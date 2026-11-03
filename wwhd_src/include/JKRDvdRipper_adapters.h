@@ -3,6 +3,7 @@
  * Only verified prefixes and the private stream-state block are modeled. */
 #pragma once
 #include "bindings.h"
+#include "JSystem/JKernel/JKRDvdFile.h"
 enum JKRExpandSwitch {
     EXPAND_SWITCH_UNKNOWN0,
     EXPAND_SWITCH_UNKNOWN1,
@@ -14,16 +15,6 @@ enum JKRDvdAllocDirection {
     ALLOC_DIRECTION_BACKWARD,
 };
 enum JKRDvdCompression { COMPRESSION_NONE, COMPRESSION_YAY0, COMPRESSION_YAZ0, COMPRESSION_ASR };
-struct JKRDvdFileVtable {
-    u8 padding[0x34];
-    be<u32> mGetFileSize;
-};
-struct JKRDvdFile {
-    u8 padding_0[0xC];
-    gptr<JKRDvdFileVtable> __vtbl;
-    u8 padding_10[0x6C];
-    u8 mFileInfo;
-};
 struct JKRDvdStreamState {
     /* 0x00 */ gptr<be<u8>> szpBuf;
     /* 0x04 */ gptr<be<u8>> szpEnd;
@@ -43,8 +34,6 @@ struct JKRDvdStreamState {
 struct SYaz0Header {
     be<u32> signature, length;
 };
-WWHD_OFFSET(JKRDvdFile, __vtbl, 0xC);
-WWHD_OFFSET(JKRDvdFile, mFileInfo, 0x7C);
 WWHD_SIZE(JKRDvdStreamState, 0x38);
 WWHD_OFFSET(JKRDvdStreamState, srcFile, 0x20);
 WWHD_OFFSET(JKRDvdStreamState, pDecompressedSize, 0x30);

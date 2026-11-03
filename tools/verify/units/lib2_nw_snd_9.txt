@@ -1,0 +1,402 @@
+# NW-SND#9: wave sound, wave player, wave-sound file reader, audio file streams and the remote speaker.
+# verify: -strictnan -calleesp
+src wwhd_src/nw/snd/AudioFileStream.cpp
+src wwhd_src/nw/snd/WaveFileReader.cpp
+src wwhd_src/nw/snd/RemoteSpeaker.cpp
+stackfill
+callee C000A850 r3=out100 r4=100 r5=0
+mockmove C000A850 r3 r4 r5
+
+# Bounded archive counts and the physical common file-header version boundary.
+ret! 0289FC08 0,1,2,3,4
+arg 0289FD24 r4 0,1,2,3,4,0xFFFFFFFF
+arg 0289FDC8 r4 0,1,2,3,4,0xFFFFFFFF
+field 028A02B8 r3+0x0 u32 0,0x46575344,0x46575345
+field 028A02B8 r3+0x8 u32 0,0xFFFF,0x10000,0x100FF,0x10100,0x10101,0xFFFFFFFF
+field 028A02F0 r4+0x0 u32 0,0x46575344
+field 028A02F0 r4+0x8 u32 0,0x10000,0x10100,0x10101
+
+# Disjoint finite file command/context and buffer storage. Opaque calls keep
+# method metadata and the command-pool owner identity alive across operations.
+arg! 028A24B0 r3 0x60300000
+arg! 028A2688 r3 0x60300000
+arg! 028A28F8 r3 0x60300000
+arg! 028A2B14 r3 0x60300000
+arg! 028A2C54 r3 0x60300000
+arg! 028A2DC0 r3 0x60300000
+field * 6030000C u32 0x60305000
+field * 60300080 u32 0x60301000
+field * 60300084 u32 0,1,16
+field * 60300090 u32 0,0x60303000
+field * 60300094 u32 0,32,64
+field * 60300098 s32 -1,0,32
+field * 6030009C s32 0,1,31,32,64
+field * 6030501C u32 0x0F090004
+field * 6030508C u32 0x0F090008
+field * 603050BC u32 0x0F09000C
+callee 0F090004 fixture r3=0
+callee 0F090008 fixture r3=0
+callee 0F09000C fixture r3=0
+ret! 0F090008 0,32,64
+ret! 0F09000C 0,1,32,64
+stable 6030000C 4
+stable 60300080 4
+stable 60305000 0xC0
+arg! 028A28F8 r7 0x60301000
+arg! 028A2C54 r5 1,16,32,64
+arg 028A2688 r5 0,1,2,3,0xFFFFFFFF
+arg 028A2DC0 r5 0,1,2,3,0xFFFFFFFF
+ret! 0288A248 0,0x60302000
+callee C000A848 r3=0 r4=dyn1*r5:128 r5=0
+mockmove C000A848 r3 r4 r5
+callee C0008E98 r7=out4
+callee C0008E00 r6=out100
+mockfield C0008E00 r6+0x10 u32 0,32,64
+callee C0008EC8 r5=dyn1*r7:128
+ret! C0008EC8 -1,0,1
+ret! C0008F48 -1,0,1
+ret! C0008E98 -1,0,1
+ret! C0008E00 -1,0,1
+
+# Remote samples/callbacks remain bounded, with no actual device or audio output.
+ret! C0006F00 -1,0,39,40,41,80
+ret! C0009B70 0x60400000
+field * 60400038 u32 0,0x0F090100
+callee 0F090100 fixture r3=0 r4=0
+field 028A1BA8 r3+0x8 u32 0,1,4
+arg 028A1FFC r4 0,1,2,3,4
+arg 028A1DB0 r4 -2,-1,0,1
+arg 028A1E84 r4 -2,-1,0,1
+arg 028A1F40 r4 -2,-1,0,1
+ret! C0009C80 0x60420000
+field * 60420000 u32 0,4,0xE7BE2C0
+callee C00085C0 r4=20
+callee C0006EF8 r4=out80
+arg! 028A2344 r3 0x60430000
+field 028A2344 6043190C u32 0,1,30,31
+
+# Wave sound diagnostic storage, with real bounded list transitions.
+src wwhd_src/nw/snd/WaveSound.cpp
+arg! 028A0148 r3 0x60500000
+arg! 028A0034 r3 0x60500000
+field * 6050029C u32 0x60501000
+field * 6050100C u32 0x60500274
+field * 60501010 u32 0x60502274
+field * 60500274 u32 0x60502274
+field * 60500278 u32 0x6050100C
+field * 60500294 u32 0x60503000
+field * 60503024 u32 0x0F090200
+callee 0F090200 fixture r3=0
+
+real 0286DA9C
+real 0286DA70
+field * 60501008 u32 2
+field * 60501014 u32 0
+field * 60501018 u32 0x60501018
+field * 6050101C u32 0x60501018
+
+field * 60502274 u32 0x6050100C
+field * 60502278 u32 0x60500274
+field * 60500040 s32 -256,-1,0,64,127,256
+field * 605000EA u8 0,1,64,127,255
+field * 60502040 s32 -256,-1,0,64,127,256
+field * 605020EA u8 0,1,64,127,255
+
+src wwhd_src/nw/snd/WaveSoundPlayer.cpp
+
+# Destructors explicitly accept null object pointers in the original ABI.
+arg! 028A0250 r3 0,0x60500000
+arg 028A0250 r4 0,1,2,3
+arg! 028A0D70 r3 0,0x60600000
+arg 028A0D70 r4 0,1,2,3
+arg! 028A2FCC r3 0,0x60700000
+arg 028A2FCC r4 0,1,2,3
+
+# Buffer cache predicates use their actual bodies, so availability agrees with
+# the live pointer/size fields. User and cache storage each cover 128 bytes.
+real 028A2418
+real 028A2440
+arg! 028A24B0 r4 0x60304000
+arg! 028A24B0 r5 0,1,16,31,32,33,63,64,65,128
+# Base file operations cannot replace the derived cache's pointer/size/cursors.
+# These 16 bytes are beyond the base AudioFileStream object's 0x90-byte extent.
+stable 60300090 16
+callee 028A2C54 r3=144
+callee 028A2DC0 r3=144
+
+# Header and complete INFO block returned by the external block accessor.
+arg! 028A02F0 r4 0x60800000
+field * 60800004 u32 0xFEFF0038
+field * 6080000C u32 0x100
+field * 60800010 u16 1
+fill * 60800040 40 0
+field * 60800040 u32 0,0x494E464F
+field * 60800044 u32 40
+ret! 028B0ED4 0,0x60800040
+callee 028B0ED4 r3=56
+stable 60800040 40
+
+# Finite immutable results from foreign wave-data format accessors.
+arg! 028A03A8 r3 0x60820000
+arg! 028A0498 r3 0x60820000
+arg! 028A03A8 r4 0x60821000
+arg! 028A0498 r4 0x60821000
+arg! 028A03A8 r5 0,1,2,3
+arg! 028A0498 r5 0,1,2,3
+arg! 028A0498 r6 0,1,2,3
+field * 60820000 u32 0x60800000
+field * 60820004 u32 0x60800048
+field * 60800008 u32 0x10000,0x10100
+ret! 028B0F48 0x60810000
+ret! 028B0F98 0x60811000
+ret! 028B0FB0 0x60812000
+ret! 028B0F30 0x60813000
+ret! 028B1174 0x60814000
+ret! 028B14F0 0x60814000
+field * 60812000 u32 0,1,2,3,4
+field * 60813000 u32 0,1,2,3,4
+
+# Loaded wave archive entries and exchange slots each have four owned records.
+arg! 0289FD24 r3 0x60830000
+arg! 0289FDC8 r3 0x60830000
+field * 60830000 u32 0x60833000
+field * 60830004 u32 0x60831000
+field * 60830008 u32 0,0x60832000
+field * 6083000C u8 0,1
+field * 60831008 u32 0
+field * 60831014 u32 16
+field * 60831020 u32 32
+field * 6083102C u32 48
+ret! 0289F9B0 0x60833000
+
+# Real silence predicate over a complete forty-sample capture frame.
+arg! 028A1B24 r4 0x60900000
+arg! 028A1BA8 r3 0x60400000
+arg! 028A1BA8 r4 0x60900000
+fill * 60900000 80 0
+field * 60900000 u32 0,1,0x80000000,0xFFFFFFFF
+real 028A1B24
+field 028A1BA8 60400001 u8 0,1
+field 028A1BA8 60400002 u8 0,1
+field 028A1BA8 60400003 u8 0,1
+field 028A1BA8 60400006 u8 0,1
+field 028A1BA8 60400007 u8 0,1
+field * 60400034 u32 0,1,2,3
+ret! C0008348 0,1
+ret! C00085C0 -2,-1,0
+callee C0008338 r3=inout32 r5=80 r7=out20
+
+# Singleton lookup and per-channel selection retain the real four-object ownership.
+real 028A2138
+real 028A2184
+field * 104BBE90 u32 0,1
+field * 104BBF00 u32 0,4
+field * 104BBF2C u32 0
+field * 104BBF30 u32 0,0x0F090100
+field * 104BBFF8 u32 0,4
+field * 104BC024 u32 1
+field * 104BC028 u32 0,0x0F090100
+field * 104BC0F0 u32 0,4
+field * 104BC11C u32 2
+field * 104BC120 u32 0,0x0F090100
+field * 104BC1E8 u32 0,4
+field * 104BC214 u32 3
+field * 104BC218 u32 0,0x0F090100
+arg! 028A18F8 r3 0x60400000
+arg! 028A194C r3 0x60400000
+arg! 028A1990 r3 0x60400000
+arg! 028A1A00 r3 0x60400000
+arg! 028A1A74 r3 0x60400000
+arg! 028A1B24 r3 0x60400000
+arg! 028A1D58 r3 0x60400000
+arg! 028A1FFC r3 0x60400000
+arg! 028A2088 r3 0x60400000
+arg! 028A2184 r4 0,1,2,3
+arg! 028A2240 r3 0x60410000
+arg! 028A2300 r3 0x60410000
+field * 60410000 u8 0,1
+
+# A real pool erase transfers one available owned task to the player.
+arg! 028A0E1C r3 0x60600000
+arg! 028A0C50 r3 0x60600000
+field * 606001D8 u32 0,0x60610000
+field * 606001DC u32 0,0x60620000
+field * 60610014 u32 0
+field * 60610018 u32 0x60610018
+field * 6061001C u32 0x60610018
+field * 60610020 u32 0
+field * 60610024 u32 0x60610024
+field * 60610028 u32 0x60610024
+field 028A0E1C 60610014 u32 1
+field 028A0E1C 60610018 u32 0x60620060
+field 028A0E1C 6061001C u32 0x60620060
+field 028A0E1C 60620060 u32 0x60610018
+field 028A0E1C 60620064 u32 0x60610018
+real 0286DB18
+real 028A02B8
+# The assigned parameter reader returns one on every returning path.
+ret! 028A03A8 1
+
+# Four channels are initialized by the real manager constructor.
+real 028A20B4
+arg! 028A1B50 r3 0x60400040
+arg! 028A1B54 r3 0x60400098
+arg! 028A0C10 r3 0x60620000
+arg! 028A0C38 r3 0x60620000
+arg! 028A0C4C r3 0x60620000
+arg! 028A0EB0 r3 0x60620000
+arg! 028A0EC8 r3 0x60620000
+arg! 028A0F20 r3 0x60620000
+arg! 028A0F88 r3 0x60620000
+arg! 028A13A8 r3 0x60620000
+arg! 028A0EC8 r4 0x60640000
+field * 6062002C u32 0,1,2,3,4,5
+field * 60620038 u32 0x60650000
+field * 6062003C u32 0,0x60651000
+field * 60620040 u32 0x60652000
+field * 60620044 u32 0,1,2,0xFFFFFFFF
+field * 60620048 u32 0,0x60800000
+field * 6062004C u32 0,1,2,3
+field * 60620058 u32 0x60630000
+field 028A0F20 60620058 u32 0,0x60630000
+field 028A0F88 60620058 u32 0,0x60630000
+ret! 02897B84 0,0x60630000
+real 028A0F20
+ret! 02892430 0,1
+ret! 028928B8 0,1
+ret! 028926BC 0x60800000
+ret! 0289D018 0,0x60860000
+
+# Voice metadata occupies the bounded 28-byte output observed by the caller.
+arg! 028A10AC r3 0x60600000
+field 028A10AC 60600198 u32 0x60800000
+field 028A10AC 6060019C u32 0x60810000
+field 028A10AC 606001A0 u32 0,1,2,3
+field 028A10AC 606001A4 u32 0,1,2,0xFFFFFFFF
+field 028A10AC 606001A8 u32 0,1,1000,0xFFFFFFFF
+callee 028B0D68 r4=out28
+mockfield 028B0D68 r4+8 s32 1,2,3,4
+mockfield 028B0D68 r4+12 s32 8000,32000,44100,48000
+mockfield 028B0D68 r4+20 u32 0,1,32,44100,0x7FFFFFFF
+ret! 028A3DA0 0,0x60660000
+
+# Live Cafe file/client identities and bounded path/mode strings.
+field * 60300010 u8 0,1
+field * 60300014 u32 0x60306000
+field * 60300018 u32 16
+arg! 028A28F8 r5 0x60307000
+arg! 028A28F8 r6 0x60308000
+fieldstr 028A28F8 r5 128 "test.bfstm","wave/test.bfwav"
+fieldstr 028A28F8 r6 8 "r"
+stable 60307000 128
+stable 60308000 8
+callee C0008E98 r5=cstr:128 r6=cstr:8
+
+# Complete table allocations and distinct decoded identifiers.
+fill * 60813000 36 0
+field * 60813004 u32 11
+field * 60813008 u32 101
+field * 6081300C u32 22
+field * 60813010 u32 202
+field * 60813014 u32 33
+field * 60813018 u32 303
+field * 6081301C u32 44
+field * 60813020 u32 404
+field * 60832000 u32 0,0x60834000
+field * 60832004 u32 0,0x60834100
+field * 60832008 u32 0,0x60834200
+field * 6083200C u32 0,0x60834300
+arg! 0289FDC8 r5 0,0x60835000
+fill * 60834000 1024 0
+fill * 60835000 256 0
+
+# Alarm SDK calls touch only their 0x58-byte alarm object, not adjacent state.
+callee C00099A8 r3=inout88
+callee C0009A38 r3=out88
+callee C0009FF0 r3=inout88 r4=0
+callee C0009B70 r3=88
+callee C0009FD8 r3=inout88
+callee C000A038 r3=inout88
+real 028A18F8
+real 028A194C
+real 028A1D58
+arg! 028A1DB0 r3 0,1,2,3
+arg! 028A1E84 r3 0,1,2,3
+arg! 028A1F40 r3 0,1,2,3
+field * 60400004 u8 0,1
+field * 60400005 u8 0,1
+field * 60400008 u32 0,1,2,3,4,5,6
+field * 6040000C u32 0,1,2,3
+field * 60400010 u32 0,1,2,3
+stable 60400034 4
+callee C0009990 r3=out32
+mockfield C0009990 r3+0 u32 0
+mockfield C0009990 r3+4 u32 0
+mockfield C0009990 r3+8 u32 0
+mockfield C0009990 r3+12 u32 0
+mockfield C0009990 r3+16 u32 0
+mockfield C0009990 r3+20 u32 0
+mockfield C0009990 r3+24 u32 0
+mockfield C0009990 r3+28 u32 0
+stable 104BBF2C 4
+field * 104BBEFC u8 0,1
+field * 104BBEFD u8 0,1
+field * 104BBF04 u32 0,1,2,3
+field * 104BBF08 u32 0,1,2,3
+stable 104BC024 4
+field * 104BBFF4 u8 0,1
+field * 104BBFF5 u8 0,1
+field * 104BBFFC u32 0,1,2,3
+field * 104BC000 u32 0,1,2,3
+stable 104BC11C 4
+field * 104BC0EC u8 0,1
+field * 104BC0ED u8 0,1
+field * 104BC0F4 u32 0,1,2,3
+field * 104BC0F8 u32 0,1,2,3
+stable 104BC214 4
+field * 104BC1E4 u8 0,1
+field * 104BC1E5 u8 0,1
+field * 104BC1EC u32 0,1,2,3
+field * 104BC1F0 u32 0,1,2,3
+
+# Setup descriptors and the command arena are complete, disjoint live objects.
+arg! 0289FE28 r4 0x60501000
+arg! 0289FE9C r3 0x60500000
+arg! 0289FE9C r6 0x60641000
+arg! 0289FF2C r3 0x60500000
+arg! 0289FF2C r4 0x60642000
+arg! 0289FF2C r5 0x60641000
+arg! 028A00BC r3 0x60500000
+field * 60642008 u32 0x60643000
+ret! 02885F10 0x60680000
+ret! 02887248 0x60670000
+stable 60500294 4
+
+# Foreign observer/thread queues can update only the eight-byte intrusive link.
+ret! 028A5B00 0x60690000
+ret! 028986B0 0x606A0000
+callee 028A5BD0 r4=inout8
+callee 028A5C00 r4=inout8
+callee 02898E74 r4=inout8
+callee 02898EA8 r4=inout8
+field 028A0C50 606001D8 u32 0x60610000
+field 028A0E1C 606001DC u32 0
+
+# The primary update context is prepared; asynchronous phases have companions.
+arg! 028A1270 r3 0x60600000
+field 028A1270 606001D4 u8 3
+field 028A1270 60600024 u8 0,1
+field 028A1270 60600025 u8 0,1
+field 028A1270 60600026 u8 0,1
+field 028A1270 60600190 u8 0,1
+field 028A1270 606001D0 u32 0,0x60660000
+
+# open() replaces the stream's previous work context (none, or another pool), so the store of the new one is observable.
+field 028A28F8 60300080 u32 0,0x60309000
+fill 028A28F8 60309000 12 0
+
+# update() hands its 12-byte stack source record to startSource: compare the record, not only the pointer.
+callee 028A1024 r4=12
+
+# notify() runs the user's callback, which may look at the speaker: compare the speaker's flags and state at the call.
+observearg 028A1D58 r3+0 12

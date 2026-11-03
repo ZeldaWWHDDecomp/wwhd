@@ -1,0 +1,3 @@
+# TYPE-DOMAIN: accepted original ParameterBase nonreprojection producer and concrete graphics observations.
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_lifecycle_ad60_nonreprojection_consumed_graphics_20261030.txt

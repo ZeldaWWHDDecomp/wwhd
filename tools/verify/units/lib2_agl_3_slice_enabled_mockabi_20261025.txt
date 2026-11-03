@@ -1,0 +1,47 @@
+# AGL#3 additive narrow direct caller ABI profile; root decision 266f444e4cb2f99ae35d9ae3d15cffffe6ee9d0be0f56befaa5854dde9163672.
+# Claim is limited to 02777BA8 enabled slice0 call construction and verifier-mock return forwarding.
+# No claim about 027A9E28 implementation, receiver validity/extent/lifetime, runtime owner, color application, or render behavior.
+# Source list intentionally matches broad unit source list; this unit runs only 02777BA8.
+# Inputs are explicit caller-owned fixture state. Color words are source-initializer values set explicitly in BSS.
+# verify: -strictnan -calleesp -only 02777BA8
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+
+# Exact target entry for one surface and selected slice0.
+arg! 02777BA8 r3 0x56000000
+arg! 02777BA8 r4 0
+arg! 02777BA8 r5 0
+arg! 02777BA8 r6 0x56800000
+arg! 02777BA8 r7 0x12345678
+
+# EffectRuntimePrefix: mask=0 selects the first parameter block; one surface and one slot are present.
+field 02777BA8 r3+0x10 u32 0
+field 02777BA8 r3+0x2CC u32 1
+field 02777BA8 r3+0x2D0 u32 0x56300000
+field 02777BA8 r3+0x2D4 u32 1
+field 02777BA8 r3+0x2D8 u32 0x56400000
+field 02777BA8 56400000 u32 0x56900000
+
+# ParameterBlock +0xB8 slice0: enabled, mFirst=1.25, mSecond=-2.5.
+field 02777BA8 569000C4 u8 1
+field 02777BA8 569000D4 u32 0x3FA00000
+field 02777BA8 569000E4 u32 0xC0200000
+
+# SurfaceBatchEntry scale arguments: 1.5 and 0.75.
+field 02777BA8 56300C70 u32 0x3FC00000
+field 02777BA8 56300C74 u32 0x3F400000
+
+# Explicit source-derived global fixture bytes; these BSS words are not inferred from image.bin or startup state.
+# sSliceColorFirst aliases sBlack; sSliceColorSecond aliases sWhite.
+field 02777BA8 104A01CC u32 0
+field 02777BA8 104A01D0 u32 0
+field 02777BA8 104A01D4 u32 0
+field 02777BA8 104A01D8 u32 0x3F800000
+field 02777BA8 104A01EC u32 0x3F800000
+field 02777BA8 104A01F0 u32 0x3F800000
+field 02777BA8 104A01F4 u32 0x3F800000
+field 02777BA8 104A01F8 u32 0x3F800000
+
+# At the boundary, r3 is an opaque token in the approved mock-only domain; r5/r6 payload extents are pinned.
+callee 027A9E28 r3=0 r4=0 r5=8 r6=32

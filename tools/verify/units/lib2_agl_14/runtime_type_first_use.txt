@@ -1,0 +1,26 @@
+# verify: -only 027B432C -calleesp -strictnan
+# First use of both runtime-type nodes: guards and node words still zero (BSS), so the inline
+# initializers store their tables (the main spec covers the initialized state).
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+arg! 027B432C r4 0,0x101FDFFC,0x101FE000
+field 027B432C 0x101FD8E0 u32 0
+field 027B432C 0x101FD8D0 u32 0
+field 027B432C 0x101FDFFC u32 0
+field 027B432C 0x101FE000 u32 0

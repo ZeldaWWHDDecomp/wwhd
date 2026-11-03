@@ -1,0 +1,34 @@
+# verify: -only 027E7A14 -strictnan -calleesp
+# One complete active pose; real compiler angle conversion, finite half-turns.
+src wwhd_src/agl/gx2/GpuUtilitySupport.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ArchiveLookupSupport.cpp
+src wwhd_src/JSystem/JKernel/JKRFileLoaderStatics.cpp
+src wwhd_src/agl/gx2/QueuedObjectSupport.cpp
+src wwhd_src/agl/gx2/CalendarSupport.cpp
+src wwhd_src/agl/gx2/UtilityText.cpp
+src wwhd_src/agl/gx2/UniformUpdateSupport.cpp
+src wwhd_src/agl/gx2/BlendPoseSupport.cpp
+src wwhd_src/agl/gx2/WorldPoseSupport.cpp
+stackfill
+real 028F5680 028F5564
+arg! 027E7A14 r3 0x61000000
+arg! 027E7A14 r4 0x61010000
+arg! 027E7A14 f1 1
+field * 61000000 u32 0x61001000
+field * 61000004 u16 1
+field * 61000006 u16 1
+field * 6100101C u32 0
+field * 6101002C u32 0x61011000
+field * 61010038 u32 0x61012000
+field * 6101003E u16 1
+field * 61010040 u16 1
+field * 61012000 u32 0
+field * 61011020 u32 0x40490FDB,0xC0490FDB,0
+field * 61011024 u32 0
+field * 61011028 u32 0
+stable 61000000 0x14
+stable 61001000 0x38
+stable 61010000 0x58
+stable 61011000 0x30
+stable 61012000 4

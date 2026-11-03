@@ -1,0 +1,18 @@
+# AGL#18 027D174C consecutive-evaluation companion for dropped completed-slot
+# reset.  The included original producer chain builds a positive extended
+# collection.  Before the tested call, run one original evaluateSlot on the
+# same collection, slot, view context, and output index.  That first call
+# leaves the shared completed word positive.  The original tested call resets
+# it before evaluating again; the mutant that drops `*completed = 0` carries
+# the prior total into the second result.  This is a shipped-valid consecutive
+# evaluation lifecycle and does not fabricate collection or value storage.
+# verify: -only 027D174C -strictnan -calleesp -footprint
+include lib2_agl_18/collection_extended_eval_upload_submit_frame.txt
+postsetup 027D174C 027D174C r3=0x6A87F634 r4=0 r5=0x6A87E34C r6=0
+
+# Hold the tested call to the identical slot/context/output-index tuple so the
+# original pre-call and tested call share exactly mSlots[0].
+arg! 027D174C r3 0x6A87F634
+arg! 027D174C r4 0
+arg! 027D174C r5 0x6A87E34C
+arg! 027D174C r6 0

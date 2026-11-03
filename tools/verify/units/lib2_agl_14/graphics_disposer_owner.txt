@@ -1,0 +1,30 @@
+# verify: -only 027B738C -calleesp -strictnan
+# Graphics-access disposer destroy when it is the registered disposer: the manager destroy slot is a
+# mock-only callback (arguments compared); the merged RegisteredObject destroy stays a mock.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+callee 0F003100 fixture r3=0 r4=0
+arg! 027B738C r3 0,0x58000000
+arg! 027B738C r4 0,1,2,3
+field 027B738C 0x101F8E08 u32 0x58000000,0x58000000,0x58000000,0x59000000,0
+field 027B738C 0x101F8E04 u32 0x5A000000
+field 027B738C 0x5A000000 u32 0x5A100000
+field 027B738C 0x5A100014 u32 0x0F003100
+stable 0x5A000000 4
+stable 0x5A100014 4

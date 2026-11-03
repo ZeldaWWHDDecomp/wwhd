@@ -1,0 +1,16 @@
+# TYPE-DOMAIN: prepareAttachedSurface 027D6A74 on the first frame (lib2_agl_19_display_frame_fixture.txt)
+# with view flag words no shipped producer leaves: 0x20 set (update 027C106C sets it only for manager frame token 4)
+# and 0x80 clear (update sets 0x80 from manager flag 0x800, which the shipped flags 0x1858 hold); and a target without
+# depth (releaseAttachments 027D5C48, then configureAttachments 027D6658 with depth swizzle -1, i.e. manager flag 0x40 clear,
+# run here as postsetups the way update orders them).
+# The frame token (manager+0x1250, read at 027C11B4) has one writer, the manager constructor 027C088C storing 0
+# (027C0A34 stw r30,0x1250(r31), r30 = 0; whole-.text scan for stores to +0x1250), so the view never gets 0x20.
+# verify: -only 027D6A74 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+real 0274D690 0274F964 0274F8D8 02751698 027516AC 0274F698 027B9F60 027B9F4C 027D4FE8 025C0928
+# flag words: 0x88 | 0x20, 0x08 (0x80 clear), 0x28
+poke * 5E1007A8 u32 0xA8,0x08,0x28
+postsetup * 027D5C48 r3=0x5E100018
+postsetup * 027D6658 r3=0x5E100018 r4=0 r5=0 r6=0x1D r7=0 r8=0x3A r9=0xFFFFFFFF r10=1 sp+8=0
+arg! 027D6A74 r3 0x5E100018

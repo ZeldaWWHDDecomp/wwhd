@@ -1,0 +1,61 @@
+# verify: -only 027B50BC -calleesp -strictnan
+# Original initialized complete0x124 curve member prefix; bounded setter only, no evaluator-domain claim.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B4FEC
+mockmove C0009988 r3 r4 r5
+setup 027B50BC 027B4FEC r3=0x58000000
+arg! 027B50BC r3 0x58000000
+arg! 027B50BC r4 0,1
+arg! 027B50BC r5 0,1,2,3,4,5,6,7,8,9,10
+arg! 027B50BC r6 0x59000000
+arg! 027B50BC r7 0,1,2,3,9,29,30
+stable 0x58000000 0x124
+stable 0x59000000 120
+stable 0x10169734 36
+field * 0x59000000 u32 0x00000000
+field * 0x59000004 u32 0x80000000
+field * 0x59000008 u32 0x3F000000
+field * 0x5900000C u32 0xBF000000
+field * 0x59000010 u32 0x3F800000
+field * 0x59000014 u32 0xBF800000
+field * 0x59000018 u32 0x40000000
+field * 0x5900001C u32 0xC0000000
+field * 0x59000020 u32 0x00000000
+field * 0x59000024 u32 0x80000000
+field * 0x59000028 u32 0x3F000000
+field * 0x5900002C u32 0xBF000000
+field * 0x59000030 u32 0x3F800000
+field * 0x59000034 u32 0xBF800000
+field * 0x59000038 u32 0x40000000
+field * 0x5900003C u32 0xC0000000
+field * 0x59000040 u32 0x00000000
+field * 0x59000044 u32 0x80000000
+field * 0x59000048 u32 0x3F000000
+field * 0x5900004C u32 0xBF000000
+field * 0x59000050 u32 0x3F800000
+field * 0x59000054 u32 0xBF800000
+field * 0x59000058 u32 0x40000000
+field * 0x5900005C u32 0xC0000000
+field * 0x59000060 u32 0x00000000
+field * 0x59000064 u32 0x80000000
+field * 0x59000068 u32 0x3F000000
+field * 0x5900006C u32 0xBF000000
+field * 0x59000070 u32 0x3F800000
+field * 0x59000074 u32 0xBF800000

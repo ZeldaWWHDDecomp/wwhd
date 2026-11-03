@@ -1,0 +1,162 @@
+# AGL#10 companion: one busy entry, then an exactly matching free entry is reused.
+# verify: -strictnan -calleesp -only 0279F7F0
+src wwhd_src/agl/MultiFilter.cpp wwhd_src/agl/ParameterBase.cpp wwhd_src/agl/DynamicTextureCache.cpp wwhd_src/agl/DynamicTextureCacheStatics.cpp wwhd_src/agl/TextureResource.cpp wwhd_src/agl/PrimitiveShapes.cpp wwhd_src/agl/PrimitiveShapesStatics.cpp wwhd_src/sead/PoolHeapStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# Name and label texts passed on the stack are compared by content.
+callee 0279E618 r4=8 r5=8 r6=8
+callee 02785CB4 r4=8
+# Cafe core id: the three CPU cores, mapped by the core-reverse table to pools 0..2.
+ret! C0009BB0 0,1,2
+field * 104A0BC0 u32 0
+field * 104A0BC4 u32 1
+field * 104A0BC8 u32 2
+stable 104A0BC0 12
+# Disposers are compared as registered (their contents at the registration call).
+callee 02752B0C r3=heap16
+# Object and heap allocators hand out distinct blocks (identical on both sides).
+alloc 0273AD10 r3 0x58B00000 4
+alloc 0273B0D4 r3 0x58D00000 align=r5
+stable 58B00000 0x20000
+stable 58D00000 0x10000
+# A heap at 0x58900000 whose method table allocates (F0010000) and releases (F0010004) as fixtures.
+callee F0010000 fixture r3=0 r4=0 r5=0
+alloc F0010000 r4 0x58920000 align=r5
+callee F0010004 fixture r3=0 r4=0
+field * 5890000C u32 0x58910000
+field * 58910034 u32 0xF0010000
+field * 5891003C u32 0xF0010004
+stable 58900000 0x94
+stable 58910000 0x90
+ret! 02755FEC 0x58900000
+ret! 02756140 0x58900000
+# Dynamic texture cache at 0x58700000 (singleton word 101F8DD4), core pool 0 at 0x58710000 with four
+# entries at 0x58730000 whose descriptions come from the same small value lists as the requests.
+field * 101F8DD4 u32 0,0x58700000
+field * 101F8DE4 u32 0,0x58800000
+callee F0050000 fixture r3=0 r4=0
+field * 58700000 u32 0x58780000
+field * 58780014 u32 0xF0050000
+stable 58780000 0x18
+field * 58700014 u32 0,8
+# The pools inside the cache keep their entry counts across the range-pool configuration calls.
+stable 58700018 8
+stable 58700BE8 8
+stable 587017B8 8
+stable 58702388 8
+arg! 0279F474 r3 0x58700000
+arg! 0279F474 r4 0,0x58900000
+arg! 0279F6B0 r3 0x58700000
+arg! 0279F738 r3 0x58700000
+arg! 0279F7F0 r3 0x58700000
+arg! 0279FC6C r3 0x58700000
+arg! 0279FD18 r3 0x58700000
+arg! 0279FDC8 r3 0x58700000
+arg! 0279FE74 r3 0x58700000
+arg! 0279FF24 r3 0x58700000
+arg! 0279FFDC r3 0x58700000
+arg! 027A0040 r3 0x58700000
+arg! 027A0114 r3 0x58700000
+arg! 0279F38C r3 0,0x58700000
+arg! 0279F6B0 r4 0x58710000,0x58710BD0
+arg! 0279F738 r4 0,0x58710000
+arg! 0279F7F0 r4 0x58710000
+arg! 0279F7F0 r5 0x58720000
+# Skip one busy entry, then reuse an exact free description.
+field * 58710000 s32 4
+arg! 0279F7F0 r6 0
+arg! 0279F7F0 r7 1
+arg! 0279F7F0 r8 1
+arg! 0279F7F0 r9 1
+arg! 0279F7F0 r10 0
+field 0279F7F0 r1+0x08 u32 0
+field 0279F7F0 r1+0x0C u32 1
+field 0279F7F0 r1+0x20 u32 0
+field 0279F7F0 r1+0x10 u32 0,1
+field 0279F7F0 r1+0x14 u32 0,1
+field 0279F7F0 r1+0x18 u32 0,1,2,3
+field 0279F7F0 r1+0x1C u32 0,1
+field * 58710004 u32 0x58730000
+field * 58710BCC u32 0,1
+field * 58720000 u32 0x58720100
+field * 58720004 u32 0x10167DD8
+fill * 58720100 32 0
+fieldstr * 58720100 32 "texture",""
+stable 58720000 8
+stable 58720100 32
+# Range-pool allocation succeeds or fails; the pools match or not.
+ret! 027CB1A0 0,0x58750000
+ret! 0279F738 0,1
+# A failed allocation is read through at address 0 (image +0xC, mips +0x10).
+field 0279F7F0 0000000C u32 0x60020000
+field 0279F7F0 00000010 u32 0,0x60030000
+stable 00000000 0x20
+field * 5875000C u32 0x60000000
+field * 58750010 u32 0,0x60010000
+stable 58750000 0x14
+field * 58730000 u32 0,1
+field * 58730004 u32 0,1,2,3,5,6
+field * 58730008 s32 1,4
+field * 5873000C s32 1,4
+field * 58730010 s32 1,2
+field * 5873001C u32 0,1
+field * 58730078 u8 0,1,4
+field * 58730079 u8 0,1,4
+field * 5873007A u8 0,1,4
+field * 58730094 u32 0x58751000
+field * 587300A5 u8 0,1,2,255
+field * 587300A6 u8 0,1
+field * 587300A7 u8 0,1,2,3
+field * 587300AA u8 0,1
+field * 587300B0 u32 0
+field * 587300B4 u32 1
+field * 587300B8 s32 1
+field * 587300BC s32 1
+field * 587300C0 s32 1
+field * 587300CC u32 0
+field * 58730128 u8 0
+field * 58730129 u8 0
+field * 5873012A u8 0
+field * 58730144 u32 0
+field * 58730156 u8 0,1
+field * 5873015A u8 0,1
+field * 58730160 u32 0,1
+field * 58730164 u32 0,1,2,3,5,6
+field * 58730168 s32 1,4
+field * 5873016C s32 1,4
+field * 58730170 s32 1,2
+field * 5873017C u32 0,1
+field * 587301D8 u8 0,1,4
+field * 587301D9 u8 0,1,4
+field * 587301DA u8 0,1,4
+field * 587301F4 u32 0,0,0,0x58751000
+field * 58730205 u8 0,1,2,255
+field * 58730206 u8 0,1
+field * 58730207 u8 0,1,2,3
+field * 5873020A u8 0,1
+field * 58730210 u32 0,1
+field * 58730214 u32 0,1,2,3,5,6
+field * 58730218 s32 1,4
+field * 5873021C s32 1,4
+field * 58730220 s32 1,2
+field * 5873022C u32 0,1
+field * 58730288 u8 0,1,4
+field * 58730289 u8 0,1,4
+field * 5873028A u8 0,1,4
+field * 587302A4 u32 0,0,0,0x58751000
+field * 587302B5 u8 0,1,2,255
+field * 587302B6 u8 0,1
+field * 587302B7 u8 0,1,2,3
+field * 587302BA u8 0,1
+# The registered disposer of the cache.
+arg! 027A0174 r3 0,0x58700004
+# acquire's stack arguments (anti-aliasing .. tile mode) and configure's ninth are compared.
+callee 0279F7F0 stack=7
+callee 027BE930 stack=1
+field * 101F8DD8 u32 0,0x58700004
+# The entries' range-pool pointers are set by acquire itself; mocked calls do not rewrite them.
+stable 58730090 4
+stable 58730140 4
+stable 587301F0 4
+stable 587302A0 4
+# The range pool's allocate gets the entry: its range-pool pointer (set just before) is compared at the call.
+observearg 027CB1A0 r4+0x90 4

@@ -1,0 +1,9 @@
+# Fresh queue singleton from original registered root heap, disposer and embedded queue constructor.
+# Zero singleton words mirror image initialization; no dispatcher or worker-private fields fabricated.
+# verify: -only 027F96F0 -strictnan -calleesp
+include lib2_j3d_hdrew_1_queue_constructed_state_20261030.txt
+setupsnapshot
+field * 0x101F997C u32 0
+field * 0x101F9980 u32 0
+real 0273B0D4 02752B0C 027F9560
+arg! 027F96F0 r3 0x6A000000

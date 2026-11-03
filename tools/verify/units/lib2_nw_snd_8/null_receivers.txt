@@ -1,0 +1,14 @@
+# GHS destructors return at once for a NULL object (the merged convention for deleting destructors).
+# verify: -only 0289D30C -strictnan -calleesp
+src wwhd_src/nw/snd/WaveArchiveReader.cpp
+src wwhd_src/nw/snd/AudioCurves.cpp
+src wwhd_src/nw/snd/AudioEventLog.cpp
+src wwhd_src/nw/snd/PlaybackVoiceParameters.cpp
+src wwhd_src/nw/snd/PlaybackVoicePool.cpp
+src wwhd_src/nw/snd/PlaybackVoice.cpp
+src wwhd_src/nw/snd/AdpcmDecode.cpp
+src wwhd_src/nw/snd/WaveResourceResolver.cpp
+src wwhd_src/nw/snd/AudioWorkerRun.cpp
+src wwhd_src/nw/snd/PlaybackVoiceUpdate.cpp
+src wwhd_src/nw/snd/PlaybackMix.cpp
+arg! 0289D30C r3 0

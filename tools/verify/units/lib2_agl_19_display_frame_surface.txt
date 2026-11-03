@@ -1,0 +1,9 @@
+# AGL#19 prepareAttachedSurface 027D6A74 / refreshAttachmentBounds 027D740C on the first frame before the job phase
+# (lib2_agl_19_display_frame_fixture.txt): setSurfaceExtent left the render target resized (mSurfaceChanged = 1), so
+# the colour/depth textures of the target are refreshed; the begin listener is installed (setViewOutput).
+# verify: -only 027D6A74,027D740C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+real 0274D690 0274F964 0274F8D8 02751698 027516AC 0274F698 027B9F60 027B9F4C 027D4FE8 025C0928
+arg! 027D6A74 r3 0x5E100018,0x5E100818
+arg! 027D740C r3 0x5E100018,0x5E100818

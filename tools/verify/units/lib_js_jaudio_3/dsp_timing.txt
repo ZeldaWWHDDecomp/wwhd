@@ -1,0 +1,17 @@
+# Coherent timer ratios straddle the 1.1 starvation threshold with elapsed=100.
+src wwhd_src/JSystem/JAudio/JASRate.cpp
+src wwhd_src/JSystem/JAudio/JASDSPBuf.cpp
+arg! 0281361C r4 0,1,2,3,8
+field 0281361C 101F9EB8 u8 0,1,2,3,4
+field 0281361C 104B539C u32 0,1,2,3
+field 0281361C 104B53A0 u32 0,1,2,3
+field 02813980 101F9EE8 u32 0,1,2,3
+field 028137E0 101F9EA4 u32 2
+field 028137E0 101F9F08 u32 1
+field 028137E0 101F9EBC u32 200
+field 028137E0 101F9EC0 u32 100,109,110,111,150,210,211,220
+ret! C0009CD0 300
+stable 101F9EA4 4
+stable 101F9F08 4
+stable 101F9EBC 4
+stable 101F9EC0 4

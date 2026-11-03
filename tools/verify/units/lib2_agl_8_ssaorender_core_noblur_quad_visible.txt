@@ -1,0 +1,7 @@
+# verify: -strictnan -only 0279599C -noclobber
+# ssaorender: lib2_agl_8_ssaorender_core_noblur_prior_visible with the
+# original default textured-quad draw real (drawDefaultQuad 027A90AC -> 027A8D08, DrawProgram), so the blur-0
+# secondary pass of the prior frame binds primary sampler 0 through the original 027BE53C (clearing its dirty byte)
+# before its final history rebind, as in the shipped program; the tested frame then starts from that sampler state.
+include lib2_agl_8_ssaorender_core_noblur_prior_visible.txt
+real 027A90AC 027A8D08

@@ -1,0 +1,26 @@
+# verify: -only 027D5E5C,027D6070,027D7498 -strictnan -calleesp
+# AGL#19 TYPE-DOMAIN companion: the arms the shipped callers never take.
+# - createRenderJob 027D5E5C with r3 == NULL (allocate 0x1C through operator new 0273AD10, success or an exhausted heap):
+#   unreachable in the shipped game because the only caller, the view initializer 027D60D4, passes array elements and
+#   skips NULL ones (`add. r3,r22,r30` / `beq`).
+# - configureLayerCommand 027D6070 with kind >= 4 (no name stored): 027D60D4 passes only 1, 2, 0 (primary) and 3 (secondary).
+# - releaseRenderJob 027D7498 (job table +0x14) with the delete flag (bit 0) and with a NULL job: the only caller, the view
+#   destructor 027D5CF4, passes flags 2 and a constructed job. 027D7498 is referenced only from the job table
+#   (1016C360 +0x14, word 1016C374), which only 027D5E5C installs; the only call through that slot is 027D5CF4's
+#   primary-job loop (`li r4,2` at 027D5D64, bctrl 027D5D68); the job array itself is then returned to its heap
+#   through the heap's free slot (+0x3C, 027D5D9C), never through a deleting destructor.
+# - kind is written only by 027D6070 from its own r4; its three call sites in 027D60D4 pass 1 (027D63F8),
+#   2 (027D6408) and 0 for the primary jobs and 3 (027D643C) for the secondary jobs.
+# Objects are still built by the original producer (027D5E5C); only the selecting argument varies.
+src wwhd_src/agl/RenderJobOrder.cpp
+real 027D5E5C
+alloc 0273AD10 r3 0x58300000 4
+allocfail 0273AD10 0,1
+arg! 027D5E5C r3 0
+setup 027D6070 027D5E5C r3=0x58004000
+arg! 027D6070 r3 0x58004000
+arg! 027D6070 r4 4,5,0x100,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+arg! 027D6070 r5 0x58010000
+setup 027D7498 027D5E5C r3=0x58004000
+arg! 027D7498 r3 0x58004000,0
+arg! 027D7498 r4 0,1,2,3

@@ -1,0 +1,10 @@
+# AGL#18 027CF2B0 caller-valid curve/draw companion.  Retain the original
+# configuration/program/provider producers and the initialized distinct fourth
+# buffer from the uniform-domain fixture.  The shipped configuration domain
+# keeps bit 0x2000 clear, so this profile does not synthesize that unreachable
+# arm.  It varies only the producer-owned packet's draw count; the packet's
+# original index type, primitive, and valid index storage remain intact.
+# Trace evidence: provider packet 6A838870, count at +0x0C.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_uniform_domain.txt
+poke * 6A83887C u32 0,1,4

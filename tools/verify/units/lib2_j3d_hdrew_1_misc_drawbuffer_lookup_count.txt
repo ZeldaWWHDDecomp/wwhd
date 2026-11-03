@@ -1,0 +1,9 @@
+# TYPE-DOMAIN: the admitted producers make lookupIndex < mIndexCount; the original's guard at 027F587C/027F5884
+# (cmplw r10,r0; bge) defines the fallback (indices[0]) for any lookupIndex >= mIndexCount.
+# 027F583C over the committed record-produced profile with the shape lookup index equal to the index count:
+# mIndexCount = 1, shape lookupIndex = 1. The index array keeps its three produced entries {0,1,2}, so the original
+# selects indices[0] = 0 (record 0) and a candidate that uses indices[1] selects record 1.
+# verify: -only 027F583C -strictnan -calleesp
+include lib2_j3d_hdrew_1_packet_drawbuffer_record_produced_20261031.txt
+poke 027F583C 71810130 u32 1
+poke 027F583C 7181410C u16 1

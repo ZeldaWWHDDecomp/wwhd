@@ -1,0 +1,4 @@
+# Environment no-input constant accessors and empty hooks.
+# verify: -strictnan -calleesp -footprint -only 027727E4,027727E8,027727EC,02772804,0277280C,02772824,0277282C,02772844,0277284C,02772864,0277286C,02772874,0277287C,0277289C,027728A0,027728A4,027728A8
+src wwhd_src/agl/EnvironmentLightTypes.cpp
+src wwhd_src/agl/EnvironmentObjects.cpp

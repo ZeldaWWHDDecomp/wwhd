@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 027966F0,027967A0,027967C4,02796B3C,02796EEC -noclobber
+# Non-clobber reconfirmation of lib2_agl_8_shadow_preparation_observed_group: the same profile, mocked callees never modify memory,
+# so every input is a non-clobber input and owner-only state keeps the value its real producers gave it.
+include lib2_agl_8_shadow_preparation_observed_group.txt

@@ -1,0 +1,6 @@
+# Independent AGL2 no-input interfaces: seven bareblr hooks and six constants.
+# verify: -strictnan -calleesp -footprint -only 02770710,027708B0,027708B4,027708CC,027708D4,0277095C,02770964,0277096C,02770974,027709D0,027709D4,027709D8,027709DC
+# Exact own instructions have no input GPR/FPR/memory reads or calls/stores.
+# No fabricated object, constructor state, helper mocks, return pins or stable ranges.
+src wwhd_src/agl/EnvironmentLightTypes.cpp
+src wwhd_src/agl/EnvironmentObjects.cpp

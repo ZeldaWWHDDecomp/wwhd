@@ -1,0 +1,18 @@
+# Historical broad-storage control: O2/O1 paired10k pass, coverage1/1.
+# Mutation acceptance superseded by parameter_defaults_caller.txt: five old detections
+# were redundant stores at the actual 027D0474 pre-callback state; do not count them.
+# AGL18 point-record defaults from actual SEAD startup values.
+# verify: -only 027CC1BC -strictnan -calleesp
+# Original does not access its receiver; only the complete writable 0x48 point record is consumed.
+# Disjoint record storage; nonzero initial bytes expose omitted stores and preserve untouched padding/mask/tail.
+src wwhd_src/agl/DrawPreparation.cpp
+arg! 027CC1BC r3 0x59000000
+arg! 027CC1BC r4 0x59100000,0x59100100
+fill 027CC1BC r4 0x48 0xA5
+setup 027CC1BC 02757190
+setup 027CC1BC 0274D510
+real 02757190 0274D510
+# Mutation survivors replayed exactly at 10k input seeds 1/7 before review.
+# EQ disjoint record stores, no dependencies/calls: 0,14,15,17,19,20,23,33,34,35.
+# EQ startup loads reordered across disjoint record stores: 4,5,12,25,27,32.
+# Original caller-owned record storage cannot alias the static startup position/color objects.

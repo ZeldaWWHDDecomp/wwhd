@@ -1,0 +1,74 @@
+# Failed record allocation with zero registered classes and no preexisting records; original skips null record construction.
+# verify: -only 0276DF64 -strictnan -calleesp
+src wwhd_src/agl/EnvironmentSetInitialize.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 0276DF64 r3 0x59700000
+arg! 0276DF64 r4 0x59710000
+arg! 0276DF64 r5 0,0x58F00000
+fill 0276DF64 59710000 520 0
+field 0276DF64 59710204 u32 0x101607A8
+field 0276DF64 59710000 u32 1
+field 0276DF64 59710004 u32 0
+field 0276DF64 59710200 s32 1
+field 0276DF64 59700098 u32 0x59720000
+field 0276DF64 5970009C u32 0x101607DC
+field 0276DF64 597000A0 s32 32
+field 0276DF64 59700008 s32 2
+field 0276DF64 5970000C u32 0x59740000
+field 0276DF64 59700010 s32 1
+field 0276DF64 59700014 u32 0x59750000
+field 0276DF64 59700188 s32 0
+field 0276DF64 5970018C u32 0
+field 0276DF64 59740000 u16 0
+field 0276DF64 59740002 u16 1
+field 0276DF64 59740004 u16 1
+field 0276DF64 59740006 u16 1
+field 0276DF64 101F8BF4 s32 0
+field 0276DF64 58F0000C u32 0x101459E0
+field 0276DF64 104A1564 u32 0x59770000
+field 0276DF64 104A1578 u32 0x59770040
+fieldstr 0276DF64 59770000 64 "","Projector","ProjectorLongName","ProjectorNameLongerThanTheFixedThirtyTwoByteBuffer"
+fieldstr 0276DF64 59770040 64 "","Fog","FogLongName","FogNameLongerThanTheFixedThirtyTwoByteBuffer"
+field 0276DF64 104A0CD8 u32 0x59780000
+field 0276DF64 104A0CDC u32 0x101607DC
+fieldstr 0276DF64 59780000 64 "","EnvObject","Record","EnvironmentRecordNameLongerThanThirtyTwoBytes"
+# Reference-array initialization supplies coherent buffer metadata before record allocation.
+mockfield 0276F554 r3+8 s32 2
+mockfield 0276F554 r3+0xC u32 0x59740000
+mockfield 0276F554 r3+0x10 s32 1
+mockfield 0276F554 r3+0x14 u32 0x59750000
+ret! 02756140 0x58F00000
+ret! 02753D6C 0
+real 0276F8B4
+real 027A7E6C
+real 0276EBB4
+real 0276EBB8
+real 02770710
+real 0276EC20
+callee 0279E618 r3=12 r4=8 r5=8 r6=8 r7=0
+callee 0279CB9C r5=8
+callee 0279CB24 r5=8
+callee 02759C10 r3=12 r4=cstr r5=12
+mockmove C0009988 r3 r4 r5
+callcr 0276EC20 6
+# Const capacity, registered classes and disjoint owner metadata survive unrelated mock epochs.
+# Explicit constructor and initialization writes are still compared.
+stable 59710000 520
+stable 101F8BF4 4
+stable 104A1564 40
+stable 104A0CD8 8
+stable 58F0000C 4
+stable 59700008 16
+stable 59700098 12
+stable 59700188 8
+stable 59740000 8
+stable 59760068 12
+stable 597600B8 12
+stable 5976014C 12
+stable 5976019C 12
+
+# Explicitly model failed allocation without stale record owner storage.
+callee 027A84B8 r3=0
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

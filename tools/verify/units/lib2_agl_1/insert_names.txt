@@ -1,0 +1,37 @@
+# Environment insertion with actual name-byte copying, disjoint bounded records.
+# verify: -only 0276E774 -strictnan -calleesp
+src wwhd_src/agl/EnvironmentSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 0276D8DC
+real 02770710
+mockmove C0009988 r3 r4 r5
+# Bounded record insertion with actual object queries and text termination.
+arg! 0276E774 r3 0x59100000
+arg! 0276E774 r4 0,0x59110000
+field 0276E774 59100008 s32 1
+field 0276E774 5910000C u32 0x59120000
+field 0276E774 59100010 s32 3
+field 0276E774 59100014 u32 0x59130000
+field 0276E774 59100188 s32 3
+field 0276E774 5910018C u32 0x59140000
+field 0276E774 59110058 u32 0x10160030
+field 0276E774 104A145C u32 0x59150000
+field 0276E774 59150000 s16 -1,0,1
+field 0276E774 59110080 u32 0x59160000
+field 0276E774 59110084 u32 0x101607DC
+fieldstr 0276E774 59160000 64 "","Cloud","LongEnvironmentName"
+field 0276E774 59120000 u16 0
+field 0276E774 59120002 u16 0,1,3
+real 0276D95C
+field 0276E774 59140068 u32 0x59170000
+field 0276E774 59140070 s32 1,8,32
+field 0276E774 59140094 s32 -3,-2,-1,0,1
+field 0276E774 5914014C u32 0x59170040
+field 0276E774 59140154 s32 1,8,32
+field 0276E774 59140178 s32 -3,-2,-1,0,1
+field 0276E774 59140230 u32 0x59170080
+field 0276E774 59140238 s32 1,8,32
+field 0276E774 5914025C s32 -3,-2,-1,0,1
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

@@ -1,0 +1,410 @@
+# Actualcanonicalmathstartup defaults beforeOWNdefaultStoredView initializer. Earlieruninitializeddefault witness retained.
+# readable-scope: 027C2698
+# Concrete hdErrorViewer original placement constructor, corrected Lead10:53.
+src wwhd_src/agl/RenderRecording.cpp
+src wwhd_src/agl/VertexInput.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/ViewTypeIdentity.cpp
+src wwhd_src/sead/ViewTransform.cpp
+src wwhd_src/sead/RenderInlineInstances.cpp
+src wwhd_src/agl/RenderQueue.cpp
+src wwhd_src/agl/CaptureImage.cpp
+src wwhd_src/agl/PixelTransfer.cpp
+src wwhd_src/agl/RenderLayer.cpp
+real 027340D8
+real 02734248
+real 027342B4
+real 02873D70
+real 02873FD0
+real 027C3280
+real 027C2DF0
+real 0274F358
+real 02752A84
+real 0274DEA8
+real 0274E1C8
+real 0274E87C
+real 02760084
+real 028E90D4
+real 02733EF4
+real 02733EFC
+real 02733FC8
+real 02734028
+arg! 027C2698 r3 0x6A800000
+arg! 027C2698 r4 1,2,3
+field 027C2698 6A200000 u32 0x6A200100
+field 027C2698 6A200004 u32 0x10169EEC
+field 027C2698 6A200100 u8 0
+real 0273B310
+real 0273B7B4
+real 02752C74
+real 02752E60
+real 02753000
+real 0275315C
+real 0275320C
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 02753D6C
+real 02753F84
+real 02754018
+real 027540AC
+real 027541B8
+real 02757C10
+real 027581F4
+real 02758414
+real 02758724
+real 027587B4
+real 027588DC
+real 02758AAC
+real 02758B80
+real 027601BC
+real 027601F0
+real 027D76D4
+stable 6A000000 0x100000
+nestedret 02756140 0x6A000000
+ret! 02756140 0x6A000000
+setup 027C2698 0275315C r3=0x6A000000 r4=0x100000 r5=0x6A200000 r6=0
+setup 027C2698 02756E3C
+setup 027C2698 02757190
+setup 027C2698 027C48E0
+setup 027C2698 02759B40
+setup 027C2698 02734B68 r3=0x6A800000
+
+real 0275589C
+real 02752F10
+real 027537B8
+real 027536B0
+real 0273B2F0
+real 02752D8C
+real 0274D6B4
+real 0274DE2C
+real 028F521C
+real 0274CCC4
+real 027C49B8
+real 027C48E0
+mockset C0009990 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+
+real 02752B0C
+real 027600EC
+real 028F026C
+real 028F43F8
+real 028F4BE0
+real 028F423C
+real 025155D8
+real 028E8D4C
+real 0274D114
+real 02753628
+
+real 028F5E98
+real 028E8E10
+
+real 0273B310
+real 0273B7B4
+real 02752C74
+real 02752E60
+real 02753000
+real 0275315C
+real 0275320C
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 02753D6C
+real 02753F84
+real 02754018
+real 027540AC
+real 027541B8
+real 02757C10
+real 027581F4
+real 02758414
+real 02758724
+real 027587B4
+real 027588DC
+real 02758AAC
+real 02758B80
+real 027601BC
+real 027601F0
+real 027D76D4
+real 0275589C
+real 02752F10
+real 027537B8
+real 027536B0
+real 0273B2F0
+real 02752D8C
+real 02752B0C
+real 027600EC
+real 02753628
+real 02758B5C
+mockset C000A858 r3 r4 r5
+real 028F521C
+real 02752A84
+real 027C23F8
+real 027D56E4
+real 027D57A8
+real 027D57B8
+real 027D5818
+real 027D58B4
+real 027D58C8
+real 027D58CC
+real 027D58E4
+real 027D58F8
+real 0273B560
+real 0273B584
+real 0273B5DC
+real 0273B624
+real 0273B6AC
+real 0273B94C
+real 0273ADAC
+real 0273AE48
+real 0273AEC4
+real 0273B0D4
+real 028EFFD0
+real 028EFE58
+real 028F0020
+real 027C4BF0
+real 027C4BF4
+real 027C4BF8
+real 027C4BFC
+mockset C0009990 r3 r4 r5
+real 0274DEA8
+real 0274E1C8
+real 0274E87C
+real 0274F358
+real 02752A84
+real 02759B40
+real 02759B98
+real 02760084
+real 027B6CB8
+real 027B6E64
+real 027B95B4
+real 027BE6B8
+real 027BF144
+real 027BF1A4
+real 027BF1E8
+real 027BF244
+real 027BF3FC
+real 027BF598
+real 027BF730
+real 027BF734
+real 027BF7E8
+real 027BF880
+real 027BF8DC
+real 027BF960
+real 027BFA24
+real 027BFA9C
+real 027BFB60
+real 027BFC74
+real 027BFE5C
+real 027BFEF4
+real 027BFEF8
+real 027BFF40
+real 027BFF54
+real 027BFF68
+real 027BFF80
+real 027BFF9C
+real 027BFFB4
+real 027C0574
+real 027C057C
+real 027C0588
+real 027C059C
+real 027C05A0
+real 027C05C8
+real 027C05F4
+real 027C0680
+real 027C06C4
+real 027C0720
+real 027C073C
+real 027C077C
+real 027C07E4
+real 027C07F8
+real 027C07FC
+real 027C0804
+real 027C087C
+real 027C088C
+real 027C0A60
+real 027C0B00
+real 027C0CEC
+real 027C106C
+real 027C1834
+real 027C1848
+real 027C1A24
+real 027C1A60
+real 027C1AD8
+real 027C1C64
+real 027C1CBC
+real 027C1D0C
+real 027C1DD8
+real 027C1E48
+real 027C1F70
+real 027C2008
+real 027C2060
+real 027C211C
+real 027C21C4
+real 027C22D0
+real 027C2338
+real 027C234C
+real 027C2378
+real 027C237C
+real 027C2390
+real 027C23D4
+real 027C23F8
+real 027C2450
+real 027C24E4
+real 027C2560
+real 027C2580
+real 027C25AC
+real 027C2698
+real 027C2DF0
+real 027C3280
+real 027C33C0
+real 027C2698
+real 027C3804
+real 027C424C
+real 027C4538
+real 027C45E8
+real 027C48E0
+real 027D5948
+real 027D5C48
+real 027D5E5C
+real 027D5EE8
+real 027D6070
+real 027D60D4
+real 027D646C
+real 027D72B8
+real 027D76B8
+real 027D778C
+real 027D7920
+real 027DA694
+real 027C3280
+real 027C2DF0
+real 0274F358
+real 02752A84
+real 0274DEA8
+real 0274E1C8
+real 0274E87C
+real 02760084
+real 028E90D4
+real 0273B310
+real 0273B7B4
+real 02752C74
+real 02752E60
+real 02753000
+real 0275315C
+real 0275320C
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 02753D6C
+real 02753F84
+real 02754018
+real 027540AC
+real 027541B8
+real 02757C10
+real 027581F4
+real 02758414
+real 02758724
+real 027587B4
+real 027588DC
+real 02758AAC
+real 02758B80
+real 027601BC
+real 027601F0
+real 027D76D4
+real 0275589C
+real 02752F10
+real 027537B8
+real 027536B0
+real 0273B2F0
+real 02752D8C
+real 0274D6B4
+real 0274DE2C
+real 028F521C
+real 0274CCC4
+real 027C49B8
+real 027C48E0
+real 02752B0C
+real 027600EC
+real 028F026C
+real 028F43F8
+real 028F4BE0
+real 028F423C
+real 025155D8
+real 028E8D4C
+real 0274D114
+real 02753628
+real 028F5E98
+real 028E8E10
+real 027B958C
+real 027D5064
+real 027D78FC
+real 02759C10
+real 0274F53C
+real 027584E0
+real 027B954C
+real 027D56A4
+real 02760DE8
+real 02759BA0
+real 028F1748
+real 028F11BC
+real 028F171C
+real 028F0578
+real 028F05A0
+real 028F099C
+real 028F0DF4
+real 028F10B8
+real 028F1158
+real 028F5C88
+real 028F61E8
+real 028F6240
+real 028F03F4
+real 028F0DBC
+real 028F5DE8
+real 028F5DFC
+real 02734B68
+real 02734BE4
+real 02734F18
+real 02734F20
+real 02734FC4
+real 02759C28
+real 027C4A38
+real 027C4C5C
+real 027C49BC
+real 0274D09C
+real 0274EC54
+real 0274ECCC
+callcr 02759C28 6
+callcr 027C4A38 6
+alloc 0273AD10 r3 0x6B000000 32
+allocnested 0273AD10
+
+real 02734D80
+real 0274CA7C
+real 0274CB24
+real 0274CAEC
+real 028F067C
+real 028F1904
+real 028F605C
+real 028F60F8
+real 028F613C
+real 028F6190
+real 028F5E54
+setup 027C2698 027C356C r3=0x6A800000 r4=0x6A000000
+real 027C356C
+field 027C2698 101FD6A0 u32 0
+field 027C2698 101FD6A4 u32 0
+field 027C2698 101FD6A8 u32 0
+field 027C2698 101FD6AC u32 0
+field 027C2698 101FD6B0 u32 0
+field 027C2698 101FD6B4 u32 0
+field 027C2698 101FD6B8 u32 0
+field 027C2698 101FD6BC u32 0
+real 02756E3C
+real 0275713C
+real 02757190
+real 02757644
+# The constructed layer keeps its debug-text array (prepareResources setup) across callbacks.
+stable 6A8003B4 8

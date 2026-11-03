@@ -1,0 +1,15 @@
+# verify: -only 027D7BE4 -strictnan -calleesp
+# AGL#19 OOM profile: allocateGeometryGroup 027D7BE4 on a constructed shadow-context workspace (original 027C70A8) whose
+# heap (original 0275315C, 0x980 bytes, free memory holding old data) runs out part-way through the 16 lists: the slot
+# array and the first lists get their 0xC0 point buffers, then point buffers fail while 0xC list objects still fit (the
+# list keeps the constructor's NULL data and zero capacity), then list objects fail too (NULL slots). Heap = the
+# context heap or NULL (the current heap, answered with the same heap).
+src wwhd_src/agl/ProjectionWorkspace.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+include lib2_agl_19_jobs_geometry_oom_fixture.txt
+setup 027D7BE4 027C70A8 r3=0x5F500000
+arg! 027D7BE4 r3 0x5F500084,0x5F500090,0x5F50009C
+arg! 027D7BE4 r4 0x6A000000,0
+ret! 02756140 0x6A000000
+nestedret 02756140 0x6A000000

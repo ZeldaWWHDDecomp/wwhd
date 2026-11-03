@@ -1,0 +1,5 @@
+# TYPE-DOMAIN: shipped provider count3; public IndexBufferLayout::setStorage count0.
+# Original provider/storage/format retained; no produced-field poke. Exact produced layout address validated separately.
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_lifecycle_two_entries_render_index_type.txt
+postsetup 0277AD60 027B54E0 r3=0x6A8386D4 r4=*(*101F8DE4+0x324) r5=*(*101F8DE4+0x31C) r6=0

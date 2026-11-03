@@ -1,0 +1,6 @@
+# Both reserved thread-key guard states, including existing guards.
+# verify: -only 0275FCFC -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+field * 101F8BA0 u8 0,1
+field * 101F8BA1 u8 0,1

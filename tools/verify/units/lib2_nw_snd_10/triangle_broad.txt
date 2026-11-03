@@ -1,0 +1,3 @@
+# verify: -only 028A58CC -calleesp
+# Broad float/nonfinite phase inputs, including conversion-slot indexing.
+src wwhd_src/nw/snd/Modulator.cpp

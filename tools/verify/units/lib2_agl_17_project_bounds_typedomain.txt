@@ -1,0 +1,221 @@
+# Type-domain companion (AGL#17 027CA37C projectBounds / 027CA7D0 projectSphereBounds): shipped but never run. 027C93A8 installs
+# them as the context bound methods only when the light input has +0x70 == 0, and that byte is only ever written 1 (0278D870, 0278D418;
+# producer enumeration in the archive, mutation/3819-producers.md). Here the light input (a plain 0x74 struct, no vtable) is a type-domain
+# instance with +0x70 = 0; its +0 and +0x30 come from the only writers of those fields (look-at 02791D00, scale 028E8B04(1,1,-1), as
+# setDirection 0278D2E8 does), and the original updateShadowView 027C93A8 installs the methods and copies the matrices into the context.
+# The light look-at (eye 5F516030, direction 5F51603C, up 5F516048) takes several orientations, including one whose first row is
+# (+0, -0.7071, -0.7071, -0) (eye at the origin, up = +X), the exact-zero case for the corner-order (+0/-0) mutants.
+# verify: -only 027CA37C,027CA7D0 -strictnan -calleesp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+real 02756E3C 02757190 02759B40 02759B98 0273B200 0273B264
+real 027A84B8 0279E674 0279E618 0279E57C 027A861C 0279F1BC 027A8C80
+real 027D7E04 027D7D94 028EFFD0 028F0164 02791BE4 027CA91C 027CA978 027CA918
+mockmove C0009988 r3 r4 r5
+stable 104A0CD8 8
+stable 104A0908 188
+stable 104A041C 48
+stable 104A048C 64
+stable 101F8AE5 1
+stable 1049FBA0 1024
+
+real 028EFE58 028F61E4 028F623C
+
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+field * 104A030C s32 1
+field * 104A0310 s32 1
+field * 104A0314 u32 0x5B007000
+field * 5B007000 u32 0x6A000000
+field * 104A0364 s32 0
+fill * 6A000000 512 0
+fill * 5B006000 8 0
+field * 5B006000 u32 0x5B006100
+field * 5B006004 u32 0x1016A368
+fill * 5B006100 32 0
+fieldstr * 5B006100 32 "fixture-heap"
+real 0273B2D0 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02754564 02754618
+real 027D7E04 027D7D94 028EFFD0 028F0164 027D7D40 027D7BE4 0273B050
+stable 6A000000 0x100000
+stable 101F8B4C 4
+stable 101F8B94 4
+stable 104A030C 12
+stable 104A0364 12
+stable 5B007000 4
+real 028EFE58 028F61E4 028F623C
+
+real 027C70A8 027CA82C 027D7F44 027D7EA8 027DA23C 02791C68 02791C90
+real 028E89B4 0272D680 028E91EC 028E8F64 025155D8 028E8E10 02791D00 028E8D4C
+real 02525C94 027D9FD4 0274EDD4 028E892C
+real 028E8AB8 028E8B04 0274E594 0274D80C 0274E69C
+stable 5F500010 64
+mockfield C00088C8 r3+0x0 u32 0,0
+mockfield C00088C8 r3+0x4 u32 0,0
+mockfield C00088C8 r3+0x8 u32 0,0
+mockfield C00088C8 r3+0xC u32 0,0
+mockfield C00088C8 r3+0x10 u32 0,0
+mockfield C00088C8 r3+0x14 u32 0,0
+mockfield C00088C8 r3+0x18 u32 0,0
+mockfield C00088C8 r3+0x1C u32 0,0
+mockfield C00088C8 r3+0x20 u32 0,0
+mockfield C00088C8 r3+0x24 u32 0,0
+mockfield C00088C8 r3+0x28 u32 0,0
+mockfield C00088C8 r3+0x2C u32 0,0
+mockfield C00088C8 r3+0x30 u32 0,0
+mockfield C00088C8 r3+0x34 u32 0,0
+mockfield C00088C8 r3+0x38 u32 0,0
+mockfield C00088C8 r3+0x3C u32 0,0
+mockfield C00088C8 r3+0x40 u32 0,0
+mockfield C00088C8 r3+0x44 u32 0,0
+mockfield C00088C8 r3+0x48 u32 0,0
+mockfield C00088C8 r3+0x4C u32 0,0
+mockfield C00088C8 r3+0x50 u32 0,0
+mockfield C00088C8 r3+0x54 u32 0,0
+mockfield C00088C8 r3+0x58 u32 0,0
+mockfield C00088C8 r3+0x5C u32 0,0
+mockfield C00088C8 r3+0x60 u32 0,0
+mockfield C00088C8 r3+0x64 u32 0,0
+mockfield C00088C8 r3+0x68 u32 0,0
+mockfield C00088C8 r3+0x6C u32 0,0
+mockfield C00088C8 r3+0x70 u32 0,0
+mockfield C00088C8 r3+0x74 u32 0,0
+mockfield C00088C8 r3+0x78 u32 0,0
+mockfield C00088C8 r3+0x7C u32 0,0
+mockfield C00088C8 r3+0x80 u32 0,0
+mockfield C00088C8 r3+0x84 u32 0,0
+mockfield C00088C8 r3+0x88 u32 0,0
+mockfield C00088C8 r3+0x8C u32 0,0
+mockfield C00088C8 r3+0x90 u32 0,0
+mockfield C00088C8 r3+0x94 u32 0,0
+mockfield C00088C8 r3+0x98 u32 0,0
+mockfield C00088C8 r3+0x9C u32 0,0
+mockfield C00088C8 r3+0xA0 u32 0,0
+mockfield C00088C8 r3+0xA4 u32 0,0
+mockfield C00088C8 r3+0xA8 u32 0,0
+mockfield C00088C8 r3+0xAC u32 0,0
+mockfield C00088C8 r3+0xB0 u32 0,0
+mockfield C00088C8 r3+0xB4 u32 0,0
+mockfield C00088C8 r3+0xB8 u32 0,0
+mockfield C00088C8 r3+0xBC u32 0,0
+nestedmockfield C00088C8
+callee C00088C8 r3=out192 r4=0
+
+real 0274CCB0 0274CCC4 028E90D4 027CAA2C
+
+real 0274D6B4 0274D750
+
+real 0274DA08 0274E6B0
+
+real 028E8970
+real 027D85E8 027C81E8 027CAAB0
+real 0278D434 02791C90 02791D00 02791C68 025155D8 028E8B04
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x5B006000 r6=0
+setup * 02756E3C
+setup * 02757190
+setup * 02759B40
+setup * 0273B200
+setup * 027CA82C
+setup * 027C70A8 r3=0x5F500000
+setup * 027D7D40 r3=0x5F500084 r4=0x6A000000
+fill * 5F516000 256 0
+field * 5F516000 f32 0
+field * 5F516004 f32 5
+field * 5F516008 f32 20
+field * 5F51600C f32 0,0.6,-0.3,2
+field * 5F516010 f32 0
+field * 5F516014 f32 -0.8
+field * 5F516018 f32 0
+field * 5F51601C f32 1
+field * 5F516020 f32 0
+field * 5F516030 f32 0
+field * 5F516034 f32 40,0
+field * 5F516038 f32 0
+field * 5F51603C f32 0
+field * 5F516040 f32 -1,1
+field * 5F516044 f32 0,-1
+field * 5F516048 f32 0,1
+field * 5F51604C f32 0
+field * 5F516050 f32 -1,0
+stable 5F516000 256
+fill * 5F517000 128 0
+stable 5F517000 128
+setup * 02791D00 r3=0x5F511000 r4=0x5F516000 r5=0x5F51600C r6=0x5F516018
+setup * 02791D00 r3=0x5F517000 r4=0x5F516030 r5=0x5F51603C r6=0x5F516048
+setup * 028E8B04 r3=0x5F517030 f1=1 f2=1 f3=-1
+fill * 5F500000 1460 165
+fill * 5F511000 48 0
+stable 5F511000 48
+fill * 5F515000 64 165
+
+stackfill
+
+real 027C8270 027C8ABC 027C8698 027C87DC 027C90C0 0278D668
+real 027C93A8
+field * 5F517070 u8 0
+field * 101F9600 u8 1
+field * 101F9601 u8 1
+field * 101F9602 u8 1
+field * 101F9603 u8 1
+stable 101F9600 4
+
+# install through the original updateShadowView (crop disabled), then test the installed methods on that context
+# camera projection (populate input of updateShadowView) from the original producers: ctor 027389F8, PerspectiveProjection::set 0274E04C, matrix 0274D83C
+real 0274E04C 027389F8 0274DEA8 0274D6B4 028F5E98 0274E7A0 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 0274DA08 028E8970
+stable 101F8B1C 12
+stable 5F530000 0xE4
+fill * 5F531000 16 0
+field * 5F531000 u32 0x3F490FDB
+field * 5F531004 u32 0x3FE38E39
+stable 5F531000 16
+setup * 027389F8 r3=0x5F530000
+setup * 0274E04C r3=0x5F530000 f1=0.05 f2=60 f3=*5F531000 f4=*5F531004
+setup * 0274D83C r3=0x5F530000
+setup * 027C93A8 r3=0x5F500000 r4=0x5F517000 r5=0x5F511000 r6=0x5F530044 f1=0.05 f2=60 f3=0.05
+fill * 5F520000 64 0
+field * 5F520000 f32 -20,-3,-1,0,0.5
+field * 5F520004 f32 -20,-3,-1,0,0.5,45
+field * 5F520008 f32 -20,-3,-1,0,0.5
+field * 5F52000C f32 0,0.5,2,10,25
+field * 5F520010 f32 0,0.5,2,10,25,60
+field * 5F520014 f32 0,0.5,2,10,25
+stable 5F520000 64
+fill * 5F521000 24 165
+arg! 027CA37C r3 0x5F500000
+arg! 027CA37C r4 0x5F521000
+arg! 027CA37C r5 0x5F520000
+arg! 027CA7D0 r3 0x5F500000
+arg! 027CA7D0 r4 0x5F521000
+arg! 027CA7D0 r5 0x5F520020
+fill * 5F520020 16 0
+field * 5F520020 f32 -5,0,3
+field * 5F520024 f32 -5,0,3,50
+field * 5F520028 f32 -5,0,3
+field * 5F52002C f32 0,0.5,4,30
+final 027CA37C 5F521000 18
+final 027CA7D0 5F521000 18

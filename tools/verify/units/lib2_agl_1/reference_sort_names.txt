@@ -1,0 +1,59 @@
+# Heap sort with the real environment comparator and immutable, disjoint named objects.
+# verify: -strictnan -calleesp
+src wwhd_src/agl/EnvironmentReferences.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 0276FA58 r3 0x58FC0000
+arg! 0276FA58 r4 0x0276F6DC
+arg! 0276FA58 r5 0
+arg! 0276FA58 r6 7
+field 0276FA58 r3+0 s32 8
+field 0276FA58 r3+4 u32 0x58FA0000
+real 0276F6DC
+real 0276D8DC
+real 0276F2E0
+real 02770710
+callee 0276F6DC r3=4 r4=4
+field 0276FA58 58FA0000 u32 0,0x58FD0000
+field 0276FA58 58FD0058 u32 0x10160030
+field 0276FA58 58FD0080 u32 0x58FE0000
+field 0276FA58 58FD0084 u32 0x101607DC
+fieldstr 0276FA58 58FE0000 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+field 0276FA58 58FA0004 u32 0,0x58FD0400
+field 0276FA58 58FD0458 u32 0x10160030
+field 0276FA58 58FD0480 u32 0x58FE0040
+field 0276FA58 58FD0484 u32 0x101607DC
+fieldstr 0276FA58 58FE0040 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+field 0276FA58 58FA0008 u32 0,0x58FD0800
+field 0276FA58 58FD0858 u32 0x10160030
+field 0276FA58 58FD0880 u32 0x58FE0080
+field 0276FA58 58FD0884 u32 0x101607DC
+fieldstr 0276FA58 58FE0080 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+field 0276FA58 58FA000C u32 0,0x58FD0C00
+field 0276FA58 58FD0C58 u32 0x10160030
+field 0276FA58 58FD0C80 u32 0x58FE00C0
+field 0276FA58 58FD0C84 u32 0x101607DC
+fieldstr 0276FA58 58FE00C0 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+field 0276FA58 58FA0010 u32 0,0x58FD1000
+field 0276FA58 58FD1058 u32 0x10160030
+field 0276FA58 58FD1080 u32 0x58FE0100
+field 0276FA58 58FD1084 u32 0x101607DC
+fieldstr 0276FA58 58FE0100 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+field 0276FA58 58FA0014 u32 0,0x58FD1400
+field 0276FA58 58FD1458 u32 0x10160030
+field 0276FA58 58FD1480 u32 0x58FE0140
+field 0276FA58 58FD1484 u32 0x101607DC
+fieldstr 0276FA58 58FE0140 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+field 0276FA58 58FA0018 u32 0,0x58FD1800
+field 0276FA58 58FD1858 u32 0x10160030
+field 0276FA58 58FD1880 u32 0x58FE0180
+field 0276FA58 58FD1884 u32 0x101607DC
+fieldstr 0276FA58 58FE0180 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+field 0276FA58 58FA001C u32 0,0x58FD1C00
+field 0276FA58 58FD1C58 u32 0x10160030
+field 0276FA58 58FD1C80 u32 0x58FE01C0
+field 0276FA58 58FD1C84 u32 0x101607DC
+fieldstr 0276FA58 58FE01C0 64 "same","Alpha","AlphaLong","Beta","alpha","\x80A"
+# The observed table slot at byte0x84 returns the group text at object+0x80.
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

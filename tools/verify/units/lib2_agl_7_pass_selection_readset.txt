@@ -1,0 +1,31 @@
+# Complete ordinary ShadowPrePass borrowed scalar readset only; no attachment/renderer/lifecycle claim.
+# Own0278FB08 reads five initialized scalar members, no calls/pointers/stores; enum/boolean inputs bounded.
+# verify: -only 0278FB08 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+arg! 0278FB08 r3 0x56600000
+fill 0278FB08 56600000 0x5C4 0
+field 0278FB08 56600454 u32 0,1,2
+field 0278FB08 566001D4 u32 0,1,2,3
+field 0278FB08 56600594 u8 0,1
+field 0278FB08 566005A4 u8 0,1
+field 0278FB08 56600494 u8 0,1
+final 0278FB08 56600000 0x5C4

@@ -1,0 +1,9 @@
+# Caller-valid 027CC78C uniform-upload companion. The selected shipped program
+# retains its published vertex/pixel locations and absent geometry location.
+# These directives observe the existing CPU uniform payload at each original
+# stage-upload boundary; no location, program, or buffer field is fabricated.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+observearg 028FAC78 r4+0 16
+observearg 028FADB0 r4+0 16
+observearg 028FAC20 r4+0 16

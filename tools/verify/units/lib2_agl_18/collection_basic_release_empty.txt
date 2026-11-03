@@ -1,0 +1,11 @@
+# Basic collection release on its real constructed-empty lifecycle state.
+# The populated and allocation-failure cleanup paths use their dedicated profiles.
+# verify: -only 027D081C -strictnan -calleesp -footprint
+src wwhd_src/agl/RenderSelectionCleanup.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027D081C r3 0x59000000
+fill 027D081C r3 0x114 0
+field 027D081C r3 u32 0x1016AD80
+setup 027D081C 027BF734 r3=0x5900001C
+stable 1016AD80 0x130
+real 027BF734

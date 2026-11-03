@@ -1,0 +1,63 @@
+# AGL#19 banks: TYPE-DOMAIN profile "spatial count via 027D2B18": the record walks of
+# the spatial light collection (update 027D240C, prepare 027D2504, refresh 027D26C0, apply 027D27BC, applyWithContext
+# 027D2988). In the shipped game the spatial count is always 0 (hdRenderCommandMgr_c passes mOverlayCount, only ever 0);
+# the shipped rows (count 0) are in lib2_agl_19_banks_prepass_accessors' fixture state and the main part. Here the
+# collection LightPrepass::configure builds (fixture lib2_agl_19_banks_prepass_fixture.txt: 0x6A87F65C, 256 records as
+# the spatial initializeRecord hook leaves them: flags 0xB, mask ~0, empty bounds; one value each) gets N in {1, 2, 256}
+# through its own setCount (original); record 1 gets mask 0 through its own setRecordEnabled. The view is the prepass's
+# view 0 after updateViewInputs (as in lib2_agl_19_banks_paired_walks.txt), which also runs the collections' prepare.
+# Record bounds are the initializer's (no producer writes them); prepareValue 027CEA18 tests them against the view.
+# The draw hook 027CF2B0
+# (AGL#18) stays a mock: the walk only forwards (record, valueIndex, context, output); those are compared.
+# verify: -only 027D240C,027D2504,027D26C0,027D27BC,027D2988 -strictnan -calleesp
+src wwhd_src/agl/LightCollectionPasses.cpp
+src wwhd_src/agl/LightCollectionAccessors.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+real 027D31B4 027D2504 027D1110 027D1E1C 027D2BD4 027D3898 027D37E0 027D3848 027D3880 027D3884 027D3888 027D388C 027D3890 027D3894 027D2B20 027D2B88 027D2BBC 027D2BC0 027D2BC4 027D2BC8 027D2BCC 027D2BD0 027D37D0 027D37D8 027D37C8 027B1548 027B00D0 0278CB8C 0278D07C 027AFEEC 027CF8B4 027CF8DC 027CFA10 0274CCC4 0274CCB0 027D4E84 027D4D30 02759A48
+real 028E89B4 0272D680 028E91EC 028E8F64 025155D8 028E8E10 02791D00 028E8D4C 02791C90 02791C68 028E8B04
+real 0274E04C 027389F8 0274DEA8 0274D6B4 028F5E98 0274E7A0 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 0274DA08 028E8970
+real 027CE130 027CEA18 027CEB24 027D2B18
+# camera: eye (0, 5, 20) looking along (0, -5, -20) at the origin (02791D00 takes eye, direction, up), up +y; projection near 0.1, far 1000, fovy pi/4 or pi/3, aspect 16/9 or 4/3
+fill * 5A021000 0x40 0
+field * 5A021004 f32 5
+field * 5A021008 f32 20
+field * 5A021010 f32 -5
+field * 5A021014 f32 -20
+field * 5A02101C f32 1
+stable 5A021000 0x40
+fill * 5A020000 0x40 0
+stable 5A020000 0x40
+setup * 02791D00 r3=0x5A020000 r4=0x5A021000 r5=0x5A02100C r6=0x5A021018
+fill * 5A030000 0xE4 0
+stable 5A030000 0xE4
+stable 101F8B1C 12
+setup * 027389F8 r3=0x5A030000
+fill * 5A031000 16 0
+field * 5A031000 u32 0x3F490FDB,0x3F860A92
+field * 5A031004 u32 0x3FE38E39,0x3FAAAAAB
+stable 5A031000 16
+fill * 5A040000 8 0
+stable 5A040000 8
+fill * 5A032000 4 0
+field * 5A032000 u32 1,2,256
+stable 5A032000 4
+postsetup * 027D2B18 r3=0x6A87F65C r4=*5A032000
+postsetup * 027D2B44 r3=0x6A87F65C r4=1 r5=0
+postsetup * 0274E04C r3=0x5A030000 f1=0.1 f2=1000 f3=*5A031000 f4=*5A031004
+postsetup * 0274D83C r3=0x5A030000
+postsetup * 027B00D0 r3=0x5A000000 r4=0 r5=0x5A020000 r6=0x5A030044 r7=0x5A040000 f1=0.1 f2=1000 f3=*5A031000 f4=*5A031004
+arg! 027D240C r3 0x6A87F65C
+arg! 027D26C0 r3 0x6A87F65C
+arg! 027D2504 r3 0x6A87F65C
+arg! 027D2504 r4 0
+arg! 027D2504 r5 0x6A87E2A0
+arg! 027D2504 r6 0,1
+arg! 027D27BC r3 0x6A87F65C
+arg! 027D27BC r4 0
+arg! 027D27BC r5 0x6A87E2A0
+arg! 027D27BC r6 0,1
+arg! 027D2988 r3 0x6A87F65C
+arg! 027D2988 r4 0
+arg! 027D2988 r5 0x6A87E2A0
+arg! 027D2988 r6 0x5A060000
+fill 027D2988 5A060000 0x40 0

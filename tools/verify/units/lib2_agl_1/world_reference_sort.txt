@@ -1,0 +1,16 @@
+# AGL#1 reference sorting on the original world: the manager's reference buffer after the original initialize (eleven of
+# the game's objects: ambient light, eight point lights, fog, projector) and the game's first blend (which gives the objects
+# their names from env.baglenv), sorted by the original name comparator 0276F6DC,
+# per class range as sortClassRange (0276F814) does, and over other in-range spans of the same buffer.
+# verify: -only 0276FA58,0276F814,0276F6DC -strictnan -calleesp
+include lib2_agl_1/world_manager_blend.txt
+real 0276F6DC 0276FA58 02770714 0276B710
+setup * 0276B710 r3=0x59E00000 r4=0x5E001010 r5=0x5E001014 r6=0xFFFFFFFF f1=1.0
+arg! 0276FA58 r3 0x59E00010
+arg! 0276FA58 r4 0x0276F6DC
+arg! 0276FA58 r5 0,1,1,2,9
+arg! 0276FA58 r6 8,8,10,5,10,0
+arg! 0276F814 r3 0x59E00000
+arg! 0276F814 r4 0,1,2,3,4,5,6
+arg! 0276F6DC r3 0x6A87E2A0,0x6A87E2A4,0x6A87E2A8,0x6A87E2C0,0x6A87E2C4,0x6A87E2C8
+arg! 0276F6DC r4 0x6A87E2C8,0x6A87E2A8,0x6A87E2A4,0x6A87E2C4,0x6A87E2A0,0x6A87E2C0

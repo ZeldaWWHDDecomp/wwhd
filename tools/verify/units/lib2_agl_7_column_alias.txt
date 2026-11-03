@@ -1,0 +1,42 @@
+# Streamed column copy across all ten aligned internal Vector3 views and external storage.
+# verify: -only 0278D234 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+stackfill
+arg! 0278D234 r3 0x56300000,0x56300004,0x56300008,0x5630000C,0x56300010,0x56300014,0x56300018,0x5630001C,0x56300020,0x56300024,0x56310000
+arg! 0278D234 r4 0x56300000
+arg! 0278D234 r5 0,1,2,3
+fill 0278D234 56300000 0x30 0
+fill 0278D234 56310000 0xC 0xA5
+final 0278D234 56300000 30
+final 0278D234 56310000 C
+field 0278D234 56300000 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300004 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300008 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 5630000C u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300010 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300014 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300018 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 5630001C u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300020 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300024 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 56300028 u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF
+field 0278D234 5630002C u32 0,1,0x80000000,0x3F800000,0x7F800001,0x7FC12345,0xFFFFFFFF

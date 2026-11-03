@@ -1,0 +1,40 @@
+# Explicit opaque derived-heap allocation effect registers its private Thread subobject during allocation.
+# The field writes equal one coherent insert-before/count++/owner assignment; real detach/insert helpers are used afterward.
+# This is a declared transitive heap-callback model, not an actual game allocator footprint claim.
+# verify: -only 027607C0 -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+real 0273B310
+real 0273B2F0
+arg! 027607C0 r3 0x60140100
+arg! 027607C0 r4 0x60143000
+arg! 027607C0 r5 0x60140000
+arg! 027607C0 r9 32
+arg! 027607C0 r10 1
+field * 60143004 u32 0x60144000
+field * 101F8B94 u32 0x60100000
+field * 60100014 u32 0x60100014
+field * 60100018 u32 0x60100014
+field * 6010001C u32 0
+field * 60100020 u32 0
+stable 60100000 0x28
+stable 101F8B94 4
+stable 60140000 0x200
+stable 60143000 8
+stable 60144000 32
+ret! 0273B0D4 0x61300000
+ret! 0273B050 0
+stable 61300000 32
+mockglobal 0273B0D4 60140160 u32 0x60100014
+mockglobal 0273B0D4 60140164 u32 0x60100014
+mockglobal 0273B0D4 6014016C u32 0x60100014
+mockglobal 0273B0D4 60100014 u32 0x60140160
+mockglobal 0273B0D4 60100018 u32 0x60140160
+mockglobal 0273B0D4 6010001C u32 1
+
+# Declared derived-heap callback layout. The mocked wrapper projects its explicit transitive effects;
+# the callback is not claimed executed/observed in this profile.
+callee 0F003000 fixture r3=heap512 r4=0 r5=0
+field * 6014000C u32 0x60142000
+field * 60142034 u32 0x0F003000
+stable 60142000 0x38

@@ -1,0 +1,39 @@
+# Lead01:32 fixed-baseline recheck complete: all58 historical detections remain differences at their recorded n on seeds1/7 (dw-fixed-direction*-input1/7).
+# Direction source revalidation with production owner flags/index and finite nonzero axes.
+# Y is finite and nonzero, including underflow/overflow magnitudes; X/Z include exact axis thresholds.
+# Positive, zero and negative scale/falloff values exercise both clamp outcomes.
+# Scope: original-initialized direction record prefix with zero resources; full collection/resource lifetimes remain separate.
+# Shared owner comes from D11D4 +4 under Lead23:40; its constructor sets index1 per Lead19:44.
+# No immutability mask is asserted for the separate direction table or margin global.
+# verify: -only 027CCEB8 -strictnan -calleesp
+stackfill
+src wwhd_src/agl/DrawResourceDirection.cpp
+src wwhd_src/agl/DrawResourceInitialization.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+real 02757190 027CCC80 025155D8 028E8E10
+field 027CCEB8 r4+0x58 u32 0
+field 027CCEB8 r4+0x5C u32 0
+field 027CCEB8 r3+4 u32 0x5A000000
+field 027CCEB8 5A000004 u32 0x00164120
+field 027CCEB8 5A000038 u32 1
+setup 027CCEB8 02757190
+setup 027CCEB8 027CCC80 r3=0x58000000 r4=0x58100000 r5=0
+poke 027CCEB8 r4+0x14 f32 0,1,-1,5e-5,-5e-5,1e-4,-1e-4,2e-4,-2e-4
+poke 027CCEB8 r4+0x18 f32 1,-1,1e-30,-1e-30,1e30,-1e30
+poke 027CCEB8 r4+0x1C f32 0,1,-1,5e-5,-5e-5,1e-4,-1e-4,2e-4,-2e-4
+poke 027CCEB8 r4+0x48 u32 0,0xBF800000,0x3F800000
+poke 027CCEB8 r4+0x4C u32 0,0xBF800000,0x3F000000
+# Mutation review: 123 exact direction variants; source and normal outputs retained under build/agl18/direction-*.
+# Detected 58, compile-invalid34, EQ27, runtime-invalid2, synchronization residual2, OPEN0.
+# Extra detections:18/74/93 finite-magnitude edges;33/34/44/72/85 stackfill;21 owner option;
+# 2/7/12/30/46/48/50/82 exact normalized thresholds;88 Lead22:00 magnitudes confirmed at10k seeds1/7.
+# EQ independent operations, no intervening call/dependency:8,16,17,24,40,47,60,66,76,83,86,89,96,99,100,108,118,120.
+# EQ84 initializer overwritten whenever used;121 repeated subtraction differs only in signed zero, immaterial to comparisons.
+# Qualified EQ43/51/61/78: reference axisY is +/-1; the normalized-Y difference cannot equal exact1e-4f on its f32 lattice.
+# Qualified EQ79/95: perturb Y is near +/-1 or unordered, so zero-sign boundary changes cannot affect the valid branch.
+# Runtime-invalid31: copiedAxis15..20 overlaps saved-r30 at20;98: negativeAxis9..14 overlaps live copiedAxis14..1F.
+# Lead21:40 confirms fixed frame0x48/object-slot violations; no EQ/D credit for31/98.
+# Synchronization0/94 remain untested model residuals, no EQ/D credit; source fence retained (Lead10:01 policy).
+# QualifiedEQ39 (Lead22:54): only cfg+4 writers ctor027AE770=00164220 and owner027308EC..8FC=&~200|100; bit0 alwaysclear.
+# Exact10k seeds1/7 survived; no bit0-set producer. Candidate mask0x20 retained.

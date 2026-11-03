@@ -1,0 +1,60 @@
+# describeFileDialogRequest with the formatter 027C5978 mocked: the format text and the six argument strings it
+# receives are compared (the description itself is a frame local the function discards). Texts as built by the
+# capture options constructor (table 1016A368, whose terminator 027C58AC is a bare blr); id empty or not.
+# verify: -only 027C52D4 -strictnan -calleesp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 027C58AC
+arg! 027C52D4 r3 0x58F90000
+arg! 027C52D4 r4 0x58FA0000
+arg! 027C52D4 r5 0x5B000000
+arg! 027C52D4 r6 0x5B000010
+arg! 027C52D4 r7 0x5B000020
+arg! 027C52D4 r8 0x5B000030
+fill 027C52D4 5B000000 64 0
+field 027C52D4 0x5B000000 u32 0x5B001000
+field 027C52D4 0x5B000004 u32 0x1016A368
+fill 027C52D4 5B001000 64 0
+fieldstr 027C52D4 0x5B001000 64 "r","w","rb"
+field 027C52D4 0x5B000010 u32 0x5B001100,0x1016A3FC
+field 027C52D4 0x5B000014 u32 0x1016A368
+fill 027C52D4 5B001100 64 0
+fieldstr 027C52D4 0x5B001100 64 "","entry","capture","x"
+field 027C52D4 0x5B000020 u32 0x5B001200
+field 027C52D4 0x5B000024 u32 0x1016A368
+fill 027C52D4 5B001200 64 0
+fieldstr 027C52D4 0x5B001200 64 "bin","png","txt"
+field 027C52D4 0x5B000030 u32 0x5B001300
+field 027C52D4 0x5B000034 u32 0x1016A368
+fill 027C52D4 5B001300 64 0
+fieldstr 027C52D4 0x5B001300 64 "file.bin","capture.png","out.txt"
+cr 027C52D4 6 0,1
+callcr 027C5978 6
+callee 027C5978 r3=255 r4=cstr:512 r5=cstr:256 r6=cstr:256 r7=cstr:256 r8=cstr:256 r9=cstr:256 r10=cstr:256
+stable 5B000000 64
+stable 5B001000 0x400

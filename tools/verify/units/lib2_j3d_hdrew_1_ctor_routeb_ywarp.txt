@@ -1,0 +1,74 @@
+# ModelDataPipeline_l constructor 027F5A5C, route (b): a shipped FMDL
+# parsed by the original SARC code with NO loadModel / registration of its archive before the tested call, so the tested
+# call is that FMDL's FIRST construction. Everything else follows route 1:
+# - World: lib2_j3d_hdrew_1_ctor_world (animator world variant, TLS current heap, 02756140 real; Kn/St registered).
+# - Archive: game/ content/Common/Object/Ywarp00.szs (SHA-256 7c70696f12e2dd4b0781091dcaf2254d242b1c93c97e299e6a925e199cb5a324,
+#   Yaz0 SARC 0x1133D: Ywarp00.bfres at +0x2000, ywarp00.sharcfb at +0x4000), hash-checked blobfile at 0x58E00000, parsed
+#   by the original SharcArchiveRes 0275E11C/0275D21C (as the registrations do before 02604EB4). 02604EB4 is NOT run.
+# - FMDL: "ywarp00" 0x58E020E4 (Ywarp00.bfres model dictionary, only entry). Its one material has render bits with bit 0
+#   set and bit 1 clear (complete FMAT scan, ctor/scan-4568/rsscan.py: 1542 such FMATs ship). The literal is the blob base
+#   plus a fixed offset into the hash-checked file, so it cannot drift.
+# - Heap (B): fresh archive FrameHeap by the original 02754B38 with the registration's argument formation (02604F00..
+#   02604F18: r3 = 0, r4 = &SafeString{archive name "Ywarp00", vtable 100E1994}, r5 = parent 0x720000C8, r6 = 1, r7 = 0),
+#   made current by the original 02756170 as at 02604FD0 (H = 0x72069F20); S from the original 0273B050(0x4C, H, 4) as at 027F7B78 (S = 0x72069FBC).
+#   The H and S literals are drift-guarded with the original 025DD258 (exit 2 on mismatch).
+# - Byte equality: ctor/routeb/ has the -watch of Ywarp00.bfres (0x58E02000..0x58E037FF) on the full
+#   original registration of the same archive and on this
+#   profile: no write to those bytes before the model's first construction in either, so the bytes the constructor reads
+#   are the file bytes in both.
+# verify: -only 027F5A5C -strictnan -calleesp
+include lib2_j3d_hdrew_1_ctor_world.txt
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+blobfile * 0x58E00000 content/Common/Object/Ywarp00.szs:<yaz0>
+stable 0x58E00000 0x1133D
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x58E00000 r5=0x1133D r6=0x1133D r7=0 r8=0
+fill * 0x581010C0 0x20 0
+field * 0x581010C0 u32 0x59776172
+field * 0x581010C4 u32 0x70303000
+field * 0x581010D0 u32 0x581010C0
+field * 0x581010D4 u32 0x100E1994
+stable 0x581010C0 0x20
+fill * 0x58101080 8 0
+setup * 02754B38 r3=0 r4=0x581010D0 r5=0x720000C8 r6=1 r7=0 ->0x58101080
+setup * 02756170 r3=*0x101F8B4C r4=*0x58101080
+setup * 0273B050 r3=0x4C r4=*0x58101080 r5=4 ->0x58101084
+real 025DD258
+fill * 0x58101090 0x10 0
+setup * 025DD258 r3=*0x58101080 r4=0x72069F20 ->0x58101098
+setup * 025DD258 r3=*0x58101084 r4=0x72069FBC ->0x5810109C
+arg! 027F5A5C r3 0x72069FBC
+arg! 027F5A5C r4 0x58E020E4
+arg! 027F5A5C r5 0x72069F20

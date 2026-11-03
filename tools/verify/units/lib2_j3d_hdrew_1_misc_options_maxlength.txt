@@ -1,0 +1,14 @@
+# TYPE-DOMAIN: shipped callers (02605A4C, 02608B60) pass names bounded by their own buffers; the original's length
+# guard at 027F79AC/027F79B8/027F79C0 (lis r0,4; cmpw; bgt) defines the behaviour for names of 0x40000 characters
+# and more.
+# Named-option factory on the admitted options profile with a name of exactly 0x40000 characters, the boundary of
+# the length scan guard in 027F78A8 (027F79AC lis r0,4; 027F79B8 cmpw; 027F79C0 bgt): a length equal to the
+# limit is kept (and clamped to capacity - 1), only a longer one resets to 0.
+# verify: -only 027F78A8 -strictnan -calleesp
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+include lib2_j3d_hdrew_1_options.txt
+fill * 71600000 0x40000 0x41
+fill * 71640000 16 0
+field * 71500000 u32 0x71600000
+stable 71600000 0x40010

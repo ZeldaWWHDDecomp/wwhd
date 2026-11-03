@@ -1,0 +1,62 @@
+# AGL#19 commands fixture (included by the lib2_agl_19_commands_* specs): the shared agl world plus render command
+# pools built by the pool's own producers, as RenderQueueManager does it (027C088C -> 027D5064 on its embedded pool,
+# 027C0CEC -> 027D527C(pool, bytes, layers*2+8, mode, heap)). Shipped call: 027297C0 sets 14 layers (36 commands),
+# mode 2 (two frames) and 0x400000 bytes per frame on the heap 02753004 creates ("agl::lyr::Renderer", parent = the
+# game heap, size 0 = the parent's free memory); here the parent is the world's root heap and the bytes per frame are
+# the model size 0x1000, room for several 0x100-byte recordings per slice.
+# Recordings (world BYTES 0x100): a job that issues GX2 commands between beginCommand and
+# endCommand records min(0x100, open size) bytes; here the command is the original register setter 027E18A8
+# (GX2SetPolygonControlReg on a register block). An empty recording (no command, as 027D6BD0/027D6A74 jobs can leave
+# it) ends with size 0 and is also a shipped state. Pool P1 records both kinds.
+include shared/agl_world.txt
+setupsnapshot
+ret! C0009C98 0x00000010
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/agl/RenderCommandPool.cpp
+src wwhd_src/agl/RenderCommandAllocation.cpp
+src wwhd_src/agl/RenderCommandDestruction.cpp
+src wwhd_src/agl/RenderCommandRecording.cpp
+src wwhd_src/agl/RenderStorageCopies.cpp
+# Producers (originals) for the setups: pool constructor/initializer/frame reset/recording, the command records'
+# constructor (TimedCounter 027DA694 over a DisplayListRecording) and destructor, operator new/delete[].
+# The renderer heap, as 027297C0 makes it: 02753004(0, name, parent, 1, 0) with the name SafeText {"agl::lyr::Renderer"
+# 101412FC, vtable 10141158} the caller builds on its stack.
+field * 0x58200020 u32 0x101412FC
+field * 0x58200024 u32 0x10141158
+real 02754620
+setup * 02753004 r3=0 r4=0x58200020 r5=0x6A000000 r6=1 r7=0
+# The heap object is placed at the start of its region: 0x6A87E2A0 after the world's allocations (seen with -trace:
+# "setup 02753004 -> r3 6A87E2A0", 0x781D60 bytes); the pools below use it as their heap.
+real 027E18A8
+real 027D5064 027D56A4 027D527C 027D54A4 027D54F8 027D55F8 027DA694 027DA710 0273AD10 0273AFC8 027C06C4 027C0680
+# Pool P0 (0x58000000): constructed and initialized, nothing recorded yet (frame 0).
+setup * 027D5064 r3=0x58000000
+setup * 027D527C r3=0x58000000 r4=0x1000 r5=36 r6=2 r7=0x6A87E2A0
+# Pool P1 (0x58000100): one frame completed (two commands recorded in rings 0 and 1, then the frame reset with
+# advance = 1, as RenderQueueManager::update does), then two commands of the new frame recorded in rings 1 and 2.
+setup * 027D5064 r3=0x58000100
+setup * 027D527C r3=0x58000100 r4=0x1000 r5=36 r6=2 r7=0x6A87E2A0
+setup * 027D54F8 r3=0x58000100 r4=0x58200000 r5=0x40 r6=0
+setup * 027E18A8 r3=0x58200040
+setup * 027D55F8 r3=0x58000100 r4=0 r5=0
+setup * 027D54F8 r3=0x58000100 r4=0x58200008 r5=0xFFFFFFFE r6=1
+setup * 027D55F8 r3=0x58000100 r4=1 r5=1
+setup * 027D54A4 r3=0x58000100 r4=1
+setup * 027D54F8 r3=0x58000100 r4=0x58200000 r5=0x41 r6=1
+setup * 027E18A8 r3=0x58200040
+setup * 027D55F8 r3=0x58000100 r4=0 r5=1
+setup * 027D54F8 r3=0x58000100 r4=0x58200010 r5=0x400 r6=2
+setup * 027D55F8 r3=0x58000100 r4=1 r5=2
+# Pools and names are not memory a mocked call (e.g. OSGetSystemTime) may scribble on.
+stable 0x58000000 0x800
+stable 0x58200000 0x50
+field * 0x58200040 u32 0x00010240
+# Command names as RenderJob::execute (027D74AC) builds them on its stack: {text, vtable 1016C180}; texts "" (draw and
+# GPU-calc jobs, sFileDeviceEmptyText's 10147664), "begin" (1016C340), "end" (1016C33C).
+field * 0x58200000 u32 0x10147664
+field * 0x58200004 u32 0x1016C180
+field * 0x58200008 u32 0x1016C340
+field * 0x5820000C u32 0x1016C180
+field * 0x58200010 u32 0x1016C33C
+field * 0x58200014 u32 0x1016C180

@@ -1,0 +1,69 @@
+# AGL#4 companion: 0277D354 with the original parameter constructors; other unit bodies are support only.
+# verify: -only 0277D354 -strictnan -calleesp -footprint
+# Exercise arbitrary stale original-frame bytes during real parameter construction.
+stackfill
+src wwhd_src/agl/ParameterValues.cpp
+src wwhd_src/agl/DepthBlurValues.cpp
+src wwhd_src/agl/BloomValues.cpp
+src wwhd_src/agl/DepthBlurCallbacks.cpp
+src wwhd_src/agl/DepthBlurRuntimeValues.cpp
+src wwhd_src/agl/DepthBlurConstruction.cpp
+src wwhd_src/agl/DepthBlurShapeSetup.cpp
+src wwhd_src/agl/DepthBlurParameterSetup.cpp
+src wwhd_src/agl/DepthBlurDrawState.cpp
+src wwhd_src/agl/DepthBlurContext.cpp
+# Shape registration passes complete SafeString views and a bounded formatted-name object.
+callee 027828DC r3=out44
+# Parameter registration 0279E618 reads only the name (r4) and the parent (r7); label and help (r5/r6) are unread.
+# The constructor receiver's output bytes are not entry inputs. Real-lifetime companions audit exact writes.
+callee 0279E618 r3=out8 r4=8 r7=0
+callee 0279E674 r3=out12
+callee 0279CB9C r5=8
+callee 0279A07C r4=8
+callee 02785CB4 r4=8
+callee 027A063C r5=8
+# Stack viewport/state and the copied scale are observed by their actual callees.
+callee 0274F964 r3=24
+callee 0274FEB0 r3=116
+callee 027A919C r4=24 r5=8 r6=8
+callee 0279FC6C r4=8
+callee 0274F8D8 r4=out8
+callee 0274FA00 r3=24
+# Graphics register counts are words, including retained half-extents in the bloom uniform.
+callee C0006A40 r5=dyn4*r4
+callee C0006908 r5=dyn4*r4
+# Compose dynamic length with heap observation: parameter-backed uniforms are observable too.
+# read_unit retains dyn4*r4 and adds heapref; both directives retain the 4096-byte cap.
+callee C0006A40 r5=heap4096
+callee C0006908 r5=heap4096
+# Bounded render fixture: the context and its target set are distinct live objects.
+# The copied target pointer is read-only in this pass and its callees. Texture mip count
+# is resource metadata; sampler binding and GPU state calls update other fields only.
+# Retain zero levels and all levels through six, exercising both first-level paths and repeats.
+arg! 0277FF88 r4 0x54010000 0x54010000
+field 0277FF88 54010008 u32 0x54011000 0x54011000
+field 0277FF88 540114D0 u32 0 6
+stable 54010008 4
+stable 540114D0 4
+# The near-depth pass likewise consumes immutable mip metadata from its distinct depth target.
+arg! 027805A0 r4 0x54010000 0x54010000
+field 027805A0 54010008 u32 0x54011000 0x54011000
+field 027805A0 5401166C u32 0 6
+stable 5401166C 4
+# Four columns of a 4x4 matrix; the original indexes without a bounds check.
+arg! 0277C85C r4 0 3
+# The translation helper passes its four-float column on its original stack frame.
+callee 0277C85C r5=16
+# Texture-transform routines read three-float arguments and write a 3x4 matrix.
+callee 02782C20 r3=out48 r4=12
+callee 02782D70 r3=out48 r4=48 r5=12
+callee 02782E1C r3=out48 r4=48 r5=12
+
+# Original metadata and hash tree run real.
+real 0279E674
+real 0279E618
+real 0279E57C
+real 0273B264
+real 0279F1BC
+real 02759B98
+real 027A861C

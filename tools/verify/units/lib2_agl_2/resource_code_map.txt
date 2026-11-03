@@ -1,0 +1,4 @@
+# Scalar resource code decoder; original read-only four-byte map remains image-backed.
+# verify: -strictnan -calleesp -footprint -only 0277376C
+src wwhd_src/agl/ShaderCommandState.cpp
+arg 0277376C r3 0,1,2,3,4,5,6,255,256,0x7FFFFFFF,0x80000000,0xFFFFFFFF

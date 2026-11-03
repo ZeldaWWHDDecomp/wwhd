@@ -1,0 +1,35 @@
+# TYPE-DOMAIN: configuration callback +0x30 = AA mode 1 or 2 (GX2 2x/4x, the MSAA arm),
+# single-thread 1, manager flag 0x40 clear (depth swizzle -1), tile-mode bit 14 set; nothing in the shipped game
+# writes these. Otherwise as lib2_agl_19_display_attachments_first_tv.txt.
+# AGL#19 027D6658 configureAttachments, first frame, view 0 (TV, own surfaces): the initialized renderer after update's
+# setSurfaceExtent (as refreshSurfaceExtent runs it after updateResolution 0272A1C4) / releaseAttachments (lib2_agl_19_display_init_fixture.txt + postsetups), with update's arguments
+# (027C106C: samples = configuration callback 0, colour format 0x1D or 0x22 (hdGraphicsTask_c::configureBuffers 02729688), borrowed = view 0 for view 1 (manager flag 8), colour 0x1D,
+# colour swizzle = single-thread 0, depth 0x3A, depth swizzle = mInitialized 1 (flag 0x40), HiZ = bit 12 (1),
+# tile = bit 14 (0)). View 0 owns its surfaces (dynamic texture cache, shared pool), view 1 borrows view 0's.
+# verify: -only 027D6658 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_init_fixture.txt
+real 0274F53C 027D5EE8 027D660C 027D5C48 027A0114 0279FF24 027CB744 027BE7F0 025C0928 025C0AB8 025C0848 025C09D8 027B954C 027BE930
+postsetup * 027D5EE8 r3=0x5E100018 r4=0x5E100750
+postsetup * 027D5C48 r3=0x5E100018
+postsetup * 027D5EE8 r3=0x5E100818 r4=0x5E100F50
+postsetup * 027D5C48 r3=0x5E100818
+arg! 027D6658 r3 0x5E100018
+arg! 027D6658 r5 0
+# AA mode 1 (2x) only on the TV view. (a) The shipped game configures no MSAA on either view: the AA mode 027D6658 gets
+# (r4) is RenderQueueManager::update 027C106C passing the configuration callback +0x30, which the configuration's
+# constructor 027C21C4 sets to 0 and hdGraphicsTask_c 027297C0 never writes, so the shipped value is 0 (TV and GamePad);
+# 2x on TV is therefore type-domain like every non-zero mode here (driven through the real 027D6658 and its real surface
+# setters). (b) Mode 2 (4x) on the TV view: the 1280x720 4x colour surface does not fit the test world's GPU ranges
+# (0x70000000/0x71000000, 16 MB each, agl_world.txt:76-77): the pool allocator 027CB1A0 returns NULL and 0279F7F0 loads
+# +0xC of it at 0279FBD8 (a page-0 DSI on the console as well; 522/1000 inputs on s1). 4x is covered by the 854x480 twin
+# lib2_agl_19_display_typedomain_attachments_drc (modes 1 and 2): 027D6658 MSAA-arm blocks 11 21 22 25 26 29 30 37 (the
+# blocks it covers that the AA-0 spec lib2_agl_19_display_attachments_first_tv does not), with 0279FF24/0279F7F0/027CB1A0
+# real. The 4x TV case is listed in TODO item 28 (world GPU-range enlargement) next to the 1920x1080 size.
+arg! 027D6658 r4 1
+arg! 027D6658 r6 0x1D,0x22
+arg! 027D6658 r7 1
+arg! 027D6658 r8 0x3A
+arg! 027D6658 r9 0xFFFFFFFF
+arg! 027D6658 r10 1
+poke 027D6658 r1+8 u32 1

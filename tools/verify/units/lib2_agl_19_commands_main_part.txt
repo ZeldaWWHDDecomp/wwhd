@@ -1,0 +1,7 @@
+# The commands group's main-spec part on its own (same lines as in lib2_agl_19.txt): checks those rows independently of
+# the other groups' sources. Diagnostic; the gate is the main spec itself.
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+include lib2_agl_19_main_commands.txt

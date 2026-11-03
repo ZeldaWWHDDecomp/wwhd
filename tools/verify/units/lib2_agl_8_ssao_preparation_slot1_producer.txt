@@ -1,0 +1,48 @@
+# verify: -strictnan -calleesp -footprint -only 02794270
+# Original caller-produced slot-1 surface: initialize the shared SceneRenderManager, then execute the pass-1
+# producer calls in drawLayer3DPass (02733190): set dimensions for slots 2 then 1 from the adjacent viewport
+# max-X/max-Y floats. The returned slot-1 description feeds the original SSAO preparation target.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+include shared/agl_world.txt
+setupsnapshot
+
+# Create the original shared scene render manager (same owner/heap sequence as the caller).
+field * 0x101F9968 u32 0
+field * 0x101F996C u32 0
+alloc 0273B0D4 r3 0x60000000 align=r5
+allocnested 0273B0D4
+setup * 027F7E08 r3=0
+setup * 027F8F14
+setup * 027F7F08 r3=*101F9968 r4=0x6A000000
+
+# Caller viewport mMaxX/mMaxY are adjacent floats. Pass 1 in 02733190 calls 027F81C0 for slot 2 then slot 1.
+field * 0x5E000000 f32 64
+field * 0x5E000004 f32 64
+setup * 027F81C0 r3=*101F9968 r4=2 r5=0x5E000000 ->0x5E100000
+setup * 027F81C0 r3=*101F9968 r4=1 r5=0x5E000000 ->0x5E100004
+setup * 027F81A4 r3=*101F9968 r4=1 ->0x5E100008
+
+# Original SSAO effect + target set. The tested input is the produced slot-1 descriptor pointer.
+fill * 0x58000000 0x285C 0
+setup * 02792A08 r3=0x58000000
+setup * 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+
+arg! 02794270 r3 0x58000000
+arg! 02794270 r4 0
+arg! 02794270 r5 0x6A00F380
+arg! 02794270 r6 0
+
+real 02792A08 02793E88 02793384 0279345C 02793908 0279FC6C 027F7E08 027F7D78 0274FDBC 027B95B4 027B958C 027B954C 027B6CB8 027BE6B8 027F7F08 0273B050 027F8F14 027F81C0 027F81A4 027CB744
+real 027BE7F0 027BE74C 027BE744 027BFF9C 027F29D4
+stable 104A0BC0 0x10

@@ -198,23 +198,27 @@ struct Index4 {
     be<u32> values[4];
 };
 } // namespace jst_adaptors
-using namespace jst_adaptors;
-void adaptor_getVariableValue_Vec(TAdaptor *, Vec *, const Index3 *);
-void adaptor_getVariableValue_GXColor(TAdaptor *, Color *, const Index4 *);
-void MTXMultVec(const Matrix *, const Vec *, Vec *);
-void MTXMultVecSR(const Matrix *, const Vec *, Vec *);
-void VECSubtract(const Vec *, const Vec *, Vec *);
-void MTXConcat(const Matrix *, const Matrix *, Matrix *);
-void getTransformation_SRxyzT(Matrix *, const Vec *, const Vec *, const Vec *);
-void JPAGetXYZRotateMtx(s16, s16, s16, Matrix *);
-void JPASetSRTMatrix(const Matrix *, Matrix *, Vec *, Vec *);
-void soundStart(JAISound *, u32);
-void soundStop(JAISound *, u32);
-void startSoundVec(JAIBasic *, u32, gptr<JAISound> *, Vec *, u32, u32, u32);
-void forceDeleteEmitter(JPAEmitterManager *, Emitter *, u32);
-Emitter *createSimpleEmitterID(JPAEmitterManager *, Vec *, u32, u32, u32,
-                               TAdaptor_particle::TJPACallback_ *, u32);
-void initializePosition(Vec *, const Vec *, u32);
+void adaptor_getVariableValue_Vec(jst_adaptors::TAdaptor *, jst_adaptors::Vec *, const jst_adaptors::Index3 *);
+void adaptor_getVariableValue_GXColor(jst_adaptors::TAdaptor *, jst_adaptors::Color *, const jst_adaptors::Index4 *);
+void MTXMultVec(const jst_adaptors::Matrix *, const jst_adaptors::Vec *, jst_adaptors::Vec *);
+void MTXMultVecSR(const jst_adaptors::Matrix *, const jst_adaptors::Vec *, jst_adaptors::Vec *);
+void VECSubtract(const jst_adaptors::Vec *, const jst_adaptors::Vec *, jst_adaptors::Vec *);
+void MTXConcat(const jst_adaptors::Matrix *, const jst_adaptors::Matrix *, jst_adaptors::Matrix *);
+void getTransformation_SRxyzT(jst_adaptors::Matrix *, const jst_adaptors::Vec *, const jst_adaptors::Vec *, const jst_adaptors::Vec *);
+void JPAGetXYZRotateMtx(s16, s16, s16, jst_adaptors::Matrix *);
+void JPASetSRTMatrix(const jst_adaptors::Matrix *, jst_adaptors::Matrix *, jst_adaptors::Vec *, jst_adaptors::Vec *);
+void soundStart(jst_adaptors::JAISound *, u32);
+void soundStop(jst_adaptors::JAISound *, u32);
+void startSoundVec(jst_adaptors::JAIBasic *, u32, gptr<jst_adaptors::JAISound> *, jst_adaptors::Vec *, u32, u32, u32);
+void forceDeleteEmitter(jst_adaptors::JPAEmitterManager *, jst_adaptors::Emitter *, u32);
+jst_adaptors::Emitter *createSimpleEmitterID(jst_adaptors::JPAEmitterManager *, jst_adaptors::Vec *, u32, u32, u32,
+                               jst_adaptors::TAdaptor_particle::TJPACallback_ *, u32);
+void initializePosition(jst_adaptors::Vec *, const jst_adaptors::Vec *, u32);
 f64 adaptorCos(f32);
 f64 adaptorSin(f32);
 // namespace jst_adaptors
+
+// Light index tables owned by jstudio-object.cpp.
+extern const jst_adaptors::Index4& sJStudioLightColorIndices;
+extern const jst_adaptors::Index3& sJStudioLightPositionIndices;
+extern const jst_adaptors::Index3& sJStudioLightTargetIndices;

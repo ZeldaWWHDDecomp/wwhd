@@ -1,0 +1,52 @@
+# Resource factory admission: actual shared-world FreeRegionHeap and ShaderArchive; constructor raw resource with zero material/shape counts.
+# verify: -only 027F7B50 -strictnan -calleesp
+include shared/agl_world.txt
+setupsnapshot
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+real 027F5A5C 027F70D8 027F3F94 027F3F8C 027F3C38 027F7870 028010F8 02800B0C 028012BC 0273B050
+arg! 027F7B50 r3 0x58010000
+arg! 027F7B50 r4 0x6A833E2C
+arg! 027F7B50 r5 0
+arg! 027F7B50 r6 0x6A000000
+fill * 0x58010000 0x38 0
+field * 0x5801000C u32 0xFF4
+fill * 0x58011000 0x18 0
+field * 0x58011008 u16 0,1,2
+field * 0x58011014 u32 0xFEC
+fill * 0x58012000 128 165
+stable 0x58010000 0x38
+stable 0x58011000 0x18
+stable 0x58012000 128

@@ -1,0 +1,8 @@
+# Caller-valid first-draw observer companion for 027CD8EC dirty-program
+# mutations. The inherited profile obtains the selected program through the
+# original selector and sets its validated lifecycle dirty byte to 2. Observe
+# the selected/root program at the original 027BB9E0 refresh boundary so the
+# caller's bit-2 clear cannot be hidden by later refresh writes.
+# verify: -only 027CD8EC -strictnan -calleesp -footprint
+include lib2_agl_18/render_resource_original_context_dirty_program.txt
+observearg 027BB9E0 r3+0 32

@@ -1,0 +1,4 @@
+# PipelineFrameQueue::resetWork after a completed frame, without mock clobbering (every input is a -noclobber input):
+# same inputs as lib2_j3d_hdrew_1_queue_reset_after_completion.txt.
+# verify: -only 027F9A7C -strictnan -calleesp -noclobber
+include lib2_j3d_hdrew_1_queue_reset_after_completion.txt

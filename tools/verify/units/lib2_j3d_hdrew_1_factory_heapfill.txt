@@ -1,0 +1,10 @@
+# Resource factory 027F7B50 on the admitted resource_factory_produced profile, with stale (non-zero) bytes in the heap
+# block that the real allocator hands out for the ModelDataPipeline_l object. A freshly allocated sead heap block is
+# not zeroed (0273B050 dispatches to the heap vtable +0x34; no clear), so its previous contents are arbitrary and
+# 027F7B50 must initialise every field itself (027F7B8C..027F7C34). Same recipe as the admitted options heapfill
+# companion (lib2_j3d_hdrew_1_misc_options_heapfill).
+# The block payload is 6A87E2A0..6A87E2EB on every input (the allocation at 027F7B78 after the setupsnapshot,
+# -trace 1000003: 0273B050(0x4C, heap 6A000000, 4) -> 6A87E2A0; block header 6A87E290 is not touched).
+# verify: -only 027F7B50 -strictnan -calleesp
+include lib2_j3d_hdrew_1_resource_factory_produced_20261030.txt
+fill * 6A87E2A0 0x4C 0xA5

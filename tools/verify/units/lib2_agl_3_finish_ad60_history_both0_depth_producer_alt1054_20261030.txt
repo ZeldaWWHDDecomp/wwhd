@@ -1,0 +1,9 @@
+# verify: -strictnan -calleesp -only 0277AD60
+# TYPE-DOMAIN: shipped view extents >=480 (027D60D4/0272A1C4); 0 via init-arg API 027C22D0 or client store to view+0x738/+0x73C -> fctiwz 027D66A0/66E8 -> r6/r7 027D68BC/68CC -> 0279FF24 027D68D8.
+# Lead10:54 exact recipe. No standalone027BE7F0, no Viewport composition, no produced field/descriptor pokes.
+include lib2_agl_3_lifecycle_depth_quality_finite_stack_current_world.txt
+field 0277AD60 5D52002C f32 1.0
+field 0277AD60 5D52000C u8 1
+stable 0x5D550020 4
+postsetup 0277AD60 0279FF24 r3=*101F8DD4 r4=0x5D500000 r5=0x3A r6=0 r7=0 r8=0 r9=0x5D500014 r10=0 sp+8=0 sp+0xC=0 ->0x5D550020
+postsetup 0277AD60 027BDEB4 r3=0x5D510200 r4=*5D550020

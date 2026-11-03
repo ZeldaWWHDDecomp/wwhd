@@ -1,0 +1,271 @@
+# verify: -only 027B8904 -calleesp -strictnan
+# Producer probe only: verify original heap createAt plus first allocation in setup.
+# No program-construction or full-unit acceptance is inferred from this constant-kind caller.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 0275315C
+real 02753D6C
+real 027540AC
+real 027B9F78
+real 027BA710
+real 027BA95C
+real 027BAA54
+real 027BAA9C
+real 027BAC4C
+real 027BAC58
+real 027BBCA0
+real 027BBB9C
+real 027B7168
+real 027B70B4
+real 027510FC
+real 02752C74
+real 02753000
+real 027601BC
+real 027601F0
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 0273B310
+real 02752E60
+real 02753F84
+real 02754018
+real 0273AD10
+real 027C05F4
+real 027D4CCC
+real 0273B050
+real 027BA674
+real 028EFFD0
+real 028F521C
+real 027BA88C
+real 027BA968
+real 027BAA60
+real 027BAAA8
+real 027BB9E0
+real 0273B0D4
+real 02752B0C
+real 02760084
+real 0275589C
+real 02752F10
+real 02753628
+real 027536B0
+real 027537B8
+real 02753998
+real 02753B48
+real 0273B2F0
+real 02752D8C
+real 027C05C8
+real 028EFE58
+real 027B736C
+real 027B737C
+real 027BB710
+real 027BB7CC
+real 027BB840
+real 027BB8A8
+real 027BB910
+real 027BB978
+real 027C073C
+real 027C077C
+real 027D4D30
+real 02755CA4
+real 02755FEC
+real 02752A84
+real 02755818
+real 027600EC
+real 027C05A0
+real 0273ADAC
+real 028F61E4
+real 028F623C
+real 027B72AC
+real 027B730C
+real 027BAC8C
+real 027BB630
+real 027D3FC4
+real 027D3FD4
+real 0276B0D4
+real 027BD3CC
+real 027BDA2C
+real 027BDD2C
+real 027BD72C
+real 027C5474
+real 027C57E8
+real 027D4028
+real 027556FC
+real 027B727C
+real 0273AFC8
+real 02740B24
+real 02740BE0
+real 027414F8
+real 02752BEC
+real 027C52D4
+real 027C5AAC
+real 027C5B20
+real 027D4C9C
+real 02740B0C
+real 02740B14
+real 02740B1C
+real 02740E08
+real 0273AF40
+real 02755D28
+real 027C5978
+real 02759C28
+real 027C6B98
+real 02759C10
+real 02759BA0
+real 02759B98
+ret! 02756140 0x6A000000
+nestedret 02756140 0x6A000000
+mockset C000A858 r3 r4 r5
+mockset C0009990 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+stable 0x6A000000 0x100000
+field * 0x101F8B4C u32 0
+field * 0x55000000 u32 0x55000100
+field * 0x55000004 u32 0x10147634
+fieldstr * 0x55000100 32 "AGL14TestHeap"
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x55000000 r6=0
+
+# fieldstr may retain random bytes; bound the owned32-byte text.
+field * 0x5500011F u8 0
+real 0273B560
+real 0273B584
+real 02760DE8
+real 027B744C
+real 027B75E0
+real 027B78D4
+real 027B7A48
+real 027B7B1C
+real 027B7BE8
+real 027B7D78
+real 027B8024
+real 027B814C
+real 027B81E4
+real 027B82B8
+real 027BC138
+real 027BC2D0
+real 027BC2D8
+real 027BC4AC
+real 027BC4F8
+real 027BC654
+real 027BC68C
+real 027BC6B8
+real 027BC73C
+real 027BC790
+real 027BC854
+real 027BCDA0
+real 027BD2CC
+real 027BD30C
+real 027BD34C
+real 027BD38C
+real 027BF0CC
+real 027C5FD8
+real 027C6060
+real 027D3F1C
+
+# Existing protected debug-name contract: no ownerwrites;inactivehook.
+field * 0x101F8C1C u32 0
+setup * 027B744C r3=0x58000000
+stable 0x58000000 0x54
+arg! 027B8904 r3 0x58000000
+arg! 027B8904 r4 0x59000000
+arg! 027B8904 r5 0x5A000000
+arg! 027B8904 r6 1,3
+arg! 027B8904 r7 0x6A000000
+field * 0x59000000 u32 0x71000000
+field * 0x5A000000 u32 0
+stable 0x59000000 4
+stable 0x5A000000 4
+# Native normalized SHAB/version9; empty coherent descriptor/program lists.
+fill * 0x71000000 0x100 0
+field * 0x71000000 u32 0x53484142
+field * 0x71000004 u32 9
+field * 0x71000008 u32 0x100
+field * 0x7100000C u32 0
+field * 0x71000010 u32 0
+field * 0x71000014 u32 0x20
+field * 0x71000038 u32 8
+field * 0x7100003C u32 0
+field * 0x71000040 u32 0x68
+field * 0x71000044 u32 1
+stable 0x71000000 0x100
+field * 0x71000018 u8 65
+field * 0x71000019 u8 71
+field * 0x7100001A u8 76
+field * 0x7100001B u8 49
+field * 0x7100001C u8 52
+field * 0x7100001D u8 69
+field * 0x7100001E u8 109
+field * 0x7100001F u8 112
+field * 0x71000020 u8 116
+field * 0x71000021 u8 121
+field * 0x71000022 u8 66
+field * 0x71000023 u8 105
+field * 0x71000024 u8 110
+field * 0x71000025 u8 97
+field * 0x71000026 u8 114
+field * 0x71000027 u8 121
+field * 0x71000028 u8 70
+field * 0x71000029 u8 105
+field * 0x7100002A u8 120
+field * 0x7100002B u8 116
+field * 0x7100002C u8 117
+field * 0x7100002D u8 114
+field * 0x7100002E u8 101
+field * 0x7100002F u8 48
+field * 0x71000030 u8 49
+field * 0x71000031 u8 50
+field * 0x71000032 u8 51
+field * 0x71000033 u8 52
+field * 0x71000034 u8 53
+field * 0x71000035 u8 54
+field * 0x71000036 u8 55
+field * 0x71000037 u8 0
+
+# One blank program, no shaderstage flags/descriptors; not a drawable-shader claim.
+field * 0x71000048 u32 0x60
+field * 0x7100004C u32 0x10
+field * 0x71000050 u32 0
+field * 0x71000054 u32 0
+# Key/default/unused lists then4stage lists, allcomplete empty8-byte lists.
+field * 0x71000068 u32 8
+field * 0x71000070 u32 8
+field * 0x71000078 u32 8
+field * 0x71000080 u32 8
+field * 0x71000088 u32 8
+field * 0x71000090 u32 8
+field * 0x71000098 u32 8
+real 027BC094
+field * 0x71000058 u8 69
+field * 0x71000059 u8 109
+field * 0x7100005A u8 112
+field * 0x7100005B u8 116
+field * 0x7100005C u8 121
+field * 0x7100005D u8 80
+field * 0x7100005E u8 114
+field * 0x7100005F u8 111
+field * 0x71000060 u8 103
+field * 0x71000061 u8 114
+field * 0x71000062 u8 97
+field * 0x71000063 u8 109
+field * 0x71000064 u8 0
+
+# Existing approved native endian-operation selection, image table left untouched.
+field * 0x104A0CD4 u32 0

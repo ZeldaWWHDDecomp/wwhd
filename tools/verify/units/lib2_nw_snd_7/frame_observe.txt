@@ -1,0 +1,134 @@
+# verify: -only 02898AF8
+# NW-SND#7: own reconstruction from WWHD original instructions.
+src wwhd_src/nw/snd/AudioBlockPool.cpp
+stackfill
+# Allocation bitmap belongs to a fixed 32-block pool.
+field 02899168 r3+0xC s32 0,1,8,16,24,32
+field 02899168 r3+0x10 s32 0,1,8,16,24,32
+field 02899228 r3+8 u32 32,64,128
+src wwhd_src/nw/snd/AudioWorkQueue.cpp
+arg! 0289C214 r4 0,1,2
+arg! 0289C464 r5 0,1,2
+ret! 0289C2CC 0
+# Every priority list initially terminates at its own embedded sentinel.
+arg! 0289C4FC r3 0x5E000000
+field 0289C4FC 5E000004 u32 0x5E000004
+field 0289C4FC 5E000010 u32 0x5E000010
+field 0289C4FC 5E00001C u32 0x5E00001C
+stable 5E000000 36
+ret! 0289C5B8 1
+src wwhd_src/nw/snd/AudioWorker.cpp
+
+src wwhd_src/nw/snd/StreamTrackParameters.cpp
+field 0289B0F8 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B13C r3+0x1AC0 u32 0,1,2,4,8
+field 0289B180 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B1C4 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B20C r3+0x1AC0 u32 0,1,2,4,8
+field 0289B250 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B2BC r3+0x1AC0 u32 0,1,2,4,8
+field 0289B300 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B344 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B388 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B3D8 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B428 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B4B0 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B500 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B550 r3+0x1AC0 u32 0,1,2,4,8
+field 0289B5A0 r3+0x1AC0 u32 0,1,2,4,8
+arg! 0289B250 r5 0,1
+arg! 0289B388 r5 0,1
+arg! 0289B3D8 r4 0,1
+arg! 0289B428 r4 0,1
+arg! 0289B4B0 r4 0,1
+arg! 0289B500 r4 0,1
+arg! 0289B550 r4 0,1
+arg! 0289B5A0 r4 0,1
+arg! 0289B428 r6 0,1
+arg! 0289B5A0 r6 0,1,2
+src wwhd_src/nw/snd/StreamPlaybackStorage.cpp
+field 0289B5FC r3+0x1ABC u32 0,1,2,4,8,16
+
+src wwhd_src/nw/snd/StreamPlaybackLifecycle.cpp
+field 02899900 r3+0x1ABC u32 0,1,2,4,8,16
+field 02899970 r3+0x1ABC u32 0,1,2,4,8,16
+field 02899B04 r3+0x1ABC u32 0,1,2,4,8,16
+
+src wwhd_src/nw/snd/StreamSound.cpp
+arg! 0289964C r3 0x5E100000
+field 0289964C 5E10029C u32 0x5E110000
+field 0289964C 5E11000C u32 0x5E11000C
+stable 5E110000 32
+
+src wwhd_src/nw/snd/AudioWork.cpp
+src wwhd_src/nw/snd/StreamVoiceAllocation.cpp
+field 0289B77C r3+0x1ABC u32 0,1,2,4,8,16
+src wwhd_src/nw/snd/AudioFrameDriver.cpp
+arg! 0289882C r3 0x5E200000
+field 0289882C 5E200968 u32 0x5E200968
+stable 5E200964 12
+src wwhd_src/nw/snd/AudioFrameProfile.cpp
+src wwhd_src/nw/snd/AudioDriverRun.cpp
+arg! 0289888C r3 0x5E200000
+field 0289888C 5E203CA0 u32 0
+ret! C0006E98 1
+src wwhd_src/nw/snd/AudioFrameProcess.cpp
+arg! 02898AF8 r3 0x5E200000
+field 02898AF8 5E203C9C s32 0,1,2
+ret! C0006DE0 0,1,2,3
+ret! 02887464 0
+stable 5E200958 24
+src wwhd_src/nw/snd/StreamPlaybackConfiguration.cpp
+src wwhd_src/nw/snd/StreamPlaybackProgress.cpp
+field 02899BB4 r3+0x1ABC u32 0,1,2,4,8,16
+field 02899CE8 r3+0x19EC u32 0,1,4,8,16,32
+field 02899D28 r3+0x25 u8 0
+field 0289A984 r3+0x25 u8 0
+field 0289AF6C r3+0x1AC0 u32 0,1,2,4,8
+field 0289AF6C r3+0x6744 u8 0
+field 0289AF6C r3+0x6854 u8 0
+field 0289AF6C r3+0x6964 u8 0
+field 0289AF6C r3+0x6A74 u8 0
+field 0289AF6C r3+0x6B84 u8 0
+field 0289AF6C r3+0x6C94 u8 0
+field 0289AF6C r3+0x6DA4 u8 0
+field 0289AF6C r3+0x6EB4 u8 0
+field 0289B048 r3+0x1ABC u32 0,1,2,4,8,16
+src wwhd_src/nw/snd/StreamLoadCompletion.cpp
+field 0289B86C r3+0x184 u8 0
+field 0289BC0C r3+0x1ABC u32 0,1,2,4,8,16
+arg! 0289BC0C r5 0,1,2,3,7,15,31
+src wwhd_src/nw/snd/StreamTrackMix.cpp
+field 02899EC4 r4+0 u8 0
+arg! 02898AF8 r3 0x5E200000
+field 02898AF8 5E20095C u32 0x5E220000
+field 02898AF8 5E200960 u32 0x5E220000
+field 02898AF8 5E220000 u32 0x5E20095C
+field 02898AF8 5E220004 u32 0x5E20095C
+field 02898AF8 5E220008 u32 0x5E230000
+field 02898AF8 5E230014 u32 0x0F000710
+field 02898AF8 5E23001C u32 0x0F000714
+field 02898AF8 5E200968 u32 0x5E221000
+field 02898AF8 5E20096C u32 0x5E221000
+field 02898AF8 5E221000 u32 0x5E200968
+field 02898AF8 5E221004 u32 0x5E200968
+field 02898AF8 5E221008 u32 0x5E231000
+field 02898AF8 5E231014 u32 0x0F000710
+field 02898AF8 5E23101C u32 0x0F000714
+field 02898AF8 5E200970 u32 0,0x0F000718
+field 02898AF8 5E200980 u32 0,0x5E250000
+field 02898AF8 5E200984 u8 0,1
+field 02898AF8 5E203C98 u32 0,0x5E240000
+stable 5E200000 0x3CAC
+stable 5E220000 12
+stable 5E221000 12
+stable 5E230000 32
+stable 5E231000 32
+callee 0F000710 fixture r3=0
+callee 0F000714 fixture r3=0
+callee 0F000718 fixture r3=0
+callee 0289888C r4=0x78 r5=8 r6=8
+
+# The voice-event update empties the player list, so the end-of-frame player walk must load the head after that call.
+mockglobal 0289CE14 5E20095C u32 0x5E20095C
+mockglobal 0289CE14 5E200960 u32 0x5E20095C

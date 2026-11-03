@@ -1,0 +1,53 @@
+# A bounded derived LayoutAllocator owns a MaterialGpu at +0x100 in its storage.
+# Its allocation/release callbacks record the receiver's owned bytes, including
+# the material's raw storage pointer while a reserve operation is in progress.
+# This explicit fixture contract makes no private SDK allocator-footprint claim.
+# Original allocation/release wrappers execute for real and dispatch this allocator.
+# verify: -strictnan -calleesp -only 0288119C
+src wwhd_src/nw/lyt/LayoutGpuResources.cpp
+src wwhd_src/nw/lyt/LayoutResourceCompanions.cpp
+src wwhd_src/nw/lyt/LayoutRenderStorage.cpp
+src wwhd_src/nw/lyt/LayoutSession.cpp
+src wwhd_src/nw/lyt/LayoutResourceFormatting.cpp
+src wwhd_src/nw/lyt/LayoutSessionAnimations.cpp
+src wwhd_src/nw/lyt/LayoutQuadDrawing.cpp
+src wwhd_src/nw/lyt/LayoutTextureDecoder.cpp
+src wwhd_src/nw/lyt/LayoutShaderLoader.cpp
+src wwhd_src/nw/lyt/MaterialGpuStorage.cpp
+src wwhd_src/nw/lyt/LayoutTextureMatrix.cpp
+src wwhd_src/nw/lyt/LayoutHitTest.cpp
+src wwhd_src/nw/lyt/MaterialResourceBuild.cpp
+src wwhd_src/nw/lyt/MaterialGpuApply.cpp
+src wwhd_src/nw/lyt/MaterialTransformUpload.cpp
+src wwhd_src/nw/lyt/MaterialPixelUniforms.cpp
+src wwhd_src/nw/lyt/MaterialGpuState.cpp
+src wwhd_src/nw/lyt/MaterialGpuBindings.cpp
+src wwhd_src/nw/lyt/MaterialGpuCopy.cpp
+src wwhd_src/nw/lyt/LayoutBuild.cpp
+src wwhd_src/nw/lyt/LayoutShaderSetup.cpp
+src wwhd_src/nw/lyt/PaneRuntimeType.cpp
+real 0287F3DC 0287F3FC 0288112C
+callee 0F004100 fixture r3=heap512 r4=0 r5=0
+callee 0F004104 fixture r3=heap512 r4=0
+ret! 0F004100 0x60202000
+arg! 0288119C r3 0x60200100
+arg! 0288119C r4 1
+arg! 0288119C r5 0
+arg! 0288119C r6 0
+arg! 0288119C r7 0
+arg! 0288119C r8 0
+arg! 0288119C r9 0
+arg! 0288119C r10 0
+field 0288119C r1+0x8 u32 0
+field 0288119C r1+0xC u32 0
+field * 101FC8B4 u32 0x60200000
+field * 60200000 u32 0x60203000
+field * 6020301C u32 0x0F004100
+field * 60203024 u32 0x0F004104
+field * 60200108 u32 0
+field * 6020010C u32 0
+field * 60200110 u32 0x60201000
+stable 60200000 0x200
+stable 60201000 0x100
+stable 60202000 0x100
+stable 60203000 0x28

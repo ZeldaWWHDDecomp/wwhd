@@ -1,0 +1,11 @@
+# Ramp equality/duration boundaries and both hardware-affinity modes.
+# verify: -only 02762258,02762470,02762510,02762538 -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 02762258 f1 0,1,-1
+arg! 02762258 r4 0,1,2,4294967295
+field 02762258 r3+0 f32 0,1,-1
+field 02762470 r3+0x80 u8 0,1
+field 02762470 r3+0x84 u32 0,1,2,4294967295
+field 02762510 r3+0x84 u32 0,1,2,4294967295
+field 02762538 r3+0x84 u32 0,1,2,4294967295

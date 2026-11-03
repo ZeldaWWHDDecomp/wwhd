@@ -1,0 +1,96 @@
+# verify: -only 027D660C,027D5EE8 -strictnan -calleesp
+# AGL#19 refreshSurfaceExtent 027D660C / setSurfaceExtent 027D5EE8 after the REAL hdGraphicsTask_c::updateResolution
+# 0272A1C4 on the initialized renderer (lib2_agl_19_display_init_fixture.txt)..
+# Shipped frame order (task calc 0272A5F0, vtable 10141490 slot 1014147C): 0278BF5C(*101F8D74) at 0272A65C, then
+# 0272A1C4(task) at 0272A664, then RenderQueueManager::update 027C106C(*101F95D0, 1) at 0272A670 -> 027D660C at 027C1160.
+# 0272A1C4 itself stores both views' extents and ORs 0x200 into their flags: view 0 = renderer+0x18 (+0x738 0272A574,
+# +0x73C 0272A584, +0x790 0272A580), view 1 = renderer+0x818 (0272A5B8/0272A5C8/0272A5C4) on the *101F8DC8 == NULL path
+# (0272A42C beq 0272A524), the only shipped path: no instruction in the binary stores 101F8DC8 (its .data word is 0;
+# the only references 0272A312/41A/610/784/89C are lwz). View 0 gets task+0x188/+0x18C, view 1 task+0x180/+0x184.
+# View-0 extent vs. target: the shipped TV extent is 1920x1080
+# (027297C0 setDimensions 02729814..0272986C), while the fixture's targets are 1280x720 (colour 0x70C7B800 and depth
+# 0x708F6000, 0x384000 bytes each, HiZ 0x70C7A000 + 0x1000). In the shipped game the extent never exceeds the target;
+# here it does because the display fixtures use the 1280x720 output size. Condition check (2026-10-29): this chain run
+# on the first frame WITH the attachments (lib2_agl_19_display_view_extent_watch) and every display spec that builds
+# them, with -watch 0x708F6000:0x719800 (depth, HiZ, the gap, colour and 64 KB past the colour end), n1000 -nulltrap s1
+# and s7: 0 guest accesses on either side (027D660C / 027D5EE8 write only view fields; the viewport, scissor, clear and
+# copy uses of the extent go to GX2 mocks that touch no guest memory). Nothing reaches past the 1280x720 targets.
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_init_fixture.txt
+real 0274F53C
+# ---- static size table of sinit 02739634 (static ctor list 1018BCA8). Its other parts (028ED6F8/028EAB2C guarded
+# statics) touch page 0 when run here, so its six size stores are the words below, each with its store instruction and
+# the rodata constant it stores. 0273971C returns 1049FB6C (TV), 02739578(r3) returns 1049FB74 (r3 != 0) / 1049FB7C.
+# 027396D0 stfsu f13,-0x494(r8) (10142E44)
+field * 1049FB6C f32 1920
+# 027396E8 stfs f13,4(r8) (10142E48)
+field * 1049FB70 f32 1080
+# 027396F8 stfsu f0,-0x48c(r12) (10142E4C)
+field * 1049FB74 f32 1280
+# 02739704 stfs f0,4(r12) (10142E50)
+field * 1049FB78 f32 720
+# 027396F0 stfsu f12,-0x484(r7) (10142E54)
+field * 1049FB7C f32 854
+# 02739708 stfs f13,4(r7) (10142E58)
+field * 1049FB80 f32 480
+stable 1049FB6C 0x18
+# sinit 0273C6B8 (static ctor list 1018BCB0): 1049FFA0/A4 = -FLT_MAX, 1049FFA8/AC = 0x80000000 (read by 02001790 in the
+# mode singleton's constructor; without it the setups read generated bss).
+real 0273C6B8
+setup * 0273C6B8
+# ---- sGraphicsMode *101F5088: createInstance 026177B8(heap) (game boot 0203EF2C): 0273B0D4 alloc 0x270, disposer
+# 02752B0C (vtable 100E29E0), constructor 02617620 (+0x1D0 = 4 at 02617670), store 02617834. Heap: the renderer heap
+# (the boot heap of 0203EE2C is not built here; the heap only places the object).
+real 026177B8 02617620 020011CC 02618E74 02001790 0273CDD4 0273D15C 0273BBD0 02001924
+setup * 026177B8 r3=0x6A87E2D0
+# ---- sGraphicsDevice *101F9968: createInstance 027F7E08 (constructor 027F7D78, store 027F7E84) and initialize
+# 027F7F08(dev, heap) (pass table: each entry's +8 = 0 at 027F7FAC). Shipped both run in hdLayer3D initialize 02730688
+# (02730928 with r3 = 0 after 0273091C made the layer heap = the renderer heap current; 02730938 with that heap); the
+# harness's current heap is the root heap (nestedret 02756140), so the renderer heap is passed explicitly.
+real 027F7E08 027F7D78 0274FDBC 027B95B4 027B6CB8 027F7F08
+setup * 027F7E08 r3=0x6A87E2D0
+setup * 027F7F08 r3=*101F9968 r4=0x6A87E2D0
+# ---- sTimingOwner *101F8D74: createInstance 0278BC9C (constructor 0278BBA8, store 0278BD18) and initialize 0278BDF8,
+# as 027297C0 runs them (02729D34 r3 = 0 -> current heap = renderer heap; 02729D44 r4 = r29 = the renderer heap).
+real 0278BC9C 0278BBA8 0278BDF8 0278BD3C 028F521C 0278BF5C 027AE6E0 028F543C
+setup * 0278BC9C r3=0x6A87E2D0
+setup * 0278BDF8 r3=*101F8D74 r4=0x6A87E2D0
+# ---- sGraphicsRenderer *101F95D0: creator 027C0A60 (0273B0D4 alloc 0x1260 from the renderer heap, disposer, constructor
+# 027C088C, store 027C0ADC; 027297C0 calls it at 027298D8). The display fixtures run its constructor 027C088C at the
+# placement 0x5E100000 (renderer_base_fixture); the word is the creator's store 027C0ADC of that object.
+field * 101F95D0 u32 0x5E100000
+stable 101F95D0 4
+# ---- hdGraphicsTask_c: real constructor 027294A8 (factory 0203FB48 = new(0x16AC, heapArray, 4) + 027294A8(this, arg))
+# at the placement 0x5E400000 (same allocation-site deviation as the manager). Fields 0272A1C4 reads, all written by the
+# constructor's own body: +0x17C = 4 (02729540), +0x180/+0x184 = 02739578(0) = {854,480} (0272954C/02729554),
+# +0x188/+0x18C = 0273971C() = {1920,1080} (02729560/0272956C), +0x1670 = 1 (027295B0), +0x1671 = 0 (027295A4),
+# +0x1674 = 200 (027295B4), +0x1678 = 125 (027295BC), +0x167C/+0x1680 = {1280,720} (027295E4/E8), +0x169C = 4 (02729604),
+# +0x16A0 = 4 (02729620). TaskConstructArg (made by the boot task manager): 0x5E402000 {HeapArray 0x5E402100, 0, 0};
+# the TaskBase constructor 02748980 only copies it (into +0x44..+0x58, +0x5C, +0x2C), which 0272A1C4 never reads.
+field * 5E402000 u32 0x5E402100
+field * 5E402004 u32 0
+field * 5E402008 u32 0
+field * 5E402100 u32 0x6A000000
+field * 5E402104 u32 0
+field * 5E402108 u32 0
+field * 5E40210C u32 0
+field * 5E402110 u32 0
+field * 5E402114 u32 0
+stable 5E402000 0x10
+stable 5E402100 0x18
+real 027294A8 02746910 02748980 02767360 0279DFE0 02739578 0273971C
+setup * 027294A8 r3=0x5E400000 r4=0x5E402000
+stable 5E400000 0x16AC
+# ---- the frame, in 0272A5F0's order. 0272A1C4 callees, all original: 027F81A4 (device pass lookup, entries 7/8 -> 0
+# after 027F7F08), 0272A104/0272A178 (layer+0x50 bit 0 of layers 0..3 / layer 7 (layer 0 with < 8 layers)),
+# 0273971C/02739578 (size-table addresses), 0272A03C + 027C23D4 (only on a mode change: *101F5088+0x1D0 != task+0x17C;
+# both are 4 from their constructors here, so not reached).
+real 0272A1C4 027F81A4 0272A03C 0272A104 0272A178 027C23D4
+postsetup * 0278BF5C r3=*101F8D74
+postsetup * 0272A1C4 r3=0x5E400000
+# After 0272A1C4: view 0 extent {1920,1080} (the shipped TV size; this fixture renders view 0 at 1280x720),
+# flags 0x388; view 1 extent {854,480} = its size, flags | 0x200. 027D5EE8 is driven on both views with both
+# extent vectors (a size is any RenderVector2 of the API; each vector belongs to a distinct view object).
+arg! 027D660C r3 0x5E100018,0x5E100818
+arg! 027D5EE8 r3 0x5E100018,0x5E100818
+arg! 027D5EE8 r4 0x5E100750,0x5E100F50

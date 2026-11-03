@@ -1,0 +1,36 @@
+# verify: -only 027E66B4 -strictnan -calleesp
+# A zero-sized logical conversion table in complete readable backing storage.
+# Reserved backing descriptor is an inert format; zero logical conversions must preserve dirty bits.
+src wwhd_src/agl/gx2/GpuUtilitySupport.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ArchiveLookupSupport.cpp
+src wwhd_src/JSystem/JKernel/JKRFileLoaderStatics.cpp
+src wwhd_src/agl/gx2/QueuedObjectSupport.cpp
+src wwhd_src/agl/gx2/CalendarSupport.cpp
+src wwhd_src/agl/gx2/UtilityText.cpp
+src wwhd_src/agl/gx2/UniformUpdateSupport.cpp
+src wwhd_src/agl/gx2/BlendPoseSupport.cpp
+src wwhd_src/agl/gx2/WorldPoseSupport.cpp
+stackfill
+arg! 027E66B4 r3 0x61200000
+arg! 027E66B4 r4 0x61210000
+arg! 027E66B4 r5 0x61220000
+field * 61200000 u32 0x61201000
+field * 61200028 u32 0x61203000
+field * 61201034 u32 0x2FCC
+field * 61204000 u8 255
+field * 61204002 u16 0
+field * 61204004 u32 0
+field * 61204008 u32 0
+real 027E6608
+field * 61201012 u16 0
+field * 61201044 u32 0xFBC
+field * 61202000 u32 0
+field * 61220000 u32 1
+stable 61200000 0x3C
+stable 61201000 0x48
+stable 61202000 4
+stable 61210000 0x40
+stable 61220000 4
+stable 61203000 0x40
+stable 61204000 20

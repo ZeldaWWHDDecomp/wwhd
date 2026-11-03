@@ -1,0 +1,13 @@
+# UNEXECUTED: own complete16B Color4 construction, placement or fresh allocation.
+# Opaque standard allocation is modelled as a fresh writable range; no heap-release lifecycle credit.
+# Allocation-failure branch stays in the separate constructor_oom companion.
+# verify: -strictnan -calleesp -only 027791DC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 027791DC r3 0,0x56000000
+fill 027791DC 56000000 16 165
+alloc 0273AD10 r3 0x57000000 16
+# Exact complete16B object outputs in both placement and fresh-allocation domains.
+final 027791DC 56000000 10
+final 027791DC 57000000 10

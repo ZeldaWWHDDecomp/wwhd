@@ -1,0 +1,13 @@
+# verify: -only 027F55FC -strictnan -calleesp -footprint
+include lib2_j3d_hdrew_1_model_frame_alt.txt
+# Realcallbackreceiver invariant: M+140, index0/next0 < observedbonecount4.
+arg! 027F55FC r3 0x5E001000
+arg! 027F59B4 r3 0x5E001140
+arg! 027F59B4 r4 0x5D200000
+fill * 0x5D200000 12 0
+field * 0x5D200000 u32 0x5D200008
+field * 0x5D200008 u32 0
+
+real 027F55FC
+# Frame 1 is produced by one additional original advanceFrame call.
+postsetup 027F55FC 027F55FC r3=0x5E001000

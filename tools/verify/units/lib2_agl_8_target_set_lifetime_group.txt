@@ -1,0 +1,22 @@
+# verify: -strictnan -calleesp -only 0279313C,02793E88,02794068
+# Three related lifecycle functions, grouped once per real constructor/cache producer.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+include shared/agl_world.txt for 0279313C 02793E88 02794068
+setupsnapshot
+real 025C0928 025C0934 025C09D8 0273AD10 0273AFC8 0273B200 0273B264 0274D67C 02752BEC 02755D28 02759B98 0276ACA0 0276AD30 0276B114 027861E0 027919BC
+real 027919FC 02791A4C 02791A54 0279288C 02792A08 02793384 0279345C 02793908 02793E88 02795EE0 02796034 02796558 027965BC 027966F0 027967A0 027967C4
+real 02796EEC 02797DDC 0279A07C 0279A490 0279C950 0279CA34 0279CB9C 0279E57C 0279E618 0279E674 0279F1BC 0279FD18 0279FDC8 0279FE74 027A0114 027A03A0
+real 027A063C 027A08C8 027A0998 027A84B8 027A861C 027A8C80 027B6030 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027B954C 027B958C 027B95B4 027B9694
+real 027BDF7C 027BE2B0 027BEB5C 027BEBEC 027BEC90 027BECEC 027BED84 027BEE9C 027BEEBC 027BEED4 027BEEE4 027CB744 028F007C 028F0164
+include lib2_agl_8_grouped_lifetime_producers.txt

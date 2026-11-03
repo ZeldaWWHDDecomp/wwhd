@@ -1,0 +1,7 @@
+# verify: -strictnan -calleesp -only 02796B3C
+# TYPE-DOMAIN: original extent setter admits zero after real positive-depth allocation.
+# Composite of validated observation payloads and the validated zero-extent API producer.
+include lib2_agl_8_shadow_preparation_observed_group.txt
+field 02796B3C 0x5E120220 u32 0,16
+field 02796B3C 0x5E120224 u32 0,16
+postsetup 02796B3C 027967A0 r3=0x59020000 r4=0x5E120220

@@ -1,0 +1,13 @@
+# Caller-valid 027CC78C rigid-transform depth-X companion. This coherent point
+# is R^T*(-2,3,498) for the tilted transform, yielding transformed (0,0,-2).
+# Replacing row2.x with row2.y instead yields depth about -88, across far=10.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_visibility_tilted_translated.txt
+# Steer the original camera producer; its postsetup publishes these into the
+# cull volume after ordinary poke directives have run.
+poke * 59400094 f32 1
+poke * 59400098 f32 10
+poke * 59100008 f32 -170.5440663
+poke * 5910000C f32 84.7912297
+poke * 59100010 f32 460.1545071
+poke * 59100014 f32 1

@@ -1,0 +1,26 @@
+# AGL#19 shader allocation arms, TYPE-DOMAIN: r3 == NULL makes these constructors
+# allocate their object (0273AD10) and return NULL when that fails. Every shipped call passes an object (wdis):
+#   027D3D3C: only caller 027B949C passes r3 = r31, reached only past `beq 027B94A0` on a NULL r31 (027B9494);
+#   027D4CCC: only callers 027BA060/027BA074/027BA088 (program constructor 027B9F78) pass r3 = program+0x40/+0x54/+0x68;
+#   027D4EA4: callers 027C4288 (r3 = r1+0x94, in 027C424C) and 027C4554 (r3 = r1+8, in 027C4538), stack frames;
+#   027D4FE8: callers 027D6AA4, 027D6BFC, 027D7234 all pass r3 = r1+8, a stack frame.
+# Only r3 is varied; the layers are the producer-built ones of lib2_agl_19_shader_layer_fixture.txt. Allocation
+# succeeds (deterministic block) or fails (allocfail call 1).
+# verify: -only 027D3D3C,027D4CCC,027D4EA4,027D4FE8
+src wwhd_src/agl/ShaderStageState.cpp
+src wwhd_src/agl/RenderInputCollections.cpp
+src wwhd_src/agl/RenderDispatchContext.cpp
+include lib2_agl_19_shader_layer_fixture.txt
+alloc 0273AD10 r3 0x5A800000
+allocfail 0273AD10 0,1
+fill * 5A800000 0x100 0xA5
+arg! 027D3D3C r3 0
+arg! 027D4CCC r3 0
+arg! 027D4EA4 r3 0
+arg! 027D4EA4 r4 0,1,2,3
+arg! 027D4EA4 r5 0,0x5A100000
+arg! 027D4EA4 r6 0,1
+arg! 027D4EA4 r7 0x58000000,0x58001000,0x58002000
+arg! 027D4FE8 r3 0
+arg! 027D4FE8 r4 0,1,2,3
+arg! 027D4FE8 r5 0,0x5A100000

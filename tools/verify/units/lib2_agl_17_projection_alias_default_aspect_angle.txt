@@ -1,0 +1,15 @@
+# Alias witness: Null fallback aspect/angle outputs share one writable scalar; original zero angle store wins.
+# Supplemental caller-memory contract diagnostic; not whole-unit acceptance.
+# Null projection alias fallback only; no positive-family acceptance from this spec.
+# verify: -only 027C4C5C -strictnan -calleesp
+src wwhd_src/agl/UtilityProjection.cpp
+stackfill
+arg! 027C4C5C r3 0
+arg! 027C4C5C r4 0,0x58A00000
+arg! 027C4C5C r5 0,0x58A00010
+arg! 027C4C5C r6 0,0x58A00020
+arg! 027C4C5C r7 0x58A00020
+arg! 027C4C5C r8 0,0x58A00040
+field 027C4C5C 101FD6A0 u32 0,1,2,0xFFFFFFFF
+field 027C4C5C 101FD6A8 u32 0,1,2,0xFFFFFFFF
+field 027C4C5C 101FD6A4 u32 0,1,2,0xFFFFFFFF

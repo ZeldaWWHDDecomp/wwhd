@@ -1,0 +1,43 @@
+# A bounded derived registry heap owns the bank subobject at +0x100.
+# Its explicit contains callback may inspect its private backing storage, including
+# the bank's initialized raw count word while base registration is in progress.
+# Execute real base registration, registry search, contains dispatch and list insertion.
+# Only the count word is lifted to outer entry: none of those real helpers writes it
+# before the nested contains callback. No SDK/private game callback footprint claim.
+# verify: -only 02761D48 -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+real 02752A84 02755FEC 027556FC 02755CA4 0273B2F0
+observe 02752A84 60140114 4
+callee 0F0100A0 fixture r3=heap512 r4=heap28
+ret! 0F0100A0 1
+ret! 0273B0D4 0
+arg! 02761D48 r3 0x60140100
+arg! 02761D48 r4 0,1,4
+arg! 02761D48 r5 0x60140000
+field * 60140114 u32 7
+field * 101F8B4C u32 0x6014E000
+field * 101F8B94 u32 0
+field * 104A030C u32 1
+field * 104A0310 u32 1
+field * 104A0314 u32 0x104A0318
+field * 104A0318 u32 0x60140000
+field * 6014000C u32 0x60142000
+field * 60142084 u32 0x0F0100A0
+field * 6014001C u32 0x60140100
+field * 60140020 u32 0x100
+field * 60140028 u32 0x60140028
+field * 6014002C u32 0x60140028
+field * 60140030 u32 0
+field * 60140034 u32 0
+field * 60140040 u32 0x60140040
+field * 60140044 u32 0x60140040
+field * 60140048 u32 0
+field * 6014004C u32 4
+field * 60140090 u32 0
+stable 60140000 0x200
+stable 60142000 0x90
+stable 6014E000 0x200
+stable 101F8B4C 4
+stable 101F8B94 4
+stable 104A030C 0x1C

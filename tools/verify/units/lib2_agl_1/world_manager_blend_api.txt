@@ -1,0 +1,29 @@
+# AGL#1 blendResources (0276B710) on the original world and the game env.baglenv: the full argument API (selected
+# entry and blend weight), beyond the shipped callers (025AE500/025B1194/0276CBFC pass entry -1, weight 1.0).
+# verify: -only 0276B710 -strictnan -calleesp
+include lib2_agl_1/world_manager_initialize.txt
+real 0276C3F8
+setup * 0276C3F8 r3=0x59E00000 r4=0x59E10000 r5=0x6A000000
+# The game's environment archive (content/Common/env.baglenv, 1164 bytes), endian-converted in place by its original
+# resource constructor (027A7558), which the game runs on the loaded file before blending.
+fill * 5E000000 0x1000 0
+blob * 5E000000 content/Common/env.baglenv 0 0x48C
+setup * 027A7558 r3=0x5E001000 r4=0x5E000000
+field * 5E001010 u32 0x5E000000
+# A second, distinct copy of the same archive (the paired-blend arm needs two different archive objects).
+fill * 5E002000 0x1000 0
+blob * 5E002000 content/Common/env.baglenv 0 0x48C
+setup * 027A7558 r3=0x5E001004 r4=0x5E002000
+field * 5E001014 u32 0x5E000000,0x5E002000
+stable 5E000000 0x3000
+arg! 0276B710 r3 0x59E00000
+arg! 0276B710 r4 0x5E001010
+arg! 0276B710 r5 0x5E001014
+arg! 0276B710 r6 -1,0,1,2,3,5,0x7FFFFFFF
+# First blend after startup: the .bss first-use flags of the two key hashes are zero.
+field * 0x104A144C u32 0
+field * 0x104A1450 u32 0
+argf64! 0276B710 f1 0,0.25,0.5,0.75,1,1.5,-0.5
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

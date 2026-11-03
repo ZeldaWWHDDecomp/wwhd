@@ -1,0 +1,7 @@
+# Producer-backed bloom drawing context from the shared AGL world.
+# The original resource-provider setup constructs the object reached through 101F8DE4;
+# 02775BDC reads its valid draw count at +0x328.
+# verify: -strictnan -calleesp -only 02775BDC
+src wwhd_src/agl/BloomParameters.cpp
+include shared/agl_world.txt
+setupsnapshot

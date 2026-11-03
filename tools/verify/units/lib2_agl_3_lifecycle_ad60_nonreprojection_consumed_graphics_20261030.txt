@@ -1,0 +1,14 @@
+# TYPE-DOMAIN: accepted reprojection0 +alpha0..1 originalParameterBase apply producer, unchanged.
+include lib2_agl_3_filter_aa_typedomain_reprojection_disabled_apply_uniform_observed.txt
+# Exact original-produced RenderBuffer/ColorSurface/Viewport readsets, no padding.
+observearg 0274D690 r3+0x1C 36
+observearg 025C0928 r3+0x94 8
+observearg 0274F964 r3+0 20
+observearg 0274F964 r4+0 24
+# All TextureSampler activate paths read allthree signed stage locations.
+observearg 027BE53C r4+0x8 6
+# Nonreprojection site2=secondTexture/binding1, activePS1 in every42native fxaa program.
+# No history/depth calls/sites3/4 exist; base binding0 can be absent and receives no sampler-byte capture.
+observearg 027BE53C@2 r3+0x190 1
+# Correction: source secondaryFlag91 is unrelated to native customBorder14C; no border168 payload observation.
+# Minimal sampler input observation:190 dirty byte only;14C customBorder can be overwritten by dirty32.

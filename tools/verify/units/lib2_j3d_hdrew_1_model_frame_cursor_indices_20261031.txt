@@ -1,0 +1,5 @@
+# verify: -only 027F59B4 -strictnan -calleesp -footprint
+include lib2_j3d_hdrew_1_model_frame_cursor_20261031.txt
+# Caller-owned index covers all four observed bones, including last-bone wrap.
+# No out-of-range bone index or private model field is changed.
+field * 0x5D200008 u32 0,1,2,3

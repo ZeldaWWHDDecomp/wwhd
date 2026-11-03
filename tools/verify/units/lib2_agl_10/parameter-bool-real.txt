@@ -1,0 +1,82 @@
+# AGL#10 companion: bool parameters with this unit's real getters, hash, initialization and copy.
+# verify: -strictnan -calleesp -only 0279E674,0279E710,0279E7B0,0279E868,0279E904,0279EACC,0279EB28,0279EC1C
+src wwhd_src/agl/MultiFilter.cpp wwhd_src/agl/ParameterBase.cpp wwhd_src/agl/DynamicTextureCache.cpp wwhd_src/agl/DynamicTextureCacheStatics.cpp wwhd_src/agl/TextureResource.cpp wwhd_src/agl/PrimitiveShapes.cpp wwhd_src/agl/PrimitiveShapesStatics.cpp wwhd_src/sead/PoolHeapStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# Name and label texts passed on the stack are compared by content.
+callee 0279E618 r4=8 r5=8 r6=8
+callee 02785CB4 r4=8
+# Cafe core id: the three CPU cores, mapped by the core-reverse table to pools 0..2.
+ret! C0009BB0 0,1,2
+field * 104A0BC0 u32 0
+field * 104A0BC4 u32 1
+field * 104A0BC8 u32 2
+stable 104A0BC0 12
+# Disposers are compared as registered (their contents at the registration call).
+callee 02752B0C r3=heap16
+# Object and heap allocators hand out distinct blocks (identical on both sides).
+alloc 0273AD10 r3 0x58B00000 4
+alloc 0273B0D4 r3 0x58D00000 align=r5
+stable 58B00000 0x20000
+stable 58D00000 0x10000
+# A heap at 0x58900000 whose method table allocates (F0010000) and releases (F0010004) as fixtures.
+callee F0010000 fixture r3=0 r4=0 r5=0
+alloc F0010000 r4 0x58920000 align=r5
+callee F0010004 fixture r3=0 r4=0
+field * 5890000C u32 0x58910000
+field * 58910034 u32 0xF0010000
+field * 5891003C u32 0xF0010004
+stable 58900000 0x94
+stable 58910000 0x90
+ret! 02755FEC 0x58900000
+ret! 02756140 0x58900000
+# Parameters at 0x58500000/0x58510000 with the multi-filter's bool parameter method table (10167B4C).
+field * 58500000 u32 0,1
+field * 58500008 u32 0x10167B4C,0x58520000
+# A derived bool parameter: the real method table, but its onResourceApplied hook is a fixture that sees the
+# stored value at the call (a derived parameter may read it there).
+copy * 58520000 10167B4C 0x78
+field * 5852006C u32 0xF0030008
+stable 58520000 0x78
+callee F0030008 fixture r3=0
+observearg F0030008 r3+0xC 1
+field * 5850000C u8 0,1,2
+field * 58510000 u32 0,1
+field * 58510008 u32 0x10167B4C
+field * 5851000C u8 0,1,2
+stable 58500000 16
+stable 58510000 16
+real 0279E4AC
+real 0279E4B4
+real 0279E4BC
+real 0279E4C4
+real 0279E4A8
+real 0279E868
+real 0279E57C
+real 0279E618
+real 0273B264
+mockmove C0009988 r3 r4 r5
+field * 58560000 u32 0x58560100
+field * 58560004 u32 0x10167CCC
+fill * 58560100 32 0
+fieldstr * 58560100 32 "parameter","ab","","x"
+stable 58560000 8
+stable 58560100 32
+arg! 0279E674 r3 0x58500000
+arg! 0279E710 r3 0x58500000
+arg! 0279E710 r4 0x58560000
+arg! 0279E710 r6 0
+arg! 0279E7B0 r3 0x58500000
+arg! 0279E7B0 r4 0x58510000
+arg! 0279E868 r3 0x58500000
+arg! 0279E868 r4 0x58510000
+arg! 0279E904 r3 0x58500000
+arg! 0279EACC r3 0x58500000
+arg! 0279EB28 r3 0x58500000
+arg! 0279EB28 r4 0x58590000
+arg! 0279EC1C r3 0x58500000
+arg! 0279EC1C r4 0x58590000
+field * 58590000 u32 0x585A0000
+field * 585A0000 u32 12,13,16,20,28
+stable 58590000 4
+stable 585A0000 32
+argf64! 0279EC1C f1 0x0000000000000000,0x3FF0000000000000,0x7FF8000000000042

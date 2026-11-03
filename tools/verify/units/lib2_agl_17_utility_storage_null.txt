@@ -1,0 +1,9 @@
+# Exact null-allocation failure: allocator returns no object, no object writes.
+# The constructor leaves all unobserved bytes unchanged.
+# verify: -only 027C6C54 -strictnan -calleesp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027C6C54 r3 0
+fill 027C6C54 5E100000 204 165
+ret! 0273AD10 0
+final 027C6C54 5E100000 CC

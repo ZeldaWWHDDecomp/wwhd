@@ -1,0 +1,7 @@
+# Readback over the original-produced parameter block with its FMAT initial data: 027DD0BC copies the material's
+# 0x100-byte initial uniform data into mData with memcpy (import C000A848 via 028FEAC0), modelled as a real copy
+# (as in batch_cursor_calculate_20261031). The shipped Esa values give konst1 four distinct channels and tev_color0
+# a distinct alpha; the unmodelled copy left mData zero, so every channel read the same 0.0.
+# verify: -only 027FA160,027FA3F4 -strictnan -calleesp
+include lib2_j3d_hdrew_1_batch_real_formatter_20261031.txt
+mockmove C000A848 r3 r4 r5

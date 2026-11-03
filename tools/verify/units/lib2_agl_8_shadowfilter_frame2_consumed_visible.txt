@@ -1,0 +1,36 @@
+# verify: -strictnan -only 02796F74 -noclobber
+# Consumed-input observation for ShadowMap::filterDepthTexture 02796F74 (AGL#8 shadowfilter family, 2026-10-31).
+# Every mocked callee of 02796F74 gets the bytes it actually reads compared at the call:
+#  - CompactRenderState::create 0274FDBC runs for real (original producer, writes only the r3 object; 0273AD10 = its
+#    memset), and CompactRenderState::apply 0274FEB0 reads the state's fields (padding and the table word excluded,
+#    same spans as lib2_agl_8_mode0_core_state_observed_group).
+#  - sead::Viewport::createSurface 0274F5F0 / apply 0274F964 read the logical surface at map+0x6D8 (24 bytes) and
+#    the viewport (20 bytes).
+#  - GX2SetVertexUniformReg C0006A40 / GX2SetPixelUniformReg C0006908 read 4*r4 bytes at r5 (the filter vectors and
+#    the per-layer vectors at sp+0x48/0x4C/0x50, which overlap the rectangle at sp+0x54).
+#  - bindFilterSampler 027BE53C reads the whole filter-input sampler at r3 (map+0x860, 0x198 bytes) and the
+#    sampler locations r4+8 (3 halfwords).
+#  - sead::activateFrameBuffer 0274D690 reads the frame's colour/depth targets (r3+0x1C, 36 bytes).
+#  - attachColorSlice 025C0848 reads the colour surface's descriptor words and its mip/slice cache (r3+0x90).
+# Observation only: no owner field is assigned; -noclobber gives non-clobber witnesses.
+# Base: second-frame schedule (cached filter description meets a same-description texture).
+include lib2_agl_8_filter_depth_frame2_alt.txt
+real 0274FDBC 0273AD10
+callee C0006A40 r5=dyn4*r4:heap64
+callee C0006908 r5=dyn4*r4:heap64
+observearg 0274FEB0 r3+0 2
+observearg 0274FEB0 r3+0x4 8
+observearg 0274FEB0 r3+0xC 1
+observearg 0274FEB0 r3+0x10 40
+observearg 0274FEB0 r3+0x38 1
+observearg 0274FEB0 r3+0x3C 13
+observearg 0274FEB0 r3+0x4C 32
+observearg 0274FEB0 r3+0x6C 3
+observearg 0274F5F0 r4+0 24
+observearg 0274F964 r3+0 20
+observearg 0274F964 r4+0 24
+observearg 027BE53C r3+0 256
+observearg 027BE53C r3+0x100 152
+observearg 027BE53C r4+0x8 6
+observearg 0274D690 r3+0x1C 36
+observearg 025C0848 r3+0x90 12

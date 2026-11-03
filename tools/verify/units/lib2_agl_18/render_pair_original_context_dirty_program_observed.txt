@@ -1,0 +1,10 @@
+# Caller-valid first-draw observer companion for 027CFFF0 dirty-program
+# mutations.  The included profile obtains the selected program through the
+# original selector and marks its family dirty through 027BBCA0.  Observe the
+# selected/root program at the refresh boundary so changes to the dirty clear
+# or to refresh ordering cannot be hidden by 027BB9E0's later flag update.
+# No program metadata is poked.
+# verify: -only 027CFFF0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_pair_original_context_dirty_program.txt
+observearg 027BB9E0 r3+0 32
+observearg 027BB7CC r3+0 32

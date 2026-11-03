@@ -1,0 +1,142 @@
+# NW-SND#12: group resources, sequence bytecode and player adapters.
+# verify: -strictnan -calleesp
+src wwhd_src/nw/snd/GroupFileReader.cpp
+stackfill
+src wwhd_src/nw/snd/SequenceArgumentReader.cpp
+src wwhd_src/nw/snd/SequenceFileReader.cpp
+src wwhd_src/nw/snd/SoundMemoryArena.cpp
+src wwhd_src/nw/snd/SequenceTrackPool.cpp
+src wwhd_src/nw/snd/SequenceFileCache.cpp
+src wwhd_src/nw/snd/SequenceSound.cpp
+src wwhd_src/nw/snd/SequenceCommandReader.cpp
+src wwhd_src/nw/snd/SequenceSoundCommands.cpp
+src wwhd_src/nw/snd/SequenceSoundList.cpp
+src wwhd_src/nw/snd/SequenceManager.cpp
+# Finite list fixtures: zero or one resident sound/task; mock calls retain list topology.
+arg! 028AE048 r3 0x50000000
+field 028AE048 r3+0x29C u32 0x55000000
+field 028AE048 5500000C u32 0x5500000C,0x56000274
+field 028AE048 56000274 u32 0x5500000C
+stable 55000000 0x20
+stable 56000000 0x588
+arg! 028AE3D0 r3 0x55000000
+field 028AE3D0 r3+0x394 u32 0x55000394,0x56000084
+field 028AE3D0 56000084 u32 0x55000394
+field 028AE3D0 56000034 u32 0x61000000
+field 028AE3D0 6100000C u32 0x0289C0C8
+stable 55000390 0xC
+stable 56000084 8
+src wwhd_src/nw/snd/SequenceCommandExecutor.cpp
+
+# Interpreter opcode and numeric edges retain the standard unsteered escape inputs.
+arg 028AB2E8 r5 0,0x80,0x81,0x88,0x89,0x8A,0xB0,0xB1,0xB2,0xB3,0xB4,0xB5,0xB6,0xBD,0xBE,0xBF,0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0xC6,0xC7,0xC8,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xCF,0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB,0xDC,0xDD,0xDE,0xDF,0xE0,0xE1,0xE3,0xE4,0xFB,0xFC,0xFD,0xFF,0xF080,0xF081,0xF082,0xF083,0xF084,0xF085,0xF086,0xF087,0xF088,0xF089,0xF08A,0xF08B,0xF090,0xF091,0xF092,0xF093,0xF094,0xF095,0xF0A0,0xF0A1,0xF0A2,0xF0A3,0xF0A4,0xF0A5,0xF0A6,0xF0A7,0xF0A8,0xF0A9,0xF0AA,0xF0AB,0xF0AC,0xF0AD,0xF0AE,0xF0AF,0xF0B0,0xF0B1,0xF0E0,0xF0E1,0xF0E2,0xF0E3,0xF0E4,0xF0E5,0xF0E6,0xFFFF,0x10000,0xFFFFFFFF,0x8B,0xB7,0xB8,0xB9,0xBA,0xBB,0xBC,0xE2,0xF08C,0xF08D,0xF08E,0xF08F,0xF096,0xF097,0xF098,0xF099,0xF09A,0xF09B,0xF09C,0xF09D,0xF09E,0xF09F
+arg 028AB2E8 r6 -2147483648,-65536,-32768,-129,-128,-1,0,1,31,32,47,48,63,64,127,128,255,256,1023,1024,32767,32768,65535,65536,2147483647
+arg 028AB2E8 r7 -2147483648,-65536,-32768,-129,-128,-64,-32,-1,0,1,31,32,63,64,127,255,32767,32768,65535,65536,2147483647
+field 028AB2E8 r4+0x15C u8 0,1,2,9,10,11,255
+field 028AB2E8 104D48E0 u8 0,1
+# Supported/unsupported resource versions and block signatures.
+field 028AA7BC r3+0x0 u32 0x46475250,0,0x46475251
+field 028AA7BC r3+0x8 u32 0x10000,0xFFFF,0x10001
+field 028AA7F4 r4+0x0 u32 0x46475250,0,0x46475251,0x46475250,0x46475250,0x46475250,0x46475250
+field 028AA7F4 r4+0x8 u32 0x10000,0xFFFF,0x10001,0x10000,0x10000,0x10000,0x10000
+ret 028B1D44 0,0x60000000,0x60000000,0x60000000,0x60000000
+ret 028B1DA0 0,0x60001000,0x60001000,0x60001000,0x60001000
+ret 028B1DFC 0,0x60002000,0x60002000,0x60002000,0x60002000
+field 028AA7F4 60000000 u32 0x494E464F,0,0x494E464E,0x494E464F,0x494E464F,0x494E464F,0x494E464F
+field 028AA7F4 60001000 u32 0x46494C45,0,0x46494C44,0x46494C45,0x46494C45,0x46494C45,0x46494C45
+field 028AA7F4 60002000 u32 0x494E4658,0,0x494E4659,0x494E4658,0x494E4658,0x494E4658,0x494E4658
+field 028AE1B4 r3+0x0 u32 0x46534551,0,0x46534550
+field 028AE1B4 r3+0x8 u32 0xFFFF,0x10000,0x10001,0x1FFFF,0x20000,0x20001
+field 028AE1F4 r4+0x0 u32 0x46534551,0,0x46534550,0x46534551,0x46534551,0x46534551,0x46534551
+field 028AE1F4 r4+0x8 u32 0xFFFF,0x10000,0x10001,0x1FFFF,0x20000,0x20001
+ret 028B1F14 0,0x60003000,0x60003000,0x60003000,0x60003000
+ret 028B1F70 0,0x60004000,0x60004000,0x60004000,0x60004000
+field 028AE1F4 60003000 u32 0x44415441,0,0x44415440,0x44415441,0x44415441,0x44415441,0x44415441
+field 028AE1F4 60004000 u32 0x4C41424C,0,0x4C41424D,0x4C41424C,0x4C41424C,0x4C41424C,0x4C41424C
+# Reference resolution includes the wrapped-null entry and absent file sentinel.
+arg 028AA8FC r5 0,1,2,3,4,0xFFFFFFFF
+arg 028AA978 r5 0,1,2,3,4,0xFFFFFFFF
+field 028AA8FC r3+0x0 u32 0,0x60005000
+field 028AA978 r3+0x8 u32 0,0x60005000
+field 028AA8FC 60005000 u32 0,1,2,3,4
+field 028AA978 60005000 u32 0,1,2,3,4
+field 028AA8FC 60005008 u32 0,0x80,0x9FFFB000
+field 028AA8FC 60005010 u32 0,0x80,0x9FFFB000
+field 028AA8FC 60005018 u32 0,0x80,0x9FFFB000
+field 028AA8FC 60005020 u32 0,0x80,0x9FFFB000
+field 028AA978 60005008 u32 0,0x80,0x9FFFB000
+field 028AA978 60005010 u32 0,0x80,0x9FFFB000
+field 028AA978 60005018 u32 0,0x80,0x9FFFB000
+field 028AA978 60005020 u32 0,0x80,0x9FFFB000
+field 028AA8FC 60005088 s32 -1,0,1,2147483647,-2147483648
+# Variable provider ranges, including negative indices and both provider boundaries.
+arg 028AA9C4 r6 -2147483648,-1,0,30,31,32,33,46,47,48,49,2147483647
+# Parser prefixes/opcodes through a finite byte stream; default arguments still vary.
+arg! 028AAB94 r4 0x58000000
+field 028AAB94 r4+0x104 u32 0x60006000
+field 028AAB94 60006000 u8 0,1,60,127,0x80,0x81,0x88,0x89,0x8A,0x90,0xA0,0xA1,0xA2,0xA3,0xA4,0xA5,0xB0,0xC3,0xC4,0xD4,0xE0,0xF0,0xFE,0xFF,0x82,0x8B,0xF1,0xC2
+field 028AAB94 60006001 u8 0,1,0x80,0x81,0x88,0x89,0x8A,0xA0,0xA1,0xB0,0xC3,0xC4,0xD4,0xE0,0xF0,0xFE,0xFF,0x82,0x8B,0xF1,0xC2
+field 028AAB94 60006002 u8 0,1,0x80,0x90,0xA0,0xA1,0xB0,0xC3,0xC4,0xE0,0xF0,0xFF
+field 028AAB94 r4+0x108 u8 0,1,255
+field 028AAB94 r4+0x109 u8 0,1,255
+field 028AAB94 r4+0x15E u8 0,1,255
+arg 028AAB94 r5 0,1,255
+# Embedded-list construction at the 32-bit wrapped-null address.
+arg 028AE2E8 r3 0,0x50000000,0xFFFFFC70,0xFFFFFFFF
+# Both allocator/attachment-null cases and a typed deallocation callback.
+field 028AE46C 101FCB70 u32 0,0x62000000
+field 028AE46C 62000000 u32 0x62000100
+field 028AE46C 6200011C u32 0xC1000010
+field 028AE46C r3+0x1528 u32 0,0x63000000
+callee C1000010 fixture r3=0 r4=0
+
+# Loop completion/repeat and call-stack entries, including the one-repeat pop.
+field 028AB2E8 r4+0x10C u8 0,1,255
+field 028AB2E8 r4+0x10D u8 0,1,2,255
+field 028AB2E8 r4+0x114 u8 0,1,255
+field 028AB2E8 r4+0x115 u8 0,1,2,255
+field 028AB2E8 r4+0x11C u8 0,1,255
+field 028AB2E8 r4+0x11D u8 0,1,2,255
+field 028AB2E8 r4+0x124 u8 0,1,255
+field 028AB2E8 r4+0x125 u8 0,1,2,255
+field 028AB2E8 r4+0x12C u8 0,1,255
+field 028AB2E8 r4+0x12D u8 0,1,2,255
+field 028AB2E8 r4+0x134 u8 0,1,255
+field 028AB2E8 r4+0x135 u8 0,1,2,255
+field 028AB2E8 r4+0x13C u8 0,1,255
+field 028AB2E8 r4+0x13D u8 0,1,2,255
+field 028AB2E8 r4+0x144 u8 0,1,255
+field 028AB2E8 r4+0x145 u8 0,1,2,255
+field 028AB2E8 r4+0x14C u8 0,1,255
+field 028AB2E8 r4+0x14D u8 0,1,2,255
+field 028AB2E8 r4+0x154 u8 0,1,255
+field 028AB2E8 r4+0x155 u8 0,1,2,255
+
+# Event::wait forwards r3 unchanged to OSWaitEvent (import mask0x8).
+# The event identity is observable: runtime's host Event table is keyed by this guest address.
+# r3=0 requests raw argument identity, not an inferred36-byte OS read footprint.
+# Canonical nw/ut/Platform.h still establishes Event storage extent0x24.
+callee 028F6A2C r3=0
+# Pin valid parser virtuals so all command/note arguments are checked against real signatures.
+field 028AAB94 r3+0x0 u32 0x64000000
+field 028AAB94 64000014 u32 0x028AB2E8
+field 028AAB94 6400001C u32 0x028AD7B8
+# Both cache dispatch entries use the concrete cached-file lookup signature.
+field 028ADADC r3+0x8 u32 0x66000000
+field 028ADAEC r3+0xFFFFFFFC u32 0x66000000
+field * 66000024 u32 0x028ADA9C
+# The sequence-finalization hook takes only the sound identity.
+arg! 028ADFA8 r3 0x50000000
+field 028ADFA8 r3+0x294 u32 0x65000000
+field 028ADFA8 r3+0x29C u32 0x55000000
+field 028ADFA8 65000024 u32 0xC1000030
+callee C1000030 fixture r3=0
+# Track-mask prefix and byte-order edges (ordinary non-prefix streams remain present).
+arg 028AB2A8 r4 0,1,2,3
+field 028AB2A8 r3+0x0 u8 0,0xFE
+field 028AB2A8 r3+0x1 u8 0x12,0xFE
+field 028AB2A8 r3+0x2 u8 0x34,0xFE
+field 028AB2A8 r3+0x3 u8 0x56,0xFE
+# Variable equality/overflow/shift boundaries as well as null and broad return pointers.
+ret 028AA9C4 0,0x60007000
+field * 60007000 s16 -32768,-1,0,1,32767

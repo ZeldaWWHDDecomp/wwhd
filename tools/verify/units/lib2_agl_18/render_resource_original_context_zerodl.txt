@@ -1,0 +1,5 @@
+# Type-domain empty display-list companion.
+# Shipped ShaderMgr recordings are nonzero; this keeps the valid zero-size arm.
+# verify: -only 027CD8EC -strictnan -calleesp -footprint
+include lib2_agl_18/render_resource_original_context.txt
+mockdisplaylist C0006090 C0006190 C0006218

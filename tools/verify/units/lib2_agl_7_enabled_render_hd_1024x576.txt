@@ -1,0 +1,6 @@
+# AGL#7 02791230 targeted dimension input: proposed 1024x576 depth size through the original allocator in the 32 MB world; baseline passes; shipped caller-domain acceptance is still pending.
+# Supplemental profile only; it does not replace the accepted ten-profile suite.
+# verify: -only 02791230 -strictnan -calleesp -nulltrap
+include lib2_agl_7/enabled_render_hd_1024x576_base.txt
+real 02791230
+postsetup 02791230 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0

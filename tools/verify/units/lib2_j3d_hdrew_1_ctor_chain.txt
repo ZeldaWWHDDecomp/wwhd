@@ -1,0 +1,56 @@
+# ModelDataPipeline_l constructor 027F5A5C reached the way 027F7B50 calls it
+# (admitted chain ResourceArchiveInfoHD::loadMaterialModel 0260A0B4 -> resourceCreateModel 0272D384 ->
+# ModelDataPipeline_l::create 027F7B50 -> 027F5A5C on shipped model archives, -only 027F5A5C). Base: the toon companion
+# (lib2_j3d_hdrew_1_misc_50f8_toon: packet_values_lead world, shared_gfxdevice, shared_resarchive,
+# Kn.szs and St.szs registered by the original 02604EB4 and each model made by the original 0272D384 -> 027F7B50, as the
+# loaders 0260870C/0260A5C8 call it). The tested call is 027F7B50's own call 027F7C44 replayed (prefix replay as admitted
+# 2026-11-01 02:41): the original allocation 0273B050(0x4C, heap, 4) at 027F7B78 gives the receiver S; 027F7B50's stores
+# before the call (027F7B8C..027F7C34) are all 0 and S is already zero after the setups (-watch proof in the ctor
+# helper evidence), so they are not replayed; then 027F5A5C(r3 = S, r4 = the FMDL 027F7B50 got in r3 (027F7C3C mr r4,r29),
+# r5 = its heap r6 (027F7C38 mr r5,r28)). FMDLs: Kn.bfres "kn" (FRES 0x58220000 +0x124, 2 materials) and St.bfres "st_asil"
+# (0x585672EC, one material, valueCount 1), the same FMDL pointers the base passes to 0272D384. Nothing is poked into the
+# receiver or the resource.
+# verify: -only 027F5A5C -strictnan -calleesp
+include lib2_j3d_hdrew_1_misc_50f8_toon.txt
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+# The current heap: the constructor's NULL-heap allocations call sead getCurrentHeap 02756140 at top level; it answers
+# the root heap 0x6A000000, exactly as shared/agl_world.txt answers the same calls of the setups' own 027F5A5C runs
+# inside 0272D384 (`nestedret 02756140 0x6A000000`), as in lib2_j3d_hdrew_1_factory_kn_curheap.
+ret! 02756140 0x6A000000
+fill * 0x58101058 4 0
+setup * 0273B050 r3=0x4C r4=0x6A000000 r5=4 ->0x58101058
+arg! 027F5A5C r3 0x6A8A8420
+arg! 027F5A5C r4 0x58220124,0x585672EC
+arg! 027F5A5C r5 0x6A000000

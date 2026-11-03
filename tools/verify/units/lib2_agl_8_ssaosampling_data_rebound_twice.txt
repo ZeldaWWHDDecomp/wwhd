@@ -1,0 +1,34 @@
+# verify: -strictnan -only 0279345C -noclobber
+# ssaosampling companion: 0279345C on the second-prepareResources state of
+# lib2_agl_8_ssaosampling_data_prepare_twice, after a client has bound every noise sampler once.
+# The 16 noise samplers SsaoEffect::mSampleSamplers (+0xE5C + i*0x198) leave construction and the first
+# prepareResources with dirty (+0x190) = 0xFF (027BDF7C create, 027BDEB4 copyTexture ORs 5), so the dirty ORs at
+# 0279345C (|4, |2 on the same-layout arm) cannot show. A bind clears them: bindTextureSampler 027BE53C (real) with
+# a pixel-stage location calls updateSamplerState 027BE494 (real), which stores dirty = 0 (the SSAO render binds
+# its noise sampler the same way at sampler location 1). Same pattern as the AGL#7 re-initialize bind companions
+#. The location record is caller-owned type-domain input: vertex -1, pixel 1,
+# geometry -1 (SamplerLocations_l +8/+0xA/+0xC).
+# Caller-visible only (no frame checks), -noclobber.
+include lib2_agl_8_ssaosampling_data_prepare_twice.txt
+real 027BE53C 027BE494
+fill 0279345C 0x5B100000 0x10 0
+field 0279345C 0x5B100008 u16 0xFFFF
+field 0279345C 0x5B10000A u16 1
+field 0279345C 0x5B10000C u16 0xFFFF
+stable 0x5B100000 0x10
+setup 0279345C 027BE53C r3=0x58000E5C r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58000FF4 r4=0x5B100000
+setup 0279345C 027BE53C r3=0x5800118C r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58001324 r4=0x5B100000
+setup 0279345C 027BE53C r3=0x580014BC r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58001654 r4=0x5B100000
+setup 0279345C 027BE53C r3=0x580017EC r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58001984 r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58001B1C r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58001CB4 r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58001E4C r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58001FE4 r4=0x5B100000
+setup 0279345C 027BE53C r3=0x5800217C r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58002314 r4=0x5B100000
+setup 0279345C 027BE53C r3=0x580024AC r4=0x5B100000
+setup 0279345C 027BE53C r3=0x58002644 r4=0x5B100000

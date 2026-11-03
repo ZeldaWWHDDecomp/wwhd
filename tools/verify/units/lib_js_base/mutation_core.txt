@@ -1,0 +1,90 @@
+# Mutation-only companion: all non-trigonometric candidates; main steering retained.
+src wwhd_src/JSystem/JMath/random.cpp
+
+src wwhd_src/JSystem/JSupport/JSUInputStream.cpp
+src wwhd_src/JSystem/JKernel/JKRDvdFile.cpp
+src wwhd_src/JSystem/JKernel/JKRDvdRipper_base.cpp
+src wwhd_src/JSystem/JKernel/JKRFileFinder.cpp
+src wwhd_src/JSystem/JKernel/JKRDisposer.cpp
+src wwhd_src/JSystem/JKernel/JKRFileLoader.cpp
+src wwhd_src/JSystem/JKernel/JKRFileLoaderStatics.cpp
+src wwhd_src/JSystem/JKernel/JKRHeap_base.cpp
+src wwhd_src/JSystem/JKernel/JKRHeap_current.cpp
+src wwhd_src/JSystem/JKernel/JKRSolidHeap.cpp
+src wwhd_src/JSystem/JUtility/JUTConsole.cpp
+src wwhd_src/JSystem/JUtility/JUTDbPrint.cpp
+src wwhd_src/JSystem/JMath/JMath.cpp
+src wwhd_src/JSystem/JGadget/binary.cpp
+src wwhd_src/JSystem/JKernel/JKRDecomp.cpp
+src wwhd_src/JSystem/JSupport/JSUIosBase.cpp
+src wwhd_src/JSystem/JSupport/JSUMemoryStream.cpp
+src wwhd_src/JSystem/JSupport/JSUMemoryStream_inline.cpp
+src wwhd_src/JSystem/JUtility/JUTPalette.cpp
+src wwhd_src/JSystem/JUtility/JUTResource.cpp
+src wwhd_src/JSystem/JUtility/JUTTexture.cpp
+src wwhd_src/JSystem/JGadget/linklist.cpp
+src wwhd_src/JSystem/JGadget/vector.cpp
+src wwhd_src/JSystem/JSupport/JSUList_base.cpp
+fieldstr 028428FC r3+0 4 "Yay0","Yaz0","ASR","Ya00","Yb00","Yay1","ASx","Axx"
+src wwhd_src/JSystem/JFramework/JFWSystem.cpp
+# Coherent bounded vector and volume-list shapes; memory outside these fields remains generated.
+field 02843544 r3+4 u32 0x4f000000
+field 02843544 r3+8 u32 0x4f000000,0x4f000004,0x4f000008
+arg! 0284364C r3 0x4e000000
+arg! 0284364C r4 0x4f000000,0x4f000004,0x4f000008
+field 0284364C r3+4 u32 0x4f000000
+field 0284364C r3+8 u32 0x4f000008,0x4f00000c,0x4f000010
+field 0284364C r3+12 u32 0,2,4,8
+field 0284364C r3+16 u32 0x02843aec
+ret 02843AEC 0 16
+stable 0x4e000000 20
+# Bounded path strings, rooted and relative volume lookup, and a one-node volume chain.
+fieldstr 027EBD6C r5+0 32 "/","/foo","/foo/bar","/FOO/BAR","foo","/very-long-volume-name/next"
+field 027EBD6C r5+31 u8 0
+arg! 027EBD6C r4 -1,0,1,2,4,32
+arg! 027EBE3C r3 0x4d040000
+field 027EBE3C r3+0 u32 0x4d000000
+fieldstr 027EBE3C 0x4d000000 32 "/","/foo/bar","relative"
+field * 0x104a2430 u32 0,0x4d010000
+field * 0x4d010000 u32 0x4d020000
+field * 0x4d01000c u32 0
+field * 0x4d020020 u32 0x4d030000
+fieldstr * 0x4d030000 32 "foo","bar",""
+stable 0x104a2430 4
+stable 0x4d010000 16
+stable 0x4d020000 36
+stable 0x4d030000 32
+# Parser callbacks supply a bounded block count and both success/failure results.
+arg! 027ED8C0 r3 0x4c000000
+field 027ED8C0 r3+0 u32 0x4c010000
+field 027ED8C0 0x4c010014 u32 0x027ed8c0
+field 027ED8C0 0x4c01001c u32 0x027ed8c0
+field 027ED8C0 r4+0 u32 0,0x4c020000
+mockfield 027ED8C0 r5+0 u32 0,1,2,3
+ret 027ED8C0 0 1
+stable 0x4c000000 4
+stable 0x4c010000 32
+# Model valid bounded formatter output, including empty and nonempty strings.
+mockfield 028F1748 r3+0 u32 0,0x41000000,0x41424300
+mockfield 028F1748 r3+255 u8 0
+# Valid small stream offsets exercise each origin and clamp boundary.
+arg! 02842EE0 r4 -2,-1,0,1,2,4,8,16
+arg! 02842EE0 r5 0,1,2,3
+field 02842EE0 r3+12 u32 0,1,4,8,16
+field 02842EE0 r3+16 u32 0,1,4,8,16
+arg! 028431FC r5 0,1,3,15,16,17
+field 028012C0 0x101f9af4 u32 0,1
+field 0280136C 0x101f9af4 u32 0,1
+field 0280136C 0x101f9b18 u8 0,1
+field 0280136C 0x101f9af8 u32 0,0x4b000000
+ret 02756170 0 2
+# Compare GHS variadic list contents passed through formatting boundaries.
+callee 027EC908 r4=112
+callee 028F1748 r6=112
+# Null TLUT and solid-heap sentinel are defined diagnostic/API cases.
+arg! 02842FBC r5 0,0x4a000000
+arg! 027EC464 r3 0,1,0xfffffffe,0xffffffff
+callee 02754B38 r4=8
+# Exercise GHS floating variadic register-save branch.
+cr 027EC938 6 0,1
+cr 027EC9E8 6 0,1

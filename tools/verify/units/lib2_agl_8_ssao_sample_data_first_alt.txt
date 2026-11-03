@@ -1,0 +1,67 @@
+# verify: -strictnan -calleesp -footprint -only 0279345C
+# AGL#8 0279345C initializeSsaoSampleData on a caller-produced SsaoEffect: the shipped chain
+# 0272FB84 02792A08(owner+0x610) then 027308C8 02793E88(owner+0x610, 1, heap), which allocates the 16 sample buffers
+# (027BE930 8x8 fmt 0xA descriptors at +0x55C+i*0x90, 0273B0D4 buffers at +0x27DC+i*4) and runs 0279345C once.
+# FIRST-CALL companion: the state at 02794018, i.e. 02792A08 then 02793E88's own loop 02793F2C..02794010 replayed as
+# setups (per i: 027BE930(+0x55C+i*0x90, 1, 0xA, 8, 8, 1, 1, 0; sp+8 = 0), then 0273B0D4(desc+0x24, heap, desc+0x3C)
+# stored at +0x27DC+i*4). The +0xE5C+i*0x198 copies still hold the constructor's values, so the 027937E8 mismatch
+# exit (027BDEB4) runs. 02793E88 r4 = 1 record allocation is not read by 0279345C and is left out.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+
+include shared/agl_world.txt
+setupsnapshot
+
+fill * 0x58000000 0x2900 0
+setup * 02792A08 r3=0x58000000
+setup * 027BE930 r3=0x5800055C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000580 r4=0x6A000000 r5=*0x58000598 ->0x580027DC
+setup * 027BE930 r3=0x580005EC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000610 r4=0x6A000000 r5=*0x58000628 ->0x580027E0
+setup * 027BE930 r3=0x5800067C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x580006A0 r4=0x6A000000 r5=*0x580006B8 ->0x580027E4
+setup * 027BE930 r3=0x5800070C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000730 r4=0x6A000000 r5=*0x58000748 ->0x580027E8
+setup * 027BE930 r3=0x5800079C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x580007C0 r4=0x6A000000 r5=*0x580007D8 ->0x580027EC
+setup * 027BE930 r3=0x5800082C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000850 r4=0x6A000000 r5=*0x58000868 ->0x580027F0
+setup * 027BE930 r3=0x580008BC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x580008E0 r4=0x6A000000 r5=*0x580008F8 ->0x580027F4
+setup * 027BE930 r3=0x5800094C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000970 r4=0x6A000000 r5=*0x58000988 ->0x580027F8
+setup * 027BE930 r3=0x580009DC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000A00 r4=0x6A000000 r5=*0x58000A18 ->0x580027FC
+setup * 027BE930 r3=0x58000A6C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000A90 r4=0x6A000000 r5=*0x58000AA8 ->0x58002800
+setup * 027BE930 r3=0x58000AFC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000B20 r4=0x6A000000 r5=*0x58000B38 ->0x58002804
+setup * 027BE930 r3=0x58000B8C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000BB0 r4=0x6A000000 r5=*0x58000BC8 ->0x58002808
+setup * 027BE930 r3=0x58000C1C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000C40 r4=0x6A000000 r5=*0x58000C58 ->0x5800280C
+setup * 027BE930 r3=0x58000CAC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000CD0 r4=0x6A000000 r5=*0x58000CE8 ->0x58002810
+setup * 027BE930 r3=0x58000D3C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000D60 r4=0x6A000000 r5=*0x58000D78 ->0x58002814
+setup * 027BE930 r3=0x58000DCC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup * 0273B0D4 r3=*0x58000DF0 r4=0x6A000000 r5=*0x58000E08 ->0x58002818
+arg! 0279345C r3 0x58000000
+
+real 02792A08 02793E88 0279345C 02793384 02793908 027A063C 027BE930 027B6030 027BDEB4
+real 0279E618 0279E674 027A84B8 0279CB9C 0279E57C 0273B264 027A861C 02795EE0 02797DDC
+real 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 0279F1BC
+real 027B95B4 027B958C 027B954C
+real 0273B200
+# CRC-32 table guard (0273B200 builds 1049FBA0 on first use; the bss flag starts 0)
+field * 0x101F8AE5 u8 0

@@ -1,0 +1,28 @@
+# verify: -only 027D55F8 -calleesp
+# RenderCommandPool::endCommand closing the third command of a frame, index 2 on ring 2, whose recording issued a GX2
+# command (027E18A8, as a job's draw does): the shipped nonzero-size arm (world BYTES 0x100). Earlier in the
+# frame one command on ring 2 (with a GX2 command, so ring 2's fill offset is past it) and one on ring 0; frame 0 (P5)
+# and frame 1 (P6). Built by the pool's own producers (lib2_agl_19_commands_pool_fixture.txt).
+include lib2_agl_19_commands_pool_fixture.txt
+setup 027D55F8 027D5064 r3=0x58000400
+setup 027D55F8 027D527C r3=0x58000400 r4=0x1000 r5=36 r6=2 r7=0x6A87E2A0
+setup 027D55F8 027D54F8 r3=0x58000400 r4=0x58200000 r5=0x40 r6=2
+setup 027D55F8 027E18A8 r3=0x58200040
+setup 027D55F8 027D55F8 r3=0x58000400 r4=0 r5=2
+setup 027D55F8 027D54F8 r3=0x58000400 r4=0x58200000 r5=3 r6=0
+setup 027D55F8 027D55F8 r3=0x58000400 r4=1 r5=0
+setup 027D55F8 027D54F8 r3=0x58000400 r4=0x58200010 r5=0x400 r6=2
+setup 027D55F8 027E18A8 r3=0x58200040
+setup 027D55F8 027D5064 r3=0x58000500
+setup 027D55F8 027D527C r3=0x58000500 r4=0x1000 r5=36 r6=2 r7=0x6A87E2A0
+setup 027D55F8 027D54A4 r3=0x58000500 r4=1
+setup 027D55F8 027D54F8 r3=0x58000500 r4=0x58200000 r5=0x4D r6=2
+setup 027D55F8 027E18A8 r3=0x58200040
+setup 027D55F8 027D55F8 r3=0x58000500 r4=0 r5=2
+setup 027D55F8 027D54F8 r3=0x58000500 r4=0x58200000 r5=13 r6=0
+setup 027D55F8 027D55F8 r3=0x58000500 r4=1 r5=0
+setup 027D55F8 027D54F8 r3=0x58000500 r4=0x58200010 r5=0x400 r6=2
+setup 027D55F8 027E18A8 r3=0x58200040
+arg! 027D55F8 r3 0x58000400,0x58000500
+arg! 027D55F8 r4 2
+arg! 027D55F8 r5 2

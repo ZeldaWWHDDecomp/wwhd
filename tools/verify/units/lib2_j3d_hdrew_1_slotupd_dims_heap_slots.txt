@@ -1,0 +1,18 @@
+# Companion of lib2_j3d_hdrew_1_slotupd_observe_heap_slots: adds a 640x360 slot 18 (original createWord)
+# so slot handles differ in size from each other and from the input buffer; copyBetweenSlots is tested on the same
+# allocator-produced renderer (the base profile's own 027F8B20 arguments, plus slot 18).
+# verify: -only 027F84A4,027F869C,027F8974,027F8B20 -strictnan -calleesp
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+include lib2_j3d_hdrew_1_slotupd_observe_heap_slots.txt
+# Slot 18 produced by the original createWord at 640x360 (a half-resolution viewport), so source, destination
+# and input dimensions differ between slots; dimension record kept stable like the 1280x720 one.
+field * 0x5E002000 u32 0x44200000
+field * 0x5E002004 u32 0x43B40000
+stable 0x5E000000 8
+stable 0x5E002000 8
+setup * 027F81C0 r3=*101F9968 r4=18 r5=0x5E002000
+arg! 027F869C r4 3,12,15,16,18
+arg! 027F8974 r4 3,12,15,16,18
+arg! 027F8B20 r4 16,12,15,3,0,18
+arg! 027F8B20 r5 12,16,15,3,0,18

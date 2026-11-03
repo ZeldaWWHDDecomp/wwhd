@@ -1,0 +1,8 @@
+# Accepted original-produced three cached handles; only early-return path claimed.
+# verify: -only 027F81C0 -strictnan -calleesp
+include lib2_j3d_hdrew_1_copy_between_slots_produced_corrected.txt
+# Retarget the inherited per-entry accepted cache-region initialization.
+fill 027F81C0 0x6A000000 0x01000000 0
+arg! 027F81C0 r3 0x60000000
+arg! 027F81C0 r4 12,15,16
+arg! 027F81C0 r5 0x5E000000

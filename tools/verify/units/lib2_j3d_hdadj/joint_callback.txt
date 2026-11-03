@@ -1,0 +1,27 @@
+# verify: -only 027F3B28 -calleesp
+# The public joint callback changes only the current-model selection in this fixture.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027F3B28 r4 0x5C610000
+field 027F3B28 5C610000 u32 0x5C620000
+field 027F3B28 5C620000 u32 0,1,2,0xFFFF
+field 027F3B28 104B462C u32 0x5C630000
+field 027F3B28 5C6300AC u32 0x5C640000
+field 027F3B28 5C63002C u32 0x5C660000
+field 027F3B28 5C63102C u32 0x5C661000
+field 027F3B28 5C640004 u32 1
+field 027F3B28 5C640008 u32 0x5C650000
+field 027F3B28 5C650008 u32 0,0x0F002000
+field 027F3B28 5C66002C u16 1
+field 027F3B28 5C66102C u16 2,3
+callee 0F002000 fixture r3=0 r4=0
+mockglobal 0F002000 104B462C u32 0x5C630000,0x5C631000
+stable 5C610000 8
+stable 5C620000 4
+stable 5C630000 0x144
+stable 5C631000 0x144
+stable 5C640000 0x14
+stable 5C650000 0x1C
+stable 5C660000 0x34
+stable 5C661000 0x34

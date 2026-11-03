@@ -100,6 +100,8 @@ WWHD_SIZE(JPAFieldMatrix, 0x30);
 WWHD_OFFSET(JPAFieldEmitterInfo, mEmitterGlobalRot, 0x38);
 } // namespace jpa_field_b
 using namespace jpa_field_b;
+// The field-emitter slot (104B5948) defined in JPA_field_b.cpp; JPAField::initField writes it.
+extern JPAFieldEmitterSlot& l_emitterInfo;
 void JPAField_basePre(JPABaseField *, JPAFieldData *);
 void JPAField_baseVel(JPABaseField *, JPAFieldData *, JPABaseParticle *);
 f32 JPAField_calcFade(JPABaseField *, JPAFieldData *, f32);

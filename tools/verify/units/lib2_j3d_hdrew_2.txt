@@ -1,0 +1,113 @@
+# J3D-HDREW#2 (027FB168-02801024): value entries, text/callback helpers, material setters, registries and
+# the primitive statics, callees mocked. Companion specs in lib2_j3d_hdrew_2/ cover the other functions.
+# verify: -only 027FB2D4,027FB3B4,027FB3B8,027FE640,027FF64C,027FF678,027FF67C,027FF610,027FFCBC,027FFC7C,02800938,02800960,027FF6F8,027FF708,027FB3A0,027FB3D0,027FB3E4,027FB3F8,027FF638,0280037C,028003C0,0280025C,027FB168,027FBB58,027FC420,027FC500,027FC650,027FC80C,027FCAB0,028001B4,027FFCC8 -strictnan -calleesp -footprint
+src wwhd_src/JSystem/J3DGraph/RenderFrameArray.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameEnvironment.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderMaterialUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderSceneUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderStorageConstructors.cpp
+src wwhd_src/JSystem/J3DGraph/RenderTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformDestroy.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformGroup.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformPair.cpp
+src wwhd_src/JSystem/J3DGraph/RenderValueStorage.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometry.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/RenderResourceBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+# Text storage has positive capacity and a complete disjoint 64-byte buffer.
+arg! 027FB3B8 r3 0x6B000000
+field 027FB3B8 r3+0 u32 0x6B001000
+field 027FB3B8 r3+8 s32 1,2,16,32,64
+fill 027FB3B8 0x6B001000 64 0xA5
+
+# Four complete pointer entries; the lookup has no internal bounds check.
+arg! 027FE640 r3 0x6B002000
+arg! 027FE640 r4 0,1,2,3
+
+# Exercise existing storage, successful allocation, and allocation failure.
+arg! 027FF64C r3 0,0x6B003000
+arg! 027FF67C r3 0,0x6B004000
+ret! 0273AD10 0,0x6B005000
+
+arg! 027FFC7C r3 0,0x6B006000
+arg! 02800960 r3 0,0x6B007000
+
+# Two explicit opaque callback fixtures. Each observes its complete argument
+# prefix; no callback output or memory comparison is suppressed.
+callee 7C100000 fixture r3=heap16
+callee 7C110000 fixture r3=heap16
+arg! 027FF6F8 r3 0x6B008000
+field 027FF6F8 r3+0x10 u32 0x6B009000
+field 027FF6F8 0x6B00900C u32 0x7C110000
+
+# Valid unbound, direct, and virtual GHS member slots. The direct fixture's
+# low16 bits are zero, also selecting vtable offset0 for the virtual case.
+arg! 027FF708 r3 0x6B00A000
+field 027FF708 r3+4 u32 0,0x6B00B000
+field 027FF708 r3+8 s16 0
+field 027FF708 r3+0xA s16 -1,0,1
+field 027FF708 r3+0xC u32 0x7C100000
+field 027FF708 0x6B00B000 u32 0x6B00C000
+field 027FF708 0x6B00C00C u32 0x7C100000
+arg! 027FBB58 r3 0x6D000000
+field 027FBB58 r3+0x368 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027FBB58 r3+0x36C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+arg! 027FC420 r3 0x6D000000
+field 027FC420 r3+0x368 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027FC420 r3+0x36C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+arg! 027FC500 r3 0x6D000000
+field 027FC500 r3+0x368 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027FC500 r3+0x36C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+arg! 027FC650 r3 0x6D000000
+field 027FC650 r3+0x368 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027FC650 r3+0x36C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+arg! 027FC80C r3 0x6D000000
+field 027FC80C r3+0x368 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027FC80C r3+0x36C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+arg! 027FCAB0 r3 0x6D000000
+field 027FCAB0 r3+0x368 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027FCAB0 r3+0x36C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+arg! 027FBB58 r4 0,1,2,3,0xFFFFFFFF
+arg! 027FBB58 r5 0x6D110000,0x6D000304,0x6D000314
+arg! 027FBB58 r6 0x6D120000,0x6D000304,0x6D000314
+arg! 027FCAB0 r4 0,1,2,3,0xFFFFFFFF
+arg! 027FCAB0 r5 0x6D110000,0x6D000304,0x6D000314
+arg! 027FCAB0 r6 0x6D120000,0x6D000304,0x6D000314
+arg! 027FC420 r4 0x6D130000,0x6D000074,0x6D000094
+arg! 027FC420 r5 0,1,2,0xFFFFFFFF
+arg! 027FC500 r4 0x6D130000,0x6D000074,0x6D000094
+arg! 027FC500 r5 0,1,2,3,0xFFFFFFFF
+arg! 027FC650 r4 0x6D130000,0x6D000074,0x6D000094
+arg! 027FC650 r5 0,1,2,3,4,0xFFFFFFFF
+arg! 027FC80C r4 0x6D100000,0x6D000184
+arg! 027FC80C r5 0,1,2,3,4,5,6,7,8,0xFFFFFFFF
+callee 028E90D4 r3=heap48 r4=out48
+arg! 027FB3A0 r3 0,0x6B100000
+arg! 027FB3A0 r4 0,1,2,3,0xFFFFFFFF
+arg! 027FB3D0 r3 0,0x6B100000
+arg! 027FB3D0 r4 0,1,2,3,0xFFFFFFFF
+arg! 027FB3E4 r3 0,0x6B100000
+arg! 027FB3E4 r4 0,1,2,3,0xFFFFFFFF
+arg! 027FB3F8 r3 0,0x6B100000
+arg! 027FB3F8 r4 0,1,2,3,0xFFFFFFFF
+arg! 027FF638 r3 0,0x6B100000
+arg! 027FF638 r4 0,1,2,3,0xFFFFFFFF
+arg! 0280037C r3 0,1,0xFFFFFFFF
+arg! 0280037C r4 0x6B110000
+arg! 0280025C r3 0,0x6B120000,0xFFFFFFFF,0xFFFFFFF4,0xFFFFFFE8,0xFFFFFFD8,0xFFFFFFC8,0xFFFFFFC0,0xFFFFFFB8,0xFFFFFFB0,0xFFFFFFA8,0xFFFFFFA0,0xFFFFFF98,0xFFFFFF90,0xFFFFFF88,0xFFFFFF78
+arg! 027FB168 r3 0x6B130000
+field 027FB168 r3+0x12 u16 0,1,2
+field 027FB168 r3+0x34 s32 0xFFCC,0,1,0xFFFFFFD6
+field 027FB168 0x6B140010 s32 0xFFF0,0,1
+field 027FB168 0x6B140024 s32 0x100DC,0,1
+fieldstr 027FB168 0x6B150000 32 "texmtx","texmtx0","texmt","other","texmty","Texmtx","aexmtx",""
+fieldstr 027FB168 0x6B150100 32 "texmtx","texmtx1","texmt","none",""
+real 027FB3B4
+
+# Primitive statics: the sequential index buffer (10000 words) comes from an aligned allocation.
+arg! 027FFCC8 r3 0,0x6E000000
+ret! 0273B0D4 0x6B500000

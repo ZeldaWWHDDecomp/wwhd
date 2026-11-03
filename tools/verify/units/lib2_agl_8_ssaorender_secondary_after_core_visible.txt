@@ -1,0 +1,18 @@
+# verify: -strictnan -only 0279515C -noclobber
+# ssaorender: the secondary bind profile, entered in the state the sole caller
+# leaves. renderSsaoCore 0279599C calls 0279515C (02795D18) right after it has set primary sampler 0's modes to
+# 0/0/0 with dirty|4 (SsaoRender.cpp:72-88) and the primary pass has bound that sampler (027BE53C, which clears the
+# dirty byte). The base profile instead enters after a previous secondary pass (modes 1/1/0). Here one original core
+# frame runs first (postsetup 0279599C, mode 0, the shipped default model) with the client's borrowed output frame
+# assigned (the admitted external-output contract: original RenderBuffer constructor 027B95B4, set+0x980 is the only
+# client-written word, written by 027310B4), so the core prepares sampler 0 and runs the primary pass but returns
+# before its own secondary call; its depth input is the original default texture (*(*101F8DEC+0x1C), produced by
+# 027A76C8/027A78F8 in the world). The tested secondary then starts from exactly the sampler state of the shipped
+# chain. Caller-visible checks only; -noclobber.
+include lib2_agl_8_ssaorender_secondary_bind_visible.txt
+fill 0279515C 0x5B400000 0x40 0
+stable 0x5B400000 0x40
+setup 0279515C 027B95B4 r3=0x5B400000
+poke 0279515C 6A87EC20 u32 0x5B400000
+postsetup 0279515C 0279599C r3=0x58000000 r4=0 r5=0x280 r6=0x168 r7=*(*101F8DEC+0x1C) r8=0 r9=0x104A048C r10=0 f1=0.25 f2=0.5
+real 0279599C 02794270

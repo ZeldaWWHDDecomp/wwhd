@@ -1,0 +1,100 @@
+# verify: -only 027F4098 -calleesp -strictnan
+# Shape-packet setup over a complete read-only joint/material tree: allocation, draw_buffer_type split, priority lists and bindings.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DInlineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialStorage.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelPacketSetup.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelConfiguration.cpp
+src wwhd_src/JSystem/J3DGraph/J3DBatchAdapter.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+arg! 027F4098 r3 0x5C780000
+field 027F4098 5C780028 u16 0,1,2,3
+ret! 02756140 0x5C790000
+field 027F4098 5C79000C u32 0x5C791000
+field 027F4098 5C791034 u32 0x5C792000
+callee 5C792000 fixture r3=0 r4=0 r5=0
+alloc 5C792000 r4 0x5C7A0000 align=r5
+stable 5C79000C 4
+stable 5C791034 4
+field 027F4098 5C7800AC u32 0x5C7B0000
+field 027F4098 5C7B0000 u32 0x5C7B1000
+field 027F4098 5C7B0004 u32 0,1,2,3
+field 027F4098 5C7B0008 u32 0x5C7D0000
+field 027F4098 5C7B100C u32 0xFFF4
+field 027F4098 5C7C1008 u16 0,1,2,3
+stable 5C7B0000 0x10
+stable 5C7B1000 0x10
+stable 5C7C1000 0x10
+field 027F4098 5C7D0010 u32 0,0x5C7E0000
+field 027F4098 5C7D002C u32 0,0x5C7E0020
+field 027F4098 5C7D0048 u32 0,0x5C7E0040
+field 027F4098 5C7D0064 u32 0,0x5C7E0060
+stable 5C7D0000 0x70
+field 027F4098 5C7E0000 u32 0x5C7F0000
+field 027F4098 5C7E0004 u32 0,0x5C7E0010
+field 027F4098 5C7E0008 u32 0x5C820000
+field 027F4098 5C820000 u32 0x5C830000
+field 027F4098 5C83000C u16 0,1,2,3,5
+field 027F4098 5C7E0010 u32 0x5C7F0020
+field 027F4098 5C7E0014 u32 0
+field 027F4098 5C7E0018 u32 0x5C820010
+field 027F4098 5C820010 u32 0x5C830010
+field 027F4098 5C83001C u16 0,1,2,3,5
+field 027F4098 5C7E0020 u32 0x5C7F0040
+field 027F4098 5C7E0024 u32 0,0x5C7E0030
+field 027F4098 5C7E0028 u32 0x5C820020
+field 027F4098 5C820020 u32 0x5C830020
+field 027F4098 5C83002C u16 0,1,2,3,5
+field 027F4098 5C7E0030 u32 0x5C7F0060
+field 027F4098 5C7E0034 u32 0
+field 027F4098 5C7E0038 u32 0x5C820030
+field 027F4098 5C820030 u32 0x5C830030
+field 027F4098 5C83003C u16 0,1,2,3,5
+field 027F4098 5C7E0040 u32 0x5C7F0000
+field 027F4098 5C7E0044 u32 0,0x5C7E0050
+field 027F4098 5C7E0048 u32 0x5C820040
+field 027F4098 5C820040 u32 0x5C830040
+field 027F4098 5C83004C u16 0,1,2,3,5
+field 027F4098 5C7E0050 u32 0x5C7F0020
+field 027F4098 5C7E0054 u32 0
+field 027F4098 5C7E0058 u32 0x5C820050
+field 027F4098 5C820050 u32 0x5C830050
+field 027F4098 5C83005C u16 0,1,2,3,5
+field 027F4098 5C7E0060 u32 0x5C7F0040
+field 027F4098 5C7E0064 u32 0,0x5C7E0070
+field 027F4098 5C7E0068 u32 0x5C820060
+field 027F4098 5C820060 u32 0x5C830060
+field 027F4098 5C83006C u16 0,1,2,3,5
+field 027F4098 5C7E0070 u32 0x5C7F0060
+field 027F4098 5C7E0074 u32 0
+field 027F4098 5C7E0078 u32 0x5C820070
+field 027F4098 5C820070 u32 0x5C830070
+field 027F4098 5C83007C u16 0,1,2,3,5
+stable 5C7E0000 0x80
+stable 5C820000 0x80
+stable 5C830000 0x80
+field 027F4098 5C7F001C u32 0,0x100
+field 027F4098 5C7F003C u32 0,0x100
+field 027F4098 5C7F005C u32 0,0x100
+field 027F4098 5C7F007C u32 0,0x100
+stable 5C7F0000 0x80
+ret! 027DFA24 0,0x5C810000,0x5C810040
+field 027F4098 5C810008 u32 0,1,4,7
+field 027F4098 5C810048 u32 4
+stable 5C810000 0x50
+callee 027DFA24 r4=cstr:64
+field 027F4098 5C780030 u32 0x5C840000
+# The pointer-buffer storage setter is a pure leaf (count 0, capacity, storage): run it for real so appends happen.
+real 0273B560
+# The primary pointer buffer {count, capacity, storage} is a stack object the sort reads: compare it at the call.
+callee 0273B7B4 r3=12

@@ -1,0 +1,12 @@
+# AGL#19 setSurfaceExtent 027D5EE8 as allocateFrameStorage 027D60D4 calls it (027D63A0): the view built by its
+# constructor inside 027C088C (lib2_agl_19_display_renderer_fixture.txt: frame-buffer area 0,0,1,1, so the size changes),
+# and the logical size the caller converts into its frame (the configuration's output size: 1280x720 for the TV view).
+# verify: -only 027D5EE8 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_renderer_fixture.txt
+real 0274F53C
+field * 0x5E000400 f32 1280.0
+field * 0x5E000404 f32 720.0
+stable 0x5E000400 0x8
+arg! 027D5EE8 r3 0x5E100018
+arg! 027D5EE8 r4 0x5E000400

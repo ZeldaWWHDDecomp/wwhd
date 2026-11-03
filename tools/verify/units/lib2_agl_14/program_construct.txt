@@ -1,0 +1,196 @@
+# verify: -only 027B78D4 -calleesp -strictnan
+# Real heap/program/manager construction; first reserved84-byte block address from
+# diagnostic063 producertrace BOTHsides:6A0000C8. No allocator return pin.
+# Initial zero-variant source-list domain; nonempty variant-source companion pending.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 0275315C
+real 02753D6C
+real 027540AC
+real 027B9F78
+real 027BC094
+real 027BA710
+real 027BA95C
+real 027BAA54
+real 027BAA9C
+real 027BAC4C
+real 027BAC58
+real 027BBCA0
+real 027BBB9C
+real 027B7168
+real 027B70B4
+real 027510FC
+real 02752C74
+real 02753000
+real 027601BC
+real 027601F0
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 0273B310
+real 02752E60
+real 02753F84
+real 02754018
+real 0273AD10
+real 027C05F4
+real 027D4CCC
+real 0273B050
+real 027BA674
+real 028EFFD0
+real 028F521C
+real 027BA88C
+real 027BA968
+real 027BAA60
+real 027BAAA8
+real 027BB9E0
+real 0273B0D4
+real 02752B0C
+real 02760084
+real 0275589C
+real 02752F10
+real 02753628
+real 027536B0
+real 027537B8
+real 02753998
+real 02753B48
+real 0273B2F0
+real 02752D8C
+real 027C05C8
+real 028EFE58
+real 027B736C
+real 027B737C
+real 027BB710
+real 027BB7CC
+real 027BB840
+real 027BB8A8
+real 027BB910
+real 027BB978
+real 027C073C
+real 027C077C
+real 027D4D30
+real 02755CA4
+real 02755FEC
+real 02752A84
+real 02755818
+real 027600EC
+real 027C05A0
+real 0273ADAC
+real 028F61E4
+real 028F623C
+real 027B72AC
+real 027B730C
+real 027BAC8C
+real 027BB630
+real 027D3FC4
+real 027D3FD4
+real 0276B0D4
+real 027BD3CC
+real 027BDA2C
+real 027BDD2C
+real 027BD72C
+real 027C5474
+real 027C57E8
+real 027D4028
+real 027556FC
+real 027B727C
+real 0273AFC8
+real 02740B24
+real 02740BE0
+real 027414F8
+real 02752BEC
+real 027C52D4
+real 027C5AAC
+real 027C5B20
+real 027D4C9C
+real 02740B0C
+real 02740B14
+real 02740B1C
+real 02740E08
+real 0273AF40
+real 02755D28
+real 027C5978
+real 02759C28
+real 027C6B98
+real 02759C10
+real 02759BA0
+real 02759B98
+ret! 02756140 0x6A000000
+nestedret 02756140 0x6A000000
+mockset C000A858 r3 r4 r5
+mockset C0009990 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+stable 0x6A000000 0x100000
+field * 0x101F8B4C u32 0
+field * 0x55000000 u32 0x55000100
+field * 0x55000004 u32 0x10147634
+fieldstr * 0x55000100 32 "AGL14TestHeap"
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x55000000 r6=0
+setup * 02753D6C r3=0x6A000000 r4=0x84 r5=4
+
+# Reserve the original observed first block before any other heap allocations.
+setup * 027B9F78 r3=0x6A0000C8
+field * 0x101F8E04 u32 0
+field * 0x101F8E08 u32 0
+setup * 027B7168 r3=0x6A000000
+arg! 027B78D4 r3 0x6A0000C8
+arg! 027B78D4 r4 0x55000200
+arg! 027B78D4 r5 0x5C000000
+arg! 027B78D4 r6 0x5D000000
+arg! 027B78D4 r7 0
+arg! 027B78D4 r8 0x5D000004
+arg! 027B78D4 r9 0x5D000008
+arg! 027B78D4 r10 0x5D00000C
+field 027B78D4 r1+8 u32 0x5D000010
+field 027B78D4 r1+0xC u32 0x6A000000
+field * 0x55000200 u32 0x55000300
+field * 0x55000204 u32 0x10147634
+fieldstr * 0x55000300 32 "AGL14Program"
+stable 0x55000000 8
+stable 0x55000200 8
+field 027B78D4 0x5C000000 u32 0x5C000100
+field 027B78D4 0x5C000100 u32 8
+field 027B78D4 0x5C000104 u32 0
+stable 0x5C000000 4
+stable 0x5C000100 8
+field 027B78D4 0x5D000000 u32 0x5E000000
+field 027B78D4 0x5E000000 u32 8
+field 027B78D4 0x5E000004 u32 0
+field 027B78D4 0x5D000004 u32 0x5E000100
+field 027B78D4 0x5E000100 u32 8
+field 027B78D4 0x5E000104 u32 0
+field 027B78D4 0x5D000008 u32 0x5E000200
+field 027B78D4 0x5E000200 u32 8
+field 027B78D4 0x5E000204 u32 0
+field 027B78D4 0x5D00000C u32 0x5E000300
+field 027B78D4 0x5E000300 u32 8
+field 027B78D4 0x5E000304 u32 0
+field 027B78D4 0x5D000010 u32 0x5E000400
+field 027B78D4 0x5E000400 u32 8
+field 027B78D4 0x5E000404 u32 0
+stable 0x5D000000 0x14
+stable 0x5E000000 0x408
+
+# fieldstr may retain random bytes; bound the owned32-byte text.
+field * 0x5500011F u8 0
+
+# fieldstr may retain random bytes; bound the owned32-byte text.
+field * 0x5500031F u8 0

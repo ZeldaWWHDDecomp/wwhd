@@ -1,0 +1,19 @@
+# Startup-initialized shared axis, original-initialized direction record, finite +Y and valid config indices.
+# verify: -only 027CCEB8 -strictnan -calleesp
+src wwhd_src/agl/DrawResourceDirection.cpp
+src wwhd_src/agl/DrawResourceInitialization.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+real 02757190 027CCC80 025155D8 028E8E10
+field 027CCEB8 r4+0x58 u32 0
+field 027CCEB8 r4+0x5C u32 0
+field 027CCEB8 r3+4 u32 0x5A000000
+field 027CCEB8 5A000004 u32 0,0x20
+field 027CCEB8 5A000038 u32 0,1,2
+setup 027CCEB8 02757190
+setup 027CCEB8 027CCC80 r3=0x58000000 r4=0x58100000 r5=0
+poke 027CCEB8 r4+0x14 u32 0
+poke 027CCEB8 r4+0x18 u32 0x3F800000
+poke 027CCEB8 r4+0x1C u32 0
+poke 027CCEB8 r4+0x48 u32 0
+poke 027CCEB8 r4+0x4C u32 0

@@ -1,0 +1,9 @@
+# lib2_j3d_hdrew_1_ctor_chain_stale (09:09 chain 0260A0B4 -> 0272D384 -> 027F7B50 -> 027F5A5C, prefix replay of
+# 027F7B50's call 027F7C44, stale heap bytes) on a third FMDL of the same registered St.bfres (FRES 0x58564000): model
+# "st" at 0x58565664 (one shape, one material "lambert1" whose FMAT+0x10 count byte (mScalarCount) is 0 and +0x11
+# (mValueCount) is 0). The St archive is registered by the original 02604EB4 in the base; the loaders hand every FMDL of
+# a registered archive to 0272D384 -> 027F7B50 the same way (0260870C/0260A5C8). Nothing is poked into the receiver or
+# the resource. The later arg! replaces the model list.
+# verify: -only 027F5A5C -strictnan -calleesp
+include lib2_j3d_hdrew_1_ctor_chain_stale.txt
+arg! 027F5A5C r4 0x58565664

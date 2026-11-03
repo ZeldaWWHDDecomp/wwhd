@@ -1,0 +1,99 @@
+# refreshShadowPlanes on a context built by the original constructor after the shared startup (empty workspace,
+# light transform/projection written by the original 0278D434 as updateShadowView does); non-periodic stack fill.
+# verify: -only 027C9770 -strictnan -calleesp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+real 02756E3C 02757190 02759B40 02759B98 0273B200 0273B264
+real 027A84B8 0279E674 0279E618 0279E57C 027A861C 0279F1BC 027A8C80
+real 027D7E04 027D7D94 028EFFD0 028F0164 02791BE4 027CA91C 027CA978 027CA918
+setup 027C9770 02756E3C
+setup 027C9770 02757190
+setup 027C9770 02759B40
+setup 027C9770 0273B200
+fill 027C9770 5F800000 1460 165
+mockmove C0009988 r3 r4 r5
+stable 104A0CD8 8
+stable 104A0908 188
+stable 104A041C 48
+stable 104A048C 64
+stable 101F8AE5 1
+stable 1049FBA0 1024
+
+# Execute the GHS constructor loop and its exact register-save/restore closure.
+real 028EFE58 028F61E4 028F623C
+
+# The only SDK move has zero length for the actual initialized empty source.
+# Preserve precisely the64-byte parameter-name char array across that opaque epoch;
+# original constructor NUL stores remain observed and compared.
+stable 5F800010 64
+
+# Actual completed shadow constructor precedes refresh; no D85E8 producer path.
+real 027C70A8 027C8270 027C8ABC 027D9FD4 02791C68
+setup 027C9770 027C70A8 r3=0x5F800000
+arg! 027C9770 r3 0x5F800000
+field 027C9770 101F9602 u8 1
+field 027C9770 101F9601 u8 1
+field 027C9770 101F9603 u8 1
+stable 101F9600 4
+# Light transform/projection at +0x134/+0x164 from the original 0278D434.
+real 0278D434 02791C90 02791D00 02791C68 025155D8 028E8B04
+fill 027C9770 5F516000 256 0
+field 027C9770 5F516000 f32 0
+field 027C9770 5F516004 f32 5
+field 027C9770 5F516008 f32 20
+field 027C9770 5F51600C f32 -1,-0.5,0.5,1
+field 027C9770 5F516010 f32 -0.3,-0.6
+field 027C9770 5F516014 f32 -1,-0.5,0.5
+field 027C9770 5F516018 f32 0
+field 027C9770 5F51601C f32 1
+field 027C9770 5F516020 f32 0
+field 027C9770 5F516030 f32 -60,-30,0,30,60
+field 027C9770 5F516034 f32 40,60
+field 027C9770 5F516038 f32 -30,0,30
+field 027C9770 5F51603C f32 0.3
+field 027C9770 5F516040 f32 -1
+field 027C9770 5F516044 f32 0.2
+field 027C9770 5F516048 f32 0
+field 027C9770 5F51604C f32 1
+field 027C9770 5F516050 f32 0
+stable 5F516000 256
+fill 027C9770 5F517000 128 0
+stable 5F517000 128
+fill 027C9770 5F511000 48 0
+stable 5F511000 48
+setup 027C9770 02791D00 r3=0x5F511000 r4=0x5F516000 r5=0x5F51600C r6=0x5F516018
+setup 027C9770 02791D00 r3=0x5F517000 r4=0x5F516030 r5=0x5F51603C r6=0x5F516048
+setup 027C9770 028E8B04 r3=0x5F517030 f1=1 f2=1 f3=-1
+poke 027C9770 5F517070 u8 1
+postsetup 027C9770 0278D434 r3=0x5F517000 r4=0x5F800134 r5=0x5F800164 r6=0x5F511000
+final 027C9770 5F800000 5B4
+real 0274EDD4 028E892C 028E91EC 028E8F64 028E8D4C 025155D8 028E8E10 027C8698 027C87DC
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 025155D8 r3=inout12
+callee 028E8F64 r3=48 r4=12 r5=out12
+stackfill

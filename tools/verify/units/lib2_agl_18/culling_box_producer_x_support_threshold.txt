@@ -1,0 +1,13 @@
+# AGL#18 027CEA18 caller-valid X-support threshold companion.  Keep the
+# power-of-two unit-tangent camera, cull volume and CE130 producers.  Its first
+# side plane has normalX=-sqrt(1/2), normalZ=+sqrt(1/2).  The produced box for
+# centre X=-2,Z=-0.5 has maximumX approximately -1.5 and minimumZ exactly -1.5:
+# the original negative-normal support is tangent/non-positive.  Changing the
+# threshold 0.0f to 1.0f selects minimumX (approximately -2.5) instead and
+# makes that plane distance positive.  Y remains centred so no other side
+# plane masks the result; no produced bound or plane is patched.
+# verify: -only 027CEA18 -strictnan -calleesp
+include lib2_agl_18/culling_box_producer_unit_tangent.txt
+poke * r4+0x8 f32 -2
+poke * r4+0xC f32 0
+poke * r4+0x10 f32 -0.5

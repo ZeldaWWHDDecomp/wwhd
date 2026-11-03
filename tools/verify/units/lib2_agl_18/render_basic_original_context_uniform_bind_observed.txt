@@ -1,0 +1,8 @@
+# Caller-valid 027CC78C uniform-binding companion. The included profile retains
+# the original archive-selected program, its published uniform count/records,
+# and the original context buffers. These directives only observe the buffer
+# and uniform record passed to the original binding call.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+observearg 027BE53C r3+0 16
+observearg 027BE53C r4+0 16

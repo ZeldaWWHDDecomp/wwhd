@@ -1,0 +1,18 @@
+# The ADPCM seek's whole stack frame (decoder state, sample buffer, saved registers) compared, with
+# distinct callee-saved register values, for empty and one- to three-frame seeks.
+# verify: -only 0289EFFC -strictnan -calleesp
+src wwhd_src/nw/snd/WaveArchiveReader.cpp
+src wwhd_src/nw/snd/AudioCurves.cpp
+src wwhd_src/nw/snd/AudioEventLog.cpp
+src wwhd_src/nw/snd/PlaybackVoiceParameters.cpp
+src wwhd_src/nw/snd/PlaybackVoicePool.cpp
+src wwhd_src/nw/snd/PlaybackVoice.cpp
+src wwhd_src/nw/snd/AdpcmDecode.cpp
+src wwhd_src/nw/snd/WaveResourceResolver.cpp
+src wwhd_src/nw/snd/AudioWorkerRun.cpp
+src wwhd_src/nw/snd/PlaybackVoiceUpdate.cpp
+src wwhd_src/nw/snd/PlaybackMix.cpp
+stackfill
+footprint 0289EFFC 0x98
+arg! 0289EFFC r5 0,1,13,14,15,28,29
+callee C0006C98 r3=32 r4=inout96 r5=0 r6=out28

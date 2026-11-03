@@ -1,0 +1,20 @@
+# AGL#18 027CFFF0 first-draw companion.  The included profile constructs the
+# shared archive, renderer, context, packet provider, and both parameter
+# records through the original game producers.  Fix both records at the
+# producer-valid base flag so selectPair and drawPair choose the same shipped
+# program, then obtain that program through the original selector and mark it
+# dirty through the original archive API.  No program metadata is poked.
+# verify: -only 027CFFF0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_pair_original_context.txt
+
+# The original record producer's base state (bit 0); alternate-color bit 1 is
+# independently optional but is held clear here to make the selected variant
+# deterministic.  The inherited context format is 1 and the two valid
+# configuration words both yield selector inputs (1,1,0,1,0,0).
+poke * 5A000000 u16 1
+poke * 5A001000 u16 1
+
+stable 59800000 0x8
+fill * 59800000 0x8 0
+setup * 027CFED4 r3=0x59800000 r4=1 r5=1 r6=0 r7=1 r8=0 r9=0
+setup * 027BBCA0 r3=*59800000

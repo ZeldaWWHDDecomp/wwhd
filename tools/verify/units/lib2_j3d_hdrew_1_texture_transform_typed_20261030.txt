@@ -1,0 +1,27 @@
+# Type-domain matrix API: bounded readable transform/pivot/effect and writable48-byte result.
+# Caller-owned values only; original image constants/tables retained, no private global edits.
+# Mode9 uses image/default projection state; no shipped post-frame projection claim.
+# verify: -only 027FAA70 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+stackfill
+real 028F5680 028E90D4 028E9108 028E93CC 028E945C 02782C20
+arg! 027FAA70 r3 0x5D400000
+arg! 027FAA70 r4 0x5D401000
+fill * 0x5D400000 0x30 165
+field * 0x5D401000 s32 -1,0,6,7,8,9,10,11
+field * 0x5D401004 f32 -1,0,0.5,1,2
+field * 0x5D401008 f32 -1,0,0.5,1,2
+field * 0x5D40100C f32 -3.1415927,-1,0,0.5,1,3.1415927
+field * 0x5D401010 f32 -1,0,0.25,1
+field * 0x5D401014 f32 -1,0,0.25,1
+field * 0x5D401018 u32 0x5D402000
+field * 0x5D402000 f32 0,0.5,1
+field * 0x5D402004 f32 0,0.5,1
+field * 0x5D402008 u32 0,0x5D403000
+fill * 0x5D403000 0x30 0
+field * 0x5D403000 f32 1
+field * 0x5D403014 f32 1
+field * 0x5D403028 f32 1
+
+# Row-copy import has no generated game body; standard documented copy model retains its boundary/effect.
+mockmove C000A848 r3 r4 r5

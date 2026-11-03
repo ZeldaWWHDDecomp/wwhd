@@ -1,0 +1,76 @@
+# Second shipped material for PipelineColorTable::applyParameters: Common/Object/Ywarp00.szs (Yaz0 0x4C53 bytes,
+# sha256 7c70696f12e2dd4b0781091dcaf2254d242b1c93c97e299e6a925e199cb5a324), same producer chain as the Esa recipe
+# (original SZS decoder, 027DCFF8/027DCF64 layout, 027DD0BC builder, 027DD298 rebuildDirty). Its FMAT (decoded +0x24B8)
+# has 11 parameters with mat_color0 at fixup 0 (Esa has texpivot0 there); all fixups unbound (-1) as shipped, no pokes.
+# 027DD0BC's memcpy of the 0xB0-byte initial data (import C000A848) is modelled as a real copy; r6 is the storage size
+# 027DCF64 computed (builder+0xC). The colour table is the profile's (bits 0..10, distinct channel values).
+# verify: -only 027F9FB8 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+real 02759AD8 02759B38 0275ED14 0275EB8C 0275EBC0 027DCFF8 027DCF64 027DD0BC 028F5914 027DD024 027DD298 027DF9B0 027DF8B4 027DEFE4 027F9F0C 027FB3B4
+mockmove C000A848 r3 r4 r5
+setup * 02759AD8
+blob * 0x6C000000 content/Common/Object/Ywarp00.szs 0 0x4C53
+fill * 0x6C100000 0x14000 0
+setup * 0275ED14 r3=0x6C100000 r4=0x14000 r5=0x6C000000
+fill * 0x6B000000 0x3C 0
+fill * 0x6B001000 0x200 0
+fill * 0x6B000100 0x30 0
+field * 0x6B000100 u32 0x6C1024B8
+field * 0x6B000104 u32 2
+field * 0x6B000108 u32 0
+field * 0x6B00010C u32 0
+setup * 027DCFF8 r3=0x6B000100
+setup * 027DD0BC r3=0x6B000000 r4=0x6B000100 r5=0x6B001000 r6=*0x6B00010C
+postsetup * 027DD298 r3=0x6B000000
+fill * 0x62000000 0xB4 0
+field * 0x62000000 u32 0,1,2,3,4,8,16,32,64,128,256,512,1024,2047
+field * 0x62000004 f32 0.125
+field * 0x62000008 f32 0.25
+field * 0x6200000C f32 0.5
+field * 0x62000010 f32 1.0
+field * 0x62000014 f32 0.125
+field * 0x62000018 f32 0.25
+field * 0x6200001C f32 0.5
+field * 0x62000020 f32 1.0
+field * 0x62000024 f32 0.125
+field * 0x62000028 f32 0.25
+field * 0x6200002C f32 0.5
+field * 0x62000030 f32 1.0
+field * 0x62000034 f32 0.125
+field * 0x62000038 f32 0.25
+field * 0x6200003C f32 0.5
+field * 0x62000040 f32 1.0
+field * 0x62000044 f32 0.125
+field * 0x62000048 f32 0.25
+field * 0x6200004C f32 0.5
+field * 0x62000050 f32 1.0
+field * 0x62000054 f32 0.125
+field * 0x62000058 f32 0.25
+field * 0x6200005C f32 0.5
+field * 0x62000060 f32 1.0
+field * 0x62000064 f32 0.125
+field * 0x62000068 f32 0.25
+field * 0x6200006C f32 0.5
+field * 0x62000070 f32 1.0
+field * 0x62000074 f32 0.125
+field * 0x62000078 f32 0.25
+field * 0x6200007C f32 0.5
+field * 0x62000080 f32 1.0
+field * 0x62000084 f32 0.125
+field * 0x62000088 f32 0.25
+field * 0x6200008C f32 0.5
+field * 0x62000090 f32 1.0
+field * 0x62000094 f32 0.125
+field * 0x62000098 f32 0.25
+field * 0x6200009C f32 0.5
+field * 0x620000A0 f32 1.0
+field * 0x620000A4 f32 0.125
+field * 0x620000A8 f32 0.25
+field * 0x620000AC f32 0.5
+field * 0x620000B0 f32 1.0
+arg! 027F9FB8 r3 0x62000000
+arg! 027F9FB8 r4 0x6B000000
+final 027F9FB8 0x62000000 0xB4
+final 027F9FB8 0x6B000000 0x3C
+final 027F9FB8 0x6B001000 0x200

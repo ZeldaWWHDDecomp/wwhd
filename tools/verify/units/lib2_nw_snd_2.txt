@@ -1,0 +1,284 @@
+# NW-SND#2 command producer and audio driver utilities. Own reconstruction from WWHD.
+src wwhd_src/nw/snd/DriverCommandQueue.cpp
+stackfill
+# Bounded retired command list; the queue returns an allocated command with serial zero.
+# The first diagnostic uses wait target zero; later profiles will exercise the serial domain.
+arg! 028871BC r4 0
+mockfield 028F6C94 r4+0 u32 0x5F010000
+field * 5F010000 u32 0
+field * 5F010008 u32 0
+stable 5F010000 16
+ret 028F6C94 0,1
+ret 0288712C 0,0x5F010000
+ret! 02887248 0x5F010000
+# List traversal starts at one valid final link in this diagnostic.
+arg! 02887134 r4 0x5F010000
+src wwhd_src/nw/snd/ExternalSoundQueue.cpp
+# Empty or one-sound intrusive list for priority selection.
+arg! 0288750C r3 0x5F020000
+field 0288750C 5F020004 u32 0x5F020004,0x5F03028C
+arg! 02887570 r3 0x5F020000
+field 02887570 5F020000 s32 0,1,2
+field 02887570 5F02000C s32 0,1,2
+arg! 028875F8 r3 0x5F020000
+field 028875F8 5F020000 s32 0
+field 028875F8 5F02000C s32 0,1,2
+src wwhd_src/nw/snd/SoundHeap.cpp
+# One owned heap level and one owned allocation record; list links remain owned metadata.
+arg! 028877E0 r3 0x5F040000
+arg! 02887A10 r3 0x5F040000
+arg! 02887924 r3 0,0x5F041000
+field * 5F040004 u32 1
+field * 5F040008 u32 0x5F041000
+field * 5F04000C u32 0x5F041000
+field * 5F041000 u32 0x5F040008
+field * 5F041004 u32 0x5F040008
+field * 5F041008 u32 1
+field * 5F04100C u32 0x5F042000
+field * 5F041010 u32 0x5F042000
+field * 5F041014 u8 0,1
+field * 5F042000 u32 0x5F04100C
+field * 5F042004 u32 0x5F04100C
+field * 5F042008 u32 0x5F043000
+field * 5F04200C u32 0,1,256
+field * 5F042010 u32 0,0x028898F0
+stable 5F040004 12
+stable 5F041000 24
+stable 5F042000 24
+real 0286DA9C
+real 0286DACC
+src wwhd_src/nw/snd/StreamSource.cpp
+src wwhd_src/nw/snd/AudioMixRuntime.cpp
+# File names are borrowed, bounded terminated strings during stream setup.
+arg! 028880A0 r5 0x5F070000
+# Extra picks: only a leading slash, and lengths 637/638 around the 639-character limit.
+fieldstr 028880A0 r5 1024 "file.bfstm","dir/file.bfstm","/vol/content/file.bfstm","\\dir\\file.bfstm",@keep,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/file.bfstm","/file.bfstm","\\file.bfstm","dir/","a/b/","\\","aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","d/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+stable 5F070000 1024
+# The filesystem query writes an owned, terminated current-directory buffer.
+callee C0008D58 r5=out639
+mockfield C0008D58 r5+638 u8 0
+
+# Mixer callback descriptors contain at most two DRC output records.
+arg! 02888C88 r3 0x5F080000
+arg! 02888E60 r3 0x5F080000
+arg! 02888C88 r4 0x5F092000
+arg! 02888E60 r4 0x5F092000
+arg! 02889064 r3 0x5F080000
+arg! 02889064 r5 0,1,2
+field * 5F092000 u32 0x5F093000
+field * 5F092004 u16 0,1,2,3,4,5,6
+field * 5F092006 u16 0,1,32,144
+field * 5F092008 u16 0,1,2
+stable 5F092000 12
+field * 5F080208 u32 0,0x0288949C
+field * 5F08020C u32 0,0x0288949C
+field * 5F0801F4 u32 0x5F0801F4,0x5F090000
+field * 5F080200 u32 0x5F080200,0x5F090020
+field * 5F090000 u32 0x5F0801F4
+field * 5F090020 u32 0x5F080200
+field * 5F090008 u32 0x5F091000
+field * 5F090028 u32 0x5F091000
+field * 5F091014 u32 0x02000108
+field * 5F09101C u32 0x02000020
+stable 5F0801F4 4
+stable 5F080200 4
+stable 5F090000 48
+stable 5F091000 48
+ret! 02885F10 0x5F0A0000
+callee C0006D48 r4=out4
+mockfield C0006D48 r4+0 u32 0,1,3,5,0xFFFFFFFF
+field * 5F080164 u32 0x5F080164
+field * 5F080170 u32 0x5F080170
+field * 5F08017C u32 0x5F08017C
+field * 5F080188 u32 0x5F080188
+field * 5F080194 u32 0x5F080194
+field * 5F0801A0 u32 0x5F0801A0
+field * 5F0801AC u32 0x5F0801AC
+field * 5F0801B8 u32 0x5F0801B8
+field * 5F0801C4 u32 0x5F0801C4
+stable 5F080160 108
+
+arg! 028894A0 r3 0x5F080000
+arg! 028894A0 r4 0,1,2
+arg! 028894A0 r5 0,1,2
+arg! 02889594 r3 0x5F080000
+field * 5F080160 u32 1
+field * 5F080164 u32 0x5F094000
+field * 5F080168 u32 0x5F094000
+field * 5F094000 u32 0x5F080164
+field * 5F094004 u32 0x5F080164
+field * 5F094008 u32 0x5F095000
+field * 5F09501C u32 0x0288949C
+field * 5F09502C u32 0x0288949C
+stable 5F094000 12
+stable 5F095000 48
+real 0288945C
+real 0288949C
+field * 5F08016C u32 0
+field * 5F080178 u32 0
+field * 5F080184 u32 0
+field * 5F080190 u32 0
+field * 5F08019C u32 0
+field * 5F0801A8 u32 0
+field * 5F0801B4 u32 0
+field * 5F0801C0 u32 0
+
+# Auxiliary processing receives up to six channel buffers and one of nine output/bus pairs.
+arg! 02889954 r3 0x5F099000
+arg! 02889954 r4 0,1,2,3,4,5,6,7,8
+arg! 02889954 r5 0x5F098000
+field * 5F098000 u32 0,1,2,3,4,5,6
+field * 5F098004 u32 0,1,32,144
+stable 5F098000 8
+field * 101FD8C8 u32 0,1
+field * 5F096000 u32 0x101FCF64
+field * 5F096004 u32 0x101FCF64
+field * 5F096008 u32 0x5F097000
+field * 5F097024 u32 0x02354200
+stable 5F096000 12
+stable 5F097000 48
+real 0288991C
+real 0288993C
+field * 101FCF60 u32 1
+field * 101FCF64 u32 0x5F096000
+field * 101FCF68 u32 0x5F096000
+field * 101FCF6C u32 0
+field * 101FCF70 u32 0x101FCF70
+field * 101FCF74 u32 0x101FCF70
+field * 101FCF78 u32 0
+field * 101FCF7C u32 0x101FCF7C
+field * 101FCF80 u32 0x101FCF7C
+field * 101FCF84 u32 0
+field * 101FCF88 u32 0x101FCF88
+field * 101FCF8C u32 0x101FCF88
+field * 101FCF90 u32 0
+field * 101FCF94 u32 0x101FCF94
+field * 101FCF98 u32 0x101FCF94
+field * 101FCF9C u32 0
+field * 101FCFA0 u32 0x101FCFA0
+field * 101FCFA4 u32 0x101FCFA0
+field * 101FCFA8 u32 0
+field * 101FCFAC u32 0x101FCFAC
+field * 101FCFB0 u32 0x101FCFAC
+field * 101FCFB4 u32 0
+field * 101FCFB8 u32 0x101FCFB8
+field * 101FCFBC u32 0x101FCFB8
+field * 101FCFC0 u32 0
+field * 101FCFC4 u32 0x101FCFC4
+field * 101FCFC8 u32 0x101FCFC4
+stable 101FCF60 108
+
+src wwhd_src/nw/snd/DriverCommandDispatch.cpp
+# Submitted command links are owned by the command queue for the whole dispatch.
+arg! 02885FC0 r3 0,0x5F0B0000
+field 02885FC0 5F0B0000 u32 0,0x5F0B0200
+field 02885FC0 5F0B0200 u32 0
+field 02885FC0 5F0B0004 u32 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,0xFFFFFFFF
+field 02885FC0 5F0B0204 u32 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,0xFFFFFFFF
+field 02885FC0 5F0B0010 u32 0x5F0C0000
+field 02885FC0 5F0B0210 u32 0x5F0C0000
+stable 5F0B0000 4
+stable 5F0B0200 4
+
+# Bounded serial-chain traversal and read-result boundaries.
+field 02887134 5F010000 u32 0,0x5F010020
+field 02887134 5F010020 u32 0
+field 02887134 5F01002C u32 0,1,2,0xFFFFFFFF
+ret 028A2C54 0,1,32,255,256,257,0xFFFFFFFF
+ret 028A28F8 0,1
+ret 02888010 0,1
+ret C0008D58 0,1,0xFFFFFFFF
+ret 0288A248 0,0x5F0D0000
+field 02888668 r3+0x365 u8 0,1
+field 02888668 r3+0x368 u32 0,1,2,0xFFFFFFFF
+
+# TV forwards the full descriptor output-count word without indexing DRC output records.
+field 02888C88 5F092008 u16 0 65535
+# Inline member constructors test the member's address for NULL: an object placed just below the top of
+# the address space makes one member address wrap to zero, so the allocate-on-NULL arm runs too.
+arg 02887768 r3 0,0x5F0E0000,0xFFFFFFFC
+arg 02888A50 r3 0,0x5F0E0000,0xFFFFFFE0,0xFFFFFFD0,0xFFFFFE10,0xFFFFFE04
+# The nw::ut message-queue wrappers reach the OS through import thunks, so the live-in analysis
+# sees only part of their arguments: compare the queue object, the message slot and the blocking flag.
+callee 028F6C2C r3=0 r4=0 r5=0
+callee 028F6C30 r3=0 r4=0 r5=0
+callee 028F6C94 r3=0 r5=0
+# auxDeviceBus is a bare blr that returns its argument: compare the bus it is given.
+callee 0288949C r3=0
+# Priority clamps and ties: a one- or two-sound list (sounds at 5F030000 and 5F0F0000) whose player
+# priority byte and ambient priority straddle the 0 and 127 clamps.
+field 0288750C 5F03028C u32 0x5F020004,0x5F0F028C
+field 0288750C 5F0F028C u32 0x5F020004
+field 0288750C 5F030040 s32 -300,-129,-128,-1,0,1,63,126,127,128,300
+field 0288750C 5F0300EA u8 0,1,63,127,128,200,255
+field 0288750C 5F0F0040 s32 -300,-129,-128,-1,0,1,63,126,127,128,300
+field 0288750C 5F0F00EA u8 0,1,63,127,128,200,255
+stable 5F030040 4
+stable 5F0300EA 1
+stable 5F0F0040 4
+stable 5F0F00EA 1
+# canAccept: the lowest-priority sound is 5F030000 (or none); its priority and the request straddle the clamps.
+ret 0288750C 0,0x5F030000
+arg 02887570 r4 -300,-1,0,1,63,126,127,128,300
+field 02887570 5F030040 s32 -300,-129,-128,-1,0,1,63,126,127,128,300
+field 02887570 5F0300EA u8 0,1,63,127,128,200,255
+# Heap release callbacks are steered to 028898F0 (the data-cache flush wrapper, a tail branch with no
+# analysed live-ins): compare the three callback arguments at every call through such a pointer.
+callee 028898F0 r3=0 r4=0 r5=0
+
+# createSlice / createBuffered: storage sizes around the object sizes.
+arg 0288876C r5 0,0x97,0x98,0x99,0x1000
+arg 02888864 r5 0,0x9F,0xA0,0xA1,0x1000
+# Bytes after the terminator are nonzero (700 of them), so a scan that starts past an empty path differs.
+fill 028880A0 5F070001 0x2C0 0x41
+# The TV and DRC mix effects are steered to two stand-in targets (mocked): compare the effect, the
+# channel-buffer stack objects (one MixBufferSet for TV, two for DRC) and the output count.
+callee 02000108 r3=0 r4=28 r5=0
+callee 02000020 r3=0 r4=56 r5=0
+# The auxiliary effect is steered to a stand-in target (mocked; its analysed live-ins include f1, the sample rate): compare the effect, channel count,
+# the six-entry buffer array on the stack, byte count, the constant 3 and the output mode.
+callee 02354200 r3=0 r4=0 r5=24 r6=0 r7=0 r8=0
+# updateVolumes: auxiliary volume and return fades one frame before, at and past their end.
+field 02889594 5F080048 s32 0,1,2,5
+field 02889594 5F08004C s32 -1,0,1,4,5
+field 02889594 5F080058 s32 0,1,2,5
+field 02889594 5F08005C s32 -1,0,1,4,5
+field 02889594 5F080068 s32 0,1,2,5
+field 02889594 5F08006C s32 -1,0,1,4,5
+field 02889594 5F080078 s32 0,1,2,5
+field 02889594 5F08007C s32 -1,0,1,4,5
+field 02889594 5F080088 s32 0,1,2,5
+field 02889594 5F08008C s32 -1,0,1,4,5
+field 02889594 5F080098 s32 0,1,2,5
+field 02889594 5F08009C s32 -1,0,1,4,5
+field 02889594 5F0800A8 s32 0,1,2,5
+field 02889594 5F0800AC s32 -1,0,1,4,5
+field 02889594 5F0800B8 s32 0,1,2,5
+field 02889594 5F0800BC s32 -1,0,1,4,5
+field 02889594 5F0800C8 s32 0,1,2,5
+field 02889594 5F0800CC s32 -1,0,1,4,5
+field 02889594 5F0800D8 s32 0,1,2,5
+field 02889594 5F0800DC s32 -1,0,1,4,5
+field 02889594 5F0800E8 s32 0,1,2,5
+field 02889594 5F0800EC s32 -1,0,1,4,5
+field 02889594 5F0800F8 s32 0,1,2,5
+field 02889594 5F0800FC s32 -1,0,1,4,5
+field 02889594 5F080108 s32 0,1,2,5
+field 02889594 5F08010C s32 -1,0,1,4,5
+field 02889594 5F080118 s32 0,1,2,5
+field 02889594 5F08011C s32 -1,0,1,4,5
+field 02889594 5F080128 s32 0,1,2,5
+field 02889594 5F08012C s32 -1,0,1,4,5
+field 02889594 5F080138 s32 0,1,2,5
+field 02889594 5F08013C s32 -1,0,1,4,5
+field 02889594 5F080148 s32 0,1,2,5
+field 02889594 5F08014C s32 -1,0,1,4,5
+field 02889594 5F080158 s32 0,1,2,5
+field 02889594 5F08015C s32 -1,0,1,4,5
+# clearLevels: the level handed to destroy is compared (a store moved across the call differs).
+callee 02887924 r3=heap24
+# A release callback may empty the level's allocation list (destroy must re-read its first node).
+mockglobal 028898F0 5F04100C u32 0x5F04100C,0x5F042000
+# releaseTogether: a level whose count is zero although its list still holds an allocation (heap_levels
+# has the two-level form of it).
+field 028877E0 5F041008 u32 0,1

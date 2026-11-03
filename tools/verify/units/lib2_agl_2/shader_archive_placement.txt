@@ -1,0 +1,6 @@
+# Shader archive constructor on complete caller-owned nonnull placement storage.
+# verify: -strictnan -calleesp -footprint -only 02772E8C
+src wwhd_src/agl/ShaderBindingEditor.cpp
+arg! 02772E8C r3 0x5BE00000
+fill 02772E8C 5BE00000 0x40 0xA5
+final 02772E8C 5BE00000 0x40

@@ -1,0 +1,24 @@
+# verify: -only 027566D8 -strictnan -calleesp
+# Original allocator frame, including both 20-byte allocation-failure records.
+src wwhd_src/sead/PoolHeap.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+footprint 027566D8 0x48
+arg! 027566D8 r3 0x57C00000
+arg! 027566D8 r4 0,8,16,17,0xFFFFFFFF
+arg! 027566D8 r5 -4,0,1,4,8,16,32
+field 027566D8 57C00090 u32 0,1
+field 027566D8 57C00094 u32 16
+field 027566D8 57C000A0 u32 0,16,32,64
+field 027566D8 57C000A4 u32 0,0x57C10000
+# A declared opaque failure observer; its event is observed, never executed.
+field 027566D8 101F8B4C u32 0x57C20000
+field 027566D8 57C20004 u32 0x57C20020
+field 027566D8 57C20020 u32 0x57C20040
+field 027566D8 57C2004C u32 0x0F000100
+stable 101F8B4C 4
+stable 57C20004 4
+stable 57C20020 4
+stable 57C2004C 4
+callee 0F000100 fixture r3=0 r4=20

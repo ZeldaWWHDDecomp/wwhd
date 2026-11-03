@@ -1,0 +1,14 @@
+# TYPE-DOMAIN: createFormattedRenderText 027D778C with r3 = NULL (heap text, blocks 3/4/6/7) and
+# with cr6 set (float argument registers saved, block 1). Its sole caller allocateFrameStorage 027D60D4 always passes
+# its frame text SP+0x30 (027D62D8 addi r3,r1,0x30) and clears cr6 (027D62E0 crclr cr1eq), so these arms are
+# type-domain. Heap = the world's root heap (current heap).
+# verify: -only 027D778C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include shared/agl_world.txt
+setupsnapshot
+real 02759C10 02759BA0 028F1748 0273AD10
+fill * 5E400000 0x10C 0xA5
+arg! 027D778C r3 0,0x5E400000
+arg! 027D778C r4 0x1016C2F0
+arg! 027D778C r5 0x10169EAC,0x10169EB0
+cr 027D778C 6 0,1

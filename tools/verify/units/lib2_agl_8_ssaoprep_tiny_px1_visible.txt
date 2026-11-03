@@ -1,0 +1,6 @@
+# verify: -strictnan -only 02794270 -noclobber
+# ssaoprep companion (small viewports are in the domain, (d)): the first-frame bind companion with
+# a 2x2 caller viewport (slot-1 depth 1x1, so the reduced texture has one mip level and no level is drawn). Viewport floats are the adjacent mMaxX/mMaxY read by the original slot producer 027F81C0.
+include lib2_agl_8_ssaoprep_first_bind_real_visible.txt
+field 02794270 0x5E000000 f32 2
+field 02794270 0x5E000004 f32 2

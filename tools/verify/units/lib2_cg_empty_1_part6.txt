@@ -1,0 +1,45 @@
+# Owned empty state callback group.
+src wwhd_src/cg/empty_1_part6.cpp
+stackfill
+footprint 02635CE4 0
+footprint 02635CE8 0
+footprint 02635CEC 0
+footprint 02635CF0 0
+footprint 02635CF4 0
+footprint 02635CF8 0
+footprint 02635CFC 0
+footprint 02635D00 0
+footprint 0262F6D0 0
+footprint 0262F6D4 0
+footprint 0262F6D8 0
+footprint 0262F6DC 0
+footprint 0262F6E0 0
+footprint 0267C46C 0
+footprint 0267F388 0
+footprint 0267C6C0 0
+footprint 0267F394 0
+footprint 0264B4AC 0
+footprint 02648854 0
+footprint 0264885C 0
+footprint 0263DC0C 0
+footprint 0263DC10 0
+footprint 0263DC14 0
+footprint 0263BB28 0
+footprint 0263BB2C 0
+footprint 0263CB54 0
+footprint 0263CB58 0
+footprint 02640FF8 0
+footprint 02640FFC 0
+footprint 0266924C 0
+footprint 0266ACD8 0
+footprint 0266EDD8 0
+footprint 0266F484 0
+footprint 026AC86C 0
+footprint 02684D90 0
+footprint 02673FF4 0
+footprint 0267395C 0
+footprint 02673960 0
+footprint 0265EC10 0
+footprint 02671AE4 0
+footprint 02698560 0
+footprint 0262EC38 0

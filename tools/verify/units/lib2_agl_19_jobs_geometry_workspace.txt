@@ -1,0 +1,68 @@
+# verify: -only 027D7E04,027D7D94,027D7D40,027D7BE4,027D7EA8,027D7F44 -strictnan -calleesp
+# AGL#19 projection polygon workspace on its producers: createGeometryWorkspace 027D7E04 / createGeometryGroup 027D7D94
+# on the context storage the shadow-context constructor hands them (placement, never NULL); the allocation
+# 027D7D40 / 027D7BE4 of a constructed workspace from the context heap or the current heap (NULL); slot acquire
+# 027D7EA8 and the box-face reset 027D7F44 on a workspace that the original populate 027D85E8 has filled from a
+# camera view/projection (AGL#17 recipe camera; eye (0,5,20) looking down -z, tilted; near 1 / far 60).
+src wwhd_src/agl/ProjectionWorkspace.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+include lib2_agl_19_jobs_geometry_fixture.txt
+# 027D7E04 / 027D7D94: the context's storage (fresh heap memory), workspace at +0x84 and its groups
+arg! 027D7E04 r3 0x5F600084
+arg! 027D7D94 r3 0x5F600084,0x5F600090,0x5F60009C
+# 027D7D40 / 027D7BE4: a constructed, not yet allocated workspace
+setup 027D7D40 027C70A8 r3=0x5F500000
+setup 027D7BE4 027C70A8 r3=0x5F500000
+arg! 027D7D40 r3 0x5F500084
+arg! 027D7D40 r4 0x6A000000,0
+# the current-heap getter (sead registry, 02756140) answers the context heap, as the shadow setup leaves it
+ret! 02756140 0x6A000000
+nestedret 02756140 0x6A000000
+arg! 027D7BE4 r3 0x5F500084,0x5F500090,0x5F50009C
+arg! 027D7BE4 r4 0x6A000000,0
+# 027D7EA8 / 027D7F44: constructed, allocated and populated (027D85E8 resets, clips and leaves the clip sets)
+setup 027D7EA8 027C70A8 r3=0x5F500000
+setup 027D7F44 027C70A8 r3=0x5F500000
+setup 027D7EA8 027D7D40 r3=0x5F500084 r4=0x6A000000
+setup 027D7F44 027D7D40 r3=0x5F500084 r4=0x6A000000
+postsetup 027D7EA8 027D85E8 r3=0x5F500084 r4=0x5F511000 r5=0x5F512000 f1=1 f2=60
+postsetup 027D7F44 027D85E8 r3=0x5F500084 r4=0x5F511000 r5=0x5F512000 f1=1 f2=60
+fill * 5F511000 48 0
+fill * 5F512000 64 0
+field * 5F511000 f32 1
+field * 5F51100C f32 -7.5,0,4
+field * 5F511014 f32 0.9805806756
+field * 5F511018 f32 0.1961161351
+field * 5F51101C f32 -8.8261261
+field * 5F511024 f32 -0.1961161351
+field * 5F511028 f32 0.9805806756
+field * 5F51102C f32 -18.6310329
+field * 5F512000 f32 1.3,1,0.75
+field * 5F512014 f32 1.7320508,1
+field * 5F512028 f32 -1.0202020
+field * 5F51202C f32 -2.0202020
+field * 5F512038 f32 -1
+# then 16 cut-slot takes by the original acquire on the cut group, so the tested call meets an exhausted group (NULL).
+# the NULL arm stays in the domain. A traced real caster-box clip (027C9AFC clips the union of
+# its three caster bounds once through 027D9AE8, mask 0xFE / 0x9C2C 0xFF, after the populate) reached group counts of
+# at most 6 (seeds 1/7, 4 inputs each), so this 16-original-takes profile carries the arm as the type domain of
+# takeGeometrySlot (the clipper 027D95C4 handles the NULL); it is not an unreachable-EQ arm.
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+postsetup 027D7EA8 027D7EA8 r3=0x5F500084
+arg! 027D7EA8 r3 0x5F500084,0x5F500090,0x5F50009C
+arg! 027D7F44 r3 0x5F500084

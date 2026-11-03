@@ -1,0 +1,11 @@
+# Complete disjoint factor/output views; scale uses the full incoming FPR.
+# verify: -strictnan -calleesp -footprint -only 02775930
+src wwhd_src/agl/BloomParameters.cpp
+arg! 02775930 r3 0x5AF00000
+arg! 02775930 r4 0x5AF00100
+fill 02775930 5AF00000 0x30 0
+field 02775930 5AF0000C f32 0,1,-1,0.1,1e-20
+field 02775930 5AF0001C f32 0,1,-1,0.1,1e-20
+field 02775930 5AF0002C f32 0,1,-1,0.1
+final 02775930 5AF00000 0x30
+final 02775930 5AF00100 0x10

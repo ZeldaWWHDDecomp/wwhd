@@ -1,0 +1,54 @@
+# verify: -only 027B5B6C,027B5B9C,027B5BB0,027B5BC4,027B9364,027B9394,027B940C,027B9420,027B9434,027B9448,027B945C,027B709C,027B7434 -calleesp -strictnan
+# Address-only terminal ABI: null or live modeled-global-new allocation head; flags rawu32.
+# Own five-instruction bodies read no receiver fields. No text class-size/constructor claim.
+# Every generated case gets a fresh independently owned allocation; never reuse afterdelete.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B7044
+real 027B6FF8
+alloc 0273AD10 r3 0x5B000000 32
+allocnested 0273AD10
+# Owned ByteLayout constructor provides a live16-byte allocation head; its type is unobserved by these terminal ABIs.
+setup * 027B7044 r3=0
+arg! 027B5B6C r3 0,0x5B000000
+arg! 027B5B6C r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B5B9C r3 0,0x5B000000
+arg! 027B5B9C r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B5BB0 r3 0,0x5B000000
+arg! 027B5BB0 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B5BC4 r3 0,0x5B000000
+arg! 027B5BC4 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B9364 r3 0,0x5B000000
+arg! 027B9364 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B9394 r3 0,0x5B000000
+arg! 027B9394 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B940C r3 0,0x5B000000
+arg! 027B940C r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B9420 r3 0,0x5B000000
+arg! 027B9420 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B9434 r3 0,0x5B000000
+arg! 027B9434 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B9448 r3 0,0x5B000000
+arg! 027B9448 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B945C r3 0,0x5B000000
+arg! 027B945C r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B709C r3 0,0x5B000000
+arg! 027B709C r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+arg! 027B7434 r3 0,0x5B000000
+arg! 027B7434 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF

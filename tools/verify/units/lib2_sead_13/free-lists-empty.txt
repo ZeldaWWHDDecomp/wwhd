@@ -1,0 +1,33 @@
+# Valid empty free list; the sentinel is both head and tail.
+# verify: -only 02752D8C,0275456C,027556FC -calleesp
+src wwhd_src/sead/HeapRegistry.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill periodic
+arg! 02752D8C r3 0x58F00000
+field 02752D8C 58F00098 u32 0x58F00098
+field 02752D8C 58F0009C u32 0x58F00098
+field 02752D8C 58F000A0 u32 0
+field 02752D8C 58F000A4 u32 0
+
+# Empty lists have coherent sentinel links and zero count.
+arg! 0275456C r3 0x58F90000
+field 0275456C r3+0x90 u32 0,1,4,5
+field 0275456C r3+0x98 u32 0x58F90098
+field 0275456C r3+0x9C u32 0x58F90098
+field 0275456C r3+0xA0 u32 0
+field 0275456C r3+0xA4 u32 0
+stable 58F9009C 4
+stable 58F900A4 4
+arg! 027556FC r3 0x58FB0000
+field 027556FC r3+0x0C u32 0x101459E0
+field 027556FC r3+0x90 u32 0,1,4,5
+field 027556FC r3+0x28 u32 0x58FB0028
+field 027556FC r3+0x2C u32 0x58FB0028
+field 027556FC r3+0x30 u32 0
+field 027556FC r3+0x34 u32 0x38
+ret 02754754 0,1
+stable 58FB000C 4
+stable 58FB002C 4
+stable 58FB0034 4
+stable 10145A64 4

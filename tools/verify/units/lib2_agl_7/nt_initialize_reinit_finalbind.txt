@@ -1,0 +1,23 @@
+# AGL#7 0278E730 initializeFrames re-initialize (count <= 0) after a render and a client bind of the published mFinalSampler: type-domain companion (labelled).
+# Receiver from nt_base.txt (original ctor + initialize(1)); a postsetup runs the original render 02791230 once with the
+# shipped caller's argument shape, which binds the frame samplers and clears their dirty bits; the tested call then passes a
+# count <= 0, so the original re-sets the existing frame array, where the sampler dirty-bit ORs are no longer no-ops.
+# The shipped caller 0273661C initializes once with count 1, so this re-initialize-after-use path is shipped code that the
+# producer domain never runs.
+# verify: -only 0278E730 -strictnan -calleesp
+include lib2_agl_7/nt_base.txt
+real 02791230
+# The postsetup render binds the frame samplers through the original bindTextureSampler 027BE53C, which runs
+# updateSamplerState 027BE494 (the only code that clears TextureSampler::dirty) and its update helpers: real here so the
+# bound samplers really have their dirty bits cleared before the re-initialize (nt_initialize_reinit_used.txt answers them as mocks).
+# render reaches the binds through its passes primary 027904D0 / paired 027908F4 / combined 02790C28 (shipped code, real too).
+real 027904D0 027908F4 02790C28 027BE53C 027BE494 027BE2C4 027BE3B8 027BE32C 027BE340 027BE398 027BE3AC
+postsetup 0278E730 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0
+# Client bind of the published final sampler ((c)): game code 02736278 publishes &frames[0].mFinalSampler
+# (frame 6A87E2A0 + 0x17B8 = 6A87FA58) at 02736304 into renderer+0x6AF0 for the game's composite passes; their draws bind
+# through the original bindTextureSampler 027BE53C (client-called), here with the program's first sampler-location record
+# (6A2F580C, location 0), which clears the sampler's dirty byte via updateSamplerState 027BE494 before the re-initialize.
+postsetup 0278E730 027BE53C r3=0x6A87FA58 r4=0x6A2F580C
+arg! 0278E730 r3 0x5C020000
+arg! 0278E730 r4 0,0xFFFFFFFF
+arg! 0278E730 r5 0,0x6A000000

@@ -1,0 +1,6 @@
+# Type-domain companion for explicit public index normalization in word(index)/createWord(index).
+# Both original entry checks choose initializedslot0 for index>=19; no private metadata values.
+# Source-backed own typed API behavior; not a claim these indices are shipped callers.
+# verify: -only 027F81C0 -strictnan -calleesp
+include lib2_j3d_hdrew_1_slot_create_all_initialized_depth_20261030.txt
+arg! 027F81C0 r4 19,20,0xFFFFFFFF

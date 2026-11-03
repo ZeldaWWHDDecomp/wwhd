@@ -1,0 +1,4 @@
+# TYPE domain: unchanged approved matrix producer recipe plus full uniform payload observation.
+include agl3_0277AD60_reprojection_matrices_alt.txt
+callee C0006A40 r5=dyn4*r4
+callee C0006908 r5=dyn4*r4

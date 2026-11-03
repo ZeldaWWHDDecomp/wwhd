@@ -1,0 +1,41 @@
+# verify: -only 027D74AC -strictnan -calleesp
+# AGL#19 RenderJob::execute 027D74AC (job table +0xC; run by the job queue or inline by submit): jobs built by the
+# original createRenderJob 027D5E5C, configured by configureLayerCommand 027D6070 with the view initializer's kinds
+# (1 "Layer(Begin)", 2 "Layer(End)", 0 "Layer(Draw)", 3 "Layer(GPUCalc)") for a view built by the original view
+# constructor 027D5948, owners assigned by the original submit 027D7270 from the three 027340D8-built layers (manager
+# slot index +0x58 = 0 from the constructor). Its callees (beginCommand/endCommand, the view's pass steps,
+# appendDeferred) are answered by the harness: the row checks the command names, requests (0x40 + slot, 0xFFFFFFFE,
+# 0x400, slot), the core's ring and the call order with its reloads. Display-list dependent only through those
+# callees (not exercised here).
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/agl/RenderJobExecution.cpp
+src wwhd_src/agl/RenderCommandRecording.cpp
+src wwhd_src/agl/DisplayDeferredSubmission.cpp
+src wwhd_src/agl/DisplayFrameHooks.cpp
+src wwhd_src/agl/DisplayRenderPass.cpp
+src wwhd_src/agl/DisplaySurfacePreparation.cpp
+src wwhd_src/agl/RenderPointerStorage.cpp
+src wwhd_src/agl/RenderDispatchContext.cpp
+src wwhd_src/agl/ShaderStageState.cpp
+include lib2_agl_19_jobs_layer_owner_fixture.txt
+real 027D5948 027D6070 027D7270
+setup 027D74AC 027D5948 r3=0x58010000
+setup 027D74AC 027D6070 r3=0x58004000 r4=1 r5=0x58010000
+setup 027D74AC 027D6070 r3=0x5800401C r4=2 r5=0x58010000
+setup 027D74AC 027D6070 r3=0x58004038 r4=0 r5=0x58010000
+setup 027D74AC 027D6070 r3=0x58004054 r4=3 r5=0x58010000
+stable 0x58005100 0x400
+poke 027D74AC 58005000 u32 0
+poke 027D74AC 58005004 u32 0x100
+poke 027D74AC 58005008 u32 0x58005100
+field 027D74AC 0x58005200 u32 0x58000000,0x58001000,0x58002000
+stable 0x58005200 0x4
+postsetup 027D74AC 027D7270 r3=0x58004000 r4=0x58005000 r5=0
+postsetup 027D74AC 027D7270 r3=0x5800401C r4=0x58005000 r5=0
+postsetup 027D74AC 027D7270 r3=0x58004038 r4=0x58005000 r5=*0x58005200
+postsetup 027D74AC 027D7270 r3=0x58004054 r4=0x58005000 r5=*0x58005200
+arg! 027D74AC r3 0x58004000,0x5800401C,0x58004038,0x58004054
+ret! C0009BB0 0,1,2

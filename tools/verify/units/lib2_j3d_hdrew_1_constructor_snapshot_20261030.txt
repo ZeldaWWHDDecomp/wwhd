@@ -1,0 +1,4 @@
+# Same-input constructor_entries wrapper: no added/removed input domains, only prefix cache.
+# verify: -only 027F5A5C -strictnan -calleesp
+include lib2_j3d_hdrew_1_constructor_entries.txt
+setupsnapshot

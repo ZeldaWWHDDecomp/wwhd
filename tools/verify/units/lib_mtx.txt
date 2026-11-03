@@ -1,0 +1,7 @@
+# SDK array-transform contract: count > 1 (tww mtxvec.c assertion; PPC count-1 CTR loop).
+src wwhd_src/sdk/mtx/vec.cpp
+src wwhd_src/sdk/mtx/mtx.cpp
+src wwhd_src/sdk/mtx/mtxvec.cpp
+arg! 028E8FB8 r6 2,3,4,8
+arg 028E948C r4 88,89,90,120,121,122,0
+src wwhd_src/sdk/mtx/quat.cpp

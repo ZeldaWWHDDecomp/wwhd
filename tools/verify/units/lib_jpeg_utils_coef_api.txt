@@ -1,0 +1,555 @@
+src wwhd_src/libjpeg/jutils.cpp
+# Bound row-copy work, while retaining empty and negative row counts.
+arg! 0284E048 r7 -2,0,1,2,3,8
+src wwhd_src/libjpeg/jcomapi.cpp
+src wwhd_src/libjpeg/jcapimin.cpp
+field 0284E280 51000010 s32 1
+src wwhd_src/libjpeg/jcapistd.cpp
+src wwhd_src/libjpeg/jcinit.cpp
+src wwhd_src/libjpeg/jcmainct.cpp
+src wwhd_src/libjpeg/jdatadst.cpp
+src wwhd_src/libjpeg/jdatasrc.cpp
+src wwhd_src/libjpeg/jdapimin.cpp
+# A real refill supplies IJG's two-byte synthetic EOI marker; bound skip work.
+arg! 02852F18 r3 0x51010000
+arg! 02852F18 r4 -2,0,1,2,3,8
+field 02852F18 r3+0x1c u32 0x51011000
+field 02852F18 51011004 u32 0,1,2,3,8
+field 02852F18 5101100c u32 0x02852EA8
+real 02852EA8
+src wwhd_src/libjpeg/jdapistd.cpp
+stable 5101001c 4
+stable 5101100c 4
+# Valid persistent input-controller callbacks keep the preload state machine finite.
+arg! 02852A88 r3 0x51020000
+field 02852A88 r3+0x14 s32 200,202,203,204,205,210
+field 02852A88 r3+0x1d0 u32 0x51021000
+field 02852A88 r3+0x150 u32 0,1,2,4
+field 02852A88 51021000 u32 0x0F5A0100
+field 02852A88 51021010 s32 0,1
+stable 51020000 0x1f0
+stable 51021000 0x20
+ret! 0F5A0100 0,1,2,3,4
+src wwhd_src/libjpeg/jcparam.cpp
+# Bound component-table setup, retaining the component-count error edges.
+src wwhd_src/libjpeg/jcmarker.cpp
+# Dummy output passes suspend on a no-progress callback; normal passes complete.
+arg! 02852930 r3 0x51030000
+field 02852930 r3+0x14 s32 202,203,204,205
+field 02852930 r3+0x7c u32 1,2,8
+field 02852930 r3+0x1c0 u32 0x51031000
+field 02852930 r3+0x1c4 u32 0x51032000
+field 02852930 51031008 s32 0,1
+field 02852930 51032004 u32 0x0F5A0200
+stable 51030000 0x94
+stable 51030098 0x158
+stable 51031000 0x20
+stable 51032000 0x20
+src wwhd_src/libjpeg/jcprepct.cpp
+arg! 02850F9C r5 0,1,2,4
+arg! 02850F9C r6 0,1,2,4
+# Marker traversal uses bounded JPEG component and coefficient-table geometry.
+arg! 0284EAA0 r3 0x51040000
+field 0284EAA0 r3+0x4c s32 0,1,3,4
+field 0284EAA0 r3+0x120 s32 0,1,3,4
+field 0284EAA0 r3+0x180 s32 -1,0,1,63
+field 0284EAA0 r3+0x17c u32 0x1017B7A8
+arg! 0284ED2C r3 0x51040000
+field 0284ED2C r3+0x4c s32 0,1,3,4
+field 0284ED2C r3+0x120 s32 0,1,3,4
+field 0284ED2C r3+0x180 s32 -1,0,1,63
+field 0284ED2C r3+0x17c u32 0x1017B7A8
+arg! 0284EEDC r3 0x51040000
+field 0284EEDC r3+0x4c s32 0,1,3,4
+field 0284EEDC r3+0x120 s32 0,1,3,4
+field 0284EEDC r3+0x180 s32 -1,0,1,63
+field 0284EEDC r3+0x17c u32 0x1017B7A8
+arg! 0284EFF4 r3 0x51040000
+field 0284EFF4 r3+0x4c s32 0,1,3,4
+field 0284EFF4 r3+0x120 s32 0,1,3,4
+field 0284EFF4 r3+0x180 s32 -1,0,1,63
+field 0284EFF4 r3+0x17c u32 0x1017B7A8
+arg! 0284F40C r3 0x51040000
+field 0284F40C r3+0x4c s32 0,1,3,4
+field 0284F40C r3+0x120 s32 0,1,3,4
+field 0284F40C r3+0x180 s32 -1,0,1,63
+field 0284F40C r3+0x17c u32 0x1017B7A8
+arg! 0284F5C0 r3 0x51040000
+field 0284F5C0 r3+0x4c s32 0,1,3,4
+field 0284F5C0 r3+0x120 s32 0,1,3,4
+field 0284F5C0 r3+0x180 s32 -1,0,1,63
+field 0284F5C0 r3+0x17c u32 0x1017B7A8
+stable 51040000 0x1b0
+field 0284ED2C r3+0x124 u32 0x51041000
+field 0284ED2C 51041014 s32 0,1,15
+field 0284ED2C 51041018 s32 0,1,15
+field 0284ED2C r3+0x128 u32 0x51041100
+field 0284ED2C 51041114 s32 0,1,15
+field 0284ED2C 51041118 s32 0,1,15
+field 0284ED2C r3+0x12c u32 0x51041200
+field 0284ED2C 51041214 s32 0,1,15
+field 0284ED2C 51041218 s32 0,1,15
+field 0284ED2C r3+0x130 u32 0x51041300
+field 0284ED2C 51041314 s32 0,1,15
+field 0284ED2C 51041318 s32 0,1,15
+src wwhd_src/libjpeg/jdinput.cpp
+# Preprocessing uses finite row groups and persistent controller buffers.
+arg! 02851004 r3 0x51050000
+field 02851004 r3+0x4c s32 0,1,3,4
+field 02851004 r3+0x110 s32 1,2,4
+field 02851004 r3+0x20 u32 1,2,8
+field 02851004 r3+0x18c u32 0x51051000
+arg! 028511F4 r3 0x51050000
+field 028511F4 r3+0x4c s32 0,1,3,4
+field 028511F4 r3+0x110 s32 1,2,4
+field 028511F4 r3+0x20 u32 1,2,8
+field 028511F4 r3+0x18c u32 0x51051000
+arg! 02851428 r3 0x51050000
+field 02851428 r3+0x4c s32 0,1,3,4
+field 02851428 r3+0x110 s32 1,2,4
+field 02851428 r3+0x20 u32 1,2,8
+field 02851428 r3+0x18c u32 0x51051000
+arg! 02851554 r3 0x51050000
+field 02851554 r3+0x4c s32 0,1,3,4
+field 02851554 r3+0x110 s32 1,2,4
+field 02851554 r3+0x20 u32 1,2,8
+field 02851554 r3+0x18c u32 0x51051000
+arg! 02851004 r5 0x51052000
+arg! 02851004 r8 0x51053000
+arg! 02851004 r6 0,1,2,4
+arg! 02851004 r9 0,1,2,4
+field 02851004 51052000 u32 0,1,2
+field 02851004 51053000 u32 0,1,2
+field 02851004 51051030 u32 0,1,2,4
+field 02851004 51051034 s32 0,1
+field 02851004 51051038 s32 0,1
+field 02851004 5105103c s32 2,4
+arg! 028511F4 r5 0x51052000
+arg! 028511F4 r8 0x51053000
+arg! 028511F4 r6 0,1,2,4
+arg! 028511F4 r9 0,1,2,4
+field 028511F4 51052000 u32 0,1,2
+field 028511F4 51053000 u32 0,1,2
+field 028511F4 51051030 u32 0,1,2,4
+field 028511F4 51051034 s32 0,1
+field 028511F4 51051038 s32 0,1
+field 028511F4 5105103c s32 2,4
+stable 51050000 0x1b0
+stable 51051000 0x40
+stable 51052000 4
+stable 51053000 4
+src wwhd_src/libjpeg/jcsample.cpp
+# Input geometry includes empty, single-component, and interleaved scans.
+arg! 02853078 r3 0x51060000
+field 02853078 r3+0x28 s32 0,1,3,4
+field 02853078 r3+0x158 s32 0,1,3,4
+field 02853078 r3+0xe0 u32 0x51061000
+field 02853078 r3+0x15c u32 0x51061000
+field 02853078 r3+0x160 u32 0x51061058
+field 02853078 r3+0x164 u32 0x510610b0
+field 02853078 r3+0x168 u32 0x51061108
+field 02853078 51061008 s32 1,2,4
+field 02853078 5106100c s32 1,2,4
+field 02853078 51061060 s32 1,2,4
+field 02853078 51061064 s32 1,2,4
+field 02853078 510610b8 s32 1,2,4
+field 02853078 510610bc s32 1,2,4
+field 02853078 51061110 s32 1,2,4
+field 02853078 51061114 s32 1,2,4
+arg! 0285311C r3 0x51060000
+field 0285311C r3+0x158 s32 0,1,3,4
+field 0285311C r3+0xe0 u32 0x51061000
+field 0285311C r3+0x15c u32 0x51061000
+field 0285311C r3+0x160 u32 0x51061058
+field 0285311C r3+0x164 u32 0x510610b0
+field 0285311C r3+0x168 u32 0x51061108
+arg! 0285388C r3 0x51060000
+field 0285388C r3+0x28 s32 0,1,3,4
+field 0285388C r3+0x158 s32 0,1,3,4
+field 0285388C r3+0xe0 u32 0x51061000
+field 0285388C r3+0x15c u32 0x51061000
+field 0285388C r3+0x160 u32 0x51061058
+field 0285388C r3+0x164 u32 0x510610b0
+field 0285388C r3+0x168 u32 0x51061108
+field 0285388C 51061008 s32 1,2,4
+field 0285388C 5106100c s32 1,2,4
+field 0285388C 51061060 s32 1,2,4
+field 0285388C 51061064 s32 1,2,4
+field 0285388C 510610b8 s32 1,2,4
+field 0285388C 510610bc s32 1,2,4
+field 0285388C 51061110 s32 1,2,4
+field 0285388C 51061114 s32 1,2,4
+arg! 02853A94 r3 0x51060000
+field 02853A94 r3+0x28 s32 0,1,3,4
+field 02853A94 r3+0x158 s32 0,1,3,4
+field 02853A94 r3+0xe0 u32 0x51061000
+field 02853A94 r3+0x15c u32 0x51061000
+field 02853A94 r3+0x160 u32 0x51061058
+field 02853A94 r3+0x164 u32 0x510610b0
+field 02853A94 r3+0x168 u32 0x51061108
+field 02853A94 51061008 s32 1,2,4
+field 02853A94 5106100c s32 1,2,4
+field 02853A94 51061060 s32 1,2,4
+field 02853A94 51061064 s32 1,2,4
+field 02853A94 510610b8 s32 1,2,4
+field 02853A94 510610bc s32 1,2,4
+field 02853A94 51061110 s32 1,2,4
+field 02853A94 51061114 s32 1,2,4
+arg! 02853BF0 r3 0x51060000
+field 02853BF0 r3+0x28 s32 0,1,3,4
+field 02853BF0 r3+0x158 s32 0,1,3,4
+field 02853BF0 r3+0xe0 u32 0x51061000
+field 02853BF0 r3+0x15c u32 0x51061000
+field 02853BF0 r3+0x160 u32 0x51061058
+field 02853BF0 r3+0x164 u32 0x510610b0
+field 02853BF0 r3+0x168 u32 0x51061108
+field 02853BF0 51061008 s32 1,2,4
+field 02853BF0 5106100c s32 1,2,4
+field 02853BF0 51061060 s32 1,2,4
+field 02853BF0 51061064 s32 1,2,4
+field 02853BF0 510610b8 s32 1,2,4
+field 02853BF0 510610bc s32 1,2,4
+field 02853BF0 51061110 s32 1,2,4
+field 02853BF0 51061114 s32 1,2,4
+stable 51060000 0x1f0
+stable 51061000 0x160
+src wwhd_src/libjpeg/jcmaster.cpp
+# Pixel loops use bounded JPEG row geometry; smoothing requires at least two columns.
+arg! 02851684 r4 -1,0,1,2,4
+arg! 02851684 r5 0,1,2,4,8
+arg! 02851684 r6 0,1,2,4,8,16
+arg! 02851768 r3 0x51070000
+arg! 02851768 r4 0x51071000
+field 02851768 r3+0x110 s32 0,1,2,4
+field 02851768 r3+0x20 u32 0,1,2,8
+field 02851768 5107101c u32 1,2,3
+field 02851768 51071024 s32 2,4,8
+arg! 02851884 r3 0x51070000
+arg! 02851884 r4 0x51071000
+field 02851884 r3+0x110 s32 0,1,2,4
+field 02851884 r3+0x20 u32 0,1,2,8
+field 02851884 5107101c u32 1,2,3
+field 02851884 51071024 s32 2,4,8
+arg! 028518FC r3 0x51070000
+arg! 028518FC r4 0x51071000
+field 028518FC r3+0x110 s32 0,1,2,4
+field 028518FC r3+0x20 u32 0,1,2,8
+field 028518FC 5107101c u32 1,2,3
+field 028518FC 51071024 s32 2,4,8
+arg! 028519BC r3 0x51070000
+arg! 028519BC r4 0x51071000
+field 028519BC r3+0x110 s32 0,1,2,4
+field 028519BC r3+0x20 u32 0,1,2,8
+field 028519BC 5107101c u32 1,2,3
+field 028519BC 51071024 s32 2,4,8
+arg! 02851A9C r3 0x51070000
+arg! 02851A9C r4 0x51071000
+field 02851A9C r3+0x110 s32 0,1,2,4
+field 02851A9C r3+0x20 u32 0,1,2,8
+field 02851A9C 5107101c u32 1,2,3
+field 02851A9C 51071024 s32 2,4,8
+arg! 02851CFC r3 0x51070000
+arg! 02851CFC r4 0x51071000
+field 02851CFC r3+0x110 s32 0,1,2,4
+field 02851CFC r3+0x20 u32 0,1,2,8
+field 02851CFC 5107101c u32 1,2,3
+field 02851CFC 51071024 s32 2,4,8
+field 02851768 r3+0x19c u32 0x51072000
+field 02851768 51071004 s32 0
+field 02851768 5107205c u8 1,2,4
+field 02851768 51072066 u8 1,2,4
+arg! 028516C8 r3 0x51070000
+field 028516C8 r3+0x4c s32 0,1,3,4
+arg! 02851E6C r3 0x51070000
+field 02851E6C r3+0x4c s32 0,1,3,4
+stable 51070000 0x1b0
+stable 51071000 0x58
+stable 51072000 0x70
+# Compression master setup is bounded to JPEG component limits.
+arg! 0284F8C4 r3 0x51080000
+field 0284F8C4 r3+0x120 s32 0,1,3,4
+field 0284F8C4 r3+0x54 u32 0x51081000
+field 0284F8C4 r3+0x124 u32 0x51081000
+field 0284F8C4 51081008 s32 1,2,4
+field 0284F8C4 5108100c s32 1,2,4
+field 0284F8C4 r3+0x128 u32 0x51081058
+field 0284F8C4 51081060 s32 1,2,4
+field 0284F8C4 51081064 s32 1,2,4
+field 0284F8C4 r3+0x12c u32 0x510810b0
+field 0284F8C4 510810b8 s32 1,2,4
+field 0284F8C4 510810bc s32 1,2,4
+field 0284F8C4 r3+0x130 u32 0x51081108
+field 0284F8C4 51081110 s32 1,2,4
+field 0284F8C4 51081114 s32 1,2,4
+arg! 0284FCE8 r3 0x51080000
+field 0284FCE8 r3+0x4c s32 0,1,3,4,5
+field 0284FCE8 r3+0x120 s32 0,1,3,4
+field 0284FCE8 r3+0x54 u32 0x51081000
+field 0284FCE8 r3+0x124 u32 0x51081000
+field 0284FCE8 51081008 s32 1,2,4
+field 0284FCE8 5108100c s32 1,2,4
+field 0284FCE8 r3+0x128 u32 0x51081058
+field 0284FCE8 51081060 s32 1,2,4
+field 0284FCE8 51081064 s32 1,2,4
+field 0284FCE8 r3+0x12c u32 0x510810b0
+field 0284FCE8 510810b8 s32 1,2,4
+field 0284FCE8 510810bc s32 1,2,4
+field 0284FCE8 r3+0x130 u32 0x51081108
+field 0284FCE8 51081110 s32 1,2,4
+field 0284FCE8 51081114 s32 1,2,4
+arg! 0284FD9C r3 0x51080000
+field 0284FD9C r3+0x4c s32 0,1,3,4,5
+field 0284FD9C r3+0x120 s32 0,1,3,4
+field 0284FD9C r3+0x54 u32 0x51081000
+field 0284FD9C r3+0x124 u32 0x51081000
+field 0284FD9C 51081008 s32 1,2,4
+field 0284FD9C 5108100c s32 1,2,4
+field 0284FD9C r3+0x128 u32 0x51081058
+field 0284FD9C 51081060 s32 1,2,4
+field 0284FD9C 51081064 s32 1,2,4
+field 0284FD9C r3+0x12c u32 0x510810b0
+field 0284FD9C 510810b8 s32 1,2,4
+field 0284FD9C 510810bc s32 1,2,4
+field 0284FD9C r3+0x130 u32 0x51081108
+field 0284FD9C 51081110 s32 1,2,4
+field 0284FD9C 51081114 s32 1,2,4
+arg! 0284FFC4 r3 0x51080000
+field 0284FFC4 r3+0x4c s32 0,1,3,4,5
+field 0284FFC4 r3+0x120 s32 0,1,3,4
+field 0284FFC4 r3+0x54 u32 0x51081000
+field 0284FFC4 r3+0x124 u32 0x51081000
+field 0284FFC4 51081008 s32 1,2,4
+field 0284FFC4 5108100c s32 1,2,4
+field 0284FFC4 r3+0x128 u32 0x51081058
+field 0284FFC4 51081060 s32 1,2,4
+field 0284FFC4 51081064 s32 1,2,4
+field 0284FFC4 r3+0x12c u32 0x510810b0
+field 0284FFC4 510810b8 s32 1,2,4
+field 0284FFC4 510810bc s32 1,2,4
+field 0284FFC4 r3+0x130 u32 0x51081108
+field 0284FFC4 51081110 s32 1,2,4
+field 0284FFC4 51081114 s32 1,2,4
+stable 51080000 0x1b0
+stable 51081000 0x1b8
+# Invalid component-count errors return in mocks; keep the retained context finite.
+arg! 028509C8 r3 0x51090000
+field 028509C8 r3+0x28 s32 0,1,3,4,10,11
+stable 51090000 0x1b0
+# A successful allocator returns a distinct controller allocation, as in IJG's memory manager.
+field 02851E6C r3+0x4 u32 0x51073000
+field 02851E6C 51073000 u32 0x0F5A0300
+stable 51073000 0x34
+alloc 0F5A0300 r5 0x52000000 32
+# Main-controller allocation and component geometry, including raw and full-buffer exits.
+arg! 0284E894 r3 0x510a0000
+arg! 0284E894 r4 0,1
+field 0284E894 r3+0x4c s32 0,1,3,4
+field 0284E894 r3+0xd0 s32 0,1
+field 0284E894 r3+0x54 u32 0x510a1000
+field 0284E894 r3+0x4 u32 0x51073000
+field 0284E894 51073000 u32 0x0F5A0300
+stable 510a0000 0x1b0
+# Exercise baseline, pseudo-SOS block sizes, and invalid spectral bounds.
+field 0285311C r3+0xe4 s32 0,1
+field 0285311C r3+0xe8 s32 0,1
+# Scalar API boundaries.
+arg 02850804 r3 -1,0,1,49,50,51,99,100,101
+field 02850D84 r3+0x2c s32 0,1,2,3,4,5,6
+# SOF baseline selection and quantizer precision are independent decisions.
+field 0284F40C r3+0xd4 s32 0,1
+field 0284F40C r3+0x108 s32 0,1
+field 0284F40C r3+0x48 s32 8,12
+field 0284F40C r3+0x178 s32 1,8,16
+field 0284F40C r3+0x54 u32 0x510e1000
+ret! 0284EAA0 0,1
+# Master pass modes and DCT ratio bounds.
+field 0284F8C4 r3+0x178 s32 0,1,2,3,4,5,6,7,8,16,17
+field 0284F8C4 r3+0x114 s32 1,2,8,16
+field 0284F8C4 r3+0x118 s32 1,2,8,16
+field 0284FFC4 r3+0x184 u32 0x510e2000
+field 0284FFC4 r3+0x168 s32 0,1
+field 0284FFC4 r3+0x170 s32 0,1
+field 0284FFC4 510e2014 s32 0,1,2,3
+field 0284FFC4 510e2018 s32 0,1,2
+field 0284FFC4 510e201c s32 1,2,3
+field 0284FFC4 510e2020 s32 0,1
+stable 510e2014 0x10
+arg 028503B0 r4 0,1
+# Color-space inference includes JFIF, Adobe transforms and component IDs.
+arg! 02852214 r3 0x510b0000
+field 02852214 r3+0x28 s32 0,1,3,4
+field 02852214 r3+0x124 s32 0,1
+field 02852214 r3+0x130 s32 0,1
+field 02852214 r3+0x134 u8 0,1,2,255
+field 02852214 r3+0xe0 u32 0x510b1000
+field 02852214 510b1000 s32 1,82,0,82,82,82,82,82
+field 02852214 510b1058 s32 2,71,0,71,71,71,71,71
+field 02852214 510b10b0 s32 3,66,0,66,66,66,66,66
+stable 510b0000 0x1f0
+# Input API state transitions, with a suspension-capable controller.
+arg! 028525F0 r3 0x510c0000
+field 028525F0 r3+0x14 s32 0,200,201,202,203,204,205,206,207,208,209,210
+field 028525F0 r3+0x1d0 u32 0x510c1000
+field 028525F0 510c1000 u32 0x0F5A0500
+arg! 028527E0 r3 0x510c0000
+field 028527E0 r3+0x14 s32 0,205,206,207,210
+field 028527E0 r3+0x48 s32 0,1
+field 028527E0 r3+0x1d0 u32 0x510c1000
+field 028527E0 510c1000 u32 0x0F5A0500
+field 028527E0 510c1014 s32 0,1
+stable 510c0000 0x14
+stable 510c0018 0x1d8
+stable 510c1000 0x1c
+ret! 0F5A0500 0,1,2
+# Real IJG output-pass preparation clears the completed dummy-pass flag.
+field 02852930 r3+0x94 u32 0,1,2
+field 02852930 51031000 u32 0x02856AC4
+real 02856AC4
+# Real compression pass setup/finish advance finite multi-pass controller state.
+arg! 0284E280 r3 0x510d0000
+field 0284E280 r3+0x14 s32 0,101,102,103
+field 0284E280 r3+0x184 u32 0x510d1000
+field 0284E280 r3+0x11c u32 0,1,2,4
+field 0284E280 510d1000 u32 0x0284FFC4
+field 0284E280 510d1008 u32 0x028502E8
+field 0284E280 510d1010 s32 0,1
+field 0284E280 510d1014 s32 0,1,2
+field 0284E280 510d1018 s32 0
+field 0284E280 510d1020 s32 0,1
+stable 510d0000 0x1b0
+stable 510d1000 0x24
+real 0284FFC4
+real 028502E8
+field 0284F40C 510e1014 s32 0,1,2
+field 0284F40C 510e1018 s32 0,1,2
+field 0284F40C 510e106c s32 0,1,2
+field 0284F40C 510e1070 s32 0,1,2
+field 0284F40C 510e10c4 s32 0,1,2
+field 0284F40C 510e10c8 s32 0,1,2
+field 0284F40C 510e111c s32 0,1,2
+field 0284F40C 510e1120 s32 0,1,2
+field 02851E6C r3+0x54 u32 0x510f1000
+field 02851E6C r3+0x10c s32 1,2,4
+field 02851E6C r3+0x110 s32 1,2,4
+field 02851E6C r3+0x114 s32 8
+field 02851E6C r3+0x118 s32 8
+field 02851E6C r3+0xe4 s32 0,1,50,100
+field 02851E6C 510f1008 s32 1,2,4
+field 02851E6C 510f100c s32 1,2,4
+field 02851E6C 510f1024 s32 8
+field 02851E6C 510f1028 s32 8
+field 02851E6C 510f1060 s32 1,2,4
+field 02851E6C 510f1064 s32 1,2,4
+field 02851E6C 510f107c s32 8
+field 02851E6C 510f1080 s32 8
+field 02851E6C 510f10b8 s32 1,2,4
+field 02851E6C 510f10bc s32 1,2,4
+field 02851E6C 510f10d4 s32 8
+field 02851E6C 510f10d8 s32 8
+field 02851E6C 510f1110 s32 1,2,4
+field 02851E6C 510f1114 s32 1,2,4
+field 02851E6C 510f112c s32 8
+field 02851E6C 510f1130 s32 8
+# A scanning pass has already completed before finish_compress advances the master.
+field 0284E280 510d101c s32 2,3,4
+field 0284E280 r3+0x168 s32 0
+field 0284E280 r3+0x170 s32 0
+# The master controller also receives distinct successful allocator storage.
+arg! 028503B0 r3 0x51100000
+field 028503B0 r3+0x4 u32 0x51073000
+field 028503B0 51073000 u32 0x0F5A0300
+field 028503B0 r3+0xcc u32 0,0x51101000
+field 028503B0 r3+0x108 s32 0,1
+field 028503B0 r3+0x178 s32 4,8
+field 028503B0 r3+0xd4 s32 0,1
+field 028503B0 r3+0xc8 s32 1,2,3
+stable 51100000 0x1b0
+# Main-buffer suspension and resumption, with a no-progress preprocessing callback.
+arg! 0284E724 r3 0x51110000
+field 0284E724 r3+0x188 u32 0x51111000
+field 0284E724 r3+0x190 u32 0x51112000
+field 0284E724 r3+0x18c u32 0x51113000
+field 0284E724 r3+0x11c u32 0,1,2
+field 0284E724 r3+0x118 s32 8
+field 0284E724 51111008 u32 0,1
+field 0284E724 5111100c u32 0,1,8
+field 0284E724 51111010 s32 0,1
+field 0284E724 51112004 u32 0x0F5A0800
+stable 51110000 0x1b0
+stable 51111000 0x40
+stable 51112000 0x8
+stable 51113000 0x8
+ret! 0F5A0800 0,1
+arg 0284E840 r4 0,1
+# Consume real marker return codes, including pseudo SOS and tables-only streams.
+field 02853BF0 r3+0x1d0 u32 0x51121000
+field 02853BF0 r3+0x1d4 u32 0x51122000
+field 02853BF0 r3+0x98 s32 0,1,2
+field 02853BF0 r3+0xa0 s32 0,1,2,3
+field 02853BF0 51121010 s32 0,1
+field 02853BF0 51121014 s32 0,1
+field 02853BF0 51121018 s32 0,1,2
+field 02853BF0 51122004 u32 0x0F5A0900
+field 02853BF0 51122010 s32 0,1
+stable 51121000 0x1c
+stable 51122000 0x1c
+ret! 0F5A0900 0,1,2
+# Invalid geometry paths keep finite component counts after the mocked error returns.
+field 0285311C r3+0x28 s32 0,1,3,4,11
+field 0285311C 51061008 s32 -1,0,1,2,4,5
+field 0285311C 5106100c s32 -1,0,1,2,4,5
+field 0285311C 51061060 s32 -1,0,1,2,4,5
+field 0285311C 51061064 s32 -1,0,1,2,4,5
+field 0285311C 510610b8 s32 -1,0,1,2,4,5
+field 0285311C 510610bc s32 -1,0,1,2,4,5
+field 0285311C 51061110 s32 -1,0,1,2,4,5
+field 0285311C 51061114 s32 -1,0,1,2,4,5
+field 0284F8C4 r3+0x4c s32 0,1,3,4,5,11
+field 0285311C r3+0x1a4 s32 0,3,8,15,15,15,15,24,35,48,63,80,99,120,143,168,195,224,255,17,25,36,64,81,100,121,144,169,196,225,256
+# The preprocessing allocators expose their actual four/three-argument interfaces.
+field 02851428 r3+0x4 u32 0x51073000
+field 02851554 r3+0x4 u32 0x51073000
+field 02851428 51073000 u32 0x0F5A0300
+field 02851554 51073000 u32 0x0F5A0300
+field 02851428 51073008 u32 0x0F5A0B00
+field 02851554 51073008 u32 0x0F5A0B00
+allocfixed 0F5A0B00 0x100 0x52400000 32
+
+# Output pointer slots may alias the destination's saved outsize pointer.
+arg! 02852D54 r3 0x51140000
+field 02852D54 r3+0x1c u32 0x51150000
+field 02852D54 51150014 u32 0x51150018,0x51151000
+field 02852D54 51150018 u32 0x51152000
+field 02852D54 51150020 u32 0x51153000
+field 02852D54 51150024 u32 8,16
+field 02852D54 51150004 u32 0,1,7
+
+# Execute Cafe's bounded word-clear helper; preserve application fields through allocator mocks.
+real 028F5914
+arg! 0284E0CC r3 0x51160000
+arg! 028520E8 r3 0x51170000
+stable 51160000 4
+stable 5116000c 4
+stable 51160018 4
+stable 51170000 4
+stable 5117000c 4
+stable 51170018 4
+
+# Accept/reject precision boundary in compression setup.
+field 0284F8C4 r3+0x48 s32 8,9,12
+
+# Nonzero scratch bytes expose deleted explicit initialization of stack arrays.
+stackfill periodic
+# Exact image-limit boundaries and a frequent four-wide spectral-size case.
+field 0285311C r3+0x20 u32 0,1,65500,65501,65502
+field 0285311C r3+0x24 u32 0,1,65500,65501,65502
+field 0285311C r3+0x48 s32 8,9,12
+# Read-header accepts both valid entry states before consuming input.
+arg! 0285272C r3 0x510c0000
+arg! 0285272C r4 0,1
+field 0285272C r3+0x14 s32 200,201,202
+
+# Marker payload and SOF image-size rejection boundaries.
+arg! 0284F320 r5 0,1,65532,65533,65534,65535
+field 0284EEDC r3+0x40 u32 0,1,65535,65536,65537
+field 0284EEDC r3+0x44 u32 0,1,65535,65536,65537

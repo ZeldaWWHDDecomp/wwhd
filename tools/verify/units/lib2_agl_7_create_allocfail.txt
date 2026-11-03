@@ -1,0 +1,37 @@
+# AGL#7 CameraOverride::create with its original first allocation succeeding or exhausted.
+# The zero input requests the constructor's ordinary 0x74-byte allocation; fail call 1 models heap exhaustion.
+# Run the original math-default initializers so the constructor reads valid default vectors and matrices.
+# Coverage blocks 1/2 are the reachable allocation/NULL-return arms. Blocks 4/6 test state==0 or
+# state+0x30==0 after allocation; those addresses require invalid wrapped object pointers, not valid storage.
+# verify: -only 0278D81C -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+stackfill
+stable 104A0934 0x18
+real 02756E3C 02757190 0278D2E8 02791D00 02791C68 02791C90 025155D8 028E8D4C 028E8E10 0274CCC4 0274CCB0 028E8970 028E8B04
+setup 0278D81C 02757190
+setup 0278D81C 02756E3C
+alloc 0273AD10 r3 0x63000000
+allocfail 0273AD10 0,1
+arg! 0278D81C r3 0
+final 0278D81C 0x63000000 0x74
+final 0278D81C 104A041C 0x30
+final 0278D81C 104A0928 0x30

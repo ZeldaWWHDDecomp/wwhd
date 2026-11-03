@@ -1,0 +1,4 @@
+# TYPE-DOMAIN: same approved real Viewport::setSize prefix, with authentic nested acquire retained for producers.
+# vm_call performs depth0 stopat BEFORE real dispatch; nested setup acquires still run real and the tested acquire never enters the surface model.
+include lib2_agl_3_lifecycle_large_viewport_prefix_stop_type.txt
+real 0279FC6C

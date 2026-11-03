@@ -1,0 +1,56 @@
+# verify: -only 027B6D64,027B6F18 -calleesp -strictnan
+# Qualified borrowed buffer-range readsets; receiver extents0x148(color)/0x154(depth), not constructor lifecycle.
+# SDKcontext NONRECORDING: GX2Invalidate modes0x10/0x20 queue hostcommands or return beforeCPUguestwrites.
+# Recording display-list context excluded: emit would write a guest command buffer there.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+fill * 0x58000000 0x148 0
+fill * 0x58001000 0x154 0
+fill * 0xE8001000 0x100 0x17
+fill * 0xE8002000 0x100 0x39
+fill * 0xE8003000 0x100 0x5B
+callee C00064A8 r3=0 r4=0 r5=0
+arg! 027B6D64 r3 0x58000000
+arg! 027B6F18 r3 0x58001000
+field 027B6D64 0x58000024 u32 0,0x20,0x40,0x80
+field 027B6D64 0x5800002C u32 0,0x20,0x40,0x80
+field 027B6D64 0x580000A0 u32 0,0x20,0x40,0x80
+field 027B6D64 0x58000028 u32 0,0xE8001000
+field 027B6D64 0x58000030 u32 0,0xE8002000
+field 027B6D64 0x580000A8 u32 0,0xE8003000
+stable 0x58000024 0x10
+final 027B6D64 58000024 0x10
+stable 0x580000A0 0x4
+final 027B6D64 580000A0 0x4
+stable 0x580000A8 0x4
+final 027B6D64 580000A8 0x4
+field 027B6F18 0x58001024 u32 0,0x20,0x40,0x80
+field 027B6F18 0x5800102C u32 0,0x20,0x40,0x80
+field 027B6F18 0x5800109C u32 0,0x20,0x40,0x80
+field 027B6F18 0x58001028 u32 0,0xE8001000
+field 027B6F18 0x58001030 u32 0,0xE8002000
+field 027B6F18 0x580010A4 u32 0,0xE8003000
+stable 0x58001024 0x10
+final 027B6F18 58001024 0x10
+stable 0x5800109C 0x4
+final 027B6F18 5800109C 0x4
+stable 0x580010A4 0x4
+final 027B6F18 580010A4 0x4
+# No stable on whole receivers, callerdata, GPUbuffers, outputstate or unknown fields.
+# Final compares only still-live exact metadata readset; no GPUcache/pixelbehavior credit.

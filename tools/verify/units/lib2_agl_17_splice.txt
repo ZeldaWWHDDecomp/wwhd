@@ -1,0 +1,72 @@
+# replaceTextRange (splice) on a 31-character text: ranges ending 1 character before the end (one-character
+# suffix), at the end (empty suffix) and inside; replacements empty, 1, 4 and 9 characters (caller 027C6060 form).
+# verify: -only 027C5FD8 -strictnan -calleesp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027C5FD8 r3 0x58700000
+arg! 027C5FD8 r4 0x58800000
+arg! 027C5FD8 r5 0,1,4,8
+arg! 027C5FD8 r6 8,12,16,30,31
+arg! 027C5FD8 r7 0x58900000
+fill 027C5FD8 58700000 256 0
+fill 027C5FD8 58800000 64 0
+fill 027C5FD8 58900000 256 0xA5
+fieldstr 027C5FD8 0x58800000 64 "","x","REPL","abcdefghi"
+final 027C5FD8 58700000 100
+final 027C5FD8 58900000 100
+field 027C5FD8 0x58700000 u8 48
+field 027C5FD8 0x58700001 u8 49
+field 027C5FD8 0x58700002 u8 50
+field 027C5FD8 0x58700003 u8 51
+field 027C5FD8 0x58700004 u8 52
+field 027C5FD8 0x58700005 u8 53
+field 027C5FD8 0x58700006 u8 54
+field 027C5FD8 0x58700007 u8 55
+field 027C5FD8 0x58700008 u8 56
+field 027C5FD8 0x58700009 u8 57
+field 027C5FD8 0x5870000A u8 65
+field 027C5FD8 0x5870000B u8 66
+field 027C5FD8 0x5870000C u8 67
+field 027C5FD8 0x5870000D u8 68
+field 027C5FD8 0x5870000E u8 69
+field 027C5FD8 0x5870000F u8 70
+field 027C5FD8 0x58700010 u8 71
+field 027C5FD8 0x58700011 u8 72
+field 027C5FD8 0x58700012 u8 73
+field 027C5FD8 0x58700013 u8 74
+field 027C5FD8 0x58700014 u8 75
+field 027C5FD8 0x58700015 u8 76
+field 027C5FD8 0x58700016 u8 77
+field 027C5FD8 0x58700017 u8 78
+field 027C5FD8 0x58700018 u8 79
+field 027C5FD8 0x58700019 u8 80
+field 027C5FD8 0x5870001A u8 81
+field 027C5FD8 0x5870001B u8 82
+field 027C5FD8 0x5870001C u8 83
+field 027C5FD8 0x5870001D u8 84
+field 027C5FD8 0x5870001E u8 85

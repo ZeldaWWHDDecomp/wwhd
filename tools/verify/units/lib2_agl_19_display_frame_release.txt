@@ -1,0 +1,6 @@
+# AGL#19 027D5C48 releaseAttachments after the first frame (lib2_agl_19_display_frame_fixture.txt): view 0 owns its
+# attachments (flag 4: released to the texture cache's shared pool), view 1 borrows view 0's (flag 4 clear).
+# verify: -only 027D5C48 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+arg! 027D5C48 r3 0x5E100018,0x5E100818

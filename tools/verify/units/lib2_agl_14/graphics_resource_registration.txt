@@ -1,0 +1,30 @@
+# verify: -only 027B59F4 -calleesp -strictnan
+# Graphics resource registration: the registration callee may update the eight-byte text it is passed
+# (inout), so the per-call text re-initialisation is observable; resource globals are steered words.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+arg! 027B59F4 r3 0x57001000,0x57002000
+field 027B59F4 0x101F8C14 u32 0x57000000
+field 027B59F4 0x57000010 u32 0x57001000,0x57003000
+callee 02786064 r3=0 r4=inout8 r5=0
+field 027B59F4 0x101F8C1C u32 0,0x57100000,0x57200000
+field 027B59F4 0x101F8D6C u32 0,0x57300000
+# The opaque shader-resource initializer may replace the resource and debug globals; the original reloads both after it.
+mockglobal 02786520 101F8C1C u32 0,0x57100000,0x57400000
+mockglobal 02786520 101F8D6C u32 0,0x57300000,0x57500000

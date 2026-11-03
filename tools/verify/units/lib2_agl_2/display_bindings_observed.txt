@@ -1,0 +1,5 @@
+# buildDisplayBindings with the main-spec steering and the original buildAttributes (02773984) running: the attribute list
+# it hands over (locations, streams) drives the real attribute commands, whose memory effects are compared.
+# verify: -strictnan -calleesp -only 02773C0C
+include lib2_agl_2.txt
+real 02773984

@@ -1,0 +1,83 @@
+# AGL#2 direct light constructor profile: original manager/world setup plus fresh raw receivers from the shipped heap allocator.
+# Constructor targets receive allocator-return EAs before any constructor has touched these receiver blocks.
+# The world setup ordering and allocation sizes match the traced allocator probe; direct receiver EAs are trace-confirmed.
+# verify: -strictnan -calleesp -nulltrap -only 02770D10,027713EC,027719D0
+src wwhd_src/agl/EnvironmentLightTypes.cpp
+src wwhd_src/agl/EnvironmentObjects.cpp
+src wwhd_src/agl/FormattedEnvironmentText.cpp
+src wwhd_src/agl/ShaderBindingEditor.cpp
+src wwhd_src/agl/ShaderCommandState.cpp
+src wwhd_src/agl/LightOutputRuntime.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/LightConstructors.cpp
+src wwhd_src/agl/BloomParameters.cpp
+src wwhd_src/agl/ShaderLookupRuntime.cpp
+src wwhd_src/agl/BloomRenderRuntime.cpp
+src wwhd_src/agl/TimingStatics.cpp
+include shared/agl_world.txt
+setupsnapshot
+# Static class registrations in the startup-table order (1018BD14/18/1C): Projector, Fog, the five light kinds.
+real 02770250 02770710 027727E4 0276D71C 0276F11C 027725D0
+setup * 0276D71C
+setup * 0276F11C
+setup * 027725D0
+# Manager object (embedded in the game's scene object) and the stack InitArg the game builds (025AE3D8..438).
+fill * 59E00000 0x400 0
+fill * 59E10000 0x210 0
+real 0276C1DC 0276CAA4 0276F968 0276F9F0
+setup * 0276C1DC r3=0x59E00000
+setup * 0276CAA4 r3=0x59E10000
+setup * 0276F9F0 r3=0x59E10000 r4=0 r5=1
+setup * 0276F9F0 r3=0x59E10000 r4=3 r5=8
+setup * 0276F9F0 r3=0x59E10000 r4=5 r5=1
+setup * 0276F9F0 r3=0x59E10000 r4=6 r5=1
+arg! 0276C3F8 r3 0x59E00000
+arg! 0276C3F8 r4 0x59E10000
+arg! 0276C3F8 r5 0x6A000000
+# Written only by the original constructors/setters above and by the tested function (writes stay compared).
+stable 59E00000 0x400
+stable 59E10000 0x210
+# The game-side closure of initialize: every callee runs its original body on both sides.
+real 0276F554 0276DF64 0276DDD0 0273B584 0276C35C 0276C3EC 0279CB24 028E892C 0279BC70 0279BD8C 02770564 0276E774
+real 0276CC10 0276CC68 0279CB9C 0276D96C 0276F370 02772950 02772A0C 02772AC8 02772B84 02772C40
+real 027A84B8 027A7E6C 0279E674 0276EBB4 0276EBB8 0279E618 027A861C
+real 0279E57C
+real 0276F3A8 0279B7B4 0279A07C 0276DC4C 0276F228 0276D828 0279F1BC 02759B98 0273B264
+real 0273B200 027A8C80 0276F8B4 0276EC20 0279CA34 0279C950
+real 028F10B8 027A7FF4 0279A490
+real 028F0D8C 0277293C 0276CC14 027728BC 0277289C 0277077C 02770480 0276FCA0
+real 02770714 027AE62C 027701D4 027A80FC 0277019C 027AE5D8
+real 0279BB98 0279B9CC 02772B74 02759C28 02771DC0 027A83A8 02770698 0276DAE4 0277067C 0276EE70 0276CE10
+real 0276B3D0 0276B3D8
+real 0276CB1C 0276F360 0276CBB0 0276D9A8
+real 0279C764 0276D95C 0276F2E0 028E9098 0276F2C0 0276D8DC 0276D8C0
+# NOBITS first-use guard of the default text registration (027AE62C): zero at startup.
+field * 0x104A2088 u32 0
+real 027AE6AC
+# Closure of the later lifecycle steps (blend, object callbacks); listed here so every world spec shares it.
+real 027A7558 027A747C 027A732C
+real 027A73F4 027A7424 027A8780 027A8BAC 027727C0
+real 0279EB28 0277286C 027728AC 0276F2D0 0276F290 0276D8CC 0276D890
+real 0276D82C 0276D830 0276D840 0276D848 0276D850 0276D860 0276D868 0276D870 0276D880 0276D888 0276D8C8 0276F22C 0276F230 0276F240 0276F248 0276F250 0276F260 0276F268 0276F270 0276F280 0276F288 0276F2CC 027708B0 027708B4 027708C4 027708CC 027708D4 0277091C 0277095C 027727E8 0277280C 0277281C 02772824 0277282C 0277283C 02772844 0277284C 0277285C 02772864 027728A8 
+real 0276F204
+real 0276D804
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap
+# .bss words the setups of this fixture produce (the class registrations' id and entry tables, the default-text
+# registration guard): no mocked callee writes them in the game, so mock epochs must not clobber them. The shared world
+# keeps the empty text 104A0CD8 and its own singletons stable. Writes stay compared.
+stable 104A1464 0x100
+stable 104A1564 0xA00
+stable 104A2080 0xC
+
+# Exercise the shipped allocator with the exact create-factory byte sizes and alignment.
+# Its ->STORE values are inspected with -trace; no constructor touches these blocks here.
+real 0273B050
+setup 0273B050 0273B050 r3=276 r4=0x6A000000 r5=4 ->0x5E200000
+setup 0273B050 0273B050 r3=448 r4=0x6A000000 r5=4 ->0x5E200004
+setup 0273B050 0273B050 r3=368 r4=0x6A000000 r5=4 ->0x5E200008
+# Direct constructor inputs use the exact EAs returned by the three original allocator setups above.
+arg! 02770D10 r3 0x6A87E2A0
+arg! 027713EC r3 0x6A87E3C4
+arg! 027719D0 r3 0x6A87E594

@@ -1,0 +1,9 @@
+# Nonnull complete vertex attribute and uniform binding placement storage.
+# verify: -strictnan -calleesp -footprint -only 02774844,027748C8
+src wwhd_src/agl/ShaderCommandState.cpp
+arg! 02774844 r3 0x5C600000
+fill 02774844 5C600000 0x10 0xA5
+final 02774844 5C600000 0x10
+arg! 027748C8 r3 0x5C601000
+fill 027748C8 5C601000 0x10 0xA5
+final 027748C8 5C601000 0x10

@@ -1,0 +1,10 @@
+# Resource factory 027F7B50 with a null binding source (no shader archive) over the admitted resource_factory_produced
+# raw resource (zero materials, zero shapes), plus the stale heap bytes of lib2_j3d_hdrew_1_factory_heapfill.
+# Domain: hdResModel's mpShader is left NULL when the .sharcfb load fails (beq 02602E68 / 02603160),
+# and the caller 02605944 passes it unchanged in r4. (3a): a null source is in the domain
+# when every material takes the names == NULL path of 027F70D8; with zero materials that holds vacuously.
+# FrameRecords::initialize 028010F8 then stores only +4 (02801114) and skips +0/+8/+0xC (beq 0280126C), so the
+# FrameRecords words at pipeline+0x14..+0x23 keep what 027F7B50 stored.
+# verify: -only 027F7B50 -strictnan -calleesp
+include lib2_j3d_hdrew_1_factory_heapfill.txt
+arg! 027F7B50 r4 0

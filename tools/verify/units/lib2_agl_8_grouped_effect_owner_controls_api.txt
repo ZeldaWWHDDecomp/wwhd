@@ -1,0 +1,24 @@
+# Include-only: caller uses the original effect at58000000 and sets its own tested-function scope.
+# Opaque sampler binding can update the16 embedded samplers atE5C..27DB; leave that entire array clobberable.
+# Other effect fields have no writable escape to the runtime opaque callees; real stores still compare.
+stable 0x58000000 0xE5C
+stable 0x580027DC 0x80
+# Three caller-owned resources: integer blur count, Boolean rotation and distance attenuation.
+fill * 0x5B600000 0x200 0
+field * 0x5B600000 u32 0x5B600100
+field * 0x5B600100 u32 16
+field * 0x5B600104 u32 2
+field * 0x5B60010C s32 0,1
+field * 0x5B600004 u32 0x5B600140
+field * 0x5B600140 u32 13
+field * 0x5B600144 u32 0
+field * 0x5B60014C u8 0,1
+field * 0x5B600008 u32 0x5B600180
+field * 0x5B600180 u32 13
+field * 0x5B600184 u32 0
+field * 0x5B60018C u8 0,1
+stable 0x5B600000 0x200
+postsetup * 0279EB28 r3=0x5800282C r4=0x5B600000
+postsetup * 0279EB28 r3=0x5800281C r4=0x5B600004
+postsetup * 0279EB28 r3=0x58000274 r4=0x5B600008
+real 0279EB28 02795EE4 02795EE8 02795EF0 02795EF8 02795F00 02795F08 02795F10 02795F18 02795F20

@@ -1,0 +1,11 @@
+# Caller-valid 027CD8EC uniform-binding/upload companion. The included runtime
+# profile retains the selected shipped resource program, its original uniform
+# records, locations, and context buffers. These directives only observe the
+# original binding and stage-upload call arguments.
+# verify: -only 027CD8EC -strictnan -calleesp -footprint
+include lib2_agl_18/render_resource_original_context_runtime.txt
+observearg 027BE53C r3+0 16
+observearg 027BE53C r4+0 16
+observearg 028FAC78 r4+0 16
+observearg 028FADB0 r4+0 16
+observearg 028FAC20 r4+0 16

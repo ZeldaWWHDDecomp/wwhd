@@ -1,0 +1,34 @@
+src wwhd_src/libjpeg/jerror.cpp
+# Integer formatting checks both arguments passed on the guest stack.
+arg! * r3 0x54000000
+arg! 02858238 r3 0x54000200
+arg! 028580FC r4 0x59000600
+stable 54000000 4096
+field * 54000000 u32 0x54000200
+field * 5400020C u32 0x028580FC
+field 028580FC 54000214 s32 -1,0,1,2,3
+field 028580FC 54000270 u32 0x59000400
+field 028580FC 54000274 s32 0,1,2
+field 028580FC 54000278 u32 0
+field 028580FC 59000400 u32 0x59000500
+field 028580FC 59000404 u32 0x59000500
+field 028580FC 59000408 u32 0x59000500
+fieldstr 028580FC 59000500 40 "%d %d %d %d %d %d %d %d" "plain message"
+callee 028F186C stack=2
+callee 028580FC r4=out200
+callee C0009EE8 r4=200
+# Observe the callback's pinned error object at call entry, before later traces overwrite it.
+observe 0285B5B8 54000214 84
+observe 02858224 54000214 84
+# Matching periodic scratch bytes expose omitted initialization of guest stack locals.
+stackfill periodic
+# Distinct variadic parameter words expose the last stack argument index.
+field 028580FC 54000218 s32 305397760
+field 028580FC 5400021C s32 305397761
+field 028580FC 54000220 s32 305397762
+field 028580FC 54000224 s32 305397763
+field 028580FC 54000228 s32 305397764
+field 028580FC 5400022C s32 305397765
+field 028580FC 54000230 s32 305397766
+field 028580FC 54000234 s32 305397767
+field 028580FC 54000238 s32 305397768

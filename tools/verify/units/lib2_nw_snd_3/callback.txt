@@ -1,0 +1,19 @@
+# verify: -strictnan -calleesp -only 0288BF9C
+# Modeled sequence callback observes the complete sixteen-byte state record.
+src wwhd_src/nw/snd/SoundRuntimeSupport.cpp
+src wwhd_src/nw/snd/SequenceRuntimeSupport.cpp
+src wwhd_src/nw/snd/SoundOutputRuntime.cpp
+src wwhd_src/nw/snd/MemorySoundArchive.cpp
+src wwhd_src/nw/snd/TrackChannelRuntime.cpp
+src wwhd_src/nw/snd/SequenceResourceLoad.cpp
+arg! 0288BF9C r3 0x5A000000
+arg! 0288BF9C r5 0x5B000000
+field 0288BF9C r3+0x1BC u32 0,0x0288C5FC
+stable 5A0001BC 4
+callee 0288C5FC r3=0 r4=inout16 r5=0
+
+callee 028F6A30 r3=0
+callee 028A370C r3=0
+callee C0006F20 r4=0
+callee 0288AD60 r4=44
+callee 0288BD14 r4=44

@@ -1,0 +1,8 @@
+# TYPE-DOMAIN companion (labelled): render 02791230 enabled path on a 2-frame receiver built by the producer initialize(2),
+# frame index 0/1/2 (the frameIndex < mFrameCount bound). Shipped code never runs here (1 frame, index 0).
+# AGL#7 02791230 ShadowPrePass::render, enabled shipped path; include file: lib2_agl_7/enabled_render_base.txt. Trace 1000004 clean (setupsnapshot installed, previous-frame postsetup runs the original render), -watch 00000000:0x1000 clean, 20/20 at n=20 seeds 1 and 7, coverage 64/105.
+# AGL#7 02791230 ShadowPrePass::render, enabled path, steady state: the previous frame's original render call with the same surfaces ran (postsetup), so the cached samplers match.
+# verify: -only 02791230 -strictnan -calleesp
+include lib2_agl_7/enabled_render_frames2_base.txt
+real 02791230
+postsetup 02791230 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0

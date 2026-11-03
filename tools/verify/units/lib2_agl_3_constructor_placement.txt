@@ -1,0 +1,21 @@
+# Focused caller-owned placement construction for SurfacePair::construct.
+# Source contract: 0x2E4-byte, 4-byte-aligned object; constructor initializes embedded images at +0x4 and +0x19C.
+# The shared original AGL world supplies the real image initializers and their owner/global setup.
+# Allocation-failure and allocator-owned construction are outside this profile.
+# verify: -strictnan -calleesp -only 0277969C
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include shared/agl_world.txt
+setupsnapshot
+# Paired gate commands (fresh preflight before each run):
+# O2 seed1: verify.py lib2_agl_3_constructor_placement -only 0277969C -n 10000 -seed 1 -shards 4 -buildj 8
+# O2 seed7: verify.py lib2_agl_3_constructor_placement -only 0277969C -n 10000 -seed 7 -shards 4 -buildj 8
+# O1 seed1: verify.py lib2_agl_3_constructor_placement -only 0277969C -n 10000 -seed 1 -shards 4 -buildj 8 -srcopt-only wwhd_src/agl/FilterAaParameters.cpp -srcopt O1
+# O1 seed7: verify.py lib2_agl_3_constructor_placement -only 0277969C -n 10000 -seed 7 -shards 4 -buildj 8 -srcopt-only wwhd_src/agl/FilterAaParameters.cpp -srcopt O1
+stackfill
+footprint 0277969C 16
+arg! 0277969C r3 0x5E000000
+fill * 0x5E000000 0x2E4 0
+stable 0x5E000000 0x2E4
+real 027BDF7C 027BE53C 027BFE5C 027BFEF4 027BFF40 027BFF54
+final 0277969C 0x5E000000 0x2E4

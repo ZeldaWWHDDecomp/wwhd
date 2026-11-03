@@ -1,0 +1,31 @@
+# AGL#19 PointerBuffer sort 027D7A4C with its sole comparator 027DA7D4 (the call 027D6EAC inside sortDeferred makes),
+# and sortDeferred 027D6E80 / submitDisplayLists 027D6EEC, on the TV view's deferred list after the executed first
+# frame (lib2_agl_19_display_exec_fixture.txt) plus three more job commands recorded the way RenderJob::execute
+# records them (beginCommand 027D54F8 with the job requests 0x40 (layer pass, tag 0), 0x400 (pass listener) and
+# 0xFFFFFFFE (surface job), the surface preparation 027D6A74 (target bind, viewport, clear) recorded between begin and end,
+# endCommand 027D55F8,
+# appendDeferred 027D71D4 with the layer owner): the list then holds four records with distinct and equal keys.
+# verify: -only 027D7A4C,027D6E80,027D6EEC -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+real 027DA7D4 027DA764 027D6E80 027D7A4C
+field * 0x5E000210 u32 0x1016C340
+field * 0x5E000214 u32 0x1016C180
+stable 0x5E000210 0x8
+postsetup * 027D54F8 r3=0x5E101028 r4=0x5E000210 r5=0x40 r6=0
+postsetup * 027D6A74 r3=0x5E100018
+postsetup * 027D55F8 r3=0x5E101028 r4=10 r5=0
+postsetup * 027D71D4 r3=0x5E100018 r4=0x6A8846F0 r5=0x58000000
+postsetup * 027D54F8 r3=0x5E101028 r4=0x5E000210 r5=0x400 r6=0
+postsetup * 027D6A74 r3=0x5E100018
+postsetup * 027D55F8 r3=0x5E101028 r4=11 r5=0
+postsetup * 027D71D4 r3=0x5E100018 r4=0x6A884730 r5=0
+postsetup * 027D54F8 r3=0x5E101028 r4=0x5E000210 r5=0xFFFFFFFE r6=0
+postsetup * 027D6A74 r3=0x5E100018
+postsetup * 027D55F8 r3=0x5E101028 r4=12 r5=0
+postsetup * 027D71D4 r3=0x5E100018 r4=0x6A884770 r5=0
+arg! 027D7A4C r3 0x5E1007EC
+arg! 027D7A4C r4 0x027DA7D4
+arg! 027D6E80 r3 0x5E100018
+arg! 027D6EEC r3 0x5E100018
+arg! 027D6EEC r4 1

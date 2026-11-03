@@ -1,0 +1,14 @@
+# Caller-valid 027CC78C visibility companion. This replaces only the X/Y rows
+# of the producer-built cull transform with one rigid 90-degree Z rotation;
+# the original depth row, translation, near/far values, and side planes remain.
+# A single coherent matrix is used instead of independently randomized cells.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+poke * 59300000 f32 0
+poke * 59300004 f32 -1
+poke * 59300008 f32 0
+poke * 5930000C f32 0
+poke * 59300010 f32 1
+poke * 59300014 f32 0
+poke * 59300018 f32 0
+poke * 5930001C f32 0

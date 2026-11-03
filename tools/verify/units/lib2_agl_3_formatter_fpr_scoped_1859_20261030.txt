@@ -1,0 +1,3 @@
+# verify: -strictnan -calleesp -only 02779244
+# Same formatter inputs as accepted historical explicit-only gate; exclude unrelated function baselines.
+include lib2_agl_3_formatter_fpr.txt

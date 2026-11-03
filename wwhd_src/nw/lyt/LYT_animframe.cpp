@@ -71,15 +71,15 @@ void nw::lyt::Animator::UpdateFrame() {
 
 /* 0287FB68 */
 void nw::lyt::Layout::UpdateAnimFrame() {
-    Animator* sentinel = reinterpret_cast<Animator*>(&mAnimators);
-    Animator* animator = mAnimators.mpNext;
+    Animator* sentinel = reinterpret_cast<Animator*>(&mAnimators.root);
+    Animator* animator = reinterpret_cast<Animator*>(mAnimators.root.next.get());
     while (animator != sentinel) {
         AnimatorVtable* table = animator->__vtbl;
         gabi::call_ptr<void>(table->mUpdateFrame, animator);
         animator = animator->mLink.mpNext;
     }
-    PartLink* partSentinel = &mParts;
-    PartLink* link = mParts.mpNext;
+    PartLink* partSentinel = reinterpret_cast<PartLink*>(&mParts.root);
+    PartLink* link = reinterpret_cast<PartLink*>(mParts.root.next.get());
     while (link != partSentinel) {
         Part* part = link->mpPart;
         PartVtable* table = part->__vtbl;

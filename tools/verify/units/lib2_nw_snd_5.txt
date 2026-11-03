@@ -1,0 +1,454 @@
+# NW-SND#5 archive playback and loading. Binary-derived; own names.
+# verify: -strictnan -calleesp
+src wwhd_src/nw/snd/ArchivePlayback.cpp
+src wwhd_src/nw/snd/ArchiveLoading.cpp
+stackfill
+callee 0288EB54 r4=out28
+callee 0288EACC r5=out8
+# Coherent finite capacities: the per-player work loop must not use random billion-entry counts.
+ret! 0288E8FC 0,1,2,3
+mockfield 0288EACC r5+0x0 s32 -1,0,1,2,3
+mockfield 0288EACC r5+0x4 u32 0,1,31,32,33,0xFFFFFFFF
+arg 02892D9C r5 0,0x5F040000,0xFFFFFFFF
+arg 02892D9C r6 0,1,31,32,33,0xFFFFFFFF
+field 02892D9C r4+0x0 u32 0,1,31,32,0x5F030000,0xFFFFFFE0
+
+# Archive absent/present and full-width player IDs, including wrapped slot arithmetic.
+field 02893C88 r3+0x4 u32 0,0x5F010000
+ret 0288E8E4 0,1,0x80000000,0xFFFFFFFF
+ret 0288E91C 0,1,0x04000002,0x00FFFFFF,0xFFFFFFFF
+arg 02893CD4 r4 0,1,0x04000002,0x00FFFFFF,0xFFFFFFFF
+arg 02893CE8 r4 0,1,0x04000002,0x00FFFFFF,0xFFFFFFFF
+arg 02892BD8 r3 0,0x5F020000
+arg 02892BD8 r4 0,1,2,3,0xFFFFFFFF
+# Constructor member-address wrap branches and allocator failure are valid GHS paths.
+arg 028929AC r3 0,0x5F020000,0xFFFFFFE0,0xFFFFFFC0,0xFFFFFF94,0xFFFFFF74,0xFFFFFF48
+ret 0273AD10 0,0x5F040000
+arg 02893418 r4 0,1,2,0xFFFFFFFF
+arg 02893418 r6 0,0x5F040000,0xFFFFFFFF
+field 02893418 r5+0x0 u32 0,1,31,32,0x5F030000,0xFFFFFFE0
+arg 02893690 r5 0,1,7,8,0x5F040000
+arg 02893690 r6 0,1,0xCD00,0xFFFFFFFF
+# Finite intrusive free lists: each list is empty or owns exactly one distinct BasicSound node.
+arg! 0289349C r3 0x5F100000
+field 0289349C 5F100038 u32 0x5F100038,0x5F110274
+field 0289349C 5F100084 u32 0x5F100084,0x5F120274
+field 0289349C 5F1000D0 u32 0x5F1000D0,0x5F130274
+field 0289349C 5F110274 u32 0x5F100038
+field 0289349C 5F120274 u32 0x5F100084
+field 0289349C 5F130274 u32 0x5F1000D0
+field 0289349C r5+0x0 u32 0,1,31,32,0x5F140000,0xFFFFFFE0
+arg 0289349C r6 0,0x5F140000,0xFFFFFFFF
+arg 0289349C r7 0,1,3,4,5,0xFFFFFFFF
+field 02892E54 r5+0x0 u32 0,1,31,32,0x5F150000,0xFFFFFFE0
+arg 02892E54 r6 0,0x5F160000,0xFFFFFFFF
+arg! 02893348 r4 0,1,2,3
+field 02893348 r5+0x0 u32 0,1,31,32,0x5F150000,0xFFFFFFE0
+arg 02893348 r6 0,0x5F160000,0xFFFFFFFF
+# Pool construction has independent bounded storage and an empty or one-node existing free list.
+arg! 02892FA0 r3 0x5F200000
+arg! 02893194 r3 0x5F200000
+arg! 02892FA0 r4 0,1,2,3,32
+arg! 02893194 r4 0,1,2,3,32
+field 02892FA0 r5+0x0 u32 0,1,31,32,0x5F230000,0xFFFFFFE0
+field 02893194 r5+0x0 u32 0,1,31,32,0x5F230000,0xFFFFFFE0
+# Limits where the sounds fit but the work entries do not, and the exact fits (cursor 0x5F230000:
+# one sequence sound 0x5A0 + work 0xC0, two 0xB20 + 0x160; one wave sound 0x4A0 + work 0x80, two 0x940 + 0xE0).
+arg 02892FA0 r6 0,0x5F240000,0xFFFFFFFF,0x5F230000,0x5F2305A0,0x5F2305E0,0x5F23065F,0x5F230660,0x5F230BA0,0x5F230C7F,0x5F230C80
+arg 02893194 r6 0,0x5F240000,0xFFFFFFFF,0x5F230000,0x5F2304A0,0x5F2304E0,0x5F23051F,0x5F230520,0x5F230980,0x5F230A1F,0x5F230A20
+field 02892FA0 5F200038 u32 0x5F200038,0x5F210274
+field 02892FA0 5F210274 u32 0x5F200038
+field 02893194 5F200084 u32 0x5F200084,0x5F220274
+field 02893194 5F220274 u32 0x5F200084
+# Finite metadata must survive unrelated opaque mocked calls; explicit stores still apply.
+stable 5F200038 8
+stable 5F210274 8
+stable 5F200084 8
+stable 5F220274 8
+arg 02893544 r5 0,1,31,32,0x5F300000
+arg 02893544 r6 0,1,0x10000,0xFFFFFFFF
+arg 02893544 r7 0,1,4,0xFFFFFFFF
+field 02893750 r3+0x119 u8 0,1,2,255
+ret 0288EB54 0,1
+ret 02892E54 0,1
+ret 02892FA0 0,1
+ret 02893194 0,1
+ret 02893348 0,1
+ret 02893418 0,1
+ret 0289349C 0,1
+ret 02893544 0,1
+ret 02893690 0,1
+ret 02893750 0,1
+arg! 02893868 r3 0x5F100000
+field 02893868 5F1000D0 u32 0x5F1000D0,0x5F130274
+field 02893868 5F130274 u32 0x5F1000D0
+field 02893868 r4+0x18 u32 0,0x5F310000
+stable 5F1000D0 8
+stable 5F130274 8
+# The file reader writes only the fields of the file kind it finds (size/offset or path), so the
+# caller's defaults flow through: compare them at the call.
+callee 0288EEFC r5=inout12
+ret 0288EEFC 0,1
+mockfield 0288EEFC r5+0x0 u32 0,1,32,0xFFFFFFFF
+ret 02891044 0,1,32,0xFFFFFFFF
+arg! 02891214 r5 0x5F400000
+field 02891214 5F400000 u32 0x5F401000
+field 02891214 5F401014 u32 0xC1006000
+stable 5F400000 4
+stable 5F401000 0x18
+callee C1006000 fixture r3=0 r4=0
+ret! C1006000 0,0x5F402000
+
+# Bounded teardown capacities; metadata is immutable across opaque destruction callbacks.
+arg! 02893964 r3 0x5F500000
+field 02893964 5F500119 u8 0,1
+field 02893964 5F500018 u32 0,1,2
+stable 5F500018 4
+# Stopping a player may change the player count, which the finalize loop re-reads.
+mockglobal 028972D4 5F500018 u32 0,1,2
+field 02893964 5F50001C u32 0x5F510000
+stable 5F50001C 4
+field 02893964 5F500020 u32 0x5F520000
+stable 5F500020 4
+field 02893964 5F500024 u32 0,0x588,0xB10
+stable 5F500024 4
+field 02893964 5F50004C u32 0,0x5F550000
+stable 5F50004C 4
+field 02893964 5F500050 u32 0,0xA4,0x148
+stable 5F500050 4
+field 02893964 5F50006C u32 0x5F530000
+stable 5F50006C 4
+field 02893964 5F500070 u32 0,0x4A0,0x940
+stable 5F500070 4
+field 02893964 5F500098 u32 0,0x5F560000
+stable 5F500098 4
+field 02893964 5F50009C u32 0,0x68,0xD0
+stable 5F50009C 4
+field 02893964 5F5000B8 u32 0x5F540000
+stable 5F5000B8 4
+field 02893964 5F5000BC u32 0,0x7670,0xECE0
+stable 5F5000BC 4
+field 02893964 5F520294 u32 0x5F580000
+stable 5F520294 4
+field 02893964 5F52081C u32 0x5F580000
+stable 5F52081C 4
+field 02893964 5F530294 u32 0x5F580000
+stable 5F530294 4
+field 02893964 5F530734 u32 0x5F580000
+stable 5F530734 4
+field 02893964 5F540294 u32 0x5F580000
+stable 5F540294 4
+field 02893964 5F547904 u32 0x5F580000
+stable 5F547904 4
+field 02893964 5F580014 u32 0xC1006100
+stable 5F580000 0x18
+callee C1006100 fixture r3=0 r4=0
+
+# Update without active sounds; sorting is exercised by the real-list companion.
+arg! 02893CEC r3 0x5F600000
+field 02893CEC 5F600018 u32 0,1,2
+field 02893CEC 5F600028 u32 0
+field 02893CEC 5F600074 u32 0
+field 02893CEC 5F6000C0 u32 0
+field 02893CEC 5F600118 u8 0,1
+stable 5F600018 4
+# Updating a player may change the player count, which the update loop re-reads.
+mockglobal 0289755C 5F600018 u32 0,1,2
+stable 5F600028 4
+stable 5F600074 4
+stable 5F6000C0 4
+callee 0289D220 r3=heap2060
+callee 0289D1FC r3=heap2060
+
+# Confirmed loader slots: derived implementations supply cache/store/file operations.
+arg! 028912F0 r3 0x5F700000
+field 028912F0 5F700208 u32 0x5F701000
+field 028912F0 5F701014 u32 0xC1006100
+field 028912F0 5F701024 u32 0xC1006120
+stable 5F700208 4
+stable 5F701000 0x28
+callee C1006100 fixture r3=0 r4=0 r5=0
+callee C1006120 fixture r3=0 r4=0
+ret! C1006120 0,0x5F702000
+ret 02891214 0,0x5F703000
+# The item readers leave the record untouched when the item is missing, and fileAddressForItem
+# uses the record without testing the result: the caller's defaults flow through, compare them.
+callee 0288ED64 r5=inout9
+mockfield 0288ED64 r5+8 u8 0,1,255
+ret 0288ED64 0,1
+arg 02891698 r6 0,1,7,8,9,0xFFFFFFFF
+ret 028912F0 0,0x5F704000
+ret 0289150C 0,1,0xFFFFFFFF
+ret 02891698 0,1,0xFFFFFFFF
+
+# Wave-file header parsing uses bounded valid allocation requests and documented scratch extents.
+arg! 02891380 r3 0x5F700000
+arg! 0289150C r3 0x5F700000
+arg! 02891380 r5 0x5F400000
+arg! 0289150C r6 0x5F400000
+field 02891380 5F700208 u32 0x5F701000
+field 0289150C 5F700208 u32 0x5F701000
+field 02891380 5F701014 u32 0xC1006100
+field 02891380 5F70101C u32 0xC1006110
+field 0289150C 5F70101C u32 0xC1006110
+field 02891380 5F400000 u32 0x5F401000
+field 0289150C 5F400000 u32 0x5F401000
+field 02891380 5F401014 u32 0xC1006000
+field 0289150C 5F401014 u32 0xC1006000
+callee C1006110 fixture r3=0 r4=0
+ret! C1006110 0,0x5F702000
+mockfield 0288ED64 r5+4 u32 0,1,2,3
+ret! 0289F988 44,64,128
+ret! 0289F938 0,44,128
+callee 0289F988 r3=44
+callee 0289F938 r3=44
+ret! 02891044 0,1,32,44,64,128
+callee 0289FB20 r3=out16 r4=0 r5=0
+mockfield 0289FB20 r3+0xC u8 0,1
+callee 0289FC28 r3=16
+callee 0289FD24 r3=16 r4=0
+callee 0289FC80 r3=16 r4=0
+callee 0289FCA8 r3=16 r4=0
+callee 0289FDC8 r3=16 r4=0 r5=0
+ret! 0289FC80 0,1,32,64,128
+ret 02891380 0,0x5F702000
+stable 5F701000 0x28
+stable 5F700208 4
+
+# memcpy import alias; compare copied source bytes, including intentionally stale header padding.
+callee C000A848 r3=0 r4=dyn1*r5:128 r5=0
+mockmove C000A848 r3 r4 r5
+
+# Bank dependency tables: finite counts, disjoint immutable metadata across load callbacks.
+callee 028A32C8 r3=out12 r4=0
+callee 028A3518 r3=12
+# The bank wave table, plus a table at the top of memory whose first entry address wraps to 0
+# (the binary tests that entry address for null).
+ret! 028A3518 0,0x5F710000,0xFFFFFFFC
+# A wave-entry load may change the bank table's count, which the loops re-read after each call.
+mockglobal 0289172C 5F710000 u32 0,1,2,3
+field 028927FC 5F710000 u32 0,1,2,3
+stable 5F710000 0x20
+callee 028A02F0 r3=out8 r4=0
+callee 028A0498 r3=8 r4=out24 r5=0 r6=0
+ret 028A0498 0,1
+arg 028927FC r4 0,0x5F711000
+arg 028928B8 r4 0,0x5F711000
+ret 0289172C 0,1,0xFFFFFFFF
+ret 02892430 0,1,0xFFFFFFFF
+ret 02891FC4 0,0x5F712000
+
+arg! 028917E8 r3 0x5F700000
+field 028917E8 5F700208 u32 0x5F701000
+field 028917E8 5F701024 u32 0xC1006120
+field 028917E8 5F710000 u32 0,1,2,3
+field 028917E8 5F713000 u32 0,1,2,3
+ret! 0288EF8C 0x5F713000
+stable 5F713000 0x10
+callee 0288E9BC r5=out26
+ret 0288E9BC 0,1
+arg 028917E8 r6 0,1,4,8,12,0xFFFFFFFF
+arg 02891960 r6 0,1,4,8,12,0xFFFFFFFF
+ret 028917E8 0,1,0xFFFFFFFF
+
+# Address-table conversion: finite archive counts and real documented reader/output extents.
+arg! 02891C0C r3 0x5F700000
+field 02891C0C 5F700208 u32 0x5F701000
+field 02891C0C 5F70101C u32 0xC1006110
+arg! 02891D70 r3 0x5F700000
+field 02891D70 5F700208 u32 0x5F701000
+field 02891D70 5F70101C u32 0xC1006110
+arg! 02891ECC r3 0x5F700000
+field 02891ECC 5F700208 u32 0x5F701000
+field 02891ECC 5F70101C u32 0xC1006110
+arg! 02891C0C r5 0x5F400000
+field 02891C0C 5F400000 u32 0x5F401000
+field 02891C0C 5F401014 u32 0xC1006000
+field 02891C0C 5F701014 u32 0xC1006100
+field 02891D70 5F710000 u32 0,1,2,3
+callee 0289FA10 r3=16
+ret 0289FA10 0,1
+callee 0288EA44 r5=inout4
+callee 0288E934 r5=out21
+callee 0288ECDC r5=out10
+ret 0288EA44 0,1
+ret 0288E934 0,1
+ret 0288ECDC 0,1
+ret 02891C0C 0
+ret 02891D70 0
+arg 02891D70 r4 0,1,0xFFFFFFFF
+arg 02891ECC r4 0,1,0xFFFFFFFF
+
+# Typed archive dispatch and finite sound-group ranges.
+arg! 02891A6C r3 0x5F700000
+field 02891A6C 5F700208 u32 0x5F701000
+field 02891A6C 5F701024 u32 0xC1006120
+arg! 02892430 r3 0x5F700000
+field 02892430 5F700208 u32 0x5F701000
+field 02892430 5F701024 u32 0xC1006120
+arg! 02892988 r3 0x5F700000
+field 02892988 5F700208 u32 0x5F701000
+field 02892988 5F701024 u32 0xC1006120
+field 02891A6C 5F713000 u32 0,1,2,3
+field 02892430 5F700000 u32 0x5F730000
+field 02892988 5F700000 u32 0,0x5F730000
+field 02892430 5F73028C u32 0x5F731000
+field 02892988 5F73028C u32 0x5F731000
+field 02892430 5F731024 u32 0xC1006140
+field 02892430 5F73102C u32 0xC1006150
+field 02892988 5F731014 u32 0xC1006130
+stable 5F731000 0x30
+callee C1006130 fixture r3=0
+callee C1006140 fixture r3=0
+callee C1006150 fixture r3=0
+arg 02892430 r4 0,0x01000001,0x02000001,0x03000001,0x05000001,0x06000001,0xFFFFFFFF
+arg 02892430 r5 0,0x5F400000
+arg 02891A6C r6 0,1,2,8,10,0xFFFFFFFF
+arg 02891A6C r8 0,1,0xFFFFFFFF
+ret 02890FF8 0,1
+ret 0288E92C 0,1,2,3,4
+callee 0288EDEC r5=out12
+mockfield 0288EDEC r5+0 u32 0,1,2,3,0xFFFFFFFF
+mockfield 0288EDEC r5+4 u32 0,1,2,3
+ret 0288EDEC 0,1
+ret 02891960 0,1,0xFFFFFFFF
+ret 02891A6C 0,1,0xFFFFFFFF
+ret 028922FC 0,1,0xFFFFFFFF
+ret 02892280 0,1,0xFFFFFFFF
+
+# Group-file reader outputs bounded tables and item dependencies.
+arg! 02891FC4 r3 0x5F700000
+field 02891FC4 5F700208 u32 0x5F701000
+field 02891FC4 5F701014 u32 0xC1006100
+callee 028AA7F4 r3=out12 r4=0
+mockfield 028AA7F4 r3+0 u32 0x5F740000
+field 02891FC4 5F740000 u32 0,1,2,3
+stable 5F740000 4
+callee 028AA8FC r3=12 r4=out8 r5=0
+mockfield 028AA8FC r4+4 u32 0,0x5F741000
+callee 028AA95C r3=12
+ret! 028AA95C 0,1,2,3
+callee 028AA978 r3=12 r4=out8 r5=0
+mockfield 028AA978 r4+0 u32 0,0x01000001,0x02000001,0x03000001,0x05000001
+mockfield 028AA978 r4+4 u32 0,1,8,9,0xFFFFFFFF
+ret 028AA8FC 0,1
+ret 028AA978 0,1
+arg! 028926BC r3 0x5F700000
+field 028926BC 5F700000 u32 0,0x5F730000
+field 028926BC 5F700208 u32 0x5F701000
+field 028926BC 5F701024 u32 0xC1006120
+arg 028926BC r4 0,0x01000001,0x03000001,0x05000001,0x06000001,0xFFFFFFFF
+# Item records whose file id is absent (-1).
+mockfield 0288E934 r5+0 u32 0,1,2,0xFFFFFFFF
+mockfield 0288EA44 r5+0 u32 0,1,2,0xFFFFFFFF
+mockfield 0288ED64 r5+0 u32 0,1,2,0xFFFFFFFF
+mockfield 0288EE74 r5+0 u32 0,1,2,0xFFFFFFFF
+callee 0288EE74 r5=inout8
+ret 0288EE74 0,1
+
+# Stream preparation: finite format selection and correctly sized command descriptors.
+arg! 02894924 r3 0x5F750000
+field 02894924 5F750004 u32 0x5F730000
+field 02894924 5F750114 u32 0,0x5F751000
+field 02894924 5F73028C u32 0x5F731000
+field 02894924 5F73103C u32 0xC1006160
+field 02894924 5F731034 u32 0xC1006170
+field 02894924 5F73104C u32 0xC1006180
+callee C1006160 fixture r3=0
+callee C1006170 fixture r3=0
+callee C1006180 fixture r3=0
+field 02894924 r6+0x7C u32 0,1,2,3
+arg 02894924 r7 0,0x5F752000
+field 02894924 5F752000 u8 0,1,255
+arg 02894924 r8 0,1,2,3
+arg 02894924 r10 0,0x5F753000
+field 02894924 5F753000 u32 0,0x5F754000
+fieldstr 02894924 5F754000 640 "","stream.bin"
+callee 028992FC r4=140
+callee 02899388 r4=684
+callee 0288F218 r3=0 r4=cstr:640 r5=out639 r6=0
+callee C000A858 r3=0 r4=0 r5=0
+
+# Sequence resource preparation: four bank slots, typed label reader and command descriptors.
+arg! 028941A0 r3 0x5F760000
+field 028941A0 5F760114 u32 0,0x5F761000
+field 028941A0 5F761000 u8 0,1
+field 028941A0 5F761004 u32 0x5F762000
+field 028941A0 5F762034 u32 0xC1006190
+stable 5F762000 0x38
+callee C1006190 fixture r3=0 r4=0 r5=cstr:8 r6=cstr:8 r7=0
+ret! C1006190 0,0x5F763000
+arg 028941A0 r9 0,0x5F764000
+field 028941A0 5F764000 u32 0,0x5F765000
+field 028941A0 5F764004 u32 0,0x5F766000
+fieldstr 028941A0 5F766000 32 "","Intro"
+arg 028941A0 r7 0,1,2,0xFFFFFFFF
+ret! 02896B5C 0,0x5F767000
+callee 028AE1F4 r3=out12 r4=0
+callee 028AE2B8 r3=12 r4=cstr:32 r5=out4
+callee 028AE2B0 r3=12
+callee 028AB2A8 r3=0 r4=0 r5=out4
+ret 028AE2B8 0,1
+callee 0289CEA0 r3=out8 r4=out1 r5=0 r6=0 r7=0
+ret! 0289CEA0 0,1,2,0xFFFFFFFE,0xFFFFFFFF,3
+callee 028ADC58 r3=0 r4=0 r5=0 r6=0 r7=0 r8=0 r9=0 r10=0
+callee 0288B600 r3=out32 r4=0 r5=0 r6=8 r7=32 r8=0
+callee 028ADE8C r3=0 r4=32 r5=12
+callee 028ADD60 r3=0 r4=40 r5=12
+
+# Run GHS array construction and the 8-byte file-slot constructor for real.
+# Sequence bank/wave entries begin as {invalidId,null}; constructors do not retain stack arrays.
+real 028EFFD0
+real 028EFE58
+real 02895F68
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258
+
+# These preparation fixtures retain their archive/hook identity and immutable typed tables.
+# Opaque SDK/lookup calls may change data and hook.enabled, but cannot destroy method metadata.
+stable 5F73028C 4
+stable 5F731000 0x50
+stable 5F700000 4
+stable 5F750004 4
+stable 5F750114 4
+stable 5F760004 4
+stable 5F760114 4
+stable 5F761004 4
+field 028941A0 5F760004 u32 0x5F730000
+field 028941A0 5F730004 u32 0x5F769000
+stable 5F730004 4
+
+# Label lookup is an explicit API parameter, not a default-ID getter.
+callee 0288E91C r3=0 r4=cstr:32
+arg! 02892650 r4 0x5F7A0000
+arg! 02894160 r4 0x5F7A0000
+arg! 0289419C r4 0x5F7A0000
+fieldstr * 5F7A0000 32 "","Music","AbsentLabel"
+
+# Outer sound constructors preserve their non-null input this pointer; execute those small bodies.
+# Their nested setup calls stay modeled; this avoids inventing a different returned sound object.
+real 028ADBE4
+real 0289FE28
+real 02899268
+
+# Archive labels returned to the resource hook are borrowed NUL-terminated strings.
+ret! 0288E914 0,0x5F7B0000
+fieldstr * 5F7B0000 32 "","Music","SoundGroup"
+callee C1006190 fixture r3=0 r4=cstr:32 r5=cstr:8 r6=cstr:8 r7=0
+
+# Canonical output records expose9/26/10 valuebytes; former extra3/2/2 bytes were unread frame padding.
+# Output-only extents now match their canonical sizeof; no input comparison was removed.

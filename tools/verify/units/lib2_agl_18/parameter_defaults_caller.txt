@@ -1,0 +1,33 @@
+# Caller-phase companion for 027D0474 -> 027D107C -> 027CC1BC.
+# verify: -only 027CC1BC -strictnan -calleesp
+# Preserve only original producer stores; untouched bytes retain generated initial state.
+src wwhd_src/agl/DrawPreparation.cpp
+arg! 027CC1BC r3 0x59000000
+arg! 027CC1BC r4 0x59100000,0x59100100
+setup 027CC1BC 02757190
+setup 027CC1BC 0274D510
+real 02757190 0274D510
+field 027CC1BC r4+0x0 u16 0
+field 027CC1BC r4+0x4 u32 0xFFFFFFFF
+field 027CC1BC r4+0x18 f32 0
+field 027CC1BC r4+0x1C f32 0
+field 027CC1BC r4+0x20 f32 0
+field 027CC1BC r4+0x24 f32 1
+field 027CC1BC r4+0x28 f32 0
+field 027CC1BC r4+0x2C f32 0
+field 027CC1BC r4+0x30 f32 0
+field 027CC1BC r4+0x34 f32 1
+field 027CC1BC r4+0x40 u32 1
+field 027CC1BC r4+0x44 u32 0x59200000
+field * 0x59200000 u32 0
+setup 027CC1BC 027BEB5C r3=0x59200004
+real 027BEB5C
+field * 0x59200030 f32 0
+field * 0x59200034 f32 0
+field * 0x59200038 f32 0
+field * 0x5920003C f32 1
+# Exact n1000 replay of all35 previously compiled variants:14 difference,21 survived.
+# Newly surviving dropped stores13/18/21/29/37 rewrite caller-initialized colors unchanged.
+# Existing16 survivors are independent-store/load ordering equivalents as in parameter_defaults.txt.
+# O2 and matched own-TU O1 controls pass10k seeds1/7, coverage1/1.
+# All21 exact survivors replayed10k seeds1/7. Final:14 detected,21 EQ,6 compile-invalid.

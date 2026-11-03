@@ -1,0 +1,27 @@
+# A complete borrowed worker with a live manager and an unlinked node.
+# The distinct stack and platform-thread allocations are owned by this worker.
+# Platform release operations stay opaque; no SDK implementation is executed.
+# verify: -only 027609AC -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 027609AC r3 0x60110000
+arg! 027609AC r4 0
+field * 101F8B94 u32 0x60100000
+field * 60100000 u32 0x1015E600
+field * 60100014 u32 0x60100014
+field * 60100018 u32 0x60100014
+field * 6010001C u32 0
+field * 60100020 u32 0
+field * 60110000 u32 0x1015E70C
+field * 60110060 u32 0
+field * 60110064 u32 0
+field * 60110068 u32 0x60110000
+field * 6011006C u32 0
+field * 60110080 u32 0,4
+field * 60110088 u32 0x60120000
+field * 6011008C u32 0x60130000
+stable 101F8B94 4
+stable 60100000 0x28
+stable 60110000 0x94
+stable 60120000 0x6A0
+stable 60130000 32

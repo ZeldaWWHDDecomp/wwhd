@@ -1,0 +1,7 @@
+# Exact original allocator return observed in heap-renderer-nulltop-trace1000003.log lines53..97/153..197.
+# Both sides: real0273B0D4 allocates0x4C0 at6A0000C8 in registered6A000000 heap;
+# real02752B0C registers disposer6A0000CC; real027F7D78 constructs complete renderer.
+# No private heap-owner fields or postproducer writes.
+# verify: -only 027F7EA8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_render_state_destroy_heap_owned_20261030.txt
+arg! 027F7EA8 r3 0,0x6A0000C8

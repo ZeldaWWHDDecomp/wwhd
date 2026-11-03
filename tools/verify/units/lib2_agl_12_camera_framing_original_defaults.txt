@@ -1,0 +1,55 @@
+# verify: -only 027AA2EC,027AAA2C -strictnan -calleesp
+# OriginalLookAtCamera producer on complete58byte receiver; finiteunitbasis/nonnullcompletevector inputs, completeVolumeQuadSettings128. Ordinaryhelperclosurediagnostic.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+real 02757190
+real 0274CCC4 028E8E10 028F4BE0 028F43F8 0274CBAC 0274CB08 0274CB24 0274CAEC 025155D8 02515644 028E8D4C 027AAF80 027AA2EC
+setup 027AA2EC 02757190
+setup 027AA2EC 0274CBAC r3=0x57010000 r4=0x57010100 r5=0x57010110 r6=0x57010120
+setup 027AA2EC 0274CCC4 r3=0x57010000 r4=0x57010000
+fill 027AA2EC 57010000 0x58 0
+fill 027AA2EC 57010100 0x30 0
+field 027AA2EC 57010108 f32 4,10,100
+field 027AA2EC 57010124 f32 1
+fill 027AA2EC 57010200 0x128 0
+field 027AA2EC 5701030C u32 0,1,2,8,16,9,17,10,18
+field 027AA2EC 57010318 f32 -1,0,1
+field 027AA2EC 5701031C f32 -1,0,1
+field 027AA2EC 57010320 f32 -1,0,1
+field 027AA2EC 57010324 f32 -1,0,1
+setup 027AAA2C 02757190
+setup 027AAA2C 0274CBAC r3=0x57010000 r4=0x57010100 r5=0x57010110 r6=0x57010120
+setup 027AAA2C 0274CCC4 r3=0x57010000 r4=0x57010000
+fill 027AAA2C 57010000 0x58 0
+fill 027AAA2C 57010100 0x30 0
+field 027AAA2C 57010108 f32 4,10,100
+field 027AAA2C 57010124 f32 1
+fill 027AAA2C 57010200 0x128 0
+field 027AAA2C 5701030C u32 0,1,2,8,16,9,17,10,18
+field 027AAA2C 57010318 f32 -1,0,1
+field 027AAA2C 5701031C f32 -1,0,1
+field 027AAA2C 57010320 f32 -1,0,1
+field 027AAA2C 57010324 f32 -1,0,1
+arg! 027AA2EC r3 0x57010000
+arg! 027AA2EC r4 0x57010318
+arg! 027AA2EC r5 0x57010320
+arg! 027AA2EC r6 0,1
+argf! 027AA2EC f1 -1,0,1
+argf! 027AA2EC f2 -1,0,1
+arg! 027AAA2C r3 0x57010000
+arg! 027AAA2C r4 0x57010200
+stable 57010000 0x58
+stable 57010100 0x30
+stable 57010200 0x128

@@ -1,0 +1,6 @@
+# verify: -strictnan -only 02794270 -noclobber
+# ssaoprep companion: the non-square repeat-frame
+# caller-visible profile with the legacy zero-size display-list model (as lib2_agl_8_primary_pass_world_zerodl), so the
+# preparation shader's recorded display list has size 0 and activation takes the direct-bind arm.
+include lib2_agl_8_ssaoprep_nonsquare_bind_visible.txt
+mockdisplaylist C0006090 C0006190 C0006218

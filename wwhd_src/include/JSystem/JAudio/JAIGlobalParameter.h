@@ -87,3 +87,27 @@ void audioParameterAssert(const char*, s32, const char*);
 void audioDriverSetOutputMode(u32);
 u32 audioSoundTableGetCategoryMax();
 void registerAudioParameterStatics(AudioDestructorRecord*);
+
+// Canonical direct scalar reads shared with Sound; owners retain the sole raw static bindings.
+namespace JAIGlobalParameter {
+extern be<f32>& audioParamDistanceMax;
+extern be<f32>& audioParamMinDistanceVolume;
+extern be<f32>& audioParamMaxVolumeDistance;
+extern be<f32>& audioParamSeDolbyCenterValue;
+extern be<f32>& audioParamSeDolbyFrontDistanceMax;
+extern be<f32>& audioParamSeDolbyBehindDistanceMax;
+extern be<u32>& audioParamDopplarMoveTime;
+extern be<u32>& audioParamAudioCameraMax;
+extern be<u16>& audioParamSeDistanceFxParameter;
+extern be<f32>& audioParamPanDistanceMax;
+extern be<f32>& audioParamPanDistance2Max;
+extern be<f32>& audioParamPanAngleParameter;
+extern be<f32>& audioParamPanAngleParameter2;
+extern be<f32>& audioParamDopplarParameter;
+extern be<f32>& audioParamSeDistancePitchMax;
+extern be<u16>& audioParamSeDefaultFx;
+}
+// Audio1 owner export: sequence parameter lines (101F9C59), read inline by the Sound SeqInter bounds checks.
+namespace JAIGlobalParameter {
+extern be<u8>& audioSeqParameterLines;
+}

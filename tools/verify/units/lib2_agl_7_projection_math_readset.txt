@@ -1,0 +1,101 @@
+# AGL7 borrowed complete ProjectionShadow readsets for direct mathematical updates.
+# verify: -only 02791E24,02791F44,02791F88,02792008 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+stackfill
+stable 104A0934 0x18
+real 02757190 02782C20 02782D70 0279298C 02791E24 02791F44 02791F88 028F43F8 028F4BE0
+setup 02791E24 02757190
+arg! 02791E24 r3 0x56500000
+fill 02791E24 56500000 0x4BC 0
+field 02791E24 5650041C f32 1,2
+field 02791E24 56500420 f32 1,2
+field 02791E24 5650049C f32 0,0.25,-0.25
+field 02791E24 5650048C f32 0,0.125,-0.125
+field 02791E24 56500478 f32 0,0.25,-0.25
+field 02791E24 5650047C f32 0,0.25,-0.25
+field 02791E24 565004AC u8 0,1
+field 02791E24 565004B0 u8 0,1
+field 02791E24 5650035C u8 0,1,0xFF
+field 02791E24 56500394 f32 0,0.25,-0.25
+field 02791E24 56500398 f32 0,0.25,-0.25
+field 02791E24 5650039C f32 0,0.125,-0.125
+field 02791E24 565003A0 f32 0,0.125,-0.125
+field 02791E24 565003A4 f32 0,0.125,-0.125
+final 02791E24 56500000 4BC
+setup 02791F44 02757190
+arg! 02791F44 r3 0x56500000
+fill 02791F44 56500000 0x4BC 0
+field 02791F44 5650041C f32 1,2
+field 02791F44 56500420 f32 1,2
+field 02791F44 5650049C f32 0,0.25,-0.25
+field 02791F44 5650048C f32 0,0.125,-0.125
+field 02791F44 56500478 f32 0,0.25,-0.25
+field 02791F44 5650047C f32 0,0.25,-0.25
+field 02791F44 565004AC u8 0,1
+field 02791F44 565004B0 u8 0,1
+field 02791F44 5650035C u8 0,1,0xFF
+field 02791F44 56500394 f32 0,0.25,-0.25
+field 02791F44 56500398 f32 0,0.25,-0.25
+field 02791F44 5650039C f32 0,0.125,-0.125
+field 02791F44 565003A0 f32 0,0.125,-0.125
+field 02791F44 565003A4 f32 0,0.125,-0.125
+final 02791F44 56500000 4BC
+setup 02791F88 02757190
+arg! 02791F88 r3 0x56500000
+fill 02791F88 56500000 0x4BC 0
+field 02791F88 5650041C f32 1,2
+field 02791F88 56500420 f32 1,2
+field 02791F88 5650049C f32 0,0.25,-0.25
+field 02791F88 5650048C f32 0,0.125,-0.125
+field 02791F88 56500478 f32 0,0.25,-0.25
+field 02791F88 5650047C f32 0,0.25,-0.25
+field 02791F88 565004AC u8 0,1
+field 02791F88 565004B0 u8 0,1
+field 02791F88 5650035C u8 0,1,0xFF
+field 02791F88 56500394 f32 0,0.25,-0.25
+field 02791F88 56500398 f32 0,0.25,-0.25
+field 02791F88 5650039C f32 0,0.125,-0.125
+field 02791F88 565003A0 f32 0,0.125,-0.125
+field 02791F88 565003A4 f32 0,0.125,-0.125
+final 02791F88 56500000 4BC
+setup 02792008 02757190
+arg! 02792008 r3 0x56500004
+fill 02792008 56500000 0x4BC 0
+field 02792008 5650041C f32 1,2
+field 02792008 56500420 f32 1,2
+field 02792008 5650049C f32 0,0.25,-0.25
+field 02792008 5650048C f32 0,0.125,-0.125
+field 02792008 56500478 f32 0,0.25,-0.25
+field 02792008 5650047C f32 0,0.25,-0.25
+field 02792008 565004AC u8 0,1
+field 02792008 565004B0 u8 0,1
+field 02792008 5650035C u8 0,1,0xFF
+field 02792008 56500394 f32 0,0.25,-0.25
+field 02792008 56500398 f32 0,0.25,-0.25
+field 02792008 5650039C f32 0,0.125,-0.125
+field 02792008 565003A0 f32 0,0.125,-0.125
+field 02792008 565003A4 f32 0,0.125,-0.125
+final 02792008 56500000 4BC
+final 02791E24 104A0908 8
+final 02791F44 104A0908 8
+final 02791F88 104A0908 8
+final 02792008 104A0908 8

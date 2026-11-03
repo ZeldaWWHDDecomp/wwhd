@@ -1,0 +1,19 @@
+# verify: -strictnan -calleesp -footprint -only 027967A0
+# Complete disjoint BE4B map receiver and8B extent. Nonnegative finite dimensions.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+arg! 027967A0 r3 0x58000000
+arg! 027967A0 r4 0x59000000
+fill 027967A0 0x58000000 0xBE4 0
+field 027967A0 59000000 s32 0,1,7,8,9,16384
+field 027967A0 59000004 s32 0,1,7,8,9,16384

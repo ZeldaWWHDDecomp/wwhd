@@ -1,0 +1,50 @@
+# 027F5018 ModelPipeline_l::updatePacketBindings with shipped material apply objects (J3D-HDREW#1 misc rows 880 885 2299
+# 2591 3384 4097). Base: the admitted packet_bindings_produced_root profile (packet_values recipe, five
+# original-produced models). Added: model F = Ls.szs FMDL "ls" (Aryll), made like the other five (0275ED14 decode,
+# 027F5A5C, configure 027DDFA4/027DE0AC), and the shipped apply-object producer of daNpc_Ls1_c::bodyCreateHeap
+# (0227E3BC): for the two names of its table (SC_eyeL, SC_eyeR; 027DF9B0 on FMDL+0x18 gives 0 and 1) it allocates 0x80
+# bytes (0273AD10 at 0227E4A8), runs the original ctor daNpc_Ls1_matAnm_c (0227DFF0 at 0227E4B8; vtable 1001D448 at
+# +0x68) and stores the object at material+0x24 (`stw r0,0x24(r21)` at 0227E4C8). The final plain store is replayed with
+# `->` of the ctor-returned object at the material address (01:51 store-routine precedent). Writer audit:
+# local trace files
+# verify: -only 027F5018 -strictnan -calleesp
+include lib2_j3d_hdrew_1_packet_bindings_produced_root_20261030.txt
+real 0227DFF0
+# ---- Ls.szs (shipped, read only; Yaz0 SARC 0x3E4183 bytes, Ls.bfres at +0x2000, FMDL "ls" at +0x25FC, 6 materials) ----
+blob * 0x64000000 content/Common/Object/Ls.szs 0 0x826A2
+stable 0x64000000 0x826A2
+fill * 0x65000000 0x3E4200 0
+setup * 0275ED14 r3=0x65000000 r4=0x3E4183 r5=0x64000000
+# ---- model F ----
+fill * 0x56000000 0x4C 0
+setup * 027F5A5C r3=0x56000000 r4=0x650025FC r5=0x6A000000
+fill * 0x56001000 0x144 0
+field * 0x560010AC u32 0x56000000
+fill * 0x56002000 0x48 0
+field * 0x56002000 u32 0x650025FC
+field * 0x56002008 u32 2
+field * 0x5600200C u32 2
+field * 0x56002010 u32 2
+field * 0x56002014 u32 2
+setup * 027DDFA4 r3=0x56002000
+fill * 0x56100000 0x4000 0
+setup * 027DE0AC r3=0x56001014 r4=0x56002000 r5=0x56100000 r6=*0x56002024
+# ---- apply objects (0227E3BC loop, i = 0, 1) ----
+# 027F5A5C put model F's material array at 0x6A88C7A8 (count 6; deterministic, read back with -trace 1000003 through the
+# identity routine 027E2DC0): material 0 +0x24 = 0x6A88C7CC, material 1 (+0x39C) +0x24 = 0x6A88CB68.
+# The producer's own lookups (0227E460: r3 = FMDL+0x18 group 0x65003B0C, r4 = name): -trace shows r3 = 0 and 1.
+real 027DF9B0 027DF8B4 027DEFE4
+setup * 027DF9B0 r3=0x65003B0C r4=0x1001D438
+setup * 027DF9B0 r3=0x65003B0C r4=0x1001D440
+# i = 0 (SC_eyeL): 0227E4A8 bl 0273AD10(0x80); 0227E4B8 bl 0227DFF0; 0227E4C8 stw r0,0x24(r21)
+setup * 0273AD10 r3=0x80 ->0x6A88C7CC
+setup * 0227DFF0 r3=*0x6A88C7CC ->0x6A88C7CC
+# i = 1 (SC_eyeR)
+setup * 0273AD10 r3=0x80 ->0x6A88CB68
+setup * 0227DFF0 r3=*0x6A88CB68 ->0x6A88CB68
+# the apply method the objects dispatch to (vtable 1001D448 +0x14 = 02281564, daNpc_Ls1_matAnm_c::calc(this, packet)):
+# run as the original (it looks up a parameter in the packet's FMAT with 027DF9B0 and sets the packet's dirty bits),
+# so 027F5018's call executes the shipped consumer instead of a generic mock.
+real 02281564
+# the later arg! replaces the profile's model list: every input tests model F
+arg! 027F5018 r3 0x56001000

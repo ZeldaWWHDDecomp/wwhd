@@ -1,0 +1,11 @@
+# ModelDataPipeline_l::applyMaterialSource 027F691C as the original 027F70D8 calls it for material 1 ("a_eye_2_") of the
+# shipped Figure5.bfres model "vf_098": r4 = &records[6] 6A8ED104, r5 = FMAT 59136B88, after the material-0 call made
+# first (postsetup of the original 027F691C with exactly its arguments, after the base's mVariantCount poke); between the
+# two calls 027F70D8 runs only 027F7830 (blr) and 027B90AC (frame-only stores). Trace of lib2_j3d_hdrew_1_factory_fig5.
+# verify: -only 027F691C -strictnan -calleesp
+include lib2_j3d_hdrew_1_factory_fig5_bind.txt
+postsetup * 027F691C r3=0x6A8E60AC r4=0x6A8ED02C r5=0x59136788 r6=0x6A000000
+arg! 027F691C r3 0x6A8E60AC
+arg! 027F691C r4 0x6A8ED104
+arg! 027F691C r5 0x59136B88
+arg! 027F691C r6 0x6A000000

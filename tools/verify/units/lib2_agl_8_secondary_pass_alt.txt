@@ -1,0 +1,43 @@
+# verify: -strictnan -calleesp -footprint -only 0279515C
+# AGL#8 0279515C SSAO secondary pass on a caller-produced effect. Shipped caller 0279599C (vtable thunk 02795DA0)
+# calls it at 02795D18 only when record+0x980 == 0 (02795C88), i.e. after it ran 02794068(record, levels, W, H) at
+# 02795A64, which allocates record+0 (0279FDC8, +0x9C8 = 1) and record+4 (0279FC6C). Producers here: the shared world
+# (ShaderMgr owner *101F8D6C, texture cache *101F8DD4, provider *101F8DE4), SsaoEffect ctor 02792A08 + initialize
+# 02793E88(effect, 1, heap) (one 0x9CC record at *(effect+0x1D0)), then 02794068 on that record.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+
+include shared/agl_world.txt
+setupsnapshot
+
+fill * 0x58000000 0x2900 0
+setup * 02792A08 r3=0x58000000
+setup * 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+setup * 02794068 r3=*0x580001D0 r4=1 r5=0x280 r6=0x168
+
+# Caller argument shape (0279599C 02795D00..02795D14): r3 effect, r4 record index (caller r4; >= count selects record 0),
+# r5/r6 = the W/H passed to 02794068, r7 = caller r8 (0 or a variant index), r8 = caller r10, the previously bound shader mode (027B9F68 sets it; data+0x28 compares with it).
+arg! 0279515C r3 0x58000000
+arg! 0279515C r4 0,1,0xFFFFFFFF
+arg! 0279515C r5 0x280
+arg! 0279515C r6 0x168
+arg! 0279515C r7 0,1,2
+arg! 0279515C r8 0,1,2
+
+real 02792A08 02793E88 0279345C 02793384 02793908 027A063C 027BE930 027B6030 027BDEB4 02794068
+real 0279E618 0279E674 027A84B8 0279CB9C 0279E57C 0273B264 027A861C 02795EE0 02797DDC
+real 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 0279F1BC
+real 027B95B4 027B958C 027B954C 0273B200 0279FDC8 0279FD18 0279FE74 027CB744
+field * 0x101F8AE5 u8 0
+# Core-index table written by the world setup 02757B48 (read by 0279FC6C at 0279FCBC); no mocked callee receives it.
+stable 104A0BC0 0x10

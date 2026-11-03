@@ -1,0 +1,17 @@
+# Low-pass application around the 16000 Hz "off" limit the cutoff conversion returns.
+# verify: -only 0289E4E4 -strictnan -calleesp
+src wwhd_src/nw/snd/WaveArchiveReader.cpp
+src wwhd_src/nw/snd/AudioCurves.cpp
+src wwhd_src/nw/snd/AudioEventLog.cpp
+src wwhd_src/nw/snd/PlaybackVoiceParameters.cpp
+src wwhd_src/nw/snd/PlaybackVoicePool.cpp
+src wwhd_src/nw/snd/PlaybackVoice.cpp
+src wwhd_src/nw/snd/AdpcmDecode.cpp
+src wwhd_src/nw/snd/WaveResourceResolver.cpp
+src wwhd_src/nw/snd/AudioWorkerRun.cpp
+src wwhd_src/nw/snd/PlaybackVoiceUpdate.cpp
+src wwhd_src/nw/snd/PlaybackMix.cpp
+arg! 0289E4E4 r3 0x5F500000
+field 0289E4E4 5F500368 s32 0,1,2
+stable 5F500368 4
+ret! 0289CA18 80,15999,16000,16001

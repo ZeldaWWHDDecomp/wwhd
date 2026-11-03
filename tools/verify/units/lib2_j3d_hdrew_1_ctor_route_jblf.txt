@@ -1,0 +1,99 @@
+# ModelDataPipeline_l constructor 027F5A5C on the loader route, heap option (B) (
+# 09:44, 09:50, 10:12 route 1; -only 027F5A5C). Base: lib2_j3d_hdrew_1_ctor_world (accepted animator world variant
+# with the TLS current heap and 02756140 real, shared_resarchive, shared_gfxdevice, Kn.szs and St.szs
+# registered by the original 02604EB4). That registration runs the real chain for every model of the archive:
+# 02604EB4 -> 02604550 (0260509C) -> loadModel 02608308 (vtable 100E1C44) -> 0272D384 (call 0260870C) -> 027F7B50 ->
+# 027F5A5C. loadModel's argument formation (wdis 02608308): r3 = the model-dictionary entry's resource
+# (027DF9B0 index at 02608678, entry +0x24 self-relative at 026086AC..026086C0), r4 = 026031D0(archive res, index)
+# (026086CC), r5 = a SafeString copy in its own frame (dead: 0272D384 branches to 027F7B50 at once, which overwrites r5 at
+# 027F7B6C before any read), r6 = its heap = the archive heap. 0260A0B4 (loadMaterialModel) only loads "<name>_bmt" FMDLs.
+# The tested call replays 027F7B50's call at 027F7C44 (prefix replay, 02:41): 027F5A5C(r3 = S, r4 = the FMDL 7B50 got in
+# r3 (027F7C3C), r5 = its heap r6 (027F7C38)).
+# Heap (B), 09:50: the archive heaps the base registration made are full after it (0273B050(0x4C, 0x7200035C/0x72005D20, 4)
+# returns 0), so a fresh archive heap is made by the original 02754B38 (sead FrameHeap create) with the registration's own
+# arguments (02604F00..02604F18: r3 = 0 (all of the parent), r4 = &SafeString{archive name, vtable 100E1994} (its frame
+# object at 1C(r1), built here at 0x58101070), r5 = parent 0x720000C8 (02604094's result in the base trace), r6 = 1, r7 = 0).
+# Parent max-allocatable before it: 0x3961A8; the new heap is H = 0x72097F20 (deterministic, -trace 1000003). S is
+# allocated from H by the original 0273B050(0x4C, H, 4) as at 027F7B78. The current heap is H too: the registration makes
+# the archive heap current before loading (02756170(*101F8B4C, heap) at 02604FD0, restored at 02605230), replayed by the
+# original 02756170 below, so the constructor's NULL-heap allocations (real 02756140, Thread+0x70) come from H. 027F7B50's stores to S before the call (027F7B8C..
+# 027F7C34) are all 0 and S reads 0 at entry (-watch, ctor/watch/), so they are not replayed. Nothing is poked into the
+# receiver or the resource.
+# Model: Jb.bfres FMDL "lf" 0x58A09208 (Jb.szs decoded at 0x58A00000, Jb.bfres at +0x2000, FMDL dictionary entry -> +0x9208):
+# one material "_hikari1" whose render-state word +8 has bit 1 clear (0x49749730), so the query 027E1918 returns 0
+# (complete FMAT scan, ctor/scan-4568/rsscan.py: 49 such FMATs ship). The registration's own loadModel passes it to
+# 0272D384 (base trace: 0272D384 r3=58A09208 r6=archive heap) and stores the model at (*(info 0x72073720+0x60))[0x15].
+# Parent max-allocatable after the Jb registration is enough for H = 0x72097F20; S = 0x72097FBC (-trace 1000003).
+# verify: -only 027F5A5C -strictnan -calleesp
+include lib2_j3d_hdrew_1_ctor_world.txt
+# ---- Jb archive (game/ content/Common/Object/Jb.szs, SHA-256 56dba43507cf3b96e220586261dc1466ed77d54c90862c484c0bdebbffa8655a,
+# Yaz0 SARC 0x3C03D5: Jb.bfres at +0x2000 with FMDLs jb/lf/yjbsm00, three .sharcfb), registered like Kn/St in the world:
+# SharcArchiveRes rebuilt at the lookup's object, then the original 02604EB4 (which loads every model through
+# 02604550 -> 02608308 -> 0272D384 -> 027F7B50 -> 027F5A5C) ----
+blobfile * 0x58A00000 content/Common/Object/Jb.szs:<yaz0>
+stable 0x58A00000 0x3C03D5
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x58A00000 r5=0x3C03D5 r6=0x3C03D5 r7=0 r8=0
+fill * 0x581010A0 0x10 0
+field * 0x581010A0 u16 0x4A62
+field * 0x581010A8 u32 0x581010A0
+field * 0x581010AC u32 0x100526DC
+stable 0x581010A0 0x10
+setup * 02604EB4 r3=*0x101F4F28 r4=0x581010A8 r5=0
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+fill * 0x581010B0 8 0
+field * 0x581010B0 u32 0x581010A0
+field * 0x581010B4 u32 0x100E1994
+stable 0x581010B0 8
+fill * 0x58101080 8 0
+setup * 02754B38 r3=0 r4=0x581010B0 r5=0x720000C8 r6=1 r7=0 ->0x58101080
+setup * 02756170 r3=*0x101F8B4C r4=*0x58101080
+setup * 0273B050 r3=0x4C r4=*0x58101080 r5=4 ->0x58101084
+# ---- drift guards: each literal below must equal the value the original code produced in this
+# run, else the setup line exits 2 ('a returned 0 exits 2'). The comparison is the original fpcBs_Is_JustOfType
+# 025DD258 (xor r12,r4,r3; cntlzw; srwi r3,r0,5: returns r3==r4).
+#  - FMDL: the registration's own loadModel 02608308 stored its created model at (*(info+0x60))[index] via 026082D0
+#    (stwx at 026082E4); that model's +0 is mResource = the FMDL loadModel passed (027F5A5C's first store). Jb: info 0x72073720, index 0x15 (trace: 026082D0 r3=72073720 r4=15 r5=72095610).
+#    027E2DC0 (blr, identity) copies the model pointer to 0x58101090; the guard compares its +0 with the literal.
+#  - H and S: the guard compares the values 02754B38 and 0273B050 returned (->0x58101080 / ->0x58101084).
+real 025DD258
+fill * 0x58101090 0x10 0
+setup * 027E2DC0 r3=*(*0x72073780+0x54) ->0x58101090
+setup * 025DD258 r3=*(*0x58101090+0) r4=0x58A09208 ->0x58101094
+setup * 025DD258 r3=*0x58101080 r4=0x72097F20 ->0x58101098
+setup * 025DD258 r3=*0x58101084 r4=0x72097FBC ->0x5810109C
+arg! 027F5A5C r3 0x72097FBC
+arg! 027F5A5C r4 0x58A09208
+arg! 027F5A5C r5 0x72097F20

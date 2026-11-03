@@ -1,0 +1,26 @@
+# Full sphere-to-clipped-bounds composition with actual original geometry callees.
+# Finite perspective matrices, complete disjoint sphere/output, nonnegative radius.
+# verify: -only 027CA7D0 -strictnan -calleesp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/UtilityText.cpp
+real 027C9A50 027CA37C 0272D680 028EFFD0 027CA8EC
+arg! 027CA7D0 r3 0x5D000000
+arg! 027CA7D0 r4 0x5D010000
+arg! 027CA7D0 r5 0x5D020000
+fill 027CA7D0 5D000000 420 0
+fill 027CA7D0 5D010000 24 165
+fill 027CA7D0 5D020000 16 0
+field 027CA7D0 5D000134 f32 1
+field 027CA7D0 5D000148 f32 1
+field 027CA7D0 5D00015C f32 1
+field 027CA7D0 5D000164 f32 1,2
+field 027CA7D0 5D000178 f32 1,2
+field 027CA7D0 5D00018C f32 -1.02020202
+field 027CA7D0 5D000190 f32 -0.202020202
+field 027CA7D0 5D00019C f32 -1
+field 027CA7D0 5D020000 f32 -3,-1,0,1,3
+field 027CA7D0 5D020004 f32 -3,-1,0,1,3
+field 027CA7D0 5D020008 f32 -5,-3,-2
+field 027CA7D0 5D02000C f32 0,0.5,1
+final 027CA7D0 5D010000 18
+final 027CA7D0 5D020000 10

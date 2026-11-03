@@ -1,0 +1,9 @@
+# NW-SND#9 companion: acquireLoad (028A0E1C) with an empty load pool.
+# verify: -strictnan -calleesp -only 028A0E1C
+include lib2_nw_snd_9.txt
+
+# Complementary coherent lifecycle context.
+field 028A0E1C 606001D8 u32 0x60610000
+field 028A0E1C 60610014 u32 0
+field 028A0E1C 60610018 u32 0x60610018
+field 028A0E1C 6061001C u32 0x60610018

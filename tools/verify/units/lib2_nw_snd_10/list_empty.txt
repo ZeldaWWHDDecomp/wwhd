@@ -1,0 +1,8 @@
+# verify: -only 028A5B4C -calleesp
+# Valid empty list, including count and both sentinel links.
+src wwhd_src/nw/snd/SoundRangeListeners.cpp
+ret! 028A5B00 0x5B000000
+field * 5B000000 u32 0
+field * 5B000004 u32 0x5B000004
+field * 5B000008 u32 0x5B000004
+stable 5B000000 12

@@ -1,0 +1,20 @@
+# verify: -strictnan -only 0279599C -noclobber
+# ssaorender: the core bind/resize profile plus one more original frame
+# (postsetup 02795D7C, same 64x64 caller frame) run with blur count 0, set through the real
+# ParameterBase::applyResource 0279EB28 on mBlurCount (0x5800282C) from a resource word 0. Afterwards the per-input
+# blur choice of the owner-controls group is re-applied by the same real call. A blur-0 frame ends the secondary pass
+# with drawDefaultQuad's bind (which clears the sampler dirty byte) and a rebind of the history texture, so the
+# tested frame starts with primary sampler 0 in that state (shipped sequence: a blur-0 frame followed by any frame).
+# GX2InitTextureRegs C0006498 is observed on the GX2Texture descriptor prefix it reads.
+# Caller-visible checks only; -noclobber.
+include lib2_agl_8_ssaorender_core_bind_resize_visible.txt
+fill 0279599C 0x5B700000 0x200 0
+field 0279599C 0x5B700000 u32 0x5B700100
+field 0279599C 0x5B700100 u32 16
+field 0279599C 0x5B700104 u32 2
+field 0279599C 0x5B70010C s32 0
+stable 0x5B700000 0x200
+postsetup 0279599C 0279EB28 r3=0x5800282C r4=0x5B700000
+postsetup 0279599C 02795D7C r3=0x58000000 r4=0 r5=64 r6=64 r7=*0x5E100008 r8=0 f1=0.25 f2=0.5
+postsetup 0279599C 0279EB28 r3=0x5800282C r4=0x5B600000
+observenested C0006498 r3+0 136

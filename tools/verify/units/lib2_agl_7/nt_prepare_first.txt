@@ -1,0 +1,33 @@
+# AGL#7 0278F04C ShadowPrePass::prepareFrame, nulltrap profile, first frame: ctor + initialize(1, current heap) from nt_base.txt; caller ensureOutput 0278FC80 (0278FE58/74/90).
+# verify: -only 0278F04C -strictnan -calleesp
+# include file: lib2_agl_7_nt_base_lead.txt -> install as tools/verify/units/lib2_agl_7/nt_base.txt
+include lib2_agl_7/nt_base.txt
+# Tunable agl::utl::Parameter values (param+0xC; ctor defaults, editable through the parameter IO) and the game-set registry bit (027312D8: +0x1D4 |= 1), as in the enabled-render recipe.
+poke 0278F04C 5C020424 u8 1
+poke 0278F04C 5C0201D4 u32 0,1
+poke 0278F04C 5C020454 u32 0,1
+poke 0278F04C 5C020464 u32 0,5,6,7
+poke 0278F04C 5C020474 u32 0,1,2
+poke 0278F04C 5C020494 u8 0,1
+poke 0278F04C 5C0204C4 u8 0,1
+poke 0278F04C 5C020514 u8 0,1
+poke 0278F04C 5C020524 u8 0,1
+poke 0278F04C 5C020554 u8 0,1
+poke 0278F04C 5C020594 u8 0,1
+poke 0278F04C 5C0205A4 u8 0,1
+# More tunable parameter values (param+0xC): mResolution 0x444 (0..2; ensureOutput halves/quarters the size), mFarFade 0x4E4,
+# mMipBlurReduce 0x564 (prepareFrame: mip size /4 instead of /2).
+poke 0278F04C 5C020444 u32 0,1,2
+poke 0278F04C 5C0204E4 u8 0,1
+poke 0278F04C 5C020564 u8 0,1
+# frame->mCombinedSampler (+0x1960): the game stores a TextureSampler of another object there together with +0x1D4 |= 1
+# (027312DC..027312EC) or clears it (02731338). prepareFrame (0278F13C) and render's key (0278EEC4) only test it against 0,
+# so a real constructed sampler stands in: the frame's own mInitialSamplers[0] (frame+0x54).
+poke 0278F04C 6A87FC00 u32 0,0x6A87E2F4
+# r3 = this, r4 = ensureOutput's frame index (render passes its r4 = 0), r5/r6 = depth size x resolution scale (full or >>1),
+# r7 = 0 (li r7,0 at every call site). Sizes stay inside the world's 16 MB texture pool next to the 12 MB shadow map.
+arg! 0278F04C r3 0x5C020000
+arg! 0278F04C r4 0
+arg! 0278F04C r5 64,160,320,640
+arg! 0278F04C r6 36,90,180,360
+arg! 0278F04C r7 0

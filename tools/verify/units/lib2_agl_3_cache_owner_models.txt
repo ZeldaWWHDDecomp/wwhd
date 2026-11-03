@@ -1,0 +1,28 @@
+# Actual owner callbacks plus landedmockset transport only; no owner/render equivalence credit.
+# verify: -strictnan -calleesp -only 027791A8
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+footprint 027791A8 0
+alloc 0273AD10 r3 0x62000000 32
+allocnested 0273AD10
+setup 027791A8 0279F2EC r3=0
+field * 101F8B4C u32 0
+field * 101F8DD4 u32 0
+field * 101F8C1C u32 0
+real 0279F2EC 0279F218 02752B0C 028EFFD0 028EFE58
+real 02760084 02752A84 02755FEC 02755CA4 027601BC 027601F0 027556FC 0273B2F0 02759C10 028F521C
+real 028F61E4 028F61E8 028F61EC 028F61F0 028F61F4 028F61F8 028F61FC 028F6200
+real 028F623C 028F6240 028F6244 028F6248 028F624C 028F6250 028F6254 028F6258
+alloc 0273B0D4 r3 0x60000000 32
+allocnested 0273B0D4
+stable 60000000 0x2F9C
+nestedret 028FDE28 0
+field * 104A0BC0 u32 0
+field * 104A0BC4 u32 1
+field * 104A0BC8 u32 2
+
+# Exact Lead03:04 cache-record/subrecord closure; no texture/query/render setup.
+real 027A029C 027CAB58 027C05F4 027C05C8 027C05A0 027B6CB8 027B6E64 0273B524 027BE6B8
+mockset C0009990 r3 r4 r5
+# Protected0278635C/02785CB4/027861E0 opaque; no surface-size chain/private model.

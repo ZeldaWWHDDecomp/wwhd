@@ -1,0 +1,198 @@
+# verify: -only 02759EE8,02759F7C -strictnan -calleesp -footprint
+# SEAD#15: local reconstruction of runtime formatting and heap support.
+stackfill
+src wwhd_src/sead/RuntimeFormatSupport.cpp
+# Finite UTF-16 parsing sequences retain signs, modifiers, width and precision edges.
+arg! 02759E40 r4 0x54000000
+arg! 02759EE8 r4 0x54000000
+arg! 02759F7C r4 0x54000000
+arg! 0275A024 r4 0x54000000
+field * 0x54000000 u16 0,32,35,42,43,45,46,48,49,57,104,108
+field * 0x54000002 u16 0,32,35,42,43,45,48,49,57,104,108
+field * 0x54000004 u16 0,48,49,57,104,108
+field * 0x54000006 u16 0
+stable 54000000 8
+ret! 028F5C88 0x54010000
+field * 0x54010000 u32 0,1,2,16,255,0xFFFFFFFF
+stable 54010000 4
+src wwhd_src/sead/RuntimeIntegerFormat.cpp
+# Complete bounded output states for reverse integer digits.
+arg! 02759BA0 r3 0x54100000
+arg! 02759BA0 r4 1,2,16,32
+arg! 02759CB0 r3 0x54110000
+arg! 02759CB0 r4 1,2,16,32
+arg! 0275BF18 r3 0x54200000
+arg! 0275C370 r3 0x54200000
+field * 0x54200000 u32 0x54210000
+field * 0x54200004 s32 0,1,2,8,32
+field * 0x54200008 s32 0,1,2,8,32
+stable 54200000 16
+stable 54210000 64
+arg! 0275BF18 r4 0,8,10,16,17
+arg! 0275C370 r4 0,8,10,16,17
+real 028F5A1C
+src wwhd_src/sead/WorkerRuntimeInstances.cpp
+field 027598AC r3+8 u32 1,2,16,32
+src wwhd_src/sead/WorkerQueueSupport.cpp
+arg! 027594FC r3 0x54300000
+arg! 02759564 r3 0x54300000
+field * 0x54300040 s32 0,1,2,3
+field * 0x54300044 u32 0x54310000
+field * 0x54300050 u32 0
+field * 0x54300054 u8 0,1
+field * 0x54310000 u32 0x54320000
+field * 0x54310004 u32 0x54320100
+field * 0x54310008 u32 0x54320200
+field 027594FC 0x54320098 u32 0,1
+field 027594FC 0x54320198 u32 0,1
+field 027594FC 0x54320298 u32 0,1
+field 02759564 0x54320098 u32 0
+field 02759564 0x54320198 u32 0
+field 02759564 0x54320298 u32 0
+stable 54300000 0x6C
+stable 54310000 12
+stable 54320000 0x9C
+stable 54320100 0x9C
+stable 54320200 0x9C
+real 028EFFD0
+real 02759928
+
+cr 02759C28 6 0,1
+cr 02759D3C 6 0,1
+
+arg! 0275A5AC r3 0x54400000
+arg! 0275A5AC r4 0x54200000
+field 0275A5AC 0x5440000C u32 0,1,4,5
+field 0275A5AC 0x54400010 u32 0,1,2,8,32
+field 0275A5AC 0x5440001C u32 0,1,2,3,4,5,0xFFFF
+stable 54400000 32
+
+arg! 0275B960 r3 0x54500000
+arg! 0275B960 r4 0,1,2,8,32
+arg! 0275B960 r5 0x54000000
+stable 54500000 64
+
+arg! 0275B5CC r3 0x54400000
+arg! 0275B5CC r4 0x54200000
+arg! 0275B5CC r5 0x54000000
+real 02759DC4
+real 02759E40
+real 02759EE8
+real 02759F7C
+real 0275A024
+
+src wwhd_src/sead/RuntimeTextEncoding.cpp
+arg! 0275BAA0 r3 0x54600000
+arg! 0275BAA0 r4 0,1,2,8,32
+arg! 0275BAA0 r5 0x54610000
+arg! 0275BAA0 r6 -2,-1,0,1,2,3
+field * 0x54610000 u8 0,65,128,129,160,161,223,224,240,249,253,255
+field * 0x54610001 u8 0,63,64,126,127,128,252,253
+field * 0x54610002 u8 0
+arg! 0275BC8C r3 0x54620000
+arg! 0275BC8C r4 0,1,2,3,8,32
+arg! 0275BC8C r5 0x54630000
+arg! 0275BC8C r6 -2,-1,0,1,2,3
+field * 0x54630000 u16 0,65,128,0x3042,0xD800,0xE000,0xE757,0xE758,0xF8F0,0xF8F1,0xFF61,0xFF9F
+field * 0x54630002 u16 0,65,0x3042
+field * 0x54630004 u16 0
+stable 54600000 64
+stable 54610000 4
+stable 54620000 32
+stable 54630000 6
+
+arg! 0275A094 r3 0x54400000
+arg! 0275A094 r4 0x54200000
+arg! 0275A094 r5 8,10,16,17
+arg! 0275A094 r6 0,1
+arg! 0275A094 r7 0,1
+field 0275A094 0x5440000C u32 0,1,2,4,8,16,31
+field 0275A094 0x54400010 u32 0,1,2,8,32
+field 0275A094 0x54400014 u32 0,1,2,8,32
+field 0275A094 0x54400018 u8 0,1
+field 0275A094 0x5440001C u32 0,1,2,3,4,5
+real 0275C0D0
+real 0275C1B0
+real 0275C290
+real 0275C62C
+
+src wwhd_src/sead/RuntimeFloatingFormat.cpp
+arg! 0275A86C r3 0x54400000
+arg! 0275A86C r4 0x54200000
+arg! 0275A86C r5 101,102,103
+arg! 0275A86C r6 0,1
+field 0275A86C 0x5440000C u32 0,1,2,4,8,16,31
+field 0275A86C 0x54400010 u32 0,1,2,8,32
+field 0275A86C 0x54400014 u32 0,1,2,6,16,512,513
+field 0275A86C 0x54400018 u8 0,1
+field 0275A86C 0x54010000 u32 0,0x3FF00000,0xBFF00000,0x7FF00000,0xFFF00000,0x7FF80000,0x80000000,1
+field 0275A86C 0x54010004 u32 0,1,0xFFFFFFFF
+callee C0009990 r3=out84 r4=0 r5=0
+
+# Populated queues have a terminating progress reply and coherent virtual targets.
+field 02759564 0x54300048 u32 2
+field 02759564 0x5430004C u32 0x54330000
+field 02759564 0x54300050 u32 0,1,2
+field * 0x54330000 u32 0x54340000
+field * 0x54330004 u32 0x54340100
+field * 0x54340000 u32 0x54350000
+field * 0x54340100 u32 0x54350000
+field * 0x54340014 u32 0,1
+field * 0x54340114 u32 0,1
+field * 0x54340030 u32 1
+field * 0x54340034 u32 1
+field * 0x54340038 u32 1
+field * 0x54340130 u32 1
+field * 0x54340134 u32 1
+field * 0x54340138 u32 1
+field * 0x5432000C u32 0x54350100
+field * 0x5432010C u32 0x54350100
+field * 0x5432020C u32 0x54350100
+field * 0x54350024 u32 0x5F000104
+field * 0x5435018C u32 0x5F000100
+callee 5F000100 fixture r3=heap156
+callee 5F000104 fixture r3=heap60
+ret! 5F000104 0,1,2,3
+stable 54330000 8
+stable 54340000 60
+stable 54340100 60
+stable 54350000 40
+stable 54350100 144
+# Real finite format grammar and every conversion selector, including invalid selectors.
+field 0275B5CC 0x54000000 u16 0,37,43,45,48,49,69,71,88,99,100,101,102,103,104,105,108,111,112,115,117,120
+field 0275B5CC 0x54000002 u16 0,37,46,49,69,71,88,99,100,101,102,103,104,105,108,111,112,115,117,120
+field 0275B5CC 0x54000004 u16 0,99,100,101,102,103,111,112,115,117,120
+field 0275B960 0x54000000 u16 0,37,65,66
+field 0275B960 0x54000002 u16 0,37,69,71,88,99,100,101,102,103,105,111,112,115,117,120
+field 0275B960 0x54000004 u16 0,65
+real 0275BF18
+real 0275C370
+# The 12-byte argument cursor handed to formatArguments (register state, overflow and register-save pointers).
+callee 02759C10 r4=12
+callee 02759D24 r4=12
+
+# The parser text view may overlap the receiver's output field; both are caller-owned memory.
+# A store to width/precision changes the next code unit before the subsequent load.
+arg! 02759EE8 r3 0x54E00000
+arg! 02759EE8 r4 0x54E0000E
+fill 02759EE8 0x54E00000 32 0
+field 02759EE8 0x54E0000E u16 49,58
+field 02759EE8 0x54E00010 u16 50
+field 02759EE8 0x54E00012 u16 0
+arg! 02759F7C r3 0x54E10000,0x54E20000
+arg! 02759F7C r4 0x54E10010,0x54E20016
+fill 02759F7C 0x54E10000 32 0
+field 02759F7C 0x54E10010 u16 46
+field 02759F7C 0x54E10012 u16 49
+field 02759F7C 0x54E10014 u16 50
+field 02759F7C 0x54E10016 u16 0
+stable 54E00000 32
+stable 54E10000 32
+
+# A second receiver/text pair overlaps the precision-present byte with the next code unit.
+# Cross-pair choices remain ordinary disjoint receiver/text objects.
+fill 02759F7C 0x54E20000 32 0
+field 02759F7C 0x54E20016 u16 46
+field 02759F7C 0x54E20018 u16 49
+field 02759F7C 0x54E2001A u16 0
+stable 54E20000 32

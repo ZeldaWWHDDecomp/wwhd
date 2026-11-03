@@ -1,0 +1,31 @@
+# verify: -only 027B7044,027B7088 -calleesp -strictnan
+# ExactByteLayout16B own originalproducer; no unrelatedheap/managerbootstrap.
+# GlobalnewAD10 opaqueapprovedLead11:23 freshalignedmodeledblocks; globaldeleteAF40 terminalopaque.
+# Complete16B constructor placement final:10metadata bytes+4method bytes written,2padding bytes preserved.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B7044
+real 027B6FF8
+alloc 0273AD10 r3 0x5B000000 32
+allocnested 0273AD10
+arg! 027B7044 r3 0x58000000
+setup 027B7088 027B7044 r3=0
+arg! 027B7088 r3 0,0x5B000000
+arg! 027B7088 r4 0,1,2,3,0x80000000,0x80000001,0xFFFFFFFF
+final 027B7044 58000000 10

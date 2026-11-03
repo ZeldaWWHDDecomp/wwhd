@@ -1,0 +1,48 @@
+# verify: -only 027A9408 -strictnan -calleesp
+# Borrowed complete selector read-set graph only; no program construction, GPU calls or lifecycle claim.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+arg! 027A9408 r3 0,0xFFFFFFFF,0x80000000,1,2,3,4,5,0x7FFFFFFF
+field 027A9408 101F8D6C u32 0x57028000
+fill 027A9408 57028000 0x20 0
+field 027A9408 57028014 u32 13
+field 027A9408 5702801C u32 0x57028100
+fill 027A9408 57028100 0x34 0
+field 027A9408 57028100 u32 0x57028200
+field 027A9408 57028104 u32 0x57028200
+field 027A9408 57028108 u32 0x57028200
+field 027A9408 5702810C u32 0x57028200
+field 027A9408 57028110 u32 0x57028200
+field 027A9408 57028114 u32 0x57028200
+field 027A9408 57028118 u32 0x57028200
+field 027A9408 5702811C u32 0x57028200
+field 027A9408 57028120 u32 0x57028200
+field 027A9408 57028124 u32 0x57028200
+field 027A9408 57028128 u32 0x57028200
+field 027A9408 5702812C u32 0x57028200
+field 027A9408 57028130 u32 0x57028200
+fill 027A9408 57028200 0x84 0
+field 027A9408 5702827C u32 0x57028300
+fill 027A9408 57028300 0x2C 0
+field 027A9408 57028308 u32 0x57028400
+field 027A9408 5702830C u32 0,1,2,3,4
+field 027A9408 57028310 u32 0x57028500
+fill 027A9408 57028400 0x84 0
+field 027A9408 5702847C u32 0x57028300
+fill 027A9408 57028500 0x210 0
+field 027A9408 5702857C u32 0x57028300
+field 027A9408 57028600 u32 0x57028300
+field 027A9408 57028684 u32 0x57028300
+field 027A9408 57028708 u32 0x57028300

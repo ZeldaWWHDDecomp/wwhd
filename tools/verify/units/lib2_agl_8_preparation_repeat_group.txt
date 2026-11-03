@@ -1,0 +1,6 @@
+# verify: -strictnan -calleesp -only 02794270
+# Real previous-frame caller retains the reduced-depth sampler description.
+# The caller releases its temporary cache textures before the next preparation call.
+include lib2_agl_8_final_six_group.txt
+# Device publication occurs after setup; run the prior frame after those caller-visible writes.
+postsetup 02794270 02795D7C r3=0x58000000 r4=0 r5=64 r6=64 r7=*0x5E100008 r8=0 f1=0.25 f2=0.5

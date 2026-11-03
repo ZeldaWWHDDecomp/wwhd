@@ -1,0 +1,37 @@
+# Valid registered EmbeddedObject cleanup and deleting-storage boundaries.
+# verify: -only 027F9D54,027F9C98,027F9DFC -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+real 0273B310 02752BEC
+arg! 027F9D54 r3 0,0x70100000
+arg! 027F9D54 r4 0,1,2,3
+arg! 027F9C98 r3 0,0x70100000
+arg! 027F9C98 r4 0,1,2,3
+arg! 027F9DFC r3 0,0x70100000
+arg! 027F9DFC r4 0,1,2,3
+field 027F9D54 r3+0 u32 0,1
+field 027F9D54 r3+4 u32 0
+field 027F9D54 r3+8 u32 0
+field 027F9D54 r3+0xC u32 0x1016EB44
+field 027F9D54 r3+0x38 u8 1
+field 027F9D54 r3+0x10 u32 0x70110000
+field 027F9D54 r3+0x14 u32 0x70110000
+field 027F9D54 r3+0x1C u32 0x70110000
+field 027F9D54 70110000 u32 0x70100010
+field 027F9D54 70110004 u32 0x70100010
+field 027F9D54 70110008 s32 1
+final 027F9D54 70100000 0x3C
+final 027F9D54 70110000 12

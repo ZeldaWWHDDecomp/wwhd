@@ -1,0 +1,47 @@
+# verify: -only 027D7A4C,027D76D4,027D76B8 -strictnan -calleesp
+# AGL#19 render-job ordering: the per-view job queue that collectJobs 027C1848 fills
+# through RenderJob::submit 027D7270 (two NULL-owner jobs first, then one job per pending layer, layers mapped per
+# input from three original-built layers with render states 100/50/0: sharing, ties and NULL owners), sorted by
+# RenderPointerArray::sort 027D7A4C with the comparator compareRenderJobs 027D76D4 (its body equals the merged
+# sead::PointerBuffer::heapSort 0273B7B4, which the game calls with 027D76D4). The comparator and the priority getter
+# are also tested directly on the same jobs. Queue lengths 2..6 (pending layers 0..4).
+src wwhd_src/agl/RenderPointerStorage.cpp
+src wwhd_src/agl/RenderJobOrder.cpp
+include lib2_agl_19_jobs_layer_owner_fixture.txt
+real 027D7270 027D76D4 027D76B8
+field 027D7A4C 0x58005200 u32 0x58000000,0x58001000,0x58002000
+field 027D7A4C 0x58005204 u32 0x58000000,0x58001000,0x58002000
+field 027D7A4C 0x58005208 u32 0x58000000,0x58001000,0x58002000
+field 027D7A4C 0x5800520C u32 0x58000000,0x58001000,0x58002000
+stable 0x58005200 0x10
+stable 0x58005100 0x40
+poke 027D7A4C 58005000 u32 0
+poke 027D7A4C 58005004 u32 6
+poke 027D7A4C 58005008 u32 0x58005100
+postsetup 027D7A4C 027D7270 r3=0x58004000 r4=0x58005000 r5=0
+postsetup 027D7A4C 027D7270 r3=0x5800401C r4=0x58005000 r5=0
+postsetup 027D7A4C 027D7270 r3=0x58004038 r4=0x58005000 r5=*0x58005200
+postsetup 027D7A4C 027D7270 r3=0x58004054 r4=0x58005000 r5=*0x58005204
+postsetup 027D7A4C 027D7270 r3=0x58004070 r4=0x58005000 r5=*0x58005208
+postsetup 027D7A4C 027D7270 r3=0x5800408C r4=0x58005000 r5=*0x5800520C
+arg! 027D7A4C r3 0x58005000
+arg! 027D7A4C r4 0x027D76D4
+# Direct comparator / priority-getter rows on the same constructed jobs: the jobs get their owner from the original
+# submit (postsetup 027D7270 with the queue), so J0/J1 have no owner and J2..J5 one of the layers.
+field 027D76B8 0x58005200 u32 0x58000000,0x58001000,0x58002000
+field 027D76D4 0x58005200 u32 0x58000000,0x58001000,0x58002000
+field 027D76D4 0x58005204 u32 0x58000000,0x58001000,0x58002000
+poke 027D76B8 58005000 u32 0
+poke 027D76B8 58005004 u32 6
+poke 027D76B8 58005008 u32 0x58005100
+poke 027D76D4 58005000 u32 0
+poke 027D76D4 58005004 u32 6
+poke 027D76D4 58005008 u32 0x58005100
+postsetup 027D76B8 027D7270 r3=0x58004000 r4=0x58005000 r5=0
+postsetup 027D76B8 027D7270 r3=0x58004038 r4=0x58005000 r5=*0x58005200
+postsetup 027D76D4 027D7270 r3=0x58004000 r4=0x58005000 r5=0
+postsetup 027D76D4 027D7270 r3=0x58004038 r4=0x58005000 r5=*0x58005200
+postsetup 027D76D4 027D7270 r3=0x58004054 r4=0x58005000 r5=*0x58005204
+arg! 027D76B8 r3 0x58004000,0x58004038,0x5800401C
+arg! 027D76D4 r3 0x58004000,0x58004038,0x58004054
+arg! 027D76D4 r4 0x58004000,0x58004038,0x58004054

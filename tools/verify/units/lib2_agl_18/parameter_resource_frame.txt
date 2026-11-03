@@ -1,0 +1,153 @@
+# FULL POOL COMPLETE 2026-10-26: public427 +leading6 =433 total:190D120CI121EQ2 untested synchronization variants.
+# Public427:190D117CI118EQ2sync; old public400/combined406 notes below are preserved completed subsets, superseded by these totals.
+# RemainingIDs400..426 --max100000 n1000:12D5CI10S; grouped n1000 resurvey all10S; exact10k seeds1/7 all10S, no errors/timeouts.
+# Tail independent/read-reload EQ IDs402,404,405,406,413,417,423; sourceNULL-arm EQ415,424; config bit0-clear qualifiedEQ412 (CLOSED22:54).
+# 402: independent radiusSquared/projectedY arithmetic;404/405: alternate-color stores vs disjoint record reads;423: disjoint r/g local stores.
+# 406: matrix concatenate writes only its matrix output, independent of radius read from record. 413/417: selectedResourceValue(record,slot0) remains the same pointer, record/slot unchanged.
+# 415/424 are confined to nonNULL source arms; complete original producer domain has sourceNULL (CLOSED20:56), no synthetic positive case.
+# 412 changes configuration mask20 to21; bit0 is always clear in the accepted configuration domain, so the tested bit20 result is unchanged.
+# All4 resource profiles now additionally have guest-only pagezero n1 audits PASS, zero watched accesses; old paired controls/proofs remain intact.
+# Normal full-pool logs: build/agl18/resource-spatial-fullpool-20261026/027CD1E4-tail-{fullpool-n1000-seed1,grouped-n1000-seed1,residual-n10000-seed1,residual-n10000-seed7}.log.
+# Historical subset406 (400 sampled public +6 helpers) is preserved below; the additional27 public variants are now tested/reviewed in the full433 totals above.
+# Lead02:53 complete caller chain passes slot0 only; N=1. Earlier slot>=1 inputs are diagnostic.
+# Resource parameter writer, default null-source state: owner and coherent production frame recipe.
+# O2 and own-TU O1 paired10k seeds1/7 PASS; coverage16/35, all reachable blocks covered.
+# Lead20:56 sourceNULL gaps IDs6..10 at CD434/444/468/484/48C and20..33 at CD7A0/7CC/7E8/7EC/7F4/7F4/7F8/80C/810/818/818/820/85C/860.
+# Those19 blocks require nonNULL source; every producer writesNULL, so 35-19=16 reachable. Mutation pending.
+# verify: -only 027CD1E4 -strictnan -calleesp -footprint
+callbudget 60000
+src wwhd_src/agl/DrawResourceParameterPreparation.cpp
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027CD1E4 r3 0x59200000
+arg! 027CD1E4 r4 0x59100000
+arg! 027CD1E4 r5 0
+arg! 027CD1E4 r6 0x59300000
+field * 0x101F8B94 u32 0
+field * 0x58000000 u32 0x6A000000
+field * 0x58000004 u32 0x1000000
+field * 0x58000008 u32 0
+stable 0x6A000000 0xC8
+nestedret 02756140 0x6A000000
+setup * 02756E3C
+setup * 02757190
+setup * 027561B4
+setup * 02755FE0 r3=0x58000000
+real 025155D8 0273AD10 0273ADAC 0273AF40 0273AFC8 0273B050 0273B158 0273B2F0 0273B310 0273B560 02750CDC 02750D00 02752A84 02752B0C 02752BEC 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 0275320C 02753214 027532BC 02753628 027536B0 027536F4 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02753D6C 02753F84 02754018 027540AC 027541B8 02754370 027544E0 02754564 0275456C 02754618 02754620 02754754 027547A8 02754814 02754894 027556FC 02755818 0275589C 02755A48 02755CA4 02755D28 02755DA8 02755DBC 02755E7C 02755EC4 02755F40 02755F80 02755FE0 02755FEC 027561B4 02756254 02756268 0275626C 02756CC0 02756D04 02756D18 02756E3C 02757190 02760084 027600EC 02760168 027601BC 027601C4 027601F0 027601F8 0276024C 0276028C 027BEB5C 027BECEC 027BED84 027CBCD0 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58 028EFFD0 028F026C 028F0294 028F02E4 028F43F8 028F4BE0 028F521C 028F5228 028F5564 028F5678 028F5680 028F5DC0 028F5DD4 028F5E98 028F61E4
+# Disjoint caller-owned record/value storage; original constructors produce all buffer fields.
+fill * 59100000 0x60 0
+fill * 59200000 0x118 0
+fill * 59500000 0x68 0
+field * 59200004 u32 0x59600000
+field * 59600004 u32 0x00164120,0x00164100,0x00164020,0x00164000
+field * 59600038 u32 1
+stable 59600000 0x3C
+field * 59100058 u32 1
+field * 5910005C u32 0x59500000
+field * 5910002C u32 0x3F800000
+field * 5910003C u32 0x3F800000
+field * 59200000 u32 0x1016AEF8
+setup * 0274D510
+# default-texture bootstrap; pointer read after the original getter.
+field * 101F8B4C u32 0
+field * 101F8DEC u32 0
+mockset C0009990 r3 r4 r5
+mocksurfacesize C00060D0
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+setup * 027854AC r3=0x6A000000
+setup * 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup * 027A76C8 r3=0x6A000000
+setup * 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup * 027BF734 r3=0x59200020
+setup * 027CCC80 r3=0x59200000 r4=0x59100000 r5=0x6A000000
+setup * 027BEB5C r3=0x5950004C
+setup * 027CCE34 r3=0x59200000 r4=0x5950004C r5=0x6A000000
+setup * 027BEEE4 r3=0x5950004C r4=0x6A000000 r5=2
+# Projection remains in ctor fov/scale state; source projection is updated after pokes.
+stable 59300000 0xEA4
+stable 59400000 0xC4
+setup * 027389F8 r3=0x59400000
+poke * 59400094 u32 0x3F800000
+poke * 59400098 u32 0x461C4000
+poke * 594000AC u32 0x3FAAAAAB
+poke * 594000B0 u32 0x00000000
+poke * 594000B4 u32 0x00000000
+poke * 594000B8 u32 0x3F800000
+poke * 594000BC u32 0x3F800000
+poke * 59300000 u32 0x3F800000
+poke * 59300004 u32 0x00000000
+poke * 59300008 u32 0x00000000
+poke * 5930000C u32 0x00000000
+poke * 59300010 u32 0x00000000
+poke * 59300014 u32 0x3F800000
+poke * 59300018 u32 0x00000000
+poke * 5930001C u32 0x00000000
+poke * 59300020 u32 0x00000000
+poke * 59300024 u32 0x00000000
+poke * 59300028 u32 0x3F800000
+poke * 5930002C u32 0xC3FA0000
+poke * 593000E8 u32 0x3ED413CD
+poke * 59300E9C u32 0x3F0D6289
+poke * 59300E88 u32 0x00000000
+poke * 59300E8C u32 0x00000000
+poke * 59300EA0 u32 0xBF800000
+# Keep the initializer's valid nonzero axis/angle, and cover camera-plane/radius cases.
+poke * 59100000 u8 1,3
+poke * 59100008 u32 0x00000000,0x41200000,0xC1200000
+poke * 5910000C u32 0x00000000,0x41200000,0xC1200000
+poke * 59100010 u32 0x00000000,0x43FA0000,0x447A0000
+poke * 59100044 u32 0x00000000,0x3F800000,0x41200000
+postsetup * 027CCEB8 r3=0x59200000 r4=0x59100000
+postsetup * 0274D83C r3=0x59400000
+postsetup * 028E8970 r3=0x59400044 r4=0x59300128
+postsetup * 028E90D4 r3=0x59300000 r4=0x59300E18
+postsetup * 0272D680 r3=0x59300E48 r4=0x59300128 r5=0x59300000
+real 0274D510 027CC1BC 027CC250 027389F8 0274DEA8 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 028E8F64 028E9044 028E9108 028E91EC 028E90D4 028E8970 0272D680 027BEF54 027BF048 028E8E10
+real 027BEEE4 027BEEBC 027BEED4
+# every producer writes source NULL; this is the complete producible source domain.
+# Infeasible non-null-source coverage: 027CD430..027CD498 and 027CD7A0..027CD894 (uniforms 0xB/0xD).
+# Survivors confined to those arms are equivalent; inverted null checks must still be detected.
+real 027CCC80 027CCE34 027CCEB8 027BF734 027BFEF8 027A76C8 027A7640 027A78F8 027A77F8 027BE6B8 027BE930 027BDF7C 027BDE1C 027BDEB4 028E93CC 028E945C 027AAFF4
+real 0274D6B4 0274DA08
+real 02750AF0 02750C2C 027B5EEC 027BE114 027BE494 027BE74C 027BE7F0 027BFF9C
+real 027BE744 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8
+# Lead09:27 full surface-import model at the parked alias; the protected body stays opaque.
+mocksurfacesize 0278635C
+observearg 0278635C r3+0 32
+observearg 0278635C r3+0x30 8
+real 0274D4C0
+
+# Published Lead16:02 manager/childheap producer exception; shipped r5=0.
+real 027854AC 0278540C 027855BC 0273B0D4
+
+# OSBlockMove effects used by original sampler/bitmap bootstrap.
+mockmove C0009988 r3 r4 r5
+
+# Lead22:54 supersedes opaque360: execute the published original tail and merged target closure.
+real 02786360 027BEA90 02786314
+observearg C00060D0 r3+0 32
+
+# Mutation disposition after canonical poke-baseline fix (Lead01:32, 2026-10-26).
+# Public-body 400: 178 observed differences, 112 compile-invalid, 108 equivalent, 2 untested synchronization.
+# Exact original detecting variants rechecked n1000 seeds1/7: 149 base +6 colors +22 general-camera +1 published-angle; all178 differ on both seeds.
+# Normal logs: build/agl18/resource-spatial-worker-20261025-2217/resource-fixed-{base,colors,camera,angles}-D-n1000-seed{1,7}.log.
+# Residual110 paired10k: seed1 preserves40 resource-final-survivors +70 resource-angles-final; seed7 resource-angles-final110; no errors/timeouts.
+# Qualified sourceNULL EQ (Lead20:56), changes entirely inside the excluded nonNULL-source arms:
+# 15,18,22,23,29,38,74,75,81,82,95,104,105,113,122,128,129,134,135,153,155,179,186,190,194,195,198,200,204,216,223,226,235,239,244,248,252,255,270,293,299,315,322,331,333,339,379,383,391.
+# Unused FrameLocal offsets76/184/284 qualified EQ (Lead23:50): read/write only in the same excluded arms; no guest-visible scratch effect.
+# Mask40 qualified EQ (Lead22:54): configuration bit0 is clear throughout all producer states.
+# Independent-order EQ: 21,28,34,42,44,50,51,52,70,73,78,79,88,89,92,98,101,116,118,123,139,144,152,156,163,168,176,177,180,197,215,231,234,256,279,307,309,313,314,323,329,332,349,353,359,364,367,370,384,387,399.
+# These swap independent scalar/local computations, disjoint component stores, or immutable record/configuration reads around pure real helpers; no callee writes those owner fields.
+# Swaps70/123/279/359 move disjoint scalar assignments across single-word uniform reads; own image properties establish words1 for fields0..5, stride4.
+# Reload EQ157/207/213/300: prior configuration/angle/value/source loads stay unchanged; real callees never mutate those caller-owned fields.
+# Fence71/141 remain untested synchronization (Lead23:33/AGL1 fence227 precedent): single-thread harness cannot observe ordering; no EQ/detection credit, original fences retained.
+# Leading private-helper variants are a separate pool, not included in this public-body400 ledger.
+
+# Final valid-slot0 controls: resource-{base,angles}-slot0-{O2,O1}-10000-seed{1,7}.log, allPASS16/35.
+# Leading-helper6 are separate from public400 above: 3 compile-invalid (#1/#2/#5), 3 EQ (#0/#3/#4).
+# #0 (< to <=): qualified EQ by CLOSED, sole caller slot0 and N1; old slot1 timeout is diagnostic, not rerun.
+# #3 drop index update: qualified EQ, valid slot0 adds0. #4 count/value load swap: source EQ, independent readonly fields.
+# Exact #3/#4 replayed n10000 seeds1/7 on valid slot0, bothPASS; resource-leading-survivors-slot0-n10000-seed{1,7} normal outputs.
+# Combined resource406:178 observed differences,115 compile-invalid,111 explained equivalents,2 untested synchronization; no blocking open.
+# All public-body variants leave the leading selection helper unchanged; at N1 both old slot0 and diagnostic slot1 return values[0].

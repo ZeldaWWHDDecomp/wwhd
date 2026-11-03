@@ -1,0 +1,9 @@
+# The prepare path uploads16words; draw paths use shorter uniform inputs.
+# This scope compares every byte of the64byte composed stack matrix.
+# verify: -only 02752848 -calleesp
+src wwhd_src/sead/HeapRegistry.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill periodic
+callee 0272D680 r3=out64 r4=64 r5=48
+callee C0006A40 r5=64

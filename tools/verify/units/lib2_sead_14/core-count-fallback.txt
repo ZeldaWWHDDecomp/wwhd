@@ -1,0 +1,14 @@
+# verify: -only 02758414 -strictnan -calleesp
+# Model the original guarded index fallback with bounded counts beyond the
+# physical three-core setup; this is not a claim about additional console cores.
+src wwhd_src/sead/PoolHeap.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 02758414 r3 0x57D00000
+arg! 02758414 r4 0x57D00100
+arg! 02758414 r5 0x57D00104
+field 02758414 101F8B5C u32 4,5
+field 02758414 57D00100 u32 0,1,7,8,16,0xFFFFFFFF
+field 02758414 57D00104 u32 0,1,2
+stable 101F8B5C 4

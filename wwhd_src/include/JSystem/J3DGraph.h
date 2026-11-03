@@ -11,6 +11,8 @@
 #include "wwhd.h"
 
 struct J3DModel;
+struct J3DEntryMaterialLookup;
+struct J3DEntryPacket;
 struct J3DJoint;
 typedef s32 (*J3DJointCallBack)(J3DNode*, int);  /* GameCube: int (*)(J3DNode*, int) */
 enum { J3DNodeCBCalcTiming_In = 0, J3DNodeCBCalcTiming_Out = 1 };
@@ -88,12 +90,27 @@ struct J3DMtxBuffer_hd {
 struct J3DModel {
     /* 0x00 */ u8 _00[0x2C];
     /* 0x2C */ gptr<J3DMtxBuffer_hd> mpMtxBuffer;
-    /* 0x30 */ u8 _30[0xAC - 0x30];
+    /* 0x30 */ union {
+        u8 _30[0xAC - 0x30];
+        struct {
+            gptr<J3DEntryMaterialLookup> mMaterialLookup;
+            u8 _34[0x78 - 0x34];
+            be<u8> mDrawType;
+            u8 _79[0xAC - 0x79];
+        };
+    };
     /* 0xAC */ gptr<J3DModelData> mModelData;
     /* 0xB0 */ u8 _B0[8];
     /* 0xB8 */ be<u32> mUserArea;
     /* 0xBC */ cXyz mBaseScale;
     /* 0xC8 */ Mtx34 mBaseTransformMtx;
+    /* 0xF8 */ u8 _F8[0x128 - 0xF8];
+    /* 0x128 */ be<u32> mPacketCount;
+    /* 0x12C */ gptr<J3DEntryPacket> mPackets;
+    /* 0x130 */ u8 _130[0x144 - 0x130];  /* 0x138/0x13C: material packet count/array (d_a_itembase ModelPacketsHD) */
+
+    void entry();
+    void update();
 
     J3DModelData* getModelData() { return mModelData; }
     /* 027F4D5C J3DModel::calc [g] */
@@ -120,6 +137,11 @@ struct J3DModel {
         for (int i = 0; i < 12; i++) dst->m[i / 4][i % 4] = t[i];
     }
 };
+WWHD_OFFSET(J3DModel, mMaterialLookup, 0x30);
+WWHD_OFFSET(J3DModel, mDrawType, 0x78);
+WWHD_OFFSET(J3DModel, mPacketCount, 0x128);
+WWHD_OFFSET(J3DModel, mPackets, 0x12C);
+WWHD_SIZE(J3DModel, 0x144);  /* mDoExt_J3DModel__create 025E38E0 allocates 0x144 */
 WWHD_OFFSET(J3DModel, mModelData, 0xAC);
 WWHD_OFFSET(J3DModel, mUserArea, 0xB8);
 WWHD_OFFSET(J3DModel, mBaseTransformMtx, 0xC8);

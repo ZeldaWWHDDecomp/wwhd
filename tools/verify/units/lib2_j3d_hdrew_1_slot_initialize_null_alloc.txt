@@ -1,0 +1,12 @@
+# UNEXECUTED; ROOT STATIC REVIEW PASSED. Bounded 027F7F08 null-heap/allocation-failure profile.
+# The admitted initializeLayer3D source path permits heap==null and forwards it to this initializer.
+# A mapped PipelineRenderState-compatible 0x4C0 receiver contains the 0x2C0 slot table at +0x14.
+# ret! pins each allocator result to null; allocator calls and argument order remain compared.
+# This claims no allocator or slot-storage constructor behavior and no singleton lifecycle.
+# verify: -only 027F7F08 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+arg! 027F7F08 r3 0x62000000
+arg! 027F7F08 r4 0
+fill 027F7F08 0x62000000 0x4C0 0
+ret! 0273B050 0
+final 027F7F08 0x62000000 0x4C0

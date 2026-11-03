@@ -1,0 +1,86 @@
+# writeCaptureFile with a chosen (non-empty) path: open failure and success, write, close, buffer release,
+# optional output-path copy with large and small capacities. Options built by the original constructor.
+# verify: -only 027C5474 -strictnan -calleesp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 027C57E8 027C52D4 02759B40 02759B98 027C5060 02760084
+real 02759BA0 02759C10 02759C28 028F03F4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C 028F0DBC 028F0DF4 028F10B8 028F1108 028F1158 028F11BC 028F1748 028F1904 028F5228 028F5C88 028F5DE8 028F5DFC 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 028F61D0 028F61E8 028F61FC 028F6228 028F6240 028F6254 028F171C 028F60E0 028F60E8 028F60F0 028F6130 028F6158 028F615C 028F6184 028F61AC 028F61B0 028F61D8 028F61DC 028F61E0 028F61E4 028F61EC 028F61F0 028F61F4 028F61F8 028F6200 028F6230 028F6234 028F6238 028F623C 028F6244 028F6248 028F624C 028F6250 028F6258 027C5AAC 027C6B98 027C6B9C
+setup 027C5474 02759B40
+setup 027C5474 027C5060 r3=0x5F600000
+setup 027C5474 027C57E8 r3=0x5F610000
+arg! 027C5474 r3 0x5F600000
+arg! 027C5474 r4 0x5F620000
+arg! 027C5474 r5 0,1,16,64
+arg! 027C5474 r6 0x5F610000
+fill 027C5474 5F600000 92 165
+fill 027C5474 5F610000 40 165
+fill 027C5474 5F620000 64 90
+field 027C5474 101F8B4C u32 0
+field 027C5474 101F8B94 u32 0
+stable 5F610000 32
+stable 104A0CD8 8
+stable 101F8B4C 4
+stable 101F8B94 4
+stable 5F60002C 44
+final 027C5474 5F600000 5C
+final 027C5474 5F610000 28
+mockmove C0009988 r3 r4 r5
+fill 027C5474 5F640000 64 0
+fieldstr 027C5474 5F640000 64 "capture.bin","dir/out.png","a"
+poke 027C5474 5F610018 u32 0x5F640000,0x5F640000,0x5F680000,0x5F680008
+ret! 02740B24 0,0x5F650000
+alloc 0273B0D4 r3 0x5F700000 64
+fill 027C5474 5F660000 48 0
+field 027C5474 101F8C14 u32 0x5F660000
+field 027C5474 5F66002C u32 0x6A000000
+stable 101F8C14 4
+stable 5F660000 48
+poke 027C5474 5F610020 u32 0,0x5F670000
+fill 027C5474 5F670000 12 0
+field 027C5474 5F670000 u32 0x5F671000
+field 027C5474 5F670004 u32 0x1016A368
+field 027C5474 5F670008 s32 1,4,64
+fill 027C5474 5F671000 64 0x5A
+final 027C5474 5F671000 40
+stable 5F670000 12
+stable 5F640000 64
+stable 5F610020 8
+# The mocked open (sead FileDevice::tryOpen) may leave the handle's original device set or cleared.
+mockfield 02740B24 r4+0x14 u32 0,0x5F650000
+# A path longer than the 0x40000-character text limit (length check resets the copied length to 0).
+fill 027C5474 5F680000 0x40010 0x61
+field 027C5474 5F6C0008 u8 0
+stable 5F680000 0x40010
+# The handle's prefix (disposer, devices) and read-chunk word, the path object and the open mode reach the open call.
+observearg 02740B24 r4+0 24
+observearg 02740B24 r4+0x38 4
+observearg 02740B24 r5+0 8
+callee 02740B24 r6=0
+stackfill
+observearg 02740BE0 r4+0 24
+observearg 02752BEC r3+0 16

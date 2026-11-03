@@ -1,0 +1,24 @@
+# Bounded geometry regression companion; generated inputs contain no game assets.
+# verify: -only 027D9150 -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+arg! 027D9150 r3 0x6D000000
+arg! 027D9150 r4 0x6D001000
+arg! 027D9150 r5 0x6D003000
+fill 027D9150 0x6D000000 0x90 0
+fill 027D9150 0x6D001000 0xC 0
+fill 027D9150 0x6D002000 0xC 0
+fill 027D9150 0x6D003000 0xC 0
+field 027D9150 r3+0x8C f32 0.5
+field 027D9150 r4+0 u32 1
+field 027D9150 r4+4 u32 0x6D002000
+field 027D9150 r4+8 s32 1
+field 027D9150 0x6D002000 f32 0.5

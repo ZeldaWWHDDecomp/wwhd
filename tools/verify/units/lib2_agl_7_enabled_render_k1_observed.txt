@@ -1,0 +1,14 @@
+# Observation companion of lib2_agl_7_enabled_render_k1.txt: the stack objects render passes to its mocked sead callees are compared
+# over the spans those callees read (as lib2_agl_7_apply_mip_blur declares them): the render state (CompactRenderState
+# create 0274FDBC runs the original initializer, apply 0274FEB0 reads 112 bytes), the viewports (createSurface 0274F5F0 writes 24 bytes,
+# apply 0274F964 reads 20) and the blur draws' viewport/scale/offset arguments (027A90AC r4/r5/r6, 027A9584 r4).
+# verify: -only 02791230 -strictnan -calleesp
+include lib2_agl_7_enabled_render_k1.txt
+real 0274FDBC
+callee 0274FEB0 r3=112
+callee 0274F5F0 r3=out24
+callee 0274F964 r3=20
+callee 027A90AC r4=20 r5=8 r6=8
+callee 027A9584 r4=20
+# primary 027904D0 (a mocked callee here) takes useFirstSample, width and height as its 9th..11th arguments on the stack.
+callee 027904D0 stack=3

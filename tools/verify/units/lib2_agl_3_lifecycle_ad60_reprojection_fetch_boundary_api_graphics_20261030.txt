@@ -1,0 +1,8 @@
+# verify: -strictnan -calleesp -only 0277AD60
+# TYPE-DOMAIN: same original fetchIntegerParameter apply7/8/UINTMAX, now reprojection1 viaoriginalBoolean apply.
+include lib2_agl_3_lifecycle_ad60_fetch_boundary_api_graphics_20261030.txt
+# Caller-owned Boolean ResParameterData only; no producedowner/program/texture edits.
+field 0277AD60 5D52000C u8 1
+arg! 0277AD60 r9 0,1
+# Inherited active site2 dirty190 remains valid: reprojectionbinding1 PS2 all84programs.
+# No extra sites3/4 or14C/168 are observed.

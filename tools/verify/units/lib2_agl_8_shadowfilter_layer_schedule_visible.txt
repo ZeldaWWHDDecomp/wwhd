@@ -1,0 +1,16 @@
+# verify: -strictnan -only 02796F74 -noclobber
+# AGL#8 shadowfilter (2026-10-31): lib2_agl_8_shadowfilter_bind_real_visible on the shipped per-layer schedule.
+# CascadeShadow::renderLayers 02798B0C runs ShadowMap::prepareLayer 02796B3C + finishLayer 02796EEC for each layer
+# before the filter 02796F74 (header of lib2_agl_8_filter_depth_extent_api_type). The base replays only finishLayer;
+# here the original prepareLayer runs first (layer 0, caller-owned origin/extent vectors), so the filter starts on the
+# frame state prepareLayer leaves: mFrame.clearColors() and mFrame.mDepth = &mDepth (store at 02796C18), which the
+# filter's first sead::activateFrameBuffer 0274D690 (observed r3+0x1C, 36 bytes) consumes after line 208 resets it.
+include lib2_agl_8_shadowfilter_bind_real_visible.txt
+real 02796B3C
+fill * 0x5E120500 0x20 0
+field 02796F74 0x5E120500 f32 0.0
+field 02796F74 0x5E120504 f32 0.0
+field 02796F74 0x5E120508 f32 0.5,1.0
+field 02796F74 0x5E12050C f32 0.5,1.0
+postsetup 02796F74 02796B3C r3=0x59000000 r4=0 r5=0x5E120500 r6=0x5E120508
+postsetup 02796F74 02796EEC r3=0x59000000 r4=0

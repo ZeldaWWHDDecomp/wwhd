@@ -1,0 +1,788 @@
+src wwhd_src/JSystem/JAudio/JASInstEffect.cpp
+src wwhd_src/JSystem/JAudio/JASInstSense.cpp
+arg! 028124D4 r4 -128,-1,0,1,59,60,61,126,127,128,255,2147483647,-2147483648
+arg! 028124D4 r5 -128,-1,0,1,59,60,61,126,127,128,255,2147483647,-2147483648
+field 028124D4 r3+8 u8 0,1,2,3,255
+field 028124D4 r3+9 u8 0,1,60,126,127,128,255
+src wwhd_src/JSystem/JAudio/JASInstRand.cpp
+src wwhd_src/JSystem/JAudio/JASWaveBankMgr.cpp
+arg! 02812CC0 r3 0,1,2,8,16
+arg! 02812D20 r3 -1,0,1,2,7,8,16
+field 02812D20 104B5374 s32 0,1,2,8,16
+ret 02812EE4 0,1,2,8
+src wwhd_src/JSystem/JAudio/JASDrumSet.cpp
+arg! 02812030 r4 -1,0,1,60,127,128
+arg! 02812030 r5 0,1,60,127,128
+field 02812030 r3+0x18 u32 0,1,2
+field 02812030 r3+0x1C u32 0,1,2
+arg! 02812270 r3 0,0x50000000
+ret! 0273AD10 0,0x51000000
+arg! 02812030 r3 0x50000000
+field 02812030 r3+0x18 u32 0,1,2
+field 02812030 r3+0x1C u32 0,1,2
+field 02812030 r3+0x38 u32 0,1,2
+field 02812030 r3+0x3C u32 0,1,2
+field 02812030 r3+0x58 u32 0,1,2
+field 02812030 r3+0x5C u32 0,1,2
+field 02812030 r3+0x78 u32 0,1,2
+field 02812030 r3+0x7C u32 0,1,2
+field 02812030 r3+0x98 u32 0,1,2
+field 02812030 r3+0x9C u32 0,1,2
+field 02812030 r3+0xB8 u32 0,1,2
+field 02812030 r3+0xBC u32 0,1,2
+field 02812030 r3+0xD8 u32 0,1,2
+field 02812030 r3+0xDC u32 0,1,2
+field 02812030 r3+0xF8 u32 0,1,2
+field 02812030 r3+0xFC u32 0,1,2
+field 02812030 r3+0x118 u32 0,1,2
+field 02812030 r3+0x11C u32 0,1,2
+field 02812030 r3+0x138 u32 0,1,2
+field 02812030 r3+0x13C u32 0,1,2
+field 02812030 r3+0x158 u32 0,1,2
+field 02812030 r3+0x15C u32 0,1,2
+field 02812030 r3+0x178 u32 0,1,2
+field 02812030 r3+0x17C u32 0,1,2
+field 02812030 r3+0x198 u32 0,1,2
+field 02812030 r3+0x19C u32 0,1,2
+field 02812030 r3+0x1B8 u32 0,1,2
+field 02812030 r3+0x1BC u32 0,1,2
+field 02812030 r3+0x1D8 u32 0,1,2
+field 02812030 r3+0x1DC u32 0,1,2
+field 02812030 r3+0x1F8 u32 0,1,2
+field 02812030 r3+0x1FC u32 0,1,2
+field 02812030 r3+0x218 u32 0,1,2
+field 02812030 r3+0x21C u32 0,1,2
+field 02812030 r3+0x238 u32 0,1,2
+field 02812030 r3+0x23C u32 0,1,2
+field 02812030 r3+0x258 u32 0,1,2
+field 02812030 r3+0x25C u32 0,1,2
+field 02812030 r3+0x278 u32 0,1,2
+field 02812030 r3+0x27C u32 0,1,2
+field 02812030 r3+0x298 u32 0,1,2
+field 02812030 r3+0x29C u32 0,1,2
+field 02812030 r3+0x2B8 u32 0,1,2
+field 02812030 r3+0x2BC u32 0,1,2
+field 02812030 r3+0x2D8 u32 0,1,2
+field 02812030 r3+0x2DC u32 0,1,2
+field 02812030 r3+0x2F8 u32 0,1,2
+field 02812030 r3+0x2FC u32 0,1,2
+field 02812030 r3+0x318 u32 0,1,2
+field 02812030 r3+0x31C u32 0,1,2
+field 02812030 r3+0x338 u32 0,1,2
+field 02812030 r3+0x33C u32 0,1,2
+field 02812030 r3+0x358 u32 0,1,2
+field 02812030 r3+0x35C u32 0,1,2
+field 02812030 r3+0x378 u32 0,1,2
+field 02812030 r3+0x37C u32 0,1,2
+field 02812030 r3+0x398 u32 0,1,2
+field 02812030 r3+0x39C u32 0,1,2
+field 02812030 r3+0x3B8 u32 0,1,2
+field 02812030 r3+0x3BC u32 0,1,2
+field 02812030 r3+0x3D8 u32 0,1,2
+field 02812030 r3+0x3DC u32 0,1,2
+field 02812030 r3+0x3F8 u32 0,1,2
+field 02812030 r3+0x3FC u32 0,1,2
+field 02812030 r3+0x418 u32 0,1,2
+field 02812030 r3+0x41C u32 0,1,2
+field 02812030 r3+0x438 u32 0,1,2
+field 02812030 r3+0x43C u32 0,1,2
+field 02812030 r3+0x458 u32 0,1,2
+field 02812030 r3+0x45C u32 0,1,2
+field 02812030 r3+0x478 u32 0,1,2
+field 02812030 r3+0x47C u32 0,1,2
+field 02812030 r3+0x498 u32 0,1,2
+field 02812030 r3+0x49C u32 0,1,2
+field 02812030 r3+0x4B8 u32 0,1,2
+field 02812030 r3+0x4BC u32 0,1,2
+field 02812030 r3+0x4D8 u32 0,1,2
+field 02812030 r3+0x4DC u32 0,1,2
+field 02812030 r3+0x4F8 u32 0,1,2
+field 02812030 r3+0x4FC u32 0,1,2
+field 02812030 r3+0x518 u32 0,1,2
+field 02812030 r3+0x51C u32 0,1,2
+field 02812030 r3+0x538 u32 0,1,2
+field 02812030 r3+0x53C u32 0,1,2
+field 02812030 r3+0x558 u32 0,1,2
+field 02812030 r3+0x55C u32 0,1,2
+field 02812030 r3+0x578 u32 0,1,2
+field 02812030 r3+0x57C u32 0,1,2
+field 02812030 r3+0x598 u32 0,1,2
+field 02812030 r3+0x59C u32 0,1,2
+field 02812030 r3+0x5B8 u32 0,1,2
+field 02812030 r3+0x5BC u32 0,1,2
+field 02812030 r3+0x5D8 u32 0,1,2
+field 02812030 r3+0x5DC u32 0,1,2
+field 02812030 r3+0x5F8 u32 0,1,2
+field 02812030 r3+0x5FC u32 0,1,2
+field 02812030 r3+0x618 u32 0,1,2
+field 02812030 r3+0x61C u32 0,1,2
+field 02812030 r3+0x638 u32 0,1,2
+field 02812030 r3+0x63C u32 0,1,2
+field 02812030 r3+0x658 u32 0,1,2
+field 02812030 r3+0x65C u32 0,1,2
+field 02812030 r3+0x678 u32 0,1,2
+field 02812030 r3+0x67C u32 0,1,2
+field 02812030 r3+0x698 u32 0,1,2
+field 02812030 r3+0x69C u32 0,1,2
+field 02812030 r3+0x6B8 u32 0,1,2
+field 02812030 r3+0x6BC u32 0,1,2
+field 02812030 r3+0x6D8 u32 0,1,2
+field 02812030 r3+0x6DC u32 0,1,2
+field 02812030 r3+0x6F8 u32 0,1,2
+field 02812030 r3+0x6FC u32 0,1,2
+field 02812030 r3+0x718 u32 0,1,2
+field 02812030 r3+0x71C u32 0,1,2
+field 02812030 r3+0x738 u32 0,1,2
+field 02812030 r3+0x73C u32 0,1,2
+field 02812030 r3+0x758 u32 0,1,2
+field 02812030 r3+0x75C u32 0,1,2
+field 02812030 r3+0x778 u32 0,1,2
+field 02812030 r3+0x77C u32 0,1,2
+field 02812030 r3+0x798 u32 0,1,2
+field 02812030 r3+0x79C u32 0,1,2
+field 02812030 r3+0x7B8 u32 0,1,2
+field 02812030 r3+0x7BC u32 0,1,2
+field 02812030 r3+0x7D8 u32 0,1,2
+field 02812030 r3+0x7DC u32 0,1,2
+field 02812030 r3+0x7F8 u32 0,1,2
+field 02812030 r3+0x7FC u32 0,1,2
+field 02812030 r3+0x818 u32 0,1,2
+field 02812030 r3+0x81C u32 0,1,2
+field 02812030 r3+0x838 u32 0,1,2
+field 02812030 r3+0x83C u32 0,1,2
+field 02812030 r3+0x858 u32 0,1,2
+field 02812030 r3+0x85C u32 0,1,2
+field 02812030 r3+0x878 u32 0,1,2
+field 02812030 r3+0x87C u32 0,1,2
+field 02812030 r3+0x898 u32 0,1,2
+field 02812030 r3+0x89C u32 0,1,2
+field 02812030 r3+0x8B8 u32 0,1,2
+field 02812030 r3+0x8BC u32 0,1,2
+field 02812030 r3+0x8D8 u32 0,1,2
+field 02812030 r3+0x8DC u32 0,1,2
+field 02812030 r3+0x8F8 u32 0,1,2
+field 02812030 r3+0x8FC u32 0,1,2
+field 02812030 r3+0x918 u32 0,1,2
+field 02812030 r3+0x91C u32 0,1,2
+field 02812030 r3+0x938 u32 0,1,2
+field 02812030 r3+0x93C u32 0,1,2
+field 02812030 r3+0x958 u32 0,1,2
+field 02812030 r3+0x95C u32 0,1,2
+field 02812030 r3+0x978 u32 0,1,2
+field 02812030 r3+0x97C u32 0,1,2
+field 02812030 r3+0x998 u32 0,1,2
+field 02812030 r3+0x99C u32 0,1,2
+field 02812030 r3+0x9B8 u32 0,1,2
+field 02812030 r3+0x9BC u32 0,1,2
+field 02812030 r3+0x9D8 u32 0,1,2
+field 02812030 r3+0x9DC u32 0,1,2
+field 02812030 r3+0x9F8 u32 0,1,2
+field 02812030 r3+0x9FC u32 0,1,2
+field 02812030 r3+0xA18 u32 0,1,2
+field 02812030 r3+0xA1C u32 0,1,2
+field 02812030 r3+0xA38 u32 0,1,2
+field 02812030 r3+0xA3C u32 0,1,2
+field 02812030 r3+0xA58 u32 0,1,2
+field 02812030 r3+0xA5C u32 0,1,2
+field 02812030 r3+0xA78 u32 0,1,2
+field 02812030 r3+0xA7C u32 0,1,2
+field 02812030 r3+0xA98 u32 0,1,2
+field 02812030 r3+0xA9C u32 0,1,2
+field 02812030 r3+0xAB8 u32 0,1,2
+field 02812030 r3+0xABC u32 0,1,2
+field 02812030 r3+0xAD8 u32 0,1,2
+field 02812030 r3+0xADC u32 0,1,2
+field 02812030 r3+0xAF8 u32 0,1,2
+field 02812030 r3+0xAFC u32 0,1,2
+field 02812030 r3+0xB18 u32 0,1,2
+field 02812030 r3+0xB1C u32 0,1,2
+field 02812030 r3+0xB38 u32 0,1,2
+field 02812030 r3+0xB3C u32 0,1,2
+field 02812030 r3+0xB58 u32 0,1,2
+field 02812030 r3+0xB5C u32 0,1,2
+field 02812030 r3+0xB78 u32 0,1,2
+field 02812030 r3+0xB7C u32 0,1,2
+field 02812030 r3+0xB98 u32 0,1,2
+field 02812030 r3+0xB9C u32 0,1,2
+field 02812030 r3+0xBB8 u32 0,1,2
+field 02812030 r3+0xBBC u32 0,1,2
+field 02812030 r3+0xBD8 u32 0,1,2
+field 02812030 r3+0xBDC u32 0,1,2
+field 02812030 r3+0xBF8 u32 0,1,2
+field 02812030 r3+0xBFC u32 0,1,2
+field 02812030 r3+0xC18 u32 0,1,2
+field 02812030 r3+0xC1C u32 0,1,2
+field 02812030 r3+0xC38 u32 0,1,2
+field 02812030 r3+0xC3C u32 0,1,2
+field 02812030 r3+0xC58 u32 0,1,2
+field 02812030 r3+0xC5C u32 0,1,2
+field 02812030 r3+0xC78 u32 0,1,2
+field 02812030 r3+0xC7C u32 0,1,2
+field 02812030 r3+0xC98 u32 0,1,2
+field 02812030 r3+0xC9C u32 0,1,2
+field 02812030 r3+0xCB8 u32 0,1,2
+field 02812030 r3+0xCBC u32 0,1,2
+field 02812030 r3+0xCD8 u32 0,1,2
+field 02812030 r3+0xCDC u32 0,1,2
+field 02812030 r3+0xCF8 u32 0,1,2
+field 02812030 r3+0xCFC u32 0,1,2
+field 02812030 r3+0xD18 u32 0,1,2
+field 02812030 r3+0xD1C u32 0,1,2
+field 02812030 r3+0xD38 u32 0,1,2
+field 02812030 r3+0xD3C u32 0,1,2
+field 02812030 r3+0xD58 u32 0,1,2
+field 02812030 r3+0xD5C u32 0,1,2
+field 02812030 r3+0xD78 u32 0,1,2
+field 02812030 r3+0xD7C u32 0,1,2
+field 02812030 r3+0xD98 u32 0,1,2
+field 02812030 r3+0xD9C u32 0,1,2
+field 02812030 r3+0xDB8 u32 0,1,2
+field 02812030 r3+0xDBC u32 0,1,2
+field 02812030 r3+0xDD8 u32 0,1,2
+field 02812030 r3+0xDDC u32 0,1,2
+field 02812030 r3+0xDF8 u32 0,1,2
+field 02812030 r3+0xDFC u32 0,1,2
+field 02812030 r3+0xE18 u32 0,1,2
+field 02812030 r3+0xE1C u32 0,1,2
+field 02812030 r3+0xE38 u32 0,1,2
+field 02812030 r3+0xE3C u32 0,1,2
+field 02812030 r3+0xE58 u32 0,1,2
+field 02812030 r3+0xE5C u32 0,1,2
+field 02812030 r3+0xE78 u32 0,1,2
+field 02812030 r3+0xE7C u32 0,1,2
+field 02812030 r3+0xE98 u32 0,1,2
+field 02812030 r3+0xE9C u32 0,1,2
+field 02812030 r3+0xEB8 u32 0,1,2
+field 02812030 r3+0xEBC u32 0,1,2
+field 02812030 r3+0xED8 u32 0,1,2
+field 02812030 r3+0xEDC u32 0,1,2
+field 02812030 r3+0xEF8 u32 0,1,2
+field 02812030 r3+0xEFC u32 0,1,2
+field 02812030 r3+0xF18 u32 0,1,2
+field 02812030 r3+0xF1C u32 0,1,2
+field 02812030 r3+0xF38 u32 0,1,2
+field 02812030 r3+0xF3C u32 0,1,2
+field 02812030 r3+0xF58 u32 0,1,2
+field 02812030 r3+0xF5C u32 0,1,2
+field 02812030 r3+0xF78 u32 0,1,2
+field 02812030 r3+0xF7C u32 0,1,2
+field 02812030 r3+0xF98 u32 0,1,2
+field 02812030 r3+0xF9C u32 0,1,2
+field 02812030 r3+0xFB8 u32 0,1,2
+field 02812030 r3+0xFBC u32 0,1,2
+field 02812030 r3+0xFD8 u32 0,1,2
+field 02812030 r3+0xFDC u32 0,1,2
+field 02812030 r3+0xFF8 u32 0,1,2
+field 02812030 r3+0xFFC u32 0,1,2
+src wwhd_src/JSystem/JAudio/JASBankMgr.cpp
+arg! 02810E80 r3 -1,0,1,2,8,16
+arg! 02810FBC r3 -1,0,1,2,7,8,16
+field 02810FBC 104B52A4 s32 0,1,2,8,16
+arg! 02810F4C r3 0,1,65535,65536,0xffffffff
+stable 50000018 4
+stable 5000001C 4
+stable 50000038 4
+stable 5000003C 4
+stable 50000058 4
+stable 5000005C 4
+stable 50000078 4
+stable 5000007C 4
+stable 50000098 4
+stable 5000009C 4
+stable 500000B8 4
+stable 500000BC 4
+stable 500000D8 4
+stable 500000DC 4
+stable 500000F8 4
+stable 500000FC 4
+stable 50000118 4
+stable 5000011C 4
+stable 50000138 4
+stable 5000013C 4
+stable 50000158 4
+stable 5000015C 4
+stable 50000178 4
+stable 5000017C 4
+stable 50000198 4
+stable 5000019C 4
+stable 500001B8 4
+stable 500001BC 4
+stable 500001D8 4
+stable 500001DC 4
+stable 500001F8 4
+stable 500001FC 4
+stable 50000218 4
+stable 5000021C 4
+stable 50000238 4
+stable 5000023C 4
+stable 50000258 4
+stable 5000025C 4
+stable 50000278 4
+stable 5000027C 4
+stable 50000298 4
+stable 5000029C 4
+stable 500002B8 4
+stable 500002BC 4
+stable 500002D8 4
+stable 500002DC 4
+stable 500002F8 4
+stable 500002FC 4
+stable 50000318 4
+stable 5000031C 4
+stable 50000338 4
+stable 5000033C 4
+stable 50000358 4
+stable 5000035C 4
+stable 50000378 4
+stable 5000037C 4
+stable 50000398 4
+stable 5000039C 4
+stable 500003B8 4
+stable 500003BC 4
+stable 500003D8 4
+stable 500003DC 4
+stable 500003F8 4
+stable 500003FC 4
+stable 50000418 4
+stable 5000041C 4
+stable 50000438 4
+stable 5000043C 4
+stable 50000458 4
+stable 5000045C 4
+stable 50000478 4
+stable 5000047C 4
+stable 50000498 4
+stable 5000049C 4
+stable 500004B8 4
+stable 500004BC 4
+stable 500004D8 4
+stable 500004DC 4
+stable 500004F8 4
+stable 500004FC 4
+stable 50000518 4
+stable 5000051C 4
+stable 50000538 4
+stable 5000053C 4
+stable 50000558 4
+stable 5000055C 4
+stable 50000578 4
+stable 5000057C 4
+stable 50000598 4
+stable 5000059C 4
+stable 500005B8 4
+stable 500005BC 4
+stable 500005D8 4
+stable 500005DC 4
+stable 500005F8 4
+stable 500005FC 4
+stable 50000618 4
+stable 5000061C 4
+stable 50000638 4
+stable 5000063C 4
+stable 50000658 4
+stable 5000065C 4
+stable 50000678 4
+stable 5000067C 4
+stable 50000698 4
+stable 5000069C 4
+stable 500006B8 4
+stable 500006BC 4
+stable 500006D8 4
+stable 500006DC 4
+stable 500006F8 4
+stable 500006FC 4
+stable 50000718 4
+stable 5000071C 4
+stable 50000738 4
+stable 5000073C 4
+stable 50000758 4
+stable 5000075C 4
+stable 50000778 4
+stable 5000077C 4
+stable 50000798 4
+stable 5000079C 4
+stable 500007B8 4
+stable 500007BC 4
+stable 500007D8 4
+stable 500007DC 4
+stable 500007F8 4
+stable 500007FC 4
+stable 50000818 4
+stable 5000081C 4
+stable 50000838 4
+stable 5000083C 4
+stable 50000858 4
+stable 5000085C 4
+stable 50000878 4
+stable 5000087C 4
+stable 50000898 4
+stable 5000089C 4
+stable 500008B8 4
+stable 500008BC 4
+stable 500008D8 4
+stable 500008DC 4
+stable 500008F8 4
+stable 500008FC 4
+stable 50000918 4
+stable 5000091C 4
+stable 50000938 4
+stable 5000093C 4
+stable 50000958 4
+stable 5000095C 4
+stable 50000978 4
+stable 5000097C 4
+stable 50000998 4
+stable 5000099C 4
+stable 500009B8 4
+stable 500009BC 4
+stable 500009D8 4
+stable 500009DC 4
+stable 500009F8 4
+stable 500009FC 4
+stable 50000A18 4
+stable 50000A1C 4
+stable 50000A38 4
+stable 50000A3C 4
+stable 50000A58 4
+stable 50000A5C 4
+stable 50000A78 4
+stable 50000A7C 4
+stable 50000A98 4
+stable 50000A9C 4
+stable 50000AB8 4
+stable 50000ABC 4
+stable 50000AD8 4
+stable 50000ADC 4
+stable 50000AF8 4
+stable 50000AFC 4
+stable 50000B18 4
+stable 50000B1C 4
+stable 50000B38 4
+stable 50000B3C 4
+stable 50000B58 4
+stable 50000B5C 4
+stable 50000B78 4
+stable 50000B7C 4
+stable 50000B98 4
+stable 50000B9C 4
+stable 50000BB8 4
+stable 50000BBC 4
+stable 50000BD8 4
+stable 50000BDC 4
+stable 50000BF8 4
+stable 50000BFC 4
+stable 50000C18 4
+stable 50000C1C 4
+stable 50000C38 4
+stable 50000C3C 4
+stable 50000C58 4
+stable 50000C5C 4
+stable 50000C78 4
+stable 50000C7C 4
+stable 50000C98 4
+stable 50000C9C 4
+stable 50000CB8 4
+stable 50000CBC 4
+stable 50000CD8 4
+stable 50000CDC 4
+stable 50000CF8 4
+stable 50000CFC 4
+stable 50000D18 4
+stable 50000D1C 4
+stable 50000D38 4
+stable 50000D3C 4
+stable 50000D58 4
+stable 50000D5C 4
+stable 50000D78 4
+stable 50000D7C 4
+stable 50000D98 4
+stable 50000D9C 4
+stable 50000DB8 4
+stable 50000DBC 4
+stable 50000DD8 4
+stable 50000DDC 4
+stable 50000DF8 4
+stable 50000DFC 4
+stable 50000E18 4
+stable 50000E1C 4
+stable 50000E38 4
+stable 50000E3C 4
+stable 50000E58 4
+stable 50000E5C 4
+stable 50000E78 4
+stable 50000E7C 4
+stable 50000E98 4
+stable 50000E9C 4
+stable 50000EB8 4
+stable 50000EBC 4
+stable 50000ED8 4
+stable 50000EDC 4
+stable 50000EF8 4
+stable 50000EFC 4
+stable 50000F18 4
+stable 50000F1C 4
+stable 50000F38 4
+stable 50000F3C 4
+stable 50000F58 4
+stable 50000F5C 4
+stable 50000F78 4
+stable 50000F7C 4
+stable 50000F98 4
+stable 50000F9C 4
+stable 50000FB8 4
+stable 50000FBC 4
+stable 50000FD8 4
+stable 50000FDC 4
+stable 50000FF8 4
+stable 50000FFC 4
+src wwhd_src/JSystem/JAudio/JASBNKParser.cpp
+src wwhd_src/JSystem/JAudio/JASWSParser.cpp
+arg! 02811500 r3 0x52000000
+field 02811500 r3+0 s16 0,10,11,12,15
+field 02811500 r3+6 s16 0,10,11,12,15
+field 02811500 r3+12 s16 15
+src wwhd_src/JSystem/JAudio/JASHeapCtrl.cpp
+arg! 0280FBE0 r3 0,0x53000000
+src wwhd_src/JSystem/JAudio/JASThread.cpp
+arg! 0281017C r3 0x53000000
+field 0281017C r3+0 u32 0,0x5400000C
+field 0281017C 5400000C u32 0x54000000
+field 0281017C 54000018 u32 0,0x5500000C
+field 0281017C 5500000C u32 0x55000000
+field 0281017C 55000018 u32 0
+stable 53000000 4
+stable 5400000C 4
+stable 54000018 4
+stable 5500000C 4
+stable 55000018 4
+arg! 02810D34 r3 0,0x56000000
+arg! 02810D34 r5 0,1,31,32,33,4096
+arg! 02810D34 r6 0,1,2,8
+arg! 02810D34 r8 0,1,2,3,0xffffffff
+src wwhd_src/JSystem/JAudio/JASSystemHeap.cpp
+arg! 028102C0 r3 0,0x57000000
+arg! 02810374 r5 -1,0,1,2,4
+src wwhd_src/JSystem/JAudio/JASResArcLoader.cpp
+callee C0009FC8 r4=16
+callee C0009ED0 r4=out16
+callee C0009D58 r3=out60 r4=out16
+callee 02810AA4 r5=16
+arg! 02810670 r3 0x58000000
+field 02810670 r3+4 u16 0,1,2,65535
+# was `field 02810670 r3+0 -> 0 u32 0,1,2,65536`: `->` is not field syntax; the line wrote 0 bytes (strict spec parser 2026-10-27).
+# Intent (the u32 at *(r3+0)+0) needs a nested field or mockfield form
+ret C0009ED0 0,1
+src wwhd_src/JSystem/JAudio/JASDvdThread_strings.cpp
+src wwhd_src/JSystem/JAudio/JASTaskThread.cpp
+arg! 028108A4 r3 0,0x59000000
+arg! 02810944 r6 0,1,16,1016,1017,1024,0xffffffff
+callee C0009FC8 r4=16
+src wwhd_src/JSystem/JAudio/JASWaveArcLoader.cpp
+arg! 02812668 r3 0,0x5A000000
+arg! 02812780 r3 0x5A000000
+field 02812780 r3+0x6C u32 0x5B000000
+fieldstr 02812780 r4+0 32 "test.aw","a",""
+fieldstr 02812780 101F9E28 64 "/Banks/","","x/"
+arg! 02812BEC r3 0x5C000000
+fieldstr 02812BEC 5C000000 32 "/Banks/","","x","x/"
+real 028F040C
+# Bounded message-block topology; payload/state words remain generated.
+ret! 02810648 0x5D000000
+field * 5D000000 u32 0,0x5E000000
+field * 5E000000 u32 0,0x5F000000
+field * 5F000000 u32 0
+stable 5D000000 4
+stable 5E000000 4
+stable 5F000000 4
+ret 02810944 0,0x5E00000C,0x5E000020,0x5F000010,0x5D000100
+src wwhd_src/JSystem/JAudio/JASDvdThread_extra.cpp
+arg! 0280F3DC r3 0,0x5A100000
+field 0280F3DC 101F9D70 u32 0,0x5A100000
+arg! 0280F4A0 r3 0,0x5A200000
+field 0280FA60 r3+0x6C u8 0,1,255
+field 0280FB30 r3+0x6C u8 0,1,255
+# One complete iteration and the backedge of the nonreturning task thread.
+stopat 02810B9C C0009ED0 2
+mockfield C0009ED0 r4+0 u32 0,1,2,3,3,3,0x5E00000C,0x5E000020,0x5F000010,0x5D000100
+src wwhd_src/JSystem/JAudio/JASRate.cpp
+src wwhd_src/JSystem/JAudio/JASDSPBuf.cpp
+arg! 0281361C r4 0,1,2,3,8
+field 0281361C 101F9EB8 u8 0,1,2,3,4
+field 0281361C 104B539C u32 0,1,2,3
+field 0281361C 104B53A0 u32 0,1,2,3
+field 02813980 101F9EE8 u32 0,1,2,3
+# Timing history indexes span the configured seven subframes.
+field 028137E0 101F9EA4 u32 7
+field 028137E0 101F9F08 u32 0,1,2,3,4,5,6,7
+src wwhd_src/JSystem/JAudio/JASAudioThread.cpp
+arg! 02813AE0 r3 0,0x5A300000
+callee 02844088 r4=8
+# Read-only synthetic WS image, with zero, one or two groups/waves.
+arg! 02812F0C r3 0x60000000
+arg! 02813150 r3 0x60000000
+stable 60000000 0x2000
+field * 60000010 u32 0x300
+field * 60000014 u32 0x100
+field * 60000108 u32 0,1,2
+field * 6000010C u32 0x200
+field * 60000110 u32 0x240
+field * 6000020C u32 0x500
+field * 6000024C u32 0x540
+field * 60000308 u32 0x400
+field * 6000030C u32 0x400
+field * 60000504 u32 0,1,2
+field * 60000544 u32 0,1,2
+field * 60000508 u32 0x700
+field * 6000050C u32 0x720
+field * 60000548 u32 0x700
+field * 6000054C u32 0x720
+field * 60000474 u32 0x800
+field * 60000478 u32 0x840
+field * 60000702 u16 0,1,10,65535
+field * 60000722 u16 0,1,10,65535
+real 0281338C 028133A0 028133B4 028133C8 028133DC 028133F0 02813404
+callee 02844EFC r6=40
+callee 02845150 r5=40
+
+# BNK input records are immutable serialized offsets; bound each serialized count.
+arg! 02811518 r3 0x61000000
+fill 02811518 61000000 0x4000 0
+stable 61000000 0x4000
+field 02811518 61000024 u32 0,0x1000
+field 02811518 61000028 u32 0,0x1000
+field 02811518 610003B4 u32 0,0x2000
+field 02811518 61001010 u32 0,0x1100
+field 02811518 61001014 u32 0,0x1100
+field 02811518 61001018 u32 0,0x1200
+field 02811518 6100101C u32 0,0x1200
+field 02811518 61001020 u32 0,0x1300
+field 02811518 61001024 u32 0,0x1300
+field 02811518 61001028 u32 0,1,2
+field 02811518 6100102C u32 0x1400
+field 02811518 61001030 u32 0x1400
+field 02811518 61001108 u32 0,0x1800
+field 02811518 6100110C u32 0,0x1800
+field 02811518 61001404 u32 0,1,2
+field 02811518 61001408 u32 0x1500
+field 02811518 6100140C u32 0x1500
+field 02811518 61001800 s16 11,15
+field 02811518 61002000 u32 0,0x50455232
+field 02811518 61002088 u32 0,0x3000
+field 02811518 6100208C u32 0,0x3000
+field 02811518 61003008 u32 0,0x1200
+field 02811518 6100300C u32 0,0x1200
+field 02811518 61003010 u32 0,1,2
+field 02811518 61003014 u32 0x1500
+field 02811518 61003018 u32 0x1500
+real 02811F6C 02811F80 02811F94 02811FA8 02811FBC 02811FD0 02811FE4 02811FF8 0281200C 02811500
+
+# Allocation scans a valid acyclic two-child heap topology; payload addresses remain varied.
+arg! 0280FF88 r3 0x64300000
+arg! 0280FF88 r4 0x64000000
+field 0280FF88 r3+0x4C u32 0,0,0,1
+field 0280FF88 64000000 u32 0,0x6410000C
+field 0280FF88 6400004C u32 0,0x1000,0x80000000,0xFFFFFFC0
+field 0280FF88 6410000C u32 0x64100000
+field 0280FF88 64100018 u32 0,0x6420000C
+field 0280FF88 6420000C u32 0x64200000
+field 0280FF88 64200018 u32 0
+stable 64000000 4
+stable 6410000C 4
+stable 64100018 4
+stable 6420000C 4
+stable 64200018 4
+
+# Distinct serialized BNK values exercise every copied field independently.
+field 02811518 61001008 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 6100100C f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001104 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001110 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001114 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001204 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001208 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001304 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001308 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001508 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 6100150C f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61003000 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61003004 f32 -1,0,0.25,0.5,1,2,127
+field 02811518 61001100 u8 0,1,5,60,127,255
+field 02811518 61001200 u8 0,1,5,60,127,255
+field 02811518 61001300 u8 0,1,5,60,127,255
+field 02811518 61001400 u8 0,1,5,60,127,255
+field 02811518 61001500 u8 0,1,5,60,127,255
+field 02811518 61001301 u8 0,1,2,3,255
+field 02811518 61001302 u8 0,1,60,127,255
+field 02811518 61001504 u32 0,1,65535,65536,4294967295
+field 02811518 61002288 s8 -128,-1,0,1,127
+field 02811518 61002289 s8 -128,-1,0,1,127
+field 02811518 61002308 u16 0,1,255,65535
+field 02811518 6100230A u16 0,1,255,65535
+
+# Previously parsed oscillator lookup: actual bank/inst virtual targets with full result records.
+ret! 028441B0 0,0x65000000
+ret! 02844200 0,0x65000200
+field * 65000004 u32 0x65000100
+field * 65000114 u32 0x02844200
+field * 65000200 u32 0x65000300
+field * 65000314 u32 0x02812030
+field * 65000A00 u32 0,0x65000B00
+field * 65000A04 u32 0,0x65000C00
+stable 65000000 0x800
+stable 65000A00 8
+callee 02812030 r6=inout40
+mockfield 02812030 r6+8 u32 0x65000A00
+mockfield 02812030 r6+0xC u32 0,1,2
+mockfield 02812030 r6+0x24 u8 0,1
+
+# Message state edges in the driver loop.
+field 02813C84 101F9F11 u8 0,1
+field 02813C84 101F9F08 u32 0,1,2
+# Full/reset frame and callback alternatives; mixDSP has the PCM callback signature.
+field 028138A8 104B539C u32 0,1,2,3
+field 028138A8 104B53A0 u32 0,1,2,3
+field 028138A8 101F9EB8 u8 1,2,3,4
+field 028138A8 101F9EA0 u32 0,0x0281361C
+field 02813980 101F9EA8 u32 0,0x68000000
+field 02813980 101F9EAC u32 0,0x0281361C
+# Reuse an exhausted message block with no outstanding references.
+field 02810944 5E000004 u32 0,1,512,1020,1024,4294967295
+field 02810944 5E000008 u32 0,1,2
+# Tail unlink with and without a preceding sibling.
+field 0281017C 53000010 u32 0,0x66000000
+field 0281017C 53000014 u32 0,0x6700000C
+field 0281017C 6600000C u32 0x66000000
+field 0281017C 66000054 u32 0x53000000
+field 0281017C 6700000C u32 0x67000000
+stable 53000010 8
+stable 6600000C 4
+stable 66000054 4
+stable 6700000C 4
+
+# HD ExpHeap's actual total-free-size virtual slot; no unrelated callback signature.
+ret! 0284416C 0x69000000
+ret! 028452A4 0x69000000
+field * 6900000C u32 0x69000100
+field * 69000174 u32 0x0275456C
+stable 6900000C 4
+stable 69000174 4
+
+# Wave archive setup success: requested generation matches the loaded generation.
+arg! 02812834 r4 0,1
+field 02812834 r3+0x68 u32 0,1
+field 02812834 r3+0x60 u32 0,1,2
+
+# Cross-build save states (2026-11-03): the JAudio threads (task, audio) wait in their
+# run loops' receives below JASThread_entry. Frames (footprint) and, at every wait, the original's
+# return address, r14..r31 / f14..f31 and the whole frame (framexact). JASThread_entry has no frame and
+# tail-branches: run starts at the entry sp with the entry LR (the harness's 0BADC0DE).
+footprint 02810D20 0
+framexact 02810D20 0BADC0DE
+footprint 02810B9C 0x30
+framexact 02810B9C 02810BF4
+footprint 02813C84 0x38
+framexact 02813C84 02813D7C
+framexact 02813C84 02813DA8
+framexact 02813C84 02813E00
+framexact 02813C84 02813E44
+framexact 02813C84 02813E9C

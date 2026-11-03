@@ -1,0 +1,77 @@
+# ModelDataPipeline_l::bindMaterialSources 027F70D8 on the state the original 027F7B50 hands it at 027F7D34 for the
+# shipped Kn.bfres model "kn" (2 materials, 2 shapes, 8 variants) with its 026031D0 record 0x7200042C and the real heap.
+# Prefix replay of 027F7B50 with the original routines:
+#   0273B050(0x4C, heap, 4) (027F7B78) -> pipeline D; 027F5A5C(D, FMDL, heap) (027F7C44); 028010F8(D+0x14, record,
+#   heap) (027F7C54); heap vtable +0x34 = 02753D6C(heap, 8*0x1DC, 4) (027F7C94) -> stored at D+0x28 as
+#   `stw r27,0x28(r30)` 027F7CE0 does; 02774320 on each variant (027F7CC4); 0277445C on each (027F7D10).
+#   The one plain non-zero store left, mVariantCount at D+0x24 (`stw r26,0x24(r30)` 027F7CE4, value shapeCount<<2 from
+#   the rlwinm at 027F7C60 = 8 on Kn), is a poke with that value; the full real 027F7B50 run on the same input
+#   (lib2_j3d_hdrew_1_factory_kn -trace 1000003) writes the same 8. The zero stores of 027F7B50
+#   (027F7B8C..027F7C34 and +0x1D8 at 027F7CC8) land on bytes that are already 0 (fresh blocks of the zero-filled
+#   world heap; -watch evidence in the factory helper's results).
+# D = 0x6A8A8420 and the variant array 0x6A8ABD44 are deterministic (same allocation sequence as the full run).
+# Base: the toon companion (Kn archive registered through the original 02604EB4; record 026031D0(0x720003F8, 0)).
+# Archive object reuse: the Kn and St registrations of the base rebuild the one
+# SharcArchiveRes at 0x58100000 that the harness lookup 026123FC answers. Proof: -watch n1000 s1/s7 of 0x58100000:0x44 and
+# of the System/Kn registration records (res 7200022C/720003F8 +0x24, resinfo 72000250/72001A00 +0x8C) on this spec and
+# on lib2_j3d_hdrew_1_factory_kn_apply_m1 (factory helper evidence factory/watch/reuse/); the base's own proof is
+# in the toon companion header.
+# verify: -only 027F70D8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_misc_50f8_toon.txt
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+setup * 0273B050 r3=0x4C r4=0x6A000000 r5=4
+setup * 027F5A5C r3=0x6A8A8420 r4=0x58220124 r5=0x6A000000
+setup * 028010F8 r3=0x6A8A8434 r4=0x7200042C r5=0x6A000000
+setup * 02753D6C r3=0x6A000000 r4=0xEE0 r5=4 ->0x6A8A8448
+setup * 02774320 r3=0x6A8ABD44
+setup * 02774320 r3=0x6A8ABF20
+setup * 02774320 r3=0x6A8AC0FC
+setup * 02774320 r3=0x6A8AC2D8
+setup * 02774320 r3=0x6A8AC4B4
+setup * 02774320 r3=0x6A8AC690
+setup * 02774320 r3=0x6A8AC86C
+setup * 02774320 r3=0x6A8ACA48
+setup * 0277445C r3=0x6A8ABD44 r4=0x6A000000
+setup * 0277445C r3=0x6A8ABF20 r4=0x6A000000
+setup * 0277445C r3=0x6A8AC0FC r4=0x6A000000
+setup * 0277445C r3=0x6A8AC2D8 r4=0x6A000000
+setup * 0277445C r3=0x6A8AC4B4 r4=0x6A000000
+setup * 0277445C r3=0x6A8AC690 r4=0x6A000000
+setup * 0277445C r3=0x6A8AC86C r4=0x6A000000
+setup * 0277445C r3=0x6A8ACA48 r4=0x6A000000
+poke * 6A8A8444 u32 8
+arg! 027F70D8 r3 0x6A8A8420
+arg! 027F70D8 r4 0x6A8A8434
+arg! 027F70D8 r5 0x6A000000

@@ -1,0 +1,21 @@
+# UNEXECUTED: explicit direct-data/empty-hook consumed-record fixture.
+# This25-function subset does not substitute for the other30 unit functions.
+# Caller owns bounded input records; no virtual dispatch or foreign owner lifecycle is exercised.
+# verify: -strictnan -calleesp -only 027791A8,027791AC,027791B0,027793B4,027793B8,027793C0,027793C8,027793D0,027793D8,027793E0,027793E8,027793F0,027793F8,02779400,02779408,02779410,02779418,02779420,02779428,02779430,02779438,02779440,0277945C,027794D4,027794DC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+# Complete largest directly consumed prefix (ControlPrefix88B; other types <=28B).
+fill * 56000000 92 0
+# Safe mutable text buffer: capacity1..128 in complete128B caller-owned storage.
+field 027791B0 56000000 u32 0x56100000
+field 027791B0 56000008 u32 1,2,16,128
+fill 027791B0 56100000 128 165
+final 027791B0 56100000 80
+# A complete borrowed reference→record graph; equality and inequality both steerable.
+arg! 02779440 r4 0x56200000
+field 02779440 56200000 u32 0x56200100
+field 02779440 56200100 u32 0
+field 02779440 56200104 u32 0,1,2,0xFFFFFFFF,0x01234567
+field 02779440 56000054 u32 0,1,2,0xFFFFFFFF,0x01234567

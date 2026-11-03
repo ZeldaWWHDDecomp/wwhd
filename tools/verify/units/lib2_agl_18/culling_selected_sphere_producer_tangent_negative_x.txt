@@ -1,0 +1,14 @@
+# Caller-valid opposite-side tangent companion for 027CF8DC. The cull volume,
+# planes and transforms remain original-produced. This mirrors the accepted
+# positive-X tangent point so the opposite generated side plane is the equality
+# plane while the other three side tests remain interior.
+# verify: -only 027CF8DC -strictnan -calleesp
+include lib2_agl_18/culling_selected_sphere_producer_tangent.txt
+poke * 58200008 u32 0xBFD8EA94
+poke * 5820000C f32 0
+poke * 58200010 f32 499
+poke * 58200014 f32 1
+poke * 58200108 u32 0xBFD8EA94
+poke * 5820010C f32 0
+poke * 58200110 f32 499
+poke * 58200114 f32 1

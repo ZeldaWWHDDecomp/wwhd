@@ -1,0 +1,5 @@
+# verify: -strictnan -calleesp -footprint -only 02794970
+# Type-domain companion: zero-byte display lists retain the direct-bind fallback arm.
+# The shipped ShaderMgr profile records nonzero lists; this override is confined to this companion.
+include lib2_agl_8_primary_pass_world_alt.txt
+mockdisplaylist C0006090 C0006190 C0006218

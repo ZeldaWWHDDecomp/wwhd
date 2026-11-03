@@ -1,0 +1,38 @@
+# verify: -strictnan -calleesp -only 02794970
+# Lead02:04 read-only GX2Texture inputs: real original constructors/copyTexture producers preserved.
+# Includes every existing observation. Native register output +88..9B remains unprotected by these added ranges.
+include lib2_agl_8_mode0_primary_sampler_consumed_group.txt
+# Effect embedded sampler0: NativeTexture descriptor/view/compSel only.
+stable 0x58000F0C 0x88
+# Effect embedded sampler1: NativeTexture descriptor/view/compSel only.
+stable 0x580010A4 0x88
+# Effect embedded sampler2: NativeTexture descriptor/view/compSel only.
+stable 0x5800123C 0x88
+# Effect embedded sampler3: NativeTexture descriptor/view/compSel only.
+stable 0x580013D4 0x88
+# Effect embedded sampler4: NativeTexture descriptor/view/compSel only.
+stable 0x5800156C 0x88
+# Effect embedded sampler5: NativeTexture descriptor/view/compSel only.
+stable 0x58001704 0x88
+# Effect embedded sampler6: NativeTexture descriptor/view/compSel only.
+stable 0x5800189C 0x88
+# Effect embedded sampler7: NativeTexture descriptor/view/compSel only.
+stable 0x58001A34 0x88
+# Effect embedded sampler8: NativeTexture descriptor/view/compSel only.
+stable 0x58001BCC 0x88
+# Effect embedded sampler9: NativeTexture descriptor/view/compSel only.
+stable 0x58001D64 0x88
+# Effect embedded sampler10: NativeTexture descriptor/view/compSel only.
+stable 0x58001EFC 0x88
+# Effect embedded sampler11: NativeTexture descriptor/view/compSel only.
+stable 0x58002094 0x88
+# Effect embedded sampler12: NativeTexture descriptor/view/compSel only.
+stable 0x5800222C 0x88
+# Effect embedded sampler13: NativeTexture descriptor/view/compSel only.
+stable 0x580023C4 0x88
+# Effect embedded sampler14: NativeTexture descriptor/view/compSel only.
+stable 0x5800255C 0x88
+# Effect embedded sampler15: NativeTexture descriptor/view/compSel only.
+stable 0x580026F4 0x88
+# Program sampler caches observed in root6A arena already inherit shared/agl_world.txt stable6A000000+01000000.
+# No guessed program-array count or unobserved address is added; explicit precise cache list awaits original producer evidence.

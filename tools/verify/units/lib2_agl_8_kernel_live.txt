@@ -1,0 +1,24 @@
+# verify: -strictnan -calleesp -footprint -only 02793908
+# Complete285C effect, validpositive sample pairs/resolution, original pure trig and array drivers.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+arg! 02793908 r3 0x58000000
+arg! 02793908 r4 2,4,8
+fill 02793908 0x58000000 0x285C 0
+field 02793908 r3+0x2858 s32 1,3,9
+real 028EFFD0
+real 028EFE58
+real 02795EB4
+real 028F4BE0
+real 028F43F8
+real 028F5E98

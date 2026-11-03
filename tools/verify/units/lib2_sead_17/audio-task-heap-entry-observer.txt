@@ -1,0 +1,24 @@
+# A bounded opaque derived heap owns AudioTask at +0x100 within its 0x200-byte storage.
+# Its allocation callback may inspect the contained task label. The real allocation
+# wrapper forwards this storage unchanged; lift that transitive callback input to
+# its entry because nested callback observations are not collected by the harness.
+# This describes the explicit fixture callback, not a game allocator footprint.
+# verify: -only 02761004 -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+real 0273AD10
+observe 0273AD10 601401CC 4
+callee 0F010070 fixture r3=heap512 r4=0 r5=0
+ret! 0F010070 0
+ret! 02756140 0x60140000
+arg! 02761004 r3 0x60140100
+arg! 02761004 r4 0x6014D000
+field * 101F8B4C u32 0x6014E000
+field * 6014000C u32 0x60142000
+field * 60142034 u32 0x0F010070
+field * 601401CC u32 0x60143000
+stable 60140000 0x200
+stable 60142000 0x38
+stable 60143000 8
+stable 6014D000 12
+stable 6014E000 0x200

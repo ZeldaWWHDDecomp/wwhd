@@ -1,0 +1,10 @@
+# SHARED FRAGMENT (include only, after shared/agl_world.txt; before any setup that reaches the GraphicsDevice).
+# J3D-HDREW#1 the world's GraphicsDevice singleton words, set during setup instead
+# of by the world's trailing pokes, so original setups (e.g. shader/archive registration via 0274FBF8) see them.
+# Publisher: shared/agl_world.txt constructs the device at 0x5D300000 with the original 0274FB24 (+ 028EFFD0 for
+# +0x60); the derived Cafe device constructor (which would store the vtable word 5D30000C = 0x101456CC and the
+# singleton *101F8B18) is not run in the world (its "Gaps" note). Same values as the world's pokes, handed to `->` by
+# the identity routine 027E2DC0 (a single blr).
+real 027E2DC0
+setup * 027E2DC0 r3=0x101456CC ->0x5D30000C
+setup * 027E2DC0 r3=0x5D300000 ->0x101F8B18

@@ -1,0 +1,110 @@
+# AGL#19 main spec part: jobs group (included by lib2_agl_19.txt). Per-function lines only (no unit-global
+# directives). Receivers and arguments come from the callers' domains; nested calls are answered by the harness.
+# The producer-built profiles are the companions lib2_agl_19_jobs_*.txt (gate manifest in the archive).
+src wwhd_src/agl/RenderPointerStorage.cpp
+src wwhd_src/agl/ProjectionWorkspace.cpp
+src wwhd_src/agl/RenderJobOrder.cpp
+src wwhd_src/agl/RenderJobExecution.cpp
+
+# ---- render pointer arrays (AGL#19's copies of the sead::PointerBuffer methods) ----
+# 027D78FC: only from allocateStorage, with a positive capacity and the allocator's result (NULL on OOM)
+arg! 027D78FC r3 0x5E100000
+arg! 027D78FC r4 1,8,10,16,40
+arg! 027D78FC r5 0,0x5E101000
+# 027D7920: the view initializer's capacities (2*pending+8, the submitted-command capacity), heap and alignment 4
+arg! 027D7920 r3 0x5E100000
+arg! 027D7920 r4 8,10,16,40,0x48
+arg! 027D7920 r5 0x6A000000,0
+arg! 027D7920 r6 4
+# 027D7978: an array the initializer allocated (storage set, count <= capacity) or whose allocation failed
+arg! 027D7978 r3 0x5E100000
+field 027D7978 0x5E100000 s32 0,1,5,8
+field 027D7978 0x5E100004 s32 8,16
+field 027D7978 0x5E100008 u32 0,0x5E101000
+# 027D79C0: removePending 027D650C erases the entry it found (first < count, length 1)
+arg! 027D79C0 r3 0x5E100000
+field 027D79C0 0x5E100000 s32 4,5,8
+field 027D79C0 0x5E100004 s32 8
+field 027D79C0 0x5E100008 u32 0x5E101000
+arg! 027D79C0 r4 0,1,2,3
+arg! 027D79C0 r5 1
+# 027D7A4C: a job queue (collectJobs buffer, 2..8 job pointers) sorted with compareRenderJobs; the comparator's
+# answers are the harness's (the producer-built ordering is lib2_agl_19_jobs_priority_sort)
+arg! 027D7A4C r3 0x5E100000
+field 027D7A4C 0x5E100000 s32 2,3,4,5,6,8
+field 027D7A4C 0x5E100004 s32 0x100
+field 027D7A4C 0x5E100008 u32 0x5E101000
+field 027D7A4C 0x5E101000 u32 0x5E200000
+field 027D7A4C 0x5E101004 u32 0x5E20001C
+field 027D7A4C 0x5E101008 u32 0x5E200038
+field 027D7A4C 0x5E10100C u32 0x5E200054
+field 027D7A4C 0x5E101010 u32 0x5E200070
+field 027D7A4C 0x5E101014 u32 0x5E20008C
+field 027D7A4C 0x5E101018 u32 0x5E2000A8
+field 027D7A4C 0x5E10101C u32 0x5E2000C4
+arg! 027D7A4C r4 0x027D76D4
+
+# ---- render jobs (constructed images: name "", text vtable 1016C180, job table 1016C360) ----
+arg! 027D5E5C r3 0x5E200000,0x5E20001C
+arg! 027D6070 r3 0x5E200000
+arg! 027D6070 r4 0,1,2,3
+arg! 027D6070 r5 0x5E300000
+# 027D76B8 / 027D76D4: jobs with no owner or a layer whose render state is one of the shipped {0, 50, 100}
+arg! 027D76B8 r3 0x5E200000
+field 027D76B8 0x5E200018 u32 0,0x5E500000
+field 027D76B8 0x5E50005C u32 0,50,100
+arg! 027D76D4 r3 0x5E200000
+arg! 027D76D4 r4 0x5E20001C
+# 027D7270: a constructed draw job (kind 0, frame 0x5E300000) into the collectJobs buffer or executed inline
+arg! 027D7270 r3 0x5E200000
+field 027D7270 0x5E200000 u32 0x1016C2B0
+field 027D7270 0x5E200004 u32 0x1016C180
+field 027D7270 0x5E200008 u8 0
+field 027D7270 0x5E20000C u32 0x1016C360
+field 027D7270 0x5E200010 u32 0
+field 027D7270 0x5E200014 u32 0x5E300000
+arg! 027D7270 r4 0x5E100000,0
+field 027D7270 0x5E100000 s32 0,1,2,15
+field 027D7270 0x5E100004 s32 0x100
+field 027D7270 0x5E100008 u32 0x5E101000
+arg! 027D7270 r5 0,0x5E500000
+# 027D7498: the frame destructor's flags (2)
+arg! 027D7498 r3 0x5E200000
+arg! 027D7498 r4 2
+# 027D74AC: a configured job of each kind on a frame whose command pool is 0x5E600000; draw/GPUCalc owners carry
+# their manager slot index (0..13)
+arg! 027D74AC r3 0x5E200000
+field 027D74AC 0x5E200010 u32 0,1,2,3
+field 027D74AC 0x5E200014 u32 0x5E300000
+field 027D74AC 0x5E200018 u32 0x5E500000
+field 027D74AC 0x5E300740 u32 0x5E600000
+field 027D74AC 0x5E500058 u32 0,1,7,13
+
+# ---- projection polygon workspace (allocation, acquire and reset on producer state: _jobs_geometry_workspace) ----
+arg! 027D7D94 r3 0x5E400000,0x5E40000C
+arg! 027D7E04 r3 0x5E400000
+# allocation on a sead::ExpHeap (object table 101459E0: +0x34 = 02753D6C, answered by the harness)
+arg! 027D7D40 r3 0x5E400000
+arg! 027D7D40 r4 0x5E700000
+field 027D7D40 0x5E70000C u32 0x101459E0
+arg! 027D7BE4 r3 0x5E400000,0x5E40000C
+arg! 027D7BE4 r4 0x5E700000
+field 027D7BE4 0x5E70000C u32 0x101459E0
+field 027D7BE4 0x5E400000 u32 0
+field 027D7BE4 0x5E400004 u32 0
+# acquire: a group of 16 allocated lists, 0..16 already taken this pass
+arg! 027D7EA8 r3 0x5E400000
+field 027D7EA8 0x5E400000 u32 16
+field 027D7EA8 0x5E400004 u32 0x5E410000
+field 027D7EA8 0x5E400008 s32 0,1,5,15,16
+field 027D7EA8 0x5E410000 u32 0x5E420000
+field 027D7EA8 0x5E410004 u32 0x5E420010
+field 027D7EA8 0x5E410014 u32 0x5E420020
+field 027D7EA8 0x5E41003C u32 0x5E420030
+field 027D7EA8 0x5E420000 u32 16
+field 027D7EA8 0x5E420010 u32 16
+field 027D7EA8 0x5E420020 u32 16
+field 027D7EA8 0x5E420030 u32 16
+# reset: active set 0/1; the slot acquires are answered by the harness (lists of 16 points)
+arg! 027D7F44 r3 0x5E400000
+field 027D7F44 0x5E400024 u32 0,1

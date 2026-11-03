@@ -1,0 +1,572 @@
+# verify: -strictnan -only 02794970 -noclobber
+# Caller-visible reconfirmation of lib2_agl_8_mode0_primary_sampler_consumed_group: the same profile, expanded, without the
+# footprint/-calleesp frame checks, so a difference is a return value, a store outside the frame or a call (args, pointees);
+# -noclobber: non-clobber inputs.
+# Batch companion: real sampler consumer plus exact defined native inputs consumed by GX2InitTextureRegs.
+# Preserve validated producer/consumer specs unchanged; native SDK output registers and padding stay unobserved.
+# >>> include lib2_agl_8_mode0_primary_sampler_consumer_group.txt
+# Additional real sampler consumer; preserve all validated producer specs unchanged.
+# >>> include lib2_agl_8_mode0_primary_owner_pairs_cached_group.txt
+# Produce the fixed9-pair kernel in the cached original setup; vary only public resource inputs afterward.
+# initializeSsaoKernel reads the pair count and resolution, independently of blur/rotation/attenuation controls.
+# >>> include lib2_agl_8_mode0_primary_owner_controls_api_group.txt
+# Preserve complete uniform observation and original history; protect only nonescaping owner fields.
+# >>> include lib2_agl_8_mode0_ssao_observed_group.txt
+# Observe each complete SSAO register-uniform input at its exact 4*wordCount byte extent.
+# Sample-pair count is clamped1..9, so the largest kernel upload is144 bytes; the model upload is64.
+# >>> include lib2_agl_8_mode0_render_filter_group.txt
+# Combined render/filter function group on original-produced effect, target-set, frame and depth-map lifetimes.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+# >>> include shared/agl_world.txt for 02794970 0279515C 02796F74
+# Shared agl "world" fixture: `include shared/agl_world.txt` in a unit spec.
+# Everything below is produced by the ORIGINAL code (setup lines run the recompiled originals); no candidate source is
+# needed for the world itself. The including spec supplies its `src` lines, its tested function, `setupsnapshot`
+# (recommended: the ShaderMgr/SARC parse costs seconds per run) and its own objects outside the reserved ranges.
+#
+# Reserved addresses (do not steer, fill or allocate here in an including spec):
+#   0x6A000000-0x6AFFFFFF  root heap arena (16 MB, sead ExpHeap made by 02755FE0); all world objects live in it
+#   0x6B000000-0x6B000FFF  ShaderMgr/archive object (0275E11C/0275D21C)
+#   0x6C000000-0x6D019E1D  SARC blob content/Cafe/Common/agl_resource_cafe_dev.sarc (read-only)
+#   0x6E200000-0x6E20000B  root arena record {start, size, 0} handed to 02755FE0
+#   0x5D300000-0x5D30015F  GraphicsDevice block (0274FB24 + 028EFFD0), *101F8B18 = 0x5D300000 after the pokes
+#   0x70000000-0x71FFFFFF  GPU memory ranges given to the texture cache (0279F474 r5..r8; not dereferenced at setup)
+#   0x7EFE7000-0x7EFF6FFF  setup stack window (filled 0 so setup frames are input-independent)
+#   0x104A0934 (0x18)      default axes table (02757190), kept stable
+#   0x101F8C24 (0x100)     mocklookup 02786348 table
+#
+# Globals after setup (all pointers into the root heap unless noted):
+#   101F8B94/101F8DD4.. see the field lines; registry: root heap 0x6A000000 (02756140 answers it in nested calls);
+#   101F8C14 sGraphicsAccessManager-side child heap holder (027854AC/027855BC); 101F8D6C ShaderMgr owner (02786418);
+#   101F8DD4 dynamic texture cache (AGL#10, 0279F2EC + 0279F474 ranges); 101F8DDC 027A0A80 singleton;
+#   101F8DE4 resource provider (027A145C + 027A5DF0 shapes); 101F8DEC default texture (027A76C8 + 027A78F8);
+#   101F8B18 GraphicsDevice (0x5D300000); 104DA130 __register_global_object list head (starts empty).
+#
+# Mock models used by the world (also active for the tested function): mockdisplaylist / mockretfield (GX2 queries),
+# mocksurfacesize C00060D0, mockset C0009990, mockmove C0009988/028FDC00, mocklookup 02786348, mockfetchsize/init,
+# nestedret C0009BB0 0 (core 0 pin), nestedret 028FDE28 0, nestedret 02756140 0x6A000000.
+# NOTE: `real` lines are global: a tested function that calls one of the listed originals reaches the original.
+# A spec that needs one of them mocked or modelled must not include this world (or must qualify the difference).
+#
+# Gaps (not original-produced): the GraphicsDevice derived vtable word (5D30000C = 0x101456CC) and the device
+# singleton word (101F8B18) are pokes, because the derived Cafe device constructor is not run here.
+
+callbudget 10000000
+accessbudget 50000000
+stackfill
+
+# ---- 1. registry / root heap ----
+field 02794970 0x101F8B94 u32 0
+field 0279515C 0x101F8B94 u32 0
+field 02796F74 0x101F8B94 u32 0
+field 02794970 0x104DA130 u32 0
+field 0279515C 0x104DA130 u32 0
+field 02796F74 0x104DA130 u32 0
+field 02794970 0x101F8B34 u32 0
+field 0279515C 0x101F8B34 u32 0
+field 02796F74 0x101F8B34 u32 0
+field 02794970 0x101F8B40 u32 0
+field 0279515C 0x101F8B40 u32 0
+field 02796F74 0x101F8B40 u32 0
+field 02794970 0x101F8B4C u32 0
+field 0279515C 0x101F8B4C u32 0
+field 02796F74 0x101F8B4C u32 0
+field 02794970 0x101F8C14 u32 0
+field 0279515C 0x101F8C14 u32 0
+field 02796F74 0x101F8C14 u32 0
+field 02794970 0x101F8D6C u32 0
+field 0279515C 0x101F8D6C u32 0
+field 02796F74 0x101F8D6C u32 0
+field 02794970 0x101F8D70 u32 0
+field 0279515C 0x101F8D70 u32 0
+field 02796F74 0x101F8D70 u32 0
+field 02794970 0x101F8DD4 u32 0
+field 0279515C 0x101F8DD4 u32 0
+field 02796F74 0x101F8DD4 u32 0
+field 02794970 0x101F8DDC u32 0
+field 0279515C 0x101F8DDC u32 0
+field 02796F74 0x101F8DDC u32 0
+field 02794970 0x101F8DE4 u32 0
+field 0279515C 0x101F8DE4 u32 0
+field 02796F74 0x101F8DE4 u32 0
+field 02794970 0x101F8DE8 u32 0
+field 0279515C 0x101F8DE8 u32 0
+field 02796F74 0x101F8DE8 u32 0
+field 02794970 0x101F8DEC u32 0
+field 0279515C 0x101F8DEC u32 0
+field 02796F74 0x101F8DEC u32 0
+field 02794970 0x101F8E04 u32 0
+field 0279515C 0x101F8E04 u32 0
+field 02796F74 0x101F8E04 u32 0
+field 02794970 0x101F8E08 u32 0
+field 0279515C 0x101F8E08 u32 0
+field 02796F74 0x101F8E08 u32 0
+field 02794970 0x101F95F8 u32 0
+field 0279515C 0x101F95F8 u32 0
+field 02796F74 0x101F95F8 u32 0
+field 02794970 0x101F8B18 u32 0
+field 0279515C 0x101F8B18 u32 0
+field 02796F74 0x101F8B18 u32 0
+fill 02794970 0x6A000000 0x01000000 0
+fill 0279515C 0x6A000000 0x01000000 0
+fill 02796F74 0x6A000000 0x01000000 0
+stable 0x6A000000 0x01000000
+field 02794970 0x6E200000 u32 0x6A000000
+field 0279515C 0x6E200000 u32 0x6A000000
+field 02796F74 0x6E200000 u32 0x6A000000
+field 02794970 0x6E200004 u32 0x01000000
+field 0279515C 0x6E200004 u32 0x01000000
+field 02796F74 0x6E200004 u32 0x01000000
+field 02794970 0x6E200008 u32 0
+field 0279515C 0x6E200008 u32 0
+field 02796F74 0x6E200008 u32 0
+stable 0x6E200000 0xC
+fill 02794970 0x7EFE7000 0x10000 0
+fill 0279515C 0x7EFE7000 0x10000 0
+fill 02796F74 0x7EFE7000 0x10000 0
+
+# ---- 2. static initialisers ----
+setup 02794970 0274D510
+setup 0279515C 0274D510
+setup 02796F74 0274D510
+setup 02794970 02759B40
+setup 0279515C 02759B40
+setup 02796F74 02759B40
+setup 02794970 02756E3C
+setup 0279515C 02756E3C
+setup 02796F74 02756E3C
+setup 02794970 02757190
+setup 0279515C 02757190
+setup 02796F74 02757190
+stable 104A0934 0x18
+setup 02794970 027561B4
+setup 0279515C 027561B4
+setup 02796F74 027561B4
+setup 02794970 02755FE0 r3=0x6E200000
+setup 0279515C 02755FE0 r3=0x6E200000
+setup 02796F74 02755FE0 r3=0x6E200000
+nestedret 02756140 0x6A000000
+setup 02794970 02757B48
+setup 0279515C 02757B48
+setup 02796F74 02757B48
+setup 02794970 02759AD8
+setup 0279515C 02759AD8
+setup 02796F74 02759AD8
+
+# ---- 4. texture cache owner (AGL#10) ----
+setup 02794970 0279F2EC r3=0x6A000000
+setup 0279515C 0279F2EC r3=0x6A000000
+setup 02796F74 0279F2EC r3=0x6A000000
+setup 02794970 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+setup 0279515C 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+setup 02796F74 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+nestedret C0009BB0 0
+
+# ---- 3. ShaderMgr / archive startup ----
+blob 02794970 0x6C000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0 0x1000000
+blob 0279515C 0x6C000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0 0x1000000
+blob 02796F74 0x6C000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0 0x1000000
+blob 02794970 0x6D000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0x1000000 0x19E1E
+blob 0279515C 0x6D000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0x1000000 0x19E1E
+blob 02796F74 0x6D000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0x1000000 0x19E1E
+fill 02794970 0x6B000000 0x1000 0
+fill 0279515C 0x6B000000 0x1000 0
+fill 02796F74 0x6B000000 0x1000 0
+stable 0x6B000000 0x1000
+stable 0x6C000000 0x01019E1E
+setup 02794970 0275E11C r3=0x6B000000
+setup 0279515C 0275E11C r3=0x6B000000
+setup 02796F74 0275E11C r3=0x6B000000
+setup 02794970 0275D21C r3=0x6B000000 r4=0x6C000000 r5=0x01019E1E r6=0x01019E1E r7=0 r8=0
+setup 0279515C 0275D21C r3=0x6B000000 r4=0x6C000000 r5=0x01019E1E r6=0x01019E1E r7=0 r8=0
+setup 02796F74 0275D21C r3=0x6B000000 r4=0x6C000000 r5=0x01019E1E r6=0x01019E1E r7=0 r8=0
+setup 02794970 027854AC r3=0x6A000000
+setup 0279515C 027854AC r3=0x6A000000
+setup 02796F74 027854AC r3=0x6A000000
+setup 02794970 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup 0279515C 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup 02796F74 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup 02794970 027B7168 r3=0x6A000000
+setup 0279515C 027B7168 r3=0x6A000000
+setup 02796F74 027B7168 r3=0x6A000000
+setup 02794970 02786418 r3=0x6A000000
+setup 0279515C 02786418 r3=0x6A000000
+setup 02796F74 02786418 r3=0x6A000000
+setup 02794970 02786520 r3=*101F8D6C r4=0x6B000000 r5=*(*101F8C14+0x10)
+setup 0279515C 02786520 r3=*101F8D6C r4=0x6B000000 r5=*(*101F8C14+0x10)
+setup 02796F74 02786520 r3=*101F8D6C r4=0x6B000000 r5=*(*101F8C14+0x10)
+setup 02794970 027B9C1C r3=0x6A000000
+setup 0279515C 027B9C1C r3=0x6A000000
+setup 02796F74 027B9C1C r3=0x6A000000
+
+# ---- 5. singletons: default texture, resource provider, GraphicsDevice, 101F8DDC ----
+setup 02794970 027A76C8 r3=0
+setup 0279515C 027A76C8 r3=0
+setup 02796F74 027A76C8 r3=0
+setup 02794970 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup 0279515C 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup 02796F74 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup 02794970 027A145C r3=0x6A000000
+setup 0279515C 027A145C r3=0x6A000000
+setup 02796F74 027A145C r3=0x6A000000
+setup 02794970 027A5DF0 r3=*101F8DE4 r4=0x6A000000
+setup 0279515C 027A5DF0 r3=*101F8DE4 r4=0x6A000000
+setup 02796F74 027A5DF0 r3=*101F8DE4 r4=0x6A000000
+fill 02794970 0x5D300000 0x160 0
+fill 0279515C 0x5D300000 0x160 0
+fill 02796F74 0x5D300000 0x160 0
+stable 0x5D300000 0x160
+setup 02794970 0274FB24 r3=0x5D300000
+setup 0279515C 0274FB24 r3=0x5D300000
+setup 02796F74 0274FB24 r3=0x5D300000
+setup 02794970 028EFFD0 r3=0x5D300060 r4=8 r5=0x18 r6=0x0274CA20
+setup 0279515C 028EFFD0 r3=0x5D300060 r4=8 r5=0x18 r6=0x0274CA20
+setup 02796F74 028EFFD0 r3=0x5D300060 r4=8 r5=0x18 r6=0x0274CA20
+poke 02794970 5D30000C u32 0x101456CC
+poke 0279515C 5D30000C u32 0x101456CC
+poke 02796F74 5D30000C u32 0x101456CC
+poke 02794970 101F8B18 u32 0x5D300000
+poke 0279515C 101F8B18 u32 0x5D300000
+poke 02796F74 101F8B18 u32 0x5D300000
+setup 02794970 027A0A80 r3=0
+setup 0279515C 027A0A80 r3=0
+setup 02796F74 027A0A80 r3=0
+
+# ---- startup .bss the setups produce: never clobbered by mock epochs ----
+# .data (1018C0C0..101FCD38, incl. the singleton/registry words 101F8B10..101F8E0C) is image memory and never clobbered;
+# .bss (101FCE00..104DA1C8) is not, so a mocked call in the tested function could rewrite these words (AGL#1: a seed-7
+# clobber of 104A0CDC sent both sides through a garbage method table). Each range is exactly what the setups write
+# (`-watch` trace, 2026-10-27); in the game only the startup producer named writes it, so no mocked callee does.
+# `stable` only disables clobbering: stores by the tested function or a `real` callee still happen and are compared.
+stable 104A01CC 0xB4
+# ^ 0274D510 colour presets
+stable 104A02F8 0x24
+# ^ heap manager statics: 02755E7C/02755F40 (104A02F8), 02756CC0 (104A0300), root-heap array 027561B4/0273B560/02755EC4
+stable 104A0328 0x10
+# ^ heap-tree critical section header 02752A84/02760084; its OSMutex body 104A0338 (0x2C) is left out on purpose:
+#   OSLockMutex/OSUnlockMutex (mocked imports) write it in the game
+stable 104A0364 0xC
+# ^ independent-heap array header 027561B4/0273B560 (later written only by 02756B94, called once at startup from 0200604C)
+stable 104A0384 0x148
+stable 104A04D0 0x290
+# ^ 02756E3C math constants
+stable 104A0790 0x234
+stable 104A09C8 0x178
+# ^ 02757190 math constants (contains the default axes 104A0934)
+stable 104A0B40 0xC
+stable 104A0BC0 0xC
+# ^ 02757B48 core tables (core -> slot {1,0,2})
+stable 104A0CD4 4
+# ^ 02759AD8 endian flag
+stable 104A0CD8 0x10
+# ^ 02759B40 the two shared empty SafeStrings (vtable + text pointer each)
+stable 104A2090 8
+# ^ 027B9C1C per-core array {count 3, buffer in the root heap}
+# Not stable on purpose: 104DA130 (__register_global_object list head; any function with a first-use static, mocked
+# ones included, prepends to it in the game) and the core id: 028FDE28 is pinned to 0 only for nested calls; a tested
+# function that calls it itself pins its own top-level answer per spec (`ret! 028FDE28 N` + `nestedret 028FDE28 N`).
+
+# ---- mock models ----
+nestedret 028FDE28 0
+mockset C0009990 r3 r4 r5
+mockset C000A858 r3 r4 r5
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+mockmove 028FDC00 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+mocksurfacesize C00060D0
+mockfetchsize C00060B8
+mockfetchinit C0006400
+# Display lists: a recording that issued GX2 commands ends with a nonzero size (0x100, capped
+# at the open size), an empty one with 0 (harness command condition); the shipped ShaderMgr program recordings
+# (02786520 -> 027BBB9C/027BB9E0 -> 027C073C .. 027BB7CC .. 027C077C) always issue GX2 commands. A spec that needs the
+# legacy zero-size model puts `mockdisplaylist C0006090 C0006190 C0006218` (no BYTES) after the include.
+mockdisplaylist C0006090 C0006190 C0006218 0x100
+mockretfield C0006390 r3 0 0 0xFF
+mockretfield C0006398 r3 0 8 0xFF
+mockretfield C00062D0 r3 0 0 0xFF
+mockretfield C00062D8 r3 0 8 0xFF
+
+# ---- original closure (REALS) ----
+# Setups' own functions plus every original reached inside them (traced 2026-10-26), the aligned alloc paths and
+# the heap free tree, and the AGL#10 texture-cache closure (0279F6B0..027CB3B8) for tested functions using the cache.
+real 025155D8 0273AF40 0273B050 0273B0D4 0273B2D0 0273B2F0 0273B310 0273B440 0273B524 0273B560 0274CA20 0274D4C0 0274D510 0274FB24
+real 02750CDC 02750D00 02752A84 02752B0C 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 02753628 027536B0 027536F4
+real 027537B8 02753880 02753D6C 027540AC 02754754 027556FC 02755818 0275589C 02755CA4 02755E7C 02755EC4 02755F40 02755FE0 02755FEC
+real 027561B4 02756CC0 02756E3C 02757190 02757B48 02759928 02759A48 02759AD8 02759B40 02759BA0 02759C10 0275CF28 0275D064 0275D12C
+real 0275D21C 0275E11C 0275E208 0275E288 0275E2E0 0275E354 0275E3A0 0275E6B8 0275E894 02760084 027600EC 027601BC 027601F0 02760DE8
+real 02760E34 02760E58 0278540C 027854AC 027855BC 02785CB4 02786314 0278635C 02786360 02786364 02786418 02786520 0278B9B8 0278B9CC
+real 0278BA1C 0278BA20 0278BA74 0279A95C 0279AC28 0279AD54 0279ADD4 0279AE68 0279F218 0279F2EC 0279F474 0279F6B0 0279F738 0279F7F0
+real 0279FC6C 0279FFDC 027A0040 027A029C 027A0A08 027A0A80 027A0E94 027A145C 027A1DFC 027A1E68 027A1E70 027A1EAC 027A20B8 027A20C4
+real 027A21F8 027A25F8 027A260C 027A2748 027A2B08 027A2B18 027A2C08 027A308C 027A309C 027A31A0 027A35AC 027A35B8 027A35DC 027A37A8
+real 027A4050 027A4420 027A47BC 027A4DF8 027A5000 027A5220 027A5440 027A575C 027A5A78 027A5DF0 027A5F68 027A5FA8 027A6000 027A60C0
+real 027A612C 027A62B0 027A6724 027A6B00 027A6E28 027A7144 027A7640 027A76C8 027A77F8 027A78F8 027B5430 027B548C 027B54E0 027B5BD8
+real 027B5C68 027B5CFC 027B5D60 027B5EA4 027B5EEC 027B6CB8 027B6E64 027B70B4 027B7168 027B736C 027B737C 027B744C 027B75E0 027B78D4
+real 027B81E4 027B82B8 027B8904 027B8F48 027B9070 027B90AC 027B9C1C 027B9F78 027BA674 027BA710 027BA88C 027BA95C 027BA968 027BAA54
+real 027BAA60 027BAA9C 027BAAA8 027BAC4C 027BAC58 027BAC8C 027BACC0 027BAE8C 027BAEF8 027BB0EC 027BB160 027BB354 027BB3C8 027BB5BC
+real 027BB630 027BB710 027BB7CC 027BB840 027BB8A8 027BB910 027BB978 027BB9E0 027BBB9C 027BBCA0 027BC078 027BC094 027BC138 027BC2D0
+real 027BC2D8 027BC4AC 027BC4F8 027BC73C 027BC790 027BCDA0 027BD2B4 027BD2C0 027BD2CC 027BD30C 027BD34C 027BD38C 027BD3CC 027BD72C
+real 027BDA2C 027BDD2C 027BDE1C 027BDEB4 027BE114 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8 027BE494 027BE6B8 027BE744
+real 027BE74C 027BE794 027BE7F0 027BE930 027BEA90 027BF0CC 027BF734 027BFEF8 027BFF9C 027C05A0 027C05C8 027C05F4 027C073C 027C077C
+real 027C07FC 027CAB58 027CAD30 027CAED8 027CB1A0 027CB3B8 027D4CCC 027D4D30 027D4E84 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58
+real 028EFFD0 028F026C 028F03F4 028F0DBC 028F0DF4 028F11BC 028F171C 028F1748 028F43F8 028F4BE0 028F521C 028F5564 028F5680 028F5C88
+real 028F5DE8 028F5DFC 028F5E98 028F61D0 028F61D8 028F61DC 028F61E0 028F61E4 028F61E8 028F61EC 028F61F0 028F61F4 028F61F8 028F61FC
+real 028F6200 028F6228 028F6230 028F6234 028F6238 028F623C 028F6240 028F6244 028F6248 028F624C 028F6250 028F6254 028F6258
+# <<< include shared/agl_world.txt for 02794970 0279515C 02796F74
+setupsnapshot
+field * 0x101F8D7C u8 0 0
+real 025C0928 025C0934 025C09D8 0273AD10 0273AFC8 0273B200 0273B264 0274D67C 02752BEC 02755D28 02759B98 0276ACA0 0276AD30 0276B114 027861E0 027919BC
+real 027919FC 02791A4C 02791A54 0279288C 02792A08 02793384 0279345C 02793908 02793E88 02795EE0 02796034 02796558 027965BC 027966F0 027967A0 027967C4
+real 02796EEC 02797DDC 0279A07C 0279A490 0279C950 0279CA34 0279CB9C 0279E57C 0279E618 0279E674 0279F1BC 0279FD18 0279FDC8 0279FE74 027A0114 027A03A0
+real 027A063C 027A08C8 027A0998 027A84B8 027A861C 027A8C80 027B6030 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027B954C 027B958C 027B95B4 027B9694
+real 027BDF7C 027BE2B0 027BEB5C 027BEBEC 027BEC90 027BECEC 027BED84 027BEE9C 027BEEBC 027BEED4 027BEEE4 027CB744 028F007C 028F0164
+# >>> include lib2_agl_8_mode0_grouped_render_producers.txt
+# Render producer fragment for the source-order-preserving all-90 grouped baseline.
+# Add 02794970 and 0279515C to that baseline single shared/agl_world.txt include scope.
+# This fragment adds no sources, world include or duplicate world setup chain.
+# Include after existing baseline directives; replace the obsolete main 0279515C r3+0x2838 field with its real constructor producer.
+# Keep the baseline setupsnapshot directive once. Original repeated-frame states come from the validated companions.
+
+# 02794970: lib2_agl_8_primary_history_repeat.txt producer-specific directives, function-scoped.
+fill 02794970 0x58000000 0x285C 0
+setup 02794970 02792A08 r3=0x58000000
+setup 02794970 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+fill 02794970 0x5A000000 64 0
+field 02794970 0x5A000000 f32 1
+field 02794970 0x5A000014 f32 1
+field 02794970 0x5A000028 f32 1
+field 02794970 0x5A00003C f32 1
+arg! 02794970 r3 0x58000000
+arg! 02794970 r4 0
+arg! 02794970 r5 64
+arg! 02794970 r6 64
+arg! 02794970 r7 0
+arg! 02794970 r8 0x5A000000
+arg! 02794970 r9 0
+argf64! 02794970 f1 0.0
+argf64! 02794970 f2 1.0
+setup 02794970 02794068 r3=*0x580001D0 r4=0xA r5=64 r6=64
+arg! 02794970 r7 0
+arg! 02794970 r9 0,3
+real 02794068
+field 02794970 0x101F8AE5 u8 0
+setup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+real 02794970
+
+# 0279515C: lib2_agl_8_secondary_pass_frame2_alt.txt producer-specific directives, function-scoped.
+fill 0279515C 0x58000000 0x2900 0
+setup 0279515C 02792A08 r3=0x58000000
+setup 0279515C 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+setup 0279515C 02794068 r3=*0x580001D0 r4=1 r5=0x280 r6=0x168
+setup 0279515C 0279515C r3=0x58000000 r4=0 r5=0x280 r6=0x168 r7=0 r8=0
+setup 0279515C 027A0040 r3=*0x101F8DD4 r4=0x6A00F2D0
+poke 0279515C 6A87E2A4 u32 0
+postsetup 0279515C 02794068 r3=0x6A87E2A0 r4=1 r5=0x280 r6=0x168
+arg! 0279515C r3 0x58000000
+arg! 0279515C r4 0,1,0xFFFFFFFF
+arg! 0279515C r5 0x280
+arg! 0279515C r6 0x168
+arg! 0279515C r7 0,1,2
+arg! 0279515C r8 0,1,2
+real 0279515C
+field 0279515C 0x101F8AE5 u8 0
+# <<< include lib2_agl_8_mode0_grouped_render_producers.txt
+# Caller-produced filter map/depth storage, equivalent to filter_depth_lead for this tested function.
+# The standalone filter header observes its original frame; preserve that observation only for this function.
+# Engine/ShaderContext singleton *101F8BD8 (02796EEC 0276B114, 02796F74 027B9F68): its getter 0276AD30 (store 0276ADAC).
+setup 02796F74 0276AD30 r3=0x6A000000
+fill 02796F74 0x59000000 0xBE4 0
+# The map's own fields are stable: the mocked callees of 02796F74 receive only the sub-objects +0x6D8 (0274D690,
+# ShadowSurfaceStorage_l 0x188: +0x718 for 027B6D64/025C0848) and +0x860 (027BE53C, 0x198), never the map itself
+# (ShadowMap.h offsets; disassembly 02797484..02797D2C).
+stable 0x59000000 0x6D8
+stable 0x590009F8 0x1EC
+field 02796F74 0x5E100000 u32 0x100
+field 02796F74 0x5E100004 u32 0x100
+stable 0x5E100000 0x20
+setup 02796F74 02796034 r3=0x59000000
+setup 02796F74 027966F0 r3=0x59000000 r5=0
+setup 02796F74 027967A0 r3=0x59000000 r4=0x5E100000
+# Tunable agl::utl::Parameter values (value byte at param+0xC) read by 027967C4/02796F74: +0x9C/+0xAC/+0xBC/+0xCC/+0xDC.
+# They must be set before the storage is built, so 027967C4 and 02796EEC run as postsetups.
+poke 02796F74 5900009C u8 0,1
+poke 02796F74 590000AC u8 0,1
+poke 02796F74 590000BC u8 0,1
+poke 02796F74 590000CC u8 0,1
+poke 02796F74 590000DC u8 0,1
+postsetup 02796F74 027967C4 r3=0x59000000 r4=1
+postsetup 02796F74 02796EEC r3=0x59000000 r4=0
+
+arg! 02796F74 r3 0x59000000
+arg! 02796F74 r4 0,1,2
+
+real 0279A07C 0279CA34 0279C950 0279E57C 0273B264 0273B200 0279E618 0279E674 027A84B8 0279CB9C 027A861C 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 027BDEB4 02752A84 02759B98 0279F1BC 0279288C 02791A4C 027919BC 027919FC 02791A54
+real 02759B40 027A8C80 0279A490 027A08C8
+real 027B95B4 027B958C 027B954C 027B6CB8 027B6E64 027BEB5C 027BECEC 027BED84 027BEEE4 027BEEBC 027BEED4 027BEE9C 027A063C
+real 027BE2B0 027B9694 0274D67C 028F0164 028F007C 027BEC90 027BEBEC 0273AFC8 027A0998 02752BEC 02755D28
+real 025C0928 025C0934 025C09D8 0276ACA0 0276AD30 0276B114 027861E0 02795EE0 02797DDC 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027CB744
+real 027BE930 027BE7F0 027BE74C 027BE744 027BFF9C 0279FFDC 027A0040 027A0114
+real 02796034 027966F0 027967A0 027967C4 02796EEC 0279FC6C 0279FD18 0279FDC8 0279FE74 02796558 027965BC
+real 027B6F18 027B6F90 027B95B4 027B958C 027B954C 0273B200 027CB744
+field 02796F74 0x101F8AE5 u8 0
+stable 104A0BC0 0x10
+# <<< include lib2_agl_8_mode0_render_filter_group.txt
+callee C0006A40 r5=dyn4*r4:heap144
+callee C0006908 r5=dyn4*r4:heap144
+# <<< include lib2_agl_8_mode0_ssao_observed_group.txt
+# >>> include lib2_agl_8_grouped_effect_owner_controls_api.txt
+# Include-only: caller uses the original effect at58000000 and sets its own tested-function scope.
+# Opaque sampler binding can update the16 embedded samplers atE5C..27DB; leave that entire array clobberable.
+# Other effect fields have no writable escape to the runtime opaque callees; real stores still compare.
+stable 0x58000000 0xE5C
+stable 0x580027DC 0x80
+# Three caller-owned resources: integer blur count, Boolean rotation and distance attenuation.
+fill * 0x5B600000 0x200 0
+field * 0x5B600000 u32 0x5B600100
+field * 0x5B600100 u32 16
+field * 0x5B600104 u32 2
+field * 0x5B60010C s32 0,1
+field * 0x5B600004 u32 0x5B600140
+field * 0x5B600140 u32 13
+field * 0x5B600144 u32 0
+field * 0x5B60014C u8 0,1
+field * 0x5B600008 u32 0x5B600180
+field * 0x5B600180 u32 13
+field * 0x5B600184 u32 0
+field * 0x5B60018C u8 0,1
+stable 0x5B600000 0x200
+postsetup * 0279EB28 r3=0x5800282C r4=0x5B600000
+postsetup * 0279EB28 r3=0x5800281C r4=0x5B600004
+postsetup * 0279EB28 r3=0x58000274 r4=0x5B600008
+real 0279EB28 02795EE4 02795EE8 02795EF0 02795EF8 02795F00 02795F08 02795F10 02795F18 02795F20
+# <<< include lib2_agl_8_grouped_effect_owner_controls_api.txt
+# The caller's model matrix is uploaded read-only; no runtime callee can write it.
+stable 0x5A000000 64
+# <<< include lib2_agl_8_mode0_primary_owner_controls_api_group.txt
+fill 02794970 0x5B610000 0x200 0
+field 02794970 0x5B610000 u32 0x5B610100
+field 02794970 0x5B610100 u32 16
+field 02794970 0x5B610104 u32 2
+field 02794970 0x5B61010C s32 9
+field 02794970 0x5B610004 u32 0x5B610140
+field 02794970 0x5B610140 u32 16
+field 02794970 0x5B610144 u32 2
+field 02794970 0x5B61014C s32 0,1,3,9,10
+stable 0x5B610000 0x200
+setup 02794970 0279EB28 r3=0x5800284C r4=0x5B610000
+setup 02794970 02793908 r3=0x58000000 r4=128
+postsetup 02794970 0279EB28 r3=0x5800284C r4=0x5B610004
+# <<< include lib2_agl_8_mode0_primary_owner_pairs_cached_group.txt
+real 027BE53C 027BE494 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8 0274D4C0
+# Per embedded sampler: protect logical TextureData/flags/mapping/settings/dirty/methods only.
+# SDK NativeSampler A4..AF and NativeTexture B0..14F remain writable and clobberable.
+# Reserved padding92..93,189..18B,191..193 is deliberately excluded.
+# Embedded sampler 0, base0x58000E5C.
+stable 0x58000E5C 0x92
+stable 0x58000EF0 0x10
+stable 0x58000FAC 0x39
+stable 0x58000FE8 0x5
+stable 0x58000FF0 0x4
+# Embedded sampler 1, base0x58000FF4.
+stable 0x58000FF4 0x92
+stable 0x58001088 0x10
+stable 0x58001144 0x39
+stable 0x58001180 0x5
+stable 0x58001188 0x4
+# Embedded sampler 2, base0x5800118C.
+stable 0x5800118C 0x92
+stable 0x58001220 0x10
+stable 0x580012DC 0x39
+stable 0x58001318 0x5
+stable 0x58001320 0x4
+# Embedded sampler 3, base0x58001324.
+stable 0x58001324 0x92
+stable 0x580013B8 0x10
+stable 0x58001474 0x39
+stable 0x580014B0 0x5
+stable 0x580014B8 0x4
+# Embedded sampler 4, base0x580014BC.
+stable 0x580014BC 0x92
+stable 0x58001550 0x10
+stable 0x5800160C 0x39
+stable 0x58001648 0x5
+stable 0x58001650 0x4
+# Embedded sampler 5, base0x58001654.
+stable 0x58001654 0x92
+stable 0x580016E8 0x10
+stable 0x580017A4 0x39
+stable 0x580017E0 0x5
+stable 0x580017E8 0x4
+# Embedded sampler 6, base0x580017EC.
+stable 0x580017EC 0x92
+stable 0x58001880 0x10
+stable 0x5800193C 0x39
+stable 0x58001978 0x5
+stable 0x58001980 0x4
+# Embedded sampler 7, base0x58001984.
+stable 0x58001984 0x92
+stable 0x58001A18 0x10
+stable 0x58001AD4 0x39
+stable 0x58001B10 0x5
+stable 0x58001B18 0x4
+# Embedded sampler 8, base0x58001B1C.
+stable 0x58001B1C 0x92
+stable 0x58001BB0 0x10
+stable 0x58001C6C 0x39
+stable 0x58001CA8 0x5
+stable 0x58001CB0 0x4
+# Embedded sampler 9, base0x58001CB4.
+stable 0x58001CB4 0x92
+stable 0x58001D48 0x10
+stable 0x58001E04 0x39
+stable 0x58001E40 0x5
+stable 0x58001E48 0x4
+# Embedded sampler 10, base0x58001E4C.
+stable 0x58001E4C 0x92
+stable 0x58001EE0 0x10
+stable 0x58001F9C 0x39
+stable 0x58001FD8 0x5
+stable 0x58001FE0 0x4
+# Embedded sampler 11, base0x58001FE4.
+stable 0x58001FE4 0x92
+stable 0x58002078 0x10
+stable 0x58002134 0x39
+stable 0x58002170 0x5
+stable 0x58002178 0x4
+# Embedded sampler 12, base0x5800217C.
+stable 0x5800217C 0x92
+stable 0x58002210 0x10
+stable 0x580022CC 0x39
+stable 0x58002308 0x5
+stable 0x58002310 0x4
+# Embedded sampler 13, base0x58002314.
+stable 0x58002314 0x92
+stable 0x580023A8 0x10
+stable 0x58002464 0x39
+stable 0x580024A0 0x5
+stable 0x580024A8 0x4
+# Embedded sampler 14, base0x580024AC.
+stable 0x580024AC 0x92
+stable 0x58002540 0x10
+stable 0x580025FC 0x39
+stable 0x58002638 0x5
+stable 0x58002640 0x4
+# Embedded sampler 15, base0x58002644.
+stable 0x58002644 0x92
+stable 0x580026D8 0x10
+stable 0x58002794 0x39
+stable 0x580027D0 0x5
+stable 0x580027D8 0x4
+# <<< include lib2_agl_8_mode0_primary_sampler_consumer_group.txt
+observenested C0006498 r3+0 32
+observenested C0006498 r3+0x74 20

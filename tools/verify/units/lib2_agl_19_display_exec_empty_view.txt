@@ -1,0 +1,12 @@
+# AGL#19 submitDisplayLists 027D6EEC (rebuild, r4 = 1 as RenderQueueManager::drawView 027C1AD8 passes it) on views whose
+# deferred list is empty. Producer
+# state: the first frame of lib2_agl_19_display_frame_fixture.txt (update's view part ran: clearPending 027D646C set the
+# deferred count to 0 with its lwarx/stwcx. loop, the layers are appended), but the job phase that records commands into
+# the deferred list (027D72B8 / 027D7384 -> 027D71D4) has not run yet, so drawView finds no deferred command: sortDeferred
+# 027D6E80 sorts an empty list, the submitted count is reset and nothing is called.
+# verify: -only 027D6EEC -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+real 027DA7D4 027DA764 027D6E80 027D7A4C
+arg! 027D6EEC r3 0x5E100018,0x5E100818
+arg! 027D6EEC r4 1

@@ -1,0 +1,30 @@
+# Fresh global-new Text8 from original constructor; flags0..3/null destructor. No final read of freed receiver.
+# verify: -only 027919BC -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+arg! 027919BC r3 0,0x63000000
+arg! 027919BC r4 0,1,2,3
+fill 027919BC 56210000 4 0
+field 027919BC 56210000 u8 0,65,66
+alloc 0273AD10 r3 0x63000000
+allocnested 0273AD10
+real 027919FC
+setup 027919BC 027919FC r3=0 r4=0x56210000

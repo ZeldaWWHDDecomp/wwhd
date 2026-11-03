@@ -1,0 +1,29 @@
+# Constructors retain the caller's direction word without normalization.
+# No enum/API evidence excludes5: this profile preserves that broader raw contract.
+# Multiplying accepted alignment1 by direction5 distinguishes thresholds4/5.
+# Both possible allocation/search targets return the same bounded block; the
+# actual target/argument sequence, rather than invented return data, differs.
+# verify: -only 02754620,02753D6C -calleesp
+src wwhd_src/sead/HeapRegistry.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill periodic
+arg! 02754620 r3 0x59250000
+arg! 02754620 r4 1
+field 02754620 r3+0x50 u32 5
+field 02754620 r3+0x90 u32 0
+field 02754620 59251008 u32 64
+ret! 02753628 0x59251000
+ret! 027537B8 0x59251000
+arg! 02753D6C r3 0x59260000
+arg! 02753D6C r4 4
+arg! 02753D6C r5 1
+field 02753D6C r3+0x1C u32 0x59261000
+field 02753D6C r3+0x20 u32 4096
+field 02753D6C r3+0x50 u32 5
+field 02753D6C r3+0x90 u32 0
+field 02753D6C 101F8B4C u32 0
+field 02753D6C 59261008 u32 64
+field 02753D6C 5926100C u32 0
+ret! 027536F4 0x59261000
+ret! 02753880 0x59261000

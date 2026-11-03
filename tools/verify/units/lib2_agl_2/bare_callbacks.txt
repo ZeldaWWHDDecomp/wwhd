@@ -1,0 +1,8 @@
+# Separate AGL2 two bare no-input callback entries outside accepted117.
+# verify: -strictnan -calleesp -footprint -only 0277294C,0277367C
+# Exact original: bareblr; exact C++: static void callback(){}.
+# No input, receiver, memory read/write, helper, stable range or fabricated object.
+src wwhd_src/agl/LightOutputRuntime.cpp
+src wwhd_src/agl/ShaderCommandState.cpp
+# Canonical data owner needed for linkage only, never executed by these callbacks.
+src wwhd_src/sead/HeapRegistryStatics.cpp

@@ -1,0 +1,51 @@
+# Original-constructed empty workspace with complete finite matrix/dimension inputs.
+# Empty workspace: the empty-bounds return (populated paths: _projection_configure / _configure_flat).
+# verify: -only 027C8270 -strictnan -calleesp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/UtilityText.cpp
+real 027D7E04 027D7D94 028EFFD0 027D9FD4
+setup 027C8270 027D7E04 r3=0x5F100084
+arg! 027C8270 r3 0x5F100000
+arg! 027C8270 r4 0x5F110000
+arg! 027C8270 r5 1,2
+arg! 027C8270 r6 0x5F120000
+fill 027C8270 5F100000 1460 0
+fill 027C8270 5F110000 48 0
+field 027C8270 5F100134 f32 1
+field 027C8270 5F100148 f32 1
+field 027C8270 5F10015C f32 1
+field 027C8270 5F100164 f32 1
+field 027C8270 5F100178 f32 1
+field 027C8270 5F10018C f32 1
+field 027C8270 5F1001A0 f32 1
+field 027C8270 5F110000 f32 1
+field 027C8270 5F110014 f32 1
+field 027C8270 5F110028 f32 1
+field 027C8270 5F120000 s32 64,128,1920
+field 027C8270 5F120004 s32 64,128,1080
+final 027C8270 5F100000 5B4

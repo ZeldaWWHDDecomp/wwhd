@@ -1,0 +1,118 @@
+# SHARED FRAGMENT (include only, lighting B 2026-11-02): imports that are VOID in the port, for plain `strictmocks`.
+# Input: startup-b's strictmocks report first-hit list (ui1/ui7, 208 keys, 53 imports; it will grow with later runs).
+# Evidence per import = the port HLE body (runtime/src): no ret() / c->r[3] / f1 write, no guest memory the game reads back.
+# Common helpers: HLE macro runtime/src/runtime.h:95 leaves r3 unchanged unless the body uses ret(); emit/set_reg(s)
+# gx2_core.cpp:117/148/156 enqueue or execute host commands; while a display list is being recorded emit() writes the list into its
+# guest buffer (port-private format, replayed by OP_CALL, not read by the game). gfx writes to guest memory checked: only
+# copy_surface (metal_surfaces.mm:638, see the not-void list). Metal backend read; other backends not checked.
+#
+# Directive: `importvoid SLOT` (README `importvoid`; the earlier `callee` form had no effect). Limits: no row may
+# take credit that depends on ProcUIRegisterCallback's callbacks firing; display-list recording is void subject to the -watch below.
+# Display-list buffer -watch (diagnosis, no credit; build, s1 + s7, -watch 21EFFF80:0x400 = the first two recording buffers,
+# GX2BeginDisplayListEx r3=21EFFF80 / 21F00180 seen in both traces): 0 `watch R/W/P` lines. No guest read up to where both runs stopped, in LOGO
+# create (025AC214 -> 026195C4 -> 0286CD7C, FindExport not modelled before the swkbd model). Limits: two of 1613 buffers, verifier display-list
+# model (no list bytes are written), nothing after LOGO create covered. Evidence: local trace files
+# mkunit accepts this file (build check, rc 0); not yet run under plain strictmocks.
+# r3 use after the call, static scan of the relocated bl/b sites (straight line + wrappers one level; heuristic, conditional paths not
+# followed): DCFlushRangeNoSync 18 sites and GX2SetScissor 4 sites: no read found. 027516AC (GX2SetScissor) has no direct caller.
+# Other imports: only the first-level scan; its READ hits were tail branches running into the next function.
+# GX2CallDisplayList: runtime/src/gx2/gx2_core.cpp:360: emit(OP_CALL, {...}) only
+importvoid C00060E0
+# GX2ClearBuffersEx: runtime/src/gx2/gx2_core.cpp:389: reads the buffers, emit(OP_CLEAR_BUFFERS) only
+importvoid C00060F0
+# GX2ClearColor: runtime/src/gx2/gx2_core.cpp:377: reads the buffer, emit(OP_CLEAR_COLOR) only
+importvoid C00060F8
+# GX2DrawIndexedEx: runtime/src/gx2/gx2_core.cpp:365: emit(OP_DRAW_INDEXED) only
+importvoid C0006178
+# GX2Flush: runtime/src/gx2/gx2_core.cpp:421: emit_host(OP_FLUSH) only
+importvoid C00061A8
+# GX2InitDepthBufferHiZEnable: runtime/src/gx2/gx2_resources.cpp:29: empty body
+importvoid C00063E8
+# GX2Invalidate: runtime/src/gx2/gx2_core.cpp:418: emit(OP_INVALIDATE) only
+importvoid C00064A8
+# GX2SetAlphaTest: runtime/src/gx2/gx2_state.cpp:17: set_reg x2
+importvoid C0006778
+# GX2SetAlphaToMask: runtime/src/gx2/gx2_state.cpp:30: set_reg
+importvoid C0006788
+# GX2SetAttribBuffer: runtime/src/gx2/gx2_resources.cpp:294: set_regs
+importvoid C0006798
+# GX2SetBlendConstantColor: runtime/src/gx2/gx2_state.cpp:64: set_reg x4
+importvoid C00067A0
+# GX2SetBlendControl: runtime/src/gx2/gx2_state.cpp:49: set_reg
+importvoid C00067B0
+# GX2SetColorBuffer: runtime/src/gx2/gx2_resources.cpp:47: reads the buffer, set_reg x6
+importvoid C00067C8
+# GX2SetColorControl: runtime/src/gx2/gx2_state.cpp:39: set_reg
+importvoid C00067D0
+# GX2SetDepthBuffer: runtime/src/gx2/gx2_resources.cpp:60: reads the buffer, set_reg x6
+importvoid C0006838
+# GX2SetDepthStencilControl: runtime/src/gx2/gx2_state.cpp:78: reads stack args, set_reg
+importvoid C0006848
+# GX2SetFetchShader: runtime/src/gx2/gx2_resources.cpp:268: reads the shader, set_reg x2
+importvoid C0006860
+# GX2SetPixelSampler: runtime/src/gx2/gx2_resources.cpp:122: set_sampler (:118): ld32 x3, set_regs
+importvoid C00068E0
+# GX2SetPixelShader: runtime/src/gx2/gx2_resources.cpp:158: reads the shader into a host thread_local, set_reg(s)
+importvoid C00068F0
+# GX2SetPixelTexture: runtime/src/gx2/gx2_resources.cpp:99: set_texture (:84): reads the texture, set_regs
+importvoid C00068F8
+# GX2SetPixelUniformReg: runtime/src/gx2/gx2_resources.cpp:292: uniform_regs (:283): ld32 into a host thread_local, set_regs
+importvoid C0006908
+# GX2SetPolygonControl: runtime/src/gx2/gx2_state.cpp:105: reads a stack arg, set_reg
+importvoid C0006930
+# GX2SetScissor: runtime/src/gx2/gx2_state.cpp:146: set_reg x2
+importvoid C0006970
+# GX2SetShaderModeEx: runtime/src/gx2/gx2_state.cpp:168: set_reg
+importvoid C0006988
+# GX2SetStencilMask: runtime/src/gx2/gx2_state.cpp:95: set_reg x2
+importvoid C0006990
+# GX2SetTargetChannelMasks: runtime/src/gx2/gx2_state.cpp:71: set_reg
+importvoid C00069F0
+# GX2SetVertexShader: runtime/src/gx2/gx2_resources.cpp:135: reads the shader into a host thread_local, set_reg(s)
+importvoid C0006A28
+# GX2SetVertexUniformReg: runtime/src/gx2/gx2_resources.cpp:291: uniform_regs (:283): ld32 into a host thread_local, set_regs
+importvoid C0006A40
+# GX2SetViewport: runtime/src/gx2/gx2_state.cpp:136: set_reg x6
+importvoid C0006A50
+# ProcUIRegisterCallback: runtime/src/hle/system_stubs.cpp:58: empty body (the port never stores or calls the callback)
+importvoid C0007890
+# DCFlushRange: runtime/src/hle/coreinit_mem.cpp:257: empty body
+importvoid C0008898
+# DCFlushRangeNoSync: runtime/src/hle/coreinit_mem.cpp:258: empty body
+importvoid C00088A0
+# DCInvalidateRange: runtime/src/hle/coreinit_mem.cpp:259: empty body
+importvoid C00088A8
+# OSReport: runtime/src/hle/coreinit_misc.cpp:93: formats the arguments, report() (:87) LOG only
+importvoid C0009EE8
+# Added 2026-11-02 from the route (a) tail strictmocks report (r3 use at their call sites not scanned yet):
+# GX2CopyColorBufferToScanBuffer: runtime/src/gx2/gx2_core.cpp:410: reads the buffer, emit(OP_COPY_TO_SCAN) only
+importvoid C0006110
+# GX2DirectCallDisplayList: runtime/src/gx2/gx2_core.cpp:361: emit(OP_CALL, {...}) only
+importvoid C0006160
+# GX2SwapScanBuffers: runtime/src/gx2/gx2_core.cpp:428: debug read, emit_host(OP_SWAP), host counters; no ret, no guest write
+importvoid C0006A90
+# GX2SetTVEnable: runtime/src/gx2/gx2_core.cpp:490: empty body
+importvoid C00069D0
+# GX2SetDRCEnable: runtime/src/gx2/gx2_core.cpp:491: empty body
+importvoid C0006808
+#
+# NOT VOID (no callee line; for the model work), port answer and file:line:
+#   C0006120 GX2CopySurface: writes guest memory: CPU-produced source is re-tiled into the destination image, runtime/src/gfx/metal_surfaces.mm:638 (via gx2_core.cpp:402 -> :224)
+#   C00063D0 GX2InitColorBufferRegs: writes the struct through r3: gx2_resources.cpp:32 -> third_party/cemu/gx2_texture_regs.cpp:271
+#   C00063F0 GX2InitDepthBufferRegs: writes the struct through r3: gx2_resources.cpp:33 -> gx2_texture_regs.cpp:359
+#   C0006438 GX2InitSampler: writes the struct through r3: gx2_resources.cpp:104 -> gx2_texture_regs.cpp:147
+#   C0006440 GX2InitSamplerBorderType: writes the struct through r3: gx2_resources.cpp:115 (GX2:: body, third_party/cemu)
+#   C0006448 GX2InitSamplerClamping: writes the struct through r3: gx2_resources.cpp:112 (GX2:: body, third_party/cemu)
+#   C0006450 GX2InitSamplerDepthCompare: writes the struct through r3: gx2_resources.cpp:116 (GX2:: body, third_party/cemu)
+#   C0006460 GX2InitSamplerLOD: writes the struct through r3: gx2_resources.cpp:111 -> gx2_texture_regs.cpp:206
+#   C0006470 GX2InitSamplerXYFilter: writes the struct through r3: gx2_resources.cpp:105 (GX2:: body, third_party/cemu)
+#   C0006478 GX2InitSamplerZMFilter: writes the struct through r3: gx2_resources.cpp:108 (GX2:: body, third_party/cemu)
+#   C0006498 GX2InitTextureRegs: writes the struct through r3: gx2_resources.cpp:82 -> gx2_texture_regs.cpp:11
+#   C0006748 GX2SampleBottomGPUCycle: if (r3) st64(r3, timebase::now()): gx2_core.cpp:515
+#   C0006760 GX2SampleTopGPUCycle: if (r3) st64(r3, timebase::now()): gx2_core.cpp:514
+#   C00067C0 GX2SetClearDepthStencil: writes db->clearDepth, db->clearStencil through r3: gx2_core.cpp:397
+#   C00069B8 GX2SetSurfaceSwizzle: writes s->swizzle through r3: gx2_resources.cpp:22
+#   C0009010 IMDisableDim: ret 0: coreinit_misc.cpp:189
+#   C0009060 IMIsDimEnabled: if (r3) st32(r3, 0); ret 0: coreinit_misc.cpp:191
+#   C0009B18 OSEnableHomeButtonMenu: ret 1: coreinit_misc.cpp:187
+#   C0009C58 OSGetSharedData: ret 0: coreinit_misc.cpp:184

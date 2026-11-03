@@ -1,0 +1,20 @@
+# AGL#19: own render-state banks and render/surface support.
+# 027D60D4 (allocateFrameStorage) is gated on lib2_agl_19_display_view_init_tv / _drc, not here
+#: with this spec's mocked heap allocator (outside the producer domain; the shipped allocator is real) its
+# 027D778C call differs only in the leftover r7 the formatted call forwards as raw save state; with
+# the world's real allocator every row matches.
+# 027D7BE4 (allocateGeometryGroup) and 027D7F44 (resetGeometryWorkspace) are gated on lib2_agl_19_jobs_geometry_workspace,
+# lib2_agl_19_jobs_geometry_alloc_partial and lib2_agl_19_jobs_typedomain_geometry_construct: this spec's generic inputs for them
+# make the original read page 0 on every input (no clean input), and on the side without -nulltrap a garbage workspace pointer
+# can land on a host-local address (one-side guard abort), so these two rows carry no evidence here.
+# verify: -only 027D1D60,027D1D68,027D1D8C,027D1DD0,027D1E04,027D1E08,027D1E0C,027D1E10,027D1E14,027D1E18,027D1E1C,027D1ED8,027D1EE0,027D22A8,027D240C,027D2504,027D26C0,027D27BC,027D2988,027D2B18,027D2B20,027D2B44,027D2B88,027D2BBC,027D2BC0,027D2BC4,027D2BC8,027D2BCC,027D2BD0,027D2BD4,027D2C90,027D2C98,027D2F9C,027D30BC,027D31B4,027D3370,027D346C,027D3638,027D37C8,027D37D0,027D37D8,027D37E0,027D3804,027D3848,027D387C,027D3880,027D3884,027D3888,027D388C,027D3890,027D3894,027D3898,027D3954,027D395C,027D3A54,027D3B4C,027D3C44,027D3D3C,027D3E60,027D3EC0,027D3F1C,027D3FC4,027D3FD4,027D4028,027D4C88,027D4C9C,027D4CA0,027D4CB8,027D4CCC,027D4D30,027D4E84,027D4E8C,027D4EA0,027D4EA4,027D4FE8,027D5064,027D514C,027D527C,027D54A4,027D54F8,027D55F8,027D56A4,027D56E4,027D57A8,027D57B8,027D5818,027D58B4,027D58C8,027D58CC,027D58E4,027D58F8,027D590C,027D5920,027D5934,027D5948,027D5C48,027D5CF4,027D5E5C,027D5EE8,027D6070,027D646C,027D6498,027D64C8,027D650C,027D660C,027D6658,027D6A74,027D6BB0,027D6BD0,027D6C3C,027D6E80,027D6ED0,027D6EEC,027D7050,027D71D4,027D7270,027D72B8,027D7384,027D740C,027D7498,027D74AC,027D76B8,027D76D4,027D770C,027D7720,027D7724,027D773C,027D7750,027D7764,027D7778,027D778C,027D78AC,027D78C0,027D78D4,027D78E8,027D78FC,027D7920,027D7978,027D79C0,027D7A4C,027D7D40,027D7D94,027D7E04,027D7EA8
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+
+include lib2_agl_19_main_banks.txt
+include lib2_agl_19_main_shader.txt
+include lib2_agl_19_main_commands.txt
+include lib2_agl_19_main_jobs.txt
+include lib2_agl_19_main_display.txt

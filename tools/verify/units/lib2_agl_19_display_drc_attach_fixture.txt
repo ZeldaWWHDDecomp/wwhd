@@ -1,0 +1,53 @@
+# AGL#19 DRC layer attach fixture.
+# AGL#19 display fixture: the initialized renderer (lib2_agl_19_display_init_fixture.txt) with one view-1 layer attached
+# by the real HD-task path, as 027297C0 does for layer 7 (02729BB0..02729BD4: 0272B7C0(mgr, idx 7, name {10141274,
+# SafeString vtable 10141158}, view 1, renderer heap)): 0272B7C0 allocates 0x880 (0273B050), constructs the concrete
+# layer (0272E8CC -> 0272D978 -> 027340D8 -> Layer ctor 027C3280: +0x48 camera = 0, +0x4C projection = 0, +0x50 = 0x183,
+# +0x54 view = 0, +0x55 = -1, at 027C32E0/027C32E8/027C3304/027C3308/027C3314), then addLayer 027C2060(mgr, layer, 7, name,
+# 1, heap): +0x14 manager, +0x58 index, +0x50 |= 0x20, view setter 027C23D4 (+0x54 = 1, manager+0x1078 |= 1),
+# Layer::initialize 027C356C (slot +0x24 0272ED8C = 4 steps, 4 x 0x414 steps at +0x78/+0x74 via 027D56E4, slot +0x2C
+# 0272ED94 per step, step name strings +0x3B8/+0x3B4, 027C2698(layer, 3), slot +0x34 027342B4 -> 0272E948), the
+# viewport copy from manager view 1 (+0x778..+0x788 + 0x800) into +0x18..+0x28 and the layer table store
+# (+0x1024[7], 027C20F8). The camera/projection words +0x48/+0x4C stay NULL as the Layer ctor leaves them: 027C2698
+# and 027343FC then use the default camera 104A2098 / projection 104A20FC built by the static init 027C48E0 (a setup
+# of the init fixture). 027343FC also reads the frame counter object *1018C404 (+0x14 -> layer+0x5F0): its creator
+# 02005B90(heap) (boot call 0203F314; alloc 0x24 via 0273B0D4, 02752B0C, ctor 02005B3C, store through the lwzu base
+# 1018C404 at 02005C04) runs real on the renderer heap (placement deviation: the boot heap from 02753004 at 0203F30C
+# is not in the world).
+include lib2_agl_19_display_init_fixture.txt
+field * 0x58004000 u32 0x10141274
+field * 0x58004004 u32 0x10141158
+stable 0x58004000 0x20
+real 0272B7C0 0273B050 0272E8CC 0272D978 0272ED8C 0272E948 0272EB84 0272ED94 0274CA7C 0274CB24 0274D09C 0274EC54 02759C28 027C49BC 027C4A38 027C4C5C 027D56E4 0272DB10 027343FC 027C2450 0274CAEC 0274D83C 0274E04C 0274E488 0274E4A4 027D57B8 02873FE4 028F067C 028F1904 028F61D0
+real 02005B90 02005B3C 028F5E54 0274D750 0274DA08 0274E0B8 028E8970
+# .bss first-use guards the attach chain reads before it sets them (zero at load, as the RPX loader clears .bss):
+# 0274EC54 (101FD69C/101FD6A4), 027C2698 (101FD6A0/6A8/6AC/6B4), 0274D09C (101FD6B0/6BC), 0272ED94 (101FDDC8; its
+# step-name table 101FDE34 is copied from 101F875C by memcpy (thunk 028FEAC0 -> coreinit memcpy C000A848), modelled with mockmove like the world's OSBlockMove).
+field * 0x101FD69C u32 0
+field * 0x101FD6A0 u32 0
+field * 0x101FD6A4 u32 0
+field * 0x101FD6A8 u32 0
+field * 0x101FD6AC u32 0
+field * 0x101FD6B0 u32 0
+field * 0x101FD6B4 u32 0
+field * 0x101FD6BC u32 0
+field * 0x101FDDC8 u32 0
+mockmove C000A848 r3 r4 r5
+# Current-heap operator new 0273AD10 (sead heap of the calling thread: 02756140 -> thread +0x70) is a steered arena.
+# The world answers 02756140 with the root heap 0x6A000000, whose free memory the renderer heap (02753004 size 0,
+# as 027297C0 makes it) has already taken, so a real 0273AD10 returns NULL for the 0x40-byte draw method 0272E948
+# allocates (0272E97C) and 027C2450 then adds a NULL entry to every step (027C25AC faults at 027C2620 in the job
+# phase). The shipped current heap during 027297C0 has free memory (the layers' constructors would fault otherwise),
+# so 0273AD10 returns distinct 4-aligned blocks from 0x5E600000 (stable; no mocked callee receives an arena address).
+alloc 0273AD10 r3 0x5E600000 4
+allocnested 0273AD10
+stable 0x5E600000 0x2000
+setup * 02005B90 r3=0x6A87E2D0
+setup * 0272B7C0 r3=0x5E100000 r4=7 r5=0x58004000 r6=1 r7=0x6A87E2D0 ->0x58004010
+# The attached layer's own agl-side virtuals in the job phase run as originals (10141970: +0x74 0272EBE4 = 0, +0x84
+# 0272EBF4, the small forwarders 0272EB88 0272EBDC 0272EBE0 027343C4 027343D8 027343EC 0273461C). The hdLayerBase
+# pre-draw slot +0x44 027342E0 stays mocked as for layers A/B/C: it reaches the game's shader-parameter state
+# (027F29D4 on 104B45C0, then slot +0x9C), a game draw method like the fixture's other mocked layer hooks.
+# The step draw 027C25AC reaches slots 0272EBFC/027346A4 (blr) and the draw method's delegate 0272EACC, whose body
+# 0272EA3C (layer 7's game draw: 027F29D4 shader parameters, 027F8974) stays mocked.
+real 0272EB88 0272EBDC 0272EBE0 0272EBE4 0272EBF4 027343C4 027343D8 027343EC 0273461C 0272EBFC 027346A4 0272EACC

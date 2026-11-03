@@ -1,0 +1,81 @@
+# AGL#19 display fixture: the shipped renderer after the HD graphics task's set-up (027297C0), before the first frame:
+#  - renderer (lib2_agl_19_display_renderer_base_fixture.txt) and its configuration, RenderQueueManager::initialize
+#    027C0CEC (setup);
+#  - the task's fade listener 0x5E300000 (0x40 bytes: base constructor 02752A84; the task writes its delegate table
+#    10141220 at +0x20, whose +0xC slot is the delegate's invoke) attached for all five outputs through
+#    setViewOutput 027C1C64 (kinds 0..4: begin/pass hooks of both views and the shared command hook);
+#  - the manager flags as the task leaves them (027297C0: flags & ~0x20 = 0x1858, enabled 1);
+#  - three render layers built by hdLayerBase_c::constructLayerBase 027340D8 (/ jobs layer
+#    fixture recipe: A 0x58000000 render state 100, B 0x58001000 50, C 0x58002000 0).
+include lib2_agl_19_display_renderer_base_fixture.txt
+# Configuration: the caller's (027297C0) stack parameter block, written as input words with exactly the values it holds
+# when 027C0CEC reads it (constructor 027C21C4 values: vtable 10169E84, mode 2, flags 0, callback 0; the caller's stores:
+# layer capacity 14, command bytes); the sizes come from setDimensions 027C22D0
+# (setups): view 0 renders 1280x720 into the 1280x720 TV target, view 1 854x480 into the 854x480 DRC target.
+field * 5E000020 u32 14
+field * 5E000024 u32 0x1000
+field * 5E000028 u32 2
+field * 5E00002C u32 0
+field * 5E000030 u32 0
+field * 5E000034 u32 0x10169E84
+field * 5E000100 u32 1280
+field * 5E000104 u32 720
+field * 5E000108 u32 1280
+field * 5E00010C u32 720
+field * 5E000110 u32 854
+field * 5E000114 u32 480
+field * 5E000118 u32 854
+field * 5E00011C u32 480
+stable 5E000100 0x20
+real 027C22D0
+setup * 027C22D0 r3=0x5E000000 r4=0 r5=0x5E000100 r6=0x5E000108
+setup * 027C22D0 r3=0x5E000000 r4=1 r5=0x5E000110 r6=0x5E000118
+real 027C0CEC 027C2008 027C2378 0274F53C 027C1C64 02752A84
+real 027D60D4 027D5E5C 027D6070 027D5EE8 027D778C 027D7920 027D78FC 027D527C 027DA694
+real 027340D8 027C3280 027C48E0 0274D6B4 0274DE2C 0274CCC4 028F423C 0274D114
+real 02734248 027342B4 02873D70 02873FD0 027C2DF0 0274DEA8 0274E1C8 0274E87C 028E90D4 02733EF4 02733EFC 02733FC8 02734028
+stable 101F95C8 8
+# layer name SafeText "Layer(Draw)" with the hdLayerSafeString vtable 10169E4C (jobs layer fixture)
+field * 0x58003000 u32 0x1016C2B0
+field * 0x58003004 u32 0x10169E4C
+stable 0x58003000 0x8
+field * 0x101FD304 u32 0
+field * 0x101FD308 u32 0
+setup * 027C48E0
+setup * 027340D8 r3=0x58000000 r4=0x58003000
+setup * 027340D8 r3=0x58001000 r4=0x58003000
+setup * 027340D8 r3=0x58002000 r4=0x58003000
+# Mocked callees (GX2 imports, the task listener's delegate, game draw methods) never write the renderer's objects:
+# manager and views, layers, listener and renderer heap stay unclobbered (the tested functions' stores are compared).
+stable 5E100000 0x1260
+stable 58000000 0x2610
+stable 5E300000 0x40
+stable 6A87E2D0 0x781D60
+# (027D6658 attachment memory): the colour/depth target setters run as originals (they also make
+# the pool's HiZ descriptor through 027CB1A0 -> 025C0AB8); the view words 027D6658 reloads after its GX2 mocks are
+# stable; GX2CalcDepthBufferHiZInfo is modelled as the port's HLE (gx2_resources.cpp:29: size 0x1000, alignment 0x100).
+real 025C07A4 025C0934 027B6C60 027B6E2C 025C0848 025C09D8 025C0928 025C0AB8 027BE7F0 027CB744
+stable 0x5E100018 0x138
+stable 0x5E100574 0x4
+stable 0x5E1007A8 0x4
+stable 0x5E100818 0x138
+stable 0x5E100D74 0x4
+stable 0x5E100FA8 0x4
+mockfield C00060B0 r4+0 u32 0x1000
+mockfield C00060B0 r5+0 u32 0x100
+nestedmockfield C00060B0
+# OSGetSystemTime pinned (the listener base constructor reads the clock; a per-input value would change the snapshot).
+ret! C0009C98 0x00000010
+setup * 02752A84 r3=0x5E300000
+# the task's delegate table at +0x20 (outside the 0x10 bytes the base constructor writes)
+field * 5E300020 u32 0x10141220
+poke * 5800005C u32 100
+poke * 5800105C u32 50
+poke * 5800205C u32 0
+poke * 5E101078 u16 0x1858
+setup * 027C0CEC r3=0x5E100000 r4=0x5E000000 r5=0x6A87E2D0 r6=0
+setup * 027C1C64 r3=0x5E100000 r4=0 r5=0x5E300000
+setup * 027C1C64 r3=0x5E100000 r4=2 r5=0x5E300000
+setup * 027C1C64 r3=0x5E100000 r4=1 r5=0x5E300000
+setup * 027C1C64 r3=0x5E100000 r4=3 r5=0x5E300000
+setup * 027C1C64 r3=0x5E100000 r4=4 r5=0x5E300000

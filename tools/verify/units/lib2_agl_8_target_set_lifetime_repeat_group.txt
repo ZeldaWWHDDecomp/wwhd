@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 0279313C,02793E88,02794068
+# Reuse/mismatch companion for the same complete lifecycle mutant group.
+include lib2_agl_8_target_set_lifetime_group.txt
+setup 02794068 02794068 r3=0x58040000 r4=1 r5=64 r6=64

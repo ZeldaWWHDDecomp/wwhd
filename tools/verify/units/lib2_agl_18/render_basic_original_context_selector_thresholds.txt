@@ -1,0 +1,7 @@
+# Caller-valid 027CC78C selector-input companion. DrawPreparation initializes
+# mThreshold to 0.1f and the parameter producer writes ordinary finite values;
+# this profile adds zero/sign-zero and a second positive finite value without
+# changing the published record-flag or configuration domains.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+poke * 5910003C f32 0,-0,0.1,1

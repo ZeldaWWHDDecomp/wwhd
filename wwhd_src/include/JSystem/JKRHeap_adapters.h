@@ -2,7 +2,7 @@
  * HD: allocation uses a heap-manager root and thread-local current heap, rather than
  * the GameCube JKRHeap statics. These private views describe only verified fields. */
 #pragma once
-#include "bindings.h"
+#include "wwhd.h"
 
 namespace heap_adapters {
 struct HeapVtable {

@@ -1,0 +1,205 @@
+#pragma once
+#include "nw/snd/SoundRuntimeSupport.h"
+#include "nw/snd/BankReader.h"
+#include "nw/snd/WaveArchiveReader.h"
+namespace nw { namespace snd {
+struct TrackMethod {
+    be<s16> thisAdjustment;
+    be<s16> virtualSlot;
+    be<u32> target;
+};
+WWHD_OFFSET(TrackMethod,virtualSlot,2);
+WWHD_OFFSET(TrackMethod,target,4);
+WWHD_SIZE(TrackMethod,8);
+struct SequenceRuntimeVtable {
+    u8 reserved[0x1C];
+    be<u32> stop;
+    u8 reservedCallbacks[0xC];
+    be<u32> update;
+    u8 reservedChannelSlots[0x14];
+    be<u32> detachChannel;
+};
+struct TrackAllocatorVtable { u8 reserved[0x1C]; be<u32> release; };
+struct RuntimeTrackAllocator { gptr<TrackAllocatorVtable> vtable; };
+struct SequenceTaskPool {
+    u8 state[0x14];
+    MixEffectChain waiting,finished;
+};
+WWHD_OFFSET(SequenceTaskPool,finished,0x20);
+struct TrackProviderVtable {
+    u8 reserved[0x14];
+    be<u32> allocate;
+    u8 reservedSlots[0xC];
+    be<u32> capacity;
+};
+struct TrackProvider { gptr<TrackProviderVtable> vtable; };
+struct SequenceTrackSetup { gptr<TrackProvider> provider; be<u32> mask; gptr<void> allocator; };
+struct SequencePreparation {
+    be<u32> sequence;
+    be<u32> banks[4];
+    be<u32> waveArchiveImages[4];
+    be<u8> individualWaveLoads[4];
+    be<u32> offset;
+};
+WWHD_SIZE(SequencePreparation,0x2C);
+struct RuntimeSequenceReader { gptr<void> file,data,labels; };
+WWHD_SIZE(RuntimeSequenceReader,12);
+struct SequenceRuntimeSupport {
+    u8 driverState[0x24];
+    be<u8> active,startRequested,paused,finished;
+    u8 reservedDriverState[4];
+    be<f32> volume,pitch,lpfOffset,biquadValue;
+    be<s8> biquadType;
+    be<u8> routeMode;
+    u8 reservedRouting[2];
+    gptr<void> owner;
+    u8 reservedOwner[4];
+    be<s32> defaultOutputLine;
+    u8 reservedOutput[4];
+    TrackOutputControl tvOutput;
+    TrackOutputControl output[2];
+    be<u32> remoteOutput[4][3];
+    u8 reservedDriverTail[4];
+    gptr<SequenceRuntimeVtable> vtable;
+    u8 disposalLink[8];
+    be<u32> disposalVtable;
+    u8 updateLink[8];
+    be<u32> updateVtable;
+    be<u8> noteWait;
+    u8 reservedNote[3];
+    be<f32> panRange;
+    be<f32> tempoRatio,tickFraction;
+    be<s32> pendingTicks;
+    be<f32> pendingTime;
+    be<u8> sequenceOption;
+    be<u8> timeBase;
+    be<u16> tempo;
+    be<u8> modulationStart,modulationTarget;
+    be<s16> waitFrames,waitCounter;
+    be<u16> reservedWait;
+    gptr<void> allocator;
+    gptr<RuntimeTrackAllocator> trackAllocator;
+    be<u32> callback,callbackArgument;
+    gptr<TrackRuntimeControl> tracks[16];
+    be<s16> variables[16];
+    be<u32> processedTicks;
+    WaveArchiveReader waveArchives[4];   // each bank's wave archive (WaveArchiveReader::attach 0289FA7C)
+    BankReader banks[4];                 // BankReader::attach 028A3258 / detach 028A3330
+    be<u8> preparationState,ownsResources,linked;
+    u8 reservedPreparation;
+    be<u32> preparedHeader[3];
+    gptr<SequenceTaskPool> taskPool;
+    gptr<SequenceLoadTask> loadTask;
+    be<u32> preparedParameters[13];
+    TrackRuntimeControl* getTrack(s32);
+    void releaseTrack(s32);
+    void resetTracks();
+    void finish();
+    void destroy(u32);
+    void disposeRange(u32,u32);
+    void resetTracksCallback();
+    TrackRuntimeControl* allocateTrack(u32,u32);
+    void invokeCallback(u32,TrackRuntimeControl*);
+    static SequenceRuntimeSupport* create(SequenceRuntimeSupport*);
+    void initialize();
+    void tick();
+    void startPrepared(const SequencePreparation*);
+    void startPreparedAndLink(const SequencePreparation*);
+    void configureTracks(const SequenceTrackSetup*);
+    void prepareAsync(const be<u32>*,const be<u32>*);
+    void skipPending();
+    void advanceTime();
+    void update();
+    void callUpdate();
+    void returnLoadTask();
+    u32 acquireLoadTask();
+    void advance(u32,s32);
+    u32 updateTracks(u32);
+    void setPaused(u32);
+    void attachTrack(s32,TrackRuntimeControl*);
+    void updateTrackParameters();
+    void setTempoRatio(f32);
+    void setSequenceOption(u8);
+    void setNoteWait(u8);
+    void requestStart();
+    void setCallback(u32,u32);
+    be<s16>* variable(s32);
+    void setVariable(u32,s16);
+    static void setGlobalVariable(u32,s16);
+    static void initializeGlobalVariables();
+    void dispatchInteger(u32,const TrackMethod*,u32);
+    void dispatchIntegerPair(u32,const TrackMethod*,u32,u32);
+    void dispatchFloat(u32,const TrackMethod*,f32);
+    void dispatchFloatInteger(u32,const TrackMethod*,u32,f32);
+    void dispatchSigned(u32,const TrackMethod*,u32);
+    void dispatchByte(u32,const TrackMethod*,u32);
+    void dispatchShort(u32,const TrackMethod*,u32);
+    void dispatchFloatByte(u32,const TrackMethod*,u32,f32);
+    void dispatchOutputFloat(u32,const TrackMethod*,u32,f32);
+    void dispatchOutputEffect(u32,const TrackMethod*,u32,u32,f32);
+    void setTrackMute(u32,u32);
+    void setTrackSilence(u32,u32,u32);
+    void setTrackVolume(u32,f32);
+    void setTrackPitch(u32,f32);
+    void setTrackLpfOffset(u32,f32);
+    void setTrackBiquadFilter(u32,u32,f32);
+    u32 setResourceTrackOption(u32,u32);
+    void setTrackTranspose(u32,u32);
+    void setTrackVelocity(u32,u32);
+    void setTrackOption(u32,u32);
+    void resetTrackOption(u32);
+    void setTrackTvVolume(u32,f32);
+    void setTrackTvPan(u32,f32);
+    void setTrackTvSurroundPan(u32,f32);
+    void setTrackTvMainSend(u32,f32);
+    void setTrackTvEffect(u32,u32,f32);
+    void setTrackOutputVolume(u32,u32,f32);
+    void setTrackOutputPan(u32,u32,f32);
+    void setTrackOutputSurroundPan(u32,u32,f32);
+    void setTrackOutputMainSend(u32,u32,f32);
+    void setTrackOutputEffect(u32,u32,u32,f32);
+};
+WWHD_OFFSET(SequenceRuntimeSupport,owner,0x40);
+WWHD_OFFSET(SequenceRuntimeSupport,vtable,0x174);
+WWHD_OFFSET(SequenceRuntimeSupport,noteWait,0x190);
+WWHD_OFFSET(SequenceRuntimeSupport,tempoRatio,0x198);
+WWHD_OFFSET(SequenceRuntimeSupport,sequenceOption,0x1A8);
+WWHD_OFFSET(SequenceRuntimeSupport,allocator,0x1B4);
+WWHD_OFFSET(SequenceRuntimeSupport,tracks,0x1C4);
+WWHD_OFFSET(SequenceRuntimeSupport,variables,0x204);
+WWHD_OFFSET(SequenceRuntimeSupport,waveArchives,0x228);
+WWHD_OFFSET(SequenceRuntimeSupport,banks,0x268);
+WWHD_SIZE(SequenceRuntimeSupport,0x2E4);
+} }
+
+void runtimeStopTrack(nw::snd::TrackRuntimeControl*);
+void* runtimeSequenceUpdateManager();
+void runtimeRemoveSequenceUpdate(void*,void*);
+void runtimeListEraseFront(nw::snd::MixEffectChain*,const gptr<void>*);
+void runtimeTrackTick(nw::snd::TrackRuntimeControl*);
+s32 runtimeTrackStep(nw::snd::TrackRuntimeControl*,u32);
+void runtimeTrackPause(nw::snd::TrackRuntimeControl*,u32);
+void runtimeTrackReset(nw::snd::TrackRuntimeControl*);
+void runtimeTrackUpdate(nw::snd::TrackRuntimeControl*);
+
+void* runtimeDisposalManager();
+void runtimeRemoveDisposal(void*,void*);
+void runtimeSequenceReleaseResources(nw::snd::SequenceRuntimeSupport*);
+void runtimeDestroyEvent(void*,u32);
+u32 runtimeTrackUserValue(nw::snd::TrackRuntimeControl*,u32);
+
+void runtimeDelete(void*);
+
+void runtimeSequenceBaseConstruct(nw::snd::SequenceRuntimeSupport*);
+void runtimeSequenceBaseInitialize(nw::snd::SequenceRuntimeSupport*);
+void runtimeTrackStopNotes(nw::snd::TrackRuntimeControl*,u32);
+void runtimeTrackReleaseNotes(nw::snd::TrackRuntimeControl*);
+Pair32 runtimeTimeToTicks(f64);
+f64 runtimeTicksToTime(u32,u32);
+
+void runtimeOpenSequenceReader(nw::snd::RuntimeSequenceReader*,u32);
+u32 runtimeSequenceData(nw::snd::RuntimeSequenceReader*);
+void runtimeTrackSetSequence(nw::snd::TrackRuntimeControl*,u32,u32);
+void runtimeTrackStart(nw::snd::TrackRuntimeControl*);
+void runtimeAddDisposal(void*,void*);
+void runtimeAddSequenceUpdate(void*,void*);

@@ -1,0 +1,13 @@
+# verify: -only 027D7D94,027D7E04 -strictnan -calleesp
+# AGL#19 TYPE-DOMAIN companion: createGeometryGroup 027D7D94 and
+# createGeometryWorkspace 027D7E04 with r3 == NULL (allocate 0xC / 0x90 through operator new 0273AD10, success or an
+# exhausted heap). Unreachable in the shipped game: 027D7E04's only caller is the shadow-context constructor 027C70A8
+# (placement at context+0x84), and 027D7D94 is called only by 027D7E04 on its own members and by __construct_array
+# 028EFFD0 on array elements. The GHS member guards inside stay named gaps.
+src wwhd_src/agl/ProjectionWorkspace.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+alloc 0273AD10 r3 0x58400000 4
+allocfail 0273AD10 0,1
+arg! 027D7D94 r3 0
+arg! 027D7E04 r3 0

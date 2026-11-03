@@ -1,0 +1,44 @@
+# AGL#19 banks: initialize of the spatial (027D1EE0) and paired (027D2C98) light collections on heaps too small for
+# the request (allocation failure: the record array, the prepared-count array or a value array comes back NULL and the
+# collection keeps capacity / value capacity 0 for it). The collection is constructed as in lib2_agl_19_banks_initialize
+# (configure's inline construction); the heaps are root ExpHeaps made by the original 02755FE0 from 0x400-, 0x1000- and
+# 0x4000-byte arenas. Capacities 1..4 and the shipped
+# 256 / 128, value capacity 1 or 2.
+# verify: -only 027D1EE0,027D2C98 -strictnan -calleesp
+src wwhd_src/agl/LightCollectionInitialize.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+ret! 02756140 0x6A000000
+fill * 5A0B0000 0x40 0
+field * 5A0B0000 u32 0x5A0C0000
+field * 5A0B0004 u32 0x400
+field * 5A0B0010 u32 0x5A0D0000
+field * 5A0B0014 u32 0x1000
+field * 5A0B0020 u32 0x5A0E0000
+field * 5A0B0024 u32 0x4000
+stable 5A0B0000 0x40
+fill * 5A0C0000 0x400 0
+fill * 5A0D0000 0x1000 0
+fill * 5A0E0000 0x4000 0
+setup * 02755FE0 r3=0x5A0B0000
+setup * 02755FE0 r3=0x5A0B0010
+setup * 02755FE0 r3=0x5A0B0020
+# the collection object is written only by the tested initializer (no mocked call may clobber it)
+stable 5A070000 0x114
+arg! 027D1EE0 r3 0x5A070000
+fill 027D1EE0 5A070000 0x114 0
+field 027D1EE0 5A070000 u32 0x1016B070
+setup 027D1EE0 027BF734 r3=0x5A07001C
+arg! 027D1EE0 r4 0x5A000000
+arg! 027D1EE0 r5 1,2,4,256
+arg! 027D1EE0 r6 1,2
+arg! 027D1EE0 r7 0x5A0C0000,0x5A0D0000,0x5A0E0000
+arg! 027D2C98 r3 0x5A070000
+fill 027D2C98 5A070000 0x114 0
+field 027D2C98 5A070000 u32 0x1016B1E8
+setup 027D2C98 027BF734 r3=0x5A07001C
+arg! 027D2C98 r4 0x5A000000
+arg! 027D2C98 r5 1,2,4,128
+arg! 027D2C98 r6 1,2
+arg! 027D2C98 r7 0x5A0C0000,0x5A0D0000,0x5A0E0000

@@ -1,0 +1,13 @@
+# verify: -strictnan -calleesp
+# G02 current-tool companion: steer 02793384 to complete real receiver storage.
+# Install the original root heap and world producers for the direct allocate-on-null path.
+include shared/agl_world.txt
+# Base AGL#8 functions and source profile are inherited unchanged.
+include lib2_agl_8.txt
+setupsnapshot
+
+# blocks 4/5: these are valid element storage addresses; block 4 remains
+# the named out-of-domain wrap-to-zero guard. approved values include top-level allocate-on-null (0) and real element storage.
+fill * 0x5A000000 0x1000 0
+stable 0x5A000000 0x1000
+arg! 02793384 r3 0,0x5A000000,0x5A000A00

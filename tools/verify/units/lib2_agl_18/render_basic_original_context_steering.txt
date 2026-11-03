@@ -1,0 +1,19 @@
+# Same-family steering companion; includes the already-validated existing startup unchanged.
+# Published Lead19:44/04:43/07:20 CFG bits20/100 and CTX cache0/1; finite colors include zero to exercise valid no-draw arms.
+# Matched controls COMPLETE: O2 and own-DrawBasicRendering.cpp-O1,10000/10000 on seeds1/7,46/61 blocks each.
+# Normal evidence: build/agl18/dw-render-basic-steering-{O2,O1}-seed{1,7}.log.
+# Canonical guest-only n2 watch/trace preflight actualrc0, zeroR/W/P/abort/refusal: dw-render-basic-steering-n2-watch-trace1000004.log.gz.
+# Remaining15 coverage blocks need named reachability closure; record/program domain question is open.
+# Mutation NOT LAUNCHED: public208 and leading-helper115 inputs prepared; no mutation acceptance claimed.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context.txt
+poke * 59600004 u32 0x00164120,0x00164100,0x00164020,0x00164000
+poke * 59700024 u32 0,1
+poke * 59100018 f32 0,0.25,0.5,1
+poke * 5910001C f32 0,0.25,0.5,1
+poke * 59100020 f32 0,0.25,0.5,1
+poke * 59100024 f32 0,0.25,0.5,1
+poke * 59100028 f32 0,0.25,0.5,1
+poke * 5910002C f32 0,0.25,0.5,1
+poke * 59100030 f32 0,0.25,0.5,1
+poke * 59100034 f32 0,0.25,0.5,1

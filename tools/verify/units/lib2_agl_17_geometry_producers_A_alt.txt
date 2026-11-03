@@ -1,0 +1,89 @@
+# Corrected 2026-10-26: flags 9601/9603 = 1 (.data, no writer)
+#.
+# r4 camera look-at {VIEW0 eye 0 dir -z (on-axis), VIEWY eye (300,200,500) -> origin}; r5 = hdRenderProjection_c device matrix
+# PROJ+0x44 (027389F8, n 0.1, f 10000, aspect {16/9, 4/3}, shift 0, scale 1, fov {pi/4, pi/3}; since R2 set through PerspectiveProjection::set 0274E04C, then 0274D83C);
+# r6 = REF_L = 02791C68(LVIEW) or REF_W = 025155D8 on raw (3F7FFFF8, 0, BA83126E) -> (3F7FFFFA, 0, BA83126F); r7 = 1;
+# f1/f2 = NDC of production distances for the traced P22 BF8000A7, P23 BE4CCD52, P32 BF800000, P33 0 (n 0.1 / f 10000), computed
+# as fdivs(fnmsubs(P22,d,P23), fnmsubs(P32,d,P33)) like 027C95B4..95CC: f1 in {30 3F7E4C64, 40 3F7EB99E}, f2 in {70 3F7F460F,
+# 200 3F7FBFC5, 300 3F7FD59D, 500 3F7FE718, 700 3F7FEE94, 1000 3F7FF432} (f1 < f2 always).
+# Producer closure: real also 0274D6B4 (sead Projection base ctor: +0x84 posture, +0x88/+0x8C; mocked
+# it left the posture random -> mocked 0274D9A0 swap) and 028F5E98 (int->float helper in tan 028F423C; mocked = random f1), plus
+# stable 101F8B1C 12. No mocked nested call remains in the setups. Light look-at LVIEW = 02791D00 with eye {-300,200}x{1000,600}x
+# {-200,400} and dir {0.3,-0.5}x{-1,-0.6}x{0.2,-0.4} poked per component (dir.x, dir.y != 0: never parallel to up (0,1,0)).
+# Every input is a production tuple of this path (pinned registers use arg!/argf64!). Survivor ids: mutate.py --ids with the
+# campaign enumeration (header -only 027C8ABC, default --max, --seed 1 = o1, --seed 7 = o7), n200, input seeds 1 and 7.
+# Results: -trace 1000003: inverse row 3 at frame +0x74/+0x78 = 80000000/00000000 (z/w C09FFF98/40A00068), every face one
+# 4-store group (no flip; flip block 027C8FAC unreached in 400 inputs). -watch 00000000:0x1000 over n200 seeds 1/7: clean.
+# n200 seeds 1/7: 200/200 (coverage 36/51), also the -srcopt-only ShadowPlanes.cpp O1 control. Survivors: o1 #39 #47 #161 and
+# o7 #41 #179 #211 killed on all 200 inputs (both input seeds); o1 #143 killed (188/200 and 184/200 pass) only by witness inputs
+# VIEW0 + REF_W (near plane (0,-0,1), dot = -0.001f, the mutant appends it); o1 #32 / o7 #127 survive (EQ).
+# verify: -only 027C8ABC -strictnan -calleesp
+stackfill
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+real 0274EDD4 028E892C 028E91EC 028E8F64 028E8D4C 025155D8 028E8E10 027C8698 027C87DC
+real 027389F8 0274DEA8 0274D6B4 028F5E98 0274E7A0 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 0274DA08 028E8970 02791D00 0274CCC4 0274CCB0 028E90D4 02791C68 028E8B04 028E89B4 027CAAB0 0274E04C
+callee 0274EDD4 r3=out64 r4=64
+callee 028E91EC r3=48 r4=out48
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 025155D8 r3=inout12
+callee 028E8F64 r3=48 r4=12 r5=out12
+stable 1016A604 96
+stable 101F8B1C 12
+stable 5F300000 0xE4
+stable 5F301000 0xC0
+stable 5F302000 0x70
+stable 5F303000 0x20
+stable 5F304000 0xC0
+arg! 027C8ABC r3 0x5F200000
+arg! 027C8ABC r4 0x5F301000,0x5F301040
+arg! 027C8ABC r5 0x5F300044
+arg! 027C8ABC r6 0x5F303000,0x5F303010
+arg! 027C8ABC r7 1
+argf64! 027C8ABC f1 0x3FEFC98C80000000,0x3FEFD733C0000000
+argf64! 027C8ABC f2 0x3FEFE8C1E0000000,0x3FEFF7F8A0000000,0x3FEFFAB3A0000000,0x3FEFFCE300000000,0x3FEFFDD280000000,0x3FEFFE8640000000
+fill 027C8ABC 5F200000 1460 0
+field 027C8ABC 101F9601 u8 1
+field 027C8ABC 101F9603 u8 1
+# camera projection: hdRenderProjection_c main state n 0.1 / f 10000 (the NDC words above are for this n/f)
+setup * 027389F8 r3=0x5F300000
+# camera views: VIEW0 eye 0 dir -z (on-axis, #143 witness); VIEWY eye (300,200,500) -> origin
+poke * 5F302000 u32 0
+poke * 5F302004 u32 0
+poke * 5F302008 u32 0
+poke * 5F302010 u32 0
+poke * 5F302014 u32 0
+poke * 5F302018 f32 -1
+poke * 5F302030 f32 300
+poke * 5F302034 f32 200
+poke * 5F302038 f32 500
+poke * 5F302040 f32 -300
+poke * 5F302044 f32 -200
+poke * 5F302048 f32 -500
+# light look-at LVIEW: eye and direction components poked per input (every pick is a valid look-at: dir.x, dir.y != 0)
+poke * 5F302020 u32 0
+poke * 5F302024 f32 1
+poke * 5F302028 u32 0
+poke * 5F302050 f32 -300,200
+poke * 5F302054 f32 1000,600
+poke * 5F302058 f32 -200,400
+poke * 5F302060 f32 0.3,-0.5
+poke * 5F302064 f32 -1,-0.6
+poke * 5F302068 f32 0.2,-0.4
+# witness light forward: raw (X, 0, Z) normalised by 025155D8 -> (3F7FFFFA, 0, BA83126F)
+poke * 5F303010 u32 0x3F7FFFF8
+poke * 5F303014 u32 0
+poke * 5F303018 u32 0xBA83126E
+# camera parameters through the original sead PerspectiveProjection::set 0274E04C (near, far, fovy, aspect as caller arguments)
+fill * 5F305000 16 0
+field * 5F305000 u32 0x3F490FDB,0x3F860A92
+field * 5F305004 u32 0x3FE38E39,0x3FAAAAAB
+stable 5F305000 16
+postsetup * 0274E04C r3=0x5F300000 f1=0.1 f2=10000 f3=*5F305000 f4=*5F305004
+postsetup * 0274D83C r3=0x5F300000
+postsetup * 02791D00 r3=0x5F301000 r4=0x5F302000 r5=0x5F302010 r6=0x5F302020
+postsetup * 02791D00 r3=0x5F301040 r4=0x5F302030 r5=0x5F302040 r6=0x5F302020
+postsetup * 02791D00 r3=0x5F301080 r4=0x5F302050 r5=0x5F302060 r6=0x5F302020
+postsetup * 02791C68 r3=0x5F303000 r4=0x5F301080
+postsetup * 025155D8 r3=0x5F303010
+final 027C8ABC 5F20041C 184

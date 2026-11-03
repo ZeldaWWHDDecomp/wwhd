@@ -1,0 +1,40 @@
+# Complete separate PaletteBuffer and 64-padded world allocation; callback/context are opaque borrowed handles.
+# callback word stable; SDK writes confined to owned world block (00:50), last dispatch after final read.
+# verify: -only 027DB1D4 -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+arg! 027DB1D4 r3 0x70700000
+arg! 027DB1D4 r4 0x70740000
+fill 027DB1D4 0x70700000 76 0
+fill 027DB1D4 0x70702000 24 0
+fill 027DB1D4 0x70704000 128 0
+fill 027DB1D4 0x70710000 128 0
+fill 027DB1D4 0x70712000 128 0
+fill 027DB1D4 0x70714000 64 0
+field 027DB1D4 0x70700000 u32 0x70702000
+field 027DB1D4 0x70700004 u16 0x16,0x116,0x216,0x316
+field 027DB1D4 0x70700006 u8 1
+field 027DB1D4 0x70700008 u32 0x70704000
+field 027DB1D4 0x7070000C u32 0x70712000
+field 027DB1D4 0x70700010 u32 0x70710000
+field 027DB1D4 0x70700014 u32 0x70714000
+field 027DB1D4 0x7070002C u16 1
+field 027DB1D4 0x7070002E u16 0xFFFF
+field 027DB1D4 0x70700030 u32 0,0x70730000
+field 027DB1D4 0x70700034 u32 0x70712000
+field 027DB1D4 0x70700038 u32 0x70710000
+field 027DB1D4 0x70700044 u32 0x70710000
+field 027DB1D4 0x70702008 u16 1
+field 027DB1D4 0x70702014 s32 8172
+copy 027DB1D4 0x1016C6A0 0x1016C6A0 64
+stable 0x1016C6A0 64
+stable 0x70700030 4
+# Only the callback word is excluded from implicit epochs; actual stores and net writes remain compared.

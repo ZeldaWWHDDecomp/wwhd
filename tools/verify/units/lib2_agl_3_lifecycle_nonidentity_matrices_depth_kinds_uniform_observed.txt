@@ -1,0 +1,3 @@
+# TYPE-DOMAIN: public render depthKind selector0/1; actual SDK-built nonidentity current/history matrices and depth sampler producers.
+include lib2_agl_3_lifecycle_nonidentity_matrices_uniform_observed.txt
+arg! 0277AD60 r9 0,1

@@ -1,0 +1,148 @@
+# AGL#3 own helpers; full assigned unit remains55 bodies.
+# verify: -strictnan -calleesp
+src wwhd_src/agl/FilterAaParameters.cpp
+# Unchanged canonical data-only owner; approved by root for shared registry linkage.
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# CLOSED 23:41 registry-root producer: construct the actual manager/current root heap.
+field * 0x101F8B94 u32 0
+field * 0x104DA130 u32 0
+field * 0x101F8B34 u32 0
+field * 0x101F8B40 u32 0
+field * 0x101F8B4C u32 0
+fill * 0x6A000000 0x01000000 0
+stable 0x6A000000 0x01000000
+field * 0x6E200000 u32 0x6A000000
+field * 0x6E200004 u32 0x01000000
+field * 0x6E200008 u32 0
+stable 0x6E200000 0xC
+setup * 027561B4
+setup * 02755FE0 r3=0x6E200000
+nestedret 02756140 0x6A000000
+setup * 02757B48
+setup * 02759AD8
+# Complete nonwrapping prefix/value objects; null only at entries that accept it.
+arg! * r3 0x56000000
+arg! 0277912C r3 0,0x56000000
+arg! 02779140 r3 0,0x56000000
+arg! 02779154 r3 0,0x56000000
+arg! 027791C8 r3 0,0x56000000
+arg! 02779230 r3 0,0x56000000
+arg! 02779364 r3 0,0x56000000
+arg! 02779378 r3 0,0x56000000
+arg! 0277938C r3 0,0x56000000
+arg! 027793A0 r3 0,0x56000000
+arg! 02779460 r3 0,0x56000000
+arg! 027791DC r3 0,0x56000000
+arg! 02779628 r3 0,0x56000000
+alloc 0273AD10 r3 0x57000000 16
+allocnested 0273AD10
+field 027791B0 r3+0 u32 0x56100000
+field 027791B0 r3+8 u32 1,2,16,128
+arg! 02779440 r4 0x56200000
+field 02779440 r4+0 u32 0x56200100
+field 02779440 56200104 u32 0,1,2,0xFFFFFFFF
+field 02779440 r3+0x54 u32 0,1,2,0xFFFFFFFF
+footprint 0277912C 0
+footprint 02779140 0
+footprint 027791C8 0
+footprint 02779230 0
+footprint 02779364 0
+footprint 02779378 0
+footprint 0277938C 0
+footprint 027793A0 0
+
+arg! 027794E0 r3 0,0x56000000
+arg! 02779594 r3 0,0x56000000
+arg! 0277969C r3 0,0x56000000
+arg! 02779888 r3 0,0x56000000
+
+# Two complete 0xC98 entries, with fallback-to-first for indices >= count.
+arg! 02777CB0 r4 0,1,2,0xFFFFFFFF
+field 02777CB0 r3+0x2CC u32 2
+field 02777CB0 r3+0x2D0 u32 0x56300000
+field 02777CB0 563006A0 u32 0,1,0x12345678
+field 02777CB0 56300984 u32 0,2,0x87654321
+field 02777CB0 56301338 u32 0,1,0x12345678
+field 02777CB0 5630161C u32 0,2,0x87654321
+
+arg! 027796EC r3 0,0x56000000
+arg! 027796EC r4 0,1,2,3
+field 027796EC r3+0x2CC u32 2
+field 027796EC r3+0x2D0 u32 0x56300000
+field 027796EC r3+0x2D4 u32 2
+field 027796EC r3+0x2D8 u32 0x56400000
+field 027796EC r3+0x2DC u32 2
+field 027796EC r3+0x2E0 u32 0x56500000
+# The heap lookup remains opaque and returns a live dispatch prefix.
+ret! 02755FEC 0x56600000
+field 027796EC 5660000C u32 0x56600100
+field 027796EC 5660013C u32 0x02FFFF00
+callee 02FFFF00 fixture r3=0 r4=0
+
+arg! 02779244 r3 0,0x56000000
+arg! 02779244 r4 0x56700000
+cr 02779244 6 0,1
+# The argument list and saved-register payload are inputs to the opaque formatter.
+callee 02759C10 r3=140 r4=16 r5=12
+
+arg! 02777BA8 r4 0,1,2,0xFFFFFFFF
+arg! 02777BA8 r5 0,1,5
+arg! 02777BA8 r6 0x56800000
+field 02777BA8 r3+0x10 u32 0,1
+field 02777BA8 r3+0x2CC u32 2
+field 02777BA8 r3+0x2D0 u32 0x56300000
+field 02777BA8 r3+0x2D4 u32 2
+field 02777BA8 r3+0x2D8 u32 0x56400000
+field 02777BA8 56400000 u32 0x56900000
+field 02777BA8 56400004 u32 0x56A00000
+field 02777BA8 569000C4 u8 0,1
+field 02777BA8 56900114 u8 0,1
+field 02777BA8 56900254 u8 0,1
+field 02777BA8 56A000C4 u8 0,1
+field 02777BA8 56A00114 u8 0,1
+field 02777BA8 56A00254 u8 0,1
+callee 027A9E28 r3=0 r4=0 r5=8 r6=32
+
+arg! 0277A488 r3 0,0x56000000
+arg! 0277A488 r4 0,1,2,3
+field 0277A488 r3+0x584 u32 2
+field 0277A488 r3+0x588 u32 0x56B00000
+field 0277A488 56B006E4 u32 0,0x56C00000
+field 0277A488 56B00EB4 u32 0,0x56D00000
+field 0277A488 5660000C u32 0x56600100
+field 0277A488 5660013C u32 0x02FFFF00
+
+# Approved body47 publisher: canonical contract, 2026-10-24 01:13.
+setup * 02779888 r3=0x56010000
+arg! 027798F4 r3 0x56010000
+arg! 027798F4 r4 1,2,3
+arg! 027798F4 r5 0,1
+arg! 027798F4 r6 0,0x6A000000
+observeptr 02759C10 r5+8 96
+
+# The distinct body47 receiver prevents the stability contract affecting other rows.
+
+arg! 0277A634 r4 0x5A100000
+arg! 0277A634 r5 0,0x56600000
+field 0277A634 5A100000 s32 1,2
+field 0277A634 5A100004 u32 0,64
+field 0277A634 5660000C u32 0x56600100
+field 0277A634 56600134 u32 0x02FFFF10
+alloc 0273B0D4 r3 0x5C000000 align=r5
+allocnested 0273B0D4
+
+footprint 02779120 0
+callee 02777D3C r3=0 r4=0 r5=0 r6=0 r7=0
+
+arg! 02779BFC r3 0,0x56000000
+
+# CLOSED 20:57 runtime entry producer and traced ordinary children for body47.
+real 0279A86C 027A84B8
+real 02779888 02774FD0 02775090 0279AAFC 027BDF7C 027B6CB8 027B95B4 027B958C 027B954C 0277969C 0279A95C 028EFFD0
+real 0279E674 0279E618 02759B98 027794E0 02779594 02779628 0273B584
+# CLOSED 23:41 registry-root setup closure (SDK/memory imports remain mocked).
+real 027561B4 02755FE0 02755F40 02755EC4 0275315C 027601BC 02752C74 0275589C 02752B0C 027600EC 028F521C
+real 02753000 02752F10 02752E60 0273B2F0 02752D8C 027601F0 027536F4 02753628 0273B310 027536B0 02757B48 02759AD8 0273B0D4
+# Protected 02774FD0 preserves this +4..+0xF.
+stable 56010004 12

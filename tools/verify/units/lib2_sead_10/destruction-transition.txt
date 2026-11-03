@@ -1,0 +1,331 @@
+# verify: -only 0274A4E0
+# A task is enqueued before the lock is acquired, then moved from active to finished.
+# SEAD#10: sead framework tail, method tree nodes, tasks, task base, task manager, game framework
+# (the primary spec: every function; the companion specs in lib2_sead_10/ steer populated structures).
+src wwhd_src/sead/Framework.cpp
+src wwhd_src/sead/MethodTreeNode.cpp
+src wwhd_src/sead/Task.cpp
+src wwhd_src/sead/TaskBase.cpp
+src wwhd_src/sead/TaskMgr.cpp
+src wwhd_src/sead/GameFramework.cpp
+src wwhd_src/sead/CafeGameFramework.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+# Pointees the callees read, compared at the calls: heap and thread names, the null fader's construct
+# argument (construct argument + heap array), create arguments, class IDs, the heap arrays passed
+# between the create steps, and the sleep span.
+callee 02753004 r4=8
+callee 0275FBD8 r4=8 r5=heap16
+callee 02768514 r4=36
+callee 02749ECC r4=128
+callee 02748CFC r3=out128 r4=8
+callee 02760C3C r3=8
+callee 02768A14 r3=8 r4=12
+callee 02749C10 r4=24 r5=128
+callee 02749DEC r4=128 r5=24
+# Method tree walks need finite child and sibling links.
+field 027479F4 r3+4 u32 0
+field 027479F4 r3+8 u32 0
+field 02747BDC r3+4 u32 0
+# Framework reset: an empty reset event (the list's sentinel links to itself).
+arg! 02747818 r3 0x59000000
+field 02747818 0x59000008 u32 0x59000008
+field 02747818 0x5900000C u32 0x59000008
+stable 0x59000000 28
+# The heap manager has at most four root heaps; counts 0..4.
+field * 0x104A030C s32 0 4
+stable 0x104A030C 4
+# TaskBase::destroy: no children (populated trees: lib2_sead_10/finite-structures).
+field 027485F0 r3+4 u32 0
+# TaskBase::adjustHeap: indices of the four heap slots.
+arg! 027487DC r4 0,1,2,3
+# Task delegates bound directly (virtual index -1) to 027479D4, an empty function of this unit.
+# Virtual bindings: lib2_sead_10/virtual-delegates.
+arg! 027484C8 r3 0x59200000
+arg! 0274859C r3 0x59200000
+field 027484C8 0x59200004 u32 0,0x59201000
+field 0274859C 0x59200004 u32 0,0x59201000
+field 027484C8 0x59200008 s16 0
+field 0274859C 0x59200008 s16 0
+field 027484C8 0x5920000A s16 -1,0
+field 0274859C 0x5920000A s16 -1,0
+field 027484C8 0x5920000C u32 0x027479D4
+field 0274859C 0x5920000C u32 0x027479D4
+stable 0x59200000 16
+# The root task's primary heap index selects one of its four heaps.
+field 0274AF44 r4+0x58 u32 0 3
+# Keep stale stack bytes: the word of the system-task argument that createSystemTasks leaves unset.
+stackfill
+arg! 0274A9CC r3 0x59200000
+field 0274A9CC 0x59200004 u32 0,0x59201000
+field 0274A9CC 0x59200008 s16 0
+field 0274A9CC 0x5920000A s16 -1,0
+field 0274A9CC 0x5920000C u32 0x027479D4
+arg! 0274AA20 r3 0x59200000
+field 0274AA20 0x59200004 u32 0,0x59201000
+field 0274AA20 0x59200008 s16 0
+field 0274AA20 0x5920000A s16 -1,0
+field 0274AA20 0x5920000C u32 0x027479D4
+# TaskMgr::destroyTaskRecursive: an empty child list (populated: lib2_sead_10/finite-structures).
+arg! 02749AB4 r4 0x59300000
+field 02749AB4 0x59300004 u32 0
+stable 0x59300004 4
+# TaskMgr::insertByTag: an empty target list.
+arg! 02749734 r3 0x59400000
+arg! 02749734 r4 0x59410000
+arg! 02749734 r5 0x59420000
+field 02749734 0x59410000 u32 0x59410000
+field 02749734 0x59410004 u32 0x59410000
+field 02749734 0x59410008 s32 0
+field 02749734 0x59420040 u32 0
+stable 0x59410000 8
+stable 0x59420040 4
+# TaskMgr::changeTaskState: every state, plus unsigned out-of-range values.
+arg! 02749850 r5 0,1,2,3,4,5,6,7,8,0x80000000,0xFFFFFFFF
+field 02749850 r4+0x60 u32 0,1,2,3,4,5,6,7,8,0x80000000,0xFFFFFFFF
+# TaskMgr::isDestroyable: no children; flags and states cover the checks.
+arg! 0274A418 r4 0x59500000
+field 0274A418 0x59500004 u32 0
+field 0274A418 0x59500030 u32 0,2,4,6,0xFFFFFFFF
+field 0274A418 0x59500060 u32 0,1,2,3,4,5,6,7
+stable 0x59500004 4
+# TaskMgr::finalize: empty task lists while the manager holds its lock.
+arg! 0274A5F0 r3 0x59600000
+field 0274A5F0 0x596000B4 u32 0
+stable 0x596000B4 4
+field 0274A5F0 0x5960004C u32 0x5960004C
+field 0274A5F0 0x59600050 u32 0x5960004C
+stable 0x5960004C 8
+field 0274A5F0 0x59600064 u32 0x59600064
+field 0274A5F0 0x59600068 u32 0x59600064
+stable 0x59600064 8
+field 0274A5F0 0x5960007C u32 0x5960007C
+field 0274A5F0 0x59600080 u32 0x5960007C
+stable 0x5960007C 8
+field 0274A5F0 0x59600088 u32 0x59600088
+field 0274A5F0 0x5960008C u32 0x59600088
+stable 0x59600088 8
+# GameFramework::waitStartDisplayLoop: a frame may create the root task; a sleep may start the display.
+arg! 0274AF60 r3 0x59700000
+field 0274AF60 0x59700018 u32 0x59710000
+field 0274AF60 0x59700028 u32 0,1
+field 0274AF60 0x597100B4 u32 0,0x59300000
+stable 0x59700018 4
+stable 0x59700028 4
+stable 0x597100B4 4
+mockglobal 0274A414 0x597100B4 u32 0,0x59300000
+mockglobal 02760C3C 0x59700028 u32 1
+# TaskMgr::setupWorkers: primary heap index and request pool capacities (none, small).
+arg! 02748E1C r3 0x59800000
+field 02748E1C 0x598000A8 u32 0 3
+field 02748E1C 0x598000B0 s32 -1,0,1,2,3
+# A capacity <= 0 leaves the pool empty; a positive one allocates capacity*0x9C bytes.
+# Mocked callees leave the capacity word alone; the allocator mock may change it before the late read,
+# within the allocated pool.
+stable 0x598000B0 4
+mockglobal 0273B050 0x598000B0 u32 0xFFFFFFFF,0,1,2,3
+# TaskMgr::enqueueCreateRequest: a finite queue, a free request and the capacity check.
+arg! 0274905C r3 0x59900000
+field 0274905C 0x599000AC u32 0x59910000
+field 0274905C 0x59910008 s32 0,1,2
+field 0274905C 0x59910014 s32 0,1,2,3
+field 0274905C 0x5991000C u32 0,0x59920000
+stable 0x599000AC 4
+stable 0x59910008 4
+stable 0x59910014 4
+stable 0x5991000C 4
+field 02749DEC r5+0x14 u32 0 3
+# TaskMgr::createTaskSync: no listener (with listeners: lib2_sead_10/linked-listener and friends).
+arg! 02749ECC r4 0x59A00000
+field 02749ECC 0x59A00070 u32 0
+stable 0x59A00070 4
+# TaskMgr::processCreateQueue: one queued request with an empty listener list.
+arg! 0274A1E4 r3 0x59B00000
+field 0274A1E4 0x59B000AC u32 0x59B10000
+field 0274A1E4 0x59B10008 s32 1
+field 0274A1E4 0x59B10004 u32 0x59B20094
+field 0274A1E4 0x59B20000 u32 0,0x59B30000
+field 0274A1E4 0x59B20084 u32 0x59B20084
+field 0274A1E4 0x59B20088 u32 0x59B20084
+field 0274A1E4 0x59B30060 u32 0,1,2,4
+stable 0x59B000AC 4
+stable 0x59B10008 4
+stable 0x59B10004 4
+stable 0x59B20000 4
+stable 0x59B20084 8
+stable 0x59B30060 4
+# TaskMgr::processDestruction: finite active and finished lists; the destroy mock removes the finished task.
+arg! 0274A4E0 r3 0x59C00000
+field 0274A4E0 0x59C00064 u32 0x59C10034
+field 0274A4E0 0x59C00068 u32 0x59C10034
+field 0274A4E0 0x59C0006C s32 1
+field 0274A4E0 0x59C10034 u32 0x59C00064
+field 0274A4E0 0x59C10038 u32 0x59C00064
+field 0274A4E0 0x59C1003C u32 0x59C10000
+field 0274A4E0 0x59C10030 u32 0,2,6
+field 0274A4E0 0x59C00088 u32 0x59C20034
+field 0274A4E0 0x59C0008C u32 0x59C20034
+field 0274A4E0 0x59C00090 s32 1
+field 0274A4E0 0x59C20034 u32 0x59C00088
+field 0274A4E0 0x59C20038 u32 0x59C00088
+field 0274A4E0 0x59C2003C u32 0x59C20000
+stable 0x59C00064 12
+stable 0x59C10034 12
+stable 0x59C00088 12
+stable 0x59C20034 12
+mockglobal 02749AB4 0x59C00088 u32 0x59C00088
+mockglobal 02749AB4 0x59C0008C u32 0x59C00088
+mockglobal 02749AB4 0x59C00090 u32 0
+# TaskMgr::prepareThreadMain: finite queued and request lists; the lookup finds or misses the task.
+arg! 0274A7A4 r3 0x59D00000
+field 0274A7A4 0x59D0004C u32 0x59D10034
+field 0274A7A4 0x59D00050 u32 0x59D10034
+field 0274A7A4 0x59D00054 s32 1
+field 0274A7A4 0x59D10034 u32 0x59D0004C
+field 0274A7A4 0x59D10038 u32 0x59D0004C
+field 0274A7A4 0x59D1003C u32 0x59D10000
+field 0274A7A4 0x59D10040 u32 0x59D0004C
+field 0274A7A4 0x59D10058 u32 0 3
+field 0274A7A4 0x59D000AC u32 0x59D20000
+field 0274A7A4 0x59D20000 u32 0x59D30094
+field 0274A7A4 0x59D20004 u32 0x59D30094
+field 0274A7A4 0x59D20008 s32 1
+field 0274A7A4 0x59D30000 u32 0,0x59D10000
+field 0274A7A4 0x59D30094 u32 0x59D20000
+field 0274A7A4 0x59D30098 u32 0x59D20000
+stable 0x59D0004C 12
+stable 0x59D10034 16
+stable 0x59D000AC 4
+stable 0x59D20000 12
+stable 0x59D30000 4
+stable 0x59D30094 8
+# Valid vtables for the heap release-all and the task prepare calls:
+# the image's heap constructor 02752C74 allocates 0xB8 bytes and stores vtable 101459E0 at +0xC,
+# whose slot 0x50 (fn word 21) is 027544E0 (heap only); the task vtables' slot 0x50 is TaskBase::prepare 02748E04.
+# The fixture heaps lie apart from their manager and task, so callees cannot overwrite those or
+# substitute unrelated vtables.
+field 0274A7A4 0x59D10070 u32 0x5D0E0000
+field 0274A7A4 0x5D0E0054 u32 0x02748E04
+stable 0x59D10070 4
+stable 0x5D0E0054 4
+field 0274A5F0 0x59600094 u32 0,0x5D010000
+stable 0x59600094 4
+field 0274A7A4 0x59D10044 u32 0,0x5D010000
+stable 0x59D10044 4
+fill * 0x5D010000 184 0
+field * 0x5D01000C u32 0x5D0F0000
+field * 0x5D010098 u32 0x5D010098
+field * 0x5D01009C u32 0x5D010098
+field * 0x5D0100A8 u32 0x5D0100A8
+field * 0x5D0100AC u32 0x5D0100A8
+stable 0x5D010000 184
+field 0274A5F0 0x59600098 u32 0,0x5D011000
+stable 0x59600098 4
+field 0274A7A4 0x59D10048 u32 0,0x5D011000
+stable 0x59D10048 4
+fill * 0x5D011000 184 0
+field * 0x5D01100C u32 0x5D0F0000
+field * 0x5D011098 u32 0x5D011098
+field * 0x5D01109C u32 0x5D011098
+field * 0x5D0110A8 u32 0x5D0110A8
+field * 0x5D0110AC u32 0x5D0110A8
+stable 0x5D011000 184
+field 0274A5F0 0x5960009C u32 0,0x5D012000
+stable 0x5960009C 4
+field 0274A7A4 0x59D1004C u32 0,0x5D012000
+stable 0x59D1004C 4
+fill * 0x5D012000 184 0
+field * 0x5D01200C u32 0x5D0F0000
+field * 0x5D012098 u32 0x5D012098
+field * 0x5D01209C u32 0x5D012098
+field * 0x5D0120A8 u32 0x5D0120A8
+field * 0x5D0120AC u32 0x5D0120A8
+stable 0x5D012000 184
+field 0274A5F0 0x596000A0 u32 0,0x5D013000
+stable 0x596000A0 4
+field 0274A7A4 0x59D10050 u32 0,0x5D013000
+stable 0x59D10050 4
+fill * 0x5D013000 184 0
+field * 0x5D01300C u32 0x5D0F0000
+field * 0x5D013098 u32 0x5D013098
+field * 0x5D01309C u32 0x5D013098
+field * 0x5D0130A8 u32 0x5D0130A8
+field * 0x5D0130AC u32 0x5D0130A8
+stable 0x5D013000 184
+field * 0x5D0F0024 u32 0x02753214
+stable 0x5D0F0024 4
+field * 0x5D0F002C u32 0x0275357C
+stable 0x5D0F002C 4
+field * 0x5D0F0034 u32 0x02753D6C
+stable 0x5D0F0034 4
+field * 0x5D0F003C u32 0x027540AC
+stable 0x5D0F003C 4
+field * 0x5D0F0054 u32 0x027544E0
+stable 0x5D0F0054 4
+field * 0x5D0F007C u32 0x02754620
+stable 0x5D0F007C 4
+# SystemSingleton::createInstance: no instance yet, or one already created.
+field 0274B0CC 0x101F8B10 u32 0,0x5E200000
+
+arg! 0274A4E0 r3 0x5F700000
+fill 0274A4E0 0x5F700000 420 0
+fill 0274A4E0 0x5F710000 116 0
+fill 0274A4E0 0x5F720000 116 0
+ret! 027601C4 1
+ret! 0274A418 1
+ret! 02749850 1
+callee 0F003010 fixture r3=0
+callee 0F003018 fixture r3=0
+ret! 0F003010 0
+ret! 0F003018 0
+field 0274A4E0 0x5F700064 u32 0x5F700064
+field 0274A4E0 0x5F700068 u32 0x5F700064
+field 0274A4E0 0x5F70006C u32 0
+stable 0x5F700064 12
+field 0274A4E0 0x5F700088 u32 0x5F700088
+field 0274A4E0 0x5F70008C u32 0x5F700088
+field 0274A4E0 0x5F700090 u32 0
+stable 0x5F700088 12
+field 0274A4E0 0x5F71003C u32 0x5F710000
+field 0274A4E0 0x5F710070 u32 0x5F730000
+field 0274A4E0 0x5F710060 u32 4
+stable 0x5F710034 16
+stable 0x5F710070 4
+stable 0x5F710030 4
+field 0274A4E0 0x5F72003C u32 0x5F720000
+field 0274A4E0 0x5F720070 u32 0x5F730000
+field 0274A4E0 0x5F720060 u32 4
+stable 0x5F720034 16
+stable 0x5F720070 4
+stable 0x5F720030 4
+field 0274A4E0 0x5F710030 u32 6
+field 0274A4E0 0x5F720030 u32 0
+field 0274A4E0 0x5F73008C u32 0xF003010
+field 0274A4E0 0x5F730094 u32 0xF003018
+stable 0x5F730088 16
+mockglobal 027601C4 0x5F700064 u32 0x5F720034
+mockglobal 027601C4 0x5F700068 u32 0x5F710034
+mockglobal 027601C4 0x5F70006C u32 2
+mockglobal 027601C4 0x5F710034 u32 0x5F700064
+mockglobal 027601C4 0x5F710038 u32 0x5F720034
+mockglobal 027601C4 0x5F710040 u32 0x5F700064
+mockglobal 027601C4 0x5F720034 u32 0x5F710034
+mockglobal 027601C4 0x5F720038 u32 0x5F700064
+mockglobal 027601C4 0x5F720040 u32 0x5F700064
+mockglobal 02749850 0x5F700064 u32 0x5F720034
+mockglobal 02749850 0x5F700068 u32 0x5F720034
+mockglobal 02749850 0x5F70006C u32 1
+mockglobal 02749850 0x5F720034 u32 0x5F700064
+mockglobal 02749850 0x5F720038 u32 0x5F700064
+mockglobal 02749850 0x5F700088 u32 0x5F710034
+mockglobal 02749850 0x5F70008C u32 0x5F710034
+mockglobal 02749850 0x5F700090 u32 1
+mockglobal 02749850 0x5F710034 u32 0x5F700088
+mockglobal 02749850 0x5F710038 u32 0x5F700088
+mockglobal 02749850 0x5F710040 u32 0x5F700088
+mockglobal 02749850 0x5F710060 u32 6
+mockglobal 02749AB4 0x5F700088 u32 0x5F700088
+mockglobal 02749AB4 0x5F70008C u32 0x5F700088
+mockglobal 02749AB4 0x5F700090 u32 0
+mockglobal 02749AB4 0x5F710034 u32 0
+mockglobal 02749AB4 0x5F710038 u32 0
+mockglobal 02749AB4 0x5F710040 u32 0

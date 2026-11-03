@@ -1,0 +1,29 @@
+# Lead01:32 fixed-baseline recheck complete: all58 historical detections remain differences at their recorded n on seeds1/7 (dw-fixed-direction*-input1/7).
+# Direction positive-axis sign cases from finite nonzero vector magnitudes.
+# Original trace maps raw +/-1e-4 to two words farther from zero; pre-compensate with words -3/-2/-1.
+# These inputs cover the normalized words immediately below/at/above +/-1e-4; Y stays nonzero.
+# Positive, zero and negative scale/falloff values exercise both clamp outcomes.
+# Scope: original-initialized direction record prefix with zero resources; full collection/resource lifetimes remain separate.
+# Shared owner comes from D11D4 +4 under Lead23:40; its constructor sets index1 per Lead19:44.
+# No immutability mask is asserted for the separate direction table or margin global.
+# verify: -only 027CCEB8 -strictnan -calleesp
+stackfill
+src wwhd_src/agl/DrawResourceDirection.cpp
+src wwhd_src/agl/DrawResourceInitialization.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+real 02757190 027CCC80 025155D8 028E8E10
+field 027CCEB8 r4+0x58 u32 0
+field 027CCEB8 r4+0x5C u32 0
+field 027CCEB8 r3+4 u32 0x5A000000
+field 027CCEB8 5A000004 u32 0x00164120,0x00164100
+field 027CCEB8 5A000038 u32 1
+setup 027CCEB8 02757190
+setup 027CCEB8 027CCC80 r3=0x58000000 r4=0x58100000 r5=0
+poke 027CCEB8 r4+0x14 u32 953267988,953267989,953267990,0xB8D1B714,0xB8D1B715,0xB8D1B716
+poke 027CCEB8 r4+0x18 f32 1.75,1.45,1.85,1.95
+poke 027CCEB8 r4+0x1C u32 953267988,953267989,953267990,0xB8D1B714,0xB8D1B715,0xB8D1B716
+poke 027CCEB8 r4+0x48 u32 0,0xBF800000,0x3F800000
+poke 027CCEB8 r4+0x4C u32 0,0xBF800000,0x3F000000
+# Shared owner bit-0x20 steering follows Lead19:44; D11D4 stores the same owner at receiver+4 (Lead23:40).
+# Lead22:00: these magnitudes normalize just below +1 and distinguish mutation88.

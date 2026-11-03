@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 0277AD60
+# ABI OBSERVER: framexact exit check compares all nonvolatile GPR/FPR halves. RET=0 selects no call boundary; the existing exit check remains active. No CPU register/body field setup.
+include lib2_agl_3_ad60_quality_fpr_api_root_20261030.txt
+framexact 0277AD60 00000000

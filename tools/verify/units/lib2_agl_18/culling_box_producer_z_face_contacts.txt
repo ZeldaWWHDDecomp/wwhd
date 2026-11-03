@@ -1,0 +1,13 @@
+# AGL#18 027CEA18 caller-valid exact Z-face contact companion.  Reuse the
+# power-of-two unit-tangent camera, cull-volume and CE130 producers unchanged;
+# steer only the input box centre.  The real producer maps centre Z to
+# [Z-1,Z-0.5]; with original volume bounds [-16,-1], centre 0 gives box
+# minimumZ == -1 and centre -15.5 gives box maximumZ == -16.  Keep X/Y at the
+# producer's valid centred value so another side plane cannot mask the Z-face
+# result.  These values distinguish both strict Z AABB comparisons and exercise
+# an exact-zero near/far plane distance without patching any produced bound or plane.
+# verify: -only 027CEA18 -strictnan -calleesp
+include lib2_agl_18/culling_box_producer_unit_tangent.txt
+poke * r4+0x8 f32 0
+poke * r4+0xC f32 0
+poke * r4+0x10 f32 0,-15.5

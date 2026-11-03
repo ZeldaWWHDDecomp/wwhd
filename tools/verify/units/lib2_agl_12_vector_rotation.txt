@@ -1,0 +1,44 @@
+# verify: -only 027AAFF4 -strictnan -calleesp
+# Realverifiedrotation/quaternion/matrix helpers, completeunit-axis vectors; no cache/device/provider.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+real 02750AF0 02750C2C 028E9098
+arg! 027AAFF4 r3 0x57004000
+arg! 027AAFF4 r4 0x57004100,0x57004110,0x57004120,0x57004130,0x57004140,0x57004150
+arg! 027AAFF4 r5 0x57004100,0x57004110,0x57004120,0x57004130,0x57004140,0x57004150
+field 027AAFF4 57004100 f32 1
+field 027AAFF4 57004104 f32 0
+field 027AAFF4 57004108 f32 0
+field 027AAFF4 57004110 f32 -1
+field 027AAFF4 57004114 f32 0
+field 027AAFF4 57004118 f32 0
+field 027AAFF4 57004120 f32 0
+field 027AAFF4 57004124 f32 1
+field 027AAFF4 57004128 f32 0
+field 027AAFF4 57004130 f32 0
+field 027AAFF4 57004134 f32 -1
+field 027AAFF4 57004138 f32 0
+field 027AAFF4 57004140 f32 0
+field 027AAFF4 57004144 f32 0
+field 027AAFF4 57004148 f32 1
+field 027AAFF4 57004150 f32 0
+field 027AAFF4 57004154 f32 0
+field 027AAFF4 57004158 f32 -1
+fill 027AAFF4 57004000 0x30 65
+stable 57004000 0x30
+stable 57004100 0x60
+
+# Actualordinarycross/vector helper observed inside verifiedrotationclosure; no fabricatedresult.
+real 028E8D4C

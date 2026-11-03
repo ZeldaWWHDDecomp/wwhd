@@ -1,0 +1,23 @@
+# verify: -strictnan -calleesp -only 02792A08,02796034
+# Lead23:52 approved real metadata/hash/append observation on non-null constructor fixtures.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+real 0279E618
+real 0279E674
+real 027A84B8
+real 0279CB9C
+real 027A063C
+real 0279E57C
+real 0273B264
+real 027A861C
+real 02795EE0
+real 02797DDC
+arg! 02792A08 r3 0x58000000
+arg! 02796034 r3 0x58000000

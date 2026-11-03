@@ -1,0 +1,68 @@
+# AGL#19 shader stage text refresh (027D4D30), dev-config, with its callee 027D4028 MOCKED: the call's argument registers
+# r3..r7 (layout, kind, text, mode 1, 1) are compared at the call. Objects and producers as in
+# lib2_agl_19_shader_stage_refresh.txt (which runs the original 027D4028 to produce the text instead).
+# verify: -only 027D4D30
+src wwhd_src/agl/ShaderStageState.cpp
+src wwhd_src/agl/RenderInputCollections.cpp
+src wwhd_src/agl/ShaderStageRefresh.cpp
+src wwhd_src/agl/ShaderStageText.cpp
+src wwhd_src/agl/RenderStorageCopies.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+include lib2_agl_19_shader_dev_world_fixture.txt
+setupsnapshot
+real 027D4C9C 027B9470 027D3D3C 027D3F1C 027D3FD4 027D4E84 0273B584 0273B560 0273B5DC 027C5AAC 027C57E8 027BC07C 027BC084 027BC08C
+callee 027C5474 r6=0x28
+# program P (0x84), layout L (0x48, placement), its strings, compiled source S, output text O
+fill * 5B000000 0x4000 0
+setup * 027B9F78 r3=0x5B000000
+setup * 027D4E84 r3=0x5B000040 r4=0x5B004000
+setup * 027B9470 r3=0x5B001000
+setup * 027D3F1C r3=0x5B001000 r4=3 r5=2 r6=0x6A000000
+setup * 027D3FD4 r3=0x5B001000 r4=0x5B001800 r5=0x5B001810
+setup * 027D3FD4 r3=0x5B001000 r4=0x5B001820 r5=0x5B001830
+fieldstr * 5B001800 0x10 "SHADOW"
+fieldstr * 5B001810 0x10 "1"
+fieldstr * 5B001820 0x10 "QUALITY"
+fieldstr * 5B001830 0x10 "2"
+field * 5B002000 u32 0x5B002100
+field * 5B002004 u32 0x1016B360
+fieldstr * 5B002100 0x100 "\x23version 330\x0A\x23define A 1\x0Amain\x0A","\x23version 330\x0D\x0Amain","// a\x0A\x23version 400\x0A\x23define X\x0A","\x23version","\x23versio","main\x0A","precision highp\x0Amain\x0A","\x23version 330","\x0A\x23version 100\x0D","x\x23version 3\x0Dm"
+field * 5B003000 u32 0x5B003100
+field * 5B003004 u32 0x1016B378
+field * 5B003008 s32 1,2,16,64,0x400
+poke * 5B000044 u32 0x5B001000
+poke * 5B000058 u32 0x5B001000
+poke * 5B00006C u32 0x5B001000
+# a second compiled source longer than the 0x40000-character text limit (0x40100 'A's, then NUL)
+field * 5B002010 u32 0x5C000000
+field * 5B002014 u32 0x1016B360
+fill * 5C000000 0x40100 0x41
+field * 5C040100 u32 0
+stable 5B002010 0x8
+stable 5C000000 0x40104
+# a third one just under the limit ("#version 330" line, then 'A's: 0x3FFC0 characters): the generated text
+# (macros + source) then passes the limit
+field * 5B002020 u32 0x5C100000
+field * 5B002024 u32 0x1016B360
+fill * 5C100000 0x3FFC0 0x41
+field * 5C100000 u32 0x23766572
+field * 5C100004 u32 0x73696F6E
+field * 5C100008 u32 0x20333330
+field * 5C10000C u8 0x0A
+field * 5C13FFC0 u32 0
+stable 5B002020 0x8
+stable 5C100000 0x3FFC4
+poke * 5B001008 u32 0x5B002000,0x5B002010,0x5B002020,0
+poke * 5B00100C u32 0,0x5B003000
+poke * 5B001010 u32 0,3
+# producer-built objects: mocked callees never write them (stores of the tested function stay compared)
+stable 5B000000 0x84
+stable 5B001000 0x48
+stable 5B001800 0x40
+stable 5B002000 0x8
+stable 5B003000 0xC
+arg! 027D4D30 r3 0x5B000040,0x5B000054,0x5B000068
+arg! 027D4D30 r4 0,1
+arg! 027D4D30 r5 0,1
+
+

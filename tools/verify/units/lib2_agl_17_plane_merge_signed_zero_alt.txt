@@ -1,0 +1,37 @@
+# witness: signed-zero distance tie at 027C8698. Two original
+# buildPlanes (027C8ABC) runs produce plane sets A and B whose face-3 plane (slot 2) has the same normal (1,0,0) and
+# d = +0 / -0. Detects an initializer swap (old/new distance); a pure declaration reorder is EQ.
+# verify: -only 027C8698 -strictnan -calleesp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+real 027C8ABC 0274EDD4 028E892C 028E91EC 028E8F64 028E8D4C 025155D8 028E8E10 027C8698
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 025155D8 r3=inout12
+callee 028E8F64 r3=48 r4=12 r5=out12
+stable 1016A604 96
+arg! 027C8698 r3 0x5E000000
+arg! 027C8698 r4 0x5E002440
+fill 027C8698 5E000000 1460 0
+fill 027C8698 5E002000 1460 0
+fill 027C8698 5E004000 208 0
+field 027C8698 101F9603 u8 1
+field 027C8698 5E004000 f32 1
+field 027C8698 5E00400C f32 1
+field 027C8698 5E004014 f32 1
+field 027C8698 5E00401C f32 -2
+field 027C8698 5E004028 f32 1
+field 027C8698 5E00402C f32 -2
+field 027C8698 5E004040 f32 1
+field 027C8698 5E00404C f32 1
+field 027C8698 5E004054 f32 1
+field 027C8698 5E00405C f32 2
+field 027C8698 5E004068 f32 1
+field 027C8698 5E00406C f32 -2
+field 027C8698 5E004080 f32 1
+field 027C8698 5E004094 f32 1
+field 027C8698 5E0040A8 f32 1
+field 027C8698 5E0040BC f32 1
+field 027C8698 5E0040C0 f32 1
+setup 027C8698 027C8ABC r3=0x5E000000 r4=0x5E004000 r5=0x5E004080 r6=0x5E0040C0 r7=0 f1=-1 f2=1
+setup 027C8698 027C8ABC r3=0x5E002000 r4=0x5E004040 r5=0x5E004080 r6=0x5E0040C0 r7=0 f1=-1 f2=1
+final 027C8698 5E00041C 184

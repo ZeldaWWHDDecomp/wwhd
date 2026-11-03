@@ -1,0 +1,27 @@
+# Shared-cause group100 batch fixture control: original bias-matrix initializer, caller-owned dense effect.
+# Modes excluding9: nonzero projection publication remains OPEN, not fabricated through an SDK copy.
+# verify: -only 027FAA70 -strictnan -calleesp
+include lib2_j3d_hdrew_1_texture_transform_typed_20261030.txt
+real 027FB2D4 028F026C
+setup * 027FB2D4
+field * 0x5D401000 s32 -1,0,6,7,8,10,11
+field * 0x5D401004 f32 -1,0.5,1,2
+field * 0x5D401008 f32 -1,0.5,1,2
+field * 0x5D40100C f32 -1,0.25,0.75
+field * 0x5D401010 f32 0.125,0.375
+field * 0x5D401014 f32 -0.25,0.5
+field * 0x5D402000 f32 -0.5,0.25
+field * 0x5D402004 f32 0.25,0.75
+field * 0x5D402008 u32 0x5D403000
+field * 0x5D403000 f32 2
+field * 0x5D403004 f32 0.25
+field * 0x5D403008 f32 -0.5
+field * 0x5D40300C f32 3
+field * 0x5D403010 f32 -1
+field * 0x5D403014 f32 1.5
+field * 0x5D403018 f32 0.75
+field * 0x5D40301C f32 -2
+field * 0x5D403020 f32 0.125
+field * 0x5D403024 f32 -0.25
+field * 0x5D403028 f32 0.875
+field * 0x5D40302C f32 0.625

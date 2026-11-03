@@ -1,0 +1,70 @@
+# Lead05:50 producer-backed accessor companion. Counts256/1, original D0474 initializer; masks only0/FFFFFFFF via original setters.
+# All constructor-produced flags are retained; no direct flag/mask payload steering. Snapshot installation/closure require n1 preflight.
+# Complete: original-producer closure, four matched 10k controls, clean guest-only pagezero audits and paired exact survivor replays.
+# verify: -only 027D1058,027D107C,027D10C0 -strictnan -calleesp -footprint
+callbudget 60000
+# Lead05:50 functional profile: caller-owned arena starts zero; all heap/object metadata still comes from original setup.
+fill * 6A000000 0x100000 0
+# Canonical original-bootstrap reuse only; target still runs for every input/side.
+setupsnapshot
+# Original __register_global_object reads this zero-filled BSS startup list head.
+field * 0x104DA130 u32 0
+src wwhd_src/agl/RenderSelection.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! * r3 0x59000000
+fill * r3 0x114 0
+field * r3 u32 0x1016AD80
+fill * 59100000 0x100 0
+field * 0x101F8B94 u32 0
+field * 0x101F8DE4 u32 0
+field * 0x101F8DE8 u32 0
+field * 0x58000000 u32 0x6A000000
+field * 0x58000004 u32 0x100000
+field * 0x58000008 u32 0
+stable 0x6A000000 0xC8
+nestedret 02756140 0x6A000000
+setup * 02756E3C
+setup * 02757190
+setup * 027561B4
+setup * 02755FE0 r3=0x58000000
+setup * 027A145C r3=0x6A000000
+setup * 027A5DF0 r3=*101F8DE4 r4=0x6A000000
+mockfetchsize C00060B8
+mockfetchinit C0006400
+real 025155D8 0273AD10 0273ADAC 0273AF40 0273AFC8 0273B050 0273B0D4 0273B158 0273B2F0 0273B310 0273B560 02750CDC 02750D00 02752A84 02752B0C 02752BEC 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 0275320C 02753214 027532BC 02753628 027536B0 027536F4 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02753D6C 02753F84 02754018 027540AC 027541B8 02754370 027544E0 02754564 0275456C 02754618 02754620 02754754 027547A8 02754814 02754894 027556FC 02755818 0275589C 02755A48 02755CA4 02755D28 02755DA8 02755DBC 02755E7C 02755EC4 02755F40 02755F80 02755FE0 02755FEC 027561B4 02756254 02756268 0275626C 02756CC0 02756D04 02756D18 02756E3C 02757190 02760084 027600EC 02760168 027601BC 027601C4 027601F0 027601F8 0276024C 0276028C 027A0E94 027A145C 027A14FC 027A1DFC 027A1E68 027A1E70 027A1EAC 027A20B8 027A20C4 027A21F8 027A25F8 027A260C 027A2748 027A2B08 027A2B18 027A2C08 027A308C 027A309C 027A31A0 027A35AC 027A35B8 027A35DC 027A37A8 027A4050 027A4420 027A47BC 027A4DF8 027A5000 027A5220 027A5440 027A575C 027A5A78 027A5DF0 027A5ECC 027A5F68 027A5FA8 027A6000 027A60C0 027A612C 027A62B0 027A6724 027A6B00 027A6E28 027A7144 027B5430 027B548C 027B54E0 027B5BD8 027B5C68 027B5CFC 027B5D60 027B5EA4 027BF734 027BF7E8 027BF880 027BF8DC 027BF960 027BFA24 027BFA9C 027BFB60 027BFC74 027BFE5C 027BFEF4 027BFEF8 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58 028EFFD0 028F026C 028F0294 028F02E4 028F43F8 028F4BE0 028F521C 028F5228 028F5564 028F5678 028F5680 028F5DC0 028F5DD4 028F5E98 028F61E4
+setup * 0274D510
+setup * 027BF734 r3=0x5900001C
+stable 1016AD80 0x130
+stable 10169DBC 4
+real 027CC160 027D107C 027CC1BC 027CC250 027CBCD0 027BEB5C 027BECEC 027BED84 027BEEE4 027BEE9C 0274D510
+# Original initializer creates all256 records and one value each; accessors receive approved index/bit/enabled arguments.
+setup * 027D0474 r3=0x59000000 r4=0x59100000 r5=0x100 r6=1 r7=0x6A000000
+real 027D0474 027D10F4 027BEC90
+
+# Merged AGL15 buffer allocation closure.
+real 027BEEBC 027BEED4
+
+real 027BEBEC
+
+arg! * r4 0,1,127,254,255,256,257,0xFFFFFFFF
+arg! 027D107C r5 0,1
+arg! 027D10C0 r5 0,1,31
+# Original mask setters select legal0/FFFFFFFF states across first/middle/last records; no indirect-zero operand is needed.
+postsetup * 027D107C r3=0x59000000 r4=0 r5=1
+postsetup * 027D107C r3=0x59000000 r4=127 r5=0
+postsetup * 027D107C r3=0x59000000 r4=255 r5=0
+
+# Original D0474 trace: mRecords=6A045820,256 records stride48; include prior/onepast observation, no writes.
+stable 6A0457D8 0x4890
+# Final complete generated pools: D1058 6=3D2CI1EQ; D107C11=6D4CI1EQ; D10C0 17=3D8CI6EQ; total34=12D14CI8EQ.
+# Full canonical enumeration is6/11/17 (<400), so initial--max400 surveys exhausted all candidates; exact replays use--max100000.
+# Four controls O2/own-TU-O1, seeds1/7,10k: PASS; full block coverage3/3,5/5,3/3 respectively.
+# Original setup snapshot validated325839bytes; guest-only watch0:0x1000 n1 all3PASS, zero watch lines, before/after pagewise tool refresh.
+# Exact residuals10k seeds1/7 complete: D1058#2 and D107C#9 are independent readonly count/record load swaps, sourceEQ.
+# D10C0#2/#7 are independent readonly mask/shift and count/record load swaps, sourceEQ.
+# D10C0#1 (<32 -> <=32),#13 (32 ->33),#15 (unused false-arm0 ->1): credited bit0..31 implies shift0..31, so the selected-shift arm stays true.
+# D10C0#5 (63 ->64): credited bit0..31 produces shift0 instead; masks only0/FFFFFFFF, hence boolean test remains0/1 for every credited bit.
+# Qualified domain for four preceding D10C0 cases: CLOSED Lead05:50, mask0/~0 from original init/sole setterD107C, shippedbit0, creditedbit0..31.
+# No timeouts accepted. Old bytewise D1058#2 seed1 capture was stopped for canonical performance refresh and remains explicitly incomplete.
+# Normal logs: build/agl18/small-scopes-worker-20261026/accessors256-{fixed-trace1,O2-10000-seed1,O2-10000-seed7,O1-10000-seed1,O1-10000-seed7,pagezero-n1,pagewise-pagezero-n1}.log;
+# per-function *-accessors256-mutation-n1000-seed1.log and *-accessors256-residual-pagewise-n10000-seed{1,7}.log.

@@ -1,0 +1,39 @@
+# appendEdgePlane, direct entry on caller-produced inputs: as lib2_agl_17_edge_plane_producer.txt, but the original
+# buildPlanes runs on a small perspective frustum (near 0.5, far 1, x/y scale 1|2): corners of the far face lie in front
+# of some edge planes by less than one unit.
+# verify: -only 027C87DC -strictnan -calleesp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+real 027C8ABC 0274EDD4 028E91EC 028E8F64 028E8D4C 025155D8 028E8E10 027C8698 027C87DC
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 025155D8 r3=inout12
+callee 028E8F64 r3=48 r4=12 r5=out12
+stable 1016A604 96
+fill 027C87DC 5E000000 1460 0
+fill 027C87DC 5E004000 208 0
+field 027C87DC 101F9601 u8 1
+field 027C87DC 101F9603 u8 1
+field 027C87DC 5E004000 f32 1
+field 027C87DC 5E00400C f32 -1
+field 027C87DC 5E004014 f32 1
+field 027C87DC 5E00401C f32 -2
+field 027C87DC 5E004028 f32 1
+field 027C87DC 5E004080 f32 1,2
+field 027C87DC 5E004094 f32 1,2
+field 027C87DC 5E0040A8 f32 -3
+field 027C87DC 5E0040AC f32 -2
+field 027C87DC 5E0040B8 f32 -1
+field 027C87DC 5E0040BC f32 0
+field 027C87DC 5E0040C0 f32 0.5,-0.5,0
+field 027C87DC 5E0040C4 f32 1,-1,0.25
+field 027C87DC 5E0040C8 f32 1,0.5
+stackfill
+footprint 027C87DC 48
+setup 027C87DC 025155D8 r3=0x5E0040C0
+setup 027C87DC 027C8ABC r3=0x5E000000 r4=0x5E004000 r5=0x5E004080 r6=0x5E0040C0 r7=1 f1=-1 f2=1
+arg! 027C87DC r3 0x5E000000
+arg! 027C87DC r4 0x5E0040C0
+arg! 027C87DC r5 0x7EFF6ED8
+arg! 027C87DC r6 0
+arg! 027C87DC r7 0x5E000420
+final 027C87DC 5E00041C 184

@@ -1,0 +1,10 @@
+# AGL#18 027CF2B0 caller-valid surface-domain companion.  Use the record's
+# two original-initialized release resources as source texture and destination,
+# then vary valid positive widths to exercise both equal and unequal surface
+# comparisons without synthetic objects.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_uniform_domain.txt
+poke * 59500004 u32 0x5910008C
+poke * 59500008 u32 0x59100310
+poke * 59100094 u32 1,2
+poke * 59100318 u32 1,2

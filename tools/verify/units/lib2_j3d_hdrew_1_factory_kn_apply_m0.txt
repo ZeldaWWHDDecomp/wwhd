@@ -1,0 +1,11 @@
+# ModelDataPipeline_l::applyMaterialSource 027F691C exactly as the original 027F70D8 calls it at 027F73AC for material 0
+# of the shipped Kn.bfres model "kn" (record &records[0] = 6A8AA13C, FMAT 5822082C; -watch of D+0x20 and the full
+# 027F7B50 trace (lib2_j3d_hdrew_1_factory_kn -trace 1000003) give these arguments), on the 027F7B50 prefix
+# replay of lib2_j3d_hdrew_1_factory_kn_bind (state at 027F7D34; between 027F70D8 entry and this call only
+# 027F7830 (blr) and 027B90AC (frame-only stores) run).
+# verify: -only 027F691C -strictnan -calleesp
+include lib2_j3d_hdrew_1_factory_kn_bind.txt
+arg! 027F691C r3 0x6A8A8420
+arg! 027F691C r4 0x6A8AA13C
+arg! 027F691C r5 0x5822082C
+arg! 027F691C r6 0x6A000000

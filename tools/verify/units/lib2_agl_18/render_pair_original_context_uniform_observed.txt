@@ -1,0 +1,10 @@
+# AGL#18 027CFFF0 selected-program uniform-boundary companion.  The included
+# original-API dirty profile fixes both produced record flags and selects the
+# shipped pair program with tuple (format, alternateOption, bindFourth,
+# option, firstMode, secondMode) = (1,1,0,1,0,0).  Its inherited 027BE53C
+# callee observer records the first- and third-buffer uniform bindings, so the
+# >1/>=1/literal-2 and >2/>=2/literal-3 mutations are externally visible when
+# the selected program count lies on a distinguishing boundary.  No program
+# metadata or archive payload is fabricated.
+# verify: -only 027CFFF0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_pair_original_context_dirty_program.txt

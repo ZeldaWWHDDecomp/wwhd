@@ -1,0 +1,17 @@
+# verify: -only 027D54F8 -calleesp
+# TYPE-DOMAIN companion (Phase A2): RenderCommandPool::beginCommand caps the recording's open size at 0x400000 when the
+# slice holds more (block 7@027D55C4). Shipped frames are exactly 0x400000 bytes (027297C0 config +0x24 -> 027C0CEC ->
+# 027D527C), so the cap never applies in the game; the initializer takes any frame size, so here the pool is built by
+# its own constructor and initializer with 0x400020 bytes per frame (one frame, 36 commands) on a 32 MB sead heap made
+# by FreeRegionHeap::createAt 0275315C, and the first command of each ring opens with 0x400020 bytes free.
+include lib2_agl_19_commands_pool_fixture.txt
+accessbudget 200000000
+timebudget 300
+setup 027D54F8 0275315C r3=0x40000000 r4=0x02000000 r5=0x58200020 r6=0
+stable 0x40000000 0x02000000
+setup 027D54F8 027D5064 r3=0x58000600
+setup 027D54F8 027D527C r3=0x58000600 r4=0x400020 r5=36 r6=1 r7=0x40000000
+arg! 027D54F8 r3 0x58000600
+arg! 027D54F8 r4 0x58200000
+arg! 027D54F8 r5 0x40,0,13
+arg! 027D54F8 r6 0,1,2

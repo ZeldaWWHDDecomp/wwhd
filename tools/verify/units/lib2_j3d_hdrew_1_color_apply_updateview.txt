@@ -1,0 +1,8 @@
+# Esa colour-apply profile in the per-frame steady state: after the original rebuildDirty (027DD298) the original
+# updateView 027DD468 (view 0, 2 views) runs as in the frame cycle: it merges mDirty into the view dirty words,
+# clears mDirty and clears mFlags bit 4, the state applyParameters meets on the next frame.
+# Only original routines produce the state; no field pokes beyond the profile's bound-fixup choices.
+# verify: -only 027F9FB8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_color_apply_esa_alt.txt
+real 027DD468
+postsetup * 027DD468 r3=0x6B000000 r4=0

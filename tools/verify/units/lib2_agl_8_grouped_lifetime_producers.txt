@@ -1,0 +1,31 @@
+# Include-only producer fragment: caller supplies all sources, snapshot, and one canonical world expansion.
+# Add 0279313C 02793E88 02794068 to the caller world scope; no world/src include appears here.
+real 02793384 02794068 02792A08 0273AD10 0279A07C 0279CA34 0279C950
+
+# Static target-set construction + real cached history; destructor flags never delete caller-owned storage.
+fill 0279313C 0x58020000 0x9CC 0
+stable 0x58020000 0x9CC
+setup 0279313C 02793384 r3=0x58020000
+setup 0279313C 02794068 r3=0x58020000 r4=1 r5=64 r6=64
+arg! 0279313C r3 0,0x58020000
+arg! 0279313C r4 0,2
+
+# Effect resource preparation uses an original-constructed effect and genuine root/current heap.
+fill 02793E88 0x58030000 0x285C 0
+stable 0x58030000 0x285C
+setup 02793E88 02792A08 r3=0x58030000
+arg! 02793E88 r3 0x58030000
+arg! 02793E88 r4 -1,0,1,2
+arg! 02793E88 r5 0,0x6A000000
+
+# Cold target surface preparation: original target-set constructor supplies all owner and descriptor state.
+fill 02794068 0x58040000 0x9CC 0
+stable 0x58040000 0x9CC
+setup 02794068 02793384 r3=0x58040000
+arg! 02794068 r3 0x58040000
+arg! 02794068 r4 1,10
+arg! 02794068 r5 32,64,128
+arg! 02794068 r6 32,64,128
+# The canonical world selects the root as current heap for nested calls; prepareResources calls this getter directly.
+# Match that produced root state at the top-level mock boundary too, rather than returning a generated invalid heap.
+ret! 02756140 0x6A000000

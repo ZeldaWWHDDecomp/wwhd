@@ -1,0 +1,25 @@
+# SEAD#10 companion: MethodTreeNode::detachAll; the node is compared at the lock and unlock calls, so the critical
+# section it restores after the recursive detach is observed (clobbered inputs).
+# verify: -only 02747A84
+src wwhd_src/sead/Framework.cpp
+src wwhd_src/sead/MethodTreeNode.cpp
+src wwhd_src/sead/Task.cpp
+src wwhd_src/sead/TaskBase.cpp
+src wwhd_src/sead/TaskMgr.cpp
+src wwhd_src/sead/GameFramework.cpp
+src wwhd_src/sead/CafeGameFramework.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+# Pointees the callees read, compared at the calls: heap and thread names, the null fader's construct
+# argument (construct argument + heap array), create arguments, class IDs, the heap arrays passed
+# between the create steps, and the sleep span.
+callee 02753004 r4=8
+callee 0275FBD8 r4=8 r5=heap16
+callee 02768514 r4=36
+callee 02749ECC r4=128
+callee 02748CFC r3=out128 r4=8
+callee 02760C3C r3=8
+callee 02768A14 r3=8 r4=12
+callee 02749C10 r4=24 r5=128
+callee 02749DEC r4=128 r5=24
+callee 02747A64 r3=heap64
+callee 02747A74 r3=heap64

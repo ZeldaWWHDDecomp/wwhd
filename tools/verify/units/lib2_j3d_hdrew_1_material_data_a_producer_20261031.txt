@@ -1,0 +1,35 @@
+# Actual ModelDataA producer from accepted packet_values_lead; no hand-built provider.
+#.
+# Producer chain per model (all original code, run as setups, snapshotted):
+#   shipped .szs -> 0275ED14 (original Yaz0 decoder; 02759B38 endian identity real) -> FMDL inside the bfres;
+#   ModelDataPipeline_l (0x4C, zeroed as create 027F7B50 leaves it) <- 027F5A5C initializeResource(data, FMDL, root heap):
+#     data+0xC/+0x10 materials (count = FMDL+0x24), material+0x28 mValueStart = prefix sum of FMAT+0x11,
+#     data+0x30 value table (count = sum, +4 = 0x24-byte records, word +0x20; NULL when the sum is 0);
+#   model+0xAC = data (configure 027F4404 at 027F441C);
+#   builder exactly as configure 027F4404 fills it (+0 FMDL, +8/+0xC/+0x10 = 2, +0x14 mode 2 = sole caller 025E3940 r6=2),
+#   027DDFA4 (layout size -> builder+0x24) then 027DE0AC(model+0x14, builder, storage, size) as at 027F4484:
+#     model+0x2A = FMDL+0x24 (027DE184), model+0x34 = packet array (027DE1BC), packet i (0x3C) built by 027DD0BC from
+#     FMAT i: +0 = FMAT (027DD128), +0x2C = FMAT+0x11 words (027DD1F4, filled 027DD250).
+#   Storage: a zeroed region of the layout size (configure takes it from 027EC0AC; contents are written by 027DE0AC).
+include shared/agl_world.txt
+setupsnapshot
+
+real 027F7654 027F7514 027F74D4 027F7634 027F763C 027F7644 027F764C 027F7614 027F7624 027F7590 027F75A0 027F75B0 027F75DC 027F75EC 027F7604 027F7680 027F785C 027F76E4 027F7690 028F036C 02759B38 0273AD10 0273ADAC 0273B050 0273B0D4 0274FDBC 027556FC 02755FEC 0275EB8C 0275EBC0 0275ED14 027601BC 027601F0 027DAB24 027DABB4 027DABE0 027DAFB4 027DCF64 027DCFF8 027DD024 027DD0BC 027DD5E4 027DD6C0 027DD6EC 027DD738 027DD778 027DDD10 027DDFA4 027DDFDC 027DE048 027DE0AC 027E1474 027E1918 027E194C 027E1974 027E19D4 027ED0B4 027ED268 027F3C38 027F3F8C 027F3F94 027F5A5C 027F7870 027FB168 027FB3B4 02843B1C 02843BC4 02843C5C 02843CA8 028EFE58 028EFF8C 028EFFD0 028F521C 028F5680 028F5914 028F61E4 
+
+# ---- shipped resources (read-only blobs) decoded by the original 0275ED14 ----
+blob * 0x60000000 content/Common/Stage/Ebesso_Room0.szs 0 0x472CE
+stable 0x60000000 0x472CE
+fill * 0x61000000 0x1C4A00 0
+setup * 0275ED14 r3=0x61000000 r4=0x1C4A00 r5=0x60000000
+blob * 0x60100000 content/Common/Stage/Hyrule_Stage.szs 0 0x22C3B
+stable 0x60100000 0x22C3B
+fill * 0x61200000 0x89800 0
+setup * 0275ED14 r3=0x61200000 r4=0x89800 r5=0x60100000
+blob * 0x60200000 content/Common/Object/Shinju_d.szs 0 0x13BDA
+stable 0x60200000 0x13BDA
+fill * 0x61300000 0x6BF00 0
+setup * 0275ED14 r3=0x61300000 r4=0x6BF00 r5=0x60200000
+
+# ---- model A: Ebesso_Room0.szs Room0.bfres FMDL "model" (2 materials, FMAT+0x11 = 1,0) ----
+fill * 0x5E000000 0x4C 0
+setup * 027F5A5C r3=0x5E000000 r4=0x6100218C r5=0x6A000000

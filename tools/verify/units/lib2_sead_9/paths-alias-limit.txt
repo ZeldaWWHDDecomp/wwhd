@@ -1,0 +1,37 @@
+# verify: -only 02743EAC
+# A valid long root expands over an aliased initially short source descriptor.
+# The formatter post-state is the exact root + slash output, within positive capacity.
+# Eight-case boundary diagnostic; ordinary paths remain in the primary and paths specs.
+src wwhd_src/sead/CafeFileDevices.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+arg! 02743EAC r3 0x52000000
+arg! 02743EAC r4 0x55000000
+arg! 02743EAC r5 0x53000000
+field 02743EAC 52000054 u32 0x57000000
+field 02743EAC 53000000 u32 0x56000000
+field 02743EAC 53000004 u32 0x10143EA0
+field 02743EAC 55000000 u32 0x56000000
+field 02743EAC 55000004 u32 0x10143EE8
+field 02743EAC 55000008 s32 0x40004
+fill 02743EAC 56000000 0x40004 82
+field 02743EAC 56000000 u32 0x25454E56
+field 02743EAC 56000004 u16 0x2500
+fill 02743EAC 57000000 0x40002 82
+field 02743EAC 57040001 u8 0
+stable 52000054 4
+stable 53000000 8
+stable 55000000 12
+stable 56000000 0x40004
+stable 57000000 0x40002
+ret! 02759C28 0x40002
+mockglobal 02759C28 56000000 u32 0x52525252
+mockglobal 02759C28 56000004 u32 0x52525252
+mockglobal 02759C28 56040000 u32 0x522F0000
+ret! C0008980 0
+real 02743E34
+real 027445FC
+real 02744600
+mockmove C0009988 r3 r4 r5
+callee C0008980 r4=out256
+mockfield C0008980 r4+255 u8 0
+stackfill periodic

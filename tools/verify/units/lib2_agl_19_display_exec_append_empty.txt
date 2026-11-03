@@ -1,0 +1,13 @@
+# AGL#19 appendDeferred 027D71D4 with an empty recording (beginCommand/endCommand with no GX2 command between them, as a
+# job whose pass issues nothing: size 0 under the world model; a shipped state): the command is not appended. As lib2_agl_19_display_exec_append.txt otherwise.
+# verify: -only 027D71D4 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+field * 0x5E000210 u32 0x1016C340
+field * 0x5E000214 u32 0x1016C180
+stable 0x5E000210 0x8
+postsetup * 027D54F8 r3=0x5E101028 r4=0x5E000210 r5=0x40 r6=0
+postsetup * 027D55F8 r3=0x5E101028 r4=10 r5=0
+arg! 027D71D4 r3 0x5E100018,0x5E100818
+arg! 027D71D4 r4 0x6A8846F0
+arg! 027D71D4 r5 0,0x58000000,0x58001000,0x58002000

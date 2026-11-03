@@ -1,0 +1,6 @@
+# AGL#7 0278CC74 rebuildVolume on the look-at profile with the column copy 0278D234 run as the original (the shipped
+# game always runs it): the translation it writes at SP+0x3C..0x47 is then the original's, so a read of it moved before the
+# copy shows.
+# verify: -only 0278CC74 -strictnan -calleesp
+include lib2_agl_7/nt_rebuildvolume_lookat.txt
+real 0278D234

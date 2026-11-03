@@ -1,0 +1,140 @@
+#pragma once
+#include "nw/snd/HardwareVoice.h"
+#include "nw/ut/Platform.h"
+namespace nw { namespace snd {
+struct MixLevels {
+    be<f32> volume;
+    be<f32> pitch;
+    be<f32> main[4];
+    u8 outputSettings[0x50];
+    be<f32> remote[2];
+};
+struct SoftwareVoice {
+    be<u32> callback;
+    be<u32> callbackContext;
+    gptr<void> owner;
+    gptr<VoiceRequest> firstRequest;
+    gptr<VoiceRequest> lastRequest;
+    VolumeRamp volume;
+    VolumeRamp mainMix[6];
+    VolumeRamp remoteMix[4];
+    AdpcmLoop decoderLoop;
+    u8 decoderAlignment[2];
+    be<u32> resamplePhase;
+    be<s16> resampleHistory[4];
+    be<u32> outputOffset;
+    be<u32> sampleFormat;
+    be<u32> sampleRate;
+    be<u32> adpcmCoefficients[8];
+    be<u32> playbackMode;
+    MixLevels mixLevels;
+    u8 synthesisState[0xB8];
+    be<f32> remoteVolume[4];
+    be<f32> remoteSend[4];
+    be<u8> remoteEnabled;
+    u8 outputState[0x13];
+    be<u32> filterState;
+    be<u32> priority;
+    be<u32> loopOffset;
+    be<u32> currentOffset;
+    be<u8> paused;
+    be<u8> linked;
+    u8 alignment[2];
+    VoiceLink priorityLink;
+    be<u32> status;
+    static SoftwareVoice* create(SoftwareVoice*);
+    void clearRequests();
+    void reset();
+    void release();
+    void appendRequest(VoiceRequest*);
+    void setPriority(u32);
+    void initialize(u32,u32);
+    void setVolume(MixLevels*,u32);
+    u32 updateChannels(VolumeRamp*,const be<f32>*,u32);
+    void initializeChannels(VolumeRamp*,const be<f32>*,u32);
+    u32 updateMainMix(MixLevels*,u32);
+    u32 updateRemoteMix(MixLevels*);
+    void updateMix(MixLevels*,u32);
+    void initializeMainMix(MixLevels*,u32);
+    void initializeRemoteMix(MixLevels*);
+    void initializeMix(MixLevels*,u32);
+    void applyMix(u32);
+    u32 nextRequest();
+    u32 decodePcm16(be<s16>*,u32);
+    u32 decodePcm8(be<s16>*,u32);
+    u32 decodeAdpcm(be<s16>*,u32);
+    u32 accumulate(const be<f32>*,be<f32>*,u32,VolumeRamp*);
+    void render(struct MixBlock*,be<f32>*,u32,f32);
+};
+WWHD_SIZE(VolumeRamp,4);
+WWHD_OFFSET(MixLevels,main,8); WWHD_OFFSET(MixLevels,remote,0x68);
+WWHD_OFFSET(SoftwareVoice,decoderLoop,0x40);
+WWHD_OFFSET(SoftwareVoice,resamplePhase,0x48);
+WWHD_OFFSET(SoftwareVoice,resampleHistory,0x4C);
+WWHD_OFFSET(SoftwareVoice,outputOffset,0x54);
+WWHD_OFFSET(SoftwareVoice,volume,0x14);
+WWHD_OFFSET(SoftwareVoice,mainMix,0x18);
+WWHD_OFFSET(SoftwareVoice,remoteMix,0x30);
+WWHD_OFFSET(SoftwareVoice,sampleFormat,0x58);
+WWHD_OFFSET(SoftwareVoice,playbackMode,0x80);
+WWHD_OFFSET(SoftwareVoice,mixLevels,0x84);
+WWHD_OFFSET(SoftwareVoice,remoteVolume,0x1AC);
+WWHD_OFFSET(SoftwareVoice,priority,0x1E4);
+WWHD_OFFSET(SoftwareVoice,priorityLink,0x1F4);
+WWHD_SIZE(SoftwareVoice,0x200);
+u16 softwareVolumeToAx(f32);
+u32 updateVolumeRamp(u32,VolumeRamp*);
+} }
+void softwareRemoveVoice(void*,nw::snd::SoftwareVoice*);
+void softwareReorderVoice(void*,nw::snd::SoftwareVoice*);
+
+namespace nw { namespace snd {
+// Shared SDK wrapper storage from the merged NW-UT/NW-SND dependency.
+using VoiceEvent = nw::ut::Event;
+using VoiceMessageQueue = nw::ut::MessageQueue;
+struct MixBlock {
+    be<u32> activeChannels;
+    be<u32> sampleCount;
+    gptr<be<f32>> main[6];
+    be<u32> mainSampleCapacity;
+    be<u32> mainChannelCount;
+    gptr<be<f32>> remote[4];
+    be<u32> remoteState;
+    be<u32> remoteReserved;
+    be<u32> remoteSampleCapacity;
+    be<u32> remoteChannelCount;
+    VoiceEvent mainReady;
+    VoiceEvent remoteReady;
+    static MixBlock* create(MixBlock*);
+    void initialize(be<f32>*,u32);
+};
+struct SoftwareVoiceManager {
+    VoiceList active;
+    VoiceList free;
+    SoftwareVoice voices[96];
+    void unlink(SoftwareVoice*);
+    void recycle(SoftwareVoice*);
+    void link(SoftwareVoice*);
+    void reorder(SoftwareVoice*);
+    void initialize();
+    void releaseAll();
+    SoftwareVoice* acquire(u32,u32,u32);
+    void updateAll();
+    void render(MixBlock*,u32,f32);
+    u32 count();
+};
+WWHD_SIZE(VoiceEvent,0x24); WWHD_SIZE(VoiceMessageQueue,0x3C);
+WWHD_OFFSET(MixBlock,main,8); WWHD_OFFSET(MixBlock,remote,0x28);
+WWHD_OFFSET(MixBlock,mainReady,0x48); WWHD_SIZE(MixBlock,0x90);
+WWHD_OFFSET(SoftwareVoiceManager,free,0xC); WWHD_OFFSET(SoftwareVoiceManager,voices,0x18);
+WWHD_SIZE(SoftwareVoiceManager,0xC018);
+}}
+void* softwareCopy(void*,const void*,u32);
+void softwareBlockSet(void*,u32,u32);
+void softwareDecodeAdpcm(u32,nw::snd::AdpcmLoop*,be<u32>*,const void*,u32,be<s16>*);
+void softwareEventInitialize(nw::snd::VoiceEvent*,u32,u32);
+void softwareEventSignal(nw::snd::VoiceEvent*);
+u32 softwareEventTryWait(nw::snd::VoiceEvent*);
+void softwareEventReset(nw::snd::VoiceEvent*);
+void softwareListErase(nw::snd::VoiceList*,const gptr<nw::snd::VoiceLink>*);
+void softwareZeroRange(void*,u32);

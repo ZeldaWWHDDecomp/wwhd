@@ -1,0 +1,182 @@
+# FULL POOL COMPLETE 2026-10-26: public469 +leading29 =498 total:261D112CI124EQ1 untested synchronization variant.
+# Public469:255D93CI120EQ1sync; old public400/combined429 notes below are preserved completed subsets, superseded by these totals.
+# Tail IDs400..468 --max100000 n1000:41D9CI19S; grouped n1000 resurvey all19S; exact10k seeds1/7 all19S, no errors/timeouts.
+# Tail sourceNULL-arm EQ IDs404,410,411,417,419,420,422,425,430,438,456: nonNULL source arms infeasible under complete CLOSED20:56 producer domain.
+# Tail independent-operation EQ IDs400,407,412,439,442,449,454; unchanged selected-value reload EQ446.
+# 400/439: disjoint worldTarget coordinate stores;407: record y read vs disjoint local x store;442: configuration pointer read vs disjoint alpha store;449: disjoint matrix element stores.
+# 454: second-camera destruction touches only camera lifetime/frame, independent of flags read from distinct record. 446: repeated spatialParameterValue(record,slot0) returns unchanged value pointer.
+# 412: field2 nearRatio upload consumes only its own4 bytes; inverseRange at the next4 bytes is uploaded by separate field3 call. Moving its store before field2 changes no consumed data.
+# Original guest watch seed1000003 reads7EFFEDC0..C3 inBF048, then writesC4..C7, then separateBF048 readsC4..C7; matches published CLOSED22:36 field-type span contract.
+# All4 spatial profiles additionally have guest-only pagezero n1 audits PASS, zero watched accesses; prior paired controls and named18 sourceNULL gaps retained.
+# Normal full-pool logs: build/agl18/resource-spatial-fullpool-20261026/027CEB24-tail-{fullpool-n1000-seed1,grouped-n1000-seed1,residual-n10000-seed1,residual-n10000-seed7}.log; spatial-tail-scalar-span-{trace1,watch1}.log.
+# Lead03:10 qualification: type-domain: large record kind not activated by any shipped producer.
+# Lead02:53 complete caller chain passes slot0 only; N=1. Earlier slot>=1 inputs are diagnostic.
+# Spatial parameter writer, original perspective/orthographic geometry and null-source state: owner and coherent production frame recipe.
+# Corrected original-camera fixture: O2 and own-TU O1 paired10k seeds1/7 PASS,21/39 blocks; every reachable block covered.
+# Lead20:56 sourceNULL gaps20..37: CF120/130/154/170/178/1B4/1D0/1D4/1DC/1DC/1E0/1F4/1F8/200/200/208/244/248.
+# All18 require value.source nonNULL; complete producer domain is NULL. Mutation dispositions complete; final counts below.
+# Earlier37/39 captures were invalid diagnostics (mocked camera CCC4); corrected trace3 reads sourceNULL at epoch0, no stable override.
+# verify: -only 027CEB24 -strictnan -calleesp -footprint
+callbudget 60000
+src wwhd_src/agl/DrawSpatialParameters.cpp
+src wwhd_src/agl/DrawSpatialGeometry.cpp
+src wwhd_src/agl/DrawResourceDirection.cpp
+src wwhd_src/agl/DrawResourceParameterPreparation.cpp
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027CEB24 r3 0x59200000
+arg! 027CEB24 r4 0x59100000
+arg! 027CEB24 r5 0
+arg! 027CEB24 r6 0x59300000
+field * 0x101F8B94 u32 0
+field * 0x58000000 u32 0x6A000000
+field * 0x58000004 u32 0x1000000
+field * 0x58000008 u32 0
+stable 0x6A000000 0xC8
+nestedret 02756140 0x6A000000
+setup * 02756E3C
+setup * 02757190
+setup * 027561B4
+setup * 02755FE0 r3=0x58000000
+real 025155D8 0273AD10 0273ADAC 0273AF40 0273AFC8 0273B050 0273B158 0273B2F0 0273B310 0273B560 02750CDC 02750D00 02752A84 02752B0C 02752BEC 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 0275320C 02753214 027532BC 02753628 027536B0 027536F4 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02753D6C 02753F84 02754018 027540AC 027541B8 02754370 027544E0 02754564 0275456C 02754618 02754620 02754754 027547A8 02754814 02754894 027556FC 02755818 0275589C 02755A48 02755CA4 02755D28 02755DA8 02755DBC 02755E7C 02755EC4 02755F40 02755F80 02755FE0 02755FEC 027561B4 02756254 02756268 0275626C 02756CC0 02756D04 02756D18 02756E3C 02757190 02760084 027600EC 02760168 027601BC 027601C4 027601F0 027601F8 0276024C 0276028C 027BEB5C 027BECEC 027BED84 027CBCD0 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58 028EFFD0 028F026C 028F0294 028F02E4 028F43F8 028F4BE0 028F521C 028F5228 028F5564 028F5678 028F5680 028F5DC0 028F5DD4 028F5E98 028F61E4
+# Disjoint caller-owned record/value storage; original constructors produce all buffer fields.
+fill * 59100000 0x4A8 0
+fill * 59200000 0x114 0
+fill * 59500000 0x68 0
+field * 59200004 u32 0x59600000
+field * 59600004 u32 0x00164120,0x00164100,0x00164020,0x00164000
+field * 59600038 u32 1
+stable 59600000 0x3C
+field * 5910023C u32 1
+field * 59100240 u32 0x59500000
+field * 59200000 u32 0x1016B070
+setup * 0274D510
+# default-texture bootstrap; pointer read after the original getter.
+field * 101F8B4C u32 0
+field * 101F8DEC u32 0
+mockset C0009990 r3 r4 r5
+mocksurfacesize C00060D0
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+setup * 027854AC r3=0x6A000000
+setup * 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup * 027A76C8 r3=0x6A000000
+setup * 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup * 027BF734 r3=0x5920001C
+setup * 027BDF7C r3=0x5910008C
+setup * 027BDF7C r3=0x59100310
+setup * 027CDE3C r3=0x59200000 r4=0x59100000 r5=0x6A000000
+setup * 027BEB5C r3=0x5950004C
+setup * 027CE0AC r3=0x59200000 r4=0x5950004C r5=0x6A000000
+setup * 027BEEE4 r3=0x5950004C r4=0x6A000000 r5=2
+# Projection remains in ctor fov/scale state; source projection is updated after pokes.
+stable 59300000 0xEA4
+stable 59400000 0xC4
+setup * 027389F8 r3=0x59400000
+poke * 59400094 u32 0x3F800000
+poke * 59400098 u32 0x461C4000
+poke * 594000AC u32 0x3FAAAAAB
+poke * 594000B0 u32 0x00000000
+poke * 594000B4 u32 0x00000000
+poke * 594000B8 u32 0x3F800000
+poke * 594000BC u32 0x3F800000
+poke * 59300000 u32 0x3F800000
+poke * 59300004 u32 0x00000000
+poke * 59300008 u32 0x00000000
+poke * 5930000C u32 0x00000000
+poke * 59300010 u32 0x00000000
+poke * 59300014 u32 0x3F800000
+poke * 59300018 u32 0x00000000
+poke * 5930001C u32 0x00000000
+poke * 59300020 u32 0x00000000
+poke * 59300024 u32 0x00000000
+poke * 59300028 u32 0x3F800000
+poke * 5930002C u32 0xC3FA0000
+poke * 593000E8 u32 0x3ED413CD
+poke * 59300E9C u32 0x3F0D6289
+poke * 59300E88 u32 0x00000000
+poke * 59300E8C u32 0x00000000
+poke * 59300EA0 u32 0xBF800000
+# Finite, nondegenerate axes. Original geometry produces the appropriate perspective/orthographic fields.
+poke * 59100000 u8 0x0B,0x0F,0x1B,0x1F
+poke * 5910004C u32 0x00000000
+poke * 59100050 u32 0x00000000
+poke * 59100054 u32 0xBF800000
+poke * 59100058 u32 0x00000000
+poke * 5910005C u32 0x3F800000
+poke * 59100060 u32 0x00000000
+poke * 59100244 u8 1
+postsetup * 027CE130 r3=0x59200000 r4=0x59100000
+postsetup * 0274D83C r3=0x59400000
+postsetup * 028E8970 r3=0x59400044 r4=0x59300128
+postsetup * 028E90D4 r3=0x59300000 r4=0x59300E18
+postsetup * 0272D680 r3=0x59300E48 r4=0x59300128 r5=0x59300000
+real 0274D510 027CC1BC 027CC250 027389F8 0274DEA8 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 028E8F64 028E9044 028E9108 028E91EC 028E90D4 028E8970 0272D680 027BEF54 027BF048 028E8E10
+real 027BEEE4 027BEEBC 027BEED4
+# every producer writes source NULL; this is the complete producible source domain.
+# Infeasible non-null-source coverage: 027CF120..027CF27C (uniforms 0xA/0xB).
+# Survivors confined to that arm are equivalent; inverted null checks must still be detected.
+real 027CCC80 027CCE34 027CCEB8 027BF734 027BFEF8 027A76C8 027A7640 027A78F8 027A77F8 027BE6B8 027BE930 027BDF7C 027BDE1C 027BDEB4 028E93CC 028E945C 027AAFF4
+real 027CDE3C 027CE0AC 027CE130 028E8D4C 0274CBAC 0274CCB0 0274E25C 0274DF4C 0274D80C 0274E474 0274E038 028E89B4
+real 0274D6B4 0274DA08
+real 02750AF0 02750C2C 027B5EEC 027BE114 027BE494 027BE74C 027BE7F0 027BFF9C
+real 027BE744 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8
+# Lead09:27 full surface-import model at the parked alias; the protected body stays opaque.
+mocksurfacesize 0278635C
+observearg 0278635C r3+0 32
+observearg 0278635C r3+0x30 8
+real 0274D4C0
+
+# Published Lead16:02 manager/childheap producer exception; shipped r5=0.
+real 027854AC 0278540C 027855BC 0273B0D4
+
+# OSBlockMove effects used by original sampler/bitmap bootstrap.
+mockmove C0009988 r3 r4 r5
+
+# Lead22:54 supersedes opaque360: execute the published original tail and merged target closure.
+real 02786360 027BEA90 02786314
+observearg C00060D0 r3+0 32
+
+# Direct virtual camera-build target, merged SEAD original; prevents bogus top-level mock epochs.
+real 0274CCC4
+
+# Ordinary orthographic projection builder, merged SEAD; its matrix output is consumed by applyDeviceTransform.
+real 0274E4B8
+
+# Fresh canonical orthographic-closure gates (2026-10-26): spatial-realortho-base-{O2,O1}-10000-seed{1,7}.log,
+# under build/agl18/resource-spatial-worker-20261025-2217: all10000/10000 PASS, 21/39, no errors.
+# Earlier spatial-corrected gates predate closure of consumed builder0274E4B8 and are historical, not the accepted evidence.
+# New real-ortho trace has only the approved348/35C opaque game aliases; all ordinary game targets are real.
+
+# Mutation source-proof groups after tilted n1000 survey: public102 exact residuals passed n10000 seeds1/7, no errors/timeouts.
+# Public400 final:214 observed differences,84 compile-invalid (all compile stage),101 explained equivalents,1 untested synchronization.
+# Tilted source-backed steering detects axis-fixture gaps8/26/138; normal spatial-tilted-first47-n1000-seed1 outputs.
+# SourceNULL-arm group41 (Lead20:56):2,10,14,28,38,49,54,57,61,70,83,89,102,109,146,156,164,171,175,180,187,189,194,198,199,200,222,226,238,240,246,260,261,298,315,321,333,334,351,355,359.
+# Unused FrameLocal258/347 occur only in that excluded arm; declaration only computes scratch address, with no guest memory traffic (same Lead23:50 reasoning as resource76/184/284).
+# Configuration mask161: bit0 remains clear on the whole owner/configuration domain (Lead22:54).
+# Independent-order/unchanged-reload group57:0,15,19,27,31,34,37,41,50,65,68,77,84,106,107,112,114,120,122,126,130,135,141,150,151,154,158,159,162,165,177,178,183,188,196,197,204,239,244,252,254,264,280,286,305,306,310,319,320,328,339,362,367,368,390,392,395.
+# All real matrix/camera helpers write only their own stack outputs; record near/far, value count/base, and owner configuration remain unchanged.
+# Reloads27/126/204/328 and swaps114/158 use prior identical record/value loads. Camera destructor196 cannot mutate the disjoint caller-owned record.
+# Other swaps move independent scalar computations, pure pointer setup, or stores into disjoint matrix/vector components.
+# Uniform reads: own RPX preset2 at1016AB0C + properties10169D50 establishes fields2..5 count1/words1, fields12/13 count1/words2.
+# Thus swaps141/254 move disjoint scalar assignments past one-word writes;159 moves inverse-scale.y past field12 copiedOffsets (two words, disjoint FrameLocal storage).
+# Swaps310/390 move scalar work past field0 RGBA (record input), disjoint from all scalar stack locals; buffers are original allocator-owned and disjoint from record/configuration.
+# Fence289 is untested synchronization, not EQ/detection (Lead23:33/AGL1 fence227); original fence retained.
+# Flag218 detected n1000 after CLOSED Lead03:47 eight-mode steering:465/1000 pass, gen1000004 extra BF048 where original calls PSMTXMultVec.
+# Leading helpers are a separate29-case pool:6D19CI4EQ, including boundary0 qualified by Lead02:53 (no diagnostic timeout rerun).
+
+# Public residual paired evidence: spatial-final102-slot0-n10000-seed{1,7} normal outputs under build/agl18/resource-spatial-worker-20261025-2217.
+# Public400 final disposition:214D84CI101 explainedEQ1 untested-sync(289); mode218 witness completed.
+
+# Leading helper #3/#4/#18 exact paired10k seeds1/7 completed with no errors/timeouts: spatial-leading-survivors-slot0-n10000-seed{1,7}.
+# #3 qualified EQ: N1/slot0 adds0; #4 source EQ: independent readonly count/value loads; #18 source EQ: pure destination/source pointer setup.
+# Boundary helper0 qualified EQ by CLOSED02:53 (slot0 only,N1), diagnostic one-past run not required.
+# Explicit semantic helper27/28 (prefix EA+4 / dropped camera dispatch) both detected n1000, closing the generic generator's template-only blind spot.
+
+# FINAL spatial429 (public400 + leading29):220 observed differences,103 compile-invalid,105 explained equivalents,1 untested synchronization; no open.
+# Leading29 final:6D19CI4EQ. #0/#3 qualifiedN1/slot0, #4 independent readonly count/value loads, #18 pure pointer setup.
+# Actual helper survivors3/4/18 and public102 were replayed exactly at n10000 seeds1/7, allPASS with no errors/timeouts; boundary0 is not rerun.
+# Expanded-mode four controls: spatial-modes-slot0-{O2,O1}-10000-seed{1,7}.log, all10000/10000,21/39.
+# New differences: spatial-mode218-n1000-seed1/mutant218.json; spatial-leading-explicit-n1000-seed1/mutant27|28.json.
+# Normal outputs under build/agl18/resource-spatial-worker-20261025-2217; all evidence uses ordinary per-input original setup, exact replay sources preserved.
+# Fence289 remains untested synchronization (not EQ/detection), original source fence retained; type-domain qualification from CLOSED03:10 retained.

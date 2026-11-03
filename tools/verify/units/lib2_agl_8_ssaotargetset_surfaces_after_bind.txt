@@ -1,0 +1,8 @@
+# verify: -strictnan -only 02794068 -noclobber
+# AGL#8 ssaotargetset (2026-10-31): lib2_agl_8_ssaotargetset_surfaces_after_frame with the sampler bind 027BE53C run for
+# real (original code, as in lib2_agl_8_shadowfilter_bind_real_visible): in the postsetup render frame 02795D7C the
+# core binds primary sampler 0 of the set, which re-initialises the GX2 sampler for each set dirty bit and clears the
+# dirty byte (+0x320 of the set). With the bind mocked the byte kept 0xFF (sampler constructor 027BDF7C), so
+# prepareSurfaces' `dirty | 4` (SsaoTargetSet.cpp:352) never changed it. prepareSurfaces itself does not call it.
+include lib2_agl_8_ssaotargetset_surfaces_after_frame.txt
+real 027BE53C

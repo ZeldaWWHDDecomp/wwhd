@@ -1,0 +1,46 @@
+# verify: -only 0276424C
+# SEAD#18 audio runtime and per-translation-unit helpers.
+stackfill
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/sead/AudioStatics.cpp
+src wwhd_src/sead/AudioSystemRuntime.cpp
+src wwhd_src/sead/AudioPlayer.cpp
+src wwhd_src/sead/AudioArchive.cpp
+src wwhd_src/sead/AudioSoundHeap.cpp
+src wwhd_src/sead/AudioLaunchConfiguration.cpp
+arg 027631F4 r4 0,0x101FD958,0x101FD95c
+arg 02763C08 r4 0,0x101FD950,0x101FD954
+arg 02764C40 r4 0,0x101FDFC8
+arg 02764C90 r4 0,0x101FDFC0,0x101FDFC8
+arg 02764D1C r4 0,0x101FDFC4,0x101FDFC8
+field * 101FD648 u32 0,1
+field * 101FD588 u32 0,1
+field * 101FD634 u32 0,1
+field * 101FD2D8 u32 0,1
+field * 101FD63C u32 0,1
+field * 101FD640 u32 0,1
+field * 101FD644 u32 0,1
+
+# Valid voice counts exercise empty, single and repeated stop dispatch.
+field 027632E4 r3+0x1C u32 0,1,2,4,8,32
+
+field * 101FD8C8 u32 0,1
+arg 02762BC8 r4 0,1,2,3,0xFFFFFFFF
+
+# Valid NUL-terminated path pointers for the file-open contract; private fixture storage.
+arg! 0276424C r4 0x5AD00000
+field 0276424C r3+0x648 u32 0x5AD01000
+fieldstr 0276424C 5AD00000 512 "","archive.bfsar","audio/test.bfsar"
+fieldstr 0276424C 5AD01000 512 "","content/Audio","external"
+
+mockmove C0009988 r3 r4 r5
+field 0276424C r3+0x648 u32 0x5AC00000
+fill 0276424C 5AC00000 0x40002 0x61
+stable 5AC00000 0x40002
+field 0276424C 5AC40001 u8 0
+
+# Stack records handed to callees: the playback configuration, the storage-scale record and the opened path.
+callee 02893868 r4=36
+callee 02763AC4 r4=16
+callee 028880A0 r5=cstr:1024

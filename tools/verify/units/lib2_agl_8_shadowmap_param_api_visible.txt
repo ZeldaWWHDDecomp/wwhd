@@ -1,0 +1,39 @@
+# verify: -strictnan -only 027967C4,02796B3C,02796EEC -noclobber
+# ShadowMap per-frame state through public APIs, caller-visible checks only (no footprint/-calleesp; -noclobber).
+# Base: the admitted preparation fixture (original ctor/configure/setExtent/allocate on the map at 0x59020000).
+# Parameter values change after the depth texture exists only through the real ParameterBase::applyResource 0279EB28
+# (resource word -> 16-byte record, value at +0xC) with the parameters' own methods (bool table 10166A84, int table
+# 10166AFC); mNeedsRebuild stays 0, so no reallocation follows such a change.
+include lib2_agl_8_shadow_preparation_observed_group_visible.txt
+real 0279EB28 02797E04 02797E0C 02797E14 02797E1C 02797DE0 02797DE4 02797DEC 02797DF4 02797DFC
+fill * 0x5E120400 0x100 0
+
+# 027967C4: alloc_without_ctx (+0xC0) changes between the original allocation/release and the tested reallocation,
+# so the cache pool, mUseSharedCache and (same layout, other entry) the refreshed image words change.
+field 027967C4 0x5E120400 u32 0x5E120410
+field 027967C4 0x5E120410 u32 16
+field 027967C4 0x5E12041C u8 0,1
+postsetup 027967C4 0279EB28 r3=0x590200C0 r4=0x5E120400
+
+# 02796EEC: frame N+1 after a mode-1 frame: the original filter 02796F74 published the filter sampler, and
+# enable_hiz (+0x90) may differ from the value the depth storage was allocated with.
+real 02796F74 0279FFDC 027A0040 027A0114 0279FC6C 0279FD18 0279FDC8 0279FE74 02796558 027965BC
+field 02796EEC 0x5E120420 u32 0x5E120430
+field 02796EEC 0x5E120430 u32 16
+field 02796EEC 0x5E12043C u8 0,1
+postsetup 02796EEC 02796F74 r3=0x59020000 r4=0
+postsetup 02796EEC 0279EB28 r3=0x59020090 r4=0x5E120420
+
+# 02796B3C: the previous layer's finishLayer has run (HiZ storage: depth registers initialised, dirty cleared), the
+# size parameters may hold any integer (1 or 16) and the layer extent may be narrower than one texel.
+postsetup 02796B3C 02796EEC r3=0x59020000
+field 02796B3C 0x5E120440 u32 0x5E120450
+field 02796B3C 0x5E120450 u32 16
+field 02796B3C 0x5E12045C s32 1,16
+field 02796B3C 0x5E120460 u32 0x5E120470
+field 02796B3C 0x5E120470 u32 16
+field 02796B3C 0x5E12047C s32 1,16
+postsetup 02796B3C 0279EB28 r3=0x59020070 r4=0x5E120440
+postsetup 02796B3C 0279EB28 r3=0x59020080 r4=0x5E120460
+field 02796B3C 0x5E120110 f32 0.03125,0.125,0.5,1.0
+field 02796B3C 0x5E120114 f32 0.03125,0.125,0.5,1.0

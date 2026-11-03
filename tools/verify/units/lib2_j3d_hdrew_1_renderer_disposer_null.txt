@@ -1,0 +1,8 @@
+# Bounded null-disposer early-return profile for PipelineRendererDisposer::destroy.
+# The source checks null before any dereference, static-owner comparison, finalizer, or release call.
+# This profile claims only the null input path; it makes no nonnull owner or lifecycle claim.
+# verify: -only 027F8E78 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+arg! 027F8E78 r3 0
+arg! 027F8E78 r4 0

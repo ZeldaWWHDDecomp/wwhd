@@ -1,0 +1,13 @@
+# TYPE-DOMAIN: destroyDisplayFrameState 027D5CF4 with flags & 1 (delete, block 14) on a view
+# the constructor 027D5948 allocated itself (r3 = NULL, current heap = the world's root heap). Shipped views are only the
+# two embedded in RenderQueueManager (027C088C), destroyed through __destroy_arr 028F0164 -> 028F007C, which passes
+# flags 2 (028F0114 li r4,2); no shipped code deletes a view, so this arm is type-domain. The view constructor
+# allocates the view at 0x6A87E2A0 (setup trace).
+# verify: -only 027D5CF4 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include shared/agl_world.txt
+setupsnapshot
+real 027D5948 027BE6B8 027B6CB8 027B6E64 027B95B4 0274F358 02785CB4 0273AD10 027B9694 027D7978 0273B5DC 027D5C48 0273AF40
+setup * 027D5948 r3=0
+arg! 027D5CF4 r3 0x6A87E2A0
+arg! 027D5CF4 r4 1,3

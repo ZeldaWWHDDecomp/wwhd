@@ -1,0 +1,8 @@
+# Named-option / scalar-binding factories on the admitted options profile, with stale (non-zero) bytes in the
+# heap block that the real allocator hands out. A freshly allocated sead heap block is not zeroed, so its previous
+# contents are arbitrary; 027F7A2C must initialise every field itself (027F7A64..027F7A7C).
+# verify: -only 027F78A8,027F7A2C -strictnan -calleesp
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+include lib2_j3d_hdrew_1_options.txt
+fill * 6A0000C8 0x138 0xA5

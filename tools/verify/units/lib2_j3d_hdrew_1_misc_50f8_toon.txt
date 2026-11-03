@@ -1,0 +1,80 @@
+# 027F50F8 ModelPipeline_l::updatePacketValues over a model made by the toon-substituting factory 0272D384 (J3D-HDREW#1
+# misc copy rows 1864 1971 2520 2975 2986 3771; ). Base: the packet_values_lead profile
+# (five original-produced models), the GraphicsDevice words during setup, and the shared resource bootstrap (System
+# archive, toon images 10475800/10475804 via the original getRes).
+# SharcArchiveRes reuse: 026123FC answers one archive object (0x58100000), so
+# Kn and St rebuild it after System. Proof (-watch, n1000, s1 and s7, -nulltrap, setups included)
+#: every read of 0x58100000..+0x44 is by the archive's own rebuild/parse (0275D21C,
+# 0275CF28, 0275E6B8) or by its own registration's file lookups (02612450 -> 0275E208/0275E288/0275E3A0) between that
+# rebuild and the end of that archive's 02604EB4; none in any later setup or in the tested function. Earlier archives'
+# registration records are read after a rebuild only by the original cross-archive binding (0260AC60/0260AC94 ->
+# 02608234/02608258 -> 027E2EA4): resinfo+0x5C -> res object, res+0x14 -> that archive's own res file in its intact,
+# stable blob (System 0x58002000, Kn 0x58220000), never the overwritten object.
+# verify: -only 027F50F8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_packet_values_alt.txt
+include lib2_j3d_hdrew_1_shared_gfxdevice.txt
+include lib2_j3d_hdrew_1_shared_resarchive.txt
+# ---- Kn archive (game/ content/Common/Pack/first_szs_permanent.pack -> Kn.szs, Yaz0 SARC 0x2F000: kn.sharcfb,
+# Kn.bfres at +0x20000), registered like System: SharcArchiveRes rebuilt at the lookup's object, then 02604EB4 ----
+blobfile * 0x58200000 content/Common/Pack/first_szs_permanent.pack:Kn.szs:<yaz0>
+stable 0x58200000 0x2F000
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x58200000 r5=0x2F000 r6=0x2F000 r7=0 r8=0
+fill * 0x58101040 0x10 0
+# "Kn" as fixed bytes (fieldstr would draw an empty or generated string on 1 input in 8)
+field * 0x58101040 u16 0x4B6E
+field * 0x58101048 u32 0x58101040
+field * 0x5810104C u32 0x100526DC
+stable 0x58101040 0x10
+setup * 02604EB4 r3=*0x101F4F28 r4=0x58101048 r5=0
+# ---- model K: Kn.bfres FMDL "kn" (FRES at 0x58220000, FMDL +0x124; 2 materials, "koura" refs ZBtoonEX/ZAtoon) through
+# the model-data factory with the toon substitution, called as the loaders 0260870C/0260A5C8 call it:
+# r3 = FMDL, r4 = the archive's per-model record (026031D0(archive res 0x720003F8, model 0), as at 026086CC),
+# r6 = heap. 0272D384 = 027F7B50 (027F5A5C, 028010F8, shapes, 027F70D8) + the ZA/ZB value-table rewrite from
+# *10475800/*10475804. Configure as in the.
+setup * 026031D0 r3=0x720003F8 r4=0 ->0x58101050
+fill * 0x58300000 0x144 0
+setup * 0272D384 r3=0x58220124 r4=*0x58101050 r5=0 r6=0x6A000000 ->0x583000AC
+fill * 0x58302000 0x48 0
+field * 0x58302000 u32 0x58220124
+field * 0x58302008 u32 2
+field * 0x5830200C u32 2
+field * 0x58302010 u32 2
+field * 0x58302014 u32 2
+setup * 027DDFA4 r3=0x58302000
+fill * 0x58310000 0x4000 0
+setup * 027DE0AC r3=0x58300014 r4=0x58302000 r5=0x58310000 r6=*0x58302024
+# the St registration (25 shader archives) needs more than the world's access and page budgets
+accessbudget 400000000
+pagebudget 131072
+# ---- St archive (game/ content/Common/Pack/szs_permanent1.pack -> St.szs, Yaz0 SARC 0x258F3E: 25 .sharcfb, St.bfres at
+# +0x64000) and model S: FMDL "st_asil" (model 3, FRES 0x58564000 + 0x32EC), ONE material whose ONLY texture ref is
+# ZA/ZB (the shipped case for packet 0 / value 0 / valueCount 1; 18 such FMDLs ship, all in St.bfres) ----
+blobfile * 0x58500000 content/Common/Pack/szs_permanent1.pack:St.szs:<yaz0>
+stable 0x58500000 0x258F3E
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x58500000 r5=0x258F3E r6=0x258F3E r7=0 r8=0
+fill * 0x58101060 0x10 0
+field * 0x58101060 u16 0x5374
+field * 0x58101068 u32 0x58101060
+field * 0x5810106C u32 0x100526DC
+stable 0x58101060 0x10
+setup * 02604EB4 r3=*0x101F4F28 r4=0x58101068 r5=0
+# record: 026031D0(St archive res 0x72005DBC (deterministic, 02602AD4 in the St registration), model 3)
+setup * 026031D0 r3=0x72005DBC r4=3 ->0x58101054
+fill * 0x58800000 0x144 0
+setup * 0272D384 r3=0x585672EC r4=*0x58101054 r5=0 r6=0x6A000000 ->0x588000AC
+fill * 0x58802000 0x48 0
+field * 0x58802000 u32 0x585672EC
+field * 0x58802008 u32 2
+field * 0x5880200C u32 2
+field * 0x58802010 u32 2
+field * 0x58802014 u32 2
+setup * 027DDFA4 r3=0x58802000
+fill * 0x58810000 0x4000 0
+setup * 027DE0AC r3=0x58800014 r4=0x58802000 r5=0x58810000 r6=*0x58802024
+# the later arg! replaces the profile's model list: every input tests model K or model S
+arg! 027F50F8 r3 0x58300000,0x58800000
+real 026031D0 02608308 0260873C 0272D384 027738DC 0277390C 0277397C 02773984 02773C0C 02773E90 02773F98 02773FA8 0277408C 027742F0 02774320 02774448 02774450 0277445C 027744A0 0277462C 02774840 027B950C 027BBD04 027BBF6C 027BC0F4 027BD2B0 027DFA24 027E1550 027E159C 027E15A4 027E15D0 027E15FC 027E1604 027E1618 027E1648 027E1784 027E17B4 027E17E0 027E1878 027E39EC 027E39F0 027ED1F0 027F691C 027F70D8 027F76FC 027F7830 027F78A8 027F7B50 02800B0C 028010F8 028F0074 028F007C 028F0164 028F02EC 028F0314 028F24D0 028F25FC 028F2724 028F274C 028F2774 028F2ED0 028F5688 028F571C 028F578C 028F57D8 028F58E4 028F5DC0 028F5DD4 028F5E38 028F5E44 
+real 027517C0 027517C4 02774844 027748C8 02774968 027ED2CC 028012BC
+real 

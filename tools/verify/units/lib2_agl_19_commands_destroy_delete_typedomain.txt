@@ -1,0 +1,28 @@
+# verify: -only 027D514C,027D5934 -calleesp
+# TYPE-DOMAIN companion (Phase A2): the delete arms (flags & 1) of the command pool destructor 027D514C and the resource
+# list destructor slot 027D5934. In the shipped game they never run: the pool's only caller is RenderQueueManager's
+# destructor 027C0B00 (027C0CA0 li r4,2; bl 027D514C at 027C0CA4) for its embedded pool, and resource lists are only
+# destroyed by RenderLayerPrefix's destructor through their vtable slot with flags 2 (027C33C0) before the array is
+# freed in one block; no other code or data references 027D514C / 027D5934 (vtables 1016C0B4 / 1016C144 only). Here each object is allocated by its own constructor with NULL storage (operator new on the world's root
+# heap; both land at 0x6A87E2A0, seen with -trace), the pool initialized by its own initializer, and destroyed with flags 1 or 3 (and 0/2 for comparison).
+include shared/agl_world.txt
+setupsnapshot
+# OSGetSystemTime (C0009C98), reached inside the command-record constructors, answers a fixed tick so the setups are
+# input-independent and run once (setupsnapshot), as in lib2_agl_19_commands_pool_fixture.
+ret! C0009C98 0x00000010
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/agl/RenderCommandPool.cpp
+src wwhd_src/agl/RenderCommandAllocation.cpp
+src wwhd_src/agl/RenderCommandDestruction.cpp
+src wwhd_src/agl/RenderResourceList.cpp
+src wwhd_src/agl/RenderStorageCopies.cpp
+real 027D5064 027D56A4 027D527C 027D56E4 027DA694 027DA710 0273AD10 0273AFC8 027C06C4 027C0680 0273B560
+field * 0x101F8C1C u32 0
+setup 027D514C 027D5064 r3=0
+setup 027D514C 027D527C r3=0x6A87E2A0 r4=0x100 r5=36 r6=2 r7=0x6A000000
+setup 027D5934 027D56E4 r3=0
+arg! 027D514C r3 0x6A87E2A0
+arg! 027D514C r4 0,1,2,3
+arg! 027D5934 r3 0x6A87E2A0
+arg! 027D5934 r4 0,1,2,3

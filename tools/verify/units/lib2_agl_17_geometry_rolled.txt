@@ -1,0 +1,72 @@
+# buildPlanes on.3|-0.5|0.2, 1, 0|0.4)
+# or nearly 90 degrees with up.y 0.1, instead of (0, 1, 0)), so corners that differ only in NDC x also differ in world y (camera roll, a valid look-at).
+# verify: -only 027C8ABC -strictnan -calleesp
+stackfill
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+real 0274EDD4 028E892C 028E91EC 028E8F64 028E8D4C 025155D8 028E8E10 027C8698 027C87DC
+real 027389F8 0274DEA8 0274D6B4 028F5E98 0274E7A0 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 0274DA08 028E8970 02791D00 0274CCC4 0274CCB0 028E90D4 02791C68 028E8B04 028E89B4 027CAAB0 0274E04C
+callee 0274EDD4 r3=out64 r4=64
+callee 028E91EC r3=48 r4=out48
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 025155D8 r3=inout12
+callee 028E8F64 r3=48 r4=12 r5=out12
+stable 1016A604 96
+stable 101F8B1C 12
+stable 5F300000 0xE4
+stable 5F301000 0xC0
+stable 5F302000 0x70
+stable 5F303000 0x20
+stable 5F304000 0xC0
+arg! 027C8ABC r3 0x5F200000
+arg! 027C8ABC r4 0x5F301000,0x5F301040
+arg! 027C8ABC r5 0x5F300044
+arg! 027C8ABC r6 0x5F303000,0x5F303010
+arg! 027C8ABC r7 1
+argf64! 027C8ABC f1 0x3FEFC98C80000000,0x3FEFD733C0000000
+argf64! 027C8ABC f2 0x3FEFE8C1E0000000,0x3FEFF7F8A0000000,0x3FEFFAB3A0000000,0x3FEFFCE300000000,0x3FEFFDD280000000,0x3FEFFE8640000000
+fill 027C8ABC 5F200000 1460 0
+field 027C8ABC 101F9601 u8 1
+field 027C8ABC 101F9603 u8 1
+# camera projection: hdRenderProjection_c main state n 0.1 / f 10000 (the NDC words above are for this n/f)
+setup * 027389F8 r3=0x5F300000
+# camera views: VIEW0 eye 0 dir -z (on-axis, #143 witness); VIEWY eye (300,200,500) -> origin
+poke * 5F302000 u32 0
+poke * 5F302004 u32 0
+poke * 5F302008 u32 0
+poke * 5F302010 u32 0
+poke * 5F302014 u32 0
+poke * 5F302018 f32 -1
+poke * 5F302030 f32 300
+poke * 5F302034 f32 200
+poke * 5F302038 f32 500
+poke * 5F302040 f32 -300
+poke * 5F302044 f32 -200
+poke * 5F302048 f32 -500
+# light look-at LVIEW: eye and direction components poked per input (every pick is a valid look-at: dir.x, dir.y != 0)
+poke * 5F302020 f32 0.3,-0.5,0.2
+poke * 5F302024 f32 1,0.1
+poke * 5F302028 f32 0,0.4
+poke * 5F302050 f32 -300,200
+poke * 5F302054 f32 1000,600
+poke * 5F302058 f32 -200,400
+poke * 5F302060 f32 0.3,-0.5
+poke * 5F302064 f32 -1,-0.6
+poke * 5F302068 f32 0.2,-0.4
+# witness light forward: raw (X, 0, Z) normalised by 025155D8 -> (3F7FFFFA, 0, BA83126F)
+poke * 5F303010 u32 0x3F7FFFF8
+poke * 5F303014 u32 0
+poke * 5F303018 u32 0xBA83126E
+# camera parameters through the original sead PerspectiveProjection::set 0274E04C (near, far, fovy, aspect as caller arguments)
+fill * 5F305000 16 0
+field * 5F305000 u32 0x3F490FDB,0x3F860A92
+field * 5F305004 u32 0x3FE38E39,0x3FAAAAAB
+stable 5F305000 16
+postsetup * 0274E04C r3=0x5F300000 f1=0.1 f2=10000 f3=*5F305000 f4=*5F305004
+postsetup * 0274D83C r3=0x5F300000
+postsetup * 02791D00 r3=0x5F301000 r4=0x5F302000 r5=0x5F302010 r6=0x5F302020
+postsetup * 02791D00 r3=0x5F301040 r4=0x5F302030 r5=0x5F302040 r6=0x5F302020
+postsetup * 02791D00 r3=0x5F301080 r4=0x5F302050 r5=0x5F302060 r6=0x5F302020
+postsetup * 02791C68 r3=0x5F303000 r4=0x5F301080
+postsetup * 025155D8 r3=0x5F303010
+final 027C8ABC 5F20041C 184

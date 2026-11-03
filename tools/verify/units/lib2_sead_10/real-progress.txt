@@ -1,0 +1,148 @@
+# SEAD#10 companion: two real child destructions, the task watcher, and a two-request lookup.
+# verify: -only 027485F0,02749850,0274A7A4
+stackfill
+src wwhd_src/sead/Framework.cpp
+src wwhd_src/sead/MethodTreeNode.cpp
+src wwhd_src/sead/Task.cpp
+src wwhd_src/sead/TaskBase.cpp
+src wwhd_src/sead/TaskMgr.cpp
+src wwhd_src/sead/GameFramework.cpp
+src wwhd_src/sead/CafeGameFramework.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+# Pointees the callees read, compared at the calls: heap and thread names, the null fader's construct
+# argument (construct argument + heap array), create arguments, class IDs, the heap arrays passed
+# between the create steps, and the sleep span.
+callee 02753004 r4=8
+callee 0275FBD8 r4=8 r5=heap16
+callee 02768514 r4=36
+callee 02749ECC r4=128
+callee 02748CFC r3=out128 r4=8
+callee 02760C3C r3=8
+callee 02768A14 r3=8 r4=12
+callee 02749C10 r4=24 r5=128
+callee 02749DEC r4=128 r5=24
+real 02749BB0
+real 02749AB4
+real 02749850
+real 02767464
+real 02767398
+real 0276740C
+real 02767348
+real 02748E0C
+real 02748E04
+real 02749734
+real 0273B2F0
+real 0273B310
+real 0275DEEC
+ret 027601C4 1
+stable 0x104A030C 4
+arg! 027485F0 r3 0x5F000000
+field 027485F0 0x104A030C s32 0
+fill 027485F0 0x5F000000 116 0
+field 027485F0 0x5F000004 u32 0x5F001000
+field 027485F0 0x5F000010 u32 0x5F000000
+field 027485F0 0x5F00005C u32 0x5F010000
+stable 0x5F000000 20
+stable 0x5F00005C 4
+field 027485F0 0x5F010040 u32 0x5F020000
+field 027485F0 0x5F02001C u32 0x5F030000
+stable 0x5F010040 4
+stable 0x5F02001C 4
+fill 027485F0 0x5F001000 116 0
+field 027485F0 0x5F001000 u32 0x5F000000
+field 027485F0 0x5F001008 u32 0x5F002000
+field 027485F0 0x5F00100C u32 0x00000000
+field 027485F0 0x5F001010 u32 0x5F001000
+field 027485F0 0x5F00105C u32 0x5F010000
+field 027485F0 0x5F001060 u32 4
+field 027485F0 0x5F001070 u32 0x5F040000
+stable 0x5F001000 20
+stable 0x5F001034 16
+stable 0x5F001044 32
+stable 0x5F001070 4
+fill 027485F0 0x5F002000 116 0
+field 027485F0 0x5F002000 u32 0x5F000000
+field 027485F0 0x5F002008 u32 0x00000000
+field 027485F0 0x5F00200C u32 0x5F001000
+field 027485F0 0x5F002010 u32 0x5F002000
+field 027485F0 0x5F00205C u32 0x5F010000
+field 027485F0 0x5F002060 u32 4
+field 027485F0 0x5F002070 u32 0x5F040000
+stable 0x5F002000 20
+stable 0x5F002034 16
+stable 0x5F002044 32
+stable 0x5F002070 4
+field 027485F0 0x5F04006C u32 0x02748E0C
+stable 0x5F04006C 4
+arg! 02749850 r3 0x5F100000
+arg! 02749850 r4 0x5F110000
+arg! 02749850 r5 4
+fill 02749850 0x5F100000 420 0
+fill 02749850 0x5F110000 284 0
+field 02749850 0x5F100064 u32 0x5F100064
+field 02749850 0x5F100068 u32 0x5F100064
+field 02749850 0x5F11003C u32 0x5F110000
+field 02749850 0x5F11005C u32 0x5F100000
+field 02749850 0x5F110060 u32 1
+field 02749850 0x5F110070 u32 0x5F140000
+field 02749850 0x5F14005C u32 0x02748724
+field 02749850 0x101F8B68 u32 0x5F120000
+fill 02749850 0x5F120000 40 0
+field 02749850 0x5F12001C u32 0x5F12001C
+field 02749850 0x5F120020 u32 0x5F12001C
+stable 0x5F100064 12
+stable 0x5F110034 16
+stable 0x5F11005C 8
+stable 0x5F110070 4
+stable 0x5F14005C 4
+stable 0x101F8B68 4
+stable 0x5F120000 40
+arg! 0274A7A4 r3 0x5F300000
+field 0274A7A4 0x104A030C s32 1 4
+fill 0274A7A4 0x5F310000 284 0
+field 0274A7A4 0x5F30004C u32 0x5F310034
+field 0274A7A4 0x5F300050 u32 0x5F310034
+field 0274A7A4 0x5F300054 s32 1
+stable 0x5F30004C 12
+field 0274A7A4 0x5F310034 u32 0x5F30004C
+field 0274A7A4 0x5F310038 u32 0x5F30004C
+stable 0x5F310034 8
+field 0274A7A4 0x5F31003C u32 0x5F310000
+field 0274A7A4 0x5F310040 u32 0x5F30004C
+field 0274A7A4 0x5F310070 u32 0x5F350000
+field 0274A7A4 0x5F350054 u32 0x02748E04
+stable 0x5F31003C 8
+stable 0x5F310044 24
+stable 0x5F310070 4
+stable 0x5F350054 4
+field 0274A7A4 0x5F3000AC u32 0x5F320000
+stable 0x5F3000AC 4
+field 0274A7A4 0x5F320000 u32 0x5F340094
+field 0274A7A4 0x5F320004 u32 0x5F330094
+field 0274A7A4 0x5F320008 s32 2
+stable 0x5F320000 12
+field 0274A7A4 0x5F330094 u32 0x5F320000
+field 0274A7A4 0x5F330098 u32 0x5F340094
+stable 0x5F330094 8
+field 0274A7A4 0x5F340094 u32 0x5F330094
+field 0274A7A4 0x5F340098 u32 0x5F320000
+stable 0x5F340094 8
+field 0274A7A4 0x5F330000 u32 0x5F360000
+field 0274A7A4 0x5F340000 u32 0x5F310000
+stable 0x5F330000 4
+stable 0x5F340000 4
+field 0274A7A4 0x5F34001C u8 1
+field 0274A7A4 0x5F340018 u32 32
+stable 0x5F340018 5
+field 0274A7A4 0x5F340030 u8 1
+field 0274A7A4 0x5F34002C u32 48
+stable 0x5F34002C 5
+field 0274A7A4 0x5F340044 u8 1
+field 0274A7A4 0x5F340040 u32 64
+stable 0x5F340040 5
+field 0274A7A4 0x5F340058 u8 1
+field 0274A7A4 0x5F340054 u32 80
+stable 0x5F340054 5
+# Two real child destructions move the parent's child link to the second child, then NULL (the manager reload is seen).
+# The try-lock succeeds; children in state 4 make the real change to state 7 succeed; real tree helpers unlink them.
+# The watcher's wait queue is empty. The prepare thread walks two queued requests before the task's own.

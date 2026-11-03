@@ -1,0 +1,15 @@
+# verify: -strictnan -calleesp -only 0279515C
+# Real blur-count resource application on the original constructed effect.
+include lib2_agl_8_mode0_secondary_state_observed_group.txt
+# Runtime opaque callees receive sampler/frame/shader/stack inputs, never this effect storage.
+# Stability suppresses unrelated mock epochs; actual source and real-callee stores still compare.
+stable 0x58000000 0x285C
+fill 0279515C 0x5B200000 0x200 0
+field 0279515C 0x5B200000 u32 0x5B200100
+field 0279515C 0x5B200100 u32 16
+field 0279515C 0x5B200104 u32 2
+field 0279515C 0x5B20010C s32 0,1
+stable 0x5B200000 0x200
+# The constructor creates IntegerParameter at effect+282C, whose value is at+2838.
+postsetup 0279515C 0279EB28 r3=0x5800282C r4=0x5B200000
+real 0279EB28 02795EE4 02795F08 02795F10 02795F18 02795F20

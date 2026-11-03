@@ -1,0 +1,34 @@
+# verify: -only 027D5E5C,027D6070,027D7270,027D7498 -strictnan -calleesp
+# AGL#19 render-job records as the view initializer 027D60D4 and the job collectors 027D72B8/027D7384 use them:
+# createRenderJob 027D5E5C on placement elements of a freshly allocated job array (the caller never passes NULL);
+# configureLayerCommand 027D6070 with the kinds the initializer assigns (primary job 0 -> 1 "Layer(Begin)",
+# job 1 -> 2 "Layer(End)", jobs 2.. -> 0 "Layer(Draw)", secondary jobs -> 3 "Layer(GPUCalc)") and a frame pointer;
+# RenderJob::submit 027D7270 of a constructed and configured job into the collectJobs 027C1848 frame buffer
+# (setStorage(0x100, entries): count 0, capacity 256, two NULL-owner jobs already submitted) or, when the manager runs
+# jobs inline (flags bit 2 clear: 027C1848 passes NULL), executed at once through the job table (+0xC = 027D74AC,
+# answered by the harness); owners are NULL or one of the three original-built layers; releaseRenderJob 027D7498
+# with the flags the frame destructor 027D5CF4 passes (2: destroy without freeing).
+src wwhd_src/agl/RenderJobOrder.cpp
+include lib2_agl_19_jobs_layer_owner_fixture.txt
+real 027D7270 027D6070
+# 027D5E5C: elements of a job array (heap storage, contents as left by earlier use)
+arg! 027D5E5C r3 0x58006000,0x5800601C,0x58006038,0x58006054
+# 027D6070: job J2 (constructed), kinds 0..3, the owning frame
+arg! 027D6070 r3 0x58004038,0x58004054
+arg! 027D6070 r4 0,1,2,3
+arg! 027D6070 r5 0x58010000,0x58010800
+# 027D7270: job J2 configured as a draw job of frame 0x58010000, J3 as a GPUCalc job
+setup 027D7270 027D6070 r3=0x58004038 r4=0 r5=0x58010000
+setup 027D7270 027D6070 r3=0x58004054 r4=3 r5=0x58010000
+stable 0x58005100 0x400
+poke 027D7270 58005000 u32 0
+poke 027D7270 58005004 u32 0x100
+poke 027D7270 58005008 u32 0x58005100
+postsetup 027D7270 027D7270 r3=0x58004000 r4=0x58005000 r5=0
+postsetup 027D7270 027D7270 r3=0x5800401C r4=0x58005000 r5=0
+arg! 027D7270 r3 0x58004038,0x58004054
+arg! 027D7270 r4 0x58005000,0
+arg! 027D7270 r5 0,0x58000000,0x58001000,0x58002000
+# 027D7498: a constructed job, frame destructor flags
+arg! 027D7498 r3 0x58004038,0x5800408C
+arg! 027D7498 r4 2

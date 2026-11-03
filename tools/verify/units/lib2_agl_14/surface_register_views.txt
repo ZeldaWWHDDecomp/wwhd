@@ -1,0 +1,83 @@
+# Qualified SDK input/view readset only; no TextureData constructor, GPU registers or rendering claim.
+# verify: -only 027B6DDC,027B6F90 -calleesp -strictnan
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+fill 027B6DDC 0x58000000 0x148 0
+arg! 027B6DDC r3 0x58000000
+field 027B6DDC 0x58000090 u8 0,1
+field 027B6DDC 0x58000094 u32 0
+field 027B6DDC 0x58000098 u32 0
+field 027B6DDC 0x580000AC u32 0x1
+field 027B6DDC 0x580000B0 u32 0x10
+field 027B6DDC 0x580000B4 u32 0x10
+field 027B6DDC 0x580000B8 u32 0x1
+field 027B6DDC 0x580000BC u32 0x1
+field 027B6DDC 0x580000C0 u32 0x1A
+field 027B6DDC 0x580000C4 u32 0x0
+field 027B6DDC 0x580000C8 u32 0x2
+field 027B6DDC 0x580000DC u32 0x4
+field 027B6DDC 0x58000120 u32 0,1,0xFFFFFFFF
+field 027B6DDC 0x58000124 u32 0,1,0xFFFFFFFF
+field 027B6DDC 0x58000128 u32 0,1,0xFFFFFFFF
+callee C00063D0 r3=0
+observearg C00063D0 r3+0x0 16
+observearg C00063D0 r3+0x14 8
+observearg C00063D0 r3+0x30 4
+observearg C00063D0 r3+0x74 12
+mockfield C00063D0 r3+0x88 u32 0,0xFFFFFFFF
+mockfield C00063D0 r3+0x8C u32 0,0xFFFFFFFF
+mockfield C00063D0 r3+0x90 u32 0,0xFFFFFFFF
+mockfield C00063D0 r3+0x94 u32 0,0xFFFFFFFF
+mockfield C00063D0 r3+0x98 u32 0,0xFFFFFFFF
+final 027B6DDC 58000090 0x1
+final 027B6DDC 580000AC 0x88
+fill 027B6F90 0x58001000 0x154 0
+arg! 027B6F90 r3 0x58001000
+field 027B6F90 0x58001090 u8 0,1
+field 027B6F90 0x58001094 u32 0
+field 027B6F90 0x58001098 u32 0
+field 027B6F90 0x580010A8 u32 0x1
+field 027B6F90 0x580010AC u32 0x10
+field 027B6F90 0x580010B0 u32 0x10
+field 027B6F90 0x580010B4 u32 0x1
+field 027B6F90 0x580010B8 u32 0x1
+field 027B6F90 0x580010BC u32 0x811
+field 027B6F90 0x580010C0 u32 0x0
+field 027B6F90 0x580010C4 u32 0x4
+field 027B6F90 0x580010D8 u32 0x4
+field 027B6F90 0x5800111C u32 0,1,0xFFFFFFFF
+field 027B6F90 0x58001120 u32 0,1,0xFFFFFFFF
+field 027B6F90 0x58001124 u32 0,1,0xFFFFFFFF
+field 027B6F90 0x58001130 f32 0,0.5,1
+field 027B6F90 0x58001134 u32 0,1,0xFFFFFFFF
+callee C00063F0 r3=0
+observearg C00063F0 r3+0x0 16
+observearg C00063F0 r3+0x14 8
+observearg C00063F0 r3+0x30 4
+observearg C00063F0 r3+0x74 4
+observearg C00063F0 r3+0x7C 4
+mockfield C00063F0 r3+0x90 u32 0,0xFFFFFFFF
+mockfield C00063F0 r3+0x94 u32 0,0xFFFFFFFF
+mockfield C00063F0 r3+0x98 u32 0,0xFFFFFFFF
+mockfield C00063F0 r3+0x9C u32 0,0xFFFFFFFF
+mockfield C00063F0 r3+0xA0 u32 0,0xFFFFFFFF
+mockfield C00063F0 r3+0xA4 u32 0,0xFFFFFFFF
+mockfield C00063F0 r3+0xA8 u32 0,0xFFFFFFFF
+final 027B6F90 58001090 0x1
+final 027B6F90 580010A8 0x90

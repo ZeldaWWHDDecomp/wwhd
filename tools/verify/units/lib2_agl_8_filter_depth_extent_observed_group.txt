@@ -1,0 +1,7 @@
+# verify: -strictnan -calleesp -footprint -only 02796F74
+# TYPE-DOMAIN zero/ordinary real extent producer with fully assigned filter-vector observations.
+include lib2_agl_8_filter_depth_extent_api_type.txt
+observearg C0006A40 r5+0 16 if lr=027978B4
+observearg C0006908 r5+0 16 if lr=027978CC
+observearg C0006A40 r5+0 16 if lr=02797B60
+observearg C0006908 r5+0 16 if lr=02797B78

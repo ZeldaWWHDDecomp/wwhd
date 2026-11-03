@@ -1,0 +1,9 @@
+# AGL#18 027CF2B0 selector-digit type domain.  Preserve the original-produced
+# texture value while crossing digit {0,1,2} with absent/present source.
+# target the source-null comparison mutation;
+# numeric IDs are regenerated from the final committed source.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_runtime.txt
+poke * 59100234 u32 0,1,2
+poke * 59500004 u32 0,0x5910008C
+callee 027B1938 r10=0

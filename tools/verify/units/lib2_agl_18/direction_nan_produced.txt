@@ -1,0 +1,19 @@
+# Diagnostic only; not mutation evidence.  The inherited render profile runs
+# 027CCEB8 on the 59100000 fixture after these pokes, so it changes the input
+# vector before 027B1734 consumes it.  Retained only to reproduce the trace
+# that motivated the finite producer domain.
+# verify: -only 027CCEB8 -strictnan -calleesp -footprint
+include lib2_agl_18/render_resource_original_context_runtime.txt
+src wwhd_src/agl/DrawResourceDirection.cpp
+arg! * r3 0x59200000
+arg! * r4 0x6A87E820
+poke * 5960001C u32 0x59200000
+poke * 59100014 u32 0
+poke * 59100018 u32 0x7FC00001
+poke * 5910001C u32 0
+poke * 59100040 f32 0
+poke * 59100044 f32 0
+poke * 59100048 f32 0
+poke * 5910004C u32 0x3E99999A
+real 027B1734 027D1E1C
+postsetup * 027B1734 r3=0x59600000 r4=0 r5=0x59100008 r6=0x59100014 r7=0x59100020 r8=0 r9=0x59100030 f1=*59100040 f2=*59100044 f3=*59100048 f4=*5910004C

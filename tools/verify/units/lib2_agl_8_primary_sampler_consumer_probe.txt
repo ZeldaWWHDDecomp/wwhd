@@ -1,0 +1,6 @@
+# verify: -strictnan -calleesp -only 02794970
+# Diagnostic only: inspect actual native texture inputs to SDK register construction.
+include lib2_agl_8_primary_sampler_consumer_group.txt
+observearg 027BE53C r3+0x190 1 if r5=0xFFFFFFFF
+observenested C0006498 r3+0 32
+observenested C0006498 r3+0x74 20

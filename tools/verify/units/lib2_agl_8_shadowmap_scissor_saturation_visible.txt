@@ -1,0 +1,9 @@
+# verify: -strictnan -only 02796B3C -noclobber
+# ShadowMap::prepareLayer 02796B3C scissor floor at the s32 saturation edges, caller-visible checks only (-noclobber).
+# The layer origin is the caller's argument (r5, a sead::Vector2f); here its components may be far outside [0,1], so that
+# width*origin - margin (16 x origin, margin from the original parameter) is below -2^31 (fctiwz saturates to 0x80000000 and the
+# original's 32-bit decrement at 02796D2C / 02796D98 wraps it) or exactly -2^31 (no decrement), next to ordinary values.
+# Everything else is the admitted visible preparation profile (original ctor/configure/setExtent(16x16)/allocate producers).
+include lib2_agl_8_shadow_preparation_observed_group_visible.txt
+field 02796B3C 0x5E120100 f32 -469762048.0,-134217728.0,0.0,0.03125
+field 02796B3C 0x5E120104 f32 -469762048.0,-134217728.0,0.0,0.03125

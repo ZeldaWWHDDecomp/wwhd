@@ -1,0 +1,67 @@
+# Indexed bounds transform with indices built by the assigned original producer.
+# The setup uses a finite affine matrix and the producer's positive half-extent vector.
+# This covers the coordinate transform, not the full shadow-context lifecycle.
+# verify: -only 027C90C0,027C9F68,027CA978 -strictnan -calleesp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/UtilityText.cpp
+real 027C90C0 028EFFD0 027CA8EC 028E8F64
+real 02757190
+setup * 02757190
+stable 104A0934 12
+stable 104A0958 12
+setup 027C9F68 027C90C0 r3=0x58E00000
+arg! 027C9F68 r3 0x58E00000
+arg! 027C9F68 r4 0x58E01000
+arg! 027C9F68 r5 0x58E02000
+fill 027C9F68 58E00000 356 0
+fill 027C9F68 58E01000 24 165
+fill 027C9F68 58E02000 24 0
+field 027C9F68 58E02000 f32 -3,-2,-1
+field 027C9F68 58E02004 f32 -3,-2,-1
+field 027C9F68 58E02008 f32 -3,-2,-1
+field 027C9F68 58E0200C f32 1,2,3
+field 027C9F68 58E02010 f32 1,2,3
+field 027C9F68 58E02014 f32 1,2,3
+field 027C9F68 104A0958 f32 1
+field 027C9F68 104A095C f32 1
+field 027C9F68 104A0960 f32 1
+field 027C9F68 58E00134 f32 -2,-1,0,1,2
+field 027C9F68 58E00138 f32 -2,-1,0,1,2
+field 027C9F68 58E0013C f32 -2,-1,0,1,2
+field 027C9F68 58E00140 f32 -2,-1,0,1,2
+field 027C9F68 58E00144 f32 -2,-1,0,1,2
+field 027C9F68 58E00148 f32 -2,-1,0,1,2
+field 027C9F68 58E0014C f32 -2,-1,0,1,2
+field 027C9F68 58E00150 f32 -2,-1,0,1,2
+field 027C9F68 58E00154 f32 -2,-1,0,1,2
+field 027C9F68 58E00158 f32 -2,-1,0,1,2
+field 027C9F68 58E0015C f32 -2,-1,0,1,2
+field 027C9F68 58E00160 f32 -2,-1,0,1,2
+final 027C9F68 58E01000 18
+
+# Selector producer: complete read prefix, finite matrix and positive extent.
+arg! 027C90C0 r3 0x58E00000
+fill 027C90C0 58E00000 356 0
+field 027C90C0 104A0958 f32 1
+field 027C90C0 104A095C f32 1
+field 027C90C0 104A0960 f32 1
+field 027C90C0 58E00134 f32 -2,-1,0,1,2
+field 027C90C0 58E00138 f32 -2,-1,0,1,2
+field 027C90C0 58E0013C f32 -2,-1,0,1,2
+field 027C90C0 58E00140 f32 -2,-1,0,1,2
+field 027C90C0 58E00144 f32 -2,-1,0,1,2
+field 027C90C0 58E00148 f32 -2,-1,0,1,2
+field 027C90C0 58E0014C f32 -2,-1,0,1,2
+field 027C90C0 58E00150 f32 -2,-1,0,1,2
+field 027C90C0 58E00154 f32 -2,-1,0,1,2
+field 027C90C0 58E00158 f32 -2,-1,0,1,2
+field 027C90C0 58E0015C f32 -2,-1,0,1,2
+field 027C90C0 58E00160 f32 -2,-1,0,1,2
+final 027C90C0 58E00114 1C
+
+# Startup installs the real default normal (SEAD14 defaults indices11..13).
+alloc 0273AD10 r3 0x5B00B000 4
+allocnested 0273AD10
+arg! 027CA978 r3 0,0x58C20000
+fill 027CA978 58C20000 16 165
+final 027CA978 58C20000 10

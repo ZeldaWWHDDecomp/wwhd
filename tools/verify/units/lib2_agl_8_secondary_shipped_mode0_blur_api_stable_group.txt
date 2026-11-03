@@ -1,0 +1,5 @@
+# verify: -strictnan -calleesp -only 0279515C
+# Lead02:04: sole shipped core caller supplies secondary mode r7=0.
+# Retain the prior-frame producer, defined observations and real blur resource controls.
+include lib2_agl_8_mode0_secondary_blur_api_stable_group.txt
+arg! 0279515C r7 0

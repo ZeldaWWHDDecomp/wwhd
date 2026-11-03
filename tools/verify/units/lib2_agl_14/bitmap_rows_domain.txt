@@ -1,0 +1,30 @@
+# verify: -only 027B6614 -calleesp -strictnan
+# Bottom-up row copy over the full bounded domain: components 0..5, widths up to 40, heights
+# 0..3, strides 8..64, aligned and unaligned destinations, disjoint source (512 B) and destination (1280 B);
+# DCZeroRange is the port-formula mockzero model.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+mockzero C00088C8 r3 r4
+arg! 027B6614 r3 0x58000000,0x58000004,0x58000020
+arg! 027B6614 r4 0x59000000
+arg! 027B6614 r5 0,1,2,3,4,5,1,3,4
+arg! 027B6614 r6 0,1,7,8,9,16,31,32,33,40
+arg! 027B6614 r7 0,1,2,3
+arg! 027B6614 r8 8,16,32,40,64
+stable 0x59000000 0x200

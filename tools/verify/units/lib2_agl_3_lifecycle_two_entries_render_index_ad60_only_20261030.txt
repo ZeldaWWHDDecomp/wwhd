@@ -1,0 +1,3 @@
+# Same original producer/type-domain fixture; restrict execution to the unresolved render function.
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_lifecycle_two_entries_render_index_type.txt

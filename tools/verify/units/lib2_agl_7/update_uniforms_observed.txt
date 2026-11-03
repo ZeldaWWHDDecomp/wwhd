@@ -1,0 +1,87 @@
+# AGL#7 0278FF3C ShadowPrePass::updateUniforms: DIAGNOSTIC companion (no producer-domain credit). Receiver and frame fields are poked,
+# and the FPR arguments include doubles with more than single precision (argf64), which the shipped caller never passes (its
+# f1..f4 come from lfs loads and the fdivs result of tanf 028F423C). It pins that the original stores those arguments with stfs
+# (truncating excess precision); the candidate does the same since 2026-10-29 (storedSingle). tested producer profiles:
+# lib2_agl_7_updateuniforms_enabled*.txt.
+# verify: -only 0278FF3C -strictnan -calleesp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+real 028E892C 0274EDD4 028E89B4 028EFFD0
+
+# ShadowPrePass, one original-produced FrameResources object, and three live
+# current uniform buffers. Keep all pointer targets disjoint and non-null.
+arg! 0278FF3C r3 0x5C020000
+arg! 0278FF3C r4 0
+arg! 0278FF3C r5 0x5C300000
+arg! 0278FF3C r6 0x5C301000
+arg! 0278FF3C r7 0x5C302000
+arg! 0278FF3C r8 0x5C303000
+arg! 0278FF3C r9 0x5C304000
+argf64! 0278FF3C f1 0.1,0.25,0.5,1.0
+argf64! 0278FF3C f2 100,500,1000,10000
+argf64! 0278FF3C f3 0.25,0.5,1,2
+argf64! 0278FF3C f4 0.75,1,1.3333333333333333,2
+fill 0278FF3C 5C020000 0x5C4 0
+field 0278FF3C r3+0x1CC u32 1
+field 0278FF3C r3+0x1D0 u32 0x5C100000
+field 0278FF3C r3+0x424 u8 1
+field 0278FF3C r3+0x484 f32 0.25,0.5,1,2
+field 0278FF3C r3+0x498 f32 0.25,0.5,1
+field 0278FF3C r3+0x4A8 f32 0.1,0.25,0.5
+field 0278FF3C r3+0x4F4 f32 0,0.25,0.5
+field 0278FF3C r3+0x504 f32 10,50,100
+field 0278FF3C r3+0x5B0 f32 1,0.25,-0.5
+field 0278FF3C r3+0x5B4 f32 0.5,1,0.25
+field 0278FF3C r3+0x5B8 f32 -0.25,0.5,1
+field 0278FF3C r3+0x5BC f32 1
+
+fill 0278FF3C 5C100000 0x1970 0
+field 0278FF3C 5C100004 u32 0x5D000000
+field 0278FF3C 5C10000C u32 0x100
+field 0278FF3C 5C100020 u32 0x5D001000
+field 0278FF3C 5C100028 u32 0x100
+field 0278FF3C 5C10003C u32 0x5D002000
+field 0278FF3C 5C100044 u32 0x100
+fill 0278FF3C 5D000000 0x1000 0
+fill 0278FF3C 5D001000 0x1000 0
+fill 0278FF3C 5D002000 0x1000 0
+
+# Finite affine view, projection, 3-transform array, vector triplet, and
+# ProjectionDimensions_l (horizontal/vertical scale at +0xF0/+0xF4).
+fill 0278FF3C 5C300000 0x30 0
+field 0278FF3C 5C300000 f32 1
+field 0278FF3C 5C300014 f32 1
+field 0278FF3C 5C300028 f32 1
+fill 0278FF3C 5C301000 0x40 0
+field 0278FF3C 5C301000 f32 1
+field 0278FF3C 5C301014 f32 1
+field 0278FF3C 5C301028 f32 1
+field 0278FF3C 5C30103C f32 1
+fill 0278FF3C 5C302000 0xC0 0
+field 0278FF3C 5C302000 f32 1
+field 0278FF3C 5C302014 f32 1
+field 0278FF3C 5C302028 f32 1
+field 0278FF3C 5C30203C f32 1
+field 0278FF3C 5C302040 f32 1
+field 0278FF3C 5C302054 f32 1
+field 0278FF3C 5C302068 f32 1
+field 0278FF3C 5C30207C f32 1
+field 0278FF3C 5C302080 f32 1
+field 0278FF3C 5C302094 f32 1
+field 0278FF3C 5C3020A8 f32 1
+field 0278FF3C 5C3020BC f32 1
+field 0278FF3C 5C303000 f32 0.25,0.5,1
+field 0278FF3C 5C303004 f32 0.5,1,2
+field 0278FF3C 5C303008 f32 1,2,4
+fill 0278FF3C 5C304000 0xF8 0
+field 0278FF3C 5C3040F0 f32 0.5,1,2
+field 0278FF3C 5C3040F4 f32 0.25,0.75,1
+
+# Compare actual uniform payload at the setter boundary and the buffer after
+# upload; these calls are nested in updateUniforms.
+observearg 027BF048 r6+0 4
+observearg 027BEFE4 r4+0 256
+final 0278FF3C 5C101964 8

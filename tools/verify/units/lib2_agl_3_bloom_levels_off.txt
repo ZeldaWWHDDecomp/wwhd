@@ -1,0 +1,20 @@
+# UNEXECUTED: mode-zero bloom-level consumed-input branch only.
+# No enabled iteration, surface/context/texture ownership or renderer coverage.
+# verify: -strictnan -calleesp -only 02777048
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+footprint 02777048 464
+arg! 02777048 r3 0x56000000
+arg! 02777048 r4 0,1,2,0xFFFFFFFF
+arg! 02777048 r5 0,1,7,0xFFFFFFFF
+# Direct-entry ABI domain: finite f22/f24 values; no runtime-caller provenance claim.
+argf64! 02777048 f22 0x0000000000000000,0x3FF0000000000000,0xBFF0000000000000
+argf64! 02777048 f24 0x0000000000000000,0x3FF0000000000000,0xBFF0000000000000
+# Compare target exit callee-saved registers; the named callsite is skipped in mode zero.
+framexact 02777048 02777B2C
+field 02777048 56000010 u32 0
+field 02777048 560002D4 u32 1
+field 02777048 560002D8 u32 0x56400000
+field 02777048 56400000 u32 0x56900000
+field 02777048 56900244 u32 0

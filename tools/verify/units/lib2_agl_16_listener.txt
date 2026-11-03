@@ -1,0 +1,104 @@
+# readable-scope: 027C25AC
+# Real constructor-created HDlistener +resource and original registration.
+src wwhd_src/agl/RenderRecording.cpp
+src wwhd_src/agl/VertexInput.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/ViewTypeIdentity.cpp
+src wwhd_src/sead/ViewTransform.cpp
+src wwhd_src/sead/RenderInlineInstances.cpp
+src wwhd_src/agl/RenderQueue.cpp
+src wwhd_src/agl/CaptureImage.cpp
+src wwhd_src/agl/PixelTransfer.cpp
+src wwhd_src/agl/RenderLayer.cpp
+real 0273B310
+real 0273B7B4
+real 02752C74
+real 02752E60
+real 02753000
+real 0275315C
+real 0275320C
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 02753D6C
+real 02753F84
+real 02754018
+real 027540AC
+real 027541B8
+real 02757C10
+real 027581F4
+real 02758414
+real 02758724
+real 027587B4
+real 027588DC
+real 02758AAC
+real 02758B80
+real 027601BC
+real 027601F0
+real 027D76D4
+stable 6A000000 0x100000
+nestedret 02756140 0x6A000000
+ret! 02756140 0x6A000000
+real 0275589C
+real 02752F10
+real 027537B8
+real 027536B0
+real 0273B2F0
+real 02752D8C
+real 02752B0C
+real 027600EC
+real 02753628
+real 02758B5C
+mockset C000A858 r3 r4 r5
+real 028F521C
+real 02728030
+real 02728180
+real 02752A84
+real 027C23F8
+real 027D56E4
+real 027D57A8
+real 027D57B8
+real 027D5818
+real 027D58B4
+real 027D58C8
+real 027D58CC
+real 027D58E4
+real 027D58F8
+real 0273B560
+real 0273B584
+real 0273B5DC
+real 0273B624
+real 0273B6AC
+real 0273B94C
+real 0273ADAC
+real 0273AE48
+real 0273AEC4
+real 0273B0D4
+real 028EFFD0
+real 028EFE58
+real 028F0020
+real 027C4BF0
+real 027C4BF4
+real 027C4BF8
+real 027C4BFC
+mockmove C0009988 r3 r4 r5
+mockset C0009990 r3 r4 r5
+arg! 027C25AC r3 0x6A800000
+arg! 027C25AC r4 0x6A810000
+arg! 027C25AC r5 0x6A830000
+field 027C25AC r3+0xC u32 0x1016A2A8
+field 027C25AC r3+0x74 u32 1
+field 027C25AC r3+0x78 u32 0x6A810000
+field 027C25AC 101F8C1C u32 0
+field 027C25AC 6A200000 u32 0x6A200100
+field 027C25AC 6A200004 u32 0x10169EEC
+field 027C25AC 6A200100 u8 0
+setup 027C25AC 0275315C r3=0x6A000000 r4=0x100000 r5=0x6A200000 r6=0
+setup 027C25AC 027D56E4 r3=0x6A810000
+setup 027C25AC 02728030 r3=0x6A820000
+setup 027C25AC 027C23F8 r3=0x6A800000 r4=0 r5=0x6A820000
+real 027283EC
+alloc 0273AD10 r3 0x6B000000 32
+allocnested 0273AD10

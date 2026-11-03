@@ -1,0 +1,767 @@
+# AGL#10: agl multi-filter, parameter base, dynamic texture cache, texture resources and primitive shapes.
+# Main profile: every function of the unit.
+# verify: -strictnan -calleesp
+src wwhd_src/agl/MultiFilter.cpp wwhd_src/agl/ParameterBase.cpp wwhd_src/agl/DynamicTextureCache.cpp wwhd_src/agl/DynamicTextureCacheStatics.cpp wwhd_src/agl/TextureResource.cpp wwhd_src/agl/PrimitiveShapes.cpp wwhd_src/agl/PrimitiveShapesStatics.cpp wwhd_src/sead/PoolHeapStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# Name and label texts passed on the stack are compared by content.
+callee 0279E618 r4=8 r5=8 r6=8
+callee 02785CB4 r4=8
+# Cafe core id: the three CPU cores, mapped by the core-reverse table to pools 0..2.
+ret! C0009BB0 0,1,2
+field * 104A0BC0 u32 0
+field * 104A0BC4 u32 1
+field * 104A0BC8 u32 2
+stable 104A0BC0 12
+# Disposers are compared as registered (their contents at the registration call).
+callee 02752B0C r3=heap16
+# Object and heap allocators hand out distinct blocks (identical on both sides).
+alloc 0273AD10 r3 0x58B00000 4
+alloc 0273B0D4 r3 0x58D00000 align=r5
+stable 58B00000 0x20000
+stable 58D00000 0x10000
+# A heap at 0x58900000 whose method table allocates (F0010000) and releases (F0010004) as fixtures.
+callee F0010000 fixture r3=0 r4=0 r5=0
+alloc F0010000 r4 0x58920000 align=r5
+callee F0010004 fixture r3=0 r4=0
+field * 5890000C u32 0x58910000
+field * 58910034 u32 0xF0010000
+field * 5891003C u32 0xF0010004
+stable 58900000 0x94
+stable 58910000 0x90
+ret! 02755FEC 0x58900000
+ret! 02756140 0x58900000
+# Multi-filter at 0x58E00000: lists, filters, the resource holder and the method-table fixtures.
+real 027ABF8C
+callee F0020000 fixture r3=0 r4=inout4 r5=0
+callee F0021000 fixture r3=0 r4=0
+field * 58E001CC u32 0x58E001CC
+field * 58E001D0 u32 0x58E001CC,0x58E60000
+field * 58E001D4 s32 0,1
+field * 58E60000 u32 0x58E001CC
+field * 58E60004 u32 0x58E001CC
+field * 58E60008 u32 0x58E10000
+stable 58E60000 12
+field * 58E0055C u32 0,0x58740000
+field * 58E008BC u8 0,1
+field * 58E008C0 u32 0,0x58E20000
+field * 58E0092C u8 0,1
+field * 58E00A0C u32 0,1,2,3,4,5,6
+field * 58E00A20 u8 0,1
+field * 58E00A44 u32 0x58E30020
+field * 58E100DC u32 0,1,2,3,4,5,6
+field * 58E100F0 u8 0,1
+field * 58E10114 u32 0x58E30020
+field * 58E2000C u32 0x58E30000
+field * 58E3000C u32 0xF0021000
+field * 58E30044 u32 0xF0020000
+# Only the list heads stay put across mocked calls; the rest of the object may be clobbered.
+stable 58E001CC 0x60
+stable 58E10000 0x140
+stable 58E20000 0x10
+stable 58E30000 0x48
+# The result sampler's surface against the result texture's: equal fields, each one sometimes different.
+field * 58740004 u32 1
+field * 58E00568 u32 1,1,2
+field * 58740008 u32 1
+field * 58E0056C u32 1,1,2
+field * 5874000C u32 1
+field * 58E00570 u32 1,1,2
+field * 58740010 u32 1
+field * 58E00574 u32 1,1,2
+field * 58740014 u32 0
+field * 58E00578 u32 0,0,1
+field * 58740018 u32 0
+field * 58E0057C u32 0,0,1
+field * 5874001C u32 0
+field * 58E00580 u32 0,0,1
+field * 58740034 u32 0
+field * 58E00598 u32 0,0,1
+field * 58740038 u32 0
+field * 58E0059C u32 0,0,1
+field * 58740028 u32 0x60000000
+field * 58740030 u32 0,0x60010000
+stable 58740000 0xB0
+field * 58E001D8 u32 0x58E001D8
+field * 58E001DC u32 0x58E001D8
+field * 58E001E0 s32 0
+field * 58E001E4 u32 0x58E001E4
+field * 58E001E8 u32 0x58E001E4
+field * 58E001EC s32 0
+field * 58E001F0 u32 0x58E001F0
+field * 58E001F4 u32 0x58E001F0
+field * 58E001F8 s32 0
+field * 58E001FC u32 0x58E001FC
+field * 58E00200 u32 0x58E001FC
+field * 58E00204 s32 0
+field * 58E00208 u32 0x58E00208
+field * 58E0020C u32 0x58E00208
+field * 58E00210 s32 0
+field * 58E00214 u32 0x58E00214
+field * 58E00218 u32 0x58E00214
+field * 58E0021C s32 0
+field * 58E00220 u32 0x58E00220
+field * 58E00224 u32 0x58E00220
+field * 58E00228 s32 0
+arg! 0279D8D8 r3 0x58E00004
+arg! 0279D8E0 r3 0x58E00000
+arg! 0279D92C r3 0,0x58E00000
+arg! 0279DAA0 r3 0x58E00000
+arg! 0279DAA0 r4 0x58E10000
+arg! 0279DAA0 r5 0,1,6
+arg! 0279DB64 r3 0x58E00000
+arg! 0279DB64 r4 0x58E40000
+arg! 0279DDA4 r3 0x58E00000
+arg! 0279DFE0 r3 0,0x58E00000
+# Factory-produced filters have distinct storage in creation order.
+allocfixed 027ABDD0 0x140 0x58E70000 4
+# The formatter gets the saved EABI argument bank; the format arguments are compared.
+observeptr 02759C10 r5+8 96
+callcr 0279E338 6
+callee 0279E338 r5=0 r6=0
+# Name texts and the render state passed on the stack are compared by content.
+callee 0279CB24 r5=8
+callee 0279CB9C r5=8
+callee 0279A07C r4=8
+callee 0274FEB0 r3=0x74
+real 0274FDBC
+cr 0279DAA0 6 0,1
+cr 0279DDA4 6 0,1
+cr 0279E338 6 0,1
+footprint 0279E338 0x88
+# Parameters at 0x58500000 (this) and 0x58510000 (source): name hash 0/1, method table = one kind fixture.
+# Each kind fixture answers valueKind/valueBytes consistently (F003k000/F003k004), value()/constValue()
+# return two 256-byte buffers, copyUnchecked and onResourceApplied are fixtures too.
+callee F0030000 fixture r3=0
+callee F0030004 fixture r3=0
+ret! F0030000 0x0
+ret! F0030004 1
+field * 58520014 u32 0x0279E868
+field * 58520034 u32 0xF0030000
+field * 5852003C u32 0x0279E4BC
+field * 58520044 u32 0x0279E4B4
+field * 5852005C u32 0xF0030004
+field * 5852006C u32 0x0279E4D4
+stable 58520000 0x70
+callee F0030100 fixture r3=0
+callee F0030104 fixture r3=0
+ret! F0030100 0x1
+ret! F0030104 4
+field * 58520094 u32 0x0279E868
+field * 585200B4 u32 0xF0030100
+field * 585200BC u32 0x0279E4BC
+field * 585200C4 u32 0x0279E4B4
+field * 585200DC u32 0xF0030104
+field * 585200EC u32 0x0279E4D4
+stable 58520080 0x70
+callee F0030200 fixture r3=0
+callee F0030204 fixture r3=0
+ret! F0030200 0x2
+ret! F0030204 4
+field * 58520114 u32 0x0279E868
+field * 58520134 u32 0xF0030200
+field * 5852013C u32 0x0279E4BC
+field * 58520144 u32 0x0279E4B4
+field * 5852015C u32 0xF0030204
+field * 5852016C u32 0x0279E4D4
+stable 58520100 0x70
+callee F0030300 fixture r3=0
+callee F0030304 fixture r3=0
+ret! F0030300 0x3
+ret! F0030304 8
+field * 58520194 u32 0x0279E868
+field * 585201B4 u32 0xF0030300
+field * 585201BC u32 0x0279E4BC
+field * 585201C4 u32 0x0279E4B4
+field * 585201DC u32 0xF0030304
+field * 585201EC u32 0x0279E4D4
+stable 58520180 0x70
+callee F0030400 fixture r3=0
+callee F0030404 fixture r3=0
+ret! F0030400 0x4
+ret! F0030404 12
+field * 58520214 u32 0x0279E868
+field * 58520234 u32 0xF0030400
+field * 5852023C u32 0x0279E4BC
+field * 58520244 u32 0x0279E4B4
+field * 5852025C u32 0xF0030404
+field * 5852026C u32 0x0279E4D4
+stable 58520200 0x70
+callee F0030500 fixture r3=0
+callee F0030504 fixture r3=0
+ret! F0030500 0x5
+ret! F0030504 16
+field * 58520294 u32 0x0279E868
+field * 585202B4 u32 0xF0030500
+field * 585202BC u32 0x0279E4BC
+field * 585202C4 u32 0x0279E4B4
+field * 585202DC u32 0xF0030504
+field * 585202EC u32 0x0279E4D4
+stable 58520280 0x70
+callee F0030600 fixture r3=0
+callee F0030604 fixture r3=0
+ret! F0030600 0x6
+ret! F0030604 16
+field * 58520314 u32 0x0279E868
+field * 58520334 u32 0xF0030600
+field * 5852033C u32 0x0279E4BC
+field * 58520344 u32 0x0279E4B4
+field * 5852035C u32 0xF0030604
+field * 5852036C u32 0x0279E4D4
+stable 58520300 0x70
+callee F0030700 fixture r3=0
+callee F0030704 fixture r3=0
+ret! F0030700 0x6
+ret! F0030704 12
+field * 58520394 u32 0x0279E868
+field * 585203B4 u32 0xF0030700
+field * 585203BC u32 0x0279E4BC
+field * 585203C4 u32 0x0279E4B4
+field * 585203DC u32 0xF0030704
+field * 585203EC u32 0x0279E4D4
+stable 58520380 0x70
+callee F0030800 fixture r3=0
+callee F0030804 fixture r3=0
+ret! F0030800 0x6
+ret! F0030804 0
+field * 58520414 u32 0x0279E868
+field * 58520434 u32 0xF0030800
+field * 5852043C u32 0x0279E4BC
+field * 58520444 u32 0x0279E4B4
+field * 5852045C u32 0xF0030804
+field * 5852046C u32 0x0279E4D4
+stable 58520400 0x70
+callee F0030900 fixture r3=0
+callee F0030904 fixture r3=0
+ret! F0030900 0x7
+ret! F0030904 32
+field * 58520494 u32 0x0279E868
+field * 585204B4 u32 0xF0030900
+field * 585204BC u32 0x0279E4BC
+field * 585204C4 u32 0x0279E4B4
+field * 585204DC u32 0xF0030904
+field * 585204EC u32 0x0279E4D4
+stable 58520480 0x70
+callee F0030A00 fixture r3=0
+callee F0030A04 fixture r3=0
+ret! F0030A00 0x8
+ret! F0030A04 64
+field * 58520514 u32 0x0279E868
+field * 58520534 u32 0xF0030A00
+field * 5852053C u32 0x0279E4BC
+field * 58520544 u32 0x0279E4B4
+field * 5852055C u32 0xF0030A04
+field * 5852056C u32 0x0279E4D4
+stable 58520500 0x70
+callee F0030B00 fixture r3=0
+callee F0030B04 fixture r3=0
+ret! F0030B00 0x9
+ret! F0030B04 0
+field * 58520594 u32 0x0279E868
+field * 585205B4 u32 0xF0030B00
+field * 585205BC u32 0x0279E4BC
+field * 585205C4 u32 0x0279E4B4
+field * 585205DC u32 0xF0030B04
+field * 585205EC u32 0x0279E4D4
+stable 58520580 0x70
+callee F0030C00 fixture r3=0
+callee F0030C04 fixture r3=0
+ret! F0030C00 0xA
+ret! F0030C04 0
+field * 58520614 u32 0x0279E868
+field * 58520634 u32 0xF0030C00
+field * 5852063C u32 0x0279E4BC
+field * 58520644 u32 0x0279E4B4
+field * 5852065C u32 0xF0030C04
+field * 5852066C u32 0x0279E4D4
+stable 58520600 0x70
+callee F0030D00 fixture r3=0
+callee F0030D04 fixture r3=0
+ret! F0030D00 0xB
+ret! F0030D04 0
+field * 58520694 u32 0x0279E868
+field * 585206B4 u32 0xF0030D00
+field * 585206BC u32 0x0279E4BC
+field * 585206C4 u32 0x0279E4B4
+field * 585206DC u32 0xF0030D04
+field * 585206EC u32 0x0279E4D4
+stable 58520680 0x70
+callee F0030E00 fixture r3=0
+callee F0030E04 fixture r3=0
+ret! F0030E00 0xC
+ret! F0030E04 0
+field * 58520714 u32 0x0279E868
+field * 58520734 u32 0xF0030E00
+field * 5852073C u32 0x0279E4BC
+field * 58520744 u32 0x0279E4B4
+field * 5852075C u32 0xF0030E04
+field * 5852076C u32 0x0279E4D4
+stable 58520700 0x70
+callee F0030F00 fixture r3=0
+callee F0030F04 fixture r3=0
+ret! F0030F00 0xD
+ret! F0030F04 16
+field * 58520794 u32 0x0279E868
+field * 585207B4 u32 0xF0030F00
+field * 585207BC u32 0x0279E4BC
+field * 585207C4 u32 0x0279E4B4
+field * 585207DC u32 0xF0030F04
+field * 585207EC u32 0x0279E4D4
+stable 58520780 0x70
+callee F0031000 fixture r3=0
+callee F0031004 fixture r3=0
+ret! F0031000 0xE
+ret! F0031004 16
+field * 58520814 u32 0x0279E868
+field * 58520834 u32 0xF0031000
+field * 5852083C u32 0x0279E4BC
+field * 58520844 u32 0x0279E4B4
+field * 5852085C u32 0xF0031004
+field * 5852086C u32 0x0279E4D4
+stable 58520800 0x70
+callee F0031100 fixture r3=0
+callee F0031104 fixture r3=0
+ret! F0031100 0xF
+ret! F0031104 256
+field * 58520894 u32 0x0279E868
+field * 585208B4 u32 0xF0031100
+field * 585208BC u32 0x0279E4BC
+field * 585208C4 u32 0x0279E4B4
+field * 585208DC u32 0xF0031104
+field * 585208EC u32 0x0279E4D4
+stable 58520880 0x70
+callee F0031200 fixture r3=0
+callee F0031204 fixture r3=0
+ret! F0031200 0x10
+ret! F0031204 4
+field * 58520914 u32 0x0279E868
+field * 58520934 u32 0xF0031200
+field * 5852093C u32 0x0279E4BC
+field * 58520944 u32 0x0279E4B4
+field * 5852095C u32 0xF0031204
+field * 5852096C u32 0x0279E4D4
+stable 58520900 0x70
+callee F0031300 fixture r3=0
+callee F0031304 fixture r3=0
+ret! F0031300 0xFFFFFFFF
+ret! F0031304 4
+field * 58520994 u32 0x0279E868
+field * 585209B4 u32 0xF0031300
+field * 585209BC u32 0x0279E4BC
+field * 585209C4 u32 0x0279E4B4
+field * 585209DC u32 0xF0031304
+field * 585209EC u32 0x0279E4D4
+stable 58520980 0x70
+field * 58500000 u32 0,1
+field * 58500008 u32 0x58520000,0x58520080,0x58520100,0x58520180,0x58520200,0x58520280,0x58520300,0x58520380,0x58520400,0x58520480,0x58520500,0x58520580,0x58520600,0x58520680,0x58520700,0x58520780,0x58520800,0x58520880,0x58520900,0x58520980
+field * 58510000 u32 0,1
+field * 58510008 u32 0x58520000,0x58520080,0x58520100,0x58520180,0x58520200,0x58520280,0x58520300,0x58520380,0x58520400,0x58520480,0x58520500,0x58520580,0x58520600,0x58520680,0x58520700,0x58520780,0x58520800,0x58520880,0x58520900,0x58520980
+# A parameter's method table does not change while its methods run.
+stable 58500008 4
+stable 58510008 4
+ret! 0279E4B4 0x58530000
+ret! 0279E4BC 0x58540000
+stable 58530000 0x100
+stable 58540000 0x100
+mockmove C0009988 r3 r4 r5
+# The color case runs the real component multiply and add.
+real 0274D3EC
+real 0274D1E0
+real 0274D268
+# A parameter record: size field (header 12 bytes + payload) and payload.
+field * 58590000 u32 0x585A0000
+field * 585A0000 u32 12,13,16,20,24,28,44,76,268
+stable 58590000 4
+stable 585A0000 0x110
+field * 585A000C u32 0,1,0x01000000,0x3F800000,0x7FC00000,0xFFFFFFFF
+# A name text.
+field * 58560000 u32 0x58560100
+field * 58560004 u32 0x10167CCC
+fill * 58560100 32 0
+fieldstr * 58560100 32 "parameter","ab","","x"
+stable 58560000 8
+stable 58560100 32
+arg! 0279E2F4 r3 0,0x58580000
+arg! 0279E57C r3 0x58560000
+arg! 0279E618 r3 0x58500000
+arg! 0279E618 r4 0x58560000
+arg! 0279E618 r7 0,0x58570000
+arg! 0279E674 r3 0,0x58500000
+arg! 0279E710 r3 0,0x58500000
+arg! 0279E710 r4 0x58560000
+arg! 0279E710 r6 0,0x58570000
+arg! 0279E7B0 r3 0x58500000
+arg! 0279E7B0 r4 0x58510000
+arg! 0279E868 r3 0x58500000
+arg! 0279E868 r4 0x58510000
+arg! 0279E904 r3 0x58500000
+arg! 0279EACC r3 0x58500000
+arg! 0279EB28 r3 0x58500000
+arg! 0279EB28 r4 0x58590000
+arg! 0279EC1C r3 0x58500000
+arg! 0279EC1C r4 0x58590000
+argf64! 0279EC1C f1 0x0000000000000000,0x8000000000000000,0x3FF0000000000000,0x3FF0000000400000,0x3FF000001FFFFFFF,0xBFF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+# Dynamic texture cache at 0x58700000 (singleton word 101F8DD4), core pool 0 at 0x58710000 with four
+# entries at 0x58730000 whose descriptions come from the same small value lists as the requests.
+field * 101F8DD4 u32 0,0x58700000
+field * 101F8DE4 u32 0,0x58800000
+callee F0050000 fixture r3=0 r4=0
+field * 58700000 u32 0x58780000
+field * 58780014 u32 0xF0050000
+stable 58780000 0x18
+field * 58700014 u32 0,8
+# The pools inside the cache keep their entry counts across the range-pool configuration calls.
+stable 58700018 8
+stable 58700BE8 8
+stable 587017B8 8
+stable 58702388 8
+arg! 0279F474 r3 0x58700000
+arg! 0279F474 r4 0,0x58900000
+arg! 0279F6B0 r3 0x58700000
+arg! 0279F738 r3 0x58700000
+arg! 0279F7F0 r3 0x58700000
+arg! 0279FC6C r3 0x58700000
+arg! 0279FD18 r3 0x58700000
+arg! 0279FDC8 r3 0x58700000
+arg! 0279FE74 r3 0x58700000
+arg! 0279FF24 r3 0x58700000
+arg! 0279FFDC r3 0x58700000
+arg! 027A0040 r3 0x58700000
+arg! 027A0114 r3 0x58700000
+arg! 0279F38C r3 0,0x58700000
+arg! 0279F6B0 r4 0x58710000,0x58710BD0
+arg! 0279F738 r4 0,0x58710000
+arg! 0279F7F0 r4 0x58710000
+arg! 0279F7F0 r5 0x58720000
+arg! 0279F7F0 r6 0,1
+arg! 0279F7F0 r7 0,1,2,3,5,6,7
+arg! 0279F7F0 r8 1,4
+arg! 0279F7F0 r9 1,4
+arg! 0279F7F0 r10 0,1
+field 0279F7F0 r1+0x08 u32 0,1
+field 0279F7F0 r1+0x0C u32 1,2,4
+field 0279F7F0 r1+0x20 u32 0,1
+field * 58710000 s32 1,2,4
+field 0279F7F0 r1+0x10 u32 0,1
+field 0279F7F0 r1+0x14 u32 0,1
+field 0279F7F0 r1+0x18 u32 0,1,2,3
+field 0279F7F0 r1+0x1C u32 0,1
+field * 58710004 u32 0x58730000
+field * 58710BCC u32 0,1
+field * 58720000 u32 0x58720100
+field * 58720004 u32 0x10167DD8
+fill * 58720100 32 0
+fieldstr * 58720100 32 "texture",""
+stable 58720000 8
+stable 58720100 32
+# Range-pool allocation succeeds or fails; the pools match or not.
+ret! 027CB1A0 0,0x58750000
+ret! 0279F738 0,1
+# A failed allocation is read through at address 0 (image +0xC, mips +0x10).
+field 0279F7F0 0000000C u32 0x60020000
+field 0279F7F0 00000010 u32 0,0x60030000
+stable 00000000 0x20
+field * 5875000C u32 0x60000000
+field * 58750010 u32 0,0x60010000
+stable 58750000 0x14
+field * 58730000 u32 0,1
+field * 58730004 u32 0,1,2,3,5,6
+field * 58730008 s32 1,4
+field * 5873000C s32 1,4
+field * 58730010 s32 1,2
+field * 5873001C u32 0,1
+field * 58730078 u8 0,1,4
+field * 58730079 u8 0,1,4
+field * 5873007A u8 0,1,4
+field * 58730094 u32 0
+field * 587300A5 u8 0,1,2,255
+field * 587300A6 u8 0,1
+field * 587300A7 u8 0,1,2,3
+field * 587300AA u8 0,1
+field * 587300B0 u32 0,1
+field * 587300B4 u32 0,1,2,3,5,6
+field * 587300B8 s32 1,4
+field * 587300BC s32 1,4
+field * 587300C0 s32 1,2
+field * 587300CC u32 0,1
+field * 58730128 u8 0,1,4
+field * 58730129 u8 0,1,4
+field * 5873012A u8 0,1,4
+field * 58730144 u32 0,0,0,0x58751000
+field * 58730155 u8 0,1,2,255
+field * 58730156 u8 0,1
+field * 58730157 u8 0,1,2,3
+field * 5873015A u8 0,1
+field * 58730160 u32 0,1
+field * 58730164 u32 0,1,2,3,5,6
+field * 58730168 s32 1,4
+field * 5873016C s32 1,4
+field * 58730170 s32 1,2
+field * 5873017C u32 0,1
+field * 587301D8 u8 0,1,4
+field * 587301D9 u8 0,1,4
+field * 587301DA u8 0,1,4
+field * 587301F4 u32 0,0,0,0x58751000
+field * 58730205 u8 0,1,2,255
+field * 58730206 u8 0,1
+field * 58730207 u8 0,1,2,3
+field * 5873020A u8 0,1
+field * 58730210 u32 0,1
+field * 58730214 u32 0,1,2,3,5,6
+field * 58730218 s32 1,4
+field * 5873021C s32 1,4
+field * 58730220 s32 1,2
+field * 5873022C u32 0,1
+field * 58730288 u8 0,1,4
+field * 58730289 u8 0,1,4
+field * 5873028A u8 0,1,4
+field * 587302A4 u32 0,0,0,0x58751000
+field * 587302B5 u8 0,1,2,255
+field * 587302B6 u8 0,1
+field * 587302B7 u8 0,1,2,3
+field * 587302BA u8 0,1
+# The registered disposer of the cache.
+arg! 027A0174 r3 0,0x58700004
+# acquire's stack arguments (anti-aliasing .. tile mode) and configure's ninth are compared.
+callee 0279F7F0 stack=7
+callee 027BE930 stack=1
+field * 101F8DD8 u32 0,0x58700004
+# Resource records and texture references constructed in fixed storage or fresh blocks.
+arg! 027A03A0 r3 0,0x58600000
+arg! 027A0698 r3 0,0x58610000
+# The fixed texts' pointer/capacity headers do not change across the termination call.
+stable 58600024 12
+stable 586000B0 12
+stable 5860013C 12
+stable 58610010 12
+arg! 027A0640 r3 0x58620000
+arg! 027A0844 r3 0,0x58620000
+field * 5862003C u32 0,0x58730000
+field * 5862004C u8 0,1
+# Primitive shapes at 0x58800000 (word 101F8DE4) with allocated vertex/index storage, and the vertex
+# input sets at 0x58A00000 (word 101F8DDC).
+arg! 027A0E94 r3 0,0x58800000
+arg! 027A14FC r3 0,0x58800000
+field * 58800014 u32 0,1
+field * 58800018 u32 0,0x59000000
+field * 5880001C u32 0,1
+field * 58800020 u32 0,0x59001000
+field * 58800024 u32 0,1
+field * 58800028 u32 0,0x59002000
+field * 588001B0 u32 0,1
+field * 588001B4 u32 0,0x59003000
+field * 588001B8 u32 0,1
+field * 588001BC u32 0,0x59004000
+field * 588001C0 u32 0,1
+field * 588001C4 u32 0,0x59005000
+field * 5880034C u32 0,1
+field * 58800350 u32 0,0x59006000
+field * 58800354 u32 0,1
+field * 58800358 u32 0,0x59007000
+field * 5880035C u32 0,1
+field * 58800360 u32 0,0x59008000
+field * 588004E8 u32 0,1
+field * 588004EC u32 0,0x59009000
+field * 588004F0 u32 0,1
+field * 588004F4 u32 0,0x5900A000
+field * 588004F8 u32 0,1
+field * 588004FC u32 0,0x5900B000
+field * 58800500 u32 0,1
+field * 58800504 u32 0,0x5900C000
+field * 58800508 u32 0,1
+field * 5880050C u32 0,0x5900D000
+field * 58800510 u32 0,1
+field * 58800514 u32 0,0x5900E000
+field * 58800518 u32 0,1
+field * 5880051C u32 0,0x5900F000
+field * 58800520 u32 0,1
+field * 58800524 u32 0,0x59010000
+field * 58800528 u32 0,1
+field * 5880052C u32 0,0x59011000
+field * 58800530 u32 0,1
+field * 58800534 u32 0,0x59012000
+field * 58800764 u32 0,1
+field * 58800768 u32 0,0x59013000
+field * 5880076C u32 0,1
+field * 58800770 u32 0,0x59014000
+field * 58800774 u32 0,1
+field * 58800778 u32 0,0x59015000
+field * 5880077C u32 0,1
+field * 58800780 u32 0,0x59016000
+field * 58800784 u32 0,1
+field * 58800788 u32 0,0x59017000
+field * 5880078C u32 0,1
+field * 58800790 u32 0,0x59018000
+field * 58800794 u32 0,1
+field * 58800798 u32 0,0x59019000
+field * 5880079C u32 0,1
+field * 588007A0 u32 0,0x5901A000
+field * 588007A4 u32 0,1
+field * 588007A8 u32 0,0x5901B000
+field * 588007AC u32 0,1
+field * 588007B0 u32 0,0x5901C000
+field * 588009E0 u32 0,1
+field * 588009E4 u32 0,0x5901D000
+field * 588009E8 u32 0,1
+field * 588009EC u32 0,0x5901E000
+field * 588009F0 u32 0,1
+field * 588009F4 u32 0,0x5901F000
+field * 588009F8 u32 0,1
+field * 588009FC u32 0,0x59020000
+field * 58800A00 u32 0,1
+field * 58800A04 u32 0,0x59021000
+field * 58800A08 u32 0,1
+field * 58800A0C u32 0,0x59022000
+field * 58800A10 u32 0,1
+field * 58800A14 u32 0,0x59023000
+field * 58800A18 u32 0,1
+field * 58800A1C u32 0,0x59024000
+field * 58800A20 u32 0,1
+field * 58800A24 u32 0,0x59025000
+field * 58800A28 u32 0,1
+field * 58800A2C u32 0,0x59026000
+field * 58800C5C u32 0,1
+field * 58800C60 u32 0,0x59027000
+field * 58800C64 u32 0,1
+field * 58800C68 u32 0,0x59028000
+field * 58800C6C u32 0,1
+field * 58800C70 u32 0,0x59029000
+field * 58800C74 u32 0,1
+field * 58800C78 u32 0,0x5902A000
+field * 58800C7C u32 0,1
+field * 58800C80 u32 0,0x5902B000
+field * 58800C84 u32 0,1
+field * 58800C88 u32 0,0x5902C000
+field * 58800C8C u32 0,1
+field * 58800C90 u32 0,0x5902D000
+field * 58800E78 u32 0,1
+field * 58800E7C u32 0,0x5902E000
+field * 58800E80 u32 0,1
+field * 58800E84 u32 0,0x5902F000
+field * 58800E88 u32 0,1
+field * 58800E8C u32 0,0x59030000
+field * 58800E90 u32 0,1
+field * 58800E94 u32 0,0x59031000
+field * 58800E98 u32 0,1
+field * 58800E9C u32 0,0x59032000
+field * 58800EA0 u32 0,1
+field * 58800EA4 u32 0,0x59033000
+field * 58800EA8 u32 0,1
+field * 58800EAC u32 0,0x59034000
+field * 58801094 u32 0,1
+field * 58801098 u32 0,0x59035000
+field * 5880109C u32 0,1
+field * 588010A0 u32 0,0x59036000
+field * 588010A4 u32 0,1
+field * 588010A8 u32 0,0x59037000
+field * 588010AC u32 0,1
+field * 588010B0 u32 0,0x59038000
+field * 588010B4 u32 0,1
+field * 588010B8 u32 0,0x59039000
+field * 588010BC u32 0,1
+field * 588010C0 u32 0,0x5903A000
+field * 588010C4 u32 0,1
+field * 588010C8 u32 0,0x5903B000
+field * 101F8DDC u32 0,0x58A00000
+callee F0060000 fixture r3=0 r4=0
+field * 58A0000C u32 0x10168040
+field * 58A008A4 u32 0x58A10000
+field * 58A1000C u32 0xF0060000
+stable 58A10000 0x18
+arg! 027A0A08 r3 0,0x58A00000
+arg! 027A0B14 r3 0,0x58A00000
+arg! 027A0B7C r3 0x58A00000
+arg! 027A0DEC r3 0,0x58A00000
+field * 101F8DE0 u32 0,0x58A00000
+arg! 0279F2EC r3 0,0x58900000
+arg! 027A0A80 r3 0,0x58900000
+arg! 027A145C r3 0,0x58900000
+# Counts: small sizes, the three index modes plus an unknown one, levels of detail 0..4.
+# lod: the step is 1 << (lod & 31) while (lod & 63) < 32, so 64 and 65 select steps 1 and 2 again.
+arg! 027A20C4 r3 0,1,2,7,16
+arg! 027A20C4 r4 1,2,3,8
+arg! 027A20C4 r5 0,1,2,3
+arg! 027A20C4 r6 0,1,2,3,4,64,65
+arg! 027A260C r3 0,1,2,7,16
+arg! 027A260C r4 1,2,3,8
+arg! 027A260C r5 0,1,2,3
+arg! 027A260C r6 0,1,2,3,4,64,65
+arg! 027A2B18 r3 0,1,2,7,16
+arg! 027A2B18 r4 1,2,3,8
+arg! 027A2B18 r5 0,1,2,3
+arg! 027A2B18 r6 0,1,2,3,4,64,65
+arg! 027A309C r3 0,1,2,7,16
+arg! 027A309C r4 1,2,3,8
+arg! 027A309C r5 0,1,2,3
+arg! 027A309C r6 0,1,2,3,4,64,65
+arg! 027A1E70 r4 0,1,2,3
+arg! 027A1E70 r5 0,1,2,31,32,63,64
+arg! 027A1EAC r5 0,1,2,3,7,16
+arg! 027A21F8 r5 0,1,2,3,7,16
+arg! 027A21F8 r6 0,1,2,3,8
+arg! 027A2748 r5 0,1,2,3,7,16
+arg! 027A2748 r6 0,1,2,3,8
+arg! 027A2C08 r5 0,1,2,3,7,16
+arg! 027A2C08 r6 0,1,2,3,8
+arg! 027A31A0 r5 0,1,2,3,7,16
+arg! 027A31A0 r6 0,1,2,3,8
+# Page-0 rule (nulltrap): every pointer argument points at a real object (or is NULL where the function tests it).
+arg! 0279E22C r3 0,0x5C000000
+arg! 027A099C r3 0,0x5C010000
+# Text buffers whose terminator is set: text pointer into their own storage, capacities 1..64.
+arg! 0279E250 r3 0x5C020000
+arg! 0279F1C0 r3 0x5C020000
+arg! 027A0234 r3 0x5C020000
+arg! 027A08CC r3 0x5C020000
+field * 5C020000 u32 0x5C020100
+field * 5C020008 s32 1,2,32,64
+stable 5C020000 12
+arg! 0279E338 r3 0,0x5C030000
+arg! 0279E338 r4 0x5C030100
+# Parameter match records: a record pointer slot pointing at a record.
+arg! 0279E4E4 r3 0x5C050000
+arg! 0279E4E4 r4 0x5C040000
+arg! 0279E50C r3 0x5C050000
+arg! 0279E50C r4 0x5C040000
+field * 5C040000 u32 0x5C040100
+stable 5C040000 4
+arg! 0279F218 r3 0,0x5C060000
+arg! 027A029C r3 0,0x5C070000
+arg! 0279FFDC r4 0x58710000
+arg! 0279FFDC r5 0x58730000
+# Vertex builders: a layout object and a vertex array large enough for the largest shape (16 x 11 + 2 vertices).
+arg! 027A1EAC r3 0x5C080000
+arg! 027A1EAC r4 0x5C090000
+arg! 027A21F8 r3 0x5C080000
+arg! 027A21F8 r4 0x5C090000
+arg! 027A2748 r3 0x5C080000
+arg! 027A2748 r4 0x5C090000
+arg! 027A2C08 r3 0x5C080000
+arg! 027A2C08 r4 0x5C090000
+arg! 027A31A0 r3 0x5C080000
+arg! 027A31A0 r4 0x5C090000
+# Disposers that are the registered one destroy their singleton, which then exists.
+field 027A0174 101F8DD4 u32 0x58700000
+field 027A0DEC 101F8DDC u32 0x58A00000
+# A filter may replace the multi-filter's result texture and the resource may detach itself from its owner.
+mockglobal 0279DAA0 58E0055C u32 0,0x58740000
+mockglobal 027A0998 58E008C0 u32 0,0x58E20000
+# The entries' range-pool pointers are set by acquire itself; mocked calls do not rewrite them.
+stable 58730090 4
+stable 58730140 4
+stable 587301F0 4
+stable 587302A0 4
+# initialize runs on a freshly constructed cache: every pool starts with no entries (count 0, entries NULL).
+field 0279F474 58700018 u32 0
+field 0279F474 5870001C u32 0
+field 0279F474 58700BE8 u32 0
+field 0279F474 58700BEC u32 0
+field 0279F474 587017B8 u32 0
+field 0279F474 587017BC u32 0
+field 0279F474 58702388 u32 0
+field 0279F474 5870238C u32 0
+# releaseFromPool: the texture belongs to the given pool or to another one.
+field 0279FFDC 587300AC u32 0x58710000,0x58710BD0
+# The range pool's allocate gets the entry: its range-pool pointer (set just before) is compared at the call.
+observearg 027CB1A0 r4+0x90 4
+# releaseFromPool: the texture holds an allocation.
+field 0279FFDC 58730094 u32 0x58750000,0x58751000

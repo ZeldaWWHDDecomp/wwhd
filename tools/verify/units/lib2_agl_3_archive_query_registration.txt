@@ -1,0 +1,106 @@
+# AGL#3 archive/query path: registry + shipped SARC/ShaderMgr setup.
+# SUT 0277AD60; original postpoke 0277A634 builds the live query state from the registered archive table.
+# Current heap r5 is dereferenced from the original 8 MiB child heap published at 101F8C14+0x10.
+# The count-one A634 initializer constructs the inline 0x40-byte mSurfaceState receiver; its +0x18
+# logical-frame table dispatches activateFrameBuffer at slot 0x38 (image target 028F036C stays mocked).
+# Run: -strictnan -calleesp -only 0277AD60 -shardout; first n=1 seed1 uses -trace 1000003.
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+callbudget 10000000
+stackfill
+# bounded pool-slot recipe for the exact 0277AD60 lookup/release path.
+# Keep the 0xB0 slot opaque: 0279FC6C produces it; AGL#3 reads only its TextureData prefix,
+# passes the entry to 027BDEB4/025C0928, then releases via 027A0040 at 0277BF54.
+field * 0x101F8DD4 u32 0
+field * 0x101F8B4C u32 0
+# actual registry manager/heap producer, caller-owned 16 MiB arena.
+field * 0x101F8B94 u32 0
+field * 0x5D440000 u32 0x6A000000
+field * 0x5D440004 u32 0x01000000
+field * 0x5D440008 u32 0
+setup * 027561B4
+setup * 02755FE0 r3=0x5D440000
+nestedret 02756140 0x6A000000
+setup * 02757B48
+setup * 0279F2EC r3=0
+# locale/text static, actual SARC resource and shipped bytes (in place, not stable).
+setup * 02759AD8
+blob * 0x6C000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0 0x1000000
+blob * 0x6D000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0x1000000 0x19E1E
+setup * 0275E11C r3=0x6B000000
+setup * 0275D21C r3=0x6B000000 r4=0x6C000000 r5=0x01019E1E r6=0x01019E1E r7=0 r8=0
+setup * 027854AC r3=0x6A000000
+setup * 027855BC r3=*101F8C14 r4=0x6A000000 r5=0x6A000000 r6=0x800000 r7=0
+setup * 02786418 r3=0x6A000000
+setup * 02786520 r3=*101F8D6C r4=0x6B000000 r5=*(*101F8C14+0x10)
+# Actual receiver/argument records from prior accepted domain; original constructor before postsetup.
+field * 0x56500000 s32 1
+field * 0x56500004 u32 64
+setup * 02779BFC r3=0x56000000
+# AGL12 public GraphicsDevice producer contract, applied to AD60's common Viewport::apply path.
+# DEV is a distinct 0x160 inline object; no synthesized callback table. The HiZ-only +0x138 context is unused
+# here because this profile supplies depth=r8=0 and previousDepth=r10=0.
+field * 0x101F8B18 u32 0
+fill * 0x5D300000 0x160 0
+stable 0x5D300000 0x160
+setup * 0274FB24 r3=0x5D300000
+setup * 028EFFD0 r3=0x5D300060 r4=8 r5=0x18 r6=0x0274CA20
+poke 0277AD60 5D30000C u32 0x101456CC
+poke 0277AD60 101F8B18 u32 0x5D300000
+# Caller-owned render inputs: a real RenderSurface POD and an original-created Viewport.
+field * 0x5D200000 u32 0x44A00000
+field * 0x5D200004 u32 0x44340000
+field * 0x5D200008 u32 0
+field * 0x5D20000C u32 0
+field * 0x5D200010 u32 0x44A00000
+field * 0x5D200014 u32 0x44340000
+setup * 0274F5F0 r3=0x5D100000 r4=0x5D200000
+# Positive single-entry renderer arguments; output is the declared zeroed SurfaceImage input object.
+arg! 0277AD60 r3 0x56000000
+arg! 0277AD60 r4 0
+arg! 0277AD60 r5 0x5D200000
+arg! 0277AD60 r6 0x5D100000
+arg! 0277AD60 r7 0x5D000000
+arg! 0277AD60 r8 0
+arg! 0277AD60 r9 0
+arg! 0277AD60 r10 0
+field 0277AD60 r1+8 u32 0
+fill * 0x5D000000 0x148 0
+# postpoke original initializer; source its heap from the child-heap producer.
+postsetup 0277AD60 0277A634 r3=0x56000000 r4=0x56500000 r5=*(*101F8C14+0x10)
+real 0273AD10 0273ADAC 0273AF40 0273B0D4 0273B2F0 0273B310 0273B560 0274F53C 0274F5F0 0274F698 0274F8D8 02752A84
+# pool lifecycle originals; no AGL#10 slot fields or candidate bodies are modeled/read.
+real 0279F2EC 0279FC6C 0279F7F0 0279F738 0279F6B0 027BE930 027BE794 027CB1A0 027CB3B8
+real 027A029C 027CAB58 027A0040 02757B48
+# parked AGL#15 originals may run real; this is the SUT base-program texture-slot path.
+real 027BE53C
+# d/d_snap.cpp 025C0928 may run real with its non-protected.text tree.
+# confirms AD60 passes its initialized mSecondSurfaceState and the live pool-produced entry here.
+real 025C0928
+# the dirty-texture branch of real 027BE53C may call 027BE494; parked AGL#15 originals are allowed real.
+# Keep the reported refresh descendant span 027BE2C4..027BE3B8 trace-visible; stop if an unapproved target appears.
+real 027BE494
+nestedret 028FDE28 0
+mockset C0009990 r3 r4 r5
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+real 0274D690
+real 0274FB24 0274CA20 0274F964
+real 02752B0C 02752C74 02752D8C 02752E60 02752F10 02753000 0275315C 027556FC 0275589C 02755CA4 02755E7C 02755EC4
+real 02755F40 02755FE0 02755FEC 027561B4 02756CC0 02759AD8 0275D064 0275D12C 0275D21C 0275D274 0275E11C 0275E1B4
+real 02760084 027600EC 027601BC 027601F0 02779BFC 0277A488 0277A634 0278540C 027854AC 02785540 027855BC 02785714
+real 027858E8 02785990 02785994 027859A8 027859BC 027859C0 027859D8 027859EC 02785A50 02785A64 02785BC0 02785C60
+real 02785CB4 02785D54 02786064 027860A4 0278614C 02786160 02786164 0278617C 02786190 027861A4 027861B8 027861CC
+real 027861E0 02786300 02786314 02786348 0278635C 02786360 02786364 02786418 027864B8 02786520 027A063C 027B6CB8
+real 027B6D64 027B6DDC 027B6E2C 027B6E64 027B6F18 027B6F90 027B6FF8 027B7044 027B7088 027B709C 027B70B0 027B70B4
+real 027B7168 027B7208 027B727C 027B72AC 027B72E8 027B730C 027B7348 027B736C 027B737C 027B738C 027B7434 027B7448
+real 027B744C 027B75E0 027B7780 027B7860 027B78D4 027B7A48 027B7B1C 027B7BE8 027B7D78 027B8024 027B814C 027B81E4
+real 027B82B8 027B8904 027B8EB0 027B8F48 027B9070 027B90AC 027B91B4 027B9268 027B9364 027B9378 027B937C 027B9394
+real 027B93A8 027B940C 027B9420 027B9434 027B9448 027B945C 027B9470 027B94B8 027B950C 027B954C 027B958C 027B95B4
+real 027B9694 027B975C 027BBD04 027BC0F4 027BDE1C 027BDEB4 027BDF7C 027BE6B8 027BFE5C 027BFEF4 027BFEF8 027BFF40
+real 027BFF54 027BFF68 027BFF80 027BFF9C 027BFFB4 027C0574 027C057C 027C0588 027C059C 027C05A0 027C05C8 027C05F4
+real 027C0680 027C06C4 027C0720 027C073C 027C077C 027C07E4 027C07F8 027C07FC 027C0804 027C087C 027C088C 027C0A60
+real 027C0B00 027C0CEC 027C106C 027C1834 027C1848 027C1A24 027C1A60 027C1AD8 027C1C64 027C1CBC 027C1D0C 027C1DD8
+real 027C1E48 027C1F70 027C2008 027C2060 027C211C 027C21C4 027C22D0 027C2338 027C234C 027C2378 027C237C 027C2390
+real 027C23D4 027C23F8 027C2450 027C24E4 027C2560 027C2580 027C25AC 027C2698 027C2DF0 027C3280 027C33C0 027C356C
+real 027C3804 027C424C 027C4538 027C45E8 027C48E0 028E892C 028E9098 028EFE58 028EFFD0

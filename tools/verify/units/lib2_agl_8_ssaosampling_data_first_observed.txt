@@ -1,0 +1,9 @@
+# verify: -strictnan -only 0279345C -noclobber
+# AGL#8 initializeSsaoSampleData 0279345C first-call state, with the
+# noise pixels observed where the SDK consumes them (ssaosampling helper, 2026-10-31): each of the 16 real
+# agl::replaceBitmapMip 027B6030 calls stages the 4x4 image (C0009988 memmove into a heap staging buffer) and hands it to
+# the mocked GX2CopySurface C0006120 as the source surface (r3; GX2Surface.image at +0x24); the copy result is not
+# modelled, so the 32 staged pixel bytes are compared at that nested call.
+# Caller-visible checks only (no frame checks); -noclobber: every input is a non-clobber input.
+include lib2_agl_8_ssao_sample_data_first_alt.txt
+observenested C0006120 [r3+0x24]+0 32

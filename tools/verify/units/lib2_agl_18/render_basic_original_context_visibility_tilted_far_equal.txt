@@ -1,0 +1,11 @@
+# Caller-valid 027CC78C far-equality companion. The exact f32 point is the
+# rigid inverse of transformed (0,0,-11); source PPC operations produce depth
+# exactly -11, so negativeDepth-radius equals producer-published far=10.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_visibility_tilted_translated.txt
+poke * 59400094 f32 1
+poke * 59400098 f32 10
+poke * 59100008 u32 0xC3277744
+poke * 5910000C u32 0x42A6A532
+poke * 59100010 u32 0x43E1E9B2
+poke * 59100014 f32 1

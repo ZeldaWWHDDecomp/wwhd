@@ -1,0 +1,17 @@
+# verify: -strictnan -calleesp -only 02792A08,02796034,02793384
+# Complete canonical root-heap world and ordinary constructor placement/allocation domains.
+# Top-level NULL uses the original allocation router and registered root heap, not an invented allocation result.
+include lib2_agl_8_g02_real.txt
+real 0273AD10
+arg! 02792A08 r3 0,0x58000000
+fill 02792A08 0x58000000 0x285C 0
+stable 0x58000000 0x285C
+
+# Shadow-map constructor uses a separate complete ordinary placement object.
+arg! 02796034 r3 0,0x58010000
+fill 02796034 0x58010000 0xBE4 0
+stable 0x58010000 0xBE4
+
+# Real owner-list producer: appendValue must consume the ParameterRoot created by the original IO/root chain.
+# This closure is the accepted construction_lifetimes constructor profile.
+real 0279A07C 0279CA34 0279C950

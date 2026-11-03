@@ -1,0 +1,47 @@
+# verify: -strictnan -calleesp -footprint -only 0279345C,02793908
+# Real resource reinitialization plus TYPE-DOMAIN kernel upper clamp through ParameterBase::applyResource.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+include shared/agl_world.txt for 0279345C 02793908
+setupsnapshot
+fill 0279345C 0x58000000 0x2900 0
+setup 0279345C 02792A08 r3=0x58000000
+setup 0279345C 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+arg! 0279345C r3 0x58000000
+field 0279345C 0x101F8AE5 u8 0
+
+# Original constructor owns the integer parameter, its methods and callback.
+fill 02793908 0x58000000 0x2900 0
+setup 02793908 02792A08 r3=0x58000000
+# Caller-owned valid resource: integer type16, payload category2, count10.
+fill 02793908 0x5B000000 0x200 0
+field 02793908 0x5B000000 u32 0x5B000100
+field 02793908 0x5B000100 u32 16
+field 02793908 0x5B000104 u32 2
+field 02793908 0x5B00010C u32 10
+stable 0x5B000000 0x200
+setup 02793908 0279EB28 r3=0x5800284C r4=0x5B000000
+arg! 02793908 r3 0x58000000
+arg! 02793908 r4 2,4,8
+real 02792A08 02793E88 0279345C 02793384 02793908 027A063C 027BE930 027B6030 027BDEB4
+real 0279E618 0279E674 027A84B8 0279CB9C 0279E57C 0273B264 027A861C 02795EE0 02797DDC
+real 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 0279F1BC
+real 027B95B4 027B958C 027B954C
+real 0273B200
+real 028EFFD0
+real 028EFE58
+real 02795EB4
+real 028F4BE0
+real 028F43F8
+real 028F5E98
+real 0279EB28 02795EE4 02795F08 02795F10 02795F18 02795F20

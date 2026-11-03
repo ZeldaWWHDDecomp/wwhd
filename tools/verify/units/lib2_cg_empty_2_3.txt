@@ -1,0 +1,5 @@
+# Empty hooks; opaque receivers, no field access.
+src wwhd_src/cg/empty_2_3.cpp
+stackfill
+arg! * r3 0,0x52000000
+footprint * 0

@@ -1,0 +1,3 @@
+# AGL#7 02791230 ShadowPrePass::render, enabled path, first frame after initialize (cached samplers still from 0278E730).
+# verify: -only 02791230 -strictnan -calleesp
+include lib2_agl_7/enabled_render_k1_base.txt

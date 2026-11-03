@@ -1,0 +1,6 @@
+# PipelineFrameQueue::instance when the singleton already exists: the original instance (027F96F0) runs once as a
+# setup on the registered root heap and publishes 101F997C/101F9980; the tested call is the second get.
+# verify: -only 027F96F0 -strictnan -calleesp
+include lib2_j3d_hdrew_1_queue_instance_heap_20261030.txt
+real 027F96F0
+setup 027F96F0 027F96F0 r3=0x6A000000

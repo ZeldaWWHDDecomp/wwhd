@@ -1,0 +1,6 @@
+# Type-domain zero-size display-list companion.
+# Shipped ShaderMgr recordings issue GX2 commands and have nonzero size.
+# This empty-list model retains coverage of the zero-size arms; it is not a shipped-state gate.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_visibility_tilted_translated.txt
+mockdisplaylist C0006090 C0006190 C0006218

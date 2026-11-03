@@ -1,0 +1,15 @@
+# Frame observer companion of lib2_agl_7.txt for the functions with a 16-byte frame record
+# (AutoFrame-ID mutants are observed with `footprint` + `stackfill`): each function's own frame words (back chain,
+# saved GPRs, LR save) are compared, with distinct values in the stack and in r14..r31.
+# verify: -only 0278D07C,0278D0D0,0278D294,0278CACC,0278FB94,02790B3C,027919FC,02791ABC,02792010 -strictnan -calleesp
+include lib2_agl_7.txt
+stackfill
+footprint 0278D07C 16
+footprint 0278D0D0 16
+footprint 0278D294 16
+footprint 0278CACC 16
+footprint 0278FB94 16
+footprint 02790B3C 16
+footprint 027919FC 16
+footprint 02791ABC 16
+footprint 02792010 16

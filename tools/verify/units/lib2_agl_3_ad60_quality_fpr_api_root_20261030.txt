@@ -1,0 +1,5 @@
+# verify: -strictnan -calleesp -only 0277AD60
+# TYPE-DOMAIN: original IntegerMethods edge-quality parameter accepts3/4/UINTMAX (Lead23:32); ordinary small viewport stays supported.
+# Caller-owned resource payload only; real ParameterBase apply updates the produced object. No FPR/body/owner-field pokes.
+include lib2_agl_3_lifecycle_two_entries_render_index_type.txt
+field 0277AD60 5D53000C u32 3,4,0xFFFFFFFF

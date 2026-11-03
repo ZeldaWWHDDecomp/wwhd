@@ -1,0 +1,17 @@
+# verify: -only 027D527C -calleesp
+# DIAGNOSTIC: RenderCommandPool::initialize with the shipped frame size 0x400000 (027297C0
+# config +0x24 -> 027C0CEC -> 027D527C), command count 36 and two frames: 3 rings x 2 frames x 0x400000 = 24 MB recording
+# memory, filled word by word. The world's root heap is 16 MB, so the pool's heap here is a 32 MB sead heap made by the
+# original FreeRegionHeap::createAt 0275315C at 0x40000000 (name "agl::lyr::Renderer"); everything else is the
+# commands fixture. Run at small n on seeds 1 and 7 to show the shipped size takes the same path as the model sizes.
+include lib2_agl_19_commands_pool_fixture.txt
+accessbudget 200000000
+timebudget 300
+setup 027D527C 0275315C r3=0x40000000 r4=0x02000000 r5=0x58200020 r6=0
+stable 0x40000000 0x02000000
+setup 027D527C 027D5064 r3=0x58000600
+arg! 027D527C r3 0x58000600
+arg! 027D527C r4 0x400000
+arg! 027D527C r5 36
+arg! 027D527C r6 2
+arg! 027D527C r7 0x40000000

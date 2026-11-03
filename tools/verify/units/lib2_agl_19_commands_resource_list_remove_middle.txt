@@ -1,0 +1,7 @@
+# verify: -only 027D5818 -calleesp
+# removeAll of tokens in the middle of a list (producer-built, lib2_agl_19_commands_resource_list_fixture.txt): list L4
+# (tokens 4, 0, 6, 2, 5 in registration order) and L2 (0, 1, 2); the removed token has later entries behind it, so the
+# entries shift down and the count drops by one. Absent tokens included.
+include lib2_agl_19_commands_resource_list_fixture.txt
+arg! 027D5818 r3 0x58440000,0x58420000
+arg! 027D5818 r4 0x58500000,0x58500120,0x585000C0,0x58500030,0x58500150

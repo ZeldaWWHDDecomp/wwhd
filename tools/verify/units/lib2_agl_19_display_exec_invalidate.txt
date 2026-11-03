@@ -1,0 +1,14 @@
+# TYPE-DOMAIN: manager flag 0x80 (drawView -> 027D7050) is set by no shipped writer.
+# AGL#19 027D7050 markRandomDeferredWord (RenderQueueManager::drawView with manager flag 0x80) on the executed first
+# frame: a random word of a random deferred command is overwritten. Random generator from 0275CD20. DISPLAY-LIST
+# DEPENDENT (command sizes from the BYTES model). See the OPEN on the flag-0x80 domain.
+# verify: -only 027D7050 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+# The random word comes from the real sead::Random::getU32 0275CEE4 on the GlobalRandom instance (101F8B60, made by
+# 0275CD20 in the fixture). As a generated mock its result took edge values (0xFFFFFFFF and near) far more often than the
+# generator does; u32 * 2^-32 then rounds to 1.0f and the index equals the deferred count, so 027D7050 loaded the NULL
+# slot past the list (a page-0 DSI on 17..39 inputs per shard). The real generator keeps the index in range for the
+# fixture's states (the 1.0f rounding needs a draw >= 0xFFFFFF80, probability 2^-25 per call).
+real 0275CEE4
+arg! 027D7050 r3 0x5E100018,0x5E100818

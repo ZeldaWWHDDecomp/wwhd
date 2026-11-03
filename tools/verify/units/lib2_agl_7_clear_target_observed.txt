@@ -1,0 +1,6 @@
+# Observation companion of lib2_agl_7.txt for clearPrimaryTarget 0278EFC0: the clear colour it builds on its stack
+# (sead::ColorChannels, 16 bytes) is passed in r6 to the mocked clear 027B997C, which loads all four channels
+# (lfs 0/4/8/0xC from r6 at 027B99F4..027B9A00); the default compares only the first word.
+# verify: -only 0278EFC0 -strictnan -calleesp
+include lib2_agl_7.txt
+callee 027B997C r6=16

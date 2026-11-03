@@ -1,0 +1,20 @@
+# verify: -strictnan -only 0279515C -noclobber
+# ssaorender: the shipped mode-0 secondary profile with the
+# original sampler bind real, so the sampler state the pass prepares (filter modes, dirty bits, image words of
+# primary sampler 0) is consumed by the original code and its GX2 inputs are compared. Caller-visible checks only
+# (no frame/footprint checks); -noclobber: every input is a non-clobber input.
+include lib2_agl_8_secondary_shipped_mode0_blur_api_stable_group.txt
+# Sampler consumption inside the original bind 027BE53C (ShaderProgram sampler bind, TextureSamplerLifecycle):
+# its own update path 027BE494 runs per dirty bit and hands sampler fields to the GX2 sampler/texture imports.
+# Each span below is exactly the sampler field the wrapper loads into that import's argument registers
+# (027BE340: XYFilter r4/r5/r6 = +0x150/+0x154/+0x184, ZMFilter r5 = +0x158; 027BE32C: Clamping r4..r6 =
+# +0x15C..+0x164; r3 = sampler+0xA4), and the GX2Surface image/mipmap words of the native texture (+0xB0) that
+# GX2SetPixelTexture programs (surface +0x24 image, +0x2C mipmaps). Register words of the native objects stay
+# unobserved.
+real 027BE53C 027BE494 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8 0274D4C0
+observenested C0006470 r3+0xAC 8
+observenested C0006470 r3+0xE0 4
+observenested C0006478 r3+0xB4 4
+observenested C0006448 r3+0xB8 12
+observenested C00068F8 r3+0x24 4
+observenested C00068F8 r3+0x2C 4

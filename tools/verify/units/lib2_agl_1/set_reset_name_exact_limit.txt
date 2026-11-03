@@ -1,0 +1,22 @@
+# Record-reset label terminates exactly at the accepted scan limit; destination capacity32 exposes truncation vs overflow reset.
+# verify: -only 0276DAEC -strictnan -calleesp
+src wwhd_src/agl/EnvironmentSetCallbacks.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 02770710
+mockmove C0009988 r3 r4 r5
+arg! 0276DAEC r3 0x5A200000
+field 0276DAEC 5A200188 s32 1
+field 0276DAEC 5A20018C u32 0x5A220000
+field 0276DAEC 104A0CD8 u32 0x5A300000
+field 0276DAEC 104A0CDC u32 0x101607DC
+field 0276DAEC 5A220068 u32 0x5A290000
+field 0276DAEC 5A220070 s32 32
+field 0276DAEC 5A22014C u32 0x5A290040
+field 0276DAEC 5A220154 s32 32
+stable 5A220068 12
+stable 5A22014C 12
+fill 0276DAEC 5A300000 0x40000 65
+field 0276DAEC 5A340000 u8 0
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

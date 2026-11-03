@@ -1,0 +1,234 @@
+# verify: -only 028A7DD4 -strictnan
+# Hardware voice reconstruction; binary-derived layouts only.
+src wwhd_src/nw/snd/HardwareVoice.cpp
+src wwhd_src/nw/snd/VoiceRequestStorage.cpp
+# Finite request chains and circular priority sentinel; dedicated companions expand linked paths.
+arg! 028A648C r3 0x58000000
+field 028A648C 5800000C u32 0,0x58001000
+field 028A648C 5800101C u32 0
+stable 58001000 0x28
+field 028A65B4 104C1AC0 u32 0x104C1AC0
+stable 104C1ABC 12
+src wwhd_src/nw/snd/SoftwareVoice.cpp
+arg! 028A8C60 r3 0x58000000
+field 028A8C60 5800000C u32 0,0x58001000
+field 028A8C60 5800101C u32 0
+field 028A88EC 104C1AC0 u32 0x104C1AC0
+# Queue fixtures use disjoint objects, valid 0/1/2-node links, and finite sample blocks.
+arg! 028A8DD0 r3 0x58100000
+arg! 028A8DD0 r4 0x58110000
+field 028A8DD0 581101F1 u8 0,1
+field 028A8DD0 58100004 u32 0x58100004,0x581201F4,0x581221F4
+field 028A8DD0 58100008 u32 0x581201F4
+field 028A8DD0 581201F8 u32 0x581221F4
+field 028A8DD0 581221F8 u32 0x58100004
+field 028A8DD0 581201E4 u32 0,1,8,255,0xFFFFFFFF
+field 028A8DD0 581221E4 u32 0,1,8,255,0xFFFFFFFF
+stable 58100000 12
+stable 58120000 0x200
+stable 58122000 0x200
+arg! 028A9F74 r3 0x58100000
+arg! 028A9F74 r5 0,8,16,32,96,144
+field 028A9F74 58100004 u32 0x58100004,0x581201F4,0x581221F4
+field 028A9F74 581201F4 u32 0x58100004
+field 028A9F74 581221F4 u32 0x581201F4
+field 028A9F74 58120080 u32 0,1,2
+field 028A9F74 58122080 u32 0,1,2
+arg! 028A95F4 r6 0,1,8,15,16,17,32,64
+arg! 028A9818 r6 0,1,2,16,32,96,144
+field 028A9818 r3+0x48 u32 0,1,32768,65535
+field 028A9818 r3+0x58 u32 0,1,2,3
+arg! 028A9328 r5 0,1,8,16,32
+arg! 028A93FC r5 0,1,8,16,32
+arg! 028A94E8 r5 0,1,8,16,32
+field 028A9328 r3+0xC u32 0x58200000
+field 028A93FC r3+0xC u32 0x58200000
+field 028A94E8 r3+0xC u32 0x58200000
+field 028A9328 r3+0x54 u32 0,1,8,16
+field 028A93FC r3+0x54 u32 0,1,8,16
+field 028A94E8 r3+0x54 u32 0,1,8,16
+field * 58200000 u32 0x58210000
+field * 58200004 u32 32,64
+field * 58200008 u32 0,1,8,16
+field * 5820000C u32 0,0x58220000
+stable 58200000 0x28
+real 028A92CC
+arg! 028AA080 r5 0,1,5759,5760,11520,92160,92161,0xFFFFFFFF
+arg! 028AA374 r6 0,1,7,8,9,16,144
+field 028AA23C r3+0xCBA4 u32 0,1,2,16
+ret! 028F6C94 0,1
+callee 028F6C94 r4=out4
+mockfield 028F6C94 r4+0x0 u32 0x58300000
+field * 58300004 u32 0,8,16,96,144
+field 028AA490 r4+0x18 u16 0,8,16,96,144
+field 028AA64C r4+0x18 u16 0,8,16,96,144
+field 028AA490 r4+0x1A u16 0,1,2,3,4,5,6,8
+field 028AA64C r4+0x1A u16 0,1,2,3,4,5,6,8
+# Hardware circular list: zero, one, or two live links, with both absent and present AX voices.
+field 028A65B4 104C1AC0 u32 0x104C1AC0,0x584032E8,0x584042E8
+field 028A65B4 104C1AC4 u32 0x584032E8
+field 028A88EC 104C1AC0 u32 0x104C1AC0,0x584032E8,0x584042E8
+field 028A88EC 104C1AC4 u32 0x584032E8
+field * 584032E8 u32 0x104C1AC0
+field * 584032EC u32 0x584042E8
+field * 584042E8 u32 0x584032E8
+field * 584042EC u32 0x104C1AC0
+field * 584032D4 u32 0,1,8,255,0xFFFFFFFF
+field * 584042D4 u32 0,1,8,255,0xFFFFFFFF
+field * 58403008 u32 0,0x58405000
+field * 58404008 u32 0,0x58406000
+stable 58403000 0x2F4
+stable 58404000 0x2F4
+callee 028A9328 r4=out4096
+callee 028A93FC r4=out4096
+callee 028A94E8 r4=out4096
+
+# OSLockMutex only acquires protection; it does not replace this voice's queue head.
+# Keep only the protected head stable; all other voice storage remains clobberable.
+stable 5800000C 4
+field 028A648C 5800000C u32 0,0x58001000,0x58002000
+field 028A8C60 5800000C u32 0,0x58001000,0x58002000
+field 028A648C 5800201C u32 0x58001000
+field 028A8C60 5800201C u32 0x58001000
+stable 58002000 0x28
+# Hardware allocation includes the reserved priority and the first/last AX slots.
+arg 028A6644 r3 0,1,16,254,255
+ret C0006C80 0,0x58500000
+field * 58500000 u32 0,95
+stable 58500000 4
+field 028A7654 r3+0x140 u16 0,2
+field 028A7654 r4+0x14D u8 0,1
+field 028A870C r3+0xC u32 0,0x58200000
+field 028A870C r3+0x144 u32 0,1,2,3
+field * 58200018 u32 0,1,2,3
+ret C0006DE8 0,1,2,15,16,17,18
+field 028A925C r3+0xC u32 0,0x58200000
+field 028A95F4 r7+0x0 u16 0,1,32768,65535
+field 028A95F4 r7+0x2 s16 0,1,-1,32767,-32768
+# A popped mix descriptor is immutable until its semaphore is released.
+field * 58300000 u32 0,1,2,4,8,16,32,63,64,128,256,512,1023
+stable 58300000 0x48
+
+# The decoder advances through finite requests with the real local queue helper.
+arg! 028A9328 r3 0x58600000
+arg! 028A93FC r3 0x58600000
+arg! 028A94E8 r3 0x58600000
+field * 58200014 u8 0,1
+field * 5820001C u32 0,0x58202000
+field * 58202000 u32 0x58212000
+field * 58202004 u32 32,64
+field * 58202008 u32 0,1,8,16
+field * 58202014 u8 0,1
+field * 5820201C u32 0
+stable 58202000 0x28
+stable 5860000C 4
+stable 58600054 4
+field 028A826C r3+0xC u32 0,0x58200000
+field 028A826C r3+0x10 u32 0,0x58200000
+field 028A826C r3+0x2E6 u8 0,1
+arg 028A826C r5 0,1
+
+# SDK boundary extents: original local writes and port AX parameter layouts agree.
+# Stack descriptors are observed in full; voice envelopes and the minimum device mix are heap inputs.
+stackfill periodic
+callee C0007010 r4=40
+callee C0007018 r4=6
+callee C00070A8 r4=20
+callee C00070F0 r4=14
+callee C0007088 r4=8
+callee C0007020 r4=20
+callee C00070C0 r4=20
+callee C0007118 r4=heap4
+callee C0007048 r6=heap16
+callee C0006C90 r4=out2 r5=out2
+callee C0006E00 r4=out20
+callee 0289D108 r4=out2 r5=out2 r6=out2 r7=out2 r8=out2
+callee 028B1AF0 r4=inout6 r5=heap32
+
+# Message wrappers use canonical callee_facts.tsv argument facts.
+# Event wrappers forward the event address unchanged.
+callee 028F6A24 r3=0
+callee 028F6A28 r3=0
+callee 028F6A30 r3=0
+# AX argument registers remain meaningful where a runtime HLE stub is empty.
+callee C00070A0 r3=0 r4=0
+callee C00070D8 r3=0 r4=0
+callee C00070B8 r3=0 r4=0
+callee C00070C0 r3=0
+callee C00070C8 r3=0 r4=0 r5=0 r6=0 r7=0 r8=0 r9=0
+
+# Zero target and zero current/delta produce the valid unchanged-ramp return.
+real 028A6B24
+real 028A7234
+arg! 028A7DD4 r3 0x58800000
+arg! 028A7DD4 r4 0x58801000
+arg! 028A7DD4 r5 0x58802000
+arg! 028A7DD4 r6 0,1
+arg! 028A7DD4 r7 0,1
+field * 58800000 u32 0
+field * 58800004 u32 0
+field * 58800008 u32 0
+field * 5880000C u32 0
+field * 58800010 u32 0
+field * 58800014 u32 0
+field * 58800018 u32 0
+field * 5880001C u32 0
+field * 58800020 u32 0
+field * 58800024 u32 0
+field * 58800028 u32 0
+field * 5880002C u32 0
+field * 58800030 u32 0
+field * 58800034 u32 0
+field * 58800038 u32 0
+field * 5880003C u32 0
+field * 58800040 u32 0
+field * 58800044 u32 0
+field * 58800048 u32 0
+field * 5880004C u32 0
+field * 58800050 u32 0
+field * 58800054 u32 0
+field * 58800058 u32 0
+field * 5880005C u32 0
+stable 58800000 0x60
+field * 58801000 u32 0
+field * 58801004 u32 0
+field * 58801008 u32 0
+field * 5880100C u32 0
+field * 58801010 u32 0
+field * 58801014 u32 0
+field * 58801018 u32 0
+field * 5880101C u32 0
+field * 58801020 u32 0
+field * 58801024 u32 0
+field * 58801028 u32 0
+field * 5880102C u32 0
+field * 58801030 u32 0
+field * 58801034 u32 0
+field * 58801038 u32 0
+field * 5880103C u32 0
+stable 58801000 0x40
+field * 58802000 u32 0
+field * 58802004 u32 0
+field * 58802008 u32 0
+field * 5880200C u32 0
+field * 58802010 u32 0
+field * 58802014 u32 0
+field * 58802018 u32 0
+field * 5880201C u32 0
+field * 58802020 u32 0
+field * 58802024 u32 0
+field * 58802028 u32 0
+field * 5880202C u32 0
+field * 58802030 u32 0
+field * 58802034 u32 0
+field * 58802038 u32 0
+field * 5880203C u32 0
+field * 58802040 u32 0
+field * 58802044 u32 0
+field * 58802048 u32 0
+field * 5880204C u32 0
+field * 58802050 u32 0
+field * 58802054 u32 0
+field * 58802058 u32 0
+field * 5880205C u32 0
+stable 58802000 0x60

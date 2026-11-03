@@ -1,0 +1,9 @@
+# UNEXECUTED: seven own constructors, explicit first-allocation-failure branch only.
+# No object state, foreign initializer, consumer or successful constructor lifecycle is exercised.
+# The remaining success domains and full55 acceptance remain open.
+# verify: -strictnan -calleesp -only 027791DC,027794E0,02779594,02779628,0277969C,02779888,02779BFC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0
+ret! 0273AD10 0

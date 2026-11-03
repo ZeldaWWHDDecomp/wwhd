@@ -1,0 +1,20 @@
+# Diagnostic: own three parameter constructors with the approved original
+# CascadeParameterBase -> base/hash/SafeText closure. No foreign candidate source.
+# Foreign effects included in comparison only through approved original addresses.
+# This does not establish full55 or helper lifecycle beyond this constructor domain.
+# verify: -strictnan -calleesp -only 027794E0,02779594,02779628
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 0279E674
+real 0279E618
+real 0279E57C
+real 0273B264
+real 0279F1BC
+stackfill
+arg! * r3 0x56000000
+fill 027794E0 56000000 92 165
+fill 02779594 56000000 80 165
+fill 02779628 56000000 28 165
+final 027794E0 56000000 5C
+final 02779594 56000000 50
+final 02779628 56000000 1C

@@ -1,0 +1,7 @@
+# verify: -strictnan -only 0279515C -noclobber
+# ssaorender: the secondary bind profile with the two stack arguments of
+# acquire2D 0279FC6C declared (its frame is 0x50 and it loads lbz r30,0x5B(r1) / lbz r31,0x5F(r1), i.e. the caller's
+# outgoing parameter words at sp+8 and sp+0xC: the 9th and 10th arguments of acquire2D(name,0xA,width,height,1,0,1,1,0)),
+# so they are compared at the call.
+include lib2_agl_8_ssaorender_secondary_bind_visible.txt
+callee 0279FC6C stack=2

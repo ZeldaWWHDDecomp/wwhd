@@ -1,0 +1,98 @@
+# Same valid own-unit slice POD domain; finite fractional values retain nonzero low bytes to observe stack overlap.
+# API/type-domain: two own-unit entries, six slices, enabled/disabled states. Original RenderBuffer and mock ABI boundary retained.
+# AGL#3 enabled slice0 direct caller ABI profile with the constructed RenderBuffer.
+# Claim remains limited to 02777BA8 argument construction and verifier-mock return forwarding.
+# 027A9E28 internals, owner, color application, and render behavior remain outside the claim.
+# Source list intentionally matches broad unit source list; this unit runs only 02777BA8.
+# Inputs are explicit caller-owned fixture state. Color words are source-initializer values set explicitly in BSS.
+# verify: -strictnan -calleesp -only 02777BA8
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+
+# construct the 0x40-byte RenderBuffer receiver with the original constructor.
+alloc 0273AD10 r3 0x56800000
+allocnested 0273AD10
+setup * 027B95B4 r3=0x56800000
+
+# Exact target entry for the shipped caller domain: surfaceIndex 0 and selected slice0.
+arg! 02777BA8 r3 0x56000000
+arg! 02777BA8 r4 0,1
+arg! 02777BA8 r5 0,1,2,3,4,5
+arg! 02777BA8 r6 0x56800000
+arg! 02777BA8 r7 0x12345678
+
+# EffectRuntimePrefix: mask=0 selects the first parameter block; one surface and one slot are present.
+field 02777BA8 r3+0x10 u32 0xFFFFFFFF
+field 02777BA8 r3+0x2CC u32 2
+field 02777BA8 r3+0x2D0 u32 0x56300000
+field 02777BA8 r3+0x2D4 u32 2
+field 02777BA8 r3+0x2D8 u32 0x56400000
+field 02777BA8 56400000 u32 0x56000020
+field 02777BA8 56400004 u32 0x56901000
+
+# ParameterBlock +0xB8 slice0: enabled, mFirst=1.25, mSecond=-2.5.
+field 02777BA8 569000C4 u8 1
+field 02777BA8 569000D4 u32 0x3FA00000
+field 02777BA8 569000E4 u32 0xC0200000
+
+# SurfaceBatchEntry scale arguments: 1.5 and 0.75.
+field 02777BA8 56300C70 u32 0x3FC00000
+field 02777BA8 56300C74 u32 0x3F400000
+
+# Explicit source-derived global fixture bytes; these BSS words are not inferred from image.bin or startup state.
+# sSliceColorFirst aliases sBlack; sSliceColorSecond aliases sWhite.
+field 02777BA8 104A01CC u32 0
+field 02777BA8 104A01D0 u32 0
+field 02777BA8 104A01D4 u32 0
+field 02777BA8 104A01D8 u32 0x3F800000
+field 02777BA8 104A01EC u32 0x3F800000
+field 02777BA8 104A01F0 u32 0x3F800000
+field 02777BA8 104A01F4 u32 0x3F800000
+field 02777BA8 104A01F8 u32 0x3F800000
+
+# At the boundary, r3 is an opaque token in the approved mock-only domain; r5/r6 payload extents are pinned.
+observearg 027A9E28 r5+0 8
+observearg 027A9E28 r6+0 32
+callee 027A9E28 r3=0 r4=0 r5=8 r6=32 r7=0
+retarg 027A9E28 r7
+real 027B95B4
+
+field 02777BA8 560000E4 u8 0,1
+field 02777BA8 560000F4 u32 0x3FA12345
+field 02777BA8 56000104 u32 0xC0212345
+field 02777BA8 56000134 u8 0,1
+field 02777BA8 56000144 u32 0x3FB12345
+field 02777BA8 56000154 u32 0xC0112345
+field 02777BA8 56000184 u8 0,1
+field 02777BA8 56000194 u32 0x3FC12345
+field 02777BA8 560001A4 u32 0xC0012345
+field 02777BA8 560001D4 u8 0,1
+field 02777BA8 560001E4 u32 0x3FD12345
+field 02777BA8 560001F4 u32 0xBFE12345
+field 02777BA8 56000224 u8 0,1
+field 02777BA8 56000234 u32 0x3FE12345
+field 02777BA8 56000244 u32 0xBFC12345
+field 02777BA8 56000274 u8 0,1
+field 02777BA8 56000284 u32 0x3FF12345
+field 02777BA8 56000294 u32 0xBFA12345
+field 02777BA8 569010C4 u8 0,1
+field 02777BA8 569010D4 u32 0x3FC12345
+field 02777BA8 569010E4 u32 0xC0192345
+field 02777BA8 56901114 u8 0,1
+field 02777BA8 56901124 u32 0x3FD12345
+field 02777BA8 56901134 u32 0xC0092345
+field 02777BA8 56901164 u8 0,1
+field 02777BA8 56901174 u32 0x3FE12345
+field 02777BA8 56901184 u32 0xBFF12345
+field 02777BA8 569011B4 u8 0,1
+field 02777BA8 569011C4 u32 0x3FF12345
+field 02777BA8 569011D4 u32 0xBFD12345
+field 02777BA8 56901204 u8 0,1
+field 02777BA8 56901214 u32 0x40012345
+field 02777BA8 56901224 u32 0xBFB12345
+field 02777BA8 56901254 u8 0,1
+field 02777BA8 56901264 u32 0x40092345
+field 02777BA8 56901274 u32 0xBF912345
+field 02777BA8 56301908 u32 0x40000000
+field 02777BA8 5630190C u32 0x3F000000

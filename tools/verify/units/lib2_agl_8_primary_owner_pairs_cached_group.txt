@@ -1,0 +1,17 @@
+# verify: -strictnan -calleesp -only 02794970
+# Produce the fixed9-pair kernel in the cached original setup; vary only public resource inputs afterward.
+# initializeSsaoKernel reads the pair count and resolution, independently of blur/rotation/attenuation controls.
+include lib2_agl_8_primary_owner_controls_api_group.txt
+fill 02794970 0x5B610000 0x200 0
+field 02794970 0x5B610000 u32 0x5B610100
+field 02794970 0x5B610100 u32 16
+field 02794970 0x5B610104 u32 2
+field 02794970 0x5B61010C s32 9
+field 02794970 0x5B610004 u32 0x5B610140
+field 02794970 0x5B610140 u32 16
+field 02794970 0x5B610144 u32 2
+field 02794970 0x5B61014C s32 0,1,3,9,10
+stable 0x5B610000 0x200
+setup 02794970 0279EB28 r3=0x5800284C r4=0x5B610000
+setup 02794970 02793908 r3=0x58000000 r4=128
+postsetup 02794970 0279EB28 r3=0x5800284C r4=0x5B610004

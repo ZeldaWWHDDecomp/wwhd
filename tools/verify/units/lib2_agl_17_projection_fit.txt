@@ -1,0 +1,61 @@
+# fitProjection on an original-constructed context with an empty workspace.
+# verify: -only 027C7598 -strictnan -calleesp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+
+# Qualified complete original empty workspace; aligned finite matrices.
+# Only the first direction-degeneracy return is expected from identity inputs.
+real 027D7E04 027D7D94 028EFFD0 028F0164 027CA82C
+real 02791C68 02791C90 025155D8 028E8E10 028E89B4 0272D680
+real 027DA23C 028E91EC 028E8F64
+setup 027C7598 027D7E04 r3=0x5F300084
+setup 027C7598 027CA82C
+arg! 027C7598 r3 0x5F300000
+arg! 027C7598 r4 0x5F310000
+arg! 027C7598 r5 0x5F311000
+arg! 027C7598 r6 0x5F312000
+arg! 027C7598 r7 0x5F313000
+argf64! 027C7598 f1 0,0.25,1
+argf64! 027C7598 f2 0,0.25,1
+fill 027C7598 5F300000 1460 0
+fill 027C7598 5F310000 64 165
+fill 027C7598 5F311000 64 0
+fill 027C7598 5F312000 48 0
+fill 027C7598 5F313000 48 0
+field 027C7598 5F311000 f32 1
+field 027C7598 5F311014 f32 1
+field 027C7598 5F311028 f32 1
+field 027C7598 5F31103C f32 1
+field 027C7598 5F312000 f32 1
+field 027C7598 5F312014 f32 1
+field 027C7598 5F312028 f32 1
+field 027C7598 5F313000 f32 1
+field 027C7598 5F313014 f32 1
+field 027C7598 5F313028 f32 1
+final 027C7598 5F300000 5B4
+final 027C7598 5F310000 40

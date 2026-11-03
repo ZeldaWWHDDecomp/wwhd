@@ -1,0 +1,4 @@
+# TYPE-DOMAIN: approved zero-byte display-list arm, with the same parameter-API quality/luma inputs.
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_lane_lifecycle_quality_luma_api_uniform.txt
+mockdisplaylist C0006090 C0006190 C0006218

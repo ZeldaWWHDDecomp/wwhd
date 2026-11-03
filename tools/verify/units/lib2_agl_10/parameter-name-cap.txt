@@ -1,0 +1,23 @@
+# AGL#10 companion: a NUL-terminated parameter name one byte longer than the scanned maximum hashes as length 0;
+# a name of exactly the maximum length still hashes all its bytes.
+# verify: -strictnan -calleesp -only 0279E57C
+src wwhd_src/agl/MultiFilter.cpp wwhd_src/agl/ParameterBase.cpp wwhd_src/agl/DynamicTextureCache.cpp wwhd_src/agl/DynamicTextureCacheStatics.cpp wwhd_src/agl/TextureResource.cpp wwhd_src/agl/PrimitiveShapes.cpp wwhd_src/agl/PrimitiveShapesStatics.cpp wwhd_src/sead/PoolHeapStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# Name and label texts passed on the stack are compared by content.
+callee 0279E618 r4=8 r5=8 r6=8
+callee 02785CB4 r4=8
+# Cafe core id: the three CPU cores, mapped by the core-reverse table to pools 0..2.
+ret! C0009BB0 0,1,2
+field * 104A0BC0 u32 0
+field * 104A0BC4 u32 1
+field * 104A0BC8 u32 2
+stable 104A0BC0 12
+real 0273B264
+field * 58560000 u32 0x5B000000
+field * 58560004 u32 0x10167CCC
+fill * 5B000000 0x40002 0x61
+field * 5B040000 u8 0x61,0
+field * 5B040001 u8 0
+stable 5B000000 0x40002
+stable 58560000 8
+arg! 0279E57C r3 0x58560000

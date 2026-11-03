@@ -1,0 +1,21 @@
+# Exercise index128 fallback to capacity count0 with129 allocated reference ranges.
+# verify: -only 0276F554 -strictnan -calleesp
+src wwhd_src/agl/EnvironmentClassRegistry.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 0276F554 r3 0x5E000000
+arg! 0276F554 r4 0x5E010000
+arg! 0276F554 r5 0x58F00000
+fill 0276F554 5E000000 32 0
+fill 0276F554 5E010000 520 0
+field 0276F554 5E010000 u32 1
+field 0276F554 5E010200 s32 2
+field 0276F554 101F8BF4 s32 129
+field 0276F554 58F0000C u32 0x101459E0
+alloc 02753D6C r4 0x5E100000 align=r5
+stable 5E010000 520
+stable 101F8BF4 4
+stable 58F0000C 4
+stable 5E000008 16
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

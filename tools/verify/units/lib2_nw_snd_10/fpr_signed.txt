@@ -1,0 +1,23 @@
+# verify: -only 028A37D0,028A3844,028A38B8,028A393C,028A39C0,028A3710,028A4AA4,028A4AB0,028A51F0,028A520C,028A57E0,028A58CC,028A59AC,028A5A90 -calleesp
+# Exact incoming FPRs, including non-single values, signed zero and signaling NaNs.
+src wwhd_src/nw/snd/FilterPresets.cpp
+src wwhd_src/nw/snd/BankReader.cpp
+src wwhd_src/nw/snd/Envelope.cpp
+src wwhd_src/nw/snd/Modulator.cpp
+src wwhd_src/nw/snd/SoundRangeListeners.cpp
+src wwhd_src/nw/snd/SoundVoiceHandle.cpp
+src wwhd_src/nw/snd/VoicePlaybackParameters.cpp
+src wwhd_src/nw/snd/ChannelParameters.cpp
+src wwhd_src/nw/snd/WaveChannel.cpp
+src wwhd_src/nw/snd/WaveChannelHelpers.cpp
+src wwhd_src/nw/snd/WaveChannelPool.cpp
+src wwhd_src/nw/snd/SoundVoiceRequestInit.cpp
+src wwhd_src/nw/snd/WaveChannelInitialize.cpp
+src wwhd_src/nw/snd/WaveChannelAllocate.cpp
+src wwhd_src/nw/snd/BankInstrumentPlayback.cpp
+src wwhd_src/nw/snd/WaveChannelPrepare.cpp
+src wwhd_src/nw/snd/WaveChannelUpdate.cpp
+src wwhd_src/nw/snd/WaveChannelRange.cpp
+src wwhd_src/nw/snd/WaveChannelPoolUpdate.cpp
+src wwhd_src/nw/snd/VoiceRequestStorage.cpp
+argf64! * f1 -2,-1,-0.5,0x8000000000000001,0x0000000000000001,0,2,3,0x8000000000000000,0x3FF0000000000000,0x3FF0000000400000,0x3FEFFFFFFFFFFFFF,0x7FF0000000000001,0xFFF0000000000001,0x7FF8000000001234,0x7FF0000000000000,0xFFF0000000000000,0x7FEFFFFFFFFFFFFF

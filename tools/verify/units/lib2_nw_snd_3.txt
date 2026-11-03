@@ -1,0 +1,171 @@
+# verify: -strictnan
+# NW-SND#3: sound runtime support; runtime reconstruction.
+src wwhd_src/nw/snd/SoundRuntimeSupport.cpp
+# Bounded pool fixtures contain three linked blocks or an empty list.
+arg! 0288A184 r4 0x56000000,0x56000001,0x56000002,0x56000003
+arg! 0288A184 r5 3,4,15,16,31,32,48
+arg! 0288A184 r6 1,2,3,4,5,6,7,8,13,16
+field 0288A224 r3+0x0 u32 0,0x56000000
+field 0288A248 r3+0x0 u32 0,0x56000000
+field * 56000000 u32 0x56000010
+field * 56000010 u32 0x56000020
+field * 56000020 u32 0
+stable 56000000 48
+
+arg 0288A6C0 r5 0,1,2,3,0xFFFFFFFF
+
+# Output indexes are valid output/effect slots; other setters retain unrestricted values.
+arg! 0288C638 r4 0,1,2
+arg! 0288C648 r4 0,1,2
+arg! 0288C658 r4 0,1,2
+arg! 0288C668 r4 0,1,2
+arg! 0288C678 r4 0,1,2
+arg! 0288C688 r4 0,1,2
+arg! 0288C688 r5 0,1,2
+
+src wwhd_src/nw/snd/SequenceRuntimeSupport.cpp
+
+# Three bounded free nodes; removal covers inside/outside intervals.
+field 0288A1D0 r3+0x0 u32 0,0x56000000
+field 0288A1D0 r3+0x4 u32 0x56000000,0x56000010,0x57000000
+field 0288A1D0 r3+0x8 u32 0,16,32,48
+field 0288ACC4 r3+0x2C u32 0,1,2,3,4,5
+
+src wwhd_src/nw/snd/SoundOutputRuntime.cpp
+arg! 02889B10 r4 0,1,2
+arg! 02889B10 r6 0,1,2
+arg! 02889CAC r4 0,1,2
+arg! 02889CAC r6 0,1,2
+callee 0288945C r4=out8
+
+# Compact track-method inputs: bounded direct descriptors with the matching argument ABI.
+arg! 0288C6A4 r5 0x57000000
+arg 0288C6A4 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288C6A4 r5+0x0 s16 -8,0,8
+field 0288C6A4 r5+0x2 s16 -1
+field 0288C6A4 r5+0x4 u32 0x0288E724
+callee 0288C6A4 r5=8
+arg! 0288C758 r5 0x57000000
+arg 0288C758 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288C758 r5+0x0 s16 -8,0,8
+field 0288C758 r5+0x2 s16 -1
+field 0288C758 r5+0x4 u32 0x0288E660
+callee 0288C758 r5=8
+arg! 0288C818 r5 0x57000000
+arg 0288C818 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288C818 r5+0x0 s16 -8,0,8
+field 0288C818 r5+0x2 s16 -1
+field 0288C818 r5+0x4 u32 0x0288C600
+callee 0288C818 r5=8
+arg! 0288C8E4 r5 0x57000000
+arg 0288C8E4 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288C8E4 r5+0x0 s16 -8,0,8
+field 0288C8E4 r5+0x2 s16 -1
+field 0288C8E4 r5+0x4 u32 0x0288E718
+callee 0288C8E4 r5=8
+arg! 0288C9BC r5 0x57000000
+arg 0288C9BC r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288C9BC r5+0x0 s16 -8,0,8
+field 0288C9BC r5+0x2 s16 -1
+field 0288C9BC r5+0x4 u32 0x0288E724
+callee 0288C9BC r5=8
+arg! 0288CA70 r5 0x57000000
+arg 0288CA70 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288CA70 r5+0x0 s16 -8,0,8
+field 0288CA70 r5+0x2 s16 -1
+field 0288CA70 r5+0x4 u32 0x0288E72C
+callee 0288CA70 r5=8
+arg! 0288CB24 r5 0x57000000
+arg 0288CB24 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288CB24 r5+0x0 s16 -8,0,8
+field 0288CB24 r5+0x2 s16 -1
+field 0288CB24 r5+0x4 u32 0x0288E734
+callee 0288CB24 r5=8
+arg! 0288CBD8 r5 0x57000000
+arg 0288CBD8 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288CBD8 r5+0x0 s16 -8,0,8
+field 0288CBD8 r5+0x2 s16 -1
+field 0288CBD8 r5+0x4 u32 0x0288C638
+callee 0288CBD8 r5=8
+arg! 0288CCB0 r5 0x57000000
+arg 0288CCB0 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288CCB0 r5+0x0 s16 -8,0,8
+field 0288CCB0 r5+0x2 s16 -1
+field 0288CCB0 r5+0x4 u32 0x0288C648
+callee 0288CCB0 r5=8
+arg! 0288CD88 r5 0x57000000
+arg 0288CD88 r4 0,1,2,3,0x8000,0x8001,0x10000,0xFFFF,0xFFFFFFFF
+field 0288CD88 r5+0x0 s16 -8,0,8
+field 0288CD88 r5+0x2 s16 -1
+field 0288CD88 r5+0x4 u32 0x0288C688
+callee 0288CD88 r5=8
+ret 0288A750 0,0x58000000
+
+src wwhd_src/nw/snd/MemorySoundArchive.cpp
+# Archive group and entry walks use finite coherent callback output objects.
+ret! 0288E8F4 0,1,2
+callee 0288EEFC r5=inout12
+callee 0288EE74 r5=inout8
+callee 028AA7F4 r3=out12
+mockfield 028AA7F4 r3+0x0 u32 0x59000000
+field 0288A410 59000000 u32 0,1,2
+stable 59000000 4
+callee 028AA8FC r4=out8
+
+# Skip count is the driver's configured per-update limit, bounded for the generated fixture.
+field 0288AF88 101FC8D4 s32 0,1,2,4,8
+stable 101FC8D4 4
+# These pure compiler-runtime conversions give coherent 64-bit tick values.
+real 028F5678
+real 028F543C
+# Completion and continued-play driver callback cases are tested in separate profiles.
+ret! 0288AEDC 1
+
+src wwhd_src/nw/snd/TrackChannelRuntime.cpp
+src wwhd_src/nw/snd/SequenceResourceLoad.cpp
+# Bounded channel chain: three full channel objects, including nonempty traversal.
+arg! 0288D2E8 r3 0x5B000000
+field 0288D2E8 r3+0x1 u8 0,1
+field 0288D2E8 r3+0x214 u32 0x5C000000
+field 0288D2E8 r3+0x218 u32 0,0x5D000000
+# Only the channel-list head stays stable (bounded walk); the owner pointer is reloaded after calls and may change.
+stable 5B000218 4
+field 0288D2E8 r3+0x1F0 s32 -2,-1,0,1,2
+arg! 0288CE6C r3 0x5D000000,0x5D000300,0x5D000600
+arg! 0288CE6C r5 0x5B000000
+field 0288CE6C r5+0x214 u32 0
+field 0288CE6C r5+0x218 u32 0x5D000000
+field * 5D000238 u32 0x5D000300
+field * 5D000538 u32 0x5D000600
+field * 5D000838 u32 0
+stable 5D000238 4
+stable 5D000538 4
+stable 5D000838 4
+# Bank resolver input/output objects; dynamic constructor calls retain canonical metadata.
+callee 0289CEA0 r3=inout8 r4=inout1
+
+arg 0288BF64 r4 -1,0,15,16,31,32,33
+
+# Explicit forwarded receiver and SDK scalar facts; no shared metadata edited.
+callee 028F6A30 r3=0
+callee 028A370C r3=0
+callee C0006F20 r4=0
+callee 0288AD60 r4=44
+callee 0288BD14 r4=44
+
+# Exact public capacity/index/filter sentinels supplement broad generated values.
+arg 0288A5EC r5 0,27,28,29,32
+arg 0288BBA8 r4 0,14,15,16,31
+field 0288D2E8 5C00003C s8 -2,-1,0,1,2
+
+# Load-task pool: a waiting list whose front link belongs to a NULL task (link at task+0x9C) as well as real tasks.
+field 0288AB44 r3+0x2A8 u32 0,0x5E000000
+field 0288AB44 5E000014 u32 0,1,2
+field 0288AB44 5E000018 u32 0x9C,0x5E000100,0x5E00019C
+
+# Track index boundaries of getTrack.
+arg 0288A750 r4 -1,0,14,15,16,17
+
+# Sequence file id sentinel: no file to load (-1) next to real ids, with no sequence loaded yet.
+field 0288B678 r3+0x48 u32 0,0,0x5F000000
+field 0288B678 r3+0x44 u32 0xFFFFFFFF,0xFFFFFFFE,0,1

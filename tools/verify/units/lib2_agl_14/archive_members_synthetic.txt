@@ -1,0 +1,278 @@
+# verify: -only 027B744C,027B7780,027B7A48,027B7B1C,027B9268,027B814C,027B81E4,027B8EB0,027B8F48,027B90AC,027B7BE8,027B8024,027B7D78 -calleesp -strictnan
+# Shader-archive members over synthetic, field-built object graphs: archive, variations, program sets, programs and
+# their binaries with 0..3 entries, allocator/release slots and virtual destroy/terminate slots as mock-only callbacks.
+# Every callee is an opaque mock with its arguments compared. Qualified: the graphs are synthetic (not built by the
+# original constructors); counts the walks depend on are kept stable across mocked calls.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+callee 0F001400 fixture r3=0 r4=0 r5=0
+callee 0F001401 fixture r3=0 r4=0
+callee 0F001402 fixture r3=0 r4=0
+callee 0F001403 fixture r3=0
+callee 0F001404 fixture r3=0 r4=0
+alloc 0F001400 r4 0x5D000000 align=r5
+# a second heap whose allocation slot fails (returns NULL)
+callee 0F001405 fixture r3=0 r4=0 r5=0
+ret! 0F001405 0
+field * 0x5701100C u32 0x57012000
+field * 0x57012034 u32 0x0F001405
+stable 0x5701100C 4
+stable 0x57012034 4
+alloc 0273AD10 r3 0x5E000000
+ret! 02756140 0x57001000
+ret! 02755FEC 0x57001000
+field * 0x5700100C u32 0x57002000
+field * 0x57002034 u32 0x0F001400
+field * 0x5700203C u32 0x0F001401
+stable 0x5700100C 4
+stable 0x57002034 4
+stable 0x5700203C 4
+# virtual tables: destroy slot +0xC, SafeText terminate slot +0x14, callback update slot +0xC
+field * 0x5B30000C u32 0x0F001402
+field * 0x5B310014 u32 0x0F001403
+field * 0x5BD0000C u32 0x0F001404
+stable 0x5B30000C 4
+stable 0x5B310014 4
+stable 0x5BD0000C 4
+# programs[3] (stride 0x84): binary +0x7C, methods +0x80
+field * 0x5B00007C u32 0x5B900000
+field * 0x5B000100 u32 0x5B900100
+field * 0x5B000184 u32 0x5B900200
+field * 0x5B000080 u32 0x5B300000
+field * 0x5B000104 u32 0x5B300000
+field * 0x5B000188 u32 0x5B300000
+stable 0x5B00007C 0x110
+# binaries: name {text, vtable}, primary +8, variant count +0xC, variants +0x10, dimensions +0x14
+field * 0x5B900000 u32 0x5BE10000
+field * 0x5B900004 u32 0x5B310000
+field * 0x5B900008 u32 0x5BA00000
+field * 0x5B90000C u32 0,1,2,3
+field * 0x5B900010 u32 0x5BB00000
+field * 0x5B900014 u32 0,1,2,3
+field * 0x5B900100 u32 0x5BE20000
+field * 0x5B900104 u32 0x5B310000
+field * 0x5B900108 u32 0x5BA00000
+field * 0x5B90010C u32 0,1,2
+field * 0x5B900110 u32 0x5BB00000
+field * 0x5B900114 u32 0,1,2,3
+field * 0x5B900200 u32 0x5BE10000
+field * 0x5B900204 u32 0x5B310000
+field * 0x5B900208 u32 0x5BA00000
+field * 0x5B90020C u32 0,1,2
+field * 0x5B900210 u32 0x5BB00000
+field * 0x5B900214 u32 0,1,2,3
+stable 0x5B900000 0x18
+stable 0x5B900100 0x18
+stable 0x5B900200 0x18
+fieldstr * 0x5BE10000 16 "prog_a","prog_b","x"
+fieldstr * 0x5BE20000 16 "prog_b","prog_a","y"
+
+# constructors: NULL receiver allocates (the 0x34/0xF0/0x54 block), else placement
+arg! 027B744C r3 0,0x58000000
+arg! 027B7A48 r3 0,0x58000000
+arg! 027B7B1C r3 0,0x58000000
+
+# variation destroy: compiled/source objects with a destroy slot, selection storage
+arg! 027B9268 r3 0,0x58000000,0x58000000,0x58000000
+arg! 027B9268 r4 0,1,2,3
+field 027B9268 r3+0x24 u32 0,0x5B200000
+field 027B9268 r3+0x28 u32 0,0x5B100000
+field 027B9268 r3+0x2C u32 0,1,2,3
+field 027B9268 r3+0x30 u32 0,0x5B400000
+field * 0x5B100004 u32 0x5B300000
+field 027B9268 0x5B200004 u32 0x5B300000
+
+# archive release: programs with a destroy slot, filename
+arg! 027B7780 r3 0x58100000
+field 027B7780 r3+0x1C u32 0,1,2,3
+field 027B7780 r3+0x20 u32 0,0x5B000000
+field 027B7780 r3+0x2C u32 0,0x5BC10000
+stable 0x5810001C 4
+
+# program-set layout refresh: three layouts (stride 0x48 from +0xC), variation +0x44
+arg! 027B814C r3 0x58000000
+field 027B814C r3+4 u16 0,1,2,3,0xFFFF
+field 027B814C r3+8 u32 0x5B600000
+field 027B814C r3+0x50 u32 0,0x5B700000,0x5B700034
+field 027B814C r3+0x98 u32 0,0x5B700000,0x5B700068
+field 027B814C r3+0xE0 u32 0,0x5B700034,0x5B700068
+field 027B814C 0x5B700018 u32 0,1,2,3
+field 027B814C 0x5B70004C u32 0,1,2,3
+field 027B814C 0x5B700080 u32 0,1,2,3
+field 027B814C 0x5B60001C u32 0,1,2,3
+field 027B814C 0x5B600020 u32 0x5B000000
+
+# archive variation update: variations (stride 0x34, flags +0x18) and program sets (stride 0xF0)
+arg! 027B81E4 r3 0x58200000
+field 027B81E4 r3+0x34 u32 0,1,2,3
+field 027B81E4 r3+0x38 u32 0x5B800000
+field 027B81E4 r3+0x3C u32 0,1,2,3
+field 027B81E4 r3+0x40 u32 0x5B700000
+field 027B81E4 0x5B700018 u32 0,1,2,3
+field 027B81E4 0x5B70004C u32 0,1,2,3
+field 027B81E4 0x5B700080 u32 0,1,2,3
+stable 0x58200034 8
+stable 0x5820003C 4
+real 02760DE8
+real 02760E58
+real 02760E34
+callee 02760DE8 r3=8
+callee 02760E58 r3=8
+
+# program-set dirty mark
+arg! 027B8EB0 r3 0x58000000
+field 027B8EB0 r3+0xEC u8 0,1,3,9,255
+field 027B8EB0 r3+4 u16 0,1,2,3
+field 027B8EB0 r3+6 u16 0,1,2,3,4
+field 027B8EB0 r3+8 u32 0x5B600000
+field 027B8EB0 0x5B60001C u32 0,1,2,3
+field 027B8EB0 0x5B600020 u32 0x5B000000
+field 027B8EB0 0x5BA00000 u8 0,1,2,8,0xFF
+field 027B8EB0 0x5BB00000 u8 0,2,0xFD
+field 027B8EB0 0x5BB00084 u8 0,2,0xFD
+
+# archive program update
+arg! 027B8F48 r3 0x58300000
+arg! 027B8F48 r4 0,1
+field 027B8F48 r3+0x30 u16 0,1,2,0xFFFF
+field 027B8F48 r3+0x34 u32 0,1,2,3
+field 027B8F48 r3+0x38 u32 0x5B800000
+field 027B8F48 r3+0x1C u32 0,1,2,3
+field 027B8F48 r3+0x20 u32 0x5B000000
+field 027B8F48 r3+0x28 u32 0,0x5BC00000
+field 027B8F48 0x5BC00000 u32 0x5BD00000
+ret 027BBB9C 0,1
+stable 0x5830001C 4
+stable 0x58300030 2
+stable 0x58300034 4
+
+# program lookup by name
+arg! 027B90AC r3 0x58000000
+arg! 027B90AC r4 0x5BE30000
+field 027B90AC r3+0x1C u32 0,1,2,3
+field 027B90AC r3+0x20 u32 0x5B000000
+field 027B90AC 0x5BE30004 u32 0x5B310000
+fieldstr 027B90AC 0x5BE40000 16 "prog_a","prog_b","prog_c","x","y",""
+# names of 0x40000 equal bytes (terminated or not at the scan limit) reach the bounded compare's limit
+field 027B90AC 0x5B900000 u32 0x5BE10000,0x5C800000
+field 027B90AC 0x5BE30000 u32 0x5BE40000,0x5BE10000,0x5C900000
+fill 027B90AC 0x5C800000 0x40010 0x41
+fill 027B90AC 0x5C900000 0x40010 0x41
+field 027B90AC 0x5C840000 u8 0,0x41
+field 027B90AC 0x5C940000 u8 0,0x41
+field 027B90AC 0x5C840001 u8 0,0x41
+field 027B90AC 0x5C940001 u8 0,0x41
+
+# variation initialize: archive string/binary tables, selection storage from the heap
+arg! 027B7BE8 r3 0x58400000
+arg! 027B7BE8 r4 0x59000000
+arg! 027B7BE8 r5 0,1,2,3,65535,65536
+arg! 027B7BE8 r6 0x5A000000
+arg! 027B7BE8 r7 0,1
+arg! 027B7BE8 r8 0,0x57001000,0x57011000
+field 027B7BE8 r3+0x18 u32 0,1,2,3
+field 027B7BE8 r3+0x2C u32 0,1,2
+field 027B7BE8 r3+0x30 u32 0,0x5C500000
+field 027B7BE8 0x5A000000 u32 0x5B000000
+field 027B7BE8 0x5B000004 u32 0,4,16,32
+field 027B7BE8 0x5900003C u32 0,1,2,3
+field 027B7BE8 0x59000044 u32 0,1,2,3,4
+field 027B7BE8 0x59000048 u32 0x5C000100
+field 027B7BE8 0x5900004C u32 0,1,2,3,4
+field 027B7BE8 0x59000050 u32 0x5C000000,0x5C000000,0x58400008
+stable 0x5840002C 8
+
+# variation compile: compiled object with a destroy slot, archive tables, sibling variations' selection storage
+arg! 027B8024 r3 0x58500000
+field 027B8024 r3+0x14 u32 0,1,2,3
+field 027B8024 r3+0x18 u32 0,1,2,3,0xFFFFFFFD
+field 027B8024 r3+0x1C u32 0x59100000
+field 027B8024 r3+0x28 u32 0,0x5B100000
+field 027B8024 0x5910003C u32 0,1,2,3
+field 027B8024 0x59100040 u32 0x5B710000
+field 027B8024 0x59100044 u32 0,1,2,3
+field 027B8024 0x59100048 u32 0x5C000100
+field 027B8024 0x59100050 u32 0x5C000000
+field 027B8024 0x5B71002C u32 0,1,2,3
+field 027B8024 0x5B710030 u32 0x5C100000
+field 027B8024 0x5B710060 u32 0,1,2,3
+field 027B8024 0x5B710064 u32 0x5C100010
+field 027B8024 0x5B710094 u32 0,1,2,3
+field 027B8024 0x5B710098 u32 0x5C100020
+field 027B8024 0x101F8C14 u32 0x57300000
+callee 027C6060 r7=out1024
+stable 0x5910003C 8
+stable 0x5850001C 4
+
+# program-set initialize: per-stage variation indices, stage bindings, layout capacities from the layout initializer
+arg! 027B7D78 r3 0x58600000
+arg! 027B7D78 r4 0x59200000
+arg! 027B7D78 r5 0,1,2,3,65535,65536
+arg! 027B7D78 r6 0x5A100000
+field 027B7D78 r3+0xE4 u32 0,1,2
+field 027B7D78 r3+0xE8 u32 0,0x5C600000
+arg! 027B7D78 r7 0,0x57001000,0x57011000
+field 027B7D78 0x5A100000 u32 0x5B020000
+field 027B7D78 0x5B02000A u16 0xFFFF,0,1,2
+field 027B7D78 0x5B02000E u16 0xFFFF,0,1,2
+field 027B7D78 0x5B020012 u16 0xFFFF,0,1,2
+field 027B7D78 0x5920001C u32 0,1,2,3
+field 027B7D78 0x59200020 u32 0x5B000000
+field 027B7D78 0x5920003C u32 0,1,2,3
+field 027B7D78 0x59200040 u32 0x5B700000
+field 027B7D78 0x5B700020 u32 0x5C200000
+field 027B7D78 0x5B700054 u32 0x5C200100
+field 027B7D78 0x5B700088 u32 0x5C200200
+ret! 027BC654 0x5BF00000
+field 027B7D78 0x5BF00004 u32 0,1,2,3
+field 027B7D78 0x5BF00008 u32 0x20
+field 027B7D78 0x5BF0000C u32 4,8
+field 027B7D78 0x5BF00028 u32 0x20
+field 027B7D78 0x5BF0002C u32 4,8
+field 027B7D78 0x5BF00048 u32 0x20
+field 027B7D78 0x5BF0004C u32 4,8
+stable 0x5BF00000 0x70
+mockfield 027D3F1C r3+0x10 u32 0,1
+mockfield 027D3F1C r3+0x14 u32 0,1,2,3
+mockfield 027D3F1C r3+0x18 u32 0x5C300000
+mockfield 027D3F1C r3+0x1C u32 0,1
+mockfield 027D3F1C r3+0x20 u32 0,1,2,3
+mockfield 027D3F1C r3+0x24 u32 0x5C400000
+ret! 027BAC58 0x5BF10000
+stable 0x586000E4 8
+
+# the stack texts handed to the name hook and the compiler are compared at the call
+callee 02785CB4 r4=8
+callee 027C6060 r3=8
+# the compiler may retarget the variation to a second archive, the per-entry updates may change the variation count
+mockglobal 027C6060 0x5850001C u32 0x59100000,0x59180000
+field 027B8024 0x5918003C u32 0,1,2
+field 027B8024 0x59180040 u32 0x5B710000
+field 027B8024 0x59180044 u32 1,2,3
+field 027B8024 0x59180048 u32 0x5C000100
+stable 0x5918003C 8
+mockglobal 027B8024 0x5820003C u32 0,1,2,3
+mockglobal 027B814C 0x5820003C u32 0,1,2,3
+# frame contents (stack objects at the original's offsets)
+stackfill
+footprint 027B744C 0x18
+footprint 027B7BE8 0x18
+footprint 027B8024 0x418
+footprint 027B81E4 0x20
+footprint 027B8F48 0x20

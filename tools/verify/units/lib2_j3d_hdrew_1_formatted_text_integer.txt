@@ -1,0 +1,24 @@
+# GHS variadic entry adapter: exact own frame and two genuine fixed parameters.
+# The formatter remains an opaque typed consumer; this is not formatting-result credit.
+# verify: -only 027F76FC -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+# Only the formatted constructor is tested; inline constructors supply allocation binding.
+# readable-scope: 027F76FC
+cr 027F76FC 6 0
+stackfill
+arg! 027F76FC r3 0,0x71200000
+arg! 027F76FC r4 0x71201000
+fieldstr 027F76FC 71201000 32 "%u%u%u%u%u%u"
+arg! 027F76FC r5 0,1,255,0xFFFFFFFF
+arg! 027F76FC r6 0,1,0x12345678
+arg! 027F76FC r7 0,1,0x80000000
+arg! 027F76FC r8 0,1,0x11223344
+arg! 027F76FC r9 0,1,0x55667788
+arg! 027F76FC r10 0,1,0x99AABBCC
+alloc 0273AD10 r3 0x71210000 4
+observearg 02759C10 r5+0 112
+callcr 02759C10 6
+
+# Allocator output is disjoint from this readonly format string.
+stable 71201000 32

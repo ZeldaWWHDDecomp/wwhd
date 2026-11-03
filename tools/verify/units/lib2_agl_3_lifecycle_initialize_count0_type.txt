@@ -1,0 +1,8 @@
+# TYPE-DOMAIN: zero surface count approved by Lead2026-10-29 20:26 notice, correcting earlier positive-only note.
+# Fresh original constructor, original base initializer and real registered heaps retained; no produced fields poked.
+# verify: -strictnan -calleesp -only 027798F4
+include lib2_agl_3_initialize_arrays_api_alt.txt
+arg! 027798F4 r4 0
+arg! 027798F4 r5 0
+arg! 027798F4 r6 0,0x6A000000
+stackfill

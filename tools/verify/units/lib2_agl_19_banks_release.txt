@@ -1,0 +1,13 @@
+# AGL#19 banks: release of the spatial (027D22A8) and paired (027D2F9C) light collections as LightPrepass::configure
+# leaves them (fixture lib2_agl_19_banks_prepass_fixture.txt: 256 spatial / 128 paired records, one value each, records
+# and values from the world heap). The record release hook (spatial: AGL#18 027CE0C0; paired: the collection's own empty
+# hook), the uniform-buffer and sampler destructors and the heap free run real, as LightPrepass::destroy 027AEC5C reaches
+# them. Also after a first release (records NULL: the empty walk) through the original itself.
+# verify: -only 027D22A8,027D2F9C -strictnan -calleesp
+src wwhd_src/agl/LightCollectionRelease.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+real 027CE0C0 027D387C 027BEC90 027BE2B0
+arg! 027D22A8 r3 0x6A87F65C
+arg! 027D2F9C r3 0x6A87F780

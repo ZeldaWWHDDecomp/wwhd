@@ -1,0 +1,387 @@
+# NW-SND#8: all 97 owned bodies with coherent owned reader, singleton pool and approved filter fixtures.
+# verify: -only 0289D744 -strictnan -calleesp
+src wwhd_src/nw/snd/WaveArchiveReader.cpp
+stackfill
+# NW-SND#8 owned WaveArchive reader: coherent attached FWAR with three entries and an address cache.
+# Only owned helpers execute for real; no external list or resource-loader bodies are included.
+real 0289F908
+real 0289F938
+real 0289F960
+real 0289F988
+real 0289F9D8
+real 0289FA10
+real 0289FA7C
+real 0289FC08
+# The allocator either fails or returns the owned sixteen-byte reader storage.
+alloc 0273AD10 r3 0x5FA00000 16
+# Header and directory: supported signature/version; two distinct twelve-byte block entries.
+field * 5F900000 u32 0x46574152
+field * 5F900008 u32 0x10000
+field * 5F900014 u16 0x6800
+field * 5F900018 u32 0x100
+field * 5F900020 u16 0x6801
+field * 5F900024 u32 0x200
+field * 5F900108 u32 3
+field * 5F900110 u32 0x20
+field * 5F900114 u32 32
+field * 5F90011C u32 0x40
+field * 5F900120 u32 64
+field * 5F900128 u32 0x80
+field * 5F90012C u32 128
+field * 5F900200 u32 0x46574154
+field * 5F900204 u32 0,0x5F920000
+field * 5F900208 u32 0,0x5F921000
+field * 5F90020C u32 0,0x5F922000
+# Existing reader state agrees with attach(header,1): header, table+8, cache+4 and valid byte.
+field * 5F910000 u32 0x5F900000
+field * 5F910004 u32 0x5F900108
+field * 5F910008 u32 0x5F900204
+field * 5F91000C u8 1
+arg! 0289F908 r3 0x5F900000
+arg! 0289F938 r3 0x5F900000
+arg! 0289F960 r3 0x5F900000
+arg! 0289F988 r3 0x5F900000
+arg! 0289F9B0 r3 0x5F900000
+arg! 0289F9D8 r3 0x5F900000
+arg! 0289F908 r4 0x6800,0x6801,0,0xFFFFFFFF
+arg! 0289FA10 r3 0x5F910000
+arg! 0289FA7C r3 0x5F910000
+arg! 0289FBE4 r3 0x5F910000
+arg! 0289FC08 r3 0x5F910000
+arg! 0289FC28 r3 0x5F910000
+arg! 0289FC80 r3 0x5F910000
+arg! 0289FCA8 r3 0x5F910000
+arg! 0289FA7C r4 0,0x5F900000
+arg! 0289FA7C r5 0,1
+arg! 0289FB20 r3 0,0x5F910000
+arg! 0289FB20 r4 0,0x5F900000
+arg! 0289FB20 r5 0,1
+arg! 0289FB9C r3 0,0x5F910000
+# These three in-range entry indices are valid for the count-three directory.
+arg! 0289FC80 r4 0,1,2
+arg! 0289FCA8 r4 0,1,2
+src wwhd_src/nw/snd/AudioCurves.cpp
+# Bounded octave walks include both octave boundaries and fractional semitone edges.
+arg! 0289CCCC r3 -9217,-9216,-9215,-3073,-3072,-3071,-257,-256,-255,-1,0,1,255,256,257,3071,3072,3073,9215,9216,9217
+arg 0289CE3C r4 0,1,2,3,0xFFFFFFFF
+arg 0289CE3C r3 0,1,2,13,14,15,27,28,29,0xFFFFFFFF
+field 0289CAB4 r3+0 u32 0,1,2
+field 0289CC00 r3+0 u32 0,1,2
+field 0289CAB4 r3+4 u8 0,1
+field 0289CAB4 r3+5 u8 0,1
+field 0289CAB4 r3+6 u8 0,1
+arg 0289CAB4 r4 0,1,2,3
+
+src wwhd_src/nw/snd/AudioEventLog.cpp
+# Owned double buffer and legal event indices, including sentinel insertion at 62.
+arg! 0289D15C r3 0x5F200000
+field 0289D15C 5F200400 s32 0,1,61,62,63,64,65
+stable 5F200400 4
+arg! 0289D1D8 r3 0x5F210000
+arg! 0289D1FC r3 0x5F210000
+arg! 0289D220 r3 0x5F210000
+field * 5F210808 u32 0,0x5F210000,0x5F210404,0x5F220000
+arg 0289D108 r3 -1,0,1,126,127,128,0x80000000,0x7FFFFFFF
+
+src wwhd_src/nw/snd/PlaybackVoiceParameters.cpp
+# Two owned playback channel slots; counts include empty and signed-negative cases.
+arg! 0289D8DC r3 0x5F300000
+field 0289D8DC 5F300368 s32 -1,0,1,2
+arg! 0289EAB0 r3 0x5F300000
+field 0289EAB0 5F300368 s32 -1,0,1,2
+arg! 0289EAE8 r3 0x5F300000
+field 0289EAE8 5F300368 s32 -1,0,1,2
+arg! 0289ECC4 r3 0x5F300000
+field 0289ECC4 5F300368 s32 -1,0,1,2
+arg! 0289ECF8 r3 0x5F300000
+field 0289ECF8 5F300368 s32 -1,0,1,2
+arg 0289EEE8 r4 0,1,0xFFFFFFFF
+arg 0289EEFC r4 0,1,2,3,0xFFFFFFFF
+arg 0289ED28 r4 0,1,126,127,128,255,256,0xFFFFFFFF
+
+
+# Coherent singleton pool: one allocated active voice, no free voices; list bodies.
+real 0286DA70
+real 0286DA9C
+real 0286DACC
+real 0286DB18
+real 0289D254
+real 0289D3B4
+real 0289D4A4
+real 0289D598
+real 0289D6B0
+real 0289F364
+real 0289F45C
+real 0289F56C
+real 0289F628
+real 0289F758
+real 0289F7B0
+arg! 0289F3B0 r3 0x104BBE70
+arg! 0289F3B8 r3 0x104BBE70
+arg! 0289F45C r3 0x104BBE70
+arg! 0289F4E4 r3 0x104BBE70
+arg! 0289F56C r3 0x104BBE70
+arg! 0289F628 r3 0x104BBE70
+arg! 0289F694 r3 0x104BBE70
+arg! 0289F758 r3 0x104BBE70
+arg! 0289F7B0 r3 0x104BBE70
+arg! 0289F7B4 r3 0x104BBE70
+arg! 0289F82C r3 0x104BBE70
+arg! 0289F880 r3 0x104BBE70
+arg! 0289F8BC r3 0x104BBE70
+field * 104BBE70 u8 1
+field * 104BBE74 u32 1
+field * 104BBE78 u32 0x5F4104D0
+field * 104BBE7C u32 0x5F4104D0
+field * 104BBE80 u32 0
+field * 104BBE84 u32 0x104BBE84
+field * 104BBE88 u32 0x104BBE84
+field * 104BBE8C u32 1
+field * 5F4104D0 u32 0x104BBE78
+field * 5F4104D4 u32 0x104BBE78
+field * 5F410368 s32 1,2
+field * 5F41036C u32 0,0x0F080001
+field * 5F410370 u32 0,0x12345678
+field * 5F410374 u8 1
+field * 5F410375 u8 1
+field * 5F410376 u8 1
+field * 5F410380 u16 0
+field * 5F4103A0 s32 0,63,127
+# List topology changes only through the approved original list functions; these helpers do not touch callback ownership.
+stable 104BBE70 32
+stable 5F410368 12
+stable 5F410374 1
+stable 5F4104D0 8
+callee 0F080001 fixture r3=0 r4=0 r5=0
+callee 0286DA70 r4=4
+callee 0286DB18 r4=4
+ret! 028A5DE4 0,1
+# Priority insertion receives a detached, allocated candidate; reordering/releasing receives the active node.
+arg! 0289F628 r4 0x5F430000
+field * 5F430368 s32 1
+field * 5F430374 u8 1
+field * 5F4303A0 s32 0,63,127
+field * 5F4304D0 u32 0
+field * 5F4304D4 u32 0
+arg! 0289F758 r4 0x5F410000
+arg! 0289F7B0 r4 0x5F410000
+arg! 0289F8BC r4 0x5F410000
+field 0289F758 5F410368 s32 0
+field 0289F7B0 5F410368 s32 0
+arg! 0289F56C r4 0,63,127
+arg! 0289F694 r4 -1,0,1,2,3
+arg! 0289F694 r5 0,63,127
+arg! 0289F694 r6 0,0x0F080001
+arg! 0289F694 r7 0,0x12345678
+arg! 0289F694 r8 0
+# The list traversal's opaque playback check uses the allocated-but-not-running state and cannot release it.
+field 0289F82C 5F410376 u8 0
+# Initialization starts with both lists empty and a separately owned two-voice storage extent.
+field 0289F3B8 104BBE70 u8 0
+field 0289F3B8 104BBE74 u32 0
+field 0289F3B8 104BBE78 u32 0x104BBE78
+field 0289F3B8 104BBE7C u32 0x104BBE78
+arg! 0289F3B8 r4 0x5F420000
+arg! 0289F3B8 r5 0,1239,1240,1241,2479,2480,2481
+src wwhd_src/nw/snd/PlaybackVoicePool.cpp
+src wwhd_src/nw/snd/PlaybackVoice.cpp
+arg! 0289D30C r3 0x5F500000
+field 0289D30C 5F500368 s32 -1,0,1,2
+arg! 0289D598 r3 0x5F500000
+field 0289D598 5F500368 s32 -1,0,1,2
+arg! 0289D644 r3 0x5F500000
+field 0289D644 5F500368 s32 -1,0,1,2
+arg! 0289D708 r3 0x5F500000
+field 0289D708 5F500368 s32 -1,0,1,2
+arg! 0289D744 r3 0x5F500000
+field 0289D744 5F500368 s32 -1,0,1,2
+arg! 0289D910 r3 0x5F500000
+field 0289D910 5F500368 s32 -1,0,1,2
+arg! 0289EC48 r3 0x5F500000
+field 0289EC48 5F500368 s32 -1,0,1,2
+stable 5F500368 4
+field 0289D744 5F50036C u32 0
+stable 5F50036C 4
+arg 0289D4A4 r4 -1,0,1,2,3,0x7FFFFFFF
+field 0289D708 5F50037C u32 0,0x5F510000
+field 0289D708 5F510018 u32 0,1,2,3,0xFFFFFFFF
+field 0289D910 101FD8C8 u32 0,1
+
+src wwhd_src/nw/snd/AdpcmDecode.cpp
+arg! 0289EFFC r5 0,1,13,14,15,27,28,29
+arg 0289EF7C r3 0,1,13,14,15,27,28,29,0xFFFFFFFF
+arg 0289EFAC r4 0,1,2,3,0xFFFFFFFF
+arg 0289F174 r4 0,1,0xFFFFFFFF
+arg 0289F1D0 r4 0,1,0xFFFFFFFF
+callee C0006C98 r3=32 r4=inout96 r5=0 r6=out28
+
+src wwhd_src/nw/snd/WaveResourceResolver.cpp
+src wwhd_src/nw/snd/AudioWorkerRun.cpp
+# A bounded owned reference table. Both absence and nonempty reference resolution are exercised.
+ret! 028A3518 0,0x5F600000
+field * 5F600000 u32 0,1,2
+stable 5F600000 4
+callee 028A32C8 r3=out16
+callee 028A3518 r3=16
+callee 0288ED64 r5=inout12
+callee 0289FB20 r3=out16
+callee 028A02F0 r3=out8
+callee 028A0498 r4=inout24
+arg! 0289C998 r3 0x5F610000
+# External shutdown requests at a work boundary,.
+field 0289C998 5F610708 u8 0,1
+mockglobal 0289C61C 5F610708 u8 0,0,0,1
+mockglobal 0289C3D8 5F610708 u8 0,0,0,1
+
+src wwhd_src/nw/snd/PlaybackVoiceUpdate.cpp
+src wwhd_src/nw/snd/PlaybackMix.cpp
+arg! 0289E34C r3 0x5F500000
+field 0289E34C 5F500368 s32 -1,0,1,2
+arg! 0289E4E4 r3 0x5F500000
+field 0289E4E4 5F500368 s32 -1,0,1,2
+arg! 0289E594 r3 0x5F500000
+field 0289E594 5F500368 s32 -1,0,1,2
+arg! 0289E69C r3 0x5F500000
+field 0289E69C 5F500368 s32 -1,0,1,2
+arg! 0289E81C r3 0x5F500000
+field 0289E81C 5F500368 s32 -1,0,1,2
+arg! 0289E888 r3 0x5F500000
+field 0289E888 5F500368 s32 -1,0,1,2
+arg! 0289E8F4 r3 0x5F500000
+field 0289E8F4 5F500368 s32 -1,0,1,2
+
+arg 0289D9B8 r7 0,1,2
+arg 0289D9B8 r6 0,1,2
+arg 0289E32C r4 0,1
+callee 0289D9B8 r4=out28
+callee 0289DFE4 r4=out96
+callee 0289E1B0 r4=out96
+callee 0289E32C r5=out96
+callee 0289E1C0 r4=inout33
+callee 028A6170 r4=33
+callee 028A61B4 r5=10
+
+# Mock-only voice observer ABI; no callback writes are assumed.
+callee 0F080001 fixture r3=0 r4=0 r5=0
+stable 5F41036C 4
+# Stereo speaker calculation uses both allocated channels and all explicit pan-curve variants.
+arg! 0289D9B8 r3 0x5F500000
+arg! 0289D9B8 r4 0x5F710000
+arg! 0289D9B8 r5 0x5F700000
+arg! 0289D9B8 r6 0,1
+arg! 0289D9B8 r7 0,1,2
+field 0289D9B8 5F500368 s32 2
+field 0289D9B8 5F500390 u32 0,1
+field 0289D9B8 5F500394 u32 0,1,2,3,4,5,6,7,8,9
+field 0289D9B8 5F700004 u32 0,1
+field 0289D9B8 101FCE04 u32 0,1,2,3
+field 0289D9B8 101FCE08 u32 0,1,2,3
+field 0289D9B8 101FCE0C u32 0,1,2,3
+field 0289D9B8 101FCE10 u32 0,1,2,3
+field 0289D9B8 101FCE14 u32 0,1,2,3
+field 0289D9B8 101FCE18 u32 0,1,2,3
+stable 101FCE04 24
+stable 5F700000 80
+stable 5F500390 8
+
+# Constructor fixtures start from an empty singleton; allocations remain separately owned.
+real 0289F2C4
+field 0289F210 104BBE70 u8 0
+field 0289F210 104BBE74 u32 0
+field 0289F210 104BBE78 u32 0x104BBE78
+field 0289F210 104BBE7C u32 0x104BBE78
+field 0289F210 104BBE80 u32 0
+field 0289F210 104BBE84 u32 0x104BBE84
+field 0289F210 104BBE88 u32 0x104BBE84
+field 0289F210 104BBE8C u32 0,1
+field 0289F26C 104BBE70 u8 0
+field 0289F26C 104BBE74 u32 0
+field 0289F26C 104BBE78 u32 0x104BBE78
+field 0289F26C 104BBE7C u32 0x104BBE78
+field 0289F26C 104BBE80 u32 0
+field 0289F26C 104BBE84 u32 0x104BBE84
+field 0289F26C 104BBE88 u32 0x104BBE84
+field 0289F26C 104BBE8C u32 0,1
+field 0289F2C4 104BBE70 u8 0
+field 0289F2C4 104BBE74 u32 0
+field 0289F2C4 104BBE78 u32 0x104BBE78
+field 0289F2C4 104BBE7C u32 0x104BBE78
+field 0289F2C4 104BBE80 u32 0
+field 0289F2C4 104BBE84 u32 0x104BBE84
+field 0289F2C4 104BBE88 u32 0x104BBE84
+field 0289F2C4 104BBE8C u32 0,1
+field 0289F364 104BBE70 u8 0
+field 0289F364 104BBE74 u32 0
+field 0289F364 104BBE78 u32 0x104BBE78
+field 0289F364 104BBE7C u32 0x104BBE78
+field 0289F364 104BBE80 u32 0
+field 0289F364 104BBE84 u32 0x104BBE84
+field 0289F364 104BBE88 u32 0x104BBE84
+field 0289F364 104BBE8C u32 0,1
+arg! 0289F210 r3 0,0x5FA01000
+arg! 0289F26C r3 0,0x5FA01000
+arg! 0289F2C4 r3 0,0x5FA01000
+
+# Direct release/update receivers are the active singleton node, with real list transitions.
+field 0289D598 104BBE78 u32 0x5F5004D0
+field 0289D598 104BBE7C u32 0x5F5004D0
+field 0289D598 5F5004D0 u32 0x104BBE78
+field 0289D598 5F5004D4 u32 0x104BBE78
+field 0289D598 5F500374 u8 1
+field 0289D598 5F500375 u8 1
+field 0289D598 5F500376 u8 1
+field 0289D744 104BBE78 u32 0x5F5004D0
+field 0289D744 104BBE7C u32 0x5F5004D0
+field 0289D744 5F5004D0 u32 0x104BBE78
+field 0289D744 5F5004D4 u32 0x104BBE78
+field 0289D744 5F500374 u8 1
+field 0289D744 5F500375 u8 1
+field 0289D744 5F500376 u8 1
+stable 5F500374 3
+stable 5F5004D0 8
+
+# filter contract: five exact pure callbacks initialize all five coefficient halfwords.
+real 028A37D0
+callee 028A37D0 r5=out10
+real 028A3844
+callee 028A3844 r5=out10
+real 028A38B8
+callee 028A38B8 r5=out10
+real 028A393C
+callee 028A393C r5=out10
+real 028A39C0
+callee 028A39C0 r5=out10
+arg! 0289E594 r3 0x5F500000
+field 0289E594 5F500368 s32 1,2
+field 0289E594 5F500382 u8 0,1,2,3,4,5,6,127
+field 0289E594 5F50039C f32 0,0.25,0.5,1
+field 0289E594 101FD8C8 u32 1
+fill 0289E594 101FD010 512 0
+# The initialized 128-slot table has only the five registered filters; other in-range types stay null.
+field 0289E594 101FD014 u32 0x104B71D8
+field 0289E594 104B71D8 u32 0x10186C4C
+field 0289E594 10186C60 u32 0x028A37D0
+field 0289E594 101FD018 u32 0x104B71DC
+field 0289E594 104B71DC u32 0x10186C64
+field 0289E594 10186C78 u32 0x028A3844
+field 0289E594 101FD01C u32 0x104B71E0
+field 0289E594 104B71E0 u32 0x10186C7C
+field 0289E594 10186C90 u32 0x028A38B8
+field 0289E594 101FD020 u32 0x104B71E4
+field 0289E594 104B71E4 u32 0x10186C94
+field 0289E594 10186CA8 u32 0x028A393C
+field 0289E594 101FD024 u32 0x104B71E8
+field 0289E594 104B71E8 u32 0x10186CAC
+field 0289E594 10186CC0 u32 0x028A39C0
+# Pure callbacks and channel setters preserve controller selection and the initialized filter registry.
+stable 5F500368 4
+stable 5F500382 1
+stable 5F50039C 4
+stable 101FD8C8 4
+stable 101FD010 512
+stable 104B71D8 20
+stable 10186C4C 120
+callee 028A61B4 r5=10
+
+# Both approved mock-only observer events are reachable with the coherent active singleton voice.
+field 0289D744 5F50036C u32 0,0x0F080001

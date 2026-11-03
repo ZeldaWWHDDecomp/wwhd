@@ -1,0 +1,16 @@
+# verify: -strictnan -calleesp -only 0279515C
+# Preserve full SSAO uniform observation; construct and consume the actual render state and viewport.
+include lib2_agl_8_ssao_observed_group.txt
+real 0274FDBC 0274FEB0 0274F5F0 0274F53C 0274F964 0274F698 0274F8D8
+# CompactRenderState fields consumed by apply, excluding padding and the unused table.
+observearg 0274FEB0 r3+0 2
+observearg 0274FEB0 r3+0x4 8
+observearg 0274FEB0 r3+0xC 1
+observearg 0274FEB0 r3+0x10 40
+observearg 0274FEB0 r3+0x38 1
+observearg 0274FEB0 r3+0x3C 13
+observearg 0274FEB0 r3+0x4C 32
+observearg 0274FEB0 r3+0x6C 3
+# The no-blur path's original viewport call reads rectangle/orientation and logical frame.
+observearg 0274F964 r3+0 20 if lr=0279588C
+observearg 0274F964 r4+0 24 if lr=0279588C

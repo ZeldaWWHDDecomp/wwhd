@@ -1,0 +1,111 @@
+# The 22 deleting text destructors on real heap objects (flags 0..3, release through the real heap).
+# Actual createAt/allocate/registered-release helpers; no allocated result or heap lookup pinned.
+# verify: -strictnan -calleesp -only 027C49A4,027C49D4,027C49E8,027C49FC,027C4A10,027C4A24,027C4B58,027C4B6C,027C4B80,027C4B94,027C5898,027C58C8,027C5950,027C5964,027C5A98,027C6B84,027C6BB4,027C6C2C,027C6C40,027CAAFC,027CAB14,027CAB44
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 0273B0D4 02753D6C 027536F4 02753628 027536B0 0273AF40 02755FEC 027556FC 02754754 027540AC 027600EC 027601BC 027601F0 028F521C
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x5B006000 r6=0
+setup * 0273B0D4 r3=0x200 r4=0x6A000000 r5=4
+arg! * r3 0,0x6A0000C8
+arg! * r4 0,1,2,3
+footprint 027C49A4 0
+footprint 027C49D4 0
+footprint 027C49E8 0
+footprint 027C49FC 0
+footprint 027C4A10 0
+footprint 027C4A24 0
+footprint 027C4B58 0
+footprint 027C4B6C 0
+footprint 027C4B80 0
+footprint 027C4B94 0
+footprint 027C5898 0
+footprint 027C58C8 0
+footprint 027C5950 0
+footprint 027C5964 0
+footprint 027C5A98 0
+footprint 027C6B84 0
+footprint 027C6BB4 0
+footprint 027C6C2C 0
+footprint 027C6C40 0
+footprint 027CAAFC 0
+footprint 027CAB14 0
+footprint 027CAB44 0
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+field * 104A030C s32 1
+field * 104A0310 s32 1
+field * 104A0314 u32 0x5B007000
+field * 5B007000 u32 0x6A000000
+field * 104A0364 s32 0
+fill * 6A000000 512 0
+fill * 5B006000 8 0
+field * 5B006000 u32 0x5B006100
+field * 5B006004 u32 0x1016A368
+fill * 5B006100 32 0
+fieldstr * 5B006100 32 "fixture-heap"
+fill * 5D430000 8 0
+# Manager presence is published only after actual heap construction and allocation.
+poke * 101F8B4C u32 0x5D430000
+# Same bounded registry-lock preservation model as accepted AGL17 real-heap recipe.
+# Real allocator/release writes remain compared; these are not arena write exemptions.
+# Exclude the60B unused heap mutex subobject54..8F, including SDK init output.
+stable 6A000000 0x54
+stable 6A000090 0xFFF70
+stable 5D430000 8
+stable 101F8B4C 4
+stable 101F8B94 4
+stable 104A030C 12
+stable 104A0364 12
+stable 5B007000 4
+mockset C000A858 r3 r4 r5
+# Observe actual free/used list metadata and first block header in every branch.
+# These are comparisons only, never input/output pokes.
+# These22 leaves never read a text header/payload/vtable: no text-capacity or rich-object lifecycle claim.
+# Allocation return6A0000C8/header6A0000B8 remain conditional until actual setup/free trace witnesses them.
+# Do not transfer this domain to5178/5740/58DC/6BC8; those have extra ownership/handle/payload effects.
+final 027C49A4 6A000098 20
+final 027C49D4 6A000098 20
+final 027C49E8 6A000098 20
+final 027C49FC 6A000098 20
+final 027C4A10 6A000098 20
+final 027C4A24 6A000098 20
+final 027C4B58 6A000098 20
+final 027C4B6C 6A000098 20
+final 027C4B80 6A000098 20
+final 027C4B94 6A000098 20
+final 027C5898 6A000098 20
+final 027C58C8 6A000098 20
+final 027C5950 6A000098 20
+final 027C5964 6A000098 20
+final 027C5A98 6A000098 20
+final 027C6B84 6A000098 20
+final 027C6BB4 6A000098 20
+final 027C6C2C 6A000098 20
+final 027C6C40 6A000098 20
+final 027CAAFC 6A000098 20
+final 027CAB14 6A000098 20
+final 027CAB44 6A000098 20
+final 027C49A4 6A0000B8 20
+final 027C49D4 6A0000B8 20
+final 027C49E8 6A0000B8 20
+final 027C49FC 6A0000B8 20
+final 027C4A10 6A0000B8 20
+final 027C4A24 6A0000B8 20
+final 027C4B58 6A0000B8 20
+final 027C4B6C 6A0000B8 20
+final 027C4B80 6A0000B8 20
+final 027C4B94 6A0000B8 20
+final 027C5898 6A0000B8 20
+final 027C58C8 6A0000B8 20
+final 027C5950 6A0000B8 20
+final 027C5964 6A0000B8 20
+final 027C5A98 6A0000B8 20
+final 027C6B84 6A0000B8 20
+final 027C6BB4 6A0000B8 20
+final 027C6C2C 6A0000B8 20
+final 027C6C40 6A0000B8 20
+final 027CAAFC 6A0000B8 20
+final 027CAB14 6A0000B8 20
+final 027CAB44 6A0000B8 20

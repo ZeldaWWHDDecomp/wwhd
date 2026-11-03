@@ -1,0 +1,15 @@
+# verify: -strictnan -only 0279599C -noclobber
+# ssaorender: lib2_agl_8_ssaorender_core_bind_resize_visible on the
+# expanded caller-visible base (no footprint/-calleesp frame checks): the same lines added to the same profile, so the
+# only difference to lib2_agl_8_ssaorender_core_bind_resize_visible is the absence of the footprint lines. For the
+# item-12 survival of frame-shift mutants whose store only runs on a resized (history re-acquire) frame.
+include lib2_agl_8_mode0_core_owner_controls_api_group_visible.txt
+arg! 0279599C r5 64,0x80
+arg! 0279599C r6 64,0x48
+real 027BE53C 027BE494 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8 0274D4C0
+observenested C0006470 r3+0xAC 8
+observenested C0006470 r3+0xE0 4
+observenested C0006478 r3+0xB4 4
+observenested C0006448 r3+0xB8 12
+observenested C00068F8 r3+0x24 4
+observenested C00068F8 r3+0x2C 4

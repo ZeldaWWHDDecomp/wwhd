@@ -1,0 +1,7 @@
+# TYPE-DOMAIN: real AGL depth TextureSampler producers, original ParameterBase::applyResource inputs and approved zero-DL model.
+# Cover depth/main-AA/fallback groups together. These fields belong to caller-owned parameter resources;
+# original0279EB28 applies them to the original-produced object. No shader or produced object fields are poked.
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_lane_lifecycle_quality_luma_zerodl_type.txt
+field 0277AD60 5D52000C u8 0,1
+field 0277AD60 5D52002C f32 0.0,0.125,0.5,1.0

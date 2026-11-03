@@ -1,0 +1,12 @@
+# AGL#18 027CC78C first-draw companion.  The included profile constructs the
+# archive, renderer, context, packet provider, and record through original
+# game producers.  The retained original selector trace identifies the
+# selected shipped program as 6A19DFB8 for the fixed kind-0/format-1 selector
+# tuple.  This draw wrapper has no archive-binary link, so the archive-program
+# dirty API does not apply; steer its validated first-draw lifecycle byte.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context.txt
+
+# Producer-valid base flags make the selected variant deterministic.
+poke * 59100000 u16 1
+poke * 6A19DFB8 u8 2

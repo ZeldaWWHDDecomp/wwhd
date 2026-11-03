@@ -1,0 +1,78 @@
+#pragma once
+#include "wwhd.h"
+struct JPASweepShapeData {
+    be<u32> mFlags;
+    be<f32> mPosRndm;
+    be<f32> mBaseVel;
+    be<f32> mBaseVelRndm;
+    be<f32> mVelInfRate;
+    be<f32> mGravity;
+    be<f32> mTiming;
+    be<s16> mLife;
+    be<s16> mRate;
+    be<u8> mStep;
+    u8 mStepPadding[3];
+    be<f32> mScaleX;
+    be<f32> mScaleY;
+    be<f32> mRotateSpeed;
+    be<f32> mInheritScale;
+    be<f32> mInheritAlpha;
+    be<f32> mInheritRGB;
+    GXColor mPrm;
+    GXColor mEnv;
+    be<u8> mTextureIndex;
+    u8 mTailPadding[3];
+};
+struct JPASweepShapeStaticBlock { be<u32> mWords[4]; };
+class JPASweepShapeArc {
+public:
+    u8 getType();
+    u8 getDirType();
+    u8 getRotType();
+    u8 getBasePlaneType();
+    s16 getLife();
+    s16 getRate();
+    f32 getTiming();
+    u32 getStep();
+    f32 getPosRndm();
+    f32 getVelInfRate();
+    f32 getBaseVel();
+    f32 getBaseVelRndm();
+    f32 getGravity();
+    u32 isEnableField();
+    u32 isEnableDrawParent();
+    u32 isEnableScaleOut();
+    u32 isEnableAlphaOut();
+    u32 isEnableRotate();
+    u32 isInheritedScale();
+    u32 isInheritedAlpha();
+    u32 isInheritedRGB();
+    u8 getTextureIndex();
+    f32 getScaleX();
+    f32 getScaleY();
+    u32 getPrm();
+    u32 getEnv();
+    u8 getPrmAlpha();
+    u8 getEnvAlpha();
+    f32 getRotateSpeed();
+    f32 getInheritScale();
+    f32 getInheritAlpha();
+    f32 getInheritRGB();
+    gptr<void> mVtable;
+    gptr<const JPASweepShapeData> mpData;
+    // HD: gamma-converted colors are cached in the archive object.
+    GXColor mPrm;
+    GXColor mEnv;
+};
+WWHD_SIZE(JPASweepShapeData,0x48);
+WWHD_OFFSET(JPASweepShapeData,mScaleX,0x24);
+WWHD_OFFSET(JPASweepShapeData,mPrm,0x3c);
+WWHD_OFFSET(JPASweepShapeArc,mpData,4);
+WWHD_OFFSET(JPASweepShapeArc,mPrm,8);
+WWHD_OFFSET(JPASweepShapeArc,mEnv,12);
+WWHD_SIZE(JPASweepShapeArc,16);
+WWHD_SIZE(JPASweepShapeStaticBlock,16);
+f64 JPASweepPow(f64,f64);
+f64 JPASweepColorComponent(u32);
+void JPASweepConvertColor(GXColor*);
+void JPASweepShapeConstructRegister(void*);

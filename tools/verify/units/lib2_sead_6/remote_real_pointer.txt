@@ -1,0 +1,49 @@
+# verify: -only 0273DA78
+# Actual pointer-state helper commutes with disjoint stick-component writes on remote controller objects.
+# Run with -only0273DA78; other original helpers compile as real support only.
+# Link own-unit support bindings; the invocation keeps the explicit test-address scope.
+src wwhd_src/sead/Foundation.cpp
+src wwhd_src/sead/Checksum.cpp
+src wwhd_src/sead/MemberDispatch.cpp
+src wwhd_src/sead/RuntimeType.cpp
+src wwhd_src/sead/InputState.cpp
+src wwhd_src/sead/Allocation.cpp
+src wwhd_src/sead/Controller.cpp
+src wwhd_src/sead/ControllerConstruction.cpp
+src wwhd_src/sead/FoundationObjects.cpp
+src wwhd_src/sead/DeviceBuffers.cpp
+src wwhd_src/sead/ReportListeners.cpp
+src wwhd_src/sead/ControllerManager.cpp
+src wwhd_src/sead/Reports.cpp
+src wwhd_src/sead/ControllerMapping.cpp
+src wwhd_src/sead/DeviceConstruction.cpp
+src wwhd_src/sead/TabletMotor.cpp
+src wwhd_src/sead/RemoteInput.cpp
+src wwhd_src/sead/TabletInput.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+real 0273BE34
+ret! 0273CB8C 0,0x54006000
+field * 54006AD4 s32 -1,0,1,2,3,8,16
+field * 54006AD8 s32 -2,-1,0
+field * 54008018 s32 -1,0,1,16
+field * 5400801C s32 -2,-1,0
+field * 54008F20 s32 -1,0,1,16
+field * 54008F24 s32 -2,-1,0
+field * 54009E28 s32 -1,0,1,16
+field * 54009E2C s32 -2,-1,0
+field * 5400AD30 s32 -1,0,1,16
+field * 5400AD34 s32 -2,-1,0
+field 0273DA78 r3+0x15C s32 -1,0,1,2,3,4
+field 0273DA78 r3+0x162 u8 0,1,2
+field 0273DA78 54007174 u8 0,1,2,6,7,31,252,253,255
+field 0273DA78 54007176 s8 -1,0,1
+field 0273DA78 5400807C u8 0,1,2,6,7,31,252,253,255
+field 0273DA78 5400807E s8 -1,0,1
+field 0273DA78 54008F84 u8 0,1,2,6,7,31,252,253,255
+field 0273DA78 54008F86 s8 -1,0,1
+field 0273DA78 54009E8C u8 0,1,2,6,7,31,252,253,255
+field 0273DA78 54009E8E s8 -1,0,1
+# Output destinations keep raw-address equality; compare the complete saved variadic argument object.
+callee 028F17A8 r3=0
+callee 028F1748 r3=0 r6=112
+callee 0273B158 r4=112

@@ -1,5 +1,6 @@
 /* Heap entry adapters: array allocation, delete, current-heap lookup and switching.
- * Verified WWHD behavior. */
+ * Verified WWHD behavior; */
+#include "bindings.h"
 #include "JSystem/JKRHeap_adapters.h"
 
 using namespace heap_adapters;

@@ -1,0 +1,9 @@
+# Focused bounded selector for the source-defined eleven-color PipelineColorTable_l.
+# color returns &mColors[index] for 0..10 and null for every index >=11.
+# The 0xB4-byte table contains all 11 sixteen-byte ColorChannels records.
+# verify: -only 027F9F0C -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+arg! 027F9F0C r3 0x62000000
+arg! 027F9F0C r4 0,1,2,3,4,5,6,7,8,9,10,11,12,0xFFFFFFFF
+fill 027F9F0C 0x62000000 0xB4 165
+final 027F9F0C 0x62000000 0xB4

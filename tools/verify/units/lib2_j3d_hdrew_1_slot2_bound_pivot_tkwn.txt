@@ -1,0 +1,66 @@
+# slot2 companion: indexed texture parameters on a material BOUND by the original 027731C8 (the bound state after 027731C8 is the domain). Same recipe as lib2_agl_2/lookup_esa_pair_alt
+# (shipped caller 02602BC8: SZS decoded by 0275ED14, program archive 027B744C/027B8904/027B9070 over the member
+# sharcfb, selection SafeString "Mat", 027732B0 on the FMDL of index-group entry 1 -> 027731C8), on the shipped
+# Tkwn.szs instead of Esa.szs: esa.sharcfb has no texmtxN symbol, tn_ken1.sharcfb program m_tn_ken1_tuba1 has
+# texpivot0 (752) and texmtx0 (272). Layout (decoded SARC 0x18000): tn_ken1.sharcfb +0x2000, Tkwn.bfres +0xE000,
+# FMDL tn_ken1 +0xE0CC, FMAT m_tn_ken1_tuba1 +0xE390 (texpivot0 = record 0, linked record 13 = texmtx0).
+# Parameter set built as in lib2_j3d_hdrew_1_color_apply_esa_alt (027DCFF8 + 027DD0BC + 027DD298), real formatter
+# closure as in batch_real_formatter; then one original 027DD468 update (buffer 0) consumes the initial all-dirty
+# state of 027DD298, as after a drawn frame (its GPU uniform writer 027E640C stays mocked: the fixture has no GPU
+# uniform buffer). No record, offset or dirty-bit pokes.
+# verify: -only 027FA678,027FA7F8,027FA974 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+include shared/agl_world.txt
+setupsnapshot
+stackfill
+
+blob * 0x64000000 content/Common/Object/Tkwn.szs 0 0x54C0
+stable 0x64000000 0x54C0
+fill * 0x64100000 0x18000 0
+stable 0x64100000 0x18000
+setup * 0275ED14 r3=0x64100000 r4=0x18000 r5=0x64000000
+
+fill * 0x64200000 0x300 0
+stable 0x64200000 0x300
+field * 0x64200100 u32 0x64102000
+setup * 027B744C r3=0x64200000
+setup * 027B8904 r3=0x64200000 r4=0x64200100 r5=0x64200104 r6=0 r7=0x6A000000
+setup * 027B9070 r3=0x64200000
+field * 0x64200200 u32 0x100E1920
+field * 0x64200204 u32 0x100E1858
+stable 0x64200200 8
+setup * 027732B0 r3=0x6410E0CC r4=0x64200000 r5=0x64200200
+real 02759B38 0275ED14 0275EB8C 0275EBC0 027732B0 027731C8 027BC540 0277367C 027BD2B0 02603298
+
+fill * 0x65000000 0x3C 0
+fill * 0x65001000 0x114 0
+fill * 0x65000100 0x30 0
+field * 0x65000100 u32 0x6410E390
+field * 0x65000104 u32 2
+field * 0x65000108 u32 0
+field * 0x6500010C u32 0
+setup * 027DCFF8 r3=0x65000100
+setup * 027DD0BC r3=0x65000000 r4=0x65000100 r5=0x65001000 r6=0x114
+postsetup * 027DD298 r3=0x65000000
+# consume the initial dirty state once with the original per-frame update 027DD468 (buffer 0), so later marks are visible
+postsetup * 027DD468 r3=0x65000000 r4=0
+real 027DD468 027DBBB0 027DBC00 027E64B4 027E66B4 027DBBEC
+real 027DCFF8 027DCF64 027DD0BC 028F5914 027DD024 027DD298 027DF9B0 027DF8B4 027DEFE4 027F9F0C 027FB3B4 027FB3B8 02759C10 027382E8
+real 02759BA0 02759C10 02759C28 028F03F4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C 028F0DBC 028F0DF4 028F10B8 028F1108 028F1158 028F11BC 028F1748 028F1904 028F5228 028F5C88 028F5DE8 028F5DFC 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 028F61D0 028F61E8 028F61FC 028F6228 028F6240 028F6254 028F171C 028F60E0 028F60E8 028F60F0 028F6130 028F6158 028F615C 028F6184 028F61AC 028F61B0 028F61D8 028F61DC 028F61E0 028F61E4 028F61EC 028F61F0 028F61F4 028F61F8 028F6200 028F6230 028F6234 028F6238 028F623C 028F6244 028F6248 028F624C 028F6250 028F6258 027F76E4
+mockmove C0009988 r3 r4 r5
+
+arg! 027FA678 r3 0x65000000
+arg! 027FA678 r4 -1,0,1,2,3,4,7,8,0x80000000,0x7FFFFFFF
+arg! 027FA7F8 r3 0x65000000
+arg! 027FA7F8 r4 -1,0,1,2,3,4,7,8,0x80000000,0x7FFFFFFF
+arg! 027FA974 r3 0x65000000
+arg! 027FA974 r4 -1,0,1,2,3,4,7,8,0x80000000,0x7FFFFFFF
+arg! 027FA974 r5 0,0x5D500000
+fill * 0x5D500000 4 165
+final 027FA678 0x65000000 0x3C
+final 027FA7F8 0x65000000 0x3C

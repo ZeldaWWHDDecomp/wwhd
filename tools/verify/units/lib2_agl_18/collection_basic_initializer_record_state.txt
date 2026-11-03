@@ -1,0 +1,23 @@
+# Basic collection initializer with a bounded derived dispatch table.
+# The shipped point-record callbacks intentionally rewrite the record defaults
+# after 027D0474 creates them.  Replace only SetRecordEnabled and
+# InitializeRecord with the game's own empty hook so this profile observes the
+# initializer-owned record state; allocator, value, and buffer paths stay real.
+# verify: -only 027D0474 -strictnan -calleesp -footprint
+include lib2_agl_18/collection_basic_positive256_nullheap_dirty_arena.txt
+# RenderSelectionDispatch_l::mSetRecordEnabled.mFunction (0xB8 + 4).
+field * 0x1016AE3C u32 0x027D10F4
+# RenderSelectionDispatch_l::mInitializeRecord.mFunction (0xE0 + 4).
+field * 0x1016AE64 u32 0x027D10F4
+real 027D10F4
+# First survey group: record-owned default stores and their local ordering only.
+# IDs 2,5,8,14,16,22,23,26,28,33,34,38,43,46,49,50,52,55,59,64,
+# 69,72,73,74,79,80,83,87,88,93,94,96,103,109,110,112,115,116,
+# 121,136,137,142,143,152,153,155,157,163,164.
+# Allocation, loop-bound, collection-field, value-record, and fence variants are
+# deliberately left to their own profiles/source dispositions.
+# n1000 seed1 result: 49 compiled, 31 difference-killed, 18 survived, zero
+# abnormal outcomes.  Survivor groups before exact replay:
+# - independent-store reorder candidates: 2,5,28,34,38,43,50,72,112,136,164;
+# - valid-heap embedded-address predicate candidates: 74,142,143,153;
+# - overwritten value metadata requiring allocation-failure profiles: 52,83,96.

@@ -1,0 +1,94 @@
+# LMS message/project resource readers and retained nullable member delegates.
+# verify: -calleesp -strictnan
+src wwhd_src/lms/DelegateInstances.cpp
+
+src wwhd_src/lms/MessageBinary.cpp
+src wwhd_src/lms/ProjectBinary.cpp
+
+# Resource-view fixtures provide bounded section tables and bounded label/text storage.
+ret! 027672CC 0x57400000,0x57400100
+ret! 027671F0 -1,0,1,2,3
+ret! 0276727C 0,1,2,3
+ret! 0273A2E8 0,0x57300000
+field * 57000008 u8 0,1,2,3
+field * 5700000C u32 0x57100000
+field * 57000010 s32 -1,0,1,2,3
+field * 57000014 s32 -1,0,1,2,3
+field * 57000018 s32 0,1,2,3
+field * 5700001C s32 -1,0,1,2,3
+field * 57000034 s32 -1,0,1,2,3
+field * 5700003C s32 -1,0,1,2,3
+arg! 0273A15C r3 0x57000000
+arg! 0273A1A0 r3 0x57000000
+arg! 0273A1CC r3 0x57000000
+arg! 0273A2E8 r3 0x57000000
+arg! 0273A32C r3 0x57000000
+arg! 0273A4B4 r3 0x57000000
+arg! 0273A574 r3 0x57000000
+arg! 0273A598 r3 0x57000000
+arg! 0273A700 r3 0x57000000
+arg! 0273A728 r3 0x57000000
+arg! 0273A768 r3 0x57000000
+arg! 0273A790 r3 0x57000000
+arg! 0273A7F4 r3 0x57000000
+arg! 0273A830 r3 0x57000000
+arg! 0273A868 r3 0x57000000
+arg! 0273A898 r3 0x57000000
+arg! 0273A8C0 r3 0x57000000
+arg! 0273A8E8 r3 0x57000000
+arg! 0273A924 r3 0x57000000
+arg! 0273A954 r3 0x57000000
+arg! 0273A984 r3 0x57000000
+arg! 0273A9D4 r3 0x57000000
+field * 57100000 u32 0x57200000
+field * 57100008 u32 0,4,20,32,64
+field * 57100010 u32 0x57200000
+field * 57100018 u32 0,4,20,32,64
+field * 57100020 u32 0x57200000
+field * 57100028 u32 0,4,20,32,64
+field * 57100030 u32 0x57200000
+field * 57100038 u32 0,4,20,32,64
+fill * 57200000 256 0
+field * 57200000 u32 0,1,2,3
+field * 57200004 u32 0,1,2,3
+field * 57200008 u32 32,64,96
+field * 5720000C u32 0,1,2,3
+field * 57200010 u32 32,64,96
+field * 57200014 u32 0,1,2,3
+field * 57200018 u32 32,64,96
+field * 5720001C u32 0,1,2,3
+field * 57200020 u8 0,1,2,3
+field * 57200021 u8 0,65,66
+field * 57200022 u8 0,65,66
+field * 57200023 u8 0,65,66
+field * 57200040 u8 0,1,2,3
+field * 57200060 u8 0,1,2,3
+arg! 0273A1CC r4 0x57500000
+fill 0273A1CC 57500000 32 0
+fieldstr 0273A1CC 57500000 32 "","A","AB","ABC","B"
+fill * 57300000 128 0
+field * 57300000 u32 0,0x41000000,0x0E000000,0x0F000000,0x000E0000,0x000F0000,0x0000000E,0x0000000F,0x00000041
+field * 57300004 u32 0,0x41000000,0x00020000
+arg! 0273A2E8 r4 -1,0,1,2,3,4
+arg! 0273A32C r4 -1,0,1,2,3,4
+arg! 0273A574 r4 -1,0,1,2,3,4
+arg! 0273A598 r4 -1,0,1,2,3,4
+arg! 0273A728 r4 -1,0,1,2,3,4
+arg! 0273A790 r4 -1,0,1,2,3,4
+arg! 0273A7F4 r4 -1,0,1,2,3,4
+arg! 0273A830 r4 -1,0,1,2,3,4
+arg! 0273A868 r4 -1,0,1,2,3,4
+arg! 0273A8E8 r4 -1,0,1,2,3,4
+arg! 0273A924 r4 -1,0,1,2,3,4
+arg! 0273A954 r4 -1,0,1,2,3,4
+arg! 0273A984 r4 -1,0,1,2,3,4
+arg! 0273A9D4 r4 -1,0,1,2,3,4
+# Keep the preceding entry bounded too: copyLabel performs no missing-section check.
+field * 570FFFF0 u32 0x57200000
+field * 570FFFF8 u32 0,4,20,32,64
+# readColor: distinct bytes in every color word, so each output byte shows which source byte it copied.
+field 0273A790 57200000 u32 0,1,2,3,4
+field 0273A790 57200004 u32 0x11223344,0x01020304,0xA0B0C0D0
+field 0273A790 57200008 u32 0x55667788,0x05060708,0xE0F01020
+field 0273A790 5720000C u32 0x99AABBCC,0x090A0B0C,0x30405060
+field 0273A790 57200010 u32 0xDDEEFF01,0x0D0E0F10,0x708090A0

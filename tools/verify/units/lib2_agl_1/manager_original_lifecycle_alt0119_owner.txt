@@ -1,0 +1,506 @@
+# Original SEAD startup state before registered class and manager constructors.
+real 02757190
+real 02759B40
+setup 0276C3F8 02757190
+setup 0276C3F8 02759B40
+# Coherent two-class registry with disjoint empty/populated ranges.
+# Two classes, objects and matrix records; distinct allocations, real icon/label constructors and matrix initialization.
+# verify: -only 0276C3F8 -strictnan -calleesp
+src wwhd_src/agl/EnvironmentManagerInitialize.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 0276C3F8 r3 0x59E00000
+arg! 0276C3F8 r4 0x59E10000
+arg! 0276C3F8 r5 0,0x58F00000
+field 0276C3F8 59E0001C u32 0x1015FCB4
+fill 0276C3F8 59E10000 528 0
+field 0276C3F8 59E10000 u32 1
+field 0276C3F8 59E10004 u32 1
+field 0276C3F8 59E10200 u32 2
+field 0276C3F8 59E10204 u32 0x101607A8
+field 0276C3F8 59E10208 u32 0,4
+field 0276C3F8 59E1020C s32 2
+field 0276C3F8 101F8BF4 s32 0
+field 0276C3F8 59E00008 s32 2
+field 0276C3F8 59E0000C u32 0x59E20000
+field 0276C3F8 59E00010 s32 1
+field 0276C3F8 59E00014 u32 0x59E30000
+field 0276C3F8 59E00234 s32 0
+field 0276C3F8 59E00238 u32 0
+field 0276C3F8 59E003E4 s32 0
+field 0276C3F8 59E003E8 u32 0
+field 0276C3F8 59E20000 u16 0
+field 0276C3F8 59E20002 u16 0
+field 0276C3F8 58F0000C u32 0x101459E0
+field 0276C3F8 104A1564 u32 0x59E60000
+field 0276C3F8 104A156C u32 0x0276D96C
+fieldstr 0276C3F8 59E60000 64 "","Projector","ProjectorLongName"
+field 0276C3F8 104A145C u32 0x59E80000
+field 0276C3F8 59E80000 s16 0
+ret! 02756140 0x58F00000
+alloc 02753D6C r4 0x5A100000 align=r5
+real 0276C35C
+real 0276C3EC
+real 0276D95C
+real 0276CC10
+real 0276CC68
+real 028E9098
+real 028E892C
+callee 02785CB4 r4=8
+callee 0279CB24 r5=8
+callee 0279CB9C r5=8
+callee 02759C10 r3=12 r4=cstr r5=12
+callcr 0276CC68 6
+# Registration is complete, const settings and unrelated buffer descriptors survive mock epochs.
+# The actual allocation, constructor, matrix and reference-element writes remain compared.
+stable 59E10000 528
+stable 101F8BF4 4
+stable 104A1564 40
+stable 104A145C 4
+stable 59E80000 2
+stable 58F0000C 4
+stable 59E0001C 4
+stable 59E00008 16
+stable 59E00234 8
+stable 59E003E4 8
+field 0276C3F8 59E20004 u16 0
+field 0276C3F8 59E20006 u16 1
+field 0276C3F8 104A1578 u32 0x59E60040
+field 0276C3F8 104A1580 u32 0x0276F370
+fieldstr 0276C3F8 59E60040 64 "","Fog","FogLongName"
+field 0276C3F8 104A1460 u32 0x59E80004
+field 0276C3F8 59E80004 s16 1
+real 0276F360
+stable 104A1460 4
+stable 59E80004 2
+
+# One active reference: empty first class and one second-class object at reference zero.
+field 0276C3F8 59E30000 u32 0
+
+# Diagnostic original lifecycle draft. No boundary-equivalence acceptance from this fixture yet.
+src wwhd_src/agl/EnvironmentManager.cpp
+src wwhd_src/agl/EnvironmentReferences.cpp
+src wwhd_src/agl/EnvironmentClassRegistry.cpp
+src wwhd_src/agl/EnvironmentSet.cpp
+src wwhd_src/agl/EnvironmentObjects.cpp
+field 0276C3F8 101F8BE0 s16 0
+real 0276C1DC
+real 0276F3A8
+real 0276DC4C
+real 0276F968
+real 0276F9F0
+real 0276D71C
+real 0276F11C
+real 02770250
+real 0276F554
+real 02770710
+allocnested 02753D6C
+setup 0276C3F8 0276D71C
+setup 0276C3F8 0276F11C
+setup 0276C3F8 0276C1DC r3=0x59E00000
+setup 0276C3F8 0276F968 r3=0x59E10000
+setup 0276C3F8 0276F9F0 r3=0x59E10000 r4=0 r5=1
+setup 0276C3F8 0276F9F0 r3=0x59E10000 r4=1 r5=1
+
+# Lead10:58 approved real closure and exact initial two allocations (8+8 bytes).
+# Opaque epochs may not overwrite unrelated live reference/range blocks. Own writes remain compared.
+stable 5A100000 16
+src wwhd_src/agl/EnvironmentSetInitialize.cpp
+real 0276DF64
+real 0279BC70
+real 0279CB24
+real 0279CA34
+real 0279C950
+real 0279E57C
+real 0273B264
+real 02759B98
+real 0276F8B4
+real 027A7E6C
+real 0276EBB4
+real 0276EBB8
+real 0276EC20
+
+# Exact shared empty-text initialization contract, Lead23:59.
+field 0276C3F8 104A0CD8 u32 0x10147664
+field 0276C3F8 104A0CDC u32 0x10147634
+stable 104A0CD8 8
+
+# Approved BC70 original subtree: construct both parameter array descriptors rather than mocking their writes.
+real 0273B584
+real 0279B9CC
+real 0279BB98
+nestedret 02756140 0x58F00000
+
+# Construct the parameter owner and array descriptors through the original AGL9/SEAD subtree.
+real 0279B7B4
+real 0279A07C
+real 0273B0D4
+real 0273B560
+
+# Replace factory answers and object initialization with original own lifecycle.
+alloc 0273B050 r3 0x5B100000 align=r5
+allocnested 0273B050
+real 0276D96C
+real 0276F370
+real 0276CE10
+real 0276EE70
+real 0276FCA0
+real 02770564
+real 02770480
+real 0276D8C0
+real 0276D6E0
+real 0276D8DC
+real 0276D8C8
+real 0276F2C0
+real 0276F2C4
+real 0276F2E0
+real 0276F2CC
+real 0279E618
+real 0279E674
+real 027A861C
+real 027A84B8
+real 027AE5D8
+real 0279F1BC
+field 0276C3F8 101F8C1C u32 0
+# The approved protected debug-name hook remains opaque and explicitly inactive.
+real 025F64C0
+real 0261AAA0
+real 0271B1AC
+real 0272D680
+real 02738024
+real 0273926C
+real 0273B200
+real 0276ACA0
+real 0276AD30
+real 0276ADD0
+real 0276AE84
+real 0276AFF0
+real 0276B0CC
+real 0276B0D4
+real 0276B114
+real 0276B15C
+real 0276B204
+real 0276B218
+real 0276B21C
+real 0276B3D0
+real 0276B3D8
+real 0276B3E0
+real 0276B708
+real 0276B710
+real 0276C1D4
+real 0276C8B8
+real 0276C9B4
+real 0276CAA4
+real 0276CB08
+real 0276CB1C
+real 0276CBB0
+real 0276CBD0
+real 0276CC14
+real 0276CC2C
+real 0276CC40
+real 0276CC54
+real 0276CD88
+real 0276CD9C
+real 0276CDA4
+real 0276CDA8
+real 0276CDC4
+real 0276CDC8
+real 0276CDCC
+real 0276CDD0
+real 0276CDF0
+real 0276CDF8
+real 0276CE00
+real 0276CE08
+real 0276D324
+real 0276D5E0
+real 0276D6D0
+real 0276D780
+real 0276D794
+real 0276D7F4
+real 0276D804
+real 0276D80C
+real 0276D81C
+real 0276D828
+real 0276D82C
+real 0276D830
+real 0276D838
+real 0276D840
+real 0276D848
+real 0276D850
+real 0276D858
+real 0276D860
+real 0276D868
+real 0276D870
+real 0276D878
+real 0276D880
+real 0276D888
+real 0276D890
+real 0276D898
+real 0276D8A0
+real 0276D8A4
+real 0276D8C4
+real 0276D8CC
+real 0276D8E4
+real 0276D9A8
+real 0276DAE4
+real 0276DAEC
+real 0276DBE4
+real 0276DBEC
+real 0276DC44
+real 0276DDD0
+real 0276DE44
+real 0276E774
+real 0276E95C
+real 0276EB8C
+real 0276EBA0
+real 0276EBD0
+real 0276EBE4
+real 0276EBF8
+real 0276EC0C
+real 0276ED40
+real 0276ED54
+real 0276ED58
+real 0276ED60
+real 0276EDA0
+real 0276EDE0
+real 0276EDE8
+real 0276EDF0
+real 0276EDF4
+real 0276EDFC
+real 0276EE00
+real 0276EE1C
+real 0276EE20
+real 0276EE28
+real 0276EE2C
+real 0276EE48
+real 0276EE4C
+real 0276EE50
+real 0276EE58
+real 0276EE60
+real 0276EE68
+real 0276F180
+real 0276F194
+real 0276F1F4
+real 0276F204
+real 0276F20C
+real 0276F21C
+real 0276F228
+real 0276F22C
+real 0276F230
+real 0276F238
+real 0276F240
+real 0276F248
+real 0276F250
+real 0276F258
+real 0276F260
+real 0276F268
+real 0276F270
+real 0276F278
+real 0276F280
+real 0276F288
+real 0276F290
+real 0276F298
+real 0276F2A0
+real 0276F2A4
+real 0276F2C8
+real 0276F2D0
+real 0276F2E8
+real 0276F448
+real 0276F4F8
+real 0276F6DC
+real 0276F814
+real 0276FA58
+real 0276FC20
+real 0276FC80
+real 0276FC88
+real 0276FC90
+real 0276FC98
+real 0277019C
+real 027701D4
+real 02770638
+real 0277067C
+real 02770698
+real 027706B4
+real 027706C8
+real 0279A490
+real 027AE62C
+
+# UNEXECUTED preparation: Lead22:48 AGL12 cold global-object registration facts.
+# Original getter builds the shared descriptor. Original registration updates head/node normally.
+# No arbitrary copied text, descriptor stability or registration-list masking.
+field 0276C3F8 104A2088 u32 0
+field 0276C3F8 104DA130 u32 0
+field 0276C3F8 101F8DF4 u32 0
+field 0276C3F8 101F8DF8 u32 0x104A2080
+field 0276C3F8 101F8DFC u32 0x027AE698
+real 028F026C
+real 027AE6AC
+
+# Lead23:40 original owner effects and approved descriptor noninterference.
+real 027A7FF4
+real 027A80FC
+real 0273B310
+real 0273B2F0
+real 027A83A8
+real 0279C80C
+real 0279C83C
+# 028FDC00 is the OSBlockMove import thunk; canonical C0009988 mockmove below handles it.
+real 0279C764
+mockmove C0009988 r3 r4 r5
+stable 59E00030 8
+# EnvironmentSet is manager+0x240 here; its record descriptor+0x188 is manager+0x3C8.
+stable 59E003C8 8
+
+# Read-only original child-count probe after original manager/parameter construction; trace must return0.
+setup 0276C3F8 0279C83C r3=0x59E00020
+
+# Existing published name-termination, parameter registration and mergedSEAD15 formatter behavior.
+real 02770714
+real 0279CB9C
+real 02759C10
+real 02759BA0
+real 028F1748
+
+real 02759C28
+real 0277077C
+real 027A8C80
+real 028F03F4
+real 028F040C
+real 028F0428
+real 028F0458
+real 028F0578
+real 028F05A0
+real 028F067C
+real 028F099C
+real 028F0D8C
+real 028F0DBC
+real 028F0DF4
+real 028F10B8
+real 028F1108
+real 028F1158
+real 028F11BC
+real 028F171C
+real 028F1904
+real 028F1BF0
+real 028F1C34
+real 028F2330
+real 028F234C
+real 028F2370
+real 028F24C4
+real 028F24D0
+real 028F25F8
+real 028F25FC
+real 028F26F4
+real 028F2724
+real 028F274C
+real 028F2774
+real 028F286C
+real 028F2920
+real 028F296C
+real 028F29AC
+real 028F2EA8
+real 028F2ED0
+real 028F2EE8
+real 028F3090
+real 028F325C
+real 028F3394
+real 028F36F4
+real 028F3760
+real 028F37E0
+real 028F37E4
+real 028F3938
+real 028F3AB8
+real 028F3B98
+real 028F3F84
+real 028F5228
+real 028F5688
+real 028F5708
+real 028F571C
+real 028F578C
+real 028F57D8
+real 028F5880
+real 028F5888
+real 028F58E4
+real 028F5C88
+real 028F5DC0
+real 028F5DD4
+real 028F5DE8
+real 028F5DFC
+real 028F5E10
+real 028F5E24
+real 028F5E38
+real 028F5E44
+real 028F5E54
+real 028F6038
+real 028F6044
+real 028F6050
+real 028F605C
+real 028F60E0
+real 028F60E8
+real 028F60F0
+real 028F60F8
+real 028F6130
+real 028F613C
+real 028F6154
+real 028F6158
+real 028F615C
+real 028F6184
+real 028F6190
+real 028F61A8
+real 028F61AC
+real 028F61B0
+real 028F61D0
+real 028F61D8
+real 028F61DC
+real 028F61E0
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F6228
+real 028F6230
+real 028F6234
+real 028F6238
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258
+
+# Bounded successful, non-reentrant front allocator / readonly TLS-currentheap profile.
+# Existing allocated payloads only; no allocator block headers are represented here.
+# Exact prior allocations: set refs 8, ranges 8, records456, pending8, icons224.
+# Real constructors and writes remain compared; excludes synthetic opaque-call fuzz only.
+stable 5A100010 704
+
+# Same allocation/TLS noninterference: exact constructed manager/set owner headers
+# and set reference descriptors survive allocator mocks, real mutations still compare.
+stable 59E00020 60
+stable 59E00248 16
+stable 59E00260 60
+
+# Constructor-established manager Io class-list head; real CB24 appends remain compared.
+# Successful allocator/currentheap calls do not write this manager client field.
+stable 59E00060 4
+
+# Exact original default-text descriptor/guard and inactive debug flag.
+# owner-attach recipe; acceptance requires clean paired controls and opaque census.
+# AE62C writes text/vtable at104A2080/4 and readiness at104A2088; actual writes compare.
+stable 104A2080 12
+# Published debug-hook no-outside-frame domain is guard0 at call, preserved inductively
+# under documented successful alloc/currentheap/copy and original owner-attach effects.
+stable 101F8C1C 4
+
+# actual bounded pointer-array append and inactive debug hook.
+# Real owner writes stay in the net effect; remaining opaque callees are alloc/TLS/copy.
+real 0279BD8C
+real 02785CB4
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

@@ -1,0 +1,31 @@
+# Bounded two-entry resource archive; the required type exists only in the second entry.
+# verify: -only 0276E95C -strictnan -calleesp
+src wwhd_src/agl/EnvironmentSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 02770710
+real 0276EBB4
+real 0279E57C
+real 0273B264
+real 0273B200
+arg! 0276E95C r3 0x59300000
+arg! 0276E95C r4 0x59310000
+field 0276E95C 59310000 u32 0x59600000
+field 0276E95C 59300068 u32 0x59340000
+field 0276E95C 5930006C u32 0x101607DC
+field 0276E95C 104A0CD8 u32 0x59340000
+field 0276E95C 104A0CDC u32 0x101607DC
+fieldstr 0276E95C 59340000 32 "Record"
+field 0276E95C 593000B8 u32 0x59400000
+field 0276E95C 593000BC u32 0x101607DC
+fieldstr 0276E95C 59400000 32 "Type"
+fill 0276E95C 59600000 80 0
+field 0276E95C 59600004 u32 2
+field 0276E95C 59600010 u32 0x20
+field 0276E95C 59600018 u32 0xDEADBEEF
+fieldstr 0276E95C 5960001C 16 "Other"
+field 0276E95C 59600030 u32 0
+field 0276E95C 59600038 u32 0x8CDE5729
+fieldstr 0276E95C 5960003C 16 "Type"
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

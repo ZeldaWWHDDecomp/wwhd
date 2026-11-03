@@ -1,0 +1,9 @@
+# Caller-valid 027CC78C curve/draw companion. The included profile retains the
+# original packet selected by the fixed format index and its nonzero count.
+# These directives observe the parameter-curve call inputs and the indexed-draw
+# arguments, without changing the packet or program domains.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+observearg 027D395C r3+0 32
+observearg 027D395C r4+0 32
+observearg C0006178 r3+0 24

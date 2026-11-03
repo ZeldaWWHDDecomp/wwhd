@@ -1,0 +1,7 @@
+# Observation companion of lib2_agl_7/nt_paired_dirty.txt: the render state the function fills on its stack is compared at the mocked
+# sead::CompactRenderState calls (create 0274FDBC runs the original initializer; apply 0274FEB0 reads the first 112 bytes,
+# offsets 0..0x6E in the original's loads). The included profile alone compares only the pointer and its first word.
+# verify: -only 027908F4 -strictnan -calleesp
+include lib2_agl_7/nt_paired_dirty.txt
+real 0274FDBC
+callee 0274FEB0 r3=112

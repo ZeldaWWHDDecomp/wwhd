@@ -1,0 +1,65 @@
+# Coherent two-service audio list; real bounded link helpers and explicit opaque callbacks.
+# verify: -only 02760F38,0276117C,02761190,027613C8,02761448,02761640,027618B8,02761990,02761AFC -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# Explicit mock-only callbacks; no unrelated game target or actual callee-footprint claim.
+callee 0F002000 fixture r3=heap16 r4=heap60 r5=0
+callee 0F002008 fixture r3=heap16
+callee 0F002010 fixture r3=heap16
+callee 0F002018 fixture r3=heap16
+ret! 0F002018 0,1
+real 0273B494
+real 0273B310
+real 0273B2F0
+field * 101F8BA8 u32 0x60200000
+field * 101F8BAC u32 0x60200004
+stable 101F8BA8 8
+stable 60200000 0x3C
+field * 60200000 u32 0x1015E93C
+field * 60200010 u32 0x1015E92C
+field * 60200014 u32 0
+field * 60200018 u32 0
+field * 6020001C u32 0
+field * 60200020 u32 0
+field * 60200024 u32 0x60220004
+field * 60200028 u32 0x60210004
+field * 6020002C u32 2
+field * 60200030 u32 4
+field * 60200038 u8 1
+field * 60210000 u32 0x60230000
+field * 60210004 u32 0x60200024
+field * 60210008 u32 0x60220004
+field * 60220000 u32 0x60230000
+field * 60220004 u32 0x60210004
+field * 60220008 u32 0x60200024
+stable 60210000 0x10
+stable 60220000 0x10
+stable 60230000 0x60
+field * 6023002C u32 0x0F002000
+field * 60230034 u32 0x0F002008
+field * 6023003C u32 0x0F002010
+field * 6023005C u32 0x0F002018
+arg! 02761990 r3 0x60200004
+arg! 02761AFC r3 0x60260000
+field * 60260000 u32 0x60200000
+stable 60260000 8
+arg! 02761448 r3 0x60200000
+arg! 027618B8 r3 0x60200000
+arg! 02761640 r3 0x60200000
+arg! 02761640 r4 0x60240000
+field 02761640 60200024 u32 0x60200024
+field 02761640 60200028 u32 0x60200024
+field 02761640 6020002C u32 0
+field 02761640 60200038 u8 0
+field 02761640 60240004 u32 0
+field 02761640 60240008 u32 0
+field 02761640 6024000C u32 0
+field 02761640 60240010 u32 0
+field 02761640 60240014 u32 0x60220004
+field 02761640 60240018 u32 0x60210004
+field 02761640 6024001C u32 2
+field 02761640 60240020 u32 4
+field 02761640 60210004 u32 0x60240014
+field 02761640 60220008 u32 0x60240014
+stable 60240000 0x24
+ret! 0273B050 0

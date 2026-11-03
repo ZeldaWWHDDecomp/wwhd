@@ -1,0 +1,8 @@
+# drawBloomTexture after the resource provider's quad index stream was reset by its original clear (027B548C, which
+# writes count 0 at provider+0x328; the valid count domain is {0, 3}, ): the zero-count arm.
+# verify: -strictnan -calleesp -only 02775BDC
+src wwhd_src/agl/BloomParameters.cpp
+include shared/agl_world.txt
+# The provider object is at 0x6A8383B8 in the world (*101F8DE4 as read by the original in a -trace of this spec); its index stream is at +0x31C.
+setup * 027B548C r3=0x6A8386D4
+setupsnapshot

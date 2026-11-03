@@ -1,0 +1,92 @@
+# AGL#19 main spec part: shader group (included by lib2_agl_19.txt). Per-function lines only (no unit-global
+# directives). Receivers are the objects the callers pass (never NULL: placement members/stack frames); the
+# producer-built profiles are the companions lib2_agl_19_shader_*.txt.
+src wwhd_src/agl/ShaderStageState.cpp
+src wwhd_src/agl/RenderInputCollections.cpp
+src wwhd_src/agl/RenderDispatchContext.cpp
+src wwhd_src/agl/ShaderStageRefresh.cpp
+src wwhd_src/agl/ShaderStageText.cpp
+
+# Stage construction in the program's stage slots (027B9F78 passes program+0x40/+0x54/+0x68); old bytes in the slot.
+arg! 027D4CCC r3 0x53000000,0x53000040
+fill 027D4CCC 53000000 0x80 0xA5
+arg! 027D4E84 r3 0x53000000
+arg! 027D4E84 r4 0,0x53100000
+# Text virtuals of the shader TU's sead text classes (vtables 1016B360 / 1016B378): delete flag bit 0 frees.
+arg! 027D4C88 r3 0x55000000
+arg! 027D4C88 r4 0,1,2,3
+arg! 027D4CB8 r3 0x55000000
+arg! 027D4CB8 r4 0,1,2,3
+arg! 027D4E8C r3 0x55000000
+arg! 027D4E8C r4 0,1,2,3
+arg! 027D4CA0 r3 0x54000000
+field 027D4CA0 r3+0 u32 0x54001000
+field 027D4CA0 r3+4 u32 0x1016B378
+field 027D4CA0 r3+8 s32 1,2,8,16,32,256
+
+# Variation layouts: construction on the archive layout's storage, reservation counts from the archive
+# (binding count, variant dimensions), selection and release on constructed/reserved states.
+arg! 027D3D3C r3 0x56000000
+fill 027D3D3C 56000000 0x48 0xA5
+arg! 027D3F1C r3 0x56000000
+arg! 027D3F1C r4 0,1,2,5,16
+arg! 027D3F1C r5 0,1,3,8
+arg! 027D3F1C r6 0x6A000000
+arg! 027D3E60 r3 0x56000000
+field 027D3E60 r3+0x18 u32 0,0x57000000
+field 027D3E60 r3+0x24 u32 0,0x57000100
+field 027D3E60 r3+0x30 u32 0,0x57000200
+field 027D3E60 r3+0x3C u32 0,0x57000300
+arg! 027D3EC0 r3 0x56000000
+arg! 027D3EC0 r4 0,1,2
+field 027D3EC0 r3+0x18 u32 0,0x57000000
+field 027D3EC0 r3+0x24 u32 0,0x57000100
+field 027D3EC0 r3+0x30 u32 0,0x57000200
+field 027D3EC0 r3+0x3C u32 0,0x57000300
+arg! 027D3FC4 r3 0x56000000
+arg! 027D3FD4 r3 0x56000000
+field 027D3FD4 r3+0x28 s32 0,1,2,3
+field 027D3FD4 r3+0x2C s32 0,1,3,4
+field 027D3FD4 r3+0x30 u32 0x58000000
+field 027D3FD4 r3+0x34 s32 0,1,2,3
+field 027D3FD4 r3+0x38 s32 0,1,3,4
+field 027D3FD4 r3+0x3C u32 0x58001000
+
+# Dispatch contexts on the caller's stack frame; the layer prefix's flags/camera/projection (constructor flags 0x183,
+# setCameraMode 0x40, the layer workspace's active projection) - the 027340D8-built layers are the companion.
+arg! 027D4EA4 r3 0x5A000000
+arg! 027D4EA4 r4 0,1,2,3
+arg! 027D4EA4 r5 0,0x5A100000
+arg! 027D4EA4 r6 0,1
+arg! 027D4EA4 r7 0x5B000000
+field 027D4EA4 0x5B000050 u32 0x183,0x1C3,0x103,0x143,0x1183,0x11C3,0x187,0x1C7
+field 027D4EA4 0x5B000048 u32 0,0x5C000000
+field 027D4EA4 0x5B00004C u32 0,0x5C001000
+field 027D4EA4 0x5B000058 u32 0,1,13
+field 027D4EA4 0x5B000164 u32 0x5C002000
+arg! 027D4FE8 r3 0x5A000000
+arg! 027D4FE8 r4 0,1,2,3
+arg! 027D4FE8 r5 0,0x5A100000
+
+# Stage refresh on constructor-state stages (no variation layout: returns 2, or 0 with code); the text paths need the
+# development shader text and are the lib2_agl_19_shader_stage_text companion.
+arg! 027D4D30 r3 0x4F720000
+field 027D4D30 r3+0 u32 0,0x4F721000
+field 027D4D30 r3+4 u32 0
+field 027D4D30 r3+16 u32 0x1016C014
+arg! 027D4D30 r4 0,1
+arg! 027D4D30 r5 0,1
+# Stage text with a layout whose compiled source is unset (the loader assigns it only for compiled variations): the
+# destination is cleared to the empty text.
+arg! 027D4028 r3 0x4F700000
+arg! 027D4028 r4 0,1,2
+arg! 027D4028 r5 0x4F710000
+arg! 027D4028 r6 1
+arg! 027D4028 r7 1
+field 027D4028 r3+8 u32 0
+field 027D4028 r5+0 u32 0x4F711000
+field 027D4028 r5+4 u32 0x1016B378
+field 027D4028 r5+8 s32 1,2,16,256
+# mocked copies must not rewrite the layout or the text object (only the tested function's stores count)
+stable 4F700000 0x44
+stable 4F710000 0xC

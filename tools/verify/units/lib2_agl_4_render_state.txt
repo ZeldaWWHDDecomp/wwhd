@@ -1,0 +1,456 @@
+# AGL#4 companion: the three draw passes that build render states, with the original sead render-state constructor.
+# verify: -only 02780C34,0277FF88,027805A0 -strictnan -calleesp -footprint
+# Preserve arbitrary stale frame bytes so missing zero stores cannot hide behind zero-filled scratch.
+stackfill
+src wwhd_src/agl/ParameterValues.cpp
+src wwhd_src/agl/DepthBlurValues.cpp
+src wwhd_src/agl/BloomValues.cpp
+src wwhd_src/agl/DepthBlurCallbacks.cpp
+src wwhd_src/agl/DepthBlurRuntimeValues.cpp
+src wwhd_src/agl/DepthBlurConstruction.cpp
+src wwhd_src/agl/DepthBlurShapeSetup.cpp
+src wwhd_src/agl/DepthBlurParameterSetup.cpp
+src wwhd_src/agl/DepthBlurDrawState.cpp
+src wwhd_src/agl/DepthBlurContext.cpp
+# Shape registration passes complete SafeString views and a bounded formatted-name object.
+callee 027828DC r3=out44
+# Parameter registration 0279E618 reads only the name (r4) and the parent (r7); label and help (r5/r6) are unread.
+# The constructor receiver's output bytes are not entry inputs. Real-lifetime companions audit exact writes.
+callee 0279E618 r3=out8 r4=8 r7=0
+callee 0279E674 r3=out12
+callee 0279CB9C r5=8
+callee 0279A07C r4=8
+callee 02785CB4 r4=8
+callee 027A063C r5=8
+# Stack viewport/state and the copied scale are observed by their actual callees.
+callee 0274F964 r3=24
+callee 0274FEB0 r3=116
+callee 027A919C r4=24 r5=8 r6=8
+callee 0279FC6C r4=8
+callee 0274F8D8 r4=out8
+callee 0274FA00 r3=24
+# Graphics register counts are words, including retained half-extents in the bloom uniform.
+callee C0006A40 r5=dyn4*r4
+callee C0006908 r5=dyn4*r4
+# Compose dynamic length with heap observation: parameter-backed uniforms are observable too.
+# read_unit retains dyn4*r4 and adds heapref; both directives retain the 4096-byte cap.
+callee C0006A40 r5=heap4096
+callee C0006908 r5=heap4096
+# Bounded render fixture: the context and its target set are distinct live objects.
+# The copied target pointer is read-only in this pass and its callees. Texture mip count
+# is resource metadata; sampler binding and GPU state calls update other fields only.
+# Retain zero levels and all levels through six, exercising both first-level paths and repeats.
+arg! 0277FF88 r4 0x54010000 0x54010000
+field 0277FF88 54010008 u32 0x54011000 0x54011000
+field 0277FF88 540114D0 u32 0,1,1,2,3,6
+stable 54010008 4
+stable 540114D0 4
+# The near-depth pass likewise consumes immutable mip metadata from its distinct depth target.
+arg! 027805A0 r4 0x54010000 0x54010000
+field 027805A0 54010008 u32 0x54011000 0x54011000
+field 027805A0 5401166C u32 0 6
+stable 5401166C 4
+# Four columns of a 4x4 matrix; the original indexes without a bounds check.
+arg! 0277C85C r4 0 3
+# The translation helper passes its four-float column on its original stack frame.
+callee 0277C85C r5=16
+# Texture-transform routines read three-float arguments and write a 3x4 matrix.
+callee 02782C20 r3=out48 r4=12
+callee 02782D70 r3=out48 r4=48 r5=12
+callee 02782E1C r3=out48 r4=48 r5=12
+
+# The merged SEAD#11 constructor initializes the actual caller frame state. No receiver-entry snapshot.
+real 0274FDBC
+
+# ---- page-0 fixtures (zero-page rule, refined 2026-10-26 18:03): only the functions whose originals lost
+# coverage or clean inputs under -nulltrap are steered; every pointer below is one the original dereferences.
+# Shader programs: eight objects with generated contents; their resource, uniform, sampler and macro pointers
+# point at generated tables. The program repository (*101F8D6C) lists them for indices 40..63.
+field * 5700002C u32 0x57800000
+field * 5700003C u32 0x57900000
+field * 5700007C u32 0x57A00000
+field * 57A00018 u32 0x57B00000
+field * 57800008 s16 -1,0,3,0x7F
+field * 5780000A s16 -1,0,5,0x7F
+field * 57000000 u8 0,2,3
+field * 5700000C u32 0,0x40
+field * 57000038 u32 0,1,2,4
+field * 5700102C u32 0x57800100
+field * 5700103C u32 0x57900100
+field * 5700107C u32 0x57A00100
+field * 57A00118 u32 0x57B00100
+field * 57800108 s16 -1,0,3,0x7F
+field * 5780010A s16 -1,0,5,0x7F
+field * 57001000 u8 0,2,3
+field * 5700100C u32 0,0x40
+field * 57001038 u32 0,1,2,4
+field * 5700202C u32 0x57800200
+field * 5700203C u32 0x57900200
+field * 5700207C u32 0x57A00200
+field * 57A00218 u32 0x57B00200
+field * 57800208 s16 -1,0,3,0x7F
+field * 5780020A s16 -1,0,5,0x7F
+field * 57002000 u8 0,2,3
+field * 5700200C u32 0,0x40
+field * 57002038 u32 0,1,2,4
+field * 5700302C u32 0x57800300
+field * 5700303C u32 0x57900300
+field * 5700307C u32 0x57A00300
+field * 57A00318 u32 0x57B00300
+field * 57800308 s16 -1,0,3,0x7F
+field * 5780030A s16 -1,0,5,0x7F
+field * 57003000 u8 0,2,3
+field * 5700300C u32 0,0x40
+field * 57003038 u32 0,1,2,4
+field * 5700402C u32 0x57800400
+field * 5700403C u32 0x57900400
+field * 5700407C u32 0x57A00400
+field * 57A00418 u32 0x57B00400
+field * 57800408 s16 -1,0,3,0x7F
+field * 5780040A s16 -1,0,5,0x7F
+field * 57004000 u8 0,2,3
+field * 5700400C u32 0,0x40
+field * 57004038 u32 0,1,2,4
+field * 5700502C u32 0x57800500
+field * 5700503C u32 0x57900500
+field * 5700507C u32 0x57A00500
+field * 57A00518 u32 0x57B00500
+field * 57800508 s16 -1,0,3,0x7F
+field * 5780050A s16 -1,0,5,0x7F
+field * 57005000 u8 0,2,3
+field * 5700500C u32 0,0x40
+field * 57005038 u32 0,1,2,4
+field * 5700602C u32 0x57800600
+field * 5700603C u32 0x57900600
+field * 5700607C u32 0x57A00600
+field * 57A00618 u32 0x57B00600
+field * 57800608 s16 -1,0,3,0x7F
+field * 5780060A s16 -1,0,5,0x7F
+field * 57006000 u8 0,2,3
+field * 5700600C u32 0,0x40
+field * 57006038 u32 0,1,2,4
+field * 5700702C u32 0x57800700
+field * 5700703C u32 0x57900700
+field * 5700707C u32 0x57A00700
+field * 57A00718 u32 0x57B00700
+field * 57800708 s16 -1,0,3,0x7F
+field * 5780070A s16 -1,0,5,0x7F
+field * 57007000 u8 0,2,3
+field * 5700700C u32 0,0x40
+field * 57007038 u32 0,1,2,4
+field * 101F8D6C u32 0x57F00000
+field * 57F00014 u32 0x40,0x40,0x40,45,46,47,48,49,50,56,57
+field * 57F0001C u32 0x57F00100
+field * 57F001A0 u32 0x57000000
+field * 57F001A4 u32 0x57001000
+field * 57F001A8 u32 0x57002000
+field * 57F001AC u32 0x57003000
+field * 57F001B0 u32 0x57004000
+field * 57F001B4 u32 0x57005000
+field * 57F001B8 u32 0x57006000
+field * 57F001BC u32 0x57007000
+field * 57F001C0 u32 0x57000000
+field * 57F001C4 u32 0x57001000
+field * 57F001C8 u32 0x57002000
+field * 57F001CC u32 0x57003000
+field * 57F001D0 u32 0x57004000
+field * 57F001D4 u32 0x57005000
+field * 57F001D8 u32 0x57006000
+field * 57F001DC u32 0x57007000
+field * 57F001E0 u32 0x57000000
+field * 57F001E4 u32 0x57001000
+field * 57F001E8 u32 0x57002000
+field * 57F001EC u32 0x57003000
+field * 57F001F0 u32 0x57004000
+field * 57F001F4 u32 0x57005000
+field * 57F001F8 u32 0x57006000
+field * 57F001FC u32 0x57007000
+# Shared quad vertices/indices singletons and the depth-blur Parameters receiver (0x55000000).
+field * 101F8DDC u32 0x57D00000
+field * 101F8DE4 u32 0x57E00000
+field * 550002AC u32 0x57000000
+field * 550002B0 u32 0x57001000
+field * 550002B4 u32 0x57002000
+field * 550002B8 u32 0x57003000
+field * 550002BC u32 0x57004000
+field * 550002C0 u32 0x57005000
+field * 550002C4 u32 0x57006000
+field * 550002C8 u32 0x57007000
+arg! 0277CA98 r3 0x55000000 0x55000000
+# Bloom draw: bloom object, its pass states, surface, viewport, source texture, acquired temporary texture.
+arg! 0277BF94 r3 0x56800000 0x56800000
+arg! 0277BF94 r4 0,1,2,5
+arg! 0277BF94 r5 0x56820000 0x56820000
+arg! 0277BF94 r6 0x56830000 0x56830000
+arg! 0277BF94 r7 0x56840000 0x56840000
+arg! 0277C578 r3 0x56800000 0x56800000
+arg! 0277C578 r4 0,1,2,5
+arg! 0277C578 r5 0x56820000 0x56820000
+arg! 0277C578 r6 0x56830000 0x56830000
+arg! 0277C578 r7 0x56840000 0x56840000
+field * 56800588 u32 0x56810000
+ret 0279FC6C 0x56850000,0x56860000
+# Depth-blur runtime (0x56000000): view targets, view parameter table, mesh buffers, allocation heap.
+arg! 0277EBF4 r3 0x56000000 0x56000000
+arg! 0277F0F0 r3 0x56000000 0x56000000
+arg! 0277F6BC r3 0x56000000 0x56000000
+arg! 0277FD9C r3 0x56000000 0x56000000
+arg! 0277FF88 r3 0x56000000 0x56000000
+arg! 027805A0 r3 0x56000000 0x56000000
+arg! 02780C34 r3 0x56000000 0x56000000
+arg! 02780D1C r3 0x56000000 0x56000000
+field * 56000320 u32 0x54011000
+field * 5600031C u32 1,2
+field * 56000328 u32 0x56002000
+field * 56000324 u32 1,2
+field * 56002000 u32 0x55000000
+field * 56002004 u32 0x55000000
+field * 56002008 u32 0x55000000
+field * 5600200C u32 0x55000000
+field * 56000890 u32 0x56210000
+field * 56000898 u32 0x56300000
+field * 56000B00 u32 0x56290000
+field * 56000B08 u32 0x56380000
+arg! 0277EBF4 r4 0,0x56400000
+arg! 0277F0F0 r4 0,0x56400000
+field * 5640000C u32 0x56400100
+field * 56400134 u32 0x0273B0D4
+ret 0273B0D4 0,0x56200000,0x56280000
+ret 02756140 0x56400000
+# Draw context (0x54010000, as for the mip-chain passes): targets, parameters and the render buffer with colour and depth surfaces.
+arg! 0277FD9C r4 0x54010000 0x54010000
+arg! 02780C34 r4 0x54010000 0x54010000
+arg! 02780D1C r4 0x54010000 0x54010000
+field * 54010004 u32 0,1,2,3
+field 0277FD9C 54010008 u32 0x54011000
+field 02780C34 54010008 u32 0x54011000
+field 02780D1C 54010008 u32 0x54011000
+field * 5401000C u32 0x55000000
+field * 54010010 u32 0x56500000
+field * 5650001C u32 0x56510000
+field * 5650003C u32 0x56520000
+
+# Surface descriptors compared field by field (dimension, size, depth, mips, format, AA, tile mode, swizzle):
+# the produced textures and the render buffer surfaces hold one descriptor; the cached copies mostly match it,
+# and differ in one field per input often enough to reach every early exit of the comparison.
+field * 56850004 u32 0x1
+field * 56850008 u32 0x140
+field * 5685000C u32 0xB4
+field * 56850010 u32 0x1
+field * 56850014 u32 0x1
+field * 56850018 u32 0x1A
+field * 5685001C u32 0x0
+field * 56850034 u32 0x10
+field * 56850038 u32 0x4
+field * 56860004 u32 0x1
+field * 56860008 u32 0x140
+field * 5686000C u32 0xB4
+field * 56860010 u32 0x1
+field * 56860014 u32 0x1
+field * 56860018 u32 0x1A
+field * 5686001C u32 0x0
+field * 56860034 u32 0x10
+field * 56860038 u32 0x4
+field * 56510004 u32 0x1
+field * 56510008 u32 0x140
+field * 5651000C u32 0xB4
+field * 56510010 u32 0x1
+field * 56510014 u32 0x1
+field * 56510018 u32 0x1A
+field * 5651001C u32 0x0
+field * 56510034 u32 0x10
+field * 56510038 u32 0x4
+field * 56520004 u32 0x1
+field * 56520008 u32 0x140
+field * 5652000C u32 0xB4
+field * 56520010 u32 0x1
+field * 56520014 u32 0x1
+field * 56520018 u32 0x1A
+field * 5652001C u32 0x0
+field * 56520034 u32 0x10
+field * 56520038 u32 0x4
+field 0277BF94 56810190 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277BF94 56810194 u32 0x140,0x140,0x140,0x140,0x140,0x140,0x140,0x141
+field 0277BF94 56810198 u32 0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB5
+field 0277BF94 5681019C u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277BF94 568101A0 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277BF94 568101A4 u32 0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1B
+field 0277BF94 568101A8 u32 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1
+field 0277BF94 568101C0 u32 0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x11
+field 0277BF94 568101C4 u32 0x4,0x4,0x4,0x4,0x4,0x4,0x4,0x5
+field 0277F450 54011004 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F450 54011008 u32 0x140,0x140,0x140,0x140,0x140,0x140,0x140,0x141
+field 0277F450 5401100C u32 0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB5
+field 0277F450 54011010 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F450 54011014 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F450 54011018 u32 0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1B
+field 0277F450 5401101C u32 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1
+field 0277F450 54011034 u32 0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x11
+field 0277F450 54011038 u32 0x4,0x4,0x4,0x4,0x4,0x4,0x4,0x5
+field 0277F450 5401119C u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F450 540111A0 u32 0x140,0x140,0x140,0x140,0x140,0x140,0x140,0x141
+field 0277F450 540111A4 u32 0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB5
+field 0277F450 540111A8 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F450 540111AC u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F450 540111B0 u32 0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1B
+field 0277F450 540111B4 u32 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1
+field 0277F450 540111CC u32 0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x11
+field 0277F450 540111D0 u32 0x4,0x4,0x4,0x4,0x4,0x4,0x4,0x5
+field 0277F6BC 540114C0 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F6BC 540114C4 u32 0x140,0x140,0x140,0x140,0x140,0x140,0x140,0x141
+field 0277F6BC 540114C8 u32 0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB5
+field 0277F6BC 540114CC u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F6BC 540114D0 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F6BC 540114D4 u32 0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1B
+field 0277F6BC 540114D8 u32 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1
+field 0277F6BC 540114F0 u32 0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x11
+field 0277F6BC 540114F4 u32 0x4,0x4,0x4,0x4,0x4,0x4,0x4,0x5
+field 0277F6BC 5401165C u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F6BC 54011660 u32 0x140,0x140,0x140,0x140,0x140,0x140,0x140,0x141
+field 0277F6BC 54011664 u32 0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB4,0xB5
+field 0277F6BC 54011668 u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F6BC 5401166C u32 0x1,0x1,0x1,0x1,0x1,0x1,0x1,0x2
+field 0277F6BC 54011670 u32 0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1B
+field 0277F6BC 54011674 u32 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1
+field 0277F6BC 5401168C u32 0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x11
+field 0277F6BC 54011690 u32 0x4,0x4,0x4,0x4,0x4,0x4,0x4,0x5
+arg! 0277F450 r5 0x54011000 0x54011000
+arg! 0277F450 r7 0x56500000 0x56500000
+arg! 0277F450 r8 0x56520000 0x56520000
+# Parameters values that select shader variants, passes and shapes.
+field * 5500011C f32 0,0.5,1,2.5,-1,-0.5
+field * 5500012C f32 0,0.5,1,3
+field * 5500014C f32 1,1,0.5
+field * 55000294 f32 1,1,0.5
+field * 55000298 f32 1,1,0.5
+field * 5500029C f32 1,1,0.5
+field * 550001E0 f32 0,0,0.25
+field * 550001E4 f32 0,0,0.25
+field * 550001E8 f32 0,0,0.25
+field * 550001D0 s32 0,1,2,3,4
+field * 550001FC s32 0,1,2,7
+field * 55000248 s32 0,1,2,7
+arg! 0277F6BC r5 0x1A,0x1A,0x1D,1
+# The parameter receiver of 0277DD2C is a constructed Parameters object on every caller (027830E0).
+arg! 0277DD2C r3 0x55100000 0x55100000
+# Bloom extent edges: half extents at and above the 2^31 conversion limit.
+mockfield 0274F8D8 r4+0 f32 640,4294967296,4294967552,8589934592,3,1,0,-0,-640
+mockfield 0274F8D8 r4+4 f32 360,4294967296,4294967040,1,0,-0,-360
+# Shader variant tables: small macro strides and variant counts, so selections hit the table edges.
+field * 57A00004 u32 0,1,2,3,4,6,0x40
+field * 57A00014 u32 0,1,2,4
+field * 57B00018 u16 0,1,2,3
+field * 57B00034 u16 0,1,2,3
+field * 57B00050 u16 0,1,2,3
+field * 57B0006C u16 0,1,2,3
+field * 57A00104 u32 0,1,2,3,4,6,0x40
+field * 57A00114 u32 0,1,2,4
+field * 57B00118 u16 0,1,2,3
+field * 57B00134 u16 0,1,2,3
+field * 57B00150 u16 0,1,2,3
+field * 57B0016C u16 0,1,2,3
+field * 57A00204 u32 0,1,2,3,4,6,0x40
+field * 57A00214 u32 0,1,2,4
+field * 57B00218 u16 0,1,2,3
+field * 57B00234 u16 0,1,2,3
+field * 57B00250 u16 0,1,2,3
+field * 57B0026C u16 0,1,2,3
+field * 57A00304 u32 0,1,2,3,4,6,0x40
+field * 57A00314 u32 0,1,2,4
+field * 57B00318 u16 0,1,2,3
+field * 57B00334 u16 0,1,2,3
+field * 57B00350 u16 0,1,2,3
+field * 57B0036C u16 0,1,2,3
+field * 57A00404 u32 0,1,2,3,4,6,0x40
+field * 57A00414 u32 0,1,2,4
+field * 57B00418 u16 0,1,2,3
+field * 57B00434 u16 0,1,2,3
+field * 57B00450 u16 0,1,2,3
+field * 57B0046C u16 0,1,2,3
+field * 57A00504 u32 0,1,2,3,4,6,0x40
+field * 57A00514 u32 0,1,2,4
+field * 57B00518 u16 0,1,2,3
+field * 57B00534 u16 0,1,2,3
+field * 57B00550 u16 0,1,2,3
+field * 57B0056C u16 0,1,2,3
+field * 57A00604 u32 0,1,2,3,4,6,0x40
+field * 57A00614 u32 0,1,2,4
+field * 57B00618 u16 0,1,2,3
+field * 57B00634 u16 0,1,2,3
+field * 57B00650 u16 0,1,2,3
+field * 57B0066C u16 0,1,2,3
+field * 57A00704 u32 0,1,2,3,4,6,0x40
+field * 57A00714 u32 0,1,2,4
+field * 57B00718 u16 0,1,2,3
+field * 57B00734 u16 0,1,2,3
+field * 57B00750 u16 0,1,2,3
+field * 57B0076C u16 0,1,2,3
+# Indirect-texture inputs of the full-resolution path (usesIndirectFromFull).
+field * 5500001C u8 0,1,1
+field * 5500008C u8 0,1,1
+field * 550002D0 u32 0,0x56600000,0x56600000
+# Double-buffered shader selection (the first program index is doubled when the flag is set).
+field * 101F8C11 u8 0,1
+# Second parameters object for view index 1 (0277F6BC picks its parameters by view & mask).
+field * 56002004 u32 0x55100000
+arg 0277F6BC r4 0,1,2,3
+arg 0277F6BC r6 1024,1280,320,7
+field * 550002CC f32 1,0.5,4194304
+field * 551002CC f32 1,0.5,4194304
+# Near/far range ties (end == start, signed zeros) and the minimum-range edge (0.1).
+field * 550000DC f32 0,-0,100,0.1
+field * 550000EC f32 0,-0,200,0.1
+field * 550000FC f32 0,-0,120,0.1
+field * 5500010C f32 0,-0,150,0.1
+# Resource pointer words (program tables, the program repository, the render buffer surface pointers) are
+# written only when resources load; no callee of these functions rewrites them, so callee epochs leave them alone.
+stable 5700002C 4
+stable 5700003C 4
+stable 5700007C 4
+stable 57A00008 4
+stable 57A00018 4
+stable 5700102C 4
+stable 5700103C 4
+stable 5700107C 4
+stable 57A00108 4
+stable 57A00118 4
+stable 5700202C 4
+stable 5700203C 4
+stable 5700207C 4
+stable 57A00208 4
+stable 57A00218 4
+stable 5700302C 4
+stable 5700303C 4
+stable 5700307C 4
+stable 57A00308 4
+stable 57A00318 4
+stable 5700402C 4
+stable 5700403C 4
+stable 5700407C 4
+stable 57A00408 4
+stable 57A00418 4
+stable 5700502C 4
+stable 5700503C 4
+stable 5700507C 4
+stable 57A00508 4
+stable 57A00518 4
+stable 5700602C 4
+stable 5700603C 4
+stable 5700607C 4
+stable 57A00608 4
+stable 57A00618 4
+stable 5700702C 4
+stable 5700703C 4
+stable 5700707C 4
+stable 57A00708 4
+stable 57A00718 4
+stable 57F00014 4
+stable 57F0001C 4
+stable 57F00100 0x100
+stable 5650001C 4
+stable 5650003C 4
+stable 540114D0 4
+stable 5401166C 4
+# The runtime input texture is the indirect texture the parameters name (set together).
+field * 56000500 u32 0x56600000
+stable 56000500 4

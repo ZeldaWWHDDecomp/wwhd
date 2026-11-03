@@ -1,0 +1,9 @@
+# TYPE-DOMAIN companion: render 02791230
+# with an MSAA depth. A first render (postsetup) caches the frame's depth sampler from the AA 1 depth 6A027790; the tested
+# render gets the AA 2 depth 6A027840 (same size, format and dimension, antiAlias differs), so the cached-sampler check differs
+# only in antiAlias (+0x1C). Both depths come from the real acquire variant 0279FF24 (r8 = antiAlias; the MSAA count is the
+# client-assigned InitArg+0x30 -> mgr+0x14), assigned as the render target depth (client-assigned RenderBuffer::mDepth).
+# verify: -only 02791230 -strictnan -calleesp
+include lib2_agl_7/enabled_render_msaa_base.txt
+real 02791230
+postsetup 02791230 02791230 r3=0x5C020000 r4=0 r6=0x6A027790 r7=0x6A027790 r8=0x6A027790 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0

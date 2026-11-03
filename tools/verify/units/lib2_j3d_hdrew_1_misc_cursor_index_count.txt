@@ -1,0 +1,7 @@
+# TYPE-DOMAIN: the caller-owned cursor index of the admitted profiles is 0..3 (four observed bones); the original's
+# guard at 027F59EC/027F59F4 (cmplw r0,r8; bge) defines the fallback (entry 0) for any u16 index >= data->mEntryCount
+#. 027F59B4 over the committed model-frame cursor profile (entry count 4) with the
+# caller-owned index equal to the entry count. No model or private field is changed.
+# verify: -only 027F59B4 -strictnan -calleesp -footprint
+include lib2_j3d_hdrew_1_model_frame_cursor_20261031.txt
+field * 0x5D200008 u32 4

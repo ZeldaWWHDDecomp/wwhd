@@ -90,14 +90,28 @@ struct TObject : stb::TObject {
     gptr<TAdaptor> mpAdaptor;
     void forward_value(u32);
 };
-struct TControl {
-    u8 prefix[0xC];
+namespace stb {
+// HD: the STB base ends at 0x58; JStudio adds its frame interval after it.
+struct TControlPrefix {
+    be<u32> reservedState[2];
+    gptr<void> pFactory;
     be<u32> objectCount;
     TLinkListNode mObjectContainer;
     be<u32> mStatus;
-    stb::TObject mObject_control;
+    TObject mObject_control;
     be<s32> _54;
-    u8 pad54[4];
+    gptr<void> __vtbl;
+};
+WWHD_SIZE(TControlPrefix, 0x58);
+WWHD_OFFSET(TControlPrefix, pFactory, 8);
+WWHD_OFFSET(TControlPrefix, objectCount, 0xC);
+WWHD_OFFSET(TControlPrefix, mObjectContainer, 0x10);
+WWHD_OFFSET(TControlPrefix, mStatus, 0x18);
+WWHD_OFFSET(TControlPrefix, mObject_control, 0x1C);
+WWHD_OFFSET(TControlPrefix, _54, 0x50);
+WWHD_OFFSET(TControlPrefix, __vtbl, 0x54);
+}
+struct TControl : stb::TControlPrefix {
     be<f64> mSecondPerFrame;
     bool forward(u32);
 };
@@ -159,6 +173,7 @@ WWHD_OFFSET(TControl, mObjectContainer, 0x10);
 WWHD_OFFSET(TControl, mStatus, 0x18);
 WWHD_OFFSET(TControl, mObject_control, 0x1C);
 WWHD_OFFSET(TControl, _54, 0x50);
+WWHD_OFFSET(TControl, __vtbl, 0x54);
 WWHD_OFFSET(TControl, mSecondPerFrame, 0x58);
 WWHD_SIZE(TControl, 0x60);
 WWHD_SIZE(SequenceData, 0x10);

@@ -1,6 +1,7 @@
 /** Particle rotation/key math and draw initialization.
  * HD texture descriptors and particle caches retain their native load/store order. */
 #include "JSystem/JParticle/JPA_math_drawcalc.h"
+#include "JSystem/JParticle/JPAParticle.h"
 #include <cstring>
 using namespace JPAMathDraw;
 static JPAMathSinCosTable l_sincosTable;
@@ -221,20 +222,20 @@ void cacheTexture(JPADraw *draw, JPAParticleHD *particle, u32 index, JPATextureD
             break;
         }
     }
-    if (equal && u32(state->mDescriptor.mLayoutTail[1]) != u32(object->mLayoutTail[1]))
-        equal = false;
-    if (equal && u32(state->mDescriptor.mLayoutTail[0]) != u32(object->mLayoutTail[0]))
-        equal = false;
     if (equal && u32(state->mDescriptor.mSwizzle) != u32(object->mSwizzle))
+        equal = false;
+    if (equal && u32(state->mDescriptor.mTileMode) != u32(object->mTileMode))
+        equal = false;
+    if (equal && u32(state->mDescriptor.mAA) != u32(object->mAA))
         equal = false;
     if (!equal)
         JPAMath_copyTextureState(state, object);
     else {
-        u32 address = object->mAddress;
+        u32 address = object->mImageAddress;
         u32 mipAddress = object->mMipAddress;
-        state->mCachedAddress = address;
+        state->mCachedImageAddress = address;
         state->mCachedMipAddress = mipAddress;
-        state->mDescriptor.mAddress = address;
+        state->mDescriptor.mImageAddress = address;
         state->mDescriptor.mMipAddress = mipAddress;
     }
     particle->mTextureIndex = index;

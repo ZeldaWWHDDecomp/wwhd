@@ -1,0 +1,167 @@
+# Dispatcher and worker producer from original queue constructor and actual root heap.
+# verify: -only 027F9784 -strictnan -calleesp
+# >>> include lib2_j3d_hdrew_1_queue_constructed_state_20261030.txt
+# Original PipelineFrameQueue::create installs critical sections, embedded tasks, arrays and worker set.
+# Only resetWork/notifyCompleted: neither needs an initialized dispatcher or running worker thread.
+# No private queue fields or fabricated completion-state writes.
+# >>> include lib2_j3d_hdrew_1_constructor_entries.txt
+# Partial constructor graph: actual FreeRegionHeap, 1/2 entries, zero materials and shapes.
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+# 027F9784/027F9890 reach OSBlockMove C0009988 through real callees: the copy is modelled.
+mockmove C0009988 r3 r4 r5
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440
+real 027F3F94 027F3F8C 027F3C38 027F7870
+mockset C0009990 r3 r4 r5
+setup * 027561B4
+setup * 02755FE0 r3=0x6E200000
+stable 6A000000 0x1000000
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+fill * 6A000000 0x1000000 0
+fill * 71003000 8 0
+field * 71003000 u32 0x71003100
+field * 71003004 u32 0x1016A368
+fill * 71003100 32 0
+fieldstr * 71003100 32 "model-fixture-heap"
+arg! 027F5A5C r3 0x71000000
+arg! 027F5A5C r4 0x71010000
+arg! 027F5A5C r5 0x6A000000
+fill 027F5A5C 71000000 76 165
+# Own7B50 factory initializes these fields; padding2D..2F remains patterned.
+field 027F5A5C 71000000 u32 0
+field 027F5A5C 71000004 u32 0
+field 027F5A5C 71000008 u32 0
+field 027F5A5C 7100000C u32 0
+field 027F5A5C 71000010 u32 0
+field 027F5A5C 71000014 u32 0
+field 027F5A5C 71000018 u32 0
+field 027F5A5C 7100001C u32 0
+field 027F5A5C 71000020 u32 0
+field 027F5A5C 71000024 u32 0
+field 027F5A5C 71000028 u32 0
+field 027F5A5C 71000030 u32 0
+field 027F5A5C 71000034 u32 0
+field 027F5A5C 71000038 u32 0
+field 027F5A5C 7100003C u32 0
+field 027F5A5C 71000040 u32 0
+field 027F5A5C 71000044 u32 0
+field 027F5A5C 71000048 u32 0
+field 027F5A5C 7100002C u8 0
+fill 027F5A5C 71010000 38 0
+field 027F5A5C 7101000C u32 0xFF4
+fill 027F5A5C 71011000 24 0
+field 027F5A5C 71011008 u16 1,2
+field 027F5A5C 71011014 u32 0xFEC
+fill 027F5A5C 71012000 128 165
+stable 71010000 38
+stable 71011000 24
+stable 71012000 128
+final 027F5A5C 71000000 4C
+# final directives are capped at0x10000 each; cover the whole1MiB in disjoint chunks.
+final 027F5A5C 6A000000 10000
+final 027F5A5C 6A010000 10000
+final 027F5A5C 6A020000 10000
+final 027F5A5C 6A030000 10000
+final 027F5A5C 6A040000 10000
+final 027F5A5C 6A050000 10000
+final 027F5A5C 6A060000 10000
+final 027F5A5C 6A070000 10000
+final 027F5A5C 6A080000 10000
+final 027F5A5C 6A090000 10000
+final 027F5A5C 6A0A0000 10000
+final 027F5A5C 6A0B0000 10000
+final 027F5A5C 6A0C0000 10000
+final 027F5A5C 6A0D0000 10000
+final 027F5A5C 6A0E0000 10000
+final 027F5A5C 6A0F0000 10000
+# <<< include lib2_j3d_hdrew_1_constructor_entries.txt
+real 027F9560 027F90B0 027F9CAC 028EFFD0 02760084 02758724 02758B88
+fill * 0x5D000000 0x390 0
+setup * 027F9560 r3=0x5D000000
+arg! 027F9A7C r3 0x5D000000
+arg! 027F9E10 r3 0x5D000000
+# <<< include lib2_j3d_hdrew_1_queue_constructed_state_20261030.txt
+setupsnapshot
+# Borrow actual constructed root heap at current-heap service boundary, matching accepted renderer recipe.
+nestedret 02756140 0x6A000000
+real 027F93C4 0273B584 027587B4 02759814 02758CA8 0273B050
+real 0275FBD8 027607C0 02760C4C 02760B1C
+arg! 027F9890 r3 0x5D000000
+arg! 027F9890 r4 0,1,32
+arg! 027F9890 r5 0x6A000000
+callbudget 10000000
+
+# Actual JobQueue base constructor supplies mName and lock/core state consumed by initialize.
+real 027581F4 02757C10 0276A628
+
+# Runtime array producer, required by028EFFD0 to invoke original element constructors.
+real 028EFE58
+
+# Actual worker/thread allocation and embedded message-queue producers.
+real 0273AD10 0273ADAC 0273B0D4 027601F8 027602DC 02752A84
+
+# Registered-root recipe from shared/agl_world and accepted renderer producer.
+field * 0x6E200000 u32 0x6A000000
+field * 0x6E200004 u32 0x1000000
+field * 0x6E200008 u32 0
+stable 0x6E200000 0xC
+stackfill
+setup * 02757B48
+real 027561B4 02755FE0 02755F40 02755EC4 02755CA4 02755E7C 02755FEC 027600EC 0273AF40 02757B48
+stable 104A0B40 0xC
+stable 104A0BC0 0xC
+# Heap registry closure already used by shared/agl_world.
+real 0273B2D0 0273B560 02750CDC 02750D00 02753004 027537B8 02753880 02755818 027601BC 027601F0 02760DE8 02760E34 02760E58
+stable 104A02F8 0x24
+stable 104A0328 0x10
+stable 104A0364 0xC
+
+# Complete dispatcher using actual initializer and completion producer.
+real 027F9890 027F9E10 027F9E50 027F9994
+setup * 027F9890 r3=0x5D000000 r4=32 r5=0x6A000000
+setup * 027F9E10 r3=0x5D000000
+arg! 027F9994 r3 0x5D000000
+arg! 027F9A10 r3 0x5D000000
+arg! 027F9AC0 r3 0x5D000000
+arg! 027F9AE0 r3 0x5D000000
+arg! 027F9B64 r3 0x5D000000
+arg! 027F9AE0 r4 0x5D000368
+arg! 027F9B64 r4 0x5D000368
+
+# No delete flag: supplied queue storage remains outside arena; dispatcher is original heap-owned.
+arg! 027F9784 r3 0x5D000000
+arg! 027F9784 r4 0,2
+arg! 027F9D54 r3 0x5D000264
+arg! 027F9D54 r4 0,2
+real 028F0164 027F9DFC 02760168 02752BEC
+# Actual runtime array-destruction producer, retaining declared opaque thread hook boundary.
+real 028F0020
+
+# Non-singleton disposer initialized through original public heap-registration producer.
+real 02752B0C
+setup 027F9BD4 02752B0C r3=0x5D000000 r4=0x6A000000 r5=3
+field * 0x101F997C u32 0
+field * 0x101F9980 u32 0
+arg! 027F9BD4 r3 0x5D000000
+arg! 027F9BD4 r4 0,2
+
+# Original delegate hook forwards through real quit/join, avoiding opaque queue-owner clobbers.
+real 0275FCEC 0275FF7C 0275FF34 02760958 02760338 027603B0

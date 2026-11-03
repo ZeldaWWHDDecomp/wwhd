@@ -1,0 +1,6 @@
+# verify: -strictnan -calleesp -only 02794970
+# Batch companion: real sampler consumer plus exact defined native inputs consumed by GX2InitTextureRegs.
+# Preserve validated producer/consumer specs unchanged; native SDK output registers and padding stay unobserved.
+include lib2_agl_8_mode0_primary_sampler_consumer_group.txt
+observenested C0006498 r3+0 32
+observenested C0006498 r3+0x74 20

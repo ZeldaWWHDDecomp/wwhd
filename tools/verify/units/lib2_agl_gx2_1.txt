@@ -1,0 +1,570 @@
+# AGL-GX2#1; binary-derived geometry and graphics runtime utilities.
+# verify: -only 027D85E8,027D8CC4,027D9150,027D9214,027D9294,027D935C,027D95C4,027D9764,027D9AE8,027D9C2C,027D9F1C,027D9FD4,027DA23C,027DA4C8,027DA5E4,027DA610,027DA624,027DA628,027DA640,027DA654,027DA668,027DA67C,027DA690,027DA694,027DA710,027DA764,027DA7D4,027DA7E4,027DA84C,027DA87C,027DA898,027DA8D8,027DA960,027DA984,027DA9E8,027DAAA0,027DAAB8,027DAB24,027DABB4,027DABE0,027DAFB4,027DB10C,027DB134,027DB154,027DB1D4,027DB320,027DB590,027DBBB0,027DBBC4,027DBBEC,027DBC00,027DBC2C,027DC078,027DC0C4,027DC1B4,027DC200,027DC598,027DC650,027DC9A0,027DCBBC,027DD5E4,027DD6C0,027DD6EC,027DD738,027DD778,027DD998,027DD9AC,027DD9B0,027DDBB0,027DDD10,027DDFA4,027DDFDC,027DE048,027DE0AC,027DE4D8,027DE5BC -strictnan -calleesp -footprint
+# The eight UniformBuffer/UniformLayout functions are gated by the coherent_uniform companion.
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+# Mutable binding tables are generated with bounded counts, including empty and boundary cases.
+field 027DA898 r3+0x8 u16 0,1,2,3,8
+arg! 027DA898 r4 0,1,2,3,8
+field 027DA8D8 r3+0x8 u16 0,1,2,3,8
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+# Bounded owned-array sizes retain empty, singleton, and multi-entry disposal.
+field 027DA4C8 r3+0x0 s32 -1,0,1,2,4
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+
+# Coherent bounded uniform-resource records, including a word boundary.
+real 027DCF64
+field 027DD0BC r4+0x0 u32 0x56000000
+field 027DD0BC r4+0x8 u32 0
+field 027DD0BC r4+0x4 s32 0,1,2,3
+field 027DD024 r3+0x0 u32 0x56000000
+field 027DD024 r3+0x7 u8 0,1,2,3
+field 027DD024 r3+0x8 u16 0,1,2,3
+field 027DD298 r3+0x0 u32 0x56000000
+field 027DD298 r3+0x7 u8 0,1,2,3
+field 027DD298 r3+0x8 u16 0,1,2,3
+field 027DD394 r3+0x0 u32 0x56000000
+field 027DD394 r3+0x7 u8 0,1,2,3
+field 027DD394 r3+0x8 u16 0,1,2,3
+field 027DD468 r3+0x0 u32 0x56000000
+field 027DD468 r3+0x7 u8 0,1,2,3
+field 027DD468 r3+0x8 u16 0,1,2,3
+field * 56000011 u8 0,1,2,3
+field * 56000012 u16 0,1,2,3,31,32,33,64
+field * 56000014 u16 0,1,2
+field * 56000016 u16 0,16,32,64
+field * 56000018 u16 0,16,32,64
+field * 56000034 s32 0x00FFFFCC
+field * 56000028 s32 0x01FFFFD8
+
+real 027DD5E4
+field 027DD778 r4+0 u32 0x59000000
+field 027DD778 r4+0x14 u32 0
+field 027DD778 r4+4 u32 0,1,2,3
+field 027DD778 r4+8 u32 0,1,2,3
+field 027DD778 r4+0xc u8 0,1
+field 027DD778 r4+0xd u8 0,1
+field 027DD778 r4+0x10 u32 0,1,16,32
+field * 0x59000018 u8 0,1,2,3
+field * 0x5900001a u16 0,1,2,3
+field * 0x59000034 s32 0x00ffffcc
+
+field 027DD9B0 r3+0xa u8 0,1,2,3
+field 027DD9B0 r3+0xb u8 0,1,2,3
+field 027DD9B0 r3+0x20 u32 0,1,16,32,64
+field 027DDBB0 r3+0x20 u32 0,1,16,32,64
+
+field 027DDFDC r3+0x18 u32 0x5b000000
+field * 0x5b00002c u16 0,1,2,3,31,32,33
+field 027DE048 r3+0x16 u16 0,1,2,3,31,32,33
+field 027DE4D8 r3+0x14 u16 0,1,2,3
+field 027DE4D8 r3+0x16 u16 0,1,2,3
+field 027DE5BC r3+0x14 u16 0,1,2,3
+field 027DE5BC r3+0x16 u16 0,1,2,3
+
+real 027DAB24
+field 027DAFB4 r4+0 u32 0x5c000000
+field 027DAFB4 r4+8 u32 0
+field * 0x5c000008 u16 0,1,2,3
+
+field 027D9294 r3+8 s32 -1,0,1,2,3,8
+field 027D9150 r4+8 s32 -1,0,1,2,3,8
+
+# Separate GPU slices and flag arrays model valid allocations without aliasing their owners.
+field 027DDBB0 r3+0xc u32 0x5d000000
+field 027DDBB0 r3+0x1c u32 0x5e000000
+field 027DDBB0 r3+9 u8 0,1
+arg! 027DDBB0 r4 0,1,2,3
+arg! 027DDBB0 r6 0,1,2,3
+field * 0x5d000000 u32 0x60000000
+field * 0x5d000004 u32 256
+field * 0x5d000014 u32 0x61000000
+field * 0x5d000018 u32 256
+field * 0x5d000028 u32 0x62000000
+field * 0x5d00002c u32 256
+field * 0x5d00003c u32 0x63000000
+field * 0x5d000040 u32 256
+field 027DD468 r3+0xc u32 0x64000000
+field 027DD468 r3+0x10 u32 0x65000000
+field 027DD468 r3+0x14 u32 0x66000000
+field 027DD468 r3+0x18 u32 256
+arg! 027DD468 r4 0,1,2,3,31,32,63,64,65
+
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+
+# A slice accessor returns GPU memory. Preserve the genuine accessor rather than a random mock pointer.
+real 027DBBB0
+
+# Two bounded polygon sets and bounded vertex lists, with both active slots and fallback selection.
+arg! 027D9FD4 r3 0x67000000
+arg! 027DA23C r4 0x67000000
+field * 0x6700000c u32 0,1,2,3
+field * 0x67000010 u32 0x68000000
+field * 0x67000014 s32 0,1,2,3
+field * 0x67000018 u32 0,1,2,3
+field * 0x6700001c u32 0x68000000
+field * 0x67000020 s32 0,1,2,3
+field * 0x67000024 u32 0,1,2,3
+field * 0x68000000 u32 0x69000000
+field * 0x68000004 u32 0x69000000
+field * 0x68000008 u32 0x69000000
+field * 0x69000000 u32 0,1,2,3
+field * 0x69000004 u32 0x6a000000
+field * 0x69000008 s32 0,1,2,3
+
+field 027D935C r3+8 s32 -1,0,1,2,3,4,8
+arg! 027D95C4 r3 0x67000000
+
+field 027DBC2C r3+0 u32 0x6b000000
+field * 0x6b00000a u16 0,1,2,3
+field * 0x6b00000c u16 0,1,2,3
+field * 0x6b000018 s32 0x00ffffe8
+field * 0x6b00001c s32 0x01ffffe4
+field 027DBC2C r3+0x1c u32 0,256,512
+
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+field 027DABE0 r3+0 u32 0x6e000000
+field * 0x6e000008 u16 0,1,2,3
+field * 0x6e000014 s32 0x00ffffec
+
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+field 027DDD10 r4+0 u32 0x70000000
+field 027DDFA4 r3+0 u32 0x70000000
+field * 0x7000000c s32 0x00fffff4
+field * 0x70000022 u16 0,1,2,3
+field * 0x70000024 u16 0,1,2,3
+field * 0x71000008 u16 0,1,2,3
+
+real 027DDD10
+field 027DE0AC r4+0 u32 0x70000000
+field 027DE0AC r4+0x20 u32 0
+
+field 027D8CC4 r6+8 s32 -1,0,1,2,3,8
+
+# 027D9C2C reads only lbz 0(r6); bytes after the one-byte face mask are not input.
+callee 027D9C2C r6=1
+
+# Valid clipping owns distinct input, output, cut-list and plane storage.
+arg! 027D8CC4 r4 0x7b000000
+arg! 027D8CC4 r5 0x7c000000
+arg! 027D8CC4 r6 0x7a000000
+arg! 027D8CC4 r7 0x7d000000
+field * 0x7a000000 u32 0,1,2,3,8
+field * 0x7a000004 u32 0x7e000000
+field * 0x7a000008 s32 -1,0,1,2,3,8
+field * 0x7b000000 u32 0,1,2,3,8
+field * 0x7b000004 u32 0x7f000000
+field * 0x7b000008 s32 0
+field * 0x7c000000 u32 0,1,2,3,8
+field * 0x7c000004 u32 0x80000000
+field * 0x7c000008 s32 0
+# Matrix inputs and bounds outputs do not overlap the polygon workspace or its lists.
+arg! 027D9FD4 r4 0x78000000
+arg! 027D9FD4 r5 0x79000000
+arg! 027D9FD4 r6 0x77000000
+arg! 027DA23C r3 0x78000000
+arg! 027DA23C r5 0x77000000
+# A material's owner, matrix input, resource and GPU slices are separate allocations.
+arg! 027DDBB0 r3 0x74000000
+arg! 027DDBB0 r5 0x76000000
+field 027DDBB0 r3+0 u32 0x75000000
+# Dirty words and GPU slices cannot alias the owning uniform descriptor.
+arg! 027DD468 r3 0x73000000
+
+# Bounded real vector math makes plane-normal acceptance reachable with valid box corners.
+real 025155D8
+real 028E8E10
+real 028E8D4C
+arg! 027D9764 r4 0x81000000,0x82000000
+arg! 027D9764 r5 0x83000000
+field * 0x83000000 u8 0,1,2,4,8,16,32,63,255
+field * 81000000 f32 -1
+field * 81000004 f32 -1
+field * 81000008 f32 -1
+field * 8100000c f32 1
+field * 81000010 f32 -1
+field * 81000014 f32 -1
+field * 81000018 f32 1
+field * 8100001c f32 -1
+field * 81000020 f32 1
+field * 81000024 f32 -1
+field * 81000028 f32 -1
+field * 8100002c f32 1
+field * 81000030 f32 -1
+field * 81000034 f32 1
+field * 81000038 f32 -1
+field * 8100003c f32 1
+field * 81000040 f32 1
+field * 81000044 f32 -1
+field * 81000048 f32 1
+field * 8100004c f32 1
+field * 81000050 f32 1
+field * 81000054 f32 -1
+field * 81000058 f32 1
+field * 8100005c f32 1
+field * 82000000 f32 1
+field * 82000004 f32 -1
+field * 82000008 f32 -1
+field * 8200000c f32 -1
+field * 82000010 f32 -1
+field * 82000014 f32 -1
+field * 82000018 f32 -1
+field * 8200001c f32 -1
+field * 82000020 f32 1
+field * 82000024 f32 1
+field * 82000028 f32 -1
+field * 8200002c f32 1
+field * 82000030 f32 1
+field * 82000034 f32 1
+field * 82000038 f32 -1
+field * 8200003c f32 -1
+field * 82000040 f32 1
+field * 82000044 f32 -1
+field * 82000048 f32 -1
+field * 8200004c f32 1
+field * 82000050 f32 1
+field * 82000054 f32 1
+field * 82000058 f32 1
+field * 8200005c f32 1
+
+# Pair joining includes complete segments, non-segments, fallback indices and empty arrays.
+arg! 027D935C r3 0x88000000
+field 027D935C r3+0 u32 0,1,2,3,4
+field 027D935C r3+4 u32 0x84000000
+field 027D935C r3+8 s32 -1,0,1,2,3,4,8
+field * 0x84000000 u32 0x85000000
+field * 0x84000004 u32 0x86000000
+field * 0x84000008 u32 0x87000000
+field * 0x8400000c u32 0x85000000
+field * 0x85000000 u32 0,1,2,3
+field * 0x85000004 u32 0x90000000
+field * 0x85000008 s32 0,2,3
+field * 0x86000000 u32 0,1,2,3
+field * 0x86000004 u32 0x91000000
+field * 0x86000008 s32 0,2,3
+field * 0x87000000 u32 0,1,2,3
+field * 0x87000004 u32 0x92000000
+field * 0x87000008 s32 0,2,3
+
+# Pure geometry helpers execute their bounded binary bodies, preserving real output and list ownership.
+real 028E8F64
+real 0274EDD4
+real 028E91EC
+real 027E9D28
+real 027D7EA8
+real 027D8CC4
+real 027D935C
+real 027D9294
+real 027D9150
+real 027D9214
+# SDK address checks, zeroing and byte copies do not mutate the owning material descriptor.
+stable 74000000 0x30
+# Separate storage for generated cut polygons and the second polygon buffer.
+field * 0x67000000 u32 4
+field * 0x67000004 u32 0x68000200
+field * 0x67000008 s32 0
+field * 0x6700001c u32 0x68000100
+field * 68000200 u32 0x69500000
+field * 69500000 u32 8
+field * 69500004 u32 0x6a500000
+field * 69500008 s32 0,1,2,3
+field * 68000204 u32 0x6950000c
+field * 6950000c u32 8
+field * 69500010 u32 0x6a500100
+field * 69500014 s32 0,1,2,3
+field * 68000208 u32 0x69500018
+field * 69500018 u32 8
+field * 6950001c u32 0x6a500200
+field * 69500020 s32 0,1,2,3
+field * 6800020c u32 0x69500024
+field * 69500024 u32 8
+field * 69500028 u32 0x6a500300
+field * 6950002c s32 0,1,2,3
+field * 68000100 u32 0x69100000
+field * 69100000 u32 8
+field * 69100004 u32 0x6a100000
+field * 69100008 s32 0,1,2,3
+field * 68000104 u32 0x6910000c
+field * 6910000c u32 8
+field * 69100010 u32 0x6a100100
+field * 69100014 s32 0,1,2,3
+field * 68000108 u32 0x69100018
+field * 69100018 u32 8
+field * 6910001c u32 0x6a100200
+field * 69100020 s32 0,1,2,3
+field * 6800010c u32 0x69100024
+field * 69100024 u32 8
+field * 69100028 u32 0x6a100300
+field * 6910002c s32 0,1,2,3
+
+arg! 027D935C r4 0x8a000000
+field * 0x8a000000 u32 4
+field * 0x8a000004 u32 0x8b000000
+field * 0x8a000008 s32 0,1,2,3,16
+field * 8b000000 u32 0x8c000000
+field * 8c000000 u32 16
+field * 8c000004 u32 0x8d000000
+field * 8c000008 s32 0
+field * 8b000004 u32 0x8c00000c
+field * 8c00000c u32 16
+field * 8c000010 u32 0x8d000100
+field * 8c000014 s32 0
+field * 8b000008 u32 0x8c000018
+field * 8c000018 u32 16
+field * 8c00001c u32 0x8d000200
+field * 8c000020 s32 0
+field * 8b00000c u32 0x8c000024
+field * 8c000024 u32 16
+field * 8c000028 u32 0x8d000300
+field * 8c00002c s32 0
+
+# resetGeometryWorkspace reads the completed corners/radius and writes separate polygon pools.
+# Its allocator zeroes only each pool's vertex allocation; neither transitive destination aliases the owner.
+arg! 027D85E8 r3 0x93000000
+arg! 027D85E8 r4 0x98000000
+arg! 027D85E8 r5 0x99000000
+stable 93000028 0x64
+field * 0x93000000 u32 16
+field * 0x93000004 u32 0x68000600
+field * 0x93000008 s32 0
+field * 0x9300000c u32 16
+field * 0x93000010 u32 0x68000400
+field * 0x93000014 s32 0
+field * 0x93000018 u32 16
+field * 0x9300001c u32 0x68000500
+field * 0x93000020 s32 0
+field * 0x93000024 u32 0,1
+field * 68000400 u32 0x9b000000
+field * 9b000000 u32 8
+field * 9b000004 u32 0x9d000000
+field * 9b000008 s32 0
+field * 68000404 u32 0x9b00000c
+field * 9b00000c u32 8
+field * 9b000010 u32 0x9d000100
+field * 9b000014 s32 0
+field * 68000408 u32 0x9b000018
+field * 9b000018 u32 8
+field * 9b00001c u32 0x9d000200
+field * 9b000020 s32 0
+field * 6800040c u32 0x9b000024
+field * 9b000024 u32 8
+field * 9b000028 u32 0x9d000300
+field * 9b00002c s32 0
+field * 68000410 u32 0x9b000030
+field * 9b000030 u32 8
+field * 9b000034 u32 0x9d000400
+field * 9b000038 s32 0
+field * 68000414 u32 0x9b00003c
+field * 9b00003c u32 8
+field * 9b000040 u32 0x9d000500
+field * 9b000044 s32 0
+field * 68000418 u32 0x9b000048
+field * 9b000048 u32 8
+field * 9b00004c u32 0x9d000600
+field * 9b000050 s32 0
+field * 6800041c u32 0x9b000054
+field * 9b000054 u32 8
+field * 9b000058 u32 0x9d000700
+field * 9b00005c s32 0
+field * 68000420 u32 0x9b000060
+field * 9b000060 u32 8
+field * 9b000064 u32 0x9d000800
+field * 9b000068 s32 0
+field * 68000424 u32 0x9b00006c
+field * 9b00006c u32 8
+field * 9b000070 u32 0x9d000900
+field * 9b000074 s32 0
+field * 68000428 u32 0x9b000078
+field * 9b000078 u32 8
+field * 9b00007c u32 0x9d000a00
+field * 9b000080 s32 0
+field * 6800042c u32 0x9b000084
+field * 9b000084 u32 8
+field * 9b000088 u32 0x9d000b00
+field * 9b00008c s32 0
+field * 68000430 u32 0x9b000090
+field * 9b000090 u32 8
+field * 9b000094 u32 0x9d000c00
+field * 9b000098 s32 0
+field * 68000434 u32 0x9b00009c
+field * 9b00009c u32 8
+field * 9b0000a0 u32 0x9d000d00
+field * 9b0000a4 s32 0
+field * 68000438 u32 0x9b0000a8
+field * 9b0000a8 u32 8
+field * 9b0000ac u32 0x9d000e00
+field * 9b0000b0 s32 0
+field * 6800043c u32 0x9b0000b4
+field * 9b0000b4 u32 8
+field * 9b0000b8 u32 0x9d000f00
+field * 9b0000bc s32 0
+field * 68000500 u32 0x9c000000
+field * 9c000000 u32 8
+field * 9c000004 u32 0x9e000000
+field * 9c000008 s32 0
+field * 68000504 u32 0x9c00000c
+field * 9c00000c u32 8
+field * 9c000010 u32 0x9e000100
+field * 9c000014 s32 0
+field * 68000508 u32 0x9c000018
+field * 9c000018 u32 8
+field * 9c00001c u32 0x9e000200
+field * 9c000020 s32 0
+field * 6800050c u32 0x9c000024
+field * 9c000024 u32 8
+field * 9c000028 u32 0x9e000300
+field * 9c00002c s32 0
+field * 68000510 u32 0x9c000030
+field * 9c000030 u32 8
+field * 9c000034 u32 0x9e000400
+field * 9c000038 s32 0
+field * 68000514 u32 0x9c00003c
+field * 9c00003c u32 8
+field * 9c000040 u32 0x9e000500
+field * 9c000044 s32 0
+field * 68000518 u32 0x9c000048
+field * 9c000048 u32 8
+field * 9c00004c u32 0x9e000600
+field * 9c000050 s32 0
+field * 6800051c u32 0x9c000054
+field * 9c000054 u32 8
+field * 9c000058 u32 0x9e000700
+field * 9c00005c s32 0
+field * 68000520 u32 0x9c000060
+field * 9c000060 u32 8
+field * 9c000064 u32 0x9e000800
+field * 9c000068 s32 0
+field * 68000524 u32 0x9c00006c
+field * 9c00006c u32 8
+field * 9c000070 u32 0x9e000900
+field * 9c000074 s32 0
+field * 68000528 u32 0x9c000078
+field * 9c000078 u32 8
+field * 9c00007c u32 0x9e000a00
+field * 9c000080 s32 0
+field * 6800052c u32 0x9c000084
+field * 9c000084 u32 8
+field * 9c000088 u32 0x9e000b00
+field * 9c00008c s32 0
+field * 68000530 u32 0x9c000090
+field * 9c000090 u32 8
+field * 9c000094 u32 0x9e000c00
+field * 9c000098 s32 0
+field * 68000534 u32 0x9c00009c
+field * 9c00009c u32 8
+field * 9c0000a0 u32 0x9e000d00
+field * 9c0000a4 s32 0
+field * 68000538 u32 0x9c0000a8
+field * 9c0000a8 u32 8
+field * 9c0000ac u32 0x9e000e00
+field * 9c0000b0 s32 0
+field * 6800053c u32 0x9c0000b4
+field * 9c0000b4 u32 8
+field * 9c0000b8 u32 0x9e000f00
+field * 9c0000bc s32 0
+field * 68000600 u32 0x9f000000
+field * 9f000000 u32 8
+field * 9f000004 u32 0xa0000000
+field * 9f000008 s32 0
+field * 68000604 u32 0x9f00000c
+field * 9f00000c u32 8
+field * 9f000010 u32 0xa0000100
+field * 9f000014 s32 0
+field * 68000608 u32 0x9f000018
+field * 9f000018 u32 8
+field * 9f00001c u32 0xa0000200
+field * 9f000020 s32 0
+field * 6800060c u32 0x9f000024
+field * 9f000024 u32 8
+field * 9f000028 u32 0xa0000300
+field * 9f00002c s32 0
+field * 68000610 u32 0x9f000030
+field * 9f000030 u32 8
+field * 9f000034 u32 0xa0000400
+field * 9f000038 s32 0
+field * 68000614 u32 0x9f00003c
+field * 9f00003c u32 8
+field * 9f000040 u32 0xa0000500
+field * 9f000044 s32 0
+field * 68000618 u32 0x9f000048
+field * 9f000048 u32 8
+field * 9f00004c u32 0xa0000600
+field * 9f000050 s32 0
+field * 6800061c u32 0x9f000054
+field * 9f000054 u32 8
+field * 9f000058 u32 0xa0000700
+field * 9f00005c s32 0
+field * 68000620 u32 0x9f000060
+field * 9f000060 u32 8
+field * 9f000064 u32 0xa0000800
+field * 9f000068 s32 0
+field * 68000624 u32 0x9f00006c
+field * 9f00006c u32 8
+field * 9f000070 u32 0xa0000900
+field * 9f000074 s32 0
+field * 68000628 u32 0x9f000078
+field * 9f000078 u32 8
+field * 9f00007c u32 0xa0000a00
+field * 9f000080 s32 0
+field * 6800062c u32 0x9f000084
+field * 9f000084 u32 8
+field * 9f000088 u32 0xa0000b00
+field * 9f00008c s32 0
+field * 68000630 u32 0x9f000090
+field * 9f000090 u32 8
+field * 9f000094 u32 0xa0000c00
+field * 9f000098 s32 0
+field * 68000634 u32 0x9f00009c
+field * 9f00009c u32 8
+field * 9f0000a0 u32 0xa0000d00
+field * 9f0000a4 s32 0
+field * 68000638 u32 0x9f0000a8
+field * 9f0000a8 u32 8
+field * 9f0000ac u32 0xa0000e00
+field * 9f0000b0 s32 0
+field * 6800063c u32 0x9f0000b4
+field * 9f0000b4 u32 8
+field * 9f0000b8 u32 0xa0000f00
+field * 9f0000bc s32 0
+
+# Full input records passed to real math helpers; output storage is not an input.
+# Vector=12, affine matrix=48, projection=64, segment=24 and plane=16 bytes,
+# checked against the original helper loads/stores and our layout assertions.
+# heap facts also observe non-stack inputs; real helpers execute without mock fills.
+callee 025155D8 r3=heap12
+callee 028E8E10 r3=heap12
+callee 028E8D4C r3=heap12 r4=heap12 r5=out12
+callee 028E8F64 r3=heap48 r4=heap12 r5=out12
+callee 028E91EC r3=heap48 r4=out48
+callee 0274EDD4 r3=out64 r4=heap64
+callee 027E9D28 r3=heap24 r4=heap16 r5=out4
+
+# Complete initialized geometry records and scalar face masks at caller boundaries.
+callee 027D9764 r4=heap96 r5=1
+callee 027D9C2C r4=heap24 r5=heap64
+callee 027D9AE8 r4=heap24 r5=heap48 r6=1
+callee 027D95C4 r4=heap16
+callee 027DB320 r4=heap48 r5=heap48 r6=heap48
+# Work-size calls receive the full builder object at its original frame location.
+# FrameLocal preserves the original stale bytes; no padding is zeroed or masked.
+callee 027DABB4 r3=heap40
+callee 027DCFF8 r3=heap48
+callee 027DD6C0 r3=heap68
+callee 027DDFA4 r3=heap112
+# Calculators write their complete layout receiver and read their builder argument.
+# These real targets bypass generated output fills.
+callee 027DAB24 r3=out32 r4=heap40
+callee 027DCF64 r3=out40 r4=heap48
+callee 027DD5E4 r3=out48 r4=heap68
+callee 027DDD10 r3=out80 r4=heap112
+callee 027DAFB4 r4=heap40
+callee 027DD0BC r4=heap48
+callee 027DD778 r4=heap68
+# Byte-copy source extents follow the actual byte count (stack sources here <=48).
+callee C000A848 r4=dyn1*r5:4096 r5=0
+# Array construction receives uninitialized destination storage, not an input.
+# The 8x12-byte corner array is fully written before its first consuming call.
+callee 028EFFD0 r3=255

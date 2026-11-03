@@ -1,0 +1,98 @@
+# Lead20:24: original empty SafeText static initializer and real termination slots. Original uninitialized diagnostic retained.
+# AGL#7: original constructor lifetime tree, :31.
+# verify: -only 0278DAC0 -strictnan -calleesp
+# Coverage gap map for the n1000 seed1 profile: in 0278DAC0, blocks 4-5,
+# 8-9, 12-13, 16-17, 20-21, 24-25, 28-29, 32-33, 36-37, 40-41, 44-45,
+# 48-49, 52-53, 56-57, 60-61, 64-65, 68-69, 72-73, 76-77, 80-81, 84-85,
+# 88-89, 92-93, 96-97, 100-101, 104-105, 108-109, and 112 are GHS null
+# guards on embedded member addresses; odd blocks are the associated
+# operator_new failure arms where present. In 0279207C, blocks 4, 6, 8, 10,
+# 12-13, 16-17, 20-21, 24-25, 28-29, 32-33, 36-37, 40-41, 44-45, and 48
+# are the same guards/failure arms. These appear to be GHS null guards on
+# embedded member addresses in complete receivers of sizes 0x5C4 and 0x4BC;
+# whether every gap is unreachable on that valid domain is under the §3 OPEN
+# reachability question. The 143 n1000 survivors mutate covered constructor
+# body statements (94 in 0278DAC0, 49 in 0279207C), not these gaps.
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+# Complete receiver storage or a fresh allocation; no allocation result reuse.
+arg! 0278DAC0 r3 0
+alloc 0273AD10 r3 0x63000000
+allocfail 0273AD10 2
+allocnested 0273AD10
+# Protected02785CB4 remains opaque.
+real 0279A07C
+real 0279CA34
+real 0279C950
+real 0279E57C
+real 0273B264
+real 0273B200
+real 0279E618
+real 0279E674
+real 027A84B8
+real 0279CB9C
+real 027A861C
+real 027A03A0
+real 028EFFD0
+real 028EFE58
+real 027BE6B8
+real 027BDF7C
+real 027BDE1C
+real 027BDEB4
+real 02752A84
+real 02759B98
+real 0279F1BC
+real 0279288C
+real 02791A4C
+real 027919BC
+real 027919FC
+real 02791A54
+# SDK import stubs stay imports.
+mockmove C0009988 r3 r4 r5
+
+# Approved full GHS nonvolatile save/restore chains for real array driver.
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258
+
+real 02759B40 027A8C80 0279A490 027A08C8
+setup 0279207C 02759B40
+setup 0278DAC0 02759B40
+
+# Complete caller-owned nonnull placement storage; uninitialized bytes remain observable.
+fill 0278DAC0 62000000 0x5C4 0xA5
+fill 0279207C 62010000 0x4BC 0xA5
+final 0278DAC0 62000000 0x5C4
+final 0279207C 62010000 0x4BC

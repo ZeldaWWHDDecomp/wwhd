@@ -1,0 +1,33 @@
+# verify: -only 027B91B4,027B7860 -calleesp -strictnan
+# Program-set and archive destructors including the NULL receiver (both return at once). Opaque mocks with
+# arguments compared; the release slot is a mock-only callback.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+callee 0F001401 fixture r3=0 r4=0
+ret! 02755FEC 0x57001000
+field * 0x5700100C u32 0x57002000
+field * 0x5700203C u32 0x0F001401
+stable 0x5700100C 4
+stable 0x5700203C 4
+arg! 027B91B4 r3 0,0x58000000,0x58000000,0x58000000
+arg! 027B91B4 r4 0,1,2,3
+field 027B91B4 r3+0xE4 u32 0,1,2,3
+field 027B91B4 r3+0xE8 u32 0,0x5B400000
+arg! 027B7860 r3 0,0x58000000,0x58000000,0x58000000
+arg! 027B7860 r4 0,1,2,3

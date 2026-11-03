@@ -1,0 +1,10 @@
+# verify: -only 027D54F8 -calleesp
+# RenderCommandPool::beginCommand on pools built by the pool's own producers (lib2_agl_19_commands_pool_fixture.txt):
+# a fresh pool and one with a completed frame and commands recorded in the current frame. Arguments as RenderJob::execute
+# (027D74AC) passes them for draw and GPU-calc jobs: name "" (stack SafeText), request = layer manager index (+0x40 for
+# draw jobs; indices 0..13), ring = the core's ring 0..2. Pool P1 holds earlier recordings with GX2 commands (nonzero sizes) and the fresh P0 none.
+include lib2_agl_19_commands_pool_fixture.txt
+arg! 027D54F8 r3 0x58000000,0x58000100
+arg! 027D54F8 r4 0x58200000
+arg! 027D54F8 r5 0x40,0x41,0x46,0x4D,0,1,6,13
+arg! 027D54F8 r6 0,1,2

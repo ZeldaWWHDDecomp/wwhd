@@ -1,0 +1,41 @@
+# Actual merged NW-UT intrusive insertion, one distinct constructed sound per input.
+# readable-scope: 02892FA0,02893194
+# verify: -strictnan -calleesp -only 02892FA0,02893194
+src wwhd_src/nw/snd/ArchivePlayback.cpp
+src wwhd_src/nw/snd/ArchiveLoading.cpp
+stackfill
+real 0286DA70
+arg! 02892FA0 r3 0x5F200000
+arg! 02893194 r3 0x5F200000
+arg! 02892FA0 r4 0,1
+arg! 02893194 r4 0,1
+arg! 02892FA0 r5 0x5F270000
+arg! 02893194 r5 0x5F270000
+arg! 02892FA0 r6 0x5F240000
+arg! 02893194 r6 0x5F240000
+field * 5F270000 u32 0x5F230000
+ret! 028ADBE4 0x5F230000
+ret! 0289FE28 0x5F230000
+# The existing sound list has one owned node, with both directions coherent.
+field 02892FA0 5F200038 u32 0x5F210274
+field 02892FA0 5F20003C u32 0x5F210274
+field 02892FA0 5F210274 u32 0x5F200038
+field 02892FA0 5F210278 u32 0x5F200038
+field 02893194 5F200084 u32 0x5F220274
+field 02893194 5F200088 u32 0x5F220274
+field 02893194 5F220274 u32 0x5F200084
+field 02893194 5F220278 u32 0x5F200084
+# Empty work lists. Insertion mutates these nodes; stability only excludes unrelated mock clobber.
+field * 5F200058 u32 0x5F200058
+field * 5F20005C u32 0x5F200058
+field * 5F2000A4 u32 0x5F2000A4
+field * 5F2000A8 u32 0x5F2000A4
+stable 5F200038 8
+stable 5F200058 8
+stable 5F200084 8
+stable 5F2000A4 8
+stable 5F210274 8
+stable 5F220274 8
+stable 5F230274 8
+stable 5F23063C 8
+stable 5F230500 8

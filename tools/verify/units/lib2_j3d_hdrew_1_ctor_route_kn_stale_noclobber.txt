@@ -1,0 +1,4 @@
+# lib2_j3d_hdrew_1_ctor_route_kn_stale without mock clobbering (every input is a -noclobber input), loader route
+# heap (B), -only 027F5A5C.
+# verify: -only 027F5A5C -strictnan -calleesp -noclobber
+include lib2_j3d_hdrew_1_ctor_route_kn_stale.txt

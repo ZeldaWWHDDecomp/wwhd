@@ -1,0 +1,41 @@
+# Own named-option/scalarbinding factories using the approved real unlocked heap.
+# verify: -only 027F78A8,027F7A2C -strictnan -calleesp
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440 0273B050 028F521C 027F7B24
+mockset C0009990 r3 r4 r5
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x71003000 r6=0
+stable 6A000000 0x100000
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+fill * 6A000000 512 0
+fill * 71003000 8 0
+field * 71003000 u32 0x71003100
+field * 71003004 u32 0x1016A368
+fill * 71003100 32 0
+fieldstr * 71003100 32 "model-fixture-heap"
+mockmove C0009988 r3 r4 r5
+arg! 027F78A8 r3 0x71502000
+arg! 027F78A8 r4 0x71500000
+arg! 027F78A8 r5 0x6A000000
+arg! 027F7A2C r3 0,0x71502000
+arg! 027F7A2C r4 0x6A000000
+fill * 71500000 8 0
+field * 71500000 u32 0x71500100
+field * 71500004 u32 0x1016E8E4
+fill * 71500100 65 66
+field * 71500100 u8 0,66
+field * 7150011F u8 0,66
+field * 71500120 u8 0,66
+field * 71500140 u8 0
+fill * 71502000 20 0
+field * 7150200C u32 0,4
+field * 71502012 s16 -1,0,1
+stable 71500000 8
+stable 71500100 65
+stable 71502000 20
+final 027F78A8 6A000000 200
+final 027F7A2C 6A000000 200

@@ -1,0 +1,33 @@
+# AGL#19 027D60D4 allocateFrameStorage, drc view (index 1), with the GamePad sizes as the shipped HD task passes them to
+# setDimensions 027C22D0 (027297C0 at 02729870..027298C0): logical {854,480} from the task (+0x180/+0x184, set by its
+# constructor 027294A8 from 02739578(0)) and physical {1920,1080} from 02739594/027395E4 (the TV size table words
+# 1049FB6C/1049FB70 the static initializer 02739634 stores). Otherwise as lib2_agl_19_display_view_init_drc (renderer
+# fixture: configuration, manager and views from their real constructors; TV sizes unchanged). The frame buffer takes
+# the physical size, the logical size goes to setSurfaceExtent, so the two re-reads of the logical size are observable.
+# verify: -only 027D60D4 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_renderer_base_fixture.txt
+real 027C21C4 027C22D0
+setup * 027C21C4 r3=0x5E000000
+field * 5E000100 u32 1280
+field * 5E000104 u32 720
+field * 5E000108 u32 1280
+field * 5E00010C u32 720
+field * 5E000110 u32 854
+field * 5E000114 u32 480
+field * 5E000118 u32 1920
+field * 5E00011C u32 1080
+stable 5E000100 0x20
+poke * 5E000020 u32 14
+poke * 5E000024 u32 0x1000
+postsetup * 027C22D0 r3=0x5E000000 r4=0 r5=0x5E000100 r6=0x5E000108
+postsetup * 027C22D0 r3=0x5E000000 r4=1 r5=0x5E000110 r6=0x5E000118
+real 027C2008 027C2378 0274F53C
+real 027D7920 027D78FC 027D5E5C 027D6070 027D5EE8 027D778C 027DA694
+stable 101F95C8 8
+arg! 027D60D4 r3 0x5E100818
+arg! 027D60D4 r4 1
+arg! 027D60D4 r5 0x5E000008
+arg! 027D60D4 r6 0x5E000018
+arg! 027D60D4 r7 14
+arg! 027D60D4 r8 0x6A87E2D0

@@ -1,0 +1,30 @@
+# AGL#7 CameraView::create 0278D0D0 with a NULL receiver: the constructor allocates its 0x168-byte object through operator
+# new 0273AD10, which succeeds or (allocfail call 1) is exhausted and returns NULL, so the top-level `view == nullptr` return
+# runs. Type-domain companion (labelled): the shipped callers pass a stack CameraView, so the NULL-receiver path is shipped
+# code that the producer domain never runs.
+# verify: -only 0278D0D0 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+stackfill
+alloc 0273AD10 r3 0x63000000
+allocfail 0273AD10 0,1
+arg! 0278D0D0 r3 0
+final 0278D0D0 0x63000000 0x168

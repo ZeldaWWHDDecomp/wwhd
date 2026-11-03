@@ -1,0 +1,10 @@
+# verify: -strictnan -only 02794068 -noclobber
+# AGL#8 ssaotargetset (2026-10-31): lib2_agl_8_target_set_lifetime_group_visible (cold prepareSurfaces 02794068 on a
+# target set made by the original constructor 02793384, real texture cache) with the stack arguments of the two cache
+# calls compared. prepareSurfaces calls acquireShared2D 0279FDC8 (history) and acquire2D 0279FC6C (work) with ten
+# arguments; the last two are passed at sp+8 / sp+0xC. Both callees read them (0279FDC8: lbz 0x5B(r1) / lbz 0x5F(r1),
+# i.e. the low bytes of the caller's sp+8 / sp+0xC words, and forward them to 0279F7F0), but livein.tsv records no
+# stack words for them, so the top-level call compare did not include them.
+include lib2_agl_8_target_set_lifetime_group_visible.txt
+callee 0279FDC8 stack=2
+callee 0279FC6C stack=2

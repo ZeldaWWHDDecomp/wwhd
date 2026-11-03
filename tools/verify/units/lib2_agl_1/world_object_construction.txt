@@ -1,0 +1,14 @@
+# AGL#1 environment object construction on the original world: Projector (0276CE10) and Fog (0276EE70) as their class
+# factories (0276D96C / 0276F370) build them in a fresh zeroed block of the world heap, the shared base constructor
+# (0276FCA0), the factories themselves, and the self-allocating form (object NULL).
+# verify: -only 0276CE10,0276EE70,0276FCA0,0276D96C,0276F370 -strictnan -calleesp
+include lib2_agl_1/world_manager_initialize.txt
+real 0273AD10
+fill * 59E30000 0x1000 0
+stable 59E30000 0x1000
+arg! 0276CE10 r3 0x59E30000,0
+arg! 0276CE10 r4 0
+arg! 0276EE70 r3 0x59E30000,0
+arg! 0276FCA0 r3 0x59E30000,0
+arg! 0276D96C r3 0x6A000000
+arg! 0276F370 r3 0x6A000000

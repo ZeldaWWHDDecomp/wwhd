@@ -1,0 +1,9 @@
+# TYPE-DOMAIN: the admitted producers make recordIndex < mRecordCount; the original's guard at 027F5898/027F58A0
+# (cmplw r11,r10; bge) defines the fallback (record 0) for any recordIndex >= mRecordCount.
+# 027F583C over the committed record-produced profile with the selected record index equal to the record count:
+# mRecordCount = 1, shape lookupIndex = 1 (indices[1] = 1). All three records stay constructed by 027F1534, so the
+# original calls slot +0x14 with record 0 and a candidate that uses record[1] passes the second record.
+# verify: -only 027F583C -strictnan -calleesp
+include lib2_j3d_hdrew_1_packet_drawbuffer_record_produced_20261031.txt
+poke 027F583C 71810128 u32 1
+poke 027F583C 7181410C u16 1

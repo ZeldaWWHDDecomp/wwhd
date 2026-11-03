@@ -1,0 +1,25 @@
+# Parser command handlers within JS-JAudio#5.
+src wwhd_src/JSystem/JAudio/JASSeqParser_commands.cpp
+# CloseTrack requires a valid child index; other command words retain all register bits.
+field 02846CA4 r5+0 u32 0,1,7,15,0x100,0x101,0x1000F
+field 02846AE0 r5+0 u32 0,1,2,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+field 02846BAC r5+0 u32 0,1,2,0x100,0x80000000,0xFFFFFFFF
+field 02846E3C r4+0x14 s32 -2147483648,-1,0,1,2,2147483647
+
+# Oscillator routing supports the two declared oscillator slots.
+field 02847270 r5+0 u32 0,1,15,16,17,31,0x100,0x11F
+
+field 02846AB0 r5+0 u32 0,1,7,15
+field 02846AC8 r5+0 u32 0,1,7,15
+field 028469C8 r4+0x18 u32 0,1,2,3,4,5,6,7
+field 028470B8 r5+0 u32 0,31,32,63,64,95,96,127,128,159,160,191,192,223
+field 028470B8 r5+4 u32 0,31,32,63,64,95,96,127,128,159,160,191,192,223
+field 028470B8 r5+8 u32 0,31,32,63,64,95,96,127,128,159,160,191,192,223
+arg 028465E4 r5 0,1,2,3,4,5,6,15,16,0xFFFFFFF5
+field 028465E4 r4+0x26E u16 0,1,2,32767,32768,65535
+arg 02845E38 r5 0,0x80,0x88,0x180,0xFFFFFFFF
+
+field 02846EA8 101F9FCC u32 0,0x02803180
+
+# Untouched single owner of the canonical sequence callback word.
+src wwhd_src/JSystem/JAudio/JASTrack_statics.cpp

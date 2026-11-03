@@ -1,0 +1,18 @@
+# AGL#19 027D60D4 allocateFrameStorage, tv view (index 0), as RenderQueueManager::initialize 027C0CEC calls it (027C0DFC):
+# view built by the original constructor inside 027C088C, sizes from setDimensions, pending capacity = the manager's
+# layer count (14: the configuration's capacity after the layer array allocation), heap = the renderer heap. Name from the
+# real static getter 027C2008.
+# verify: -only 027D60D4 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_renderer_fixture.txt
+real 027C2008 027C2378 0274F53C
+# Own callees run as originals here (they are tested in their own specs): the 778C ABI residue words r6..r10 are
+# what these leave in the volatile registers, which a mock would not model.
+real 027D7920 027D78FC 027D5E5C 027D6070 027D5EE8 027D778C 027DA694
+stable 101F95C8 8
+arg! 027D60D4 r3 0x5E100018
+arg! 027D60D4 r4 0
+arg! 027D60D4 r5 0x5E000000
+arg! 027D60D4 r6 0x5E000010
+arg! 027D60D4 r7 14
+arg! 027D60D4 r8 0x6A87E2D0

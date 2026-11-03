@@ -1,0 +1,22 @@
+# verify: -strictnan -only 02794970 -noclobber
+# ssaorender: the read-only mode-0 primary profile after fourteen further
+# original primary passes (postsetup 02794970). The base profile's own setup chain already leaves the rotating
+# sample index (set+0x984, written only by the target-set constructor 02793384 and by this pass, modulo 16) at 1, so
+# with sample rotation on (real ParameterBase::applyResource choice) the tested pass reads index 15 and wraps it
+# (15 -> 0); with rotation off it reads 0. (lib2_agl_8_ssaorender_primary_rotation_visible runs fifteen passes and
+# so wraps back to 0 before the tested pass; this companion replaces it.) Caller-visible checks only; -noclobber.
+include lib2_agl_8_mode0_primary_sampler_readonly_group.txt
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1

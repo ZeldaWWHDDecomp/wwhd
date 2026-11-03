@@ -1,0 +1,11 @@
+# Extended collection release on its real constructed-empty lifecycle state.
+# Populated record/value destruction remains in release_positive256.
+# verify: -only 027D1534 -strictnan -calleesp -footprint
+src wwhd_src/agl/RenderSelectionCleanup.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027D1534 r3 0x59000000
+fill 027D1534 r3 0x118 0
+field 027D1534 r3 u32 0x1016AEF8
+setup 027D1534 027BF734 r3=0x59000020
+stable 1016AEF8 0x130
+real 027BF734

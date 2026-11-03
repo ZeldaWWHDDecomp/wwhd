@@ -1,0 +1,12 @@
+# 027F5A5C on the admitted 09:09 chain profile (lib2_j3d_hdrew_1_ctor_chain: 0260A0B4 -> 0272D384 -> 027F7B50 ->
+# 027F5A5C, -only 027F5A5C), with stale (non-zero) bytes in the heap blocks the real allocator hands out to the
+# constructor. A sead heap block is not cleared on allocation (02753D6C -> 027536F4/02753628/0273B310 return the block
+# as it is), so its previous contents are arbitrary and 027F5A5C must initialise every field of the entries, materials,
+# providers, fog and texture-matrix objects it allocates itself. Same recipe as the admitted factory heapfill companion
+# (lib2_j3d_hdrew_1_factory_heapfill) and the AGL#7 construction_world recipe (fill 0xA5).
+# Range: the free tail of heap 0x6A000000 after the receiver S = 0x6A8A8420 (S..S+0x4C, from 0273B050 after the
+# setups, is not filled; the allocator writes its own block headers inside the range). Every allocation of the tested
+# call (heap r5 and the current heap) lies in 0x6A8A846C..0x6A8A9300 on St and below 0x6A8B0000 on Kn (-trace 1000003).
+# verify: -only 027F5A5C -strictnan -calleesp
+include lib2_j3d_hdrew_1_ctor_chain.txt
+fill * 0x6A8A846C 0x17B94 0xA5

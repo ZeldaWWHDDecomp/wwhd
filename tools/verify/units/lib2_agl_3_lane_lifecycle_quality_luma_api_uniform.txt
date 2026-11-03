@@ -1,0 +1,31 @@
+# TYPE-DOMAIN: supported quality choices and finite luma coefficients through the original parameter apply API.
+# No shader/program fields are changed. Runtime, targets, and samplers remain original-produced.
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_filter_aa_typedomain_reprojection_disabled_apply_uniform_observed.txt
+# Keep this cohort on the AA path; alpha0 and varying-alpha guards were tested separately.
+field 0277AD60 5D52002C f32 1.0
+# Edge-quality Int parameter at object+0x4CC (value+0x4D8).
+field * 5D530000 u32 16
+field * 5D530004 u32 2
+field * 5D530008 u32 0
+field 0277AD60 5D53000C u32 0,1,2
+field * 5D530010 u32 0x5D530000
+# Fetch-quality Int parameter at object+0x4DC (value+0x4E8); initialization builds all seven choices.
+field * 5D530020 u32 16
+field * 5D530024 u32 2
+field * 5D530028 u32 0
+field 0277AD60 5D53002C u32 0,1,2,3,4,5,6
+field * 5D530030 u32 0x5D530020
+# Color parameter at object+0x4FC: caller-owned 16-byte payload with finite components.
+field * 5D530040 u32 28
+field * 5D530044 u32 6
+field * 5D530048 u32 0
+field 0277AD60 5D53004C f32 0.0,0.299,1.0
+field 0277AD60 5D530050 f32 0.0,0.587,0.5
+field 0277AD60 5D530054 f32 0.0,0.114,1.0
+field * 5D530058 f32 0.0
+field * 5D530060 u32 0x5D530040
+stable 0x5D530000 0x64
+postsetup 0277AD60 0279EB28 r3=0x560004CC r4=0x5D530010
+postsetup 0277AD60 0279EB28 r3=0x560004DC r4=0x5D530030
+postsetup 0277AD60 0279EB28 r3=0x560004FC r4=0x5D530060

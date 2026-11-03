@@ -1,0 +1,5 @@
+# resolveShaderLookupNames with the main-spec steering, observing the stack SafeText name it hands to the lookup
+# 027BC540 (the lookup reads the text pointer and terminates the text through the methods word).
+# verify: -strictnan -calleesp -only 027731C8
+include lib2_agl_2.txt
+callee 027BC540 r4=8

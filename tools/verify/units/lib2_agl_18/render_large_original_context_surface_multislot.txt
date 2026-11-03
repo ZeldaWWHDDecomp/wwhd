@@ -1,0 +1,21 @@
+# AGL#18 027CF2B0 caller-valid two-slot surface companion.  Preserve the base
+# record/program producers, extend their value storage to two contiguous
+# DrawResourceValue_l entries, initialize each embedded selection buffer with
+# the original value producer, and select slots 0/1 within valueCount=2.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_surface_observed.txt
+stable 59800000 0xD0
+fill * 59800000 0xD0 0
+setup * 027BEB5C r3=0x5980004C
+setup * 027CE0AC r3=0x59200000 r4=0x5980004C r5=0x6A000000
+setup * 027BEEE4 r3=0x5980004C r4=0x6A000000 r5=2
+setup * 027BEB5C r3=0x598000B4
+setup * 027CE0AC r3=0x59200000 r4=0x598000B4 r5=0x6A000000
+setup * 027BEEE4 r3=0x598000B4 r4=0x6A000000 r5=2
+poke * 5910023C u32 2
+poke * 59100240 u32 0x59800000
+poke * 59800004 u32 0x5910008C
+poke * 59800008 u32 0x59100310
+poke * 5980006C u32 0x59100310
+poke * 59800070 u32 0x5910008C
+arg! * r5 0,1

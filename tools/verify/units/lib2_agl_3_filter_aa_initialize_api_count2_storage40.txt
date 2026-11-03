@@ -1,0 +1,7 @@
+# verify: -strictnan -calleesp -only 0277A634
+# Targeted AGL#3 survivor probe: force the second entry iteration and the nonzero
+# per-entry allocation arm while retaining the producer-backed API fixture.
+include lib2_agl_3_filter_aa_initialize_api_alt.txt
+field 0277A634 0x5A100000 s32 2 2
+field 0277A634 0x5A100004 u32 0x40 0x40
+arg! 0277A634 r5 0x6A000000

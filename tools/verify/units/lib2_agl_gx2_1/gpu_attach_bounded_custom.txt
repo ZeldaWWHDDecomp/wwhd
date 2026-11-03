@@ -1,0 +1,45 @@
+# Complete disjoint ViewAllocation, ViewGpu, resource prefix, custom data and GPU storage.
+# GPU allocation starts nonzero to expose cleared cache lines.
+# GPU allocation is 256 bytes: original and selected variant clear extents remain owned.
+# GPU address E8001000 and its 256-byte extent lie inside the SDK cache-valid E8000000..EC000000 window.
+# SDK checks and cache operations do not receive or alias the private metadata.
+# Stable excludes only implicit unrelated mock epochs; real stores and call arguments remain observed.
+# Own clear wrapper027DD9AC stays a standard observed call boundary (r3 destination,r4 bytes).
+# verify: -only 027DD9B0 -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+arg! 027DD9B0 r3 0x6E000000
+arg! 027DD9B0 r4 0xE8001000
+arg! 027DD9B0 r5 256
+fill 027DD9B0 0x6E000000 0x30 0
+fill 027DD9B0 0x6E001000 0x17 0
+fill 027DD9B0 0x6E002000 0x14 0
+fill 027DD9B0 0x6E003000 0x80 0
+fill 027DD9B0 0xE8001000 0x100 0xA5
+field 027DD9B0 0x6E000000 u32 0x6E001000
+field 027DD9B0 0x6E000004 u32 2
+field 027DD9B0 0x6E000008 u8 1
+field 027DD9B0 0x6E00000A u8 1
+field 027DD9B0 0x6E00000B u8 1
+field 027DD9B0 0x6E00000C u32 0x6E002000
+field 027DD9B0 0x6E00001C u32 0x6E003000
+field 027DD9B0 0x6E000020 u32 128
+stable 0x6E000000 0x30
+stable 0x6E001000 0x17
+stable 0x6E002000 0x14
+real 027DD998
+real 027DB134
+real 027DBBB0
+real 027DBBC4
+real 027DBBEC
+real 027DBC00
+ret! C0009DB0 1
+callee 027DD9AC r3=0 r4=0

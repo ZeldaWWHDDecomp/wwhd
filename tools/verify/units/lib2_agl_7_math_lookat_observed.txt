@@ -1,0 +1,120 @@
+# Independent AGL7 normalization and finite LookAt original-helper domains.
+# verify: -only 02791C68,02791D00 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+stackfill
+real 02756E3C 025155D8 028E8D4C 0274CCC4 028E8E10 028E90D4 0274CCB0
+setup 02791D00 02756E3C
+arg! 02791C68 r3 0x56400000
+arg! 02791C68 r4 0x56410000,0x56410040,0x56410080,0x564100C0,0x56410100,0x56410140
+fill 02791C68 56400000 0xC 0xA5
+final 02791C68 56400000 C
+footprint 02791C68 0
+fill 02791C68 56410000 0x30 0
+field 02791C68 56410000 f32 1
+field 02791C68 56410004 f32 0
+field 02791C68 56410008 f32 0
+field 02791C68 56410010 f32 0
+field 02791C68 56410014 f32 1
+field 02791C68 56410018 f32 0
+field 02791C68 56410020 f32 0
+field 02791C68 56410024 f32 0
+field 02791C68 56410028 f32 1
+fill 02791C68 56410040 0x30 0
+field 02791C68 56410040 f32 -1
+field 02791C68 56410044 f32 0
+field 02791C68 56410048 f32 0
+field 02791C68 56410050 f32 0
+field 02791C68 56410054 f32 1
+field 02791C68 56410058 f32 0
+field 02791C68 56410060 f32 0
+field 02791C68 56410064 f32 0
+field 02791C68 56410068 f32 -1
+fill 02791C68 56410080 0x30 0
+field 02791C68 56410080 f32 0
+field 02791C68 56410084 f32 0
+field 02791C68 56410088 f32 -1
+field 02791C68 56410090 f32 0
+field 02791C68 56410094 f32 1
+field 02791C68 56410098 f32 0
+field 02791C68 564100A0 f32 1
+field 02791C68 564100A4 f32 0
+field 02791C68 564100A8 f32 0
+fill 02791C68 564100C0 0x30 0
+field 02791C68 564100C0 f32 0
+field 02791C68 564100C4 f32 0
+field 02791C68 564100C8 f32 1
+field 02791C68 564100D0 f32 0
+field 02791C68 564100D4 f32 1
+field 02791C68 564100D8 f32 0
+field 02791C68 564100E0 f32 -1
+field 02791C68 564100E4 f32 0
+field 02791C68 564100E8 f32 0
+fill 02791C68 56410100 0x30 0
+field 02791C68 56410100 f32 1
+field 02791C68 56410104 f32 0
+field 02791C68 56410108 f32 0
+field 02791C68 56410110 f32 0
+field 02791C68 56410114 f32 0
+field 02791C68 56410118 f32 -1
+field 02791C68 56410120 f32 0
+field 02791C68 56410124 f32 1
+field 02791C68 56410128 f32 0
+fill 02791C68 56410140 0x30 0
+field 02791C68 56410140 f32 1
+field 02791C68 56410144 f32 0
+field 02791C68 56410148 f32 0
+field 02791C68 56410150 f32 0
+field 02791C68 56410154 f32 0
+field 02791C68 56410158 f32 1
+field 02791C68 56410160 f32 0
+field 02791C68 56410164 f32 -1
+field 02791C68 56410168 f32 0
+arg! 02791D00 r3 0x56400000
+arg! 02791D00 r4 0x56420000
+arg! 02791D00 r5 0x56420100,0x56420110,0x56420120,0x56420130
+arg! 02791D00 r6 0x56420200
+fill 02791D00 56400000 0x30 0xA5
+fill 02791D00 56420000 0xC 0
+field 02791D00 56420000 f32 1
+field 02791D00 56420004 f32 2
+field 02791D00 56420008 f32 3
+fill 02791D00 56420100 0x40 0
+fill 02791D00 56420200 0xC 0
+field 02791D00 56420204 f32 1
+final 02791D00 56400000 30
+field 02791D00 56420100 f32 1
+field 02791D00 56420104 f32 0
+field 02791D00 56420108 f32 0
+field 02791D00 56420110 f32 -1
+field 02791D00 56420114 f32 0
+field 02791D00 56420118 f32 0
+field 02791D00 56420120 f32 0
+field 02791D00 56420124 f32 0
+field 02791D00 56420128 f32 1
+field 02791D00 56420130 f32 0
+field 02791D00 56420134 f32 0
+field 02791D00 56420138 f32 -1
+# Capture state passed into look-at helper calls, where this implementation
+# consumes or forwards the prepared vectors/matrix.
+observearg 025155D8 r3+0 12
+observearg 028E90D4 r3+0 48
+observearg 0274CCB0 r3+0 48

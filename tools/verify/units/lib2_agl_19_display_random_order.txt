@@ -1,0 +1,13 @@
+# TYPE-DOMAIN: view flag bit 1 is set by no shipped producer; the comparator is
+# gated here as a type-domain companion with the GlobalRandom from its producer 0275CD20.
+# AGL#19 027D6498 randomizeRenderOrder (the comparator appendPending 027D64C8 hands PointerBuffer::heapSort when the
+# view flag bit 1 is set) on the global random generator made by its producer sead::GlobalRandom::createInstance
+# 0275CD20 (boot). See the OPEN on the flag-bit-1 domain.
+# verify: -only 027D6498 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include shared/agl_world.txt
+setupsnapshot
+real 0275CD20
+setup * 0275CD20 r3=0x6A000000
+arg! 027D6498 r3 0x5E100000
+arg! 027D6498 r4 0x5E100004

@@ -1,0 +1,7 @@
+# AGL#18 027CEA18 caller-valid upper-Z separation companion.  Keep the
+# original inverse-view, volume and CE130 producers from the accepted viewpoint
+# profile; add finite positive view-space depths to complement its zero/negative
+# samples and reach the maximumZ<minimumZ return arm.
+# verify: -only 027CEA18 -strictnan -calleesp
+include lib2_agl_18/culling_box_producer_viewpoints.txt
+poke * 5A100008 f32 0,0.25,0.5,1,2,10,100,1000

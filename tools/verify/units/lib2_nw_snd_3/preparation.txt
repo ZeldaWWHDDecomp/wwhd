@@ -1,0 +1,25 @@
+# verify: -strictnan -calleesp -only 0288B42C
+# Completed bounded load task supplies all bank flags through the preparation record.
+src wwhd_src/nw/snd/SoundRuntimeSupport.cpp
+src wwhd_src/nw/snd/SequenceRuntimeSupport.cpp
+src wwhd_src/nw/snd/SoundOutputRuntime.cpp
+src wwhd_src/nw/snd/MemorySoundArchive.cpp
+src wwhd_src/nw/snd/TrackChannelRuntime.cpp
+src wwhd_src/nw/snd/SequenceResourceLoad.cpp
+arg! 0288B42C r3 0x5A000000
+field 0288B42C r3+0x298 u8 2
+field 0288B42C r3+0x2AC u32 0x5F000000
+field 0288B42C r3+0x24 u8 0
+field 0288B42C 5F000098 u8 1
+field 0288B42C 5F000090 u8 1,2,3,255
+stable 5A000298 1
+stable 5A0002AC 4
+stable 5A000024 1
+stable 5F000098 1
+ret! 0288ACC4 1
+
+callee 028F6A30 r3=0
+callee 028A370C r3=0
+callee C0006F20 r4=0
+callee 0288AD60 r4=44
+callee 0288BD14 r4=44

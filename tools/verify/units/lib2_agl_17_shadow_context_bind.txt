@@ -1,0 +1,59 @@
+# constructShadowContext on placement storage after the shared startup (as lib2_agl_17_shadow_context_real.txt), with
+# the matrix-parameter binder 0279E618 mocked so its name/label/description texts (stack SafeTexts) and owner are
+# compared at the call; non-periodic stack fill so a missing text store shows.
+# verify: -only 027C70A8 -strictnan -calleesp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+real 02756E3C 02757190 02759B40 02759B98 0273B200 0273B264
+real 027A84B8 0279E674 0279E57C 027A861C 0279F1BC 027A8C80
+real 027D7E04 027D7D94 028EFFD0 028F0164 02791BE4 027CA91C 027CA978 027CA918
+setup 027C70A8 02756E3C
+setup 027C70A8 02757190
+setup 027C70A8 02759B40
+setup 027C70A8 0273B200
+arg! 027C70A8 r3 0x5F400000
+fill 027C70A8 5F400000 1460 165
+mockmove C0009988 r3 r4 r5
+stable 104A0CD8 8
+stable 104A0908 188
+stable 104A041C 48
+stable 104A048C 64
+stable 101F8AE5 1
+stable 1049FBA0 1024
+final 027C70A8 5F400000 5B4
+
+# Execute the GHS constructor loop and its exact register-save/restore closure.
+real 028EFE58 028F61E4 028F623C
+
+# The only SDK move has zero length for the actual initialized empty source.
+# Preserve precisely the64-byte parameter-name char array across that opaque epoch;
+# original constructor NUL stores remain observed and compared.
+stable 5F400010 64
+
+callee 0279E618 r4=8 r5=8 r6=8
+stackfill

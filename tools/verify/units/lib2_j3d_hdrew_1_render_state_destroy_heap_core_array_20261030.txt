@@ -1,0 +1,8 @@
+# Complete original current-target registry required by real027B9694.
+# Setup added AFTER renderer allocation, preserving observed original renderer6A0000C8 address.
+# Canonical shared/agl_world.txt uses same027B9C1C(heap) producer for104A2090 count3/storage.
+# No private global/header writes or masking.
+# verify: -only 027F7EA8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_render_state_destroy_heap_real_buffer_20261030.txt
+real 027B9C1C
+setup * 027B9C1C r3=0x6A000000

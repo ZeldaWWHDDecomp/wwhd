@@ -1,0 +1,17 @@
+# AGL#17 027CB1A0: constructor-produced empty-cache early return only.
+# Do not add 027CAD30 / 027CAC9C setup: mRegionBegin must remain null.
+# verify: -only 027CB1A0 -strictnan -calleesp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 027CAB58 027B6CB8 027B6E64 0273B524
+mockset C0009990 r3 r4 r5
+alloc 0273AD10 r3 0x5B003000 4
+allocnested 0273AD10
+fill * 5B003000 744 165
+setup * 027CAB58 r3=0
+arg! 027CB1A0 r3 0x5B003000
+arg! 027CB1A0 r4 0
+arg! 027CB1A0 r5 0
+arg! 027CB1A0 r6 0
+final 027CB1A0 5B003000 2E8

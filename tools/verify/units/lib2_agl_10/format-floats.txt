@@ -1,0 +1,44 @@
+# AGL#10 companion: the format constructor saves f1-f8 when cr1.eq is set (exact double bits).
+# verify: -strictnan -calleesp -only 0279E338
+src wwhd_src/agl/MultiFilter.cpp wwhd_src/agl/ParameterBase.cpp wwhd_src/agl/DynamicTextureCache.cpp wwhd_src/agl/DynamicTextureCacheStatics.cpp wwhd_src/agl/TextureResource.cpp wwhd_src/agl/PrimitiveShapes.cpp wwhd_src/agl/PrimitiveShapesStatics.cpp wwhd_src/sead/PoolHeapStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# Name and label texts passed on the stack are compared by content.
+callee 0279E618 r4=8 r5=8 r6=8
+callee 02785CB4 r4=8
+# Cafe core id: the three CPU cores, mapped by the core-reverse table to pools 0..2.
+ret! C0009BB0 0,1,2
+field * 104A0BC0 u32 0
+field * 104A0BC4 u32 1
+field * 104A0BC8 u32 2
+stable 104A0BC0 12
+# Disposers are compared as registered (their contents at the registration call).
+callee 02752B0C r3=heap16
+# Object and heap allocators hand out distinct blocks (identical on both sides).
+alloc 0273AD10 r3 0x58B00000 4
+alloc 0273B0D4 r3 0x58D00000 align=r5
+stable 58B00000 0x20000
+stable 58D00000 0x10000
+# A heap at 0x58900000 whose method table allocates (F0010000) and releases (F0010004) as fixtures.
+callee F0010000 fixture r3=0 r4=0 r5=0
+alloc F0010000 r4 0x58920000 align=r5
+callee F0010004 fixture r3=0 r4=0
+field * 5890000C u32 0x58910000
+field * 58910034 u32 0xF0010000
+field * 5891003C u32 0xF0010004
+stable 58900000 0x94
+stable 58910000 0x90
+ret! 02755FEC 0x58900000
+ret! 02756140 0x58900000
+cr 0279E338 6 1
+footprint 0279E338 0x88
+argf64! 0279E338 f1 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+argf64! 0279E338 f2 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+argf64! 0279E338 f3 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+argf64! 0279E338 f4 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+argf64! 0279E338 f5 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+argf64! 0279E338 f6 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+argf64! 0279E338 f7 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+argf64! 0279E338 f8 0x0000000000000000,0x8000000000000000,0x3FF000001FFFFFFF,0x7FF0000000000000,0x7FF0000000000001,0x7FF8000000000042
+# Page-0 rule: the storage is NULL (allocated) or a real block; the format text pointer is a real address.
+arg! 0279E338 r3 0,0x5C030000
+arg! 0279E338 r4 0x5C030100

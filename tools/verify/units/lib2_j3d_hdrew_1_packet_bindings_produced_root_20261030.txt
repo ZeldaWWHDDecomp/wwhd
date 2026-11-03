@@ -1,0 +1,5 @@
+# Original FMDL/FMAT/configure producer graph reused from accepted packet-values recipe.
+# Tests own updatePacketBindings entry; resource/packets/buffer/counts unchanged from real producers.
+# verify: -only 027F5018 -strictnan -calleesp
+include lib2_j3d_hdrew_1_packet_values_alt.txt
+arg! 027F5018 r3 0x5E001000,0x5F001000,0x5A001000,0x5B001000,0x5C001000

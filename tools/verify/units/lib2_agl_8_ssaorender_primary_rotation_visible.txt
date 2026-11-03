@@ -1,0 +1,21 @@
+# verify: -strictnan -only 02794970 -noclobber
+# ssaorender: the read-only mode-0 primary profile after fifteen further
+# original primary passes (postsetup 02794970), so the rotating sample index (set+0x984, written only by the
+# target-set constructor 02793384 and by this pass, modulo 16) reaches every value up to 15 when sample rotation
+# is on (real ParameterBase::applyResource choice). Caller-visible checks only; -noclobber.
+include lib2_agl_8_mode0_primary_sampler_readonly_group.txt
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1
+postsetup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=0 r8=0x5A000000 r9=0 f1=0 f2=1

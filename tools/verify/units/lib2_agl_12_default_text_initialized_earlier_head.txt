@@ -1,0 +1,25 @@
+# verify: -only 027AE62C -strictnan -calleesp
+# Alreadyinitializedstate produced by one actualoriginalsamefunction setup; no fabricatedguard/pointer/registrationeffects.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+real 028F026C
+real 027AE62C
+setup 027AE62C 027AE62C
+# Lead22:48 originalregistrationhead contract; no destructor execution.
+field * 0x104A2088 u32 0
+field * 0x104DA130 u32 0x1018F514
+final 027AE62C 104A2080 C
+final 027AE62C 104DA130 4
+final 027AE62C 101F8DF4 C

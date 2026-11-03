@@ -1,0 +1,29 @@
+# Disabled alpha-output path only; no enabled rendering/cache coverage credit.
+# verify: -strictnan -calleesp -only 0277AD60
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 0277AD60 r3 0x56000000
+arg! 0277AD60 r4 0
+arg! 0277AD60 r5 0x5D200000
+arg! 0277AD60 r6 0x5D100000
+arg! 0277AD60 r7 0x5D000000
+arg! 0277AD60 r8 0
+arg! 0277AD60 r9 0
+arg! 0277AD60 r10 0
+# Complete declared object storage; copy mock reads no pointees (CLOSED board467).
+# SurfaceImagePrefix_l148: all scalar words0, all pointersnull, opaque/reserved bytes0.
+fill 0277AD60 5D000000 0x148 0
+# ViewportRecord_l18 has only opaque byte storage in our assigned declaration.
+fill 0277AD60 5D100000 0x18 0
+# Unused frameContext still points at a complete declared BlurViewport_l40.
+fill 0277AD60 5D200000 0x40 0
+# Own actual constructor creates770-byte FilterAa receiver; no render/cache tree real.
+real 02779BFC
+setup 0277AD60 02779BFC r3=0x56000000
+# Registered range string101621FC explicitly permits alpha0.
+poke 0277AD60 r3+0x4C8 f32 0
+# Ninth entry argument is prior integer mode at entrySP+8; keep it valid0.
+field 0277AD60 r1+8 u32 0
+callee 027A90AC r3=0 r4=0 r5=0 r6=0 r7=0
+ret! 027A90AC 0,1,2

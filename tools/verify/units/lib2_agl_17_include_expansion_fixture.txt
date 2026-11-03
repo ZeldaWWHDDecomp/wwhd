@@ -1,0 +1,67 @@
+# Shared producer-backed fixture directives from the focused include-expansion spec.
+# Include expansion on a real heap (genuine allocations).
+# verify: -only 027C6060 -strictnan -calleesp
+
+# Genuine unlocked FreeRegionHeap construction; explicit heap avoids fallback.
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440
+setup 027C6060 0275315C r3=0x6A000000 r4=0x100000 r5=0x5B006000 r6=0
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+field * 104A030C s32 1
+field * 104A0310 s32 1
+field * 104A0314 u32 0x5B007000
+field * 5B007000 u32 0x6A000000
+field * 104A0364 s32 0
+fill * 6A000000 512 0
+fill * 5B006000 8 0
+field * 5B006000 u32 0x5B006100
+field * 5B006004 u32 0x1016A368
+fill * 5B006100 32 0
+fieldstr * 5B006100 32 "fixture-heap"
+real 0273B2D0 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02754564 02754618
+real 0273B050 0273B0D4 028F521C 0273AF40 027C6BC8 027C6B9C 027C6B98 027C5FD8
+mockset C0009990 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+arg! 027C6060 r3 0x5D400000
+arg! 027C6060 r4 0x5D410000
+arg! 027C6060 r5 0x5D411000
+arg! 027C6060 r6 0,1,2
+arg! 027C6060 r7 0,0x5D420000
+arg! 027C6060 r8 0x6A000000
+fill 027C6060 5D400000 8 0
+field 027C6060 5D400000 u32 0x5D401000
+field 027C6060 5D400004 u32 0x1016A490
+fill 027C6060 5D401000 1024 0
+fieldstr 027C6060 5D401000 1024 "","plain","before\x0Aafter","\x23include \x22FIRST\x22","head\x23include \x22FIRST\x22tail","\x23include \x22SECOND\x22\x0Aend","\x23include \x22UNKNOWN\x22","\x23include \x22FIRST\x22\x0A\x23include \x22SECOND\x22"
+field 027C6060 5D410000 u32 0x5D412000
+field 027C6060 5D410004 u32 0x5D412020
+field 027C6060 5D411000 u32 0x5D413000
+field 027C6060 5D411004 u32 0,0x5D413020
+fill 027C6060 5D412000 32 0
+fill 027C6060 5D412020 32 0
+fill 027C6060 5D413000 32 0
+fill 027C6060 5D413020 32 0
+fieldstr 027C6060 5D412000 32 "FIRST"
+fieldstr 027C6060 5D412020 32 "SECOND"
+fieldstr 027C6060 5D413000 32 "first-content"
+fieldstr 027C6060 5D413020 32 "second-content"
+fill 027C6060 5D420000 2 165
+stable 5D400000 8
+stable 5D410000 8
+stable 5D411000 8
+stable 6A000000 0x100000
+final 027C6060 5D420000 2
+
+# Nonnull canonical RegistryManagerState prefix selects actual registered-heap lookup.
+fill * 5D430000 8 0
+stable 5D430000 8
+stable 101F8B4C 4
+stable 101F8B94 4
+stable 104A030C 12
+stable 104A0364 12
+stable 5B007000 4
+real 0273AFC8
+mockset C000A858 r3 r4 r5
+
+# Publish the manager only after createAt has constructed the registered heap.
+poke 027C6060 101F8B4C u32 0x5D430000

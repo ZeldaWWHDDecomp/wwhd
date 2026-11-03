@@ -1,0 +1,15 @@
+# Original-producer companion for the valid inactive state immediately after initialization.
+# D0474 leaves activeCount zero, so evaluation returns before reading context or invoking callbacks.
+# verify: -only 027D0A34 -strictnan -calleesp -footprint
+include lib2_agl_18/collection_basic_positive256.txt
+src wwhd_src/agl/RenderSelectionEvaluation.cpp
+arg! 027D0A34 r3 0x59000000
+arg! 027D0A34 r4 0
+arg! 027D0A34 r5 0
+arg! 027D0A34 r6 0
+fill 027D0A34 r3 0x114 0
+field 027D0A34 r3 u32 0x1016AD80
+fill 027D0A34 59100000 0x100 0
+setup 027D0A34 027BF734 r3=0x5900001C
+setup 027D0A34 027D0474 r3=0x59000000 r4=0x59100000 r5=0x100 r6=1 r7=0x6A000000
+real 027D0474 027D10F4 027BEC90

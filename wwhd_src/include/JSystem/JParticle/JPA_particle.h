@@ -49,15 +49,26 @@ struct JPABaseParticle {
     /*0x0CC*/ be<u32> mStatus;
     /*0x0D0*/ be<u32> mChildState; // tww's unnamed field_0xd0.
     /*0x0D4*/ gptr<JPABaseEmitter> mpEmitter;
-    u8 mBeforeSlot[0xC];
+    union {
+        u8 mBeforeSlot[0xC];
+        struct { u8 mBeforeVertexPool[8]; gptr<void> mVertexPool; };
+    };
     /*0x0E4*/ gptr<JPAParticleSlot> mpSlot;
     u8 mBeforeGpu[4];
     /*0x0EC*/ gptr<JPAGpuState> mpGpuState;
     /*0x0F0*/ gptr<JPAParticleRenderer> mpRenderer;
-    u8 mBeforeDelete[0x18];
+    union {
+        u8 mBeforeDelete[0x18];
+        struct { be<u32> mCachedTextureIndex, mCachedEmitterIndex; u8 mAfterTextureCache[0x10]; };
+    };
     /*0x10C*/ be<u8> mDeletionDelay;
     u8 mBeforeHidden[0x13];
     /*0x120*/ be<u8> mHidden;
+    union {
+        u8 mBeforeViewIndex[3];
+        struct { be<u8> mDrawSkipped; union { be<u8> mNeedsVertexUpdate; be<u8> mUseAnmTone; }; u8 mAfterVertexUpdate; };  /* 0x122: JS-JParticle#1 reads it as the anm-tone flag (finishGpuBuffers 02825158), JS-JParticle#3 as the vertex-update flag */
+    };
+    /*0x124*/ be<s32> mViewIndex;  /* view for per-view positions (-1: use the emitter's), read by dirTypeEmtrDir 02830480 */
 };
 struct JPAShapeVtable {
     u8 mPrefix[0x14];
@@ -161,6 +172,7 @@ WWHD_OFFSET(JPABaseParticle, mStatus, 0xCC);
 WWHD_OFFSET(JPABaseParticle, mpGpuState, 0xEC);
 WWHD_OFFSET(JPABaseParticle, mDeletionDelay, 0x10C);
 WWHD_OFFSET(JPABaseParticle, mHidden, 0x120);
+WWHD_OFFSET(JPABaseParticle, mViewIndex, 0x124);
 WWHD_OFFSET(JPABaseEmitter, mAccel, 0x3C);
 WWHD_OFFSET(JPABaseEmitter, mInitialVelOmni, 0x68);
 WWHD_OFFSET(JPABaseEmitter, mDataFlag, 0x84);
@@ -249,3 +261,11 @@ void PSMTXConcat(be<f32>*, be<f32>*, be<f32>*);
 void JPAGetYZRotateMtx(s16, s16, be<f32>*);
 void JPAGetUnitVec(s16, s16, be<f32>*);
 f64 JPA_sqrt(f64);
+
+WWHD_OFFSET(JPABaseParticle,mVertexPool,0xE0);
+WWHD_OFFSET(JPABaseParticle,mCachedTextureIndex,0xF4);
+WWHD_OFFSET(JPABaseParticle,mCachedEmitterIndex,0xF8);
+WWHD_OFFSET(JPABaseParticle,mDrawSkipped,0x121);
+WWHD_OFFSET(JPABaseParticle,mNeedsVertexUpdate,0x122);
+WWHD_OFFSET(JPABaseParticle,mUseAnmTone,0x122);
+WWHD_SIZE(JPABaseParticle,0x128);

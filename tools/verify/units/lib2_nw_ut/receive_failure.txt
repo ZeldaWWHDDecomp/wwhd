@@ -1,0 +1,7 @@
+# NW-UT Cafe message failure profile: empty queue, nonblocking receive, untouched output storage.
+src wwhd_src/nw/ut/Platform.cpp
+stackfill
+callee C0009FC8 r4=16
+callee C0009ED0 r4=255
+ret! C0009ED0 0
+arg! 028F6C94 r5 0

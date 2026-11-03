@@ -1,0 +1,57 @@
+# initializeHostCapture on a fresh provider built by the original factory/getter on a real heap.
+# No guessed root-list/vtable/lookup result or FSClient state.
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill
+# Own static manager M and arena record R are disjoint caller-owned mapped storage.
+fill * 5F710000 6184 165
+fill * 5F700000 12 0
+field * 5F700000 u32 0x6A000000
+field * 5F700004 u32 0x100000
+field * 5F700008 u32 0
+# INITIAL PHASE ONLY: select approved41900 early-null-manager path.
+# Real55F40 later overwrites101F8B4C with104A02F8; never poke it back toNULL.
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+field * 101F95F8 u32 0
+field * 101F95FC u32 0
+# Original setup order is mandatory; field/fill steering is before this whole sequence.
+setup * 02741900 r3=0x5F710000
+setup * 02759B40
+setup * 027561B4
+setup * 02755FE0 r3=0x5F700000
+# Only publish the actual constructed manager; no root-list/registry/vtable pokes.
+poke * 101F8B08 u32 0x5F710000
+# Exact shipping-port boundaries; original stores and models' explicit writes stay compared.
+mockset C000A858 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+mockfield C0009D68 r3+0 u32 0x6D557458,0x6D557458
+nestedmockfield C0009D68
+real 02741900 02759B40 02759B98 027561B4 02755E7C 02756CC0 028F026C 0273B560 02755FE0 02755F40 02755EC4 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 0273B0D4 02753D6C 027536F4 02753628 027536B0 02755FEC 027556FC 02754754 027600EC 027601BC 027601F0 028F521C 027C50E4 027C5060 02760084 02752A84 02755CA4 0273B050 02743DA0 02743128 02741770 027445FC 027C58AC
+# Bounded SDK noninterference preservation PROPOSED for root review; explicit model writes remain observed.
+# Real init/allocate/register stores are never mocked or suppressed.
+stable 6A000000 0x54
+stable 6A000090 0xFFF70
+# Require reached-mock trace inventory and exact SDK noninterference before accepting this preservation model.
+# No FileDeviceManager stable span or synthetic FSClient model.
+# Producer-only diagnostic: original factory builds registeredbase/5060/CriticalSection.
+setup * 027C50E4 r3=0x6A000000
+# StageA actually observed P=6A0000C8. Allocation output is not mocked/pinned.
+# Original factory constructs theprovider; candidate51CC is theonly compared SUT.
+# verify: -only 027C51CC -strictnan -calleesp
+# Trace must record actual factory allocation/return P and rootstate/live-list invariants.
+# Actual StageA/B returned addresses; no allocator result/lookup pinned.
+arg! 027C51CC r3 0x6A0000C8
+arg! 027C51CC r4 0x6A000000
+# Initial free-arena payload bytes only, before original constructors/allocator.
+# This is observation-strength steering, not a fabricated allocated-object lifetime.
+fill 027C51CC 6A000134 32768 165
+final 027C51CC 6A0000C8 5C
+final 027C51CC 6A000134 8000
+final 027C51CC 6A008144 6C
+final 027C51CC 5F710010 C
+final 027C51CC 101F95F8 8
+final 027C51CC 101F8B4C 4
+final 027C51CC 104A030C C

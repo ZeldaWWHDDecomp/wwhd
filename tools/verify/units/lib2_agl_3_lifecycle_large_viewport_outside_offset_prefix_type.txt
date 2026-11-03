@@ -1,0 +1,5 @@
+# TYPE-DOMAIN: CLOSED Lead21:56 also requests a viewport offset outside its unchanged producer-built RenderBuffer.
+# Reinitialize the existing client viewport using the real public createRect API. Caller POD dimensions remain those of the accepted mixed-axis prefix.
+include lib2_agl_3_lifecycle_large_viewport_prefix_all_conversion_paths_type.txt
+real 0274F424
+postsetup 0277AD60 0274F424 r3=0x5D030000 f1=4096.0 f2=4096.0 f3=*5D540000 f4=*5D540004

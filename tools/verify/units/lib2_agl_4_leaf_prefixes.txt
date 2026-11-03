@@ -1,0 +1,46 @@
+# AGL#4 companion: six read-only predicates and match hooks on caller-owned typed objects.
+# verify: -only 0277E774,0277C910,0277C8D4,0277C7B4,0277E714,0277C798 -strictnan -calleesp -footprint
+stackfill
+src wwhd_src/agl/ParameterValues.cpp
+src wwhd_src/agl/DepthBlurValues.cpp
+src wwhd_src/agl/BloomValues.cpp
+src wwhd_src/agl/DepthBlurCallbacks.cpp
+src wwhd_src/agl/DepthBlurRuntimeValues.cpp
+src wwhd_src/agl/DepthBlurConstruction.cpp
+src wwhd_src/agl/DepthBlurShapeSetup.cpp
+src wwhd_src/agl/DepthBlurParameterSetup.cpp
+src wwhd_src/agl/DepthBlurDrawState.cpp
+src wwhd_src/agl/DepthBlurContext.cpp
+
+# Complete disjoint caller backing; fills are input values, not constructor-effect models.
+fill * 55000000 0x2FC 0
+fill * 55001000 0x58 0
+fill * 55002000 0x54 0
+fill * 55003000 0x4 0
+fill * 55004000 0xC 0
+arg! 0277E774 r3 0x55000000 0x55000000
+arg! 0277C910 r3 0x55000000 0x55000000
+arg! 0277C8D4 r3 0x55000000 0x55000000
+arg! 0277E714 r3 0x55000000 0x55000000
+arg! 0277C7B4 r3 0x55001000 0x55001000
+arg! 0277C798 r3 0x55002000 0x55002000
+arg! 0277C798 r4 0x55003000 0x55003000
+# Normalized booleans and finite levels; all other parameter payloads remain zero.
+field * 5500000C u8 0 1
+field * 5500001C u8 0 1
+field * 5500002C u8 0 1
+field * 5500003C u8 0 1
+field * 5500004C u8 0 1
+field * 5500005C u8 0 1
+field * 5500011C f32 0 1
+# Indirect disabled: both source helpers short-circuit before texture/FP-floor paths.
+field * 5500008C u8 0 0
+field * 550002D0 u32 0 0
+# Correctly bounded reference/key and archive identifier prefixes.
+field * 55003000 u32 0x55004000 0x55004000
+field * 55002050 u32 0 1
+field * 55004008 u32 0 1
+# Own predicate helpers execute originals; no arbitrary mock returns/caller heap clobber.
+real 0277E714
+real 0277C9F8
+real 0277C9C4

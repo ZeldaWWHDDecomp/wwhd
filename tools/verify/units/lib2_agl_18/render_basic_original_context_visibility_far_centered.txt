@@ -1,0 +1,8 @@
+# Caller-valid refinement of the depth-boundary profile. Centered X/Y values
+# isolate the valid far-plane equality/crossing cases: Z=489 is equality and
+# Z=488 enters the far rejection arm for near=1, far=10, radius=1.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_visibility_depth_boundaries.txt
+poke * 59100008 f32 0
+poke * 5910000C f32 0
+poke * 59100010 f32 488,489

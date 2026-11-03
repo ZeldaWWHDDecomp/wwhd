@@ -1,0 +1,39 @@
+# verify: -only 0273CB44
+# A bounded controller buffer contains repeated matching device types.
+# Nonzero occurrence indices must count matching entries, not merely scan past them.
+# Run with -only0273CB44; other marked bodies compile as support only.
+# Link own-unit support bindings; the invocation keeps the explicit test-address scope.
+src wwhd_src/sead/Foundation.cpp
+src wwhd_src/sead/Checksum.cpp
+src wwhd_src/sead/MemberDispatch.cpp
+src wwhd_src/sead/RuntimeType.cpp
+src wwhd_src/sead/InputState.cpp
+src wwhd_src/sead/Allocation.cpp
+src wwhd_src/sead/Controller.cpp
+src wwhd_src/sead/ControllerConstruction.cpp
+src wwhd_src/sead/FoundationObjects.cpp
+src wwhd_src/sead/DeviceBuffers.cpp
+src wwhd_src/sead/ReportListeners.cpp
+src wwhd_src/sead/ControllerManager.cpp
+src wwhd_src/sead/Reports.cpp
+src wwhd_src/sead/ControllerMapping.cpp
+src wwhd_src/sead/DeviceConstruction.cpp
+src wwhd_src/sead/TabletMotor.cpp
+src wwhd_src/sead/RemoteInput.cpp
+src wwhd_src/sead/TabletInput.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+arg! 0273CB44 r3 0x5400A000
+arg! 0273CB44 r4 7
+arg! 0273CB44 r5 -1,0,1,2,3
+field 0273CB44 5400A0DC s32 3
+field 0273CB44 5400A0E4 u32 0x5400B000
+field 0273CB44 5400B000 u32 0x5400C000
+field 0273CB44 5400B004 u32 0x5400D000
+field 0273CB44 5400B008 u32 0x5400E000
+field 0273CB44 5400C130 u32 7
+field 0273CB44 5400D130 u32 7
+field 0273CB44 5400E130 u32 7
+# Output destinations keep raw-address equality; compare the complete saved variadic argument object.
+callee 028F17A8 r3=0
+callee 028F1748 r3=0 r6=112
+callee 0273B158 r4=112

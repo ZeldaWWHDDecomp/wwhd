@@ -1,0 +1,11 @@
+# Shared valid empty-storage profile for the aggregate AGL#17 gate.
+# Complete placement object built by the original aggregate constructor.
+# Empty storage lifetime (populated records: _utility_storage_populated_lead).
+# Flags0/2 retain placement ownership; no fake heap-backed delete is claimed.
+# verify: -only 027C6E10 -strictnan -calleesp
+real 027C6C54
+setup 027C6E10 027C6C54 r3=0x5E100000
+arg! 027C6E10 r3 0,0x5E100000
+arg! 027C6E10 r4 0,2
+fill 027C6E10 5E100000 204 165
+final 027C6E10 5E100000 CC

@@ -1,0 +1,34 @@
+# AGL#19 shader fixture: render layers in the shared agl world for the dispatch-context companions.
+#   A 0x58000000: hdLayerBase_c::constructLayerBase 027340D8 (-> RenderLayerPrefix::create 027C3280):
+#     flags 0x183, no camera, no projection (the default-camera/projection arms).
+#   B 0x58001000 / C 0x58002000: hdLayer2D_c built by its constructor 0272D978, then hdLayer2D_c::initialize 0272DB10
+#: +0x48 = this+0x820 and +0x4C = this+0x768 (B, perspective byte +0x87C = 1 as the
+#     constructor leaves it) or this+0x610 (C, +0x87C = 0: the producer's own input, set before it runs).
+#   D 0x58003000: as B, then setCameraMode 027C45E8 (enabled 1): flags | 0x40 | 0x8000 (type-domain: setMode 027C1F70,
+#     its only caller, gets mode 1 from no shipped caller; the manager is not built, so its writer runs directly).
+#   E 0x58004000: as A (its flags are steered by the type-domain companion).
+# Layer name SafeText 0x58008000 -> "Layer(Draw)" with the hdLayerSafeString vtable 10169E4C.
+include shared/agl_world.txt
+setupsnapshot
+real 027340D8 027C3280 027C2378 0272D978 0272DB10 027C45E8
+real 027C48E0 0274D6B4 0274DE2C 0274CCC4 028F423C
+real 02734248 027342B4 02873D70 02873FD0 027C2DF0 0274F358 0274DEA8 0274E1C8 0274E87C 028E90D4 02733EF4 02733EFC 02733FC8 02734028
+real 0274E04C 0274E488 0274E4A4 0274CA7C 0274CAEC 0274CB24 0274D114 0274CF68
+field * 0x58008000 u32 0x1016C2B0
+field * 0x58008004 u32 0x10169E4C
+stable 0x58008000 0x8
+field * 0x101FD304 u32 0
+field * 0x101FD308 u32 0
+fill * 58000000 0x5000 0
+setup * 027C48E0
+setup * 027340D8 r3=0x58000000 r4=0x58008000
+setup * 0272D978 r3=0x58001000 r4=0x58008000
+setup * 0272D978 r3=0x58002000 r4=0x58008000
+setup * 0272D978 r3=0x58003000 r4=0x58008000
+setup * 027340D8 r3=0x58004000 r4=0x58008000
+poke * 5800287C u8 0
+postsetup * 0272DB10 r3=0x58001000
+postsetup * 0272DB10 r3=0x58002000
+postsetup * 0272DB10 r3=0x58003000
+postsetup * 027C45E8 r3=0x58003000 r4=1
+stable 58000000 0x5000

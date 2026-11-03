@@ -1,0 +1,11 @@
+# Valid left reference and null right object: original comparator must return before right-method access.
+# verify: -only 0276F6DC -strictnan -calleesp
+src wwhd_src/agl/EnvironmentReferences.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 0276F6DC r3 0x5D000000
+arg! 0276F6DC r4 0x5D000010
+field 0276F6DC 5D000000 u32 0x5D010000
+field 0276F6DC 5D000010 u32 0
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

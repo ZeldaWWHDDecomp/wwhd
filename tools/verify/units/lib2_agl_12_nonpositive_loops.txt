@@ -1,0 +1,28 @@
+# verify: -only 027AD050,027AD4D4 -strictnan -calleesp
+# Nonpositive signed repetition count only; complete borrowed parameter storage, destination unused and NULL. No child effect/helper call. Positive repetitions notclaimed.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+arg! 027AD050 r3 0x5700C000
+arg! 027AD050 r4 0
+arg! 027AD050 r5 0,1,2,0xFFFFFFFF
+fill 027AD050 5700C000 0x138 0
+field 027AD050 5700C134 u32 0,0xFFFFFFFF,0x80000000
+arg! 027AD4D4 r3 0x5700C000
+arg! 027AD4D4 r4 0
+arg! 027AD4D4 r5 0,1,2,0xFFFFFFFF
+fill 027AD4D4 5700C000 0x148 0
+field 027AD4D4 5700C134 u32 0,0xFFFFFFFF,0x80000000
+field 027AD4D4 5700C144 u32 0,3,5,7,9,11,13,0xFFFFFFFF
+stable 5700C000 0x148

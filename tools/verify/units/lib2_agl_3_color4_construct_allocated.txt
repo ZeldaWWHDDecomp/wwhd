@@ -1,0 +1,10 @@
+# Fresh-allocation success companion for Color4::construct.
+# r3 is null so the original constructor requests its canonical 16-byte allocation; no deallocation lifecycle is exercised.
+# OOM remains in the separate constructor_oom profile; placement construction remains in color4_construct.
+# verify: -strictnan -calleesp -only 027791DC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 027791DC r3 0
+alloc 0273AD10 r3 0x57000000 16
+final 027791DC 57000000 10

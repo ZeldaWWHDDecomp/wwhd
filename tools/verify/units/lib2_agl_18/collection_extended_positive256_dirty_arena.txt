@@ -1,0 +1,8 @@
+# Mutation companion for extended-collection initialization stores: allocated
+# payload bytes are unwritten by the shipped allocator, so retain the validated
+# functional producer while giving untouched arena bytes one bounded nonzero
+# pattern.  This mirrors collection_basic_positive256_nullheap_dirty_arena.
+# verify: -only 027D11D4 -strictnan -calleesp -footprint
+include lib2_agl_18/collection_extended_positive256_functional.txt
+fill * 0x6A000000 0x1000000 0xA5
+stable 0x6A000000 0x1000000

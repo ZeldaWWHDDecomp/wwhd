@@ -1,0 +1,14 @@
+# verify: -strictnan -only 02795FAC -noclobber
+# AGL#8 ssaotargetset (2026-10-31): the deleting destructor destroyResourceRecord 02795FAC (this TU's copy, reached through
+# the record's vtable) on a heap record, so the delete flag (bit 0 of r4) frees real storage.
+# The record is made by the original ResourceRecord::create 027A03A0 with r3 = 0: it allocates 0x1E4 bytes through
+# 0273AD10 in the world's root heap and constructs them. The setup snapshot makes the heap state identical for every
+# input, so the returned address (stored at 5E10000C by `->`) is the fixed receiver 6A87E2A0 below (the word read back
+# by RegisteredObject::destroy 02752BEC in a -trace run with r3 = 5E10000C: `nested call 02755D28 r3=6A87E2A0`).
+# Base: lib2_agl_8_mode0_final_six_campaign_group_visible (its world covers 02795FAC; caller-visible form, -noclobber);
+# the arg! lines below come after the base's and replace them.
+include lib2_agl_8_mode0_final_six_campaign_group_visible.txt
+fill 02795FAC 0x5E10000C 4 0
+setup 02795FAC 027A03A0 r3=0 ->0x5E10000C
+arg! 02795FAC r3 0,0x6A87E2A0
+arg! 02795FAC r4 0,1,2,3

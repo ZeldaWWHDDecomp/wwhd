@@ -1,0 +1,5 @@
+# verify: -strictnan -calleesp -only 02776524
+# Original public mip-level scalar zero; unchanged original producer/history and supported SDK observers.
+# nextLevel1 makes the final target reset predicate observable through the real color-buffer consumer.
+include lib2_agl_3_mip_native_colormip_nested_alt03a_20261030.txt
+arg! 02776524 r5 0

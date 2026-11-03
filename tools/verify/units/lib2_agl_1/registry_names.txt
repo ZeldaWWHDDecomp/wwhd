@@ -1,0 +1,35 @@
+# Registry name ordering with valid SafeText descriptors and existing class entries.
+# verify: -only 02770250,027701D4,02770564 -strictnan -calleesp
+src wwhd_src/agl/EnvironmentClassRegistry.cpp
+arg 02770250 r3 0x58000000
+arg 02770250 r4 0x58000100
+arg 02770250 r6 -1,0,1,2
+field 02770250 101F8BE0 s16 1
+field 02770250 r3+0 u32 0x58C00000,0x58C00100
+field 02770250 r3+4 u32 0x101607DC
+field 02770250 r4+0 u32 0x58C00200
+field 02770250 r4+4 u32 0x101607DC
+field 02770250 104A1564 u32 0x58C00000
+field 02770250 104A1568 u32 0x58C00200
+field 02770250 104A1570 s32 -1,0,1,2
+field 02770250 104A1574 u32 0
+field 02770250 104A1464 s16 0
+fieldstr 02770250 58C00000 64 "Alpha","AlphaLong","Beta","alpha","\x80A"
+fieldstr 02770250 58C00100 64 "Alpha","AlphaLong","Beta","alpha","\x80B"
+fieldstr 02770250 58C00200 64 "class description"
+real 02770710
+field 027701D4 r3+0x58 u32 0x10160030,0x101606C0
+field 027701D4 r3+0xE4 u16 0,1,255,65535
+field 02770564 r3+0x58 u32 0x10160030,0x101606C0
+arg 02770564 r4 0,1,255,65535,0xFFFFFFFF
+cr 027701D4 6 0,1
+cr 02770564 6 0,1
+callcr 02759C28 6
+callcr 0277077C 6
+callee 02759C28 r3=12 r4=cstr r5=cstr
+callee 0277077C r3=out1036 r4=cstr r5=cstr
+
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

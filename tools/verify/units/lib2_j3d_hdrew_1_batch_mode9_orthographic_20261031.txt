@@ -1,0 +1,22 @@
+# verify: -only 027FAA70 -strictnan -calleesp
+# TYPE-DOMAIN: 104B470C projection = game camera_draw 024FFC40 via 028E8970 (caller-published per draw)
+# admits finite per-draw projection steering.
+# GX orthographic: left-2 right6 bottom-3 top5 near1 far101.
+include lib2_j3d_hdrew_1_batch_bias_math_20261031.txt
+field * 0x5D401000 s32 9
+field * 0x104B470C f32 0.25
+field * 0x104B4710 f32 0
+field * 0x104B4714 f32 0
+field * 0x104B4718 f32 -0.5
+field * 0x104B471C f32 0
+field * 0x104B4720 f32 0.25
+field * 0x104B4724 f32 0
+field * 0x104B4728 f32 -0.25
+field * 0x104B472C f32 0
+field * 0x104B4730 f32 0
+field * 0x104B4734 f32 -0.01
+field * 0x104B4738 f32 -0.01
+field * 0x104B473C f32 0
+field * 0x104B4740 f32 0
+field * 0x104B4744 f32 0
+field * 0x104B4748 f32 1

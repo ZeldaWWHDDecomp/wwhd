@@ -1,0 +1,15 @@
+# verify: -strictnan -only 0279515C -noclobber
+# ssaorender: the secondary bind profile with the shared texture cache reused
+# across clients before the history rebind: a real cache client first acquires a multi-level texture of
+# the history's format and size (DynamicTextureCache::acquireShared2D 0279FDC8 -> 0279F7F0, format 1, 320x180, two
+# levels) and releases it (releaseShared 027A0114); then one original own-texture core frame (postsetup 0279599C, mode
+# 0, client output word 0, the original default texture as depth) re-acquires the history texture (a new size, so prepareSurfaces clears mHistoryValid) at format 1
+# 320x180 from the cache (SsaoRender.cpp:116-123); the original prepareSurfaces 02794068 re-acquires the work texture
+# the core released. The tested blur-0 secondary then rebinds the history texture over the same-layout work texture
+# (SsaoRender.cpp:341-346).
+include lib2_agl_8_ssaorender_secondary_bind_visible.txt
+postsetup 0279515C 0279FDC8 r3=*101F8DD4 r4=0x104A0CD8 r5=1 r6=0x140 r7=0xB4 r8=2 r9=0 r10=0 sp+8=1 sp+0xC=0 ->0x5B710000
+postsetup 0279515C 027A0114 r3=*101F8DD4 r4=*0x5B710000
+postsetup 0279515C 0279599C r3=0x58000000 r4=0 r5=0x140 r6=0xB4 r7=*(*101F8DEC+0x1C) r8=0 r9=0x104A048C r10=0 f1=0.25 f2=0.5
+postsetup 0279515C 02794068 r3=0x6A87E2A0 r4=1 r5=0x140 r6=0xB4
+real 0279599C 02794270 027A0114

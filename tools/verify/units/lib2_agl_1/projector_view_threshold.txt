@@ -1,0 +1,20 @@
+# View fallback at and adjacent to the original 2^-23 length threshold.
+# verify: -only 0276D324 -strictnan -calleesp
+src wwhd_src/agl/ProjectorView.cpp
+arg! 0276D324 r3 0x5D800000
+field 0276D324 r3+0x104 u32 0x33FFFFFF,0x34000000,0x34000001
+field 0276D324 r3+0x108 u32 0
+field 0276D324 r3+0x10C u32 0
+field 0276D324 r3+0x11C u32 0
+field 0276D324 r3+0x120 u32 0
+field 0276D324 r3+0x124 u32 0
+field 0276D324 r3+0x134 u32 0
+field 0276D324 r3+0x138 u32 0x3F800000
+field 0276D324 r3+0x13C u32 0
+real 025155D8
+real 028E8D4C
+callee 025155D8 r3=12
+callee 028E8D4C r3=12 r4=12 r5=out12
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

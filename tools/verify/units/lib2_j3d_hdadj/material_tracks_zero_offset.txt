@@ -1,0 +1,28 @@
+# verify: -only 027F34AC -calleesp -strictnan
+# Tracks whose name-link or name offsets are zero: the original reads through guest address 0 (a fault on the console,
+# so outside the valid domain); kept as the regression check of the address-form offset decoding.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+real 027F3F8C
+arg! 027F34AC r3 0x5C220000
+arg! 027F34AC r4 0x5C240000
+field 027F34AC 5C22000C u32 0x5C230000
+field 027F34AC 5C240000 u32 0x5C230000
+field 027F34AC 5C230016 u16 0,1,2,3
+field 027F34AC 5C23002C u32 0,0x1FFD4
+alloc 0273ADAC r3 0x5C280000 4
+stable 5C22000C 4
+stable 5C230000 0x30
+stable 5C240000 4
+stable 5C250000 0x54
+stable 5C260000 0x18
+stable 5C270000 0x18
+field 027F34AC 5C250010 u32 0xFFF0
+field 027F34AC 5C260004 u32 0,0x10000
+field 027F34AC 5C270006 u8 48
+field 027F34AC 5C25002C u32 0,0xFFDC
+field 027F34AC 5C26000C u32 0x10000
+field 027F34AC 5C27000E u8 49
+field 027F34AC 5C250048 u32 0xFFC8
+field 027F34AC 5C260014 u32 0x10000
+field 027F34AC 5C270016 u8 50

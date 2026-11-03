@@ -1,0 +1,10 @@
+# AGL#19 027D5CF4 destroyDisplayFrameState on the views of a renderer after one executed frame
+# (lib2_agl_19_display_exec_fixture.txt): owned attachments (view 0), borrowed ones (view 1), job and command tables,
+# pending/deferred/submitted lists. Flags 0 as RenderQueueManager::destroy's array destructor 028F0164 passes them for
+# the embedded views, 1 for a heap view (delete). Display-list model state.
+# verify: -only 027D5CF4 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+real 027B9694 027D7978 0273B5DC 027D7498 027DA710 0273AF40 027D5C48
+arg! 027D5CF4 r3 0x5E100018,0x5E100818
+arg! 027D5CF4 r4 0,2

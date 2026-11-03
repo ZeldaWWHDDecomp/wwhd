@@ -1,0 +1,16 @@
+# verify: -only 02750250,027507E8,0275181C -strictnan
+# Original 32-bit address arithmetic at in-place subobject checks.
+src wwhd_src/sead/RenderState.cpp
+src wwhd_src/sead/PrimitiveRenderer.cpp
+src wwhd_src/sead/PrimitiveBackend.cpp
+arg! 02750250 r3 0,0xFFFFFFF4,0xFFFFFFF0,0x54001000
+arg! 0275181C r3 0,0xFFFFFFFC,0xFFFFFFCC,0x54001000
+field 027507E8 101F8B28 u32 0
+ret! 0273B0D4 0,0xFFFFFFF0,0x54001000
+
+# Retain callback clobbers of the controller singleton as observable postconditions.
+final 027507E8 101F8B2C 4
+mockglobal 02750754 101F8B2C u32 0,0x54009900,0x12345678
+
+# createBackend forwards its retained heap even though the constructor ignores it.
+callee 0275181C r4=0

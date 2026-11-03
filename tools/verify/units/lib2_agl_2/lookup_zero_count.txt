@@ -1,0 +1,10 @@
+# Conditional borrowed readonly collection header; no constructed owner claim.
+# verify: -strictnan -calleesp -footprint -only 027735DC
+src wwhd_src/agl/ShaderLookupRuntime.cpp
+arg! 027735DC r3 0x58F10000
+arg! 027735DC r4 0
+arg! 027735DC r5 0
+fill 027735DC 58F10000 0x54 0
+field 027735DC 58F10020 u32 0xFFFFFFFF
+field 027735DC 58F10050 u16 0
+final 027735DC 58F10000 0x54

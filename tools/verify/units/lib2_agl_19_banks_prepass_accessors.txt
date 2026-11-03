@@ -1,0 +1,126 @@
+# AGL#19 banks: record accessors, kinds, empty hooks and runtime-type checks of the directed (0x6A87F534), spatial
+# (0x6A87F65C) and paired (0x6A87F780) light collections exactly as LightPrepass::configure leaves them (fixture
+# lib2_agl_19_banks_prepass_fixture.txt: shipped capacities 256/256/128, one value per record, every record enabled with
+# mask ~0, counts 0). Record 1 of each collection then gets its mask cleared through the collection's own
+# setRecordEnabled(1, 0) (original, API state), so canApply sees both masks.
+# TYPE-DOMAIN arguments: the shipped callers pass a record index below
+# min(count, capacity) (the walks 027D240C/027D30BC/... and the initializers 027D1EE0/027D2C98/027D11D4), enabled = 1
+# (the initializers' setRecordEnabled calls, li r5,1) and valueIndex 0 (one view: 027B19CC viewCount 1). The rows with
+# an index at or past the capacity (first-record fallback), enabled 0 / 2 / 0x80000000 and valueIndex 1..64 / ~0
+# (the >= 32 shift arm) are type-domain: same producer-built collections, only the argument varies.
+# verify: -strictnan -calleesp
+src wwhd_src/agl/LightCollectionAccessors.cpp
+src wwhd_src/agl/LightCollectionTypes.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+postsetup * 027D1D8C r3=0x6A87F534 r4=1 r5=0
+postsetup * 027D2B44 r3=0x6A87F65C r4=1 r5=0
+postsetup * 027D3804 r3=0x6A87F780 r4=1 r5=0
+# 6A87F534: setCount / isEnabled / setRecordEnabled / canApply (capacity 256)
+arg! 027D1D60 r3 0x6A87F534
+arg! 027D1D60 r4 0,1,2,255,256,257,0x7FFFFFFF,0xFFFFFFFF
+arg! 027D1D68 r3 0x6A87F534
+arg! 027D1D68 r4 0,1,2,255,256,263,0xFFFFFFFF
+arg! 027D1D8C r3 0x6A87F534
+arg! 027D1D8C r4 0,1,2,255,256,0xFFFFFFFF
+arg! 027D1D8C r5 0,1,2,0x80000000
+arg! 027D1DD0 r3 0x6A87F534
+arg! 027D1DD0 r4 0,1,2,255,256,0xFFFFFFFF
+arg! 027D1DD0 r5 0,1,2,31,32,33,63,64,0xFFFFFFFF
+# 6A87F65C: setCount / isEnabled / setRecordEnabled / canApply (capacity 256)
+arg! 027D2B18 r3 0x6A87F65C
+arg! 027D2B18 r4 0,1,2,255,256,257,0x7FFFFFFF,0xFFFFFFFF
+arg! 027D2B20 r3 0x6A87F65C
+arg! 027D2B20 r4 0,1,2,255,256,263,0xFFFFFFFF
+arg! 027D2B44 r3 0x6A87F65C
+arg! 027D2B44 r4 0,1,2,255,256,0xFFFFFFFF
+arg! 027D2B44 r5 0,1,2,0x80000000
+arg! 027D2B88 r3 0x6A87F65C
+arg! 027D2B88 r4 0,1,2,255,256,0xFFFFFFFF
+arg! 027D2B88 r5 0,1,2,31,32,33,63,64,0xFFFFFFFF
+# 6A87F780: setCount / isEnabled / setRecordEnabled / canApply (capacity 128)
+arg! 027D37C8 r3 0x6A87F780
+arg! 027D37C8 r4 0,1,2,127,128,129,0x7FFFFFFF,0xFFFFFFFF
+arg! 027D37E0 r3 0x6A87F780
+arg! 027D37E0 r4 0,1,2,127,128,135,0xFFFFFFFF
+arg! 027D3804 r3 0x6A87F780
+arg! 027D3804 r4 0,1,2,127,128,0xFFFFFFFF
+arg! 027D3804 r5 0,1,2,0x80000000
+arg! 027D3848 r3 0x6A87F780
+arg! 027D3848 r4 0,1,2,127,128,0xFFFFFFFF
+arg! 027D3848 r5 0,1,2,31,32,33,63,64,0xFFFFFFFF
+arg! 027D37D0 r3 0x6A87F780
+arg! 027D37D8 r3 0x6A87F780
+# kinds and empty hooks (they read nothing)
+arg! 027D1ED8 r3 0x6A87F534
+arg! 027D2C90 r3 0x6A87F65C
+arg! 027D3954 r3 0x6A87F780
+arg! 027D1E04 r3 0x6A87F534
+arg! 027D1E08 r3 0x6A87F534
+arg! 027D1E0C r3 0x6A87F534
+arg! 027D1E10 r3 0x6A87F534
+arg! 027D1E14 r3 0x6A87F534
+arg! 027D1E18 r3 0x6A87F534
+arg! 027D2BBC r3 0x6A87F65C
+arg! 027D2BC0 r3 0x6A87F65C
+arg! 027D2BC4 r3 0x6A87F65C
+arg! 027D2BC8 r3 0x6A87F65C
+arg! 027D2BCC r3 0x6A87F65C
+arg! 027D2BD0 r3 0x6A87F65C
+arg! 027D387C r3 0x6A87F780
+arg! 027D3880 r3 0x6A87F780
+arg! 027D3884 r3 0x6A87F780
+arg! 027D3888 r3 0x6A87F780
+arg! 027D388C r3 0x6A87F780
+arg! 027D3890 r3 0x6A87F780
+arg! 027D3894 r3 0x6A87F780
+# runtime types: requested node = each light/base/common node, another TU's node, NULL; guards fresh (0) or set (1) with
+# the node holding a table some TU stored (first use wins: this TU's or AGL#13/#14's)
+arg! 027D1E1C r3 0x6A87F534
+arg! 027D1E1C r4 0x101FDFE8,0x101FDFEC,0x101FDFE0,0x101FDFF4,0x101FDFF8,0x101FDFFC,0x101FE000,0x101FDFE4,0x101FDFF0,0
+field 027D1E1C 101FD80C u32 0,1
+field 027D1E1C 101FDFE8 u32 0,0x1016A898,0x10168F84
+field 027D1E1C 101FD810 u32 0,1
+field 027D1E1C 101FDFEC u32 0,0x1016A8A8
+field 027D1E1C 101FD814 u32 0,1
+field 027D1E1C 101FDFE0 u32 0,0x1016A8B8,0x10168FA4
+field 027D1E1C 101FD8D8 u32 0,1
+field 027D1E1C 101FDFF4 u32 0,0x1016A8C8,0x10168FCC
+field 027D1E1C 101FD8DC u32 0,1
+field 027D1E1C 101FDFF8 u32 0,0x1016A8C8,0x10168FCC
+field 027D1E1C 101FD8E0 u32 0,1
+field 027D1E1C 101FDFFC u32 0,0x1016A8C8,0x10168FCC
+field 027D1E1C 101FD8D0 u32 0,1
+field 027D1E1C 101FE000 u32 0,0x1016A848,0x10168F14
+arg! 027D2BD4 r3 0x6A87F65C
+arg! 027D2BD4 r4 0x101FDFE8,0x101FDFEC,0x101FDFE0,0x101FDFF4,0x101FDFF8,0x101FDFFC,0x101FE000,0x101FDFE4,0x101FDFF0,0
+field 027D2BD4 101FD80C u32 0,1
+field 027D2BD4 101FDFE8 u32 0,0x1016A898,0x10168F84
+field 027D2BD4 101FD810 u32 0,1
+field 027D2BD4 101FDFEC u32 0,0x1016A8A8
+field 027D2BD4 101FD814 u32 0,1
+field 027D2BD4 101FDFE0 u32 0,0x1016A8B8,0x10168FA4
+field 027D2BD4 101FD8D8 u32 0,1
+field 027D2BD4 101FDFF4 u32 0,0x1016A8C8,0x10168FCC
+field 027D2BD4 101FD8DC u32 0,1
+field 027D2BD4 101FDFF8 u32 0,0x1016A8C8,0x10168FCC
+field 027D2BD4 101FD8E0 u32 0,1
+field 027D2BD4 101FDFFC u32 0,0x1016A8C8,0x10168FCC
+field 027D2BD4 101FD8D0 u32 0,1
+field 027D2BD4 101FE000 u32 0,0x1016A848,0x10168F14
+arg! 027D3898 r3 0x6A87F780
+arg! 027D3898 r4 0x101FDFE8,0x101FDFEC,0x101FDFE0,0x101FDFF4,0x101FDFF8,0x101FDFFC,0x101FE000,0x101FDFE4,0x101FDFF0,0
+field 027D3898 101FD80C u32 0,1
+field 027D3898 101FDFE8 u32 0,0x1016A898,0x10168F84
+field 027D3898 101FD810 u32 0,1
+field 027D3898 101FDFEC u32 0,0x1016A8A8
+field 027D3898 101FD814 u32 0,1
+field 027D3898 101FDFE0 u32 0,0x1016A8B8,0x10168FA4
+field 027D3898 101FD8D8 u32 0,1
+field 027D3898 101FDFF4 u32 0,0x1016A8C8,0x10168FCC
+field 027D3898 101FD8DC u32 0,1
+field 027D3898 101FDFF8 u32 0,0x1016A8C8,0x10168FCC
+field 027D3898 101FD8E0 u32 0,1
+field 027D3898 101FDFFC u32 0,0x1016A8C8,0x10168FCC
+field 027D3898 101FD8D0 u32 0,1
+field 027D3898 101FE000 u32 0,0x1016A848,0x10168F14

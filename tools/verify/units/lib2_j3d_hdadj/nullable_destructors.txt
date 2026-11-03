@@ -1,0 +1,22 @@
+# verify: -only 027F2804,027F2830,027F2848,027F2860,027F28B8,027F2AEC,027F3628,027F3D60,027F13DC -calleesp
+# Explicit null receivers are part of each original deleting-destructor entry contract.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+arg! 027F2804 r3 0
+arg! 027F2804 r4 0,1,2,3
+arg! 027F2830 r3 0
+arg! 027F2830 r4 0,1,2,3
+arg! 027F2848 r3 0
+arg! 027F2848 r4 0,1,2,3
+arg! 027F2860 r3 0
+arg! 027F2860 r4 0,1,2,3
+arg! 027F28B8 r3 0
+arg! 027F28B8 r4 0,1,2,3
+arg! 027F2AEC r3 0
+arg! 027F2AEC r4 0,1,2,3
+arg! 027F3628 r3 0
+arg! 027F3628 r4 0,1,2,3
+arg! 027F3D60 r3 0
+arg! 027F3D60 r4 0,1,2,3
+arg! 027F13DC r3 0
+arg! 027F13DC r4 0,1,2,3

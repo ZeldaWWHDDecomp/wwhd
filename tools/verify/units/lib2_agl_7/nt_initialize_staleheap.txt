@@ -1,0 +1,7 @@
+# AGL#7 0278E730 initializeFrames with stale heap contents: as nt_initialize_count0, but the root heap arena starts filled
+# with 0xA5 instead of 0 (sead's ExpHeap does not clear a block on allocation, so a fresh FrameResources array holds whatever
+# earlier use left there; the world's objects are built over the same bytes by their original constructors). A dropped
+# store of 0 into a new frame record then shows.
+# verify: -only 0278E730 -strictnan -calleesp
+include lib2_agl_7/nt_initialize_count0.txt
+fill * 0x6A000000 0x01000000 0xA5

@@ -1,0 +1,18 @@
+# AGL#19 appendDeferred 027D71D4 with a command the view's pool just recorded (beginCommand 027D54F8 / endCommand
+# 027D55F8 as RenderJob::execute does; command 10 of the pool at 0x6A8846F0), owner NULL or a pending layer.
+# The recording issues one GX2 command between begin and end (see the postsetup), so it ends with the world model size
+# 0x100: appended, command listener told.
+# verify: -only 027D71D4 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+field * 0x5E000210 u32 0x1016C340
+field * 0x5E000214 u32 0x1016C180
+stable 0x5E000210 0x8
+postsetup * 027D54F8 r3=0x5E101028 r4=0x5E000210 r5=0x40 r6=0
+real 0274F964 0274F8D8 02751698 027516AC
+# one GX2 command in the recording: the view's scaled viewport applied to its render target (sead::Viewport::apply 0274F964)
+postsetup * 0274F964 r3=0x5E100790 r4=*0x5E100024
+postsetup * 027D55F8 r3=0x5E101028 r4=10 r5=0
+arg! 027D71D4 r3 0x5E100018,0x5E100818
+arg! 027D71D4 r4 0x6A8846F0
+arg! 027D71D4 r5 0,0x58000000,0x58001000,0x58002000

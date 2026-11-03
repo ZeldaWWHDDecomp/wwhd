@@ -1,0 +1,96 @@
+# (base, included by zz_a7en_hd.txt; 1280x720 depth on the 32 MB pool world copy) AGL#7 02791230 ShadowPrePass::render, enabled path, shipped caller 02736278 (call 027362DC) domain.
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+include lib2_agl_7/enabled_render_hd_world.txt
+setupsnapshot
+
+# ---- ShadowPrePass (game: owner+0x15D4): ctor 0278DAC0 (02736048) + initialize 0278E730(count 1, heap) (0273661C) ----
+fill * 0x5C020000 0x5C4 0
+stable 0x5C020000 0x5C4
+setup 02791230 0278DAC0 r3=0x5C020000
+setup 02791230 0278E730 r3=0x5C020000 r4=1 r5=0
+
+# ---- "normal" r9 = *(owner+0x9D4) = ShadowMap(DepthShadow+0x2C4)+0x100 = &ShadowMap+0x108 ----
+# ShadowMap ctor 02796034 (DepthShadow ctor 02797EEC at 0279837C), configureSurface 027966F0 (DepthShadow::initialize
+# 027984FC at 027986DC: +0x100 = this+0x108, r5 = heap), size 027967A0 (game 027363F4 with owner+0x1BDC = {0x400,0x400},
+# stored at 0273616C), allocation 027967C4 via 02798AE4 with r4 = min(max(DS+0x254,1), DS+0x2BC) = 3 (initialize stores
+# *r4 = 3 from 027363B8 into both). 3 layers -> 0279FD18/0279FE74 (dim 5, 2D array) -> render's kind != 1 arm.
+fill * 0x59000000 0xBE4 0
+stable 0x59000000 0xBE4
+field * 0x5E100000 u32 0x400
+field * 0x5E100004 u32 0x400
+stable 0x5E100000 0x20
+setup 02791230 02796034 r3=0x59000000
+setup 02791230 027966F0 r3=0x59000000 r5=0
+setup 02791230 027967A0 r3=0x59000000 r4=0x5E100000
+setup 02791230 027967C4 r3=0x59000000 r4=3
+
+# ---- "depth" r6 = r8 = RenderBuffer(+8 of the render info)->mDepthTarget (+0x3C): a 640x360 depth texture (see the size
+# note below) from the
+# original dynamic texture allocator (the allocator the HD layer uses for its screen buffers, 027F8474), name = the
+# original-constructed empty SafeString 104A0CD8 (02759B40).
+# Size note: the world's texture-cache pool 0 is the 16 MB range 0x70000000 (0279F474 r5/r6; every entry has +0xA7 = 0,
+# so only pool 0 is used). The shipped 3-layer 1024x1024 shadow map takes 12 MB; a 1280x720 depth plus the two
+# 1280x720 + two 640x360 RGBA8 frame outputs that prepareFrame 0278F04C allocates (~9 MB) do not fit, 027CB1A0 returns 0
+# and 0279F7F0 reads NULL+0xC (watch) on the shared world. This hd variant uses the 32 MB pool world copy, where 1280x720 fits.
+setup 02791230 0279FC6C r3=*101F8DD4 r4=0x104A0CD8 r5=0x3B r6=1280 r7=720 r8=1 r9=0 r10=0 sp+8=1 sp+0xC=0 ->0x5E100010
+
+# ---- closure ----
+real 0278DAC0 0278E730 0278FB08 02796034 027966F0 027967A0 027967C4 0279FC6C 0279FD18 0279FDC8 0279FE74
+real 0279A07C 0279CA34 0279C950 0279E57C 0273B264 0273B200 0279E618 0279E674 027A84B8 0279CB9C 027A861C 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 027BDEB4 02752A84 02759B98 0279F1BC 0279288C 02791A4C 027919BC 027919FC 02791A54
+real 02759B40 027A8C80 0279A490 027A08C8
+real 027B95B4 027B958C 027B954C 027B6CB8 027B6E64 027BEB5C 027BECEC 027BED84 027BEEE4 027BEEBC 027BEED4 027BEE9C 027A063C
+real 027BE2B0 027B9694 0274D67C 028F0164 028F007C 027BEC90 027BEBEC 0273AFC8 027A0998 02752BEC 02755D28
+real 025C0928 025C0934 025C09D8 0276ACA0 0276AD30 0276B114 027861E0 02795EE0 02797DDC 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027CB744
+real 027BE930 027BE7F0 027BE74C 027BE744 027BFF9C 0279FFDC 027A0040 027A0114
+# ensureOutput 0278FC80 runs the original (as in render, 027912B0): prepareFrame 0278F04C allocates the frame output
+# textures (+0x84C etc.) that render flushes through 027BE794 (a world real).
+real 0278FC80 0278EE50 0278F04C 0278EFC0 0278EEF8 025C0848
+
+
+# ---- tested call: the shipped caller's argument shape (02736278 at 027362B0..027362DC) ----
+# r3 = owner+0x15D4, r4 = 0, r6 = r7 = r8 = depth target, r9 = *(owner+0x9D4), r10 = 0 (li r4,0; mr r10,r4),
+# sp+8 = *(owner+0x864) = 3 (02736420: min(DS+0x2BC = 3, owner+0x1BA0 = 3), >= 1), sp+0xC = the per-core GPU state word
+# from 027F29D4(104B45C0) (any value: generated). r5 (RenderBuffer*) is not read.
+# 6A00F380 = the depth TextureData returned by the 0279FC6C setup (->5E100010, deterministic: second cache entry).
+arg! 02791230 r3 0x5C020000
+arg! 02791230 r4 0
+arg! 02791230 r6 0x6A00F380
+arg! 02791230 r7 0x6A00F380
+arg! 02791230 r8 0x6A00F380
+arg! 02791230 r9 0x59000108
+arg! 02791230 r10 0
+poke 02791230 r1+8 u32 3
+# Tunable agl::utl::Parameter values of the ShadowPrePass (value word/byte at param+0xC; ctor 0278DAC0 defaults,
+# editable through the parameter IO) and the game-set registry bit (027312D8: +0x1D4 |= 1).
+poke 02791230 5C020424 u8 1
+poke 02791230 5C0201D4 u32 0,1
+poke 02791230 5C020454 u32 0,1
+poke 02791230 5C020464 u32 0,5,6,7
+poke 02791230 5C020474 u32 0,1,2
+poke 02791230 5C020494 u8 0,1
+poke 02791230 5C0204C4 u8 0,1
+poke 02791230 5C020514 u8 0,1
+poke 02791230 5C020524 u8 0,1
+poke 02791230 5C020554 u8 0,1
+poke 02791230 5C020594 u8 0,1
+poke 02791230 5C0205A4 u8 0,1

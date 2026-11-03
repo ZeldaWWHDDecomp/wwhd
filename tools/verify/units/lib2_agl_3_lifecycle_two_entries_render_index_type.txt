@@ -1,0 +1,6 @@
+# TYPE-DOMAIN: original initialize(count2), render only valid entry indices0/1; shippedcaller uses0.
+# Caller-owned setup countPOD and public render scalar only; no produced entry/program fields are poked.
+include lib2_agl_3_lifecycle_depth_quality_finite_stack_current_world.txt
+field * 0x5A100000 s32 2
+arg! 0277AD60 r4 0,1
+arg! 0277AD60 r9 0,1

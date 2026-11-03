@@ -1,0 +1,326 @@
+// JPA1 visitor-container teardown, with Cafe's additional HD execution pair.
+#include "JSystem/JParticle/JPADrawVisitor_container.h"
+using namespace JPADrawExtension;
+using JPADrawVisitorVtableWord = be<u32>;
+static JPADrawVisitorContainer_l sVisitorContainer;
+JPADrawVisitorContainer_l& JPADrawExtension::drawVisitors() { return sVisitorContainer; }
+static JPADrawVisitorVtableWord sTextureRandomParticleVtable;
+static JPADrawVisitorVtableWord sTextureReverseParticleVtable;
+static JPADrawVisitorVtableWord sTextureRepeatParticleVtable;
+static JPADrawVisitorVtableWord sColorRandomParticleVtable;
+static JPADrawVisitorVtableWord sTextureMergeParticleVtable;
+static JPADrawVisitorVtableWord sColorMergeParticleVtable;
+static JPADrawVisitorVtableWord sColorRepeatParticleVtable;
+static JPADrawVisitorVtableWord sTextureNormalParticleVtable;
+static JPADrawVisitorVtableWord sColorEnvParticleVtable;
+static JPADrawVisitorVtableWord sColorReverseParticleVtable;
+static JPADrawVisitorVtableWord sHDPairParticleVtable;
+static JPADrawVisitorVtableWord sSetTexMtxParticleVtable;
+static JPADrawVisitorVtableWord sColorPrmParticleVtable;
+static JPADrawVisitorVtableWord sCallBackParticleVtable;
+static JPADrawVisitorVtableWord sLoadTextureParticleVtable;
+static JPADrawVisitorVtableWord sColorNormalParticleVtable;
+void JPADrawVisitorDelete(void*);
+#include "JSystem/JParticle/JPADraw.h"
+struct JPADrawStaticBlock_l { be<u32> words[4]; };
+struct JPADrawRegistration_l { be<u32> words[3]; };
+struct JPADrawViewClipBoards_l { JPADrawClipBoard_l entries[3]; };
+struct JPADrawAlternateClipBoards_l { JPADrawClipBoard_l entries[2]; };
+static JPADrawStaticBlock_l sDrawStaticBlock;
+static JPADrawRegistration_l sDrawStaticRegistration;
+static JPADrawRegistration_l sVisitorRegistration;
+static JPADrawViewClipBoards_l sViewClipBoards;
+static JPADrawAlternateClipBoards_l sAlternateClipBoards;
+void JPADrawVisitorRegisterGlobal(void*);
+void JPADrawVisitorConstructArray(void*,u32,u32,u32);
+JPADrawClipBoard_l* JPADrawClipBoardConstruct(JPADrawClipBoard_l*);
+JPADrawClipBoard_l* JPADrawExtension::drawViewClipBoards() { return sViewClipBoards.entries; }
+JPADrawClipBoard_l* JPADrawExtension::drawAlternateClipBoards() { return sAlternateClipBoards.entries; }
+
+static JPADrawVisitorVtableWord sGenPrjMtxVtable;
+static JPADrawVisitorVtableWord sGenPrjTexMtxVtable;
+static JPADrawVisitorVtableWord sGenTexMtx0Vtable;
+static JPADrawVisitorVtableWord sGenIdtMtxVtable;
+static JPADrawVisitorVtableWord sSetTexMtxemitterVtable;
+static JPADrawVisitorVtableWord sSetPointSizeVtable;
+static JPADrawVisitorVtableWord sSetLineWidthVtable;
+static JPADrawVisitorVtableWord sRegisterColorPrmEnvVtable;
+static JPADrawVisitorVtableWord sRegisterColorPrmVtable;
+static JPADrawVisitorVtableWord sRegisterColorEnvVtable;
+static JPADrawVisitorVtableWord sRegisterColorChildPrmEnvVtable;
+static JPADrawVisitorVtableWord sRegisterPrmColorAnmVtable;
+static JPADrawVisitorVtableWord sRegisterPrmAlphaAnmVtable;
+static JPADrawVisitorVtableWord sRegisterEnvColorAnmVtable;
+static JPADrawVisitorVtableWord sRegisterPrmColorVtable;
+static JPADrawVisitorVtableWord sRegisterPrmAlphaVtable;
+static JPADrawVisitorVtableWord sLoadDefaultTextureVtable;
+static JPADrawVisitorVtableWord sLoadTextureemitterVtable;
+static JPADrawVisitorVtableWord sLoadExTextureVtable;
+static JPADrawVisitorVtableWord sExecBillBoardVtable;
+static JPADrawVisitorVtableWord sExecRotBillBoardVtable;
+static JPADrawVisitorVtableWord sExecYBillBoardVtable;
+static JPADrawVisitorVtableWord sExecRotYBillBoardVtable;
+static JPADrawVisitorVtableWord sExecDirectionalVtable;
+static JPADrawVisitorVtableWord sExecRotDirectionalVtable;
+static JPADrawVisitorVtableWord sExecDirectionalCrossVtable;
+static JPADrawVisitorVtableWord sExecRotDirectionalCrossVtable;
+static JPADrawVisitorVtableWord sExecDirBillBoardVtable;
+static JPADrawVisitorVtableWord sExecRotationVtable;
+static JPADrawVisitorVtableWord sExecRotationCrossVtable;
+static JPADrawVisitorVtableWord sExecPointVtable;
+static JPADrawVisitorVtableWord sExecLineVtable;
+static JPADrawVisitorVtableWord sExecStripeVtable;
+static JPADrawVisitorVtableWord sExecStripeCrossVtable;
+static JPADrawVisitorVtableWord sExecCallBackemitterVtable;
+static JPADrawVisitorVtableWord sHDExecHDQuadVtable;
+static JPADrawVisitorVtableWord sHDExecHDCrossVtable;
+static JPADrawVisitorVtableWord sHDExecHDPointVtable;
+static JPADrawVisitorVtableWord sHDExecHDStripeVtable;
+static JPADrawVisitorVtableWord sHDExecHDStripeCrossVtable;
+static JPADrawVisitorVtableWord sHDExecPairemitterVtable;
+static JPADrawVisitorVtableWord sCalcScaleXVtable;
+static JPADrawVisitorVtableWord sCalcScaleXBySpeedVtable;
+static JPADrawVisitorVtableWord sCalcScaleYVtable;
+static JPADrawVisitorVtableWord sCalcScaleYBySpeedVtable;
+static JPADrawVisitorVtableWord sCalcScaleCopyX2YVtable;
+static JPADrawVisitorVtableWord sCalcScaleAnmTimingNormalVtable;
+static JPADrawVisitorVtableWord sCalcScaleAnmTimingRepeatXVtable;
+static JPADrawVisitorVtableWord sCalcScaleAnmTimingRepeatYVtable;
+static JPADrawVisitorVtableWord sCalcScaleAnmTimingReverseXVtable;
+static JPADrawVisitorVtableWord sCalcScaleAnmTimingReverseYVtable;
+static JPADrawVisitorVtableWord sCalcColorPrmemitterVtable;
+static JPADrawVisitorVtableWord sCalcColorEnvemitterVtable;
+static JPADrawVisitorVtableWord sCalcColorCopyFromEmitterVtable;
+static JPADrawVisitorVtableWord sCalcColorAnmFrameNormalemitterVtable;
+static JPADrawVisitorVtableWord sCalcColorAnmFrameRepeatemitterVtable;
+static JPADrawVisitorVtableWord sCalcColorAnmFrameReverseemitterVtable;
+static JPADrawVisitorVtableWord sCalcColorAnmFrameMergeemitterVtable;
+static JPADrawVisitorVtableWord sCalcColorAnmFrameRandomemitterVtable;
+static JPADrawVisitorVtableWord sCalcAlphaVtable;
+static JPADrawVisitorVtableWord sCalcAlphaFlickNrmSinVtable;
+static JPADrawVisitorVtableWord sCalcAlphaFlickAddSinVtable;
+static JPADrawVisitorVtableWord sCalcAlphaFlickMultSinVtable;
+static JPADrawVisitorVtableWord sCalcTextureAnmIndexNormalemitterVtable;
+static JPADrawVisitorVtableWord sCalcTextureAnmIndexRepeatemitterVtable;
+static JPADrawVisitorVtableWord sCalcTextureAnmIndexReverseemitterVtable;
+static JPADrawVisitorVtableWord sCalcTextureAnmIndexMergeemitterVtable;
+static JPADrawVisitorVtableWord sCalcTextureAnmIndexRandomemitterVtable;
+static JPADrawVisitorVtableWord sCalcChildAlphaOutVtable;
+static JPADrawVisitorVtableWord sCalcChildScaleOutVtable;
+/* 02830300 */
+void JPADrawVisitorContainerDestroy(JPADrawVisitorContainer_l* self,s32 flags) {
+    if (!self) return;
+    self->mCalcTextureAnmIndexRandom.particle.__vtbl = &sTextureRandomParticleVtable;
+    self->mCalcTextureAnmIndexReverse.particle.__vtbl = &sTextureReverseParticleVtable;
+    self->mCalcTextureAnmIndexRepeat.particle.__vtbl = &sTextureRepeatParticleVtable;
+    self->mCalcColorAnmFrameRandom.particle.__vtbl = &sColorRandomParticleVtable;
+    self->mCalcTextureAnmIndexMerge.particle.__vtbl = &sTextureMergeParticleVtable;
+    self->mCalcColorAnmFrameMerge.particle.__vtbl = &sColorMergeParticleVtable;
+    self->mCalcColorAnmFrameRepeat.particle.__vtbl = &sColorRepeatParticleVtable;
+    self->mCalcTextureAnmIndexNormal.particle.__vtbl = &sTextureNormalParticleVtable;
+    self->mCalcColorEnv.particle.__vtbl = &sColorEnvParticleVtable;
+    self->mCalcColorAnmFrameReverse.particle.__vtbl = &sColorReverseParticleVtable;
+    self->mHDExecPair.particle.__vtbl = &sHDPairParticleVtable;
+    self->mSetTexMtx.particle.__vtbl = &sSetTexMtxParticleVtable;
+    self->mCalcColorPrm.particle.__vtbl = &sColorPrmParticleVtable;
+    self->mExecCallBack.particle.__vtbl = &sCallBackParticleVtable;
+    self->mLoadTexture.particle.__vtbl = &sLoadTextureParticleVtable;
+    self->mCalcColorAnmFrameNormal.particle.__vtbl = &sColorNormalParticleVtable;
+    if (flags & 1) JPADrawVisitorDelete(self);
+}
+/* 0282FDA0 */
+void JPADrawStaticInitialize() {
+    sDrawStaticBlock.words[3] = 0;
+    sDrawStaticBlock.words[2] = 0;
+    sDrawStaticBlock.words[1] = 0;
+    sDrawStaticBlock.words[0] = 0;
+    JPADrawVisitorRegisterGlobal(&sDrawStaticRegistration);
+    auto& vc = sVisitorContainer;
+    vc.mGenPrjMtx.__vtbl = &sGenPrjMtxVtable;
+    vc.mGenPrjTexMtx.__vtbl = &sGenPrjTexMtxVtable;
+    vc.mGenTexMtx0.__vtbl = &sGenTexMtx0Vtable;
+    vc.mGenIdtMtx.__vtbl = &sGenIdtMtxVtable;
+    vc.mSetTexMtx.emitter.__vtbl = &sSetTexMtxemitterVtable;
+    vc.mSetTexMtx.particle.__vtbl = &sSetTexMtxParticleVtable;
+    vc.mSetPointSize.__vtbl = &sSetPointSizeVtable;
+    vc.mSetLineWidth.__vtbl = &sSetLineWidthVtable;
+    vc.mRegisterColorPrmEnv.__vtbl = &sRegisterColorPrmEnvVtable;
+    vc.mRegisterColorPrm.__vtbl = &sRegisterColorPrmVtable;
+    vc.mRegisterColorEnv.__vtbl = &sRegisterColorEnvVtable;
+    vc.mRegisterColorChildPrmEnv.__vtbl = &sRegisterColorChildPrmEnvVtable;
+    vc.mRegisterPrmColorAnm.__vtbl = &sRegisterPrmColorAnmVtable;
+    vc.mRegisterPrmAlphaAnm.__vtbl = &sRegisterPrmAlphaAnmVtable;
+    vc.mRegisterEnvColorAnm.__vtbl = &sRegisterEnvColorAnmVtable;
+    vc.mRegisterPrmColor.__vtbl = &sRegisterPrmColorVtable;
+    vc.mRegisterPrmAlpha.__vtbl = &sRegisterPrmAlphaVtable;
+    vc.mLoadDefaultTexture.__vtbl = &sLoadDefaultTextureVtable;
+    vc.mLoadTexture.emitter.__vtbl = &sLoadTextureemitterVtable;
+    vc.mLoadTexture.particle.__vtbl = &sLoadTextureParticleVtable;
+    vc.mLoadExTexture.__vtbl = &sLoadExTextureVtable;
+    vc.mExecBillBoard.__vtbl = &sExecBillBoardVtable;
+    vc.mExecRotBillBoard.__vtbl = &sExecRotBillBoardVtable;
+    vc.mExecYBillBoard.__vtbl = &sExecYBillBoardVtable;
+    vc.mExecRotYBillBoard.__vtbl = &sExecRotYBillBoardVtable;
+    vc.mExecDirectional.__vtbl = &sExecDirectionalVtable;
+    vc.mExecRotDirectional.__vtbl = &sExecRotDirectionalVtable;
+    vc.mExecDirectionalCross.__vtbl = &sExecDirectionalCrossVtable;
+    vc.mExecRotDirectionalCross.__vtbl = &sExecRotDirectionalCrossVtable;
+    vc.mExecDirBillBoard.__vtbl = &sExecDirBillBoardVtable;
+    vc.mExecRotation.__vtbl = &sExecRotationVtable;
+    vc.mExecRotationCross.__vtbl = &sExecRotationCrossVtable;
+    vc.mExecPoint.__vtbl = &sExecPointVtable;
+    vc.mExecLine.__vtbl = &sExecLineVtable;
+    vc.mExecStripe.__vtbl = &sExecStripeVtable;
+    vc.mExecStripeCross.__vtbl = &sExecStripeCrossVtable;
+    vc.mExecCallBack.emitter.__vtbl = &sExecCallBackemitterVtable;
+    vc.mExecCallBack.particle.__vtbl = &sCallBackParticleVtable;
+    vc.mHDExec[HDQuad].__vtbl = &sHDExecHDQuadVtable;
+    vc.mHDExec[HDCross].__vtbl = &sHDExecHDCrossVtable;
+    vc.mHDExec[HDPoint].__vtbl = &sHDExecHDPointVtable;
+    vc.mHDExec[HDStripe].__vtbl = &sHDExecHDStripeVtable;
+    vc.mHDExec[HDStripeCross].__vtbl = &sHDExecHDStripeCrossVtable;
+    vc.mHDExecPair.emitter.__vtbl = &sHDExecPairemitterVtable;
+    vc.mHDExecPair.particle.__vtbl = &sHDPairParticleVtable;
+    vc.mCalcScaleX.__vtbl = &sCalcScaleXVtable;
+    vc.mCalcScaleXBySpeed.__vtbl = &sCalcScaleXBySpeedVtable;
+    vc.mCalcScaleY.__vtbl = &sCalcScaleYVtable;
+    vc.mCalcScaleYBySpeed.__vtbl = &sCalcScaleYBySpeedVtable;
+    vc.mCalcScaleCopyX2Y.__vtbl = &sCalcScaleCopyX2YVtable;
+    vc.mCalcScaleAnmTimingNormal.__vtbl = &sCalcScaleAnmTimingNormalVtable;
+    vc.mCalcScaleAnmTimingRepeatX.__vtbl = &sCalcScaleAnmTimingRepeatXVtable;
+    vc.mCalcScaleAnmTimingRepeatY.__vtbl = &sCalcScaleAnmTimingRepeatYVtable;
+    vc.mCalcScaleAnmTimingReverseX.__vtbl = &sCalcScaleAnmTimingReverseXVtable;
+    vc.mCalcScaleAnmTimingReverseY.__vtbl = &sCalcScaleAnmTimingReverseYVtable;
+    vc.mCalcColorPrm.emitter.__vtbl = &sCalcColorPrmemitterVtable;
+    vc.mCalcColorPrm.particle.__vtbl = &sColorPrmParticleVtable;
+    vc.mCalcColorEnv.emitter.__vtbl = &sCalcColorEnvemitterVtable;
+    vc.mCalcColorEnv.particle.__vtbl = &sColorEnvParticleVtable;
+    vc.mCalcColorCopyFromEmitter.__vtbl = &sCalcColorCopyFromEmitterVtable;
+    vc.mCalcColorAnmFrameNormal.emitter.__vtbl = &sCalcColorAnmFrameNormalemitterVtable;
+    vc.mCalcColorAnmFrameNormal.particle.__vtbl = &sColorNormalParticleVtable;
+    vc.mCalcColorAnmFrameRepeat.emitter.__vtbl = &sCalcColorAnmFrameRepeatemitterVtable;
+    vc.mCalcColorAnmFrameRepeat.particle.__vtbl = &sColorRepeatParticleVtable;
+    vc.mCalcColorAnmFrameReverse.emitter.__vtbl = &sCalcColorAnmFrameReverseemitterVtable;
+    vc.mCalcColorAnmFrameReverse.particle.__vtbl = &sColorReverseParticleVtable;
+    vc.mCalcColorAnmFrameMerge.emitter.__vtbl = &sCalcColorAnmFrameMergeemitterVtable;
+    vc.mCalcColorAnmFrameMerge.particle.__vtbl = &sColorMergeParticleVtable;
+    vc.mCalcColorAnmFrameRandom.emitter.__vtbl = &sCalcColorAnmFrameRandomemitterVtable;
+    vc.mCalcColorAnmFrameRandom.particle.__vtbl = &sColorRandomParticleVtable;
+    vc.mCalcAlpha.__vtbl = &sCalcAlphaVtable;
+    vc.mCalcAlphaFlickNrmSin.__vtbl = &sCalcAlphaFlickNrmSinVtable;
+    vc.mCalcAlphaFlickAddSin.__vtbl = &sCalcAlphaFlickAddSinVtable;
+    vc.mCalcAlphaFlickMultSin.__vtbl = &sCalcAlphaFlickMultSinVtable;
+    vc.mCalcTextureAnmIndexNormal.emitter.__vtbl = &sCalcTextureAnmIndexNormalemitterVtable;
+    vc.mCalcTextureAnmIndexNormal.particle.__vtbl = &sTextureNormalParticleVtable;
+    vc.mCalcTextureAnmIndexRepeat.emitter.__vtbl = &sCalcTextureAnmIndexRepeatemitterVtable;
+    vc.mCalcTextureAnmIndexRepeat.particle.__vtbl = &sTextureRepeatParticleVtable;
+    vc.mCalcTextureAnmIndexReverse.emitter.__vtbl = &sCalcTextureAnmIndexReverseemitterVtable;
+    vc.mCalcTextureAnmIndexReverse.particle.__vtbl = &sTextureReverseParticleVtable;
+    vc.mCalcTextureAnmIndexMerge.emitter.__vtbl = &sCalcTextureAnmIndexMergeemitterVtable;
+    vc.mCalcTextureAnmIndexMerge.particle.__vtbl = &sTextureMergeParticleVtable;
+    vc.mCalcTextureAnmIndexRandom.emitter.__vtbl = &sCalcTextureAnmIndexRandomemitterVtable;
+    vc.mCalcTextureAnmIndexRandom.particle.__vtbl = &sTextureRandomParticleVtable;
+    vc.mCalcChildAlphaOut.__vtbl = &sCalcChildAlphaOutVtable;
+    vc.mCalcChildScaleOut.__vtbl = &sCalcChildScaleOutVtable;
+    JPADrawVisitorRegisterGlobal(&sVisitorRegistration);
+    u32 constructor = gabi::guest_fn(reinterpret_cast<const void*>(JPADrawClipBoardConstruct));
+    JPADrawVisitorConstructArray(sViewClipBoards.entries,3,sizeof(JPADrawClipBoard_l),constructor);
+    JPADrawVisitorConstructArray(sAlternateClipBoards.entries,2,sizeof(JPADrawClipBoard_l),constructor);
+}
+/* WWHD glue
+data sGenPrjMtxVtable 101722CC
+data sGenPrjTexMtxVtable 101722E4
+data sGenTexMtx0Vtable 101722FC
+data sGenIdtMtxVtable 10172314
+data sSetTexMtxemitterVtable 10172434
+data sSetPointSizeVtable 1017238C
+data sSetLineWidthVtable 101723A4
+data sRegisterColorPrmEnvVtable 1017232C
+data sRegisterColorPrmVtable 10172344
+data sRegisterColorEnvVtable 1017235C
+data sRegisterColorChildPrmEnvVtable 10172374
+data sRegisterPrmColorAnmVtable 101723BC
+data sRegisterPrmAlphaAnmVtable 101723D4
+data sRegisterEnvColorAnmVtable 101723EC
+data sRegisterPrmColorVtable 10172404
+data sRegisterPrmAlphaVtable 1017241C
+data sLoadDefaultTextureVtable 1017246C
+data sLoadTextureemitterVtable 10172484
+data sLoadExTextureVtable 101722B4
+data sExecBillBoardVtable 101724BC
+data sExecRotBillBoardVtable 101724D4
+data sExecYBillBoardVtable 101724EC
+data sExecRotYBillBoardVtable 10172504
+data sExecDirectionalVtable 1017251C
+data sExecRotDirectionalVtable 10172534
+data sExecDirectionalCrossVtable 1017254C
+data sExecRotDirectionalCrossVtable 10172564
+data sExecDirBillBoardVtable 1017257C
+data sExecRotationVtable 10172594
+data sExecRotationCrossVtable 101725AC
+data sExecPointVtable 101725C4
+data sExecLineVtable 101725DC
+data sExecStripeVtable 101725F4
+data sExecStripeCrossVtable 1017260C
+data sExecCallBackemitterVtable 10172624
+data sHDExecHDQuadVtable 10172A94
+data sHDExecHDCrossVtable 10172AAC
+data sHDExecHDPointVtable 10172AC4
+data sHDExecHDStripeVtable 10172ADC
+data sHDExecHDStripeCrossVtable 10172AF4
+data sHDExecPairemitterVtable 10172B0C
+data sCalcScaleXVtable 1017265C
+data sCalcScaleXBySpeedVtable 1017268C
+data sCalcScaleYVtable 10172674
+data sCalcScaleYBySpeedVtable 101726A4
+data sCalcScaleCopyX2YVtable 101726BC
+data sCalcScaleAnmTimingNormalVtable 101726D4
+data sCalcScaleAnmTimingRepeatXVtable 101726EC
+data sCalcScaleAnmTimingRepeatYVtable 10172704
+data sCalcScaleAnmTimingReverseXVtable 1017271C
+data sCalcScaleAnmTimingReverseYVtable 10172734
+data sCalcColorPrmemitterVtable 1017274C
+data sCalcColorEnvemitterVtable 10172784
+data sCalcColorCopyFromEmitterVtable 101727BC
+data sCalcColorAnmFrameNormalemitterVtable 101727D4
+data sCalcColorAnmFrameRepeatemitterVtable 1017280C
+data sCalcColorAnmFrameReverseemitterVtable 10172844
+data sCalcColorAnmFrameMergeemitterVtable 1017287C
+data sCalcColorAnmFrameRandomemitterVtable 101728B4
+data sCalcAlphaVtable 101728EC
+data sCalcAlphaFlickNrmSinVtable 10172904
+data sCalcAlphaFlickAddSinVtable 1017291C
+data sCalcAlphaFlickMultSinVtable 10172934
+data sCalcTextureAnmIndexNormalemitterVtable 1017294C
+data sCalcTextureAnmIndexRepeatemitterVtable 10172984
+data sCalcTextureAnmIndexReverseemitterVtable 101729BC
+data sCalcTextureAnmIndexMergeemitterVtable 101729F4
+data sCalcTextureAnmIndexRandomemitterVtable 10172A2C
+data sCalcChildAlphaOutVtable 10172A64
+data sCalcChildScaleOutVtable 10172A7C
+data sDrawStaticBlock 104B59B0
+data sDrawStaticRegistration 101FACD8
+data sVisitorRegistration 101FACE4
+data sViewClipBoards 104B5D00
+data sAlternateClipBoards 104B5B18
+ext 028F026C void JPADrawVisitorRegisterGlobal(void*)
+ext 028EFFD0 void JPADrawVisitorConstructArray(void*,u32,u32,u32)
+data sVisitorContainer 104B59C0
+data sTextureRandomParticleVtable 10172A4C
+data sTextureReverseParticleVtable 101729DC
+data sTextureRepeatParticleVtable 101729A4
+data sColorRandomParticleVtable 101728D4
+data sTextureMergeParticleVtable 10172A14
+data sColorMergeParticleVtable 1017289C
+data sColorRepeatParticleVtable 1017282C
+data sTextureNormalParticleVtable 1017296C
+data sColorEnvParticleVtable 101727A4
+data sColorReverseParticleVtable 10172864
+data sHDPairParticleVtable 10172B2C
+data sSetTexMtxParticleVtable 10172454
+data sColorPrmParticleVtable 1017276C
+data sCallBackParticleVtable 10172644
+data sLoadTextureParticleVtable 101724A4
+data sColorNormalParticleVtable 101727F4
+ext 0273AF40 void JPADrawVisitorDelete(void*)
+*/

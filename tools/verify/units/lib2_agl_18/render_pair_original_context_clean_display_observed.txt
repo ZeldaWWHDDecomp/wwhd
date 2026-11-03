@@ -1,0 +1,12 @@
+# AGL#18 027CFFF0 clean shipped program-display-list state.
+# the shared world records the 0x3F program at load
+# with bit 0 clear.  Keep it clean at draw time and opt into a nonzero mocked
+# display-list byte count after the world include.
+# verify: -only 027CFFF0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_pair_original_context.txt
+poke * 5A000000 u16 1
+poke * 5A001000 u16 1
+stable 59800000 0x8
+fill * 59800000 0x8 0
+setup * 027CFED4 r3=0x59800000 r4=1 r5=1 r6=0 r7=1 r8=0 r9=0
+mockdisplaylist C0006090 C0006190 C0006218 0x100

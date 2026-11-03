@@ -1,0 +1,19 @@
+# verify: -only 027D527C,027D54A4,027D514C -calleesp
+# Render command pool lifecycle on the pool's own producers (lib2_agl_19_commands_pool_fixture.txt): initialization
+# of a constructed pool with the shipped command count 36 and two frames on the renderer heap (model frame sizes 0x20,
+# 0x40, 0x100, 0x1000), the per-frame reset of RenderQueueManager::update 027C106C (advance 0/1) on a
+# fresh pool and on one with recorded commands, and destruction with the manager's flags 2 (027C0B00) of an initialized
+# pool and of a constructed pool that was never initialized (RenderQueueManager::initialize 027C0CEC skips the pool
+# when the configuration's command bytes are 0).
+include lib2_agl_19_commands_pool_fixture.txt
+setup 027D527C 027D5064 r3=0x58000600
+arg! 027D527C r3 0x58000600
+arg! 027D527C r4 0x20,0x40,0x100,0x1000
+arg! 027D527C r5 36
+arg! 027D527C r6 2
+arg! 027D527C r7 0x6A87E2A0
+arg! 027D54A4 r3 0x58000000,0x58000100
+arg! 027D54A4 r4 0,1
+setup 027D514C 027D5064 r3=0x58000700
+arg! 027D514C r3 0x58000100,0x58000700
+arg! 027D514C r4 2

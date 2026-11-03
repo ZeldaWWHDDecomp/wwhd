@@ -1,0 +1,37 @@
+# AGL#2 027732B0 two-material companion (Vlupy.szs): second program-name compare mismatches first.
+# Same producer chain as lookup_esa_pair_alt (02602BC8 sequence). Vlupy.szs (user's file, read at run time): decompressed
+# SARC 0x25922 bytes, Vlupy.bfres at +0x2000, vlupy.sharcfb at +0xC000, FMDL at +0x211C with two FMATs whose shader assigns
+# are {"vlupy","SC_lupy_inside"} and {"vlupy","SC_lupy_outside"}; the sharcfb archive "vlupy" holds both programs, so one
+# material's program search first meets the other program (name mismatch, loop continue) and the material loop runs twice.
+# verify: -strictnan -calleesp -only 027732B0
+src wwhd_src/agl/ShaderLookupRuntime.cpp
+include shared/agl_world.txt
+setupsnapshot
+
+# ---- Vlupy.szs -> SARC (original decoder 0275ED14; endian table from the world's 02759AD8) ----
+blob * 0x64000000 content/Common/Object/Vlupy.szs 0 0x94CE
+stable 0x64000000 0x94CE
+fill * 0x64100000 0x25922 0
+stable 0x64100000 0x25922
+setup * 0275ED14 r3=0x64100000 r4=0x25922 r5=0x64000000
+
+# ---- owner: program archive over vlupy.sharcfb (02602CE0..02602E10 sequence) ----
+fill * 0x64200000 0x300 0
+stable 0x64200000 0x300
+field * 0x64200100 u32 0x6410C000
+setup * 027B744C r3=0x64200000
+setup * 027B8904 r3=0x64200000 r4=0x64200100 r5=0x64200104 r6=0 r7=0x6A000000
+setup * 027B9070 r3=0x64200000
+
+# ---- selection SafeString "Mat" (caller's stack object at r1+0x10) ----
+field * 0x64200200 u32 0x100E1920
+field * 0x64200204 u32 0x100E1858
+stable 0x64200200 8
+
+arg! 027732B0 r3 0x6410211C
+arg! 027732B0 r4 0x64200000
+arg! 027732B0 r5 0x64200200
+final 027732B0 0x64102000 0xA000
+final 027732B0 0x64200000 0x54
+
+real 02759B38 0275ED14 0275EB8C 0275EBC0 027BC540

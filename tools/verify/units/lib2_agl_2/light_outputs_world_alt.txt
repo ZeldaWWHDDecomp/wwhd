@@ -1,0 +1,39 @@
+# AGL#2 light allocateOutputs (02771218/02771888/02771DC0/0277243C) with a positive view count on the shared
+# original-produced agl world.
+# Shipped producer chain: EnvObjMgr::initialize 0276C3F8 (game callers 025AE450, 025B10E0; InitArg built by 0276CAA4,
+# which stores view max 1 at +0x20C; the callers do not change it) creates each light with its type create function
+# and calls EnvObj::initialize_ 02770564 (0276C6B0: r4 index, r5 = *(arg+0x20C), r6 mgr, r7 heap), which calls the
+# light's vtable slot +0x5C (027705F4..0277060C: r3 light, r4 view max, r5 heap) = allocateOutputs. The heap is the
+# one the game passes to EnvObjMgr::initialize (non-null); here the world's original-made root ExpHeap 0x6A000000.
+# The receiver is constructed by the original light constructor (placement storage, as after operator new).
+# Heap: 0x6A000000 (shipped: a non-null heap) or NULL (current heap). Counts: 1 (shipped), 2, 8 (API view max), 0x200000 (24 MB: the real heap fails, the NULL-result arm).
+# verify: -strictnan -calleesp -footprint -only 02771218,02771888,02771DC0,0277243C
+
+src wwhd_src/agl/LightOutputRuntime.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+include shared/agl_world.txt
+setupsnapshot
+
+real 02770EC0 027713EC 027719D0 02771E70
+
+setup 02771218 02770EC0 r3=0x5E100000
+setup 02771888 027713EC r3=0x5E110000
+setup 02771DC0 027719D0 r3=0x5E120000
+setup 0277243C 02771E70 r3=0x5E130000
+
+arg! 02771218 r3 0x5E100000
+arg! 02771888 r3 0x5E110000
+arg! 02771DC0 r3 0x5E120000
+arg! 0277243C r3 0x5E130000
+arg! 02771218 r4 1,2,8,0x200000
+arg! 02771218 r5 0,0x6A000000
+arg! 02771888 r4 1,2,8,0x200000
+arg! 02771888 r5 0,0x6A000000
+arg! 02771DC0 r4 1,2,8,0x200000
+arg! 02771DC0 r5 0,0x6A000000
+arg! 0277243C r4 1,2,8,0x200000
+arg! 0277243C r5 0,0x6A000000
+# heap NULL (API: sead Buffer allocation on the current heap): 02756140 answers the world's root heap at top level too,
+# exactly as the world's `nestedret 02756140 0x6A000000` does for nested calls.
+ret! 02756140 0x6A000000

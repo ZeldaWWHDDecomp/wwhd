@@ -1,0 +1,42 @@
+# complete disjoint ModelRuntime, external PaletteBuffer, bones and visibility payload.
+# Fixed resource/runtime bone counts agree; world/local blocks follow the pose builder layout.
+# verify: -only 027DDFDC -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+arg! 027DDFDC r3 0x6D200000
+fill 027DDFDC 0x6D200000 0x34 0
+fill 027DDFDC 0x6D201000 0x4C 0
+fill 027DDFDC 0x6D202000 0x840 0
+fill 027DDFDC 0x6D204000 0x20 0
+fill 027DDFDC 0x6D205000 0x26 0
+fill 027DDFDC 0x6D210000 0x1000 0
+fill 027DDFDC 0x6D230000 0x100 0
+field 027DDFDC 0x6D200000 u32 0x6D205000
+field 027DDFDC 0x6D200004 u32 0x00000000
+field 027DDFDC 0x6D20000C u8 1
+field 027DDFDC 0x6D200018 u32 0x6D201000
+field 027DDFDC 0x6D20002C u32 0x6D230000
+field 027DDFDC 0x6D201000 u32 0x6D204000
+field 027DDFDC 0x6D201004 u16 0x16
+field 027DDFDC 0x6D201006 u8 1
+field 027DDFDC 0x6D201008 u32 0x00000000
+field 027DDFDC 0x6D20100C u32 0x00000000
+field 027DDFDC 0x6D201010 u32 0x00000000
+field 027DDFDC 0x6D20102C u16 0
+field 027DDFDC 0x6D20102E u16 0xFFFF
+field 027DDFDC 0x6D201034 u32 0x00000000
+field 027DDFDC 0x6D201038 u32 0x00000000
+field 027DDFDC 0x6D201044 u32 0x00000000
+field 027DDFDC 0x6D204008 u16 0
+field 027DDFDC 0x6D204014 s32 0
+field 027DDFDC 0x6D20500C s32 -0x100C
+field 027DDFDC 0x6D23004C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027DDFDC 0x6D230050 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA

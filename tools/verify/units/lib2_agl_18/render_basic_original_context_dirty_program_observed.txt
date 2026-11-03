@@ -1,0 +1,9 @@
+# Caller-valid first-draw companion for 027CC78C program-initialization mutants.
+# The included profile selects the shipped kind-0/format-1 program and steers
+# only its validated dirty lifecycle byte. These observations add no fabricated
+# program fields: they record the selected program object at the original
+# initialization and direct-bind call boundaries.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_dirty_program.txt
+observearg 027BB9E0 r3+0 32
+observearg 027BB7CC r3+0 32

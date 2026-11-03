@@ -1,0 +1,7 @@
+# Lifecycle steering: one original draw prepares the program/cache state before the tested next draw.
+# Used by the current n1000 diagnostic campaign; it is not a substitute for the canonical cold profile.
+# Same published CFG/CTX lifetimes and complete producer-backed receiver/record; no direct program-flag writes.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+postsetup * 027CC78C r3=0x59200000 r4=0x59100000 r5=0 r6=0x59300000 r7=0x59700000
+real 027CC78C

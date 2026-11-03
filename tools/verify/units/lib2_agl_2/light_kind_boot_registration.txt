@@ -1,0 +1,12 @@
+# Authentic builtin light registration boot order, Lead20:56.
+# verify: -strictnan -calleesp -footprint -only 027725D0
+src wwhd_src/agl/EnvironmentLightTypes.cpp
+src wwhd_src/agl/EnvironmentObjects.cpp
+real 02770250 02770710 027727E4 0276D71C 0276F11C 0276D828 0276F228
+setup 027725D0 0276D71C
+setup 027725D0 0276F11C
+final 027725D0 101F8BE0 0x2
+final 027725D0 101F8BF4 0x4
+final 027725D0 104A1464 0x100
+final 027725D0 104A1564 0xA00
+final 027725D0 104A1F64 0x14

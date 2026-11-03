@@ -1,0 +1,15 @@
+# AGL#19 layer passes on the executed first frame (lib2_agl_19_display_exec_fixture.txt): renderPendingPasses
+# 027D6C3C (RenderQueueManager::drawView's not-ready path), prepareAttachedSurface 027D6A74, prepareRenderPass
+# 027D6BB0 / finishRenderPass 027D6ED0 of a pending layer (options 0 as 027D6C3C passes, 1 as RenderJob::execute
+# passes), invokePassHook 027D6BD0. The task's listener is installed on every hook (setViewOutput).
+# verify: -only 027D6C3C,027D6A74,027D6BB0,027D6ED0,027D6BD0 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+arg! 027D6C3C r3 0x5E100018,0x5E100818
+arg! 027D6A74 r3 0x5E100018,0x5E100818
+arg! 027D6BB0 r3 0x5E100018,0x5E100818
+arg! 027D6BB0 r4 0x58000000,0x58001000,0x58002000
+arg! 027D6BB0 r5 0,1
+arg! 027D6ED0 r3 0x5E100018,0x5E100818
+arg! 027D6ED0 r4 0x58000000,0x58001000,0x58002000
+arg! 027D6BD0 r3 0x5E100018,0x5E100818

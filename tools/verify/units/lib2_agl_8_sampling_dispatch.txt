@@ -1,0 +1,17 @@
+# verify: -strictnan -calleesp -footprint -only 02795DA4
+# Complete effect storage; observe both outgoing sampling calls and the fixed kernel count128.
+# Neither nested implementation is listed real: this isolates dispatch/ABI, not sample or kernel effects.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+arg! 02795DA4 r3 0x58000000
+fill 02795DA4 0x58000000 0x285C 0

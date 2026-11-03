@@ -1,0 +1,35 @@
+# install as tools/verify/units/lib2_agl_7/nt_paired_dirty.txt; needs nt_base.txt: trace 1000004 shows postsetup 027BBCA0 then call 027BB9E0, -watch 00000000:0x1000 0 lines; -nulltrap n=20 seeds 1/7 20/20; nulltrap_compare 10k seeds 1/7 OK, 10000/10000 clean.
+# AGL#7 027908F4 ShaderSetup::paired, nulltrap DIRTY-PROGRAM companion: objects from original producers (see nt_base.txt); args = render's calls at 02791724/02791768.
+# verify: -only 027908F4 -strictnan -calleesp
+# include file: lib2_agl_7_nt_base_lead.txt -> install as tools/verify/units/lib2_agl_7/nt_base.txt
+include lib2_agl_7/nt_base.txt
+# Tunable agl::utl::Parameter values (param+0xC; ctor defaults, editable through the parameter IO) and the game-set registry bit (027312D8: +0x1D4 |= 1), as in the enabled-render recipe.
+poke 027908F4 5C020424 u8 1
+poke 027908F4 5C0201D4 u32 0,1
+poke 027908F4 5C020454 u32 0,1
+poke 027908F4 5C020464 u32 0,5,6,7
+poke 027908F4 5C020474 u32 0,1,2
+poke 027908F4 5C020494 u8 0,1
+poke 027908F4 5C0204C4 u8 0,1
+poke 027908F4 5C020514 u8 0,1
+poke 027908F4 5C020524 u8 0,1
+poke 027908F4 5C020554 u8 0,1
+poke 027908F4 5C020594 u8 0,1
+poke 027908F4 5C0205A4 u8 0,1
+real 02791230
+# Previous frame: the shipped caller's render call (02736278 -> 027362DC) runs the original once with the poked parameters,
+# so the frame resources (6A87E2A0 = *(5C0201D0)), their samplers and output textures are the ones render leaves.
+postsetup 027908F4 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0
+# Dirty program: the original invalidation 027BBCA0
+# (agl reserveSetUpAllVariation; shipped callers 027B81B8 in 027B814C and 027B8E8C in the archive load 027B8904) on
+# program 0x74 = *(*(*101F8D6C+0x1C)+0x1D0) = 0x6A1F22CC in this world (deterministic: setupsnapshot) sets bit 0x02 on its
+# default program and every variant record, so the tested call takes the validate arm 027909B8..027909D8 (blocks 8/9) -> 027BB9E0.
+postsetup 027908F4 027BBCA0 r3=0x6A1F22CC
+# r4 = frame 0, r5 = pair 0/1 (li r5,0 / li r5,1), r6 = member (0x464 >= 7 ? 1 : 0), r7 = frame+0x54,
+# r8 = outputSampler 02790B3C result: &mPrimarySampler (+0x6B4) or &mAlternateSampler (+0x9D8); r9 = previous mode (generated).
+arg! 027908F4 r3 0x5C020000
+arg! 027908F4 r4 0x6A87E2A0
+arg! 027908F4 r5 0,1
+arg! 027908F4 r6 0,1
+arg! 027908F4 r7 0x6A87E2F4
+arg! 027908F4 r8 0x6A87E954,0x6A87EC78

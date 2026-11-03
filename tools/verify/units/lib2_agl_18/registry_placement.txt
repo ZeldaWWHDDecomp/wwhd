@@ -1,0 +1,8 @@
+# Original-approved placement construction and nondeleting teardown only.
+# Child item bytes A..13 remain untouched; no profile reads them.
+# verify: -only 027CB85C,027CB968 -strictnan -calleesp
+src wwhd_src/agl/DrawRegistry.cpp
+arg! * r3 0x58000000
+arg! 027CB968 r4 0,2
+real 027CB85C 027B5BD8 027B5CBC 027B5EA4 027B5C68 028EFFD0 028F0164
+setup 027CB968 027CB85C r3=0x58000000

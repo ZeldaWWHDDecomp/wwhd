@@ -1,0 +1,9 @@
+# AGL#3 02779364 null-receiver early-return domain only.
+# This does not cover TextBufferD's nonnull delete path or allocation lifetime.
+# verify: -strictnan -calleesp -only 02779364
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 02779364 r3 0
+arg! 02779364 r4 0,1
+footprint 02779364 0

@@ -1,0 +1,9 @@
+# AGL#19 refreshSurfaceExtent 027D660C on a frame without the resolution update: shipped as
+# 02035098 -> 0272A8C4 -> RenderQueueManager::update 027C106C at 0272A910, without hdGraphicsTask_c::updateResolution
+# 0272A1C4, so view+0x790 holds the value its constructor 027D5948 left (0x88) and 0x200 is clear: 027D660C does no
+# extent work. Producer-domain companion of lib2_agl_19_display_view_extent (the 0x200 arm).
+# verify: -only 027D660C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_init_fixture.txt
+real 0274F53C
+arg! 027D660C r3 0x5E100018,0x5E100818

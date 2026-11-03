@@ -1,0 +1,11 @@
+# FrameWorkerSet::runQueues / initialize with stale stack bytes and the option objects their callees consume.
+# stackfill: frame words start with deterministic stale bytes (a real stack is not zero).
+# 027591F4 (WorkerManager::submit) reads the core mask, wait mode and flags words through r6/r7/r8 (live-in 0x1F8).
+# 02758CA8 (WorkerManager::initialize) reads the 0x20-byte worker settings through r4 (+0x18 queue capacity at 02758E18).
+# 02759814 is the original settings constructor (defaults: per-core priority/stack words, capacity 0x20, name).
+# verify: -only 027F9308,027F93C4 -strictnan -calleesp
+include lib2_j3d_hdrew_1_clean65_current_receipts_20261030.txt
+stackfill
+real 02759814
+callee 027591F4 r6=4 r7=4 r8=4
+callee 02758CA8 r4=0x20

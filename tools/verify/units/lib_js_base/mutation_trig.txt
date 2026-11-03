@@ -1,0 +1,3 @@
+# Mutation companion: the fixed-table initializer, including every mutant in its body.
+# Main lib_js_base retains all 99 functions for the 10k seed 1/7 differential gates.
+src wwhd_src/JSystem/JMath/JMATrigonometric.cpp

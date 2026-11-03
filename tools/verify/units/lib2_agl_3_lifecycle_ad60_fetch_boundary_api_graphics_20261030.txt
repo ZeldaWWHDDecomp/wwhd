@@ -1,0 +1,12 @@
+# TYPE-DOMAIN: IntegerMethods fetch-quality has empty range; original apply accepts arbitraryu32.
+# Explicit >=7 normalizes fxaa shader selection to0; shippedarchive gives3.
+include lib2_agl_3_lane_lifecycle_quality_luma_api_uniform.txt
+field 0277AD60 5D53002C u32 7,8,0xFFFFFFFF
+# Concrete frame/viewport and actual binding-stage location readsets only.
+observearg 0274D690 r3+0x1C 36
+observearg 025C0928 r3+0x94 8
+observearg 0274F964 r3+0 20
+observearg 0274F964 r4+0 24
+observearg 027BE53C r4+0x8 6
+# Nonreprojection secondTexture site2 binding1 activePS1 all42fxaa programs; dirty byte readbefore update.
+observearg 027BE53C@2 r3+0x190 1

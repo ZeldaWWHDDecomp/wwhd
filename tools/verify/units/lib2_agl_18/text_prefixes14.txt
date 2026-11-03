@@ -1,0 +1,36 @@
+# Mutation: dw-text-prefixes14-survey1000-seed1: 49 detected, 23 compile-invalid, 3 survivors.
+# Residuals42/64 commute independent mText/mCapacity loads; 51 commutes mText+0 load with disjoint vtable+4 store.
+# dw-text-prefixes14-final3-seed1/7: all three survive 10000 inputs on both seeds; equivalent by the disjoint-access proofs.
+# Empty hooks027CB804/027D03A4 have no generic mutation candidates.
+# Complete qualified receiver-prefix domain per Lead00:55; no derived capacity/extent claim.
+# verify: -only 027CB7F0,027CB804,027CB808,027CB820,027CB834,027CB848,027D0390,027D03A4,027D03A8,027D03C0,027D03D4,027D0438,027D044C,027D0460 -strictnan -calleesp
+src wwhd_src/agl/RenderSelection.cpp
+arg 027CB7F0 r3 0
+arg 027CB7F0 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027CB820 r3 0
+arg 027CB820 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027CB834 r3 0
+arg 027CB834 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027CB848 r3 0
+arg 027CB848 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027D0390 r3 0
+arg 027D0390 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027D03C0 r3 0
+arg 027D03C0 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027D0438 r3 0
+arg 027D0438 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027D044C r3 0
+arg 027D044C r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg 027D0460 r3 0
+arg 027D0460 r4 0,1,2,3,0xFFFFFFFE,0xFFFFFFFF
+arg! 027CB808 r3 0x58000000
+field 027CB808 r3 u32 0x58200000
+field 027CB808 r3+8 u32 1,2,0x20,0x40,0x100,0x200
+fill 027CB808 0x58200000 0x200 0x5A
+arg! 027D03A8 r3 0x58000000
+field 027D03A8 r3 u32 0x58200000
+field 027D03A8 r3+8 u32 1,2,0x20,0x40,0x100,0x200
+fill 027D03A8 0x58200000 0x200 0x5A
+arg! 027D03D4 r3 0,0x58000000
+arg 027D03D4 r4 0,1,2,3
+field 027D03D4 r3 u32 0,0x58400000

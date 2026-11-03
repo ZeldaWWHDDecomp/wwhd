@@ -1,0 +1,13 @@
+# TYPE-DOMAIN: view flag bit 0 (+0x790 & 1) is client-assigned
+# (0272A1C4); no shipped writer sets it (see lib2_agl_19_display_typedomain_flag_bit0_extent for the writer list).
+# prepareAttachedSurface 027D6A74 and refreshAttachmentBounds 027D740C on the first frame (as
+# lib2_agl_19_display_frame_surface): the client word is the flags the frame leaves | 1 (view 0 0x18C | 1, view 1
+# 0x188 | 1).
+# verify: -only 027D6A74,027D740C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+real 0274D690 0274F964 0274F8D8 02751698 027516AC 0274F698 027B9F60 027B9F4C 027D4FE8 025C0928
+arg! 027D6A74 r3 0x5E100018,0x5E100818
+arg! 027D740C r3 0x5E100018,0x5E100818
+poke * 5E1007A8 u32 0x18D
+poke * 5E100FA8 u32 0x189

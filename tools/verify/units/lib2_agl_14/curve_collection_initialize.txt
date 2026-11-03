@@ -1,0 +1,55 @@
+# verify: -only 027B43A4 -calleesp -strictnan
+# CurveCollection initialize, qualified fixture: receiver prefix of the parked AGL#13
+# constructor not reproduced; +0 = image table 10169474 (stable), empty record/value storage. Heaps are pinned
+# views whose allocate slot is a mock-only callback: distinct blocks, or always NULL (allocation failure).
+# AGL#15 uniform helpers stay opaque mocks with arguments compared.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+callee 0F001400 fixture r3=0 r4=0 r5=0
+alloc 0F001400 r4 0x5D000000 4
+callee 0F001402 fixture r3=0 r4=0 r5=0
+ret! 0F001402 0
+arg! 027B43A4 r3 0x58000000
+arg! 027B43A4 r5 0,1,2,3,0xFFFFFFFF
+arg! 027B43A4 r6 0,1,2,3,0xFFFFFFFF
+arg! 027B43A4 r7 0,0x57001000,0x57001000,0x57003000
+ret! 02756140 0x57001000,0x57003000
+fill 027B43A4 0x58000000 0x1C 0
+field 027B43A4 0x58000000 u32 0x10169474
+stable 0x58000000 4
+field 027B43A4 0x5700100C u32 0x57002000
+field 027B43A4 0x57002034 u32 0x0F001400
+field 027B43A4 0x5700300C u32 0x57004000
+field 027B43A4 0x57004034 u32 0x0F001402
+stable 0x5700100C 4
+stable 0x57002034 4
+stable 0x5700300C 4
+stable 0x57004034 4
+# The table's hooks reached here are this unit's own methods (beforeAllocate, setMask, initializeRecord,
+# initializeValue); they run as originals, so only the allocator and the AGL#15 helpers are mocked, and none
+# of those receives the collection: its prefix keeps what this function stores.
+real 027B4F90
+real 027B4F18
+real 027B4F94
+real 027B4F98
+stable 0x58000004 0x18
+# The record/value arena is written only by this function (the opaque helpers get value pointers only).
+stable 0x5D000000 0x1000
+# A re-initialized collection may hold a stale active count.
+field 027B43A4 0x58000010 u32 0,1,3

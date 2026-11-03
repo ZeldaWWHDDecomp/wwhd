@@ -1,0 +1,11 @@
+# verify: -strictnan -calleesp -only 02777D3C
+# TYPE-DOMAIN: original public Viewport::setSize receives caller-owned finite Vector2 values; no produced private state altered.
+# Original constructor02774FD0 at02775038 sets entry+C78 mRenderScale=1.0 from10161810; image10161E40 sBloomRenderScale=0.25.
+# Public width2^33 therefore reaches blurDimension at exact2^31. Image10161E10=4F000000 (2^31).
+# Prefix ends at first actual0279ADD4 allocateBlurSurface consumer, BEFORE allocation/real dispatch, comparing width/height arguments.
+# Same stopat semantics as CLOSED Lead22:42 AD60 first-acquire prefix; nested setup producer acquires remain real.
+# Lead2026-10-30 15:52 admits public size and first-acquire prefix with unchanged base fixture; require clean call-argument witness.
+include lib2_agl_3_d3c_viewport_boundaries_api_root_20261029.txt
+field 02777D3C 5D530000 f32 8589934592.0
+field 02777D3C 5D530004 f32 720.0
+stopat 02777D3C 0279ADD4 1

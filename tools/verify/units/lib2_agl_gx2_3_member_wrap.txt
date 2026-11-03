@@ -1,0 +1,13 @@
+# verify: -strictnan -calleesp
+# Modeled32-bit member-address arithmetic; not a live wrapping allocation claim.
+src wwhd_src/agl/gx2/QueuedObjectSupport.cpp
+stackfill
+arg! 027EABB8 r3 0xFFFFFEA8
+# this+0x158 wraps to NULL, so the original requests a separate16-byte link.
+ret! 0273AD10 0,0x59110000
+arg! 027EAB4C r3 0x59120000
+arg! 027EAC3C r3 0x59120000
+callee C0009D68 r3=out44
+callee C0009D58 r3=out60 r4=0 r5=0
+callee 02752A84 r3=heap16
+callee 027EC50C r3=out16 r4=0

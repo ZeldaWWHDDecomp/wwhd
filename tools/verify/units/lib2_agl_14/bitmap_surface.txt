@@ -1,0 +1,70 @@
+# verify: -only 027B5EEC,027B6A24 -calleesp -strictnan
+# Complete SDK descriptors, approved opaque import-alias model, explicit bounded heap interface.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+callee 0F001400 fixture r3=0 r4=0 r5=0
+callee 0F001401 fixture r3=0 r4=0
+alloc 0F001400 r4 0x5D000000 align=r5
+stable 0x5700100C 4
+stable 0x57002000 0x40
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+
+
+mocksurfacesize C00060D0
+mocksurfacesize 0278635C
+observearg C00060D0 r3+0 32
+observearg C00060D0 r3+0x30 8
+observearg 0278635C r3+0 32
+observearg 0278635C r3+0x30 8
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+mockmove C0009988 r3 r4 r5
+arg! 027B5EEC r3 0x55000000
+arg! 027B5EEC r4 0x59000000
+arg! 027B5EEC r5 0,4,16,32
+arg! 027B5EEC r6 1,0x1D
+arg! 027B5EEC r7 1,2,3,4
+arg! 027B5EEC r8 1,2,3,4
+arg! 027B5EEC r9 0x57001000
+field 027B5EEC 0x5700100C u32 0x57002000
+field 027B5EEC 0x57002034 u32 0x0F001400
+field 027B5EEC 0x5700203C u32 0x0F001401
+arg! 027B6A24 r3 0x59000000
+arg! 027B6A24 r4 0
+arg! 027B6A24 r5 0x59010000
+arg! 027B6A24 r6 0
+arg! 027B6A24 r7 0
+arg! 027B6A24 r8 0x5A000000
+arg! 027B6A24 r9 0x5A010000
+arg! 027B6A24 r10 0,1,2
+
+# Ninth through thirteenth arguments in the caller parameter area.
+field 027B6A24 r1+8 u32 1,0x1D
+field 027B6A24 r1+0xC u32 4
+field 027B6A24 r1+0x10 u32 4
+field 027B6A24 r1+0x14 u32 1,2,3
+field 027B6A24 r1+0x18 u32 0x5D000000
+real 027B6A08
+
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+
+# Coherent4x4 supports ALL requested1..3mip levels (copyloop uses requestedcount).
+real 027BE6B8
+mockset C0009990 r3 r4 r5
+setup 027B5EEC 027BE6B8 r3=0x55000000
+stable 0x55000000 0x90

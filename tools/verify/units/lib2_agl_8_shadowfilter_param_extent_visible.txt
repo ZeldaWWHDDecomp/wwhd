@@ -1,0 +1,19 @@
+# verify: -strictnan -only 02796F74 -noclobber
+# AGL#8 shadowfilter (2026-10-31): lib2_agl_8_shadowfilter_bind_real_visible with the map's size parameters
+# (mWidth +0x70, mHeight +0x80; value word at +0xC = map+0x7C/+0x8C) changed after the depth storage exists, only
+# through the real ParameterBase::applyResource 0279EB28 (resource word -> 16-byte record, value at +0xC) with the
+# parameters' own int methods (same form as lib2_agl_8_shadowmap_param_api_visible). The setter 027967A0 rounds to a
+# multiple of 8; a resource value of 1 or 2 gives a filter extent below/at one texel, where the 0.0f comparisons of
+# the frame rectangle (ShadowFilter.cpp lines 130-132) differ from neighbouring constants.
+# mNeedsRebuild stays 0, so no reallocation follows such a change (shipped behaviour).
+include lib2_agl_8_shadowfilter_bind_real_visible.txt
+real 0279EB28 02797E04 02797E0C 02797E14 02797E1C 02797DE0 02797DE4 02797DEC 02797DF4 02797DFC
+fill * 0x5E120400 0x100 0
+field 02796F74 0x5E120400 u32 0x5E120410
+field 02796F74 0x5E120410 u32 16
+field 02796F74 0x5E12041C s32 1,2,16,256
+field 02796F74 0x5E120420 u32 0x5E120430
+field 02796F74 0x5E120430 u32 16
+field 02796F74 0x5E12043C s32 0,1,2,256,1
+postsetup 02796F74 0279EB28 r3=0x59000070 r4=0x5E120400
+postsetup 02796F74 0279EB28 r3=0x59000080 r4=0x5E120420

@@ -1,0 +1,31 @@
+# Alias witness: Perspective far/aspect outputs share one writable scalar; original aspect store wins.
+# Supplemental caller-memory contract diagnostic; not whole-unit acceptance.
+# Projection extraction using actual image vtables and original type predicates.
+# Predicates compare identity-node addresses, initialize only their own/common
+# guard-node pairs, do not read the receiver, and make no nested calls.
+# Finite parameter domain with the explicitly documented output alias above.
+# verify: -only 027C4C5C -strictnan -calleesp
+src wwhd_src/agl/UtilityProjection.cpp
+stackfill
+real 0274EBD4 0274EC54 0274ECD4
+arg! 027C4C5C r3 0x58B00000
+arg! 027C4C5C r4 0,0x58C00000
+arg! 027C4C5C r5 0,0x58C00010
+arg! 027C4C5C r6 0x58C00010
+arg! 027C4C5C r7 0,0x58C00030
+arg! 027C4C5C r8 0,0x58C00040
+fill 027C4C5C 58B00000 184 0
+field 027C4C5C r3+0x90 u32 0x10145260
+field 027C4C5C r3+0x94 f32 0.1,1,2
+field 027C4C5C r3+0x98 f32 10,100,1000
+field 027C4C5C r3+0x9C f32 0,0.25,0.5,1,2
+field 027C4C5C r3+0xA0 f32 0,-0.25,-0.5,-1,-2
+field 027C4C5C r3+0xA4 f32 0,-0.25,-0.5,-1,-2
+field 027C4C5C r3+0xA8 f32 0,0.25,0.5,1,2
+field 027C4C5C r3+0xAC f32 0.5,1,2
+field 027C4C5C r3+0xB0 f32 -0.5,0,0.5
+field 027C4C5C r3+0xB4 f32 -0.5,0,0.5
+field 027C4C5C 101FD6A0 u32 0,1
+field 027C4C5C 101FD6A8 u32 0,1
+field 027C4C5C 101FD6A4 u32 0,1
+field 027C4C5C 101FD69C u32 0,1

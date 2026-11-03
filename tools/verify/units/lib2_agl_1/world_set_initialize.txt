@@ -1,0 +1,11 @@
+# AGL#1 EnvironmentSet::initialize (0276DF64) on the original world, called as the original manager initialize calls
+# it (0276C454: set = manager+0x240, the game's InitArg, the heap), after the reference-list initialize (0276F554).
+# verify: -only 0276DF64 -strictnan -calleesp
+include lib2_agl_1/world_manager_initialize.txt
+setup * 0276F554 r3=0x59E00000 r4=0x59E10000 r5=0x6A000000
+arg! 0276DF64 r3 0x59E00240
+arg! 0276DF64 r4 0x59E10000
+arg! 0276DF64 r5 0x6A000000
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

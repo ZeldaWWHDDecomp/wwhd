@@ -1,0 +1,16 @@
+# TYPE-DOMAIN (the display Phase D facts): view flag
+# 0x80 clear. The manager flags are client-assigned (027297C0 stores them on the renderer it sets up; the shipped value is
+# 0x1858). Here the client store is 0x1058 (0x800 clear) on the producer-built manager in place of the 027297C0 model's
+# 0x1858, and the next frame's RenderQueueManager::update 027C106C(manager, 1) (the task's call at 0272A670) runs as the
+# original: with 0x800 clear it takes 027C13E0 and clears 0x80 in each view's +0x790. No view words are poked. The libc
+# unsigned-to-decimal writer 028F0D8C (used by the layer-name format inside update) runs as the original.
+# prepareAttachedSurface 027D6A74 then runs on both views: the arm that applies the scaled viewport to the target
+# without the bind/clear.
+# verify: -only 027D6A74 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+real 0274D690 0274F964 0274F8D8 02751698 027516AC 0274F698 027B9F60 027B9F4C 027D4FE8 025C0928
+real 027C106C 028F0D8C
+arg! 027D6A74 r3 0x5E100018,0x5E100818
+poke * 5E101078 u16 0x1058
+postsetup * 027C106C r3=0x5E100000 r4=1

@@ -1,0 +1,24 @@
+# Nonpositive output-count branches (count <= 0 skips allocation). Positive counts: light_outputs_world_alt.
+# verify: -strictnan -calleesp -footprint -only 02771218,02771888,02771DC0,0277243C
+src wwhd_src/agl/LightOutputRuntime.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 02771218 r3 0x58F5A000
+arg! 02771218 r4 0,0xFFFFFFFF,0xFFFFFFFE,0x80000000
+arg! 02771218 r5 0
+fill 02771218 58F5A000 0x150 0
+final 02771218 58F5A000 0x150
+arg! 02771888 r3 0x58F5C000
+arg! 02771888 r4 0,0xFFFFFFFF,0xFFFFFFFE,0x80000000
+arg! 02771888 r5 0
+fill 02771888 58F5C000 0x1C0 0
+final 02771888 58F5C000 0x1C0
+arg! 02771DC0 r3 0x58F5E000
+arg! 02771DC0 r4 0,0xFFFFFFFF,0xFFFFFFFE,0x80000000
+arg! 02771DC0 r5 0
+fill 02771DC0 58F5E000 0x170 0
+final 02771DC0 58F5E000 0x170
+arg! 0277243C r3 0x58F60000
+arg! 0277243C r4 0,0xFFFFFFFF,0xFFFFFFFE,0x80000000
+arg! 0277243C r5 0
+fill 0277243C 58F60000 0x1B0 0
+final 0277243C 58F60000 0x1B0

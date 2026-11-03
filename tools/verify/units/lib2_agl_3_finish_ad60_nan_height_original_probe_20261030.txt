@@ -1,0 +1,7 @@
+# TYPE-DOMAIN: requests original setSize(1280, quiet NaN); caller-owned RenderVector2 inputs only.
+include lib2_agl_3_lifecycle_depth_quality_finite_stack_current_world.txt
+field 0277AD60 5D52002C f32 1.0
+field 0277AD60 5D540000 f32 1280.0
+field 0277AD60 5D540004 u32 0x7FC00000
+stable 0x5D540000 8
+postsetup 0277AD60 0274F53C r3=0x5D030000 r4=0x5D540000

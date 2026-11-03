@@ -25,22 +25,30 @@ static u32 sequenceArchivesFileName;
 static u32 audioResPath;
 static f32 inputGainDown;
 static f32 outputGainUp;
-static f32 distanceMax;
-static f32 minDistanceVolume;
-static f32 maxVolumeDistance;
-static f32 seDolbyCenterValue;
-static f32 seDolbyFrontDistanceMax;
-static f32 seDolbyBehindDistanceMax;
-static u32 dopplarMoveTime;
+static f32 audioParamDistanceMax;
+static f32 audioParamMinDistanceVolume;
+static f32 audioParamMaxVolumeDistance;
+static f32 audioParamSeDolbyCenterValue;
+static f32 audioParamSeDolbyFrontDistanceMax;
+static f32 audioParamSeDolbyBehindDistanceMax;
+static u32 audioParamDopplarMoveTime;
 static u32 dummyObjectLifeTime;
 static u32 seqMuteMoveSpeedSePlay;
-static u32 audioCameraMax;
+static u32 audioParamAudioCameraMax;
 static u32 systemTrackMax;
-static u16 seDistanceFxParameter;
+static u16 audioParamSeDistanceFxParameter;
 static u16 seDistanceWaitMax;
 static u8 seqMuteVolumeSePlay;
-static u8 seqParameterLines;
+static u8 audioSeqParameterLines;
 static u8 distanceParameterMoveTime;
+static f32 audioParamPanDistanceMax;
+static f32 audioParamPanDistance2Max;
+static f32 audioParamPanAngleParameter;
+static f32 audioParamPanAngleParameter2;
+static f32 audioParamDopplarParameter;
+static f32 audioParamSeDistancePitchMax;
+static u16 audioParamSeDefaultFx;
+
 static JAIBasicView* msBasic;
 } // namespace JAIGlobalParameter
 using namespace JAIGlobalParameter;
@@ -95,15 +103,15 @@ void setParamOutputGainUp(f64 value) {
 }
 /* 028044E4 */
 void setParamDistanceMax(f64 value) {
-    distanceMax = value;
+    audioParamDistanceMax = value;
 }
 /* 028044F0 */
 void setParamMaxVolumeDistance(f64 value) {
-    maxVolumeDistance = value;
+    audioParamMaxVolumeDistance = value;
 }
 /* 028044FC */
 void setParamMinDistanceVolume(f64 value) {
-    minDistanceVolume = value;
+    audioParamMinDistanceVolume = value;
 }
 /* 02804508 */
 // HD: store the original low byte, but clamp only the driver argument; omit the GC stream call.
@@ -118,7 +126,7 @@ void setParamSoundOutputMode(u32 value) {
 }
 /* 02804588 */
 void setParamSeDistanceFxParameter(u32 value) {
-    seDistanceFxParameter = value;
+    audioParamSeDistanceFxParameter = value;
 }
 /* 02804594 */
 // HD: this setter is a no-op.
@@ -139,15 +147,15 @@ void setParamStayHeapSize(u32 value) {
 }
 /* 028045C8 */
 void setParamSeDolbyCenterValue(u32 value) {
-    seDolbyCenterValue = (f32)value;
+    audioParamSeDolbyCenterValue = (f32)value;
 }
 /* 028045FC */
 void setParamSeDolbyFrontDistanceMax(f64 value) {
-    seDolbyFrontDistanceMax = value;
+    audioParamSeDolbyFrontDistanceMax = value;
 }
 /* 02804608 */
 void setParamSeDolbyBehindDistanceMax(f64 value) {
-    seDolbyBehindDistanceMax = value;
+    audioParamSeDolbyBehindDistanceMax = value;
 }
 /* 02804614 */
 void setParamInitDataFileName(u32 value) {
@@ -183,7 +191,7 @@ void setParamDummyObjectMax(u32 value) {
 }
 /* 02804674 */
 void setParamAudioCameraMax(u32 value) {
-    audioCameraMax = value;
+    audioParamAudioCameraMax = value;
 }
 /* 02804680 */
 void setParamSystemTrackMax(u32 value) {
@@ -230,15 +238,15 @@ u32 getParamSeqPlayTrackMax() {
 }
 /* 02804718 */
 f64 getParamDistanceMax() {
-    return distanceMax;
+    return audioParamDistanceMax;
 }
 /* 02804724 */
 f64 getParamMaxVolumeDistance() {
-    return maxVolumeDistance;
+    return audioParamMaxVolumeDistance;
 }
 /* 02804730 */
 f64 getParamMinDistanceVolume() {
-    return minDistanceVolume;
+    return audioParamMinDistanceVolume;
 }
 /* 0280473C */
 u32 getParamAutoHeapRoomSize() {
@@ -250,15 +258,15 @@ u32 getParamStayHeapSize() {
 }
 /* 02804754 */
 f64 getParamSeDolbyCenterValue() {
-    return seDolbyCenterValue;
+    return audioParamSeDolbyCenterValue;
 }
 /* 02804760 */
 f64 getParamSeDolbyFrontDistanceMax() {
-    return seDolbyFrontDistanceMax;
+    return audioParamSeDolbyFrontDistanceMax;
 }
 /* 0280476C */
 f64 getParamSeDolbyBehindDistanceMax() {
-    return seDolbyBehindDistanceMax;
+    return audioParamSeDolbyBehindDistanceMax;
 }
 /* 02804778 */
 u32 getParamInitDataFileName() {
@@ -282,7 +290,7 @@ u32 getParamSequenceArchivesFileName() {
 }
 /* 028047B4 */
 u32 getParamDopplarMoveTime() {
-    return dopplarMoveTime;
+    return audioParamDopplarMoveTime;
 }
 /* 028047C0 */
 u32 getParamDistanceParameterMoveTime() {
@@ -302,11 +310,11 @@ u32 getParamSeqMuteMoveSpeedSePlay() {
 }
 /* 028047F0 */
 u32 getParamAudioCameraMax() {
-    return audioCameraMax;
+    return audioParamAudioCameraMax;
 }
 /* 028047FC */
 u32 getParamSeqParameterLines() {
-    return seqParameterLines;
+    return audioSeqParameterLines;
 }
 /* 02804808 */
 u32 getParamSeDistanceWaitMax() {
@@ -325,6 +333,14 @@ static void __sinit_JAIGlobalParameter_cpp() {
 }
 
 /* WWHD glue
+data audioParamPanDistanceMax 101F9C24
+data audioParamPanDistance2Max 101F9C28
+data audioParamPanAngleParameter 101F9C2C
+data audioParamPanAngleParameter2 101F9C30
+data audioParamDopplarParameter 101F9C34
+data audioParamSeDistancePitchMax 101F9C38
+data audioParamSeDefaultFx 101F9C52
+
 data dummyObjectMax 101F9BB8
 data interfaceHeapSize 101F9BBC
 data soundSceneMax 101F9BC0
@@ -346,21 +362,21 @@ data sequenceArchivesFileName 101F9BFC
 data audioResPath 101F9C00
 data inputGainDown 101F9C04
 data outputGainUp 101F9C08
-data distanceMax 101F9C0C
-data minDistanceVolume 101F9C10
-data maxVolumeDistance 101F9C14
-data seDolbyCenterValue 101F9C18
-data seDolbyFrontDistanceMax 101F9C1C
-data seDolbyBehindDistanceMax 101F9C20
-data dopplarMoveTime 101F9C3C
+data audioParamDistanceMax 101F9C0C
+data audioParamMinDistanceVolume 101F9C10
+data audioParamMaxVolumeDistance 101F9C14
+data audioParamSeDolbyCenterValue 101F9C18
+data audioParamSeDolbyFrontDistanceMax 101F9C1C
+data audioParamSeDolbyBehindDistanceMax 101F9C20
+data audioParamDopplarMoveTime 101F9C3C
 data dummyObjectLifeTime 101F9C40
 data seqMuteMoveSpeedSePlay 101F9C44
-data audioCameraMax 101F9C48
+data audioParamAudioCameraMax 101F9C48
 data systemTrackMax 101F9C4C
-data seDistanceFxParameter 101F9C50
+data audioParamSeDistanceFxParameter 101F9C50
 data seDistanceWaitMax 101F9C54
 data seqMuteVolumeSePlay 101F9C58
-data seqParameterLines 101F9C59
+data audioSeqParameterLines 101F9C59
 data distanceParameterMoveTime 101F9C5B
 data msBasic 104B4F14
 data headerStatics 104B4FCC

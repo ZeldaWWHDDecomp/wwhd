@@ -1,0 +1,9 @@
+# Direct OOM companion for AGL#3 02779BFC's reachable placement allocation.
+# A null input receiver reaches the original operator_new(0x770) call at 02779C48.
+# Its null result exits at 0277A44C; this profile does not synthesize null member fields.
+# verify: -strictnan -calleesp -only 02779BFC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0
+ret! 0273AD10 0

@@ -1,0 +1,5 @@
+# TYPE-DOMAIN: approved mixed-axis prefix and real nested producers, inherited unchanged.
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_lifecycle_large_viewport_prefix_all_conversion_paths_type.txt
+# original f13/f14 values live beyond approved first-acquire boundary.
+stopat 0277AD60 0279FC6C 1 live f13 f14

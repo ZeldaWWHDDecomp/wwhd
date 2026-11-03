@@ -1,0 +1,3 @@
+# Companion for the valid wrapping seed edge absent from the main generated domain.
+src wwhd_src/JSystem/JMath/random.cpp
+arg! 027ED730 r4 0xffffffff,0,1,2

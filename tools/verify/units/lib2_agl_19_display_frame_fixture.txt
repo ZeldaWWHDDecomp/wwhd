@@ -1,0 +1,31 @@
+# AGL#19 display fixture: the first frame of the shipped renderer (lib2_agl_19_display_init_fixture.txt), through the
+# view part of RenderQueueManager::update 027C106C:
+#  - the resolution step: RenderQueueManager::update 027C106C
+#    reaches setSurfaceExtent 027D5EE8 through refreshSurfaceExtent 027D660C (call at 027C1160) when view+0x790 has 0x200;
+#    hdGraphicsTask_c::updateResolution 0272A1C4 (called before update in the task's frame, 0272A664) does not call
+#    027D5EE8 itself: it stores the views' extents (view 0 {1920,1080} from task+0x188, view 1 {854,480}) and ORs 0x200
+#    into the flags (producer value 0x388 for view 0). This fixture renders the views at their 1280x720 / 854x480 frame
+#    sizes and drives 027D5EE8 directly on +0x738 with the size allocateFrameStorage 027D60D4 left there; the real
+#    0272A1C4 chain with the shipped 1920x1080 TV extent is lib2_agl_19_display_view_extent. A -watch on
+#    0x5E100750:0x24 (view 0 +0x738..+0x75B) over this chain shows writes only from the view constructor 027D5948,
+#    027D60D4 and 027D5EE8 (and 027C0CEC's mCommands store at +0x740, not an extent word);
+#  - update with the arguments it passes (manager flags 0x1858: 0x10 set, so attachments are configured; 0x8 set, so
+#    view 1 borrows view 0's surfaces; 0x40 set, so the depth swizzle is mInitialized = 1; bit 12 set: HiZ; bit 14
+#    clear; colour format 0x1D, depth 0x3A, samples = configuration callback 0, single-thread 0):
+#    setSurfaceExtent 027D5EE8 (as refreshSurfaceExtent does), releaseAttachments 027D5C48, configureAttachments 027D6658, clearPending 027D646C,
+#    then the selected layers through appendPending 027D64C8:
+#    A and B on view 0, C on view 1.
+# The initialized renderer with the view-1 layer attached by the real 0272B7C0 -> 027C2060 path.
+include lib2_agl_19_display_drc_attach_fixture.txt
+real 027D660C 027D5C48 027D6658 027D646C 027D64C8 027A0114 0279FF24 027CB744 027BE7F0 025C0928 025C0AB8
+setup * 027D5EE8 r3=0x5E100018 r4=0x5E100750
+setup * 027D5C48 r3=0x5E100018
+setup * 027D6658 r3=0x5E100018 r4=0 r5=0 r6=0x1D r7=0 r8=0x3A r9=1 r10=1 sp+8=0
+setup * 027D646C r3=0x5E100018
+setup * 027D5EE8 r3=0x5E100818 r4=0x5E100F50
+setup * 027D5C48 r3=0x5E100818
+setup * 027D6658 r3=0x5E100818 r4=0 r5=0x5E100018 r6=0x1D r7=0 r8=0x3A r9=1 r10=1 sp+8=0
+setup * 027D646C r3=0x5E100818
+setup * 027D64C8 r3=0x5E100018 r4=0x58000000
+setup * 027D64C8 r3=0x5E100018 r4=0x58001000
+setup * 027D64C8 r3=0x5E100818 r4=0x58002000

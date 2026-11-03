@@ -1,0 +1,84 @@
+# Uniform field configuration, reset and upload of the frame/matrix/material/scene uniforms.
+# Each upload runs on a buffer built by the original agl constructor (027BEB5C) and the original
+# field configuration (027FB6A0/027FBA24/027FBC3C/027FD0A8); begin/write/end run as originals.
+# verify: -only 027FB880,027FBACC,027FC118,027FD408,027FCC60,027FB6A0,027FBA24,027FBC3C,027FD0A8,027FB780,027FBA94,027FBE4C,027FD25C -strictnan -calleesp -footprint
+src wwhd_src/JSystem/J3DGraph/RenderFrameArray.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameEnvironment.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderMaterialUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderSceneUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderStorageConstructors.cpp
+src wwhd_src/JSystem/J3DGraph/RenderTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformDestroy.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformGroup.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformPair.cpp
+src wwhd_src/JSystem/J3DGraph/RenderValueStorage.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometry.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/RenderResourceBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 027BEB5C
+real 027BECEC
+real 027BED84
+real 027BEEE4
+real 027BEEBC
+real 027BEED4
+real 027BEF54
+real 027BF048
+real 027BEF80
+real 027FB6A0
+real 027FD0A8
+real 027FBA24
+real 027FBC3C
+alloc 0273AD10 r3 0x68000000 32
+allocnested 0273AD10
+alloc 0273B050 r3 0x69000000 align=r5
+allocnested 0273B050
+alloc 0273B0D4 r3 0x6A000000 align=r5
+allocnested 0273B0D4
+arg! 027FB880 r3 0x6D000000
+arg! 027FB880 r4 0x6D100000
+setup 027FB880 027BEB5C r3=0x6D100000
+setup 027FB880 027FB6A0 r3=0x6D000000 r4=0x6D100000 r5=0
+arg! 027FBACC r3 0x6D000000
+arg! 027FBACC r4 0x6D100000
+setup 027FBACC 027BEB5C r3=0x6D100000
+setup 027FBACC 027FBA24 r3=0x6D000000 r4=0x6D100000 r5=0
+arg! 027FC118 r3 0x6D000000
+arg! 027FC118 r4 0x6D100000
+setup 027FC118 027BEB5C r3=0x6D100000
+setup 027FC118 027FBC3C r3=0x6D000000 r4=0x6D100000 r5=0
+arg! 027FD408 r3 0x6D000000
+arg! 027FD408 r4 0x6D100000
+setup 027FD408 027BEB5C r3=0x6D100000
+setup 027FD408 027FD0A8 r3=0x6D000000 r4=0x6D100000 r5=0
+arg! 027FCC60 r3 0x6D000000
+arg! 027FCC60 r4 0x6D100000
+setup 027FCC60 027BEB5C r3=0x6D100000
+setup 027FCC60 027FBC3C r3=0x6D000000 r4=0x6D100000 r5=0
+field 027FCC60 r3+0x368 u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+field 027FCC60 r3+0x36C u32 0,0xFFFFFFFF,0x55555555,0xAAAAAAAA
+
+real 028E9098
+real 028E892C
+arg! 027FB6A0 r3 0x6D000000
+arg! 027FB6A0 r4 0x6D100000
+arg! 027FB6A0 r5 0
+setup 027FB6A0 027BEB5C r3=0x6D100000
+arg! 027FBA24 r3 0x6D000000
+arg! 027FBA24 r4 0x6D100000
+arg! 027FBA24 r5 0
+setup 027FBA24 027BEB5C r3=0x6D100000
+arg! 027FBC3C r3 0x6D000000
+arg! 027FBC3C r4 0x6D100000
+arg! 027FBC3C r5 0
+setup 027FBC3C 027BEB5C r3=0x6D100000
+arg! 027FD0A8 r3 0x6D000000
+arg! 027FD0A8 r4 0x6D100000
+arg! 027FD0A8 r5 0
+setup 027FD0A8 027BEB5C r3=0x6D100000
+arg! 027FB780 r3 0x6D000000
+arg! 027FBA94 r3 0x6D000000
+arg! 027FBE4C r3 0x6D000000
+arg! 027FD25C r3 0x6D000000

@@ -1,0 +1,23 @@
+# Direct comparator bound with distinct equal long group-text buffers and original accessor/noop callbacks.
+# verify: -only 0276F6DC -strictnan -calleesp
+src wwhd_src/agl/EnvironmentReferences.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 0276D8DC
+real 02770710
+arg! 0276F6DC r3 0x5D000000
+arg! 0276F6DC r4 0x5D000010
+field 0276F6DC 5D000000 u32 0x5D010000
+field 0276F6DC 5D000010 u32 0x5D020000
+field 0276F6DC 5D010058 u32 0x10160030
+field 0276F6DC 5D020058 u32 0x10160030
+field 0276F6DC 5D010080 u32 0x5D100000
+field 0276F6DC 5D010084 u32 0x101607DC
+field 0276F6DC 5D020080 u32 0x5D200000
+field 0276F6DC 5D020084 u32 0x101607DC
+fill 0276F6DC 5D100000 0x40000 65
+fill 0276F6DC 5D200000 0x40000 65
+field 0276F6DC 5D140000 u8 0
+field 0276F6DC 5D240000 u8 0
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

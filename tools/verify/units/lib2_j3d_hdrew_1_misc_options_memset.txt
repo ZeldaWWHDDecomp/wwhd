@@ -1,0 +1,8 @@
+# Named-option factory on the admitted options profile with the clear modelled and stale heap block bytes.
+# 027F78A8 clears the new 0x38-byte option through 028F521C (mr r5,r4; li r4,0; b -> coreinit memset C000A858);
+# the base profile leaves memset as a generic import and relies on its zero-filled heap. Here memset is the
+# semantic set model and the heap block holds non-zero stale bytes, as a reused sead heap block can.
+# verify: -only 027F78A8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_options.txt
+mockset C000A858 r3 r4 r5
+fill * 6A0000C8 0x138 0xA5

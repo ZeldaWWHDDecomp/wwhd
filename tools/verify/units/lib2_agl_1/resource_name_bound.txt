@@ -1,0 +1,38 @@
+# Resource matching scan-bound cases; both compared strings have 0x40001 nonzero bytes.
+# verify: -only 0276E95C -strictnan -calleesp
+src wwhd_src/agl/EnvironmentSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 02770710
+# Resource records have an immutable, existing type entry in a relative-offset chain.
+arg! 0276E95C r3 0x59300000
+arg! 0276E95C r4 0x59310000
+field 0276E95C 59310000 u32 0x59320000
+field 0276E95C 59300068 u32 0x59400000
+field 0276E95C 5930006C u32 0x101607DC
+field 0276E95C 104A0CD8 u32 0x59500000
+field 0276E95C 104A0CDC u32 0x101607DC
+fieldstr 0276E95C 59330000 32 "","EnvObject","Other"
+fieldstr 0276E95C 59340000 32 "","EnvObject","Other"
+field 0276E95C 593000B8 u32 0x59350000,0x5932001C
+field 0276E95C 593000BC u32 0x101607DC
+fieldstr 0276E95C 59350000 32 "","Projector","Fog"
+field 0276E95C 59320004 u32 3
+field 0276E95C 59320010 u32 32
+field 0276E95C 59320018 u32 0,0x8CDE5729
+fieldstr 0276E95C 5932001C 20 "","Projector","Fog"
+field 0276E95C 59320030 u32 32
+field 0276E95C 59320038 u32 0,0x8CDE5729
+fieldstr 0276E95C 5932003C 20 "","Projector","Fog"
+field 0276E95C 59320050 u32 32
+field 0276E95C 59320058 u32 0x8CDE5729
+fieldstr 0276E95C 5932005C 20 "","Projector","Fog"
+real 0279E57C
+real 0273B264
+real 0273B200
+fill 0276E95C 59400000 0x40001 65
+fill 0276E95C 59500000 0x40001 65
+field 0276E95C 59440001 u8 0
+field 0276E95C 59540001 u8 0
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

@@ -1,0 +1,37 @@
+# AGL#4 companion: 0277DA88 on complete 0x988-byte view-target storage, with the sampler flag edges.
+# verify: -only 0277DA88 -strictnan -calleesp -footprint
+stackfill
+src wwhd_src/agl/ParameterValues.cpp
+src wwhd_src/agl/DepthBlurValues.cpp
+src wwhd_src/agl/BloomValues.cpp
+src wwhd_src/agl/DepthBlurCallbacks.cpp
+src wwhd_src/agl/DepthBlurRuntimeValues.cpp
+src wwhd_src/agl/DepthBlurConstruction.cpp
+src wwhd_src/agl/DepthBlurShapeSetup.cpp
+src wwhd_src/agl/DepthBlurParameterSetup.cpp
+src wwhd_src/agl/DepthBlurDrawState.cpp
+src wwhd_src/agl/DepthBlurContext.cpp
+
+fill * 55000000 0x988 0
+arg! 0277DA88 r3 0 0
+arg! 0277DA88 r4 0x55000000 0x55000000
+field * 55000150 u32 1 1
+field * 55000154 u32 1 1
+field * 55000158 u32 1 1
+field * 55000190 u8 0 0
+field * 550002E8 u32 1 1
+field * 550002EC u32 1 1
+field * 550002F0 u32 1 1
+field * 55000328 u8 0 0
+field * 5500060C u32 1 1
+field * 55000610 u32 1 1
+field * 55000614 u32 1 1
+field * 5500064C u8 0 0
+field * 550007A8 u32 1 1
+field * 550007AC u32 1 1
+field * 550007B0 u32 1 1
+field * 550007E8 u8 0 0
+field * 55000940 u32 1 1
+field * 55000944 u32 1 1
+field * 55000948 u32 1 1
+field * 55000980 u8 0 0

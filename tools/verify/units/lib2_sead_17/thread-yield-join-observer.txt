@@ -1,0 +1,73 @@
+# Derived Thread join callbacks coherently re-register their receiver if invoked after yield detached it.
+# Native destroy never invokes them once yield empties the list; a stale-head mutant makes an extra observable call.
+# Callback effects project insertion through each receiver private manager pointer, not actual Thread::join behavior.
+# Coherent two-thread manager list, already exited/joined threads.
+# verify: -only 0275FDD0 -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 0275FDD0 r3 0x60000000
+field * 101F8B94 u32 0x60000000
+field * 60000000 u32 0x1015E600
+field * 60000014 u32 0x60020060
+field * 60000018 u32 0x60010060
+field * 6000001C u32 2
+stable 101F8B94 4
+stable 60000000 0x28
+field * 6001000C u32 0x1015E70C
+field * 60010060 u32 0x60000014
+field * 60010064 u32 0x60020060
+field * 60010068 u32 0x60010000
+field * 6001006C u32 0x60000014
+stable 60010000 0x94
+field * 6002000C u32 0x1015E70C
+field * 60020060 u32 0x60010060
+field * 60020064 u32 0x60000014
+field * 60020068 u32 0x60020000
+field * 6002006C u32 0x60000014
+stable 60020000 0x94
+field * 60010080 u32 3,4
+field * 60020080 u32 3,4
+
+# Both key guards are live; cooperative yield coherently detaches both bounded records.
+field * 60000024 u32 0,1
+field * 101F8BA0 u8 1
+field * 101F8BA1 u8 1
+stable 101F8BA0 2
+mockglobal 02760C48 60000014 u32 0x60000014
+mockglobal 02760C48 60000018 u32 0x60000014
+mockglobal 02760C48 6000001C u32 0
+mockglobal 02760C48 6001006C u32 0
+mockglobal 02760C48 6002006C u32 0
+mockglobal 02760C48 60010060 u32 0
+mockglobal 02760C48 60010064 u32 0
+mockglobal 02760C48 60020060 u32 0
+mockglobal 02760C48 60020064 u32 0
+
+field * 6001000C u32 0x60310000
+field * 60010094 u32 0x60000000
+field * 6031003C u32 0x0F010090
+stable 60010000 0x98
+stable 60310000 0x40
+callee 0F010090 fixture r3=heap152
+mockglobal 0F010090 60010060 u32 0x60000014
+mockglobal 0F010090 60010064 u32 0x60000014
+mockglobal 0F010090 6001006C u32 0x60000014
+mockglobal 0F010090 60000014 u32 0x60010060
+mockglobal 0F010090 60000018 u32 0x60010060
+mockglobal 0F010090 6000001C u32 0x00000001
+
+field * 6002000C u32 0x60320000
+field * 60020094 u32 0x60000000
+field * 6032003C u32 0x0F010098
+stable 60020000 0x98
+stable 60320000 0x40
+callee 0F010098 fixture r3=heap152
+mockglobal 0F010098 60020060 u32 0x60000014
+mockglobal 0F010098 60020064 u32 0x60000014
+mockglobal 0F010098 6002006C u32 0x60000014
+mockglobal 0F010098 60000014 u32 0x60020060
+mockglobal 0F010098 60000018 u32 0x60020060
+mockglobal 0F010098 6000001C u32 0x00000001
+
+field * 60310034 u32 0x0275FF34
+field * 60320034 u32 0x0275FF34

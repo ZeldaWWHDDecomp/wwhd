@@ -1,0 +1,10 @@
+# lib2_j3d_hdrew_1_ctor_routeb_ywarp (route (b), heap (B), -only 027F5A5C) with stale (non-zero) bytes in the free
+# payload of the fresh archive heap H = 0x72069F20. H is a sead FrameHeap (vtable 10145B38, alloc 02754F50): blocks have no
+# headers, its metadata is the heap object 0x72069F20..0x72069FBB (head/tail words inside it), and the payload starts at
+# 0x72069FBC. The fill covers 0x7206A008..0x7207A007: after S (0x72069FBC..0x7206A007, not filled) and far below the tail;
+# every store of the tested call lies in 0x72069FBC..0x7206AC40 (-trace 1000003; all allocations of the call come from H: every nested 02756140 answers H). Applied before the setups; the parent's
+# region there is free (02754B38 takes it whole). Same allocator behaviour with and without the fill: ctor/watch/ (heap
+# object watch). Recipe as the admitted factory heapfill and the AGL#7 construction_world (0xA5).
+# verify: -only 027F5A5C -strictnan -calleesp
+include lib2_j3d_hdrew_1_ctor_routeb_ywarp.txt
+fill * 0x7206A008 0x10000 0xA5

@@ -1,0 +1,13 @@
+# Empty editor-array selection after genuine nonnull archive placement construction.
+# verify: -strictnan -calleesp -footprint -only 02773134
+src wwhd_src/agl/ShaderBindingEditor.cpp
+real 02772E8C
+arg! 02773134 r3 0x5C200000
+arg! 02773134 r4 0,0x5C201000
+fill 02773134 5C200000 0x40 0
+field 02773134 5C200014 u16 0
+field 02773134 5C200016 u16 0
+fill 02773134 5C201000 0x4 0
+setup 02773134 02772E8C r3=0x5C200000
+final 02773134 5C200000 0x40
+final 02773134 5C201000 0x4

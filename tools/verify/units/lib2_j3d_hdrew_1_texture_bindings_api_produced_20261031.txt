@@ -1,0 +1,11 @@
+# verify: -only 027F7614,027F7624 -strictnan -calleesp
+# Proper API domain: actual original-produced provider and eight original-produced matrices; no private provider writes.
+include lib2_j3d_hdrew_1_material_data_a_producer_20261031.txt
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+arg! 027F7614 r3 0x6A87EB2C
+arg! 027F7614 r4 0,1,2,3,4,5,6,7
+final 027F7614 6A87EB2C 28
+arg! 027F7624 r3 0x6A87EB2C
+arg! 027F7624 r4 0,1,2,3,4,5,6,7
+final 027F7624 6A87EB2C 28
+arg! 027F7614 r5 0,0x6A87EC14,0x6A87ED18,0x6A87EE1C,0x6A87EF20,0x6A87F024,0x6A87F128,0x6A87F22C,0x6A87F330

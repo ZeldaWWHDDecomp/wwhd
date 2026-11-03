@@ -1,0 +1,52 @@
+# ModelDataPipeline_l::create 027F7B50 on an authentic shipped model: Kn.bfres FMDL "kn" (2 materials, real shapes) with
+# the binding source the game's loaders pass, i.e. the archive's per-model record returned by the original
+# hdResModel_getShader 026031D0 (02605908..02605944 / 0272D384 callers 0260870C, 0260A5C8), and the real heap.
+# Base: the toon companion (lib2_j3d_hdrew_1_misc_50f8_toon: packet_values_lead world, GraphicsDevice words
+# during setup, shared resource bootstrap, Kn archive registered through the original 02604EB4 and its
+# record 026031D0(0x720003F8, 0) -> 0x7200042C, deterministic: -trace 1000003 'setup 026031D0 ->58101050 <- 7200042C').
+# Everything 027F7B50 calls runs original code (027F5A5C, 028010F8, 02774320, 0277445C, 027F70D8 -> 027F691C).
+# Calling create again on an already registered model is the shipped case of a second actor of the same model.
+# Archive object reuse: the Kn and St registrations of the base rebuild the one
+# SharcArchiveRes at 0x58100000 that the harness lookup 026123FC answers. Proof: -watch n1000 s1/s7 of 0x58100000:0x44 and
+# of the System/Kn registration records (res 7200022C/720003F8 +0x24, resinfo 72000250/72001A00 +0x8C) on this spec and
+# on lib2_j3d_hdrew_1_factory_kn_apply_m1 (factory helper evidence factory/watch/reuse/); the base's own proof is
+# in the toon companion header.
+# verify: -only 027F7B50 -strictnan -calleesp
+include lib2_j3d_hdrew_1_misc_50f8_toon.txt
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+arg! 027F7B50 r3 0x58220124
+arg! 027F7B50 r4 0x7200042C
+arg! 027F7B50 r5 0
+arg! 027F7B50 r6 0x6A000000

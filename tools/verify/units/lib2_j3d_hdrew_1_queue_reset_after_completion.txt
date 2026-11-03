@@ -1,0 +1,6 @@
+# PipelineFrameQueue::resetWork after a completed frame: the original notifyCompleted (027F9E10) sets the
+# completion byte on the constructed queue before resetWork runs (frame order: completion, then reset).
+# verify: -only 027F9A7C -strictnan -calleesp
+include lib2_j3d_hdrew_1_queue_constructed_state_20261030.txt
+real 027F9E10
+setup 027F9A7C 027F9E10 r3=0x5D000000

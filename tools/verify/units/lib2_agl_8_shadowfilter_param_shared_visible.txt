@@ -1,0 +1,13 @@
+# verify: -strictnan -only 02796F74 -noclobber
+# AGL#8 shadowfilter (2026-10-31): lib2_agl_8_shadowfilter_bind_real_visible with alloc_without_ctx (bool parameter
+# +0xC0, value byte +0xCC) changed after the depth storage exists, only through the real ParameterBase::applyResource
+# 0279EB28 with the parameter's own bool methods (same form as lib2_agl_8_shadowmap_param_api_visible). allocateDepthTexture
+# 027967C4 copied the old value into mUseSharedCache (+0xBDC); the filter re-reads the parameter (filter/temporary
+# cache pool, mUseSharedCache store, shared/plain release). mNeedsRebuild stays 0.
+include lib2_agl_8_shadowfilter_bind_real_visible.txt
+real 0279EB28 02797E04 02797E0C 02797E14 02797E1C 02797DE0 02797DE4 02797DEC 02797DF4 02797DFC
+fill * 0x5E120400 0x100 0
+field 02796F74 0x5E120440 u32 0x5E120450
+field 02796F74 0x5E120450 u32 16
+field 02796F74 0x5E12045C u8 0,1
+postsetup 02796F74 0279EB28 r3=0x590000C0 r4=0x5E120440

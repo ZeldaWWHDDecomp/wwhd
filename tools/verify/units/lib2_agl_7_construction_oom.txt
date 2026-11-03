@@ -1,0 +1,33 @@
+# AGL#7 top-level ProjectionShadow::create allocation failure on the shared original-produced AGL world.
+# embedded GHS null guards are unreachable; the top-level operator_new failure arm is in-domain.
+# verify: -only 0279207C -strictnan -calleesp -watch 00000000:0x1000
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+# The shared world owns the registered root heap and its reserved ranges.
+include shared/agl_world.txt
+setupsnapshot
+
+# The tested function directly calls operator_new once at 027920A4.
+# Keep nested startup allocations original; allocnested is intentionally absent.
+arg! 0279207C r3 0
+alloc 0273AD10 r3 0x63000000
+allocfail 0273AD10 1

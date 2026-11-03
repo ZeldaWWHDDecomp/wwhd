@@ -1,0 +1,1356 @@
+# AGL#9 initial sixteen owned callback/destructor entries; remaining scope is pending.
+src wwhd_src/agl/ShadowParameterHooks.cpp
+stackfill
+# Complete live objects and a pointer-to-record comparison argument.
+arg! 02797E5C r3 0x68000000
+arg! 02797E5C r4 0x68001000
+field 02797E5C r3+80 u32 0,1,2,0xFFFFFFFF
+field 02797E5C 68001000 u32 0x68002000
+field 02797E5C 68002008 u32 0,1,2,0xFFFFFFFF
+# Both deleting and non-deleting calls use an explicitly complete receiver fixture.
+arg! 02797E78 r3 0,0x68003000
+arg! 02797E78 r4 0,1
+fill 02797E78 68003000 0x100 0
+src wwhd_src/agl/ParameterTree.cpp
+# Bounded name descriptors with a compatible no-op termination callback.
+field * 68100000 u32 0x68101000
+field * 68100004 u32 0x68102000
+field * 68102014 u32 0x0F000910
+fill * 68101000 64 0
+fieldstr * 68101000 64 "","shadow","cascade"
+stable 68100000 8
+stable 68102000 24
+callee 0F000910 fixture r3=heap8
+# Complete bounded receiver and value objects; their list links start empty.
+fill * 68110000 0x64 0
+fill * 68120000 0x64 0
+fill * 68130000 0x5C 0
+arg! 0279C950 r3 0x68110000
+arg! 0279C950 r4 0x68100000,0x69F00000,0x69F80000
+arg! 0279CB24 r3 0x68120000
+arg! 0279CB24 r4 0x68110000
+arg! 0279CB24 r5 0x68100000
+arg! 0279CB9C r3 0x68120000
+arg! 0279CB9C r4 0x68130000
+arg! 0279CB9C r5 0x68100000,0x69F00000,0x69F80000
+field * 68110008 u32 0x68110014
+field * 6811000C u32 0x68102000
+field * 68110010 s32 64
+field * 68120008 u32 0x68120014
+field * 6812000C u32 0x68102000
+field * 68120010 s32 64
+field * 68130004 u32 0x68130010
+field * 68130008 u32 0x68102000
+field * 6813000C s32 64
+stable 68110008 12
+stable 68120008 12
+stable 68130004 12
+# Nonempty sibling/value lists of one or two nodes, linked through +58 / +54; the walked
+# link words reach no callee (callees get the appended object or its name).
+fill * 68111000 0x64 0
+fill * 68112000 0x64 0
+fill * 68131000 0x5C 0
+fill * 68132000 0x5C 0
+field 0279CB24 68120004 u32 0,0x68111000
+field 0279CB24 68111058 u32 0,0x68112000
+field 0279CB9C 68120000 u32 0,0x68131000
+field 0279CB9C 68131054 u32 0,0x68132000
+stable 68111058 4
+stable 68112058 4
+stable 68131054 4
+stable 68132054 4
+# Find uses the assigned real comparison leaf with a compatible record pointer.
+arg! 0279CCAC r3 0x68120000
+arg! 0279CCAC r4 0x68140000
+field 0279CCAC 68120000 u32 0,0x68130000
+field 0279CCAC 68140000 u32 0,0x68141000
+field 0279CCAC 68130050 u32 0,1,2
+field 0279CCAC 68141008 u32 0,1,2
+field 0279CCAC 68130058 u32 0x68142000
+field 0279CCAC 6814203C u32 0x02797E5C
+stable 68130054 8
+stable 68142000 64
+real 02797E5C
+# Name termination/copy/hash boundaries do not mutate this disjoint list's links.
+# This is an explicit fixture contract, pending final external-interface review.
+stable 68120000 8
+stable 68110058 8
+# Null/new Node construction uses distinct allocator-owned blocks.
+alloc 0273AD10 r3 69000000 4
+arg! 0279CA34 r3 0,0x68150000
+fill 0279CA34 68150000 0x64 0
+# Blend wrappers pass complete four-byte optional-record slots on the original frame.
+arg! 0279D5E0 r3 0x68120000
+arg! 0279D5E0 r4 0x68160000
+arg! 0279D624 r3 0x68120000
+arg! 0279D624 r4 0x68160000
+arg! 0279D624 r5 0x68161000
+field * 68160000 u32 0,0x68162000
+field * 68161000 u32 0,0x68163000
+callee 0279D2D0 r5=4 r6=4
+# Bounded text-prefix fixtures; fixed enclosing class extents remain a final-review qualification.
+src wwhd_src/agl/LibraryTextEntries.cpp
+fill * 68201000 64 0xA5
+fill * 68211000 64 0xA5
+arg! 02798F20 r3 0,0x68200000
+arg! 02798F20 r4 0,1
+field 02798F20 68200000 u32 0x68201000
+field 02798F20 68200004 u32 0x10166D98
+arg! 02798F64 r3 0,0x68200000
+arg! 02798F64 r4 0,1
+field 02798F64 68200000 u32 0x68201000
+field 02798F64 68200004 u32 0x10166DB0
+field 02798F64 68200008 s32 64
+arg! 02798F34 r3 0,0x68200000
+arg! 02798F34 r4 0,1
+field 02798F34 68200000 u32 0x68201000
+field 02798F34 68200004 u32 0x10166DE8
+field 02798F34 68200008 s32 64
+arg! 02798F78 r3 0,0x68200000
+arg! 02798F78 r4 0,1
+field 02798F78 68200000 u32 0x68201000
+field 02798F78 68200004 u32 0x10166E00
+field 02798F78 68200008 s32 64
+arg! 027990AC r3 0,0x68200000
+arg! 027990AC r4 0,1
+field 027990AC 68200000 u32 0x68201000
+field 027990AC 68200004 u32 0x10166E58
+field 027990AC 68200008 s32 64
+arg! 02798F4C r3 0x68210000
+field 02798F4C r3+0 u32 0x68211000
+field 02798F4C r3+8 s32 1,16,64
+arg! 02799F6C r3 0,0x68200000
+arg! 02799F6C r4 0,1
+field 02799F6C 68200000 u32 0x68201000
+field 02799F6C 68200004 u32 0x101672D0
+arg! 02799F9C r3 0,0x68200000
+arg! 02799F9C r4 0,1
+field 02799F9C 68200000 u32 0x68201000
+field 02799F9C 68200004 u32 0x101672E8
+field 02799F9C 68200008 s32 64
+arg! 02799FB0 r3 0,0x68200000
+arg! 02799FB0 r4 0,1
+field 02799FB0 68200000 u32 0x68201000
+field 02799FB0 68200004 u32 0x10167320
+field 02799FB0 68200008 s32 64
+arg! 0279A068 r3 0,0x68200000
+arg! 0279A068 r4 0,1
+field 0279A068 68200000 u32 0x68201000
+field 0279A068 68200004 u32 0x10167338
+field 0279A068 68200008 s32 64
+arg! 02799F84 r3 0x68210000
+field 02799F84 r3+0 u32 0x68211000
+field 02799F84 r3+8 s32 1,16,64
+arg! 0279A47C r3 0,0x68200000
+arg! 0279A47C r4 0,1
+field 0279A47C 68200000 u32 0x68201000
+field 0279A47C 68200004 u32 0x10167378
+arg! 0279A4AC r3 0,0x68200000
+arg! 0279A4AC r4 0,1
+field 0279A4AC 68200000 u32 0x68201000
+field 0279A4AC 68200004 u32 0x10167390
+field 0279A4AC 68200008 s32 64
+arg! 0279A4C0 r3 0,0x68200000
+arg! 0279A4C0 r4 0,1
+field 0279A4C0 68200000 u32 0x68201000
+field 0279A4C0 68200004 u32 0x101673A8
+field 0279A4C0 68200008 s32 64
+arg! 0279A4D4 r3 0,0x68200000
+arg! 0279A4D4 r4 0,1
+field 0279A4D4 68200000 u32 0x68201000
+field 0279A4D4 68200004 u32 0x101673C0
+field 0279A4D4 68200008 s32 64
+arg! 0279A4E8 r3 0,0x68200000
+arg! 0279A4E8 r4 0,1
+field 0279A4E8 68200000 u32 0x68201000
+field 0279A4E8 68200004 u32 0x101673D8
+field 0279A4E8 68200008 s32 64
+arg! 0279A4FC r3 0,0x68200000
+arg! 0279A4FC r4 0,1
+field 0279A4FC 68200000 u32 0x68201000
+field 0279A4FC 68200004 u32 0x101673F0
+field 0279A4FC 68200008 s32 64
+arg! 0279A510 r3 0,0x68200000
+arg! 0279A510 r4 0,1
+field 0279A510 68200000 u32 0x68201000
+field 0279A510 68200004 u32 0x10167408
+field 0279A510 68200008 s32 64
+arg! 0279A524 r3 0,0x68200000
+arg! 0279A524 r4 0,1
+field 0279A524 68200000 u32 0x68201000
+field 0279A524 68200004 u32 0x10167420
+field 0279A524 68200008 s32 64
+arg! 0279A538 r3 0,0x68200000
+arg! 0279A538 r4 0,1
+field 0279A538 68200000 u32 0x68201000
+field 0279A538 68200004 u32 0x10167438
+field 0279A538 68200008 s32 64
+arg! 0279A54C r3 0,0x68200000
+arg! 0279A54C r4 0,1
+field 0279A54C 68200000 u32 0x68201000
+field 0279A54C 68200004 u32 0x10167450
+field 0279A54C 68200008 s32 64
+arg! 0279A494 r3 0x68210000
+field 0279A494 r3+0 u32 0x68211000
+field 0279A494 r3+8 s32 1,16,64
+arg! 0279B5E4 r3 0,0x68200000
+arg! 0279B5E4 r4 0,1
+field 0279B5E4 68200000 u32 0x68201000
+field 0279B5E4 68200004 u32 0x10167508
+arg! 0279B628 r3 0,0x68200000
+arg! 0279B628 r4 0,1
+field 0279B628 68200000 u32 0x68201000
+field 0279B628 68200004 u32 0x10167520
+field 0279B628 68200008 s32 64
+arg! 0279B664 r3 0,0x68200000
+arg! 0279B664 r4 0,1
+field 0279B664 68200000 u32 0x68201000
+field 0279B664 68200004 u32 0x10167558
+field 0279B664 68200008 s32 64
+arg! 0279B678 r3 0,0x68200000
+arg! 0279B678 r4 0,1
+field 0279B678 68200000 u32 0x68201000
+field 0279B678 68200004 u32 0x10167570
+field 0279B678 68200008 s32 64
+arg! 0279B5F8 r3 0,0x68200000
+arg! 0279B5F8 r4 0,1
+field 0279B5F8 68200000 u32 0x68201000
+field 0279B5F8 68200004 u32 0x10167588
+field 0279B5F8 68200008 s32 64
+arg! 0279B68C r3 0,0x68200000
+arg! 0279B68C r4 0,1
+field 0279B68C 68200000 u32 0x68201000
+field 0279B68C 68200004 u32 0x101675A0
+field 0279B68C 68200008 s32 64
+arg! 0279B714 r3 0,0x68200000
+arg! 0279B714 r4 0,1
+field 0279B714 68200000 u32 0x68201000
+field 0279B714 68200004 u32 0x101675C8
+field 0279B714 68200008 s32 64
+arg! 0279B728 r3 0,0x68200000
+arg! 0279B728 r4 0,1
+field 0279B728 68200000 u32 0x68201000
+field 0279B728 68200004 u32 0x101675E0
+field 0279B728 68200008 s32 64
+arg! 0279B63C r3 0,0x68200000
+arg! 0279B63C r4 0,1
+field 0279B63C 68200000 u32 0x68201000
+field 0279B63C 68200004 u32 0x101675F8
+field 0279B63C 68200008 s32 64
+arg! 0279B650 r3 0,0x68200000
+arg! 0279B650 r4 0,1
+field 0279B650 68200000 u32 0x68201000
+field 0279B650 68200004 u32 0x10167610
+field 0279B650 68200008 s32 64
+arg! 0279B73C r3 0,0x68200000
+arg! 0279B73C r4 0,1
+field 0279B73C 68200000 u32 0x68201000
+field 0279B73C 68200004 u32 0x10167628
+field 0279B73C 68200008 s32 64
+arg! 0279B750 r3 0,0x68200000
+arg! 0279B750 r4 0,1
+field 0279B750 68200000 u32 0x68201000
+field 0279B750 68200004 u32 0x10167640
+field 0279B750 68200008 s32 64
+arg! 0279B764 r3 0,0x68200000
+arg! 0279B764 r4 0,1
+field 0279B764 68200000 u32 0x68201000
+field 0279B764 68200004 u32 0x10167658
+field 0279B764 68200008 s32 64
+arg! 0279B778 r3 0,0x68200000
+arg! 0279B778 r4 0,1
+field 0279B778 68200000 u32 0x68201000
+field 0279B778 68200004 u32 0x10167670
+field 0279B778 68200008 s32 64
+arg! 0279B78C r3 0,0x68200000
+arg! 0279B78C r4 0,1
+field 0279B78C 68200000 u32 0x68201000
+field 0279B78C 68200004 u32 0x10167688
+field 0279B78C 68200008 s32 64
+arg! 0279B7A0 r3 0,0x68200000
+arg! 0279B7A0 r4 0,1
+field 0279B7A0 68200000 u32 0x68201000
+field 0279B7A0 68200004 u32 0x101676A0
+field 0279B7A0 68200008 s32 64
+arg! 0279B610 r3 0x68210000
+field 0279B610 r3+0 u32 0x68211000
+field 0279B610 r3+8 s32 1,16,64
+arg! 0279C73C r3 0,0x68200000
+arg! 0279C73C r4 0,1
+field 0279C73C 68200000 u32 0x68201000
+field 0279C73C 68200004 u32 0x101676E0
+arg! 0279C780 r3 0,0x68200000
+arg! 0279C780 r4 0,1
+field 0279C780 68200000 u32 0x68201000
+field 0279C780 68200004 u32 0x101676F8
+field 0279C780 68200008 s32 64
+arg! 0279C794 r3 0,0x68200000
+arg! 0279C794 r4 0,1
+field 0279C794 68200000 u32 0x68201000
+field 0279C794 68200004 u32 0x10167730
+field 0279C794 68200008 s32 64
+arg! 0279C7A8 r3 0,0x68200000
+arg! 0279C7A8 r4 0,1
+field 0279C7A8 68200000 u32 0x68201000
+field 0279C7A8 68200004 u32 0x10167748
+field 0279C7A8 68200008 s32 64
+arg! 0279C750 r3 0,0x68200000
+arg! 0279C750 r4 0,1
+field 0279C750 68200000 u32 0x68201000
+field 0279C750 68200004 u32 0x10167760
+field 0279C750 68200008 s32 64
+arg! 0279C7BC r3 0,0x68200000
+arg! 0279C7BC r4 0,1
+field 0279C7BC 68200000 u32 0x68201000
+field 0279C7BC 68200004 u32 0x10167778
+field 0279C7BC 68200008 s32 64
+arg! 0279C7D0 r3 0,0x68200000
+arg! 0279C7D0 r4 0,1
+field 0279C7D0 68200000 u32 0x68201000
+field 0279C7D0 68200004 u32 0x10167790
+field 0279C7D0 68200008 s32 64
+arg! 0279C7E4 r3 0,0x68200000
+arg! 0279C7E4 r4 0,1
+field 0279C7E4 68200000 u32 0x68201000
+field 0279C7E4 68200004 u32 0x101677A8
+field 0279C7E4 68200008 s32 64
+arg! 0279C7F8 r3 0,0x68200000
+arg! 0279C7F8 r4 0,1
+field 0279C7F8 68200000 u32 0x68201000
+field 0279C7F8 68200004 u32 0x101677C0
+field 0279C7F8 68200008 s32 64
+arg! 0279C768 r3 0x68210000
+field 0279C768 r3+0 u32 0x68211000
+field 0279C768 r3+8 s32 1,16,64
+arg! 0279D6E4 r3 0,0x68200000
+arg! 0279D6E4 r4 0,1
+field 0279D6E4 68200000 u32 0x68201000
+field 0279D6E4 68200004 u32 0x10167868
+arg! 0279D714 r3 0,0x68200000
+arg! 0279D714 r4 0,1
+field 0279D714 68200000 u32 0x68201000
+field 0279D714 68200004 u32 0x10167880
+field 0279D714 68200008 s32 64
+arg! 0279D728 r3 0,0x68200000
+arg! 0279D728 r4 0,1
+field 0279D728 68200000 u32 0x68201000
+field 0279D728 68200004 u32 0x10167898
+field 0279D728 68200008 s32 64
+arg! 0279D73C r3 0,0x68200000
+arg! 0279D73C r4 0,1
+field 0279D73C 68200000 u32 0x68201000
+field 0279D73C 68200004 u32 0x101678B0
+field 0279D73C 68200008 s32 64
+arg! 0279D750 r3 0,0x68200000
+arg! 0279D750 r4 0,1
+field 0279D750 68200000 u32 0x68201000
+field 0279D750 68200004 u32 0x101678C8
+field 0279D750 68200008 s32 64
+arg! 0279D764 r3 0,0x68200000
+arg! 0279D764 r4 0,1
+field 0279D764 68200000 u32 0x68201000
+field 0279D764 68200004 u32 0x101678E0
+field 0279D764 68200008 s32 64
+arg! 0279D778 r3 0,0x68200000
+arg! 0279D778 r4 0,1
+field 0279D778 68200000 u32 0x68201000
+field 0279D778 68200004 u32 0x10167938
+field 0279D778 68200008 s32 64
+arg! 0279D6FC r3 0x68210000
+field 0279D6FC r3+0 u32 0x68211000
+field 0279D6FC r3+8 s32 1,16,64
+src wwhd_src/agl/CascadeShadow.cpp
+# Complete constructor receiver or fresh allocator result; no wrapped partial object placement.
+arg! 02797EEC r3 0,0x68300000
+fill 02797EEC 68300000 0xF48 0
+# Full caller-initialized SafeText descriptors; semantic read subsets remain interface-review qualified.
+callee 0279A07C r4=8
+callee 0279E618 r4=8 r5=8 r6=8
+# Canonical shared registry storage, never a private duplicate owner.
+src wwhd_src/sead/HeapRegistryStatics.cpp
+# Partial empty-resource destructor profile; external map lifecycle remains explicitly opaque.
+arg! 027983DC r3 0,0x68320000
+arg! 027983DC r4 0,1
+fill 027983DC 68320000 0xF48 0
+stable 683202BC 8
+stable 68320264 8
+# Teardown of up to two units (release slot +0x44 observed) and of a present split array.
+field 027983DC 683202BC s32 -1,0,1,2
+field 027983DC 683202C0 u32 0,0x68400000
+field 027983DC 68320264 u32 0,0x68330000
+field * 68420044 u32 0x0F000B04
+callee 0F000B04 fixture r3=0 r4=0
+# Bounded two-unit diagnostic scene, with immutable membership/dispatch metadata.
+# Scope and bounds callbacks are explicit opaque-interface fixtures, pending final owner review.
+fill * 68400000 0xB68 0
+field * 68400058 u32 0x68420000
+field * 6840060C u32 0x68420000
+field * 6842000C u32 0x0F000B00
+field * 68420004 u32 0x0F000B00
+stable 68400000 0x70
+stable 684005B4 0x70
+stable 68420000 0x48
+ret! 027C988C 0,1
+ret! 027C99BC 0,1
+callee 0F000B00 fixture r3=0 r4=inout24 r5=0
+mockfield 0F000B00 r4+0 f32 -2,0,-0
+mockfield 0F000B00 r4+4 f32 -1,0,-0
+mockfield 0F000B00 r4+8 f32 0,0,-0
+mockfield 0F000B00 r4+12 f32 2,0,-0
+mockfield 0F000B00 r4+16 f32 3,0,-0
+mockfield 0F000B00 r4+20 f32 4,0,-0
+field * 68400060 s16 0,8
+field * 68400062 s16 -1
+field * 68400064 u32 0x0F000B00
+field * 68400068 s16 0,8
+field * 6840006A s16 -1
+field * 6840006C u32 0x0F000B00
+field * 68400614 s16 0
+# The second unit's bound-collection members are virtual (index 1 through its table at +0x58).
+field * 68400616 s16 0,1
+field * 68400618 u32 0x58
+field * 6840061C s16 0
+field * 6840061E s16 0,1
+field * 68400620 u32 0x58
+arg! 027991D0 r3 0x68430000
+arg! 027991D0 r4 0x68410000
+arg! 027991D0 r5 0,1,2,3
+fill 027991D0 68430000 0xF48 0
+field 027991D0 r3+596 s32 0,1,2,3,31,32,33,63,64,65
+field 027991D0 r3+700 u32 2
+field 027991D0 r3+704 u32 0x68400000
+arg! 027993A4 r3 0x68430000
+arg! 027993A4 r4 0x68410000
+arg! 027993A4 r5 0,1,2,3
+fill 027993A4 68430000 0xF48 0
+field 027993A4 r3+596 s32 0,1,2,3,31,32,33,63,64,65
+field 027993A4 r3+700 u32 2
+field 027993A4 r3+704 u32 0x68400000
+arg! 02799578 r3 0x68430000
+arg! 02799578 r4 0x68410000
+arg! 02799578 r5 0,1,2,3
+fill 02799578 68430000 0xF48 0
+field 02799578 r3+596 s32 0,1,2,3,31,32,33,63,64,65
+field 02799578 r3+700 u32 2
+field 02799578 r3+704 u32 0x68400000
+arg! 0279974C r3 0x68430000
+arg! 0279974C r4 0x68410000
+arg! 0279974C r5 0,1,2,3
+fill 0279974C 68430000 0xF48 0
+field 0279974C r3+596 s32 0,1,2,3,31,32,33,63,64,65
+field 0279974C r3+700 u32 2
+field 0279974C r3+704 u32 0x68400000
+stable 68430254 4
+stable 684302BC 8
+src wwhd_src/agl/CascadeParameterHooks.cpp
+# Bounded array-word metadata; pointer queries do not inspect the contents.
+arg! 0279914C r3 0x68500000
+arg! 02799158 r3 0x68500000
+arg! 02799160 r3 0x68500000
+field * 6850000C u32 0x68501000
+field * 68500010 u32 0,1,2,64
+fill * 68501000 0x100 0
+# Complete comparison input prefixes, distinct from their pointer wrappers.
+arg! 02799180 r3 0x68530000
+arg! 02799180 r4 0x68531000
+arg! 027991A8 r3 0x68520000
+arg! 027991A8 r4 0x68521000
+fill * 68520000 0x64 0
+fill * 68530000 0x5C 0
+field 027991A8 r3+84 u32 0,1,2
+field 02799180 r3+80 u32 0,1,2
+field * 68521000 u32 0x68522000
+field * 68531000 u32 0x68532000
+field * 68522004 u32 0,1,2
+field * 68532008 u32 0,1,2
+src wwhd_src/agl/ParameterRoot.cpp
+# Canonical empty-text storage; its owner is unchanged (including legacy initializer annotations).
+src wwhd_src/sead/FileDeviceStatics.cpp
+# Initialized canonical descriptor per Lead23:59: original static owner
+# writes this empty rodata and table; termination slot is the actual bare blr.
+field * 104A0CD8 u32 0x10147664
+field * 104A0CDC u32 0x10147634
+real 02759B98
+stable 104A0CD8 8
+stable 10147664 1
+stable 10147634 24
+arg! 0279A07C r3 0,0x68610000
+arg! 0279A07C r4 0x68100000,0x69F00000,0x69F80000
+arg! 0279A07C r5 0,1
+fill 0279A07C 68610000 0x1C8 0
+# Bounded root input headers and relative payload addresses; format validity remains separate.
+arg! 0279A308 r3 0x68630000
+arg! 0279A308 r4 0x68650000
+arg! 0279A390 r3 0x68630000
+arg! 0279A390 r4 0x68650000
+arg! 0279A390 r5 0x68651000
+fill * 68630000 0x1C8 0
+fill * 68660000 0x100 0
+fill * 68661000 0x100 0
+field * 68630060 u32 0x68640000
+field * 686300B0 u32 0,1
+# The context-mismatch hook is the base class's empty hook (real) or an observed derived override.
+field * 68640064 u32 0x0279A958,0x0F000D24
+callee 0F000D24 fixture r3=0 r4=4
+field * 68650000 u32 0x68660000
+field * 68651000 u32 0x68661000
+field * 6866000C u32 0,1,2
+field * 6866100C u32 0,1,2
+field * 68660010 u32 0,1
+field * 68661010 u32 0,1
+field * 68660014 u32 0,16,32
+field * 68661014 u32 0,16,32
+stable 68640000 0x68
+real 0279A958
+callee 0279D5E0 r4=4
+callee 0279D624 r4=4 r5=4
+# Distinct tree hooks use complete bounded prefixes and comparison records.
+src wwhd_src/agl/ParameterBlend.cpp
+arg! 0279A56C r3 0x68630000
+arg! 0279A56C r4 0x68650000
+field 0279A56C 68630054 u32 0,1,2,0xFFFFFFFF
+field 0279A56C 68650000 u32 0x68660000
+field 0279A56C 68660004 u32 0,1,2,0xFFFFFFFF
+arg! 0279D798 r3 0x68630000
+arg! 0279D798 r4 0x68650000
+field 0279D798 68630054 u32 0,1,2,0xFFFFFFFF
+field 0279D798 68650000 u32 0x68660000
+field 0279D798 68660004 u32 0,1,2,0xFFFFFFFF
+# Child lookup dispatches to the real assigned tree comparison leaf.
+arg! 0279CE84 r3 0x68120000
+arg! 0279CE84 r4 0x68140000
+field 0279CE84 68120004 u32 0,0x68110000
+field 0279CE84 68140000 u32 0,0x68141000
+field 0279CE84 68110054 u32 0,1,2
+field 0279CE84 68141004 u32 0,1,2
+field 0279CE84 68110060 u32 0x68143000
+field 0279CE84 6814302C u32 0x027991A8
+stable 68143000 0x30
+real 027991A8
+# Single-entry bounded input ranges; opaque indexed access returns the sole valid entry.
+# The parser's authentic format/side-effect contract remains pending review.
+arg! 0279CD28 r3 0x68120000
+arg! 0279CD28 r4 0x68700000
+arg! 0279CD28 r5 0x68130000
+arg! 0279CF00 r3 0x68120000
+arg! 0279CF00 r4 0x68700000
+arg! 0279CF00 r5 0x68110000
+field * 68700000 u32 0,0x68701000
+fill * 68701000 16 0
+field * 68701008 u32 0,1,2,3
+field * 6870100C u32 0,1,2,3
+# Input images: a 16-byte header (child count +8, value count +0xC) followed by 16-byte
+# records (byte step 16; child records first, then value records), walked by the real
+# record accessors 027A7424 / 027A73F4 (they only load).
+fill * 68701010 0x60 0
+field * 68701010 u32 16
+field * 68701014 u32 0,1,2
+field * 68701018 u32 0,1,2
+field * 68701020 u32 16
+field * 68701024 u32 0,1,2
+field * 68701028 u32 0,1,2
+field * 68701030 u32 16
+field * 68701034 u32 0,1,2
+field * 68701038 u32 0,1,2
+field * 68701040 u32 16
+field * 68701044 u32 0,1,2
+field * 68701048 u32 0,1,2
+field * 68701050 u32 16
+field * 68701054 u32 0,1,2
+field * 68701058 u32 0,1,2
+field * 68701060 u32 16
+field * 68701064 u32 0,1,2
+field * 68701068 u32 0,1,2
+stable 68701000 0x70
+real 027A7424
+real 027A73F4
+field 0279CD28 68130058 u32 0x68142000
+field 0279CD28 6814203C u32 0x02797E5C
+field 0279CD28 68130050 u32 0,1,2
+field 0279CF00 68110060 u32 0x68143000
+field 0279CF00 6814302C u32 0x027991A8
+field 0279CF00 68110054 u32 0,1,2
+callee 027A7424 r3=4 r4=0
+callee 027A73F4 r3=4 r4=0
+# The remaining input applies use bounded sole-entry lists and complete tree/value receivers.
+arg! 0279D05C r3 0x68120000
+arg! 0279D05C r4 0,1
+arg! 0279D05C r5 0x68700000
+arg! 0279D198 r3 0x68120000
+arg! 0279D198 r4 0,1
+arg! 0279D198 r5 0x68700000
+field 0279D05C 68120000 u32 0,0x68130000
+field 0279D05C 68130050 u32 0,1,2
+field 0279D05C 68130058 u32 0x68142000
+field 0279D05C 6814203C u32 0x02797E5C
+field 0279D198 68120004 u32 0,0x68110000
+field 0279D198 68110054 u32 0,1,2
+field 0279D198 68110060 u32 0x68143000
+field 0279D198 6814302C u32 0x027991A8
+real 0279CCAC
+real 0279CE84
+callee 027A8780 r3=heap92 r4=0 r5=4 r6=4 r7=heap100
+# Blend coordinator: complete first/second headers and real assigned no-op/one hooks.
+arg! 0279D2D0 r3 0x68120000
+arg! 0279D2D0 r4 0,1
+arg! 0279D2D0 r5 0x68700000
+arg! 0279D2D0 r6 0x68703000
+field 0279D2D0 68703000 u32 0,0x68704000
+field 0279D2D0 68704008 u32 0,1
+field 0279D2D0 6870400C u32 0,1
+fill 0279D2D0 68704000 0x30 0
+field 0279D2D0 68704010 u32 16
+field 0279D2D0 68704014 u32 0,1,2
+field 0279D2D0 68704018 u32 0,1,2
+field 0279D2D0 68704020 u32 16
+field 0279D2D0 68704024 u32 0,1,2
+field 0279D2D0 68704028 u32 0,1,2
+stable 68704000 0x30
+field 0279D2D0 68120000 u32 0,0x68130000
+field 0279D2D0 68120004 u32 0,0x68110000
+field 0279D2D0 68120060 u32 0x68143000
+field 0279D2D0 6814301C u32 0x0279919C
+field 0279D2D0 68143024 u32 0x027991A4
+field 0279D2D0 68110060 u32 0x68143000
+field 0279D2D0 6814302C u32 0x027991A8
+field 0279D2D0 68110054 u32 0,1,2
+field 0279D2D0 68130058 u32 0x68142000
+field 0279D2D0 6814203C u32 0x02797E5C
+field 0279D2D0 68130050 u32 0,1,2
+real 0279919C
+real 027991A4
+real 0279CD28
+real 0279CF00
+real 0279D05C
+real 0279D198
+callee 0279D2D0 r3=heap100 r4=0 r5=4 r6=4
+
+arg! 02799A38 r3 0x68430000
+field 02799A38 68430254 s32 -1,0,1,2,31,32,33,63,64,65
+
+arg! 02799A6C r3 0x68430000
+field 02799A6C 68430254 s32 -1,0,1,2,31,32,33,63,64,65
+# Mask-only leaf observations include word-shift boundaries; these do not assert
+# that the corresponding multi-cascade rendering lifecycle is a valid scene.
+
+src wwhd_src/agl/HierarchyNode.cpp
+# Complete 0x3C node allocations; constructor leaves two padding bytes alone.
+arg! 0279B7B4 r3 0,0x68800000
+fill * 68800000 0x3C 0
+fill * 68801000 0x3C 0
+fill * 68802000 0x3C 0
+fill * 68803000 8 0
+field * 68800024 u32 0x68800024
+field * 68800028 u32 0x68800024
+field * 68800030 u32 0x3C
+# Append uses disjoint writable storage and valid nonnegative count/capacity.
+arg! 0279BD8C r3 0x68800000
+arg! 0279BD8C r4 0x68801000
+field 0279BD8C 68800004 s32 0,1,2
+field 0279BD8C 68800008 s32 2
+field 0279BD8C 6880000C u32 0x68803000
+# Access through a valid populated child slot; out-of-range/null dereference is excluded.
+arg! 0279C80C r3 0x68800000
+arg! 0279C80C r4 0,1,2
+field 0279C80C 68800004 u32 2
+field 0279C80C 6880000C u32 0x68803000
+field 0279C80C 68803000 u32 0x68801000
+field 0279C80C 68803004 u32 0x68802000
+field 0279C80C 68801000 u32 0x68804000
+field 0279C80C 68802000 u32 0x68804000
+field 0279C80C 68801004 u32 0,1,2
+field 0279C80C 68802004 u32 0,1,2
+field 0279C80C 6880401C u32 0x0F000E00
+real 0279C83C
+# Empty linked-entry state is valid; nonempty callback/lifetime contract is pending.
+arg! 0279BE24 r3 0x68800000
+field 0279BE24 68800000 u32 0x68804000
+field 0279BE24 6880402C u32 0x027991A4
+field 0279BE24 68800038 u16 0,1,2,3
+real 0279BDB8
+
+arg! 02799920 r3 0x68430000
+arg! 02799920 r4 0x68410000
+fill 02799920 68430000 0xF48 0
+field 02799920 68430254 s32 0,1,2,3,31,32,33,63,64,65
+field 02799920 684302BC u32 2
+field 02799920 684302C0 u32 0x68400000
+
+arg! 027999AC r3 0x68430000
+arg! 027999AC r4 0x68410000
+fill 027999AC 68430000 0xF48 0
+field 027999AC 68430254 s32 0,1,2,3,31,32,33,63,64,65
+field 027999AC 684302BC u32 2
+field 027999AC 684302C0 u32 0x68400000
+
+# Disposer prefix uses canonical SEAD layout. Cold construction and matched singleton
+# destruction are diagnostic fixtures; authentic registration/lifetime policy is pending.
+alloc 0273B0D4 r3 69800000 4
+arg! 0279C844 r3 0
+field 0279C844 101F8DCC u32 0,0x68810000
+field 0279C844 101F8DD0 u32 0
+callee 02752B0C r3=inout16 r4=0 r5=0
+mockfield 02752B0C r3+0 u32 0
+mockfield 02752B0C r3+4 u32 0
+mockfield 02752B0C r3+8 u32 0
+mockfield 02752B0C r3+12 u32 0
+arg! 0279C8D0 r3 0,0x68810000
+arg! 0279C8D0 r4 0,1
+fill 0279C8D0 68810000 16 0
+field 0279C8D0 101F8DCC u32 0x68810000
+field 0279C8D0 101F8DD0 u32 0x68810000
+# Generic deleting leaf: only raw allocated storage is observed; dynamic type policy remains separate.
+arg! 0279C728 r3 0,0x68810000
+arg! 0279C728 r4 0,1
+fill 0279C728 68810000 16 0
+
+# Observed blend-entry prefixes, independent pointer slots, and wrapping unsigned order difference.
+arg! 0279D7BC r3 0x68930000
+arg! 0279D7BC r4 0x68931000
+field * 68930000 u32 0x68920000
+field * 68931000 u32 0x68921000
+fill * 68920000 0x114 0
+fill * 68921000 0x114 0
+field * 68920110 u32 0,1,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+field * 68921110 u32 0,1,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+# Finite canonical rings; entries are their own intrusive link and payload.
+# Concrete table10168C64 comes from original constructor027AB294 (size138).
+# Its real +34 callback027ACA18 only writes entry+124 and+134; no further callees.
+arg! 0279D7D4 r3 0x68900000
+fill 0279D7D4 68900000 0x22C 0
+fill 0279D7D4 68920000 0x138 0
+# The ungrouped ring holds two entries (68920000, 68922000), so the cached next pointer matters.
+field 0279D7D4 689001CC u32 0x68922000
+field 0279D7D4 689001D0 u32 0x68920000
+field 0279D7D4 689001D4 s32 2
+field 0279D7D4 68920000 u32 0x689001CC
+field 0279D7D4 68920004 u32 0x68922000
+fill 0279D7D4 68922000 0x138 0
+field 0279D7D4 68922000 u32 0x68920000
+field 0279D7D4 68922004 u32 0x689001CC
+field 0279D7D4 68922008 u32 0x68922000
+field 0279D7D4 6892200C u32 0x689001CC
+field 0279D7D4 689220D4 u32 0x68900000
+field 0279D7D4 689220D8 u32 0x689001D8
+field 0279D7D4 68922100 u8 0,1
+field 0279D7D4 68922114 u32 0x10168C64
+field 0279D7D4 68920008 u32 0x68920000
+field 0279D7D4 6892000C u32 0x689001CC
+field 0279D7D4 689200D4 u32 0x68900000
+field 0279D7D4 689200D8 u32 0x689001D8
+field 0279D7D4 68920100 u8 0,1
+field 0279D7D4 68920114 u32 0x10168C64
+fill 0279D7D4 68921000 0x138 0
+field 0279D7D4 689001D8 u32 0x68921000
+field 0279D7D4 689001DC u32 0x68921000
+field 0279D7D4 689001E0 s32 1
+field 0279D7D4 68921000 u32 0x689001D8
+field 0279D7D4 68921004 u32 0x689001D8
+field 0279D7D4 68921008 u32 0x68921000
+field 0279D7D4 6892100C u32 0x689001D8
+field 0279D7D4 689210D4 u32 0x68900000
+field 0279D7D4 689210D8 u32 0x689001D8
+field 0279D7D4 68921100 u8 0,1
+field 0279D7D4 68921114 u32 0x10168C64
+field 0279D7D4 689001E4 u32 0x689001E4
+field 0279D7D4 689001E8 u32 0x689001E4
+field 0279D7D4 689001F0 u32 0x689001F0
+field 0279D7D4 689001F4 u32 0x689001F0
+field 0279D7D4 689001FC u32 0x689001FC
+field 0279D7D4 68900200 u32 0x689001FC
+field 0279D7D4 68900208 u32 0x68900208
+field 0279D7D4 6890020C u32 0x68900208
+field 0279D7D4 68900214 u32 0x68900214
+field 0279D7D4 68900218 u32 0x68900214
+field 0279D7D4 68900220 u32 0x68900220
+field 0279D7D4 68900224 u32 0x68900220
+real 027AC200
+real 027AC2D4
+real 027AC1F0
+real 0273B310
+real 0273B2D0
+real 0273B2F0
+real 027ACA18
+callee 0273B378 r3=inout12 r4=0 r5=0
+
+src wwhd_src/agl/ParameterValueBank.cpp
+# Source checkpoint only until the new bank allocation/copy boundary fixture is reviewed.
+# Complete bank and two disjoint Value prefixes; full callee ownership policy remains qualified.
+fill * 68B00000 32 0
+fill * 68B01000 184 0
+arg! 0279A730 r3 0,0x68B00000
+arg! 0279A7D8 r3 0,0x68B00000
+arg! 0279A7D8 r4 0,1
+arg! 0279A594 r3 0x68B00000
+arg! 0279A594 r4 0,1,2
+arg! 0279A594 r5 0,1,2
+arg! 0279A6B0 r3 0x68B00000
+arg! 0279A6B0 r4 0,1
+field 0279A594 68B00014 u32 2
+field 0279A594 68B00018 u32 0x68B01000
+# The bank's dispatch is the base table (real hooks) or an observed derived table whose
+# before-copy hook can refuse (0) or allow (1) the copy.
+field 0279A594 68B0001C u32 0x101674E0,0x68B02000
+field * 68B0200C u32 0x0F000D28
+field * 68B02014 u32 0x0F000D2C
+callee 0F000D28 fixture r3=0 r4=0 r5=heap92 r6=0
+callee 0F000D2C fixture r3=0 r4=0 r5=heap92 r6=0
+ret! 0F000D28 0,1
+stable 68B02000 0x18
+field 0279A6B0 68B00008 s32 0,1,2
+field 0279A6B0 68B0000C u8 0,1
+field 0279A6B0 68B00014 u32 2
+field 0279A6B0 68B00018 u32 0x68B01000
+field 0279A6B0 68B0001C u32 0x101674E0
+arg! 0279A86C r3 0x68B00000
+arg! 0279A86C r4 0,1,2
+arg! 0279A86C r5 0,1,256
+arg! 0279A86C r6 0,0x68B10000,0x68B12000
+field 0279A7D8 68B00018 u32 0,0x68B01000
+fill * 68B10000 0x94 0
+field * 68B1000C u32 0x68B11000
+field * 68B11034 u32 0x0F000D00
+field * 68B1103C u32 0x0F000D04
+callee 0F000D04 fixture r3=0 r4=0
+# Heap lookups (current heap, containing heap) answer with the fixture heap, whose header and
+# allocate/release slots no callee writes.
+ret! 02755FEC 0x68B10000
+ret! 02756140 0x68B10000
+stable 68B10000 0x10
+stable 68B11030 0x10
+# A second heap whose allocation fails (null block), for the allocation-failure paths.
+fill * 68B12000 0x94 0
+field * 68B1200C u32 0x68B13000
+field * 68B13034 u32 0x0F000D08
+field * 68B1303C u32 0x0F000D04
+callee 0F000D08 fixture r3=heap148 r4=0 r5=0
+ret! 0F000D08 0
+stable 68B12000 0x10
+stable 68B13030 0x10
+alloc 0F000D00 r4 69B00000 4
+callee 0F000D00 fixture r3=heap148 r4=0 r5=0
+callee 027A86F8 r3=inout92 r4=heap92
+callee 027A84B8 r3=inout92
+
+src wwhd_src/agl/HierarchyItem.cpp
+# Source-only checkpoints during grouped-entry contract hold; no gate credit.
+arg! 0279B9CC r3 0,0x68820000
+arg! 0279BB98 r3 0x68820000
+arg! 0279C1B4 r3 0x68820000
+arg! 0279C1B4 r4 0x68820000,0x68821000
+fill * 68820000 0x144 0
+fill * 68821000 0x144 0
+field * 6882000C u32 0x68820018
+field * 68820010 u32 0x101676E0
+field * 68820014 s32 32
+field * 68820038 u32 0x68820044
+fieldstr 0279BB98 68820044 16 "","old"
+field * 6882003C u32 0x101676E0
+field * 68820040 s32 0,1,256
+field * 6882100C u32 0x68821018
+field * 68821010 u32 0x101676E0
+field * 68821014 s32 32
+fieldstr * 68820018 32 "","alpha","beta","alphabet"
+fieldstr * 68821018 32 "","alpha","beta","alphabet"
+real 0279C764
+real 0273B5DC
+real 0273B524
+
+# Additional source-only hierarchy checkpoints, pending callback domain review.
+
+# Corrected distinct leaf interface: child+1C returns a bounded SafeText pointer,
+# rather than routing to the owner's unrelated child-count accessor.
+callee 0F000E00 fixture r3=heap4
+ret! 0F000E00 0x68100000
+
+# Source-only comparator fixture: live query interfaces preserve their dispatch words.
+arg! 0279BE80 r3 0x68801000
+arg! 0279BE80 r4 0x68802000
+field 0279BE80 68801000 u32 0x68805000
+field 0279BE80 68802000 u32 0x68806000
+field 0279BE80 6880502C u32 0x0F000E10
+field 0279BE80 6880602C u32 0x0F000E14
+field 0279BE80 6880501C u32 0x0F000E20
+field 0279BE80 6880601C u32 0x0F000E24
+callee 0F000E10 fixture r3=heap4
+callee 0F000E14 fixture r3=heap4
+callee 0F000E20 fixture r3=heap4
+callee 0F000E24 fixture r3=heap4
+ret! 0F000E10 -1,0,1
+ret! 0F000E14 -1,0,1
+ret! 0F000E20 0x68876000,0x68876010,0x68876020,0x68876030,0x69F00000,0x69F80000
+ret! 0F000E24 0x68876000,0x68876010,0x68876020,0x68876030,0x69F00000,0x69F80000
+stable 68801000 4
+stable 68802000 4
+stable 68805000 0x30
+stable 68806000 0x30
+
+# Hierarchy node fixture N = 68870000 for the node walks, teardown and allocation:
+# children 68871000 (4 slots) -> leaves 68874000/+100/+200/+300 with dispatch 68875000
+# (group name +24, priority +2C, update +34 observed hooks); items 68872000 (three 0x144
+# items, dispatch 68878100 destroy +14); entries 68873000 (4 slots); linked entries at
+# 6886003C/6886103C (link offset 0x3C). Group names are three SafeTexts at 68876000/10/20
+# ("alpha", "beta", "alpha") with the no-op termination hook.
+fill * 68870000 0x3C 0
+field * 68870000 u32 0x68878000
+field * 68870004 s32 0,1,2,3,4
+field * 68870008 s32 4
+field * 6887000C u32 0x68871000
+field * 68870010 s32 0,1,2,3
+field * 68870014 u32 0,0x68872000
+field * 68870018 s32 0,1,2,3
+field * 6887001C s32 0,1,2,3
+field * 68870020 u32 0x68873000
+field * 68870034 s32 -1,0,1,2,5
+field * 68871000 u32 0x68874000
+field * 68871004 u32 0x68874100
+field * 68871008 u32 0x68874200
+field * 6887100C u32 0x68874300
+field * 68874000 u32 0x68875000
+field * 68874100 u32 0x68875000
+field * 68874200 u32 0x68875000
+field * 68874300 u32 0x68875000
+field * 6887501C u32 0x0F000E20
+field * 68875024 u32 0x0F000E30
+field * 6887502C u32 0x0F000E10
+field * 68875034 u32 0x0F000E34
+callee 0F000E30 fixture r3=heap4
+ret! 0F000E30 0x68876000,0x68876010,0x68876020,0x68876030,0x69F00000,0x69F80000
+callee 0F000E34 fixture r3=heap4
+fill * 68876000 0x30 0
+field * 68876000 u32 0x68877000
+field * 68876004 u32 0x68102000
+field * 68876010 u32 0x68877040
+field * 68876014 u32 0x68102000
+field * 68876020 u32 0x68877080
+field * 68876030 u32 0x68877100
+field * 68876034 u32 0x68102000
+fieldstr * 68877100 16 "alphabet"
+stable 68876030 8
+field * 68876024 u32 0x68102000
+fieldstr * 68877000 16 "alpha"
+fieldstr * 68877040 16 "beta"
+fieldstr * 68877080 16 "alpha"
+fill * 68872000 0x3CC 0
+field * 68872000 u32 0x68878100
+field * 6887200C u32 0x68872018
+field * 68872010 u32 0x68102000
+field * 68872014 s32 32
+fieldstr * 68872018 32 "","alpha","beta","alphabet"
+field * 68872144 u32 0x68878100
+field * 68872150 u32 0x6887215C
+field * 68872154 u32 0x68102000
+field * 68872158 s32 32
+fieldstr * 6887215C 32 "","alpha","beta","alphabet"
+field * 68872288 u32 0x68878100
+field * 68872294 u32 0x688722A0
+field * 68872298 u32 0x68102000
+field * 6887229C s32 32
+fieldstr * 688722A0 32 "","alpha","beta","alphabet"
+field * 68878114 u32 0x0F000D1C
+callee 0F000D1C fixture r3=0 r4=0
+field * 68873000 u32 0x68872000
+field * 68873004 u32 0x68872144
+field * 68873008 u32 0x68872288
+field * 6887300C u32 0
+# Linked entries: empty ring or two entries (their link words are never written by the
+# per-entry hook, which only stores entry+0x38 and the entry's own text buffer).
+field * 68870024 u32 0x68870024,0x6886003C
+field * 68870028 u32 0x68870024,0x6886003C
+field * 68870030 s32 0x3C
+field * 6886003C u32 0x68870024
+field * 68860040 u32 0x6886103C
+field * 6886103C u32 0x6886003C
+field * 68861040 u32 0x68870024
+# No mocked callee receives the node, the slot arrays, the leaves' dispatch words or the
+# group-name texts (hooks get a leaf or an item), so those are stable.
+stable 68870000 0x3C
+stable 68871000 0x10
+stable 68873000 0x10
+stable 68875000 0x40
+stable 68876000 0x30
+stable 68860038 0x10
+stable 68861038 0x10
+stable 68878110 8
+# Sorting runs the original comparators.
+real 0279BE80
+real 0279C1B4
+arg! 0279B8D0 r3 0,0x68870000
+arg! 0279B8D0 r4 0,1
+arg! 0279BC70 r3 0x68870000
+arg! 0279BC70 r4 -1,0,1,4
+arg! 0279BC70 r5 -1,0,1,3
+arg! 0279BC70 r6 0,0x68B10000,0x68B12000
+arg! 0279BDB8 r3 0x68870000
+arg! 0279C2AC r3 0x68870000
+arg! 0279C494 r3 0x68870000
+arg! 0279C5D0 r3 0x68870000
+
+# Texts at the 0x40000-character bound: 69F00000 and 69E80000 hold exactly 0x40000 'a' bytes,
+# 69F80000 holds 0x40002 (one past the bound and longer than the others).
+# They drive the length clamps and the bounded compare loops on both sides of the bound.
+field * 69F00000 u32 0x69F00100
+field * 69F00004 u32 0x68102000
+field * 69F80000 u32 0x69F80100
+field * 69F80004 u32 0x68102000
+field * 69E80000 u32 0x69E80100
+field * 69E80004 u32 0x68102000
+stable 69E80000 8
+# 69D80000 holds a second 0x40002-byte text, so two distinct identical texts exhaust the compare loops.
+field * 69D80000 u32 0x69D80100
+field * 69D80004 u32 0x68102000
+stable 69D80000 8
+stable 69F00000 8
+stable 69F80000 8
+field 0279C1B4 6882000C u32 0x68820018,0x69F00100
+field 0279C1B4 6882100C u32 0x68821018,0x69F80100
+field 0279C2AC 6887200C u32 0x68872018,0x69F80100,0x69E80100,0x69D80100
+field 0279C494 6887200C u32 0x68872018,0x69F80100,0x69E80100,0x69D80100
+field 0279C5D0 6887200C u32 0x68872018,0x69F80100,0x69E80100,0x69D80100
+field 0279C494 68872150 u32 0x6887215C,0x69F80100
+field 0279C5D0 68872150 u32 0x6887215C,0x69F80100
+fill 0279C950 69F00100 0x40002 0x61
+fill 0279C950 69F80100 0x40002 0x61
+field 0279C950 69F40100 u8 0
+fill 0279C950 69E80100 0x40002 0x61
+field 0279C950 69EC0100 u8 0
+field 0279C950 69FC0102 u8 0
+fill 0279CB9C 69F00100 0x40002 0x61
+fill 0279CB9C 69F80100 0x40002 0x61
+field 0279CB9C 69F40100 u8 0
+fill 0279CB9C 69E80100 0x40002 0x61
+field 0279CB9C 69EC0100 u8 0
+field 0279CB9C 69FC0102 u8 0
+fill 0279A07C 69F00100 0x40002 0x61
+fill 0279A07C 69F80100 0x40002 0x61
+field 0279A07C 69F40100 u8 0
+fill 0279A07C 69E80100 0x40002 0x61
+field 0279A07C 69EC0100 u8 0
+field 0279A07C 69FC0102 u8 0
+fill 0279C00C 69F00100 0x40002 0x61
+fill 0279C00C 69F80100 0x40002 0x61
+field 0279C00C 69F40100 u8 0
+fill 0279C00C 69E80100 0x40002 0x61
+field 0279C00C 69EC0100 u8 0
+fill 0279C00C 69D80100 0x40002 0x61
+field 0279C00C 69DC0102 u8 0
+field 0279C00C 69FC0102 u8 0
+fill 0279BE80 69F00100 0x40002 0x61
+fill 0279BE80 69F80100 0x40002 0x61
+field 0279BE80 69F40100 u8 0
+fill 0279BE80 69E80100 0x40002 0x61
+field 0279BE80 69EC0100 u8 0
+field 0279BE80 69FC0102 u8 0
+fill 0279C1B4 69F00100 0x40002 0x61
+fill 0279C1B4 69F80100 0x40002 0x61
+field 0279C1B4 69F40100 u8 0
+fill 0279C1B4 69E80100 0x40002 0x61
+field 0279C1B4 69EC0100 u8 0
+field 0279C1B4 69FC0102 u8 0
+fill 0279C2AC 69F00100 0x40002 0x61
+fill 0279C2AC 69F80100 0x40002 0x61
+field 0279C2AC 69F40100 u8 0
+fill 0279C2AC 69E80100 0x40002 0x61
+field 0279C2AC 69EC0100 u8 0
+fill 0279C2AC 69D80100 0x40002 0x61
+field 0279C2AC 69DC0102 u8 0
+field 0279C2AC 69FC0102 u8 0
+fill 0279C494 69F00100 0x40002 0x61
+fill 0279C494 69F80100 0x40002 0x61
+field 0279C494 69F40100 u8 0
+fill 0279C494 69E80100 0x40002 0x61
+field 0279C494 69EC0100 u8 0
+fill 0279C494 69D80100 0x40002 0x61
+field 0279C494 69DC0102 u8 0
+field 0279C494 69FC0102 u8 0
+fill 0279C5D0 69F00100 0x40002 0x61
+fill 0279C5D0 69F80100 0x40002 0x61
+field 0279C5D0 69F40100 u8 0
+fill 0279C5D0 69E80100 0x40002 0x61
+field 0279C5D0 69EC0100 u8 0
+fill 0279C5D0 69D80100 0x40002 0x61
+field 0279C5D0 69DC0102 u8 0
+field 0279C5D0 69FC0102 u8 0
+
+src wwhd_src/agl/ContextSlots.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+# Source-only bounded collection checkpoints; full slot class lifetime and owner adoption remain open.
+arg! 0279A95C r3 0,0x68C00000
+arg! 0279AA14 r3 0,0x68C00000
+arg! 0279AA14 r4 0,1
+arg! 0279AAFC r3 0x68C00000
+arg! 0279AAFC r4 -1,0,1,2,3
+arg! 0279AAFC r5 0,0x68B10000,0x68B12000
+arg! 0279ABB4 r3 0x68C00000
+field 0279ABB4 68C00004 s32 0,1,2
+arg! 0279AE88 r3 0x68C20000
+fill * 68C00000 0x1C 0
+fill * 68C20000 1 0
+field 0279AE68 68C20000 u8 0,1,2,3
+field 0279AE88 68C20000 u8 0,1,2,3
+field * 101F8DD4 u32 0x68C10000
+fill * 68C10000 0x2388 0
+field * 68C10BE4 u32 0,1
+field * 68C117B4 u32 0,1
+field * 68C12384 u32 0,1
+ret! C0009BB0 0,1,2
+
+# Source-only slot copy/pop checkpoints; constructor/apply API domain remains qualified.
+arg! 0279AC28 r3 0x68C00000
+arg! 0279AC28 r4 0x68C40000
+arg! 0279AD54 r3 0x68C00000
+fill * 68C30000 0x120 0
+fill * 68C40000 0x90 0
+fill * 68C50000 8 0
+field 0279AC28 68C00004 s32 0,1,2
+field 0279AC28 68C00008 s32 2
+field 0279AC28 68C0000C u32 0x68C50000
+field 0279AC28 68C00010 s32 2
+field 0279AC28 68C00014 u32 0x68C30000
+field 0279AD54 68C00004 s32 0,1,2
+field 0279AD54 68C00008 s32 2
+field 0279AD54 68C0000C u32 0x68C50000
+field 0279AD54 68C50000 u32 0x68C30000
+field 0279AD54 68C50004 u32 0x68C30090
+callee 027BE794 r3=heap144
+# Slot collection teardown over up to two 0x90 slots with an observed destroy hook; the
+# collection's count/data words reach no callee (the hook gets the slot), so they are stable.
+field 0279AA14 68C00010 s32 -1,0,1,2
+field 0279AA14 68C00014 u32 0,0x68C30000
+field * 68C3008C u32 0x68C60000
+field * 68C3011C u32 0x68C60000
+field * 68C6000C u32 0x0F000D18
+callee 0F000D18 fixture r3=0 r4=0
+stable 68C00010 8
+stable 68C60000 0x10
+# Both the cached-acquire and the pop path.
+arg! 0279ADD4 r3 0x68C00000
+field 0279ADD4 68C00000 u8 0,1
+
+src wwhd_src/agl/LibraryWorkPool.cpp
+# Source-only pool checkpoints during boundary hold; full initialized-label/lifetime
+# and nonempty record constructor/destructor domains require final review.
+arg! 02799AA0 r3 0,0x68D00000
+arg! 02799C74 r3 0x68D00000
+arg! 02799D28 r3 0x68D00000
+arg! 02799FC4 r3 0,0x68D10000
+fill * 68D00000 0x4684 0
+fill * 68D10000 0x8C 0
+field 02799BC8 101F8DC0 u32 0,0,0,0x68D00000
+field 02799BC8 101F8DC4 u32 0
+arg! 02799BC8 r3 0,0x68B10000
+# Record buffer fixture: up to three 0x54 records whose dispatch +0xC is an observed destroy hook.
+# The pool's count/data words are passed to no callee (callees get records, the heap, the
+# free list), so they are stable across the hook calls.
+field 02799C74 68D00014 s32 -1,0,1,2,3
+field 02799C74 68D00018 u32 0,0x68D20000
+field 02799D28 68D00014 s32 0,1,2
+field 02799D28 68D00018 u32 0,0x68D20000
+fill * 68D20000 0xFC 0
+field * 68D20050 u32 0x68D21000
+field * 68D200A4 u32 0x68D21000
+field * 68D200F8 u32 0x68D21000
+field * 68D2100C u32 0x0F000D10
+callee 0F000D10 fixture r3=0 r4=0
+stable 68D00014 8
+stable 68D21000 0x10
+arg! 02799D28 r4 0,0x68B10000,0x68B12000
+# Disposer teardown: matching and non-matching registered disposers, live singleton pool.
+arg! 02799E48 r3 0,0x68D00000
+arg! 02799E48 r4 0,1
+arg! 02799EC4 r3 0,0x68D00004,0x68D30000
+arg! 02799EC4 r4 0,1
+field 02799EC4 101F8DC4 u32 0x68D00004,0x68D30000,0
+field 02799EC4 101F8DC0 u32 0x68D00000
+field 02799EC4 68D00000 u32 0x68D22000
+field 02799EC4 68D22014 u32 0x0F000D14
+callee 0F000D14 fixture r3=0 r4=0
+
+src wwhd_src/agl/CascadeShadowSteps.cpp
+# Source-only step/bounds checkpoints; real interfaces and callback record observation pending.
+arg! 02798978 r3 0x68430000
+arg! 027989F0 r3 0x68430000
+arg! 02798AE4 r3 0x68430000
+arg! 02798B0C r3 0x68430000
+arg! 02798B0C r4 0x68410000
+arg! 02798C68 r3 0x68430000
+arg! 02798C68 r4 0x68410000
+arg! 02798C68 r5 0,1,2,3
+arg! 02798D98 r3 0x68430000
+arg! 02798D98 r4 0x68410000
+arg! 02798D98 r5 0,1,2,3
+# Bounded cascade receiver: count 0..3 over a two-unit fixture (3 exercises the past-end
+# fallback to unit 0). The count and unit-buffer words are only reachable through the
+# receiver, and no mocked callee receives the receiver (only units, map and support), so
+# they are stable.
+field 02798978 68430254 s32 -1,0,1,2,3
+field 02798978 684302BC u32 0,1,2
+field 02798978 684302C0 u32 0x68400000
+field 027989F0 68430254 s32 -1,0,1,2,3
+field 027989F0 684302BC u32 0,1,2
+field 027989F0 684302C0 u32 0x68400000
+field 02798AE4 68430254 s32 -1,0,1,2,3
+field 02798AE4 684302BC u32 0,1,2
+field 02798AE4 684302C0 u32 0x68400000
+field 02798B0C 68430254 s32 -1,0,1,2,3
+field 02798B0C 684302BC u32 0,1,2
+field 02798B0C 684302C0 u32 0x68400000
+# Optional per-layer callback (support +0x74): its 12-byte record is observed, and it may
+# replace the context through the record's context slot.
+field 02798B0C 68430F20 u32 0,0x68440000
+field 02798B0C 68440000 u32 0x68441000
+field 02798B0C 6844100C u32 0x0F000D30
+callee 0F000D30 fixture r3=0 r4=12
+mockfield 0F000D30 [r4+8]+0 u32 0x68450000,0x68450010
+stable 68440000 4
+stable 6844100C 4
+field 02798C68 68430254 s32 -1,0,1,2,3
+field 02798C68 684302BC u32 0,1,2
+field 02798C68 684302C0 u32 0x68400000
+field 02798D98 68430254 s32 -1,0,1,2,3
+field 02798D98 684302BC u32 0,1,2
+field 02798D98 684302C0 u32 0x68400000
+field 027987BC 68430254 s32 -1,0,1,2,3
+field 027987BC 684302BC u32 0,1,2
+field 027987BC 684302C0 u32 0x68400000
+fill * 68410000 24 0
+field * 68410000 f32 -2,0,-0
+field * 68410004 f32 -1,0,-0
+field * 68410008 f32 0,0,-0
+field * 6841000C f32 2,0,-0
+field * 68410010 f32 3,0,-0
+field * 68410014 f32 4,0,-0
+callee 027C9A50 r3=heap1460 r4=out24 r5=0
+mockfield 027C9A50 r4+0 f32 -2,0,-0
+mockfield 027C9A50 r4+4 f32 -1,0,-0
+mockfield 027C9A50 r4+8 f32 0,0,-0
+mockfield 027C9A50 r4+12 f32 2,0,-0
+mockfield 027C9A50 r4+16 f32 3,0,-0
+mockfield 027C9A50 r4+20 f32 4,0,-0
+
+src wwhd_src/agl/CascadeFormattedLabel.cpp
+# Source-only GHS save-area calibration. Authentic formatter-consumed argument subsets,
+# padding/nonsemantic saved words and output behavior must be reviewed before mutation credit.
+arg! 02798F8C r3 0,0x68E00000
+arg! 02798F8C r4 0x68E10000
+fill * 68E00000 44 0
+fill * 68E10000 64 0
+fieldstr * 68E10000 64 "slice_%u","%u:%u:%u:%u:%u:%u"
+cr 02798F8C 6 0,1
+callee 02759C10 r3=heap12 r5=12
+observeptr 02759C10 r5+8 96
+
+src wwhd_src/agl/CascadeShadowSetup.cpp
+# Source-only setup checkpoints. Valid requestedCount is positive; count0's predecessor
+# read is not claimed a live-array input. Formatter unused-save observation remains diagnostic-only.
+arg! 027984FC r3 0x68430000
+arg! 027984FC r4 0x68E20000
+arg! 027984FC r5 0,0x68B10000,0x68B12000
+field 027984FC 68E20000 s32 -1,0,1,2,3
+# The requested count is the caller's private word, kept in r29 and passed to no callee.
+stable 68E20000 4
+arg! 027987BC r3 0x68430000
+arg! 027987BC r4 0x68410000
+arg! 027987BC r5 0x68410000
+
+# Lead01:54: seven forwarded integer registers and two low stack bytes; no FPR input.
+# Source-only pending genuine owner/cache initialization and final domain closure.
+arg! 0279AE68 r3 0x68C20000
+arg! 0279AE68 r4 0x68C30000
+
+# Lead01:54: reference helper has no input; incidental OSBlockMove r3 is not observed.
+arg! 0279C00C r3 0x68820000
+arg! 0279C00C r4 0x68100000,0x69F00000,0x69F80000
+ret! 027AE62C 0x68100000,0x69F80000,0x69E80000,0x69D80000
+callee 02785CB4 r4=8
+
+# Capture wrappers are source inventory only until complete capture fixtures are established.
+src wwhd_src/agl/ScreenCapture.cpp
+
+# Final renderer is source-only until transfer/file callback fixtures close.
+src wwhd_src/agl/ScreenCaptureRender.cpp
+# Capture renderer fixture: owner 68F20000 (0x6B8), source holder 68F30000 whose +0x1C is a
+# texture-data prefix 68F31000 (format word + GX2 surface: 2D, 1280x720 / 854x480 / 16x16,
+# one level, R8G8B8A8, tile mode 4). The cached surface words at owner+0x368.. mostly match
+# the source, so both the reuse and the copy branch run. Paths: three short texts or one
+# past the 0x40000 bound; file provider 68F40000 with its device at +0x10; an optional
+# notification callback whose 32-byte record is observed.
+arg! 0279AF1C r3 0x68F20000
+arg! 0279AF1C r4 0x68F30000
+arg! 0279AF1C r5 0,1,0x80
+arg! 0279AF1C r6 0x68100000,0x69F00000,0x68F44000
+field 0279AF1C 68F44000 u32 0x101676C8
+field 0279AF1C 68F44004 u32 0x68102000
+stable 68F44000 8
+# The open call fills the handle's device words (none, or the provider's device).
+mockfield 02740B24 r4+0x10 u32 0,0x68F41000
+mockfield 02740B24 r4+0x14 u32 0,0x68F41000
+arg! 0279AF1C r7 0,0x68F50000
+fill 0279AF1C 68F20000 0x6B8 0
+fill 0279AF1C 68F31000 0x7C 0
+fill 0279AF1C 69F00100 0x40002 0x61
+field 0279AF1C 69F40102 u8 0
+field 0279AF1C 68F3001C u32 0x68F31000
+field 0279AF1C 68F31004 u32 1
+field 0279AF1C 68F31008 u32 1280,854,16,0
+field 0279AF1C 68F3100C u32 720,480,16,0
+field 0279AF1C 68F31010 u32 1
+field 0279AF1C 68F31014 u32 1
+field 0279AF1C 68F31018 u32 0x1A
+field 0279AF1C 68F31034 u32 4
+field 0279AF1C 68F31028 u32 0,0x69100000
+field 0279AF1C 68F31030 u32 0,0x69110000
+# The stack file handle (0x3C) and render state (0x74) are compared by content where they are passed.
+callee 02740B24 r4=60 r5=8 r6=0 r7=0
+callee 02740BE0 r4=60
+callee 02740E08 r5=60
+callee 0274FDBC r3=out116
+callee 0274FEB0 r3=116
+field 0279AF1C 68F31078 u8 0,0x40,0xFF
+field 0279AF1C 68F31079 u8 0,0x40,0xFF
+field 0279AF1C 68F20368 u32 1,1,1,1,1,1,1,2
+field 0279AF1C 68F2036C u32 1280,1280,854,854,16,16,640
+field 0279AF1C 68F20370 u32 720,720,480,480,16,16,360
+field 0279AF1C 68F20374 u32 1,1,1,1,1,1,1,2
+field 0279AF1C 68F20378 u32 1,1,1,1,1,1,1,2
+field 0279AF1C 68F2037C u32 0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x1A,0x19
+field 0279AF1C 68F20380 u32 0,0,0,0,0,0,0,1
+field 0279AF1C 68F20398 u32 4,4,4,4,4,4,4,2
+field 0279AF1C 68F2039C u32 0,0,0,0,0,0,0,0x10000
+field 0279AF1C 68F20014 u32 0x68F60000
+field 0279AF1C 68F20028 u8 0,1
+field 0279AF1C 68F20360 u8 0,1
+field 0279AF1C 68F20024 f32 1,0.5
+field 0279AF1C 68F206B4 u32 0,7
+field 0279AF1C 68F2068C u32 0,0x68F42000
+field 0279AF1C 68F42000 u32 0x68F43000
+field 0279AF1C 68F4300C u32 0x0F000D20
+callee 0F000D20 fixture r3=0 r4=0
+observearg 0F000D20 r4+0 32
+field 0279AF1C 101F95F8 u32 0x68F40000
+field 0279AF1C 68F40010 u32 0x68F41000
+# None of these owner, source or table words is passed to a mocked callee as an object
+# (the callees get the slot, the target, the viewport surface or the path text).
+stable 68F3001C 4
+stable 68F31000 0x7C
+stable 68F42000 4
+stable 68F4300C 4
+stable 68F40010 4
+
+# Canonical merged foundation operations preserve empty buffers without mock epochs.
+# allocate(capacity<=0) returns directly; setStorage initializes count on success;
+# heapSort(size<=1) returns directly. Their original writes remain observable.
+real 0273B584
+real 0273B560
+real 0273B7B4
+
+# Stack texts and words handed to own-unit callees are compared by content.
+callee 0279C950 r4=8
+callee 0279CB9C r5=8
+callee 027966F0 r4=4
+# The formatted-label call is variadic: compare its CR bit 6 (floats in registers).
+callcr 02798F8C 6
+# The cache lookup's two stack argument words (low bytes read at caller SP+0xB/+0xF) and its name text.
+callee 0279FC6C stack=2 r4=8
+# The caller's CR bit 6 at entry is arbitrary; the candidate must clear it before the variadic call.
+cr 027984FC 6 0,1

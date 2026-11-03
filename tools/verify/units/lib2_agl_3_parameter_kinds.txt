@@ -1,0 +1,9 @@
+# Direct-entry profile for the four ParameterKind accessors.
+# A complete 28-byte caller-owned ColorParameter-shaped record is supplied; each target returns its declared enum constant.
+# No constructor, virtual dispatch, or foreign owner lifecycle is exercised.
+# verify: -strictnan -calleesp -only 027793B8,027793D8,027793F8,02779418
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+fill * 56000000 28 0

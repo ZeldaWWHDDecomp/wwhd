@@ -1,0 +1,143 @@
+# Lead03:10 qualification: type-domain: large record kind not activated by any shipped producer.
+# Lead02:53 complete caller chain passes slot0 only; N=1. Earlier slot>=1 inputs are diagnostic.
+# Corrected original-camera base (realCCC4); this strengthened color companion still needs its own controls.
+# Strengthened owned-record companion; finite independent colors and random stack initialization.
+# Spatial parameter writer, original perspective/orthographic geometry and null-source state: owner and coherent production frame recipe.
+# Pending runtime validation; no gate or coverage credit from this fixture alone.
+# verify: -only 027CEB24 -strictnan -calleesp -footprint
+callbudget 60000
+src wwhd_src/agl/DrawSpatialParameters.cpp
+src wwhd_src/agl/DrawSpatialGeometry.cpp
+src wwhd_src/agl/DrawResourceDirection.cpp
+src wwhd_src/agl/DrawResourceParameterPreparation.cpp
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027CEB24 r3 0x59200000
+arg! 027CEB24 r4 0x59100000
+arg! 027CEB24 r5 0
+arg! 027CEB24 r6 0x59300000
+field * 0x101F8B94 u32 0
+field * 0x58000000 u32 0x6A000000
+field * 0x58000004 u32 0x1000000
+field * 0x58000008 u32 0
+stable 0x6A000000 0xC8
+nestedret 02756140 0x6A000000
+setup * 02756E3C
+setup * 02757190
+setup * 027561B4
+setup * 02755FE0 r3=0x58000000
+real 025155D8 0273AD10 0273ADAC 0273AF40 0273AFC8 0273B050 0273B158 0273B2F0 0273B310 0273B560 02750CDC 02750D00 02752A84 02752B0C 02752BEC 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 0275320C 02753214 027532BC 02753628 027536B0 027536F4 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02753D6C 02753F84 02754018 027540AC 027541B8 02754370 027544E0 02754564 0275456C 02754618 02754620 02754754 027547A8 02754814 02754894 027556FC 02755818 0275589C 02755A48 02755CA4 02755D28 02755DA8 02755DBC 02755E7C 02755EC4 02755F40 02755F80 02755FE0 02755FEC 027561B4 02756254 02756268 0275626C 02756CC0 02756D04 02756D18 02756E3C 02757190 02760084 027600EC 02760168 027601BC 027601C4 027601F0 027601F8 0276024C 0276028C 027BEB5C 027BECEC 027BED84 027CBCD0 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58 028EFFD0 028F026C 028F0294 028F02E4 028F43F8 028F4BE0 028F521C 028F5228 028F5564 028F5678 028F5680 028F5DC0 028F5DD4 028F5E98 028F61E4
+# Disjoint caller-owned record/value storage; original constructors produce all buffer fields.
+fill * 59100000 0x4A8 0
+fill * 59200000 0x114 0
+fill * 59500000 0x68 0
+field * 59200004 u32 0x59600000
+field * 59600004 u32 0x00164120,0x00164100,0x00164020,0x00164000
+field * 59600038 u32 1
+stable 59600000 0x3C
+field * 5910023C u32 1
+field * 59100240 u32 0x59500000
+field * 59200000 u32 0x1016B070
+setup * 0274D510
+# default-texture bootstrap; pointer read after the original getter.
+field * 101F8B4C u32 0
+field * 101F8DEC u32 0
+mockset C0009990 r3 r4 r5
+mocksurfacesize C00060D0
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+setup * 027854AC r3=0x6A000000
+setup * 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup * 027A76C8 r3=0x6A000000
+setup * 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup * 027BF734 r3=0x5920001C
+setup * 027BDF7C r3=0x5910008C
+setup * 027BDF7C r3=0x59100310
+setup * 027CDE3C r3=0x59200000 r4=0x59100000 r5=0x6A000000
+setup * 027BEB5C r3=0x5950004C
+setup * 027CE0AC r3=0x59200000 r4=0x5950004C r5=0x6A000000
+setup * 027BEEE4 r3=0x5950004C r4=0x6A000000 r5=2
+# Projection remains in ctor fov/scale state; source projection is updated after pokes.
+stable 59300000 0xEA4
+stable 59400000 0xC4
+setup * 027389F8 r3=0x59400000
+poke * 59400094 u32 0x3F800000
+poke * 59400098 u32 0x461C4000
+poke * 594000AC u32 0x3FAAAAAB
+poke * 594000B0 u32 0x00000000
+poke * 594000B4 u32 0x00000000
+poke * 594000B8 u32 0x3F800000
+poke * 594000BC u32 0x3F800000
+poke * 59300000 u32 0x3F800000
+poke * 59300004 u32 0x00000000
+poke * 59300008 u32 0x00000000
+poke * 5930000C u32 0x00000000
+poke * 59300010 u32 0x00000000
+poke * 59300014 u32 0x3F800000
+poke * 59300018 u32 0x00000000
+poke * 5930001C u32 0x00000000
+poke * 59300020 u32 0x00000000
+poke * 59300024 u32 0x00000000
+poke * 59300028 u32 0x3F800000
+poke * 5930002C u32 0xC3FA0000
+poke * 593000E8 u32 0x3ED413CD
+poke * 59300E9C u32 0x3F0D6289
+poke * 59300E88 u32 0x00000000
+poke * 59300E8C u32 0x00000000
+poke * 59300EA0 u32 0xBF800000
+# Finite, nondegenerate axes. Original geometry produces the appropriate perspective/orthographic fields.
+poke * 59100000 u8 0x0B,0x0F,0x1B,0x1F
+poke * 5910004C u32 0x00000000
+poke * 59100050 u32 0x00000000
+poke * 59100054 u32 0xBF800000
+poke * 59100058 u32 0x00000000
+poke * 5910005C u32 0x3F800000
+poke * 59100060 u32 0x00000000
+poke * 59100244 u8 1
+postsetup * 027CE130 r3=0x59200000 r4=0x59100000
+postsetup * 0274D83C r3=0x59400000
+postsetup * 028E8970 r3=0x59400044 r4=0x59300128
+postsetup * 028E90D4 r3=0x59300000 r4=0x59300E18
+postsetup * 0272D680 r3=0x59300E48 r4=0x59300128 r5=0x59300000
+real 0274D510 027CC1BC 027CC250 027389F8 0274DEA8 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 028E8F64 028E9044 028E9108 028E91EC 028E90D4 028E8970 0272D680 027BEF54 027BF048 028E8E10
+real 027BEEE4 027BEEBC 027BEED4
+# every producer writes source NULL; this is the complete producible source domain.
+# Infeasible non-null-source coverage: 027CF120..027CF27C (uniforms 0xA/0xB).
+# Survivors confined to that arm are equivalent; inverted null checks must still be detected.
+real 027CCC80 027CCE34 027CCEB8 027BF734 027BFEF8 027A76C8 027A7640 027A78F8 027A77F8 027BE6B8 027BE930 027BDF7C 027BDE1C 027BDEB4 028E93CC 028E945C 027AAFF4
+real 027CDE3C 027CE0AC 027CE130 028E8D4C 0274CBAC 0274CCB0 0274E25C 0274DF4C 0274D80C 0274E474 0274E038 028E89B4
+real 0274D6B4 0274DA08
+real 02750AF0 02750C2C 027B5EEC 027BE114 027BE494 027BE74C 027BE7F0 027BFF9C
+real 027BE744 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8
+# Lead09:27 full surface-import model at the parked alias; the protected body stays opaque.
+mocksurfacesize 0278635C
+observearg 0278635C r3+0 32
+observearg 0278635C r3+0x30 8
+real 0274D4C0
+
+# Published Lead16:02 manager/childheap producer exception; shipped r5=0.
+real 027854AC 0278540C 027855BC 0273B0D4
+
+# OSBlockMove effects used by original sampler/bitmap bootstrap.
+mockmove C0009988 r3 r4 r5
+
+# Lead22:54 supersedes opaque360: execute the published original tail and merged target closure.
+real 02786360 027BEA90 02786314
+observearg C00060D0 r3+0 32
+
+stackfill
+# Complete caller-owned color fields; no derived matrices or resource payloads are handfilled.
+poke * 5910002C u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+poke * 59100030 u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+poke * 59100034 u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+poke * 59100038 u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+poke * 5910003C u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+poke * 59100040 u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+poke * 59100044 u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+poke * 59100048 u32 0x00000000,0x3E800000,0x3F000000,0x3F800000
+
+# Direct virtual camera-build target, merged SEAD original; prevents bogus top-level mock epochs.
+real 0274CCC4
+
+# Ordinary orthographic projection builder, merged SEAD; its matrix output is consumed by applyDeviceTransform.
+real 0274E4B8

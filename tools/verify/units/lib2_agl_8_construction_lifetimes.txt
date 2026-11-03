@@ -1,0 +1,64 @@
+# verify: -strictnan -calleesp -only 02792A08,02796034
+# Lead23:52 and00:25 approved real metadata/list and constructor lifetime dependencies.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+real 0279E618
+real 0279E674
+real 027A84B8
+real 0279CB9C
+real 027A063C
+real 0279E57C
+real 0273B264
+real 027A861C
+real 02795EE0
+real 02797DDC
+arg! 02792A08 r3 0x58000000
+arg! 02796034 r3 0x58000000
+
+real 027A03A0
+real 028EFFD0
+real 028EFE58
+real 027BE6B8
+real 027BDF7C
+real 027BDE1C
+real 027BDEB4
+real 02752A84
+alloc 0273AD10 r3 0x60000000
+allocnested 0273AD10
+real 0279F1BC
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+
+src wwhd_src/agl/ShadowFilter.cpp
+mockmove C0009988 r3 r4 r5
+
+# Lead01:31 ordinary IO constructor tree; own initializeSsaoBase receiver/name/zero roles match.
+real 0279A07C
+real 0279CA34
+real 0279C950
+real 0273B200
+
+# Lead01:52 complete GHS save/restore tail chains used by028EFE58.
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258

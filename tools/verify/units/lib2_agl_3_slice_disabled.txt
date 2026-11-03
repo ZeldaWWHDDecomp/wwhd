@@ -1,0 +1,25 @@
+# AGL#3 02777BA8 disabled-slice consumed-input profile; disabled branch only.
+# No protected constructor, owner initializer, or consumer runs/credit.
+# verify: -strictnan -calleesp -only 02777BA8
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 02777BA8 r3 0x56000000
+arg! 02777BA8 r4 0,1,2,0xFFFFFFFF
+arg! 02777BA8 r5 0,1,2,3,4,5
+arg! 02777BA8 r6 0,0x56800000
+arg! 02777BA8 r7 0,1,7,0xFFFFFFFF
+# Caller-owned consumed receiver prefix and pointer-slot array.
+field 02777BA8 56000010 u32 0
+field 02777BA8 560002CC u32 1
+field 02777BA8 560002D0 u32 0x56300000
+field 02777BA8 560002D4 u32 1
+field 02777BA8 560002D8 u32 0x56400000
+field 02777BA8 56400000 u32 0x56900000
+# Six caller-owned disabled slice input bytes; other object bytes are not consumed.
+field 02777BA8 569000C4 u8 0
+field 02777BA8 56900114 u8 0
+field 02777BA8 56900164 u8 0
+field 02777BA8 569001B4 u8 0
+field 02777BA8 56900204 u8 0
+field 02777BA8 56900254 u8 0

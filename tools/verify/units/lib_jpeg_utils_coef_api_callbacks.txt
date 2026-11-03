@@ -1,0 +1,135 @@
+src wwhd_src/libjpeg/jcmarker.cpp
+# Keep JPEG traversal geometry finite while callbacks may change output-mode flags.
+arg! * r3 0x53500000
+field * r3+0x4c s32 1,3,4
+field * r3+0x120 s32 0,1,3,4
+field * r3+0x54 u32 0x53501000
+field * r3+0x180 s32 0,1,63
+field * r3+0x17c u32 0x1017B7A8
+field * r3+0xd4 s32 0,1
+field * r3+0x108 s32 0,1
+field * r3+0x48 s32 8
+field * r3+0x178 s32 8
+field * r3+0x1c u32 0x53700000
+field * 53700000 u32 0x53701000
+field * 53700004 u32 0,1,2,1000
+# Stable traversal counts and pointers; arithmetic/progressive flags remain clobberable.
+stable 5350004c 4
+stable 53500120 4
+stable 5350017c 8
+stable 53500048 4
+stable 53500178 4
+ret! 0284EAA0 0,1
+field 0284F7A0 r3+0x4 u32 0x53800000
+field 0284F7A0 53800000 u32 0x0F5A0A00
+stable 53800000 0x34
+alloc 0F5A0A00 r5 0x53801000 32
+field * 53501014 s32 0,1,2,3
+stable 53501014 4
+field * 53501018 s32 0,1,2,3
+stable 53501018 4
+field * r3+0x124 u32 0x53501000
+stable 53500124 4
+field * 5350106c s32 0,1,2,3
+stable 5350106c 4
+field * 53501070 s32 0,1,2,3
+stable 53501070 4
+field * r3+0x128 u32 0x53501058
+stable 53500128 4
+field * 535010c4 s32 0,1,2,3
+stable 535010c4 4
+field * 535010c8 s32 0,1,2,3
+stable 535010c8 4
+field * r3+0x12c u32 0x535010b0
+stable 5350012c 4
+field * 5350111c s32 0,1,2,3
+stable 5350111c 4
+field * 53501120 s32 0,1,2,3
+stable 53501120 4
+field * r3+0x130 u32 0x53501108
+stable 53500130 4
+arg! 0284EAA0 r4 0,1,2,3
+arg! 0284EC18 r4 0,1,2,3
+field * r3+0x78 u32 0x53601000
+stable 53500078 4
+field * r3+0x7c u32 0x53601000
+stable 5350007c 4
+field * r3+0x80 u32 0x53601000
+stable 53500080 4
+field * r3+0x84 u32 0x53601000
+stable 53500084 4
+field * r3+0x88 u32 0x53601200
+stable 53500088 4
+field * r3+0x8c u32 0x53601200
+stable 5350008c 4
+field * r3+0x90 u32 0x53601200
+stable 53500090 4
+field * r3+0x94 u32 0x53601200
+stable 53500094 4
+field * 53601114 s32 0,1
+stable 53601001 16
+field * 53601001 u8 0,1,2,3
+field * 53601002 u8 0,1,2,3
+field * 53601003 u8 0,1,2,3
+field * 53601004 u8 0,1,2,3
+field * 53601005 u8 0,1,2,3
+field * 53601006 u8 0,1,2,3
+field * 53601007 u8 0,1,2,3
+field * 53601008 u8 0,1,2,3
+field * 53601009 u8 0,1,2,3
+field * 5360100a u8 0,1,2,3
+field * 5360100b u8 0,1,2,3
+field * 5360100c u8 0,1,2,3
+field * 5360100d u8 0,1,2,3
+field * 5360100e u8 0,1,2,3
+field * 5360100f u8 0,1,2,3
+field * 53601010 u8 0,1,2,3
+field * 53601314 s32 0,1
+stable 53601201 16
+field * 53601201 u8 0,1,2,3
+field * 53601202 u8 0,1,2,3
+field * 53601203 u8 0,1,2,3
+field * 53601204 u8 0,1,2,3
+field * 53601205 u8 0,1,2,3
+field * 53601206 u8 0,1,2,3
+field * 53601207 u8 0,1,2,3
+field * 53601208 u8 0,1,2,3
+field * 53601209 u8 0,1,2,3
+field * 5360120a u8 0,1,2,3
+field * 5360120b u8 0,1,2,3
+field * 5360120c u8 0,1,2,3
+field * 5360120d u8 0,1,2,3
+field * 5360120e u8 0,1,2,3
+field * 5360120f u8 0,1,2,3
+field * 53601210 u8 0,1,2,3
+field 0284ED2C 53501014 s32 0,1,15
+field 0284ED2C 53501018 s32 0,1,15
+field 0284ED2C 5350106c s32 0,1,15
+field 0284ED2C 53501070 s32 0,1,15
+field 0284ED2C 535010c4 s32 0,1,15
+field 0284ED2C 535010c8 s32 0,1,15
+field 0284ED2C 5350111c s32 0,1,15
+field 0284ED2C 53501120 s32 0,1,15
+
+# Expose explicit local-array initialization and callback changes to component pointers.
+stackfill periodic
+
+# Marker payload/image limits and legal byte-buffer aliases of destination control words.
+arg! 0284F320 r5 0,1,65532,65533,65534,65535
+field 0284EEDC r3+0x40 u32 0,1,65535,65536,65537
+field 0284EEDC r3+0x44 u32 0,1,65535,65536,65537
+stable 53500040 8
+field 0284E990 53700000 u32 0x53701000,0x53700000,0x53700004
+# Opaque destination callbacks may change the Adobe colorspace selection.
+mockfield 0284EA58 r3+0x50 s32 0,2,3,5
+# Retain ordinary baseline cases and sample nonbaseline precision/block sizes.
+field 0284F40C r3+0x48 s32 8,8,8,12
+field 0284F40C r3+0x178 s32 8,8,8,16
+
+# Warning callbacks retain or reset the separate error-manager message code.
+field * r3+0x0 u32 0x53900000
+field * 53900000 u32 0x0F5A0E00
+field * 53900004 u32 0x0F5A0D00,0x0F5A0D10
+stable 53500000 4
+stable 53900000 8
+mockglobal 0F5A0D10 53900014 u32 0,1,2

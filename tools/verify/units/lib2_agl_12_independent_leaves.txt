@@ -1,0 +1,78 @@
+# verify: -only 027AD0BC,027AD63C,027AE390,027AE470,027AE3B8,027AAF80,027A8C80,027AAE98,027A9CAC -strictnan -calleesp
+# Independentleaf domain: completeboundedreceivers/valueobjects; no helpercalls or stoppedrangeoriginalexecution.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+arg! 027AD0BC r3 0x57000000
+fill 027AD0BC 57000000 0x168 0
+arg! 027AD63C r3 0x57000000
+fill 027AD63C 57000000 0x168 0
+arg! 027AE390 r3 0x57000000
+fill 027AE390 57000000 0x168 0
+arg! 027AE470 r3 0x57000000
+fill 027AE470 57000000 0x168 0
+arg! 027AE3B8 r3 0x57000000
+fill 027AE3B8 57000000 0x168 0
+arg! 027AE3B8 r4 0x57001000
+arg! 027AE3B8 r5 0,1,2
+fill 027AE3B8 57001000 0x34C 0
+field 027AE3B8 57001008 u32 0x1D
+field 027AE3B8 5700119C u8 0,1,2,3
+field 027AE3B8 57000124 u32 0,1,2,3,4
+field 027AE3B8 57000134 u32 0,1,2,3,4,5
+field 027AE3B8 57000144 u32 0,1,2,3,4,5
+field 027AE3B8 57000154 u32 0,1,2,3,4,5
+field 027AE3B8 57000164 u32 0,1,2,3,4,5
+stable 57000000 0x168
+stable 57001000 0x34C
+arg! 027AAF80 r3 0x57002000
+arg! 027AAF80 r4 0x57002100
+arg! 027AAF80 r5 0x57002200
+field 027AAF80 57002000 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 57002004 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 57002008 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 5700200C f32 -2,-1,-0.5,0,0.5,1,2
+stable 57002000 0x10
+field 027AAF80 57002100 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 57002104 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 57002108 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 5700210C f32 -2,-1,-0.5,0,0.5,1,2
+stable 57002100 0x10
+field 027AAF80 57002200 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 57002204 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 57002208 f32 -2,-1,-0.5,0,0.5,1,2
+field 027AAF80 5700220C f32 -2,-1,-0.5,0,0.5,1,2
+stable 57002200 0x10
+arg! 027A8C80 r3 0x57003000
+field 027A8C80 57003000 u32 0x57003100
+field 027A8C80 57003004 u32 0x10147634
+field 027A8C80 57003008 u32 1,2,4,16,32,64
+fill 027A8C80 57003100 0x40 65
+stable 57003000 0xC
+stable 57003100 0x40
+# Staticvectorinitializer domain uses originalimage constants and unmodifiedstartupdestination bytes; no arbitraryglobaldestination steering.
+field 027AD0BC 57000124 f32 0,1,2,3
+field 027AD0BC 57000134 u32 0,1,2,3,4
+field 027AD63C 57000124 u32 0,1,2,3,4,5,9
+field 027AD63C 57000134 u32 0,1,2,3,4,5,9
+field 027AD63C 57000144 u32 0,1,2,3,4,5,9
+field 027AE390 57000124 f32 0,1,2,3
+field 027AE390 57000128 f32 0,1,2,3
+field 027AE390 57000138 f32 0,1,2,3
+field 027AE390 5700013C f32 0,1,2,3
+field 027AE470 57000124 u32 0,1,2,3,4,5
+field 027AE470 57000134 u32 0,1,2,3,4,5
+field 027AE470 57000144 u32 0,1,2,3,4,5
+field 027AE470 57000154 u32 0,1,2,3,4,5
+field 027AE470 57000164 u32 0,1,2,3,4,5

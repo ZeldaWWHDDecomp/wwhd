@@ -1,0 +1,8 @@
+# verify: -strictnan -calleesp -footprint -only 02792640,0279298C
+# Real prior motion update produces wrap-boundary states.
+include lib2_agl_8_parameter_observed_group.txt
+real 02792640
+field 02792640 r3+0x430 f32 -1.5,-0.5,0,0.5,1,1.5,2
+field 02792640 r3+0x434 f32 -1.5,-0.5,0,0.5,1,1.5,2
+field 02792640 r3+0x48C f32 -6.2831855,-3.1415927,0,3.1415927,6.2831855
+postsetup 02792640 02792640 r3=0x58000000 f1=60

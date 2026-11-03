@@ -1,0 +1,13 @@
+# Caller-valid 027CC78C depth-boundary companion. With the original identity
+# depth row and -500 translation, near=1, far=10, radius=1 and record Z values
+# 489/500/501 place the sphere exactly on and across the near/far comparisons.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+poke * 59300020 f32 0
+poke * 59300024 f32 0
+poke * 59300028 f32 1
+poke * 5930002C f32 -500
+poke * 59300030 f32 1
+poke * 59300034 f32 10
+poke * 59100010 f32 489,500,501
+poke * 59100014 f32 1

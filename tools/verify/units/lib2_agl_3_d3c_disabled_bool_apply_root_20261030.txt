@@ -1,0 +1,12 @@
+# verify: -only 02777D3C
+# API companion: original Bloom BoolParameter base+4B0/value+4BC; no owned flag/mask edits.
+# Authentic runtime/arrays/scene/context and previous-frame producers remain from accepted modes012 profile.
+# ResParameterData typeBool0, padded16bytes, payloadfalse is client-owned input to original ParameterBase apply0279EB28.
+include lib2_agl_3_d3c_modes012_root_20261029.txt
+field * 5D560000 u32 16
+field * 5D560004 u32 0
+field * 5D560008 u32 0
+field * 5D56000C u8 0
+field * 5D560010 u32 0x5D560000
+stable 0x5D560000 0x14
+postsetup 02777D3C 0279EB28 r3=0x560004B0 r4=0x5D560010

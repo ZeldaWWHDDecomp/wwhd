@@ -1,0 +1,91 @@
+# verify: -only 027F273C -calleesp -strictnan
+# Lead11:37: two buffers originate in real0252C8B4 constructor; eight image table modes.
+# Entry bodies stay opaque: this profile proves preparation/dispatch, not foreign entry lifecycle.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DInlineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialStorage.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelPacketSetup.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelConfiguration.cpp
+src wwhd_src/JSystem/J3DGraph/J3DBatchAdapter.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027F273C r3 0x5CA00000
+field 027F273C 5CA00098 u32 0x5CA01000
+field 027F273C 5CA0009C u32 0x5CA02000
+field 027F273C 5CA000A0 u32 0,1,2
+field 027F273C 5CA01000 u32 0x5CA03000
+field 027F273C 5CA03010 u16 0,1,2
+field 027F273C 5CA0202C u32 0x5CA04000
+field 027F273C 5CA04004 u16 0,1,0xFFFF
+field 027F273C 5CA04010 u32 0x5CA05000
+# Lead11:37 original draw-buffer constructor diagnostic; not a draw/lifecycle gate.
+# Initialize own four-byte ResourceHandle in that allocation after setup; no allocator return or application metadata pin.
+field * 101F8B94 u32 0
+field * 5CDFF000 u32 0x5CDFF010
+field * 5CDFF004 u32 0x1016E1F8
+fill * 5CDFF010 32 0
+field * 5CDFF010 u32 0x4A33442D
+field * 5CDFF014 u32 0x68656170
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x5CDFF000 r6=0
+setup * 02753D6C r3=0x6A000000 r4=0x100 r5=0x20
+nestedret 02756140 0x6A000000
+ret! 02756140 0x6A000000
+ret! C0009BB0 0,1,2
+stable 6A000000 0x100000
+real 027F28B4
+real 02752B0C
+real 02752C74
+real 02752D8C
+real 02752E60
+real 02752F10
+real 02753000
+real 0275315C
+real 02753628
+real 027536B0
+real 027536F4
+real 027537B8
+real 02753880
+real 02753998
+real 02753A34
+real 02753B48
+real 02753C28
+real 02753D6C
+real 027556FC
+real 02755818
+real 0275589C
+real 02755CA4
+real 02755FEC
+real 027600EC
+real 027601BC
+real 027601F0
+real 028F521C
+
+# Reached heap-list primitives, declared by canonical HeapRegistry interface metadata.
+real 0273B2F0
+real 0273B310
+mockset C000A858 r3 r4 r5
+
+# Real original constructor capacity1 plus field-built SafeText, allocation steering explicitly approved Lead11:37.
+setup * 0252C8B4 r3=1 r4=0x5CDFF000
+real 0252C8B4
+real 027F0A9C
+real 027F0B04
+alloc 0273AD10 r3 0x5D000000 32
+allocnested 0273AD10
+setup * 0252C8B4 r3=1 r4=0x5CDFF000
+field 027F273C 104B4634 u32 0x5D000000
+field 027F273C 104B4638 u32 0x5D000040
+poke 027F273C 5D00000C u32 0
+poke 027F273C 5D00004C u32 0
+callee 027F0DA8 r3=0 r4=0
+callee 027F0C14 r3=0 r4=0
+callee 027F10CC r3=0 r4=0
+callee 027F1174 r3=0 r4=0

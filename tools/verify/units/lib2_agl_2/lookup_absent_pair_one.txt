@@ -1,0 +1,23 @@
+# AGL2 positive serialized-list traversal with absent optional pairs.
+# Serialized (relative-offset) model data with absent optional shader-assign pairs; accepted with the recipes
+#. No runtime owner or callback object is fabricated.
+# verify: -strictnan -calleesp -footprint -only 027732B0
+src wwhd_src/agl/ShaderLookupRuntime.cpp
+arg! 027732B0 r3 0x58F00000
+arg! 027732B0 r4 0
+arg! 027732B0 r5 0
+fill 027732B0 58F00000 0x28 0
+field 027732B0 58F00018 u32 0x100
+field 027732B0 58F00024 u16 1
+fill 027732B0 58F00118 0x60 0
+field 027732B0 58F0013C u32 0x2C4
+fill 027732B0 58F00400 0x38 0
+field 027732B0 58F0014C u32 0x2F4
+fill 027732B0 58F00440 0x38 0
+field 027732B0 58F0015C u32 0x324
+fill 027732B0 58F00480 0x38 0
+final 027732B0 58F00000 0x28
+final 027732B0 58F00118 0x60
+final 027732B0 58F00400 0x38
+final 027732B0 58F00440 0x38
+final 027732B0 58F00480 0x38

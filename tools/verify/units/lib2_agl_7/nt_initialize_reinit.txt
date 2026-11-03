@@ -1,0 +1,51 @@
+# install as nt_initialize_reinit.txt: trace + -watch 0 lines; n=20 seeds 1/7 20/20 17/35 (covers 11, 12); nulltrap_compare 10k seeds 1/7 OK, 10000/10000 clean.
+# AGL#7 0278E730 ShadowPrePass::initialize, nulltrap RE-INITIALIZE companion: receiver constructed by the original ctor 0278DAC0 (02736048) and initialized once by the original 0278E730(1, current heap) as the sole caller 0273661C does; the tested call then passes a count <= 0 (signed test 0278E750/0278E75C), so the original skips the allocation and re-sets up the existing frame array (+0x1CC = 1, +0x1D0) through 0278E8B8 -> 0278E8D8 (blocks 11, 12); shared agl world (root heap 0x6A000000 = current heap via 02756140).
+# Caller domain: sole caller 0273661C: r3 = owner+0x15D4, r4 = 1 (li r4,1 at 02736614), r5 = the caller's heap (r31; 0 = current heap). r4 = 2 is the API companion (frame count > 1).
+# verify: -only 0278E730 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+include shared/agl_world.txt
+setupsnapshot
+
+fill * 0x5C020000 0x5C4 0
+stable 0x5C020000 0x5C4
+setup * 0278DAC0 r3=0x5C020000
+setup * 0278E730 r3=0x5C020000 r4=1 r5=0
+# ---- closure ----
+real 0278DAC0 0278E730 0278FB08 02796034 027966F0 027967A0 027967C4 0279FC6C 0279FD18 0279FDC8 0279FE74
+real 0279A07C 0279CA34 0279C950 0279E57C 0273B264 0273B200 0279E618 0279E674 027A84B8 0279CB9C 027A861C 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 027BDEB4 02752A84 02759B98 0279F1BC 0279288C 02791A4C 027919BC 027919FC 02791A54
+real 02759B40 027A8C80 0279A490 027A08C8
+real 027B95B4 027B958C 027B954C 027B6CB8 027B6E64 027BEB5C 027BECEC 027BED84 027BEEE4 027BEEBC 027BEED4 027BEE9C 027A063C
+real 027BE2B0 027B9694 0274D67C 028F0164 028F007C 027BEC90 027BEBEC 0273AFC8 027A0998 02752BEC 02755D28
+real 025C0928 025C0934 025C09D8 0276ACA0 0276AD30 0276B114 027861E0 02795EE0 02797DDC 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027CB744
+real 027BE930 027BE7F0 027BE74C 027BE744 027BFF9C 0279FFDC 027A0040 027A0114
+# ensureOutput 0278FC80 runs the original (as in render, 027912B0): prepareFrame 0278F04C allocates the frame output
+# textures (+0x84C etc.) that render flushes through 027BE794 (a world real).
+real 0278FC80 0278EE50 0278F04C 0278EFC0 0278EEF8 025C0848
+
+
+arg! 0278E730 r3 0x5C020000
+arg! 0278E730 r4 0,0xFFFFFFFF
+arg! 0278E730 r5 0,0x6A000000
+# r5 = 0: the original asks 02756140 (sead current heap) at top level; the world's nestedret answers only nested calls.
+# The current heap is the world's root heap (as in the AGL#3 0277A634/027798F4 recipes); stable: no runtime pointer reaches it.
+ret! 02756140 0x6A000000

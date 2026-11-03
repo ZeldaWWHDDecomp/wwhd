@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 0279599C
+# Prior frame/external output plus real parameter controls and justified owner stability.
+include lib2_agl_8_core_state_observed_group.txt
+include lib2_agl_8_grouped_effect_owner_controls_api.txt

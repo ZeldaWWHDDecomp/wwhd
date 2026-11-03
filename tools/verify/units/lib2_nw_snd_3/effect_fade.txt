@@ -1,0 +1,22 @@
+# verify: -strictnan -only 02889CAC
+# Immediate fade stop before the in-progress auxiliary ramp finishes.
+src wwhd_src/nw/snd/SoundRuntimeSupport.cpp
+src wwhd_src/nw/snd/SequenceRuntimeSupport.cpp
+src wwhd_src/nw/snd/SoundOutputRuntime.cpp
+src wwhd_src/nw/snd/MemorySoundArchive.cpp
+src wwhd_src/nw/snd/TrackChannelRuntime.cpp
+src wwhd_src/nw/snd/SequenceResourceLoad.cpp
+arg! 02889CAC r3 0x5B000000
+arg! 02889CAC r4 0
+arg! 02889CAC r5 0
+arg! 02889CAC r6 0
+field 02889CAC r3+0x48 s32 10
+field 02889CAC r3+0x4C s32 0,9,10,11
+stable 5B000040 16
+
+# Explicit forwarded receiver and SDK scalar facts; no shared metadata edited.
+callee 028F6A30 r3=0
+callee 028A370C r3=0
+callee C0006F20 r4=0
+callee 0288AD60 r4=44
+callee 0288BD14 r4=44

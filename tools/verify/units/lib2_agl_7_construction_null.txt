@@ -1,0 +1,74 @@
+# AGL#7: explicit initial allocation failure for the two constructors.
+# Both inputs are null; allocation null checks return before helpers.
+# verify: -only 0278DAC0,0279207C -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+# Protected02785CB4 remains opaque.
+real 0279A07C
+real 0279CA34
+real 0279C950
+real 0279E57C
+real 0273B264
+real 0273B200
+real 0279E618
+real 0279E674
+real 027A84B8
+real 0279CB9C
+real 027A861C
+real 027A03A0
+real 028EFFD0
+real 028EFE58
+real 027BE6B8
+real 027BDF7C
+real 027BDE1C
+real 027BDEB4
+real 02752A84
+real 02759B98
+real 0279F1BC
+real 0279288C
+real 02791A4C
+real 027919BC
+real 027919FC
+real 02791A54
+# SDK import stubs stay imports.
+mockmove C0009988 r3 r4 r5
+
+# Approved full GHS nonvolatile save/restore chains for real array driver.
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258
+arg! 0278DAC0 r3 0
+arg! 0279207C r3 0
+ret! 0273AD10 0

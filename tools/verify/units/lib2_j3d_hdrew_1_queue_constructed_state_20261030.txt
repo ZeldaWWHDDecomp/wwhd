@@ -1,0 +1,10 @@
+# Original PipelineFrameQueue::create installs critical sections, embedded tasks, arrays and worker set.
+# Only resetWork/notifyCompleted: neither needs an initialized dispatcher or running worker thread.
+# No private queue fields or fabricated completion-state writes.
+# verify: -only 027F9A7C,027F9E10 -strictnan -calleesp
+include lib2_j3d_hdrew_1_constructor_entries.txt
+real 027F9560 027F90B0 027F9CAC 028EFFD0 02760084 02758724 02758B88
+fill * 0x5D000000 0x390 0
+setup * 027F9560 r3=0x5D000000
+arg! 027F9A7C r3 0x5D000000
+arg! 027F9E10 r3 0x5D000000

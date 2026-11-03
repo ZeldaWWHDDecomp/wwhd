@@ -1,0 +1,129 @@
+# AGL#7 CameraOverride producer-backed direction and application profile.
+# verify: -only 0278D2E8,0278D434,0278D668,0278D81C -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+stackfill
+stable 104A0934 0x18
+real 02756E3C 02757190 0278D81C 0278D2E8 02791D00 02791C68 02791C90 025155D8 028E8D4C 028E8E10 0274CCC4 028E90D4 0274CCB0 028E8970 028E8B04
+arg! 0278D2E8 r3 0x56800000
+fill 0278D2E8 56800000 0x74 0
+setup 0278D2E8 02757190
+setup 0278D2E8 02756E3C
+setup 0278D2E8 0278D81C r3=0x56800000
+arg! 0278D2E8 r4 0x56810000,0x56810010,0x56810020,0x56810030,0x56810040,0x56810050,0x56810060,0x56810070,0x56810080,0x56810090,0x568100A0,0x568100B0,0x568100C0
+fill 0278D2E8 56810000 0xC 0
+field 0278D2E8 56810000 f32 1
+field 0278D2E8 56810004 f32 0
+field 0278D2E8 56810008 f32 0
+fill 0278D2E8 56810010 0xC 0
+field 0278D2E8 56810010 f32 -1
+field 0278D2E8 56810014 f32 0
+field 0278D2E8 56810018 f32 0
+fill 0278D2E8 56810020 0xC 0
+field 0278D2E8 56810020 f32 0
+field 0278D2E8 56810024 f32 1
+field 0278D2E8 56810028 f32 0
+fill 0278D2E8 56810030 0xC 0
+field 0278D2E8 56810030 f32 0
+field 0278D2E8 56810034 f32 -1
+field 0278D2E8 56810038 f32 0
+fill 0278D2E8 56810040 0xC 0
+field 0278D2E8 56810040 f32 0
+field 0278D2E8 56810044 f32 0
+field 0278D2E8 56810048 f32 1
+fill 0278D2E8 56810050 0xC 0
+field 0278D2E8 56810050 f32 0
+field 0278D2E8 56810054 f32 0
+field 0278D2E8 56810058 f32 -1
+# approved finite overflow direction reaches the second fallback (block 2).
+# mEnabled stays at the original producer's value; D434 block 16 and D668 block 12 are
+# unreachable for initialized objects.
+fill 0278D2E8 56810060 0xC 0
+field 0278D2E8 56810060 u32 0
+field 0278D2E8 56810064 u32 0x60AD78EC
+field 0278D2E8 56810068 u32 0x60AD78EC
+fill 0278D2E8 56810070 0xC 0
+field 0278D2E8 56810070 f32 1
+field 0278D2E8 56810074 f32 2
+field 0278D2E8 56810078 f32 3
+fill 0278D2E8 56810080 0xC 0
+field 0278D2E8 56810080 f32 -4
+field 0278D2E8 56810084 f32 5
+field 0278D2E8 56810088 f32 -6
+# Near-axis vectors exercise the strict length boundary and first-fallback neighborhood.
+fill 0278D2E8 56810090 0xC 0
+field 0278D2E8 56810090 f32 1
+field 0278D2E8 56810094 f32 1.1920928955078125e-07
+field 0278D2E8 56810098 f32 0
+fill 0278D2E8 568100A0 0xC 0
+field 0278D2E8 568100A0 f32 1
+field 0278D2E8 568100A4 f32 5.9604644775390625e-08
+field 0278D2E8 568100A8 f32 0
+# threshold witnesses: finite inputs distinguish IDs #71 and #86.
+fill 0278D2E8 568100B0 0xC 0
+field 0278D2E8 568100B0 u32 0
+field 0278D2E8 568100B4 u32 0x28FEA5D6
+field 0278D2E8 568100B8 u32 0x62B3C333
+fill 0278D2E8 568100C0 0xC 0
+field 0278D2E8 568100C0 u32 0
+field 0278D2E8 568100C4 u32 0x237745FB
+field 0278D2E8 568100C8 u32 0x67FCFD33
+final 0278D2E8 56810060 0xC
+final 0278D2E8 56800000 74
+final 0278D2E8 104A041C 30
+final 0278D2E8 104A0928 30
+arg! 0278D434 r3 0x56800000
+fill 0278D434 56800000 0x74 0
+setup 0278D434 02757190
+setup 0278D434 02756E3C
+setup 0278D434 0278D81C r3=0x56800000
+arg! 0278D434 r4 0,0x56820000
+fill 0278D434 56820000 0x30 0xA5
+final 0278D434 56820000 30
+arg! 0278D434 r5 0,0x56830000
+fill 0278D434 56830000 0x40 0xA5
+final 0278D434 56830000 40
+arg! 0278D434 r6 0x104A041C
+final 0278D434 56800000 74
+final 0278D434 104A041C 30
+final 0278D434 104A0928 30
+arg! 0278D668 r3 0x56800000
+fill 0278D668 56800000 0x74 0
+setup 0278D668 02757190
+setup 0278D668 02756E3C
+setup 0278D668 0278D81C r3=0x56800000
+arg! 0278D668 r4 0,0x56820000
+fill 0278D668 56820000 0x30 0xA5
+final 0278D668 56820000 30
+arg! 0278D668 r5 0,0x56830000
+fill 0278D668 56830000 0x40 0xA5
+final 0278D668 56830000 40
+arg! 0278D668 r6 0x104A094C
+final 0278D668 56800000 74
+final 0278D668 104A041C 30
+final 0278D668 104A0928 30
+arg! 0278D81C r3 0x56800000
+fill 0278D81C 56800000 0x74 0
+setup 0278D81C 02757190
+setup 0278D81C 02756E3C
+final 0278D81C 56800000 74
+final 0278D81C 104A041C 30
+final 0278D81C 104A0928 30

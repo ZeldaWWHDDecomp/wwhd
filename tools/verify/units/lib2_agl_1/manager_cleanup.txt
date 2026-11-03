@@ -1,0 +1,40 @@
+# Disjoint manager cleanup: deleting one object cannot rewrite another object's methods or manager array metadata.
+# Explicit writes and calls remain compared; stable ranges exclude only generic mock epoch corruption.
+# verify: -strictnan -calleesp
+src wwhd_src/agl/EnvironmentManager.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 0276B21C r3 0,0x59000000
+arg 0276B21C r4 0,1,2,3
+field 0276B21C r3+0x10 s32 0,1,2
+field 0276B21C r3+0x14 u32 0x59010000
+field 0276B21C 59010000 u32 0,0x59040000
+field 0276B21C 59010004 u32 0,0x59040400
+field 0276B21C 59040058 u32 0x10160030
+field 0276B21C 59040458 u32 0x101606C0
+field 0276B21C r3+0x230 u32 0
+field 0276B21C r3+0x234 s32 0,1,2
+field 0276B21C r3+0x238 u32 0,0x59020000
+field 0276B21C r3+0x3E4 s32 0,1,2
+field 0276B21C r3+0x3E8 u32 0,0x59030000
+field 0276B21C 59030060 u32 0x1015FC00
+field 0276B21C 590300D0 u32 0x1015FC00
+ret 02755FEC 0x58F00000
+field 0276B21C 58F0000C u32 0x10145CBC
+stable 59010000 8
+stable 59040058 4
+stable 59040458 4
+stable 59000230 12
+stable 590003E4 8
+stable 58F0000C 4
+real 0273B5DC
+real 0276CDD0
+real 0276D794
+real 0276F194
+real 0276FC20
+real 027AE618
+
+stable 59030060 4
+stable 590300D0 4
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

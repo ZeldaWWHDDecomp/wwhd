@@ -1,0 +1,12 @@
+# O2 and own-TU O1 10k seeds1/7 pass, coverage7/7. Mutation29:7 detected,16 compile-invalid,4 EQ,2 RI,0 OPEN.
+# AGL18 mixed-radix weight initialization on actual image-provided group descriptors.
+# verify: -only 027CBD54 -strictnan -calleesp
+# No table bytes embedded, no handfilled group or dimension records; harness reads its pinned image.
+src wwhd_src/agl/DrawFormatPreparation.cpp
+src wwhd_src/agl/TimingStatics.cpp
+# Survivors replayed exactly at 10k input seeds1/7 before review.
+# EQ0: output words104A2228..104A2283 are disjoint from group metadata101F962C..101F967B; pointer load/store commute.
+# EQ25: independent index/weight local initializers.
+# RI5/17: group bound visits nonexistent mGroups[4]; both time out, no EQ/D credit.
+# Qualified EQ8/28 (Lead22:32): immutable descriptors101F962C count6/5/7/5; no writer; sole caller027AEC34.
+# Only count1 distinguishes the guards; no valid count1 producer exists. Original candidate guards retained.

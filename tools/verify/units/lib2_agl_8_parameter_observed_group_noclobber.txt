@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -footprint -only 02792640,0279298C -noclobber
+# Non-clobber reconfirmation of lib2_agl_8_parameter_observed_group: the same profile, mocked callees never modify memory,
+# so every input is a non-clobber input and owner-only state keeps the value its real producers gave it.
+include lib2_agl_8_parameter_observed_group.txt

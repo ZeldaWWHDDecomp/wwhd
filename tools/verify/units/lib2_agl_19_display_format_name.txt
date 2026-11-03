@@ -1,0 +1,13 @@
+# AGL#19 027D778C createFormattedRenderText as its sole caller allocateFrameStorage 027D60D4 calls it: a 0x10C-byte
+# frame-local text (old bytes in it; the caller always passes SP+0x30), the format "%s" + 0x89E6 0x96CA (1016C2F0), the view's
+# display name from 027C2008 ("TV" 10169EAC / "DRC" 10169EB0), r6..r10 the caller's leftover registers, cr6 clear.
+# verify: -only 027D778C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include shared/agl_world.txt
+setupsnapshot
+real 02759C10 02759BA0 028F1748 0273AD10
+fill * 5E400000 0x10C 0xA5
+arg! 027D778C r3 0x5E400000
+arg! 027D778C r4 0x1016C2F0
+arg! 027D778C r5 0x10169EAC,0x10169EB0
+cr 027D778C 6 0

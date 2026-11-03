@@ -1,0 +1,66 @@
+# verify: -only 027F3F8C -calleesp -strictnan
+# Lead09:27/09:57 heap setup: observed 0x100-byte aligned allocation at6A0000E0.
+# Initialize own four-byte ResourceHandle in that allocation after setup; no allocator return or application metadata pin.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DInlineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialStorage.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelPacketSetup.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelConfiguration.cpp
+src wwhd_src/JSystem/J3DGraph/J3DBatchAdapter.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027F3F8C r3 0x6A0000E0
+poke 027F3F8C r3+0 u32 0
+field * 101F8B94 u32 0
+field * 5CDFF000 u32 0x5CDFF010
+field * 5CDFF004 u32 0x1016E1F8
+fill * 5CDFF010 32 0
+field * 5CDFF010 u32 0x4A33442D
+field * 5CDFF014 u32 0x68656170
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x5CDFF000 r6=0
+setup * 02753D6C r3=0x6A000000 r4=0x100 r5=0x20
+nestedret 02756140 0x6A000000
+ret! 02756140 0x6A000000
+ret! C0009BB0 0,1,2
+stable 6A000000 0x100000
+real 027F28B4
+real 02752B0C
+real 02752C74
+real 02752D8C
+real 02752E60
+real 02752F10
+real 02753000
+real 0275315C
+real 02753628
+real 027536B0
+real 027536F4
+real 027537B8
+real 02753880
+real 02753998
+real 02753A34
+real 02753B48
+real 02753C28
+real 02753D6C
+real 027556FC
+real 02755818
+real 0275589C
+real 02755CA4
+real 02755FEC
+real 02756140
+real 027600EC
+real 027601BC
+real 027601F0
+real 028F521C
+
+# Reached heap-list primitives, declared by canonical HeapRegistry interface metadata.
+real 0273B2F0
+real 0273B310
+mockset C000A858 r3 r4 r5

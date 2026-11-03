@@ -1,0 +1,81 @@
+# Original tanf at FOVword3FC90FDB yields T=1+1ULP; this profile does not create exact16-wide contacts.
+# Power-of-two frustum: near1/far16/aspect1/FOVpi/2, identity view.
+# Axis-aligned original CE130 boxes use half-unit extents and finite face-contact centres.
+# Actual generated coefficients/bounds and controls must be checked before mutation credit.
+# Valid large-kind type-domain box/far-plane tangent; axis vectors and finite centre feed original CE130.
+# Runtime controls pending.
+# Original volume constructor FPR values match projection words; CC74 and every ordinary nested helper run real.
+# type-domain: large record kind not activated by any shipped producer (Lead03:10).
+# Original CE130 produces record bounds; original CB8C/D07C/CC74 produce volume planes.
+# Trace closure validated; collection lifecycle remains separate.
+# verify: -only 027CEA18 -strictnan -calleesp
+src wwhd_src/agl/DrawPreparation.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+arg! * r5 0
+arg! * r6 0x59300000
+callbudget 60000
+setup * 02757190
+stable 59300000 0xEA4
+stable 59400000 0xC4
+setup * 027389F8 r3=0x59400000
+poke * 59400094 u32 0x3F800000
+poke * 59400098 u32 0x41800000
+poke * 594000AC u32 0x3F800000
+poke * 594000B0 u32 0x00000000
+poke * 594000B4 u32 0x00000000
+poke * 594000B8 u32 0x3F800000
+poke * 594000BC u32 0x3F800000
+poke * 59300000 u32 0x3F800000
+poke * 59300004 u32 0x00000000
+poke * 59300008 u32 0x00000000
+poke * 5930000C u32 0x00000000
+poke * 59300010 u32 0x00000000
+poke * 59300014 u32 0x3F800000
+poke * 59300018 u32 0x00000000
+poke * 5930001C u32 0x00000000
+poke * 59300020 u32 0x00000000
+poke * 59300024 u32 0x00000000
+poke * 59300028 u32 0x3F800000
+poke * 5930002C u32 0x00000000
+src wwhd_src/agl/DrawSpatialGeometry.cpp
+src wwhd_src/agl/DrawResourceParameterPreparation.cpp
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/agl/DrawResourceDirection.cpp
+field * r4+0x23C u32 0
+field * r4+0x240 u32 0
+setup * 027CDE3C r3=0x58000000 r4=0x58100000 r5=0
+real 027CDE3C 025155D8 02515644 025156EC 028E8D4C 028E8D88 028E8DAC 028E8E10 028E8E64 028F423C 028F4384 028F43F8 028F4BE0 028F5E98 028F6038 028F605C 028F60F8
+poke * r4+0x8 u32 0,0x41840000,0xC1840000
+poke * r4+0xC u32 0,0x41840000,0xC1840000
+poke * r4+0x10 u32 0,0xC1780000
+poke * r4+0x4C u32 0x00000000
+poke * r4+0x50 u32 0x00000000
+poke * r4+0x54 u32 0xBF800000
+poke * r4+0x58 u32 0x00000000
+poke * r4+0x5C u32 0x3F800000
+poke * r4+0x60 u32 0x00000000
+poke * r4+0x64 u32 0x3F000000
+poke * r4+0x68 u32 0x3F800000
+poke * r4+0x6C u32 0x3F800000
+poke * r4+0x70 u32 0x3F333333
+poke * r4+0x84 u32 0x3F800000
+poke * r4 u8 0x0F
+poke * r4+0x244 u8 1
+poke * r4+0x74 u32 0x3F000000
+poke * r4+0x78 u32 0xBF000000
+poke * r4+0x7C u32 0xBF000000
+poke * r4+0x80 u32 0x3F000000
+postsetup * 0274D83C r3=0x59400000
+postsetup * 0278CB8C r3=0x59300000 r4=0x59400044 r5=0x594000B0 f1=*59400094 f2=*59400098 f3=*594000C0 f4=*594000AC
+postsetup * 0278D07C r3=0x59300000 r4=0x59300000
+postsetup * 028E90D4 r3=0x59300000 r4=0x59300E18
+postsetup * 0272D680 r3=0x59300E48 r4=0x59300128 r5=0x59300000
+real 02757190 027CC1BC 027389F8 0274D83C 0274D510 0274D750 0274E0B8 0274DEA8 0274DE2C 02738B20 0278CB8C 028F423C 028F5E98 028E8970 0278D07C 0278CC74 028EFFD0 028EFE58 028F61E4 0278D208 028E8D4C 025155D8 028E8E10 0278D234 028E90D4 028E91EC 028E8F64 028E9044 0272D680 028E9108
+postsetup * 027CE130 r3=0x58000000 r4=0x58100000
+real 027CE130
+
+# Original projection helper closure exposed by culling preflight1; prior trace has no gate credit.
+real 0274D6B4 0274DA08 028F43F8 028F4BE0
+
+poke * 594000C0 u32 0x3FC90FDB

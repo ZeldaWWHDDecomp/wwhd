@@ -1,0 +1,14 @@
+# verify: -strictnan -only 0279599C -noclobber
+# ssaorender: the shipped frame sequence "client output frame, then own-texture
+# frame" for the mode-0 core. On the first-frame profile, the admitted per-input value of the client-written word
+# set+0x980 (0 or the original-constructed RenderBuffer 0x5B400000) drives one caller-shaped frame (postsetup
+# renderIfEnabled 02795D7C, mode 0). The client then clears that word, as the game client does every frame: 027310B4
+# stores ensureOutput 0278FC80's result with `stw r3,0x980(r5)`, and ensureOutput returns NULL when the pre-pass is
+# disabled. That store of 0 is made here by the original one-instruction store 027D4E84 (`stw r4,0(r3); blr`, the generated twin of 027A8648, which has no generated body) on that
+# word only. The tested frame therefore uses its own textures: prepareSurfaces sets sampler 0's
+# modes to 1/1/0, and when the previous frame used the client output the depth rebind takes its same-layout arm
+# (SsaoRender.cpp:78-88). Caller-visible checks only; -noclobber.
+include lib2_agl_8_ssaorender_core_first_frame_visible.txt
+postsetup 0279599C 02795D7C r3=0x58000000 r4=0 r5=64 r6=64 r7=*0x5E100008 r8=0 f1=0.25 f2=0.5
+postsetup 0279599C 027D4E84 r3=0x6A881068 r4=0
+real 02795D7C 027D4E84

@@ -1,0 +1,6 @@
+# Mutation companion for initialization stores: allocated payload bytes are
+# uninitialized by the shipped allocator, so retain the validated NULL-heap
+# producer while giving untouched arena bytes one bounded nonzero pattern.
+# verify: -only 027D0474 -strictnan -calleesp -footprint
+include lib2_agl_18/collection_basic_positive256_nullheap.txt
+fill * 0x6A000000 0x100000 0xA5

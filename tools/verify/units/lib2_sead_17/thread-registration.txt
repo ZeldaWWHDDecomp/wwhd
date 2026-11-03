@@ -1,0 +1,21 @@
+# Live manager, registration and destruction; manager links are bounded.
+# verify: -only 027604BC,02760718,027607C0,027609AC -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+field * 101F8B94 u32 0x60100000
+field * 101F8B98 u32 0x60100004
+stable 101F8B94 8
+stable 60100000 0x28
+field * 60100000 u32 0x1015E600
+field * 60100014 u32 0x60100014
+field * 60100018 u32 0x60100014
+field * 6010001C u32 0
+field * 60100020 u32 0,0x60110000
+arg! 02760718 r3 0x60100004
+arg! 027609AC r3 0,0x60110000
+field 027609AC 6011006C u32 0,0x60100014
+field 027609AC 60110080 u32 0,1,2,3,4
+arg! 027607C0 r9 0,32,256,4096
+arg! 027607C0 r10 0,1,4,32
+field * 101F8B5C u32 3
+stable 101F8B5C 4

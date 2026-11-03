@@ -1,0 +1,7 @@
+# AGL#18 027CF2B0 first-draw companion.  The runtime fixture selects the
+# deterministic shipped wrapper at 6A1D99E8; steer its validated lifecycle
+# dirty byte without changing program payloads or comparisons.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_runtime.txt
+poke * 59100000 u8 3
+poke * 6A1D99E8 u8 2

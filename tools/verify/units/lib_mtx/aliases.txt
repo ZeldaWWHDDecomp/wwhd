@@ -1,0 +1,10 @@
+# Partial overlap fixtures exercise the SDK paired load/store ordering.
+src wwhd_src/sdk/mtx/vec.cpp
+src wwhd_src/sdk/mtx/mtx.cpp
+src wwhd_src/sdk/mtx/mtxvec.cpp
+src wwhd_src/sdk/mtx/quat.cpp
+arg! * r3 0x50000020
+arg! * r4 0x50000000,0x50000004,0x50000010,0x50000018,0x50000020,0x50000024,0x50000028,0x50000030,0x50000040
+arg! * r5 0x50000000,0x50000004,0x50000010,0x50000018,0x50000020,0x50000024,0x50000028,0x50000030,0x50000040
+arg! 028E8FB8 r6 2,3,4,8
+arg 028E948C r4 88,89,90,120,121,122,0

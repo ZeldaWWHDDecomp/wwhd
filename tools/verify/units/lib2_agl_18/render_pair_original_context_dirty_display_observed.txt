@@ -1,0 +1,10 @@
+# AGL#18 027CFFF0 display-list observer.  The inherited caller-valid fixture
+# selects the shipped pair program through the original selector and marks it
+# dirty through the original archive API.  drawPair therefore performs the
+# original initialization before reading the program's produced display-list
+# pointer/size.  `-calleesp` makes the C00060E0 dispatch and its arguments part
+# of the comparison; no program or display metadata is fabricated.  Do not use
+# `mockdisplaylist` here: that directive models the three GX2 begin/end/getcur
+# entry points and requires exactly those three addresses.
+# verify: -only 027CFFF0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_pair_original_context_dirty_program.txt

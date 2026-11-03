@@ -1,0 +1,30 @@
+# Opaque owner service owns a bounded AudioServices subobject at+0x40 within0x100bytes.
+# Its shutdown callback may read its own private manager vtable; no actual game callback footprint claim.
+# The empty-manager shutdown body writes no manager bytes before that callback, so its input observation is lifted to entry.
+# verify: -only 02761548,02761448 -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+real 02761448
+callee 02761448 r3=heap60
+callee 0F003100 fixture r3=heap256
+arg! 02761548 r3 0x60250040
+arg! 02761548 r4 0
+field * 60250000 u32 0x60251000
+field * 6025102C u32 0x0F003100
+field * 60250040 u32 0x60252000
+field * 60250050 u32 0x1015E92C
+field * 60250054 u32 0x60250000
+field * 60250058 u32 0
+field * 6025005C u32 0
+field * 60250060 u32 0
+field * 60250064 u32 0x60250064
+field * 60250068 u32 0x60250064
+field * 6025006C u32 0
+field * 60250070 u32 4
+field * 60250078 u8 1
+stable 60250000 0x100
+stable 60251000 0x60
+stable 60252000 0x60
+
+# The direct shutdown profile also observes readiness at the same owning-backend callback.
+arg! 02761448 r3 0x60250040

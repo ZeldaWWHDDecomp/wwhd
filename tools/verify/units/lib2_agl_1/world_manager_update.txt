@@ -1,0 +1,8 @@
+# AGL#1 EnvironmentManager::update (0276B3E0) on the original world: after the original initialize, and (second
+# profile line) after the game's first blend of env.baglenv.
+# verify: -only 0276B3E0 -strictnan -calleesp
+include lib2_agl_1/world_manager_blend.txt
+arg! 0276B3E0 r3 0x59E00000
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

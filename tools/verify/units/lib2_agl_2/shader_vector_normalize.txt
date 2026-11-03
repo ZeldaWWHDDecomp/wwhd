@@ -1,0 +1,13 @@
+# Complete disjoint finite Vec3 inputs/outputs, using the original magnitude helper.
+# verify: -strictnan -calleesp -footprint -only 02772C74
+src wwhd_src/agl/ShaderBindingEditor.cpp
+real 028E8E10
+callee 028E8E10 r3=12
+arg! 02772C74 r3 0x5B800000
+arg! 02772C74 r4 0x5B801000
+fill 02772C74 5B800000 0xC 0xA5
+field 02772C74 5B801000 f32 0,1,-1,0.5,-0.5,1e-20
+field 02772C74 5B801004 f32 0,1,-1,0.5,-0.5,1e-20
+field 02772C74 5B801008 f32 0,1,-1,0.5,-0.5,1e-20
+final 02772C74 5B800000 0xC
+final 02772C74 5B801000 0xC

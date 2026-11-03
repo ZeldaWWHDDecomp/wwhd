@@ -1,0 +1,29 @@
+# AGL#7 02790C28 ShaderSetup::combined, nulltrap profile: objects from original producers (see nt_base.txt); args = render's call at 02791958.
+# verify: -only 02790C28 -strictnan -calleesp
+# include file: lib2_agl_7_nt_base_lead.txt -> install as tools/verify/units/lib2_agl_7/nt_base.txt
+include lib2_agl_7/nt_base.txt
+# Tunable agl::utl::Parameter values (param+0xC; ctor defaults, editable through the parameter IO) and the game-set registry bit (027312D8: +0x1D4 |= 1), as in the enabled-render recipe.
+poke 02790C28 5C020424 u8 1
+poke 02790C28 5C0201D4 u32 0,1
+poke 02790C28 5C020454 u32 0,1
+poke 02790C28 5C020464 u32 0,5,6,7
+poke 02790C28 5C020474 u32 0,1,2
+poke 02790C28 5C020494 u8 0,1
+poke 02790C28 5C0204C4 u8 0,1
+poke 02790C28 5C020514 u8 0,1
+poke 02790C28 5C020524 u8 0,1
+poke 02790C28 5C020554 u8 0,1
+poke 02790C28 5C020594 u8 0,1
+poke 02790C28 5C0205A4 u8 0,1
+real 02791230
+# Previous frame: the shipped caller's render call (02736278 -> 027362DC) runs the original once with the poked parameters,
+# so the frame resources (6A87E2A0 = *(5C0201D0)), their samplers and output textures are the ones render leaves.
+postsetup 02790C28 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0
+# r4 = frame 0, r5 = previous mode (generated), r6 = outputSampler result (+0x6B4 / +0x9D8), r7 = frame->mCombinedSampler (+0x1960),
+# r8 = (+0x1D4 & 1) && !+0x594, r9 = +0x494 byte.
+arg! 02790C28 r3 0x5C020000
+arg! 02790C28 r4 0x6A87E2A0
+arg! 02790C28 r6 0x6A87E954,0x6A87EC78
+arg! 02790C28 r7 0
+arg! 02790C28 r8 0,1
+arg! 02790C28 r9 0,1

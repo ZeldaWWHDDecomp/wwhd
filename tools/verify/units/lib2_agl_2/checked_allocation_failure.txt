@@ -1,0 +1,12 @@
+# Constructors with a NULL receiver whose operator new (0273AD10) returns NULL: the checked allocation-failure arm
+# (heap exhausted). Successful construction is in the main spec and the raw-receiver profile.
+# verify: -strictnan -calleesp -footprint -only 02770D10,027713EC,02774D44,027759BC
+src wwhd_src/agl/LightConstructors.cpp
+src wwhd_src/agl/LightOutputRuntime.cpp
+src wwhd_src/agl/BloomParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+ret! 0273AD10 0
+arg! 02770D10 r3 0
+arg! 027713EC r3 0
+arg! 02774D44 r3 0
+arg! 027759BC r3 0

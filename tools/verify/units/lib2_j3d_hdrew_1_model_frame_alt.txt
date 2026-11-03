@@ -1,0 +1,340 @@
+#.
+# Producer chain per model (all original code, run as setups, snapshotted):
+#   shipped .szs -> 0275ED14 (original Yaz0 decoder; 02759B38 endian identity real) -> FMDL inside the bfres;
+#   ModelDataPipeline_l (0x4C, zeroed as create 027F7B50 leaves it) <- 027F5A5C initializeResource(data, FMDL, root heap):
+#     data+0xC/+0x10 materials (count = FMDL+0x24), material+0x28 mValueStart = prefix sum of FMAT+0x11,
+#     data+0x30 value table (count = sum, +4 = 0x24-byte records, word +0x20; NULL when the sum is 0);
+#   model+0xAC = data (configure 027F4404 at 027F441C);
+#   builder exactly as configure 027F4404 fills it (+0 FMDL, +8/+0xC/+0x10 = 2, +0x14 mode 2 = sole caller 025E3940 r6=2),
+#   027DDFA4 (layout size -> builder+0x24) then 027DE0AC(model+0x14, builder, storage, size) as at 027F4484:
+#     model+0x2A = FMDL+0x24 (027DE184), model+0x34 = packet array (027DE1BC), packet i (0x3C) built by 027DD0BC from
+#     FMAT i: +0 = FMAT (027DD128), +0x2C = FMAT+0x11 words (027DD1F4, filled 027DD250).
+#   Storage: a zeroed region of the layout size (configure takes it from 027EC0AC; contents are written by 027DE0AC).
+include shared/agl_world.txt
+setupsnapshot
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+
+real 027F7654 027F7514 027F74D4 027F7634 027F763C 027F7644 027F764C 027F7614 027F7624 027F7590 027F75A0 027F75B0 027F75DC 027F75EC 027F7604 027F7680 027F785C 027F76E4 027F7690 028F036C 02759B38 0273AD10 0273ADAC 0273B050 0273B0D4 0274FDBC 027556FC 02755FEC 0275EB8C 0275EBC0 0275ED14 027601BC 027601F0 027DAB24 027DABB4 027DABE0 027DAFB4 027DCF64 027DCFF8 027DD024 027DD0BC 027DD5E4 027DD6C0 027DD6EC 027DD738 027DD778 027DDD10 027DDFA4 027DDFDC 027DE048 027DE0AC 027E1474 027E1918 027E194C 027E1974 027E19D4 027ED0B4 027ED268 027F3C38 027F3F8C 027F3F94 027F5A5C 027F7870 027FB168 027FB3B4 02843B1C 02843BC4 02843C5C 02843CA8 028EFE58 028EFF8C 028EFFD0 028F521C 028F5680 028F5914 028F61E4 
+
+# ---- shipped resources (read-only blobs) decoded by the original 0275ED14 ----
+blob * 0x60000000 content/Common/Stage/Ebesso_Room0.szs 0 0x472CE
+stable 0x60000000 0x472CE
+fill * 0x61000000 0x1C4A00 0
+setup * 0275ED14 r3=0x61000000 r4=0x1C4A00 r5=0x60000000
+blob * 0x60100000 content/Common/Stage/Hyrule_Stage.szs 0 0x22C3B
+stable 0x60100000 0x22C3B
+fill * 0x61200000 0x89800 0
+setup * 0275ED14 r3=0x61200000 r4=0x89800 r5=0x60100000
+blob * 0x60200000 content/Common/Object/Shinju_d.szs 0 0x13BDA
+stable 0x60200000 0x13BDA
+fill * 0x61300000 0x6BF00 0
+setup * 0275ED14 r3=0x61300000 r4=0x6BF00 r5=0x60200000
+
+# ---- model A: Ebesso_Room0.szs Room0.bfres FMDL "model" (2 materials, FMAT+0x11 = 1,0) ----
+fill * 0x5E000000 0x4C 0
+setup * 027F5A5C r3=0x5E000000 r4=0x6100218C r5=0x6A000000
+fill * 0x5E001000 0x144 0
+setup * 027F3E04 r3=0x5E001000
+postsetup * 027F4404 r3=0x5E001000 r4=0x5E000000 r5=0 r6=2
+
+# ---- model B: Ebesso_Room0.szs Room0.bfres FMDL "model1" (6 materials, FMAT+0x11 = 5,0,0,3,3,1) ----
+fill * 0x5F000000 0x4C 0
+postsetup * 027F5A5C r3=0x5F000000 r4=0x61002FE4 r5=0x6A000000
+fill * 0x5F001000 0x144 0
+postsetup * 027F3E04 r3=0x5F001000
+postsetup * 027F4404 r3=0x5F001000 r4=0x5F000000 r5=0 r6=2
+
+# ---- model C: Hyrule_Stage.szs FMDL "vr_back_cloud" (3 materials, FMAT+0x11 = 4,4,4) ----
+fill * 0x5A000000 0x4C 0
+postsetup * 027F5A5C r3=0x5A000000 r4=0x6125E18C r5=0x6A000000
+fill * 0x5A001000 0x144 0
+postsetup * 027F3E04 r3=0x5A001000
+postsetup * 027F4404 r3=0x5A001000 r4=0x5A000000 r5=0 r6=2
+
+# ---- model D: Hyrule_Stage.szs FMDL "vr_sky" (2 materials, FMAT+0x11 = 0,0 (value table stays NULL)) ----
+fill * 0x5B000000 0x4C 0
+postsetup * 027F5A5C r3=0x5B000000 r4=0x61260604 r5=0x6A000000
+fill * 0x5B001000 0x144 0
+postsetup * 027F3E04 r3=0x5B001000
+postsetup * 027F4404 r3=0x5B001000 r4=0x5B000000 r5=0 r6=2
+
+# ---- model E: Shinju_d.szs FMDL "vpead" (3 materials, FMAT+0x11 = 3,2,1) ----
+fill * 0x5C000000 0x4C 0
+postsetup * 027F5A5C r3=0x5C000000 r4=0x61302124 r5=0x6A000000
+fill * 0x5C001000 0x144 0
+postsetup * 027F3E04 r3=0x5C001000
+postsetup * 027F4404 r3=0x5C001000 r4=0x5C000000 r5=0 r6=2
+
+# 027DD0BC copies the FMAT parameter block with memcpy (import C000A848 via 028FEAC0): modelled as a real copy
+mockmove C000A848 r3 r4 r5
+
+# tested object: one of the five original-produced models per input
+
+# Complete admitted configure_pipeline real and shared SDK model closure (Lead00:34).
+mockset C000A858 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+real 027F3F8C
+real 027DDFA4
+real 027DDD10
+real 027DABB4
+real 027DAB24
+real 027DE0AC
+real 027DAFB4
+real 027DCFF8
+real 027DD0BC
+real 027DD6C0
+real 027DD6EC
+real 027DD778
+real 027DDFDC
+real 027DE048
+real 027DE4D8
+real 027DE5BC
+real 027DB10C
+real 027DD27C
+real 027DD998
+real 027DB154
+real 027DD394
+real 027DD9B0
+real 027DABE0
+real 027DB134
+real 027DBBB0
+real 028F5914
+real 028F521C
+real 028EFFD0
+real 028EFE58
+real 027F7654
+real 027FB40C
+real 027FB5D4
+real 027FD838
+real 027FBC3C
+real 027FBE4C
+real 027FB6A0
+real 027FB780
+real 027BEBEC
+real 027BEB5C
+real 027FF64C
+real 027FF67C
+real 027BECEC
+real 027BED84
+real 027BEEE4
+real 028E9098
+real 028E892C
+real 027BEEBC
+real 027BEED4
+real 027F28B4
+real 0273AD10
+real 0273AE48
+real 027EC0AC
+real 0273B050
+real 0273B0D4
+real 0273B2F0
+real 0273B310
+real 0273B560
+real 02752A84
+real 02752B0C
+real 02752BEC
+real 02752C74
+real 02752D8C
+real 02752E60
+real 02752F10
+real 02753000
+real 0275315C
+real 02753628
+real 027536B0
+real 027536F4
+real 027537B8
+real 02753880
+real 02753998
+real 02753A34
+real 02753B48
+real 02753C28
+real 02753D6C
+real 027556FC
+real 02755818
+real 0275589C
+real 02755CA4
+real 02755FEC
+real 027600EC
+real 027601BC
+real 027601F0
+real 027561B4
+real 02755FE0
+real 02755F40
+real 02755EC4
+real 02755E7C
+real 02756CC0
+real 027F3E04
+real 02772E8C
+real 027FD6F4
+real 027F3D78
+real 02754754
+real 02760084
+real 027DBBC4
+real 027DBC00
+real 027DCF64
+real 027DD024
+real 027DD298
+real 027DD5E4
+real 027DD738
+real 027DD9AC
+mockmove C000A848 r3 r4 r5
+real 027DBBEC
+ret! C0009DB0 1
+mockzero C00088C8 r3 r4
+real 027FFCBC
+real 027B90AC
+real 02800B0C
+real 027BDD2C
+real 027BDA2C
+real 027BD72C
+real 028012BC
+real 027F7830
+
+# Admitted pipeline frame-registry block from merged configure_pipeline.
+fill * 0x5CEA0000 0x800 0
+fill * 0x5CEA0100 0x200 0
+field * 0x5CEA001C u32 3
+field * 0x5CEA0020 u32 0x5CEA0100
+field * 0x5CEA017C u32 0x5CEA0400
+field * 0x5CEA0400 u32 0x5CEA0500
+field * 0x5CEA0404 u32 0x1016E5A4
+fieldstr * 0x5CEA0500 32 "wii_pipeline","x"
+field * 0x5CEA0200 u32 0x5CEA0410
+field * 0x5CEA0410 u32 0x5CEA0520
+field * 0x5CEA0414 u32 0x1016E5A4
+fieldstr * 0x5CEA0520 32 "wii_pipeline","wii_pipelinf","wii_pipeline_"
+field * 0x5CEA0284 u32 0x5CEA0420
+field * 0x5CEA0420 u32 0x5CEA0540
+field * 0x5CEA0424 u32 0x1016E5A4
+# The third record always names "wii_pipeline": an exact copy of the image literal (fieldstr would give it its
+# empty/generated escapes, i.e. a table without the mandatory record, which is outside the domain).
+copy * 0x5CEA0540 0x1016E80C 13
+stable 0x5CEA0000 0x800
+# Frame registry (027FFCBC's static): source, record count around the found index, four 0x24-byte records.
+field * 0x104B4A68 u32 0x5CEA0000
+field * 0x104B4A6C u32 0,1,2,3
+field * 0x104B4A70 u32 0x5CEB0000
+fill * 0x5CEB0000 0x90 0
+field * 0x5CEB0020 u8 0,1
+field * 0x5CEB0000 u32 0x5CEC0000
+field * 0x5CEB0044 u8 0,1
+field * 0x5CEB0024 u32 0x5CEC0100
+field * 0x5CEB0068 u8 0,1
+field * 0x5CEB0048 u32 0x5CEC0200
+field * 0x5CEB008C u8 0,1
+field * 0x5CEB006C u32 0x5CEC0300
+real 027FFCBC
+real 027B90AC
+real 02800B0C
+real 027BDD2C
+real 027BDA2C
+real 027BD72C
+real 028012BC
+# SafeText termination slot of table 1016E5A4: a no-op blr (027F7830).
+real 027F7830
+# Registry static and its record array are fixture state no mocked call of this profile writes.
+stable 0x104B4A64 0x10
+stable 0x5CEB0000 0x90
+# Each source record's shader program (+0x40) is a complete empty program: every uniform/sampler/attribute
+# table count read by the AGL#15 frame constructors is 0, so their name lookups resolve to -1.
+fill * 0x5CED0000 0x200 0
+stable 0x5CED0000 0x200
+field * 0x5CEA0140 u32 0x5CED0000
+field * 0x5CEA01C4 u32 0x5CED0000
+field * 0x5CEA0248 u32 0x5CED0000
+# The frame is compared too (-footprint): the builder/SafeText stack objects sit at the original offsets.
+stackfill
+
+# Actual queue constructor/instance/dispatcher producer closure, no model-field substitutes.
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440
+real 027F3F94 027F3F8C 027F3C38 027F7870
+real 027F9560 027F90B0 027F9CAC 028EFFD0 02760084 02758724 02758B88
+real 027F93C4 0273B584 027587B4 02759814 02758CA8 0273B050
+real 0275FBD8 027607C0 02760C4C 02760B1C
+real 027581F4 02757C10 0276A628
+real 028EFE58
+real 0273AD10 0273ADAC 0273B0D4 027601F8 027602DC 02752A84
+real 027561B4 02755FE0 02755F40 02755EC4 02755CA4 02755E7C 02755FEC 027600EC 0273AF40 02757B48
+real 0273B2D0 0273B560 02750CDC 02750D00 02753004 027537B8 02753880 02755818 027601BC 027601F0 02760DE8 02760E34 02760E58
+real 027F9890 027F9470 027F9EA4 027F9EB4 027F9E10
+real 027F96F0 02752B0C
+real 0275FEFC 02760338 027F9EA4 027F9EB4
+field * 101F997C u32 0
+field * 101F9980 u32 0
+postsetup * 027F96F0 r3=0x6A000000
+postsetup * 027F9890 r3=*101F997C r4=32 r5=0x6A000000
+
+# Existing approved GHS formatting closure for original packet names.
+real 02759BA0 02759C10 02759C28 028F03F4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C 028F0DBC 028F0DF4 028F10B8 028F1108 028F1158 028F11BC 028F1748 028F1904 028F5228 028F5C88 028F5DE8 028F5DFC 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 028F61D0 028F61E8 028F61FC 028F6228 028F6240 028F6254 028F171C 028F60E0 028F60E8 028F60F0 028F6130 028F6158 028F615C 028F6184 028F61AC 028F61B0 028F61D8 028F61DC 028F61E0 028F61E4 028F61EC 028F61F0 028F61F4 028F61F8 028F6200 028F6230 028F6234 028F6238 028F623C 028F6244 028F6248 028F624C 028F6250 028F6258 027F76E4
+mockmove C0009988 r3 r4 r5
+
+# Full parent/configure/packet/calc dependency bodies; only explicitly permitted caller boundaries stay opaque.
+real 027F4404 027F4098 027F1534 027F1278 027F15A0 0273B7B4 027DFA24
+real 027F4D5C 027DB1D4 027E39F4 027E3CA8 027E4134 027E47BC 027E4D20 027E50A8 027E565C 027E5DA4
+real 027F59B4 027F3B28 027F5018 027F50F8 027F53CC 027F9FB8 027FDFF4 027F4F1C
+# Cursor game callback setter is filled only after observing the original joint-array address.
+callee 0F00A000 fixture r3=0 r4=0
+postsetup * 027F4D5C r3=0x5E001000
+postsetup 027F55FC 027F4F1C r3=0x5E001000
+# Read-only produced asset/model domains as in configure_pipeline; actual writes stay compared.
+stable 0x5E000000 0x4C
+stable 0x5E001000 0x144
+stable 0x5F000000 0x4C
+stable 0x5F001000 0x144
+stable 0x5A000000 0x4C
+stable 0x5A001000 0x144
+stable 0x5B000000 0x4C
+stable 0x5B001000 0x144
+stable 0x5C000000 0x4C
+stable 0x5C001000 0x144
+stable 0x61000000 0x1C4A00
+stable 0x61200000 0x89800
+stable 0x61300000 0x6BF00
+
+# Only game per-draw camera/light matrix publication is steered (025E2BF4).
+field * 104B45F8 f32 1
+field * 104B45FC f32 0.125
+field * 104B4600 f32 0
+field * 104B4604 f32 4
+field * 104B4608 f32 0
+field * 104B460C f32 1.25
+field * 104B4610 f32 0.25
+field * 104B4614 f32 -2
+field * 104B4618 f32 0.125
+field * 104B461C f32 0
+field * 104B4620 f32 0.75
+field * 104B4624 f32 3
+stable 104B45F8 0x30
+field * 104B470C f32 0.75
+field * 104B4710 f32 -0.125
+field * 104B4714 f32 0
+field * 104B4718 f32 1
+field * 104B471C f32 0.125
+field * 104B4720 f32 1
+field * 104B4724 f32 0.25
+field * 104B4728 f32 2
+field * 104B472C f32 0
+field * 104B4730 f32 0.125
+field * 104B4734 f32 1.5
+field * 104B4738 f32 -1
+stable 104B470C 0x30
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+
+# Existing defining binding for allocatePipelineStorage; source is unchanged.
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+# Original property dictionary/sort and lighting matrix copies.
+real 027DF8B4 027F3FB4 027F51B4 028E90D4
+
+# permitted game-side setter, actualjointarray6A87E2A0+8.
+poke * 6A87E2A8 u32 0x0F00A000
+
+# RPX .bss NOBITS initial-state restoration ONLY; root-authorized2026-10-31.
+# Loader initialword0 precedes original constructors; no owner pointer/counter/per-draw override.
+field * 104B45AC u32 0
+
+# Original readonly dictionary key-bit helper; complete lookup closure, no stable mask/snapshot bypass.
+real 027DEFE4

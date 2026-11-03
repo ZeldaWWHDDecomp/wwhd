@@ -1,0 +1,25 @@
+# AGL#3 02779364: source-backed FormattedText128 constructor -> formatter boundary -> delete path.
+# Constructor allocates 0x8C through the bounded allocator model, writes the D vtable,
+# and receives a plain NUL-terminated format string with no conversions.
+# Formatter internals stay mocked/argument-observed; this does not claim format semantics.
+# verify: -strictnan -calleesp -only 02779364
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+real 02779244
+alloc 0273AD10 r3 0x57000000 16
+allocnested 0273AD10
+fieldstr * 5D450000 16 "Plain"
+stable 5D450000 16
+cr 02779364 6 0
+setup 02779364 02779244 r3=0 r4=0x5D450000 r5=0 r6=0 r7=0 r8=0 r9=0 r10=0 f1=0 f2=0 f3=0 f4=0 f5=0 f6=0 f7=0 f8=0 ->57000100
+arg! 02779364 r3 0x57000000
+arg! 02779364 r4 0,1
+footprint 02779364 0
+callee 02759C10 r3=140 r4=heap16 r5=12
+observearg 02759C10 r3+0 13
+observearg 02759C10 r3+139 1
+observearg 02759C10 r5+0 2
+observearg 02759C10 r5+4 8
+observeptr 02759C10 r5+4 8
+observeptr 02759C10 r5+8 32

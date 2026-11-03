@@ -1,0 +1,13 @@
+# Partial API domain: original-produced model data and model graph from accepted packet recipe.
+# Explicit nonpositive count returns before pages/provider consumption. Positive lighting remains separate work.
+# verify: -only 027F53CC -strictnan -calleesp
+include lib2_j3d_hdrew_1_packet_values_alt.txt
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+arg! 027F53CC r3 0x5E001000,0x5F001000,0x5A001000,0x5B001000,0x5C001000
+arg! 027F53CC r4 0
+arg! 027F53CC r5 0,-2
+arg! 027F53CC r6 0
+
+# Real matrix copies preserve the producer graph; mocked copy epochs could clobber borrowed model fields.
+real 027F51B4 028E90D4

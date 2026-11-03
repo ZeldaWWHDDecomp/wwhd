@@ -1,0 +1,21 @@
+# verify: -strictnan -calleesp -footprint -only 02792640
+# Signedperiodbranchcompanion: <=1 skips originaltrig; >1 keeps approved pure math.
+# Lead00:51: genuine angle-related double results from the original pure math chain.
+src wwhd_src/agl/EffectMotion.cpp
+real 028F4BE0
+real 028F43F8
+real 028F5E98
+arg! 02792640 r3 0x58000000
+argf64! 02792640 f1 1,0x3FF0000000000001,0x3FF0000000400000,0.25,1.5
+field 02792640 r3+0x394 f32 0,0.25,0.75,0.99
+field 02792640 r3+0x398 f32 0,0.25,0.75,0.99
+field 02792640 r3+0x39C f32 -3,-0.5,0,0.5,3
+field 02792640 r3+0x3A8 f32 0,0.125,0.5,1.25,-0.5
+field 02792640 r3+0x3AC f32 0,0.125,0.5,1.25,-0.5
+field 02792640 r3+0x430 f32 0,0.5,1,2
+field 02792640 r3+0x434 f32 0,0.5,1,2
+field 02792640 r3+0x444 s32 -1,0,1,2,3,5,127
+field 02792640 r3+0x454 s32 -1,0,1,2,3,5,127
+field 02792640 r3+0x464 f32 0.7,1.3,2.1
+field 02792640 r3+0x468 f32 0.7,1.3,2.1
+field 02792640 r3+0x48C f32 0,0.5,2

@@ -1,0 +1,24 @@
+# Genuine SEAD15 shared empty text; valid disjoint mutable record-name buffers.
+# Lead23:59 original02759B40 initializes104A0CD8; text10147664 empty, table10147634 ->59B98 bare return.
+# verify: -only 0276DAEC -strictnan -calleesp
+src wwhd_src/agl/EnvironmentSetCallbacks.cpp
+setup 0276DAEC 02759B40
+real 02759B40
+real 02759B98
+mockmove C0009988 r3 r4 r5
+arg! 0276DAEC r3 0x5A200000
+field 0276DAEC 5A200188 s32 1,2
+field 0276DAEC 5A20018C u32 0x5A220000
+field 0276DAEC 5A220068 u32 0x5A290000
+field 0276DAEC 5A220070 s32 1,8,32
+field 0276DAEC 5A22014C u32 0x5A290040
+field 0276DAEC 5A220154 s32 1,8,32
+fill 0276DAEC 5A290000 32 65
+fill 0276DAEC 5A290040 32 66
+# Shared immutable descriptor and owned buffer descriptors survive unrelated copy epochs.
+stable 104A0CD8 8
+stable 5A220068 12
+stable 5A22014C 12
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

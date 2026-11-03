@@ -1,0 +1,31 @@
+# verify: -only 0273AB58
+# Execute the actual variadic prefix wrapper. Its fixed prefix format consumes only integer args.
+# Changing the floating-argument-present bit can only save unused FPR slots in that wrapper frame.
+# Run with -only0273AB58; other marked bodies compile as support only.
+# Link own-unit support bindings; the invocation keeps the explicit test-address scope.
+src wwhd_src/sead/Foundation.cpp
+src wwhd_src/sead/Checksum.cpp
+src wwhd_src/sead/MemberDispatch.cpp
+src wwhd_src/sead/RuntimeType.cpp
+src wwhd_src/sead/InputState.cpp
+src wwhd_src/sead/Allocation.cpp
+src wwhd_src/sead/Controller.cpp
+src wwhd_src/sead/ControllerConstruction.cpp
+src wwhd_src/sead/FoundationObjects.cpp
+src wwhd_src/sead/DeviceBuffers.cpp
+src wwhd_src/sead/ReportListeners.cpp
+src wwhd_src/sead/ControllerManager.cpp
+src wwhd_src/sead/Reports.cpp
+src wwhd_src/sead/ControllerMapping.cpp
+src wwhd_src/sead/DeviceConstruction.cpp
+src wwhd_src/sead/TabletMotor.cpp
+src wwhd_src/sead/RemoteInput.cpp
+src wwhd_src/sead/TabletInput.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+real 028F17A8
+ret! 028F1748 -1,0,1,4
+cr 0273AB58 6 0,1
+# Output destinations keep raw-address equality; compare the complete saved variadic argument object.
+callee 028F17A8 r3=0
+callee 028F1748 r3=0 r6=112
+callee 0273B158 r4=112

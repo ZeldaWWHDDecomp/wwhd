@@ -1,0 +1,30 @@
+# verify: -strictnan -only 0288A410
+# Finite archive fallback with an entry matching the requested identifier.
+src wwhd_src/nw/snd/SoundRuntimeSupport.cpp
+src wwhd_src/nw/snd/SequenceRuntimeSupport.cpp
+src wwhd_src/nw/snd/SoundOutputRuntime.cpp
+src wwhd_src/nw/snd/MemorySoundArchive.cpp
+src wwhd_src/nw/snd/TrackChannelRuntime.cpp
+src wwhd_src/nw/snd/SequenceResourceLoad.cpp
+arg! 0288A410 r4 0,1
+ret! 0288EEFC 0,1
+callee 0288EEFC r5=inout12
+mockfield 0288EEFC r5+0x4 s32 -1,0,16
+ret! 0288E8F4 1
+ret! 0288EE74 1
+callee 0288EE74 r5=inout8
+callee 028AA7F4 r3=out12
+mockfield 028AA7F4 r3+0 u32 0x59000000
+field 0288A410 59000000 u32 1,2
+stable 59000000 4
+callee 028AA8FC r4=out8
+ret! 028AA8FC 0,1
+mockfield 028AA8FC r4+0 u32 0
+mockfield 028AA8FC r4+0x4 u32 0,0x59001000
+
+# Explicit forwarded receiver and SDK scalar facts; no shared metadata edited.
+callee 028F6A30 r3=0
+callee 028A370C r3=0
+callee C0006F20 r4=0
+callee 0288AD60 r4=44
+callee 0288BD14 r4=44

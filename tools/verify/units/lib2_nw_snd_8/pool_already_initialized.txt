@@ -1,0 +1,100 @@
+# An initialized pool preserves its existing active list and does not construct new voices.
+# verify: -only 0289F3B8 -strictnan -calleesp
+src wwhd_src/nw/snd/WaveArchiveReader.cpp
+src wwhd_src/nw/snd/AudioCurves.cpp
+src wwhd_src/nw/snd/AudioEventLog.cpp
+src wwhd_src/nw/snd/PlaybackVoiceParameters.cpp
+src wwhd_src/nw/snd/PlaybackVoicePool.cpp
+src wwhd_src/nw/snd/PlaybackVoice.cpp
+src wwhd_src/nw/snd/AdpcmDecode.cpp
+src wwhd_src/nw/snd/WaveResourceResolver.cpp
+src wwhd_src/nw/snd/AudioWorkerRun.cpp
+src wwhd_src/nw/snd/PlaybackVoiceUpdate.cpp
+src wwhd_src/nw/snd/PlaybackMix.cpp
+stackfill
+real 0286DA70
+real 0286DA9C
+real 0286DACC
+real 0286DB18
+real 0289D254
+real 0289D3B4
+real 0289D4A4
+real 0289D598
+real 0289D6B0
+real 0289F364
+real 0289F45C
+real 0289F56C
+real 0289F628
+real 0289F758
+real 0289F7B0
+arg! 0289F3B0 r3 0x104BBE70
+arg! 0289F3B8 r3 0x104BBE70
+arg! 0289F45C r3 0x104BBE70
+arg! 0289F4E4 r3 0x104BBE70
+arg! 0289F56C r3 0x104BBE70
+arg! 0289F628 r3 0x104BBE70
+arg! 0289F694 r3 0x104BBE70
+arg! 0289F758 r3 0x104BBE70
+arg! 0289F7B0 r3 0x104BBE70
+arg! 0289F7B4 r3 0x104BBE70
+arg! 0289F82C r3 0x104BBE70
+arg! 0289F880 r3 0x104BBE70
+arg! 0289F8BC r3 0x104BBE70
+field * 104BBE70 u8 1
+field * 104BBE74 u32 1
+field * 104BBE78 u32 0x5F4104D0
+field * 104BBE7C u32 0x5F4104D0
+field * 104BBE80 u32 0
+field * 104BBE84 u32 0x104BBE84
+field * 104BBE88 u32 0x104BBE84
+field * 104BBE8C u32 1
+field * 5F4104D0 u32 0x104BBE78
+field * 5F4104D4 u32 0x104BBE78
+field * 5F410368 s32 1,2
+field * 5F41036C u32 0,0x0F080001
+field * 5F410370 u32 0,0x12345678
+field * 5F410374 u8 1
+field * 5F410375 u8 1
+field * 5F410376 u8 1
+field * 5F410380 u16 0
+field * 5F4103A0 s32 0,63,127
+# List topology changes only through the approved original list functions; these helpers do not touch callback ownership.
+stable 104BBE70 32
+stable 5F410368 12
+stable 5F410374 1
+stable 5F4104D0 8
+callee 0F080001 fixture r3=0 r4=0 r5=0
+callee 0286DA70 r4=4
+callee 0286DB18 r4=4
+ret! 028A5DE4 0,1
+# Priority insertion receives a detached, allocated candidate; reordering/releasing receives the active node.
+arg! 0289F628 r4 0x5F430000
+field * 5F430368 s32 1
+field * 5F430374 u8 1
+field * 5F4303A0 s32 0,63,127
+field * 5F4304D0 u32 0
+field * 5F4304D4 u32 0
+arg! 0289F758 r4 0x5F410000
+arg! 0289F7B0 r4 0x5F410000
+arg! 0289F8BC r4 0x5F410000
+field 0289F758 5F410368 s32 0
+field 0289F7B0 5F410368 s32 0
+arg! 0289F56C r4 0,63,127
+arg! 0289F694 r4 -1,0,1,2,3
+arg! 0289F694 r5 0,63,127
+arg! 0289F694 r6 0,0x0F080001
+arg! 0289F694 r7 0,0x12345678
+arg! 0289F694 r8 0
+# The list traversal's opaque playback check uses the allocated-but-not-running state and cannot release it.
+field 0289F82C 5F410376 u8 0
+# Initialization starts with both lists empty and a separately owned two-voice storage extent.
+field 0289F3B8 104BBE70 u8 0
+field 0289F3B8 104BBE74 u32 0
+field 0289F3B8 104BBE78 u32 0x104BBE78
+field 0289F3B8 104BBE7C u32 0x104BBE78
+arg! 0289F3B8 r4 0x5F420000
+arg! 0289F3B8 r5 0,1239,1240,1241,2479,2480,2481
+field 0289F3B8 104BBE70 u8 1
+field 0289F3B8 104BBE74 u32 1
+field 0289F3B8 104BBE78 u32 0x5F4104D0
+field 0289F3B8 104BBE7C u32 0x5F4104D0

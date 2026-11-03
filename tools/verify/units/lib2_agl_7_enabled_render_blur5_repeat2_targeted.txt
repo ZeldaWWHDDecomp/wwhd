@@ -1,0 +1,10 @@
+# AGL#7 02791230 targeted in-domain input for blur state/loop survivors. Keep out of credited profile set until seed-1/7 -nulltrap baselines and mutation outcomes are recorded.
+# verify: -only 02791230 -strictnan -calleesp -nulltrap
+include lib2_agl_7/enabled_render_blur5_repeat2_targeted_base.txt
+real 02791230
+postsetup 02791230 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0
+observearg 0274FEB0 r3+0 116
+observearg 0274F964 r3+0 24
+observearg 0274F964 r4+0 24
+observearg 027BF048 r6+0 8
+observearg 027BEFE4 r4+0 256

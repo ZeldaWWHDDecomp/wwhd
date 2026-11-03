@@ -1,0 +1,7 @@
+# AGL#18 027CD8EC deterministic render-time profile.  The owner changes the
+# constructor word 00164220 to 00164120 before any renderer call; record bit 0
+# is the producer API's base state.
+# verify: -only 027CD8EC -strictnan -calleesp -footprint
+include lib2_agl_18/render_resource_original_context.txt
+poke * 59600004 u32 0x00164120
+poke * 59100000 u8 1

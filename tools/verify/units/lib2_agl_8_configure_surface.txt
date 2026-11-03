@@ -1,0 +1,21 @@
+# verify: -strictnan -calleesp -footprint -only 027966F0
+# Complete shadow-map placement; configure own fields and observe the control-binding ABI.
+# Lead00:27 identifies original027A063C as bareblr; no external lifecycle is claimed.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+real 027A063C
+arg! 027966F0 r3 0x58000000
+fill 027966F0 0x58000000 0xBE4 0
+arg! 027966F0 r4 0,1,0xFFFFFFFF
+arg! 027966F0 r5 0,0x59000000
+fill 027966F0 0x59000000 0x40 0

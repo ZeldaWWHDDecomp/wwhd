@@ -3,6 +3,7 @@
  * HD teardown countdowns live in the expanded emitter tail. */
 #pragma once
 #include "wwhd.h"
+#include "JSystem/JParticle/JPAEmitter_gpu.h"
 namespace jpa_emitter_calc {
 enum : u32 {
     JPAEmtrStts_StopEmit = 1, JPAEmtrStts_StopCalc = 2,
@@ -60,9 +61,14 @@ struct JPABaseEmitter {
     u8 pad238[0x24c - 0x238];
     be<f32> mEmitCount, mRateStepTimer;
     be<u32> mFlags;
-    u8 pad258[0x3d4 - 0x258];
-    be<u8> mDeleteCountdown, mClearCountdown;
-    u8 pad3d6[0x3fc - 0x3d6];
+    union {
+        struct {
+            u8 pad258[0x3d4 - 0x258];
+            be<u8> mDeleteCountdown, mClearCountdown;
+            u8 pad3d6[0x3fc - 0x3d6];
+        };
+        JPAEmitterGpuState mGpuState;  /* HD render state, 0x258..0x3FC */
+    };
 };
 WWHD_OFFSET(JPABaseEmitter, mEmitterScale, 8);
 WWHD_OFFSET(JPABaseEmitter, mEmitterTranslation, 0x14);
@@ -75,6 +81,8 @@ WWHD_OFFSET(JPABaseEmitter, mTick, 0x194);
 WWHD_OFFSET(JPABaseEmitter, mRandomSeed, 0x1ec);
 WWHD_OFFSET(JPABaseEmitter, mFlags, 0x254);
 WWHD_OFFSET(JPABaseEmitter, mDeleteCountdown, 0x3d4);
+WWHD_OFFSET(JPABaseEmitter, mGpuState, 0x258);
+static_assert(offsetof(JPABaseEmitter, mGpuState) + offsetof(JPAEmitterGpuState, mDeleteCountdown) == 0x3d4, "gpu state countdown");
 static_assert(sizeof(JPABaseEmitter) == 0x3fc);
 
 struct CallbackVtable { be<u32> slots[10]; };
@@ -87,13 +95,29 @@ struct KeyVtable {
 struct JPAKeyBlock { gptr<KeyVtable> __vtbl; };
 struct KeyFrame { be<f32> time; be<f32> values[3]; };
 struct JPADataBlockLinkInfo {
-    u8 _00[0x14]; gptr<gptr<JPAKeyBlock>> keyBlocks;
-    u8 _18[0xA]; be<u8> keyNum;
+    union {
+        u8 _00[0x14];
+        struct { gptr<void> mpDynamics, mpBaseShape, mpExtraShape, mpSweepShape, mpExTexShape; };
+    };
+    gptr<gptr<JPAKeyBlock>> keyBlocks;
+    union {
+        u8 _18[0xA];
+        struct { gptr<void> fieldBlocks; gptr<be<u16>> textureMap; be<u8> fieldNum, textureNum; };
+    };
+    be<u8> keyNum;
 };
 struct EmitterLink { gptr<JPABaseEmitter> object; u8 _04[8]; gptr<EmitterLink> next; };
 struct EmitterList { gptr<EmitterLink> first; u8 _04[8]; };
 struct JPAEmitterManager {
-    u8 _00[0x50]; EmitterList mEmtrGroup[16];
+    union {
+        u8 _00[0x50];
+        struct {
+            EmitterList mPtclPool, mEmtrPool, mFieldPool;
+            be<u32> mPtclNum, mEmtrNum, mFieldNum;
+            gptr<void> pResMgrArray[8];
+        };
+    };
+    EmitterList mEmtrGroup[16];
     void calc(u8 group);
 };
 struct SinCosEntry { be<f32> sin, cos; };
@@ -101,7 +125,10 @@ struct JPAEmitterInfo {
     be<u32> mRandom; gptr<JPABaseEmitter> mpCurEmitter;
     be<f32> mEmitterGlobalSR[12], mEmitterGlobalRot[12], mGlobalRot[12], mEmitterDirMtx[12];
     be<f32> mEmitterGlobalScale[3], mEmitterTranslation[3], mEmitterGlobalCenter[3], mPublicScale[3];
-    u8 _0F8[0x134 - 0xF8];
+    union {
+        u8 _0F8[0x134 - 0xF8];
+        struct { be<f32> mViewPosition[3][3], mCameraFovy[3], mCameraAspect[3]; };  /* per view (HD) */
+    };
     be<f32> mVolumePos[3], mVelOmni[3], mVelAxis[3], mVolumeSize;
     be<s32> mVolumeEmitCount;
     be<u32> mVolumeEmitIdx, mVolumeEmitAngleCount, mVolumeEmitXCount, mVolumeEmitAngleMax, mDivNumber;
@@ -114,11 +141,16 @@ WWHD_OFFSET(JPABaseEmitter, mFieldManager, 0x19C);
 WWHD_OFFSET(JPABaseEmitter, mDraw, 0x9C);
 WWHD_OFFSET(JPADataBlockLinkInfo, keyBlocks, 0x14);
 WWHD_OFFSET(JPADataBlockLinkInfo, keyNum, 0x22);
+WWHD_OFFSET(JPADataBlockLinkInfo, mpExtraShape, 8);
+WWHD_OFFSET(JPADataBlockLinkInfo, textureMap, 0x1C);
+WWHD_OFFSET(JPADataBlockLinkInfo, fieldNum, 0x20);
 WWHD_SIZE(JPADataBlockLinkInfo, 0x23);
 WWHD_OFFSET(EmitterLink, next, 0xC);
 WWHD_SIZE(EmitterLink, 0x10);
 WWHD_SIZE(EmitterList, 0xC);
 WWHD_OFFSET(JPAEmitterManager, mEmtrGroup, 0x50);
+WWHD_OFFSET(JPAEmitterManager, mPtclNum, 0x24);
+WWHD_OFFSET(JPAEmitterManager, pResMgrArray, 0x30);
 WWHD_SIZE(JPAEmitterManager, 0x110);
 WWHD_SIZE(CallbackVtable, 0x28);
 WWHD_SIZE(EmitterCallback, 4);
@@ -132,6 +164,11 @@ WWHD_OFFSET(JPAEmitterInfo, mEmitterGlobalScale, 0xC8);
 WWHD_OFFSET(JPAEmitterInfo, mVolumePos, 0x134);
 WWHD_OFFSET(JPAEmitterInfo, mVolumeEmitCount, 0x15C);
 WWHD_SIZE(JPAEmitterInfo, 0x174);
+WWHD_OFFSET(JPAEmitterInfo, mViewPosition, 0xF8);
+WWHD_OFFSET(JPAEmitterInfo, mCameraFovy, 0x11C);
+WWHD_OFFSET(JPAEmitterInfo, mCameraAspect, 0x128);
+// The emitter info (104B5730) defined in JPA_emitter_calc.cpp, shared with the JS-JParticle#1 emitter sources.
+extern JPAEmitterInfo& emtrInfo;
 } // namespace jpa_emitter_calc
 void JPADeleteAllParticleHD(jpa_emitter_calc::JPABaseEmitter*, u32);
 void JPACalcKey(jpa_emitter_calc::JPABaseEmitter*);

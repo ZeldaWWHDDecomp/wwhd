@@ -1,0 +1,20 @@
+# Companion of lib2_j3d_hdrew_1_batch_heap_slots_20261031 (replaces the wider observation of the slotupd_observe_*
+# specs): the original surface constructor 027BE114 runs, and only the bytes the callees read are observed.
+# verify: -only 027F84A4,027F869C,027F8974 -strictnan -calleesp
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+include lib2_j3d_hdrew_1_batch_heap_slots_20261031.txt
+real 027BE114
+# drawSlotUpdateSurface 027A90AC -> 027A8D08: surface +8/+0xC/+0x78/+0x79 (027A8D44..), +0x94..+0xA3 via 027BE53C ->
+# 027BE494 -> 027BE2C4; source +0..+0x13 (lfs 0..0xC(r26), 0274E364 lwz 0x10); scale pair +0/+4 (lfs 0/4(r30)).
+observearg 027A90AC r3+8 8
+observearg 027A90AC r3+0x78 2
+observearg 027A90AC r3+0x94 16
+observearg 027A90AC r4+0 20
+observearg 027A90AC r5+0 8
+# activateSlotUpdateBuffer 0274D690 -> RenderBuffer bind 027B9D00 reads the colour targets +0x1C..+0x38 and the depth
+# target +0x3C of the bound buffer.
+observearg 0274D690 r3+0x1C 36
+# updateSlot: slot 4 is a slot index the shipped callers pass (025A23C4 etc.); it is not created yet here (word 0 from
+# initializeSlots, as after releaseSlot(4) at 025A23B4), so the original createWord builds it from the dimensions record.
+arg! 027F84A4 r4 3,4,12,15,16

@@ -1,0 +1,8 @@
+# Type-domain caller-owned dimensions: explicit quiet NaN/ordinary floats, no private slot/handle writes.
+# Original unsigned conversion's unordered subtract arm mapsfctiwz(NaN)+0x80000000 to0.
+# Current documented mocksurfacesize models zero width/height (Lead10:54); no huge allocation requested.
+# Diagnostic admission first: establishes no game/shipped NaN claim; only clean original API inputs can be credited.
+# verify: -only 027F81C0 -strictnan -calleesp
+include lib2_j3d_hdrew_1_slot_create_all_initialized_depth_20261030.txt
+field * 0x5E000000 u32 0x44A00000,0x7FC00000
+field * 0x5E000004 u32 0x44340000,0x7FC00000

@@ -1,0 +1,94 @@
+# AGL#7 finite direction-domain profile for CameraOverride::setDirection.
+# verify: -only 0278D2E8 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+stackfill
+stable 104A0934 0x18
+real 02756E3C 02757190 0278D81C 0278D2E8 02791D00 02791C68 02791C90 025155D8 028E8D4C 028E8E10 0274CCC4 028E90D4 0274CCB0 028E8970 028E8B04
+arg! 0278D2E8 r3 0x56800000
+fill 0278D2E8 56800000 0x74 0
+setup 0278D2E8 02757190
+setup 0278D2E8 02756E3C
+setup 0278D2E8 0278D81C r3=0x56800000
+# Varied finite directions exercise all three input components; the 0x100B0/C0
+# values are the approved block-2 witnesses. 0x10130/140/150 straddle the
+# block-1 near-zero cross-length threshold.
+arg! 0278D2E8 r4 0x56810060,0x568100D0,0x568100E0,0x568100F0,0x56810100,0x56810110,0x56810120,0x568100B0,0x568100C0,0x56810130,0x56810140,0x56810150
+fill 0278D2E8 56810060 0xC 0
+field 0278D2E8 56810060 u32 0
+field 0278D2E8 56810064 u32 0x60AD78EC
+field 0278D2E8 56810068 u32 0x60AD78EC
+fill 0278D2E8 568100D0 0xC 0
+field 0278D2E8 568100D0 u32 0x3F800000
+field 0278D2E8 568100D4 u32 0x40000000
+field 0278D2E8 568100D8 u32 0x40400000
+fill 0278D2E8 568100E0 0xC 0
+field 0278D2E8 568100E0 u32 0xBF800000
+field 0278D2E8 568100E4 u32 0x3F000000
+field 0278D2E8 568100E8 u32 0xC0000000
+fill 0278D2E8 568100F0 0xC 0
+field 0278D2E8 568100F0 u32 0x3E800000
+field 0278D2E8 568100F4 u32 0xBF400000
+field 0278D2E8 568100F8 u32 0x3F000000
+fill 0278D2E8 56810100 0xC 0
+field 0278D2E8 56810100 u32 0x3F800000
+field 0278D2E8 56810104 u32 0x3F800000
+field 0278D2E8 56810108 u32 0x3F800000
+fill 0278D2E8 56810110 0xC 0
+field 0278D2E8 56810110 u32 0
+field 0278D2E8 56810114 u32 0
+field 0278D2E8 56810118 u32 0x3F800000
+fill 0278D2E8 56810120 0xC 0
+field 0278D2E8 56810120 u32 0x40000000
+field 0278D2E8 56810124 u32 0xC0400000
+field 0278D2E8 56810128 u32 0x40800000
+fill 0278D2E8 568100B0 0xC 0
+field 0278D2E8 568100B0 u32 0
+field 0278D2E8 568100B4 u32 0x28FEA5D6
+field 0278D2E8 568100B8 u32 0x62B3C333
+fill 0278D2E8 568100C0 0xC 0
+field 0278D2E8 568100C0 u32 0
+field 0278D2E8 568100C4 u32 0x237745FB
+field 0278D2E8 568100C8 u32 0x67FCFD33
+fill 0278D2E8 56810130 0xC 0
+field 0278D2E8 56810130 u32 0x3F800000
+field 0278D2E8 56810134 u32 0x34000000
+fill 0278D2E8 56810140 0xC 0
+field 0278D2E8 56810140 u32 0x3F800000
+field 0278D2E8 56810144 u32 0x3356BF95
+fill 0278D2E8 56810150 0xC 0
+field 0278D2E8 56810150 u32 0x3F800000
+field 0278D2E8 56810154 u32 0xB4000000
+final 0278D2E8 56800000 0x74
+final 0278D2E8 56810060 0xC
+final 0278D2E8 568100D0 0xC
+final 0278D2E8 568100E0 0xC
+final 0278D2E8 568100F0 0xC
+final 0278D2E8 56810100 0xC
+final 0278D2E8 56810110 0xC
+final 0278D2E8 56810120 0xC
+final 0278D2E8 568100B0 0xC
+final 0278D2E8 568100C0 0xC
+final 0278D2E8 56810130 0xC
+final 0278D2E8 56810140 0xC
+final 0278D2E8 56810150 0xC
+final 0278D2E8 104A041C 0x30
+final 0278D2E8 104A0928 0x30

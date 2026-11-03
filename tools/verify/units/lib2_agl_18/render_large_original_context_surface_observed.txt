@@ -1,0 +1,12 @@
+# AGL#18 027CF2B0 observable surface-copy companion.  Retain the original
+# caller-owned source/target objects, but give their image, mip-image, and cache
+# fields distinct valid non-null backing addresses so each same-surface copy is
+# observable in the stable record footprint.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_surface_domain.txt
+poke * 591000B4 u32 0x59300000,0x59400000
+poke * 591000BC u32 0x59400000,0x59300000
+poke * 59100338 u32 0x59600000
+poke * 59100340 u32 0x59600100
+poke * 591003E4 u32 0x59600200
+poke * 591003EC u32 0x59600300

@@ -1,0 +1,54 @@
+# Bounded zero-handle early-return profile for PipelineRenderState::copySlot.
+# initializeSlots source explicitly writes mWord=0 for every valid slot 0..18.
+# Only those 19 fields are initialized/asserted here; all other object bytes remain
+# seed-derived unspecified memory and are not claimed as post-initializeSlots state.
+# The zero-handle return precedes owner/object, callback, applyState and helper reads.
+# verify: -only 027F8974 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+arg! 027F8974 r3 0x62000000
+arg! 027F8974 r4 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+arg! 027F8974 r5 0
+arg! 027F8974 r6 0
+field 027F8974 0x6200001C u32 0
+field 027F8974 0x62000040 u32 0
+field 027F8974 0x62000064 u32 0
+field 027F8974 0x62000088 u32 0
+field 027F8974 0x620000AC u32 0
+field 027F8974 0x620000D0 u32 0
+field 027F8974 0x620000F4 u32 0
+field 027F8974 0x62000118 u32 0
+field 027F8974 0x6200013C u32 0
+field 027F8974 0x62000160 u32 0
+field 027F8974 0x62000184 u32 0
+field 027F8974 0x620001A8 u32 0
+field 027F8974 0x620001CC u32 0
+field 027F8974 0x620001F0 u32 0
+field 027F8974 0x62000214 u32 0
+field 027F8974 0x62000238 u32 0
+field 027F8974 0x6200025C u32 0
+field 027F8974 0x62000280 u32 0
+field 027F8974 0x620002A4 u32 0
+final 027F8974 0x6200001C 4
+final 027F8974 0x62000040 4
+final 027F8974 0x62000064 4
+final 027F8974 0x62000088 4
+final 027F8974 0x620000AC 4
+final 027F8974 0x620000D0 4
+final 027F8974 0x620000F4 4
+final 027F8974 0x62000118 4
+final 027F8974 0x6200013C 4
+final 027F8974 0x62000160 4
+final 027F8974 0x62000184 4
+final 027F8974 0x620001A8 4
+final 027F8974 0x620001CC 4
+final 027F8974 0x620001F0 4
+final 027F8974 0x62000214 4
+final 027F8974 0x62000238 4
+final 027F8974 0x6200025C 4
+final 027F8974 0x62000280 4
+final 027F8974 0x620002A4 4
+
+# Repair: run own source-derived bounded lookup instead of unconstrained mocked return.
+real 027F81A4

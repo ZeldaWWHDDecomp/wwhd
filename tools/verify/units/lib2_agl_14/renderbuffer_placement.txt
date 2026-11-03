@@ -1,0 +1,43 @@
+# verify: -only 027B95B4,027B958C -calleesp -strictnan
+# Placement-only complete0x40 RenderBuffer; no allocator path, surface helper, or stopped closure.
+# Clear starts from exact original constructor state; all typed ColorSurface*/DepthSurface* slots NULL.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B954C
+real 027B958C
+real 027B95B4
+field * 0x58000000 u32 0xA5A5A5A5
+field * 0x58000004 u32 0xA5A5A5A5
+field * 0x58000008 u32 0xA5A5A5A5
+field * 0x5800000C u32 0xA5A5A5A5
+field * 0x58000010 u32 0xA5A5A5A5
+field * 0x58000014 u32 0xA5A5A5A5
+field * 0x58000018 u32 0xA5A5A5A5
+field * 0x5800001C u32 0xA5A5A5A5
+field * 0x58000020 u32 0xA5A5A5A5
+field * 0x58000024 u32 0xA5A5A5A5
+field * 0x58000028 u32 0xA5A5A5A5
+field * 0x5800002C u32 0xA5A5A5A5
+field * 0x58000030 u32 0xA5A5A5A5
+field * 0x58000034 u32 0xA5A5A5A5
+field * 0x58000038 u32 0xA5A5A5A5
+field * 0x5800003C u32 0xA5A5A5A5
+arg! 027B95B4 r3 0x58000000
+setup 027B958C 027B95B4 r3=0x58000000
+arg! 027B958C r3 0x58000000

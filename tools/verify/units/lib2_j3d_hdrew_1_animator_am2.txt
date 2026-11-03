@@ -1,0 +1,439 @@
+# verify: -only 027F55FC -strictnan -calleesp -footprint
+# J3D-HDREW#1 animator family: 027F55FC ModelPipeline_l::advanceFrame over the shipped Am2 actor model with
+# its two original HD animators attached (BTK -> ModelData+0x44, BRK -> ModelData+0x48), all produced by original code.
+# Route:
+#   * world: lib2_j3d_hdrew_1_animator_world.txt = shared/agl_world.txt + the current-thread TLS model right after
+#     the root heap, 02756140 real (the inits require isCurrentSolidHeap, 025E2AF8).
+#   *.txt (frame registry, queue, closures, matrices) WITHOUT its
+#     five stage models, their model-A cursor poke/callee and stables (the tested model here is the Am2 model).
+#   * GraphicsDevice words during setup and the resource bootstrap of
+#     lib2_j3d_hdrew_1_shared_resarchive.txt copied below WITHOUT its thread block (the world
+#     already installs it; a second ThreadManager::create would be a duplicate boot step).
+#   * Am2.szs (game/ content/Common/Pack/szs_permanent0.pack entry Am2.szs, Yaz0 SARC 0x9E000: am2.sharcfb, Am2.bfres at
+#     +0x44000) as the completed load at 0x58400000, SharcArchiveRes rebuilt at the lookup's object, then the original
+#     ResourceControlHD::setArchive 02604EB4 with name "Am2" (the actor's literal 100070E4; SafeString vtable 100526DC),
+#     whose loadResourceTable 02604550 runs the original loaders: 02608308 (BDL 0x12 -> 0272D384 -> 027F7B50
+#     ModelDataPipeline_l), 026093A0 (BRK 0x15), 02608F80 (BTK 0x18). The three objects come from the original getRes
+#     026066C4 with the actor's indices (useHeapInit 0204FA28: 0x12, 0x18, 0x15).
+#   * actor heap as fopAcM_entrySolidHeap_ 025D6174 does it on the HD path (size 0 = createSolidHeapToCurrent(0, parent,
+#     HeapAlign 0x100) at 025D6248/025D632C; parent = the world's root heap), then useHeapInit's order: model object
+# on the getRes
+#     model data; BTK ctor 025E7C6C + init 025E7CE0, BRK ctor 025E80D0 + init 025E8154 with useHeapInit's arguments
+#     (0204FB38..0204FB58 / 0204FBB0..0204FBD0: r6=1 r7=2 r8=0 r9=-1 r10=0 f1=1.0; the stack word is not read by the
+#     inits); restoreCurrentHeap 025E37D8 + adjustSolidHeap 025E3678 as 025D6174 does after the callback.
+#   * per frame: calc 027F4D5C (McaMorf calc in Execute), then daAM2_Draw 0204C5F8's order: brk entry 025E83FC, btk
+#     entry 025E7FC4 (frame 0 = getFrame() after init), then entryDL -> mDoExt_drawModel 025E2BF4 -> 027F55FC (the tested
+#     call). J3DModel::entry 027F4F1C (draw-list registration inside entryDL) is not run: it dispatches through the
+#     game-side packet draw-buffer method table, which this profile does not produce; 027F55FC does not read it.
+#   * .bss: mDoExt_SaveCurrentHeap 1048CED8 = 0 (NOBITS loader zero; restoreCurrentHeap clears it after each use).
+# Gate: n1000 seeds 1/7 -nulltrap, 20/20 at n20.
+include lib2_j3d_hdrew_1_animator_world.txt
+setupsnapshot
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+
+real 027F7654 027F7514 027F74D4 027F7634 027F763C 027F7644 027F764C 027F7614 027F7624 027F7590 027F75A0 027F75B0 027F75DC 027F75EC 027F7604 027F7680 027F785C 027F76E4 027F7690 028F036C 02759B38 0273AD10 0273ADAC 0273B050 0273B0D4 0274FDBC 027556FC 02755FEC 0275EB8C 0275EBC0 0275ED14 027601BC 027601F0 027DAB24 027DABB4 027DABE0 027DAFB4 027DCF64 027DCFF8 027DD024 027DD0BC 027DD5E4 027DD6C0 027DD6EC 027DD738 027DD778 027DDD10 027DDFA4 027DDFDC 027DE048 027DE0AC 027E1474 027E1918 027E194C 027E1974 027E19D4 027ED0B4 027ED268 027F3C38 027F3F8C 027F3F94 027F5A5C 027F7870 027FB168 027FB3B4 02843B1C 02843BC4 02843C5C 02843CA8 028EFE58 028EFF8C 028EFFD0 028F521C 028F5680 028F5914 028F61E4 
+
+# 027DD0BC copies the FMAT parameter block with memcpy (import C000A848 via 028FEAC0): modelled as a real copy
+mockmove C000A848 r3 r4 r5
+
+# tested object: one of the five original-produced models per input
+
+# Complete admitted configure_pipeline real and shared SDK model closure (Lead00:34).
+mockset C000A858 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+real 027F3F8C
+real 027DDFA4
+real 027DDD10
+real 027DABB4
+real 027DAB24
+real 027DE0AC
+real 027DAFB4
+real 027DCFF8
+real 027DD0BC
+real 027DD6C0
+real 027DD6EC
+real 027DD778
+real 027DDFDC
+real 027DE048
+real 027DE4D8
+real 027DE5BC
+real 027DB10C
+real 027DD27C
+real 027DD998
+real 027DB154
+real 027DD394
+real 027DD9B0
+real 027DABE0
+real 027DB134
+real 027DBBB0
+real 028F5914
+real 028F521C
+real 028EFFD0
+real 028EFE58
+real 027F7654
+real 027FB40C
+real 027FB5D4
+real 027FD838
+real 027FBC3C
+real 027FBE4C
+real 027FB6A0
+real 027FB780
+real 027BEBEC
+real 027BEB5C
+real 027FF64C
+real 027FF67C
+real 027BECEC
+real 027BED84
+real 027BEEE4
+real 028E9098
+real 028E892C
+real 027BEEBC
+real 027BEED4
+real 027F28B4
+real 0273AD10
+real 0273AE48
+real 027EC0AC
+real 0273B050
+real 0273B0D4
+real 0273B2F0
+real 0273B310
+real 0273B560
+real 02752A84
+real 02752B0C
+real 02752BEC
+real 02752C74
+real 02752D8C
+real 02752E60
+real 02752F10
+real 02753000
+real 0275315C
+real 02753628
+real 027536B0
+real 027536F4
+real 027537B8
+real 02753880
+real 02753998
+real 02753A34
+real 02753B48
+real 02753C28
+real 02753D6C
+real 027556FC
+real 02755818
+real 0275589C
+real 02755CA4
+real 02755FEC
+real 027600EC
+real 027601BC
+real 027601F0
+real 027561B4
+real 02755FE0
+real 02755F40
+real 02755EC4
+real 02755E7C
+real 02756CC0
+real 027F3E04
+real 02772E8C
+real 027FD6F4
+real 027F3D78
+real 02754754
+real 02760084
+real 027DBBC4
+real 027DBC00
+real 027DCF64
+real 027DD024
+real 027DD298
+real 027DD5E4
+real 027DD738
+real 027DD9AC
+mockmove C000A848 r3 r4 r5
+real 027DBBEC
+ret! C0009DB0 1
+mockzero C00088C8 r3 r4
+real 027FFCBC
+real 027B90AC
+real 02800B0C
+real 027BDD2C
+real 027BDA2C
+real 027BD72C
+real 028012BC
+real 027F7830
+
+# Admitted pipeline frame-registry block from merged configure_pipeline.
+fill * 0x5CEA0000 0x800 0
+fill * 0x5CEA0100 0x200 0
+field * 0x5CEA001C u32 3
+field * 0x5CEA0020 u32 0x5CEA0100
+field * 0x5CEA017C u32 0x5CEA0400
+field * 0x5CEA0400 u32 0x5CEA0500
+field * 0x5CEA0404 u32 0x1016E5A4
+fieldstr * 0x5CEA0500 32 "wii_pipeline","x"
+field * 0x5CEA0200 u32 0x5CEA0410
+field * 0x5CEA0410 u32 0x5CEA0520
+field * 0x5CEA0414 u32 0x1016E5A4
+fieldstr * 0x5CEA0520 32 "wii_pipeline","wii_pipelinf","wii_pipeline_"
+field * 0x5CEA0284 u32 0x5CEA0420
+field * 0x5CEA0420 u32 0x5CEA0540
+field * 0x5CEA0424 u32 0x1016E5A4
+# The third record always names "wii_pipeline": an exact copy of the image literal (fieldstr would give it its
+# empty/generated escapes, i.e. a table without the mandatory record, which is outside the domain).
+copy * 0x5CEA0540 0x1016E80C 13
+stable 0x5CEA0000 0x800
+# Frame registry (027FFCBC's static): source, record count around the found index, four 0x24-byte records.
+field * 0x104B4A68 u32 0x5CEA0000
+field * 0x104B4A6C u32 0,1,2,3
+field * 0x104B4A70 u32 0x5CEB0000
+fill * 0x5CEB0000 0x90 0
+field * 0x5CEB0020 u8 0,1
+field * 0x5CEB0000 u32 0x5CEC0000
+field * 0x5CEB0044 u8 0,1
+field * 0x5CEB0024 u32 0x5CEC0100
+field * 0x5CEB0068 u8 0,1
+field * 0x5CEB0048 u32 0x5CEC0200
+field * 0x5CEB008C u8 0,1
+field * 0x5CEB006C u32 0x5CEC0300
+real 027FFCBC
+real 027B90AC
+real 02800B0C
+real 027BDD2C
+real 027BDA2C
+real 027BD72C
+real 028012BC
+# SafeText termination slot of table 1016E5A4: a no-op blr (027F7830).
+real 027F7830
+# Registry static and its record array are fixture state no mocked call of this profile writes.
+stable 0x104B4A64 0x10
+stable 0x5CEB0000 0x90
+# Each source record's shader program (+0x40) is a complete empty program: every uniform/sampler/attribute
+# table count read by the AGL#15 frame constructors is 0, so their name lookups resolve to -1.
+fill * 0x5CED0000 0x200 0
+stable 0x5CED0000 0x200
+field * 0x5CEA0140 u32 0x5CED0000
+field * 0x5CEA01C4 u32 0x5CED0000
+field * 0x5CEA0248 u32 0x5CED0000
+# The frame is compared too (-footprint): the builder/SafeText stack objects sit at the original offsets.
+stackfill
+
+# Actual queue constructor/instance/dispatcher producer closure, no model-field substitutes.
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440
+real 027F3F94 027F3F8C 027F3C38 027F7870
+real 027F9560 027F90B0 027F9CAC 028EFFD0 02760084 02758724 02758B88
+real 027F93C4 0273B584 027587B4 02759814 02758CA8 0273B050
+real 0275FBD8 027607C0 02760C4C 02760B1C
+real 027581F4 02757C10 0276A628
+real 028EFE58
+real 0273AD10 0273ADAC 0273B0D4 027601F8 027602DC 02752A84
+real 027561B4 02755FE0 02755F40 02755EC4 02755CA4 02755E7C 02755FEC 027600EC 0273AF40 02757B48
+real 0273B2D0 0273B560 02750CDC 02750D00 02753004 027537B8 02753880 02755818 027601BC 027601F0 02760DE8 02760E34 02760E58
+real 027F9890 027F9470 027F9EA4 027F9EB4 027F9E10
+real 027F96F0 02752B0C
+real 0275FEFC 02760338 027F9EA4 027F9EB4
+field * 101F997C u32 0
+field * 101F9980 u32 0
+postsetup * 027F96F0 r3=0x6A000000
+postsetup * 027F9890 r3=*101F997C r4=32 r5=0x6A000000
+
+# Existing approved GHS formatting closure for original packet names.
+real 02759BA0 02759C10 02759C28 028F03F4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C 028F0DBC 028F0DF4 028F10B8 028F1108 028F1158 028F11BC 028F1748 028F1904 028F5228 028F5C88 028F5DE8 028F5DFC 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 028F61D0 028F61E8 028F61FC 028F6228 028F6240 028F6254 028F171C 028F60E0 028F60E8 028F60F0 028F6130 028F6158 028F615C 028F6184 028F61AC 028F61B0 028F61D8 028F61DC 028F61E0 028F61E4 028F61EC 028F61F0 028F61F4 028F61F8 028F6200 028F6230 028F6234 028F6238 028F623C 028F6244 028F6248 028F624C 028F6250 028F6258 027F76E4
+mockmove C0009988 r3 r4 r5
+
+# Full parent/configure/packet/calc dependency bodies; only explicitly permitted caller boundaries stay opaque.
+real 027F4404 027F4098 027F1534 027F1278 027F15A0 0273B7B4 027DFA24
+real 027F4D5C 027DB1D4 027E39F4 027E3CA8 027E4134 027E47BC 027E4D20 027E50A8 027E565C 027E5DA4
+real 027F59B4 027F3B28 027F5018 027F50F8 027F53CC 027F9FB8 027FDFF4 027F4F1C
+# Cursor game callback setter is filled only after observing the original joint-array address.
+# (model-A cursor line dropped) callee 0F00A000 fixture r3=0 r4=0
+# (model-A cursor line dropped) postsetup * 027F4D5C r3=0x5E001000
+# (model-A cursor line dropped) postsetup 027F55FC 027F4F1C r3=0x5E001000
+# Read-only produced asset/model domains as in configure_pipeline; actual writes stay compared.
+# (model A-E stable dropped) stable 0x5E000000 0x4C
+# (model A-E stable dropped) stable 0x5E001000 0x144
+# (model A-E stable dropped) stable 0x5F000000 0x4C
+# (model A-E stable dropped) stable 0x5F001000 0x144
+# (model A-E stable dropped) stable 0x5A000000 0x4C
+# (model A-E stable dropped) stable 0x5A001000 0x144
+# (model A-E stable dropped) stable 0x5B000000 0x4C
+# (model A-E stable dropped) stable 0x5B001000 0x144
+# (model A-E stable dropped) stable 0x5C000000 0x4C
+# (model A-E stable dropped) stable 0x5C001000 0x144
+stable 0x61000000 0x1C4A00
+stable 0x61200000 0x89800
+stable 0x61300000 0x6BF00
+
+# Only game per-draw camera/light matrix publication is steered (025E2BF4).
+field * 104B45F8 f32 1
+field * 104B45FC f32 0.125
+field * 104B4600 f32 0
+field * 104B4604 f32 4
+field * 104B4608 f32 0
+field * 104B460C f32 1.25
+field * 104B4610 f32 0.25
+field * 104B4614 f32 -2
+field * 104B4618 f32 0.125
+field * 104B461C f32 0
+field * 104B4620 f32 0.75
+field * 104B4624 f32 3
+stable 104B45F8 0x30
+field * 104B470C f32 0.75
+field * 104B4710 f32 -0.125
+field * 104B4714 f32 0
+field * 104B4718 f32 1
+field * 104B471C f32 0.125
+field * 104B4720 f32 1
+field * 104B4724 f32 0.25
+field * 104B4728 f32 2
+field * 104B472C f32 0
+field * 104B4730 f32 0.125
+field * 104B4734 f32 1.5
+field * 104B4738 f32 -1
+stable 104B470C 0x30
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+
+# Existing defining binding for allocatePipelineStorage; source is unchanged.
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+# Original property dictionary/sort and lighting matrix copies.
+real 027DF8B4 027F3FB4 027F51B4 028E90D4
+
+# permitted game-side setter, actualjointarray6A87E2A0+8.
+# (model-A cursor line dropped) poke * 6A87E2A8 u32 0x0F00A000
+
+# RPX .bss NOBITS initial-state restoration ONLY; root-authorized2026-10-31.
+# Loader initialword0 precedes original constructors; no owner pointer/counter/per-draw override.
+field * 104B45AC u32 0
+
+# Original readonly dictionary key-bit helper; complete lookup closure, no stable mask/snapshot bypass.
+real 027DEFE4
+
+include lib2_j3d_hdrew_1_shared_gfxdevice.txt
+# SHARED FRAGMENT (include only, after a spec that includes shared/agl_world.txt; it has no tested function).
+# J3D-HDREW#1 2026-11-01: original HD resource bootstrap + registration of the shipped System archive and the
+# toon images 10475800/10475804 exactly as d_s_logo.cpp 025AC3F8 stores them.
+# Chain (all original code, run as setups):
+#   boot heap part of 0203EE2C (0203F138..0203F248): 02753004 x3 (archive heap r25, resource heap r26, r24 under r26),
+#   02603680 ResControl createInstance (*101F4F28) on r26, 0260ABF8 (blr), stores +0x2044/+0x2040/+0x2128;
+#   System.szs (game/, sha256 0c58fa6ae79faa8f361356411eec6a7ae652d44d64d985ebb647c8ee9206ad30; Yaz0 SARC 0xBC000,
+#   one entry System.bfres) as the completed load: original SharcArchiveRes
+#   0275E11C/0275D21C; ResMgr loaded-archive lookup 026123FC answers it (nestedret: the FS read/mount is skipped);
+#   02604EB4 = ResControl archive registration (02604094 heap choice, 02754B38 archive heap, 02602AD4/02602BC8 res
+#   file, 026042AC res info, 02604550 resources, tree insert 0260AD08); 026066C4 getRes("System", 3/4) ->10475800/04.
+# Reserved: 0x58000000-0x580BBFFF (System SARC), 0x58100000 (archive object), 0x58101000-0x5810103F (names, slots),
+#   0x72000000-0x72FFFFFF (FreeRegionHeap backing), 0x5D400000-0x5D400FFF (current OSThread block). Deterministic results: ResControl 0x724001A0, toon images
+#   0x72000304 / 0x72000328.
+# Harness models (declared): nestedret 026123FC (archive lookup; FS read/mount skipped, rulings 19:47/00:52), the
+#   current-thread TLS model; 026123FC answers ONE archive object, so a later archive
+#   registration reconstructs its SharcArchiveRes at 0x58100000 before its own 02604EB4.
+# Known gap: archives whose registration builds shaders (e.g. a model .szs with .sharcfb) reach the GraphicsDevice
+#   singleton *101F8B18, which shared/agl_world.txt only pokes AFTER all setups (0274FBF8 r3=0 -> page 0).
+real 02602AD4 02602BC8 02602ECC 02603298 026032F0 0260344C 02603680 02603740 02603ACC 02603C84 02604094 026042AC 02604470 026044E0 02604550 02604A08 02604EB4 026066A0 026066C4 0260A824
+real 0260A828 0260ACC8 0260AD08 0260B538 0260B5E8 0260B698 0260B704 02612450 026124F4 02613F20 0273AFC8 0273B200 0273B264 0273B584 02740B0C 02740B14 02740B1C 02740B24 02740BE0 02740E08
+real 027414F8 0274FBF8 0274FCCC 02752BEC 027549FC 02754A8C 02754AA4 02754AC4 02754B38 02755D28 02759C28 0276B0D4 027731C8 027732B0 027735DC 0277367C 027861E0 027B727C 027B72AC 027B730C
+real 027B7A48 027B7B1C 027B7BE8 027B7D78 027B8024 027B814C 027B8EB0 027BC540 027BC654 027BC68C 027BC6B8 027BC854 027C52D4 027C5474 027C57E8 027C5978 027C5AAC 027C5B20 027C5FD8 027C6060
+real 027C6B98 027D3F1C 027D3FC4 027D3FD4 027D4028 027D4C9C 027DB134 027DBBEC 027DBC00 027DEFE4 027DF00C 027DF01C 027E14A4 027E14A8 027E14B0 027E14B8 027E14C0 027E1518 027E1EFC 027E1F5C
+real 027E1FC8 027E25FC 027E267C 027E26FC 027E2748 027E288C 027E2940 027E2A68 027E2D40 027E2DC0 027E2DC4 027E2EA4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C
+real 028F10B8 028F1108 028F1158 028F1904 028F5228 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 025AC78C 0260329C 02608234 02608258 026082D0 026082EC
+real 02609A3C 0260AC60 0260AC94 02753998 02753B48 02754620 027DF8B4 027DF9B0 02754C98 02754F50 02754D40 02754DD8 02754E74 02754370 02755280 02753A34
+# ---- boot heap part of 0203EE2C (0203F138..0203F248), replayed with the original 02753004 ----
+fill * 0x58101000 0x40 0
+field * 0x58101000 u32 0x100065CC
+field * 0x58101004 u32 0x100062F8
+field * 0x58101008 u32 0x10006688
+field * 0x5810100C u32 0x100062F8
+field * 0x58101010 u32 0x100065DC
+field * 0x58101014 u32 0x100062F8
+field * 0x58101018 u32 0x100527BC
+field * 0x5810101C u32 0x100526DC
+stable 0x58101000 0x40
+# backing: an original FreeRegionHeap (0275315C) in a free 16 MiB range (the agl world's root arena is too small).
+# Shipped boot sizes (0203F15C..0203F21C): archive heap r25 = 0275320C(4)+0x00E00000 (0203F17C..0203F1B0);
+# resource heap r26 = 0x16C00000 - r25's size (0203F1B8..0203F1E8); r24 = 0275320C(0x2000)+0x0D400000 under r26
+# (0203F1F0..0203F21C). Scaled here to 0x400000 / 0x600000 / 0x100000: the sizes decide only whether allocations
+# succeed; the -trace allocation check (no allocator return of 0 in any setup) is recorded with the companions.
+fill * 0x72000000 0x01000000 0
+stable 0x72000000 0x01000000
+field * 0x58101030 u32 0x100065B0
+field * 0x58101034 u32 0x100062F8
+setup * 0275315C r3=0x72000000 r4=0x01000000 r5=0x58101030 r6=0 ->0x58101038
+setup * 02753004 r3=0x400000 r4=0x58101000 r5=*0x58101038 r6=1 r7=0 ->0x58101020
+setup * 02753004 r3=0x600000 r4=0x58101008 r5=*0x58101038 r6=1 r7=1 ->0x58101024
+setup * 02753004 r3=0x100000 r4=0x58101010 r5=*0x58101024 r6=-1 r7=0 ->0x58101028
+setup * 02603680 r3=*0x58101024
+setup * 027E2DC0 r3=*0x101F4F28 ->0x5810102C
+# boot 0203F228 bl 02603680 (r3=r26); 0203F23C bl 0260ABF8 (a single blr: no effect); then the plain stores
+# 0203F240 stw r25,0x2044(r31); 0203F244 stw r26,0x2040(r31).
+# ResControl = 0x724001A0 (original 02603680 on the 0x724000D8 heap, deterministic); the identity routine 027E2DC0 (blr)
+# hands the original-returned heap to `->`.
+setup * 027E2DC0 r3=*0x58101020 ->0x724021E4
+setup * 027E2DC0 r3=*0x58101024 ->0x724021E0
+# 0203F248 stw r24,0x2128(r31)
+setup * 027E2DC0 r3=*0x58101028 ->0x724022C8
+# ---- System archive: shipped bytes as the completed load ----
+blobfile * 0x58000000 content/Common/Object/System.szs:<yaz0>
+stable 0x58000000 0xBC000
+fill * 0x58100000 0x1000 0
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x58000000 r5=0xBC000 r6=0xBC000 r7=0 r8=0
+nestedret 026123FC 0x58100000
+setup * 02604EB4 r3=*0x101F4F28 r4=0x58101018 r5=0
+setup * 026066C4 r3=*0x101F4F28 r4=0x58101018 r5=3 ->0x10475800
+setup * 026066C4 r3=*0x101F4F28 r4=0x58101018 r5=4 ->0x10475804
+
+# ---- Am2 archive (see header) ----
+# SharcArchiveRes reuse: the resource bootstrap's
+# `nestedret 026123FC 0x58100000` answers ONE archive object, so this profile rebuilds the SharcArchiveRes at 0x58100000
+# over Am2 (0275E11C/0275D21C) after System's registration. Proof (n1000, seeds 1 and 7, -nulltrap, all 1000/1000 ok;
+# -watch 0x58100000:0x1000 and -watch 0x72000250:0x8C = System's ResourceArchiveInfoHD, setups included): after the
+# rebuild, 0x58100000 is read only by Am2's own 02604EB4 lookups (02612450/0275E208/0275E3A0/0275E288, one per archive
+# member); never by getRes, the postsetups or the tested call. System's record is read after the rebuild only by the
+# pool for-each transfer callbacks 0260AC60/0260AC94 -> 02608234/02608258 inside Am2's registration: info+0x5C
+# mpArchive 0x7200022C -> ResourceArchiveHD+0x14 mpHeader 0x58002000, inside System's own blob (never rewritten), not
+# the overwritten object. Logs: local trace files
+# SHA-256 (00:52): szs_permanent0.pack 0ca778c94fdbe100f1ff9c4eaabe7d4bcdf89c370a0b31da37f7ce7169bdc3f5; entry Am2.szs (Yaz0)
+# 1b464e37bdd66eb70b9c1f454c820d6b59ec66fb3520205bc8774d1f8878f5de; decoded SARC (0x9E000) c89944b51f7215dbec62eb33d7c1c270bac1a0a8884f6b35d994d9c64527feaf
+blobfile * 0x58400000 content/Common/Pack/szs_permanent0.pack:Am2.szs:<yaz0>
+stable 0x58400000 0x9E000
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x58400000 r5=0x9E000 r6=0x9E000 r7=0 r8=0
+fill * 0x58500000 0x100 0
+field * 0x58500000 u32 0x100070E4
+field * 0x58500004 u32 0x100526DC
+stable 0x58500000 0x8
+setup * 02604EB4 r3=*0x101F4F28 r4=0x58500000 r5=0
+setup * 026066C4 r3=*0x101F4F28 r4=0x58500000 r5=0x12 ->0x58500010
+setup * 026066C4 r3=*0x101F4F28 r4=0x58500000 r5=0x18 ->0x58500014
+setup * 026066C4 r3=*0x101F4F28 r4=0x58500000 r5=0x15 ->0x58500018
+real 026031D0 02608308 0260873C 0272D384 027738DC 0277390C 0277397C 02773984 02773C0C 02773E90 02773F98 02773FA8 0277408C 027742F0 02774320 02774448 02774450 0277445C 027744A0 0277462C 02774840 027B950C 027BBD04 027BBF6C 027BC0F4 027BD2B0 027DFA24 027E1550 027E159C 027E15A4 027E15D0 027E15FC 027E1604 027E1618 027E1648 027E1784 027E17B4 027E17E0 027E1878 027E39EC 027E39F0 027ED1F0 027F691C 027F70D8 027F76FC 027F7830 027F78A8 027F7B50 02800B0C 028010F8 028F0074 028F007C 028F0164 028F02EC 028F0314 028F24D0 028F25FC 028F2724 028F274C 028F2774 028F2ED0 028F5688 028F571C 028F578C 028F57D8 028F58E4 028F5DC0 028F5DD4 028F5E38 028F5E44 
+real 027517C0 027517C4 02774844 027748C8 02774968 027ED2CC 028012BC
+real 026093A0 02608F80
+real 025E35BC 025E37D8 025E7C6C 025E7CE0 025E80D0 025E8154 025E83FC 025E7FC4 027DF774 027DF57C 027E1234 027E1198
+postsetup * 025E35BC r3=0 r4=0x6A000000 r5=0x100 ->0x58500020
+fill * 0x58510000 0x144 0
+postsetup * 027F3E04 r3=0x58510000
+postsetup * 027F4404 r3=0x58510000 r4=*0x58500010 r5=0 r6=2
+fill * 0x58520000 0x78 0
+fill * 0x58520100 0x74 0
+postsetup * 025E7C6C r3=0x58520100
+postsetup * 025E7CE0 r3=0x58520100 r4=*0x58500010 r5=*0x58500014 r6=1 r7=2 r8=0 r9=0xFFFFFFFF r10=0 f1=1
+postsetup * 025E80D0 r3=0x58520000
+postsetup * 025E8154 r3=0x58520000 r4=*0x58500010 r5=*0x58500018 r6=1 r7=2 r8=0 r9=0xFFFFFFFF r10=0 f1=1
+postsetup * 025E37D8
+postsetup * 025E3678 r3=*0x58500020
+postsetup * 027F4D5C r3=0x58510000
+postsetup * 025E83FC r3=0x58520000 r4=*0x58500010 f1=0
+postsetup * 025E7FC4 r3=0x58520100 r4=*0x58500010 f1=0
+arg! 027F55FC r3 0x58510000
+real 025E2AF8 025E32A0 025E33A8 025E3570 025E3A34 025E72D4 0271B1AC 02754C90 027DA7E4 027DA984 027DEE5C 027DEFB8 027DF240 027DF40C 027DF7F4 027EC23C 027EC464 027F2BC0 027F35CC
+field * 0x1048CED8 u32 0
+real 0275494C 02755478 027DED78 027DA87C 027DA960 027DAAB8 027DA898 027DF108 027DF168 027F35F4 027F273C 027DAAA0 027E6930
+
+real 02755644 027DA84C 027E67EC
+real 027DA9E8 027DEC10 02755AB4
+real 025E3678
+real 027DEAD0 027E95E0 027556CC 027549CC 02755298 027F0DA8
+real 027EC460 027E1C34
+real 027E92A8
+stable 0x58510000 0x144
+stable 0x58520000 0x200
+stable 0x58500010 0x20

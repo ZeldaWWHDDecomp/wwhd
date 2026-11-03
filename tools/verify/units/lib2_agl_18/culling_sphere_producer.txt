@@ -1,0 +1,55 @@
+# Final full pool115: 40 observed differences, 40 compile-invalid, 35 qualified/source-equivalent; zero open/timeouts.
+# Combined four culling pools433:138 observed-D,159 compile-CI,136 qualified/source-EQ; raw tool classes unchanged.
+# Existing culling_sphere_producer-O2|O1-seed1|7.log controls each10000/10000; family coverage union12/12, no reachable gaps.
+# Canonical n1 guest-pagezero audit clean: dw-pagezero-culling_sphere_producer-n1.log (no R/W/P, abort or refusal).
+# Exact residual evidence: dw-culling-sphere-final35-seed1|7.log, n10000 each; individual source groups in culling_sphere_producer_viewpoints.txt.
+# All normal logs under build/agl18; base n1000 pool, camera/tangent/viewpoint n1000 steering surveys precede residual-only10k.
+# Evidence: culling_sphere_producer-{O2,O1}-seed{1,7}.log allPASS10000/10000, coverage12/12; no gaps.
+# Original volume constructor FPR values match projection words; CC74 and every ordinary nested helper run real.
+# Original-produced culling volume, CLOSED Lead02:42; trace closure validated.
+# No plane/bounds writes: projection and rigid view feed original CB8C/D07C/CC74.
+# verify: -only 027CC288 -strictnan -calleesp
+src wwhd_src/agl/DrawPreparation.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+arg! * r5 0
+arg! * r6 0x59300000
+callbudget 60000
+setup * 02757190
+setup * 027CC1BC r3=0x58000000 r4=0x58100000
+stable 59300000 0xEA4
+stable 59400000 0xC4
+setup * 027389F8 r3=0x59400000
+poke * 59400094 u32 0x3F800000
+poke * 59400098 u32 0x461C4000
+poke * 594000AC u32 0x3FAAAAAB
+poke * 594000B0 u32 0x00000000
+poke * 594000B4 u32 0x00000000
+poke * 594000B8 u32 0x3F800000
+poke * 594000BC u32 0x3F800000
+poke * 59300000 u32 0x3F800000
+poke * 59300004 u32 0x00000000
+poke * 59300008 u32 0x00000000
+poke * 5930000C u32 0x00000000
+poke * 59300010 u32 0x00000000
+poke * 59300014 u32 0x3F800000
+poke * 59300018 u32 0x00000000
+poke * 5930001C u32 0x00000000
+poke * 59300020 u32 0x00000000
+poke * 59300024 u32 0x00000000
+poke * 59300028 u32 0x3F800000
+poke * 5930002C u32 0xC3FA0000
+poke * 58100000 u16 3,0x23
+poke * 58100008 f32 0,10,-10,10000,-10000
+poke * 5810000C f32 0,10,-10,10000,-10000
+poke * 58100010 f32 500,499,498,0,-9500,-9501
+poke * 58100014 f32 0,1,10
+postsetup * 0274D83C r3=0x59400000
+postsetup * 0278CB8C r3=0x59300000 r4=0x59400044 r5=0x594000B0 f1=*59400094 f2=*59400098 f3=*594000C0 f4=*594000AC
+postsetup * 0278D07C r3=0x59300000 r4=0x59300000
+postsetup * 028E90D4 r3=0x59300000 r4=0x59300E18
+postsetup * 0272D680 r3=0x59300E48 r4=0x59300128 r5=0x59300000
+real 02757190 027CC1BC 027389F8 0274D83C 0274D510 0274D750 0274E0B8 0274DEA8 0274DE2C 02738B20 0278CB8C 028F423C 028F5E98 028E8970 0278D07C 0278CC74 028EFFD0 028EFE58 028F61E4 0278D208 028E8D4C 025155D8 028E8E10 0278D234 028E90D4 028E91EC 028E8F64 028E9044 0272D680 028E9108
+
+# Original projection helper closure exposed by culling preflight1; prior trace has no gate credit.
+real 0274D6B4 0274DA08 028F43F8 028F4BE0

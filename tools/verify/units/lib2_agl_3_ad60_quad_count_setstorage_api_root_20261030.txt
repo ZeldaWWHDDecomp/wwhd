@@ -1,0 +1,7 @@
+# TYPE-DOMAIN: shipped provider sets count3 (027A46BC..C8); other counts via public IndexBufferLayout::setStorage,.
+# Real provider/layout/storage/format retained. Scalar count is caller-owned POD; no produced field is poked.
+# Shared-world producer027A145C returns6A8383B8; its layout+31C is6A8386D4 (must verify actual trace before credit).
+# verify: -strictnan -calleesp -only 0277AD60
+include lib2_agl_3_lifecycle_two_entries_render_index_type.txt
+field 0277AD60 0x5D560000 u32 1,2,4
+postsetup 0277AD60 027B54E0 r3=0x6A8386D4 r4=*(*101F8DE4+0x324) r5=*(*101F8DE4+0x31C) r6=*5D560000

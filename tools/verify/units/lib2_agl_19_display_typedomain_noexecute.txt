@@ -1,0 +1,13 @@
+# TYPE-DOMAIN: manager flag 0x20 set (executeView 027C1A60 returns early), so
+# after collectRenderViewJobs 027D72B8 the view's current job stays -1 (clearPending) and submitDisplayLists 027D6EEC
+# finishes each owned command's layer pass before calling its list. The first frame's job phase without
+# executeRenderView: lib2_agl_19_display_frame_fixture.txt + 027D72B8(view, NULL) per view (postsetups).
+# verify: -only 027D6EEC -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+real 0274D690 0274F964 0274F8D8 02751698 027516AC 0274F698 027B9F60 027B9F4C
+real 027D72B8 027D7270 027D74AC 027D54F8 027D55F8 027D6BB0 027D6ED0 027D6A74 027D6BD0 027D71D4 027D4FE8 027D4EA4 027D76B8 027D6E80 027D7A4C 027DA7D4 027DA764
+postsetup * 027D72B8 r3=0x5E100018 r4=0
+postsetup * 027D72B8 r3=0x5E100818 r4=0
+arg! 027D6EEC r3 0x5E100018,0x5E100818
+arg! 027D6EEC r4 1

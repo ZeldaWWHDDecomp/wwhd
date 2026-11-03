@@ -1,0 +1,71 @@
+# verify: -only 027B744C,027B75E0,027B7780,027B9070,027B81E4,027B8F48,027B90AC -calleesp -strictnan
+# Original cold84Barchive; zeroarrays/callback producedbyoriginalconstructor, no positiveAGL15graph.
+# Debugname85CB4 remainsopaque underpublished noownerwrite contract; clockmergedSEAD17real.
+# No stableglobals. Excludes7860/base destructor andallpost-hookmanager/root reads.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 02752A84
+real 027B744C
+real 027B75E0
+real 027B7780
+real 027B9070
+real 027B81E4
+real 027B8F48
+real 02760DE8
+real 02760E58
+real 02760E34
+field * 0x101F8B4C u32 0
+field * 0x101F8C1C u32 0
+stable 0x58000000 84
+field * 0x58000000 u32 0xA5A5A5A5
+field * 0x58000004 u32 0xA5A5A5A5
+field * 0x58000008 u32 0xA5A5A5A5
+field * 0x5800000C u32 0xA5A5A5A5
+field * 0x58000010 u32 0xA5A5A5A5
+field * 0x58000014 u32 0xA5A5A5A5
+field * 0x58000018 u32 0xA5A5A5A5
+field * 0x5800001C u32 0xA5A5A5A5
+field * 0x58000020 u32 0xA5A5A5A5
+field * 0x58000024 u32 0xA5A5A5A5
+field * 0x58000028 u32 0xA5A5A5A5
+field * 0x5800002C u32 0xA5A5A5A5
+field * 0x58000030 u32 0xA5A5A5A5
+field * 0x58000034 u32 0xA5A5A5A5
+field * 0x58000038 u32 0xA5A5A5A5
+field * 0x5800003C u32 0xA5A5A5A5
+field * 0x58000040 u32 0xA5A5A5A5
+field * 0x58000044 u32 0xA5A5A5A5
+field * 0x58000048 u32 0xA5A5A5A5
+field * 0x5800004C u32 0xA5A5A5A5
+field * 0x58000050 u32 0xA5A5A5A5
+arg! 027B744C r3 0x58000000
+setup 027B75E0 027B744C r3=0x58000000
+arg! 027B75E0 r3 0x58000000
+setup 027B7780 027B744C r3=0x58000000
+arg! 027B7780 r3 0x58000000
+setup 027B9070 027B744C r3=0x58000000
+arg! 027B9070 r3 0x58000000
+setup 027B81E4 027B744C r3=0x58000000
+arg! 027B81E4 r3 0x58000000
+setup 027B8F48 027B744C r3=0x58000000
+arg! 027B8F48 r3 0x58000000
+setup 027B90AC 027B744C r3=0x58000000
+arg! 027B90AC r3 0x58000000
+arg! 027B8F48 r4 0,1
+arg! 027B90AC r4 0

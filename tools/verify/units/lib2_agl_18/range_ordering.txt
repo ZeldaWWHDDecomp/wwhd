@@ -1,0 +1,28 @@
+# Lead01:23/20:34: range bases are plain numbers, never dereferenced; base1 is a nonzero numeric window. Node/link pointers remain aligned mapped addresses.
+# Range ordering: existing source-bound list/range domain, no opaque callees.
+# verify: -only 027CB744 -strictnan -calleesp
+src wwhd_src/agl/RangePoolOrdering.cpp
+arg! 027CB744 r3 0x58000000
+arg! 027CB744 r4 0x58100000
+field 027CB744 r3+0x24 u32 0x58200008
+field 027CB744 r3+0x28 u32 0x58200008
+field 027CB744 r3+0x2C s32 0,1
+field 027CB744 r3+0x30 u32 8
+field 027CB744 r4+0x24 u32 0x58300008
+field 027CB744 r4+0x28 u32 0x58300008
+field 027CB744 r4+0x2C s32 0,1
+field 027CB744 r4+0x30 u32 8
+field 027CB744 58200000 u32 1,0x5A000000,0x5A000020,0x5A000080
+field 027CB744 58200004 u32 16,32,64
+field 027CB744 58300000 u32 1,0x5A000000,0x5A000020,0x5A000080
+field 027CB744 58300004 u32 16,32,64
+# Completion: CB744 pool36 =13 difference kills +18 compile-invalid +5 qualified EQ; no open dispositions.
+# Four base1 O2/own-TU-O1 controls, 10k seeds1/7: PASS17/17 blocks. Original ready_fields24 O2 pair also PASS17/17.
+# Main survey n1000:12D18CI6S; numeric-base1 id32 resurvey n1000 detects firstStart>1 vs>0.
+# Exact residual ids2,12,16,23,24 at10k seeds1/7 all survive, no errors/timeouts.
+# IDs2/12: non-null list-node pointers are aligned mapped addresses, never1, so !=0 and !=1 agree.
+# IDs23/24: decoded range-node addresses are aligned mapped addresses, never1; null still yields no dereference.
+# ID16: swapping independent readonly start/bytes loads from one range changes no value or observable order.
+# Logs: build/agl18/small-scopes-worker-20261026/CB744-{mutation,base1-*}; normal stdout only, receipt-free --ids.
+
+# Full generated pool independently enumerated: CB744=36; prior max400 did not truncate.

@@ -1,0 +1,21 @@
+# AGL#7 0278E730 initializeFrames re-initialize after a CASCADE_TYPE_NONE render (; type-domain
+# companion (labelled: re-initialize after use is shipped code the producer domain never runs, 10-27 15:08 A). The postsetup render
+# runs with sampleCount 1 (the shipped producer: game code 02736420 stores owner+0x864 = max(min(owner+0x8CC, owner+0x1BA0), 1),
+# read at 027362B4, so 1 with a single-cascade setting) and no normal input (useFirstSample 0), so primary 027904D0 selects a
+# CASCADE_TYPE_NONE variation (packShaderChoice 0279049C real) whose texDynamicShadow location is valid; the original bind chain
+# clears frame sampler [1]'s dirty byte before the re-initialize.
+# verify: -only 0278E730 -strictnan -calleesp
+include lib2_agl_7/nt_base.txt
+real 02791230
+# The postsetup render (sampleCount 1, no normal input: CASCADE_TYPE_NONE variations, where texDynamicShadow = frame sampler [1] has a pixel location) binds the frame samplers through the original bindTextureSampler 027BE53C, which runs
+# updateSamplerState 027BE494 (the only code that clears TextureSampler::dirty) and its update helpers: real here so the
+# bound samplers really have their dirty bits cleared before the re-initialize (nt_initialize_reinit_used.txt answers them as mocks).
+# render reaches the binds through its passes primary 027904D0 / paired 027908F4 / combined 02790C28 (shipped code, real too).
+# packShaderChoice 0279049C runs the original so the render postsetup selects its variation from the real choice
+# (a mock return value would pick an arbitrary variation).
+real 0279049C
+real 027904D0 027908F4 02790C28 027BE53C 027BE494 027BE2C4 027BE3B8 027BE32C 027BE340 027BE398 027BE3AC
+postsetup 0278E730 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0 r10=0 sp+8=1 sp+0xC=0
+arg! 0278E730 r3 0x5C020000
+arg! 0278E730 r4 0,0xFFFFFFFF
+arg! 0278E730 r5 0,0x6A000000

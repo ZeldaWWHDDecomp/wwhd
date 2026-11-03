@@ -1,0 +1,122 @@
+# verify: -only 0274F964 -strictnan -calleesp
+# SEAD#12: render and display helpers reconstructed from local game instructions.
+src wwhd_src/sead/RenderState.cpp
+src wwhd_src/sead/RenderMath.cpp
+src wwhd_src/sead/Viewport.cpp
+field 0274F53C r3+0x10 u32 0,1,2,3,4,5,6
+field 0274F698 r3+0x10 u32 0,1,2,3,4,5,6
+field 0274F8D8 r3+0x10 u32 0,1,2,3,4,5,6
+src wwhd_src/sead/RenderInlineInstances.cpp
+field * 101FD6A8 u32 0,1
+field * 101FD6AC u32 0,1
+field * 101FD69C u32 0,1
+arg 0274ECD4 r4 0,0x101FDF84,0x101FDF88,0x101FDCD8
+arg 0274ED54 r4 0,0x101FDF84,0x101FDF88,0x101FDCD8
+src wwhd_src/sead/PrimitiveRenderer.cpp
+src wwhd_src/sead/GraphicsDevice.cpp
+src wwhd_src/sead/DisplayTargets.cpp
+field 02751174 r3+0xC u32 0,1,2
+field 02751400 r3+0xC u32 0,1,2
+field 02751174 r3+0x10 u32 0,1
+field 02751400 r3+0x10 u32 0,1
+src wwhd_src/sead/PrimitiveBackend.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+# Backend initialization receives coherent shader metadata and a valid heap callback.
+# Parsing owns these shader objects; unrelated calls do not mutate retained metadata.
+arg! 02751888 r3 0x54000000
+arg! 02751888 r4 0x54100000
+field 02751888 5410000C u32 0x54100100
+field 02751888 54100134 u32 0x027566D8
+stable 54000000 0x200
+stable 54100000 0x200
+stable 55000000 0x10000
+stable 56000000 0x2000
+ret! 028E8518 0x134
+ret! 028E8538 0x100
+ret! 028E8528 0xE8
+ret! 028E8548 0x100
+alloc 027566D8 r4 0x55000000 256
+mockfield 028E8624 r3+0xE4 u32 0,1,2,3,4
+mockfield 028E8624 r3+0xE8 u32 0x56000000
+mockfield 028E8624 r3+0x104 u32 0,1,2,3
+mockfield 028E8624 r3+0x108 u32 0x56000400
+mockfield 028E87A8 r3+0xB8 u32 0,1,2
+mockfield 028E87A8 r3+0xBC u32 0x56000800
+mockfield 028E87A8 r3+0xD0 u32 0,1,2
+mockfield 028E87A8 r3+0xD4 u32 0x56000A00
+field 02751888 56000000 u32 0x56001000
+fieldstr 02751888 56001000 16 "wvp","user","color0","color1"
+field 02751888 56000014 u32 0x56001020
+fieldstr 02751888 56001020 16 "wvp","user","color0","color1"
+field 02751888 56000028 u32 0x56001040
+fieldstr 02751888 56001040 16 "wvp","user","color0","color1"
+field 02751888 5600003C u32 0x56001060
+fieldstr 02751888 56001060 16 "wvp","user","color0","color1"
+field 02751888 56000400 u32 0x56001100
+fieldstr 02751888 56001100 16 "Vertex","TexCoord0","ColorRate"
+field 02751888 56000410 u32 0x56001120
+fieldstr 02751888 56001120 16 "Vertex","TexCoord0","ColorRate"
+field 02751888 56000420 u32 0x56001140
+fieldstr 02751888 56001140 16 "Vertex","TexCoord0","ColorRate"
+field 02751888 56000800 u32 0x56001200
+fieldstr 02751888 56001200 16 "rate","other"
+field 02751888 56000814 u32 0x56001220
+fieldstr 02751888 56001220 16 "rate","other"
+field 02751888 56000A00 u32 0x56001280
+fieldstr 02751888 56001280 16 "texture0","other"
+field 02751888 56000A0C u32 0x560012A0
+fieldstr 02751888 560012A0 16 "texture0","other"
+mockfetchsize C00060B8
+mockfetchinit C0006400
+field * 101FD74C u32 0,1
+field * 101FD728 u32 0,1
+field * 101FD724 u32 0,1
+field * 101FD750 u32 0,1
+field * 101FD730 u32 0,1
+arg 027514F8 r4 0x101FDF8C,0x101FDCF4,0x101FDCF0,0
+arg 027515B4 r4 0x101FDDFC,0x101FDE04,0
+# Valid polygon modes, nested lock counts, and singleton destruction states.
+field 0274FEB0 r3+0x64 u32 0,1,2
+field 0274FEB0 r3+0x68 u32 0,1,2
+field 027501D8 r3+0x64 u32 0,1,2
+field 027501D8 r3+0x68 u32 0,1,2
+field 02750370 r3+0x10C u32 0,1,2
+field 02750370 r3+0x110 u32 0,1,2
+field 02750684 r3+0x10C u32 0,1,2
+field 02750684 r3+0x110 u32 0,1,2
+field 0274FCCC r3+0x14 s32 0,1,2,3
+arg 02750A48 r3 0x54005000,0
+field 02750A48 101F8B2C u32 0x54005000,0
+# Pure bounded SDK cross product supplies the actual quaternion vector terms.
+real 028E8D4C
+# Viewport mapping writes both coordinates before the platform dispatch.
+callee 0274F698 r4=out8
+callee 0274F8D8 r4=out8
+
+# Retain callback clobbers of the controller singleton as observable postconditions.
+final 027507E8 101F8B2C 4
+mockglobal 02750754 101F8B2C u32 0,0x54009900,0x12345678
+
+# Observe all thirteen depth/stencil and nine polygon control arguments.
+callee C0006848 stack=5
+callee C0006930 stack=1
+# Generated-entry SP is 0x7EFFF000; the fifth stack word is at frame+0x18.
+# Depth/stencil callers own 0x20-byte or 0x30-byte native frames.
+observe C0006848 7EFFEFF8 4
+observe C0006848 7EFFEFE8 4
+
+# createBackend forwards its retained heap even though the constructor ignores it.
+callee 0275181C r4=0
+
+# A viewport operation may select a new active graphics device before scissor dispatch.
+# The three synthetic labels stand for void(this, f32 x, f32 y, f32 w, f32 h) callbacks.
+# Both device objects and method tables have the original game layouts.
+field 0274F964 101F8B18 u32 0x54200000
+field 0274F964 5420000C u32 0x54200100
+field 0274F964 5430000C u32 0x54300100
+field 0274F964 5420011C u32 0x60000100
+field 0274F964 54200124 u32 0x60000200
+field 0274F964 54300124 u32 0x60000300
+stable 54200000 0x200
+stable 54300000 0x200
+mockglobal 60000100 101F8B18 u32 0x54300000

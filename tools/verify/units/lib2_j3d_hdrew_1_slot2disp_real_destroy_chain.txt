@@ -1,0 +1,13 @@
+# slot2 companion: registered (non-null) renderer disposer through the original producer chain, with the
+# consumers of PipelineRendererDisposer::destroy run as original code instead of observed mocks where their state is produced.
+# Producer: the committed registry-flags profile (original heap/registry/current-thread setup, original
+# PipelineRenderState::instance 027F7E08 construction; target receives the disposer it registers at state+4 and the
+# RegistryHeap callback flags 2). This file adds no field writes; it only makes destroy-side callees real:
+# PipelineRenderState::destroy 027F7EA8 and the Disposer finalizer 02752BEC with heap unlink 02755D28
+# (lock/list/unlock already real). destroyPipelineRenderBuffer 027B9694 stays observed: it reads the per-core
+# current-buffer table 104A2090/104A2094 whose producer 027B9C1C is not part of this fixture.
+# verify: -only 027F8E78 -strictnan -calleesp
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+include lib2_j3d_hdrew_1_renderer_disposer_registered_threadheap_registryflags_20261031.txt
+real 027F7EA8 02752BEC 02755D28

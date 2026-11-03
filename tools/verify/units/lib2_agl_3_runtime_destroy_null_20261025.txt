@@ -1,0 +1,9 @@
+# AGL#3 027796EC null-storage destructor guard and exact 40-byte frame only.
+# Direct-entry null input; no constructed EffectRuntimePrefix or lifecycle claim.
+# verify: -strictnan -calleesp -only 027796EC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 027796EC r3 0
+arg! 027796EC r4 0,1,0xFFFFFFFF
+footprint 027796EC 40

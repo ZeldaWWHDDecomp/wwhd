@@ -1,0 +1,22 @@
+# Complete pose layout output, builder and resource records.
+# The output is disjoint or the builder layout at its declared +8 offset.
+# verify: -only 027DAB24 -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+arg! 027DAB24 r3 0x6C000000,0x6C001008
+arg! 027DAB24 r4 0x6C001000
+fill 027DAB24 0x6C000000 0x20 0
+fill 027DAB24 0x6C001000 0x28 0
+fill 027DAB24 0x6C002000 0x18 0
+field 027DAB24 0x6C001000 u32 0x6C002000
+field 027DAB24 0x6C001004 u32 1
+field 027DAB24 0x6C002004 u32 0,0x100,0x300
+field 027DAB24 0x6C002008 u16 0,1,2,33

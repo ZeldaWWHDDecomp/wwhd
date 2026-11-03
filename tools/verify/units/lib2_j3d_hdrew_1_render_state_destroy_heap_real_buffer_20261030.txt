@@ -1,0 +1,7 @@
+# Exact observed heap-owned renderer; complete original buffer destructor and its base destructor run real.
+# Trace heap-destroy-input1000013-trace.log shows opaque027B9694 precedes realdelete registryfault.
+# Canonical RenderBuffer::destroy calls0274D67C flags0; that base only frees a nonnull receiver whenflags1.
+# No private registry stable masks or ownership edits.
+# verify: -only 027F7EA8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_render_state_destroy_heap_observed_20261030.txt
+real 027B9694 0274D67C

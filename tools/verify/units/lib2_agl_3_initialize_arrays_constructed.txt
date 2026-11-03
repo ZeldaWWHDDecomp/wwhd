@@ -1,0 +1,29 @@
+# Focused 027798F4 reproduction of the prior abort (input 1002793), not a full-domain gate profile.
+# Receiver is constructed by original 02779888; initializeArrays then creates each C98 entry using the
+# 20:57 AGL#2 sequence before its own call to 02774FD0. Heap statics/arena use the CLOSED 23:41 recipe
+# via the tested shared AGL world. SDK/memory imports remain as in that approved world.
+# The old fake heap dispatch (5660000C -> 02FFFF10) is intentionally absent.
+# verify: -strictnan -calleesp -only 027798F4
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include shared/agl_world.txt
+setupsnapshot
+# Caller-owned, aligned EffectRuntimePrefix_l; use its original constructor before entry.
+setup * 02779888 r3=0x56010000
+arg! 027798F4 r3 0x56010000
+# Match the failing trace's initializeRuntimeBase inputs: surfaceCount=2, sharedParameters=1.
+arg! 027798F4 r4 2
+arg! 027798F4 r5 1
+# Null heap selects the actual registered current root heap produced by shared/agl_world.txt.
+arg! 027798F4 r6 0
+# 027B95B4's possible 0273AD10 allocation path is modeled with the approved allocator return;
+# the four constructed SurfaceImage prefixes remain within the entry's caller-owned storage.
+alloc 0273AD10 r3 0x57010000 16
+allocnested 0273AD10
+
+# Original runtime/entry construction and the allocator/registry closure used by the approved AGL renderer recipe.
+real 02779888 0279A730 02774D44 0279A86C 027A84B8 0279E674 0279E618 02759B98
+real 02774FD0 02775090 0279AAFC 027BDF7C 027B6CB8 027B95B4 027B958C 027B954C 0277969C 0279A95C 028EFFD0
+real 0273B0D4 0273B050 0273B584 0273AD10 0273ADAC 0273B2F0 02752B0C 02752A84
+real 027794E0 02779594 02779628
+real 02755F40 02755EC4 0275315C 02753D6C 027536F4 02753628 027536B0 02755CA4 027556FC 027601BC 027601F0

@@ -1,0 +1,22 @@
+# AGL#19 display fixture: the renderer of lib2_agl_19_display_renderer_base_fixture.txt plus its configuration as the
+# HD graphics task 027297C0 fills it: RenderQueueConfiguration::create 027C21C4 (setup), the caller's stores of the layer
+# capacity 14 and the command bytes
+# after the constructor (pokes), and setDimensions 027C22D0 for both views on per-input sizes (postsetups).
+# Sizes: the shipped ones: view 0 renders at 1280x720 into the 1280x720 TV target,
+# view 1 at 854x480 into the 854x480 GamePad target.
+include lib2_agl_19_display_renderer_base_fixture.txt
+real 027C21C4 027C22D0
+setup * 027C21C4 r3=0x5E000000
+field * 5E000100 u32 1280
+field * 5E000104 u32 720
+field * 5E000108 u32 1280
+field * 5E00010C u32 720
+field * 5E000110 u32 854
+field * 5E000114 u32 480
+field * 5E000118 u32 854
+field * 5E00011C u32 480
+stable 5E000100 0x20
+poke * 5E000020 u32 14
+poke * 5E000024 u32 0x1000
+postsetup * 027C22D0 r3=0x5E000000 r4=0 r5=0x5E000100 r6=0x5E000108
+postsetup * 027C22D0 r3=0x5E000000 r4=1 r5=0x5E000110 r6=0x5E000118

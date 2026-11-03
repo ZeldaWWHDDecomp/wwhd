@@ -1,0 +1,6 @@
+# verify: -strictnan -calleesp -only 02794970
+# Preserve complete uniform observation and original history; protect only nonescaping owner fields.
+include lib2_agl_8_ssao_observed_group.txt
+include lib2_agl_8_grouped_effect_owner_controls_api.txt
+# The caller's model matrix is uploaded read-only; no runtime callee can write it.
+stable 0x5A000000 64

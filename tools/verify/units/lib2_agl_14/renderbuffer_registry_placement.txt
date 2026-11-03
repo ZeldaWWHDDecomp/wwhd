@@ -1,0 +1,47 @@
+# verify: -only 027B9694 -calleesp -strictnan
+# Qualified borrowed registry projection: count0..2, complete unique NULL/original-constructed buffer entries.
+# Ordinary disjoint nonvolatile storage/no observer; not a registration-lifecycle claim.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B954C
+real 027B958C
+real 027B95B4
+real 0274D67C
+fill * 0x58001000 0x40 0xA5
+fill * 0x5C000000 0x50 0xA5
+field * 0x104A2090 s32 0,1,2
+field * 0x104A2094 u32 0x5C000000,0x5C000010,0x5C000020,0x5C000030,0x5C000040
+field * 0x5C000000 u32 0x58000000
+field * 0x5C000004 u32 0x58001000
+field * 0x5C000010 u32 0x58001000
+field * 0x5C000014 u32 0x58000000
+field * 0x5C000020 u32 0x00000000
+field * 0x5C000024 u32 0x58001000
+field * 0x5C000030 u32 0x58001000
+field * 0x5C000034 u32 0x00000000
+field * 0x5C000040 u32 0x00000000
+field * 0x5C000044 u32 0x00000000
+fill * 0x58000000 0x40 0xA5
+setup 027B9694 027B95B4 r3=0x58000000
+setup 027B9694 027B95B4 r3=0x58001000
+arg! 027B9694 r3 0,0x58000000
+arg! 027B9694 r4 0,2,0x80000000,0xFFFFFFFE
+# Final reads only still-live registry storage, NEVER a destroyed/freed receiver.
+final 027B9694 104A2090 0x8
+final 027B9694 5C000000 0x50

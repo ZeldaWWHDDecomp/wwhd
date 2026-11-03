@@ -1,0 +1,82 @@
+# verify: -strictnan -calleesp
+# AGL#8 screen-space effect support; implementation checkpoint.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+# Unchanged canonical data-only registry owner; no additional tested functions.
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+# Both receiver dispatches are frameless tail calls.
+footprint 02792978 0
+footprint 02796020 0
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+footprint 02795D7C 0
+
+# Positive target counts are bounded to allocated test objects.
+arg! 02793E88 r4 -1,0,1,2
+src wwhd_src/agl/SsaoSampling.cpp
+arg! 02793908 r4 0,1,2,8,16
+field 02793908 r3+0x2858 s32 0,1,3,9,10
+src wwhd_src/agl/SsaoPreparation.cpp
+field 0279515C r3+0x2838 s32 0,1,2
+src wwhd_src/agl/ShadowFilter.cpp
+field 02796F74 r3+0xBE0 s32 0,1,2
+# The owned byte has no writer in the image; keep its initialized value in valid states.
+field * 0x101F8D7C u8 0 0
+
+
+# Canonical world scoped to the allocation/sample-data and destroy paths.
+include shared/agl_world.txt for 0279345C 027931EC
+# Original call closure required by the accepted 0279345C standalone fixture.
+real 0273B200 0273B264 02793384 0279345C 02793908 02793E88 02795EE0 02797DDC 0279CB9C 0279E57C 0279E618 0279E674 0279F1BC 027A03A0 027A063C 027A84B8 027A861C 027B6030 027B954C 027B958C 027B95B4 027BDF7C
+# Destroy-path receiver built by the real effect constructor and target-set allocator.
+fill 027931EC 0x58000000 0x285C 0
+setup 027931EC 02792A08 r3=0x58000000
+setup 027931EC 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+arg! 027931EC r3 0x58000000
+arg! 027931EC r4 2
+
+# Snapshot post-setup state per tested function; the shared world fixture requires this for
+# expensive stateful original setup chains and falls back when a setup depends on generated input.
+setupsnapshot
+
+# Accepted first-call producer for initializeSsaoSampleData; setup rows are function-scoped.
+real 02792A08
+fill 0279345C 0x58000000 0x2900 0
+setup 0279345C 02792A08 r3=0x58000000
+setup 0279345C 027BE930 r3=0x5800055C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000580 r4=0x6A000000 r5=*0x58000598 ->0x580027DC
+setup 0279345C 027BE930 r3=0x580005EC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000610 r4=0x6A000000 r5=*0x58000628 ->0x580027E0
+setup 0279345C 027BE930 r3=0x5800067C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x580006A0 r4=0x6A000000 r5=*0x580006B8 ->0x580027E4
+setup 0279345C 027BE930 r3=0x5800070C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000730 r4=0x6A000000 r5=*0x58000748 ->0x580027E8
+setup 0279345C 027BE930 r3=0x5800079C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x580007C0 r4=0x6A000000 r5=*0x580007D8 ->0x580027EC
+setup 0279345C 027BE930 r3=0x5800082C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000850 r4=0x6A000000 r5=*0x58000868 ->0x580027F0
+setup 0279345C 027BE930 r3=0x580008BC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x580008E0 r4=0x6A000000 r5=*0x580008F8 ->0x580027F4
+setup 0279345C 027BE930 r3=0x5800094C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000970 r4=0x6A000000 r5=*0x58000988 ->0x580027F8
+setup 0279345C 027BE930 r3=0x580009DC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000A00 r4=0x6A000000 r5=*0x58000A18 ->0x580027FC
+setup 0279345C 027BE930 r3=0x58000A6C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000A90 r4=0x6A000000 r5=*0x58000AA8 ->0x58002800
+setup 0279345C 027BE930 r3=0x58000AFC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000B20 r4=0x6A000000 r5=*0x58000B38 ->0x58002804
+setup 0279345C 027BE930 r3=0x58000B8C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000BB0 r4=0x6A000000 r5=*0x58000BC8 ->0x58002808
+setup 0279345C 027BE930 r3=0x58000C1C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000C40 r4=0x6A000000 r5=*0x58000C58 ->0x5800280C
+setup 0279345C 027BE930 r3=0x58000CAC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000CD0 r4=0x6A000000 r5=*0x58000CE8 ->0x58002810
+setup 0279345C 027BE930 r3=0x58000D3C r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000D60 r4=0x6A000000 r5=*0x58000D78 ->0x58002814
+setup 0279345C 027BE930 r3=0x58000DCC r4=1 r5=0xA r6=8 r7=8 r8=1 r9=1 r10=0 sp+8=0
+setup 0279345C 0273B0D4 r3=*0x58000DF0 r4=0x6A000000 r5=*0x58000E08 ->0x58002818
+arg! 0279345C r3 0x58000000

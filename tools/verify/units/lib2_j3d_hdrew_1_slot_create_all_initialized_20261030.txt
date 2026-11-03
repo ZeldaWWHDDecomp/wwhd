@@ -1,0 +1,7 @@
+# Original initialized19-slot table, real cache and name producers from accepted corrected recipe.
+# Additional indices only; no private state changes. Caller examples prove1/2/3/9/10/11 plus accepted12/15/16.
+# Typed initializeSlots constructs every0..18; gate is type-domain coverage, not a claim every index shipped here.
+# verify: -only 027F81C0 -strictnan -calleesp
+include lib2_j3d_hdrew_1_slot_create_fresh_produced_20261030.txt
+real 0279FDC8
+arg! 027F81C0 r4 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18

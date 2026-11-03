@@ -1,0 +1,8 @@
+# D11D4 initializer companion for dropped count/pointer initializers.
+# 's registered-arena capacity makes value-array allocation fail
+# after record 99 while the original remains clean on the shipped 256x1 path.
+# The included profile owns the complete producer/bootstrap; this final field
+# overrides only the registered arena capacity.
+# verify: -only 027D11D4 -strictnan -calleesp -footprint
+include lib2_agl_18/collection_extended_positive256_functional.txt
+field * 0x58000004 u32 0x86F140

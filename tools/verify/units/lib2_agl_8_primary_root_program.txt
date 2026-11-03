@@ -1,0 +1,18 @@
+# verify: -strictnan -calleesp -footprint -only 02794970
+# Type-domain parameter values applied through ParameterBase::applyResource: one sample pair, no attenuation.
+# Together with mode 0 and the ctor's disabled filter this selects the actual SSAO root program (variant index 0).
+include lib2_agl_8_primary_pass_world_alt.txt
+fill * 0x5B000000 0x300 0
+field * 0x5B000000 u32 0x5B000100
+field * 0x5B000004 u32 0x5B000200
+field * 0x5B000100 u32 16
+field * 0x5B000104 u32 2
+field * 0x5B00010C u32 1
+field * 0x5B000200 u32 13
+field * 0x5B000204 u32 0
+field * 0x5B00020C u8 0
+stable 0x5B000000 0x300
+setup * 0279EB28 r3=0x5800284C r4=0x5B000000
+setup * 0279EB28 r3=0x58000274 r4=0x5B000004
+arg! 02794970 r9 0,3
+real 0279EB28 02795EE4 02795F08 02795F10 02795F18 02795F20 02795EE8 02795EF0 02795EF8 02795F00

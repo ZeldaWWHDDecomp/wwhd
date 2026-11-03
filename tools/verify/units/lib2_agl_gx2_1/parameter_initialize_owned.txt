@@ -1,0 +1,49 @@
+# Complete distinct parameter runtime/builder/descriptor/default source/work allocation.
+# Embedded five-slot layout at builder+1C is the named-subobject alias.
+# Cached1,floatCount1,curveCount0,instance1 gives56 bytes including32-byte defaults.
+# verify: -only 027DD778 -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+arg! 027DD778 r3 0x70400000
+arg! 027DD778 r4 0x70401000
+arg! 027DD778 r5 0x70404000
+arg! 027DD778 r6 56
+fill 027DD778 0x70400000 0x30 0
+fill 027DD778 0x70401000 0x44 0
+fill 027DD778 0x70402000 0x38 0
+fill 027DD778 0x70403000 0x10 0
+fill 027DD778 0x70404000 0x38 0
+field 027DD778 0x70401000 u32 0x70402000
+field 027DD778 0x70401004 u32 1
+field 027DD778 0x70401008 u32 1
+field 027DD778 0x7040100D u8 1
+field 027DD778 0x70401014 u32 0,0x7040101C
+field 027DD778 0x70401018 u32 56
+field 027DD778 0x7040101C u32 0
+field 027DD778 0x70401020 u32 0
+field 027DD778 0x70401024 u32 20
+field 027DD778 0x70401028 u32 0
+field 027DD778 0x7040102C u32 4
+field 027DD778 0x70401030 u32 20
+field 027DD778 0x70401034 u32 32
+field 027DD778 0x70401038 u32 24
+field 027DD778 0x7040103C u32 0
+field 027DD778 0x70401040 u32 56
+field 027DD778 0x70402018 u8 1
+field 027DD778 0x7040201C f32 0,1,-1
+field 027DD778 0x70402034 s32 4044
+field 027DD778 0x70403000 u32 1,0x12345678,0xFFFFFFFF
+field 027DD778 0x70403004 u32 2,0x87654321
+field 027DD778 0x70403008 u32 3,0xF00DF00D
+real 027DD5E4
+real 027DD6EC
+real 027DD738
+real 028F5914

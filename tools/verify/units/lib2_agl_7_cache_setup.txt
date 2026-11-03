@@ -1,0 +1,103 @@
+# AGL#7: original cache-owner setup foundation, not an enabled-frame gate.
+# verify: -only 0279049C -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+real 0279A07C
+real 0279CA34
+real 0279C950
+real 0279E57C
+real 0273B264
+real 0273B200
+real 0279E618
+real 0279E674
+real 027A84B8
+real 0279CB9C
+real 027A861C
+real 027A03A0
+real 028EFFD0
+real 028EFE58
+real 027BE6B8
+real 027BDF7C
+real 027BDE1C
+real 027BDEB4
+real 02752A84
+real 02759B98
+real 0279F1BC
+real 0279288C
+real 02791A4C
+real 027919BC
+real 027919FC
+real 02791A54
+mockmove C0009988 r3 r4 r5
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258
+real 0279F2EC
+real 0279F218
+real 02752B0C
+real 02760084
+real 02755FEC
+real 02755CA4
+real 027601BC
+real 027601F0
+real 027556FC
+real 0273B2F0
+real 02759C10
+real 028F521C
+# Exact approved getter: r3heap only, NULLheap with NULLregistrymanager.
+alloc 0273B0D4 r3 0x65000000 32
+allocnested 0273B0D4
+alloc 0273AD10 r3 0x66000000 32
+allocnested 0273AD10
+field 0279049C 101F8B4C u32 0
+field 0279049C 101F8DD4 u32 0
+field 0279049C 101F8C1C u32 0
+stable 65000000 0x2F9C
+# Protected02785CB4 stays mocked;027861E0 is not executed.
+nestedret C0009BB0 0
+nestedret 028FDE28 0
+field 0279049C 104A0BC0 u32 0
+field 0279049C 104A0BC4 u32 1
+field 0279049C 104A0BC8 u32 2
+setup 0279049C 0279F2EC r3=0
+# This pure owned function has no live frame/resource requirements.
+arg! 0279049C r3 0,1,2,3
+arg! 0279049C r4 0,1,2,3
+arg! 0279049C r5 0,1
+arg! 0279049C r6 0,1
+arg! 0279049C r7 0,1
+arg! 0279049C r8 0,1
+arg! 0279049C r9 0,1
+# Compare the constructor-produced whole owner as an unchanged postcondition.
+final 0279049C 65000000 0x2F9C

@@ -1,0 +1,195 @@
+# AGL#11 parameters: the parameter selection (a String32 text parameter naming an entry of its owner's list),
+# the String32 accessors and text-class virtuals of its translation unit, and the parameter object
+# (construction, parameter chain, copy, resource application and blending).
+src wwhd_src/agl/ParameterSelection.cpp wwhd_src/agl/ParameterObject.cpp
+nulltrap
+stackfill
+# Object allocator: distinct blocks, or an exhausted heap.
+alloc 0273AD10 r3 0x58B00000 4
+allocfail 0273AD10 0,0,1,2,3
+stable 58B00000 0x10000
+# The empty text (sead's shared empty SafeString): its text and a text vtable with a fixture terminator.
+field * 104A0CD8 u32 0x5A050000,0x5A050000,0x5A050000,0x5A050040,0x5A100000,0x5A280000
+# An unterminated text longer than sead's 0x40000-character scan limit (two views one byte apart).
+fill * 5A100000 0x40010 0x41
+stable 5A100000 0x40010
+# Two distinct texts of exactly 0x40000 characters (the longest text the scans accept).
+fill * 5A200000 0x40000 0x42
+field * 5A240000 u8 0
+fill * 5A280000 0x40000 0x42
+field * 5A2C0000 u8 0
+stable 5A200000 0x40001
+stable 5A280000 0x40001
+field * 104A0CDC u32 0x5A020000
+fieldstr * 5A050000 16 "","",""
+fieldstr * 5A050040 16 "name1","x"
+field * 5A020014 u32 0xF0020010
+callee F0020010 fixture r3=0
+# The parameter base constructor runs for real (it sets the base methods the constructor then replaces).
+real 0279E674
+stable 5A020000 0x20
+# ---- parameter selection at 0x5A000000 ----
+arg! 027A7E6C r3 0,0x5A000000
+arg! 027A80FC r3 0x5A000000
+arg! 027A7FF4 r3 0x5A000000
+arg 027A8084 r3 0,0x5A000000
+arg 027A8084 r4 0,1,2,3
+field * 5A000008 u32 0x5A010000
+field * 5A00000C u32 0x5A000018,0x5A000018,0x5A000018,0x5A050000,0x5A070000,0x5A100000,0x5A100001,0x5A200000
+field * 5A000010 u32 0x5A020000
+field * 5A000014 s32 32,32,32,1,2,64
+fieldstr * 5A000018 32 "","name1","name2","ab","x","name1","name2"
+field * 5A00003C u32 0,0,0x5A0F0000
+field * 5A000040 u32 0,0,0x5A0F0010
+field * 5A000044 u32 0,0x5A030000,0x5A030000
+field * 5A000048 u32 0,0x5A040000,0x5A040000,0x5A041000
+# Selection dispatch: entry name (+0x84) and entry count (+0x8C) as fixtures.
+field * 5A010084 u32 0xF0020004
+field * 5A01008C u32 0xF0020008
+stable 5A010080 0x10
+callee F0020004 fixture r3=0 r4=0
+callee F0020008 fixture r3=0
+ret F0020008 0,1,2,3,0xFFFFFFFF
+ret F0020004 0x5A060000,0x5A060008,0x5A060010,0x5A060018,0x5A060020,0x5A060028
+# Entry names: SafeTexts over fixed strings (one shares the value's own buffer).
+field * 5A060000 u32 0x5A070000
+field * 5A060004 u32 0x5A020000
+field * 5A060008 u32 0x5A070040
+field * 5A06000C u32 0x5A020000
+field * 5A060010 u32 0x5A000018
+field * 5A060014 u32 0x5A020000
+field * 5A060018 u32 0x5A050040
+field * 5A06001C u32 0x5A020000
+field * 5A060020 u32 0x5A100001
+field * 5A060024 u32 0x5A020000
+field * 5A060028 u32 0x5A280000
+field * 5A06002C u32 0x5A020000
+fieldstr * 5A070000 32 "name1","name2","ab"
+fieldstr * 5A070040 32 "name2","x",""
+# Listener (+0x44): dispatch slot 1 as a fixture.
+field * 5A030000 u32 0x5A031000
+field * 5A03100C u32 0xF002000C
+callee F002000C fixture r3=0 r4=0
+# Owners (HierarchyNode): link offset at +0x30, list head at +0x24, count at +0x2C.
+arg 027A7FF4 r4 0,0x5A040000,0x5A041000
+field * 5A040030 s32 0x3C,0x3C,0x40
+field * 5A041030 s32 0x3C,0,0x10
+field * 5A04002C s32 0,1,5
+field * 5A04102C s32 0,2,0x7FFFFFFF
+# ---- parameter object at 0x5B000000 ----
+arg! 027A84B8 r3 0,0x5B000000
+arg! 027A861C r3 0x5B000000
+arg! 027A861C r4 0x5B100000,0x5B100040
+arg! 027A86D0 r3 0x5B000000
+arg 027A86D0 r4 0x11,0x22,0x33,0x44
+arg! 027A86F8 r3 0x5B000000
+arg! 027A86F8 r4 0x5B010000
+arg! 027A8650 r4 0,0x5B100000,0x5B100040
+arg! 027A8650 r5 0,0x5B100040,0x5B100080
+arg! 027A8650 r6 0,0x5B110000,0x5B110040
+arg! 027A8650 r7 0,0x5B110040,0x5B110080
+arg! 027A8780 r3 0x5B000000
+arg 027A8780 r4 0,1,2
+arg! 027A8780 r5 0x5B500000
+arg! 027A8780 r6 0x5B500004
+arg! 027A8780 r7 0,0x5B400000
+arg! 027A8BAC r3 0x5B000000
+arg! 027A8BAC r4 0x5B500000
+arg! 027A8BAC r5 0x5B500004
+arg! 027A8BAC r6 0,0x5B400000
+argf64 027A8BAC f1 0,-0.0,0.25,0.5,1,1.5,-1,0x7FF8000000000000
+argf64 027A8780 f1 0,0.25,0.5,1,0.75
+field * 5B500000 u32 0,0x5B300000,0x5B300000
+field * 5B500004 u32 0,0x5B310000,0x5B310000
+# Object: first parameter, vtable with apply/copy begin and end as fixtures.
+field * 5B000000 u32 0,0x5B100000,0x5B100000,0x5B100040
+field * 5B000058 u32 0x5B430000
+field * 5B010000 u32 0,0x5B110000,0x5B110000,0x5B110040
+field * 5B43001C u32 0xF0030020
+field * 5B430024 u32 0xF0030024
+field * 5B43002C u32 0xF0030028
+field * 5B430034 u32 0xF003002C
+stable 5B430000 0x40
+callee F0030020 fixture r3=0
+callee F0030024 fixture r3=0
+callee F0030028 fixture r3=0
+callee F003002C fixture r3=0
+ret F0030020 0,1,1,1
+ret F0030028 0,1,1,1
+# Parameter chains (name hash, next, methods): 0x5B100000.. and 0x5B110000.., stride 0x40.
+field * 5B100000 u32 0x11,0x22
+field * 5B100004 u32 0,0x5B100040,0x5B100040
+field * 5B100008 u32 0x5B200000
+field * 5B100040 u32 0x22,0x33,0x44
+field * 5B100044 u32 0,0x5B100080,0x5B100080
+field * 5B100048 u32 0x5B200000
+field * 5B100080 u32 0x33,0x11
+field * 5B100084 u32 0
+field * 5B100088 u32 0x5B200000
+field * 5B110000 u32 0x11,0x22,0x33
+field * 5B110004 u32 0,0x5B110040,0x5B110040
+field * 5B110008 u32 0x5B200000
+field * 5B110040 u32 0x22,0x44
+field * 5B110044 u32 0,0x5B110080,0x5B110080
+field * 5B110048 u32 0x5B200000
+field * 5B110080 u32 0x33,0x11
+field * 5B110084 u32 0
+field * 5B110088 u32 0x5B200000
+# Parameter dispatch: copy (+0x08 slot) as a fixture.
+field * 5B20000C u32 0xF0030030
+stable 5B200000 0x80
+callee F0030030 fixture r3=0 r4=0
+# Mocked parameter methods: float-type predicate is a bool.
+ret 0279EACC 0,1
+# Resources: object (size, count, hash, reserved) then parameters (size, type, hash, payload).
+field * 5B300004 u32 0,1,2,3,3
+field * 5B300010 u32 0x10,0x14
+field * 5B300018 u32 0x11,0x22,0x55
+field * 5B310004 u32 0,1,2,3,3
+field * 5B310010 u32 0x10,0x14
+field * 5B310018 u32 0x11,0x22,0x55
+fill * 5B300020 0x40 0
+field * 5B300020 u32 0x10
+field * 5B300024 u32 0x10
+field * 5B300028 u32 0x22,0x33,0x44
+field * 5B300030 u32 0x10
+field * 5B300034 u32 0x10
+field * 5B300038 u32 0x33,0x44,0x11
+field * 5B300040 u32 0x10
+field * 5B300044 u32 0x10
+field * 5B300048 u32 0x44,0x11
+fill * 5B310020 0x40 0
+field * 5B310020 u32 0x10
+field * 5B310024 u32 0x10
+field * 5B310028 u32 0x22,0x33,0x44
+field * 5B310030 u32 0x10
+field * 5B310034 u32 0x10
+field * 5B310038 u32 0x33,0x44,0x11
+field * 5B310040 u32 0x10
+field * 5B310044 u32 0x10
+field * 5B310048 u32 0x44,0x11
+# Parameter list (+0x5C parent, +0x60 dispatch) and its parent; not-applied/not-blended slots as fixtures.
+field * 5B40005C u32 0,0x5B410000
+field * 5B400060 u32 0x5B420000
+field * 5B41005C u32 0,0x5B400000
+field * 5B410060 u32 0x5B420000
+field * 5B420034 u32 0xF0030010
+field * 5B42003C u32 0xF0030014
+stable 5B420000 0x40
+callee F0030010 fixture r3=0 r4=0 r5=0 r6=4
+callee F0030014 fixture r3=0 r4=0 r5=0 r6=4 r7=4 r8=4 r9=4
+# Resource arguments of the parameter methods are compared by their pointee (the record pointer).
+callee 0279EB28 r4=4
+callee 0279EC1C r4=4
+# Resource data is read-only file content: mocked calls never rewrite it (keeps the walks bounded).
+stable 5B300000 0x60
+stable 5B310000 0x60
+# The parameter chain's links stay as built (a clobbered link would leave the chain for random memory,
+# where a cycle runs to the access budget); names and methods stay clobberable.
+stable 5B000000 4
+stable 5B100004 4
+stable 5B100044 4
+stable 5B100084 4
+stable 5B110004 4
+stable 5B110044 4
+stable 5B110084 4

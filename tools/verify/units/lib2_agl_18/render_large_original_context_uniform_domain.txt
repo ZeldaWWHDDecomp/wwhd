@@ -1,0 +1,23 @@
+# AGL#18 027CF2B0 caller-valid uniform-domain companion.  Keep the original
+# selector/producer path from the deterministic runtime fixture, then vary the
+# selected shipped program within its allocated six-entry uniform array and
+# vary only initialized buffer objects already owned by this fixture.
+# Trace evidence: the producer selects DrawProgram_l 6A1D99E8, whose locations
+# are 6A2C1CF4, uniform count is 6, and uniform array is 6A2CA8B4.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_runtime.txt
+
+# Counts remain within the selected program's six-entry uniform allocation.
+poke * 6A1D9A20 u32 0,1,2,3,4,6
+
+# Stage locations use the API's disabled sentinel or valid small register slots.
+poke * 6A2C1CFC u16 0xFFFF,0,1,2
+poke * 6A2C1CFE u16 0xFFFF,0,1,2
+poke * 6A2C1D00 u16 0xFFFF,0,1,2
+
+# Permute the four initialized uniform-buffer objects without introducing a
+# synthetic allocation or bypassing the original program-selection producer.
+poke * 59700014 u32 0x5930064C,0x5930031C,0x5960076C,0x593004B4
+poke * 59700018 u32 0x5930064C,0x5930031C,0x5960076C,0x593004B4
+poke * 5970001C u32 0x5930064C,0x5930031C,0x5960076C,0x593004B4
+poke * 59700020 u32 0x5930064C,0x5930031C,0x5960076C,0x593004B4

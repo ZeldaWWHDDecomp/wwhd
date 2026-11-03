@@ -1,0 +1,45 @@
+# install as tools/verify/units/lib2_agl_7/nt_primary_dirty.txt; needs nt_base.txt: trace 1000004 shows postsetup 027BBCA0 then call 027BB9E0, -watch 00000000:0x1000 0 lines; -nulltrap n=20 seeds 1/7 20/20; nulltrap_compare 10k seeds 1/7 OK, 10000/10000 clean.
+# AGL#7 027904D0 ShaderSetup::primary, nulltrap DIRTY-PROGRAM companion: objects from original producers (see nt_base.txt); args = render's call at 02791634/027916B8.
+# verify: -only 027904D0 -strictnan -calleesp
+# include file: lib2_agl_7_nt_base_lead.txt -> install as tools/verify/units/lib2_agl_7/nt_base.txt
+include lib2_agl_7/nt_base.txt
+# Tunable agl::utl::Parameter values (param+0xC; ctor defaults, editable through the parameter IO) and the game-set registry bit (027312D8: +0x1D4 |= 1), as in the enabled-render recipe.
+poke 027904D0 5C020424 u8 1
+poke 027904D0 5C0201D4 u32 0,1
+poke 027904D0 5C020454 u32 0,1
+poke 027904D0 5C020464 u32 0,5,6,7
+poke 027904D0 5C020474 u32 0,1,2
+poke 027904D0 5C020494 u8 0,1
+poke 027904D0 5C0204C4 u8 0,1
+poke 027904D0 5C020514 u8 0,1
+poke 027904D0 5C020524 u8 0,1
+poke 027904D0 5C020554 u8 0,1
+poke 027904D0 5C020594 u8 0,1
+poke 027904D0 5C0205A4 u8 0,1
+# More tunable parameter values (param+0xC): mResolution 0x444 (0..2; ensureOutput halves/quarters the size), mFarFade 0x4E4,
+# mMipBlurReduce 0x564 (prepareFrame: mip size /4 instead of /2).
+poke 027904D0 5C020444 u32 0,1,2
+poke 027904D0 5C0204E4 u8 0,1
+poke 027904D0 5C020564 u8 0,1
+real 02791230
+# Previous frame: the shipped caller's render call (02736278 -> 027362DC) runs the original once with the poked parameters,
+# so the frame resources (6A87E2A0 = *(5C0201D0)), their samplers and output textures are the ones render leaves.
+postsetup 027904D0 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0
+# Dirty program: the original invalidation 027BBCA0
+# (agl reserveSetUpAllVariation; shipped callers 027B81B8 in 027B814C and 027B8E8C in the archive load 027B8904) on
+# program 0x73 = *(*(*101F8D6C+0x1C)+0x1CC) = 0x6A1F2248 in this world (deterministic: setupsnapshot) sets bit 0x02 on its
+# default program and every variant record, so the tested call takes the validate arm 02790704..02790724 (blocks 32/33) -> 027BB9E0.
+postsetup 027904D0 027BBCA0 r3=0x6A1F2248
+# r3 = this, r4 = frame 0 (mFrames), r6/r7/r8/r10 = frame+0x54/+0x1EC/+0x384/+0x51C (render: addi r6,r29,0x54 ...),
+# r9 = render's sample count (sp+8 of render, min(DS+0x2BC, owner+0x1BA0) >= 1: 1..3), r5 = render's previous mode (any: generated),
+# stack: sp+8 = r23 (0/1), sp+0xC/+0x10 = max(depth width, +0x78 byte) / max(height, +0x79 byte) of the 640x360 depth.
+arg! 027904D0 r3 0x5C020000
+arg! 027904D0 r4 0x6A87E2A0
+arg! 027904D0 r6 0x6A87E2F4
+arg! 027904D0 r7 0x6A87E48C
+arg! 027904D0 r8 0x6A87E624
+arg! 027904D0 r9 1,2,3
+arg! 027904D0 r10 0x6A87E7BC
+poke 027904D0 r1+8 u32 0,1
+poke 027904D0 r1+0xC u32 640
+poke 027904D0 r1+0x10 u32 360

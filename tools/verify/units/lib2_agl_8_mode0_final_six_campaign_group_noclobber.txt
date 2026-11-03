@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 027931EC,02794270,0279599C,02795D7C,02795DDC,02795FAC -noclobber
+# Non-clobber reconfirmation of lib2_agl_8_mode0_final_six_campaign_group: the same profile, mocked callees never modify memory,
+# so every input is a non-clobber input and owner-only state keeps the value its real producers gave it.
+include lib2_agl_8_mode0_final_six_campaign_group.txt

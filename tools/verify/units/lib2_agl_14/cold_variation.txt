@@ -1,0 +1,43 @@
+# verify: -only 027B7A48,027B9268 -calleesp -strictnan
+# Original placement-only cold variation34hex. RegisteredObject constructor runs with manager/rootNULL.
+# Original cold pointersNULL; flags0/2 nofree; no registered-heap lifecycle or variationcompile claim.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 02752A84
+real 02752BEC
+real 027B7A48
+field * 0x101F8B4C u32 0
+field * 0x101F8B30 u32 0
+field * 0x58000000 u32 0xA5A5A5A5
+field * 0x58000004 u32 0xA5A5A5A5
+field * 0x58000008 u32 0xA5A5A5A5
+field * 0x5800000C u32 0xA5A5A5A5
+field * 0x58000010 u32 0xA5A5A5A5
+field * 0x58000014 u32 0xA5A5A5A5
+field * 0x58000018 u32 0xA5A5A5A5
+field * 0x5800001C u32 0xA5A5A5A5
+field * 0x58000020 u32 0xA5A5A5A5
+field * 0x58000024 u32 0xA5A5A5A5
+field * 0x58000028 u32 0xA5A5A5A5
+field * 0x5800002C u32 0xA5A5A5A5
+field * 0x58000030 u32 0xA5A5A5A5
+arg! 027B7A48 r3 0x58000000
+setup 027B9268 027B7A48 r3=0x58000000
+arg! 027B9268 r3 0x58000000
+arg! 027B9268 r4 0,2

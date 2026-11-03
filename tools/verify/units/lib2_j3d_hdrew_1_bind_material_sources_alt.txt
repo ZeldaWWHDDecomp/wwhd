@@ -1,0 +1,97 @@
+# 
+# binding (j3d::FrameRecords at pipeline+0x14): postsetup runs FrameRecords::initialize 028010F8 exactly as create 027F7B50
+# does at 027F7C54 (r3 = data+0x14, r4 = the model's shader archive, r5 = heap), with 02800B0C/027BDD2C real.
+# Archive = the shared world's agl_technique ShaderArchive_l (ShaderResources *101F8D6C = 6A833BA8, +0x230 + 1*0x54 =
+# 6A833E2C, initialized by the original 027B8904 inside 02786520): mBinaryImageAddress 6C86F100 (name text +0x18 =
+# "agl_technique"), mProgramCount 14, mPrograms 6A04D9DC (program 2 = screen_pick, 0 = multi_filter_reduce,
+# 11 = decal_trail, 13 = normal_drawer_post).
+# verify: -only 027F70D8 -strictnan -calleesp
+include shared/agl_world.txt
+setupsnapshot
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+
+# ---- ModelDataPipeline_l at 0x58000000 (0x4C; create zeroes the binding words before 028010F8) ----
+fill * 0x58000000 0x4C 0
+stable 0x58000000 0x4C
+field * 0x58000000 u32 0x58001000
+real 028010F8 02800B0C 028012BC
+postsetup 027F70D8 028010F8 r3=0x58000014 r4=0x6A833E2C r5=0x6A000000
+arg! 027F70D8 r3 0x58000000
+arg! 027F70D8 r4 0x58000014
+arg! 027F70D8 r5 0,0x6A000000
+
+# ---- RawModelResource_l at 0x58001000: +0x18 relative -> lookup block 0x58001100, +0x24 material count ----
+fill * 0x58001000 0x600 0
+stable 0x58001000 0x600
+field * 0x58001018 u32 0xE8
+field * 0x58001024 u16 0,1,2,3,4
+# material 0: block word 58001124 -> material 58001200; material+0x24 -> names 58001400 (0 = no names); names+0 -> owner text 58002000, names+4 -> program name 58002020
+field * 0x58001124 u32 0xDC
+# material 0 always has names: the failure report at 027F73F8 reads material 0's names+0 (NULL names would read address 0)
+field * 0x58001224 u32 0x1DC
+field * 0x58001400 u32 0xC00
+field * 0x58001404 u32 0xC1C
+fieldstr * 0x58002000 32 "agl_technique","agl_technique","agl_technique","agl_common"
+fieldstr * 0x58002020 32 "screen_pick","multi_filter_reduce","normal_drawer_post","decal_trail","no_such_program"
+# material 1: block word 58001134 -> material 58001240; material+0x24 -> names 58001420 (0 = no names); names+0 -> owner text 58002040, names+4 -> program name 58002060
+field * 0x58001134 u32 0x10C
+field * 0x58001264 u32 0,0x1BC
+field * 0x58001420 u32 0xC20
+field * 0x58001424 u32 0xC3C
+fieldstr * 0x58002040 32 "agl_technique","agl_technique","agl_technique","agl_common"
+fieldstr * 0x58002060 32 "screen_pick","multi_filter_reduce","normal_drawer_post","decal_trail","no_such_program"
+# material 2: block word 58001144 -> material 58001280; material+0x24 -> names 58001440 (0 = no names); names+0 -> owner text 58002080, names+4 -> program name 580020A0
+field * 0x58001144 u32 0x13C
+field * 0x580012A4 u32 0,0x19C
+field * 0x58001440 u32 0xC40
+field * 0x58001444 u32 0xC5C
+fieldstr * 0x58002080 32 "agl_technique","agl_technique","agl_technique","agl_common"
+fieldstr * 0x580020A0 32 "screen_pick","multi_filter_reduce","normal_drawer_post","decal_trail","no_such_program"
+# material 3: block word 58001154 -> material 580012C0; material+0x24 -> names 58001460 (0 = no names); names+0 -> owner text 580020C0, names+4 -> program name 580020E0
+field * 0x58001154 u32 0x16C
+field * 0x580012E4 u32 0,0x17C
+field * 0x58001460 u32 0xC60
+field * 0x58001464 u32 0xC7C
+fieldstr * 0x580020C0 32 "agl_technique","agl_technique","agl_technique","agl_common"
+fieldstr * 0x580020E0 32 "screen_pick","multi_filter_reduce","normal_drawer_post","decal_trail","no_such_program"
+
+# ---- failure text (027F76FC result object, its vtable +0x14 call) ----
+ret! 027F76FC 0x58003000
+fill * 0x58003000 0x200 0
+field * 0x58003004 u32 0x58003100
+field * 0x58003114 u32 0x5F000200
+stable 0x58003000 0x200
+callee 5F000200 fixture r3=8

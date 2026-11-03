@@ -1,0 +1,9 @@
+# AGL#3 0277A488 null-storage destructor guard and exact 32-byte frame only.
+# Direct-entry null receiver; no FilterAaObject construction or nonnull cleanup claim.
+# verify: -strictnan -calleesp -only 0277A488
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 0277A488 r3 0
+arg! 0277A488 r4 0
+footprint 0277A488 32

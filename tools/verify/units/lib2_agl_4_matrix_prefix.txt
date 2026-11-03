@@ -1,0 +1,28 @@
+# AGL4 complete matrix/translation caller backing; includes legal within-matrix input alias.
+# verify: -only 0277C85C,0277C888 -strictnan -calleesp -footprint
+stackfill
+src wwhd_src/agl/ParameterValues.cpp
+src wwhd_src/agl/DepthBlurValues.cpp
+src wwhd_src/agl/BloomValues.cpp
+src wwhd_src/agl/DepthBlurCallbacks.cpp
+src wwhd_src/agl/DepthBlurRuntimeValues.cpp
+src wwhd_src/agl/DepthBlurConstruction.cpp
+src wwhd_src/agl/DepthBlurShapeSetup.cpp
+src wwhd_src/agl/DepthBlurParameterSetup.cpp
+src wwhd_src/agl/DepthBlurDrawState.cpp
+src wwhd_src/agl/DepthBlurContext.cpp
+fill * 55000000 0x40 0
+fill * 55001000 0xC 0
+arg! 0277C85C r3 0x55000000 0x55000000
+arg! 0277C85C r4 0 0
+arg! 0277C85C r5 0x55000010 0x55000010
+arg! 0277C888 r3 0x55000000 0x55000000
+arg! 0277C888 r4 0x55001000 0x55001000
+field * 55000010 f32 1 1
+field * 55000014 f32 2 2
+field * 55000018 f32 3 3
+field * 5500001C f32 4 4
+field * 55001000 f32 1 1
+field * 55001004 f32 2 2
+field * 55001008 f32 3 3
+real 0277C85C

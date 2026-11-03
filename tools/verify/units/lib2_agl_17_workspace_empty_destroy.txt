@@ -1,0 +1,14 @@
+# Original embedded workspace construction; empty groups, placement ownership.
+# Placement owner (deleting flags: _workspace_real_destroy).
+# verify: -only 027C7504 -strictnan -calleesp
+src wwhd_src/agl/ShadowGeometry.cpp
+real 027D7E04 027D7D94 028EFFD0 028F0164 027DA4C8
+setup 027C7504 027D7E04 r3=0x5E000084
+arg! 027C7504 r3 0,0x5E000000
+arg! 027C7504 r4 0,2
+fill 027C7504 5E000000 1460 165
+final 027C7504 5E000000 5B4
+
+# Complete original GHS loops; earlier wrapper-only captures give no array-lifetime credit.
+real 028EFE58 028F61E4 028F623C
+real 028F007C 028F61D8 028F6230

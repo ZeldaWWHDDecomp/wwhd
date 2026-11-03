@@ -1,0 +1,17 @@
+# Current six remaining small AutoFrame-ID source tuples; same accepted null/OOM domain and stronger stack observer.
+# AGL#3 AutoFrame-ID survivor observer profile.
+# Uses the established allocation-failure constructor domain: null receiver, allocator returns null.
+# The destructor's null receiver also returns before nested calls. The six original 16-byte frames
+# are written before those branches; footprint makes the frame words observable.
+# verify: -strictnan -calleesp -only 02779154,02779460,027794E0,02779594,02779628,0277969C
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0
+ret! 0273AD10 0
+footprint 02779460 16
+footprint 027794E0 16
+footprint 02779594 16
+footprint 02779628 16
+footprint 0277969C 16
+footprint 02779154 16

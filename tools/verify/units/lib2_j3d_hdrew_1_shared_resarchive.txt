@@ -1,0 +1,91 @@
+# SHARED FRAGMENT (include only, after a spec that includes shared/agl_world.txt; it has no tested function).
+# J3D-HDREW#1 2026-11-01: original HD resource bootstrap + registration of the shipped System archive and the
+# toon images 10475800/10475804 exactly as d_s_logo.cpp 025AC3F8 stores them.
+# Chain (all original code, run as setups):
+#   boot heap part of 0203EE2C (0203F138..0203F248): 02753004 x3 (archive heap r25, resource heap r26, r24 under r26),
+#   02603680 ResControl createInstance (*101F4F28) on r26, 0260ABF8 (blr), stores +0x2044/+0x2040/+0x2128;
+#   System.szs (game/, sha256 0c58fa6ae79faa8f361356411eec6a7ae652d44d64d985ebb647c8ee9206ad30; Yaz0 SARC 0xBC000,
+#   one entry System.bfres) as the completed load: original SharcArchiveRes
+#   0275E11C/0275D21C; ResMgr loaded-archive lookup 026123FC answers it (nestedret: the FS read/mount is skipped);
+#   02604EB4 = ResControl archive registration (02604094 heap choice, 02754B38 archive heap, 02602AD4/02602BC8 res
+#   file, 026042AC res info, 02604550 resources, tree insert 0260AD08); 026066C4 getRes("System", 3/4) ->10475800/04.
+# Reserved: 0x58000000-0x580BBFFF (System SARC), 0x58100000 (archive object), 0x58101000-0x5810103F (names, slots),
+#   0x72000000-0x72FFFFFF (FreeRegionHeap backing), 0x5D400000-0x5D400FFF (current OSThread block). Deterministic results: ResControl 0x724001A0, toon images
+#   0x72000304 / 0x72000328.
+# Harness models (declared): nestedret 026123FC (archive lookup; FS read/mount skipped, rulings 19:47/00:52), the
+#   current-thread TLS model; 026123FC answers ONE archive object, so a later archive
+#   registration reconstructs its SharcArchiveRes at 0x58100000 before its own 02604EB4.
+# Known gap: archives whose registration builds shaders (e.g. a model .szs with .sharcfb) reach the GraphicsDevice
+#   singleton *101F8B18, which shared/agl_world.txt only pokes AFTER all setups (0274FBF8 r3=0 -> page 0).
+real 02602AD4 02602BC8 02602ECC 02603298 026032F0 0260344C 02603680 02603740 02603ACC 02603C84 02604094 026042AC 02604470 026044E0 02604550 02604A08 02604EB4 026066A0 026066C4 0260A824
+real 0260A828 0260ACC8 0260AD08 0260B538 0260B5E8 0260B698 0260B704 02612450 026124F4 02613F20 0273AFC8 0273B200 0273B264 0273B584 02740B0C 02740B14 02740B1C 02740B24 02740BE0 02740E08
+real 027414F8 0274FBF8 0274FCCC 02752BEC 027549FC 02754A8C 02754AA4 02754AC4 02754B38 02755D28 02759C28 0276B0D4 027731C8 027732B0 027735DC 0277367C 027861E0 027B727C 027B72AC 027B730C
+real 027B7A48 027B7B1C 027B7BE8 027B7D78 027B8024 027B814C 027B8EB0 027BC540 027BC654 027BC68C 027BC6B8 027BC854 027C52D4 027C5474 027C57E8 027C5978 027C5AAC 027C5B20 027C5FD8 027C6060
+real 027C6B98 027D3F1C 027D3FC4 027D3FD4 027D4028 027D4C9C 027DB134 027DBBEC 027DBC00 027DEFE4 027DF00C 027DF01C 027E14A4 027E14A8 027E14B0 027E14B8 027E14C0 027E1518 027E1EFC 027E1F5C
+real 027E1FC8 027E25FC 027E267C 027E26FC 027E2748 027E288C 027E2940 027E2A68 027E2D40 027E2DC0 027E2DC4 027E2EA4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C
+real 028F10B8 028F1108 028F1158 028F1904 028F5228 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 025AC78C 0260329C 02608234 02608258 026082D0 026082EC
+real 02609A3C 0260AC60 0260AC94 02753998 02753B48 02754620 027DF8B4 027DF9B0 02754C98 02754F50 02754D40 02754DD8 02754E74 02754370 02755280 02753A34
+# ---- current thread (shipping-HLE TLS model, mockthreadspecific; same block as the
+# approved thread bootstrap): ThreadManager::create 027604BC(root), attachCurrent 02760680 -> 0276055C, then the
+# original 02756170 sets the produced Thread+0x70 (current heap) ----
+mockthreadspecific C000A090,028FE308 C0009CC8,028FDF40 5D400000 C0009BC8,028FDE40
+fill * 5D400000 0x1000 0
+field * 5D400330 u32 16
+stable 5D400330 4
+stable 5D40057C 0x40
+mockretfield C0009CC0 r3 0x330 0 0xFFFFFFFF
+mockretfield 028FDF38 r3 0x330 0 0xFFFFFFFF
+real 02756170 027EC220 027EC230
+real 027604BC 0275FCFC 02760680 0276055C 027601F8 027602DC
+real 02754A8C 02754AA4 027553E0
+field * 101F8BA0 u8 0
+field * 101F8BA1 u8 0
+stable 101F8B94 8
+stable 101F8BA0 2
+setup * 027604BC r3=0x6A000000
+setup * 02760680 r3=*101F8B94 r4=0x6A000000
+setup * 02756170 r3=0 r4=0x6A000000
+# ---- boot heap part of 0203EE2C (0203F138..0203F248), replayed with the original 02753004 ----
+fill * 0x58101000 0x40 0
+field * 0x58101000 u32 0x100065CC
+field * 0x58101004 u32 0x100062F8
+field * 0x58101008 u32 0x10006688
+field * 0x5810100C u32 0x100062F8
+field * 0x58101010 u32 0x100065DC
+field * 0x58101014 u32 0x100062F8
+field * 0x58101018 u32 0x100527BC
+field * 0x5810101C u32 0x100526DC
+stable 0x58101000 0x40
+# backing: an original FreeRegionHeap (0275315C) in a free 16 MiB range (the agl world's root arena is too small).
+# Shipped boot sizes (0203F15C..0203F21C): archive heap r25 = 0275320C(4)+0x00E00000 (0203F17C..0203F1B0);
+# resource heap r26 = 0x16C00000 - r25's size (0203F1B8..0203F1E8); r24 = 0275320C(0x2000)+0x0D400000 under r26
+# (0203F1F0..0203F21C). Scaled here to 0x400000 / 0x600000 / 0x100000: the sizes decide only whether allocations
+# succeed; the -trace allocation check (no allocator return of 0 in any setup) is recorded with the companions.
+fill * 0x72000000 0x01000000 0
+stable 0x72000000 0x01000000
+field * 0x58101030 u32 0x100065B0
+field * 0x58101034 u32 0x100062F8
+setup * 0275315C r3=0x72000000 r4=0x01000000 r5=0x58101030 r6=0 ->0x58101038
+setup * 02753004 r3=0x400000 r4=0x58101000 r5=*0x58101038 r6=1 r7=0 ->0x58101020
+setup * 02753004 r3=0x600000 r4=0x58101008 r5=*0x58101038 r6=1 r7=1 ->0x58101024
+setup * 02753004 r3=0x100000 r4=0x58101010 r5=*0x58101024 r6=-1 r7=0 ->0x58101028
+setup * 02603680 r3=*0x58101024
+setup * 027E2DC0 r3=*0x101F4F28 ->0x5810102C
+# boot 0203F228 bl 02603680 (r3=r26); 0203F23C bl 0260ABF8 (a single blr: no effect); then the plain stores
+# 0203F240 stw r25,0x2044(r31); 0203F244 stw r26,0x2040(r31).
+# ResControl = 0x724001A0 (original 02603680 on the 0x724000D8 heap, deterministic); the identity routine 027E2DC0 (blr)
+# hands the original-returned heap to `->`.
+setup * 027E2DC0 r3=*0x58101020 ->0x724021E4
+setup * 027E2DC0 r3=*0x58101024 ->0x724021E0
+# 0203F248 stw r24,0x2128(r31)
+setup * 027E2DC0 r3=*0x58101028 ->0x724022C8
+# ---- System archive: shipped bytes as the completed load ----
+blobfile * 0x58000000 content/Common/Object/System.szs:<yaz0>
+stable 0x58000000 0xBC000
+fill * 0x58100000 0x1000 0
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x58000000 r5=0xBC000 r6=0xBC000 r7=0 r8=0
+nestedret 026123FC 0x58100000
+setup * 02604EB4 r3=*0x101F4F28 r4=0x58101018 r5=0
+setup * 026066C4 r3=*0x101F4F28 r4=0x58101018 r5=3 ->0x10475800
+setup * 026066C4 r3=*0x101F4F28 r4=0x58101018 r5=4 ->0x10475804

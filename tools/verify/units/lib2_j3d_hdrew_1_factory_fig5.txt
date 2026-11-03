@@ -1,0 +1,63 @@
+# ModelDataPipeline_l::create 027F7B50 on the shipped Figure5.bfres FMDL "vf_098" (model 1 of the archive; 8 materials,
+# 8 shapes) with the record that the original hdResModel_getShader 026031D0(archive res, 1) returns, and the real heap.
+# Chosen from the shipped name scan (factory helper evidence factory-sourcenames-scan/pairs_fmatname.json): its material
+# pairs separate the 027F691C name-compare rows 4272/4503/4594 and reach the a==0 test.
+# Figure5 (game/ content/Common/Object/Figure5.szs, Yaz0 SARC 0xDE2322: Figure5.bfres at +0x130000, 19 .sharcfb) is
+# registered like the base's Kn/St archives: SharcArchiveRes rebuilt at the lookup's object 0x58100000, name "Figure5"
+# as fixed bytes, original 02604EB4 (archive res 0x720583BC, deterministic: -trace 'nested return 02602AD4 r3=720583BC');
+# record 026031D0(0x720583BC, 1) -> 0x7205FB30 (deterministic, -trace). FMDL vf_098 = 0x59130000 + 0x58C4.
+# Archive object reuse: see lib2_j3d_hdrew_1_factory_kn; the -watch proof
+# for this spec is in the factory helper evidence factory/watch/reuse/.
+# verify: -only 027F7B50 -strictnan -calleesp
+include lib2_j3d_hdrew_1_misc_50f8_toon.txt
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineEntryCursor.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineOptions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorTable.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceFactory.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorParameters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineTextureTransform.cpp
+src wwhd_src/JSystem/J3DGraph/ModelFrameUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineMaterialSources.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+blobfile * 0x59000000 content/Common/Object/Figure5.szs:<yaz0>
+stable 0x59000000 0xDE2322
+setup * 0275E11C r3=0x58100000
+setup * 0275D21C r3=0x58100000 r4=0x59000000 r5=0xDE2322 r6=0xDE2322 r7=0 r8=0
+fill * 0x58101080 0x10 0
+field * 0x58101080 u32 0x46696775
+field * 0x58101084 u32 0x72653500
+field * 0x58101088 u32 0x58101080
+field * 0x5810108C u32 0x100526DC
+stable 0x58101080 0x10
+setup * 02604EB4 r3=*0x101F4F28 r4=0x58101088 r5=0
+setup * 026031D0 r3=0x720583BC r4=1 ->0x58101058
+accessbudget 800000000
+pagebudget 262144
+arg! 027F7B50 r3 0x591358C4
+arg! 027F7B50 r4 0x7205FB30
+arg! 027F7B50 r5 0
+arg! 027F7B50 r6 0x6A000000

@@ -1,0 +1,84 @@
+# verify: -only 027B5234 -calleesp -strictnan
+# compareAndCopy over the curve member fixture plus a source of a different parameter class.
+# Original curve initializer binds each descriptor to its internal30-float storage.
+# Copy paths are raw256-byte payload moves, not lfs/stfs setters; no evaluator-domain claim.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B4FCC
+real 027B4FD4
+real 027B4FDC
+real 027B4FE4
+real 027B4FEC
+real 027B5134
+real 02759B98
+mockmove C0009988 r3 r4 r5
+field * 0x58000008 u32 0x101696BC
+field * 0x58001008 u32 0x101696BC
+setup 027B5134 027B4FEC r3=0x58000000
+setup 027B5234 027B4FEC r3=0x58000000
+setup 027B5370 027B4FEC r3=0x58000000
+setup * 027B4FEC r3=0x58001000
+stable 0x58000000 0x124
+stable 0x58001000 0x124
+stable 0x101696BC 0x60
+stable 0x10169734 36
+field * 0x104A0CD8 u32 0x10147664
+field * 0x104A0CDC u32 0x10147634
+stable 0x104A0CD8 8
+stable 0x10147664 1
+arg! 027B4FEC r3 0x58000000
+arg! 027B5134 r3 0x58000000
+arg! 027B5234 r3 0x58000000
+arg! 027B5370 r3 0x58000000
+arg! 027B5134 r4 0x58000000,0x58001000
+arg! 027B5234 r4 0x58000000,0x58001000,0x58002000
+arg! 027B5370 r4 0x58000024
+arg! 027B5370 r5 0,1,255,256,257,0xFFFFFFFF
+# A coherent, distinct source linear curve payload, applied after initializers.
+poke * 58001014 u8 0
+poke * 58001017 u8 1
+poke * 58001024 u32 1
+poke * 58001028 u32 0
+poke * 5800102C u32 0x3F000000
+poke * 58001020 u8 0
+poke * 58001023 u8 2
+poke * 580010A4 u32 2
+poke * 580010A8 u32 0
+poke * 580010AC u32 0x3F000000
+poke * 580010B0 u32 0x3F400000
+# Serialized payload updated before descriptor restoration; old descriptor metadata is stale.
+poke 027B5370 58000024 u32 3
+poke 027B5370 58000028 u32 0
+# Helper027B1A30 is opaque under published Lead09:27 bare-blr/no-memory-effect contract; no parked-body generation.
+# This dispatch table has no writer in this bounded path (1A30/59B98 are published no-memory leaves).
+stable 0x10168EC4 24
+# A source of another parameter class: its table's kind slot is a mock-only callback returning
+# this class's kind (10) or another one, so both the mismatch exit and the copy path are reached.
+callee 0F001500 fixture r3=0
+ret! 0F001500 9,10,11,0xFFFFFFFF
+field 027B5234 0x58002008 u32 0x58003000
+field 027B5234 0x58003034 u32 0x0F001500
+field 027B5234 0x58003014 u32 0x0F001501
+callee 0F001501 fixture r3=0 r4=0
+stable 0x58002008 4
+stable 0x58003000 0x40
+# The comparison text handed to the bare initializer is an 8-byte SafeText (compared at the call).
+callee 027B1A30 r3=8

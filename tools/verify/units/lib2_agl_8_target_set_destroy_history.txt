@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 0279313C
+# Real history/cache state produced before the nondeleting destructor.
+include lib2_agl_8_target_set_destroy_placement.txt
+setup 0279313C 02794068 r3=0x58020000 r4=1 r5=64 r6=64

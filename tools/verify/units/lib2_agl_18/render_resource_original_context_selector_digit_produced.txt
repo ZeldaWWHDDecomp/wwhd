@@ -1,0 +1,21 @@
+# AGL#18 027CD8EC selector-digit domain.  The collection owner points at the
+# produced collection and the original 027B1734 producer creates the record
+# state after the included runtime fixture has finished its base setup.
+# target the source-null literal and comparison
+# mutations; numeric IDs are regenerated from the final committed source.
+# verify: -only 027CD8EC -strictnan -calleesp -footprint
+include lib2_agl_18/render_resource_original_context_runtime.txt
+# D11D4 produces record 0 at 6A87E820 in this setup snapshot.  Draw that
+# producer-owned record rather than the separate 59100000 fixture record.
+arg! * r4 0x6A87E820
+poke * 5960001C u32 0x59200000
+# 027B1734 follows owner+0x1C to the D11D4-produced collection, then selects
+# record index 0 through the collection's own +0xC arena pointer.  Do not poke
+# producer-written collection fields +8 or +0xC.
+poke * 59100040 f32 0,1,2
+poke * 59100044 f32 1,2,0
+poke * 59100048 f32 2,0,1
+poke * 5910004C u32 0x3E99999A
+real 027B1734 027D1E1C
+postsetup * 027B1734 r3=0x59600000 r4=0 r5=0x59100008 r6=0x59100014 r7=0x59100020 r8=0 r9=0x59100030 f1=*59100040 f2=*59100044 f3=*59100048 f4=*5910004C
+callee 027B1938 r10=0

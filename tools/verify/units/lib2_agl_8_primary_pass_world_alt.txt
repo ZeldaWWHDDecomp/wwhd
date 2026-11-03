@@ -1,0 +1,41 @@
+# verify: -strictnan -calleesp -footprint -only 02794970
+# Current caller-backed SSAO primary-pass profile: complete original effect and resource/target-set construction,
+# with the approved original AGL world and shader archive graph. No direct target-set/effect field seeding.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+include shared/agl_world.txt
+setupsnapshot
+
+# Real constructor-produced effect and target set.
+fill * 0x58000000 0x285C 0
+setup * 02792A08 r3=0x58000000
+setup * 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+
+# Caller inputs: index 0 into the original single target set, positive viewport dimensions, identity model.
+fill * 0x5A000000 64 0
+field * 0x5A000000 f32 1
+field * 0x5A000014 f32 1
+field * 0x5A000028 f32 1
+field * 0x5A00003C f32 1
+arg! 02794970 r3 0x58000000
+arg! 02794970 r4 0
+arg! 02794970 r5 64
+arg! 02794970 r6 64
+arg! 02794970 r7 0
+arg! 02794970 r8 0x5A000000
+arg! 02794970 r9 0
+argf64! 02794970 f1 0.0
+argf64! 02794970 f2 1.0
+
+# The setup functions and their constructors execute as originals; helper closure is from shared/agl_world.txt.
+real 02792A08 02793E88 02793384 0279345C 02793908

@@ -1,0 +1,8 @@
+# verify: -strictnan -only 0279515C -noclobber
+# ssaorender: the mode-0 secondary bind profile with blur counts 0..3 from the
+# resource word that the real ParameterBase::applyResource 0279EB28 (the only setter) copies into mBlurCount
+# (0x5800282C). The base profile offers only 0 and 1. From the second iteration on, the rebind of the temporary texture
+# (SsaoRender.cpp:415) finds sampler 0 already holding the temporary's description and takes the equal-description arm
+# (SsaoRender.cpp:339-346, blocks at 02795788..027957CC). Caller-visible checks only; -noclobber.
+include lib2_agl_8_ssaorender_secondary_bind_visible.txt
+field 0279515C 0x5B20010C s32 0,1,2,3

@@ -1,0 +1,78 @@
+# Final full pool115: 38 observed differences, 42 compile-invalid, 35 qualified/source-equivalent; zero open/timeouts.
+# Combined four culling pools433:138 observed-D,159 compile-CI,136 qualified/source-EQ; raw tool classes unchanged.
+# Existing culling_selected_sphere_producer_viewpoints-O2|O1-seed1|7.log controls each10000/10000; family coverage union11/11, no reachable gaps.
+# Canonical n1 guest-pagezero audit clean: dw-pagezero-culling_selected_sphere_producer_viewpoints-n1.log (no R/W/P, abort or refusal).
+# Exact residual evidence: dw-culling-selected_sphere-final35-seed1|7.log, n10000 each; individual source groups in culling_selected_sphere_producer_viewpoints.txt.
+# All normal logs under build/agl18; base n1000 pool, camera/tangent/viewpoint n1000 steering surveys precede residual-only10k.
+# View-space input samples transformed by the original inverse-view matrix into owned world centres.
+# No projection/volume/bounds patches; controls and trace closure validated.
+poke * 5A100000 f32 0,0.5,-0.5,1,-1,10,-10,1000,-1000
+poke * 5A100004 f32 0,0.5,-0.5,1,-1,10,-10,1000,-1000
+poke * 5A100008 f32 0,-0.5,-1,-2,-10,-100,-1000,-10000,-10001
+poke * 5A100100 f32 0,0.5,-0.5,1,-1,10,-10,1000,-1000
+poke * 5A100104 f32 0,0.5,-0.5,1,-1,10,-10,1000,-1000
+poke * 5A100108 f32 0,-0.5,-1,-2,-10,-100,-1000,-10000,-10001
+# Selected-pair consumer with a disjoint original-initialized point record; no collection lifecycle claim.
+# Original-produced culling volume, CLOSED Lead02:42; camera closure validation pending.
+# No plane/bounds writes: projection and rigid view feed original CB8C/D07C/CC74.
+# verify: -only 027CF8DC -strictnan -calleesp
+src wwhd_src/agl/DrawPreparation.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+arg! * r5 0
+arg! * r6 0x59300000
+callbudget 60000
+setup * 02757190
+setup * 027CC1BC r3=0x58000000 r4=0x58200000
+setup * 027CC1BC r3=0x58000000 r4=0x58200100
+setup * 027CF888 r3=0x58000000 r4=0x58100000
+stable 59300000 0xEA4
+stable 59400000 0xC4
+setup * 027389F8 r3=0x59400000
+poke * 59400094 u32 0x3F800000
+poke * 59400098 u32 0x461C4000
+poke * 594000AC u32 0x3FAAAAAB
+poke * 594000B0 u32 0x00000000
+poke * 594000B4 u32 0x00000000
+poke * 594000B8 u32 0x3F800000
+poke * 594000BC u32 0x3F800000
+poke * 58100008 u32 0x58200000
+poke * 5810000C u32 0x58200100
+poke * 58200014 f32 0,1,10
+poke * 59900000 u32 0x40400000
+poke * 59900004 u32 0x40800000
+poke * 59900008 u32 0x40A00000
+poke * 59900100 u32 0xC1200000
+poke * 59900104 u32 0x3F800000
+poke * 59900108 u32 0xC0E00000
+poke * 59900200 u32 0x3E4CCCCD
+poke * 59900204 u32 0x3F800000
+poke * 59900208 u32 0x3E99999A
+postsetup * 0274CBAC r3=0x59800000 r4=0x59900000 r5=0x59900100 r6=0x59900200
+postsetup * 0274CCC4 r3=0x59800000 r4=0x59300000
+postsetup * 0274D83C r3=0x59400000
+postsetup * 0278CB8C r3=0x59300000 r4=0x59400044 r5=0x594000B0 f1=*59400094 f2=*59400098 f3=*594000C0 f4=*594000AC
+postsetup * 0278D07C r3=0x59300000 r4=0x59300000
+postsetup * 028E90D4 r3=0x59300000 r4=0x59300E18
+postsetup * 0272D680 r3=0x59300E48 r4=0x59300128 r5=0x59300000
+real 02757190 027CC1BC 027389F8 0274D83C 0274D510 0274D750 0274E0B8 0274DEA8 0274DE2C 02738B20 0278CB8C 028F423C 028F5E98 028E8970 0278D07C 0278CC74 028EFFD0 028EFE58 028F61E4 0278D208 028E8D4C 025155D8 028E8E10 0278D234 028E90D4 028E91EC 028E8F64 028E9044 0272D680 028E9108
+real 027CF888 027CF8B4
+
+# Original projection helper closure exposed by culling preflight1; prior trace has no gate credit.
+real 0274D6B4 0274DA08 028F43F8 028F4BE0
+
+poke * 58200114 f32 0,1,10
+postsetup * 027CF8B4 r3=0x58000000 r4=0x58100000
+real 0274CBAC 0274CCC4
+postsetup * 028E8F64 r3=0x593000F8 r4=0x5A100000 r5=0x58200008
+postsetup * 028E8F64 r3=0x593000F8 r4=0x5A100100 r5=0x58200108
+real 028E8F64
+
+# FrameLocal shift review (paired10k seeds1/7 confirmed): own original is a leaf with 0x20-byte frame; no LR or other live local saved in support storage.
+# The candidate reads arithmetic from host locals, not FrameLocal memory; changing8 to9 moves dead scratch stores within the frame, including one padding byte, without touching backchain0..3 or caller frame32+.
+# This is qualified dead-slot equivalence, not runtime-invalid merely for byte misalignment (Lead08:24).
+
+# Final source-equivalence map: all listed residuals survived10000 inputs on seeds1/7; canonical guest-only page-zero audit clean.
+# independent swaps IDs1,2,4,6,7,8,12,13,23,28,32,33,34,41,43,47,49,55,70,72,76,79,82,84,90,91,100,102,105,110,111,112: Each pair has no intervening call or write to its loaded inputs; arithmetic uses unchanged operands without reassociation. Scratch-store swaps address disjoint words, never read by the candidate.
+# unused scratch stores IDs31,113: Return and later arithmetic use host scalar locals; these frame writes are never read by candidate code and are outside ordinary observable outputs.
+# dead-slot FrameLocal shift IDs99: See frame-lifetime proof above: moved stores touch dead scratch/padding inside the32-byte leaf frame, not linkage or another live local.

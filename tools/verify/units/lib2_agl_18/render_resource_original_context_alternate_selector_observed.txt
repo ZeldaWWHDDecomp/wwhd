@@ -1,0 +1,8 @@
+# Caller-valid alternate-colour selector observer for 027CD8EC. The runtime
+# profile fixes the original render-time configuration; flags=3 is the record
+# initializer's produced state and enables the alternate-colour path. Compare
+# the selector's scalar alternate-mode argument as a plain register.
+# verify: -only 027CD8EC -strictnan -calleesp -footprint
+include lib2_agl_18/render_resource_original_context_runtime.txt
+poke * 59100000 u8 3
+callee 027B1938 r5=0

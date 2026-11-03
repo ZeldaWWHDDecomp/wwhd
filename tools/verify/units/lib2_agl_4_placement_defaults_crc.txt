@@ -1,0 +1,41 @@
+# AGL#4 companion: 0277D354 placement construction with the original startup defaults and CRC table.
+# verify: -only 0277D354 -strictnan -calleesp -footprint
+# Complete caller-owned 0x2FC storage; no NULL allocation or graphics/resource lifetime claim.
+stackfill
+src wwhd_src/agl/ParameterValues.cpp
+src wwhd_src/agl/DepthBlurValues.cpp
+src wwhd_src/agl/BloomValues.cpp
+src wwhd_src/agl/DepthBlurCallbacks.cpp
+src wwhd_src/agl/DepthBlurRuntimeValues.cpp
+src wwhd_src/agl/DepthBlurConstruction.cpp
+src wwhd_src/agl/DepthBlurShapeSetup.cpp
+src wwhd_src/agl/DepthBlurParameterSetup.cpp
+src wwhd_src/agl/DepthBlurDrawState.cpp
+src wwhd_src/agl/DepthBlurContext.cpp
+fill * 55000000 0x2FC 0
+arg! 0277D354 r3 0x55000000 0x55000000
+# Initial writable payloads distinct from ordinary default-color values where applicable.
+field * 550002D8 f32 2 2
+field * 550002DC f32 2 2
+# Actual SEAD empty-string startup before all parameter names/hash callbacks.
+setup * 02759B40
+real 02759B40
+real 028F026C
+# 0279E674 constructs the 12-byte parameter header in place; the registration parent is NULL.
+callee 0279E674 r3=out12
+callee 0279E618 r3=out8 r4=8 r7=0
+real 0279E674
+real 0279E618
+real 0279E57C
+real 0273B264
+real 0279F1BC
+real 02759B98
+real 027A861C
+
+# Original merged SEAD14 startup establishes the live four-float default color at104A0964.
+setup * 02757190
+real 02757190
+
+# Complete original CRC startup; avoid a mocked lazy initializer inside the metadata hash.
+setup * 0273B200
+real 0273B200

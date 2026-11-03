@@ -1,0 +1,86 @@
+# Mutation122:57 detected,52 equivalent,12 compile-invalid,1 runtime-invalid.
+# Fixed-baseline n1000 seeds1/7:57D52S each; final52 residuals n10000 seeds1/7 all survive.
+# EQ47 are independent adjacent operations; EQ5 IDs40/58/61/102/108 repeat caller-produced alpha1/alternate RGB0.
+# Exact repeated words: primary alpha+0x38=1, alternate RGB+0x3C/+0x40/+0x44=0, alternate alpha+0x48=1.
+# ID64 end=value-count leaves the one-value array during forward iteration; raw timeout preserved, no detection credit.
+# Current helper-inclusive n1000: 73 detected, 103 survived, 21 compile-invalid.
+# The original 027BDF7C resource watch shows dirtyFlags=0xFF before the helper;
+# the supplied alternate border is already RGBA(0,0,0,1), pointer reloads retain
+# the same owned object, and compareEnabled=1 is written twice.  Qualified-EQ
+# helper groups: pointer/reload/constructor-return #124/#132/#147/#153/#156/
+# #162/#165/#178/#179/#187/#188 plus aligned-pointer literal #184; independent
+# reorder #131/#133/#139/#142/#143/#144/#155/#159/#161/#167/#173/#177/#182/
+# #183/#185/#189/#190/#191/#195; dirty=0xFF redundancies #122/#134/#135/
+# #137/#141/#148/#152/#157/#158/#164/#172/#181/#186; constructor-equal border
+# drops #154/#163/#170/#174; repeated compare-enable #145/#169/#175.
+# Lead00:12 exact D1EE0 pre-callback record/value write set; unwritten heap stays generator first-touch.
+# Original resources at+8C,+280,+310 and buffer+4C; no handfilled resource payloads.
+# Original manager/default-texture bootstrap; shipped count1, full0x68 value + original buffer/resource constructors.
+# No projection/camera setup or fabricated source/resource payload.
+# verify: -only 027CDE3C -strictnan -calleesp -footprint
+src wwhd_src/agl/DrawResourceInitialization.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027CDE3C r3 0x59200000
+arg! 027CDE3C r4 0x59100000
+arg! 027CDE3C r5 0x6A000000
+callbudget 60000
+field * 0x101F8B94 u32 0
+field * 0x58000000 u32 0x6A000000
+field * 0x58000004 u32 0x1000000
+field * 0x58000008 u32 0
+stable 0x6A000000 0xC8
+# The count-1 callback's original 0x198 resource allocation is deterministic
+# after the fixed producer/setup sequence above.  Observe its final state so
+# helper-body stores are not hidden merely because the object is heap-owned.
+observe 027CDE3C 0x6A8044B8 408
+nestedret 02756140 0x6A000000
+setup * 02756E3C
+setup * 02757190
+setup * 027561B4
+setup * 02755FE0 r3=0x58000000
+fill * 59200000 0x114 0
+field * 5910023C u32 1
+field * 59100240 u32 0x59500000
+field * 59200000 u32 0x1016B070
+setup * 0274D510
+field * 101F8B4C u32 0
+field * 101F8DEC u32 0
+mockset C0009990 r3 r4 r5
+mocksurfacesize C00060D0
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+setup * 027854AC r3=0x6A000000
+setup * 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup * 027A76C8 r3=0x6A000000
+setup * 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup * 027BF734 r3=0x5920001C
+setup * 027BDF7C r3=0x5910008C
+setup * 027BE6B8 r3=0x59100280
+setup * 027BDF7C r3=0x59100310
+setup * 027BEB5C r3=0x5950004C
+real 025155D8 0273AD10 0273ADAC 0273AF40 0273AFC8 0273B050 0273B158 0273B2F0 0273B310 0273B560 02750CDC 02750D00 02752A84 02752B0C 02752BEC 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 0275320C 02753214 027532BC 02753628 027536B0 027536F4 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02753D6C 02753F84 02754018 027540AC 027541B8 02754370 027544E0 02754564 0275456C 02754618 02754620 02754754 027547A8 02754814 02754894 027556FC 02755818 0275589C 02755A48 02755CA4 02755D28 02755DA8 02755DBC 02755E7C 02755EC4 02755F40 02755F80 02755FE0 02755FEC 027561B4 02756254 02756268 0275626C 02756CC0 02756D04 02756D18 02756E3C 02757190 02760084 027600EC 02760168 027601BC 027601C4 027601F0 027601F8 0276024C 0276028C 027BEB5C 027BECEC 027BED84 027CBCD0 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58 028EFFD0 028F026C 028F0294 028F02E4 028F43F8 028F4BE0 028F521C 028F5228 028F5564 028F5678 028F5680 028F5DC0 028F5DD4 028F5E98 028F61E4 0274D510 027CC1BC 027CC250 027389F8 0274DEA8 0274DE2C 028F423C 0274D750 0274D83C 0274E0B8 02738B20 028E9108 028E91EC 028E90D4 028E8970 0272D680 027BEF54 027BF048 027BEEE4 027BEEBC 027BEED4 027CCE34 027CCEB8 027BF734 027BFEF8 027A76C8 027A7640 027A78F8 027A77F8 027BE6B8 027BE930 027BDF7C 027BDE1C 027BDEB4 028E93CC 028E945C 027AAFF4 027CE0AC 027CE130 0274CBAC 0274CCB0 0274E25C 0274DF4C 0274D80C 0274E474 0274E038 028E89B4 0274D6B4 0274DA08 02750AF0 02750C2C 027B5EEC 027BE114 027BE494 027BE74C 027BE7F0 027BFF9C 027BE744 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8 0274D4C0 027854AC 0278540C 027855BC 0273B0D4 02786360 027BEA90 02786314 0274CCC4
+# Complete validated SDK effects, including manager surface alias and block-copy model.
+mocksurfacesize 0278635C
+observearg 0278635C r3+0 32
+observearg 0278635C r3+0x30 8
+mockmove C0009988 r3 r4 r5
+observearg C00060D0 r3+0 32
+poke 027CDE3C r4+0x0 u8 0
+poke 027CDE3C r4+0x4 u32 0xFFFFFFFF
+poke 027CDE3C r4+0x2C u32 0
+poke 027CDE3C r4+0x30 u32 0
+poke 027CDE3C r4+0x34 u32 0
+poke 027CDE3C r4+0x3C u32 0
+poke 027CDE3C r4+0x40 u32 0
+poke 027CDE3C r4+0x44 u32 0
+poke 027CDE3C r4+0x38 u32 0x3F800000
+poke 027CDE3C r4+0x48 u32 0x3F800000
+poke 027CDE3C r4+0x23C u32 1
+poke 027CDE3C r4+0x240 u32 0x59500000
+poke 027CDE3C r4+0x260 u32 0x7F7FFFFF
+poke 027CDE3C r4+0x264 u32 0x7F7FFFFF
+poke 027CDE3C r4+0x268 u32 0x7F7FFFFF
+poke 027CDE3C r4+0x26C u32 0xFF7FFFFF
+poke 027CDE3C r4+0x270 u32 0xFF7FFFFF
+poke 027CDE3C r4+0x274 u32 0xFF7FFFFF
+poke 027CDE3C 59500000 u32 0

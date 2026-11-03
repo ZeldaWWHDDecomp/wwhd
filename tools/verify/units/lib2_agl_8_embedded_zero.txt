@@ -1,0 +1,6 @@
+# verify: -strictnan -calleesp -only 02793384
+# Modular guest receiver + mTransform offset wraps to zero.
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 02793384 r3 0xFFFFF678
+src wwhd_src/agl/ParameterConstruction.cpp

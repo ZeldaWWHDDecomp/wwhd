@@ -1,0 +1,42 @@
+# verify: -only 02743EAC
+# A terminated source beyond the inline length cap exercises length-limit recovery.
+# One input in 16 keeps the over-long text (each scan of it is 0x40000 bytes); the rest end at
+# byte 16, so a 10k run stays affordable while the limit path is still taken hundreds of times.
+src wwhd_src/sead/CafeFileDevices.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+arg! 02743EAC r3 0x52000000
+arg! 02743EAC r4 0x55000000
+arg! 02743EAC r5 0x53000000
+field 02743EAC 52000054 u32 0x57000000
+field 02743EAC 53000000 u32 0x54000000
+field 02743EAC 53000004 u32 0x10143EA0
+field 02743EAC 55000000 u32 0x56000000
+field 02743EAC 55000004 u32 0x10143EE8
+field 02743EAC 55000008 s32 64
+fill 02743EAC 54000000 0x40010 97
+field 02743EAC 54000000 u8 37,97
+field 02743EAC 54040003 u8 0
+field 02743EAC 54000010 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,97
+# Valid storage after the first terminator must not be parsed as another token.
+field 02743EAC 54040004 u32 0x454E5625
+field 02743EAC 54040008 u8 0
+fill 02743EAC 57000000 16 0
+field 02743EAC 57000000 u32 0x726F6F74
+fill 02743EAC 56000000 64 0
+stable 52000054 4
+stable 53000000 8
+stable 54000000 0x40010
+stable 55000000 12
+stable 57000000 16
+# Formatting root plus separator yields five characters in this bounded profile.
+ret! 02759C28 5
+ret C0008980 0,-1
+real 02743E34
+real 027445FC
+real 02744600
+mockmove C0009988 r3 r4 r5
+callee C0008980 r4=out256
+mockfield C0008980 r4+255 u8 0
+
+# Pre-existing aligned stack bytes exercise stores of explicit zero terminators.
+stackfill periodic

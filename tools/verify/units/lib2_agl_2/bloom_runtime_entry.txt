@@ -1,0 +1,55 @@
+# Bloom entry initialization with original registered-root heap setup.
+# entry C98 and AAFC(poolC7C,80,heap); heap recipe.
+# verify: -strictnan -calleesp -footprint -only 02774FD0
+src wwhd_src/agl/BloomParameters.cpp
+arg! 02774FD0 r3 0
+arg! 02774FD0 r4 0x5B600000
+arg! 02774FD0 r5 0x6A000000
+fill 02774FD0 5B600000 0xC98 0
+final 02774FD0 5B600000 0xC98
+field 02774FD0 101F8B94 u32 0
+field 02774FD0 104DA130 u32 0
+field 02774FD0 5B700000 u32 0x6A000000
+field 02774FD0 5B700004 u32 0x100000
+field 02774FD0 5B700008 u32 0
+setup 02774FD0 027561B4
+setup 02774FD0 02755FE0 r3=0x5B700000
+real 027561B4
+real 02755FE0
+real 02755F40
+real 02755EC4
+real 0275315C
+real 02753D6C
+real 027556FC
+real 027601BC
+real 027601F0
+real 028F026C
+real 0279AAFC
+nestedret 02756140 0x6A000000
+stable 6A000000 0x100000
+# Observed ordinary children of the published initializer/createAt/pool trees.
+real 02755E7C
+real 02756CC0
+real 0273B560
+real 02760084
+real 02752C74
+real 02753000
+real 0273B584
+real 027BE6B8
+real 02752A84
+real 028F521C
+real 0275589C
+real 02752F10
+real 0273B0D4
+real 02753880
+mockset C0009990 r3 r4 r5
+real 02752B0C
+real 027600EC
+real 02752E60
+real 027536F4
+mockset C000A858 r3 r4 r5
+real 0273B2F0
+real 02752D8C
+real 02753628
+real 0273B310
+real 027536B0

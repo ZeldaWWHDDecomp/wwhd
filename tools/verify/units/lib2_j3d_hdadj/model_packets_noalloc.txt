@@ -1,0 +1,41 @@
+# verify: -only 027F4098 -calleesp -strictnan
+# Allocation failure for both arrays: one shape, constructor-state packet/mapping fields, joints without materials.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DInlineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialStorage.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelPacketSetup.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelConfiguration.cpp
+src wwhd_src/JSystem/J3DGraph/J3DBatchAdapter.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+arg! 027F4098 r3 0x5C780000
+field 027F4098 5C780028 u16 1
+fill 027F4098 5C780128 0x10 0
+ret! 02756140 0x5C790000
+field 027F4098 5C79000C u32 0x5C791000
+field 027F4098 5C791034 u32 0x5C792000
+callee 5C792000 fixture r3=0 r4=0 r5=0
+ret! 5C792000 0
+stable 5C79000C 4
+stable 5C791034 4
+field 027F4098 5C7800AC u32 0x5C7B0000
+field 027F4098 5C7B0000 u32 0x5C7B1000
+field 027F4098 5C7B0004 u32 0,1,2
+field 027F4098 5C7B0008 u32 0x5C7D0000
+field 027F4098 5C7B100C u32 0xFFF4
+field 027F4098 5C7C1008 u16 0,1,2
+fill 027F4098 5C7D0000 0x38 0
+stable 5C7B0000 0x10
+stable 5C7B1000 0x10
+stable 5C7C1000 0x10
+stable 5C7D0000 0x38
+real 0273B560

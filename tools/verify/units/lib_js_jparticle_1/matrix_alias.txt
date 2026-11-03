@@ -1,0 +1,38 @@
+# readable-scope: 028247E4,02824890,028249B0
+# Same, preceding and following 3x4 windows of a five-row float array are valid SDK Mtx arguments.
+# Vector outputs also cover aligned matrix fields and one another; the API has no no-alias precondition.
+# SDK identity writes only its matrix; sqrt writes only private stack state.
+src wwhd_src/JSystem/JParticle/JPAMath.cpp
+stackfill periodic
+real 028247E4
+real 028E9098
+real 028F37F0
+arg! 028247E4 r3 0x5B000010
+arg! 028247E4 r4 0x5B002000,0x5B000010,0x5B000024
+arg! 02824890 r3 0x5B000010
+arg! 02824890 r4 0x5B000000,0x5B000010,0x5B000020,0x5B001000
+arg! 02824890 r5 0x5B002000,0x5B000000,0x5B000010,0x5B000020,0x5B001000,0x5B000024
+arg! 02824890 r6 0x5B003000,0x5B00001C,0x5B00002C,0x5B002000
+arg! 028249B0 r3 0x5B000010
+arg! 028249B0 r4 0x5B000000,0x5B000010,0x5B000020,0x5B001000
+arg! 028249B0 r5 0x5B003000,0x5B00001C,0x5B00002C
+field * 5B000000 f32 -3,-2,-1,0,1,2,3
+field * 5B000004 f32 -3,-2,-1,0,1,2,3
+field * 5B000008 f32 -3,-2,-1,0,1,2,3
+field * 5B00000C f32 -3,-2,-1,0,1,2,3
+field * 5B000010 f32 -3,-2,-1,0,1,2,3
+field * 5B000014 f32 -3,-2,-1,0,1,2,3
+field * 5B000018 f32 -3,-2,-1,0,1,2,3
+field * 5B00001C f32 -3,-2,-1,0,1,2,3
+field * 5B000020 f32 -3,-2,-1,0,1,2,3
+field * 5B000024 f32 -3,-2,-1,0,1,2,3
+field * 5B000028 f32 -3,-2,-1,0,1,2,3
+field * 5B00002C f32 -3,-2,-1,0,1,2,3
+field * 5B000030 f32 -3,-2,-1,0,1,2,3
+field * 5B000034 f32 -3,-2,-1,0,1,2,3
+field * 5B000038 f32 -3,-2,-1,0,1,2,3
+field * 5B00003C f32 -3,-2,-1,0,1,2,3
+field * 5B000040 f32 -3,-2,-1,0,1,2,3
+field * 5B000044 f32 -3,-2,-1,0,1,2,3
+field * 5B000048 f32 -3,-2,-1,0,1,2,3
+field * 5B00004C f32 -3,-2,-1,0,1,2,3

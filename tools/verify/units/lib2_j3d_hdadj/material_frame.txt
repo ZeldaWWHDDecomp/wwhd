@@ -1,0 +1,36 @@
+# verify: -only 027F36FC -calleesp -strictnan
+# allocateForResource with its whole 0xA0-byte frame compared (footprint + stackfill): the request, count word and
+# SafeText temporaries sit at the original's frame offsets, so their placement and every staged field are observed.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DInlineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialStorage.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelPacketSetup.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelConfiguration.cpp
+src wwhd_src/JSystem/J3DGraph/J3DBatchAdapter.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+# allocateForResource with and without a shader input; same bounded name inputs as the main spec.
+arg! 027F36FC r3 0x5C730000
+arg! 027F36FC r4 0x5C740000
+arg! 027F36FC r5 0,0x5C740100
+ret! 027F68FC 0x5C720000
+ret! 027F68F4 0x5C700000
+field 027F36FC 5C720008 u16 0,1,2,3
+field 027F36FC 5C700004 u32 0xFFFC
+fieldstr 027F36FC 5C710000 64 "cc_ptcl","bo_ue1","pp","bgn_2","ordinary"
+stable 5C720000 12
+stable 5C700000 8
+real 027F3D74
+ret! 027DFCCC 64,128
+alloc 027EC0AC r3 0x5C750000 align=r4
+stackfill
+footprint 027F36FC 160

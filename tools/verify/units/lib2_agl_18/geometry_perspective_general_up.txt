@@ -1,0 +1,64 @@
+# CE130 final mutations: public351=157 observed-D,120 EQ,69 compile-CI,4 RI,1 SYNC; leading helpers90=30 observed-D,34 EQ,22 compile-CI,4 RI.
+# Combined441=187 observed-D,154 EQ,91 compile-CI,8 RI,1 SYNC; no open or timeout dispositions. Raw tool classes remain unchanged.
+# D survey chain (n1000): dw-geometry-{public,helpers}-{ortho,persp,cached}-survey1000, then {orthographic,perspective}-varied-survey1000, narrow-survey1000, general-up-survey1000.
+# Public194 is detected in general-up n1000: nearRight production/copy are dependent; the generic-up narrow frustum makes the omitted near corner an extremum. It is never classified as an independent swap.
+# Helpers70010..70015 are observed-D at n1000 on both seeds in dw-geometry-signed-zero-{x,y,z}-survey1000-seed1|7; exact finite-underflow fixtures per CLOSED Lead04:48.
+# Public final125 actual-S paired evidence: dw-geometry-public-orthographic-residuals10000-seed1|7 (126 includes subsequently detected194), dw-geometry-public-general-up-final125-seed1|7; each at10000.
+# Helper final38 actual-S paired evidence: dw-geometry-helpers-{orthographic,general-up}-final38-seed1|7, all38 at10000.
+# Public85 independent swaps: 2,3,13,18,19,20,24,25,28,29,33,35,45,46,47,49,50,54,56,57,59,60,68,71,74,78,80,81,86,93,97,98,101,102,108,115,117,133,135,143,146,153,156,157,159,165,166,180,185,189,206,214,217,219,226,228,232,234,236,239,241,244,249,252,258,260,267,270,271,275,278,279,282,288,292,296,297,314,317,318,323,329,343,344,345. They exchange disjoint component loads/stores, scalar computations, or helpers on disjoint record/stack fields; no dependent value crosses the swap.
+# Public242 swaps a far reload with near/far division: farPlane already equals unchanged record.mFar. Public334 swaps halfHeight reload and scaling: the local equals record.mVerticalExtent written earlier; the scale helper writes only its distinct stack output.
+# Public reload-drop EQ14/37/227/231/287: the corresponding local retains the value written/read earlier; intervening owned helpers cannot modify mFar/mHorizontalExtent/mVerticalExtent (only distinct stack vectors or bounds/center fields).
+# FrameLocal EQ26: 9,40,41,64,87,132,144,149,151,154,158,169,178,186,188,202,205,207,218,277,280,303,328,339,346,348. be<T> has byte alignment; every +1 relocation stays inside the0x238 automatic frame and is private to C++ helpers.
+# Relocation lifetimes: 9/132/207/218 touch mutually exclusive main-branch temporaries;169/188 touch opposite near/far branch scratch whose next use follows a complete write.
+# Before-successor-complete-write relocations:40 nearStage->masks;41 nearUp->farRight;64 nearRight->nearUp;87 doubleUp->depthTranslation;149 centerRight->positionRight;154 rightStage->upStage;158 perspectiveUp->perspectiveDepth;178 centerUp->centerSum;186 halfUp->doubleRight;202 halfRight->halfUp;205 nearTranslation->halfRight;280 centerSum->nearTranslation;303 perspectiveNear->perspectiveRight;328 perspectiveRight->perspectiveUp;339 doubleRight->doubleUp;348 farRight->farUp.
+# After-neighbor-last-use relocations:144 positionStage->rightStage;151 depthEdge->stage;277 finalCenter->positionStage. ID346 moved masks ends at0x201, in frame padding before GPR31 save0x204; all later accesses use the relocated table.
+# Public128/212 qualified whole-domain EQ per CLOSED Lead04:48: formulas enumerate the same eight corner values with far-set order exchanged; strict extrema keep an existing tie, equal nonzero values have identical bits, and any opposite-zero extreme has its -0 base visited first.
+# Public243 is SYNC, not D or EQ: the harness has no concurrent observer for the acquire fence. Keep __atomic_thread_fence(__ATOMIC_ACQUIRE) in the source.
+# Public RI118/167/262/276 visit row8 of masks.mRows[8]; helper RI70001/70008 likewise visit row8, and70003/70009 visit column3 of mRows[][3]. These are out-of-array C++ accesses with no observed output difference, not timeout kills.
+# Helper31 swap EQ: 70056,70058,70059,70060,70061,70062,70063,70064,70065,70066,70067,70068,70069,70070,70071,70072,70073,70074,70075,70076,70077,70078,70079,70080,70081,70082,70084,70085,70086,70087,70088. Component fields are disjoint; actual owned calls use distinct or identical complete vectors, and bound helpers receive stack vectors distinct from the record.
+# Helper70036/70037/70038 dropped subtract outputs are source-EQ: subtractGeometryVector has no caller in this translation unit/public driver, so these changes are unreachable; no extra function-coverage claim.
+# All91 CI records have stage=compile with actual compiler stderr in the initial ortho survey outputs. No abort/signal/timeout is credited as an observed difference.
+# Original geometry_old_store_control.txt and its failing diagnostic evidence are preserved unchanged.
+# CE130 evidence: O2 and own-TU O1 10000/10000 on seeds1/7; coverage 30/54.
+# Normal control logs: build/agl18/dw-geometry-general-up-O2|O1-seed1|7.log.
+# Combined mutation dispositions and individual survivor proofs: geometry_perspective_general_up.txt.
+# General finite non-collinear up(.25,.75,.5): expose the omitted near-corner extrema; original cross/normalization produces the frame.
+# Narrow positive FOV companion: make near-plane corners AABB extrema; derived geometry remains original-produced.
+# Finite asymmetric scalar companion; same original initializer and Lead03:10 tilted vectors.
+# Consumer-domain steering: near>0, far>near, left<right, bottom<top, finite positive aspect/FOV; no derived geometry payloads.
+# type-domain: large record kind not activated by any shipped producer (CLOSED Lead03:10).
+# Direction/up contract: finite, nonzero, non-collinear; derived geometry remains original-produced.
+# Targeted valid perspective geometry: ownoriginalrecord initializer, finite nondegenerate axes/near/far/aspect.
+# verify: -only 027CE130 -strictnan -calleesp
+src wwhd_src/agl/DrawSpatialGeometry.cpp
+src wwhd_src/agl/DrawResourceParameterPreparation.cpp
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/agl/DrawResourceDirection.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+field * r4+0x23C u32 0
+field * r4+0x240 u32 0
+setup * 027CDE3C r3=0x58000000 r4=0x58100000 r5=0
+real 027CDE3C 025155D8 02515644 025156EC 028E8D4C 028E8D88 028E8DAC 028E8E10 028E8E64 028F423C 028F4384 028F43F8 028F4BE0 028F5E98 028F6038 028F605C 028F60F8
+poke * r4+0x8 u32 0xC0000000,0x3E800000,0x40400000
+poke * r4+0xC u32 0xBFA00000,0x3F000000,0x40000000
+poke * r4+0x10 u32 0xC0800000,0x3F400000,0x3FC00000
+poke * r4+0x4C u32 0x3EF5C28F
+poke * r4+0x50 u32 0xBF19999A
+poke * r4+0x54 u32 0xBF23D70A
+poke * r4+0x58 u32 0x3E800000
+poke * r4+0x5C u32 0x3F400000
+poke * r4+0x60 u32 0x3F000000
+poke * r4+0x64 u32 0x3E000000,0x3EC00000,0x3F400000
+poke * r4+0x68 u32 0x40000000,0x40800000,0x41000000
+poke * r4+0x6C u32 0x3CA3D70A,0x3D23D70A,0x3DA3D70A,0x3DCCCCCD
+poke * r4+0x70 u32 0x3F000000,0x3F333333,0x3FC00000
+poke * r4+0x84 u32 0xBF800000,0x00000000,0x3E000000,0x3F800000
+poke * r4 u8 0x0B,0x1B
+poke * r4+0x244 u8 1
+poke * r4+0x74 u32 0x3FA00000,0x40400000
+poke * r4+0x78 u32 0xC0000000,0xBF000000
+poke * r4+0x7C u32 0xBFC00000,0xBE800000
+poke * r4+0x80 u32 0x3F400000,0x40200000
+poke * r4+0x22C u32 0xBF800000,0x00000000,0x3F000000,0x3F800000
+poke * r4+0x230 u32 0xBF800000,0x00000000,0x3F000000,0x3F800000

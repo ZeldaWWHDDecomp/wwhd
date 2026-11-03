@@ -1,0 +1,5 @@
+# Original-setter companion for the reachable extended active-count-zero path.
+# The included producer chain builds the collection; the final setter clears only its active count.
+# verify: -only 027D174C -strictnan -calleesp -footprint
+include lib2_agl_18/collection_extended_eval_upload_submit_frame.txt
+postsetup * 027D1D60 r3=0x6A87F634 r4=0

@@ -1,0 +1,39 @@
+# verify: -strictnan -only 02793E88 -noclobber
+# AGL#8 ssaotargetset (2026-10-31): prepareResources 02793E88 when the target-set array allocation fails (on
+# Q-A: a failed allocation is in the domain, AGL#7 OOM precedent; targetCount 1 is the valid witness, >= 2 makes the
+# original store to page 0).
+# Producer (second route; the first is not available: the allocate entry 02753D6C, reached through
+# heap->dispatch()->mAllocate = slot 10145A14, is `real` in the shared world, and a top-level call to a real target runs
+# the original, so an `alloc`/`allocfail` mock on it never applies - checked with -trace):
+# a real FreeRegionHeap made by the original create routine 02753004 (size 0x4000, parent = root heap 0x6A000000,
+# direction 1, no locking; name = the shared empty SafeString 104A0CD8 of 02759B40), then fragmented and exhausted with
+# real allocations 02753D6C and releases 027540AC: five 0x9B0-byte blocks separated by 0x10-byte keep blocks, the tail
+# taken whole (maxAllocation 02754620), then the five 0x9B0 blocks released. No free block can hold the 0x9CC-byte
+# array (it fails as on an exhausted heap), while the sixteen 0x100-byte, 0x100-aligned sample images still fit.
+# The heap is the first root-heap block after the world's setups, so its address is fixed (6A87E2A0, as the array
+# itself in lib2_agl_8_target_set_lifetime_group_visible: `st32 580301D0 <- 6A87E2A0`). -trace 1000004: the tested call
+# reads the dispatch at 6A87E2AC -> 101459E0 (FreeRegionHeap table), 02753D6C -> 02753628 returns 0, all 16 images allocate.
+include lib2_agl_8_target_set_lifetime_group_visible.txt
+real 02754620
+fill 02793E88 0x5E100010 0x40 0
+stable 0x5E100010 0x40
+setup 02793E88 02753004 r3=0x4000 r4=0x104A0CD8 r5=0x6A000000 r6=1 r7=0 ->0x5E100010
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x9B0 r5=4 ->0x5E100014
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x10 r5=4 ->0x5E100030
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x9B0 r5=4 ->0x5E100018
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x10 r5=4 ->0x5E100034
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x9B0 r5=4 ->0x5E10001C
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x10 r5=4 ->0x5E100038
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x9B0 r5=4 ->0x5E100020
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x10 r5=4 ->0x5E10003C
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x9B0 r5=4 ->0x5E100024
+setup 02793E88 02753D6C r3=*0x5E100010 r4=0x10 r5=4 ->0x5E100040
+setup 02793E88 02754620 r3=*0x5E100010 r4=4 ->0x5E100044
+setup 02793E88 02753D6C r3=*0x5E100010 r4=*0x5E100044 r5=4 ->0x5E100048
+setup 02793E88 027540AC r3=*0x5E100010 r4=*0x5E100014
+setup 02793E88 027540AC r3=*0x5E100010 r4=*0x5E100018
+setup 02793E88 027540AC r3=*0x5E100010 r4=*0x5E10001C
+setup 02793E88 027540AC r3=*0x5E100010 r4=*0x5E100020
+setup 02793E88 027540AC r3=*0x5E100010 r4=*0x5E100024
+arg! 02793E88 r4 1
+arg! 02793E88 r5 0x6A87E2A0

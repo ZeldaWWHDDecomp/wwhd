@@ -1,0 +1,33 @@
+# AGL#19 jobs fixture: three render layers built by the original
+# hdLayerBase_c::constructLayerBase 027340D8 (-> RenderLayerPrefix::create 027C3280) on the shared world, with the
+# render states the HD graphics task 027297C0 writes (+0x5C = 100 "TV_3D", 50 "TV_Shadow", 0 = constructor default;
+# approved poke after the constructor), six render jobs built by the original createRenderJob 027D5E5C and a
+# job queue (the collectJobs frame buffer: count 0, capacity 6, stable storage).
+#   layers A 0x58000000, B 0x58001000, C 0x58002000 (0x610 each); layer name SafeText 0x58003000 -> "Layer(Draw)"
+#   with the hdLayerSafeString vtable 10169E4C (+0x14 = 027C2378, a bare blr);
+#   jobs J0..J5 0x58004000 + 0x1C*i; queue 0x58005000 {count, capacity, storage 0x58005100}.
+include shared/agl_world.txt
+setupsnapshot
+real 027340D8 027C3280 027D5E5C 027C2378
+real 027C48E0 0274D6B4 0274DE2C 0274CCC4 028F423C 0274D114
+real 02734248 027342B4 02873D70 02873FD0 027C2DF0 0274F358 0274DEA8 0274E1C8 0274E87C 028E90D4 02733EF4 02733EFC 02733FC8 02734028
+field * 0x58003000 u32 0x1016C2B0
+field * 0x58003004 u32 0x10169E4C
+stable 0x58003000 0x8
+# .bss guards of the function-local identity matrices in 02873D70 (zero at boot)
+field * 0x101FD304 u32 0
+field * 0x101FD308 u32 0
+# static initialiser of the layer's default camera matrix object 104A2098 (vtable 10145148), as at boot
+setup * 027C48E0
+setup * 027340D8 r3=0x58000000 r4=0x58003000
+setup * 027340D8 r3=0x58001000 r4=0x58003000
+setup * 027340D8 r3=0x58002000 r4=0x58003000
+poke * 5800005C u32 100
+poke * 5800105C u32 50
+poke * 5800205C u32 0
+setup * 027D5E5C r3=0x58004000
+setup * 027D5E5C r3=0x5800401C
+setup * 027D5E5C r3=0x58004038
+setup * 027D5E5C r3=0x58004054
+setup * 027D5E5C r3=0x58004070
+setup * 027D5E5C r3=0x5800408C

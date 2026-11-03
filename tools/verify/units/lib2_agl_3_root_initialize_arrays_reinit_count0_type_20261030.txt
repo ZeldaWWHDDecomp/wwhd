@@ -1,0 +1,9 @@
+# TYPE-DOMAIN: original initializeArrays API count2 then count0 on the same original-constructed runtime.
+# Count0 admitted by Lead2026-10-29 20:26; this covers retained nonempty array branch02779A04 after original prior initialization.
+# No post-producer field poke; ordinary original producer initializes retained array/count.
+# verify: -strictnan -calleesp -only 027798F4
+include lib2_agl_3_initialize_arrays_api_alt.txt
+setup * 027798F4 r3=0x56000000 r4=2 r5=0 r6=0x6A000000
+arg! 027798F4 r4 0
+arg! 027798F4 r5 0
+arg! 027798F4 r6 0x6A000000

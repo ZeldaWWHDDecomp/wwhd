@@ -1,0 +1,78 @@
+# Per-frame environment update: model/projection matrices, eight positioned lights, two colours and
+# the fog range from an environment collection, callees mocked. Environment objects answer the
+# type test through a fixture method slot.
+# verify: -only 027FDA54 -strictnan -calleesp -footprint
+src wwhd_src/JSystem/J3DGraph/RenderFrameArray.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameEnvironment.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderMaterialUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderSceneUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderStorageConstructors.cpp
+src wwhd_src/JSystem/J3DGraph/RenderTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformDestroy.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformGroup.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformPair.cpp
+src wwhd_src/JSystem/J3DGraph/RenderValueStorage.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometry.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/RenderResourceBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+callee 028E90D4 r3=heap48 r4=out48
+arg! 027FDA54 r3 0x6C800000
+arg! 027FDA54 r4 0,1,2,0xFFFFFFFF
+arg! 027FDA54 r5 0x6CC00000
+arg! 027FDA54 r6 0x6CC10000
+arg! 027FDA54 r7 0,0x6CD00000
+field * 0x6C800000 u32 0,1,2
+field * 0x6C800004 u32 0x6C900000
+# Type indices (pointers to s16) of the position, colour and fog environments; first-use guards.
+field * 0x104A1F70 u32 0x6CD10000
+field * 0x104A1F64 u32 0x6CD10010
+field * 0x104A1460 u32 0x6CD10020
+field * 0x6CD10000 s16 0,1,2,-1
+field * 0x6CD10010 s16 0,1,2,-1
+field * 0x6CD10020 s16 0,1,2,-1
+field * 0x101FD7D4 u32 0,1
+field * 0x101FD7C8 u32 0,1
+field * 0x101FD7DC u32 0,1
+# Collection {.., range count +8, ranges +0xC, object count +0x10, objects +0x14}.
+field * 0x6CD00008 u32 0,1,2,3
+field * 0x6CD0000C u32 0x6CD20000
+field * 0x6CD00010 u32 0,2,6,12
+field * 0x6CD00014 u32 0x6CD30000
+field * 0x6CD20000 u16 0,1,2
+field * 0x6CD20002 u16 0,1,2,8,9
+field * 0x6CD20004 u16 0,1,2
+field * 0x6CD20006 u16 0,1,2,3
+field * 0x6CD20008 u16 0,1,3
+field * 0x6CD2000A u16 0,1,2
+field * 0x6CD30000 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30004 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30008 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD3000C u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30010 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30014 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30018 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD3001C u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30020 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30024 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD30028 u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+field * 0x6CD3002C u32 0,0x6CE00000,0x6CE00400,0x6CE00800
+# Objects: method table +0x58 (type test slot +0x44), enabled flag +0x70, fog near/far +0xF4/+0x104.
+callee 7C400000 fixture r3=0 r4=0
+ret 7C400000 0,1
+field * 0x6CF00044 u32 0x7C400000
+field * 0x6CE00058 u32 0x6CF00000
+field * 0x6CE00070 u8 0,1
+field * 0x6CE000F4 f32 0,1,2.5,1000
+field * 0x6CE00104 f32 0,1,2.5,1000
+field * 0x6CE00458 u32 0x6CF00000
+field * 0x6CE00470 u8 0,1
+field * 0x6CE004F4 f32 0,1,2.5,1000
+field * 0x6CE00504 f32 0,1,2.5,1000
+field * 0x6CE00858 u32 0x6CF00000
+field * 0x6CE00870 u8 0,1
+field * 0x6CE008F4 f32 0,1,2.5,1000
+field * 0x6CE00904 f32 0,1,2.5,1000

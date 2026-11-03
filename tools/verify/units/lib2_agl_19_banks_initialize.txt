@@ -1,0 +1,33 @@
+# AGL#19 banks: initialize of the spatial (027D1EE0) and paired (027D2C98) light collections on a collection
+# constructed exactly as LightPrepass::configure 027AF16C constructs it inline (zeroed 0x114 bytes, the class's method
+# table at +0, the vertex-input set at +0x1C made by its constructor 027BF734), owner = the configured light prepass,
+# on the shared world heap or with heap NULL (the current heap, which is the world root heap). The game's call
+# (027AF16C, from hdLayer3D 027308E0) passes the layer's heap argument of 02730688; heap NULL is kept here as the
+# initializer's own current-heap fallback (type-domain if that heap is never NULL). Capacities: the shipped
+# 256 (spatial) / 128 (paired) and small ones; value capacity 1 (one view, shipped), 2 or 0. The record hooks
+# (beforeAllocate / initializeRecord / initializeValue: AGL#18 originals; setRecordEnabled: the collection's own,
+# original) run real.
+# verify: -only 027D1EE0,027D2C98 -strictnan -calleesp
+src wwhd_src/agl/LightCollectionInitialize.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+ret! 02756140 0x6A000000
+# the collection object is written only by the tested initializer (no mocked call may clobber it)
+stable 5A070000 0x114
+arg! 027D1EE0 r3 0x5A070000
+fill 027D1EE0 5A070000 0x114 0
+field 027D1EE0 5A070000 u32 0x1016B070
+setup 027D1EE0 027BF734 r3=0x5A07001C
+arg! 027D1EE0 r4 0x5A000000
+arg! 027D1EE0 r5 1,2,3,256
+arg! 027D1EE0 r6 1,1,2,0
+arg! 027D1EE0 r7 0x6A000000,0x6A000000,0
+arg! 027D2C98 r3 0x5A070000
+fill 027D2C98 5A070000 0x114 0
+field 027D2C98 5A070000 u32 0x1016B1E8
+setup 027D2C98 027BF734 r3=0x5A07001C
+arg! 027D2C98 r4 0x5A000000
+arg! 027D2C98 r5 1,2,3,128
+arg! 027D2C98 r6 1,1,2,0
+arg! 027D2C98 r7 0x6A000000,0x6A000000,0

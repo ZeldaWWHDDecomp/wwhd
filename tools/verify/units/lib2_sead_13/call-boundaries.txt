@@ -1,0 +1,77 @@
+# Loads and stores the original places after a call: the mocked callee rewrites the word it would see,
+# so a load or store moved across the call reads or leaves a different value.
+# verify: -only 027561B4,02752BEC,02755FEC,02755478,02752D8C,02754370 -calleesp
+src wwhd_src/sead/HeapRegistry.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill periodic
+# Static init: the independent buffer's words are compared at every storage call (they are reset after the root call).
+field 027561B4 104A0364 u32 5
+field 027561B4 104A0368 u32 6
+field 027561B4 104A036C u32 0x58500000
+observe 0273B560 104A0364 12
+# Registered-object destructor: the root heap is reloaded after the removal call.
+arg! 02752BEC r3 0x58000000
+arg 02752BEC r4 0,1
+field 02752BEC 58000000 u32 0x58300000
+field 02752BEC 101F8B30 u32 0x58310000
+mockglobal 02755D28 101F8B30 u32 0x58320000,0
+# Heap lookup: the module manager pointer is read after the registry lock is taken.
+field 02755FEC 101F8B94 u32 0x58FA0000,0
+mockglobal 027601BC 101F8B94 u32 0,0x58FA0000
+field 02755FEC 58FA0024 u32 0,1
+# Cursor restore: the checkpoint is re-read after the containment query.
+arg! 02755478 r3 0x58FF4000
+arg! 02755478 r4 0x58FF5000
+field 02755478 r3+0x0C u32 0x10145B38
+field 02755478 r3+0x90 u32 0
+field 02755478 r3+0x94 u32 0x58FF6100
+field 02755478 r3+0x98 u32 0x58FF6400
+field 02755478 58FF5000 u32 0x58FF6040,0
+field 02755478 58FF5004 u32 0x58FF6480,0
+stable 58FF400C 4
+ret! 027553E0 1
+mockglobal 027553E0 58FF5000 u32 0x58FF6080,0x58FF6200
+mockglobal 027553E0 58FF5004 u32 0x58FF6440,0x58FF6500
+# Free-block merge: the list offset is re-read after the link removal; a removal that changes it
+# can make the merged block the new end of the walk.
+arg! 02752D8C r3 0x58F00000
+field 02752D8C r3+0xA4 u32 0
+field 02752D8C r3+0xA0 u32 3
+field 02752D8C 58F00098 u32 0x58F01080
+field 02752D8C 58F0009C u32 0x58F01000
+field 02752D8C 58F01000 u32 0x58F00098
+field 02752D8C 58F01004 u32 0x58F01040
+field 02752D8C 58F01008 u32 48
+field 02752D8C 58F0100C u32 0
+field 02752D8C 58F01040 u32 0x58F01000
+field 02752D8C 58F01044 u32 0x58F01080
+field 02752D8C 58F01048 u32 48
+field 02752D8C 58F0104C u32 0
+field 02752D8C 58F01080 u32 0x58F01040
+field 02752D8C 58F01084 u32 0x58F00098
+field 02752D8C 58F01088 u32 16
+field 02752D8C 58F0108C u32 0
+stable 58F00098 16
+stable 58F01000 16
+stable 58F01040 16
+stable 58F01080 16
+mockglobal 0273B310 58F000A4 u32 0,0xFFFFF098
+# Back resize: a tail block that would start at address 0 or 1 (wrapping request size).
+arg! 02754370 r3 0x59010000
+arg! 02754370 r4 0x59011010
+arg! 02754370 r5 0xA6FEEFF0,0xA6FEEFF1,16
+field 02754370 r3+0x0C u32 0x101459E0
+field 02754370 r3+0x90 u32 0
+field 02754370 r3+0xA8 u32 0x59011000
+field 02754370 r3+0xAC u32 0x59011000
+field 02754370 r3+0xB0 u32 1
+field 02754370 r3+0xB4 u32 0
+field 02754370 59011000 u32 0x590100A8
+field 02754370 59011004 u32 0x590100A8
+field 02754370 59011008 u32 0xFFFFFFF0
+field 02754370 5901100C u32 0
+stable 5901000C 4
+stable 590100A8 16
+stable 59011000 16
+ret! 02754754 1

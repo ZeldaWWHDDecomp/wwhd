@@ -1,0 +1,16 @@
+# Companion of lib2_j3d_hdrew_1_copy_between_slots_produced_corrected: same inputs, adds the original surface
+# constructor and observes what the draw callee reads through its pointer arguments.
+# verify: -only 027F8B20 -strictnan -calleesp
+include lib2_j3d_hdrew_1_copy_between_slots_produced_corrected.txt
+# Observation added by (J3D-HDREW#1 reached survivors):
+# 027BE114 (surface constructor) runs as the original: it stores mFlag (+0x91) = 0 and +0x90..+0xA3,
+# so the caller's later mFlag=1 store and its order against the constructor are observable.
+real 027BE114
+# drawSlotUpdateSurface / drawSlotUpdateGamma read the surface header, the source record and the scale pair.
+observearg 027A90AC r3+0x90 20
+observearg 027A90AC r4+0 24
+observearg 027A90AC r5+0 8
+observearg 027A9B0C r3+0x90 20
+# activateSlotUpdateBuffer (0274D690 -> RenderBuffer bind 027B9D00 via vtable +0x3C) reads the eight colour targets
+# at +0x1C..+0x38 and the depth target at +0x3C of the buffer it binds.
+observearg 0274D690 r3+0x1C 36

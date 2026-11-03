@@ -1,0 +1,26 @@
+# TYPE-DOMAIN: configuration callback +0x30 = AA mode 1 or 2 (GX2 2x/4x, the MSAA arm),
+# single-thread 1, manager flag 0x40 clear (depth swizzle -1), tile-mode bit 14 set; nothing in the shipped game
+# writes these. Otherwise as lib2_agl_19_display_attachments_first_drc.txt.
+# AGL#19 027D6658 configureAttachments, first frame, view 1 (DRC, borrows view 0's surfaces, configured first as update does): the initialized renderer after update's
+# setSurfaceExtent (as refreshSurfaceExtent runs it after updateResolution 0272A1C4) / releaseAttachments (lib2_agl_19_display_init_fixture.txt + postsetups), with update's arguments
+# (027C106C: samples = configuration callback 0, colour format 0x1D or 0x22 (hdGraphicsTask_c::configureBuffers 02729688), borrowed = view 0 for view 1 (manager flag 8), colour 0x1D,
+# colour swizzle = single-thread 0, depth 0x3A, depth swizzle = mInitialized 1 (flag 0x40), HiZ = bit 12 (1),
+# tile = bit 14 (0)). View 0 owns its surfaces (dynamic texture cache, shared pool), view 1 borrows view 0's.
+# verify: -only 027D6658 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_init_fixture.txt
+real 0274F53C 027D6658 027D5EE8 027D660C 027D5C48 027A0114 0279FF24 027CB744 027BE7F0 025C0928 025C0AB8 025C0848 025C09D8 027B954C 027BE930
+postsetup * 027D5EE8 r3=0x5E100018 r4=0x5E100750
+postsetup * 027D5C48 r3=0x5E100018
+postsetup * 027D5EE8 r3=0x5E100818 r4=0x5E100F50
+postsetup * 027D5C48 r3=0x5E100818
+postsetup * 027D6658 r3=0x5E100018 r4=0 r5=0 r6=0x1D r7=0 r8=0x3A r9=1 r10=1 sp+8=0
+arg! 027D6658 r3 0x5E100818
+arg! 027D6658 r5 0x5E100018
+arg! 027D6658 r4 1,2
+arg! 027D6658 r6 0x1D,0x22
+arg! 027D6658 r7 1
+arg! 027D6658 r8 0x3A
+arg! 027D6658 r9 0xFFFFFFFF
+arg! 027D6658 r10 1
+poke 027D6658 r1+8 u32 1

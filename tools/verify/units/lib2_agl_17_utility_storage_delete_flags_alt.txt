@@ -1,0 +1,27 @@
+# Result (n200 seeds 1/7 pass, 10/32 = the empty-object paths + flags tail; populated paths are in
+# lib2_agl_17_utility_storage_populated_alt.txt). Original constructor allocates a real heap object; flags 0 / 1.
+# Constructor's allocation is deterministic (fresh arena, fixed setup order): traced setup 027C6C54 -> r3 6A0000C8, pinned with arg!.
+# verify: -only 027C6E10 -strictnan -calleesp
+callbudget 10000000
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityText.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 027561B4 0273B560 02760084 028F026C 02755FE0 02755F40 02755EC4 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 02755CA4 027600EC 027601BC 027601F0 02755FEC 0273B0D4 0273B050 0273AD10 0273AF40 027C6C54 027C6E10 027556FC 02754754 027540AC
+field * 101F8B94 u32 0
+field * 5B007000 u32 0x6A000000
+field * 5B007004 u32 0x100000
+field * 5B007008 u32 0
+setup 027C6E10 027561B4
+setup 027C6E10 02755FE0 r3=0x5B007000
+nestedret 02756140 0x6A000000
+setup 027C6E10 027C6C54 r3=0
+arg! 027C6E10 r3 0x6A0000C8
+arg! 027C6E10 r4 0,1
+stable 6A000000 0x100000
+stable 101F8B4C 4
+stable 101F8B94 4
+stable 104A030C 0x1C
+stable 104A0328 0x3C
+stable 104A0364 0x1C
+stable 5B007000 0xC
+final 027C6E10 6A0000C8 CC

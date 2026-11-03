@@ -1,0 +1,36 @@
+# Complete finite invertible affine/orthographic matrices and plane-storage prefix.
+# No full parameter-owner/workspace lifecycle is consumed or claimed here.
+# Reference direction is either absent or a complete unit Y vector.
+# verify: -only 027C8ABC -strictnan -calleesp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+real 0274EDD4 028E892C 028E91EC 028E8F64 028E8D4C 025155D8 028E8E10 027C8698 027C87DC
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 025155D8 r3=inout12
+callee 028E8F64 r3=48 r4=12 r5=out12
+arg! 027C8ABC r3 0x5F200000
+arg! 027C8ABC r4 0x5F210000
+arg! 027C8ABC r5 0x5F211000
+arg! 027C8ABC r6 0,0x5F220000
+arg! 027C8ABC r7 0,1
+argf64! 027C8ABC f1 -1,-0.5
+argf64! 027C8ABC f2 0.5,1
+fill 027C8ABC 5F200000 1460 0
+fill 027C8ABC 5F210000 48 0
+fill 027C8ABC 5F211000 64 0
+fill 027C8ABC 5F220000 12 0
+field 027C8ABC 5F210000 f32 1
+field 027C8ABC 5F210014 f32 1
+field 027C8ABC 5F210028 f32 1
+field 027C8ABC 5F21000C f32 -1,0,1
+field 027C8ABC 5F21001C f32 -1,0,1
+field 027C8ABC 5F21002C f32 -2,0,2
+field 027C8ABC 5F211000 f32 0.5,1,2
+field 027C8ABC 5F211014 f32 0.5,1,2
+field 027C8ABC 5F211028 f32 0.5,1,2
+field 027C8ABC 5F21103C f32 1
+field 027C8ABC 5F220004 f32 1
+field 027C8ABC 101F9601 u8 1
+field 027C8ABC 101F9603 u8 1
+stable 1016A604 96
+final 027C8ABC 5F20041C 184

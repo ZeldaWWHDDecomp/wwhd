@@ -1,0 +1,20 @@
+# verify: -strictnan -calleesp -footprint -only 02792A08,02796034
+# Own constructor writes and outgoing argument boundaries on complete nonwrapping storage.
+# External constructors/registration remain opaque; no live nested-object or lifecycle claim.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+arg! 02792A08 r3 0,0x58010000
+arg! 02796034 r3 0,0x58010000
+fill 02792A08 0x58010000 0x285C 0
+fill 02796034 0x58010000 0xBE4 0
+alloc 0273AD10 r3 0x58000000 32

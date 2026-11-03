@@ -1,0 +1,164 @@
+# AGL#7 0278FF3C ShadowPrePass::updateUniforms, enabled path,
+# shipped caller 02736C10 (HD shadow layer draw delegate, registered by 02736390 at 02736520/027365C0; kind-2 arm 02736E14, call 02736F44) domain.
+# World = enabled_render_base.txt with its setup lines unscoped (setup *), plus the shipped parameter archive applied through the original HD path.
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+include shared/agl_world.txt
+setupsnapshot
+
+# ---- ShadowPrePass (game: owner+0x15D4): ctor 0278DAC0 (02736048) + initialize 0278E730(count 1, heap) (0273661C) ----
+fill * 0x5C020000 0x5C4 0
+stable 0x5C020000 0x5C4
+setup * 0278DAC0 r3=0x5C020000
+setup * 0278E730 r3=0x5C020000 r4=1 r5=0
+
+# ---- "normal" r9 = *(owner+0x9D4) = ShadowMap(DepthShadow+0x2C4)+0x100 = &ShadowMap+0x108 ----
+# ShadowMap ctor 02796034 (DepthShadow ctor 02797EEC at 0279837C), configureSurface 027966F0 (DepthShadow::initialize
+# 027984FC at 027986DC: +0x100 = this+0x108, r5 = heap), size 027967A0 (game 027363F4 with owner+0x1BDC = {0x400,0x400},
+# stored at 0273616C), allocation 027967C4 via 02798AE4 with r4 = min(max(DS+0x254,1), DS+0x2BC) = 3 (initialize stores
+# *r4 = 3 from 027363B8 into both). 3 layers -> 0279FD18/0279FE74 (dim 5, 2D array) -> render's kind != 1 arm.
+fill * 0x59000000 0xBE4 0
+stable 0x59000000 0xBE4
+field * 0x5E100000 u32 0x400
+field * 0x5E100004 u32 0x400
+stable 0x5E100000 0x20
+setup * 02796034 r3=0x59000000
+setup * 027966F0 r3=0x59000000 r5=0
+setup * 027967A0 r3=0x59000000 r4=0x5E100000
+setup * 027967C4 r3=0x59000000 r4=3
+
+# ---- "depth" r6 = r8 = RenderBuffer(+8 of the render info)->mDepthTarget (+0x3C): a 640x360 depth texture (see the size
+# note below) from the
+# original dynamic texture allocator (the allocator the HD layer uses for its screen buffers, 027F8474), name = the
+# original-constructed empty SafeString 104A0CD8 (02759B40).
+# Size note: the world's texture-cache pool 0 is the 16 MB range 0x70000000 (0279F474 r5/r6; every entry has +0xA7 = 0,
+# so only pool 0 is used). The shipped 3-layer 1024x1024 shadow map takes 12 MB; a 1280x720 depth plus the two
+# 1280x720 + two 640x360 RGBA8 frame outputs that prepareFrame 0278F04C allocates (~9 MB) do not fit, 027CB1A0 returns 0
+# and 0279F7F0 reads NULL+0xC (watch). 640x360 fits; the size only changes values passed to compared callees.
+setup * 0279FC6C r3=*101F8DD4 r4=0x104A0CD8 r5=0x3B r6=640 r7=360 r8=1 r9=0 r10=0 sp+8=1 sp+0xC=0 ->0x5E100010
+
+# ---- closure ----
+real 0278DAC0 0278E730 0278FB08 02796034 027966F0 027967A0 027967C4 0279FC6C 0279FD18 0279FDC8 0279FE74
+real 0279A07C 0279CA34 0279C950 0279E57C 0273B264 0273B200 0279E618 0279E674 027A84B8 0279CB9C 027A861C 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 027BDEB4 02752A84 02759B98 0279F1BC 0279288C 02791A4C 027919BC 027919FC 02791A54
+real 02759B40 027A8C80 0279A490 027A08C8
+real 027B95B4 027B958C 027B954C 027B6CB8 027B6E64 027BEB5C 027BECEC 027BED84 027BEEE4 027BEEBC 027BEED4 027BEE9C 027A063C
+real 027BE2B0 027B9694 0274D67C 028F0164 028F007C 027BEC90 027BEBEC 0273AFC8 027A0998 02752BEC 02755D28
+real 025C0928 025C0934 025C09D8 0276ACA0 0276AD30 0276B114 027861E0 02795EE0 02797DDC 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027CB744
+real 027BE930 027BE7F0 027BE74C 027BE744 027BFF9C 0279FFDC 027A0040 027A0114
+# ensureOutput 0278FC80 runs the original (as in render, 027912B0): prepareFrame 0278F04C allocates the frame output
+# textures (+0x84C etc.) that render flushes through 027BE794 (a world real).
+real 0278FC80 0278EE50 0278F04C 0278EFC0 0278EEF8 025C0848
+
+
+# ---- tested call: the shipped caller's argument shape (02736278 at 027362B0..027362DC) ----
+# r3 = owner+0x15D4, r4 = 0, r6 = r7 = r8 = depth target, r9 = *(owner+0x9D4), r10 = 0 (li r4,0; mr r10,r4),
+# sp+8 = *(owner+0x864) = 3 (02736420: min(DS+0x2BC = 3, owner+0x1BA0 = 3), >= 1), sp+0xC = the per-core GPU state word
+# from 027F29D4(104B45C0) (any value: generated). r5 (RenderBuffer*) is not read.
+
+# ---- shipped parameter archive: content/Common/Misc/Misc.szs -> Misc.bfres -> shadow_pre_pass.baglshpp (428 bytes, AAMP
+# type "aglshpp", one object, 25 parameters; first parameter crc32("is_enable") = 0xA3E945ED = true, the name string
+# at 10165B5C that the ctor 0278DAC0 registers at this+0x418 (value byte this+0x424)). Shipped chain: 02727874 stores the
+# embedded file in the Misc holder (+0x18, 027278F4..02727910); 02727D40 hands it to the HD layer at 02727D70 ->
+# 02736328(layer, res): res != 0 -> 027A7558 (ResParameterArchive, byte-swaps in place) + IParameterIO 0279A308 on
+# layer+0x15D8 = ShadowPrePass+4. The layer object itself is not touched on that arm, so layer = 0x5C020000 - 0x15D4.
+blobfile * 5A300000 content/Common/Misc/Misc.szs:Misc.bfres:shadow_pre_pass.baglshpp
+setup * 02736328 r3=0x5C01EA2C r4=0x5A300000
+real 02736328 0279EB28 027A8CD4 027A8CDC 027A8CEC 0279CCAC 0279CD28 027A8780 0279D05C 027A7424 0279D2D0 027A732C 027A7558 027BF0CC 027A747C 0279A308 0279D5E0 02791A50 02791A5C 02791A64 02791A6C 02791A74 02791A7C 02791A84 02791A8C 02791A94 02791A9C 02791AA4 02791AAC 02791AB4 02791B30 02791B38 02791B3C 02791B44 02791B48 0279E7B0 0279E868 028F036C
+
+# ---- caller-side producers (02736C10 at 02736E9C..02736F40) ----
+# r25 view = a sead LookAtCamera (layer+0x84 / *(layer+0x48)): original ctor 0274CBAC(camera, pos, at, up) +
+# doUpdateMatrix 0274CCC4 (as the 0278CC74 look-at recipe); pos/at/up per input are API inputs (finite, pos != at, up not
+# parallel to at-pos). r31 projection = the layer's perspective projection: sead PerspectiveState 0274DF4C(state, near, far,
+# angle, aspect) (base layout of the derived HD projection: +0x94 near, +0x98 far, +0xAC aspect, +0xB0 shift as read at
+# 02736EA4..02736EB8/02736F1C..02736F34); r6 = 0274D83C(state) = state+0x44 after the original update.
+# r9 = the caller's stack CameraView (sp+0xD0): ctor 0278D0D0, 0278CB8C(view, r6, state+0xB0; near, far, angle, aspect)
+# (02736EE8), setView 0278D07C(view, camera) (02736EF4).
+# r7 = the 3 cascade Matrix44s (028E8970 copies of DepthShadow cascade +0x2C4, 02736E54..02736E98) and r8 = cascade
+# split distances 1..3 (*(layer+0x874)+4.., 02736E74..02736E94): light-space values, API inputs (finite).
+real 0274CBAC 0274CCC4 0274DF4C 0274D83C 0274D750 0278D0D0 0278CB8C 0278D07C 028F423C 028E8970 028E8D4C 025155D8 028E90D4 028E91EC
+fill * 0x5C030000 0x2000 0
+stable 0x5C030000 0x2000
+poke 0278FF3C 5C030100 f32 0.3,-0.7,0.0,1.5
+poke 0278FF3C 5C030104 f32 1.0,-0.5,2.0
+poke 0278FF3C 5C030108 f32 1.2,-1.0,0.4
+poke 0278FF3C 5C030110 f32 0.0,0.25
+poke 0278FF3C 5C030114 f32 0.0
+poke 0278FF3C 5C030118 f32 0.0,-0.5
+poke 0278FF3C 5C030120 f32 0.0
+poke 0278FF3C 5C030124 f32 1.0
+poke 0278FF3C 5C030128 f32 0.0
+postsetup 0278FF3C 0274CBAC r3=0x5C030000 r4=0x5C030100 r5=0x5C030110 r6=0x5C030120
+postsetup 0278FF3C 0274CCC4 r3=0x5C030000 r4=0x5C030000
+setup * 0274DF4C r3=0x5C030400 f1=1.0 f2=30000.0 f3=0.7853982 f4=1.7777778
+setup * 0274D83C r3=0x5C030400
+setup * 0278D0D0 r3=0x5C030800
+setup * 0278CB8C r3=0x5C030800 r4=0x5C030444 r5=0x5C0304B0 f1=1.0 f2=30000.0 f3=0.7853982 f4=1.7777778
+postsetup 0278FF3C 0278D07C r3=0x5C030800 r4=0x5C030000
+# cascade matrices (3 x Matrix44 at 5C031000) and splits (5C031100): finite light-space values.
+poke 0278FF3C 5C031000 f32 0.01,0.002
+poke 0278FF3C 5C031004 f32 0.0,0.001
+poke 0278FF3C 5C031008 f32 0.0,-0.003
+poke 0278FF3C 5C03100C f32 0.5,-0.25
+poke 0278FF3C 5C031010 f32 0.0,0.004
+poke 0278FF3C 5C031014 f32 0.01,0.007
+poke 0278FF3C 5C031018 f32 0.0,0.002
+poke 0278FF3C 5C03101C f32 0.5,0.125
+poke 0278FF3C 5C031020 f32 0.0,0.001
+poke 0278FF3C 5C031024 f32 0.0,-0.002
+poke 0278FF3C 5C031028 f32 -0.001,-0.0005
+poke 0278FF3C 5C03102C f32 0.5,0.75
+poke 0278FF3C 5C03103C f32 1.0
+poke 0278FF3C 5C031040 f32 0.005,0.003
+poke 0278FF3C 5C031054 f32 0.005,0.006
+poke 0278FF3C 5C031068 f32 -0.0005,-0.0007
+poke 0278FF3C 5C03104C f32 0.5,0.3
+poke 0278FF3C 5C03105C f32 0.5,0.6
+poke 0278FF3C 5C03106C f32 0.5,0.2
+poke 0278FF3C 5C03107C f32 1.0
+poke 0278FF3C 5C031080 f32 0.0025,0.001
+poke 0278FF3C 5C031094 f32 0.0025,0.002
+poke 0278FF3C 5C0310A8 f32 -0.00025,-0.0001
+poke 0278FF3C 5C03108C f32 0.5,0.4
+poke 0278FF3C 5C03109C f32 0.5,0.45
+poke 0278FF3C 5C0310AC f32 0.5,0.55
+poke 0278FF3C 5C0310BC f32 1.0
+poke 0278FF3C 5C031100 f32 300.0,500.0,1000.0
+poke 0278FF3C 5C031104 f32 1500.0,2500.0,4000.0
+poke 0278FF3C 5C031108 f32 6000.0,9000.0,14000.0
+
+# ---- tested call: 02736F24..02736F44 argument shape ----
+# r4 = 0 (li r4,0), f1 = near, f2 = far, f3 = tanf(angle*0.5) (028F423C at 02736F08), f4 = aspect (same projection).
+arg! 0278FF3C r3 0x5C020000
+arg! 0278FF3C r4 0
+arg! 0278FF3C r5 0x5C030000
+arg! 0278FF3C r6 0x5C030444
+arg! 0278FF3C r7 0x5C031000
+arg! 0278FF3C r8 0x5C031100
+arg! 0278FF3C r9 0x5C030800
+argf64! 0278FF3C f1 1.0
+argf64! 0278FF3C f2 30000.0
+argf64! 0278FF3C f3 0.41421356797218323
+argf64! 0278FF3C f4 1.7777777910232544
+real 028E892C 0274EDD4 028E89B4 028EFFD0 027919D0 02791BE4 02791B98
+# setUniform 027BF048 (byte-swapped copy into the frame's uniform buffer) and flush 027BEFE4 run the originals, so every
+# uploaded word is in the compared net memory effect (the cache flush import 028FCB18 stays a compared call).
+real 027BF048 027BEFE4

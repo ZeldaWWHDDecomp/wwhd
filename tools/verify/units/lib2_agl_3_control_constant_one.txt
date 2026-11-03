@@ -1,0 +1,9 @@
+# Bounded direct-entry check for ControlPrefix_l::constantOneHook.
+# A complete caller-owned ControlPrefix_l record is supplied; the target returns a constant and does not dereference it.
+# No virtual dispatch or foreign owner lifecycle is exercised.
+# verify: -strictnan -calleesp -only 02779438
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+fill * 56000000 88 0

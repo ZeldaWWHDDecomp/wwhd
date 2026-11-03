@@ -1,0 +1,29 @@
+# Scheduler-model companion: the known thread-entry exit store becomes visible at yield; no timing claim.
+# verify: -only 0275FDD0 -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 0275FDD0 r3 0x60000000
+field * 101F8B94 u32 0x60000000
+field * 60000000 u32 0x1015E600
+field * 60000014 u32 0x60020060
+field * 60000018 u32 0x60010060
+field * 6000001C u32 2
+stable 101F8B94 4
+stable 60000000 0x28
+field * 6001000C u32 0x1015E70C
+field * 60010060 u32 0x60000014
+field * 60010064 u32 0x60020060
+field * 60010068 u32 0x60010000
+field * 6001006C u32 0x60000014
+stable 60010000 0x94
+field * 6002000C u32 0x1015E70C
+field * 60020060 u32 0x60010060
+field * 60020064 u32 0x60000014
+field * 60020068 u32 0x60020000
+field * 6002006C u32 0x60000014
+stable 60020000 0x94
+field * 60010080 u32 1
+field * 60020080 u32 1
+mockfield 0275FF34 r3+0x80 u32 2
+mockglobal 02760C48 60010080 u32 3
+mockglobal 02760C48 60020080 u32 3

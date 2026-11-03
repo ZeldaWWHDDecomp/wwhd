@@ -1,0 +1,12 @@
+# TYPE-DOMAIN: manager flag 0x200 (replay arm) is set by no shipped writer.
+# AGL#19 submitDisplayLists 027D6EEC replay (rebuild = 0, RenderQueueManager::drawView with manager flag 0x200) after one
+# rebuild of the executed first frame (lib2_agl_19_display_exec_fixture.txt + 027D6EEC(view, 1) as postsetup): the
+# submitted command copies are called again. See the OPEN on the manager flag 0x200 domain.
+# verify: -only 027D6EEC -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+real 027D6EEC 027D6E80 027D7A4C 027DA7D4 027DA764
+postsetup * 027D6EEC r3=0x5E100018 r4=1
+postsetup * 027D6EEC r3=0x5E100818 r4=1
+arg! 027D6EEC r3 0x5E100018,0x5E100818
+arg! 027D6EEC r4 0

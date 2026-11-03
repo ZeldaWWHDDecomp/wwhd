@@ -1,0 +1,5 @@
+# Empty virtual hooks; opaque receivers and arguments, no field access.
+src wwhd_src/cg/empty_2_7.cpp
+stackfill
+arg! * r3 0,0x52000000
+footprint * 0

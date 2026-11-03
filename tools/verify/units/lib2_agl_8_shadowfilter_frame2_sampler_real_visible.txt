@@ -1,0 +1,19 @@
+# verify: -strictnan -only 02796F74 -noclobber
+# AGL#8 shadowfilter (2026-10-31): lib2_agl_8_shadowfilter_frame2_consumed_visible (second-frame schedule) with the filter-input sampler bind
+# 027BE53C (TextureSamplerLifecycle bindFilterSampler) running for real, as in the game: it applies the dirty sampler
+# state through 027BE494 (clears the dirty byte +0x190) and binds texture/sampler per stage through GX2 imports.
+# Its nested GX2 calls are observed, so a missing/extra dirty bit or a changed mode/texture word reaches a call.
+include lib2_agl_8_shadowfilter_frame2_consumed_visible.txt
+real 027BE53C
+# Nested GX2 calls of the real bind (027BE53C -> 027BE494 -> 027BE2C4..027BE3B8, all `real` in the shared world):
+# number/order of the sampler-state inits (selected by the dirty bits), the GX2Texture built from the sampler's
+# native surface (GX2InitTextureRegs / GX2SetPixelTexture, 0x9C bytes) and the GX2Sampler words (12 bytes).
+observenested C0006498 r3+0 156
+observenested C00068F8 r3+0 156
+observenested C00068E0 r3+0 12
+observenested C0006448 r3+0 12
+observenested C0006470 r3+0 12
+observenested C0006478 r3+0 12
+observenested C0006460 r3+0 12
+observenested C0006450 r3+0 12
+observenested C0006440 r3+0 12

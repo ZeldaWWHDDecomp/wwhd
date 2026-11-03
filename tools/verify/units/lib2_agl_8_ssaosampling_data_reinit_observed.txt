@@ -1,0 +1,7 @@
+# verify: -strictnan -only 0279345C -noclobber
+# AGL#8 initializeSsaoSampleData 0279345C on the repeated-initialization state (lib2_agl_8_sampling_reinit_api_group:
+# 02792A08, then 02793E88 which already ran 0279345C once), with the staged noise pixels observed at the nested
+# GX2CopySurface C0006120 source surface (r3, GX2Surface.image at +0x24, 32 bytes) inside agl::replaceBitmapMip 027B6030
+# (ssaosampling helper, 2026-10-31). Caller-visible checks only (no frame checks); -noclobber.
+include lib2_agl_8_sampling_reinit_api_group.txt
+observenested C0006120 [r3+0x24]+0 32

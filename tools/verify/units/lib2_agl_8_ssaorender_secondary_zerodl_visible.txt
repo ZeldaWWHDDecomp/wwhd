@@ -1,0 +1,8 @@
+# verify: -strictnan -only 0279515C -noclobber
+# ssaorender: the mode-0 secondary bind profile with the legacy zero-size
+# display-list model (no BYTES): a program recording that issued no GX2 command ends with size 0, so
+# activateEffectProgram takes its bindStagePrograms arm (SsaoRender.cpp:400-411 via EffectShaderViews.h:31-33,
+# blocks at 027954C8/027954E4/02795664/02795680). Size-0 recordings are type-domain, as in
+# lib2_agl_8_primary_pass_world_zerodl. The line follows the include, so it overrides the world's BYTES model.
+include lib2_agl_8_ssaorender_secondary_bind_visible.txt
+mockdisplaylist C0006090 C0006190 C0006218

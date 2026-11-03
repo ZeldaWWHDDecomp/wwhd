@@ -1,0 +1,13 @@
+# TYPE-DOMAIN: view flag bit 0 (+0x790 & 1) is client-assigned
+# (0272A1C4); no shipped writer sets it
+# (writers of a view's +0x790: constructor 0x88 027D5AB0, 0x4 027D6914, 0x20/0x80 027C139C/027C13C8, 0x40 027D7368,
+# 0x100 027D5F38, 0x200 0272A4CC..0272A5C0, 0x400 027D747C; triage evidence stores-0x790.txt). The client word on the
+# initialized renderer's views is the producer word | 1: 0x188 | 1 (as allocateFrameStorage leaves it) and 0x388 | 1 (after
+# 0272A1C4 ORs the 0x200 refresh bit) to run refreshSurfaceExtent 027D660C's flag test and clear with bit 0 present.
+# verify: -only 027D660C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_init_fixture.txt
+real 0274F53C 027D5EE8
+poke * 5E1007A8 u32 0x189,0x389
+poke * 5E100FA8 u32 0x189,0x389
+arg! 027D660C r3 0x5E100018,0x5E100818

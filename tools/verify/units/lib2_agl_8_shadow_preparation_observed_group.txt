@@ -1,0 +1,12 @@
+# verify: -strictnan -calleesp -only 027966F0,027967A0,027967C4,02796B3C,02796EEC
+# Exact, defined viewport/frame call payloads on the unchanged positive-depth producer.
+include lib2_agl_8_shadow_preparation_group.txt
+# Original viewport producers assign rectangle, posture and table before observation.
+real 0274F5F0 0274F53C 0274F424
+# Viewport::apply/applyScissor read rectangle + orientation, excluding the dispatch table.
+observearg 0274F964 r3+0 20 if lr=02796CAC
+observearg 0274F964 r4+0 24 if lr=02796CAC
+observearg 0274FA70 r3+0 20 if lr=02796EBC
+observearg 0274FA70 r4+0 24 if lr=02796EBC
+# Frame activation reads dispatch + fully assigned colour/depth attachment pointers.
+observearg 0274D690 r3+0x18 40 if lr=02796C94

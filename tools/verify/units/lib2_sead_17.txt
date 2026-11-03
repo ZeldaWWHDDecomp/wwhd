@@ -1,0 +1,75 @@
+# SEAD#17: sead threads, audio services and the audio system (Cafe platform layer).
+# verify: -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+
+stackfill
+callee C0009FC8 r4=16
+callee C0009ED0 r4=out16
+
+# Empty, coherent manager list for the initial destructor profile.
+arg! 0275FDD0 r3 0x59200000
+field 0275FDD0 r3+0x18 u32 0x59200014
+stable 59200000 0x28
+
+# A bounded message-loop fixture; callbacks cannot replace this thread's quit token.
+arg! 0275FFCC r3 0x59300000
+field 0275FFCC r3+0x78 u32 0x7FFFFFFF
+stable 59300000 0x94
+ret! 02760374 0,2147483647
+
+# Platform core count is a hardware configuration constant in this profile.
+field * 101F8B5C u32 3
+stable 101F8B5C 4
+# No manager registration during the initial standalone thread construction profile.
+field * 101F8B94 u32 0
+stable 101F8B94 4
+arg! 027607C0 r9 0,32,256,4096
+arg! 027607C0 r10 0,1,4,32
+
+# Initial audio-service profile: coherent empty service lists. Populated-list profiles follow.
+arg! 02761448 r3 0x59400000
+arg! 02761548 r3 0x59400000
+arg! 02761640 r3 0x59400000
+arg! 027618B8 r3 0x59400000
+field * 5940002C u32 0
+field * 59400030 u32 4
+field * 59400028 u32 0x59400024
+stable 59400000 0x3C
+arg! 02761640 r4 0,0x59410000
+field 02761640 5941001C u32 0
+field 02761640 59410020 u32 4
+stable 59410000 0x24
+arg! 02761AFC r3 0x59420000
+field 02761AFC r3+0 u32 0x59400000
+stable 59420000 8
+arg! 027611BC r4 0,0x101FD9D4,0x101FD97C,0x101FD980
+arg! 02761A50 r4 0,0x101FD954
+arg! 02761CD0 r4 0,0x101FDFB4,0x101FD994
+
+# Bounded handle banks for the initial loop profile.
+arg! 02761D48 r4 0,1,4
+arg! 02761E2C r3 0x59500000
+arg! 02761EA8 r3 0x59500000
+arg! 02761F54 r3 0x59500000
+arg! 02761FF0 r3 0x59500000
+field * 59500010 u32 0x59510000
+field * 59500014 u32 0,1,4
+field * 59500018 u8 0,1
+stable 59500000 0x1C
+# Coherent launch-thread name object, with the local plain text interface.
+field * 104A11D8 u32 0x1015EB14
+field * 104A11DC u32 0x1015E638
+stable 104A11D8 8
+
+# Cross-build save states (2026-11-03): sead worker threads wait in MessageQueue::pop below
+# ThreadManager::threadEntry -> Thread::run. Each function's frame (footprint) and, at the chain call,
+# the original's return address, r14..r31 / f14..f31 and the whole frame (framexact).
+footprint 0275FFCC 0x10
+footprint 02760ACC 0x10
+footprint 02760374 0x18
+framexact 0275FFCC 0275FFEC
+framexact 0275FFCC 02760020
+framexact 02760ACC 02760AF8
+# zero-page rule: threadEntry with a registered manager (thread-specific key at +0x24) and a thread
+field 02760ACC 101F8B94 u32 0x59310000
+arg! 02760ACC r4 0x59300000

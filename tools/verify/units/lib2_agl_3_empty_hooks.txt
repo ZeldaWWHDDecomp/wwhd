@@ -1,0 +1,9 @@
+# Direct-entry profile for five source-defined direct-entry hooks.
+# A complete caller-owned record is supplied for each receiver; these bodies perform no reads, writes, or calls.
+# No owner lifecycle or virtual dispatch is exercised.
+# verify: -strictnan -calleesp -only 027791A8,027791AC,027793B4,0277945C,027794DC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+fill * 56000000 92 0

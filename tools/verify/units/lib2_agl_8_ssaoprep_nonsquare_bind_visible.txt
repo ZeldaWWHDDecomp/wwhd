@@ -1,0 +1,5 @@
+# verify: -strictnan -only 02794270 -noclobber
+# ssaoprep companion (repeated frame): the non-square first-frame profile, then the previous frame through the public
+# wrapper 02795D7C at the same 64x48 viewport before the tested call (lib2_agl_8_preparation_repeat_group form).
+include lib2_agl_8_ssaoprep_nonsquare_first_bind_visible.txt
+postsetup 02794270 02795D7C r3=0x58000000 r4=0 r5=64 r6=48 r7=*0x5E100008 r8=0 f1=0.25 f2=0.5

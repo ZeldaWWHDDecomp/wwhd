@@ -1,0 +1,8 @@
+# Companion of batch_bias_math: the float-to-s64 helper 028F5564 (reached through 028F5680), sin 028F43F8, cos 028F4BE0
+# (reached through 02782C20) and their int-to-float helper 028F5E98 run as originals instead of mocks, so the mode -1
+# sine/cosine table lookup and the rotation matrix of the other modes depend on the rotation input.
+# The rotation list adds 2^-13 (angle word 83443: odd fraction, table entry 0) for the mode -1 fraction arithmetic.
+# verify: -only 027FAA70 -strictnan -calleesp
+include lib2_j3d_hdrew_1_batch_bias_math_20261031.txt
+real 028F5564 028F43F8 028F4BE0 028F5E98
+field * 0x5D40100C f32 -1,0,0.0001220703125,0.25,0.75,3.1415927

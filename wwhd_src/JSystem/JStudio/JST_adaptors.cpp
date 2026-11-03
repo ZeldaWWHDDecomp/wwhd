@@ -8,9 +8,6 @@ static const Index4 ambientColor;
 static const Index3 cameraPosition;
 static const Index3 cameraTarget;
 static const Index4 fogColor;
-static const Index4 lightColor;
-static const Index3 lightPosition;
-static const Index3 lightTarget;
 static const Index3 particleTranslation;
 static const Index3 particleRotation;
 static const Index3 particleScaling;
@@ -238,12 +235,12 @@ void TAdaptor_light::adaptor_do_update(TObject *object, u32 frames) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     FrameLocal<LightFrame> storage(8);
     TControl *control = object->mControl;
-    adaptor_getVariableValue_GXColor(this, &storage->color, &lightColor);
+    adaptor_getVariableValue_GXColor(this, &storage->color, &sJStudioLightColorIndices);
     StageObject *target = this->mObject;
     u32 fn = target->mVtable->JSGSetLightColor;
     storage->output.word = storage->color.word;
     call_ptr<void>(fn, target, &storage->output);
-    adaptor_getVariableValue_Vec(this, &storage->source[0], &lightPosition);
+    adaptor_getVariableValue_Vec(this, &storage->source[0], &sJStudioLightPositionIndices);
     u32 mode = this->_118;
     if (mode == 1) {
         TVariableValues *values = this->mVariableValues;
@@ -259,7 +256,7 @@ void TAdaptor_light::adaptor_do_update(TObject *object, u32 frames) {
         f64 cy = adaptorCos(yawRad);
         storage->source[1].z = static_cast<f32>(cp * cy);
     } else if (mode == 2) {
-        adaptor_getVariableValue_Vec(this, &storage->target, &lightTarget);
+        adaptor_getVariableValue_Vec(this, &storage->target, &sJStudioLightTargetIndices);
         VECSubtract(&storage->target, &storage->source[0], &storage->source[1]);
     }
     Vec *vectors = &storage->source[0];
@@ -395,9 +392,6 @@ data ambientColor 10172E68
 data cameraPosition 10172EE8
 data cameraTarget 10172EF4
 data fogColor 10172E78
-data lightColor 10172E88
-data lightPosition 10172F18
-data lightTarget 10172F24
 data particleTranslation 10172F30
 data particleRotation 10172F3C
 data particleScaling 10172F48

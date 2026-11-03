@@ -1,0 +1,11 @@
+# Focused cached-instance fast path for PipelineRenderState::instance.
+# A nonnull cache pointer is a result domain of the same source's successful create path.
+# This profile exercises only the early return; the heap argument and object fields are not read.
+# verify: -only 027F7E08 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+# Shared own-unit allocation/release glue used by the render-state translation unit.
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+arg! 027F7E08 r3 0
+fill 027F7E08 0x62000000 0x4C0 0
+field 027F7E08 0x101F9968 u32 0x62000000
+final 027F7E08 0x101F9968 4

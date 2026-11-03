@@ -1,0 +1,123 @@
+# Lead01:32 fixed-baseline rechecks complete: all161 detections remain differences at n1000 seeds1/7.
+# Normal outputs: build/agl18/dw-fixed-dw-pair-heapfix-{differences1000,camera-survey1000}-input{1,7}.
+# Final valid-heap controls: O2 and own-TU O1 10k seeds1/7 PASS16/16 (dw-pair-heapfix-*-O*-seed*).
+# Exact prior122D re-established at n1000: dw-pair-heapfix-differences1000,122/122D.
+# Strengthened general-camera/color survey of119 prior survivors at n1000:39D/80S.
+# Only residual80 replayed10k seeds1/7:80/80S both,0timeout (dw-pair-heapfix-camera-final80-seed1|7).
+# Campaign326 final:161D,84compile-invalid,78EQ(49independent+29qualified),1RI,2SYNC,0OPEN.
+# RI293: <= selects element1 past caller's one-element0x20 values; no timeout-kill/EQ credit.
+# SYNC222/292: fence movement/deletion untested by single-threaded harness (Lead10:01); candidate fence retained.
+# Qualified masks143/262: cfg bit0 alwaysclear, only ctor027AE770 and owner027308EC..8FC writers (Lead22:54).
+# Reload/helper reorder proofs use published027BEF54/027BF048 payload spans, disjoint live objects/frame fields.
+# Per-ID reasons and exact source changes are review fields in normal mutant JSON; raw classes remain intact.
+# Ranked-pair parameter writer with an original general look-at camera: owner and coherent production frame recipe.
+# O2 and own-TU O1 controls: 10k seeds1/7 PASS, 16/16 blocks (dw-pair-camera-* logs).
+# verify: -only 027CFA10 -strictnan -calleesp -footprint
+callbudget 60000
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027CFA10 r3 0x59200000
+arg! 027CFA10 r4 0x59100000
+arg! 027CFA10 r5 0,1
+arg! 027CFA10 r6 0x59300000
+field * 0x101F8B94 u32 0
+field * 0x58000000 u32 0x6A000000
+field * 0x58000004 u32 0x100000
+field * 0x58000008 u32 0
+stable 0x6A000000 0xC8
+nestedret 02756140 0x6A000000
+setup * 02756E3C
+setup * 02757190
+setup * 027561B4
+setup * 02755FE0 r3=0x58000000
+real 025155D8 0273AD10 0273ADAC 0273AF40 0273AFC8 0273B050 0273B0D4 0273B158 0273B2F0 0273B310 0273B560 02750CDC 02750D00 02752A84 02752B0C 02752BEC 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 0275320C 02753214 027532BC 02753628 027536B0 027536F4 027537B8 02753880 02753998 02753A34 02753B48 02753C28 02753D6C 02753F84 02754018 027540AC 027541B8 02754370 027544E0 02754564 0275456C 02754618 02754620 02754754 027547A8 02754814 02754894 027556FC 02755818 0275589C 02755A48 02755CA4 02755D28 02755DA8 02755DBC 02755E7C 02755EC4 02755F40 02755F80 02755FE0 02755FEC 027561B4 02756254 02756268 0275626C 02756CC0 02756D04 02756D18 02756E3C 02757190 02760084 027600EC 02760168 027601BC 027601C4 027601F0 027601F8 0276024C 0276028C 027BEB5C 027BECEC 027BED84 027CBCD0 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58 028EFFD0 028F026C 028F0294 028F02E4 028F43F8 028F4BE0 028F521C 028F5228 028F5564 028F5678 028F5680 028F5DC0 028F5DD4 028F5E98 028F61E4
+# Disjoint caller-owned record/value storage; original constructors produce all buffer fields.
+fill * 59100000 0x1C 0
+fill * 59700000 0x48 0
+fill * 59700100 0x48 0
+fill * 59500000 0x20 0
+field * 59200004 u32 0x59600000
+field * 59600004 u32 0x00164120,0x00164100,0x00164020,0x00164000
+field * 59600038 u32 1
+stable 59600000 0x3C
+stable 101F9614 12
+field * 59100014 u32 1
+field * 59100018 u32 0x59500000
+setup * 0274D510
+setup * 027CC1BC r3=0x59200000 r4=0x59700000
+setup * 027CC1BC r3=0x59200000 r4=0x59700100
+setup * 027CF888 r3=0x59200000 r4=0x59100000
+setup * 027BEB5C r3=0x59500004
+setup * 027CF8A0 r3=0x59200000 r4=0x59500004 r5=0x6A000000
+setup * 027BEEE4 r3=0x59500004 r4=0x6A000000 r5=2
+# Projection remains in ctor fov/scale state; source projection is updated after pokes.
+stable 59300000 0xEA4
+stable 59400000 0xC4
+setup * 027389F8 r3=0x59400000
+poke * 59400094 u32 0x3F800000
+poke * 59400098 u32 0x461C4000
+poke * 594000AC u32 0x3FAAAAAB
+poke * 594000B0 u32 0x00000000
+poke * 594000B4 u32 0x00000000
+poke * 594000B8 u32 0x3F800000
+poke * 594000BC u32 0x3F800000
+poke * 593000E8 u32 0x3ED413CD
+poke * 59300E9C u32 0x3F0D6289
+poke * 59300E88 u32 0x00000000
+poke * 59300E8C u32 0x00000000
+poke * 59300EA0 u32 0xBF800000
+poke * 59100008 u32 0x59700000
+poke * 5910000C u32 0x59700100
+poke * 59700000 u16 1,3
+poke * 59700008 u32 0x00000000,0x41200000,0xC1200000
+poke * 5970000C u32 0x00000000,0x41200000,0xC1200000
+poke * 59700010 u32 0x00000000,0x43FA0000,0x447A0000
+poke * 59700014 u32 0x00000000,0x3F800000,0x41200000
+poke * 59700100 u16 1,3
+poke * 59700108 u32 0x00000000,0x41200000,0xC1200000
+poke * 5970010C u32 0x00000000,0x41200000,0xC1200000
+poke * 59700110 u32 0x00000000,0x43FA0000,0x447A0000
+poke * 59700114 u32 0x00000000,0x3F800000,0x41200000
+# Independent finite colors and positive scalar values distinguish both source records.
+poke * 59700018 f32 0,0.25,0.5,1
+poke * 5970001C f32 0,0.25,0.5,1
+poke * 59700020 f32 0,0.25,0.5,1
+poke * 59700024 f32 0,0.25,0.5,1
+poke * 59700028 f32 0,0.25,0.5,1
+poke * 5970002C f32 0,0.25,0.5,1
+poke * 59700030 f32 0,0.25,0.5,1
+poke * 59700034 f32 0,0.25,0.5,1
+poke * 59700038 f32 0.25,1,2,4
+poke * 5970003C f32 0.1,0.5,1,4
+poke * 59700118 f32 0,0.25,0.5,1
+poke * 5970011C f32 0,0.25,0.5,1
+poke * 59700120 f32 0,0.25,0.5,1
+poke * 59700124 f32 0,0.25,0.5,1
+poke * 59700128 f32 0,0.25,0.5,1
+poke * 5970012C f32 0,0.25,0.5,1
+poke * 59700130 f32 0,0.25,0.5,1
+poke * 59700134 f32 0,0.25,0.5,1
+poke * 59700138 f32 0.25,1,2,4
+poke * 5970013C f32 0.1,0.5,1,4
+postsetup * 027CF8B4 r3=0x59200000 r4=0x59100000
+# Canonical sead::createLookAtCamera and ViewCamera::buildView produce a general rigid view.
+poke * 59900000 u32 0x40400000
+poke * 59900004 u32 0x40800000
+poke * 59900008 u32 0x40A00000
+poke * 59900100 u32 0xC1200000
+poke * 59900104 u32 0x3F800000
+poke * 59900108 u32 0xC0E00000
+poke * 59900200 u32 0x3E4CCCCD
+poke * 59900204 u32 0x3F800000
+poke * 59900208 u32 0x3E99999A
+postsetup * 0274CBAC r3=0x59800000 r4=0x59900000 r5=0x59900100 r6=0x59900200
+postsetup * 0274CCC4 r3=0x59800000 r4=0x59300000
+postsetup * 0274D83C r3=0x59400000
+postsetup * 028E8970 r3=0x59400044 r4=0x59300128
+postsetup * 028E90D4 r3=0x59300000 r4=0x59300E18
+postsetup * 0272D680 r3=0x59300E48 r4=0x59300128 r5=0x59300000
+real 0274D510 027CC1BC 027CC250 027389F8 0274DEA8 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 028E8F64 028E9044 028E9108 028E91EC 028E90D4 028E8970 0272D680 027BEF54 027BF048 028E8E10
+real 027BEEE4 027BEEBC 027BEED4
+real 027CF888 027CF8B4 027CF8A0
+real 0274D6B4 0274DA08
+real 0274CBAC 0274CCC4

@@ -1,0 +1,346 @@
+src wwhd_src/sead/RuntimeStatics.cpp
+# SEAD#11 primary broad boundary domain: all92 assigned functions.
+src wwhd_src/sead/ViewTransform.cpp
+stackfill
+src wwhd_src/sead/ColorChannels.cpp
+src wwhd_src/sead/ProjectionState.cpp
+src wwhd_src/sead/ViewTypeIdentity.cpp
+field * 101FD6B0 u32 0,1,0xFFFFFFFF
+field * 101FD6B4 u32 0,1,0xFFFFFFFF
+field * 101FD6B8 u32 0,1,0xFFFFFFFF
+field * 101FD6BC u32 0,1,0xFFFFFFFF
+field * 101FD69C u32 0,1,0xFFFFFFFF
+field * 101FD6A0 u32 0,1,0xFFFFFFFF
+field * 101FD6A4 u32 0,1,0xFFFFFFFF
+arg 0274CF2C r4 0x101FDF6C,0x101FDF70,0x101FDF74,0x101FDF78,0x101FDCD8,0x101FDCDC,0x101FDF80,0
+arg 0274CF68 r4 0x101FDF6C,0x101FDF70,0x101FDF74,0x101FDF78,0x101FDCD8,0x101FDCDC,0x101FDF80,0
+arg 0274CFE0 r4 0x101FDF6C,0x101FDF70,0x101FDF74,0x101FDF78,0x101FDCD8,0x101FDCDC,0x101FDF80,0
+arg 0274D09C r4 0x101FDF6C,0x101FDF70,0x101FDF74,0x101FDF78,0x101FDCD8,0x101FDCDC,0x101FDF80,0
+arg 0274EB98 r4 0x101FDF6C,0x101FDF70,0x101FDF74,0x101FDF78,0x101FDCD8,0x101FDCDC,0x101FDF80,0
+arg 0274EBD4 r4 0x101FDF6C,0x101FDF70,0x101FDF74,0x101FDF78,0x101FDCD8,0x101FDCDC,0x101FDF80,0
+arg 0274EC54 r4 0x101FDF6C,0x101FDF70,0x101FDF74,0x101FDF78,0x101FDCD8,0x101FDCDC,0x101FDF80,0
+src wwhd_src/sead/PerspectiveState.cpp
+arg 0274E910 r5 0,1,2,3,4,5,6,0xFFFFFFFF
+arg 0274EAF0 r5 0,1,2,3,4,5,6,0xFFFFFFFF
+src wwhd_src/sead/GraphicsRuntime.cpp
+# A swap wait samples a pending submission until its completion counter catches up.
+callee C0006348 r3=out4 r4=out4 r5=out8 r6=out8
+mockfield C0006348 r3+0 u32 1
+mockfield C0006348 r4+0 u32 0,1
+field * 101FD718 u32 0,1
+arg 0274BCD8 r4 0,1,2,3,4,5,6,7,8,9,10,11,0xFFFFFFFF
+arg 0274BE28 r4 0,1,2,3,4,5,6,7,8,9,10,11,0xFFFFFFFF
+# Nonreturning graphics thread: bounded prefix through the second frame dispatch only.
+# stopat does not establish thread termination, later iterations or scheduler behavior.
+arg! 0274C00C r3 0x53400000
+field 0274C00C r3+0x24 u32 0x53401000
+field 0274C00C 534010CC u32 0x0274C264
+stable 53400024 4
+stable 53401000 0x100
+stopat 0274C00C 0274C264 2
+arg 0274DA08 r6 0,1,2,3,4,5,6,0xFFFFFFFF
+# Scan-buffer construction fixes its virtual type and returns its live receiver.
+# The graphics initializer calls this only after a nonnull allocation.
+real 027510FC
+
+# Valid successful object allocation: size from r3, alignment32 satisfies requested4.
+# Distinct rounded extents per call; null/failure paths remain a separate limitation.
+alloc 0273B050 r3 0x5A000000 32
+
+# Complete initialized GX2 attribute list: nine words, including END (original call 0274B4DC).
+callee C00063A8 r3=36
+# Bounded original arithmetic/copy helpers supply actual outputs, preserving input/output aliasing.
+# Complete input records remain explicitly observed at each call.
+callee 028E8D4C r3=heap12 r4=heap12
+real 028E8D4C
+callee 025155D8 r3=heap12
+real 025155D8
+callee 028E8970 r3=heap64
+real 028E8970
+callee 028E90D4 r3=heap48
+real 028E90D4
+callee 028E8F64 r3=heap48 r4=heap12
+real 028E8F64
+callee 0274CBAC r4=heap12 r5=heap12 r6=heap12
+real 0274CBAC
+# This canonical viewport method consumes two-dimensional input and writes only two floats.
+callee 0274FAE0 r3=heap16 r5=heap8
+real 0274FAE0
+# Original row helpers observe only the indexed 16-byte row; no blanket matrix snapshot.
+real 0274F300
+callee 0274F32C r4=heap16
+real 0274F32C
+callee 02760E58 r3=heap8
+real 02760E58
+callee 02760EB8 r3=heap8 r4=heap8
+real 02760EB8
+# Color wrappers use all four components; real leaves update the complete 16-byte temporary.
+callee 0274D1E0 r3=heap16 r4=heap16
+real 0274D1E0
+callee 0274D224 r3=heap16 r4=heap16
+real 0274D224
+callee 0274D268 r3=heap16 r4=heap16
+real 0274D268
+callee 0274D2AC r3=heap16
+real 0274D2AC
+callee 0274D2E0 r3=heap16
+real 0274D2E0
+
+# HiZ output words are defined by the SDK declaration; exercise positive aligned allocations.
+callee C00060B0 r4=out4 r5=out4
+mockfield C00060B0 r4+0 u32 0x1000,0x2000,0x4000
+mockfield C00060B0 r5+0 u32 0x100,0x800
+# GPU samples write a complete 64-bit clock in heap query storage (outSIZE alone fills stack only).
+callee C0006760 r3=out8
+callee C0006748 r3=out8
+mockfield C0006760 r3+0 u32 0,1
+mockfield C0006760 r3+4 u32 1,0xFFFFFF00
+mockfield C0006748 r3+0 u32 2,3
+mockfield C0006748 r3+4 u32 0x100,0xFFFFFFFF
+
+# Complete bounded transitive dependencies of normalization and clock arithmetic.
+callee 028E8E10 r3=heap12
+real 028E8E10
+real 02760DE8
+callee 02760E34 r3=heap8 r4=heap8
+real 02760E34
+callee 02760E94 r3=heap8 r4=heap8
+real 02760E94
+
+# Typed clear-target fixture: Cafe framework extent380, DisplayFrame24, separate dispatch records.
+# Getter is fixture-only (no SEAD10 body); its result exercises null and nonnull receivers.
+arg! 0274C9A8 r3 0x53A00000
+field 0274C9A8 r3+0x24 u32 0x53A01000
+field 0274C9A8 53A01034 u32 0x0F110000
+field 0274C9A8 53A02018 u32 0x53A03000
+field 0274C9A8 53A0302C u32 0x02750E24
+stable 53A00000 0x380
+stable 53A01000 0x100
+stable 53A02000 0x24
+stable 53A03000 0x40
+callee 0F110000 fixture r3=0
+ret! 0F110000 0,0x53A02000
+# DisplayFrame::clear consumes all four color components when flags bit0 is set (caller passes7).
+callee 02750E24 r5=heap16
+
+# Bounded driver output model: original clear thunk and in-place array construction.
+# Sole own clear call requests160 bytes; raw size/fill arguments remain compared.
+real 028F521C
+callee 028F521C r3=out352
+callee C000A858 r3=out352 r4=0 r5=0
+mockfield C000A858 r3+0x0 u32 0
+mockfield C000A858 r3+0x4 u32 0
+mockfield C000A858 r3+0x8 u32 0
+mockfield C000A858 r3+0xC u32 0
+mockfield C000A858 r3+0x10 u32 0
+mockfield C000A858 r3+0x14 u32 0
+mockfield C000A858 r3+0x18 u32 0
+mockfield C000A858 r3+0x1C u32 0
+mockfield C000A858 r3+0x20 u32 0
+mockfield C000A858 r3+0x24 u32 0
+mockfield C000A858 r3+0x28 u32 0
+mockfield C000A858 r3+0x2C u32 0
+mockfield C000A858 r3+0x30 u32 0
+mockfield C000A858 r3+0x34 u32 0
+mockfield C000A858 r3+0x38 u32 0
+mockfield C000A858 r3+0x3C u32 0
+mockfield C000A858 r3+0x40 u32 0
+mockfield C000A858 r3+0x44 u32 0
+mockfield C000A858 r3+0x48 u32 0
+mockfield C000A858 r3+0x4C u32 0
+mockfield C000A858 r3+0x50 u32 0
+mockfield C000A858 r3+0x54 u32 0
+mockfield C000A858 r3+0x58 u32 0
+mockfield C000A858 r3+0x5C u32 0
+mockfield C000A858 r3+0x60 u32 0
+mockfield C000A858 r3+0x64 u32 0
+mockfield C000A858 r3+0x68 u32 0
+mockfield C000A858 r3+0x6C u32 0
+mockfield C000A858 r3+0x70 u32 0
+mockfield C000A858 r3+0x74 u32 0
+mockfield C000A858 r3+0x78 u32 0
+mockfield C000A858 r3+0x7C u32 0
+mockfield C000A858 r3+0x80 u32 0
+mockfield C000A858 r3+0x84 u32 0
+mockfield C000A858 r3+0x88 u32 0
+mockfield C000A858 r3+0x8C u32 0
+mockfield C000A858 r3+0x90 u32 0
+mockfield C000A858 r3+0x94 u32 0
+mockfield C000A858 r3+0x98 u32 0
+mockfield C000A858 r3+0x9C u32 0
+mockfield C000A858 r3+0xA0 u32 0
+mockfield C000A858 r3+0xA4 u32 0
+mockfield C000A858 r3+0xA8 u32 0
+mockfield C000A858 r3+0xAC u32 0
+mockfield C000A858 r3+0xB0 u32 0
+mockfield C000A858 r3+0xB4 u32 0
+mockfield C000A858 r3+0xB8 u32 0
+mockfield C000A858 r3+0xBC u32 0
+mockfield C000A858 r3+0xC0 u32 0
+mockfield C000A858 r3+0xC4 u32 0
+mockfield C000A858 r3+0xC8 u32 0
+mockfield C000A858 r3+0xCC u32 0
+mockfield C000A858 r3+0xD0 u32 0
+mockfield C000A858 r3+0xD4 u32 0
+mockfield C000A858 r3+0xD8 u32 0
+mockfield C000A858 r3+0xDC u32 0
+mockfield C000A858 r3+0xE0 u32 0
+mockfield C000A858 r3+0xE4 u32 0
+mockfield C000A858 r3+0xE8 u32 0
+mockfield C000A858 r3+0xEC u32 0
+mockfield C000A858 r3+0xF0 u32 0
+mockfield C000A858 r3+0xF4 u32 0
+mockfield C000A858 r3+0xF8 u32 0
+mockfield C000A858 r3+0xFC u32 0
+mockfield C000A858 r3+0x100 u32 0
+mockfield C000A858 r3+0x104 u32 0
+mockfield C000A858 r3+0x108 u32 0
+mockfield C000A858 r3+0x10C u32 0
+mockfield C000A858 r3+0x110 u32 0
+mockfield C000A858 r3+0x114 u32 0
+mockfield C000A858 r3+0x118 u32 0
+mockfield C000A858 r3+0x11C u32 0
+mockfield C000A858 r3+0x120 u32 0
+mockfield C000A858 r3+0x124 u32 0
+mockfield C000A858 r3+0x128 u32 0
+mockfield C000A858 r3+0x12C u32 0
+mockfield C000A858 r3+0x130 u32 0
+mockfield C000A858 r3+0x134 u32 0
+mockfield C000A858 r3+0x138 u32 0
+mockfield C000A858 r3+0x13C u32 0
+mockfield C000A858 r3+0x140 u32 0
+mockfield C000A858 r3+0x144 u32 0
+mockfield C000A858 r3+0x148 u32 0
+mockfield C000A858 r3+0x14C u32 0
+mockfield C000A858 r3+0x150 u32 0
+mockfield C000A858 r3+0x154 u32 0
+mockfield C000A858 r3+0x158 u32 0
+mockfield C000A858 r3+0x15C u32 0
+# Eight24-byte in-place constructors exactly cover driver+60..11F.
+real 028EFFD0
+real 028EFE58
+real 0274CA20
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258
+# Do not mark the192-byte destination as an input: constructor outputs replace it.
+callee 028EFFD0 r3=out192
+callee 0274CA20 r3=out24
+# A changed size/count/stride remains a call-argument mismatch, not a licensed overrun.
+
+# approved pre-call surface inputs; output-only words are deliberately excluded.
+observearg C00060D0 r3+0 32
+observearg C00060D0 r3+0x30 8
+
+# Canonical merged SEAD12 reset/acquire reads its dispatch and locking inputs (not the whole driver).
+observearg 0274FD64 r3+0xC 12
+observearg 0274FD64 r3+0x54 4
+# Scan allocation consumes dimensions and target/progressive; mBuffer at14 is output-only.
+observearg 02751174 r3+0 8
+observearg 02751174 r3+0xC 8
+
+# approved surface/view inputs; generated register outputs remain unobserved.
+observearg C00063D0 r3+0 16
+observearg C00063D0 r3+0x14 8
+observearg C00063D0 r3+0x30 4
+observearg C00063D0 r3+0x74 12
+observearg C00063F0 r3+0 16
+observearg C00063F0 r3+0x14 8
+observearg C00063F0 r3+0x30 4
+observearg C00063F0 r3+0x74 4
+observearg C00063F0 r3+0x7C 4
+# Opaque HiZ record identity and BOOL are scalar arguments; no unproved record spans.
+callee C00063E8 r3=0 r4=0
+# Model complete declared register-output arrays, without asserting SDK-internal values.
+mockfield C00063D0 r3+0x88 u32 0,0x01010101
+mockfield C00063D0 r3+0x8C u32 0,0x02020202
+mockfield C00063D0 r3+0x90 u32 0,0x03030303
+mockfield C00063D0 r3+0x94 u32 0,0x04040404
+mockfield C00063D0 r3+0x98 u32 0,0x05050505
+mockfield C00063F0 r3+0x90 u32 0,0x01010101
+mockfield C00063F0 r3+0x94 u32 0,0x02020202
+mockfield C00063F0 r3+0x98 u32 0,0x03030303
+mockfield C00063F0 r3+0x9C u32 0,0x04040404
+mockfield C00063F0 r3+0xA0 u32 0,0x05050505
+mockfield C00063F0 r3+0xA4 u32 0,0x06060606
+mockfield C00063F0 r3+0xA8 u32 0,0x07070707
+# Bounded opaque layout-result model for downstream caller forwarding; not a GPU layout formula.
+mockfield C00060D0 r3+0x20 u32 0x800000
+mockfield C00060D0 r3+0x38 u32 0x1000
+
+# Complete-object/named-subobject alias domain; no partial overlays.
+arg! 0274E4B8 r3 0x53e32000
+arg! 0274E4B8 r4 0x53e32200,0x53e32004,0x53e32044
+field 0274E4B8 53E32000 u8 1
+field 0274E4B8 53E32001 u8 1
+field 0274E4B8 53E32084 u32 0
+field 0274E4B8 53E32088 f32 1
+field 0274E4B8 53E3208C f32 0
+field 0274E4B8 53E32090 u32 0x101452a0
+field 0274E4B8 53E32094 f32 1
+field 0274E4B8 53E32098 f32 100
+field 0274E4B8 53E3209C f32 1
+field 0274E4B8 53E320A0 f32 -1
+field 0274E4B8 53E320A4 f32 -1
+field 0274E4B8 53E320A8 f32 1
+field 0274E4B8 53E32004 f32 1
+field 0274E4B8 53E32008 f32 0
+field 0274E4B8 53E3200C f32 0
+field 0274E4B8 53E32010 f32 0
+field 0274E4B8 53E32014 f32 0
+field 0274E4B8 53E32018 f32 1
+field 0274E4B8 53E3201C f32 0
+field 0274E4B8 53E32020 f32 0
+field 0274E4B8 53E32024 f32 0
+field 0274E4B8 53E32028 f32 0
+field 0274E4B8 53E3202C f32 1
+field 0274E4B8 53E32030 f32 0
+field 0274E4B8 53E32034 f32 0
+field 0274E4B8 53E32038 f32 0
+field 0274E4B8 53E3203C f32 0
+field 0274E4B8 53E32040 f32 1
+field 0274E4B8 53E32044 f32 1
+field 0274E4B8 53E32048 f32 0
+field 0274E4B8 53E3204C f32 0
+field 0274E4B8 53E32050 f32 0
+field 0274E4B8 53E32054 f32 0
+field 0274E4B8 53E32058 f32 1
+field 0274E4B8 53E3205C f32 0
+field 0274E4B8 53E32060 f32 0
+field 0274E4B8 53E32064 f32 0
+field 0274E4B8 53E32068 f32 0
+field 0274E4B8 53E3206C f32 1
+field 0274E4B8 53E32070 f32 0
+field 0274E4B8 53E32074 f32 0
+field 0274E4B8 53E32078 f32 0
+field 0274E4B8 53E3207C f32 0
+field 0274E4B8 53E32080 f32 1
+field 0274E4B8 53E32200 f32 1
+field 0274E4B8 53E32204 f32 0
+field 0274E4B8 53E32208 f32 0
+field 0274E4B8 53E3220C f32 0
+field 0274E4B8 53E32210 f32 0
+field 0274E4B8 53E32214 f32 1
+field 0274E4B8 53E32218 f32 0
+field 0274E4B8 53E3221C f32 0
+field 0274E4B8 53E32220 f32 0
+field 0274E4B8 53E32224 f32 0
+field 0274E4B8 53E32228 f32 1
+field 0274E4B8 53E3222C f32 0
+field 0274E4B8 53E32230 f32 0
+field 0274E4B8 53E32234 f32 0
+field 0274E4B8 53E32238 f32 0
+field 0274E4B8 53E3223C f32 1

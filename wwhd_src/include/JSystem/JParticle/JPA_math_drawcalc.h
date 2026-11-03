@@ -1,7 +1,8 @@
 /** Qualified HD particle math and draw views.
  * HD: per-draw context/clipboard and GPU texture state extend the GameCube layout. */
 #pragma once
-#include "JSystem/JParticle/JPAParticle.h"
+#include "SSystem/SComponent/c_xyz.h"
+struct JPABaseParticle;
 namespace JPAMathDraw {
 // HD: GPU texture slots and the default-texture cache sentinel.
 enum {
@@ -131,20 +132,33 @@ struct JPABaseEmitterHD {
     u8 padding_262[0x17A];
     gptr<void> mpTextureContext;
 };
+// HD: the descriptor's GX2Surface starts at +4 (JPAMath_copyTextureState 027BDEB4 copies 0x74 =
+// sizeof(GX2Surface) bytes from descriptor+4); this view holds its first 0x38 bytes.
 struct JPATextureDescriptor {
     u8 padding_0[4];
-    be<u32> mLayout[6];
-    be<u32> mSwizzle;
-    u8 padding_20[8];
-    be<u32> mAddress;
-    u8 padding_2c[4];
+    union {
+        be<u32> mLayout[6];
+        struct { be<u32> mDimension, mWidth, mHeight, mDepth, mMipLevels, mFormat; };
+    };
+    be<u32> mAA;
+    be<u32> mUse;
+    be<u32> mImageSize;
+    be<u32> mImageAddress;
+    be<u32> mMipSize;
     be<u32> mMipAddress;
-    be<u32> mLayoutTail[2];
+    be<u32> mTileMode;
+    be<u32> mSwizzle;
 };
 WWHD_OFFSET(JPABaseEmitterHD, mTextureGeneration, 0x260);
 WWHD_OFFSET(JPABaseEmitterHD, mpTextureContext, 0x3DC);
-WWHD_OFFSET(JPATextureDescriptor, mAddress, 0x28);
-WWHD_OFFSET(JPATextureDescriptor, mLayoutTail, 0x34);
+WWHD_SIZE(JPATextureDescriptor, 0x3C);
+WWHD_OFFSET(JPATextureDescriptor, mWidth, 8);
+WWHD_OFFSET(JPATextureDescriptor, mFormat, 0x18);
+WWHD_OFFSET(JPATextureDescriptor, mAA, 0x1C);
+WWHD_OFFSET(JPATextureDescriptor, mImageAddress, 0x28);
+WWHD_OFFSET(JPATextureDescriptor, mMipAddress, 0x30);
+WWHD_OFFSET(JPATextureDescriptor, mSwizzle, 0x38);
+WWHD_OFFSET(JPATextureDescriptor, mTileMode, 0x34);
 
 struct JPAParticleHD;
 struct JPADrawContext;
@@ -162,21 +176,24 @@ struct JPATextureResource {
 enum JPATextureDirtyFlags { TEXTURE_BINDING_DIRTY = 2, TEXTURE_MODE_DIRTY = 4, TEXTURE_EXTRA_DIRTY = 0x20 };
 struct JPATextureState {
     JPATextureDescriptor mDescriptor;
+    // HD: 0xB0 holds a GX2Surface copy (027BDEB4); mCachedImageAddress/mCachedMipAddress are its image and mip pointers.
     u8 padding_3c[0x98];
-    be<u32> mCachedAddress;
+    be<u32> mCachedImageAddress;
     u8 padding_d8[4];
     be<u32> mCachedMipAddress;
     u8 padding_e0[0x70];
     be<u32> mMode[2];
     u8 padding_158[4];
     be<u32> mBinding[2];
-    u8 padding_164[4];
+    be<u32> mSecondaryBinding;
     be<u32> mExtraState[4];
     u8 padding_178[0x18];
     be<u8> mDirtyFlags;
 };
 WWHD_SIZE(JPATextureBinding, 16);
 WWHD_OFFSET(JPATextureResource, mTextureBindings, 0x54);
+WWHD_OFFSET(JPATextureState, mCachedImageAddress, 0xD4);
+WWHD_OFFSET(JPATextureState, mCachedMipAddress, 0xDC);
 WWHD_OFFSET(JPATextureState, mBinding, 0x15C);
 WWHD_OFFSET(JPATextureState, mExtraState, 0x168);
 WWHD_OFFSET(JPATextureState, mDirtyFlags, 0x190);
@@ -190,7 +207,7 @@ struct JPACalcVisitor {
 };
 struct JPADrawContext {
     be<u32> pcb;
-    u8 padding_4[8];
+    union { u8 padding_4[8]; gptr<void> mpAlternateClipBoards[2]; };  /* draw +0xB8/+0xBC banks (initialize 02829F40..4C) */
     gptr<JPABaseEmitterHD> pbe;
     gptr<JPABaseShape> pbsp;
     gptr<JPAExtraShape> pesp;
@@ -202,23 +219,39 @@ struct JPADrawContext {
     gptr<be<u16>> pTexIdx;
 };
 struct JPADraw {
-    u8 padding_0[0x24];
+    /* execution-visitor aliases */
+    union {
+        u8 padding_0[0x24];
+        struct { gptr<void> mpExecEmtrVis[1], mpExecEmtrPVis[5], mpExecEmtrCVis[3]; };
+    };
     gptr<JPACalcVisitor> mpCalcEmtrVis[4];
-    u8 padding_34[0x14];
+    union { u8 padding_34[0x14]; gptr<void> mpExecPtclVis[5]; };
     gptr<JPACalcVisitor> mpCalcPtclVis[10];
-    u8 padding_70[0x10];
+    union { u8 padding_70[0x10]; gptr<void> mpExecChldVis[4]; };
     gptr<JPACalcVisitor> mpCalcChldVis[2];
-    u8 padding_88[0x23];
+    union {
+        u8 padding_88[0x23];
+        struct {
+            gptr<void> mpHDExecEmtrPVis[2], mpHDExecEmtrCVis[2], mpHDExecPtclVis[2], mpHDExecChldVis[2];
+            be<u8> execEmtrVisNum, execEmtrPVisNum, execEmtrCVisNum;
+        };
+    };
     be<u8> calcEmtrVisNum;
-    u8 padding_ac;
+    union { u8 padding_ac; be<u8> execPtclVisNum; };
     be<u8> calcPtclVisNum;
-    u8 padding_ae;
+    union { u8 padding_ae; be<u8> execChldVisNum; };
     be<u8> calcChldVisNum;
-    u8 padding_b0[4];
+    union {
+        u8 padding_b0[4];
+        struct { be<u8> hdExecEmtrPVisNum, hdExecEmtrCVisNum, hdExecPtclVisNum, hdExecChldVisNum; };
+    };
     JPADrawContext dc;
     be<f32> mScaleOut;
     be<u32> mPrmColor;
     be<u32> mEnvColor;
+    be<u16> mTexIdx;
+    be<u8> mDrawFlags, mUniformsUpdated[2], mTextureCopyEnabled;
+    u8 mDrawTail[2];
     void calc();
     void initParticle(JPAParticleHD *);
     void initChild(JPAParticleHD *, JPAParticleHD *);
@@ -243,6 +276,21 @@ WWHD_OFFSET(JPADraw, mpCalcChldVis, 0x80);
 WWHD_OFFSET(JPADraw, calcEmtrVisNum, 0xAB);
 WWHD_OFFSET(JPADraw, calcPtclVisNum, 0xAD);
 WWHD_OFFSET(JPADraw, calcChldVisNum, 0xAF);
+WWHD_OFFSET(JPADraw, mpExecEmtrPVis, 0x4);
+WWHD_OFFSET(JPADraw, mpExecEmtrCVis, 0x18);
+WWHD_OFFSET(JPADraw, mpExecPtclVis, 0x34);
+WWHD_OFFSET(JPADraw, mpExecChldVis, 0x70);
+WWHD_OFFSET(JPADraw, mpHDExecEmtrPVis, 0x88);
+WWHD_OFFSET(JPADraw, mpHDExecEmtrCVis, 0x90);
+WWHD_OFFSET(JPADraw, mpHDExecPtclVis, 0x98);
+WWHD_OFFSET(JPADraw, mpHDExecChldVis, 0xA0);
+WWHD_OFFSET(JPADraw, execEmtrVisNum, 0xA8);
+WWHD_OFFSET(JPADraw, execEmtrPVisNum, 0xA9);
+WWHD_OFFSET(JPADraw, execEmtrCVisNum, 0xAA);
+WWHD_OFFSET(JPADraw, execPtclVisNum, 0xAC);
+WWHD_OFFSET(JPADraw, execChldVisNum, 0xAE);
+WWHD_OFFSET(JPADraw, hdExecEmtrPVisNum, 0xB0);
+WWHD_OFFSET(JPADraw, hdExecChldVisNum, 0xB3);
 WWHD_OFFSET(JPADraw, dc, 0xB4);
 WWHD_OFFSET(JPADraw, mScaleOut, 0xE4);
 WWHD_SIZE(JPADrawContext, 0x30);
@@ -271,3 +319,10 @@ struct JPAMathSinCosTable {
 using JPAMtxP = be<f32> (*)[4];
 WWHD_SIZE(JPAMathSinCos, 8);
 WWHD_SIZE(JPAMathSinCosTable, 65536);
+
+WWHD_OFFSET(JPAMathDraw::JPATextureState, mSecondaryBinding, 0x164);
+WWHD_OFFSET(JPAMathDraw::JPADraw, mTexIdx, 0xF0);
+WWHD_OFFSET(JPAMathDraw::JPADraw, mDrawFlags, 0xF2);
+WWHD_OFFSET(JPAMathDraw::JPADraw, mUniformsUpdated, 0xF3);
+WWHD_OFFSET(JPAMathDraw::JPADraw, mTextureCopyEnabled, 0xF5);
+WWHD_SIZE(JPAMathDraw::JPADraw, 0xF8);

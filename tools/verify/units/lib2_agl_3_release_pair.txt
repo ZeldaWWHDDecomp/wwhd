@@ -1,0 +1,58 @@
+# nonzero pool-produced SurfacePair header; bounded release path only.
+# The handle is the real 0279ADD4 return from this entry's own pool; no protected consumer lifecycle is exercised.
+# verify: -strictnan -calleesp -only 02777CB0
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+setupsnapshot
+arg! 02777CB0 r3 0x56000000
+arg! 02777CB0 r4 0,1,2,0xFFFFFFFF
+field 02777CB0 560002CC u32 2
+field 02777CB0 560002D0 u32 0x56300000
+field 02777CB0 56300984 u32 0
+field 02777CB0 56301338 u32 0
+field 02777CB0 5630161C u32 0
+
+# closed AGL#3 producer recipe: authentic cache owner and entry-local pool.
+field * 0x101F8DD4 u32 0
+# AGL#8 RegistryHeap backing and producer; do not zero the manager slot because 02755FE0 publishes it.
+fill 02777CB0 0x6A000000 0x01000000 0
+stable 0x6A000000 0x01000000
+field * 0x6E200000 u32 0x6A000000
+field * 0x6E200004 u32 0x01000000
+field * 0x6E200008 u32 0
+setup * 027561B4
+setup * 02755FE0 r3=0x6E200000
+nestedret 02756140 0x6A000000
+alloc 0273B0D4 r3 0x60000000 align=r5
+allocnested 0273B0D4
+alloc 0273AD10 r3 0x62000000 32
+allocnested 0273AD10
+setup * 02757B48
+setup * 0279F2EC r3=0x6A000000
+# cache registration producer (AGL#8 recipe); RegistryHeap at 0x6A000000.
+setup * 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+
+# Entry-local context and original SurfaceData name record.
+setup * 0279A95C r3=0x56300C7C
+field * 0x5D400000 u32 0x10161E48
+field * 0x5D400004 u32 0x10161818
+setup * 0279ADD4 r3=0x56300C7C r4=0x5D400000 r5=0x1A r6=0x280 r7=0x168 r8=4 r9=0 r10=0 sp+8=1 ->0x563006A0
+
+# Approved original owner/pool and TextureData path; handle returned above is preserved in pair[0].
+real 0279ADD4 0279AC28 0279AD54 0279AE68 0279FC6C 0279F7F0 0279F738 0279F6B0
+real 027BE930 027BE794 027BE6B8 027CB1A0 027CB3B8 0279FFDC 027A0040 027601BC 027601F0 027A029C 027CAB58
+real 027C05F4 027C05C8 027C05A0 027B6CB8 027B6E64 02757B48 0279A95C
+real 027561B4 02755FE0 0279F2EC 0279F218 0279F474 02752B0C 028EFFD0 028EFE58
+# -closed nonzero-acquire heap-tree producer path.
+real 02755F40 02755EC4 0275315C
+real 02752C74 02752D8C 02752E60 02752F10 02753000 0275589C 02755CA4 02755E7C 027600EC 028F521C
+real 02753D6C 027536F4 02753628 027536B0 0273B2F0 0273B310 0273B440 0273B524 027CAD30 027CAED8 0273B2D0
+nestedret 028FDE28 0
+nestedret C0009BB0 0
+callbudget 10000000
+mockset C0009990 r3 r4 r5
+mocksurfacesize C00060D0
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+# Keep these opaque mocks as directed; the claim is limited to the valid caller release domain.

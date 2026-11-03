@@ -1,0 +1,18 @@
+# AGL#19 deferred/submitted command lists after the first frame's jobs (lib2_agl_19_display_exec_fixture.txt):
+# sortDeferred 027D6E80 (prepareView 027C1A24; flag 0x40 set by the submission), PointerBuffer sort 027D7A4C with
+# its sole comparator 027DA7D4 on the view's deferred list (the call 027D6EAC inside sortDeferred makes), removePending
+# 027D650C with commands owned by the removed layer, submitDisplayLists 027D6EEC rebuild (drawView 027C1AD8 passes 1
+# for manager flags without 0x200), refreshAttachmentBounds 027D740C (finishRenderView). DISPLAY-LIST DEPENDENT
+# (BYTES model 0x40).
+# verify: -only 027D6E80,027D7A4C,027D650C,027D6EEC,027D740C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+real 027DA7D4 027DA764 027D6E80 025C0928
+arg! 027D6E80 r3 0x5E100018,0x5E100818
+arg! 027D7A4C r3 0x5E1007EC,0x5E100FEC
+arg! 027D7A4C r4 0x027DA7D4
+arg! 027D650C r3 0x5E100018,0x5E100818
+arg! 027D650C r4 0x58000000,0x58001000,0x58002000,0x6A886D50
+arg! 027D6EEC r3 0x5E100018,0x5E100818
+arg! 027D6EEC r4 1
+arg! 027D740C r3 0x5E100018,0x5E100818

@@ -1,0 +1,17 @@
+# AGL#18 027D11D4 caller-valid initializer-owned record-state companion.
+# Reuse the accepted shipped 256x1 value-allocation-OOM lifecycle, retain the
+# bounded nonzero allocator pattern, and replace only the two record callbacks
+# with the game's empty hook so initializer-owned flags/mask/count/pointer state
+# remains observable.
+# verify: -only 027D11D4 -strictnan -calleesp -footprint
+include lib2_agl_18/collection_extended_positive256_value_oom.txt
+
+# Allocator payload is unwritten before the initializer's own field stores.
+fill * 0x6A000000 0x1000000 0xA5
+stable 0x6A000000 0x1000000
+
+# RenderSelectionDispatch_l::mSetRecordEnabled.mFunction (0xB8 + 4) and
+# mInitializeRecord.mFunction (0xE0 + 4), relative to extended table 1016AEF8.
+field * 0x1016AFB4 u32 0x027D10F4
+field * 0x1016AFDC u32 0x027D10F4
+real 027D10F4

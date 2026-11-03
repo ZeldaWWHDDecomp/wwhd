@@ -1,0 +1,13 @@
+src wwhd_src/JSystem/JParticle/JPAFieldBlock.cpp
+src wwhd_src/JSystem/JParticle/JPAKeyBlock.cpp
+src wwhd_src/JSystem/JParticle/JPADynamicsBlock.cpp
+src wwhd_src/JSystem/JParticle/JPASweepShape.cpp
+src wwhd_src/JSystem/JParticle/JPABaseShape.cpp
+# Color-table generation uses a bounded coherent key sequence and output frame count.
+arg! 0284AA5C r4 3
+arg! 0284AA5C r5 -1,0,1,2,4,8,10,12
+field 0284AA5C r3+0 u16 0
+field 0284AA5C r3+6 u16 2
+field 0284AA5C r3+12 u16 8
+# Trailing constant-color frames read the following archive slot; keep it beyond this range.
+field 0284AA5C r3+18 u16 0x7fff

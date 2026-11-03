@@ -1,0 +1,6 @@
+# Diagnostic-only bounded trace for AGL#18 global 5648.
+# It preserves the producer-valid range_release_both setup and lowers only the
+# diagnostic access budget so the repeated loop is visible in a compact log.
+# verify: -only 027CB3B8 -strictnan -calleesp -nulltrap
+include lib2_agl_18/range_release_both.txt
+accessbudget 1000000

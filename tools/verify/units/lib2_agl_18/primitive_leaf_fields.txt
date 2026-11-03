@@ -1,0 +1,25 @@
+# Pure scalar/pointer-prefix leaves; no constructed foreign-object or opaque-callee lifecycle claim.
+# Positive scalar inputs finite; pair reset has pre-existing pointers; ranked comparison includes equal finite ranks.
+# verify: -only 027CC264,027CF888,027CF8B4 -strictnan -calleesp -footprint
+src wwhd_src/agl/DrawPreparation.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+field 027CC264 r4+0x38 u32 0x00000000,0x80000000,0x3F000000,0x3F800000,0xBF800000
+field 027CF888 r4+0 u8 0,1
+field 027CF888 r4+8 u32 0x58200000
+field 027CF888 r4+0xC u32 0x58300000
+field 027CF888 r4+0x10 u32 0,0x58200000,0x58300000
+field 027CF8B4 r4+8 u32 0x58200000
+field 027CF8B4 r4+0xC u32 0x58300000
+field 027CF8B4 r4+0x10 u32 0,0x58200000,0x58300000
+field 027CF8B4 58200014 u32 0x00000000,0x3F800000
+field 027CF8B4 58300014 u32 0x00000000,0x3F800000
+
+# Four matched10k controls (O2/own-TU O1 seeds1/7) PASS: CC2642/2,CF8881/1,CF8B43/3.
+# Receipt-free n1000 seed1 campaigns: CC2644D1CI;CF8884D2EQ;CF8B41D6CI3EQ. No errors/timeouts.
+# CF888 survivors2/4 exactly replayed via --ids at n10000 seeds1/7: EQ, stores to enabled(+0,1byte),first(+8,4bytes),second(+C,4bytes) are disjoint and do not read one another.
+# CF8B4 survivors1/2/3 exactly replayed via --ids at n10000 seeds1/7: EQ, independent readonly first/second pointers and rank loads; no writes/calls intervene.
+# Same unit/--only/--func/--seed1/--max400 and unchanged DrawPreparation.cpp reproduce each enumeration; no new receipts.
+# Normal primitive-leaves-* and CF888|CF8B4-ids-*-n10000-seed{1,7}.log under build/agl18/small-scopes-worker-20261026.
+
+# Full generated pools independently enumerated: CC264=5, CF888=6, CF8B4=10; prior max400 did not truncate.

@@ -1,0 +1,35 @@
+# Registered objects use actual destructor/removal/detach bodies in a bounded list.
+# verify: -only 02755AB4 -calleesp
+src wwhd_src/sead/HeapRegistry.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill periodic
+real 02752BEC
+real 02755D28
+real 0273B310
+arg! 02755AB4 r3 0x59000000
+arg 02755AB4 r4 0,0x59001000,0x59001001,0x59001020,0x59001021
+arg 02755AB4 r5 0,0x59001000,0x59001001,0x59001020,0x59001021,0xFFFFFFFF
+field 02755AB4 r3+0x90 u32 0,1,2,3,4,5
+field 02755AB4 r3+0x40 u32 0x59001024
+field 02755AB4 r3+0x44 u32 0x59001004
+field 02755AB4 r3+0x48 u32 0x2
+field 02755AB4 r3+0x4C u32 0x4
+field 02755AB4 59001000 u32 0x59000000
+field 02755AB4 59001004 u32 0x59000040
+field 02755AB4 59001008 u32 0x59001024
+field 02755AB4 5900100C u32 0x10145940
+field 02755AB4 59001020 u32 0x59000000
+field 02755AB4 59001024 u32 0x59001004
+field 02755AB4 59001028 u32 0x59000040
+field 02755AB4 5900102C u32 0x10145940
+field 02755AB4 101F8B30 u32 0
+# SDK mutex effects are disjoint from this owner/list/object storage. Real
+# destructor/detach changes remain compared and are preserved at subsequent calls.
+stable 101F8B30 4
+stable 1014594C 4
+stable 59000040 16
+stable 59001000 16
+stable 59001020 16
+# The heap flags word is compared at every destructor call (disposing bit set while the walk runs).
+observe 02752BEC 59000090 4

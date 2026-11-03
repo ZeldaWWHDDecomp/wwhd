@@ -1,0 +1,15 @@
+# verify: -only 027D56E4,027D57B8,027D5818,027D57A8,027D5934 -calleesp
+# Render method resource lists on their own producers (lib2_agl_19_commands_resource_list_fixture.txt): construction on
+# placement storage or NULL (allocate from the world's root heap); addUnique of present, absent and (full list) new
+# tokens; removeAll of present and absent tokens; sortEntries over the registered tokens with sort keys from the
+# shipped domain {0, 100} per token (ties included, real sort helper 0273B6AC, comparator 027C087C); the list's
+# destructor slot with the flags of a non-deleting destruction (0, 2: element of RenderLayerPrefix's resource array).
+include lib2_agl_19_commands_resource_list_fixture.txt
+arg! 027D56E4 r3 0,0x58400000
+arg! 027D57B8 r3 0x58410000,0x58420000,0x58440000,0x58450000,0x58430000
+arg! 027D57B8 r4 0x58500000,0x58500060,0x58500090,0x585000F0,0x58500150,0x58503000
+arg! 027D5818 r3 0x58410000,0x58420000,0x58440000,0x58450000,0x58430000
+arg! 027D5818 r4 0x58500000,0x58500060,0x58500090,0x585000F0,0x58500150,0x58502FD0
+arg! 027D57A8 r3 0x58410000,0x58420000,0x58440000,0x58450000
+arg! 027D5934 r3 0x58410000,0x58420000
+arg! 027D5934 r4 0,2

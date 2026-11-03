@@ -1,0 +1,160 @@
+# AGL#19 banks: TYPE-DOMAIN value-index profile: valueIndex is always 0 in the shipped
+# game (one view), so the canApply bit-shift arm (valueIndex & 63 >= 32) and the value-array fallback are not reached
+# there. Here a second spatial, paired and directed light collection is built exactly as LightPrepass::configure builds
+# them (zeroed object, method table, vertex-input set by 027BF734, then the original initializer 027D1EE0 / 027D2C98 /
+# 027D11D4 with owner = the configured prepass), but with value capacity 64 (an API-domain argument of the original
+# producer) and 4 records. The paired collection gets N in {0,1,2} pairs of the prepass's own points (setPoint, the
+# ranked-pair recipe pokes into its own records, selected point by its updateRecord hook); its values are prepared
+# for value index V by its own prepare (original) before apply. Calls use valueIndex in {0,1,31,32,63} and 64 / 100
+# (past the 64 values: the first value). Rows are type-domain.
+# verify: -only 027D1DD0,027D2B88,027D3848,027D31B4,027D346C,027D3638,027D2504,027D27BC,027D2988 -strictnan -calleesp
+src wwhd_src/agl/LightCollectionPasses.cpp
+src wwhd_src/agl/LightCollectionAccessors.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+real 027D31B4 027D2504 027D1110 027D1E1C 027D2BD4 027D3898 027D37E0 027D3848 027D3880 027D3884 027D3888 027D388C 027D3890 027D3894 027D2B20 027D2B88 027D2BBC 027D2BC0 027D2BC4 027D2BC8 027D2BCC 027D2BD0 027D37D0 027D37D8 027D37C8 027B1548 027B00D0 0278CB8C 0278D07C 027AFEEC 027CF8B4 027CF8DC 027CFA10 0274CCC4 0274CCB0 027D4E84 027D4D30 02759A48
+real 028E89B4 0272D680 028E91EC 028E8F64 025155D8 028E8E10 02791D00 028E8D4C 02791C90 02791C68 028E8B04
+real 0274E04C 027389F8 0274DEA8 0274D6B4 028F5E98 0274E7A0 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 0274DA08 028E8970
+# camera: eye (0, 5, 20) looking along (0, -5, -20) at the origin (02791D00 takes eye, direction, up), up +y; projection near 0.1, far 1000, fovy pi/4 or pi/3, aspect 16/9 or 4/3
+fill * 5A021000 0x40 0
+field * 5A021004 f32 5
+field * 5A021008 f32 20
+field * 5A021010 f32 -5
+field * 5A021014 f32 -20
+field * 5A02101C f32 1
+stable 5A021000 0x40
+fill * 5A020000 0x40 0
+stable 5A020000 0x40
+setup * 02791D00 r3=0x5A020000 r4=0x5A021000 r5=0x5A02100C r6=0x5A021018
+fill * 5A030000 0xE4 0
+stable 5A030000 0xE4
+stable 101F8B1C 12
+setup * 027389F8 r3=0x5A030000
+fill * 5A031000 16 0
+field * 5A031000 u32 0x3F490FDB,0x3F860A92
+field * 5A031004 u32 0x3FE38E39,0x3FAAAAAB
+stable 5A031000 16
+fill * 5A040000 8 0
+stable 5A040000 8
+# point light inputs (the game's light parameters): positions near the origin (in view) or behind the camera, colours,
+# falloff, radii
+fill * 5A050000 0x400 0
+stable 5A050000 0x400
+field * 5A050000 f32 0,0,1.5,-3,0,0
+field * 5A050004 f32 0,0,0.5,2,0,0
+field * 5A050008 f32 0,0,-2,1,40,-60
+field * 5A050010 f32 0,2,-1.5,4
+field * 5A050014 f32 1,0,0.25
+field * 5A050018 f32 -4,0,3,45
+field * 5A050020 f32 2.5,-1,0
+field * 5A050024 f32 0,1.5
+field * 5A050028 f32 30,0.5,-1
+field * 5A050040 f32 1,0.5,0.25
+field * 5A050044 f32 0.75,0
+field * 5A050048 f32 0,0.5
+field * 5A05004C f32 1
+field * 5A050060 f32 1,0.5
+field * 5A050064 f32 0.25
+field * 5A050068 f32 0.1
+field * 5A05006C f32 1
+# radii (falloff on, so a pair needs min/max >= 0.55): each pair draws both radii from one two-value set, giving
+# rF > rS, rF < rS and rF == rS
+field * 5A050100 f32 1,1.5
+field * 5A050104 f32 1,1.5
+field * 5A050108 f32 2,3
+field * 5A05010C f32 2,3
+field * 5A050110 f32 0.5,0.75
+field * 5A050114 f32 0.5,0.75
+real 027D11D4 027D2B18
+# the three collections (inline construction as in configure, then the original initializer)
+fill * 5A070000 0x114 0
+field * 5A070000 u32 0x1016B070
+setup * 027BF734 r3=0x5A07001C
+setup * 027D1EE0 r3=0x5A070000 r4=0x5A000000 r5=4 r6=64 r7=0x6A000000
+fill * 5A080000 0x114 0
+field * 5A080000 u32 0x1016B1E8
+setup * 027BF734 r3=0x5A08001C
+setup * 027D2C98 r3=0x5A080000 r4=0x5A000000 r5=4 r6=64 r7=0x6A000000
+fill * 5A090000 0x118 0
+field * 5A090000 u32 0x1016AEF8
+setup * 027BF734 r3=0x5A090020
+setup * 027D11D4 r3=0x5A090000 r4=0x5A000000 r5=4 r6=64 r7=0x6A000000
+# the three collection objects are written only by their producers (no mocked call, e.g. the uniform flush 027BEF80, may
+# clobber their method table or counts)
+stable 5A070000 0x114
+stable 5A080000 0x114
+stable 5A090000 0x118
+# pairs of the second paired collection (recipe pokes into its own records) and its count N
+poke * 6AA54820 u8 1
+poke * 6AA54824 u32 0xFFFFFFFF
+poke * 6AA54828 u32 0x6A87FA20
+poke * 6AA5482C u32 0x6A87FA68
+poke * 6AA5483C u8 1
+poke * 6AA54840 u32 0xFFFFFFFF
+poke * 6AA54844 u32 0x6A87FAB0
+poke * 6AA54848 u32 0x6A87FAF8
+poke * 5A080010 u32 0,1,2
+# the points (game setter), selected points (updateRecord hook), camera, view update
+postsetup * 027B1548 r3=0x5A000000 r4=0 r5=0x5A050000 r6=0x5A050040 r7=1 r8=0x5A050060 r9=0 r10=1 sp+8=0 f1=*5A050100 f2=1 f3=0
+postsetup * 027B1548 r3=0x5A000000 r4=1 r5=0x5A050000 r6=0x5A050040 r7=1 r8=0x5A050060 r9=1 r10=1 sp+8=0 f1=*5A050104 f2=1 f3=0
+postsetup * 027B1548 r3=0x5A000000 r4=2 r5=0x5A050010 r6=0x5A050040 r7=1 r8=0x5A050060 r9=0 r10=1 sp+8=0 f1=*5A050108 f2=1 f3=0
+postsetup * 027B1548 r3=0x5A000000 r4=3 r5=0x5A050010 r6=0x5A050040 r7=1 r8=0x5A050060 r9=1 r10=1 sp+8=0 f1=*5A05010C f2=1 f3=0
+postsetup * 027CF8B4 r3=0x5A080000 r4=0x6AA54820
+postsetup * 027CF8B4 r3=0x5A080000 r4=0x6AA5483C
+postsetup * 0274E04C r3=0x5A030000 f1=0.1 f2=1000 f3=*5A031000 f4=*5A031004
+postsetup * 0274D83C r3=0x5A030000
+postsetup * 027B00D0 r3=0x5A000000 r4=0 r5=0x5A020000 r6=0x5A030044 r7=0x5A040000 f1=0.1 f2=1000 f3=*5A031000 f4=*5A031004
+# spatial count N in {1, 2, capacity 4} through its own setCount (original)
+fill * 5A0A0010 4 0
+field * 5A0A0010 u32 1,2,4
+stable 5A0A0010 4
+postsetup * 027D2B18 r3=0x5A070000 r4=*5A0A0010
+# every value index prepared by the collections' own prepare (original) for the view, output slot 0
+postsetup * 027D31B4 r3=0x5A080000 r4=0 r5=0x6A87E2A0 r6=0
+postsetup * 027D2504 r3=0x5A070000 r4=0 r5=0x6A87E2A0 r6=0
+postsetup * 027D31B4 r3=0x5A080000 r4=1 r5=0x6A87E2A0 r6=0
+postsetup * 027D2504 r3=0x5A070000 r4=1 r5=0x6A87E2A0 r6=0
+postsetup * 027D31B4 r3=0x5A080000 r4=31 r5=0x6A87E2A0 r6=0
+postsetup * 027D2504 r3=0x5A070000 r4=31 r5=0x6A87E2A0 r6=0
+postsetup * 027D31B4 r3=0x5A080000 r4=32 r5=0x6A87E2A0 r6=0
+postsetup * 027D2504 r3=0x5A070000 r4=32 r5=0x6A87E2A0 r6=0
+postsetup * 027D31B4 r3=0x5A080000 r4=63 r5=0x6A87E2A0 r6=0
+postsetup * 027D2504 r3=0x5A070000 r4=63 r5=0x6A87E2A0 r6=0
+postsetup * 027D31B4 r3=0x5A080000 r4=64 r5=0x6A87E2A0 r6=0
+postsetup * 027D2504 r3=0x5A070000 r4=64 r5=0x6A87E2A0 r6=0
+postsetup * 027D31B4 r3=0x5A080000 r4=100 r5=0x6A87E2A0 r6=0
+postsetup * 027D2504 r3=0x5A070000 r4=100 r5=0x6A87E2A0 r6=0
+arg! 027D1DD0 r3 0x5A090000
+arg! 027D1DD0 r4 0,1,3,4
+arg! 027D1DD0 r5 0,1,31,32,63,64,100
+arg! 027D2B88 r3 0x5A070000
+arg! 027D2B88 r4 0,1,3,4
+arg! 027D2B88 r5 0,1,31,32,63,64,100
+arg! 027D3848 r3 0x5A080000
+arg! 027D3848 r4 0,1,3,4
+arg! 027D3848 r5 0,1,31,32,63,64,100
+arg! 027D31B4 r3 0x5A080000
+arg! 027D31B4 r4 0,1,31,32,63,64,100
+arg! 027D31B4 r5 0x6A87E2A0
+arg! 027D31B4 r6 0,1
+arg! 027D346C r3 0x5A080000
+arg! 027D346C r4 0,1,31,32,63,64,100
+arg! 027D346C r5 0x6A87E2A0
+arg! 027D346C r6 0,1
+arg! 027D2504 r3 0x5A070000
+arg! 027D2504 r4 0,1,31,32,63,64,100
+arg! 027D2504 r5 0x6A87E2A0
+arg! 027D2504 r6 0,1
+arg! 027D27BC r3 0x5A070000
+arg! 027D27BC r4 0,1,31,32,63,64,100
+arg! 027D27BC r5 0x6A87E2A0
+arg! 027D27BC r6 0,1
+arg! 027D3638 r3 0x5A080000
+arg! 027D3638 r4 0,1,31,32,63,64,100
+arg! 027D3638 r5 0x6A87E2A0
+arg! 027D3638 r6 0x5A060000
+fill 027D3638 5A060000 0x40 0
+arg! 027D2988 r3 0x5A070000
+arg! 027D2988 r4 0,1,31,32,63,64,100
+arg! 027D2988 r5 0x6A87E2A0
+arg! 027D2988 r6 0x5A060000
+fill 027D2988 5A060000 0x40 0

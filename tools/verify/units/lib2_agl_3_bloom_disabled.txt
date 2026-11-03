@@ -1,0 +1,17 @@
+# UNEXECUTED: disabled bloom consumed-input branch only.
+# Caller owns a 0x4C4 byte effect input view; this is not a constructed base/derived owner claim.
+# No enabled renderer, protected consumer, or lifecycle coverage.
+# verify: -strictnan -calleesp -only 02777D3C
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 02777D3C r3 0x56000000
+arg! 02777D3C r4 0,1,2,0xFFFFFFFF
+arg! 02777D3C r5 0
+arg! 02777D3C r6 0,1,255
+arg! 02777D3C r7 0,1,7,0xFFFFFFFF
+field 02777D3C 56000010 u32 0
+field 02777D3C 560002D4 u32 1
+field 02777D3C 560002D8 u32 0x56400000
+field 02777D3C 560004BC u8 0
+field 02777D3C 56400000 u32 0x56900000

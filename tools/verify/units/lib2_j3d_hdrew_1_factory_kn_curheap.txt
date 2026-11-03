@@ -1,0 +1,7 @@
+# lib2_j3d_hdrew_1_factory_kn with the world's current-heap model also for a top-level call of the tested
+# 027F7B50: sead's getCurrentHeap 02756140 answers the root heap 0x6A000000, exactly as shared/agl_world.txt models it
+# for nested calls (`nestedret 02756140 0x6A000000`: the registry's current heap is the root ExpHeap; no registry
+# manager object is published in the world). Without it a top-level 02756140 call gets a generated r3.
+# verify: -only 027F7B50 -strictnan -calleesp
+include lib2_j3d_hdrew_1_factory_kn.txt
+ret! 02756140 0x6A000000

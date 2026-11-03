@@ -1,0 +1,23 @@
+# verify: -only 027AAF00,027AAF2C,027AE5D8 -strictnan -calleesp
+# Complete disjoint nonnull placement storage only; no allocator call or preexisting lifetime claim.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+arg! 027AAF00 r3 0x5700B000
+fill 027AAF00 5700B000 0x10 165
+arg! 027AAF2C r3 0x5700B000
+fill 027AAF2C 5700B000 0x10 165
+arg! 027AE5D8 r3 0x5700B000
+fill 027AE5D8 5700B000 0x4 165
+stable 5700B000 0x10

@@ -1,0 +1,8 @@
+# Prepared AGL#18 027CF2B0 minimal follow-up (not yet run): distinguish the
+# remaining valid uniform-count threshold and the slot==valueCount boundary.
+# It reuses the producer-initialized two-slot record and selected six-entry
+# program allocation; count 5 stays within that allocation.
+# verify: -only 027CF2B0 -strictnan -calleesp -footprint
+include lib2_agl_18/render_large_original_context_surface_multislot.txt
+poke * 6A1D9A20 u32 5
+arg! * r5 0,1,2

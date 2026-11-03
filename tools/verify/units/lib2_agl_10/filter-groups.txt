@@ -1,0 +1,191 @@
+# AGL#10 companion: every filter group holds one filter; destruction releases them and drawing walks the active one.
+# verify: -strictnan -calleesp -only 0279D92C,0279DB64
+src wwhd_src/agl/MultiFilter.cpp wwhd_src/agl/ParameterBase.cpp wwhd_src/agl/DynamicTextureCache.cpp wwhd_src/agl/DynamicTextureCacheStatics.cpp wwhd_src/agl/TextureResource.cpp wwhd_src/agl/PrimitiveShapes.cpp wwhd_src/agl/PrimitiveShapesStatics.cpp wwhd_src/sead/PoolHeapStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# Name and label texts passed on the stack are compared by content.
+callee 0279E618 r4=8 r5=8 r6=8
+callee 02785CB4 r4=8
+# Cafe core id: the three CPU cores, mapped by the core-reverse table to pools 0..2.
+ret! C0009BB0 0,1,2
+field * 104A0BC0 u32 0
+field * 104A0BC4 u32 1
+field * 104A0BC8 u32 2
+stable 104A0BC0 12
+# Disposers are compared as registered (their contents at the registration call).
+callee 02752B0C r3=heap16
+# Object and heap allocators hand out distinct blocks (identical on both sides).
+alloc 0273AD10 r3 0x58B00000 4
+alloc 0273B0D4 r3 0x58D00000 align=r5
+stable 58B00000 0x20000
+stable 58D00000 0x10000
+# A heap at 0x58900000 whose method table allocates (F0010000) and releases (F0010004) as fixtures.
+callee F0010000 fixture r3=0 r4=0 r5=0
+alloc F0010000 r4 0x58920000 align=r5
+callee F0010004 fixture r3=0 r4=0
+field * 5890000C u32 0x58910000
+field * 58910034 u32 0xF0010000
+field * 5891003C u32 0xF0010004
+stable 58900000 0x94
+stable 58910000 0x90
+ret! 02755FEC 0x58900000
+ret! 02756140 0x58900000
+# Multi-filter at 0x58E00000: lists, filters, the resource holder and the method-table fixtures.
+real 027ABF8C
+callee F0020000 fixture r3=0 r4=inout4 r5=0
+callee F0021000 fixture r3=0 r4=0
+field * 58E001CC u32 0x58E001CC
+field * 58E001D0 u32 0x58E001CC,0x58E60000
+field * 58E001D4 s32 0,1
+field * 58E60000 u32 0x58E001CC
+field * 58E60004 u32 0x58E001CC
+field * 58E60008 u32 0x58E10000
+stable 58E60000 12
+field * 58E0055C u32 0,0x58740000
+field * 58E008BC u8 0,1
+field * 58E008C0 u32 0,0x58E20000
+field * 58E0092C u8 0,1
+field * 58E00A0C u32 0,1,2,3,4,5,6
+field * 58E00A20 u8 0,1
+field * 58E00A44 u32 0x58E30020
+field * 58E100DC u32 0,1,2,3,4,5,6
+field * 58E100F0 u8 0,1
+field * 58E10114 u32 0x58E30020
+field * 58E2000C u32 0x58E30000
+field * 58E3000C u32 0xF0021000
+field * 58E30044 u32 0xF0020000
+# Only the list heads stay put across mocked calls; the rest of the object may be clobbered.
+stable 58E001CC 0x60
+stable 58E10000 0x140
+stable 58E20000 0x10
+stable 58E30000 0x48
+# The result sampler's surface against the result texture's: equal fields, each one sometimes different.
+field * 58740004 u32 1
+field * 58E00568 u32 1,1,2
+field * 58740008 u32 1
+field * 58E0056C u32 1,1,2
+field * 5874000C u32 1
+field * 58E00570 u32 1,1,2
+field * 58740010 u32 1
+field * 58E00574 u32 1,1,2
+field * 58740014 u32 0
+field * 58E00578 u32 0,0,1
+field * 58740018 u32 0
+field * 58E0057C u32 0,0,1
+field * 5874001C u32 0
+field * 58E00580 u32 0,0,1
+field * 58740034 u32 0
+field * 58E00598 u32 0,0,1
+field * 58740038 u32 0
+field * 58E0059C u32 0,0,1
+field * 58740028 u32 0x60000000
+field * 58740030 u32 0,0x60010000
+stable 58740000 0xB0
+field * 58E001D8 u32 0x58E60100
+field * 58E001DC u32 0x58E60100
+field * 58E001E0 s32 1
+field * 58E60100 u32 0x58E001D8
+field * 58E60104 u32 0x58E001D8
+field * 58E60108 u32 0x58E11000
+stable 58E60100 12
+field * 58E110DC u32 0
+field * 58E110F0 u8 0,1
+field * 58E11114 u32 0x58E30020
+stable 58E11000 0x140
+field * 58E001E4 u32 0x58E60120
+field * 58E001E8 u32 0x58E60120
+field * 58E001EC s32 1
+field * 58E60120 u32 0x58E001E4
+field * 58E60124 u32 0x58E001E4
+field * 58E60128 u32 0x58E12000
+stable 58E60120 12
+field * 58E120DC u32 1
+field * 58E120F0 u8 0,1
+field * 58E12114 u32 0x58E30020
+stable 58E12000 0x140
+field * 58E001F0 u32 0x58E60140
+field * 58E001F4 u32 0x58E60140
+field * 58E001F8 s32 1
+field * 58E60140 u32 0x58E001F0
+field * 58E60144 u32 0x58E001F0
+field * 58E60148 u32 0x58E13000
+stable 58E60140 12
+field * 58E130DC u32 2
+field * 58E130F0 u8 0,1
+field * 58E13114 u32 0x58E30020
+stable 58E13000 0x140
+field * 58E001FC u32 0x58E60160
+field * 58E00200 u32 0x58E60160
+field * 58E00204 s32 1
+field * 58E60160 u32 0x58E001FC
+field * 58E60164 u32 0x58E001FC
+field * 58E60168 u32 0x58E14000
+stable 58E60160 12
+field * 58E140DC u32 3
+field * 58E140F0 u8 0,1
+field * 58E14114 u32 0x58E30020
+stable 58E14000 0x140
+field * 58E00208 u32 0x58E60180
+field * 58E0020C u32 0x58E60180
+field * 58E00210 s32 1
+field * 58E60180 u32 0x58E00208
+field * 58E60184 u32 0x58E00208
+field * 58E60188 u32 0x58E15000
+stable 58E60180 12
+field * 58E150DC u32 4
+field * 58E150F0 u8 0,1
+field * 58E15114 u32 0x58E30020
+stable 58E15000 0x140
+field * 58E00214 u32 0x58E601A0
+field * 58E00218 u32 0x58E601A0
+field * 58E0021C s32 1
+field * 58E601A0 u32 0x58E00214
+field * 58E601A4 u32 0x58E00214
+field * 58E601A8 u32 0x58E16000
+stable 58E601A0 12
+field * 58E160DC u32 5
+field * 58E160F0 u8 0,1
+field * 58E16114 u32 0x58E30020
+stable 58E16000 0x140
+field * 58E00220 u32 0x58E601C0
+field * 58E00224 u32 0x58E601C0
+field * 58E00228 s32 1
+field * 58E601C0 u32 0x58E00220
+field * 58E601C4 u32 0x58E00220
+field * 58E601C8 u32 0x58E17000
+stable 58E601C0 12
+field * 58E170DC u32 6
+field * 58E170F0 u8 0,1
+field * 58E17114 u32 0x58E30020
+stable 58E17000 0x140
+arg! 0279D8D8 r3 0x58E00004
+arg! 0279D8E0 r3 0x58E00000
+arg! 0279D92C r3 0,0x58E00000
+arg! 0279DAA0 r3 0x58E00000
+arg! 0279DAA0 r4 0x58E10000
+arg! 0279DAA0 r5 0,1,6
+arg! 0279DB64 r3 0x58E00000
+arg! 0279DB64 r4 0x58E40000
+# applyFilter gets the multi-filter itself: a filter may change the result sampler's dirty flags and its mip filter.
+mockfield 0279DAA0 r3+0x6F4 u8 0,7,0xFF
+mockfield 0279DAA0 r3+0x6BC u32 0,1,2
+arg! 0279DDA4 r3 0x58E00000
+arg! 0279DFE0 r3 0,0x58E00000
+# Factory-produced filters have distinct storage in creation order.
+allocfixed 027ABDD0 0x140 0x58E70000 4
+# The formatter gets the saved EABI argument bank; the format arguments are compared.
+observeptr 02759C10 r5+8 96
+callcr 0279E338 6
+callee 0279E338 r5=0 r6=0
+# Name texts and the render state passed on the stack are compared by content.
+callee 0279CB24 r5=8
+callee 0279CB9C r5=8
+callee 0279A07C r4=8
+callee 0274FEB0 r3=0x74
+real 0274FDBC
+cr 0279DAA0 6 0,1
+cr 0279DDA4 6 0,1
+cr 0279E338 6 0,1
+footprint 0279E338 0x88
+# A filter may replace the multi-filter's result texture and the resource may detach itself from its owner.
+mockglobal 0279DAA0 58E0055C u32 0,0x58740000
+mockglobal 027A0998 58E008C0 u32 0,0x58E20000

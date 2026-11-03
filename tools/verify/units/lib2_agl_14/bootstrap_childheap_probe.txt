@@ -1,0 +1,166 @@
+# verify: -only 027B4FCC -calleesp -strictnan
+# Producer probe only: verify original heap createAt plus first allocation in setup.
+# No program-construction or full-unit acceptance is inferred from this constant-kind caller.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 0275315C
+real 02753D6C
+real 027540AC
+real 027B9F78
+real 027BA710
+real 027BA95C
+real 027BAA54
+real 027BAA9C
+real 027BAC4C
+real 027BAC58
+real 027BBCA0
+real 027BBB9C
+real 027B7168
+real 027B70B4
+real 027510FC
+real 02752C74
+real 02753000
+real 027601BC
+real 027601F0
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 0273B310
+real 02752E60
+real 02753F84
+real 02754018
+real 0273AD10
+real 027C05F4
+real 027D4CCC
+real 0273B050
+real 027BA674
+real 028EFFD0
+real 028F521C
+real 027BA88C
+real 027BA968
+real 027BAA60
+real 027BAAA8
+real 027BB9E0
+real 0273B0D4
+real 02752B0C
+real 02760084
+real 0275589C
+real 02752F10
+real 02753628
+real 027536B0
+real 027537B8
+real 02753998
+real 02753B48
+real 0273B2F0
+real 02752D8C
+real 027C05C8
+real 028EFE58
+real 027B736C
+real 027B737C
+real 027BB710
+real 027BB7CC
+real 027BB840
+real 027BB8A8
+real 027BB910
+real 027BB978
+real 027C073C
+real 027C077C
+real 027D4D30
+real 02755CA4
+real 02755FEC
+real 02752A84
+real 02755818
+real 027600EC
+real 027C05A0
+real 0273ADAC
+real 028F61E4
+real 028F623C
+real 027B72AC
+real 027B730C
+real 027BAC8C
+real 027BB630
+real 027D3FC4
+real 027D3FD4
+real 0276B0D4
+real 027BD3CC
+real 027BDA2C
+real 027BDD2C
+real 027BD72C
+real 027C5474
+real 027C57E8
+real 027D4028
+real 027556FC
+real 027B727C
+real 0273AFC8
+real 02740B24
+real 02740BE0
+real 027414F8
+real 02752BEC
+real 027C52D4
+real 027C5AAC
+real 027C5B20
+real 027D4C9C
+real 02740B0C
+real 02740B14
+real 02740B1C
+real 02740E08
+real 0273AF40
+real 02755D28
+real 027C5978
+real 02759C28
+real 027C6B98
+real 02759C10
+real 02759BA0
+real 02759B98
+ret! 02756140 0x6A000000
+nestedret 02756140 0x6A000000
+mockset C000A858 r3 r4 r5
+mockset C0009990 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+stable 0x6A000000 0x100000
+field * 0x101F8B4C u32 0
+field * 0x55000000 u32 0x55000100
+field * 0x55000004 u32 0x10147634
+fieldstr * 0x55000100 32 "AGL14TestHeap"
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x55000000 r6=0
+arg! 027B4FCC r3 0x58000000
+
+# fieldstr may retain random bytes; bound the owned32-byte text.
+field * 0x5500011F u8 0
+real 0273B2D0
+real 0273B348
+real 0273B378
+real 02753004
+real 027532D0
+real 02753378
+real 0275341C
+real 027534C4
+real 0275357C
+real 02754620
+
+# First childheap creation placement probe only; actualreturnedEA requiredbeforetrimsetup.
+field * 0x55000400 u32 0x55000500
+field * 0x55000404 u32 0x10147634
+fieldstr * 0x55000500 32 "AGL14ChildHeap"
+field * 0x5500051F u8 0
+stable 0x55000400 8
+setup * 02753004 r3=0 r4=0x55000400 r5=0x6A000000 r6=1 r7=0

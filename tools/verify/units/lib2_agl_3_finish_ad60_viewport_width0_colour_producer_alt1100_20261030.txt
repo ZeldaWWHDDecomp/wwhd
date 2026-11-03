@@ -1,0 +1,20 @@
+# verify: -strictnan -calleesp -only 0277AD60
+# TYPE-DOMAIN: zero view extents via027C22D0/client view+738/73C ->fctiwz027D66A0/66E8 ->colour acquire027D6868, Lead10:54/11:00.
+# Current AD60 Viewport uses its real public setSize0274F53C (Lead21:56); caller RenderBuffer remains original-produced.
+# Matching literal colour extents use real0279FF24 then original027BE114 into fresh caller-owned outputr7 TextureSampler.
+include lib2_agl_3_lifecycle_depth_quality_finite_stack_current_world.txt
+field 0277AD60 5D52002C f32 1.0
+field 0277AD60 5D52000C u8 0
+field 0277AD60 5D570000 f32 0.0
+field 0277AD60 5D570004 f32 720.0
+stable 0x5D570000 8
+postsetup 0277AD60 0274F53C r3=0x5D030000 r4=0x5D570000
+field 0277AD60 5D560000 u32 0x1016C2FC
+field 0277AD60 5D560004 u32 0x1016C180
+field 0277AD60 5D560010 u32 0
+stable 0x5D560000 0x40
+postsetup 0277AD60 0279FF24 r3=*101F8DD4 r4=0x5D560000 r5=0x1D r6=0 r7=720 r8=0 r9=0x5D560010 r10=0 sp+8=0 sp+0xC=0 ->0x5D560020
+fill 0277AD60 0x5D580000 0x198 0
+stable 0x5D580000 0xA4
+postsetup 0277AD60 027BE114 r3=0x5D580000 r4=*5D560020
+arg! 0277AD60 r7 0x5D580000

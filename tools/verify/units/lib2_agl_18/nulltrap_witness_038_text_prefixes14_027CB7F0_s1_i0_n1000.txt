@@ -1,0 +1,4 @@
+# Exact previously killing input, same original profile and input seed.
+# One-input mutation confirmation, not a 10k gate. The included fixture is unchanged.
+# verify: -only 027CB7F0 -strictnan -calleesp -range 0:1
+include lib2_agl_18/text_prefixes14.txt

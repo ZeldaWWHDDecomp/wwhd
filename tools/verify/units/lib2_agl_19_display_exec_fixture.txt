@@ -1,0 +1,17 @@
+# AGL#19 display fixture: the first frame's jobs executed (lib2_agl_19_display_frame_fixture.txt, then the job phase of
+# the frame). Manager flags 0x1858 have bit 2 clear, so RenderQueueManager::collectJobs 027C1848 and executeView
+# 027C1A60 pass a NULL queue and every job runs at once (RenderJob::submit 027D7270 calls the job's execute slot,
+# RenderJob::execute 027D74AC): collectRenderViewJobs 027D72B8 then executeRenderView 027D7384 for view 0 and view 1.
+# The job phase runs per input (postsetups): its viewport/clear paths reach the world's GraphicsDevice, whose vtable
+# word the world sets with a poke after the setups. Each job records one command of the view's command pool around its pass; the layer passes are the layers' own
+# originals. Display lists: the world's model: a recording that issued at least one GX2
+# command ends with the BYTES size 0x100, an empty one (no command) with size 0; both are shipped states.
+include lib2_agl_19_display_frame_fixture.txt
+real 0274D690 0274F964 0274F8D8 02751698 027516AC 0274F698 027B9F60 027B9F4C
+real 027D72B8 027D7384 027D7270 027D74AC 027D54F8 027D55F8 027D6BB0 027D6ED0 027D6A74 027D6BD0 027D71D4 027D4FE8 027D4EA4 027D76B8
+# the attached layer on view 1's pending list (after clearPending), as update 027C106C appends it (027C1688..027C16C0: +0x50 bits 0/1 set, bit 3 clear, slot +0x7C = 0, +0x55 = -1 so +0x54 = 1 selects view 1)
+setup * 027D64C8 r3=0x5E100818 r4=*0x58004010
+postsetup * 027D72B8 r3=0x5E100018 r4=0
+postsetup * 027D7384 r3=0x5E100018 r4=0
+postsetup * 027D72B8 r3=0x5E100818 r4=0
+postsetup * 027D7384 r3=0x5E100818 r4=0

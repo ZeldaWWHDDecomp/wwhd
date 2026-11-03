@@ -1,0 +1,36 @@
+# verify: -only 02743EAC
+# Bounded immutable source paths and a writable 64-byte destination.
+# This supplements the broad primary spec with percent-variable expansion paths.
+src wwhd_src/sead/CafeFileDevices.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+arg! 02743EAC r3 0x52000000
+arg! 02743EAC r4 0x55000000
+arg! 02743EAC r5 0x53000000
+field 02743EAC 52000054 u32 0x57000000
+field 02743EAC 53000000 u32 0x54000000
+field 02743EAC 53000004 u32 0x10143EA0
+field 02743EAC 55000000 u32 0x56000000
+field 02743EAC 55000004 u32 0x10143EE8
+field 02743EAC 55000008 s32 64
+fill 02743EAC 54000000 256 0
+fieldstr 02743EAC 54000000 256 "x","","%ENV%/sub","p%ENV%/tail","pp%ENV%/tail","pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp%ENV%/tail","prefix/%ENV%/tail","%ENV%","%ENV","%%","prefix%ENV%%","a\\b:c","%ENV%/a%second%/b"
+fill 02743EAC 57000000 16 0
+field 02743EAC 57000000 u32 0x726F6F74
+fill 02743EAC 56000000 64 0
+stable 52000054 4
+stable 53000000 8
+stable 54000000 256
+stable 55000000 12
+stable 57000000 16
+# Formatting root plus separator yields five characters in this bounded profile.
+ret! 02759C28 5
+ret C0008980 0,-1
+real 02743E34
+real 027445FC
+real 02744600
+mockmove C0009988 r3 r4 r5
+callee C0008980 r4=out256
+mockfield C0008980 r4+255 u8 0
+
+# Pre-existing aligned stack bytes exercise stores of explicit zero terminators.
+stackfill periodic

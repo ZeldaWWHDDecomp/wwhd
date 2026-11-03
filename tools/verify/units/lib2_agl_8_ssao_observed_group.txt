@@ -1,0 +1,6 @@
+# verify: -strictnan -calleesp -only 02794970,0279515C
+# Observe each complete SSAO register-uniform input at its exact 4*wordCount byte extent.
+# Sample-pair count is clamped1..9, so the largest kernel upload is144 bytes; the model upload is64.
+include lib2_agl_8_render_filter_group.txt
+callee C0006A40 r5=dyn4*r4:heap144
+callee C0006908 r5=dyn4*r4:heap144

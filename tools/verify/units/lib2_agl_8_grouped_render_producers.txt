@@ -1,0 +1,51 @@
+# Render producer fragment for the source-order-preserving all-90 grouped baseline.
+# Add 02794970 and 0279515C to that baseline single shared/agl_world.txt include scope.
+# This fragment adds no sources, world include or duplicate world setup chain.
+# Include after existing baseline directives; replace the obsolete main 0279515C r3+0x2838 field with its real constructor producer.
+# Keep the baseline setupsnapshot directive once. Original repeated-frame states come from the validated companions.
+
+# 02794970: lib2_agl_8_primary_history_repeat.txt producer-specific directives, function-scoped.
+footprint 02794970 0xC8
+fill 02794970 0x58000000 0x285C 0
+setup 02794970 02792A08 r3=0x58000000
+setup 02794970 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+fill 02794970 0x5A000000 64 0
+field 02794970 0x5A000000 f32 1
+field 02794970 0x5A000014 f32 1
+field 02794970 0x5A000028 f32 1
+field 02794970 0x5A00003C f32 1
+arg! 02794970 r3 0x58000000
+arg! 02794970 r4 0
+arg! 02794970 r5 64
+arg! 02794970 r6 64
+arg! 02794970 r7 0
+arg! 02794970 r8 0x5A000000
+arg! 02794970 r9 0
+argf64! 02794970 f1 0.0
+argf64! 02794970 f2 1.0
+setup 02794970 02794068 r3=*0x580001D0 r4=0xA r5=64 r6=64
+arg! 02794970 r7 1
+arg! 02794970 r9 0,3
+real 02794068
+field 02794970 0x101F8AE5 u8 0
+setup 02794970 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=1 r8=0x5A000000 r9=0 f1=0 f2=1
+real 02794970
+
+# 0279515C: lib2_agl_8_secondary_pass_frame2_alt.txt producer-specific directives, function-scoped.
+footprint 0279515C 0x128
+fill 0279515C 0x58000000 0x2900 0
+setup 0279515C 02792A08 r3=0x58000000
+setup 0279515C 02793E88 r3=0x58000000 r4=1 r5=0x6A000000
+setup 0279515C 02794068 r3=*0x580001D0 r4=1 r5=0x280 r6=0x168
+setup 0279515C 0279515C r3=0x58000000 r4=0 r5=0x280 r6=0x168 r7=0 r8=0
+setup 0279515C 027A0040 r3=*0x101F8DD4 r4=0x6A00F2D0
+poke 0279515C 6A87E2A4 u32 0
+postsetup 0279515C 02794068 r3=0x6A87E2A0 r4=1 r5=0x280 r6=0x168
+arg! 0279515C r3 0x58000000
+arg! 0279515C r4 0,1,0xFFFFFFFF
+arg! 0279515C r5 0x280
+arg! 0279515C r6 0x168
+arg! 0279515C r7 0,1,2
+arg! 0279515C r8 0,1,2
+real 0279515C
+field 0279515C 0x101F8AE5 u8 0

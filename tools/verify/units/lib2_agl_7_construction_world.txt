@@ -1,0 +1,48 @@
+# AGL#7 ProjectionShadow::create (0279207C) success path on the shared original-produced AGL world.
+# Why: the TextureSampler member constructor 027BDF7C (called at 02792108 with r3=this+0x1CC) reads the default-texture
+# singleton *101F8DEC at 027BE00C and then +0x1C at 027BE010. Outside the world that word is 0, so the original takes a
+# page-0 DSI (load 0000001C, depth 1) on every success-path input. In the world 101F8DEC is produced by the originals
+# 027A76C8 + 027A78F8, as at agl startup, so the whole constructor body runs clean.
+# verify: -only 0279207C -strictnan -calleesp -watch 00000000:0x1000
+
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+include shared/agl_world.txt
+setupsnapshot
+
+# Fresh allocation (r3=0, operator_new at 027920A4) or complete caller-owned placement storage.
+arg! 0279207C r3 0,0x62010000
+alloc 0273AD10 r3 0x63000000
+fill 0279207C 62010000 0x4BC 0xA5
+final 0279207C 62010000 0x4BC
+
+# Original member constructors and their callees (same set as construction_initialized; the world already lists
+# 027BDE1C 027BDEB4 027BE6B8 028EFFD0 028EFE58 02752A84 02759B40 and the GHS save/restore chains).
+real 0279A07C 0279CA34 0279C950 0279E57C 0273B264 0273B200 0279E618 0279E674 027A84B8 0279CB9C 027A861C 027A03A0
+real 027BDF7C 0279F1BC 0279288C 02791A4C 027919BC 027919FC 02791A54 02759B98
+real 027A8C80 0279A490 027A08C8
+
+# The SafeText statics 104A0CD8/104A0CE0 (8 bytes each) are written only by their original static initializer
+# 02759B40 (run by the world); no mocked callee receives their address (0279C950/02759B98 read them as real callees).
+# Without this, a clobber epoch of the steered operator_new can zero the vtable word 104A0CDC, and the original then
+# faults at 0279C97C (load 00000014) - a harness artifact, not a caller-producible state.
+stable 0x104A0CD8 0x10

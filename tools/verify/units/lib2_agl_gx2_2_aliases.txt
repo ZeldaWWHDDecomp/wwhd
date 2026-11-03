@@ -1,0 +1,23 @@
+# AGL-GX2#2 compressed-key trailer profile: the trailer at the end of a curve's key block placed at
+# aligned offsets around the curve record itself, so the order of the trailer loads and record stores counts.
+# verify: -only 027E1E00,027E1D5C -strictnan -calleesp
+src wwhd_src/agl/gx2/RenderResources.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+stackfill periodic
+# kind0x70, frames0..2 => getIntegerStorageSize returns12 for three packed boolean samples.
+# base=this+0x20+delta; trailer=base+12-8 = this-4 .. this+0x14 for the deltas below.
+arg! 027E1E00 r3 0xE1000000
+field 027E1E00 r3+0 u16 0x70
+field 027E1E00 r3+2 u16 0x1234
+field 027E1E00 r3+8 f32 0
+field 027E1E00 r3+0xC f32 2
+field 027E1E00 r3+0x20 s32 -40,-36,-32,-28,-24,-20,-16
+field 027E1E00 E0FFFFFC u16 0x60
+field 027E1E00 E0FFFFFE u16 0xABCD
+ret! 027E1B24 12 12
+# kind0x20 (float keys); the storage size comes from the mocked size query (32 bytes);
+# trailer=base+32-16 = this+0 .. this+0x14 for the deltas below.
+arg! 027E1D5C r3 0xE2000000
+field 027E1D5C r3+0 u16 0x20
+field 027E1D5C r3+0x20 s32 -48,-44,-40,-36,-32,-28
+ret! 027E1A8C 32 32

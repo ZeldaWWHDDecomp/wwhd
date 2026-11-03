@@ -1,0 +1,5 @@
+# verify: -strictnan -calleesp -footprint -only 02794970
+# Type-domain repeated primary pass: the original first pass copies the history description into sampler 1.
+include lib2_agl_8_primary_history_first.txt
+setup * 02794970 r3=0x58000000 r4=0 r5=64 r6=64 r7=1 r8=0x5A000000 r9=0 f1=0 f2=1
+real 02794970

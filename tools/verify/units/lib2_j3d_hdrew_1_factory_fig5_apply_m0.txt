@@ -1,0 +1,9 @@
+# ModelDataPipeline_l::applyMaterialSource 027F691C exactly as the original 027F70D8 calls it at 027F73AC for material 0
+# ("a_eye") of the shipped Figure5.bfres model "vf_098": r4 = &records[0] 6A8ED02C, r5 = FMAT 59136788 (full real
+# 027F7B50 trace of lib2_j3d_hdrew_1_factory_fig5, input 1000003), on the prefix replay fig5_bind.
+# verify: -only 027F691C -strictnan -calleesp
+include lib2_j3d_hdrew_1_factory_fig5_bind.txt
+arg! 027F691C r3 0x6A8E60AC
+arg! 027F691C r4 0x6A8ED02C
+arg! 027F691C r5 0x59136788
+arg! 027F691C r6 0x6A000000

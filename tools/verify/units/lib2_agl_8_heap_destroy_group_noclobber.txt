@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 0279313C,027931EC,02796624 -noclobber
+# Non-clobber reconfirmation of lib2_agl_8_heap_destroy_group: the same profile, mocked callees never modify memory,
+# so every input is a non-clobber input and owner-only state keeps the value its real producers gave it.
+include lib2_agl_8_heap_destroy_group.txt

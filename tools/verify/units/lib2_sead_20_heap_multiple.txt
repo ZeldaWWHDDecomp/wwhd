@@ -1,0 +1,110 @@
+# verify: -strictnan -calleesp -only 02769AE0,02769DEC,02769E24,02769EC4,0276A070,0276A208,0276A2C8,0276A304,0276A390,0276A3BC,0276A43C
+# SEAD#20: local binary reconstruction; unmerged owner interfaces remain explicit local views.
+src wwhd_src/sead/AudioHandleCompanions.cpp
+src wwhd_src/sead/TaskTransitionCompanions.cpp
+src wwhd_src/sead/TaskTransitionStatics.cpp
+field * 101FD594 u32 0,1
+arg 02768914 r4 0,0x101FD980,0x101FD984
+src wwhd_src/sead/TrackedRegionHeap.cpp
+# One coherent record list; companions will expand empty/multiple allocation states.
+arg! 02769DEC r3 0x59000000
+arg! 02769E24 r3 0x59000000
+arg! 02769AE0 r3 0x59000000
+arg! 02769EC4 r3 0x59000000
+arg! 0276A070 r3 0x59000000
+arg! 0276A208 r3 0x59000000
+arg! 0276A2C8 r3 0x59000000
+arg! 0276A304 r3 0x59000000
+arg! 0276A390 r3 0x59000000
+arg! 0276A3BC r3 0x59000000
+arg! 0276A43C r3 0x59000000
+field * 5900001C u32 0x59100000
+field * 59000020 u32 4096
+field * 59000090 u32 0,1
+field * 59000094 u32 0x59200028
+field * 59000098 u32 0x59200008
+field * 5900009C s32 3
+field * 590000A0 u32 0x59200030
+field * 590000A4 u32 0x59200000
+field * 590000A8 s32 4
+field * 59200000 u32 0x59100100
+field * 59200004 u32 64
+field * 59200008 u32 0x59000094
+field * 5920000C u32 0x59200018
+field * 59200010 u32 0x59100300
+stable 59000000 0xAC
+stable 59200000 64
+arg 02769DEC r4 0,0x59100100,0x59100101,0x59100300,0x59100800
+arg 02769E24 r4 0,0x59100100,0x59100101,0x59100300,0x59100800
+arg! 02769AE0 r4 0,1,3,4,63,64,65,128,4096,0xFFFFFFFF
+arg! 02769AE0 r5 -2147483648,-16,-4,-1,0,1,2,3,4,8,16,32
+arg! 02769EC4 r4 0,0x59100100,0x59100101,0x59100300,0x59100800
+arg! 0276A070 r4 0,0x59100100,0x59100101,0x59100300,0x59100800
+arg! 02769EC4 r5 0,1,32,64,65,128,512,4096,0xFFFFFFFF
+arg! 0276A070 r5 0,1,32,64,65,128,512,4096,0xFFFFFFFF
+arg! 0276A304 r4 0,1,2,4,8,16,32,256
+real 02769DEC
+real 0273B310
+real 0273B2F0
+# Separately supplied and combined record arrays have finite byte counts.
+arg! 027698D8 r6 0,0x59201000
+arg! 027698D8 r7 0,15,16,32,64
+arg! 02769A04 r4 0,0x59001000
+arg! 02769A04 r5 172,188,204,236
+field * 101FD768 u32 0,1
+field * 101FD2C4 u32 0,1
+arg 0276A56C r4 0,0x101FDFCC,0x101FDF9C,0x101FD980
+src wwhd_src/sead/JobQueueWorker.cpp
+arg! 0276A628 r5 -1,0,1,4
+# A valid heap callback provides the worker's pointer-array storage.
+field * 101F8B4C u32 0x59300000
+field * 59300004 u32 0
+stable 59300000 0x80
+ret! 02756140 0x59310000
+field * 5931000C u32 0x59310100
+field * 59310134 u32 0x027566D8
+stable 59310000 0x200
+alloc 027566D8 r4 0x59320000 4
+
+src wwhd_src/sead/PrimitiveMeshBuilders.cpp
+arg! 02768AA8 r3 0,0x59400000
+arg! 02768AA8 r4 0,0x59410000
+arg! 02768BD4 r3 0,0x59400000
+arg! 02768BD4 r4 0,0x59410000
+arg! 02768DA0 r3 0,0x59400000
+arg! 02768DA0 r4 0,0x59410000
+arg! 02768DF0 r3 0,0x59400000
+arg! 02768DF0 r4 0,0x59410000
+arg! 027692BC r3 0,0x59400000
+arg! 027692BC r4 0,0x59410000
+arg! 027694B0 r3 0,0x59400000
+arg! 027694B0 r4 0,0x59410000
+arg! 02769594 r3 0,0x59400000
+arg! 02769594 r4 0,0x59410000
+arg! 02768DF0 r5 0,1,2,3,4,8
+arg! 027692BC r5 0,1,2,3,4,8
+arg! 02769594 r5 0,1,2,3,4,8
+arg! 02768DF0 r6 1,2,3,4
+field * 104A1440 u32 0,1
+field * 104A1444 u32 0,1
+field * 104A1448 u32 0,1
+mockmove C0009988 r3 r4 r5
+real 02768BD4
+# Dynamic source observation covers every byte consumed by the block move.
+callee C0009988 r4=dyn1*r5:288
+callee C0009988 r4=heap288
+
+# Empty queue diagnostic; nonempty process profiles follow canonical queue support.
+ret! 0276A95C 0
+
+field * 59200014 u32 96
+field * 59200018 u32 0x59200008
+field * 5920001C u32 0x59200028
+field * 59200020 u32 0x59100800
+field * 59200024 u32 128
+field * 59200028 u32 0x59200018
+field * 5920002C u32 0x59000094
+field * 59200030 u32 0
+
+# Canonical shared heap pointer/type storage; no functions or mutations owned here.
+src wwhd_src/sead/HeapRegistryStatics.cpp

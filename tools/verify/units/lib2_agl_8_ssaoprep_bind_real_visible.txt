@@ -1,0 +1,14 @@
+# verify: -strictnan -only 02794270 -noclobber
+# ssaoprep companion (repeat frame): the caller-visible repeat-frame profile with the real sampler consumer
+# bindPreparationSampler 027BE53C (reads the sampler dirty byte +0x190; when set, the real 027BE494 apply reads the
+# settings +0x150.., re-derives the native sampler state and clears the dirty byte). Same form as
+# lib2_agl_3_archive_query_registration.
+include lib2_agl_8_preparation_repeat_group_visible.txt
+real 027BE53C
+# The bind consumes the settings (modes, lod scalars, option) and the dirty byte: 0x44 bytes from +0x150.
+observearg 027BE53C r3+0x150 68
+# createSurface/apply read the level's logical frame (area + size) and the stack viewport (same spans as
+# lib2_agl_8_mode0_core_state_observed_group for 0279599C).
+observearg 0274F5F0 r4+0 24
+observearg 0274F964 r3+0 20
+observearg 0274F964 r4+0 24

@@ -1,0 +1,18 @@
+# verify: -strictnan -calleesp -only 0279599C,02795D7C
+# Real previous-frame core/wrapper lifetime; Boolean enable changes use ParameterBase::applyResource.
+include lib2_agl_8_final_six_group.txt
+postsetup 0279599C 02795D7C r3=0x58000000 r4=0 r5=64 r6=64 r7=*0x5E100008 r8=0 f1=0.25 f2=0.5
+postsetup 02795D7C 02795D7C r3=0x58000000 r4=0 r5=64 r6=64 r7=*0x5E100008 r8=0 f1=0.25 f2=0.5
+# Caller-owned bool resource, matching the accepted SSAO parameter-resource layout.
+fill 02795D7C 0x5B200000 0x200 0
+field 02795D7C 0x5B200000 u32 0x5B200100
+field 02795D7C 0x5B200100 u32 13
+field 02795D7C 0x5B200104 u32 0
+poke 02795D7C 5B20010C u8 0,1
+stable 0x5B200000 0x200
+postsetup 02795D7C 0279EB28 r3=0x58000234 r4=0x5B200000
+real 0279EB28 02795EE4 02795EE8 02795EF0 02795EF8 02795F00
+
+# Public target index is clamped to slot zero when outside the one-slot owner.
+arg! 0279599C r4 0,1,0xFFFFFFFF
+arg! 02795D7C r4 0,1,0xFFFFFFFF

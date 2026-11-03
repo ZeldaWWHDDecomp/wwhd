@@ -1,0 +1,21 @@
+# Regression for the original empty snapshot path: no callbacks are reached.
+# verify: -only 027D0A34,027D174C -strictnan -calleesp
+src wwhd_src/agl/RenderSelection.cpp
+src wwhd_src/agl/DrawPreparation.cpp
+src wwhd_src/agl/DrawFormatPreparation.cpp
+src wwhd_src/agl/RangePoolOrdering.cpp
+src wwhd_src/agl/DrawResourceCleanup.cpp
+src wwhd_src/agl/RenderSelectionCleanup.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderSelectionEvaluation.cpp
+src wwhd_src/agl/RenderSelectionSubmission.cpp
+src wwhd_src/agl/TimingStatics.cpp
+arg! * r3 0x58000000
+arg! * r4 0
+arg! * r5 0
+arg! * r6 0
+field * r3+8 u32 0
+field * r3+0xC u32 0x5A000000
+field * r3+0x10 u32 1
+field * r3+0x14 u32 1
+field * r3+0x18 u32 0x58100000

@@ -1,0 +1,20 @@
+# verify: -only 027D55F8 -calleesp
+# RenderCommandPool::endCommand closing the command RenderJob::execute (027D74AC) opened: index 0 on ring 1, in frame 0
+# of a fresh pool (P2) and in frame 1 after a completed frame (P3). Pools, commands and the open recording are built by
+# the pool's own producers (lib2_agl_19_commands_pool_fixture.txt). The recording is empty (no GX2
+# command issued): size 0, a shipped state (027D6BD0/027D6A74 jobs; 027D71D4 skips size-0 lists).
+include lib2_agl_19_commands_pool_fixture.txt
+setup 027D55F8 027D5064 r3=0x58000200
+setup 027D55F8 027D527C r3=0x58000200 r4=0x1000 r5=36 r6=2 r7=0x6A87E2A0
+setup 027D55F8 027D54F8 r3=0x58000200 r4=0x58200000 r5=0x40 r6=1
+setup 027D55F8 027D5064 r3=0x58000300
+setup 027D55F8 027D527C r3=0x58000300 r4=0x1000 r5=36 r6=2 r7=0x6A87E2A0
+setup 027D55F8 027D54F8 r3=0x58000300 r4=0x58200008 r5=0xFFFFFFFE r6=0
+setup 027D55F8 027D55F8 r3=0x58000300 r4=0 r5=0
+setup 027D55F8 027D54F8 r3=0x58000300 r4=0x58200000 r5=0x45 r6=1
+setup 027D55F8 027D55F8 r3=0x58000300 r4=1 r5=1
+setup 027D55F8 027D54A4 r3=0x58000300 r4=1
+setup 027D55F8 027D54F8 r3=0x58000300 r4=0x58200000 r5=0x41 r6=1
+arg! 027D55F8 r3 0x58000200,0x58000300
+arg! 027D55F8 r4 0
+arg! 027D55F8 r5 1

@@ -1,0 +1,46 @@
+# AGL#7 0278CC74 rebuildVolume, signed-zero corners, targets (+-1, 0, 0): the look-at recipe
+# (lib2_agl_7_rebuildvolume_lookat_lead.txt) extended through real producers only: the real offset setter setPerspective
+# 0278CB8C with center offsets (+-0.5, +-0.5), eye components +-0 at the origin, targets on the +-x / +-z axes (this file and
+# its _z twin; pos != at as the API requires), up (0, 1, 0). Targets the >= -> > corner-bound mutants that differ
+# only for a +0 / -0 corner pair.
+# verify: -only 0278CC74 -strictnan -calleesp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+include shared/agl_world.txt
+setupsnapshot
+
+real 028E8970 028E90D4 028E91EC 028F423C 028E8D4C 025155D8 0274CBAC 0274CCC4 0278D0D0 0278D07C 0278CB8C
+
+# CameraView 0x168 bytes at 0x5C020000 from the original ctor 0278D0D0 (default perspective near 0.1 / far 10000 /
+# fovy 0.785 / aspect 16:9, default view); LookAtCamera 0x58 at 0x5C020800; pos/at/up 0xC each at 0x5C020900/910/920.
+setup 0278CC74 0278D0D0 r3=0x5C020000
+poke 0278CC74 5C020900 f32 0.0,-0.0
+poke 0278CC74 5C020904 f32 0.0,-0.0
+poke 0278CC74 5C020908 f32 0.0,-0.0
+poke 0278CC74 5C020910 f32 1.0,-1.0
+poke 0278CC74 5C020914 f32 0.0
+poke 0278CC74 5C020918 f32 0.0
+poke 0278CC74 5C020920 f32 0.0
+poke 0278CC74 5C020924 f32 1.0
+poke 0278CC74 5C020928 f32 0.0
+postsetup 0278CC74 0274CBAC r3=0x5C020800 r4=0x5C020900 r5=0x5C020910 r6=0x5C020920
+postsetup 0278CC74 0274CCC4 r3=0x5C020800 r4=0x5C020800
+postsetup 0278CC74 0278D07C r3=0x5C020000 r4=0x5C020800
+# setPerspective 0278CB8C (out-of-line offset setter; client callers 02736EE8, 027B011C): center offsets (+-0.5, +-0.5) at
+# 5C020940 (argument buffer values = tunable inputs), projection source 5C020960 (zero-filled world memory), near 1, far 1000,
+# field of view 1.0 rad, aspect 16:9.
+poke 0278CC74 5C020940 f32 0.5,-0.5
+poke 0278CC74 5C020944 f32 0.5,-0.5
+postsetup 0278CC74 0278CB8C r3=0x5C020000 r4=0x5C020960 r5=0x5C020940 f1=1 f2=1000 f3=1.0 f4=1.7777778
+arg! 0278CC74 r3 0x5C020000
+final 0278CC74 0x5C020068 0x78
+# Observe the values produced before the vector helpers consume them. These
+# call arguments expose corner and plane mutations even when later bounds
+# updates collapse to the same extrema.
+observearg 028E8D4C r3+0 12
+observearg 028E8D4C r4+0 12
+observearg 025155D8 r3+0 12
+observearg 028E8F64 r4+0 12
+observearg 028E9044 r4+0 12
+final 0278CC74 0x5C020038 0x30

@@ -1,0 +1,237 @@
+# verify: -strictnan -calleesp -footprint -only 027967C4
+# Original registered-heap/cache/map producers; tests allocation on a fresh constructed map.
+# No pool fields or allocation results are invented. No 02794068 workflow.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+callbudget 10000000
+arg! 027967C4 r3 0x58000000
+arg! 027967C4 r4 1,2
+arg! 027967C4 r4 1
+fill 027967C4 58000000 0xBE4 0
+fill 027967C4 6A000000 0x01000000 0
+stable 6A000000 0x01000000
+fill 027967C4 6E200000 12 0
+field 027967C4 6E200000 u32 0x6A000000
+field 027967C4 6E200004 u32 0x01000000
+field 027967C4 6E200008 u32 0
+field 027967C4 101F8B94 u32 0
+field 027967C4 101F8DD4 u32 0
+field 027967C4 101F8BD8 u32 0
+field 027967C4 101F8BDC u32 0
+field 027967C4 101F8DEC u32 0
+alloc 0273B0D4 r3 0x64000000 align=r5
+allocnested 0273B0D4
+alloc 0273AD10 r3 0x65000000 32
+allocnested 0273AD10
+nestedret 02756140 0x6A000000
+nestedret 028FDE28 0
+mockset C0009990 r3 r4 r5
+mockset C000A858 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+mocksurfacesize C00060D0
+mockfield C00060B0 r4+0 u32 0x1000
+mockfield C00060B0 r5+0 u32 0x100
+nestedmockfield C00060B0
+# Approved concrete device/context construction, kept distinct from the registered heap.
+fill 027967C4 66000000 0x160 0
+stable 66000000 0x160
+fill 027967C4 66100000 0xA100 0
+setup 027967C4 02759B40
+setup 027967C4 027561B4
+setup 027967C4 02755FE0 r3=0x6E200000
+setup 027967C4 02757B48
+setup 027967C4 0279F2EC r3=0x6A000000
+setup 027967C4 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+setup 027967C4 0276AD30 r3=0x6A000000
+setup 027967C4 0274FB24 r3=0x66000000
+setup 027967C4 028EFFD0 r3=0x66000060 r4=8 r5=0x18 r6=0x0274CA20
+setup 027967C4 027854AC r3=0x6A000000
+setup 027967C4 027855BC r3=*101F8C14 r4=0x6A000000 r5=0x6A000000 r6=0x800000 r7=0
+setup 027967C4 027A76C8 r3=0x6A000000
+setup 027967C4 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup 027967C4 02796034 r3=0x58000000
+poke 027967C4 6600000C u32 0x101456CC
+poke 027967C4 66000138 u32 0x66100000
+poke 027967C4 101F8B18 u32 0x66000000
+poke 027967C4 5800007C u32 16
+poke 027967C4 5800008C u32 16
+poke 027967C4 5800009C u8 0,1
+poke 027967C4 580000AC u8 0,1
+poke 027967C4 580000BC u8 0,1
+poke 027967C4 580000CC u8 0,1
+poke 027967C4 580000DC u8 0,1
+postsetup 027967C4 027967C4 r3=0x58000000 r4=1
+postsetup 027967C4 02796558 r3=0x58000000
+real 027561B4
+real 02796558
+real 027A0040
+real 027A0114
+real 0279FFDC
+real 0279FC6C
+real 0279FDC8
+real 02755FE0
+real 02755F40
+real 02755EC4
+real 0275315C
+real 02753D6C
+real 02755CA4
+real 027601BC
+real 027601F0
+real 02752B0C
+real 02755FEC
+real 027556FC
+real 02755E7C
+real 02756CC0
+real 0273B560
+real 028F026C
+real 02760084
+real 02752A84
+real 02785CB4
+real 027861E0
+real 02759C10
+real 028F521C
+real 02757B48
+real 0279F2EC
+real 0279F218
+real 028EFFD0
+real 028EFE58
+real 027A029C
+real 027CAB58
+real 027B6CB8
+real 027B6E64
+real 0273B524
+real 027C05F4
+real 027C05C8
+real 027C05A0
+real 027BE6B8
+real 0279F474
+real 027CAD30
+real 0273B2F0
+real 0273B440
+real 0273B2D0
+real 0273B310
+real 0276AD30
+real 0276ACA0
+real 027B7044
+real 0274FB24
+real 0274CA20
+real 0276B114
+real 02796034
+real 027967C4
+real 0279E618
+real 0279E674
+real 027A84B8
+real 0279CB9C
+real 027A063C
+real 0279E57C
+real 0273B264
+real 027A861C
+real 02795EE0
+real 02797DDC
+real 0279FD18
+real 0279F7F0
+real 027CB1A0
+real 027CAED8
+real 025C0928
+real 025C09D8
+real 027B6E2C
+real 027B6F18
+real 027B6F90
+real 027BE794
+
+# Ordinary createAt children observed mocked in the first producer diagnostic.
+real 02752C74
+real 02753000
+
+# Further ordinary createAt/base/release children observed in v2.
+real 0275589C
+real 02752F10
+real 02754754
+
+# v3 ordinary heap-lock/free-block setup and allocation descendant.
+real 027600EC
+real 02752E60
+real 027536F4
+
+# v4 ordinary free-block initialization, search, and split children.
+real 02752D8C
+real 02753628
+real 027536B0
+
+# Published ordinary provider/cache/surface closure; protected A03A0 and format aliases stay opaque.
+real 02759B40
+real 02759B98
+real 0279F1BC
+real 0273B200
+real 027B6FF8
+real 027B95B4
+real 0279F738
+real 0279F6B0
+real 025C0934
+real 027A76C8
+real 027A7640
+real 027A77F8
+real 027A78F8
+real 027BE930
+real 027BE7F0
+real 027BE74C
+real 027BE744
+real 027BE114
+real 027BDF7C
+real 027BDE1C
+real 027BDEB4
+real 027BE494
+real 027BE2C4
+real 027BE3B8
+real 027BFF9C
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+stable 101F93D8 16
+stable 101F95A8 16
+mocksurfacesize 0278635C
+observearg 0278635C r3+0 32
+observearg 0278635C r3+0x30 8
+
+# Published default-sampler new(size,heap,align) allocation boundary.
+alloc 0273B050 r3 0x67000000 align=r5
+allocnested 0273B050
+# OSGetCoreId's published valid core0, including nested original calls.
+ret! C0009BB0 0
+nestedret C0009BB0 0
+# Ordinary descendants observed in the admitted provider/cache trees.
+real 027B5EEC
+real 027B958C
+real 027BE32C
+real 027BE340
+real 027BE3AC
+real 027BE398
+real 0274D4C0
+real 027CB744
+real 027CB3B8
+
+real 027B954C
+
+
+real 027854AC
+real 0278540C
+real 027855BC
+real 02753004
+
+real 02755818
+real 02753880
+real 027540AC
+
+real 027537B8
+
+# Immutable private-format record additionally used by the 16-bit-depth choice.
+stable 101F9598 16

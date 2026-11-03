@@ -1,0 +1,6 @@
+# Custom allocation observer knows the supplied construction storage.
+src wwhd_src/JSystem/JAudio/JASThread.cpp
+arg! 02810D34 r3 0x6B000000
+arg! 02810D34 r4 0x6C000000
+field 02810D34 6B000004 u32 0x6B100000
+observe 0273B0D4 6B000004 4

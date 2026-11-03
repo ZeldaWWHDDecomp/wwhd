@@ -1,0 +1,12 @@
+# Bounded direct-entry check for ControlPrefix_l::matchesValue.
+# The receiver, reference, and record are caller-owned complete prefixes; no virtual dispatch or owner lifecycle is exercised.
+# verify: -strictnan -calleesp -only 02779440
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+fill * 56000000 92 0
+arg! * r4 0x56200000
+field 02779440 56200000 u32 0x56200100
+field 02779440 56200100 u32 0,1,2,0xFFFFFFFF,0x01234567
+field 02779440 56000054 u32 0,1,2,0xFFFFFFFF,0x01234567

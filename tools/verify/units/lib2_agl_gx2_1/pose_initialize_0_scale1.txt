@@ -1,0 +1,44 @@
+# Complete distinct PaletteBuffer/PoseBuilder/PoseResource/bones/work storage.
+# Three-slot layout may be null-to-calculate or the named builder+10 array.
+# Quaternion identity avoids Euler helper; scale path follows resource flags.
+# verify: -only 027DAFB4 -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+arg! 027DAFB4 r3 0x70500000
+arg! 027DAFB4 r4 0x70501000
+arg! 027DAFB4 r5 0x70504000
+arg! 027DAFB4 r6 0
+fill 027DAFB4 0x70500000 0x4C 0
+fill 027DAFB4 0x70501000 0x28 0
+fill 027DAFB4 0x70502000 0x18 0
+fill 027DAFB4 0x70503000 0x40 0
+fill 027DAFB4 0x70504000 0xC0 0
+field 027DAFB4 0x70501000 u32 0x70502000
+field 027DAFB4 0x70501004 u32 1
+field 027DAFB4 0x70501008 u32 0,0x70501010
+field 027DAFB4 0x7050100C u32 0
+field 027DAFB4 0x70502004 u32 768
+field 027DAFB4 0x70502008 u16 0
+field 027DAFB4 0x70502014 s32 4076
+field 027DAFB4 0x70501010 u32 0
+field 027DAFB4 0x70501014 u32 0
+field 027DAFB4 0x70501018 u32 0
+field 027DAFB4 0x7050101C u32 0
+field 027DAFB4 0x70501020 u32 0
+field 027DAFB4 0x70501024 u32 0
+field 027DAFB4 0x70503014 f32 1
+field 027DAFB4 0x70503018 f32 1
+field 027DAFB4 0x7050301C f32 1
+field 027DAFB4 0x7050302C f32 1
+field 027DAFB4 0x70503010 u32 0,0x300
+real 027DAB24
+real 027DABE0
+real 028F5914

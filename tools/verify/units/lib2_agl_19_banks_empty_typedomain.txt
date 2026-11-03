@@ -1,0 +1,133 @@
+# AGL#19 banks: TYPE-DOMAIN "collections without records or values". In the shipped game LightPrepass::configure
+# 027AF16C always initializes the spatial / paired collections with capacity 256 / 128 and value capacity 1 (config
+# 027B19CC: viewCount 1), so their record arrays, value arrays and prepared-count arrays are never NULL. Here the same
+# inline construction (zeroed object, method table, VertexInputSet::create 027BF734) is followed by the collection's own
+# original initializer 027D1EE0 / 027D2C98 with capacity 0 or 2 and value capacity 0 or 1 (API-domain arguments of the
+# producer), owner = the configured prepass, world heap. Then the original setCount (027D2B18 / 027D37C8) sets the count
+# N in {0, 1, 3} (one collection per (capacity, value capacity, count 0 or not) combination; the tested call picks one). The walks (prepare / apply / applyWithContext), release and update run on these collections: NULL
+# record array with N > 0, NULL value arrays (release skips them), NULL prepared-count array with N = 0.
+# Zero-page steering: prepare, apply and applyWithContext only get the collections whose prepared-count array exists
+# or whose count is 0 (with no value array and a nonzero count the original itself reads/writes through NULL, a console
+# DSI, so those inputs gave no clean evidence).
+# verify: -only 027D2504,027D27BC,027D2988,027D31B4,027D346C,027D3638,027D22A8,027D2F9C,027D240C,027D30BC -strictnan -calleesp
+src wwhd_src/agl/LightCollectionPasses.cpp
+src wwhd_src/agl/LightCollectionRelease.cpp
+src wwhd_src/agl/LightCollectionAccessors.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+real 027D2B18 027D37C8 027D1EE0 027D2C98 027CE0C0 027D387C 027BEC90 027BE2B0 027D2B20 027D2B88 027D37E0 027D3848 027D2BBC 027D3880
+fill * 5A070000 0x114 0
+field * 5A070000 u32 0x1016B070
+stable 5A070000 0x114
+setup * 027BF734 r3=0x5A07001C
+postsetup * 027D1EE0 r3=0x5A070000 r4=0x5A000000 r5=0 r6=0 r7=0x6A000000
+postsetup * 027D2B18 r3=0x5A070000 r4=*5A0A0008
+fill * 5A070200 0x114 0
+field * 5A070200 u32 0x1016B070
+stable 5A070200 0x114
+setup * 027BF734 r3=0x5A07021C
+postsetup * 027D1EE0 r3=0x5A070200 r4=0x5A000000 r5=0 r6=1 r7=0x6A000000
+postsetup * 027D2B18 r3=0x5A070200 r4=*5A0A0008
+fill * 5A070400 0x114 0
+field * 5A070400 u32 0x1016B070
+stable 5A070400 0x114
+setup * 027BF734 r3=0x5A07041C
+postsetup * 027D1EE0 r3=0x5A070400 r4=0x5A000000 r5=2 r6=0 r7=0x6A000000
+postsetup * 027D2B18 r3=0x5A070400 r4=*5A0A0008
+fill * 5A070600 0x114 0
+field * 5A070600 u32 0x1016B070
+stable 5A070600 0x114
+setup * 027BF734 r3=0x5A07061C
+postsetup * 027D1EE0 r3=0x5A070600 r4=0x5A000000 r5=2 r6=1 r7=0x6A000000
+postsetup * 027D2B18 r3=0x5A070600 r4=*5A0A0008
+fill * 5A070800 0x114 0
+field * 5A070800 u32 0x1016B070
+stable 5A070800 0x114
+setup * 027BF734 r3=0x5A07081C
+postsetup * 027D1EE0 r3=0x5A070800 r4=0x5A000000 r5=0 r6=0 r7=0x6A000000
+fill * 5A070A00 0x114 0
+field * 5A070A00 u32 0x1016B070
+stable 5A070A00 0x114
+setup * 027BF734 r3=0x5A070A1C
+postsetup * 027D1EE0 r3=0x5A070A00 r4=0x5A000000 r5=2 r6=0 r7=0x6A000000
+fill * 5A070C00 0x114 0
+field * 5A070C00 u32 0x1016B070
+stable 5A070C00 0x114
+setup * 027BF734 r3=0x5A070C1C
+postsetup * 027D1EE0 r3=0x5A070C00 r4=0x5A000000 r5=2 r6=1 r7=0x6A000000
+fill * 5A080000 0x114 0
+field * 5A080000 u32 0x1016B1E8
+stable 5A080000 0x114
+setup * 027BF734 r3=0x5A08001C
+postsetup * 027D2C98 r3=0x5A080000 r4=0x5A000000 r5=0 r6=0 r7=0x6A000000
+postsetup * 027D37C8 r3=0x5A080000 r4=*5A0A0008
+fill * 5A080200 0x114 0
+field * 5A080200 u32 0x1016B1E8
+stable 5A080200 0x114
+setup * 027BF734 r3=0x5A08021C
+postsetup * 027D2C98 r3=0x5A080200 r4=0x5A000000 r5=0 r6=1 r7=0x6A000000
+postsetup * 027D37C8 r3=0x5A080200 r4=*5A0A0008
+fill * 5A080400 0x114 0
+field * 5A080400 u32 0x1016B1E8
+stable 5A080400 0x114
+setup * 027BF734 r3=0x5A08041C
+postsetup * 027D2C98 r3=0x5A080400 r4=0x5A000000 r5=2 r6=0 r7=0x6A000000
+postsetup * 027D37C8 r3=0x5A080400 r4=*5A0A0008
+fill * 5A080600 0x114 0
+field * 5A080600 u32 0x1016B1E8
+stable 5A080600 0x114
+setup * 027BF734 r3=0x5A08061C
+postsetup * 027D2C98 r3=0x5A080600 r4=0x5A000000 r5=2 r6=1 r7=0x6A000000
+postsetup * 027D37C8 r3=0x5A080600 r4=*5A0A0008
+fill * 5A080800 0x114 0
+field * 5A080800 u32 0x1016B1E8
+stable 5A080800 0x114
+setup * 027BF734 r3=0x5A08081C
+postsetup * 027D2C98 r3=0x5A080800 r4=0x5A000000 r5=0 r6=0 r7=0x6A000000
+fill * 5A080A00 0x114 0
+field * 5A080A00 u32 0x1016B1E8
+stable 5A080A00 0x114
+setup * 027BF734 r3=0x5A080A1C
+postsetup * 027D2C98 r3=0x5A080A00 r4=0x5A000000 r5=2 r6=0 r7=0x6A000000
+fill * 5A080C00 0x114 0
+field * 5A080C00 u32 0x1016B1E8
+stable 5A080C00 0x114
+setup * 027BF734 r3=0x5A080C1C
+postsetup * 027D2C98 r3=0x5A080C00 r4=0x5A000000 r5=2 r6=1 r7=0x6A000000
+# the collections with records, values and a nonzero count are prepared for view 0 by their own prepare (original), as the
+# prepass does before apply, so apply / applyWithContext reach their record bodies
+real 027D2504 027D31B4
+postsetup * 027D2504 r3=0x5A070600 r4=0 r5=0x6A87E2A0 r6=0
+postsetup * 027D31B4 r3=0x5A080600 r4=0 r5=0x6A87E2A0 r6=0
+fill * 5A0A0000 0x20 0
+field * 5A0A0008 u32 1,3
+stable 5A0A0000 0x20
+arg! 027D2504 r3 0x5A070200,0x5A070600,0x5A070C00
+arg! 027D2504 r4 0
+arg! 027D2504 r5 0x6A87E2A0
+arg! 027D2504 r6 0,1
+arg! 027D27BC r3 0x5A070200,0x5A070600,0x5A070800,0x5A070A00,0x5A070C00
+arg! 027D27BC r4 0
+arg! 027D27BC r5 0x6A87E2A0
+arg! 027D27BC r6 0,1
+arg! 027D2988 r3 0x5A070200,0x5A070600,0x5A070800,0x5A070A00,0x5A070C00
+arg! 027D2988 r4 0
+arg! 027D2988 r5 0x6A87E2A0
+arg! 027D2988 r6 0x5A060000
+arg! 027D240C r3 0x5A070000,0x5A070200,0x5A070400,0x5A070600,0x5A070800,0x5A070A00,0x5A070C00
+arg! 027D22A8 r3 0x5A070000,0x5A070200,0x5A070400,0x5A070600,0x5A070800,0x5A070A00,0x5A070C00
+arg! 027D31B4 r3 0x5A080200,0x5A080600,0x5A080C00
+arg! 027D31B4 r4 0
+arg! 027D31B4 r5 0x6A87E2A0
+arg! 027D31B4 r6 0,1
+arg! 027D346C r3 0x5A080200,0x5A080600,0x5A080800,0x5A080A00,0x5A080C00
+arg! 027D346C r4 0
+arg! 027D346C r5 0x6A87E2A0
+arg! 027D346C r6 0,1
+arg! 027D3638 r3 0x5A080200,0x5A080600,0x5A080800,0x5A080A00,0x5A080C00
+arg! 027D3638 r4 0
+arg! 027D3638 r5 0x6A87E2A0
+arg! 027D3638 r6 0x5A060000
+arg! 027D30BC r3 0x5A080000,0x5A080200,0x5A080400,0x5A080600,0x5A080800,0x5A080A00,0x5A080C00
+arg! 027D2F9C r3 0x5A080000,0x5A080200,0x5A080400,0x5A080600,0x5A080800,0x5A080A00,0x5A080C00

@@ -1,0 +1,5 @@
+# verify: -strictnan -calleesp -footprint -only 0279515C
+# Labelled type-domain zero-display-list companion.
+# Retain original world/effect/resource producers; only the approved legacy recording model differs.
+include lib2_agl_8_secondary_pass_alt.txt
+mockdisplaylist C0006090 C0006190 C0006218

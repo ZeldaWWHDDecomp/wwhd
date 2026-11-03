@@ -1,0 +1,25 @@
+# Queries on the empty initialized resource state established by empty_resource.
+# verify: -only 0273A2E8,0273A790,0273A898,0273A700,0273A8C0 -calleesp -strictnan
+src wwhd_src/lms/DelegateInstances.cpp
+src wwhd_src/lms/MessageBinary.cpp
+src wwhd_src/lms/ProjectBinary.cpp
+arg! 0273A2E8 r3 0x57400000
+arg! 0273A790 r3 0x57400000
+arg! 0273A898 r3 0x57400000
+arg! 0273A700 r3 0x57400000
+arg! 0273A8C0 r3 0x57400000
+fill * 57400000 64 0
+field * 57400000 u32 0x10001000
+field * 57400004 u32 32
+field * 57400010 s32 -1
+field * 57400014 s32 -1
+field * 57400018 s32 -1
+field * 5740001C s32 -1
+field * 57400020 s32 -1
+field * 57400024 s32 -1
+field * 57400028 s32 -1
+field * 5740002C s32 -1
+field * 57400030 s32 -1
+field * 57400034 s32 -1
+field * 57400038 s32 -1
+field * 5740003C s32 -1

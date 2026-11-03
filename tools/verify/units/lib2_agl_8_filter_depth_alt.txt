@@ -1,0 +1,59 @@
+# verify: -strictnan -calleesp -footprint -only 02796F74
+# AGL#8 02796F74 finishCascadeMapRendering on a caller-produced ShadowMap. Shipped schedule (AGL#9):
+# CascadeShadow ctor 02797EEC -> 02796034; initializeUnits 027984FC -> configureSurface 027966F0; size 027967A0;
+# 02798AE4 -> 027967C4 (depth storage at +0x104); renderLayers 02798B0C: per layer 02796B3C + 02796EEC, then
+# 02796F74(map, r4 = bound shader mode word at sp+0x14) at 02798C44 when +0x330 == 1.
+# The per-layer draw 02796B3C (layer viewport/camera from the CascadeShadow) is not replayed; 02796EEC publishes.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+
+include shared/agl_world.txt
+setupsnapshot
+
+# Engine/ShaderContext singleton *101F8BD8 (02796EEC 0276B114, 02796F74 027B9F68): its getter 0276AD30 (store 0276ADAC).
+setup * 0276AD30 r3=0x6A000000
+fill * 0x59000000 0xBE4 0
+# The map's own fields are stable: the mocked callees of 02796F74 receive only the sub-objects +0x6D8 (0274D690,
+# ShadowSurfaceStorage_l 0x188: +0x718 for 027B6D64/025C0848) and +0x860 (027BE53C, 0x198), never the map itself
+# (ShadowMap.h offsets; disassembly 02797484..02797D2C).
+stable 0x59000000 0x6D8
+stable 0x590009F8 0x1EC
+field * 0x5E100000 u32 0x100
+field * 0x5E100004 u32 0x100
+stable 0x5E100000 0x20
+setup * 02796034 r3=0x59000000
+setup * 027966F0 r3=0x59000000 r5=0
+setup * 027967A0 r3=0x59000000 r4=0x5E100000
+# Tunable agl::utl::Parameter values (value byte at param+0xC) read by 027967C4/02796F74: +0x9C/+0xAC/+0xBC/+0xCC/+0xDC.
+# They must be set before the storage is built, so 027967C4 and 02796EEC run as postsetups.
+poke 02796F74 5900009C u8 0,1
+poke 02796F74 590000AC u8 0,1
+poke 02796F74 590000BC u8 0,1
+poke 02796F74 590000CC u8 0,1
+poke 02796F74 590000DC u8 0,1
+postsetup 02796F74 027967C4 r3=0x59000000 r4=1
+postsetup 02796F74 02796EEC r3=0x59000000 r4=0
+
+arg! 02796F74 r3 0x59000000
+arg! 02796F74 r4 0,1,2
+
+real 0279A07C 0279CA34 0279C950 0279E57C 0273B264 0273B200 0279E618 0279E674 027A84B8 0279CB9C 027A861C 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 027BDEB4 02752A84 02759B98 0279F1BC 0279288C 02791A4C 027919BC 027919FC 02791A54
+real 02759B40 027A8C80 0279A490 027A08C8
+real 027B95B4 027B958C 027B954C 027B6CB8 027B6E64 027BEB5C 027BECEC 027BED84 027BEEE4 027BEEBC 027BEED4 027BEE9C 027A063C
+real 027BE2B0 027B9694 0274D67C 028F0164 028F007C 027BEC90 027BEBEC 0273AFC8 027A0998 02752BEC 02755D28
+real 025C0928 025C0934 025C09D8 0276ACA0 0276AD30 0276B114 027861E0 02795EE0 02797DDC 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027CB744
+real 027BE930 027BE7F0 027BE74C 027BE744 027BFF9C 0279FFDC 027A0040 027A0114
+real 02796034 027966F0 027967A0 027967C4 02796EEC 0279FC6C 0279FD18 0279FDC8 0279FE74 02796558 027965BC
+real 027B6F18 027B6F90 027B95B4 027B958C 027B954C 0273B200 027CB744
+field * 0x101F8AE5 u8 0
+stable 104A0BC0 0x10

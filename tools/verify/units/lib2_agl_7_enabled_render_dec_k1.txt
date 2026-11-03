@@ -1,0 +1,5 @@
+# AGL#7 02791230 decal companion, steady state (previous frame with the same three surfaces).
+# verify: -only 02791230 -strictnan -calleesp
+include lib2_agl_7/enabled_render_dec_k1_base.txt
+real 02791230
+postsetup 02791230 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0x6A00F430 sp+8=3 sp+0xC=0

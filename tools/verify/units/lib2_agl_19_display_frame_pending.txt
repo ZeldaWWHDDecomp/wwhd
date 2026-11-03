@@ -1,0 +1,12 @@
+# AGL#19 pending layers after the first frame's update (lib2_agl_19_display_frame_fixture.txt: A, B pending on view 0,
+# C on view 1): clearPending 027D646C, appendPending 027D64C8 of a 027340D8-built layer (view flag bit 1 clear,
+# ), removePending 027D650C (RenderQueueManager::removeLayer 027C1D0C calls it for both views with the
+# layer it detaches: pending or not pending on that view; the deferred list is empty before the job phase).
+# verify: -only 027D646C,027D64C8,027D650C -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_frame_fixture.txt
+arg! 027D646C r3 0x5E100018,0x5E100818
+arg! 027D64C8 r3 0x5E100018,0x5E100818
+arg! 027D64C8 r4 0x58000000,0x58001000,0x58002000
+arg! 027D650C r3 0x5E100018,0x5E100818
+arg! 027D650C r4 0x58000000,0x58001000,0x58002000

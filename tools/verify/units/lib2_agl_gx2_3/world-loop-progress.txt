@@ -1,0 +1,32 @@
+# verify: -only 027E565C -strictnan -calleesp
+# Two complete bones, self-contained root, no callback scheduled.
+src wwhd_src/agl/gx2/GpuUtilitySupport.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ArchiveLookupSupport.cpp
+src wwhd_src/JSystem/JKernel/JKRFileLoaderStatics.cpp
+src wwhd_src/agl/gx2/QueuedObjectSupport.cpp
+src wwhd_src/agl/gx2/CalendarSupport.cpp
+src wwhd_src/agl/gx2/UtilityText.cpp
+src wwhd_src/agl/gx2/UniformUpdateSupport.cpp
+src wwhd_src/agl/gx2/BlendPoseSupport.cpp
+src wwhd_src/agl/gx2/WorldPoseSupport.cpp
+stackfill
+arg! 027E565C r3 0x61100000
+arg! 027E565C r4 0x61104000
+field * 61100008 u32 0x61101000
+field * 6110000C u32 0x61102000
+field * 61100010 u32 0x61103000
+field * 6110002C u16 2
+field * 6110002E u16 65535
+field * 61100030 u32 0
+field * 61101004 u16 0
+field * 61101006 u16 0
+field * 61101044 u16 1
+field * 61101046 u16 0
+field * 61102000 u32 0x0F000000
+field * 61102040 u32 0x0F000000
+stable 61100000 0x34
+stable 61101000 0x80
+stable 61102000 0x80
+stable 61103000 0x60
+stable 61104000 0x30

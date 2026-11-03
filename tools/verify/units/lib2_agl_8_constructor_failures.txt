@@ -1,0 +1,18 @@
+# verify: -strictnan -calleesp -footprint -only 02792A08,02796034,02793384
+# Explicit allocator failure with NULL placement only; no positive lifetime claim.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+ret! 0273AD10 0
+arg! 02792A08 r3 0
+arg! 02796034 r3 0
+arg! 02793384 r3 0

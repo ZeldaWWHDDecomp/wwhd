@@ -1,0 +1,29 @@
+# AGL#19 027D6658 configureAttachments, first frame, view 0 (TV, own surfaces), up to its second (depth) acquire call to the dynamic texture
+# cache: lib2_agl_19_display_attachments_first_tv with DynamicTextureCache::acquireSharedMultisample 0279FF24 as a
+# compared mock and the run ending at that call (stopat), so the call's arguments are compared: the registers, the
+# stack arguments (the reuse byte at sp+0xB, tile mode at sp+0xF) and the stack objects passed by pointer (the
+# SafeText name at r4 and the auxiliary-buffer word at r9). Same producer state and arguments as attachments_first_tv.
+# The call's facts: r4 = the 8-byte SafeText name on the stack, r9 = the 4-byte auxiliary-buffer word on the stack (or 0),
+# and two stack argument words (sp+8: the u8 at sp+0xB, read by 0279FF24 at 0279FF4C; sp+0xC: tile mode, 0279FF58).
+# verify: -only 027D6658 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_init_fixture.txt
+real 0274F53C 027D5EE8 027D660C 027D5C48 027A0114 027CB744 027BE7F0 025C0928 025C0AB8 025C0848 025C09D8 027B954C 027BE930
+postsetup * 027D5EE8 r3=0x5E100018 r4=0x5E100750
+postsetup * 027D5C48 r3=0x5E100018
+postsetup * 027D5EE8 r3=0x5E100818 r4=0x5E100F50
+postsetup * 027D5C48 r3=0x5E100818
+arg! 027D6658 r3 0x5E100018
+arg! 027D6658 r5 0
+arg! 027D6658 r4 0
+arg! 027D6658 r6 0x1D,0x22
+arg! 027D6658 r7 0
+arg! 027D6658 r8 0x3A
+arg! 027D6658 r9 1
+arg! 027D6658 r10 1
+poke 027D6658 r1+8 u32 0
+# The colour acquire (call 1) returns the view's own colour texture description mTextureA (view 0 +0x18), configured by
+# the real TextureData::configure 027BE930 just before; the code then only swizzles and records it.
+ret! 0279FF24 0x5E100030
+callee 0279FF24 r4=8 r9=4 stack=2
+stopat 027D6658 0279FF24 2

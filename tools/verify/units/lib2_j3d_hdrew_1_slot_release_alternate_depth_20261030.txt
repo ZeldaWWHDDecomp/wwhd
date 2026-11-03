@@ -1,0 +1,10 @@
+# Original initialized mode1 slot3, produced by completed all19-depth original cache closure.
+# Only caller-owned entry inputs; no private slot/header changes.
+# verify: -only 027F88C8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_slot_create_all_initialized_depth_20261030.txt
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+fill 027F88C8 0x6A000000 0x01000000 0
+real 027F81C0 027A0114
+setup * 027F81C0 r3=0x60000000 r4=3 r5=0x5E000000
+arg! 027F88C8 r3 0x60000000
+arg! 027F88C8 r4 3

@@ -1,0 +1,31 @@
+# verify: -only 0273AA38,0273B15C
+# Report consumers follow the descriptor into saved integer and floating registers.
+# This contiguous save object contains112 bytes, including its descriptor and register payload.
+# Run with -only0273AA38,0273B15C; other marked bodies compile as support only.
+# Link own-unit support bindings; the invocation keeps the explicit test-address scope.
+src wwhd_src/sead/Foundation.cpp
+src wwhd_src/sead/Checksum.cpp
+src wwhd_src/sead/MemberDispatch.cpp
+src wwhd_src/sead/RuntimeType.cpp
+src wwhd_src/sead/InputState.cpp
+src wwhd_src/sead/Allocation.cpp
+src wwhd_src/sead/Controller.cpp
+src wwhd_src/sead/ControllerConstruction.cpp
+src wwhd_src/sead/FoundationObjects.cpp
+src wwhd_src/sead/DeviceBuffers.cpp
+src wwhd_src/sead/ReportListeners.cpp
+src wwhd_src/sead/ControllerManager.cpp
+src wwhd_src/sead/Reports.cpp
+src wwhd_src/sead/ControllerMapping.cpp
+src wwhd_src/sead/DeviceConstruction.cpp
+src wwhd_src/sead/TabletMotor.cpp
+src wwhd_src/sead/RemoteInput.cpp
+src wwhd_src/sead/TabletInput.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+field 0273AA38 101F8AE4 u8 1
+cr 0273AA38 6 0,1
+cr 0273B15C 6 0,1
+# Output destinations keep raw-address equality; compare the complete saved variadic argument object.
+callee 028F17A8 r3=0
+callee 028F1748 r3=0 r6=112
+callee 0273B158 r4=112

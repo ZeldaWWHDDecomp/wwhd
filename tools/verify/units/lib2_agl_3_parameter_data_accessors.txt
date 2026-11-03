@@ -1,0 +1,9 @@
+# Direct-entry profile for the four parameter types' readData/writeData/byteSize accessors.
+# A complete caller-owned base+value record is supplied; the bodies return the mValue address or its fixed size.
+# No constructor, virtual dispatch, or foreign owner lifecycle is exercised.
+# verify: -strictnan -calleesp -only 027793C0,027793C8,027793D0,027793E0,027793E8,027793F0,02779400,02779408,02779410,02779420,02779428,02779430
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+fill * 56000000 28 0

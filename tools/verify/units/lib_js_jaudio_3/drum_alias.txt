@@ -1,0 +1,11 @@
+# Output/input overlap and output/static-oscillator overlap preserve native store ordering.
+src wwhd_src/JSystem/JAudio/JASDrumSet.cpp
+arg! 02812030 r3 0x50000000
+arg! 02812030 r4 0
+arg! 02812030 r5 0,127
+arg! 02812030 r6 0x4FFFFFE0,0x104B52D4,0x50010000
+field 02812030 50000004 f32 0.25,1,2,4
+field 02812030 50000018 u32 0
+field 02812030 5000001C u32 0
+stable 50000018 8
+arg! 02812270 r3 0,0x50020000

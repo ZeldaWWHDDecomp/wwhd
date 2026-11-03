@@ -1,0 +1,7 @@
+# TYPE-DOMAIN companion (labelled): updateUniforms 0278FF3C enabled path on a 2-frame receiver built by the producer
+# initialize(2), frame index 0/1/2 (the frameIndex < mFrameCount bound). Shipped code never runs here (1 frame, index 0).
+# v2 checker: setUniform 027BF048 + flush 027BEFE4 real, every uploaded word compared; install as tools/verify/units/lib2_agl_7_updateuniforms_enabled.txt; include file lib2_agl_7_updateuniforms_enabled_base_lead.txt -> tools/verify/units/lib2_agl_7/updateuniforms_enabled_base.txt: trace 1000004 + -watch 00000000:0x1000 0 lines; -nulltrap n=20 seeds 1/7 20/20 7/7; nulltrap_compare 10k seeds 1/7 --archive OK (10000/10000 clean, 7/7). Same bar on the steady companion (lib2_agl_7_updateuniforms_enabled_steady_lead.txt). The 246 apply_mip_blur 0278FF3C survivor receipts rerun n=1000, input seeds 1/7, --nulltrap: 179 killed, 67 survived (same IDs on both seeds and on both profiles; the v1 checker with observearg 027BF048 r6+0 4 killed 160).
+# 
+# initialize 0278E730(count 1) + the shipped shadow_pre_pass.baglshpp through 02736328; no previous render).
+# verify: -only 0278FF3C -strictnan -calleesp
+include lib2_agl_7/updateuniforms_enabled_frames2_base.txt

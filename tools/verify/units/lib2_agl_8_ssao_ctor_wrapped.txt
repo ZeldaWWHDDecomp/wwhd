@@ -1,0 +1,8 @@
+# verify: -strictnan -calleesp -only 02792A08
+# Emulator wrapped-address domain only; no real object lifetime/mutation-validity claim.
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 02792A08 r3 0,0xFFFFFE34,0xFFFFFDCC,0xFFFFFDBC,0xFFFFFDAC,0xFFFFFD9C,0xFFFFFD8C,0xFFFFFD7C,0xFFFFFD6C,0xFFFFFD5C,0xFFFFFD48,0xFFFFFCB8,0xFFFFFAA4,0xFFFFF1A4,0xFFFFD824,0xFFFFD7E4,0xFFFFD7D4,0xFFFFD7C4,0xFFFFD7B4
+# Exercise both success and failure at wrapped embedded allocation sites.
+ret! 0273AD10 0,0x5A000000

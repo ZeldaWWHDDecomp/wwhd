@@ -1,0 +1,5 @@
+# Original-produced camera companion for the reachable culling-rejection arm.
+# The later poke replaces only the included camera translation steering.
+# verify: -only 027D0A34 -strictnan -calleesp -footprint
+include lib2_agl_18/collection_basic_evaluate_positive256.txt
+poke * 5930002C u32 0,0x3F800000,0x40000000,0x43FA0000,0x461C4000,0xBF800000,0xC0000000,0xC3FA0000,0xC61C4000

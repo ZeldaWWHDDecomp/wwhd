@@ -1,0 +1,58 @@
+# Send and gain boundaries: routed outputs, sends around the clamp limits (-1, 0, +1) and negative zero.
+# verify: -only 0289DFE4,0289E1C0,0289ED8C,0289EEFC -strictnan -calleesp
+src wwhd_src/nw/snd/WaveArchiveReader.cpp
+src wwhd_src/nw/snd/AudioCurves.cpp
+src wwhd_src/nw/snd/AudioEventLog.cpp
+src wwhd_src/nw/snd/PlaybackVoiceParameters.cpp
+src wwhd_src/nw/snd/PlaybackVoicePool.cpp
+src wwhd_src/nw/snd/PlaybackVoice.cpp
+src wwhd_src/nw/snd/AdpcmDecode.cpp
+src wwhd_src/nw/snd/WaveResourceResolver.cpp
+src wwhd_src/nw/snd/AudioWorkerRun.cpp
+src wwhd_src/nw/snd/PlaybackVoiceUpdate.cpp
+src wwhd_src/nw/snd/PlaybackMix.cpp
+stackfill
+# A created mix runtime whose route bytes reach the main (bit 0), remote (bits 1..4) and gamepad (bits 5, 6) outputs.
+field * 101FD8C8 u32 1
+fill * 101FD289 32 0
+field * 101FD289 u8 0,1,0x7F
+field * 101FD28A u8 0,0x1E,0x60
+field * 101FD28B u8 0,0x61
+stable 101FD289 32
+arg! 0289DFE4 r3 0x5F500000
+arg! 0289E1C0 r3 0x5F500000
+field * 5F5003A4 u32 0,1,2,4,7
+stable 5F5003A4 4
+# calculateSends(output, route, mix, speakers)
+arg! 0289DFE4 r4 0x5F780000
+arg! 0289DFE4 r5 0,5,6
+arg! 0289DFE4 r6 0x5F700000
+arg! 0289DFE4 r7 0x5F720000
+callee 0289DFE4 r4=out96
+field * 5F700000 u32 0x3F800000,0x3F000000,0x80000000,0xBF800000
+field * 5F700040 u32 0xC0000000,0xBF800000,0xBF000000,0x80000000,0,0x3F000000,0x3F800000,0x3FC00000
+field * 5F700044 u32 0xC0000000,0xBF800000,0x80000000,0,0x3F000000,0x3F800000,0x3FC00000
+field * 5F700048 u32 0xBF800000,0x80000000,0,0x3F000000,0x3F800000,0x3FC00000
+field * 5F70004C u32 0xBF800000,0x80000000,0,0x3F000000,0x3F800000,0x3FC00000
+field * 5F720000 u32 0x3F800000,0x3F000000,0xBF800000
+field * 5F720004 u32 0x3F800000,0x3F000000,0xBF800000
+field * 5F720018 u32 0x3F800000,0x3F000000,0xBF800000,0x80000000
+stable 5F700000 80
+stable 5F720000 28
+# calculateRemoteSends(output, speakers): four remote gains with main/auxiliary sends around the limits.
+arg! 0289E1C0 r4 0x5F780000
+arg! 0289E1C0 r5 0x5F720000
+field * 5F500498 u32 0x3F800000,0x3F000000,0x80000000
+field * 5F50049C u32 0xC0000000,0xBF800000,0xBF000000,0x80000000,0,0x3F000000,0x3F800000
+field * 5F5004A0 u32 0xBF800000,0x80000000,0,0x3F000000,0x3F800000,0x3FC00000
+field * 5F5004A4 u32 0x3F800000,0x80000000
+field * 5F5004A8 u32 0xBF000000,0x80000000,0x3F000000
+field * 5F5004AC u32 0x80000000,0x3F000000,0x3FC00000
+stable 5F500498 48
+# updateMix / setRemoteMix: a negative-zero or negative incoming gain against a non-zero stored one.
+arg! 0289ED8C r4 0x5F700000
+arg! 0289ED8C r5 0x5F740000
+field * 5F740000 u32 0x3F800000,0,0x80000000
+arg! 0289EEFC r4 0,1,2,3
+arg! 0289EEFC r5 0x5F760000
+field * 5F760000 u32 0x80000000,0xBF800000,0,0x3F800000

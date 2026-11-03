@@ -1,0 +1,356 @@
+# AGL-GX2#1 uniform companion: the eight UniformBuffer/UniformLayout functions on coherent objects.
+# verify: -only 027DCF64,027DCFF8,027DD024,027DD0BC,027DD27C,027DD298,027DD394,027DD468 -strictnan -calleesp -footprint
+# Buffers come from the unit's own initializer (027DD0BC, run as a setup): wordCount = (bitCount + 31) >> 5,
+# viewCount from the builder. relocateData stays a mock inside the setup, so 027DD024 sees the pre-relocation state.
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+
+# Producer closure (own code) and SDK byte models.
+real 027DCF64
+real 027DCFF8
+real 027DD0BC
+real 027DD27C
+real 027DD298
+real 027DD394
+real 027DD468
+real 027DB134
+real 027DBBB0
+real 028F5914
+mockmove C000A848 r3 r4 r5
+mockset C000A858 r3 r4 r5
+callee C000A848 r4=dyn1*r5:4096 r5=0
+callee 027DCFF8 r3=heap48
+callee 027DCF64 r3=out40 r4=heap48
+
+# Uniform resource: counts over their boundary sets; arrays are separate allocations.
+field * 0xB0002011 u8 0,1,2,3
+field * 0xB0002012 u16 0,1,2,3,31,32,33,64
+field * 0xB0002014 u16 0,1
+field 027DCF64 0xB0002016 u16 0,1,2,3,4,255,256
+field 027DCFF8 0xB0002016 u16 0,1,2,3,4,255,256
+field 027DD024 0xB0002016 u16 256
+field 027DD0BC 0xB0002016 u16 256
+field 027DD27C 0xB0002016 u16 256
+field 027DD298 0xB0002016 u16 256
+field 027DD394 0xB0002016 u16 256
+field 027DD468 0xB0002016 u16 256
+field * 0xB0002018 u16 0,1,16,255,256,257
+field * 0xB0002028 s32 0x1FD8
+field * 0xB0002034 s32 0xFCC
+field * 0xB000203C s32 0x2FC4
+stable 0xB0002000 0x40
+field * 0xB0004004 s32 0,0x100,-0x100
+field * 0xB000400C s32 0,0x100,-0x100
+field * 0xB0004014 s32 0,0x100,-0x100
+field * 0xB000401C s32 0,0x100,-0x100
+# Fixups: slots inside the data block, targets inside the table (self, first, previous).
+field * 0xB0003001 u8 0,4
+field * 0xB0003002 u16 4,8,0x40,0xF8
+field * 0xB0003004 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+# Fixup 0 may name a later entry as its target (the resource data, not the binary, fixes targets).
+field * 0xB000300E u16 0,1,2
+field * 0xB0003015 u8 0,4
+field * 0xB0003016 u16 4,8,0x40,0xF8
+field * 0xB0003018 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003022 u16 0,1
+field * 0xB0003029 u8 0,4
+field * 0xB000302A u16 4,8,0x40,0xF8
+field * 0xB000302C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003036 u16 0,1,2
+field * 0xB000303D u8 0,4
+field * 0xB000303E u16 4,8,0x40,0xF8
+field * 0xB0003040 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000304A u16 0,2,3
+field * 0xB0003051 u8 0,4
+field * 0xB0003052 u16 4,8,0x40,0xF8
+field * 0xB0003054 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000305E u16 0,3,4
+field * 0xB0003065 u8 0,4
+field * 0xB0003066 u16 4,8,0x40,0xF8
+field * 0xB0003068 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003072 u16 0,4,5
+field * 0xB0003079 u8 0,4
+field * 0xB000307A u16 4,8,0x40,0xF8
+field * 0xB000307C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003086 u16 0,5,6
+field * 0xB000308D u8 0,4
+field * 0xB000308E u16 4,8,0x40,0xF8
+field * 0xB0003090 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000309A u16 0,6,7
+field * 0xB00030A1 u8 0,4
+field * 0xB00030A2 u16 4,8,0x40,0xF8
+field * 0xB00030A4 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00030AE u16 0,7,8
+field * 0xB00030B5 u8 0,4
+field * 0xB00030B6 u16 4,8,0x40,0xF8
+field * 0xB00030B8 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00030C2 u16 0,8,9
+field * 0xB00030C9 u8 0,4
+field * 0xB00030CA u16 4,8,0x40,0xF8
+field * 0xB00030CC s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00030D6 u16 0,9,10
+field * 0xB00030DD u8 0,4
+field * 0xB00030DE u16 4,8,0x40,0xF8
+field * 0xB00030E0 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00030EA u16 0,10,11
+field * 0xB00030F1 u8 0,4
+field * 0xB00030F2 u16 4,8,0x40,0xF8
+field * 0xB00030F4 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00030FE u16 0,11,12
+field * 0xB0003105 u8 0,4
+field * 0xB0003106 u16 4,8,0x40,0xF8
+field * 0xB0003108 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003112 u16 0,12,13
+field * 0xB0003119 u8 0,4
+field * 0xB000311A u16 4,8,0x40,0xF8
+field * 0xB000311C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003126 u16 0,13,14
+field * 0xB000312D u8 0,4
+field * 0xB000312E u16 4,8,0x40,0xF8
+field * 0xB0003130 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000313A u16 0,14,15
+field * 0xB0003141 u8 0,4
+field * 0xB0003142 u16 4,8,0x40,0xF8
+field * 0xB0003144 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000314E u16 0,15,16
+field * 0xB0003155 u8 0,4
+field * 0xB0003156 u16 4,8,0x40,0xF8
+field * 0xB0003158 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003162 u16 0,16,17
+field * 0xB0003169 u8 0,4
+field * 0xB000316A u16 4,8,0x40,0xF8
+field * 0xB000316C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003176 u16 0,17,18
+field * 0xB000317D u8 0,4
+field * 0xB000317E u16 4,8,0x40,0xF8
+field * 0xB0003180 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000318A u16 0,18,19
+field * 0xB0003191 u8 0,4
+field * 0xB0003192 u16 4,8,0x40,0xF8
+field * 0xB0003194 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000319E u16 0,19,20
+field * 0xB00031A5 u8 0,4
+field * 0xB00031A6 u16 4,8,0x40,0xF8
+field * 0xB00031A8 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00031B2 u16 0,20,21
+field * 0xB00031B9 u8 0,4
+field * 0xB00031BA u16 4,8,0x40,0xF8
+field * 0xB00031BC s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00031C6 u16 0,21,22
+field * 0xB00031CD u8 0,4
+field * 0xB00031CE u16 4,8,0x40,0xF8
+field * 0xB00031D0 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00031DA u16 0,22,23
+field * 0xB00031E1 u8 0,4
+field * 0xB00031E2 u16 4,8,0x40,0xF8
+field * 0xB00031E4 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00031EE u16 0,23,24
+field * 0xB00031F5 u8 0,4
+field * 0xB00031F6 u16 4,8,0x40,0xF8
+field * 0xB00031F8 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003202 u16 0,24,25
+field * 0xB0003209 u8 0,4
+field * 0xB000320A u16 4,8,0x40,0xF8
+field * 0xB000320C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003216 u16 0,25,26
+field * 0xB000321D u8 0,4
+field * 0xB000321E u16 4,8,0x40,0xF8
+field * 0xB0003220 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000322A u16 0,26,27
+field * 0xB0003231 u8 0,4
+field * 0xB0003232 u16 4,8,0x40,0xF8
+field * 0xB0003234 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000323E u16 0,27,28
+field * 0xB0003245 u8 0,4
+field * 0xB0003246 u16 4,8,0x40,0xF8
+field * 0xB0003248 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003252 u16 0,28,29
+field * 0xB0003259 u8 0,4
+field * 0xB000325A u16 4,8,0x40,0xF8
+field * 0xB000325C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003266 u16 0,29,30
+field * 0xB000326D u8 0,4
+field * 0xB000326E u16 4,8,0x40,0xF8
+field * 0xB0003270 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000327A u16 0,30,31
+field * 0xB0003281 u8 0,4
+field * 0xB0003282 u16 4,8,0x40,0xF8
+field * 0xB0003284 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000328E u16 0,31,32
+field * 0xB0003295 u8 0,4
+field * 0xB0003296 u16 4,8,0x40,0xF8
+field * 0xB0003298 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00032A2 u16 0,32,33
+field * 0xB00032A9 u8 0,4
+field * 0xB00032AA u16 4,8,0x40,0xF8
+field * 0xB00032AC s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00032B6 u16 0,33,34
+field * 0xB00032BD u8 0,4
+field * 0xB00032BE u16 4,8,0x40,0xF8
+field * 0xB00032C0 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00032CA u16 0,34,35
+field * 0xB00032D1 u8 0,4
+field * 0xB00032D2 u16 4,8,0x40,0xF8
+field * 0xB00032D4 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00032DE u16 0,35,36
+field * 0xB00032E5 u8 0,4
+field * 0xB00032E6 u16 4,8,0x40,0xF8
+field * 0xB00032E8 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00032F2 u16 0,36,37
+field * 0xB00032F9 u8 0,4
+field * 0xB00032FA u16 4,8,0x40,0xF8
+field * 0xB00032FC s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003306 u16 0,37,38
+field * 0xB000330D u8 0,4
+field * 0xB000330E u16 4,8,0x40,0xF8
+field * 0xB0003310 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000331A u16 0,38,39
+field * 0xB0003321 u8 0,4
+field * 0xB0003322 u16 4,8,0x40,0xF8
+field * 0xB0003324 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000332E u16 0,39,40
+field * 0xB0003335 u8 0,4
+field * 0xB0003336 u16 4,8,0x40,0xF8
+field * 0xB0003338 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003342 u16 0,40,41
+field * 0xB0003349 u8 0,4
+field * 0xB000334A u16 4,8,0x40,0xF8
+field * 0xB000334C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003356 u16 0,41,42
+field * 0xB000335D u8 0,4
+field * 0xB000335E u16 4,8,0x40,0xF8
+field * 0xB0003360 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000336A u16 0,42,43
+field * 0xB0003371 u8 0,4
+field * 0xB0003372 u16 4,8,0x40,0xF8
+field * 0xB0003374 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000337E u16 0,43,44
+field * 0xB0003385 u8 0,4
+field * 0xB0003386 u16 4,8,0x40,0xF8
+field * 0xB0003388 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003392 u16 0,44,45
+field * 0xB0003399 u8 0,4
+field * 0xB000339A u16 4,8,0x40,0xF8
+field * 0xB000339C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00033A6 u16 0,45,46
+field * 0xB00033AD u8 0,4
+field * 0xB00033AE u16 4,8,0x40,0xF8
+field * 0xB00033B0 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00033BA u16 0,46,47
+field * 0xB00033C1 u8 0,4
+field * 0xB00033C2 u16 4,8,0x40,0xF8
+field * 0xB00033C4 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00033CE u16 0,47,48
+field * 0xB00033D5 u8 0,4
+field * 0xB00033D6 u16 4,8,0x40,0xF8
+field * 0xB00033D8 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00033E2 u16 0,48,49
+field * 0xB00033E9 u8 0,4
+field * 0xB00033EA u16 4,8,0x40,0xF8
+field * 0xB00033EC s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00033F6 u16 0,49,50
+field * 0xB00033FD u8 0,4
+field * 0xB00033FE u16 4,8,0x40,0xF8
+field * 0xB0003400 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000340A u16 0,50,51
+field * 0xB0003411 u8 0,4
+field * 0xB0003412 u16 4,8,0x40,0xF8
+field * 0xB0003414 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000341E u16 0,51,52
+field * 0xB0003425 u8 0,4
+field * 0xB0003426 u16 4,8,0x40,0xF8
+field * 0xB0003428 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003432 u16 0,52,53
+field * 0xB0003439 u8 0,4
+field * 0xB000343A u16 4,8,0x40,0xF8
+field * 0xB000343C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003446 u16 0,53,54
+field * 0xB000344D u8 0,4
+field * 0xB000344E u16 4,8,0x40,0xF8
+field * 0xB0003450 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000345A u16 0,54,55
+field * 0xB0003461 u8 0,4
+field * 0xB0003462 u16 4,8,0x40,0xF8
+field * 0xB0003464 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB000346E u16 0,55,56
+field * 0xB0003475 u8 0,4
+field * 0xB0003476 u16 4,8,0x40,0xF8
+field * 0xB0003478 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003482 u16 0,56,57
+field * 0xB0003489 u8 0,4
+field * 0xB000348A u16 4,8,0x40,0xF8
+field * 0xB000348C s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB0003496 u16 0,57,58
+field * 0xB000349D u8 0,4
+field * 0xB000349E u16 4,8,0x40,0xF8
+field * 0xB00034A0 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00034AA u16 0,58,59
+field * 0xB00034B1 u8 0,4
+field * 0xB00034B2 u16 4,8,0x40,0xF8
+field * 0xB00034B4 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00034BE u16 0,59,60
+field * 0xB00034C5 u8 0,4
+field * 0xB00034C6 u16 4,8,0x40,0xF8
+field * 0xB00034C8 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00034D2 u16 0,60,61
+field * 0xB00034D9 u8 0,4
+field * 0xB00034DA u16 4,8,0x40,0xF8
+field * 0xB00034DC s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00034E6 u16 0,61,62
+field * 0xB00034ED u8 0,4
+field * 0xB00034EE u16 4,8,0x40,0xF8
+field * 0xB00034F0 s32 0,-1,1,0x7FFFFFFF,-0x80000000
+field * 0xB00034FA u16 0,62,63
+stable 0xB0003000 0x500
+
+# Builders: A has no layout yet (initializer calculates it), B gets its layout from workSize first.
+field * 0xB0001000 u32 0xB0002000
+field * 0xB0001004 s32 0,1,2,3
+field * 0xB0001100 u32 0xB0002000
+field * 0xB0001104 s32 0,1,2,3
+field * 0xB0001008 u32 0
+
+# Layout calculators.
+arg! 027DCF64 r3 0xB0000200
+arg! 027DCF64 r4 0xB0001000,0xB0001100
+arg! 027DCFF8 r3 0xB0001000,0xB0001100
+
+# Initializer: both builder states; sizes around the layout totals of the boundary counts.
+setup 027DD0BC 027DCFF8 r3=0xB0001100
+arg! 027DD0BC r3 0xB0000000
+arg! 027DD0BC r4 0xB0001000,0xB0001100
+arg! 027DD0BC r5 0xB0010000
+arg 027DD0BC r6 0,255,256,257,259,260,261,263,264,265,268,0x10000
+
+# Consumers of an initialized buffer.
+setup 027DD024 027DD0BC r3=0xB0000000 r4=0xB0001000 r5=0xB0010000 r6=0x10000
+setup 027DD27C 027DD0BC r3=0xB0000000 r4=0xB0001000 r5=0xB0010000 r6=0x10000
+setup 027DD298 027DD0BC r3=0xB0000000 r4=0xB0001000 r5=0xB0010000 r6=0x10000
+setup 027DD394 027DD0BC r3=0xB0000000 r4=0xB0001000 r5=0xB0010000 r6=0x10000
+setup 027DD468 027DD0BC r3=0xB0000000 r4=0xB0001000 r5=0xB0010000 r6=0x10000
+setup 027DD468 027DD0BC r3=0xB0000100 r4=0xB0001000 r5=0xB0020000 r6=0x10000
+setup 027DD468 027DD394 r3=0xB0000100 r4=0xB0100000 r5=0x10000
+arg! 027DD024 r3 0xB0000000
+arg! 027DD27C r3 0xB0000000
+arg! 027DD298 r3 0xB0000000
+arg! 027DD394 r3 0xB0000000
+arg! 027DD394 r4 0xB0100000
+arg 027DD394 r5 0,255,256,257,511,512,513,767,768,769,1024,1536,0x10000
+# Native-order path: the same producer, then the byte-order flag (bit 1) cleared after attach (flags 7 -> 5).
+setup 027DD468 027DD0BC r3=0xB0000180 r4=0xB0001000 r5=0xB0030000 r6=0x10000
+setup 027DD468 027DD394 r3=0xB0000180 r4=0xB0200000 r5=0x10000
+poke 027DD468 B0000184 u16 5
+# Second update after attach: the original updateView turns flags 7 into 3 (bit 2 consumed, bit 0 kept).
+setup 027DD468 027DD0BC r3=0xB0000280 r4=0xB0001000 r5=0xB0040000 r6=0x10000
+setup 027DD468 027DD394 r3=0xB0000280 r4=0xB0300000 r5=0x10000
+setup 027DD468 027DD468 r3=0xB0000280 r4=0
+arg! 027DD468 r3 0xB0000000,0xB0000100,0xB0000180,0xB0000280
+arg! 027DD468 r4 0,1,2,3,31,32,63,64,65

@@ -1,0 +1,30 @@
+# AGL-GX2#1 runtime boundary values: signed zeros in the frame clamp, binding targets at the 15-bit sentinel,
+# and target counts whose register carries bits above the u16 parameter.
+# verify: -only 027DAAA0,027DA898,027DA8D8 -strictnan -calleesp -footprint
+src wwhd_src/agl/gx2/RuntimeUtility.cpp
+src wwhd_src/agl/gx2/BufferRuntime.cpp
+src wwhd_src/agl/gx2/MatrixUtility.cpp
+src wwhd_src/agl/gx2/GeometryStorage.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/gx2/ResourceLayout.cpp
+src wwhd_src/agl/gx2/GeometryProjection.cpp
+src wwhd_src/agl/gx2/PoseRuntime.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/agl/gx2/ModelRuntime.cpp
+
+# clampFrame(value, start, end): equal start/value with either zero sign.
+argf64 027DAAA0 f1 0x0000000000000000,0x8000000000000000,0x3FF0000000000000
+argf64 027DAAA0 f2 0x0000000000000000,0x8000000000000000,0x3FF0000000000000
+argf64 027DAAA0 f3 0x0000000000000000,0x3FF0000000000000,0x4000000000000000
+
+# reset(targetCount): the u16 parameter arrives with arbitrary upper register bits.
+field 027DA898 r3+0x8 u16 0,1,2,3,8
+arg! 027DA898 r4 0,1,2,3,8,0x10002,0x20001,0x30000
+
+# setTargets(targets): bounded source count, targets around the 0x7FFF "no target" sentinel.
+field 027DA8D8 r3+0x8 u16 1,2,3,4
+arg! 027DA8D8 r4 0x5A000000
+field 027DA8D8 0x5A000000 u16 0,1,2,3,0x7FFE,0x7FFF,0xFFFF
+field 027DA8D8 0x5A000002 u16 0,1,2,3,0x7FFE,0x7FFF,0xFFFF
+field 027DA8D8 0x5A000004 u16 0,1,2,3,0x7FFE,0x7FFF,0xFFFF
+field 027DA8D8 0x5A000006 u16 0,1,2,3,0x7FFE,0x7FFF,0xFFFF

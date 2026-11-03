@@ -1,0 +1,31 @@
+# Exact allocation failure; no constructed-context/lifecycle/default-value claim.
+# verify: -only 027C70A8 -strictnan -calleesp
+src wwhd_src/agl/CaptureFileOptions.cpp
+src wwhd_src/agl/CaptureProvider.cpp
+src wwhd_src/agl/CaptureTextTools.cpp
+src wwhd_src/agl/CaptureWrite.cpp
+src wwhd_src/agl/DefineReplacement.cpp
+src wwhd_src/agl/IncludeExpansion.cpp
+src wwhd_src/agl/RangeCache.cpp
+src wwhd_src/agl/RenderLayerHooks.cpp
+src wwhd_src/agl/ShadowBoundsCollection.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowPlaneUpdate.cpp
+src wwhd_src/agl/ShadowProjection.cpp
+src wwhd_src/agl/ShadowProjectionFit.cpp
+src wwhd_src/agl/TextAdapters.cpp
+src wwhd_src/agl/UtilityDefaultBodies.cpp
+src wwhd_src/agl/UtilityKeyPredicate.cpp
+src wwhd_src/agl/UtilityParameterViews.cpp
+src wwhd_src/agl/UtilityProjection.cpp
+src wwhd_src/agl/UtilityRuntimeType.cpp
+src wwhd_src/agl/UtilityStorage.cpp
+src wwhd_src/agl/UtilityTextFormat.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowContext.cpp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/UtilityText.cpp
+arg! 027C70A8 r3 0
+ret! 0273AD10 0

@@ -1,0 +1,263 @@
+# verify: -strictnan -only 02796F74 -noclobber
+# Caller-visible reconfirmation of lib2_agl_8_filter_depth_extent_observed_group: the same profile, expanded, without the
+# footprint/-calleesp frame checks, so a difference is a return value, a store outside the frame or a call (args, pointees);
+# -noclobber: non-clobber inputs.
+# TYPE-DOMAIN zero/ordinary real extent producer with fully assigned filter-vector observations.
+# >>> include lib2_agl_8_filter_depth_extent_api_type.txt
+# TYPE-DOMAIN: ShadowMap::setExtent027967A0 has game client02736390, call027363F4.
+# Apply zero/ordinary caller-owned extent inputs through the real setter before depth allocation.
+# No map, surface descriptor or cached texture fields are assigned.
+# AGL#8 02796F74 finishCascadeMapRendering on a caller-produced ShadowMap. Shipped schedule (AGL#9):
+# CascadeShadow ctor 02797EEC -> 02796034; initializeUnits 027984FC -> configureSurface 027966F0; size 027967A0;
+# 02798AE4 -> 027967C4 (depth storage at +0x104); renderLayers 02798B0C: per layer 02796B3C + 02796EEC, then
+# 02796F74(map, r4 = bound shader mode word at sp+0x14) at 02798C44 when +0x330 == 1.
+# The per-layer draw 02796B3C (layer viewport/camera from the CascadeShadow) is not replayed; 02796EEC publishes.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+
+# >>> include shared/agl_world.txt
+# Shared agl "world" fixture: `include shared/agl_world.txt` in a unit spec.
+# Everything below is produced by the ORIGINAL code (setup lines run the recompiled originals); no candidate source is
+# needed for the world itself. The including spec supplies its `src` lines, its tested function, `setupsnapshot`
+# (recommended: the ShaderMgr/SARC parse costs seconds per run) and its own objects outside the reserved ranges.
+#
+# Reserved addresses (do not steer, fill or allocate here in an including spec):
+#   0x6A000000-0x6AFFFFFF  root heap arena (16 MB, sead ExpHeap made by 02755FE0); all world objects live in it
+#   0x6B000000-0x6B000FFF  ShaderMgr/archive object (0275E11C/0275D21C)
+#   0x6C000000-0x6D019E1D  SARC blob content/Cafe/Common/agl_resource_cafe_dev.sarc (read-only)
+#   0x6E200000-0x6E20000B  root arena record {start, size, 0} handed to 02755FE0
+#   0x5D300000-0x5D30015F  GraphicsDevice block (0274FB24 + 028EFFD0), *101F8B18 = 0x5D300000 after the pokes
+#   0x70000000-0x71FFFFFF  GPU memory ranges given to the texture cache (0279F474 r5..r8; not dereferenced at setup)
+#   0x7EFE7000-0x7EFF6FFF  setup stack window (filled 0 so setup frames are input-independent)
+#   0x104A0934 (0x18)      default axes table (02757190), kept stable
+#   0x101F8C24 (0x100)     mocklookup 02786348 table
+#
+# Globals after setup (all pointers into the root heap unless noted):
+#   101F8B94/101F8DD4.. see the field lines; registry: root heap 0x6A000000 (02756140 answers it in nested calls);
+#   101F8C14 sGraphicsAccessManager-side child heap holder (027854AC/027855BC); 101F8D6C ShaderMgr owner (02786418);
+#   101F8DD4 dynamic texture cache (AGL#10, 0279F2EC + 0279F474 ranges); 101F8DDC 027A0A80 singleton;
+#   101F8DE4 resource provider (027A145C + 027A5DF0 shapes); 101F8DEC default texture (027A76C8 + 027A78F8);
+#   101F8B18 GraphicsDevice (0x5D300000); 104DA130 __register_global_object list head (starts empty).
+#
+# Mock models used by the world (also active for the tested function): mockdisplaylist / mockretfield (GX2 queries),
+# mocksurfacesize C00060D0, mockset C0009990, mockmove C0009988/028FDC00, mocklookup 02786348, mockfetchsize/init,
+# nestedret C0009BB0 0 (core 0 pin), nestedret 028FDE28 0, nestedret 02756140 0x6A000000.
+# NOTE: `real` lines are global: a tested function that calls one of the listed originals reaches the original.
+# A spec that needs one of them mocked or modelled must not include this world (or must qualify the difference).
+#
+# Gaps (not original-produced): the GraphicsDevice derived vtable word (5D30000C = 0x101456CC) and the device
+# singleton word (101F8B18) are pokes, because the derived Cafe device constructor is not run here.
+
+callbudget 10000000
+accessbudget 50000000
+stackfill
+
+# ---- 1. registry / root heap ----
+field * 0x101F8B94 u32 0
+field * 0x104DA130 u32 0
+field * 0x101F8B34 u32 0
+field * 0x101F8B40 u32 0
+field * 0x101F8B4C u32 0
+field * 0x101F8C14 u32 0
+field * 0x101F8D6C u32 0
+field * 0x101F8D70 u32 0
+field * 0x101F8DD4 u32 0
+field * 0x101F8DDC u32 0
+field * 0x101F8DE4 u32 0
+field * 0x101F8DE8 u32 0
+field * 0x101F8DEC u32 0
+field * 0x101F8E04 u32 0
+field * 0x101F8E08 u32 0
+field * 0x101F95F8 u32 0
+field * 0x101F8B18 u32 0
+fill * 0x6A000000 0x01000000 0
+stable 0x6A000000 0x01000000
+field * 0x6E200000 u32 0x6A000000
+field * 0x6E200004 u32 0x01000000
+field * 0x6E200008 u32 0
+stable 0x6E200000 0xC
+fill * 0x7EFE7000 0x10000 0
+
+# ---- 2. static initialisers ----
+setup * 0274D510
+setup * 02759B40
+setup * 02756E3C
+setup * 02757190
+stable 104A0934 0x18
+setup * 027561B4
+setup * 02755FE0 r3=0x6E200000
+nestedret 02756140 0x6A000000
+setup * 02757B48
+setup * 02759AD8
+
+# ---- 4. texture cache owner (AGL#10) ----
+setup * 0279F2EC r3=0x6A000000
+setup * 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+nestedret C0009BB0 0
+
+# ---- 3. ShaderMgr / archive startup ----
+blob * 0x6C000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0 0x1000000
+blob * 0x6D000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0x1000000 0x19E1E
+fill * 0x6B000000 0x1000 0
+stable 0x6B000000 0x1000
+stable 0x6C000000 0x01019E1E
+setup * 0275E11C r3=0x6B000000
+setup * 0275D21C r3=0x6B000000 r4=0x6C000000 r5=0x01019E1E r6=0x01019E1E r7=0 r8=0
+setup * 027854AC r3=0x6A000000
+setup * 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup * 027B7168 r3=0x6A000000
+setup * 02786418 r3=0x6A000000
+setup * 02786520 r3=*101F8D6C r4=0x6B000000 r5=*(*101F8C14+0x10)
+setup * 027B9C1C r3=0x6A000000
+
+# ---- 5. singletons: default texture, resource provider, GraphicsDevice, 101F8DDC ----
+setup * 027A76C8 r3=0
+setup * 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup * 027A145C r3=0x6A000000
+setup * 027A5DF0 r3=*101F8DE4 r4=0x6A000000
+fill * 0x5D300000 0x160 0
+stable 0x5D300000 0x160
+setup * 0274FB24 r3=0x5D300000
+setup * 028EFFD0 r3=0x5D300060 r4=8 r5=0x18 r6=0x0274CA20
+poke * 5D30000C u32 0x101456CC
+poke * 101F8B18 u32 0x5D300000
+setup * 027A0A80 r3=0
+
+# ---- startup .bss the setups produce: never clobbered by mock epochs ----
+# .data (1018C0C0..101FCD38, incl. the singleton/registry words 101F8B10..101F8E0C) is image memory and never clobbered;
+# .bss (101FCE00..104DA1C8) is not, so a mocked call in the tested function could rewrite these words (AGL#1: a seed-7
+# clobber of 104A0CDC sent both sides through a garbage method table). Each range is exactly what the setups write
+# (`-watch` trace, 2026-10-27); in the game only the startup producer named writes it, so no mocked callee does.
+# `stable` only disables clobbering: stores by the tested function or a `real` callee still happen and are compared.
+stable 104A01CC 0xB4
+# ^ 0274D510 colour presets
+stable 104A02F8 0x24
+# ^ heap manager statics: 02755E7C/02755F40 (104A02F8), 02756CC0 (104A0300), root-heap array 027561B4/0273B560/02755EC4
+stable 104A0328 0x10
+# ^ heap-tree critical section header 02752A84/02760084; its OSMutex body 104A0338 (0x2C) is left out on purpose:
+#   OSLockMutex/OSUnlockMutex (mocked imports) write it in the game
+stable 104A0364 0xC
+# ^ independent-heap array header 027561B4/0273B560 (later written only by 02756B94, called once at startup from 0200604C)
+stable 104A0384 0x148
+stable 104A04D0 0x290
+# ^ 02756E3C math constants
+stable 104A0790 0x234
+stable 104A09C8 0x178
+# ^ 02757190 math constants (contains the default axes 104A0934)
+stable 104A0B40 0xC
+stable 104A0BC0 0xC
+# ^ 02757B48 core tables (core -> slot {1,0,2})
+stable 104A0CD4 4
+# ^ 02759AD8 endian flag
+stable 104A0CD8 0x10
+# ^ 02759B40 the two shared empty SafeStrings (vtable + text pointer each)
+stable 104A2090 8
+# ^ 027B9C1C per-core array {count 3, buffer in the root heap}
+# Not stable on purpose: 104DA130 (__register_global_object list head; any function with a first-use static, mocked
+# ones included, prepends to it in the game) and the core id: 028FDE28 is pinned to 0 only for nested calls; a tested
+# function that calls it itself pins its own top-level answer per spec (`ret! 028FDE28 N` + `nestedret 028FDE28 N`).
+
+# ---- mock models ----
+nestedret 028FDE28 0
+mockset C0009990 r3 r4 r5
+mockset C000A858 r3 r4 r5
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+mockmove 028FDC00 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+mocksurfacesize C00060D0
+mockfetchsize C00060B8
+mockfetchinit C0006400
+# Display lists: a recording that issued GX2 commands ends with a nonzero size (0x100, capped
+# at the open size), an empty one with 0 (harness command condition); the shipped ShaderMgr program recordings
+# (02786520 -> 027BBB9C/027BB9E0 -> 027C073C .. 027BB7CC .. 027C077C) always issue GX2 commands. A spec that needs the
+# legacy zero-size model puts `mockdisplaylist C0006090 C0006190 C0006218` (no BYTES) after the include.
+mockdisplaylist C0006090 C0006190 C0006218 0x100
+mockretfield C0006390 r3 0 0 0xFF
+mockretfield C0006398 r3 0 8 0xFF
+mockretfield C00062D0 r3 0 0 0xFF
+mockretfield C00062D8 r3 0 8 0xFF
+
+# ---- original closure (REALS) ----
+# Setups' own functions plus every original reached inside them (traced 2026-10-26), the aligned alloc paths and
+# the heap free tree, and the AGL#10 texture-cache closure (0279F6B0..027CB3B8) for tested functions using the cache.
+real 025155D8 0273AF40 0273B050 0273B0D4 0273B2D0 0273B2F0 0273B310 0273B440 0273B524 0273B560 0274CA20 0274D4C0 0274D510 0274FB24
+real 02750CDC 02750D00 02752A84 02752B0C 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 02753628 027536B0 027536F4
+real 027537B8 02753880 02753D6C 027540AC 02754754 027556FC 02755818 0275589C 02755CA4 02755E7C 02755EC4 02755F40 02755FE0 02755FEC
+real 027561B4 02756CC0 02756E3C 02757190 02757B48 02759928 02759A48 02759AD8 02759B40 02759BA0 02759C10 0275CF28 0275D064 0275D12C
+real 0275D21C 0275E11C 0275E208 0275E288 0275E2E0 0275E354 0275E3A0 0275E6B8 0275E894 02760084 027600EC 027601BC 027601F0 02760DE8
+real 02760E34 02760E58 0278540C 027854AC 027855BC 02785CB4 02786314 0278635C 02786360 02786364 02786418 02786520 0278B9B8 0278B9CC
+real 0278BA1C 0278BA20 0278BA74 0279A95C 0279AC28 0279AD54 0279ADD4 0279AE68 0279F218 0279F2EC 0279F474 0279F6B0 0279F738 0279F7F0
+real 0279FC6C 0279FFDC 027A0040 027A029C 027A0A08 027A0A80 027A0E94 027A145C 027A1DFC 027A1E68 027A1E70 027A1EAC 027A20B8 027A20C4
+real 027A21F8 027A25F8 027A260C 027A2748 027A2B08 027A2B18 027A2C08 027A308C 027A309C 027A31A0 027A35AC 027A35B8 027A35DC 027A37A8
+real 027A4050 027A4420 027A47BC 027A4DF8 027A5000 027A5220 027A5440 027A575C 027A5A78 027A5DF0 027A5F68 027A5FA8 027A6000 027A60C0
+real 027A612C 027A62B0 027A6724 027A6B00 027A6E28 027A7144 027A7640 027A76C8 027A77F8 027A78F8 027B5430 027B548C 027B54E0 027B5BD8
+real 027B5C68 027B5CFC 027B5D60 027B5EA4 027B5EEC 027B6CB8 027B6E64 027B70B4 027B7168 027B736C 027B737C 027B744C 027B75E0 027B78D4
+real 027B81E4 027B82B8 027B8904 027B8F48 027B9070 027B90AC 027B9C1C 027B9F78 027BA674 027BA710 027BA88C 027BA95C 027BA968 027BAA54
+real 027BAA60 027BAA9C 027BAAA8 027BAC4C 027BAC58 027BAC8C 027BACC0 027BAE8C 027BAEF8 027BB0EC 027BB160 027BB354 027BB3C8 027BB5BC
+real 027BB630 027BB710 027BB7CC 027BB840 027BB8A8 027BB910 027BB978 027BB9E0 027BBB9C 027BBCA0 027BC078 027BC094 027BC138 027BC2D0
+real 027BC2D8 027BC4AC 027BC4F8 027BC73C 027BC790 027BCDA0 027BD2B4 027BD2C0 027BD2CC 027BD30C 027BD34C 027BD38C 027BD3CC 027BD72C
+real 027BDA2C 027BDD2C 027BDE1C 027BDEB4 027BE114 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8 027BE494 027BE6B8 027BE744
+real 027BE74C 027BE794 027BE7F0 027BE930 027BEA90 027BF0CC 027BF734 027BFEF8 027BFF9C 027C05A0 027C05C8 027C05F4 027C073C 027C077C
+real 027C07FC 027CAB58 027CAD30 027CAED8 027CB1A0 027CB3B8 027D4CCC 027D4D30 027D4E84 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58
+real 028EFFD0 028F026C 028F03F4 028F0DBC 028F0DF4 028F11BC 028F171C 028F1748 028F43F8 028F4BE0 028F521C 028F5564 028F5680 028F5C88
+real 028F5DE8 028F5DFC 028F5E98 028F61D0 028F61D8 028F61DC 028F61E0 028F61E4 028F61E8 028F61EC 028F61F0 028F61F4 028F61F8 028F61FC
+real 028F6200 028F6228 028F6230 028F6234 028F6238 028F623C 028F6240 028F6244 028F6248 028F624C 028F6250 028F6254 028F6258
+# <<< include shared/agl_world.txt
+setupsnapshot
+
+# Engine/ShaderContext singleton *101F8BD8 (02796EEC 0276B114, 02796F74 027B9F68): its getter 0276AD30 (store 0276ADAC).
+setup * 0276AD30 r3=0x6A000000
+fill * 0x59000000 0xBE4 0
+# The map's own fields are stable: the mocked callees of 02796F74 receive only the sub-objects +0x6D8 (0274D690,
+# ShadowSurfaceStorage_l 0x188: +0x718 for 027B6D64/025C0848) and +0x860 (027BE53C, 0x198), never the map itself
+# (ShadowMap.h offsets; disassembly 02797484..02797D2C).
+stable 0x59000000 0x6D8
+stable 0x590009F8 0x1EC
+field * 0x5E100000 u32 0x100
+field * 0x5E100004 u32 0x100
+stable 0x5E100000 0x20
+setup * 02796034 r3=0x59000000
+setup * 027966F0 r3=0x59000000 r5=0
+setup * 027967A0 r3=0x59000000 r4=0x5E100000
+# Tunable agl::utl::Parameter values (value byte at param+0xC) read by 027967C4/02796F74: +0x9C/+0xAC/+0xBC/+0xCC/+0xDC.
+# They must be set before the storage is built, so 027967C4 and 02796EEC run as postsetups.
+poke 02796F74 5900009C u8 0,1
+poke 02796F74 590000AC u8 0,1
+poke 02796F74 590000BC u8 0,1
+poke 02796F74 590000CC u8 0,1
+poke 02796F74 590000DC u8 0,1
+poke 02796F74 5E100000 u32 0,256
+poke 02796F74 5E100004 u32 0,256
+postsetup 02796F74 027967A0 r3=0x59000000 r4=0x5E100000
+postsetup 02796F74 027967C4 r3=0x59000000 r4=1
+postsetup 02796F74 02796EEC r3=0x59000000 r4=0
+
+arg! 02796F74 r3 0x59000000
+arg! 02796F74 r4 0,1,2
+
+real 0279A07C 0279CA34 0279C950 0279E57C 0273B264 0273B200 0279E618 0279E674 027A84B8 0279CB9C 027A861C 027A03A0 028EFFD0 028EFE58 027BE6B8 027BDF7C 027BDE1C 027BDEB4 02752A84 02759B98 0279F1BC 0279288C 02791A4C 027919BC 027919FC 02791A54
+real 02759B40 027A8C80 0279A490 027A08C8
+real 027B95B4 027B958C 027B954C 027B6CB8 027B6E64 027BEB5C 027BECEC 027BED84 027BEEE4 027BEEBC 027BEED4 027BEE9C 027A063C
+real 027BE2B0 027B9694 0274D67C 028F0164 028F007C 027BEC90 027BEBEC 0273AFC8 027A0998 02752BEC 02755D28
+real 025C0928 025C0934 025C09D8 0276ACA0 0276AD30 0276B114 027861E0 02795EE0 02797DDC 027B6E2C 027B6F18 027B6F90 027B6FF8 027B7044 027CB744
+real 027BE930 027BE7F0 027BE74C 027BE744 027BFF9C 0279FFDC 027A0040 027A0114
+real 02796034 027966F0 027967A0 027967C4 02796EEC 0279FC6C 0279FD18 0279FDC8 0279FE74 02796558 027965BC
+real 027B6F18 027B6F90 027B95B4 027B958C 027B954C 0273B200 027CB744
+field * 0x101F8AE5 u8 0
+stable 104A0BC0 0x10
+# <<< include lib2_agl_8_filter_depth_extent_api_type.txt
+observearg C0006A40 r5+0 16 if lr=027978B4
+observearg C0006908 r5+0 16 if lr=027978CC
+observearg C0006A40 r5+0 16 if lr=02797B60
+observearg C0006908 r5+0 16 if lr=02797B78

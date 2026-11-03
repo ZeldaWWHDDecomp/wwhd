@@ -1,0 +1,25 @@
+# readable-scope: 027C25AC
+# Actual image base hooks are real by Lead09:27; empty method list is valid.
+src wwhd_src/agl/RenderRecording.cpp
+src wwhd_src/agl/VertexInput.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/ViewTypeIdentity.cpp
+src wwhd_src/sead/ViewTransform.cpp
+src wwhd_src/sead/RenderInlineInstances.cpp
+src wwhd_src/agl/RenderQueue.cpp
+src wwhd_src/agl/CaptureImage.cpp
+src wwhd_src/agl/PixelTransfer.cpp
+src wwhd_src/agl/RenderLayer.cpp
+real 027C4BF0
+real 027C4BF4
+real 027C4BF8
+real 027C4BFC
+arg! 027C25AC r3 0x6A800000
+arg! 027C25AC r4 0x6A801000
+arg! 027C25AC r5 0x6A802000
+field 027C25AC r3+0xC u32 0x1016A2A8
+field 027C25AC r4+0x4 u32 0
+field 027C25AC r4+0xC u32 0x6A803000
+alloc 0273AD10 r3 0x6B000000 32
+allocnested 0273AD10

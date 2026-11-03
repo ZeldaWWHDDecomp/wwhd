@@ -1,0 +1,4 @@
+# verify: -strictnan -calleesp -only 0277AD60
+# TYPE-DOMAIN: public u32 render depthKind values2/3/UINTMAX exercise the original normalization guard; all owner/depth/matrix producers unchanged.
+include lib2_agl_3_lifecycle_nonidentity_matrices_depth_kinds_uniform_observed.txt
+arg! 0277AD60 r9 2,3,0xFFFFFFFF

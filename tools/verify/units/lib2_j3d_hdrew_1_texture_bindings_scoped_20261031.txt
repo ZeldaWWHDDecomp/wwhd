@@ -1,0 +1,3 @@
+# verify: -only 027F7614,027F7624 -strictnan -calleesp
+# Preserve base indexed binding inputs/observations; isolate these leaves from unrelated broad producer fixtures.
+include lib2_j3d_hdrew_1.txt

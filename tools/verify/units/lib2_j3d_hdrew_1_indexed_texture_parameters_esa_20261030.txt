@@ -1,0 +1,13 @@
+# API key queries on original Esa parameter dictionary from accepted producer.
+# Scalar indices form bounded decimal names; no guessed record index/pointer injection.
+# Approved resource edits retained; methods return addresses/dirty bits, no pointee matrix claim.
+# verify: -only 027FA678,027FA7F8,027FA974 -strictnan -calleesp
+include lib2_j3d_hdrew_1_color_readback_esa_produced_20261030.txt
+arg! 027FA678 r3 0x6B000000
+arg! 027FA678 r4 -1,0,1,2,3,4,7,8,0x80000000,0x7FFFFFFF
+arg! 027FA7F8 r3 0x6B000000
+arg! 027FA7F8 r4 -1,0,1,2,3,4,7,8,0x80000000,0x7FFFFFFF
+arg! 027FA974 r3 0x6B000000
+arg! 027FA974 r4 -1,0,1,2,3,4,7,8,0x80000000,0x7FFFFFFF
+arg! 027FA974 r5 0,0x5D500000
+fill * 0x5D500000 4 165

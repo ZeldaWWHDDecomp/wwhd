@@ -1,0 +1,100 @@
+# verify: -only 027B48C0 -calleesp -strictnan
+# Lead10:43 qualification: override target mocked; no image class supplies one.
+# No EQ survivor credit from this profile. Callback writes no memory by fixture contract;
+# stable ranges exclude synthetic callback epochs, never suppress stores by the tested code.
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B4EF4
+callee 0F001403 fixture r3=0 r4=0 r5=0 r6=0 retu=32
+ret! 0F001403 0,1,2,0xFFFFFFFF
+arg! 027B48C0 r3 0x58000000
+arg! 027B48C0 r4 0,1,2,3,4
+arg! 027B48C0 r5 0x55000000
+arg! 027B48C0 r6 0,1
+field 027B48C0 r3+0 u32 0x57004000
+field 027B48C0 r3+8 u32 0,3,3,3
+field 027B48C0 r3+0xC u32 0x59000000
+field 027B48C0 r3+0x10 u32 0,1,2,3,4,0xFFFFFFFF
+field 027B48C0 r3+0x14 u32 3
+field 027B48C0 r3+0x18 u32 0x5A000000
+field 027B48C0 0x570040A4 u32 0x027B4EF4
+field 027B48C0 0x5700410C u32 0x0F001403
+stable 0x57004000 0x110
+stable 0x58000000 0x1C
+stable 0x59000000 0x54
+stable 0x5A000000 0xC
+field 027B48C0 0x59000000 u8 0,1
+field 027B48C0 0x59000014 u32 1,2,3
+field 027B48C0 0x59000018 u32 0x5B000000
+stable 0x5B000000 0x60
+field 027B48C0 0x5B000000 u32 0,1,2,3
+field 027B48C0 0x5B00000C u32 0x5D000000
+field 027B48C0 0x5B000010 u32 0x10
+field 027B48C0 0x5B000014 u32 0x20
+field 027B48C0 0x5B000019 u8 2
+field 027B48C0 0x5B000020 u32 0,1,2,3
+field 027B48C0 0x5B00002C u32 0x5D000100
+field 027B48C0 0x5B000030 u32 0x10
+field 027B48C0 0x5B000034 u32 0x20
+field 027B48C0 0x5B000039 u8 2
+field 027B48C0 0x5B000040 u32 0,1,2,3
+field 027B48C0 0x5B00004C u32 0x5D000200
+field 027B48C0 0x5B000050 u32 0x10
+field 027B48C0 0x5B000054 u32 0x20
+field 027B48C0 0x5B000059 u8 2
+field 027B48C0 0x5900001C u8 0,1
+field 027B48C0 0x59000030 u32 1,2,3
+field 027B48C0 0x59000034 u32 0x5B001000
+stable 0x5B001000 0x60
+field 027B48C0 0x5B001000 u32 0,1,2,3
+field 027B48C0 0x5B00100C u32 0x5D010000
+field 027B48C0 0x5B001010 u32 0x10
+field 027B48C0 0x5B001014 u32 0x20
+field 027B48C0 0x5B001019 u8 2
+field 027B48C0 0x5B001020 u32 0,1,2,3
+field 027B48C0 0x5B00102C u32 0x5D010100
+field 027B48C0 0x5B001030 u32 0x10
+field 027B48C0 0x5B001034 u32 0x20
+field 027B48C0 0x5B001039 u8 2
+field 027B48C0 0x5B001040 u32 0,1,2,3
+field 027B48C0 0x5B00104C u32 0x5D010200
+field 027B48C0 0x5B001050 u32 0x10
+field 027B48C0 0x5B001054 u32 0x20
+field 027B48C0 0x5B001059 u8 2
+field 027B48C0 0x59000038 u8 0,1
+field 027B48C0 0x5900004C u32 1,2,3
+field 027B48C0 0x59000050 u32 0x5B002000
+stable 0x5B002000 0x60
+field 027B48C0 0x5B002000 u32 0,1,2,3
+field 027B48C0 0x5B00200C u32 0x5D020000
+field 027B48C0 0x5B002010 u32 0x10
+field 027B48C0 0x5B002014 u32 0x20
+field 027B48C0 0x5B002019 u8 2
+field 027B48C0 0x5B002020 u32 0,1,2,3
+field 027B48C0 0x5B00202C u32 0x5D020100
+field 027B48C0 0x5B002030 u32 0x10
+field 027B48C0 0x5B002034 u32 0x20
+field 027B48C0 0x5B002039 u8 2
+field 027B48C0 0x5B002040 u32 0,1,2,3
+field 027B48C0 0x5B00204C u32 0x5D020200
+field 027B48C0 0x5B002050 u32 0x10
+field 027B48C0 0x5B002054 u32 0x20
+field 027B48C0 0x5B002059 u8 2

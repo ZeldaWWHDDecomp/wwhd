@@ -1,0 +1,41 @@
+# CE130 evidence: O2 and own-TU O1 10000/10000 on seeds1/7; coverage 31/54.
+# Normal control logs: build/agl18/dw-geometry-perspective-varied-O2|O1-seed1|7.log.
+# Combined mutation dispositions and individual survivor proofs: geometry_perspective_general_up.txt.
+# Finite asymmetric scalar companion; same original initializer and Lead03:10 tilted vectors.
+# Consumer-domain steering: near>0, far>near, left<right, bottom<top, finite positive aspect/FOV; no derived geometry payloads.
+# type-domain: large record kind not activated by any shipped producer (CLOSED Lead03:10).
+# Direction/up contract: finite, nonzero, non-collinear; derived geometry remains original-produced.
+# Targeted valid perspective geometry: ownoriginalrecord initializer, finite nondegenerate axes/near/far/aspect.
+# verify: -only 027CE130 -strictnan -calleesp
+src wwhd_src/agl/DrawSpatialGeometry.cpp
+src wwhd_src/agl/DrawResourceParameterPreparation.cpp
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/agl/DrawResourceDirection.cpp
+arg! * r3 0x58000000
+arg! * r4 0x58100000
+field * r4+0x23C u32 0
+field * r4+0x240 u32 0
+setup * 027CDE3C r3=0x58000000 r4=0x58100000 r5=0
+real 027CDE3C 025155D8 02515644 025156EC 028E8D4C 028E8D88 028E8DAC 028E8E10 028E8E64 028F423C 028F4384 028F43F8 028F4BE0 028F5E98 028F6038 028F605C 028F60F8
+poke * r4+0x8 u32 0xC0000000,0x3E800000,0x40400000
+poke * r4+0xC u32 0xBFA00000,0x3F000000,0x40000000
+poke * r4+0x10 u32 0xC0800000,0x3F400000,0x3FC00000
+poke * r4+0x4C u32 0x3EF5C28F
+poke * r4+0x50 u32 0xBF19999A
+poke * r4+0x54 u32 0xBF23D70A
+poke * r4+0x58 u32 0x3F4CCCCD
+poke * r4+0x5C u32 0x00000000
+poke * r4+0x60 u32 0x3F19999A
+poke * r4+0x64 u32 0x3E000000,0x3EC00000,0x3F400000
+poke * r4+0x68 u32 0x40000000,0x40800000,0x41000000
+poke * r4+0x6C u32 0x3F000000,0x3F400000,0x3F800000
+poke * r4+0x70 u32 0x3F000000,0x3F333333,0x3FC00000
+poke * r4+0x84 u32 0xBF800000,0x00000000,0x3E000000,0x3F800000
+poke * r4 u8 0x0B,0x1B
+poke * r4+0x244 u8 1
+poke * r4+0x74 u32 0x3FA00000,0x40400000
+poke * r4+0x78 u32 0xC0000000,0xBF000000
+poke * r4+0x7C u32 0xBFC00000,0xBE800000
+poke * r4+0x80 u32 0x3F400000,0x40200000
+poke * r4+0x22C u32 0xBF800000,0x00000000,0x3F000000,0x3F800000
+poke * r4+0x230 u32 0xBF800000,0x00000000,0x3F000000,0x3F800000

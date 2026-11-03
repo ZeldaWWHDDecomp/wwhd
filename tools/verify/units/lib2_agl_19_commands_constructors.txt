@@ -1,0 +1,12 @@
+# verify: -only 027D5064,027D56A4 -calleesp
+# Render command pool and ring constructors on the shared world: placement storage (RenderQueueManager::create 027C088C
+# passes its embedded pool; the pool constructor builds its three rings through __construct_array) or NULL, which
+# allocates from the current heap (the world's root heap, real operator new 0273AD10).
+include shared/agl_world.txt
+setupsnapshot
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/agl/RenderCommandPool.cpp
+real 0273AD10
+arg! 027D5064 r3 0,0x58300000
+arg! 027D56A4 r3 0,0x58300100

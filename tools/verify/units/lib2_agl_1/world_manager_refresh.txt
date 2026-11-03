@@ -1,0 +1,7 @@
+# AGL#1 EnvironmentManager::refreshPendingObjects (0276C8B8) on the original world, as the scene setup calls it right
+# after the first blend (025AE504..508): original initialize, then the original blend of the game's env.baglenv.
+# verify: -only 0276C8B8 -strictnan -calleesp
+include lib2_agl_1/world_manager_blend.txt
+real 0276B710
+setup * 0276B710 r3=0x59E00000 r4=0x5E001010 r5=0x5E001014 r6=0xFFFFFFFF f1=1.0
+arg! 0276C8B8 r3 0x59E00000

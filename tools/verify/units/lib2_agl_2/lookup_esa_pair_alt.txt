@@ -1,0 +1,40 @@
+# AGL#2 027732B0 positive pair + owner-name match, producer-backed.
+# Mirrors the shipped caller 02602BC8 (hd_res_model): <model>.szs is decompressed by the original sead SZS decoder,
+# <model>.bfres and <model>.sharcfb are members of that SARC; the owner is the 0x54 program archive built by
+# 027B744C + 027B8904 + 027B9070 over the sharcfb; selection is the caller's SafeString "Mat" {0x100E1920, vt 0x100E1858};
+# 027735DC hands 027732B0 the FMDL of index-group entry 1 (FRES+0x20). Esa.szs (user's file, read at run time):
+# decompressed SARC 0x14000 bytes, esa.sharcfb at +0x2000, Esa.bfres at +0xE000, FMDL "esa" at +0xE0CC, one FMAT
+# "esaMAT" at +0xE390, shader assign at +0xE69C = {archive "esa", model "esaMAT"}; sharcfb archive name "esa" and one
+# program "esaMAT": nonzero pair, owner-name match and program match -> 027731C8.
+# verify: -strictnan -calleesp -only 027732B0
+src wwhd_src/agl/ShaderLookupRuntime.cpp
+include shared/agl_world.txt
+setupsnapshot
+
+# ---- Esa.szs -> SARC (original decoder 0275ED14; endian table from the world's 02759AD8) ----
+blob * 0x64000000 content/Common/Object/Esa.szs 0 0x4957
+stable 0x64000000 0x4957
+fill * 0x64100000 0x14000 0
+stable 0x64100000 0x14000
+setup * 0275ED14 r3=0x64100000 r4=0x14000 r5=0x64000000
+
+# ---- owner: program archive over esa.sharcfb (02602CE0..02602E10 sequence) ----
+fill * 0x64200000 0x300 0
+stable 0x64200000 0x300
+field * 0x64200100 u32 0x64102000
+setup * 027B744C r3=0x64200000
+setup * 027B8904 r3=0x64200000 r4=0x64200100 r5=0x64200104 r6=0 r7=0x6A000000
+setup * 027B9070 r3=0x64200000
+
+# ---- selection SafeString "Mat" (caller's stack object at r1+0x10) ----
+field * 0x64200200 u32 0x100E1920
+field * 0x64200204 u32 0x100E1858
+stable 0x64200200 8
+
+arg! 027732B0 r3 0x6410E0CC
+arg! 027732B0 r4 0x64200000
+arg! 027732B0 r5 0x64200200
+final 027732B0 0x6410E000 0x6000
+final 027732B0 0x64200000 0x54
+
+real 02759B38 0275ED14 0275EB8C 0275EBC0 027BC540

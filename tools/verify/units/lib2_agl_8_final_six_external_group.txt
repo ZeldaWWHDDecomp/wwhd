@@ -1,0 +1,15 @@
+# verify: -strictnan -calleesp -only 0279599C,02795D7C
+# Repeat frame plus the actual client's borrowed output-frame contract.
+include lib2_agl_8_final_six_repeat_group.txt
+# RenderBuffer's original constructor supplies its complete logical frame/attachment state.
+fill 0279599C 0x5B400000 0x40 0
+fill 02795D7C 0x5B400000 0x40 0
+stable 0x5B400000 0x40
+setup 0279599C 027B95B4 r3=0x5B400000
+setup 02795D7C 027B95B4 r3=0x5B400000
+# Original prepareResources produces target-set 6A8806E8 (n1 watch of effect+1D0).
+# Client 027310B4 assigns only its borrowed +980 frame field: 6A881068.
+poke 0279599C 6A881068 u32 0,0x5B400000
+poke 02795D7C 6A881068 u32 0,0x5B400000
+# Both source-supported core modes; external output canonically forces mode zero.
+arg! 0279599C r8 0,1

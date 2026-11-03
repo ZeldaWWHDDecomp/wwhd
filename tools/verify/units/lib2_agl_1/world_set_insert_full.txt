@@ -1,0 +1,8 @@
+# AGL#1 EnvironmentSet::insertObject (0276E774) on the original world right after the original manager initialize: every
+# record is bound, so the tested insert of any of the game's own objects walks its whole class range.
+# verify: -only 0276E774 -strictnan -calleesp
+include lib2_agl_1/world_manager_initialize.txt
+real 0276C3F8
+setup * 0276C3F8 r3=0x59E00000 r4=0x59E10000 r5=0x6A000000
+arg! 0276E774 r3 0x59E00240
+arg! 0276E774 r4 0x6A87F400,0x6A87F264,0x6A87FDA8,0x6A87F140,0x6A87FF44,0x6A880090

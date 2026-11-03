@@ -1,0 +1,8 @@
+# type-domain (zero-size display list) companion of lib2_agl_7/nt_combined.txt.
+# The world records display lists with BYTES 0x100 since 2026-10-29 (shipped ShaderMgr program recordings always issue
+# GX2 commands, so their display-list size is nonzero). This companion keeps the legacy zero-size model (an empty display
+# list, size 0: a valid program state of the type, reached by no shipped program) so the size-0 arm the shipped-domain
+# profile no longer reaches stays covered. Everything else is lib2_agl_7/nt_combined.txt, included unchanged.
+# verify: -only 02790C28 -strictnan -calleesp
+include lib2_agl_7/nt_combined.txt
+mockdisplaylist C0006090 C0006190 C0006218

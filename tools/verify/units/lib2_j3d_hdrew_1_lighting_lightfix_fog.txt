@@ -1,0 +1,595 @@
+# verify: -only 027F53CC -strictnan -calleesp -nulltrap
+# J3D-HDREW#1 lighting family, row 2182 (027F53CC, far == near arm `fmuls(1.0, alpha)` -> 2.0),.
+# Base: lightfix without its light blocks: the row 154 profile without allocfail, non-threads, setupsnapshot-accepted (exempt from plain strictmocks).
+# Producer: original setFog 027F7634 (`mFog=fog`, provider+4) on material 0's fog provider *(*0x5E000010+0x20). Only its r4 block is fixture, laid out like the fog object 02562F5C fills
+# (PipelineFog_l, ModelLighting.h:17; 0256367C kind 2, 02563684 near = tevstr+0xA8, 02563690 far = tevstr+0xAC, near and far as stored there): kind 2, near = far = 0.0, mColor alpha byte 0xFF, RGB generated.
+# Values: shipped game/content/Common/Stage/I_SubAN_Stage.szs sha256 53ebe8f0cbca8c95526ebbeb2da9262246034c790e8b262739e8f02f6c8ac0ca, I_SubAN_Stage.dz palette records 0 and 9:
+#   fogStartZ 0.0, fogEndZ 0.0, fogAlpha 1.0. Alpha is nonzero. The env-to-palette link rests on that scan plus settingTevStruct 025626A4; blending not traced.
+# 027F5254 (expandByteColor) is real here so page mFogColor.a comes from the block's alpha byte: the tested call reads alpha from the page.
+# Exact-target lighting control composed from approved phase00 and model-frame producers; all-real BFRES trie lookup.
+# Skipped outer boundaries: HD app entry/root-task startup and the two named ResourceMgr archive retrievals
+# (026124B0 and 027E2DC0). Both retrieval answers are the authentic raw Misc.bfres blob below.
+# Original phase00 still performs the BFRES file-dictionary lookup, AAMP/environment resolution, SceneSystem
+# initialization/binding/type check/update, and its explicit 104B4708 publication.
+# The class-index globals alias registered EnvironmentClassDescriptor pointers. Never write those globals.
+# AGL#1 original lifecycle on the shared agl world: manager initialize (0276C3F8) from the game's own state.
+src wwhd_src/agl/ProjectionParameters.cpp
+src wwhd_src/agl/EnvironmentParameters.cpp
+src wwhd_src/agl/EnvironmentObjects.cpp
+src wwhd_src/agl/FogConstruction.cpp
+src wwhd_src/agl/ProjectionProduct.cpp
+src wwhd_src/agl/ProjectorView.cpp
+src wwhd_src/agl/ProjectorProjection.cpp
+src wwhd_src/agl/EnvironmentBase.cpp
+src wwhd_src/agl/ShaderContext.cpp
+src wwhd_src/agl/EnvironmentClassRegistry.cpp
+src wwhd_src/agl/EnvironmentReferences.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/EnvironmentManager.cpp
+src wwhd_src/agl/EnvironmentSet.cpp
+src wwhd_src/agl/EnvironmentSetInitialize.cpp
+src wwhd_src/agl/EnvironmentManagerUpdate.cpp
+src wwhd_src/agl/EnvironmentManagerInitialize.cpp
+src wwhd_src/agl/EnvironmentManagerOperations.cpp
+src wwhd_src/agl/EnvironmentSetCallbacks.cpp
+src wwhd_src/agl/EnvironmentManagerBlend.cpp
+src wwhd_src/agl/EnvironmentDefaultCallbacks.cpp
+src wwhd_src/agl/EnvironmentAbiAdapters.cpp
+src wwhd_src/agl/EnvironmentTextParameter.cpp
+src wwhd_src/agl/EnvironmentSetResourceCallbacks.cpp
+src wwhd_src/agl/EnvironmentFormattedText.cpp
+src wwhd_src/agl/EnvironmentVectorMath.cpp
+src wwhd_src/agl/EnvironmentConstructionViews.cpp
+src wwhd_src/agl/EnvironmentRemainingAdapters.cpp
+src wwhd_src/agl/EnvironmentShaderArchiveLifetime.cpp
+src wwhd_src/hd/hd_shader_archive_statics.cpp
+# Shared agl "world" fixture: `include shared/agl_world.txt` in a unit spec.
+# Everything below is produced by the ORIGINAL code (setup lines run the recompiled originals); no candidate source is
+# needed for the world itself. The including spec supplies its `src` lines, its tested function, `setupsnapshot`
+# (recommended: the ShaderMgr/SARC parse costs seconds per run) and its own objects outside the reserved ranges.
+#
+# Reserved addresses (do not steer, fill or allocate here in an including spec):
+#   0x6A000000-0x6AFFFFFF  root heap arena (16 MB, sead ExpHeap made by 02755FE0); all world objects live in it
+#   0x6B000000-0x6B000FFF  ShaderMgr/archive object (0275E11C/0275D21C)
+#   0x6C000000-0x6D019E1D  SARC blob content/Cafe/Common/agl_resource_cafe_dev.sarc (read-only)
+#   0x6E200000-0x6E20000B  root arena record {start, size, 0} handed to 02755FE0
+#   0x5D300000-0x5D30015F  GraphicsDevice block (0274FB24 + 028EFFD0), *101F8B18 = 0x5D300000 after the pokes
+#   0x70000000-0x71FFFFFF  GPU memory ranges given to the texture cache (0279F474 r5..r8; not dereferenced at setup)
+#   0x7EFE7000-0x7EFF6FFF  setup stack window (filled 0 so setup frames are input-independent)
+#   0x104A0934 (0x18)      default axes table (02757190), kept stable
+#   0x101F8C24 (0x100)     mocklookup 02786348 table
+#
+# Globals after setup (all pointers into the root heap unless noted):
+#   101F8B94/101F8DD4.. see the field lines; registry: root heap 0x6A000000 (02756140 answers it in nested calls);
+#   101F8C14 sGraphicsAccessManager-side child heap holder (027854AC/027855BC); 101F8D6C ShaderMgr owner (02786418);
+#   101F8DD4 dynamic texture cache (AGL#10, 0279F2EC + 0279F474 ranges); 101F8DDC 027A0A80 singleton;
+#   101F8DE4 resource provider (027A145C + 027A5DF0 shapes); 101F8DEC default texture (027A76C8 + 027A78F8);
+#   101F8B18 GraphicsDevice (0x5D300000); 104DA130 __register_global_object list head (starts empty).
+#
+# Mock models used by the world (also active for the tested function): mockdisplaylist / mockretfield (GX2 queries),
+# mocksurfacesize C00060D0, mockset C0009990, mockmove C0009988/028FDC00, mocklookup 02786348, mockfetchsize/init,
+# nestedret C0009BB0 0 (core 0 pin), nestedret 028FDE28 0, nestedret 02756140 0x6A000000.
+# NOTE: `real` lines are global: a tested function that calls one of the listed originals reaches the original.
+# A spec that needs one of them mocked or modelled must not include this world (or must qualify the difference).
+#
+# Gaps (not original-produced): the GraphicsDevice derived vtable word (5D30000C = 0x101456CC) and the device
+# singleton word (101F8B18) are pokes, because the derived Cafe device constructor is not run here.
+
+callbudget 10000000
+accessbudget 50000000
+stackfill
+
+# ---- 1. registry / root heap ----
+field * 0x101F8B94 u32 0
+field * 0x104DA130 u32 0
+field * 0x101F8B34 u32 0
+field * 0x101F8B40 u32 0
+field * 0x101F8B4C u32 0
+field * 0x101F8C14 u32 0
+field * 0x101F8D6C u32 0
+field * 0x101F8D70 u32 0
+field * 0x101F8DD4 u32 0
+field * 0x101F8DDC u32 0
+field * 0x101F8DE4 u32 0
+field * 0x101F8DE8 u32 0
+field * 0x101F8DEC u32 0
+field * 0x101F8E04 u32 0
+field * 0x101F8E08 u32 0
+field * 0x101F95F8 u32 0
+field * 0x101F8B18 u32 0
+fill * 0x6A000000 0x01000000 0
+stable 0x6A000000 0x01000000
+field * 0x6E200000 u32 0x6A000000
+field * 0x6E200004 u32 0x01000000
+field * 0x6E200008 u32 0
+stable 0x6E200000 0xC
+fill * 0x7EFE7000 0x10000 0
+
+# ---- 2. static initialisers ----
+setup * 0274D510
+setup * 02759B40
+setup * 02756E3C
+setup * 02757190
+stable 104A0934 0x18
+setup * 027561B4
+setup * 02755FE0 r3=0x6E200000
+nestedret 02756140 0x6A000000
+setup * 02757B48
+setup * 02759AD8
+
+# ---- 4. texture cache owner (AGL#10) ----
+setup * 0279F2EC r3=0x6A000000
+setup * 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+nestedret C0009BB0 0
+
+# ---- 3. ShaderMgr / archive startup ----
+blob * 0x6C000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0 0x1000000
+blob * 0x6D000000 content/Cafe/Common/agl_resource_cafe_dev.sarc 0x1000000 0x19E1E
+fill * 0x6B000000 0x1000 0
+stable 0x6B000000 0x1000
+stable 0x6C000000 0x01019E1E
+setup * 0275E11C r3=0x6B000000
+setup * 0275D21C r3=0x6B000000 r4=0x6C000000 r5=0x01019E1E r6=0x01019E1E r7=0 r8=0
+setup * 027854AC r3=0x6A000000
+setup * 027855BC r3=*101F8C14 r4=0x6A000000 r5=0 r6=0x800000 r7=0
+setup * 027B7168 r3=0x6A000000
+setup * 02786418 r3=0x6A000000
+setup * 02786520 r3=*101F8D6C r4=0x6B000000 r5=*(*101F8C14+0x10)
+setup * 027B9C1C r3=0x6A000000
+
+# ---- 5. singletons: default texture, resource provider, GraphicsDevice, 101F8DDC ----
+setup * 027A76C8 r3=0
+setup * 027A78F8 r3=*101F8DEC r4=0x6A000000
+setup * 027A145C r3=0x6A000000
+setup * 027A5DF0 r3=*101F8DE4 r4=0x6A000000
+fill * 0x5D300000 0x160 0
+stable 0x5D300000 0x160
+setup * 0274FB24 r3=0x5D300000
+setup * 028EFFD0 r3=0x5D300060 r4=8 r5=0x18 r6=0x0274CA20
+poke * 5D30000C u32 0x101456CC
+poke * 101F8B18 u32 0x5D300000
+setup * 027A0A80 r3=0
+
+# ---- startup .bss the setups produce: never clobbered by mock epochs ----
+# .data (1018C0C0..101FCD38, incl. the singleton/registry words 101F8B10..101F8E0C) is image memory and never clobbered;
+# .bss (101FCE00..104DA1C8) is not, so a mocked call in the tested function could rewrite these words (AGL#1: a seed-7
+# clobber of 104A0CDC sent both sides through a garbage method table). Each range is exactly what the setups write
+# (`-watch` trace, 2026-10-27); in the game only the startup producer named writes it, so no mocked callee does.
+# `stable` only disables clobbering: stores by the tested function or a `real` callee still happen and are compared.
+stable 104A01CC 0xB4
+# ^ 0274D510 colour presets
+stable 104A02F8 0x24
+# ^ heap manager statics: 02755E7C/02755F40 (104A02F8), 02756CC0 (104A0300), root-heap array 027561B4/0273B560/02755EC4
+stable 104A0328 0x10
+# ^ heap-tree critical section header 02752A84/02760084; its OSMutex body 104A0338 (0x2C) is left out on purpose:
+#   OSLockMutex/OSUnlockMutex (mocked imports) write it in the game
+stable 104A0364 0xC
+# ^ independent-heap array header 027561B4/0273B560 (later written only by 02756B94, called once at startup from 0200604C)
+stable 104A0384 0x148
+stable 104A04D0 0x290
+# ^ 02756E3C math constants
+stable 104A0790 0x234
+stable 104A09C8 0x178
+# ^ 02757190 math constants (contains the default axes 104A0934)
+stable 104A0B40 0xC
+stable 104A0BC0 0xC
+# ^ 02757B48 core tables (core -> slot {1,0,2})
+stable 104A0CD4 4
+# ^ 02759AD8 endian flag
+stable 104A0CD8 0x10
+# ^ 02759B40 the two shared empty SafeStrings (vtable + text pointer each)
+stable 104A2090 8
+# ^ 027B9C1C per-core array {count 3, buffer in the root heap}
+# Not stable on purpose: 104DA130 (__register_global_object list head; any function with a first-use static, mocked
+# ones included, prepends to it in the game) and the core id: 028FDE28 is pinned to 0 only for nested calls; a tested
+# function that calls it itself pins its own top-level answer per spec (`ret! 028FDE28 N` + `nestedret 028FDE28 N`).
+
+# ---- mock models ----
+nestedret 028FDE28 0
+mockset C0009990 r3 r4 r5
+mockset C000A858 r3 r4 r5
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+mockmove 028FDC00 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+mocksurfacesize C00060D0
+mockfetchsize C00060B8
+mockfetchinit C0006400
+# Display lists: a recording that issued GX2 commands ends with a nonzero size (0x100, capped
+# at the open size), an empty one with 0 (harness command condition); the shipped ShaderMgr program recordings
+# (02786520 -> 027BBB9C/027BB9E0 -> 027C073C .. 027BB7CC .. 027C077C) always issue GX2 commands. A spec that needs the
+# legacy zero-size model puts `mockdisplaylist C0006090 C0006190 C0006218` (no BYTES) after the include.
+mockdisplaylist C0006090 C0006190 C0006218 0x100
+mockretfield C0006390 r3 0 0 0xFF
+mockretfield C0006398 r3 0 8 0xFF
+mockretfield C00062D0 r3 0 0 0xFF
+mockretfield C00062D8 r3 0 8 0xFF
+
+# ---- original closure (REALS) ----
+# Setups' own functions plus every original reached inside them (traced 2026-10-26), the aligned alloc paths and
+# the heap free tree, and the AGL#10 texture-cache closure (0279F6B0..027CB3B8) for tested functions using the cache.
+real 025155D8 0273AF40 0273B0D4 0273B2D0 0273B2F0 0273B310 0273B440 0273B524 0273B560 0274CA20 0274D4C0 0274D510 0274FB24
+real 02750CDC 02750D00 02752A84 02752B0C 02752C74 02752D8C 02752E60 02752F10 02753000 02753004 0275315C 02753628 027536B0 027536F4
+real 027537B8 02753880 02753D6C 027540AC 02754754 027556FC 02755818 0275589C 02755CA4 02755E7C 02755EC4 02755F40 02755FE0 02755FEC
+real 027561B4 02756CC0 02756E3C 02757190 02757B48 02759928 02759A48 02759AD8 02759B40 02759BA0 02759C10 0275CF28 0275D064 0275D12C
+real 0275D21C 0275E11C 0275E208 0275E288 0275E2E0 0275E354 0275E3A0 0275E6B8 0275E894 02760084 027600EC 027601BC 027601F0 02760DE8
+real 02760E34 02760E58 0278540C 027854AC 027855BC 02785CB4 02786314 0278635C 02786360 02786364 02786418 02786520 0278B9B8 0278B9CC
+real 0278BA1C 0278BA20 0278BA74 0279A95C 0279AC28 0279AD54 0279ADD4 0279AE68 0279F218 0279F2EC 0279F474 0279F6B0 0279F738 0279F7F0
+real 0279FC6C 0279FFDC 027A0040 027A029C 027A0A08 027A0A80 027A0E94 027A145C 027A1DFC 027A1E68 027A1E70 027A1EAC 027A20B8 027A20C4
+real 027A21F8 027A25F8 027A260C 027A2748 027A2B08 027A2B18 027A2C08 027A308C 027A309C 027A31A0 027A35AC 027A35B8 027A35DC 027A37A8
+real 027A4050 027A4420 027A47BC 027A4DF8 027A5000 027A5220 027A5440 027A575C 027A5A78 027A5DF0 027A5F68 027A5FA8 027A6000 027A60C0
+real 027A612C 027A62B0 027A6724 027A6B00 027A6E28 027A7144 027A7640 027A76C8 027A77F8 027A78F8 027B5430 027B548C 027B54E0 027B5BD8
+real 027B5C68 027B5CFC 027B5D60 027B5EA4 027B5EEC 027B6CB8 027B6E64 027B70B4 027B7168 027B736C 027B737C 027B744C 027B75E0 027B78D4
+real 027B81E4 027B82B8 027B8904 027B8F48 027B9070 027B90AC 027B9C1C 027B9F78 027BA674 027BA710 027BA88C 027BA95C 027BA968 027BAA54
+real 027BAA60 027BAA9C 027BAAA8 027BAC4C 027BAC58 027BAC8C 027BACC0 027BAE8C 027BAEF8 027BB0EC 027BB160 027BB354 027BB3C8 027BB5BC
+real 027BB630 027BB710 027BB7CC 027BB840 027BB8A8 027BB910 027BB978 027BB9E0 027BBB9C 027BBCA0 027BC078 027BC094 027BC138 027BC2D0
+real 027BC2D8 027BC4AC 027BC4F8 027BC73C 027BC790 027BCDA0 027BD2B4 027BD2C0 027BD2CC 027BD30C 027BD34C 027BD38C 027BD3CC 027BD72C
+real 027BDA2C 027BDD2C 027BDE1C 027BDEB4 027BE114 027BE2C4 027BE32C 027BE340 027BE398 027BE3AC 027BE3B8 027BE494 027BE6B8 027BE744
+real 027BE74C 027BE794 027BE7F0 027BE930 027BEA90 027BF0CC 027BF734 027BFEF8 027BFF9C 027C05A0 027C05C8 027C05F4 027C073C 027C077C
+real 027C07FC 027CAB58 027CAD30 027CAED8 027CB1A0 027CB3B8 027D4CCC 027D4D30 027D4E84 028E8D4C 028E8E10 028E8F64 028E9044 028EFE58
+real 028EFFD0 028F026C 028F03F4 028F0DBC 028F0DF4 028F11BC 028F171C 028F1748 028F43F8 028F4BE0 028F521C 028F5564 028F5680 028F5C88
+real 028F5DE8 028F5DFC 028F5E98 028F61D0 028F61D8 028F61DC 028F61E0 028F61E4 028F61E8 028F61EC 028F61F0 028F61F4 028F61F8 028F61FC
+real 028F6200 028F6228 028F6230 028F6234 028F6238 028F623C 028F6240 028F6244 028F6248 028F624C 028F6250 028F6254 028F6258
+# setup snapshot omitted only for diagnostic trace
+# Static class registrations in the startup-table order (1018BD14/18/1C): Projector, Fog, the five light kinds.
+real 02770250 02770710 027727E4 0276D71C 0276F11C 027725D0
+setup * 0276D71C
+setup * 0276F11C
+setup * 027725D0
+# Manager object (embedded in the game's scene object) and the stack InitArg the game builds (025AE3D8..438).
+fill * 59E00000 0x400 0
+fill * 59E10000 0x210 0
+real 0276C1DC 0276CAA4 0276F968 0276F9F0
+setup * 0276C1DC r3=0x59E00000
+setup * 0276CAA4 r3=0x59E10000
+setup * 0276F9F0 r3=0x59E10000 r4=0 r5=1
+setup * 0276F9F0 r3=0x59E10000 r4=3 r5=8
+setup * 0276F9F0 r3=0x59E10000 r4=5 r5=1
+setup * 0276F9F0 r3=0x59E10000 r4=6 r5=1
+arg! 0276C3F8 r3 0x59E00000
+arg! 0276C3F8 r4 0x59E10000
+arg! 0276C3F8 r5 0x6A000000
+# Written only by the original constructors/setters above and by the tested function (writes stay compared).
+stable 59E00000 0x400
+stable 59E10000 0x210
+# The game-side closure of initialize: every callee runs its original body on both sides.
+real 0276F554 0276DF64 0276DDD0 0273B584 0276C35C 0276C3EC 0279CB24 028E892C 0279BC70 0279BD8C 02770564 0276E774
+real 0276CC10 0276CC68 0279CB9C 0276D96C 0276F370 02772950 02772A0C 02772AC8 02772B84 02772C40
+real 027A84B8 027A7E6C 0279E674 0276EBB4 0276EBB8 0279E618 027A861C
+real 0279E57C
+real 0276F3A8 0279B7B4 0279A07C 0276DC4C 0276F228 0276D828 0279F1BC 02759B98 0273B264
+real 0273B200 027A8C80 0276F8B4 0276EC20 0279CA34 0279C950
+real 028F10B8 027A7FF4 0279A490 02770D10
+real 028F0D8C 0277293C 0276CC14 027728BC 0277289C 0277077C 02770480 0276FCA0
+real 02770714 027AE62C 027701D4 027A80FC 027719D0 0277019C 027AE5D8
+real 0279BB98 0279B9CC 02772B74 02759C28 02771DC0 027A83A8 02770698 0276DAE4 0277067C 0276EE70 0276CE10
+real 0276B3D0 0276B3D8
+real 0276CB1C 0276F360 0276CBB0 0276D9A8
+real 0279C764 0276D95C 0276F2E0 028E9098 0276F2C0 0276D8DC 0276D8C0
+# NOBITS first-use guard of the default text registration (027AE62C): zero at startup.
+field * 0x104A2088 u32 0
+real 027AE6AC
+# Closure of the later lifecycle steps (blend, object callbacks); listed here so every world spec shares it.
+real 027A7558 027A747C 027A732C
+real 027A73F4 027A7424 027A8780 027A8BAC 027727C0
+real 0279EB28 0277286C 027728AC 0276F2D0 0276F290 0276D8CC 0276D890
+real 0276D82C 0276D830 0276D840 0276D848 0276D850 0276D860 0276D868 0276D870 0276D880 0276D888 0276D8C8 0276F22C 0276F230 0276F240 0276F248 0276F250 0276F260 0276F268 0276F270 0276F280 0276F288 0276F2CC 027708B0 027708B4 027708C4 027708CC 027708D4 0277091C 0277095C 027727E8 0277280C 0277281C 02772824 0277282C 0277283C 02772844 0277284C 0277285C 02772864 027728A8
+real 0276F204
+real 0276D804
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap
+# .bss words the setups of this fixture produce (the class registrations' id and entry tables, the default-text
+# registration guard): no mocked callee writes them in the game, so mock epochs must not clobber them. The shared world
+# keeps the empty text 104A0CD8 and its own singletons stable. Writes stay compared.
+stable 104A1464 0x100
+stable 104A1564 0xA00
+stable 104A2080 0xC
+src wwhd_src/d/d_s_play.cpp
+src wwhd_src/d/d_s_play_2.cpp
+src wwhd_src/d/d_s_play_3.cpp
+src wwhd_src/d/d_com_inf_game.cpp
+src wwhd_src/d/d_com_inf_game_2.cpp
+src wwhd_src/m_Do/m_Do_main.cpp
+src wwhd_src/agl/gx2/RenderResources.cpp
+src wwhd_src/agl/gx2/PoseTrigTable.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+stackfill
+callbudget 30000000
+accessbudget 100000000
+
+# Authentic whole Misc BFRES bytes, extracted test-time from the shipped SZS.
+blobfile * 0x5A000000 content/Common/Misc/Misc.szs:Misc.bfres
+stable 0x5A000000 0x8C300
+
+# App main01 is the original HD producer of the 16-byte startup/reset record at 1048D090 and pointer at 101F4974.
+# Named startup services skipped here: machine heap bootstrap (the shared world supplies real root heap),
+# display creation, controller companion, DVD callback, and app framework/root-task creation.
+nestedret 025F12F8 1
+nestedret 025E2FBC 0
+nestedret 025F0550 1
+nestedret 025F2D70 0
+nestedret 025E2384 0
+nestedret 025D4320 0
+setup * 025F1660
+
+# Loader-zeroed NOBITS guards read by original phase_00 and EnvironmentManager::blendResources.
+field * 0x101FD7E0 u32 0
+# This matches world_manager_blend_api.txt; no derived hash or resource state is supplied.
+field * 0x104A144C u32 0
+field * 0x104A1450 u32 0
+setupsnapshot
+
+# Caller-owned play storage; all object fields and SceneSystem are initialized by original constructors.
+fill * 0x5D000000 0xB68 0
+stable 0x5D000000 0xB68
+setup * 025B0FB4 r3=0x5D000000
+arg! 025B02E8 r3 0x5D000000
+
+# Named display-service startup skip (overlay APIs collide with HD NetBoss in this verifier image).
+# l_displayReady and l_displaySystem remain original BSS values; no fields are seeded.
+nestedret 0203E900 0x6A000000
+nestedret 0203E8F4 0x6A000000
+nestedret 02038624 0
+nestedret 02038744 0
+nestedret 02038A3C 0
+# Explicit stream-buffer readiness answer for the skipped outer startup boundary.
+nestedret 025E20F0 0
+
+# Named archive-load skips only. Do not mock or seed parsed entries or resource-return objects.
+# Main01 game-heap lookup is the skipped app-root heap service (no game heap is published yet); phase_00's separate current-heap accessor returns the original 02755FE0 heap.
+nestedret 025E2FBC 0
+nestedret 025E3268 0x6A000000
+nestedret 025EE048 0x6A000000
+nestedret 025EE060 0x6A000000
+nestedret 026124B0 0x5A000000
+nestedret 027E2DC0 0x5A000000
+
+# Original play-object, SceneDescription, EnvironmentSet/SceneSystem and raw BFRES parser path.
+real 025F1660
+
+real 025B0FB4 025B0F2C 025DD5F0 0276C1DC 0276CAA4 0276F9F0 0276C3F8 0276B710 0277019C 0276C8B8
+real 027A7558 0276D8E4 0220CCB4
+
+real 0275ED14 027F5A5C 027F3E04 027F4404 027FF610 028F026C 027FFCBC
+# Keep the approved FrameSource table intact; 027FF610 zeroes this registry and is not run in the accepted model-frame recipe.
+# Accepted model-frame input: shipped SZS -> original Yaz0 decoder -> FMDL root -> original ModelData and model configure.
+blob * 0x60000000 content/Common/Stage/Ebesso_Room0.szs 0 0x472CE
+stable 0x60000000 0x472CE
+fill * 0x61000000 0x1C4A00 0
+setup * 0275ED14 r3=0x61000000 r4=0x1C4A00 r5=0x60000000
+stable 0x61000000 0x1C4A00
+fill * 0x5E000000 0x4C 0
+setup * 027F5A5C r3=0x5E000000 r4=0x6100218C r5=0x6A000000
+fill * 0x5E001000 0x144 0
+setup * 027F3E04 r3=0x5E001000
+
+# Exact admitted FrameSource/FrameRecords fixture from model_frame_lead.txt.
+# Keep the valid source-name table alive for ModelAdapter::configure's original findModelFrame call.
+fill * 0x5CEA0000 0x800 0
+fill * 0x5CEA0100 0x200 0
+field * 0x5CEA001C u32 3
+field * 0x5CEA0020 u32 0x5CEA0100
+field * 0x5CEA017C u32 0x5CEA0400
+field * 0x5CEA0400 u32 0x5CEA0500
+field * 0x5CEA0404 u32 0x1016E5A4
+fieldstr * 0x5CEA0500 32 "wii_pipeline","x"
+field * 0x5CEA0200 u32 0x5CEA0410
+field * 0x5CEA0410 u32 0x5CEA0520
+field * 0x5CEA0414 u32 0x1016E5A4
+fieldstr * 0x5CEA0520 32 "wii_pipeline","wii_pipelinf","wii_pipeline_"
+field * 0x5CEA0284 u32 0x5CEA0420
+field * 0x5CEA0420 u32 0x5CEA0540
+field * 0x5CEA0424 u32 0x1016E5A4
+copy * 0x5CEA0540 0x1016E80C 13
+stable 0x5CEA0000 0x800
+field * 0x104B4A68 u32 0x5CEA0000
+field * 0x104B4A6C u32 0,1,2,3
+field * 0x104B4A70 u32 0x5CEB0000
+fill * 0x5CEB0000 0x90 0
+field * 0x5CEB0020 u8 0,1
+field * 0x5CEB0000 u32 0x5CEC0000
+field * 0x5CEB0044 u8 0,1
+field * 0x5CEB0024 u32 0x5CEC0100
+field * 0x5CEB0068 u8 0,1
+field * 0x5CEB0048 u32 0x5CEC0200
+field * 0x5CEB008C u8 0,1
+field * 0x5CEB006C u32 0x5CEC0300
+stable 0x104B4A64 0x10
+stable 0x5CEB0000 0x90
+fill * 0x5CED0000 0x200 0
+stable 0x5CED0000 0x200
+field * 0x5CEA0140 u32 0x5CED0000
+field * 0x5CEA01C4 u32 0x5CED0000
+field * 0x5CEA0248 u32 0x5CED0000
+
+# Restore the RPX .bss loader-initialized null heap pointer from the admitted model-frame recipe.
+field * 0x104B45AC u32 0
+
+postsetup * 027F4404 r3=0x5E001000 r4=0x5E000000 r5=0 r6=2
+stable 0x5E000000 0x4C
+stable 0x5E001000 0x144
+
+# Original frame queue setup and call path from the clean model-frame control.
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 027F55FC 027F53CC 027F9890 027F9470 027F9EA4 027F9EB4 027F9E10 027F96F0 02752B0C 027F3F94 027F3F8C 027F3C38 027F7870 027F9560 027F90B0 027F9CAC 028EFFD0 02760084 02758724 02758B88 027F93C4 0273B584 027587B4 02759814 02758CA8 0275FBD8 027607C0 02760C4C 02760B1C 027581F4 02757C10 0276A628 028EFE58 0273AD10 0273ADAC 0273B0D4 027601F8 027602DC 02752A84 027561B4 02755FE0 02755F40 02755EC4 02755CA4 02755E7C 02755FEC 027600EC 0273AF40 02757B48 0273B2D0 0273B560 02750CDC 02750D00 02753004 027537B8 02753880 02755818 027601BC 027601F0 02760DE8 02760E34 02760E58
+real 02759BA0 02759C10 02759C28 028F03F4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C 028F0DBC 028F0DF4 028F10B8 028F1108 028F1158 028F11BC 028F1748 028F1904 028F5228 028F5C88 028F5DE8 028F5DFC 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 028F61D0 028F61E8 028F61FC 028F6228 028F6240 028F6254 027F76E4
+mockmove C000A848 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+field * 101F997C u32 0
+field * 101F9980 u32 0
+
+# --- fog block (see the header) and the original setFog ---
+real 027F7634 027F5254
+fill * 0x5EF00200 0x18 0
+stable 0x5EF00200 0x18
+field * 0x5EF00200 u8 2
+field * 0x5EF00214 u8 0,255
+field * 0x5EF00215 u8 0,255
+field * 0x5EF00216 u8 0,255
+field * 0x5EF00217 u8 255
+postsetup * 027F7634 r3=*(*0x5E000010+0x20) r4=0x5EF00200
+postsetup * 027F96F0 r3=0x6A000000
+postsetup * 027F9890 r3=*101F997C r4=32 r5=0x6A000000
+postsetup 027F55FC 027F53CC r3=0x5E001000
+
+# Exact direct target ABI follows the model's original in-place page producer at +0x60.
+arg! 027F53CC r3 0x5E001000
+arg! 027F53CC r4 0x5E001060
+arg! 027F53CC r5 -1
+arg! 027F53CC r6 0
+
+# Full admitted original model-frame helper closure, preserving its SDK/parser helpers.
+real 027F7654 027F7514 027F74D4 027F7634 027F763C 027F7644 027F764C 027F7614 027F7624 027F7590 027F75A0 027F75B0 027F75DC 027F75EC 027F7604 027F7680 027F785C 027F76E4 027F7690 028F036C 02759B38 0273AD10 0273ADAC 0273B0D4 0274FDBC 027556FC 02755FEC 0275EB8C 0275EBC0 0275ED14 027601BC 027601F0 027DAB24 027DABB4 027DABE0 027DAFB4 027DCF64 027DCFF8 027DD024 027DD0BC 027DD5E4 027DD6C0 027DD6EC 027DD738 027DD778 027DDD10 027DDFA4 027DDFDC 027DE048 027DE0AC 027E1474 027E1918 027E194C 027E1974 027E19D4 027ED0B4 027ED268 027F3C38 027F3F8C 027F3F94 027F5A5C 027F7870 027FB168 027FB3B4 02843B1C 02843BC4 02843C5C 02843CA8 028EFE58 028EFF8C 028EFFD0 028F521C 028F5680 028F5914 028F61E4
+mockset C000A858 r3 r4 r5
+real 027F3F8C
+real 027DDFA4
+real 027DDD10
+real 027DABB4
+real 027DAB24
+real 027DE0AC
+real 027DAFB4
+real 027DCFF8
+real 027DD0BC
+real 027DD6C0
+real 027DD6EC
+real 027DD778
+real 027DDFDC
+real 027DE048
+real 027DE4D8
+real 027DE5BC
+real 027DB10C
+real 027DD27C
+real 027DD998
+real 027DB154
+real 027DD394
+real 027DD9B0
+real 027DABE0
+real 027DB134
+real 027DBBB0
+real 028F5914
+real 028F521C
+real 028EFFD0
+real 028EFE58
+real 027F7654
+real 027FB40C
+real 027FB5D4
+real 027FD838
+real 027FBC3C
+real 027FBE4C
+real 027FB6A0
+real 027FB780
+real 027BEBEC
+real 027BEB5C
+real 027FF64C
+real 027FF67C
+real 027BECEC
+real 027BED84
+real 027BEEE4
+real 028E9098
+real 028E892C
+real 027BEEBC
+real 027BEED4
+real 027F28B4
+real 0273AD10
+real 0273AE48
+real 027EC0AC
+real 0273B0D4
+real 0273B2F0
+real 0273B310
+real 0273B560
+real 02752A84
+real 02752B0C
+real 02752BEC
+real 02752C74
+real 02752D8C
+real 02752E60
+real 02752F10
+real 02753000
+real 0275315C
+real 02753628
+real 027536B0
+real 027536F4
+real 027537B8
+real 02753880
+real 02753998
+real 02753A34
+real 02753B48
+real 02753C28
+real 02753D6C
+real 027556FC
+real 02755818
+real 0275589C
+real 02755CA4
+real 02755FEC
+real 027600EC
+real 027601BC
+real 027601F0
+real 027561B4
+real 02755FE0
+real 02755F40
+real 02755EC4
+real 02755E7C
+real 02756CC0
+real 027F3E04
+real 02772E8C
+real 027FD6F4
+real 027F3D78
+real 02754754
+real 02760084
+real 027DBBC4
+real 027DBC00
+real 027DCF64
+real 027DD024
+real 027DD298
+real 027DD5E4
+real 027DD738
+real 027DD9AC
+real 027DBBEC
+ret! C0009DB0 1
+mockzero C00088C8 r3 r4
+real 027FFCBC
+real 027B90AC
+real 02800B0C
+real 027BDD2C
+real 027BDA2C
+real 027BD72C
+real 028012BC
+real 027F7830
+real 027FFCBC
+real 027B90AC
+real 02800B0C
+real 027BDD2C
+real 027BDA2C
+real 027BD72C
+real 028012BC
+real 027F7830
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440
+real 027F3F94 027F3F8C 027F3C38 027F7870
+real 027F9560 027F90B0 027F9CAC 028EFFD0 02760084 02758724 02758B88
+real 027F93C4 0273B584 027587B4 02759814 02758CA8
+real 0275FBD8 027607C0 02760C4C 02760B1C
+real 027581F4 02757C10 0276A628
+real 028EFE58
+real 0273AD10 0273ADAC 0273B0D4 027601F8 027602DC 02752A84
+real 027561B4 02755FE0 02755F40 02755EC4 02755CA4 02755E7C 02755FEC 027600EC 0273AF40 02757B48
+real 0273B2D0 0273B560 02750CDC 02750D00 02753004 027537B8 02753880 02755818 027601BC 027601F0 02760DE8 02760E34 02760E58
+real 027F9890 027F9470 027F9EA4 027F9EB4 027F9E10
+real 027F96F0 02752B0C
+real 0275FEFC 02760338 027F9EA4 027F9EB4
+real 02759BA0 02759C10 02759C28 028F03F4 028F040C 028F0428 028F0458 028F0578 028F05A0 028F067C 028F099C 028F0D8C 028F0DBC 028F0DF4 028F10B8 028F1108 028F1158 028F11BC 028F1748 028F1904 028F5228 028F5C88 028F5DE8 028F5DFC 028F5E10 028F5E24 028F5E54 028F605C 028F60F8 028F613C 028F6154 028F6190 028F61A8 028F61D0 028F61E8 028F61FC 028F6228 028F6240 028F6254 028F171C 028F60E0 028F60E8 028F60F0 028F6130 028F6158 028F615C 028F6184 028F61AC 028F61B0 028F61D8 028F61DC 028F61E0 028F61E4 028F61EC 028F61F0 028F61F4 028F61F8 028F6200 028F6230 028F6234 028F6238 028F623C 028F6244 028F6248 028F624C 028F6250 028F6258 027F76E4
+real 027F4404 027F4098 027F1534 027F1278 027F15A0 0273B7B4 027DFA24
+real 027F4D5C 027DB1D4 027E39F4 027E3CA8 027E4134 027E47BC 027E4D20 027E50A8 027E565C 027E5DA4
+real 027F59B4 027F3B28 027F5018 027F50F8 027F53CC 027F9FB8 027FDFF4 027F4F1C
+callee 0F00A000 fixture r3=0 r4=0
+real 027DF8B4 027F3FB4 027F51B4 028E90D4
+real 027DEFE4
+
+# ---- row-154 allocation model (17:44 (2)) ----
+fill * 0x4C000000 0x01000000 0
+fill * 0x4D000000 0x01000000 0
+stable 0x4C000000 0x02000000
+alloc 0273B050 r3 0x4C000000 align=r5
+allocnested 0273B050
+# ---- drift guard ----
+real 025DD258 027E2DC0

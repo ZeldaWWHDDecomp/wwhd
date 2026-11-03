@@ -1,0 +1,37 @@
+# Early field-only diagnostic: caller-owned complete prefixes, not constructed object lifecycles.
+# verify: -only 027CB744,027CC264,027CC750,027CF888,027CF8B4,027D1048,027D1050,027D1058,027D107C,027D10C0,027D11CC -strictnan -calleesp
+src wwhd_src/agl/RenderSelection.cpp
+src wwhd_src/agl/DrawPreparation.cpp
+src wwhd_src/agl/DrawFormatPreparation.cpp
+src wwhd_src/agl/RangePoolOrdering.cpp
+src wwhd_src/agl/TimingStatics.cpp
+arg! * r3 0x58000000
+arg! 027CB744 r4 0x58100000
+field 027CB744 r3+0x24 u32 0x58200008
+field 027CB744 r3+0x28 u32 0x58200008
+field 027CB744 r3+0x2C s32 0,1
+field 027CB744 r3+0x30 u32 8
+field 027CB744 r4+0x24 u32 0x58300008
+field 027CB744 r4+0x28 u32 0x58300008
+field 027CB744 r4+0x2C s32 0,1
+field 027CB744 r4+0x30 u32 8
+field 027CB744 58200000 u32 0x5A000000,0x5A000020,0x5A000080
+field 027CB744 58200004 u32 16,32,64
+field 027CB744 58300000 u32 0x5A000000,0x5A000020,0x5A000080
+field 027CB744 58300004 u32 16,32,64
+arg! 027CC264 r4 0x58100000
+arg! 027CF888 r4 0x58100000
+arg! 027CF8B4 r4 0x58100000
+field 027CF8B4 r4+8 u32 0x58200000
+field 027CF8B4 r4+0xC u32 0x58300000
+field 027D1058 r3+8 u32 4
+field 027D1058 r3+0xC u32 0x5A000000
+arg! 027D1058 r4 0,1,3,4,0xFFFFFFFF
+field 027D107C r3+8 u32 4
+field 027D107C r3+0xC u32 0x5A000000
+arg! 027D107C r4 0,1,3,4,0xFFFFFFFF
+arg! 027D107C r5 0,1,2,0xFFFFFFFF
+field 027D10C0 r3+8 u32 4
+field 027D10C0 r3+0xC u32 0x5A000000
+arg! 027D10C0 r4 0,1,3,4,0xFFFFFFFF
+arg! 027D10C0 r5 0,1,15,31

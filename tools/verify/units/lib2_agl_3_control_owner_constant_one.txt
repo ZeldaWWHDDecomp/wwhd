@@ -1,0 +1,9 @@
+# Bounded direct-entry check for ControlOwnerPrefix_l::constantOneHook.
+# The complete empty caller-owned receiver storage is supplied; the target returns a constant without dereferencing it.
+# No virtual dispatch or owner lifecycle is exercised.
+# verify: -strictnan -calleesp -only 027794D4
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+fill * 56000000 4 0

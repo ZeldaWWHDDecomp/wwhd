@@ -1,0 +1,29 @@
+# 027F7B50 with a NULL allocation heap (rows 3440/3043;
+# heap exhaustion at archive registration is in the domain). Producer: when the archive-heap parent has less than 0x9C allocatable, 02754B38 returns
+# 0 (cmplwi 02754BB0), 02604EB4 continues with that NULL heap (02604FB8), and 02604550 hands it to the model loaders
+# (r7 = r31, bctrl 02604964/026049AC) -> 02608308 -> 0272D384 -> 027F7B50 with r6 = 0. Shown on Figure5: after one real
+# 0273B050(0x3A7D20, 0x720000C8, 4) the parent 0x720000C8 has max-allocatable 0x78, and the original registration calls
+# 027F7B50(FMDL, its record, label, 0) for all 19 models, vf_098 included (factory helper evidence
+# factory/watch/nullheap/registration-excerpt.txt; that registration later stops at 02605180, which dereferences the
+# NULL heap, so it cannot itself be a setup). This profile tests the same call (vf_098, its record, heap 0) on the
+# normally registered archive of lib2_j3d_hdrew_1_factory_fig5. The NULL heap sends 027F7B50 to getCurrentHeap
+# 02756140 (027F7C7C), answered with the world's current heap 0x6A000000 as shared/agl_world.txt does for nested calls.
+# Substitute conditions:
+#  (1) r3 = the same FMDL 0x591358C4 as the traced exhaustion route; r5 (traced label 7EFF6DC0, here 0) is never read
+#      (li r5,4 at 027F7B6C overwrites it). r4: traced registration record 6A8AFF50, here 7205FB30 (026031D0 after the
+#      normal registration). The only r4 words read before the kill point (the fallback at 027F7C6C..027F7C80) are
+#      read by 028010F8 (-watch of r4+0..+0x3F, evidence factory/watch/nullheap/record-*-watch.log):
+#        field   traced 6A8AFF50   here 7205FB30   kind
+#        +0x1C   0x00000008        0x00000008      program count: equal
+#        +0x20   0x6A8AFFB4        0x7205FB84      program table: instance address only
+#  (2) ret! 02756140 answers 0x6A000000, the current heap the traced route allocates from (0273B050(0x24, NULL) ->
+#      02756140 -> block 6A8A8420 in registration-excerpt.txt).
+#  (3) the 19 traced 027F7B50 calls come from 02604550 at 0260509C, before the NULL-heap dereference at 02605180 on the
+#      straight-line path of 02604EB4.
+#  (N1) The program-table entries reached through r4 (+0x20) and read by the nested 02800B0C/027BDD2C before the kill
+#      point are those the normal registration initialised (same shipped vf_098 shader data); the kill (the NULL-heap
+#      +0xC load at the fallback) does not depend on them.
+# verify: -only 027F7B50 -strictnan -calleesp
+include lib2_j3d_hdrew_1_factory_fig5.txt
+ret! 02756140 0x6A000000
+arg! 027F7B50 r6 0

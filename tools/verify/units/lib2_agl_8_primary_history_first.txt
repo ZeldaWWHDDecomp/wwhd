@@ -1,0 +1,11 @@
+# verify: -strictnan -calleesp -footprint -only 02794970
+# Type-domain companion: primary pass's nonzero reprojection mode and previous-mode arguments.
+# The target-set API creates a real 64x64 format-0xA history texture, as renderSsaoCore does for mode != 0.
+include lib2_agl_8_primary_pass_world_alt.txt
+setup * 02794068 r3=*0x580001D0 r4=0xA r5=64 r6=64
+arg! 02794970 r7 1
+arg! 02794970 r9 0,3
+# Original surface allocation closure, shared with the accepted secondary-pass producer.
+real 02794068 0279FDC8 0279FD18 0279FE74 027A03A0 027CB744
+field * 0x101F8AE5 u8 0
+stable 104A0BC0 0x10

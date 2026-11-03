@@ -1,0 +1,25 @@
+# One coherent free stream sound in complete disjoint manager/config/sound storage.
+# Opaque initialization succeeds without changing the ring; capacity query writes
+# a complete output summary with one stream. The user-storage assignment is finite.
+# verify: -strictnan -calleesp -only 02893868
+src wwhd_src/nw/snd/ArchivePlayback.cpp
+src wwhd_src/nw/snd/ArchiveLoading.cpp
+stackfill
+arg! 02893868 r3 0x60100000
+arg! 02893868 r4 0x60101000
+field * 60101000 u32 0x60102000
+field * 60101018 u32 0x60120000
+field * 6010101C u32 64
+field * 601000CC u32 1
+field * 601000D0 u32 0x60110274
+field * 601000D4 u32 0x60110274
+field * 60110274 u32 0x601000D0
+field * 60110278 u32 0x601000D0
+callee 02893750 r3=0 r4=0 r5=0 r6=0 r7=0 r8=0 r9=0 r10=0
+ret! 02893750 1
+callee 0288EB54 r3=0 r4=out28
+ret! 0288EB54 1
+mockfield 0288EB54 r4+0x8 u32 1
+stable 60100000 0x11C
+stable 60101000 0x24
+stable 60110274 8

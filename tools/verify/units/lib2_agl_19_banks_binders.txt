@@ -1,0 +1,26 @@
+# AGL#19 banks: the uniform-block binders (point 027D395C, directed 027D3A54, spatial 027D3B4C, paired 027D3C44) on
+# the world's own light shader programs (ShaderMgr programs 0x3C..0x3F, the ones AGL#18's createLightResource 027CBDB0
+# selects per kind through table 101F962C: roots 0x6A132088 / 0x6A13210C / 0x6A132190 / 0x6A132214, loaded by the
+# boot loader 02786520 in shared/agl_world.txt) and the records of the light prepass's own collections as
+# LightPrepass::configure leaves them (fixture lib2_agl_19_banks_prepass_fixture.txt: one value per record, its uniform
+# buffer formatted and allocated). Kind: the caller's constant (point 0, directed 1, spatial 2, paired 3) and the other
+# table entries; value 0 (one view) or 1 (past the value array: the first value).
+# verify: -only 027D395C,027D3A54,027D3B4C,027D3C44 -strictnan -calleesp
+src wwhd_src/agl/LightUniformBinding.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+arg! 027D395C r3 0x6A132088,0x6A13210C
+arg! 027D395C r4 0x6A87FA20,0x6A87FA68,0x6A8841D8
+arg! 027D395C r5 0,0,1,2,3
+arg! 027D395C r6 0,1
+arg! 027D3A54 r3 0x6A13210C,0x6A132088
+arg! 027D3A54 r4 0x6A8B4520,0x6A8B4580,0x6A8BA4C0
+arg! 027D3A54 r5 1,1,0,2,3
+arg! 027D3A54 r6 0,1
+arg! 027D3B4C r3 0x6A132190,0x6A132214
+arg! 027D3B4C r4 0x6A90A720,0x6A90ABC8,0x6A954A78
+arg! 027D3B4C r5 2,2,0,1,3
+arg! 027D3B4C r6 0,1
+arg! 027D3C44 r3 0x6A132214,0x6A132190
+arg! 027D3C44 r4 0x6A9C5120,0x6A9C513C,0x6A9C5F04
+arg! 027D3C44 r5 3,3,0,1,2
+arg! 027D3C44 r6 0,1

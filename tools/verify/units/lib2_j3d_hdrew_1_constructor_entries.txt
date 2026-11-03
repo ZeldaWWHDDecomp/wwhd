@@ -1,0 +1,83 @@
+# Partial constructor graph: actual FreeRegionHeap, 1/2 entries, zero materials and shapes.
+# verify: -only 027F5A5C -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueInitialization.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineQueueLifetime.cpp
+src wwhd_src/JSystem/J3DGraph/ModelDataPipeline.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 02753D6C 027536F4 02753628 027536B0 027540AC 02754754 027556FC 02755FEC 0273B524 0273B440
+real 027F3F94 027F3F8C 027F3C38 027F7870
+mockset C0009990 r3 r4 r5
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x71003000 r6=0
+stable 6A000000 0x100000
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+fill * 6A000000 512 0
+fill * 71003000 8 0
+field * 71003000 u32 0x71003100
+field * 71003004 u32 0x1016A368
+fill * 71003100 32 0
+fieldstr * 71003100 32 "model-fixture-heap"
+arg! 027F5A5C r3 0x71000000
+arg! 027F5A5C r4 0x71010000
+arg! 027F5A5C r5 0x6A000000
+fill 027F5A5C 71000000 76 165
+# Own7B50 factory initializes these fields; padding2D..2F remains patterned.
+field 027F5A5C 71000000 u32 0
+field 027F5A5C 71000004 u32 0
+field 027F5A5C 71000008 u32 0
+field 027F5A5C 7100000C u32 0
+field 027F5A5C 71000010 u32 0
+field 027F5A5C 71000014 u32 0
+field 027F5A5C 71000018 u32 0
+field 027F5A5C 7100001C u32 0
+field 027F5A5C 71000020 u32 0
+field 027F5A5C 71000024 u32 0
+field 027F5A5C 71000028 u32 0
+field 027F5A5C 71000030 u32 0
+field 027F5A5C 71000034 u32 0
+field 027F5A5C 71000038 u32 0
+field 027F5A5C 7100003C u32 0
+field 027F5A5C 71000040 u32 0
+field 027F5A5C 71000044 u32 0
+field 027F5A5C 71000048 u32 0
+field 027F5A5C 7100002C u8 0
+fill 027F5A5C 71010000 38 0
+field 027F5A5C 7101000C u32 0xFF4
+fill 027F5A5C 71011000 24 0
+field 027F5A5C 71011008 u16 1,2
+field 027F5A5C 71011014 u32 0xFEC
+fill 027F5A5C 71012000 128 165
+stable 71010000 38
+stable 71011000 24
+stable 71012000 128
+final 027F5A5C 71000000 4C
+# final directives are capped at0x10000 each; cover the whole1MiB in disjoint chunks.
+final 027F5A5C 6A000000 10000
+final 027F5A5C 6A010000 10000
+final 027F5A5C 6A020000 10000
+final 027F5A5C 6A030000 10000
+final 027F5A5C 6A040000 10000
+final 027F5A5C 6A050000 10000
+final 027F5A5C 6A060000 10000
+final 027F5A5C 6A070000 10000
+final 027F5A5C 6A080000 10000
+final 027F5A5C 6A090000 10000
+final 027F5A5C 6A0A0000 10000
+final 027F5A5C 6A0B0000 10000
+final 027F5A5C 6A0C0000 10000
+final 027F5A5C 6A0D0000 10000
+final 027F5A5C 6A0E0000 10000
+final 027F5A5C 6A0F0000 10000

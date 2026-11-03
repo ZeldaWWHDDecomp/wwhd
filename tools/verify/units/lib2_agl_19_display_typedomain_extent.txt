@@ -1,0 +1,14 @@
+# TYPE-DOMAIN: setSurfaceExtent 027D5EE8 with sizes no shipped producer passes:
+# block 2 (the width equals the view's current frame width, only the height changes: no shipped size pair does that,
+# the producers 027D60D4 / 027D660C pass 1280x720, 854x480 or 1920x1080) and blocks 5..8 (non-positive width or
+# height: the min/max order arms at 027D5F44..027D5FAC). The view is view 0 of the initialized renderer (frame
+# 0,0..1280,720); the size vector is a stable block with picked components.
+# verify: -only 027D5EE8 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_init_fixture.txt
+real 0274F53C
+field * 0x5E000400 f32 1280.0,640.0,0.0,-16.0
+field * 0x5E000404 f32 720.0,360.0,0.0,-8.0
+stable 0x5E000400 0x8
+arg! 027D5EE8 r3 0x5E100018
+arg! 027D5EE8 r4 0x5E000400

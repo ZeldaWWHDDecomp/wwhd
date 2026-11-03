@@ -1,0 +1,74 @@
+# Bounded FIFO callback scenario: read16-byte job prefix, update job flag, clear core0 count.
+# Maximum7 executions: core0 stops after its first callback; cores1/2 each have at most3 jobs.
+# This is an allowed callback transition, not a whole-owner lifecycle claim.
+# verify: -only 027F91C8 -strictnan -calleesp
+src wwhd_src/JSystem/J3DGraph/PipelineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRecordBindings.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineResourceViews.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineStaticState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelPipeline.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineColorRegisters.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineRenderState.cpp
+src wwhd_src/JSystem/J3DGraph/ModelLighting.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFrameQueue.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineDelegates.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineWorkerConstruction.cpp
+arg! 027F91C8 r3 0x6E100000
+mockmove C0009988 r3 r4 r5
+callee C1000500 fixture r3=heap16
+mockfield C1000500 r3+8 u8 0,1
+mockglobal C1000500 6E100000 u32 0
+stable 6E100000 36
+final 027F91C8 6E100000 36
+field 027F91C8 r3+0x0 s32 0,1,2,3
+field 027F91C8 r3+0x4 s32 3
+field 027F91C8 r3+0x8 u32 0x6E110000
+stable 6E110000 12
+final 027F91C8 6E110000 12
+field 027F91C8 6E110000 u32 0,0x6E200000
+field 027F91C8 6E110004 u32 0,0x6E200000
+field 027F91C8 6E110008 u32 0,0x6E200000
+field 027F91C8 6E20000C u32 0x6E210000
+stable 6E200000 16
+field 027F91C8 r3+0xc s32 0,1,2,3
+field 027F91C8 r3+0x10 s32 3
+field 027F91C8 r3+0x14 u32 0x6E111000
+stable 6E111000 12
+final 027F91C8 6E111000 12
+field 027F91C8 6E111000 u32 0,0x6E200020
+field 027F91C8 6E111004 u32 0,0x6E200020
+field 027F91C8 6E111008 u32 0,0x6E200020
+field 027F91C8 6E20002C u32 0x6E210000
+stable 6E200020 16
+field 027F91C8 r3+0x18 s32 0,1,2,3
+field 027F91C8 r3+0x1c s32 3
+field 027F91C8 r3+0x20 u32 0x6E112000
+stable 6E112000 12
+final 027F91C8 6E112000 12
+field 027F91C8 6E112000 u32 0,0x6E200040
+field 027F91C8 6E112004 u32 0,0x6E200040
+field 027F91C8 6E112008 u32 0,0x6E200040
+field 027F91C8 6E20004C u32 0x6E210000
+stable 6E200040 16
+field 027F91C8 6E21000C u32 0xC1000500
+stable 6E21000C 4
+
+field 027F91C8 6E200000 u32 0x6E220000
+field 027F91C8 6E200004 u32 0x1016EB2C
+field 027F91C8 6E200008 u8 0,1
+final 027F91C8 6E200008 1
+
+field 027F91C8 6E200020 u32 0x6E220000
+field 027F91C8 6E200024 u32 0x1016EB2C
+field 027F91C8 6E200028 u8 0,1
+final 027F91C8 6E200028 1
+
+field 027F91C8 6E200040 u32 0x6E220000
+field 027F91C8 6E200044 u32 0x1016EB2C
+field 027F91C8 6E200048 u8 0,1
+final 027F91C8 6E200048 1
+
+field 027F91C8 6E220000 u8 0
+stable 6E220000 1

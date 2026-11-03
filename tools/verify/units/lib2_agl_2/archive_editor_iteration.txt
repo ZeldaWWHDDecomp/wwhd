@@ -1,0 +1,21 @@
+# Borrowed complete archive readset; genuine original initialization for both editors.
+# Program count zero: editor dispatch is real, program binder is not reached.
+# verify: -strictnan -calleesp -footprint -only 02773134
+src wwhd_src/agl/ShaderBindingEditor.cpp
+real 02772D8C 02772DDC
+arg! 02773134 r3 0x5C301000
+arg! 02773134 r4 0,0x5C303000
+fill 02773134 5C300000 0x48 0xA5
+fill 02773134 5C301000 0x40 0
+field 02773134 5C301014 u16 0
+field 02773134 5C301016 u16 1,2
+field 02773134 5C301020 u32 0x5C302000
+field 02773134 5C301038 u32 0x5C300000
+fill 02773134 5C302000 0x78 0x5A
+fill 02773134 5C303000 0x4 0
+setup 02773134 02772D8C r3=0x5C300000 r4=0x5C301000 r5=0 r6=0
+setup 02773134 02772D8C r3=0x5C300024 r4=0x5C301000 r5=1 r6=0
+final 02773134 5C300000 0x48
+final 02773134 5C301000 0x40
+final 02773134 5C302000 0x78
+final 02773134 5C303000 0x4

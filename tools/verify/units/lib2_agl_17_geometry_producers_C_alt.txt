@@ -1,0 +1,68 @@
+# Corrected 2026-10-26: flags 9601/9603 = 1 (.data, no writer)
+#.
+# r4 = LVIEW light look-at; r5 = Crop.diag(1,1,-1,1): 027CAAB0 zeroes all 16 words (not an identity), crop pokes for AABB
+# min (-300,-200,100) max (500,400,2500) computed as 027C8540..85D4 does ([i][i] = 2/r; [i][3] = -(max/r) - (min/r), two fdivs):
+# 3B23D70A/BE800000, 3B5A740E/BEAAAAAB, 3A5A740E/BF8AAAAA, [3][3] = 1.0 (027C85D0); then 028E89B4 in place (r4 == r5) as at
+# 027C85D4; r6 = REF = 02791C68 of the same LVIEW; r7 = 0; f1/f2 = -1/1. The ctx plane count stays 0.
+# Producer closure: real also 0274D6B4 (sead Projection base ctor: +0x84 posture, +0x88/+0x8C; mocked
+# it left the posture random -> mocked 0274D9A0 swap) and 028F5E98 (int->float helper in tan 028F423C; mocked = random f1), plus
+# stable 101F8B1C 12. No mocked nested call remains in the setups. Light look-at LVIEW = 02791D00 with eye {-300,200}x{1000,600}x
+# {-200,400} and dir {0.3,-0.5}x{-1,-0.6}x{0.2,-0.4} poked per component (dir.x, dir.y != 0: never parallel to up (0,1,0)).
+# Every input is a production tuple of this path (pinned registers use arg!/argf64!). Survivor ids: mutate.py --ids with the
+# campaign enumeration (header -only 027C8ABC, default --max, --seed 1 = o1, --seed 7 = o7), n200, input seeds 1 and 7.
+# Results: -trace 1000003: inverse row 3 = (80000000 at +0x74, 00000000 at +0x78, 0, 3F800000), no face flip.
+# -watch 00000000:0x1000 over n200 seeds 1/7: clean. n200 seeds 1/7: 200/200 (coverage 34/51), also the O1 control.
+# Survivors: o1 #39 / o7 #41 killed on all 200 inputs; o1 #32 / o7 #127 survive.
+# verify: -only 027C8ABC -strictnan -calleesp
+stackfill
+src wwhd_src/agl/ShadowPlanes.cpp
+src wwhd_src/agl/ShadowGeometry.cpp
+real 0274EDD4 028E892C 028E91EC 028E8F64 028E8D4C 025155D8 028E8E10 027C8698 027C87DC
+real 027389F8 0274DEA8 0274D6B4 028F5E98 0274E7A0 0274DE2C 028F423C 028F43F8 028F4BE0 0274D750 0274D83C 0274E0B8 02738B20 0274DA08 028E8970 02791D00 0274CCC4 0274CCB0 028E90D4 02791C68 028E8B04 028E89B4 027CAAB0
+callee 0274EDD4 r3=out64 r4=64
+callee 028E91EC r3=48 r4=out48
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 025155D8 r3=inout12
+callee 028E8F64 r3=48 r4=12 r5=out12
+stable 1016A604 96
+stable 101F8B1C 12
+stable 5F300000 0xE4
+stable 5F301000 0xC0
+stable 5F302000 0x70
+stable 5F303000 0x20
+stable 5F304000 0xC0
+arg! 027C8ABC r3 0x5F200000
+arg! 027C8ABC r4 0x5F301080
+arg! 027C8ABC r5 0x5F304080
+arg! 027C8ABC r6 0x5F303000
+arg! 027C8ABC r7 0
+argf64! 027C8ABC f1 -1
+argf64! 027C8ABC f2 1
+fill 027C8ABC 5F200000 1460 0
+field 027C8ABC 101F9601 u8 1
+field 027C8ABC 101F9603 u8 1
+setup * 027CAAB0 r3=0x5F304040
+# light look-at LVIEW: eye and direction components poked per input (every pick is a valid look-at: dir.x, dir.y != 0)
+poke * 5F302020 u32 0
+poke * 5F302024 f32 1
+poke * 5F302028 u32 0
+poke * 5F302050 f32 -300,200
+poke * 5F302054 f32 1000,600
+poke * 5F302058 f32 -200,400
+poke * 5F302060 f32 0.3,-0.5
+poke * 5F302064 f32 -1,-0.6
+poke * 5F302068 f32 0.2,-0.4
+# crop terms for AABB min (-300,-200,100) max (500,400,2500), f32 per 027C8540..85D4; [3][3] = 1.0 (027C85D0)
+poke * 5F304040 u32 0x3B23D70A
+poke * 5F30404C u32 0xBE800000
+poke * 5F304054 u32 0x3B5A740E
+poke * 5F30405C u32 0xBEAAAAAB
+poke * 5F304068 u32 0x3A5A740E
+poke * 5F30406C u32 0xBF8AAAAA
+poke * 5F30407C f32 1
+postsetup * 02791D00 r3=0x5F301080 r4=0x5F302050 r5=0x5F302060 r6=0x5F302020
+postsetup * 02791C68 r3=0x5F303000 r4=0x5F301080
+# OUT = diag(1,1,-1,1), then Crop.OUT in place as 027C85D4 does
+postsetup * 028E8B04 r3=0x5F304080 f1=1 f2=1 f3=-1
+postsetup * 028E89B4 r3=0x5F304040 r4=0x5F304080 r5=0x5F304080
+final 027C8ABC 5F20041C 184

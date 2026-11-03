@@ -1,0 +1,26 @@
+# NW-SND#9 companion: update (028A1270) with a deferred load waiting for a task.
+# verify: -strictnan -calleesp -only 028A1270
+include lib2_nw_snd_9.txt
+
+# Complementary coherent lifecycle context.
+field 028A1270 606001D4 u8 1
+field 028A1270 606001D8 u32 0x60610000
+field 028A1270 606001DC u32 0
+field 028A1270 60610014 u32 1
+field 028A1270 60610018 u32 0x60620060
+field 028A1270 6061001C u32 0x60620060
+field 028A1270 60620060 u32 0x60610018
+field 028A1270 60620064 u32 0x60610018
+real 028A0E1C
+real 028A0EC8
+real 028A0F88
+callee 0289C464 r4=inout56
+mockfield 0289C464 r4+44 u32 1
+stable 60620000 4
+# Configuration copied into the newly assigned task owns its foreign handles.
+field 028A1270 606001E0 u32 0x60650000
+field 028A1270 606001E4 u32 0,0x60651000
+field 028A1270 606001E8 u32 0x60652000
+field 028A1270 606001EC u32 0,1,2,0xFFFFFFFF
+field 028A1270 606001F0 u32 0,0x60800000
+field 028A1270 606001F4 u32 0,1,2,3

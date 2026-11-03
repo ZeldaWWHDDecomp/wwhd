@@ -1,0 +1,17 @@
+# AGL#19 render dispatch contexts, shipped domain: layers A (027340D8: no camera/projection,
+# flags 0x183), B and C (hdLayer2D_c 0272D978 + initialize 0272DB10: camera and projection set) of
+# lib2_agl_19_shader_layer_fixture.txt; flag bits 0x40/0x1000/0x4 clear.
+# The context is the caller's stack object (render 027C424C / dispatch 027C4538 frames); old bytes in it.
+# verify: -only 027D4EA4,027D4FE8
+src wwhd_src/agl/ShaderStageState.cpp
+src wwhd_src/agl/RenderDispatchContext.cpp
+include lib2_agl_19_shader_layer_fixture.txt
+fill * 5A000000 0x24 0xA5
+arg! 027D4EA4 r3 0x5A000000
+arg! 027D4EA4 r4 0,1,2,3,0xFFFFFFFF
+arg! 027D4EA4 r5 0,0x5A100000
+arg! 027D4EA4 r6 0,1,2
+arg! 027D4EA4 r7 0x58000000,0x58001000,0x58002000
+arg! 027D4FE8 r3 0x5A000000
+arg! 027D4FE8 r4 0,1,2,3,4,5
+arg! 027D4FE8 r5 0,0x5A100000

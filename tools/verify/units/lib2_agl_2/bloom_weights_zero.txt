@@ -1,0 +1,11 @@
+# BloomColorWeights::normalize on weights whose custom colours sum to zero or less (all zero, signed zeros) as well as
+# positive sums, in custom mode (mode 1) and in the fixed-luma mode: the early return for a non-positive sum runs.
+# verify: -strictnan -calleesp -footprint -only 0277497C
+src wwhd_src/agl/BloomParameters.cpp
+arg! 0277497C r3 0x57F80000
+fill 0277497C 57F80000 0x2AC 0
+field 0277497C 57F80298 u32 0,1
+field 0277497C 57F80228 f32 0.0,-0.0,0.25
+field 0277497C 57F8022C f32 0.0,-0.0,0.5
+field 0277497C 57F80230 f32 0.0,-0.0,0.125
+final 0277497C 57F80000 0x2AC

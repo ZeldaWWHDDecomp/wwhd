@@ -1,0 +1,199 @@
+# Empty hooks full-pool supplement (Lead09:00 correction): all9 isolated inserted-store hand variants detected by observed receiver-memory differences on seeds1/7, n100; matched original O1 controls PASS100/100 and guest-only page-zero preflight clean. Specs empty_hooks9 and empty_hook_ADDR; archive normal dw-empty-hook-ADDR-n100-seed{1,7}.log plus build/agl18/empty-hooks9/ADDR/RenderSelection.cpp source copies.
+# Mutation inventory: nine empty-body leaves have zero source mutation candidates:027CB804,027D03A4,027D10F4,027D10F8,027D10FC,027D1100,027D1104,027D1108,027D110C.
+# The two nonempty leaves missed by generic enumeration (D1048/D1050) instead have seven explicit store/return mutations, all detected on seeds1/7 (scalar_active_count).
+# Provenance (AGL18 unit sources and own AGL headers): local instruction-derived names and prefix views;
+# original caller/FPR/frame-stage contracts and canonical project SEAD/GX2 APIs supply the interfaces.
+# Audit of all24 src entries and10 own AGL headers identified no external layout reference.
+# Borrowed image globals/tables remain runtime data; no game payload is embedded by these fixtures.
+# Qualification: a bounded public-header search displayed unrelated inline guest wrappers (intake/header-search-exposure-note.json).
+# Those wrappers were not copied or used to infer game implementations; callback transport uses canonical gabi guest_fn and the assigned ABI.
+# This records the documented unit provenance, not a claim of literal zero foreign-header exposure or an audit of dependency history.
+# every 0x68-value source-pointer producer stores NULL; no projector-matrix writer exists.
+# Infeasible reader arms: 027CD98C, 027CDC04, 027CF37C, 027CF650. Keep them compiled.
+# AGL#18 own implementation checkpoint; full scope remains 84 functions.
+# verify: -only 027CB3B8,027CB744,027CB7F0,027CB804,027CB808,027CB820,027CB834,027CB848,027CB85C,027CB8D4,027CB968,027CBA08,027CBC28,027CBCD0,027CBD54,027CC160,027CC1BC,027CC250,027CC264,027CC288,027CC3D0,027CC750,027CCC24,027CCC80,027CCE34,027CCE48,027CD0B4,027CD1E4,027CDDE0,027CE0AC,027CE0C0,027CE130,027CEA18,027CF82C,027CF888,027CF8A0,027CF8B4,027CF8DC,027D0390,027D03A4,027D03A8,027D03C0,027D03D4,027D0438,027D044C,027D0460,027D081C,027D093C,027D0A34,027D0BF0,027D0CEC,027D0EB8,027D1048,027D1050,027D1058,027D107C,027D10C0,027D10F4,027D10F8,027D10FC,027D1100,027D1104,027D1108,027D110C,027D1110,027D11CC,027D1534,027D1654,027D174C,027D1908,027D1A04,027D1BD0 -strictnan -calleesp
+src wwhd_src/agl/RenderSelection.cpp
+src wwhd_src/agl/DrawPreparation.cpp
+src wwhd_src/agl/DrawFormatPreparation.cpp
+src wwhd_src/agl/RangePoolOrdering.cpp
+src wwhd_src/agl/DrawResourceCleanup.cpp
+src wwhd_src/agl/RenderSelectionCleanup.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/RenderSelectionEvaluation.cpp
+src wwhd_src/agl/RenderSelectionSubmission.cpp
+src wwhd_src/agl/RenderSelectionIdentity.cpp
+src wwhd_src/agl/RenderSelectionInitialization.cpp
+src wwhd_src/agl/DrawResourceBinding.cpp
+src wwhd_src/agl/DrawRegistry.cpp
+src wwhd_src/agl/DrawResourceInitialization.cpp
+src wwhd_src/agl/DrawResourceDirection.cpp
+src wwhd_src/agl/RangePoolRelease.cpp
+src wwhd_src/agl/DrawParameterPreparation.cpp
+src wwhd_src/agl/DrawPairRendering.cpp
+src wwhd_src/agl/DrawResourceRendering.cpp
+src wwhd_src/agl/DrawBasicRendering.cpp
+src wwhd_src/agl/DrawLargeRendering.cpp
+src wwhd_src/agl/DrawResourceParameterPreparation.cpp
+src wwhd_src/agl/DrawSpatialParameters.cpp
+src wwhd_src/agl/DrawSpatialGeometry.cpp
+src wwhd_src/agl/PrimitiveShapesStatics.cpp
+src wwhd_src/agl/TimingStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+
+# releaseRange receives a linked pool range, not random list topology. Use the
+# accepted coherent empty-list state here; the range_release companions cover
+# insertion, ordering, coalescing, and heap-backed releases.
+arg! 027CB3B8 r3 0x58000000
+arg! 027CB3B8 r4 0x58100000
+fill 027CB3B8 0x58000000 0x44 0
+fill 027CB3B8 0x58100000 0x1C 0
+field 027CB3B8 0x58000008 u32 16
+field 027CB3B8 0x5800001C u32 1
+field 027CB3B8 0x58000020 u32 0xC
+field 027CB3B8 0x58000024 u32 0x58000024
+field 027CB3B8 0x58000028 u32 0x58000024
+field 027CB3B8 0x5800002C u32 0
+field 027CB3B8 0x58000030 u32 0x14
+field 027CB3B8 0x58000034 u32 0x58000034
+field 027CB3B8 0x58000038 u32 0x58000034
+field 027CB3B8 0x5800003C u32 0
+field 027CB3B8 0x58000040 u32 0x14
+field 027CB3B8 0x58100000 u32 0x5B000000
+field 027CB3B8 0x58100004 u32 16
+field 027CB3B8 0x58100008 u32 0
+field 027CB3B8 0x5810000C u32 0x5C000000
+field 027CB3B8 0x58100010 u32 0x5C000000
+field 027CB3B8 0x58100014 u32 0
+field 027CB3B8 0x58100018 u32 0
+field 027CB3B8 0x5C000000 u32 0x5810000C
+field 027CB3B8 0x5C000004 u32 0x5810000C
+
+# The base initializer uses an empty constructed record. Lifecycle companions
+# provide the heap-backed single-value allocation and construction path.
+arg! 027CCC80 r3 0x59200000
+arg! 027CCC80 r4 0x59100000
+arg! 027CCC80 r5 0
+fill 027CCC80 0x59100000 0x60 0
+field 027CCC80 0x59100058 u32 0
+field 027CCC80 0x5910005C u32 0x59500000
+
+# Collection initialization receives bounded record/slot counts. Keep the base
+# profile on constructed empty receivers; the collection and OOM companions
+# exercise the shipped 256-record, one-slot allocation paths.
+arg! 027D0474 r3 0x59000000
+arg! 027D0474 r4 0x59100000
+arg! 027D0474 r5 0
+arg! 027D0474 r6 0
+arg! 027D0474 r7 0
+fill 027D0474 0x59000000 0x114 0
+field 027D0474 0x59000000 u32 0x1016AD80
+setup 027D0474 027BF734 r3=0x5900001C
+
+arg! 027D11D4 r3 0x59200000
+arg! 027D11D4 r4 0x59300000
+arg! 027D11D4 r5 0
+arg! 027D11D4 r6 0
+arg! 027D11D4 r7 0
+fill 027D11D4 0x59200000 0x118 0
+field 027D11D4 0x59200000 u32 0x1016AEF8
+setup 027D11D4 027BF734 r3=0x59200020
+real 027BF734
+
+# The update/finish loops consume an already-constructed collection. Keep the
+# broad base profile on the valid empty state so generated u32 counts cannot
+# turn into multi-billion-record walks; the dedicated basic/extended
+# update_finish profiles retain the original 256x1 active-record paths.
+arg! 027D093C r3 0x59000000
+arg! 027D0BF0 r3 0x59000000
+fill 027D093C 0x59000000 0x114 0
+fill 027D0BF0 0x59000000 0x114 0
+field 027D093C 0x59000000 u32 0x1016AD80
+field 027D0BF0 0x59000000 u32 0x1016AD80
+setup 027D093C 027BF734 r3=0x5900001C
+setup 027D0BF0 027BF734 r3=0x5900001C
+
+arg! 027D1654 r3 0x59200000
+arg! 027D1908 r3 0x59200000
+fill 027D1654 0x59200000 0x118 0
+fill 027D1908 0x59200000 0x118 0
+field 027D1654 0x59200000 u32 0x1016AEF8
+field 027D1908 0x59200000 u32 0x1016AEF8
+setup 027D1654 027BF734 r3=0x59200020
+setup 027D1908 027BF734 r3=0x59200020
+
+# Cleanup likewise consumes a constructed collection. The broad profile uses
+# its valid empty state; release-positive256 and lifecycle companions retain
+# the populated record/value destruction paths.
+arg! 027D081C r3 0x59000000
+fill 027D081C 0x59000000 0x114 0
+field 027D081C 0x59000000 u32 0x1016AD80
+setup 027D081C 027BF734 r3=0x5900001C
+
+arg! 027D1534 r3 0x59200000
+fill 027D1534 0x59200000 0x118 0
+field 027D1534 0x59200000 u32 0x1016AEF8
+setup 027D1534 027BF734 r3=0x59200020
+
+# Reuse the accepted evaluate_empty_range state: one valid result slot, active
+# count one, and zero record capacity. This reaches the evaluator's empty-range
+# return without permitting generated counts to drive unbounded walks. The
+# dedicated evaluate profiles retain inactive and populated 256-record paths.
+arg! 027D0A34 r3 0x59400000
+arg! 027D0A34 r4 0
+arg! 027D0A34 r5 0
+arg! 027D0A34 r6 0
+field 027D0A34 r3+8 u32 0
+field 027D0A34 r3+0xC u32 0x5A000000
+field 027D0A34 r3+0x10 u32 1
+field 027D0A34 r3+0x14 u32 1
+field 027D0A34 r3+0x18 u32 0x59500000
+
+arg! 027D174C r3 0x59600000
+arg! 027D174C r4 0
+arg! 027D174C r5 0
+arg! 027D174C r6 0
+field 027D174C r3+8 u32 0
+field 027D174C r3+0xC u32 0x5A000000
+field 027D174C r3+0x10 u32 1
+field 027D174C r3+0x14 u32 1
+field 027D174C r3+0x18 u32 0x59700000
+
+# Upload/submit first test activeCount, so a constructed-empty collection is
+# their valid broad-profile fast path. Producer-frame companions retain the
+# populated evaluate -> upload -> submit lifecycle and callback coverage.
+arg! 027D0CEC r3 0x59000000
+arg! 027D0EB8 r3 0x59000000
+fill 027D0CEC 0x59000000 0x114 0
+fill 027D0EB8 0x59000000 0x114 0
+field 027D0CEC 0x59000000 u32 0x1016AD80
+field 027D0EB8 0x59000000 u32 0x1016AD80
+setup 027D0CEC 027BF734 r3=0x5900001C
+setup 027D0EB8 027BF734 r3=0x5900001C
+
+arg! 027D1A04 r3 0x59200000
+arg! 027D1BD0 r3 0x59200000
+fill 027D1A04 0x59200000 0x118 0
+fill 027D1BD0 0x59200000 0x118 0
+field 027D1A04 0x59200000 u32 0x1016AEF8
+field 027D1BD0 0x59200000 u32 0x1016AEF8
+setup 027D1A04 027BF734 r3=0x59200020
+setup 027D1BD0 027BF734 r3=0x59200020
+
+# As with the large record below, cleanup only receives a constructed bounded
+# record. Keep the base profile on empty/single-value storage; the dedicated
+# lifecycle companion covers the populated resource/destructor path.
+arg! 027CCE48 r4 0x59000000
+fill * 0x59000000 0x60 0
+fill * 0x59400000 0xD0 0
+field * 0x59000058 u32 0 1
+field * 0x5900005C u32 0x59400000
+
+# The game's large-record cleanup receives a constructed record. Bound the base
+# spec to the live empty/single-value domains instead of walking a random u32
+# count through lazily materialized memory; the lifecycle companion exercises
+# the populated resource/destructor path.
+arg! 027CE0C0 r4 0x59100000
+fill * 0x59100000 0x4A8 0
+fill * 0x59500000 0xD0 0
+field * 0x5910023C u32 0 1
+field * 0x59100240 u32 0x59500000

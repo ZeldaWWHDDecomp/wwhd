@@ -1,0 +1,14 @@
+# Named-option factory with a name whose assureTermination is the original sead buffered-text body 027FB3B8
+# (lwz top; lwz +8 buffer size; stb 0 at top+size-1; blr) instead of the fixture class's empty 027F7B24.
+# The name object (0x71504000) takes vtable 1016EC9C (slot +0x14 = 027FB3B8), the profile's 65-byte text
+# buffer 71500100 as its storage and a buffer size of 0x41, 0x20 or 1 (terminator at +0x40, +0x1F or +0).
+# Over the memset companion (coreinit memset modelled, stale heap bytes).
+# verify: -only 027F78A8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_misc_options_memset.txt
+real 027FB3B8
+arg! 027F78A8 r4 0x71504000
+fill * 71504000 12 0
+field * 71504000 u32 0x71500100
+field * 71504004 u32 0x1016EC9C
+field * 71504008 u32 0x41,0x20,1
+stable 71504000 12

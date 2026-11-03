@@ -1,0 +1,24 @@
+# AGL#2 caller-valid direct profile for 0277077C.
+# Receiver: uninitialized writable storage, as the caller's stack FixedSafeText<1024> (the constructor writes text,
+# methods, capacity and both terminators itself); format 101609E4, CR6 clear (crclr at 027705E0), registered names.
+# verify: -strictnan -calleesp -nulltrap -only 0277077C
+src wwhd_src/agl/EnvironmentLightTypes.cpp
+src wwhd_src/agl/EnvironmentObjects.cpp
+src wwhd_src/agl/FormattedEnvironmentText.cpp
+src wwhd_src/agl/ShaderBindingEditor.cpp
+src wwhd_src/agl/ShaderCommandState.cpp
+src wwhd_src/agl/LightOutputRuntime.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/LightConstructors.cpp
+src wwhd_src/agl/BloomParameters.cpp
+src wwhd_src/agl/ShaderLookupRuntime.cpp
+src wwhd_src/agl/BloomRenderRuntime.cpp
+src wwhd_src/agl/TimingStatics.cpp
+
+cr 0277077C 6 0
+arg! 0277077C r3 0x5E300000
+arg! 0277077C r4 0x101609E4
+arg! 0277077C r5 0x101609F0,0x101609FC,0x10160A0C,0x10160A1C
+# The original formatter runs (real), so the formatted text is compared as memory: a saved argument counts exactly when
+# the shipped format consumes it.
+real 02759BA0 02759C10 028F03F4 028F0DBC 028F0DF4 028F11BC 028F171C 028F1748 028F5C88 028F5DE8 028F5DFC 028F61D0 028F61D8 028F61DC 028F61E0 028F61E4 028F61E8 028F61EC 028F61F0 028F61F4 028F61F8 028F61FC 028F6200 028F6228 028F6230 028F6234 028F6238 028F623C 028F6240 028F6244 028F6248 028F624C 028F6250 028F6254 028F6258

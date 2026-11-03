@@ -1,0 +1,6 @@
+# verify: -only 028A58CC -calleesp
+# Full-FPR phases, including negative, infinity and signaling-NaN values.
+src wwhd_src/nw/snd/Modulator.cpp
+argf64! 028A58CC f1 0,0.000000000931322574615478515625,0.249999999068677425384521484375,0.25,0.5,0.75,0.999999999068677425384521484375,1,-0.5,-1,0x7FF0000000000001,0x7FF0000000000000,0xFFF0000000000000,0x7FFFFFFFFFFFFFFF,0x41C0000000000000,0x41BFFFFFFFFFFFFF,0xC1C0000000000000
+# Stale stack under the slope/offset tables, and the 2^31 conversion boundary of phase*4.
+stackfill

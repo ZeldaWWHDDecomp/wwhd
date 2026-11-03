@@ -1,0 +1,4 @@
+# TYPE-DOMAIN: shipped callers pass surfaceIndex 0; the original guard at 0277AE30 defines fallback for index >= count.
+# original-produced count2 owner/entries, public scalar only, no field steering.
+include lib2_agl_3_lifecycle_two_entries_render_index_type.txt
+arg! 0277AD60 r4 2,3,0x7FFFFFFF,0xFFFFFFFF

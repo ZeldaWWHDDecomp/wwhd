@@ -1,0 +1,51 @@
+# verify: -only 027D78FC,027D7920,027D79C0,027D7270 -strictnan -calleesp
+# AGL#19 TYPE-DOMAIN companion: the RenderPointerArray / RenderJob::submit
+# argument and state values the shipped callers never pass, on arrays and jobs built by the original producers.
+# - adoptStorage 027D78FC with capacity <= 0 or 1: its only caller allocateStorage 027D7920 (bl 027D795C) passes a capacity it
+#   has just checked > 0, and the view initializer 027D60D4 asks for 2*pending+8 (027D620C) or that array's capacity.
+# - allocateStorage 027D7920 with capacity -1, 0, 1, 2: 027D60D4 passes only those capacities (>= 8; bl 027D6214 / 027D62A4).
+# - eraseRange 027D79C0 with a negative first/length, length 0 or 2, or a range past the count: the only caller,
+#   removePending 027D650C (bl 027D65A0), erases the one entry it found (0 <= first < count, length 1).
+# - submit 027D7270 into a full queue (count == capacity): collectJobs 027C1848 gives each view a 256-entry buffer and a view
+#   submits at most layers + 2 jobs (14 manager slots). Here the queue is full after two original submits into capacity 2.
+src wwhd_src/agl/RenderPointerStorage.cpp
+src wwhd_src/agl/RenderJobOrder.cpp
+mockmove C0009988 r3 r4 r5
+alloc 0273B0D4 r3 0x58500000 align=r5
+allocfail 0273B0D4 0,1
+# arrays as the view constructor leaves them (count 0, capacity 0, no storage)
+fill 027D78FC 58400000 12 0
+fill 027D7920 58400000 12 0
+arg! 027D78FC r3 0x58400000
+arg! 027D78FC r4 -1,0,1
+arg! 027D78FC r5 0,0x58401000
+arg! 027D7920 r3 0x58400000
+arg! 027D7920 r4 -1,0,1,2
+arg! 027D7920 r5 0x6A000000
+arg! 027D7920 r6 4
+# a deferred array holding 4 entries (storage adopted by the original 027D78FC as 027D7920 does it, filled by the original
+# submit); the allocator answers are only for the 027D7920 row
+real 027D78FC 027D5E5C 027D7270
+stable 0x58403000 0x20
+setup 027D79C0 027D78FC r3=0x58400000 r4=8 r5=0x58403000
+setup 027D79C0 027D5E5C r3=0x58402000
+setup 027D79C0 027D5E5C r3=0x5840201C
+setup 027D79C0 027D5E5C r3=0x58402038
+setup 027D79C0 027D5E5C r3=0x58402054
+setup 027D79C0 027D7270 r3=0x58402000 r4=0x58400000 r5=0
+setup 027D79C0 027D7270 r3=0x5840201C r4=0x58400000 r5=0
+setup 027D79C0 027D7270 r3=0x58402038 r4=0x58400000 r5=0
+setup 027D79C0 027D7270 r3=0x58402054 r4=0x58400000 r5=0
+arg! 027D79C0 r3 0x58400000
+arg! 027D79C0 r4 -1,0,1,2,3,4,5
+arg! 027D79C0 r5 -1,0,1,2,4
+# a full job queue: capacity 2 with two jobs submitted by the original
+setup 027D7270 027D78FC r3=0x58400000 r4=2 r5=0x58403000
+setup 027D7270 027D5E5C r3=0x58402000
+setup 027D7270 027D5E5C r3=0x5840201C
+setup 027D7270 027D5E5C r3=0x58402038
+setup 027D7270 027D7270 r3=0x58402000 r4=0x58400000 r5=0
+setup 027D7270 027D7270 r3=0x5840201C r4=0x58400000 r5=0
+arg! 027D7270 r3 0x58402038
+arg! 027D7270 r4 0x58400000
+arg! 027D7270 r5 0

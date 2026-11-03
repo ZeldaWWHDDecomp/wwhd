@@ -1,0 +1,24 @@
+# Preserve arena publication order at the actual mutex/manager call boundaries.
+# Both arena records have bounded disjoint start/size/state words; no fabricated callback.
+# observe compares the global pointer before call effects, including an actual
+# manager path whose original createInitialRegistryHeap reads this pointer.
+# verify: -only 02755F80,02755FE0 -calleesp
+src wwhd_src/sead/HeapRegistry.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill periodic
+observe 027601BC 101F8B50 4
+observe 02755F40 101F8B50 4
+arg! 02755F80 r3 4096,8192
+field 02755F80 101F8B50 u32 0x59210000
+field 02755F80 59210000 u32 0x59230000
+field 02755F80 59210004 u32 4096
+field 02755F80 59210008 u32 0
+arg! 02755FE0 r3 0x59220000
+field 02755FE0 101F8B50 u32 0x59210000
+field 02755FE0 59210000 u32 0x59230000
+field 02755FE0 59210004 u32 4096
+field 02755FE0 59210008 u32 0
+field 02755FE0 59220000 u32 0x59240000
+field 02755FE0 59220004 u32 8192
+field 02755FE0 59220008 u32 0

@@ -1,0 +1,19 @@
+# verify: -strictnan -calleesp -footprint -only 02793384
+# Isolated own constructor boundary: complete nonwrapping placement storage,
+# or deterministic allocation. Embedded constructor calls remain opaque and observed.
+# No actual nested-object lifetime or external-constructor output contract is claimed.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+arg! 02793384 r3 0,0x58010000
+fill 02793384 0x58010000 0x9CC 0
+alloc 0273AD10 r3 0x58000000 32

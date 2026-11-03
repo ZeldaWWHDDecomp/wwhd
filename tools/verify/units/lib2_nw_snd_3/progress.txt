@@ -1,0 +1,30 @@
+# verify: -strictnan -only 0288AF88,0288B198
+# Continued-play progress case; unrestricted NaN inputs remain in the primary profile.
+src wwhd_src/nw/snd/SoundRuntimeSupport.cpp
+src wwhd_src/nw/snd/SequenceRuntimeSupport.cpp
+src wwhd_src/nw/snd/SoundOutputRuntime.cpp
+src wwhd_src/nw/snd/MemorySoundArchive.cpp
+ret! 0288AEDC 0
+ret! 0288A750 0,0x58000000
+real 028F5678
+real 028F543C
+field 0288AF88 101FC8D4 s32 0,1,2,4,8
+stable 101FC8D4 4
+arg! 0288AF88 r3 0x5A000000
+field 0288AF88 r3+0x1A9 u8 1,48
+field 0288AF88 r3+0x1AA u16 1,120,240
+field 0288AF88 r3+0x198 f32 0.5,1,2
+arg! 0288B198 r3 0x5A000000
+field 0288B198 r3+0x1A9 u8 1,48
+field 0288B198 r3+0x1AA u16 1,120,240
+field 0288B198 r3+0x198 f32 0.5,1,2
+stable 5A000190 40
+src wwhd_src/nw/snd/TrackChannelRuntime.cpp
+src wwhd_src/nw/snd/SequenceResourceLoad.cpp
+
+# Explicit forwarded receiver and SDK scalar facts; no shared metadata edited.
+callee 028F6A30 r3=0
+callee 028A370C r3=0
+callee C0006F20 r4=0
+callee 0288AD60 r4=44
+callee 0288BD14 r4=44

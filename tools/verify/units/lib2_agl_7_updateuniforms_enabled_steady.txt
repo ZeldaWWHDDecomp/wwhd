@@ -1,0 +1,8 @@
+# v2 base, install as tools/verify/units/lib2_agl_7_updateuniforms_enabled_steady.txt: trace/watch clean, 20/20 seeds 1/7 7/7, nulltrap_compare 10k seeds 1/7 --archive OK.
+# 
+# original render 02791230 (shipped caller 02736278 shape) ran first, so prepareFrame 0278F04C filled frame 0
+# (+0x1958 configuration vector, outputs) before this frame's uniform update.
+# verify: -only 0278FF3C -strictnan -calleesp
+include lib2_agl_7/updateuniforms_enabled_base.txt
+real 02791230
+postsetup 0278FF3C 02791230 r3=0x5C020000 r4=0 r6=0x6A00F380 r7=0x6A00F380 r8=0x6A00F380 r9=0x59000108 r10=0 sp+8=3 sp+0xC=0

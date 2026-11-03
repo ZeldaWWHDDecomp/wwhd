@@ -1,0 +1,35 @@
+# verify: -only 0273BF88
+# Explicit regression for seed1/input1009901: reciprocal multiplier precision at the 3.0 threshold.
+# Run with -only0273BF88; other marked bodies compile as support only.
+# Link own-unit support bindings; the invocation keeps the explicit test-address scope.
+src wwhd_src/sead/Foundation.cpp
+src wwhd_src/sead/Checksum.cpp
+src wwhd_src/sead/MemberDispatch.cpp
+src wwhd_src/sead/RuntimeType.cpp
+src wwhd_src/sead/InputState.cpp
+src wwhd_src/sead/Allocation.cpp
+src wwhd_src/sead/Controller.cpp
+src wwhd_src/sead/ControllerConstruction.cpp
+src wwhd_src/sead/FoundationObjects.cpp
+src wwhd_src/sead/DeviceBuffers.cpp
+src wwhd_src/sead/ReportListeners.cpp
+src wwhd_src/sead/ControllerManager.cpp
+src wwhd_src/sead/Reports.cpp
+src wwhd_src/sead/ControllerMapping.cpp
+src wwhd_src/sead/DeviceConstruction.cpp
+src wwhd_src/sead/TabletMotor.cpp
+src wwhd_src/sead/RemoteInput.cpp
+src wwhd_src/sead/TabletInput.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+arg! 0273BF88 r3 0x5400A000
+arg! 0273BF88 r4 0
+arg! 0273BF88 r5 0x5400B000
+arg! 0273BF88 r6 0
+arg! 0273BF88 f1 3
+arg! 0273BF88 f2 3
+field 0273BF88 5400B000 u32 0x3010E8F0
+field 0273BF88 5400B004 u32 0x403FFFFF
+# Output destinations keep raw-address equality; compare the complete saved variadic argument object.
+callee 028F17A8 r3=0
+callee 028F1748 r3=0 r6=112
+callee 0273B158 r4=112

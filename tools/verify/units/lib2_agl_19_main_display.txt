@@ -1,0 +1,150 @@
+# AGL#19 main spec part: display group (included by lib2_agl_19.txt)
+src wwhd_src/agl/DynamicTextureCacheStatics.cpp
+src wwhd_src/agl/DisplayFrameState.cpp
+field 027D6498 0x101F8B60 u32 0x65000000
+field 027D64C8 r3+1936 u32 0,2
+field 027D64C8 r3+1940 s32 0,1,2,4
+field 027D64C8 r3+1944 s32 0,1,2,4
+field 027D64C8 r3+1948 u32 0x65001000
+
+src wwhd_src/agl/DisplaySurfaceExtent.cpp
+arg! 027D5EE8 r4 0x66000000
+field 027D5EE8 r3+12 u32 0,0x66001000
+field 027D660C r3+1936 u32 0,0x200
+field 027D660C r3+12 u32 0,0x66001000
+
+src wwhd_src/agl/FormattedRenderText.cpp
+arg! 027D778C r3 0,0x67001000
+arg! 027D778C r4 0x67000000
+fieldstr 027D778C 0x67000000 32 "%u","%08x","%u:%u",""
+cr 027D778C 6 0,1
+callee 02759C10 r5=12
+
+
+src wwhd_src/agl/DisplayAttachments.cpp
+field 027D5C48 r3+1936 u32 0,4
+field 027D5C48 r3+16 u32 0,0x69000000
+field 027D5C48 r3+20 u32 0,0x69001000
+field 027D5C48 r3+1372 u32 0,0x69002000
+field 027D5C48 0x101F8DD4 u32 0x69003000
+
+# Lead23:40 serialized first-use identity: complete 4B nodes, cold/warm guards.
+src wwhd_src/agl/DisplayRenderPass.cpp
+# Own forwarding and empty deferred-sort diagnostic; opaque pass effects remain qualified.
+field 027D6BB0 r3+4 u32 0,1,2,3,0xFFFFFFFF
+field 027D6BB0 r3+12 u32 0,0x6B000000
+field 027D6BB0 r3+1936 u32 0,8,0xFFFFFFFF
+field 027D6ED0 r3+4 u32 0,1,2,3,0xFFFFFFFF
+field 027D6ED0 r3+12 u32 0,0x6B000000
+field 027D6ED0 r3+1936 u32 0,8,0xFFFFFFFF
+field 027D6E80 r3+1936 u32 0,0x40,0xFFFFFFFF
+field 027D6E80 r3+2004 s32 0
+field 027D6E80 r3+2008 s32 0
+field 027D6E80 r3+2012 u32 0x6B001000
+
+src wwhd_src/agl/DisplayFrameHooks.cpp
+# Positive listener producer pending; only the legitimate null-listener branch is configured here.
+field 027D6BD0 r3+2040 u32 0
+
+src wwhd_src/agl/DisplayPendingRemoval.cpp
+# Pending removal empty-list branch; positive coherent command/entry lifecycle pending.
+field 027D650C r3+1940 s32 0
+field 027D650C r3+1948 u32 0x6C000000
+
+src wwhd_src/agl/DisplayFrameDestruction.cpp
+# destroyDisplayFrameState on NULL (no effect); producer-built views: lib2_agl_19_display_view_destroy.
+arg! 027D5CF4 r3 0
+arg! 027D5CF4 r4 0,1
+
+src wwhd_src/agl/DisplayFrameConstruction.cpp
+arg! 027D5948 r3 0,0x6E000000
+
+src wwhd_src/agl/DisplayJobSubmission.cpp
+# submitPrimaryJobs on a view as allocateFrameStorage 027D60D4 leaves it: a view object at
+# 0x6F300000 whose primary job table has the pending capacity + 2 = 16 jobs (+0x7A0/+0x7A4 -> 0x6F100000), an empty
+# pending list (+0x794 count 0, +0x79C storage 0: positive pending layers come from appendPending 027D64C8, see
+# lib2_agl_19_display_exec_lists), and a queue that is a PointerBuffer with free room (count 0, capacity 16, storage),
+# as RenderQueueManager::collectJobs passes it. All words are stable, so every input is in this domain.
+arg! 027D72B8 r3 0x6F300000
+arg! 027D72B8 r4 0x6F200000
+field 027D72B8 0x6F300794 s32 0
+field 027D72B8 0x6F30079C u32 0
+field 027D72B8 0x6F3007A0 u32 16
+field 027D72B8 0x6F3007A4 u32 0x6F100000
+stable 0x6F300794 0x14
+field 027D72B8 0x6F200000 s32 0
+field 027D72B8 0x6F200004 s32 16
+field 027D72B8 0x6F200008 u32 0x6F200100
+stable 0x6F200000 0xC
+# Empty secondary-list path; positive submitted jobs must come from real producers.
+field 027D7384 r3+1940 s32 0
+field 027D7384 r3+1948 u32 0
+field 027D7384 r3+1968 s32 -1,0
+
+src wwhd_src/agl/DisplayDeferredSubmission.cpp
+# Zero-size command prefix diagnostic; positive owned command/listener producers remain pending.
+arg! 027D71D4 r4 0x6F000000
+field 027D71D4 0x6F000008 u32 0
+
+src wwhd_src/agl/DisplaySurfacePreparation.cpp
+# Legitimate null attached-target/listener paths only; concrete positive target producer remains pending.
+field 027D6A74 r3+12 u32 0
+field 027D6A74 r3+2036 u32 0
+field 027D740C r3+12 u32 0
+
+src wwhd_src/agl/DisplayCommandMarker.cpp
+# Marker requires nonempty coherent deferred commands and writable recorded data; no arbitrary-pointee test.
+
+src wwhd_src/agl/DisplayListSubmission.cpp
+# Both empty rebuild/replay branches; positive command-stream ownership remains pending.
+arg! 027D6EEC r4 0,1
+field 027D6EEC r3+1936 u32 0
+field 027D6EEC r3+2004 s32 0
+field 027D6EEC r3+2012 u32 0
+field 027D6EEC r3+2024 s32 0
+field 027D6EEC r3+2032 u32 0
+real 027D6E80
+real 027D7A4C
+
+src wwhd_src/agl/DisplaySurfaceComposition.cpp
+# Empty pending/null attachment composition path only; real surface/sampler/blit producers remain pending.
+field 027D6C3C r3+12 u32 0
+field 027D6C3C r3+1372 u32 0
+field 027D6C3C r3+1940 s32 0
+field 027D6C3C r3+1948 u32 0
+field 027D6C3C r3+2036 u32 0
+field 027D6C3C r3+2040 u32 0
+real 027D6A74
+real 027D6BD0
+
+src wwhd_src/agl/DisplayAttachmentConfiguration.cpp
+
+src wwhd_src/agl/DisplayFrameStorage.cpp
+# allocateFrameStorage on a view image in the constructor state with the configuration's layer count (14) and a
+# sead::ExpHeap object (table 101459E0: +0x34 = 02753D6C, whose blocks the commands part's alloc line answers); the jobs it builds and configures run as the originals (027D5E5C/027D6070,
+# own callees, so the job loop follows the returned job); producer-built views: lib2_agl_19_display_view_init_tv/drc.
+real 027D5E5C 027D6070 027D7920 027D78FC 027D5EE8 027D778C 027C2008 027C2378
+stable 101F95C8 8
+arg! 027D60D4 r3 0x5F100000
+arg! 027D60D4 r4 0,1
+arg! 027D60D4 r5 0x5F200000
+arg! 027D60D4 r6 0x5F200008
+arg! 027D60D4 r7 14
+arg! 027D60D4 r8 0x5F300000
+field 027D60D4 0x5F30000C u32 0x101459E0
+field 027D60D4 r3+0x790 u32 0x88
+field 027D60D4 r3+0x794 u32 0
+field 027D60D4 r3+0x798 u32 0
+field 027D60D4 r3+0x7A0 u32 0
+field 027D60D4 r3+0x7A4 u32 0
+field 027D60D4 r3+0x7A8 u32 0
+field 027D60D4 r3+0x7AC u32 0
+field 027D60D4 r3+0x7D4 u32 0
+field 027D60D4 r3+0x7D8 u32 0
+field 027D60D4 r3+0x7E0 u32 0
+field 027D60D4 r3+0x7E4 u32 0
+field 027D60D4 r3+0xC u32 0
+field 027D60D4 0x5F200000 u32 1280,854
+field 027D60D4 0x5F200004 u32 720,480
+field 027D60D4 0x5F200008 u32 1920,854
+field 027D60D4 0x5F20000C u32 1080,480

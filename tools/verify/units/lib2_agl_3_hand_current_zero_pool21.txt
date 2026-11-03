@@ -1,0 +1,9 @@
+# Direct ABI-complete receiver domain, per CLOSED empty-hook14:27/14:18 and accessor rules.
+# No construction/lifecycle claim; each entry only returns an accessor value or is an empty hook.
+# verify: -strictnan -calleesp -only 027791A8,027791AC,027793B4,027793B8,027793C0,027793C8,027793D0,027793D8,027793E0,027793E8,027793F0,027793F8,02779400,02779408,02779410,02779418,02779420,02779428,02779430,0277945C,027794DC
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! * r3 0x56000000
+fill * 56000000 0x770 0
+stable 0x56000000 0x770

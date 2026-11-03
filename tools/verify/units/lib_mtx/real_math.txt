@@ -1,0 +1,16 @@
+# Pure SDK helpers run from the original, so final normalization cannot hide its input.
+src wwhd_src/sdk/mtx/vec.cpp
+src wwhd_src/sdk/mtx/mtx.cpp
+src wwhd_src/sdk/mtx/mtxvec.cpp
+src wwhd_src/sdk/mtx/quat.cpp
+arg! 028E8FB8 r6 2,3,4,8
+arg 028E948C r4 88,89,90,120,121,122,0
+real 028E9DE0
+real 028E9DAC
+real 028E9E60
+real 028E8D4C
+real 028E8EF0
+real 028F4384
+# GHS sqrt save/restore helpers must run with the real sqrt body.
+real 028F605C
+real 028F60F8

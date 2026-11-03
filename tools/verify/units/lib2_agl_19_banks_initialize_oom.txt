@@ -1,0 +1,38 @@
+# AGL#19 banks: OOM profile of the spatial (027D1EE0) and paired (027D2C98) initializers: the heap is (nearly) full.
+# The collection is constructed as in lib2_agl_19_banks_initialize.txt (configure's inline construction) and initialized
+# on the world root heap after a filler block (0273B0D4, the game's heap allocator) took almost all of its free memory
+# (of 0x61DFF0 max allocatable, read by the heap's own 02754620):
+#  - paired: 0x20 bytes stay free: the 4-byte block of its beforeAllocate hook 027CF82C still fits, the 0x1C-byte record
+#    array does not (NULL);
+#  - spatial: 0x6C0 bytes stay free: beforeAllocate 027CDDE0 (4 + 0x110 bytes), one 0x4A8-byte record and the count array
+#    fit, the value array (0x68 per value) does not (NULL); two records do not fit at all.
+# The element NULL checks then skip index 0 of a NULL array (index 1 of a NULL array is a page-0 store, as on the
+# console). A full heap is a real runtime state; only the filler allocation is added to the producer chain.
+# Zero-page steering: capacity 1 (and one value for the spatial collection), so the failed array is only ever skipped at
+# index 0: with a second element the original itself stores through page 0 (a console DSI, no clean evidence).
+# verify: -only 027D1EE0,027D2C98 -strictnan -calleesp
+src wwhd_src/agl/LightCollectionInitialize.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+ret! 02756140 0x6A000000
+setup 027D2C98 0273B0D4 r3=0x0061DFD0 r4=0x6A000000 r5=4
+setup 027D1EE0 0273B0D4 r3=0x0061D930 r4=0x6A000000 r5=4
+# the collection object is written only by the tested initializer (no mocked call may clobber it)
+stable 5A070000 0x114
+arg! 027D1EE0 r3 0x5A070000
+fill 027D1EE0 5A070000 0x114 0
+field 027D1EE0 5A070000 u32 0x1016B070
+setup 027D1EE0 027BF734 r3=0x5A07001C
+arg! 027D1EE0 r4 0x5A000000
+arg! 027D1EE0 r5 1
+arg! 027D1EE0 r6 1
+arg! 027D1EE0 r7 0x6A000000
+arg! 027D2C98 r3 0x5A070000
+fill 027D2C98 5A070000 0x114 0
+field 027D2C98 5A070000 u32 0x1016B1E8
+setup 027D2C98 027BF734 r3=0x5A07001C
+arg! 027D2C98 r4 0x5A000000
+arg! 027D2C98 r5 1
+arg! 027D2C98 r6 1,2
+arg! 027D2C98 r7 0x6A000000

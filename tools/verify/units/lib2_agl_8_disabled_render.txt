@@ -1,0 +1,26 @@
+# verify: -strictnan -calleesp -footprint -only 02795D7C
+# Disabled effect early return: the source proves other render inputs are not consumed.
+# No enabled render or nested pipeline/lifetime credit is claimed.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+src wwhd_src/agl/SsaoSampling.cpp
+src wwhd_src/agl/SsaoPreparation.cpp
+src wwhd_src/agl/ShadowFilter.cpp
+arg! 02795D7C r3 0x58000000
+fill 02795D7C 0x58000000 0x285C 0
+field 02795D7C r3+0x240 u8 0
+arg! 02795D7C r4 0
+arg! 02795D7C r5 64
+arg! 02795D7C r6 64
+arg! 02795D7C r7 0
+arg! 02795D7C r8 0,1,2
+argf64! 02795D7C f1 0.25,1
+argf64! 02795D7C f2 0.5,2
+footprint 02795D7C 0

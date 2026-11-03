@@ -1,0 +1,27 @@
+# verify: -strictnan -calleesp -only 02796F74
+# AGL#8 screen-space effect support; implementation checkpoint.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+# Unchanged canonical data-only registry owner; no additional tested functions.
+src wwhd_src/sead/HeapRegistryStatics.cpp
+field 027931EC r3+0x1CC s32 -1,0,1,2
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+# Both receiver dispatches are frameless tail calls.
+footprint 02792978 0
+footprint 02796020 0
+src wwhd_src/agl/ParameterConstruction.cpp
+src wwhd_src/agl/SsaoRender.cpp
+footprint 02795D7C 0
+
+# Positive target counts are bounded to allocated test objects.
+arg! 02793E88 r4 -1,0,1,2
+src wwhd_src/agl/SsaoSampling.cpp
+arg! 02793908 r4 0,1,2,8,16
+field 02793908 r3+0x2858 s32 0,1,3,9,10
+src wwhd_src/agl/SsaoPreparation.cpp
+field 0279515C r3+0x2838 s32 0,1,2
+src wwhd_src/agl/ShadowFilter.cpp
+field 02796F74 r3+0xBE0 s32 0,1,2

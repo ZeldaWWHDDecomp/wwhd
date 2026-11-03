@@ -1,0 +1,11 @@
+# Caller-valid 027CC78C far-rejection companion. This coherent rigid-inverse
+# point transforms to centered X/Y and depth just below -12; with radius=1 and
+# producer-published far=10 it enters the strict far rejection arm.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_visibility_tilted_translated.txt
+poke * 59400094 f32 1
+poke * 59400098 f32 10
+poke * 59100008 u32 0xC3271FB6
+poke * 5910000C u32 0x42A651A6
+poke * 59100010 u32 0x43E1733E
+poke * 59100014 f32 1

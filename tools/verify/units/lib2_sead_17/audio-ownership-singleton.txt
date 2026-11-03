@@ -1,0 +1,17 @@
+# A borrowed AudioTask ownership member and a distinct live published AudioTask.
+# The singleton and complete task storage stay separate from guard/static tables.
+# verify: -only 02760F0C -strictnan -calleesp
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 02760F0C r3 0x602E00C8
+arg! 02760F0C r4 0
+field * 602E00C8 u8 0
+field * 602F00C8 u8 1
+field * 101F8BA4 u32 0x602F0000
+field * 602E0000 u32 0x1015E7FC
+field * 602F0000 u32 0x1015E7FC
+field * 602E0020 u32 0x1015E8B4
+field * 602F0020 u32 0x1015E8B4
+stable 602E0000 0xD0
+stable 602F0000 0xD0
+stable 101F8BA4 4

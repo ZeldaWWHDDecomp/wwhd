@@ -1,0 +1,65 @@
+# UNEXECUTED: eight identical deleting leaf bodies with actual allocated receiver/release.
+# Actual createAt/allocate/registered-release helpers; no allocated result or heap lookup pinned.
+# verify: -strictnan -calleesp -only 0277912C,02779140,027791C8,02779230,02779364,02779378,0277938C,027793A0
+src wwhd_src/agl/FilterAaParameters.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+real 0275315C 02752C74 0275589C 02752B0C 02753000 02752F10 02752E60 02752D8C 0273B2F0 0273B310 0273B0D4 02753D6C 027536F4 02753628 027536B0 0273AF40 02755FEC 027556FC 02754754 027540AC 027600EC 027601BC 027601F0 028F521C
+setup * 0275315C r3=0x6A000000 r4=0x100000 r5=0x5B006000 r6=0
+setup * 0273B0D4 r3=0x200 r4=0x6A000000 r5=4
+arg! * r3 0,0x6A0000C8
+arg! * r4 0,1,2,3
+footprint 0277912C 0
+footprint 02779140 0
+footprint 027791C8 0
+footprint 02779230 0
+footprint 02779364 0
+footprint 02779378 0
+footprint 0277938C 0
+footprint 027793A0 0
+field * 101F8B4C u32 0
+field * 101F8B94 u32 0
+field * 104A030C s32 1
+field * 104A0310 s32 1
+field * 104A0314 u32 0x5B007000
+field * 5B007000 u32 0x6A000000
+field * 104A0364 s32 0
+fill * 6A000000 512 0
+fill * 5B006000 8 0
+field * 5B006000 u32 0x5B006100
+field * 5B006004 u32 0x1016A368
+fill * 5B006100 32 0
+fieldstr * 5B006100 32 "fixture-heap"
+fill * 5D430000 8 0
+# Manager presence is published only after actual heap construction and allocation.
+poke * 101F8B4C u32 0x5D430000
+# Same bounded registry-lock preservation model as accepted AGL17 real-heap recipe.
+# Real allocator/release writes remain compared; these are not arena write exemptions.
+# Exclude the60B unused heap mutex subobject54..8F, including SDK init output.
+stable 6A000000 0x54
+stable 6A000090 0xFFF70
+stable 5D430000 8
+stable 101F8B4C 4
+stable 101F8B94 4
+stable 104A030C 12
+stable 104A0364 12
+stable 5B007000 4
+mockset C000A858 r3 r4 r5
+# Observe actual free/used list metadata and first block header in every branch.
+# These are comparisons only, never input/output pokes.
+final 0277912C 6A000098 20
+final 02779140 6A000098 20
+final 027791C8 6A000098 20
+final 02779230 6A000098 20
+final 02779364 6A000098 20
+final 02779378 6A000098 20
+final 0277938C 6A000098 20
+final 027793A0 6A000098 20
+final 0277912C 6A0000B8 20
+final 02779140 6A0000B8 20
+final 027791C8 6A0000B8 20
+final 02779230 6A0000B8 20
+final 02779364 6A0000B8 20
+final 02779378 6A0000B8 20
+final 0277938C 6A0000B8 20
+final 027793A0 6A0000B8 20

@@ -1,0 +1,30 @@
+# verify: -strictnan -only 0288CE6C
+# Nonempty finite chain with callback, and a channel absent from the three-entry chain.
+src wwhd_src/nw/snd/SoundRuntimeSupport.cpp
+src wwhd_src/nw/snd/SequenceRuntimeSupport.cpp
+src wwhd_src/nw/snd/SoundOutputRuntime.cpp
+src wwhd_src/nw/snd/MemorySoundArchive.cpp
+src wwhd_src/nw/snd/TrackChannelRuntime.cpp
+src wwhd_src/nw/snd/SequenceResourceLoad.cpp
+arg! 0288CE6C r3 0x5D000000,0x5D000300,0x5D000600,0x5D000900
+arg! 0288CE6C r5 0x5B000000
+field 0288CE6C r5+0x214 u32 0,0x5C000000
+field 0288CE6C r5+0x218 u32 0x5D000000
+field * 5D000238 u32 0x5D000300
+field * 5D000538 u32 0x5D000600
+field * 5D000838 u32 0
+field * 5D000B38 u32 0
+field * 5C000174 u32 0x10181FC8
+stable 5C000174 4
+stable 5B000214 8
+stable 5D000238 4
+stable 5D000538 4
+stable 5D000838 4
+stable 5D000B38 4
+
+# Explicit forwarded receiver and SDK scalar facts; no shared metadata edited.
+callee 028F6A30 r3=0
+callee 028A370C r3=0
+callee C0006F20 r4=0
+callee 0288AD60 r4=44
+callee 0288BD14 r4=44

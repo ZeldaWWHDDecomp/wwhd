@@ -1,0 +1,70 @@
+# readable-scope: 027C1E48
+# Partial finite empty pending list, original queue+heap construction per Lead09:27.
+src wwhd_src/agl/RenderRecording.cpp
+src wwhd_src/agl/VertexInput.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/ViewTypeIdentity.cpp
+src wwhd_src/sead/ViewTransform.cpp
+src wwhd_src/sead/RenderInlineInstances.cpp
+src wwhd_src/agl/RenderQueue.cpp
+src wwhd_src/agl/CaptureImage.cpp
+src wwhd_src/agl/PixelTransfer.cpp
+src wwhd_src/agl/RenderLayer.cpp
+real 0273B310
+real 0273B7B4
+real 02752C74
+real 02752E60
+real 02753000
+real 0275315C
+real 0275320C
+real 027536F4
+real 02753880
+real 02753A34
+real 02753C28
+real 02753D6C
+real 02753F84
+real 02754018
+real 027540AC
+real 027541B8
+real 02757C10
+real 027581F4
+real 02758414
+real 02758724
+real 027587B4
+real 027588DC
+real 02758AAC
+real 02758B80
+real 027601BC
+real 027601F0
+real 027D76D4
+arg! 027C1E48 r3 0x6A800000
+arg! 027C1E48 r4 0
+field 027C1E48 6A200000 u32 0x6A200100
+field 027C1E48 6A200004 u32 0x10169EEC
+field 027C1E48 6A200100 u8 0
+stable 6A000000 0x100000
+nestedret 02756140 0x6A000000
+ret! 02756140 0x6A000000
+setup 027C1E48 0275315C r3=0x6A000000 r4=0x100000 r5=0x6A200000 r6=0
+setup 027C1E48 02758724 r3=0x6A8010CC
+setup 027C1E48 027587B4 r3=0x6A8010CC r4=4 r5=0x6A000000
+field 027C1E48 r3+0x1210 u32 0
+field 027C1E48 r3+0x1214 u32 4
+field 027C1E48 r3+0x1218 u32 0x6A802000
+field 027C1E48 6A802000 u32 0x6A803000
+
+real 0275589C
+real 02752F10
+real 027537B8
+real 027536B0
+real 0273B2F0
+real 02752D8C
+real 02752B0C
+real 027600EC
+real 02753628
+real 02758B5C
+mockset C000A858 r3 r4 r5
+real 028F521C
+alloc 0273AD10 r3 0x6B000000 32
+allocnested 0273AD10

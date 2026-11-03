@@ -1,0 +1,125 @@
+# Shader resource name tables (attribute/uniform-block/sampler locations per program part) and the
+# per-geometry attribute state groups, callees mocked. The registry heap is a fixture object whose
+# allocate/release slots are fixture callbacks; attribute states destroy through a fixture vtable.
+# verify: -only 028003E8,0280068C,028009A0,02800B0C -strictnan -calleesp -footprint
+src wwhd_src/JSystem/J3DGraph/RenderFrameArray.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameEnvironment.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderMaterialUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderSceneUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderStorageConstructors.cpp
+src wwhd_src/JSystem/J3DGraph/RenderTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformDestroy.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformGroup.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformPair.cpp
+src wwhd_src/JSystem/J3DGraph/RenderValueStorage.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometry.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/RenderResourceBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+# Fixture heap at 6E000000 (vtable word +0xC; allocate slot +0x34, release slot +0x3C).
+ret 02755FEC 0x6E000000
+ret 02756140 0x6E000000
+field * 0x6E00000C u32 0x6E000100
+field * 0x6E000134 u32 0x7C210000
+field * 0x6E00013C u32 0x7C200000
+callee 7C210000 fixture r3=0 r4=0 r5=0
+callee 7C200000 fixture r3=0 r4=0
+# Allocations: a block, or storage whose embedded members wrap to address 0 (GHS keeps their NULL tests).
+ret 7C210000 0x6D000000,0x6D100000,0xFFFFFFFC,0xFFFFFFF4,0xFFFFFFF0,0xFFFFFFEC,0xFFFFFFDC,0xFFFFFF0C
+# operator new and the aligned container allocation: success or failure
+ret! 0273AD10 0,0x6D800000
+ret! 0273B050 0,0x6D900000
+# Attribute-state fixture vtable (word +0xF0 of a 0xF4 state): destroy slot +0xC.
+field * 0x6C0F000C u32 0x7C330000
+callee 7C330000 fixture r3=0 r4=0
+
+# --- geometry bindings {locations, two attribute spans} at 6C000000 ---
+arg! 028003E8 r3 0x6C000000
+arg! 028003E8 r4 0,0x6C400000
+arg! 028003E8 r5 0x6C500000
+arg! 028003E8 r6 0,0x6E000000
+field 028003E8 0x6C000004 s32 -1,0,1,2
+field 028003E8 0x6C000008 u32 0,0x6C100000
+field 028003E8 0x6C00000C s32 -1,0,1,2
+field 028003E8 0x6C000010 u32 0,0x6C200000
+field 028003E8 0x6C1000F0 u32 0x6C0F0000
+field 028003E8 0x6C1001E4 u32 0x6C0F0000
+field 028003E8 0x6C2000F0 u32 0x6C0F0000
+field 028003E8 0x6C2001E4 u32 0x6C0F0000
+# geometry pool: sets {count, storage} and the geometry count
+field 028003E8 0x6C500000 s32 -1,0,1,2
+field 028003E8 0x6C500004 u32 0,0x6C510000
+field 028003E8 0x6C500008 s32 -1,0,1,2
+field 028003E8 0x6C50000C u32 0,0x6C520000
+# (a negative geometry count makes the original configure loop run 2^32 times: out of domain)
+field 028003E8 0x6C500010 s32 0,1,2,3
+
+# --- binding groups {count, span{count, storage}} at 6C600000, groups of 0x14 bytes ---
+arg! 0280068C r3 0x6C600000
+arg! 0280068C r4 0x6C700000
+arg! 0280068C r5 0,0x6E000000
+field 0280068C 0x6C600004 s32 -1,0,1,2
+field 0280068C 0x6C600008 u32 0,0x6C610000
+field 0280068C 0x6C610008 u32 0,0x6C620000
+field 0280068C 0x6C610004 s32 -1,0,1
+field 0280068C 0x6C610010 u32 0,0x6C630000
+field 0280068C 0x6C61000C s32 -1,0,1
+field 0280068C 0x6C61001C u32 0,0x6C640000
+field 0280068C 0x6C610018 s32 -1,0,1
+field 0280068C 0x6C610020 s32 -1,0,1
+field 0280068C 0x6C610024 u32 0,0x6C650000
+field 0280068C 0x6C6500F0 u32 0x6C0F0000
+field 0280068C 0x6C6200F0 u32 0x6C0F0000
+field 0280068C 0x6C6300F0 u32 0x6C0F0000
+field 0280068C 0x6C6400F0 u32 0x6C0F0000
+field 0280068C 0x6C710000 u32 0,1
+field 0280068C 0x6C71007C u32 0x6C720000
+field 0280068C 0x6C72000C u32 0,1,2,3,0xFFFFFFFF
+field 0280068C 0x6C70001C u32 0,0x6C730000
+field 0280068C 0x6C730000 u32 0,1,2,4
+field 0280068C 0x6C730004 u32 0x6C740000
+field 0280068C 0x6C700000 u32 0x6C710000
+
+# --- resource binding at 6C700000: resource +0, three name spans, children +0x1C, flags +0x20/+0x21 ---
+arg! 028009A0 r3 0x6C700000
+field 028009A0 0x6C700004 s32 0,14
+field 028009A0 0x6C700008 u32 0,0x6C780000
+field 028009A0 0x6C70000C s32 0,5
+field 028009A0 0x6C700010 u32 0,0x6C790000
+field 028009A0 0x6C700014 s32 0,15
+field 028009A0 0x6C700018 u32 0,0x6C7A0000
+field 028009A0 0x6C70001C u32 0,0x6C730000
+field 028009A0 0x6C700021 u8 0,1
+field 028009A0 0x6C730000 s32 -1,0,1,2,3
+field 028009A0 0x6C730004 u32 0,0x6C740000
+field 028009A0 0x6C740020 u8 0,1
+field 028009A0 0x6C740044 u8 0,1
+field 028009A0 0x6C740068 u8 0,1
+
+arg! 02800B0C r3 0x6C700000
+arg! 02800B0C r4 0x6C710000
+arg! 02800B0C r5 0,0x6E000000
+field 02800B0C 0x6C70001C u32 0,0x6C730000
+field 02800B0C 0x6C71007C u32 0x6C720000
+field 02800B0C 0x6C720008 u32 0x6C750000
+field 02800B0C 0x6C72000C u32 0,1,2,0xFFFFFFFF
+field 02800B0C 0x6C720010 u32 0x6C760000
+# The resource graph is read-only data: the name lookups write only the looked-up entry's location
+# halfwords, so mock epochs must not rewrite the part pointer or the part count.
+stable 0x6C710000 0x80
+stable 0x6C720000 0x14
+# Binding, group and pool headers are written only by the functions under test: the callees receive the
+# attribute states, the locations and the geometry descriptors, the heap only its blocks.
+stable 0x6C000000 0x14
+stable 0x6C500000 0x14
+stable 0x6C600000 0xC
+stable 0x6C610000 0x28
+# The children container {count, records} belongs to the binding being reset: the recursive resets run on
+# the children, which only borrow it.
+stable 0x6C730000 0x8
+# The binding itself (resource, three name spans, children, flags) is written only by its own reset and
+# activate: the callees receive name entries, child bindings and heap blocks.
+stable 0x6C700000 0x24

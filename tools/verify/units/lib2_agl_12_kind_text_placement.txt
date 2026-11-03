@@ -1,0 +1,21 @@
+# verify: -only 027ABF8C -strictnan -calleesp
+# Complete8byte nonnullplacement text; boundedkind0..6; realordinaryruntimearraydestructor+ownedreleaseEffectName callback. No allocator call.
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+stackfill
+real 028F0164 028F007C 027AE49C
+arg! 027ABF8C r3 0x5700E000
+arg! 027ABF8C r4 0,1,2,3,4,5,6
+fill 027ABF8C 5700E000 0x8 165
+stable 5700E000 0x8

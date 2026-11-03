@@ -1,0 +1,4 @@
+# Exact previously killing input, same original profile and input seed.
+# One-input mutation confirmation, not a 10k gate. The included fixture is unchanged.
+# verify: -only 027D0474 -strictnan -calleesp -footprint -range 0:1
+include lib2_agl_18/collection_basic_positive256_oom_value_storage.txt

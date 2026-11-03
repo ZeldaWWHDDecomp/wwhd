@@ -1,0 +1,62 @@
+# verify: -only 0278BC9C -strictnan -footprint
+# AGL#6 companion: the timing singleton creator with its constructor (0278BBA8) run as the original.
+src wwhd_src/agl/HistoryText.cpp
+src wwhd_src/agl/TimingHistory.cpp
+src wwhd_src/agl/TimingStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+# -footprint also compares each function's own stack frame, back chain and LR save word.
+stackfill periodic
+# Singleton disposers: registered and not registered; the owner's destroy slot is a mock-only fixture.
+arg 0278B910 r3 0,0x58000004
+arg 0278B910 r4 0,1,2,3
+field 0278B910 101F8D70 u32 0,0x58000004
+field 0278B910 101F8D6C u32 0x58002000
+field 0278B910 58002000 u32 0x58003000
+field 0278B910 58003014 u32 0x0F600100
+arg 0278C5A4 r3 0,0x58000004
+arg 0278C5A4 r4 0,1,2,3
+field 0278C5A4 101F8D78 u32 0,0x58000004
+field 0278C5A4 101F8D74 u32 0x58002000
+field 0278C5A4 58002000 u32 0x58003000
+field 0278C5A4 58003014 u32 0x0F600100
+callee 0F600100 fixture r3=0 r4=0
+# The timing singleton creator: not created yet, and already created.
+field 0278BC9C 101F8D74 u32 0,0x58002000
+# Embedded member addresses are 32-bit sums: include each base whose member address wraps to null.
+arg 0278BBA8 r3 0,0x58000000,0xFFFFFFEC,0xFFFFFFE8,0xFFFFFFD0,0xFFFFFFBC
+# The query and history loops have fixed bounds; vary the ring state.
+arg 0278BF5C r3 0x58000000
+field 0278BF5C r3+0x14 u32 0,1,2,3
+field 0278BF5C r3+0x18 u32 0x58001000
+field 0278BF5C r3+0x1C u32 0x58001010
+field 0278BF5C r3+0x20 u32 0x58001020
+field 0278BF5C 58001000 u32 0,1,2,3,4
+field 0278BF5C 58001004 u32 0x58002000
+field 0278BF5C 58001008 u32 0,1,2,3,4,7
+field 0278BF5C r3+0x30 u32 0x58004000
+field 0278BF5C r3+0x34 s32 0,1,3,4,20,32
+field 0278BF5C r3+0x38 s32 -1,0,1,19,20,21
+field 0278BF5C r3+0x3C s32 -1,0,1,2,3,4,5,19,20,21
+# The va_list descriptor (12 bytes) and the register save area it points to are compared at the format call.
+callee 02759C10 r3=heap1036 r4=0 r5=12
+observeptr 02759C10 r5+8 96
+# Field records and the fixed parameter are compared at the calls that receive them.
+callee 0278533C r3=heap572
+callee 028EFFD0 r3=heap48 r4=0 r5=0 r6=0
+# GHS varargs save floating registers only when CR1.eq is set.
+cr 0278BA74 6 0,1
+# Both fixed parameters use the unit's own vtable; its element-size slot (+0x34) is 0278C870 (12).
+# The copy slot (0278C9CC) belongs to the next unit and stays a mock.
+arg 0278C890 r3 0x58000000
+arg 0278C890 r4 0x58001000
+field 0278C890 r3+8 u32 0x101657E4
+field 0278C890 r4+8 u32 0x101657E4
+ret 0278C870 12
+callee 0278C9CC r3=0 r4=0
+# Array allocation results include 0xFFFFFFF8, whose flags member (+8) wraps to null.
+ret 0273B050 0,0x58008000,0xFFFFFFF8
+# The top/bottom GPU timestamp wrappers each write one 8-byte timestamp through r3.
+callee 027AE6D8 r3=out8
+callee 027AE6DC r3=out8
+# The constructor is this unit's own function, run as the original here.
+real 0278BBA8

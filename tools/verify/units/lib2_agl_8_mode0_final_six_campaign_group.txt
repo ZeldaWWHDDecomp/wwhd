@@ -1,0 +1,3 @@
+# verify: -strictnan -calleesp -only 027931EC,02794270,0279599C,02795D7C,02795DDC,02795FAC
+# All six remaining roots, with validated repeat/external/enable producers for core and wrapper.
+include lib2_agl_8_mode0_final_six_external_group.txt

@@ -1,0 +1,135 @@
+# Double-buffered uniform pairs, their derived destructors, binding entries, the frame array and the
+# uniform group, callees mocked. Virtual slots of the pairs and the registry heap are fixture targets.
+# verify: -only 027FB40C,027FB528,027FB5D4,027FB678,027FF6D0,027FF838,027FF96C,027FFAA0,027FFAF4,027FFC28,027FF75C,027FF88C,027FF9C0,027FFB48,027FD6F4,027FD764,027FD838,027FDFF4,027FE010,027FE084,027FE0DC,027FE118 -strictnan -calleesp -footprint
+src wwhd_src/JSystem/J3DGraph/RenderFrameArray.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameEnvironment.cpp
+src wwhd_src/JSystem/J3DGraph/RenderFrameUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderMaterialUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderSceneUniforms.cpp
+src wwhd_src/JSystem/J3DGraph/RenderStorageConstructors.cpp
+src wwhd_src/JSystem/J3DGraph/RenderTextureBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformBindings.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformDestroy.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformGroup.cpp
+src wwhd_src/JSystem/J3DGraph/RenderUniformPair.cpp
+src wwhd_src/JSystem/J3DGraph/RenderValueStorage.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometry.cpp
+src wwhd_src/JSystem/J3DGraph/RenderGeometryStatics.cpp
+src wwhd_src/JSystem/J3DGraph/RenderResourceBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+# Fixture heap at 6E000000 (vtable word +0xC; allocate slot +0x34, release slot +0x3C).
+ret 02755FEC 0x6E000000
+ret 02756140 0x6E000000
+field * 0x6E00000C u32 0x6E000100
+field * 0x6E000134 u32 0x7C210000
+field * 0x6E00013C u32 0x7C200000
+callee 7C210000 fixture r3=0 r4=0 r5=0
+callee 7C200000 fixture r3=0 r4=0
+# Allocations: a block, or storage whose embedded members wrap to address 0 (GHS keeps their NULL tests).
+ret 7C210000 0x6D000000,0xFFFFFF8C,0xFFFFFF5C,0xFFFFFE04,0xFFFFFDC4
+# operator new: success or failure
+ret! 0273AD10 0,0x6D800000
+
+# Pair fixture vtable 6C0F0000: destroy +0xC, configure +0x14, after-setup +0x1C, upload +0x24.
+field * 0x6C0F000C u32 0x7C330000
+field * 0x6C0F0014 u32 0x7C300000
+field * 0x6C0F001C u32 0x7C310000
+field * 0x6C0F0024 u32 0x7C320000
+callee 7C330000 fixture r3=0 r4=0
+callee 7C300000 fixture r3=0 r4=0 r5=0
+callee 7C310000 fixture r3=0
+callee 7C320000 fixture r3=0 r4=0
+callee 02752A84 r3=out16
+# Stack bytes start random, so a frame field the code fails to set is seen.
+stackfill
+
+# A pair at 6C000000 (indices 0/1), its vtable word set to the fixture table.
+field * 0x6C00000C u32 0x6C0F0000
+field * 0x6C000048 u32 0,1
+field * 0x6C00004C u32 0,1
+# Construction: allocated (NULL), in place, and storage whose embedded callback address wraps to 0.
+arg! 027FB40C r3 0,0x6C000000,0xFFFFFFAC,0xFFFFFF9C
+arg! 027FB528 r3 0,0x6C000000
+arg! 027FB528 r4 0,1,2,3
+arg! 027FB5D4 r3 0x6C000000
+arg! 027FB5D4 r4 0,0x6E000000
+arg! 027FB678 r3 0x6C000000
+arg! 027FF6D0 r3 0x6C000000
+arg! 027FF838 r3 0,0x6C000000
+arg! 027FF838 r4 0,1,2,3
+arg! 027FF96C r3 0,0x6C000000
+arg! 027FF96C r4 0,1,2,3
+arg! 027FFAA0 r3 0,0x6C000000
+arg! 027FFAA0 r4 0,1,2,3
+arg! 027FFAF4 r3 0,0x6C000000
+arg! 027FFAF4 r4 0,1,2,3
+arg! 027FFC28 r3 0,0x6C000000
+arg! 027FFC28 r4 0,1,2,3
+
+# Binding table {.., count +0xC, records +0x10}; 20-byte records, stage locations at +0xC/+0xE/+0x10.
+arg! 027FF75C r3 0x6C000000
+arg! 027FF75C r4 0x6CB00000
+arg! 027FF88C r3 0x6C000000
+arg! 027FF88C r4 0x6CB00000
+arg! 027FF9C0 r3 0x6C000000
+arg! 027FF9C0 r4 0x6CB00000
+arg! 027FFB48 r3 0x6C000000
+arg! 027FFB48 r4 0x6CB00000
+field * 0x6CB0000C u32 0,1,2,3,4,5,8
+field * 0x6CB00010 u32 0x6CB10000
+field * 0x6CB1000C s16 -1,0,3
+field * 0x6CB1000E s16 -1,0,3
+field * 0x6CB10010 s16 -1,0,3
+field * 0x6CB10034 s16 -1,1,4
+field * 0x6CB10036 s16 -1,1,4
+field * 0x6CB10038 s16 -1,1,4
+field * 0x6CB10048 s16 -1,2,5
+field * 0x6CB1004A s16 -1,2,5
+field * 0x6CB1004C s16 -1,2,5
+field * 0x6CB1005C s16 -1,6
+field * 0x6CB1005E s16 -1,6
+field * 0x6CB10060 s16 -1,6
+
+# Frame array {count, storage, ready} at 6C800000; frames (0x23C bytes) at 6C900000.
+arg! 027FD6F4 r3 0,0x6C800000
+arg! 027FD764 r3 0,0x6C800000
+arg! 027FD764 r4 0,1,2,3
+arg! 027FD838 r3 0x6C800000
+arg! 027FD838 r4 -1,0,1,2,3
+arg! 027FD838 r5 0,0x6E000000
+arg! 027FDFF4 r3 0x6C800000
+arg! 027FDFF4 r4 0,1,2,3,0xFFFFFFFF
+arg! 027FE010 r3 0x6C800000
+# (a negative frame count makes prepare's pointer walk never meet its end: out of domain there)
+field 027FD838 0x6C800000 s32 0,1,2,3
+field 027FD764 0x6C800000 s32 -1,0,1,2,3
+field 027FDFF4 0x6C800000 s32 -1,0,1,2,3
+field 027FE010 0x6C800000 s32 -1,0,1,2,3
+field 027FD6F4 0x6C800000 s32 -1,0,1,2,3
+field * 0x6C800004 u32 0,0x6C900000
+field * 0x6C90000C u32 0x6C0F0000
+field * 0x6C900048 u32 0,1
+field * 0x6C90004C u32 0,1
+field * 0x6C90024C u32 0x6C0F0000
+field * 0x6C900288 u32 0,1
+field * 0x6C900484 u32 0x6C0F0000
+field * 0x6C9004C4 u32 0,1
+
+# Uniform group at 6CA00000: frame array prefix, matrix pair +0xC, material pair +0xB4.
+arg! 027FE084 r3 0x6CA00000
+arg! 027FE084 r4 -1,0,1,2
+arg! 027FE084 r5 0,0x6E000000
+arg! 027FE0DC r3 0x6CA00000
+arg! 027FE0DC r4 0,1,2,0xFFFFFFFF
+arg! 027FE118 r3 0x6CA00000
+arg! 027FE118 r4 0x6CB00000
+arg! 027FE118 r5 0,1,2,0xFFFFFFFF
+field * 0x6CA00000 s32 0,1,2,3
+field * 0x6CA00004 u32 0,0x6C900000
+field * 0x6CA00058 u32 0,1
+field * 0x6CA00100 u32 0,1
+# The frame array header {count, storage, ready} is written only by the array's own functions: the
+# callees receive the frames, the heap only its blocks.
+stable 0x6C800000 0xC
+stable 0x6CA00000 0xC

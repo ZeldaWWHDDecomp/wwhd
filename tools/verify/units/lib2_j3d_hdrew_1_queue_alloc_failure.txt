@@ -1,0 +1,6 @@
+# Worker-set and queue constructors with the HD storage allocator failing (allocfail: the first 0273AD10 call returns NULL, as on an exhausted heap).
+# The original tests the allocator result (027F90B0, 027F9560: early return on NULL); allocation failure is the
+# allocator's documented result, as in lib2_j3d_hdrew_1_allocation_failure.txt. Receivers 0 / 0x6E100000 as in the base profile.
+# verify: -only 027F90B0,027F9560 -strictnan -calleesp
+include lib2_j3d_hdrew_1_clean65_current_receipts_20261030.txt
+allocfail 0273AD10 1

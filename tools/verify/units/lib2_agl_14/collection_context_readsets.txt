@@ -1,0 +1,126 @@
+# Not every randomized count/flag combination is proven fullclass reachable; no preparedclass/UniformBuffer lifecycle credit.
+# Counts are bounded gate words only; stale counts possible after own setCount/setMask. Mutation witnesses require independently supported valid states.
+# Qualified borrowed baseline: owned complete readset projection, no constructor/UniformBuffer lifecycle claim.
+# verify: -only 027B40B4,027B4D44 -calleesp -strictnan
+src wwhd_src/agl/ResourceText.cpp
+src wwhd_src/agl/IndexBufferLayout.cpp
+src wwhd_src/agl/VertexBufferLayout.cpp
+src wwhd_src/agl/ValueCollections.cpp
+src wwhd_src/agl/CurveParameter.cpp
+src wwhd_src/agl/GraphicsAccess.cpp
+src wwhd_src/agl/RenderSurface.cpp
+src wwhd_src/agl/RenderBuffer.cpp
+src wwhd_src/agl/ShaderInputLayout.cpp
+src wwhd_src/agl/BitmapTransfer.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShaderArchive.cpp
+src wwhd_src/agl/BitmapSurfacePreparation.cpp
+src wwhd_src/agl/ResourceBootstrap.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/agl/ShaderArchiveLoading.cpp
+real 027B4254
+real 027B42BC
+real 027B4324
+real 027B4328
+real 027B4EF4
+real 027B4F5C
+real 027B4FC4
+real 027B4FC8
+fill 027B40B4 0x58000000 0x1C 0
+fill 027B40B4 0x59000000 0xDF8 0
+fill 027B40B4 0x58002000 0xC 0
+field 027B40B4 0x58000000 u32 0x101692FC
+field 027B40B4 0x58000008 u32 3
+field 027B40B4 0x5800000C u32 0x59000000
+field 027B40B4 0x58000010 u32 0,1,2,3,4,0xFFFFFFFF
+field 027B40B4 0x58000014 u32 3
+field 027B40B4 0x58000018 u32 0x58002000
+arg! 027B40B4 r3 0x58000000
+arg! 027B40B4 r4 0,1,2,3,4,31,32,63,0xFFFFFFFF
+arg! 027B40B4 r5 0x5D000000
+arg! 027B40B4 r6 0x5D001000
+fill 027B40B4 0x5D000000 0x20 0
+fill 027B40B4 0x5D001000 0x20 0
+field 027B40B4 0x58002000 u32 0,1,2,3
+field 027B40B4 0x59000000 u8 0,1,2,3
+field 027B40B4 0x59000004 u32 0,1,2,7,0xFFFFFFFF
+field 027B40B4 0x5900023C u32 1,2,3
+field 027B40B4 0x59000240 u32 0x5B000000
+fill 027B40B4 0x5B000000 0x138 0
+field 027B40B4 0x5B000000 u32 0,1,2,3
+field 027B40B4 0x5B000068 u32 0,1,2,3
+field 027B40B4 0x5B0000D0 u32 0,1,2,3
+field 027B40B4 0x58002004 u32 0,1,2,3
+field 027B40B4 0x590004A8 u8 0,1,2,3
+field 027B40B4 0x590004AC u32 0,1,2,7,0xFFFFFFFF
+field 027B40B4 0x590006E4 u32 1,2,3
+field 027B40B4 0x590006E8 u32 0x5B001000
+fill 027B40B4 0x5B001000 0x138 0
+field 027B40B4 0x5B001000 u32 0,1,2,3
+field 027B40B4 0x5B001068 u32 0,1,2,3
+field 027B40B4 0x5B0010D0 u32 0,1,2,3
+field 027B40B4 0x58002008 u32 0,1,2,3
+field 027B40B4 0x59000950 u8 0,1,2,3
+field 027B40B4 0x59000954 u32 0,1,2,7,0xFFFFFFFF
+field 027B40B4 0x59000B8C u32 1,2,3
+field 027B40B4 0x59000B90 u32 0x5B002000
+fill 027B40B4 0x5B002000 0x138 0
+field 027B40B4 0x5B002000 u32 0,1,2,3
+field 027B40B4 0x5B002068 u32 0,1,2,3
+field 027B40B4 0x5B0020D0 u32 0,1,2,3
+final 027B40B4 58000000 0x1C
+final 027B40B4 59000000 0xDF8
+fill 027B4D44 0x58001000 0x1C 0
+fill 027B4D44 0x59010000 0x54 0
+fill 027B4D44 0x58003000 0xC 0
+field 027B4D44 0x58001000 u32 0x10169474
+field 027B4D44 0x58001008 u32 3
+field 027B4D44 0x5800100C u32 0x59010000
+field 027B4D44 0x58001010 u32 0,1,2,3,4,0xFFFFFFFF
+field 027B4D44 0x58001014 u32 3
+field 027B4D44 0x58001018 u32 0x58003000
+arg! 027B4D44 r3 0x58001000
+arg! 027B4D44 r4 0,1,2,3,4,31,32,63,0xFFFFFFFF
+arg! 027B4D44 r5 0x5D000000
+arg! 027B4D44 r6 0x5D001000
+fill 027B4D44 0x5D000000 0x20 0
+fill 027B4D44 0x5D001000 0x20 0
+field 027B4D44 0x58003000 u32 0,1,2,3
+field 027B4D44 0x59010000 u8 0,1,2,3
+field 027B4D44 0x59010004 u32 0,1,2,7,0xFFFFFFFF
+field 027B4D44 0x59010014 u32 1,2,3
+field 027B4D44 0x59010018 u32 0x5B010000
+fill 027B4D44 0x5B010000 0x60 0
+field 027B4D44 0x5B010000 u32 0,1,2,3
+field 027B4D44 0x5B010020 u32 0,1,2,3
+field 027B4D44 0x5B010040 u32 0,1,2,3
+field 027B4D44 0x58003004 u32 0,1,2,3
+field 027B4D44 0x5901001C u8 0,1,2,3
+field 027B4D44 0x59010020 u32 0,1,2,7,0xFFFFFFFF
+field 027B4D44 0x59010030 u32 1,2,3
+field 027B4D44 0x59010034 u32 0x5B011000
+fill 027B4D44 0x5B011000 0x60 0
+field 027B4D44 0x5B011000 u32 0,1,2,3
+field 027B4D44 0x5B011020 u32 0,1,2,3
+field 027B4D44 0x5B011040 u32 0,1,2,3
+field 027B4D44 0x58003008 u32 0,1,2,3
+field 027B4D44 0x59010038 u8 0,1,2,3
+field 027B4D44 0x5901003C u32 0,1,2,7,0xFFFFFFFF
+field 027B4D44 0x5901004C u32 1,2,3
+field 027B4D44 0x59010050 u32 0x5B012000
+fill 027B4D44 0x5B012000 0x60 0
+field 027B4D44 0x5B012000 u32 0,1,2,3
+field 027B4D44 0x5B012020 u32 0,1,2,3
+field 027B4D44 0x5B012040 u32 0,1,2,3
+final 027B4D44 58001000 0x1C
+final 027B4D44 59010000 0x54
+callee 027B4254 r3=0 r4=0
+callee 027B4EF4 r3=0 r4=0
+callee 027B42BC r3=0 r4=0 r5=0
+callee 027B4F5C r3=0 r4=0 r5=0
+callee 027B4324 r3=0 r4=0 r5=0 r6=0
+callee 027B4FC4 r3=0 r4=0 r5=0 r6=0
+callee 027B4328 r3=0 r4=0 r5=0 r6=0 r7=0
+callee 027B4FC8 r3=0 r4=0 r5=0 r6=0 r7=0

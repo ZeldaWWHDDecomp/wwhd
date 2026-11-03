@@ -1,0 +1,22 @@
+#.txt stands in for MultiFilter::initialize's heap); under setupsnapshot it is constant at 0x6A87E2A0 (traced: setup 0273B050 ->5401F000 <- 6A87E2A0). src lines = the AGL#12 unit's own list (lib2_agl_12.txt).
+# 027AB594 (0x148, kind 2). run: trace 1000004 clean, -watch 00000000:0x1000 clean at n=20 seeds 1 and 7, 20/20; uncovered blocks = only the entry/member null-storage fallbacks.
+# verify: -only 027AB594
+include shared/agl_world.txt
+setupsnapshot
+src wwhd_src/agl/ParameterHooks.cpp
+src wwhd_src/agl/RenderEntry.cpp
+src wwhd_src/agl/InterfaceHooks.cpp
+src wwhd_src/agl/QuaternionOps.cpp
+src wwhd_src/agl/EntryParameters.cpp
+src wwhd_src/agl/DrawDefaults.cpp
+src wwhd_src/agl/EmbeddedEntry.cpp
+src wwhd_src/agl/EntryConstruction.cpp
+src wwhd_src/agl/DerivedEntryConstruction.cpp
+src wwhd_src/agl/EntryKindText.cpp
+src wwhd_src/agl/DrawProgram.cpp
+src wwhd_src/agl/VectorRotation.cpp
+src wwhd_src/agl/VolumeDraw.cpp
+real 027AB058 0279E674 0279E618 0279CB9C 0279CA34 027A84B8
+setup 027AB594 0273B050 r3=0x148 r4=0x6A000000 r5=4 ->0x5401F000
+arg! 027AB594 r3 0x6A87E2A0
+arg! 027AB594 r4 0,1,2,3

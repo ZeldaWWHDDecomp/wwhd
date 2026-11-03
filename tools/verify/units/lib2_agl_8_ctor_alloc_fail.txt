@@ -1,0 +1,13 @@
+# verify: -strictnan -calleesp -only 02792A08,02796034
+# Lifetime-valid null-allocation/reuse fixtures; no wrapped receivers.
+src wwhd_src/agl/ScreenEffectParameters.cpp
+src wwhd_src/agl/ShadowMap.cpp
+src wwhd_src/agl/SsaoTargetSet.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowViewport.cpp
+src wwhd_src/agl/EffectMotion.cpp
+src wwhd_src/agl/ParameterComparisons.cpp
+src wwhd_src/agl/ParameterConstruction.cpp
+arg! 02792A08 r3 0,0x58000000
+arg! 02796034 r3 0,0x58000000
+ret! 0273AD10 0

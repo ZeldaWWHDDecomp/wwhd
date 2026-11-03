@@ -1,0 +1,24 @@
+# Typed hidden-result ABI: writable result, original-produced Esa parameter set, integer key index.
+# Original formatter/dictionary run live; successful keys retain original record/link/payload layout.
+# Missing-key fallback is stack-dependent and tested with shared deterministic stackfill.
+# verify: -only 027FA160,027FA3F4 -strictnan -calleesp
+include lib2_j3d_hdrew_1_color_apply_esa_alt.txt
+src wwhd_src/JSystem/J3DGraph/PipelineColorReadback.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineIndexedParameter.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineFormattedText.cpp
+stackfill
+setupsnapshot
+real 02759C28 027DF9B0 027382E8
+arg! 027FA160 r3 0x5D200000
+arg! 027FA160 r4 0x6B000000
+arg! 027FA160 r5 -1,0,1,2,3,4
+arg! 027FA3F4 r3 0x5D200000
+arg! 027FA3F4 r4 0x6B000000
+arg! 027FA3F4 r5 -1,0,1,2,3,4
+fill * 0x5D200000 8 165
+
+# Shared allocator glue owner for hidden-result allocation and formatter helper.
+src wwhd_src/JSystem/J3DGraph/PipelineInlineState.cpp
+
+# Actual SafeText vtable termination leaf and formatter delegate; opaque versions clobber parameter-set state.
+real 027FB3B8 02759C10

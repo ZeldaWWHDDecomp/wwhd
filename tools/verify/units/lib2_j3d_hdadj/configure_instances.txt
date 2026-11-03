@@ -1,0 +1,237 @@
+# verify: -only 027F4404 -calleesp -strictnan -footprint
+# configure_direct with the builder instance count (r6, stored as the model mode +0x70 and the ModelBuilder
+# instance count +0x14) over 1..4: the AGL-GX2#1 layout/initializer scale their per-instance blocks by it.
+# The protected pipeline bodies 02772FD0/02773134 are not on this path.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DInlineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialStorage.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelPacketSetup.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelConfiguration.cpp
+src wwhd_src/JSystem/J3DGraph/J3DBatchAdapter.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 027F4404 r3 0x5CE00000
+arg! 027F4404 r4 0x5CE10000
+arg! 027F4404 r5 0
+arg! 027F4404 r6 1,2,3,4
+field * 0x101F8B94 u32 0
+field * 0x5CDFF100 u32 0x6A000000
+field * 0x5CDFF104 u32 0x100000
+field * 0x5CDFF108 u32 0
+stable 0x5CDFF100 12
+setup 027F4404 027561B4
+setup 027F4404 02755FE0 r3=0x5CDFF100
+nestedret 02756140 0x6A000000
+ret! 02756140 0x6A000000
+stable 0x6A000000 0x100000
+fill 027F4404 0x5CE00000 0x144 0
+setup 027F4404 027F3E04 r3=0x5CE00000
+fill 027F4404 0x5CE10000 0x100 0
+fill 027F4404 0x5CE20000 0x100 0
+fill 027F4404 0x5CE30000 0x100 0
+fill 027F4404 0x5CE38000 0x100 0
+fill 027F4404 0x5CE40000 0x100 0
+fill 027F4404 0x5CE41000 0x100 0
+fill 027F4404 0x5CE41100 0x100 0
+fill 027F4404 0x5CE50000 0x100 0
+fill 027F4404 0x5CE51000 0x100 0
+fill 027F4404 0x5CE51100 0x100 0
+fill 027F4404 0x5CE60000 0x1000 0
+field 027F4404 0x5CE10000 u32 0x5CE20000
+field 027F4404 0x5CE10024 u32 7,8
+field 027F4404 0x5CE10028 u32 0x5CE60000
+field 027F4404 0x5CE1002C u8 1
+field 027F4404 0x5CE2000C u32 0xFFF4
+field 027F4404 0x5CE20014 u32 0x1FFEC
+field 027F4404 0x5CE20018 u32 0x2FFE8
+field 027F4404 0x5CE20022 u16 0,1,2
+field 027F4404 0x5CE20024 u16 0,1,2
+field 027F4404 0x5CE30008 u16 1
+field 027F4404 0x5CE30014 u32 0x7FEC
+field 027F4404 0x5CE40024 u32 0xFDC
+field 027F4404 0x5CE4100E u16 0,1,2
+field 027F4404 0x5CE50024 u32 0xFDC
+field 027F4404 0x5CE40034 u32 0x10CC
+field 027F4404 0x5CE4110E u16 0,1,2
+field 027F4404 0x5CE50034 u32 0x10CC
+fill 027F4404 0x5CE70000 0x100 0
+fill 027F4404 0x5CE80000 0x100 0
+fill 027F4404 0x5CE90000 0x400 0
+field 027F4404 0x5CE603B8 u32 0x5CE70000
+field 027F4404 0x5CE7007C u32 0x5CE80000
+field 027F4404 0x5CE80038 u32 0,0x5CE90000
+field 027F4404 0x5CE90004 u32 0,1,2
+field 027F4404 0x5CE90008 u32 0x100
+field 027F4404 0x5CE90010 u32 0x20,0x40
+field 027F4404 0x5CE90014 u32 0,4
+fieldstr 027F4404 0x5CE90020 16 "Mat","Mat","Ma","Mats","mat"
+field 027F4404 0x5CE90108 u32 0x100
+field 027F4404 0x5CE90110 u32 0x20,0x40
+field 027F4404 0x5CE90114 u32 0,4
+fieldstr 027F4404 0x5CE90120 16 "Mat","Mat","Ma","Mats","mat"
+stable 0x5CE70000 0x100
+stable 0x5CE80000 0x100
+stable 0x5CE90000 0x400
+fill 027F4404 0x5CE70100 0x100 0
+fill 027F4404 0x5CE80100 0x100 0
+fill 027F4404 0x5CE90400 0x400 0
+field 027F4404 0x5CE60B28 u32 0x5CE70100
+field 027F4404 0x5CE7017C u32 0x5CE80100
+field 027F4404 0x5CE80138 u32 0,0x5CE90400
+field 027F4404 0x5CE90404 u32 0,1,2
+field 027F4404 0x5CE90408 u32 0x100
+field 027F4404 0x5CE90410 u32 0x20,0x40
+field 027F4404 0x5CE90414 u32 0,4
+fieldstr 027F4404 0x5CE90420 16 "Mat","Mat","Ma","Mats","mat"
+field 027F4404 0x5CE90508 u32 0x100
+field 027F4404 0x5CE90510 u32 0x20,0x40
+field 027F4404 0x5CE90514 u32 0,4
+fieldstr 027F4404 0x5CE90520 16 "Mat","Mat","Ma","Mats","mat"
+stable 0x5CE70100 0x100
+stable 0x5CE80100 0x100
+stable 0x5CE90400 0x400
+stable 0x5CE10000 0x100
+stable 0x5CE20000 0x100
+stable 0x5CE30000 0x100
+stable 0x5CE38000 0x100
+stable 0x5CE40000 0x100
+stable 0x5CE41000 0x200
+stable 0x5CE50000 0x100
+stable 0x5CE51000 0x200
+stable 0x5CE60000 0x1000
+# The model is this call's own object. The calls that stay mocks here are the current-heap getter 02756140 (pure),
+# memset/OSBlockMove/memcpy/DCZeroRange (effects modelled below), mutex/cache/init SDK imports, the global-object
+# registration 028F026C and the final 027F4098; none of them writes the model, so it is stable.
+stable 0x5CE00000 0x144
+mockset C000A858 r3 r4 r5
+mockmove C0009988 r3 r4 r5
+ret! C0009BB0 0,1,2
+real 027F3F8C
+real 027DDFA4
+real 027DDD10
+real 027DABB4
+real 027DAB24
+real 027DE0AC
+real 027DAFB4
+real 027DCFF8
+real 027DD0BC
+real 027DD6C0
+real 027DD6EC
+real 027DD778
+real 027DDFDC
+real 027DE048
+real 027DE4D8
+real 027DE5BC
+real 027DB10C
+real 027DD27C
+real 027DD998
+real 027DB154
+real 027DD394
+real 027DD9B0
+real 027DABE0
+real 027DB134
+real 027DBBB0
+real 028F5914
+real 028F521C
+real 028EFFD0
+real 028EFE58
+real 027F7654
+real 027FB40C
+real 027FB5D4
+real 027FD838
+real 027FBC3C
+real 027FBE4C
+real 027FB6A0
+real 027FB780
+real 027BEBEC
+real 027BEB5C
+real 027FF64C
+real 027FF67C
+real 027BECEC
+real 027BED84
+real 027BEEE4
+real 028E9098
+real 028E892C
+real 027BEEBC
+real 027BEED4
+real 027F28B4
+real 0273AD10
+real 0273AE48
+real 027EC0AC
+real 0273B050
+real 0273B0D4
+real 0273B2F0
+real 0273B310
+real 0273B560
+real 02752A84
+real 02752B0C
+real 02752BEC
+real 02752C74
+real 02752D8C
+real 02752E60
+real 02752F10
+real 02753000
+real 0275315C
+real 02753628
+real 027536B0
+real 027536F4
+real 027537B8
+real 02753880
+real 02753998
+real 02753A34
+real 02753B48
+real 02753C28
+real 02753D6C
+real 027556FC
+real 02755818
+real 0275589C
+real 02755CA4
+real 02755FEC
+real 027600EC
+real 027601BC
+real 027601F0
+real 027561B4
+real 02755FE0
+real 02755F40
+real 02755EC4
+real 02755E7C
+real 02756CC0
+real 027F3E04
+real 02772E8C
+real 027FD6F4
+real 027F3D78
+real 02754754
+real 02760084
+real 027DBBC4
+real 027DBC00
+real 027DCF64
+real 027DD024
+real 027DD298
+real 027DD5E4
+real 027DD738
+real 027DD9AC
+mockmove C000A848 r3 r4 r5
+real 027DBBEC
+# Heap blocks lie in the registered root heap, application memory the SDK reports as DC-valid.
+ret! C0009DB0 1
+mockzero C00088C8 r3 r4
+# Heap registry statics built by the setups (manager, arena, root/independent lists, registry mutex); no mocked call here writes them.
+stable 0x104A02F8 0x80
+stable 0x101F8B34 0x64
+# SafeText termination slot of table 1016E5A4: a no-op blr (027F7830).
+real 027F7830
+# The frame is compared too (-footprint): the builder/SafeText stack objects sit at the original offsets.
+stackfill
+# Uniform blocks with a nonzero byte size, so the material payload copies move real bytes.
+field 027F4404 0x5CE51018 u16 0,16,64
+field 027F4404 0x5CE51118 u16 0,16,64
+field 027F4404 0x5CE51016 u16 0,16,64
+field 027F4404 0x5CE51116 u16 0,16,64

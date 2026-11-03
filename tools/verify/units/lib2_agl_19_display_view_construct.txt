@@ -1,0 +1,11 @@
+# AGL#19 027D5948 createDisplayFrameState: the render view constructor as RenderQueueManager::create 027C088C runs it
+# (placement on a 0x800 block; the manager passes its embedded views) and as a heap-allocating constructor (r3 = 0,
+# storage from the current heap, the world's root heap). Embedded constructors and the name registration run as the
+# originals.
+# verify: -only 027D5948 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include shared/agl_world.txt
+setupsnapshot
+real 027BE6B8 027B6CB8 027B6E64 027B95B4 0274F358 02785CB4 0273AD10
+arg! 027D5948 r3 0x5E200000,0
+stackfill

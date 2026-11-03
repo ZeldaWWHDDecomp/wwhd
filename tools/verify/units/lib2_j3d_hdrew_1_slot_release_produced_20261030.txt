@@ -1,0 +1,9 @@
+# Accepted original-created handles12/15/16; initialized lazy slots0/3 retain zero.
+# All selected nonzero slots use default release mode from initializeSlots; no mode/header edits.
+# verify: -only 027F88C8 -strictnan -calleesp
+include lib2_j3d_hdrew_1_copy_between_slots_produced_corrected.txt
+src wwhd_src/JSystem/J3DGraph/PipelineSlotRelease.cpp
+# Retarget the inherited per-entry accepted cache-region initialization.
+fill 027F88C8 0x6A000000 0x01000000 0
+arg! 027F88C8 r3 0x60000000
+arg! 027F88C8 r4 0,3,12,15,16

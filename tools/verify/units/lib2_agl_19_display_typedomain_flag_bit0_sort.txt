@@ -1,0 +1,12 @@
+# TYPE-DOMAIN: view flag bit 0 (+0x790 & 1) is client-assigned
+# (0272A1C4); no shipped writer sets it (see lib2_agl_19_display_typedomain_flag_bit0_extent). sortDeferred 027D6E80 on
+# the executed first frame (as lib2_agl_19_display_exec_lists): the client word is the job-phase flags | 1 (view 0
+# 0x1CC | 1, view 1 0x1C8 | 1), 0x40 set by submitPrimaryJobs. The 0x40-clear case comes from the original sort itself:
+# lib2_agl_19_display_typedomain_flag_bit0_resort.
+# verify: -only 027D6E80 -strictnan -calleesp
+include lib2_agl_19_display_sources.txt
+include lib2_agl_19_display_exec_fixture.txt
+real 027DA7D4 027DA764 025C0928
+poke * 5E1007A8 u32 0x1CD
+poke * 5E100FA8 u32 0x1C9
+arg! 027D6E80 r3 0x5E100018,0x5E100818

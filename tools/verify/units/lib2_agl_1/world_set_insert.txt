@@ -1,0 +1,12 @@
+# AGL#1 EnvironmentSet::insertObject (0276E774) on the original world: after the original manager initialize (11 objects:
+# one of class 0, eight of class 3, one each of classes 5 and 6), the set's record bindings reset by the original
+# 0276DAEC, then the first class-3 object inserted again by the original; the tested call inserts one of the game's own
+# objects (addresses of the original allocations, deterministic under setupsnapshot), so free and occupied slots mix.
+# verify: -only 0276E774 -strictnan -calleesp
+include lib2_agl_1/world_manager_initialize.txt
+real 0276C3F8 0276DAEC 0276E774
+setup * 0276C3F8 r3=0x59E00000 r4=0x59E10000 r5=0x6A000000
+setup * 0276DAEC r3=0x59E00240
+setup * 0276E774 r3=0x59E00240 r4=0x6A87F264
+arg! 0276E774 r3 0x59E00240
+arg! 0276E774 r4 0x6A87F400,0x6A87F59C,0x6A87F264,0x6A87FDA8,0x6A87F140,0x6A87FF44,0x6A880090,0

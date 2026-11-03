@@ -1,0 +1,28 @@
+# verify: -strictnan -calleesp -only 0279599C
+# Unchanged original repeat/external-frame producer, with exact consumed state/viewport inputs.
+include lib2_agl_8_mode0_final_six_external_group.txt
+# CompactRenderState::create assigns these fields; apply reads them. Exclude every padding byte and table.
+observearg 0274FEB0 r3+0 2 if lr=02795A20
+observearg 0274FEB0 r3+0x4 8 if lr=02795A20
+observearg 0274FEB0 r3+0xC 1 if lr=02795A20
+observearg 0274FEB0 r3+0x10 40 if lr=02795A20
+observearg 0274FEB0 r3+0x38 1 if lr=02795A20
+observearg 0274FEB0 r3+0x3C 13 if lr=02795A20
+observearg 0274FEB0 r3+0x4C 32 if lr=02795A20
+observearg 0274FEB0 r3+0x6C 3 if lr=02795A20
+# Both direct viewport paths read rectangle/orientation and the complete logical surface.
+observearg 0274F964 r3+0 20 if lr=02795BC0
+observearg 0274F964 r4+0 24 if lr=02795BC0
+observearg 0274F964 r3+0 20 if lr=02795C40
+observearg 0274F964 r4+0 24 if lr=02795C40
+# Real preparation/secondary calls have the same real constructors; nested inputs otherwise stay silent.
+observenested 0274FEB0 r3+0 2
+observenested 0274FEB0 r3+0x4 8
+observenested 0274FEB0 r3+0xC 1
+observenested 0274FEB0 r3+0x10 40
+observenested 0274FEB0 r3+0x38 1
+observenested 0274FEB0 r3+0x3C 13
+observenested 0274FEB0 r3+0x4C 32
+observenested 0274FEB0 r3+0x6C 3
+observenested 0274F964 r3+0 20
+observenested 0274F964 r4+0 24

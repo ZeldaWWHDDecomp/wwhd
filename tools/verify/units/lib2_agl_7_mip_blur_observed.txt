@@ -1,0 +1,406 @@
+# applyMipBlur 02790EC4 observation companion (copy of lib2_agl_7_apply_mip_blur.txt scoped to 02790EC4): the sampler the
+# blur draws receive (027A90AC / 027A9584 r3) is compared over its whole 0x198 bytes, since the original draw path reads its
+# dirty byte (+0x190) and level-of-detail words (+0x178..+0x180) through 027A8D08 -> 027BE53C / 027BE494; `stackfill` gives
+# the stack vectors stale contents, as in the game, so a dropped store of 0.0f into them shows.
+# AGL#7: all75 assigned bodies; several enabled-resource profiles remain pending.
+# verify: -only 02790EC4 -strictnan -calleesp
+src wwhd_src/agl/EffectMatrixSupport.cpp
+src wwhd_src/agl/ShadowParameterInstances.cpp
+src wwhd_src/agl/ShadowTextInstances.cpp
+src wwhd_src/agl/ShadowControlInstances.cpp
+src wwhd_src/agl/ShadowView.cpp
+src wwhd_src/agl/ProjectionShadow.cpp
+src wwhd_src/agl/ShadowCameraOverride.cpp
+src wwhd_src/agl/ShadowRegistryQuery.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/agl/ShadowPrePass.cpp
+src wwhd_src/agl/PackedArrayParameter.cpp
+
+# Positive frame initialization counts use the approved mock-only allocator
+# dispatch fixture. The allocate callback returns a distinct aligned block;
+# frame records and their helper trees remain part of the paired comparison.
+arg! 0278E730 r3 0x5C200000
+arg! 0278E730 r4 1,2
+arg! 0278E730 r5 0x5E000000
+field 0278E730 5E00000C u32 0x5E000100
+field 0278E730 5E000134 u32 0x0F000200
+callee 0F000200 fixture r3=0x5E000000 r4=0 r5=0
+alloc 0F000200 r4 0x6A000000 align=r5
+real 027B95B4
+real 027B6CB8
+real 027B6E64
+real 027BEB5C
+real 027BECEC
+real 027BED84
+real 027BEEE4
+real 027BEE9C
+real 025C0848
+real 025C0928
+
+# Matrix column is one of the four complete affine columns.
+arg! 0278D234 r5 0,1,2,3
+footprint 02791C68 0
+footprint 02791F44 0
+footprint 02791F88 0
+footprint 02792008 0
+
+# Per-frame resource array has a finite live count and a two-way swap index.
+field 0278FEBC r3+0x1CC u32 0,1,2,3
+field 0278FEBC r3+0x5C0 u8 0,1
+arg! 0278FEBC r3 0x5C010000
+field 0278FEBC r3+0x1D0 u32 0x5C100000
+field 0278FEBC 5C100008 u32 0x5D100000
+field 0278FEBC 5C10000C u32 64,128,256
+field 0278FEBC 5C100024 u32 0x5D101000
+field 0278FEBC 5C100028 u32 64,128,256
+field 0278FEBC 5C100040 u32 0x5D102000
+field 0278FEBC 5C100044 u32 64,128,256
+field 0278FEBC 5C101978 u32 0x5D110000
+field 0278FEBC 5C10197C u32 64,128,256
+field 0278FEBC 5C101994 u32 0x5D111000
+field 0278FEBC 5C101998 u32 64,128,256
+field 0278FEBC 5C1019B0 u32 0x5D112000
+field 0278FEBC 5C1019B4 u32 64,128,256
+field 0278FEBC 5C1032E8 u32 0x5D120000
+field 0278FEBC 5C1032EC u32 64,128,256
+field 0278FEBC 5C103304 u32 0x5D121000
+field 0278FEBC 5C103308 u32 64,128,256
+field 0278FEBC 5C103320 u32 0x5D122000
+field 0278FEBC 5C103324 u32 64,128,256
+
+# The owned pure pass selector executes as the original for its callers.
+real 0278FB08
+arg! 0278EE50 r3 0x5C020000
+arg! 0278EE50 r4 0,1,2,3,4,0xFFFFFFFF
+field 0278EE50 r3+0x1CC u32 0,1,2,3
+field 0278EE50 r3+0x1D0 u32 0x5C100000
+field 0278EE50 r3+0x554 u8 0,1
+field 0278EE50 r3+0x444 u32 0,1,2,3,0xFFFFFFFF
+field 0278EE50 5C101960 u32 0,1
+field 0278EE50 5C1032D0 u32 0,1
+field 0278EE50 5C104C40 u32 0,1
+arg! 0278EEF8 r3 0x5C020000
+arg! 0278EEF8 r4 0,1,2,3,4,0xFFFFFFFF
+field 0278EEF8 r3+0x1CC u32 0,1,2,3
+field 0278EEF8 r3+0x1D0 u32 0x5C100000
+field 0278EEF8 r3+0x554 u8 0,1
+field 0278EEF8 101F8DD4 u32 0x5C300000
+field 0278EEF8 5C10084C u32 0,0x5D300000
+field 0278EEF8 5C100B70 u32 0,0x5D301000
+field 0278EEF8 5C10102C u32 0,0x5D302000
+field 0278EEF8 5C101030 u32 0,0x5D303000
+field 0278EEF8 5C1021BC u32 0,0x5D310000
+field 0278EEF8 5C1024E0 u32 0,0x5D311000
+field 0278EEF8 5C10299C u32 0,0x5D312000
+field 0278EEF8 5C1029A0 u32 0,0x5D313000
+field 0278EEF8 5C103B2C u32 0,0x5D320000
+field 0278EEF8 5C103E50 u32 0,0x5D321000
+field 0278EEF8 5C10430C u32 0,0x5D322000
+field 0278EEF8 5C104310 u32 0,0x5D323000
+arg! 0278FB94 r3 0x5C020000
+arg! 0278FB94 r4 0,1,2,3,4,0xFFFFFFFF
+field 0278FB94 r3+0x1CC u32 0,1,2,3
+field 0278FB94 r3+0x1D0 u32 0x5C100000
+field 0278FB94 r3+0x554 u8 0,1
+arg! 0278FB94 r5 0,1,2,3,4,5
+field 0278FB94 r3+0x494 u8 0,1
+field 0278FB94 r3+0x594 u8 0,1
+field 0278FB94 r3+0x5A4 u8 0,1
+field 0278FB94 r3+0x454 u32 0,1
+arg! 02790B3C r3 0x5C020000
+arg! 02790B3C r4 0,1,2,3,4,0xFFFFFFFF
+field 02790B3C r3+0x1CC u32 0,1,2,3
+field 02790B3C r3+0x1D0 u32 0x5C100000
+field 02790B3C r3+0x554 u8 0,1
+arg! 02790B3C r5 0,1,2,3,4,5
+field 02790B3C r3+0x494 u8 0,1
+field 02790B3C r3+0x594 u8 0,1
+field 02790B3C r3+0x5A4 u8 0,1
+field 02790B3C r3+0x454 u32 0,1
+
+# Owned target selection also executes as the original for bindOutputTarget.
+real 0278FB94
+arg! 0278EFC0 r3 0x5C020000
+arg! 0278EFC0 r4 0,1,2,3,4,0xFFFFFFFF
+field 0278EFC0 r3+0x1CC u32 0,1,2,3
+field 0278EFC0 r3+0x1D0 u32 0x5C100000
+field 0278EFC0 5C100850 f32 64,128,256,640,1920
+field 0278EFC0 5C100854 f32 64,128,256,640,1920
+field 0278EFC0 5C100B74 f32 64,128,256,640,1920
+field 0278EFC0 5C100B78 f32 64,128,256,640,1920
+field 0278EFC0 5C1021C0 f32 64,128,256,640,1920
+field 0278EFC0 5C1021C4 f32 64,128,256,640,1920
+field 0278EFC0 5C1024E4 f32 64,128,256,640,1920
+field 0278EFC0 5C1024E8 f32 64,128,256,640,1920
+field 0278EFC0 5C103B30 f32 64,128,256,640,1920
+field 0278EFC0 5C103B34 f32 64,128,256,640,1920
+field 0278EFC0 5C103E54 f32 64,128,256,640,1920
+field 0278EFC0 5C103E58 f32 64,128,256,640,1920
+arg! 02790450 r3 0x5C020000
+arg! 02790450 r4 0,1,2,3,4,0xFFFFFFFF
+field 02790450 r3+0x1CC u32 0,1,2,3
+field 02790450 r3+0x1D0 u32 0x5C100000
+arg! 02790450 r5 0,1,2,3,4,5
+field 02790450 r3+0x454 u32 0,1
+field 02790450 r3+0x494 u8 0,1
+field 02790450 r3+0x594 u8 0,1
+field 02790450 r3+0x5A4 u8 0,1
+field 02790450 5C100850 f32 64,128,256,640,1920
+field 02790450 5C100854 f32 64,128,256,640,1920
+field 02790450 5C100B74 f32 64,128,256,640,1920
+field 02790450 5C100B78 f32 64,128,256,640,1920
+field 02790450 5C1021C0 f32 64,128,256,640,1920
+field 02790450 5C1021C4 f32 64,128,256,640,1920
+field 02790450 5C1024E4 f32 64,128,256,640,1920
+field 02790450 5C1024E8 f32 64,128,256,640,1920
+field 02790450 5C103B30 f32 64,128,256,640,1920
+field 02790450 5C103B34 f32 64,128,256,640,1920
+field 02790450 5C103E54 f32 64,128,256,640,1920
+field 02790450 5C103E58 f32 64,128,256,640,1920
+
+# pure-query contract. These four external targets remain opaque;
+# no original body is executed. Fixed, disjoint receiver/source storage makes
+# the returned embedded addresses exact. Stable excludes only invented clobber;
+# the byte move and all candidate stores are still compared normally.
+callee 0278C870 retu=4
+callee 0278C878 r3=0
+callee 0278C880 r3=0
+callee 0278C888 retu=10
+callee 02791A5C retu=1
+ret! 0278C870 0xC
+ret! 0278C878 0x5C41003C
+ret! 0278C880 0x5C40003C
+ret! 0278C888 0x200
+ret! 02791A5C 0
+mockmove C0009988 r3 r4 r5
+stable 5C400000 0x23C
+stable 5C410000 0x23C
+arg! 0278C9CC r3 0x5C400000
+arg! 0278C9CC r4 0x5C410000
+field 0278C9CC 5C400008 u32 0x101657E4
+field 0278C9CC 5C410008 u32 0x101657E4,0x1016594C
+arg! 0278CACC r3 0x5C400000
+arg! 0278CACC r5 0,1,0x1FF,0x200,0x201,0xFFFFFFFF
+field 0278CACC 5C400008 u32 0x101657E4
+field 0278C9CC 5C400010 u32 0x5C400044
+field 0278C9CC 5C400014 u8 0
+field 0278C9CC 5C400016 u8 30
+field 0278C9CC 5C400017 u8 0
+field 0278C9CC 5C40003C u32 0
+field 0278C9CC 5C400040 u32 0
+field 0278C9CC 5C40001C u32 0x5C4000C4
+field 0278C9CC 5C400020 u8 0
+field 0278C9CC 5C400022 u8 30
+field 0278C9CC 5C400023 u8 0
+field 0278C9CC 5C4000BC u32 0
+field 0278C9CC 5C4000C0 u32 0
+field 0278C9CC 5C400028 u32 0x5C400144
+field 0278C9CC 5C40002C u8 0
+field 0278C9CC 5C40002E u8 30
+field 0278C9CC 5C40002F u8 0
+field 0278C9CC 5C40013C u32 0
+field 0278C9CC 5C400140 u32 0
+field 0278C9CC 5C400034 u32 0x5C4001C4
+field 0278C9CC 5C400038 u8 0
+field 0278C9CC 5C40003A u8 30
+field 0278C9CC 5C40003B u8 0
+field 0278C9CC 5C4001BC u32 0
+field 0278C9CC 5C4001C0 u32 0
+field 0278C9CC 5C410010 u32 0x5C410044
+field 0278C9CC 5C410014 u8 4
+field 0278C9CC 5C410016 u8 30
+field 0278C9CC 5C410017 u8 1
+field 0278C9CC 5C41003C u32 1
+field 0278C9CC 5C410040 u32 4
+field 0278C9CC 5C41001C u32 0x5C4100C4
+field 0278C9CC 5C410020 u8 4
+field 0278C9CC 5C410022 u8 30
+field 0278C9CC 5C410023 u8 1
+field 0278C9CC 5C4100BC u32 1
+field 0278C9CC 5C4100C0 u32 4
+field 0278C9CC 5C410028 u32 0x5C410144
+field 0278C9CC 5C41002C u8 4
+field 0278C9CC 5C41002E u8 30
+field 0278C9CC 5C41002F u8 1
+field 0278C9CC 5C41013C u32 1
+field 0278C9CC 5C410140 u32 4
+field 0278C9CC 5C410034 u32 0x5C4101C4
+field 0278C9CC 5C410038 u8 4
+field 0278C9CC 5C41003A u8 30
+field 0278C9CC 5C41003B u8 1
+field 0278C9CC 5C4101BC u32 1
+field 0278C9CC 5C4101C0 u32 4
+field 0278CACC 5C400010 u32 0
+field 0278CACC 5C400014 u8 0
+field 0278CACC 5C400016 u8 0
+field 0278CACC 5C400017 u8 0
+field 0278CACC 5C40003C u32 1
+field 0278CACC 5C400040 u32 4
+field 0278CACC 5C40001C u32 0
+field 0278CACC 5C400020 u8 0
+field 0278CACC 5C400022 u8 0
+field 0278CACC 5C400023 u8 0
+field 0278CACC 5C4000BC u32 1
+field 0278CACC 5C4000C0 u32 4
+field 0278CACC 5C400028 u32 0
+field 0278CACC 5C40002C u8 0
+field 0278CACC 5C40002E u8 0
+field 0278CACC 5C40002F u8 0
+field 0278CACC 5C40013C u32 1
+field 0278CACC 5C400140 u32 4
+field 0278CACC 5C400034 u32 0
+field 0278CACC 5C400038 u8 0
+field 0278CACC 5C40003A u8 0
+field 0278CACC 5C40003B u8 0
+field 0278CACC 5C4001BC u32 1
+field 0278CACC 5C4001C0 u32 4
+field 0278CACC 5C410010 u32 0x5C410044
+field 0278CACC 5C410014 u8 4
+field 0278CACC 5C410016 u8 30
+field 0278CACC 5C410017 u8 1
+field 0278CACC 5C41003C u32 1
+field 0278CACC 5C410040 u32 4
+field 0278CACC 5C41001C u32 0x5C4100C4
+field 0278CACC 5C410020 u8 4
+field 0278CACC 5C410022 u8 30
+field 0278CACC 5C410023 u8 1
+field 0278CACC 5C4100BC u32 1
+field 0278CACC 5C4100C0 u32 4
+field 0278CACC 5C410028 u32 0x5C410144
+field 0278CACC 5C41002C u8 4
+field 0278CACC 5C41002E u8 30
+field 0278CACC 5C41002F u8 1
+field 0278CACC 5C41013C u32 1
+field 0278CACC 5C410140 u32 4
+field 0278CACC 5C410034 u32 0x5C4101C4
+field 0278CACC 5C410038 u8 4
+field 0278CACC 5C41003A u8 30
+field 0278CACC 5C41003B u8 1
+field 0278CACC 5C4101BC u32 1
+field 0278CACC 5C4101C0 u32 4
+src wwhd_src/agl/ProjectionShadowConstruction.cpp
+
+# approved ordinary constructor helpers; protected array-query targets above
+# remain opaque and are not part of this real-helper list.
+real 0279E618
+real 0279E674
+real 027A84B8
+real 0279CB9C
+real 0279E57C
+real 0273B264
+real 027A861C
+real 0279288C
+# Lead00:42: E674's internal SafeText table10167CCC uses this pure empty target.
+real 0279F1BC
+
+# Owned pure key calculation, for the existing-resource diagnostic profile.
+real 0278EE50
+# ensureOutput's not-ready setup path still needs the resource-construction model;
+# this checkpoint covers disabled/ready calls only, not a complete function gate.
+arg! 0278FC80 r3 0x5C020000
+arg! 0278FC80 r4 0
+arg! 0278FC80 r5 0,1,2,3,64,256,1920,0x7FFFFFFF,0xFFFFFFFF
+arg! 0278FC80 r6 0,1,2,3,64,256,1080,0x7FFFFFFF,0xFFFFFFFF
+field 0278FC80 r3+0x1CC u32 1
+field 0278FC80 r3+0x1D0 u32 0x5C100000
+field 0278FC80 r3+0x1D4 u32 0
+field 0278FC80 r3+0x424 u8 0,1
+field 0278FC80 r3+0x444 u32 0
+field 0278FC80 r3+0x454 u32 0
+field 0278FC80 r3+0x494 u8 0
+field 0278FC80 r3+0x554 u8 0
+field 0278FC80 r3+0x594 u8 0
+field 0278FC80 r3+0x5A4 u8 0
+field 0278FC80 5C101950 u8 1
+field 0278FC80 5C101954 u32 1
+field 0278FC80 5C101960 u32 0
+field 0278FC80 5C10196C f32 1
+
+# Empty-resource destruction diagnostic; live-frame destruction still needs the
+# resource-owner lifetime model before a complete function gate.
+arg! 0278D8D4 r3 0,0x5C020000
+arg! 0278D8D4 r4 0,1,2,3,0xFFFFFFFF
+field 0278D8D4 r3+0x1CC u32 0
+field 0278D8D4 r3+0x1D0 u32 0
+src wwhd_src/agl/ShadowPrePassConstruction.cpp
+real 02791A4C
+real 027919BC
+real 027919FC
+real 02791A54
+
+src wwhd_src/agl/ShadowShaderSetup.cpp
+src wwhd_src/agl/ShadowMipPass.cpp
+src wwhd_src/agl/ShadowUniformUpdate.cpp
+src wwhd_src/agl/ShadowRenderPass.cpp
+# Partial disabled profiles; enabled resource paths remain unaccepted.
+arg! 0278FF3C r3 0x5C020000
+arg! 0278FF3C r4 0,1,2,3
+field 0278FF3C r3+0x424 u8 0
+field 0278FF3C r3+0x1CC u32 0,1,2,3
+field 0278FF3C r3+0x1D0 u32 0x5C100000
+arg! 02791230 r3 0x5C020000
+src wwhd_src/agl/ShadowFrameConstruction.cpp
+src wwhd_src/agl/ShadowFrameSetup.cpp
+src wwhd_src/agl/ShadowPrePassBindings.cpp
+
+# Approved ordinary constructor lifetime closure, synchronized with construction companion.
+alloc 0273AD10 r3 0x63000000
+allocnested 0273AD10
+real 0279A07C
+real 0279CA34
+real 0279C950
+real 0273B200
+real 027A03A0
+real 028EFFD0
+real 028EFE58
+real 027BE6B8
+real 027BDF7C
+real 027BDE1C
+real 027BDEB4
+real 02752A84
+real 02759B98
+arg! 0278DAC0 r3 0,0x62000000
+arg! 0279207C r3 0,0x62010000
+
+# Approved full GHS nonvolatile save/restore chains for real array driver.
+real 028F61E4
+real 028F61E8
+real 028F61EC
+real 028F61F0
+real 028F61F4
+real 028F61F8
+real 028F61FC
+real 028F6200
+real 028F623C
+real 028F6240
+real 028F6244
+real 028F6248
+real 028F624C
+real 028F6250
+real 028F6254
+real 028F6258
+
+# approved applyMipBlur fixture (02790EC4; answered 2026-10-26 02:59 CET).
+# r3 is the stable owner; r5 is a distinct generated FrameResources object.
+# Compare only pointee bytes read/written by the original ext callees. The
+# create helpers fully write their outputs; the apply helpers read the fields
+# below their unused vtable word. draw* reads TextureSampler bytes 0..0x79,
+# viewport-bound fields through the device-mode word, and both RenderVector2 components (sizes
+# confirmed by wdis call chains).
+callee 027BE794 r3=heap52
+callee 027B6D64 r3=heap172
+callee 0274D690 r3=heap28
+callee 0274F5F0 r3=out24
+callee 0274F964 r3=20
+callee 0274FDBC r3=out116
+callee 0274FEB0 r3=112
+callee 027A90AC r3=heap408 r4=20 r5=8 r6=8
+callee 027A9584 r3=heap408 r4=20
+arg! 02790EC4 r3 0x5C500000
+stable 5C500000 0x5C4
+arg! 02790EC4 r5 0x5C510000
+field 02790EC4 r3+0x584 u32 0,1,2,3,5,0xFFFFFFFF,0x80000000
+field 02790EC4 r3+0x574 u32 0,1,4,5,6,0xFFFFFFFF
+field 02790EC4 r3+0x564 u8 0,1,255
+
+stackfill

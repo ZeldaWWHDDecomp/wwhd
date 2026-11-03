@@ -1,0 +1,9 @@
+# Caller-valid 027CC78C side-plane tangent companion. The cull volume remains
+# original-produced. This uses the established exact valid tangent point for
+# the same projection/rigid-view family: f32(f32(x*nx)-nz) == radius == 1.
+# verify: -only 027CC78C -strictnan -calleesp -footprint
+include lib2_agl_18/render_basic_original_context_steering.txt
+poke * 59100008 u32 0x3FD8EA94
+poke * 5910000C f32 0
+poke * 59100010 f32 499
+poke * 59100014 f32 1

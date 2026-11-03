@@ -1,0 +1,189 @@
+# verify: -only 028475E4
+# run with -only 028475E4
+# Canonical emitter/trigonometric sources provide shared globals; their previously verified bodies are support only.
+src wwhd_src/JSystem/JParticle/JPAExtraShape.cpp
+src wwhd_src/JSystem/JParticle/JPAExTexShape.cpp
+src wwhd_src/JSystem/JParticle/JPADrawVisitor.cpp
+src wwhd_src/JSystem/JParticle/JPA_emitter_calc.cpp
+src wwhd_src/JSystem/JParticle/JPAFieldBlock_archive.cpp
+
+# Canonical emitter TU support uses its established coherent input domain.
+# Live aligned emitter storage; parameter values remain generated.
+arg! 0281DBEC r3 0x30000000
+# Bounded noncyclic manager list; topology stable across callbacks.
+arg! 0282167C r4 0,1,15,16,255
+field 0282167C r3+0x50 u32 0,0x31000000
+field 0282167C r3+0x5c u32 0,0x31000000
+field 0282167C r3+0x104 u32 0,0x31000000
+field 0282167C r3+0x110 u32 0,0x31000000
+field 0282167C r3+0xc44 u32 0,0x31000000
+field 0282167C 0x31000000 u32 0x32000000
+field 0282167C 0x3100000c u32 0
+stable 0x31000000 16
+# Keep emission counts and key loops finite.
+field 0281F878 r3+0x66 u16 0,1,2,3
+field 0281F878 r3+0x34 f32 -1,0,0.1,1,2,3
+field 0281F878 r3+0x38 f32 0,0.5,1
+field 0281F878 r3+0x24c f32 -1,0,0.5,1,2
+ret! 0281DCB8 0,0x32000000
+field 0281F42C r3+0x1e0 u32 0x33000000
+field 0281F42C 0x33000022 u8 0,1,2
+field 0281F42C 0x33000014 u32 0x33000100
+field 0281F42C 0x33000100 u32 0x33000200
+field 0281F42C 0x33000104 u32 0x33000200
+field 0281F42C 0x33000200 u32 0x33000300
+field 0281F42C 0x3300032c u32 0x028484e0
+field 0281F42C 0x33000324 u32 0x028484d4
+field 0281F42C 0x3300031c u32 0x028484c0
+field 0281F42C 0x33000314 u32 0x028484b4
+stable 0x300001e0 4
+stable 0x33000000 0x400
+ret! 028484e0 0x34000000
+ret! 028484d4 1,2,3
+ret! 028484c0 0,1
+ret! 028484b4 0,1,2,3,4,5,6,7,8,9,10,11
+callee 028E945C r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 028E90D4 r3=48 r4=out48
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028245AC r6=out48
+callee 0282466C r3=12 r4=out48
+# HD teardown and stopped/running emitter branches.
+field 0281FE40 r3+0x3d4 u8 0,0,1,2
+field 0281FE40 r3+0x3d5 u8 0,0,1,2
+field 0281FE40 r3+0x254 u32 0,1,2,8,10
+field 0282014C r3+0x3d4 u8 0,0,1,2,3
+field 0282014C r3+0x5c s32 -1,0,1,10
+field 0282014C r3+0x254 u32 0,1,8,9,64,65,72,73
+field 0282014C r3+0x1b4 u32 0,1
+field 0282014C r3+0x1c0 u32 0,1
+# Exercise every latitude-ring transition in fixed-interval sphere emission.
+field 02820778 0x104b5894 u32 0,1,3
+field 02820778 0x104b5898 u32 0,1,2,3
+field 02820778 0x104b589c u32 1,4,5
+field 02820778 0x104b58a0 u32 3,5,7
+field 02820778 r3+0x84 u32 0,1,2,3
+
+# Teardown survivor regression: neighboring count byte differs, StopEmit is independent of Immortal.
+field 0282014C r3+0x1c4 u8 1
+src wwhd_src/JSystem/JParticle/JPAEmitterLoader_support.cpp
+src wwhd_src/JSystem/JParticle/JPAEmitterLoader.cpp
+# Coherent bounded JPAC fixture: one emitter with one variable-kind block, and one texture.
+arg! 028475E4 r3 0x38000000
+field 028475E4 r3+4 u32 0x38100000
+field 028475E4 0x38100008 u16 0,1
+field 028475E4 0x3810000A u16 0,1
+field 028475E4 0x3810002C u32 0,1
+field 028475E4 0x38100034 u8 0,1
+field 028475E4 0x38100035 u8 0,1
+field 028475E4 0x38100036 u8 0,1
+field 028475E4 0x38100040 u32 0,0x464C4431,0x4B464131,0x42454D31,0x42535031,0x45535031,0x53535031,0x45545831,0x54444231
+field 028475E4 0x38100044 u32 0x20
+stable 0x38100000 0x100
+stable 0x38000000 0x14
+# Exercise valid and rejected signatures of the public loader entry.
+field 02847D14 r3+0 u32 0,0x4A504143
+field 02847D14 r3+4 u32 0,0x312D3030
+src wwhd_src/JSystem/JMath/JMATrigonometric.cpp
+# Acyclic particle-list topology remains stable while texture bindings clobber state.
+arg! 028328C0 r4 0x40000000
+field 028328C0 r4+0x24 u32 0x40001000
+field 028328C0 0x40001000 u32 0,0x40002000
+field 028328C0 0x40002000 u32 0x40003000
+field 028328C0 0x4000200C u32 0
+stable 0x40001000 16
+stable 0x40002000 16
+arg! 02837B2C r4 0x41000000
+field 02837B2C r4+0x24 u32 0x41001000
+field 02837B2C 0x41001000 u32 0x41002000
+field 02837B2C 0x41001004 u32 0x41002000
+field 02837B2C 0x41001008 u32 0,1,2,3
+field 02837B2C 0x41002000 u32 0x41003000
+field 02837B2C 0x41002008 u32 0
+field 02837B2C 0x4100200C u32 0
+stable 0x41001000 16
+stable 0x41002000 16
+# The pure per-TU link accessors preserve the coherent list in all visitor paths.
+real 02830804
+real 0283080C
+arg! 0283540C r4 0x43000000
+field 0283540C r4+0x24 u32 0x43001000
+field 0283540C r4+0x10 u32 0x43001100
+field 0283540C 0x43001100 u32 0x43001200
+field 0283540C 0x4300126C u32 0x028475D4,0x028475DC
+field 0283540C 0x43001000 u32 0x43002000
+field 0283540C 0x43001004 u32 0x43002000
+field 0283540C 0x43001008 u32 0,1,2,3
+field 0283540C 0x43002000 u32 0x43003000
+field 0283540C 0x43002008 u32 0x0
+field 0283540C 0x4300200C u32 0x43002010
+field 0283540C 0x4300310C u8 0
+field 0283540C 0x43002010 u32 0x43003200
+field 0283540C 0x43002018 u32 0x43002000
+field 0283540C 0x4300201C u32 0x43002020
+field 0283540C 0x4300330C u8 0
+field 0283540C 0x43002020 u32 0x43003400
+field 0283540C 0x43002028 u32 0x43002010
+field 0283540C 0x4300202C u32 0x0
+field 0283540C 0x4300350C u8 0
+field 0283540C 0x43003120 u8 0,1
+field 0283540C 0x430030E4 u32 0x43004000
+field 0283540C 0x43004950 u32 0,1
+field 0283540C 0x43004000 u32 0x44000000
+field 0283540C 0x43004254 u32 0x44010000
+field 0283540C 0x430044A8 u32 0x44020000
+field 0283540C 0x430046FC u32 0x44030000
+field 0283540C r4+0 u32 0x43005000
+field 0283540C 0x430050E0 u32 0x02830418
+stable 0x43001000 0x300
+stable 0x43002000 48
+stable 0x430030E4 4
+stable 0x43004000 0x954
+arg! 02835A20 r4 0x43000000
+field 02835A20 r4+0x24 u32 0x43001000
+field 02835A20 r4+0x10 u32 0x43001100
+field 02835A20 0x43001100 u32 0x43001200
+field 02835A20 0x4300126C u32 0x028475D4,0x028475DC
+field 02835A20 0x43001000 u32 0x43002000
+field 02835A20 0x43001004 u32 0x43002000
+field 02835A20 0x43001008 u32 0,1,2,3
+field 02835A20 0x43002000 u32 0x43003000
+field 02835A20 0x43002008 u32 0x0
+field 02835A20 0x4300200C u32 0x43002010
+field 02835A20 0x4300310C u8 0
+field 02835A20 0x43002010 u32 0x43003200
+field 02835A20 0x43002018 u32 0x43002000
+field 02835A20 0x4300201C u32 0x43002020
+field 02835A20 0x4300330C u8 0
+field 02835A20 0x43002020 u32 0x43003400
+field 02835A20 0x43002028 u32 0x43002010
+field 02835A20 0x4300202C u32 0x0
+field 02835A20 0x4300350C u8 0
+field 02835A20 0x43003120 u8 0,1
+field 02835A20 0x430030E4 u32 0x43004000
+field 02835A20 0x43004950 u32 0,1
+field 02835A20 0x43004000 u32 0x44000000
+field 02835A20 0x43004254 u32 0x44010000
+field 02835A20 0x430044A8 u32 0x44020000
+field 02835A20 0x430046FC u32 0x44030000
+field 02835A20 r4+0 u32 0x43005000
+field 02835A20 0x430050E0 u32 0x02830418
+stable 0x43001000 0x300
+stable 0x43002000 48
+stable 0x430030E4 4
+stable 0x43004000 0x954
+# Opaque callbacks retain the draw-context list identity; real link walks stay in this topology.
+stable 0x40000024 4
+stable 0x41000024 4
+stable 0x43000024 4
+field 0283540C 0x43001004 u32 0x43002020
+field 02835A20 0x43001004 u32 0x43002020
+field 0283540C 0x430034E4 u32 0x43004000
+field 02835A20 0x430034E4 u32 0x43004000
+field 0283540C 0x43003520 u8 0,1
+field 02835A20 0x43003520 u8 0,1
+stable 0x430034E4 4
+ret! 0273B050 0,0x39000000
+ret! 0273B0D4 0
+field 028475E4 0x3810000A u16 0
+field 028475E4 0x38100008 u16 0,1

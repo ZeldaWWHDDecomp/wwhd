@@ -1,0 +1,70 @@
+# One record allocation returns null; existing empty record array remains intact.
+# No classes or objects, one matrix record; distinct allocations, real icon/label constructors and matrix initialization.
+# verify: -only 0276C3F8 -strictnan -calleesp
+src wwhd_src/agl/EnvironmentManagerInitialize.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+arg! 0276C3F8 r3 0x59E00000
+arg! 0276C3F8 r4 0x59E10000
+arg! 0276C3F8 r5 0x58F00000
+field 0276C3F8 59E0001C u32 0x1015FCB4
+fill 0276C3F8 59E10000 528 0
+field 0276C3F8 59E10000 u32 0
+field 0276C3F8 59E10200 u32 0
+field 0276C3F8 59E10204 u32 0x101607A8
+field 0276C3F8 59E10208 u32 0,4
+field 0276C3F8 59E1020C s32 1
+field 0276C3F8 101F8BF4 s32 0
+field 0276C3F8 59E00008 s32 0
+field 0276C3F8 59E0000C u32 0x59E20000
+field 0276C3F8 59E00010 s32 0
+field 0276C3F8 59E00014 u32 0x59E30000
+field 0276C3F8 59E00234 s32 0
+field 0276C3F8 59E00238 u32 0
+field 0276C3F8 59E003E4 s32 0
+field 0276C3F8 59E003E8 u32 0
+field 0276C3F8 59E20000 u16 0
+field 0276C3F8 59E20002 u16 1
+field 0276C3F8 58F0000C u32 0x101459E0
+field 0276C3F8 104A1564 u32 0x59E60000
+field 0276C3F8 104A156C u32 0x0276D96C
+fieldstr 0276C3F8 59E60000 64 "","Projector","ProjectorLongName"
+field 0276C3F8 59E70058 u32 0x10160030
+field 0276C3F8 104A145C u32 0x59E80000
+field 0276C3F8 59E80000 s16 0
+mockfield 0276F554 r3+8 s32 0
+mockfield 0276F554 r3+0xC u32 0x59E20000
+mockfield 0276F554 r3+0x10 s32 0
+mockfield 0276F554 r3+0x14 u32 0x59E30000
+ret! 02756140 0x58F00000
+ret! 02753D6C 0
+ret! 0276D96C 0x59E70000
+real 0276C35C
+real 0276C3EC
+real 0276D95C
+real 0276CC10
+real 0276CC68
+real 028E9098
+real 028E892C
+callee 02785CB4 r4=8
+callee 0279CB24 r5=8
+callee 0279CB9C r5=8
+callee 02759C10 r3=12 r4=cstr r5=12
+callcr 0276CC68 6
+# Registration is complete, const settings and unrelated buffer descriptors survive mock epochs.
+# The actual allocation, constructor, matrix and reference-element writes remain compared.
+stable 59E10000 528
+stable 101F8BF4 4
+stable 104A1564 20
+stable 104A145C 4
+stable 59E80000 2
+stable 58F0000C 4
+stable 59E0001C 4
+stable 59E00008 16
+stable 59E00234 8
+stable 59E003E4 8
+stable 59E20000 4
+stable 59E30000 4
+stable 59E70058 4
+
+# Zero-page rule: page-0 accesses are console DSI traps.
+nulltrap

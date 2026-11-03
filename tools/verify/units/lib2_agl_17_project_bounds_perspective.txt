@@ -1,0 +1,28 @@
+# Projected bounds from finite orthographic/perspective matrices and a rigid model.
+# Only raw matrix values are consumed; no projection-object RTTI/lifetime claim.
+# verify: -only 027CA37C -strictnan -calleesp
+src wwhd_src/agl/GeometryMath.cpp
+src wwhd_src/agl/UtilityText.cpp
+real 0272D680 028EFFD0 027CA8EC
+arg! 027CA37C r3 0x5D000000
+arg! 027CA37C r4 0x5D010000,0x5D020000
+arg! 027CA37C r5 0x5D020000
+fill 027CA37C 5D000000 420 0
+fill 027CA37C 5D010000 24 165
+fill 027CA37C 5D020000 24 0
+field 027CA37C 5D000134 f32 1
+field 027CA37C 5D000148 f32 1
+field 027CA37C 5D00015C f32 1
+field 027CA37C 5D020000 f32 -3,-2,-1
+field 027CA37C 5D020004 f32 -3,-2,-1
+field 027CA37C 5D02000C f32 1,2,3
+field 027CA37C 5D020010 f32 1,2,3
+field 027CA37C 5D000164 f32 1,2
+field 027CA37C 5D000178 f32 1,2
+field 027CA37C 5D00018C f32 -1.02020202
+field 027CA37C 5D000190 f32 -0.202020202
+field 027CA37C 5D00019C f32 -1
+field 027CA37C 5D020008 f32 -10,-5,-2
+field 027CA37C 5D020014 f32 -1,-0.5,-0.25
+final 027CA37C 5D010000 18
+final 027CA37C 5D020000 18

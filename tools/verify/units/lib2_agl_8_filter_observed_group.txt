@@ -1,0 +1,8 @@
+# verify: -strictnan -calleesp -only 02796F74
+# Observe complete horizontal/vertical vectors at their original upload sites.
+# Layer vectors intentionally overlap original frame slots; their defined first word keeps the existing observation.
+include lib2_agl_8_render_filter_group.txt
+observearg C0006A40 r5+0 16 if lr=027978B4
+observearg C0006908 r5+0 16 if lr=027978CC
+observearg C0006A40 r5+0 16 if lr=02797B60
+observearg C0006908 r5+0 16 if lr=02797B78

@@ -1,0 +1,13 @@
+# AGL#19 banks: release of the spatial (027D22A8) and paired (027D2F9C) light collections a second time, after their
+# own original release has run on the configured collections (fixture lib2_agl_19_banks_prepass_fixture.txt): records
+# NULL, capacity 0 (LightPrepass::destroy releases each collection once; this is the released state).
+# verify: -only 027D22A8,027D2F9C -strictnan -calleesp
+src wwhd_src/agl/LightCollectionRelease.cpp
+src wwhd_src/agl/RenderUnitBindings.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+include lib2_agl_19_banks_prepass_fixture.txt
+real 027CE0C0 027D387C 027BEC90 027BE2B0 027D22A8 027D2F9C
+setup 027D22A8 027D22A8 r3=0x6A87F65C
+setup 027D2F9C 027D2F9C r3=0x6A87F780
+arg! 027D22A8 r3 0x6A87F65C
+arg! 027D2F9C r3 0x6A87F780

@@ -1,0 +1,110 @@
+# Core-2 variant of lib2_j3d_hdrew_1_slotupd_observe_heap_slots.txt (includes inlined; all OSGetCoreId pins set to core 2, nothing else changed).
+# Basis: 
+# thread (runtime/src/threads.cpp:747 OSGetCoreId, :670 main thread created on core 1). The core-0 pin of the
+# original failed the 19:18 differential control (same spec with the pin at 1, n1000 s1, original side: refcache
+# CHECK FAILED at input 0/1, lib2_j3d_hdrew_1_slotupd_observe_heap_slots), so it cannot stand for these rows.
+# 028FDE28 is the branch stub the callers bl into before the C0009BB0 import (same call), so its pin carries the same value.
+# Core 2: port game traces (WWHD_WATCH) show PipelineRenderState updateScaledSlot/copySlot/createSlot
+# on the main thread (core 1) and WorkerMgr/Worker2() (core 2); copyBetweenSlots shares the 02733190 draw-method root. Rule 19:58/20:15.
+# Companion of lib2_j3d_hdrew_1_batch_heap_slots_20261031: same inputs, adds the original surface constructor
+# and observes what the draw callees read through their pointer arguments.
+# verify: -only 027F84A4,027F869C,027F8974 -strictnan -calleesp
+# ---- inlined lib2_j3d_hdrew_1_batch_heap_slots_20261031.txt ----
+# 028F521C tail resolves directly to the coreinit memset import.
+mockset C000A858 r3 r4 r5
+src wwhd_src/JSystem/J3DGraph/PipelineSlotUpdate.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineLookupInstances.cpp
+src wwhd_src/JSystem/J3DGraph/PipelineSlotCreation.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+arg! 027F8B20 r3 0x6A0000C8
+arg! 027F8B20 r4 16,12,15,3,0
+arg! 027F8B20 r5 12,16,15,3,0
+
+field * 0x101F8DD4 u32 0
+fill * 0x6A000000 0x01000000 0
+stable 0x6A000000 0x01000000
+field * 0x6E200000 u32 0x6A000000
+field * 0x6E200004 u32 0x01000000
+field * 0x6E200008 u32 0
+setup * 027561B4
+setup * 02755FE0 r3=0x6E200000
+field * 0x101F9968 u32 0
+field * 0x101F996C u32 0
+setup * 027F7E08 r3=0x6A000000
+nestedret 02756140 0x6A000000
+setup * 02757B48
+setup * 0279F2EC r3=0x6A000000
+setup * 0279F474 r3=*101F8DD4 r4=0x6A000000 r5=0x70000000 r6=0x01000000 r7=0x71000000 r8=0x01000000 r9=0 r10=0
+setup * 027F8F14
+setup * 027F7F08 r3=*101F9968 r4=0x6A000000
+field * 0x5E000000 u32 0x44A00000
+field * 0x5E000004 u32 0x44340000
+setup * 027F81C0 r3=*101F9968 r4=12 r5=0x5E000000
+setup * 027F81C0 r3=*101F9968 r4=16 r5=0x5E000000
+setup * 027F81C0 r3=*101F9968 r4=15 r5=0x5E000000
+
+real 027F7E08 027F7D78 0274FDBC 027B95B4 027B958C 027B954C 027B6CB8 027BE6B8 027F7F08 0273B050 027F81C0 027F81A4 027F8F14
+real 027BE7F0 027BE74C 027BE744 027BFF9C 027F29D4
+real 0279ADD4 0279AC28 0279AD54 0279AE68 0279FC6C 0279F7F0 0279F738 0279F6B0
+real 027BE930 027BE794 027CB1A0 027CB3B8 0279FFDC 027A0040 027601BC 027601F0 027A029C 027CAB58
+real 027C05F4 027C05C8 027C05A0 02757B48 0279A95C
+real 027561B4 02755FE0 0279F2EC 0279F218 0279F474 02752B0C 028EFFD0 028EFE58
+nestedret 028FDE28 2
+nestedret C0009BB0 2
+mockset C0009990 r3 r4 r5
+mocksurfacesize C00060D0
+mocklookup 02786348 r3 101F8C24 40
+stable 101F8C24 0x100
+stable 104A0BC0 0x10
+real 02755F40 02755EC4 0275315C 02752C74 02752D8C 02752E60 02752F10 02753000 027556FC 0275589C 02755CA4 02755E7C 02755FEC
+real 02753D6C 027536F4 02753628 027536B0 0273AF40 02754754 027540AC 027600EC 028F521C 0273B2F0 0273B310 0273B440 0273B524 027CAD30
+real 027CAED8 0273B2D0 027CB744
+callbudget 10000000
+
+real 0273B0D4 0273AD10 0273ADAC 027B9E90 027F8B20 0274F5F0
+setupsnapshot
+real 025C0AB8 025C09D8 025C0934 027B6E2C 0278635C 0279FDC8
+mockfield C00060B0 r4+0 u32 0x1000
+mockfield C00060B0 r5+0 u32 0x100
+nestedmockfield C00060B0
+setup * 027F81C0 r3=*101F9968 r4=3 r5=0x5E000000
+setup * 027F2A4C
+setup * 027F8B20 r3=0x6A0000C8 r4=12 r5=16
+setup * 0274F5F0 r3=0x5D100100 r4=0x6A000400
+field * 0x5D100008 u32 0x6A000400
+field * 0x5D10001C u32 0x5D100100
+stable 0x5D100000 0x20
+arg! 027F84A4 r3 0x6A0000C8
+arg! 027F84A4 r4 3,12,15,16
+arg! 027F84A4 r5 0x5D100000
+arg! 027F869C r3 0x6A0000C8
+arg! 027F869C r4 3,12,15,16
+arg! 027F869C r5 0x5D100000
+arg! 027F8974 r3 0x6A0000C8
+arg! 027F8974 r4 3,12,15,16
+arg! 027F8974 r5 0x5D100000
+arg! 027F8974 r6 0,1
+stable 104A02F8 0x24
+stable 104A0328 0x10
+stable 104A0364 0xC
+
+real 027F2A4C 027F28CC 027F2AA8 0274E1C8 02750250
+
+real 0273B2D0 0273B560 02750CDC 02750D00 02752A84 02753004 027537B8 02753880 02755818 02760DE8 02760E34 02760E58
+# ---- end lib2_j3d_hdrew_1_batch_heap_slots_20261031.txt ----
+# Observation added by (J3D-HDREW#1 reached survivors):
+# 027BE114 (surface constructor) runs as the original: it stores mFlag (+0x91) = 0 and +0x90..+0xA3,
+# so the caller's later mFlag=1 store and its order against the constructor are observable.
+real 027BE114
+# drawSlotUpdateSurface / drawSlotUpdateGamma read the surface header, the source record and the scale pair.
+observearg 027A90AC r3+0x90 20
+observearg 027A90AC r4+0 24
+observearg 027A90AC r5+0 8
+observearg 027A9B0C r3+0x90 20
+# activateSlotUpdateBuffer (0274D690 -> RenderBuffer bind 027B9D00 via vtable +0x3C) reads the eight colour targets
+# at +0x1C..+0x38 and the depth target at +0x3C of the buffer it binds.
+observearg 0274D690 r3+0x1C 36
+# Slot indices 17/18 (gamma draw), 19 (original word()/createWord fallback to slot 0) and not-yet-created slots
+# (17/18/19 are created here by the original createWord, which reads the dimensions record).
+arg! 027F84A4 r4 3,12,15,16,17,18,19

@@ -1,0 +1,134 @@
+# verify: -only 02727F7C,02728498,02732C9C,027F1278,027F13DC,027F1508,027F1518,027F1534,027F15A0,027F16E8,027F1FA8,027F26C4,027F27DC,027F2804,027F2818,027F2830,027F2844,027F2848,027F285C,027F2860,027F28B4,027F28B8,027F28CC,027F29B8,027F29D4,027F2A4C,027F2AA8,027F2AEC,027F2B40,027F2B68,027F2B98,027F3478,027F34AC,027F3588,027F35B0,027F35CC,027F35D8,027F35F4,027F3600,027F361C,027F3628,027F363C,027F36FC,027F3B28,027F3BD0,027F3C38,027F3CD0,027F3D38,027F3D60,027F3D74,027F3D78,027F3E04,027F3F8C,027F3F94,027F3FB4,027F4098,027F4C58,027F4D5C,02801024,028010F8,02801280,02837D40,02843B1C,02843BC4,02843C5C,02843C80 -calleesp
+# HD-adjacent packet and material operations. Runtime scope excludes private-table dispatch and unqualified model configuration.
+src wwhd_src/JSystem/J3DGraph/J3DAdapterUtilities.cpp
+src wwhd_src/JSystem/J3DGraph/J3DInlineConversions.cpp
+src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
+src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
+src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp
+src wwhd_src/JSystem/J3DGraph/J3DMaterialStorage.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelAdapter.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelPacketSetup.cpp
+src wwhd_src/JSystem/J3DGraph/J3DModelConfiguration.cpp
+src wwhd_src/JSystem/J3DGraph/J3DBatchAdapter.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+
+# Buffered-text termination stays within a live bounded buffer.
+arg! 027F2818 r3 0x5C100000
+field 027F2818 5C100000 u32 0x5C110000
+field 027F2818 5C100008 s32 1,2,8,32,104
+arg! 027F2AA8 r3 0,0x5C120000
+ret! 0273AD10 0,0x5C130000
+# Physical cores are bounded by the original per-core table contract.
+ret! C0009BB0 0,1,2
+
+# The initial constructor diagnostic uses a complete nonwrapping object.
+arg! 027F1278 r3 0x5C200000
+arg! 027F1534 r3 0x5C210000
+arg! 027F34AC r3 0x5C220000
+field 027F34AC 5C22000C u32 0x5C230000
+field 027F34AC 5C230016 u16 0
+# This owned getter is a load-only leaf, not an arbitrary memory-writing callback.
+real 027F3F8C
+# Empty arrays are a complete lifecycle state; positive arrays have their own companion fixture.
+arg! 02801024 r3 0,0x5C300000
+field 02801024 5C300008 s32 0
+field 02801024 5C30000C u32 0
+arg! 028010F8 r3 0x5C310000
+arg! 028010F8 r4 0,0x5C320000
+field 028010F8 5C32001C s32 0
+# Independent null-input/empty-chain branches; positive resources need their owner contracts.
+arg! 027F363C r4 0
+arg! 027F3C38 r5 0
+# Complete model construction, empty packet release, and a bounded empty joint tree.
+arg! 027F3E04 r3 0x5C400000
+arg! 027F4C58 r3 0,0x5C410000
+field 027F4C58 5C410128 s32 0
+field 027F4C58 5C41012C u32 0
+arg! 027F4D5C r3 0x5C420000
+field 027F4D5C 5C4200AC u32 0x5C430000
+field 027F4D5C 5C430000 u32 0x5C440000
+field 027F4D5C 5C44000C u32 0xFFF4
+field 027F4D5C 5C450008 u16 0
+real 027F3F94
+
+# A complete shape resource, name descriptor and one binding entry.
+arg! 027F15A0 r3 0x5C500000
+arg! 027F15A0 r4 0x5C510000
+arg! 027F15A0 r5 0x5C520000
+field 027F15A0 5C510000 u32 0x5C530000
+field 027F15A0 5C53000E u16 0
+field 027F15A0 5C530010 u16 0,1,2
+field 027F15A0 5C520014 u32 0x5C540000
+field 027F15A0 5C520034 u32 0x5C560000
+field 027F15A0 5C540004 u32 0,0x2FFFC
+field 027F15A0 5C560000 u32 0x5C550000
+field 027F15A0 5C550004 u32 0,0x2003C
+field 027F15A0 5C55000C u16 0,1,7
+field 027F15A0 5C55001C u32 0,0x70000
+field 027F15A0 5C550020 u32 0,0x3FFE0
+field 027F15A0 5C590000 u32 0,1,2,0x11,0x12
+field 027F15A0 5C500090 u32 0x5C50001C
+field 027F15A0 5C50001C u32 0x5C500028
+field 027F15A0 5C500020 u32 0x1016E240
+field 027F15A0 5C500024 s32 104
+fieldstr 027F15A0 5C570000 64 "Model","Scene"
+fieldstr 027F15A0 5C570040 64 "Material","Surface"
+stable 5C550000 0x24
+stable 5C590000 4
+ret! 027DFA24 0,0x5C580000,0x5C580040
+field * 5C580008 u32 0,1,4,7
+field * 5C580048 s32 -1,2,4
+stable 5C580000 12
+stable 5C580040 12
+cr 027F15A0 6 0,1
+callcr 02759C28 6
+callee 02759C28 r5=cstr:128 r6=cstr:128
+arg! 027F26C4 r3 0x5C600000
+field 027F26C4 5C6000A8 u32 0
+# prepareDrawList remains implemented but untested pending the private PTMF table contract.
+
+# One canonical joint record; callback-free branch and bounded next-index calculation.
+arg! 027F3B28 r4 0x5C610000
+field 027F3B28 5C610000 u32 0x5C620000
+field 027F3B28 5C620000 u32 0,1,2,0xFFFF
+field 027F3B28 104B462C u32 0x5C630000
+field 027F3B28 5C6300AC u32 0x5C640000
+field 027F3B28 5C63002C u32 0x5C660000
+field 027F3B28 5C640004 u32 1
+field 027F3B28 5C640008 u32 0x5C650000
+field 027F3B28 5C650008 u32 0
+field 027F3B28 5C66002C u16 1,2,3
+
+# Bounded material-name inputs exercise all four named allocation branches.
+arg! 027F36FC r3 0x5C730000
+arg! 027F36FC r4 0x5C740000
+arg! 027F36FC r5 0
+ret! 027F68FC 0x5C720000
+ret! 027F68F4 0x5C700000
+field 027F36FC 5C720008 u16 0,1,2,3
+field 027F36FC 5C700004 u32 0xFFFC
+fieldstr 027F36FC 5C710000 64 "cc_ptcl","bo_ue1","pp","bgn_2","ordinary"
+stable 5C720000 12
+stable 5C700000 8
+real 027F3D74
+ret! 027DFCCC 64,128
+alloc 027EC0AC r3 0x5C750000 align=r4
+# Empty/singleton batching input; positive iterator contracts remain separate.
+arg! 02837D40 r4 0x5C760000
+field 02837D40 5C760024 u32 0x5C770000
+field 02837D40 5C770008 u32 0,1
+
+# Zero shape packets are a complete setup state; populated sorted lists use a companion.
+arg! 027F4098 r3 0x5C780000
+field 027F4098 5C780028 u16 0
+
+# Null resource is an explicit early-return lifecycle state; positive submissions remain unqualified.
+arg! 027F16E8 r3 0x5C800000
+field 027F16E8 5C800098 u32 0
+arg! 027F1FA8 r3 0x5C810000
+field 027F1FA8 5C810098 u32 0

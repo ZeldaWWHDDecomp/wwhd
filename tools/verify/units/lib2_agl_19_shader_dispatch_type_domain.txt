@@ -1,0 +1,17 @@
+# AGL#19 render dispatch contexts, TYPE-DOMAIN ((B)): the layer flag bits no shipped path sets.
+# D: setCameraMode's 0x40 (with 0x80 from the constructor) selects the layer workspace's camera; E: bits 0x1000
+# (workspace active projection) and 0x4 (draw disabled) have no writer in .text and are steered (fields no producer
+# writes). Layers from lib2_agl_19_shader_layer_fixture.txt.
+# verify: -only 027D4EA4
+src wwhd_src/agl/ShaderStageState.cpp
+src wwhd_src/agl/RenderDispatchContext.cpp
+include lib2_agl_19_shader_layer_fixture.txt
+poke * 58004050 u32 0x1183,0x187,0x1187,0x11C3,0x143,0x1143
+# D keeps its camera (0272DB10) and setCameraMode's 0x8000|0x40; 0x1000 / 0x4 added, or 0x80 cleared (as 027342B4 does)
+poke * 58003050 u32 0x81C3,0x91C3,0x81C7,0x8143,0x9103
+fill * 5A000000 0x24 0xA5
+arg! 027D4EA4 r3 0x5A000000
+arg! 027D4EA4 r4 0,1,2,3,0xFFFFFFFF
+arg! 027D4EA4 r5 0,0x5A100000
+arg! 027D4EA4 r6 0,1,2
+arg! 027D4EA4 r7 0x58003000,0x58004000
