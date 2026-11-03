@@ -133,7 +133,7 @@ void *boGetResource(void *control, SafeString *name, s32 index);
 static void *boResource(s32 index, const char *archive = (const char *)l_arcName) {
     gabi::Local<SafeString> name;
     name->__vtbl = gabi::ea(&l_safeStringVtable);
-    name->mStringTop = gabi::guest_addr(archive);
+    name->mTextPtr = gabi::guest_addr(archive);
     u32 controller = l_resourceControl;
     return boInvoke(boGetResource, gabi::at<void>(controller), name.get(), index);
 }

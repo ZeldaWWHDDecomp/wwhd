@@ -618,17 +618,17 @@ static inline void wz_SafeString_vcall(SafeString *s) {
 }
 static bool wz_isStartStage(const char *name) {
   gabi::Local<SafeString> a;
-  a->mStringTop = gabi::guest_addr(name);
+  a->mTextPtr = gabi::guest_addr(name);
   a->__vtbl = SAFESTRING_VTBL;
   u32 stage = gabi::ea(dComIfGp_getStartStageName());
   gabi::Local<SafeString> b;
   b->__vtbl = SAFESTRING_VTBL;
-  b->mStringTop = stage;
+  b->mTextPtr = stage;
   wz_SafeString_vcall(a);
   wz_SafeString_vcall(a);
-  u32 pa = a->mStringTop;
+  u32 pa = a->mTextPtr;
   wz_SafeString_vcall(b);
-  u32 pb = b->mStringTop;
+  u32 pb = b->mTextPtr;
   if (pa == pb) {
     return true;
   }

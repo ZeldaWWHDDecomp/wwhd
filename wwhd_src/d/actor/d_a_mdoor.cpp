@@ -30,7 +30,7 @@ static void* objectResource(s32 index) {
     // HD: preserve the caller linkage space below the SafeString temporary.
     gabi::Local<u8[16]> callerLinkage;
     name.__vtbl = gc_tu.safeString;
-    name.mStringTop = gabi::guest_str(daMdoor_c::M_arcname);
+    name.mTextPtr = gabi::guest_str(daMdoor_c::M_arcname);
     return mdoorGetResource(dComIfG_resControl(), &name, index);
 }
 /* 021C0F70 */

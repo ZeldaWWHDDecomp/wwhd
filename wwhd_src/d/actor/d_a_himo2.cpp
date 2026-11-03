@@ -54,11 +54,11 @@ static inline void himo2_initPolyInfo(cBgS_PolyInfo* info) {
 static inline bool SafeString_eq(SafeString* a, SafeString* b) {
     gabi::call_ptr(gabi::at<himo2_safeStringVtable_c>(a->__vtbl)->assureTermination, a);
     gabi::call_ptr(gabi::at<himo2_safeStringVtable_c>(a->__vtbl)->assureTermination, a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::at<himo2_safeStringVtable_c>(b->__vtbl)->assureTermination, b);
-    if (s1 == b->mStringTop)
+    if (s1 == b->mTextPtr)
         return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+    u32 p = a->mTextPtr, q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = gabi::load<u8>(p + i);
         if (c != gabi::load<u8>(q + i))
@@ -205,10 +205,10 @@ static BOOL CallbackCreateHeap(fopAc_ac_c* i_this) {
         return FALSE;
     /* HD: in one stage (0x10011014) the hook's packets get an extra setup */
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr("GanonK");
+    a->mTextPtr = gabi::guest_addr("GanonK");
     a->__vtbl = HIMO2_SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
-    b->mStringTop =
+    b->mTextPtr =
         gabi::guest_addr(dComIfGp_getStartStageName()); /* dComIfGp_getStartStageName() */
     b->__vtbl = HIMO2_SAFESTRING_VTBL;
     if (SafeString_eq(a.get(), b.get())) {
@@ -280,10 +280,10 @@ static cPhs_State daHimo2_Create(fopAc_ac_c* i_this) {
  * extended by REG(0x5A8) - 600; a REG0_S (0x62A) widens the window. */
 static inline bool himo2_isStartStage(const char* stage) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(stage);
+    a->mTextPtr = gabi::guest_addr(stage);
     a->__vtbl = HIMO2_SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
-    b->mStringTop = gabi::guest_addr(dComIfGp_getStartStageName());
+    b->mTextPtr = gabi::guest_addr(dComIfGp_getStartStageName());
     b->__vtbl = HIMO2_SAFESTRING_VTBL;
     return SafeString_eq(a.get(), b.get());
 }

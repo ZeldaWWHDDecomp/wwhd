@@ -46,7 +46,7 @@ static u32 sTaskTypeInfo;
 static u32 sBaseTypeInfo;
 
 /* 0260B770 */
-void singletonDisposer__dt(be<u8> *i_this, u32 flags) {
+void instanceDisposer__dt(be<u8> *i_this, u32 flags) {
     const u32 p = gabi::ea(i_this);
     if (!p) {
         return;
@@ -143,10 +143,10 @@ static void fixed64Ctor(FixedString64 *i_s) {
     if (q) {
         gabi::at<FixedString64>(q)->mVtable = gabi::ea(&sBufferedStringVtable);
         gabi::at<FixedString64>(q)->mCapacity = 0x40;
-        gabi::at<FixedString64>(q)->mStringTop = s + 0xC;
+        gabi::at<FixedString64>(q)->mTextPtr = s + 0xC;
         i_s->mBuffer[63] = 0;
     }
-    const u32 top = (u32)(i_s->mStringTop);
+    const u32 top = (u32)(i_s->mTextPtr);
     i_s->mVtable = gabi::ea(&sFixed64BaseVtable);
     *gabi::at<be<u8>>(top) = 0;
     i_s->mVtable = gabi::ea(&sFixed64Vtable);
@@ -193,7 +193,7 @@ static u32 heapAlloc(Heap *i_heap, u32 size) {
 static void setStr(SafeString *i_s, be<u8> *i_top) {
     const u32 top = gabi::ea(i_top);
     i_s->mVtable = gabi::ea(&sSafeStringVtable);
-    i_s->mStringTop = top;
+    i_s->mTextPtr = top;
 }
 
 /* 0260B91C */
@@ -209,7 +209,7 @@ void ResLoadTask::prepare() {
     setStr(aSafeString, gabi::at<be<u8>>(gabi::guest_addr("Pack/permanent_3d.pack")));
     resLoadTask_loadPermanentPack(sResourceManager, a,
                                   (u32)gabi::at<ResourceControl>(sResourceControl)->mPermanentHeap);
-    aSafeString->mStringTop = gabi::guest_addr("Pack/first_szs_permanent.pack");
+    aSafeString->mTextPtr = gabi::guest_addr("Pack/first_szs_permanent.pack");
     aSafeString->mVtable = gabi::ea(&sSafeStringVtable);
     resLoadTask_loadPermanentArchive(
         sResourceManager, a, (u32)gabi::at<ResourceControl>(sResourceControl)->mPermanentHeap);
@@ -223,8 +223,8 @@ void ResLoadTask::prepare() {
     mgr = sResourceManager;
     aSafeString->mVtable = gabi::ea(&sSafeStringVtable);
     gabi::at<SafeString>(b)->mVtable = gabi::ea(&sSafeStringVtable);
-    aSafeString->mStringTop = gabi::guest_addr("Particle");
-    gabi::at<SafeString>(b)->mStringTop = gabi::guest_addr("Particle/Particle.szs");
+    aSafeString->mTextPtr = gabi::guest_addr("Particle");
+    gabi::at<SafeString>(b)->mTextPtr = gabi::guest_addr("Particle/Particle.szs");
     resLoadTask_registerArchive(mgr, a, b, heap, 1u, 0x40000u, 0x2000u);
     call_ptr<void>((u32)gabi::at<HeapVtable>(gabi::at<Heap>(heap)->mVtable)->mAdjust, heap);
     setStr(gabi::at<SafeString>(b), gabi::at<be<u8>>(gabi::guest_addr("ProgramTexture")));
@@ -232,8 +232,8 @@ void ResLoadTask::prepare() {
     mgr = sResourceManager;
     gabi::at<SafeString>(b)->mVtable = gabi::ea(&sSafeStringVtable);
     aSafeString->mVtable = gabi::ea(&sSafeStringVtable);
-    gabi::at<SafeString>(b)->mStringTop = gabi::guest_addr("ProgramTexture");
-    aSafeString->mStringTop = gabi::guest_addr("ProgramTexture/ProgramTexture.szs");
+    gabi::at<SafeString>(b)->mTextPtr = gabi::guest_addr("ProgramTexture");
+    aSafeString->mTextPtr = gabi::guest_addr("ProgramTexture/ProgramTexture.szs");
     resLoadTask_registerArchive(mgr, b, a, heap, 1u, 0x40000u, 0x2000u);
     call_ptr<void>((u32)gabi::at<HeapVtable>(gabi::at<Heap>(heap)->mVtable)->mAdjust, heap);
     setStr(gabi::at<SafeString>(c), gabi::at<be<u8>>(gabi::guest_addr("FontResMgr")));
@@ -252,8 +252,8 @@ void ResLoadTask::prepare() {
     heap = resLoadTask_createExpHeap(0u, e, p2, 1u, 0u);
     mgr = sResourceManager;
     gabi::at<SafeString>(e)->mVtable = gabi::ea(&sSafeStringVtable);
-    gabi::at<SafeString>(e)->mStringTop = gabi::guest_addr("Jpeg");
-    gabi::at<SafeString>(g)->mStringTop = gabi::guest_addr("Jpeg/Jpeg.sarc");
+    gabi::at<SafeString>(e)->mTextPtr = gabi::guest_addr("Jpeg");
+    gabi::at<SafeString>(g)->mTextPtr = gabi::guest_addr("Jpeg/Jpeg.sarc");
     gabi::at<SafeString>(g)->mVtable = gabi::ea(&sSafeStringVtable);
     resLoadTask_registerArchive(mgr, e, g, heap, 0u, 0x40000u, 0x2000u);
     call_ptr<void>((u32)gabi::at<HeapVtable>(gabi::at<Heap>(heap)->mVtable)->mAdjust, heap);
@@ -344,17 +344,17 @@ u32 ResLoadTask::unload(Request *i_entry) {
     Local<FixedStringFrame> F;
     const u32 s = F.a;
     gabi::at<FixedString128>(s)->mCapacity = 0x80;
-    gabi::at<FixedString128>(s)->mStringTop = s + 0xC;
+    gabi::at<FixedString128>(s)->mTextPtr = s + 0xC;
     gabi::at<FixedString128>(s)->mBuffer[0] = 0;
     gabi::at<FixedString128>(s)->mVtable = gabi::ea(&sFixed128Vtable);
     gabi::at<FixedString128>(s)->mBuffer[127] = 0;
     call_ptr<void>((u32)gabi::at<SafeStringVtable>(i_entry->mArchive.mVtable)->mAssureTermination,
                    entry);
     const u32 fn = (u32)gabi::at<SafeStringVtable>(i_entry->mResource.mVtable)->mAssureTermination;
-    const u32 arc = (u32)(i_entry->mArchive.mStringTop);
+    const u32 arc = (u32)(i_entry->mArchive.mTextPtr);
     call_ptr<void>(fn, gabi::ea(&i_entry->mResource));
     resLoadTask_formatString(s, gabi::guest_addr("%s_%s"), arc,
-                             (u32)(i_entry->mResource.mStringTop));
+                             (u32)(i_entry->mResource.mTextPtr));
     return resLoadTask_unloadStage(sResourceManager, s);
 }
 
@@ -382,16 +382,16 @@ static s32 cstrLength(be<u8> *i_p) {
 /* inlined into peekRequest and request/release helpers */
 static void copyString(BufferedString *i_dstObj, SafeString *i_src) {
     const u32 src = gabi::ea(i_src);
-    const u32 dst = (u32)(i_dstObj->mStringTop);
+    const u32 dst = (u32)(i_dstObj->mTextPtr);
     call_ptr<void>((u32)gabi::at<SafeStringVtable>(i_src->mVtable)->mAssureTermination, src);
-    s32 n = cstrLength(gabi::at<be<u8>>((u32)(i_src->mStringTop)));
+    s32 n = cstrLength(gabi::at<be<u8>>((u32)(i_src->mTextPtr)));
     const s32 size = s32((u32)(i_dstObj->mCapacity));
     const u32 fn = (u32)gabi::at<SafeStringVtable>(i_src->mVtable)->mAssureTermination;
     if (n >= size) {
         n = size - 1;
     }
     call_ptr<void>(fn, src);
-    resLoadTask_moveBytes(dst, (u32)(i_src->mStringTop), u32(n), 0u);
+    resLoadTask_moveBytes(dst, (u32)(i_src->mTextPtr), u32(n), 0u);
     gabi::at<be<u8>>(dst)[n] = 0;
 }
 
@@ -440,10 +440,10 @@ u32 ResLoadTask::finish(Request *i_entry) {
 static void localEntry(Request *i_e) {
     const u32 e = gabi::ea(i_e);
     i_e->mID = 0;
-    i_e->mArchive.mStringTop = e + 0xC;
+    i_e->mArchive.mTextPtr = e + 0xC;
     i_e->mResource.mCapacity = 0x40;
     i_e->mIsArchive = 0;
-    i_e->mResource.mStringTop = e + 0x58;
+    i_e->mResource.mTextPtr = e + 0x58;
     i_e->mArchive.mBuffer[0] = 0;
     i_e->mArchive.mBuffer[63] = 0;
     i_e->mResource.mBuffer[63] = 0;
@@ -519,7 +519,7 @@ u32 ResLoadTask::startLoad(Request *i_entry, u32 retry) {
                    entry);
     Local<SafeString> name;
     gabi::at<SafeString>(name.a)->mVtable = gabi::ea(&sSafeStringVtable);
-    gabi::at<SafeString>(name.a)->mStringTop = i_entry->mArchive.mStringTop;
+    gabi::at<SafeString>(name.a)->mTextPtr = i_entry->mArchive.mTextPtr;
     mCurrentHeap = resLoadTask_createExpHeap(0u, name.a, parent, 1u, 0u);
     const s32 range = s32(sWaitRange) + 1;
     const u32 r = resLoadTask_randomU32(sRandom);
@@ -744,9 +744,9 @@ static u32 hashString(SafeString *i_s) {
     const u32 s = gabi::ea(i_s);
     call_ptr<void>((u32)gabi::at<SafeStringVtable>(i_s->mVtable)->mAssureTermination, s);
     const u32 fn = (u32)gabi::at<SafeStringVtable>(i_s->mVtable)->mAssureTermination;
-    const u32 top = (u32)(i_s->mStringTop);
+    const u32 top = (u32)(i_s->mTextPtr);
     call_ptr<void>(fn, s);
-    const s32 len = cstrLength(gabi::at<be<u8>>((u32)(i_s->mStringTop)));
+    const s32 len = cstrLength(gabi::at<be<u8>>((u32)(i_s->mTextPtr)));
     return resLoadTask_hashCRC32(top, len);
 }
 
@@ -760,13 +760,13 @@ static u32 hashPair(FixedString128 *i_s, be<u8> *i_fmt, SafeString *i_arc, SafeS
     i_s->mBuffer[127] = 0;
     i_s->mBuffer[0] = 0;
     i_s->mCapacity = 0x80;
-    i_s->mStringTop = s + 0xC;
+    i_s->mTextPtr = s + 0xC;
     i_s->mVtable = gabi::ea(&sFixed128Vtable);
     call_ptr<void>((u32)gabi::at<SafeStringVtable>(i_arc->mVtable)->mAssureTermination, arc);
     const u32 fn = (u32)gabi::at<SafeStringVtable>(i_name->mVtable)->mAssureTermination;
-    const u32 arcTop = (u32)(i_arc->mStringTop);
+    const u32 arcTop = (u32)(i_arc->mTextPtr);
     call_ptr<void>(fn, name);
-    resLoadTask_formatString(s, fmt, arcTop, (u32)(i_name->mStringTop));
+    resLoadTask_formatString(s, fmt, arcTop, (u32)(i_name->mTextPtr));
     return hashString(gabi::at<SafeString>(s));
 }
 
@@ -777,7 +777,7 @@ static void entryFirst(Request *i_e, SafeString *i_src) {
     i_e->mArchive.mBuffer[63] = 0;
     i_e->mArchive.mCapacity = 0x40;
     i_e->mArchive.mVtable = gabi::ea(&sFixed64BaseVtable);
-    i_e->mArchive.mStringTop = e + 0xC;
+    i_e->mArchive.mTextPtr = e + 0xC;
     copyString(gabi::at<BufferedString>(e), i_src);
 }
 
@@ -788,7 +788,7 @@ static void entrySecond(Request *i_e, SafeString *i_src) {
     i_e->mResource.mVtable = gabi::ea(&sFixed64BaseVtable);
     i_e->mResource.mBuffer[63] = 0;
     i_e->mArchive.mVtable = gabi::ea(&sFixed64Vtable);
-    i_e->mResource.mStringTop = e + 0x58;
+    i_e->mResource.mTextPtr = e + 0x58;
     i_e->mResource.mCapacity = 0x40;
     copyString(gabi::at<BufferedString>(e + 0x4C), i_src);
 }
@@ -802,13 +802,13 @@ static void entrySecondGlobal(Request *i_e) {
     SafeString *gSafeString = gabi::at<SafeString>(g);
     i_e->mResource.mBuffer[63] = 0;
     i_e->mArchive.mVtable = gabi::ea(&sFixed64Vtable);
-    i_e->mResource.mStringTop = e + 0x58;
+    i_e->mResource.mTextPtr = e + 0x58;
     i_e->mResource.mCapacity = 0x40;
     i_e->mResource.mVtable = gabi::ea(&sFixed64BaseVtable);
     const u32 vt = (u32)(gSafeString->mVtable);
     SafeStringVtable *vtSafeStringVtable = gabi::at<SafeStringVtable>(vt);
     call_ptr<void>((u32)vtSafeStringVtable->mAssureTermination, g);
-    const u32 top = (u32)(gSafeString->mStringTop);
+    const u32 top = (u32)(gSafeString->mTextPtr);
     s32 n = cstrLength(gabi::at<be<u8>>(top));
     const s32 size = s32((u32)(i_e->mResource.mCapacity));
     const u32 fn = (u32)vtSafeStringVtable->mAssureTermination;
@@ -963,7 +963,7 @@ void ResLoadTask::releaseResource(SafeString *i_arc, SafeString *i_name) {
     entryFirst(gabi::at<Request>(L), i_arc);
     entrySecond(gabi::at<Request>(L), i_name);
     gabi::at<Request>(L)->mResource.mVtable = gabi::ea(&sFixed64Vtable);
-    TSafeString->mStringTop = gabi::guest_addr("Stage");
+    TSafeString->mTextPtr = gabi::guest_addr("Stage");
     gabi::at<Request>(L)->mID = h;
     gabi::at<Request>(L)->mIsArchive = 0;
     gabi::at<Request>(L)->mIsStage = 0;
@@ -971,11 +971,11 @@ void ResLoadTask::releaseResource(SafeString *i_arc, SafeString *i_name) {
     call_ptr<void>((u32)gabi::at<SafeStringVtable>(i_name->mVtable)->mAssureTermination, name);
     call_ptr<void>((u32)gabi::at<SafeStringVtable>(i_name->mVtable)->mAssureTermination, name);
     const u32 fn = (u32)gabi::at<SafeStringVtable>(TSafeString->mVtable)->mAssureTermination;
-    const u32 top = (u32)(i_name->mStringTop);
+    const u32 top = (u32)(i_name->mTextPtr);
     call_ptr<void>(fn, T);
-    bool stage = top == (u32)(TSafeString->mStringTop);
+    bool stage = top == (u32)(TSafeString->mTextPtr);
     if (!stage) {
-        u32 a = (u32)(i_name->mStringTop), b = (u32)(TSafeString->mStringTop);
+        u32 a = (u32)(i_name->mTextPtr), b = (u32)(TSafeString->mTextPtr);
         bool decided = false;
         for (u32 i = 0; i < 0x40001; i++) {
             const u32 x = (u8)gabi::at<be<u8>>(a)[i], y = (u8)gabi::at<be<u8>>(b)[i];
@@ -1070,16 +1070,16 @@ u32 ResLoadTask::isPendingResource(SafeString *i_arc, SafeString *i_name) {
     Local<FixedStringFrame> S;
     const u32 s = S.a;
     FixedString128 *sFixedString128 = gabi::at<FixedString128>(s);
-    sFixedString128->mStringTop = s + 0xC;
+    sFixedString128->mTextPtr = s + 0xC;
     sFixedString128->mCapacity = 0x80;
     sFixedString128->mVtable = gabi::ea(&sFixed128Vtable);
     sFixedString128->mBuffer[127] = 0;
     sFixedString128->mBuffer[0] = 0;
     call_ptr<void>((u32)gabi::at<SafeStringVtable>(i_arc->mVtable)->mAssureTermination, arc);
     const u32 fn = (u32)gabi::at<SafeStringVtable>(i_name->mVtable)->mAssureTermination;
-    const u32 arcTop = (u32)(i_arc->mStringTop);
+    const u32 arcTop = (u32)(i_arc->mTextPtr);
     call_ptr<void>(fn, name);
-    resLoadTask_formatString(s, gabi::guest_addr("%s_%s"), arcTop, (u32)(i_name->mStringTop));
+    resLoadTask_formatString(s, gabi::guest_addr("%s_%s"), arcTop, (u32)(i_name->mTextPtr));
     return isPendingId(hashString(gabi::at<SafeString>(s)));
 }
 
@@ -1166,7 +1166,7 @@ void ResLoadTask__dt(ResLoadTask *i_this, u32 flags) {
         return;
     }
     pResLoadTask->mTaskVtable = gabi::ea(&sTaskVtable);
-    resLoadTask_destroySingletonDisposer(gabi::ea(&pResLoadTask->mIsInstance), 2u);
+    resLoadTask_destroyInstanceDisposer(gabi::ea(&pResLoadTask->mIsInstance), 2u);
     resLoadTask_destroyTaskBase(p, 0u);
     if (flags & 1) {
         resLoadTask_deleteObject(p);
@@ -1211,7 +1211,7 @@ ext 0261390C void resLoadTask_destroyResourceRequestThunkTarget(u32, u32)
 ext 026138AC void resLoadTask_destroyArchiveRequestThunkTarget(u32, u32)
 ext 0273AF40 void resLoadTask_deleteObject(u32)
 ext 027452C8 void resLoadTask_destroyTaskBase(u32, u32)
-ext 0260B770 void resLoadTask_destroySingletonDisposer(u32, u32)
+ext 0260B770 void resLoadTask_destroyInstanceDisposer(u32, u32)
 ext 028F026C void resLoadTask_registerGlobalObject(u32)
 ext 028EAB2C void resLoadTask_constructHeaderObjectB(u32)
 ext 028ED6F8 void resLoadTask_constructHeaderObjectA(u32)

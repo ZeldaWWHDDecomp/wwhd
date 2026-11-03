@@ -453,13 +453,14 @@ void ke_control(st_class *i_this) {
             for (u32 component = 0; component < 3; ++component)
                 *at<be<u32>>(gabi::ea(&velocity), component * 4) =
                     word(gabi::ea(&position) + component * 4);
-            f32 newX = (f32)previous.x + (f32)rotated->value.x;
+            // fadds frA = previous: with two NaN operands the console keeps previous's payload
+            f32 newX = gabi::fadds_ppc((f32)previous.x, (f32)rotated->value.x);
             position.x = newX;
-            position.y = (f32)previous.y + (f32)rotated->value.y;
-            position.z = (f32)previous.z + (f32)rotated->value.z;
-            velocity.x = (newX - (f32)velocity.x) * damping;
-            velocity.y = ((f32)position.y - (f32)velocity.y) * damping;
-            velocity.z = ((f32)position.z - (f32)velocity.z) * damping;
+            position.y = gabi::fadds_ppc((f32)previous.y, (f32)rotated->value.y);
+            position.z = gabi::fadds_ppc((f32)previous.z, (f32)rotated->value.z);
+            velocity.x = gabi::fmuls_ppc(gabi::fsubs_ppc(newX, (f32)velocity.x), damping);
+            velocity.y = gabi::fmuls_ppc(gabi::fsubs_ppc((f32)position.y, (f32)velocity.y), damping);
+            velocity.z = gabi::fmuls_ppc(gabi::fsubs_ppc((f32)position.z, (f32)velocity.z), damping);
         }
         u32 lineArray = i_this->mLineMat.mpLine.v.get();
         u32 output = at<StLinePoints>(lineArray)[chainIndex].mpPoints.v.get();
@@ -547,13 +548,13 @@ void nun_control(st_class *i_this) {
     MtxPosition(&direction->value, &rotated->value);
     for (u32 i = 0; i < 3; ++i)
         *at<be<u32>>(gabi::ea(&velocity), i * 4) = word(gabi::ea(&position) + i * 4);
-    f32 newX = (f32)previous.x + (f32)rotated->value.x;
+    f32 newX = gabi::fadds_ppc((f32)previous.x, (f32)rotated->value.x);
     position.x = newX;
-    position.y = (f32)previous.y + (f32)rotated->value.y;
-    position.z = (f32)previous.z + (f32)rotated->value.z;
-    velocity.x = (newX - (f32)velocity.x) * damping;
-    velocity.y = ((f32)position.y - (f32)velocity.y) * damping;
-    velocity.z = ((f32)position.z - (f32)velocity.z) * damping;
+    position.y = gabi::fadds_ppc((f32)previous.y, (f32)rotated->value.y);
+    position.z = gabi::fadds_ppc((f32)previous.z, (f32)rotated->value.z);
+    velocity.x = gabi::fmuls_ppc(gabi::fsubs_ppc(newX, (f32)velocity.x), damping);
+    velocity.y = gabi::fmuls_ppc(gabi::fsubs_ppc((f32)position.y, (f32)velocity.y), damping);
+    velocity.z = gabi::fmuls_ppc(gabi::fsubs_ppc((f32)position.z, (f32)velocity.z), damping);
     MtxTrans(0, (f32)chain->m00[1].x, (f32)chain->m00[1].y, (f32)chain->m00[1].z);
     mDoMtx_XrotM(stCalcMatrix().get(), (s16)chain->m24[1].x);
     mDoMtx_YrotM(stCalcMatrix().get(), (s16)chain->m24[1].y);

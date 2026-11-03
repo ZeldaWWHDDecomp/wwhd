@@ -7,7 +7,7 @@ src wwhd_src/d/d_menu_window_hd.cpp
 src wwhd_src/d/hd_screen_telescope_scale.cpp
 src wwhd_src/d/hd_screen_telescope_cover.cpp
 
-# Provenance f372683f; 026E8694 binary026E86B4..026E87FC.
+# 026E8694 binary026E86B4..026E87FC.
 # Distinct aligned screen/layout/root/pane/type records; finite parent graph.
 # No synthetic wrapped receivers. Callback targets are existing find/type
 # methods, mocked by address. Only immutable dispatch/type metadata is stable;
@@ -45,7 +45,7 @@ stable 59005008 4
 stable 59006014 4
 stable 59007000 0x34
 
-# Provenance: aa77d256; scoped only026E8174/026E8214/026E7DD4/026E8534.
+# scoped only026E8174/026E8214/026E7DD4/026E8534.
 # Real sparse event IDs; do not force arbitrary wrapped allocation domains.
 field 026E8174 101D600C u32 0,0x1A9
 field 026E8214 101D600C u32 0,0x460

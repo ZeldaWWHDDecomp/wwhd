@@ -9,7 +9,7 @@ static void bstResumePedestal(be<u32>* global, u32 resourceId, bool brk, f32 one
     J3DModel* model = owner->m02C8;
     void* resources = bstExecuteResources(bstExecuteResourceTable());
     SafeString name;
-    name.mStringTop = gabi::guest_addr("Bst");
+    name.mTextPtr = gabi::guest_addr("Bst");
     name.__vtbl = gc_tu.safeString;
     void* resource = BstExecute_getResource(resources, &name, resourceId);
     J3DModelData* data = model->mModelData.get();

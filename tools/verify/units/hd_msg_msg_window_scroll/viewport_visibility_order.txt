@@ -1,3 +1,4 @@
+# verify: -only 026BC634
 # Supplemental 026BC634 fixture (run with -only 026BC634).
 # Button-pane visibility overlaps the viewport pointer; preserve hide/read order.
 # Synthetic mapped local game-state storage; existing callback model.

@@ -205,21 +205,21 @@ void atmos_empty(AtmosSafeString* a) {}
 static bool safestring_eq(u32 lit, u32 other, u32 vtbl) {
     gabi::Local<AtmosSafeString> sa;
     gabi::Local<AtmosSafeString> sb;
-    sa->mStringTop = gabi::at<be<u8>>(lit);
+    sa->mTextPtr = gabi::at<be<u8>>(lit);
     sa->__vtbl = gabi::at<AtmosSafeStringVtable>(vtbl);
-    sb->mStringTop = gabi::at<be<u8>>(other);
+    sb->mTextPtr = gabi::at<be<u8>>(other);
     sb->__vtbl = gabi::at<AtmosSafeStringVtable>(vtbl);
     AtmosSafeString* a = sa.get();
     AtmosSafeString* b = sb.get();
     atmos_empty(a);
     gabi::call_ptr<void>(a->__vtbl->cstr.get(), a);
     u32 cstr = b->__vtbl->cstr.get();
-    be<u8>* pa = a->mStringTop;
+    be<u8>* pa = a->mTextPtr;
     gabi::call_ptr<void>(cstr, b);
-    if (pa == (be<u8>*)b->mStringTop)
+    if (pa == (be<u8>*)b->mTextPtr)
         return true;
-    pa = a->mStringTop;
-    be<u8>* pb = b->mStringTop;
+    pa = a->mTextPtr;
+    be<u8>* pb = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         // HD: byte addresses wrap at 32 bits, including callback-produced pointers.
         u8 ca = *gabi::at<be<u8>>(gabi::ea(pa) + i);

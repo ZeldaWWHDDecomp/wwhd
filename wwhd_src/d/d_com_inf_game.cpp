@@ -267,12 +267,12 @@ u32 hdGameInfo_dComIfG_play_c_ctor(u32 i_this) {
             bok = b != 0;
         }
         if (bok) {
-            GameInfoHD::view<GameInfoHD::FixedSafeString8>(b)->mStringTop = fs + 0xC;
+            GameInfoHD::view<GameInfoHD::FixedSafeString8>(b)->mTextPtr = fs + 0xC;
             GameInfoHD::view<GameInfoHD::FixedSafeString8>(b)->__vtbl = 0x1004B8D8;
             GameInfoHD::view<GameInfoHD::FixedSafeString8>(b)->mBufferSize = 8;
             GameInfoHD::view<GameInfoHD::FixedSafeString8>(fs)->mBuffer[7] = 0;
         }
-        u32 top = (u32)GameInfoHD::view<GameInfoHD::FixedSafeString8>(fs)->mStringTop;
+        u32 top = (u32)GameInfoHD::view<GameInfoHD::FixedSafeString8>(fs)->mTextPtr;
         GameInfoHD::view<GameInfoHD::FixedSafeString8>(fs)->__vtbl = 0x1004B948;
         *GameInfoHD::view<be<u8>>(top) = 0;
         GameInfoHD::view<GameInfoHD::FixedSafeString8>(fs)->__vtbl = 0x1004B960;
@@ -315,7 +315,7 @@ u32 hdGameInfo_dComIfG_play_c_ctor(u32 i_this) {
     }
     if (wok) {
         GameInfoHD::view<GameInfoHD::WFixedSafeString17>(ws)->mBuffer[16] = 0;
-        GameInfoHD::view<GameInfoHD::WFixedSafeString17>(ws)->mStringTop = ws + 0xC;
+        GameInfoHD::view<GameInfoHD::WFixedSafeString17>(ws)->mTextPtr = ws + 0xC;
         GameInfoHD::view<GameInfoHD::WFixedSafeString17>(ws)->mBuffer[0] = 0;
         GameInfoHD::view<GameInfoHD::WFixedSafeString17>(ws)->__vtbl = 0x1004B990;
         GameInfoHD::view<GameInfoHD::WFixedSafeString17>(ws)->mBufferSize = 0x11;
@@ -435,7 +435,7 @@ s32 hdGameInfo_dComIfG_resetToOpening(u32 i_scene) {
 /* 02520354 */
 u32 hdGameInfo_dComIfG_setObjectRes(u32 i_arcName, u32 p2, u32 p3) {
     gabi::Local<SafeString> ss;
-    ss->mStringTop = i_arcName;
+    ss->mTextPtr = i_arcName;
     ss->__vtbl = SS_VT;
     return gameInfo1_setObjectArchive(GameInfoMemory1::ld(0x101F4F54), gabi::ea(ss.get()), 0);
 }
@@ -453,7 +453,7 @@ s32 hdGameInfo_phase_1(u32 i_arcName) {
 /* 025203D8 */
 s32 hdGameInfo_dComIfG_syncObjectRes(u32 i_arcName) {
     gabi::Local<SafeString> ss;
-    ss->mStringTop = i_arcName;
+    ss->mTextPtr = i_arcName;
     ss->__vtbl = SS_VT;
     return gameInfo1_syncObjectArchive(GameInfoMemory1::ld(0x101F4F54), gabi::ea(ss.get()));
 }
@@ -480,7 +480,7 @@ s32 hdGameInfo_dComIfG_resLoad(u32 i_phase, u32 i_arcName) {
 /* 02520488 */
 s32 hdGameInfo_dComIfG_deleteObjectRes(u32 i_arcName) {
     gabi::Local<SafeString> ss;
-    ss->mStringTop = i_arcName;
+    ss->mTextPtr = i_arcName;
     ss->__vtbl = SS_VT;
     gameInfo1_deleteObjectArchive(GameInfoMemory1::ld(0x101F4F54), gabi::ea(ss.get()));
     return 1;
@@ -794,11 +794,11 @@ static inline bool ss_cmp_eq(u32 a, u32 b, u32 first_direct) {
     else
         gabi::call_ptr(GameInfoMemory1::ld((u32)GameInfoHD::view<SafeString>(a)->__vtbl + 0x14), a);
     gabi::call_ptr(GameInfoMemory1::ld((u32)GameInfoHD::view<SafeString>(a)->__vtbl + 0x14), a);
-    u32 ta = (u32)GameInfoHD::view<SafeString>(a)->mStringTop;
+    u32 ta = (u32)GameInfoHD::view<SafeString>(a)->mTextPtr;
     gabi::call_ptr(
         GameInfoMemory1::ld((u32)GameInfoHD::view<GameInfoHD::FixedSafeString8>(b)->__vtbl + 0x14),
         b);
-    u32 tb = (u32)GameInfoHD::view<GameInfoHD::FixedSafeString8>(b)->mStringTop;
+    u32 tb = (u32)GameInfoHD::view<GameInfoHD::FixedSafeString8>(b)->mTextPtr;
     return ss_equal(ta, tb);
 }
 
@@ -820,17 +820,17 @@ void hdGameInfo_dComIfGs_setGameStartStage() {
         gabi::Local<SafeString> b;
         u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get());
         GameInfoHD::view<SafeString>(aa)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(bb)->mStringTop = gabi::guest_addr("");
-        GameInfoHD::view<SafeString>(aa)->mStringTop = d + 4;
+        GameInfoHD::view<SafeString>(bb)->mTextPtr = gabi::guest_addr("");
+        GameInfoHD::view<SafeString>(aa)->mTextPtr = d + 4;
         GameInfoHD::view<SafeString>(bb)->__vtbl = SS_VT;
         /* the first assureTermination: direct call to the inline copy, then the virtual */
         gameInfo1_assureTermination(aa);
         gabi::call_ptr(GameInfoMemory1::ld((u32)GameInfoHD::view<SafeString>(aa)->__vtbl + 0x14),
                        aa);
-        u32 ta = (u32)GameInfoHD::view<SafeString>(aa)->mStringTop;
+        u32 ta = (u32)GameInfoHD::view<SafeString>(aa)->mTextPtr;
         gabi::call_ptr(GameInfoMemory1::ld((u32)GameInfoHD::view<SafeString>(bb)->__vtbl + 0x14),
                        bb);
-        u32 tb = (u32)GameInfoHD::view<SafeString>(bb)->mStringTop;
+        u32 tb = (u32)GameInfoHD::view<SafeString>(bb)->mTextPtr;
         emptyName = ss_equal(ta, tb);
     }
     if (!emptyName) {
@@ -849,9 +849,9 @@ void hdGameInfo_dComIfGs_setGameStartStage() {
         gabi::Local<SafeString> b;
         u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get());
         GameInfoHD::view<SafeString>(aa)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(aa)->mStringTop = gabi::guest_addr("PShip");
+        GameInfoHD::view<SafeString>(aa)->mTextPtr = gabi::guest_addr("PShip");
         u32 g = gameInfoAddress();
-        GameInfoHD::view<SafeString>(bb)->mStringTop = g + 0x5134;
+        GameInfoHD::view<SafeString>(bb)->mTextPtr = g + 0x5134;
         GameInfoHD::view<SafeString>(bb)->__vtbl = SS_VT;
         pship = ss_cmp_eq(aa, bb, 0);
     }
@@ -1036,10 +1036,10 @@ void hdGameInfo_dComIfGs_setPlayerRecollectionData() {
         gabi::Local<SafeString> a;
         gabi::Local<SafeString> b;
         u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get());
-        GameInfoHD::view<SafeString>(aa)->mStringTop = names[k];
+        GameInfoHD::view<SafeString>(aa)->mTextPtr = names[k];
         GameInfoHD::view<SafeString>(aa)->__vtbl = SS_VT;
         u32 g = gameInfoAddress();
-        GameInfoHD::view<SafeString>(bb)->mStringTop = g + 0x5134;
+        GameInfoHD::view<SafeString>(bb)->mTextPtr = g + 0x5134;
         GameInfoHD::view<SafeString>(bb)->__vtbl = SS_VT;
         if (ss_cmp_eq(aa, bb, 0) && isEventBit_l(savep() + 0x644, events[k]) != 0)
             tbl = (s32)k;

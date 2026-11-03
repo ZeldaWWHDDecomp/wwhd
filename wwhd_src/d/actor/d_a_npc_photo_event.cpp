@@ -116,9 +116,9 @@ static inline u32 dComIfGp_evmng_getRunEventName() { return photo_runEventName(d
 static inline bool photo_SafeString_eq(SafeString* a, SafeString* b) {
     gabi::call_ptr(gabi::object_at<PhotoSafeStringVtable>(a->__vtbl).assureTermination.get(), a);
     gabi::call_ptr(gabi::object_at<PhotoSafeStringVtable>(a->__vtbl).assureTermination.get(), a);
-    u32 pa = a->mStringTop;
+    u32 pa = a->mTextPtr;
     gabi::call_ptr(gabi::object_at<PhotoSafeStringVtable>(b->__vtbl).assureTermination.get(), b);
-    u32 pb = b->mStringTop;
+    u32 pb = b->mTextPtr;
     if (pa == pb) {
         return true;
     }
@@ -137,11 +137,11 @@ static inline bool photo_SafeString_eq(SafeString* a, SafeString* b) {
 static inline bool photo_isRunEvent(const char* name) {
     gabi::Local<SafeString> l;
     l->__vtbl = PHOTO_SAFESTRING_VTBL;
-    l->mStringTop = gabi::guest_addr(name);
+    l->mTextPtr = gabi::guest_addr(name);
     u32 run = dComIfGp_evmng_getRunEventName();
     gabi::Local<SafeString> r;
     r->__vtbl = PHOTO_SAFESTRING_VTBL;
-    r->mStringTop = run;
+    r->mTextPtr = run;
     return photo_SafeString_eq(l.get(), r.get());
 }
 /* dBgS_GndChk (this TU's vtables) */

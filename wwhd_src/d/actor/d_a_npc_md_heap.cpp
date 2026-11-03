@@ -59,17 +59,17 @@ static inline u8 md_getSelectItem(int btn) { return dComIfGp_getSelectItem(btn);
 static inline void* md_getObjectRes(const char* arc, const char* name) {
     SafeString a;
     SafeString n;
-    a.mStringTop = gabi::guest_addr(arc);
+    a.mTextPtr = gabi::guest_addr(arc);
     a.__vtbl = MD_SAFESTRING_VTBL;
-    n.mStringTop = gabi::guest_addr(name);
+    n.mTextPtr = gabi::guest_addr(name);
     n.__vtbl = MD_SAFESTRING_VTBL;
     return mdHeap_getResource(dComIfG_resControl(), &a, &n);
 }
 /* the same with the two SafeStrings at given stack addresses */
 static inline void* md_getObjectRes_at(SafeString* a, SafeString* n, const char* arc, u32 name) {
-    a->mStringTop = gabi::guest_addr(arc);
+    a->mTextPtr = gabi::guest_addr(arc);
     a->__vtbl = MD_SAFESTRING_VTBL;
-    n->mStringTop = name;
+    n->mTextPtr = name;
     n->__vtbl = MD_SAFESTRING_VTBL;
     return mdHeap_getResource(dComIfG_resControl(), a, n);
 }
@@ -215,17 +215,17 @@ static inline s8 md_jntIndex(J3DModelData* md, u32 name, u32 line, u32 msg, be<s
 /* inlined into Medli heap callbacks and creation */
 static inline bool md_isStartStage(u32 lit) {
     SafeString sa;
-    sa.mStringTop = lit;
+    sa.mTextPtr = lit;
     sa.__vtbl = MD_SAFESTRING_VTBL;
     u32 stage = gabi::ea(dComIfGp_getStartStageName()); /* dComIfGp_getStartStageName() */
     SafeString sb;
-    sb.mStringTop = stage;
+    sb.mTextPtr = stage;
     sb.__vtbl = MD_SAFESTRING_VTBL;
     safeStringCstr(&sa);
     safeStringCstr(&sa);
-    u32 pa = sa.mStringTop;
+    u32 pa = sa.mTextPtr;
     safeStringCstr(&sb);
-    u32 pb = sb.mStringTop;
+    u32 pb = sb.mTextPtr;
     if (pa == pb) return true;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 ca = bytes(pa)[i].get();

@@ -438,14 +438,14 @@ static inline bool p1_isStage_Demo17() {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> b;
     a->__vtbl = P1_SAFESTRING_VTBL;
-    a->mStringTop = 0x1001F9D0; /* "Demo17" */
-    b->mStringTop = 0x1047E6B8;
+    a->mTextPtr = 0x1001F9D0; /* "Demo17" */
+    b->mTextPtr = 0x1047E6B8;
     b->__vtbl = P1_SAFESTRING_VTBL;
     gabi::call(0x022B5AE8, a.get());
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b.get());
-    u32 s2 = b->mStringTop;
+    u32 s2 = b->mTextPtr;
     if (s1 == s2)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {
@@ -462,16 +462,16 @@ static inline bool p1_isStage_Demo17() {
 static inline bool p1c_isStartStage(u32 str) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> b;
-    a->mStringTop = str;
+    a->mTextPtr = str;
     a->__vtbl = P1_SAFESTRING_VTBL;
     u32 play = dComIfGp_ea();
     b->__vtbl = P1_SAFESTRING_VTBL;
-    b->mStringTop = play + 0x5134;
+    b->mTextPtr = play + 0x5134;
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b.get());
-    u32 s2 = b->mStringTop;
+    u32 s2 = b->mTextPtr;
     if (s1 == s2)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {

@@ -938,9 +938,9 @@ void dDemo_init() {
         factory->mVtable = gabi::ea(&l_factoryVtable);
         // HD: retain the nullable embedded-list constructor even at a wrapping guest address.
         auto* list =
-            gabi::at<dDemo_factoryList>(gabi::ea(factory) + offsetof(dDemo_factory, mCount));
+            gabi::at<dDemo_factories>(gabi::ea(factory) + offsetof(dDemo_factory, mCount));
         if (!list)
-            list = static_cast<dDemo_factoryList*>(operator_new(sizeof(dDemo_factoryList)));
+            list = static_cast<dDemo_factories*>(operator_new(sizeof(dDemo_factories)));
         if (list) {
             list->mCount = 0;
             void* head = &list->mNext;

@@ -109,7 +109,7 @@ struct SafeStringVtableHD {
 };
 WWHD_SIZE(SafeStringVtableHD, 0x18);
 struct WeatherSafeStringHD {
-  gptr<be<u8>> mStringTop;
+  gptr<be<u8>> mTextPtr;
   gptr<SafeStringVtableHD> __vtbl;
   void assureTermination() {
     gabi::call_ptr<void>(__vtbl->assureTermination.get(), this);
@@ -770,7 +770,7 @@ WWHD_OFFSET(weather_move::StageInfoHD, mTypeFlags, 12);
 WWHD_OFFSET(weather_move::StageVtableHD, getStagInfo, 0x15C);
 WWHD_OFFSET(weather_move::WeatherRoomVtableHD, getFileListInfo, 0x1DC);
 WWHD_OFFSET(weather_move::SafeStringVtableHD, assureTermination, 0x14);
-WWHD_OFFSET(weather_move::WeatherSafeStringHD, mStringTop, 0);
+WWHD_OFFSET(weather_move::WeatherSafeStringHD, mTextPtr, 0);
 WWHD_SIZE(weather_move::WeatherTrigPairHD, 8);
 WWHD_SIZE(weather_move::WeatherTrigHD, 0x10000);
 namespace weather_move {

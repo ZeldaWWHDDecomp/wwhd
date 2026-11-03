@@ -80,13 +80,13 @@ static void resourceAssert(J3DModelData *data, s32 line, const char *expression)
 }
 static J3DShape *namedShape(J3DModelData *data, const char *name) {
     gabi::Local<SafeString> string;
-    string->mStringTop = gabi::guest_addr(name);
+    string->mTextPtr = gabi::guest_addr(name);
     string->__vtbl = gc_tu.safeString;
     PfallResourceHeader *names = gabi::at<PfallResourceHeader>(data->mpResHeader);
     pfallEmpty(reinterpret_cast<u8 *>(string.get()));
     u32 offset = names->materialNames;
     JUTNameTab *table = gabi::at<JUTNameTab>(offset ? gabi::ea(names) + 0x18 + offset : 0);
-    s32 index = table->getIndex(gabi::at<char>(string->mStringTop));
+    s32 index = table->getIndex(gabi::at<char>(string->mTextPtr));
     u32 material = 0;
     if (index >= 0) {
         u32 count = data->mMaterialNum;

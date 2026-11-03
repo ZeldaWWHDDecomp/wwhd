@@ -113,7 +113,7 @@ WWHD_SIZE(PaneWork_l, 0x91C);
 WWHD_OFFSET(PaneWork_l, mYear, 0x8F8);
 WWHD_OFFSET(PaneWork_l, mMinute, 0x908);
 
-/* adapter kept for callers written against bd575401: the member now takes the two contexts itself */
+/* adapter kept for callers written against an earlier version: the member now takes the two contexts itself */
 inline void hdTextPane_resetMessage(hdTextPane_c* pane, hdUiSafeString* name, hdUiSafeString* label) {
     pane->resetMessage(name, label);
 }

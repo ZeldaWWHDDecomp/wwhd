@@ -97,9 +97,9 @@ NameMatch stageMatch(SafeString* name, SafeString* stage) {
     table = name->__vtbl;
     gabi::call((u32)gabi::object_at<BubbleStringVtable>(table).assureTermination, name);
     table = stage->__vtbl;
-    u32 left = name->mStringTop;
+    u32 left = name->mTextPtr;
     gabi::call((u32)gabi::object_at<BubbleStringVtable>(table).assureTermination, stage);
-    u32 right = stage->mStringTop;
+    u32 right = stage->mTextPtr;
     if (left == right)
         return NameMatch::Equal;
     for (u32 i = 0; i < 0x40001; ++i) {
@@ -125,19 +125,19 @@ BOOL daBL_Draw(bl_class* actor) {
             return TRUE;
     }
     gabi::Local<SafeString> first, stage;
-    first->mStringTop = gabi::guest_addr("M_DaiB");
+    first->mTextPtr = gabi::guest_addr("M_DaiB");
     first->__vtbl = gc_tu.safeString;
     u32 play = bl_getGameInfo();
     stage->__vtbl = gc_tu.safeString;
-    stage->mStringTop = play + 0x5134;
+    stage->mTextPtr = play + 0x5134;
     NameMatch match = stageMatch(first.get(), stage.get());
     bool skipFigure = match == NameMatch::Equal && actor->home.roomNo == 0;
     if (!skipFigure) {
         gabi::Local<SafeString> second, otherStage;
         second->__vtbl = gc_tu.safeString;
-        second->mStringTop = gabi::guest_addr("Xboss2");
+        second->mTextPtr = gabi::guest_addr("Xboss2");
         play = bl_getGameInfo();
-        otherStage->mStringTop = play + 0x5134;
+        otherStage->mTextPtr = play + 0x5134;
         otherStage->__vtbl = gc_tu.safeString;
         NameMatch secondMatch = stageMatch(second.get(), otherStage.get());
         skipFigure = secondMatch == NameMatch::Equal && actor->home.roomNo == 0;
@@ -295,14 +295,14 @@ BOOL shock_damage_check(bl_class* actor) {
 void anm_init(bl_class* actor, s32 animation, f32 morph, u8 mode, f32 rate, s32 sound) {
     actor->animationId = animation;
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_addr("Bl");
+    name->mTextPtr = gabi::guest_addr("Bl");
     name->__vtbl = gc_tu.safeString;
     u8* resources = bl_resourceControl();
     auto* resource = bl_dRes_control_c_getRes(resources, name.get(), animation);
     u8* soundResource = nullptr;
     if (sound >= 0) {
         gabi::Local<SafeString> soundName;
-        soundName->mStringTop = gabi::guest_addr("Bl");
+        soundName->mTextPtr = gabi::guest_addr("Bl");
         soundName->__vtbl = gc_tu.safeString;
         resources = bl_resourceControl();
         soundResource = bl_dRes_control_c_getRes(resources, soundName.get(), sound);
@@ -1948,10 +1948,10 @@ BOOL daBL_Delete(bl_class* actor) {
 BOOL useHeapInit(bl_class* actor) {
     gabi::Local<SafeString> modelName, animationName;
     modelName->__vtbl = gc_tu.safeString;
-    modelName->mStringTop = gabi::guest_addr("Bl");
+    modelName->mTextPtr = gabi::guest_addr("Bl");
     u8* resources = bl_resourceControl();
     u8* modelResource = bl_dRes_control_c_getRes(resources, modelName.get(), 0x1B);
-    animationName->mStringTop = gabi::guest_addr("Bl");
+    animationName->mTextPtr = gabi::guest_addr("Bl");
     animationName->__vtbl = gc_tu.safeString;
     resources = bl_resourceControl();
     u8* animationResource = bl_dRes_control_c_getRes(resources, animationName.get(), 0x15);
@@ -1971,7 +1971,7 @@ BOOL useHeapInit(bl_class* actor) {
             return FALSE;
         gabi::Local<SafeString> name;
         name->__vtbl = gc_tu.safeString;
-        name->mStringTop = gabi::guest_addr("Bl");
+        name->mTextPtr = gabi::guest_addr("Bl");
         resources = bl_resourceControl();
         u8* resource = bl_dRes_control_c_getRes(resources, name.get(), texture ? 0x1F : 0x1E);
         animation = animationSlot;

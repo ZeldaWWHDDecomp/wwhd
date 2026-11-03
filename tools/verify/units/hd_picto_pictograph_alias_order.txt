@@ -1,3 +1,4 @@
+# verify: -only 026FD054
 # Modeled overlapping-pointer domain for the canonical message wait state.
 # WindowBase.r3=580D0000 and mpMessage=580CFA51 intentionally overlap:
 # WindowMessage.mTimedWait (message+0x697) aliases WindowBase.mStopIndex

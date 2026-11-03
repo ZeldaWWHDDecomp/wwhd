@@ -64,14 +64,14 @@ bool Act_c::create_heap() {
     if (model != nullptr && mType == 7) {
         /* HD: the material named 0x10040C30 gets 027F591C(model, material, 1) */
         gabi::Local<SafeString> name;
-        name->mStringTop = gabi::guest_addr("bokuri2");
+        name->mTextPtr = gabi::guest_addr("bokuri2");
         name->__vtbl = TSUBO_SAFESTRING_VTBL;
         J3DModelData* md = model->mModelData;
         auto* matTbl = tsuboMaterialTable(md);
         empty_fn(name.get());               /* (empty per-TU SafeString helper) */
         u32 off = matTbl->mMaterialNameOffset;
         auto* tab = off != 0 ? reinterpret_cast<JUTNameTab*>(reinterpret_cast<u8*>(&matTbl->mMaterialNameOffset) + off) : nullptr;
-        s32 idx = tsuboGetMaterialIndex(tab, tsuboStringTop(name));
+        s32 idx = tsuboGetMaterialIndex(tab, tsuboTextPtr(name));
         J3DMaterial* mat;
         if (idx < 0) {
             mat = nullptr;

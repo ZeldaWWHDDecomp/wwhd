@@ -5,6 +5,7 @@ src wwhd_src/hd/hd_render_resolution.cpp
 src wwhd_src/hd/hd_render_projection.cpp
 
 src wwhd_src/hd/hd_shader_archive.cpp
+src wwhd_src/hd/hd_shader_archive_statics.cpp
 
 src wwhd_src/hd/hd_layer_drc_mode.cpp
 
@@ -25,6 +26,7 @@ src wwhd_src/hd/hd_wipe_fader.cpp
 src wwhd_src/hd/hd_layer_shadow.cpp
 
 src wwhd_src/hd/hd_layer_3d.cpp
+src wwhd_src/agl/TimingStatics.cpp
 
 # Exercise draw gates and render-target routing, including image-default disabled flags.
 field 02732D3C 101F4825 u8 0,1

@@ -152,8 +152,6 @@ WWHD_OFFSET(hdSceneSecondaryBinding_l,mPhase,0x4C8);
 WWHD_OFFSET(hdSceneSecondaryBinding_l,mColor,0x508);
 WWHD_OFFSET(hdSceneSecondaryBinding_l,mReference,0x574);
 WWHD_OFFSET(hdSceneDisplay_l,mSuspendSecondary,0x1689);
-struct hdSceneAngle_l { u8 _00[0x28]; be<f32> mAngle; };
-WWHD_OFFSET(hdSceneAngle_l,mAngle,0x28);
 
 struct hdSceneViewMatrix_c { be<f32> mValues[12]; };
 struct hdSceneVector_c { be<f32> x,y,z; };

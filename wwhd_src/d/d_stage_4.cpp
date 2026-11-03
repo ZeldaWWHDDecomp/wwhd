@@ -33,9 +33,9 @@ static bool dStage_isEqual(SafeString* a, SafeString* b) {
     gabi::call_ptr(gabi::at<dStage_SafeStringVtable>(a->__vtbl)->assureTermination.function.get(), gabi::ea(a));
     gabi::call_ptr(gabi::at<dStage_SafeStringVtable>(a->__vtbl)->assureTermination.function.get(), gabi::ea(a));
     u32 fn = gabi::at<dStage_SafeStringVtable>(b->__vtbl)->assureTermination.function.get();
-    u32 sa = a->mStringTop;
+    u32 sa = a->mTextPtr;
     gabi::call_ptr(fn, gabi::ea(b));
-    u32 sb = b->mStringTop;
+    u32 sb = b->mTextPtr;
     if (sa == sb) return true;
     sb -= 1;
     for (u32 i = 0x40001; i != 0; i--) {
@@ -203,18 +203,18 @@ static void dStage_Create() {
         gabi::Local<SafeString> a;
         gabi::Local<SafeString> b;
         a->__vtbl = gabi::ea(&dStage_safeStringVtable);
-        a->mStringTop = gabi::guest_str("GTower"); /* "GTower" */
+        a->mTextPtr = gabi::guest_str("GTower"); /* "GTower" */
         u32 p = dComIfGp_ea();
         b->__vtbl = gabi::ea(&dStage_safeStringVtable);
-        b->mStringTop = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage);
+        b->mTextPtr = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage);
         if (!dStage_isEqual(a, b)) {
             gabi::Local<SafeString> c;
             gabi::Local<SafeString> d;
             c->__vtbl = gabi::ea(&dStage_safeStringVtable);
-            c->mStringTop = gabi::guest_str("Hyrule"); /* "Hyrule" */
+            c->mTextPtr = gabi::guest_str("Hyrule"); /* "Hyrule" */
             u32 p2 = dComIfGp_ea();
             d->__vtbl = gabi::ea(&dStage_safeStringVtable);
-            d->mStringTop = gabi::ea(&gabi::at<dComIfG_inf_c>(p2)->play.mCurStage);
+            d->mTextPtr = gabi::ea(&gabi::at<dComIfG_inf_c>(p2)->play.mCurStage);
             if (!dStage_isEqual(c, d)) create = true;
         }
     }
@@ -380,11 +380,11 @@ static s32 dStage_changeSceneExitId(u32 i_poly, f32 i_speed, u32 i_mode, s32 i_r
     if (exit_id == 0x3C) {
         gabi::Local<SafeString> a;
         gabi::Local<SafeString> b;
-        a->mStringTop = gabi::guest_str("Asoko"); /* "Asoko" */
+        a->mTextPtr = gabi::guest_str("Asoko"); /* "Asoko" */
         a->__vtbl = gabi::ea(&dStage_safeStringVtable);
         p = dComIfGp_ea();
         b->__vtbl = gabi::ea(&dStage_safeStringVtable);
-        b->mStringTop = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage);
+        b->mTextPtr = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage);
         if (dStage_isEqual(a, b)) {
             if (!dComIfGs_isEventBit(dStageEvent::UNK_0808)) {
                 StageLifecycleAPI::dComIfGp_setNextStage(gabi::guest_str("A_umikz"), 0, 0, (u32)-1, i_speed, i_mode, 1, 0); /* "A_umikz" */

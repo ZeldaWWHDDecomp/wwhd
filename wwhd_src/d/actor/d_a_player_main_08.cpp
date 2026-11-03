@@ -1550,13 +1550,13 @@ static void __sinit_d_a_player_main_cpp() {
     __register_global_object(gabi::ea(&l_headerDestructorRecord2));
     // HD: material names use SafeString objects.
     l_sleeveMaterialName.mVtable = gc_tu.safeString;
-    l_sleeveMaterialName.mStringTop = gabi::guest_addr("sleeve");
-    l_mouthMaterialName.mStringTop = gabi::guest_addr("mouth");
+    l_sleeveMaterialName.mTextPtr = gabi::guest_addr("sleeve");
+    l_mouthMaterialName.mTextPtr = gabi::guest_addr("mouth");
     l_mouthMaterialName.mVtable = gc_tu.safeString;
     l_hatMaterialName.mVtable = gc_tu.safeString;
     l_hairMaterialName.mVtable = gc_tu.safeString;
-    l_hatMaterialName.mStringTop = gabi::guest_addr("ear_3_");
-    l_hairMaterialName.mStringTop = gabi::guest_addr("ear_2_");
+    l_hatMaterialName.mTextPtr = gabi::guest_addr("ear_3_");
+    l_hairMaterialName.mTextPtr = gabi::guest_addr("ear_2_");
     l_movementDefaults.mLadderLineOffset = 50.0f;
     l_earMaterialName.mVtable = gc_tu.safeString;
     l_hammer_splash_particle_scale.x = 0.67f;
@@ -1570,15 +1570,15 @@ static void __sinit_d_a_player_main_cpp() {
     l_heel_pos.y = 3.25f;
     l_head_center_offset.x = 11.25f;
     l_faceMaterialName.mVtable = gc_tu.safeString;
-    l_faceMaterialName.mStringTop = gabi::guest_addr("face");
-    l_earMaterialName.mStringTop = gabi::guest_addr("ear");
+    l_faceMaterialName.mTextPtr = gabi::guest_addr("face");
+    l_earMaterialName.mTextPtr = gabi::guest_addr("ear");
     l_crawl_front_offset.y = 10.0f;
     l_eye_offset.x = 11.25f;
     l_eye_offset.y = 18.75f;
     l_legsMaterialName.mVtable = gc_tu.safeString;
     l_crawl_back_offset.y = 10.0f;
     l_crawl_front_up_offset.y = 50.0f;
-    l_legsMaterialName.mStringTop = gabi::guest_addr("ear_4_");
+    l_legsMaterialName.mTextPtr = gabi::guest_addr("ear_4_");
     l_toe_pos.y = 3.25f;
     l_crawl_top_offset.y = 10.0f;
     l_crawl_top_up_offset.y = 50.0f;
@@ -1591,9 +1591,9 @@ static void __sinit_d_a_player_main_cpp() {
     l_headerDistances.mSmallDistance0 = 10000.0f;
     l_at_cyl_src.mHeight = 75.0f;
     l_leftEyeMaterialName.mVtable = gc_tu.safeString;
-    l_leftEyeMaterialName.mStringTop = gabi::guest_addr("eyeL");
+    l_leftEyeMaterialName.mTextPtr = gabi::guest_addr("eyeL");
     l_rightEyeMaterialName.mVtable = gc_tu.safeString;
-    l_rightEyeMaterialName.mStringTop = gabi::guest_addr("eyeR");
+    l_rightEyeMaterialName.mTextPtr = gabi::guest_addr("eyeR");
     l_headerDistances.mLargeDistance1 = 50000.0f;
     l_crawl_rside_front_offset.x = -50.0f;
     l_crawl_rside_offset.x = -50.0f;

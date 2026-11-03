@@ -68,9 +68,9 @@ static inline void JPA_becomeInvalidEmitter(u32 e) {
 static inline void* md_getObjectRes(const char* arc, const char* name) {
     SafeString a;
     SafeString n;
-    a.mStringTop = gabi::guest_addr(arc);
+    a.mTextPtr = gabi::guest_addr(arc);
     a.__vtbl = SAFE_STRING_VTABLE;
-    n.mStringTop = gabi::guest_addr(name);
+    n.mTextPtr = gabi::guest_addr(name);
     n.__vtbl = SAFE_STRING_VTABLE;
     return mdExec_getObjectRes(dComIfG_resControl(), &a, &n);
 }
@@ -141,9 +141,9 @@ static inline void SafeString_assure(SafeString* s) { assureString(s); }
 static inline bool md_safeStringEq(SafeString* a, SafeString* b) {
     SafeString_assure(a);
     SafeString_assure(a);
-    u32 pa = a->mStringTop;
+    u32 pa = a->mTextPtr;
     SafeString_assure(b);
-    u32 pb = b->mStringTop;
+    u32 pb = b->mTextPtr;
     if (pa == pb) return true;
     for (u32 n = 0; n < 0x40001; n++) {
         u8 c1 = bytes(pa)[n];
@@ -241,9 +241,9 @@ static inline bool md_stageNameIs(u32 lit) {
     SafeString a;
     SafeString b;
     a.__vtbl = SAFE_STRING_VTABLE;
-    a.mStringTop = lit;
+    a.mTextPtr = lit;
     u32 stage = dComIfGp_ea() + 0x5134;
-    b.mStringTop = stage;
+    b.mTextPtr = stage;
     b.__vtbl = SAFE_STRING_VTABLE;
     return md_safeStringEq(&a, &b);
 }
@@ -703,10 +703,10 @@ BOOL daNpc_Md_c::setAnm(int anmIdx) {
         SafeString a;
         SafeString b;
         a.__vtbl = SAFE_STRING_VTABLE;
-        a.mStringTop = ARRIVAL_GND_NAME; /* "ARRIVAL_GND" */
+        a.mTextPtr = ARRIVAL_GND_NAME; /* "ARRIVAL_GND" */
         u32 name = dEvent_getRunEventName(dComIfGp_getPEvtManager());
         b.__vtbl = SAFE_STRING_VTABLE;
-        b.mStringTop = name;
+        b.mTextPtr = name;
         if (md_safeStringEq(&a, &b)) {
             morf = 0.0f;
         }

@@ -697,7 +697,7 @@ static void* bwdg_packet_ct(void* pkt) {
     bwdgAttributeStateCtor(&render->mAttributes);
     {
         gabi::Local<SafeString> name;
-        name->mStringTop = gabi::guest_addr("sand");
+        name->mTextPtr = gabi::guest_addr("sand");
         name->__vtbl = gc_tu.safeString;
         BwdgShaderRegistry* registry = bwdgGetShaderRegistry();
         s32 index = bwdgFindShader(registry->mpArchive.get(), name.get());
@@ -774,9 +774,9 @@ static void* bwdg_packet_ct(void* pkt) {
         gabi::Local<SafeString> archive;
         gabi::Local<SafeString> resource;
         BwdgResourceManager* manager = resourceManager;
-        resource->mStringTop = gabi::guest_addr("ProgramTexture.bfres");
+        resource->mTextPtr = gabi::guest_addr("ProgramTexture.bfres");
         resource->__vtbl = gc_tu.safeString;
-        archive->mStringTop = gabi::guest_addr("ProgramTexture");
+        archive->mTextPtr = gabi::guest_addr("ProgramTexture");
         archive->__vtbl = gc_tu.safeString;
         shader = bwdgFindResource(manager, archive.get(), resource.get(), 0);
     }

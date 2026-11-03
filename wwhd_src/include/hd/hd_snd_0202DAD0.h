@@ -29,15 +29,15 @@ struct hdSound_stringVt_c { u8 _00[0x14]; be<u32> mAssureTermination; };
 WWHD_OFFSET(hdSound_stringVt_c, mAssureTermination, 0x14);
 WWHD_SIZE(hdSound_stringVt_c, 0x18);
 struct hdSound_string_c {
-    /* 0x0 */ gptr<be<u8>> mStringTop;
+    /* 0x0 */ gptr<be<u8>> mTextPtr;
     /* 0x4 */ gptr<hdSound_stringVt_c> mVtable;
     void setVtable(u32 address) { mVtable.v = address; }
-    void setText(const char* text) { mStringTop.v = gabi::guest_addr(text); }
+    void setText(const char* text) { mTextPtr.v = gabi::guest_addr(text); }
     void assureTermination() {
         gabi::call_ptr<void>(mVtable->mAssureTermination, this);
     }
 };
-WWHD_OFFSET(hdSound_string_c, mStringTop, 0);
+WWHD_OFFSET(hdSound_string_c, mTextPtr, 0);
 WWHD_OFFSET(hdSound_string_c, mVtable, 4);
 WWHD_SIZE(hdSound_string_c, 8);
 struct hdSound_bufferedString_c : hdSound_string_c {

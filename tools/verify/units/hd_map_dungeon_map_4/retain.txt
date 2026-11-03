@@ -1,3 +1,4 @@
+# verify: -only 02666EA4
 # Supplemental retained-descriptor fixture for 02666EA4 (run with -only 02666EA4): assureTermination
 # may keep the descriptor it gets and rewrite it on its next call, so the byte loop must read the pane
 # name again after the expected name is terminated. Kept out of the

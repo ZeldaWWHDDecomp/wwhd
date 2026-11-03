@@ -26,7 +26,7 @@ static WarpmjActionNames sActionNames;
 
 static void* resource(s32 index) {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_addr("Gmjwp");
+    name->mTextPtr = gabi::guest_addr("Gmjwp");
     name->__vtbl = 0x100428F4;
     return warpmjGetResource(sResourceManager.get(), name.get(), index);
 }

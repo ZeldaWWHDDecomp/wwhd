@@ -1,4 +1,4 @@
-src wwhd_src/d/hd_state_task.cpp
+src wwhd_src/d/hd_scalable_font_mgr.cpp
 # the 'updt' message; the registered disposer
 arg 025F9BC4 r5 0x75706474,0x75706475,0
 arg 025F9C28 r3 0x5C000000

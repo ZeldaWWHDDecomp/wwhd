@@ -73,7 +73,7 @@ bool Act_c::create_heap() {
   const Attr_c &attributes = attr(mType);
   dRes_control_c *control = dComIfG_resControl();
   SafeString name;
-  name.mStringTop = gabi::guest_addr(attributes.mResName.get());
+  name.mTextPtr = gabi::guest_addr(attributes.mResName.get());
   name.__vtbl = gc_tu.safeString;
   s32 index = attributes.mModelId;
   J3DModelData *mdl_data =

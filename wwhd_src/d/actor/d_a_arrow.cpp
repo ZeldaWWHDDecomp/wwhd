@@ -291,16 +291,16 @@ void daArrow_c::arrowShooting() {
         /* HD: strcmp(dComIfGp_getStartStageName(), "GanonK") on sead::SafeStrings: cstr() is virtual
          * (slot 0x14) */
         gabi::Local<SafeString> name;
-        name->mStringTop = gabi::guest_str("GanonK");
+        name->mTextPtr = gabi::guest_str("GanonK");
         name->__vtbl = gc_tu.safeString;
         gabi::Local<SafeString> stage;
-        stage->mStringTop = dComIfGp_ea() + 0x5134;
+        stage->mTextPtr = dComIfGp_ea() + 0x5134;
         stage->__vtbl = gc_tu.safeString;
         gabi::call_ptr(gabi::at<ArrowSafeStringVtable>((u32)name->__vtbl)->mpAssureTermination, name.get());
         gabi::call_ptr(gabi::at<ArrowSafeStringVtable>((u32)name->__vtbl)->mpAssureTermination, name.get());
         gabi::call_ptr(gabi::at<ArrowSafeStringVtable>((u32)stage->__vtbl)->mpAssureTermination, stage.get());
-        u32 a = name->mStringTop;
-        u32 b = stage->mStringTop;
+        u32 a = name->mTextPtr;
+        u32 b = stage->mTextPtr;
         bool equal = true;
         if (a != b) {
             equal = false;

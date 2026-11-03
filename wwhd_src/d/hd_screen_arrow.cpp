@@ -187,7 +187,7 @@ u32 hdArrow_screen_c::setup(u32 a, u32 b, u32 c) {
         u32 assureTermination = name->mVtable->mAssureTermination;
         hdArrow_paneVtable_c* vtable = root->mVtable;
         gabi::call_ptr<void>(assureTermination, name);
-        mpPane[i] = gabi::call_ptr<hdArrow_pane_c*>(vtable->mFindPane, root, (be<u8>*)name->mStringTop, 1u);
+        mpPane[i] = gabi::call_ptr<hdArrow_pane_c*>(vtable->mFindPane, root, (be<u8>*)name->mTextPtr, 1u);
     }
     gabi::Local<hdArrow_positionFrame_c> position;
     hdArrow_panePosition(&position->mPosition, mpPane[0]);

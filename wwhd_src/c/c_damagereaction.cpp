@@ -1302,25 +1302,25 @@ static s32 dr_damage_set(u32 address) {
             temp2.y = 0.0f;
             temp2.z = dr->m4D4;
             MtxPosition(&temp2, &temp3);
-            dr->mpEnemy->current.pos.x +=
-                gabi::fmadds((f32)dr->mpEnemy->speed.x, 0.25f, (f32)temp3.x);
+            f32 forwardX = gabi::fmadds((f32)dr->mpEnemy->speed.x, 0.25f, (f32)temp3.x);
+            dr->mpEnemy->current.pos.x = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.x, forwardX);
             dr->mpEnemy->current.pos.y =
                 gabi::fmadds((f32)dr->mpEnemy->speed.y, 0.25f, (f32)dr->mpEnemy->current.pos.y);
-            dr->mpEnemy->current.pos.z +=
-                gabi::fmadds((f32)dr->mpEnemy->speed.z, 0.25f, (f32)temp3.z);
+            f32 forwardZ = gabi::fmadds((f32)dr->mpEnemy->speed.z, 0.25f, (f32)temp3.z);
+            dr->mpEnemy->current.pos.z = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.z, forwardZ);
 
             // HD: disabled modes skip collision displacement; only X and Z are applied.
             if (dr->mAction != 0xF && dr->mMode > -100) {
                 DamageStts* pStts = &dr->mStts;
                 if (pStts != NULL) {
-                    // Match the reference's lfs promotion, offset-before-position loads and
-                    // double add followed by single rounding; preserve its NaN transport.
-                    f64 moveX = (f32)pStts->GetCCMoveP()->x;
-                    f64 positionX = (f32)dr->mpEnemy->current.pos.x;
-                    dr->mpEnemy->current.pos.x = (f32)(positionX + moveX);
-                    f64 positionZ = (f32)dr->mpEnemy->current.pos.z;
-                    f64 moveZ = (f32)pStts->GetCCMoveP()->z;
-                    dr->mpEnemy->current.pos.z = (f32)(positionZ + moveZ);
+                    // The original loads the X offset before the position and the Z position before its
+                    // offset; both adds are fadds position + offset (frA = position for NaN propagation).
+                    f32 moveX = (f32)pStts->GetCCMoveP()->x;
+                    f32 positionX = (f32)dr->mpEnemy->current.pos.x;
+                    dr->mpEnemy->current.pos.x = gabi::fadds_ppc(positionX, moveX);
+                    f32 positionZ = (f32)dr->mpEnemy->current.pos.z;
+                    f32 moveZ = (f32)pStts->GetCCMoveP()->z;
+                    dr->mpEnemy->current.pos.z = gabi::fadds_ppc(positionZ, moveZ);
                 }
             }
 

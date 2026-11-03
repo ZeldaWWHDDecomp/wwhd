@@ -176,10 +176,10 @@ cPhs_State daSteamTag_c::create() {
     /* strcmp(dComIfGp_getStartStageName(), "Adanmae") == 0 (HD: sead::SafeString ==) */
     gabi::AutoFrame frame{gabi::current_function()};
     gabi::Local<SteamSafeString> a;
-    a->mStringTop = l_Adanmae.name; /* "Adanmae" */
+    a->mTextPtr = l_Adanmae.name; /* "Adanmae" */
     a->__vtbl = &l_safeStringVtable;
     gabi::Local<SteamSafeString> b;
-    b->mStringTop = reinterpret_cast<SteamPlayView*>(dComIfGp_get())->mStartStageName;
+    b->mTextPtr = reinterpret_cast<SteamPlayView*>(dComIfGp_get())->mStartStageName;
     b->__vtbl = &l_safeStringVtable;
     if (SteamSafeString_eq(a.get(), b.get()) && (current.roomNo == 0) && checkItemGet(dItemNo_PEARL_DIN_e, TRUE)) {
         phase_state = cPhs_ERROR_e;

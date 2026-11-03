@@ -84,7 +84,7 @@ static inline void btsw_assert(u32 file, s32 line, u32 msg) {
 /* dComIfG_getObjectIDRes(arc, id): HD dRes_control_c::getIDRes(SafeString, id) */
 static u32 btsw_getIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_addr(arc);
+    key->mTextPtr = gabi::guest_addr(arc);
     key->__vtbl = BTSW_SAFESTRING_VTBL;
     return Btsw_dRes_control_c_getIDRes(l_resourceControl.get(), key.get(), id);
 }

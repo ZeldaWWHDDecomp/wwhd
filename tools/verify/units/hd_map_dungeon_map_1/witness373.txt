@@ -1,3 +1,4 @@
+# verify: -only 02655198
 # Witness companion; run with -only 02655198.
 # MAP-dungeon_map#1 focused witness for mutation 373 (boss floor sentinel).
 src wwhd_src/d/hd_screen_map.cpp

@@ -373,10 +373,10 @@ void daTag_Hint_c::setPlayerAngle() {
 void daTag_Hint_c::darkProc() {
     gabi::Local<SafeString> name, stage;
     // HD: skip the light/fog adjustment in Hyrule, after the original SafeString calls.
-    name->mStringTop = gabi::guest_addr("Hyrule");
+    name->mTextPtr = gabi::guest_addr("Hyrule");
     name->__vtbl = 0x1003F210;
     u32 play = dComIfGp_ea();
-    stage->mStringTop = gabi::ea(gabi::at<dComIfG_inf_c>(play)->play.mCurStage.mName);
+    stage->mTextPtr = gabi::ea(gabi::at<dComIfG_inf_c>(play)->play.mCurStage.mName);
     stage->__vtbl = 0x1003F210;
     auto prepare = [](SafeString* s) {
         hint::SafeStringVtable* vtable = gabi::at<hint::SafeStringVtable>(s->__vtbl);
@@ -384,13 +384,13 @@ void daTag_Hint_c::darkProc() {
     };
     prepare(name.get());
     prepare(name.get());
-    u32 a = name->mStringTop;
+    u32 a = name->mTextPtr;
     prepare(stage.get());
-    u32 b = stage->mStringTop;
+    u32 b = stage->mTextPtr;
     if (a == b)
         return;
-    a = name->mStringTop;
-    b = stage->mStringTop;
+    a = name->mTextPtr;
+    b = stage->mTextPtr;
     for (u32 i = 0; i < 0x40001; ++i) {
         u8 av = gabi::load<u8>(a + i), bv = gabi::load<u8>(b + i);
         if (av != bv)

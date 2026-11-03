@@ -459,7 +459,7 @@ struct AudioSafeStringVtable {
     gabi::gfn assureTermination;
 };
 struct AudioSafeString {
-    gptr<GuestByte> mStringTop;
+    gptr<GuestByte> mTextPtr;
     gptr<AudioSafeStringVtable> __vtbl;
 };
 struct BasicVtable {

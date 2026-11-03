@@ -16,13 +16,13 @@ static inline bool startStageIs(const char* name) {
     gabi::Local<SafeString> b;
     a->__vtbl = gc_tu.safeString;
     b->__vtbl = gc_tu.safeString;
-    a->mStringTop = gabi::guest_addr(name);
-    b->mStringTop = 0x1047E6B8;
+    a->mTextPtr = gabi::guest_addr(name);
+    b->mTextPtr = 0x1047E6B8;
     gabi::call(0x02124510, a.get());
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b.get());
-    u32 s2 = b->mStringTop;
+    u32 s2 = b->mTextPtr;
     if (s1 == s2)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {

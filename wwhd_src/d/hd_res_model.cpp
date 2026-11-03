@@ -47,7 +47,7 @@ static void hdResModel_loadFiles(hdResModel_c* i_this, void* archive,
     // HD: the two format buffers share this exact guest stack frame with shader data and names.
     gabi::Local<hdResModel_loadFrame_c> frame;
     gabi::call_ptr<void>(name->mVtable->mAssureTermination, name);
-    hdResModel_path_c* path = hdResModel_formatPath(&frame->mFilePath, fileFormat, name->mStringTop);
+    hdResModel_path_c* path = hdResModel_formatPath(&frame->mFilePath, fileFormat, name->mTextPtr);
     void* data = hdResModel_loadResource(sResourceLoader.mpObject, archive, path, 0);
     hdResModel_file_c* file = hdResModel_castFile(data);
     i_this->mpFile = file;
@@ -71,10 +71,10 @@ static void hdResModel_loadFiles(hdResModel_c* i_this, void* archive,
         hdResModel_dictionary_c* models = i_this->mpFile->mModels.resolve<hdResModel_dictionary_c>();
         hdResModel_model_c* model = models->mNodes[i].mModel.resolve<hdResModel_model_c>();
         frame->mModelName.__vtbl = safeStringVtable;
-        frame->mModelName.mStringTop = gabi::ea(model->mName.resolve<be<u8>>());
+        frame->mModelName.mTextPtr = gabi::ea(model->mName.resolve<be<u8>>());
         hdResModel_assureTermination(&frame->mModelName);
         // HD: the shared SafeString stores a 32-bit address; re-read it after termination.
-        be<u8>* modelName = gabi::at<be<u8>>(frame->mModelName.mStringTop);
+        be<u8>* modelName = gabi::at<be<u8>>(frame->mModelName.mTextPtr);
         hdResModel_path_c* shaderPath = hdResModel_formatPath(&frame->mShaderPath, shaderFormat, modelName);
         void* shaderData = hdResModel_loadResource(sResourceLoader.mpObject, archive, shaderPath, 0);
         hdResModel_entry_c* entry = i_this->getEntry(i);
@@ -93,7 +93,7 @@ static void hdResModel_loadFiles(hdResModel_c* i_this, void* archive,
             i_this->getEntry(i)->mReady = 1;
             hdResModel_file_c* resFile = i_this->mpFile;
             frame->mMaterialName.__vtbl = safeStringVtable;
-            frame->mMaterialName.mStringTop = gabi::guest_addr(materialName);
+            frame->mMaterialName.mTextPtr = gabi::guest_addr(materialName);
             hdResModel_bindShader(resFile, shader, &frame->mMaterialName);
         } else {
             entry->mpShader = nullptr;

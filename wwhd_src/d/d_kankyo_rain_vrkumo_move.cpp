@@ -18,19 +18,19 @@ static f32 weatherCos(u32 angle) {
 } // namespace weather_move
 static bool cloudStage(const char *literal, WeatherSafeStringHD *left,
                        WeatherSafeStringHD *right) {
-  left->mStringTop = gabi::at<be<u8>>(gabi::guest_addr(literal));
+  left->mTextPtr = gabi::at<be<u8>>(gabi::guest_addr(literal));
   left->__vtbl = &cloudSafeStringVtable;
-  right->mStringTop = weatherPlay()->mStageName;
+  right->mTextPtr = weatherPlay()->mStageName;
   right->__vtbl = &cloudSafeStringVtable;
   left->assureTermination();
   left->assureTermination();
-  be<u8> *a = left->mStringTop;
+  be<u8> *a = left->mTextPtr;
   right->assureTermination();
-  be<u8> *b = right->mStringTop;
+  be<u8> *b = right->mTextPtr;
   if (a == b)
     return true;
-  a = left->mStringTop;
-  b = right->mStringTop;
+  a = left->mTextPtr;
+  b = right->mTextPtr;
   for (u32 i = 0; i < 0x40001; i++) {
     u8 x = a[i], y = b[i];
     if (x != y)

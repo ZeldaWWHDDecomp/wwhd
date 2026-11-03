@@ -2,6 +2,7 @@
 #pragma once
 #include "d/hd_parts_button.h"
 #include "d/hd_msg_window_base.h"
+#include "sead/TreeMapPool.h"
 struct hdWindowPaneVtable_l {
     u8 mPrefix[0xC];
     gabi::gfn mDestroy;
@@ -81,9 +82,9 @@ struct hdWindowTreeNode_l {
     be<u8> mNameBuffer[65];
     u8 mPadding[3];
 };
+/* the config map (FixedStrTreeMap<32>): its node pool (sead/TreeMapPool.h), then the nodes */
 struct hdWindowTree_l {
-    gptr<hdWindowTreeNode_l> mpRoot, mpFreeHead, mpNodes;
-    be<u32> mCount, mCapacity;
+    sead::TreeMapPool<hdWindowTreeNode_l> mPool;
     hdWindowTreeNode_l mNodes[32];
 };
 struct hdWindowPaneArray_l {

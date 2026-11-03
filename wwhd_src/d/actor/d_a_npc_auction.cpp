@@ -309,7 +309,7 @@ u32 daNpcAuction_c::createHeap() {
     u8 costume = (u8)mMdlNo;
     u32 resource = (u32)l_resControl;
     u32 modelNumber = (u32)l_modelNumbers.mEntries[costume];
-    modelName->mStringTop = (u32)l_arcNames.mEntries[costume];
+    modelName->mTextPtr = (u32)l_arcNames.mEntries[costume];
     modelName->__vtbl = SAFE_STRING_VTABLE;
     auction_cpp::JointData* modelData = gabi::at<auction_cpp::JointData>(
         auction_getResource(resource, gabi::ea(modelName.get()), modelNumber));
@@ -317,7 +317,7 @@ u32 daNpcAuction_c::createHeap() {
     u8 animationIndex = (u8)mAnmNo;
     resource = (u32)l_resControl;
     u32 animationNumber = (u32)l_animationNumbers.mEntries[costume][animationIndex];
-    animationName->mStringTop = (u32)l_arcNames.mEntries[costume];
+    animationName->mTextPtr = (u32)l_arcNames.mEntries[costume];
     animationName->__vtbl = SAFE_STRING_VTABLE;
     u32 animation = auction_getResource(resource, gabi::ea(animationName.get()), animationNumber);
     mDoExt_McaMorf* morf = gabi::at<mDoExt_McaMorf>(auction_createMorf(
@@ -328,7 +328,7 @@ u32 daNpcAuction_c::createHeap() {
     costume = (u8)mMdlNo;
     s32 extraModel = (s32)l_extraModels.mEntries[costume];
     if (extraModel >= 0) {
-        extraName->mStringTop = (u32)l_arcNames.mEntries[costume];
+        extraName->mTextPtr = (u32)l_arcNames.mEntries[costume];
         extraName->__vtbl = SAFE_STRING_VTABLE;
         resource = (u32)l_resControl;
         u32 extraData = auction_getResource(resource, gabi::ea(extraName.get()), extraModel);
@@ -1065,7 +1065,7 @@ u32 daNpcAuction_c::initTexPatternAnm(u32 restart) {
     u32 animation = (u32)mBtpNo;
     u32 name = (u32)l_arcNames.mEntries[costume];
     gabi::Local<SafeString> resource;
-    resource->mStringTop = name;
+    resource->mTextPtr = name;
     resource->__vtbl = SAFE_STRING_VTABLE;
     u32 resources = (u32)l_resControl;
     u32 texture = auction_getResource(resources, gabi::ea(resource.get()), animation);
@@ -1130,7 +1130,7 @@ void daNpcAuction_c::setAnm(s32 animation, s32 mode, f32 blend) {
     u32 archive = (u32)l_arcNames.mEntries[costume];
     u32 resourceId = (u32)l_animationNumbers.mEntries[costume][(u32)animation];
     gabi::Local<SafeString> name;
-    name->mStringTop = archive;
+    name->mTextPtr = archive;
     name->__vtbl = SAFE_STRING_VTABLE;
     u32 resource = auction_getResource(resources, gabi::ea(name.get()), resourceId);
     auction_morfSetAnimation((u32)auction_cpp::bits(&mpMorf), resource, mode, 0, blend, 1.0f, 0.0f, -1.0f);

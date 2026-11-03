@@ -3,17 +3,19 @@
 #include "hd/hd_render_commands.h"
 #include "hd/hd_graphics_task.h"
 #include "hd/hd_render_layers.h"
+#include "agl/TimingHistory_l.h"
+using agl_history_l::sTimingOwner;
+using agl_history_l::TimingHistory;
 static hdGraphicsTask_c* sGraphicsActiveTask;
 static hdRenderLayerRegistry_l* sGraphicsRenderer;
 static hdGraphicsMode_l* sGraphicsMode;
-static void* sGraphicsProfiler;
 static hdGraphicsDisplayOwner_l* getGraphicsDisplayOwner(hdGraphicsTask_c *);
 static cXy* getGraphicsScreenSize(u32);
 static void enableGraphicsLayer(hdLayerBase_c *, u32);
 static void finishGraphicsDisplay(hdGraphicsDisplayOwner_l *);
 static void setGraphicsColorMask(u32, u32, s32);
-static void beginGraphicsProfile(void *);
-static void endGraphicsProfile(void *);
+static void beginGraphicsProfile(TimingHistory *);
+static void endGraphicsProfile(TimingHistory *);
 static void graphicsRenderCallback(hdGraphicsTask_c *, hdLayerRenderInfo_c *);
 static void graphicsEmptyCallback();
 static u8 sGraphicsTaskVtable;
@@ -113,7 +115,7 @@ static hdGraphicsTask_c* hdGraphicsTask_construct(hdGraphicsTask_c* self, void* 
         name = (SafeString*)operator_new(sizeof(SafeString));
     if (name != NULL) {
         name->__vtbl = gabi::ea(&sGraphicsNameVtable);
-        name->mStringTop = gabi::guest_addr("");
+        name->mTextPtr = gabi::guest_addr("");
     }
     return self;
 }
@@ -259,13 +261,13 @@ void hdGraphicsTask_c::renderCallback(hdLayerRenderInfo_c* info) {
     switch (u32(filterRenderInfo(info)->mPass)) {
     case 0:
         setGraphicsColorMask(15, 0, -1);
-        beginGraphicsProfile(sGraphicsProfiler);
+        beginGraphicsProfile(sTimingOwner);
         break;
     case 1:
         setGraphicsColorMask(15, 0, -1);
         break;
     case 3:
-        endGraphicsProfile(sGraphicsProfiler);
+        endGraphicsProfile(sTimingOwner);
         break;
     }
 }
@@ -291,18 +293,6 @@ struct hdGraphicsRenderer_l {
     u8 mReserved[0x18];
     hdGraphicsDisplay_l mDisplays[2];
 };
-struct hdGraphicsTiming_l {
-    u8 mReserved[0x14];
-    be<f32> mElapsed;
-};
-struct hdGraphicsProfiler_l {
-    u8 mReserved[0x28];
-    be<f32> mElapsed;
-    u8 mPadding[4];
-    gptr<hdGraphicsTiming_l> mpHistory;
-    be<s32> mCapacity, mCursor;
-    be<u32> mCount;
-};
 struct hdGraphicsScale_l {
     u8 mReserved[0x18];
     be<u8> mTVEnabled, mDRCEnabled;
@@ -321,7 +311,7 @@ static void* sGraphicsDevice;
 static u32 queryGraphicsDevice(void *, u32);
 static void updateGraphicsScale(hdGraphicsScale_l *);
 static void synchronizeGraphicsScale();
-static void beginGraphicsTiming(void *);
+static void beginGraphicsTiming(TimingHistory *);
 static void prepareGraphicsRenderer(hdRenderLayerRegistry_l *, u32);
 /* 0272A1C4 */
 void hdGraphicsTask_c::updateResolution() {
@@ -340,31 +330,31 @@ void hdGraphicsTask_c::updateResolution() {
     if (mode == 2 || !mAdaptive)
         mRenderSize = sGraphicsDefaultSize;
     else {
-        hdGraphicsProfiler_l* profiler = (hdGraphicsProfiler_l *)(void *)sGraphicsProfiler;
+        TimingHistory* profiler = sTimingOwner;
         if (profiler != NULL) {
             f32 timing;
-            if (profiler->mCount) {
-                s32 index = profiler->mCursor;
-                if (index >= s32(profiler->mCapacity))
-                    index -= s32(profiler->mCapacity);
-                timing = profiler->mpHistory[index].mElapsed;
+            if (profiler->mHistory.mCount) {
+                s32 index = profiler->mHistory.mHead;
+                if (index >= s32(profiler->mHistory.mCapacity))
+                    index -= s32(profiler->mHistory.mCapacity);
+                timing = profiler->mHistory.mSamples[index].mForecast;
             } else
-                timing = profiler->mElapsed;
+                timing = profiler->mLoad;
             if (!mHistoryTiming)
-                timing = profiler->mElapsed;
+                timing = profiler->mLoad;
             if (f32(mRenderSize.x) == f32(sGraphicsDefaultSize.x)) {
                 if (timing > f32(mHighThreshold)) {
                     mRenderSize = mRequestedSize;
                     mCooldown = 4;
-                    profiler->mCursor = 0;
-                    profiler->mCount = 0;
+                    profiler->mHistory.mHead = 0;
+                    profiler->mHistory.mCount = 0;
                 }
             } else if (timing < f32(mLowThreshold)) {
                 mCooldown = u32(mCooldown) - 1;
                 if (!mCooldown) {
                     mRenderSize = sGraphicsDefaultSize;
-                    profiler->mCount = 0;
-                    profiler->mCursor = 0;
+                    profiler->mHistory.mCount = 0;
+                    profiler->mHistory.mHead = 0;
                 }
             } else
                 mCooldown = mCooldownReset;
@@ -401,7 +391,7 @@ void hdGraphicsTask_c::beginFrame() {
         if (scale->mTVEnabled || scale->mDRCEnabled)
             synchronizeGraphicsScale();
     }
-    beginGraphicsTiming(sGraphicsProfiler);
+    beginGraphicsTiming(sTimingOwner);
     updateResolution();
     prepareGraphicsRenderer(renderer, 1);
     if (scale != NULL) {
@@ -535,7 +525,7 @@ static void submitGraphicsFrame(hdGraphicsTask_c *) {
     hdGraphicsService_c* service = sGraphicsService;
     if (service != NULL) {
         SafeString name;
-        name.mStringTop = gabi::guest_addr("RenderDisplay::calcGPU");
+        name.mTextPtr = gabi::guest_addr("RenderDisplay::calcGPU");
         name.__vtbl = gabi::ea(&sGraphicsNameVtable);
         hdGraphicsCapture_l* capture = getGraphicsCapture(renderer, 2);
         if (gabi::call_ptr<u32>(capture->mpVtable->mGetCount.get(), capture) > 0) {
@@ -548,7 +538,7 @@ static void submitGraphicsFrame(hdGraphicsTask_c *) {
             *width.get() = 0;
             *height.get() = 0;
             queueGraphicsCapture(service,
-                                 gabi::at<char>(name.mStringTop),
+                                 gabi::at<char>(name.mTextPtr),
                                  capture,
                                  flags.get(),
                                  width.get(),
@@ -736,7 +726,7 @@ static void renderGraphicsFrame(hdGraphicsTask_c* self) {
     sGraphicsDrawState.mActive = 1;
     if (service != NULL) {
         SafeString name;
-        name.mStringTop = gabi::guest_addr("RenderDisplay::draw");
+        name.mTextPtr = gabi::guest_addr("RenderDisplay::draw");
         name.__vtbl = gabi::ea(&sGraphicsNameVtable);
         hdGraphicsCapture_l* capture = getGraphicsCapture(renderer, 0);
         if (gabi::call_ptr<u32>(capture->mpVtable->mGetCount.get(), capture) > 0) {
@@ -749,7 +739,7 @@ static void renderGraphicsFrame(hdGraphicsTask_c* self) {
             *width.get() = 0;
             *height.get() = 0;
             queueGraphicsCapture(service,
-                                 gabi::at<char>(name.mStringTop),
+                                 gabi::at<char>(name.mTextPtr),
                                  capture,
                                  options.get(),
                                  width.get(),
@@ -808,10 +798,6 @@ struct hdGraphicsServiceVtable_l {
     u8 mReserved[0x1C];
     be<u32> mInitialize;
 };
-struct hdGraphicsProfilerLimit_l {
-    u8 mReserved[0x2C];
-    be<f32> mLimit;
-};
 static hdGraphicsAssetList_l* sGraphicsAssets;
 static void* sGraphicsContext;
 static void* sGraphicsHeapManager;
@@ -850,7 +836,7 @@ static void beginGraphicsContext(void *);
 static void endGraphicsContext(void *);
 static void attachGraphicsShadow(hdLayerBase_c *, hdLayerBase_c *);
 static void createGraphicsProfiler(u32);
-static void initializeGraphicsProfiler(void *, void *);
+static void initializeGraphicsProfiler(TimingHistory *, void *);
 static void initializeGraphicsRenderBuffer(void *, void *);
 static void createGraphicsSupport(void *);
 static void* switchGraphicsHeap(void *, void *);
@@ -878,7 +864,7 @@ static void leaveGraphicsHeap(u32 previous) {
         switchGraphicsHeap(sGraphicsHeapManager, gabi::at<void>(previous));
 }
 static void setGraphicsLayerName(SafeString* name, const char* text) {
-    name->mStringTop = gabi::guest_addr(text);
+    name->mTextPtr = gabi::guest_addr(text);
     name->__vtbl = gabi::ea(&sGraphicsNameVtable);
 }
 /* 027297C0 */
@@ -922,7 +908,7 @@ static void initializeGraphicsTask(hdGraphicsTask_c* self) {
             listenerName = (SafeString*)operator_new(sizeof(SafeString));
         if (listenerName != NULL) {
             listenerName->__vtbl = gabi::ea(&sGraphicsNameVtable);
-            listenerName->mStringTop = gabi::guest_addr("");
+            listenerName->mTextPtr = gabi::guest_addr("");
         }
         listener->mVtable = gabi::ea(&sGraphicsListenerDisposerTable);
         listener->mUserData = 0;
@@ -984,8 +970,8 @@ static void initializeGraphicsTask(hdGraphicsTask_c* self) {
     displays->mDisplays[0].mMode = 2;
     self->configureBuffers();
     createGraphicsProfiler(0);
-    initializeGraphicsProfiler(sGraphicsProfiler, parent);
-    ((hdGraphicsProfilerLimit_l *)(void *)sGraphicsProfiler)->mLimit = 180.0f;
+    initializeGraphicsProfiler(sTimingOwner, parent);
+    sTimingOwner->mPreset = 180.0f;
     for (u32 i = 0; i < 2; ++i)
         initializeGraphicsRenderBuffer(self->mRenderBuffers[i], parent);
     rootHeap = getGraphicsSupportHeap();
@@ -1085,7 +1071,7 @@ static void initializeGraphicsTask(hdGraphicsTask_c* self) {
  ext 0274FCCC void endGraphicsContext(void*)
  ext 02736260 void attachGraphicsShadow(hdLayerBase_c*,hdLayerBase_c*)
  ext 0278BC9C void createGraphicsProfiler(u32)
- ext 0278BDF8 void initializeGraphicsProfiler(void*,void*)
+ ext 0278BDF8 void initializeGraphicsProfiler(agl_history_l::TimingHistory*,void*)
  ext 0279DDA4 void initializeGraphicsRenderBuffer(void*,void*)
  ext 0279C844 void createGraphicsSupport(void*)
  ext 02756170 void* switchGraphicsHeap(void*,void*)
@@ -1150,7 +1136,7 @@ static void initializeGraphicsTask(hdGraphicsTask_c* self) {
  ext 027F81A4 u32 queryGraphicsDevice(void*,u32)
  ext 0279AF10 void updateGraphicsScale(hdGraphicsScale_l*)
  ext C0006168 void synchronizeGraphicsScale()
- ext 0278BF5C void beginGraphicsTiming(void*)
+ ext 0278BF5C void beginGraphicsTiming(agl_history_l::TimingHistory*)
  ext 027C106C void prepareGraphicsRenderer(hdRenderLayerRegistry_l*,u32)
  data sGraphicsBaseCallbackVtable 101411A0 nocheck
  data sGraphicsBaseInterfaceVtable 101448AC nocheck
@@ -1188,13 +1174,12 @@ static void initializeGraphicsTask(hdGraphicsTask_c* self) {
  data sGraphicsActiveTask 101F86E8 nocheck
  data sGraphicsRenderer 101F95D0 nocheck
  data sGraphicsMode 101F5088 nocheck
- data sGraphicsProfiler 101F8D74 nocheck
  ext 02748974 hdGraphicsDisplayOwner_l* getGraphicsDisplayOwner(hdGraphicsTask_c*)
  ext 02739578 cXy* getGraphicsScreenSize(u32)
  ext 027C23D4 void enableGraphicsLayer(hdLayerBase_c*,u32)
  ext 0274AD68 void finishGraphicsDisplay(hdGraphicsDisplayOwner_l*)
  ext C00064A8 void setGraphicsColorMask(u32,u32,s32)
- ext 0278C4DC void beginGraphicsProfile(void*)
- ext 0278C544 void endGraphicsProfile(void*)
+ ext 0278C4DC void beginGraphicsProfile(agl_history_l::TimingHistory*)
+ ext 0278C544 void endGraphicsProfile(agl_history_l::TimingHistory*)
  ext 0272AF0C void graphicsRenderCallback(hdGraphicsTask_c*,hdLayerRenderInfo_c*) callback
 */

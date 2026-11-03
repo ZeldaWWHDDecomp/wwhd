@@ -104,9 +104,9 @@ u32 line_mat1::mDoExt_3DlineMat1_c::init(u32 count, u32 points, void* texture, u
     if (!l_shaderNamesInitialized) {
         l_shaderNamesInitialized = 1;
         l_shaderNames.names[0].__vtbl = l_safeStringVtable;
-        l_shaderNames.names[0].mStringTop = gabi::guest_addr("line_mat1");
+        l_shaderNames.names[0].mTextPtr = gabi::guest_addr("line_mat1");
         l_shaderNames.names[1].__vtbl = l_safeStringVtable;
-        l_shaderNames.names[1].mStringTop = gabi::guest_addr("line_toon_mat1");
+        l_shaderNames.names[1].mTextPtr = gabi::guest_addr("line_toon_mat1");
         __register_global_object(gabi::ea(&l_shaderNamesDestructor));
     }
     mNumLines = (u16)count;
@@ -229,8 +229,8 @@ u32 line_mat1::mDoExt_3DlineMat1_c::init(u32 count, u32 points, void* texture, u
     gabi::Local<ResourceNames> names;
     names->archive.__vtbl = l_safeStringVtable;
     names->resource.__vtbl = l_safeStringVtable;
-    names->resource.mStringTop = gabi::guest_addr("ProgramTexture.bfres");
-    names->archive.mStringTop = gabi::guest_addr("ProgramTexture");
+    names->resource.mTextPtr = gabi::guest_addr("ProgramTexture.bfres");
+    names->archive.mTextPtr = gabi::guest_addr("ProgramTexture");
     void* resource =
         texturedLineGetResource(l_resourceControl, &names->archive, &names->resource, 0);
     texturedLineLoadTexture(&mToonTexObj, resource, "himo_nml");
@@ -286,7 +286,7 @@ void line_mat1::mDoExt_3DlineMat1_c::draw(DrawContext* arguments) {
     if (!l_packetNameInitialized) {
         l_packetNameInitialized = 1;
         l_packetName.__vtbl = l_safeStringVtable;
-        l_packetName.mStringTop = gabi::guest_addr("line_packet_mat1");
+        l_packetName.mTextPtr = gabi::guest_addr("line_packet_mat1");
         __register_global_object(gabi::ea(&l_packetNameDestructor));
     }
     for (u32 i = 0; i < (u32)mNumLines; i++, buffer++) {

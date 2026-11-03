@@ -1,7 +1,7 @@
-/* HD title scene controller and its render delegate. Private reconstruction. */
+/* HD title scene controller and its render delegate. Reconstructed from the game's instructions. */
 #pragma once
 #include "bindings.h"
-#include "d/hd_state_task.h"
+#include "d/hd_state.h"
 #include "d/hd_layout_mgr.h"
 #include "d/hd_title_parts.h"
 #include "hd/hd_render_resources.h"

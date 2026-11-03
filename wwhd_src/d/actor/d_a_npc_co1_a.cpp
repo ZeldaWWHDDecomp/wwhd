@@ -16,7 +16,7 @@
 static inline void* co1_dComIfG_getObjectIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
     key->__vtbl = SAFESTRING_VTBL;
-    key->mStringTop = gabi::guest_addr(arc);
+    key->mTextPtr = gabi::guest_addr(arc);
     return co1_getIDResource(dComIfG_resControl(), key.get(), id);
 }
 /* J3DModel (HD): model data at +0xAC */

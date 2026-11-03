@@ -26,15 +26,15 @@ static bool p2_isStartStage(const char* stage) {
     SafeString a;
     SafeString b;
     a.__vtbl = P2_SAFESTRING_VTBL;
-    a.mStringTop = gabi::guest_addr(stage);
+    a.mTextPtr = gabi::guest_addr(stage);
     P2StartStageView* play = reinterpret_cast<P2StartStageView*>(dComIfGp_get());
-    b.mStringTop = gabi::ea(play->mStartStageName);
+    b.mTextPtr = gabi::ea(play->mStartStageName);
     b.__vtbl = P2_SAFESTRING_VTBL;
     gabi::call_ptr(P2_safeVtable(a.__vtbl)->assureTermination, &a);
     gabi::call_ptr(P2_safeVtable(a.__vtbl)->assureTermination, &a);
-    u32 s1 = a.mStringTop;
+    u32 s1 = a.mTextPtr;
     gabi::call_ptr(P2_safeVtable(b.__vtbl)->assureTermination, &b);
-    u32 s2 = b.mStringTop;
+    u32 s2 = b.mTextPtr;
     if (s1 == s2) return true;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c1 = P2_stringBytes(s1)[i];

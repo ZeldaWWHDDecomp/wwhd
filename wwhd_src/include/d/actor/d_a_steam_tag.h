@@ -80,7 +80,7 @@ WWHD_OFFSET(SteamCpsConstruction, mCps, 0x118);
 WWHD_SIZE(SteamCpsConstruction, 0x138);
 struct SteamSafeStringVtable { u8 _00[0x14]; gfn assureTermination; };
 struct SteamSafeString {
-    gptr<be<u8>> mStringTop; gptr<SteamSafeStringVtable> __vtbl;
+    gptr<be<u8>> mTextPtr; gptr<SteamSafeStringVtable> __vtbl;
     void assureTermination() { gabi::call_ptr(__vtbl->assureTermination.get(), this); }
 };
 WWHD_SIZE(SteamSafeString, 8);
@@ -88,10 +88,10 @@ struct SteamPlayView { u8 _00[0x5134]; be<u8> mStartStageName[8]; };
 inline bool SteamSafeString_eq(SteamSafeString* a, SteamSafeString* b) {
     // HD: retain all virtual calls and the bounded guest-byte comparison.
     a->assureTermination(); a->assureTermination();
-    be<u8>* s1 = a->mStringTop;
+    be<u8>* s1 = a->mTextPtr;
     b->assureTermination();
-    if (s1 == b->mStringTop.get()) return true;
-    be<u8>* p = a->mStringTop; be<u8>* q = b->mStringTop;
+    if (s1 == b->mTextPtr.get()) return true;
+    be<u8>* p = a->mTextPtr; be<u8>* q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; ++i) {
         u8 c = p[i];
         if (c != q[i]) return false;

@@ -76,7 +76,7 @@ BOOL daObjDrift::Act_c::Mthd_Delete() {
 BOOL daObjDrift::Act_c::CreateHeap() {
 
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_addr("Kryu");
+    name->mTextPtr = gabi::guest_addr("Kryu");
     name->__vtbl = 0x10027710;
     void* data = driftGetResource(sResourceManager.get(), name.get(), dRes_INDEX_KRYU_BDL_RYU_00_e);
     if (!data)

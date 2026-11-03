@@ -129,7 +129,7 @@ void daObjTribox::Act_c::set_state() {
 /* 023A92BC */
 BOOL daObjTribox::Act_c::create_heap() {
     gabi::Local<SafeString> blockName;
-    blockName->mStringTop = tribox_tu.archiveName;
+    blockName->mTextPtr = tribox_tu.archiveName;
     blockName->__vtbl = tribox_tu.safeStringVtable;
     void *blockData =
             tribox_dRes_control_c_getRes((u8*)l_resControl.value,
@@ -139,7 +139,7 @@ BOOL daObjTribox::Act_c::create_heap() {
     this->mBlockModel =
             tribox_mDoExt_J3DModel__create(blockData, 0x80000, 0x11000022);
     gabi::Local<SafeString> collisionName;
-    collisionName->mStringTop = tribox_tu.archiveName;
+    collisionName->mTextPtr = tribox_tu.archiveName;
     collisionName->__vtbl = tribox_tu.safeStringVtable;
     void *collision =
             tribox_dRes_control_c_getRes((u8*)l_resControl.value,
@@ -153,7 +153,7 @@ BOOL daObjTribox::Act_c::create_heap() {
     else
         this->mBackground = 0;
     gabi::Local<SafeString> lightName;
-    lightName->mStringTop = tribox_tu.archiveName;
+    lightName->mTextPtr = tribox_tu.archiveName;
     lightName->__vtbl = tribox_tu.safeStringVtable;
     void *lightData =
             tribox_dRes_control_c_getRes((u8*)l_resControl.value,
@@ -163,7 +163,7 @@ BOOL daObjTribox::Act_c::create_heap() {
     this->mLightModel =
             tribox_mDoExt_J3DModel__create(lightData, 0x80000, 0x11000022);
     gabi::Local<SafeString> blockAnimationName;
-    blockAnimationName->mStringTop = tribox_tu.archiveName;
+    blockAnimationName->mTextPtr = tribox_tu.archiveName;
     blockAnimationName->__vtbl = tribox_tu.safeStringVtable;
     void *blockAnimation =
             tribox_dRes_control_c_getRes((u8*)l_resControl.value,
@@ -173,7 +173,7 @@ BOOL daObjTribox::Act_c::create_heap() {
     s32 blockOk = tribox_mDoExt_brkAnm_initialize(reinterpret_cast<u8*>(&this->mBlockBrk), lightData,
                                                                 blockAnimation, 1, 0, 1.0f, 0, -1, 0, 0);
     gabi::Local<SafeString> lightAnimationName;
-    lightAnimationName->mStringTop = tribox_tu.archiveName;
+    lightAnimationName->mTextPtr = tribox_tu.archiveName;
     lightAnimationName->__vtbl = tribox_tu.safeStringVtable;
     void *lightAnimation =
             tribox_dRes_control_c_getRes((u8*)l_resControl.value,

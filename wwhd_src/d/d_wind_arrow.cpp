@@ -159,7 +159,7 @@ cPhs_State dWindArrow_c::create() {
     if (this) dWindArrow_ct(this);
     gabi::AutoFrame frame{gabi::current_function()};
     gabi::Local<SafeString> name;
-    name->mStringTop = 0x10056660; name->__vtbl = 0x10056668;
+    name->mTextPtr = 0x10056660; name->__vtbl = 0x10056668;
     J3DModelData* modelData = static_cast<J3DModelData*>(dWindArrow_getRes(dComIfG_resControl(), name.get(), dRes_INDEX_ALWAYS_BDL_YA_e));
     if (!modelData) dWindArrow_assert(STR(0x10056690), 0x73, STR(0x100566A4));
     J3DModel* model = mDoExt_J3DModel__create(modelData, 0x80000, 0x200);
@@ -169,7 +169,7 @@ cPhs_State dWindArrow_c::create() {
         return cPhs_ERROR_e;
     }
     gabi::Local<SafeString> animName;
-    animName->__vtbl = 0x10056668; animName->mStringTop = 0x10056660;
+    animName->__vtbl = 0x10056668; animName->mTextPtr = 0x10056660;
     J3DAnmTextureSRTKey* anm = static_cast<J3DAnmTextureSRTKey*>(dWindArrow_getRes(dComIfG_resControl(), animName.get(), dRes_INDEX_ALWAYS_BTK_YA_e));
     u32 ok = mModelInfo.mBtkAnm.init(modelData, anm, true, J3DFrameCtrl::EMode_LOOP, l_animationSpeed, 0, -1, false, 0);
     adjustHeap();

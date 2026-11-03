@@ -43,23 +43,23 @@ void dPointWind_c::set_pwind_move() {
     f32 radScale = 1.8f;
     bool animate = true;
     dKyr_get_vectle_calc(&p0, &p1, &direction);
-    sea.mStringTop = reinterpret_cast<const be<char>*>(l_sea);
+    sea.mTextPtr = reinterpret_cast<const be<char>*>(l_sea);
     sea.__vtbl = &l_safeStringVtable;
     bool special = false;
     PointWindPlayView* play = reinterpret_cast<PointWindPlayView*>(dComIfGp_get());
     stage.__vtbl = &l_safeStringVtable;
-    stage.mStringTop = play->mStartStageName;
+    stage.mTextPtr = play->mStartStageName;
     sea.assureTermination();
     sea.assureTermination();
     // HD: fetch the stage virtual target before reading the sea string pointer.
     u32 terminate = stage.__vtbl->assureTerminationImpl.get();
-    const be<char>* seaTop = sea.mStringTop;
+    const be<char>* seaTop = sea.mTextPtr;
     gabi::call_ptr(terminate, &stage);
-    const be<char>* stageTop = stage.mStringTop;
+    const be<char>* stageTop = stage.mTextPtr;
     bool equal = seaTop == stageTop;
     if (!equal) {
-        const be<char>* a = sea.mStringTop;
-        const be<char>* b = stage.mStringTop;
+        const be<char>* a = sea.mTextPtr;
+        const be<char>* b = stage.mTextPtr;
         // HD: retain SafeString's bounded byte comparison.
         for (u32 count = 0x40001; count != 0; --count) {
             u32 x = u8(*a);

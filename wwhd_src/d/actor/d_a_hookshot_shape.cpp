@@ -507,7 +507,7 @@ static u32 daHookshot_shape_ct(u32 shape) {
     hookshotGpu::constructTexture(texture);
     hookshotGpu::constructResourceTexture(resourceTexture);
     gabi::Local<SafeString> materialName;
-    materialName->mStringTop = gabi::guest_addr("hookshot_chain");
+    materialName->mTextPtr = gabi::guest_addr("hookshot_chain");
     materialName->__vtbl = 0x10011560;
     u32 resources = hookshotGpu::getResourceTable<u32>();
     s32 index = hookshotGpu::findMaterial<s32>(
@@ -604,9 +604,9 @@ static u32 daHookshot_shape_ct(u32 shape) {
         static_cast<u32>(hookshotView<HookshotGpuBuffers>(buffers)->mActiveBuffer) == 0 ? 1 : 0;
     hookshotGpu::lockTextureCache(word(0x101F8B18));
     gabi::Local<SafeString> archiveName, textureName;
-    archiveName->mStringTop = gabi::guest_addr("ProgramTexture");
+    archiveName->mTextPtr = gabi::guest_addr("ProgramTexture");
     archiveName->__vtbl = 0x10011560;
-    textureName->mStringTop = gabi::guest_addr("ProgramTexture.bfres");
+    textureName->mTextPtr = gabi::guest_addr("ProgramTexture.bfres");
     textureName->__vtbl = 0x10011560;
     u32 textureData =
         hookshotGpu::loadResource<u32>(word(0x101F4F7C), archiveName.get(), textureName.get(), 0);

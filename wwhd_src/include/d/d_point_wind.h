@@ -33,7 +33,7 @@ struct PointWindSafeStringVtable {
     gabi::gfn assureTerminationImpl;
 };
 struct PointWindSafeString {
-    gptr<const be<char>> mStringTop;
+    gptr<const be<char>> mTextPtr;
     gptr<const PointWindSafeStringVtable> __vtbl;
     void assureTermination() {
         gabi::call_ptr(__vtbl->assureTerminationImpl.get(), this);

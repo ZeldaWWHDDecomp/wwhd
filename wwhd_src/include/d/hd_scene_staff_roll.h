@@ -1,7 +1,7 @@
 /* HD staff-roll scene and bubble groups. Private binary-derived layouts. */
 #pragma once
 #include "bindings.h"
-#include "d/hd_state_task.h"
+#include "d/hd_state.h"
 #include "d/hd_scene_title.h"
 #include "d/hd_scene_save_end.h"
 #include "d/hd_screen_staff_roll_bubble.h"
@@ -61,7 +61,7 @@ struct hdStaffPlay_l { u8 mReserved[0x5D78]; be<u32> mDrawList; be<u32> mDrawBuf
 struct hdStaffDrawState_l { be<u32> mList; be<u32> mBuffer; };
 
 
-struct hdStaffResource_l { u8 mReserved[0x4C]; be<s32> mUserDataOffset; };
+struct hdStaffResource_l { u8 mReserved[0x4C]; be<s32> mUserDataPos; };
 struct hdStaffFile_l { be<s32> mDataOffset; be<u32> mSize; };
 
 struct hdStaffMaterialHeader_l { u8 mReserved[4]; be<s32> mNameOffset; };

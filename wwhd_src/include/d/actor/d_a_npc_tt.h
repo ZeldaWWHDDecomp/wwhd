@@ -304,8 +304,6 @@ inline void Tt_copyMatrix(Mtx34* dst, const Mtx34* src) {
         words[i] = s[i];
     for (int i = 0; i < 12; i++) {
         u32 v = words[i];
-        if ((v & 0x7F800000u) == 0x7F800000u && (v & 0x003FFFFFu) != 0 && !(v & 0x00400000u))
-            v |= 0x00400000u;
         gmem_stf32(gabi::ea(dst) + i * 4, v);
     }
 }

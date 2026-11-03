@@ -47,23 +47,9 @@ static void invokeBomb2(u32 object, const Bomb2PtMf& descriptor) {
   gabi::call(target, object);
 }
 static u32 play2() { return gabi::ea(dComIfGp_get()); }
-// Retain the original arithmetic NaN payload when multiple inputs are NaNs.
-static f32 bombSmokeFma(f32 a, f32 c, f32 b) {
-  if (std::isnan(c))
-    return c;
-  if (std::isnan(a))
-    return a;
-  if (std::isnan(b))
-    return b;
-  return gabi::fmadds(a, c, b);
-}
-static f32 bombSmokeSub(f32 a, f32 b) {
-  if (std::isnan(b))
-    return b;
-  if (std::isnan(a))
-    return a;
-  return a - b;
-}
+// The original's fmadds (a*c+b) and fsubs (a-b): gabi picks the NaN the hardware propagates (frA, frB, frC).
+static f32 bombSmokeFma(f32 a, f32 c, f32 b) { return gabi::fmadds(a, c, b); }
+static f32 bombSmokeSub(f32 a, f32 b) { return gabi::fsubs_ppc(a, b); }
 
 /* 020C81A4 */
 void daBomb2::Env_c::set(const cXyz *pos) {

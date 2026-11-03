@@ -86,7 +86,7 @@ static Ls1Material* eyeMaterial(J3DModelData* data, int index) {
     gabi::call_ptr(vtable->mAssureTermination.get(), name);
     u32 offset = header->mMaterialNamesOffset;
     u32 table = offset ? gabi::ea(&header->mMaterialNamesOffset) + offset : 0;
-    s32 materialIndex = ls1Guest_materialIndex(table, gabi::at<const char>(name->mStringTop));
+    s32 materialIndex = ls1Guest_materialIndex(table, gabi::at<const char>(name->mTextPtr));
     if (materialIndex < 0)
         return nullptr;
     u32 material = data->mMaterials;
@@ -2192,9 +2192,9 @@ static void __sinit_d_a_npc_ls1_cpp() {
     sinit_header_statics_z(gc_tu.headerStatics[0], gc_tu.headerStatics[1], gc_tu.headerStatics[2]);
     // HD: two static sead::SafeStrings naming the eye materials (setMat, bodyCreateHeap)
     l_eyeMaterialNames.mNames[0].__vtbl = gc_tu.safeString;
-    l_eyeMaterialNames.mNames[0].mStringTop = 0x1001D438;
+    l_eyeMaterialNames.mNames[0].mTextPtr = 0x1001D438;
     l_eyeMaterialNames.mNames[1].__vtbl = gc_tu.safeString;
-    l_eyeMaterialNames.mNames[1].mStringTop = 0x1001D440;
+    l_eyeMaterialNames.mNames[1].mTextPtr = 0x1001D440;
     daNpc_Ls1_HIO_c_ct(&l_HIO); /* static daNpc_Ls1_HIO_c l_HIO */
 }
 

@@ -1,3 +1,4 @@
+# verify: -only 026BB768
 # Supplemental 026BB768 fixture (run with -only 026BB768).
 # Text-pane visibility overlaps initialized index0, reaching the final fallback path.
 # Synthetic mapped local game-state storage; existing callback model.

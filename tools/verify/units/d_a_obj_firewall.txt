@@ -91,5 +91,5 @@ field 023421F8 0x104a84fc f32 6.123233995736766e-17
 
 # wait2_act_proc: distance threshold 950 (sqrt return) and the
 # halfword at +0xf8 == 2 check so both the jump-to-wait3 and order-event paths run.
-ret 028F4384 0,949.99,950,950.01,2000
+fretf64 028F4384 0,949.99,950,950.01,2000
 field 02342990 r3+0xf8 u16 0,1,2,3

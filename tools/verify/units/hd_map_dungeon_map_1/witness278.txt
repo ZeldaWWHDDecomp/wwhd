@@ -1,3 +1,4 @@
+# verify: -only 02656B38
 # Witness companion; run with -only 02656B38.
 src wwhd_src/d/hd_screen_dungeon_map_part1.cpp
 

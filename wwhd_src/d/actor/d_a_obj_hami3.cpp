@@ -104,7 +104,7 @@ BOOL daObjHami3::Act_c::Mthd_Delete() {
 /* 0234EEBC */
 BOOL daObjHami3::Act_c::CreateHeap() {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::ea(M_arcname.bytes);
+    name->mTextPtr = gabi::ea(M_arcname.bytes);
     name->__vtbl = gabi::ea(&safeStringVtable);
     J3DModelData *data = gabi::at<J3DModelData>(hami3_call::getObjectResource(
         (u32)resourceControl, name.get(), dRes_INDEX_HAMI3_BDL_HAMI3));

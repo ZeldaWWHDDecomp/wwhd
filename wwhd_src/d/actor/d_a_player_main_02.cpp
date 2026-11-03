@@ -1383,19 +1383,19 @@ static inline BOOL lk_safeStringEq(u32 s1, u32 s2) {
  * SafeString temporaries (the TU's vtable; slot 0x14 assures the termination) */
 static inline BOOL lk_matNameIs(gabi::Local<SafeString>& a, gabi::Local<SafeString>& b, u32 mtl, u32 str) {
     a->__vtbl = gc_tu.safeString;
-    a->mStringTop = str;
+    a->mTextPtr = str;
     u32 blk = gabi::ea(gabi::at<player02::fanMaterial_c>(mtl)->mpName.get());
     s32 off = gabi::at<player02::materialName_c>(blk)->mNameOffset;
     b->__vtbl = gc_tu.safeString;
-    b->mStringTop = off != 0 ? blk + 4 + off : 0;
+    b->mTextPtr = off != 0 ? blk + 4 + off : 0;
     player02SafeStringCtor(a.a); /* (an empty function) */
     player02::assureTermination(a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     player02::assureTermination(b);
-    if (s1 == b->mStringTop) {
+    if (s1 == b->mTextPtr) {
         return TRUE;
     }
-    return lk_safeStringEq(a->mStringTop, b->mStringTop);
+    return lk_safeStringEq(a->mTextPtr, b->mTextPtr);
 }
 
 /* 023E771C */
@@ -2568,17 +2568,17 @@ BOOL daPy_lk_c::checkNextActionBoomerangReady() {
 // HD: SafeString == of a C string and a buffer (the C string's termination is assured twice, as compiled)
 static inline BOOL lk_strEq2(gabi::Local<SafeString>& a, gabi::Local<SafeString>& b, u32 str, u32 buf) {
     a->__vtbl = gc_tu.safeString;
-    a->mStringTop = str;
+    a->mTextPtr = str;
     b->__vtbl = gc_tu.safeString;
-    b->mStringTop = buf;
+    b->mTextPtr = buf;
     player02::assureTermination(a);
     player02::assureTermination(a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     player02::assureTermination(b);
-    if (s1 == b->mStringTop) {
+    if (s1 == b->mTextPtr) {
         return TRUE;
     }
-    return lk_safeStringEq(a->mStringTop, b->mStringTop);
+    return lk_safeStringEq(a->mTextPtr, b->mTextPtr);
 }
 
 /* 023EB6C8 */

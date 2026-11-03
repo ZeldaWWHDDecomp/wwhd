@@ -21,15 +21,15 @@ static void wavePosition(WeatherVectorHD *out, WaveEffHD *p) {
 }
 static bool waveStage(const char *name, WeatherSafeStringHD *a,
                       WeatherSafeStringHD *b) {
-  a->mStringTop = at<be<u8>>(guest_addr(name));
+  a->mTextPtr = at<be<u8>>(guest_addr(name));
   a->__vtbl = &waveSafeStringVtable;
-  b->mStringTop = weatherPlay()->mStageName;
+  b->mTextPtr = weatherPlay()->mStageName;
   b->__vtbl = &waveSafeStringVtable;
   a->assureTermination();
   a->assureTermination();
-  be<u8> *first = a->mStringTop;
+  be<u8> *first = a->mTextPtr;
   b->assureTermination();
-  be<u8> *second = b->mStringTop;
+  be<u8> *second = b->mTextPtr;
   if (first == second)
     return true;
   for (u32 i = 0; i < 0x40001; i++) {

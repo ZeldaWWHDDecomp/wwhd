@@ -391,9 +391,9 @@ static void __sinit_d_a_pz_cpp() {
     sinit_header_statics(gabi::ea(&l_headerStatics), gabi::ea(&l_headerRegistration));
     /* HD: two static sead::SafeStrings (material names used by bodyCreateHeap) */
     l_eyeMaterialNames.mNames[0].__vtbl = SAFESTRING_VTBL;
-    l_eyeMaterialNames.mNames[0].mStringTop = gabi::guest_str("m_pz_eyeL");
+    l_eyeMaterialNames.mNames[0].mTextPtr = gabi::guest_str("m_pz_eyeL");
     l_eyeMaterialNames.mNames[1].__vtbl = SAFESTRING_VTBL;
-    l_eyeMaterialNames.mNames[1].mStringTop = gabi::guest_str("m_pz_eyeR");
+    l_eyeMaterialNames.mNames[1].mTextPtr = gabi::guest_str("m_pz_eyeR");
     daPz_HIO_c_ct(reinterpret_cast<u8*>(&l_HIO)); /* static daPz_HIO_c l_HIO */
 }
 

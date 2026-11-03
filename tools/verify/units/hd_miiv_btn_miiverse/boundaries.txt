@@ -1,3 +1,4 @@
+# verify: -only 0263F4F0
 # Supplemental declared scope: only 0263F4F0; run with -only 0263F4F0.
 # Valid synthetic inputs retain NULL/disjoint post domains; name length11, comment
 # lengths211/256, resolver output up to50, and leading LF cover exact local limits.

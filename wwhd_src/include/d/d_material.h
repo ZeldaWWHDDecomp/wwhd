@@ -25,7 +25,7 @@ struct Heap {
     void destroy() { gabi::call_ptr(__vtbl->destroy.get(), this); }
     void adjustSize() { gabi::call_ptr(__vtbl->adjustSize.get(), this); }
 };
-struct String { be<u32> mStringTop, __vtbl; };
+struct String { be<u32> mTextPtr, __vtbl; };
 WWHD_SIZE(State,0x90); WWHD_SIZE(ExtendedState,0x198); WWHD_SIZE(Control,0x450);
 WWHD_OFFSET(Model,mMaterialOverride,0x78); WWHD_OFFSET(Morf,mpModel,0x90);
 }

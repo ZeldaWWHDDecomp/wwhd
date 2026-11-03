@@ -2,24 +2,23 @@
  * Accessed JAIZelBasic and library prefixes only. */
 #pragma once
 #include "bindings.h"
-struct JAISound {
-    u8 mUnaccessed[0x14];
-    be<u32> field_0x18; // HD: the GC field is four bytes later.
-    be<u32> field_0x1c;
-};
-WWHD_OFFSET(JAISound, field_0x18, 0x14);
-WWHD_OFFSET(JAISound, field_0x1c, 0x18);
-WWHD_SIZE(JAISound, 0x1C);
+#include "JSystem/JAudio/JAISound.h"
 namespace JAInter {
 struct Actor {
-    be<u32> mUnaccessed;
-    gptr<cXyz> field_0x4;
-    be<u32> mUnaccessed8;
-    be<u32> field_0xc;
+    union { be<u32> mUnaccessed; gptr<cXyz> field_0x0; gptr<void> mActor; };
+    union { gptr<cXyz> field_0x4; gptr<cXyz> mPosition; };
+    union { be<u32> mUnaccessed8; gptr<void> field_0x8; be<u32> mPositionState; };
+    union { be<u32> field_0xc; be<u32> mMapInfo; };
 };
 } // namespace JAInter
+WWHD_OFFSET(JAInter::Actor, field_0x0, 0);
 WWHD_OFFSET(JAInter::Actor, field_0x4, 4);
+WWHD_OFFSET(JAInter::Actor, field_0x8, 8);
 WWHD_OFFSET(JAInter::Actor, field_0xc, 0xC);
+WWHD_OFFSET(JAInter::Actor,mActor,0);
+WWHD_OFFSET(JAInter::Actor,mPosition,4);
+WWHD_OFFSET(JAInter::Actor,mPositionState,8);
+WWHD_OFFSET(JAInter::Actor,mMapInfo,0xC);
 WWHD_SIZE(JAInter::Actor, 0x10);
 struct JAIZelCameraView {
     u8 mUnaccessed[8];

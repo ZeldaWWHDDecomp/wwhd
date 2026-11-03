@@ -135,7 +135,7 @@ static void commitJointMatrix(u32 model, u16 joint) {
 
 /* inlined into daBigelf_c::CreateHeap */
 static u32 resource(gabi::Local<SafeString>& name, s32 id) {
-    name->mStringTop = gabi::guest_str("bigelf");
+    name->mTextPtr = gabi::guest_str("bigelf");
     name->__vtbl = gc_tu.safeString;
     return bigelf_getResource(bytes(l_resourceManager.value), name.get(), id);
 }
@@ -1049,7 +1049,7 @@ void daBigelf_c::setAnm(s32 animation) {
     u32 manager = l_resourceManager.value;
     gabi::Local<SafeString> name;
     name->__vtbl = gc_tu.safeString;
-    name->mStringTop = gabi::guest_str("bigelf");
+    name->mTextPtr = gabi::guest_str("bigelf");
     u32 data = bigelf_getResource(bytes(manager), name.get(), resource);
     u32 animator = gabi::ea(this->mpBckAnimator.get());
     bigelf_setMorfAnimation(bytes(animator), bytes(data), mode, 0, morph, speed, start, end);

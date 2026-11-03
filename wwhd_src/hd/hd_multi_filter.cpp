@@ -83,7 +83,7 @@ static hdMultiFilter_c* constructMultiFilter(hdMultiFilter_c* layer) {
     }
     SafeString name;
     name.__vtbl = gabi::ea(&sMultiFilterSafeStringVtable);
-    name.mStringTop = gabi::guest_addr("MultiFilter");
+    name.mTextPtr = gabi::guest_addr("MultiFilter");
     constructMultiFilterBase(layer, &name);
     layer->mVtable = gabi::ea(&sMultiFilterLayerVtable);
     layer->mDrawVtable = gabi::ea(&sMultiFilterDrawVtable);
@@ -128,7 +128,7 @@ void hdMultiFilter_c::initialize(void* heap) {
         if (name == NULL) name = (SafeString*)allocateMultiFilter(sizeof(SafeString));
         if (name != NULL) {
             name->__vtbl = gabi::ea(&sMultiFilterSafeStringVtable);
-            name->mStringTop = gabi::guest_addr("");
+            name->mTextPtr = gabi::guest_addr("");
         }
         step->mFlags = 0;
         step->mVtable = gabi::ea(&sMultiFilterStepVtable);
@@ -139,7 +139,7 @@ void hdMultiFilter_c::initialize(void* heap) {
             step->mDrawFunction = 0x02735BA4;
         }
         step->mTarget = 2;
-        step->mName.mStringTop = gabi::guest_addr("LayerMultiFilter");
+        step->mName.mTextPtr = gabi::guest_addr("LayerMultiFilter");
     }
     addFilterStep(this, step);
 }

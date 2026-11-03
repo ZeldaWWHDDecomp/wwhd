@@ -68,3 +68,7 @@ struct hdShaderArchiveHeaderZero_c { be<u32> mWords[4]; };
 WWHD_SIZE(hdShaderArchiveHeaderZero_c,16);
 struct hdShaderArchiveHeaderDescriptor_c { u8 mData[12]; };
 WWHD_SIZE(hdShaderArchiveHeaderDescriptor_c,12);
+
+// The manager singleton (101F8A94) and its disposer holder (101F8A98), owned by hd/hd_shader_archive_statics.cpp.
+extern gptr<hdShaderArchiveMgr_c>& sShaderArchiveShaderManager;
+extern gptr<hdShaderArchiveMgr_c>& sShaderArchiveShaderManagerDisposer;

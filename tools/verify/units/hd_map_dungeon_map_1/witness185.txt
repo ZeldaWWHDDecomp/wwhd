@@ -1,3 +1,4 @@
+# verify: -only 0267C6C4
 # Witness companion; run with -only 0267C6C4.
 # MAP-dungeon_map#1 focused witness for mutation 185 (cell.mCurrent.y transfer).
 src wwhd_src/d/hd_screen_map.cpp

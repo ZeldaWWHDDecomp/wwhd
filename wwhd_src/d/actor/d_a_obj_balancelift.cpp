@@ -216,7 +216,7 @@ BOOL daBalancelift_c::CreateHeap() {
 
     gabi::Local<SafeString> modelName, bgName;
     modelName->__vtbl = 0x1002542C;
-    modelName->mStringTop = gabi::guest_addr("Hten1");
+    modelName->mTextPtr = gabi::guest_addr("Hten1");
     void* data = balanceGetResource(sResourceManager.get(), modelName.get(), HTEN1_BDL_PLATFORM);
     if (!data)
         balanceAssert("d_a_obj_balancelift.cpp", 0x1AA, "modelData != (0)");
@@ -230,7 +230,7 @@ BOOL daBalancelift_c::CreateHeap() {
     if (!mBackground)
         balanceAssert("d_a_obj_balancelift.cpp", 0x1B1, "pm_bgw != (0)");
     bgName->__vtbl = 0x1002542C;
-    bgName->mStringTop = gabi::guest_addr("Hten1");
+    bgName->mTextPtr = gabi::guest_addr("Hten1");
     data = balanceGetResource(sResourceManager.get(), bgName.get(), HTEN1_DZB_PLATFORM);
     BalanceBackground* bg = mBackground;
     balanceSetBackground(bg, data, 1, &mBackgroundMatrix);

@@ -79,7 +79,7 @@ static void ibAssert(s32 line, const char *expression) { JUT_ASSERT_fail(text(fi
 extern void *getResource(dRes_control_c *, SafeString *, s32);
 static void *resource(s32 index) {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::ea(&arc);
+    name->mTextPtr = gabi::ea(&arc);
     name->__vtbl = 0x100118C4;
     gabi::Local<u8[16]> linkage;
     return getResource(dComIfG_resControl(), name.get(), index);

@@ -34,11 +34,11 @@ struct Matrix44 {
     be<f32> m[4][4];
 };
 struct FixedSafeString32 {
-    be<u32> mStringTop, __vtbl, mBufferSize;
+    be<u32> mTextPtr, __vtbl, mBufferSize;
     be<u8> mBuffer[32];
 };
 struct WFixedSafeString17 {
-    be<u32> mStringTop, __vtbl, mBufferSize;
+    be<u32> mTextPtr, __vtbl, mBufferSize;
     be<u16> mBuffer[17];
     u8 padding[2];
 };
@@ -173,7 +173,7 @@ WWHD_SIZE(ItemSupplement, 0x4925);
 
 namespace GameInfoHD {
 struct FixedSafeString8 {
-    be<u32> mStringTop, __vtbl, mBufferSize;
+    be<u32> mTextPtr, __vtbl, mBufferSize;
     be<u8> mBuffer[8];
 };
 WWHD_SIZE(FixedSafeString8, 0x14);

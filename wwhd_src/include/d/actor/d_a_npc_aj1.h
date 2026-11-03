@@ -325,7 +325,7 @@ inline bool Aj1_equal(SafeString* a, SafeString* b) {
     assure(a);
     assure(a);
     assure(b);
-    u32 s1 = a->mStringTop, s2 = b->mStringTop;
+    u32 s1 = a->mTextPtr, s2 = b->mTextPtr;
     if (s1 == s2)
         return true;
     auto* x = gabi::at<be<u8>>(s1);

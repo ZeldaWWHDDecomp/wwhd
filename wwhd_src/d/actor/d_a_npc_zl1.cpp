@@ -96,12 +96,12 @@ enum { dSv_event_flag_ZELDA_AWAKENED = 0x2D02, dSv_event_flag_HYRULE_COURTYARD_C
 // HD: SafeString compares call assureTermination twice on the literal and once on the stage.
 static bool zl1_isStartStage(const char* name) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(name);
+    a->mTextPtr = gabi::guest_addr(name);
     a->__vtbl = ZL1_SAFESTRING_VTBL;
     u32 stage = gabi::ea(dComIfGp_getStartStageName());
     gabi::Local<SafeString> b;
     b->__vtbl = ZL1_SAFESTRING_VTBL;
-    b->mStringTop = stage;
+    b->mTextPtr = stage;
     zl1_main::assureTermination(a);
     zl1_main::assureTermination(a);
     const be<u8>* pa = zl1_main::safeStringBytes(a);

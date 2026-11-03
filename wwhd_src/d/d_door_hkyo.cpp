@@ -220,20 +220,20 @@ static dDoor_archiveStream_c* dDoor_archiveOpen(void* archive, dDoor_safeString_
     dDoor_bufferString_c* buffer = gabi::at<dDoor_bufferString_c>(bufferAddress);
     if (!buffer) buffer = (dDoor_bufferString_c*)operator_new(sizeof(dDoor_bufferString_c));
     if (buffer) {
-        buffer->mStringTop = buffer->mBuffer;
+        buffer->mTextPtr = buffer->mBuffer;
         buffer->__vtbl = 0x1004C8B8;
         buffer->mBufferSize = 16;
         buffer->mBuffer[15] = 0;
-        be<u8>* data = buffer->mStringTop;
+        be<u8>* data = buffer->mTextPtr;
         buffer->__vtbl = 0x1004C948;
         *data = 0;
         buffer->__vtbl = 0x1004C960;
     }
     dDoor_streamConstruct(stream);
     u32 assure = name->__vtbl->assureTermination;
-    be<u8>* dest = stream->mName.mStringTop;
+    be<u8>* dest = stream->mName.mTextPtr;
     gabi::call_ptr<void>(assure, name);
-    be<u8>* data = name->mStringTop;
+    be<u8>* data = name->mTextPtr;
     s32 count = 0;
     if (*data) {
         do {
@@ -247,7 +247,7 @@ static dDoor_archiveStream_c* dDoor_archiveOpen(void* archive, dDoor_safeString_
     assure = name->__vtbl->assureTermination;
     if (count >= capacity) count = capacity - 1;
     gabi::call_ptr<void>(assure, name);
-    dDoor_copyBytes(dest, name->mStringTop, count, 0);
+    dDoor_copyBytes(dest, name->mTextPtr, count, 0);
     // HD: signed count is added with 32-bit address wrap, including -1.
     *gabi::at<be<u8>>(gabi::ea(dest) + u32(count)) = 0;
     if (dDoor_streamOpen(stream, archive)) {

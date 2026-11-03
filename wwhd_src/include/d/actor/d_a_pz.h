@@ -720,11 +720,11 @@ static inline u16 J3DJoint_getJntNo(J3DJoint* joint) {
 static inline bool SafeString_eq(SafeString* a, SafeString* b) {
     pzAssureTermination(a);
     pzAssureTermination(a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     pzAssureTermination(b);
-    if (s1 == b->mStringTop)
+    if (s1 == b->mTextPtr)
         return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+    u32 p = a->mTextPtr, q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = pzStringByte(p + i);
         if (c != pzStringByte(q + i))
@@ -738,10 +738,10 @@ static inline bool SafeString_eq(SafeString* a, SafeString* b) {
  * at play+0x5134) */
 static inline bool pzIsStartStage(const char* lit) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_str(lit);
+    a->mTextPtr = gabi::guest_str(lit);
     a->__vtbl = SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
-    b->mStringTop = gabi::ea(pzGuest<PzStartStageHD>(dComIfGp_ea())->mName);
+    b->mTextPtr = gabi::ea(pzGuest<PzStartStageHD>(dComIfGp_ea())->mName);
     b->__vtbl = SAFESTRING_VTBL;
     return SafeString_eq(a, b);
 }

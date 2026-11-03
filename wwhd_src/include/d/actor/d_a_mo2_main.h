@@ -899,16 +899,16 @@ void hd_debug_print(s32 a, s32 b, const char* fmt);
  * the left one twice), pointer compare, then a bounded strcmp (0x40001 characters) */
 inline bool SafeString_eq(const char* a, const char* b, u32 vtbl) {
     gabi::Local<SafeString> sa;
-    sa->mStringTop = gabi::guest_addr(a);
+    sa->mTextPtr = gabi::guest_addr(a);
     sa->__vtbl = vtbl;
     gabi::Local<SafeString> sb;
-    sb->mStringTop = gabi::guest_addr(b);
+    sb->mTextPtr = gabi::guest_addr(b);
     sb->__vtbl = vtbl;
     gabi::call_ptr(gabi::at<Mo2VirtualTable>(sa->__vtbl)->mFunctions[5], sa.get());
     gabi::call_ptr(gabi::at<Mo2VirtualTable>(sa->__vtbl)->mFunctions[5], sa.get());
     gabi::call_ptr(gabi::at<Mo2VirtualTable>(sb->__vtbl)->mFunctions[5], sb.get());
-    u32 pa = sa->mStringTop;
-    u32 pb = sb->mStringTop;
+    u32 pa = sa->mTextPtr;
+    u32 pb = sb->mTextPtr;
     if (pa == pb)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {
@@ -1200,13 +1200,13 @@ WWHD_SIZE(Mo2AttackInfo, 0x18);
 
 inline Mo2Material* mo2MaterialByName(Mo2ModelData* modelData, const char* name) {
     gabi::Local<SafeString> string;
-    string->mStringTop = gabi::guest_addr(name);
+    string->mTextPtr = gabi::guest_addr(name);
     string->__vtbl = SAFESTRING_VTBL;
     Mo2ModelHeader* header = modelData->mpHeader;
     SafeString_assureTermination(string);
     s32 offset = header->mMaterialNamesOffset;
     u32 names = offset != 0 ? gabi::ea(&header->mMaterialNamesOffset) + offset : 0;
-    s32 index = JUTNameTab_getIndex(names, string->mStringTop);
+    s32 index = JUTNameTab_getIndex(names, string->mTextPtr);
     if (index < 0)
         return nullptr;
     Mo2Material* materials = modelData->mpMaterialArray;

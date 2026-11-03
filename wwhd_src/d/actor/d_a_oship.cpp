@@ -1169,7 +1169,7 @@ BOOL daOship_c::_createHeap() {
     if (this->mModelType != 0xFF || s16(l_debugRegisters.mShort[0]) != 0)
         resourceIndex = dRes_INDEX_OSHIP_BDL_VBTST_e;
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_addr("Oship");
+    name->mTextPtr = gabi::guest_addr("Oship");
     name->__vtbl = 0x10033F8C;
     void* data = OshipGetObjectResource(OshipGuest<dRes_control_c>(u32(l_resControl.mpControl)),
                                         name.get(), resourceIndex);

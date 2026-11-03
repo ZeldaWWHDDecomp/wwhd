@@ -137,10 +137,10 @@ template <class T, class U> static be<T> &boomerangBits(be<U> &value) {
 
 static bool boomerangStageEquals(u32 literal) {
     Local<SafeString> lhs, rhs;
-    lhs->mStringTop = literal;
+    lhs->mTextPtr = literal;
     lhs->__vtbl = ea(&l_safeStringVtable);
     u32 play = ea(dComIfGp_get());
-    rhs->mStringTop = play + 0x5134;
+    rhs->mTextPtr = play + 0x5134;
     rhs->__vtbl = ea(&l_safeStringVtable);
     u32 vt = lhs->__vtbl;
     call_ptr<void>(static_cast<u32>(at<boomerangSafeStringVtable_c>(vt)->mAssureTermination.v),
@@ -149,14 +149,14 @@ static bool boomerangStageEquals(u32 literal) {
     call_ptr<void>(static_cast<u32>(at<boomerangSafeStringVtable_c>(vt)->mAssureTermination.v),
                    lhs.get());
     vt = rhs->__vtbl;
-    u32 first = lhs->mStringTop;
+    u32 first = lhs->mTextPtr;
     call_ptr<void>(static_cast<u32>(at<boomerangSafeStringVtable_c>(vt)->mAssureTermination.v),
                    rhs.get());
-    u32 second = rhs->mStringTop;
+    u32 second = rhs->mTextPtr;
     if (first == second)
         return true;
-    first = lhs->mStringTop;
-    second = rhs->mStringTop;
+    first = lhs->mTextPtr;
+    second = rhs->mTextPtr;
     for (u32 i = 0; i < 0x40001; ++i) {
         u8 a = static_cast<u8>(at<be<u8>>(first)[i]), b = static_cast<u8>(at<be<u8>>(second)[i]);
         if (a != b)
@@ -226,7 +226,7 @@ static void boomerangConstructTrailArray(u32 storage, u32 count, u32 ctor) {
 static u32 boomerangFindRenderResource(u32 name) {
     Local<SafeString> key;
     key->__vtbl = ea(&l_safeStringVtable);
-    key->mStringTop = name;
+    key->mTextPtr = name;
     u32 manager = boomerang_getMaterialManager();
     u32 archive = static_cast<u32>(at<boomerangMaterialManager_c>(manager)->mpArchive.v);
     s32 index = boomerang_findResourceIndex(at<void>(archive), key.get());
@@ -1524,7 +1524,7 @@ BOOL daBoomerang_Delete(daBoomerang_c *actor) { return 1; }
 BOOL daBoomerang_c::createHeap() {
     Local<SafeString> resource;
     resource->__vtbl = ea(&l_safeStringVtable);
-    resource->mStringTop = guest_addr("Link");
+    resource->mTextPtr = guest_addr("Link");
     u32 resourceManager = static_cast<u32>(l_resourceControl);
     u32 data = boomerang_getArchiveResource(at<void>(resourceManager), resource.get(), 0x14);
     if (!data)
@@ -1854,7 +1854,7 @@ void daBoomerang_sightPacket_c::setup() {
     Local<SafeString> textureName;
     u32 manager = static_cast<u32>(l_resourceControl);
     textureName->__vtbl = ea(&l_safeStringVtable);
-    textureName->mStringTop = guest_addr("Link");
+    textureName->mTextPtr = guest_addr("Link");
     u32 texture = boomerang_getArchiveResource(at<void>(manager), textureName.get(), 0x72);
     if (!texture)
         boomerang_showAssert(at<void>(guest_addr("d_a_boomerang.cpp")), 0x2DB,
@@ -1961,7 +1961,7 @@ void daBoomerang_blur_c::setup() {
     Local<SafeString> name;
     name->__vtbl = ea(&l_safeStringVtable);
     u32 manager = static_cast<u32>(l_resourceControl);
-    name->mStringTop = guest_addr("Link");
+    name->mTextPtr = guest_addr("Link");
     u32 texture = boomerang_getArchiveResource(at<void>(manager), name.get(), 0x70);
     if (!texture)
         boomerang_showAssert(at<void>(guest_addr("d_a_boomerang.cpp")), 0xFA,

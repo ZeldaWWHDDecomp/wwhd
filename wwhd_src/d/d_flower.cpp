@@ -480,7 +480,7 @@ void* dFlower_packet_c__ct(void* self) {
     packet->mPlayerCutFlag = 0;
     flowerTransformSetConstruct(&packet->mTransformSet);
     flowerArrayConstruct(&packet->mTransforms, u32(200), u32(0xA8),
-                         guest_fn(reinterpret_cast<const void*>(&flowerDrawNodeConstruct)));
+                         guest_fn(reinterpret_cast<const void*>(&flowerDrawEntryConstruct)));
     flowerArrayConstruct(&packet->mTextures, u32(64), u32(0x364),
                          guest_fn(reinterpret_cast<const void*>(&flowerRoomNodeConstruct)));
     u32 groups[3];
@@ -975,10 +975,10 @@ void dFlower_packet_c::prepareGraphics() {
                 for (u32 i = 0; i < 12; ++i)
                     matrix->m[i / 4][i % 4] = data->mMtx.m[i / 4][i % 4];
                 // The counter remains unchecked and wraps in the guest address space.
-                auto* drawNode =
+                auto* drawEntry =
                     at<flower::Transform>(ea(mTransforms) + drawn * sizeof(flower::Transform));
-                flowerMatrixCopy(matrix.get(), &drawNode->mMatrix);
-                flowerUniformUpdate(drawNode);
+                flowerMatrixCopy(matrix.get(), &drawEntry->mMatrix);
+                flowerUniformUpdate(drawEntry);
                 ++drawn;
             }
             data = data->mpNext.get();
@@ -1392,7 +1392,7 @@ void* flowerStringConstruct(void* self, void* text) {
 }
 
 /* 025492E0 */
-void* flowerDrawNodeConstruct(void* self) {
+void* flowerDrawEntryConstruct(void* self) {
     if (!self)
         self = flowerAllocate(u32(0xA8));
     if (!self)
@@ -1557,7 +1557,7 @@ void flowerBuffer2Destroy(void* self, u32 flags) {
 }
 
 /* 025498E8 */
-void flowerDrawNodeDestroy(void* self, u32 flags) {
+void flowerDrawEntryDestroy(void* self, u32 flags) {
     if (!self)
         return;
     flowerUniformDestroy(self, u32(0));
@@ -1639,7 +1639,7 @@ void dFlower_packet_c__dt(void* self, u32 flags) {
         flowerCleanupShaderArray(&geometry->mShapes);
     }
     flowerArrayDestroy(packet->mTextures, u32(64), u32(sizeof(flower::TextureTransform)),
-                       at<void>(guest_fn(reinterpret_cast<const void*>(&flowerDrawNodeDestroy))),
+                       at<void>(guest_fn(reinterpret_cast<const void*>(&flowerDrawEntryDestroy))),
                        u32(0), u32(0));
     flowerArrayDestroy(packet->mTransforms, u32(200), u32(sizeof(flower::Transform)),
                        at<void>(guest_fn(reinterpret_cast<const void*>(&flowerRoomNodeDestroy))),

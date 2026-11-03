@@ -1,3 +1,4 @@
+# verify: -only 0269B414
 # Chart-detail icon fixture for hdMenuMapUpdateChartDetails (0269B414) only; run with -only 0269B414.
 # The unit spec pins the owned-chart query to 0 (the missing-chart scan needs it) and the state-key getter
 # to 0, so the owned/uncollected/state-mismatch branches with the wrapped icon index 3 are rare there.

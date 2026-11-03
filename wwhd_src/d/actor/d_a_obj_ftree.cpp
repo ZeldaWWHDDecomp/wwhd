@@ -21,14 +21,8 @@ static u32 M_action_main[26] = {0x0000FFFF, 0x02349DF0, 0x0000FFFF, 0x02348718, 
                                 0x0000FFFF, 0x023495C0, 0x0000FFFF, 0x02349098, 0x0000FFFF, 0x02348EC0,
                                 0x0000FFFF, 0x023490F8, 0x0000FFFF, 0x0234991C, 0x0000FFFF, 0x02349A20,
                                 0x0000FFFF, 0x02349B50};
-// The recompiled fmul selects the first NaN operand's payload before rounding.
-static f32 scaledComponent(f32 component, f32 scale) {
-    if (std::isnan(component))
-        return component;
-    if (std::isnan(scale))
-        return scale;
-    return f32(component * scale);
-}
+// The original's fmuls: gabi returns the first NaN operand (frA, then frC) quieted, like the hardware.
+static f32 scaledComponent(f32 component, f32 scale) { return gabi::fmuls_ppc(component, scale); }
 static void initTreeMap() {
     if (!static_cast<u32>(ftree_treeMapInitialized())) {
         ftree_treeMapInitialized() = 1;
@@ -231,7 +225,7 @@ u32 daObjFtree::Act_c::SetJointAnimation(s32 animation, f32 rate, f32 morph, s32
 
     gabi::Local<SafeString> name;
     gabi::Local<be<u32>[8]> nameLinkage;
-    name->mStringTop = ftree_tu::archiveName;
+    name->mTextPtr = ftree_tu::archiveName;
     name->__vtbl = ftree_tu::safeString;
     u32 resource = ftree_dRes_control_c__getRes(ftree_resourceManager(), name.get(), animation);
     if (endOffset > 0)
@@ -607,7 +601,7 @@ u32 daObjFtree::Act_c::action_waitS_init(s32 parameter) {
     this->unset_brought();
     gabi::Local<SafeString> name;
     gabi::Local<be<u32>[8]> nameLinkage;
-    name->mStringTop = ftree_tu::archiveName;
+    name->mTextPtr = ftree_tu::archiveName;
     name->__vtbl = ftree_tu::safeString;
     u32 resource = ftree_dRes_control_c__getRes(ftree_resourceManager(), name.get(), 13);
     if (!resource)
@@ -652,7 +646,7 @@ u32 daObjFtree::Act_c::action_waitM_init(s32 parameter) {
     this->largeVisible = 0;
     gabi::Local<SafeString> name;
     gabi::Local<be<u32>[8]> nameLinkage;
-    name->mStringTop = ftree_tu::archiveName;
+    name->mTextPtr = ftree_tu::archiveName;
     name->__vtbl = ftree_tu::safeString;
     u32 resource = ftree_dRes_control_c__getRes(ftree_resourceManager(), name.get(), 13);
     if (!resource)
@@ -860,7 +854,7 @@ u32 daObjFtree::Act_c::action_changeSL2_init(s32 parameter) {
     this->largeVisible = 0;
     gabi::Local<SafeString> name;
     gabi::Local<be<u32>[8]> nameLinkage;
-    name->mStringTop = ftree_tu::archiveName;
+    name->mTextPtr = ftree_tu::archiveName;
     name->__vtbl = ftree_tu::safeString;
     u32 resource = ftree_dRes_control_c__getRes(ftree_resourceManager(), name.get(), 13);
     if (!resource)
@@ -982,7 +976,7 @@ u32 daObjFtree::Act_c::action_changeLS2_init(s32 parameter) {
     this->largeVisible = 0;
     gabi::Local<SafeString> name;
     gabi::Local<be<u32>[8]> nameLinkage;
-    name->mStringTop = ftree_tu::archiveName;
+    name->mTextPtr = ftree_tu::archiveName;
     name->__vtbl = ftree_tu::safeString;
     u32 resource = ftree_dRes_control_c__getRes(ftree_resourceManager(), name.get(), 13);
     if (!resource)
@@ -1096,13 +1090,13 @@ u32 daObjFtree::Act_c::NodeCallBack_Effect(void* node, s32 phase) {
 u32 daObjFtree::Act_c::create_heap() {
     gabi::Local<SafeString> animationName, modelName, largeName, colorName;
     gabi::Local<be<u32>[8]> animationNameLinkage;
-    animationName->mStringTop = ftree_tu::archiveName;
+    animationName->mTextPtr = ftree_tu::archiveName;
     animationName->__vtbl = ftree_tu::safeString;
     u32 animation = ftree_dRes_control_c__getRes(ftree_resourceManager(), animationName.get(), 6);
     if (!animation)
         ftree_JUTAssertion__getSDevice("d_a_obj_ftree.cpp", 0x861, "tmp_bck_data != 0");
     modelName->__vtbl = ftree_tu::safeString;
-    modelName->mStringTop = ftree_tu::archiveName;
+    modelName->mTextPtr = ftree_tu::archiveName;
     u32 data = ftree_dRes_control_c__getRes(ftree_resourceManager(), modelName.get(), 10);
     if (!data) {
         ftree_JUTAssertion__getSDevice("d_a_obj_ftree.cpp", 0x867, "mdl_dataS != 0");
@@ -1136,7 +1130,7 @@ u32 daObjFtree::Act_c::create_heap() {
     gabi::object_at<FtreeJointView>(nodes + (count > 5 ? 0x8C : 0)).callback =
         gabi::guest_fn(reinterpret_cast<const void*>(&ftree_nodeMediumCallback));
     largeName->__vtbl = ftree_tu::safeString;
-    largeName->mStringTop = ftree_tu::archiveName;
+    largeName->mTextPtr = ftree_tu::archiveName;
     u32 largeData = ftree_dRes_control_c__getRes(ftree_resourceManager(), largeName.get(), 9);
     if (!largeData) {
         ftree_JUTAssertion__getSDevice("d_a_obj_ftree.cpp", 0x888, "mdl_dataL != 0");
@@ -1152,7 +1146,7 @@ u32 daObjFtree::Act_c::create_heap() {
     gabi::object_at<FtreeJointView>(nodes + (count > 1 ? 0x1C : 0)).callback =
         gabi::guest_fn(reinterpret_cast<const void*>(&ftree_nodeLargeCallback));
     colorName->__vtbl = ftree_tu::safeString;
-    colorName->mStringTop = ftree_tu::archiveName;
+    colorName->mTextPtr = ftree_tu::archiveName;
     u32 color = ftree_dRes_control_c__getRes(ftree_resourceManager(), colorName.get(), 13);
     if (!color) {
         ftree_JUTAssertion__getSDevice("d_a_obj_ftree.cpp", 0x898, "brk_data != 0");

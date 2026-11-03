@@ -12,7 +12,9 @@ field 028268C8 0x3400000c u32 0x35000000
 field 028268C8 0x35000000 u32 0x36000000
 field 028268C8 0x36000044 u32 0x028484e0
 field 028268C8 0x3600004c u32 0x028484d4
-ret! 028484e0 0,0.25,0.5,1
+# was `ret! 028484e0 0,0.25,0.5,1`: r3 values, the fractions were read as 0 (strict spec parser 2026-10-27); same picks kept, intent unclear
+# (028484E0 returns the u32 at +8: float bit patterns such as 0x3E800000 meant?)
+ret! 028484e0 0,0,0,1
 ret! 028484d4 0,1,2,3,7,255
 field 028266C0 r3+0x78 f32 -2,-1,0,0.5,1,2,10
 field 028266C0 r3+0x7c f32 0,1,2,10

@@ -72,7 +72,7 @@ static BOOL daBst_IsDelete(bst_class *i_this) { return TRUE; }
 /* inlined into anm_init, end_brkbtk_set, useHeapInit */
 static void *bstResource(s32 index) {
     SafeString name;
-    name.mStringTop = gabi::guest_addr("Bst");
+    name.mTextPtr = gabi::guest_addr("Bst");
     name.__vtbl = gc_tu.safeString;
     u32 control = (u32)(bstMoveResourceTable());
     return BstBase_getResource(bstBaseAddress<void>(control), &name, index);

@@ -560,15 +560,15 @@ static void sail_move(sail_class* i_this) {
             gabi::Local<SafeString> s1;
             gabi::Local<SafeString> s0;
             s1->__vtbl = sail_tu::safeStringVtable;
-            s1->mStringTop = sail_tu::stageName;        /* the stage name */
-            s0->mStringTop = gabi::guest_str("Demo46"); /* "Demo46" */
+            s1->mTextPtr = sail_tu::stageName;        /* the stage name */
+            s0->mTextPtr = gabi::guest_str("Demo46"); /* "Demo46" */
             s0->__vtbl = sail_tu::safeStringVtable;
             sail_assureStringTermination(s0.get());
             gabi::call_ptr((u32)sail_view<SailStringVtable>(s0->__vtbl)->assureTermination,
                            s0.get()); /* assureTermination */
-            u32 a = s0->mStringTop;
+            u32 a = s0->mTextPtr;
             gabi::call_ptr((u32)sail_view<SailStringVtable>(s1->__vtbl)->assureTermination, s1.get());
-            u32 b = s1->mStringTop;
+            u32 b = s1->mTextPtr;
             BOOL eq = FALSE;
             if (a == b) {
                 eq = TRUE;
@@ -952,7 +952,7 @@ static daSail_packet_c* daSail_packet_ct(daSail_packet_c* pk) {
     /* the shader program "flag_default" into the program list */
     {
         gabi::Local<SafeString> key;
-        key->mStringTop = gabi::guest_str("flag_default"); /* "flag_default" */
+        key->mTextPtr = gabi::guest_str("flag_default"); /* "flag_default" */
         key->__vtbl = sail_tu::safeStringVtable;
         u32 mgr = sail_getShaderArchives(P);
         s32 i = sail_findShaderArchive((u32)sail_view<SailArchiveCatalog>(mgr)->root, key.get());

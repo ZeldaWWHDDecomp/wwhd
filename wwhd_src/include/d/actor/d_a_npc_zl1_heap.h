@@ -513,9 +513,9 @@ namespace zl1Heap {
 inline void* objectResource(const char* archive, const char* name) {
     gabi::Local<SafeString> arc;
     gabi::Local<SafeString> resource;
-    arc->mStringTop = gabi::ea(archive);
+    arc->mTextPtr = gabi::ea(archive);
     arc->__vtbl = ZL1_SAFESTRING_VTBL;
-    resource->mStringTop = gabi::guest_addr(name);
+    resource->mTextPtr = gabi::guest_addr(name);
     resource->__vtbl = ZL1_SAFESTRING_VTBL;
     return gabi::call<void*>(0x02606900, dComIfG_resControl(), arc.get(), resource.get());
 }

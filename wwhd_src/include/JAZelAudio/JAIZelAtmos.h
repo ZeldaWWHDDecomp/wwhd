@@ -15,7 +15,7 @@ struct AtmosSafeStringVtable {
     gfn cstr;
 };
 struct AtmosSafeString {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     gptr<AtmosSafeStringVtable> __vtbl;
 };
 class JAIZelBasic {

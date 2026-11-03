@@ -72,7 +72,7 @@ static void initMaterialNames(be<u32>* guard, SafeString* names, const char* con
         *guard = 1;
         for (int i = 0; i < count; ++i) {
             names[i].__vtbl = ZL1_SAFESTRING_VTBL;
-            names[i].mStringTop = gabi::guest_str(source[i]);
+            names[i].mTextPtr = gabi::guest_str(source[i]);
         }
         __register_global_object(gabi::ea(destructor));
     }
@@ -81,13 +81,13 @@ static void initMaterialNames(be<u32>* guard, SafeString* names, const char* con
 static s32 materialIndexOf(J3DModelData* data, SafeString* name) {
     auto* header = zl1Heap::resourceHeader(zl1Heap_materialNameHeader(gabi::ea(data)));
     zl1Heap::assure(name);
-    return zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
+    return zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mTextPtr));
 }
 /* inlined into bodyCreateHeap */
 static zl1Heap::Material* materialByName(J3DModelData* data, SafeString* name) {
     auto* header = zl1Heap::modelData(data)->mpResource.get();
     zl1Heap::assure(name);
-    s32 index = zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
+    s32 index = zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mTextPtr));
     return zl1Heap::materialByIndex(data, index);
 }
 
@@ -214,19 +214,19 @@ u32 daNpc_Zl1_c::setBtp(s32 param_1, u32 param_2) {
     for (u32 i = 0; i < materialNum; ++i) {
         zl1Heap::BtpEntry* entry = &pattern->mMaterials.get()[i];
         gabi::Local<SafeString> name;
-        name->mStringTop = gabi::ea(entry->mName.get());
+        name->mTextPtr = gabi::ea(entry->mName.get());
         name->__vtbl = ZL1_SAFESTRING_VTBL;
         auto* header = zl1Heap::resourceHeader(zl1Heap_patternNameHeader(data));
         zl1Heap::assure(name);
-        s32 index = zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
+        s32 index = zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mTextPtr));
         gabi::Local<SafeString> mouth;
-        mouth->mStringTop = gabi::guest_str("zelda_mouth");
+        mouth->mTextPtr = gabi::guest_str("zelda_mouth");
         mouth->__vtbl = ZL1_SAFESTRING_VTBL;
         zl1Heap::assure(name);
         zl1Heap::assure(name);
-        u32 text = name->mStringTop;
+        u32 text = name->mTextPtr;
         zl1Heap::assure(mouth);
-        bool isMouth = SafeString_isEqual(zl1Heap::bytes(text), zl1Heap::bytes(mouth->mStringTop));
+        bool isMouth = SafeString_isEqual(zl1Heap::bytes(text), zl1Heap::bytes(mouth->mTextPtr));
         // GHS reloads the link pointer between every masked update.
         if (!isMouth) {
             be<u32>* table = links->get();
@@ -259,7 +259,7 @@ void daNpc_Zl1_c::setMat() {
         J3DModelData* data = model->getModelData();
         auto* resource = zl1Heap::modelData(data)->mpResource.get();
         zl1Heap::assure(name);
-        s32 index = zl1Heap_nameIndex(gabi::ea(resource->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
+        s32 index = zl1Heap_nameIndex(gabi::ea(resource->mMaterialNames.get()), zl1Heap::text(name->mTextPtr));
         zl1Heap::Material* material = zl1Heap::materialByIndex(data, index);
         field_0x6D4[i] = material->mpMaterialAnm.get();
     }
@@ -472,9 +472,9 @@ static void __sinit_d_a_npc_zl1_cpp() {
     __register_global_object(gabi::ea(&l_headerDestructors[2]));
     // HD: static eye-material names replace the GameCube material-number lookup.
     l_eyeMaterials[0].__vtbl = ZL1_SAFESTRING_VTBL;
-    l_eyeMaterials[0].mStringTop = gabi::guest_str("eyeL");
+    l_eyeMaterials[0].mTextPtr = gabi::guest_str("eyeL");
     l_eyeMaterials[1].__vtbl = ZL1_SAFESTRING_VTBL;
-    l_eyeMaterials[1].mStringTop = gabi::guest_str("eyeR");
+    l_eyeMaterials[1].mTextPtr = gabi::guest_str("eyeR");
     daNpc_Zl1_HIO_c_ct(&l_heapHIO);
 }
 

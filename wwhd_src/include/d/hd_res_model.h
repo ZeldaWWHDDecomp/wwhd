@@ -78,10 +78,10 @@ struct hdResModel_safeStringVt_c { u8 _00[0x14]; be<u32> mAssureTermination; };
 WWHD_OFFSET(hdResModel_safeStringVt_c, mAssureTermination, 0x14);
 WWHD_SIZE(hdResModel_safeStringVt_c, 0x18);
 struct hdResModel_safeString_c {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     gptr<hdResModel_safeStringVt_c> mVtable;
 };
-WWHD_OFFSET(hdResModel_safeString_c, mStringTop, 0);
+WWHD_OFFSET(hdResModel_safeString_c, mTextPtr, 0);
 WWHD_OFFSET(hdResModel_safeString_c, mVtable, 4);
 WWHD_SIZE(hdResModel_safeString_c, 8);
 struct hdResModel_path_c { u8 _000[0x110]; };

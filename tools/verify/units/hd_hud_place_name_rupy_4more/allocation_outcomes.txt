@@ -7,7 +7,7 @@ src wwhd_src/d/d_menu_window_hd.cpp
 src wwhd_src/d/hd_screen_telescope_scale.cpp
 src wwhd_src/d/hd_screen_telescope_cover.cpp
 
-# Source provenance: readable draft f372683f; binary constructors 026CA9F4,
+# Source provenance: readable draft; binary constructors 026CA9F4,
 # 026E6E04 and026E8490. Ordinary aligned complete-object domains only.
 # Supplied receiver, NULL+allocation success, NULL+allocation failure.
 # Member fallback allocation returns are not used to repair invalid receivers.

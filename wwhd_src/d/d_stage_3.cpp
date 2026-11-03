@@ -13,9 +13,9 @@ static bool dStage_isEqual(SafeString* a, SafeString* b) {
     gabi::call_ptr(gabi::at<dStage_SafeStringVtable>(a->__vtbl)->assureTermination.function.get(), gabi::ea(a));
     gabi::call_ptr(gabi::at<dStage_SafeStringVtable>(a->__vtbl)->assureTermination.function.get(), gabi::ea(a));
     u32 fn = gabi::at<dStage_SafeStringVtable>(b->__vtbl)->assureTermination.function.get();
-    u32 sa = a->mStringTop;
+    u32 sa = a->mTextPtr;
     gabi::call_ptr(fn, gabi::ea(b));
-    u32 sb = b->mStringTop;
+    u32 sb = b->mTextPtr;
     if (sa == sb) return true;
     sb -= 1;
     for (u32 i = 0x40001; i != 0; i--) {
@@ -187,12 +187,12 @@ static BOOL dStage_setShipPos(s32 param_0, s32 i_roomNo) {
     gabi::Local<dStage_shipPositionFrame> fr; /* the frame from SP+8: two process names, two SafeStrings */
     SafeString* s1 = &fr->expectedStage;
     SafeString* s2 = &fr->currentStage;
-    s1->mStringTop = gabi::guest_str("GanonM"); /* "GanonM" */
+    s1->mTextPtr = gabi::guest_str("GanonM"); /* "GanonM" */
     s1->__vtbl = gabi::ea(&dStage_safeStringVtable);
     bool clear = false;
     u32 p = dComIfGp_ea();
     s2->__vtbl = gabi::ea(&dStage_safeStringVtable);
-    s2->mStringTop = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage); /* the start stage name */
+    s2->mTextPtr = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage); /* the start stage name */
     if (dStage_isEqual(s1, s2)) {
         if (!dComIfGs_isEventBit(dStageEvent::UNK_3D02)) clear = true;
     }
@@ -236,11 +236,11 @@ static s32 dStage_shipInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, 
     gabi::Local<SafeString> s1;
     gabi::Local<SafeString> s2;
     s1->__vtbl = gabi::ea(&dStage_safeStringVtable);
-    s1->mStringTop = gabi::guest_str("sea"); /* "sea" */
+    s1->mTextPtr = gabi::guest_str("sea"); /* "sea" */
     bool taura = false;
     u32 p = dComIfGp_ea();
     s2->__vtbl = gabi::ea(&dStage_safeStringVtable);
-    s2->mStringTop = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage);
+    s2->mTextPtr = gabi::ea(&gabi::at<dComIfG_inf_c>(p)->play.mCurStage);
     if (dStage_isEqual(s1.get(), s2.get())) {
         if (roomId == 0xB) taura = true;
     }

@@ -187,8 +187,8 @@ static void hdRoot_setupGraphicsHeaps() {
     adjustHeap(commandHeap);
 }
 
-static HdRootTask* createTask(HdRootTask* self, HdRootTaskCreateArg* source,
-                              HdRootTaskCreateArg* destination, void* callback) {
+static HdRootTask* createTask(HdRootTask* self, HdRootTaskArgs* source,
+                              HdRootTaskArgs* destination, void* callback) {
     HdRootTaskArgWords* srcWords = reinterpret_cast<HdRootTaskArgWords*>(source);
     HdRootTaskArgWords* dstWords = reinterpret_cast<HdRootTaskArgWords*>(destination);
     for (u32 i = 0; i < 32; i++) dstWords->mWords[i] = srcWords->mWords[i];
@@ -358,9 +358,9 @@ void HdRootTask::prepare() {
     hdRootMiiverseInitialize(0);
     hdRootMiiverseConfigure(l_miiverseManager.mpValue, 0);
     HdRootTaskFactory* factory = gabi::at<HdRootTaskFactory>(native + 0x60);
-    HdRootTaskCreateArg* source = gabi::at<HdRootTaskCreateArg>(native + 0x80);
-    HdRootTaskCreateArg* firstTask = gabi::at<HdRootTaskCreateArg>(native + 0x100);
-    HdRootTaskCreateArg* secondTask = gabi::at<HdRootTaskCreateArg>(native + 0x180);
+    HdRootTaskArgs* source = gabi::at<HdRootTaskArgs>(native + 0x80);
+    HdRootTaskArgs* firstTask = gabi::at<HdRootTaskArgs>(native + 0x100);
+    HdRootTaskArgs* secondTask = gabi::at<HdRootTaskArgs>(native + 0x180);
     factory->mKind = HdRoot_CreateTaskKind;
     factory->mFactory = &l_resourceTaskFactory;
     hdRootTaskArgsConstruct(source, factory);
@@ -391,15 +391,15 @@ void HdRootTask::enter() {
     gabi::AutoFrame automatic{gabi::Activation::current};
     gabi::NativeFrame<0x1A8> native;
     HdRootTaskFactory* factory = gabi::at<HdRootTaskFactory>(native + 8);
-    HdRootTaskCreateArg* source = gabi::at<HdRootTaskCreateArg>(native + 0x118);
-    HdRootTaskCreateArg* first = gabi::at<HdRootTaskCreateArg>(native + 0x18);
+    HdRootTaskArgs* source = gabi::at<HdRootTaskArgs>(native + 0x118);
+    HdRootTaskArgs* first = gabi::at<HdRootTaskArgs>(native + 0x18);
     factory->mKind = HdRoot_CreateTaskKind;
     factory->mFactory = &l_systemTaskFactory;
     hdRootTaskArgsConstruct(source, factory);
     HdRootTask* task = createTask(this, source, first, &l_systemTaskCallback);
     castTask(task, &l_systemTaskGuard, &l_systemTaskType, &l_gpuTaskTypeVtable);
     HdRootTaskFactory* secondFactory = gabi::at<HdRootTaskFactory>(native + 0x10);
-    HdRootTaskCreateArg* second = gabi::at<HdRootTaskCreateArg>(native + 0x98);
+    HdRootTaskArgs* second = gabi::at<HdRootTaskArgs>(native + 0x98);
     secondFactory->mKind = HdRoot_CreateTaskKind;
     secondFactory->mFactory = &l_profileTaskFactory;
     hdRootTaskArgsConstruct(source, secondFactory);
@@ -535,7 +535,7 @@ ext 027B59E4 void hdRootGfxSetMode(u32)
 ext 027B59F4 void hdRootGfxSetResource(HdRootResource*)
 ext 0278D258 void hdRootHeapHolderConstruct(HdRootHeapHolder*)
 ext 0278D294 void hdRootHeapHolderApply(HdRootHeapHolder*)
-ext 02749ECC HdRootTask* hdRootCreateTask(HdRootTaskManager*, HdRootTaskCreateArg*)
+ext 02749ECC HdRootTask* hdRootCreateTask(HdRootTaskManager*, HdRootTaskArgs*)
 ext 02035E2C void hdRootProcessInitialize()
 ext 02032B48 void hdRootSystemInitialize()
 ext 02035D78 void* hdRootGetProcess()
@@ -577,10 +577,10 @@ ext 02720400 void* hdRootCreateFontResource(HdRootHeap*)
 ext 02720510 void hdRootRegisterFontResource(void*)
 ext 020360FC void hdRootMiiverseInitialize(u32)
 ext 020361E4 void hdRootMiiverseConfigure(void*, u32)
-ext 02748CFC void hdRootTaskArgsConstruct(HdRootTaskCreateArg*, HdRootTaskFactory*)
+ext 02748CFC void hdRootTaskArgsConstruct(HdRootTaskArgs*, HdRootTaskFactory*)
 ext 0203E8AC HdRootHeap* hdRootGetChildHeap()
 ext 027488E8 void hdRootBasePrepare(HdRootTask*)
-ext 02748B98 void hdRootTaskArgsConstructAlternate(HdRootTaskCreateArg*, HdRootTaskFactory*)
+ext 02748B98 void hdRootTaskArgsConstructAlternate(HdRootTaskArgs*, HdRootTaskFactory*)
 ext 0276198C void hdRootTaskManagerFinalize(void*, u32)
 ext 028F026C void hdRootRegisterStatic(void*)
 ext 028ED6F8 void hdRootInitSigned(be<u8>*)

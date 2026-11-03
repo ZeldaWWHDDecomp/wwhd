@@ -356,21 +356,21 @@ inline Quaternion* tsuboQuatStack() { return *gabi::at<gptr<Quaternion>>(0x1048D
 // HD: literal termination runs twice before the stage string virtual, then bounded byte comparison.
 template <class F> inline bool tsuboStageEquals(const char* literal, F stageName) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(literal);
+    a->mTextPtr = gabi::guest_addr(literal);
     a->__vtbl = TSUBO_SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
     u32 stage = stageName();
     b->__vtbl = TSUBO_SAFESTRING_VTBL;
-    b->mStringTop = stage;
+    b->mTextPtr = stage;
     auto assure = [](SafeString* str) {
         auto* table = gabi::at<SafeStringVtableView>(str->__vtbl);
         gabi::call_ptr(table->mAssureTermination, str);
     };
     assure(a); assure(a);
     u32 bv = b->__vtbl;
-    u32 first = a->mStringTop;
+    u32 first = a->mTextPtr;
     gabi::call_ptr(gabi::at<SafeStringVtableView>(bv)->mAssureTermination, b.get());
-    u32 second = b->mStringTop;
+    u32 second = b->mTextPtr;
     if (first == second) return true;
     const be<u8>* lhs = gabi::at<const be<u8>>(first);
     const be<u8>* rhs = gabi::at<const be<u8>>(second);
@@ -382,7 +382,7 @@ template <class F> inline bool tsuboStageEquals(const char* literal, F stageName
     return false;
 }
 inline MaterialTableView* tsuboMaterialTable(J3DModelData* data) { return gabi::at<MaterialTableView>(data->mpResHeader); }
-inline const char* tsuboStringTop(SafeString* str) { return gabi::at<const char>(str->mStringTop); }
+inline const char* tsuboTextPtr(SafeString* str) { return gabi::at<const char>(str->mTextPtr); }
 inline J3DMaterial* tsuboMaterials(J3DModelData* data) { return gabi::at<J3DMaterial>(data->mMaterials); }
 inline const be<u32>* tsuboZeroQuatWords() { return gabi::at<const be<u32>>(0x101E9C38); }
 inline cXyz* tsuboBaseX() { return gabi::at<cXyz>(0x101FFBB4); }

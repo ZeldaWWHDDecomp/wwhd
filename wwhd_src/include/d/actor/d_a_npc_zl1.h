@@ -349,7 +349,7 @@ static inline BOOL dComIfGp_evmng_ChkPresentEnd() { return gabi::call<BOOL>(0x02
 static inline u8 dComIfGp_getMesgAnimeAttrInfo() { return gabi::load<u8>(dComIfGp_ea() + PLAY_BGS + 0x4925); }
 static inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
+    key->mTextPtr = gabi::ea(arc);
     key->__vtbl = ZL1_SAFESTRING_VTBL;
     return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
 }
@@ -412,9 +412,9 @@ static inline BOOL dDemo_setDemoData(fopAc_ac_c* a, u8 flags, mDoExt_McaMorf* mo
 static inline void* dComIfG_getObjectRes_name(const char* arc, const char* name) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> n;
-    a->mStringTop = gabi::ea(arc);
+    a->mTextPtr = gabi::ea(arc);
     a->__vtbl = ZL1_SAFESTRING_VTBL;
-    n->mStringTop = gabi::ea(name);
+    n->mTextPtr = gabi::ea(name);
     n->__vtbl = ZL1_SAFESTRING_VTBL;
     return gabi::call<void*>(0x02606900, dComIfG_resControl(), a.get(), n.get());
 }

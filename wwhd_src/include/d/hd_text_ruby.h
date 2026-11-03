@@ -53,7 +53,7 @@ struct hdRuby_context_c { gptr<hdRuby_writer_c> mpWriter; };
 WWHD_SIZE(hdRuby_context_c, 4);
 struct hdRuby_stringVtable_c { u8 _00[0x14]; be<u32> mAssureTermination; };
 struct hdRuby_wideString_c {
-    gptr<be<u16>> mStringTop;
+    gptr<be<u16>> mTextPtr;
     gptr<hdRuby_stringVtable_c> mVtable;
     void setVtable(u32 address) { mVtable.v = address; }
     void assureTermination() { gabi::call_ptr<void>(mVtable->mAssureTermination, this); }

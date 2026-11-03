@@ -119,7 +119,7 @@ static daObjTide::Attr_c* attr(Tide* tide) {
 }
 static void* resource(const char* archive, s32 index) {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::ea(archive);
+    name->mTextPtr = gabi::ea(archive);
     name->__vtbl = 0x10030B60;
     return tideGetObjectResource(tideResources, name.get(), index);
 }

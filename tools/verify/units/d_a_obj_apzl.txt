@@ -114,3 +114,5 @@ field * r3+0xB9E u32 0x0C0D0E0F,0x0D0C0F0E
 ret 0258861C 0,0x57000000
 ret 02317CB0 0,14,15,18,19,255
 ret 025D8AB0 0,0x55000000
+# randamize_piece / wave_cont make more than 20000 guest calls per run (RNG and math loops): raise the budget
+callbudget 200000

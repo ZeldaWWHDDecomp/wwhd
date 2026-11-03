@@ -85,6 +85,10 @@ struct dScnLogo_ResourceControlHD {
 WWHD_OFFSET(dScnLogo_ResourceControlHD, mHeap, 0x2040);
 WWHD_SIZE(dScnLogo_ResourceControlHD, 0x2044);
 struct dScnLogo_SaveMgrHD {
+    enum Result_e : u32 {
+        RESULT_ENDING_FIRST_e = 0xFFFFFFFD,
+        RESULT_ENDING_LAST_e = 0xFFFFFFFE,
+    };
     u8 _00[0x1C];
     /* 0x1C */ be<u32> mThreadState;
     /* 0x20 */ be<u32> mResult;
@@ -129,3 +133,11 @@ struct dScnLogo_ResetStateHD {
 WWHD_OFFSET(dScnLogo_ResetStateHD, mReset, 0);
 WWHD_OFFSET(dScnLogo_ResetStateHD, mResetPrepare, 4);
 WWHD_SIZE(dScnLogo_ResetStateHD, 8);
+void fopScnM_ChangeReq(dScnLogo_c*, u32, u32, u32, u32);
+void dComIfG_changeOpeningScene(dScnLogo_c*, u32);
+void mDoGph_setFadeColor(GXColor*);
+// HD: the input controller singleton; only the mode select used by the boot scene is represented.
+struct hdInputCtrl_c {
+    enum Mode_e : u32 { MODE_MAIN_e = 3 };
+    void setMode(u32);
+};

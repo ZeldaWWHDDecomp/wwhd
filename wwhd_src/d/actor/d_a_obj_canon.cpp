@@ -171,7 +171,7 @@ static s32 createHeap_CB(Actor* a) {
 /* 0233001C */
 s32 daObj_Canon_c::_createHeap() {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_addr("WallBom");
+    name->mTextPtr = gabi::guest_addr("WallBom");
     name->__vtbl = 0x10026A78;
     void* resources = canonResources;
     J3DModelData* data =

@@ -45,19 +45,19 @@ static u32 fopAcM_createStealItem(u32 p_pos, u32 i_tblNo, u32 i_roomNo, u32 p_an
 /* strcmp(dComIfGp_getStartStageName(), lit) == 0 through two sead::SafeString temporaries */
 static bool stage_is(u32 lit) {
     gabi::Local<SafeString> a, b;
-    a->mStringTop = lit;
+    a->mTextPtr = lit;
     a->__vtbl = gc_tu.safeString;
     u32 play = dComIfGp_ea();
     b->__vtbl = gc_tu.safeString;
-    b->mStringTop = play + 0x5134;
+    b->mTextPtr = play + 0x5134;
     gabi::call_ptr((u32)actorMngView<ActorManagerSafeStringVtable>(a->__vtbl)->assureTermination,
                    gabi::ea(a.get()));
     gabi::call_ptr((u32)actorMngView<ActorManagerSafeStringVtable>(a->__vtbl)->assureTermination,
                    gabi::ea(a.get()));
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr((u32)actorMngView<ActorManagerSafeStringVtable>(b->__vtbl)->assureTermination,
                    gabi::ea(b.get()));
-    u32 s2 = b->mStringTop;
+    u32 s2 = b->mTextPtr;
     if (s1 == s2) return true;
     for (u32 n = 0; n < 0x40001; n++, s1++, s2++) {
         u8 c = (u8)*actorMngView<be<u8>>(s1);

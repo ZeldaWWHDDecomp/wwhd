@@ -67,15 +67,15 @@ BOOL Act_c::check_timer_clear() {
     // HD: preserve all virtual assure calls and the bounded, wrapping byte comparison.
     for (const char* name : {"MiniKaz", "MiniHyo"}) {
         gabi::Local<SafeString> a, b;
-        a->mStringTop = gabi::guest_addr(name);
+        a->mTextPtr = gabi::guest_addr(name);
         a->__vtbl = 0x1003FCA0;
-        b->mStringTop = gabi::ea(play()->play.mNextStage.mName);
+        b->mTextPtr = gabi::ea(play()->play.mNextStage.mName);
         b->__vtbl = 0x1003FCA0;
         gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
         gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
-        u32 left = a->mStringTop;
+        u32 left = a->mTextPtr;
         gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b.get());
-        u32 right = b->mStringTop;
+        u32 right = b->mTextPtr;
         if (left == right)
             return FALSE;
         for (u32 i = 0; i < 0x40001; ++i) {

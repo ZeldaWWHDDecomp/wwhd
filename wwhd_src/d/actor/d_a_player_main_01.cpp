@@ -330,7 +330,7 @@ u32 daPy_lk_c::setAnimeHeap(u32 animeHeap) {
 u32 daPy_lk_c::getAnimeResource(u32 anmHeap, u16 index, u32 bufferSize) {
     /* HD: the animation is taken from the resident "LkAnm" archive (no read into the anime heap) */
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_str("LkAnm"); /* "LkAnm" */
+    key->mTextPtr = gabi::guest_str("LkAnm"); /* "LkAnm" */
     key->__vtbl = Player01SafeStringVtable;
     u32 bck = Player_getArchiveResource(dComIfG_resControl(), key.get(), (u32)index);
     reinterpret_cast<daPy_anmHeap_c *>(gabi::at<void>(anmHeap))->mIdx = index;       /* mIdx */
@@ -583,13 +583,13 @@ u32 daPy_lk_c::loadTextureAnimeResource(u32 btpIdx, BOOL isDemo) {
                  ->mLkDemoAnmArchive); /* the Link demo archive name (sead::SafeString at play +
                                           0x5A50) */
         key->__vtbl = Player01SafeStringVtable;
-        key->mStringTop = (u32) reinterpret_cast<Player01DemoArchive *>(Player01_gameAt(play))
-                              ->mLkDemoAnmArchive.mStringTop;
+        key->mTextPtr = (u32) reinterpret_cast<Player01DemoArchive *>(Player01_gameAt(play))
+                              ->mLkDemoAnmArchive.mTextPtr;
         return dRes_getIDRes_l(gabi::ea(key.get()), (u16)btpIdx);
     }
     gabi::Local<SafeString> key2;
     key2->__vtbl = Player01SafeStringVtable;
-    key2->mStringTop = gabi::guest_str("LkAnm"); /* "LkAnm" */
+    key2->mTextPtr = gabi::guest_str("LkAnm"); /* "LkAnm" */
     return Player_getArchiveResource(dComIfG_resControl(), key2.get(), btpIdx);
 }
 
@@ -618,13 +618,13 @@ u32 daPy_lk_c::loadTextureScrollResource(u32 btkIdx, BOOL isDemo) {
         Player01_assureTermination(
             &reinterpret_cast<Player01DemoArchive *>(Player01_gameAt(play))->mLkDemoAnmArchive);
         key->__vtbl = Player01SafeStringVtable;
-        key->mStringTop = (u32) reinterpret_cast<Player01DemoArchive *>(Player01_gameAt(play))
-                              ->mLkDemoAnmArchive.mStringTop;
+        key->mTextPtr = (u32) reinterpret_cast<Player01DemoArchive *>(Player01_gameAt(play))
+                              ->mLkDemoAnmArchive.mTextPtr;
         return dRes_getIDRes_l(gabi::ea(key.get()), (u16)btkIdx);
     }
     gabi::Local<SafeString> key2;
     key2->__vtbl = Player01SafeStringVtable;
-    key2->mStringTop = gabi::guest_str("LkAnm"); /* "LkAnm" */
+    key2->mTextPtr = gabi::guest_str("LkAnm"); /* "LkAnm" */
     return Player_getArchiveResource(dComIfG_resControl(), key2.get(), btkIdx);
 }
 
@@ -754,7 +754,7 @@ u32 daPy_lk_c::getItemAnimeResource(u32 index /* HD: caller-extended u16 registe
     /* HD: the item animation comes from the resident "LkAnm" archive */
     gabi::Local<SafeString> key;
     key->__vtbl = Player01SafeStringVtable;
-    key->mStringTop = gabi::guest_str("LkAnm"); /* "LkAnm" */
+    key->mTextPtr = gabi::guest_str("LkAnm"); /* "LkAnm" */
     u32 bas = Player_getArchiveResource(dComIfG_resControl(), key.get(), index);
     mDoExt_setCurrentHeap(oldHeap);
     return bas;
@@ -846,7 +846,7 @@ static inline s32 anm_vf0C_l(u32 anm) { return gabi::call_ptr<s32>(gabi::load<u3
 static inline u32 lk_getLinkRes_l(u32 idx) {
     gabi::Local<SafeString> key;
     key->__vtbl = 0x10034B24;
-    key->mStringTop = 0x101CEB48; /* l_arcName */
+    key->mTextPtr = 0x101CEB48; /* l_arcName */
     return gabi::call<u32>(0x026066C4, dComIfG_resControl(), key.get(), idx);
 }
 /* 0273AEC4 operator new[](size, align) */
@@ -1094,7 +1094,7 @@ void daPy_lk_c::setTactModel() {
     /* HD: the brk comes from the resident "LkAnm" archive into the brkAnm object at 0x48F8 */
     gabi::Local<SafeString> key;
     key->__vtbl = Player01SafeStringVtable;
-    key->mStringTop = gabi::guest_str("LkAnm");
+    key->mTextPtr = gabi::guest_str("LkAnm");
     u32 brk =
         Player_getArchiveResource(dComIfG_resControl(), key.get(), dRes_INDEX_LKANM_BRK_TTAKT_e);
     s32 mode = anm_vf0C_l(brk);
@@ -1401,18 +1401,18 @@ static void lk_linkTexMaterials(daPy_lk_c* lk, u32 key) {
         u32 str = lk_relPtr(entry + 0xC);
         u32 md = gabi::load<u32>(self + 0x444);
         name->__vtbl = 0x10034B24;
-        name->mStringTop = str;
+        name->mTextPtr = str;
         u32 x = PlayerModelData_getResource(md);
         SafeString_vf14_l(gabi::ea(name.get()));
-        u32 matIdx = gabi::call<u32>(0x027DF9B0 /* material name -> index */, lk_relPtr(x + 0x18), (u32)name->mStringTop);
-        mouth->mStringTop = key; /* "mouth" */
+        u32 matIdx = gabi::call<u32>(0x027DF9B0 /* material name -> index */, lk_relPtr(x + 0x18), (u32)name->mTextPtr);
+        mouth->mTextPtr = key; /* "mouth" */
         mouth->__vtbl = 0x10034B24;
         SafeString_vf14_l(gabi::ea(name.get()));
         SafeString_vf14_l(gabi::ea(name.get()));
-        u32 a = name->mStringTop;
+        u32 a = name->mTextPtr;
         SafeString_vf14_l(gabi::ea(mouth.get()));
         u32 arr = gabi::load<u32>(self + 0x6D4);
-        if (lk_safeStrEq(a, mouth->mStringTop)) {
+        if (lk_safeStrEq(a, mouth->mTextPtr)) {
             gabi::store<u32>(arr + i * 4, gabi::load<u32>(arr + i * 4) | 0xC0007FFF);
             arr = gabi::load<u32>(self + 0x6D4);
             gabi::store<u32>(arr + matIdx * 4, gabi::load<u32>(arr + matIdx * 4) | 0x3FFF8000);
@@ -1577,17 +1577,17 @@ void daPy_lk_c::setSeAnime(u32 anmRes, u32 anmHeap, u32 frameCtrl) {
      * the bck data */
     u32 buf = (u32)Player01_animation(anmRes)->mpMetadata;
     gabi::Local<SafeString> name;
-    name->mStringTop = lk_relPtr(buf + 4);
+    name->mTextPtr = lk_relPtr(buf + 4);
     name->__vtbl = Player01SafeStringVtable;
     SafeString_vf14_l(gabi::ea(this) + 0x6938);
     SafeString_vf14_l(gabi::ea(this) + 0x6938);
     u32 cur = mpSeAnm;
     SafeString_vf14_l(gabi::ea(name.get()));
     bool same = false;
-    if (cur == name->mStringTop) {
+    if (cur == name->mTextPtr) {
         same = true;
     } else {
-        same = lk_safeStrEq(mpSeAnm, name->mStringTop);
+        same = lk_safeStrEq(mpSeAnm, name->mTextPtr);
     }
     if (same &&
         m34F0 == (u16) reinterpret_cast<daPy_anmHeap_c *>(gabi::at<void>(anmHeap))->field_0x6 &&
@@ -1597,7 +1597,7 @@ void daPy_lk_c::setSeAnime(u32 anmRes, u32 anmHeap, u32 frameCtrl) {
     }
     gabi::Local<SafeString> key;
     key->__vtbl = Player01SafeStringVtable;
-    key->mStringTop = lk_relPtr((u32)Player01_animation(anmRes)->mpMetadata + 4);
+    key->mTextPtr = lk_relPtr((u32)Player01_animation(anmRes)->mpMetadata + 4);
     u32 sanm = Player01_getSoundAnimeResource(dComIfG_resControl(), key.get(), anmRes + 0xC);
     *reinterpret_cast<be<u32> *>(_658C) = sanm;
     if (sanm == 0) {
@@ -1721,33 +1721,33 @@ void daPy_lk_c::hideHatAndBackle(u32 mtl) {
         bool hide = false;
         if (!(noResetFlg1() & 0x800)) { /* !checkFreezeState() */
             s1->__vtbl = 0x10034B24;
-            s1->mStringTop = lk_relPtr((u32)gabi::at<PlayerMaterialAnimationView>(mtl)->mpData + 4); /* the material's name */
+            s1->mTextPtr = lk_relPtr((u32)gabi::at<PlayerMaterialAnimationView>(mtl)->mpData + 4); /* the material's name */
             SafeString_vf14_l(gabi::ea(&faceMaterialName));
             SafeString_vf14_l(gabi::ea(&faceMaterialName));
-            u32 g = (u32)faceMaterialName.mStringTop;
+            u32 g = (u32)faceMaterialName.mTextPtr;
             SafeString_vf14_l(gabi::ea(s1.get()));
-            if (g == s1->mStringTop || lk_safeStrEq((u32)faceMaterialName.mStringTop, s1->mStringTop)) {
+            if (g == s1->mTextPtr || lk_safeStrEq((u32)faceMaterialName.mTextPtr, s1->mTextPtr)) {
                 hide = true;
             } else {
                 s2->__vtbl = 0x10034B24;
-                s2->mStringTop = lk_relPtr((u32)gabi::at<PlayerMaterialAnimationView>(mtl)->mpData + 4);
+                s2->mTextPtr = lk_relPtr((u32)gabi::at<PlayerMaterialAnimationView>(mtl)->mpData + 4);
                 SafeString_vf14_l(gabi::ea(&ear2MaterialName));
                 SafeString_vf14_l(gabi::ea(&ear2MaterialName));
-                g = (u32)ear2MaterialName.mStringTop;
+                g = (u32)ear2MaterialName.mTextPtr;
                 SafeString_vf14_l(gabi::ea(s2.get()));
-                if (g == s2->mStringTop || lk_safeStrEq((u32)ear2MaterialName.mStringTop, s2->mStringTop)) {
+                if (g == s2->mTextPtr || lk_safeStrEq((u32)ear2MaterialName.mTextPtr, s2->mTextPtr)) {
                     hide = true;
                 }
             }
         }
         if (!hide) {
             s3->__vtbl = 0x10034B24;
-            s3->mStringTop = lk_relPtr((u32)gabi::at<PlayerMaterialAnimationView>(mtl)->mpData + 4);
+            s3->mTextPtr = lk_relPtr((u32)gabi::at<PlayerMaterialAnimationView>(mtl)->mpData + 4);
             SafeString_vf14_l(gabi::ea(&ear3MaterialName));
             SafeString_vf14_l(gabi::ea(&ear3MaterialName));
-            u32 g = (u32)ear3MaterialName.mStringTop;
+            u32 g = (u32)ear3MaterialName.mTextPtr;
             SafeString_vf14_l(gabi::ea(s3.get()));
-            if (g == s3->mStringTop || lk_safeStrEq((u32)ear3MaterialName.mStringTop, s3->mStringTop)) {
+            if (g == s3->mTextPtr || lk_safeStrEq((u32)ear3MaterialName.mTextPtr, s3->mTextPtr)) {
                 if (checkCaughtShapeHide() || (noResetFlg1() & 8) /* daPyFlg1_CASUAL_CLOTHES */) {
                     hide = true;
                 }
@@ -2018,20 +2018,20 @@ void daPy_lk_c::setBowModel() {
             SafeString *k = ks[i];
             SafeString *n = ns[i];
             if (i == 0) {
-                k->mStringTop = gabi::guest_str(keys[i]);
+                k->mTextPtr = gabi::guest_str(keys[i]);
                 k->__vtbl = Player01SafeStringVtable;
             } else {
                 k->__vtbl = Player01SafeStringVtable;
-                k->mStringTop = gabi::guest_str(keys[i]);
+                k->mTextPtr = gabi::guest_str(keys[i]);
             }
             u32 name = lk_relPtr((u32)gabi::at<PlayerMaterialAnimationView>(mtl)->mpData + 4);
             n->__vtbl = Player01SafeStringVtable;
-            n->mStringTop = name;
+            n->mTextPtr = name;
             Player01_assureMaterialName(gabi::ea(k));
             Player01_assureTermination(k);
-            u32 a = (u32)k->mStringTop;
+            u32 a = (u32)k->mTextPtr;
             Player01_assureTermination(n);
-            if (a == (u32)n->mStringTop || lk_safeStrEq((u32)k->mStringTop, (u32)n->mStringTop)) {
+            if (a == (u32)n->mTextPtr || lk_safeStrEq((u32)k->mTextPtr, (u32)n->mTextPtr)) {
                 gabi::at<PlayerMaterialAnimationView>(mtl)->mShape->mVisible =
                     i < 2 ? 1 : 0; /* show() / hide() */
                 break;
@@ -2198,7 +2198,7 @@ void daPy_lk_c::initTextureAnime() {
      * animation objects at 0x644 and 0x69C (instead of J3DTexNoAnm / J3DMaterialAnm objects) */
     gabi::Local<SafeString> key;
     key->__vtbl = 0x10034B24;
-    key->mStringTop = 0x100351B4; /* "LkAnm" */
+    key->mTextPtr = 0x100351B4; /* "LkAnm" */
     u32 btp = Player_getArchiveResource( dComIfG_resControl(), key.get(), dRes_INDEX_LKANM_BTP_TMABAA_e);
     gabi::Local<PlayerTextureAnimationSetup> info; /* the animation object's setup (sp+0x24..0x64; HD: 0x40 bytes, field +0x3C) */
     info->mParameters[3] = -1;
@@ -2443,7 +2443,7 @@ void daPy_lk_c::setBottleModel(u32 param_0 /* u16 */) {
      * / 0x48F8 */
     gabi::Local<SafeString> k1;
     k1->__vtbl = Player01SafeStringVtable;
-    k1->mStringTop = gabi::guest_str("LkAnm");
+    k1->mTextPtr = gabi::guest_str("LkAnm");
     u32 btk =
         Player_getArchiveResource(dComIfG_resControl(), k1.get(), dRes_INDEX_LKANM_BTK_TBOTTLE_e);
     s32 mode = anm_vf0C_l(btk);
@@ -2473,7 +2473,7 @@ void daPy_lk_c::setBottleModel(u32 param_0 /* u16 */) {
                                        ->mpBottleContentsModel) /* mpBottleContentsModel */,
                          bdl, 0x13000022);
         k2->__vtbl = Player01SafeStringVtable;
-        k2->mStringTop = gabi::guest_str("LkAnm");
+        k2->mTextPtr = gabi::guest_str("LkAnm");
         u32 brk = Player_getArchiveResource(dComIfG_resControl(), k2.get(),
                                             dRes_INDEX_LKANM_BRK_TBINLIQUID_e);
         mode = anm_vf0C_l(brk);
@@ -2507,7 +2507,7 @@ void daPy_lk_c::setBottleModel(u32 param_0 /* u16 */) {
         Player01_setBottleModelFlag(
             (u32) reinterpret_cast<PlayerModelState *>(mD90)->mpBottleContentsModel.v, 1); /* HD */
         k2->__vtbl = Player01SafeStringVtable;
-        k2->mStringTop = gabi::guest_str("LkAnm");
+        k2->mTextPtr = gabi::guest_str("LkAnm");
         u32 brk = Player_getArchiveResource(dComIfG_resControl(), k2.get(),
                                             dRes_INDEX_LKANM_BRK_TBINHO_e);
         mode = anm_vf0C_l(brk);
@@ -2549,7 +2549,7 @@ static inline bool lk_checkNormalSwordEquip() {
 /* a "LkAnm" resource (sead::SafeString key with the string at 0x10035474) */
 static inline u32 Player01_getLkAnm(u32 idx) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_str("LkAnm");
+    key->mTextPtr = gabi::guest_str("LkAnm");
     key->__vtbl = Player01SafeStringVtable;
     return Player_getArchiveResource(dComIfG_resControl(), key.get(), idx);
 }
@@ -2760,7 +2760,7 @@ void daPy_lk_c::initTextureScroll() {
      * the sead::SafeString table at 0x1046CD2C */
     gabi::Local<SafeString> key;
     key->__vtbl = 0x10034B24;
-    key->mStringTop = 0x10035174; /* "LkAnm" */
+    key->mTextPtr = 0x10035174; /* "LkAnm" */
     u32 btk = Player_getArchiveResource( dComIfG_resControl(), key.get(), dRes_INDEX_LKANM_BTK_TMABA_e);
     gabi::Local<PlayerTextureAnimationSetup> info; /* the animation object's setup (sp+0x14..0x54; HD: 0x40 bytes, field +0x3C) */
     info->mParameters[3] = -1;
@@ -2810,7 +2810,7 @@ void daPy_lk_c::initTextureScroll() {
         u32 x = PlayerModelData_getResource(gabi::ea(mpCLModelData.get()));
         u32 name = gabi::ea(&eyeMaterialNames.mNames[no]);
         SafeString_vf14_l(name);
-        u16 matID = (u16)Player_materialNameIndex(lk_relPtr(x + 0x18), (u32)gabi::at<SafeString>(name)->mStringTop);
+        u16 matID = (u16)Player_materialNameIndex(lk_relPtr(x + 0x18), (u32)gabi::at<SafeString>(name)->mTextPtr);
         J3DModelData* modelData = mpCLModelData.get();
         u32 cnt = modelData->mMaterialNum;
         u32 anm = *slot;
@@ -3567,7 +3567,7 @@ BOOL daPy_lk_c::createHeap() {
     }
     gabi::Local<SafeString> agb;
     agb->__vtbl = 0x10034B24;
-    agb->mStringTop = 0x10035208; /* "Agb" */
+    agb->mTextPtr = 0x10035208; /* "Agb" */
     u32 shadowData = Player_getArchiveResource( dComIfG_resControl(), agb.get(), 4);
     if (shadowData == 0) {
         LK_ASSERT(0x5E3C, "p_landing_model_data");
@@ -3581,17 +3581,17 @@ BOOL daPy_lk_c::createHeap() {
     models.mPacketList.mCount = 0;
     /* HD: in the stage "GanonK" eleven HD objects (0xB0 each, 0x4BE8..) are set up and the packet list enabled */
     gabi::Local<SafeString> a;
-    a->mStringTop = 0x10035210; /* "GanonK" */
+    a->mTextPtr = 0x10035210; /* "GanonK" */
     a->__vtbl = 0x10034B24;
     gabi::Local<SafeString> stage;
     u32 play = dComIfGp_ea();
     stage->__vtbl = 0x10034B24;
-    stage->mStringTop = play + 0x5134; /* the stage name */
+    stage->mTextPtr = play + 0x5134; /* the stage name */
     SafeString_vf14_l(gabi::ea(a.get()));
     SafeString_vf14_l(gabi::ea(a.get()));
-    u32 s = a->mStringTop;
+    u32 s = a->mTextPtr;
     SafeString_vf14_l(gabi::ea(stage.get()));
-    if (s == stage->mStringTop || lk_safeStrEq(a->mStringTop, stage->mStringTop)) {
+    if (s == stage->mTextPtr || lk_safeStrEq(a->mTextPtr, stage->mTextPtr)) {
         Player_initializeDrawPacket(&packets[0], 0);
         packets[0].field_0xad = 1;
         packets[0].field_0xaf = 1;
@@ -3762,9 +3762,9 @@ BOOL daPy_lk_c::draw() {
             gabi::Local<SafeString> n1;
             gabi::Local<SafeString> k1;
             n1->__vtbl = 0x10034B24;
-            n1->mStringTop = lk_relPtr((u32)gabi::at<PlayerModelNameView>(bc)->mpNameData + 4); /* the contents model's name */
+            n1->mTextPtr = lk_relPtr((u32)gabi::at<PlayerModelNameView>(bc)->mpNameData + 4); /* the contents model's name */
             k1->__vtbl = 0x10034B24;
-            k1->mStringTop = 0x100353C4; /* "binho" */
+            k1->mTextPtr = 0x100353C4; /* "binho" */
             if (!lk_keyEq(gabi::ea(n1.get()), gabi::ea(k1.get()))) {
                 lk_mdlFlags2(models.mpBottleContentsModel);
                 updateDLSetLight(gabi::at<J3DModel>(gabi::ea(models.mpBottleContentsModel.get())), 0);
@@ -3870,7 +3870,7 @@ BOOL daPy_lk_c::draw() {
         d = gabi::ea(mpCLModelData.get());
         u32 x = gabi::at<J3DModelData>(d)->mpResHeader;
         SafeString_vf14_l(gabi::ea(&ear3MaterialName));
-        s32 idx = (s32)Player_materialNameIndex( lk_relPtr(x + 0x18), (u32)ear3MaterialName.mStringTop);
+        s32 idx = (s32)Player_materialNameIndex( lk_relPtr(x + 0x18), (u32)ear3MaterialName.mTextPtr);
         u32 mat = 0;
         if (idx >= 0) {
             mat = gabi::at<J3DModelData>(d)->mMaterials;
@@ -4002,8 +4002,8 @@ BOOL daPy_lk_c::draw() {
             gabi::Local<SafeString> k2;
             k1->__vtbl = 0x10034B24;
             k2->__vtbl = 0x10034B24;
-            k2->mStringTop = 0x1047E6B8; /* the current demo name */
-            k1->mStringTop = 0x100353CC; /* "Demo50" */
+            k2->mTextPtr = 0x1047E6B8; /* the current demo name */
+            k1->mTextPtr = 0x100353CC; /* "Demo50" */
             if (lk_keyEq(gabi::ea(k1.get()), gabi::ea(k2.get()))) {
                 hide = false;
             }
@@ -4055,8 +4055,8 @@ BOOL daPy_lk_c::draw() {
                 gabi::Local<SafeString> k2;
                 k1->__vtbl = 0x10034B24;
                 k2->__vtbl = 0x10034B24;
-                k2->mStringTop = 0x1047E6B8;
-                k1->mStringTop = 0x100353CC; /* "Demo50" */
+                k2->mTextPtr = 0x1047E6B8;
+                k1->mTextPtr = 0x100353CC; /* "Demo50" */
                 draw = !lk_keyEq(gabi::ea(k1.get()), gabi::ea(k2.get()));
             }
             if (draw) {
@@ -4141,9 +4141,9 @@ BOOL daPy_lk_c::draw() {
             gabi::Local<SafeString> n1;
             gabi::Local<SafeString> k1;
             n1->__vtbl = 0x10034B24;
-            n1->mStringTop = lk_relPtr((u32)gabi::at<PlayerModelNameView>(bc)->mpNameData + 4);
+            n1->mTextPtr = lk_relPtr((u32)gabi::at<PlayerModelNameView>(bc)->mpNameData + 4);
             k1->__vtbl = 0x10034B24;
-            k1->mStringTop = 0x100353C4; /* "binho": the firefly is drawn after the bottle cap */
+            k1->mTextPtr = 0x100353C4; /* "binho": the firefly is drawn after the bottle cap */
             if (lk_keyEq(gabi::ea(n1.get()), gabi::ea(k1.get()))) {
                 binho = TRUE;
             } else {

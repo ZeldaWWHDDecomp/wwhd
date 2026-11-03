@@ -99,12 +99,12 @@ static cPhs_State phase_1(daNpcPeople_c* i_this) {
     switch (i_this->getNpcNo()) {
     case NPC_UB4: {
         gabi::Local<SafeString> name;
-        name->mStringTop = gabi::guest_addr("Ocmera"); /* "Ocmera" */
+        name->mTextPtr = gabi::guest_addr("Ocmera"); /* "Ocmera" */
         name->__vtbl = PEOPLE_SAFESTRING_VTBL;
         dComIfG_inf_c* play = peopleMainGame();
         gabi::Local<SafeString> start; /* dComIfGp_getStartStageName() */
         start->__vtbl = PEOPLE_SAFESTRING_VTBL;
-        start->mStringTop = gabi::ea(play->play.mCurStage.mName);
+        start->mTextPtr = gabi::ea(play->play.mCurStage.mName);
         if (people_SafeString_eq(name.get(), start.get())) {
             if (dComIfGs_checkGetItem(dItemNo_COLLECT_MAP_20_e) ||
                 arg0 != (u32)(s32)dComIfGp_getStartStagePoint()) {

@@ -46,7 +46,7 @@ s32 daWall_c::CreateHeap() {
     WallStackPayload<SafeString> modelName, backgroundName;
     const char* name = m_arcname.names[mType];
     s32 index = m_bmdname.values[mType];
-    modelName.get()->mStringTop = gabi::guest_addr(name);
+    modelName.get()->mTextPtr = gabi::guest_addr(name);
     modelName.get()->__vtbl = gc_tu.safeString;
     J3DModelData* modelData = (J3DModelData*)Wall_getRes(dComIfG_resControl(), modelName.get(), index);
     if (modelData == NULL)
@@ -62,7 +62,7 @@ s32 daWall_c::CreateHeap() {
         return FALSE;
     name = m_arcname.names[mType];
     index = m_dzbname.values[mType];
-    backgroundName.get()->mStringTop = gabi::guest_addr(name);
+    backgroundName.get()->mTextPtr = gabi::guest_addr(name);
     backgroundName.get()->__vtbl = gc_tu.safeString;
     cBgD_t* data = (cBgD_t*)Wall_getRes(dComIfG_resControl(), backgroundName.get(), index);
     // HD: this call site tests the full signed return, rather than a truncated bool.

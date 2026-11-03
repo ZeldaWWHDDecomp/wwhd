@@ -1,3 +1,4 @@
+# verify: -only 02643108
 # Scoped overflow companion; run with -only 02643108.
 # Mirrors the primary object graph; only the wide message entry is overlong.
 src wwhd_src/d/hd_screen_best_shot_mark.cpp

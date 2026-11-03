@@ -84,7 +84,7 @@ static inline void bgn_fog_flash(u32 tev, be<s16> *c, be<f32> *z, s16 timer, s16
  * first time, then through the vtable), again through the vtable, then `b`; byte compare up to
  * 0x40001 */
 static bool bgn_name_is(SafeString *a, SafeString *b, const char *lit, bool first) {
-    b->mStringTop = gabi::guest_addr(lit);
+    b->mTextPtr = gabi::guest_addr(lit);
     b->__vtbl = BGN_SAFESTRING_VTBL;
     if (first)
         SafeString_assureTermination(a);
@@ -93,10 +93,10 @@ static bool bgn_name_is(SafeString *a, SafeString *b, const char *lit, bool firs
                        gabi::ea(a));
     gabi::call_ptr(bgn_draw::view<bgn_draw::StringVtable>(a->__vtbl)->mAssureTermination,
                    gabi::ea(a));
-    u32 p = a->mStringTop;
+    u32 p = a->mTextPtr;
     gabi::call_ptr(bgn_draw::view<bgn_draw::StringVtable>(b->__vtbl)->mAssureTermination,
                    gabi::ea(b));
-    u32 q = b->mStringTop;
+    u32 q = b->mTextPtr;
     if (p == q)
         return true;
     for (u32 n = 0x40001; n != 0; n--, p++, q++) {
@@ -282,7 +282,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
                                   gabi::at<mDoExt_J3DModelPacketS_l>(pkt)->mpModel.v)
                                   ->mpResource;
                     s32 off = (bgn_draw::view<bgn_draw::Resource>(res)->mNameOffset);
-                    a->mStringTop = off != 0 ? res + 4 + off : 0;
+                    a->mTextPtr = off != 0 ? res + 4 + off : 0;
                     a->__vtbl = BGN_SAFESTRING_VTBL;
                     bool first = true;
                     if (!far) {

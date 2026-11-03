@@ -64,7 +64,7 @@ s32 daObjHami2::Act_c::Mthd_Delete() {
 /* 0234E208 */
 s32 daObjHami2::Act_c::CreateHeap() {
   gabi::Local<SafeString> name;
-  name->mStringTop=gabi::guest_addr("Hami2");
+  name->mTextPtr=gabi::guest_addr("Hami2");
   name->__vtbl=0x10029B9C;
   void* data = hami2GetResource(sResourceManager.get(), name.get(), 4);
   if (!data)
@@ -93,7 +93,7 @@ s32 daObjHami2::Act_c::CreateHeap() {
   if (!bg)
     return 0;
   gabi::Local<SafeString> name2;
-  name2->mStringTop=gabi::guest_addr("Hami2");
+  name2->mTextPtr=gabi::guest_addr("Hami2");
   name2->__vtbl=0x10029B9C;
   data = hami2GetResource(sResourceManager.get(), name2.get(), 7);
   s32 r = hami2SetBackground(this->mpMovingBg, data, 1, &this->mInitialBgMtx);

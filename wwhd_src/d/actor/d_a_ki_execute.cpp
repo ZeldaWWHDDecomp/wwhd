@@ -40,20 +40,20 @@ static inline void fopAcM_onActor(fopAc_ac_c* a) { dComIfGs_onActor(a->setID, a-
 /* inlined into daKi_Execute */
 static bool ki_stage_is(const char* name) {
     SafeString a;
-    a.mStringTop = gabi::guest_addr(name);
+    a.mTextPtr = gabi::guest_addr(name);
     a.__vtbl = KI_SAFESTRING_VTABLE;
     SafeString b;
     {
         u32 stage = dComIfGp_ea() + 0x5134;
         b.__vtbl = KI_SAFESTRING_VTABLE;
-        b.mStringTop = stage;
+        b.mTextPtr = stage;
     }
     kiAssureString(a.__vtbl, &a);
     kiAssureString(a.__vtbl, &a);
     u32 bv = b.__vtbl;
-    u32 s1 = a.mStringTop;
+    u32 s1 = a.mTextPtr;
     kiAssureString(bv, &b);
-    u32 s2 = b.mStringTop;
+    u32 s2 = b.mTextPtr;
     if (s1 == s2) return true;
     for (u32 n = 0x40001; n != 0; n--) {
         u8 c1 = kiStringByte(s1);

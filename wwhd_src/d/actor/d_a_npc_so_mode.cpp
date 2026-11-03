@@ -71,17 +71,17 @@ static inline void so_word_copy3(u32 dst, u32 src) {
 /* inlined into next_msgStatus, getMsg */
 static inline bool so_isStartStage(const char* lit) {
     SafeString sa;
-    sa.mStringTop = gabi::guest_addr(lit);
+    sa.mTextPtr = gabi::guest_addr(lit);
     sa.__vtbl = SoModeSafeStringVtable::ADDRESS;
     u32 stage = dComIfGp_ea() + 0x5134;
     SafeString sb;
-    sb.mStringTop = stage;
+    sb.mTextPtr = stage;
     sb.__vtbl = SoModeSafeStringVtable::ADDRESS;
     soModeAssureTermination(&sa);
     soModeAssureTermination(&sa);
-    u32 pa = sa.mStringTop;
+    u32 pa = sa.mTextPtr;
     soModeAssureTermination(&sb);
-    u32 pb = sb.mStringTop;
+    u32 pb = sb.mTextPtr;
     if (pa == pb)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {

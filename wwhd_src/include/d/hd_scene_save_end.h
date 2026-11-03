@@ -1,7 +1,7 @@
 /* HD post-credits save scene. Layout reconstructed from the binary. */
 #pragma once
 #include "bindings.h"
-#include "d/hd_state_task.h"
+#include "d/hd_state.h"
 #include "d/hd_title_parts.h"
 #include "d/hd_scene_save_data.h"
 #include "d/hd_sequence_window.h"

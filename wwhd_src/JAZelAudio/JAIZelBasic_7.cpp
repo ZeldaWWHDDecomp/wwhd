@@ -114,7 +114,7 @@ void assurePath(AudioSafeString *path) {
 }
 GuestByte *pathString(AudioSafeString *path) {
     return gabi::at<GuestByte>(
-        gabi::load<u32>(gabi::ea(path) + offsetof(AudioSafeString, mStringTop)));
+        gabi::load<u32>(gabi::ea(path) + offsetof(AudioSafeString, mTextPtr)));
 }
 } // namespace
 

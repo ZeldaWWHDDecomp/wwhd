@@ -89,10 +89,10 @@ WWHD_OFFSET(kyEnvironmentView, mCurTime, 0x1020);
 WWHD_OFFSET(kyEnvironmentView, mHdPaletteParams, 0x10d4);
 WWHD_SIZE(kyEnvironmentView, 0x10e8);
 struct kyStageString {
-    /* 0x0000 */ be<u32> mStringTop;
+    /* 0x0000 */ be<u32> mTextPtr;
     /* 0x0004 */ be<u32> mVtable;
 };
-WWHD_OFFSET(kyStageString, mStringTop, 0x0);
+WWHD_OFFSET(kyStageString, mTextPtr, 0x0);
 WWHD_OFFSET(kyStageString, mVtable, 0x4);
 WWHD_SIZE(kyStageString, 0x8);
 kyEnvironmentView* dKy_getEnvironment();

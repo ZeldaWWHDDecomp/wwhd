@@ -42,15 +42,15 @@ void dKyr_sun_move() {
   WeatherVectorHD screen;
   WeatherVectorHD point;
   WeatherProjectParamsHD params;
-  stage.mStringTop = gabi::at<be<u8>>(gabi::guest_addr("Name"));
+  stage.mTextPtr = gabi::at<be<u8>>(gabi::guest_addr("Name"));
   stage.__vtbl = &sunSafeStringVtable;
-  current.mStringTop = weatherPlay()->mStageName;
+  current.mTextPtr = weatherPlay()->mStageName;
   current.__vtbl = &sunSafeStringVtable;
   stage.assureTermination();
   stage.assureTermination();
-  be<u8> *expected = stage.mStringTop;
+  be<u8> *expected = stage.mTextPtr;
   current.assureTermination();
-  bool same = equalWeatherStrings(expected, current.mStringTop);
+  bool same = equalWeatherStrings(expected, current.mTextPtr);
   bool alternate;
   if (same)
     alternate = (s16)weatherEnvironment()->mBaseLightRed != 0;

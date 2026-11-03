@@ -1,3 +1,4 @@
+# verify: -only 0263F4F0
 # Supplemental declared scope: only 0263F4F0; run with -only 0263F4F0.
 # Actual027046D4 forwards r4 to02704634, which reads vtable at+4 (02704664),
 # invokes assurance, then reads text pointer at+0 (0270469C): exactly8 descriptor bytes.

@@ -354,7 +354,7 @@ static inline u8 dComIfGp_getMesgAnimeAttrInfo() { return gabi::load<u8>(dComIfG
 /* resources by id (HD: sead::SafeString key, per-TU vtable) */
 static inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
+    key->mTextPtr = gabi::ea(arc);
     key->__vtbl = PEOPLE_SAFESTRING_VTBL;
     return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
 }
@@ -362,7 +362,7 @@ static inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
  * (through its SafeString vtable calls), so a call site whose original sets them passes them */
 static inline void* dComIfG_getObjectIDRes_r67(const char* arc, s32 id, u32 r6, u32 r7) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
+    key->mTextPtr = gabi::ea(arc);
     key->__vtbl = PEOPLE_SAFESTRING_VTBL;
     return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id, r6, r7);
 }

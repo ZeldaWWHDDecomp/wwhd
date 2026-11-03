@@ -203,7 +203,7 @@ bool daObjYLzou_c::create_heap() {
     u32 which = field_0x2E8;
     s32 idx = ylzouBdlTable[which];
     SafeString request;
-    request.mStringTop = gabi::guest_addr("YLzou");
+    request.mTextPtr = gabi::guest_addr("YLzou");
     request.__vtbl = gc_tu.safeString;
     J3DModelData *model_data =
         static_cast<J3DModelData *>(ylzouGetResource(ylzouResourceControl, &request, idx));
@@ -219,7 +219,7 @@ bool daObjYLzou_c::create_heap() {
         return false;
     which = field_0x2E8;
     SafeString collisionName;
-    collisionName.mStringTop = gabi::guest_addr("YLzou");
+    collisionName.mTextPtr = gabi::guest_addr("YLzou");
     collisionName.__vtbl = gc_tu.safeString;
     idx = ylzouDzbTable[which];
     void *dzb = ylzouGetResource(ylzouResourceControl, &collisionName, idx);

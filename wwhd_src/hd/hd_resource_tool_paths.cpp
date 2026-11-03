@@ -24,9 +24,9 @@ static void __sinit_hd_resource_tool_paths_cpp() {
     initializePositiveRotationGuard(&sResourceToolPathsPositiveRotationGuard);
     __register_global_object(gabi::ea(&sResourceToolPathsPositiveRotationDescriptor));
     sResourceToolPathsPreBinaryConverter.__vtbl = gabi::ea(&sResourceToolPathsSafeStringVtable);
-    sResourceToolPathsPreBinaryConverter.mStringTop = gabi::guest_addr("%CKING_ROOT%/Tools/convert/pre_binary_convert.py");
+    sResourceToolPathsPreBinaryConverter.mTextPtr = gabi::guest_addr("%CKING_ROOT%/Tools/convert/pre_binary_convert.py");
     sResourceToolPathsG3dConverter.__vtbl = gabi::ea(&sResourceToolPathsSafeStringVtable);
-    sResourceToolPathsG3dConverter.mStringTop = gabi::guest_addr("%NW4F_G3D_ROOT%/Tool/G3dTool/win64/NW4F_g3dfilter.exe");
+    sResourceToolPathsG3dConverter.mTextPtr = gabi::guest_addr("%NW4F_G3D_ROOT%/Tool/G3dTool/win64/NW4F_g3dfilter.exe");
 }
 /* WWHD glue
  data sResourceToolPathsSafeStringVtable 10142BB4 nocheck

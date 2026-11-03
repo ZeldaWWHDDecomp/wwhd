@@ -25,9 +25,9 @@ static Sk2::ResourceIndices sk2_bck;
 static void* getNamedResource(const char* arc, const char* name) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> n;
-    a->mStringTop = gabi::guest_addr(arc);
+    a->mTextPtr = gabi::guest_addr(arc);
     a->__vtbl = gc_tu.safeString;
-    n->mStringTop = gabi::guest_addr(name);
+    n->mTextPtr = gabi::guest_addr(name);
     n->__vtbl = gc_tu.safeString;
     return sk2GetNamedResource(dComIfG_resControl(), a.get(), n.get());
 }

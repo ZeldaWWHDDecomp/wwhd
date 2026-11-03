@@ -245,7 +245,7 @@ void daGFlag_packet_c::setTexObj(u32 archive) {
     // HD: keep the full archive index and update native resource bindings under the graphics lock.
     gabi::Local<SafeString> name;
     goalFlag_graphicsLock(l_graphicsLock.get());
-    name->mStringTop = gabi::ea(sub_arcname_tbl[archive].get());
+    name->mTextPtr = gabi::ea(sub_arcname_tbl[archive].get());
     name->__vtbl = l_safeStringVtable;
     void* resource = goalFlag_objectResource(l_resourceControl.get(), name.get(), 3);
     if (!resource)
@@ -678,10 +678,10 @@ s32 daGoal_Flag_c::_create() {
     goalFlag_matrixYRotate(&l_matrixStack, shape_angle.y);
     goalFlag_matrixStackScale(scale.x, scale.y, scale.z);
     goalFlag_matrixCopy(&l_matrixStack, &mMtx);
-    expectedStage->mStringTop = gabi::guest_addr(l_boatingStage);
+    expectedStage->mTextPtr = gabi::guest_addr(l_boatingStage);
     expectedStage->__vtbl = l_safeStringVtable;
     u32 play = goalFlag_playObject();
-    currentStage->mStringTop = gabi::ea(goalFlag_gameInfo(play)->play.mCurStage.mName);
+    currentStage->mTextPtr = gabi::ea(goalFlag_gameInfo(play)->play.mCurStage.mName);
     currentStage->__vtbl = l_safeStringVtable;
     auto validateString = [](SafeString* string) {
         gabi::call_ptr(gabi::object_at<GoalSafeStringVtable>((u32)string->__vtbl).assureTermination.get(),
@@ -689,13 +689,13 @@ s32 daGoal_Flag_c::_create() {
     };
     validateString(expectedStage.get());
     validateString(expectedStage.get());
-    u32 expected = expectedStage->mStringTop;
+    u32 expected = expectedStage->mTextPtr;
     validateString(currentStage.get());
-    u32 current = currentStage->mStringTop;
+    u32 current = currentStage->mTextPtr;
     bool equal = expected == current;
     if (!equal) {
-        expected = expectedStage->mStringTop;
-        current = currentStage->mStringTop;
+        expected = expectedStage->mTextPtr;
+        current = currentStage->mTextPtr;
         for (u32 i = 0; i < 0x40001; ++i) {
             u8 a = (&gabi::object_at<be<u8>>(expected))[i], b = (&gabi::object_at<be<u8>>(current))[i];
             if (a != b)
@@ -1088,7 +1088,7 @@ static BOOL daGoal_FlagIsDelete(void* actor) { return TRUE; }
 void daGFlag_packet_c::init() {
     // HD: initialize the shader archive, paired vertex textures and native index buffer.
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_addr(l_shaderName);
+    name->mTextPtr = gabi::guest_addr(l_shaderName);
     name->__vtbl = l_safeStringVtable;
     void* archive = goalFlag_shaderArchive(this);
     s32 index = goalFlag_shaderIndex(goalFlag_archive(archive)->mpRoot.get(), name.get());
@@ -1232,7 +1232,7 @@ void daGFlag_packet_c::update() {
     gabi::Local<be<f32>[4]> color, scaledColor;
     goalFlag_graphicsLock(l_graphicsLock.get());
     if (!(u8)mToonLoaded) {
-        name->mStringTop = gabi::guest_addr(l_toonArchiveName);
+        name->mTextPtr = gabi::guest_addr(l_toonArchiveName);
         name->__vtbl = l_safeStringVtable;
         void* resource = goalFlag_objectResource(l_resourceControl.get(), name.get(), 3);
         if (!resource)

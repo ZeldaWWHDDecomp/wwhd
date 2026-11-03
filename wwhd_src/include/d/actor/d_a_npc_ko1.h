@@ -37,7 +37,7 @@ static inline void dComIfGp_clearMesgAnimeTagInfo() { gabi::store<u8>(dComIfGp_e
 /* resources by id (HD: sead::SafeString key, per-TU vtable) */
 static inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
+    key->mTextPtr = gabi::ea(arc);
     key->__vtbl = SAFESTRING_VTBL;
     return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
 }

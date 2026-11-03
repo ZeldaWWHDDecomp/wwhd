@@ -156,13 +156,13 @@ static u32 ControlCtor(u32 self) {
             u32 data = pool + 20;
             gabi::at<resorce_hd::ResourcePool>(pool)->mRoot.v = 0;
             gabi::at<resorce_hd::ResourcePool>(pool)->mCount = 0;
-            gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v = data;
+            gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v = data;
             gabi::at<resorce_hd::ResourcePool>(pool)->mCapacity = 128;
             for (u32 i = 0; i < 127; ++i) {
                 gabi::at<resorce_hd::ResourceNode>(data + i * 32)->mLeft.v = data + (i + 1) * 32;
             }
             gabi::at<resorce_hd::ResourceNode>(data + 127 * 32)->mLeft.v = 0;
-            gabi::at<resorce_hd::ResourcePool>(pool)->mStorage.v = data;
+            gabi::at<resorce_hd::ResourcePool>(pool)->mNodeStorage.v = data;
         }
     }
     control->mpObjectHeap.v = 0;
@@ -212,12 +212,12 @@ void resorce_hd::ResourcePathInfoHD::allocatePool(s32 count, u32 heap) {
         return;
     }
     mResources.mCapacity = count;
-    mResources.mFree.v = data;
+    mResources.mFreeHead.v = data;
     for (s32 i = 0; i < count - 1; ++i) {
         gabi::at<resorce_hd::ResourceNode>(data + u32(i) * 32)->mLeft.v = data + u32(i + 1) * 32;
     }
     gabi::at<resorce_hd::ResourceNode>(data + u32(count) * 32 - 32)->mLeft.v = 0;
-    mResources.mStorage.v = data;
+    mResources.mNodeStorage.v = data;
 }
 static void StringAssure(u32 str) {
     u32 vt = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl.get();
@@ -226,9 +226,9 @@ static void StringAssure(u32 str) {
 }
 static u32 StringHash(u32 str) {
     StringAssure(str);
-    u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get();
+    u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get();
     StringAssure(str);
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get();
     u32 length = 0;
     while (gabi::at<be<u8>>(data)[length].get()) {
         ++length;
@@ -348,9 +348,9 @@ u32 resorce_hd::ResourceArchiveInfoHD::getResByFilename(u32 name) {
         resorce_hd::RAW_RESOURCE_STRING_VTABLE;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[127] = 0;
     gabi::at<resorce_hd::BufferedString>(str)->mCapacity = 128;
-    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop = data;
+    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr = data;
     StringAssure(name);
-    u32 n = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get());
+    u32 n = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get());
     u32 capacity = gabi::at<resorce_hd::BufferedString>(str)->mCapacity.get();
     u32 sourceVt = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->__vtbl.get();
     u32 target =
@@ -359,19 +359,19 @@ u32 resorce_hd::ResourceArchiveInfoHD::getResByFilename(u32 name) {
         n = capacity - 1;
     }
     gabi::call_ptr<void>(target, name);
-    u32 source = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    u32 source = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     resourceCopyBytes(data, source, n, 0u);
     gabi::at<be<u8>>(data)[n] = 0;
-    data = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get();
+    data = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get();
     gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl = resorce_hd::RESOURCE_STRING_VTABLE;
     if (!gabi::at<be<u8>>(data)->get()) {
         return 0;
     }
     gabi::Local<ResourceSafeStringRaw> suffix;
-    suffix->mStringTop = gabi::guest_addr(".bas");
+    suffix->mTextPtr = gabi::guest_addr(".bas");
     suffix->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
     resourceTerminateString(str);
-    u32 oldLen = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+    u32 oldLen = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     u32 offset = oldLen;
     u32 suffixVt = suffix->__vtbl.get();
     u32 suffixTarget =
@@ -380,7 +380,7 @@ u32 resorce_hd::ResourceArchiveInfoHD::getResByFilename(u32 name) {
         offset = 0;
     }
     gabi::call_ptr<void>(suffixTarget, suffix.get());
-    u32 appendLen = Length(suffix->mStringTop.get());
+    u32 appendLen = Length(suffix->mTextPtr.get());
     u32 left = gabi::at<resorce_hd::BufferedString>(str)->mCapacity.get() - offset;
     if (s32(appendLen) >= s32(left)) {
         appendLen = left - 1;
@@ -391,7 +391,7 @@ u32 resorce_hd::ResourceArchiveInfoHD::getResByFilename(u32 name) {
             gabi::at<resorce_hd::ResourceSafeStringVirtualsHD>(suffixVt)->mAssureTermination.get();
         u32 dest = data + offset;
         gabi::call_ptr<void>(suffixTarget, suffix.get());
-        source = suffix->mStringTop.get();
+        source = suffix->mTextPtr.get();
         resourceCopyBytes(dest, source, appendLen, 0u);
         u32 total = offset + appendLen;
         if (s32(total) > s32(oldLen)) {
@@ -444,7 +444,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadRawResource(u32 index, u32 id, u32 n
     u32 header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     s32 found = resourceFindName(entries, data);
     if (found < 0) {
         return;
@@ -455,7 +455,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadRawResource(u32 index, u32 id, u32 n
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     found = resourceFindName(entries, data);
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
@@ -475,7 +475,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadDemoScript(u32 index, u32 id, u32 na
     u32 header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     s32 found = resourceFindName(entries, data);
     if (found < 0) {
         return;
@@ -486,7 +486,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadDemoScript(u32 index, u32 id, u32 na
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     found = resourceFindName(entries, data);
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
@@ -506,7 +506,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadData(u32 index, u32 id, u32 name) {
     u32 header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     s32 found = resourceFindName(entries, data);
     if (found < 0) {
         return;
@@ -517,7 +517,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadData(u32 index, u32 id, u32 name) {
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     found = resourceFindName(entries, data);
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
@@ -537,7 +537,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadClothVertices(u32 index, u32 id, u32
     u32 header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     s32 found = resourceFindName(entries, data);
     if (found < 0) {
         return;
@@ -548,7 +548,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadClothVertices(u32 index, u32 id, u32
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     found = resourceFindName(entries, data);
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
@@ -566,12 +566,12 @@ void resorce_hd::ResourceControlHD::createStageHeaps() {
         return;
     }
     gabi::Local<ResourceSafeStringRaw> name;
-    name->mStringTop = 269359856u;
+    name->mTextPtr = 269359856u;
     name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
     u32 parent = mpStageParentHeap.v;
     u32 root = resourceCreateExpHeap(1572864u, name.get(), parent, 0xFFFFFFFFu, 0u);
     name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    name->mStringTop = 269359872u;
+    name->mTextPtr = 269359872u;
     mpStageHeap.v = root;
     u32 sub = resourceCreateExpHeap(51200u, name.get(), root, 1u, 0u);
     mpStageSpecialHeap.v = sub;
@@ -579,7 +579,7 @@ void resorce_hd::ResourceControlHD::createStageHeaps() {
     for (u32 i = 0; i < 4; ++i) {
         group->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
         u32 heap = mpStageHeap.v;
-        group->mStringTop = 269359884u;
+        group->mTextPtr = 269359884u;
         u32 result = resourceCreateExpHeap(51200u, group.get(), heap, 1u, 0u);
         mStageGroupHeaps[i].v = result;
     }
@@ -587,7 +587,7 @@ void resorce_hd::ResourceControlHD::createStageHeaps() {
     for (u32 i = 0; i < 22; ++i) {
         archive->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
         u32 heap = mpStageHeap.v;
-        archive->mStringTop = 269359896u;
+        archive->mTextPtr = 269359896u;
         u32 result = resourceCreateExpHeap(30720u, archive.get(), heap, 1u, 0u);
         mStageArchiveHeaps[i].v = result;
     }
@@ -598,12 +598,12 @@ void resorce_hd::ResourceControlHD::createObjectHeaps() {
         return;
     }
     gabi::Local<ResourceSafeStringRaw> name;
-    name->mStringTop = 269360084u;
+    name->mTextPtr = 269360084u;
     name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
     u32 parent = mpObjectParentHeap.v;
     u32 root = resourceCreateExpHeap(15728640u, name.get(), parent, 0xFFFFFFFFu, 0u);
     name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    name->mStringTop = 269360072u;
+    name->mTextPtr = 269360072u;
     mpObjectHeap.v = root;
     u32 sub = resourceCreateExpHeap(1048576u, name.get(), root, 1u, 0u);
     mpObjectSpecialHeap.v = sub;
@@ -611,7 +611,7 @@ void resorce_hd::ResourceControlHD::createObjectHeaps() {
     for (u32 i = 0; i < 4; ++i) {
         group->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
         u32 heap = mpObjectHeap.v;
-        group->mStringTop = 269360064u;
+        group->mTextPtr = 269360064u;
         u32 result = resourceCreateExpHeap(786432u, group.get(), heap, 1u, 0u);
         mObjectGroupHeaps[i].v = result;
     }
@@ -619,7 +619,7 @@ void resorce_hd::ResourceControlHD::createObjectHeaps() {
     for (u32 i = 0; i < 22; ++i) {
         archive->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
         u32 heap = mpObjectHeap.v;
-        archive->mStringTop = 269360100u;
+        archive->mTextPtr = 269360100u;
         u32 result = resourceCreateExpHeap(440320u, archive.get(), heap, 1u, 0u);
         mObjectArchiveHeaps[i].v = result;
     }
@@ -633,7 +633,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadCollision(u32 index, u32 id, u32 nam
     u32 header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     s32 found = resourceFindName(entries, data);
     if (found < 0) {
         return;
@@ -644,7 +644,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadCollision(u32 index, u32 id, u32 nam
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     gabi::call_ptr<void>(target, name);
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
-    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    data = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     found = resourceFindName(entries, data);
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
@@ -665,10 +665,10 @@ void resorce_hd::ResourcePathInfoHD::setRes(u32 name, u32 resource) {
     s32 count = s32(mResources.mCount);
     u32 pool = info + 0xAC;
     if (count < capacity) {
-        u32 node = gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v;
+        u32 node = gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v;
         if (node) {
             u32 next = gabi::at<resorce_hd::ResourceNode>(node)->mLeft.v;
-            gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v = next;
+            gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v = next;
         }
         if (node) {
             gabi::at<resorce_hd::ResourceNode>(node)->mKey = hash;
@@ -740,21 +740,21 @@ u32 resorce_hd::ResourceControlHD::getObjectResName2Index(u32 archiveName, u32 n
                 u32 array = gabi::at<resorce_hd::ResourceTableRowHD>(table)->mValues.v.get();
                 for (s32 index = 0; index < names; ++index) {
                     gabi::Local<ResourceSafeStringRaw> candidate;
-                    candidate->mStringTop =
+                    candidate->mTextPtr =
                         gabi::at<resorce_hd::ResourceTableEntryHD>(array + u32(index) * 8)
                             ->mpName.v.get();
                     candidate->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
                     StringAssure(name);
                     StringAssure(name);
-                    u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+                    u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
                     StringAssure(gabi::ea(candidate.get()));
-                    u32 other = candidate->mStringTop.get();
+                    u32 other = candidate->mTextPtr.get();
                     if (saved == other) {
                         found = index;
                         break;
                     }
-                    u32 actual = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
-                    other = candidate->mStringTop.get();
+                    u32 actual = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
+                    other = candidate->mTextPtr.get();
                     if (EqualBounded(actual, other)) {
                         found = index;
                         break;
@@ -858,11 +858,11 @@ static void InitializeString64(u32 object, u32 vt) {
     if (where) {
         gabi::at<resorce_hd::ResourceSafeStringHD>(where)->__vtbl =
             resorce_hd::BUFFERED_STRING_VTABLE;
-        gabi::at<resorce_hd::ResourceSafeStringHD>(where)->mStringTop = object + 12;
+        gabi::at<resorce_hd::ResourceSafeStringHD>(where)->mTextPtr = object + 12;
         gabi::at<resorce_hd::BufferedString>(where)->mCapacity = 64;
         gabi::at<resorce_hd::FixedString64>(object)->mBuffer[63] = 0;
     }
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(object)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(object)->mTextPtr.get();
     gabi::at<resorce_hd::ResourceSafeStringHD>(object)->__vtbl = resorce_hd::FIXED_STRING_VTABLE;
     *gabi::at<be<u8>>(data) = 0;
     gabi::at<resorce_hd::ResourceSafeStringHD>(object)->__vtbl = vt;
@@ -870,7 +870,7 @@ static void InitializeString64(u32 object, u32 vt) {
 static void CopyString(u32 destination, u32 source, u32 capacityAddress, s32 assureR4 = -1,
                        u32 capacityRegister = 0) {
     StringAssure(source);
-    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mStringTop.get());
+    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mTextPtr.get());
     u32 assureFourth = length ? 0u : gabi::cpu->r[4];
     u32 capacity = gabi::at<be<u32>>(capacityAddress)->get();
     u32 vt = gabi::at<resorce_hd::ResourceSafeStringHD>(source)->__vtbl.get();
@@ -887,7 +887,7 @@ static void CopyString(u32 destination, u32 source, u32 capacityAddress, s32 ass
     } else {
         gabi::call_ptr<void>(target, source);
     }
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mTextPtr.get();
     resourceCopyBytes(destination, data, length, 0u);
     gabi::at<be<u8>>(destination)[length] = 0;
 }
@@ -923,15 +923,15 @@ static u32 InfoCtor(u32 self, u32 archiveName, u32 path, u32 unused, u32 parent,
     if (pool) {
         gabi::at<resorce_hd::ResourcePool>(pool)->mCapacity = 0;
         gabi::at<resorce_hd::ResourcePool>(pool)->mRoot.v = 0;
-        gabi::at<resorce_hd::ResourcePool>(pool)->mStorage.v = 0;
+        gabi::at<resorce_hd::ResourcePool>(pool)->mNodeStorage.v = 0;
         gabi::at<resorce_hd::ResourcePool>(pool)->mCount = 0;
-        gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v = 0;
+        gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v = 0;
     }
     gabi::at<resorce_hd::ResourcePathInfoHD>(self)->mDataHeap.v = heap;
     gabi::at<resorce_hd::ResourcePathInfoHD>(self)->mpParentHeap.v = parent;
-    u32 destination = gabi::at<resorce_hd::ResourcePathInfoHD>(self)->mArchiveName.mStringTop;
+    u32 destination = gabi::at<resorce_hd::ResourcePathInfoHD>(self)->mArchiveName.mTextPtr;
     CopyString(destination, archiveName, self + 24, -1, 5);
-    destination = gabi::at<resorce_hd::ResourceSafeStringHD>(rawSecond)->mStringTop.get();
+    destination = gabi::at<resorce_hd::ResourceSafeStringHD>(rawSecond)->mTextPtr.get();
     CopyString(destination, path, rawSecond + 8, -1, 6);
     u32 archive = gabi::at<resorce_hd::ResourcePathInfoHD>(self)->mpArchive.v;
     if (archive) {
@@ -942,7 +942,7 @@ static u32 InfoCtor(u32 self, u32 archiveName, u32 path, u32 unused, u32 parent,
 static void StripExtension(u32 buffer, u32 name, const char *literal, s32 assureR4 = -1) {
     u32 data = buffer + 12;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(buffer)->mBuffer[127] = 0;
-    gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop = data;
+    gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr = data;
     gabi::at<resorce_hd::BufferedString>(buffer)->mCapacity = 128;
     gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->__vtbl =
         resorce_hd::RAW_RESOURCE_STRING_VTABLE;
@@ -950,13 +950,13 @@ static void StripExtension(u32 buffer, u32 name, const char *literal, s32 assure
     gabi::Local<ResourceSafeStringRaw> suffix;
     u32 suffixAddress = gabi::ea(suffix.get());
     suffix->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    suffix->mStringTop = gabi::guest_addr(literal);
+    suffix->mTextPtr = gabi::guest_addr(literal);
     gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->__vtbl = resorce_hd::RESOURCE_STRING_VTABLE;
     resourceTerminateString(buffer);
-    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop.get());
+    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr.get());
     StringAssure(suffixAddress);
     u32 suffixLength =
-        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(suffixAddress)->mStringTop.get());
+        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(suffixAddress)->mTextPtr.get());
     s32 position = s32(length - suffixLength);
     if (position >= 0) {
         u32 remaining = position + 1;
@@ -967,14 +967,14 @@ static void StripExtension(u32 buffer, u32 name, const char *literal, s32 assure
             gabi::Local<ResourceSafeStringRaw> part;
             u32 partAddress = gabi::ea(part.get());
             part->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-            part->mStringTop =
-                gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop.get() +
+            part->mTextPtr =
+                gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr.get() +
                 u32(position);
             resourceAssureSafeString(partAddress);
             StringAssure(partAddress);
-            u32 left = gabi::at<resorce_hd::ResourceSafeStringHD>(partAddress)->mStringTop.get();
+            u32 left = gabi::at<resorce_hd::ResourceSafeStringHD>(partAddress)->mTextPtr.get();
             StringAssure(suffixAddress);
-            u32 right = gabi::at<resorce_hd::ResourceSafeStringHD>(suffixAddress)->mStringTop.get();
+            u32 right = gabi::at<resorce_hd::ResourceSafeStringHD>(suffixAddress)->mTextPtr.get();
             bool equal = left == right || s32(suffixLength) <= 0;
             if (!equal) {
                 equal = true;
@@ -1004,13 +1004,13 @@ static void StripExtension(u32 buffer, u32 name, const char *literal, s32 assure
     if (position < 0) {
         StringAssure(buffer);
         position =
-            s32(Length(gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop.get()) + 1);
+            s32(Length(gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr.get()) + 1);
     }
     if (position >= s32(gabi::at<resorce_hd::BufferedString>(buffer)->mCapacity)) {
         StringAssure(buffer);
-        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop.get());
+        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr.get());
     } else {
-        u32 destination = gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop.get();
+        u32 destination = gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr.get();
         if (position < 0) {
             position = 0;
         }
@@ -1031,7 +1031,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadTextureTransformAnimation(u32 index,
     gabi::call_ptr<void>(target, str);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mTextureTransforms.getAddress();
     u32 found = resourceFindName(entries,
-                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     if (s32(found) < 0) {
         return;
     }
@@ -1066,7 +1066,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadTevRegAnimation(u32 index, u32 id, u
     gabi::call_ptr<void>(target, str);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mTevColors.getAddress();
     u32 found = resourceFindName(entries,
-                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     if (s32(found) < 0) {
         return;
     }
@@ -1101,7 +1101,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadTexture(u32 index, u32 id, u32 name,
     gabi::call_ptr<void>(target, str);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mTextures.getAddress();
     u32 found = resourceFindName(entries,
-                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     if (s32(found) < 0) {
         return;
     }
@@ -1135,7 +1135,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadModel(u32 index, u32 id, u32 name, u
     gabi::call_ptr<void>(target, str);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mModels.getAddress();
     u32 found = resourceFindName(entries,
-                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     if (s32(found) < 0) {
         return;
     }
@@ -1149,7 +1149,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadModel(u32 index, u32 id, u32 name, u
     u32 archiveName = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpArchiveName.v;
     StringAssure(archiveName);
     gabi::Local<ResourceSafeStringRaw> copy;
-    copy->mStringTop = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mStringTop.get();
+    copy->mTextPtr = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mTextPtr.get();
     copy->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
     u32 result = resourceCreateModel(resource, resourceId, copy.get(), heap);
     resourceCallSetResourceIndex(info, index, result);
@@ -1169,7 +1169,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadSkeletalAnimation(u32 index, u32 id,
     gabi::call_ptr<void>(target, str);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mSkeletalAnimations.getAddress();
     u32 found = resourceFindName(entries,
-                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     if (s32(found) < 0) {
         return;
     }
@@ -1180,7 +1180,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadSkeletalAnimation(u32 index, u32 id,
     gabi::call_ptr<void>(target, str);
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mSkeletalAnimations.getAddress();
     found = resourceFindName(entries,
-                             gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                             gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
     entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mSkeletalAnimations.getAddress();
     archive = mpArchive.v;
@@ -1192,7 +1192,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadSkeletalAnimation(u32 index, u32 id,
         gabi::at<resorce_hd::ResourceSafeStringVirtualsHD>(nameVt)->mAssureTermination.get();
     gabi::call_ptr<void>(nameTarget, archiveName);
     gabi::Local<ResourceSafeStringRaw> copy;
-    copy->mStringTop = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mStringTop.get();
+    copy->mTextPtr = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mTextPtr.get();
     copy->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
     u32 result = resourceCreateSkeletalAnimation(resource, copy.get(), heap);
     resourceCallSetResourceIndex(info, index, result);
@@ -1212,7 +1212,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadTexturePatternAnimation(u32 index, u
     gabi::call_ptr<void>(target, str);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mTexturePatterns.getAddress();
     u32 found = resourceFindName(entries,
-                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     if (s32(found) < 0) {
         return;
     }
@@ -1253,9 +1253,9 @@ static u32 ArchiveInfoCtor(u32 self, u32 name, u32 archive, u32 parent, u32 heap
     if (tree) {
         gabi::at<resorce_hd::ResourcePool>(tree)->mCapacity = 0;
         gabi::at<resorce_hd::ResourcePool>(tree)->mRoot.v = 0;
-        gabi::at<resorce_hd::ResourcePool>(tree)->mStorage.v = 0;
+        gabi::at<resorce_hd::ResourcePool>(tree)->mNodeStorage.v = 0;
         gabi::at<resorce_hd::ResourcePool>(tree)->mCount = 0;
-        gabi::at<resorce_hd::ResourcePool>(tree)->mFree.v = 0;
+        gabi::at<resorce_hd::ResourcePool>(tree)->mFreeHead.v = 0;
     }
     gabi::at<resorce_hd::ResourceArchiveInfoHD>(self)->mpParentHeap.v = parent;
     gabi::at<resorce_hd::ResourceArchiveInfoHD>(self)->mIdResCount = 0;
@@ -1264,16 +1264,16 @@ static u32 ArchiveInfoCtor(u32 self, u32 name, u32 archive, u32 parent, u32 heap
     u32 nameVt = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->__vtbl.get(),
         target =
             gabi::at<resorce_hd::ResourceSafeStringVirtualsHD>(nameVt)->mAssureTermination.get();
-    u32 destination = gabi::at<resorce_hd::ResourceSafeStringHD>(rawString)->mStringTop.get();
+    u32 destination = gabi::at<resorce_hd::ResourceSafeStringHD>(rawString)->mTextPtr.get();
     gabi::call_ptr<void>(target, name);
-    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get());
+    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get());
     u32 capacity = gabi::at<resorce_hd::BufferedString>(rawString)->mCapacity.get();
     if (s32(length) >= s32(capacity)) {
         length = capacity - 1;
     }
     StringAssure(name);
     resourceCopyBytes(destination,
-                      gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get(), length,
+                      gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get(), length,
                       0u);
     gabi::at<be<u8>>(destination)[length] = 0;
     archive = gabi::at<resorce_hd::ResourceArchiveInfoHD>(self)->mpArchive.v;
@@ -1294,25 +1294,25 @@ u32 resorce_hd::ResourceControlHD::selectStageHeap(u32 name, u32 path, u32 heap)
     gabi::Local<ResourceSafeStringRaw> needle;
     u32 needleAddress = gabi::ea(needle.get());
     needle->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    needle->mStringTop = gabi::guest_addr("LOD");
+    needle->mTextPtr = gabi::guest_addr("LOD");
     StringAssure(name);
-    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get());
+    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get());
     StringAssure(needleAddress);
     u32 needleLength =
-        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mStringTop.get());
+        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mTextPtr.get());
     s32 end = s32(length - needleLength), found = -1;
     if (end >= 0) {
         for (s32 i = 0; i <= end; ++i) {
             gabi::Local<ResourceSafeStringRaw> part;
             u32 partAddress = gabi::ea(part.get());
             part->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-            part->mStringTop =
-                gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get() + u32(i);
+            part->mTextPtr =
+                gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get() + u32(i);
             resourceAssureSafeString(partAddress);
             StringAssure(partAddress);
-            u32 left = gabi::at<resorce_hd::ResourceSafeStringHD>(partAddress)->mStringTop.get();
+            u32 left = gabi::at<resorce_hd::ResourceSafeStringHD>(partAddress)->mTextPtr.get();
             StringAssure(needleAddress);
-            u32 right = gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mStringTop.get();
+            u32 right = gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mTextPtr.get();
             bool equal = left == right || s32(needleLength) <= 0;
             if (!equal) {
                 equal = true;
@@ -1344,27 +1344,27 @@ static s32 FindSubstring(u32 name, const char *literal, bool assure = true) {
     gabi::Local<ResourceSafeStringRaw> needle;
     u32 needleAddress = gabi::ea(needle.get());
     needle->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    needle->mStringTop = gabi::guest_addr(literal);
+    needle->mTextPtr = gabi::guest_addr(literal);
     if (assure) {
         StringAssure(name);
     }
-    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get());
+    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get());
     StringAssure(needleAddress);
     u32 needleLength =
-        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mStringTop.get());
+        Length(gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mTextPtr.get());
     s32 end = s32(length - needleLength), found = -1;
     if (end >= 0) {
         for (s32 i = 0; i <= end; ++i) {
             gabi::Local<ResourceSafeStringRaw> part;
             u32 partAddress = gabi::ea(part.get());
             part->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-            part->mStringTop =
-                gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get() + u32(i);
+            part->mTextPtr =
+                gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get() + u32(i);
             resourceAssureSafeString(partAddress);
             StringAssure(partAddress);
-            u32 left = gabi::at<resorce_hd::ResourceSafeStringHD>(partAddress)->mStringTop.get();
+            u32 left = gabi::at<resorce_hd::ResourceSafeStringHD>(partAddress)->mTextPtr.get();
             StringAssure(needleAddress);
-            u32 right = gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mStringTop.get();
+            u32 right = gabi::at<resorce_hd::ResourceSafeStringHD>(needleAddress)->mTextPtr.get();
             bool equal = left == right || s32(needleLength) <= 0;
             if (!equal) {
                 equal = true;
@@ -1393,16 +1393,16 @@ static bool LiteralEquals(u32 name, const char *literal, bool leftInR4 = false) 
     gabi::Local<ResourceSafeStringRaw> comparison;
     u32 object = gabi::ea(comparison.get());
     comparison->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    comparison->mStringTop = gabi::guest_addr(literal);
+    comparison->mTextPtr = gabi::guest_addr(literal);
     StringAssure(name);
     StringAssure(name);
-    u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     StringAssure(object);
-    u32 other = gabi::at<resorce_hd::ResourceSafeStringHD>(object)->mStringTop.get();
+    u32 other = gabi::at<resorce_hd::ResourceSafeStringHD>(object)->mTextPtr.get();
     if (saved == other) {
         return true;
     }
-    return EqualBounded(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get(), other,
+    return EqualBounded(gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get(), other,
                         leftInR4);
 }
 /* 02603740 */
@@ -1446,10 +1446,10 @@ static void StorePool(u32 pool, u32 hash, u32 resource, u32 nodeVtable) {
     s32 capacity = s32(gabi::at<resorce_hd::ResourcePool>(pool)->mCapacity);
     s32 count = s32(gabi::at<resorce_hd::ResourcePool>(pool)->mCount);
     if (count < capacity) {
-        u32 node = gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v;
+        u32 node = gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v;
         if (node) {
             u32 next = gabi::at<resorce_hd::ResourceNode>(node)->mLeft.v;
-            gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v = next;
+            gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v = next;
         }
         if (node) {
             gabi::at<resorce_hd::ResourceNode>(node)->mKey = hash;
@@ -1487,7 +1487,7 @@ u32 resorce_hd::ResourceControlHD::setRes(u32 archiveName, u32 path, u32 parent)
     StringAssure(archiveName);
     gabi::Local<ResourceSafeStringRaw> copy;
     copy->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    copy->mStringTop = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mStringTop.get();
+    copy->mTextPtr = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mTextPtr.get();
     u32 heap = resourceCreateSolidHeap(0u, copy.get(), parentHeap, 1u, 0u);
     u32 archive = resourceAllocateOnHeap(36u, heap, 4u);
     if (archive) {
@@ -1502,13 +1502,13 @@ u32 resorce_hd::ResourceControlHD::setRes(u32 archiveName, u32 path, u32 parent)
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[0] = 0;
     gabi::at<resorce_hd::BufferedString>(str)->mCapacity = 128;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[127] = 0;
-    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop = str + 12;
+    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr = str + 12;
     gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl = resorce_hd::RESOURCE_STRING_VTABLE;
     StringAssure(path);
-    u32 pathChars = gabi::at<resorce_hd::ResourceSafeStringHD>(path)->mStringTop.get();
+    u32 pathChars = gabi::at<resorce_hd::ResourceSafeStringHD>(path)->mTextPtr.get();
     StringAssure(archiveName);
     resourceFormatPath(str, "%s_%s", pathChars,
-                       gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mStringTop.get());
+                       gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mTextPtr.get());
     u32 loaded = resourceLoadArchiveFile(l_resourceArchiveLoader.mpObject.v.get(), str);
     if (!loaded) {
         DestroyHeap(heap);
@@ -1528,9 +1528,9 @@ u32 resorce_hd::ResourceControlHD::setRes(u32 archiveName, u32 path, u32 parent)
     StorePool(control + 0x1028, hash, info, resorce_hd::PATH_NODE_VTABLE);
     if (parent) {
         gabi::at<resorce_hd::ResourceHeapHD>(parent)->mpName.v =
-            gabi::at<resorce_hd::ResourcePathInfoHD>(info)->mArchivePath.mStringTop.get();
+            gabi::at<resorce_hd::ResourcePathInfoHD>(info)->mArchivePath.mTextPtr.get();
     }
-    u32 value = gabi::at<resorce_hd::ResourcePathInfoHD>(info)->mArchivePath.mStringTop.get();
+    u32 value = gabi::at<resorce_hd::ResourcePathInfoHD>(info)->mArchivePath.mTextPtr.get();
     auto *heapVt = gabi::at<resorce_hd::ResourceHeapHD>(heap)->__vtbl.get();
     gabi::at<resorce_hd::ResourceHeapHD>(heap)->mpName.v = value;
     u32 target = heapVt->mAdjust.get();
@@ -1547,7 +1547,7 @@ u32 resorce_hd::ResourceControlHD::setArchive(u32 name, u32 parent, u32 arg6) {
     StringAssure(name);
     gabi::Local<ResourceSafeStringRaw> copy;
     copy->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    copy->mStringTop = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get();
+    copy->mTextPtr = gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get();
     u32 heap = resourceCreateSolidHeap(0u, copy.get(), parentHeap, 1u, 0u);
     u32 archive = resourceAllocateOnHeap(36u, heap, 4u);
     if (archive) {
@@ -1579,10 +1579,10 @@ u32 resorce_hd::ResourceControlHD::setArchive(u32 name, u32 parent, u32 arg6) {
     u32 parentValue = 0;
     if (parent) {
         parentValue =
-            gabi::at<resorce_hd::ResourceArchiveInfoHD>(info)->mArchiveName.mStringTop.get();
+            gabi::at<resorce_hd::ResourceArchiveInfoHD>(info)->mArchiveName.mTextPtr.get();
         gabi::at<resorce_hd::ResourceHeapHD>(parent)->mpName.v = parentValue;
     }
-    u32 value = gabi::at<resorce_hd::ResourceArchiveInfoHD>(info)->mArchiveName.mStringTop.get();
+    u32 value = gabi::at<resorce_hd::ResourceArchiveInfoHD>(info)->mArchiveName.mTextPtr.get();
     auto *vt = gabi::at<resorce_hd::ResourceHeapHD>(heap)->__vtbl.get();
     gabi::at<resorce_hd::ResourceHeapHD>(heap)->mpName.v = value;
     u32 resizeTarget = vt->mAdjust.get();
@@ -1633,16 +1633,16 @@ u32 resorce_hd::ResourceControlHD::getPathRes(u32 archiveName, u32 path, u32 res
     u32 control = gabi::ea(this);
     gabi::Local<StringBuffer128> buffer;
     u32 str = gabi::ea(buffer.get());
-    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop = str + 12;
+    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr = str + 12;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[0] = 0;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[127] = 0;
     gabi::at<resorce_hd::BufferedString>(str)->mCapacity = 128;
     gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl = resorce_hd::RESOURCE_STRING_VTABLE;
     StringAssure(path);
-    u32 pathChars = gabi::at<resorce_hd::ResourceSafeStringHD>(path)->mStringTop.get();
+    u32 pathChars = gabi::at<resorce_hd::ResourceSafeStringHD>(path)->mTextPtr.get();
     StringAssure(archiveName);
     resourceFormatPath(str, "%s_%s", pathChars,
-                       gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mStringTop.get());
+                       gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mTextPtr.get());
     u32 hash = StringHash(str);
     u32 root = mPathInfo.mPool.mRoot.v;
     gabi::Local<be<u32>> key;
@@ -1705,12 +1705,12 @@ void resorce_hd::ResourceControlHD::deletePathRes(u32 name, u32 path) {
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[0] = 0;
     gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl = resorce_hd::RESOURCE_STRING_VTABLE;
     gabi::at<resorce_hd::BufferedString>(str)->mCapacity = 128;
-    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop = str + 12;
+    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr = str + 12;
     StringAssure(path);
-    u32 pathChars = gabi::at<resorce_hd::ResourceSafeStringHD>(path)->mStringTop.get();
+    u32 pathChars = gabi::at<resorce_hd::ResourceSafeStringHD>(path)->mTextPtr.get();
     StringAssure(name);
     resourceFormatPath(str, "%s_%s", pathChars,
-                       gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mStringTop.get());
+                       gabi::at<resorce_hd::ResourceSafeStringHD>(name)->mTextPtr.get());
     u32 hash = StringHash(str);
     u32 root = mPathInfo.mPool.mRoot.v;
     gabi::Local<be<u32>> key;
@@ -1752,7 +1752,7 @@ void resorce_hd::ResourceControlHD::deletePathRes(u32 name, u32 path) {
     }
 }
 static void AppendString(u32 buffer, u32 source) {
-    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop.get();
+    u32 data = gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr.get();
     u32 oldLength = Length(data), offset = oldLength;
     u32 vt = gabi::at<resorce_hd::ResourceSafeStringHD>(source)->__vtbl.get(),
         target = gabi::at<resorce_hd::ResourceSafeStringVirtualsHD>(vt)->mAssureTermination.get();
@@ -1760,7 +1760,7 @@ static void AppendString(u32 buffer, u32 source) {
         offset = 0;
     }
     gabi::call_ptr<void>(target, source);
-    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mStringTop.get());
+    u32 length = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mTextPtr.get());
     u32 left = gabi::at<resorce_hd::BufferedString>(buffer)->mCapacity.get() - offset;
     if (s32(length) >= s32(left)) {
         length = left - 1;
@@ -1771,7 +1771,7 @@ static void AppendString(u32 buffer, u32 source) {
         u32 destination = data + offset;
         gabi::call_ptr<void>(target, source);
         resourceCopyBytes(destination,
-                          gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mStringTop.get(),
+                          gabi::at<resorce_hd::ResourceSafeStringHD>(source)->mTextPtr.get(),
                           length, 0u);
         u32 total = offset + length;
         if (s32(total) > s32(oldLength)) {
@@ -1815,16 +1815,16 @@ void resorce_hd::ResourceArchiveInfoHD::loadResourceTable(u32 name, u32 heap) {
         gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl =
             resorce_hd::RESOURCE_STRING_VTABLE;
         gabi::at<resorce_hd::BufferedString>(str)->mCapacity = 128;
-        gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop = str + 12;
+        gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr = str + 12;
         gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[0] = 0;
         u32 values =
             gabi::at<resorce_hd::ResourceTableRowHD>(resourceTable + resourceRow * 12)->mValues.v;
         gabi::Local<ResourceSafeStringRaw> resource;
         resource->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-        resource->mStringTop = gabi::at<resorce_hd::ResourceTableEntryHD>(values + i * 8)->mpName.v;
+        resource->mTextPtr = gabi::at<resorce_hd::ResourceTableEntryHD>(values + i * 8)->mpName.v;
         resourceTerminateString(str);
         AppendString(str, gabi::ea(resource.get()));
-        u32 chars = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get();
+        u32 chars = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get();
         values =
             gabi::at<resorce_hd::ResourceTableRowHD>(resourceTable + resourceRow * 12)->mValues.v;
         u8 first = gabi::at<be<u8>>(chars)->get();
@@ -1840,15 +1840,15 @@ void resorce_hd::ResourceArchiveInfoHD::loadResourceTable(u32 name, u32 heap) {
             u32 names = gabi::at<resorce_hd::ResourceTableRowHD>(idTable + idRow * 12)->mValues.v;
             gabi::Local<ResourceSafeStringRaw> candidate;
             candidate->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-            candidate->mStringTop =
+            candidate->mTextPtr =
                 gabi::at<resorce_hd::ResourceTableEntryHD>(names + id * 8)->mpName.v;
             StringAssure(str);
             StringAssure(str);
-            u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get();
+            u32 saved = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get();
             StringAssure(gabi::ea(candidate.get()));
-            u32 other = candidate->mStringTop.get();
+            u32 other = candidate->mTextPtr.get();
             if (saved != other &&
-                !EqualBounded(gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get(),
+                !EqualBounded(gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get(),
                               other)) {
                 continue;
             }
@@ -1878,7 +1878,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadMaterialModel(u32 index, u32 id, u32
     StripExtension(str, name, ".");
     gabi::Local<ResourceSafeStringRaw> suffix;
     suffix->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    suffix->mStringTop = gabi::guest_addr("_bmt");
+    suffix->mTextPtr = gabi::guest_addr("_bmt");
     StringAssure(str);
     AppendString(str, gabi::ea(suffix.get()));
     u32 vt = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl.get(),
@@ -1888,7 +1888,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadMaterialModel(u32 index, u32 id, u32
     gabi::call_ptr<void>(target, str);
     u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mModels.getAddress();
     u32 found = resourceFindName(entries,
-                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get());
+                                 gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get());
     if (s32(found) < 0) {
         return;
     }
@@ -1902,7 +1902,7 @@ void resorce_hd::ResourceArchiveInfoHD::loadMaterialModel(u32 index, u32 id, u32
     u32 archiveName = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpArchiveName.v;
     StringAssure(archiveName);
     gabi::Local<ResourceSafeStringRaw> copy;
-    copy->mStringTop = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mStringTop.get();
+    copy->mTextPtr = gabi::at<resorce_hd::ResourceSafeStringHD>(archiveName)->mTextPtr.get();
     copy->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
     u32 result = resourceCreateModel(resource, resourceId, copy.get(), heap);
     resourceCallSetResourceIndex(info, index, result);
@@ -1919,40 +1919,40 @@ void resorce_hd::ResourceArchiveInfoHD::loadExtraResources(u32 heap) {
     }
     u32 data = resourceAllocateArray(count * 32, heap, 4u);
     if (data) {
-        mExtraResources.mFree.v = data;
+        mExtraResources.mFreeHead.v = data;
         mExtraResources.mCapacity = count;
         for (u32 i = 0; i + 1 < count; ++i) {
             gabi::at<resorce_hd::ResourceNode>(data + i * 32)->mLeft.v = data + (i + 1) * 32;
         }
         gabi::at<resorce_hd::ResourceNode>(data + (count - 1) * 32)->mLeft.v = 0;
-        mExtraResources.mStorage.v = data;
+        mExtraResources.mNodeStorage.v = data;
     }
     gabi::Local<StringBuffer128> buffer;
     u32 str = gabi::ea(buffer.get());
-    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop = str + 12;
+    gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr = str + 12;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[127] = 0;
     gabi::at<resorce_hd::BufferedString>(str)->mCapacity = 128;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(str)->mBuffer[0] = 0;
     gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl = resorce_hd::RESOURCE_STRING_VTABLE;
     for (u32 i = 0; i < count; ++i) {
-        u32 destination = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mStringTop.get();
+        u32 destination = gabi::at<resorce_hd::ResourceSafeStringHD>(str)->mTextPtr.get();
         archive = mpArchive.v;
         header = gabi::at<resorce_hd::ResourceArchiveHD>(archive)->mpHeader.v;
         u32 entries = gabi::at<resorce_hd::ResourceHeaderHD>(header)->mRawResources.getAddress();
         gabi::Local<ResourceSafeStringRaw> name;
         name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-        name->mStringTop = gabi::at<resorce_hd::ResourceDictionaryEntryViewHD>(entries + i * 16)
+        name->mTextPtr = gabi::at<resorce_hd::ResourceDictionaryEntryViewHD>(entries + i * 16)
                                ->mName.getAddress();
         u32 nameAddress = gabi::ea(name.get());
         resourceAssureSafeString(nameAddress);
-        u32 n = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mStringTop.get());
+        u32 n = Length(gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mTextPtr.get());
         u32 capacity = gabi::at<resorce_hd::BufferedString>(str)->mCapacity.get();
         if (s32(n) >= s32(capacity)) {
             n = capacity - 1;
         }
         StringAssure(nameAddress);
         resourceCopyBytes(destination,
-                          gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mStringTop.get(),
+                          gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mTextPtr.get(),
                           n, 0u);
         gabi::at<be<u8>>(destination)[n] = 0;
         if (FindSubstring(str, ".bas") < 0) {
@@ -1969,9 +1969,9 @@ void resorce_hd::ResourceArchiveInfoHD::loadExtraResources(u32 heap) {
         s32 capacityCount = s32(mExtraResources.mCapacity), used = s32(mExtraResources.mCount);
         u32 pool = info + 104;
         if (used < capacityCount) {
-            u32 node = gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v;
+            u32 node = gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v;
             if (node) {
-                gabi::at<resorce_hd::ResourcePool>(pool)->mFree.v =
+                gabi::at<resorce_hd::ResourcePool>(pool)->mFreeHead.v =
                     gabi::at<resorce_hd::ResourceNode>(node)->mLeft.v;
             }
             if (node) {
@@ -2014,7 +2014,7 @@ static void Initialize128(u32 buffer, u32 vt = resorce_hd::RESOURCE_STRING_VTABL
     }
     gabi::at<resorce_hd::BufferedString>(buffer)->mCapacity = 128;
     gabi::at<resorce_hd::ResourceStringBuffer128HD>(buffer)->mBuffer[127] = 0;
-    gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mStringTop = buffer + 12;
+    gabi::at<resorce_hd::ResourceSafeStringHD>(buffer)->mTextPtr = buffer + 12;
 }
 static u32 ArchiveHeader(u32 info) {
     return gabi::at<resorce_hd::ResourceArchiveHD>(
@@ -2025,11 +2025,11 @@ static void FormatResourceName(u32 str, u32 entry, const char *format) {
     gabi::Local<ResourceSafeStringRaw> name;
     u32 object = gabi::ea(name.get());
     name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-    name->mStringTop =
+    name->mTextPtr =
         gabi::at<resorce_hd::ResourceDictionaryEntryViewHD>(entry)->mName.getAddress();
     resourceAssureSafeString(object);
     resourceFormatName(str, format,
-                       gabi::at<resorce_hd::ResourceSafeStringHD>(object)->mStringTop.get());
+                       gabi::at<resorce_hd::ResourceSafeStringHD>(object)->mTextPtr.get());
 }
 /* 026057F4 */
 void resorce_hd::ResourcePathInfoHD::loadResource() {
@@ -2056,9 +2056,9 @@ void resorce_hd::ResourcePathInfoHD::loadResource() {
         u32 resource =
             gabi::at<resorce_hd::ResourceDictionaryEntryViewHD>(entry)->mResource.getAddress();
         StringAssure(info + 16);
-        u32 archiveChars = mArchiveName.mStringTop.get();
+        u32 archiveChars = mArchiveName.mTextPtr.get();
         StringAssure(info + 92);
-        u32 pathChars = mArchivePath.mStringTop.get();
+        u32 pathChars = mArchivePath.mTextPtr.get();
         u32 archive = mpArchive.v;
         u32 resourceId = resourceArchiveGetId(archive, i);
         gabi::Local<u8[76]> label;
@@ -2074,12 +2074,12 @@ void resorce_hd::ResourcePathInfoHD::loadResource() {
         gabi::Local<ResourceSafeStringRaw> name;
         u32 nameAddress = gabi::ea(name.get());
         name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-        name->mStringTop =
+        name->mTextPtr =
             gabi::at<resorce_hd::ResourceModelHeaderHD>(resource)->mName.getAddress();
         resourceAssureSafeString(nameAddress);
         resourceFormatName(
             str, "%s.bmd",
-            gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mStringTop.get());
+            gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mTextPtr.get());
         resourceCallSetResource(info, str, result);
     }
     for (u32 i = 0; i < skeletalAnimations; ++i) {
@@ -2096,7 +2096,7 @@ void resorce_hd::ResourcePathInfoHD::loadResource() {
                 i * 16;
         gabi::Local<ResourceSafeStringRaw> name;
         name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-        name->mStringTop =
+        name->mTextPtr =
             gabi::at<resorce_hd::ResourceDictionaryEntryViewHD>(entry)->mName.getAddress();
         resourceCallSetResource(info, gabi::ea(name.get()), result);
     }
@@ -2203,11 +2203,11 @@ void resorce_hd::ResourcePathInfoHD::loadResource() {
         gabi::Local<ResourceSafeStringRaw> name;
         u32 nameAddress = gabi::ea(name.get());
         name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-        name->mStringTop =
+        name->mTextPtr =
             gabi::at<resorce_hd::ResourceDictionaryEntryViewHD>(entry)->mName.getAddress();
         resourceAssureSafeString(nameAddress);
         u32 length =
-            Length(gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mStringTop.get());
+            Length(gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mTextPtr.get());
         u32 capacity = gabi::at<resorce_hd::BufferedString>(str)->mCapacity.get(),
             vt = gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->__vtbl.get();
         if (s32(length) >= s32(capacity)) {
@@ -2217,7 +2217,7 @@ void resorce_hd::ResourcePathInfoHD::loadResource() {
             gabi::at<resorce_hd::ResourceSafeStringVirtualsHD>(vt)->mAssureTermination.get(),
             nameAddress);
         resourceCopyBytes(str + 12,
-                          gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mStringTop.get(),
+                          gabi::at<resorce_hd::ResourceSafeStringHD>(nameAddress)->mTextPtr.get(),
                           length, 0u);
         gabi::at<resorce_hd::ResourceSafeStringHD>(str)->__vtbl =
             resorce_hd::RESOURCE_STRING_VTABLE;
@@ -2231,7 +2231,7 @@ void resorce_hd::ResourcePathInfoHD::loadResource() {
                     ->mRawResources.getAddress() +
                 i * 16;
         name->__vtbl = resorce_hd::SAFE_STRING_VTABLE;
-        name->mStringTop =
+        name->mTextPtr =
             gabi::at<resorce_hd::ResourceDictionaryEntryViewHD>(entry)->mName.getAddress();
         resourceCallSetResource(info, gabi::ea(name.get()), resource);
     }
@@ -2381,33 +2381,33 @@ static void resourceValueTree_empty(void* self) {}
 /* 0260ABFC */
 static void resourceArchiveNode_release(resorce_hd::ResourceNode* self) {
     resorce_hd::ResourcePool* pool = self->mpPool;
-    self->mLeft = pool->mFree;
+    self->mLeft = pool->mFreeHead;
     u32 count = pool->mCount;
-    pool->mFree = self;
+    pool->mFreeHead = self;
     pool->mCount = count - 1;
 }
 
 /* 0260AC1C */
 static void resourcePathNode_release(resorce_hd::ResourceNode* self) {
     resorce_hd::ResourcePool* pool = self->mpPool;
-    self->mLeft = pool->mFree;
+    self->mLeft = pool->mFreeHead;
     u32 count = pool->mCount;
-    pool->mFree = self;
+    pool->mFreeHead = self;
     pool->mCount = count - 1;
 }
 
 /* 0260AC40 */
 static void resourceValueNode_release(resorce_hd::ResourceNode* self) {
     resorce_hd::ResourcePool* pool = self->mpPool;
-    self->mLeft = pool->mFree;
+    self->mLeft = pool->mFreeHead;
     u32 count = pool->mCount;
-    pool->mFree = self;
+    pool->mFreeHead = self;
     pool->mCount = count - 1;
 }
 
 /* 0260A828 */
 static void resourceBufferedString_terminate(resorce_hd::BufferedString* self) {
-    u32 data = self->mStringTop;
+    u32 data = self->mTextPtr;
     u32 capacity = self->mCapacity;
     // HD: effective-address arithmetic wraps before the byte store.
     *gabi::at<be<u8>>(data + capacity - 1) = 0;
@@ -2744,13 +2744,13 @@ static resorce_hd::FixedString64* resourceFormatString64__ct(resorce_hd::FixedSt
         destination = static_cast<resorce_hd::BufferedString*>(operator_new(sizeof(*destination)));
     }
     if (destination != nullptr) {
-        destination->mStringTop = gabi::ea(self->mBuffer);
+        destination->mTextPtr = gabi::ea(self->mBuffer);
         destination->__vtbl = resorce_hd::BUFFERED_STRING_VTABLE;
         destination->mCapacity = sizeof(self->mBuffer);
         self->mBuffer[63] = 0;
     }
     self->__vtbl = resorce_hd::FIXED_STRING_VTABLE;
-    be<u8>* data = gabi::at<be<u8>>(self->mStringTop);
+    be<u8>* data = gabi::at<be<u8>>(self->mTextPtr);
     *data = 0;
     self->__vtbl = resorce_hd::FORMAT_STRING_VTABLE;
     frame->mArguments.mGpr = 2;

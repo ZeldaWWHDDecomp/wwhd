@@ -139,19 +139,19 @@ static inline bool str_equal(u32 a, u32 b) {
 static inline bool ss_eq(u32 a, u32 b) {
     vss(a);
     vss(a);
-    u32 ta = (u32)GameInfoHD::view<SafeString>(a)->mStringTop;
+    u32 ta = (u32)GameInfoHD::view<SafeString>(a)->mTextPtr;
     vss(b);
-    return str_equal(ta, (u32)GameInfoHD::view<SafeString>(b)->mStringTop);
+    return str_equal(ta, (u32)GameInfoHD::view<SafeString>(b)->mTextPtr);
 }
 /* the start stage name (gi + 0x5134) compared with a literal: literal SafeString first */
 static inline bool startStageIs(u32 lit) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> b;
     u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get());
-    GameInfoHD::view<SafeString>(aa)->mStringTop = lit;
+    GameInfoHD::view<SafeString>(aa)->mTextPtr = lit;
     GameInfoHD::view<SafeString>(aa)->__vtbl = SS_VT;
     u32 g = gameInfoAddress();
-    GameInfoHD::view<SafeString>(bb)->mStringTop = g + 0x5134;
+    GameInfoHD::view<SafeString>(bb)->mTextPtr = g + 0x5134;
     GameInfoHD::view<SafeString>(bb)->__vtbl = SS_VT;
     return ss_eq(aa, bb);
 }
@@ -159,7 +159,7 @@ static inline bool startStageIs(u32 lit) {
 static inline bool ssIs(u32 ss, u32 lit) {
     gabi::Local<SafeString> l;
     u32 ll = gabi::ea(l.get());
-    GameInfoHD::view<SafeString>(ll)->mStringTop = lit;
+    GameInfoHD::view<SafeString>(ll)->mTextPtr = lit;
     GameInfoHD::view<SafeString>(ll)->__vtbl = SS_VT;
     return ss_eq(ss, ll);
 }
@@ -209,7 +209,7 @@ u32 hdGameInfo_setExtraStageRes(u32 i_stage) {
         for (u32 i = 0; i < 3; i++) {
             u32 rc = resctl();
             GameInfoHD::view<SafeString>(nn)->__vtbl = SS_VT;
-            GameInfoHD::view<SafeString>(nn)->mStringTop = GameInfoMemory2::ld(0x101D5DDC + 4 * i);
+            GameInfoHD::view<SafeString>(nn)->mTextPtr = GameInfoMemory2::ld(0x101D5DDC + 4 * i);
             ok &= gameInfo2_setExtraArchive(rc, i_stage, nn);
         }
         return ok;
@@ -221,7 +221,7 @@ u32 hdGameInfo_setExtraStageRes(u32 i_stage) {
             u32 name = GameInfoMemory2::ld(0x101D5DC8 + 4 * i);
             u32 rc = resctl();
             GameInfoHD::view<SafeString>(nn)->__vtbl = SS_VT;
-            GameInfoHD::view<SafeString>(nn)->mStringTop = name;
+            GameInfoHD::view<SafeString>(nn)->mTextPtr = name;
             ok &= gameInfo2_setStageArchive(rc, i_stage, nn, 0);
         }
         gabi::Local<SafeString> m;
@@ -229,7 +229,7 @@ u32 hdGameInfo_setExtraStageRes(u32 i_stage) {
         for (u32 i = 0; i < 2; i++) {
             u32 rc = resctl();
             GameInfoHD::view<SafeString>(mm)->__vtbl = SS_VT;
-            GameInfoHD::view<SafeString>(mm)->mStringTop = GameInfoMemory2::ld(0x101D5DD0 + 4 * i);
+            GameInfoHD::view<SafeString>(mm)->mTextPtr = GameInfoMemory2::ld(0x101D5DD0 + 4 * i);
             ok &= gameInfo2_setObjectArchive(rc, mm, 0);
         }
         return ok;
@@ -239,7 +239,7 @@ u32 hdGameInfo_setExtraStageRes(u32 i_stage) {
         u32 nn = gabi::ea(n.get());
         u32 rc = resctl();
         GameInfoHD::view<SafeString>(nn)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(nn)->mStringTop = GameInfoMemory2::ld(0x101D5DD8);
+        GameInfoHD::view<SafeString>(nn)->mTextPtr = GameInfoMemory2::ld(0x101D5DD8);
         return gameInfo2_setExtraArchive(rc, i_stage, nn) & 1;
     }
     return ok;
@@ -248,14 +248,14 @@ u32 hdGameInfo_setExtraStageRes(u32 i_stage) {
 /* FixedSafeString<32> initialised from a SafeString temporary {i_arc, vt}: strlen (0 beyond
  * 0x40000), clamped to size - 1, copied with 028FDC00 and terminated */
 static inline void fss_from(u32 fs, u32 ss, u32 i_arc) {
-    GameInfoHD::view<SafeString>(ss)->mStringTop = i_arc;
+    GameInfoHD::view<SafeString>(ss)->mTextPtr = i_arc;
     GameInfoHD::view<SafeString>(ss)->__vtbl = SS_VT;
-    GameInfoHD::view<GameInfoHD::FixedSafeString32>(fs)->mStringTop = fs + 0xC;
+    GameInfoHD::view<GameInfoHD::FixedSafeString32>(fs)->mTextPtr = fs + 0xC;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(fs)->mBufferSize = 0x20;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(fs)->mBuffer[31] = 0;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(fs)->__vtbl = 0x1004B918;
     gameInfo2_assureTermination(ss);
-    u32 s = (u32)GameInfoHD::view<SafeString>(ss)->mStringTop;
+    u32 s = (u32)GameInfoHD::view<SafeString>(ss)->mTextPtr;
     s32 len = 0;
     if ((u8)*GameInfoHD::view<be<u8>>(s) != 0) {
         for (;;) {
@@ -272,7 +272,7 @@ static inline void fss_from(u32 fs, u32 ss, u32 i_arc) {
     if (len >= size)
         len = size - 1;
     vss(ss);
-    gameInfo2_OSBlockMove(fs + 0xC, (u32)GameInfoHD::view<SafeString>(ss)->mStringTop, len, 0);
+    gameInfo2_OSBlockMove(fs + 0xC, (u32)GameInfoHD::view<SafeString>(ss)->mTextPtr, len, 0);
     *GameInfoHD::view<be<u8>>(fs + 0xC + (u32)len) = 0;
 }
 /* the stage name archive: "ma3room" for "ma2room" after event 0x1820, else the start stage */
@@ -297,7 +297,7 @@ u32 hdGameInfo_dComIfG_setStageRes(u32 i_arc) {
     u32 a = gabi::ea(arc.get()), s = gabi::ea(stg.get());
     fss_from(a, gabi::ea(ss.get()), i_arc);
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[0] = 0;
-    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mStringTop = s + 0xC;
+    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mTextPtr = s + 0xC;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[31] = 0;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(a)->__vtbl = FSS_VT;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBufferSize = 0x20;
@@ -310,8 +310,8 @@ u32 hdGameInfo_dComIfG_setStageRes(u32 i_arc) {
         u32 x = gabi::ea(n1.get()), y = gabi::ea(n2.get());
         GameInfoHD::view<SafeString>(x)->__vtbl = SS_VT;
         GameInfoHD::view<SafeString>(y)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(x)->mStringTop = gabi::guest_addr("sea");
-        GameInfoHD::view<SafeString>(y)->mStringTop = gabi::guest_addr("Stage");
+        GameInfoHD::view<SafeString>(x)->mTextPtr = gabi::guest_addr("sea");
+        GameInfoHD::view<SafeString>(y)->mTextPtr = gabi::guest_addr("Stage");
         gameInfo2_setStageArchive_discard(resctl(), x, y, 0);
     }
     if (hdGameInfo_isEndStageRes(a, s) != 0) {
@@ -320,8 +320,8 @@ u32 hdGameInfo_dComIfG_setStageRes(u32 i_arc) {
         u32 x = gabi::ea(n1.get()), y = gabi::ea(n2.get());
         GameInfoHD::view<SafeString>(x)->__vtbl = SS_VT;
         GameInfoHD::view<SafeString>(y)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(x)->mStringTop = gabi::guest_addr("Hyrule");
-        GameInfoHD::view<SafeString>(y)->mStringTop = gabi::guest_addr("Room0");
+        GameInfoHD::view<SafeString>(x)->mTextPtr = gabi::guest_addr("Hyrule");
+        GameInfoHD::view<SafeString>(y)->mTextPtr = gabi::guest_addr("Room0");
         gameInfo2_setStageArchive_discard(resctl(), x, y, 0);
     }
     if (hdGameInfo_isExtraStageRes(a, s) != 0)
@@ -335,14 +335,14 @@ u32 hdGameInfo_dComIfG_syncStageRes(u32 i_arc) {
     gabi::Local<SafeString> ss;
     gabi::Local<GameInfoHD::FixedSafeString32> stg;
     u32 s = gabi::ea(stg.get()), q = gabi::ea(ss.get());
-    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mStringTop = s + 0xC;
+    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mTextPtr = s + 0xC;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBufferSize = 0x20;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[31] = 0;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->__vtbl = FSS_VT;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[0] = 0;
     stageArcName(s, gabi::guest_addr("ma2room"), gabi::guest_addr("ma3room"),
                  gabi::guest_addr("%s"));
-    GameInfoHD::view<SafeString>(q)->mStringTop = i_arc;
+    GameInfoHD::view<SafeString>(q)->mTextPtr = i_arc;
     GameInfoHD::view<SafeString>(q)->__vtbl = SS_VT;
     return gameInfo2_syncStageArchive(resctl(), s, q);
 }
@@ -357,7 +357,7 @@ void hdGameInfo_deleteExtraStageRes(u32 i_stage) {
             u32 name = GameInfoMemory2::ld(0x101D5DDC + 4 * i);
             u32 rc = resctl();
             GameInfoHD::view<SafeString>(nn)->__vtbl = SS_VT;
-            GameInfoHD::view<SafeString>(nn)->mStringTop = name;
+            GameInfoHD::view<SafeString>(nn)->mTextPtr = name;
             gameInfo2_deleteExtraArchive(rc, i_stage, nn);
         }
         return;
@@ -369,7 +369,7 @@ void hdGameInfo_deleteExtraStageRes(u32 i_stage) {
             u32 name = GameInfoMemory2::ld(0x101D5DC8 + 4 * i);
             u32 rc = resctl();
             GameInfoHD::view<SafeString>(nn)->__vtbl = SS_VT;
-            GameInfoHD::view<SafeString>(nn)->mStringTop = name;
+            GameInfoHD::view<SafeString>(nn)->mTextPtr = name;
             gameInfo2_deleteStageArchive(rc, i_stage, nn);
         }
         gabi::Local<SafeString> m;
@@ -378,7 +378,7 @@ void hdGameInfo_deleteExtraStageRes(u32 i_stage) {
             u32 name = GameInfoMemory2::ld(0x101D5DD0 + 4 * i);
             u32 rc = resctl();
             GameInfoHD::view<SafeString>(mm)->__vtbl = SS_VT;
-            GameInfoHD::view<SafeString>(mm)->mStringTop = name;
+            GameInfoHD::view<SafeString>(mm)->mTextPtr = name;
             gameInfo2_deleteObjectArchive(rc, mm);
         }
         return;
@@ -388,7 +388,7 @@ void hdGameInfo_deleteExtraStageRes(u32 i_stage) {
         u32 nn = gabi::ea(n.get());
         u32 rc = resctl();
         GameInfoHD::view<SafeString>(nn)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(nn)->mStringTop = GameInfoMemory2::ld(0x101D5DD8);
+        GameInfoHD::view<SafeString>(nn)->mTextPtr = GameInfoMemory2::ld(0x101D5DD8);
         gameInfo2_deleteExtraArchive(rc, i_stage, nn);
     }
 }
@@ -402,7 +402,7 @@ u32 hdGameInfo_dComIfG_deleteStageRes(u32 i_arc) {
     u32 a = gabi::ea(arc.get()), s = gabi::ea(stg.get());
     fss_from(a, gabi::ea(ss.get()), i_arc);
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[0] = 0;
-    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mStringTop = s + 0xC;
+    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mTextPtr = s + 0xC;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[31] = 0;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->__vtbl = FSS_VT;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBufferSize = 0x20;
@@ -416,8 +416,8 @@ u32 hdGameInfo_dComIfG_deleteStageRes(u32 i_arc) {
         u32 rc = resctl();
         GameInfoHD::view<SafeString>(x)->__vtbl = SS_VT;
         GameInfoHD::view<SafeString>(y)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(x)->mStringTop = gabi::guest_addr("sea");
-        GameInfoHD::view<SafeString>(y)->mStringTop = gabi::guest_addr("Stage");
+        GameInfoHD::view<SafeString>(x)->mTextPtr = gabi::guest_addr("sea");
+        GameInfoHD::view<SafeString>(y)->mTextPtr = gabi::guest_addr("Stage");
         gameInfo2_deleteStageArchive(rc, x, y);
     }
     if (hdGameInfo_isEndStageRes(a, s) != 0) {
@@ -427,8 +427,8 @@ u32 hdGameInfo_dComIfG_deleteStageRes(u32 i_arc) {
         u32 rc = resctl();
         GameInfoHD::view<SafeString>(x)->__vtbl = SS_VT;
         GameInfoHD::view<SafeString>(y)->__vtbl = SS_VT;
-        GameInfoHD::view<SafeString>(x)->mStringTop = gabi::guest_addr("Hyrule");
-        GameInfoHD::view<SafeString>(y)->mStringTop = gabi::guest_addr("Room0");
+        GameInfoHD::view<SafeString>(x)->mTextPtr = gabi::guest_addr("Hyrule");
+        GameInfoHD::view<SafeString>(y)->mTextPtr = gabi::guest_addr("Room0");
         gameInfo2_deleteStageArchive(rc, x, y);
     }
     if (hdGameInfo_isExtraStageRes(a, s) != 0)
@@ -446,15 +446,15 @@ u32 hdGameInfo_dComIfG_getStageRes(u32 i_arc, u32 i_res) {
     u32 s = gabi::ea(stg.get()), q = gabi::ea(ss.get()), r = gabi::ea(rs.get());
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBufferSize = 0x20;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[31] = 0;
-    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mStringTop = s + 0xC;
+    GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mTextPtr = s + 0xC;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->mBuffer[0] = 0;
     GameInfoHD::view<GameInfoHD::FixedSafeString32>(s)->__vtbl = FSS_VT;
     stageArcName(s, gabi::guest_addr("ma2room"), gabi::guest_addr("ma3room"),
                  gabi::guest_addr("%s"));
-    GameInfoHD::view<SafeString>(q)->mStringTop = i_arc;
+    GameInfoHD::view<SafeString>(q)->mTextPtr = i_arc;
     GameInfoHD::view<SafeString>(q)->__vtbl = SS_VT;
     GameInfoHD::view<SafeString>(r)->__vtbl = SS_VT;
-    GameInfoHD::view<SafeString>(r)->mStringTop = i_res;
+    GameInfoHD::view<SafeString>(r)->mTextPtr = i_res;
     return gameInfo2_getStageArchiveResource(GameInfoMemory2::ld(0x101F4F28), q, s, r);
 }
 
@@ -627,13 +627,13 @@ void GameInfoHD::dComIfG_play_c::itemInit() {
     GameInfoHD::view<GameInfoHD::PlaySupplement>(gabi::ea(this))->field_0x4965 = 0;
     /* strcpy(mInputPassword, "") on the HD WFixedSafeString at +0x4950 */
     u32 dst = (u32)GameInfoHD::view<GameInfoHD::PlaySupplement>(gabi::ea(this))
-                  ->mInputPassword.mStringTop;
+                  ->mInputPassword.mTextPtr;
     gabi::Local<SafeString> w;
     u32 ww = gabi::ea(w.get());
     GameInfoHD::view<SafeString>(ww)->__vtbl = 0x1004B900;
-    GameInfoHD::view<SafeString>(ww)->mStringTop = 0x1004BBD0;
+    GameInfoHD::view<SafeString>(ww)->mTextPtr = 0x1004BBD0;
     gameInfo2_wideAssureTermination(ww);
-    u32 s = (u32)GameInfoHD::view<SafeString>(ww)->mStringTop;
+    u32 s = (u32)GameInfoHD::view<SafeString>(ww)->mTextPtr;
     s32 len = 0;
     if (GameInfoMemory2::ld16(s) != 0) {
         u32 p = s;
@@ -653,7 +653,7 @@ void GameInfoHD::dComIfG_play_c::itemInit() {
     if (len >= size)
         len = size - 1;
     vss(ww);
-    gameInfo2_OSBlockMove(dst, (u32)GameInfoHD::view<SafeString>(ww)->mStringTop, (u32)len << 1, 0);
+    gameInfo2_OSBlockMove(dst, (u32)GameInfoHD::view<SafeString>(ww)->mTextPtr, (u32)len << 1, 0);
     GameInfoMemory2::st16(dst + ((u32)len << 1), 0);
     GameInfoHD::view<GameInfoHD::PlaySupplement>(gabi::ea(this))->field_0x497a = 0;
     GameInfoHD::view<GameInfoHD::PlaySupplement>(gabi::ea(this))->mMesgBgm = 0;

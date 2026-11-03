@@ -52,7 +52,7 @@ BOOL daSalvage_c::CreateHeap() {
         dRes_control_c* control = dComIfG_resControl();
         const char* name = m_arcname;
         gabi::Local<SafeString> key;
-        key->mStringTop = gabi::guest_addr(name);
+        key->mTextPtr = gabi::guest_addr(name);
         key->__vtbl = gc_tu.safeString;
         return salvageObjectResource(control, key.get(), index);
     };

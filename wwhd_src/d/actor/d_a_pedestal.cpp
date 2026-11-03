@@ -151,7 +151,7 @@ void daPds_infiniteEcallBack_c::makeEmitter(u16 id, const cXyz *p, const csXyz *
 BOOL daPds_c::initBrkAnm(u8 index, BOOL force) {
     J3DModelData *data = mpModel->getModelData();
     ProtectedLocal<SafeString> name;
-    name->mStringTop = gabi::ea(&m_arcname);
+    name->mTextPtr = gabi::ea(&m_arcname);
     name->__vtbl = 0x10034318;
     auto *animation = static_cast<J3DAnmTevRegKey *>(getResource(dComIfG_resControl(), name.get(), 8));
     if (!animation)
@@ -171,7 +171,7 @@ BOOL daPds_c::initBrkAnm(u8 index, BOOL force) {
 /* 023C8718 */
 BOOL daPds_c::CreateHeap() {
     ProtectedLocal<SafeString> name;
-    name->mStringTop = gabi::ea(&m_arcname);
+    name->mTextPtr = gabi::ea(&m_arcname);
     name->__vtbl = 0x10034318;
     auto *data = static_cast<J3DModelData *>(getResource(dComIfG_resControl(), name.get(), 5));
     if (!data)
@@ -183,7 +183,7 @@ BOOL daPds_c::CreateHeap() {
     if (!mpBgW)
         return FALSE;
     ProtectedLocal<SafeString> collision;
-    collision->mStringTop = gabi::ea(&m_arcname);
+    collision->mTextPtr = gabi::ea(&m_arcname);
     collision->__vtbl = 0x10034318;
     auto *dzb = static_cast<cBgD_t *>(getResource(dComIfG_resControl(), collision.get(), 11));
     return setBackground(mpBgW, dzb, dBgW::MOVE_BG_e, &mMtx) == 0;

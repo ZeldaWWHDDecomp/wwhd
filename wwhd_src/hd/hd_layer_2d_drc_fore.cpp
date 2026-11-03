@@ -58,7 +58,7 @@ static hdLayer2DDRCFore_c* hdLayer2DDRCFore_construct(hdLayer2DDRCFore_c* i_this
         if (i_this == NULL) return NULL;
     }
     SafeString name;
-    name.mStringTop = gabi::guest_addr("UI_DRCFore");
+    name.mTextPtr = gabi::guest_addr("UI_DRCFore");
     name.__vtbl = gabi::ea(&sDRCForeNameVtable);
     constructDRCForeLayer(i_this, &name);
     i_this->mBase.mpVtable = (hdLayerVtable_c*)&sDRCForeVtable;

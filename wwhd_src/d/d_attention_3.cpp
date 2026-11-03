@@ -94,7 +94,7 @@ static inline u32 searchByID(u32 id) {
 }
 static inline u32 getRes_l(u32 str, s32 idx) {
     gabi::Local<SafeString> key;
-    key->mStringTop = str;
+    key->mTextPtr = str;
     key->__vtbl = SAFESTRING_VTBL_ATT;
     return att3_getObjectRes(AttentionMemory3::ld(0x101F4F28), gabi::ea(key.get()), idx);
 }
@@ -223,15 +223,15 @@ static void dAttDraw_c_draw(u32 i_this, u32 pos, u32 mtx) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> b;
     gabi::Local<SafeString> c;
-    a->mStringTop = morf_anm_name((u32)self->anm);
+    a->mTextPtr = morf_anm_name((u32)self->anm);
     a->__vtbl = SAFESTRING_VTBL_ATT;
-    b->mStringTop = 0x1004313C; /* "yj_in" */
+    b->mTextPtr = 0x1004313C; /* "yj_in" */
     b->__vtbl = SAFESTRING_VTBL_ATT;
     s32 frameOff;
     if (safestring_eq(gabi::ea(a.get()), gabi::ea(b.get()), true)) {
         frameOff = 0xA2; /* end frame */
     } else {
-        c->mStringTop = 0x1004314C; /* "yj_out" */
+        c->mTextPtr = 0x1004314C; /* "yj_out" */
         c->__vtbl = SAFESTRING_VTBL_ATT;
         if (!safestring_eq(gabi::ea(a.get()), gabi::ea(c.get()), false)) {
             att3_McaMorf_updateDL((u32)self->anm);
@@ -289,9 +289,9 @@ static void dAttention_c_runDrawProc(u32 i_this) {
     } else if ((s32)(u32)self->mLockonCount <= 0 && (s8)(u8)self->field_0x028 == 0) {
         gabi::Local<SafeString> a;
         gabi::Local<SafeString> b;
-        a->mStringTop = morf_anm_name((u32)self->draw[0].anm);
+        a->mTextPtr = morf_anm_name((u32)self->draw[0].anm);
         a->__vtbl = SAFESTRING_VTBL_ATT;
-        b->mStringTop = 0x10043160; /* "yj_delete" */
+        b->mTextPtr = 0x10043160; /* "yj_delete" */
         b->__vtbl = SAFESTRING_VTBL_ATT;
         if (!safestring_eq(gabi::ea(a.get()), gabi::ea(b.get()), true))
             att3_setAnm(i_this + A_DRAW, 0x1A, 0x47, 0);

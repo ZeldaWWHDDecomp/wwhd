@@ -418,16 +418,16 @@ BOOL daPy_lk_c::procSlideFrontLand_init() {
 /* inlined into daPy_lk_c::procSlideFront and procSlideBack */
 static inline s16 lk05SlideAngle(s16 ang, const char* testName) {
     SafeString name;
-    name.mStringTop = gabi::guest_addr(testName); /* "ITest62" */
+    name.mTextPtr = gabi::guest_addr(testName); /* "ITest62" */
     name.__vtbl = link05::SAFE_STRING_VTBL;
     SafeString stage;
-    stage.mStringTop = gabi::ea(dComIfGp_getStartStageName()); /* dComIfGp_getStartStageName() */
+    stage.mTextPtr = gabi::ea(dComIfGp_getStartStageName()); /* dComIfGp_getStartStageName() */
     stage.__vtbl = link05::SAFE_STRING_VTBL;
     lk05AssureTermination(&name);
     lk05AssureTermination(&name);
-    u32 a = name.mStringTop;
+    u32 a = name.mTextPtr;
     lk05AssureTermination(&stage);
-    u32 b = stage.mStringTop;
+    u32 b = stage.mTextPtr;
     bool equal = true;
     if (a != b) {
         equal = false;
@@ -3057,16 +3057,16 @@ static Link05DemoResourcePointer l_demoResourceControl;
  * equal bytes) takes the mismatch path everywhere. */
 static inline bool lk05DemoStageIs(const char *nameStr) {
   gabi::Local<SafeString> name;
-  name->mStringTop = gabi::guest_str(nameStr);
+  name->mTextPtr = gabi::guest_str(nameStr);
   name->__vtbl = 0x10034B24;
   gabi::Local<SafeString> stage;
-  stage->mStringTop = 0x1047E6B8;
+  stage->mTextPtr = 0x1047E6B8;
   stage->__vtbl = 0x10034B24;
   lk05DemoStringConstruct(name.get());
   lk05AssureTermination(name.get());
-  u32 a = name->mStringTop;
+  u32 a = name->mTextPtr;
   lk05AssureTermination(stage.get());
-  u32 b = stage->mStringTop;
+  u32 b = stage->mTextPtr;
   if (a == b) {
     return true;
   }
@@ -3329,7 +3329,7 @@ BOOL daPy_lk_c::dProcTool() {
     Link05DemoPlay *play = lk05DemoPlay();
     lk05AssureTermination(&play->mLkDemoAnmArchive);
     gabi::Local<SafeString> key;
-    key->mStringTop = play->mLkDemoAnmArchive.mStringTop;
+    key->mTextPtr = play->mLkDemoAnmArchive.mTextPtr;
     key->__vtbl = 0x10034B24;
     Link05DemoAnimation *anm = lk05DemoGetIDRes(
         link05::l_demoResourceControl.get(), key.get(), (u32)anmIdx);

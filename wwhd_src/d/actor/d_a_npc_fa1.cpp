@@ -1167,14 +1167,14 @@ s32 daNpc_Fa1_c::_create() {
 BOOL daNpc_Fa1_c::CreateHeap() {
 
     gabi::Local<SafeString> modelKey;
-    modelKey->mStringTop = gabi::guest_str("Always");
+    modelKey->mTextPtr = gabi::guest_str("Always");
     u32 manager = gabi::ea(l_resourceManager.mResource.get());
     modelKey->__vtbl = gc_tu.safeString;
     void *data =
         fa1_getObjectResource(gabi::at<void>(manager), modelKey.get(), dRes_INDEX_ALWAYS_BDL_FA_e);
     manager = gabi::ea(l_resourceManager.mResource.get());
     gabi::Local<SafeString> animationKey;
-    animationKey->mStringTop = gabi::guest_str("Always");
+    animationKey->mTextPtr = gabi::guest_str("Always");
     animationKey->__vtbl = gc_tu.safeString;
     void *animation = fa1_getObjectResource(gabi::at<void>(manager), animationKey.get(),
                                             dRes_INDEX_ALWAYS_BCK_FA_e);

@@ -833,16 +833,16 @@ inline void fopAcM_monsSeStart(fopAc_ac_c *a, u32 id, u32 param) {
 
 inline bool SafeString_eq(const char *a, const char *b, u32 vtbl) {
   gabi::Local<SafeString> sa;
-  sa->mStringTop = gabi::guest_addr(a);
+  sa->mTextPtr = gabi::guest_addr(a);
   sa->__vtbl = vtbl;
   gabi::Local<SafeString> sb;
-  sb->mStringTop = gabi::guest_addr(b);
+  sb->mTextPtr = gabi::guest_addr(b);
   sb->__vtbl = vtbl;
   gabi::call_ptr(gabi::load<u32>(sa->__vtbl + 0x14), sa.get());
   gabi::call_ptr(gabi::load<u32>(sa->__vtbl + 0x14), sa.get());
   gabi::call_ptr(gabi::load<u32>(sb->__vtbl + 0x14), sb.get());
-  u32 pa = sa->mStringTop;
-  u32 pb = sb->mStringTop;
+  u32 pa = sa->mTextPtr;
+  u32 pb = sb->mTextPtr;
   if (pa == pb)
     return true;
   for (u32 i = 0; i < 0x40001; i++) {

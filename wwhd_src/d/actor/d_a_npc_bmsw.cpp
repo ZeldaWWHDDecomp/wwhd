@@ -76,7 +76,7 @@ enum : u32 {
 static inline void* Bmsw_getObjectIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
     key->__vtbl = gc_tu.safeString;
-    key->mStringTop = gabi::guest_addr(arc);
+    key->mTextPtr = gabi::guest_addr(arc);
     return Bmsw_resourceGetID(dComIfG_resControl(), key.get(), id);
 }
 /* J3DAnmTexPattern::getFrameMax: virtual (vtable pointer at +4, slot +0x14) */
@@ -173,13 +173,13 @@ static inline bool startStageIs(u32 name) {
     gabi::Local<SafeString> b;
     a->__vtbl = gc_tu.safeString;
     b->__vtbl = gc_tu.safeString;
-    a->mStringTop = name;
-    b->mStringTop = 0x1047E6B8;
+    a->mTextPtr = name;
+    b->mTextPtr = 0x1047E6B8;
     Bmsw_assureTermination(a.get());
     gabi::call_ptr(gabi::object_at<BmswVirtualTable>(a->__vtbl).mAssureTermination.get(), a.get());
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::object_at<BmswVirtualTable>(b->__vtbl).mAssureTermination.get(), b.get());
-    u32 s2 = b->mStringTop;
+    u32 s2 = b->mTextPtr;
     if (s1 == s2)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {

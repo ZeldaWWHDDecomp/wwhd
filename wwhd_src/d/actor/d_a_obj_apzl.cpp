@@ -461,7 +461,7 @@ BOOL daObjApzl_c::CreateHeap() {
         SafeString key;
         // Reserve caller linkage space below the SafeString passed to actual callees.
         ApzlLinkage keyLinkage;
-        key.mStringTop = gabi::guest_str("Apzl");
+        key.mTextPtr = gabi::guest_str("Apzl");
         key.__vtbl = gc_tu.safeString;
         void *data = apzlGetResource(apzlResourceControl.get(), &key, resource);
         if (!data)
@@ -472,7 +472,7 @@ BOOL daObjApzl_c::CreateHeap() {
     }
     SafeString arrows;
     ApzlLinkage arrowsLinkage;
-    arrows.mStringTop = gabi::guest_str("Apzl");
+    arrows.mTextPtr = gabi::guest_str("Apzl");
     arrows.__vtbl = gc_tu.safeString;
     void *data = apzlGetResource(apzlResourceControl.get(), &arrows, dRes_INDEX_APZL_BDL_APZLY_e);
     if (!data)
@@ -484,14 +484,14 @@ BOOL daObjApzl_c::CreateHeap() {
     }
     SafeString scores;
     ApzlLinkage scoresLinkage;
-    scores.mStringTop = gabi::guest_str("Apzl");
+    scores.mTextPtr = gabi::guest_str("Apzl");
     scores.__vtbl = gc_tu.safeString;
     data = apzlGetResource(apzlResourceControl.get(), &scores, dRes_INDEX_APZL_BDL_VBSRP_e);
     if (!data)
         JUT_ASSERT_fail("d_a_obj_apzl.cpp", 0x34B, "modelData != (0)");
     SafeString animationName;
     ApzlLinkage animationNameLinkage;
-    animationName.mStringTop = gabi::guest_str("Apzl");
+    animationName.mTextPtr = gabi::guest_str("Apzl");
     animationName.__vtbl = gc_tu.safeString;
     void *animation =
         apzlGetResource(apzlResourceControl.get(), &animationName, dRes_INDEX_APZL_BTP_VBSRP_e);

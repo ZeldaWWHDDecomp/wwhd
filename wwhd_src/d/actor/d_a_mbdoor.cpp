@@ -142,7 +142,7 @@ void daMbdoor_c::calcMtx() {
 static void* objectResource(const char* archive, s32 index) {
     gabi::Local<SafeString> name;
     gabi::Local<u8[16]> linkage;
-    name->mStringTop = gabi::ea(archive);
+    name->mTextPtr = gabi::ea(archive);
     name->__vtbl = 0x10014770;
     return mbdoorGetResource(dComIfG_resControl(), name.get(), index);
 }

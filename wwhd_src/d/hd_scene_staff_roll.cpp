@@ -260,14 +260,14 @@ static void staffCopyRecord(hdStaffCharacterBubbles_c::Record* dst, hdStaffChara
 void hdStaffCharacterBubbles_c::loadRecords() {
  SafeString group;
  SafeString archive;
- group.mStringTop = gabi::guest_addr("Misc"); group.__vtbl = gabi::ea(&l_staffSafeStringVTable);
- archive.mStringTop = gabi::guest_addr("Misc.bfres"); archive.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ group.mTextPtr = gabi::guest_addr("Misc"); group.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ archive.mTextPtr = gabi::guest_addr("Misc.bfres"); archive.__vtbl = gabi::ea(&l_staffSafeStringVTable);
  void* resource = staffGetResource(l_staffResourceMgr.mpInstance, &group, &archive, 0);
  if(!resource) return;
  hdStaffResource_l* view = staffResourceView(resource);
- s32 offset = view->mUserDataOffset;
+ s32 offset = view->mUserDataPos;
  // Resource offsets are relative to their field or containing file in guest memory.
- void* userData = offset?gabi::at<void>(gabi::ea(&view->mUserDataOffset)+offset):NULL;
+ void* userData = offset?gabi::at<void>(gabi::ea(&view->mUserDataPos)+offset):NULL;
  hdStaffFile_l* file = staffFindFile(userData, "StaffRollBubble.dat");
  if(!file) return;
  s32 dataOffset = file->mDataOffset;
@@ -493,14 +493,14 @@ static void staffModelLoad(hdStaffModel_l* model) {
  SafeString room;
  SafeString stage;
  SafeString resource;
- room.mStringTop = gabi::guest_addr("Room0"); room.__vtbl = gabi::ea(&l_staffSafeStringVTable);
- stage.mStringTop = gabi::guest_addr("Hyrule"); stage.__vtbl = gabi::ea(&l_staffSafeStringVTable);
- resource.mStringTop = gabi::guest_addr("model2.bmd"); resource.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ room.mTextPtr = gabi::guest_addr("Room0"); room.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ stage.mTextPtr = gabi::guest_addr("Hyrule"); stage.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ resource.mTextPtr = gabi::guest_addr("model2.bmd"); resource.__vtbl = gabi::ea(&l_staffSafeStringVTable);
  J3DModelData* data = staffGetModelResource(control, &room, &stage, &resource);
  model->mpModel = staffCreateModel(data, 0, 0x11000022);
- room.mStringTop = gabi::guest_addr("Room0"); room.__vtbl = gabi::ea(&l_staffSafeStringVTable);
- stage.mStringTop = gabi::guest_addr("Hyrule"); stage.__vtbl = gabi::ea(&l_staffSafeStringVTable);
- resource.mStringTop = gabi::guest_addr("model2.btk"); resource.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ room.mTextPtr = gabi::guest_addr("Room0"); room.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ stage.mTextPtr = gabi::guest_addr("Hyrule"); stage.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+ resource.mTextPtr = gabi::guest_addr("model2.btk"); resource.__vtbl = gabi::ea(&l_staffSafeStringVTable);
  J3DAnmTextureSRTKey* key = reinterpret_cast<J3DAnmTextureSRTKey*>(staffGetModelResource(control, &room, &stage, &resource));
  if(key) {
   mDoExt_btkAnm* btk = staffBtkConstruct(NULL); model->mpBtk = btk;
@@ -512,10 +512,10 @@ static void staffModelLoad(hdStaffModel_l* model) {
   J3DModelData* modelData = model->mpModel->mModelData;
   hdStaffMaterial_l* material = reinterpret_cast<hdStaffMaterial_l*>(modelData->getMaterialNodePointer((u16)i));
   if(!material) continue;
-  sky.mStringTop = gabi::guest_addr("sky_0_v_x"); sky.__vtbl = gabi::ea(&l_staffSafeStringVTable);
+  sky.mTextPtr = gabi::guest_addr("sky_0_v_x"); sky.__vtbl = gabi::ea(&l_staffSafeStringVTable);
   hdStaffMaterialHeader_l* header = material->mpHeader;
   s32 offset = header->mNameOffset;
-  materialName.mStringTop = offset?gabi::ea(&header->mNameOffset)+offset:0;
+  materialName.mTextPtr = offset?gabi::ea(&header->mNameOffset)+offset:0;
   materialName.__vtbl = gabi::ea(&l_staffSafeStringVTable);
   staffSafeStringValidate(&sky);
   gabi::call_ptr<void>(reinterpret_cast<hdStaffStringView_l*>(&sky)->mVTable->mAssureTermination.get(), &sky);
@@ -586,16 +586,16 @@ static void staffSetTaskDelegate(hdStaffRenderTask_l* task, hdStaffScene_c* owne
 void hdStaffScene_c::enter() {
  l_staffGameState.mpInstance->mSceneMode = 2;
  staffSetTaskDelegate(&mStaffTask, this, &l_staffRenderCallback);
- mStaffTask.mName.mStringTop = gabi::ea(&l_staffTaskName); mStaffTask.mEnabled = 1;
+ mStaffTask.mName.mTextPtr = gabi::ea(&l_staffTaskName); mStaffTask.mEnabled = 1;
  hdRenderLayerRegistry_l* layers = l_staffLayers.mpInstance;
  void* layer = layers->mpLayers[layers->mLayerCount>3?3:0];
  staffRegisterTask(layer, 3, &mStaffTask);
  staffSetTaskDelegate(&mBackgroundTask, this, &l_staffBackgroundCallback);
- mBackgroundTask.mEnabled = 1; mBackgroundTask.mName.mStringTop = gabi::ea(&l_staffBackgroundTaskName);
+ mBackgroundTask.mEnabled = 1; mBackgroundTask.mName.mTextPtr = gabi::ea(&l_staffBackgroundTaskName);
  layers = l_staffLayers.mpInstance; layer = layers->mpLayers[layers->mLayerCount>3?3:0];
  staffRegisterTask(layer, 0, &mBackgroundTask);
  staffSetTaskDelegate(&mFadeTask, this, &l_staffFadeCallback);
- mFadeTask.mEnabled = 1; mFadeTask.mName.mStringTop = gabi::ea(&l_staffFadeTaskName);
+ mFadeTask.mEnabled = 1; mFadeTask.mName.mTextPtr = gabi::ea(&l_staffFadeTaskName);
  layers = l_staffLayers.mpInstance; layer = layers->mpLayers[layers->mLayerCount>5?5:0];
  staffRegisterTask(layer, 0, &mFadeTask);
  createScreens();
@@ -610,11 +610,10 @@ void hdStaffScene_c::enter() {
  mState.mCurrent = state;
  gabi::call_ptr<void>(state->mVTable[7].get(), state);
 }
-// The original single-precision multiply-add propagates its addend's NaN payload
-// when both the interpolation delta and base are NaNs; retain that operand order.
+// One single-precision multiply-add, as in the original; gabi::fmadds already
+// propagates the NaN the hardware picks, so no separate NaN path is needed.
 static f32 staffInterpolate(f32 next, f32 first, f32 amount) {
  f32 delta = gabi::fsubs_ppc(next, first);
- if(first != first) return gabi::ppc_qnan(first);
  return gabi::fmadds(delta, amount, first);
 }
 /* 0271D104 */
@@ -718,7 +717,7 @@ static void staffConstructTask(hdStaffRenderTask_l* task) {
  staffTaskConstruct(task);
  SafeString* name = gabi::at<SafeString>(gabi::ea(task)+offsetof(hdStaffRenderTask_l, mName));
  if(!name) name = static_cast<SafeString*>(staffAllocate(8));
- if(name) { name->mStringTop = gabi::ea(&l_staffEmptyName); name->__vtbl = gabi::ea(&l_staffSafeStringVTable); }
+ if(name) { name->mTextPtr = gabi::ea(&l_staffEmptyName); name->__vtbl = gabi::ea(&l_staffSafeStringVTable); }
  task->mEnabled = 0; task->mVTable = reinterpret_cast<gfn*>(&l_staffTaskVTable); task->mReserved = 0;
  HdStateDelegate* delegate = gabi::at<HdStateDelegate>(gabi::ea(task)+offsetof(hdStaffRenderTask_l, mDelegate));
  if(delegate) {

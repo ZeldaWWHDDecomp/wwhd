@@ -1184,11 +1184,11 @@ BOOL daNpc_Aj1_c::wait_action2(void*) {
         setStt(4);
         /* in the stage "Ojhous2" (Sturgeon's house), type 1 starts the "angry" event until event 0x508 */
         SafeString house;
-        house.mStringTop = gabi::guest_addr("Ojhous2"); /* "Ojhous2" */
+        house.mTextPtr = gabi::guest_addr("Ojhous2"); /* "Ojhous2" */
         house.__vtbl = gc_tu.safeString;
         SafeString stage;
         stage.__vtbl = gc_tu.safeString;
-        stage.mStringTop =
+        stage.mTextPtr =
             gabi::guest_addr(dComIfGp_getStartStageName()); /* dComIfGp_getStartStageName() */
         bool start = false;
         if (Aj1_equal(&house, &stage) && mType == 1) {

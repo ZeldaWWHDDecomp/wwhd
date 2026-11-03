@@ -801,16 +801,16 @@ inline void hd_debug_print(s32 a, s32 b, const char* fmt) { gabi::call(0x027EC9E
  * the left one twice), pointer compare, then a bounded strcmp (0x40001 characters) */
 inline bool SafeString_eq(const char* a, const char* b, u32 vtbl) {
     gabi::Local<SafeString> sa;
-    sa->mStringTop = gabi::ea(a);
+    sa->mTextPtr = gabi::ea(a);
     sa->__vtbl = vtbl;
     gabi::Local<SafeString> sb;
-    sb->mStringTop = gabi::ea(b);
+    sb->mTextPtr = gabi::ea(b);
     sb->__vtbl = vtbl;
     gabi::call_ptr(gabi::load<u32>(sa->__vtbl + 0x14), sa.get());
     gabi::call_ptr(gabi::load<u32>(sa->__vtbl + 0x14), sa.get());
     gabi::call_ptr(gabi::load<u32>(sb->__vtbl + 0x14), sb.get());
-    u32 pa = sa->mStringTop;
-    u32 pb = sb->mStringTop;
+    u32 pa = sa->mTextPtr;
+    u32 pb = sb->mTextPtr;
     if (pa == pb) return true;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 ca = gabi::load<u8>(pa + i);
@@ -910,13 +910,13 @@ inline s32 JUTNameTab_getIndex(u32 tab, u32 name) { return gabi::call<s32>(0x027
  * name table hangs off *(modelData+0); materials (0x39C each) at +0x10, count at +0xC */
 inline u32 modelData_getMaterialByName(u32 md, const char* name) {
     gabi::Local<SafeString> s;
-    s->mStringTop = gabi::ea(name);
+    s->mTextPtr = gabi::ea(name);
     s->__vtbl = SAFESTRING_VTBL;
     u32 hdr = gabi::load<u32>(md);
     SafeString_assureTermination(s);
     s32 off = gabi::load<s32>(hdr + 0x18);
     u32 tab = off != 0 ? hdr + 0x18 + off : 0;
-    s32 idx = JUTNameTab_getIndex(tab, s->mStringTop);
+    s32 idx = JUTNameTab_getIndex(tab, s->mTextPtr);
     if (idx < 0) return 0;
     u32 base = gabi::load<u32>(md + 0x10);
     if ((u32)idx < gabi::load<u32>(md + 0xC)) return base + idx * 0x39C;

@@ -120,13 +120,13 @@ void hdFontMgr_c::loadFonts(void* heap) {
             continue;
         }
         frame->mStorage.mBuffer[0] = 0;
-        frame->mPath.mStringTop = frame->mStorage.mBuffer;
+        frame->mPath.mTextPtr = frame->mStorage.mBuffer;
         frame->mCapacity = 0x100;
         frame->mStorage.mBuffer[0xFF] = 0;
         frame->mPath.setVtable(bufferedStringVtable);
         hdFont_string_c* name = getArchiveName(i);
         name->assureTermination();
-        hdFont_formatPath(&frame->mPath, "Common/Font/EuJpUs/%s.szs", name->mStringTop);
+        hdFont_formatPath(&frame->mPath, "Common/Font/EuJpUs/%s.szs", name->mTextPtr);
         void* loader = sResourceLoader.mpObject;
         name = getArchiveName(i);
         hdFont_archive_c* archive = hdFont_findArchive(loader, name);
@@ -172,7 +172,7 @@ void hdFontMgr_c::registerFonts(void* manager) {
     for (u32 i = 0; i < FONT_COUNT; ++i) {
         hdFont_string_c* name = getFileName(i);
         name->assureTermination();
-        be<u8>* text = name->mStringTop;
+        be<u8>* text = name->mTextPtr;
         hdFont_c* font = getFont(s32(i));
         hdFont_register(manager, text, font);
     }

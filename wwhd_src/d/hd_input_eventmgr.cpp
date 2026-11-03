@@ -93,7 +93,7 @@ void cking::ui::input::EventMgr::prepare() {
     Local<SafeString> name;
     const u32 size = hdUiHeapHeaderSize(4u) + 0x238;
     name->__vtbl = gc_tu.safeString;
-    name->mStringTop = guest_addr("cking::ui::input::EventMgr::prepare");
+    name->mTextPtr = guest_addr("cking::ui::input::EventMgr::prepare");
     const u32 parent = hdUiGetParentHeap();
     const u32 heap = hdUiCreateHeap(size, name.a, parent, 1u, 0u);
     hdUiEventQueuePrepare(gabi::ea(this), heap, 0xAu);
@@ -881,7 +881,7 @@ u32 cking::ui::input::EventMgr::holdBit12(u32 ev) {
     return ((u32)event->mHold >> 12) & 1;
 }
 
-/* SingletonDisposer deleting destructor (deletes the instance) */
+/* InstanceDisposer deleting destructor (deletes the instance) */
 /* 02616D4C */
 void hdUiEventMgr_disposerDtor(u32 p, u32 flags) {
     if (!p)

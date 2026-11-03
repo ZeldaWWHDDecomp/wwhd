@@ -128,7 +128,7 @@ void hdTitleScene_c::enter() {
   delegate->mFunction = &l_titleRenderCallback; delegate->mVirtualOffset = 0xFFFF;
  }
  mTask.mEnabled = 1;
- mTask.mName.mStringTop = gabi::ea(&l_titleTaskName);
+ mTask.mName.mTextPtr = gabi::ea(&l_titleTaskName);
  hdRenderLayerRegistry_l* layers = l_titleRenderLayers.mpInstance;
  void* layer = layers->mpLayers[layers->mLayerCount>3?3:0];
  titleTaskRegister(layer, 3, &mTask);
@@ -201,7 +201,7 @@ static hdTitleScene_c* titleConstruct(hdTitleScene_c* scene) {
  titleTaskConstruct(&scene->mTask);
  SafeString* name = gabi::at<SafeString>(gabi::ea(scene)+offsetof(hdTitleScene_c, mTask)+offsetof(hdTitleTask_l, mName));
  if(!name) name = static_cast<SafeString*>(titleAllocate(8));
- if(name) { name->__vtbl = gabi::ea(&l_titleSafeStringVTable); name->mStringTop = gabi::ea(&l_titleEmptyString); }
+ if(name) { name->__vtbl = gabi::ea(&l_titleSafeStringVTable); name->mTextPtr = gabi::ea(&l_titleEmptyString); }
  scene->mTask.mEnabled = 0; scene->mTask.mReserved = 0;
  scene->mTask.mVTable = reinterpret_cast<gfn*>(&l_titleTaskVTable);
  HdStateDelegate* delegate = gabi::at<HdStateDelegate>(gabi::ea(scene)+offsetof(hdTitleScene_c, mTask)+offsetof(hdTitleTask_l, mDelegate));

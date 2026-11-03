@@ -53,7 +53,7 @@ static hdErrorViewer_c* constructErrorViewer(hdErrorViewer_c* layer) {
     }
     SafeString name;
     name.__vtbl = gabi::ea(&sErrorViewerSafeStringVtable);
-    name.mStringTop = gabi::guest_addr("ErrorViewer");
+    name.mTextPtr = gabi::guest_addr("ErrorViewer");
     constructErrorLayerBase(layer, &name);
     layer->mVtable = gabi::ea(&sErrorViewerLayerVtable);
     layer->mDrawVtable = gabi::ea(&sErrorViewerDrawVtable);
@@ -70,7 +70,7 @@ void hdErrorViewer_c::initialize() {
         if (name == NULL) name = (SafeString*)allocateErrorLayer(sizeof(SafeString));
         if (name != NULL) {
             name->__vtbl = gabi::ea(&sErrorViewerSafeStringVtable);
-            name->mStringTop = gabi::guest_addr("");
+            name->mTextPtr = gabi::guest_addr("");
         }
         step->mFlags = 0;
         step->mVtable = gabi::ea(&sErrorViewerStepVtable);
@@ -81,7 +81,7 @@ void hdErrorViewer_c::initialize() {
             step->mDrawFunction = gabi::guest_fn((const void*)drawErrorViewer);
         }
         step->mTarget = 2;
-        step->mName.mStringTop = gabi::guest_addr("ErrorViewer");
+        step->mName.mTextPtr = gabi::guest_addr("ErrorViewer");
     }
     addErrorStep(this, step);
 }

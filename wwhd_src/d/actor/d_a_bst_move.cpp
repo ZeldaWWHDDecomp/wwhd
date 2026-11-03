@@ -12,7 +12,7 @@ static void bstFlyAnimator(bst_class* i_this, be<u16>* table, bool brk, s32 loop
     u32 morph = (u32)i_this->m02B8.v, model = gabi::ea((J3DModel*)bstMoveMorf(morph)->mpModel);
     u16 id = (u16)table[part];
     SafeString name;
-    name.mStringTop = resourceName;
+    name.mTextPtr = resourceName;
     name.__vtbl = BST_ARCHIVE_VTABLE;
     void* resource = BstMove_getResource(bstMoveOpaque(resources), &name, id);
     u32 data = gabi::ea((J3DModelData*)bstMoveModel(model)->mModelData),
@@ -32,7 +32,7 @@ static void bstFixedAnimator(bst_class* i_this, u32 id, bool brk, f32 one) {
     u32 morph = (u32)i_this->m02B8.v, resources = (u32)bstMoveResourceTable(),
         model = gabi::ea((J3DModel*)bstMoveMorf(morph)->mpModel);
     SafeString name;
-    name.mStringTop = BST_HEAD_ARCHIVE;
+    name.mTextPtr = BST_HEAD_ARCHIVE;
     name.__vtbl = BST_ARCHIVE_VTABLE;
     void* resource = BstMove_getResource(bstMoveOpaque(resources), &name, id);
     u32 controller = (u32)*bstMoveAnimatorField(i_this, brk),

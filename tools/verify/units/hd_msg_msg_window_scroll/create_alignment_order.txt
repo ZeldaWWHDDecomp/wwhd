@@ -1,3 +1,4 @@
+# verify: -only 026BBFAC
 # Supplemental 026BBFAC fixture (run with -only 026BBFAC).
 # Text-pane alignment byte overlaps the message pointer word; preserve assignment order.
 # Synthetic mapped local game-state storage; existing callback model.

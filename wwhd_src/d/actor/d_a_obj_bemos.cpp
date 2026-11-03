@@ -85,7 +85,7 @@ s32 CheckCreateHeap(void* actor) { return static_cast<daBemos_c*>(actor)->Create
 s32 daBemos_c::CreateHeap1() {
     auto* i_this = this;
     gabi::Local<SafeString> name0;
-    name0->mStringTop = gabi::guest_addr("Hmos");
+    name0->mTextPtr = gabi::guest_addr("Hmos");
     name0->__vtbl = gc_tu.safeString;
     u32 data0 = BemosHD_dRes_control_c_getRes(dComIfG_resControl(), name0.get(), dRes_INDEX_HMOS_BDL_HMOS1_e);
     if (!data0)
@@ -95,7 +95,7 @@ s32 daBemos_c::CreateHeap1() {
     if (!model0)
         return 0;
     gabi::Local<SafeString> name1;
-    name1->mStringTop = gabi::guest_addr("Hmos");
+    name1->mTextPtr = gabi::guest_addr("Hmos");
     name1->__vtbl = gc_tu.safeString;
     u32 data1 =
         BemosHD_dRes_control_c_getRes(dComIfG_resControl(), name1.get(), dRes_INDEX_HMOS_BDL_HMOSUP1_e);
@@ -112,7 +112,7 @@ s32 daBemos_c::CreateHeap1() {
 s32 daBemos_c::CreateHeap2() {
     auto* i_this = this;
     gabi::Local<SafeString> name0;
-    name0->mStringTop = gabi::guest_addr("Hmos");
+    name0->mTextPtr = gabi::guest_addr("Hmos");
     name0->__vtbl = gc_tu.safeString;
     u32 data0 = BemosHD_dRes_control_c_getRes(dComIfG_resControl(), name0.get(), dRes_INDEX_HMOS_BDL_HMOS2_e);
     if (!data0)
@@ -122,7 +122,7 @@ s32 daBemos_c::CreateHeap2() {
     if (!model0)
         return 0;
     gabi::Local<SafeString> name1;
-    name1->mStringTop = gabi::guest_addr("Hmos");
+    name1->mTextPtr = gabi::guest_addr("Hmos");
     name1->__vtbl = gc_tu.safeString;
     u32 data1 =
         BemosHD_dRes_control_c_getRes(dComIfG_resControl(), name1.get(), dRes_INDEX_HMOS_BDL_HMOSUP2_e);
@@ -133,7 +133,7 @@ s32 daBemos_c::CreateHeap2() {
     if (!model1)
         return 0;
     gabi::Local<SafeString> name2;
-    name2->mStringTop = gabi::guest_addr("Hmos");
+    name2->mTextPtr = gabi::guest_addr("Hmos");
     name2->__vtbl = gc_tu.safeString;
     u32 data2 =
         BemosHD_dRes_control_c_getRes(dComIfG_resControl(), name2.get(), dRes_INDEX_HMOS_BDL_HMOS2T_e);
@@ -145,7 +145,7 @@ s32 daBemos_c::CreateHeap2() {
     if (!upper)
         return 0;
     gabi::Local<SafeString> name3;
-    name3->mStringTop = gabi::guest_addr("Hmos");
+    name3->mTextPtr = gabi::guest_addr("Hmos");
     name3->__vtbl = gc_tu.safeString;
     u32 data3 =
         BemosHD_dRes_control_c_getRes(dComIfG_resControl(), name3.get(), dRes_INDEX_HMOS_BRK_HMOS2T_e);
@@ -162,7 +162,7 @@ s32 daBemos_c::CreateHeap2() {
 s32 daBemos_c::CreateHeap3() {
     auto* i_this = this;
     gabi::Local<SafeString> name0;
-    name0->mStringTop = gabi::guest_addr("Hmos");
+    name0->mTextPtr = gabi::guest_addr("Hmos");
     name0->__vtbl = gc_tu.safeString;
     u32 data0 = BemosHD_dRes_control_c_getRes(dComIfG_resControl(), name0.get(), dRes_INDEX_HMOS_BDL_HMOS3_e);
     if (!data0)

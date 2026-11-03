@@ -332,20 +332,20 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     /* HD: the shadow packet is set up only in Ganon's Tower ("GanonK"):
      * if (sead::SafeString("GanonK") == dComIfGp_getStartStageName()) */
     SafeString a;
-    a.mStringTop = gabi::guest_addr("GanonK"); /* "GanonK" */
+    a.mTextPtr = gabi::guest_addr("GanonK"); /* "GanonK" */
     a.__vtbl = SAFESTRING_VTBL;
     SafeString b;
     {
         u32 stage = dComIfGp_ea() + 0x5134;
         b.__vtbl = SAFESTRING_VTBL;
-        b.mStringTop = stage;
+        b.mTextPtr = stage;
     }
     kiAssureString(a.__vtbl, &a);
     kiAssureString(a.__vtbl, &a);
     u32 bv = b.__vtbl;
-    u32 s1 = a.mStringTop;
+    u32 s1 = a.mTextPtr;
     kiAssureString(bv, &b);
-    u32 s2 = b.mStringTop;
+    u32 s2 = b.mTextPtr;
     bool eq = false;
     if (s1 == s2) {
         eq = true;

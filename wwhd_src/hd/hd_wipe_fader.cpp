@@ -63,7 +63,7 @@ static void initializeWipeStep(hdWipeStep_c* step) {
     SafeString* name = gabi::at<SafeString>(gabi::ea(step)+offsetof(hdWipeStep_c, mName));
     if (name == NULL) name = (SafeString*)allocateWipeFader(sizeof(SafeString));
     if (name != NULL) {
-        name->mStringTop = gabi::guest_addr("");
+        name->mTextPtr = gabi::guest_addr("");
         name->__vtbl = gabi::ea(&sWipeFaderSafeStringVtable);
     }
     step->mTarget = 0;
@@ -113,8 +113,8 @@ void hdWipeFader_c::loadTexture() {
     archive.__vtbl = gabi::ea(&sWipeFaderSafeStringVtable);
     name.__vtbl = gabi::ea(&sWipeFaderSafeStringVtable);
     void* manager = sWipeFaderWipeResourceManager;
-    name.mStringTop = gabi::guest_addr("Misc.bfres");
-    archive.mStringTop = gabi::guest_addr("Misc");
+    name.mTextPtr = gabi::guest_addr("Misc.bfres");
+    archive.mTextPtr = gabi::guest_addr("Misc");
     void* resource = loadWipeResource(manager, &archive, &name, 0);
     beginWipeResource(sWipeFaderWipeRenderContext);
     loadWipeTextureDescriptor(&mTextureDescriptor, resource, "wipe_00");
@@ -216,7 +216,7 @@ void hdWipeFader_c::initialize() {
         delegate->mFunction = 0x02739E28;
         delegate->mAdjustment = 0;
     }
-    mTvStep.mName.mStringTop = gabi::guest_addr("WipeFader");
+    mTvStep.mName.mTextPtr = gabi::guest_addr("WipeFader");
     mTvStep.mTarget = 2;
     hdWipeLayerList_l* manager = sWipeFaderWipeLayers;
     u32 count = manager->mLayerCount;
@@ -230,7 +230,7 @@ void hdWipeFader_c::initialize() {
         delegate->mFunction = gabi::guest_fn((const void*)drawDrcWipe);
         delegate->mAdjustment = 0;
     }
-    mDrcStep.mName.mStringTop = gabi::guest_addr("WipeFader");
+    mDrcStep.mName.mTextPtr = gabi::guest_addr("WipeFader");
     mDrcStep.mTarget = 2;
     manager = sWipeFaderWipeLayers;
     count = manager->mLayerCount;

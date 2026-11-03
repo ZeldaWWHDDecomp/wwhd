@@ -70,8 +70,6 @@ static inline void mtx_wcopy(Mtx34* dst, const Mtx34* src) {
     for (int i = 0; i < 12; i++) t[i] = reinterpret_cast<const be<u32>*>(src)[i];
     for (int i = 0; i < 12; i++) {
         u32 v = t[i];
-        if ((v & 0x7F800000u) == 0x7F800000u && (v & 0x003FFFFFu) != 0 && !(v & 0x00400000u))
-            v |= 0x00400000u;
         reinterpret_cast<be<u32>*>(dst)[i] = v;
     }
 }

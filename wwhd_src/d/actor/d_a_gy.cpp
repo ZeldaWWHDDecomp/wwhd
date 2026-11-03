@@ -108,7 +108,7 @@ u32 gyCreateJointHit(J3DModel* m, u32 data, s16 n);
 static inline void setJointCallBack_gy(J3DModelData* data, u16 index, BOOL (*callback)(J3DNode*, int)) {
     data->getJointNodePointer(index)->mCallBack = gabi::guest_fn(reinterpret_cast<const void*>(callback));
 }
-/* a float moved by lfs/stfs without arithmetic is quieted on load: be<f32> models that */
+/* a float moved by lfs/stfs without arithmetic keeps its exact bits: be<f32> models that */
 
 /* the death splash: particle 0x3C at the actor's position (HD: the scale has the debug offsets
  * added, (2+a, 2+a+b, 2+a)) */

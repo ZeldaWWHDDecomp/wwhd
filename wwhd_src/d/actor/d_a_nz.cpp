@@ -151,13 +151,13 @@ static inline u32 cb_emitter(void* cb) { return NzHD::particleCallback(gabi::ea(
 /* inlined into daNZ_Draw */
 static inline u32 nz_getMaterialShape(u32 modelData, const char* name) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_addr(name);
+    key->mTextPtr = gabi::guest_addr(name);
     key->__vtbl = NZ_SAFESTRING_VTBL;
     u32 matTable = gabi::at<J3DModelData>(modelData)->mpResHeader;
     NzHD::assureMaterialName( key.get()); /* SafeString: empty virtual (this TU's copy) */
     u32 off = gabi::at<NzHD::ResourceHeader>(matTable)->mMaterialNameOffset;
     u32 nameTab = off != 0 ? matTable + 0x18 + off : 0;
-    s32 idx = NzHD::lookupMaterialName( nameTab, (u32)key->mStringTop); /* JUTNameTab::getIndex */
+    s32 idx = NzHD::lookupMaterialName( nameTab, (u32)key->mTextPtr); /* JUTNameTab::getIndex */
     u32 node;
     if (idx < 0) {
         node = 0;

@@ -72,30 +72,30 @@ static s32 hdSound_stringLength(be<u8>* text) {
 static void hdSound_copy(hdSound_bufferedString_c* dest, hdSound_string_c* source) {
     // HD: cache the destination buffer and source virtual before invoking it.
     u32 assure = source->mVtable->mAssureTermination;
-    be<u8>* data = dest->mStringTop;
+    be<u8>* data = dest->mTextPtr;
     gabi::call_ptr<void>(assure, source);
-    s32 length = hdSound_stringLength(source->mStringTop);
+    s32 length = hdSound_stringLength(source->mTextPtr);
     s32 capacity = dest->mCapacity;
     if (!(length < capacity)) length = capacity - 1;
     source->assureTermination();
-    OSBlockMove(data, source->mStringTop, length, 0);
+    OSBlockMove(data, source->mTextPtr, length, 0);
     // HD: be<> indexing retains 32-bit guest-address wrap for a negative clamped length.
     data[length] = 0;
 }
 
 static void hdSound_append(hdSound_bufferedString_c* dest, hdSound_string_c* source) {
     u32 assure = dest->mVtable->mAssureTermination;
-    be<u8>* data = dest->mStringTop;
+    be<u8>* data = dest->mTextPtr;
     gabi::call_ptr<void>(assure, dest);
-    s32 current = hdSound_stringLength(dest->mStringTop);
+    s32 current = hdSound_stringLength(dest->mTextPtr);
     s32 base = current < 0 ? 0 : current;
     source->assureTermination();
-    s32 length = hdSound_stringLength(source->mStringTop);
+    s32 length = hdSound_stringLength(source->mTextPtr);
     s32 room = s32(u32(dest->mCapacity) - u32(base));
     if (!(length < room)) length = room - 1;
     if (length <= 0) return;
     source->assureTermination();
-    OSBlockMove(data + base, source->mStringTop, length, 0);
+    OSBlockMove(data + base, source->mTextPtr, length, 0);
     if (base + length > current) data[base + length] = 0;
 }
 
@@ -106,7 +106,7 @@ static void hdSound_buildPaths() {
     hdSound_append(&sPaths[ARCHIVE_PATH], &sPathParts[COMMON_ARCHIVE]);
     gabi::Local<hdSound_fixedString128_c> base;
     base->mBuffer[127] = 0;
-    base->mStringTop = base->mBuffer;
+    base->mTextPtr = base->mBuffer;
     base->mCapacity = 128;
     base->mBuffer[0] = 0;
     base->setVtable(fixedString128Vtable);
@@ -166,7 +166,7 @@ static void __sinit_hd_sound_paths_cpp() {
         hdSound_fixedString256_c* path = &sPaths[i];
         path->mBuffer[0] = 0;
         path->mBuffer[255] = 0;
-        path->mStringTop = path->mBuffer;
+        path->mTextPtr = path->mBuffer;
         path->mCapacity = 256;
         path->setVtable(fixedString256Vtable);
         __register_global_object(0x1018ECFC + i * 0xC);
@@ -182,7 +182,7 @@ static void hdSound_destroyStringStorageA(void* i_this, s32 flags) {
 static void hdSound_assureNone() {}
 /* 0202ED8C */
 static void hdSound_assureTermination(hdSound_bufferedString_c* i_this) {
-    be<u8>* data = i_this->mStringTop;
+    be<u8>* data = i_this->mTextPtr;
     u32 capacity = i_this->mCapacity;
     data[capacity - 1] = 0;
 }

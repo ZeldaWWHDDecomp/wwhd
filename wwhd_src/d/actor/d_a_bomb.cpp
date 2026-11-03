@@ -68,23 +68,9 @@ static void initBombBck(u32 receiver) {
   gabi::store<u32>(receiver + 0x48, 0x1016D820);
 }
 
-// Retain the original arithmetic NaN payload when multiple inputs are NaNs.
-static f32 bombSmokeFma(f32 a, f32 c, f32 b) {
-  if (std::isnan(c))
-    return c;
-  if (std::isnan(a))
-    return a;
-  if (std::isnan(b))
-    return b;
-  return gabi::fmadds(a, c, b);
-}
-static f32 bombSmokeSub(f32 a, f32 b) {
-  if (std::isnan(b))
-    return b;
-  if (std::isnan(a))
-    return a;
-  return a - b;
-}
+// The original's fmadds (a*c+b) and fsubs (a-b): gabi picks the NaN the hardware propagates (frA, frB, frC).
+static f32 bombSmokeFma(f32 a, f32 c, f32 b) { return gabi::fmadds(a, c, b); }
+static f32 bombSmokeSub(f32 a, f32 b) { return gabi::fsubs_ppc(a, b); }
 
 static u32 bombGetResource(daBomb_c *self, u32 index) {
   gabi::Local<BombSafeString> name;

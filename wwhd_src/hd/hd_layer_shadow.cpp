@@ -143,7 +143,7 @@ static s32 shadowTargetCount() { return 2; }
 static SafeString* initializeShadowName(hdShadowStep_c* step) {
  SafeString* name = gabi::at<SafeString>(gabi::ea(step)+offsetof(hdShadowStep_c, mName));
  if(name == NULL) name = (SafeString*)allocateShadowLayer(8);
- if(name != NULL) { name->__vtbl = gabi::ea(&sLayerShadowSafeStringVtable); name->mStringTop = gabi::guest_addr(""); }
+ if(name != NULL) { name->__vtbl = gabi::ea(&sLayerShadowSafeStringVtable); name->mTextPtr = gabi::guest_addr(""); }
  return name;
 }
 static void initializeShadowParameters(hdShadowParameters_c* parameters, f32 a, f32 b, f32 c, f32 d) {
@@ -161,7 +161,7 @@ static hdLayerShadow_c* constructLayerShadow(hdLayerShadow_c* layer) {
  }
  SafeString name;
  name.__vtbl = gabi::ea(&sLayerShadowSafeStringVtable);
- name.mStringTop = gabi::guest_addr("Shadow");
+ name.mTextPtr = gabi::guest_addr("Shadow");
  constructShadowBase(layer, &name);
  layer->mBase.mpVtable.v = gabi::ea(&sLayerShadowLayerVtable);
  layer->mBase.mDrawVtable = gabi::ea(&sLayerShadowDrawVtable);
@@ -309,7 +309,7 @@ static void initializeLayerShadow(hdLayerShadow_c* layer, void* heap) {
    draw->mFunction = kLayerShadowDrawFunction;
   }
   step->mTarget = 2;
-  step->mName.mStringTop = gabi::guest_addr("LayerShadow");
+  step->mName.mTextPtr = gabi::guest_addr("LayerShadow");
  }
  addShadowRenderStep(layer, step);
  delegate = gabi::at<hdShadowDelegate_c>(gabi::ea(layer)+offsetof(hdLayerShadow_c, mFinishStep)+offsetof(hdShadowStep_c, mDelegate));
@@ -321,7 +321,7 @@ static void initializeLayerShadow(hdLayerShadow_c* layer, void* heap) {
   delegate->mAdjustment = 0;
  }
  layer->mFinishStep.mTarget = 2;
- layer->mFinishStep.mName.mStringTop = gabi::guest_addr("LayerShadow::freeShadowTexture_");
+ layer->mFinishStep.mName.mTextPtr = gabi::guest_addr("LayerShadow::freeShadowTexture_");
  layer->mFinishStep.mFlags = 100;
  initializeShadowRenderer(&layer->mRenderer, 1, heap);
  hdShadowEnvironmentParameters_l* environment = layer->mpEnvironmentShadow;
@@ -382,9 +382,9 @@ static BOOL shadowStageEquals(SafeString* name, SafeString* stage) {
  hdShadowSafeStringVtable_l* nameVtable = gabi::at<hdShadowSafeStringVtable_l>(name->__vtbl);
  gabi::call_ptr(nameVtable->mEnsureTerminated, name);
  hdShadowSafeStringVtable_l* stageVtable = gabi::at<hdShadowSafeStringVtable_l>(stage->__vtbl);
- u32 first = name->mStringTop;
+ u32 first = name->mTextPtr;
  gabi::call_ptr(stageVtable->mEnsureTerminated, stage);
- u32 second = stage->mStringTop;
+ u32 second = stage->mTextPtr;
  if(first == second) return TRUE;
  for(u32 i = 0; i<0x40001; ++i) {
   u8 a = *gabi::at<be<u8>>(first+i);
@@ -398,9 +398,9 @@ static BOOL shadowStageEquals(SafeString* name, SafeString* stage) {
 static BOOL configureShadowDemoRange() {
  SafeString firstName;
  SafeString firstStage;
- firstName.mStringTop = gabi::guest_addr("Demo02");
+ firstName.mTextPtr = gabi::guest_addr("Demo02");
  firstName.__vtbl = gabi::ea(&sLayerShadowSafeStringVtable);
- firstStage.mStringTop = gabi::ea(&sLayerShadowStageName);
+ firstStage.mTextPtr = gabi::ea(&sLayerShadowStageName);
  firstStage.__vtbl = gabi::ea(&sLayerShadowSafeStringVtable);
  if(shadowStageEquals(&firstName, &firstStage)) {
   u32 frame = sLayerShadowDemoFrame;
@@ -412,9 +412,9 @@ static BOOL configureShadowDemoRange() {
  }
  SafeString secondName;
  SafeString secondStage;
- secondName.mStringTop = gabi::guest_addr("Demo06");
+ secondName.mTextPtr = gabi::guest_addr("Demo06");
  secondName.__vtbl = gabi::ea(&sLayerShadowSafeStringVtable);
- secondStage.mStringTop = gabi::ea(&sLayerShadowStageName);
+ secondStage.mTextPtr = gabi::ea(&sLayerShadowStageName);
  secondStage.__vtbl = gabi::ea(&sLayerShadowSafeStringVtable);
  if(shadowStageEquals(&secondName, &secondStage)) {
   u32 frame = sLayerShadowDemoFrame;
@@ -433,9 +433,9 @@ static BOOL configureShadowDemoRange() {
  }
  SafeString thirdName;
  SafeString thirdStage;
- thirdName.mStringTop = gabi::guest_addr("Demo25");
+ thirdName.mTextPtr = gabi::guest_addr("Demo25");
  thirdName.__vtbl = gabi::ea(&sLayerShadowSafeStringVtable);
- thirdStage.mStringTop = gabi::ea(&sLayerShadowStageName);
+ thirdStage.mTextPtr = gabi::ea(&sLayerShadowStageName);
  thirdStage.__vtbl = gabi::ea(&sLayerShadowSafeStringVtable);
  if(shadowStageEquals(&thirdName, &thirdStage)) {
   if(u32(sLayerShadowDemoFrame)-0xB40u<0x78u) {

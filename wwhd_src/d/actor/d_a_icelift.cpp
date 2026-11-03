@@ -84,7 +84,7 @@ BOOL daIlift_c::CreateHeap() {
     gabi::Local<SafeString> name;
     u32 ty = mType;
     u32 control = (u32)l_resourceControl;
-    name->mStringTop = (u32)l_arcName[ty];
+    name->mTextPtr = (u32)l_arcName[ty];
     name->__vtbl = gc_tu.safeString;
     u32 index = (u32)l_bmdIdx[ty];
     u32 data = ilift_call::getResource(control, name.get(), index);
@@ -100,7 +100,7 @@ BOOL daIlift_c::CreateHeap() {
         return FALSE;
     ty = mType;
     control = (u32)l_resourceControl;
-    name->mStringTop = (u32)l_arcName[ty];
+    name->mTextPtr = (u32)l_arcName[ty];
     name->__vtbl = gc_tu.safeString;
     index = (u32)l_dzbIdx[ty];
     data = ilift_call::getResource(control, name.get(), index);

@@ -62,7 +62,7 @@ extern void eyeSetSphereCenter(cM3dGSph*, cXyz*);
 
 // HD: resource name is capitalized; SafeString follows eight bytes of linkage scratch.
 static void* getObjectResource(Local<ResourceLocal>& local, u32 id) {
-    local->name.mStringTop = guest_addr("Daiocta");
+    local->name.mTextPtr = guest_addr("Daiocta");
     local->name.__vtbl = 0x1000D4B4;
     return eyeGetResource(l_resourceControl, &local->name, id);
 }

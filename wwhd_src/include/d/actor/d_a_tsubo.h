@@ -287,20 +287,20 @@ inline void fopAcM_seStart_nn(fopAc_ac_c* a, u32 id, u32 param) {
  * literal, `str` the other string (computed after the literal's SafeString is built) */
 template <class F> inline bool sead_streq(u32 lit, F str_fn) {
     gabi::Local<SafeString> a;
-    a->mStringTop = lit;
+    a->mTextPtr = lit;
     a->__vtbl = TSUBO_SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
     {
         u32 s = str_fn();
         b->__vtbl = TSUBO_SAFESTRING_VTBL;
-        b->mStringTop = s;
+        b->mTextPtr = s;
     }
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
     u32 bv = b->__vtbl;
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(bv + 0x14), b.get());
-    u32 s2 = b->mStringTop;
+    u32 s2 = b->mTextPtr;
     if (s1 == s2) return true;
     for (u32 n = 0x40001; n != 0; n--) {
         u8 c1 = gabi::load<u8>(s1);

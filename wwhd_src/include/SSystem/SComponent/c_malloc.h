@@ -2,6 +2,7 @@
  * HD: Heap remains the TU's guest pointer; the reference names its single mapped storage.
  * The heap's HD virtual layout is shared with the verified JKR heap adapters. */
 #pragma once
+#include "bindings.h"  /* JKRHeap_adapters.h includes only wwhd.h since 2026-10-21 */
 #include "JSystem/JKRHeap_adapters.h"
 
 using CmlHeapPtr = gptr<JKRHeap>;

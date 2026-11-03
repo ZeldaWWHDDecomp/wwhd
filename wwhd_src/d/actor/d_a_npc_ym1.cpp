@@ -290,15 +290,15 @@ bool daNpc_Ym1_c::init_YM1_0() {
         gabi::Local<SafeString> a;
         gabi::Local<SafeString> b;
         b->__vtbl = SAFESTRING_VTBL;
-        b->mStringTop = gabi::ea(&startStageName);
-        a->mStringTop = gabi::ea(&demoStageName);
+        b->mTextPtr = gabi::ea(&startStageName);
+        a->mTextPtr = gabi::ea(&demoStageName);
         a->__vtbl = SAFESTRING_VTBL;
         ym1AssureTermination(
             a.get()); /* sead::SafeString::assureTerminationImpl_ (empty, this TU's copy) */
         gabi::call_ptr(ym1StringVtable(a)->assure.get(), a.get());
-        u32 s1 = a->mStringTop;
+        u32 s1 = a->mTextPtr;
         gabi::call_ptr(ym1StringVtable(b)->assure.get(), b.get());
-        u32 s2 = b->mStringTop;
+        u32 s2 = b->mTextPtr;
         if (s1 != s2) {
             bool equal = false;
             for (u32 i = 0; i < 0x40001; i++) {

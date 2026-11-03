@@ -10,8 +10,6 @@ static u8 sShaderArchiveRotationGuard;
 static u8 sShaderArchivePositiveRotationGuard;
 static void initializeRotationGuard(void* guard);
 static void initializePositiveRotationGuard(void* guard);
-static hdShaderArchiveMgr_c* sShaderArchiveShaderManager;
-static hdShaderArchiveMgr_c* sShaderArchiveShaderManagerDisposer;
 static void* sShaderArchiveResourceManager;
 static void* sShaderArchiveHeapManager;
 static u32 sShaderArchiveTypeGuard;
@@ -65,7 +63,7 @@ static void loadArchive(hdShaderArchiveMgr_c* manager, const char* path) {
     argument.mReadSize = 0;
     argument.mFileDevice = 0;
     argument.mPath.__vtbl = gabi::ea(&sShaderArchiveSafeStringVtable);
-    argument.mPath.mStringTop = gabi::guest_addr(path);
+    argument.mPath.mTextPtr = gabi::guest_addr(path);
     argument.mBuffer = 0;
     argument.mBufferSize = 256;
     argument.mOffset = 0;
@@ -144,8 +142,6 @@ static void __sinit_hd_shader_archive_cpp() {
  data sShaderArchivePositiveRotationGuard 1049FB3D
  ext 028ED6F8 void initializeRotationGuard(void* guard)
  ext 028EAB2C void initializePositiveRotationGuard(void* guard)
- data sShaderArchiveShaderManager 101F8A94
- data sShaderArchiveShaderManagerDisposer 101F8A98
  data sShaderArchiveResourceManager 101F8B68
  data sShaderArchiveHeapManager 101F8B4C
  data sShaderArchiveTypeGuard 101FD6E0

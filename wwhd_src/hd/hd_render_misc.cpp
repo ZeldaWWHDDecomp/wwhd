@@ -127,7 +127,7 @@ hdRenderResources_c* hdRenderResources_c::create(void* heap) {
 /* inlined into hdRenderResources_c::load */
 static void setMiscResourceName(SafeString* name, const char* text) {
     name->__vtbl = gabi::ea(&sMiscSafeStringVtable);
-    name->mStringTop = gabi::guest_addr(text);
+    name->mTextPtr = gabi::guest_addr(text);
 }
 
 /* inlined into hdRenderResources_c::load */
@@ -135,7 +135,7 @@ static void* lookupMiscNamedEnvironment(hdMiscResourceFile_l* file, SafeString* 
     hdMiscSafeStringVtable_l* vtable = gabi::at<hdMiscSafeStringVtable_l>(name->__vtbl);
     gabi::call_ptr(vtable->mAssureTermination.get(), name);
     void* dictionary = file->mDictionary.get();
-    const char* text = gabi::at<const char>(name->mStringTop);
+    const char* text = gabi::at<const char>(name->mTextPtr);
     return findMiscEnvironment(dictionary, text)->get();
 }
 

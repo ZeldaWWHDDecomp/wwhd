@@ -184,8 +184,8 @@ struct ModelFlagsHD {
   /* 0x00 */ u8 prefix[0x74];
   /* 0x74 */ WordHD flags;
 };
-struct ModelPacketsHD : J3DModel {
-  /* 0xF8 */ u8 gap[0x138 - 0xF8];
+struct ModelPacketsHD { /* view of a J3DModel (0x144); not derived since J3DModel is complete */
+  /* 0x000 */ u8 model[0x138];
   /* 0x138 */ WordHD count;
   /* 0x13C */ gptr<MaterialPacketHD> packets;
 };

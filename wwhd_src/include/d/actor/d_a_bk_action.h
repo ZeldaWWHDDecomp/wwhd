@@ -117,17 +117,17 @@ static inline void SafeString_vcall(SafeString* s) {
 }
 static inline bool dComIfGp_checkStageName(const char* name) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(name);
+    a->mTextPtr = gabi::guest_addr(name);
     a->__vtbl = gc_tu.safeString;
     u32 stage = dComIfGp_ea() + PLAY_OFF(mCurStage.mName); /* dStage_startStage name (HD) */
     gabi::Local<SafeString> b;
     b->__vtbl = gc_tu.safeString;
-    b->mStringTop = stage;
+    b->mTextPtr = stage;
     SafeString_vcall(a);
     SafeString_vcall(a);
-    u32 pa = a->mStringTop;
+    u32 pa = a->mTextPtr;
     SafeString_vcall(b);
-    u32 pb = b->mStringTop;
+    u32 pb = b->mTextPtr;
     if (pa == pb)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {

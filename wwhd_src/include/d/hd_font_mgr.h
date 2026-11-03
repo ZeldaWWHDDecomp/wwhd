@@ -5,10 +5,10 @@
 enum hdFontIndex_e { FONT_MAIN, FONT_MESSAGE, FONT_RUBY, FONT_ZELDA, FONT_PICTURE, FONT_SYSTEM, FONT_MAIN_L, FONT_COUNT };
 struct hdFont_stringVtable_c { u8 _00[0x14]; be<u32> mAssureTermination; };
 struct hdFont_string_c {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     gptr<hdFont_stringVtable_c> mVtable;
     void setVtable(u32 address) { mVtable.v = address; }
-    void setText(const char* text) { mStringTop.v = gabi::guest_addr(text); }
+    void setText(const char* text) { mTextPtr.v = gabi::guest_addr(text); }
     void assureTermination() { gabi::call_ptr<void>(mVtable->mAssureTermination, this); }
 };
 WWHD_SIZE(hdFont_string_c, 8);

@@ -1,3 +1,4 @@
+# verify: -only 026B9A80
 # Supplemental fixture for 026B9A80 (run with -only 026B9A80): the hidden pane may alias the button list: the flag store must precede the button-count read.
 # Primary spec plus the lines at the end; synthetic values, no game data.
 src wwhd_src/d/hd_screen_msg_window_scroll.cpp

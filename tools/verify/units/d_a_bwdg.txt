@@ -129,3 +129,5 @@ field * 5920000C u32 0x027BF7E8
 stable 591000F0 4
 stable 591001E4 4
 stable 5920000C 4
+# randamize_piece / wave_cont make more than 20000 guest calls per run (RNG and math loops): raise the budget
+callbudget 200000

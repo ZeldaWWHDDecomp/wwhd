@@ -364,19 +364,19 @@ void dKyr_wind_move() {
   pWind = env->mpWind;
   pCamera = weatherPlay()->mpCamera;
   dKyw_get_wind_vecHD();
-  work->mSeaName.mStringTop = at<be<u8>>(guest_addr("sea"));
+  work->mSeaName.mTextPtr = at<be<u8>>(guest_addr("sea"));
   work->mSeaName.__vtbl = &windSafeStringVtable;
   WeatherPlayHD *game = weatherPlay();
-  work->mStageName.mStringTop = game->mStageName;
+  work->mStageName.mTextPtr = game->mStageName;
   work->mStageName.__vtbl = &windSafeStringVtable;
   work->mSeaName.assureTermination();
   work->mSeaName.assureTermination();
-  be<u8> *name = work->mSeaName.mStringTop;
+  be<u8> *name = work->mSeaName.mTextPtr;
   work->mStageName.assureTermination();
-  bool sea = name == work->mStageName.mStringTop.get();
+  bool sea = name == work->mStageName.mTextPtr.get();
   if (!sea) {
-    be<u8> *a = work->mSeaName.mStringTop;
-    be<u8> *b = work->mStageName.mStringTop;
+    be<u8> *a = work->mSeaName.mTextPtr;
+    be<u8> *b = work->mStageName.mTextPtr;
     for (u32 j = 0; j < 0x40001; j++) {
       u8 left = a[j], right = b[j];
       if (left != right)

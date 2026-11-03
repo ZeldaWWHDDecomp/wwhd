@@ -151,11 +151,11 @@ f32 cM2dGBox_GetLen(cM2dGBox*, be<f32>*);
 static inline bool sea_SafeString_eq(SafeString* a, SafeString* b) {
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b);
-    if (s1 == b->mStringTop)
+    if (s1 == b->mTextPtr)
         return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+    u32 p = a->mTextPtr, q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = gabi::load<u8>(p + i);
         if (c != gabi::load<u8>(q + i))
@@ -169,10 +169,10 @@ static inline bool sea_SafeString_eq(SafeString* a, SafeString* b) {
  * play+0x5134) */
 static inline bool sea_isStartStage(const char* lit) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_str(lit);
+    a->mTextPtr = gabi::guest_str(lit);
     a->__vtbl = SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
-    b->mStringTop = dComIfGp_ea() + 0x5134;
+    b->mTextPtr = dComIfGp_ea() + 0x5134;
     b->__vtbl = SAFESTRING_VTBL;
     return sea_SafeString_eq(a, b);
 }
@@ -1178,7 +1178,7 @@ bool daSea_packet_c::create(cXyz* pos) {
     u32 packetAddress = gabi::ea(this);
     gabi::Local<SafeString> key;
     key->__vtbl = SAFESTRING_VTBL;
-    key->mStringTop = gabi::guest_str("wave_draw");
+    key->mTextPtr = gabi::guest_str("wave_draw");
     u32 mgr = seaShaderManagerGet();
     s32 i = seaShaderFind((u32)gabi::at<SeaShaderManager>(mgr)->mpArchive, key.get());
     u32 e = 0;

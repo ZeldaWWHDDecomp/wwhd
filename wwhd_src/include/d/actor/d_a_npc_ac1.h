@@ -286,9 +286,9 @@ void* Ac1_getNamedResource(dRes_control_c*, SafeString*, SafeString*);
 inline void* Ac1_objectResource(const char* arc, const char* name) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> n;
-    a->mStringTop = gabi::guest_addr(arc);
+    a->mTextPtr = gabi::guest_addr(arc);
     a->__vtbl = gc_tu.safeString;
-    n->mStringTop = gabi::guest_addr(name);
+    n->mTextPtr = gabi::guest_addr(name);
     n->__vtbl = gc_tu.safeString;
     return Ac1_getNamedResource(dComIfG_resControl(), a.get(), n.get());
 }

@@ -1,3 +1,4 @@
+# verify: -only 0263F4F0
 # Supplemental declared scope: only 0263F4F0; run with -only 0263F4F0.
 # Original 02038E80 post descriptors use independent 11/51/211-unit buffers.
 # Name/topic/comment physical lengths are at most 10/50/210, with fixed NULs.

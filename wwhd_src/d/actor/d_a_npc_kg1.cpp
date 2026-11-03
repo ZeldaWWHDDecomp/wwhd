@@ -17,7 +17,7 @@ static void* objectResource(s32 id) {
 
     Kg1ResourceName storage;
     SafeString* name = &storage.name;
-    name->mStringTop = gabi::guest_addr("Kg");
+    name->mTextPtr = gabi::guest_addr("Kg");
     name->__vtbl = gc_tu.safeString;
     void* control = kg1Resources();
     return Kg1Core_getResource(control, name, id);

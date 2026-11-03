@@ -29,16 +29,16 @@ static bool stageNameEquals(const char* name) {
     gabi::Local<SafeString> left, right;
     right->__vtbl = 0x10051884;
     left->__vtbl = 0x10051884;
-    left->mStringTop = gabi::guest_addr(name);
-    right->mStringTop = gabi::ea(l_stageName);
+    left->mTextPtr = gabi::guest_addr(name);
+    right->mTextPtr = gabi::ea(l_stageName);
     // HD: keep the direct assure call and both virtual calls in their original order.
     gabi::call_ptr<void>(gabi::guest_fn((const void*)seadSafeString_assureTerminationImpl), left.get());
     auto* leftVtable = gabi::at<dOvlpFd_SafeStringVtable>(left->__vtbl);
     gabi::call_ptr<void>(leftVtable->assureTerminationImpl.get(), left.get());
-    u32 saved = left->mStringTop;
+    u32 saved = left->mTextPtr;
     auto* rightVtable = gabi::at<dOvlpFd_SafeStringVtable>(right->__vtbl);
     gabi::call_ptr<void>(rightVtable->assureTerminationImpl.get(), right.get());
-    return sameStageName(gabi::at<const be<u8>>(saved), gabi::at<const be<u8>>(right->mStringTop));
+    return sameStageName(gabi::at<const be<u8>>(saved), gabi::at<const be<u8>>(right->mTextPtr));
 }
 
 /* 025A1798 */

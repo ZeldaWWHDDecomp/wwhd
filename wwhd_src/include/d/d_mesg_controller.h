@@ -3,13 +3,7 @@
 #pragma once
 #include "gc_api/gc_api.h"
 
-namespace JMessage {
-struct TControl {
-    // HD: base work is initialized by the original JMessage constructor.
-    /* 0x00 */ u8 _000[0x38];
-    /* 0x38 */ be<u32> __vtbl;
-};
-}
+#include "JSystem/JMessage/control.h"  /* JMessage::TControl (0x3C; base work set by its constructor 028427B8) */
 struct JUTFont;
 struct dMesg_tControl : JMessage::TControl {
     enum : u32 { __vt = 0x100E0CB8 };

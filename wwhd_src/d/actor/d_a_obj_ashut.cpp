@@ -64,7 +64,7 @@ s32 daObjAshut::Act_c::Mthd_Delete() {
 /* 02318BE4 */
 s32 daObjAshut::Act_c::CreateHeap() {
     gabi::Local<SafeString> name;
-    name->mStringTop=gabi::guest_addr("Ashut");
+    name->mTextPtr=gabi::guest_addr("Ashut");
     name->__vtbl=0x10025074;
     void* resource=ashutGetModelResource(sResourceManager,name.get(),4);
     if(!resource) ashutAssert("d_a_obj_ashut.cpp",0xF9,"mdl_data != 0");

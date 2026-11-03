@@ -82,11 +82,11 @@ static inline void dComIfG_Ccsp_SetMass(u32 obj, u8 type) {
 static inline bool SafeString_eq(SafeString* a, SafeString* b) {
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b);
-    if (s1 == b->mStringTop)
+    if (s1 == b->mTextPtr)
         return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+    u32 p = a->mTextPtr, q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = gabi::load<u8>(p + i);
         if (c != gabi::load<u8>(q + i))
@@ -98,10 +98,10 @@ static inline bool SafeString_eq(SafeString* a, SafeString* b) {
 }
 static inline bool hookshotIsStartStage(const char* lit) {
     HookshotLocal<SafeString> a;
-    a->mStringTop = gabi::guest_addr(lit);
+    a->mTextPtr = gabi::guest_addr(lit);
     a->__vtbl = SAFESTRING_VTBL;
     HookshotLocal<SafeString> b;
-    b->mStringTop = dComIfGp_ea() + 0x5134;
+    b->mTextPtr = dComIfGp_ea() + 0x5134;
     b->__vtbl = SAFESTRING_VTBL;
     return SafeString_eq(a, b);
 }

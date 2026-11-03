@@ -12,3 +12,10 @@ field 0203E284 r3+14 u16 0,4,8
 # GHS delegate thunk: r6..r8 hold the decoded member pointer (scratch), only r3..r5 are passed; the
 # resolved random target's live-in r6.. is a false positive
 nolivein 0203E284
+
+# cross-build save states (2026-11-03): Delegate_invoke runs the Olive manager thread, which is parked
+# below it when a state is taken. The original has no frame and only tail-branches (bctr), so its target
+# must start at the entry sp (footprint 0: callee sp and the caller's linkage words) with the entry LR
+# (the harness's entry LR 0BADC0DE) and the caller's r14..r31 / f14..f31 untouched (framexact).
+footprint 0203E284 0
+framexact 0203E284 0BADC0DE

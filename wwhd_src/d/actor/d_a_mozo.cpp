@@ -47,7 +47,7 @@ static cXyz l_fireTarget;
 static void *mozoPtr(u32 address) { return gabi::at<u8>(address); }
 static u32 mozoResource(s32 index, const char *archive) {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_str(archive);
+    name->mTextPtr = gabi::guest_str(archive);
     name->__vtbl = mozo_tu::safeString;
     gabi::Local<u8[16]> linkage;
     return mozoGetResource(mozoPtr((u32)(l_resourceControl)), name.get(), index);

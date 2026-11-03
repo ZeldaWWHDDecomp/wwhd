@@ -451,7 +451,7 @@ s32 daStone::Act_c::create_heap() {
     u16 modelIndex = static_cast<u16>(record->modelIndex);
     u32 resources = static_cast<u32>(stone_resourceAddress());
     StoneLocal<SafeString> name;
-    name->mStringTop = archive;
+    name->mTextPtr = archive;
     name->__vtbl = stone_tu::safeStringVtable;
     void* modelData = stone_getObjectResource(static_cast<void*>(stone_pointer<StoneResources>(resources)),
                                               name.get(), modelIndex);
@@ -545,12 +545,12 @@ s32 daStone::Act_c::_create() {
     this->cullMtx = static_cast<u32>(model ? model + 0xC8 : 0);
     this->cull_set_draw();
     StoneLocal<SafeString> stageName;
-    stageName->mStringTop = gabi::guest_str("sea");
+    stageName->mTextPtr = gabi::guest_str("sea");
     stageName->__vtbl = stone_tu::safeStringVtable;
     u32 play = address(stone_getPlay());
     StoneLocal<SafeString> currentStage;
     currentStage->__vtbl = stone_tu::safeStringVtable;
-    currentStage->mStringTop = gabi::ea(&gabi::object_at<StonePlayView>(play).stageName[0]);
+    currentStage->mTextPtr = gabi::ea(&gabi::object_at<StonePlayView>(play).stageName[0]);
     u32 vtable = stageName->__vtbl;
     gabi::call<void>(static_cast<u32>(gabi::object_at<StoneSafeStringVtable>(vtable).assureTermination),
                      stageName.get());
@@ -558,10 +558,10 @@ s32 daStone::Act_c::_create() {
     gabi::call<void>(static_cast<u32>(gabi::object_at<StoneSafeStringVtable>(vtable).assureTermination),
                      stageName.get());
     vtable = currentStage->__vtbl;
-    u32 left = stageName->mStringTop;
+    u32 left = stageName->mTextPtr;
     gabi::call<void>(static_cast<u32>(gabi::object_at<StoneSafeStringVtable>(vtable).assureTermination),
                      currentStage.get());
-    u32 right = currentStage->mStringTop;
+    u32 right = currentStage->mTextPtr;
     if (same_stage(left, right)) {
         play = address(stone_getPlay());
         u32 stage = gabi::ea(&gabi::object_at<StonePlayView>(play).stageVtable),
@@ -1290,13 +1290,13 @@ void daStone::Act_c::eff_break() {
                              position.get(), nullptr, nullptr, 255, nullptr, -1, color, color, nullptr);
     u32 resources = static_cast<u32>(stone_resourceAddress());
     StoneLocal<SafeString> firstName;
-    firstName->mStringTop = gabi::guest_str("Always");
+    firstName->mTextPtr = gabi::guest_str("Always");
     firstName->__vtbl = stone_tu::safeStringVtable;
     void* model = stone_getObjectResource_2(static_cast<void*>(stone_pointer<StoneResources>(resources)),
                                             firstName.get(), 0x30);
     resources = static_cast<u32>(stone_resourceAddress());
     StoneLocal<SafeString> secondName;
-    secondName->mStringTop = gabi::guest_str("Always");
+    secondName->mTextPtr = gabi::guest_str("Always");
     secondName->__vtbl = stone_tu::safeStringVtable;
     void* animation = stone_getObjectResource_2(static_cast<void*>(stone_pointer<StoneResources>(resources)),
                                                 secondName.get(), 0x66);

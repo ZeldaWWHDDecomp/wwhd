@@ -59,24 +59,24 @@ static VrboxView* vrboxView() {
 /* inlined into daVrbox_Draw */
 static bool startStageIs(const char* name) {
     gabi::Stack<SafeString> lhs;
-    lhs->mStringTop = gabi::guest_addr(name);
+    lhs->mTextPtr = gabi::guest_addr(name);
     lhs->__vtbl = gc_tu.safeString;
     const char* stage = dComIfGp_getStartStageName();
     gabi::Stack<SafeString> rhs;
-    rhs->mStringTop = ea(stage);
+    rhs->mTextPtr = ea(stage);
     rhs->__vtbl = gc_tu.safeString;
     gabi::call_ptr(at<VrboxStringVtable>(lhs->__vtbl)->assureTermination.get(),
                    lhs.get()); /* assureTerminationImpl_ */
     gabi::call_ptr(at<VrboxStringVtable>(lhs->__vtbl)->assureTermination.get(),
                    lhs.get()); /* cstr() */
-    u32 a = lhs->mStringTop;
+    u32 a = lhs->mTextPtr;
     gabi::call_ptr(at<VrboxStringVtable>(rhs->__vtbl)->assureTermination.get(),
                    rhs.get()); /* str.cstr() */
-    if (a == rhs->mStringTop) {
+    if (a == rhs->mTextPtr) {
         return true;
     }
-    u32 b = rhs->mStringTop;
-    a = lhs->mStringTop;
+    u32 b = rhs->mTextPtr;
+    a = lhs->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = (u8)*at<be<u8>>(a + i);
         if (c != (u8)*at<be<u8>>(b + i)) {

@@ -26,17 +26,17 @@ static inline void SafeString_assureTermination(SafeString* s) {
 }
 static bool isStartStage(const char* name) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(name);
+    a->mTextPtr = gabi::guest_addr(name);
     a->__vtbl = ZL1_SAFESTRING_VTBL;
     u32 stage = gabi::ea(&reinterpret_cast<PlayStageView*>(dComIfGp_get())->mStartStage);
     gabi::Local<SafeString> b;
     b->__vtbl = ZL1_SAFESTRING_VTBL;
-    b->mStringTop = stage;
+    b->mTextPtr = stage;
     SafeString_assureTermination(a);
     SafeString_assureTermination(a);
-    u32 pa = a->mStringTop;
+    u32 pa = a->mTextPtr;
     SafeString_assureTermination(b);
-    u32 pb = b->mStringTop;
+    u32 pb = b->mTextPtr;
     if (pa == pb)
         return true;
     for (u32 i = 0; i < SAFE_STRING_MAX_LENGTH; i++) {
@@ -54,15 +54,15 @@ static bool isStartStage(const char* name) {
 static bool SafeString_equal(u32 lit, u32 other) {
     gabi::Local<SafeString> b;
     b->__vtbl = ZL1_SAFESTRING_VTBL;
-    b->mStringTop = other;
+    b->mTextPtr = other;
     gabi::Local<SafeString> a;
-    a->mStringTop = lit;
+    a->mTextPtr = lit;
     a->__vtbl = ZL1_SAFESTRING_VTBL;
     Zl1Demo_assureTerminationImpl(a.get()); /* sead::SafeString::assureTerminationImpl_ (empty) */
     SafeString_assureTermination(a);
-    u32 pa = a->mStringTop;
+    u32 pa = a->mTextPtr;
     SafeString_assureTermination(b);
-    u32 pb = b->mStringTop;
+    u32 pb = b->mTextPtr;
     if (pa == pb)
         return true;
     for (u32 i = 0; i < SAFE_STRING_MAX_LENGTH; i++) {
@@ -560,20 +560,20 @@ u8 daNpc_Zl1_c::demo() {
                 u32 name = gabi::ea(anm2->mMaterials.get()[i].mName.get());
                 gabi::Local<SafeString> s1;
                 s1->__vtbl = ZL1_SAFESTRING_VTBL;
-                s1->mStringTop = name;
+                s1->mTextPtr = name;
                 MaterialNameHeader* h =
                     Zl1Demo_getMaterialName(md); /* the material name table header */
                 SafeString_assureTermination(s1);
                 s32 idx = Zl1Demo_getMaterialIndex(h->mNames.get(),
-                                                   (u32)s1->mStringTop); /* JUTNameTab::getIndex */
+                                                   (u32)s1->mTextPtr); /* JUTNameTab::getIndex */
                 gabi::Local<SafeString> s2;
-                s2->mStringTop = gabi::guest_addr("zelda_mouth"); /* "zelda_mouth" */
+                s2->mTextPtr = gabi::guest_addr("zelda_mouth"); /* "zelda_mouth" */
                 s2->__vtbl = ZL1_SAFESTRING_VTBL;
                 SafeString_assureTermination(s1);
                 SafeString_assureTermination(s1);
-                u32 pa = s1->mStringTop;
+                u32 pa = s1->mTextPtr;
                 SafeString_assureTermination(s2);
-                u32 pb = s2->mStringTop;
+                u32 pb = s2->mTextPtr;
                 bool equal = true;
                 if (pa != pb) {
                     equal = false;

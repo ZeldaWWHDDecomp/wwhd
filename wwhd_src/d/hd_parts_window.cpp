@@ -113,7 +113,7 @@ f32 hdWindowPart_c::randomize(f32 value) {
     return gabi::fmadds(fraction, maximum - minimum, value + minimum);
 }
 static hdWindowTreeNode_l* hdWindow_findConfig(hdWindowPart_c* part, hdUiSafeString* name) {
-    return hdWindow_findTree(&part->mConfigs, part->mConfigs.mpRoot, name);
+    return hdWindow_findTree(&part->mConfigs, part->mConfigs.mPool.mRoot, name);
 }
 /* 026F5258 */
 void hdWindowPart_c::selectConfig(hdUiSafeString* name) {
@@ -398,15 +398,15 @@ static hdWindowPart_c* hdWindowPart_c__ct(hdWindowPart_c* part, f32 spacing) {
     if (!tree)
         tree = static_cast<hdWindowTree_l*>(operator_new(sizeof(hdWindowTree_l)));
     if (tree) {
-        tree->mpRoot = NULL;
-        tree->mCount = 0;
-        tree->mCapacity = 32;
+        tree->mPool.mRoot = NULL;
+        tree->mPool.mCount = 0;
+        tree->mPool.mCapacity = 32;
         hdWindowTreeNode_l* first = &tree->mNodes[0];
-        tree->mpFreeHead = first;
+        tree->mPool.mFreeHead = first;
         for (u32 i = 0; i < 31; ++i)
             tree->mNodes[i].mpLeft = &tree->mNodes[i + 1];
         tree->mNodes[31].mpLeft = NULL;
-        tree->mpNodes = first;
+        tree->mPool.mNodeStorage = first;
     }
     part->mpOrder = NULL;
     part->mRemaining = 0;
@@ -443,20 +443,20 @@ void hdWindowPart_c::clearConfigs() {
     locals.mDeleteMethod.mFirst = sWindowDeleteMethod.mFirst;
     locals.mDeleteMethod.mSecond = sWindowDeleteMethod.mSecond;
     hdWindow_constructDeleteDelegate(&locals.mDeleteDelegate, &locals.mReceiver, &locals.mDeleteMethod);
-    hdWindowTreeNode_l* root = mConfigs.mpRoot;
+    hdWindowTreeNode_l* root = mConfigs.mPool.mRoot;
     if (root)
         hdWindow_traverseDelete(root, &locals.mDeleteDelegate);
     locals.mNoopMethod.mFirst = sWindowNoopMethod.mFirst;
     locals.mNoopMethod.mSecond = sWindowNoopMethod.mSecond;
     hdWindow_constructTreeDelegate(&locals.mTreeDelegate, &mConfigs, &locals.mNoopMethod);
-    root = mConfigs.mpRoot;
+    root = mConfigs.mPool.mRoot;
     if (root)
         hdWindow_traverseTree(root, &locals.mTreeDelegate);
-    u32 capacity = mConfigs.mCapacity;
-    hdWindowTreeNode_l* nodes = mConfigs.mpNodes;
-    mConfigs.mCount = 0;
-    mConfigs.mpFreeHead = nodes;
-    mConfigs.mpRoot = NULL;
+    u32 capacity = mConfigs.mPool.mCapacity;
+    hdWindowTreeNode_l* nodes = mConfigs.mPool.mNodeStorage;
+    mConfigs.mPool.mCount = 0;
+    mConfigs.mPool.mFreeHead = nodes;
+    mConfigs.mPool.mRoot = NULL;
     s32 remaining = s32(capacity - 1);
     if (remaining > 0) {
         u32 address = gabi::ea(nodes);
@@ -469,7 +469,7 @@ void hdWindowPart_c::clearConfigs() {
     hdWindowTreeNode_l* last = gabi::at<hdWindowTreeNode_l>(
         gabi::ea(nodes) + capacity * sizeof(hdWindowTreeNode_l) - sizeof(hdWindowTreeNode_l));
     hdPartsView(last)->mpLeft = NULL;
-    mConfigs.mpNodes = nodes;
+    mConfigs.mPool.mNodeStorage = nodes;
 }
 /* 026F344C */
 void hdWindowPart_c::clear() {
@@ -843,10 +843,10 @@ hdWindowConfig_l* hdWindowPart_c::createConfig(hdUiSafeString* name, void* heap)
     if (config)
         config = hdWindow_configConstruct(config);
     hdWindow_loadConfig(config, mpPane, &mPanes, name, heap);
-    if (s32(mConfigs.mCount) < s32(mConfigs.mCapacity)) {
-        node = mConfigs.mpFreeHead;
+    if (s32(mConfigs.mPool.mCount) < s32(mConfigs.mPool.mCapacity)) {
+        node = mConfigs.mPool.mFreeHead;
         if (node)
-            mConfigs.mpFreeHead = node->mpLeft;
+            mConfigs.mPool.mFreeHead = node->mpLeft;
         if (node) {
             node->mpConfig = config;
             node->mpLeft = NULL;
@@ -866,9 +866,9 @@ hdWindowConfig_l* hdWindowPart_c::createConfig(hdUiSafeString* name, void* heap)
             node->mNameBuffer[u32(length)] = 0;
             node->mKey.mText = &node->mNameBuffer[0];
         }
-        ++mConfigs.mCount;
-        mConfigs.mpRoot = hdWindow_insertTree(&mConfigs, mConfigs.mpRoot, node);
-        mConfigs.mpRoot->mIsRed = 0;
+        ++mConfigs.mPool.mCount;
+        mConfigs.mPool.mRoot = hdWindow_insertTree(&mConfigs, mConfigs.mPool.mRoot, node);
+        mConfigs.mPool.mRoot->mIsRed = 0;
     } else {
         node = hdWindow_findConfig(this, name);
         if (node && u32(gabi::ea(node) + offsetof(hdWindowTreeNode_l, mpConfig)))

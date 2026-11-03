@@ -682,17 +682,17 @@ BOOL daGnd_Execute(gnd_class* i_this) {
             gabi::Local<SafeString> a;
             gabi::Local<SafeString> b;
             a->__vtbl = gc_tu.safeString;
-            b->mStringTop = gabi::guest_addr(l_demoName.mName);
-            a->mStringTop = gabi::guest_addr("Demo42");
+            b->mTextPtr = gabi::guest_addr(l_demoName.mName);
+            a->mTextPtr = gabi::guest_addr("Demo42");
             b->__vtbl = gc_tu.safeString;
             gndExec_assureTermination(a.get());
             gabi::at<gndExecStringVtable>(a->__vtbl)->assureTermination(a.get());
-            u32 s1 = a->mStringTop;
+            u32 s1 = a->mTextPtr;
             gabi::at<gndExecStringVtable>(b->__vtbl)->assureTermination(b.get());
-            if (s1 == b->mStringTop) {
+            if (s1 == b->mTextPtr) {
                 skip = true;
             } else {
-                u32 p = a->mStringTop, q = b->mStringTop;
+                u32 p = a->mTextPtr, q = b->mTextPtr;
                 for (u32 k = 0; k < 0x40001; k++) {
                     u8 c = gabi::load<u8>(p + k);
                     if (c != gabi::load<u8>(q + k))

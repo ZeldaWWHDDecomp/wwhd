@@ -1783,13 +1783,13 @@ u8 daNpc_Ba1_c::demo() {
         gabi::Local<SafeString> b;
         a->__vtbl = SAFESTRING_VTBL;
         b->__vtbl = SAFESTRING_VTBL;
-        b->mStringTop = gabi::ea(l_startStageName);
-        a->mStringTop = gabi::guest_addr("Demo01"); /* "Demo01" */
+        b->mTextPtr = gabi::ea(l_startStageName);
+        a->mTextPtr = gabi::guest_addr("Demo01"); /* "Demo01" */
         ba1_assureString(a.get()); /* sead::SafeString::assureTerminationImpl_ (empty) */
         gabi::call_ptr(gabi::at<Ba1SafeStringVtable>(a->__vtbl)->mAssureTermination, a.get());
-        u32 s1 = a->mStringTop;
+        u32 s1 = a->mTextPtr;
         gabi::call_ptr(gabi::at<Ba1SafeStringVtable>(b->__vtbl)->mAssureTermination, b.get());
-        u32 s2 = b->mStringTop;
+        u32 s2 = b->mTextPtr;
         bool equal = true;
         if (s1 != s2) {
             equal = false;

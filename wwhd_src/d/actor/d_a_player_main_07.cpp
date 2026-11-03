@@ -2129,21 +2129,21 @@ int daPy_lk_c::changeRopeEndProc(int fall) {
     {
         gabi::Local<SafeString> name;                  /* sp+0x08 */
         gabi::Local<SafeString> stage;                 /* sp+0x10 */
-        name->mStringTop = gabi::guest_addr("ADMumi"); /* "ADMumi" */
+        name->mTextPtr = gabi::guest_addr("ADMumi"); /* "ADMumi" */
         name->__vtbl = gc_tu.safeString;
         dComIfG_inf_c* play = Link07::gameInfo();
         stage->__vtbl = gc_tu.safeString;
-        stage->mStringTop = gabi::ea(play) + 0x5134; /* dComIfGp_getStartStageName() */
+        stage->mTextPtr = gabi::ea(play) + 0x5134; /* dComIfGp_getStartStageName() */
         gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
         gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
-        u32 a = name->mStringTop;
+        u32 a = name->mTextPtr;
         gabi::call_ptr(gabi::load<u32>(stage->__vtbl + 0x14), stage.get());
-        u32 b = stage->mStringTop;
+        u32 b = stage->mTextPtr;
         if (a == b) {
             return FALSE;
         }
-        u32 p = name->mStringTop;
-        u32 q = stage->mStringTop;
+        u32 p = name->mTextPtr;
+        u32 q = stage->mTextPtr;
         for (u32 n = 0x40001; n != 0; n--) {
             u8 c = gabi::load<u8>(p);
             if (c != gabi::load<u8>(q)) {
@@ -5548,20 +5548,20 @@ static inline BOOL lk_safeStageIs(u32 str) {
     gabi::Local<SafeString> name;
     gabi::Local<SafeString> stage;
     name->__vtbl = gc_tu.safeString;
-    name->mStringTop = str;
+    name->mTextPtr = str;
     u32 play = dComIfGp_ea();
     stage->__vtbl = gc_tu.safeString;
-    stage->mStringTop = play + 0x5134;
+    stage->mTextPtr = play + 0x5134;
     gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
     gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
-    u32 a = name->mStringTop;
+    u32 a = name->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(stage->__vtbl + 0x14), stage.get());
-    u32 b = stage->mStringTop;
+    u32 b = stage->mTextPtr;
     if (a == b) {
         return TRUE;
     }
-    u32 p = name->mStringTop;
-    u32 q = stage->mStringTop;
+    u32 p = name->mTextPtr;
+    u32 q = stage->mTextPtr;
     for (u32 n = 0x40001; n != 0; n--) {
         u8 c = gabi::load<u8>(p);
         if (c != gabi::load<u8>(q)) {

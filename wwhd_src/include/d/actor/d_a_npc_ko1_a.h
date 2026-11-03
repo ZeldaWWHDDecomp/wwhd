@@ -35,7 +35,7 @@ u32 createHeapRegister(daNpc_Ko1_c*);
 // HD: the original helper does not call SafeString::assureTermination.
 inline void* ko1ObjectRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_addr(arc);
+    key->mTextPtr = gabi::guest_addr(arc);
     key->__vtbl = SAFESTRING_VTBL;
     return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
 }

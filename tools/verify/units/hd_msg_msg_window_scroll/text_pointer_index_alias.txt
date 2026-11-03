@@ -1,3 +1,4 @@
+# verify: -only 026BB768
 # Supplemental fixture for 026BB768 (run with -only 026BB768): an unaligned window whose pane pointers alias its index words.
 # Primary spec plus the lines at the end; synthetic values, no game data.
 src wwhd_src/d/hd_screen_msg_window_scroll.cpp

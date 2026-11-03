@@ -268,14 +268,14 @@ static bool bgn_safestring_equal(const char* lit, u32 name) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> b;
     a->__vtbl = gc_tu.safeString;
-    a->mStringTop = gabi::guest_addr(lit);
+    a->mTextPtr = gabi::guest_addr(lit);
     b->__vtbl = gc_tu.safeString;
-    b->mStringTop = name;
+    b->mTextPtr = name;
     SafeString_assureTermination(a);
     bgnSafeString_assureTermination(a);
     bgnSafeString_assureTermination(b);
-    u32 p = a->mStringTop;
-    u32 q = b->mStringTop;
+    u32 p = a->mTextPtr;
+    u32 q = b->mTextPtr;
     if (p == q)
         return true;
     for (u32 n = 0x40001; n != 0; n--, p++, q++) {

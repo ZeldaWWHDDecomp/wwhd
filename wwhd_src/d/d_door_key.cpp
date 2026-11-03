@@ -73,7 +73,7 @@ static BOOL keyCreate(dDoor_key2_c* key, bool big, const char* name,
     // HD: both SafeString stack slots live across both resource calls.
     SafeString first;
     SafeString second;
-    first.mStringTop = gabi::guest_addr(name);
+    first.mTextPtr = gabi::guest_addr(name);
     first.__vtbl = gc_tu.safeString;
     J3DModelData* modelData = (J3DModelData*)dDoor_getObjectRes(
         dComIfG_resControl(), &first, big ? dRes_INDEX_KEY_BDL_VLOCB_e : dRes_INDEX_KEY_BDL_VLOCN_e);
@@ -85,7 +85,7 @@ static BOOL keyCreate(dDoor_key2_c* key, bool big, const char* name,
     if (key->mpModel == NULL) {
         return FALSE;
     }
-    second.mStringTop = gabi::guest_addr(name);
+    second.mTextPtr = gabi::guest_addr(name);
     second.__vtbl = gc_tu.safeString;
     J3DAnmTransform* bck = (J3DAnmTransform*)dDoor_getObjectRes(
         dComIfG_resControl(), &second, big ? dRes_INDEX_KEY_BCK_VLOCB_e : dRes_INDEX_KEY_BCK_VLOCN_e);

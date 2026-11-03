@@ -65,27 +65,27 @@ static u32 assureTerminationTarget(SafeString* string) {
 }
 static bool rootNameMatches(SafeString* strings, u32 name, u32 incoming) {
     u32 slot = incoming / sizeof(SafeString);
-    strings[slot].mStringTop = name;
+    strings[slot].mTextPtr = name;
     strings[slot].__vtbl = gc_tu.safeString;
     u32 target = assureTerminationTarget(&strings[0]);
     call<void>(target, &strings[0], 0);
     target = assureTerminationTarget(&strings[0]);
     call<void>(target, &strings[0]);
     target = assureTerminationTarget(&strings[slot]);
-    u32 left = strings[0].mStringTop;
+    u32 left = strings[0].mTextPtr;
     call<void>(target, &strings[slot]);
-    if (equalText(left, strings[slot].mStringTop))
+    if (equalText(left, strings[slot].mTextPtr))
         return true;
-    strings[slot + 2].mStringTop = name;
+    strings[slot + 2].mTextPtr = name;
     strings[slot + 2].__vtbl = gc_tu.safeString;
     target = assureTerminationTarget(&strings[1]);
     call<void>(target, &strings[1], 1);
     target = assureTerminationTarget(&strings[1]);
     call<void>(target, &strings[1]);
     target = assureTerminationTarget(&strings[slot + 2]);
-    left = strings[1].mStringTop;
+    left = strings[1].mTextPtr;
     call<void>(target, &strings[slot + 2]);
-    return equalText(left, strings[slot + 2].mStringTop);
+    return equalText(left, strings[slot + 2].mTextPtr);
 }
 static FigureDrawListHD* figureDrawList() {
     // HD: these Gallery lists precede the normal lists in dDlst_list_c.
@@ -511,9 +511,9 @@ bool daObjFigure_c::_draw() {
     reinterpret_cast<J3DJoint*>(eyebrow)->entryIn(model);
     material = root->mpMesh;
     SafeString* strings = guestFrame->mStrings;
-    strings[0].mStringTop = gabi::guest_str("face");
+    strings[0].mTextPtr = gabi::guest_str("face");
     strings[0].__vtbl = gc_tu.safeString;
-    strings[1].mStringTop = gabi::guest_str("ear_2_");
+    strings[1].mTextPtr = gabi::guest_str("ear_2_");
     strings[1].__vtbl = gc_tu.safeString;
     while (material) {
         FigureMaterialRecordHD* record = material->mpData;

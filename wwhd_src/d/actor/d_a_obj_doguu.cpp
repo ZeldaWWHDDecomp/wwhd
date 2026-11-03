@@ -25,7 +25,7 @@ static void* saveEvents() { return &dComIfGs_info()->mSavedata.mEvent; }
 /* inlined into daObjDoguu_c::CreateHeap */
 static void* doguuResource(s32 index) {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::guest_addr("Doguu");
+    name->mTextPtr = gabi::guest_addr("Doguu");
     name->__vtbl = gc_tu.safeString;
     dRes_control_c* controller = dComIfG_resControl();
     return reinterpret_cast<void*>((uintptr_t)doguuObjectResource(controller, name.get(), index));

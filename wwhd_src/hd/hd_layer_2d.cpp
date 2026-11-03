@@ -176,7 +176,7 @@ static hdLayer2DUI_c* hdLayer2DUI_construct(hdLayer2DUI_c* i_this) {
     }
     SafeString name;
     name.__vtbl = gabi::ea(&sUINameVtable);
-    name.mStringTop = gabi::guest_addr("UI");
+    name.mTextPtr = gabi::guest_addr("UI");
     constructUILayer(i_this, &name);
     i_this->mBase.mpVtable = (hdLayerVtable_c*)&sUIVtable;
     i_this->mBase.mDrawVtable = gabi::ea(&sUIInterface);

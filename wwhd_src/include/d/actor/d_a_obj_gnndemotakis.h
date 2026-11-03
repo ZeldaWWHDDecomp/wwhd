@@ -41,22 +41,22 @@ BOOL gnntakis_startCheck(void*, const char*);
 // HD: this inline SafeString comparison is distinct from GameCube strcmp.
 inline bool gnntakis_isTowerStage() {
     gabi::Local<SafeString> requested, stage;
-    requested->mStringTop = gabi::guest_addr("GTower");
+    requested->mTextPtr = gabi::guest_addr("GTower");
     requested->__vtbl = gc_tu.safeString;
     auto* play = (gnntakis_play_c*)dComIfGp_get();
-    stage->mStringTop = gabi::ea(play->mStartStageName);
+    stage->mTextPtr = gabi::ea(play->mStartStageName);
     stage->__vtbl = gc_tu.safeString;
     auto assure = [](SafeString* s) {
         gabi::call_ptr<void>(gabi::load<u32>((u32)s->__vtbl + 0x14), s);
     };
     assure(requested.get());
     assure(requested.get());
-    u32 first = requested->mStringTop;
+    u32 first = requested->mTextPtr;
     assure(stage.get());
-    u32 second = stage->mStringTop;
+    u32 second = stage->mTextPtr;
     if (first == second) return true;
-    auto* left = gabi::at<be<u8>>(requested->mStringTop);
-    auto* right = gabi::at<be<u8>>(stage->mStringTop);
+    auto* left = gabi::at<be<u8>>(requested->mTextPtr);
+    auto* right = gabi::at<be<u8>>(stage->mTextPtr);
     for (u32 i = 0; i < 0x40001; ++i) {
         u8 a = left[i], b = right[i];
         if (a != b) return false;

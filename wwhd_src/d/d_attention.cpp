@@ -53,7 +53,7 @@ f32 att1_PSVECSquareMag(u32 v);
 f32 att1_sqrtf(f32 x);
 static inline u32 getRes_l(u32 str, s32 idx) {
     gabi::Local<SafeString> key;
-    key->mStringTop = str;
+    key->mTextPtr = str;
     key->__vtbl = SAFESTRING_VTBL_ATT;
     return att1_getObjectRes(gabi::load<u32>(0x101F4F28), gabi::ea(key.get()), idx);
 }

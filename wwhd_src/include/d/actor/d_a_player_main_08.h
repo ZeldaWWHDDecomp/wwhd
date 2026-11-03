@@ -445,7 +445,7 @@ struct Link08FanSwingCallback {
 WWHD_SIZE(Link08FanSwingCallback, 0xC);
 
 struct Link08ResourceName {
-    be<u32> mStringTop, mVtable;
+    be<u32> mTextPtr, mVtable;
 };
 WWHD_SIZE(Link08ResourceName, 8);
 struct Link08CylinderSource {

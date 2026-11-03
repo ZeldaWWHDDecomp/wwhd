@@ -159,11 +159,11 @@ static u32 bk_getMaterialShape(u32 md, const char* name) {
     u32 res = gabi::load<u32>(md);
     gabi::Local<SafeString> key;
     key->__vtbl = SAFESTRING_VTBL;
-    key->mStringTop = gabi::guest_addr(name);
+    key->mTextPtr = gabi::guest_addr(name);
     gabi::call_ptr(0x020A8A98, key.get());
     u32 off = gabi::load<u32>(res + 0x18);
     u32 tab = off != 0 ? res + 0x18 + off : 0;
-    s32 idx = gabi::call<s32>(0x027DF9B0, tab, key->mStringTop.get());
+    s32 idx = gabi::call<s32>(0x027DF9B0, tab, key->mTextPtr.get());
     u32 mat;
     if (idx >= 0) {
         u32 count = gabi::load<u32>(md + 0xC);
@@ -237,16 +237,16 @@ static inline void bk_SafeString_vcall(SafeString* s) {
 static bool bk_isStartStage(const char* name) {
     gabi::Local<SafeString> a;
     a->__vtbl = SAFESTRING_VTBL;
-    a->mStringTop = gabi::guest_addr(name);
+    a->mTextPtr = gabi::guest_addr(name);
     u32 stage = dComIfGp_ea() + PLAY_OFF(mCurStage.mName);
     gabi::Local<SafeString> b;
-    b->mStringTop = stage;
+    b->mTextPtr = stage;
     b->__vtbl = SAFESTRING_VTBL;
     bk_SafeString_vcall(a);
     bk_SafeString_vcall(a);
-    u32 pa = a->mStringTop;
+    u32 pa = a->mTextPtr;
     bk_SafeString_vcall(b);
-    u32 pb = b->mStringTop;
+    u32 pb = b->mTextPtr;
     if (pa == pb)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {

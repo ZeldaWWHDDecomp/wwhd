@@ -20,6 +20,9 @@ static u32 l_resourceControl;
 static u32 l_messageData;
 static u32 l_resetState;
 static u32 l_saveMgr;
+typedef gptr<hdInputCtrl_c> InputCtrlPtr;
+static InputCtrlPtr l_inputCtrl;
+static GXColor l_blackColor;
 static u8 l_audioInitFlag;
 static u32 l_toonImage;
 static u32 l_toonExImage;
@@ -32,8 +35,39 @@ static u32 relative(be<u32>* p) {
     u32 offset = *p;
     return offset ? gabi::ea(p) + offset : 0;
 }
+// Scene process names used by the boot scene's requests.
+enum {
+    fpcNm_OVERLAP0_e = 0,
+    fpcNm_LOGO_SCENE_e = 5,
+    fpcNm_OPENING_SCENE_e = 8,
+    fpcNm_ENDING_SCENE_e = 11,
+};
+// Method table 101EA5F0: create 025AC6C8, delete 025ABFD4, execute 025ABF00, isdelete 025ABFCC, draw 025AC770.
+/* 025ABF00 */
+u32 dScnLogo_Execute(dScnLogo_c* i_this) {
+    // HD: reset returns to the logo, without checking the GameCube movie actor.
+    if (at<dScnLogo_ResetStateHD>(l_resetState)->mReset) {
+        fopScnM_ChangeReq(i_this, fpcNm_LOGO_SCENE_e, fpcNm_OVERLAP0_e, 5, 1);
+        return TRUE;
+    }
+
+    // HD: select the main controller and branch on the save-manager result.
+    l_inputCtrl->setMode(hdInputCtrl_c::MODE_MAIN_e);
+    u32 result = at<dScnLogo_SaveMgrHD>(l_saveMgr)->mResult;
+    if (result >= dScnLogo_SaveMgrHD::RESULT_ENDING_FIRST_e && result <= dScnLogo_SaveMgrHD::RESULT_ENDING_LAST_e) {
+        mDoGph_setFadeColor(&l_blackColor);
+        fopScnM_ChangeReq(i_this, fpcNm_ENDING_SCENE_e, fpcNm_OVERLAP0_e, 5, 1);
+    } else {
+        dComIfG_changeOpeningScene(i_this, fpcNm_OPENING_SCENE_e);
+    }
+    return TRUE;
+}
+
+/* 025ABFCC */
+u32 dScnLogo_IsDelete(dScnLogo_c* i_this) { return TRUE; }
+
 /* 025AC770 */
-u32 dScnLogo_IsDelete(dScnLogo_c* i_this) { return 1; }
+u32 dScnLogo_Draw(dScnLogo_c* i_this) { return 1; }
 
 /* 025ABFD4 */
 u32 dScnLogo_Delete(dScnLogo_c* i_this) {
@@ -41,8 +75,8 @@ u32 dScnLogo_Delete(dScnLogo_c* i_this) {
     SafeString right;
     left.__vtbl = gc_tu.safeString;
     right.__vtbl = gc_tu.safeString;
-    right.mStringTop = guest_addr("Misc.bfres");
-    left.mStringTop = guest_addr("Misc");
+    right.mTextPtr = guest_addr("Misc.bfres");
+    left.mTextPtr = guest_addr("Misc");
     if (dScnLogo_loadResourceHD(l_resourceLoader, &left, &right, 0u)) {
         u32 archive = dScnLogo_getResourceFileHD(),
             folder = relative(&at<dScnLogo_ResourceFileHD>(archive)->mFileDictionaryOffset),
@@ -63,8 +97,8 @@ u32 dScnLogo_Delete(dScnLogo_c* i_this) {
     }
     right.__vtbl = gc_tu.safeString;
     left.__vtbl = gc_tu.safeString;
-    right.mStringTop = guest_addr("Particle");
-    left.mStringTop = guest_addr("Particle.bfres");
+    right.mTextPtr = guest_addr("Particle");
+    left.mTextPtr = guest_addr("Particle.bfres");
     if (dScnLogo_loadResourceHD(l_resourceLoader, &right, &left, 0u)) {
         u32 archive = dScnLogo_getResourceFileHD(),
             folder = relative(&at<dScnLogo_ResourceFileHD>(archive)->mFileDictionaryOffset),
@@ -104,7 +138,7 @@ u32 phase_0(dScnLogo_c* i_this) {
         u32 owner = dScnLogo_getHeapHeaderSizeHD(4u) + 0x30D4;
         SafeString name;
         name.__vtbl = gc_tu.safeString;
-        name.mStringTop = guest_addr("cking::system::MiiverseBottleMgr");
+        name.mTextPtr = guest_addr("cking::system::MiiverseBottleMgr");
         u32 heap = dScnLogo_getSystemHeapHD(),
             resource = dScnLogo_createHeapHD(owner, &name, heap, 1u, 0u);
         dScnLogo_createMiiverseBottleMgrHD();
@@ -120,7 +154,7 @@ u32 phase_0(dScnLogo_c* i_this) {
         u32 owner = dScnLogo_getHeapHeaderSizeHD(4u) + 0x1C8;
         SafeString name;
         name.__vtbl = gc_tu.safeString;
-        name.mStringTop = guest_addr("cking::ui::input::SwkbdMgr");
+        name.mTextPtr = guest_addr("cking::ui::input::SwkbdMgr");
         u32 heap = dScnLogo_getUIHeapHD(),
             resource = dScnLogo_createHeapHD(owner, &name, heap, 1u, 0u);
         dScnLogo_createSwkbdMgrHD();
@@ -140,7 +174,7 @@ u32 phase_1(dScnLogo_c* i_this) {
     mDoExt_getCommandHeapHD();
     SafeString first;
     first.__vtbl = gc_tu.safeString;
-    first.mStringTop = guest_addr("System");
+    first.mTextPtr = guest_addr("System");
     u32 toonImage = dRes_control_getResHD(l_resourceControl, &first, dRes_INDEX_SYSTEM_BTI_TOON_e);
     if (!toonImage)
         JUTAssertion_showAssertHD(guest_addr("d_s_logo.cpp"), 0x25Au,
@@ -148,7 +182,7 @@ u32 phase_1(dScnLogo_c* i_this) {
     u32 owner = l_resourceControl;
     SafeString second;
     second.__vtbl = gc_tu.safeString;
-    second.mStringTop = guest_addr("System");
+    second.mTextPtr = guest_addr("System");
     l_toonImage = toonImage;
     u32 toonExImage = dRes_control_getResHD(owner, &second, dRes_INDEX_SYSTEM_BTI_TOONEX_e);
     if (!toonExImage)
@@ -223,6 +257,10 @@ void dScnLogo_SafeStringAssureTerminationHD(u32 p) {}
 
 /* WWHD glue
 ext 02035D78 u32 dScnLogo_getSystemControlHD()
+ext 025DC86C void fopScnM_ChangeReq(dScnLogo_c*, u32, u32, u32, u32)
+ext 02520230 void dComIfG_changeOpeningScene(dScnLogo_c*, u32)
+ext 02618094 void hdInputCtrl_c::setMode(u32)
+ext 025F05F8 void mDoGph_setFadeColor(GXColor*)
 ext 02035ED4 void dScnLogo_setSystemControlEnabledHD(u32, u32)
 ext 02036EEC void dScnLogo_createMiiverseBottleMgrHD()
 ext 02036F8C void dScnLogo_initializeMiiverseBottleMgrHD(u32)
@@ -300,6 +338,8 @@ data l_resourceControl 101F4F28
 data l_messageData 101F8294
 data l_resetState 101F4974
 data l_saveMgr 101F852C
+data l_inputCtrl 101F5088
+data l_blackColor 101D5E94
 data l_audioInitFlag 101F4704
 data l_toonImage 10475800
 data l_toonExImage 10475804

@@ -19,10 +19,10 @@ static inline void J2DPicture_drawTexCoordHD(J2DPicture* pic, Mtx* mtx, f32 a1, 
     c->r[4] = gabi::ea(mtx);
     const f32 fr[8] = {a1, a2, a3, a4, a5, a6, a7, a8};
     for (int i = 0; i < 8; i++)
-        c->f[i + 1].ps0 = c->f[i + 1].ps1 = (double)fr[i];
+        c->f[i + 1].ps0 = c->f[i + 1].ps1 = gabi::fpr_from_f32(fr[i]); /* lfs image: a signalling NaN stays signalling */
     u32 sp = c->r[1];
     c->r[1] = sp - 48;
-    const f64 st[4] = {s9, s10, s11, s12};
+    const f64 st[4] = {gabi::fpr_from_f32(s9), gabi::fpr_from_f32(s10), gabi::fpr_from_f32(s11), gabi::fpr_from_f32(s12)};
     for (int i = 0; i < 4; i++) {
         u64 b;
         memcpy(&b, &st[i], 8);

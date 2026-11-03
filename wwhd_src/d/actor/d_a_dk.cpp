@@ -306,13 +306,13 @@ static BOOL daDk_Execute(dk_class *a_this) {
         gabi::Local<SafeString> b;
         a->__vtbl = SAFESTRING_VTBL;
         b->__vtbl = SAFESTRING_VTBL;
-        a->mStringTop = gabi::ea(l_demoName.mText); /* "Demo07" */
-        b->mStringTop = gabi::ea(l_currentDemoArchive.mText);
+        a->mTextPtr = gabi::ea(l_demoName.mText); /* "Demo07" */
+        b->mTextPtr = gabi::ea(l_currentDemoArchive.mText);
         Dk_assureString(a.get()); /* SafeString::assureTerminationImpl_ (direct) */
         gabi::call_ptr(gabi::at<DkSafeStringVtable>(a->__vtbl)->assureTermination, a.get());
-        u32 pa = a->mStringTop;
+        u32 pa = a->mTextPtr;
         gabi::call_ptr(gabi::at<DkSafeStringVtable>(b->__vtbl)->assureTermination, b.get());
-        u32 pb = b->mStringTop;
+        u32 pb = b->mTextPtr;
         if (pa != pb) {
             u32 i = 0;
             for (;; i++) {

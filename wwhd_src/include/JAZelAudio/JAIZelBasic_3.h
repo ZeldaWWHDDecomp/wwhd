@@ -44,7 +44,7 @@ struct SafeStringVtable {
     gabi::gfn assureTermination;
 };
 struct SafeString {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     gptr<SafeStringVtable> __vtbl;
     void assureTermination();
 };

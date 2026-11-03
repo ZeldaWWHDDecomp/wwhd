@@ -14,7 +14,7 @@ struct StringVtable {
     gfn assureTermination;
 };
 struct String {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     gptr<StringVtable> __vtbl;
 };
 WWHD_SIZE(String, 8);

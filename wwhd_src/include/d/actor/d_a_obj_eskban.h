@@ -15,7 +15,7 @@ struct Model : J3DModel {
 struct SmokeCallback : dPa_smokeEcallBack {
     bool isEnd() { return (m10 & 1) != 0; }
 };
-WWHD_SIZE(Model, 0xF8);
+WWHD_SIZE(Model, 0x144);  /* = J3DModel */
 WWHD_SIZE(SmokeCallback, 0x20);
 /* The collision source object-info prefix is unchanged; the trailing shape is typed here. */
 struct CylinderSource {

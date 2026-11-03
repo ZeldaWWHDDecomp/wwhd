@@ -250,10 +250,10 @@ void daGhostship_c::createInit() {
         auto& circle = this->mPaths[i];
         s16 angle = (s16)(i * 0x2000), oldSpeed = circle.mAngleSpeed;
         circle.mAngle = angle;
-        f32 vertical = 600.0f * cM_scos((s16)(angle + oldSpeed));
+        f32 vertical = gabi::fmuls_ppc(600.0f, cM_scos((s16)(angle + oldSpeed)));
         s32 direction = 1;
         if (i & 1) {
-            vertical = 600.0f * cM_ssin((s16)(angle + oldSpeed));
+            vertical = gabi::fmuls_ppc(600.0f, cM_ssin((s16)(angle + oldSpeed)));
             direction = -1;
         }
         circle.mRadius = (f32)i * 100.0f;
@@ -264,9 +264,9 @@ void daGhostship_c::createInit() {
         circle.mAngleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
         circle.mTranslation.x =
             gabi::fmadds(distance, cM_ssin(this->shape_angle.y), (f32)this->current.pos.x);
-        f32 y = ((f32)this->current.pos.y + 600.0f) + vertical;
+        f32 y = gabi::fadds_ppc(gabi::fadds_ppc((f32)this->current.pos.y, 600.0f), vertical);
         random = cM_rndF(100.0f);
-        circle.mTranslation.y = y + random;
+        circle.mTranslation.y = gabi::fadds_ppc(y, random);
         circle.mTranslation.z =
             gabi::fmadds(distance, cM_scos(this->shape_angle.y), (f32)this->current.pos.z);
         ghostshipSetCirclePath(&circle);
@@ -402,10 +402,10 @@ BOOL daGhostship_c::_execute() {
             target = this->field_0x6C4[i];
         s32 phase = (s32)(s16)circle.mAngle + (s32)(s16)circle.mAngleSpeed;
         s16 doubled = (s16)((phase * 2) & 0xFFFE);
-        f32 vertical = 600.0f * cM_scos(doubled);
+        f32 vertical = gabi::fmuls_ppc(600.0f, cM_scos(doubled));
         s32 direction = 1;
         if (i & 1) {
-            vertical = 600.0f * cM_ssin(doubled);
+            vertical = gabi::fmuls_ppc(600.0f, cM_ssin(doubled));
             direction = -1;
         }
         cLib_addCalc2(&circle.mRadius, target, 0.1f, 10.0f);
@@ -416,7 +416,7 @@ BOOL daGhostship_c::_execute() {
         circle.mAngleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
         circle.mTranslation.x =
             gabi::fmadds(offset, cM_ssin(this->shape_angle.y), (f32)this->current.pos.x);
-        circle.mTranslation.y = ((f32)this->current.pos.y + 600.0f) + vertical;
+        circle.mTranslation.y = gabi::fadds_ppc(gabi::fadds_ppc((f32)this->current.pos.y, 600.0f), vertical);
         circle.mTranslation.z =
             gabi::fmadds(offset, cM_scos(this->shape_angle.y), (f32)this->current.pos.z);
         ghostshipSetCirclePath(&circle);

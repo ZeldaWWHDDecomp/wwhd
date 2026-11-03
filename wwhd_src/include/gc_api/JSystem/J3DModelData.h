@@ -7,13 +7,13 @@
 
 inline J3DMaterial* J3DModelData::getMaterialNodePointer(const char* name) {
     gabi::Stack<SafeString> key;
-    key->mStringTop = gabi::guest_addr(name);
+    key->mTextPtr = gabi::guest_addr(name);
     key->__vtbl = gc_tu.safeString;
     u32 hdr = mpResHeader;
     gabi::call_ptr(gc_tu.safeStringAssure, key.get());
     u32 off = gabi::load<u32>(hdr + 0x18);
     JUTNameTab* tab = gabi::at<JUTNameTab>(off ? hdr + 0x18 + off : 0);
-    s32 idx = gabi::call<s32>(0x027DF9B0, tab, (u32)key->mStringTop);
+    s32 idx = gabi::call<s32>(0x027DF9B0, tab, (u32)key->mTextPtr);
     if (idx < 0) return nullptr;
     u32 n = mMaterialNum;
     u32 p = mMaterials;

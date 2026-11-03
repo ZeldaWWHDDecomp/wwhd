@@ -10,7 +10,7 @@ static Kg1ResourceControl resources;
 static J3DAnmTransform *objectResource(s32 index) {
     gabi::Local<Kg1ResourceName> storage;
     SafeString *name = &storage->name;
-    name->mStringTop = gabi::guest_addr("Kg");
+    name->mTextPtr = gabi::guest_addr("Kg");
     name->__vtbl = gc_tu.safeString;
     return Kg1_getResource(resources.control, name, index);
 }

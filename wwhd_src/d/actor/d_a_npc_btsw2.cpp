@@ -49,7 +49,7 @@ static u32 address(daNpc_Btsw2_c* actor) {
 
 static void* btsw2_resource(const char* archive, u32 id) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_addr(archive);
+    key->mTextPtr = gabi::guest_addr(archive);
     key->__vtbl = gc_tu.safeString;
     u32 manager = gabi::ea(dComIfG_resControl());
     return Btsw2Resource(gabi::at<void>(manager), key.get(), id);
@@ -149,7 +149,7 @@ BOOL daNpc_Btsw2_c::initTexPatternAnm(u8 modify) {
     u32 modelData = gabi::at<J3DModel>(model)->mModelData.v.get();
     u32 manager = gabi::ea(dComIfG_resControl());
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_str(m_arc_name);
+    key->mTextPtr = gabi::guest_str(m_arc_name);
     key->__vtbl = gc_tu.safeString;
     void* pattern = Btsw2Resource(gabi::at<void>(manager), key.get(), resource);
     m_btp = pattern;

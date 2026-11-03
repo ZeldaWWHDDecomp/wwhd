@@ -566,9 +566,9 @@ static void loadBackendModel(hdShaderBackend_c* self) {
         SafeString folder;
         SafeString file;
         folder.__vtbl = gabi::ea(&sShaderLocationVtable);
-        folder.mStringTop = gabi::guest_addr("Particle");
+        folder.mTextPtr = gabi::guest_addr("Particle");
         file.__vtbl = gabi::ea(&sShaderLocationVtable);
-        file.mStringTop = gabi::guest_addr("Particle.bfres");
+        file.mTextPtr = gabi::guest_addr("Particle.bfres");
         void* resource = loadShaderModel(sShaderResourceManager, &folder, &file, 0);
         beginShaderModelLoad(sShaderGraphicsContext);
         initializeShaderVertexState(self->mVertexState, resource, (const char *)"zel_tingle");
@@ -628,7 +628,7 @@ void initializeBackendShaders(hdShaderBackend_c* self, void* heap) {
             gabi::at<hdShaderArchiveProgram_l>(self->mArchiveHeader[1]);
         SafeString name;
         name.__vtbl = gabi::ea(&sShaderLocationVtable);
-        name.mStringTop = gabi::guest_addr(programNames[program]);
+        name.mTextPtr = gabi::guest_addr(programNames[program]);
         s32 index = findShaderProgram(archive, &name);
         hdShaderProgram_l* selected = NULL;
         if (index >= 0) {

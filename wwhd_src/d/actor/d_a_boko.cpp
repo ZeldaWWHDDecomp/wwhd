@@ -186,15 +186,15 @@ void daBoko_c::keCalc1(ke_c_s* chainObject, s32 index) {
     bokoTransformStackVector(&step.payload, &transformed.payload);
     velocity.x = f32(position.x);
     velocity.z = f32(position.z);
-    f32 nextX = f32(previous.x) + f32(transformed.payload.x);
+    f32 nextX = gabi::fadds_ppc(f32(previous.x), f32(transformed.payload.x));
     position.x = nextX;
-    f32 nextY = f32(previous.y) + f32(transformed.payload.y);
+    f32 nextY = gabi::fadds_ppc(f32(previous.y), f32(transformed.payload.y));
     position.y = nextY;
-    f32 nextZ = f32(previous.z) + f32(transformed.payload.z);
+    f32 nextZ = gabi::fadds_ppc(f32(previous.z), f32(transformed.payload.z));
     position.z = nextZ;
     f32 oldX = f32(velocity.x), oldZ = f32(velocity.z);
-    velocity.x = (nextX - oldX) * damping;
-    velocity.z = (f32(position.z) - oldZ) * damping;
+    velocity.x = gabi::fmuls_ppc(gabi::fsubs_ppc(nextX, oldX), damping);
+    velocity.z = gabi::fmuls_ppc(gabi::fsubs_ppc(f32(position.z), oldZ), damping);
     phaseZ -= 0x1B58;
     phaseX -= 0x2328;
   }

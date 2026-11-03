@@ -41,18 +41,18 @@ static EpLightInfo j3dDefaultLightInfo = {0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 2
 /* inlined into daEp_Execute */
 static bool ep_chk_sea_stage(const be<u8>* lit) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::ea(lit);
+    a->mTextPtr = gabi::ea(lit);
     a->__vtbl = SAFESTRING_VTBL;
     bool r = false;
     u32 play = dComIfGp_ea();
     gabi::Local<SafeString> b;
-    b->mStringTop = play + PLAY_OFF(mCurStage.mName);
+    b->mTextPtr = play + PLAY_OFF(mCurStage.mName);
     b->__vtbl = SAFESTRING_VTBL;
     SafeString_assure(a.get());
     SafeString_assure(a.get());
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     SafeString_assure(b.get());
-    u32 s2 = b->mStringTop;
+    u32 s2 = b->mTextPtr;
     bool eq = false;
     if (s1 == s2) {
         eq = true;

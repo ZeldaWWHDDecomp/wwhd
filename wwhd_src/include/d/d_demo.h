@@ -474,12 +474,12 @@ inline u8 dDemo_nameByte(const char* name, u32 index) {
     return *gabi::at<be<u8>>(gabi::guest_addr(name) + index);
 }
 
-struct dDemo_factoryList {
+struct dDemo_factories {
     be<u32> mCount;
     gptr<void> mNext, mPrev;
 };
-WWHD_SIZE(dDemo_factoryList, 0xC);
-WWHD_OFFSET(dDemo_factoryList, mNext, 4);
+WWHD_SIZE(dDemo_factories, 0xC);
+WWHD_OFFSET(dDemo_factories, mNext, 4);
 dDemo_messageControl* dDemo_messageControl_ct(dDemo_messageControl* self);
 void dDemo_setMessageControl(u32 audioControl, dDemo_messageControl* message);
 dDemo_control* dDemo_control_ct(dDemo_control* self);

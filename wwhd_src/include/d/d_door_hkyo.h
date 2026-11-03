@@ -57,12 +57,12 @@ WWHD_SIZE(dDoor_hkyo_c, 0x14);
 // HD: archive stream and embedded fixed buffer; no GameCube equivalent.
 struct dDoor_safeString_vt { u8 _00[0x14]; be<u32> assureTermination; };
 struct dDoor_safeString_c {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     gptr<dDoor_safeString_vt> __vtbl;
     void assureTermination() { gabi::call_ptr<void>(__vtbl->assureTermination, this); }
 };
 struct dDoor_bufferString_c {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     be<u32> __vtbl;
     be<s32> mBufferSize;
     be<u8> mBuffer[16];

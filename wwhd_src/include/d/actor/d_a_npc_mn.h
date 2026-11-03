@@ -231,7 +231,7 @@ static inline NpcDatStruct* mn_npc_dat(u32 npcNo) { return &l_npc_dat[npcNo]; }
 void* mn_getResourceWithRegisters(void* control, SafeString* key, s32 id, u32 r6, u32 r7);
 static inline void* mn_getObjectIDResWithRegisters(const char* arc, s32 id, u32 r6, u32 r7) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
+    key->mTextPtr = gabi::ea(arc);
     key->__vtbl = MN_SAFESTRING_VTBL;
     return mn_getResourceWithRegisters(dComIfG_resControl(), key.get(), id, r6, r7);
 }
@@ -266,8 +266,8 @@ static inline bool mn_SafeString_eq(SafeString* a, SafeString* b) {
     gabi::call_ptr(reinterpret_cast<MnVirtualSlot*>((uintptr_t)(u32)a->__vtbl)->mFunction, a);
     gabi::call_ptr(reinterpret_cast<MnVirtualSlot*>((uintptr_t)(u32)a->__vtbl)->mFunction, a);
     gabi::call_ptr(reinterpret_cast<MnVirtualSlot*>((uintptr_t)(u32)b->__vtbl)->mFunction, b);
-    u32 pa = a->mStringTop;
-    u32 pb = b->mStringTop;
+    u32 pa = a->mTextPtr;
+    u32 pb = b->mTextPtr;
     if (pa == pb) {
         return true;
     }
@@ -285,11 +285,11 @@ static inline bool mn_SafeString_eq(SafeString* a, SafeString* b) {
 /* strcmp(dComIfGp_getNextStageName(), name) == 0 (play + 0x5140) */
 static inline bool mn_isNextStage(const char* name) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(name);
+    a->mTextPtr = gabi::guest_addr(name);
     a->__vtbl = MN_SAFESTRING_VTBL;
     dComIfG_inf_c* game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     gabi::Local<SafeString> b;
-    b->mStringTop = gabi::ea(game->play.mNextStage.mName);
+    b->mTextPtr = gabi::ea(game->play.mNextStage.mName);
     b->__vtbl = MN_SAFESTRING_VTBL;
     return mn_SafeString_eq(a.get(), b.get());
 }

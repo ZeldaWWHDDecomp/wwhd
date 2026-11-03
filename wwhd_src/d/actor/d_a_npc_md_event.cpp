@@ -143,8 +143,8 @@ static inline bool md_SafeString_eq(SafeString* a, SafeString* b) {
     assureTermination(a);
     assureTermination(a);
     assureTermination(b);
-    u32 s1 = (u32)a->mStringTop;
-    u32 s2 = (u32)b->mStringTop;
+    u32 s1 = (u32)a->mTextPtr;
+    u32 s2 = (u32)b->mTextPtr;
     if (s1 == s2)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {
@@ -556,10 +556,10 @@ void daNpc_Md_c::initialMovePosEvent(int staffIdx) {
             SafeString* arrival = &frame->arrival;
             SafeString* evName = &frame->eventName;
             arrival->__vtbl = SAFE_STRING_VTABLE; /* this TU's sead::SafeString vtable */
-            arrival->mStringTop = gabi::guest_addr("ARRIVAL_GND"); /* "ARRIVAL_GND" */
+            arrival->mTextPtr = gabi::guest_addr("ARRIVAL_GND"); /* "ARRIVAL_GND" */
             u32 name = mdEvent_runEventName(dComIfGp_getPEvtManager()); /* dEvent_manager_c run event name */
             evName->__vtbl = SAFE_STRING_VTABLE;
-            evName->mStringTop = name;
+            evName->mTextPtr = name;
             if (md_SafeString_eq(arrival, evName)) {
                 mdEvent_checkInitialRoom(this); /* daPy_npc_c::check_initialRoom */
                 setAnm(0);

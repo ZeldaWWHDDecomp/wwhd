@@ -104,7 +104,7 @@ static cXyz l_headScale;
 static inline void* bj1_getIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
     key->__vtbl = gc_tu.safeString;
-    key->mStringTop = gabi::guest_addr(arc);
+    key->mTextPtr = gabi::guest_addr(arc);
     return Bj1_getResource(dComIfG_resControl(), key.get(), id);
 }
 
@@ -128,9 +128,6 @@ static inline void bj1_mtxCopy(Mtx34* dstMtx, const Mtx34* srcMtx) {
     }
     for (int i = 0; i < 12; i++) {
         u32 v = t[i];
-        if ((v & 0x7F800000u) == 0x7F800000u && (v & 0x003FFFFFu) != 0 && !(v & 0x00400000u)) {
-            v |= 0x00400000u;
-        }
         dst[i] = v;
     }
 }
@@ -178,13 +175,10 @@ static void bj1_storeMatrixOrdered(Mtx34* destination, const Mtx34* source, cons
     for (int i = 0; i < 12; ++i) {
         words[i] = src[i];
     }
-    // HD: quiet lfs/stfs signaling NaNs after capturing every source word.
+    // HD: store the words in the original's order after capturing every source word (lfs/stfs keep a
+    // signalling NaN's bits exactly).
     for (int j = 0; j < 12; ++j) {
         u32 i = storeOrder[j], word = words[i];
-        if ((word & 0x7F800000u) == 0x7F800000u && (word & 0x003FFFFFu) != 0 &&
-            !(word & 0x00400000u)) {
-            word |= 0x00400000u;
-        }
         dst[i] = word;
     }
 }
@@ -784,7 +778,7 @@ void daNpc_Bj1_c::setAnm_prp(s8 mode) {
     gabi::Local<SafeString> key;
     key->__vtbl = gc_tu.safeString;
     dRes_control_c *manager = dComIfG_resControl();
-    key->mStringTop = gabi::guest_str("Bj");
+    key->mTextPtr = gabi::guest_str("Bj");
     void *resource = Bj1_getResource(manager, key.get(), 40);
     if (mode == 1) {
         f32 speed = (f32)l_one;

@@ -183,7 +183,7 @@ s32 daObjTry::Act_c::create_heap() {
     gabi::Local<cXyz> callLinkage; // Reserve the 16-byte caller linkage area below live locals.
     u32 type = checkedType(this);
     modelName->__vtbl = gc_tu.safeString;
-    modelName->mStringTop = gabi::guest_addr("Hseki");
+    modelName->mTextPtr = gabi::guest_addr("Hseki");
     s16 modelIndex = s16(tryAttributes.mRows[type].mModelIndex);
     u32 resource = tryGetResource(tryResources.mPointer.get(), modelName.get(), modelIndex);
     if (!resource)
@@ -202,7 +202,7 @@ s32 daObjTry::Act_c::create_heap() {
             JUT_ASSERT_fail("d_a_obj_try.cpp", 0x3CE, "M_type >= 0 && M_type < Type_Max");
             type = this->type;
         }
-        animationName->mStringTop = gabi::guest_addr("Hseki");
+        animationName->mTextPtr = gabi::guest_addr("Hseki");
         animationName->__vtbl = gc_tu.safeString;
         animationIndex = s16(tryAttributes.mRows[type].mBrkIndex);
         u32 animation = tryGetResource(tryResources.mPointer.get(), animationName.get(), animationIndex);

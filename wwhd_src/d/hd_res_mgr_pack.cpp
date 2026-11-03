@@ -398,7 +398,7 @@ static bool isExtension(u32 f, u32 ent, s32 pos, u32 extStr) {
     const u32 top = readField<u32>(at<FixedString<1>>(ent)->mString.mTop);
     const s32 nlen = packStrlen(top);
     const s32 p1 = pos + 1;
-    const u32 et = (p1 < 0 || p1 > nlen) ? wordAt(kEmptyStringTopSlot).get() : top + u32(p1);
+    const u32 et = (p1 < 0 || p1 > nlen) ? wordAt(kEmptyTextPtrSlot).get() : top + u32(p1);
     writeField<u32>(at<FixedString<1>>(e)->mString.mVtable, kSafeStringVt);
     writeField<u32>(at<FixedString<1>>(x)->mString.mVtable, kSafeStringVt);
     writeField<u32>(at<FixedString<1>>(e)->mString.mTop, et);
@@ -541,7 +541,7 @@ u32 ResMgr_loadPack(u32 self, u32 name, u32 heap) {
     const u32 tmpHeap =
         resPackNative_createExpHeap(0u, s, gameHeaps()->mPackHeap.get(), 0xFFFFFFFFu, 0u);
     const u32 arc = resPackNative_loadArchiveFile(
-        name, tmpHeap, readField<u32>(at<Manager>(self)->mLoadAlignment), 0x2000u);
+        name, tmpHeap, readField<u32>(at<Manager>(self)->mLoadAlign), 0x2000u);
     call_ptr<void>(heapVtable(tmpHeap)->adjust.get(), tmpHeap);
     writeField<u32>(at<FixedString<1>>(s)->mString.mVtable, kSafeStringVt);
     writeField<u32>(at<FixedString<1>>(s)->mString.mTop, kArchiveResourceHeapName);
@@ -658,7 +658,7 @@ u32 ResMgr_loadSzsPack(u32 self, u32 name, u32 heap) {
         resPackNative_threadSleep(f + 0x48);
     }
     const u32 arc = resPackNative_loadArchiveFile(
-        name, packHeap, readField<u32>(at<Manager>(self)->mLoadAlignment), 0x2000u);
+        name, packHeap, readField<u32>(at<Manager>(self)->mLoadAlign), 0x2000u);
     call_ptr<void>(heapVtable(packHeap)->adjust.get(), packHeap);
     writeField<u32>(at<SzsPackFrame>(f)->mPath.mVtable, kSafeStringVt);
     writeField<u32>(at<SzsPackFrame>(f)->mPath.mTop, kSzsResourceHeapName);

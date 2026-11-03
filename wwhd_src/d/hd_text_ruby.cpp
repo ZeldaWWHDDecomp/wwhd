@@ -51,16 +51,16 @@ static s32 hdRuby_wideLength(be<u16>* text) {
 
 /* inlined into drawRuby */
 static void hdRuby_copyInto(hdRuby_drawFrame_c* frame, hdRuby_fixedString_c* fixed, s32 length) {
-    be<u16>* buffer = fixed->mString.mStringTop;
+    be<u16>* buffer = fixed->mString.mTextPtr;
     s32 count = length;
     if (length < 0) {
         hdRuby_assureWideString(&frame->mSource);
-        count = hdRuby_wideLength(frame->mSource.mStringTop);
+        count = hdRuby_wideLength(frame->mSource.mTextPtr);
     }
     s32 capacity = fixed->mCapacity;
     if (count >= capacity) count = capacity - 1;
     frame->mSource.assureTermination();
-    hdRuby_copyText(buffer, frame->mSource.mStringTop, u32(count * 2), 0);
+    hdRuby_copyText(buffer, frame->mSource.mTextPtr, u32(count * 2), 0);
     buffer[count] = 0;
 }
 
@@ -71,21 +71,21 @@ void hdRuby_tagState_c::drawRuby(hdRuby_writer_c* writer, hdRuby_tag_c* tag, be<
     hdRuby_config_c* config = sConfig.mpConfig;
     if (u32(baseLength - 1) >= 31 || u32(rubyLength - 1) >= 31) return;
     gabi::Local<hdRuby_drawFrame_c> frame;
-    frame->mRuby.mString.mStringTop = frame->mRuby.mBuffer;
+    frame->mRuby.mString.mTextPtr = frame->mRuby.mBuffer;
     frame->mRuby.mCapacity = 32;
     frame->mRuby.mString.setVtable(fixedStringVtable);
     frame->mRuby.mBuffer[31] = 0;
     frame->mRuby.mBuffer[0] = 0;
     frame->mSource.setVtable(wideStringVtable);
-    frame->mSource.mStringTop = &tag->mData.mParams[2];
+    frame->mSource.mTextPtr = &tag->mData.mParams[2];
     hdRuby_copyInto(frame.get(), &frame->mRuby, rubyLength);
-    frame->mSource.mStringTop = text;
+    frame->mSource.mTextPtr = text;
     frame->mBase.mBuffer[31] = 0;
     frame->mBase.mBuffer[0] = 0;
     frame->mBase.mString.setVtable(fixedStringVtable);
     frame->mBase.mCapacity = 32;
     frame->mSource.setVtable(wideStringVtable);
-    frame->mBase.mString.mStringTop = frame->mBase.mBuffer;
+    frame->mBase.mString.mTextPtr = frame->mBase.mBuffer;
     hdRuby_copyInto(frame.get(), &frame->mBase, baseLength);
     hdRuby_writerPrepareFirst(writer);
     hdRuby_writerPrepareSecond(writer);
@@ -112,9 +112,9 @@ void hdRuby_tagState_c::drawRuby(hdRuby_writer_c* writer, hdRuby_tag_c* tag, be<
     rubyWriter->mFlags = 0x300;
     rubyWriter->mUnknown = u32(writer->mUnknown);
     frame->mBase.mString.assureTermination();
-    f32 baseWidth = hdRuby_textWidth(writer, frame->mBase.mString.mStringTop, baseLength);
+    f32 baseWidth = hdRuby_textWidth(writer, frame->mBase.mString.mTextPtr, baseLength);
     frame->mRuby.mString.assureTermination();
-    f32 rubyWidth = hdRuby_textWidth(rubyWriter, frame->mRuby.mString.mStringTop, rubyLength);
+    f32 rubyWidth = hdRuby_textWidth(rubyWriter, frame->mRuby.mString.mTextPtr, rubyLength);
     f32 difference = gabi::fsubs_ppc(baseWidth, rubyWidth);
     if (difference > zero) {
         f32 interval = difference / f32(rubyLength + 1);
@@ -133,7 +133,7 @@ void hdRuby_tagState_c::drawRuby(hdRuby_writer_c* writer, hdRuby_tag_c* tag, be<
     rubyWriter->mColorTop = color;
     rubyWriter->mColorBottom = color;
     frame->mRuby.mString.assureTermination();
-    hdRuby_print(rubyWriter, frame->mRuby.mString.mStringTop, rubyLength);
+    hdRuby_print(rubyWriter, frame->mRuby.mString.mTextPtr, rubyLength);
     hdRuby_destroyWriter(rubyWriter, 2);
 }
 

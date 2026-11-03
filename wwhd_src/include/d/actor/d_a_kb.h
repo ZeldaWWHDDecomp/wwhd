@@ -312,11 +312,11 @@ void kbGuest___destroy_arr(void *p, u32 n, u32 size, u32 dtor, u32 flags);
 static inline bool SafeString_eq(SafeString *a, SafeString *b) {
     gabi::call_ptr(gabi::at<KbSafeStringVtable>(a->__vtbl)->assureTermination.get(), a);
     gabi::call_ptr(gabi::at<KbSafeStringVtable>(a->__vtbl)->assureTermination.get(), a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::at<KbSafeStringVtable>(b->__vtbl)->assureTermination.get(), b);
-    if (s1 == b->mStringTop)
+    if (s1 == b->mTextPtr)
         return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+    u32 p = a->mTextPtr, q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = gabi::load<u8>(p + i);
         if (c != gabi::load<u8>(q + i))
@@ -330,10 +330,10 @@ static inline bool SafeString_eq(SafeString *a, SafeString *b) {
  * at play+0x5134) */
 static inline bool kbIsStartStage(const char *lit) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_str(lit);
+    a->mTextPtr = gabi::guest_str(lit);
     a->__vtbl = SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
-    b->mStringTop = gabi::ea(kbPlay()->mCurStage.mName);
+    b->mTextPtr = gabi::ea(kbPlay()->mCurStage.mName);
     b->__vtbl = SAFESTRING_VTBL;
     return SafeString_eq(a, b);
 }

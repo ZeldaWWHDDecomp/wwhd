@@ -70,7 +70,7 @@ static inline void gm_cylinderConstructor(dCcD_Cyl* collider) {
     shape->mVtable = 0x1004B160;
 }
 
-// HD: all twelve float loads precede stores; this copy also quiets signaling NaNs.
+// HD: all twelve float loads precede stores; lfs/stfs copy each word's bits exactly.
 static inline void gm_copyMatrix(u32 source, u32 destination) {
     f32 elements[12];
     for (u32 i = 0; i < 12; ++i)
@@ -107,7 +107,7 @@ static inline f32 gm_cos(s16 angle) { return l_sincos.mSamples[(u16)angle >> 3].
 
 static inline void* gm_resource(u32 name, s32 index) {
     gabi::Local<SafeString> key;
-    key->mStringTop = name;
+    key->mTextPtr = name;
     key->__vtbl = gc_tu.safeString;
     void* control = gabi::at<void>(l_resourceControl.v);
     return GmHD_dRes_control_c_getRes(control, key.get(), index);
@@ -1004,7 +1004,7 @@ BOOL daGM_Draw(gm_class* actor) {
 void anm_init(gm_class* actor, s32 animation, f32 morph, u8 mode, f32 speed, s32 auxiliary) {
     actor->mAnimation = animation;
     gabi::Local<SafeString> resourceName;
-    resourceName->mStringTop = gabi::guest_addr("Gm");
+    resourceName->mTextPtr = gabi::guest_addr("Gm");
     resourceName->__vtbl = gc_tu.safeString;
     void* resourceControl = gabi::at<void>(l_resourceControl.v);
     void* mainAnimation =
@@ -1012,7 +1012,7 @@ void anm_init(gm_class* actor, s32 animation, f32 morph, u8 mode, f32 speed, s32
     void* secondary = gabi::at<void>(0);
     if (auxiliary >= 0) {
         gabi::Local<SafeString> secondaryName;
-        secondaryName->mStringTop = gabi::guest_addr("Gm");
+        secondaryName->mTextPtr = gabi::guest_addr("Gm");
         secondaryName->__vtbl = gc_tu.safeString;
         resourceControl = gabi::at<void>(l_resourceControl.v);
         secondary = GmHD_dRes_control_c_getRes(resourceControl, secondaryName.get(), auxiliary);
@@ -2761,24 +2761,24 @@ s32 daGM_Create(gm_class* actor) {
     gabi::Local<SafeString> modelName, expectedName, wing1, wing2, wing3, wing4;
     modelName->__vtbl = expectedName->__vtbl = wing1->__vtbl = wing2->__vtbl = wing3->__vtbl =
         wing4->__vtbl = gc_tu.safeString;
-    expectedName->mStringTop = gabi::guest_addr("gm");
-    wing1->mStringTop = gabi::guest_addr("hane");
-    wing2->mStringTop = gabi::guest_addr("haneB");
-    wing3->mStringTop = gabi::guest_addr("haneR");
-    wing4->mStringTop = gabi::guest_addr("haneBR");
+    expectedName->mTextPtr = gabi::guest_addr("gm");
+    wing1->mTextPtr = gabi::guest_addr("hane");
+    wing2->mTextPtr = gabi::guest_addr("haneB");
+    wing3->mTextPtr = gabi::guest_addr("haneR");
+    wing4->mTextPtr = gabi::guest_addr("haneBR");
     u32 morf = gabi::ea(actor->mpMorf.get());
     u32 model = GmGuest<mDoExt_McaMorf>(morf)->mpModel.v;
     u32 nameObject = GmGuest<GmModelHD>(model)->mpResourceHeader.v;
     u32 modelNameEA = gm_relative(GmGuest<GmResourceHeaderHD>(nameObject)->mModelNameOffset);
-    modelName->mStringTop = modelNameEA;
+    modelName->mTextPtr = modelNameEA;
     gm_emptyVirtual((gm_class*)expectedName.get());
     gm_safeAssure(expectedName.get());
-    u32 expectedEA = expectedName->mStringTop;
+    u32 expectedEA = expectedName->mTextPtr;
     gm_safeAssure(modelName.get());
-    modelNameEA = modelName->mStringTop;
+    modelNameEA = modelName->mTextPtr;
     bool matching = expectedEA == modelNameEA;
     if (!matching) {
-        u32 a = expectedName->mStringTop, b = modelName->mStringTop;
+        u32 a = expectedName->mTextPtr, b = modelName->mTextPtr;
         matching = true;
         // HD: the name comparison is capped; additions wrap in the guest address space.
         for (u32 i = 0; i < 0x40001; ++i) {
@@ -2798,7 +2798,7 @@ s32 daGM_Create(gm_class* actor) {
             nameObject = GmGuest<GmModelHD>(model)->mpResourceHeader.v;
             u32 nameTable =
                 gm_relative(GmGuest<GmResourceHeaderHD>(nameObject)->mMaterialNameOffset);
-            u32 name = names[i]->mStringTop;
+            u32 name = names[i]->mTextPtr;
             u32 index =
                 GmHD_JUTNameTab_getIndex(gabi::at<void>(nameTable), gabi::at<const char>(name));
             l_wingNames.mIndices[i] = index;

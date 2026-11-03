@@ -1,3 +1,4 @@
+# verify: -only 0263F4F0
 # Supplemental declared scope: only 0263F4F0; run with -only 0263F4F0.
 # Same valid boundary domains with real original wrapping/classification helpers.
 # Allocator yields distinct nodes in call order; width delegate remains a finite bool mock.

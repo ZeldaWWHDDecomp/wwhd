@@ -363,7 +363,7 @@ void hdInputManager::pointerSlow(u32 a) {
     this->pointerParamsMasked(a, 0x1E, 1);
 }
 
-// SingletonDisposer deleting destructor (deletes the instance)
+// InstanceDisposer deleting destructor (deletes the instance)
 /* 02618798 */
 void disposerDtor(hdInputDisposer* p, u32 flags) {
     if (!p) return;

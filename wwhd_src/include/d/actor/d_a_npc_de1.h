@@ -262,8 +262,8 @@ inline void* De1_objectResource(const char* arc, const char* name) {
     gabi::Local<SafeString> n;
     a->__vtbl = gc_tu.safeString;
     n->__vtbl = gc_tu.safeString;
-    n->mStringTop = gabi::guest_addr(name);
-    a->mStringTop = gabi::guest_addr(arc);
+    n->mTextPtr = gabi::guest_addr(name);
+    a->mTextPtr = gabi::guest_addr(arc);
     return De1_namedResource(dComIfG_resControl(), a.get(), n.get());
 }
 WWHD_OFFSET(daNpc_De1_HIO_c, mNo, 0);

@@ -37,29 +37,6 @@ struct hdProfileDelegate {
             be<s16> mVtableOffset;
         } mVirtual;
     };
-    u32 invoke(u32 argument, u32 userData) {
-        void* object = mObject;
-        if (object == NULL) {
-            return gabi::ea(this);
-        }
-        s32 index = mVirtualIndex;
-        if (index == 0) {
-            return gabi::ea(this);
-        }
-        // HD: GHS this and vtable adjustments are signed offsets with 32-bit guest wrapping.
-        u32 targetAddress = gabi::ea(object) + (u32)(s32)mThisDelta;
-        void* target = gabi::at<void>(targetAddress);
-        u32 function;
-        if (index < 0) {
-            function = mFunction.get();
-        } else {
-            u32 vtableAddress = targetAddress + (u32)(s32)mVirtual.mVtableOffset;
-            auto* vtablePointer = gabi::at<gptr<hdProfileDelegateVirtualEntry>>(vtableAddress);
-            hdProfileDelegateVirtualEntry* entries = *vtablePointer;
-            function = entries[index].mFunction.get();
-        }
-        return gabi::call_ptr<u32>(function, target, argument, userData);
-    }
 };
 WWHD_OFFSET(hdProfileDelegate, mObject, 4);
 WWHD_OFFSET(hdProfileDelegate, mThisDelta, 8);

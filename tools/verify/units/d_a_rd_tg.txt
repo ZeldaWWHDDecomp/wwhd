@@ -1,3 +1,4 @@
+# verify: -only 0245C770
 # Verification unit: d_a_rd, variant for checkTgHit (cc_at_check writes its CcAtInfo: covers the HD 0x69E8 re-arm); run with -only 0245C770
 src wwhd_src/d/actor/d_a_rd.cpp
 arg! 0245B050 r5 0 1                # setAnm: bool force (the original passes r5 on unmasked)

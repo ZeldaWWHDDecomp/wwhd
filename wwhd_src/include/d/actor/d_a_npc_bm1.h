@@ -521,9 +521,9 @@ BOOL Bm1_isAdvance(void* manager, s32 staff);
 static inline void* Bm1_resource(const char* arc, const char* name) {
     gabi::Local<SafeString> a;
     gabi::Local<SafeString> n;
-    a->mStringTop = gabi::guest_addr(arc);
+    a->mTextPtr = gabi::guest_addr(arc);
     a->__vtbl = 0x10016F80;
-    n->mStringTop = gabi::guest_addr(name);
+    n->mTextPtr = gabi::guest_addr(name);
     n->__vtbl = 0x10016F80;
     return gabi::call<void*>(0x02606900, dComIfG_resControl(), a.get(), n.get());
 }

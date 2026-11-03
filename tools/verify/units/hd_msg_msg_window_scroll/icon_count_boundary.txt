@@ -1,3 +1,4 @@
+# verify: -only 026BCDC4
 # Supplemental 026BCDC4 fixture (run with -only 026BCDC4).
 # Icon count boundary selects fallback0 rather than a distinct adjacent mapped word.
 # Synthetic mapped local game-state storage; existing callback model.

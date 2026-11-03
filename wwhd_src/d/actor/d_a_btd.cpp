@@ -101,7 +101,7 @@ u32 resource(u32 name, s32 index) {
 
     SafeString text;
 
-    text.mStringTop = name;
+    text.mTextPtr = name;
     text.__vtbl = gabi::ea(&l_safeStringVtable);
     u32 controller = gabi::ea(dComIfG_resControl());
     return btdGuest_dRes_control_c_getRes(controller, &text, index);
@@ -1172,7 +1172,7 @@ u32 btdEndResource(u32 name, s32 index) {
 
     SafeString s;
 
-    s.mStringTop = name;
+    s.mTextPtr = name;
     s.__vtbl = gabi::ea(&l_safeStringVtable);
     return btdGuest_dRes_control_c_getRes(gabi::ea(dComIfG_resControl()), &s, index);
 }

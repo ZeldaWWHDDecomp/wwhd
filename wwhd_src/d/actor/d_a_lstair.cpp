@@ -36,7 +36,7 @@ enum {
 namespace dPa_name { enum { ID_IT_SN_RSTAIRS_F00 = 0x8174, ID_IT_SN_RSTAIRS_S00 = 0x8175 }; }
 static void* lstair_getObjectRes(const char* arc, s32 index, u32 vtable) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_addr(arc);
+    key->mTextPtr = gabi::guest_addr(arc);
     key->__vtbl = vtable;
     auto control = dComIfG_resControl();
 // Keep the key above the callee's incoming LR-save/linkage words.

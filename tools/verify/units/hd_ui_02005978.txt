@@ -25,3 +25,30 @@ footprint 02005EA8 0x118
 # cross-build save states (2026-10-06): the run call (main loop) is frame-exact (LR, r14..r31, f14..f31,
 # the whole frame) and the epilogue reloads the saved registers
 framexact 02005EA8 020061C4
+
+# zero-page rule (2026-11-03, frame-exact): real objects along hdAppMain's path to the main-loop run call, so
+# -nulltrap inputs reach it (before: 4 clean inputs of 10000). 104A030C/104A0314: the argument table
+# (non-zero count, pointer to a list whose first word is the object called through vtable slot 0x7C);
+# 02753004 (twice), 0273B050 and 02034C10 return objects whose vtable slot 0x2C / run pointer at +0x24,+0x24
+# are non-zero (non-code targets get the generic mock on both sides). The count stays 0 on some inputs
+# (the original then reads page 0, as on the console). The root array and the two heap objects are stable
+# (the mocked callees do not clobber them); l_rootReady (104A030C) and the framework object stay clobberable,
+# so the reloads of l_rootReady and of the run pointer after calls stay observable.
+stable 104A0314 4
+stable 6B000000 0x300
+stable 6C000000 0x300
+stable 6C100000 0x300
+field 02005EA8 104A030C u32 1,1,1,0
+field 02005EA8 104A0314 u32 0x6B000000
+field 02005EA8 6B000000 u32 0x6B000100
+field 02005EA8 6B00010C u32 0x6B000200
+field 02005EA8 6B00027C u32 0x6E000000
+ret! 02753004 0x6C000000,0x6C100000
+field 02005EA8 6C00000C u32 0x6C000200
+field 02005EA8 6C00022C u32 0x6E000010
+field 02005EA8 6C10000C u32 0x6C100200
+field 02005EA8 6C10022C u32 0x6E000020
+ret! 0273B050 0x6D000000
+ret! 02034C10 0x6D100000
+field 02005EA8 6D100024 u32 0x6D100100
+field 02005EA8 6D100124 u32 0x6E000030

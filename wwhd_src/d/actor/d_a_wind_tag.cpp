@@ -71,16 +71,16 @@ inline u8 getDrawFlag(daWindTag_c* i_this) { return (i_this->home.angle.z >> 4) 
 static bool isStage(const char* lit) {
     gabi::Local<PointWindSafeString> a;
     a->__vtbl.v = gc_tu.safeString;
-    a->mStringTop.v = gabi::guest_addr(lit);
+    a->mTextPtr.v = gabi::guest_addr(lit);
     const char* stage = dComIfGp_getStartStageName();
     gabi::Local<PointWindSafeString> b;
     b->__vtbl.v = gc_tu.safeString;
-    b->mStringTop = reinterpret_cast<const be<char>*>(stage);
+    b->mTextPtr = reinterpret_cast<const be<char>*>(stage);
     a->assureTermination();
     a->assureTermination();
-    const be<u8>* lhs = reinterpret_cast<const be<u8>*>(a->mStringTop.get());
+    const be<u8>* lhs = reinterpret_cast<const be<u8>*>(a->mTextPtr.get());
     b->assureTermination();
-    const be<u8>* rhs = reinterpret_cast<const be<u8>*>(b->mStringTop.get());
+    const be<u8>* rhs = reinterpret_cast<const be<u8>*>(b->mTextPtr.get());
     if (lhs == rhs)
         return true;
     for (u32 i = 0; i < 0x40001; i++) {

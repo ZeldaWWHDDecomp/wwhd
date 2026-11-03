@@ -53,7 +53,7 @@ static inline void assureTermination(SafeString* s) {
 /* inlined into daPz_c methods */
 static inline bool SafeString_eq_lit(SafeString* a, const char* lit) {
     SafeString b;
-    b.mStringTop = gabi::guest_str(lit);
+    b.mTextPtr = gabi::guest_str(lit);
     b.__vtbl = SAFESTRING_VTBL;
     return SafeString_eq(a, &b);
 }
@@ -67,12 +67,12 @@ static void setBtpMaterialTable(daPz_c* i_this, J3DModelData* data, PzBtpResourc
     for (u32 i = 0; i < num; i++) {
         PzBtpNameEntryHD* entry = btp->mNames.get() + i;
         SafeString name;
-        name.mStringTop = gabi::ea(entry->mName.get());
+        name.mTextPtr = gabi::ea(entry->mName.get());
         name.__vtbl = SAFESTRING_VTBL;
         u32 mtab = pzGetMaterialTable(data);
         assureTermination(&name);
         s32 idx = pzJUTNameTab_getIndex(gabi::ea(pzGuest<PzMaterialNamesHD>(mtab)->mNames.get()),
-                                        name.mStringTop);
+                                        name.mTextPtr);
         bool other = !SafeString_eq_lit(&name, mouth) && !SafeString_eq_lit(&name, shadowL) &&
                      !SafeString_eq_lit(&name, shadowR);
         be<u32>* tbl = reinterpret_cast<PzBtpAnmHD*>(&i_this->mBtpAnm2)->mpMaterialLinks;
@@ -110,7 +110,7 @@ BOOL daPz_c::bodyCreateHeap() {
         u32 tbl = pzGuest<J3DModelData>(data)->mpResHeader.get();
         assureTermination(s);
         s32 idx = pzJUTNameTab_getIndex(gabi::ea(pzGuest<PzMaterialNamesHD>(tbl)->mNames.get()),
-                                        s->mStringTop);
+                                        s->mTextPtr);
         u32 mat = idx < 0 ? 0 : getMaterialNodePointer(data, (u32)idx);
         daPz_matAnm_c* anm = (daPz_matAnm_c*)operator_new(0x80);
         if (anm != nullptr)
@@ -154,7 +154,7 @@ BOOL daPz_c::bodyCreateHeap() {
         u32 tbl = pzGuest<J3DModelData>(data)->mpResHeader.get();
         assureTermination(s);
         s32 idx = pzJUTNameTab_getIndex(gabi::ea(pzGuest<PzMaterialNamesHD>(tbl)->mNames.get()),
-                                        s->mStringTop);
+                                        s->mTextPtr);
         u32 mat = idx < 0 ? 0 : getMaterialNodePointer(data, (u32)idx);
         mpMatAnm[j] = pzGuest<PzMaterialHD>(mat)->mpMaterialAnm.get();
     }
@@ -173,7 +173,7 @@ BOOL daPz_c::bodyCreateHeap() {
                 0) /* SafeString "constructor" (never allocates) */
                 operator_new(8);
             material_names.mNames[k].__vtbl = SAFESTRING_VTBL;
-            material_names.mNames[k].mStringTop = gabi::guest_str(material_name_literals[k]);
+            material_names.mNames[k].mTextPtr = gabi::guest_str(material_name_literals[k]);
         }
         __register_global_object(gabi::ea(&l_materialRegistration));
     }
@@ -183,7 +183,7 @@ BOOL daPz_c::bodyCreateHeap() {
         u32 mtab = pzGetMaterialNameTable(modelData);
         assureTermination(s);
         mMatIdx[k < 16 ? k : 0] = pzJUTNameTab_getIndex(
-            gabi::ea(pzGuest<PzMaterialNamesHD>(mtab)->mNames.get()), s->mStringTop);
+            gabi::ea(pzGuest<PzMaterialNamesHD>(mtab)->mNames.get()), s->mTextPtr);
     }
     return TRUE;
 }

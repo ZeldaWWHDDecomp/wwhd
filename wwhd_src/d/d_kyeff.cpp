@@ -19,15 +19,15 @@ static f32 l_menuTime = 150.0;
 /* inlined into dKyeff_execute and dKyeff_Create */
 static bool stageEquals(const char* text) {
     gabi::Local<kyStageString> left, right;
-    left->mStringTop = gabi::guest_addr(text);
+    left->mTextPtr = gabi::guest_addr(text);
     left->mVtable = 0x100504D0;
-    right->mStringTop = gabi::ea(dKy_getGameInfo()->mStartStageName);
+    right->mTextPtr = gabi::ea(dKy_getGameInfo()->mStartStageName);
     right->mVtable = 0x100504D0;
     gabi::call_ptr<void>(gabi::at<gfn>(left->mVtable)[5].get(), left.get());
     gabi::call_ptr<void>(gabi::at<gfn>(left->mVtable)[5].get(), left.get());
-    u32 a = left->mStringTop;
+    u32 a = left->mTextPtr;
     gabi::call_ptr<void>(gabi::at<gfn>(right->mVtable)[5].get(), right.get());
-    u32 b = right->mStringTop;
+    u32 b = right->mTextPtr;
     if (a == b)
         return true;
     for (u32 i = 0; i < 0x40001; ++i) {

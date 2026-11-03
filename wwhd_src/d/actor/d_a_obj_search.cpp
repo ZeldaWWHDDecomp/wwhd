@@ -348,7 +348,7 @@ s32 daObj_Search::Act_c::_createHeap() {
 s32 daObj_Search::Act_c::searchCreateHeap() {
     auto* a = this;
     SearchLocal<SafeString> name;
-    name->mStringTop = gabi::guest_addr("Search");
+    name->mTextPtr = gabi::guest_addr("Search");
     name->__vtbl = gc_tu.safeString;
     void* data = SearchHD_dRes_control_c_getRes(gabi::at<void>(address(dComIfG_resControl())), name.get(),
                                                 dRes_SEARCH_BDL_SEARCH_e);
@@ -364,7 +364,7 @@ s32 daObj_Search::Act_c::searchCreateHeap() {
         return 0;
     SearchLocal<SafeString> collision;
     collision->__vtbl = gc_tu.safeString;
-    collision->mStringTop = gabi::guest_addr("Search");
+    collision->mTextPtr = gabi::guest_addr("Search");
     data = SearchHD_dRes_control_c_getRes(gabi::at<void>(address(dComIfG_resControl())), collision.get(),
                                           dRes_SEARCH_DZB_BASE_e);
     return static_cast<s32>(SearchHD_cBgW_Set(a->mpBaseBackground.get(), data, 1, &a->mBaseMatrix)) == 0;
@@ -375,7 +375,7 @@ s32 daObj_Search::Act_c::beamCreateHeap(s32 index) {
     auto* a = this;
     SearchLocal<SafeString> name;
     name->__vtbl = gc_tu.safeString;
-    name->mStringTop = gabi::guest_addr("Search");
+    name->mTextPtr = gabi::guest_addr("Search");
     void* data = SearchHD_dRes_control_c_getRes(gabi::at<void>(address(dComIfG_resControl())), name.get(),
                                                 dRes_SEARCH_BDL_BEAM_e);
     if (!data)
@@ -390,7 +390,7 @@ s32 daObj_Search::Act_c::beamCreateHeap(s32 index) {
         return 0;
     u32 resources = address(dComIfG_resControl()), resourceIndex = l_beamCollision[u32(index)];
     SearchLocal<SafeString> collision;
-    collision->mStringTop = gabi::guest_addr("Search");
+    collision->mTextPtr = gabi::guest_addr("Search");
     collision->__vtbl = gc_tu.safeString;
     data = SearchHD_dRes_control_c_getRes(gabi::at<void>(resources), collision.get(), resourceIndex);
     return static_cast<s32>(

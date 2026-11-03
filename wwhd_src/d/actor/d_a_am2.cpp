@@ -48,7 +48,7 @@ static void* am2ObjectResource(s32 index, const char* archive = "Am2") {
     // Reserve the linkage prefix for actual nonleaf callees before the SafeString.
     gabi::Local<SafeString> name;
     gabi::Local<u64> linkage;
-    name->mStringTop = gabi::guest_addr(archive);
+    name->mTextPtr = gabi::guest_addr(archive);
     name->__vtbl = 0x10006F74;
     dRes_control_c* control = dComIfG_resControl();
     return am2ResourceGet(control, name.get(), index);

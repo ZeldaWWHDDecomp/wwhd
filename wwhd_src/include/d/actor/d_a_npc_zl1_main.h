@@ -371,7 +371,7 @@ s8 dBgS_GetRoomId(dBgS* bgs,void* poly);
 u8 dBgS_GetPolyColor(dBgS* bgs,void* poly);
 
 namespace zl1_main {
-inline const be<u8>* safeStringBytes(const SafeString* string) { return gabi::at<const be<u8>>(string->mStringTop); }
+inline const be<u8>* safeStringBytes(const SafeString* string) { return gabi::at<const be<u8>>(string->mTextPtr); }
 inline const char* staffName(const dNpc_EventCut_c& cut) { return gabi::at<const char>(cut.mpEvtStaffName); }
 }
 

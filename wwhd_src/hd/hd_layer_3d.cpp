@@ -1,5 +1,6 @@
 /* HD Layer3D routes scene targets and render passes. Private decomp source. */
 #include "hd/hd_layer_3d.h"
+#include "agl/TimingHistory_l.h"
 static hdLayer3DHeaderZero_c sLayer3DHeaderZero;
 static hdLayer3DHeaderDescriptor_c sLayer3DHeaderDescriptor;
 static hdLayer3DHeaderDescriptor_c sLayer3DRotationDescriptor;
@@ -118,7 +119,6 @@ static void synchronizeSceneGraphics(void* context);
 static u32 getScenePassFormat(void* manager, u32 pass);
 static u32 drawSceneDepthCopy(void* drawer, hdFilterTexture_c* texture, u32 slot, f32 nearPlane, f32 farPlane);
 static hdRenderPerspective_l* getScenePerspective(hdLayerProjection_c* projection);
-static hdSceneAngle_l* sLayer3DAngle;
 static void approachScenePhase(be<f32>* phase, f32 target, f32 step);
 static void* finishScenePass(void* manager, u32 pass, hdFilterRenderInfo_c* info);
 static void constructSceneTexture(hdFilterTexture_c* texture, void* source);
@@ -183,7 +183,7 @@ static hdLayer3D_c* constructLayer3D(hdLayer3D_c* layer) {
  }
  SafeString name;
  name.__vtbl = gabi::ea(&sLayer3dSafeStringVtable);
- name.mStringTop = gabi::guest_addr("3D");
+ name.mTextPtr = gabi::guest_addr("3D");
  constructSceneLayerBase(layer, &name);
  layer->mBase.mpVtable.v = gabi::ea(&sLayer3dLayerVtable);
  layer->mBase.mDrawVtable = gabi::ea(&sLayer3dDrawVtable);
@@ -602,7 +602,7 @@ f32 hdLayer3D_c::getViewScale(u32 index) {
 static SafeString* initializeSceneStepName(hdSceneRenderStep_c* step) {
  SafeString* name = gabi::at<SafeString>(gabi::ea(step)+offsetof(hdSceneRenderStep_c, mName));
  if(name == NULL) name = (SafeString*)allocateSceneLayer(sizeof(SafeString));
- if(name != NULL) { name->__vtbl = gabi::ea(&sLayer3dSafeStringVtable); name->mStringTop = gabi::guest_addr(""); }
+ if(name != NULL) { name->__vtbl = gabi::ea(&sLayer3dSafeStringVtable); name->mTextPtr = gabi::guest_addr(""); }
  return name;
 }
 /* 02730688 */
@@ -623,7 +623,7 @@ static void initializeLayer3D(hdLayer3D_c* layer, void* heap) {
    delegate->mFunction = kLayer3dRenderFunction;
   }
   step->mTarget = 2;
-  step->mName.mStringTop = gabi::guest_addr("Layer3D");
+  step->mName.mTextPtr = gabi::guest_addr("Layer3D");
  }
  addSceneStep(layer, step);
  for(u32 i = 0; i<7; ++i) {
@@ -759,7 +759,7 @@ static void updateSceneSecondaryPhase(hdLayer3D_c* layer) {
  BOOL easeIn = sLayer3DDisplay->mWidth == sLayer3DDisplay->mRenderWidth;
  if(!easeIn) {
   u8 suspended = sLayer3DDisplay->mSuspendSecondary;
-  hdSceneAngle_l* camera = sLayer3DAngle;
+  agl_history_l::TimingHistory* timing = agl_history_l::sTimingOwner;
   if(suspended) {
    f32 reference = layer->mSecondaryBinding.mReference;
    layer->mSecondaryBinding.mPhase = 0.0f;
@@ -767,7 +767,7 @@ static void updateSceneSecondaryPhase(hdLayer3D_c* layer) {
    layer->mSecondaryBinding.mReference = reference;
    return;
   }
-  easeIn = camera != NULL && camera->mAngle<layer->mAngle;
+  easeIn = timing != NULL && timing->mLoad<layer->mAngle;
  }
  f32 step = 1.0f/(f32)(s32)layer->mViewCount;
  approachScenePhase(&layer->mPhase, easeIn?1.0f:0.0f, step);
@@ -1248,7 +1248,6 @@ static void __sinit_hd_layer_3d_cpp() {
  ext 027BE2B0 void destroySceneTexture(hdFilterTexture_c* texture,s32 flags)
  ext 0277C578 u32 drawSceneSecondary(hdSceneSecondaryBinding_l* binding,u32 index,hdFilterViewport_l* viewport,hdFilterBounds_c* bounds,hdFilterTexture_c* texture,u32 first,u32 second,u32 third,u32 slot)
  ext 0268B070 void approachScenePhase(be<f32>* phase,f32 target,f32 step)
- data sLayer3DAngle 101F8D74
  data sLayer3DDisplay 101F86E8
  ext 027A7558 hdFilterTargetArg_c* getSceneTarget(hdFilterTargetArg_c* argument,void* target)
  ext 0279A308 void setSceneTarget(void* binding,hdFilterTargetArg_c* argument)

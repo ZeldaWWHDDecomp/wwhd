@@ -43,13 +43,13 @@ static void transfer(ExtendedState* dst, State* src) {
 static void dMat_setup(Control* self) {
     String first;
     String second;
-    first.mStringTop = 0x10050fe4;
+    first.mTextPtr = 0x10050fe4;
     first.__vtbl = 0x10050fcc;
     void* resources = resourceControl;
     Resource* a = getResource(resources, &first, 0x92);
     second.__vtbl = 0x10050fcc;
     resources = resourceControl;
-    second.mStringTop = 0x10050fe4;
+    second.mTextPtr = 0x10050fe4;
     Resource* b = getResource(resources, &second, 0x93);
     if (!a || !b)
         return;
@@ -166,7 +166,7 @@ static void dMat_control_create(Heap* parentHeap) {
     // HD: named heap and combined 0x450-byte render-state allocation replace GC backups.
     String name;
     name.__vtbl = 0x10050fcc;
-    name.mStringTop = 0x10050fec;
+    name.mTextPtr = 0x10050fec;
     Heap* heap = createHeap(0x100000, &name, parentHeap, 1, 0);
     mHeap = heap;
     Control* control = allocateControl(sizeof(Control), heap, 4);

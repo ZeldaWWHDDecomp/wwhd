@@ -1,5 +1,6 @@
 #pragma once
 #include "wwhd.h"
+#include "sead/TreeMapPool.h"
 
 // HD: these sead resource-manager views follow the verified Wii U layouts.
 namespace ResourceManagerHD {
@@ -15,32 +16,36 @@ template <u32 N> struct FixedString {
     be<s32> mCapacity;
     u8 mBuffer[N];
 };
-struct TreeHeader {
-    be<u32> mRoot, mFreeHead, mNodes;
-    be<s32> mCount, mCapacity;
-};
+/* either map's node pool (sead/TreeMapPool.h), viewed by address */
+typedef sead::TreeMapPool<void> TreeHeader;
+/* a node of the archive map (SafeString keys; FixedSafeString<48> key storage) */
 struct ArchiveNode {
-    be<u32> mLeft, mRight;
+    gptr<ArchiveNode> mLeft, mRight;
     be<u8> mColor;
     u8 mPadding[3];
     SafeString mKey;
-    be<u32> mValueVtable, mHolder, mTree;
+    be<u32> mValueVtable, mHolder;
+    gptr<sead::TreeMapPool<ArchiveNode>> mTree;
     u8 mBuffer[0x30];
     be<u8> mBufferFlag;
     u8 mTail[3];
+    void erase();  // the map node's erase_: back to the pool's free list (hd_res_mgr_lib.cpp)
 };
+/* a node of the pack entry map (hash keys) */
 struct PackNode {
-    be<u32> mLeft, mRight;
+    gptr<PackNode> mLeft, mRight;
     be<u8> mColor;
     u8 mPadding[3];
-    be<u32> mHash, mValueVtable, mHashCopy, mHolder, mTree;
+    be<u32> mHash, mValueVtable, mHashCopy, mHolder;
+    gptr<sead::TreeMapPool<PackNode>> mTree;
+    void erase();  // the map node's erase_ (hd_res_mgr_lib.cpp)
 };
 struct ArchiveTree {
-    TreeHeader mHeader;
+    sead::TreeMapPool<ArchiveNode> mHeader;
     ArchiveNode mNodes[0x280];
 };
 struct PackTree {
-    TreeHeader mHeader;
+    sead::TreeMapPool<PackNode> mHeader;
     PackNode mNodes[0x200];
 };
 struct Manager {
@@ -55,9 +60,11 @@ struct Manager {
     be<u8> mFromPack;
     u8 mPadding[3];
     u8 mCriticalSection[0x3C];
-    be<u32> mLoadAlignment;
+    be<u32> mLoadAlign;
 };
 WWHD_SIZE(ArchiveNode, 0x54);
+WWHD_OFFSET(ArchiveNode, mTree, 0x1C);
+WWHD_OFFSET(PackNode, mTree, 0x1C);
 WWHD_SIZE(PackNode, 0x20);
 WWHD_SIZE(ArchiveTree, 0xD214);
 WWHD_SIZE(PackTree, 0x4014);
@@ -351,7 +358,7 @@ enum ResourceImageAddress : u32 {
     kFirstPermanentPackPath = 0x100E2428,
     kSecondPermanentPackPath = 0x100E2444,
     kThirdPermanentPackPath = 0x100E2460,
-    kSingletonDisposerVtable = 0x100E25C0,
+    kInstanceDisposerVtable = 0x100E25C0,
     kArchiveHolderVtable = 0x100E25D0,
     kPackHolderVtable = 0x100E25E0,
     kArchiveFileDeviceVtable = 0x101439A4,
@@ -363,7 +370,7 @@ enum ResourceImageAddress : u32 {
     kPackTypeInfoGuard = 0x101FD778,
     kArchiveTypeInfo = 0x101FD9D0,
     kPackTypeInfo = 0x101FDD64,
-    kEmptyStringTopSlot = 0x104A0CD8,
+    kEmptyTextPtrSlot = 0x104A0CD8,
 };
 inline SafeString* languagePackObjects() { return gabi::at<SafeString>(0x1048DD4C); }
 inline be<u32>* languagePackTable() { return gabi::at<be<u32>>(0x100E2408); }

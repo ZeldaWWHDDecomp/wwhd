@@ -56,12 +56,12 @@ void himo3DestroyArray(void*, u32, u32, u32, u32);
 static inline bool SafeString_eq(himo3HD::String* a, himo3HD::String* b) {
     gabi::call_ptr(a->__vtbl->assureTermination.get(), a);
     gabi::call_ptr(a->__vtbl->assureTermination.get(), a);
-    be<u8>* s1 = a->mStringTop;
+    be<u8>* s1 = a->mTextPtr;
     gabi::call_ptr(b->__vtbl->assureTermination.get(), b);
-    if (s1 == b->mStringTop)
+    if (s1 == b->mTextPtr)
         return true;
-    be<u8>* p = a->mStringTop;
-    be<u8>* q = b->mStringTop;
+    be<u8>* p = a->mTextPtr;
+    be<u8>* q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = p[i];
         if (c != q[i])
@@ -75,10 +75,10 @@ static inline bool SafeString_eq(himo3HD::String* a, himo3HD::String* b) {
  * at play+0x5134) */
 static inline bool himo3IsStartStage(const char* lit) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(lit);
+    a->mTextPtr = gabi::guest_addr(lit);
     a->__vtbl = SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
-    b->mStringTop = dComIfGp_ea() + 0x5134;
+    b->mTextPtr = dComIfGp_ea() + 0x5134;
     b->__vtbl = SAFESTRING_VTBL;
     return SafeString_eq(reinterpret_cast<himo3HD::String*>(a.get()),
                          reinterpret_cast<himo3HD::String*>(b.get()));

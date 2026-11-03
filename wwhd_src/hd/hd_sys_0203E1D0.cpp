@@ -63,7 +63,29 @@ static void destroyWideSafeBufferCompanion(void* i_this, u32 flags) {
 
 /* 0203E284 */
 static u32 invokeProfileDelegate(hdProfileDelegate* i_this, u32 argument, u32 userData) {
-    return i_this->invoke(argument, userData);
+    void* object = i_this->mObject;
+    if (object == NULL) {
+        return gabi::ea(i_this);
+    }
+    s32 index = i_this->mVirtualIndex;
+    if (index == 0) {
+        return gabi::ea(i_this);
+    }
+    // HD: GHS this and vtable adjustments are signed offsets with 32-bit guest wrapping.
+    u32 targetAddress = gabi::ea(object) + (u32)(s32)i_this->mThisDelta;
+    void* target = gabi::at<void>(targetAddress);
+    u32 function;
+    if (index < 0) {
+        function = i_this->mFunction.get();
+    } else {
+        u32 vtableAddress = targetAddress + (u32)(s32)i_this->mVirtual.mVtableOffset;
+        auto* vtablePointer = gabi::at<gptr<hdProfileDelegateVirtualEntry>>(vtableAddress);
+        hdProfileDelegateVirtualEntry* entries = *vtablePointer;
+        function = entries[index].mFunction.get();
+    }
+    // HD: the original tail-branches (bctr) without a frame: the target runs at the caller's sp with the
+    // caller's LR (the Olive manager thread is parked below it when a save state is taken).
+    return gabi::tail_ptr<u32>(function, target, argument, userData);
 }
 
 /* 0203E2D8 */

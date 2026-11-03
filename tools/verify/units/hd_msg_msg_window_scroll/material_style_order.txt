@@ -1,3 +1,4 @@
+# verify: -only 026BCBF0
 # Supplemental 026BCBF0 fixture (run with -only 026BCBF0).
 # Material write overlaps the message style-pointer word; preserve store/read order.
 # Synthetic mapped local game-state storage; existing callback model.

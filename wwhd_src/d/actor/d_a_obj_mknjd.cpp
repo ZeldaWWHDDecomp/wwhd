@@ -116,11 +116,11 @@ static inline u32 getAnmMtx(u32 model, u32 jointNo) {
 static inline bool SafeString_eq(SafeString *a, SafeString *b) {
     gabi::call_ptr(Mknjd_view<MknjdSafeStringVtable>(a->__vtbl)->mAssureTermination, a);
     gabi::call_ptr(Mknjd_view<MknjdSafeStringVtable>(a->__vtbl)->mAssureTermination, a);
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(Mknjd_view<MknjdSafeStringVtable>(b->__vtbl)->mAssureTermination, b);
-    if (s1 == b->mStringTop)
+    if (s1 == b->mTextPtr)
         return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+    u32 p = a->mTextPtr, q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = *Mknjd_view<be<u8>>(p + i);
         if (c != *Mknjd_view<be<u8>>(q + i))
@@ -133,10 +133,10 @@ static inline bool SafeString_eq(SafeString *a, SafeString *b) {
 // HD: this comparison retains two SafeString stack temporaries and repeated termination calls.
 static inline bool Mknjd_isStartStage(u32 literal) {
     gabi::Local<SafeString> a;
-    a->mStringTop = literal;
+    a->mTextPtr = literal;
     a->__vtbl = gc_tu.safeString;
     gabi::Local<SafeString> b;
-    b->mStringTop = dComIfGp_ea() + 0x5134;
+    b->mTextPtr = dComIfGp_ea() + 0x5134;
     b->__vtbl = gc_tu.safeString;
     return SafeString_eq(a, b);
 }

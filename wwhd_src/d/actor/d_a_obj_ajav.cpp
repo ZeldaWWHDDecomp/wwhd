@@ -51,7 +51,7 @@ static void* daObjAjav_Cyl_constructor(void*);
 static void* objectResource(const char* archive, s32 index) {
     gabi::Local<SafeString> name;
     gabi::Local<u8[16]> resourceLinkage;
-    name->mStringTop = gabi::guest_addr(archive);
+    name->mTextPtr = gabi::guest_addr(archive);
     name->__vtbl = gc_tu.safeString;
     return ajavObjectResource(dComIfG_resControl(), name.get(), index);
 }

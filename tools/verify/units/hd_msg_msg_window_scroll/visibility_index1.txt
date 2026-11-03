@@ -1,3 +1,4 @@
+# verify: -only 026BB768
 # Supplemental 026BB768 fixture (run with -only 026BB768).
 # Pane0 visibility overlaps index1 high byte, reaching the in-loop pane fallback.
 # Synthetic mapped local game-state storage; existing callback model.

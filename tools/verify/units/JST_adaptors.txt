@@ -1,4 +1,14 @@
+# readable-scope: 0283DD48,0283DE84,0283E020,0283EA48,0283EB98,0283ECE8,0283EE58,0283FF60,02840AC0,02840F24,02841678,02841D7C
 src wwhd_src/JSystem/JStudio/JST_adaptors.cpp
+# support only: JS-JStudio#1 sources, linked for the light index tables sJStudioLight*Indices (10172E88/10172F18/10172F24); not under test here
+src wwhd_src/JSystem/JStudio/jstudio-math.cpp
+src wwhd_src/JSystem/JStudio/fvb.cpp
+src wwhd_src/JSystem/JStudio/jstudio-control.cpp
+src wwhd_src/JSystem/JStudio/stb-data-parse.cpp
+src wwhd_src/JSystem/JStudio/jstudio-data.cpp
+src wwhd_src/JSystem/JStudio/stb-data.cpp
+src wwhd_src/JSystem/JStudio/jstudio-object.cpp
+src wwhd_src/JSystem/JStudio/jstudio-object_inline.cpp
 callee 0283A1E0 r4=out12
 callee 0283A318 r4=out4
 callee 028E8F64 r3=48 r4=12 r5=out12

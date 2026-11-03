@@ -77,7 +77,7 @@ s32 Act_c::CreateHeap() {
   const Attr_c &table = attr();
   void *resources = l_resources.get();
   gabi::Local<SafeString> name;
-  name->mStringTop = gabi::guest_addr(M_arcname);
+  name->mTextPtr = gabi::guest_addr(M_arcname);
   name->__vtbl = kSafeStringVtableHD;
   s16 index = table.bdlResIndex;
   J3DModelData *data = jumpGetResourceHD(resources, name.get(), index);

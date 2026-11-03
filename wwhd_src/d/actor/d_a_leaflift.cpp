@@ -114,7 +114,7 @@ static gabi::HostFn typicalRotYBinding(reinterpret_cast<const void*>(&dBgS_MoveB
 /* 021B3260 */
 s32 daLlift_c::CreateHeap() {
     ProtectedLocal<SafeString> name;
-    name->mStringTop = gabi::guest_addr("Olift");
+    name->mTextPtr = gabi::guest_addr("Olift");
     name->__vtbl = 0x10013E78;
     auto* data = static_cast<J3DModelData*>(getObjectRes(dComIfG_resControl(), name.get(), 4));
     if (!data)
@@ -129,7 +129,7 @@ s32 daLlift_c::CreateHeap() {
         return FALSE;
     ProtectedLocal<SafeString> bgname;
     bgname->__vtbl = 0x10013E78;
-    bgname->mStringTop = gabi::guest_addr("Olift");
+    bgname->mTextPtr = gabi::guest_addr("Olift");
     auto* collision = static_cast<cBgD_t*>(getObjectRes(dComIfG_resControl(), bgname.get(), 7));
     LeafBgWorld* bg = mpBgW;
     if (SetBackground(bg, collision, dBgW::MOVE_BG_e, &mMtx))

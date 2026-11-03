@@ -17,7 +17,7 @@ struct SafeStringVtable {
 };
 WWHD_SIZE(SafeStringVtable, 0x18);
 struct SafeString {
-    be<u32> mStringTop;
+    be<u32> mTextPtr;
     be<u32> mVtable;
 };
 WWHD_SIZE(SafeString, 8);
@@ -186,7 +186,7 @@ void resLoadTask_deleteObject(u32);
 
 void resLoadTask_destroyTaskBase(u32, u32);
 
-void resLoadTask_destroySingletonDisposer(u32, u32);
+void resLoadTask_destroyInstanceDisposer(u32, u32);
 
 void resLoadTask_registerGlobalObject(u32);
 

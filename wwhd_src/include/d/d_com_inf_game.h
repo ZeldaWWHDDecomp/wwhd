@@ -300,18 +300,18 @@ inline void dComIfGs_onActor(s32 no, s32 roomNo) { dComIfGs_info()->onActor(no, 
 /* ---- resources ---- */
 inline cPhs_State dComIfG_resLoad(request_of_phase_process_class* p, const char* arc) { return gabi::call<cPhs_State>(0x02520460, p, arc); }
 inline BOOL dComIfG_resDelete(request_of_phase_process_class* p, const char* arc) { return gabi::call<BOOL>(0x025204C8, p, arc); }
-/* HD: resource names are passed as sead::SafeString temporaries {const char* mStringTop; vtable}
+/* HD: resource names are passed as sead::SafeString temporaries {const char* mTextPtr; vtable}
  * (GHS places the vtable pointer after the members). Each translation unit has its own copy of
  * the SafeString vtable, so the caller passes its TU's vtable address. */
 struct SafeString {
-    be<u32> mStringTop;
+    be<u32> mTextPtr;
     be<u32> __vtbl;
 };
 inline dRes_control_c* dComIfG_resControl() { return gabi::at<dRes_control_c>(gabi::load<u32>(0x101F4F28)); }
 /* 026066C4 HD: dRes_control_c::getRes(const sead::SafeString& arc, s32 index) [v] */
 inline void* dComIfG_getObjectRes(const char* arc, s32 index, u32 safestring_vtbl) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_addr(arc); /* a guest string, or a host literal of a GameCube-style unit */
+    key->mTextPtr = gabi::guest_addr(arc); /* a guest string, or a host literal of a GameCube-style unit */
     key->__vtbl = safestring_vtbl;
     return gabi::call<void*>(0x026066C4, dComIfG_resControl(), key.get(), index);
 }

@@ -21,17 +21,17 @@ static BOOL fopAcM_entrySolidHeapRegister(u32 i_this, u32 createHeapCB, u32 esti
     actMngGuest_mDoExt_getHeap(1);
     u32 play = dComIfGp_ea();
     gabi::Local<SafeString> stage, sea;        /* sead::SafeString temporaries */
-    sea->mStringTop = gabi::guest_addr("sea"); /* "sea" */
+    sea->mTextPtr = gabi::guest_addr("sea"); /* "sea" */
     sea->__vtbl = gc_tu.safeString;
-    stage->mStringTop = play + 0x5134; /* dComIfGp_getStartStageName() */
+    stage->mTextPtr = play + 0x5134; /* dComIfGp_getStartStageName() */
     stage->__vtbl = gc_tu.safeString;
     actorMngAssureTermination(gabi::ea(stage.get()));
     gabi::call_ptr((u32)actorMngView<ActorManagerSafeStringVtable>(stage->__vtbl)->assureTermination,
                    gabi::ea(stage.get()));
-    u32 s1 = stage->mStringTop;
+    u32 s1 = stage->mTextPtr;
     gabi::call_ptr((u32)actorMngView<ActorManagerSafeStringVtable>(sea->__vtbl)->assureTermination,
                    gabi::ea(sea.get()));
-    u32 s2 = sea->mStringTop;
+    u32 s2 = sea->mTextPtr;
     bool isSea = false;
     if (s1 == s2) {
         isSea = true;

@@ -108,17 +108,17 @@ static inline void SafeString_vcall(SafeString* s) { ksAssureString(s); }
 /* inlined into dead_eff_set, useHeapInit, daKS_Create */
 static inline bool ksStageIs(const char* name) {
     SafeString a;
-    a.mStringTop = gabi::guest_addr(name);
+    a.mTextPtr = gabi::guest_addr(name);
     a.__vtbl = KS_SAFESTRING_VTBL;
     u32 stage = ksStartStageAddress();
     SafeString b;
     b.__vtbl = KS_SAFESTRING_VTBL;
-    b.mStringTop = stage;
+    b.mTextPtr = stage;
     SafeString_vcall(&a);
     SafeString_vcall(&a);
-    u32 pa = a.mStringTop;
+    u32 pa = a.mTextPtr;
     SafeString_vcall(&b);
-    u32 pb = b.mStringTop;
+    u32 pb = b.mTextPtr;
     if (pa == pb) return true;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 ca = ksStringByte(pa + i);

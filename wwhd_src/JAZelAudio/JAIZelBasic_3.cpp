@@ -240,17 +240,17 @@ u32 JAIZelBasic::checkDemoFanfarePlaying() {
     gabi::Local<SafeString> stage;
     demo->__vtbl = &l_safeStringVtable;
     stage->__vtbl = &l_safeStringVtable;
-    demo->mStringTop = &l_demo34;
-    stage->mStringTop = &l_stageName;
+    demo->mTextPtr = &l_demo34;
+    stage->mTextPtr = &l_stageName;
     demo->assureTermination();
     gabi::call_ptr(demo->__vtbl->assureTermination.get(), demo.get());
     auto stageAssure = stage->__vtbl->assureTermination.get();
-    GuestByte *demoStart = demo->mStringTop.get();
+    GuestByte *demoStart = demo->mTextPtr.get();
     gabi::call_ptr(stageAssure, stage.get());
-    bool equal = demoStart == stage->mStringTop.get();
+    bool equal = demoStart == stage->mTextPtr.get();
     if (!equal) {
-        GuestByte *left = demo->mStringTop.get();
-        GuestByte *right = stage->mStringTop.get();
+        GuestByte *left = demo->mTextPtr.get();
+        GuestByte *right = stage->mTextPtr.get();
         for (u32 i = 0; i < 0x40001; i++) {
             u8 character = left[i];
             if (character != right[i])

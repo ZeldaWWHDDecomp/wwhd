@@ -2,11 +2,13 @@
  * loader threads), WWHD.
  * HD-only code (no GameCube source): written from the
  * WWHD code. Range 0260F9E4..02614BDF (sinit 02613710; two initialiser-only TUs 02614AB8 and
- * 02614B4C). The pack scanners are in hd_res_mgr_pack.cpp. Not verified here (sead library
- * template instances emitted in this TU): 02613884 02613898 026138AC 0261390C 0261396C 02613970
- * 02613988 0261399C 02613BBC..02613C0C 02613C20 02613C94 02613C98 02613CA0 02613CA4 02613D60
- * 02613DB4 02613DE4 02613E38 02613E90..02613ECC 02613EE0 02613F00 02613F20 (TreeMap find)
- * 0261401C (TreeMap insert) 026142C4 (TreeMap erase).
+ * 02614B4C). The pack scanners are in hd_res_mgr_pack.cpp. The sead library template instances
+ * emitted in this TU are in hd_res_mgr_lib.cpp: 0261399C (TreeMap eraseMin) 02613C20 02613C98
+ * 02613D60 02613DB4 02613E38 02613EE0 02613F00 (archive/pack node erase) 02613F20 (TreeMap find)
+ * 0261401C (TreeMap insert) 026142C4 (TreeMap erase); the rest in cg/dtor_1.cpp (02613884
+ * 02613898 02613988 02613BBC..02613C0C 02613E90..02613ECC), cg/empty_1_part1.cpp (0261396C),
+ * cg/empty_1_part7.cpp (02613C94 02613CA0) and sead/InlineInstances.cpp (026138AC 0261390C
+ * 02613970 02613CA4 02613DE4).
  *
  * ResMgr (0x1131C): +0 vtable 100E222C, +0x14 archive map (sead TreeMap keyed by name, 0x280 nodes
  * of 0x54 at +0x28; node +0xC key {top, vtable} with a 0x30-char buffer at +0x20, +0x18 value),
@@ -24,7 +26,7 @@ u32 resNative_allocate(u32);
 void resNative_clearRequestBuffer(u32, u32);
 void resNative_criticalSectionConstruct(u32);
 u32 resNative_allocateWithHeapAligned(u32, u32, u32);
-void resNative_singletonDisposerConstruct(u32, u32, u32);
+void resNative_instanceDisposerConstruct(u32, u32, u32);
 void resNative_formatObjectPath(u32, u32, u32);
 void resNative_disposerConstruct(u32);
 u32 resNative_currentHeap(u32);
@@ -134,9 +136,9 @@ u32 ResMgr_ctor(u32 p) {
         writeField<u32>(at<TreeHeader>(t)->mCapacity, 0x280);
         writeField<u32>(at<TreeHeader>(t)->mFreeHead, nodes);
         for (u32 i = 0; i < 0x27F; i++)
-            at<ArchiveNode>(nodes)[i].mLeft = nodes + sizeof(ArchiveNode) * (i + 1);
-        at<ArchiveNode>(nodes)[0x27F].mLeft = 0;
-        writeField<u32>(at<TreeHeader>(t)->mNodes, nodes);
+            at<ArchiveNode>(nodes)[i].mLeft.v = nodes + sizeof(ArchiveNode) * (i + 1);
+        at<ArchiveNode>(nodes)[0x27F].mLeft.v = 0;
+        writeField<u32>(at<TreeHeader>(t)->mNodeStorage, nodes);
     }
     const u32 m = p + 0xD228;
     u32 q = m;
@@ -149,9 +151,9 @@ u32 ResMgr_ctor(u32 p) {
         writeField<u32>(at<TreeHeader>(q)->mFreeHead, nodes);
         writeField<u32>(at<TreeHeader>(q)->mCapacity, 0x200);
         for (u32 i = 0; i < 0x1FF; i++)
-            at<PackNode>(nodes)[i].mLeft = nodes + sizeof(PackNode) * (i + 1);
-        at<PackNode>(nodes)[0x1FF].mLeft = 0;
-        writeField<u32>(at<TreeHeader>(q)->mNodes, nodes);
+            at<PackNode>(nodes)[i].mLeft.v = nodes + sizeof(PackNode) * (i + 1);
+        at<PackNode>(nodes)[0x1FF].mLeft.v = 0;
+        writeField<u32>(at<TreeHeader>(q)->mNodeStorage, nodes);
     }
     writeField<u32>(managerFromPackTree(m)->mArena, 0);
     writeField<u32>(managerFromPackTree(m)->mRequestState, 0);
@@ -163,7 +165,7 @@ u32 ResMgr_ctor(u32 p) {
     fixedCtor(m + 0x4060, 0x40, kFixedStringBaseVtable, kFixedString64BaseVtable,
               kFixedString64Vtable, 0x4C);
     resNative_criticalSectionConstruct(m + 0x40B4);
-    writeField<u32>(managerFromPackTree(m)->mLoadAlignment, 0x40000);
+    writeField<u32>(managerFromPackTree(m)->mLoadAlign, 0x40000);
     return p;
 }
 
@@ -176,8 +178,8 @@ void ResMgr_createInstance(u32 heap) {
     const u32 p = resNative_allocateWithHeapAligned(0x1131Cu, heap, 4u);
     const u32 d = p + 4;
     if (d) {
-        resNative_singletonDisposerConstruct(d, heap, 3u);
-        writeField<u32>(at<Disposer>(d)->mVtable, kSingletonDisposerVtable);
+        resNative_instanceDisposerConstruct(d, heap, 3u);
+        writeField<u32>(at<Disposer>(d)->mVtable, kInstanceDisposerVtable);
     }
     disposerSlot() = d;
     writeField<u32>(singletonSlot(), p ? ResMgr_ctor(p) : 0u);
@@ -651,14 +653,14 @@ void ResMgr_threadMain(u32 self, u32 thread, u32 msg) {
         }
         resNative_criticalSectionEnter(cs);
         ResMgr_loadArchive(self, r, r + 0x3C, readField<u32>(at<Request>(r)->mHeap), 1u,
-                           readField<u32>(at<Manager>(self)->mLoadAlignment), 0x2000u);
+                           readField<u32>(at<Manager>(self)->mLoadAlign), 0x2000u);
         wordAt(st) = 0;
         resNative_criticalSectionLeave(cs);
     } else if (msg == 3) {
         resNative_criticalSectionEnter(cs);
         resNative_scanStagePack(self, r, self + 0x11288,
                                 readField<u32>(at<Manager>(self)->mRequestHeap),
-                                readField<u32>(at<Manager>(self)->mLoadAlignment));
+                                readField<u32>(at<Manager>(self)->mLoadAlign));
         wordAt(st) = 0;
         resNative_criticalSectionLeave(cs);
     }
@@ -685,12 +687,12 @@ void ResMgr_packThreadMain(u32 self, u32 thread, u32 msg) {
 }
 
 /* 02613580 */
-// HD: SingletonDisposer deleting destructor (destroys the instance)
+// HD: InstanceDisposer deleting destructor (destroys the instance)
 void ResMgr_disposerDtor(u32 p, u32 flags) {
 
     if (!p)
         return;
-    writeField<u32>(at<Disposer>(p)->mVtable, kSingletonDisposerVtable);
+    writeField<u32>(at<Disposer>(p)->mVtable, kInstanceDisposerVtable);
     if (p == disposerSlot().get()) {
         const u32 inst = readField<u32>(singletonSlot());
         disposerSlot() = 0;
@@ -790,7 +792,7 @@ ext 0273AD10 u32 resNative_allocate(u32)
 ext 028F521C void resNative_clearRequestBuffer(u32, u32)
 ext 02760084 void resNative_criticalSectionConstruct(u32)
 ext 0273B0D4 u32 resNative_allocateWithHeapAligned(u32, u32, u32)
-ext 02752B0C void resNative_singletonDisposerConstruct(u32, u32, u32)
+ext 02752B0C void resNative_instanceDisposerConstruct(u32, u32, u32)
 ext 02759C28 void resNative_formatObjectPath(u32, u32, u32)
 ext 02752A84 void resNative_disposerConstruct(u32)
 ext 02756140 u32 resNative_currentHeap(u32)

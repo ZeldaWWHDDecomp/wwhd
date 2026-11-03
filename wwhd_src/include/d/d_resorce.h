@@ -3,8 +3,11 @@
  * This header holds the template layouts; the runtime control/info layouts are separate. */
 #pragma once
 #include "bindings.h"
+#include "sead/TreeMapPool.h"
 namespace resorce_hd {
-struct ResourcePool;
+struct ResourceNode;
+/* the node pool of a resource map (sead/TreeMapPool.h) */
+typedef sead::TreeMapPool<ResourceNode> ResourcePool;
 struct ResourceNodeVirtuals {
     u8 mOtherVirtuals[0x14];
     be<u32> mRelease;
@@ -29,15 +32,6 @@ WWHD_OFFSET(ResourceNode, mHash, 0x14);
 WWHD_OFFSET(ResourceNode, mValue, 0x18);
 WWHD_OFFSET(ResourceNode, mpPool, 0x1C);
 WWHD_SIZE(ResourceNode, 0x20);
-struct ResourcePool {
-    gptr<ResourceNode> mRoot;
-    gptr<ResourceNode> mFree;
-    gptr<ResourceNode> mStorage;
-    be<u32> mCount;
-    be<u32> mCapacity;
-};
-WWHD_OFFSET(ResourcePool, mCount, 0xC);
-WWHD_OFFSET(ResourcePool, mCapacity, 0x10);
 WWHD_SIZE(ResourcePool, 0x14);
 struct ResourceCallback {
     be<u32> __vtbl;
@@ -51,7 +45,7 @@ struct ResourceCallbackReceiver {
 };
 WWHD_SIZE(ResourceCallbackReceiver, 4);
 struct BufferedString {
-    be<u32> mStringTop;
+    be<u32> mTextPtr;
     be<u32> __vtbl;
     be<u32> mCapacity;
 };
@@ -107,7 +101,7 @@ enum {
     FORMAT_STRING_VTABLE = 0x100E1A44
 };
 struct FixedString64 {
-    be<u32> mStringTop, __vtbl, mCapacity;
+    be<u32> mTextPtr, __vtbl, mCapacity;
     be<u8> mBuffer[64];
 };
 WWHD_OFFSET(FixedString64, mBuffer, 0xC);
@@ -452,12 +446,12 @@ WWHD_SIZE(ResourceTextureHeaderHD, 0x10);
 
 namespace resorce_hd {
 struct ResourceSafeStringHD {
-    be<u32> mStringTop;
+    be<u32> mTextPtr;
     be<u32> __vtbl;
 };
 WWHD_SIZE(ResourceSafeStringHD, 8);
 struct ResourceStringBuffer128HD {
-    be<u32> mStringTop;
+    be<u32> mTextPtr;
     be<u32> __vtbl;
     be<u32> mCapacity;
     be<u8> mBuffer[128];

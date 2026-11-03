@@ -79,7 +79,7 @@ static hdLayer2DDRC_c* hdLayer2DDRC_c__ct(hdLayer2DDRC_c* i_this) {
         if (i_this == NULL) return NULL;
     }
     SafeString name;
-    name.mStringTop = gabi::guest_addr("UI_DRC");
+    name.mTextPtr = gabi::guest_addr("UI_DRC");
     name.__vtbl = gabi::ea(&shdLayer2DDRC_cNameVtable);
     constructLayer2D(i_this, &name);
     i_this->mBase.mpVtable = (hdLayerVtable_c*)&shdLayer2DDRC_cVtable;

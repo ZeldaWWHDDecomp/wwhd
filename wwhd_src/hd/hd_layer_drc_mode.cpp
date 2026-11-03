@@ -35,7 +35,7 @@ static hdDrcLayer_c* constructDrcModeLayer(hdDrcLayer_c* layer) {
     }
     SafeString name;
     name.__vtbl = gabi::ea(&sLayerDrcModeSafeStringVtable);
-    name.mStringTop = gabi::guest_addr("UI_DRCMode");
+    name.mTextPtr = gabi::guest_addr("UI_DRCMode");
     constructDrcLayerBase(layer, &name);
     layer->mVtable = gabi::ea(&sLayerDrcModeLayerVtable);
     layer->mDrawVtable = gabi::ea(&sLayerDrcModeDrawVtable);
@@ -54,7 +54,7 @@ void hdDrcLayer_c::initialize() {
         if (name == NULL) name = (SafeString*)allocateDrcLayer(sizeof(SafeString));
         if (name != NULL) {
             name->__vtbl = gabi::ea(&sLayerDrcModeSafeStringVtable);
-            name->mStringTop = gabi::guest_addr("");
+            name->mTextPtr = gabi::guest_addr("");
         }
         step->mFlags = 0;
         step->mVtable = gabi::ea(&sLayerDrcModeStepVtable);
@@ -65,7 +65,7 @@ void hdDrcLayer_c::initialize() {
             step->mDrawFunction = gabi::guest_fn((const void*)drawDrcMode);
         }
         step->mTarget = 2;
-        step->mName.mStringTop = gabi::guest_addr("LayerDRCMode2D");
+        step->mName.mTextPtr = gabi::guest_addr("LayerDRCMode2D");
     }
     addDrcStep(this, step);
 }

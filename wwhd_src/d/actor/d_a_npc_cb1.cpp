@@ -62,20 +62,20 @@ static inline void cLib_offsetPos(cXyz *out, const cXyz *base, s16 ang, const cX
 /* inlined into create */
 static inline bool cb1_isStartStage(const char *lit) {
     gabi::Local<SafeString> sa;
-    sa->mStringTop = gabi::guest_str(lit);
+    sa->mTextPtr = gabi::guest_str(lit);
     sa->__vtbl = CB1_SAFESTRING_VTBL;
     u32 stage = gabi::ea(dComIfGp_getStartStageName());
     gabi::Local<SafeString> sb;
-    sb->mStringTop = stage;
+    sb->mTextPtr = stage;
     sb->__vtbl = CB1_SAFESTRING_VTBL;
     gabi::call_ptr((u32)gabi::at<CbCreateSafeStringVtable>(sa->__vtbl)->mAssureTermination,
                    sa.get());
     gabi::call_ptr((u32)gabi::at<CbCreateSafeStringVtable>(sa->__vtbl)->mAssureTermination,
                    sa.get());
-    u32 pa = sa->mStringTop;
+    u32 pa = sa->mTextPtr;
     gabi::call_ptr((u32)gabi::at<CbCreateSafeStringVtable>(sb->__vtbl)->mAssureTermination,
                    sb.get());
-    u32 pb = sb->mStringTop;
+    u32 pb = sb->mTextPtr;
     if (pa == pb) {
         return true;
     }

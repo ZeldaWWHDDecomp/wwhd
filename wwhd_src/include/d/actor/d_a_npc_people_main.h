@@ -324,7 +324,7 @@ enum NpcNo_e {
 
 static inline void* dComIfG_getObjectIDRes_r67(const char* arc, s32 id, u32 r6, u32 r7) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
+    key->mTextPtr = gabi::ea(arc);
     key->__vtbl = PEOPLE_SAFESTRING_VTBL;
     return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id, r6, r7);
 }
@@ -367,7 +367,7 @@ inline bool people_SafeString_eq(SafeString* a, SafeString* b) {
     gabi::call_ptr(gabi::at<PeopleMainSafeStringVtable>(a->__vtbl)->assureTermination.get(), a);
     gabi::call_ptr(gabi::at<PeopleMainSafeStringVtable>(a->__vtbl)->assureTermination.get(), a);
     gabi::call_ptr(gabi::at<PeopleMainSafeStringVtable>(b->__vtbl)->assureTermination.get(), b);
-    u32 pa=a->mStringTop, pb=b->mStringTop;
+    u32 pa=a->mTextPtr, pb=b->mTextPtr;
     if (pa==pb) return true;
     const be<u8>* left=gabi::at<be<u8>>(pa);
     const be<u8>* right=gabi::at<be<u8>>(pb);

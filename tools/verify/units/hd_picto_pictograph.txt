@@ -9,7 +9,7 @@ src wwhd_src/d/hd_screen_pictograph_box_resources.cpp
 src wwhd_src/d/hd_screen_pictograph_camera.cpp
 src wwhd_src/d/hd_msg_window_base.cpp
 
-# Canonical UI_msg_base_b.txt finite typing fixture, origin b85cd83c.
+# Canonical UI_msg_base_b.txt finite typing fixture.
 # This original subtract-one loop does not terminate for infinite/huge accumulators.
 arg! 026FCB00 r3 536870912 536870912
 field 026FCB00 r3+0x118 u32 536879104 536879104
@@ -31,7 +31,7 @@ src wwhd_src/d/hd_screen_pictograph_list.cpp
 src wwhd_src/d/hd_screen_pictograph_list_resources.cpp
 
 # Initialized pane metadata and finite RTTI trees, following canonical fixtures
-# hd_miiv_menu_miiverse_1.txt:98 and hd_fw_parts_text_valid.txt:388 (b85cd83c).
+# hd_miiv_menu_miiverse_1.txt:98 and hd_fw_parts_text_valid.txt:388.
 # Lookup may return NULL or a live pane. RTTI may match directly, through a
 # parent, or end in an unrelated type. Class metadata survives the callbacks;
 # pane payload, names, guards and all stores remain observable.

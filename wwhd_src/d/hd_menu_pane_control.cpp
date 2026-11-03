@@ -216,14 +216,14 @@ void hdMenuPaneControl::destroy(u32 flags) {
 void hdMenuPaneControl::update() {
     hdMenuPane_l* pane = mpPane;
     if (pane != NULL) {
-        f32 x = f32(mBasePosition.x) + f32(mBaseOffset.x);
-        f32 y = f32(mBasePosition.y) + f32(mBaseOffset.y);
+        f32 x = gabi::fadds_ppc(f32(mBasePosition.x), f32(mBaseOffset.x)); /* fadds NaN order: frA first */
+        f32 y = gabi::fadds_ppc(f32(mBasePosition.y), f32(mBaseOffset.y));
         u8 flags = pane->mFlags;
         pane->mTranslationY = y;
         pane->mTranslationZ = 0.0f;
         pane->mFlags = flags | 0x10;
         pane->mTranslationX = x;
-        f32 scale = f32(mScale) * f32(mScaleFactor);
+        f32 scale = gabi::fmuls_ppc(f32(mScale), f32(mScaleFactor));
         pane = mpPane;
         flags = pane->mFlags;
         pane->mScaleY = scale;

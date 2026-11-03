@@ -30,7 +30,7 @@ static hdLayer2DFore_c* hdLayer2DFore_c__ct(hdLayer2DFore_c* i_this) {
         if (i_this == NULL) return NULL;
     }
     SafeString name;
-    name.mStringTop = gabi::guest_addr("UI_Fore");
+    name.mTextPtr = gabi::guest_addr("UI_Fore");
     name.__vtbl = gabi::ea(&shdLayer2DFore_cNameVtable);
     constructLayer2D(i_this, &name);
     i_this->mBase.mpVtable = (hdLayerVtable_c*)&shdLayer2DFore_cVtable;

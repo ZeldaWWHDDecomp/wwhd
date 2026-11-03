@@ -326,16 +326,16 @@ static void tn_moveFlyingPart(tn_class* actor, tn_p* part, int index, tn_groundc
 static bool tn_stageEquals(u32 name) {
     gabi::Local<SafeString> expected;
     gabi::Local<SafeString> stage;
-    expected->mStringTop = name;
+    expected->mTextPtr = name;
     expected->__vtbl = TN_SAFESTRING_VTABLE;
     const u32 play = gabi::ea(dComIfGp_get());
-    stage->mStringTop = play + 0x5134u;
+    stage->mTextPtr = play + 0x5134u;
     stage->__vtbl = TN_SAFESTRING_VTABLE;
     tn_assureTermination(expected.get());
     tn_assureTermination(expected.get());
-    const u32 left = expected->mStringTop;
+    const u32 left = expected->mTextPtr;
     tn_assureTermination(stage.get());
-    const u32 right = stage->mStringTop;
+    const u32 right = stage->mTextPtr;
     if (left == right) return true;
     for (u32 i = 0; i < 0x40001u; ++i) {
         const u8 a = gabi::load<u8>(left + i);
@@ -2794,13 +2794,13 @@ BOOL daTn_Draw(tn_class* i_this) {
     // HD: resolves the body material by name in its model-data material array.
     gabi::Local<SafeString> materialName;
     materialName->__vtbl = TN_SAFESTRING_VTABLE;
-    materialName->mStringTop = 0x100405A0;
+    materialName->mTextPtr = 0x100405A0;
     J3DModelData* data = J3DModel_getModelData(model);
     TnResource* resource = gabi::at<TnResource>(data->mpResHeader);
     tnSafeString_noop(materialName.get());
     const u32 nameOffset = resource->mMaterialNameOffset;
     const u32 nameTable = nameOffset == 0 ? 0u : gabi::ea(&resource->mMaterialNameOffset) + nameOffset;
-    const u32 name = materialName->mStringTop;
+    const u32 name = materialName->mTextPtr;
     const s32 index = tn_materialIndex(gabi::at<u8>(nameTable), gabi::at<const char>(name));
     u32 material = 0;
     if (index >= 0) {

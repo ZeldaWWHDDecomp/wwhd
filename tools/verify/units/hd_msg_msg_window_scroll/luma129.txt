@@ -1,3 +1,4 @@
+# verify: -only 026BA16C
 # Supplemental fixture for 026BA16C (run with -only 026BA16C): a background luma of exactly 129 sits on the 128 threshold boundary.
 # Primary spec plus the lines at the end; synthetic values, no game data.
 src wwhd_src/d/hd_screen_msg_window_scroll.cpp

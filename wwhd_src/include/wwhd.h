@@ -37,6 +37,13 @@ struct Mtx34 {
 };
 WWHD_SIZE(Mtx34, 0x30);
 
+/* SDK 4x4 matrix (dolphin/Cafe MTX44; sdk/mtx). */
+struct Mtx44 {
+    be<f32> m[4][4];
+};
+WWHD_SIZE(Mtx44, 0x40);
+WWHD_OFFSET(Mtx44, m, 0);
+
 /* Quaternion (dolphin mtx). Assignment is a bit copy of the four words, loads before stores (GHS
  * copies with lfs/stfs pairs, which keep signalling NaNs in the recompiled original) [v lpalm] */
 struct Quaternion {

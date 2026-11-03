@@ -58,14 +58,11 @@ s32 dWpillar_c::jointCallBack(s32 i_jointNo) {
     f32 y = mPos.y;
     f32 scale = mScale.x;
     f32 low = gabi::load<f32>(gabi::ea(min_y) + u32(i_jointNo) * sizeof(f32));
-    f32 var_f2 = y != y ? y : gabi::fmadds(low, scale, y);
+    f32 var_f2 = gabi::fmadds(low, scale, y); /* fmadds: NaN order frA (low), frB (y), frC (scale), quieted */
     f32 old = m->m[1][3];
     f32 delta = f32(f64(old) - f64(var_f2));
     f32 height = mHeight;
     f32 result = gabi::fmadds(delta, height, var_f2);
-    // HD: retain GHS's additive operand when both operands are NaNs.
-    if (var_f2 != var_f2)
-        result = var_f2;
     m->m[1][3] = result;
     MTXCopy(m, &currentMtxHD);
     return 1;

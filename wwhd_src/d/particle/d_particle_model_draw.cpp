@@ -289,11 +289,11 @@ void dPa_rippleParticleDraw(void* callback, void* emitter, void* particle) {
         pa_dBgS_WtrChk_ctor(p(check));
         pa_registerGlobalObject(p(0x101EA444));
     }
-    f32 floor = y - f(0x10051CB0), offset = f(0x10051CAC), zero = (f32)l_particleZero;
+    f32 floor = gabi::fsubs_ppc(y, f(0x10051CB0)), offset = f(0x10051CAC), zero = (f32)l_particleZero;
     F(check + 0x3C, floor);
     F(check + 0x38, x);
     F(check + 0x40, z);
-    F(check + 0x44, floor + f(0x10051CB4));
+    F(check + 0x44, gabi::fadds_ppc(floor, f(0x10051CB4)));
     bool each = false;
     if ((u8)l_particleStatus & 1) {
         if (pa_daSea_ChkArea(x, z)) {
@@ -310,10 +310,10 @@ void dPa_rippleParticleDraw(void* callback, void* emitter, void* particle) {
     if (each) {
         for (u32 i = 0; i < 4; i++) {
             gabi::at<pa::Vec>(v)->y = y;
-            gabi::at<pa::Vec>(v)->x = xs[i] + x;
-            gabi::at<pa::Vec>(v)->z = zs[i] + z;
+            gabi::at<pa::Vec>(v)->x = gabi::fadds_ppc(xs[i], x);
+            gabi::at<pa::Vec>(v)->z = gabi::fadds_ppc(zs[i], z);
             s32 found = pa_fopAcM_getWaterY(pos.get(), water.get());
-            heights[i] = (found ? f(gabi::ea(water.get())) : y) + offset;
+            heights[i] = gabi::fadds_ppc(found ? f(gabi::ea(water.get())) : y, offset);
         }
     } else {
         gabi::at<pa::Vec>(v)->x = x;
@@ -322,7 +322,7 @@ void dPa_rippleParticleDraw(void* callback, void* emitter, void* particle) {
         if (pa_fopAcM_getWaterY(pos.get(), water.get()))
             y = f(gabi::ea(water.get()));
         for (u32 i = 0; i < 4; i++)
-            heights[i] = y + offset;
+            heights[i] = gabi::fadds_ppc(y, offset);
     }
     u32 block = (u32)gabi::at<pa::JPABaseParticle>(q)->hdRippleBuffer,
         bank = (u32)gabi::at<pa::ParticleRippleBuffers>(block)->mBank;
@@ -331,9 +331,9 @@ void dPa_rippleParticleDraw(void* callback, void* emitter, void* particle) {
     u32 dest = (u32)gabi::at<pa::ParticleRenderBuffer>(block + bank * 0x254)->mData;
     f32 one = (f32)l_particleOne;
     for (u32 i = 0; i < 4; i++) {
-        F(dest + i * 20, i == 1 ? gabi::fadds_ppc(x, xs[i]) : gabi::fadds_ppc(xs[i], x));
+        F(dest + i * 20, gabi::fadds_ppc(xs[i], x)); /* fadds frA = xs[i], frB = x for every vertex (025A70A4/A8) */
         F(dest + i * 20 + 4, heights[i]);
-        F(dest + i * 20 + 8, zs[i] + z);
+        F(dest + i * 20 + 8, gabi::fadds_ppc(zs[i], z));
         F(dest + i * 20 + 12, (i == 1 || i == 2) ? one : zero);
         F(dest + i * 20 + 16, i >= 2 ? one : zero);
     }

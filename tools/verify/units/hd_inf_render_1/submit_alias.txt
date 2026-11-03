@@ -9,6 +9,7 @@ src wwhd_src/hd/hd_render_misc.cpp
 src wwhd_src/hd/hd_layer_2d_drc_fore.cpp
 
 src wwhd_src/hd/hd_graphics_task.cpp
+src wwhd_src/agl/TimingStatics.cpp
 
 # Render-state ancestry is a finite parent chain. Pin a coherent depth-two fixture,
 # varying the current/parent state and an absent parent; random graphs can cycle.

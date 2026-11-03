@@ -1,3 +1,4 @@
+# verify: -only 02656B38
 # Witness companion; run with -only 02656B38.
 src wwhd_src/d/hd_screen_dungeon_map_part1.cpp
 
@@ -992,8 +993,8 @@ ret 0265524C 1
 # Exact #397 witness: loaded player and linked-player actor references alias,
 # while updatePlayerMarkers takes the active boss/special actor path. The original
 # XOR 1 produces mLinked=0; the mutation XOR 2 produces mLinked=2.
-field 586F5B2C u32 0x58500000
-field 586F5B34 u32 0x58500000
+field * 586F5B2C u32 0x58500000
+field * 586F5B34 u32 0x58500000
 field * 58410050 u32 5
 field * 585002E0 u32 0x2000
 field * 101BDC2A u16 1

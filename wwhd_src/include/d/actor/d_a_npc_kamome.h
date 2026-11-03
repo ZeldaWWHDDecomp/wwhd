@@ -90,7 +90,7 @@ struct KamomeSafeStringVtable {
     be<u32> assureTermination;
 };
 struct KamomeSafeString {
-    gptr<be<u8>> mStringTop;
+    gptr<be<u8>> mTextPtr;
     gptr<KamomeSafeStringVtable> mpVtable;
 };
 WWHD_SIZE(KamomeSafeString, 8);
@@ -491,17 +491,17 @@ static inline f32 kam_absXZ_delta(cXyz* a, cXyz* b) {
 /* strcmp(dComIfGp_getStartStageName(), lit) == 0, HD: sead::SafeString operator== */
 static inline bool kam_isStartStage(const char* lit) {
     gabi::Local<KamomeSafeString> sa;
-    sa->mStringTop.v = gabi::guest_addr(lit);
+    sa->mTextPtr.v = gabi::guest_addr(lit);
     sa->mpVtable.v = KAM_SAFESTRING_VTBL;
     u32 stage = dComIfGp_ea() + 0x5134;
     gabi::Local<KamomeSafeString> sb;
-    sb->mStringTop.v = stage;
+    sb->mTextPtr.v = stage;
     sb->mpVtable.v = KAM_SAFESTRING_VTBL;
     gabi::call_ptr(sa->mpVtable->assureTermination, sa.get());
     gabi::call_ptr(sa->mpVtable->assureTermination, sa.get());
-    const be<u8>* pa = sa->mStringTop;
+    const be<u8>* pa = sa->mTextPtr;
     gabi::call_ptr(sb->mpVtable->assureTermination, sb.get());
-    const be<u8>* pb = sb->mStringTop;
+    const be<u8>* pb = sb->mTextPtr;
     if (pa == pb) return true;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 ca = pa[i];

@@ -8,14 +8,7 @@ struct d2d_cXy {
     be<f32> x, y;
 };
 WWHD_SIZE(d2d_cXy, 8);
-struct ResTIMG {
-    u8 mUnaccessed[2];
-    be<u16> width, height;
-    u8 mRemaining[0x20 - 6];
-};
-WWHD_SIZE(ResTIMG, 0x20);
-WWHD_OFFSET(ResTIMG, width, 2);
-WWHD_OFFSET(ResTIMG, height, 4);
+#include "JSystem/JUtility/ResTIMG.h"
 struct d2d_picture {
     struct VTable {
         u8 mUnaccessed[0x3C];

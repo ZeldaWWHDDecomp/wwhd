@@ -1,3 +1,4 @@
+# verify: -only 0263F4F0
 # Supplemental declared scope: only 0263F4F0; run with -only 0263F4F0.
 # Original02038E80 fixed-post descriptors: independent internal11/51/211-unit
 # buffers, actualvtable/capacity, boundedvariedUTF16 with leadingLF/singletonLF.

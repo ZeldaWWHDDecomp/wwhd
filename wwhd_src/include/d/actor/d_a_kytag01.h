@@ -37,18 +37,18 @@ enum : u32 { kytag01_SafeStringVtable = 0x10013A24 };
 static inline void SafeString_vcall(SafeString* s) { gabi::call_ptr(gabi::load<u32>(s->__vtbl + 0x14), s); }
 static inline bool dComIfGp_checkStageName(const char* name) {
     gabi::Local<SafeString> a;
-    a->mStringTop = gabi::guest_addr(name);
+    a->mTextPtr = gabi::guest_addr(name);
     a->__vtbl = kytag01_SafeStringVtable;
     auto* play = gabi::at<kytag01_play_c>(dComIfGp_ea());
     u32 stage = gabi::ea(play->mStartStageName);
     gabi::Local<SafeString> b;
     b->__vtbl = kytag01_SafeStringVtable;
-    b->mStringTop = stage;
+    b->mTextPtr = stage;
     SafeString_vcall(a);
     SafeString_vcall(a);
-    u32 pa = a->mStringTop;
+    u32 pa = a->mTextPtr;
     SafeString_vcall(b);
-    u32 pb = b->mStringTop;
+    u32 pb = b->mTextPtr;
     if (pa == pb) return true;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 ca = gabi::at<be<u8>>(pa)[i];

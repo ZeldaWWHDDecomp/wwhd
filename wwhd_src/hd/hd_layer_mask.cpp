@@ -38,7 +38,7 @@ static hdLayerMask_c* constructLayerMask(hdLayerMask_c* layer) {
     }
     SafeString name;
     name.__vtbl = gabi::ea(&sLayerMaskSafeStringVtable);
-    name.mStringTop = gabi::guest_addr("3DMask");
+    name.mTextPtr = gabi::guest_addr("3DMask");
     constructMaskLayerBase(layer, &name);
     layer->mVtable = gabi::ea(&sLayerMaskLayerVtable);
     layer->mDrawVtable = gabi::ea(&sLayerMaskDrawVtable);
@@ -53,7 +53,7 @@ void hdLayerMask_c::initialize() {
         if (name == NULL) name = (SafeString*)allocateMaskLayer(sizeof(SafeString));
         if (name != NULL) {
             name->__vtbl = gabi::ea(&sLayerMaskSafeStringVtable);
-            name->mStringTop = gabi::guest_addr("");
+            name->mTextPtr = gabi::guest_addr("");
         }
         step->mFlags = 0;
         step->mVtable = gabi::ea(&sLayerMaskStepVtable);
@@ -64,7 +64,7 @@ void hdLayerMask_c::initialize() {
             step->mDrawFunction = gabi::guest_fn((const void*)drawLayerMask);
         }
         step->mTarget = 1;
-        step->mName.mStringTop = gabi::guest_addr("Layer3DMask");
+        step->mName.mTextPtr = gabi::guest_addr("Layer3DMask");
     }
     addMaskStep(this, step);
 }

@@ -1,3 +1,4 @@
+# verify: -only 0263F4F0
 # Supplemental declared scope: only 0263F4F0; run with -only 0263F4F0.
 # Real topic resolution consumes a varied bounded80-unit synthetic source.
 # Supplemental declared scope: only 0263F4F0; run with -only 0263F4F0.

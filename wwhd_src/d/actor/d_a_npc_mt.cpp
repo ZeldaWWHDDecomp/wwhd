@@ -64,7 +64,7 @@ static MtPhotoQueueHD* photoBuffer() { return MtPhotoAlbum_getQueue(&l_photoSave
 
 static void* objectResource(u32 resource) {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::ea(l_arcname_tbl);
+    name->mTextPtr = gabi::ea(l_arcname_tbl);
     name->__vtbl = gc_tu.safeString;
     return Mt_getObjectResHD(dComIfG_resControl(), name.get(), resource);
 }
@@ -80,12 +80,12 @@ static void jointParameters(dNpc_JntCtrl_c* joint) {
 static bool sameStage(SafeString* first, SafeString* second) {
     Mt_assureTermination(first);
     Mt_assureTermination(first);
-    u32 string = first->mStringTop.get();
+    u32 string = first->mTextPtr.get();
     Mt_assureTermination(second);
-    if (string == second->mStringTop.get())
+    if (string == second->mTextPtr.get())
         return true;
-    string = first->mStringTop.get();
-    u32 other = second->mStringTop.get();
+    string = first->mTextPtr.get();
+    u32 other = second->mTextPtr.get();
     for (u32 i = 0; i < 0x40001; ++i) {
         u8 c = gabi::at<be<u8>>(string)[i];
         if (c != static_cast<u8>(gabi::at<be<u8>>(other)[i]))
@@ -313,9 +313,9 @@ BOOL daNpcMt_c::_delete() {
         return TRUE;
     for (u32 room = 1; room < 8; ++room) {
         gabi::Local<SafeString> desired, next;
-        desired->mStringTop = gabi::ea(l_figure_room_name.name[room].get());
+        desired->mTextPtr = gabi::ea(l_figure_room_name.name[room].get());
         desired->__vtbl = gc_tu.safeString;
-        next->mStringTop = gabi::ea(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mNextStage.mName);
+        next->mTextPtr = gabi::ea(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mNextStage.mName);
         next->__vtbl = gc_tu.safeString;
         if (sameStage(desired, next)) {
             if (!dComIfGs_isEventBit(0x4080))

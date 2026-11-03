@@ -216,17 +216,17 @@ extern be<s16>& oqSpawnDelay;
 /* sead::SafeString equality (HD inline of strcmp(dComIfGp_getStartStageName(), lit) == 0) */
 static inline bool oq_isStartStage(u32 lit) {
     gabi::Local<SafeString> a;
-    a->mStringTop = lit;
+    a->mTextPtr = lit;
     a->__vtbl = SAFESTRING_VTBL_OQ;
     gabi::Local<SafeString> b;
-    b->mStringTop = dComIfGp_ea() + 0x5134;
+    b->mTextPtr = dComIfGp_ea() + 0x5134;
     b->__vtbl = SAFESTRING_VTBL_OQ;
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
     gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
-    u32 s1 = a->mStringTop;
+    u32 s1 = a->mTextPtr;
     gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b.get());
-    if (s1 == b->mStringTop) return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+    if (s1 == b->mTextPtr) return true;
+    u32 p = a->mTextPtr, q = b->mTextPtr;
     for (u32 i = 0; i < 0x40001; i++) {
         u8 c = gabi::load<u8>(p + i);
         if (c != gabi::load<u8>(q + i)) return false;

@@ -1,3 +1,4 @@
+# verify: -only 026BCDC4
 # Supplemental 026BCDC4 fixture (run with -only 026BCDC4).
 # Button slot overlaps the count word; preserve slot-store/count-reload order.
 # Synthetic mapped local game-state storage; existing callback model.

@@ -102,7 +102,7 @@ inline dMagma_packet_c* dComIfGp_getMagma() { return gabi::at<dMagma_packet_c>(g
 /* 026067F4 dRes_control_c::getIDRes(SafeString arc, s32 id) [v npc_kf1, ko1, gp1, ...] */
 inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
     gabi::Local<SafeString> key;
-    key->mStringTop = gabi::guest_addr(arc);
+    key->mTextPtr = gabi::guest_addr(arc);
     key->__vtbl = gc_tu.safeString;
     return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
 }

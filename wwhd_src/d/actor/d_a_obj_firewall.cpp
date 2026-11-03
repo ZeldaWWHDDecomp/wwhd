@@ -143,7 +143,7 @@ static void releaseBackground(daObjFirewall_c *actor) {
 extern void *getResource(dRes_control_c *, SafeString *, s32);
 static void *resource(s32 index) {
     gabi::Local<SafeString> name;
-    name->mStringTop = gabi::ea(&archive);
+    name->mTextPtr = gabi::ea(&archive);
     name->__vtbl = 0x10028A4C;
     return getResource(dComIfG_resControl(), name.get(), index);
 }

@@ -34,7 +34,7 @@ BOOL daObjVtil_c::create_heap() {
     // HD: this TU uses the legacy resource lookup and its SafeString vtable.
     gabi::Local<SafeString> archive;
     archive->__vtbl = VT_ARCHIVE;
-    archive->mStringTop = gabi::guest_str("Vtil");
+    archive->mTextPtr = gabi::guest_str("Vtil");
     u32 resource = u32(l_modelRes[type]);
     J3DModelData* modelData = vtilGetResource(dComIfG_resControl(), archive.get(), resource);
     if (!modelData) {

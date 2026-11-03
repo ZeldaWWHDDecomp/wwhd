@@ -789,7 +789,7 @@ static void action_up_check(cc_class* i_this) {
 
             gabi::Local<cXyz> sp24;
             {
-                /* lfs/stfs pairs (the recompiled code quiets a signalling NaN here) */
+                /* lfs/stfs pairs (bit-exact: a signalling NaN is copied unchanged) */
                 cXyz* hp = i_this->mCyl.GetTgHitPosP();
                 f32 z = hp->z, y = hp->y, x = hp->x;
                 sp24->z = z;
