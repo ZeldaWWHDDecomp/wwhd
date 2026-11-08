@@ -662,10 +662,10 @@ void dCloth_packet_c::getFactor(cloth::Vector* output, cloth::Vector* positions,
     point->mValues[0] = f32(gabi::at<cloth::Vector>(gabi::ea(positions) + offset)->mValues[0]);
     point->mValues[1] = f32(gabi::at<cloth::Vector>(gabi::ea(positions) + offset)->mValues[1]);
     point->mValues[2] = f32(gabi::at<cloth::Vector>(gabi::ea(positions) + offset)->mValues[2]);
-    clothApi_dotVector(gabi::ea(wind), gabi::ea(normals) + offset);
+    f64 windDot = clothApi_dotVector(gabi::ea(wind), gabi::ea(normals) + offset);
     nx = u32(mFlyGridSize);
     offset = (x + y * nx) * 12;
-    clothApi_scaleNormalByDotResult(gabi::ea(normals) + offset, normal.a);
+    clothApi_scaleNormalByDotResult(gabi::ea(normals) + offset, normal.a, windDot);
     f32 a = f32(normal->mValues[0]), gravity = f32(mGravity);
     force->mValues[0] = a;
     f32 b = f32(normal->mValues[1]), c = f32(normal->mValues[2]), by = gabi::fadds_ppc(b, gravity);
@@ -2148,7 +2148,7 @@ data lUnit 1004B580
 data lGraphicsZero 10145180
 data lGraphicsOne 1014517C
 ext 0201ADE0 void clothApi_subtractVector(u32, u32, u32)
-ext 0201AE48 void clothApi_scaleNormalByDotResult(u32, u32)
+ext 0201AE48 void clothApi_scaleNormalByDotResult(u32, u32, f64)
 ext 0201B12C void clothApi_normalizeVector(u32, u32)
 ext 0251B590 void clothApi_springFactor(u32, u32, u32, f64, f32)
 ext 0251B638 void clothApi_setMatrix(u32, u32)

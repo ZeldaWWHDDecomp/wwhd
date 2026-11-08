@@ -22,8 +22,7 @@ void audioApi_JAIZelBasic_resetRecover_0(u32);
 void audioApi_JAIZelInst_ct_0(u32);
 void audioApi_createJAIZelBasic_0(u32);
 u32 audioApi_JAIZelBasic_checkFirstWaves_0();
-u32 audioApi_JAIZelBasic_check1stDynamicWave_0(u32, u32, u32, u32, u32, u32, f64, f64, f64, f64,
-                                               f64, f64, f64, f64);
+u32 audioApi_JAIZelBasic_check1stDynamicWave_0(u32);
 u32 audioApi_JAIZelBasic_load2ndDynamicWave_0(u32, u32, u32, u32, u32, u32, u32, u32, f64, f64, f64,
                                               f64, f64, f64, f64, f64);
 u32 audioApi_emptyAudioCompatibility_0();
@@ -113,7 +112,7 @@ u32 audioApi_JAIZelBasic_taktModeMuteOff_0(u32, u32, u32, u32, u32, u32, u32, u3
                                            f64, f64, f64, f64, f64);
 u32 audioApi_JAIZelInst_reset_0(u32, u32, u32, u32, u32, u32, u32, f64, f64, f64, f64, f64, f64,
                                 f64, f64);
-u32 audioApi_JAIZelInst_setStickPos_0();
+u32 audioApi_JAIZelInst_setStickPos_0(u32, s32, s32);
 u32 audioApi_Inst_headerObject_ct_0(u32);
 u32 audioApi_JAIZelInst_emptyMember_0(u32);
 u32 audioApi_Inst_headerObject_dt_0(u32);

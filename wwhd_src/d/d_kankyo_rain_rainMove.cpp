@@ -40,8 +40,7 @@ void dKyr_rain_move() {
     sdk::dKyr_get_vectle_calc(ea(&at<Camera>(camera)->mCenter), ea(&at<RainPacket>(packet)->mCamCenterPos),
                               direction.get());
     auto distance = [&](u32 a, u32 b) {
-        sdk::distanceSquared(a, b);
-        return sdk::squareRoot<f32>();
+        return sdk::squareRoot<f32>(sdk::distanceSquared<f32>(a, b));
     };
     f32 eyeChange = distance(ea(&at<RainPacket>(packet)->mCamEyePos), ea(&at<Camera>(camera)->mEye)),
         zero = (f32)*at<be<f32>>(Zero), one = (f32)*at<be<f32>>(One), step;
@@ -318,8 +317,7 @@ void dKyr_rain_move() {
             horizontal->x = position->x;
             horizontal->y = zero;
             horizontal->z = position->z;
-            sdk::vectorSquareMagnitude(horizontal.get());
-            f32 d = gabi::fsubs_ppc(sdk::squareRoot<f32>(), radialLimit);
+            f32 d = gabi::fsubs_ppc(sdk::squareRoot<f32>(sdk::vectorSquareMagnitude<f32>(horizontal.get())), radialLimit);
             alpha = d >= 0 ? alpha : zero;
             if (radial == 2) {
                 d = gabi::fsubs_ppc((f32)position->y, (f32)*at<be<f32>>(RainRadialLimitB));

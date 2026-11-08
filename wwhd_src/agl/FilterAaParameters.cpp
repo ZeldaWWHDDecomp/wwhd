@@ -95,7 +95,7 @@ struct SliceValues_l { be<f32> mFirst, mSecond; };
 struct ColorWords_l { be<u32> mWords[4]; };
 static ColorWords_l sSliceColorFirst;
 static ColorWords_l sSliceColorSecond;
-u32 submitSliceColor(void* receiver,u32 count,const SliceValues_l* values,const ColorWords_l* colors,f32 scaleX,f32 scaleY);
+u32 submitSliceColor(void* receiver,u32 count,const SliceValues_l* values,const ColorWords_l* colors,u32 initial,f32 scaleX,f32 scaleY);
 void constructFilterBase(FilterAaObject_l* storage,const Text* name,u32 flags);
 void constructFilterParameterContainer(FilterParameterContainer_l* storage);
 void bindFilterParameter(ParameterBase_l* parameter,const Text* name,const Text* description,const Text* range,FilterParameterContainer_l* container);
@@ -815,7 +815,7 @@ u32 EffectRuntimePrefix_l::applySliceColor(u32 surfaceIndex,u32 sliceIndex,void*
     (*colors)[1].mWords[0]=sSliceColorSecond.mWords[0];
     f32 scaleX=surface->mScaleX;
     f32 scaleY=surface->mScaleY;
-    return submitSliceColor(receiver,2,values.get(),&(*colors)[0],scaleX,scaleY);
+    return submitSliceColor(receiver,2,values.get(),&(*colors)[0],fallback,scaleX,scaleY);
 }
 /* 0277A488 */
 void FilterAaObject_l::destroy(FilterAaObject_l* storage,u32 flags) {
@@ -2060,7 +2060,7 @@ u32 renderBloomEffect(EffectRuntimePrefix_l* effect,u32 surfaceIndex,void* rawCo
  ext 0273AFC8 void releaseFilterEntryStorage(void*)
  data sSliceColorFirst 104A01CC
  data sSliceColorSecond 104A01EC
- ext 027A9E28 u32 submitSliceColor(void*,u32,const SliceValues_l*,const ColorWords_l*,f32,f32)
+ ext 027A9E28 u32 submitSliceColor(void*,u32,const SliceValues_l*,const ColorWords_l*,u32,f32,f32)
  data sTextBufferMethods 10161830
  data sTextBaseMethods 10161868
  data sFormattedTextMethods 101618D0

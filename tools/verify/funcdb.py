@@ -13,6 +13,35 @@ INT_ARGS = tuple(range(3, 11))
 FLT_ARGS = tuple(range(1, 9))
 
 
+# The port's recompiler keeps a function's registers in C locals (leaflocal: `uint32_t r3 = c->r[3], ...;` on entry,
+# `rN` / `fN_0` / `fN_1` in the body, copies to and from the Cpu around calls and returns). The analyses here read
+# registers as c->r[N] / c->f[N].psK: such a function is written back into that form (the entry loads and the copies
+# around calls drop out, every local becomes its register), the same dataflow as the plain form. Text without
+# register locals (this repository's own translation, build/gen) is returned unchanged.
+_LOCAL_DECL = re.compile(r"^[ \t]+(?:uint32_t|uint64_t|double) [rf]\d+(?:_[01])? = c->(?:r|f)\[\d+\][^\n]*;[ \t]*\n", re.M)
+_LOCAL_R = re.compile(r"\br(\d+)\b")
+_LOCAL_F = re.compile(r"\bf(\d+)_([01])\b")
+_SELF_R = re.compile(r"c->r\[(\d+)\] = c->r\[\1\];[ \t]*")
+_PSQ_LOAD_L = re.compile(r"psq_load_l\(c, &c->f\[(\d+)\]\.ps0, &c->f\[\1\]\.ps1, ")
+_PSQ_STORE_L = re.compile(r"psq_store_l\(c, c->f\[(\d+)\]\.ps0, c->f\[\1\]\.ps1, ")
+_ONE_STMT = re.compile(r"\{ ([^{};]*;) \}")
+_SELF_F = re.compile(r"c->f\[(\d+)\]\.ps([01]) = c->f\[\1\]\.ps\2;[ \t]*")
+
+
+def unlocalize(t):
+    """a function's text in the plain register form (see above); unchanged when it keeps no register in a local"""
+    if not _LOCAL_DECL.search(t):
+        return t
+    t = _LOCAL_DECL.sub("", t)
+    t = _LOCAL_R.sub(r"c->r[\1]", t)
+    t = _LOCAL_F.sub(r"c->f[\1].ps\2", t)
+    t = _SELF_R.sub("", t)
+    t = _SELF_F.sub("", t)
+    t = _PSQ_LOAD_L.sub(r"psq_load(c, \1, ", t)  # the locals' paired-single helpers: the plain form's register index
+    t = _PSQ_STORE_L.sub(r"psq_store(c, \1, ", t)
+    return _ONE_STMT.sub(r"\1", t)  # `{ f_X(c); }`, `{ return; }`: the bare statement, as the plain form writes it
+
+
 class GenIndex:
     """address -> generated C text of that function (the game's code: f_X, or f_X_orig if hooked)"""
 
@@ -58,7 +87,7 @@ class GenIndex:
             fn, a, b, _ = self.loc[addr]
             with open(os.path.join(self.gen_dir, fn)) as f:
                 f.seek(a)
-                t = f.read(b - a)
+                t = unlocalize(f.read(b - a))
             if keep:
                 self._text[addr] = t
         return t

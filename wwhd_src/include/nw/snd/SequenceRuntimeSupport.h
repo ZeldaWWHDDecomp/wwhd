@@ -179,7 +179,7 @@ void runtimeListEraseFront(nw::snd::MixEffectChain*,const gptr<void>*);
 void runtimeTrackTick(nw::snd::TrackRuntimeControl*);
 s32 runtimeTrackStep(nw::snd::TrackRuntimeControl*,u32);
 void runtimeTrackPause(nw::snd::TrackRuntimeControl*,u32);
-void runtimeTrackReset(nw::snd::TrackRuntimeControl*);
+void runtimeTrackReset(nw::snd::TrackRuntimeControl*,u32);
 void runtimeTrackUpdate(nw::snd::TrackRuntimeControl*);
 
 void* runtimeDisposalManager();

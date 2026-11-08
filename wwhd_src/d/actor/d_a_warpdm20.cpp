@@ -208,9 +208,7 @@ void daWarpdm20_c::normal_execute() {
     horizontal->x = delta->x;
     horizontal->y = 0.0f;
     horizontal->z = delta->z;
-    PSVECSquareMag(horizontal.get());
-    // HD: sqrt consumes the preceding square-magnitude result left in f1.
-    const f32 distance = warpSqrt();
+    const f32 distance = warpSqrt(PSVECSquareMag(horizontal.get()));
     dSv_event_c* save = dComIfGs_getEvent();
     if (!warpIsEventBit(save, UNK_2D08))
         return;
@@ -579,9 +577,7 @@ BOOL daWarpdm20_c::check_warp() {
     horizontal->x = delta->x;
     horizontal->y = 0.0f;
     horizontal->z = delta->z;
-    PSVECSquareMag(horizontal.get());
-    // HD: sqrt consumes the preceding square-magnitude result left in f1.
-    const f32 distance = warpSqrt();
+    const f32 distance = warpSqrt(PSVECSquareMag(horizontal.get()));
     return distance < 500.0f;
 }
 
@@ -706,7 +702,7 @@ ext 025D4ED0 void warpActorConstruct(fopAc_ac_c*)
 ext 025A9084 void warpRippleConstruct(warpdm20::RippleCallback*)
 ext 025D63E8 s32 warpEntryHeap(fopAc_ac_c*, u32, u32)
 ext 025D7A58 void warpOrderEvent(fopAc_ac_c*, s32, u32, u32, u32, u32)
-ext 028F4384 f32 warpSqrt()
+ext 028F4384 f32 warpSqrt(f32)
 ext 0254407C s32 warpEventStart(dEvent_manager_c*, s32)
 ext 025440C8 s32 warpEventEnd(dEvent_manager_c*, s32)
 ext 025D57E0 void warpDeleteActor(fopAc_ac_c*)

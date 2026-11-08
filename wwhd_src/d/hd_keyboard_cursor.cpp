@@ -90,8 +90,8 @@ void hdKeyboardCursor_c::setPosition(const be<u32>* position) {
     root->mPosition[2] = z;
 }
 /* 02673CCC */
-u32 hdKeyboardCursor_c::isAnimationFinished() {
-    return keyboardLayoutFinished(mpLayout);
+u32 hdKeyboardCursor_c::isAnimationFinished(void* resource, void* block) {
+    return keyboardLayoutFinished(mpLayout, resource, block);
 }
 /* 02673CD4 */
 u32 hdKeyboardCursor_c::createLayout(u32 resource, u32 parent, u32 archive, u32 pane, u32 flags) {

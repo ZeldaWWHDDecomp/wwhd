@@ -67,8 +67,7 @@ void line_layout::mDoExt_3DlineMat0_c::update(u32 count, const be<u32>* color, u
         eye->copy(*temp);
         *temp = cross->outprod(*eye);
         cross->copy(*temp);
-        PSVECSquareMag(cross);
-        f32 magnitude = lineSquareRoot();
+        f32 magnitude = lineSquareRoot(PSVECSquareMag(cross));
         *temp = tangent->outprod(*cross);
         tangent->copy(*temp);
         f32 nx, ny, nz;
@@ -116,8 +115,7 @@ void line_layout::mDoExt_3DlineMat0_c::update(u32 count, const be<u32>* color, u
             eye->copy(*partial);
             *partial = cross->outprod(*eye);
             cross->copy(*partial);
-            PSVECSquareMag(cross);
-            magnitude = lineSquareRoot();
+            magnitude = lineSquareRoot(PSVECSquareMag(cross));
             *partial = tangent->outprod(*cross);
             tangent->copy(*partial);
             if (lineNonzero(magnitude)) {
@@ -207,8 +205,7 @@ void line_layout::mDoExt_3DlineMat0_c::updateWidths(u32 count, const be<u32>* co
         eye->copy(*temp);
         *temp = cross->outprod(*eye);
         cross->copy(*temp);
-        PSVECSquareMag(cross);
-        f32 magnitude = lineSquareRoot();
+        f32 magnitude = lineSquareRoot(PSVECSquareMag(cross));
         *temp = tangent->outprod(*cross);
         tangent->copy(*temp);
         f32 nx, ny, nz;
@@ -255,8 +252,7 @@ void line_layout::mDoExt_3DlineMat0_c::updateWidths(u32 count, const be<u32>* co
             eye->copy(*partial);
             *partial = cross->outprod(*eye);
             cross->copy(*partial);
-            PSVECSquareMag(cross);
-            magnitude = lineSquareRoot();
+            magnitude = lineSquareRoot(PSVECSquareMag(cross));
             *partial = tangent->outprod(*cross);
             tangent->copy(*partial);
             if (lineNonzero(magnitude)) {
@@ -314,7 +310,7 @@ data lineHalf 100586D8
 str 10058BAC
 str 10058B9C
 ext 025EA530 u32 lineNonzero(f32 value)
-ext 028F4384 f32 lineSquareRoot()
+ext 028F4384 f32 lineSquareRoot(f32)
 ext 0201B084 void lineNormalize(cXyz* vector, cXyz* result)
 ext 0201AE48 void lineScale(cXyz* vector, cXyz* result, f32 scale)
 ext 028E8D88 void lineAddVectors(cXyz* a, cXyz* b, cXyz* result)

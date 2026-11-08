@@ -17,8 +17,8 @@ extern void *hdAppFontConstruct(void *);
 extern void hdAppFontSetup(void *, void *, void *);
 extern void *hdAppDrawInfoConstruct(void *);
 extern void hdAppRuntimeInit();
-extern void hdAppSystemInit();
-extern void hdAppSystemConfigure();
+extern void* hdAppSystemInit();
+extern void hdAppSystemConfigure(void*);
 extern void hdAppArenaQuery(HdAppArena *);
 extern HdAppBaseHeap *hdAppBaseHeap(u32);
 extern u32 hdAppExpHeapFree(HdAppBaseHeap *);
@@ -275,8 +275,7 @@ s32 hdAppMain(s32 argc, void *argv) {
     gabi::AutoFrame automatic{gabi::Activation::current};
     gabi::NativeFrame<0x118> frame;
     hdAppRuntimeInit();
-    hdAppSystemInit();
-    hdAppSystemConfigure();
+    hdAppSystemConfigure(hdAppSystemInit());
     HdAppArena *arena = gabi::at<HdAppArena>(frame + 0x54);
     hdAppArenaQuery(arena);
     HdAppBaseHeap *baseHeap = hdAppBaseHeap(1);
@@ -441,8 +440,8 @@ ext 0287D924 void* hdAppFontConstruct(void*)
 ext 0287E4C4 void hdAppFontSetup(void*,void*,void*)
 ext 0286DED4 void* hdAppDrawInfoConstruct(void*)
 ext 028EA09C void hdAppRuntimeInit()
-ext 02034380 void hdAppSystemInit()
-ext 02034884 void hdAppSystemConfigure()
+ext 02034380 void* hdAppSystemInit()
+ext 02034884 void hdAppSystemConfigure(void*)
 ext 027478C4 void hdAppArenaQuery(HdAppArena*)
 ext C0009790 HdAppBaseHeap* hdAppBaseHeap(u32)
 ext C00097D8 u32 hdAppExpHeapFree(HdAppBaseHeap*)

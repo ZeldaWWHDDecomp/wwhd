@@ -83,7 +83,7 @@ struct hdMenuMiiverseComment_c : hdParts_c {
     void beginInNewPost(f32);
     void connectAllVerticalControls(hdButtonPart_c*, hdButtonPart_c*);
     void focusContent();
-    void openContent();
+    f32 openContent();
     void pictureGlobalTranslation(cXyz*) const;
     f32 pictureWidth() const;
     f32 pictureHeight() const;

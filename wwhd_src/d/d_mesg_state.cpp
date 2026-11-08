@@ -49,13 +49,21 @@ static void dMesg_writeWordHD(u32 buffer, u32 index, u16 value) {
 static u16 dMesg_readWordHD(u32 input) { return gabi::load<u16>(input); }
 
 /* 025F85A8 */
-void dMesg_state_c::paneAction() { dMesg_sequenceActionHD(mSequenceWork); }
+void dMesg_state_c::paneAction(u32 secondChoice, u32 firstChoice) {
+    dMesg_sequenceActionHD(mSequenceWork, secondChoice, firstChoice);
+}
 /* 025F85B0 */
-void dMesg_state_c::textAction() { dMesg_resourceActionHD(mResourceWork); }
+void dMesg_state_c::textAction(void* positions, void* message, void* font, f32 scale) {
+    dMesg_resourceActionHD(mResourceWork, positions, message, font, scale);
+}
 /* 025F85B8 */
-void dMesg_state_c::textAdvance() { dMesg_resourceAdvanceHD(mResourceWork); }
+void dMesg_state_c::textAdvance(void* positions, void* first, void* second, void* font, f32 scale) {
+    dMesg_resourceAdvanceHD(mResourceWork, positions, first, second, font, scale);
+}
 /* 025F85C0 */
-u32 dMesg_state_c::textReset() { return dMesg_resourceResetHD(mResourceWork); }
+u32 dMesg_state_c::textReset(u32 open, u32 line, void* rotationSource, u32 drawFront) {
+    return dMesg_resourceResetHD(mResourceWork, open, line, rotationSource, drawFront);
+}
 /* 025F85C8 */
 void dMesg_state_c::positionActor(dMesg_positionHD* actor) {
     auto* pane = mResourceWork->mpPane.get();
@@ -297,10 +305,10 @@ data activeHandlerHD 101F4B60
 data textKeyFormatHD 100E0CA0
 data actorOffsetHD 100E0C98
 data actorMinimumHD 100E0C9C
-ext 026AE410 void dMesg_sequenceActionHD(void*)
-ext 02651EE4 void dMesg_resourceActionHD(dMesg_resourceStateHD*)
-ext 02652020 void dMesg_resourceAdvanceHD(dMesg_resourceStateHD*)
-ext 026521B8 u32 dMesg_resourceResetHD(dMesg_resourceStateHD*)
+ext 026AE410 void dMesg_sequenceActionHD(void*, u32, u32)
+ext 02651EE4 void dMesg_resourceActionHD(dMesg_resourceStateHD*, void*, void*, void*, f32)
+ext 02652020 void dMesg_resourceAdvanceHD(dMesg_resourceStateHD*, void*, void*, void*, void*, f32)
+ext 026521B8 u32 dMesg_resourceResetHD(dMesg_resourceStateHD*, u32, u32, void*, u32)
 ext 02720170 dMesg_nameEntryHD* dMesg_getSavedNameHD(void*)
 ext 025F8F80 void dMesg_byteStringNoopHD(dMesg_stringBaseHD*)
 ext C0009988 void dMesg_memcpyHD(void*,void*,u32,u32)

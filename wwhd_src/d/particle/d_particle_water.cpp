@@ -488,7 +488,7 @@ void pa::dPa_waveEcallBack::draw(void* emitter) {
     if (count < 2)
         return;
     u32 node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead;
-    pa_drawParticleModel(p(w(node)));
+    pa_drawParticleModel(p(w(node)), emitter);
     f32 zero = (f32)l_particleZero, half = (f32)l_particleHalf;
     for (u32 side = 0; side < 2; side++) {
         u32 v = a + 0x1C + side * 12;

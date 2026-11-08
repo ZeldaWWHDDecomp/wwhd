@@ -106,8 +106,9 @@ void hdMenuMiiverseComment_c::focusContent() {
     miiverseCommentFocus(sMiiverseCommentEventManager, receiver);
 }
 /* 026A8D18 */
-void hdMenuMiiverseComment_c::openContent() {
-    reinterpret_cast<hdBtnMiiverseComment_c*>((*mChildren.mpData).get())->getPictureHeight();
+f32 hdMenuMiiverseComment_c::openContent() {
+    // HD: returns the picture height (f1), which the caller uses.
+    return reinterpret_cast<hdBtnMiiverseComment_c*>((*mChildren.mpData).get())->getPictureHeight();
 }
 /* 026A8E1C */
 f32 hdMenuMiiverseComment_c::pictureWidth() const {

@@ -70,7 +70,8 @@ static void hdPane_setMaterial(PaneUtilAccessor_l* accessor, void* value, u32 pa
 }
 
 /* 02704FC0 */
-static void hdPane_setName(PaneUtilOwner_l* owner, PaneUtilString_l* paneName, PaneUtilString_l* name) {
+// HD: returns the pane's slot-0x5C result, which the callers use.
+static u32 hdPane_setName(PaneUtilOwner_l* owner, PaneUtilString_l* paneName, PaneUtilString_l* name) {
     PaneUtilNamedPane_l* pane;
     gfn* table;
     if (paneName->mpBuffer[0] != 0) {
@@ -79,8 +80,7 @@ static void hdPane_setName(PaneUtilOwner_l* owner, PaneUtilString_l* paneName, P
         if (pane) {
             table = pane->mpVTable;
             gabi::call_ptr<void>(name->mpVTable[0x14 / 4].get(), name);
-            gabi::call_ptr<void>(table[0x5C / 4].get(), pane, name->mpBuffer.get(), 1);
-            return;
+            return gabi::call_ptr<u32>(table[0x5C / 4].get(), pane, name->mpBuffer.get(), 1);
         }
     }
     PaneUtilString_l* value = name;
@@ -88,7 +88,7 @@ static void hdPane_setName(PaneUtilOwner_l* owner, PaneUtilString_l* paneName, P
     pane = layout->mpRootPane;
     table = pane->mpVTable;
     gabi::call_ptr<void>(value->mpVTable[0x14 / 4].get(), value);
-    gabi::call_ptr<void>(table[0x5C / 4].get(), pane, value->mpBuffer.get(), 1);
+    return gabi::call_ptr<u32>(table[0x5C / 4].get(), pane, value->mpBuffer.get(), 1);
 }
 
 /* 027050A4 */

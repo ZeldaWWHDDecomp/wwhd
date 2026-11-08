@@ -65,7 +65,7 @@ WWHD_OFFSET(hdWarpMap_c, mConfirmed, 0x5C);
 struct hdWarpMapTextOwner_l { u8 mReserved[0x1BC]; gptr<void> mpTextSource; };
 WWHD_OFFSET(hdWarpMapTextOwner_l, mpTextSource, 0x1BC);
 struct hdWarpMapTextOwnerPointer_l { gptr<hdWarpMapTextOwner_l> mpOwner; };
-extern void* hdWarpMap_getAreaText(void* source);
+extern void* hdWarpMap_getAreaText(void* source, s32 index);
 extern void hdWarpMap_constructBase(hdWarpMap_c* map);
 extern void hdWarpMap_releaseBase(hdWarpMap_c* map);
 

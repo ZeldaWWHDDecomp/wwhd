@@ -29,8 +29,8 @@ static void beginCommandPacket(hdRenderPacket_l* packet);
 static void configureCommandPacket(hdRenderPacket_l* packet, u32 target, hdLayerMatrix_c* view, void* projection, void* frustum, f32 nearPlane, f32 farPlane, f32 fieldOfView, f32 aspect);
 static void finishCommandPacket(hdRenderPacket_l* packet, u32 target);
 static void* getCommandProjectionMatrix(hdRenderPerspective_l* projection);
-static void enqueueCommandPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g);
-static void enqueueExtraPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e);
+static void enqueueCommandPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g, f64 radius, f64 intensity, f64 attenuation);
+static void enqueueExtraPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e, f64 inner, f64 outer, f64 intensity, f64 attenuation);
 /* inlined into render-command forwarding */
 static hdRenderCommandLayer_l* activeCommandLayer(hdRenderSceneMgr_l* manager) {
     u32 count = manager->mLayerCount;
@@ -134,18 +134,18 @@ void hdRenderCommandMgr_c::initialize() {
     finishCommandPacket(packet, 0);
 }
 /* 0273862C */
-void hdRenderCommandMgr_c::enqueueDraw(u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g) {
+void hdRenderCommandMgr_c::enqueueDraw(u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g, f64 radius, f64 intensity, f64 attenuation) {
     hdRenderCommandLayer_l* layer = activeCommandLayer(sRenderCommandsSceneManager);
     if (layer != NULL) {
-        enqueueCommandPacket(&layer->mPacket, mDrawCount, a, b, c, d, e, f, g);
+        enqueueCommandPacket(&layer->mPacket, mDrawCount, a, b, c, d, e, f, g, radius, intensity, attenuation);
         mDrawCount = mDrawCount + 1;
     }
 }
 /* 027386D4 */
-void hdRenderCommandMgr_c::enqueueExtra(u32 a, u32 b, u32 c, u32 d, u32 e) {
+void hdRenderCommandMgr_c::enqueueExtra(u32 a, u32 b, u32 c, u32 d, u32 e, f64 inner, f64 outer, f64 intensity, f64 attenuation) {
     hdRenderCommandLayer_l* layer = activeCommandLayer(sRenderCommandsSceneManager);
     if (layer != NULL) {
-        enqueueExtraPacket(&layer->mPacket, mExtraDrawCount, a, b, c, d, e);
+        enqueueExtraPacket(&layer->mPacket, mExtraDrawCount, a, b, c, d, e, inner, outer, intensity, attenuation);
         mExtraDrawCount = mExtraDrawCount + 1;
     }
 }
@@ -204,6 +204,6 @@ static void __sinit_hd_render_commands_cpp() {
  ext 027B00D0 void configureCommandPacket(hdRenderPacket_l* packet, u32 target, hdLayerMatrix_c* view, void* projection, void* frustum, f32 nearPlane, f32 farPlane, f32 fieldOfView, f32 aspect)
  ext 027B0158 void finishCommandPacket(hdRenderPacket_l* packet, u32 target)
  ext 0274D83C void* getCommandProjectionMatrix(hdRenderPerspective_l* projection)
- ext 027B1548 void enqueueCommandPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g)
- ext 027B1734 void enqueueExtraPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e)
+ ext 027B1548 void enqueueCommandPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g, f64 radius, f64 intensity, f64 attenuation)
+ ext 027B1734 void enqueueExtraPacket(hdRenderPacket_l* packet, u32 index, u32 a, u32 b, u32 c, u32 d, u32 e, f64 inner, f64 outer, f64 intensity, f64 attenuation)
 */

@@ -56,7 +56,7 @@ static s32 phase_4(dScnPly::dScnPly_ply_c *i_this) {
                                             gabi::ea(resB.get()), 0);
     u32 scene = 0;
     if (found != 0) {
-        u32 files = dScnPlyAPI_getResourceFile();
+        u32 files = dScnPlyAPI_getResourceFile(found);
         gabi::Local<dScnPly_FixedString32> name;
         u32 n = gabi::ea(name.get());
         name->mBuffer[0] = 0;

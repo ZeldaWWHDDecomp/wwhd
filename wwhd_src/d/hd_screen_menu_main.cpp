@@ -117,7 +117,7 @@ static void setMenuMainChildEnabled(hdParts_c* child, u32 enabled);
 static void updateMenuMainInput(void* input, u32 first, u32 second);
 static void resetMenuMainChild(hdParts_c* child);
 static void selectMenuMainInput(void* input, void* selection);
-static void updateMenuMainCollectIcon(hdParts_c* child);
+static u32 updateMenuMainCollectIcon(hdParts_c* child, u32 receiverId);
 using hdMenuMainInputChild_l = hdButtonPart_c;
 /* 0268E910 */
 u32 hdMenuMain_c::findButtonIndex(u32 key) {
@@ -170,7 +170,7 @@ void hdMenuMain_c::updateInputOwner() {
     selectMenuMainInput(input, child->mpReceiver.get());
 }
 /* 02694500 */
-void hdMenuMain_c::updateCollectIcon() { updateMenuMainCollectIcon(*mChildren.safeSlot(0x2D)); }
+u32 hdMenuMain_c::updateCollectIcon(u32 receiverId) { return updateMenuMainCollectIcon(*mChildren.safeSlot(0x2D), receiverId); }
 
 static hdPartsStateId_c sMenuMainWindowOpening;
 static hdPartsStateId_c sMenuMainPrimaryReady;
@@ -719,9 +719,9 @@ void hdMenuMain_c::updateButtonSelection() {
 }
 
 static hdScreenStringTable sMenuMainResourceNameVtable;
-static void setMenuMainChildResourceName(hdParts_c* child, hdScreenString* name);
+static void setMenuMainChildResourceName(hdParts_c* child, hdScreenString* name, void* label);
 /* 0268FFC4 */
-void hdMenuMain_c::setTabResourceName(u32 index) {
+void hdMenuMain_c::setTabResourceName(u32 index, void* label) {
     const u32 count = u32(mTabChildren.mNum);
     hdPartsLayout_c* layout = mpLayout.get();
     hdPartsLyt_c* resource = layout->lyt();
@@ -732,7 +732,7 @@ void hdMenuMain_c::setTabResourceName(u32 index) {
     hdScreenString name;
     name.mText.v = text;
     name.mVtable = &sMenuMainResourceNameVtable;
-    setMenuMainChildResourceName(*slot, &name);
+    setMenuMainChildResourceName(*slot, &name, label);
 }
 
 static u32 getMenuMainCollectItemValue(hdParts_c* child, u32 key);
@@ -3311,7 +3311,7 @@ ext 0263B230 void startMenuMainBagTransition(hdParts_c* child)
 ext 0262A7BC void startMenuMainTabTransition(hdParts_c* child)
 ext 0262BEC8 void startMenuMainSaveTransition(hdParts_c* child)
 data sMenuMainResourceNameVtable 100FA150
-ext 027045B0 void setMenuMainChildResourceName(hdParts_c* child, hdScreenString* name)
+ext 027045B0 void setMenuMainChildResourceName(hdParts_c* child, hdScreenString* name, void* label)
 data sMenuMainSelectionEvents 100FA4AC
 ext 026F620C u32 isMenuMainSelectionEvent(u32 type)
 ext 02697324 u32 isMenuMainBagItem(hdMenuMain_c* self, u32 item)
@@ -3357,7 +3357,7 @@ ext 027045F0 void setMenuMainChildEnabled(hdParts_c* child, u32 enabled)
 ext 02615148 void updateMenuMainInput(void* input, u32 first, u32 second)
 ext 02701B38 void resetMenuMainChild(hdParts_c* child)
 ext 02615154 void selectMenuMainInput(void* input, void* selection)
-ext 026701C0 void updateMenuMainCollectIcon(hdParts_c* child)
+ext 026701C0 u32 updateMenuMainCollectIcon(hdParts_c* child, u32 receiverId)
 data sMenuMainWindowOpening 10497070
 data sMenuMainPrimaryReady 10496D10
 data sMenuMainPendingReady 10496E90

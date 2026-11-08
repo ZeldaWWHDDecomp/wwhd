@@ -33,12 +33,14 @@ static void copy_float(cXyz* dst, const cXyz* src) {
     dst->z = (f32)src->z;
 }
 /* 0201AD78 */
-void cXyz_addGuest(cXyz* src, cXyz* dst, cXyz* rhs) {
+// HD: the result is the destination (r3), which camera and shop callers return on.
+cXyz* cXyz_addGuest(cXyz* src, cXyz* dst, cXyz* rhs) {
     cXyz temp;
     PSVECAdd(src, rhs, &temp);
     dst = allocate(dst);
     if (dst)
         copy_float(dst, &temp);
+    return dst;
 }
 
 /* 0201ADE0 */

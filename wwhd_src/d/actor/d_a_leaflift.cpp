@@ -84,7 +84,7 @@ extern f32 addCalc(be<f32>*, f32, f32, f32, f32);
 extern f32 waterHeight(cXyz*);
 extern void getParticleColors(LeafColor*, LeafColor*);
 extern void JPASetRMtxTVecfromMtx(const Mtx34*, Mtx34*, cXyz*);
-extern void dBgS_MoveBGProc_TypicalRotY(dBgW*, fopAc_ac_c*, fopAc_ac_c*);
+extern void dBgS_MoveBGProc_TypicalRotY(dBgW*, void*, void*, u32, cXyz*, csXyz*, csXyz*);
 extern void constructHeader0(void*);
 extern void constructHeader1(void*);
 extern void registerHeader(void*);
@@ -580,7 +580,7 @@ ext 0200ECD4 f32 addCalc(be<f32>*, f32, f32, f32, f32)
 ext 024F1478 f32 waterHeight(cXyz*)
 ext 025602F0 void getParticleColors(LeafColor*, LeafColor*)
 ext 028249B0 void JPASetRMtxTVecfromMtx(const Mtx34*, Mtx34*, cXyz*)
-ext 024EE708 void dBgS_MoveBGProc_TypicalRotY(dBgW*, fopAc_ac_c*, fopAc_ac_c*)
+ext 024EE708 void dBgS_MoveBGProc_TypicalRotY(dBgW*, void*, void*, u32, cXyz*, csXyz*, csXyz*)
 ext 028ED6F8 void constructHeader0(void*)
 ext 028EAB2C void constructHeader1(void*)
 ext 028F026C void registerHeader(void*)

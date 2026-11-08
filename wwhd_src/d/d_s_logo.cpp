@@ -77,8 +77,8 @@ u32 dScnLogo_Delete(dScnLogo_c* i_this) {
     right.__vtbl = gc_tu.safeString;
     right.mTextPtr = guest_addr("Misc.bfres");
     left.mTextPtr = guest_addr("Misc");
-    if (dScnLogo_loadResourceHD(l_resourceLoader, &left, &right, 0u)) {
-        u32 archive = dScnLogo_getResourceFileHD(),
+    if (u32 loaded = dScnLogo_loadResourceHD(l_resourceLoader, &left, &right, 0u)) {
+        u32 archive = dScnLogo_getResourceFileHD(loaded),
             folder = relative(&at<dScnLogo_ResourceFileHD>(archive)->mFileDictionaryOffset),
             entry = dScnLogo_findArchiveEntryHD(folder, guest_addr("item_table.bin")),
             data = relative(at<be<u32>>(entry));
@@ -99,8 +99,8 @@ u32 dScnLogo_Delete(dScnLogo_c* i_this) {
     left.__vtbl = gc_tu.safeString;
     right.mTextPtr = guest_addr("Particle");
     left.mTextPtr = guest_addr("Particle.bfres");
-    if (dScnLogo_loadResourceHD(l_resourceLoader, &right, &left, 0u)) {
-        u32 archive = dScnLogo_getResourceFileHD(),
+    if (u32 loaded = dScnLogo_loadResourceHD(l_resourceLoader, &right, &left, 0u)) {
+        u32 archive = dScnLogo_getResourceFileHD(loaded),
             folder = relative(&at<dScnLogo_ResourceFileHD>(archive)->mFileDictionaryOffset),
             entry = dScnLogo_findArchiveEntryHD(folder, guest_addr("common.jpc")),
             data = relative(at<be<u32>>(entry));
@@ -129,8 +129,7 @@ u32 phase_0(dScnLogo_c* i_this) {
     u32 control = dScnLogo_getSystemControlHD();
     dScnLogo_setSystemControlEnabledHD(control, 0u);
     if (!l_platformMgr) {
-        dScnLogo_getSystemHeapHD();
-        dScnLogo_createPlatformMgrHD();
+        dScnLogo_createPlatformMgrHD(dScnLogo_getSystemHeapHD());
         dScnLogo_initializePlatformMgrHD(l_platformMgr);
         dScnLogo_startPlatformMgrHD(l_platformMgr);
     }
@@ -141,7 +140,7 @@ u32 phase_0(dScnLogo_c* i_this) {
         name.mTextPtr = guest_addr("cking::system::MiiverseBottleMgr");
         u32 heap = dScnLogo_getSystemHeapHD(),
             resource = dScnLogo_createHeapHD(owner, &name, heap, 1u, 0u);
-        dScnLogo_createMiiverseBottleMgrHD();
+        dScnLogo_createMiiverseBottleMgrHD(resource);
         dScnLogo_initializeMiiverseBottleMgrHD(l_miiverseBottleMgr);
         dScnLogo_startMiiverseBottleMgrHD(l_miiverseBottleMgr);
         call_ptr<void>(at<dScnLogo_HeapHD>(resource)->mVtable->destroy.get(), resource);
@@ -157,7 +156,7 @@ u32 phase_0(dScnLogo_c* i_this) {
         name.mTextPtr = guest_addr("cking::ui::input::SwkbdMgr");
         u32 heap = dScnLogo_getUIHeapHD(),
             resource = dScnLogo_createHeapHD(owner, &name, heap, 1u, 0u);
-        dScnLogo_createSwkbdMgrHD();
+        dScnLogo_createSwkbdMgrHD(resource);
         dScnLogo_initializeSwkbdMgrHD(l_swkbdMgr);
         call_ptr<void>(at<dScnLogo_HeapHD>(resource)->mVtable->destroy.get(), resource);
     }
@@ -262,10 +261,10 @@ ext 02520230 void dComIfG_changeOpeningScene(dScnLogo_c*, u32)
 ext 02618094 void hdInputCtrl_c::setMode(u32)
 ext 025F05F8 void mDoGph_setFadeColor(GXColor*)
 ext 02035ED4 void dScnLogo_setSystemControlEnabledHD(u32, u32)
-ext 02036EEC void dScnLogo_createMiiverseBottleMgrHD()
+ext 02036EEC void dScnLogo_createMiiverseBottleMgrHD(u32)
 ext 02036F8C void dScnLogo_initializeMiiverseBottleMgrHD(u32)
 ext 02036FD4 void dScnLogo_startMiiverseBottleMgrHD(u32)
-ext 0203B88C void dScnLogo_createPlatformMgrHD()
+ext 0203B88C void dScnLogo_createPlatformMgrHD(u32)
 ext 0203B984 void dScnLogo_initializePlatformMgrHD(u32)
 ext 0203BBB0 void dScnLogo_startPlatformMgrHD(u32)
 ext 0203E8C4 u32 dScnLogo_getSystemHeapHD()
@@ -291,7 +290,7 @@ ext 025F0968 void mDoGph_waitBlankingHD(u32)
 ext 025F096C void mDoGph_setTickRateHD(u32)
 ext 026066C4 u32 dRes_control_getResHD(u32, SafeString*, u32)
 ext 026124B0 u32 dScnLogo_loadResourceHD(u32, SafeString*, SafeString*, u32)
-ext 026193D4 void dScnLogo_createSwkbdMgrHD()
+ext 026193D4 void dScnLogo_createSwkbdMgrHD(u32)
 ext 026195C4 void dScnLogo_initializeSwkbdMgrHD(u32)
 ext 02708748 void dScnLogo_initializeMessageDataHD(u32)
 ext 027089F8 void dScnLogo_initializeMessageControlHD()
@@ -302,7 +301,7 @@ ext 0273AF40 void operator_deleteHD(u32)
 ext 02753004 u32 dScnLogo_createHeapHD(u32, SafeString*, u32, u32, u32)
 ext 0275320C u32 dScnLogo_getHeapHeaderSizeHD(u32)
 ext 027DFA24 u32 dScnLogo_findArchiveEntryHD(u32, u32)
-ext 027E2DC0 u32 dScnLogo_getResourceFileHD()
+ext 027E2DC0 u32 dScnLogo_getResourceFileHD(u32)
 ext 027EC3D4 void dScnLogo_dumpHeapHD(u32)
 ext 028EAB2C void dScnLogo_initializeAngleTableHD(u32)
 ext 028ED6F8 void dScnLogo_initializeMathTableHD(u32)

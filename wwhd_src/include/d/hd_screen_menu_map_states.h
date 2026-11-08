@@ -120,7 +120,7 @@ struct hdMenuMap_c : hdParts_c {
     void setEnabled(u32 enabled); u32 isBusy();
     void activate(); void deactivate(); void switchChart();
     void selectChartView(); void changeChartViewState(hdPartsStateId_c* state);
-    void enterChartView(); void executeChartView(); void exitChartView();
+    void enterChartView(); void executeChartView(); void exitChartView(u32 marker);
     void refresh(); void refreshIslandCaption();
     u32 findButton(u32 receiver); u32 buttonIndex(u32 receiver);
 };

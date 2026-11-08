@@ -79,9 +79,7 @@ bool mDoMch_Create() {
         allocationAssert(0xD6, STR(0x10059010));
     }
     mDoMch_setCurrentHeap(zeldaHeap);
-    mDoExt_getZeldaHeap();
-    // HD: retained call has no explicit argument; cMl::init receives the preceding return register.
-    cMl::init();
+    cMl::init(mDoExt_getZeldaHeap());
     cM_initRnd(100, 100, 100);
     mDoDvdThd::create(sMainThreadPriority - 2);
     if (previousHeap != 1) {
@@ -117,7 +115,7 @@ void mDoMch_HeapCheckAll() {
  ext 025E3004 void* mDoExt_createZeldaHeap(u32, mDoMch_Heap*)
  ext 027EC220 void mDoMch_setCurrentHeap(void*)
  ext 025EE048 void* mDoExt_getZeldaHeap()
- ext 02019424 void cMl_initFromHeapReturnRegister()
+ ext 02019424 void cMl_init(void*)
  ext 0201976C void cM_initRnd(s32, s32, s32)
  ext 025E28B0 void mDoDvdThd_create(u32)
 */

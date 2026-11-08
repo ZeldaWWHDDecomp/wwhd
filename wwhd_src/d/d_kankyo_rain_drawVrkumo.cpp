@@ -299,8 +299,8 @@ void drawVrkumo(u32 drawMtx, u32 color, u32 images) {
                 cloud_sdk::project(ea(&work->centerInput), ea(&work->projectedCenter),
                                    ea(&work->sunProjection));
                 work->projectedCenter.channels[2] = (f32)(work->projectedSun.channels[2]);
-                cloud_sdk::distanceSquared(ea(&work->projectedSun), ea(&work->projectedCenter));
-                fade = cloud_sdk::squareRoot<f32>();
+                fade = cloud_sdk::squareRoot<f32>(
+                    cloud_sdk::distanceSquared<f32>(ea(&work->projectedSun), ea(&work->projectedCenter)));
                 if (fade < (f32)(*at<be<f32>>(CloudFadeDistance)))
                     fade = zero;
                 else if (fade < (f32)(*at<be<f32>>(SkyRange)))

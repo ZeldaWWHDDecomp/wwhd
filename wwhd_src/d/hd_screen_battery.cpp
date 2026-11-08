@@ -81,8 +81,8 @@ u32 hdBattery_c::setup(u32 archive, u32 resource, u32 flags) {
 }
 
 /* 026233B4 */
-void hdBattery_c::drawIfRequested() {
-    if (mDisplayRequested) batteryDrawBase(this);
+void hdBattery_c::drawIfRequested(void* info) {
+    if (mDisplayRequested) batteryDrawBase(this, info);
 }
 
 /* 026233C4 */
@@ -148,7 +148,7 @@ data sBatteryAnimationStart 100E4728
 data sBatteryHeapManager 1018C404
 ext 02700A70 void batteryDestroyBase(hdBattery_c* screen, u32 flags)
 ext 02700B48 u32 batterySetupBase(hdBattery_c* screen, hdUiSafeString* name, u32 archive, u32 resource, u32 flags)
-ext 026F8B54 void batteryDrawBase(hdBattery_c* screen)
+ext 026F8B54 void batteryDrawBase(hdBattery_c* screen, void* info)
 ext 020053E4 void batteryStartAnimation(hdAnimSet* animation, u32 track, u32 flags, f32 frame)
 ext 0273B050 hdPartsLayout_c* batteryAllocateLayout(u32 size, void* heap, u32 alignment)
 ext 02004E04 void batteryBindAnimation(hdAnimSet* animation, u32 track, hdUiSafeString* name, hdUiSafeString* pane)

@@ -199,7 +199,7 @@ enum SeaMapZoomUpdateSlot { SeaMapApplyZoom = 0x22C / 4 };
 /* 0267C5C8 */
 void hdSeaChartMap_c::updateZoomOut() {
     f32 ratio = hdPadZoomRatio(this, u32(mZoomMode), mZoomStart, mScale);
-    hdPadZoomPosition(this, &mCurrent, &mTarget, u32(mZoomMode));
+    hdPadZoomPosition(this, &mCurrent, &mTarget, u32(mZoomMode), ratio);
     auto* drag = reinterpret_cast<SeaMapDragState_l*>(this);
     interpolateDrag(&drag->mPosition, &drag->mOffset, ratio);
     hdPadZoomScale(this, u32(mZoomMode), mZoomX, mZoomY, ratio);
@@ -1604,7 +1604,7 @@ ext 020063C0 void hdPadChangeState(HdPadStateController*, HdPadState*)
 ext 02006364 void hdPadStateExecute(HdPadStateController*)
 ext 02689BA0 f32 hdMapDisplayChase(HdPadPoint*, HdPadPoint*, f32, f32, f32)
 ext 0267BF30 f32 hdPadZoomRatio(HdPadMap*, u32, f32, f32)
-ext 0267C068 void hdPadZoomPosition(HdPadMap*, HdPadPoint*, HdPadPoint*, u32)
+ext 0267C068 void hdPadZoomPosition(HdPadMap*, HdPadPoint*, HdPadPoint*, u32, f32)
 ext 0267C188 void hdPadZoomScale(HdPadMap*, u32, f32, f32, f32)
 ext 02655CE8 u32 hdPadMapMode(void*)
 data sSeaMapScaleStep 100F8D38

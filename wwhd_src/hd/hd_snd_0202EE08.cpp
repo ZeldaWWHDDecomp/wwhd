@@ -91,9 +91,9 @@ static void destroySoundPlayer(hdSoundPlayer* i_this, s32 flags) {
     if (flags & 1) operator_delete(i_this);
 }
 /* 0202F040 */
-static u32 forwardSoundPlayerSecondary(void* secondary, u32 option) {
+static u32 forwardSoundPlayerSecondary(void* secondary, void* handle, u32 soundId, void* startInfo, u32 flags) {
     // HD: secondary-base adjustment wraps in the guest address space.
-    return hdPlayerForwardSecondary(gabi::at<hdSoundPlayer>(gabi::ea(secondary) - 4), option);
+    return hdPlayerForwardSecondary(gabi::at<hdSoundPlayer>(gabi::ea(secondary) - 4), handle, soundId, startInfo, flags);
 }
 /* 0202F048 */
 static hdSoundPlayer* constructSoundPlayer(hdSoundPlayer* i_this) {
@@ -564,7 +564,7 @@ static void emptyFinalPlayerCompanion() {}
  str 10004544
  ext 02896CD8 void hdPlayerDestroyHandle(hdPlayerSoundHandle*)
  ext 02763360 void hdPlayerDestroyBase(hdSoundPlayer*, u32)
- ext 02763498 u32 hdPlayerForwardSecondary(hdSoundPlayer*, u32)
+ ext 02763498 u32 hdPlayerForwardSecondary(hdSoundPlayer*, void*, u32, void*, u32)
  ext 0276359C void hdPlayerConstructBase(hdSoundPlayer*)
  ext 028EFFD0 void hdPlayerConstructFaderArray(void*, u32, u32, hdPlayerFaderConstructor)
  ext 02762170 u32 hdPlayerInitializeFader(hdPlayerFader*, f32)

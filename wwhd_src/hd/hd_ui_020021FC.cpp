@@ -187,9 +187,9 @@ static void setupLayoutScreen(hdLayoutScreen* i_this, void* resource, be<u32>* b
 }
 /* 02002A40 */
 static s32 buildLayoutScreen(hdLayoutScreen* i_this, u32 argument, u32 option, void* resource, be<u32>* block, u32 first, u32 second, hdScreenArchive* archive) {
-    (void)argument; (void)option;
     if (archive == NULL) {
-        if (gabi::call_ptr<u32>(i_this->mVtable->mInitialize.get(), i_this) == 0) return 0;
+        // HD: the original leaves its argument/option (r4/r5) in place for the virtual initialize, which reads them.
+        if (gabi::call_ptr<u32>(i_this->mVtable->mInitialize.get(), i_this, argument, option) == 0) return 0;
         if (gabi::call_ptr<u32>(i_this->mVtable->mInitializeOptions.get(), i_this, first, second) == 0) return 0;
         hdScreenSetup(i_this, resource, block);
         return 1;

@@ -25,7 +25,7 @@ extern void glyphCacheInitialize(GlyphCacheStorage*,GlyphCacheInitArg*);
 extern void scalableFontInitArgDefaults(ScalableFontInitArg*);
 extern void scalableFontInitialize(ScalableFontStorage*,ScalableFontInitArg*);
 extern HdStateVTableObject* hdAppAllocatorConstruct(HdStateVTableObject*,void*);
-extern void glyphCacheUpdateA(GlyphCacheStorage*);
+extern void glyphCacheUpdateA(GlyphCacheStorage*, void*, u32, u32, u32, u32);
 extern void glyphCacheUpdateB(GlyphCacheStorage*);
 extern void hdSFont_runObject(void*);
 extern void hdSFont_registerDestructor(void*);
@@ -210,9 +210,9 @@ void hdScalableFontMgr_c::execute() {
 }
 
 /* 025F9B1C */
-u32 hdScalableFontMgr_c::requestCacheUpdateA() {
+u32 hdScalableFontMgr_c::requestCacheUpdateA(void* text, u32 a, u32 b, u32 c, u32 d) {
     if (!isIdle()) return 0;
-    glyphCacheUpdateA(&mGlyphCache);
+    glyphCacheUpdateA(&mGlyphCache, text, a, b, c, d);
     return 1;
 }
 
@@ -338,7 +338,7 @@ ext 028B2B64 void glyphCacheInitialize(GlyphCacheStorage*,GlyphCacheInitArg*)
 ext 028B289C void scalableFontInitArgDefaults(ScalableFontInitArg*)
 ext 028B239C void scalableFontInitialize(ScalableFontStorage*,ScalableFontInitArg*)
 ext 020039C0 HdStateVTableObject* hdAppAllocatorConstruct(HdStateVTableObject*,void*)
-ext 028B3540 void glyphCacheUpdateA(GlyphCacheStorage*)
+ext 028B3540 void glyphCacheUpdateA(GlyphCacheStorage*, void*, u32, u32, u32, u32)
 ext 028B3804 void glyphCacheUpdateB(GlyphCacheStorage*)
 ext 0275FFC8 void hdSFont_runObject(void*)
 ext 028F026C void hdSFont_registerDestructor(void*)

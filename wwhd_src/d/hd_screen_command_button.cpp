@@ -341,7 +341,7 @@ static void initializeCommandButtonStatics() {
 /* WWHD glue
  ext 020063C0 void hdPadChangeState(HdPadStateController*, HdPadState*)
  ext 0267BF30 f32 hdPadZoomRatio(HdPadMap*, u32, f32, f32)
- ext 0267C068 void hdPadZoomPosition(HdPadMap*, HdPadPoint*, HdPadPoint*, u32)
+ ext 0267C068 void hdPadZoomPosition(HdPadMap*, HdPadPoint*, HdPadPoint*, u32, f32)
  ext 0267C188 void hdPadZoomScale(HdPadMap*, u32, f32, f32, f32)
  ext 02655CE8 u32 hdPadMapMode(void*)
  ext 02689BA0 f32 hdMapDisplayChase(HdPadPoint*, HdPadPoint*, f32, f32, f32)

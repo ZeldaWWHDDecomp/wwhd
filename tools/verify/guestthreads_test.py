@@ -199,11 +199,13 @@ def part_b():
 
     # 3. mutant in thread-reached code
     src = open(os.path.join(ROOT, "wwhd_src", "sead", "Thread.cpp")).read()
-    old = """        message = mQueue.pop(mMessageMode);
+    # anchor: the end of Thread::run's message loop (frame-exact b7c183f70 made the pops call_site calls that reload
+    # self from r31); the mutant yields once after the loop, before run returns
+    old = """        self = gabi::at<Thread>(gabi::cpu->r[31]);
     }
 }"""
     assert src.count(old) == 1
-    mut = src.replace(old, """        message = mQueue.pop(mMessageMode);
+    mut = src.replace(old, """        self = gabi::at<Thread>(gabi::cpu->r[31]);
     }
     platformYieldThread(); /* guestthreads_test mutant */
 }""")

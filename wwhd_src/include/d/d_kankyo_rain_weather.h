@@ -714,9 +714,9 @@ static weather_move::WeatherRoomDtHD *
 weatherRoomStatus(weather_move::WeatherRoomControlHD *, s32);
 static f32 weatherMagnitudeSquared(weather_move::WeatherVectorHD *);
 static f32 weatherSqrtFloat(f32);
-static void weatherDistanceForward(weather_move::WeatherVectorHD *,
-                                   weather_move::WeatherVectorHD *);
-static f32 weatherSqrtForward();
+static f64 weatherDistanceForward(weather_move::WeatherVectorHD *,
+                                  weather_move::WeatherVectorHD *);
+static f32 weatherSqrtForward(f64);
 static void weatherMatrixInverse(weather_move::WeatherMatrixHD *,
                                  weather_move::WeatherMatrixHD *);
 static f32 weatherSinRadians(f32);

@@ -121,7 +121,7 @@ void hdWarpMap_c::updateAreaName(s32 area, u32 visible) {
     if (visible) {
         void* source = sMapTextOwner.mpOwner->mpTextSource;
         if (source) {
-            void* text = hdWarpMap_getAreaText(source);
+            void* text = hdWarpMap_getAreaText(source, area);
             hdWarpMap_updateText(this, mpAreaName.get(), text);
         }
         hdPartsPaneSRT_c* pane = mpAreaName;
@@ -625,7 +625,7 @@ ext 0268034C void hdWarpMap_activateAreaItem(hdSeaChartCell_c* item)
 data sMapBlankText 101091D4
 ext 02704AFC void hdWarpMap_setTextCapacity(hdPartsPaneSRT_c* pane, u32 capacity)
 ext 02005674 void hdWarpMap_stopAnimation(hdAnimSet* animation, u32 track, u32 flags)
-ext 026DBD10 void* hdWarpMap_getAreaText(void* source)
+ext 026DBD10 void* hdWarpMap_getAreaText(void* source, s32 index)
 ext 0267A250 s32 hdSeaChartMenu_c::findMapResource(u32)
 ext 026F89E8 void hdWarpMap_constructBase(hdWarpMap_c* map)
 ext 02679B88 void hdSeaChartMenu_c::setSelectionMode(u32)

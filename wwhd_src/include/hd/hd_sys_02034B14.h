@@ -110,7 +110,7 @@ HDFrameworkController* HDFramework_createDebugController(u32, u32);
 u32 HDFramework_createDebugAddon(u32, u32);
 void* HDFramework_createKeyboard(u32, u32, u32, u32);
 void HDFramework_listPushBack(u32, u32);
-u32 HDFramework_baseDelegate(u32);
+u32 HDFramework_baseDelegate(u32, u32);
 void HDFramework_rootBeginFrame(u32);
 void HDFramework_resetFrameArena(u32);
 void HDFramework_beginFrame(u32);

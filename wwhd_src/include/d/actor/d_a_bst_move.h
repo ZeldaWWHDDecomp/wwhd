@@ -223,7 +223,6 @@ void BstMove_endDemo(bst_class*);
 void BstMove_soundSe(bst_class*, u32, u32);
 void BstMove_damageCheck(bst_class*);
 void BstMove_vectorAdd(cXyz*, cXyz*, cXyz*);
-void BstMove_setHandCoNoArgs();
 enum BstMoveArchiveName : u32 {
     BST_FLY_ARCHIVE = 0x1000B6FC,
     BST_SLEEP_ARCHIVE = 0x1000B700,

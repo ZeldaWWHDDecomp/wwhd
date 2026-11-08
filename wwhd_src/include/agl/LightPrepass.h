@@ -183,7 +183,8 @@ struct LightPrepass {
     void configure(const LightPrepassConfig* config, sead::RegistryHeap* heap);
     void update();
     void updateView(u32 index);
-    void updateViewInputs(u32 index, void* projection, const void* camera, const void* viewport);
+    void updateViewInputs(u32 index, void* projection, const void* camera, const void* viewport, f64 nearPlane, f64 farPlane,
+                          f64 fieldOfView, f64 aspect);
     void refreshCollections(void* context);
     u32 skipView(u32 index) const;
     void uploadView(u32 index, u32 invalidateGpu);

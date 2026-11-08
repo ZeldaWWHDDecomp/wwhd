@@ -15,7 +15,7 @@ void hdMapZoom(HdPadMap *self) {
         y = -fmuls_ppc(self->mTarget.y, scale);
     self->mTarget.x = x;
     self->mTarget.y = y;
-    hdPadZoomPosition(self, &self->mCurrent, &self->mTarget, u32(self->mZoomMode));
+    hdPadZoomPosition(self, &self->mCurrent, &self->mTarget, u32(self->mZoomMode), t);
     hdPadZoomScale(self, u32(self->mZoomMode), self->mZoomX, self->mZoomY, t);
     call_ptr<void>(self->mVTable[HD_PAD_ZOOM].get(), self);
     if (!(l_hdMapOne > t)) {

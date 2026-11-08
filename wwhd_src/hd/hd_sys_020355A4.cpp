@@ -85,14 +85,14 @@ void HdGameTask::prepare() {
     void* events = l_events.mpValue;
     if (events == NULL) {
         HdGameTaskManager* manager = createManager(&frame->mEventName, false);
-        hdGameTaskCreateEvents();
+        hdGameTaskCreateEvents(manager);
         gabi::call_ptr(manager->mVtable[HdGameTask_PrepareSlot].get(), manager);
         events = l_events.mpValue;
     }
     if (events != NULL) hdGameTaskPrepareEvents(events);
     if (l_system.mpValue == NULL) {
         HdGameTaskManager* manager = createManager(&frame->mSystemName, true);
-        hdGameTaskCreateSystem();
+        hdGameTaskCreateSystem(manager);
         hdGameTaskPrepareSystem(l_system.mpValue);
         gabi::call_ptr(manager->mVtable[HdGameTask_PrepareSlot].get(), manager);
     }
@@ -248,9 +248,9 @@ ext 027289DC void hdGameTaskGraphicsAttach(void*, u32)
 ext 02708910 void hdGameTaskAudioPrepare(u32)
 ext 02708634 void hdGameTaskAudioAttach(void*)
 ext 027488E8 void hdGameTaskBasePrepare(HdGameTask*)
-ext 02614DAC void hdGameTaskCreateEvents()
+ext 02614DAC void hdGameTaskCreateEvents(HdGameTaskManager*)
 ext 02614EA8 void hdGameTaskPrepareEvents(void*)
-ext 020393E0 void hdGameTaskCreateSystem()
+ext 020393E0 void hdGameTaskCreateSystem(HdGameTaskManager*)
 ext 02039480 void hdGameTaskPrepareSystem(void*)
 ext 027201DC void* hdGameTaskGetHoldState(void*)
 ext 02726D3C void hdGameTaskHomeHeld(void*, u32)

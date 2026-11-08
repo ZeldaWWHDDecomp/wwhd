@@ -104,7 +104,8 @@ void dMetronome_c::timerInit() { mWaitTimer = 10; }
 /* 0261E808 */
 void dMetronome_c::demoInit() {
   const u32 p = ea(this);
-  const u32 q = sdk::invokeHide<u32>(p);
+  sdk::invokeHide<void>(p);
+  const u32 q = p;  // HD: melodyHide leaves r3 (this) unchanged; the original keeps using it.
   controller(q)->mDemoTimer = 0;
   controller(q)->mDemoIndex = 0;
 }

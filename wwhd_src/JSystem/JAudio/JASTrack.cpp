@@ -886,10 +886,10 @@ void TTrack::overwriteOsc(TChannel* channel) {
     }
 }
 /* 028199BC */
-u32 TTrack::channelCallback(u32 event,TChannel* channel,void* unused,TTrack* track) {
+u32 TTrack::channelCallback(u32 event,TChannel* channel,void* buffer,TTrack* track) {
     switch (event) {
-    case 0: return updateTrackChannelDSP(&track->mChannelUpdater,channel);
-    case 1: return initializeTrackChannelDSP(&track->mChannelUpdater,channel);
+    case 0: return updateTrackChannelDSP(&track->mChannelUpdater,channel,buffer);
+    case 1: return initializeTrackChannelDSP(&track->mChannelUpdater,channel,buffer);
     case 2:
         for (u32 i = 0; i < 8; ++i) {
             if ((TChannel*)track->mNoteChannels[i] == channel) { track->mNoteChannels[i] = nullptr; break; }
@@ -1019,8 +1019,8 @@ ext 0284565C u32 trackExtend8(u32)
 ext 028155FC u32 scheduleTrackRoot(TrackRootCallback,JASystem::TTrack*)
 ext 02816C8C u32 TOuterParam::getOuterUpdate()
 ext 02816C84 void TOuterParam::setOuterUpdate(u32)
-ext 02845564 u32 updateTrackChannelDSP(void*,JASystem::TChannel*)
-ext 028453F8 u32 initializeTrackChannelDSP(void*,JASystem::TChannel*)
+ext 02845564 u32 updateTrackChannelDSP(void*,JASystem::TChannel*,void*)
+ext 028453F8 u32 initializeTrackChannelDSP(void*,JASystem::TChannel*,void*)
 ext 02815330 u32 stopTrackChannel(JASystem::TChannel*,u32)
 ext 02810FF0 u32 mapTrackBank(u32)
 ext 02811064 JASystem::TChannel* allocateTrackNote(u32,u32,u32,u32,u32,TrackChannelCallback,JASystem::TTrack*)

@@ -72,10 +72,10 @@ struct dMesg_textTableHD {
 WWHD_SIZE(dMesg_textTableHD, 8);
 class dMesg_state_c {
   public:
-    void paneAction();
-    void textAction();
-    void textAdvance();
-    u32 textReset();
+    void paneAction(u32 secondChoice, u32 firstChoice);
+    void textAction(void* positions, void* message, void* font, f32 scale);
+    void textAdvance(void* positions, void* first, void* second, void* font, f32 scale);
+    u32 textReset(u32 open, u32 line, void* rotationSource, u32 drawFront);
     void positionActor(dMesg_positionHD* actor);
     void setContext(u32 context);
     void playerName(dMesg_stringHD* destination);
@@ -109,10 +109,10 @@ enum {
     fopMsgStts_SCOPE_WAIT_e = 13,
     daPyStts0_TELESCOPE_LOOK_e = 0x200000
 };
-void dMesg_sequenceActionHD(void*);
-void dMesg_resourceActionHD(dMesg_resourceStateHD*);
-void dMesg_resourceAdvanceHD(dMesg_resourceStateHD*);
-u32 dMesg_resourceResetHD(dMesg_resourceStateHD*);
+void dMesg_sequenceActionHD(void*, u32, u32);
+void dMesg_resourceActionHD(dMesg_resourceStateHD*, void*, void*, void*, f32);
+void dMesg_resourceAdvanceHD(dMesg_resourceStateHD*, void*, void*, void*, void*, f32);
+u32 dMesg_resourceResetHD(dMesg_resourceStateHD*, u32, u32, void*, u32);
 dMesg_nameEntryHD* dMesg_getSavedNameHD(void*);
 void dMesg_byteStringNoopHD(dMesg_stringBaseHD*);
 void dMesg_memcpyHD(void*, void*, u32, u32);

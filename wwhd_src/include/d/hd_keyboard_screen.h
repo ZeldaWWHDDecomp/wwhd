@@ -45,7 +45,7 @@ struct hdKeyboardTextArea_c : hdParts_c {
     void setAnswer(const be<u16>*);
     void setQuestion(u32);
     void setQuestionVisible(u32);
-    u32 isAnimationFinished();
+    u32 isAnimationFinished(void* resource, void* block);
     u32 createLayout(u32, u32, u32, u32, u32);
 };
 struct hdKeyboardCursor_c : hdParts_c {
@@ -56,7 +56,7 @@ struct hdKeyboardCursor_c : hdParts_c {
     void update();
     void executeState();
     void setPosition(const be<u32>*);
-    u32 isAnimationFinished();
+    u32 isAnimationFinished(void* resource, void* block);
     u32 createLayout(u32, u32, u32, u32, u32);
 };
 struct hdKeyboardKeyIcon_c {
@@ -123,7 +123,7 @@ void keyboardLoopDestroy(void*, u32);
 void keyboardLoopRemove(void*);
 void keyboardSetLayoutName(void*, hdUiSafeString*, u32);
 void keyboardExecuteState(hdStateMachine*);
-u32 keyboardLayoutFinished(hdPartsLayout_c*);
+u32 keyboardLayoutFinished(hdPartsLayout_c*, void*, void*);
 hdPartsLayout_c* keyboardConstructLayout(hdPartsLayout_c*);
 void keyboardBindAnimation(void*, u32, hdUiSafeString*, hdUiSafeString*);
 void keyboardSetAnimationFrame(void*, u32, u32, f32);

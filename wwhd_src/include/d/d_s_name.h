@@ -121,7 +121,7 @@ enum { NAME_SCENE = 9, NAMEEX_SCENE = 10, FORMAT_SCENE = 11,
 
 void mDoAud_bgmStart(u32);
 u32 dComIfG_setStageRes(void*, u32);
-s32 dComIfG_syncStageRes();
+s32 dComIfG_syncStageRes(void* arc);
 u32 Frontend_load(void*, u32);
 u32 Frontend_isReady(void*);
 void Font_load();
@@ -225,8 +225,8 @@ void EnvironmentConfig_ct(NameScene::EnvironmentConfig*);
 void EnvironmentConfig_add(NameScene::EnvironmentConfig*, s32, u32);
 void* Environment_getContext();
 void Environment_create(NameScene::Environment*, NameScene::EnvironmentConfig*, void*);
-void GameInfo_loadResource(NameScene::GameInfo*, NameScene::SafeString*, NameScene::SafeString*, u32);
-NameScene::ResourceArchive* ResourceArchive_get();
+u32 GameInfo_loadResource(NameScene::GameInfo*, NameScene::SafeString*, NameScene::SafeString*, u32);
+NameScene::ResourceArchive* ResourceArchive_get(u32);
 NameScene::EnvironmentResource* ResourceArchive_getFile(void*, const char*);
 be<u32>* Resource_getData(be<u32>*, void*);
 void Environment_setResource(NameScene::Environment*, be<u32>*, be<u32>*, s32, f32);

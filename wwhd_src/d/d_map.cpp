@@ -261,9 +261,10 @@ static void dMap_loadResource(u32 first, u32 second, u32 discard, u32 selected, 
     a->mVTable = SafeString_vtable;
     b->mString = second;
     b->mVTable = SafeString_vtable;
-    if (!dMap_resourceExists(gabi::at<void>(mResourceControlP.get()), a.get(), b.get(), 0))
+    void* loaded = dMap_resourceExists(gabi::at<void>(mResourceControlP.get()), a.get(), b.get(), 0);
+    if (!loaded)
         return;
-    void* archive = dMap_getArchive();
+    void* archive = dMap_getArchive(loaded);
     u32 base = gabi::ea(archive) + 0x4C,
         relative = static_cast<Archive*>(archive)->mResourceOffset.get();
     dMap_getArchiveResource(gabi::at<void>(relative ? base + relative : 0),
@@ -1714,8 +1715,8 @@ ext 028F0164 void dMap_destroyArray(void*, u32, u32, u32, u32, u32)
 ext 028F026C void dMap_registerGlobal(void*)
 ext 028ED6F8 void dMap_constructHeaderByte(void*)
 ext 028EAB2C void dMap_constructArchiveByte(void*)
-ext 026124B0 bool dMap_resourceExists(void*, void*, void*, u32)
-ext 027E2DC0 void* dMap_getArchive()
+ext 026124B0 void* dMap_resourceExists(void*, void*, void*, u32)
+ext 027E2DC0 void* dMap_getArchive(void*)
 ext 027DFA24 void* dMap_getArchiveResource(void*, void*)
 ext 028F4114 f32 dMap_floor(f32)
 ext 028F186C s32 dMap_sprintf(void*, const char*, u32)

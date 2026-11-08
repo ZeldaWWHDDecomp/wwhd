@@ -376,7 +376,7 @@ void SequenceRuntimeSupport::updateTrackParameters() {
 void SequenceRuntimeSupport::attachTrack(s32 index,TrackRuntimeControl* track) {
     if (index > 15) return;
     *trackSlot(tracks, index) = track;
-    runtimeTrackReset(track);
+    runtimeTrackReset(track, index); // the original passes the slot index on (r4)
     track->routeMode = (u8)routeMode;
 }
 /* 0288BEB8 */
@@ -788,7 +788,7 @@ ext 0286DB18 void runtimeListEraseFront(nw::snd::MixEffectChain*,const gptr<void
 ext 0288DF48 void runtimeTrackTick(nw::snd::TrackRuntimeControl*)
 ext 0288DD80 s32 runtimeTrackStep(nw::snd::TrackRuntimeControl*,u32)
 ext 0288E54C void runtimeTrackPause(nw::snd::TrackRuntimeControl*,u32)
-ext 0288E774 void runtimeTrackReset(nw::snd::TrackRuntimeControl*)
+ext 0288E774 void runtimeTrackReset(nw::snd::TrackRuntimeControl*,u32)
 ext 0288D2E8 void runtimeTrackUpdate(nw::snd::TrackRuntimeControl*)
 data sSequenceVtable 10181FC8
 data sDisposalVtable 10182020

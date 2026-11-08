@@ -113,7 +113,7 @@ enum : u32 {
 void hdReceiverConstructQueue(hdReceiverQueue*);
 void hdReceiverConstructAccumulator(hdReceiverAccumulator*);
 void hdReceiverDestroyQueue(hdReceiverQueue*, u32);
-u32 hdReceiverQueueOperationFirst(hdReceiverQueue*);
+u32 hdReceiverQueueOperationFirst(hdReceiverQueue*, void* heap, u32 count);
 u32 hdReceiverQueueOperationSecond(hdReceiverQueue*);
 void hdReceiverEraseNode(hdReceiverNode*);
 void hdReceiverFlushAccumulator(hdReceiverAccumulator*);

@@ -318,7 +318,9 @@ s32 daHo_packet_c::setNrmMtx() {
 
     s16 angle = static_cast<s16>(this->normalAngle);
     void* matrix = static_cast<void*>(grid_pointer<Mtx34>(static_cast<u32>(grid_matrixAddress())));
-    return grid_mDoMtx_YrotS(matrix, angle);
+    // HD: a tail call; mDoMtx_YrotS leaves r3 (the matrix) as it was, so that is the result.
+    grid_mDoMtx_YrotS_2(matrix, angle);
+    return static_cast<s32>(gabi::ea(matrix));
 }
 
 /* 02162F7C */
@@ -1440,7 +1442,6 @@ ext 025204C8 void grid_dComIfG_resDelete(void *, const char *)
 ext 025F0A18 void grid_mDoHIO_subRoot_c__deleteChild(signed char)
 ext 0273AF40 void grid_dl(void *)
 ext 02162B04 int grid_daGrid_c___draw(daGrid_c *)
-ext 025F1884 int grid_mDoMtx_YrotS(void *, short)
 ext 021642D4 int grid_daGrid_c___execute(daGrid_c *)
 ext 0273AD10 void * grid_allocateObject(int)
 ext 027B5BD8 void grid_constructVertexBuffer(void *)

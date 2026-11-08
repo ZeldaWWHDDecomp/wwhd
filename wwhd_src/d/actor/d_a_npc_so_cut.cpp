@@ -255,8 +255,9 @@ void daNpc_So_c::cutUnequipProc() {
 
 /* 022E2724 */
 void daNpc_So_c::cutEatesaStart() {
-    /* GHS keeps `this` in r3 across offsetZero (known to return it) */
-    daNpc_So_c* t = soCut_offsetZeroResult(this);
+    /* GHS keeps `this` in r3 across offsetZero, which leaves it unchanged */
+    soCut_offsetZero(this);
+    daNpc_So_c* t = this;
     t->mAFC = 0.0f;
     t->speedF = 0.0f;
 }
@@ -359,8 +360,9 @@ void daNpc_So_c::cutEatesaFirstProc() {
 /* 022E2C18 */
 void daNpc_So_c::cutJumpMapopenStart() {
     mBBC = 0;
-    /* GHS keeps `this` in r3 across offsetZero (known to return it) */
-    daNpc_So_c* t = soCut_offsetZeroResult(this);
+    /* GHS keeps `this` in r3 across offsetZero, which leaves it unchanged */
+    soCut_offsetZero(this);
+    daNpc_So_c* t = this;
     so_setAnm(t, 2, false);
     mBDA = 1;
 }

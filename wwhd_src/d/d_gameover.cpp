@@ -107,7 +107,7 @@ u32 dGameover_c::deleteCheck() {
 /* 02549C00 */
 static void d_GameOver_setBackAlpha(f64 alpha) {
     // HD: free-function entry with f64 input; call the black-pane method before conversion.
-    GameOverBlackPane_show(l_graphics->mpBlackPane);
+    GameOverBlackPane_show(l_graphics->mpBlackPane, alpha);
     u8 value = (u8)gabi::ftoi((f32)(alpha * (f64)l_alphaScale));
     dGameover_getGameInfo()->mBackAlpha = value;
 }
@@ -146,7 +146,7 @@ data l_constants 1004E1E0
 ext 02006478 GameOverStateID* GameOverStateMgr_getCurrent(GameOverStateMgr*)
 ext 027170D4 void GameOverGraphics_start(GameOverGraphics*)
 ext 027170F8 s32 GameOverGraphics_isReady(GameOverGraphics*)
-ext 0266A064 void GameOverBlackPane_show(void*)
+ext 0266A064 void GameOverBlackPane_show(void*, f64)
 ext 025986BC s32 dMenu_flag()
 ext 0259170C void dMenu_flagSet(u32)
 ext 028ED6F8 void GameOverFirstHeaderObject_ct(u8*)

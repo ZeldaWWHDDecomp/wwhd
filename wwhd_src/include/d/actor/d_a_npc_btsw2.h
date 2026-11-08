@@ -118,7 +118,7 @@ void* Btsw2JointNames(void*);
 s32 Btsw2NameIndex(void*, const char*);
 void* Btsw2MorfCreate(void*, void*, void*, void*, void*, s32, s32, s32, s32, s32, u32, u32, f32);
 void* Btsw2ModelCreate(void*, s32, u32);
-void* Btsw2JointObject();
+void* Btsw2JointObject(void* node);
 void PSMTXMultVec(const Mtx34*, const cXyz*, cXyz*);
 void PSMTXConcat(const Mtx34*, const Mtx34*, Mtx34*);
 f32 PSVECDotProduct(const cXyz*, const cXyz*);

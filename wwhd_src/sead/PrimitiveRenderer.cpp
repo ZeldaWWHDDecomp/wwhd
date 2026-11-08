@@ -78,15 +78,17 @@ void sead::PrimitiveDrawController::initializeBackend(void* heap, const void* se
 }
 
 /* 027509A0 */
-void sead::PrimitiveDrawController::begin() {
+void sead::PrimitiveDrawController::begin(const void* model) {
     PrimitiveRenderer* backend = mBackend;
-    gabi::tail_ptr<void>(primitiveDispatchTable(backend)->mBegin, backend);
+    // HD: the backend's slot is PrimitiveRenderer::setModel (02752800): the argument is passed on.
+    gabi::tail_ptr<void>(primitiveDispatchTable(backend)->mBegin, backend, model);
 }
 
 /* 027509B4 */
-void sead::PrimitiveDrawController::end() {
+void sead::PrimitiveDrawController::end(void* projection) {
     PrimitiveRenderer* backend = mBackend;
-    gabi::tail_ptr<void>(primitiveDispatchTable(backend)->mEnd, backend);
+    // HD: the backend's slot is PrimitiveRenderer::setProjection (02752810): the argument is passed on.
+    gabi::tail_ptr<void>(primitiveDispatchTable(backend)->mEnd, backend, projection);
 }
 
 /* 027509C8 */

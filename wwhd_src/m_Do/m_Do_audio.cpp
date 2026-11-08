@@ -119,14 +119,10 @@ static void __sinit_m_Do_audio_cpp() {
 /* 025E18AC */
 static u32 mDoAud_checkFirstWaves() { return audioApi_JAIZelBasic_checkFirstWaves_0(); }
 
-// HD: emitted wrappers retain unused register arguments read by the verification harness.
 /* 025E18B8 */
-static u32 mDoAud_check1stDynamicWave(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, f64 f1,
-                                      f64 f2, f64 f3, f64 f4, f64 f5, f64 f6, f64 f7, f64 f8) {
-    return audioApi_JAIZelBasic_check1stDynamicWave_0(gabi::ea(zel_basic), a1, a2, a3, a4, a5, f1,
-                                                      f2, f3, f4, f5, f6, f7, f8);
-}
+static u32 mDoAud_check1stDynamicWave() { return audioApi_JAIZelBasic_check1stDynamicWave_0(gabi::ea(zel_basic)); }
 
+// HD: emitted wrappers retain unused register arguments read by the verification harness.
 /* 025E18C4 */
 static u32 mDoAud_load2ndDynamicWave(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6, u32 a7,
                                      f64 f1, f64 f2, f64 f3, f64 f4, f64 f5, f64 f6, f64 f7,
@@ -395,7 +391,7 @@ static u32 mDoAud_talkOut(f64 f1, f64 f2, f64 f3, f64 f4, f64 f5, f64 f6, f64 f7
 }
 
 /* 025E1C74 */
-static u32 mDoAud_basicFinalizeStub() { return audioApi_basicFinalizeStub_0(gabi::ea(zel_basic)); }
+static u32 mDoAud_basicFinalizeStub(u32 mode) { (void)mode; return audioApi_basicFinalizeStub_0(gabi::ea(zel_basic)); }
 
 /* 025E1C84 */
 static u32 mDoAud_heartGaugeOn() {
@@ -541,7 +537,7 @@ static u32 mDoAud_tact_reset(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32
 }
 
 /* 025E1EA0 */
-static u32 mDoAud_tact_setStickPos() { return audioApi_JAIZelInst_setStickPos_0(); }
+static u32 mDoAud_tact_setStickPos(s32 a, s32 b) { return audioApi_JAIZelInst_setStickPos_0(gabi::ea(&mTact), a, b); }
 
 /* 025E1EB4 */
 static u32 mDoAud_Inst_headerObject_ct() {
@@ -549,7 +545,11 @@ static u32 mDoAud_Inst_headerObject_ct() {
 }
 
 /* 025E1EC0 */
-static u32 mDoAud_tact_emptyMember() { return audioApi_JAIZelInst_emptyMember_0(gabi::ea(&mTact)); }
+static u32 mDoAud_tact_emptyMember(s32 a, s32 b) {
+    (void)a;
+    (void)b;
+    return audioApi_JAIZelInst_emptyMember_0(gabi::ea(&mTact));
+}
 
 /* 025E1ED4 */
 static u32 mDoAud_Inst_headerObject_dt() {
@@ -731,7 +731,7 @@ ext 0202736C void audioApi_JAIZelBasic_resetRecover_0(u32)
 ext 02029E5C void audioApi_JAIZelInst_ct_0(u32)
 ext 02025B44 void audioApi_createJAIZelBasic_0(u32)
 ext 02027AE4 u32 audioApi_JAIZelBasic_checkFirstWaves_0()
-ext 0202796C u32 audioApi_JAIZelBasic_check1stDynamicWave_0(u32, u32, u32, u32, u32, u32, f64, f64, f64, f64, f64, f64, f64, f64)
+ext 0202796C u32 audioApi_JAIZelBasic_check1stDynamicWave_0(u32)
 ext 020271E4 u32 audioApi_JAIZelBasic_load2ndDynamicWave_0(u32, u32, u32, u32, u32, u32, u32, u32, f64, f64, f64, f64, f64, f64, f64, f64)
 ext 028024E0 u32 audioApi_emptyAudioCompatibility_0()
 ext 0202573C u32 audioApi_JAIZelBasic_monsSeInit_0(u32)
@@ -792,7 +792,7 @@ ext 02027FF0 u32 audioApi_JAIZelBasic_changeSubBgmStatus_0(u32, u32)
 ext 02028518 u32 audioApi_JAIZelBasic_taktModeMute_0(u32, u32, u32, u32, u32, u32, u32, u32, f64, f64, f64, f64, f64, f64, f64, f64)
 ext 0202862C u32 audioApi_JAIZelBasic_taktModeMuteOff_0(u32, u32, u32, u32, u32, u32, u32, u32, f64, f64, f64, f64, f64, f64, f64, f64)
 ext 02029F10 u32 audioApi_JAIZelInst_reset_0(u32, u32, u32, u32, u32, u32, u32, f64, f64, f64, f64, f64, f64, f64, f64)
-ext 0202A038 u32 audioApi_JAIZelInst_setStickPos_0()
+ext 0202A038 u32 audioApi_JAIZelInst_setStickPos_0(u32, s32, s32)
 ext 0202ABA0 u32 audioApi_Inst_headerObject_ct_0(u32)
 ext 0202A034 u32 audioApi_JAIZelInst_emptyMember_0(u32)
 ext 0202AB9C u32 audioApi_Inst_headerObject_dt_0(u32)

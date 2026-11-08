@@ -592,8 +592,7 @@ inline void absolutePosition(u32 output, u32 particle) {
         out->channels[i] = fadds_ppc((f32)p->mBasePos.channels[i], (f32)p->mPos.channels[i]);
 }
 inline f32 ashDistance(u32 a, u32 b) {
-    gabi::call(0x028E8DE8, at<void>(a), at<void>(b));
-    return gabi::call<f32>(0x028F4384);
+    return gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DE8, at<void>(a), at<void>(b)));
 }
 
 namespace sdk {

@@ -335,8 +335,8 @@ void pa::dPa_control_c::createCommon(void* data) {
     u32 n1 = gabi::ea(firstName.get()), n2 = gabi::ea(secondName.get());
     makeSafeName(n1, 0x10051D78);
     makeSafeName(n2, 0x10051D84);
-    pa_loadParticleTextureBank(p(w(0x101F4F7C)), firstName.get(), secondName.get(), u32(0));
-    void* bank = pa_getParticleTextureBank();
+    void* loaded = pa_loadParticleTextureBank(p(w(0x101F4F7C)), firstName.get(), secondName.get(), u32(0));
+    void* bank = pa_getParticleTextureBank(loaded);
     this->mTextureBank = gabi::ea(bank);
     heapReport(a, 0x10051D94);
     heap = (u32)this->mHeap;
@@ -384,8 +384,8 @@ void pa::dPa_control_c::createCommon(void* data) {
     heapReport(a, 0x10051DF0);
     makeSafeName(n2, 0x10051D84);
     makeSafeName(n1, 0x10051D78);
-    if (pa_loadParticleTextureBank(p(w(0x101F4F7C)), firstName.get(), secondName.get(), u32(0))) {
-        u32 res = gabi::ea(pa_getParticleTextureBank()), off = w(res + 0x4C);
+    if (void* loaded = pa_loadParticleTextureBank(p(w(0x101F4F7C)), firstName.get(), secondName.get(), u32(0))) {
+        u32 res = gabi::ea(pa_getParticleTextureBank(loaded)), off = w(res + 0x4C);
         u32 tableBase = off ? res + 0x4C + off : 0;
         u32 table = gabi::ea(pa_findParticleTexture(p(tableBase), p(0x10051E00)));
         if (table) {

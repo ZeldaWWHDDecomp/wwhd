@@ -34,8 +34,8 @@ struct PrimitiveDrawController {
     static void destroy(PrimitiveDrawController* object, u32 flags);
     void createBackend(void* heap);
     void initializeBackend(void* heap, const void* settings);
-    void begin();
-    void end();
+    void begin(const void* model);
+    void end(void* projection);
     void setTransform(const RenderMatrix34* transform);
     void prepare();
     void flush();

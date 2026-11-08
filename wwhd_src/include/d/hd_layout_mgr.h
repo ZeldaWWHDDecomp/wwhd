@@ -88,7 +88,7 @@ struct hdLayoutResMgr_c {
     u32 unload(hdScreenString* name);
     void* find(hdScreenString* name);
     u8 isIdle();
-    u32 resume();
+    u32 resume(u32 message);
     void createStaffRollHeap();
     void destroyStaffRollHeap();
 };

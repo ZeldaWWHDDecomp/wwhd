@@ -47,7 +47,8 @@ void* allocateAlignedFromHeap_l(u32 size, sead::RegistryHeap* heap, s32 alignmen
 void clearBytes(void* storage, u32 size);
 void constructArray(void* storage, u32 count, u32 stride, u32 constructor);
 void createViewCamera_l(agl::LightViewCamera_l* camera);
-void setViewCamera_l(agl::LightView* view, const void* camera, const void* viewport);
+void setViewCamera_l(agl::LightView* view, const void* camera, const void* viewport, f64 nearPlane, f64 farPlane,
+                     f64 fieldOfView, f64 aspect);
 void setViewProjection_l(agl::LightView* view, void* projection);
 void createPostprocess_l(void* state);
 void destroyPostprocess_l(void* state, u32 flags);
@@ -773,10 +774,11 @@ void agl::LightPrepass::updateView(u32 index) {
     else view->mFlags = view->mFlags & ~(u32)LightView_Empty;
 }
 /* 027B00D0 */
-void agl::LightPrepass::updateViewInputs(u32 index, void* projection, const void* camera, const void* viewport) {
+void agl::LightPrepass::updateViewInputs(u32 index, void* projection, const void* camera, const void* viewport, f64 nearPlane,
+                                         f64 farPlane, f64 fieldOfView, f64 aspect) {
     gabi::AutoFrame frame{gabi::current_function()};
     LightView* view = clampedElement((LightView*)mViews, mViewCount, index);
-    setViewCamera_l(view, camera, viewport);
+    setViewCamera_l(view, camera, viewport, nearPlane, farPlane, fieldOfView, aspect);
     setViewProjection_l(view, projection);
     updateView(index);
 }
@@ -1269,7 +1271,7 @@ ext 0272D680 void combineRegistryMatrices(sead::RegistryMatrix44*,const sead::Re
 ext 028E90D4 void copyRegistryMatrix_l(const sead::RegistryMatrix34*,sead::RegistryMatrix34*)
 ext 025155D8 void normalizeDirection_l(be<f32>*)
 ext 0278D0D0 void createViewCamera_l(agl::LightViewCamera_l*)
-ext 0278CB8C void setViewCamera_l(agl::LightView*,const void*,const void*)
+ext 0278CB8C void setViewCamera_l(agl::LightView*,const void*,const void*,f64,f64,f64,f64)
 ext 0278D07C void setViewProjection_l(agl::LightView*,void*)
 ext 027C6C54 void createPostprocess_l(void*)
 ext 027C6E10 void destroyPostprocess_l(void*,u32)

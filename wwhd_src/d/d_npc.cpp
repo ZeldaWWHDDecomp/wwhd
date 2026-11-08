@@ -448,11 +448,10 @@ BOOL npc_readable::dNpc_PathRun_c::setInfDrct(u32 path) {
 }
 
 /* 0259E744 */
-u32 npc_readable::dNpc_PathRun_c::nextPath() {
+u32 npc_readable::dNpc_PathRun_c::nextPath(s32 room) {
     gabi::AutoFrame frame{0x0259E744};
-    // HD: this entry point supplies only the path, without a room argument.
     u32 path = gabi::ea(mPath.get());
-    return path ? npc_pathGetNext(path) : 0;
+    return path ? npc_pathGetNext(path, room) : 0;
 }
 
 /* 0259E778 */
@@ -1756,7 +1755,7 @@ void npc_readable::dNpc_EventCut_c::cutMoveToActorProc() {
  data npc_zero 100515BC
  ext 0200F378 void npc_addCalcAngle(be<s16>* angle, s32 goal, s32 scale, s32 maximum, s32 minimum)
  ext 025AAF88 u32 npc_pathGetRoom(s32 id, s32 room)
- ext 025AB070 u32 npc_pathGetNext(u32 path)
+ ext 025AB070 u32 npc_pathGetNext(u32 path, s32 room)
  ext 0273AD10 cXyz* npc_allocatePoint(u32 size)
 */
 // clang-format on

@@ -988,9 +988,7 @@ s32 daOship_c::_execute() {
     flat->x = x;
     flat->z = z;
     flat->y = flatY;
-    // HD: sqrt consumes the live FPR result of PSVECSquareMag without an explicit argument.
-    PSVECSquareMag(flat.get());
-    f32 distance = OshipSqrtLiveFpr();
+    f32 distance = OshipSqrtLiveFpr(PSVECSquareMag(flat.get()));
     f32 threshold = f32(l_HIO.mBadAimAdjustDistanceStart);
     s32 correction = 0;
     if (distance > threshold) {
@@ -1654,7 +1652,7 @@ data l_defaultBadAimDistance 10034284
 data l_defaultPathSpeed 10034288
 data l_negativePi 10034290
 data l_positivePi 10034294
-ext 028F4384 f32 OshipSqrtLiveFpr()
+ext 028F4384 f32 OshipSqrtLiveFpr(f32)
 ext 028F4384 f64 OshipSqrt(f64)
 ext 027F7878 u32 OshipJointDescriptor(void*)
 ext 027F3F94 u32 OshipJointTreeHeader(void*)

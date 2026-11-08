@@ -503,7 +503,7 @@ struct hdShaderModelResource_l {
 };
 static hdShaderMaterialRecord_l* sShaderMaterialA;
 static hdShaderMaterialRecord_l* sShaderMaterialB;
-static hdShaderModelResource_l* getShaderModelResource(void *);
+static hdShaderModelResource_l* getShaderModelResource(void *, void *, u32, void *);
 static be<u8> *getShaderMaterialName(void *, u32);
 static u32 shaderShiftLeft(u32 value, u32 amount) {
     amount &= 63;
@@ -514,8 +514,8 @@ static u32 shaderShiftRight(u32 value, u32 amount) {
     return amount < 32 ? value >> amount : 0;
 }
 /* 0272D384 */
-static hdShaderModelResource_l* replaceBackendMaterials(void* resource) {
-    hdShaderModelResource_l* model = getShaderModelResource(resource);
+static hdShaderModelResource_l* replaceBackendMaterials(void* resource, void* bindingSource, u32 name, void* heap) {
+    hdShaderModelResource_l* model = getShaderModelResource(resource, bindingSource, name, heap);
     hdShaderMaterialTable_l* table = model->mpTable;
     void* names = model->mpNames;
     if (table != NULL && names != NULL) {
@@ -712,7 +712,7 @@ void initializeBackendShaders(hdShaderBackend_c* self, void* heap) {
  ext 027BDEB4 void copyShaderIndexState(void*,void*)
  data sShaderMaterialA 10475800 nocheck
  data sShaderMaterialB 10475804 nocheck
- ext 027F7B50 hdShaderModelResource_l* getShaderModelResource(void*)
+ ext 027F7B50 hdShaderModelResource_l* getShaderModelResource(void*, void*, u32, void*)
  ext 027ED1F0 be<u8>* getShaderMaterialName(void*,u32)
  ext 0272D680 void makeBackendTextureMatrix(void*,void*,void*)
  data sShaderDraw 104B4CFC nocheck

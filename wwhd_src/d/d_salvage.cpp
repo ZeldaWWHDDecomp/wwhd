@@ -5,8 +5,8 @@
 s32 isCompleteCollectMap(dSv_player_map_c*, u32);
 s32 isOceanSvBit(dSv_ocean_c*, u32, u32);
 s32 dKy_moon_type_chk();
-void squareMagnitudeGuest(const cXyz*);
-f32 sqrtMagnitudeGuest();
+f32 squareMagnitudeGuest(const cXyz*);
+f32 sqrtMagnitudeGuest(f32);
 static salvage_layout::SaveLabels m_savelabel;
 
 /* 025B44A0 */
@@ -114,9 +114,7 @@ void dSalvage_control_c::calcDistanceXZ() {
         horizontal.x = difference.x;
         horizontal.y = 0.0f;
         horizontal.z = difference.z;
-        // HD: the square magnitude remains in guest FPR1 for the following sqrt call.
-        squareMagnitudeGuest(&horizontal);
-        mInfo[i].mDistance = sqrtMagnitudeGuest();
+        mInfo[i].mDistance = sqrtMagnitudeGuest(squareMagnitudeGuest(&horizontal));
     }
 }
 
@@ -241,7 +239,7 @@ str 100535E4 "pact != NULL"
 ext 025B8228 s32 isCompleteCollectMap(dSv_player_map_c*, u32)
 ext 025B8A50 s32 isOceanSvBit(dSv_ocean_c*, u32, u32)
 ext 02560828 s32 dKy_moon_type_chk()
-ext 028E8DD0 void squareMagnitudeGuest(const cXyz*)
-ext 028F4384 f32 sqrtMagnitudeGuest()
+ext 028E8DD0 f32 squareMagnitudeGuest(const cXyz*)
+ext 028F4384 f32 sqrtMagnitudeGuest(f32)
 data m_savelabel 1004BD1C
 */

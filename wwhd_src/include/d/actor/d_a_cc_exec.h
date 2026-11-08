@@ -42,7 +42,7 @@ void action_up_check(cc_class*);
 void action_tomaru(cc_class*);
 void action_tubo_search(cc_class*);
 void fopAcM_seStart_ool(fopAc_ac_c*, u32, u32);
-CcExecRotation* CcExec_globalRotation(CcExecRotation*);
+void CcExec_globalRotation(CcExecRotation*);
 BOOL enemy_ice(enemyice_l*);
 void enemy_piyo_set(fopAc_ac_c*);
 void fopAcM_setGbaName(fopAc_ac_c*, u8, u8, u8);

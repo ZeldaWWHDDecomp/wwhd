@@ -171,8 +171,8 @@ static void HDGameFramework_initialize(u32 a, u32 b, u32 c, u32 d) {
 
 
 /* 02034FF8 */
-static u32 HDGameFramework_delegate(u32 self) {
-    return HDFramework_baseDelegate( self);
+static u32 HDGameFramework_delegate(u32 self, u32 rootTask) {
+    return HDFramework_baseDelegate(self, rootTask);
 }
 
 
@@ -354,7 +354,7 @@ ext 0273E4B4 HDFrameworkController* HDFramework_createDebugController(u32, u32)
 ext 0273EAC8 u32 HDFramework_createDebugAddon(u32, u32)
 ext 0273D2D0 void* HDFramework_createKeyboard(u32, u32, u32, u32)
 ext 0273B2F0 void HDFramework_listPushBack(u32, u32)
-ext 0274AF44 u32 HDFramework_baseDelegate(u32)
+ext 0274AF44 u32 HDFramework_baseDelegate(u32, u32)
 ext 0274A414 void HDFramework_rootBeginFrame(u32)
 ext 02799C70 void HDFramework_resetFrameArena(u32)
 ext 0272A8C4 void HDFramework_beginFrame(u32)

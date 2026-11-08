@@ -615,7 +615,7 @@ void majuu_flag_move(daMajuu_Flag_c* actor) {
         center->x = f32(input->mValues[0]);
         center->y = f32(input->mValues[1]);
         center->z = f32(input->mValues[2]);
-        majuuApi_dotVector(transformedWind.get(), gabi::at<void>(oldNormals + offset));
+        f64 windDot = majuuApi_dotVector(transformedWind.get(), gabi::at<void>(oldNormals + offset));
         u32 velocity = velocities + offset;
         if (vertex == 15 || vertex == 20) {
             bias->z = f32(lZeroVector.mValues[2]);
@@ -626,7 +626,7 @@ void majuu_flag_move(daMajuu_Flag_c* actor) {
             majuuApi_addVector(output, gabi::at<void>(velocity), output);
             continue;
         }
-        majuuApi_scaleNormalByDotResult(gabi::at<void>(oldNormals + offset), scratch.get());
+        majuuApi_scaleNormalByDotResult(gabi::at<void>(oldNormals + offset), scratch.get(), windDot);
         f32 gravity = f32(l_HIO.mGravity);
         sum->x = scratch->x;
         sum->z = scratch->z;
@@ -1510,8 +1510,8 @@ ext 0257DAA8 void majuuApi_sampleWind()
 ext 02578348 float majuuApi_dKyw_get_wind_pow()
 ext 028E8E64 void majuuApi_scaleVector(void*, void*, f32)
 ext 025F181C void majuuApi_mDoMtx_ZrotS(void*, s16)
-ext 028E8F44 void majuuApi_dotVector(void*, void*)
-ext 0201AE48 void majuuApi_scaleNormalByDotResult(void*, void*)
+ext 028E8F44 f64 majuuApi_dotVector(void*, void*)
+ext 0201AE48 void majuuApi_scaleNormalByDotResult(void*, void*, f64)
 ext 028E8DD0 float majuuApi_squareMagnitude(void*)
 ext 028F4384 float majuuApi_squareRoot(f32)
 ext 021B8D98 void majuuApi_setNormalMatrix(void*)

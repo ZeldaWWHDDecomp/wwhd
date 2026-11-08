@@ -393,6 +393,64 @@ s32 cM3d_Cross_LinPla(void* line, void* plane, void* out, u32 front, u32 back) {
     return 0;
 }
 
+// cM3d_Cross_MinMaxBoxLine's bevel outcode bits of point p against the box [min, max] (was a lambda: a lambda
+// in the body kept the function off the native path, native_returns.py / native_rules.py src:ret)
+static u32 minMaxBoxBevel2(const f32* p, const f32* min, const f32* max) {
+    u32 bits = 0;
+    f32 diff = p[1] - p[0], sum = p[0] + p[1];
+    if (diff > max[1] - min[0])
+        bits |= 1;
+    if (diff < min[1] - max[0])
+        bits |= 2;
+    if (sum > max[0] + max[1])
+        bits |= 4;
+    if (sum < min[0] + min[1])
+        bits |= 8;
+    diff = p[1] - p[2];
+    sum = p[2] + p[1];
+    if (diff > max[1] - min[2])
+        bits |= 16;
+    if (diff < min[1] - max[2])
+        bits |= 32;
+    if (sum > max[2] + max[1])
+        bits |= 64;
+    if (sum < min[2] + min[1])
+        bits |= 128;
+    diff = p[0] - p[2];
+    sum = p[2] + p[0];
+    if (diff > max[0] - min[2])
+        bits |= 256;
+    if (diff < min[0] - max[2])
+        bits |= 512;
+    if (sum > max[2] + max[0])
+        bits |= 1024;
+    if (sum < min[2] + min[0])
+        bits |= 2048;
+    return bits;
+}
+
+// cM3d_Cross_MinMaxBoxLine's bevel outcode bits of point p against the box [min, max] (was a lambda: a lambda
+// in the body kept the function off the native path, native_returns.py / native_rules.py src:ret)
+static u32 minMaxBoxBevel3(const f32* p, const f32* min, const f32* max) {
+    u32 bits = 0;
+    if ((p[0] + p[1]) + p[2] > (max[0] + max[1]) + max[2])
+        bits |= 1;
+    if ((p[1] - p[0]) + p[2] > (max[1] - min[0]) + max[2])
+        bits |= 2;
+    if ((p[1] - p[0]) - p[2] > (max[1] - min[0]) - min[2])
+        bits |= 4;
+    if ((p[0] + p[1]) - p[2] > (max[0] + max[1]) - min[2])
+        bits |= 8;
+    if ((p[0] - p[1]) + p[2] > (max[0] - min[1]) + max[2])
+        bits |= 16;
+    // HD: both bevel bits use this same expression.
+    if ((-p[0] - p[1]) + p[2] > (-min[0] - min[1]) + max[2])
+        bits |= 96;
+    if ((-p[0] - p[1]) - p[2] > (-min[0] - min[1]) - min[2])
+        bits |= 128;
+    return bits;
+}
+
 /* 02010FFC */
 s32 cM3d_Cross_MinMaxBoxLine(void* minimum, void* maximum, void* start, void* end) {
     u32 startCode = 0, endCode = 0;
@@ -418,64 +476,12 @@ s32 cM3d_Cross_MinMaxBoxLine(void* minimum, void* maximum, void* start, void* en
     }
     if (startCode == 0 || endCode == 0)
         return 1;
-    auto bevel2 = [&](const f32* p) {
-        u32 bits = 0;
-        f32 diff = p[1] - p[0], sum = p[0] + p[1];
-        if (diff > max[1] - min[0])
-            bits |= 1;
-        if (diff < min[1] - max[0])
-            bits |= 2;
-        if (sum > max[0] + max[1])
-            bits |= 4;
-        if (sum < min[0] + min[1])
-            bits |= 8;
-        diff = p[1] - p[2];
-        sum = p[2] + p[1];
-        if (diff > max[1] - min[2])
-            bits |= 16;
-        if (diff < min[1] - max[2])
-            bits |= 32;
-        if (sum > max[2] + max[1])
-            bits |= 64;
-        if (sum < min[2] + min[1])
-            bits |= 128;
-        diff = p[0] - p[2];
-        sum = p[2] + p[0];
-        if (diff > max[0] - min[2])
-            bits |= 256;
-        if (diff < min[0] - max[2])
-            bits |= 512;
-        if (sum > max[2] + max[0])
-            bits |= 1024;
-        if (sum < min[2] + min[0])
-            bits |= 2048;
-        return bits;
-    };
-    startCode |= bevel2(a) << 8;
-    endCode |= bevel2(b) << 8;
+    startCode |= minMaxBoxBevel2(a, min, max) << 8;
+    endCode |= minMaxBoxBevel2(b, min, max) << 8;
     if (startCode & endCode)
         return 0;
-    auto bevel3 = [&](const f32* p) {
-        u32 bits = 0;
-        if ((p[0] + p[1]) + p[2] > (max[0] + max[1]) + max[2])
-            bits |= 1;
-        if ((p[1] - p[0]) + p[2] > (max[1] - min[0]) + max[2])
-            bits |= 2;
-        if ((p[1] - p[0]) - p[2] > (max[1] - min[0]) - min[2])
-            bits |= 4;
-        if ((p[0] + p[1]) - p[2] > (max[0] + max[1]) - min[2])
-            bits |= 8;
-        if ((p[0] - p[1]) + p[2] > (max[0] - min[1]) + max[2])
-            bits |= 16;
-        // HD: both bevel bits use this same expression.
-        if ((-p[0] - p[1]) + p[2] > (-min[0] - min[1]) + max[2])
-            bits |= 96;
-        if ((-p[0] - p[1]) - p[2] > (-min[0] - min[1]) - min[2])
-            bits |= 128;
-        return bits;
-    };
-    startCode |= bevel3(a) << 24;
-    endCode |= bevel3(b) << 24;
+    startCode |= minMaxBoxBevel3(a, min, max) << 24;
+    endCode |= minMaxBoxBevel3(b, min, max) << 24;
     if (startCode & endCode)
         return 0;
     gabi::Local<cXyz> first, last, cross;

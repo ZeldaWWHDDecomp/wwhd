@@ -323,7 +323,7 @@ HdPadInputMode *hdPadGetInputMode(HdPadEventSource *);
 void hdPadRotatePoint(HdPadPoint *, HdPadPoint *, HdPadPoint *, f32);
 void hdPadStateExecute(HdPadStateController *);
 f32 hdPadZoomRatio(HdPadMap *, u32, f32, f32);
-void hdPadZoomPosition(HdPadMap *, HdPadPoint *, HdPadPoint *, u32);
+void hdPadZoomPosition(HdPadMap *, HdPadPoint *, HdPadPoint *, u32, f32);
 void hdPadZoomScale(HdPadMap *, u32, f32, f32, f32);
 u32 hdPadMapMode(void *);
 void hdPadGridSetup(HdPadGrid *);

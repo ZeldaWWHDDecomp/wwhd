@@ -17,7 +17,7 @@ struct hdWidget_pointer_c {
     u8 _118[0x130-0x118]; be<u32> mId; u8 _134[8]; be<u32> mSecondaryVtable;
     u8 _140[0x170-0x140]; be<u32> mVtable; u8 _174[0x194-0x174];
     hdWidget_cursor_c mCursor; hdWidget_vec2_c mPosition, mCenter, mScale;
-    void update();
+    void update(u32 previous, u32 previousPointer);
     void setScreen(f32 width, f32 height, f32 targetWidth, f32 targetHeight);
 };
 WWHD_SIZE(hdWidget_pointer_c, 0x1B4);
@@ -88,7 +88,7 @@ WWHD_SIZE(hdWidget_paneTransform_c, 0x14);
 void hdWidget_destroyPointerBase(hdWidget_pointer_c* pointer, u32 flags);
 void hdWidget_destroyPointerEntry(hdWidget_pointer_c* pointer, s32 flags);
 void hdWidget_constructPointerBase(hdWidget_pointer_c* pointer);
-void hdWidget_updatePointerBase(hdWidget_pointer_c* pointer);
+void hdWidget_updatePointerBase(hdWidget_pointer_c* pointer, u32 previous, u32 previousPointer);
 hdWidget_c* hdWidget_constructBase(hdWidget_c* widget);
 void hdWidget_destroyBase(hdWidget_c* widget, u32 flags);
 void hdWidget_getPaneTransform(void* pane, hdWidget_paneTransform_c* transform);

@@ -1614,7 +1614,9 @@ void daAuction_c::setMessage(u32 message) {
 
 /* 0205AD6C */
 void daAuction_c::setMessage2(u32 message) {
-    u32 receiver = auction_daAuction_c_setMessage(this, message);
+    // HD: setMessage leaves r3 (this) unchanged; the original keeps using it.
+    auction_daAuction_c_setMessage_abi2(this, message);
+    u32 receiver = gabi::ea(this);
     auctionActorController(receiver)->m81F = daAuction_c::MAIN_MSG_SET;
     auction_dAuction_screen_gaugeHide(gabi::at<void>(receiver));
 }

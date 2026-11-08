@@ -94,7 +94,7 @@ BOOL nodeCallBack(void* node, int phase) {
         a_eye_pos_offst.y = y;
         a_eye_pos_offst.z = zero;
     }
-    void* jointObject = Btsw2JointObject();
+    void* jointObject = Btsw2JointObject(node);
     u16 joint = static_cast<Btsw2JointData*>(jointObject)->mJointNo;
     u32 matrices = gabi::at<J3DModel>(model)->mpMtxBuffer.v.get();
     u16 flags = gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags;
@@ -959,7 +959,7 @@ ext 027F68FC void* Btsw2JointNames(void*)
 ext 027DF9B0 s32 Btsw2NameIndex(void*, const char*)
 ext 025E4F64 void* Btsw2MorfCreate(void*, void*, void*, void*, void*, s32, s32, s32, s32, s32, u32, u32, f32)
 ext 025E38E0 void* Btsw2ModelCreate(void*, s32, u32)
-ext 027F7878 void* Btsw2JointObject()
+ext 027F7878 void* Btsw2JointObject(void*)
 ext 028E8F64 void PSMTXMultVec(const Mtx34*, const cXyz*, cXyz*)
 ext 028E9108 void PSMTXConcat(const Mtx34*, const Mtx34*, Mtx34*)
 ext 028E8F44 f32 PSVECDotProduct(const cXyz*, const cXyz*)

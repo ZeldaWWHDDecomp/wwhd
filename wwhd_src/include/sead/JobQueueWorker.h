@@ -51,7 +51,7 @@ struct JobQueueWorker_l {
     static JobQueueWorker_l* create(JobQueueWorker_l* object,u32 owner,s32 capacity,u32 affinity,u32 priority);
     u32 enqueue(u32 context,QueuedJob_l* job,const be<u32>* prepend);
     void clear();
-    u32 start();
+    u32 start(u32 message);
     u32 onMessage(u32 message);
     QueuedJob_l* dequeue();
     void processJobs();

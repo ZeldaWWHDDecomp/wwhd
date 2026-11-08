@@ -286,11 +286,12 @@ void hdMenuMap_c::switchChart() { hdPadChangeState((HdPadStateController*)stateM
 /* 0269E2B8 */
 u32 hdMenuMap_c::isBusy() { return mBusy; }
 /* 0269E2C0 */
-void hdMenuMap_c::exitChartView() {
+void hdMenuMap_c::exitChartView(u32 marker) {
     hdMenuChartView_l* view = mpSelectedChartView;
     if (view) {
-        // HD: this interface slot is separate from the parts state executor.
-        gabi::call_ptr<void>(view->mVtable->mDraw.get(),view);
+        // HD: this interface slot is separate from the parts state executor; the original passes the caller's
+        // marker (r4) on to it (the map display coordinator's seaMapSetMarker).
+        gabi::call_ptr<void>(view->mVtable->mDraw.get(),view,marker);
     }
 }
 /* 0269BB60 */

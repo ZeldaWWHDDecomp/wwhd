@@ -92,8 +92,7 @@ static void cloud_shadow_move() {
           (u32)wordAxis(center.get(), off / 4);
   };
   auto distance = [&](u32 a, u32 b) {
-    sdk::distanceSquared<void>(a, b);
-    return sdk::squareRoot<f32>();
+    return sdk::squareRoot<f32>(sdk::distanceSquared<f32>(a, b));
   };
   for (s32 i = 0; i < (s32)(u32)view<dKankyo_cloud_Packet>(packet)->mCount;
        ++i) {

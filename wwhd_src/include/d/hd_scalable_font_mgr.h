@@ -53,7 +53,7 @@ struct hdScalableFontMgr_c {
  void initScalableFont();
  void init(void* heap);
  void execute();
- u32 requestCacheUpdateA();
+ u32 requestCacheUpdateA(void* text, u32 a, u32 b, u32 c, u32 d);
  u32 requestCacheUpdateB();
  void onMessage(void* object, u32 message);
 };

@@ -101,7 +101,7 @@ inline f32 hdPlayerDivide(f32 first, f32 second) {
 using hdPlayerFaderConstructor = u32 (*)(hdPlayerFader*);
 void hdPlayerDestroyHandle(hdPlayerSoundHandle*);
 void hdPlayerDestroyBase(hdSoundPlayer*, u32);
-u32 hdPlayerForwardSecondary(hdSoundPlayer*, u32);
+u32 hdPlayerForwardSecondary(hdSoundPlayer*, void*, u32, void*, u32);
 void hdPlayerConstructBase(hdSoundPlayer*);
 void hdPlayerConstructFaderArray(void*, u32, u32, hdPlayerFaderConstructor);
 u32 hdPlayerInitializeFader(hdPlayerFader*, f32);

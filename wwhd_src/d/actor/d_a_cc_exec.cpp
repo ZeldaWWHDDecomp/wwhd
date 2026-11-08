@@ -838,15 +838,17 @@ static BOOL daCC_Execute(cc_class* i_this) {
             /* emitter->setGlobalRTMatrix(getAnmMtx(BODY03)) */
             if (JPABaseEmitter* e = i_this->m368.getEmitter()) {
                 Mtx34* mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
-                CcExecRotation* r =
-                    CcExec_globalRotation(&reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation);
+                // HD: the callee leaves r3 (the rotation) unchanged; the original keeps using it.
+                CcExecRotation* r = &reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation;
+                CcExec_globalRotation(r);
                 JPASetRMtxTVecfromMtx(mtx2, r,
                                       &reinterpret_cast<CcExecEmitter*>(e)->mGlobalTranslation);
             }
             if (JPABaseEmitter* e = i_this->m37C.getEmitter()) {
                 Mtx34* mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
-                CcExecRotation* r =
-                    CcExec_globalRotation(&reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation);
+                // HD: the callee leaves r3 (the rotation) unchanged; the original keeps using it.
+                CcExecRotation* r = &reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation;
+                CcExec_globalRotation(r);
                 JPASetRMtxTVecfromMtx(mtx2, r,
                                       &reinterpret_cast<CcExecEmitter*>(e)->mGlobalTranslation);
             }
@@ -962,7 +964,7 @@ ext 02112414 void action_up_check(cc_class*)
 ext 02112DA0 void action_tomaru(cc_class*)
 ext 02112E74 void action_tubo_search(cc_class*)
 ext 02111638 void fopAcM_seStart_ool(fopAc_ac_c*, u32, u32)
-ext 0211310C CcExecRotation* CcExec_globalRotation(CcExecRotation*)
+ext 0211310C void CcExec_globalRotation(CcExecRotation*)
 ext 020402C8 BOOL enemy_ice(enemyice_l*)
 ext 02041CAC void enemy_piyo_set(fopAc_ac_c*)
 ext 025DA088 void fopAcM_setGbaName(fopAc_ac_c*, u8, u8, u8)

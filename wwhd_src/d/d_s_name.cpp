@@ -63,8 +63,8 @@ static u32 phase_1(void* resName) {
 }
 
 /* 025ADA0C */
-static u32 phase_2() {
-    s32 result = dComIfG_syncStageRes();
+static u32 phase_2(void* resName) {
+    s32 result = dComIfG_syncStageRes(resName);
     if (result < 0) return cPhs_ERROR_e;
     if (result > 0) return cPhs_INIT_e;
     // HD: stage loading also starts the UI frontend's asynchronous load.
@@ -293,8 +293,8 @@ void dScnName_c::createEnvironment() {
     fileName->__vtbl = &l_safeStringVtable;
     archiveName->mString = gabi::at<const char>(gabi::guest_addr("Misc"));
     fileName->mString = gabi::at<const char>(gabi::guest_addr("Misc.bfres"));
-    GameInfo_loadResource(l_gameInfo, archiveName.get(), fileName.get(), 0);
-    NameScene::ResourceArchive* archive = ResourceArchive_get();
+    u32 loaded = GameInfo_loadResource(l_gameInfo, archiveName.get(), fileName.get(), 0);
+    NameScene::ResourceArchive* archive = ResourceArchive_get(loaded);
     NameScene::EnvironmentResource* resource = ResourceArchive_getFile(
         resolveRelative(&archive->mEnvironmentFile), "env.baglenv");
     gabi::Local<be<u32>> result, left, right;
@@ -551,8 +551,8 @@ ext 0276CAA4 void EnvironmentConfig_ct(NameScene::EnvironmentConfig*)
 ext 0276F9F0 void EnvironmentConfig_add(NameScene::EnvironmentConfig*, s32, u32)
 ext 0203E8F4 void* Environment_getContext()
 ext 0276C3F8 void Environment_create(NameScene::Environment*, NameScene::EnvironmentConfig*, void*)
-ext 026124B0 void GameInfo_loadResource(NameScene::GameInfo*, NameScene::SafeString*, NameScene::SafeString*, u32)
-ext 027E2DC0 NameScene::ResourceArchive* ResourceArchive_get()
+ext 026124B0 u32 GameInfo_loadResource(NameScene::GameInfo*, NameScene::SafeString*, NameScene::SafeString*, u32)
+ext 027E2DC0 NameScene::ResourceArchive* ResourceArchive_get(u32)
 ext 027DFA24 NameScene::EnvironmentResource* ResourceArchive_getFile(void*, const char*)
 ext 027A7558 be<u32>* Resource_getData(be<u32>*, void*)
 ext 0276B710 void Environment_setResource(NameScene::Environment*, be<u32>*, be<u32>*, s32, f32)
@@ -580,7 +580,7 @@ ext C0009C80 be<u32>* NameSceneTimer_getTicks()
 ext 025F096C void NameSceneDisplay_setTickRate(u32)
 ext 025E18EC void mDoAud_bgmStart(u32)
 ext 02523A04 u32 dComIfG_setStageRes(void*, u32)
-ext 02523D08 s32 dComIfG_syncStageRes()
+ext 02523D08 s32 dComIfG_syncStageRes(void*)
 ext 026FBB8C u32 Frontend_load(void*, u32)
 ext 026FBB7C u32 Frontend_isReady(void*)
 ext 02031090 void Font_load()

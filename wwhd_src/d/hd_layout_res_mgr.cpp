@@ -241,12 +241,13 @@ u8 hdLayoutResMgr_c::isIdle() {
     return u8(u8(mBusy) ^ 1);
 }
 /* 026FBB8C */
-u32 hdLayoutResMgr_c::resume() {
+u32 hdLayoutResMgr_c::resume(u32 message) {
     if (!isIdle())
         return 0;
     hdLayoutThread_c* thread = mpThread;
     mBusy = 1;
-    return gabi::call_ptr<u32>(thread->mpVtable->mResume.get(), thread);
+    // HD: the thread's sead::Thread::sendMessage(message, nonBlocking): the original leaves the busy flag's 1 in r5.
+    return gabi::call_ptr<u32>(thread->mpVtable->mResume.get(), thread, message, 1u);
 }
 /* 026FBBE8 */
 void hdLayoutResMgr_c::createStaffRollHeap() {

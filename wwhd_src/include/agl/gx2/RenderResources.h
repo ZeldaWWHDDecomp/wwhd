@@ -329,11 +329,11 @@ struct BlendRuntime {
     gptr<void> mData; be<u16> mTargetCount; be<u16> mCapacity; be<u32> mState;
     gptr<void> mWork; gptr<void> mStorage;
     u32 initialize(ShapeBuildPlan* plan, void* storage, u32 capacity); void invalidate();
-    void blend(AnimationRuntime* animation, f32 weight); void finalize();
+    void blend(AnimationRuntime* animation, f32 weight); void finalize(void* target);
 };
 WWHD_OFFSET(BlendRuntime, mState, 8); WWHD_SIZE(BlendRuntime, 20);
 
-void finishDrawCommands(); void onPaletteRebound(); void onUniformRebound();
+u32 finishDrawCommands(u32 value); void onPaletteRebound(); void onUniformRebound();
 } }
 
 /* Cafe SDK imports and out-of-line helpers this unit calls. */

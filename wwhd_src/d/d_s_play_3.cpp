@@ -82,8 +82,8 @@ static s32 phase_00(dScnPly::dScnPly_ply_c *i_this) {
     b->mVtable = gc_tu.safeString;
     a->mString = gabi::guest_addr("Misc");
     b->mString = gabi::guest_addr("Misc.bfres");
-    dScnPlyAPI_getResource_void4(l_resourceSystem.mValue, gabi::ea(a.get()), gabi::ea(b.get()), 0);
-    u32 r = dScnPlyAPI_getResourceFile();
+    u32 loaded = dScnPlyAPI_getResource_u324(l_resourceSystem.mValue, gabi::ea(a.get()), gabi::ea(b.get()), 0);
+    u32 r = dScnPlyAPI_getResourceFile(loaded);
     u32 off = gabi::at<dScnPly_ResourceFile>(r)->mFileDictionaryOffset;
     u32 p = off != 0 ? gabi::ea(&gabi::at<dScnPly_ResourceFile>(r)->mFileDictionaryOffset) + off
                      : 0; /* relative pointer */

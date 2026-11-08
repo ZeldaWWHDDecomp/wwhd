@@ -171,21 +171,21 @@ static u32 pauseSoundHandle(hdSoundHandleHolder* i_this, u32 argument, u32 optio
 }
 
 /* 0202C1C0 */
-static u32 firstSoundHandleForward(hdSoundHandleHolder* i_this, u32 argument, u32 option) {
+static u32 firstSoundHandleForward(hdSoundHandleHolder* i_this, f32 value, s32 frames) {
     void* handle = i_this->mHandle;
     if (handle == NULL) {
         return 0;
     }
-    return hdSoundHandleFirstForward(handle, argument, option);
+    return hdSoundHandleFirstForward(handle, value, frames);
 }
 
 /* 0202C1D0 */
-static u32 secondSoundHandleForward(hdSoundHandleHolder* i_this, u32 argument, u32 option) {
+static u32 secondSoundHandleForward(hdSoundHandleHolder* i_this, f32 value) {
     void* handle = i_this->mHandle;
     if (handle == NULL) {
         return 0;
     }
-    return hdSoundHandleSecondForward(handle, argument, option);
+    return hdSoundHandleSecondForward(handle, value);
 }
 
 /* 0202C138 */
@@ -240,8 +240,8 @@ static u32 getSoundHandleId(hdSoundHandleHolder* i_this) {
  ext 0202DD2C void hdSoundManagerBuildPaths(u32)
  ext 02883FA8 u32 hdSoundHandleStop(void*, u32, u32)
  ext 028850D4 u32 hdSoundHandlePause(void*, u32, u32)
- ext 02885914 u32 hdSoundHandleFirstForward(void*, u32, u32)
- ext 028859A0 u32 hdSoundHandleSecondForward(void*, u32, u32)
+ ext 02885914 u32 hdSoundHandleFirstForward(void*, f32, s32)
+ ext 028859A0 u32 hdSoundHandleSecondForward(void*, f32)
  ext 0202C128 void hdSoundHandleStopForDestroy(hdSoundHandleHolder*, u32)
  ext 02896CD8 void hdSoundHandleDestroy(gptr<void>*)
 */

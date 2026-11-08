@@ -170,7 +170,7 @@ void warpActorConstruct(fopAc_ac_c*);
 void warpRippleConstruct(warpdm20::RippleCallback*);
 s32 warpEntryHeap(fopAc_ac_c*, u32, u32);
 void warpOrderEvent(fopAc_ac_c*, s32, u32, u32, u32, u32);
-f32 warpSqrt();
+f32 warpSqrt(f32);
 s32 warpEventStart(dEvent_manager_c*, s32);
 s32 warpEventEnd(dEvent_manager_c*, s32);
 void warpDeleteActor(fopAc_ac_c*);

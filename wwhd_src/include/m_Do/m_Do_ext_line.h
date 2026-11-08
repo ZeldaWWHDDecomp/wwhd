@@ -102,8 +102,7 @@ WWHD_OFFSET(mDoExt_3DlineMat0_c, mpTevStr, 0x138);
 WWHD_OFFSET(mDoExt_3DlineMat0_c, mpLines, 0x144);
 } // namespace line_mat0
 u32 texturedLineNonzero(f32);
-f32 texturedLineSquareRoot(); // HD: consumes the preceding magnitude in guest
-                              // FPR1.
+f32 texturedLineSquareRoot(f32 magnitude);
 void texturedLineNormalize(cXyz*, cXyz*);
 void texturedLineScale(cXyz*, cXyz*, f32);
 void texturedLineFinalize(line_mat0::MeshBuffer*, u32, u32);

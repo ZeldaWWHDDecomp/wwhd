@@ -9,10 +9,8 @@ static WeatherRoomNumberHD waveStayRoom;
 static SafeStringVtableHD waveSafeStringVtable;
 static WeatherTrigHD waveWeatherTrig;
 static f32 waveDistance(WeatherVectorHD *a, WeatherVectorHD *b) {
-  // HD: the squared-distance result is forwarded in the native FPR; neither
-  // wrapper may materialize or re-pack the intermediate float.
-  weatherDistanceForward(a, b);
-  return weatherSqrtForward();
+  // HD: the squared distance is passed on as a double (the FPR value as is).
+  return weatherSqrtForward(weatherDistanceForward(a, b));
 }
 static void wavePosition(WeatherVectorHD *out, WaveEffHD *p) {
   out->x = fadds_ppc(p->mBasePos.x, p->mPos.x);
@@ -382,6 +380,6 @@ ext 02010CFC f32 cM3d_VectorProduct2dHD(f32, f32, f32, f32, f32, f32)
 ext 02563F0C void get_vectle_calcHD(WeatherVectorHD *, WeatherVectorHD *, WeatherVectorHD *)
 ext 028F43F8 f32 weatherSinRadians(f32)
 ext 0200ECD4 void weatherAddCalc(be<f32> *, f32, f32, f32, f32)
-ext 028E8DE8 void weatherDistanceForward(WeatherVectorHD*, WeatherVectorHD*)
-ext 028F4384 f32 weatherSqrtForward()
+ext 028E8DE8 f64 weatherDistanceForward(WeatherVectorHD*, WeatherVectorHD*)
+ext 028F4384 f32 weatherSqrtForward(f64)
 */

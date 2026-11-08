@@ -876,9 +876,8 @@ void daBst_move(bst_class* actor) {
             return;
         }
     }
-    // HD: the following CO call has no arguments in the verified dispatch.
     BstMove_setHandAt(actor, 0);
-    BstMove_setHandCoNoArgs();
+    BstMove_setHandCo(actor, 0);
     u32 flags = (u32) * reinterpret_cast<be<u32>*>(&i_this->mHeadHurtCyl);
     f32 one = (f32)bstMoveConstants().mOne;
     s16 action = (s16)i_this->mActionType;
@@ -1030,5 +1029,4 @@ ext 020EB174 void BstMove_endDemo(bst_class*)
 ext 020E880C void BstMove_soundSe(bst_class*, u32, u32)
 ext 020EA6B4 void BstMove_damageCheck(bst_class*)
 ext 028E8D88 void BstMove_vectorAdd(cXyz*, cXyz*, cXyz*)
-ext 020E4790 void BstMove_setHandCoNoArgs()
 */

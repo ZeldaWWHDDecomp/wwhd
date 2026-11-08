@@ -270,10 +270,11 @@ void hdFaderMgr_c::drawForeground(void* renderInfo) {
 }
 
 /* 02728CB8 */
-void hdFaderMgr_c::start(u32 direction, u32 delay) {
+u32 hdFaderMgr_c::start(u32 direction, u32 delay) {
     hdFadeTask_l* task = mpTask;
     mDelay = delay;
-    gabi::tail_ptr(task->mpVtable->mStart.get(), task, direction, delay);
+    // HD: returns the fade task's start result (the overlap scenes test it).
+    return gabi::tail_ptr<u32>(task->mpVtable->mStart.get(), task, direction, delay);
 }
 
 /* 02728CD4 */

@@ -366,7 +366,7 @@ WWHD_SIZE(dClothVobj07_0_c, 0xA50);
 
 // HD: external SDK and verified-callee bindings, preserving each callsite's ABI.
 void clothApi_subtractVector(u32, u32, u32);
-void clothApi_scaleNormalByDotResult(u32, u32);
+void clothApi_scaleNormalByDotResult(u32, u32, f64);
 void clothApi_normalizeVector(u32, u32);
 void clothApi_springFactor(u32, u32, u32, f64, f32);
 void clothApi_setMatrix(u32, u32);

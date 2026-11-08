@@ -40,7 +40,7 @@ struct hdFaderMgr_c {
     void calc();
     void draw(void* renderInfo);
     void drawForeground(void* renderInfo);
-    void start(u32 direction, u32 delay);
+    u32 start(u32 direction, u32 delay);
     u32 isDone();
     u32 isFading();
     void reset();

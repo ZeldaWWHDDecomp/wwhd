@@ -433,8 +433,7 @@ void line_mat1::mDoExt_3DlineMat1_c::update(u32 count, const be<u32>* color, u32
         Vertex* destination;
         *temp = point[1] - point[0];
         vectorCopy(cross, temp);
-        PSVECSquareMag(cross);
-        f32 segment = texturedLineSquareRoot();
+        f32 segment = texturedLineSquareRoot(PSVECSquareMag(cross));
         vectorCopy(tangent, cross);
         vertex(table, 0)->mTexY = distance;
         vertex(table, 1)->mTexY = distance;
@@ -443,8 +442,7 @@ void line_mat1::mDoExt_3DlineMat1_c::update(u32 count, const be<u32>* color, u32
         vectorCopy(eye, temp);
         *temp = cross->outprod(*eye);
         vectorCopy(cross, temp);
-        PSVECSquareMag(cross);
-        f32 magnitude = texturedLineSquareRoot();
+        f32 magnitude = texturedLineSquareRoot(PSVECSquareMag(cross));
         *temp = tangent->outprod(*cross);
         vectorCopy(tangent, temp);
         f32 nx, ny, nz;
@@ -484,8 +482,7 @@ void line_mat1::mDoExt_3DlineMat1_c::update(u32 count, const be<u32>* color, u32
                 currentWidth = gabi::fsubs_ppc(currentWidth, step);
             *partial = point[1] - point[0];
             vectorCopy(cross, partial);
-            PSVECSquareMag(cross);
-            segment = texturedLineSquareRoot();
+            segment = texturedLineSquareRoot(PSVECSquareMag(cross));
             vectorCopy(tangent, cross);
             vertex(table, index)->mTexY = distance;
             vertex(table, index + 1)->mTexY = distance;
@@ -494,8 +491,7 @@ void line_mat1::mDoExt_3DlineMat1_c::update(u32 count, const be<u32>* color, u32
             vectorCopy(eye, partial);
             *partial = cross->outprod(*eye);
             vectorCopy(cross, partial);
-            PSVECSquareMag(cross);
-            magnitude = texturedLineSquareRoot();
+            magnitude = texturedLineSquareRoot(PSVECSquareMag(cross));
             *partial = tangent->outprod(*cross);
             vectorCopy(tangent, partial);
             if (texturedLineNonzero(magnitude)) {
@@ -587,16 +583,14 @@ void line_mat1::mDoExt_3DlineMat1_c::updateWidths(u32 count, const be<u32>* colo
         vertex(table, 1)->mTexY = distance;
         *temp = point[1] - point[0];
         vectorCopy(cross, temp);
-        PSVECSquareMag(cross);
-        f32 segment = texturedLineSquareRoot();
+        f32 segment = texturedLineSquareRoot(PSVECSquareMag(cross));
         vectorCopy(tangent, cross);
         distance = gabi::fmadds(segment, texScale, distance);
         *temp = point[0] - camera->mEye;
         vectorCopy(eye, temp);
         *temp = cross->outprod(*eye);
         vectorCopy(cross, temp);
-        PSVECSquareMag(cross);
-        f32 magnitude = texturedLineSquareRoot();
+        f32 magnitude = texturedLineSquareRoot(PSVECSquareMag(cross));
         *temp = tangent->outprod(*cross);
         vectorCopy(tangent, temp);
         f32 nx, ny, nz;
@@ -635,8 +629,7 @@ void line_mat1::mDoExt_3DlineMat1_c::updateWidths(u32 count, const be<u32>* colo
         for (s32 n = remaining; n > 0; n--) {
             *partial = point[1] - point[0];
             vectorCopy(cross, partial);
-            PSVECSquareMag(cross);
-            segment = texturedLineSquareRoot();
+            segment = texturedLineSquareRoot(PSVECSquareMag(cross));
             vectorCopy(tangent, cross);
             vertex(table, index)->mTexY = distance;
             vertex(table, index + 1)->mTexY = distance;
@@ -645,8 +638,7 @@ void line_mat1::mDoExt_3DlineMat1_c::updateWidths(u32 count, const be<u32>* colo
             vectorCopy(eye, partial);
             *partial = cross->outprod(*eye);
             vectorCopy(cross, partial);
-            PSVECSquareMag(cross);
-            magnitude = texturedLineSquareRoot();
+            magnitude = texturedLineSquareRoot(PSVECSquareMag(cross));
             *partial = tangent->outprod(*cross);
             vectorCopy(tangent, partial);
             if (texturedLineNonzero(magnitude)) {
@@ -765,7 +757,7 @@ data texturedLineTexScale 10058C20
 str 10058C34 "m_Do_ext.cpp"
 str 10058C24 "size_p != (0)"
 ext 025EA530 u32 texturedLineNonzero(f32)
-ext 028F4384 f32 texturedLineSquareRoot()
+ext 028F4384 f32 texturedLineSquareRoot(f32)
 ext 0201B084 void texturedLineNormalize(cXyz*, cXyz*)
 ext 0201AE48 void texturedLineScale(cXyz*, cXyz*, f32)
 ext 027FF1D8 void texturedLineFinalize(line_mat1::MeshBuffer*, u32, u32)

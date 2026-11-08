@@ -29,8 +29,8 @@ static void destroyInputReceiver(hdInputReceiver* i_this, s32 flags) {
     if (flags & 1) operator_delete(i_this);
 }
 /* 02000108 */
-static u32 receiverQueueOperationFirst(hdInputReceiver* i_this) {
-    return hdReceiverQueueOperationFirst(i_this->queue());
+static u32 receiverQueueOperationFirst(hdInputReceiver* i_this, void* heap, u32 count) {
+    return hdReceiverQueueOperationFirst(i_this->queue(), heap, count);
 }
 /* 02000110 */
 static u32 receiverQueueOperationSecond(hdInputReceiver* i_this) {
@@ -302,7 +302,7 @@ static void __sinit_hd_input_receiver_cpp() {
  ext 02001CB0 void hdReceiverConstructQueue(hdReceiverQueue*)
  ext 020012CC void hdReceiverConstructAccumulator(hdReceiverAccumulator*)
  ext 02001D38 void hdReceiverDestroyQueue(hdReceiverQueue*, u32)
- ext 02001D4C u32 hdReceiverQueueOperationFirst(hdReceiverQueue*)
+ ext 02001D4C u32 hdReceiverQueueOperationFirst(hdReceiverQueue*, void*, u32)
  ext 02001E18 u32 hdReceiverQueueOperationSecond(hdReceiverQueue*)
  ext 0273B310 void hdReceiverEraseNode(hdReceiverNode*)
  ext 02001480 void hdReceiverFlushAccumulator(hdReceiverAccumulator*)

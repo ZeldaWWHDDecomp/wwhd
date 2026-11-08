@@ -10,8 +10,8 @@ struct hdRenderCommandMgr_c {
     be<u32> mReservedCount;
     void clear();
     void initialize();
-    void enqueueDraw(u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g);
-    void enqueueExtra(u32 a, u32 b, u32 c, u32 d, u32 e);
+    void enqueueDraw(u32 a, u32 b, u32 c, u32 d, u32 e, u32 f, u32 g, f64 radius, f64 intensity, f64 attenuation);
+    void enqueueExtra(u32 a, u32 b, u32 c, u32 d, u32 e, f64 inner, f64 outer, f64 intensity, f64 attenuation);
 };
 WWHD_OFFSET(hdRenderCommandMgr_c,mVtable,0xC);
 WWHD_OFFSET(hdRenderCommandMgr_c,mDrawCount,0x10);

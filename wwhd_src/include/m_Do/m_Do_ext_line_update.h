@@ -71,7 +71,7 @@ inline line_layout::CameraView* lineGetView() {
     return reinterpret_cast<line_layout::PlayView*>(dComIfGp_get())->mView;
 }
 u32 lineNonzero(f32 value);
-f32 lineSquareRoot(); // HD: consumes the preceding vector magnitude in guest FPR1.
+f32 lineSquareRoot(f32 magnitude);
 void lineNormalize(cXyz* vector, cXyz* result);
 void lineScale(cXyz* vector, cXyz* result, f32 scale);
 void lineAddVectors(cXyz* a, cXyz* b, cXyz* result);

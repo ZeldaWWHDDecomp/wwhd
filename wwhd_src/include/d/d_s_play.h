@@ -401,7 +401,7 @@ u32 dScnPlyAPI_resolveSceneModel(u32, u32);
 void dScnPlyAPI_bindWindModel(u32, u32);
 s32 dScnPlyAPI_findResourceIndex(u32, u32);
 u32 dScnPlyAPI_findResource(u32, u32);
-u32 dScnPlyAPI_getResourceFile();
+u32 dScnPlyAPI_getResourceFile(u32);
 s32 dScnPlyAPI_getTotalFreeHeapSize(u32);
 void dScnPlyAPI_reportStage(u32, u32, u32);
 void dScnPlyAPI_constructHeaderStaticByte(u32);

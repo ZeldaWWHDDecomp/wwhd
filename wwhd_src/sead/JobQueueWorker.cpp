@@ -133,13 +133,14 @@ QueuedJob_l* JobQueueWorker_l::dequeue() {
     return result;
 }
 /* 0276A928 */
-u32 JobQueueWorker_l::start() {
+u32 JobQueueWorker_l::start(u32 message) {
     JobWorkerDispatch_l* table=dispatch();
     mState=1;
     u32 target=table->mWake.mFunction;
     u32 state=mState;
     (void)state;
-    return gabi::tail_ptr<u32>(target,this);
+    // HD: the worker thread's sendMessage(message, nonBlocking): the original leaves the state's 1 in r5.
+    return gabi::tail_ptr<u32>(target,this,message,1u);
 }
 /* 0276A944 */
 u32 JobQueueWorker_l::onMessage(u32 message) {

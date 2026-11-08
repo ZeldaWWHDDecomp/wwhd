@@ -174,7 +174,7 @@ void hdKeyboardTextArea_c::findTextPanes() {
  ext 026F91F8 void keyboardLoopRemove(void*)
  ext 026F90D8 void keyboardSetLayoutName(void*,hdUiSafeString*,u32)
  ext 02006364 void keyboardExecuteState(hdStateMachine*)
- ext 020029EC u32 keyboardLayoutFinished(hdPartsLayout_c*)
+ ext 020029EC u32 keyboardLayoutFinished(hdPartsLayout_c*, void*, void*)
  ext 0273B050 void* keyboardAllocateAligned(u32,void*,u32)
  ext 026FADB0 hdPartsLayout_c* keyboardConstructLayout(hdPartsLayout_c*)
  ext 02004E04 void keyboardBindAnimation(void*,u32,hdUiSafeString*,hdUiSafeString*)

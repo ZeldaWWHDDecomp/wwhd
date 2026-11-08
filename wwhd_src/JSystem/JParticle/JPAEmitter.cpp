@@ -9,7 +9,7 @@ void JPAEmitterListInitiate(void*);
 void JPAEmitterVertexBaseConstruct(void*);
 void JPAEmitterClearScratch(void*,u32);
 void* JPAEmitterGpuArrayConstruct(void*);
-void JPAEmitterVertexStateInit(void*);
+void JPAEmitterVertexStateInit(void*, void*);
 void JPAEmitterGpuArrayInit(void*,u32,void*);
 void JPAEmitterDeferredInit(JPAParticleVector*,u32,void*,s32);
 void JPAEmitterIdentity(Mtx34*);
@@ -142,7 +142,7 @@ void jpa_emitter_extension::JPABaseEmitter::requestDelete() {
 void jpa_emitter_extension::JPABaseEmitter::initGpuState(void* context) {
     gpu().mParticlePools[0] = nullptr;
     gpu().mParticlePools[1] = nullptr;
-    JPAEmitterVertexStateInit(&gpu().mVertexState);
+    JPAEmitterVertexStateInit(&gpu().mVertexState, context);
     JPAEmitterGpuArrayInit(gpu().mDynamicBuffers[0], 1, context);
     JPAEmitterGpuArrayInit(gpu().mDynamicBuffers[1], 1, context);
     gpu().mLargePoolIndex = 0;
@@ -357,7 +357,7 @@ ext 027FD6F4 void* JPAEmitterGpuArrayConstruct(void*) callback
 str 10170D18 "" in 0281E0E0
 data sStaticBlock 104B5720
 data sStaticRegistration 101FA04C
-ext 027FB5D4 void JPAEmitterVertexStateInit(void*)
+ext 027FB5D4 void JPAEmitterVertexStateInit(void*, void*)
 ext 027FD838 void JPAEmitterGpuArrayInit(void*,u32,void*)
 ext 0273B584 void JPAEmitterDeferredInit(JPAParticleVector*,u32,void*,s32)
 ext 028E9098 void JPAEmitterIdentity(Mtx34*)

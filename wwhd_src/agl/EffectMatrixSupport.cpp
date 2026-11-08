@@ -19,20 +19,14 @@ static void copyWord(be<f32>& destination, const be<f32>& source) {
         static_cast<u32>(reinterpret_cast<const be<u32>&>(source));
 }
 
-static const be<f32>& rowComponent(const Row4& row, u32 column) {
-    switch (column) {
-    case 0: return row.mX;
-    case 1: return row.mY;
-    case 2: return row.mZ;
-    default: return row.mW;
-    }
-}
-
+// The original indexes the rows by `column * 4` with no bound check (slwi/lfsx): every column value reads
+// source + 4 * column (32-bit wrap) and the same offset in rows 1 and 2, one word load and store per row.
 /* 0278D234 */
 void Vector3::copyColumn(const Matrix34* source, u32 column) {
-    copyWord(mX, rowComponent(source->mRows[0], column));
-    copyWord(mY, rowComponent(source->mRows[1], column));
-    copyWord(mZ, rowComponent(source->mRows[2], column));
+    u32 element = gabi::ea(source) + column * 4;
+    gabi::store<u32>(gabi::ea(&mX), gabi::load<u32>(element));
+    gabi::store<u32>(gabi::ea(&mY), gabi::load<u32>(element + 0x10));
+    gabi::store<u32>(gabi::ea(&mZ), gabi::load<u32>(element + 0x20));
 }
 
 /* 0279049C */

@@ -42,7 +42,7 @@ void* mDoExt_createGameHeap(u32 index, u32 size, mDoMch_Heap* parent);
 void* mDoExt_createZeldaHeap(u32 size, mDoMch_Heap* parent);
 void mDoMch_setCurrentHeap(void* heap);
 void* mDoExt_getZeldaHeap();
-void cMl_initFromHeapReturnRegister();
+void cMl_init(void* heap);
 void cM_initRnd(s32, s32, s32);
 void mDoDvdThd_create(u32 priority);
 
@@ -53,6 +53,5 @@ namespace mDoDvdThd {
 inline void create(u32 priority) { mDoDvdThd_create(priority); }
 }
 namespace cMl {
-// HD: preserve the incoming return register instead of supplying a new argument.
-inline void init() { cMl_initFromHeapReturnRegister(); }
+inline void init(void* heap) { cMl_init(heap); }
 }

@@ -878,8 +878,12 @@ void agl::gx2util::RenderPipelineState::bind() {
     mBlendColor.bind();
 }
 /* 027E2DC0 */
-void agl::gx2util::finishDrawCommands() {
-    gabi::AutoFrame nativeFrame{gabi::current_function()};}
+// HD: a lone `blr`, shared (identical code folding) with the resource getters that return their argument: callers
+// read r3 afterwards as the archive they passed in, so the definition returns its first argument unchanged.
+u32 agl::gx2util::finishDrawCommands(u32 value) {
+    gabi::AutoFrame nativeFrame{gabi::current_function()};
+    return value;
+}
 /* 027E39EC */
 void agl::gx2util::onPaletteRebound() {
     gabi::AutoFrame nativeFrame{gabi::current_function()};}
@@ -1778,7 +1782,8 @@ void agl::gx2util::BlendRuntime::blend(AnimationRuntime* animation,f32 weight) {
     if (__builtin_fabsf(weight) < 0.001f) return;
     mState = mState & ~4u;
     AnimationVtable* table = static_cast<AnimationVtable*>(animation->mVtable.get());
-    gabi::call_ptr<void>(table->mEvaluate, animation);
+    // HD: the original leaves the animation in r4 as well (moved to r3 from it) for the virtual evaluate.
+    gabi::call_ptr<void>(table->mEvaluate, animation, animation);
     AnimationResourceHeader* resource = animation->mResource;
     u32 state = mState;
     u32 mode = ((u32)resource->mFlags >> 12) & 7u;
@@ -1786,11 +1791,12 @@ void agl::gx2util::BlendRuntime::blend(AnimationRuntime* animation,f32 weight) {
     invokeResourceMethod<void>(sBlendMethods[index], this, animation, weight);
 }
 /* 027E0834 */
-void agl::gx2util::BlendRuntime::finalize() {
+void agl::gx2util::BlendRuntime::finalize(void* target) {
     gabi::AutoFrame nativeFrame{gabi::current_function()};
     u32 state = mState;
     u32 index = (state & 3u) | ((state >> 2) & 1u);
-    invokeResourceMethod<void>(sFinalizeMethods[index], this);
+    // HD: the finalize methods (027E89FC ...) write the blended result into the caller's target (r4).
+    invokeResourceMethod<void>(sFinalizeMethods[index], this, target);
     mState = mState | 4u;
 }
 static inline void* allocationPointer(AllocationSegment* segments,u32 index,void* storage) {

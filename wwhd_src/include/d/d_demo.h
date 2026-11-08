@@ -466,7 +466,7 @@ inline void dDemo_deleteMessageControl(dDemo_messageControl* object) {
 }
 
 // HD: retain the name-based actor factory's full-width parameter ABI.
-dDemo_actor_c* dDemo_bindActor(dDemo_actor_c* self, fopAc_ac_c* actor);
+void dDemo_bindActor(dDemo_actor_c* self, fopAc_ac_c* actor);
 fopAc_ac_c* dDemo_searchActorByName(const char* name, u32 first, u32 second);
 fopAc_ac_c* dDemo_fastCreateActor(const char* name, u32 first, u32 second, s32 room, u32 fourth,
                                   u32 fifth, u32 sixth, u32 seventh);

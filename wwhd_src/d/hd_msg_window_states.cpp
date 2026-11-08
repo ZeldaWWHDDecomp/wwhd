@@ -336,7 +336,7 @@ void hdMsgWindowStates_c::positionThreeChoices() {
 
 extern WindowPlay* statesGetPlay();
 extern void statesUpdateBase(hdMsgWindowStates_c*);
-extern void statesResetAnimator(void*, f32);
+extern void statesResetAnimator(void*, u32, u32, f32);
 extern void statesStartAnimator(void*, u32, u32, f32);
 extern void statesSetAnimatorFrame(void*, u32, u32, f32);
 extern u32 statesAnimatorFinished(void*, u32);
@@ -395,7 +395,7 @@ void hdMsgWindowStates_c::update() {
 /* 026FF5EC */
 void hdMsgWindowStates_c::startAnimation(u32 group, u32 animation) {
     void* animator = windowPanes(this)->mpLayout.get()->animSet();
-    statesResetAnimator(animator, 0.0f);
+    statesResetAnimator(animator, group, animation, 0.0f);
     animator = windowPanes(this)->mpLayout.get()->animSet();
     statesStartAnimator(animator, group, animation, 1.0f);
 }
@@ -800,7 +800,7 @@ ext 025F85B0 void choiceSetPositions(WindowCore*,ChoicePositions_l*,void*,Choice
 ext 025F85C8 void choiceSetCursor(WindowCore*,WindowPane*)
 ext 025200D4 WindowPlay* statesGetPlay()
 ext 026F91F8 void statesUpdateBase(hdMsgWindowStates_c*)
-ext 0200579C void statesResetAnimator(void*,f32)
+ext 0200579C void statesResetAnimator(void*,u32,u32,f32)
 ext 020053E4 void statesStartAnimator(void*,u32,u32,f32)
 ext 0200552C void statesSetAnimatorFrame(void*,u32,u32,f32)
 ext 02005840 u32 statesAnimatorFinished(void*,u32)

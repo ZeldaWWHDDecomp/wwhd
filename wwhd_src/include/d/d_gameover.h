@@ -63,7 +63,7 @@ inline u32 dGameover_stateID(u32 callback, void* state) { return gabi::call_ptr<
 GameOverStateID* GameOverStateMgr_getCurrent(GameOverStateMgr*);
 void GameOverGraphics_start(GameOverGraphics*);
 s32 GameOverGraphics_isReady(GameOverGraphics*);
-void GameOverBlackPane_show(void*);
+void GameOverBlackPane_show(void* pane, f64 amount);
 s32 dMenu_flag();
 void dMenu_flagSet(u32);
 struct GameOverHeaderStatics {

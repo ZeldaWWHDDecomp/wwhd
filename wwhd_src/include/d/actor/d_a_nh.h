@@ -147,7 +147,7 @@ WWHD_OFFSET(daNh_c, mLightId, 0x83C);
 
 s32 nhCalcTimerInt(be<s32> *);
 BOOL nhChaseAngleRegister(be<s16> *, u32, u32);
-f32 nhSqrtCurrentFloat();
+f32 nhSqrtCurrentFloat(f32);
 u32 nhPlayBrk(NhBrkAnm *);
 void nhCutPointLight(cXyz *);
 void *nhAllocate(u32);

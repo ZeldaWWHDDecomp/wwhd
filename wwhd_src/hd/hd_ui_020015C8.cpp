@@ -80,8 +80,8 @@ static hdWidget_pointer_c* hdWidget_constructPointer(hdWidget_pointer_c* pointer
     return pointer;
 }
 /* 0200188C */
-void hdWidget_pointer_c::update() {
-    hdWidget_updatePointerBase(this);
+void hdWidget_pointer_c::update(u32 previous, u32 previousPointer) {
+    hdWidget_updatePointerBase(this, previous, previousPointer);
     f32 centerY = mCenter.y, rawY = mRawPosition.y, centerX = mCenter.x;
     f32 deltaY = gabi::fsubs_ppc(rawY, centerY);
     f32 rawX = mRawPosition.x, scaleY = mScale.y;
@@ -300,7 +300,7 @@ data sHalf 10000214
 ext 0273D0E0 void hdWidget_destroyPointerBase(hdWidget_pointer_c* pointer, u32 flags)
 ext 02001728 void hdWidget_destroyPointerEntry(hdWidget_pointer_c* pointer, s32 flags)
 ext 0273CDD4 void hdWidget_constructPointerBase(hdWidget_pointer_c* pointer)
-ext 0273CE94 void hdWidget_updatePointerBase(hdWidget_pointer_c* pointer)
+ext 0273CE94 void hdWidget_updatePointerBase(hdWidget_pointer_c* pointer, u32 previous, u32 previousPointer)
 ext 020015C8 hdWidget_c* hdWidget_constructBase(hdWidget_c* widget)
 ext 02001668 void hdWidget_destroyBase(hdWidget_c* widget, u32 flags)
 ext 02876368 void hdWidget_getPaneTransform(void* pane, hdWidget_paneTransform_c* transform)

@@ -714,8 +714,9 @@ dDemo_actor_c* dDemo_object_c::appendActor(fopAc_ac_c* actor) {
     u32 count = mNumActor;
     mNumActor = count + 1;
     mpActors[count] = object;
-    // HD: this caller consumes the setter's unchanged r3 receiver register.
-    dDemo_actor_c* returned = dDemo_bindActor(object, actor);
+    // HD: the setter leaves r3 (the receiver) unchanged; the original keeps using it.
+    dDemo_bindActor(object, actor);
+    dDemo_actor_c* returned = object;
     J3DModel* model = gabi::at<J3DModel>(actor->model);
     u32 current = mNumActor;
     actor->demoActorID = current;
@@ -1578,7 +1579,7 @@ ext 025F7424 dDemo_messageControl* dDemo_messageControl_ct(dDemo_messageControl*
 ext 025F8610 void dDemo_setMessageControl(u32 audioControl, dDemo_messageControl* message)
 ext 028395A8 dDemo_control* dDemo_control_ct(dDemo_control* self)
 ext 0283973C void dDemo_appendCreateObject(dDemo_factory* factory, dDemo_createObject* creator)
-ext 025277D8 dDemo_actor_c* dDemo_bindActor(dDemo_actor_c* self, fopAc_ac_c* actor)
+ext 025277D8 void dDemo_bindActor(dDemo_actor_c* self, fopAc_ac_c* actor)
 ext 025D9F38 fopAc_ac_c* dDemo_searchActorByName(const char* name, u32 first, u32 second)
 ext 025D59A8 fopAc_ac_c* dDemo_fastCreateActor(const char* name, u32 first, u32 second, s32 room, u32 fourth, u32 fifth, u32 sixth, u32 seventh)
 ext 0283D3E8 void dDemo_destroyAll(dDemo_control* control)

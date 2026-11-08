@@ -252,9 +252,7 @@ BOOL daNh_c::searchPlayer() {
     horizontal->z = delta->z;
     mPlayerDist = distance;
     horizontal->y = 0.0f;
-    PSVECSquareMag(horizontal.get());
-    // GHS forwards the previous magnitude result in f1 without a new explicit argument.
-    const f32 movement = nhSqrtCurrentFloat();
+    const f32 movement = nhSqrtCurrentFloat(PSVECSquareMag(horizontal.get()));
     if (movement > 0.001f && distance < 600.0f && change > f32(l_HIO.prm.mMinFrightenSpeed)) {
         nhChangeAction(this, l_escapeAction);
         return TRUE;
@@ -280,9 +278,7 @@ f32 daNh_c::getHomeDistance() {
     horizontal->x = delta->x;
     horizontal->y = 0.0f;
     horizontal->z = delta->z;
-    // GHS leaves the magnitude result in f1; the following sqrt forwards that live register.
-    PSVECSquareMag(horizontal.get());
-    return nhSqrtCurrentFloat();
+    return nhSqrtCurrentFloat(PSVECSquareMag(horizontal.get()));
 }
 
 /* 021E0B18 */
@@ -677,7 +673,7 @@ str 10015A7C "modelData != NULL" in 021E0868
 str 10015AB4 "Forest Firefly" renamed
 ext 0211D2F8 s32 nhCalcTimerInt(be<s32>*)
 ext 0200F8D0 BOOL nhChaseAngleRegister(be<s16>*, u32, u32)
-ext 028F4384 f32 nhSqrtCurrentFloat()
+ext 028F4384 f32 nhSqrtCurrentFloat(f32)
 ext 025E742C u32 nhPlayBrk(NhBrkAnm*)
 ext 0255A374 void nhCutPointLight(cXyz*)
 ext 0273AD10 void* nhAllocate(u32)

@@ -35,7 +35,7 @@ struct dNpc_PathRun_c : ::dNpc_PathRun_c {
     BOOL chkInside(cXyz* position);
     BOOL setInf(s32 id, s32 room, u32 reverse);
     BOOL setInfDrct(u32 path);
-    u32 nextPath();
+    u32 nextPath(s32 room);
     void getPoint(cXyz* output, u32 index);
     BOOL nextIdx();
     BOOL nextIdxAuto();
@@ -128,7 +128,7 @@ WWHD_SIZE(fopNpc_npc_c, 0x7DC);
 } // namespace npc_readable
 
 u32 npc_pathGetRoom(s32 id, s32 room);
-u32 npc_pathGetNext(u32 path);
+u32 npc_pathGetNext(u32 path, s32 room);
 cXyz* npc_allocatePoint(u32 size);
 
 void npc_addCalcAngle(be<s16>* angle, s32 goal, s32 scale, s32 maximum, s32 minimum);

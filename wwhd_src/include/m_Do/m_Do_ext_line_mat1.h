@@ -97,8 +97,7 @@ WWHD_OFFSET(LineWork, normal, 0x24);
 WWHD_OFFSET(WidthWork, normal, 0x30);
 } // namespace line_mat1
 u32 texturedLineNonzero(f32);
-f32 texturedLineSquareRoot(); // HD: consumes the preceding magnitude in guest
-                              // FPR1.
+f32 texturedLineSquareRoot(f32 magnitude);
 void texturedLineNormalize(cXyz*, cXyz*);
 void texturedLineScale(cXyz*, cXyz*, f32);
 void texturedLineFinalize(line_mat1::MeshBuffer*, u32, u32);

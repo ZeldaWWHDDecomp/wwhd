@@ -102,8 +102,8 @@ void hdKeyboardTextArea_c::setQuestionVisible(u32 visible) {
         pane->mFlags = (pane->mFlags.get() & 0xFE) | visible;
 }
 /* 02673414 */
-u32 hdKeyboardTextArea_c::isAnimationFinished() {
-    return keyboardLayoutFinished(mpLayout);
+u32 hdKeyboardTextArea_c::isAnimationFinished(void* resource, void* block) {
+    return keyboardLayoutFinished(mpLayout, resource, block);
 }
 /* 026734C8 */
 u32 hdKeyboardTextArea_c::createLayout(u32 resource, u32 parent, u32 archive, u32 pane, u32 flags) {

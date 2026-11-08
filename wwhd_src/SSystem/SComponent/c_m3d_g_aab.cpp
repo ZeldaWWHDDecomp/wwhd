@@ -15,8 +15,8 @@ static const f32 centerScale = 0.5f;
 /* 02017E74 */
 void cM3dGAab::SetMinMax(const cXyz* pMinMax) {
     SetMin(pMinMax);
-    // HD: the tail call forwards the argument registers left by SetMin.
-    gabi::at<cM3dGAab>(gabi::cpu->r[3])->SetMax(gabi::at<cXyz>(gabi::cpu->r[4]));
+    // HD: the tail call forwards the argument registers SetMin leaves unchanged (r3 = this, r4 = pMinMax).
+    SetMax(pMinMax);
 }
 
 /* 02017DF4 */
@@ -60,10 +60,9 @@ void cM3dGAab::SetMax(const cXyz* pMax) {
 /* 02017E98 */
 void cM3dGAab::SetMinMaxAab(const cM3dGAab* aab) {
     SetMinMax(&aab->mMin);
-    // HD: the second call forwards the first call's argument registers, advancing to mMax.
-    cM3dGAab* box = gabi::at<cM3dGAab>(gabi::cpu->r[3]);
-    cM3dGAab* bounds = gabi::at<cM3dGAab>(gabi::cpu->r[4]);
-    box->SetMinMax(&bounds->mMax);
+    // HD: the second call forwards the registers SetMinMax leaves unchanged (r3 = this, r4 = &aab->mMin, which is aab:
+    // mMin is at offset 0), advancing to mMax.
+    SetMinMax(&aab->mMax);
 }
 
 /* 02017D08 */

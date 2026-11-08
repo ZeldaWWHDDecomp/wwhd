@@ -74,7 +74,7 @@ struct hdMenuMain_c : hdParts_c {
     void updateSpecialButton(u32 key);
     void activateOptionChild();
     void updateInputOwner();
-    void updateCollectIcon();
+    u32 updateCollectIcon(u32 receiverId);
     void openWindow(u32 mode);
     u32 isCollectInputBlocked();
     void executeWindow();
@@ -117,7 +117,7 @@ struct hdMenuMain_c : hdParts_c {
     void executeTransitionChildren();
     void updateButtonFocus();
     void updateButtonSelection();
-    void setTabResourceName(u32 index);
+    void setTabResourceName(u32 index, void* label);
     u32 getSelectedItemValue(u32 key);
     void startWindowChildTransitions();
     void refreshWindowSelection();

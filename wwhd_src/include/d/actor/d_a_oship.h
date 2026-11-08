@@ -228,7 +228,7 @@ f32 OshipGetWaterY(const cXyz*, void*);
 u32 OshipJointTreeHeader(void*);
 u32 OshipJointDescriptor(void*);
 f64 OshipSqrt(f64);
-f32 OshipSqrtLiveFpr();
+f32 OshipSqrtLiveFpr(f32);
 
 WWHD_SIZE(daOship_c::ModeEntry, 20);
 

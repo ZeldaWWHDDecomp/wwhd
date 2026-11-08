@@ -1,0 +1,38 @@
+# decl_lint.py: definitions whose original's live-in registers (funcdb Dataflow, path-insensitive) include a register
+# the original never depends on. One line per function: livein<TAB>ADDR<TAB>reason (2026-11-03).
+livein	020A8EE0	smoke_set: r10 only as the first rlwimi of a chain that overwrites all of r10
+livein	026021E8	hdRuby_tagState_c::tagColor: r8 only as the first rlwimi of a chain that overwrites all of r8
+livein	0260223C	hdRuby_tagState_c::tagSystem: r8 only through tagColor (026021E8, rlwimi chain)
+livein	026024C8	hdRuby_tagState_c::process: r8 only through tagSystem (0260223C)
+livein	02602640	hdMessageTagProcessor_Process: r8 read at a shared label only after the path that sets it
+livein	0275EBC0	sead::SZSDecompressor::decode: r7 read only after the first group byte is loaded into it (bit mask 0 on entry)
+livein	02814A80	TChannel::updateEffectorParam: f3 compared at a label reached only after f3 = f1 (path-insensitive)
+livein	02814DC8	TChannel::updateJcToDSP: f3 only through updateEffectorParam (02814A80)
+livein	02815008	TChannel::playLogicalChannel: f3 only through updateEffectorParam (02814A80)
+livein	02815208	TChannel::dspCallback: f3 only through updateJcToDSP / playLogicalChannel
+livein	028754EC	TextureBinding::exportResource: r6 only as the first rlwimi of a chain that overwrites all of r6
+livein	0287B180	WindowPane::drawAround: r8 = r8 | 0xFFFF0000 then | 0xFFFF (all ones whatever r8 held)
+# decl_lint.py e?i: registers a callee's original still holds from its entry at one of its own indirect calls, which
+# the callers pass but no target of that call reads (2026-11-04, checked against the binary: the vtables whose
+# pointer the object keeps at that offset, or the call's table). One line per callee:
+# indirect<TAB>ADDR<TAB>REGS<TAB>reason. The registers stay e?: a callee with unresolved
+# e? sites is `guest` in the hand-off (the round trip keeps the register), never `shim`.
+indirect	02523A04	r4	02523AB8 is a SafeString's assureTerminationImpl (vtable +4, slot 0x14): reads this only
+indirect	025F8618	r5	025F868C is a SafeString's assureTerminationImpl (vtable +4, slot 0x14): reads this only
+indirect	025FB5D4	r7,r8	025FB648/025FB6D0 are SafeString assureTerminationImpl calls (vtable +4, slot 0x14): this only
+indirect	025FC444	r8	025FC488 is a SafeString's assureTerminationImpl (vtable +4, slot 0x14): reads this only
+indirect	02603740	r6	02603780 is a SafeString's assureTerminationImpl (vtable +4, slot 0x14): reads this only
+indirect	026065A8	r5,r6	026065D8 is a SafeString's assureTerminationImpl (vtable +4, slot 0x14): reads this only
+indirect	026067F4	r6,r7	0260682C is a SafeString's assureTerminationImpl (vtable +4, slot 0x14): reads this only
+indirect	0277DB24	r6	0277DB5C is a SafeString's assureTerminationImpl (vtable +4, slot 0x14): reads this only
+indirect	02728CD4	r4	02728CE4 is the fade task's isDone (vtables 1013E9F0, 1013EAB8, 1013EDC0, 101402F0 slot 0x1C): this only
+indirect	027C0CEC	r6	027C0D40 is the heap's alloc(size, alignment) (vtable +0xC, slot 0x34): no heap reads r6
+indirect	027D4D30	r5	027D4D84 is the stage's kind getter (vtable +0x10, slot 0x14): no such target reads r5
+indirect	0286EC88	r5	0286ECC0 is the font's encoding getter (1017FB2C/1017FCBC slot 0xA4 = 0286F8D4): this only
+indirect	02883FA8	r5	02883FFC is the sound's finalize (table +0x294, slot 0x24): no such target reads r5
+indirect	0279C494	r4	guest: the children's update gets the caller's flag only on an unselected first child, scratch otherwise
+# indirect lines also clear registers of a definition's own indirect calls (decl_lint callptr_audit, 2026-11-04) that
+# the decompiled call passes explicitly where the pairing of decompiled and original calls is ambiguous (checked by hand).
+indirect	02002A40	r4,r5	02002B14 (mInitialize, slot 0x3C) gets argument/option passed explicitly; 02002A8C (slot 0x44) targets read r3,r4 only
+indirect	027F9AE0	r4	027F9B14 (the dispatcher's mSendMessage, methods +0x1C) gets the job in r4 passed explicitly; r4 is not held at 027F9B30 (the job's mExecute)
+indirect	027F9B64	r4	027F9B8C (the dispatcher's mSendMessage, methods +0x1C) gets the job in r4 passed explicitly; r4 is not held at 027F9BA8 (the job's mExecute)
