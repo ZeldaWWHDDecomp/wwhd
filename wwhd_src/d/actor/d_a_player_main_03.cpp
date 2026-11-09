@@ -11,6 +11,7 @@
  * HD folds the GameCube HIO values (m_HIO->...) into constants; they are written as literals.
  */
 #include "d/actor/d_a_player_main_03.h"
+#include "port_hooks.h"
 
 static LinkDemoEntry mDemoProcInitFuncTable[] = {
     {0, 0, 0x00000000},  {0, 0, 0x00000000},  {0, 0, 0x00000000},  {0, 0, 0x00000000},
@@ -1570,7 +1571,8 @@ void daPy_lk_c::endDemoMode() {
         s32 proc = mCurProc;
         // HD: a special demo also ends in procWait_init unless the proc is one of three ranges
         if (proc == LinkActionConstants::daPyProc_DEMO_BOSS_WARP_e ||
-            (wasSpecial && !((u32)(proc - 0xF) < 4) && !((u32)(proc - 0x96) < 4) &&
+            (wasSpecial && !PORT_CLASSIC_TACT() /* the port's Classic Wind Waker skips this (port_hooks.h) */ &&
+             !((u32)(proc - 0xF) < 4) && !((u32)(proc - 0x96) < 4) &&
              !((u32)(proc - 0x76) < 0xA))) {
             procWait_init();
         }

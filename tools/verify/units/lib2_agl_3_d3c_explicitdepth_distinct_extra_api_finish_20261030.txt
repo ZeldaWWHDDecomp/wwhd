@@ -293,3 +293,7 @@ fill * 0x5D510800 0x400 0
 stable 0x5D510800 0x198
 postsetup 02777D3C 027BDF7C r3=0x5D510800
 postsetup 02777D3C 027BDEB4 r3=0x5D510800 r4=*6A302F60
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

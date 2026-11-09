@@ -12,6 +12,7 @@
 #include "d/actor/d_a_player_main_07.h"
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "port_hooks.h"
 
 // HD: GHS emits a SafeString vtable for this translation unit.
 const gc_tu_data gc_tu = {.safeString = 0x10034B24};
@@ -5099,7 +5100,8 @@ BOOL daPy_lk_c::procTactWait() {
     }
     BOOL cancel = TRUE;
     if (!checkTactCancelTrigger()) {
-        if (!(p1 < -1) || mAcch.ChkGroundHit()) {
+        // HD: cancels once Link falls during the count-up; the port's Classic Wind Waker skips that (port_hooks.h)
+        if (!(p1 < -1) || mAcch.ChkGroundHit() || PORT_CLASSIC_TACT()) {
             cancel = FALSE;
         }
     }

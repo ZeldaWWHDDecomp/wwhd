@@ -71,3 +71,7 @@ real 0278540C 027854AC 02785540 027855BC 02785714 027858E8 02785990 02785994 027
 real 02785CB4 02785D54 02786064 027860A4 0278614C 02786160 02786164 0278617C 02786190 027861A4 027861B8 027861CC 027861E0 02786300 02786314
 mockmove 028FDC00 r3 r4 r5
 real 02753004 02786360 02755818 027BEA90
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

@@ -130,3 +130,7 @@ callee 02741144 r4=4 r5=0 r6=0 r7=0
 # The text constructors' termination hooks get the temporary text object.
 callee 0274310C r3=8
 callee 027445FC r3=8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

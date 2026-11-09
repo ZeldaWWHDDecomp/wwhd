@@ -51,3 +51,7 @@ field 02785CB4 0x101F8C14 u32 0,0x5A100000
 arg 02786314 r3 0,1,0x11,0x80E,0x235,0x10164BBC,0xFFFFFFFF
 # stack bytes start non-zero, so stores of zero into stack objects (the variadic state's FPR count) are observable
 stackfill
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

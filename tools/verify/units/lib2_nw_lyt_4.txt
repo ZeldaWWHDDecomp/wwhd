@@ -514,3 +514,7 @@ stackfill
 # Observation facts: the texture parameters handed to the surface initializer, and reserve's two stack arguments.
 callee 0287EDA0 r4=28
 callee 0288119C stack=2
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

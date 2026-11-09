@@ -107,3 +107,7 @@ observearg 0279E618 r4+0 8
 observearg 0279E618 r5+0 8
 observearg 0279E618 r6+0 8
 observearg 0279CB9C r5+0 8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockSet C0009990.
+mockset C0009990 r3 r4 r5

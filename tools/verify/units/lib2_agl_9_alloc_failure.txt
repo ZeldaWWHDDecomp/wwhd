@@ -50,3 +50,7 @@ field * 68102014 u32 0x0F000910
 fill * 68101000 64 0
 fieldstr * 68101000 64 "","param"
 callee 0F000910 fixture r3=heap8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

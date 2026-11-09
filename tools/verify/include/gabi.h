@@ -244,7 +244,9 @@ struct NativeInfo {
     u32 flags; /* 1: may be called natively, 2: its own calls may go native, 4: a decompiled function (listed),
                 * 8: register-exact (the port's decl table: exact or shim, every decompiled call passes exactly what the
                 * definition reads), bits 8-11 / 12-15: the integer / float argument registers the definition takes
-                * (`this` included), bits 16-17: its result (0 none, 1 r3, 2 r3+r4, 3 f1) */
+                * (`this` included), bits 16-17: its result (0 none, 1 r3, 2 r3+r4, 3 f1), 18: its native entry places
+                * r1 (GABI_NATIVE_PLACE), 19: caller=ok only by the per-function A3 rule (GABI_A3_FN), 20: a leaf
+                * (GABI_LEAF) */
 };
 /* the native entry signature of a register-exact function (NativeEntry::sig): its argument registers and result as
  * the port's table states them, bit 15 set (0: no native entry) */
@@ -307,6 +309,24 @@ template <bool CALL = false> [[gnu::always_inline]] inline const GabiPtrEntry* g
  * bits 1 / 2: debug, poison the argument registers on such an entry / the result registers on its exit
  * (WWHD_DECOMP_POISON=1 both, =args only the arguments: a body that still reads a register the call no longer sets) */
 extern "C" __attribute__((visibility("default"))) uint8_t g_decomp_exact;
+#ifdef GABI_LEAF
+#if !defined(GABI_FAST) || !defined(GABI_SLIM_SCOPE) || !defined(GABI_TP_CACHE)
+#error "GABI_LEAF (leaf bodies keep no call state) is a fast-mode form: it needs GABI_FAST, GABI_SLIM_SCOPE and GABI_TP_CACHE"
+#endif
+/* the port's WWHD_DECOMP_FAST_LEAF: 1 = leaf bodies take the full native-call scope (WWHD_DECOMP_FAST_LEAF=0); set by the
+ * runtime before any guest thread runs */
+extern "C" __attribute__((visibility("default"))) uint8_t g_decomp_leaf_off;
+#endif
+#ifdef GABI_NSTATS
+/* the port's WWHD_DECOMP_FAST_NSTATS (diagnostics builds only, never shipped): per slot the native entries into the body
+ * (NativeScope's native path); null unless WWHD_DECOMP_FAST_NSTATS=PATH */
+extern "C" __attribute__((visibility("default"))) uint64_t* g_decomp_nstats;
+#endif
+#ifdef GABI_A3_FN
+/* the port's WWHD_DECOMP_FAST_A3_FN: 1 = bodies with NativeInfo bit 19 keep their calls guest calls (WWHD_DECOMP_FAST_A3_FN=0,
+ * bisecting); set by the runtime before any guest thread runs */
+extern "C" __attribute__((visibility("default"))) uint8_t g_decomp_a3_off;
+#endif
 /* registers a unit's native entry (the port's glue.cpp; MISMATCH: its C++ signature differs from the table's) */
 extern "C" void decomp_register_native(const char* unit, u32 addr, void* fn, u32 sig, u32 table_sig);
 namespace gabi {
@@ -651,6 +671,88 @@ struct GuestStrCacheEntry {
     return g->addr;
 }
 inline u32 guest_addr(const char* s) { return is_guest(s) ? ea(s) : guest_str(s); }
+#ifdef GABI_FAST_STR
+#if !defined(GABI_FAST) || !defined(GABI_GAME_BUILD)
+#error "GABI_FAST_STR (the port's WWHD_DECOMP_FAST_STR) is a fast-mode game-build form: it needs GABI_FAST"
+#endif
+}  /* namespace gabi */
+/* the runtime: 1 when the source's guest_str / guest_addr calls use their per-site cache (set before any guest thread
+ * runs; 0: the WWHD_DECOMP_FAST_STR=0 off switch) */
+extern "C" __attribute__((visibility("default"))) uint8_t g_decomp_fast_str;
+#ifndef GABI_FCOUNT
+#ifdef GABI_FAST_COUNT
+/* GABI_FAST_COUNT (the port's WWHD_DECOMP_FAST_COUNT, Mac statistics only): Local/FrameLocal fast, general; guest_str
+ * site hits, misses */
+extern "C" __attribute__((visibility("default"))) uint64_t g_decomp_fast_count[4];
+#define GABI_FCOUNT(i) __atomic_fetch_add(&g_decomp_fast_count[i], 1, __ATOMIC_RELAXED)
+#else
+#define GABI_FCOUNT(i) ((void)0)
+#endif
+#endif
+namespace gabi {
+/* fast mode: guest_str with one cache entry per call site in the source (each guest_str(...) / guest_addr(...) the
+ * decompiled code writes, through the macros below), no thread-local access. An entry holds the last (pointer, running
+ * function, registry generation) of its site and what guest_str answered for it, with the registration's text; it
+ * answers only when the string at that pointer still equals the text (the same pointer, or strcmp), so the answer is
+ * guest_str's: guest_str_scan depends only on the text, the running function and the registry. Shared by the threads:
+ * a sequence word (odd while a thread fills the entry; a filler that does not get it just leaves the entry). */
+struct StrSite {
+    u32 seq;
+    u32 cur, gen, addr;
+    const char* s;
+    const char* text;
+};
+/* guest_str's answer and its registration's text (the lookup guest_str makes, own cache) */
+[[gnu::noinline]] inline u32 guest_str_text(const char* s, u32 cur, const char** text) {
+    static thread_local GuestStrCacheEntry cache[256];
+    uintptr_t h = ((uintptr_t)s >> 3) ^ ((uintptr_t)s >> 11) ^ (cur * 0x9E3779B1u);
+    GuestStrCacheEntry& e = cache[(h ^ (h >> 8)) & 255];
+    if (e.s == s && e.cur == cur && e.gen == GuestStr::generation && e.text && !strcmp(e.text, s)) {
+        *text = e.text;
+        return e.addr;
+    }
+    const GuestStr* g = guest_str_scan(s, cur);
+    e = GuestStrCacheEntry{s, g->text, cur, GuestStr::generation, g->addr};
+    *text = g->text;
+    return g->addr;
+}
+[[gnu::noinline, gnu::cold]] inline u32 guest_str_site_miss(StrSite& c, const char* s, u32 cur, u32 gen) {
+    if (!__atomic_load_n(&g_decomp_fast_str, __ATOMIC_RELAXED)) return (guest_str)(s);
+    const char* text;
+    const u32 addr = guest_str_text(s, cur, &text);
+    u32 q = __atomic_load_n(&c.seq, __ATOMIC_RELAXED);
+    if (!(q & 1) && __atomic_compare_exchange_n(&c.seq, &q, q + 1, false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+        __atomic_store_n(&c.cur, cur, __ATOMIC_RELAXED);
+        __atomic_store_n(&c.gen, gen, __ATOMIC_RELAXED);
+        __atomic_store_n(&c.addr, addr, __ATOMIC_RELAXED);
+        __atomic_store_n(&c.s, s, __ATOMIC_RELAXED);
+        __atomic_store_n(&c.text, text, __ATOMIC_RELAXED);
+        __atomic_store_n(&c.seq, q + 2, __ATOMIC_RELEASE);
+    }
+    return addr;
+}
+template <class Site> [[gnu::always_inline]] inline u32 guest_str_site(Site, const char* s) {
+    static constinit StrSite c{}; /* one per call site: Site is the site's own lambda type */
+    const u32 cur = current_function();
+    const u32 gen = GuestStr::generation;
+    const u32 q = __atomic_load_n(&c.seq, __ATOMIC_ACQUIRE);
+    const char* cs = __atomic_load_n(&c.s, __ATOMIC_RELAXED);
+    const char* ct = __atomic_load_n(&c.text, __ATOMIC_RELAXED);
+    const u32 ccur = __atomic_load_n(&c.cur, __ATOMIC_RELAXED);
+    const u32 cgen = __atomic_load_n(&c.gen, __ATOMIC_RELAXED);
+    const u32 ca = __atomic_load_n(&c.addr, __ATOMIC_RELAXED);
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
+    if (__builtin_expect(!(q & 1) && __atomic_load_n(&c.seq, __ATOMIC_RELAXED) == q && cs == s && ccur == cur && cgen == gen &&
+                             ct && (ct == s || !strcmp(ct, s)), 1))
+        return GABI_FCOUNT(2), ca; /* (an empty entry has text null) */
+    GABI_FCOUNT(3);
+    return guest_str_site_miss(c, s, cur, gen);
+}
+template <class Site> [[gnu::always_inline]] inline u32 guest_addr_site(Site site, const char* s) {
+    return is_guest(s) ? ea(s) : guest_str_site(site, s);
+}
+/* (the source's calls take guest_str_site through the macros at the end of this header, after gabi.h's own uses) */
+#endif
 inline u32 guest_fn(const void* f) {
     for (const HostFn* h = HostFn::head; h; h = h->next)
         if (h->fn == f) return h->addr;
@@ -1052,12 +1154,50 @@ template <class R, size_t... I, size_t... J>
         return native_result<R>(((CR(*)(native_u32_t<I>..., native_f64_t<J>...))fn)(p.r[I]..., p.f[J]...));
     }
 }
+/* may a call of shape R(A...) through a pointer take the native entry with signature SIG: the same registers (and the
+ * same result kind, or a void call); with GABI_PTR_SUB also an entry that takes fewer integer or float registers */
+#ifdef GABI_PTR_SUB
+/* GABI_PTR_SUB (the port's WWHD_DECOMP_FAST_PTR_SUB): a call that passes MORE registers than the target's definition
+ * takes (executeJob's tail_ptr(mExecute, job, context) to RenderDelegateEntries::dispatch(node)), as lcall_sub_shape
+ * allows for lcall. The entry takes the leading integer and float registers (separate register files in both host
+ * ABIs). A register-exact target reads nothing else (the decl table: its original reads only the registers its
+ * definition takes). A target that is not (bit 14) may read the others through the guest registers (an indirect call
+ * of its own that reads an entry register it does not pass, decl_lint's "held" case): ptr_sub_regs puts every argument
+ * into the guest registers first, as ArgPack does on the guest call, so they hold what the guest call gives them.
+ * g_decomp_ptr_sub: 1 = on (the runtime; WWHD_DECOMP_FAST_PTR_SUB=0: 0, equal shapes only, as before) */
+extern "C" __attribute__((visibility("default"))) uint8_t g_decomp_ptr_sub;
+template <class R, class... A> [[gnu::always_inline]] inline bool ptr_sig_ok(u32 sig) {
+    constexpr u32 mask = std::is_void_v<R> ? ~0x4300u : ~0x4000u;
+    if ((sig & mask) == ptr_call_sig<R, A...>()) return true;
+    constexpr u32 nf = (u32)ptr_nf<A...>(), nI = (u32)sizeof...(A) - nf;
+    if (!g_decomp_ptr_sub || !(sig & 0x8000u) || (sig & 15u) > nI || ((sig >> 4) & 15u) > nf) return false;
+    if constexpr (std::is_void_v<R>) return true;
+    else return ((sig >> 8) & 3u) == native_rk<R>();
+}
+/* a sub-shape call of a target that is not register-exact: the guest registers as the guest call puts them */
+template <class R, class... A> [[gnu::always_inline]] inline void ptr_sub_regs(const ThreadState& t, u32 sig, A... a) {
+    if (__builtin_expect((sig & 0x4000u) && (sig & 0xFFu) != (ptr_call_sig<R, A...>() & 0xFFu), 0)) {
+        ArgPack p{t.cpu};
+        (p.put(a), ...);
+    }
+}
+#else
+template <class R, class... A> [[gnu::always_inline]] inline bool ptr_sig_ok(u32 sig) {
+    constexpr u32 mask = std::is_void_v<R> ? ~0x4300u : ~0x4000u;
+    return (sig & mask) == ptr_call_sig<R, A...>();
+}
+#endif
 template <class R, bool CALL, class... A> inline bool ptr_native_call(ThreadState& t, u32 fn, R* out, A... a) {
     if constexpr (!ptr_native_types_ok<R, A...>()) {
         return false;
     } else {
         const GabiPtrEntry* e = gabi_ptr_find<CALL>(fn);
+#ifdef GABI_PTR_SUB
+        if (!e || !ptr_sig_ok<R, A...>(e->sig) || !t.caller_ok) return false;
+        ptr_sub_regs<R, A...>(t, e->sig, a...);
+#else
         if (!e || (e->sig & ~0x4000u) != ptr_call_sig<R, A...>() || !t.caller_ok) return false;
+#endif
         NativePack np;
         (np.put(a), ...);
         constexpr int nf = ptr_nf<A...>(), ni = (int)sizeof...(A) - nf;
@@ -1070,7 +1210,12 @@ template <bool CALL, class... A> inline bool ptr_native_call_v(ThreadState& t, u
         return false;
     } else {
         const GabiPtrEntry* e = gabi_ptr_find<CALL>(fn);
+#ifdef GABI_PTR_SUB
+        if (!e || !ptr_sig_ok<void, A...>(e->sig) || !t.caller_ok) return false;
+        ptr_sub_regs<void, A...>(t, e->sig, a...);
+#else
         if (!e || (e->sig & ~0x4300u) != ptr_call_sig<void, A...>() || !t.caller_ok) return false;
+#endif
         NativePack np;
         (np.put(a), ...);
         constexpr int nf = ptr_nf<A...>(), ni = (int)sizeof...(A) - nf;
@@ -1090,7 +1235,12 @@ template <class Tag> inline constinit uint64_t ptr_ic_v = 0;
 template <class R, class... A> [[gnu::noinline]] const GabiPtrEntry* ptr_ic_miss(uint64_t* ic, u32 fn) {
     const GabiPtrEntry* e = gabi_ptr_find<false>(fn);
     constexpr u32 mask = std::is_void_v<R> ? ~0x4300u : ~0x4000u;
+#ifdef GABI_PTR_SUB
+    (void)mask;
+    if (e && !ptr_sig_ok<R, A...>(e->sig)) e = nullptr;
+#else
     if (e && (e->sig & mask) != ptr_call_sig<R, A...>()) e = nullptr;
+#endif
     __atomic_store_n(ic, (uint64_t)(e ? (u32)(e - g_decomp_ptr_tab) + 1u : 0u) << 32 | fn, __ATOMIC_RELAXED);
     return e;
 }
@@ -1145,6 +1295,9 @@ template <class Tag, bool TAIL, class R, class... A> [[gnu::always_inline]] inli
         if (e) {  /* (one brace in the source for both forms: autoglue reads this header too) */
             ThreadState& t = GABI_TLS_;
             if (__builtin_expect(t.caller_ok, 1)) {
+#ifdef GABI_PTR_SUB
+                ptr_sub_regs<R, A...>(t, e->sig, a...);
+#endif
                 NativePack np;
                 (np.put(a), ...);
                 constexpr int nf = ptr_nf<A...>(), ni = (int)sizeof...(A) - nf;
@@ -1409,15 +1562,62 @@ template <class R, class... A> [[gnu::noinline]] R tail_ptr_g(u32 fn, A... a) {
 #endif
 
 /* ---- guest stack temporaries (for locals whose address is passed to guest code) ---- */
+#ifdef GABI_FAST_LOCAL
+#if !defined(GABI_FAST) || !defined(GABI_GAME_BUILD)
+#error "GABI_FAST_LOCAL (the port's WWHD_DECOMP_FAST_LOCAL) is a fast-mode game-build form: it needs GABI_FAST"
+#endif
+}  /* namespace gabi */
+/* the runtime: 1 when gabi::Local / FrameLocal take their fast form (set before any guest thread runs; 0: the
+ * WWHD_DECOMP_FAST_LOCAL=0 off switch, or WWHD_NATIVE_LOCALS=1, whose in-frame placement keeps the general form) */
+extern "C" __attribute__((visibility("default"))) uint8_t g_decomp_fast_local;
+#ifndef GABI_FCOUNT
+#ifdef GABI_FAST_COUNT
+/* GABI_FAST_COUNT (the port's WWHD_DECOMP_FAST_COUNT, Mac statistics only): Local/FrameLocal fast, general; guest_str
+ * site hits, misses */
+extern "C" __attribute__((visibility("default"))) uint64_t g_decomp_fast_count[4];
+#define GABI_FCOUNT(i) __atomic_fetch_add(&g_decomp_fast_count[i], 1, __ATOMIC_RELAXED)
+#else
+#define GABI_FCOUNT(i) ((void)0)
+#endif
+#endif
+namespace gabi {
+/* fast mode, the established placement (native_locals() off): the block looked up once, r1 read once, and the slot
+ * zeroed inline (gmem_stack_fresh of the game build is this memset); the same values and stores as the general form */
+[[gnu::always_inline]] inline Cpu* local_fast_place(u32 size, u32* a, u32* prev) {
+    ThreadState& t = GABI_TLS_;
+    FrameCtx* fc = t.frame_ctx;
+    Cpu* c = t.cpu;
+    const u32 r1 = c->r[1];
+    *prev = r1;
+    u32 top = r1;
+    if (fc && fc->active && fc->cur > fc->lo) top = fc->lo & ~15u; /* below in-frame Locals */
+    const u32 na = top - size;
+    c->r[1] = na;
+    *a = na;
+    return c;
+}
+#endif
 template <class T> struct Local {
     static constexpr u32 kSize = (sizeof(T) + 15) & ~15u;
     u32 a;
     u32 prev_bump = 0;
     bool in_frame = false;
+#ifdef GABI_FAST_LOCAL
+    Cpu* fast_c = nullptr; /* the fast form's Cpu (null: the general form); the dtor restores r1 through it */
+#endif
     /* a fresh stack slot: zeroed, as the harness's scratch stack starts out (GHS gives each
      * temporary its own frame slot; reused host-side slots would otherwise carry stale bytes
      * into the uninitialised parts of objects passed to callees) */
     Local() {
+#ifdef GABI_FAST_LOCAL
+        if (__builtin_expect(g_decomp_fast_local, 1)) {
+            GABI_FCOUNT(0);
+            fast_c = local_fast_place(kSize, &a, &prev_bump);
+            memset(PPC_MEM_BASE + a, 0, kSize);
+            return;
+        }
+        GABI_FCOUNT(1);
+#endif
         FrameCtx* fc = frame_ctx;
         /* GHS packs its stack objects 4-aligned (word structs; d_a_beam's SafeStrings at sp+0xC, +0x14,
          * ...) from the lowest address-taken frame offset upward */
@@ -1452,6 +1652,9 @@ template <class T> struct Local {
         gmem_stack_fresh(a, kSize, sizeof(T));
     }
     ~Local() {
+#ifdef GABI_FAST_LOCAL
+        if (fast_c) { fast_c->r[1] = prev_bump; return; }
+#endif
         if (in_frame) frame_ctx->cur = prev_bump;
         else cpu->r[1] = prev_bump;
     }
@@ -1477,7 +1680,31 @@ template <class T> struct FrameLocal {
     u32 a;
     u32 prev_r1 = 0;
     bool in_frame = false;
+#ifdef GABI_FAST_LOCAL
+    Cpu* fast_c = nullptr; /* the fast form's Cpu when r1 was lowered (null: in the frame, or the general form) */
+#endif
     explicit FrameLocal(u32 off) {
+#ifdef GABI_FAST_LOCAL
+        if (__builtin_expect(g_decomp_fast_local, 1)) { /* the general form below with one block lookup and one r1 read */
+            GABI_FCOUNT(0);
+            ThreadState& t = GABI_TLS_;
+            FrameCtx* fc = t.frame_ctx;
+            Cpu* c = t.cpu;
+            const u32 r1 = c->r[1];
+            if (fc && fc->active && r1 == fc->entry && off >= 8 && off + sizeof(T) <= fc->size) {
+                a = fc->sp + off;
+                in_frame = true;
+                return;
+            }
+            prev_r1 = r1;
+            c->r[1] = r1 - kSize;
+            a = r1 - kSize;
+            fast_c = c;
+            memset(PPC_MEM_BASE + a, 0, kSize);
+            return;
+        }
+        GABI_FCOUNT(1);
+#endif
         FrameCtx* fc = frame_ctx;
         if (fc && fc->active && cpu->r[1] == fc->entry && off >= 8 && off + sizeof(T) <= fc->size) {
             a = fc->sp + off;
@@ -1489,7 +1716,12 @@ template <class T> struct FrameLocal {
         a = cpu->r[1];
         gmem_stack_fresh(a, kSize, sizeof(T));
     }
-    ~FrameLocal() { if (!in_frame) cpu->r[1] = prev_r1; }
+    ~FrameLocal() {
+#ifdef GABI_FAST_LOCAL
+        if (fast_c) { fast_c->r[1] = prev_r1; return; }
+#endif
+        if (!in_frame) cpu->r[1] = prev_r1;
+    }
     FrameLocal(const FrameLocal&) = delete;
     T* get() const { return at<T>(a); }
     T* operator->() const { return get(); }
@@ -1644,6 +1876,10 @@ inline u32 current_function() { return Activation::current; }
 struct ActivationT {
     ThreadState& t;
     [[gnu::always_inline]] ActivationT(ThreadState& t_, u32 addr) : t(t_) { t.depth++; t.current = addr; }
+#ifdef GABI_LEAF
+    /* a leaf (NativeScope::leaf): depth only, Activation::current stays the caller's (its scope does not restore it) */
+    [[gnu::always_inline]] ActivationT(ThreadState& t_, u32 addr, bool leaf) : t(t_) { t.depth++; if (!leaf) t.current = addr; }
+#endif
     [[gnu::always_inline]] ~ActivationT() { t.depth--; }
 };
 #endif
@@ -2315,6 +2551,30 @@ struct NativeScope {
     double ret_f;
     u32 addr;
     ThreadState* ts; /* this thread's block (the exit and the site marks write through it) */
+#ifdef GABI_LEAF
+    bool leaf = false; /* a leaf body (bit 20): nothing kept, nothing restored but depth (ActivationT) */
+#ifdef GABI_LEAF_CHECK
+    [[gnu::noinline]] void leaf_poison(ThreadState& t) {
+        Cpu* pc = t.cpu;
+        saved_ok = t.caller_ok;
+        saved_fc = t.frame_ctx;
+        saved_current = t.current;
+        saved_running = pc ? pc->decomp_running : 0;
+        t.caller_ok = 0;                     /* a native call would go guest ... */
+        t.frame_ctx = (FrameCtx*)(uintptr_t)1; /* ... where do_call_g / AutoFrame / Local / NativeScope trap */
+        t.current = 0xFFFFFFFEu;
+        if (pc) pc->decomp_running = 0xFFFF; /* the runtime traps on it (gmem_call, decomp_lcall, decomp_native_lr) */
+    }
+    [[gnu::noinline]] void leaf_unpoison(ThreadState& t) {
+        if ((uintptr_t)t.frame_ctx != 1 || t.current != 0xFFFFFFFEu || t.caller_ok) __builtin_trap();
+        if (t.cpu && t.cpu->decomp_running != 0xFFFF) __builtin_trap();
+        t.caller_ok = saved_ok;
+        t.frame_ctx = saved_fc;
+        t.current = saved_current;
+        if (t.cpu) t.cpu->decomp_running = saved_running;
+    }
+#endif
+#endif
 #ifdef GABI_NATIVE_PLACE
     bool placed = false; /* step 2: r1 placed as do_call places it (restored on exit) */
 #endif
@@ -2363,8 +2623,35 @@ struct NativeScope {
 #ifdef GABI_SITE_LR
         site_key = (uint64_t)(ni.slot + 1) << 32;
 #endif
+#ifdef GABI_LEAF
+        /* the port's WWHD_DECOMP_FAST_LEAF: a leaf (NativeInfo bit 20, native_rules.py --leaf: register-exact, its original
+         * makes no call of any kind, its body no guest call, no native call of a non-leaf, no Local / AutoFrame / Cpu
+         * access / string literal) keeps none of the state only calls, Locals, frames and string literals read: caller_ok,
+         * the running function (decomp_running), the automatic frame (frame_ctx) and Activation::current stay the
+         * caller's; ActivationT still counts depth. g_decomp_leaf_off (WWHD_DECOMP_FAST_LEAF=0): the full scope.
+         * GABI_LEAF_CHECK (diagnostics): instead of keeping them, they are poisoned for the body (leaf_poison) and any
+         * call, frame or Local use traps */
+        if ((ni.flags >> 20) & 1 && !g_decomp_leaf_off) {
+            leaf = true;
+            native = false;
+#ifdef GABI_LEAF_CHECK
+            leaf_poison(t);
+#endif
+            return;
+        }
+#endif
+#ifdef GABI_LEAF_CHECK
+        if ((uintptr_t)t.frame_ctx == 1) __builtin_trap(); /* a body entered from a leaf */
+#endif
         saved_ok = t.caller_ok;
+#ifdef GABI_A3_FN
+        /* the port's WWHD_DECOMP_FAST_A3_FN: NativeInfo bit 19, caller=ok only by the per-function A3 rule (native_rules.py
+         * --a3-fn); g_decomp_a3_off (WWHD_DECOMP_FAST_A3_FN=0) makes such a body's calls guest calls again. Constant for
+         * every other body. */
+        t.caller_ok = ((ni.flags >> 1) & 1) & ~(u32)((ni.flags >> 19) & g_decomp_a3_off);
+#else
         t.caller_ok = (ni.flags >> 1) & 1;
+#endif
         native = t.depth > 0;
         if (!native) return;
         c = t.cpu;
@@ -2403,6 +2690,9 @@ struct NativeScope {
 #endif
         saved_running = c->decomp_running;
         c->decomp_running = (u16)(ni.slot + 1);
+#ifdef GABI_NSTATS
+        if (g_decomp_nstats) __atomic_fetch_add(&g_decomp_nstats[ni.slot], 1, __ATOMIC_RELAXED); /* diagnostics (below) */
+#endif
 #ifndef GABI_FAST /* fast mode: no park guard */
         saved_depth = c->native_depth;
         c->native_depth = (u8)(saved_depth + (saved_depth != 255));
@@ -2429,6 +2719,14 @@ struct NativeScope {
     }
     [[gnu::always_inline]] ~NativeScope() {
         ThreadState& t = *ts;
+#ifdef GABI_LEAF
+        if (leaf) {
+#ifdef GABI_LEAF_CHECK
+            leaf_unpoison(t);
+#endif
+            return;
+        }
+#endif
         if (native) {
             if (exact) {
 #ifndef GABI_FAST
@@ -2478,6 +2776,11 @@ struct NativeScope {
 #define GABI_GLUE_GUEST_CALL_(addr, R, ...) gabi::call<R>(addr __VA_OPT__(, ) __VA_ARGS__)
 #endif
 #ifdef GABI_TP_CACHE
+#ifdef GABI_LEAF
+#define GABI_ACTIVATION_T_(addr) ::gabi::ActivationT wwhd_activation_(wwhd_ts_, addr, wwhd_native_scope_.leaf)
+#else
+#define GABI_ACTIVATION_T_(addr) ::gabi::ActivationT wwhd_activation_(wwhd_ts_, addr)
+#endif
 /* GABI_TP_CACHE: the body looks its block up once (wwhd_ts_) and hands it to the check, the scope and Activation */
 #define WWHD_GLUE_FUNC_IMPL_(addr, R, RET_OK, ...)                                                       \
     using wwhd_ret_t_ [[maybe_unused]] = R;                                                              \
@@ -2488,7 +2791,7 @@ struct NativeScope {
         return GABI_GLUE_GUEST_CALL_(addr, R __VA_OPT__(, ) __VA_ARGS__);                               \
     static constinit uint64_t wwhd_lr_cache_ = 0;                                                        \
     ::gabi::NativeScope wwhd_native_scope_(wwhd_ts_, wwhd_native_info_, &wwhd_lr_cache_, !std::is_void_v<R> __VA_OPT__(, ) __VA_ARGS__); \
-    ::gabi::ActivationT wwhd_activation_(wwhd_ts_, addr)
+    GABI_ACTIVATION_T_(addr)
 #else
 #define WWHD_GLUE_FUNC_IMPL_(addr, R, RET_OK, ...)                                                       \
     using wwhd_ret_t_ [[maybe_unused]] = R;                                                              \
@@ -2589,3 +2892,9 @@ inline BoundPtmf<C, R, A...> operator->*(D* self, const ptmf<R (C::*)(A...)>& m)
 }
 
 }  // namespace gabi
+
+#ifdef GABI_FAST_STR
+/* fast mode: the source's guest_str(...) / guest_addr(...) calls, each with its own cache entry (gabi::guest_str_site) */
+#define guest_str(s) guest_str_site([] {}, (s))
+#define guest_addr(s) guest_addr_site([] {}, (s))
+#endif

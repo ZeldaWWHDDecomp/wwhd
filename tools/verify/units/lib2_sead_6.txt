@@ -263,3 +263,8 @@ field 0273DA78 54007118 u32 0,0x800,0x8000
 field 0273DA78 54008020 u32 0,0x800,0x8000
 field 0273DA78 54008F28 u32 0,0x800,0x8000
 field 0273DA78 54009E30 u32 0,0x800,0x8000
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988, OSBlockSet C0009990.
+mockmove C0009988 r3 r4 r5
+mockset C0009990 r3 r4 r5

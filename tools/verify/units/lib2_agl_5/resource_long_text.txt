@@ -35,3 +35,7 @@ field 02785D54 0x5C000014 u32 0x5B000000,0x5B200000
 field 02785D54 0x5C00001C s32 0,1,0x100
 field 02785D54 0x5C100000 u32 0x5B000000,0x5B100000,0x5B800000
 field 02785D54 0x104A0CD8 u32 0x5B000000,0x5B200000,0x5B400000,0x5BC00000
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

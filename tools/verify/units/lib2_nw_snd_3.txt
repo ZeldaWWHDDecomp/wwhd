@@ -169,3 +169,7 @@ arg 0288A750 r4 -1,0,14,15,16,17
 # Sequence file id sentinel: no file to load (-1) next to real ids, with no sequence loaded yet.
 field 0288B678 r3+0x48 u32 0,0,0x5F000000
 field 0288B678 r3+0x44 u32 0xFFFFFFFF,0xFFFFFFFE,0,1
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memcpy C000A848.
+mockmove C000A848 r3 r4 r5

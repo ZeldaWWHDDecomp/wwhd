@@ -128,3 +128,7 @@ field * 5F006000 u32 0x5F007000
 field * 5F006004 u32 0x5F007000
 field * 5F006008 u32 0x5F007000
 field * 5F005FFC u32 0x5F007000
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memcpy C000A848.
+mockmove C000A848 r3 r4 r5

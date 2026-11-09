@@ -100,3 +100,7 @@ fill 0278DAC0 62000000 0x5C4 0xA5
 fill 0279207C 62010000 0x4BC 0xA5
 final 0278DAC0 62000000 0x5C4
 final 0279207C 62010000 0x4BC
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockSet C0009990.
+mockset C0009990 r3 r4 r5

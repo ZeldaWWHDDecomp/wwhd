@@ -60,3 +60,7 @@ ret 0273B050 0,0x58008000,0xFFFFFFF8
 # The top/bottom GPU timestamp wrappers each write one 8-byte timestamp through r3.
 callee 027AE6D8 r3=out8
 callee 027AE6DC r3=out8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockSet C0009990.
+mockset C0009990 r3 r4 r5

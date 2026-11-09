@@ -36,3 +36,7 @@ arg! 027A0A08 r3 0
 arg! 027A0E94 r3 0
 cr 0279E338 6 0,1
 footprint 0279E338 0x88
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

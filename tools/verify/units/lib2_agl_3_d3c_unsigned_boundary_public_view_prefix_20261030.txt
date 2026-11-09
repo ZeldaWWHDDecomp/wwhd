@@ -9,3 +9,7 @@ include lib2_agl_3_d3c_viewport_boundaries_api_root_20261029.txt
 field 02777D3C 5D530000 f32 8589934592.0
 field 02777D3C 5D530004 f32 720.0
 stopat 02777D3C 0279ADD4 1
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

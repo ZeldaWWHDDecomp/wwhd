@@ -1354,3 +1354,7 @@ callcr 02798F8C 6
 callee 0279FC6C stack=2 r4=8
 # The caller's CR bit 6 at entry is arbitrary; the candidate must clear it before the variadic call.
 cr 027984FC 6 0,1
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

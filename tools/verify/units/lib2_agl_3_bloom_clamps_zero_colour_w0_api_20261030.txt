@@ -343,3 +343,7 @@ postsetup 02777048 0279EB28 r3=0x56000268 r4=0x5D570010
 arg! 02777048 r3 0x56000000
 arg! 02777048 r4 0
 arg! 02777048 r5 0
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

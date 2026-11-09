@@ -122,3 +122,7 @@ real 028F624C
 real 028F6250
 real 028F6258
 real 027C5AAC 027C6B98 027C6B9C
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

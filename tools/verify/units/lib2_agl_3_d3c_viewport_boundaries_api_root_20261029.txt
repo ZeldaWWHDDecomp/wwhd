@@ -256,3 +256,7 @@ postsetup 02777D3C 0274F53C r3=0x5D030000 r4=0x5D530000
 # Proven concrete RenderBuffer/ColorSurface roles: mipworker2-d3c-frame-bind-concrete-role-proof-20261029.md
 observearg 0274D690 r3+0x1C 36
 observearg 025C0928 r3+0x94 8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

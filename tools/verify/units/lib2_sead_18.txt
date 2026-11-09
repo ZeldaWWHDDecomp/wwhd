@@ -45,3 +45,7 @@ field 02763498 r3+0x151 u8 0,1
 callee 02893868 r4=36
 callee 02763AC4 r4=16
 callee 028880A0 r5=cstr:1024
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

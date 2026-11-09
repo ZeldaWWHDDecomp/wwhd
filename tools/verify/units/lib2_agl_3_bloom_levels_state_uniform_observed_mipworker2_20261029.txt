@@ -185,3 +185,7 @@ observearg 0274FEB0 r3+0x53 1
 observearg 0274FEB0 r3+0x57 1
 observearg 0274FEB0 r3+0x58 20
 observearg 0274FEB0 r3+0x6C 3
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

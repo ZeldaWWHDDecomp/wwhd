@@ -215,3 +215,9 @@ src wwhd_src/sead/PoolHeapStatics.cpp
 # Shared data owners (no function bodies).
 src wwhd_src/sead/RuntimeStatics.cpp
 src wwhd_src/sead/AudioStatics.cpp
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: DCZeroRange C00088C8, OSBlockMove C0009988, OSBlockSet C0009990.
+mockzero C00088C8 r3 r4
+mockmove C0009988 r3 r4 r5
+mockset C0009990 r3 r4 r5

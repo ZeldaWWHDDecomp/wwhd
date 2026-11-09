@@ -107,3 +107,7 @@ observe C0006848 7EFFEFE8 4
 
 # createBackend forwards its retained heap even though the constructor ignores it.
 callee 0275181C r4=0
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memcpy C000A848.
+mockmove C000A848 r3 r4 r5

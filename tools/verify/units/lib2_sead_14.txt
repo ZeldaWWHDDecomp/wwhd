@@ -130,3 +130,7 @@ mockglobal 02759C28 7EFFEF34 u32 0,0x41000000,0x41420000
 arg 027581F4 r3 0,0x57B00000,0xFFFFFFFC,0xFFFFFFF0,0xFFFFFFE8,0xFFFFFFDC,0xFFFFFFD0,0xFFFFFFBC,0xFFFFFFB4,0xFFFFFFAC
 arg 02758724 r3 0,0x57B01000,0xFFFFFFA4
 arg 02758B88 r3 0,0x57B02000,0xFFFFFFFC,0xFFFFFFC0,0xFFFFFFB8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5

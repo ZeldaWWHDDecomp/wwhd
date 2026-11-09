@@ -198,3 +198,7 @@ mockretfield C00062D8 r3 0 8 0xFF
 
 callee C0006A40 r5=dyn4*r4
 callee C0006908 r5=dyn4*r4
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

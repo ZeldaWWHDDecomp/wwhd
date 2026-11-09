@@ -1626,3 +1626,7 @@ field * 5d00199c u32 3
 stable 5D000000 6656
 real 0284DFCC
 arg! 0284CFE0 r3 0x5d000000,0x5d000100,0x5d000200,0x5d000300,0x5d000400,0x5d000500,0x5d000600,0x5d000700,0x5d000800,0x5d000900,0x5d000a00,0x5d000b00,0x5d000c00,0x5d000d00,0x5d000e00,0x5d000f00,0x5d001000,0x5d001100,0x5d001200,0x5d001300,0x5d001400,0x5d001500,0x5d001600,0x5d001700,0x5d001800,0x5d001900
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

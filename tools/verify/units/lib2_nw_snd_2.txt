@@ -282,3 +282,7 @@ mockglobal 028898F0 5F04100C u32 0x5F04100C,0x5F042000
 # releaseTogether: a level whose count is zero although its list still holds an allocation (heap_levels
 # has the two-level form of it).
 field 028877E0 5F041008 u32 0,1
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockSet C0009990.
+mockset C0009990 r3 r4 r5

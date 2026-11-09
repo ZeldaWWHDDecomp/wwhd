@@ -146,3 +146,8 @@ real 027561B4 02755FE0 02755F40 02755EC4 0275315C 027601BC 02752C74 0275589C 027
 real 02753000 02752F10 02752E60 0273B2F0 02752D8C 027601F0 027536F4 02753628 0273B310 027536B0 02757B48 02759AD8 0273B0D4
 # Protected 02774FD0 preserves this +4..+0xF.
 stable 56010004 12
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988, OSBlockSet C0009990.
+mockmove C0009988 r3 r4 r5
+mockset C0009990 r3 r4 r5

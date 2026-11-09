@@ -171,3 +171,8 @@ callee 028870F0 r4=heap0x14C
 # Signed zero and negative volumes at the clamp.
 arg 02885900 f1 -0.0,0.0,0.5,-1.0
 arg 02885914 f1 -0.0,0.0,0.5,-1.0
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memcpy C000A848, memset C000A858.
+mockmove C000A848 r3 r4 r5
+mockset C000A858 r3 r4 r5

@@ -398,3 +398,7 @@ arg! 02790EC4 r5 0x5C510000
 field 02790EC4 r3+0x584 u32 0,1,2,3,5,0xFFFFFFFF,0x80000000
 field 02790EC4 r3+0x574 u32 0,1,4,5,6,0xFFFFFFFF
 field 02790EC4 r3+0x564 u8 0,1,255
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockSet C0009990.
+mockset C0009990 r3 r4 r5

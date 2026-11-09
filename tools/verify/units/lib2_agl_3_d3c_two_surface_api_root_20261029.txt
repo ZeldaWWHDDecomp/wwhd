@@ -234,3 +234,7 @@ field 02777D3C 0x5D000008 u32 0x5D020000
 field 02777D3C 0x5D00000C u32 0x5D510000
 field 02777D3C 0x5D000010 u8 0
 field 02777D3C 0x5D000014 u32 0x5D020000
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5

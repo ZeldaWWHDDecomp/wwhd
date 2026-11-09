@@ -2,3 +2,7 @@
 # One-input mutation confirmation, not a 10k gate. The included fixture is unchanged.
 # verify: -only 027CB85C -strictnan -calleesp -range 0:1
 include lib2_agl_18/registry_constructor_small_heap.txt
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: memset C000A858.
+mockset C000A858 r3 r4 r5
