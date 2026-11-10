@@ -1,5 +1,6 @@
 /* HD result screen: elapsed-time and rupee text, animation setup and visibility. */
 #include "d/hd_screen_boat_race_result_parts.h"
+#include "port_hooks.h"
 static u32 raceResultSScreenVtable;
 static u32 raceResultSDelegateVtable;
 static u32 raceResultSSecondaryVtable;
@@ -93,6 +94,7 @@ void hdBoatRaceResultView::updateText() {
         // HD: the original multiply wraps before the signed division by 30.
         s32 milliseconds = s32((finish - start) * 1000u) / 30;
         if (milliseconds < 0) milliseconds = 0;
+        milliseconds = PORT_TEXT_W(0x026277A8, this, milliseconds);
         s32 seconds = milliseconds / 1000;
         s32 minutes = seconds / 60;
         s32 centiseconds = (milliseconds % 1000) / 10;

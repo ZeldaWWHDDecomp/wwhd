@@ -113,3 +113,13 @@ callee 0275181C r4=0
 
 # The CompactRenderState temporary must preserve reset's r31 save word at frame+0x7C.
 final 0274FD64 7EFFEFFC 4
+# zero-page rule (2026-11-01; LOW clean 0/1000): Viewport::applyViewport 0274FA00 and applyScissor
+# 0274FA70 dispatch through the current graphics device sCurrentGraphicsDevice (101F8B18, null in the image): device
+# +0xC method table, slot +0x1C setViewport / +0x24 setScissor (0274FA48/0274FA4C, 0274FAB8/0274FABC). Steered to the
+# device layout device_switch uses (object 0x54200000, table 0x54200100, synthetic callbacks 0x60000100/0x60000200).
+field 0274FA00 101F8B18 u32 0x54200000
+field 0274FA00 5420000C u32 0x54200100
+field 0274FA00 5420011C u32 0x60000100
+field 0274FA70 101F8B18 u32 0x54200000
+field 0274FA70 5420000C u32 0x54200100
+field 0274FA70 54200124 u32 0x60000200

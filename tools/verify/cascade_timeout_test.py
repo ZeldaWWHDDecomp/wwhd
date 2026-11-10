@@ -6,6 +6,8 @@ retries); without it no --timeout is passed (mutate.py derives its limit once fr
 receipts say `timeout` never kills: the mutant stays alive with a `timeout` history entry and is rerun on the next
 companion.
 
+cascade.py --sweep-stale-refcache (2026-11-10) is forwarded to every mutate.py pass; without it no pass gets it.
+
 Runs cascade.py against a stub tree (--root): a fake tools/verify/mutate.py that records its command line and writes a
 `timeout` receipt for every rerun mutant (no build, no harness), and two companion specs that name the mutants' source.
 Temporary directories only; exit 0 when all pass.
@@ -49,7 +51,9 @@ def main():
             json.dump({"id": i, "src": "wwhd_src/x/A.cpp", "func": "02000000", "mutation": "m%d" % i, "class": "survived"},
                       open(os.path.join(main_dir, "mutant%d.json" % i), "w"))
             open(os.path.join(main_dir, "mutant%d.cpp" % i), "w").write("// mutant %d\n" % i)
-        for tag, extra, want in (("fixed", ["--timeout", "7"], ["--timeout", "7"]), ("derived", [], None)):
+        for tag, extra, want, sweep in (("fixed", ["--timeout", "7"], ["--timeout", "7"], False),
+                                        ("derived", [], None, False),
+                                        ("sweep", ["--sweep-stale-refcache"], None, True)):
             argv = os.path.join(work, tag + ".argv")
             out = os.path.join(work, tag)
             r = subprocess.run([sys.executable, os.path.join(HERE, "cascade.py"), "--receipts", main_dir, "--out", out,
@@ -65,6 +69,8 @@ def main():
                 has = c[c.index("--timeout"):c.index("--timeout") + 2] if "--timeout" in c else None
                 if has != want:
                     fails.append("%s: mutate.py got --timeout %s, want %s" % (tag, has, want))
+                if ("--sweep-stale-refcache" in c) != sweep:
+                    fails.append("%s: mutate.py got --sweep-stale-refcache %s, want %s" % (tag, not sweep, sweep))
             alive = json.load(open(os.path.join(out, "alive.json")))
             for i, v in sorted(alive.items()):
                 kinds = [h[2] for h in v["hist"][1:]]

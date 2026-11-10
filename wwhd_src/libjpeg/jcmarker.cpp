@@ -6,6 +6,7 @@
  * Adapted IJG8c marker serialization to guest storage and callbacks.
  */
 #include "libjpeg/jcmarker.h"
+#include "sead/ElementAt.h"
 /* 0284E990 */
 static void emit_byte(j_compress_ptr cinfo, s32 val) {
     jpeg_destination_mgr *dest = cinfo->dest;
@@ -54,10 +55,10 @@ static s32 emit_dqt(j_compress_ptr cinfo, s32 index) {
 static void emit_dht(j_compress_ptr cinfo, s32 index, boolean is_ac) {
     JHUFF_TBL *htbl;
     if (is_ac) {
-        htbl = cinfo->ac_huff_tbl_ptrs[index];
+        htbl = sead::elementAt(cinfo->ac_huff_tbl_ptrs, (u32)index); /* guest EA arithmetic: wraps at 32 bits as on the console */
         index = (u32)index + 0x10;
     } else
-        htbl = cinfo->dc_huff_tbl_ptrs[index];
+        htbl = sead::elementAt(cinfo->dc_huff_tbl_ptrs, (u32)index);
     if (htbl == nullptr)
         jpeg_error1(cinfo, JERR_NO_HUFF_TABLE, index);
     if (!htbl->sent_table) {

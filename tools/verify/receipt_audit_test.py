@@ -25,7 +25,11 @@ Rows (function 02000000, file src/a.cpp; v2 is the landed text, it changed an ea
   plus: a receipt in a mapped directory whose local id maps to a row of another mutation -> `error`;
         a receipt below an --exclude directory -> `excluded` with its reason; one with no row -> `unjoined`;
         one without mutantN.cpp -> `no-companion`.
-Expected: exit 1; UNBACKED = {2, 6, 7, 9}, CONTRADICTED = {8, 12};
+  13 D    its only kill ran on a spec that is not in the tree's tools/verify/units      -> receipt `unlanded-spec`; UNBACKED
+  14 D    its receipt ran a unit file under an old name the rename table maps to a landed spec -> current, backed
+  15 EQ   a survivor whose `spec` field names a landed companion, and a clean difference whose `spec` names an unlanded
+          one                                                                           -> backed; not CONTRADICTED
+Expected: exit 1; UNBACKED = {2, 3, 6, 7, 9, 13}, CONTRADICTED = {8, 12};
 Object pin (a second git repo, wwhd_src/include/toy.h and wwhd_src/toy/toy.cpp, compiled with this tree's tools): a header
 change of struct S that leaves g's text unchanged must not pin g's row; k, which uses nothing that changed, pins. errors = the receipts of 3 and 7 and the bad map; every receipt has exactly one
 status in --out-receipts.
@@ -62,10 +66,12 @@ def git(repo, *a):
 
 
 def receipt(d, rid, mutation, cls, text, stdout, nulltrap=True, cpp=True, spec="/b/lib2_scoped/spec.expanded.txt", src="src/a.cpp",
-            func="02000000"):
+            func="02000000", jspec=None):
     os.makedirs(d, exist_ok=True)
     j = {"id": str(rid), "src": src, "func": func, "mutation": mutation, "class": cls, "seed": "1", "input_seed": 1, "n": 1000,
          "cmd": ["verify", "-spec", spec, "-n", "1000", "-seed", "1"] + (["-nulltrap"] if nulltrap else []), "stdout": stdout}
+    if jspec:
+        j["spec"] = jspec
     open(os.path.join(d, "mutant%s.json" % rid), "w").write(json.dumps(j))
     if cpp:
         open(os.path.join(d, "mutant%s.cpp" % rid), "w").write(text)
@@ -87,6 +93,13 @@ def build(T):
     git(repo, "commit", "-q", "-m", "v1")
     open(os.path.join(repo, "src", "a.cpp"), "w").write(V2)
     git(repo, "commit", "-q", "-am", "v2")
+    # the unit specs on the audited tree (receipt_audit checks each receipt's spec landed), and a
+    # rename table (old name lib2_oldname -> lib2_scoped)
+    for u in ("lib2_scoped", "lib2_parent", "lib2_scoped/comp"):
+        os.makedirs(os.path.dirname(os.path.join(repo, "tools", "verify", "units", u)), exist_ok=True)
+        open(os.path.join(repo, "tools", "verify", "units", u + ".txt"), "w").write("src src/a.cpp\n")
+    os.makedirs(os.path.join(repo, "verify-archive"))
+    open(os.path.join(repo, "verify-archive", "spec-renames-x.tsv"), "w").write("# renames\nold\tnew\nlib2_oldname\tlib2_scoped\n")
     rows = []
 
     def row(gid, cls, original, replacement, mutation, text, nth=0, src="ledger x", span_text=None):
@@ -106,6 +119,9 @@ def build(T):
     row(10, "EQ", "y = 2;", "y = 2 ;", "space after two", V2)
     row(11, "NAMED_GAP", "y = 2;", "y = 3;", "literal 2->3", V2)
     row(12, "RI", "z = 3;", "z = 33;", "literal 3->33", V2)
+    row(13, "D", "line1 = 1", "line1 = 7", "literal 1->7", V2)
+    row(14, "D", "line2 = 2", "line2 = 7", "literal 2->7", V2)
+    row(15, "EQ", "line4 = 4", "line4 = 4 ", "space after four", V2)
     rc = os.path.join(T, "receipts")
     receipt(os.path.join(rc, "rc-plain"), 1, "literal 1->5 @a.cpp:12", "difference", edit(V2, "x = 1;", "x = 5;")[0], WITNESS)
     receipt(os.path.join(rc, "rc-plain"), 2, "plus zero", "survived", edit(V1, "y = 2;", "y = 2+0;")[0], SURV)
@@ -120,6 +136,18 @@ def build(T):
             spec="/b/lib2_parent/spec.expanded.txt")
     receipt(os.path.join(rc, "rc-plain"), 11, "literal 2->3", "difference", edit(V2, "y = 2;", "y = 3;")[0], WITNESS)
     receipt(os.path.join(rc, "rc-plain"), 12, "literal 3->33", "difference", edit(V2, "z = 3;", "z = 33;")[0], WITNESS)
+    # 13: its only kill ran on a spec that never landed: unlanded-spec, the row is unbacked
+    receipt(os.path.join(rc, "rc-unlanded"), 13, "literal 1->7", "difference", edit(V2, "line1 = 1", "line1 = 7")[0], WITNESS,
+            spec="/b/lib2_unlanded_missing/spec.expanded.txt")
+    # 14: a unit file under an old name that the rename table maps to a landed spec: current
+    receipt(os.path.join(rc, "rc-renamed"), 14, "literal 2->7", "difference", edit(V2, "line2 = 2", "line2 = 7")[0], WITNESS,
+            spec="/clone/tools/verify/units/lib2_oldname.txt")
+    # 15: the receipt's own `spec` field names a landed companion (survivor: backs the EQ row) and, in another
+    # receipt, an unlanded one (a difference that does not contradict the row)
+    receipt(os.path.join(rc, "rc-field"), 15, "space after four", "survived", edit(V2, "line4 = 4", "line4 = 4 ")[0], SURV,
+            jspec="lib2_scoped/comp")
+    receipt(os.path.join(rc, "rc-field-gone"), 15, "space after four", "difference", edit(V2, "line4 = 4", "line4 = 4 ")[0],
+            WITNESS, jspec="lib2_scoped/gone")
     receipt(os.path.join(rc, "rc-void"), 1, "literal 1->5", "difference", edit(V2, "x = 1;", "x = 5;")[0], WITNESS)
     receipt(os.path.join(rc, "rc-plain"), 99, "nothing like this", "survived", V2, SURV)
     receipt(os.path.join(rc, "rc-plain"), 98, "literal 1->5", "difference", "", WITNESS, cpp=False)
@@ -199,6 +227,8 @@ def objpin_case(T):
         open(os.path.join(repo, "wwhd_src/toy/toy.cpp"), "w").write(c)
         git(repo, "add", ".")
         git(repo, "commit", "-q", "-m", m)
+    os.makedirs(os.path.join(repo, "tools", "verify", "units"))
+    open(os.path.join(repo, "tools", "verify", "units", "lib2_scoped.txt"), "w").write("src wwhd_src/toy/toy.cpp\n")
     rows = []
     for gid, func, original, replacement, mut in (("g1", "02000010", "return s->b;", "return s->b + 0;", "plus zero g"),
                                                    ("k1", "02000030", "return x * 3;", "return x * 3 + 0;", "plus zero k")):
@@ -263,6 +293,15 @@ def main():
         check("--ruled-difference 4 names a row with no current clean difference" in log, "a named row without a difference is an error")
         check(rows.get("9", {}).get("backing") == "UNBACKED" and "function identical" in recs.get("rc-plain/mutant9.json", {}).get("version", ""),
               "row 9: stale with the function identical: unbacked by default")
+        check(st.get("rc-unlanded/mutant13.json") == "unlanded-spec" and "lib2_unlanded_missing" in recs.get("rc-unlanded/mutant13.json", {}).get("note", "")
+              and rows.get("13", {}).get("backing") == "UNBACKED", "row 13: a kill on a spec that never landed is unlanded-spec, the row unbacked: %s"
+              % recs.get("rc-unlanded/mutant13.json"))
+        check(st.get("rc-renamed/mutant14.json") == "current" and rows.get("14", {}).get("backing") == "receipt",
+              "row 14: a renamed spec (rename table) counts as landed")
+        check(st.get("rc-field/mutant15.json") == "current" and st.get("rc-field-gone/mutant15.json") == "unlanded-spec"
+              and rows.get("15", {}).get("backing") == "receipt", "row 15: the receipt's spec field: landed backs, unlanded neither backs nor contradicts")
+        check({g for g, x in rows.items() if x.get("backing") == "UNBACKED"} == {"2", "3", "6", "7", "9", "13"},
+              "UNBACKED rows are exactly 2, 3, 6, 7, 9, 13: %s" % sorted(g for g, x in rows.items() if x.get("backing") == "UNBACKED"))
         if not old:
             objpin_case(T)
             _, _, rows2, _ = run_new(T, repo, rc, os.path.join(HERE, "receipt_audit.py"), ["--function-pin"])

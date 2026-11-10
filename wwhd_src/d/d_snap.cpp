@@ -1,6 +1,7 @@
 /** Picto Box photo registration, geometry and HD texture capture.
  * Verified against the original WWHD unit. */
 #include "d/d_snap.h"
+#include "port_hooks.h"
 
 static u32 l_snapAddress;
 static u32 l_snapInitialized;
@@ -645,6 +646,7 @@ void dSnap_packet::Execute() {
 
     if (ChkReleaseShutter()) {
         Judge();
+        PORT_PICTO(0x025BE898, gabi::ea(this), 0);
         mFlag = (u32)mFlag & ~2u;
         for (u32 i = 0; i < SnapObjectCount; ++i)
             m_tbl[i].field_0x34 = 1000000000.0f;
@@ -855,6 +857,7 @@ void dSnap_packet::draw(u32 context) {
     u32 old = (u32)refView->mFlags;
     u32 renderer = (u32)l_textureRenderer;
 
+    PORT_PICTO(0x025BF5D0, scale.a, position.a);
     u32 handle =
         snap_api::drawColorTexture(renderer, firstView.a, viewport.a, scale.a, position.a, old);
 
@@ -905,6 +908,7 @@ void dSnap_packet::draw(u32 context) {
     scale->x = (f32)extent->x / wh.first;
     scale->y = (f32)extent->y / wh.second;
 
+    PORT_PICTO(0x025BF7C0, scale.a, position.a);
     handle = snap_api::drawDepthTexture((u32)l_textureRenderer, secondView.a, viewport.a, scale.a,
                                         position.a, handle);
 
@@ -1505,6 +1509,7 @@ void dSnap_packet::DebugDraw(u32 context) {
     if (!ChkCapture())
         return;
 
+    PORT_PICTO(0x025BFDF8, context, 0);
     draw(context);
 
     u32 p = (u32)mpRenderBuffer;
@@ -1583,6 +1588,7 @@ void dSnap_packet::DebugDraw(u32 context) {
         matrix->m[1][2] = (delta + delta) / (screenY * ratio);
 
         gabi::Local<u8[212]> adjusted;
+        PORT_PICTO(0x025BFFB0, matrix.a, 0);
         snap_api::matrixProjectionCtor(adjusted.a, matrix.a, 0);
         snap_api::updateProjection(adjusted.a);
         snap_api::setDebugProjection(drawer, adjusted.a);
@@ -1594,6 +1600,7 @@ void dSnap_packet::DebugDraw(u32 context) {
         matrix->m[0][0] = (f32)matrix->m[0][0] * 0.5f;
         matrix->m[1][1] = (f32)matrix->m[1][1] * 0.5f;
 
+        PORT_PICTO(0x025C0004, matrix.a, 0);
         snap_api::setProjectionMtx((u32)mpProjection, matrix.a, 0);
         snap_api::matrixProjectionDtor(adjusted.a, 2);
     }

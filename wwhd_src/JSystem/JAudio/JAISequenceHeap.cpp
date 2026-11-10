@@ -1,5 +1,6 @@
 /* Based on CC0 tww JAISequenceHeap.cpp; WWHD fields and call ordering. */
 #include "JSystem/JAudio/JAISequenceHeap.h"
+#include "sead/ElementAt.h"
 namespace JAInter { namespace HeapMgr {
 static HeapBlock* sAutoHeap;
 static HeapBlock* sStayHeap;
@@ -107,10 +108,11 @@ u8 checkUsefulAutoHeapPosition() {
 }
 /* 02807EEC */
 void* getFreeAutoHeapPointer(u32 index, u32 data) {
-    sAutoHeap[index].mDataNumber = data;
-    HeapBlock* block = sAutoHeap + index;
+    /* guest EA arithmetic: base + index * size wraps at 32 bits as on the console */
+    sead::elementAt<HeapBlock>(gabi::ea(sAutoHeap), index).mDataNumber = data;
+    HeapBlock* block = &sead::elementAt<HeapBlock>(gabi::ea(sAutoHeap), index);
     block->mUseCounter = sAutoHeapCount;
-    HeapBlock* endBlock = sAutoHeap + index;
+    HeapBlock* endBlock = &sead::elementAt<HeapBlock>(gabi::ea(sAutoHeap), index);
     u32 count = sAutoHeapCount;
     void* result = block->mPointer;
     endBlock->mEndAddress = count;

@@ -1,5 +1,6 @@
 /* Sequence runtime track selection and parameter dispatch, reconstructed from WWHD. */
 #include "nw/snd/SequenceRuntimeSupport.h"
+#include "sead/ElementAt.h"
 #include "gc_api/PowerPC_EABI_Support/Runtime/Inc/CPlusLibPPC.h"
 using namespace nw::snd;
 struct DispatchVtableEntry { be<u32> adjustment,target; };
@@ -284,7 +285,7 @@ void SequenceRuntimeSupport::setTrackOutputEffect(u32 output,u32 mask,u32 effect
 /* 0288C1C0 */
 u32 SequenceRuntimeSupport::setResourceTrackOption(u32 mask,u32 resource) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (!banks[resource].attached) return 0;
+    if (!sead::elementAt(&banks[0],resource).attached) return 0; /* guest EA arithmetic: wraps at 32 bits as on the console */
     gabi::FrameLocal<TrackMethod> method(8);
     copyTrackMethod(method.get(),&sResourceMethod);
     dispatchSigned(mask,method.get(),resource);

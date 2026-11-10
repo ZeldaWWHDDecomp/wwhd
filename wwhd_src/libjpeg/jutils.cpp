@@ -6,6 +6,7 @@
  * Adapted IJG8c utility routines for explicit 32-bit Cafe arithmetic and guest memory.
  */
 #include "libjpeg/jutils.h"
+#include "sead/ElementAt.h"
 static const s32 jpeg_natural_order[80] = {
     0,  1,  8,  16, 9,  2,  3,  10, 17, 24, 32, 25, 18, 11, 4,  5,  12, 19, 26, 33,
     40, 48, 41, 34, 27, 20, 13, 6,  7,  14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36,
@@ -55,11 +56,13 @@ void jpeg_fill_bytes(void *dst, s32 byte, u32 size);
 /* 0284E048 */
 void jcopy_sample_rows(JSAMPARRAY input_array, s32 source_row, JSAMPARRAY output_array,
                        s32 dest_row, s32 num_rows, u32 num_cols) {
-    input_array += source_row;
-    output_array += dest_row;
+    input_array = sead::elementPtr(input_array, (u32)source_row); /* guest EA arithmetic: wraps at 32 bits as on the console */
+    output_array = sead::elementPtr(output_array, (u32)dest_row);
     while (num_rows > 0) {
-        JSAMPROW inptr = *input_array++;
-        JSAMPROW outptr = *output_array++;
+        JSAMPROW inptr = *input_array;
+        input_array = sead::nextElement(input_array);
+        JSAMPROW outptr = *output_array;
+        output_array = sead::nextElement(output_array);
         jpeg_copy_bytes(outptr, inptr, num_cols);
         --num_rows;
     }

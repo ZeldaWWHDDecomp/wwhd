@@ -111,3 +111,16 @@ callee 0275181C r4=0
 # Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
 # fixture keeps no bytes the original clears or overwrites: memcpy C000A848.
 mockmove C000A848 r3 r4 r5
+
+# zero-page rule (2026-11-10, LOW clean 0/1000): DisplayFrame::clear 02750E24 ends with
+# setDisplayContext(sCurrentGraphicsDevice->mContext): sCurrentGraphicsDevice (101F8B18) is null in the image and every input
+# faulted at the +0x138 load. Steered to the device object lib2_sead_12_device_switch / _frames use (0x54200000).
+field 02750E24 101F8B18 u32 0x54200000
+stable 54200000 0x200
+# zero-page rule (2026-11-10, LOST blocks 3-5 / 3-4, clean 521/1000):
+# GraphicsDevice::acquire 0274FBF8 and release 0274FCCC read sThreadManager (101F8B94, class ThreadManager; the shipped
+# game creates it at startup, before any graphics lock) ->mThreadSpecificKey (+0x24), only passed on to the thread-slot
+# lookup, so it stays generated. Null in the image: every input without a lock callback faulted at that load.
+field 0274FBF8 101F8B94 u32 0x54400000
+field 0274FCCC 101F8B94 u32 0x54400000
+stable 54400000 0x100

@@ -10,6 +10,7 @@
  * HD: both halves use autoglue registration so their shared source compiles as one unit.
  */
 #include "d/actor/d_a_player_main_06.h"
+#include "port_hooks.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10034B24};
 
@@ -1752,7 +1753,8 @@ BOOL daPy_lk_c::setMoveBGCorrectClimb() {
         return procFall_init(1, 6.0f);
     }
     cM3dGPla* tri = playerMoveTriPla(playerDemoLinePoly(this));
-    if (tri != 0 && std::fabs(tri->mNormal.y) > 0.05f) { /* HD: NULL check */
+    /* the port's climbing (port_hooks.h): a steep enough wall passes as vertical */
+    if (tri != 0 && PORT_CLIMB_STEEP(0x02429570, tri, std::fabs(tri->mNormal.y)) > 0.05f) { /* HD: NULL check */
         return procFall_init(1, 6.0f);
     }
     if ((mCurProc == player_move::daPyProc_CLIMB_MOVE_UP_DOWN_e || mCurProc == player_move::daPyProc_CLIMB_MOVE_SIDE_e) &&
@@ -1913,7 +1915,9 @@ void daPy_lk_c::checkBgClimbMove() {
     playerMoveGroundCheck(this)->m_pos.z = gz;
     playerMoveGroundCheck(this)->m_pos.x = gx;
     local_5c->z = gz;
-    f64 gc = playerMoveGroundCross(dComIfG_Bgsp(), playerMoveGroundCheck(this));
+    /* the port's climbing (port_hooks.h): on a converted wall the ledge search goes further in */
+    f64 gc = PORT_CLIMB_LEDGE(this, playerMoveGroundCross(dComIfG_Bgsp(), playerMoveGroundCheck(this)), local_5c, local_68,
+                              dVar7, dVar6);
     if (gc != -1000000000.0 && !(gc < (f64)(f32)(local_68->y - 30.0f))) {
         cM3dGPla* tri = playerMoveTriPla(playerMoveGroundPoly(this));
         if (tri != 0 && !(tri->mNormal.y < 0.5f)) { /* cBgW_CheckBGround (HD: NULL check) */

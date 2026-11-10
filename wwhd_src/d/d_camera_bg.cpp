@@ -10,6 +10,7 @@
 #include "d/d_camera_bg.h"
 #include <bit>
 #include "d/d_camera_accessors.h"
+#include "port_hooks.h"
 
 static dComIfG_camera_info_class* cameraInfo(s32 id) {
     return gabi::at<dComIfG_camera_info_class>(dComIfGp_ea() + PLAY_OFF(mCameraInfo) +
@@ -354,7 +355,7 @@ s32 dCamera_c::defaultTriming() {
     if (mode < 1) {
         size = 0;
     } else if (mode <= 3) {
-        size = sTrimSizes.mSize[mode].get();
+        size = PORT_CAMERA_W(0x024FC080, this, sTrimSizes.mSize[mode].get()); /* the port's targeting letterbox (port_hooks.h) */
     } else if (mode == 8) {
         size = 1;
     } else if (mode < 10) {

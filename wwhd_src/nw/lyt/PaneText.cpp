@@ -4,6 +4,7 @@
  * Written from WWHD's disassembly; layouts from its constructors and method tables.
  * format facts: BFLYT txt1 block (public format documentation; facts only, no text or code copied) */
 #include "nw/lyt/PaneText.h"
+#include "port_hooks.h"
 using namespace nw::lyt;
 
 enum PaneStateFlag : u32 { Pane_Visible = 1, Pane_InfluencedAlpha = 2 };
@@ -39,7 +40,9 @@ void LayoutPaneInlines::draw(void* context) {
     u32 state = content()->flags;
     if (!(state & Pane_Visible)) return;
     if (content()->inheritedAlpha != 0) {
+        PORT_PANE_AT(0x0287714C, this);
         gabi::call_ptr<void>(paneMethods<PaneMethods>(this)->drawSelf, this, context);
+        PORT_PANE_AT(0x02877150, this);
         state = content()->flags;
     }
     if ((state & Pane_InfluencedAlpha) && content()->alpha == 0) return;

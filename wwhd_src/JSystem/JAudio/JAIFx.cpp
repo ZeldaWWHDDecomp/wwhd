@@ -1,5 +1,6 @@
 /* Based on the CC0 tww JAudio 1 reference; WWHD owns the observed layout and behavior. */
 #include "JSystem/JAudio/JAIFx.h"
+#include "sead/ElementAt.h"
 // HD: accessor indices retain the full incoming register width.
 namespace JAInter { namespace Fx {
 using FxBufferSize = be<u32>;
@@ -17,7 +18,8 @@ static AudioHeaderStatics fxHeaderStatics;
 static AudioDestructorRecord fxDestructorRecord;
 namespace JAInter { namespace Fx {
 /* 0280417C */
-u32 getBufferSizeMax(u32 line) { return mBufferSizeMax[line]; }
+/* guest EA arithmetic: base + index * size wraps at 32 bits as on the console */
+u32 getBufferSizeMax(u32 line) { return sead::elementAt<FxBufferSize>(gabi::ea(mBufferSizeMax), line); }
 /* 02804190 */
 void setSceneMax(u8 count) { mSceneMax = count; }
 /* 0280419C */
@@ -30,11 +32,11 @@ void setBufferMax(u32 a, u32 b, u32 c, u32 d) {
 /* 028041C4 */
 void setTablePointer(gptr<void>* table) { mFxconfigTable = table; }
 /* 028041D0 */
-void setScenePointer(u32 scene, void* config) { mFxconfigTable[scene] = config; }
+void setScenePointer(u32 scene, void* config) { sead::elementAt<FxScenePointer>(gabi::ea(mFxconfigTable), scene) = config; }
 /* 028041E4 */
-void setBufferPointer(u32 line, s16* buffer) { mBufferPointer[line] = buffer; }
+void setBufferPointer(u32 line, s16* buffer) { sead::elementAt<FxBufferPointer>(gabi::ea(mBufferPointer), line) = buffer; }
 /* 028041F8 */
-s16* getBufferPointer(u32 line) { return mBufferPointer[line]; }
+s16* getBufferPointer(u32 line) { return sead::elementAt<FxBufferPointer>(gabi::ea(mBufferPointer), line); }
 /* 0280420C */
 void init() {
     if (!initOnCodeFxScene) return;

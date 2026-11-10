@@ -1,5 +1,6 @@
 // Format the original texmtx%d key and return its parameter payload, with an optional index result.
 #include "JSystem/J3DGraph/PipelineColorParameters.h"
+#include "sead/ElementAt.h"
 #include "sead/FileDevice.h"
 using namespace j3d::pipeline;
 void formatPipelineIndexedName(sead::SafeTextBuffer*,const char*,s32);
@@ -32,7 +33,7 @@ void markIndexedParameter(PipelineParameterSet_l* parameters,u32 index) {
 void* editableParameterPayload(PipelineParameterSet_l* parameters,s32 selected,u32 extraOffset) {
     PipelineParameterResource_l* resource=parameters->mResource;
     auto* records=indexedParameterRelative<PipelineParameterRecord_l>(&resource->mRecordsOffset);
-    auto* record=&records[static_cast<u32>(selected)];
+    auto* record=&sead::elementAt<PipelineParameterRecord_l>(gabi::ea(records),static_cast<u32>(selected)); /* guest EA arithmetic: wraps at 32 bits as on the console */
     if(record->mSignedWord4>=0) {
         markIndexedParameter(parameters,static_cast<u32>(selected));
         resource=parameters->mResource;
@@ -68,7 +69,7 @@ void* PipelineParameterSet_l::findTextureMatrix(s32 index,be<s32>* selectedIndex
         resource=mResource;
         auto* records=indexedParameterRelative<PipelineParameterRecord_l>(&resource->mRecordsOffset);
         be<u8>* values=mValues;
-        auto* record=&records[static_cast<u32>(selected)];
+        auto* record=&sead::elementAt<PipelineParameterRecord_l>(gabi::ea(records),static_cast<u32>(selected)); /* guest EA arithmetic: wraps at 32 bits as on the console */
         u16 offset=record->mDataOffset;
         result=static_cast<void*>(values+offset);
     }

@@ -8,6 +8,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/d_camera_run.h"
+#include "port_hooks.h"
 
 namespace camera_run {
 static DemoPointer demoObject;
@@ -446,7 +447,7 @@ bool dCamera_c::eventCamera(s32) {
     u32 bg = (u32)(s32)mEventData.field_0x20;
     s32 trimSize = mEventData.field_0x1c;
     m068 = (bg >= 1 && bg <= 4) ? (u8)backgroundMasks.mValues[bg] : 9;
-    mTrimSize = trimSize;
+    mTrimSize = PORT_CAMERA_W(0x024FF4C0, this, trimSize); /* the port's targeting letterbox (port_hooks.h); compiled twice (@024FF4C0, @024FF4E4) */
     if (m100 != 0 && m101 != 0 && m102 != 0) {
         setComStat(dCamAttnStts_00000004_e);
     } else {

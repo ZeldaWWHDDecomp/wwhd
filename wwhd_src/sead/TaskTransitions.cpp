@@ -231,6 +231,10 @@ template <class T> static T* transitionStorage(T* object,u32 size) {
     if (gabi::ea(object) == 0) object = static_cast<T*>(allocateTransitionObject(size));
     return object;
 }
+// GHS scheduled the two inlined copies differently: the calc node (027677C4..) stores mCriticalSection, mVtable,
+// mDisposer.mVtable and then mUserData, mPauseListener; the transition node (02767988..) stores mDisposer.mVtable first
+// and mPauseListener before mUserData. Only the order of these stores differs (visible when a store faults).
+template <bool kTransitionOrder>
 static void initializeTransitionNode(sead::MethodTreeNode* node) {
     using namespace sead;
     TreeNode* tree = transitionStorage(&node->mTreeNode,0x14);
@@ -244,13 +248,19 @@ static void initializeTransitionNode(sead::MethodTreeNode* node) {
         name->mVtable = reinterpret_cast<SafeTextVtable*>(&sTransitionNodeNameTable);
     }
     constructTransitionDisposer(&node->mDisposer);
+    if (kTransitionOrder) node->mDisposer.mVtable = reinterpret_cast<DisposerVtable*>(&sTransitionNodeDisposerTable);
     node->mCriticalSection = NULL;
     node->mVtable = reinterpret_cast<MethodTreeNodeVtable*>(&sTransitionNodeTable);
-    node->mDisposer.mVtable = reinterpret_cast<DisposerVtable*>(&sTransitionNodeDisposerTable);
+    if (!kTransitionOrder) node->mDisposer.mVtable = reinterpret_cast<DisposerVtable*>(&sTransitionNodeDisposerTable);
     be<u32>* pause = transitionStorage(&node->mPauseFlags,4);
     if (pause != NULL) *pause = 0;
-    node->mUserData = NULL;
-    node->mPauseListener = NULL;
+    if (kTransitionOrder) {
+        node->mPauseListener = NULL;
+        node->mUserData = NULL;
+    } else {
+        node->mUserData = NULL;
+        node->mPauseListener = NULL;
+    }
     MethodDelegate* delegate = gabi::at<MethodDelegate>(gabi::ea(node) + 0x2C);
     if (delegate != NULL) {
         delegate->mMethod.mTarget = 0;
@@ -293,8 +303,8 @@ static sead::TaskTransition* createTaskTransition(sead::TaskTransition* task,con
         }
         registration->mDelegate = reinterpret_cast<CreateDelegate*>(delegate);
     }
-    initializeTransitionNode(&task->mCalcEntry);
-    initializeTransitionNode(&task->mTransitionNode);
+    initializeTransitionNode<false>(&task->mCalcEntry);
+    initializeTransitionNode<true>(&task->mTransitionNode);
     task->mPreviousTask = NULL;
     task->mExitEnd = 61;
     task->mExitStart = 31;

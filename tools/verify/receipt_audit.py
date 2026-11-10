@@ -23,6 +23,13 @@ Every `mutant*.json` under the receipt roots gets exactly one status (nothing is
                 and commit) with one edit `original` -> `replacement`: evidence about that version only
   error         joined, but its mutantN.cpp matches neither the landed source nor any earlier version, or it is the landed
                 source with the edit at another offset than the ledger's span (a stale span in the ledger)
+  unlanded-spec joined and current or stale, but the unit spec it ran is not on the audited tree: no
+                tools/verify/units/<spec>.txt under --spec-root (default --root), after the --spec-renames tables (default:
+                verify-archive/spec-renames-*.tsv of that tree). Its kill or survival backs no row (2026-11-09:
+                136 J3D D rows were killed only on 13 specs that never landed). The spec is the receipt's `spec`
+                field, else its command's -spec (a unit file, or an expanded spec's build directory: matched by its
+                last path component when the unit's own path cannot be recovered); a receipt without either (no run) is not
+                checked
 Credited rows (final_class D, EQ, RI, NAMED_GAP, SYNC) need a current receipt of their class that passes the gate (at
 least --gate-min-n inputs, an input seed of --gate-seeds): D a `difference` with a clean witness (cascade.kind / row_kills, so -nulltrap and the zero-page rule apply),
 the other classes `survived` or `equivalent-identical-code`; or a ruled basis named in the row's class_source (an
@@ -91,6 +98,63 @@ def receipt_spec(j):
         return os.path.basename(os.path.dirname(sp))
     b = os.path.basename(sp)
     return b[:-4] if b.endswith(".txt") else b
+
+
+class LandedSpecs:
+    """which unit specs exist on the audited tree (tools/verify/units under ROOT), old spec names resolved through rename
+    tables (old<TAB>new lines; `#` comments and an `old new` header are skipped)"""
+
+    def __init__(self, root, rename_tables):
+        self.units = os.path.join(root, "tools", "verify", "units")
+        self.full, self.base = set(), set()
+        for dp, _, fs in os.walk(self.units):
+            for f in fs:
+                if f.endswith(".txt"):
+                    rel = os.path.relpath(os.path.join(dp, f), self.units)[:-4]
+                    self.full.add(rel)
+                    self.base.add(os.path.basename(rel))
+        self.ren, self.ren_base = {}, {}
+        for t in rename_tables:
+            for line in open(t, errors="replace"):
+                w = line.rstrip("\n").split("\t")
+                if line.startswith("#") or len(w) < 2 or w[:2] == ["old", "new"]:
+                    continue
+                self.ren[w[0]] = w[1]
+                self.ren_base[os.path.basename(w[0])] = os.path.basename(w[1])
+
+    @staticmethod
+    def name_of(j):
+        """(unit spec name or None, last path component or None) of a receipt's run; (None, None) without a run"""
+        if j.get("spec"):
+            return str(j["spec"]), None
+        cmd = j.get("cmd", j.get("command", []))
+        if isinstance(cmd, str):
+            try:
+                import ast
+                cmd = ast.literal_eval(cmd)
+            except (ValueError, SyntaxError):
+                cmd = cmd.split()
+        if not isinstance(cmd, list) or "-spec" not in cmd or cmd.index("-spec") + 1 >= len(cmd):
+            return None, None
+        sp = str(cmd[cmd.index("-spec") + 1]).rstrip("/")
+        if os.path.basename(sp) == "spec.expanded.txt":
+            d = os.path.dirname(sp)
+            if "/build/verify/" in d:
+                return d.split("/build/verify/", 1)[1], None
+            return None, os.path.basename(d)
+        if "/tools/verify/units/" in sp and sp.endswith(".txt"):
+            return sp.split("/tools/verify/units/", 1)[1][:-4], None
+        b = os.path.basename(sp)
+        return None, b[:-4] if b.endswith(".txt") else b
+
+    def missing(self, j):
+        """the spec name when the receipt's spec is not on the tree, else None"""
+        full, base = self.name_of(j)
+        if full is not None:
+            return None if self.ren.get(full, full) in self.full else full
+        if base is not None:
+            return None if self.ren_base.get(base, base) in self.base else base
+        return None
 
 
 def norm_mutation(m):
@@ -336,6 +400,12 @@ def audit(a):
     exclude_files = {(os.path.abspath(k) if os.path.isabs(k) else k): (r or "excluded")
                      for k, _, r in (x.partition("=") for x in a.exclude_receipt)}
     exclude_specs = dict(x.split("=", 1) if "=" in x else (x, "excluded spec") for x in a.exclude_spec)
+    spec_root = a.spec_root or a.root
+    tables = a.spec_renames if a.spec_renames is not None else sorted(
+        os.path.join(spec_root, "verify-archive", f) for f in (os.listdir(os.path.join(spec_root, "verify-archive"))
+                                                               if os.path.isdir(os.path.join(spec_root, "verify-archive")) else [])
+        if f.startswith("spec-renames-") and f.endswith(".tsv"))
+    landed_specs = LandedSpecs(spec_root, tables)
     seeds = {int(x) for x in a.gate_seeds.split(",") if x}
     out, errors = [], []
     backing = collections.defaultdict(list)  # global_id -> current receipts (kind, clean witness, gated, path)
@@ -366,6 +436,7 @@ def audit(a):
             rec.update(status="excluded", note="spec %s: %s" % (sp, exclude_specs[sp]))
             out.append(rec)
             continue
+        unlanded = landed_specs.missing(j)
         func, mut = str(j.get("func", "")).upper(), norm_mutation(j.get("mutation"))
         rec["kind"] = cascade.kind(j) if j.get("class") else ""
         mapped = next(((sub, m, mp) for sub, m, mp in idmaps if any(sub in x for x in parts[:-1])), None)
@@ -417,9 +488,10 @@ def audit(a):
                         same = t is not None and function_text(vt, r["function"]) is not None and \
                             function_text(vt, r["function"]) == function_text(t, r["function"])
                         hits.append(("stale", r, "%s (commit %s)%s" % (blob[:12], commit[:12], ", function identical" if same else "")))
-                        if same:
+                        if same and not unlanded:
                             pins[r["global_id"]].append((rec["kind"], p, j))
-                        stale_at[r["global_id"]].append((rec["kind"], p, j, blob, commit, vt))
+                        if not unlanded:
+                            stale_at[r["global_id"]].append((rec["kind"], p, j, blob, commit, vt))
                         break
         if not hits:
             rec.update(status="error", global_id=",".join(r["global_id"] for r in cands),
@@ -432,6 +504,10 @@ def audit(a):
         rec.update(status=st, global_id=",".join(h[1]["global_id"] for h in hits if h[0] == st),
                    version=";".join(sorted({h[2] for h in hits if h[0] == st})))
         out.append(rec)
+        if unlanded:  # its spec never landed: the run is no evidence on the audited tree (backs nothing, pins nothing)
+            rec.update(status="unlanded-spec", note="spec %s is not in tools/verify/units of %s (otherwise %s)" % (
+                unlanded, spec_root, st))
+            continue
         if st == "current":
             try:
                 gated = int(j.get("n", 0)) >= a.gate_min_n and int(j.get("input_seed", -1)) in seeds
@@ -534,6 +610,9 @@ def main(argv=None):
     ap.add_argument("--exclude-receipt", action="append", default=[], help="PATH=REASON: one receipt file, excluded")
     ap.add_argument("--exclude-spec", action="append", default=[], help="SPEC=REASON: receipts whose run used that unit spec "
                     "(from the receipt's -spec: a unit file name without .txt, or an expanded spec's build directory) are excluded")
+    ap.add_argument("--spec-root", help="tree whose tools/verify/units must hold each receipt's spec (default: --root)")
+    ap.add_argument("--spec-renames", action="append", default=None, help="old<TAB>new spec rename table (default: every "
+                    "verify-archive/spec-renames-*.tsv of the spec root)")
     ap.add_argument("--ruled-difference", action="append", default=[], help="ROW=REASON: an EQ, NAMED_GAP or RI row accepted "
                     "despite a current clean difference (listed as contradicted-ruled); a named row without one is an error")
     ap.add_argument("--ruled-basis", action="append", default=[], help="class_source prefix that names a ruled basis (no receipt needed)")

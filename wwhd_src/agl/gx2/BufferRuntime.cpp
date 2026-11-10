@@ -1,6 +1,7 @@
 /* Graphics palette allocations, strided buffer views and cache boundary calls. */
 #include "agl/gx2/BufferRuntime.h"
 #include "agl/gx2/PoseRecords.h"
+#include "sead/ElementAt.h"
 using namespace agl::gx2util;
 extern void invalidateGraphicsRange(void* data, u32 size);
 extern void flushGraphicsRange(void* data, u32 size);
@@ -570,14 +571,14 @@ static void inversePaletteMatrix(MatrixUtility* output, const MatrixUtility* inp
 void agl::gx2util::PaletteBuffer::adjustBoneMatrix(MatrixUtility* output, const MatrixUtility* input, u32 bone, u32 retainWorld) {
     gabi::AutoFrame frame{gabi::current_function()};
     u32 flags = mFlags;
-    auto world = static_cast<MatrixUtility*>(mWorld.get()) + bone;
-    auto local = static_cast<const PoseBoneDescriptor*>(mBones.get()) + bone;
+    auto world = sead::elementPtr(static_cast<MatrixUtility*>(mWorld.get()), bone); /* guest EA arithmetic: wraps at 32 bits as on the console */
+    auto local = sead::elementPtr(static_cast<const PoseBoneDescriptor*>(mBones.get()), bone);
     mFlags = flags | 0x10;
     gabi::FrameLocal<MatrixUtility> composedStorage(0x38);
     auto& composed = *composedStorage;
     multiplyPaletteMatrix(&composed, input, world);
     u32 boneFlags = local->mFlags;
-    auto bases = &static_cast<PoseLocal*>(mLocal.get())[bone].mMatrix;
+    auto bases = &sead::elementAt(static_cast<PoseLocal*>(mLocal.get()), bone).mMatrix;
     buildScaledPaletteMatrix(boneFlags & 0x70000, &composed, input, world, bases);
     u32 updated = mFlags;
     mFlags = updated | ((boneFlags & 0x60000) == 0x40000 ? 0x14 : 0x10);

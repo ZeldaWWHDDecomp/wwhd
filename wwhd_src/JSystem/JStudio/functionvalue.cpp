@@ -1,6 +1,7 @@
 // JStudio function-value evaluation, reconstructed against Cafe and the GameCube JStudio reference.
 #include "JSystem/JStudio/functionvalue.h"
 #include "JSystem/JStudio/jstudio-object.h"
+#include "sead/ElementAt.h"
 using namespace JStudio;
 namespace {
 struct VtableStorage { u8 bytes[0x38]; };
@@ -355,13 +356,13 @@ void TFunctionValue_list::getAttributeSet(TFunctionValueAttributeSet* out,TFunct
 
 /* 02849704 */
 f64 TFunctionValue_list::update_INTERPOLATE_NONE_(const TFunctionValue_list* value,const TIndexData_* index) {
-    u32 item=index->index; const be<f32>* data=value->pfData_; return data[item];
+    u32 item=index->index; const be<f32>* data=value->pfData_; return sead::elementAt(data,item); /* guest EA arithmetic: wraps at 32 bits as on the console */
 }
 
 /* 02849718 */
 f64 TFunctionValue_list::update_INTERPOLATE_LINEAR_(const TFunctionValue_list* value,const TIndexData_* index) {
     u32 item=index->index; const be<f32>* data=value->pfData_;
-    f64 parameter=index->parameter; f64 begin=data[item]; f64 end=data[item+1];
+    f64 parameter=index->parameter; f64 begin=sead::elementAt(data,item); f64 end=sead::elementAt(data,item+1); /* guest EA arithmetic: wraps at 32 bits as on the console */
     f64 indexParameter=index->indexParameter;
     return gabi::fmadd(end-begin,parameter-indexParameter,begin);
 }
@@ -369,8 +370,8 @@ f64 TFunctionValue_list::update_INTERPOLATE_LINEAR_(const TFunctionValue_list* v
 /* 02849748 */
 f64 TFunctionValue_list::update_INTERPOLATE_PLATEAU_(const TFunctionValue_list* value,const TIndexData_* index) {
     u32 item=index->index; const be<f32>* data=value->pfData_;
-    f64 begin=data[item]; f64 indexParameter=index->indexParameter;
-    return functionvalue::interpolateValue_hermite(index->parameter,indexParameter,begin,0.0,indexParameter+1.0,data[item+1],0.0);
+    f64 begin=sead::elementAt(data,item); f64 indexParameter=index->indexParameter; /* guest EA arithmetic: wraps at 32 bits as on the console */
+    return functionvalue::interpolateValue_hermite(index->parameter,indexParameter,begin,0.0,indexParameter+1.0,sead::elementAt(data,item+1),0.0);
 }
 
 namespace JStudio { namespace functionvalue {

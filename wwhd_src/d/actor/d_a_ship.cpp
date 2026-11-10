@@ -6,6 +6,7 @@
  * (zeldaret/tww src/d/actor/d_a_ship.cpp) to the WWHD layout and verified against cking.rpx.
  */
 #include "d/actor/d_a_ship.h"
+#include "port_hooks.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x1003A1EC};
 static u32 ship_drawBuffer;
@@ -2018,7 +2019,7 @@ BOOL daShip_c::procTurn_init() {
 void daShip_c::setMoveAngle(s16 moveAngle) {
     if (!mTornadoActor && !mWhirlActor) { /* !checkForceMove() */
         /* HD: the turn rate falls off up to speed 100 (GameCube 55) */
-        f32 turnRate = 4.0f - (std::fabs((f32)speedF) / 100.0f) * 3.0f;
+        f32 turnRate = 4.0f - (std::fabs(PORT_SHIP(0x0247D4E8, this, (f32)speedF)) / 100.0f) * 3.0f;
         s16 initialAngle = shape_angle.y;
         if (turnRate > 3.6f) {
             turnRate = 3.6f;
@@ -2680,6 +2681,7 @@ BOOL daShip_c::procSteerMove() {
             f32 windStrength = *dKyw_get_wind_power();
             windPower = windStrength + windStrength;
         } else {
+            (void)PORT_SHIP(0x0247E988, this, 0.0f);
             maxSpeed = 55.0f;
             if (mSwiftSailActive == 1) {
                 mSwiftSailActive = 0;
@@ -2708,6 +2710,7 @@ BOOL daShip_c::procSteerMove() {
             windPower = 1.0f;
         }
         windPower = (windFactor * maxSpeed) * windPower;
+        windPower = PORT_SHIP(0x0247EB88, this, windPower);
 
         f32 stickRate = 20.0f;
         if (checkFrontObstacle()) {
@@ -2734,7 +2737,8 @@ BOOL daShip_c::procSteerMove() {
             /* HD: always towards the wind speed, step 2 */
             cLib_addCalc(&speedF, windPower, 0.1f, 2.0f, 0.1f);
         }
-        if (shipTail::eventRun(dComIfGp_ea()) == 0 && ship_isLinkPlayer0() &&
+        if (shipTail::eventRun(dComIfGp_ea()) == 0 &&
+            (windPower = PORT_SHIP(0x0247ED24, this, windPower), ship_isLinkPlayer0()) &&
             m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(mpBodyAnm->getFrame() < 9.0f) &&
             !checkStateFlg(daSFLG_FLY_e) && mFwdVel > 30.000002f) {
             /* HD: jumps need wind speed 20 and forward speed 30 (GameCube 11 / 16.5) */

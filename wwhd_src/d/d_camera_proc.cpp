@@ -12,6 +12,7 @@
  * no-trans view matrix 0x1E4; prm1..3 bytes 0x230..0x232; dCamera_c body at 0x248.
  */
 #include "d/d_camera_proc.h"
+#include "port_hooks.h"
 #include <bit>
 
 using namespace CameraProcessHD;
@@ -212,7 +213,8 @@ static void view_setup(camera_class* i_this) {
     gabi::at<DrawView>(dComIfGp_ea() + 0x5F9C)->mViewport = window;     /* dComIfGd_setViewport */
     gabi::at<DrawView>(dComIfGp_ea() + 0x5F9C)->mView = cam_ea(i_this); /* dComIfGd_setView */
     if (playScopeMessageStatus()->get() != 0) { /* dComIfGp_getScopeMesgStatus() */
-        clipperSetup(
+        /* the port's aspect / stereo culling (port_hooks.h) may change fovy and aspect */
+        PORT_PROJECTION(0x024F811C, clipperSetup,
             fieldRead<f32>(cameraView(i_this)->mFovy), fieldRead<f32>(cameraView(i_this)->mAspect),
             fieldRead<f32>(cameraView(i_this)->mNear),
             fieldRead<f32>(
@@ -224,7 +226,7 @@ static void view_setup(camera_class* i_this) {
             stage); /* getStagInfo() */
         f32 far = (f32)fieldRead<u16>(
             gabi::at<StageInfo>(info)->mCullPoint); /* dStage_stagInfo_GetCullPoint */
-        clipperSetup(fieldRead<f32>(cameraView(i_this)->mFovy),
+        PORT_PROJECTION(0x024F8168, clipperSetup, fieldRead<f32>(cameraView(i_this)->mFovy),
                      fieldRead<f32>(cameraView(i_this)->mAspect),
                      fieldRead<f32>(cameraView(i_this)->mNear), far);
     }
@@ -234,6 +236,7 @@ static void view_setup(camera_class* i_this) {
 /* HD: when the trim is suppressed (play byte 0x5292, or for the cinema-scope size the
  * global 101D6010 == 1) the bars shrink away instead  */
 void dCamera_c::CalcTrimSize() {
+    PORT_CAMERA_AT(0x024FF8C0, this); /* the port's targeting letterbox (port_hooks.h): a trace */
     u32 size = mTrimSize;
     f32 h;
     switch (size) {
@@ -243,7 +246,8 @@ void dCamera_c::CalcTrimSize() {
         if (playEventRunning()->get() != 0)
             break;
         h = mTrimHeight;
-        mTrimHeight = gabi::fmadds(fieldRead<f32>(cameraSetup(this)->mVistaTrimHeight) - h, 0.25f,
+        /* the port's targeting letterbox (port_hooks.h) may suppress the Vista bars */
+        mTrimHeight = gabi::fmadds(PORT_CAMERA_F(0x024FF980, this, fieldRead<f32>(cameraSetup(this)->mVistaTrimHeight)) - h, 0.25f,
                                    h); /* VistaTrimHeight */
         return;
     case 2:
@@ -282,7 +286,7 @@ static BOOL camera_execute(camera_class* i_this) {
     u32 wBits = fieldRead<u32>(vp->mWidth);
     u32 hBits = fieldRead<u32>(vp->mHeight);
     fieldWrite<u32>(body->mWindowWidth, wBits);               /* SetWindow */
-    fieldWrite<f32>(cameraView(i_this)->mAspect, 1.7777778f); /* fopCamM_SetAspect */
+    fieldWrite<f32>(cameraView(i_this)->mAspect, PORT_CAMERA_F(0x024FFA98, i_this, 1.7777778f)); /* the port's aspect (port_hooks.h) */ /* fopCamM_SetAspect */
     fieldWrite<u32>(body->mWindowHeight, hBits);
     body->mWindowAspectRatio = fieldRead<f32>(vp->mWidth) / fieldRead<f32>(vp->mHeight);
     auto* stat = &cameraInfo(camId)->mCameraAttentionStatus;
@@ -430,7 +434,7 @@ static s32 init_phase2(camera_class* i_this) {
     fieldWrite<f32>(cameraView(i_this)->mFar, farPlane);      /* fopCamM_SetFar */
     fieldWrite<f32>(cameraView(i_this)->mFovy, 30.0f);        /* fopCamM_SetFovy */
     fieldWrite<f32>(cameraView(i_this)->mNear, 1.0f);         /* fopCamM_SetNear */
-    fieldWrite<f32>(cameraView(i_this)->mAspect, 1.7777778f); /* fopCamM_SetAspect */
+    fieldWrite<f32>(cameraView(i_this)->mAspect, PORT_CAMERA_F(0x025020E0, i_this, 1.7777778f)); /* the port's aspect (port_hooks.h) */ /* fopCamM_SetAspect */
     u32 pos = gabi::ea(&player->current.pos);
     u32 py = gabi::at<WordVector>(pos)->mWord[1].get();
     u32 px = gabi::at<WordVector>(pos)->mWord[0].get();
@@ -1193,7 +1197,8 @@ static BOOL camera_draw(camera_class* i_this) {
     f32 trim = (f32)gabi::ftoi(body->mTrimHeight);
     windowSetScissor(cameraArgument(window), 0.0f, trim, 1280.0f,
                      720.0f - (trim + trim)); /* window->setScissor */
-    cameraPerspective(
+    /* the port's aspect (port_hooks.h) may change fovy and aspect */
+    PORT_PROJECTION_ARG(0x024FFD60, cameraPerspective,
         cameraArgument(gabi::ea(&cameraView(i_this)->mProjMtx)),
         fieldRead<f32>(cameraView(i_this)->mFovy), fieldRead<f32>(cameraView(i_this)->mAspect),
         fieldRead<f32>(cameraView(i_this)->mNear),
@@ -1269,7 +1274,8 @@ static BOOL camera_draw(camera_class* i_this) {
     u32 lookAt = gabi::ea(&hdCamera(body)->mMatrix);
     gabi::call_ptr(gabi::at<CameraVtable>(hdCamera(body)->mVtable)->doUpdateMatrix.get(), lookAt,
                    lookAt); /* camera.doUpdateMatrix(&mtx) */
-    projectionSet(
+    /* the port's aspect (port_hooks.h) may change fovy and aspect */
+    PORT_PROJECTION_ARG(0x0250007C, projectionSet,
         cameraArgument(gabi::ea(&hdProjection(body)->mDirty)),
         fieldRead<f32>(cameraView(i_this)->mNear), fieldRead<f32>(cameraView(i_this)->mFar),
         fieldRead<f32>(cameraView(i_this)->mFovy) * 0.017453292f,

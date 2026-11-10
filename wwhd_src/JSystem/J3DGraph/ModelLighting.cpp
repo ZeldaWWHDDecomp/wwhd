@@ -2,6 +2,7 @@
 // Consumed layouts follow own instructions and the canonical shared interface.
 // The historical tww declaration cross-check supplies no layout acceptance evidence.
 #include "JSystem/J3DGraph/ModelLighting.h"
+#include "sead/ElementAt.h"
 #include "bindings.h"
 using namespace j3d::pipeline;
 static MatrixRows sPipelineDefaultMatrix;
@@ -83,9 +84,11 @@ void ModelPipeline_l::updateLighting(LightingPageArray_l* pages,s32 count,const 
     __atomic_thread_fence(__ATOMIC_ACQUIRE);
 }
 /* 027F7590 */
-void PipelineLightProvider_l::setLight(u32 index,PipelineLight_l* light) { mLights[index]=light; }
+void PipelineLightProvider_l::setLight(u32 index,PipelineLight_l* light) { /* guest EA arithmetic: wraps at 32 bits as on the console */
+    sead::elementAt<gptr<PipelineLight_l>>(gabi::ea(mLights),index)=light; }
 /* 027F75A0 */
-PipelineLight_l* PipelineLightProvider_l::light(u32 index) const { return mLights[index]; }
+PipelineLight_l* PipelineLightProvider_l::light(u32 index) const { /* guest EA arithmetic: wraps at 32 bits as on the console */
+    return sead::elementAt<gptr<PipelineLight_l>>(gabi::ea(mLights),index); }
 /* 027F7634 */
 void PipelineFogProvider_l::setFog(PipelineFog_l* fog) { mFog=fog; }
 /* 027F763C */

@@ -1,6 +1,7 @@
 /* Geometry workspace ownership and compiler-generated storage hooks. */
 #include "agl/gx2/GeometryStorage.h"
 #include "agl/gx2/GeometryProjection.h"
+#include "sead/ElementAt.h"
 using namespace agl::gx2util;
 extern void* graphicsAllocate(u32 size);
 extern void graphicsDelete(void* object);
@@ -102,13 +103,13 @@ void agl::gx2util::GeometryPointGroups::swap(u32 first, u32 second) {
     gabi::AutoFrame frame{gabi::current_function()};
     u32 capacity = mCapacity;
     auto entries = mEntries.get();
-    GeometryPointList* saved = entries[first < capacity ? first : 0];
-    auto target = entries + (first < capacity ? first : 0);
-    auto source = entries + (second < capacity ? second : 0);
+    GeometryPointList* saved = sead::elementAt(entries, first < capacity ? first : 0); /* guest EA arithmetic: wraps at 32 bits as on the console */
+    auto target = sead::elementPtr(entries, first < capacity ? first : 0);
+    auto source = sead::elementPtr(entries, second < capacity ? second : 0);
     *target = source->get();
     capacity = mCapacity;
     entries = mEntries;
-    entries[second < capacity ? second : 0] = saved;
+    sead::elementAt(entries, second < capacity ? second : 0) = saved;
 }
 
 /* 027D9294 */

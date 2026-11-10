@@ -1,5 +1,6 @@
 // HD: Message line breaking, character conversion, numbers, and localized unit strings.
 #include "d/hd_text_unit.h"
+#include "port_hooks.h"
 
 using namespace hd_text_unit;
 
@@ -244,6 +245,7 @@ s32 hdTextUnit_c::putPlayerName(hdUnitBufferedString_c* i_string, s32 pos) {
         textUnitNative_moveBytes_4(top, u32(textUnitStatics().defaultName.mBuffer), u32(k) * 2, 0u);
         store<u16>(top + u32(k) * 2, 0);
     }
+    PORT_TEXT_NAME(0x025FC668, gabi::ea(this), u32(stringAt(W).mBuffer), s32(u32(bufferAt(W).mCapacity)));
     vAssure(W);
     const s32 len = wcsLength(u32(stringAt(W).mBuffer));
     vAssure(W);

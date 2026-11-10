@@ -73,3 +73,16 @@ framexact 02760ACC 02760AF8
 # zero-page rule: threadEntry with a registered manager (thread-specific key at +0x24) and a thread
 field 02760ACC 101F8B94 u32 0x59310000
 arg! 02760ACC r4 0x59300000
+
+# zero-page rule (2026-11-10, LOW clean 0/1000). Singletons the shipped game has set up
+# before these calls (the null image words made every input fault at the first member load):
+# - ThreadManager::attachCurrent 02760680 reads sThreadManager (101F8B94, class ThreadManager, vtable 1015E600)
+#   ->mThreadSpecificKey (+0x24, only passed on: stays generated). Object 0x59310000 as for 02760ACC above.
+field 02760680 101F8B94 u32 0x59310000
+# - AudioSystem::launchEntry 027625E8 reads sAudioServices (101F8BA8, class AudioServices) ->mBackend (+0x14) and
+#   checks it with the original AudioSystem isKindOf (vtable 1015EB28). Layout of lib2_sead_18's startSound fixture
+#   (0x5AA00000 services, 0x5AA01000 audio system); the backend is fixed to the audio system (a null backend faults at
+#   system->updateLocked in the original as well).
+field 027625E8 101F8BA8 u32 0x5AA00000
+field 027625E8 5AA00014 u32 0x5AA01000
+field 027625E8 5AA01000 u32 0x1015EB28

@@ -9,6 +9,7 @@
  * Functions of other ranges are called by address (gabi::call), not as C++ members.
  */
 #include "d/actor/d_a_player_main_01.h"
+#include "port_hooks.h"
 
 static PlayerJ3DSysState j3dSysState;
 static PlayerFrameCounter g_Counter;
@@ -1788,6 +1789,7 @@ void daPy_lk_c::makeItemType() {
             Player01_gameAt(play)->play.mItemBombNumCount =
                 (s16)(Player01_gameAt(play)->play.mItemBombNumCount - 1);
             m35C8 = 17.0f;
+            PORT_QUICK_USE_AT(0x023DF7C0, this); /* the port's quick use (port_hooks.h) */
         }
         return;
     } else if (checkBowItem(item)) {

@@ -7,6 +7,7 @@
  */
 #include "d/d_camera_engine2.h"
 #include "gc_api/JSystem/JUTAssert.h"
+#include "port_hooks.h"
 using namespace camera_engine2;
 
 // HD: ride entry tables have independent guards and observed initialization order.
@@ -1254,7 +1255,8 @@ bool dCamera_c::manualCamera(s32 style) {
         radiusStep = 1.0f;
     }
     /* C stick */
-    f32 sign, ax;
+    port_rate_t sign; /* the vertical rate: f64 in the game build, where the port may set it (port_hooks.h) */
+    f32 ax;
     f32 cy = mStickCPosYLast;
     if (!(cy < 0.75f)) {
         ax = __builtin_fabsf(mStickCPosXLast);
@@ -1278,11 +1280,13 @@ bool dCamera_c::manualCamera(s32 style) {
         be<f32> *smoothedTurn = &m154; // HD: third stick-filter float at 0x154.
         if (ax < 0.01f) {
             cameraEngineChaseFloat(smoothedTurn, turn, 0.25f); /* cLib_chaseF */
+            PORT_CAMERA_MANUAL_AT(0x02510448, this, yawStep);
         } else {
             f32 step = 0.1f;
             if ((f32)*smoothedTurn * turn < 0.0f)
                 step = 0.18f;
             cameraEngineChaseFloat(smoothedTurn, turn, step);
+            PORT_CAMERA_MANUAL_AT(0x025104A0, this, yawStep);
         }
         ax = (f32)*smoothedTurn * 0.92f;
         CameraOptionViewHD *options =
@@ -1294,6 +1298,7 @@ bool dCamera_c::manualCamera(s32 style) {
     if (((ownerStatus0(mPadId) & 0x6800061) || (ownerStatus1(mPadId) & 0x10000)) &&
         mDMCSystem.field_0x0 == 0)
         setDMCAngle();
+    sign = PORT_CAMERA_RATE(0x0251053C, this, sign, latitudeStep);
     {
         gabi::Local<be<f32>> h;
         copyCameraWord(h.get(), &p->mCenterHeight);
@@ -1421,7 +1426,10 @@ bool dCamera_c::manualCamera(s32 style) {
     if (!rangeAdd(R.get(), -(sign * radiusStep), minimumRadius, maximumRadius))
         rR = blockedFollowRate;
     *lat = cameraEngineAngleDegree(&p->mDirection.mV); /* Degree */
-    if (!rangeAdd(lat.get(), -(sign * latitudeStep), minimumLatitude, maximumLatitude))
+    if (!rangeAdd(lat.get(),
+                  PORT_CAMERA_MANUAL(0x02510DEC, this, -(sign * latitudeStep), minimumLatitude,
+                                     maximumLatitude),
+                  minimumLatitude, maximumLatitude))
         rV = blockedFollowRate;
     {
         f32 du = cameraEngineAngleDegree(&p->mDirection.mU);
@@ -1438,11 +1446,11 @@ bool dCamera_c::manualCamera(s32 style) {
         f32 rr = mViewCache.mDirection.mRadius;
         mViewCache.mDirection.mRadius = gabi::fmadds(p->mDirection.mRadius - rr, rR, rr);
         subtractCameraAngles(&p->mDirection.mV, t34, &mViewCache.mDirection.mV);
-        scaleCameraAngle(t34, t32, rV);
+        scaleCameraAngle(t34, t32, PORT_CAMERA_MANUAL(0x02510EA0, this, rV, 0.0f, 0.0f));
         addCameraAngles(&mViewCache.mDirection.mV, t30, t32);
         mViewCache.mDirection.mV = copyCameraAngle(tmp, *t30);
         subtractCameraAngles(&p->mDirection.mU, t30, &mViewCache.mDirection.mU);
-        scaleCameraAngle(t30, t32, rU);
+        scaleCameraAngle(t30, t32, PORT_CAMERA_MANUAL(0x02510EE4, this, rU, 0.0f, 0.0f));
         addCameraAngles(&mViewCache.mDirection.mU, t34, t32);
         mViewCache.mDirection.mU = copyCameraAngle(tmp, *t34);
         cameraEngineGlobeXyz(&mViewCache.mDirection, x.get());

@@ -23,10 +23,12 @@ import os
 import random
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -147,6 +149,64 @@ def preamble_helpers(text, regions):
     return [(hs, he, name, sorted(callers[name], key=order.index)) for hs, he, name in found if callers[name]]
 
 
+HEADER_EXT = (".h", ".hpp", ".hh", ".inl")
+HEADER_ROOT = "wwhd_src/include"
+
+
+def is_header(path):
+    return path.endswith(HEADER_EXT)
+
+
+def header_inlines(text):
+    """Function bodies defined in a header (TODO item 3 header part, 2026-11-01): in-class member definitions and inline /
+    static free functions, at any nesting of namespaces, extern "C" blocks and class/struct/union bodies. Returns
+    [(start, end, name)] with start at the definition's first token and end after its closing brace. Declarations without
+    a body, lambdas, initialisers (`= {...}`), control statements and preprocessor lines are not definitions; a
+    constructor's member-init list belongs to its definition (name = the identifier before the first parenthesis)."""
+    code = autoglue.mask(text)
+    found = []
+    last = 0
+    i = 0
+    n = len(code)
+    while i < n:
+        c = code[i]
+        if c in ";}":
+            last = i + 1
+        elif c == "{":
+            header = code[last:i]
+            hs = header.strip()
+            lines = [ln for ln in header.split("\n") if ln.strip() and not ln.lstrip().startswith("#")]
+            head = "\n".join(lines).strip()
+            m = re.match(r"(?:template\s*<[^{};]*>\s*)?(?:[\w:~<>,*&\s]*?)\b(~?[A-Za-z_]\w*)\s*\(", head)
+            if (head and m and "(" in head and m.group(1) not in NOT_FUNCS and m.group(1) not in ("operator",)
+                    and "=" not in head.split("(")[0] and not re.match(r"(?:namespace|extern|class|struct|union|enum)\b", head)
+                    and re.search(r"\)\s*(?:const\s*)?(?:noexcept\s*)?(?:override\s*|final\s*)*(?:->\s*[\w:<>,*&\s]+)?$", head.split(":", 1)[0]
+                                  if re.search(r"\)\s*:\s*[A-Za-z_]", head) else head)):
+                close = autoglue.match_close(code, i, "{", "}")
+                start = last + len(header) - len(header.lstrip())
+                found.append((start, close + 1, m.group(1)))
+                i = close + 1
+                last = i
+                continue
+            last = i + 1  # a namespace / class / extern block (or anything else): look inside
+        i += 1
+    return found
+
+
+def header_users(htext, regions, srctexts):
+    """{name: [marked function addresses using it]} over [(src text, regions)] (name match, like preamble_helpers)"""
+    out = {}
+    for hs, he, name in header_inlines(htext):
+        pat = re.compile(r"\b%s\b" % re.escape(name.lstrip("~")))
+        users = []
+        for text, regs in srctexts:
+            code = autoglue.mask(text)
+            users += [addr for addr, s, e in regs if pat.search(code[s:e])]
+        out.setdefault(name, [])
+        out[name] += [u for u in users if u not in out[name]]
+    return out
+
+
 def mutants(text, start, end):
     # blank out comments (keeping offsets) so mutations only hit code
     # (and the WWHD_FUNC/VERIFY bookkeeping, which only names the function)
@@ -199,6 +259,55 @@ REFCACHE_MIN_FREE = 2 << 30  # free bytes the reference-side cache needs where i
 def free_bytes(path):
     """free bytes of the file system holding path (a function, so the self-test can replace it)"""
     return shutil.disk_usage(path).free
+
+
+OWN_DIRS = []  # directories this campaign created and removes on every exit path (atexit; SIGTERM/SIGHUP at once)
+
+
+# the only directory tree --sweep-stale-refcache may remove anything in (2026-11-09): WWHD_MUT_SWEEP_ROOT. No
+# default: without it the flag is refused (exit 2) and sweep_stale_refcache raises.
+SWEEP_ROOT = os.environ.get("WWHD_MUT_SWEEP_ROOT") or None
+
+
+def sweep_stale_refcache(base, unit, is_scratch=True):
+    """--sweep-stale-refcache: remove BASE/refcache-<unit>-<pid>-* directories whose pid is not running (a campaign ended
+    by SIGKILL leaves its record directory behind); a live pid's directory is kept. Returns the removed paths.
+    Limits (2026-11-09): only mutate's own refcache-* record
+    directories (no symlinks, name refcache-<unit>-<pid>-<suffix>), only of pids that are gone, only directly inside this
+    run's own scratch directory (is_scratch: BASE came from --scratch / WWHD_MUT_SCRATCH / WWHD_VERIFY_SCRATCH, never the
+    output-directory fallback) and only on SWEEP_ROOT; anything else: the sweep is skipped with a note. Each removal (and
+    each failed one) is named on stderr. SWEEP_ROOT unset (WWHD_MUT_SWEEP_ROOT): RuntimeError, nothing removed."""
+    import glob
+    if not SWEEP_ROOT:
+        raise RuntimeError("--sweep-stale-refcache needs WWHD_MUT_SWEEP_ROOT (the only directory tree the sweep may clean)")
+    removed = []
+    real = os.path.realpath(base)
+    root = os.path.realpath(SWEEP_ROOT)
+    if not is_scratch or not real.startswith(root + os.sep):
+        print("mutate.py: --sweep-stale-refcache: skipped, %s is not this run's scratch directory on %s; nothing removed"
+              % (base, SWEEP_ROOT), file=sys.stderr)
+        return removed
+    prefix = "refcache-%s-" % unit.replace("/", "__")
+    for d in sorted(glob.glob(os.path.join(base, prefix + "*"))):
+        m = re.match(r"^(\d+)-[^-]+$", os.path.basename(d)[len(prefix):])
+        if not m or os.path.islink(d) or not os.path.isdir(d):
+            continue
+        pid = int(m.group(1))
+        try:
+            os.kill(pid, 0)
+            continue  # running (or not ours to signal): kept
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            continue
+        shutil.rmtree(d, ignore_errors=True)
+        if os.path.lexists(d):
+            print("mutate.py: --sweep-stale-refcache: could not remove %s (pid %d not running); left in place" % (d, pid),
+                  file=sys.stderr)
+            continue
+        removed.append(d)
+        print("mutate.py: --sweep-stale-refcache: removed %s (pid %d not running)" % (d, pid), file=sys.stderr)
+    return removed
 
 
 def mutant_scratch_request(opt):
@@ -635,11 +744,43 @@ def new_host_symbols(base_obj, mutant_obj, source_text=None):
 FUNC_VALUE_WARNING = re.compile(r"warning: [^\n]*\bfunction '([A-Za-z_]\w*)'")
 
 
+def scratch_free_mb():
+    """free MB on the file system of the mutant scratch (WWHD_MUT_SCRATCH, else the system temp directory)"""
+    st = os.statvfs(os.environ.get("WWHD_MUT_SCRATCH") or tempfile.gettempdir())
+    return st.f_bavail * st.f_frsize // (1 << 20)
+
+
+def compile_gate(loadavg=os.getloadavg, sleep=None, freemb=None):
+    """before a clang call (every mutant, schema, base and link compile, from every -j thread) wait while
+    WWHD_COMPILE_LOAD_MAX is set and the 1-minute load is at or above it (2026-11-01: load 104 with 8
+    parallel compiles), or while WWHD_COMPILE_MIN_FREE_MB is set and the scratch file system has less free space
+    (RAM-disk floor, same day). A long run backs off instead of only its start being gated. Unset: no gate."""
+    lim = os.environ.get("WWHD_COMPILE_LOAD_MAX")
+    mfree = os.environ.get("WWHD_COMPILE_MIN_FREE_MB")
+    if not lim and not mfree:
+        return 0
+    lim = float(lim) if lim else None
+    mfree = int(mfree) if mfree else None
+    sleep = sleep or time.sleep
+    freemb = freemb or scratch_free_mb
+    waited = 0
+    while (lim is not None and loadavg()[0] >= lim) or (mfree is not None and freemb() < mfree):
+        sleep(15)
+        waited += 1
+    return waited
+
+
+def run_clang(cmd, **kw):
+    """subprocess.run of a clang command behind compile_gate"""
+    compile_gate()
+    return subprocess.run(cmd, **kw)
+
+
 def function_value_warnings(cpp, cflags):
     """names in clang warnings about a function used as a value ("comparison of function 'index' equal to a null
     pointer is always false", "address of function 'index' will always evaluate to 'true'") for one -fsyntax-only
     compile of cpp with cflags (any -w removed: these warnings are on by default)"""
-    r = subprocess.run(["clang++"] + [f for f in cflags if f != "-w"] + ["-fsyntax-only", cpp], cwd=ROOT,
+    r = run_clang(["clang++"] + [f for f in cflags if f != "-w"] + ["-fsyntax-only", cpp], cwd=ROOT,
                        capture_output=True, text=True)
     return set(FUNC_VALUE_WARNING.findall(r.stderr))
 
@@ -713,8 +854,14 @@ def check_baseline(rc, out, what):
     non-ok row. A campaign whose unmutated baseline fails is void: every mutant run fails on the same rows and would
     count as a kill (2026-10-27, AGL#8: 3,165/3,165 "killed" with 0279345C failing unmutated)."""
     rows = [l for l in out.splitlines() if re.match(r"^[0-9A-F]{8}  ", l)]
-    bad = failing_rows(out)
-    if rc == 0 and rows and not bad:
+    # the zero-page rule as verify_all applies it (750a335ab): a row whose shown first difference carries the harness's
+    # page-0 marker differs only on inputs where the ORIGINAL faulted on page 0 (the harness shows a clean input's
+    # difference first whenever one exists), so it is no evidence against the function and the baseline passes it
+    # (2026-11-09: lib2_agl_17 s7 gen 7000037, an original page-0 fetch fault, made --rerun refuse the spec).
+    # Such a row makes the harness exit 1, so exit 1 passes when every non-ok row is one of them.
+    p0 = [l for l in failing_rows(out) if verify.P0_MARK in l]
+    bad = [l for l in failing_rows(out) if verify.P0_MARK not in l]
+    if (rc == 0 or (rc == 1 and p0)) and rows and not bad:
         return None
     msg = ["mutate.py: the unmutated baseline (%s) does not pass: exit %d, %d of %d function row(s) not ok" % (
         what, rc, len(bad), len(rows))]
@@ -726,6 +873,21 @@ def check_baseline(rc, out, what):
                "rows and count as a kill): fix the spec or the candidate until the baseline passes "
                "(verify.py with the same -n/-seed/scope), or use --allow-failing-baseline to leave these functions out.")
     return "\n".join(msg)
+
+
+HOSTMEM_RE = re.compile(r"host memory budget exceeded \(RSS \d+ MB > \d+ MB in one run(?:, collecting its net effect)?\)")
+
+
+def hostmem_fields(out):
+    """receipt fields for host-memory-budget aborts in a run's output (2026-11-09): the distinct abort
+    texts and their causes, `run` (sampled at the run's safe points) or `net-effect collection` (also when appended to another
+    abort reason, e.g. `access budget exceeded; host memory budget exceeded (... collecting its net effect)`). Diagnostic only:
+    aborts never count; such a mutant is re-run with a higher budget, never credited."""
+    hm = sorted(set(HOSTMEM_RE.findall(out)))
+    if not hm:
+        return {}
+    return {"hostmem_aborts": hm,
+            "hostmem_cause": sorted({"net-effect collection" if "collecting its net effect" in x else "run" for x in hm})}
 
 
 def classify(rc, out):
@@ -781,6 +943,14 @@ def main():
     ap.add_argument("--no-preamble-helpers", action="store_true",
                     help="do not mutate file-local helpers defined above a source's first marked function (the old "
                     "enumeration); since 2026-10-26 they are mutated, as IDs after the old campaign's")
+    ap.add_argument("--headers", metavar="H[,H...]|auto",
+                    help="also mutate inline function bodies in these headers (paths from the repository root, under "
+                    "wwhd_src/include; 'auto' = every such header a unit source includes directly). Header mutants follow "
+                    "every other mutant (IDs of campaigns without --headers unchanged), are attributed to the first in-scope "
+                    "marked function naming the inline function, are built by recompiling every unit source that includes "
+                    "the header against a mutated copy in a scratch include directory, run the whole campaign scope, and "
+                    "their receipts list the other units whose sources include the header (2026-11-01, TODO item 3). "
+                    "Off by default; never with --schemata/--reach-skip for these mutants (always a plain build)")
     ap.add_argument("--pool", action="store_true",
                     help="hold a machine-wide job slot (shared by every mutate.py --pool, WWHD_MUT_POOL_SLOTS, default the core "
                     "count) for each mutant's build and run, and wait for more slots while the load exceeds 1.25x the cores; "
@@ -818,6 +988,11 @@ def main():
                     "call, an undeclared pointer argument into a heap block (`observeheap` heaps) or a static object also has "
                     "that object's bytes compared (also from a `# verify: -observe-pointees` spec header). The baseline gate "
                     "runs with it, so the campaign is creditable only when the unmutated baseline passes with it")
+    ap.add_argument("--sweep-stale-refcache", action="store_true",
+                    help="opt-in, off by default: before the campaign, remove refcache-<this spec>-<pid>-* directories on the "
+                    "scratch whose pid is no longer running (left by a SIGKILLed campaign, which cannot clean up after itself). "
+                    "This deletes other runs' directories, so use it only where that is allowed (2026-11-09). Needs "
+                    "WWHD_MUT_SWEEP_ROOT: only scratch directories below it are swept; unset, the flag is refused")
     ap.add_argument("--no-refcache", action="store_true",
                     help="run the original side in every mutant run. Default (2026-10-28): the unmutated baseline run (same "
                     "spec, -n, seed, flags, nulltrap) records the original's result for every generated input of every function "
@@ -872,6 +1047,19 @@ def main():
                     "harness runs of the campaign always run without their own progress and wall-clock hang limit, so receipts "
                     "and verdicts are unchanged")
     a = ap.parse_args()
+    if a.sweep_stale_refcache and not SWEEP_ROOT:
+        ap.error("--sweep-stale-refcache needs WWHD_MUT_SWEEP_ROOT (the only directory tree the sweep may clean); it is not set")
+    # A campaign's own directories (the refcache record directory, the per-mutant scratch) are removed by atexit handlers.
+    # SIGTERM and SIGHUP end the process without running them, so they become SystemExit here (2026-11-09: a check found
+    # 56 refcache-<spec>-<pid>-* directories, 3.3 GB, left on the RAM disk by campaigns their guard had ended). SIGKILL cannot
+    # be handled: --sweep-stale-refcache removes such leftovers of dead campaigns of the same spec at the next start.
+    def _exit_on_signal(signum, _frame):
+        signal.signal(signum, signal.SIG_DFL)  # a second signal ends at once
+        for d in OWN_DIRS:  # first this campaign's own record directories: worker threads may delay the atexit handlers
+            shutil.rmtree(d, ignore_errors=True)
+        sys.exit(128 + signum)
+    for _sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(_sig, _exit_on_signal)
     if a.scratch:
         verify.require_scratch_dir("--scratch", a.scratch, "mutate.py")  # before any build: missing -> stop, nothing written
     prog = progress.Settings()
@@ -913,6 +1101,10 @@ def main():
             srcs += f[1:]
     out = verify.unit_dir(a.unit)  # build/verify/<unit>, or its WWHD_VERIFY_SCRATCH copy (the same one verify.build used)
     spec = specfile.spec_path(a.unit, ROOT, out)
+    import hashlib
+    # (2026-11-01) every receipt names the expanded spec it ran against, so a check can reject receipts from
+    # superseded spec versions mechanically (sha256 of the spec text the harness reads, includes expanded)
+    spec_sha256 = hashlib.sha256(open(spec, "rb").read()).hexdigest()
 
     # per-mutant scope (2026-10-27): the functions of the campaign scope whose rows can run a mutant's changed code
     base_rows = None  # the campaign scope's function rows (the full baseline's rows); set before the first mutant_scope call
@@ -934,8 +1126,12 @@ def main():
     scope_stats = {"scoped": 0, "whole": 0, "funcs": 0, "widened": 0}
     scope_lock = threading.Lock()
 
+    hdr_info = {}  # header -> {"includers": unit sources, "other_units": [...]} (--headers, --rerun of header mutants)
+
     def mutant_scope(src, addr, mt):
         """(set of functions, None) or (None, reason): the functions this mutant runs (None: the whole campaign scope)"""
+        if src in hdr_info:
+            return None, "header mutant: every function of the sources including %s" % src
         if scoper is None:
             return None, whole_why or "scope parser unavailable"
         if src not in src_texts:
@@ -989,7 +1185,11 @@ def main():
             d = staged
         else:
             want, _ = mutant_scratch_request(a.scratch)
-            base = want if want and os.path.isdir(want) and os.access(want, os.W_OK) else verify.verify_scratch_base() or out
+            base = want if want and os.path.isdir(want) and os.access(want, os.W_OK) else verify.verify_scratch_base()
+            on_scratch = base is not None  # the output-directory fallback is not a scratch directory: no sweep there
+            base = base or out
+            if a.sweep_stale_refcache:
+                sweep_stale_refcache(base, a.unit, is_scratch=on_scratch)
             try:
                 if shutil.disk_usage(base).free < REFCACHE_MIN_FREE:
                     print("mutate.py: reference-side cache off: less than %d MB free in %s" % (REFCACHE_MIN_FREE >> 20, base),
@@ -1000,6 +1200,7 @@ def main():
                 print("mutate.py: reference-side cache off (%s)" % e, file=sys.stderr)
                 return []
         atexit.register(shutil.rmtree, d, True)  # a staged directory moved into the cache entry is no longer there
+        OWN_DIRS.append(d)  # also removed at once on SIGTERM/SIGHUP (before the interpreter waits for worker threads)
         refc["key"] = refcache_key()
         refc["pending"] = d
         print("mutate.py: reference-side cache in %s (--no-refcache to run the original in every mutant run)" % d, file=sys.stderr)
@@ -1057,7 +1258,9 @@ def main():
                 continue
             if not os.path.exists(cpp):
                 sys.exit("mutate.py: --rerun %s: %s has no mutant%s.cpp" % (a.rerun, fn, mm.group(1)))
-            if rj["src"] not in srcs:
+            if rj["src"] not in srcs and rj.get("header_mutant"):  # --headers mutant: its includers from the receipt
+                hdr_info[rj["src"]] = rj["header_mutant"]
+            elif rj["src"] not in srcs:
                 sys.exit("mutate.py: --rerun: mutant %s mutates %s, not a src of %s" % (mm.group(1), rj["src"], a.unit))
             res.append((int(mm.group(1)), rj["src"], int(rj["func"], 16), (rj["mutation"], 0, 0, ""), open(cpp).read()))
         return sorted(res)
@@ -1270,6 +1473,84 @@ def main():
     if dup:
         sys.exit("mutate.py: sources with the same file name share one object (%s); rename one" % ", ".join(dup))
     inc = ["-Iruntime/include", "-Itools/verify/include", "-Itools/verify/src", "-Iwwhd_src/include"]
+    def includes_of(src):
+        """the headers under wwhd_src/include that compiling src reads (clang -MM with the unit's flags), once per source"""
+        if src not in inc_cache:
+            r = run_clang(["clang++", "-std=c++20", "-w", "-MM"] + verify.FP + inc +
+                               ["-I" + os.path.dirname(os.path.join(ROOT, src)), os.path.join(ROOT, src)],
+                               cwd=ROOT, capture_output=True, text=True)
+            deps = r.stdout.replace("\\\n", " ").split(":", 1)[-1].split() if r.returncode == 0 else []
+            inc_cache[src] = {os.path.relpath(os.path.realpath(os.path.join(ROOT, d)), ROOT) for d in deps}
+        return inc_cache[src]
+
+    def header_mutants(srcs, only, info):
+        """[(header, addr, mutant)] for --headers; fills info[header] = includers / other units"""
+        if a.headers.strip() == "auto":
+            hs = set()
+            for src in srcs:
+                text = open(os.path.join(ROOT, src)).read()
+                for m in re.finditer(r'^\s*#\s*include\s+"([^"]+)"', text, re.M):
+                    cand = os.path.join(HEADER_ROOT, m.group(1))
+                    if os.path.exists(os.path.join(ROOT, cand)):
+                        hs.add(os.path.normpath(cand))
+            headers = sorted(hs)
+        else:
+            headers = [os.path.normpath(h.strip()) for h in a.headers.split(",") if h.strip()]
+        out = []
+        for h in headers:
+            if not is_header(h) or not os.path.normpath(h).startswith(HEADER_ROOT + "/") or not os.path.exists(os.path.join(ROOT, h)):
+                sys.exit("mutate.py: --headers: %s is not a header under %s" % (h, HEADER_ROOT))
+            includers = [src for src in srcs if h in includes_of(src)]
+            if not includers:
+                print("mutate.py: --headers: no unit source includes %s; skipped" % h, file=sys.stderr)
+                continue
+            htext = open(os.path.join(ROOT, h)).read()
+            stx = []
+            for src in includers:
+                t = open(os.path.join(ROOT, src)).read()
+                stx.append((t, bodies(t)))
+            users = header_users(htext, None, stx)
+            order = [addr for t, regs in stx for addr, _, _ in regs]
+            n0 = len(out)
+            for hs_, he_, name in header_inlines(htext):
+                ins = [u for u in users.get(name, []) if only is None or u in only]
+                if not ins:
+                    continue
+                ins.sort(key=order.index)
+                for m in mutants(htext, hs_, he_):
+                    loc = " @%s:%d (inline %s)" % (os.path.basename(h), htext.count("\n", 0, m[1]) + 1, name)
+                    out.append((h, ins[0], (m[0] + loc,) + tuple(m[1:])))
+            if len(out) > n0:
+                info[h] = {"includers": includers, "other_units": other_units_including(h)}
+        return out
+
+    def other_units_including(h):
+        """specs (other than this campaign's unit family) whose sources include h directly by its include path"""
+        rel = os.path.relpath(h, HEADER_ROOT)
+        pat = re.compile(r'^\s*#\s*include\s+"%s"' % re.escape(rel), re.M)
+        fam = a.unit.split("/")[0]
+        res = set()
+        units_dir = os.path.join(HERE, "units")
+        for dp, _, fns in os.walk(units_dir):
+            for fn in fns:
+                if not fn.endswith(".txt"):
+                    continue
+                spec = os.path.relpath(os.path.join(dp, fn), units_dir)[:-4]
+                if spec == fam or spec.startswith(fam + "_") or spec.startswith(fam + "/"):
+                    continue
+                try:
+                    for line in open(os.path.join(dp, fn), errors="replace"):
+                        f = line.split("#")[0].split()
+                        if f and f[0] == "src":
+                            for sp in f[1:]:
+                                pth = os.path.join(ROOT, sp)
+                                if os.path.exists(pth) and pat.search(open(pth, errors="replace").read()):
+                                    res.add(spec)
+                except OSError:
+                    pass
+        return sorted(res)
+
+    inc_cache = {}
     allm = []
     extra = []  # helpers above a source's first marked function (preamble_helpers), appended after the old campaign
     for src in srcs:
@@ -1298,6 +1579,14 @@ def main():
         random.Random(a.seed).shuffle(extra)
         take = len(extra) if pool <= a.max else -(-len(extra) * a.max // pool)
         allm += extra[:take]
+    if a.headers:
+        hextra = header_mutants(srcs, only, hdr_info)
+        if hextra:  # after every other mutant: earlier IDs unchanged; sampled at the old pool's rate like the helpers
+            random.Random(a.seed).shuffle(hextra)
+            take = len(hextra) if pool <= a.max else -(-len(hextra) * a.max // pool)
+            allm += hextra[:take]
+            print("mutate.py: --headers: %d inline-function mutant(s) in %d header(s), %d taken" % (
+                len(hextra), len(hdr_info), take), file=sys.stderr)
     allm = [(i, src, addr, m, None) for i, (src, addr, m) in enumerate(allm)]
     if a.ids:  # receipt-free replay: the same enumeration gives the same IDs
         want = {int(x) for x in a.ids.split(",") if x.strip()}
@@ -1335,7 +1624,11 @@ def main():
             return
         open(os.path.join(a.receipts, "mutant%d.cpp" % i), "w").write(mt)
         rec = {"id": i, "src": src, "func": "%08X" % addr, "mutation": desc, "class": cls, "seed": a.seed,
-               "input_seed": a.input_seed, "n": a.n}
+               "input_seed": a.input_seed, "n": a.n, "spec": a.unit, "spec_sha256": spec_sha256}
+        # (2026-11-09) a host-memory-budget abort names its cause in the receipt, not only in the
+        # stdout/stderr tails: `run` (sampled at the run's safe points) or `net-effect collection` (also when appended to
+        # another abort reason). Diagnostic only: aborts never count, such a mutant is re-run with a higher budget.
+        rec.update(hostmem_fields(kw.get("stdout", "") + kw.get("stderr", "")))
         if a.rerun:
             rec["rerun_of"] = os.path.abspath(a.rerun)
         if refc.get("reuse"):
@@ -1346,6 +1639,8 @@ def main():
             rec["baseline_cache"] = bc_info
         if bscope is not None:
             rec["baseline_scope"] = ["%08X" % x for x in sorted(bscope)]
+        if src in hdr_info:
+            rec["header_mutant"] = hdr_info[src]
         rec.update(kw)
         json.dump(rec, open(os.path.join(a.receipts, "mutant%d.json" % i), "w"), indent=1)
 
@@ -1360,7 +1655,7 @@ def main():
 
     def compile_schema(src):
         def cc0(cpp, obj):
-            r = subprocess.run(["clang++", "-std=c++20", "-O1", "-Werror=vla", "-ferror-limit=0"] + verify.FP + inc +
+            r = run_clang(["clang++", "-std=c++20", "-O1", "-Werror=vla", "-ferror-limit=0"] + verify.FP + inc +
                                ["-I" + os.path.dirname(os.path.join(ROOT, src)), "-include", "tools/verify/src/mutschema.h",
                                 "-c", cpp, "-o", obj], cwd=ROOT, capture_output=True, text=True)
             return r.returncode, r.stderr
@@ -1410,7 +1705,7 @@ def main():
         """one schema executable per source and layer: every schema-able mutant compiled in, none live"""
         by_src = {}
         for i, src, addr, m, recorded in allm:
-            if recorded is None:
+            if recorded is None and src not in hdr_info:  # header mutants: always a plain build (--headers)
                 by_src.setdefault(src, []).append((i, m[0], m[1], m[2], m[3]))
         d = run_dir()
         for src, entries in by_src.items():
@@ -1421,7 +1716,7 @@ def main():
                 schema_why[r] = schema_why.get(r, 0) + 1
             for obj, ks in objects:
                 exe = obj[:-2]
-                r = subprocess.run(["clang++", "-o", exe] + replace_object(objs, src, obj), cwd=ROOT, capture_output=True, text=True)
+                r = run_clang(["clang++", "-o", exe] + replace_object(objs, src, obj), cwd=ROOT, capture_output=True, text=True)
                 rm(obj, obj[:-2] + ".cpp")
                 if r.returncode:
                     schema_why["schema link error"] = schema_why.get("schema link error", 0) + len(ks)
@@ -1649,7 +1944,7 @@ def main():
                 bpath = os.path.join(bdir, os.path.basename(src))
                 with open(bpath, "w") as fh:
                     fh.write(compiled_text(src)(text))
-                r = subprocess.run(mutant_flags(src) + ["-c", bpath, "-o", bpath + ".o"], cwd=ROOT, capture_output=True, text=True)
+                r = run_clang(mutant_flags(src) + ["-c", bpath, "-o", bpath + ".o"], cwd=ROOT, capture_output=True, text=True)
                 base_o1[src] = (bpath + ".o", bpath, mutcode.object_digest(bpath + ".o")) if r.returncode == 0 else (None, bpath, None)
             return base_o1[src]
 
@@ -1669,6 +1964,10 @@ def main():
         return mpath, mpath + ".o", os.path.join(d, "mutant%d" % i)
 
     def rm_mutant(i, src, d):
+        if src in hdr_info:
+            shutil.rmtree(os.path.join(d, "mutant%d.tu" % i), ignore_errors=True)
+            rm(os.path.join(d, "mutant%d" % i))
+            return
         mpath, mobj, mexe = mutant_files(i, src, d)
         rm(mpath, mobj, mexe, os.path.join(d, "mutant%d.cpp" % i), os.path.join(d, "mutant%d.o" % i))
         try:
@@ -1709,7 +2008,7 @@ def main():
         except OSError as oe:
             rm(mpath)
             return ("write", None, str(oe), True)
-        r = subprocess.run(mutant_flags(src) + ["-c", mpath, "-o", mobj], cwd=ROOT, capture_output=True, text=True)
+        r = run_clang(mutant_flags(src) + ["-c", mpath, "-o", mobj], cwd=ROOT, capture_output=True, text=True)
         if r.returncode:  # the files of a broken mutant stay, as before (a scratch run directory goes at the end)
             keep_broken(i, d, mpath, mobj)
             return ("compile", r.returncode, r.stderr, nospace(r.stderr))
@@ -1727,7 +2026,7 @@ def main():
         """("ok", mpath, mobj, mexe) or ("link", rc, stderr, nospace)"""
         mpath, _, mexe = mutant_files(i, src, d)
         lo = replace_object(objs, src, mobj)
-        r = subprocess.run(["clang++", "-o", mexe] + lo, cwd=ROOT, capture_output=True, text=True)
+        r = run_clang(["clang++", "-o", mexe] + lo, cwd=ROOT, capture_output=True, text=True)
         if r.returncode:
             return ("link", r.returncode, r.stderr, nospace(r.stderr))
         return ("ok", mpath, mobj, mexe)
@@ -1742,6 +2041,8 @@ def main():
     def build_and_link(i, src, mt, d):
         """build_mutant, the identical-code check, then link_mutant: ("ok", mpath, mobj, mexe, sha256 of the object),
         ("same", mpath, mobj, digest) or a failure tuple as build_mutant/link_mutant return it"""
+        if src in hdr_info:
+            return build_header_mutant(i, src, mt, d)
         b = build_mutant(i, src, mt, d)
         if b[0] != "obj":
             return b
@@ -1753,6 +2054,68 @@ def main():
                 return ("same", b[1], b[2], b[3])
         l = link_mutant(i, src, b[2], d)
         return l + (b[3],) if l[0] == "ok" else l
+
+    def build_header_mutant(i, hdr, mt, d):
+        """--headers: the mutated header in d/mutantN.tu/inc (with its directory's other headers, so sibling includes
+        resolve to the copy), every unit source including it recompiled against that directory first, those objects
+        replaced at link. ("ok", header copy, first object, executable, digest of the objects) / ("same", ...) when every
+        includer's object equals its unmutated object / a failure tuple"""
+        tu = os.path.join(d, "mutant%d.tu" % i)
+        incdir = os.path.join(tu, "inc")
+        rel = os.path.relpath(hdr, HEADER_ROOT)
+        try:
+            dst_dir = os.path.join(incdir, os.path.dirname(rel))
+            os.makedirs(dst_dir, exist_ok=True)
+            src_dir = os.path.join(ROOT, os.path.dirname(hdr))
+            for fn in os.listdir(src_dir):
+                if is_header(fn) and os.path.isfile(os.path.join(src_dir, fn)):
+                    shutil.copyfile(os.path.join(src_dir, fn), os.path.join(dst_dir, fn))
+            hpath = os.path.join(incdir, rel)
+            with open(hpath, "w") as fh:
+                fh.write(mt)
+        except OSError as oe:
+            return ("write", None, str(oe), True)
+        lo = list(objs)
+        digests = []
+        same = True
+        first = None
+        for src in hdr_info[hdr]["includers"]:
+            spath = os.path.join(tu, os.path.basename(src))
+            sobj = spath + ".o"
+            text = open(os.path.join(ROOT, src)).read()
+            try:
+                body = compiled_text(src)(text)
+            except autoglue.GlueError as ge:
+                return ("glue", None, str(ge), False)
+            with open(spath, "w") as fh:
+                fh.write(body)
+            fl = mutant_flags(src)
+            r = run_clang(fl[:4] + ["-I" + incdir] + fl[4:] + ["-c", spath, "-o", sobj], cwd=ROOT, capture_output=True, text=True)
+            if r.returncode:
+                keep_broken(i, d, spath, sobj)
+                shutil.rmtree(tu, ignore_errors=True)
+                return ("compile", r.returncode, r.stderr, nospace(r.stderr))
+            if not a.allow_host_symbols:
+                base = base_object(src)[0]
+                host = new_host_symbols(base, sobj, mt) if base else set()
+                if host:
+                    shutil.rmtree(tu, ignore_errors=True)
+                    return ("hostsym", 1, "mutant references host symbol(s) the original does not: %s" % ", ".join(sorted(host)), False)
+            dg = mutcode.object_digest(sobj)
+            digests.append(dg)
+            if base_build(src)[2] != dg:
+                same = False
+            lo = replace_object(lo, src, sobj)
+            first = first or sobj
+        import hashlib
+        digest = hashlib.sha256("".join(map(str, digests)).encode()).hexdigest()
+        if tce and same:
+            return ("same", hpath, first, digest)
+        mexe = os.path.join(d, "mutant%d" % i)
+        r = run_clang(["clang++", "-o", mexe] + lo, cwd=ROOT, capture_output=True, text=True)
+        if r.returncode:
+            return ("link", r.returncode, r.stderr, nospace(r.stderr))
+        return ("ok", hpath, first, mexe, digest)
 
     def tce_same(i, src, mt):
         """compile mutant i's own variant like a per-mutant build (schema and unreached mutants have none) and compare
@@ -1769,7 +2132,7 @@ def main():
             os.makedirs(os.path.dirname(mpath), exist_ok=True)
             with open(mpath, "w") as fh:
                 fh.write(body)
-            r = subprocess.run(mutant_flags(src) + ["-c", mpath, "-o", mobj], cwd=ROOT, capture_output=True, text=True)
+            r = run_clang(mutant_flags(src) + ["-c", mpath, "-o", mobj], cwd=ROOT, capture_output=True, text=True)
             same = r.returncode == 0 and mutcode.object_digest(mobj) == base[2]
         except (OSError, autoglue.GlueError):
             same = False
@@ -1782,7 +2145,8 @@ def main():
         """receipt and result of a mutant closed by the identical-code check"""
         with tce_lock:
             tce_stats["identical"] += 1
-        receipt(i, src, addr, desc, mt, mutcode.EQ_CLASS, reason=mutcode.EQ_REASON, object_sha256=base_build(src)[2], **kw)
+        receipt(i, src, addr, desc, mt, mutcode.EQ_CLASS, reason=mutcode.EQ_REASON,
+                object_sha256=None if src in hdr_info else base_build(src)[2], **kw)
         return mutcode.EQ_CLASS, addr, desc
 
     def one(i, src, addr, m, recorded, force_plain=False):

@@ -1,5 +1,6 @@
 /* Based on CC0 tww JASBasicBank.cpp. Canonical Audio3 bank layout. */
 #include "JSystem/JAudio/JASBankStatics.h"
+#include "sead/ElementAt.h"
 #include "JSystem/JAudio/JASCalc.h"
 using namespace JASystem;
 static BankVTable basicBankVtable;
@@ -27,7 +28,7 @@ void TBasicBank::setInstCount(u32 count) {
     mInstCount = count;
 }
 /* 02844290 */
-void TBasicBank::setInst(s32 index,TInst* instrument) { mInstTable[(u32)index] = instrument; }
+void TBasicBank::setInst(s32 index,TInst* instrument) { sead::elementAt(mInstTable,(u32)index) = instrument; } /* guest EA arithmetic: wraps at 32 bits as on the console */
 /* 028442A0 */
 void __sinit_JASBasicBank_cpp() {
     headerStatics.mWords[2] = 0;

@@ -49,3 +49,15 @@ callee 028880A0 r5=cstr:1024
 # Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
 # fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
 mockmove C0009988 r3 r4 r5
+
+# zero-page rule (2026-11-10, LOW clean 0/1000): finalizeEntry 0276297C and quitEntry
+# 02762DBC run on the audio launch thread and read sAudioServices (101F8BA8, class AudioServices, set up by the shipped
+# game before the audio system starts) ->mBackend (+0x14), checked with the original AudioSystem isKindOf (vtable
+# 1015EB28). Same object layout as startSound above (0x5AA00000 services, 0x5AA01000 audio system); the backend is fixed
+# to the audio system (a null backend faults at system->finalize/quitDevice in the original as well).
+field 0276297C 101F8BA8 u32 0x5AA00000
+field 0276297C 5AA00014 u32 0x5AA01000
+field 0276297C 5AA01000 u32 0x1015EB28
+field 02762DBC 101F8BA8 u32 0x5AA00000
+field 02762DBC 5AA00014 u32 0x5AA01000
+field 02762DBC 5AA01000 u32 0x1015EB28

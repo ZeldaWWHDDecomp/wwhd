@@ -1,5 +1,6 @@
 /** HD file-selection scene, controller selection and name-entry transitions. Private source. */
 #include "d/hd_scene_save_data.h"
+#include "port_hooks.h"
 static u8 sNameEntryActive;
 static u8 sSaveTransition;
 static hdInputManager* sInputManager;
@@ -201,7 +202,7 @@ void hdSaveDataScene_c::updateCancel() {
 void hdSaveDataScene_c::updateSaveSelection() {
     dFile_select_c* screen = mpFileSelect;
     if (screen->mCancelSoundPlayed != 0) {
-        saveDataChangeState(&mState, &sControllerSelectState);
+        saveDataChangeState(&mState, PORT_UI_STATE(0x0270ADD0, &mState, &sControllerSelectState));
         resetEventMode();
         return;
     }
@@ -513,7 +514,8 @@ void hdSaveDataScene_c::updateControllerChoice() {
         static_cast<hdTitleStartBackground_c*>(mpCursor.get())->setCaptionIndex(0);
         hdTitleControllerSelection_c* confirmation = mpConfirmation;
         confirmation->mInAnimationFinished = 0;
-        saveDataChangeState(confirmation->stateMachine(), &sConfirmationHideState);
+        saveDataChangeState(confirmation->stateMachine(),
+                            PORT_UI_STATE(0x0270AC04, confirmation->stateMachine(), &sConfirmationHideState));
         saveDataGetPlay()->mMenuKind = 23;
         saveDataGetPlay()->mMenuPage = 7;
         sSaveTransition = 3;

@@ -42,6 +42,7 @@ import os
 import re
 import struct
 import sys
+import threading
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -764,26 +765,31 @@ def guest_view(elem):
 
 _EXTERN_PAT = re.compile(r"^\s*extern\s+(?!\"C\")([^;(){}]*?)(?:\(\s*[&*]\s*(\w+)\s*\)|\b(\w+))\s*(?:\[[^\]]*\])*\s*;", re.M)
 _SPEC_SRCS = None
+_SPEC_LOCK = threading.Lock()
 _EXPORTED_CACHE = {}
 
 
 def _spec_siblings(srcpath):
     """the other sources that share a verify unit with srcpath (tools/verify/units/**.txt `src` lines)"""
     global _SPEC_SRCS
-    if _SPEC_SRCS is None:
-        _SPEC_SRCS = []
-        ud = os.path.join(HERE, "units")
-        for dp, ds, fs in os.walk(ud):
-            if dp == ud and "_diag" in ds:  # diagnosis-only specs must not change the linkage of a credited spec's glue
-                ds.remove("_diag")
-            for f in fs:
-                if f.endswith(".txt"):
-                    srcs = set()
-                    for line in open(os.path.join(dp, f), errors="replace"):
-                        w = line.split("#")[0].split()
-                        if w and w[0] == "src":
-                            srcs |= {x if x.startswith("wwhd_src/") else "wwhd_src/" + x for x in w[1:]}
-                    _SPEC_SRCS.append(srcs)
+    with _SPEC_LOCK:  # mutate.py transforms from -j threads: the list is published only once complete (2026-11-01:
+        # assigned empty before the walk, a concurrent first-wave mutant saw no siblings, its exported statics stayed
+        # `static`, and it failed to link - classed broken, not run)
+        if _SPEC_SRCS is None:
+            found = []
+            ud = os.path.join(HERE, "units")
+            for dp, ds, fs in os.walk(ud):
+                if dp == ud and "_diag" in ds:  # diagnosis-only specs must not change the linkage of a credited spec's glue
+                    ds.remove("_diag")
+                for f in fs:
+                    if f.endswith(".txt"):
+                        srcs = set()
+                        for line in open(os.path.join(dp, f), errors="replace"):
+                            w = line.split("#")[0].split()
+                            if w and w[0] == "src":
+                                srcs |= {x if x.startswith("wwhd_src/") else "wwhd_src/" + x for x in w[1:]}
+                        found.append(srcs)
+            _SPEC_SRCS = found
     rel = os.path.relpath(os.path.join(ROOT, srcpath), ROOT) if not srcpath.startswith("wwhd_src/") else srcpath
     out = set()
     for srcs in _SPEC_SRCS:

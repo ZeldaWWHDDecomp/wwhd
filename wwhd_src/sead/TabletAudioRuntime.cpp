@@ -1,6 +1,7 @@
 // sead tablet (DRC) audio: the software surround mixer's worker thread, the mixer object, its SDK surround
 // settings and the core-hopping threads that apply them. Reconstructed from this game's instructions.
 #include "bindings.h"
+#include "sead/ElementAt.h"
 #include "sead/TabletAudioRuntime.h"
 #include "sead/PoolHeap.h"
 #include "sead/RuntimeType.h"
@@ -339,17 +340,17 @@ void sead::tablet_audio::Runtime::applyLc() {
 /* 02766580 */
 void sead::tablet_audio::Runtime::applySpeaker(u32 channel) {
     gabi::AutoFrame frame{gabi::current_function()};
-    setTabletSurroundSpeaker(channel, mSettings.mSpeakerPosition[channel]);
+    setTabletSurroundSpeaker(channel, sead::elementAt(&mSettings.mSpeakerPosition[0], channel)); /* guest EA arithmetic: wraps at 32 bits as on the console */
 }
 /* 02766594 */
 void sead::tablet_audio::Runtime::applyDepth(u32 channel) {
     gabi::AutoFrame frame{gabi::current_function()};
-    setTabletSurroundDepth(channel, mSettings.mDepth[channel]);
+    setTabletSurroundDepth(channel, sead::elementAt(&mSettings.mDepth[0], channel));
 }
 /* 027665A8 */
 void sead::tablet_audio::Runtime::applyDownmix(u32 channel) {
     gabi::AutoFrame frame{gabi::current_function()};
-    setTabletSurroundDownmix(channel, mSettings.mDownmix[channel]);
+    setTabletSurroundDownmix(channel, sead::elementAt(&mSettings.mDownmix[0], channel));
 }
 /* 027665BC */
 void sead::tablet_audio::Runtime::applySurroundGain() {
@@ -359,7 +360,7 @@ void sead::tablet_audio::Runtime::applySurroundGain() {
 /* 027665C4 */
 void sead::tablet_audio::Runtime::applyOutputGain(u32 channel) {
     gabi::AutoFrame frame{gabi::current_function()};
-    setTabletSurroundOutput(channel, mSettings.mOutputGain[channel]);
+    setTabletSurroundOutput(channel, sead::elementAt(&mSettings.mOutputGain[0], channel));
 }
 /* 027665D8 */
 void sead::tablet_audio::Runtime::applyAll() {

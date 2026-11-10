@@ -1,5 +1,6 @@
 // Cafe simple wave bank and array lifecycle, reconstructed from the WWHD binary.
 #include "JSystem/JAudio/JASSimpleWaveBank_extra.h"
+#include "sead/ElementAt.h"
 using namespace JASystem;
 using namespace gabi;
 struct WaveVtable_l { u8 bytes[0x28]; };
@@ -56,10 +57,10 @@ void TSimpleWaveBank::setWaveTableSize(u32 count) {
 /* 02845150 */
 void TSimpleWaveBank::setWaveInfo(u32 index,const TWaveInfo& info) {
     auto source = reinterpret_cast<const WaveInfoWords_l*>(&info);
-    auto destination = reinterpret_cast<WaveInfoWords_l*>(&mWaveTable[index].mWaveInfo);
+    auto destination = reinterpret_cast<WaveInfoWords_l*>(&sead::elementAt(mWaveTable,index).mWaveInfo); /* guest EA arithmetic: wraps at 32 bits as on the console */
     for (u32 i = 0; i < 10; ++i) destination->words[i] = source->words[i];
-    mWaveTable[index].mWaveInfo.mAdpcmInfo = &mLoaded;
-    mWaveTable[index].mHeap = &mHeap;
+    sead::elementAt(mWaveTable,index).mWaveInfo.mAdpcmInfo = &mLoaded;
+    sead::elementAt(mWaveTable,index).mHeap = &mHeap;
 }
 /* 028451A0 */
 TSimpleWaveBank::TWaveHandle* TSimpleWaveBank::getWaveHandle(u32 index) const {

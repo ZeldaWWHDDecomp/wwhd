@@ -2,6 +2,7 @@
  * history), and the primary and secondary passes. */
 // GX2 surface values: wut facts.
 #include "agl/SsaoTargetSet.h"
+#include "sead/ElementAt.h"
 #include "agl/EffectShaderViews.h"
 #include "agl/PrimitiveTexture.h"
 #include "sead/RenderState.h"
@@ -34,14 +35,10 @@ u32 renderSsaoSecondaryPass(SsaoEffect*,u32,u32,u32,u32,u32);
 static SsaoTargetSet* targetSetOf(SsaoEffect* effect, u32 targetIndex) {
     u32 count = (u32)(s32)effect->mTargetSetCount;
     auto* sets = effect->mTargetSets.get();
-    auto* set = sets;
-    if (sets != NULL) {
-        if (targetIndex < count) set = sets + targetIndex;
-    } else {
-        u32 setIndex = targetIndex < count ? targetIndex : 0;
-        set = gabi::at<SsaoTargetSet>(setIndex * sizeof(SsaoTargetSet));
-    }
-    return set;
+    /* guest EA arithmetic: sets + index * sizeof wraps at 32 bits as on the
+     * console, for a NULL array as before and now also for a real one (a host index reached host addresses past 4 GB) */
+    u32 setIndex = targetIndex < count ? targetIndex : 0;
+    return &sead::elementAt<SsaoTargetSet>(gabi::ea(sets), setIndex);
 }
 /* 0279599C */
 u32 renderSsaoCore(SsaoEffect* effect,u32 targetIndex,u32 width,u32 height,const TextureData* depth,u32 mode,

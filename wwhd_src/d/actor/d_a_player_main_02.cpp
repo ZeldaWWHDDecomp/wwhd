@@ -10,6 +10,7 @@
  * Private boundary declarations retain HD register widths and virtual dispatch.
  */
 #include "d/actor/d_a_player_main_02.h"
+#include "port_hooks.h"
 #include <cmath>
 
 const gc_tu_data gc_tu = { .safeString = 0x10034B24 };
@@ -1437,6 +1438,7 @@ BOOL daPy_lk_c::procFanSwing_init() {
     }
     commonProcInit(0x92);
     setSingleMoveAnime(player02::ANM_USEFANA, 1.0f, 0.0f, 0x22, 5.0f); // HD: HIO folded
+    PORT_ITEM_FACING(0x023E7A70, this, 0); /* the port's camera-directed items (port_hooks.h) */
     setFanModel();
     mProcVar6 = 0;
     LK_voiceStart(7);
@@ -1492,6 +1494,7 @@ BOOL daPy_lk_c::procBowSubject_init() {
         return FALSE;
     }
     commonProcInit(0x94);
+    PORT_ITEM_FACING(0x023E7CF4, this, 0); /* the port's camera-directed items (port_hooks.h) */
     if (!checkBowAnime()) {
         setBowReadyAnime();
     }
@@ -1702,10 +1705,12 @@ void daPy_lk_c::setBlendAtnMoveAnime(f32 f30) {
 
 /* 023E88B0 */
 BOOL daPy_lk_c::procBowMove_init() {
+    PORT_QUICK_USE_AT(0x023E88B0, this); /* the port's quick use (port_hooks.h) */
     if (mCurProc == player02::daPyProc_BOW_MOVE_e) {
         return FALSE;
     }
     commonProcInit(0x95);
+    PORT_ITEM_FACING(0x023E88F4, this, 0);
     if (mDirection == player02::DIR_LEFT) {
         current.angle.y = (s16)(shape_angle.y + 0x4000);
     } else {
@@ -1734,6 +1739,7 @@ BOOL daPy_lk_c::procHookshotSubject_init() {
         return FALSE;
     }
     commonProcInit(0x83);
+    PORT_ITEM_FACING(0x023E8A58, this, 0);
     mNormalSpeed = 0.0f;
     setActAnimeUpper(player02::dRes_INDEX_LKANM_BCK_HOOKSHOTWAIT_e, player02::UPPER_MOVE2_e, 0.0f, 0.0f, -1, -1.0f);
     setSingleMoveAnime(player02::ANM_ATNLS, 0.0f, 0.0f, -1, 2.4f);
@@ -1747,6 +1753,7 @@ BOOL daPy_lk_c::procHookshotMove_init() {
         return FALSE;
     }
     commonProcInit(0x84);
+    PORT_ITEM_FACING(0x023E8B20, this, 0);
     if (mDirection == player02::DIR_RIGHT) {
         current.angle.y = (s16)(shape_angle.y - 0x4000);
     } else {
@@ -1795,6 +1802,7 @@ BOOL daPy_lk_c::procBoomerangSubject_init() {
         m355E = itemButton() == 0;
     }
     commonProcInit(0x80);
+    PORT_ITEM_FACING(0x023E8D34, this, 0);
     mNormalSpeed = 0.0f;
     setActAnimeUpper(player02first::dRes_INDEX_LKANM_BCK_BOOMWAIT_e, 2, 0.8f, 0.0f, -1, -1.0f); // HD: rate 0.8
     setSingleMoveAnime(player02::ANM_ATNRS, 0.0f, 0.0f, -1, 2.4f);
@@ -1814,6 +1822,7 @@ BOOL daPy_lk_c::procBoomerangMove_init() {
         m355E = itemButton() == 0;
     }
     commonProcInit(0x81);
+    PORT_ITEM_FACING(0x023E8E40, this, 0);
     if (mDirection == player02::DIR_LEFT) {
         current.angle.y = (s16)(shape_angle.y + 0x4000);
     } else {
@@ -1843,6 +1852,7 @@ BOOL daPy_lk_c::procRopeSubject_init() {
         return FALSE;
     }
     commonProcInit(0x76);
+    PORT_ITEM_FACING(0x023E902C, this, 0);
     mNormalSpeed = 0.0f;
     if (player02::actorParameters(mActorKeepEquip.mActor.get()) == 0) { /* fopAcM_GetParam(mActorKeepEquip.getActor()) */
         setActAnimeUpper(player02first::dRes_INDEX_LKANM_BCK_ROPETHROWWAIT_e, 2, 0.0f, 0.0f, -1, -1.0f);
@@ -1863,6 +1873,7 @@ BOOL daPy_lk_c::procRopeMove_init() {
         return FALSE;
     }
     commonProcInit(0x7D);
+    PORT_ITEM_FACING(0x023E9130, this, 0);
     if (mDirection == player02::DIR_LEFT) {
         current.angle.y = (s16)(shape_angle.y + 0x4000);
     } else {
@@ -2140,6 +2151,7 @@ BOOL daPy_lk_c::procGrabThrow_init(int throwType) {
         return FALSE;
     }
     commonProcInit(0x71);
+    PORT_ITEM_FACING(0x023E9E98, this, throwType);
     // HD: HIO folded
     if (mActorKeepGrab.mActor.get()->actor_status & 0x10000) { /* fopAcM_CheckStatus(.., fopAcStts_UNK10000_e) */
         setSingleMoveAnime(player02first::ANM_GRABRE, 1.1f, 3.0f, 0xC, 2.0f);
@@ -2236,7 +2248,7 @@ BOOL daPy_lk_c::checkNextActionGrab() {
     if (checkSetItemTrigger(player02first::dItemNo_IRON_BOOTS_e, 1) || ((mNoResetFlg0 & 0x2000000) /* checkEquipHeavyBoots() */ && checkSetItemTrigger(0x29, 0))) {
         return procBootsEquip_init(0x29);
     }
-    if (fpcM_GetName(gabi::at<fopAc_ac_c>(grab_actor)) == player02first::fpcNm_BOMB_e && checkSetItemTrigger(player02first::dItemNo_BOMB_BAG_e, 0)) {
+    if (fpcM_GetName(gabi::at<fopAc_ac_c>(grab_actor)) == player02first::fpcNm_BOMB_e && PORT_QUICK_USE(0x023EA474, this, checkSetItemTrigger(player02first::dItemNo_BOMB_BAG_e, 0))) {
         return procGrabThrow_init(0);
     }
     if ((mItemTrigger & 2) /* cancelTrigger() */ && LK_checkSwordEquip() && barrelSearch == 0) {
@@ -2400,14 +2412,14 @@ BOOL daPy_lk_c::checkNextActionHookshotReady() {
     u32 state = (u32)gabi::at<fopAc_ac_c>(hookshot)->mParameters; /* daHookshot_c: 0 wait, 1 shot, 2 return, 3 pull (HD: +0xB0) */
     if (state == 0) { /* hookshot->checkWait() */
         BOOL shoot = FALSE;
-        if (itemButton()) {
+        if (PORT_QUICK_USE(0x023EAE30, this, itemButton())) {
             int ready = getReadyItem();
             if ((u32)mEquipItem == (u32)ready && m355C == 0) {
                 m355E = 1;
-            } else if (!itemButton() && m355E != 0) {
+            } else if (!PORT_QUICK_USE(0x023EAE78, this, itemButton()) && PORT_QUICK_USE(0x023EAE84, this, m355E) != 0) {
                 shoot = TRUE;
             }
-        } else if (m355E != 0) {
+        } else if (PORT_QUICK_USE(0x023EAE84, this, m355E) != 0) {
             shoot = TRUE;
         }
         if (shoot) {
@@ -2462,8 +2474,9 @@ BOOL daPy_lk_c::checkNextActionBowReady() {
             setPriTextureAnime(0x70, 0);
             LK_swordAnim_changeBckOnly(getItemAnimeResource(player02::dRes_INDEX_LKANM_BCK_ARROWSHOOTA_e));
             m35EC = 0.0f;
-        } else if (!bowButton()) {
+        } else if (!PORT_QUICK_USE(0x023EB2B0, this, bowButton())) {
             if (arrow != 0) {
+                PORT_QUICK_USE_AT(0x023EB2C4, this);
                 player02::setActorParameters(gabi::at<fopAc_ac_c>(arrow), 1); /* fopAcM_SetParam(arrow, 1) */
                 if (mDemo.getDemoMode() != 0x44) { /* !checkBowMiniGame() */
                     dComIfGp_setItemArrowNumCount(-1);
@@ -2493,7 +2506,7 @@ BOOL daPy_lk_c::checkNextActionBowReady() {
         }
     } else if (upper == 0xE) { /* checkBowShootAnime() */
         if (mFrameCtrlUpper[2].getRate() < 0.01f) {
-            if (m355E == 0 && bowButton() && (mDemo.getDemoMode() == 0x44 || lk_equipIsReady()) &&
+            if (m355E == 0 && PORT_QUICK_USE(0x023EB434, this, bowButton()) && (mDemo.getDemoMode() == 0x44 || lk_equipIsReady()) &&
                 !(noResetFlg1() & 0x2000) /* !checkUseArrowEffect() */) {
                 setBowReloadAnime();
                 makeArrow();
@@ -2521,7 +2534,7 @@ BOOL daPy_lk_c::checkNextActionBoomerangReady() {
     /* HD: the boomerang is thrown when its button is released (pad release bits *(0x101F5088) + 0x1C), or after
      * holding it for 12 frames; the GameCube !itemButton() test is gone */
     u8 btn = mReadyItemBtn;
-    u32 rel = player02::padReleaseWord();
+    u32 rel = PORT_QUICK_USE(0x023EB548, this, player02::padReleaseWord());
     BOOL released;
     if (btn == 0) {
         released = (rel & 8) != 0;
@@ -2542,7 +2555,7 @@ BOOL daPy_lk_c::checkNextActionBoomerangReady() {
             throwIt = mHD827C != 0;
         }
     } else {
-        if (itemButton()) {
+        if (PORT_QUICK_USE(0x023EB614, this, itemButton())) {
             m355C = (s16)(m355C + 1);
         }
         throwIt = mHD827C != 0;
@@ -2751,13 +2764,13 @@ BOOL daPy_lk_c::checkNextActionRopeReady() {
             dComIfGp_setDoStatus(7); /* dActStts_RETURN_e */
         }
         BOOL doThrow = FALSE;
-        if (itemButton()) {
+        if (PORT_QUICK_USE(0x023EC12C, this, itemButton())) {
             if (lk_equipIsReady() && m355C == 0) {
                 m355E = 1;
-            } else if (!itemButton() && m355E != 0) {
+            } else if (!PORT_QUICK_USE(0x023EC178, this, itemButton()) && PORT_QUICK_USE(0x023EC184, this, m355E) != 0) {
                 doThrow = TRUE;
             }
-        } else if (m355E != 0) {
+        } else if (PORT_QUICK_USE(0x023EC184, this, m355E) != 0) {
             doThrow = TRUE;
         }
         if (doThrow) {
@@ -3318,6 +3331,7 @@ BOOL daPy_lk_c::procBottleSwing_init(int param_0) {
     if (param_0 != 0) {
         deleteEquipItem(0);
         setBottleModel(player02tail::dItemNo_EMPTY_BOTTLE_e);
+    PORT_ITEM_FACING(0x023EDE00, this, iVar2);
     }
     current.angle.y = shape_angle.y;
     mNormalSpeed = 0.0f;
@@ -3941,7 +3955,8 @@ void daPy_lk_c::setFrontWallType() {
         return;
     }
     u32 wall = dBgS_GetTriPla_l(chkPoly);
-    if (wall == 0 || std::fabs(player02::plane(wall)->mNormal.y) > 0.05f) { // HD: null check
+    /* the port's climbing (port_hooks.h): a steep enough wall passes as vertical */
+    if (wall == 0 || PORT_CLIMB_STEEP(0x023E39EC, player02::plane(wall), std::fabs(player02::plane(wall)->mNormal.y)) > 0.05f) { // HD: null check
         return;
     }
     s16 a = cM_atan2s(player02::plane(wall)->mNormal.x, player02::plane(wall)->mNormal.z);

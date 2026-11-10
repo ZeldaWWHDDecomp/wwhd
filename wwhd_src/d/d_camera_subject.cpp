@@ -28,6 +28,7 @@ static inline u16 subjectStyleFlags(s32 style) {
 }
 
 #include <bit>
+#include "port_hooks.h"
 
 /* round25(): frC operand rounding of the PowerPC single-precision multiply (from the recompiler's ppc.h) */
 
@@ -88,7 +89,8 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
         u32 opt = subject_getAimOptions(gabi::ea(dComIfGs_info()) + sizeof(dSv_info_c));
         bool invert = gabi::at<SubjectAimOptionsHD>(opt)->mInvertY.get() != 0;
         x = subject_CPadGetStickX((s32)mPadId); /* C stick x */
-        y = subject_CPadGetStickY((s32)mPadId) * (invert ? 1.0f : -1.0f);
+        /* the port's camera controls (port_hooks.h); the compiled code has this twice, one per sign (@02506C68, @02506C80) */
+        y = PORT_CAMERA_F(0x02506C68, this, subject_CPadGetStickY((s32)mPadId)) * (invert ? 1.0f : -1.0f);
     } else {
         gabi::Local<SubjectRotationHD> rot;
         gabi::Local<cXyz> r2, r1;

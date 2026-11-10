@@ -2,6 +2,7 @@
  * The reader's GHS member-pointer union is preserved, including its virtual form. */
 #include "nw/lyt/TextLayoutWriter.h"
 #include "nw/lyt/ResourceHelpers.h"
+#include "port_hooks.h"
 using namespace nw::lyt;
 struct TextCodeReader {
     gptr<const be<u16>> cursor;
@@ -65,6 +66,7 @@ static void mergeLineBounds(TextBounds* output, const TextBounds* input) {
 /* 0286FFCC */
 u32 TextLayoutWriter::measureLine(TextBounds* bounds, gptr<const be<u16>>* cursor, s32 length) {
     auto frame = gabi::AutoFrame(gabi::current_function());
+    PORT_RTL_AT(0x02870028);
     auto* settings = reinterpret_cast<TextMeasureSettings*>(reserved);
     bool limited = f32(settings->widthLimit) < 0x1.fffffep+127f;
     gabi::FrameLocal<TextScanContext> state(0x30);
@@ -220,6 +222,7 @@ u32 TextLayoutWriter::measureLine(TextBounds* bounds, gptr<const be<u16>>* curso
             bounds->right = selectedRight;
         }
         if (limited) previousCursor = gabi::ea((const be<u16>*)reader->cursor);
+        previousCursor = PORT_RTL(0x028704CC, limited, character, previousCursor, 0);
         character = readTextCode(reader.get());
         current = gabi::ea((const be<u16>*)reader->cursor);
     }
@@ -267,6 +270,7 @@ f32 textPlaceGlyphRecord(GlyphWriter*, GlyphRecord*);
 /* 028709E0 */
 f32 TextLayoutWriter::drawTextMutable(const be<u16>* text, s32 length) {
     auto frame = gabi::AutoFrame(gabi::current_function());
+    PORT_RTL_AT(0x02870A50);
     auto* settings = reinterpret_cast<TextMeasureSettings*>(reserved);
     f32 limit = settings->widthLimit;
     bool limited = limit < 0x1.fffffep+127f;
@@ -349,7 +353,9 @@ f32 TextLayoutWriter::drawTextMutable(const be<u16>* text, s32 length) {
             }
             processor = tagProcessor;
             tagMethods = tagMethodsOf<TextDrawTagMethods>(processor);
+            PORT_RTL(0x02870CC8, 0, character, 0, 0);
             u32 action = gabi::call_ptr<u32>(tagMethods->process, processor, character, state.get());
+            PORT_RTL_AT(0x02870CCC);
             f32 base = horizontal->value;
             f32 currentX = x;
             lineWidth = gabi::fsubs_ppc(currentX, base);
@@ -437,6 +443,7 @@ f32 TextLayoutWriter::drawTextMutable(const be<u16>* text, s32 length) {
             y = oldY;
         }
         if (limited) previousCursor = gabi::ea((const be<u16>*)reader->cursor);
+        previousCursor = PORT_RTL(0x02870FC8, limited, character, previousCursor, lineStart);
         character = readTextCode(reader.get());
         current = gabi::ea((const be<u16>*)reader->cursor);
     }

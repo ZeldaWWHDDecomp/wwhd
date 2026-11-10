@@ -505,6 +505,14 @@ field 027BF3FC 6A5D0000 u32 0x1A,0x2E,0x2F,0x30,0x33,0x37,0x38,0x39
 field 027BF3FC 6A5D0008 s32 0,1,2,255
 field 027BF3FC 6A5D000C s32 0,1,2,255
 field 027BF3FC 6A5D0078 u8 0,1,2,255
+# zero-page rule (2026-11-01, LOW clean 465/449 at 10k): a null heap selects the capture work heap
+# (*101F8C14 +0x10, as for 027BFFB4); steer that selection and the explicit heap to the typed heap fixture
+# 0x6A630000 (table 0x6A630100, mAllocate slot -> callee fixture 0F160020) instead of generated words.
+arg! 027BF3FC r5 0,0x6A630000
+field 027BF3FC 101F8C14 u32 0x6A580000
+field 027BF3FC 6A580010 u32 0x6A630000
+field 027BF3FC 6A63000C u32 0x6A630100
+field 027BF3FC 6A630134 u32 0x0F160020
 field 027BF3FC 6A5D0079 u8 0,1,2,255
 arg 027BF3FC r5 0
 # readChannels: formats of the 60-record format table (101F8E0C).

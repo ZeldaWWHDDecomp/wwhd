@@ -1,5 +1,6 @@
 // GPU resource and render-register adapters reconstructed from the WWHD binary.
 #include "agl/gx2/RenderResources.h"
+#include "sead/ElementAt.h"
 using namespace agl::gx2util;
 // GHS resource dispatch descriptors contain a receiver adjustment and either a direct entry or a vtable slot.
 template<class R,bool Tail = false,class... Args>
@@ -1153,15 +1154,15 @@ void agl::gx2util::IndexedMesh::draw(u32 first,u32 count,u32 instances) {
     gabi::AutoFrame nativeFrame{gabi::current_function()};
     u32 format = mIndexFormat;
     IndexRange* ranges = mRanges.get();
-    u32 startOffset = ranges[first].mByteOffset;
+    u32 startOffset = sead::elementAt(ranges, first).mByteOffset; /* guest EA arithmetic: wraps at 32 bits as on the console */
     u32 last = first + count - 1u;
-    u32 finalOffset = ranges[last].mByteOffset;
-    u32 finalCount = ranges[last].mCount;
+    u32 finalOffset = sead::elementAt(ranges, last).mByteOffset;
+    u32 finalCount = sead::elementAt(ranges, last).mCount;
     u32 indices = ((finalOffset - startOffset) >> ((format & 1u) + 1u)) + finalCount;
     StridedBuffer* buffer = mBuffer.get();
     u32 primitive = mPrimitive;
     u8* data = static_cast<u8*>(buffer->mutableSlice(0));
-    void* start = data + startOffset;
+    void* start = sead::elementPtr(data, startOffset);
     u32 baseVertex = mBaseVertex;
     gx2DrawIndices(primitive, indices, format, start, baseVertex, instances);
 }
@@ -1900,10 +1901,10 @@ u32 agl::gx2util::AnimationRuntime::bindChannelTargets(const ChannelTrack* track
     u32 output = track->mFirstBinding;
     u32 result = 0;
     for (u32 index = 0; index < count; ++index) {
-        const KeyBits* key = info[index].mName.key();
+        const KeyBits* key = sead::elementAt(info, index).mName.key(); /* guest EA arithmetic: wraps at 32 bits as on the console */
         ResourceDictionary* names = material->mChannelNames.get();
         s32 target = ResourceDictionary::findIndex(names, key);
-        mTargets[output + index] = target;
+        sead::elementAt(mTargets, output + index) = target;
         result |= target >= 0 ? AllTargetsBound : SomeTargetMissing;
     }
     return result;
@@ -2032,17 +2033,17 @@ void agl::gx2util::AnimationRuntime::evaluateVisibility() {
 /* 027E1198 */
 void agl::gx2util::AnimationRuntime::applyVisibilityTrack(UniformBuffer* material,u32 index) {
     gabi::AutoFrame nativeFrame{gabi::current_function()};
-    VisibilityTrack* track = static_cast<VisibilityTrack*>(mTracks.get()) + index;
+    VisibilityTrack* track = sead::elementPtr(static_cast<VisibilityTrack*>(mTracks.get()), index); /* guest EA arithmetic: wraps at 32 bits as on the console */
     u32 output = track->mResultOffset;
-    be<u16>* values = static_cast<be<u16>*>(mResults.get()) + output;
+    be<u16>* values = sead::elementPtr(static_cast<be<u16>*>(mResults.get()), output);
     u32 count = track->mCount;
     for (u32 offset = 0; offset < count; ++offset) {
-        s32 target = visibilityTargets(this)[output + offset];
+        s32 target = sead::elementAt(visibilityTargets(this), output + offset);
         if (target != -1) {
             AnimationResourceHeader* resource = mResource;
-            UniformBinding* texture = resource->mTextures.get() + (u32)values[offset];
+            UniformBinding* texture = sead::elementPtr(resource->mTextures.get(), (u32)sead::elementAt(values, offset));
             void* data = texture->mTexture.get();
-            material->mBindings[(u32)target] = data;
+            sead::elementAt(material->mBindings, (u32)target) = data;
         }
     }
 }

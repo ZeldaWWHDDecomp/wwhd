@@ -1,5 +1,6 @@
 // Own spherical parameter writer; external buffer and SDK implementations stay API boundaries.
 #include "agl/DrawParameterPreparation.h"
+#include "sead/ElementAt.h"
 void transformDrawParameterPosition(const sead::RenderMatrix34* matrix, const void* input, sead::RenderVector3* output);
 void prepareDrawParameterBuffer(agl::UniformBuffer* buffer);
 void writeDrawParameter(agl::UniformBuffer* buffer, void* data, u32 field, const void* source, u32 offset, u32 count);
@@ -90,8 +91,8 @@ void agl::DrawParameterPreparation_l::prepareParameters(DrawParameterRecord_l* r
     f32 diameterScale = gabi::fadds_ppc(scale, scale);
     u32 valueCount = record->mValueCount;
     SelectionValue_l* value = record->mValues;
-    if (slot < valueCount)
-        value += slot;
+    if (slot < valueCount) /* guest EA arithmetic: wraps at 32 bits as on the console */
+        value = &sead::elementAt<SelectionValue_l>(gabi::ea(value), slot);
     UniformBuffer* buffer = &value->mBuffer;
     prepareDrawParameterBuffer(buffer);
     f32 currentRadius = record->mScale;

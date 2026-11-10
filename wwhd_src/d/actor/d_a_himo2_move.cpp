@@ -11,6 +11,7 @@
  * the typed register-bank layout shared by the two source files.
  */
 #include "d/actor/d_a_himo2.h"
+#include "port_hooks.h"
 
 enum {
     JA_SE_LK_ROPE_LAUNCH = 0x2817,
@@ -807,7 +808,7 @@ static void new_himo2_move(himo2_class* i_this) {
                 i_this->m029C = 50;
             }
         }
-        f26 = mv_subStickY();
+        f26 = PORT_CAMERA_F(0x02171B1C, nullptr, mv_subStickY()); /* the port's camera controls (port_hooks.h) */
         stickBlock = true;
         break;
     }

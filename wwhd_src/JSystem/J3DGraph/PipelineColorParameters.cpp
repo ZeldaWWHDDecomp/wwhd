@@ -1,5 +1,6 @@
 // Selected color parameters and linked dirty bits, from own9FB8 instructions.
 #include "JSystem/J3DGraph/PipelineColorParameters.h"
+#include "sead/ElementAt.h"
 #include "sead/FileDevice.h"
 using namespace j3d::pipeline;
 void assurePipelineParameterName(sead::SafeText*);
@@ -36,7 +37,7 @@ void PipelineColorTable_l::applyParameters(PipelineParameterSet_l* parameters) {
         if(selected<0) continue;
         resource=parameters->mResource;
         auto* records=relativeParameter<PipelineParameterRecord_l>(&resource->mRecordsOffset);
-        auto* record=&records[static_cast<u32>(selected)];
+        auto* record=&sead::elementAt<PipelineParameterRecord_l>(gabi::ea(records),static_cast<u32>(selected)); /* guest EA arithmetic: wraps at 32 bits as on the console */
         if(record->mSignedWord4>=0) {
             markPipelineParameter(parameters,static_cast<u32>(selected));
             resource=parameters->mResource;

@@ -1,5 +1,8 @@
 /* Based on CC0 tww JAIBankWave.cpp; WWHD behavior controls the implementation. */
 #include "JSystem/JAudio/JAIBankWave.h"
+#include "sead/ElementAt.h"
+/* guest EA arithmetic for the bank-indexed word tables: base + bank * 4
+ * wraps at 32 bits as on the console; a host index on a NULL table reached host addresses past 4 GB */
 namespace JAInter { namespace BankWave {
 using BankWord = be<s32>;
 static BankWord* wsGroupNumber;
@@ -17,9 +20,9 @@ static AudioHeaderStatics bankHeaderStatics;
 static AudioDestructorRecord bankDestructorRecord;
 namespace JAInter { namespace BankWave {
 /* 02802028 */
-void setWsGroupNumber(u32 bank, s32 group) { wsGroupNumber[bank] = group; }
+void setWsGroupNumber(u32 bank, s32 group) { sead::elementAt<BankWord>(gabi::ea(wsGroupNumber), bank) = group; }
 /* 0280203C */
-void setWsLoadStatus(u32 bank, s32 status) { wsLoadStatus[bank] = status; }
+void setWsLoadStatus(u32 bank, s32 status) { sead::elementAt<BankWord>(gabi::ea(wsLoadStatus), bank) = status; }
 /* 02802050 */
 void init() {
     JKRHeap* heap = msCurrentHeap;
@@ -77,14 +80,14 @@ void finishSceneSet(u32 token) {
 void setSceneSetFinishCallback(u32 bank, u32 group) {
     BankWord* status = wsLoadStatus;
     SceneSetFlag = -1;
-    status[bank] = 1;
+    sead::elementAt<BankWord>(gabi::ea(status), bank) = 1;
     checkPassDvdThread((bank << 16) + group, nullptr, finishSceneSet);
 }
 /* 02802278 */
 void loadGroupWave(u32 bank, u32 group) {
     loadWave(bank, group, nullptr);
     setSceneSetFinishCallback(bank, group);
-    wsGroupNumber[bank] = group;
+    sead::elementAt<BankWord>(gabi::ea(wsGroupNumber), bank) = group;
 }
 /* 028022D0 */
 void setWaveScene() {
@@ -124,7 +127,7 @@ void loadSceneWave(u32 bank, u32 group) {
     }
 }
 /* 028024CC */
-s32 getWaveLoadStatus(u32 bank) { return wsLoadStatus[bank]; }
+s32 getWaveLoadStatus(u32 bank) { return sead::elementAt<BankWord>(gabi::ea(wsLoadStatus), bank); }
 /* 028024E0 */
 bool checkAllWaveLoadStatus() {
     initOnCode_s* waves = initOnCodeWs;

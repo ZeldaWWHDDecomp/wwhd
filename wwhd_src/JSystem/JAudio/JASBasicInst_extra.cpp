@@ -1,5 +1,6 @@
 // Cafe basic instrument key/velocity regions, reconstructed from the WWHD binary.
 #include "JSystem/JAudio/JASBasicInst_extra.h"
+#include "sead/ElementAt.h"
 using namespace JASystem;
 using namespace gabi;
 struct BasicInstVTable_l { u8 bytes[0x20]; };
@@ -80,7 +81,7 @@ void TBasicInst::setEffectCount(u32 count) {
 }
 /* 028444F0 */
 void TBasicInst::setEffect(s32 index,TInstEffect* effect) {
-    mEffect.get()[index] = effect;
+    sead::elementAt(mEffect,(u32)index) = effect; /* guest EA arithmetic: wraps at 32 bits as on the console */
 }
 /* 02844500 */
 void TBasicInst::setOscCount(u32 count) {
@@ -95,7 +96,7 @@ void TBasicInst::setOscCount(u32 count) {
 }
 /* 0284458C */
 void TBasicInst::setOsc(s32 index,TOscillator::Osc_* oscillator) {
-    mOsc.get()[index] = oscillator;
+    sead::elementAt(mOsc,(u32)index) = oscillator; /* guest EA arithmetic: wraps at 32 bits as on the console */
 }
 /* 0284459C */
 const TBasicInst::TVeloRegion* TBasicInst::TKeymap::getVeloRegion(s32 index) const {

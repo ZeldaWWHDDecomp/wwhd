@@ -1,5 +1,6 @@
 // Cafe grouped wave bank and publication chains, reconstructed from the WWHD binary.
 #include "JSystem/JAudio/JASBasicWaveBank_extra.h"
+#include "sead/ElementAt.h"
 using namespace JASystem;
 using namespace gabi;
 struct WaveVtable_l { u8 bytes[0x28]; };
@@ -104,16 +105,16 @@ void TBasicWaveBank::setWaveTableSize(u32 count) {
 /* 02844B6C */
 TBasicWaveBank::TWaveGroup* TBasicWaveBank::getWaveGroup(s32 index) {
     if ((u32)index >= (u32)mWaveGroupCount) return nullptr;
-    return mWaveGroupArray[index];
+    return sead::elementAt(mWaveGroupArray,(u32)index); /* guest EA arithmetic: wraps at 32 bits as on the console */
 }
 /* 02844B90 */
 TBasicWaveBank::TWaveHandle* TBasicWaveBank::getWaveHandle(u32 index) const {
     if (index >= (u32)mWaveCount) return nullptr;
-    TWaveInfo* wave = mWaveTable[index];
+    TWaveInfo* wave = sead::elementAt(mWaveTable,index); /* guest EA arithmetic: wraps at 32 bits as on the console */
     return wave ? &wave->mWaveHandle : nullptr;
 }
 /* 02844BB8 */
-u32 TBasicWaveBank::TWaveGroup::getWaveID(s32 index) const { return mCtrlWaveArray[index].mWaveID; }
+u32 TBasicWaveBank::TWaveGroup::getWaveID(s32 index) const { return sead::elementAt(mCtrlWaveArray,(u32)index).mWaveID; } /* guest EA arithmetic: wraps at 32 bits as on the console */
 /* 02844BCC */
 void TBasicWaveBank::incWaveTable(TWaveGroup* group) {
     lockWaveMutex(&mMutex);
@@ -181,11 +182,11 @@ void TBasicWaveBank::TWaveGroup::setWaveCount(u32 count) {
 }
 /* 02844EFC */
 void TBasicWaveBank::TWaveGroup::setWaveInfo(u32 index,u32 id,const JASystem::TWaveInfo& info) {
-    mCtrlWaveArray[index].mWaveID = id;
+    sead::elementAt(mCtrlWaveArray,index).mWaveID = id; /* guest EA arithmetic: wraps at 32 bits as on the console */
     auto source = reinterpret_cast<const WaveInfoWords_l*>(&info);
-    auto destination = reinterpret_cast<WaveInfoWords_l*>(&mCtrlWaveArray[index].mWaveHandle.mWaveInfo);
+    auto destination = reinterpret_cast<WaveInfoWords_l*>(&sead::elementAt(mCtrlWaveArray,index).mWaveHandle.mWaveInfo);
     for (u32 i = 0; i < 10; ++i) destination->words[i] = source->words[i];
-    mCtrlWaveArray[index].mWaveHandle.mWaveInfo.mAdpcmInfo = &mLoaded;
+    sead::elementAt(mCtrlWaveArray,index).mWaveHandle.mWaveInfo.mAdpcmInfo = &mLoaded;
 }
 /* 02844F48 */
 void TBasicWaveBank::TWaveGroup::onLoadDone() { publishBasicWaveGroup(mBank,this); }

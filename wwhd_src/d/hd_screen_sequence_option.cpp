@@ -1,5 +1,6 @@
 /** HD SequenceOption_00 options screen. */
 #include "d/hd_sequence_option.h"
+#include "port_hooks.h"
 
 static u32 sOptionStateOwnerVtable;
 static u32 sOptionSecondaryVtable;
@@ -572,6 +573,7 @@ void hdSequenceOption_c::loadSettings() {
         mSettingValues[3] = hdPartsView<hdInputManager>(gabi::ea(sOptionInputManager.get()))->mMode == MODE_SETTINGS ? 1 : 0;
         mSettingValues[4] = options->getCreated();
         mSettingValues[5] = options->getChanged();
+        PORT_UI_AT(0x026D5D84, this);
     } else if (mMode == MODE_CONTROLLER) {
         mSettingValues[0] = optionSaveHolders()->getScratchPair()->mPrimary;
         mSettingValues[1] = optionSaveHolders()->getScratchPair()->mSecondary;
@@ -979,7 +981,7 @@ void hdSequenceOption_c::open(u32 mode) {
         mEntriesPerPage = 5;
         u32 category = mCategory;
         f32 frame = f32(4503599627370496.0 + f64(category) - sOptionUnsignedBias);
-        mItemCount = 6;
+        mItemCount = PORT_UI_W(0x026D8514, this, 6);
         hdAnimSet_setFrame(mpLayout->animSet(), 5, 3, frame);
     }
     hdAnimSet_operationCC(mpLayout->animSet(), 6, 6);

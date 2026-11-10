@@ -4,6 +4,7 @@
 #include "hd/hd_graphics_task.h"
 #include "hd/hd_render_layers.h"
 #include "agl/TimingHistory_l.h"
+#include "sead/ElementAt.h"
 using agl_history_l::sTimingOwner;
 using agl_history_l::TimingHistory;
 static hdGraphicsTask_c* sGraphicsActiveTask;
@@ -337,7 +338,9 @@ void hdGraphicsTask_c::updateResolution() {
                 s32 index = profiler->mHistory.mHead;
                 if (index >= s32(profiler->mHistory.mCapacity))
                     index -= s32(profiler->mHistory.mCapacity);
-                timing = profiler->mHistory.mSamples[index].mForecast;
+                /* guest EA arithmetic: mSamples + index * 0x18 wraps at 32 bits as on the
+                 * console, also for a negative index after the wrap-around subtraction */
+                timing = sead::elementAt<agl_history_l::Sample>(profiler->mHistory.mSamples, u32(index)).mForecast;
             } else
                 timing = profiler->mLoad;
             if (!mHistoryTiming)

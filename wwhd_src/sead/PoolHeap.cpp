@@ -1,5 +1,6 @@
 // WWHD fixed-block allocation and translation-unit support, reconstructed from the binary.
 
+#include "sead/ElementAt.h"
 #include "sead/PoolHeap.h"
 static sead::RegistryMutex_l sPoolCreationLock = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}};
 static u32 sCoreCount;
@@ -238,8 +239,8 @@ void sead::PoolHeap::dispose() {
 void* sead::PoolHeap::allocate(u32 size,s32 alignment) {
  auto nativeFrame = gabi::AutoFrame(gabi::current_function());
  RegistryManagerState* manager = sRegistryManager;
- u32 block = mBlockSize;
- if (alignment < 0 || (block & (u32(alignment) - 1)) || size > block) {
+ // the block size is read only after the alignment sign test, as the original does (blt at 027566FC, lwz at 02756700)
+ if (alignment < 0 || ((u32)mBlockSize & (u32(alignment) - 1)) || size > (u32)mBlockSize) {
   if (manager != NULL) {
    AllocationFailureReceiver* observer = manager->mFailureReceiver;
    if (observer != NULL) {
@@ -411,8 +412,9 @@ u32 sead::JobQueue::append(u32 job) {
  u32 count = mCount; u32 capacity = mCapacity; mState = 3;
  if (count >= capacity) return 0;
  count = mCount; capacity = mCapacity; mCount = count + 1;
- be<u32>* jobs = mJobs; if (count < capacity) jobs += count;
- *jobs = job; return 1;
+ // the slot address is formed in 32 bits as the original does (sead::elementAt; a host pointer add does not wrap)
+ u32 slot = count < capacity ? count : 0;
+ sead::elementAt(mJobs, slot) = job; return 1;
 }
 /* 02758B00 */
 void sead::JobQueue::clear() {

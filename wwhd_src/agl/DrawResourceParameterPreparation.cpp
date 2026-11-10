@@ -1,5 +1,6 @@
 // Own directional-resource parameter matrices and buffer writes, preserving full FPR math returns.
 #include "agl/DrawParameterPreparation.h"
+#include "sead/ElementAt.h"
 void transformResourcePoint(const sead::RenderMatrix34* matrix, const sead::RenderVector3* input, sead::RenderVector3* output);
 void transformResourceDirection(const sead::RenderMatrix34* matrix, const sead::RenderVector3* input, sead::RenderVector3* output);
 void translateResourceMatrix(sead::RenderMatrix34* matrix, f32 x, f32 y, f32 z);
@@ -21,7 +22,7 @@ static f32 sResourceParameterVerticalBias;
 static DrawResourceValue_l* selectedResourceValue(DrawResourceRecord_l* record, u32 slot) {
     u32 count=record->mValueCount;
     DrawResourceValue_l* value=record->mValues;
-    if (slot<count) value+=slot;
+    if (slot<count) value=&sead::elementAt<DrawResourceValue_l>(gabi::ea(value),slot); /* guest EA arithmetic */
     return value;
 }
 /* 027CD1E4 */

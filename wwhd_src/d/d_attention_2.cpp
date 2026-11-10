@@ -2,6 +2,7 @@
  * WWHD. See d_attention.cpp for the unit's range and
  * layouts. Calls to functions of the other parts go by address. */
 #include "d/d_attention.h"
+#include "port_hooks.h"
 
 // HD: endian-aware image accesses retained for word copies and dynamic virtual slots.
 namespace AttentionMemory2 {
@@ -234,11 +235,12 @@ static bool dAttention_c_chaseAttention(u32 i_this) {
             (u32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mFrontAngleCheckBits, a1, *angle2) !=
         0)
         return false;
-    if (att2_check_distace((u32)self->mpPlayer + AC_ATTN_POS, a1, actor + AC_ATTN_POS,
-                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMaxRelease,
-                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust,
-                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMax,
-                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMin) == 0)
+    if (PORT_LOCK_ON_DISTANCE(0x024ECC70, e, actor, att2_check_distace,
+                              (u32)self->mpPlayer + AC_ATTN_POS, a1, actor + AC_ATTN_POS,
+                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMaxRelease,
+                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust,
+                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMax,
+                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMin) == 0)
         return false;
     AttentionMemory2::stf(e + 0, att2_distace_weight(globe1->mRadius, *angle1, 0.5f));
     return true;

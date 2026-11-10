@@ -21,6 +21,7 @@
  * Actor fields: attention_info at 0x388 (distances[] 0x388, position 0x390, flags 0x39C),
  * eventInfo condition 0xFA, shape_angle.y 0x32A, eyePos 0x37C, current.pos 0x314. */
 #include "d/d_attention.h"
+#include "port_hooks.h"
 
 // HD: endian-aware image accesses retained for word copies and dynamic virtual slots.
 namespace AttentionMemory1 {
@@ -218,11 +219,12 @@ static f32 dAttention_c_calcWeight(u32 i_this, s32 listType, u32 actor, f32 dist
                     invAngle) != 0)
                 continue;
             u32 p = (u32)self->mpPlayer;
-            if (check_distace(p + AC_ATTN_POS, angle, actor + AC_ATTN_POS,
-                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMax,
-                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust,
-                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMax,
-                              (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMin) == 0)
+            if (PORT_LOCK_ON_DISTANCE(0x024EB4A8, e, actor, check_distace, p + AC_ATTN_POS, angle,
+                                      actor + AC_ATTN_POS,
+                                      (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMax,
+                                      (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust,
+                                      (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMax,
+                                      (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMin) == 0)
                 continue;
             if (!(dw > 0.0f))
                 continue;
@@ -342,8 +344,9 @@ static f32 dAttention_c_EnemyDistance(u32 i_this, u32 actor) {
     u32 dt = DIST_TABLE + (u8)AttentionHD::view<fopAc_ac_c>(actor)
                                   ->attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] *
                               0x1C;
-    if (dist < (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMax +
-                   (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust)
+    if (dist < PORT_LOCK_ON(0x024EB868, actor,
+                            (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMax +
+                                (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust))
         return dist;
     return -1.0f;
 }

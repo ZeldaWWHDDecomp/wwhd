@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/d_camera_util.h"
+#include "port_hooks.h"
 
 /* HD pad accessors (out of line, by pad id) */
 static inline f32 CPad_GET_STICK_POS_X(s32 pad) { return cameraUtilCPad_GET_STICK_POS_X(pad); }
@@ -54,7 +55,7 @@ void dCamera_c::initPad() {
     mStickMainValueDelta = 0.0f;
     mStickMainPosXDelta = 0.0f;
     mStickCPosXLast = -CPad_GET_SUBSTICK_POS_X(mPadId);
-    mStickCPosYLast = CPad_GET_SUBSTICK_POS_Y(mPadId);
+    mStickCPosYLast = PORT_CAMERA_F(0x0250074C, this, CPad_GET_SUBSTICK_POS_Y(mPadId)); /* the port's camera controls (port_hooks.h) */
     f32 cv = CPad_GET_SUBSTICK_VALUE(mPadId);
     mStickCPosYDelta = 0.0f;
     m18C = 0;
@@ -124,7 +125,7 @@ void dCamera_c::updatePad() {
         v = 0.0f;
     } else {
         x = -CPad_GET_SUBSTICK_POS_X(mPadId);
-        y = CPad_GET_SUBSTICK_POS_Y(mPadId);
+        y = PORT_CAMERA_F(0x024F9DA4, this, CPad_GET_SUBSTICK_POS_Y(mPadId)); /* the port's camera controls (port_hooks.h) */
         v = CPad_GET_SUBSTICK_VALUE(mPadId);
     }
     f32 cy = mStickCPosYLast;

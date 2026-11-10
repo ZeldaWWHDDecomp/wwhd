@@ -1,6 +1,7 @@
 /** HD elapsed-time counter and its bottom/top transition states. */
 #include "d/hd_parts_text_pane.h"
 #include "d/hd_screen_time.h"
+#include "port_hooks.h"
 static u32 sTimeStateInterfaceVtable;
 static u32 sTimeDrawInterfaceVtable;
 static hdPartsVtbl_c sTimeVtable;
@@ -106,6 +107,7 @@ void hdTimeScreen_c::updateText() {
     s32 milliseconds = s32((end - start) * 1000) / 30;
     if (milliseconds < 0)
         milliseconds = 0;
+    milliseconds = PORT_TEXT_W(0x026E9C24, this, milliseconds);
     s32 seconds = milliseconds / 1000;
     s32 minutes = seconds / 60;
     s32 hundredths = (milliseconds - seconds * 1000) / 10;

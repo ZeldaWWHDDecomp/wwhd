@@ -199,8 +199,9 @@ AudioTask* AudioTask::construct(AudioTask* object, void* parameters) {
 void AudioTask::initializeAudio() {
     gabi::AutoFrame frame{gabi::current_function()};
     RegistryHeap* heap = registryCurrentHeap(sRegistryManager);
-    initializeRuntimeType(sAudioConfigType, sAudioConfigTypeGuard, &sAudioConfigInitTypeTable);
+    // mParameters is loaded before the inlined runtime-type guard stores, as the original does (02761104 vs 0276111C)
     RuntimeTypedObject* parameters = reinterpret_cast<AudioTaskParametersView*>(this)->mParameters;
+    initializeRuntimeType(sAudioConfigType, sAudioConfigTypeGuard, &sAudioConfigInitTypeTable);
     if (parameters != nullptr) {
         u32 matches = gabi::call_ptr<u32>(parameters->mVtable->mIsKindOf.mFunction, parameters, &sAudioConfigType);
         if (matches == 0) parameters = nullptr;

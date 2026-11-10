@@ -1,6 +1,7 @@
 /** GameCube JPA1 base shape, with the HD gamma conversion and cached colors. */
 #include "bindings.h"
 #include "JSystem/JParticle/JPABaseShape.h"
+#include "sead/ElementAt.h"
 static u32 sVtable;
 static JPABaseShapeStaticBlock sStaticBlock;
 static u32 sStaticRegister;
@@ -226,10 +227,10 @@ u32 JPABaseShapeArc::getPrmColor() { return packJPAColor(&mPrmColor); }
 u32 JPABaseShapeArc::getEnvColor() { return packJPAColor(&mEnvColor); }
 
 /* 0284B35C */
-u32 JPABaseShapeArc::getPrmColor(u32 index) { return packJPAColor(&mpPrmColorArr[index]); }
+u32 JPABaseShapeArc::getPrmColor(u32 index) { return packJPAColor(&sead::elementAt(mpPrmColorArr,index)); } /* guest EA arithmetic: wraps at 32 bits as on the console */
 
 /* 0284B384 */
-u32 JPABaseShapeArc::getEnvColor(u32 index) { return packJPAColor(&mpEnvColorArr[index]); }
+u32 JPABaseShapeArc::getEnvColor(u32 index) { return packJPAColor(&sead::elementAt(mpEnvColorArr,index)); } /* guest EA arithmetic: wraps at 32 bits as on the console */
 
 /* 0284B3AC */
 u8 JPABaseShapeArc::getColorRegAnmType() { return ((u8)pBsd->mColorFlags >> 4) & 7; }

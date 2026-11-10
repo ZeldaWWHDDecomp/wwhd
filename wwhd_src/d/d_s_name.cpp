@@ -1,5 +1,6 @@
 // HD name scene.
 #include "d/d_s_name.h"
+#include "port_hooks.h"
 
 using FrontendPointer = gptr<void>;
 using ControllerPointer = gptr<NameScene::Controller>;
@@ -90,7 +91,8 @@ void dScnName_c::setView() {
     // HD: the play accessor is retained even though its result is unused here.
     dComIfGp_get();
     NameScene::view_class* view = &mCamera.view;
-    C_MTXPerspective(&view->mProjMtx, view->mFovy, view->mAspect, view->mNear, view->mFar);
+    PORT_PROJECTION_ARG(0x025ADB38, C_MTXPerspective, &view->mProjMtx, view->mFovy, view->mAspect, view->mNear,
+                        view->mFar);
     mDoMtx_lookAt(&view->mViewMtx, &view->mLookat.mEye, &view->mLookat.mCenter, view->mBank);
     cMtx_inverse(&view->mViewMtx, &view->mInvViewMtx);
     PSMTXCopy(&view->mViewMtx, &view->mViewMtxNoTrans);

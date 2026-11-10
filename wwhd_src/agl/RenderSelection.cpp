@@ -1,5 +1,6 @@
 // Render collection selection accessors and this translation unit's text interface copies.
 #include "agl/RenderSelection.h"
+#include "sead/ElementAt.h"
 
 void deleteSelectionStorage(void* storage);
 void releaseSelectionArray(void* storage);
@@ -184,8 +185,8 @@ u32 agl::RenderSelection_l::activeCount() const { return mActiveCount; }
 u32 agl::RenderSelection_l::isRecordEnabled(u32 index) const {
     u32 count = mRecordCount;
     RenderSelectionRecord_l* record = mRecords;
-    if (index < count)
-        record += index;
+    if (index < count) /* guest EA arithmetic: wraps at 32 bits as on the console */
+        record = &sead::elementAt<RenderSelectionRecord_l>(gabi::ea(record), index);
     return u16(record->mFlags) & 1;
 }
 
@@ -193,8 +194,8 @@ u32 agl::RenderSelection_l::isRecordEnabled(u32 index) const {
 void agl::RenderSelection_l::setRecordMask(u32 index, u32 enabled) {
     u32 count = mRecordCount;
     RenderSelectionRecord_l* record = mRecords;
-    if (index < count)
-        record += index;
+    if (index < count) /* guest EA arithmetic: wraps at 32 bits as on the console */
+        record = &sead::elementAt<RenderSelectionRecord_l>(gabi::ea(record), index);
     if (enabled) {
         u32 mask = record->mSelectionMask;
         record->mSelectionMask = mask | 0xFFFFFFFFu;
@@ -207,8 +208,8 @@ void agl::RenderSelection_l::setRecordMask(u32 index, u32 enabled) {
 u32 agl::RenderSelection_l::testRecordMask(u32 index, u32 bit) const {
     u32 count = mRecordCount;
     RenderSelectionRecord_l* record = mRecords;
-    if (index < count)
-        record += index;
+    if (index < count) /* guest EA arithmetic: wraps at 32 bits as on the console */
+        record = &sead::elementAt<RenderSelectionRecord_l>(gabi::ea(record), index);
     u32 mask = record->mSelectionMask;
     u32 shift = bit & 63;
     u32 selected = shift < 32 ? (1u << shift) : 0;

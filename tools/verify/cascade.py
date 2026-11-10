@@ -38,10 +38,14 @@ Optional speed-ups (opt-in, they cost disk): --baseline-cache DIR (: each compan
 basecache.py prefetch; needs --baseline-cache).
 --timeout N (2026-10-31): a fixed per-mutant limit for every pass (mutate.py --timeout N). Without it each pass derives its
 limit once from its own baseline (10x, scaled up with the load) and never re-runs the baseline to measure again.
+--sweep-stale-refcache (2026-11-10): forwarded to every mutate.py rerun pass (off by default); mutate.py then removes
+dead-PID refcache-<spec>-* directories of the pass's spec in its own scratch directory below WWHD_MUT_SWEEP_ROOT, each
+removal logged in the pass's SPEC.log (mutate.py's own limits; it refuses the flag without WWHD_MUT_SWEEP_ROOT).
 
 usage: cascade.py --receipts MAIN[,EXCLUDE...] --out OUT --input-seed S [--root TREE] [--classes C,...] [--n1 100]
                   [--n2 1000] [--two-stage] [--fast] [-j 4] [--load-max 90] [--slot-dir DIR --slots K] [--from-alive PREV]
-                  [--baseline-cache DIR] [--refcache-from DIR] [--prefetch] [--timeout N] SPEC...
+                  [--baseline-cache DIR] [--refcache-from DIR] [--prefetch] [--timeout N]
+                  [--sweep-stale-refcache] SPEC...
 MAIN: receipts of the main campaign; EXCLUDE: receipts whose `difference` kills (by the kill rule) are left out. --from-alive
 PREV: start from what an earlier cascade (e.g. seed 1 for a seed-7 cascade) left alive. Self-test: cascade_test.py.
 """
@@ -220,6 +224,8 @@ def main():
     ap.add_argument("--fast", action="store_true", help="mutate.py --schemata --fork --reach-skip on every pass: one "
                     "schema executable per source instead of a build per mutant, fork servers, and a mutant whose site no "
                     "input of the companion reaches is `not reached` there (not run, stays alive)")
+    ap.add_argument("--sweep-stale-refcache", action="store_true", help="forward --sweep-stale-refcache to every "
+                    "mutate.py rerun pass (off by default; mutate.py's limits apply)")
     ap.add_argument("specs", nargs="+")
     a = ap.parse_args()
     units = os.path.join(a.root, "tools", "verify", "units")
@@ -272,6 +278,8 @@ def main():
             r = os.path.join(sd, "rc-" + tag)
             cmd = [sys.executable, os.path.join(a.root, "tools", "verify", "mutate.py"), spec, "--rerun", d, "--rerun-class",
                    "rerun", "--n", str(n), "--receipts", r] + common
+            if a.sweep_stale_refcache:  # rerun passes only: basecache.py prefetch does not take it
+                cmd.append("--sweep-stale-refcache")
             wait_load(a.load_max)
             slots = hold_slots(a.slot_dir, a.slots) if a.slot_dir else []
             t0 = time.time()
@@ -298,6 +306,7 @@ def main():
                 save(pg_path, done)
             print("stage %d %s rc %d: %d in scope, %d rerun, %d killed, %.0fs" % (st, spec, rc, len(pick), seen, k,
                                                                                   time.time() - t0), flush=True)
+    save(ap_path, alive)  # also when no pass ran (every companion out of scope): a --from-alive cascade reads it
     left = sum(1 for v in alive.values() if not v["killed_by"])
     print("cascade: %d of %d alive after %s, %.0fs" % (left, len(alive), "stage 2" if a.two_stage else "the single stage",
                                                       time.time() - t_all), flush=True)

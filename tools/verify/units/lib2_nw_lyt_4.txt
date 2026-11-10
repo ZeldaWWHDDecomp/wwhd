@@ -132,6 +132,18 @@ field 0287F640 5C301000 u32 0x5C302000
 field 0287F640 5C30201C u32 0x0F004020
 callee 0F004020 fixture r3=0 r4=0 r5=cstr:136 r6=0
 
+# zero-page rule (2026-11-01, LOW clean 0/1000): the layout allocation wrappers dispatch through the
+# installed allocator (*101FC8B4, vtable slot +0x1C allocate / +0x24 free); a generated null allocator read page 0
+# on every input. Steer it to a bounded allocator object 0x60200000 (vtable 0x60203000, slots -> fixtures).
+field 0287F3DC 101FC8B4 u32 0x60200000
+field 0287F3DC 60200000 u32 0x60203000
+field 0287F3DC 6020301C u32 0x0F004100
+field 0287F3FC 101FC8B4 u32 0x60200000
+field 0287F3FC 60200000 u32 0x60203000
+field 0287F3FC 60203024 u32 0x0F004104
+callee 0F004100 fixture r3=0 r4=0 r5=0
+callee 0F004104 fixture r3=0 r4=0
+
 # Bounded animation-factory outputs, with real list insertion and base initialization.
 callee 028727E8 r3=out16
 mockfield 028727E8 r3+0x4 u32 0,0x5D100000

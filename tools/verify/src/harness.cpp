@@ -45,6 +45,7 @@
 #include <strings.h>
 #include <dlfcn.h>
 #include <signal.h>
+#include <mach/mach.h> /* task_info: the host memory budget (resident size) */
 #include <sys/ucontext.h>
 #include <malloc/malloc.h>
 #include <mach-o/dyld.h> /* also -listfn: candidate entry addresses as link-map addresses (verify.py result cache) */
@@ -513,12 +514,51 @@ static void page_dirty(Page* p) {
  * `pagebudget N` (unit file) raises it. */
 static uint64_t g_page_budget = 32768;
 static int g_in_peek = 0; /* harness-internal reads (peek8: argument capture, vtable scans, mock models) are not guest accesses */
+/* Host memory budget (2026-11-01: AGL#16 027C0CEC #5/#56 and AGL#14 archive_members_synthetic #2 grew
+ * the harness past the 3 GB RSS watchdog, which killed the whole process, so those mutants left no receipt). The process's
+ * resident size is sampled at the run's safe points (every 65536 guest accesses, every 256 newly touched guest pages) and
+ * while net_writes() collects the run's net effect (every 65536 entries: AGL#14 #2 at seed 7 left 54M written bytes, a
+ * 2.6 GB std::map then, ~430 MB as a NetMap, after its access-budget abort);
+ * past the budget the input aborts on the side that ran, like the access, call, page and time budgets (an abort never
+ * counts as a detected difference), with the reason `host memory budget exceeded (RSS N MB > B MB in one run)`.
+ * Default 2816 MB (under the 3072 MB watchdog); `hostmembudget MB` (unit file, 64..65536) sets it, the environment
+ * WWHD_VERIFY_HOSTMEM_MB overrides both (0 = off). RSS depends on the process's history, so such an abort is treated like
+ * a time limit (never cached as the original's result: is_env_limit). Host code that allocates without guest accesses
+ * is not sampled (the watchdog stays the backstop there). */
+static bool g_hostmem_env = getenv("WWHD_VERIFY_HOSTMEM_MB") && *getenv("WWHD_VERIFY_HOSTMEM_MB"); /* the directive does not override it */
+static uint64_t g_hostmem_budget_mb = [] {
+    const char* e = getenv("WWHD_VERIFY_HOSTMEM_MB");
+    if (!e || !*e) return (uint64_t)2816;
+    char* end;
+    unsigned long long v = strtoull(e, &end, 10);
+    if (*end || (v && (v < 64ull || v > 65536ull))) {
+        fprintf(stderr, "invalid WWHD_VERIFY_HOSTMEM_MB=%s (0 = off, or 64..65536)\n", e);
+        exit(2);
+    }
+    return (uint64_t)v;
+}();
+static uint64_t host_rss_mb() {
+    mach_task_basic_info_data_t info;
+    mach_msg_type_number_t n = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &n) != KERN_SUCCESS) return 0;
+    return (uint64_t)info.resident_size >> 20;
+}
+[[gnu::cold, gnu::noinline]] static void hostmem_check() {
+    if (!g_hostmem_budget_mb || !V.can_abort || g_in_peek) return;
+    uint64_t mb = host_rss_mb();
+    if (mb > g_hostmem_budget_mb) {
+        V.abort_reason = "host memory budget exceeded (RSS " + std::to_string(mb) + " MB > " +
+                         std::to_string(g_hostmem_budget_mb) + " MB in one run)";
+        longjmp(V.abort_jmp, 1);
+    }
+}
 [[gnu::noinline]] static void page_note(Page* p) { /* first touch of p in this run */
     p->run = V.run_serial;
     if (++V.npages > g_page_budget && V.can_abort && !g_in_peek) {
         V.abort_reason = "page budget exceeded (" + std::to_string(g_page_budget) + " guest pages touched in one run)";
         longjmp(V.abort_jmp, 1);
     }
+    if ((V.npages & 0xFF) == 0) hostmem_check();
 }
 [[gnu::always_inline]] static inline Page* page_peek(uint32_t pn) { /* nullptr when the page was never touched */
     auto& ce = g_pcache[pn & 255];
@@ -699,6 +739,7 @@ static inline void tick() {
         V.abort_reason = "access budget exceeded";
         longjmp(V.abort_jmp, 1);
     }
+    if ((V.budget & 0xFFFF) == 0) hostmem_check();
 }
 
 /* -watch ADDR[:LEN] (2026-10-26, AGL#18): print every guest byte access to [ADDR, ADDR+LEN) at any depth (setups and
@@ -1197,7 +1238,10 @@ struct NetMap {
 };
 
 /* net effect of a run: bytes whose value changed, outside the scratch stack */
-static NetMap net_writes() {
+/* *over (host memory budget, 2026-11-01): set when the process's resident size passed the budget while the map was being
+ * built (sampled every 65536 entries; a runaway mutant's run can leave tens of millions of written bytes, 8 bytes of
+ * NetMap each), the map is then dropped and the caller ends the run as an abort */
+static NetMap net_writes(bool* over = nullptr, uint64_t* over_mb = nullptr) {
     uint32_t fp_lo = V.entry_sp + 8; /* no footprint: the whole scratch stack incl. back chain/LR save is excluded */
     if (uint32_t fs = footprint_of(g_cur_func_fp); fs != UINT32_MAX) fp_lo = V.entry_sp - fs;
     NetMap out;
@@ -1210,6 +1254,7 @@ static NetMap net_writes() {
     for (Page* p : pg)
         for (int w = 0; w < 64; w++) nwr += __builtin_popcountll(p->wr[w]);
     out.v.reserve(nwr);
+    size_t sampled = 0;
     for (Page* p : pg) {
         for (int w = 0; w < 64; w++) {
             uint64_t m = p->wr[w];
@@ -1225,6 +1270,15 @@ static NetMap net_writes() {
                 bool unknown = V.mode == MODE_REC && !snap_has(ea) && !image_region(ea);
                 const Chunk* k = p->ch[o >> 6];
                 if (k->d[o & 63] != k->init[o & 63] || unknown) out.push(ea, k->d[o & 63]);
+                if (over && g_hostmem_budget_mb && out.size() >= sampled + 65536) {
+                    sampled = out.size();
+                    if (uint64_t mb = host_rss_mb(); mb > g_hostmem_budget_mb) { /* the sampled size, before the map is released */
+                        *over = true;
+                        if (over_mb) *over_mb = mb;
+                        BigVec<NetMap::value_type>().swap(out.v);
+                        return out;
+                    }
+                }
             }
         }
     }
@@ -2965,6 +3019,9 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
             uint32_t need = ci->ptrsz[i];
             bool from_ext = false;
             if (need == 255 || need == 0xFFFE) need = 0;
+            /* a dynamic extent (rN=dynK*rM[:CAP], rN=cstr[:MAX]) needs only this call's extent, not the cap
+             * (2026-11-01: hd_inf_render_1 r5=dyn4*r4:heap64 with a 4-word uniform in a 0x10 Local) */
+            if (need && ci->dynsrc[i]) need = pointee_size(ci, i, c);
             /* static extent (extent_lint.py) of the code at the target: direct calls only (an indirect call's
              * resolved target in generated mode is whatever the random vtable word points to) */
             /* ... and only where the original's call at the same position is the same direct call (a
@@ -3788,6 +3845,14 @@ static void load_specs(const char* path) {
             }
             g_op_budget = (uint32_t)nb;
             g_op_budget_set = true;
+            continue;
+        }
+        if (!strcmp(kw, "hostmembudget")) { // hostmembudget MB: this unit's host RSS budget (WWHD_VERIFY_HOSTMEM_MB overrides it)
+            unsigned long long nb; char extra[8];
+            if (sscanf(line, "%*s %llu %7s", &nb, extra) != 1 || nb < 64ull || nb > 65536ull) {
+                fprintf(stderr, "invalid hostmembudget directive (64..65536): %s", line); exit(2);
+            }
+            if (!g_hostmem_env) g_hostmem_budget_mb = nb;
             continue;
         }
         if (!strcmp(kw, "accessbudget")) { // accessbudget N: this unit's memory-access budget per run
@@ -6103,7 +6168,29 @@ static void run(void (*fn)(Cpu*), const Input& in, bool candidate, Result* out, 
         V.orig_lr.reserve(out->calls.size());
         for (auto& e : out->calls) { V.orig_seq.push_back({e.target, e.kind}); V.orig_lr.push_back(e.lr); }
     }
-    out->net = net_writes();
+    bool net_over = false;
+    uint64_t net_over_mb = 0;
+    out->net = net_writes(&net_over, &net_over_mb);
+    if (net_over) { /* host memory budget while collecting the net effect: the reason names that cause
+                     * (2026-11-09); a run that already aborted for another reason (e.g. `access budget exceeded`, AGL#14 #2 at
+                     * seed 7) keeps that reason first and gets this one appended, so the receipt shows both. A run the budget
+                     * already ended inside the run keeps that reason alone (its cause is the run itself). */
+        const bool in_run = out->aborted && !out->why.compare(0, 32, "host memory budget exceeded (RSS");
+        if (!in_run) {
+            std::string cause = "host memory budget exceeded (RSS " + std::to_string(net_over_mb) + " MB > " +
+                                std::to_string(g_hostmem_budget_mb) + " MB in one run, collecting its net effect)";
+            out->why = out->aborted ? out->why + "; " + cause : cause;
+            out->aborted = true;
+            /* also on stderr (the row names an abort's reason only when one side aborted): the first 10 per process */
+            static int shown = 0;
+            if (shown < 10) {
+                shown++;
+                fprintf(stderr, "hostmembudget: %08X %s side, gen seed=%llu: %s\n", g_cur_func_fp, candidate ? "candidate" : "original",
+                        (unsigned long long)V.seed, out->why.c_str());
+            }
+        }
+        if (g_trace) printf("        net effect (%s side): not collected (%s)\n", candidate ? "candidate" : "original", out->why.c_str());
+    }
     if (g_trace) { /* -trace: the run's net memory effect (what the comparison sees), as address ranges, per side */
         printf("        net effect (%s side): %zu bytes\n", candidate ? "candidate" : "original", out->net.size());
         uint32_t start = 0, prev = 0; std::string bytes; bool open = false;
@@ -6768,6 +6855,10 @@ static void load_runlist(const char* path) {
  * the side before dying, instead of exiting silently with rc 139 */
 static bool is_time_limit(const std::string& w) { /* an abort by the CPU time budget or the wall-clock hang limit */
     return !w.compare(0, 20, "time budget exceeded") || !w.compare(0, 25, "wall-clock limit exceeded");
+}
+static bool is_env_limit(const std::string& w) { /* ... or by the host memory budget: all depend on the machine and the
+                                                * process, not on the input (never cached / snapshotted as a result) */
+    return is_time_limit(w) || w.find("host memory budget exceeded (RSS") != std::string::npos; /* also appended */
 }
 
 static void crash_handler(int sig, siginfo_t* si, void* uc) {
@@ -8488,7 +8579,7 @@ int main(int argc, char** argv) {
                 run(of->fn, in, false, &a, &cov);
                 if (keep) {
                     refc::Side sd = refc::side_of_run(cov0, cov, st0);
-                    const bool live_only = (a.aborted && is_time_limit(a.why)) || refc_skip ||
+                    const bool live_only = (a.aborted && is_env_limit(a.why)) || refc_skip ||
                                            a.thr.used; /* `threads`: a record holds no guest-thread state: such inputs run live */
                     if (refc::digest && refc_w.on && !live_only) { /* the masks need the candidate's calls */
                         dpend = true;
@@ -8585,7 +8676,7 @@ int main(int argc, char** argv) {
                 refc_r.dlite++;
             /* -snapcache-write: an input that hit a time limit (load dependent; the setups' CPU time counts there) keeps
              * no validation state */
-            if (g_snapc_out && ((a.aborted && is_time_limit(a.why)) || (b.aborted && is_time_limit(b.why)))) g_snapc_out->ok = false;
+            if (g_snapc_out && ((a.aborted && is_env_limit(a.why)) || (b.aborted && is_env_limit(b.why)))) g_snapc_out->ok = false;
             if (prog::on && ((a.aborted && is_time_limit(a.why)) || (b.aborted && is_time_limit(b.why)))) {
                 bool ha = a.aborted && is_time_limit(a.why), hb = b.aborted && is_time_limit(b.why);
                 prog::hangs.fetch_add(1);

@@ -1,0 +1,303 @@
+# SEAD#6 companion: ControllerManager::initializeDefaults with the manager heap returning blocks and the constructors returning their objects.
+# verify: -only 0273C814
+src wwhd_src/sead/Foundation.cpp
+# Bounded list inputs preserve empty and nonempty paths without random cycles.
+arg! 0273B348 r4 -2,0,1,2,3,4
+field 0273B348 r3+8 s32 0,1,2,3,4
+arg! 0273B524 r3 0x54000000
+field 0273B524 54000004 u32 0x54000000,0x54000100
+field 0273B524 54000104 u32 0x54000000,0x54000200
+field 0273B524 54000204 u32 0x54000000
+src wwhd_src/sead/Checksum.cpp
+arg! 0273B264 r4 0,1,2,3,4,7,8,16,31,32,64,256
+field 0273B264 101F8AE5 u8 0,1
+src wwhd_src/sead/MemberDispatch.cpp
+# Sorting arrays have bounded item counts; contents and callback results remain generated.
+field 0273B6AC r3+0 s32 -2,0,1,2,3,4,5,8
+field 0273B7B4 r3+0 s32 -2,0,1,2,3,4,5,8
+# A three-node list and a stable member origin exercise insertion positions.
+arg! 0273B378 r3 0x54000000
+field 0273B378 54000008 s32 0,1,2,3
+field 0273B378 54000000 u32 0x54000300
+field 0273B378 54000004 u32 0x54000100
+field 0273B378 54000100 u32 0x54000000
+field 0273B378 54000104 u32 0x54000200
+field 0273B378 54000200 u32 0x54000100
+field 0273B378 54000204 u32 0x54000300
+field 0273B378 54000300 u32 0x54000200
+field 0273B378 54000304 u32 0x54000000
+ret! 0273B348 0x54000200,0x54000000
+stable 54000000 0x400
+src wwhd_src/sead/RuntimeType.cpp
+# Lazy identity guards exercise uninitialized and already registered states.
+field * 101FD594 u32 0,1
+field * 101FD598 u32 0,1
+field * 101FD71C u32 0,1
+field * 101FD7C0 u32 0,1
+field * 101FD984 u32 0,1
+field * 101FDDB8 u32 0,1
+field * 101FDDBC u32 0,1
+field * 101FD9AC u32 0,1
+field * 101FDDEC u32 0,1
+field * 101FD988 u32 0,1
+field * 101FDDF4 u32 0,1
+field * 101FDDE4 u32 0,1
+field * 101FD9B4 u32 0,1
+field * 101FD69C u32 0,1
+field * 101FD6A0 u32 0,1
+field * 101FD9F0 u32 0,1
+field * 101FD65C u32 0,1
+arg 0273BB8C r4 0x101FDD78,0,0x54000000
+arg 0273CD54 r4 0x101FD97C,0x101FD980,0,0x54000000
+arg 0272B1F0 r4 0x101FD9D8,0x101FD980,0,0x54000000
+arg 0272E544 r4 0x101FDE08,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 0272E690 r4 0x101FDE0C,0x101FDE08,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 0273381C r4 0x101FDCE4,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 02733F0C r4 0x101FDEA8,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 02734DFC r4 0x101FDEBC,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 027352D8 r4 0x101FDEC8,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 02735D28 r4 0x101FDED8,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 0273816C r4 0x101FDEE4,0x101FDCEC,0x101FDCE8,0,0x54000000
+arg 02738C14 r4 0x101FDCD4,0x101FDCDC,0x101FDCD8,0,0x54000000
+arg 02734620 r4 0x101FDCEC,0x101FDCE8,0,0x54000000
+src wwhd_src/sead/InputState.cpp
+field 0273BDF4 r3+248 s32 -2,0,1,4,16,28,32
+field 0273C62C r3+248 s32 -2,0,1,4,16,28,32
+field 0273C310 r3+252 s32 -1,0,1,28,31,32,63,64
+field 0273C310 r3+256 s32 -1,0,1,28,31,32,63,64
+field 0273C5A8 r3+268 u32 0,1
+field 0273C5A8 r3+12 u32 0,1,2
+field 0273C5A8 r3+280 f32 0,1
+field 0273C5A8 r3+284 f32 0,1
+field 0273C5A8 r3+288 f32 0,1
+field 0273C5A8 r3+292 f32 0,1
+field 0273C5A8 r3+296 f32 0,1
+field 0273C5A8 r3+300 f32 0,1
+field 0273C5A8 104A0908 f32 0,1
+field 0273C5A8 104A090C f32 0,1
+src wwhd_src/sead/Allocation.cpp
+field 0273AD10 101F8B4C u32 0,0x54000000
+field 0273ADAC 101F8B4C u32 0,0x54000000
+src wwhd_src/sead/Controller.cpp
+field 0273CB44 r3+0xDC s32 0,1,2,3,4
+field 0273CCA4 r3+0xDC s32 0,1,2,3,4
+arg! 0273CB8C r3 0x54000000
+field 0273CB8C 540000D8 u32 0
+field 0273CB8C 540000D0 u32 0x540000CC,0x54000100
+field 0273CB8C 54000104 u32 0x540000CC,0x54000200
+field 0273CB8C 54000204 u32 0x540000CC
+arg 0273D624 r4 0x101FDD74,0x101FDD78,0,0x54000000
+field 0273D624 101FD66C u32 0,1
+field 0273D624 101FD65C u32 0,1
+arg 0273D728 r4 0x101FDF28,0x101FDD78,0,0x54000000
+field 0273D728 101FD67C u32 0,1
+field 0273D728 101FD65C u32 0,1
+arg 0273D96C r4 0x101FD978,0x101FD96C,0,0x54000000
+field 0273D96C 101FD698 u32 0,1
+field 0273D96C 101FD654 u32 0,1
+arg 0273E220 r4 0x101FDF2C,0x101FDD78,0,0x54000000
+field 0273E220 101FD688 u32 0,1
+field 0273E220 101FD65C u32 0,1
+arg 0273E43C r4 0x101FD968,0x101FD96C,0,0x54000000
+field 0273E43C 101FD694 u32 0,1
+field 0273E43C 101FD654 u32 0,1
+arg 0273E9D4 r4 0x101FDD70,0x101FDD78,0,0x54000000
+field 0273E9D4 101FD674 u32 0,1
+field 0273E9D4 101FD65C u32 0,1
+src wwhd_src/sead/ControllerConstruction.cpp
+src wwhd_src/sead/FoundationObjects.cpp
+src wwhd_src/sead/DeviceBuffers.cpp
+src wwhd_src/sead/ReportListeners.cpp
+field 0273EE18 1049FFB4 u32 0x1049FFB0,0x54000100
+field 0273EE18 54000104 u32 0x1049FFB0,0x54000200
+field 0273EE18 54000204 u32 0x1049FFB0
+stable 1049FFB0 0x10
+stable 54000100 0x108
+src wwhd_src/sead/ControllerManager.cpp
+arg! 0273CBD0 r3 0x54001000
+field 0273CBD0 540010D8 u32 0
+field 0273CBD0 540010D0 u32 0x540010CC,0x54000300
+field 0273CBD0 54000304 u32 0x540010CC
+field 0273CBD0 540010DC s32 0,1,2,3
+field 0273CBD0 540010E4 u32 0x54000400
+stable 540010CC 0x1C
+stable 54000300 0x108
+field 0273C390 r3+248 s32 -2,0,1,4,16,28,32
+field 0273C390 r3+252 s32 -1,20
+field 0273C390 r3+256 s32 -1,24
+src wwhd_src/sead/Reports.cpp
+cr 0273AA38 6 0,1
+cr 0273AB58 6 0,1
+cr 0273B15C 6 0,1
+field 0273AA38 101F8AE4 u8 0,1
+callee 0273B158 r4=112
+ret 028F17A8 -1,0,1,4,128,380,383,2147483647
+ret 028F1748 -1,0,1,4,2147483647
+src wwhd_src/sead/ControllerMapping.cpp
+field 0273CE4C r3+248 s32 -1,0,1,4,16,28,32
+field 0273D438 r3+0x160 s32 0,1,2,3,4
+src wwhd_src/sead/DeviceConstruction.cpp
+arg! 0273BA2C r3 0x54002000
+field 0273BA2C 54002144 u32 0
+field 0273BA2C 5400213C u32 0x54002138,0x54000600
+field 0273BA2C 54000604 u32 0x54002138
+field 0273BA2C 54002154 u32 0
+field 0273BA2C 5400214C u32 0x54002148,0x54000800
+field 0273BA2C 54000804 u32 0x54002148
+stable 54002138 0x20
+stable 54000600 0x10
+stable 54000800 0x10
+src wwhd_src/sead/TabletMotor.cpp
+field 0273EB3C r3+0x14 u32 0,0x54005000
+fieldstr 0273EB3C 54005000 128 "","*","**",".*.*","................................","************************************************************************************************************************"
+src wwhd_src/sead/RemoteInput.cpp
+src wwhd_src/sead/TabletInput.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+# The device lookup mock returns either no matching device or a coherent bounded sample buffer.
+ret! 0273CB8C 0,0x54006000
+field * 54006AD4 s32 -1,0,1,2,3,8,16
+field * 54006AD8 s32 -2,-1,0
+field * 54008018 s32 -1,0,1,16
+field * 5400801C s32 -2,-1,0
+field * 54008F20 s32 -1,0,1,16
+field * 54008F24 s32 -2,-1,0
+field * 54009E28 s32 -1,0,1,16
+field * 54009E2C s32 -2,-1,0
+field * 5400AD30 s32 -1,0,1,16
+field * 5400AD34 s32 -2,-1,0
+field 0273DA78 r3+0x15C s32 -1,0,1,2,3,4
+field 0273DA78 r3+0x162 u8 0,1,2
+field 0273DA78 54007174 u8 0,1,2,2,2,6,7,7,7,31,31,252,253,255
+field 0273DA78 54007176 s8 -1,0,1
+field 0273DA78 5400807C u8 0,1,2,2,2,6,7,7,7,31,31,252,253,255
+field 0273DA78 5400807E s8 -1,0,1
+field 0273DA78 54008F84 u8 0,1,2,2,2,6,7,7,7,31,31,252,253,255
+field 0273DA78 54008F86 s8 -1,0,1
+field 0273DA78 54009E8C u8 0,1,2,2,2,6,7,7,7,31,31,252,253,255
+field 0273DA78 54009E8E s8 -1,0,1
+arg 02720548 r3 0,0x54007000
+field 02720548 101F84E0 u32 0,0x54007000
+arg 027293E0 r3 0,0x54007000
+field 027293E0 101F86E4 u32 0,0x54007000
+arg 0273EA4C r3 0,0x54007000,0xFFFFFFF8
+field 0272EC00 101FDDC4 u32 0,1
+arg 0272EC00 r4 0x101FDE30,0x101FDE08,0x101FDCEC,0x101FDCE8,0,0x54000000
+field 0272F3F0 101FDDD4 u32 0,1
+arg 0272F3F0 r4 0x101FDE44,0x101FDE08,0x101FDCEC,0x101FDCE8,0,0x54000000
+field 0272F8DC 101FDDCC u32 0,1
+arg 0272F8DC r4 0x101FDE58,0x101FDE08,0x101FDCEC,0x101FDCE8,0,0x54000000
+field 02734940 101FDDDC u32 0,1
+arg 02734940 r4 0x101FDEB4,0x101FDE08,0x101FDCEC,0x101FDCE8,0,0x54000000
+# Wrapped subobject addresses exercise each constructor's allocation fallback.
+arg 0273B94C r3 0,0x54007000,0xFFFFFEC8,0xFFFFFEB8
+arg 0273BBD0 r3 0,0x54007000,0xFFFFFFFC,0xFFFFFFF8,0xFFFFFFF4,0xFFFFFFE8,0xFFFFFEF4,0xFFFFFEE8,0xFFFFFEE0
+arg 0273C734 r3 0,0x54007000,0xFFFFFF34,0xFFFFFF24
+arg 0273D2D0 r3 0,0x54007000,0xFFFFFEA0
+arg 0273D820 r3 0,0x54007000,0xFFFFEEE8
+# Registered writers may be absent; keep object links coherent while callback state remains clobberable.
+field 0273EE18 54000108 u32 0x54005200
+field 0273EE18 54000208 u32 0x54005300
+field 0273EE18 54005220 u32 0,0x54005400
+field 0273EE18 54005320 u32 0,0x54005500
+field 0273EE18 101F8AF8 u32 0,0x54005600
+
+# Formatter destinations are output pointers: compare equal raw addresses without sampling prior bytes.
+# The bounded writer028F171C writes through destination and never reads its prior contents.
+callee 028F17A8 r3=0
+callee 028F1748 r3=0 r6=112
+
+# Device lookup walks the list with a nonzero member offset too, so the link address arithmetic is observable.
+field 0273CB8C 540000D8 u32 0,0x10
+# Buffered aggregation: a bounded sample array whose triggers, sticks and pointer flags take exact 0/1 values.
+field 0273D438 r3+0x168 u32 0x5400C000
+field 0273D438 5400C000 u32 0x5400D000,0x5400E000
+field 0273D438 5400C004 u32 0x5400D000,0x5400E000
+field 0273D438 5400C008 u32 0x5400D000,0x5400E000
+field 0273D438 5400C00C u32 0x5400D000,0x5400E000
+field 0273D438 5400D00C u32 0,1
+field 0273D438 5400E00C u32 0,1
+field 0273D438 5400D118 u32 0,0x3F800000
+field 0273D438 5400D11C u32 0,0x3F800000
+field 0273D438 5400D120 u32 0,0x3F800000
+field 0273D438 5400D124 u32 0,0x3F800000
+field 0273D438 5400D128 u32 0,0x3F800000
+field 0273D438 5400D12C u32 0,0x3F800000
+field 0273D438 5400E118 u32 0,0x3F800000
+field 0273D438 5400E11C u32 0,0x3F800000
+field 0273D438 5400E120 u32 0,0x3F800000
+field 0273D438 5400E124 u32 0,0x3F800000
+field 0273D438 5400E128 u32 0,0x3F800000
+field 0273D438 5400E12C u32 0,0x3F800000
+# Remote extension buttons: one source bit at a time (first sample of each channel's batch).
+field 0273DA78 54007178 u32 0,1,2,4,8,0x10,0x20,0x40,0x80,0x100,0x200,0x400,0x800,0x1000,0x2000,0x4000,0x8000,0xFFFF
+field 0273DA78 54008080 u32 0,1,2,4,8,0x10,0x20,0x40,0x80,0x100,0x200,0x400,0x800,0x1000,0x2000,0x4000,0x8000,0xFFFF
+field 0273DA78 54008F88 u32 0,1,2,4,8,0x10,0x20,0x40,0x80,0x100,0x200,0x400,0x800,0x1000,0x2000,0x4000,0x8000,0xFFFF
+field 0273DA78 54009E90 u32 0,1,2,4,8,0x10,0x20,0x40,0x80,0x100,0x200,0x400,0x800,0x1000,0x2000,0x4000,0x8000,0xFFFF
+# The pointer sample handed to the pointer update is an eight-byte stack pair: compare both words.
+callee 0273BE34 r6=8
+# The touch calibration import writes one eight-byte touch record through r4.
+callee C00075D0 r4=out8
+# The task singleton's owner is registered whenever the singleton is.
+field 02720548 101F84DC u32 0x54007100,0x54007200
+# Pointer bounds and the sample at exact edges (and a NaN) so inclusive/exclusive compares are observable.
+field 0273BE34 r3+24 u32 0,0x3F800000,0x40000000,0x40400000,0x7FC00000
+field 0273BE34 r3+28 u32 0,0x3F800000,0x40000000,0x40400000,0x7FC00000
+field 0273BE34 r3+32 u32 0,0x3F800000,0x40000000,0x40400000,0x7FC00000
+field 0273BE34 r3+36 u32 0,0x3F800000,0x40000000,0x40400000,0x7FC00000
+arg 0273BE34 r6 0x5400F000
+field 0273BE34 5400F000 u32 0,0x3F800000,0x40000000,0x40400000,0x7FC00000
+field 0273BE34 5400F004 u32 0,0x3F800000,0x40000000,0x40400000,0x7FC00000
+# Remote pointer coordinates of each channel's first sample are nonzero, so both words reach the pointer update.
+field 0273DA78 5400713C u32 1,0x3F800000,0x44000000
+field 0273DA78 54008044 u32 1,0x3F800000,0x44000000
+field 0273DA78 54008F4C u32 1,0x3F800000,0x44000000
+field 0273DA78 54009E54 u32 1,0x3F800000,0x44000000
+# The found device's type check (vtable slot 3) is its own unit function, which mostly accepts the queried type.
+field 0273DA78 54006010 u32 0x5400F800
+field 0273DA78 5400F80C u32 0x0273D96C
+field 0273E5D4 54006010 u32 0x5400F800
+field 0273E5D4 5400F80C u32 0x0273E43C
+ret 0273D96C 1
+ret 0273E43C 1
+# Core remote buttons of each channel's first sample stay sparse, so extension bits are not masked by mapped core bits.
+field 0273DA78 54007118 u32 0,0x800,0x8000
+field 0273DA78 54008020 u32 0,0x800,0x8000
+field 0273DA78 54008F28 u32 0,0x800,0x8000
+field 0273DA78 54009E30 u32 0,0x800,0x8000
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988, OSBlockSet C0009990.
+mockmove C0009988 r3 r4 r5
+mockset C0009990 r3 r4 r5
+
+# zero-page rule (2026-11-10, steer): ControllerManager::initializeDefaults 0273C814 allocates its
+# controllers, devices and motors from the manager heap (allocateFromHeap 0273B050, mocked) and constructs them with the
+# mocked constructors below; appendAddon then reads controller->mAddons (+0x144) unchecked. With the generic mock a
+# remote controller was NULL and every input faulted there (trace steerS/tr-0273C814.txt: load 00000144).
+# Allocators (2026-11-10): the allocator returns fixture blocks (13 calls, about
+# 0x6B00 bytes). allocfail keeps the NULL edges the original survives: K = 1 channel, 2 remote device, 4 and 6 the
+# first two remote motors, 11 tablet device, 13 tablet motor (a NULL remote or tablet controller faults the original
+# in appendAddon, so those calls are not listed).
+alloc 0273B050 r3 0x5F000000 align=r5
+allocfail 0273B050 0,1,2,4,6,11,13
+stable 0x5F000000 0x8000
+# The constructors (mocked here; each is tested on its own in the main spec) return the object they were given, as the
+# originals do for a non-NULL object.
+retarg 0273D6A4 r3
+retarg 0273D820 r3
+retarg 0273D9E4 r3
+retarg 0273E2A0 r3
+retarg 0273E380 r3
+retarg 0273E4B4 r3
+retarg 0273EAC8 r3
+# The manager is a fixture object 0x5F100000 (sizeof 0xE8) so its list words survive the mocked calls (the generic
+# mock's clobber regenerated them at every call). allocateControllerBuffer 0273C808 (mocked; PointerBuffer::allocate
+# on the manager heap) leaves the shipped empty controller buffer: mControllers (+0xDC) count 0, capacity 6 (its
+# argument), storage a fixture array of six pointers. mDevices (+0xCC: link, count, member offset) stays generated.
+# Without these the generated storage word put appendController's stores on page 0 (store 00000060).
+arg! 0273C814 r3 0x5F100000
+stable 0x5F100000 0xE8
+mockfield 0273C808 r3+0xDC u32 0
+mockfield 0273C808 r3+0xE0 u32 6
+mockfield 0273C808 r3+0xE4 u32 0x5F108000
+stable 0x5F108000 0x18

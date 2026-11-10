@@ -236,9 +236,11 @@ BOOL daPy_lk_c::procGrabThrow() {
         Link07_forceCameraLock(cam + 0x248, (u32)mActorKeepGrab.mID);
         if (grab->actor_status & fopAcStts_UNK10000_e) {
             LK_voiceStart(18);
+            PORT_QUICK_USE_AT(0x0242E14C, grab); /* the port's quick use (port_hooks.h): a launch trace */
         } else if (fpcM_GetName(grab) == Link07::fpcNm_BOMB_e ||
                    fpcM_GetName(grab) == Link07::fpcNm_Bomb2_e) {
             LK_voiceStart(0);
+            PORT_QUICK_USE_AT(0x0242E198, grab);
         } else {
             LK_voiceStart(17);
         }
@@ -4123,6 +4125,7 @@ BOOL daPy_lk_c::procHammerSideSwing() {
         mNormalSpeed = sp;
     }
     if (changeCutReverseProc(Link07::ANM_CUTREL)) {
+        PORT_QUICK_USE_AT(0x0243C6F4, this); /* the port's quick use (port_hooks.h): a launch trace */
         setHammerQuake(nullptr, nullptr, -1);
         return TRUE;
     }
@@ -4150,6 +4153,7 @@ BOOL daPy_lk_c::procHammerSideSwing() {
 BOOL daPy_lk_c::procHammerFrontSwing_init() {
     commonProcInit(Link07::daPyProc_HAMMER_FRONT_SWING_e);
     setSingleMoveAnime(Link07::ANM_HAMSWINGBHIT, 4.0f, 0.0f, 0x23, 0.0f); /* HD: HIO folded */
+    PORT_ITEM_FACING(0x0243C830, this, 0); /* the port's camera-directed items (port_hooks.h) */
     mNormalSpeed = 0.0f;
     current.angle.y = shape_angle.y;
     Link07::voiceStart(this, 1);
@@ -4211,6 +4215,7 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
         return TRUE;
     }
     if (frame > rate && changeCutReverseProc(Link07::ANM_CUTREL)) {
+        PORT_QUICK_USE_AT(0x0243CB70, this); /* the port's quick use (port_hooks.h): a launch trace */
         if (mCurProc != Link07::daPyProc_HAMMER_FRONT_SWING_e) {
             setHammerQuake(nullptr, nullptr, -1);
             return TRUE;

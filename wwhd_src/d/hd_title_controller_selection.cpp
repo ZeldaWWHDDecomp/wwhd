@@ -1,6 +1,7 @@
 /* HD controller-selection screen parts; private binary-derived source. */
 #include "d/hd_title_parts.h"
 #include "hd/hd_ui_02001084.h"
+#include "port_hooks.h"
 
 static const u32 titleControllerStringDestructor = 0x026D578C;
 extern void titleControllerDestroyStringArray(void*, u32, u32, u32, u32, u32);
@@ -90,6 +91,7 @@ void hdTitleControllerSelection_c::updateSelection() {
     managerPointer = sControllerPromptManager;
     manager = hdPartsView<hdButtonEventManager_l>(gabi::ea(managerPointer));
     titleControllerCopyEvent(event.get(), reinterpret_cast<hdUiEvent*>(&manager->mCurrentEvent));
+    PORT_UI_EVENT(0x026D44A8, this, event.get());
     u32 isSelection = titleControllerIsSelectionEvent(event->mKind);
     auto* children = hdPartsView<gptr<hdParts_c>>(gabi::ea(mChildren.mpData.get()));
     u32 count = mChildren.mNum;

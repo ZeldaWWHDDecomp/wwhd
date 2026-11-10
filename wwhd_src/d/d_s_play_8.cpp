@@ -1,6 +1,7 @@
 /* Play scene part 8. */
 // HD: native scene, wind and resource systems extend the GameCube play scene.
 #include "d/d_s_play.h"
+#include "port_hooks.h"
 
 static inline void assure(u32 s) {
     gabi::call_ptr(
@@ -153,7 +154,7 @@ static BOOL dScnPly_Draw(dScnPly::dScnPly_ply_c *i_this) {
         (s8)dScnPly_gameInfo()->play.mNextStage.enable !=
             0) /* !IsPeek, !resetToOpening, PLAY_SCENE, isEnableNextStage */
         change_stage(i_this);
-    bool paused = dScnPlyAPI_checkMenu() || dScnPlyAPI_checkPause();
+    bool paused = dScnPlyAPI_checkMenu() || PORT_PLAY_W(0x025B00B0, dScnPlyAPI_checkPause());
     if (!paused) {
         dScnPlyAPI_runVibration(
             gabi::ea(&dScnPly_gameInfo()->play.mVibration)); /* dVibration_c::Run */

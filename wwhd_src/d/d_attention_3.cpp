@@ -9,6 +9,7 @@
  * end frame of yj_in / the start frame of yj_out for the matrix calculation, and runDrawProc
  * does not restart yj_out while yj_delete is playing. */
 #include "d/d_attention.h"
+#include "port_hooks.h"
 
 // HD: endian-aware image accesses retained for word copies and dynamic virtual slots.
 namespace AttentionMemory3 {
@@ -715,7 +716,8 @@ static f32 dAttention_c_LockonReleaseDistanse(u32 i_this) {
     u32 dt = DIST_TABLE + idx * 0x1C;
     f32 r = att3_distace_angle_adjust(
         (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust, (s16)*angle, 1.0f);
-    return (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMaxRelease + r;
+    return PORT_LOCK_ON(0x024EE574, i_this,
+                        (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMaxRelease + r);
 }
 
 /* WWHD glue (tools/verify/autoglue.py)

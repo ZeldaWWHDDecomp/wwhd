@@ -4,6 +4,7 @@
 #include "d/d_mesg_state.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_msg.h"
+#include "port_hooks.h"
 
 using StringVtableHD = dMesg_stringVtableHD;
 static StringVtableHD byteBufferVtableHD;
@@ -100,6 +101,7 @@ void dMesg_state_c::playerName(dMesg_stringHD* destination) {
     source.assure();
     dMesg_memcpyHD(narrow.mBuffer, source.mData, u32(n), 0);
     dMesg_terminateBytesHD(narrow.mBuffer, u32(n));
+    PORT_TEXT_NAME(0x025F8720, 0, gabi::ea(narrow.mBuffer), narrow.mCapacity);
     destination->assure();
     auto* out = destination->mData.get();
     narrow.assure();
@@ -121,6 +123,9 @@ void dMesg_state_c::expandTagged(dMesg_stringHD* destination, u32 input, u32 con
                 name.mBuffer[0] = 0;
                 name.mBuffer[19] = 0;
                 // HD: the original call forwards context in r5 although playerName ignores it.
+                // the port's German genitive (runtime/src/language_region.cpp) takes the message id at the
+                // callee's entry hook (@025F8618: r5); this is that callee's only call
+                PORT_TEXT_NAME(0x025F8618, context, 0, 0);
                 dMesg_playerNameWithContextHD(this, &name, context);
                 u32 out = destination->mData.v;
                 destination->assure();

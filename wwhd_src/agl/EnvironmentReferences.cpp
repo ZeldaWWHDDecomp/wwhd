@@ -3,6 +3,7 @@
 // settings (128 per-class counts, total, two settings words with their defaults), each checked against this game's
 // own constructors of both.
 #include "agl/EnvironmentReferences.h"
+#include "sead/ElementAt.h"
 using namespace agl::env;
 static sead::VtableSlot sEnvironmentReferenceMethods;
 static sead::VtableSlot sEnvironmentCapacityMethods;
@@ -108,8 +109,10 @@ s32 compareEnvironmentReferenceObjects(const EnvironmentReference*,const Environ
 /* 0276F814 */
 void EnvironmentReferenceList::sortClassRange(u32 typeId) {
     u32 rangeCount = u32(mRanges.mCount);
-    const EnvironmentReferenceRange* ranges = mRanges.mData;
-    const EnvironmentReferenceRange* range = typeId < rangeCount ? ranges + typeId : ranges;
+    /* guest EA arithmetic: mData + typeId * 4 wraps at 32 bits as on the
+     * console; a host pointer index on a NULL table reached host addresses past 4 GB */
+    const EnvironmentReferenceRange* range =
+        &sead::elementAt<EnvironmentReferenceRange>(mRanges.mData, typeId < rangeCount ? typeId : 0u);
     if (range->mCount == 0) return;
     u32 first = range->mFirst;
     u32 count = range->mCount;

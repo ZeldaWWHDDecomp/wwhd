@@ -234,6 +234,7 @@ BOOL daPy_lk_c::procHammerSideSwing_init() {
 
     commonProcInit(LinkActionConstants::daPyProc_HAMMER_SIDE_SWING_e);
     setSingleMoveAnime(LinkActionConstants::ANM_HAMSWINGA, 1.2f, 4.0f, 0x3C, 2.0f);
+    PORT_ITEM_FACING(0x023EDFC4, this, 0); /* the port's camera-directed items (port_hooks.h) */
     current.angle.y = shape_angle.y;
     mNormalSpeed = 0.0f;
     LinkActionVoiceStart(this, 1);
@@ -763,6 +764,7 @@ BOOL daPy_lk_c::checkNewItemChange(u8 btn) {
             return FALSE;
         }
         mReadyItemBtn = btn;
+        PORT_QUICK_USE_AT(0x023EFB44, this); /* the port's quick use (port_hooks.h) */
         setAnimeEquipItem();
     }
     return FALSE;
@@ -865,12 +867,15 @@ BOOL daPy_lk_c::checkNextActionFromButton() {
             return checkNextBowMode();
         }
         if (eq == LinkActionConstants::dItemNo_HOOKSHOT_e) {
+            PORT_QUICK_USE_AT(0x023F0624, this); /* the port's quick use (port_hooks.h) */
             return checkNextHookshotMode();
         }
         if (eq == LinkActionConstants::dItemNo_BOOMERANG_e) {
+            PORT_QUICK_USE_AT(0x023F06AC, this);
             return checkNextBoomerangMode();
         }
         if (eq == LinkActionConstants::dItemNo_GRAPPLING_HOOK_e) {
+            PORT_QUICK_USE_AT(0x023F0670, this);
             return checkNextRopeMode();
         }
         if (eq == LinkActionConstants::dItemNo_WIND_WAKER_e) {
@@ -996,18 +1001,21 @@ BOOL daPy_lk_c::checkNextActionFromButton() {
                 }
             }
             u32 ready;
-            if (itemTrigger() && (ready = getReadyItem(), mEquipItem == ready)) {
+            if (PORT_QUICK_USE(0x023F05EC, this, itemTrigger()) && (ready = getReadyItem(), mEquipItem == ready)) {
                 eq = mEquipItem;
                 if (eq == 0x2F) {
                     if (LinkAction(this).m_anm_heap_upper[2].mIdx != 0xA7) {
+                        PORT_QUICK_USE_AT(0x023F0624, this);
                         return checkNextHookshotMode();
                     }
                 } else if (eq == 0x25) {
                     if (!checkRopeAnime()) {
+                        PORT_QUICK_USE_AT(0x023F0670, this);
                         return checkNextRopeMode();
                     }
                 } else {
                     if (eq == 0x2D) {
+                        PORT_QUICK_USE_AT(0x023F06AC, this);
                         return checkNextBoomerangMode();
                     }
                     if (checkBowItem(eq)) {
@@ -1330,14 +1338,14 @@ BOOL daPy_lk_c::checkNextMode(int noStick) {
     BOOL r;
     if (atn) {
         if (checkBoomerangAnime()) {
-            r = checkNextBoomerangMode();
+            r = (PORT_QUICK_USE_AT(0x023F1728, this), checkNextBoomerangMode()); /* the port's quick use (port_hooks.h) */
         } else if (checkBowAnime()) {
             r = checkNextBowMode();
         } else if (LinkAction(this).m_anm_heap_upper[2].mIdx ==
                    0xA7 /* checkHookshotReadyAnime() */) {
-            r = checkNextHookshotMode();
+            r = (PORT_QUICK_USE_AT(0x023F1764, this), checkNextHookshotMode());
         } else if (checkRopeAnime()) {
-            r = checkNextRopeMode();
+            r = (PORT_QUICK_USE_AT(0x023F1784, this), checkNextRopeMode());
         } else if (mpAttnActorLockOn.get() != nullptr || mDemo.mDemoMode == 0x17) {
             if (std::fabs((f32)mNormalSpeed) > 0.001f) {
                 r = procAtnActorMove_init();
@@ -3875,6 +3883,7 @@ void daPy_lk_c::checkItemAction() {
         if (fc->mRate < 0.01f || (mStickDistance > 0.05f && fc->mFrame > 10.0f)) {
             resetActAnimeUpper(2, 2.4f);
         } else if (LK_checkPass(fc, 7.0f)) {
+            PORT_QUICK_USE_AT(0x023FB49C, this); /* the port's quick use (port_hooks.h) */
             throwBoomerang();
         }
         return;
@@ -4555,7 +4564,7 @@ void daPy_lk_c::posMoveFromFootPos() {
     if (!(sy > 0.0f) && oldY > 0.0f) {
         m35F0 = current.pos.y;
     }
-    LinkMotionApi::addVector(&current.pos, &speed, &current.pos);
+    LinkMotionApi::addVector(&current.pos, PORT_LINK_MOVE(&speed) /* the port's movement mods (port_hooks.h) */, &current.pos);
     for (int i = 0; i < 2; i++) {
         LinkMotionFootData &footData =
             reinterpret_cast<LinkMotionFootData *>(mFootData)[i]; /* mFootData[i] */
@@ -6186,7 +6195,9 @@ void daPy_lk_c::setStickData() {
             m34DC = (s16)(CPad_GET_STICK_ANGLE(0) + 0x8000);
         }
         s16 cam = lk_camControledAngleY(mCameraInfoIdx);
-        m34E8 = (s16)(cam + m34DC);
+        /* the port's steering (port_hooks.h): the compiled code has this statement twice, after both m34DC branches
+         * above (instruction hooks @023F35BC, @023F3610) */
+        m34E8 = PORT_STEER_WALK(0x023F35BC, this, cam, m34DC, (s16)(cam + m34DC));
         u8 bVar2 = LinkActionPlay().mButtonMode; /* dComIfGp_getButtonActionMode() */
         bool bVar1 = false;
         if (CPad_CHECK_TRIG_B(0)) {

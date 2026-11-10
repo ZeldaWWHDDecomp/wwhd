@@ -1,6 +1,7 @@
 /** HD controller routing, GamePad orientation and calibrated touch pointer. No GameCube counterpart. */
 #include "bindings.h"
 #include "d/hd_input_ctrl.h"
+#include "port_hooks.h"
 static void* sControllerMgr;
 static hdInputManager* sInputManager;
 static hdInputDisposer* sInputDisposer;
@@ -116,7 +117,7 @@ void createInstance(void* heap) {
 // initial setup: GamePad + Pro controllers, the pointer and the cursor object
 /* 02617858 */
 void hdInputManager::init(u32 unused, void* heap) {
-    this->mMode = INPUT_MODE_BOTH;
+    this->mMode = PORT_UI_W(0x02617874, this, INPUT_MODE_BOTH);
     void* mgr = sControllerMgr;
     hdController* main = NULL;
     if (mgr) {
@@ -326,7 +327,7 @@ void hdInputManager::calibrate() {
 /* 02618604 */
 void orientation(hdInputMatrix* out, hdInputManager* self) {
     void* opt = hdInputGetOptions(&sGameInfo->mOptions);
-    if (!hdInputGyroEnabled(opt) || self->isTvMode()) {
+    if (!hdInputGyroEnabled(opt) || PORT_UI_W(0x0261864C, self, self->isTvMode())) {
         for (u32 k = 0; k < 9; k++) out->mBits[k] = sIdentityMatrix.mBits[k];
         return;
     }

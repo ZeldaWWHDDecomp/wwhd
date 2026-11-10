@@ -1,6 +1,7 @@
 /** HD renderer layer factories; library construction and layer registration stay external. */
 #include "hd/hd_render_layers.h"
 #include "hd/hd_fader.h"
+#include "sead/ElementAt.h"
 static hdLayerBase_c* allocateRenderLayer(u32, void *, u32);
 static void
 registerRenderLayer(hdRenderLayerFactory_c *, hdLayerBase_c *, u32, void *, u32, void *);
@@ -632,9 +633,11 @@ void initializeBackendShaders(hdShaderBackend_c* self, void* heap) {
         s32 index = findShaderProgram(archive, &name);
         hdShaderProgram_l* selected = NULL;
         if (index >= 0) {
-            hdShaderProgram_l* programs = gabi::at<hdShaderProgram_l>(self->mArchiveHeader[3]);
             u32 count = self->mArchiveHeader[2];
-            hdShaderProgram_l* entry = &programs[u32(index) < count ? index : 0];
+            /* guest EA arithmetic: base + index * 0x24 wraps at 32 bits as on the
+             * console; a host pointer index on a NULL base reached host addresses past 4 GB (host-object guard flake) */
+            hdShaderProgram_l* entry =
+                &sead::elementAt<hdShaderProgram_l>(u32(self->mArchiveHeader[3]), u32(index) < count ? u32(index) : 0u);
             struct Entry {
                 u8 mReserved[0x20];
                 be<u8> mReady;
@@ -646,9 +649,8 @@ void initializeBackendShaders(hdShaderBackend_c* self, void* heap) {
                     input = (u8 *)archive->mpEntries + u32(index) * 0x84;
                 initializeShaderProgram(entry, input, 0);
             }
-            programs = gabi::at<hdShaderProgram_l>(self->mArchiveHeader[3]);
             count = self->mArchiveHeader[2];
-            selected = &programs[u32(index) < count ? index : 0];
+            selected = &sead::elementAt<hdShaderProgram_l>(u32(self->mArchiveHeader[3]), u32(index) < count ? u32(index) : 0u);
         }
         self->mpPrograms[program] = selected;
     }
