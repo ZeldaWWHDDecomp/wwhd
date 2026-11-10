@@ -27,7 +27,7 @@ static inline void rsh1_items_init(RshShopItems* it) {
 /* 022D9E04 */
 int daNpc_Rsh1_c::getAimShopPosIdx() {
     fopAc_ac_c* link_p = rsh1_link();
-    int temp_78C = m78C;
+    int temp_78C = mShopNum;
     int result_index = 1;
     f32 fcond = rsh1_HIO().m4C;
     int condition = temp_78C < 1 ? 1 : temp_78C;
@@ -69,8 +69,8 @@ BOOL daNpc_Rsh1_c::pathMove(be<s32>* param_1) {
     } else {
         temp4 = getAimShopPosIdx();
     }
-    s8 temp = m704;
-    s8 aim = m744[temp4];
+    s8 temp = mPathPntIdx;
+    s8 aim = mShopPathPntIdx[temp4];
     if (temp == aim) {
     } else if (temp < aim) {
         temp = (s8)(temp + 1);
@@ -87,7 +87,7 @@ BOOL daNpc_Rsh1_c::pathMove(be<s32>* param_1) {
     target_pos.y = py;
     target_pos.z = pz;
     if (rsh1_chasePosXZ(&current.pos, &target_pos, step) != 0) { /* cLib_chasePosXZ */
-        m704 = temp;
+        mPathPntIdx = temp;
         u8 arg3 = point->mArg3;
         if (arg3 != 0xFF) {
             s32 temp2 = arg3 - 1;
@@ -120,9 +120,9 @@ BOOL daNpc_Rsh1_c::pathMove(be<s32>* param_1) {
 
 /* 022DA1C4 */
 bool daNpc_Rsh1_c::wait01() {
-    if (m771) {
-        m95D = (u8)m95C;
-        m95C = 2;
+    if (mTalking) {
+        mPrevLookMode = (u8)mLookMode;
+        mLookMode = 2;
         return rsh1_isMorf(this);
     }
     if (mCyl.ChkCoHit()) { /* mCyl.ChkCoHit() */
@@ -130,15 +130,15 @@ bool daNpc_Rsh1_c::wait01() {
         if (actor_p && fpcM_GetName(actor_p) == fpcNm_PLAYER_e) {
             // HD: the player is in the shop: start the shop-out event instead of talking
             if (checkCreateInShopPlayer()) {
-                m95B = 5;
+                mOrderState = 5;
                 actor_status = actor_status | 0x4000;
                 mShopOutEventIdx = rsh1_getEventIdx("RSH_SHOP_OUT" /* "RSH_SHOP_OUT" */);
                 rsh1_setAction(this, RSH1_dummy_action);
                 return false;
             }
-            m95B = 2;
-            m780 = 0x2883;
-            m793 = 1;
+            mOrderState = 2;
+            mNextMsgNo = 0x2883;
+            mbShopOut = 1;
         }
         return rsh1_isMorf(this);
     }
@@ -146,16 +146,16 @@ bool daNpc_Rsh1_c::wait01() {
     BOOL path_move_res = pathMove(nullptr);
     if (!path_move_res) {
         setAnm(5);
-        m95B = 0;
+        mOrderState = 0;
     } else {
         setAnm(0);
     }
     if (mbAttention) {
         f32 abs_diff = std::fabs((f32)(current.pos.y - link_p->current.pos.y));
         if (path_move_res && abs_diff < 100.0f) {
-            m95B = 3;
-        } else if (m95B == 3) {
-            m95B = 0;
+            mOrderState = 3;
+        } else if (mOrderState == 3) {
+            mOrderState = 0;
         }
     }
     return rsh1_isMorf(this);
@@ -166,26 +166,26 @@ bool daNpc_Rsh1_c::talk01() {
     u16 result = talk();
     if (result == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
         fopAc_ac_c* link_p = rsh1_link();
-        m95C = (s8)m95D;
+        mLookMode = (s8)mPrevLookMode;
         rsh1_event_reset();
         mShopCamAct.Reset();
         rsh1_offNoDraw(link_p);
-        m771 = 0;
+        mTalking = 0;
         setAnm(0);
-        u32 m = m778;
+        u32 m = mCurrMsgNo;
         if (m == 0x2856) {
-            m95B = 4;
+            mOrderState = 4;
             mItemNo = dItemNo_TOWN_FLOWER_e; /* dItemNo_TOWN_FLOWER_e */
         } else if (m == 0x288E) {
-            m95B = 4;
+            mOrderState = 4;
             mItemNo = dItemNo_SAIL_e; /* dItemNo_SAIL_e */
         } else if (m == 0x285F) {
-            m95B = 4;
+            mOrderState = 4;
             mItemNo = dItemNo_MAGIC_ARMOR_e; /* dItemNo_MAGIC_ARMOR_e */
-        } else if (m == 0x2883 && m793 == 1) {
+        } else if (m == 0x2883 && mbShopOut == 1) {
             rsh1_setAction(this, RSH1_pl_shop_out_action);
         }
-    } else if (result == 8 && daNpc_Rsh1_shopMsgCheck(m778)) {
+    } else if (result == 8 && daNpc_Rsh1_shopMsgCheck(mCurrMsgNo)) {
         mpShopItems->getSelectItemBuyMsg(); // HD: the result is not compared any more
     }
     // HD: the choose/cancel button prompts follow the shop cursor being shown
@@ -201,7 +201,7 @@ BOOL daNpc_Rsh1_c::getdemo_action(void*) {
     s32 staff_idx = dComIfGp_evmng_getMyStaffId("Rsh1" /* "Rsh1" */, nullptr, 0);
     if (mActionStatus == 0) {
         rsh1_offNoDraw(rsh1_link());
-        m95C = (s8)m95D;
+        mLookMode = (s8)mPrevLookMode;
         mShopCamAct.Reset();
         u32 pid = rsh1_createPresent(&current.pos, (u32)mItemNo, 0, -1, (s32)fopAcM_GetRoomNo(this), 0, 0); /* fopAcM_createItemForPresentDemo */
         if (pid != 0xFFFFFFFF) {
@@ -212,15 +212,15 @@ BOOL daNpc_Rsh1_c::getdemo_action(void*) {
     } else if (mActionStatus != -1) {
         dComIfGp_evmng_cutEnd(staff_idx);
         if (rsh1_endCheckOld(dComIfGp_getPEvtManager(), "RSH_GET_DEMO" /* "RSH_GET_DEMO" */)) { /* endCheckOld */
-            m95B = 1;
+            mOrderState = 1;
             rsh1_event_reset();
             u8 item = mItemNo;
             if (item == 0x8C) {
-                m780 = 0x2857;
+                mNextMsgNo = 0x2857;
             } else if (item == 0x78) {
-                m780 = 0x288F;
+                mNextMsgNo = 0x288F;
             } else if (item == 0x2A) {
-                m780 = 0x2860;
+                mNextMsgNo = 0x2860;
             }
             mItemNo = 0xFF;
             rsh1_setAction(this, RSH1_wait_action);
@@ -232,7 +232,7 @@ BOOL daNpc_Rsh1_c::getdemo_action(void*) {
 /* 022DA748 */
 BOOL daNpc_Rsh1_c::wait_action(void*) {
     if (mActionStatus == 0) {
-        m95C = 1;
+        mLookMode = 1;
         mActionStatus = (s8)(mActionStatus + 1);
     } else if (mActionStatus != -1) {
         cXyz pos;
@@ -244,7 +244,7 @@ BOOL daNpc_Rsh1_c::wait_action(void*) {
         pos.z = z;
         pos.y = y;
         u8 att = rsh1_attentionByte(this, &pos, (s32)sum); /* chkAttention: its bool stored as returned */
-        s8 m = m95C;
+        s8 m = mLookMode;
         mbAttention = att;
         switch ((u32)(s32)m) {
         case 1:

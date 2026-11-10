@@ -6,11 +6,11 @@ struct InstSoundHandle { gptr<JAISound> mpSound; };
 struct JAIZelBasic;
 struct JAIZelInst {
     // HD: stick/arm-swing state is absent; GameCube judged positions begin at 0x18.
-    be<u8> field_0x18[6]; be<u8> field_0x1e, mBeat;
-    be<f32> field_0x20, field_0x24, field_0x28, field_0x2c, mBeatFrames;
-    be<u8> field_0x34; u8 _1D[3];
-    gptr<InstSoundHandle> field_0x38, field_0x3c, field_0x40, field_0x44;
-    be<u8> field_0x48; u8 _31[3];
+    be<u8> mJudgedNotes[6]; be<u8> mJudgedNoteCount, mBeat;  /* was field_0x18: judge 0202A3B4: the last six conducted notes (cposNote), shifted when full and matched against mMelodyPattern; was field_0x1e: judge 0202A3B4: number of entries in mJudgedNotes (0 at beat 0, max 6) */
+    be<f32> mVolume, field_0x24, field_0x28, mBeatRate, mBeatFrames;  /* was field_0x20: setVolume 0202A14C: 0.55 .. 1.0 from the stick; volume of every conducting SE (metronomePlay, judge, ambientPlay); was field_0x2c: setBeat 0202A040: 1.0 / 0.75 / 0.857 for 3 / 6 / 4 beats; mBeatFrames = 30 * it */
+    be<u8> mArmNote; u8 _1D[3];  /* was field_0x34: armSoundPlay 0202A87C stores cposNote(mBeat, cpos); reset 02029F10 sets 0x37 */
+    gptr<InstSoundHandle> field_0x38, mpMetronomeSound, mpDroneSound, mpPulseSound;  /* was field_0x3c: judge 0202A3B4: handle of JA_SE_WTAKT_METRONOME; ambientPlay 0202A77C sets its volume; was field_0x40: metronomePlay 0202A1B8: handle of JA_SE_WTAKT_DRONE(_4/_6) / JA_SE_WTAKT_AUFTAKT(_4/_6); ambientPlay 0202A77C sets its volume; was field_0x44: judge 0202A3B4: handle of JA_SE_WTAKT_PULSE_3/4/6; ambientPlay 0202A77C sets its volume */
+    be<u8> mUseNote62; u8 _31[3];  /* was field_0x48: judge 0202A3B4 sets it for a 6 beat starting at cpos 1; cposNote then takes mCPosToNote62 instead of mCPosToNote61 */
     void reset(); s32 setStickPos(s32, s32); void setBeat(u32); void setVolume(f32);
     s32 metronomePlay(u32, u32); s32 judge(u32, u32); void ambientPlay();
     void armSoundPlay(u32); void melodyPlay(s32); u32 getMelodyBeat(s32);
@@ -19,10 +19,10 @@ struct JAIZelInst {
 };
 WWHD_SIZE(JAIZelInst, 0x34);
 WWHD_OFFSET(JAIZelInst, mBeat, 7);
-WWHD_OFFSET(JAIZelInst, field_0x20, 8);
+WWHD_OFFSET(JAIZelInst, mVolume, 8);
 WWHD_OFFSET(JAIZelInst, mBeatFrames, 0x18);
 WWHD_OFFSET(JAIZelInst, field_0x38, 0x20);
-WWHD_OFFSET(JAIZelInst, field_0x48, 0x30);
+WWHD_OFFSET(JAIZelInst, mUseNote62, 0x30);
 struct InstNoteTable { be<u8> note[5]; };
 struct InstMelody { be<u8> note[7]; };
 struct InstMelodyTable { InstMelody rows[8]; };
@@ -50,14 +50,14 @@ enum {
  JA_SE_WTAKT_AUFTAKT_4=0x2880, JA_SE_WTAKT_AUFTAKT_6=0x2881
 };
 
-WWHD_OFFSET(JAIZelInst, field_0x1e, 6);
+WWHD_OFFSET(JAIZelInst, mJudgedNoteCount, 6);
 WWHD_OFFSET(JAIZelInst, field_0x24, 0xC);
 WWHD_OFFSET(JAIZelInst, field_0x28, 0x10);
-WWHD_OFFSET(JAIZelInst, field_0x2c, 0x14);
-WWHD_OFFSET(JAIZelInst, field_0x34, 0x1C);
-WWHD_OFFSET(JAIZelInst, field_0x3c, 0x24);
-WWHD_OFFSET(JAIZelInst, field_0x40, 0x28);
-WWHD_OFFSET(JAIZelInst, field_0x44, 0x2C);
+WWHD_OFFSET(JAIZelInst, mBeatRate, 0x14);
+WWHD_OFFSET(JAIZelInst, mArmNote, 0x1C);
+WWHD_OFFSET(JAIZelInst, mpMetronomeSound, 0x24);
+WWHD_OFFSET(JAIZelInst, mpDroneSound, 0x28);
+WWHD_OFFSET(JAIZelInst, mpPulseSound, 0x2C);
 WWHD_SIZE(InstSoundHandle, 4);
 WWHD_OFFSET(InstHeaderStatics, zero, 0xC);
 WWHD_SIZE(InstHeaderStatics, 0x1C);

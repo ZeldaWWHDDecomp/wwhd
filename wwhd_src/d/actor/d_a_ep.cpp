@@ -18,7 +18,7 @@ static const char* l_arcName = "Ep";
 static const char* l_eventName = "SHOKUDAI_SWITCH";
 static const char* l_staffName = "SHOKUDAI";
 static const char* l_assertFile = "d_a_ep.cpp";
-static const char* l_modelAssert = "modelData != NULL";
+static const char* l_modelAssert = "modelData != (0)";
 static EpAction actions[2] = {{"WAIT"}, {"FIRE"}};
 // HD: distinct guest copies of "sea" and "SHOKUDAI_SWITCH" are used in Execute.
 static u8 l_seaFire[4] = {115, 101, 97, 0};
@@ -149,8 +149,8 @@ BOOL ep_switch_event_end(ep_class* i_this) {
 /* 0212DB44 */
 BOOL ep_switch_event_move(ep_class* i_this) {
     BOOL ret = FALSE;
-    if (dComIfGp_evmng_getIsAddvance(i_this->m7E0)) {
-        ret = dComIfGp_evmng_getMyActIdx(i_this->m7E0, reinterpret_cast<gptr<char>*>(actions), 2,
+    if (dComIfGp_evmng_getIsAddvance(i_this->mStaffId)) {
+        ret = dComIfGp_evmng_getMyActIdx(i_this->mStaffId, reinterpret_cast<gptr<char>*>(actions), 2,
                                          FALSE, 0);
         switch (ret) {
         case 1:
@@ -159,7 +159,7 @@ BOOL ep_switch_event_move(ep_class* i_this) {
         case 0:
         default:
             ret = FALSE;
-            dComIfGp_evmng_cutEnd(i_this->m7E0);
+            dComIfGp_evmng_cutEnd(i_this->mStaffId);
             break;
         }
     }
@@ -181,16 +181,16 @@ static void ga_move(ep_class* i_this) {
     dBgS_LinChk_ct(linChk.get(), EP_LINCHK_VT, false);
     for (s32 i = 0; i < 2; i++, ga++) {
         if (ga->mbEnabled != 0) {
-            if (ga->m3B != 0) {
-                ga->m3B = ga->m3B - 1;
+            if (ga->mTargetTimer != 0) {
+                ga->mTargetTimer = ga->mTargetTimer - 1;
             } else {
-                ga->m3B = (u8)gabi::ftoi(cM_rndF(10.0f));
+                ga->mTargetTimer = (u8)gabi::ftoi(cM_rndF(10.0f));
                 f32 r = cM_rndFX(150.0f);
-                ga->m1C.x = i_this->mPosTop.x + r;
+                ga->mTargetPos.x = i_this->mPosTop.x + r;
                 r = cM_rndFX(100.0f);
-                ga->m1C.y = i_this->mPosTop.y + r;
+                ga->mTargetPos.y = i_this->mPosTop.y + r;
                 r = cM_rndFX(150.0f);
-                ga->m1C.z = i_this->mPosTop.z + r;
+                ga->mTargetPos.z = i_this->mPosTop.z + r;
                 if (i == 0) {
                     gabi::Local<cXyz> tmp;
                     cXyz_mi(sp58.get(), tmp.get(), &ga->mPos);
@@ -198,16 +198,16 @@ static void ga_move(ep_class* i_this) {
                     sp64->copy(*tmp.get());
                     if (std_sqrtf(PSVECSquareMag(sp64.get())) < 300.0f) { /* sp64.abs() */
                         r = cM_rndFX(100.0f);
-                        ga->m1C.x = sp58->x + r;
+                        ga->mTargetPos.x = sp58->x + r;
                         r = cM_rndFX(100.0f);
-                        ga->m1C.y = sp58->y + r;
+                        ga->mTargetPos.y = sp58->y + r;
                         r = cM_rndFX(100.0f);
-                        ga->m1C.z = sp58->z + r;
+                        ga->mTargetPos.z = sp58->z + r;
                     }
                 }
                 f32 gy = ga->mPos.y;
-                if (i_this->m4D0 == EP_OFF) {
-                    ga->m1C.y = ga->m1C.y + 1000.0f;
+                if (i_this->mState == EP_OFF) {
+                    ga->mTargetPos.y = ga->mTargetPos.y + 1000.0f;
                 }
                 if (std::fabs(i_this->mPosTop.y - gy) > 500.0f) {
                     ga->mbEnabled = 2;
@@ -216,7 +216,7 @@ static void ga_move(ep_class* i_this) {
                 }
             }
             gabi::Local<cXyz> sp70;
-            cXyz_mi(&ga->m1C, sp70.get(), &ga->mPos);
+            cXyz_mi(&ga->mTargetPos, sp70.get(), &ga->mPos);
             f32 x = sp70->x, z = sp70->z, y = sp70->y;
             cLib_addCalcAngleS2(&ga->rotY, cM_atan2s(x, z), 2, 0x1000);
             f32 d = std_sqrtf(gabi::fmadds(x, x, z * z));
@@ -225,30 +225,30 @@ static void ga_move(ep_class* i_this) {
             cMtx_YrotS(calc_mtx(), ga->rotY);
             cMtx_XrotM(calc_mtx(), ga->rotX);
             MtxPosition(sp88.get(), sp7C.get());
-            ga->m10.copy(ga->mPos);
+            ga->mOldPos.copy(ga->mPos);
             PSVECAdd(&ga->mPos, sp7C.get(), &ga->mPos); /* ga->mPos += sp7C */
-            if (i_this->m7D4 != 0) {
+            if (i_this->mWindTimer != 0) {
                 gabi::Local<cXyz> sp4C;
-                cMtx_YrotS(calc_mtx(), i_this->m7DC);
+                cMtx_YrotS(calc_mtx(), i_this->mWindAngle);
                 f32 k = REG0_F(9) + 5.0f;
                 sp4C->x = 0.0f;
                 sp4C->y = 1.0f;
-                sp4C->z = i_this->m7D8 * k;
+                sp4C->z = i_this->mWindPower * k;
                 MtxPosition(sp4C.get(), sp7C.get());
                 PSVECAdd(&ga->mPos, sp7C.get(), &ga->mPos);
-                /* sp7C = ga->m10 + (ga->mPos - ga->m10) * 1.05f */
+                /* sp7C = ga->mOldPos + (ga->mPos - ga->mOldPos) * 1.05f */
                 gabi::Local<cXyz> t0, t1, t2;
-                cXyz_mi(&ga->mPos, t0.get(), &ga->m10);
+                cXyz_mi(&ga->mPos, t0.get(), &ga->mOldPos);
                 cXyz_ml(t0.get(), t1.get(), 1.05f);
-                cXyz_pl(&ga->m10, t2.get(), t1.get());
+                cXyz_pl(&ga->mOldPos, t2.get(), t1.get());
                 sp7C->copy(*t2.get());
-                dBgS_LinChk_Set(linChk.get(), &ga->m10, sp7C.get(), i_this);
+                dBgS_LinChk_Set(linChk.get(), &ga->mOldPos, sp7C.get(), i_this);
                 if (cBgS_LineCross(dComIfG_Bgsp(), linChk.get())) {
                     ga->mPos.copy(linChk->mLin.mEnd);
                 }
             }
-            u16 a = (u16)ga->m38;
-            ga->m38 = (s16)(a + 0x3E00);
+            u16 a = (u16)ga->mFlapAngle;
+            ga->mFlapAngle = (s16)(a + 0x3E00);
             ga->scaleY = cM_ssin(a);
         }
     }
@@ -287,20 +287,20 @@ static void ep_move(ep_class* i_this) {
     pos->x = i_this->mPosTop.x;
     pos->z = i_this->mPosTop.z;
     pos->y = (i_this->mPosTop.y + 10.0f) + REG_F(6, 0); /* -240 + 235 + 15 */
-    switch ((u32)(s32)i_this->m4D0) {
+    switch ((u32)(s32)i_this->mState) {
     case EP_OFF:
-        if (i_this->m508 != 0) {
+        if (i_this->mIgniteSwitchNo != 0) {
             cLib_addCalc0(&i_this->mLightPower, 0.5f, 0.05f);
             if (i_this->mSph1.ChkTgHit()) {
                 void* hitObj = i_this->mSph1.GetTgHitObj();
                 if (hitObj == nullptr || !cCcD_Obj_ChkAtType(hitObj, 0x600000)) {
-                    if (i_this->m505 != 0xff) {
-                        i_this->mTimers[EP_EXTINGUISH_TIMER] = i_this->m505 * 10 + 1;
+                    if (i_this->mBurnTime != 0xff) {
+                        i_this->mTimers[EP_EXTINGUISH_TIMER] = i_this->mBurnTime * 10 + 1;
                     }
-                    dComIfGs_onSwitch(i_this->m508 - 1, fopAcM_GetRoomNo(i_this));
+                    dComIfGs_onSwitch(i_this->mIgniteSwitchNo - 1, fopAcM_GetRoomNo(i_this));
                 }
             }
-            if (dComIfGs_isSwitch(i_this->m508 - 1, fopAcM_GetRoomNo(i_this))) {
+            if (dComIfGs_isSwitch(i_this->mIgniteSwitchNo - 1, fopAcM_GetRoomNo(i_this))) {
                 if (i_this->mType != EP_TORCH_NO_EVENT) {
                     /* dComIfGp_evmng_existence("SHOKUDAI_SWITCH") */
                     dEvent_manager_c* manager =
@@ -321,10 +321,10 @@ static void ep_move(ep_class* i_this) {
                                 ep_switch_event_end(i_this);
                             }
                         }
-                        i_this->m7E0 = begin;
+                        i_this->mStaffId = begin;
                         if (begin != 0) {
-                            i_this->m508 = 0;
-                            if (i_this->m7E0 != -1) {
+                            i_this->mIgniteSwitchNo = 0;
+                            if (i_this->mStaffId != -1) {
                                 ep_switch_event_move(i_this);
                             }
                         }
@@ -332,25 +332,25 @@ static void ep_move(ep_class* i_this) {
                     }
                 }
                 mDoAud_seStart2(JA_SE_OBJ_TORCH_IGNITION, &i_this->mPosTop);
-                i_this->m508 = 0;
+                i_this->mIgniteSwitchNo = 0;
             }
-        } else if (i_this->mType != EP_TORCH_NO_EVENT && i_this->m7E0 != -1) {
+        } else if (i_this->mType != EP_TORCH_NO_EVENT && i_this->mStaffId != -1) {
             if (ep_switch_event_move(i_this)) {
-                i_this->m4D0 = EP_IGNITE;
-                i_this->m4E0 = i_this->scale.x;
+                i_this->mState = EP_IGNITE;
+                i_this->mLightPowerTarget = i_this->scale.x;
             }
         } else {
-            i_this->m4D0 = EP_IGNITE;
-            i_this->m4E0 = i_this->scale.x;
+            i_this->mState = EP_IGNITE;
+            i_this->mLightPowerTarget = i_this->scale.x;
         }
         break;
     case EP_IGNITE:
-        i_this->m4D0 = EP_BURN;
+        i_this->mState = EP_BURN;
         [[fallthrough]];
     case EP_BURN:
-        cLib_addCalc2(&i_this->mLightPower, i_this->m4E0, 0.5f, 0.2f);
+        cLib_addCalc2(&i_this->mLightPower, i_this->mLightPowerTarget, 0.5f, 0.2f);
         if (i_this->mType != EP_LIGHT_ONLY) {
-            if (i_this->m7D4 < (s16)(REG0_S(7) + 7)) {
+            if (i_this->mWindTimer < (s16)(REG0_S(7) + 7)) {
                 /* HD: no fire on the sea stage outside a few areas */
                 bool suppress = false;
                 if (ep_chk_sea_stage(l_seaFire)) {
@@ -368,18 +368,18 @@ static void ep_move(ep_class* i_this) {
                 }
                 if (!suppress)
                     dComIfGp_particle_setSimple(1 /* ID_AK_JN_O_FIRE00 */, pos.get());
-                if (i_this->m7D4 == 0 && i_this->mSph1.ChkTgHit()) {
+                if (i_this->mWindTimer == 0 && i_this->mSph1.ChkTgHit()) {
                     void* hitObj = i_this->mSph1.GetTgHitObj();
                     if (hitObj != nullptr && cCcD_Obj_ChkAtType(hitObj, 0x600000)) {
                         /* hitObj->GetAc() (HD: through its dCcD_Stts, NULL-checked) */
                         dCcD_Stts* stts = static_cast<dCcD_GObjInf*>(hitObj)->mStts;
                         fopAc_ac_c* ac = stts != nullptr ? stts->mp_actor.get() : nullptr;
                         if (ac != nullptr && fpcM_GetName(ac) == fpcNm_BDK_e) {
-                            i_this->m7DC = ac->shape_angle.y;
+                            i_this->mWindAngle = ac->shape_angle.y;
                         } else {
-                            i_this->m7DC = player->shape_angle.y;
+                            i_this->mWindAngle = player->shape_angle.y;
                         }
-                        i_this->m7D4 = REG0_S(2) + 40;
+                        i_this->mWindTimer = REG0_S(2) + 40;
                     }
                 }
             }
@@ -396,14 +396,14 @@ static void ep_move(ep_class* i_this) {
                 dComIfGp_particle_setSimple(0x4004 /* ID_AK_JP_O_KAGEROU00 */, pos.get());
         }
         if (i_this->mTimers[EP_EXTINGUISH_TIMER] == 1 &&
-            (i_this->m507 == 0xFF || !dComIfGs_isSwitch(i_this->m507, fopAcM_GetRoomNo(i_this)))) {
+            (i_this->mKeepSwitchNo == 0xFF || !dComIfGs_isSwitch(i_this->mKeepSwitchNo, fopAcM_GetRoomNo(i_this)))) {
             dComIfGs_offSwitch(i_this->mOnSwitchNo, fopAcM_GetRoomNo(i_this));
         }
         if (i_this->mOnSwitchNo != 0xFF &&
             !dComIfGs_isSwitch(i_this->mOnSwitchNo, fopAcM_GetRoomNo(i_this))) {
-            i_this->m4D0 = EP_OFF;
+            i_this->mState = EP_OFF;
             if (i_this->mOnSwitchNo != 0xff) {
-                i_this->m508 = i_this->mOnSwitchNo + 1;
+                i_this->mIgniteSwitchNo = i_this->mOnSwitchNo + 1;
             }
             mDoAud_seStart2(JA_SE_OBJ_TORCH_OFF, &i_this->mPosTop);
         } else {
@@ -411,11 +411,11 @@ static void ep_move(ep_class* i_this) {
         }
         [[fallthrough]];
     default:
-        if (i_this->mType != EP_TORCH_NO_EVENT && i_this->m7E0 != -1) {
+        if (i_this->mType != EP_TORCH_NO_EVENT && i_this->mStaffId != -1) {
             if (ep_switch_event_end(i_this)) {
-                i_this->m7E0 = -1;
+                i_this->mStaffId = -1;
             } else {
-                dComIfGp_evmng_cutEnd(i_this->m7E0);
+                dComIfGp_evmng_cutEnd(i_this->mStaffId);
             }
         }
         break;
@@ -423,10 +423,10 @@ static void ep_move(ep_class* i_this) {
         cLib_addCalc0(&i_this->mLightPower, 1.0f, 0.1f);
         if (i_this->mLightPower < 0.05f) {
             if (i_this->mType == EP_TORCH || i_this->mType == EP_TORCH_NO_EVENT) {
-                i_this->m4D0 = EP_OFF;
+                i_this->mState = EP_OFF;
                 if (i_this->mOnSwitchNo != 0xFF) {
                     dComIfGs_offSwitch(i_this->mOnSwitchNo, fopAcM_GetRoomNo(i_this));
-                    i_this->m508 = i_this->mOnSwitchNo + 1;
+                    i_this->mIgniteSwitchNo = i_this->mOnSwitchNo + 1;
                 }
             } else {
                 fopAcM_delete(i_this);
@@ -448,9 +448,9 @@ static void ep_move(ep_class* i_this) {
     sp3C->z = i_this->mPosTop.z;
     i_this->mSph1.SetC(sp3C.get());
     dComIfG_Ccsp_Set(&i_this->mSph1);
-    if (i_this->m7D4 != 0) {
+    if (i_this->mWindTimer != 0) {
         s16 tmp = REG0_S(2) + 40;
-        if (i_this->m7D4 == tmp && i_this->mpEmitter == nullptr) {
+        if (i_this->mWindTimer == tmp && i_this->mpEmitter == nullptr) {
             gabi::Local<cXyz> scale;
             f32 s = REG0_F(6) + 1.0f;
             scale->z = s;
@@ -463,16 +463,16 @@ static void ep_move(ep_class* i_this) {
                 dComIfGp_particle_set(0x1EA /* ID_AK_JN_TORCH */, pos.get(), nullptr, scale.get());
         }
         if (i_this->mpEmitter != nullptr) {
-            f32 target = (i_this->m7D4 > (s16)(REG0_S(3) + 10)) ? REG0_F(5) + 4.0f : 0.0f;
-            cLib_addCalc2(&i_this->m7D8, target, 1.0f, REG0_F(8) + 0.5f);
-            cMtx_YrotS(calc_mtx(), i_this->m7DC);
+            f32 target = (i_this->mWindTimer > (s16)(REG0_S(3) + 10)) ? REG0_F(5) + 4.0f : 0.0f;
+            cLib_addCalc2(&i_this->mWindPower, target, 1.0f, REG0_F(8) + 0.5f);
+            cMtx_YrotS(calc_mtx(), i_this->mWindAngle);
             gabi::Local<cXyz> sp24;
             gabi::Local<cXyz> sp18;
-            sp24->set(0.0f, 1.0f, i_this->m7D8);
+            sp24->set(0.0f, 1.0f, i_this->mWindPower);
             MtxPosition(sp24.get(), sp18.get());
             f32 dx = sp18->x, dz = sp18->z, dy = sp18->y;
             JPABaseEmitter_setDirection(i_this->mpEmitter, dx, dy, dz);
-            if (i_this->m7D4 == 1) {
+            if (i_this->mWindTimer == 1) {
                 /* becomeInvalidEmitter() */
                 EpEmitterStatus* e = reinterpret_cast<EpEmitterStatus*>(i_this->mpEmitter.get());
                 e->mMaxFrame = -1;
@@ -480,7 +480,7 @@ static void ep_move(ep_class* i_this) {
                 i_this->mpEmitter = nullptr;
             }
         }
-        i_this->m7D4 = i_this->m7D4 - 1;
+        i_this->mWindTimer = i_this->mWindTimer - 1;
     }
 }
 
@@ -518,7 +518,7 @@ static BOOL daEp_Execute(ep_class* i_this) {
         i_this->mAlphaModelAlphaTarget = (cM_rndF(REG0_F(6) + 4.0f) + 8.0f) + REG0_F(7);
     }
     if (i_this->mTimers[EP_SCALE_TIMER] == 0) {
-        if (i_this->m7D4 != 0) {
+        if (i_this->mWindTimer != 0) {
             i_this->mTimers[EP_SCALE_TIMER] = (s16)gabi::ftoi(cM_rndF(5.0f));
             i_this->mAlphaModelScaleTarget = cM_rndF(0.2f) + 0.55f;
         } else {
@@ -543,8 +543,8 @@ static BOOL daEp_Execute(ep_class* i_this) {
     ep_move(i_this);
     i_this->mAlphaModelRotY = i_this->mAlphaModelRotY + 0xd0;
     i_this->mAlphaModelRotX = i_this->mAlphaModelRotX + 0x100;
-    if (i_this->m4D0 > EP_OFF) {
-        if (i_this->m4D0 < EP_EXTINGUISH) {
+    if (i_this->mState > EP_OFF) {
+        if (i_this->mState < EP_EXTINGUISH) {
             i_this->mGroundCheckTimer = i_this->mGroundCheckTimer + 1;
             if ((i_this->mGroundCheckTimer & 0xF) == 0) {
                 /* dBgS_ObjGndChk_Spl gndChk */
@@ -563,7 +563,7 @@ static BOOL daEp_Execute(ep_class* i_this) {
                 p->z = z;
                 f32 fVar6 = cBgS_GroundCross(dComIfG_Bgsp(), gndChk.get());
                 if ((fVar6 != -1000000000.0f) && (i_this->mPosTop.y < fVar6)) {
-                    i_this->m4D0 = EP_EXTINGUISH;
+                    i_this->mState = EP_EXTINGUISH;
                 }
                 /* ~dBgS_ObjGndChk_Spl */
                 gndChk->cBgS_PolyInfo::__vtbl = 0x1000E2B4;
@@ -623,7 +623,7 @@ static BOOL daEp_CreateHeap(fopAc_ac_c* a_this) {
                 ga.mPos.z = a_this->current.pos.z;
                 ga.mPos.y = y + 140.0f;
                 ga.scaleXZ = cM_rndF(0.3f) + 0.3f;
-                ga.m38 = (s16)gabi::ftoi(cM_rndF(30000.0f));
+                ga.mFlapAngle = (s16)gabi::ftoi(cM_rndF(30000.0f));
             }
         }
     }
@@ -659,7 +659,7 @@ static ep_class* ep_class_ct(ep_class* self) {
         h[i] = src->mHdParameters[i];
     for (int i = 0; i < 8; i++)
         fb[i] = src->mAttenuation[i];
-    EpLightInfo* dst[3] = {&self->m860, &self->mHdLightInfo1, &self->mHdLightInfo2};
+    EpLightInfo* dst[3] = {&self->mLightInfo, &self->mHdLightInfo1, &self->mHdLightInfo2};
     for (EpLightInfo* d : dst) {
         for (int i = 0; i < 6; i++)
             d->mPositionAndDirection[i] = fa[i];
@@ -696,8 +696,8 @@ static void daEp_set_mtx(ep_class* i_this) {
 /* inlined into daEp_Create */
 static void daEp_CreateInit(fopAc_ac_c* a_this) {
     ep_class* i_this = (ep_class*)a_this;
-    i_this->m4D0 = EP_OFF;
-    i_this->m508 = 0;
+    i_this->mState = EP_OFF;
+    i_this->mIgniteSwitchNo = 0;
     fopAcM_SetMtx(a_this, &i_this->mAlphaModelMtx);
     fopAcM_SetMin(a_this, -160.0f, -160.0f, -160.0f);
     fopAcM_SetMax(a_this, 160.0f, 160.0f, 160.0f);
@@ -735,8 +735,8 @@ static cPhs_State daEp_Create(fopAc_ac_c* a_this) {
         }
         i_this->mbHasGa = (fopAcM_GetParam(a_this) >> 6) & 1;
         i_this->mbHasObm = (fopAcM_GetParam(a_this) >> 7) & 1;
-        i_this->m505 = fopAcM_GetParam(a_this) >> 8;
-        i_this->m507 = fopAcM_GetParam(a_this) >> 0x10;
+        i_this->mBurnTime = fopAcM_GetParam(a_this) >> 8;
+        i_this->mKeepSwitchNo = fopAcM_GetParam(a_this) >> 0x10;
         i_this->mOnSwitchNo = fopAcM_GetParam(a_this) >> 0x18;
         i_this->mStts.Init(0xFF, 0xFF, a_this);
         i_this->mSph1.Set(reinterpret_cast<const dCcD_SrcSph*>(&sph_src));
@@ -764,14 +764,14 @@ static cPhs_State daEp_Create(fopAc_ac_c* a_this) {
         daEp_CreateInit(a_this);
         if (i_this->mOnSwitchNo != 0xFF &&
             !dComIfGs_isSwitch(i_this->mOnSwitchNo, fopAcM_GetRoomNo(a_this))) {
-            i_this->m508 = i_this->mOnSwitchNo + 1;
+            i_this->mIgniteSwitchNo = i_this->mOnSwitchNo + 1;
         }
         i_this->mTimers[EP_EXTINGUISH_TIMER] = 20000;
         dKy_plight_set(&i_this->mLight);
         i_this->mGroundCheckTimer = (u8)gabi::ftoi(cM_rndF(255.0f));
     }
 
-    i_this->m7E0 = -1;
+    i_this->mStaffId = -1;
     i_this->mFlicker = 1.0f; /* HD */
     return ret;
 }
@@ -813,7 +813,7 @@ str 1000E404 in 0212DBFC
 str 1000E4F8 in 0212F580
 str 1000E508 in 0212F5CC
 str 1000E50C
-str 1000E518 "modelData != NULL"
+str 1000E518 "modelData != (0)"
 str 1000E538 in 0212FAF4
 data l_seaFire 1000E258
 data l_seaHeat 1000E254

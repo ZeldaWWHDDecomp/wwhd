@@ -56,18 +56,18 @@ static inline void core_damage_check(bmd_class* i_this, fopAc_ac_c* player) {
     fopAc_ac_c* actor = i_this;
     s8 bVar2 = false;
     /* HD: no damage while the flower is open */
-    if (i_this->m304 == 0) {
-        i_this->m310 = 4;
+    if (i_this->mFlowerState == 0) {
+        i_this->mDamageTimer = 4;
         return;
     }
-    if (i_this->m310 != 0) {
+    if (i_this->mDamageTimer != 0) {
         return;
     }
     gabi::Local<cXyz> local_38;
     if (i_this->mCoreSph.ChkTgHit() != 0) {
-        i_this->m310 = 8;
+        i_this->mDamageTimer = 8;
         fopAcM_monsSeStart(actor, JA_SE_CV_BKM_DAMAGE, 0);
-        i_this->m306 = 1;
+        i_this->mCoreMode = 1;
         gabi::Local<CcAtInfo> atInfo;
         atInfo->pParticlePos = nullptr;
         atInfo->mpObj = (dCcD_GObjInf*)i_this->mCoreSph.GetTgHitObj();
@@ -78,9 +78,9 @@ static inline void core_damage_check(bmd_class* i_this, fopAc_ac_c* player) {
             local_38->x = x;
             f32 z = actor->eyePos.z - pfVar4->current.pos.z;
             local_38->z = z;
-            i_this->m90C[0].y = cM_atan2s(-x, -z);
+            i_this->mCoreSway[0].y = cM_atan2s(-x, -z);
         }
-        i_this->mA88[1] = 10;
+        i_this->mCoreEffTimers[1] = 10;
         if (actor->health <= 0) {
             bVar2 = true;
         }
@@ -95,7 +95,7 @@ static inline void core_damage_check(bmd_class* i_this, fopAc_ac_c* player) {
         local_38->y = 0.0f;
     }
     /* daPy_py_c::checkForestWaterUse(): a player flag */
-    if (!((((daPy_py_c*)player)->mNoResetFlg1 & 0x20000) && i_this->m304 != 0 &&
+    if (!((((daPy_py_c*)player)->mNoResetFlg1 & 0x20000) && i_this->mFlowerState != 0 &&
           std_sqrtf(PSVECSquareMag(local_38)) < 300.0f) &&
         !bVar2) {
         return;
@@ -104,27 +104,27 @@ static inline void core_damage_check(bmd_class* i_this, fopAc_ac_c* player) {
         fopAcM_seStartCurrent(actor, JA_SE_LK_LAST_HIT, 0);
     }
     ((dComIfG_inf_c*)dComIfGp_get())->play.mItemLifeCount = 0.0f; // HD: clear pending life.
-    i_this->mB72 = 1;                                             /* HD */
-    i_this->m306 = 100;
+    i_this->mBlurRate = 1;                                             /* HD */
+    i_this->mCoreMode = 100;
     i_this->mMode = 0xB;
-    i_this->m302 = 0;
-    i_this->mB74 = 100;
+    i_this->mSubMode = 0;
+    i_this->mDemoMode = 100;
     dScnPly_setPauseTimer(8);
-    i_this->m310 = 20000;
-    i_this->mBE0 = 2;
-    i_this->mBDC = 1.0f;
+    i_this->mDamageTimer = 20000;
+    i_this->mKankyoMode = 2;
+    i_this->mColBlend = 1.0f;
     mDoAudioApi::bgmStop(30);
 }
 
 /* inlined into core_move: shared motion of the dying core */
 static inline void core_dead_move(bmd_class* i_this) {
-    PSVECAdd(&i_this->m924, &i_this->m930, &i_this->m924); /* m924 += m930 */
-    if ((i_this->m308[1] & 0xF) == 0) {
-        i_this->m930.x = -i_this->m930.x;
-        i_this->m930.z = -i_this->m930.z;
+    PSVECAdd(&i_this->mCoreDeadPos, &i_this->mCoreDeadSpeed, &i_this->mCoreDeadPos); /* mCoreDeadPos += mCoreDeadSpeed */
+    if ((i_this->mTimers[1] & 0xF) == 0) {
+        i_this->mCoreDeadSpeed.x = -i_this->mCoreDeadSpeed.x;
+        i_this->mCoreDeadSpeed.z = -i_this->mCoreDeadSpeed.z;
     }
-    cLib_addCalcAngleS2(&i_this->m93C, 0, 2, 0x800);
-    cLib_addCalcAngleS2(&i_this->m93E, 0, 2, 0x800);
+    cLib_addCalcAngleS2(&i_this->mCoreAngleY, 0, 2, 0x800);
+    cLib_addCalcAngleS2(&i_this->mCoreAngleX, 0, 2, 0x800);
 }
 
 static inline void core_move(bmd_class* i_this) {
@@ -135,20 +135,20 @@ static inline void core_move(bmd_class* i_this) {
     dComIfGp_get(); /* HD: an unused player fetch */
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     core_damage_check(i_this, player);
-    switch (i_this->m306) {
+    switch (i_this->mCoreMode) {
     case 0:
         break;
     case 1:
         morf_setAnm(i_this->mpHeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_DAMAGE_e, J3DFrameCtrl::EMode_NONE,
                     1.0f);
-        i_this->m918 = 0;
-        i_this->m306 = 2;
-        i_this->m91C = REG0_F(9) + 6000.0f;
-        i_this->m920 = 9000.0f;
+        i_this->mCoreSwayPhase = 0;
+        i_this->mCoreMode = 2;
+        i_this->mCoreSwayAmp = REG0_F(9) + 6000.0f;
+        i_this->mCoreSwayAmp2 = 9000.0f;
         break;
     case 2:
-        if (std::fabs((f32)i_this->m91C) < 200.0f) {
-            i_this->m306 = 0;
+        if (std::fabs((f32)i_this->mCoreSwayAmp) < 200.0f) {
+            i_this->mCoreMode = 0;
             morf_setAnm(i_this->mpHeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_WAIT_e, J3DFrameCtrl::EMode_LOOP,
                         5.0f);
         }
@@ -156,34 +156,34 @@ static inline void core_move(bmd_class* i_this) {
     case 100:
         morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_DEAD1_e,
                     J3DFrameCtrl::EMode_NONE, 5.0f);
-        i_this->m306 = 0x65;
-        i_this->m924.copy(actor->current.pos);
+        i_this->mCoreMode = 0x65;
+        i_this->mCoreDeadPos.copy(actor->current.pos);
         cMtx_YrotS(calc_mtx(), (actor->shape_angle.y + REG0_S(4)) + 3000);
         local_40->y = 0.0f;
         local_40->x = 0.0f;
         local_40->z = REG0_F(15) + 5.5f; /* HD: 5.5 (GameCube 7.0) */
-        MtxPosition(local_40, &i_this->m930);
-        i_this->m93E = 0;
-        i_this->m93C = 0;
-        i_this->m930.y = REG0_F(11) + 50.0f;
-        i_this->m308[2] = 0;
+        MtxPosition(local_40, &i_this->mCoreDeadSpeed);
+        i_this->mCoreAngleX = 0;
+        i_this->mCoreAngleY = 0;
+        i_this->mCoreDeadSpeed.y = REG0_F(11) + 50.0f;
+        i_this->mTimers[2] = 0;
         monsSeStart_e(actor, JA_SE_CV_BKM_LAST_DAMAGE);
         break;
     case 101:
-        i_this->mA8C = 3;
-        i_this->m93C = i_this->m93C + 0x800;
-        i_this->m93E = i_this->m93E + 0x500;
-        PSVECAdd(&i_this->m924, &i_this->m930, &i_this->m924); /* m924 += m930 */
-        i_this->m930.y = i_this->m930.y - (REG0_F(12) + 1.0f);
-        if (!(i_this->m924.y > (i_this->m328 - 10.0f) + REG0_F(13))) {
-            i_this->m924.y = (i_this->m328 - 10.0f) + REG0_F(13);
-            i_this->m306 = 0x66;
+        i_this->mCoreEffTimers[2] = 3;
+        i_this->mCoreAngleY = i_this->mCoreAngleY + 0x800;
+        i_this->mCoreAngleX = i_this->mCoreAngleX + 0x500;
+        PSVECAdd(&i_this->mCoreDeadPos, &i_this->mCoreDeadSpeed, &i_this->mCoreDeadPos); /* mCoreDeadPos += mCoreDeadSpeed */
+        i_this->mCoreDeadSpeed.y = i_this->mCoreDeadSpeed.y - (REG0_F(12) + 1.0f);
+        if (!(i_this->mCoreDeadPos.y > (i_this->mGroundY - 10.0f) + REG0_F(13))) {
+            i_this->mCoreDeadPos.y = (i_this->mGroundY - 10.0f) + REG0_F(13);
+            i_this->mCoreMode = 0x66;
             mDoAudioApi::bgmStreamPlay();
             morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_DEAD2_e,
                         J3DFrameCtrl::EMode_NONE, 1.0f);
-            i_this->m930.y = 0.0f;
-            i_this->m930.z = 0.0f;
-            i_this->m930.x = 0.0f;
+            i_this->mCoreDeadSpeed.y = 0.0f;
+            i_this->mCoreDeadSpeed.z = 0.0f;
+            i_this->mCoreDeadSpeed.x = 0.0f;
             bVar5 = true;
             fopAcM_monsSeStart(actor, JA_SE_CV_BKM_FALLDOWN, 0);
             fopAcM_seStart(actor, JA_SE_CM_BKM_END_CORE_DROP, 0);
@@ -194,14 +194,14 @@ static inline void core_move(bmd_class* i_this) {
             bVar5 = true;
             fopAcM_monsSeStart(actor, JA_SE_CV_BKM_JITABATA, 0);
         }
-        i_this->mA8C = 3;
+        i_this->mCoreEffTimers[2] = 3;
         if (i_this->mpHeadDeadMorf->isStop()) {
             morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_NDEAD1_e,
                         J3DFrameCtrl::EMode_NONE, 1.0f);
-            i_this->m306 = 0x67;
-            i_this->m930.z = 10.0f;
-            i_this->m930.x = 10.0f;
-            i_this->m308[1] = REG0_S(6) + 0xC3;
+            i_this->mCoreMode = 0x67;
+            i_this->mCoreDeadSpeed.z = 10.0f;
+            i_this->mCoreDeadSpeed.x = 10.0f;
+            i_this->mTimers[1] = REG0_S(6) + 0xC3;
         }
         core_dead_move(i_this);
         break;
@@ -210,14 +210,14 @@ static inline void core_move(bmd_class* i_this) {
             bVar5 = true;
             fopAcM_monsSeStart(actor, JA_SE_CV_BKM_JITABATA, 0);
         }
-        i_this->mA8C = 3;
+        i_this->mCoreEffTimers[2] = 3;
         if (!i_this->mpHeadDeadMorf->isStop()) {
             core_dead_move(i_this);
             break;
         }
         morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_NDEAD2_e,
                     J3DFrameCtrl::EMode_NONE, 1.0f);
-        i_this->m306 = 0x68;
+        i_this->mCoreMode = 0x68;
         core_dead_move(i_this);
         break;
     case 104:
@@ -225,16 +225,16 @@ static inline void core_move(bmd_class* i_this) {
             bVar5 = true;
             fopAcM_monsSeStart(actor, JA_SE_CV_BKM_JITABATA, 0);
         }
-        i_this->mA8C = 10;
+        i_this->mCoreEffTimers[2] = 10;
         if (!i_this->mpHeadDeadMorf->isStop()) {
             core_dead_move(i_this);
             break;
         }
         morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_LDEAD_e,
                     J3DFrameCtrl::EMode_NONE, 1.0f);
-        i_this->m930.z = 0.0f;
-        i_this->m930.x = 0.0f;
-        i_this->m306 = 0x69;
+        i_this->mCoreDeadSpeed.z = 0.0f;
+        i_this->mCoreDeadSpeed.x = 0.0f;
+        i_this->mCoreMode = 0x69;
         core_dead_move(i_this);
         break;
     case 105:
@@ -249,45 +249,45 @@ static inline void core_move(bmd_class* i_this) {
         }
         if (i_this->mpHeadDeadMorf->isStop()) {
             gabi::Local<cXyz> local_58;
-            local_58->x = i_this->m924.x;
-            local_58->z = i_this->m924.z;
-            local_58->y = i_this->m924.y + (REG0_F(2) + 80.0f);
+            local_58->x = i_this->mCoreDeadPos.x;
+            local_58->z = i_this->mCoreDeadPos.z;
+            local_58->y = i_this->mCoreDeadPos.y + (REG0_F(2) + 80.0f);
             /* HD: createDisappear(actor, pos, 8, 2, 0xFF) */
             fopAcM_createDisappear(actor, local_58, 8, 2, 0xFF);
-            i_this->m306 = 0x6E;
-            i_this->m308[2] = 0xAA;
+            i_this->mCoreMode = 0x6E;
+            i_this->mTimers[2] = 0xAA;
         }
         core_dead_move(i_this);
         break;
     case 110:
-        if (i_this->m308[2] == 1) {
-            i_this->m306 = 0x6F;
-            i_this->mB74 = 0x66; /* HD (GameCube: mB74++) */
-            i_this->mB78 = 0;
+        if (i_this->mTimers[2] == 1) {
+            i_this->mCoreMode = 0x6F;
+            i_this->mDemoMode = 0x66; /* HD (GameCube: mDemoMode++) */
+            i_this->mDemoSubCount = 0;
         }
         break;
     case 111:
         break;
     }
 
-    if (i_this->m306 < 100) {
-        cMtx_YrotS(calc_mtx(), (s16)((i_this->m93C + 0x8000) - i_this->m90C[0].y));
+    if (i_this->mCoreMode < 100) {
+        cMtx_YrotS(calc_mtx(), (s16)((i_this->mCoreAngleY + 0x8000) - i_this->mCoreSway[0].y));
         local_40->x = 0.0f;
         local_40->y = 0.0f;
-        local_40->z = i_this->m91C * cM_ssin(i_this->m918);
+        local_40->z = i_this->mCoreSwayAmp * cM_ssin(i_this->mCoreSwayPhase);
         MtxPosition(local_40, local_4c);
-        i_this->m90C[0].x = (s16)gabi::ftoi(local_4c->z);
-        i_this->m90C[0].z = (s16)gabi::ftoi(local_4c->x);
-        local_40->z = i_this->m920 * cM_ssin((i_this->m918 - 20000) + REG0_S(6));
+        i_this->mCoreSway[0].x = (s16)gabi::ftoi(local_4c->z);
+        i_this->mCoreSway[0].z = (s16)gabi::ftoi(local_4c->x);
+        local_40->z = i_this->mCoreSwayAmp2 * cM_ssin((i_this->mCoreSwayPhase - 20000) + REG0_S(6));
         MtxPosition(local_40, local_4c);
-        i_this->m90C[1].x = (s16)gabi::ftoi(local_4c->z);
-        i_this->m90C[1].z = (s16)gabi::ftoi(local_4c->x);
-        i_this->m918 = i_this->m918 + (REG0_S(5) + 6000);
-        cLib_addCalc0(&i_this->m91C, 1.0f, REG0_F(10) + 250.0f);
-        cLib_addCalc0(&i_this->m920, 1.0f, REG0_F(10) + 200.0f);
+        i_this->mCoreSway[1].x = (s16)gabi::ftoi(local_4c->z);
+        i_this->mCoreSway[1].z = (s16)gabi::ftoi(local_4c->x);
+        i_this->mCoreSwayPhase = i_this->mCoreSwayPhase + (REG0_S(5) + 6000);
+        cLib_addCalc0(&i_this->mCoreSwayAmp, 1.0f, REG0_F(10) + 250.0f);
+        cLib_addCalc0(&i_this->mCoreSwayAmp2, 1.0f, REG0_F(10) + 200.0f);
         J3DModel* pJVar11 = i_this->mpHeadMorf->getModel();
         mDoMtx_stack_c::transS(actor->current.pos.x, actor->current.pos.y, actor->current.pos.z);
-        mDoMtx_stack_c::YrotM(i_this->m93C);
+        mDoMtx_stack_c::YrotM(i_this->mCoreAngleY);
         setBaseTRMtx_now(pJVar11);
         i_this->mpHeadMorf->play(&actor->eyePos, 0, 0);
         i_this->mpHeadMorf->calc();
@@ -299,13 +299,13 @@ static inline void core_move(bmd_class* i_this) {
         cXyz* attn = &actor->attention_info.position;
         cXyz_fcopy(attn, &actor->eyePos);
         attn->y = actor->eyePos.y + 50.0f;
-        if (i_this->m304 != 0 && i_this->m940 == 0 && i_this->mMode != 10) {
+        if (i_this->mFlowerState != 0 && i_this->mPetalAngle == 0 && i_this->mMode != 10) {
             actor->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         }
     } else {
-        mDoMtx_stack_c::transS(i_this->m924.x, i_this->m924.y, i_this->m924.z);
-        mDoMtx_stack_c::YrotM(i_this->m93C);
-        mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->m93E);
+        mDoMtx_stack_c::transS(i_this->mCoreDeadPos.x, i_this->mCoreDeadPos.y, i_this->mCoreDeadPos.z);
+        mDoMtx_stack_c::YrotM(i_this->mCoreAngleY);
+        mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->mCoreAngleX);
         J3DModel* pJVar11 = i_this->mpHeadDeadMorf->getModel();
         setBaseTRMtx_now(pJVar11);
         i_this->mpHeadDeadMorf->play(&actor->eyePos, 0, 0);
@@ -315,7 +315,7 @@ static inline void core_move(bmd_class* i_this) {
         local_40->y = 0.0f;
         local_40->x = 0.0f;
         MtxPosition(local_40, &actor->eyePos);
-        if (i_this->m306 >= 0x6F) {
+        if (i_this->mCoreMode >= 0x6F) {
             actor->eyePos.y = actor->eyePos.y + 20000.0f;
         }
     }
@@ -324,7 +324,7 @@ static inline void core_move(bmd_class* i_this) {
     dComIfG_Ccsp_Set(&i_this->mCoreSph);
     if (bVar5) {
         s8 room = fopAcM_GetRoomNo(actor);
-        particle_setToon(dPa_name::ID_AK_ST_BKMCOREDEADSMOKE00, &i_this->m924, 0xB9, &i_this->mSmokeCb[6],
+        particle_setToon(dPa_name::ID_AK_ST_BKMCOREDEADSMOKE00, &i_this->mCoreDeadPos, 0xB9, &i_this->mSmokeCb[6],
                          room);
         fopAcM_seStart(actor, JA_SE_CM_BKM_END_CORE_LEAP, 0);
     }
@@ -332,21 +332,21 @@ static inline void core_move(bmd_class* i_this) {
 
 static inline void bmd_kankyo(bmd_class* i_this) {
     dKy_custom_timeset((f32)l_HIO().m0C);
-    switch (i_this->mBE0) {
+    switch (i_this->mKankyoMode) {
     case 0:
-        dKy_custom_colset(0, 6, (f32)i_this->mBDC); /* dKy_custom_colset */
-        cLib_addCalc0(&i_this->mBDC, 1.0f, 0.025f);
-        i_this->m2D8 = 11.0f * (1.0f - i_this->mBDC);
+        dKy_custom_colset(0, 6, (f32)i_this->mColBlend); /* dKy_custom_colset */
+        cLib_addCalc0(&i_this->mColBlend, 1.0f, 0.025f);
+        i_this->mR00EfBrkFrame = 11.0f * (1.0f - i_this->mColBlend);
         break;
     case 1:
-        dKy_custom_colset(0, 4, (f32)i_this->mBDC);
-        cLib_addCalc0(&i_this->mBDC, 1.0f, 0.025f);
-        i_this->m2D8 = 11.0f * (1.0f - i_this->mBDC);
+        dKy_custom_colset(0, 4, (f32)i_this->mColBlend);
+        cLib_addCalc0(&i_this->mColBlend, 1.0f, 0.025f);
+        i_this->mR00EfBrkFrame = 11.0f * (1.0f - i_this->mColBlend);
         break;
     case 2:
-        dKy_custom_colset(5, 6, (f32)i_this->mBDC);
-        cLib_addCalc0(&i_this->mBDC, 1.0f, 0.02f);
-        i_this->m2D8 = 11.0f * i_this->mBDC;
+        dKy_custom_colset(5, 6, (f32)i_this->mColBlend);
+        cLib_addCalc0(&i_this->mColBlend, 1.0f, 0.02f);
+        i_this->mR00EfBrkFrame = 11.0f * i_this->mColBlend;
         break;
     }
 }
@@ -354,77 +354,77 @@ static inline void bmd_kankyo(bmd_class* i_this) {
 static inline void eff_cont(bmd_class* i_this) {
     fopAc_ac_c* actor = i_this;
     for (s32 i = 0; i < 3; i++) {
-        if (i_this->mA7C[i] != nullptr) {
-            JPABaseEmitter* e = i_this->mA7C[i];
+        if (i_this->mCoreEmitters[i] != nullptr) {
+            JPABaseEmitter* e = i_this->mCoreEmitters[i];
             u16 jnt = eff_joint[i];
             if (i >= 2) {
                 emitter_setGlobalRTMatrix(e, i_this->mpHeadDeadMorf->getModel()->getAnmMtx(jnt));
             } else {
                 emitter_setGlobalRTMatrix(e, i_this->mpHeadMorf->getModel()->getAnmMtx(jnt));
             }
-            if (i_this->mA88[i] != 0) {
-                i_this->mA88[i] = i_this->mA88[i] - 1;
-                if (i_this->mA88[i] == 0) {
+            if (i_this->mCoreEffTimers[i] != 0) {
+                i_this->mCoreEffTimers[i] = i_this->mCoreEffTimers[i] - 1;
+                if (i_this->mCoreEffTimers[i] == 0) {
                     /* becomeInvalidEmitter(): stopCreateParticle(); mMaxFrame = -1 */
-                    ((BmdEmitterView*)i_this->mA7C[i].get())->becomeInvalidEmitter();
-                    i_this->mA7C[i] = nullptr;
+                    ((BmdEmitterView*)i_this->mCoreEmitters[i].get())->becomeInvalidEmitter();
+                    i_this->mCoreEmitters[i] = nullptr;
                 }
             }
-        } else if (i_this->mA88[i] != 0) {
+        } else if (i_this->mCoreEffTimers[i] != 0) {
             u16 name = eff_name[i];
-            i_this->mA7C[i] = dComIfGp_particle_set(name, &actor->current.pos);
+            i_this->mCoreEmitters[i] = dComIfGp_particle_set(name, &actor->current.pos);
         }
     }
 }
 
 static inline void mk_move(bmd_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    if (i_this->m2DC != 0) {
-        switch ((u32)(s32)i_this->m2DC) {
+    if (i_this->mMakarMode != 0) {
+        switch ((u32)(s32)i_this->mMakarMode) {
         case 0:
-            i_this->m308[3] = 0x96;
+            i_this->mTimers[3] = 0x96;
             break;
         case 1:
-            if (i_this->m308[3] == 0) {
+            if (i_this->mTimers[3] == 0) {
                 morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_01_e,
                             J3DFrameCtrl::EMode_LOOP, 5.0f);
-                i_this->m308[3] = (s16)gabi::ftoi(cM_rndF(90.0f) + 60.0f);
-                i_this->m2DC = 2;
+                i_this->mTimers[3] = (s16)gabi::ftoi(cM_rndF(90.0f) + 60.0f);
+                i_this->mMakarMode = 2;
                 mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             }
             break;
         case 2:
-            if (i_this->m308[3] == 0) {
+            if (i_this->mTimers[3] == 0) {
                 morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_02_e,
                             J3DFrameCtrl::EMode_LOOP, 5.0f);
-                i_this->m308[3] = (s16)gabi::ftoi(cM_rndF(90.0f) + 60.0f);
-                i_this->m2DC = 1;
+                i_this->mTimers[3] = (s16)gabi::ftoi(cM_rndF(90.0f) + 60.0f);
+                i_this->mMakarMode = 1;
                 mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             }
             break;
         case 3:
             morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_01_e, J3DFrameCtrl::EMode_LOOP,
                         5.0f);
-            i_this->m2DC = 10;
+            i_this->mMakarMode = 10;
             mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             break;
         case 4:
             morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_03_e, J3DFrameCtrl::EMode_LOOP,
                         5.0f);
-            i_this->m2DC = 10;
+            i_this->mMakarMode = 10;
             mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             break;
         case 5:
             morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_DROP_e, J3DFrameCtrl::EMode_NONE,
                         1.0f);
-            i_this->m2DC = 6;
+            i_this->mMakarMode = 6;
             break;
         case 6:
             if (frame_int(i_this->mpMakarMorf) == 6) {
                 gabi::Local<cXyz> local_28;
-                local_28->x = i_this->m2E0.x;
-                f32 y = i_this->m2E0.y;
-                local_28->z = i_this->m2E0.z;
+                local_28->x = i_this->mMakarPos.x;
+                f32 y = i_this->mMakarPos.y;
+                local_28->z = i_this->mMakarPos.z;
                 local_28->y = y + 10.0f;
                 s8 room = fopAcM_GetRoomNo(actor);
                 JPABaseEmitter* emitter = particle_setToon(dPa_name::ID_AK_ST_BKMCOREDEADSMOKE00, local_28,
@@ -437,8 +437,8 @@ static inline void mk_move(bmd_class* i_this) {
             }
             break;
         }
-        mDoMtx_stack_c::transS(i_this->m2E0.x, i_this->m2E0.y, i_this->m2E0.z);
-        mDoMtx_stack_c::YrotM(i_this->m2FA);
+        mDoMtx_stack_c::transS(i_this->mMakarPos.x, i_this->mMakarPos.y, i_this->mMakarPos.z);
+        mDoMtx_stack_c::YrotM(i_this->mMakarAngleY);
         setBaseTRMtx_now(i_this->mpMakarMorf->getModel());
         i_this->mpMakarMorf->play(nullptr, 0, 0);
         i_this->mpMakarMorf->calc();
@@ -450,26 +450,26 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: an unused fetch */
     if (bmd_startStageName0() == 'X') {
-        i_this->mB72 = 0x32;
+        i_this->mBlurRate = 0x32;
     }
-    i_this->m2FE = i_this->m2FE + 1;
-    i_this->m330 = 0;
+    i_this->mFrameCounter = i_this->mFrameCounter + 1;
+    i_this->mIsResting = 0;
     for (s32 i = 0; i < 4; i++) {
-        if (i_this->m308[i] != 0) {
-            i_this->m308[i] = i_this->m308[i] - 1;
+        if (i_this->mTimers[i] != 0) {
+            i_this->mTimers[i] = i_this->mTimers[i] - 1;
         }
     }
-    if (i_this->m310 != 0) {
-        i_this->m310 = i_this->m310 - 1;
+    if (i_this->mDamageTimer != 0) {
+        i_this->mDamageTimer = i_this->mDamageTimer - 1;
     }
-    if (i_this->m314 != 0) {
-        i_this->m314 = i_this->m314 - 1;
+    if (i_this->mBgOffTimer != 0) {
+        i_this->mBgOffTimer = i_this->mBgOffTimer - 1;
     }
-    if (i_this->m312 != 0) {
-        i_this->m312 = i_this->m312 - 1;
+    if (i_this->mVineCutTimer != 0) {
+        i_this->mVineCutTimer = i_this->mVineCutTimer - 1;
     }
-    if (i_this->m334 != 0) {
-        i_this->m334 = i_this->m334 - 1;
+    if (i_this->mAttackTimer != 0) {
+        i_this->mAttackTimer = i_this->mAttackTimer - 1;
     }
     move(i_this);
     core_move(i_this);
@@ -479,26 +479,26 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), actor->shape_angle.z);
     setBaseTRMtx_now(i_this->mpBodyMorf->getModel());
     PSMTXCopy(mDoMtx_stack_c::get(), calc_mtx());
-    if ((0 < i_this->m940) || (i_this->m314 != 0)) {
+    if ((0 < i_this->mPetalAngle) || (i_this->mBgOffTimer != 0)) {
         MtxScale(0.0f, 0.0f, 0.0f, true);
     }
-    PSMTXCopy(calc_mtx(), &i_this->mA34);
+    PSMTXCopy(calc_mtx(), &i_this->mBodyBgMtx);
     dBgW_Move(i_this->pm_bgw[5]);
     for (s32 i = 0; i < 5; i++) {
         PSMTXCopy(mDoMtx_stack_c::get(), calc_mtx());
         cMtx_YrotM(calc_mtx(), (s16)gabi::ftoi(gabi::fmadds(13107.2f, (f32)i, REG0_F(11))));
         MtxTrans(REG0_F(4) - 200.0f, 0.0f, 0.0f, true);
-        cMtx_ZrotM(calc_mtx(), i_this->m940);
+        cMtx_ZrotM(calc_mtx(), i_this->mPetalAngle);
         MtxTrans(-(REG0_F(4) - 200.0f), REG0_F(5) + 15.0f, REG0_F(6), true);
-        if ((0 < i_this->m940) || (i_this->m314 != 0)) {
+        if ((0 < i_this->mPetalAngle) || (i_this->mBgOffTimer != 0)) {
             MtxScale(0.0f, 0.0f, 0.0f, true);
         }
-        PSMTXCopy(calc_mtx(), &i_this->m944[i]);
+        PSMTXCopy(calc_mtx(), &i_this->mPetalBgMtx[i]);
         dBgW_Move(i_this->pm_bgw[i]);
     }
     i_this->mpBodyMorf->play(&actor->eyePos, 0, 0);
     i_this->mpBodyMorf->calc();
-    if (i_this->mB70 != 0) {
+    if (i_this->mBodyTexAnmOn != 0) {
         i_this->mpBrkAnm->play();
         i_this->mpBtkAnm->play();
     }
@@ -508,26 +508,26 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     local_88->y = y;
     local_88->z = actor->current.pos.z;
     y = y + (REG0_F(7) + 200.0f);
-    if (i_this->m304 != 0) {
+    if (i_this->mFlowerState != 0) {
         y = y + 10000.0f;
     }
     local_88->y = y;
     i_this->mBodySph.SetC(local_88);
     i_this->mBodySph.SetR(REG0_F(8) + 300.0f);
     dComIfG_Ccsp_Set(&i_this->mBodySph);
-    if (i_this->m904 != 0) {
-        i_this->m904 = i_this->m904 - 1;
+    if (i_this->mPushTimer != 0) {
+        i_this->mPushTimer = i_this->mPushTimer - 1;
         local_88->copy(actor->current.pos);
         local_88->y = 0.0f;
-        cLib_addCalc2(&i_this->m908, REG0_F(4) + 800.0f, 1.0f, REG0_F(5) + 50.0f);
+        cLib_addCalc2(&i_this->mPushRadius, REG0_F(4) + 800.0f, 1.0f, REG0_F(5) + 50.0f);
     } else {
-        i_this->m908 = 0.0f;
+        i_this->mPushRadius = 0.0f;
         local_88->x = -20000.0f;
         local_88->y = 10000.0f;
         local_88->z = -10000.0f;
     }
     i_this->mCoCyl.SetC(local_88);
-    i_this->mCoCyl.SetR(i_this->m908);
+    i_this->mCoCyl.SetR(i_this->mPushRadius);
     i_this->mCoCyl.SetH(REG0_F(3) + 3000.0f);
     dComIfG_Ccsp_Set(&i_this->mCoCyl);
     demo_camera(i_this);
@@ -537,9 +537,9 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     i_this->mWindInfluence.mDir.x = 0.0f;
     i_this->mWindInfluence.mDir.y = 1.0f;
     i_this->mWindInfluence.mDir.z = 0.0f;
-    cLib_addCalc0(&i_this->mBD8, 1.0f, 50.0f);
-    i_this->mWindInfluence.mRadius = 2000.0f - i_this->mBD8;
-    if (i_this->mBD8 > 1.0f) {
+    cLib_addCalc0(&i_this->mWindRadiusDelta, 1.0f, 50.0f);
+    i_this->mWindInfluence.mRadius = 2000.0f - i_this->mWindRadiusDelta;
+    if (i_this->mWindRadiusDelta > 1.0f) {
         i_this->mWindInfluence.mStrength = 1.0f;
         f32 fVar2 = i_this->mWindInfluence.mRadius;
         if (fVar2 > 1500.0f) {
@@ -550,7 +550,7 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     }
     dComIfGp_get(); /* HD: an unused fetch */
     mk_move(i_this);
-    s8 b71 = i_this->mB71;
+    s8 b71 = i_this->mCamTypeMode;
     if (b71 != 0) {
         if (actor->current.pos.y > 100.0f) {
             dCamera_c* body = dCam_getBody();
@@ -559,7 +559,7 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
             dCamera_c* cam = &((BmdCameraProcessView*)dComIfGp_getCamera(0))->mCamera;
             if (b71 == 2) {
                 dCamera_SetTypeForce(cam, "Field" /* "Field" */, 0);
-                i_this->mB71 = 1;
+                i_this->mCamTypeMode = 1;
             } else {
                 dCamera_SetTypeForce(cam, "Dungeon" /* "Dungeon" */, 0);
             }
@@ -567,7 +567,7 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     }
     mDoMtx_stack_c::transS(0.0f, 0.1f, 0.0f);
     setBaseTRMtx_now(i_this->mpR00_EFModel);
-    i_this->mpR00_EFBrk->mFrameCtrl.setFrame(i_this->m2D8); /* setFrame(m2D8) */
+    i_this->mpR00_EFBrk->mFrameCtrl.setFrame(i_this->mR00EfBrkFrame); /* setFrame(mR00EfBrkFrame) */
     return TRUE;
 }
 

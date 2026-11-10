@@ -3,8 +3,8 @@
  * GameCube -> WWHD: the two dKy_tevstr_c grew (0xB0 -> 0x1C8 each), mShadowId is gone (HD: no
  * blob shadow), so the members from mPhs on are +0x348. The eye animation (GameCube m500
  * J3DAnmTexPattern*, mpTexNoAnm, m508..m50A) is an inline mDoExt_btpAnm (0x74) in HD, so the
- * members from m50C on are +0x3B0; the particle callbacks are +0x39C and mpMaterialTable is
- * gone, so the collision members are +0x398. Size 0xE2C (constructor 02193AC4).
+ * members from mBckNo (GameCube 0x50C) on are +0x3B0; the particle callbacks are +0x39C and
+ * mpMaterialTable is gone, so the collision members are +0x398. Size 0xE2C (constructor 02193AC4).
  * Offsets from the verified functions. */
 #pragma once
 #include "bindings.h"
@@ -27,71 +27,71 @@ struct kb_class : fopAc_ac_c {
     /* 0x73C */ request_of_phase_process_class mPhs;
     /* 0x744 */ gptr<mDoExt_McaMorf> mpMorf;
     /* 0x748 */ be<u8> mShapeType;
-    /* 0x749 */ be<u8> m401;
+    /* 0x749 */ be<u8> mMoveRangePrm;  /* was m401: daKb_Create 02193E48: param bits 4-7 (0xFF -> 0; 3 for the Windfall path pigs); mMoveRange = it * 100 (0 -> 300) */
     /* 0x74A */ be<u8> mbCanBeBigPig;
-    /* 0x74B */ be<u8> m403;
-    /* 0x74C */ be<u8> m404;
-    /* 0x74D */ be<u8> m405;
-    /* 0x74E */ be<u8> m406;
-    /* 0x74F */ be<u8> m407;
-    /* 0x750 */ be<u8> m408;
-    /* 0x751 */ be<u8> m409;
-    /* 0x752 */ be<u8> m40A;
-    /* 0x753 */ be<u8> m40B;
+    /* 0x74B */ be<u8> mTgHitLatch;  /* was m403: pl_attack_hit_check (in daKb_Execute 02190CE0): 1 on the first frame of a Tg hit (the hit reaction runs only while it is 0), 0 once the hit is gone */
+    /* 0x74C */ be<u8> mOnWaterGround;  /* was m404: daKb_Execute 02190CE0: 1 when the ground polygon's attribute is water (0x13), else 0 (not while carried); carry_move (in daKb_Execute) / swim_move set mTauraPos to the landing position only while it is 0; carry_check 0218EF4C clears it; swim_mode_change_check 0218F380 tests it */
+    /* 0x74D */ be<u8> mPigBit;  /* was m405: daKb_Execute 02190CE0: 1 << (mShapeType & 3) while on ground of special code 4 on Outset (also ORed into event reg 0xBFFF), else 0; normal_move (in daKb_Execute) does not run at the player while it is set; the view Ob1Pig (d_a_npc_ob1.h) already calls it mPigBit */
+    /* 0x74E */ be<u8> mDemoOwner;  /* was m406: esa_demo_check 02190708: 1 when this pig starts the bait demo (sets l_kbStatics.DEMO_START); daKb_Delete 02193778 and the demo end (esa_demo_move 0219509C) clear DEMO_START again only when it is set */
+    /* 0x74F */ be<u8> mItemDropped;  /* was m407: money_drop 021907F4: 1 when a rupee/item was created; esa_demo_move 0219509C: 1 after digging up a daTagKbItem; picks the player's smile / other reaction (DEMO_SMILE) */
+    /* 0x750 */ be<u8> mTauraPosSet;  /* was m408: TWW taura_pos_set(cXyz) (d_a_kb.h:17) sets it to 1 with mTauraPos; set/cleared by daNpcPeople (checkPig 022C3E78 tests it == 0 before tying the pig); no WWHD pig code reads it (normal_move notes the GameCube test became mbCanBeBigPig != 4) */
+    /* 0x751 */ be<u8> mDigFound;  /* was m409: esa_demo_move 0219509C: 1 when the pig ends on ground of special code 5 (a dig spot, big pig) and digs; then it looks for the item tag (daTagKbItem::kb_dig) */
+    /* 0x752 */ be<u8> mDigSeDone;  /* was m40A: esa_demo_move 0219509C: 0 in step 0x2C, 1 once the dig sound (JA_SE_CM_PG_DIG / _L_DIG) has played in step 0x2D */
+    /* 0x753 */ be<u8> mGrabMissed;  /* was m40B: speed_pos_set 02194654: 1 while the player's grab-miss actor is this pig (animation stopped, no move), 0 after; normal_move (in daKb_Execute 02190CE0) does not turn while it is set */
     /* 0x754 */ gptr<dPath> mpPath;
     /* 0x758 */ u8 m410[0x765 - 0x758];
-    /* 0x765 */ be<u8> m41D;
-    /* 0x766 */ be<s16> m41E;
-    /* 0x768 */ be<s16> m420;
-    /* 0x76A */ be<s16> m422;
-    /* 0x76C */ be<s16> m424;
-    /* 0x76E */ be<s16> m426[8];
-    /* 0x77E */ be<s16> m436;
-    /* 0x780 */ be<s16> m438;
-    /* 0x782 */ be<s16> m43A;
+    /* 0x765 */ be<u8> mPathNo;  /* was m41D: daKb_Create 02193E48: param bits 16-23, dPath_GetRoomPath(it) when not 0xFF (mpPath); the Windfall pigs start at a random point of that path */
+    /* 0x766 */ be<s16> mMode;  /* was m41E: daKb_Execute 02190CE0: switch 0 normal_move, 1 carry_move, 2 swim_move, 3 attack_move, 4 esa_demo_move; carry_check 0218EF4C sets 1, esa_demo_check 02190708 sets 4 */
+    /* 0x768 */ be<s16> mAction;  /* was m420: daKb_Execute 02190CE0: the step inside mMode (normal 0-6, carry 0xA-0xD, swim 0x14-0x19, attack 0x21-0x24, bait demo 0x28-0x31), switched on by normal_move/carry_move/swim_move, attack_move 021947AC and esa_demo_move 0219509C */
+    /* 0x76A */ be<s16> mTargetAngleY;  /* was m422: normal_move / swim_move (in daKb_Execute 02190CE0): current.angle.y turns to it (cLib_addCalcAngleS2 with mTurnStep); the angle to mTargetPos, target_set 02190400 (case 2) */
+    /* 0x76C */ be<s16> mTurnStep;  /* was m424: normal_move (in daKb_Execute 02190CE0): the step of the turn to mTargetAngleY, 0x800 walking, 0x2000 running away */
+    /* 0x76E */ be<s16> mTimers[8];  /* was m426: daKb_Execute 02190CE0: 8 timers counted down every frame ([0] the action timer, [1] no-flee wait, [2] voice/struggle wait, [3] keep-direction wait (target_set 02190400), [4] bait-demo cool-down (esa_demo_check 02190708), [5] anger flash, [6] swim voice, [7] first ground check, 5 at daKb_Create 02193E48) */
+    /* 0x77E */ be<s16> mFlipState;  /* was m436: carry_move (in daKb_Execute 02190CE0): 0 while thrown (shape_angle.x spins), 1 after the first bounce; swim_move: + 0x800 per frame, the phase of the bobbing (sin) */
+    /* 0x780 */ be<s16> mFallFrame;  /* was m438: carry_move (in daKb_Execute 02190CE0): + 1 per frame the carried pig is not at mCarryStartY; at 4 the squeal particle (particle_tuba); carry_check 0218EF4C / swim_move clear it */
+    /* 0x782 */ be<s16> mSwimTurnWait;  /* was m43A: swim_move (in daKb_Execute 02190CE0): 0 -> target_set(2) then 1; after a wall a random 5-25 turn; counted down while facing mTargetAngleY */
     /* 0x784 */ u8 m43C[4];
-    /* 0x788 */ be<s16> m440;
-    /* 0x78A */ be<s16> m442;
-    /* 0x78C */ be<s16> m444;
+    /* 0x788 */ be<s16> mInWater;  /* was m440: sibuki_set 0218F1FC sets 1 (splash on entering water); carry_move (in daKb_Execute 02190CE0) lands in water (swim, mMode 2) when set; swim_move clears it when out; swim_mode_change_check 0218F380 tests it */
+    /* 0x78A */ be<s16> mAttackAngleY;  /* was m442: carry_move (in daKb_Execute 02190CE0): the player angle when the angry run starts; attack_move 021947AC turns shape_angle.y to it and picks a new one (+- rnd 4096) when reached */
+    /* 0x78C */ be<s16> mLandSquash;  /* was m444: carry_move (in daKb_Execute 02190CE0): 6 on landing (0x1E for mbCanBeBigPig 4); daKb_Execute counts it down and squashes mScale.y (+0.5625 above 3, +1.125 below); no move while above 3 */
     /* 0x78E */ be<s16> m446;
-    /* 0x790 */ be<s16> m448;
-    /* 0x792 */ be<s16> m44A;
-    /* 0x794 */ be<s16> m44C;
+    /* 0x790 */ be<s16> mStallFrames;  /* was m448: daKb_Execute 02190CE0: in attack (mMode 3, action >= 0x24) + 1 per frame the pig moves less than 1; above 10 the anger ends (ALL_ANGER 0, back to mMode 0); carry_move clears it */
+    /* 0x792 */ be<s16> mRepeatCount;  /* was m44A: carry_move (in daKb_Execute 02190CE0): 3 struggle animations (JITA2) while carried, - 1 each; esa_demo_move 0219509C: the eat animation count (1) */
+    /* 0x794 */ be<s16> mAngerFlashPhase;  /* was m44C: daKb_Execute 02190CE0: + REG + 1000 per frame while angry (mTimers[5] or actions 0x21-0x24); |sin| of it drives mAngerColorRate */
     /* 0x796 */ be<s16> m44E;
-    /* 0x798 */ cXyz m450;
-    /* 0x7A4 */ cXyz m45C;
+    /* 0x798 */ cXyz mTauraPos;  /* was m450: TWW taura_pos_set(cXyz) (d_a_kb.h:17) sets it with mTauraPosSet (daNpcPeople 022C3E78); daKb_Execute 02190CE0 sets it to the first ground position; normal_move (in daKb_Execute) heads back when farther than mMoveRange / 2; target_set 02190400 (case 2) aims at it */
+    /* 0x7A4 */ cXyz mTargetPos;  /* was m45C: target_set 02190400: 1000 ahead in the chosen direction or the bait's position; normal_move (in daKb_Execute 02190CE0) walks towards it (mTargetAngleY) */
     /* 0x7B0 */ cXyz field_0x468[2];
     /* 0x7C8 */ cXyz field_0x480[2];
     /* 0x7E0 */ cXyz field_0x498;
-    /* 0x7EC */ cXyz m4A4;
-    /* 0x7F8 */ be<f32> m4B0;
-    /* 0x7FC */ be<f32> m4B4;
-    /* 0x800 */ be<f32> m4B8;
-    /* 0x804 */ be<f32> m4BC;
-    /* 0x808 */ be<f32> m4C0;
-    /* 0x80C */ be<f32> m4C4;
-    /* 0x810 */ be<f32> m4C8;
-    /* 0x814 */ be<f32> m4CC;
+    /* 0x7EC */ cXyz mTailPos;  /* was m4A4: nodeCallBack 0218F98C: MtxPosition of the J_PG_TAIL joint; he_set 0218F4EC starts the pig gas (ID_AK_SN_PIGGAS00) there */
+    /* 0x7F8 */ be<f32> mAngerColorRate;  /* was m4B0: daKb_Execute 02190CE0: -> the anger flash value (from mAngerFlashPhase), else 0; daKb_Draw 0218FC3C blends the C0/K0 colours towards red by it */
+    /* 0x7FC */ be<f32> mTargetSpeed;  /* was m4B4: normal_move (in daKb_Execute 02190CE0): 0 wait, 3 walk, 12 (6 big) run; speedF follows it with step mSpeedStep */
+    /* 0x800 */ be<f32> mSpeedStep;  /* was m4B8: normal_move (in daKb_Execute 02190CE0): 2.5 / 2.0, the cLib_addCalc2 step of speedF towards mTargetSpeed */
+    /* 0x804 */ be<f32> mCarryStartY;  /* was m4BC: carry_check 0218EF4C: current.pos.y when the pig is picked up; carry_move (in daKb_Execute 02190CE0) starts the fall reaction once the height differs */
+    /* 0x808 */ be<f32> mDrawOffsetY;  /* was m4C0: draw_SUB 0218FABC: the model's y translation, -> mDrawOffsetYTarget (not in mMode 4); daKb_Create 02193E48 30; esa_demo_move 0219509C moves it (-33 dig / 30) */
+    /* 0x80C */ be<f32> mDrawOffsetYTarget;  /* was m4C4: draw_SUB 0218FABC: mDrawOffsetY follows it; 30 normally, 20 while carried and falling (carry_move in daKb_Execute 02190CE0), 30 at sibuki_set 0218F1FC */
+    /* 0x810 */ be<f32> mStruggleAnmSpeed;  /* was m4C8: carry_move (in daKb_Execute 02190CE0): play speed of the struggle animation BCK_JITA2, 1.8 at the start, - 0.6 per repeat (not below 0) */
+    /* 0x814 */ be<f32> mMoveRange;  /* was m4CC: daKb_Create 02193E48: mMoveRangePrm * 100 (0 -> 300); normal_move (in daKb_Execute 02190CE0) returns to mTauraPos when farther than it / 2; 0 (no limit) after fleeing or being carried */
     /* 0x818 */ u8 m4D0[4];
-    /* 0x81C */ be<f32> m4D4;
-    /* 0x820 */ be<u32> m4D8;
-    /* 0x824 */ cXyz m4DC;
-    /* 0x830 */ cXyz m4E8;
-    /* 0x83C */ csXyz m4F4;
-    /* 0x842 */ csXyz m4FA;
+    /* 0x81C */ be<f32> mSizeRate;  /* was m4D4: daKb_Create 02193E48: 2 for the big pig (mShapeType + 8), else 0; mScale = it + 1, and it scales the collider, eye/attention height, ripples and smoke (daKb_Execute 02190CE0, sibuki_set 0218F1FC, smoke_set 0218F600) */
+    /* 0x820 */ be<u32> mEsaId;  /* was m4D8: esa_demo_check 02190708: fopAcM_GetID(the bait (esa) actor); target_set 02190400 / esa_demo_move 0219509C look it up; carry_check 0218EF4C releases the bait and sets fpcM_ERROR_PROCESS_ID_e */
+    /* 0x824 */ cXyz mHitPos;  /* was m4DC: pl_attack_hit_check (in daKb_Execute 02190CE0): mSph.GetTgHitPosP(); attack_move 021947AC runs from it */
+    /* 0x830 */ cXyz mScale;  /* was m4E8: daKb_Create 02193E48: mSizeRate + 1 (x = y = z); draw_SUB 0218FABC MtxScale(x, y, x); daKb_Execute 02190CE0 squashes y on landing (mLandSquash) */
+    /* 0x83C */ csXyz mGroundAngle;  /* was m4F4: daKb_Execute 02190CE0: fopAcM_getGroundAngle; draw_SUB 0218FABC tilts the model by x/z; carry_move returns it to 0 */
+    /* 0x842 */ csXyz mAttackTilt;  /* was m4FA: attack_move 021947AC: target x/z of shape_angle while running angry (from the ground slope), shape_angle follows it */
     /* 0x848 */ mDoExt_btpAnm mBtp; /* HD: GameCube m500/mpTexNoAnm/m508..m50A */
-    /* 0x8BC */ be<s32> m50C;
-    /* 0x8C0 */ cXyz m514;    /* demo camera eye */
-    /* 0x8CC */ cXyz m520;    /* demo camera centre */
-    /* 0x8D8 */ be<f32> m53C; /* demo camera fovy */
-    /* 0x8DC */ KbRippleCallbackHD m540;
-    /* 0x8F0 */ dPa_smokeEcallBack m554;
-    /* 0x910 */ dPa_smokeEcallBack m574;
-    /* 0x930 */ dPa_followEcallBack m594;
-    /* 0x944 */ dPa_followEcallBack m5A8[2];
-    /* 0x96C */ be<f32> m5D0;
-    /* 0x970 */ cXyz m5D4[2];
-    /* 0x988 */ csXyz m5EC[2];
+    /* 0x8BC */ be<s32> mBckNo;  /* was m50C: anm_init 0218EB64: the started BCK resource index; normal_move / pl_attack_hit_check (in daKb_Execute 02190CE0) restart WAIT1/WALK1/RUN1 only when it differs */
+    /* 0x8C0 */ cXyz mCamEye;  /* was m514: esa_demo_move 0219509C: the bait demo camera's eye (copied into dCamera_Set's eye); demo camera eye */
+    /* 0x8CC */ cXyz mCamCenter;  /* was m520: set_cam_center (in esa_demo_move 0219509C): current.pos + (REG, 60 + REG, REG), the bait demo camera's center; demo camera centre */
+    /* 0x8D8 */ be<f32> mCamFovy;  /* was m53C: esa_demo_move 0219509C: 50, the fovy argument of dCamera_Set; demo camera fovy */
+    /* 0x8DC */ KbRippleCallbackHD mRippleCb;  /* was m540: hamon_set 0218F150: the ripple (ID_AK_JN_HAMON00) emitter callback; mRate set from mRippleScale; carry_check 0218EF4C / swim_move end it */
+    /* 0x8F0 */ dPa_smokeEcallBack mSmokeCb;  /* was m554: smoke_set 0218F600 / smoke_set2 0218F71C: the smoke (ELEMENTSMOKE00) emitter callback; ended when the anger ends (daKb_Execute 02190CE0) */
+    /* 0x910 */ dPa_smokeEcallBack mDigSmokeCb;  /* was m574: smoke_set3 0218F868: the dig smoke emitter callback (onWindOff, scaled); esa_demo_move 0219509C ends it after digging */
+    /* 0x930 */ dPa_followEcallBack mGasCb;  /* was m594: he_set 0218F4EC: the pig gas (ID_AK_SN_PIGGAS00) follow callback at mTailPos; carry_move (in daKb_Execute 02190CE0) ends it */
+    /* 0x944 */ dPa_followEcallBack mShakeWaterCb[2];  /* was m5A8: swim_move (in daKb_Execute 02190CE0): the two shake-off-water (ID_AK_SN_PIGDASSUI) follow callbacks, frames 10/11 of BCK_DASSUI; pl_attack_hit_check ends them */
+    /* 0x96C */ be<f32> mRippleScale;  /* was m5D0: hamon_set 0218F150: scale of the ripple; sibuki_set 0218F1FC / swim_mode_change_check 0218F380 set it from mSizeRate, swim_move 0.5 */
+    /* 0x970 */ cXyz mParticlePos[2];  /* was m5D4: he_set 0218F4EC / smoke_set 0218F600 / smoke_set2 0218F71C / smoke_set3 0218F868: positions the particles start at ([0] body/tail, [1] the dig spot) */
+    /* 0x988 */ csXyz mParticleAngle[2];  /* was m5EC: he_set 0218F4EC / smoke_set 0218F600 / attack_move 021947AC: angles for the particles at mParticlePos */
     /* 0x994 */ dBgS_AcchCir mAcchCir;
     /* 0x9D4 */ dBgS_ObjAcch mAcch;
     /* 0xB98 */ dCcD_Stts mStts;
@@ -99,11 +99,11 @@ struct kb_class : fopAc_ac_c {
     /* 0xD00 */ dCcD_Sph m968;
 };
 WWHD_OFFSET(kb_class, mPhs, 0x73C);
-WWHD_OFFSET(kb_class, m41E, 0x766);
-WWHD_OFFSET(kb_class, m4D8, 0x820);
+WWHD_OFFSET(kb_class, mMode, 0x766);
+WWHD_OFFSET(kb_class, mEsaId, 0x820);
 WWHD_OFFSET(kb_class, mBtp, 0x848);
-WWHD_OFFSET(kb_class, m540, 0x8DC);
-WWHD_OFFSET(kb_class, m5D0, 0x96C);
+WWHD_OFFSET(kb_class, mRippleCb, 0x8DC);
+WWHD_OFFSET(kb_class, mRippleScale, 0x96C);
 WWHD_OFFSET(kb_class, mAcchCir, 0x994);
 WWHD_OFFSET(kb_class, mStts, 0xB98);
 WWHD_OFFSET(kb_class, m968, 0xD00);
@@ -191,7 +191,7 @@ static inline void dBgS_LinChk_dt(void *c) {
 }
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* esa_class (HD +0x11C): field_0x298 (u8) at 0x3B4, mState (s8) at 0x3BD */
+/* esa_class (HD +0x11C): mTaken (u8) at 0x3B4, mState (s8) at 0x3BD */
 
 /* attention_info.flags (+0x39C) */
 static inline be<u32> &attn_flags(fopAc_ac_c *a) {
@@ -540,11 +540,11 @@ inline KbTevControlBytes *kbControlBytes(dKy_tevstr_c *t) {
 // HD: food actor members used by the pig; the shared actor remains opaque.
 struct KbFoodActorHD : fopAc_ac_c {
     u8 prefix[8];
-    be<u8> field_0x298;
+    be<u8> mTaken;  /* was field_0x298: esa_class mTaken (d_a_esa.h) */
     u8 pad3B5[8];
     be<s8> mState;
 };
-WWHD_OFFSET(KbFoodActorHD, field_0x298, 0x3B4);
+WWHD_OFFSET(KbFoodActorHD, mTaken, 0x3B4);
 WWHD_OFFSET(KbFoodActorHD, mState, 0x3BD);
 struct KbJointDataHD {
     u8 prefix[4];
@@ -569,8 +569,8 @@ struct KbPlayerVtableHD {
     gfn setPlayerPosAndAngle;
 };
 WWHD_OFFSET(KbPlayerVtableHD, setPlayerPosAndAngle, 0x114);
-inline be<u8> &esa_field_0x298(fopAc_ac_c *esa) {
-    return ((KbFoodActorHD *)esa)->field_0x298;
+inline be<u8> &esa_mTaken(fopAc_ac_c *esa) {
+    return ((KbFoodActorHD *)esa)->mTaken;
 }
 inline s8 esa_mState(fopAc_ac_c *esa) {
     return ((KbFoodActorHD *)esa)->mState;

@@ -121,7 +121,7 @@ void setParamSoundOutputMode(u32 value) {
         audioParameterAssert("JAIGlobalParameter.cpp", 347, "(0)");
         mode = 1;
     }
-    msBasic->field_0xd = value;
+    msBasic->mOutputMode = value;
     audioDriverSetOutputMode(mode);
 }
 /* 02804588 */
@@ -135,7 +135,7 @@ void setParamStreamDecodedBufferBlocks(u32 value) {
 /* 02804598 */
 void setParamStreamInsideBufferCut(u32 value) {
     JAIBasicView* basic = msBasic;
-    basic->field_0xe = (basic->field_0xe & 0xF7FF) | ((value & 1) << 11);
+    basic->mFlags = (basic->mFlags & 0xF7FF) | ((value & 1) << 11);
 }
 /* 028045B0 */
 void setParamAutoHeapRoomSize(u32 value) {

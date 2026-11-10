@@ -55,7 +55,7 @@ bool dCamera_c::nonOwnerCamera(s32 style) {
     cXyz p;
     cXyz d;
     cXyz s;
-    u32 first = m11C;
+    u32 first = mCurStyleTimer;
     ofs.y = camParamVal(style, 5);
     f32 ang = camParamVal(style, 23);
     f32 vAng = camParamVal(style, 15);
@@ -76,10 +76,10 @@ bool dCamera_c::nonOwnerCamera(s32 style) {
                                   inv); /* mViewCache.mDirection.Val(dist, v, inv) */
         cameraEngineGlobeXyz(&mViewCache.mDirection, &x);
         cXyz_pl(&mViewCache.mCenter, &c, &x);
-        m100 = 1;
-        m101 = 1;
+        mStyleSettle0 = 1;
+        mStyleSettle1 = 1;
         mViewCache.mEye.copy(c);
-        m102 = 1;
+        mStyleSettle2 = 1;
         mViewCache.mFovy = fovy;
         return true;
     }
@@ -152,7 +152,7 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
     f32 fovy = camParamVal(style, 25);
     if (mCurArrowIdx == 0xFF)
         return false;
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         cXyz t;
         cXyz x;
         cXyz att;
@@ -182,7 +182,7 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
         }
         cXyz_mi(&p->m378, &d, &p->m39C);
         cSGlobe_Val(&p->m384, &d);
-        if (m530 != 0 && p->m384.mRadius < 350.0f) {
+        if (mShipRockType != 0 && p->m384.mRadius < 350.0f) {
             g.mRadius = 350.0f;
             cameraEngineGlobeXyz(&g, &x);
             cXyz_pl(&p->m378, &t2, &x);
@@ -209,7 +209,7 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
             p->m390 = (f32)((frames * (frames + 1)) >> 1);
         }
     }
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         cXyz d;
         cXyz s;
         cXyz cr;
@@ -217,7 +217,7 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
         cSAngle_l u;
         cSAngle_l w;
         cSAngle_l tmp;
-        f32 r = (f32)((s32)p->m38C - (s32)m11C);
+        f32 r = (f32)((s32)p->m38C - (s32)mCurStyleTimer);
         f32 sum = p->m390;
         p->m394 = r;
         f32 k = r / sum;
@@ -245,10 +245,10 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
         }
         f32 fv = mViewCache.mFovy;
         mViewCache.mFovy = gabi::fmadds(p->m398 - fv, k, fv);
-        if ((u32)m11C >= (u32)((s32)p->m38C - 1)) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((u32)mCurStyleTimer >= (u32)((s32)p->m38C - 1)) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
         }
     }
     return true;
@@ -298,7 +298,7 @@ static void fixedPosApproach(dCamera_c* c, cSGlobe_l* g, f32 k, f32 fovy, f32 mi
 // 10); the map frame count is used as the weight sum directly
 bool dCamera_c::fixedPositionCamera(s32 style) {
     FixedPos* p = (FixedPos*)mWork;
-    u32 first = m11C;
+    u32 first = mCurStyleTimer;
     f32 v0 = camParamVal(style, 0), v1 = camParamVal(style, 1), v10 = camParamVal(style, 10),
         v11 = camParamVal(style, 11);
     f32 v24 = camParamVal(style, 24), v4 = camParamVal(style, 4), v5 = camParamVal(style, 5),
@@ -334,7 +334,7 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
     ofs.y = v5;
     ofs.x = v1;
     ofs.z = v0;
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         if (p->m39C == 0) {
             cXyz_mi(&pos, &d, &mEye);
             f32 l = std_sqrtf(PSVECSquareMag(&d));
@@ -362,10 +362,10 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
     mul.z = v3;
     relationalPos(&target, mpPlayerActor.get(), &ofs);
     cSGlobe_l g;
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         f32 k;
         if (p->m39C == 0) {
-            f32 r = (f32)((s32)p->m378 - (s32)m11C);
+            f32 r = (f32)((s32)p->m378 - (s32)mCurStyleTimer);
             f32 sum = p->m37C;
             p->m380 = r;
             k = r / sum;
@@ -384,10 +384,10 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
         cXyz_mi(&pos, &d, &mViewCache.mCenter);
         cameraEngineGlobeFromVector(&g, &d);
         fixedPosApproach(this, &g, k, fovy, v11, v10);
-        if ((u32)m11C >= (u32)((s32)p->m378 - 1)) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((u32)mCurStyleTimer >= (u32)((s32)p->m378 - 1)) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
         }
         return true;
     }
@@ -445,7 +445,7 @@ bool dCamera_c::crawlCamera(s32 style) {
     directionOf(&dir, mpPlayerActor.get());
     cameraEngineAngleSubtract(&dir, &rel, &mViewCache.mDirection.mU); /* local_118 */
     u16 flags;
-    if (m108 == 0) {
+    if (mCurModeTimer == 0) {
         p->m378 = CRAWL_WORK; /* 'CRWL' */
         flags = cameraStyle->mFlags;
         p->m37C = 10;
@@ -499,9 +499,9 @@ bool dCamera_c::crawlCamera(s32 style) {
             p->m38C.copy(arrow(this)->position); /* mCurRoomArrowEntry.position */
             p->m399 = 1;
             mul.x = v3;
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
             mul.y = v4;
             mul.z = v3;
             arrowEye = true;
@@ -509,8 +509,8 @@ bool dCamera_c::crawlCamera(s32 style) {
     } else {
         p->m399 = 0;
     }
-    if (!arrowEye && m100 == 0) {
-        f32 r = (f32)((s32)p->m37C - (s32)m108);
+    if (!arrowEye && mStyleSettle0 == 0) {
+        f32 r = (f32)((s32)p->m37C - (s32)mCurModeTimer);
         f32 k = r / p->m380;
         p->m384 = r;
         relationalPos(&c, mpPlayerActor.get(), &ofs);
@@ -541,10 +541,10 @@ bool dCamera_c::crawlCamera(s32 style) {
         f32 fv = mViewCache.mFovy;
         mViewCache.mEye.copy(e);
         mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
-        if ((u32)m108 >= (u32)((s32)p->m37C - 1)) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((u32)mCurModeTimer >= (u32)((s32)p->m37C - 1)) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
         }
         p->m380 = p->m380 - p->m384;
         return true;
@@ -648,7 +648,7 @@ bool dCamera_c::hookshotCamera(s32 style) {
     ofs.x = camParamVal(style, 1);
     ofs.y = camParamVal(style, 5);
     ofs.z = camParamVal(style, 0);
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         work->m378 = HOOKSHOT_WORK; /* 'HOOK' */
         work->m380.copy(mViewCache.mCenter);
         fopAc_ac_c* player = mpPlayerActor.get();
@@ -663,8 +663,8 @@ bool dCamera_c::hookshotCamera(s32 style) {
             positionOf(&tp, tip);
             cXyz_mi(&tp, &d, &pp);
             if (std_sqrtf(PSVECSquareMag(&d)) > minDist) {
-                u32 mirror = ((u32)m07C >> 4) & 1;
-                u32 cnt = (u32)m07C;
+                u32 mirror = ((u32)mFrameCounter >> 4) & 1;
+                u32 cnt = (u32)mFrameCounter;
                 for (s32 i = 0; i < 8; i++) {
                     cSGlobe_l g;
                     cSAngle_l t;
@@ -698,17 +698,17 @@ bool dCamera_c::hookshotCamera(s32 style) {
                         mirror ^= 1;
                     camLinChk_dt_engine(lo);
                     if (i < 7)
-                        cnt = (u32)m07C;
+                        cnt = (u32)mFrameCounter;
                 }
             }
         }
-        m100 = 1;
-        m101 = 1;
-        m102 = 1;
+        mStyleSettle0 = 1;
+        mStyleSettle1 = 1;
+        mStyleSettle2 = 1;
         return true;
     }
     f32 k;
-    if (work->m398 != 0 && (u32)m11C > 8) {
+    if (work->m398 != 0 && (u32)mCurStyleTimer > 8) {
         eye.copy(work->m38C);
         k = 1.0f;
     } else {
@@ -719,7 +719,7 @@ bool dCamera_c::hookshotCamera(s32 style) {
     mul.x = v3;
     mul.z = v3;
     relationalPos(&c, mpPlayerActor.get(), &ofs);
-    if (m31D != 0) {
+    if (mFollowMoveBg != 0) {
         cameraEngineMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), 1,
                                    &work->m380, 0, 0); /* MoveBgMatrixCrrPos */
         cameraEngineMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), 1,

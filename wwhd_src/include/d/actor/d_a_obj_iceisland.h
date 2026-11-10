@@ -57,20 +57,24 @@ struct daObjIceisland_c : fopAc_ac_c {
     void daObjIceisland_fail_demo_wait();
     u32 daObjIceisland_fail_demo_main();
     BOOL _execute();
-    request_of_phase_process_class mPhs;
-    gptr<J3DModel> mpModel;
-    mDoExt_btkAnm mBtkAnm1, mBtkAnm2;
-    IceBrkAnm mBrkAnm;
-    gptr<IceEmitter> mEmitter1, mEmitter2;
-    IceTevStr mTevStr;
-    u8 field_0x394[10];
-    be<s16> field_0x396, mMeltIceEventIdx, mFreezeIceEventIdx;
-    be<u32> field_0x39C;
+    /* 0x3AC */ request_of_phase_process_class mPhs;
+    /* 0x3B4 */ gptr<J3DModel> mpModel;
+    /* 0x3B8 */ mDoExt_btkAnm mBtkAnm1;
+    /* 0x42C */ mDoExt_btkAnm mBtkAnm2;
+    /* 0x4A0 */ IceBrkAnm mBrkAnm;
+    /* 0x518 */ gptr<IceEmitter> mEmitter1;
+    /* 0x51C */ gptr<IceEmitter> mEmitter2;
+    /* 0x520 */ IceTevStr mTevStr;
+    /* 0x6E0 */ u8 field_0x394[10];
+    /* 0x6EA */ be<s16> mWindSeVolume;  /* was field_0x396: _execute 0235F8F0: counted down to 0 while the switch is on and up to 100 while it is off, then passed as the iceberg wind sound's volume (tww fopAcM_seStartCurrent(this, JA_SE_ATM_ICEBERG_WIND, it)); CreateInit 0235F0A0 0 when melted, 100 when frozen (tww) */
+    /* 0x6EC */ be<s16> mMeltIceEventIdx;
+    /* 0x6EE */ be<s16> mFreezeIceEventIdx;
+    /* 0x6F0 */ be<u32> mState;  /* was field_0x39C: the State enum (Frozen .. FailureDemo): CreateInit 0235F0A0 and the demo steps 0235F420 / 0235F498 / 0235F5E0 / 0235F658 / 0235F740 set it; _execute 0235F8F0 switches on it (tww switch (it) with 0 .. 7) */
 };
 WWHD_OFFSET(daObjIceisland_c, mpModel, 0x3B4);
 WWHD_OFFSET(daObjIceisland_c, mEmitter1, 0x518);
-WWHD_OFFSET(daObjIceisland_c, field_0x396, 0x6EA);
-WWHD_OFFSET(daObjIceisland_c, field_0x39C, 0x6F0);
+WWHD_OFFSET(daObjIceisland_c, mWindSeVolume, 0x6EA);
+WWHD_OFFSET(daObjIceisland_c, mState, 0x6F0);
 WWHD_SIZE(daObjIceisland_c, 0x6F4);
 struct IceModel {
     u8 pad[0x74];

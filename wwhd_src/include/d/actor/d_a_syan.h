@@ -11,16 +11,16 @@ struct syan_class : fopAc_ac_c {
     /* 0x3B4 */ gptr<mDoExt_McaMorf> morf;
     /* 0x3B8 */ be<s32> frameCount;
     /* 0x3BC */ be<u32> state;
-    /* 0x3C0 */ csXyz field_0x2a4[2];
-    /* 0x3CC */ csXyz field_0x2b0;
+    /* 0x3C0 */ csXyz mSwingAngle[2];  /* was field_0x2a4: nodeCallBack 024A4298: [0] rotates joint 5 (SYAN_JNT_JOINT5_e: Y, -X, Z), [1].x is added to joint 8's X; daSyan_Execute 024A45E0: [0].x / [1].x = sine of mSwingPhase0 / 1 times mSwingAmp0 / 1 */
+    /* 0x3CC */ csXyz mSwayAngle;  /* was field_0x2b0: nodeCallBack 024A4298: rotates joint 8 (SYAN_JNT_JOINT8_e: Y, -(X + mSwingAngle[1].x), Z); daSyan_Execute 024A45E0: y / z = sine of frameCount times mSwayAmp, x eased to 2500 in states 1 and 2 */
     /* 0x3D2 */ u8 _3D2[2];
-    /* 0x3D4 */ be<f32> field_0x2b8;
-    /* 0x3D8 */ be<f32> field_0x2bc;
-    /* 0x3DC */ be<f32> field_0x2c0;
-    /* 0x3E0 */ be<f32> field_0x2c4;
-    /* 0x3E4 */ be<f32> field_0x2c8;
-    /* 0x3E8 */ be<f32> field_0x2cc;
-    /* 0x3EC */ be<f32> field_0x2d0;
+    /* 0x3D4 */ be<f32> mSwayAmp;  /* was field_0x2b8: daSyan_Create 024A5224: 200; daSyan_Execute 024A45E0: amplitude of mSwayAngle.y / z, eased to 2000 in state 1 and to field_0x2dc * 500 in state 2 */
+    /* 0x3D8 */ be<f32> mSwingAmp0;  /* was field_0x2bc: daSyan_Execute 024A45E0: amplitude of mSwingAngle[0].x; eased to 1500 in state 1, to field_0x2dc * 300 in state 2 */
+    /* 0x3DC */ be<f32> mSwingAmp1;  /* was field_0x2c0: daSyan_Execute 024A45E0: amplitude of mSwingAngle[1].x; eased to 2500 in state 1, to field_0x2dc * 300 in state 2 */
+    /* 0x3E0 */ be<f32> mSwingPhase0;  /* was field_0x2c4: daSyan_Execute 024A45E0: + mSwingSpeed0 per frame; sine phase of mSwingAngle[0].x */
+    /* 0x3E4 */ be<f32> mSwingPhase1;  /* was field_0x2c8: daSyan_Execute 024A45E0: + mSwingSpeed1 per frame; sine phase of mSwingAngle[1].x */
+    /* 0x3E8 */ be<f32> mSwingSpeed0;  /* was field_0x2cc: daSyan_Execute 024A45E0: added to mSwingPhase0 each frame; eased to 500 in state 2 */
+    /* 0x3EC */ be<f32> mSwingSpeed1;  /* was field_0x2d0: daSyan_Execute 024A45E0: added to mSwingPhase1 each frame; eased to 1000 in state 2 */
     /* 0x3F0 */ be<s16> timer[2];
     /* 0x3F4 */ be<f32> field_0x2d8;
     /* 0x3F8 */ be<f32> field_0x2dc;
@@ -30,17 +30,17 @@ struct syan_class : fopAc_ac_c {
     /* 0x5AC */ be<s16> partRotY[kEmtrNum];
     /* 0x5B8 */ dPa_followEcallBack emtrCallBack[kEmtrNum];
     /* 0x630 */ be<f32> partAlpha[kEmtrNum];
-    /* 0x648 */ be<f32> field_0x52c[kEmtrNum];
+    /* 0x648 */ be<f32> mPartAlphaTarget[kEmtrNum];  /* was field_0x52c: daSyan_Execute 024A45E0: [i] = 4 + cM_rndF(4) whenever mPartAlphaTimer[i] runs out; partAlpha[i] is eased to it */
     /* 0x660 */ be<f32> partScale1[kEmtrNum];
-    /* 0x678 */ be<f32> field_0x55c[kEmtrNum];
+    /* 0x678 */ be<f32> mPartScale1Target[kEmtrNum];  /* was field_0x55c: daSyan_Execute 024A45E0: [i] = 0.75 + cM_rndF(0.075) whenever mPartScale1Timer[i] runs out; partScale1[i] is eased to it */
     /* 0x690 */ be<f32> partScale2[kEmtrNum];
-    /* 0x6A8 */ be<s16> field_0x58c[kEmtrNum];
-    /* 0x6B4 */ be<s16> field_0x598[kEmtrNum];
-    /* 0x6C0 */ be<s16> field_0x5a4[kEmtrNum];
+    /* 0x6A8 */ be<s16> mPartAlphaTimer[kEmtrNum];  /* was field_0x58c: daSyan_Execute 024A45E0: [i] = 5 + cM_rndF(10) at 0 (with a new mPartAlphaTarget[i]), counted down */
+    /* 0x6B4 */ be<s16> mPartScale1Timer[kEmtrNum];  /* was field_0x598: daSyan_Execute 024A45E0: [i] = 3 + cM_rndF(6) at 0 (with a new mPartScale1Target[i]), counted down */
+    /* 0x6C0 */ be<s16> mFireStartTimer[kEmtrNum];  /* was field_0x5a4: daSyan_Create 024A5224: [i] = fire_time[i]; daSyan_Execute 024A45E0: counted down; at 0 part i's ID_AK_JN_TORCH emitter starts (emtrEnabled) and partScale2[i] grows */
     /* 0x6CC */ be<u8> emtrEnabled[kEmtrNum];
     /* 0x6D2 */ u8 _6D2[2];
 };
-WWHD_OFFSET(syan_class, field_0x2b8, 0x3D4);
+WWHD_OFFSET(syan_class, mSwayAmp, 0x3D4);
 WWHD_OFFSET(syan_class, partMtx, 0x3FC);
 WWHD_OFFSET(syan_class, emtrCallBack, 0x5B8);
 WWHD_OFFSET(syan_class, emtrEnabled, 0x6CC);

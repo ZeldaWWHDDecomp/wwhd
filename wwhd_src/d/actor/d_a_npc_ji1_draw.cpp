@@ -32,7 +32,7 @@ BOOL nodeCallBack1(J3DNode *node, int calcTiming) {
         mDoMtx_XrotM(now, i_this->m_jnt.mAngles[1][1]);
         mDoMtx_ZrotM(now, (s16)-i_this->m_jnt.mAngles[1][0]);
         for (int i = 0; i < 3; i++) {
-          ji1DrawMultVecHD(now, &l_hio.field_0xC4[i], &i_this->field_0xBD8[i]);
+          ji1DrawMultVecHD(now, &l_hio.field_0xC4[i], &i_this->mBackbonePos[i]);
         }
       }
       mtx_copy(model->getAnmMtx(jntNo), now); /* setAnmMtx */
@@ -54,16 +54,16 @@ BOOL nodeCallBack2(J3DNode *node, int calcTiming) {
       PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
       if (jntNo == (u32)(s32)i_this->hair1JointNo) {
         cMtx_ZrotM(calc_mtx(),
-                   (s16)(i_this->field_0xBAA + i_this->field_0xBD2));
-        cMtx_YrotM(calc_mtx(), i_this->field_0xBAC);
+                   (s16)(i_this->mHair1AngleZ + i_this->mHair1WindAngle));
+        cMtx_YrotM(calc_mtx(), i_this->mHair1AngleY);
       } else if (jntNo == (u32)(s32)i_this->hair2JointNo) {
         cMtx_ZrotM(calc_mtx(),
-                   (s16)(i_this->field_0xBAE + i_this->field_0xBD4));
-        cMtx_YrotM(calc_mtx(), i_this->field_0xBB0);
+                   (s16)(i_this->mHair2AngleZ + i_this->mHair2WindAngle));
+        cMtx_YrotM(calc_mtx(), i_this->mHair2AngleY);
       } else {
         cMtx_ZrotM(calc_mtx(),
-                   (s16)(i_this->field_0xBB2 + i_this->field_0xBD6));
-        cMtx_YrotM(calc_mtx(), i_this->field_0xBB4);
+                   (s16)(i_this->mHair3AngleZ + i_this->mHair3WindAngle));
+        cMtx_YrotM(calc_mtx(), i_this->mHair3AngleY);
       }
       mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
       PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
@@ -84,8 +84,8 @@ BOOL nodeCallBack3(J3DNode *node, int calcTiming) {
     u32 jntNo = reinterpret_cast<Ji1DrawJointHD *>(joint)->mJntNo;
     Mtx34 *now = mDoMtx_stack_c::get();
     PSMTXCopy(model->getAnmMtx(jntNo), now);
-    s16 temp = (s16)gabi::ftoi((f32)(s16)i_this->field_0xBA2 *
-                               cM_ssin((u16)i_this->field_0xBA4));
+    s16 temp = (s16)gabi::ftoi((f32)(s16)i_this->mArmShakeAmp *
+                               cM_ssin((u16)i_this->mArmShakePhase));
     if (jntNo == (u32)(s32)i_this->armLJointNo) {
       mDoMtx_XrotM(now, temp);
     } else if (jntNo == (u32)(s32)i_this->armRJointNo) {
@@ -113,9 +113,9 @@ BOOL daNpc_Ji1_c::_draw() {
   mDoExt_btpAnm_entry((mDoExt_btpAnm *)&mBlinkAnim, pOrcaModelData,
                       (u8)mBlinkFrame);
   mpOrcaMorf->entryDL();
-  if (field_0xD84 == Ji1Draw_HARPOON_HELD) {
+  if (mHarpoonState == Ji1Draw_HARPOON_HELD) {
     mpSpearMorf->entryDL();
-  } else if (field_0xD84 == Ji1Draw_HARPOON_RELEASED) {
+  } else if (mHarpoonState == Ji1Draw_HARPOON_RELEASED) {
     mpSpearMorf->updateDL();
   }
   {
@@ -354,19 +354,19 @@ BOOL daNpc_Ji1_c::lookBack() {
                  l_hio.field_0x0C, maxHeadRot, -l_hio.field_0x0C, -maxHeadRot,
                  l_hio.field_0x14);
   if (m_jnt.mbTrn) {
-    cLib_addCalcAngleS2(&field_0xC88, l_hio.field_0x18, l_hio.field_0x16,
+    cLib_addCalcAngleS2(&mLookMaxVel, l_hio.field_0x18, l_hio.field_0x16,
                         0x800);
     temp2 = false;
     ret = true;
   } else {
-    field_0xC88 = 0;
+    mLookMaxVel = 0;
   }
   gabi::Local<cXyz> eye;
   eye->x = (f32)eyePos.x;
   eye->y = (f32)eyePos.y;
   eye->z = (f32)eyePos.z;
   ji1DrawLookAtTargetHD(&m_jnt, &current.angle.y, dstPos, eye, current.angle.y,
-                        field_0xC88, temp2);
+                        mLookMaxVel, temp2);
   return ret;
 }
 
@@ -382,22 +382,22 @@ void daNpc_Ji1_c::set_mtx() {
     Mtx34 *src = pModel->getAnmMtx(m_jnt.mHeadJntNum);
     J3DModel_setBaseTRMtx(mpTearsModel, src);
   }
-  JPABaseEmitter *e = field_0x430;
+  JPABaseEmitter *e = mpTearEmitter;
   if (e) {
     Mtx34 *m = pModel->getAnmMtx(m_jnt.mHeadJntNum);
     auto *emitter = reinterpret_cast<Ji1DrawEmitterHD *>(e);
     ji1DrawSetEmitterMatrixHD(m, emitter->mGlobalRotation,
                               &emitter->mGlobalTranslation);
   }
-  if (field_0xD84 == Ji1Draw_HARPOON_HELD) {
+  if (mHarpoonState == Ji1Draw_HARPOON_HELD) {
     PSMTXCopy(pModel->getAnmMtx(handRJointNo), mDoMtx_stack_c::get());
-    ji1DrawXYZrotMHD(mDoMtx_stack_c::get(), field_0xD5C.x, field_0xD5C.y,
-                     field_0xD5C.z);
-    mDoMtx_stack_c::transM(field_0xD50.x, field_0xD50.y, field_0xD50.z);
+    ji1DrawXYZrotMHD(mDoMtx_stack_c::get(), mHeldItemAngle.x, mHeldItemAngle.y,
+                     mHeldItemAngle.z);
+    mDoMtx_stack_c::transM(mHeldItemOffset.x, mHeldItemOffset.y, mHeldItemOffset.z);
     J3DModel_setBaseTRMtx(mpSpearMorf->getModel(), mDoMtx_stack_c::get());
   }
   mpSpearMorf->calc();
-  if (field_0xD84) {
+  if (mHarpoonState) {
     gabi::Local<cXyz> temp;
     gabi::Local<cXyz> temp2;
     temp->set(0.0f, 0.0f, 100.0f);
@@ -405,11 +405,11 @@ void daNpc_Ji1_c::set_mtx() {
     if (mAnimation == Ji1Draw_BCK_YOKOATTACK) {
       temp->z = 70.0f;
     }
-    field_0xB90.copy(field_0xB78);
+    mSpearTipOldPos.copy(mSpearTipPos);
     PSMTXCopy(mpSpearMorf->getModel()->getAnmMtx(JI_YARI_JNT_JI_YARI_e),
               mDoMtx_stack_c::get());
-    ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp, &field_0xB78);
-    ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp2, &field_0xB84);
+    ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp, &mSpearTipPos);
+    ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp2, &mSpearButtPos);
   }
 }
 
@@ -431,66 +431,66 @@ static inline void quat_copy_neg(Ji1DrawQuaternionHD *dst,
 void daNpc_Ji1_c::harpoonRelease(cXyz *param_1) {
 
   PSMTXCopy(mpSpearMorf->getModel()->getAnmMtx(JI_YARI_JNT_JI_YARI_e),
-            &field_0xCA0);
+            &mHarpoonMtx);
   mpSpearMorf->setFrame(0.0f);
-  field_0xCD0.x = field_0xCA0.m[0][3];
-  field_0xCD0.y = field_0xCA0.m[1][3];
-  field_0xCD0.z = field_0xCA0.m[2][3];
-  field_0xCA0.m[0][3] = 0.0f;
-  field_0xCA0.m[1][3] = 0.0f;
-  field_0xCA0.m[2][3] = 0.0f;
+  mHarpoonPos.x = mHarpoonMtx.m[0][3];
+  mHarpoonPos.y = mHarpoonMtx.m[1][3];
+  mHarpoonPos.z = mHarpoonMtx.m[2][3];
+  mHarpoonMtx.m[0][3] = 0.0f;
+  mHarpoonMtx.m[1][3] = 0.0f;
+  mHarpoonMtx.m[2][3] = 0.0f;
   if (param_1) {
-    field_0xCDC.copy(*param_1);
+    mHarpoonSpeed.copy(*param_1);
   } else {
-    field_0xCDC.set(0.0f, 5.0f, 0.0f);
+    mHarpoonSpeed.set(0.0f, 5.0f, 0.0f);
   }
-  field_0xD14 = 0x400;
-  field_0xD04.x = cM_ssin((u16)field_0xD14) * cM_scos((u16)current.angle.y);
-  field_0xD04.y = 0.0f;
-  field_0xD04.z = cM_ssin((u16)field_0xD14) * cM_ssin((u16)current.angle.y);
-  field_0xD04.w = cM_scos((u16)field_0xD14);
-  ji1DrawCopyQuaternionHD(&field_0xCF4, &l_zeroQuat);
-  field_0xD84 = Ji1Draw_HARPOON_RELEASED;
+  mHarpoonSwing = 0x400;
+  mHarpoonRotStep.x = cM_ssin((u16)mHarpoonSwing) * cM_scos((u16)current.angle.y);
+  mHarpoonRotStep.y = 0.0f;
+  mHarpoonRotStep.z = cM_ssin((u16)mHarpoonSwing) * cM_ssin((u16)current.angle.y);
+  mHarpoonRotStep.w = cM_scos((u16)mHarpoonSwing);
+  ji1DrawCopyQuaternionHD(&mHarpoonRot, &l_zeroQuat);
+  mHarpoonState = Ji1Draw_HARPOON_RELEASED;
 }
 
 /* 0224A2B8 */
 void daNpc_Ji1_c::harpoonMove() {
 
   gabi::Local<cXyz> temp, temp2, temp3, temp4;
-  temp3->x = (f32)field_0xB78.x;
-  temp4->z = (f32)field_0xB84.z;
+  temp3->x = (f32)mSpearTipPos.x;
+  temp4->z = (f32)mSpearButtPos.z;
   temp2->z = -100.0f;
   temp->z = 100.0f;
   temp->x = 0.0f;
   temp->y = 0.0f;
   temp2->x = 0.0f;
   temp2->y = 0.0f;
-  temp4->x = (f32)field_0xB84.x;
-  temp4->y = (f32)field_0xB84.y;
-  temp3->z = (f32)field_0xB78.z;
-  temp3->y = (f32)field_0xB78.y;
+  temp4->x = (f32)mSpearButtPos.x;
+  temp4->y = (f32)mSpearButtPos.y;
+  temp3->z = (f32)mSpearTipPos.z;
+  temp3->y = (f32)mSpearTipPos.y;
   f32 hio_bc = l_hio.field_0xBC;
   f32 hio_c0 = l_hio.field_0xC0;
 
-  ji1DrawQuatMultiplyHD(&field_0xCF4, &field_0xD04, &field_0xCF4);
-  ji1DrawQuatNormalizeHD(&field_0xCF4, &field_0xCF4);
-  PSVECAdd(&field_0xCD0, &field_0xCDC, &field_0xCD0);
-  field_0xCDC.y = field_0xCDC.y + hio_c0;
-  PSVECScale(&field_0xCDC, &field_0xCDC, 0.95f);
-  mDoMtx_stack_c::transS(field_0xCD0.x, field_0xCD0.y, field_0xCD0.z);
-  ji1DrawQuatMHD(&field_0xCF4);
-  ji1DrawMatrixConcatHD(mDoMtx_stack_c::get(), &field_0xCA0,
+  ji1DrawQuatMultiplyHD(&mHarpoonRot, &mHarpoonRotStep, &mHarpoonRot);
+  ji1DrawQuatNormalizeHD(&mHarpoonRot, &mHarpoonRot);
+  PSVECAdd(&mHarpoonPos, &mHarpoonSpeed, &mHarpoonPos);
+  mHarpoonSpeed.y = mHarpoonSpeed.y + hio_c0;
+  PSVECScale(&mHarpoonSpeed, &mHarpoonSpeed, 0.95f);
+  mDoMtx_stack_c::transS(mHarpoonPos.x, mHarpoonPos.y, mHarpoonPos.z);
+  ji1DrawQuatMHD(&mHarpoonRot);
+  ji1DrawMatrixConcatHD(mDoMtx_stack_c::get(), &mHarpoonMtx,
                         mDoMtx_stack_c::get());
   J3DModel_setBaseTRMtx(mpSpearMorf->getModel(), mDoMtx_stack_c::get());
-  ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp, &field_0xB78);
-  ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp2, &field_0xB84);
+  ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp, &mSpearTipPos);
+  ji1DrawMultVecHD(mDoMtx_stack_c::get(), temp2, &mSpearButtPos);
 
-  if (field_0xB78.y < 0.0f || field_0xB84.y < 0.0f) {
+  if (mSpearTipPos.y < 0.0f || mSpearButtPos.y < 0.0f) {
     gabi::Local<cXyz> temp5, temp6;
-    cXyz_mi(&field_0xB78, temp5, &field_0xCD0);
-    cXyz_mi(&field_0xB84, temp6, &field_0xCD0);
-    ji1DrawVectorSubtractHD(temp3, &field_0xCD0, temp3);
-    ji1DrawVectorSubtractHD(temp4, &field_0xCD0, temp4);
+    cXyz_mi(&mSpearTipPos, temp5, &mHarpoonPos);
+    cXyz_mi(&mSpearButtPos, temp6, &mHarpoonPos);
+    ji1DrawVectorSubtractHD(temp3, &mHarpoonPos, temp3);
+    ji1DrawVectorSubtractHD(temp4, &mHarpoonPos, temp4);
     gabi::Local<Ji1DrawQuaternionHD> temp7, temp8, temp11;
     ji1DrawQuatRotVecHD(temp7, temp3, temp5);
     ji1DrawQuatRotVecHD(temp8, temp4, temp6);
@@ -499,13 +499,13 @@ void daNpc_Ji1_c::harpoonMove() {
     gabi::Local<cXyz> temp12;
     // HD: preserve the original ordered tests when either height is NaN.
     bool bound = false;
-    if (field_0xB78.y < 0.0f) {
-      if (!(field_0xB84.y < 0.0f)) {
-        f32 b78y = field_0xB78.y;
-        field_0xB84.y = field_0xB84.y - b78y;
-        field_0xCD0.y = field_0xCD0.y - b78y;
-        field_0xB78.y = 0.0f;
-        quat_copy_neg(temp7, &field_0xD04);
+    if (mSpearTipPos.y < 0.0f) {
+      if (!(mSpearButtPos.y < 0.0f)) {
+        f32 b78y = mSpearTipPos.y;
+        mSpearButtPos.y = mSpearButtPos.y - b78y;
+        mHarpoonPos.y = mHarpoonPos.y - b78y;
+        mSpearTipPos.y = 0.0f;
+        quat_copy_neg(temp7, &mHarpoonRotStep);
         gabi::Local<cXyz> temp10;
         temp10->x = (f32)temp6->x;
         temp10->y = 0.0f;
@@ -513,17 +513,17 @@ void daNpc_Ji1_c::harpoonMove() {
         ji1DrawQuatRotVecHD(temp11, temp6, temp10);
         ji1DrawQuatSlerpHD(temp8, temp11, temp8, 0.05f);
         ji1DrawQuatSlerpHD(temp7, &l_zeroQuat, temp7, 0.1f);
-        ji1DrawQuatSlerpHD(temp8, temp7, &field_0xD04, 0.5f);
+        ji1DrawQuatSlerpHD(temp8, temp7, &mHarpoonRotStep, 0.5f);
         cXyz_mi(temp5, temp12, temp3);
-        sePos = &field_0xB78;
+        sePos = &mSpearTipPos;
         bound = true;
       }
-    } else if (field_0xB84.y < 0.0f) {
-      f32 b84y = field_0xB84.y;
-      field_0xCD0.y = field_0xCD0.y - b84y;
-      field_0xB78.y = field_0xB78.y - b84y;
-      field_0xB84.y = 0.0f;
-      quat_copy_neg(temp8, &field_0xD04);
+    } else if (mSpearButtPos.y < 0.0f) {
+      f32 b84y = mSpearButtPos.y;
+      mHarpoonPos.y = mHarpoonPos.y - b84y;
+      mSpearTipPos.y = mSpearTipPos.y - b84y;
+      mSpearButtPos.y = 0.0f;
+      quat_copy_neg(temp8, &mHarpoonRotStep);
       gabi::Local<cXyz> temp10;
       temp10->x = (f32)temp5->x;
       temp10->y = 0.0f;
@@ -531,9 +531,9 @@ void daNpc_Ji1_c::harpoonMove() {
       ji1DrawQuatRotVecHD(temp11, temp5, temp10);
       ji1DrawQuatSlerpHD(temp7, temp11, temp7, 0.1f);
       ji1DrawQuatSlerpHD(temp8, &l_zeroQuat, temp8, 0.1f);
-      ji1DrawQuatSlerpHD(temp7, temp8, &field_0xD04, 0.5f);
+      ji1DrawQuatSlerpHD(temp7, temp8, &mHarpoonRotStep, 0.5f);
       cXyz_mi(temp6, temp12, temp4);
-      sePos = &field_0xB84;
+      sePos = &mSpearButtPos;
       bound = true;
     }
     if (!bound) {
@@ -542,10 +542,10 @@ void daNpc_Ji1_c::harpoonMove() {
       temp10->y = 0.0f;
       temp10->z = (f32)temp5->z;
       ji1DrawQuatRotVecHD(temp7, temp5, temp10);
-      field_0xCD0.y =
-          gabi::fnmsubs(field_0xB84.y + field_0xB78.y, 0.5f, field_0xCD0.y);
-      ji1DrawQuatSlerpHD(&field_0xD04, temp7, &field_0xD04, 0.25f);
-      field_0xCDC.y = field_0xCDC.y * hio_bc;
+      mHarpoonPos.y =
+          gabi::fnmsubs(mSpearButtPos.y + mSpearTipPos.y, 0.5f, mHarpoonPos.y);
+      ji1DrawQuatSlerpHD(&mHarpoonRotStep, temp7, &mHarpoonRotStep, 0.25f);
+      mHarpoonSpeed.y = mHarpoonSpeed.y * hio_bc;
     }
     if (bound) {
       if (temp12->y < -3.0f && ji1DrawNormalizeHD(temp12)) {
@@ -554,13 +554,13 @@ void daNpc_Ji1_c::harpoonMove() {
         ji1DrawSeStartHD(JA_SE_CM_LANCE_BOUND, sePos, temp14);
         f32 d = PSVECDotProduct(temp12, &l_baseY);
         f32 k = hio_bc * d;
-        field_0xCDC.y = field_0xCDC.y * k;
+        mHarpoonSpeed.y = mHarpoonSpeed.y * k;
       } else {
-        field_0xCDC.y = 0.0f;
+        mHarpoonSpeed.y = 0.0f;
       }
     }
     gabi::Local<cXyz> temp9;
-    cXyz_mi(&field_0xB78, temp9, &field_0xB84);
+    cXyz_mi(&mSpearTipPos, temp9, &mSpearButtPos);
     gabi::Local<cXyz> up;
     up->set(0.0f, 1.0f, 0.0f);
     f32 dot = PSVECDotProduct(temp9, up);
@@ -570,10 +570,10 @@ void daNpc_Ji1_c::harpoonMove() {
       temp10->y = 0.0f;
       temp10->z = (f32)temp5->z;
       ji1DrawQuatRotVecHD(temp7, temp5, temp10);
-      field_0xCD0.y =
-          gabi::fnmsubs(field_0xB84.y + field_0xB78.y, 0.5f, field_0xCD0.y);
-      ji1DrawQuatSlerpHD(&field_0xD04, temp7, &field_0xD04, 0.25f);
-      field_0xCDC.y = field_0xCDC.y * hio_bc;
+      mHarpoonPos.y =
+          gabi::fnmsubs(mSpearButtPos.y + mSpearTipPos.y, 0.5f, mHarpoonPos.y);
+      ji1DrawQuatSlerpHD(&mHarpoonRotStep, temp7, &mHarpoonRotStep, 0.25f);
+      mHarpoonSpeed.y = mHarpoonSpeed.y * hio_bc;
     }
   }
 }

@@ -87,7 +87,7 @@ static inline void landing(kamome_class* i_this, f32 groundSpeedY, s8 nextState)
     a_this->current.pos.y += a_this->speed.y;
     if (frame > REG_S(6, 2) + 0xf) {
         a_this->speed.y -= REG_F(6, 7) + 0.8f;
-        cLib_addCalcAngleS2(&a_this->current.angle.y, i_this->m2FC, 2, 1000);
+        cLib_addCalcAngleS2(&a_this->current.angle.y, i_this->mLandAngleY, 2, 1000);
     }
     cLib_addCalcAngleS2(&a_this->current.angle.x, 0, 5, 0x800);
     cLib_addCalcAngleS2(&a_this->current.angle.z, 0, 5, 0x800);
@@ -118,7 +118,7 @@ static inline bool start_landing(kamome_class* i_this, f32 dist) {
         i_this->mAnimState = 10;
         a_this->speed.y = 0.0f;
         s16 r = (s16)gabi::ftoi(cM_rndFX(15000.0f));
-        i_this->m2FC = a_this->current.angle.y + r;
+        i_this->mLandAngleY = a_this->current.angle.y + r;
         timer(i_this, 2) = 0x3c;
         return true;
     }
@@ -215,15 +215,15 @@ static inline void kamome_heisou_move(kamome_class* i_this) {
 
     anim_wait_sing(i_this, i_this->mAnimState, false);
 
-    i_this->m2B4++;
+    i_this->mHeisouTimer++;
 
     if (i_this->mMoveState == 0) {
-        s16 c = i_this->m2B4;
+        s16 c = i_this->mHeisouTimer;
         cXyz sp44;
         f32 s1 = cM_ssin(c * (REG_S(17, 5) + 200));
         f32 s2 = cM_ssin(c * (REG_S(17, 6) + 30));
         sp44.x = s1 * (REG_F(17, 5) + 300.0f);
-        sp44.y = i_this->m2B8 + 600.0f + REG_F(17, 6);
+        sp44.y = i_this->mHeisouHeight + 600.0f + REG_F(17, 6);
         sp44.z = gabi::fmadds(s2, REG_F(17, 7) + 300.0f, REG_F(17, 4) + 150.0f);
         cMtx_YrotS(calc_mtx(), player->shape_angle.y);
         cXyz sp34;
@@ -261,7 +261,7 @@ static inline void kamome_heisou_move(kamome_class* i_this) {
         i_this->mVelocityFwdTarget = 20.0f;
     }
 
-    cLib_addCalc2(&i_this->m2B8, fVar6, 1.0f, 20.0f);
+    cLib_addCalc2(&i_this->mHeisouHeight, fVar6, 1.0f, 20.0f);
     i_this->mVelocityFwdTargetMaxVel = REG_F(17, 10) + 0.25f;
     i_this->mRotVel = REG_F(17, 11) + 300.0f;
     kamome_pos_move(i_this);
@@ -307,8 +307,8 @@ static inline void kamome_path_move(kamome_class* i_this) {
     case -1: {
         i_this->mMoveState = 1;
         dPnt_l* pnt = cur_point(i_this);
-        if (i_this->m308 != 0) {
-            i_this->m308 = 0;
+        if (i_this->mPathStart != 0) {
+            i_this->mPathStart = 0;
             i_this->mVelocityFwdTarget = 25.0f;
             i_this->mVelocityFwdTargetMaxVel = 2.0f;
         } else if (a_this->current.pos.y < i_this->mTargetPos.y) {
@@ -378,7 +378,7 @@ static inline void kamome_path_move(kamome_class* i_this) {
 
     case 0x16:
         moveType = 1;
-        i_this->m2AB = 1;
+        i_this->mLookAround = 1;
         if (timer(i_this, 2) == 0) {
             path_next_point(i_this);
             dPnt_l* pnt = cur_point(i_this);
@@ -478,7 +478,7 @@ static inline void take_off(kamome_class* i_this) {
     if (i_this->mPathIdx != 0xff) {
         i_this->mbUsePathMovement = i_this->mPathIdx + 1;
         timer(i_this, 3) = (s16)gabi::ftoi(cM_rndF(250.0f) + 250.0f);
-        i_this->m308 = 1;
+        i_this->mPathStart = 1;
     } else {
         timer(i_this, 1) = 0x32;
         i_this->mRotVel = gabi::fmadds(REG0_F(4), 10.0f, 5000.0f);
@@ -604,7 +604,7 @@ static inline void kamome_imouto_move(kamome_class* i_this) {
         cVar8 = 1;
         i_this->mVelocityFwdTarget = 0.0f;
         i_this->mRotVel = 0.0f;
-        i_this->m2AB = 1;
+        i_this->mLookAround = 1;
         a_this->speedF = 0.0f;
 
         if (timer(i_this, 2) == 0) {
@@ -682,7 +682,7 @@ static inline void kamome_imouto_move(kamome_class* i_this) {
             i_this->mRiseTimer = REG0_S(4) + 10;
             if (i_this->mPathIdx != 0xff) {
                 i_this->mbUsePathMovement = i_this->mPathIdx + 1;
-                i_this->m308 = 1;
+                i_this->mPathStart = 1;
             } else {
                 timer(i_this, 1) = 0x32;
                 i_this->mRotVel = gabi::fmadds(REG0_F(4), 10.0f, 1000.0f);
@@ -726,7 +726,7 @@ static inline void kamome_imouto_move(kamome_class* i_this) {
 static inline void kamome_imouto2_move(kamome_class* i_this) {
     switch (i_this->mMoveState) {
     case 0:
-        i_this->m2AB = 1;
+        i_this->mLookAround = 1;
         if (timer(i_this, 1) == 0) {
             anm_init(i_this, dRes_INDEX_KAMOME_BCK_KA_EAT1_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f, 0);
             i_this->mMoveState++;
@@ -791,13 +791,13 @@ static BOOL daKamome_Execute(kamome_class* i_this) {
         cLib_addCalcAngleS2(&i_this->mJointRotY, i_this->mJointRotYTarget, 4, 0x800);
         cLib_addCalcAngleS2(&i_this->mJointRotZ, i_this->mJointRotZTarget, 4, 0x800);
 
-        if (i_this->m2AB != 0) {
+        if (i_this->mLookAround != 0) {
             if (timer(i_this, 5) == 0) {
                 timer(i_this, 5) = (s16)gabi::ftoi(cM_rndF(20.0f) + 10.0f);
                 i_this->mJointRotYTarget = (s16)gabi::ftoi(cM_rndFX(REG0_F(8) + 3000.0f));
                 i_this->mJointRotZTarget = (s16)gabi::ftoi(cM_rndFX(REG0_F(8) + 3000.0f));
             }
-            i_this->m2AB = 0;
+            i_this->mLookAround = 0;
         } else {
             i_this->mJointRotZTarget = 0;
             i_this->mJointRotYTarget = 0;

@@ -167,13 +167,13 @@ BOOL daNpc_Ji1_c::setAnm(int param_1, f32 param_2, int param_3) {
     case 15: speed = 2.0f; break;
     case 22:
         BackSlideInit();
-        if (field_0xD84 == 1) {
+        if (mHarpoonState == 1) {
             harpoonRelease(nullptr);
         }
         break;
     case 23:
-        if (field_0x430.get() == nullptr) {
-            field_0x430 = dComIfGp_particle_set(dPa_ID_AK_SN_JITEAR00, &current.pos);
+        if (mpTearEmitter.get() == nullptr) {
+            mpTearEmitter = dComIfGp_particle_set(dPa_ID_AK_SN_JITEAR00, &current.pos);
             harpoonRelease(nullptr);
         }
         break;
@@ -196,7 +196,7 @@ void daNpc_Ji1_c::setAnimFromMsgNo(u32 msgNo) {
     msgNo = msgObj->mMsgNo;
     switch (msgNo) {
     case 0x9B1:
-        if (field_0xD84 == 1) {
+        if (mHarpoonState == 1) {
             setAnm(0, 4.0f, 0);
             break;
         }
@@ -212,7 +212,7 @@ void daNpc_Ji1_c::setAnimFromMsgNo(u32 msgNo) {
     case 0x9AF:
     case 0x9B3:
     case 0x9B4:
-        if (field_0xD84 == 1) {
+        if (mHarpoonState == 1) {
             setAnm(0, 4.0f, 0);
             break;
         }
@@ -241,13 +241,13 @@ void daNpc_Ji1_c::setAnimFromMsgNo(u32 msgNo) {
         if (mAnimation != 0x17) {
             break;
         }
-        if (field_0x430.get() != nullptr) {
-            reinterpret_cast<Ji1AnmEmitter*>(field_0x430.get())->becomeInvalidEmitter();
-            field_0x430 = nullptr;
-            field_0x430 = dComIfGp_particle_set(dPa_ID_AK_SN_JITEAR01, &current.pos);
+        if (mpTearEmitter.get() != nullptr) {
+            reinterpret_cast<Ji1AnmEmitter*>(mpTearEmitter.get())->becomeInvalidEmitter();
+            mpTearEmitter = nullptr;
+            mpTearEmitter = dComIfGp_particle_set(dPa_ID_AK_SN_JITEAR01, &current.pos);
         }
         setAnm(0x18, 8.0f, 0);
-        field_0xD84 = 1;
+        mHarpoonState = 1;
         break;
     default:
         break;

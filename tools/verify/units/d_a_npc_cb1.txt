@@ -94,8 +94,8 @@ field * 54005B2C u32 0x40000000,0x12340000      # dComIfGp_getPlayer(0) == this
 field * 54005292 u8 0,1                          # dComIfGp_event_runCheck()
 field * 540052B0 u8 0,1,2,5                      # talk XY
 field * r3+0xF8 u16 0,1,2,3                      # eventInfo.mCommand
-field * r3+0xAE5 i8 -1,0,1,3,5,6,7               # m8DD
-field * r3+0xAF8 i8 0,1,2,3,4,-1                 # m8F0
+field * r3+0xAE5 i8 -1,0,1,3,5,6,7               # mOrderEvent
+field * r3+0xAF8 i8 0,1,2,3,4,-1                 # mActionStatus
 field * r3+0x464 u32 0,0x10,0x20,0x30            # mAcch.m_flags
 field * 101BDC28 i16 0,1,5,500                   # m_flyingTimer
 ret 02055B64 0,1                                  # cLib_calcTimer<s16>
@@ -125,11 +125,11 @@ arg 02223380 r4 0,1
 # flyAction
 arg 022222D0 r4 0,1
 arg 022222D0 r6 0,1
-field 022222D0 r3+0xADF i8 0,1                   # m8D7
-field 022222D0 r3+0xAE4 i8 4,6,0                 # m8DC
-field 022222D0 r3+0xB00 i16 0,1,400,20000        # m8F8
-field 022222D0 r3+0xAFE i16 0,100                # m8F6
-field 022222D0 r3+0xAE8 u8 0,1                   # m8E0
+field 022222D0 r3+0xADF i8 0,1                   # mAnmLooped
+field 022222D0 r3+0xAE4 i8 4,6,0                 # mAnmTblIdx
+field 022222D0 r3+0xB00 i16 0,1,400,20000        # mPropellerSpeed
+field 022222D0 r3+0xAFE i16 0,100                # mLandIdleCount
+field 022222D0 r3+0xAE8 u8 0,1                   # mGroundHit
 field 022222D0 10466C6A i16 400                  # HIO field_0xD2
 field 022222D0 10466C66 i16 15                   # HIO field_0xCE
 field 022222D0 10466C64 i16 100                  # HIO field_0xCC
@@ -157,7 +157,7 @@ field 0222091C r3+0x605 u8 0,1
 # mutation-steering
 callee 028E8DD0 r3=12                             # PSVECSquareMag: the vector is compared
 field 02220288 r3+0x600 u32 3,2,0                # m4E4: event accept + return link
-field 02220288 r3+0xAEB i8 1,0                   # m8E3
+field 02220288 r3+0xAEB i8 1,0                   # mOrderedEvent
 ret 025440C8 1,0                                  # evmng endCheck
 field 02223694 r3+0x370 f32 0,1,-1               # speedF == 0 boundary
 field 02223694 r3+0x2E0 u32 0,0x2000             # carry bit
@@ -168,7 +168,7 @@ ret 024EBA14 0x42000000,0                         # getActor
 field 02222EF4 4200039C u32 0x10000000,0
 ret 02007898 1,0                                  # TRIG_A
 callee 022205DC r4=8                              # setPlayerAction(&pmf copy)
-field 0222091C r3+0xB04 f32 -400,-500,0          # m8FC boundary
+field 0222091C r3+0xB04 f32 -400,-500,0          # mFlyHeight boundary
 
 # ---- part 3: routes, actions, events (d_a_npc_cb1_act.cpp) ----
 
@@ -210,9 +210,9 @@ field 022244A0 r3+0x318 f32 0
 field 022250AC 10466C20 f32 1         # l_HIO.mStickWalkSpeedScale
 field 022250AC 10466BD8 f32 5         # l_HIO.mMinWalkSpeed
 field 022250AC r3+0x370 f32 0         # speedF
-field 022244A0 r3+0xAF8 i8 1,1,0,-1          # m8F0: running
+field 022244A0 r3+0xAF8 i8 1,1,0,-1          # mActionStatus: running
 field 022244A0 r3+0x3BC u32 2,2,0,1       # the NPC call command (1: other bits only)
-field 022244A0 r3+0xAE9 i8 0,0,1,-1          # m8E1
+field 022244A0 r3+0xAE9 i8 0,0,1,-1          # mMoveBlockSide
 field 022244A0 403000F8 u16 0,0,3         # player eventInfo: no door command
 field 022244A0 403003C0 u32 0,0,0x10000         # player: no attention lock
 field 022244A0 54005CD8 u32 0,0,0x100         # player status 0

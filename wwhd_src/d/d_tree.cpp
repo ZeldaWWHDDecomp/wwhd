@@ -200,11 +200,11 @@ static u32 tree_bindMaterial(u32 a, u32 draw, TreeMaterialList* records,
             gs = (s16)(at<TreeUniformMetadata>(metadata)->mGeometryRegister);
         u32 size = (at<TreeUniformData>(data)->mSize), ptr = (at<TreeUniformData>(data)->mpData.v);
         if (ps != -1)
-            GX2SetPixelUniformReg(ps, size, at<void>(ptr));
+            GX2SetPixelUniformBlock(ps, size, at<void>(ptr));
         if (vs != -1)
-            GX2SetVertexUniformReg(vs, size, at<void>(ptr));
+            GX2SetVertexUniformBlock(vs, size, at<void>(ptr));
         if (gs != -1)
-            GX2SetGeometryUniformReg(gs, size, at<void>(ptr));
+            GX2SetGeometryUniformBlock(gs, size, at<void>(ptr));
     }
     if (type == 2) {
         u32 obj = (at<TreeDrawArguments>(draw)->mpDrawUniform.v);
@@ -255,9 +255,9 @@ static void tree_setShape(u32 record, u32 flag, u32 index, u32 stride) {
 static void tree_drawIndexed(u32 p) {
     u32 count = (at<TreeIndexBuffer>(p)->mCount);
     if (count)
-        GX2DrawIndexed((at<TreeIndexBuffer>(p)->mIndexType), count,
-                       (at<TreeIndexBuffer>(p)->mPrimitive),
-                       at<void>((at<TreeIndexBuffer>(p)->mpIndices.v)), 0, 1);
+        GX2DrawIndexedEx((at<TreeIndexBuffer>(p)->mPrimitive), count,
+                         (at<TreeIndexBuffer>(p)->mIndexType),
+                         at<void>((at<TreeIndexBuffer>(p)->mpIndices.v)), 0, 1);
 }
 
 /* inlined into TreePacketState::prepareRender */
@@ -873,7 +873,7 @@ void* Tree_packetCtor(void* ptr) {
     for (u32 i = 0; i < 4; i++) {
         createIndexBuffer(at<void>(render + i * 24), at<void>(indexSources[i]), 4,
                           (u32)l_vertexCounts[i].mIndexCount);
-        at<TreeRenderer>(render)->mIndexBuffers[i].mIndexType = 4;
+        at<TreeRenderer>(render)->mIndexBuffers[i].mPrimitive = 4;
     }
     u32 slot = col + (at<TreeCollisionManager>(col)->mActiveBuffer) * 596;
     u32 sources[4][4] = {{0x101EE898, 0x101EE9E8, 0x101EECF8, 0x101EEB38},
@@ -1813,8 +1813,8 @@ ext 028F026C void registerGlobalObject(void*)
 ext 028F4384 f64 squareRoot(f32)
 ext 028F521C void zeroMemory(void*,u32)
 ext C00060E0 void GX2CallDisplayList(void*,u32)
-ext C0006178 void GX2DrawIndexed(u32,u32,u32,void*,u32,u32)
-ext C00068A8 void GX2SetGeometryUniformReg(u32,u32,void*)
-ext C0006900 void GX2SetPixelUniformReg(u32,u32,void*)
-ext C0006A38 void GX2SetVertexUniformReg(u32,u32,void*)
+ext C0006178 void GX2DrawIndexedEx(u32,u32,u32,void*,u32,u32) # was GX2DrawIndexed: build/gen/imports.json slot C0006178 = gx2 GX2DrawIndexedEx
+ext C00068A8 void GX2SetGeometryUniformBlock(u32,u32,void*) # was GX2SetGeometryUniformReg: build/gen/imports.json slot C00068A8 = gx2 GX2SetGeometryUniformBlock
+ext C0006900 void GX2SetPixelUniformBlock(u32,u32,void*) # was GX2SetPixelUniformReg: build/gen/imports.json slot C0006900 = gx2 GX2SetPixelUniformBlock
+ext C0006A38 void GX2SetVertexUniformBlock(u32,u32,void*) # was GX2SetVertexUniformReg: build/gen/imports.json slot C0006A38 = gx2 GX2SetVertexUniformBlock
 */

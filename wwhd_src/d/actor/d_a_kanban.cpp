@@ -118,21 +118,21 @@ static BOOL daKanban_Draw(kanban_class* i_this) {
     f32 s = l_HIO.m0C;
     i_this->actor.scale.set(s, s, s);
 
-    u32 uVar5 = i_this->m294;
+    u32 uVar5 = i_this->mPartsMask;
     for (s32 i = 0; i < 11; i++, uVar5 >>= 1) {
         if (!(uVar5 & 1)) {
             continue;
         }
-        J3DModel* model = i_this->m544[i];
+        J3DModel* model = i_this->mpModels[i];
         J3DModel_setBaseScale(model, &i_this->actor.scale);
-        MtxTrans(i_this->actor.current.pos.x + i_this->m2E4, i_this->actor.current.pos.y + i_this->m2E8,
-                 i_this->actor.current.pos.z + i_this->m2EC, false);
-        cMtx_XrotM(calc_mtx(), i_this->m2AC.x);
-        cMtx_ZrotM(calc_mtx(), i_this->m2AC.z);
+        MtxTrans(i_this->actor.current.pos.x + i_this->mPivotX, i_this->actor.current.pos.y + i_this->mPivotY,
+                 i_this->actor.current.pos.z + i_this->mPivotZ, false);
+        cMtx_XrotM(calc_mtx(), i_this->mGroundAngle.x);
+        cMtx_ZrotM(calc_mtx(), i_this->mGroundAngle.z);
         cMtx_YrotM(calc_mtx(), i_this->actor.shape_angle.y);
         cMtx_XrotM(calc_mtx(), i_this->actor.shape_angle.x);
         cMtx_ZrotM(calc_mtx(), i_this->actor.shape_angle.z);
-        MtxTrans(i_this->m2CC.x - i_this->m2E4, i_this->m2CC.y - i_this->m2E8, i_this->m2CC.z - i_this->m2EC, true);
+        MtxTrans(i_this->mModelOffset.x - i_this->mPivotX, i_this->mModelOffset.y - i_this->mPivotY, i_this->mModelOffset.z - i_this->mPivotZ, true);
         J3DModel_setBaseTRMtx(model, calc_mtx());
         setLightTevColorType(dKy_getEnvlight(), model, &i_this->actor.tevStr);
         mDoExt_modelUpdateDL(model);
@@ -144,8 +144,8 @@ static BOOL daKanban_Draw(kanban_class* i_this) {
 static inline void shibuki_set(kanban_class* i_this, cXyz* pos, f32 scaleXZ) {
     if (daSea_ChkArea(i_this->actor.current.pos.x, i_this->actor.current.pos.z)) {
         pos->y = daSea_calcWave(i_this->actor.current.pos.x, i_this->actor.current.pos.z);
-    } else if (Acch_MaskWaterIn(&i_this->m350)) {
-        pos->y = Acch_WtrHeight(&i_this->m350);
+    } else if (Acch_MaskWaterIn(&i_this->mAcch)) {
+        pos->y = Acch_WtrHeight(&i_this->mAcch);
     }
     fopKyM_createWpillar(pos, scaleXZ, 0.5f, 0);
     fopAcM_seStart_nn(&i_this->actor, JA_SE_OBJ_FALL_WATER_M, 0);
@@ -159,39 +159,39 @@ BOOL sea_water_check(kanban_class* i_this) {
         return FALSE;
     }
 
-    i_this->m528.copy(i_this->actor.current.pos);
+    i_this->mRipplePos.copy(i_this->actor.current.pos);
     i_this->actor.gravity = -3.0f;
 
     if (daSea_ChkArea(i_this->actor.current.pos.x, i_this->actor.current.pos.z)) {
         f32 f1 = daSea_calcWave(i_this->actor.current.pos.x, i_this->actor.current.pos.z);
-        i_this->m528.y = f1;
-        if (i_this->m2C4 == 1) {
-            i_this->m2A0 = 7.0f;
+        i_this->mRipplePos.y = f1;
+        if (i_this->mCutDir == 1) {
+            i_this->mWaterSinkY = 7.0f;
         }
         if (i_this->actor.current.pos.y < (f1 - 120.0f) + REG8_F(6)) {
             i_this->actor.gravity = 0.0f;
             i_this->actor.speedF = 0.0f;
             i_this->actor.speed.set(0.0f, 0.0f, 0.0f);
-            i_this->m2BC = (s16)(i_this->m2BC + (s16)gabi::ftoi(REG8_F(7) + 1000.0f));
-            f32 sn = cM_ssin(i_this->m2BC);
+            i_this->mBobPhase = (s16)(i_this->mBobPhase + (s16)gabi::ftoi(REG8_F(7) + 1000.0f));
+            f32 sn = cM_ssin(i_this->mBobPhase);
             f32 f0 = gabi::fmadds(sn, REG8_F(9) + 2.0f, REG8_F(8) + 147.0f);
             cLib_addCalc2(&i_this->actor.current.pos.y, f1 - f0, 1.0f, 30.0f);
             iVar3 = 1;
         }
-    } else if (Acch_MaskWaterIn(&i_this->m350)) {
+    } else if (Acch_MaskWaterIn(&i_this->mAcch)) {
         iVar3 = 2;
-        f32 f4 = Acch_WtrHeight(&i_this->m350);
-        i_this->m528.y = f4;
-        if (i_this->m2C4 == 1) {
-            i_this->m2A0 = 7.0f;
+        f32 f4 = Acch_WtrHeight(&i_this->mAcch);
+        i_this->mRipplePos.y = f4;
+        if (i_this->mCutDir == 1) {
+            i_this->mWaterSinkY = 7.0f;
         }
         i_this->actor.gravity = -3.0f;
         if (i_this->actor.current.pos.y < f4) {
             i_this->actor.gravity = 0.0f;
             i_this->actor.speedF = 0.0f;
             i_this->actor.speed.set(0.0f, 0.0f, 0.0f);
-            i_this->m2BC = (s16)(i_this->m2BC + (s16)gabi::ftoi(REG8_F(7) + 1000.0f));
-            f32 sn = cM_ssin(i_this->m2BC);
+            i_this->mBobPhase = (s16)(i_this->mBobPhase + (s16)gabi::ftoi(REG8_F(7) + 1000.0f));
+            f32 sn = cM_ssin(i_this->mBobPhase);
             f32 f0 = gabi::fmadds(sn, REG8_F(9) + 2.0f, REG8_F(8) + 147.0f);
             cLib_addCalc2(&i_this->actor.current.pos.y, f4 - f0, 1.0f, 30.0f);
             iVar3 = 1;
@@ -199,25 +199,25 @@ BOOL sea_water_check(kanban_class* i_this) {
     }
 
     if (iVar3 != 0) {
-        if (iVar3 == 1 && i_this->m29C == 0) {
+        if (iVar3 == 1 && i_this->mWaterEntered == 0) {
             gabi::Local<cXyz> sp30;
             sp30->set(0.5f, 0.5f, 0.5f);
-            dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->m514); /* HD: remove() is end() */
-            kanban_particle_setShipTail(dPa_name_ID_AK_JN_HAMON00, &i_this->m528, nullptr, sp30, 0xFF,
-                                          (dPa_levelEcallBack*)&i_this->m514);
+            dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->mRippleCb); /* HD: remove() is end() */
+            kanban_particle_setShipTail(dPa_name_ID_AK_JN_HAMON00, &i_this->mRipplePos, nullptr, sp30, 0xFF,
+                                          (dPa_levelEcallBack*)&i_this->mRippleCb);
             gabi::Local<cXyz> sp24;
             sp24->x = i_this->actor.current.pos.x;
             sp24->y = i_this->actor.current.pos.y;
             sp24->z = i_this->actor.current.pos.z;
-            i_this->m2BC = 0;
-            i_this->m514.mRate = 0.0f;
-            i_this->m29C = 1;
+            i_this->mBobPhase = 0;
+            i_this->mRippleCb.mRate = 0.0f;
+            i_this->mWaterEntered = 1;
             shibuki_set(i_this, sp24, 0.5f);
         }
         return TRUE;
     }
 
-    i_this->m2A0 = 0.0f;
+    i_this->mWaterSinkY = 0.0f;
     return FALSE;
 }
 
@@ -261,8 +261,8 @@ BOOL shock_damage_check(kanban_class* i_this) {
             f32 x = t->current.pos.x - i_this->actor.current.pos.x;
             f32 z = t->current.pos.z - i_this->actor.current.pos.z;
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) < 1000.0f) {
-                i_this->m2B2[4] = 100;
-                i_this->m2B2[4] = (s16)(100 + REG8_S(4));
+                i_this->mTimers[4] = 100;
+                i_this->mTimers[4] = (s16)(100 + REG8_S(4));
                 return TRUE;
             }
         }
@@ -284,32 +284,32 @@ void cut_point_check(kanban_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
-    if (i_this->m2C4 == 0) {
+    if (i_this->mCutDir == 0) {
         s16 pa = fopAcM_searchPlayerAngleY(a_this);
         s16 y = a_this->shape_angle.y - pa;
         s16 sVar3 = (s16)(y < 0 ? -y : y);
         if (sVar3 > 0x6000) {
-            i_this->m2C4 = 2;
+            i_this->mCutDir = 2;
         } else if (sVar3 > 0x2000 && sVar3 < 0x6000) {
             if ((s32)fopAcM_searchPlayerAngleY(a_this) & 0x80000000) {
-                i_this->m2C4 = 2;
+                i_this->mCutDir = 2;
             }
         }
     }
 
-    s32 uVar5 = i_this->m2C4 * 8;
+    s32 uVar5 = i_this->mCutDir * 8;
     u32 parameters = 0;
-    if ((ppc_sraw(i_this->m2C2, i_this->m2C4) & 1) || (i_this->m2C2 & 2)) {
+    if ((ppc_sraw(i_this->mCutFlags, i_this->mCutDir) & 1) || (i_this->mCutFlags & 2)) {
         return;
     }
 
-    i_this->m2C2 = (s16)(i_this->m2C2 | ppc_slw(1, i_this->m2C4));
-    if (i_this->m294 & 1) {
-        i_this->m294 = 0x7FE;
-        i_this->m29B = 0;
+    i_this->mCutFlags = (s16)(i_this->mCutFlags | ppc_slw(1, i_this->mCutDir));
+    if (i_this->mPartsMask & 1) {
+        i_this->mPartsMask = 0x7FE;
+        i_this->mRestored = 0;
     }
 
-    u32 uVar8 = i_this->m294 << 0x14;
+    u32 uVar8 = i_this->mPartsMask << 0x14;
     for (s32 i = 0; i < 8; i++) {
         u32 arg = cut_parts_arg_data[uVar5 + i];
         if (arg != 0x7FE00000 && (uVar8 & arg)) {
@@ -320,33 +320,33 @@ void cut_point_check(kanban_class* i_this) {
 
     if (parameters != 0) {
         gabi::Local<cXyz> sp18;
-        sp18->x = i_this->m5B0.GetTgHitPosP()->x;
-        sp18->y = i_this->m5B0.GetTgHitPosP()->y;
-        sp18->z = i_this->m5B0.GetTgHitPosP()->z;
+        sp18->x = i_this->mCyl.GetTgHitPosP()->x;
+        sp18->y = i_this->mCyl.GetTgHitPosP()->y;
+        sp18->z = i_this->mCyl.GetTgHitPosP()->z;
         dComIfGp_particle_set(dPa_name_ID_AK_JN_OK, sp18, &player->shape_angle);
         kanban_setPauseTimer(1);
-        a_this->current.angle.z = i_this->m2C4;
+        a_this->current.angle.z = i_this->mCutDir;
 
         fpc_ProcID fVar6 = kanban_createChild(fpcNm_KANBAN_e, fopAcM_GetID(a_this), parameters, &a_this->current.pos,
                                               fopAcM_GetRoomNo(a_this), &a_this->current.angle, &a_this->scale, 0, 0);
         if (fVar6 != fpcM_ERROR_PROCESS_ID_e) {
             fopAcM_seStart_nn(a_this, JA_SE_OBJ_BREAK_BOARD, 0);
-            i_this->m294 = uVar8 >> 0x14;
-            if (i_this->m2C4 == 1) {
-                i_this->m298 = 0;
-                if (i_this->m2C2 & 0x10) {
-                    i_this->m298 = 1;
+            i_this->mPartsMask = uVar8 >> 0x14;
+            if (i_this->mCutDir == 1) {
+                i_this->mWobbleStep = 0;
+                if (i_this->mCutFlags & 0x10) {
+                    i_this->mWobbleStep = 1;
                 }
-                a_this->current.pos.y = i_this->m2F8.y - 70.0f;
-                i_this->m2CC.y = 70.0f;
-                i_this->m2E8 = 140.0f;
-                i_this->m2A4 = 0.0f;
-                i_this->m2A8 = 0.0f;
-                i_this->m2C0 = 0xb;
+                a_this->current.pos.y = i_this->mHomePos.y - 70.0f;
+                i_this->mModelOffset.y = 70.0f;
+                i_this->mPivotY = 140.0f;
+                i_this->mCylHeight = 0.0f;
+                i_this->mCylRadius = 0.0f;
+                i_this->mAction = 0xb;
             }
-            if ((i_this->m2C2 & 5) == 5 || i_this->m2C4 == 4) {
-                i_this->m2A4 = 25.0f;
-                i_this->m2A8 = 10.0f;
+            if ((i_this->mCutFlags & 5) == 5 || i_this->mCutDir == 4) {
+                i_this->mCylHeight = 25.0f;
+                i_this->mCylRadius = 10.0f;
             }
         }
         a_this->current.angle.z = 0;
@@ -356,28 +356,28 @@ void cut_point_check(kanban_class* i_this) {
 /* 0218B00C */
 BOOL ret_keisan_move(kanban_class* i_this) {
     dComIfGp_get(); /* HD: unused fetch */
-    cLib_addCalc0(&i_this->m2A0, 1.0f, 2.0f);
-    f32 x = i_this->m2F8.x - i_this->actor.current.pos.x;
-    f32 y = i_this->m2F8.y - i_this->actor.current.pos.y;
-    f32 z = i_this->m2F8.z - i_this->actor.current.pos.z;
+    cLib_addCalc0(&i_this->mWaterSinkY, 1.0f, 2.0f);
+    f32 x = i_this->mHomePos.x - i_this->actor.current.pos.x;
+    f32 y = i_this->mHomePos.y - i_this->actor.current.pos.y;
+    f32 z = i_this->mHomePos.z - i_this->actor.current.pos.z;
     cLib_addCalcAngleS2(&i_this->actor.current.angle.y, cM_atan2s(x, z), 1, 0x1000);
     i_this->actor.shape_angle.x = i_this->actor.current.angle.x;
     i_this->actor.shape_angle.y = i_this->actor.current.angle.y;
     i_this->actor.shape_angle.z = i_this->actor.current.angle.z;
 
     if (std_sqrtf(y * y) > 2.0f) {
-        cLib_addCalc2(&i_this->actor.current.pos.y, i_this->m2F8.y, 1.0f, 10.0f);
+        cLib_addCalc2(&i_this->actor.current.pos.y, i_this->mHomePos.y, 1.0f, 10.0f);
         return FALSE;
     }
 
     if (std_sqrtf(gabi::fmadds(x, x, z * z)) < 2.0f) {
         i_this->actor.speedF = 0.0f;
-        i_this->actor.current.pos.copy(i_this->m2F8);
+        i_this->actor.current.pos.copy(i_this->mHomePos);
         return TRUE;
     }
 
-    cLib_addCalc2(&i_this->actor.current.pos.x, i_this->m2F8.x, 1.0f, 10.0f);
-    cLib_addCalc2(&i_this->actor.current.pos.z, i_this->m2F8.z, 1.0f, 10.0f);
+    cLib_addCalc2(&i_this->actor.current.pos.x, i_this->mHomePos.x, 1.0f, 10.0f);
+    cLib_addCalc2(&i_this->actor.current.pos.z, i_this->mHomePos.z, 1.0f, 10.0f);
     return FALSE;
 }
 
@@ -389,7 +389,7 @@ static BOOL daKanban_IsDelete(kanban_class*) {
 /* 0218C824 */
 static BOOL daKanban_Delete(kanban_class* i_this) {
     dComIfG_resDelete(&i_this->mPhase, "Kanban");
-    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->m514); /* HD: remove() is end() */
+    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->mRippleCb); /* HD: remove() is end() */
     l_msgId = 0xFFFFFFFF;
     return 1;
 }
@@ -402,22 +402,22 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     mDoMtx_stack_c::transS(i_this->actor.current.pos.x, i_this->actor.current.pos.y, i_this->actor.current.pos.z);
     mDoMtx_stack_c::YrotM(i_this->actor.shape_angle.y);
 
-    u32 uVar5 = i_this->m294;
+    u32 uVar5 = i_this->mPartsMask;
     for (s32 i = 0; i < 11; i++, uVar5 >>= 1) {
-        if (!i_this->m290 || (uVar5 & 1)) {
+        if (!i_this->mIsPart || (uVar5 & 1)) {
             J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Kanban", kanban_bdl[i], SAFESTRING_VTBL);
             if (modelData == nullptr) /* JUT_ASSERT(1926, modelData != NULL) */
-                JUT_ASSERT_fail("d_a_kanban.cpp", 0x786, "modelData != NULL");
+                JUT_ASSERT_fail("d_a_kanban.cpp", 0x786, "modelData != (0)");
 
             J3DModel* model = mDoExt_J3DModel__create(modelData, 0x80000, 0x11020002);
             if (model == nullptr) {
                 return FALSE;
             }
-            i_this->m544[i] = model;
+            i_this->mpModels[i] = model;
             J3DModel_setBaseScale(model, &i_this->actor.scale);
             J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
 
-            if (i == 9 || i_this->m290) {
+            if (i == 9 || i_this->mIsPart) {
                 i_this->actor.cullMtx = gabi::ea(J3DModel_getBaseTRMtx(model));
             }
         }
@@ -435,40 +435,40 @@ static cPhs_State daKanban_Create(fopAc_ac_c* a_this) {
         if (a_this != nullptr) {
             fopAc_ac_c_ct(a_this);
             a_this->__vtbl = KANBAN_VTBL;
-            dBgS_AcchCir_ct(&i_this->m310);
-            dBgS_ObjAcch_ct(&i_this->m350, OBJACCH_VT);
-            kanban_rippleCtor(&i_this->m514);
-            dCcD_Stts_ct(&i_this->m574);
-            dCcD_Cyl_ct(&i_this->m5B0, CYL_AAB_VTBL);
+            dBgS_AcchCir_ct(&i_this->mAcchCir);
+            dBgS_ObjAcch_ct(&i_this->mAcch, OBJACCH_VT);
+            kanban_rippleCtor(&i_this->mRippleCb);
+            dCcD_Stts_ct(&i_this->mStts);
+            dCcD_Cyl_ct(&i_this->mCyl, CYL_AAB_VTBL);
         }
         fopAcM_OnCondition(a_this, fopAcCnd_INIT_e);
     }
 
     cPhs_State ret = dComIfG_resLoad(&i_this->mPhase, "Kanban");
     if (ret == cPhs_COMPLEATE_e) {
-        i_this->m294 = fopAcM_GetParam(a_this) >> 0x14;
+        i_this->mPartsMask = fopAcM_GetParam(a_this) >> 0x14;
         a_this->shape_angle.x = a_this->current.angle.x;
         a_this->shape_angle.y = a_this->current.angle.y;
         a_this->shape_angle.z = a_this->current.angle.z;
-        i_this->m2D8.copy(a_this->current.pos);
-        i_this->m2F0.x = a_this->current.angle.x;
-        i_this->m2F0.y = a_this->current.angle.y;
-        i_this->m2F0.z = a_this->current.angle.z;
-        i_this->m2F8.copy(a_this->current.pos);
-        i_this->m290 = 1;
+        i_this->mCreatePos.copy(a_this->current.pos);
+        i_this->mHomeAngle.x = a_this->current.angle.x;
+        i_this->mHomeAngle.y = a_this->current.angle.y;
+        i_this->mHomeAngle.z = a_this->current.angle.z;
+        i_this->mHomePos.copy(a_this->current.pos);
+        i_this->mIsPart = 1;
 
-        if (i_this->m294 == 0) {
-            i_this->m290 = 0;
+        if (i_this->mPartsMask == 0) {
+            i_this->mIsPart = 0;
             kanban_setStatusMap(a_this, 0x38);
-            i_this->m2A4 = 105.0f;
-            i_this->m2A8 = 50.0f;
-            i_this->m294 = 1;
+            i_this->mCylHeight = 105.0f;
+            i_this->mCylRadius = 50.0f;
+            i_this->mPartsMask = 1;
             maxHeapSize = 0x3F40;
         } else {
-            i_this->m2C4 = a_this->current.angle.z;
+            i_this->mCutDir = a_this->current.angle.z;
             a_this->current.angle.z = 0;
             a_this->shape_angle.z = 0;
-            u32 idx = i_this->m294;
+            u32 idx = i_this->mPartsMask;
             for (s32 i = 0; i < 11; i++) {
                 if (idx & 1) {
                     maxHeapSize += kut_size_dt[i];
@@ -489,39 +489,39 @@ static cPhs_State daKanban_Create(fopAc_ac_c* a_this) {
         a_this->attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 6;
         a_this->attention_info.flags = fopAc_Attn_TALKFLAG_READ_e | fopAc_Attn_ACTION_SPEAK_e | fopAc_Attn_LOCKON_TALK_e;
 
-        i_this->m350.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &i_this->m310, &a_this->speed,
+        i_this->mAcch.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &i_this->mAcchCir, &a_this->speed,
                          &a_this->current.angle, &a_this->shape_angle);
-        i_this->m310.SetWall(20.0f, 30.0f);
-        i_this->m350.SetWaterCheckOffset(300.0f);
-        i_this->m574.Init(0xFF, 0, a_this);
-        i_this->m5B0.Set(reinterpret_cast<const dCcD_SrcCyl*>(&cyl_src));
-        i_this->m5B0.SetStts(&i_this->m574);
+        i_this->mAcchCir.SetWall(20.0f, 30.0f);
+        i_this->mAcch.SetWaterCheckOffset(300.0f);
+        i_this->mStts.Init(0xFF, 0, a_this);
+        i_this->mCyl.Set(reinterpret_cast<const dCcD_SrcCyl*>(&cyl_src));
+        i_this->mCyl.SetStts(&i_this->mStts);
 
-        if (i_this->m290) {
+        if (i_this->mIsPart) {
             u32 id = a_this->parentActorID; /* fopAcM_GetLinkId */
-            i_this->m2C8 = id;
+            i_this->mMotherId = id;
             if (id == 0xFFFFFFFF) {
                 return cPhs_ERROR_e;
             }
             kanban_class* ac = (kanban_class*)fopAcM_SearchByID(id);
             if (ac != nullptr) {
-                i_this->m2F8.copy(ac->m2F8);
-                i_this->m2F0.x = ac->m2F0.x;
-                i_this->m2F0.y = ac->m2F0.y;
-                i_this->m2F0.z = ac->m2F0.z;
-                a_this->current.pos.copy(i_this->m2F8);
-                a_this->current.pos.y = i_this->m2F8.y - 70.0f;
-                i_this->m2CC.y = 70.0f;
-                i_this->m2E8 = 140.0f;
-                i_this->m304.copy(i_this->m2CC);
-                i_this->m2BE = KANBAN_PARTS;
-                i_this->m2C0 = 0x6e;
+                i_this->mHomePos.copy(ac->mHomePos);
+                i_this->mHomeAngle.x = ac->mHomeAngle.x;
+                i_this->mHomeAngle.y = ac->mHomeAngle.y;
+                i_this->mHomeAngle.z = ac->mHomeAngle.z;
+                a_this->current.pos.copy(i_this->mHomePos);
+                a_this->current.pos.y = i_this->mHomePos.y - 70.0f;
+                i_this->mModelOffset.y = 70.0f;
+                i_this->mPivotY = 140.0f;
+                i_this->mCreateModelOffset.copy(i_this->mModelOffset);
+                i_this->mMode = KANBAN_PARTS;
+                i_this->mAction = 0x6e;
             } else {
                 return cPhs_ERROR_e;
             }
         } else {
-            i_this->m2BE = KANBAN_MOTHER;
-            i_this->m2C0 = 10;
+            i_this->mMode = KANBAN_MOTHER;
+            i_this->mAction = 10;
         }
     }
     return ret;
@@ -561,12 +561,12 @@ static void trivial_dt(void* p, s32 flags) {
 // HD: kanban_class deleting destructor (inline member destructors)
 static void kanban_class_dt(kanban_class* i_this, s32 flags) {
     if (i_this != nullptr) {
-        dCcD_Cyl_dt(&i_this->m5B0, 2);
-        dCcD_Stts_dt(&i_this->m574, 2);
-        static_cast<dBgS_GrpPassChk*>(&i_this->m350)->__vtbl = OBJACCH_VT.v20;
-        static_cast<dBgS_PolyPassChk*>(&i_this->m350)->__vtbl = OBJACCH_VT.v14;
-        kanban_acchDtor(&i_this->m350, 0);
-        kanban_circleDtor(&i_this->m310.m_cir, 2);
+        dCcD_Cyl_dt(&i_this->mCyl, 2);
+        dCcD_Stts_dt(&i_this->mStts, 2);
+        static_cast<dBgS_GrpPassChk*>(&i_this->mAcch)->__vtbl = OBJACCH_VT.v20;
+        static_cast<dBgS_PolyPassChk*>(&i_this->mAcch)->__vtbl = OBJACCH_VT.v14;
+        kanban_acchDtor(&i_this->mAcch, 0);
+        kanban_circleDtor(&i_this->mAcchCir.m_cir, 2);
         kanban_actorDtor(i_this, 0);
         if (flags & 1)
             operator_delete(i_this);
@@ -599,6 +599,6 @@ data pl_cut_no_dt 101B7CFC
 str 100125EC "Kanban" in 0218C824
 str 100125F4 "Kanban" in 0218C874
 str 100125FC "d_a_kanban.cpp" in 0218C874
-str 1001260C "modelData != NULL" in 0218C874
+str 1001260C "modelData != (0)" in 0218C874
 str 10012628 "Kanban" in 0218CA20
 */

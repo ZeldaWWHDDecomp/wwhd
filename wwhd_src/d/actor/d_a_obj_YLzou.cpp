@@ -103,7 +103,7 @@ void daObjYLzou_c::set_start_type() {
     s32 action_idx, triforce_complete = 0, demo_idx = DEMO_NONE;
     bool statue_moved = false;
     if (eventBit(EventFlagsHD::MASTER_SWORD_CUTSCENE) == 0) {
-        s32 sw = field_0x2E0;
+        s32 sw = mSwSaveNo;
         if (sw != 255) {
             SaveRootHD *sv = ylzouSave();
             s8 room = home.roomNo;
@@ -154,7 +154,7 @@ void daObjYLzou_c::set_start_type() {
             }
         }
     }
-    field_0x2E8 = triforce_complete;
+    mTriforceComplete = triforce_complete;
     mActionIdx = action_idx;
     mDemoIdx = demo_idx;
     SaveRootHD *sv = ylzouSave();
@@ -166,28 +166,28 @@ void daObjYLzou_c::set_start_type() {
 
 /* 023BDEE4 */
 void daObjYLzou_c::set_mtx() {
-    u16 angle = field_0x358;
+    u16 angle = mVibAngle;
     f32 y = current.pos.y;
-    f32 amplitude = field_0x35C;
+    f32 amplitude = mVibAmplitude;
     f32 sine = cM_ssin(angle);
     y = gabi::fmadds(sine, amplitude, y);
     f32 z = current.pos.z, x = current.pos.x;
     mDoMtx_stack_c::transS(x, y, z);
     s16 ry = shape_angle.y, rz = shape_angle.z, rx = shape_angle.x;
     ylzouXYZrotM(&ylzouMatrixStack, rx, ry, rz);
-    J3DModel *model = field_0x298;
+    J3DModel *model = mpModel;
     // HD: snapshot all twelve floats before the first model-matrix store.
     model->setBaseTRMtx(&ylzouMatrixStack);
     x = scale.x;
     z = scale.z;
     y = scale.y;
     mDoMtx_stack_c::scaleM(x, y, z);
-    PSMTXCopy(&ylzouMatrixStack, &field_0x2A0);
+    PSMTXCopy(&ylzouMatrixStack, &mMtx);
 }
 
 /* 023BDFE4 */
 void daObjYLzou_c::init_mtx() {
-    J3DModel *model = field_0x298;
+    J3DModel *model = mpModel;
     f32 y = scale.y, x = scale.x, z = scale.z;
     model->mBaseScale.x = x;
     model->mBaseScale.y = y;
@@ -200,7 +200,7 @@ static bool solidHeapCB(daObjYLzou_c *a) { return a->create_heap(); }
 
 /* 023BDD20 */
 bool daObjYLzou_c::create_heap() {
-    u32 which = field_0x2E8;
+    u32 which = mTriforceComplete;
     s32 idx = ylzouBdlTable[which];
     SafeString request;
     request.mTextPtr = gabi::guest_addr("YLzou");
@@ -213,20 +213,20 @@ bool daObjYLzou_c::create_heap() {
         return false;
     }
     J3DModel *model = mDoExt_J3DModel__create(model_data, 0x80000, 0x11000022);
-    field_0x298 = model;
+    mpModel = model;
     // HD: failed model creation returns before requesting collision data.
     if (!model)
         return false;
-    which = field_0x2E8;
+    which = mTriforceComplete;
     SafeString collisionName;
     collisionName.mTextPtr = gabi::guest_addr("YLzou");
     collisionName.__vtbl = gc_tu.safeString;
     idx = ylzouDzbTable[which];
     void *dzb = ylzouGetResource(ylzouResourceControl, &collisionName, idx);
-    model = field_0x298;
+    model = mpModel;
     dBgW *bgw = ylzouNewBgW(dzb, dBgW::MOVE_BG_e, model ? &model->mBaseTransformMtx : nullptr);
-    field_0x29C = bgw;
-    return field_0x298.get() != nullptr && bgw != nullptr;
+    mpBgW = bgw;
+    return mpModel.get() != nullptr && bgw != nullptr;
 }
 
 /* 023BE21C */
@@ -252,13 +252,13 @@ void daObjYLzou_c::eff_set_slip_smoke_pos() {
         z = ylzouSmokePositions.entries[i].z;
         mDoMtx_stack_c::transM(x, y, z);
         EffSmokeCB *cb = &mSmokeCbs[i];
-        cb->field_0x20.x = ylzouMatrixStack.m[0][3];
-        cb->field_0x20.y = ylzouMatrixStack.m[1][3];
-        cb->field_0x20.z = ylzouMatrixStack.m[2][3];
+        cb->mPos.x = ylzouMatrixStack.m[0][3];
+        cb->mPos.y = ylzouMatrixStack.m[1][3];
+        cb->mPos.z = ylzouMatrixStack.m[2][3];
         ry = current.angle.y;
-        cb->field_0x2C.x = 0;
-        cb->field_0x2C.y = ry;
-        cb->field_0x2C.z = 0;
+        cb->mAngle.x = 0;
+        cb->mAngle.y = ry;
+        cb->mAngle.z = 0;
         mDoMtx_stack_c::pop();
     }
 }
@@ -278,7 +278,7 @@ void daObjYLzou_c::eff_smoke_slip_start() {
         dComIfG_inf_c *game = ylzouPlay();
         dPa_control_c *control = game->play.mParticle;
         EmitterHD *emitter = reinterpret_cast<EmitterHD *>(control->set(
-            2, dPa_name::ID_AK_JT_ELEMENTSMOKE00, &cb->field_0x20, &cb->field_0x2C, &ylzouSmokeScale, 0xB9,
+            2, dPa_name::ID_AK_JT_ELEMENTSMOKE00, &cb->mPos, &cb->mAngle, &ylzouSmokeScale, 0xB9,
             reinterpret_cast<dPa_levelEcallBack *>(cb), room, nullptr, nullptr, nullptr));
         if (emitter) {
             emitter->mDirectionalSpeed = 15;
@@ -304,27 +304,27 @@ void daObjYLzou_c::eff_smoke_slip_remove() {
 /* 023BE4B4 */
 void daObjYLzou_c::eff_smoke_proc() {
     // HD: both smoke flags are tested for nonzero, rather than GameCube's equality to one.
-    u8 requested = field_0x361, previous = field_0x360;
+    u8 requested = mSmokeReq, previous = mSmokeState;
     if (previous != requested) {
         if (requested)
             eff_smoke_slip_start();
         else
             eff_smoke_slip_end();
-        field_0x360 = field_0x361;
+        mSmokeState = mSmokeReq;
     } else if (previous)
         eff_set_slip_smoke_pos();
 }
 
 /* 023BE548 */
 void daObjYLzou_c::vib_proc() {
-    u32 previous = field_0x364, requested = field_0x368;
-    s16 angle = field_0x358;
+    u32 previous = mVibState, requested = mVibReq;
+    s16 angle = mVibAngle;
     if (previous != requested) {
         previous = requested;
-        field_0x364 = previous;
+        mVibState = previous;
     }
-    field_0x358 = s16(u16(angle) + 0x4000);
-    f32 height = field_0x35C;
+    mVibAngle = s16(u16(angle) + 0x4000);
+    f32 height = mVibAmplitude;
     if (previous == 1) {
         height += 0.05f;
         if (height > 0.8f)
@@ -338,7 +338,7 @@ void daObjYLzou_c::vib_proc() {
         if (height < 0)
             height = 0;
     }
-    field_0x35C = height;
+    mVibAmplitude = height;
 }
 
 /* 023BE004 */
@@ -354,20 +354,20 @@ s32 daObjYLzou_c::_create() {
         actor_condition = flags | fopAcCnd_INIT_e;
     }
     if (mInitState == 0) {
-        field_0x2E0 = daObjPrmAbstractHD(this, PARAM_SWSAVE_W, PARAM_SWSAVE_S);
+        mSwSaveNo = daObjPrmAbstractHD(this, PARAM_SWSAVE_W, PARAM_SWSAVE_S);
         set_start_type();
     }
-    s32 phase = dComIfG_resLoad(&field_0x290, "YLzou");
+    s32 phase = dComIfG_resLoad(&mPhs, "YLzou");
     if (phase == cPhs_COMPLEATE_e) {
-        u32 idx = field_0x2E8;
+        u32 idx = mTriforceComplete;
         u32 heapSize = ylzouSolidHeapSizeTable[idx];
         if (fopAcM_entrySolidHeap(this, reinterpret_cast<BOOL (*)(fopAc_ac_c *)>(solidHeapCB), heapSize)) {
             dComIfG_inf_c *p = ylzouPlay();
-            dBgW *bg = field_0x29C;
+            dBgW *bg = mpBgW;
             if (ylzouRegistBg(&p->play.mBgS, bg, this))
                 phase = cPhs_ERROR_e;
             else {
-                J3DModel *model = field_0x298;
+                J3DModel *model = mpModel;
                 s32 idx = mActionIdx;
                 cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
                 setup_action(idx);
@@ -381,17 +381,17 @@ s32 daObjYLzou_c::_create() {
 
 /* 023BE198 */
 bool daObjYLzou_c::_delete() {
-    dComIfG_resDelete(&field_0x290, "YLzou");
+    dComIfG_resDelete(&mPhs, "YLzou");
     eff_smoke_slip_remove();
     if (heap) {
-        dBgW *bg = field_0x29C;
+        dBgW *bg = mpBgW;
         if (bg) {
             if (bg->ChkUsed()) {
                 dComIfG_inf_c *p = ylzouPlay();
-                bg = field_0x29C;
+                bg = mpBgW;
                 ylzouReleaseBg(&p->play.mBgS, bg);
             }
-            field_0x29C = nullptr;
+            mpBgW = nullptr;
         }
     }
     return true;
@@ -399,7 +399,7 @@ bool daObjYLzou_c::_delete() {
 
 /* 023BEA30 */
 void daObjYLzou_c::move_ylzou_demo_start_wait_act_proc() {
-    s32 sw = field_0x2E0;
+    s32 sw = mSwSaveNo;
     if (sw != 255) {
         s8 room = home.roomNo;
         SaveRootHD *sv = ylzouSave();
@@ -410,7 +410,7 @@ void daObjYLzou_c::move_ylzou_demo_start_wait_act_proc() {
 
 /* 023BEA90 */
 void daObjYLzou_c::demo_regist_wait_act_proc() {
-    s16 idx = field_0x2E4;
+    s16 idx = mEventIdx;
     if (idx != -1) {
         if (eventInfo.mCommand == dEvtCmd_INDEMO_e)
             setup_action(u32(mActionIdx) + 1);
@@ -419,13 +419,13 @@ void daObjYLzou_c::demo_regist_wait_act_proc() {
     } else {
         const char *name = ylzouDemoNames.entries[u32(mDemoIdx)];
         dComIfG_inf_c *p = ylzouPlay();
-        field_0x2E4 = ylzouGetEventIdx(&p->play.mEvtManager, name, 255);
+        mEventIdx = ylzouGetEventIdx(&p->play.mEvtManager, name, 255);
     }
 }
 
 /* 023BEB5C */
 void daObjYLzou_c::demo_vib_start_wait_act_proc() {
-    s16 event = field_0x2E4;
+    s16 event = mEventIdx;
     dComIfG_inf_c *p = ylzouPlay();
     void *data = ylzouGetEventData(&p->play.mEvtManager, event);
     if (data) {
@@ -442,7 +442,7 @@ void daObjYLzou_c::demo_vib_start_wait_act_proc() {
 
 /* 023BEC20 */
 void daObjYLzou_c::demo_vib_act_proc() {
-    s16 event = field_0x2E4;
+    s16 event = mEventIdx;
     dComIfG_inf_c *p = ylzouPlay();
     void *data = ylzouGetEventData(&p->play.mEvtManager, event);
     if (data) {
@@ -494,7 +494,7 @@ void daObjYLzou_c::go_up_stairs_demo_move_act_proc() {
 
 /* 023BEE90 */
 void daObjYLzou_c::demo_end_wait_act_proc() {
-    s16 event = field_0x2E4;
+    s16 event = mEventIdx;
     dComIfG_inf_c *p = ylzouPlay();
     if (ylzouEventEndCheck(&p->play.mEvtManager, event)) {
         p = ylzouPlay();
@@ -515,7 +515,7 @@ void daObjYLzou_c::wait_act_proc() {}
 
 /* 023BE720 */
 void daObjYLzou_c::move_ylzou_demo_start_wait_act_init_proc() {
-    field_0x2E4 = -1;
+    mEventIdx = -1;
     current.pos.z = 0;
     home.pos.y = 0;
     current.pos.y = 0;
@@ -537,7 +537,7 @@ void daObjYLzou_c::demo_regist_wait_act_init_proc() {
     const char *name = ylzouDemoNames.entries[u32(demo)];
     dComIfG_inf_c *p = ylzouPlay();
     s32 idx = ylzouGetEventIdx(&p->play.mEvtManager, name, 255);
-    field_0x2E4 = idx;
+    mEventIdx = idx;
     ylzouOrderEvent(this, idx, 255, 65535, 0, 1);
 }
 
@@ -549,20 +549,20 @@ void daObjYLzou_c::move_ylzou_demo_vib_start_wait_act_init_proc() {
 /* 023BE800 */
 void daObjYLzou_c::move_ylzou_demo_vib_act_init_proc() {
     quake();
-    field_0x368 = 1;
+    mVibReq = 1;
 }
 
 /* 023BE864 */
 void daObjYLzou_c::move_ylzou_demo_move_act_init_proc() {
-    field_0x361 = 1;
-    field_0x368 = 2;
+    mSmokeReq = 1;
+    mVibReq = 2;
     current.angle.y = -32768;
 }
 
 /* 023BE880 */
 void daObjYLzou_c::demo_end_wait_act_init_proc() {
     s32 demo = mDemoIdx;
-    field_0x361 = 0;
+    mSmokeReq = 0;
     speedF = 0;
     if (demo != DEMO_GO_UP_STAIRS2) {
         dComIfG_inf_c *p = ylzouPlay();
@@ -574,7 +574,7 @@ void daObjYLzou_c::demo_end_wait_act_init_proc() {
         axis.y = 1;
         ylzouStartShock(&p->play.mVibration, 8, 1, &axis);
     }
-    field_0x368 = 0;
+    mVibReq = 0;
 }
 
 /* 023BE928 */
@@ -607,13 +607,13 @@ void daObjYLzou_c::go_up_stairs_demo_move_start_wait_act_init_proc() {
     home.pos.z = 0;
     current.pos.z = -680;
     quake();
-    field_0x368 = 1;
+    mVibReq = 1;
 }
 
 /* 023BE9F8 */
 void daObjYLzou_c::go_up_stairs_demo_move_act_init_proc() {
-    field_0x361 = 1;
-    field_0x368 = 2;
+    mSmokeReq = 1;
+    mVibReq = 2;
 }
 
 /* 023BDE2C */
@@ -631,7 +631,7 @@ void daObjYLzou_c::setup_action(s32 idx) {
 bool daObjYLzou_c::_execute() {
     fopAcM_posMoveF(this, nullptr);
     set_mtx();
-    dBgW *bg = field_0x29C;
+    dBgW *bg = mpBgW;
     if (bg && bg->ChkUsed())
         bg->Move();
     (this->*mCurrentActProc.fn)();
@@ -645,9 +645,9 @@ bool daObjYLzou_c::_draw() {
     dScnKy_env_light_c *env = dKy_getEnvlight();
     ylzouSettingTev(env, 1, &current.pos, &tevStr);
     env = dKy_getEnvlight();
-    J3DModel *model = field_0x298;
+    J3DModel *model = mpModel;
     ylzouSetLightTev(env, model, &tevStr);
-    model = field_0x298;
+    model = mpModel;
     mDoExt_modelUpdateDL(model, 0);
     return true;
 }

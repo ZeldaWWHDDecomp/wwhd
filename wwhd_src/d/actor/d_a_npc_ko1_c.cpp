@@ -121,17 +121,17 @@ u32 daNpc_Ko1_c::setAnm_tex(s8 i_btpNum) {
 
 /* 02276B9C */
 BOOL daNpc_Ko1_c::setAnm_anm(anm_prm_c* i_prm) {
-    if (mAnimationNum == i_prm->mAnmNum) {
+    if (mAnmNum == i_prm->mAnmNum) {
         return TRUE;
     }
     s8 anmNum = i_prm->mAnmNum;
-    mAnimationNum = anmNum;
+    mAnmNum = anmNum;
     s32 resID = anmNum_toResID(anmNum);
     dNpc_setAnmIDRes(mpMorf, i_prm->mLoopMode, i_prm->mMorf, i_prm->mSpeed, resID, -1, "Ko");
-    resID = headAnmNum_toResID(mAnimationNum);
+    resID = headAnmNum_toResID(mAnmNum);
     dNpc_setAnmIDRes(mpHeadMorf, i_prm->mLoopMode, i_prm->mMorf, i_prm->mSpeed, resID, -1, "Ko");
     mAnimationEnded = 0;
-    mAnimationFrame = 0.0f;
+    mPrevMorfFrame = 0.0f;
     mAnimationState = 0;
     return TRUE;
 }
@@ -179,15 +179,15 @@ bool daNpc_Ko1_c::setAnm() {
 
 /* 02276E08 */
 void daNpc_Ko1_c::chg_anmTag() {
-    if (mAnimationTag == 10) {
+    if (mMesgAnimeTag == 10) {
         setAnm_NUM(4, 1);
     }
 }
 
 /* 02276E90 */
 void daNpc_Ko1_c::control_anmTag() {
-    if (mAnimationTag == 10 && mAnimationEnded != 0) {
-        mAnimationTag = 0xFF;
+    if (mMesgAnimeTag == 10 && mAnimationEnded != 0) {
+        mMesgAnimeTag = 0xFF;
         setAnm_ATR(1);
     }
 }
@@ -196,17 +196,17 @@ void daNpc_Ko1_c::control_anmTag() {
 void daNpc_Ko1_c::chg_anmAtr(u8 i_atr) {
     u32 msgNo = mPartnerMsgNo;
     if (msgNo != 0xFFFFFFFF && (msgNo == 0xB03 || msgNo == 0xB0A || (msgNo >= 0xB64 && msgNo <= 0xB65))) {
-        mbMoving = 0;
-        mLookTarget = 1;
+        mHeadOnlyFollow = 0;
+        mLookBackState = 1;
         m_jnt.mbTrn = 1;
     }
-    if (i_atr >= 0xD || i_atr == mAnimationSelector) {
+    if (i_atr >= 0xD || i_atr == mAnmAtrNo) {
         return;
     }
-    mAnimationSelector = i_atr;
+    mAnmAtrNo = i_atr;
     if (i_atr == 0xB) {
-        mbMoving = 0;
-        mLookTarget = 1;
+        mHeadOnlyFollow = 0;
+        mLookBackState = 1;
         m_jnt.mbTrn = 1;
     }
     setAnm_ATR(1);
@@ -214,8 +214,8 @@ void daNpc_Ko1_c::chg_anmAtr(u8 i_atr) {
 
 /* 02276F30 */
 void daNpc_Ko1_c::control_anmAtr() {
-    if (mAnimationSelector == 0xB && mAnimationEnded != 0) {
-        mAnimationSelector = 0;
+    if (mAnmAtrNo == 0xB && mAnimationEnded != 0) {
+        mAnmAtrNo = 0;
         setAnm_NUM(0, 1);
     }
 }
@@ -223,9 +223,9 @@ void daNpc_Ko1_c::control_anmAtr() {
 /* 02276E20 */
 void daNpc_Ko1_c::setAnm_ATR(s32 i_setTex) {
     if (i_setTex != 0) {
-        setAnm_tex((&a_atr_anm_prm_tbl[mAnimationSelector])->mBtpNum);
+        setAnm_tex((&a_atr_anm_prm_tbl[mAnmAtrNo])->mBtpNum);
     }
-    setAnm_anm((&a_atr_anm_prm_tbl[mAnimationSelector]));
+    setAnm_anm((&a_atr_anm_prm_tbl[mAnmAtrNo]));
 }
 
 /* 02276F58 */
@@ -244,14 +244,14 @@ void daNpc_Ko1_c::anmAtr(u16 i_msgStatus) {
         switch (i_msgStatus) {
         case 6: {
             if (mbMessageTagsStarted == 0) {
-                mAnimationSelector = 0xFF;
+                mAnmAtrNo = 0xFF;
                 chg_anmAtr(dComIfGp_getMesgAnimeAttrInfo());
                 mbMessageTagsStarted = mbMessageTagsStarted + 1;
             }
             u8 tag = dComIfGp_getMesgAnimeTagInfo();
             dComIfGp_clearMesgAnimeTagInfo();
-            if (tag != 0xFF && mAnimationTag != tag) {
-                mAnimationTag = tag;
+            if (tag != 0xFF && mMesgAnimeTag != tag) {
+                mMesgAnimeTag = tag;
                 chg_anmTag();
             }
             break;
@@ -329,7 +329,7 @@ bool daNpc_Ko1_c::chk_manzai_1() {
 
 /* 0227732C */
 u8 daNpc_Ko1_c::chk_partsNotMove() {
-    return mHeadAngleY == m_jnt.mAngles[0][1] && mBodyAngleY == m_jnt.mAngles[1][1] && mActorAngleY == current.angle.y;
+    return mJointHeadY == m_jnt.mAngles[0][1] && mJointBackboneY == m_jnt.mAngles[1][1] && mActorAngleY == current.angle.y;
 }
 
 /* 02277394 */
@@ -601,7 +601,7 @@ void daNpc_Ko1_c::setPrtcl_Hamon(f32 i_scale, f32 i_rate) {
 /* 02277FE8 */
 void daNpc_Ko1_c::setPrtcl_HanaPachi() {
     J3DModel* model = mpBalloonMorf->getModel();
-    PSMTXCopy(model->getAnmMtx(mBalloonJoint), mDoMtx_stack_c::get());
+    PSMTXCopy(model->getAnmMtx(m_bln_jnt_num), mDoMtx_stack_c::get());
     Mtx34* stk = mDoMtx_stack_c::get();
     gabi::Local<cXyz> pos;
     pos->y = stk->m[1][3];

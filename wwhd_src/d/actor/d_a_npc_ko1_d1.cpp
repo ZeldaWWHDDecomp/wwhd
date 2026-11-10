@@ -24,37 +24,37 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
     case STATUS_WAIT_5_ALT:
     case STATUS_WAIT_A:
         if (status == STATUS_WAIT_1) {
-            mWaitTimer = (s16)gabi::ftoi(cM_rndF(90.0f) + 90.0f);
+            mSttTimer = (s16)gabi::ftoi(cM_rndF(90.0f) + 90.0f);
         } else if (status == STATUS_WAIT_2) {
             mBalloonTimer = (s16)((Ko1_counter().mCounter0 & 3) + 1);
         }
         if (oldStatus != STATUS_TALK) {
             m_jnt.mbTrn = 1;
-            mTurnAngle = mInitialAngle.y;
-            mLookTarget = 3;
-            mbMoving = 0;
+            mDesiredYRot = mInitialAngle.y;
+            mLookBackState = 3;
+            mHeadOnlyFollow = 0;
         }
-        mLookMode = 0;
+        mOrderEvent = 0;
         mMoveMode = 0;
         Ko1_clrSpd(this);
         Ko1_setAnm(this);
         break;
     case STATUS_TALK:
-        mLookTarget = 1;
-        mbMoving = 0;
-        mLookMode = 0;
+        mLookBackState = 1;
+        mHeadOnlyFollow = 0;
+        mOrderEvent = 0;
         m_jnt.mbTrn = 1;
         mMoveMode = 0;
         Ko1_clrSpd(this);
-        mAnimationSelector = 0xFF;
-        mHeadAnimationSelector = 0xFF;
+        mAnmAtrNo = 0xFF;
+        mMesgAnimeTag = 0xFF;
         mResumeStatus = oldStatus;
         Ko1_setAnm(this);
         break;
     case STATUS_WALK_1:
     case STATUS_WALK_3: {
         if (status == STATUS_WALK_1) {
-            mWaitTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
+            mSttTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
         } else if (status == STATUS_WALK_3) {
             if (mSavedPath != 0) {
                 mPathRun.setInfDrct(Ko1_savedPath(mSavedPath));
@@ -65,22 +65,22 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
         gabi::Local<cXyz> pnt;
         mPathRun.getPoint(pnt, mPathRun.mIdx);
         mTargetPos.copy(*pnt);
-        mLookTarget = 0;
-        mbMoving = 1;
-        mLookMode = 0;
+        mLookBackState = 0;
+        mHeadOnlyFollow = 1;
+        mOrderEvent = 0;
         mMoveMode = 1;
         mbMoveFinished = 0;
         gravity = -4.5f;
         mMoveSpeed = Ko1_hioChildren()[mType].mWalkSpeed;
         mMoveAcceleration = Ko1_hioChildren()[mType].mWalkAcceleration;
-        mTurnRate = Ko1_hioChildren()[mType].mWalkTurnRate;
+        mPassDist = Ko1_hioChildren()[mType].mWalkPassDist;
         Ko1_setAnm(this);
         break;
     }
     case STATUS_WAIT_3:
-        mLookTarget = 0;
-        mbMoving = 0;
-        mLookMode = 0;
+        mLookBackState = 0;
+        mHeadOnlyFollow = 0;
+        mOrderEvent = 0;
         mMoveMode = 0;
         Ko1_clrSpd(this);
         Ko1_setAnm(this);
@@ -94,15 +94,15 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
         }
         fopAc_ac_c* player = dComIfGp_getLinkPlayer();
         mTargetPos.copy(player->current.pos);
-        mLookTarget = 1;
-        mbMoving = 1;
-        mLookMode = 0;
+        mLookBackState = 1;
+        mHeadOnlyFollow = 1;
+        mOrderEvent = 0;
         mMoveMode = 2;
         mbMoveFinished = 0;
         gravity = -4.5f;
         mMoveSpeed = Ko1_hioChildren()[mType].mRunSpeed;
         mMoveAcceleration = Ko1_hioChildren()[mType].mRunAcceleration;
-        mTurnRate = Ko1_hioChildren()[mType].mRunTurnRate;
+        mPassDist = Ko1_hioChildren()[mType].mRunPassDist;
         Ko1_setAnm(this);
         break;
     }
@@ -113,18 +113,18 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
         }
         fopAc_ac_c* player = dComIfGp_getLinkPlayer();
         mTargetPos.copy(player->current.pos);
-        mLookTarget = 1;
-        mbMoving = 1;
+        mLookBackState = 1;
+        mHeadOnlyFollow = 1;
         mVerticalSpeed = -4.0f;
         mMoveAcceleration = 0.0f;
         mMoveSpeed = 0.0f;
-        mLookMode = 0;
+        mOrderEvent = 0;
         mMoveMode = 3;
         mbMoveFinished = 0;
         speed.y = -4.0f;
         speedF = 0.0f;
         gravity = 0.0f;
-        mTurnRate = Ko1_hioChildren()[mType].mSwimTurnRate;
+        mPassDist = Ko1_hioChildren()[mType].mSwimPassDist;
         Ko1_setAnm(this);
         break;
     }
@@ -137,9 +137,9 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
         gabi::Local<cXyz> pnt;
         mPathRun.getPoint(pnt, mPathRun.mIdx);
         mTargetPos.copy(*pnt);
-        mLookTarget = 0;
-        mbMoving = 1;
-        mLookMode = 0;
+        mLookBackState = 0;
+        mHeadOnlyFollow = 1;
+        mOrderEvent = 0;
         mMoveMode = 3;
         speed.y = -4.0f;
         mVerticalSpeed = -4.0f;
@@ -148,7 +148,7 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
         gravity = 0.0f;
         mbMoveFinished = 0;
         mMoveSpeed = 0.0f;
-        mTurnRate = Ko1_hioChildren()[mType].mSwimTurnRate;
+        mPassDist = Ko1_hioChildren()[mType].mSwimPassDist;
         Ko1_setAnm(this);
         break;
     }
@@ -156,24 +156,24 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
     case STATUS_DOWN_2:
     case STATUS_DOWN_3:
     case STATUS_DOWN_ALT:
-        mLookTarget = 0;
-        mbMoving = 0;
+        mLookBackState = 0;
+        mHeadOnlyFollow = 0;
         speed.y = 10.0f;
-        mLookMode = 0;
+        mOrderEvent = 0;
         mPreviousMoveMode = mMoveMode;
         mMoveMode = 4;
         speedF = -3.0f;
         gravity = -1.6f;
-        mbJumping = 1;
+        mPreviousGroundHit = 1;
         mMoveAcceleration = 0.1f;
         Ko1_setAnm(this);
         break;
     case STATUS_WAIT_4:
     case STATUS_WAIT_6:
     case STATUS_WAIT_9:
-        mLookTarget = 1;
-        mbMoving = 0;
-        mLookMode = 0;
+        mLookBackState = 1;
+        mHeadOnlyFollow = 0;
+        mOrderEvent = 0;
         mMoveMode = 0;
         Ko1_clrSpd(this);
         Ko1_setAnm(this);
@@ -182,59 +182,59 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
     case STATUS_WALK_2_ALT:
         mTargetPos.copy(mInitialPos);
         gravity = -4.5f;
-        mLookTarget = 0;
-        mbMoving = 1;
-        mLookMode = 0;
+        mLookBackState = 0;
+        mHeadOnlyFollow = 1;
+        mOrderEvent = 0;
         mMoveMode = 1;
         mbMoveFinished = 0;
         mMoveSpeed = Ko1_hioChildren()[mType].mWalkSpeed;
         mMoveAcceleration = Ko1_hioChildren()[mType].mWalkAcceleration;
-        mTurnRate = Ko1_hioChildren()[mType].mWalkTurnRate;
+        mPassDist = Ko1_hioChildren()[mType].mWalkPassDist;
         Ko1_setAnm(this);
         break;
     case STATUS_ATTACK_3:
         if (actor == nullptr)
             JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0xA77, "a_partner != (0)");
         mTargetPos.copy(actor->current.pos);
-        mLookTarget = 2;
+        mLookBackState = 2;
         mLookPos.copy(actor->current.pos);
         mLookPos.y = actor->eyePos.y;
-        mbMoving = 1;
-        mLookMode = 0;
+        mHeadOnlyFollow = 1;
+        mOrderEvent = 0;
         mMoveMode = 2;
         mbMoveFinished = 0;
         gravity = -4.5f;
         mMoveSpeed = Ko1_hioChildren()[mType].mRunSpeed;
         mMoveAcceleration = Ko1_hioChildren()[mType].mRunAcceleration;
-        mTurnRate = Ko1_hioChildren()[mType].mRunTurnRate;
+        mPassDist = Ko1_hioChildren()[mType].mRunPassDist;
         Ko1_setAnm(this);
         break;
     case STATUS_WAIT_7:
         if (actor != nullptr) {
-            mLookTarget = 2;
+            mLookBackState = 2;
             mLookPos.copy(actor->current.pos);
             mLookPos.y = actor->eyePos.y;
-            mbMoving = 0;
-            mLookMode = 0;
+            mHeadOnlyFollow = 0;
+            mOrderEvent = 0;
             mMoveMode = 0;
         } else {
-            mLookTarget = 0;
-            mbMoving = 0;
-            mLookMode = 0;
+            mLookBackState = 0;
+            mHeadOnlyFollow = 0;
+            mOrderEvent = 0;
             mMoveMode = 0;
         }
         Ko1_clrSpd(this);
         Ko1_setAnm(this);
         break;
     case STATUS_MANZAI:
-        mAnimationSelector = 0xFF;
-        mHeadAnimationSelector = 0xFF;
+        mAnmAtrNo = 0xFF;
+        mMesgAnimeTag = 0xFF;
         mResumeStatus = oldStatus;
         Ko1_setAnm(this);
         break;
     case STATUS_SLEEP_1:
     case STATUS_SLEEP_2:
-        mWaitTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
+        mSttTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
         mBalloonTimer = (s16)Ko1_getRndValue(3, 10);
         mSleepState = 0;
         Ko1_setAnm(this);
@@ -247,22 +247,22 @@ void daNpc_Ko1_c::setStt(s8 i_status) {
 
 /* 0227896C */
 BOOL daNpc_Ko1_c::wait_1() {
-    if (mTalkFlag != 0) {
+    if (mTalking != 0) {
         if (Ko1_chk_talk(this)) {
             setStt(STATUS_TALK);
         }
         return TRUE;
     }
-    mTurnAngle = mInitialAngle.y;
-    mLookMode = 2;
-    mLookTarget = 3;
-    if (mAnimationNum == 6) {
+    mDesiredYRot = mInitialAngle.y;
+    mOrderEvent = 2;
+    mLookBackState = 3;
+    if (mAnmNum == 6) {
         if ((s8)mAnimationEnded != 0) {
             Ko1_calcTimer(&mBalloonTimer);
         }
         if (mBalloonTimer == 0 || mAttention != 0) {
             mBalloonTimer = (s16)((Ko1_counter().mCounter0 & 3) + 1);
-            mWaitTimer = (s16)gabi::ftoi(cM_rndF(90.0f) + 90.0f);
+            mSttTimer = (s16)gabi::ftoi(cM_rndF(90.0f) + 90.0f);
             Ko1_setAnm_NUM(this, 0, 1);
         }
     } else {
@@ -270,10 +270,10 @@ BOOL daNpc_Ko1_c::wait_1() {
             mTalkWaitTimer = 0x3C;
         }
         if (Ko1_calcTimer(&mTalkWaitTimer)) {
-            mLookTarget = 1;
+            mLookBackState = 1;
             return TRUE;
         }
-        if (!Ko1_calcTimer(&mWaitTimer)) {
+        if (!Ko1_calcTimer(&mSttTimer)) {
             Ko1_setAnm_NUM(this, 6, 1);
         }
         m_jnt.mbTrn = 1;
@@ -285,7 +285,7 @@ BOOL daNpc_Ko1_c::wait_1() {
 BOOL daNpc_Ko1_c::wait_2() {
     if ((s8)mAnimationEnded != 0) {
         Ko1_calcTimer(&mBalloonTimer);
-        if (mBalloonTimer == 0 || mAttention != 0 || mTalkFlag != 0) {
+        if (mBalloonTimer == 0 || mAttention != 0 || mTalking != 0) {
             setStt(STATUS_WAIT_1);
         }
     }
@@ -302,7 +302,7 @@ BOOL daNpc_Ko1_c::wait_3() {
 
 /* 02278B84 */
 BOOL daNpc_Ko1_c::wait_4() {
-    if (mTalkFlag != 0) {
+    if (mTalking != 0) {
         if (Ko1_chk_talk(this)) {
             setStt(STATUS_TALK);
         }
@@ -315,7 +315,7 @@ BOOL daNpc_Ko1_c::wait_4() {
     gabi::Local<cXyz> pos;
     pos->set(current.pos);
     if (Ko1_chk_areaIn(this, Ko1_hioChildren()[mType].mWaitAreaRadius, pos)) {
-        mLookMode = 2;
+        mOrderEvent = 2;
         return TRUE;
     }
     gabi::Local<cXyz> pos2;
@@ -333,9 +333,9 @@ BOOL daNpc_Ko1_c::wait_5(s8 i_nextStatus) {
     if (mTalkState == 1) {
         mTalkState = 2;
         setStt(STATUS_MANZAI);
-        mLookTarget = 1;
-        mbMoving = 0;
-        mLookMode = 0;
+        mLookBackState = 1;
+        mHeadOnlyFollow = 0;
+        mOrderEvent = 0;
         mMoveMode = 0;
         Ko1_clrSpd(this);
         return TRUE;
@@ -350,7 +350,7 @@ BOOL daNpc_Ko1_c::wait_5(s8 i_nextStatus) {
 
 /* 02278D7C */
 BOOL daNpc_Ko1_c::wait_6() {
-    if (mTalkFlag != 0) {
+    if (mTalking != 0) {
         if (Ko1_chk_talk(this) && Ko1_chk_manzai_1(this)) {
             setStt(STATUS_TALK);
         }
@@ -364,7 +364,7 @@ BOOL daNpc_Ko1_c::wait_6() {
     gabi::Local<cXyz> pos;
     pos->set(current.pos);
     if (Ko1_chk_areaIn(this, Ko1_hioChildren()[mType].mWaitAreaRadius, pos)) {
-        mLookMode = 2;
+        mOrderEvent = 2;
         return TRUE;
     }
     gabi::Local<cXyz> pos2;
@@ -382,7 +382,7 @@ BOOL daNpc_Ko1_c::wait_7() {
     fopAc_ac_c* actor = Ko1_searchByID(this, mPartnerId);
     if (actor == nullptr)
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0xB6F, "a_partner != (0)");
-    if (mTalkFlag != 0) {
+    if (mTalking != 0) {
         if (Ko1_chk_talk(this) && Ko1_chk_manzai_1(this)) {
             setStt(STATUS_TALK);
         }
@@ -391,9 +391,9 @@ BOOL daNpc_Ko1_c::wait_7() {
     if (mTalkState == 1) {
         mTalkState = 2;
         setStt(STATUS_MANZAI);
-        mLookTarget = 1;
-        mbMoving = 0;
-        mLookMode = 0;
+        mLookBackState = 1;
+        mHeadOnlyFollow = 0;
+        mOrderEvent = 0;
         mMoveMode = 0;
         Ko1_clrSpd(this);
         return TRUE;
@@ -401,9 +401,9 @@ BOOL daNpc_Ko1_c::wait_7() {
     gabi::Local<cXyz> pos;
     pos->set(current.pos);
     if (Ko1_chk_areaIn(this, Ko1_hioChildren()[mType].mWaitAreaRadius, pos)) {
-        mLookTarget = 1;
+        mLookBackState = 1;
     } else {
-        mLookTarget = 2;
+        mLookBackState = 2;
         mLookPos.copy(actor->current.pos);
         mLookPos.y = actor->eyePos.y;
     }
@@ -415,7 +415,7 @@ BOOL daNpc_Ko1_c::wait_7() {
     xz->z = pos->z;
     f32 dist = std_sqrtf(PSVECSquareMag(xz));
     if (dist < Ko1_hioChildren()[mType].mWaitAreaRadius) {
-        mLookMode = 2;
+        mOrderEvent = 2;
     } else {
         setStt(STATUS_ATTACK_3);
     }
@@ -424,7 +424,7 @@ BOOL daNpc_Ko1_c::wait_7() {
 
 /* 022790E4 */
 BOOL daNpc_Ko1_c::wait_9() {
-    if (mTalkFlag != 0) {
+    if (mTalking != 0) {
         if (Ko1_chk_talk(this)) {
             setStt(STATUS_TALK);
         }
@@ -433,7 +433,7 @@ BOOL daNpc_Ko1_c::wait_9() {
     gabi::Local<cXyz> pos;
     pos->set(current.pos);
     if (Ko1_chk_areaIn(this, Ko1_hioChildren()[mType].mWaitAreaRadius, pos)) {
-        mLookMode = 2;
+        mOrderEvent = 2;
         return TRUE;
     }
     gabi::Local<cXyz> pos2;
@@ -451,7 +451,7 @@ BOOL daNpc_Ko1_c::wait_a() {
     fopAc_ac_c* actor = Ko1_searchByID(this, mPartnerId);
     if (actor == nullptr)
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0xBC7, "a_partner != (0)");
-    if (mTalkFlag != 0) {
+    if (mTalking != 0) {
         if (Ko1_chk_talk(this) && Ko1_chk_manzai_1(this)) {
             setStt(STATUS_TALK);
         }
@@ -462,16 +462,16 @@ BOOL daNpc_Ko1_c::wait_a() {
         setStt(STATUS_MANZAI);
         return TRUE;
     }
-    mLookMode = 2;
+    mOrderEvent = 2;
     if (mAttention != 0) {
         mTalkWaitTimer = 0x3C;
     }
     if (Ko1_calcTimer(&mTalkWaitTimer)) {
-        mLookTarget = 1;
+        mLookBackState = 1;
         return TRUE;
     }
-    mLookTarget = 3;
-    mTurnAngle = mInitialAngle.y;
+    mLookBackState = 3;
+    mDesiredYRot = mInitialAngle.y;
     m_jnt.mbTrn = 1;
     return TRUE;
 }
@@ -486,7 +486,7 @@ BOOL daNpc_Ko1_c::walk_1() {
     pos->set(mAreaCenter);
     if (Ko1_chk_areaIn(this, Ko1_hioChildren()[mType].mWalkAreaRadius, pos)) {
         setStt(STATUS_ATTACK_1);
-    } else if (!Ko1_calcTimer(&mWaitTimer)) {
+    } else if (!Ko1_calcTimer(&mSttTimer)) {
         setStt(STATUS_WAIT_3);
     }
     return TRUE;

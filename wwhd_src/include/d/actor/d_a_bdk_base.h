@@ -13,20 +13,20 @@ extern cXyz &wind_se_pos;
 
 /* bdkobj_class::mEffs (HD bdo_eff_s, 0x1B8 bytes, from +0x3B8): the fields used here */
 struct BdkBaseFragment {
-    /* 0x000 */ be<s8> m000;
+    /* 0x000 */ be<s8> mState;  /* was m000: bdkobj_class bdo_eff_s mState (d/actor/d_a_bdkobj.h) */
     /* 0x001 */ u8 _001[7];
-    /* 0x008 */ cXyz m008;
+    /* 0x008 */ cXyz mPos;  /* was m008: bdo_eff_s mPos */
     /* 0x014 */ u8 _014[0x10];
-    /* 0x024 */ be<f32> m024x; /* HD: horizontal speed */
-    /* 0x028 */ be<f32> m024z;
+    /* 0x024 */ be<f32> mHorizontalSpeedX;  /* was m024x: bdo_eff_s mHorizontalSpeedX; HD: horizontal speed */
+    /* 0x028 */ be<f32> mHorizontalSpeedZ;  /* was m024z: bdo_eff_s mHorizontalSpeedZ */
     /* 0x02C */ u8 _02C[0x12];
-    /* 0x03E */ csXyz m036;
+    /* 0x03E */ csXyz mAngleSpeed;  /* was m036: bdo_eff_s mAngleSpeed (the HD offset 0x3E; GameCube m036) */
     /* 0x044 */ u8 _044[0x1B8 - 0x44];
 };
-WWHD_OFFSET(BdkBaseFragment, m008, 8);
-WWHD_OFFSET(BdkBaseFragment, m024x, 0x24);
-WWHD_OFFSET(BdkBaseFragment, m024z, 0x28);
-WWHD_OFFSET(BdkBaseFragment, m036, 0x3E);
+WWHD_OFFSET(BdkBaseFragment, mPos, 8);
+WWHD_OFFSET(BdkBaseFragment, mHorizontalSpeedX, 0x24);
+WWHD_OFFSET(BdkBaseFragment, mHorizontalSpeedZ, 0x28);
+WWHD_OFFSET(BdkBaseFragment, mAngleSpeed, 0x3E);
 WWHD_SIZE(BdkBaseFragment, 0x1B8);
 
 struct BdkBaseObject : fopAc_ac_c {

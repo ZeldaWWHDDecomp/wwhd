@@ -6,14 +6,14 @@ struct hdSoundInterfaceArchive;
 struct hdSoundInterfaceJAudio;
 struct hdSoundInterfaceFader;
 struct hdSoundInterfaceHandle { gptr<void> mSound; };
-struct hdSoundInterfaceBridge { u8 _opaque00[0x38]; be<u8> field_0x38; }; // HD: flag purpose unconfirmed.
+struct hdSoundInterfaceBridge { u8 _opaque00[0x38]; be<u8> mNoSceneStream; };  /* was field_0x38: setBridgeFlag 02030E38 is called by JAIZelBasic::load1stDynamicWave 02026E04 for scenes without a scene stream; clearBridgeFlag 02030E64 when scene 0x76 / 0x77 load their stream */
 struct hdSoundInterfaceBgm { u8 _opaque00[0x5C]; gptr<hdSoundInterfaceBridge> mBridge; };
 struct hdSoundInterfacePlayer {
     u8 _opaque00[0x1F4]; be<u8> mMenuFlag;
-    be<u8> field_0x1f5; // HD: independently toggled flags; meaning unconfirmed.
-    be<u8> field_0x1f6;
-    be<u8> field_0x1f7;
-    be<u8> field_0x1f8;
+    be<u8> mPictographMode;  /* was field_0x1f5: hdSoundPlayer::mPictographMode (hd/hd_snd_0202EE08.h), the same player */
+    be<u8> mSaveDataMode;  /* was field_0x1f6: hdSoundPlayer::mSaveDataMode (hd/hd_snd_0202EE08.h), the same player */
+    be<u8> mGameOverMode;  /* was field_0x1f7: hdSoundPlayer::mGameOverMode (hd/hd_snd_0202EE08.h), the same player */
+    be<u8> mWarpMode;  /* was field_0x1f8: hdSoundPlayer::mWarpMode (hd/hd_snd_0202EE08.h), the same player */
     u8 _padding1f9[3]; be<u32> mMode;
 };
 WWHD_OFFSET(hdSoundInterfacePlayer, mMode, 0x1FC);

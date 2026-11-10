@@ -145,79 +145,79 @@ struct h3_ga_s {
 };
 WWHD_SIZE(h3_ga_s, 0x30);
 
-/* GameCube +0x11C up to m15C0; HD inserts a mDoExt_J3DModelPacketS (0xB0) after m15C0 and the
+/* GameCube +0x11C up to mSegmentNum; HD inserts a mDoExt_J3DModelPacketS (0xB0) after mSegmentNum and the
  * line material grew (0x3C -> 0x18C); m20F8 (shadow size) is gone. Size 0x2634. */
 struct himo3_class : fopAc_ac_c {
     /* 0x03AC */ request_of_phase_process_class mPhase;
-    /* 0x03B4 */ be<u8> m0298;
-    /* 0x03B5 */ be<u8> m0299;
-    /* 0x03B6 */ be<u8> m029A;
-    /* 0x03B7 */ be<s8> m029B;
-    /* 0x03B8 */ be<s8> m029C;
-    /* 0x03B9 */ be<s8> m029D;
+    /* 0x03B4 */ be<u8> mType;  /* was m0298: daHimo3_Create 02174730: param & 0xFF (0xFF -> 0); 0 = torch (fire, light, ga, model hook_bmd[0]), 1 = Link's hook model (hook_bmd[1] from Link), 2..4 Himo3 models, 0xF = the Bgn rope (no end model, Bgn texture, cylinder, 200 segments); daHimo3_Draw 021727D4 / daHimo3_Execute 02172A00 branch on it */
+    /* 0x03B5 */ be<u8> mPathSpeed;  /* was m0299: daHimo3_Create 02174730: param >> 16; path_move (in daHimo3_Execute 02172A00) eases speedF to it when the path point's arg3 is 0 or 0xFF */
+    /* 0x03B6 */ be<u8> mPathNo;  /* was m029A: daHimo3_Create 02174730: param >> 24 (0xFF for type 0xF); dPath_GetRoomPath(it, room) when not 0xFF */
+    /* 0x03B7 */ be<s8> mPathOn;  /* was m029B: daHimo3_Create 02174730: mPathNo + 1 when a path was found; daHimo3_Execute 02172A00 runs path_move only while it is not 0 */
+    /* 0x03B8 */ be<s8> mPathPntNo;  /* was m029C: path_move (in daHimo3_Execute 02172A00): the current path point, + mPathDir per point, wraps (closed path) or turns at the ends; mPathTargetPos and the point's arg3 speed come from it */
+    /* 0x03B9 */ be<s8> mPathDir;  /* was m029D: path_move (in daHimo3_Execute 02172A00): step of mPathPntNo, 1 / -1 (turned at the ends of an open path); daHimo3_Create 02174730 sets 1 */
     /* 0x03BA */ u8 _3BA[2];
     /* 0x03BC */ gptr<himo3HD::Path> ppd;
-    /* 0x03C0 */ be<s8> m02A4;
+    /* 0x03C0 */ be<s8> mPathMode;  /* was m02A4: path_move (in daHimo3_Execute 02172A00): switch: 0 takes the next point (sets mPathTargetPos, then 1), 1 moves toward it (back to 0 when nearer than 2 * speedF) */
     /* 0x03C1 */ u8 _3C1[3];
-    /* 0x03C4 */ cXyz m02A8;
-    /* 0x03D0 */ be<s16> m02B4[3];
-    /* 0x03D6 */ be<s16> m02BA;
-    /* 0x03D8 */ be<s16> m02BC;
-    /* 0x03DA */ be<u8> m02BE;
+    /* 0x03C4 */ cXyz mPathTargetPos;  /* was m02A8: path_move (in daHimo3_Execute 02172A00): position of path point mPathPntNo; the actor moves toward it */
+    /* 0x03D0 */ be<s16> mTimers[3];  /* was m02B4: daHimo3_Execute 02172A00 (type 0): 3 timers counted down every frame; [0] reloads 5..15 and picks a new mGlowSizeTarget, [1] reloads 3..9 */
+    /* 0x03D6 */ be<s16> mFrameCounter;  /* was m02BA: daHimo3_Execute 02172A00: + 1 every frame; himo3_control (in daHimo3_Execute 02172A00) uses it as the phase of the wind sway (it * 500) and to space the 5 collision spheres along the rope */
+    /* 0x03D8 */ be<s16> mSphOffTimer;  /* was m02BC: himo3_control (in daHimo3_Execute 02172A00): 0x1E on release (param 3), counted down by daHimo3_Execute 02172A00; the rope spheres get radius 30 only while nothing hangs and it is 0, else -200 */
+    /* 0x03DA */ be<u8> mHangType;  /* was m02BE: himo3_control (in daHimo3_Execute 02172A00): 0 free, 1 the player hangs (param 1: hand position, shape_angle), 2 an actor hangs (param 2: mActorHangPos / mActorHangAngle); 0 on param 3; path_move stops while it is not 0 */
     /* 0x03DB */ u8 _3DB;
-    /* 0x03DC */ himo3_s m02C0[200];
+    /* 0x03DC */ himo3_s mSegments[200];  /* was m02C0: himo3_control (in daHimo3_Execute 02172A00): the 200 rope segments (himo3_s), [0] = current.pos, simulated up to mSegmentNum and copied into the line material; daHimo3_Create 02174730 clears them */
     /* 0x169C */ himo3HD::LineMaterial mLineMat; // HD: enlarged line material.
-    /* 0x1828 */ be<s32> m15C0;
+    /* 0x1828 */ be<s32> mSegmentNum;  /* was m15C0: daHimo3_Create 02174730: (param >> 8) & 0xFF, 200 for type 0xF (error above 200); himo3_control (in daHimo3_Execute 02172A00) loops over it; daHimo3_Draw 021727D4 updates the line with it as the point count */
     /* 0x182C */ u8 mPacket[0xB0]; /* HD: mDoExt_J3DModelPacketS */
-    /* 0x18DC */ cXyz m15C4;
-    /* 0x18E8 */ be<f32> m15D0;
-    /* 0x18EC */ be<f32> m15D4;
-    /* 0x18F0 */ be<f32> m15D8;
-    /* 0x18F4 */ be<f32> m15DC;
-    /* 0x18F8 */ be<f32> m15E0;
-    /* 0x18FC */ be<f32> m15E4;
-    /* 0x1900 */ be<f32> m15E8;
+    /* 0x18DC */ cXyz mOldHangPos;  /* was m15C4: himo3_control (in daHimo3_Execute 02172A00): the hang point of the previous frame (-23535 y while nothing hangs, then the first hang point); hang point - it drives mSwingX / mSwingZ */
+    /* 0x18E8 */ be<f32> mSwingZ;  /* was m15D0: himo3_control (in daHimo3_Execute 02172A00): while hanging eased to -10 * the hang point's local z movement, else a damped spring with mSwingVelZ; local z of the rope's bend offset (spA0.z) */
+    /* 0x18EC */ be<f32> mSwingVelZ;  /* was m15D4: himo3_control (in daHimo3_Execute 02172A00): while free, added to mSwingZ every frame and reduced by mSwingZ * 0.003 (spring) */
+    /* 0x18F0 */ be<f32> mSwingX;  /* was m15D8: himo3_control (in daHimo3_Execute 02172A00): as mSwingZ for the local x movement; local x of the rope's bend offset (spA0.x) */
+    /* 0x18F4 */ be<f32> mSwingVelX;  /* was m15DC: himo3_control (in daHimo3_Execute 02172A00): as mSwingVelZ for mSwingX */
+    /* 0x18F8 */ be<f32> mLineFollowRate;  /* was m15E0: himo3_control (in daHimo3_Execute 02172A00): the line points follow the segments at 100 * it per frame (copied when >= 0.999), eased to 1; 0 on release, 1 when a hang starts; daHimo3_Create 02174730 sets 1 */
+    /* 0x18FC */ be<f32> mSwingStepRate;  /* was m15E4: himo3_control (in daHimo3_Execute 02172A00): step of the mSwingX / mSwingZ ease (10 * it); -> 1 while the hang point moves more than 1, else -> 0.1 */
+    /* 0x1900 */ be<f32> mWindSway;  /* was m15E8: himo3_control (in daHimo3_Execute 02172A00): eased to the wind power (half while hanging); amplitude of the sway along the wind direction (sin(mFrameCounter * 500) * 100 * it) */
     /* 0x1904 */ u8 _1904[4];
-    /* 0x1908 */ be<f32> m15F0;
-    /* 0x190C */ be<f32> m15F4;
-    /* 0x1910 */ be<s16> m15F8;
-    /* 0x1912 */ be<s16> m15FA;
-    /* 0x1914 */ be<f32> m15FC;
-    /* 0x1918 */ LIGHT_INFLUENCE m1600;
-    /* 0x193C */ be<f32> m1620;
-    /* 0x1940 */ cXyz m1624;
-    /* 0x194C */ cXyz m1630;
+    /* 0x1908 */ be<f32> mGustSway;  /* was m15F0: himo3_control (in daHimo3_Execute 02172A00): eased to mGustSwayTarget; amplitude of the sway along mGustAngleY (sin(mGustPhase * 500) * 100 * it) */
+    /* 0x190C */ be<f32> mGustSwayTarget;  /* was m15F4: daHimo3_Execute 02172A00: 1 when mSph is hit by an AT_TYPE_WIND attack; himo3_control (in daHimo3_Execute 02172A00) eases it back to 0 and mGustSway to it */
+    /* 0x1910 */ be<s16> mGustAngleY;  /* was m15F8: daHimo3_Execute 02172A00: the player's shape_angle.y at the wind hit; himo3_control (in daHimo3_Execute 02172A00) sways the rope in that direction */
+    /* 0x1912 */ be<s16> mGustPhase;  /* was m15FA: himo3_control (in daHimo3_Execute 02172A00): + 1 per frame while mGustSway > 0.01, else 0; phase of the gust sway (it * 500) */
+    /* 0x1914 */ be<f32> mPlayerMoveLength;  /* was m15FC: tww accessor himo3_class::getPlayerMoveLength() returns it; daHimo3_Create 02174730: mSegmentNum * scale - 50 (- 50 more for type 0); Link's procRopeSwing_init 0241D040 / procRopeDown_init 02436780 limit the climb with it */
+    /* 0x1918 */ LIGHT_INFLUENCE mFireLight;  /* was m1600: daHimo3_Execute 02172A00 (type 0): LIGHT_INFLUENCE at mEndPos, colour 600/400/120, power 150 * mFireLightRate; daHimo3_Create 02174730 dKy_plight_set, daHimo3_Delete 021743F0 dKy_plight_cut */
+    /* 0x193C */ be<f32> mFireLightRate;  /* was m1620: daHimo3_Execute 02172A00: 1 when the torch fire emitter is created, eased to 1..1.2 (flicker) while it exists, 0 without it; mFireLight power = 150 * it */
+    /* 0x1940 */ cXyz mEndPos;  /* was m1624: daHimo3_Execute 02172A00: MtxPosition of the end model's matrix (offset, scale); centre of mSph, the torch fire and heat haze, mFireLight; mAcch position (daHimo3_Create 02174730); ga_move (in daHimo3_Execute 02172A00) flies around it */
+    /* 0x194C */ cXyz mOldEndPos;  /* was m1630: daHimo3_Execute 02172A00: mEndPos of the previous frame (copied at the end); the fire direction is (mEndPos - it) * -0.03; daHimo3_Create 02174730 mAcch old position */
     /* 0x1958 */ dBgS_AcchCir mAcchCir;
     /* 0x1998 */ dBgS_ObjAcch mAcch;
-    /* 0x1B5C */ Mtx34 m1840;
-    /* 0x1B8C */ be<f32> m1870;
+    /* 0x1B5C */ Mtx34 mGlowMtx;  /* was m1840: daHimo3_Execute 02172A00: end model matrix moved to the flame (10, -140, -15 for type 0) and scaled by mGlowScale; HD has no reader (the GameCube daHimo3_Draw passes it to dComIfGd_setAlphaModel / setSpotModel, tww d_a_himo3.cpp) */
+    /* 0x1B8C */ be<f32> mGlowScale;  /* was m1870: daHimo3_Execute 02172A00: himo3HIO.m18 every frame; scales mGlowMtx */
     /* 0x1B90 */ u8 _1B90[4];
-    /* 0x1B94 */ be<f32> m1878;
-    /* 0x1B98 */ be<f32> m187C;
+    /* 0x1B94 */ be<f32> mGlowSize;  /* was m1878: daHimo3_Execute 02172A00: eased to mGlowSizeTarget; HD has no reader (the GameCube daHimo3_Draw passes it to dComIfGd_setAlphaModel as the size, tww d_a_himo3.cpp) */
+    /* 0x1B98 */ be<f32> mGlowSizeTarget;  /* was m187C: daHimo3_Execute 02172A00: random 4..20 each time mTimers[0] runs out; mGlowSize eases to it */
     /* 0x1B9C */ gptr<J3DModel> mpModel;
     /* 0x1BA0 */ dCcD_Stts mStts;
     /* 0x1BDC */ dCcD_Sph mSphs[5];
     /* 0x21B8 */ dCcD_Sph mSph;
     /* 0x22E4 */ dCcD_Cyl mCyl;
-    /* 0x2414 */ dPa_followEcallBack m20FC;
-    /* 0x2428 */ be<u8> m2110;
+    /* 0x2414 */ dPa_followEcallBack mFireEcallBack;  /* was m20FC: daHimo3_Execute 02172A00: follow callback of the torch fire (dPa_name ID_AK_JN_TORCH at mEndPos); its emitter gets the direction and scale; himo3_class_ct 0217447C constructs it, daHimo3_Delete 021743F0 removes it */
+    /* 0x2428 */ be<u8> mHioOwner;  /* was m2110: daHimo3_Create 02174730: written (0) when this actor created the l_HIO child; daHimo3_Delete 021743F0 deletes the HIO child only while it is not 0 */
     /* 0x2429 */ be<u8> m2111;
     /* 0x242A */ u8 _242A[2];
-    /* 0x242C */ h3_ga_s m2114[1];
+    /* 0x242C */ h3_ga_s mGa[1];  /* was m2114: daHimo3_Draw 021727D4 / ga_move (in daHimo3_Execute 02172A00): the h3_ga_s (model Himo3 H3_GA, type 0 only, created in useHeapInit (in daHimo3_Create 02174730)) that flies around mEndPos; named after its type h3_ga_s and tww ga_draw / ga_move */
     /* 0x245C */ dKy_tevstr_c m2144;
-    /* 0x2624 */ cXyz m21F4;
-    /* 0x2630 */ be<s16> m2200;
+    /* 0x2624 */ cXyz mActorHangPos;  /* was m21F4: setActorHang 02174F44 (tww himo3_class::setActorHang(cXyz, s16)) stores the position; himo3_control (in daHimo3_Execute 02172A00) uses it as the hang point for mHangType 2 */
+    /* 0x2630 */ be<s16> mActorHangAngle;  /* was m2200: setActorHang 02174F44 stores the angle; himo3_control (in daHimo3_Execute 02172A00) turns the rope (current.angle.y) to it for mHangType 2 */
     /* 0x2632 */ u8 _2632[2];
 };
-WWHD_OFFSET(himo3_class, m02C0, 0x3DC);
-WWHD_OFFSET(himo3_class, m15C0, 0x1828);
-WWHD_OFFSET(himo3_class, m15C4, 0x18DC);
-WWHD_OFFSET(himo3_class, m1600, 0x1918);
+WWHD_OFFSET(himo3_class, mSegments, 0x3DC);
+WWHD_OFFSET(himo3_class, mSegmentNum, 0x1828);
+WWHD_OFFSET(himo3_class, mOldHangPos, 0x18DC);
+WWHD_OFFSET(himo3_class, mFireLight, 0x1918);
 WWHD_OFFSET(himo3_class, mAcch, 0x1998);
 WWHD_OFFSET(himo3_class, mpModel, 0x1B9C);
 WWHD_OFFSET(himo3_class, mCyl, 0x22E4);
-WWHD_OFFSET(himo3_class, m2114, 0x242C);
-WWHD_OFFSET(himo3_class, m21F4, 0x2624);
+WWHD_OFFSET(himo3_class, mGa, 0x242C);
+WWHD_OFFSET(himo3_class, mActorHangPos, 0x2624);
 WWHD_SIZE(himo3_class, 0x2634);
 
 #endif

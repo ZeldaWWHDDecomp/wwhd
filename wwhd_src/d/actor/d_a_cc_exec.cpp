@@ -44,13 +44,13 @@ static Mtx34* cc_getAnmMtx(J3DModel* model, s32 jntNo) {
 
 static inline void zero_m35C(cc_class* i_this) {
     for (s32 i = 0; i < 5; i++)
-        i_this->m35C[i] = 0;
+        i_this->mWavePhase[i] = 0;
 }
 
 /* inlined into daCC_Execute */
 static inline void action_nomal_move(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
-    switch (i_this->m2F5) {
+    switch (i_this->mMode) {
     case 0:
         cyl_OffTgSet(i_this);
         cyl_OffCoSet(i_this);
@@ -59,20 +59,20 @@ static inline void action_nomal_move(cc_class* i_this) {
         if (i_this->mBehaviorType == 0) {
             anm_init(i_this, dRes_INDEX_CC_BCK_TSTART01_e, 0.0f, 0, 0.0f, -1);
         }
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 1:
         if (fopAcM_searchPlayerDistance(a_this) < i_this->mNoticeRange) {
             a_this->actor_status |= fopAcStts_SHOWMAP_e;
             if (i_this->mBehaviorType == 1) {
                 anm_init(i_this, dRes_INDEX_CC_BCK_TSTART01_e, 0.0f, 0, 1.0f, -1);
-                i_this->m2F5 = 2;
+                i_this->mMode = 2;
             } else {
                 fopAcM_seStart(a_this, JA_SE_CM_CC_ENTER_GND, 0);
                 anm_init(i_this, dRes_INDEX_CC_BCK_START_e, 0.0f, 0, 1.0f, -1);
-                i_this->m2F9 = 0;
+                i_this->mNoBgCheck = 0;
                 a_this->gravity = -3.0f;
-                i_this->m2F5 = 3;
+                i_this->mMode = 3;
                 cyl_OnTgSet(i_this);
                 a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
             }
@@ -80,11 +80,11 @@ static inline void action_nomal_move(cc_class* i_this) {
         break;
 
     case 2:
-        if (i_this->m2B4->checkFrame(22.0f)) {
-            i_this->m2F9 = 0;
+        if (i_this->mpMorf->checkFrame(22.0f)) {
+            i_this->mNoBgCheck = 0;
             a_this->gravity = -11.0f;
         }
-        if (i_this->m2B4->getFrame() > 22.0f) {
+        if (i_this->mpMorf->getFrame() > 22.0f) {
             cLib_addCalcAngleS2(&a_this->shape_angle.x, 0, 1, 0x1000);
         }
         if (i_this->mAcch.ChkGroundHit()) {
@@ -95,7 +95,7 @@ static inline void action_nomal_move(cc_class* i_this) {
             a_this->shape_angle.x = 0;
             a_this->speed.y = 0.0f;
             anm_init(i_this, dRes_INDEX_CC_BCK_TSTART02_e, 0.0f, 0, 1.0f, -1);
-            i_this->m2F5 = 3;
+            i_this->mMode = 3;
             cyl_OnTgSet(i_this);
             a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
             denki_start(i_this);
@@ -103,10 +103,10 @@ static inline void action_nomal_move(cc_class* i_this) {
         break;
 
     case 3:
-        if (!i_this->m2B4->isStop()) {
+        if (!i_this->mpMorf->isStop()) {
             break;
         }
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 4: {
         a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
@@ -114,41 +114,41 @@ static inline void action_nomal_move(cc_class* i_this) {
         i_this->mCyl.SetTgType(CC_TG_TYPE_ALL);
         cyl_OnCoSet(i_this);
         cyl_OnTgSet(i_this);
-        i_this->m34E[0] = 10;
+        i_this->mTimers[0] = 10;
         s16 r = (s16)gabi::ftoi(cM_rndF(15.0f));
         /* HD: the stored 10 is not reloaded after the call */
-        i_this->m34E[0] = (s16)(r + 10 + i_this->m34E[1]);
+        i_this->mTimers[0] = (s16)(r + 10 + i_this->mTimers[1]);
         denki_start(i_this);
-        if (i_this->m320 != dRes_INDEX_CC_BCK_TACHI_WALK_e) {
+        if (i_this->mAnmResIdx != dRes_INDEX_CC_BCK_TACHI_WALK_e) {
             anm_init(i_this, dRes_INDEX_CC_BCK_TACHI_WALK_e, 2.0f, 2, 1.0f, -1);
         }
         fopAcM_seStart(a_this, JA_SE_CM_CC_MOVE_STAND, 0);
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         break;
     }
 
     case 5:
         search_angle_set(i_this);
-        if (i_this->m2B4->checkFrame(0.0f)) {
+        if (i_this->mpMorf->checkFrame(0.0f)) {
             fopAcM_seStart(a_this, JA_SE_CM_CC_MOVE_STAND, 0);
         }
         cLib_addCalc2(&a_this->speedF, 2.0f, 0.2f, 0.5f);
-        if (i_this->m34E[0] != 0) {
+        if (i_this->mTimers[0] != 0) {
             break;
         }
-        if (i_this->mBehaviorType == 2 && i_this->m34E[5] == 0) {
-            i_this->m2F5 = 6;
+        if (i_this->mBehaviorType == 2 && i_this->mTimers[5] == 0) {
+            i_this->mMode = 6;
             break;
         }
         if (i_this->mColorType == 1 || i_this->mColorType == 4) {
             if (fopAcM_searchPlayerDistance(a_this) < 380.0f) {
                 i_this->mCurrAction = 2;
-                i_this->m2F5 = 0x1e;
+                i_this->mMode = 0x1e;
                 return;
             }
             break;
         }
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 6:
         denki_start(i_this);
@@ -156,66 +156,66 @@ static inline void action_nomal_move(cc_class* i_this) {
         i_this->mCyl.SetTgType(CC_TG_TYPE_CROUCH);
         cyl_OffCoSet(i_this);
         anm_init(i_this, dRes_INDEX_CC_BCK_TACHI2HUSE_e, 2.0f, 0, 1.0f, -1);
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         break;
 
     case 7:
-        if (!i_this->m2B4->isStop()) {
+        if (!i_this->mpMorf->isStop()) {
             break;
         }
-        if (i_this->mBehaviorType == 2 && i_this->m34E[5] == 0) {
+        if (i_this->mBehaviorType == 2 && i_this->mTimers[5] == 0) {
             i_this->mCurrAction = 5;
-            i_this->m2F5 = 0x44;
+            i_this->mMode = 0x44;
             break;
         }
         anm_init(i_this, dRes_INDEX_CC_BCK_HUSE_WALK_e, 0.0f, 2, 1.0f, -1);
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 8: {
-        i_this->m34E[0] = 0x46;
+        i_this->mTimers[0] = 0x46;
         s16 r = (s16)gabi::ftoi(cM_rndF(15.0f));
-        i_this->m34E[0] = (s16)(r + 0x46);
+        i_this->mTimers[0] = (s16)(r + 0x46);
         fopAcM_seStart(a_this, JA_SE_CM_CC_MOVE_LIE, 0);
         a_this->speedF = 1.0f;
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         break;
     }
 
     case 9:
-        if (i_this->m2B4->checkFrame(0.0f)) {
+        if (i_this->mpMorf->checkFrame(0.0f)) {
             fopAcM_seStart(a_this, JA_SE_CM_CC_MOVE_LIE, 0);
         }
         search_angle_set(i_this);
-        if (i_this->m34E[0] != 0) {
+        if (i_this->mTimers[0] != 0) {
             break;
         }
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 10:
         i_this->mCyl.SetTgType(CC_TG_TYPE_ALL);
         anm_init(i_this, dRes_INDEX_CC_BCK_HUSE2TACHI_e, 0.0f, 0, 1.0f, -1);
         fopAcM_seStart(a_this, JA_SE_CM_CC_LIE_TO_STAND, 0);
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         break;
 
     case 0xb:
-        if (i_this->m2B4->isStop()) {
+        if (i_this->mpMorf->isStop()) {
             fopAcM_monsSeStart(a_this, JA_SE_CV_CC_STAND_UP, 0);
             if (i_this->mBehaviorType != 3 && fopAcM_searchPlayerDistance(a_this) < 380.0f &&
                 i_this->mAcch.ChkGroundHit()) {
                 i_this->mCurrAction = 2;
-                i_this->m2F5 = 0x1e;
+                i_this->mMode = 0x1e;
                 return;
             }
-            i_this->m2F5 = 4;
+            i_this->mMode = 4;
         }
         break;
     }
 
     cLib_addCalcAngleS2(&a_this->shape_angle.y, a_this->current.angle.y, 1, 0x400);
 
-    if ((i_this->m2F5 < 4 || i_this->m2F5 > 0xb || !shock_damage_check(i_this)) &&
-        i_this->m2F5 >= 3) {
+    if ((i_this->mMode < 4 || i_this->mMode > 0xb || !shock_damage_check(i_this)) &&
+        i_this->mMode >= 3) {
         body_atari_check(i_this);
         black_light_check(i_this);
     }
@@ -225,22 +225,22 @@ static inline void action_nomal_move(cc_class* i_this) {
 static inline void action_oyogu(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
 
-    switch (i_this->m2F5) {
+    switch (i_this->mMode) {
     case 0x14:
         zero_m35C(i_this);
         denki_start(i_this);
-        i_this->m301 = 0;
+        i_this->mIsSplit = 0;
         fopAcM_seStart(a_this, JA_SE_CM_CC_STAND_TO_LIE, 0);
-        i_this->m310.x = 0;
-        i_this->m310.y = 0;
-        i_this->m310.z = 0;
+        i_this->mSwingAngle.x = 0;
+        i_this->mSwingAngle.y = 0;
+        i_this->mSwingAngle.z = 0;
         i_this->mCyl.SetTgType(CC_TG_TYPE_SWIM);
         cyl_OffCoSet(i_this);
         if (i_this->mColorType != 2 && i_this->mColorType != 4) {
             cyl_OffAtSet(i_this);
         }
         fopAcM_seStart(a_this, JA_SE_CM_CC_STAND_TO_LIE, 0);
-        if (i_this->m320 != dRes_INDEX_CC_BCK_TACHI2HUSE_e) {
+        if (i_this->mAnmResIdx != dRes_INDEX_CC_BCK_TACHI2HUSE_e) {
             anm_init(i_this, dRes_INDEX_CC_BCK_TACHI2HUSE_e, 2.0f, 0, 1.0f, -1);
         }
         a_this->speedF = 0.0f;
@@ -248,30 +248,30 @@ static inline void action_oyogu(cc_class* i_this) {
         a_this->speed.y = 0.0f;
         a_this->speed.z = 0.0f;
         a_this->gravity = -3.0f;
-        i_this->m324 = 0.0f;
-        i_this->m2F8 = 0;
-        i_this->m2F5 += 1;
+        i_this->mWaterRiseSpeed = 0.0f;
+        i_this->mOnWaterSurface = 0;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 0x15: {
-        if (i_this->m320 == dRes_INDEX_CC_BCK_TACHI2HUSE_e) {
-            if (i_this->m2B4->isStop()) {
+        if (i_this->mAnmResIdx == dRes_INDEX_CC_BCK_TACHI2HUSE_e) {
+            if (i_this->mpMorf->isStop()) {
                 anm_init(i_this, dRes_INDEX_CC_BCK_HUSE_WALK_e, 0.0f, 2, 1.0f, -1);
             }
         }
         cLib_addCalc0(&a_this->gravity, 0.2f, 1.0f);
         cLib_addCalc0(&a_this->speed.y, 0.2f, 1.0f);
-        i_this->m35C[0] += 0x800;
-        f32 s = gabi::fmadds(cM_ssin(i_this->m35C[0]), 3.0f, -15.0f);
-        cLib_addCalc2(&i_this->m328, s, 1.0f, 10.0f);
+        i_this->mWavePhase[0] += 0x800;
+        f32 s = gabi::fmadds(cM_ssin(i_this->mWavePhase[0]), 3.0f, -15.0f);
+        cLib_addCalc2(&i_this->mSwimBobY, s, 1.0f, 10.0f);
 
         if (i_this->mAcch.m_flags & dBgS_Acch::WATER_IN) {
             /* m_wtr.GetHeight(): mAcch + 0x1BC */
             cLib_addCalc2(&a_this->current.pos.y, i_this->mAcch.m_wtr.m_height - 20.0f, 1.0f,
-                          i_this->m324);
-            cLib_addCalc2(&i_this->m324, 6.0f, 1.0f, 1.0f);
+                          i_this->mWaterRiseSpeed);
+            cLib_addCalc2(&i_this->mWaterRiseSpeed, 6.0f, 1.0f, 1.0f);
             f32 h = i_this->mAcch.m_wtr.m_height - 20.0f;
             if (std::fabs((f32)(a_this->current.pos.y - h)) < 2.0f) {
-                i_this->m2F8 = 1;
+                i_this->mOnWaterSurface = 1;
                 cLib_addCalc2(&a_this->speedF, REG_F(8, 17) + 1.0f, 0.3f, 1.0f);
                 if (REG_F(8, 17) != 0.0f || a_this->speedF < 2.0f) {
                     search_angle_set(i_this);
@@ -279,7 +279,7 @@ static inline void action_oyogu(cc_class* i_this) {
             }
         }
 
-        if (i_this->m2B4->checkFrame(0.0f)) {
+        if (i_this->mpMorf->checkFrame(0.0f)) {
             fopAcM_seStart(a_this, JA_SE_CM_CC_MOVE_LIE, 0);
         }
         break;
@@ -290,15 +290,15 @@ static inline void action_oyogu(cc_class* i_this) {
 
     if (!(i_this->mAcch.m_flags & dBgS_Acch::WATER_IN)) {
         a_this->gravity = -3.0f;
-        if (i_this->mAcch.ChkGroundHit() || (i_this->mBehaviorType == 2 && i_this->m34E[5] == 0)) {
-            i_this->m2F8 = 0;
-            i_this->m328 = 0.0f;
+        if (i_this->mAcch.ChkGroundHit() || (i_this->mBehaviorType == 2 && i_this->mTimers[5] == 0)) {
+            i_this->mOnWaterSurface = 0;
+            i_this->mSwimBobY = 0.0f;
             if (i_this->mBehaviorType != 2) {
                 i_this->mCurrAction = 0;
-                i_this->m2F5 = 10;
+                i_this->mMode = 10;
             } else {
                 i_this->mCurrAction = 5;
-                i_this->m2F5 = 0x44;
+                i_this->mMode = 0x44;
             }
         }
     }
@@ -309,7 +309,7 @@ static inline void action_attack_move(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     fopEn_enemy_c* e_this = &i_this->actor;
 
-    switch (i_this->m2F5) {
+    switch (i_this->mMode) {
     case 0x1E:
         zero_m35C(i_this);
         a_this->speedF = 0.0f;
@@ -317,18 +317,18 @@ static inline void action_attack_move(cc_class* i_this) {
         a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         cyl_OnCoSet(i_this);
         fopAcM_monsSeStart(a_this, JA_SE_CV_CC_ATTACK, 0);
-        i_this->m306 = 0;
+        i_this->mAttackFrame = 0;
         anm_init(i_this, dRes_INDEX_CC_BCK_ATACK01_e, 0.0f, 0, 1.0f, -1);
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 0x1F:
-        if (!i_this->m2B4->isStop())
+        if (!i_this->mpMorf->isStop())
             break;
-        i_this->m34E[0] = 10;
-        i_this->m2F5 += 1;
+        i_this->mTimers[0] = 10;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 0x20:
-        if (i_this->m34E[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             a_this->current.angle.y = fopAcM_searchPlayerAngleY(a_this);
             cyl_OnAtSet(i_this);
             i_this->mCyl.mObjAt.mRPrm = 1; /* OnAtHitBit (HD: a plain store) */
@@ -337,7 +337,7 @@ static inline void action_attack_move(cc_class* i_this) {
             a_this->speedF = 18.0f;
             a_this->gravity = -3.0f;
             a_this->speed.y = 25.0f;
-            i_this->m2F5 += 1;
+            i_this->mMode += 1;
         }
         break;
 
@@ -358,33 +358,33 @@ static inline void action_attack_move(cc_class* i_this) {
             cc_eff_set(i_this, 1);
             a_this->speedF = 0.0f;
             anm_init(i_this, dRes_INDEX_CC_BCK_ATACK03_e, 0.0f, 0, 1.0f, -1);
-            i_this->m2F5 += 1;
+            i_this->mMode += 1;
         }
         break;
 
     case 0x22:
-        if (i_this->m2B4->isStop()) {
-            i_this->m34E[1] = 5;
-            /* HD: m34E[1] += cM_rndF(m34E[1]) folded to 5 + cM_rndF(5) in float */
+        if (i_this->mpMorf->isStop()) {
+            i_this->mTimers[1] = 5;
+            /* HD: mTimers[1] += cM_rndF(mTimers[1]) folded to 5 + cM_rndF(5) in float */
             f32 r = cM_rndF(5.0f);
-            i_this->m34E[1] = (s16)gabi::ftoi(5.0f + r);
+            i_this->mTimers[1] = (s16)gabi::ftoi(5.0f + r);
             i_this->mCurrAction = 0;
-            i_this->m2F5 = 4;
+            i_this->mMode = 4;
         }
         break;
     }
 
     e_this->mBtNowFrame = 1000.0f;
 
-    if (i_this->m2F5 >= 0x1F && i_this->m2F5 <= 0x22) {
-        i_this->m306 += 1;
-        if (i_this->m306 > (s16)gabi::ftoi(REG_F(8, 7)) &&
-            i_this->m306 < (s16)gabi::ftoi(REG_F(8, 8) + 25.0f)) {
+    if (i_this->mMode >= 0x1F && i_this->mMode <= 0x22) {
+        i_this->mAttackFrame += 1;
+        if (i_this->mAttackFrame > (s16)gabi::ftoi(REG_F(8, 7)) &&
+            i_this->mAttackFrame < (s16)gabi::ftoi(REG_F(8, 8) + 25.0f)) {
             e_this->mBtNowFrame = 5.0f;
         }
     }
 
-    if (i_this->m2F5 > 0x20 || !shock_damage_check(i_this)) {
+    if (i_this->mMode > 0x20 || !shock_damage_check(i_this)) {
         cLib_addCalcAngleS2(&a_this->shape_angle.y, a_this->current.angle.y, 1, 0x1000);
         black_light_check(i_this);
         body_atari_check(i_this);
@@ -394,28 +394,28 @@ static inline void action_attack_move(cc_class* i_this) {
 /* inlined into daCC_Execute */
 static inline void damage_swing(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
-    cMtx_YrotS(calc_mtx(), i_this->m34A);
+    cMtx_YrotS(calc_mtx(), i_this->mSwingDirY);
     gabi::Local<cXyz> sp28;
     gabi::Local<cXyz> sp1C;
     sp28->x = 0.0f;
     sp28->y = 0.0f;
     // HD: retain the sine-first operand order and unextended angle passed by GHS.
-    sp28->z = cM_ssin((u16)i_this->m348) * i_this->m32C;
+    sp28->z = cM_ssin((u16)i_this->mSwingPhase) * i_this->mSwingAmplitude;
     MtxPosition(sp28, sp1C);
-    i_this->m310.z = (s16)gabi::ftoi(-sp1C->x);
-    i_this->m310.x = (s16)gabi::ftoi(sp1C->z);
+    i_this->mSwingAngle.z = (s16)gabi::ftoi(-sp1C->x);
+    i_this->mSwingAngle.x = (s16)gabi::ftoi(sp1C->z);
     cLib_addCalc0(&a_this->speedF, 0.8f, 4.0f);
-    if (i_this->m2F6 != 3) {
-        i_this->m348 = i_this->m348 + 0x3000;
+    if (i_this->mDamageType != 3) {
+        i_this->mSwingPhase = i_this->mSwingPhase + 0x3000;
     }
-    cLib_addCalc0(&i_this->m32C, 1.0f, i_this->m330);
+    cLib_addCalc0(&i_this->mSwingAmplitude, 1.0f, i_this->mSwingDecay);
 }
 
 /* inlined into daCC_Execute */
 static inline void action_damage_move(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
 
-    switch (i_this->m2F5) {
+    switch (i_this->mMode) {
     case 0x28: {
         zero_m35C(i_this);
         cyl_OffAtSet(i_this);
@@ -423,17 +423,17 @@ static inline void action_damage_move(cc_class* i_this) {
         cyl_OnCoSet(i_this);
         a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
 
-        if (i_this->mColorType == 3 && i_this->m2F6 == 0) {
+        if (i_this->mColorType == 3 && i_this->mDamageType == 0) {
             cyl_OffTgSet(i_this);
             i_this->mCyl.ClrTgHit();
-            i_this->m32C = 0.0f;
-            i_this->m330 = 0.0f;
-            i_this->m348 = 0;
-            i_this->m310.x = 0;
-            i_this->m310.y = 0;
-            i_this->m310.z = 0;
+            i_this->mSwingAmplitude = 0.0f;
+            i_this->mSwingDecay = 0.0f;
+            i_this->mSwingPhase = 0;
+            i_this->mSwingAngle.x = 0;
+            i_this->mSwingAngle.y = 0;
+            i_this->mSwingAngle.z = 0;
             a_this->speedF = 0.0f;
-            i_this->m2F5 = 0x2d;
+            i_this->mMode = 0x2d;
             break;
         }
 
@@ -442,13 +442,13 @@ static inline void action_damage_move(cc_class* i_this) {
         i_this->mCyl.SetTgType(CC_TG_TYPE_ALL);
 
         s16 ang = fopAcM_searchPlayerAngleY(a_this);
-        i_this->m34A = (s16)((ang + 0x8000) - a_this->shape_angle.y);
-        i_this->m348 = 0;
-        i_this->m32C = 7000.0f;
+        i_this->mSwingDirY = (s16)((ang + 0x8000) - a_this->shape_angle.y);
+        i_this->mSwingPhase = 0;
+        i_this->mSwingAmplitude = 7000.0f;
 
-        if (i_this->m2F6 == 1 || a_this->health <= 0) {
-            i_this->m32C = 16000.0f;
-            i_this->m2F6 = 1;
+        if (i_this->mDamageType == 1 || a_this->health <= 0) {
+            i_this->mSwingAmplitude = 16000.0f;
+            i_this->mDamageType = 1;
         }
 
         if (a_this->health > 0) {
@@ -462,20 +462,20 @@ static inline void action_damage_move(cc_class* i_this) {
         cc_eff_set(i_this, 0);
 
         a_this->speed.y = 0.0f;
-        i_this->m330 = 250.0f;
+        i_this->mSwingDecay = 250.0f;
 
-        switch (i_this->m2F6) {
+        switch (i_this->mDamageType) {
         case 1:
-            i_this->m330 = 500.0f;
+            i_this->mSwingDecay = 500.0f;
             a_this->speedF = 60.0f;
             break;
         case 4:
         case 9:
             anm_init(i_this, dRes_INDEX_CC_BCK_MAHI_e, 0.0f, 0, 1.0f, -1);
             dComIfGp_particle_set(ID_IT_JN_PIYOHIT00, &a_this->attention_info.position);
-            i_this->m32C = 0.0f;
-            i_this->m330 = 0.0f;
-            i_this->m348 = 0;
+            i_this->mSwingAmplitude = 0.0f;
+            i_this->mSwingDecay = 0.0f;
+            i_this->mSwingPhase = 0;
             break;
         case 3:
             if (((a_this->actor_status & fopAcStts_CARRY_e) != 0)) {
@@ -485,8 +485,8 @@ static inline void action_damage_move(cc_class* i_this) {
                 a_this->gravity = -3.0f;
                 a_this->speedF = 0.0f;
             }
-            i_this->m32C = 16000.0f;
-            i_this->m348 = 10000;
+            i_this->mSwingAmplitude = 16000.0f;
+            i_this->mSwingPhase = 10000;
             break;
         default:
             a_this->speedF = 20.0f;
@@ -497,77 +497,77 @@ static inline void action_damage_move(cc_class* i_this) {
             a_this->speedF = 0.0f;
         }
 
-        if (i_this->m2F6 != 3) {
+        if (i_this->mDamageType != 3) {
             s16 a = fopAcM_searchPlayerAngleY(a_this);
             a_this->current.angle.y = (s16)(a + 0x8000);
         }
 
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
     }
         [[fallthrough]];
     case 0x29:
         damage_swing(i_this);
-        if (std::fabs((f32)i_this->m32C) < 1.0f) {
+        if (std::fabs((f32)i_this->mSwingAmplitude) < 1.0f) {
             a_this->speedF = 0.0f;
-            i_this->m310.x = 0;
-            i_this->m310.y = 0;
-            i_this->m310.z = 0;
+            i_this->mSwingAngle.x = 0;
+            i_this->mSwingAngle.y = 0;
+            i_this->mSwingAngle.z = 0;
 
-            if (i_this->m2F6 == 4 || i_this->m2F6 == 2) {
-                i_this->m34E[4] = 0x5A; /* 0x2d + 0x2d */
-                i_this->m34E[4] = (s16)(REG_S(8, 5) + 0x5A);
+            if (i_this->mDamageType == 4 || i_this->mDamageType == 2) {
+                i_this->mTimers[4] = 0x5A; /* 0x2d + 0x2d */
+                i_this->mTimers[4] = (s16)(REG_S(8, 5) + 0x5A);
                 enemy_piyo_set(a_this);
                 fopAcM_seStart(a_this, JA_SE_CM_MD_PIYO, 0);
-                i_this->m2F5 = 0x2b;
-            } else if (i_this->m2F6 == 9) {
-                i_this->m34E[4] = (s16)(REG_S(8, 4) + 0x14);
-                i_this->m2F5 = 0x2c;
+                i_this->mMode = 0x2b;
+            } else if (i_this->mDamageType == 9) {
+                i_this->mTimers[4] = (s16)(REG_S(8, 4) + 0x14);
+                i_this->mMode = 0x2c;
             } else {
-                i_this->m2F5 += 1;
+                i_this->mMode += 1;
             }
         }
         break;
 
     case 0x2a:
         if (a_this->health > 0) {
-            if (i_this->m34E[4] == 0) {
+            if (i_this->mTimers[4] == 0) {
                 i_this->mCurrAction = 0;
-                i_this->m2F5 = 6;
+                i_this->mMode = 6;
                 if (i_this->mColorType == 1 || i_this->mColorType == 4) {
-                    i_this->m2F5 = 4;
+                    i_this->mMode = 4;
                 }
             }
         } else {
             i_this->mCurrAction = 4;
-            i_this->m2F5 = 0x32;
+            i_this->mMode = 0x32;
         }
         break;
 
     case 0x2b:
-        if (i_this->m34E[4] <= 1) {
+        if (i_this->mTimers[4] <= 1) {
             anm_init(i_this, dRes_INDEX_CC_BCK_HUKKATSU_e, 0.0f, 2, 1.0f, -1);
-            i_this->m34E[4] = 0x3c;
-            i_this->m34E[4] = (s16)(REG_S(8, 6) + 0x3c);
-            i_this->m2F5 += 1;
+            i_this->mTimers[4] = 0x3c;
+            i_this->mTimers[4] = (s16)(REG_S(8, 6) + 0x3c);
+            i_this->mMode += 1;
         }
         break;
 
     case 0x2c:
-        if (i_this->m34E[4] == 0) {
+        if (i_this->mTimers[4] == 0) {
             i_this->mCurrAction = 0;
-            i_this->m2F5 = 6;
+            i_this->mMode = 6;
             if (i_this->mColorType == 1 || i_this->mColorType == 4) {
-                i_this->m2F5 = 4;
+                i_this->mMode = 4;
             }
         }
         break;
 
     case 0x2d: {
-        i_this->m301 = 1;
+        i_this->mIsSplit = 1;
         J3DAnmTransform* anm =
             (J3DAnmTransform*)dComIfG_getObjectRes(reinterpret_cast<const char*>(splitArchive),
                                                    dRes_INDEX_CC_BCK_CC_PTCL_e, gc_tu.safeString);
-        i_this->m2D8->setAnm(anm, 0, 0.0f, 1.0f, 0.0f, -1.0f, nullptr);
+        i_this->mpSplitMorf->setAnm(anm, 0, 0.0f, 1.0f, 0.0f, -1.0f, nullptr);
 
         JPABaseEmitter* emitter = dComIfGp_particle_set(
             ID_AK_SN_CCSPLIT00, &a_this->attention_info.position, &a_this->current.angle);
@@ -593,17 +593,17 @@ static inline void action_damage_move(cc_class* i_this) {
             e->mEnvColor.b = a_this->tevStr.mColorK0.b;
         }
         i_this->mStts.SetWeight(0xFE);
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         break;
     }
 
     case 0x2e:
-        if (i_this->m2D8->checkFrame(12.0f)) {
+        if (i_this->mpSplitMorf->checkFrame(12.0f)) {
             fopAcM_seStart(a_this, JA_SE_CM_B_CC_RECOVER, 0);
         }
-        if (i_this->m2D8->isStop()) {
+        if (i_this->mpSplitMorf->isStop()) {
             cyl_OnTgSet(i_this);
-            i_this->m301 = 0;
+            i_this->mIsSplit = 0;
             i_this->mStts.SetWeight(0x32);
             i_this->mCyl.SetTgType(CC_TG_TYPE_ALL);
             anm_init(i_this, dRes_INDEX_CC_BCK_HUSE2TACHI_e, 0.0f, 0, 1.0f, -1);
@@ -612,13 +612,13 @@ static inline void action_damage_move(cc_class* i_this) {
             a_this->shape_angle.y = a;
             a_this->current.angle.y = a;
             i_this->mCurrAction = 0;
-            i_this->m2F5 = 0xb;
+            i_this->mMode = 0xb;
         }
         break;
     }
 
     if (a_this->health > 0 && !body_atari_check(i_this)) {
-        if (i_this->m2F5 >= 0x2A) {
+        if (i_this->mMode >= 0x2A) {
             shock_damage_check(i_this);
         }
         black_light_check(i_this);
@@ -632,9 +632,9 @@ static inline void dead_drop(cc_class* i_this, cXyz* pos) {
         if (a_this->stealItemBitNo != 0xff) {
             fopAcM_createDisappear(a_this, pos, 5, daDisItem_IBALL_e, a_this->stealItemBitNo);
         }
-    } else if (i_this->m304 == 0) {
+    } else if (i_this->mOtherHitState == 0) {
         fopAcM_createDisappear(a_this, pos, 5, daDisItem_IBALL_e, a_this->stealItemBitNo);
-    } else if (i_this->m304 != 2) {
+    } else if (i_this->mOtherHitState != 2) {
         u8 item;
         if (dComIfGs_getLife() <= 4) {
             item = daDisItem_HEART_e;
@@ -668,14 +668,14 @@ static inline void action_dead_move(cc_class* i_this) {
     reinterpret_cast<be<u32>&>(sp08->z) = reinterpret_cast<be<u32>&>(a_this->current.pos.z);
     sp08->y += 60.0f;
 
-    switch (i_this->m2F5) {
+    switch (i_this->mMode) {
     case 50:
         denki_end(i_this);
         cyl_OffAtSet(i_this);
         cyl_OffTgSet(i_this);
         cyl_OffCoSet(i_this);
         i_this->mCyl.ClrTgHit();
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         [[fallthrough]];
     case 51:
         dead_drop(i_this, sp08);
@@ -689,7 +689,7 @@ static inline void action_dead_move(cc_class* i_this) {
         J3DAnmTransform* anm =
             (J3DAnmTransform*)dComIfG_getObjectRes(reinterpret_cast<const char*>(deadArchive),
                                                    dRes_INDEX_CC_BCK_CC_BETA_e, gc_tu.safeString);
-        i_this->m2BC->setAnm(anm, 0, 0.0f, 1.0f, 0.0f, -1.0f, nullptr);
+        i_this->mpFlatMorf->setAnm(anm, 0, 0.0f, 1.0f, 0.0f, -1.0f, nullptr);
         a_this->speedF = 0.0f;
         a_this->speed.x = 0.0f;
         a_this->speed.y = 0.0f;
@@ -698,12 +698,12 @@ static inline void action_dead_move(cc_class* i_this) {
         cyl_OffTgSet(i_this);
         cyl_OffCoSet(i_this);
         i_this->mCyl.ClrTgHit();
-        i_this->m34E[0] = 0;
-        i_this->m2F5 += 1;
+        i_this->mTimers[0] = 0;
+        i_this->mMode += 1;
     }
         [[fallthrough]];
     case 53:
-        if (i_this->m2BC->isStop()) {
+        if (i_this->mpFlatMorf->isStop()) {
             dead_drop(i_this, sp08);
         }
         break;
@@ -727,7 +727,7 @@ static BOOL daCC_Execute(cc_class* i_this) {
         break;
     }
 
-    if ((i_this->m2F5 >= 6 && i_this->m2F5 < 11) || i_this->mCurrAction == 1) {
+    if ((i_this->mMode >= 6 && i_this->mMode < 11) || i_this->mCurrAction == 1) {
         a_this->eyePos.x = a_this->current.pos.x;
         a_this->eyePos.y = a_this->current.pos.y;
         a_this->eyePos.z = a_this->current.pos.z;
@@ -753,24 +753,24 @@ static BOOL daCC_Execute(cc_class* i_this) {
     }
 
     if (enemy_ice(&i_this->mEnemyIce)) {
-        J3DModel* model = i_this->m2B4->getModel();
+        J3DModel* model = i_this->mpMorf->getModel();
         J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
-        i_this->m2B4->calc();
+        i_this->mpMorf->calc();
         naraku_check(i_this);
         return TRUE;
     }
 
     for (s32 i = 0; i < 7; i++) {
-        if (i_this->m34E[i] != 0) {
-            i_this->m34E[i] -= 1;
+        if (i_this->mTimers[i] != 0) {
+            i_this->mTimers[i] -= 1;
         }
     }
 
     if (i_this->mCurrAction != 5 && i_this->mCurrAction != 4 && a_this->health > 0 &&
         i_this->mBehaviorType == 2 && DEMO_RET_START_FLAG() != 0) {
-        i_this->m34E[5] = 0;
+        i_this->mTimers[5] = 0;
         i_this->mCurrAction = 5;
-        i_this->m2F5 = 0x44;
+        i_this->mMode = 0x44;
     }
 
     switch (i_this->mCurrAction) {
@@ -808,53 +808,53 @@ static BOOL daCC_Execute(cc_class* i_this) {
     }
 
     if (i_this->mColorType == 2 || i_this->mColorType == 4) {
-        Mtx34* mtx = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
-        i_this->m3A4.x = mtx->m[0][3];
-        i_this->m3A4.y = mtx->m[1][3];
-        i_this->m3A4.z = mtx->m[2][3];
+        Mtx34* mtx = cc_getAnmMtx(i_this->mpMorf->getModel(), CC_JNT_BODY03_e);
+        i_this->mThunderPos.x = mtx->m[0][3];
+        i_this->mThunderPos.y = mtx->m[1][3];
+        i_this->mThunderPos.z = mtx->m[2][3];
 
-        switch (i_this->m2F7) {
+        switch (i_this->mElectricState) {
         case 0:
             /* HD: dPa_followEcallBack::end (GameCube remove()) */
-            dPa_followEcallBack_end(&i_this->m368);
-            dPa_followEcallBack_end(&i_this->m37C);
+            dPa_followEcallBack_end(&i_this->mThunderEcallBack0);
+            dPa_followEcallBack_end(&i_this->mThunderEcallBack1);
             break;
 
         case 1:
-            if (i_this->m368.getEmitter() == nullptr) {
-                dComIfGp_particle_set(ID_AK_JN_CCTHUNDER00, &i_this->m3A4, nullptr, nullptr, 0xff,
-                                      (dPa_levelEcallBack*)&i_this->m368);
+            if (i_this->mThunderEcallBack0.getEmitter() == nullptr) {
+                dComIfGp_particle_set(ID_AK_JN_CCTHUNDER00, &i_this->mThunderPos, nullptr, nullptr, 0xff,
+                                      (dPa_levelEcallBack*)&i_this->mThunderEcallBack0);
             }
-            if (i_this->m37C.getEmitter() == nullptr) {
-                dComIfGp_particle_set(ID_AK_JN_CCTHUNDER01, &i_this->m3A4, nullptr, nullptr, 0xff,
-                                      (dPa_levelEcallBack*)&i_this->m37C);
+            if (i_this->mThunderEcallBack1.getEmitter() == nullptr) {
+                dComIfGp_particle_set(ID_AK_JN_CCTHUNDER01, &i_this->mThunderPos, nullptr, nullptr, 0xff,
+                                      (dPa_levelEcallBack*)&i_this->mThunderEcallBack1);
             }
-            if (i_this->m368.getEmitter() != nullptr && i_this->m37C.getEmitter() != nullptr) {
-                i_this->m2F7 += 1;
+            if (i_this->mThunderEcallBack0.getEmitter() != nullptr && i_this->mThunderEcallBack1.getEmitter() != nullptr) {
+                i_this->mElectricState += 1;
             }
             break;
 
         case 2:
             /* emitter->setGlobalRTMatrix(getAnmMtx(BODY03)) */
-            if (JPABaseEmitter* e = i_this->m368.getEmitter()) {
-                Mtx34* mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
+            if (JPABaseEmitter* e = i_this->mThunderEcallBack0.getEmitter()) {
+                Mtx34* mtx2 = cc_getAnmMtx(i_this->mpMorf->getModel(), CC_JNT_BODY03_e);
                 // HD: the callee leaves r3 (the rotation) unchanged; the original keeps using it.
                 CcExecRotation* r = &reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation;
                 CcExec_globalRotation(r);
                 JPASetRMtxTVecfromMtx(mtx2, r,
                                       &reinterpret_cast<CcExecEmitter*>(e)->mGlobalTranslation);
             }
-            if (JPABaseEmitter* e = i_this->m37C.getEmitter()) {
-                Mtx34* mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
+            if (JPABaseEmitter* e = i_this->mThunderEcallBack1.getEmitter()) {
+                Mtx34* mtx2 = cc_getAnmMtx(i_this->mpMorf->getModel(), CC_JNT_BODY03_e);
                 // HD: the callee leaves r3 (the rotation) unchanged; the original keeps using it.
                 CcExecRotation* r = &reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation;
                 CcExec_globalRotation(r);
                 JPASetRMtxTVecfromMtx(mtx2, r,
                                       &reinterpret_cast<CcExecEmitter*>(e)->mGlobalTranslation);
             }
-            if (i_this->m34E[3] == 0) {
+            if (i_this->mTimers[3] == 0) {
                 fopAcM_seStart_ool(a_this, JA_SE_CM_CC_BLUE_SPARK, 0);
-                i_this->m34E[3] = (s16)gabi::ftoi(cM_rndF(42.0f) + 30.0f);
+                i_this->mTimers[3] = (s16)gabi::ftoi(cM_rndF(42.0f) + 30.0f);
             }
             break;
         }
@@ -875,9 +875,9 @@ static BOOL daCC_Execute(cc_class* i_this) {
     a_this->speed.y += a_this->gravity;
 
     if (i_this->mCurrAction != 5) {
-        i_this->m316.x = 0;
-        i_this->m316.y = 0;
-        i_this->m316.z = 0;
+        i_this->mGroundAngle.x = 0;
+        i_this->mGroundAngle.y = 0;
+        i_this->mGroundAngle.z = 0;
         if (a_this->speed.y < -55.0f) {
             a_this->speed.y = -55.0f;
         }
@@ -887,47 +887,47 @@ static BOOL daCC_Execute(cc_class* i_this) {
         a_this->speed.y = 1.0f;
     }
 
-    if (i_this->m2F5 != 0x35) {
-        if (i_this->mBehaviorType == 2 && i_this->m2FB != 3) {
-            J3DModel_setBaseTRMtx(i_this->m2B4->getModel(), &i_this->m7EC);
-            a_this->current.pos.copy(i_this->m3BC);
+    if (i_this->mMode != 0x35) {
+        if (i_this->mBehaviorType == 2 && i_this->mDekuState != 3) {
+            J3DModel_setBaseTRMtx(i_this->mpMorf->getModel(), &i_this->mDekuMtx);
+            a_this->current.pos.copy(i_this->mHomePos);
         }
 
-        if (i_this->m301 == 0) {
-            i_this->m2B4->play(nullptr, 0, 0);
+        if (i_this->mIsSplit == 0) {
+            i_this->mpMorf->play(nullptr, 0, 0);
         } else {
-            i_this->m2D8->play(nullptr, 0, 0);
+            i_this->mpSplitMorf->play(nullptr, 0, 0);
         }
 
-        if (i_this->m2FE != 0) {
-            i_this->m2C4->play(nullptr, 0, 0);
-            switch (i_this->m2FE) {
+        if (i_this->mStoneState != 0) {
+            i_this->mpStoneMorf->play(nullptr, 0, 0);
+            switch (i_this->mStoneState) {
             case 1:
             case 2:
-                i_this->m2FF += 1;
-                if (i_this->m2FF > 0x19) {
-                    i_this->m2FF = 0x19;
+                i_this->mStoneAnmFrame += 1;
+                if (i_this->mStoneAnmFrame > 0x19) {
+                    i_this->mStoneAnmFrame = 0x19;
                 }
                 break;
             }
         }
 
-        if (i_this->mBehaviorType == 2 && i_this->m2FB != 3) {
+        if (i_this->mBehaviorType == 2 && i_this->mDekuState != 3) {
             gabi::Local<cXyz> sp18;
             sp18->x = 0.0f;
             sp18->y = 0.0f;
             sp18->z = 0.0f;
-            PSMTXCopy(&i_this->m7EC, mDoMtx_stack_c::get());
-            PSMTXMultVec(mDoMtx_stack_c::get(), sp18, &i_this->m3BC);
-            a_this->current.pos.copy(i_this->m3BC);
+            PSMTXCopy(&i_this->mDekuMtx, mDoMtx_stack_c::get());
+            PSMTXMultVec(mDoMtx_stack_c::get(), sp18, &i_this->mHomePos);
+            a_this->current.pos.copy(i_this->mHomePos);
         }
     } else {
-        i_this->m2BC->play(nullptr, 0, 0);
+        i_this->mpFlatMorf->play(nullptr, 0, 0);
     }
 
     i_this->mCyl.SetC(&a_this->current.pos);
     f32 h = 100.0f;
-    if (i_this->m320 == dRes_INDEX_CC_BCK_HUSE_WALK_e) {
+    if (i_this->mAnmResIdx == dRes_INDEX_CC_BCK_HUSE_WALK_e) {
         h = 30.0f;
     }
     i_this->mCyl.SetH(h);

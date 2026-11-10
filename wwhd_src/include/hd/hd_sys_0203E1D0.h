@@ -52,13 +52,13 @@ struct hdProfileTask {
     u8 _padding00[0x20];
     be<u32> mTaskVtable;
     u8 _padding24[0x4C];
-    be<u32> field_0x70; // HD: a second vtable is installed here; base type is unconfirmed.
+    be<u32> mSecondaryVtable;  /* was field_0x70: the task constructor 0203E380 stores the vtable 10006230 here after hdProfileConstructTaskBase (a second base; its type is unconfirmed) */
     u8 _padding74[0x54];
     hdProfileInstanceGuard mInstanceGuard;
     u8 _paddingC9[3];
 };
 WWHD_OFFSET(hdProfileTask, mTaskVtable, 0x20);
-WWHD_OFFSET(hdProfileTask, field_0x70, 0x70);
+WWHD_OFFSET(hdProfileTask, mSecondaryVtable, 0x70);
 WWHD_OFFSET(hdProfileTask, mInstanceGuard, 0xC8);
 WWHD_SIZE(hdProfileTask, 0xCC);
 struct hdProfileDownloadedDataArray {

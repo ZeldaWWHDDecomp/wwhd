@@ -49,7 +49,7 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
         return false;
     if (work->m378 != SUBJECT_WORK_TAG /* 'SUBJ' */)
         return false;
-    if (m100 == 0)
+    if (mStyleSettle0 == 0)
         return false;
     if (work->m37C == 0)
         res = false;
@@ -120,7 +120,7 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
     work->m3BA = (s16)*r;
     f32 yaw = x, pitch = y;
     f32 eyeY = mEye.y;
-    bool keep = eyeY > m354 + 5.0f && eyeY > mBG.m5C.m58 + 5.0f;
+    bool keep = eyeY > mGroundHeight + 5.0f && eyeY > mBG.m5C.m58 + 5.0f;
     if (!keep) {
         if (work->m388 < 0.0f) {
             if (!(pitch > 0.0f))
@@ -208,7 +208,7 @@ static inline s16 subjectAngleShortValue(cSAngle_l* out, s16 value) {
 static inline void subjectLowCentre(dCamera_c* c, SubjectWork* work, bool swim, f32* y, f32* z) {
     gabi::Local<cXyz> a;
     c->attentionPos(a, c->mpPlayerActor.get());
-    if (a->y < c->m354 + 20.0f && !swim) {
+    if (a->y < c->mGroundHeight + 20.0f && !swim) {
         *y = 60.0f;
         *z = -5.0f;
         work->m3BD = 1;
@@ -297,7 +297,7 @@ bool dCamera_c::subjectCamera(s32 style) {
     }
     (void)dComIfGp_ea();
     u16 sflags;
-    if (m108 == 0) {
+    if (mCurModeTimer == 0) {
         work->m37C = 0;
         work->m384 = 0.0f;
         work->m380 = style;
@@ -334,9 +334,9 @@ bool dCamera_c::subjectCamera(s32 style) {
     }
     bool zoomFlag = (sflags & dCamPrmFlg_UNK010) != 0;
 
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         s32 end = (dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_SUBJECT_e) ? 7 : 10;
-        f32 t = 1.0f / (f32)(s32)(end - (s32)m108);
+        f32 t = 1.0f / (f32)(s32)(end - (s32)mCurModeTimer);
         gabi::Local<cXyz> target, d, s, x, e;
         gabi::Local<cSAngle_l> t20, t1e, t1c;
         subjectCentre(this, work, ofs, target, baseYaw);
@@ -361,7 +361,7 @@ bool dCamera_c::subjectCamera(s32 style) {
         if (!zoomFlag) {
             f32 fv = mViewCache.mFovy;
             mViewCache.mFovy = gabi::fmadds(p25 - fv, t, fv);
-        } else if ((u32)m108 >= (u32)(end - 6)) {
+        } else if ((u32)mCurModeTimer >= (u32)(end - 6)) {
             subjectZoomStat(this);
             f32 sc = gabi::at<dComIfG_inf_c>(dComIfGp_ea())
                          ->play.mItemScopeWipeScale.get(); /* mItemScopeWipeScale */
@@ -377,16 +377,16 @@ bool dCamera_c::subjectCamera(s32 style) {
                 f32 base = work->m3A0;
                 mViewCache.mFovy = gabi::fmadds(work->m39C - base, k, base);
             }
-        } else if ((u32)m108 >= (u32)(end - 7)) {
+        } else if ((u32)mCurModeTimer >= (u32)(end - 7)) {
             subjectZoomStat(this);
-        } else if (m108 == 0) {
+        } else if (mCurModeTimer == 0) {
             copySubjectFloatBits(&work->m3A0, &mViewCache.mFovy);
             work->m39C = mViewCache.mFovy * 0.44444445f; /* HD (GameCube 2/3) */
         }
-        if ((u32)m108 == (u32)(end - 1)) {
-            m100 = 1;
-            m101 = 1;
-            m102 = 1;
+        if ((u32)mCurModeTimer == (u32)(end - 1)) {
+            mStyleSettle0 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle2 = 1;
             work->m384 = 0.0f;
             work->m388 = 0.0f;
             work->m38C = 0.0f;

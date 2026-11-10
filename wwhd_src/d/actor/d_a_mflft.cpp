@@ -78,19 +78,19 @@ static inline f32 fabsf_(f32 v) { return v < 0.0f ? -v : (v == 0.0f ? 0.0f * v +
 /* 021C3ECC */
 void mflft_class::setLiftUp(cXyz *arg1) {
 
-    if ((m29A != 0) || (fabsf_(arg1->y - current.pos.y) < 200.0f)) {
+    if ((mMode != 0) || (fabsf_(arg1->y - current.pos.y) < 200.0f)) {
         fcopy(&current.pos.x, &arg1->x);
         fcopy(&current.pos.z, &arg1->z);
-        cLib_addCalc2(&current.pos.y, arg1->y, 0.2f, 1000.0f * m2D0);
-        cLib_addCalc2(&m2D0, 1.0f, 1.0f, 0.05f);
+        cLib_addCalc2(&current.pos.y, arg1->y, 0.2f, 1000.0f * mLiftUpRate);
+        cLib_addCalc2(&mLiftUpRate, 1.0f, 1.0f, 0.05f);
         speed.y = 0.0f;
-        if (m2CE == 0) {
+        if (mLiftUpTimer == 0) {
             gabi::Local<cXyz> v;
             dVibration_c *vib = dComIfGp_getVibration();
             v->set(0.0f, 1.0f, 0.0f);
             mflftShock(vib, REG0_S(2) + 8, -0x21, v.get()); /* StartShock */
         }
-        m2CE = 5;
+        mLiftUpTimer = 5;
     }
 }
 
@@ -118,20 +118,20 @@ static void ride_call_back(dBgW *bg, fopAc_ac_c *arg1, fopAc_ac_c *arg2) {
     cLib_addCalcAngleS2(&i_this->current.angle.z, iVar1, 10, 0x800);
 
     f32 fVar3 = fabsf_(sp2C->z - sp20->z) * (REG0_F(4) + 50.0f);
-    if (i_this->m2BC < fVar3) {
-        i_this->m2BC = fVar3;
+    if (i_this->mWobbleAmpX < fVar3) {
+        i_this->mWobbleAmpX = fVar3;
     }
     fVar3 = fabsf_(sp2C->x - sp20->x) * (REG0_F(4) + 50.0f);
-    if (i_this->m2C4 < fVar3) {
-        i_this->m2C4 = fVar3;
+    if (i_this->mWobbleAmpZ < fVar3) {
+        i_this->mWobbleAmpZ = fVar3;
     }
     fVar3 = fabsf_(sp2C->x - sp20->x) * (REG0_F(8) + 5.0f);
-    if ((fVar3 > 10.0f) && (i_this->m2B0 < fVar3)) {
-        cLib_addCalc2(&i_this->m2B0, fVar3, 1.0f, REG0_F(7) + 1.2f);
+    if ((fVar3 > 10.0f) && (i_this->mSwayX < fVar3)) {
+        cLib_addCalc2(&i_this->mSwayX, fVar3, 1.0f, REG0_F(7) + 1.2f);
     }
     fVar3 = fabsf_(sp2C->z - sp20->z) * (REG0_F(8) + 5.0f);
-    if ((fVar3 > 10.0f) && (i_this->m2B8 < fVar3)) {
-        cLib_addCalc2(&i_this->m2B8, fVar3, 1.0f, REG0_F(7) + 1.2f);
+    if ((fVar3 > 10.0f) && (i_this->mSwayZ < fVar3)) {
+        cLib_addCalc2(&i_this->mSwayZ, fVar3, 1.0f, REG0_F(7) + 1.2f);
     }
 }
 
@@ -172,7 +172,7 @@ static void himo_cut_control(mflft_class *i_this, cXyz *arg1, u8 *arg2, u8 arg3)
         sp0C->z = 0.0f;
         sp30->z = REG0_F(2) + 135.0f;
     } else {
-        cMtx_YrotS(calc_mtx(), i_this->m6F8 + i_this->shape_angle.y);
+        cMtx_YrotS(calc_mtx(), i_this->mTiltAngleY + i_this->shape_angle.y);
         sp30->z = REG0_F(11) + -4.0f;
         MtxPosition(sp30.get(), sp0C.get());
         sp30->z = REG0_F(2) + 10.0f;
@@ -216,12 +216,12 @@ static void himo_cut_control(mflft_class *i_this, cXyz *arg1, u8 *arg2, u8 arg3)
 
 /* inlined into daMflft_Execute */
 static inline void mflft_move(mflft_class *i_this) {
-    i_this->m298 = i_this->m298 + 1;
-    switch ((u16)i_this->m29A) {
+    i_this->mFrameCounter = i_this->mFrameCounter + 1;
+    switch ((u16)i_this->mMode) {
     case 0: {
         s32 uVar6 = 0;
         for (s32 i = 0; i < 3; i++) {
-            if (i_this->m2D4[i] != 0) {
+            if (i_this->mRopeCut[i] != 0) {
                 uVar6 |= (u8)himo_off_check[i]; /* himo_off_check */
             }
         }
@@ -230,12 +230,12 @@ static inline void mflft_move(mflft_class *i_this) {
         if (sVar2 != 1) {
             target = -0x3000;
         } else {
-            i_this->m6FA = 0;
+            i_this->mTiltX = 0;
             target = 0;
         }
 
         if (uVar6 == 7) {
-            i_this->m29A = 1;
+            i_this->mMode = 1;
             dSv_event_onEventBit(dComIfGs_getEvent(), 0x2A10);
             gabi::Local<dBgS_GndChk> gndChk;
             yogan_ct(gndChk.get());
@@ -245,16 +245,16 @@ static inline void mflft_move(mflft_class *i_this) {
             fcopy(&gp->z, &i_this->current.pos.z);
             f32 fVar10 = cBgS_GroundCross(dComIfG_Bgsp(), gndChk.get());
             if (fVar10 != -1000000000.0f) {
-                i_this->m734 = fVar10;
+                i_this->mFallGroundY = fVar10;
             }
-            if (i_this->m2A1 != 0xff) {
-                dComIfGs_onSwitch(i_this->m2A1, fopAcM_GetRoomNo(i_this));
+            if (i_this->mSwitchNo != 0xff) {
+                dComIfGs_onSwitch(i_this->mSwitchNo, fopAcM_GetRoomNo(i_this));
             }
             dBgS_GndChk_dt(gndChk.get());
         } else {
-            if (i_this->m6F5 != 0) {
-                s8 v = (s8)(i_this->m6F5 - 1);
-                i_this->m6F5 = v;
+            if (i_this->mCutCountTimer != 0) {
+                s8 v = (s8)(i_this->mCutCountTimer - 1);
+                i_this->mCutCountTimer = v;
                 if ((v == 0) && (uVar6 != 0)) {
                     u8 eventReg = dSv_event_getEventReg(dComIfGs_getEvent(), 0xA507);
                     if (eventReg < 6) {
@@ -264,37 +264,37 @@ static inline void mflft_move(mflft_class *i_this) {
                 }
             }
 
-            cLib_addCalcAngleS2(&i_this->m6FA, target, 4, 0x2000);
-            cLib_addCalcAngleS2(&i_this->m6F8, sVar2, 2, 0x2000);
+            cLib_addCalcAngleS2(&i_this->mTiltX, target, 4, 0x2000);
+            cLib_addCalcAngleS2(&i_this->mTiltAngleY, sVar2, 2, 0x2000);
             cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 10, 0x200);
             cLib_addCalcAngleS2(&i_this->current.angle.z, 0, 10, 0x200);
 
             f32 fVar10, fVar1;
-            if (i_this->m2CE != 0) {
+            if (i_this->mLiftUpTimer != 0) {
                 fVar10 = 2000.0f;
                 fVar1 = 250.0f;
-                if (i_this->m778 == 0) {
-                    i_this->m778 = 1;
+                if (i_this->mMagmaEffState == 0) {
+                    i_this->mMagmaEffState = 1;
                 }
             } else {
                 fVar10 = 100.0f;
                 fVar1 = 20.0f;
-                if (i_this->m778 == 2) {
-                    i_this->m778 = 3;
+                if (i_this->mMagmaEffState == 2) {
+                    i_this->mMagmaEffState = 3;
                 }
             }
 
-            i_this->m2C8.x = (s16)gabi::ftoi(i_this->m2BC * cM_ssin(i_this->m298 * 0x5dc));
-            i_this->m2C8.z = (s16)gabi::ftoi(i_this->m2C4 * cM_ssin(i_this->m298 * 0x514));
-            cLib_addCalc2(&i_this->m2BC, fVar10, 1.0f, fVar1 + REG0_F(3));
-            cLib_addCalc2(&i_this->m2C4, fVar10, 1.0f, fVar1 + REG0_F(3));
-            i_this->m2A4.x = i_this->m2B0 * cM_ssin(i_this->m298 * 0x2ee);
-            i_this->m2A4.z = i_this->m2B8 * cM_ssin(i_this->m298 * 900);
-            cLib_addCalc0(&i_this->m2B0, 1.0f, REG0_F(6) + 0.25f);
-            cLib_addCalc0(&i_this->m2B8, 1.0f, REG0_F(6) + 0.25f);
-            mflftAddAngles(&i_this->current.angle, &i_this->m2C8, &i_this->shape_angle);
+            i_this->mWobbleAngle.x = (s16)gabi::ftoi(i_this->mWobbleAmpX * cM_ssin(i_this->mFrameCounter * 0x5dc));
+            i_this->mWobbleAngle.z = (s16)gabi::ftoi(i_this->mWobbleAmpZ * cM_ssin(i_this->mFrameCounter * 0x514));
+            cLib_addCalc2(&i_this->mWobbleAmpX, fVar10, 1.0f, fVar1 + REG0_F(3));
+            cLib_addCalc2(&i_this->mWobbleAmpZ, fVar10, 1.0f, fVar1 + REG0_F(3));
+            i_this->mSwayOffset.x = i_this->mSwayX * cM_ssin(i_this->mFrameCounter * 0x2ee);
+            i_this->mSwayOffset.z = i_this->mSwayZ * cM_ssin(i_this->mFrameCounter * 900);
+            cLib_addCalc0(&i_this->mSwayX, 1.0f, REG0_F(6) + 0.25f);
+            cLib_addCalc0(&i_this->mSwayZ, 1.0f, REG0_F(6) + 0.25f);
+            mflftAddAngles(&i_this->current.angle, &i_this->mWobbleAngle, &i_this->shape_angle);
             gabi::Local<cXyz> tmp;
-            cXyz_pl(&i_this->home.pos, tmp.get(), &i_this->m2A4);
+            cXyz_pl(&i_this->home.pos, tmp.get(), &i_this->mSwayOffset);
             i_this->current.pos.copy(*tmp);
         }
     } break;
@@ -304,28 +304,28 @@ static inline void mflft_move(mflft_class *i_this) {
         cLib_addCalc2(&i_this->current.pos.z, i_this->home.pos.z, 0.1f, 5.0f);
         cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 10, 0x300);
         cLib_addCalcAngleS2(&i_this->current.angle.z, 0, 10, 0x300);
-        cLib_addCalcAngleS2(&i_this->m6FA, 0, 4, 0x200);
+        cLib_addCalcAngleS2(&i_this->mTiltX, 0, 4, 0x200);
 
         f32 fVar10, fVar1;
-        if (i_this->m2CE != 0) {
+        if (i_this->mLiftUpTimer != 0) {
             fVar10 = 2500.0f;
             fVar1 = 250.0f;
-            if (i_this->m778 == 0) {
-                i_this->m778 = 1;
+            if (i_this->mMagmaEffState == 0) {
+                i_this->mMagmaEffState = 1;
             }
         } else {
             fVar10 = 400.0f;
             fVar1 = 20.0f;
-            if (i_this->m778 == 2) {
-                i_this->m778 = 3;
+            if (i_this->mMagmaEffState == 2) {
+                i_this->mMagmaEffState = 3;
             }
         }
-        i_this->m2C8.x = (s16)gabi::ftoi(i_this->m2BC * cM_ssin(i_this->m298 * 800));
-        i_this->m2C8.z = (s16)gabi::ftoi(i_this->m2C4 * cM_ssin(i_this->m298 * 700));
-        cLib_addCalc2(&i_this->m2BC, fVar10, 1.0f, fVar1);
-        cLib_addCalc2(&i_this->m2C4, fVar10, 1.0f, fVar1);
+        i_this->mWobbleAngle.x = (s16)gabi::ftoi(i_this->mWobbleAmpX * cM_ssin(i_this->mFrameCounter * 800));
+        i_this->mWobbleAngle.z = (s16)gabi::ftoi(i_this->mWobbleAmpZ * cM_ssin(i_this->mFrameCounter * 700));
+        cLib_addCalc2(&i_this->mWobbleAmpX, fVar10, 1.0f, fVar1);
+        cLib_addCalc2(&i_this->mWobbleAmpZ, fVar10, 1.0f, fVar1);
 
-        mflftAddAngles(&i_this->current.angle, &i_this->m2C8, &i_this->shape_angle);
+        mflftAddAngles(&i_this->current.angle, &i_this->mWobbleAngle, &i_this->shape_angle);
         i_this->current.pos.y = i_this->current.pos.y + i_this->speed.y;
         f32 sy = i_this->speed.y - 5.0f;
         if (sy < -300.0f) {
@@ -333,12 +333,12 @@ static inline void mflft_move(mflft_class *i_this) {
         }
         i_this->speed.y = sy;
 
-        f32 lim = i_this->m734 + 80.0f;
+        f32 lim = i_this->mFallGroundY + 80.0f;
         if (!(i_this->current.pos.y > lim)) {
             i_this->current.pos.y = lim;
             if (i_this->speed.y < -50.0f) {
-                i_this->m2C4 = 2000.0f;
-                i_this->m2BC = 2000.0f;
+                i_this->mWobbleAmpZ = 2000.0f;
+                i_this->mWobbleAmpX = 2000.0f;
                 dComIfGp_particle_set(dPa_name::ID_AK_SN_MAGMALIFTSPLASH00, &i_this->current.pos,
                                       &i_this->shape_angle);
                 /* fopAcM_seStartCurrent (HD: null check on the position) */
@@ -352,7 +352,7 @@ static inline void mflft_move(mflft_class *i_this) {
                 mflftShock(vib, REG0_S(2) + 5, -0x21, v.get()); /* StartShock */
             }
             i_this->speed.y = 0.0f;
-            cLib_addCalcAngleS2(&i_this->m6FA, 0, 2, 0x2000);
+            cLib_addCalcAngleS2(&i_this->mTiltX, 0, 2, 0x2000);
         }
         break;
     }
@@ -374,17 +374,17 @@ static inline void himo_move(mflft_class *i_this) {
     gabi::Local<CcAtInfo> ccAtInfo;
 
     for (s32 i = 0; i < 3; i++) {
-        cMtx_YrotS(calc_mtx(), i_this->m298);
+        cMtx_YrotS(calc_mtx(), i_this->mFrameCounter);
         sp48->x = 0.0f;
         sp48->y = 0.0f;
-        sp48->z = (f32)(s16)i_this->m6EC[i] * cM_ssin(i_this->m298 * 15000);
+        sp48->z = (f32)(s16)i_this->mRopeHitTimer[i] * cM_ssin(i_this->mFrameCounter * 15000);
         MtxPosition(sp48, sp3C.get());
 
         cXyz *line1 = i_this->mLineMat.getPos(i);
         cXyz *line2 = i_this->mLineMat.getPos(i + 3);
 
-        if (i_this->m2D4[i] == 0) {
-            cXyz_mi(&i_this->m2FC[i], tmi.get(), &i_this->m2D8[i]);
+        if (i_this->mRopeCut[i] == 0) {
+            cXyz_mi(&i_this->mRopeTopPos[i], tmi.get(), &i_this->mRopeLiftPos[i]);
             sp48->copy(*tmi);
             u8 *lineSize = i_this->mLineMat.getSize(i);
 
@@ -392,7 +392,7 @@ static inline void himo_move(mflft_class *i_this) {
                 if (j < 9) {
                     f32 tmp = (f32)j / 27.0f;
                     cXyz_ml(sp48, t1.get(), tmp);
-                    cXyz_pl(&i_this->m2D8[i], t2.get(), t1.get());
+                    cXyz_pl(&i_this->mRopeLiftPos[i], t2.get(), t1.get());
                     f32 x = t2->x, z = t2->z;
                     fcopy(&line1->x, &t2->x);
                     fcopy(&line1->y, &t2->y);
@@ -400,15 +400,15 @@ static inline void himo_move(mflft_class *i_this) {
                     line1->x = gabi::fmadds(sp3C->x * (f32)bure_p[j], REG0_F(0) + 1.0f, x);
                     line1->z = gabi::fmadds(sp3C->z * (f32)bure_p[j], REG0_F(0) + 1.0f, z);
                 } else {
-                    line1->copy(i_this->m2FC[i]);
+                    line1->copy(i_this->mRopeTopPos[i]);
                 }
-                line2->copy(i_this->m2D8[i]);
+                line2->copy(i_this->mRopeLiftPos[i]);
                 *reinterpret_cast<be<u8> *>(lineSize) = 3;
             }
 
             dCcD_Cyl *cyl = &i_this->mCyls[i];
-            if (cyl->ChkTgHit() && (i_this->m6EC[i] < 10)) {
-                i_this->m6EC[i] = REG0_S(3) + 0xf;
+            if (cyl->ChkTgHit() && (i_this->mRopeHitTimer[i] < 10)) {
+                i_this->mRopeHitTimer[i] = REG0_S(3) + 0xf;
                 ccAtInfo->mpObj = static_cast<dCcD_GObjInf *>(cyl->GetTgHitObj());
                 mflftAttackPower(ccAtInfo.get());
 
@@ -417,23 +417,23 @@ static inline void himo_move(mflft_class *i_this) {
                     dmg = 4;
                     ccAtInfo->mDamage = 4;
                 }
-                s8 hp = (s8)(i_this->m6F2[i] - dmg);
-                i_this->m6F2[i] = hp;
+                s8 hp = (s8)(i_this->mRopeHp[i] - dmg);
+                i_this->mRopeHp[i] = hp;
                 fopAc_ac_c *actor = ccAtInfo->mpActor;
 
                 s32 soundId;
                 if (hp <= 0) {
-                    i_this->m2D4[i] = 1;
-                    i_this->m2C4 = 2000.0f;
-                    i_this->m2BC = 2000.0f;
+                    i_this->mRopeCut[i] = 1;
+                    i_this->mWobbleAmpZ = 2000.0f;
+                    i_this->mWobbleAmpX = 2000.0f;
                     soundId = JA_SE_LK_CUT_SBRIDGE_ROPE; /* JA_SE_LK_CUT_SBRIDGE_ROPE */
-                    i_this->m6F5 = 0x14;
+                    i_this->mCutCountTimer = 0x14;
                 } else {
                     soundId = JA_SE_LK_HIT_SBRIDGE_ROPE; /* JA_SE_LK_HIT_SBRIDGE_ROPE */
                 }
 
                 if (actor != 0) {
-                    sp48->copy(i_this->m2D8[i]);
+                    sp48->copy(i_this->mRopeLiftPos[i]);
                     fcopy(&sp48->y, &actor->eyePos.y); /* eyePos.y */
                     dComIfGp_particle_set(dPa_name::ID_AK_JN_OK, sp48, &player->shape_angle);
                     /* kikuzu_set inlined */
@@ -461,12 +461,12 @@ static inline void himo_move(mflft_class *i_this) {
                     mDoAud_seStart(soundId, &ccAtInfo->mpActor->eyePos, 0, reverb);
                 }
             }
-            cyl->SetC(&i_this->m2D8[i]);
+            cyl->SetC(&i_this->mRopeLiftPos[i]);
             dComIfG_Ccsp_Set(cyl);
         } else {
-            line1->copy(i_this->m2D8[i]);
+            line1->copy(i_this->mRopeLiftPos[i]);
             himo_cut_control(i_this, line1, i_this->mLineMat.getSize(i), 0);
-            line2->copy(i_this->m2FC[i]);
+            line2->copy(i_this->mRopeTopPos[i]);
             himo_cut_control(i_this, line2, i_this->mLineMat.getSize(i + 3), 1);
         }
     }
@@ -481,12 +481,12 @@ static inline void eff_cont(mflft_class *i_this) {
     fcopy(&sp24->z, &i_this->current.pos.z);
     sp24->y = y - (REG0_F(1) + 90.0f);
 
-    switch ((u8)i_this->m778) {
+    switch ((u8)i_this->mMagmaEffState) {
     case 0:
         break;
     case 1: {
         JPABaseEmitter *e = dComIfGp_particle_set(dPa_name::ID_AK_SN_MAGMAISLAND01, sp24.get());
-        i_this->m774 = e;
+        i_this->mpMagmaEmitter = e;
         if (e != nullptr) {
             /* setGlobalScale(1.8): global and particle scale */
             MflftEmitterView *emitter = reinterpret_cast<MflftEmitterView *>(e);
@@ -495,27 +495,27 @@ static inline void eff_cont(mflft_class *i_this) {
                 reinterpret_cast<be<f32> *>(&emitter->mGlobalScale)[i] = 1.8f;
             for (u32 i = 0; i < 3; i++)
                 reinterpret_cast<be<f32> *>(&emitter->mGlobalParticleScale)[i] = 1.8f;
-            i_this->m778 = 2;
+            i_this->mMagmaEffState = 2;
         } else {
-            i_this->m778 = 0;
+            i_this->mMagmaEffState = 0;
         }
         break;
     }
     case 2:
-        if (i_this->m774 != nullptr) {
+        if (i_this->mpMagmaEmitter != nullptr) {
             MtxTrans(0.0f, -90.0f, 0.0f, 1);
             /* setGlobalRTMatrix */
             Mtx34 *m = calc_mtx();
-            MflftEmitterView *emitter = reinterpret_cast<MflftEmitterView *>(i_this->m774.get());
+            MflftEmitterView *emitter = reinterpret_cast<MflftEmitterView *>(i_this->mpMagmaEmitter.get());
             mflftSetRotationTranslation(m, emitter->mGlobalRotation, &emitter->mGlobalTranslation);
         }
     case 3:
-        if (i_this->m778 == 3) {
-            if (i_this->m774 != nullptr) {
-                JPABaseEmitter_becomeInvalidEmitter(i_this->m774);
-                i_this->m774 = nullptr;
+        if (i_this->mMagmaEffState == 3) {
+            if (i_this->mpMagmaEmitter != nullptr) {
+                JPABaseEmitter_becomeInvalidEmitter(i_this->mpMagmaEmitter);
+                i_this->mpMagmaEmitter = nullptr;
             }
-            i_this->m778 = 0;
+            i_this->mMagmaEffState = 0;
         }
         break;
     }
@@ -525,10 +525,10 @@ static inline void eff_cont(mflft_class *i_this) {
 static BOOL daMflft_Execute(mflft_class *i_this) {
 
     dComIfGp_get(); /* HD: an unused accessor call */
-    if (i_this->m2CE != 0) {
-        i_this->m2CE = i_this->m2CE - 1;
+    if (i_this->mLiftUpTimer != 0) {
+        i_this->mLiftUpTimer = i_this->mLiftUpTimer - 1;
     } else {
-        i_this->m2D0 = 0.0f;
+        i_this->mLiftUpRate = 0.0f;
     }
 
     cXyz *wv = dKyw_get_wind_vec();
@@ -540,9 +540,9 @@ static BOOL daMflft_Execute(mflft_class *i_this) {
 
     MtxTrans(i_this->current.pos.x, i_this->current.pos.y, i_this->current.pos.z, 0);
     cMtx_YrotM(calc_mtx(), i_this->shape_angle.y);
-    cMtx_YrotM(calc_mtx(), i_this->m6F8);
-    cMtx_XrotM(calc_mtx(), i_this->m6FA);
-    cMtx_YrotM(calc_mtx(), -i_this->m6F8);
+    cMtx_YrotM(calc_mtx(), i_this->mTiltAngleY);
+    cMtx_XrotM(calc_mtx(), i_this->mTiltX);
+    cMtx_YrotM(calc_mtx(), -i_this->mTiltAngleY);
     cMtx_XrotM(calc_mtx(), i_this->shape_angle.x);
     cMtx_ZrotM(calc_mtx(), i_this->shape_angle.z);
     J3DModel_setBaseTRMtx(i_this->mpModel, calc_mtx());
@@ -554,15 +554,15 @@ static BOOL daMflft_Execute(mflft_class *i_this) {
         sp08->x = (f32)xd[i] * i_this->scale.x;
         sp08->y = 15.0f;
         sp08->z = (f32)zd[i] * i_this->scale.z;
-        MtxPosition(sp08.get(), &i_this->m2D8[i]);
+        MtxPosition(sp08.get(), &i_this->mRopeLiftPos[i]);
 
-        if (i_this->m6F6 != 0) {
-            i_this->m6F6 = i_this->m6F6 - 1;
-            i_this->m2FC[i].copy(i_this->m2D8[i]);
-            i_this->m2FC[i].y = i_this->home.pos.y + 2000.0f + REG0_F(19);
+        if (i_this->mRopeTopInitTimer != 0) {
+            i_this->mRopeTopInitTimer = i_this->mRopeTopInitTimer - 1;
+            i_this->mRopeTopPos[i].copy(i_this->mRopeLiftPos[i]);
+            i_this->mRopeTopPos[i].y = i_this->home.pos.y + 2000.0f + REG0_F(19);
         }
-        if (i_this->m6EC[i] != 0) {
-            i_this->m6EC[i] = i_this->m6EC[i] - 1;
+        if (i_this->mRopeHitTimer[i] != 0) {
+            i_this->mRopeHitTimer[i] = i_this->mRopeHitTimer[i] - 1;
         }
         MtxPull();
     }
@@ -572,11 +572,11 @@ static BOOL daMflft_Execute(mflft_class *i_this) {
     MtxPull();
 
     f32 y = 1.0f;
-    if (i_this->m2CE != 0) {
+    if (i_this->mLiftUpTimer != 0) {
         y = 5.0f;
     }
     MtxScale(1.0f, y, 1.0f, 1);
-    PSMTXCopy(calc_mtx(), &i_this->m700);
+    PSMTXCopy(calc_mtx(), &i_this->mBgMtx);
     dBgW_Move(i_this->pm_bgw);
     himo_move(i_this);
     return TRUE;
@@ -592,9 +592,9 @@ static BOOL daMflft_Delete(mflft_class *i_this) {
     if (i_this->heap != nullptr) {
         cBgS_Release(dComIfG_Bgsp(), i_this->pm_bgw);
     }
-    if (i_this->m774 != nullptr) {
-        JPABaseEmitter_becomeInvalidEmitter(i_this->m774);
-        i_this->m774 = nullptr;
+    if (i_this->mpMagmaEmitter != nullptr) {
+        JPABaseEmitter_becomeInvalidEmitter(i_this->mpMagmaEmitter);
+        i_this->mpMagmaEmitter = nullptr;
     }
     return TRUE;
 }
@@ -621,7 +621,7 @@ static BOOL CallbackCreateHeap(fopAc_ac_c *a_this) {
 
     cBgD_t *dzb =
         (cBgD_t *)dComIfG_getObjectRes("Mflft", dRes_INDEX_MFLFT_DZB_MFLFT_e, SAFESTRING_VTBL);
-    cBgW_Set(actor->pm_bgw, dzb, cBgW_MOVE_BG_e, &actor->m700);
+    cBgW_Set(actor->pm_bgw, dzb, cBgW_MOVE_BG_e, &actor->mBgMtx);
     reinterpret_cast<MflftBgView *>(actor->pm_bgw.get())->mCorrectCallback =
         MflftTypicalRotY; /* SetCrrFunc(dBgS_MoveBGProc_Typical) */
     reinterpret_cast<MflftBgView *>(actor->pm_bgw.get())->mRideCallback.v =
@@ -654,12 +654,12 @@ static cPhs_State daMflft_Create(fopAc_ac_c *a_this) {
 
     cPhs_State PVar2 = dComIfG_resLoad(&i_this->mPhase, "Mflft");
     if (PVar2 == cPhs_COMPLEATE_e) {
-        u8 m2A0 = fopAcM_GetParam(a_this) & 0xFF;
-        if (m2A0 == 0xff) {
-            m2A0 = 0;
+        u8 mSizeType = fopAcM_GetParam(a_this) & 0xFF;
+        if (mSizeType == 0xff) {
+            mSizeType = 0;
         }
-        i_this->m2A0 = m2A0;
-        i_this->m2A1 = fopAcM_GetParam(a_this) >> 0x18;
+        i_this->mSizeType = mSizeType;
+        i_this->mSwitchNo = fopAcM_GetParam(a_this) >> 0x18;
         if (!fopAcM_entrySolidHeap(a_this, CallbackCreateHeap, 0x10000)) {
             return cPhs_ERROR_e;
         }
@@ -667,7 +667,7 @@ static cPhs_State daMflft_Create(fopAc_ac_c *a_this) {
             return cPhs_ERROR_e;
         }
 
-        switch (i_this->m2A0) {
+        switch (i_this->mSizeType) {
         case 1:
             a_this->scale.x = 0.9f;
             a_this->scale.z = 0.9f;
@@ -696,13 +696,13 @@ static cPhs_State daMflft_Create(fopAc_ac_c *a_this) {
         for (s32 i = 0; i < 3; i++) {
             i_this->mCyls[i].Set(&himo_cyl_src /* himo_cyl_src */);
             i_this->mCyls[i].SetStts(&i_this->mStts);
-            i_this->m6F2[i] = 3;
+            i_this->mRopeHp[i] = 3;
         }
 
-        i_this->m6F6 = 10;
-        if ((i_this->m2A1 != 0xff) && dComIfGs_isSwitch(i_this->m2A1, fopAcM_GetRoomNo(a_this))) {
+        i_this->mRopeTopInitTimer = 10;
+        if ((i_this->mSwitchNo != 0xff) && dComIfGs_isSwitch(i_this->mSwitchNo, fopAcM_GetRoomNo(a_this))) {
             for (s32 i = 0; i < 3; i++) {
-                i_this->m2D4[i] = 1;
+                i_this->mRopeCut[i] = 1;
             }
             gabi::Local<dBgS_GndChk> gndChk;
             yogan_ct(gndChk.get());

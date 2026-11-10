@@ -76,19 +76,19 @@ static inline void chain_link(shand_s* seg, shand_s* prev, f32 x, f32 y, f32 z, 
 
 /* control1 (inlined). HD: the sway factor of the last links is computed with fnmsubs */
 static inline void control1(shand_class* i_this) {
-    i_this->field_31C[0].mPos.copy(i_this->current.pos);
+    i_this->mLinks[0].mPos.copy(i_this->current.pos);
     mDoMtx_YrotS(calc_mtx(), i_this->current.angle.y);
 
     gabi::Local<cXyz> local94, cStack_a0, localac, sum;
-    local94->y = i_this->field_2F8;
+    local94->y = i_this->mBendY;
     local94->x = 0.0f;
-    local94->z = i_this->field_2FC;
+    local94->z = i_this->mBendZ;
     MtxPosition(local94, localac);
-    cLib_addCalc2(&i_this->field_2F8, REG0_F(7), 1.0f, 0.1f);
-    cLib_addCalc2(&i_this->field_2FC, REG0_F(8), 1.0f, 1.0f);
-    local94->z = i_this->field_2F4;
-    f32 fVar1 = i_this->field_300;
-    shand_s* shand_i = &i_this->field_31C[1];
+    cLib_addCalc2(&i_this->mBendY, REG0_F(7), 1.0f, 0.1f);
+    cLib_addCalc2(&i_this->mBendZ, REG0_F(8), 1.0f, 1.0f);
+    local94->z = i_this->mLinkLen;
+    f32 fVar1 = i_this->mWobbleAmp;
+    shand_s* shand_i = &i_this->mLinks[1];
     for (s32 i = 1; i < 19; i++, shand_i++) {
         f32 idkx =
             cM_ssin(i_this->mExecuteCount * (REG0_S(5) + 1100) + i * (REG0_S(6) + 4000)) * fVar1;
@@ -110,17 +110,17 @@ static inline void control2(shand_class* i_this) {
     gabi::Local<cXyz> rel_offset, abs_offset, sum;
     rel_offset->x = 0.0f;
     rel_offset->y = 0.0f;
-    rel_offset->z = i_this->field_2F4;
+    rel_offset->z = i_this->mLinkLen;
 
-    cLib_addCalc2(&i_this->field_31C[19].mPos.x, i_this->field_2D4.x, 1.0f,
-                  i_this->field_2F0 * 50.0f);
-    cLib_addCalc2(&i_this->field_31C[19].mPos.y, i_this->field_2D4.y, 1.0f,
-                  i_this->field_2F0 * 50.0f);
-    cLib_addCalc2(&i_this->field_31C[19].mPos.z, i_this->field_2D4.z, 1.0f,
-                  i_this->field_2F0 * 50.0f);
-    cLib_addCalc2(&i_this->field_2F0, 1.0f, 1.0f, 0.01f);
+    cLib_addCalc2(&i_this->mLinks[19].mPos.x, i_this->mTipTargetPos.x, 1.0f,
+                  i_this->mTipSpeedRate * 50.0f);
+    cLib_addCalc2(&i_this->mLinks[19].mPos.y, i_this->mTipTargetPos.y, 1.0f,
+                  i_this->mTipSpeedRate * 50.0f);
+    cLib_addCalc2(&i_this->mLinks[19].mPos.z, i_this->mTipTargetPos.z, 1.0f,
+                  i_this->mTipSpeedRate * 50.0f);
+    cLib_addCalc2(&i_this->mTipSpeedRate, 1.0f, 1.0f, 0.01f);
 
-    shand_s* shand_i = &i_this->field_31C[18];
+    shand_s* shand_i = &i_this->mLinks[18];
     for (s32 i = 18; i >= 1; i--, shand_i--) {
         f32 dx = shand_i->mPos.x - shand_i[1].mPos.x;
         f32 dz = shand_i->mPos.z - shand_i[1].mPos.z;
@@ -131,12 +131,12 @@ static inline void control2(shand_class* i_this) {
 
 /* control3 / cut_control3 (inlined): the thickness of each link */
 static inline void set_thickness(shand_class* i_this, f32 step) {
-    shand_s* shand_i = i_this->field_31C;
+    shand_s* shand_i = i_this->mLinks;
     for (s32 counter = 0; counter < 20; counter++, shand_i++) {
         if (counter < 12) {
-            shand_i->field_18 = i_this->field_304;
+            shand_i->mThickness = i_this->mThickness;
         } else {
-            shand_i->field_18 = i_this->field_304 * gabi::fnmsubs((f32)(counter - 10), step, 1.0f);
+            shand_i->mThickness = i_this->mThickness * gabi::fnmsubs((f32)(counter - 10), step, 1.0f);
         }
     }
 }
@@ -145,7 +145,7 @@ static inline void set_thickness(shand_class* i_this, f32 step) {
 static inline void normal(shand_class* i_this) {
     fopAc_ac_c* actor = i_this;
 
-    if (i_this->field_318 != 0) {
+    if (i_this->mGroundSetTimer != 0) {
         gabi::Local<dBgS_LinChk> local94;
         dBgS_LinChk_ct(local94.get(), l_linchk_vt, false);
         gabi::Local<cXyz> chk_start, chk_end;
@@ -163,17 +163,17 @@ static inline void normal(shand_class* i_this) {
         if (cBgS_LineCross(dComIfG_Bgsp(), local94.get())) {
             cXyz* cross = &local94->mLin.mEnd;
             f32 x = cross->x, y = cross->y, z = cross->z;
-            i_this->field_2C8.x = x;
-            i_this->field_2D4.x = x;
-            i_this->field_2C8.y = y;
-            i_this->field_2C8.z = z;
-            i_this->field_2D4.y = y;
-            i_this->field_2D4.z = z;
-            i_this->field_31C[19].mPos.x = x;
-            i_this->field_31C[19].mPos.y = y;
-            i_this->field_31C[19].mPos.z = z;
+            i_this->mTipGroundPos.x = x;
+            i_this->mTipTargetPos.x = x;
+            i_this->mTipGroundPos.y = y;
+            i_this->mTipGroundPos.z = z;
+            i_this->mTipTargetPos.y = y;
+            i_this->mTipTargetPos.z = z;
+            i_this->mLinks[19].mPos.x = x;
+            i_this->mLinks[19].mPos.y = y;
+            i_this->mLinks[19].mPos.z = z;
         }
-        i_this->field_318 -= 1;
+        i_this->mGroundSetTimer -= 1;
         /* ~dBgS_LinChk (inline): this TU's vtables, then cBgS_LinChk::~cBgS_LinChk */
         local94->dBgS_GrpPassChk::__vtbl = shandGroundGroupVtable;
         local94->dBgS_PolyPassChk::__vtbl = l_linchk_vt.v58;
@@ -181,20 +181,20 @@ static inline void normal(shand_class* i_this) {
         shandLineCheckDestroyBase(local94.get(), 0);
     }
 
-    switch ((u16)i_this->field_2BA) {
+    switch ((u16)i_this->mTipMode) {
     case 0:
-        if (std::fabs(i_this->field_31C[19].mPos.y - i_this->field_2D4.y) < 10.0f) {
-            i_this->field_2BA = 1;
-            *i_this->field_314 = 2;
+        if (std::fabs(i_this->mLinks[19].mPos.y - i_this->mTipTargetPos.y) < 10.0f) {
+            i_this->mTipMode = 1;
+            *i_this->mpParentState = 2;
         }
     case 1:
-        i_this->field_2D4.copy(i_this->field_2C8);
+        i_this->mTipTargetPos.copy(i_this->mTipGroundPos);
         break;
     }
 
-    f32 y_diff = std::fabs(actor->home.pos.y - i_this->field_2C8.y);
-    cLib_addCalc2(&i_this->field_2F4, y_diff * (REG_F(14, 11) + 0.05f), 0.1f, 1.0f);
-    cLib_addCalc2(&i_this->field_300, REG_F(14, 12) + 10.0f, 0.1f, 0.5f);
+    f32 y_diff = std::fabs(actor->home.pos.y - i_this->mTipGroundPos.y);
+    cLib_addCalc2(&i_this->mLinkLen, y_diff * (REG_F(14, 11) + 0.05f), 0.1f, 1.0f);
+    cLib_addCalc2(&i_this->mWobbleAmp, REG_F(14, 12) + 10.0f, 0.1f, 0.5f);
     control1(i_this);
     control2(i_this);
     set_thickness(i_this, 0.05f);
@@ -202,22 +202,22 @@ static inline void normal(shand_class* i_this) {
 
 /* cut_control (inlined) */
 static inline void cut_control(shand_class* i_this) {
-    i_this->field_31C[0].mPos.copy(i_this->current.pos);
+    i_this->mLinks[0].mPos.copy(i_this->current.pos);
     mDoMtx_YrotS(calc_mtx(), i_this->current.angle.y);
 
     gabi::Local<cXyz> local_b8, cStack_c4, local_d0, sum;
     local_b8->x = 0.0f;
-    local_b8->y = i_this->field_2F8;
-    local_b8->z = i_this->field_2FC;
+    local_b8->y = i_this->mBendY;
+    local_b8->z = i_this->mBendZ;
     MtxPosition(local_b8, local_d0);
-    cLib_addCalc2(&i_this->field_2F8, REG_F(14, 7) + -5.0f, 1.0f, REG_F(12, 4) + 0.1f);
-    cLib_addCalc2(&i_this->field_2FC, REG_F(14, 8) + 20.0f, 1.0f, REG_F(14, 5) + 0.2f);
-    cLib_addCalc0(&i_this->field_300, 1.0f, REG_F(12, 6) + 1.0f);
-    local_b8->z = i_this->field_2F4;
+    cLib_addCalc2(&i_this->mBendY, REG_F(14, 7) + -5.0f, 1.0f, REG_F(12, 4) + 0.1f);
+    cLib_addCalc2(&i_this->mBendZ, REG_F(14, 8) + 20.0f, 1.0f, REG_F(14, 5) + 0.2f);
+    cLib_addCalc0(&i_this->mWobbleAmp, 1.0f, REG_F(12, 6) + 1.0f);
+    local_b8->z = i_this->mLinkLen;
 
-    shand_s* shand_i = &i_this->field_31C[1];
+    shand_s* shand_i = &i_this->mLinks[1];
     for (s32 i = 1; i < 20; i++, shand_i++) {
-        f32 f300 = i_this->field_300;
+        f32 f300 = i_this->mWobbleAmp;
         s32 cnt = i_this->mExecuteCount;
         f32 e8x = cM_ssin(cnt * (REG0_S(4) + 3500) + i * (REG0_S(5) + 4000));
         f32 e8y = cM_scos(cnt * (REG0_S(6) + 4000) + i * (REG0_S(7) + 4000));
@@ -237,14 +237,14 @@ static inline void cut_control(shand_class* i_this) {
 
 /* cut (inlined) */
 static inline void cut(shand_class* i_this) {
-    cLib_addCalc2(&i_this->field_2F4, REG_F(8, 12) + 20.0f, 0.1f, 0.5f);
+    cLib_addCalc2(&i_this->mLinkLen, REG_F(8, 12) + 20.0f, 0.1f, 0.5f);
     cut_control(i_this);
     set_thickness(i_this, 0.08f);
-    if (i_this->field_2BC[0] == 0 && i_this->field_30C->health != 0) {
-        i_this->field_2F0 = 0.0f;
+    if (i_this->mTimers[0] == 0 && i_this->mpParent->health != 0) {
+        i_this->mTipSpeedRate = 0.0f;
         i_this->mState = 0;
-        i_this->field_2BA = 0;
-        i_this->field_300 = 0.0f;
+        i_this->mTipMode = 0;
+        i_this->mWobbleAmp = 0.0f;
         fopAcM_seStart(i_this, JA_SE_OBJ_VINE_S_RECOVER, 0);
     }
 }
@@ -296,20 +296,20 @@ static inline void cut_ground(shand_class* i_this) {
 static inline void hand_move(shand_class* i_this) {
     fopAc_ac_c* actor = i_this;
 
-    i_this->field_30C = fopAcM_SearchByID(i_this->field_308);
-    if (i_this->field_30C != NULL) {
-        cXyz* src = i_this->field_310;
+    i_this->mpParent = fopAcM_SearchByID(i_this->mParentId);
+    if (i_this->mpParent != NULL) {
+        cXyz* src = i_this->mpRootPos;
         actor->current.pos.copy(*src);
         actor->current.angle.y =
-            actor->home.angle.y + i_this->field_30C->shape_angle.y + REG_S(14, 3);
+            actor->home.angle.y + i_this->mpParent->shape_angle.y + REG_S(14, 3);
         switch ((u16)i_this->mState) {
         case 0:
             normal(i_this);
             actor->attention_info.flags =
                 fopAc_Attn_LOCKON_MISC_e; /* attention_info.flags = fopAc_Attn_LOCKON_MISC_e */
-            if (i_this->field_30C->health == 0) {
+            if (i_this->mpParent->health == 0) {
                 i_this->mState = 1;
-                i_this->field_2BA = 0;
+                i_this->mTipMode = 0;
             }
             break;
         case 1:
@@ -325,10 +325,10 @@ static inline void hand_move(shand_class* i_this) {
         ShandLineData* lines = i_this->mLineMat.getLines();
         cXyz* line_data = lines->mpPos;
         be<u8>* line_size = lines->mpSize;
-        shand_s* shand_i = i_this->field_31C;
+        shand_s* shand_i = i_this->mLinks;
         for (s32 i = 20; i != 0; i--) {
             line_data->copy(shand_i->mPos);
-            *line_size = (u8)gabi::ftoi(shand_i->field_18);
+            *line_size = (u8)gabi::ftoi(shand_i->mThickness);
             shand_i++;
             line_data++;
             line_size += 1;
@@ -344,11 +344,11 @@ static inline void hand_move(shand_class* i_this) {
     gabi::Local<CcAtInfo> hit_atInfo;
     hit_atInfo->pParticlePos = nullptr;
     gabi::Local<cXyz> center;
-    if (i_this->field_2BC[1] == 0 && i_this->mState == 0) {
+    if (i_this->mTimers[1] == 0 && i_this->mState == 0) {
         i_this->mSph.SetC(&actor->eyePos);
         i_this->mCylArr[0].SetC(&actor->current.pos);
         for (s32 i = 0; i < 5; i++) {
-            if (i_this->field_2C4 == 0 && i_this->mCylArr[i].ChkTgHit() != 0) {
+            if (i_this->mNoHitTimer == 0 && i_this->mCylArr[i].ChkTgHit() != 0) {
                 hit_atInfo->mpObj = static_cast<dCcD_GObjInf*>(i_this->mCylArr[i].GetTgHitObj());
                 hit_atInfo->pParticlePos = i_this->mCylArr[i].GetTgHitPosP();
                 is_hit = true;
@@ -380,25 +380,25 @@ static inline void hand_move(shand_class* i_this) {
         dComIfG_Ccsp_Set(&i_this->mCylArr[i]);
     }
 
-    if (is_hit || (i_this->field_2C4 == 0 && i_this->mSph.ChkTgHit() != 0)) {
+    if (is_hit || (i_this->mNoHitTimer == 0 && i_this->mSph.ChkTgHit() != 0)) {
         if (!is_hit) {
             hit_atInfo->mpObj = static_cast<dCcD_GObjInf*>(i_this->mSph.GetTgHitObj());
             hit_atInfo->pParticlePos = i_this->mSph.GetTgHitPosP();
         }
         fopAc_ac_c* hitActor = at_power_check(hit_atInfo.get());
         hit_atInfo->mpActor = hitActor;
-        i_this->field_2C4 = 10;
+        i_this->mNoHitTimer = 10;
         if (hitActor != 0) {
             def_se_set(actor, hit_atInfo->mpObj, 33);
-            if (i_this->field_30C != NULL) {
+            if (i_this->mpParent != NULL) {
                 i_this->mState = 1;
-                i_this->field_2BA = 0;
-                i_this->field_2BC[0] = l_HIO.field_8;
-                i_this->field_2BC[1] = l_HIO.field_8 + 90 + REG0_S(2);
-                i_this->field_2F8 = 3.0f;
-                i_this->field_2FC = 40.0f;
-                i_this->field_300 = cM_rndF(20.0f) + 30.0f;
-                *i_this->field_314 = 1;
+                i_this->mTipMode = 0;
+                i_this->mTimers[0] = l_HIO.field_8;
+                i_this->mTimers[1] = l_HIO.field_8 + 90 + REG0_S(2);
+                i_this->mBendY = 3.0f;
+                i_this->mBendZ = 40.0f;
+                i_this->mWobbleAmp = cM_rndF(20.0f) + 30.0f;
+                *i_this->mpParentState = 1;
                 gabi::Local<cXyz> particle_scale;
                 cXyz* eyeA = &hit_atInfo->mpActor->eyePos;
                 particle_scale->y = 0.5f;
@@ -418,12 +418,12 @@ static BOOL daShand_Execute(shand_class* i_this) {
     i_this->mExecuteCount += 1;
 
     for (s32 i = 4, j = 0; i != 0; i--, j++) {
-        if (i_this->field_2BC[j] != 0)
-            i_this->field_2BC[j] -= 1;
+        if (i_this->mTimers[j] != 0)
+            i_this->mTimers[j] -= 1;
     }
 
-    if (i_this->field_2C4 != 0)
-        i_this->field_2C4 -= 1;
+    if (i_this->mNoHitTimer != 0)
+        i_this->mNoHitTimer -= 1;
 
     hand_move(i_this);
     return TRUE;
@@ -484,13 +484,13 @@ static cPhs_State daShand_Create(fopAc_ac_c* i_this) {
             false) {
             i_this->health = 2;
             s_this->mExecuteCount = (s16)gabi::ftoi(cM_rndF(10000.0f));
-            s_this->field_318 = 10;
-            s_this->field_2BA = 1;
-            s_this->field_2F0 = 1.0f;
+            s_this->mGroundSetTimer = 10;
+            s_this->mTipMode = 1;
+            s_this->mTipSpeedRate = 1.0f;
             if ((fopAcM_GetParam(i_this) & 0xff) == 1)
-                s_this->field_304 = 15.75f;
+                s_this->mThickness = 15.75f;
             else
-                s_this->field_304 = 10.5f;
+                s_this->mThickness = 10.5f;
             s_this->mStts.Init(0xff, 0xff, i_this);
             for (s32 i = 0; i < 5; i++) {
                 s_this->mCylArr[i].Set(reinterpret_cast<dCcD_SrcCyl*>(&tg_cyl_src));
@@ -498,7 +498,7 @@ static cPhs_State daShand_Create(fopAc_ac_c* i_this) {
             }
             s_this->mSph.Set(reinterpret_cast<dCcD_SrcSph*>(&bm_sph_src));
             s_this->mSph.SetStts(&s_this->mStts);
-            s_this->field_2C4 = 30;
+            s_this->mNoHitTimer = 30;
             for (s32 i = 0; i < 3; i++) {
                 daShand_Execute(s_this);
             }

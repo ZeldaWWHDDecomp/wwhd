@@ -83,7 +83,7 @@ static void *mt_a_d_sub(void *param_1, void *) {
     if (fopAc_IsActor(param_1) && param_1 != nullptr &&
         fpcM_GetName(param_1) == cc_uty::fpcNm_MT_e) {
         mt_all_count() += 1;
-        if (((mt_class *)param_1)->m570 == MT_STATE_FIGHT) {
+        if (((mt_class *)param_1)->mAction == MT_STATE_FIGHT) {
             mt_fight_count() += 1;
         }
     }
@@ -102,7 +102,7 @@ void mt_bg_check(mt_class *i_this) {
     i_this->current.pos.y = y;
     if (i_this->home.pos.y - y > 1000.0f) {
         if (y - i_this->mAcch.m_ground_h > 5000.0f) {
-            i_this->m1DD4 = 1;
+            i_this->mDeleteRequested = 1;
             fopAcM_delete(i_this);
         }
     }
@@ -139,11 +139,11 @@ static BOOL nodeCallBack_head(J3DNode *node, int calcTiming) {
         if (i_this != nullptr) {
             PSMTXCopy(model_getAnmMtx(model, jntNo), calc_mtx());
             if (jntNo == MT_JNT_BEND_FIRST) {
-                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->m75C[0].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m75C[0].z);
+                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[0].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[0].z);
             } else if (jntNo == MT_JNT_BEND_SECOND) {
-                mDoMtx_YrotM(calc_mtx(), i_this->m7B6[0].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m7B6[0].z);
+                mDoMtx_YrotM(calc_mtx(), i_this->mJointAnglesRight[0].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesRight[0].z);
             } else {
                 MtxScale(i_this->mHeadScale, i_this->mHeadScale, i_this->mHeadScale, 1);
             }
@@ -154,7 +154,7 @@ static BOOL nodeCallBack_head(J3DNode *node, int calcTiming) {
 }
 
 /* nodeCallBack_body (not named by the matcher). body_idx() is the segment being
- * calculated: joints 2/3 take m75C[idx+1]/[idx+2], joints 4/5 m7B6[idx+1]/[idx+2], then idx += 2 */
+ * calculated: joints 2/3 take mJointAnglesLeft[idx+1]/[idx+2], joints 4/5 mJointAnglesRight[idx+1]/[idx+2], then idx += 2 */
 /* 021D78F4 */
 static BOOL nodeCallBack_body(J3DNode *node, int calcTiming) {
     if (calcTiming == J3DNodeCBCalcTiming_In) {
@@ -165,17 +165,17 @@ static BOOL nodeCallBack_body(J3DNode *node, int calcTiming) {
         if (i_this != nullptr) {
             PSMTXCopy(model_getAnmMtx(model, jntNo), calc_mtx());
             if (jntNo == MT_JNT_BEND_FIRST) {
-                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->m75C[body_idx() + 1].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m75C[body_idx() + 1].z);
+                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[body_idx() + 1].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[body_idx() + 1].z);
             } else if (jntNo == MT_JNT_BEND_SECOND) {
-                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->m75C[body_idx() + 2].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m75C[body_idx() + 2].z);
+                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[body_idx() + 2].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[body_idx() + 2].z);
             } else if (jntNo == MT_JNT_TWIST_FIRST) {
-                mDoMtx_YrotM(calc_mtx(), i_this->m7B6[body_idx() + 1].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m7B6[body_idx() + 1].z);
+                mDoMtx_YrotM(calc_mtx(), i_this->mJointAnglesRight[body_idx() + 1].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesRight[body_idx() + 1].z);
             } else if (jntNo == MT_JNT_TWIST_SECOND) {
-                mDoMtx_YrotM(calc_mtx(), i_this->m7B6[body_idx() + 2].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m7B6[body_idx() + 2].z);
+                mDoMtx_YrotM(calc_mtx(), i_this->mJointAnglesRight[body_idx() + 2].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesRight[body_idx() + 2].z);
                 body_idx() += 2;
             }
             mt_node_store(model, jntNo);
@@ -194,17 +194,17 @@ static BOOL nodeCallBack_tail(J3DNode *node, int calcTiming) {
         if (i_this != nullptr) {
             PSMTXCopy(model_getAnmMtx(model, jntNo), calc_mtx());
             if (jntNo == MT_JNT_BEND_FIRST) {
-                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->m75C[13].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m75C[13].z);
+                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[13].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[13].z);
             } else if (jntNo == MT_JNT_BEND_SECOND) {
-                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->m75C[14].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m75C[14].z);
+                mDoMtx_YrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[14].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesLeft[14].z);
             } else if (jntNo == MT_JNT_TWIST_FIRST) {
-                mDoMtx_YrotM(calc_mtx(), i_this->m7B6[13].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m7B6[13].z);
+                mDoMtx_YrotM(calc_mtx(), i_this->mJointAnglesRight[13].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesRight[13].z);
             } else if (jntNo == MT_JNT_TWIST_SECOND) {
-                mDoMtx_YrotM(calc_mtx(), i_this->m7B6[14].x);
-                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->m7B6[14].z);
+                mDoMtx_YrotM(calc_mtx(), i_this->mJointAnglesRight[14].x);
+                mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJointAnglesRight[14].z);
             }
             mt_node_store(model, jntNo);
         }
@@ -236,7 +236,7 @@ static inline void wall_check_sub(mt_class *i_this, cXyz *oldPos, cXyz *pos) {
 /* 021D7E80 */
 void body_wall_check(mt_class *i_this) {
     for (int i = 1; i < MT_PART_NUM; i++) {
-        wall_check_sub(i_this, &i_this->m61C[i], &i_this->m5BC[i]);
+        wall_check_sub(i_this, &i_this->mOldSegmentPos[i], &i_this->mSegmentPos[i]);
     }
 }
 
@@ -244,7 +244,7 @@ void body_wall_check(mt_class *i_this) {
 
 /* inlined into daMt_Draw */
 static inline void br_draw(mt_class *i_this) {
-    u32 n = (u8)(i_this->m19F0 - 1);
+    u32 n = (u8)(i_this->mRubbleFrame - 1);
     f32 x = i_this->eyePos.x;
     f32 z = i_this->eyePos.z;
     f32 y = i_this->eyePos.y;
@@ -281,7 +281,7 @@ static BOOL daMt_Draw(mt_class *i_this) {
     zero.x = 0.0f;
     zero.y = 0.0f;
     zero.z = 0.0f;
-    if (i_this->m3D7 != 0) {
+    if (i_this->mAppearSwitch != 0) {
         return TRUE;
     }
     body_idx() = 0;
@@ -306,18 +306,18 @@ static BOOL daMt_Draw(mt_class *i_this) {
         mDoExt_btkAnm_entry(btk, J3DModel_getModelData(model), btk->getFrame());
         mDoExt_brkAnm *brk = i_this->mpBrk[i];
         mDoExt_brkAnm_entry(brk, J3DModel_getModelData(model), ((mDoExt_baseAnm *)brk)->getFrame());
-        if (i_this->m400 == 0) {
-            s32 f = i_this->m404 + i * l_HIO().m50;
+        if (i_this->mMaterialMode == 0) {
+            s32 f = i_this->mBrkFrame + i * l_HIO().m50;
             while (f < 0)
                 f += 41;
             ((mDoExt_baseAnm *)i_this->mpBrk[i].get())->mFrameCtrl.setFrame((f32)f);
-            f = i_this->m408 + i * l_HIO().m50;
+            f = i_this->mBtkFrame + i * l_HIO().m50;
             while (f < 0)
                 f += 31;
             i_this->mpBtk[i]->mFrameCtrl.setFrame((f32)f);
         } else {
-            ((mDoExt_baseAnm *)i_this->mpBrk[i].get())->mFrameCtrl.setFrame((f32)i_this->m404);
-            i_this->mpBtk[i]->mFrameCtrl.setFrame((f32)i_this->m408);
+            ((mDoExt_baseAnm *)i_this->mpBrk[i].get())->mFrameCtrl.setFrame((f32)i_this->mBrkFrame);
+            i_this->mpBtk[i]->mFrameCtrl.setFrame((f32)i_this->mBtkFrame);
         }
         if (i == 0) {
             /* mt_eye_tex_anm */
@@ -329,7 +329,7 @@ static BOOL daMt_Draw(mt_class *i_this) {
         }
         i_this->mpMorf[i]->updateDL();
     }
-    if (i_this->m19F0 != 0) {
+    if (i_this->mRubbleFrame != 0) {
         br_draw(i_this);
     }
     dSnap_RegistFig(MT_SNAP_TYPE, i_this, 1.0f, 1.0f, 1.0f);
@@ -339,19 +339,19 @@ static BOOL daMt_Draw(mt_class *i_this) {
 /* 021D8530 */
 void bakuha(mt_class *i_this) {
     fopAcM_createDisappear(i_this, &i_this->eyePos, 10, 0, 0xFF);
-    if (i_this->m3D2 == 0 && i_this->m3D5 != 0) {
-        dComIfGs_onSwitch(i_this->m3D5, fopAcM_GetRoomNo(i_this));
+    if (i_this->mUseAngleParam == 0 && i_this->mDeathSwitch != 0) {
+        dComIfGs_onSwitch(i_this->mDeathSwitch, fopAcM_GetRoomNo(i_this));
     }
-    i_this->m570 = MT_STATE_DEAD;
-    i_this->m576 = REG0_S(0) + 0x39;
+    i_this->mAction = MT_STATE_DEAD;
+    i_this->mDeleteTimer = REG0_S(0) + 0x39;
     for (int i = 1; i < MT_PART_NUM; i++) {
-        i_this->m6AC[i].x = cM_rndFX(REG0_F(4) + 30.0f);
-        i_this->m6AC[i].y = cM_rndF(10.0f) + 20.0f + REG0_F(5);
-        i_this->m6AC[i].z = cM_rndFX(REG0_F(4) + 30.0f);
+        i_this->mSegmentSpeeds[i].x = cM_rndFX(REG0_F(4) + 30.0f);
+        i_this->mSegmentSpeeds[i].y = cM_rndF(10.0f) + 20.0f + REG0_F(5);
+        i_this->mSegmentSpeeds[i].z = cM_rndFX(REG0_F(4) + 30.0f);
         s16 t = (s16)gabi::ftoi(cM_rndF(3.0f));
-        i_this->m70C[i] = t;
-        if (i_this->m1A14 == 3) {
-            i_this->m70C[i] = t + 5;
+        i_this->mScatterDelay[i] = t;
+        if (i_this->mDamageMode == 3) {
+            i_this->mScatterDelay[i] = t + 5;
         }
     }
     dComIfGp_particle_set(MT_BURST_EFFECT, &i_this->current.pos);
@@ -369,14 +369,14 @@ void water_damage_se_set(mt_class *i_this) {
             mt_monsSeStart(MT_SE_DAMAGE, &i_this->eyePos, pid, 0, reverb);
         }
     }
-    i_this->m464 = 1;
+    i_this->mWaterSteamState = 1;
 }
 
 /* 021DC62C */
 static BOOL daMt_IsDelete(mt_class *) { return TRUE; }
 
 // HD: a Magtail removed by mt_bg_check (fell out of the room) is re-created at its home
-// position, unless its switch (m3D6) is set.
+// position, unless its switch (mAngleParam) is set.
 /* 021DC634 */
 static BOOL daMt_Delete(mt_class *i_this) {
     dComIfG_resDelete(&i_this->mPhs, "Mt");
@@ -390,8 +390,8 @@ static BOOL daMt_Delete(mt_class *i_this) {
     for (int i = 0; i < MT_PART_NUM; i++) {
         i_this->mFollowCb[i].remove();
     }
-    if (i_this->m1DD4 != 0 && i_this->m3D2 != 0 && i_this->m3D6 != 0 &&
-        !dComIfGs_isSwitch(i_this->m3D6, fopAcM_GetRoomNo(i_this))) {
+    if (i_this->mDeleteRequested != 0 && i_this->mUseAngleParam != 0 && i_this->mAngleParam != 0 &&
+        !dComIfGs_isSwitch(i_this->mAngleParam, fopAcM_GetRoomNo(i_this))) {
         u8 *app = fopAcM_CreateAppend();
         MtAppendView *a = (MtAppendView *)app;
         a->mPosition = i_this->home.pos;
@@ -488,7 +488,7 @@ static BOOL CallbackCreateHeap(fopAc_ac_c *a_this) {
                 }
             }
         }
-        i_this->m71C[i] = l_part_scale[i];
+        i_this->mSegmentScale[i] = l_part_scale[i];
     }
 
     for (u32 i = 0; i < 3; i++) {
@@ -539,19 +539,19 @@ static cPhs_State daMt_Create(fopAc_ac_c *a_this) {
     a_this->gbaName = 5;
     u8 type = fopAcM_GetParam(a_this) & 0xFF;
     u32 param = fopAcM_GetParam(a_this);
-    i_this->m3D0 = type != 0xFF ? type : 0;
-    i_this->m3D1 = (param >> 8) & 0x7F;
-    i_this->m3D2 = (param >> 15) & 1;
-    i_this->m3D3 = (param >> 16) & 0xFF;
-    i_this->m3D4 = param >> 24;
+    i_this->mType = type != 0xFF ? type : 0;
+    i_this->mSnapTurn = (param >> 8) & 0x7F;
+    i_this->mUseAngleParam = (param >> 15) & 1;
+    i_this->mPathIndex = (param >> 16) & 0xFF;
+    i_this->mSwitch = param >> 24;
     u8 sw = (u8)a_this->current.angle.z;
-    if (i_this->m3D2 == 0) {
-        i_this->m3D5 = sw;
+    if (i_this->mUseAngleParam == 0) {
+        i_this->mDeathSwitch = sw;
         if (sw != 0 && dComIfGs_isSwitch(sw, fopAcM_GetRoomNo(a_this))) {
             return cPhs_ERROR_e;
         }
     } else {
-        i_this->m3D6 = sw;
+        i_this->mAngleParam = sw;
     }
     a_this->current.angle.z = 0;
 
@@ -563,53 +563,53 @@ static cPhs_State daMt_Create(fopAc_ac_c *a_this) {
 
     i_this->mBtHeight = 162.5f;
     i_this->mBtBodyR = 200.0f;
-    if (i_this->m3D0 >= 10) {
-        switch (i_this->m3D1) {
+    if (i_this->mType >= 10) {
+        switch (i_this->mSnapTurn) {
         case 1:
-            i_this->m5A4 = 1000;
+            i_this->mTurnSpeed = 1000;
             break;
         case 2:
-            i_this->m5A4 = 500;
+            i_this->mTurnSpeed = 500;
             break;
         case 3:
-            i_this->m5A4 = 250;
+            i_this->mTurnSpeed = 250;
             break;
         case 11:
-            i_this->m5A4 = -1000;
+            i_this->mTurnSpeed = -1000;
             break;
         case 12:
-            i_this->m5A4 = -500;
+            i_this->mTurnSpeed = -500;
             break;
         case 13:
-            i_this->m5A4 = -250;
+            i_this->mTurnSpeed = -250;
             break;
         }
-    } else if (i_this->m3D3 != 0xFF) {
-        i_this->ppd = dPath_GetRoomPath(i_this->m3D3, fopAcM_GetRoomNo(a_this));
+    } else if (i_this->mPathIndex != 0xFF) {
+        i_this->ppd = dPath_GetRoomPath(i_this->mPathIndex, fopAcM_GetRoomNo(a_this));
         if (i_this->ppd == nullptr) {
             return cPhs_ERROR_e;
         }
-        i_this->m3D8 = i_this->m3D3 + 1;
-        i_this->m3DA = 1;
+        i_this->mHasPath = i_this->mPathIndex + 1;
+        i_this->mPathDirection = 1;
         MtPathPoint *pnt = ((MtPathView *)i_this->ppd.get())->mpPoints;
-        i_this->m598.x = pnt->mPosition.x;
-        i_this->m598.y = pnt->mPosition.y;
-        i_this->m598.z = pnt->mPosition.z;
+        i_this->mTargetPos.x = pnt->mPosition.x;
+        i_this->mTargetPos.y = pnt->mPosition.y;
+        i_this->mTargetPos.z = pnt->mPosition.z;
     }
-    if (i_this->m3D4 != 0xFF) {
-        i_this->m3D7 = i_this->m3D4 + 1;
+    if (i_this->mSwitch != 0xFF) {
+        i_this->mAppearSwitch = i_this->mSwitch + 1;
     }
 
     a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->mpMorf[1]->getModel()));
     fopAcM_SetMin(a_this, -200.0f, -200.0f, -200.0f);
     fopAcM_SetMax(a_this, 200.0f, 200.0f, 200.0f);
     a_this->gravity = -3.0f;
-    i_this->m586 = (s16)gabi::ftoi(cM_rndF(32768.0f));
+    i_this->mFrameCounter = (s16)gabi::ftoi(cM_rndF(32768.0f));
     for (int i = 0; i < MT_JOINT_NUM; i++) {
-        i_this->m810[i].copy(a_this->current.pos);
-        i_this->mB10[i].x = a_this->current.angle.x;
-        i_this->mB10[i].y = a_this->current.angle.y;
-        i_this->mB10[i].z = a_this->current.angle.z;
+        i_this->mTrailPos[i].copy(a_this->current.pos);
+        i_this->mTrailAngle[i].x = a_this->current.angle.x;
+        i_this->mTrailAngle[i].y = a_this->current.angle.y;
+        i_this->mTrailAngle[i].z = a_this->current.angle.z;
     }
     dBgS_Acch_Set(&i_this->mAcch, &a_this->current.pos, &a_this->old.pos, a_this, 1,
                   &i_this->mAcchCir, &a_this->speed, nullptr, nullptr);
@@ -623,9 +623,9 @@ static cPhs_State daMt_Create(fopAc_ac_c *a_this) {
     i_this->mAtSph.Set(&at_sph_src);
     i_this->mAtSph.SetStts(&i_this->mStts);
     a_this->max_health = 8;
-    i_this->mEnemyIce.mDeathSwitch = i_this->m3D5;
+    i_this->mEnemyIce.mDeathSwitch = i_this->mDeathSwitch;
     i_this->mHeadScale = 1.0f;
-    i_this->m1A17 = 2;
+    i_this->mHeadHealth = 2;
     a_this->health = 8;
     i_this->mEnemyIce.mpActor = a_this;
     daMt_Execute(i_this);

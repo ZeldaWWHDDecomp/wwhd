@@ -34,7 +34,7 @@ static inline void draw_plank_rope(bridge_class *i_this, br_s *pBr, int line, u8
         &gabi::at<BridgeLineMaterial>(gabi::ea(&pBr->mLineMat1))->mpLines));
     u32 size0 = gabi::ea(gabi::at<BridgeLine>(lines)[line].mpSize.get());
     u32 size1 = gabi::ea(gabi::at<BridgeLine>(lines)[(line + 2)].mpSize.get());
-    if ((pBr->m408 & flag) == 0) {
+    if ((pBr->mRopeFlags & flag) == 0) {
         for (int j = 0; j < 5; j++) {
             *gabi::at<be<u8>>(size1++) = uVar16;
             *gabi::at<be<u8>>(size0++) = uVar16;
@@ -43,12 +43,12 @@ static inline void draw_plank_rope(bridge_class *i_this, br_s *pBr, int line, u8
     }
     u32 segment0 = gabi::ea(gabi::at<BridgeLine>(lines)[line].mpSegments.get());
     u32 segment1 = gabi::ea(gabi::at<BridgeLine>(lines)[(line + 2)].mpSegments.get());
-    cXyz *ropeEnd = line == 0 ? pBr->m11C : pBr->m0F8;
+    cXyz *ropeEnd = line == 0 ? pBr->mSide0Pos : pBr->mSide1Pos;
 
     dx = dx * 0.25f; /* GameCube: /= 4.0f */
     dy = dy * 0.25f;
     dz = dz * 0.25f;
-    f32 fVar3 = cM_ssin(i_this->m0300 * 5) * (f32)pBr->m3A0[line];
+    f32 fVar3 = cM_ssin(i_this->mAnmPhase * 5) * (f32)pBr->mRopeHitTimer[line];
 
     gabi::Local<cXyz> sum;
     for (int j = 0; j < 5; j++, segment0 += 0xC, segment1 += 0xC, size0++, size1++) {
@@ -56,13 +56,13 @@ static inline void draw_plank_rope(bridge_class *i_this, br_s *pBr, int line, u8
         f32 fVar2;
         if (j == 2) {
             fVar2 = 1.0f;
-            s8 n = line == 0 ? (s8)pBr->m3A4 : (s8)pBr->m3A5;
+            s8 n = line == 0 ? (s8)pBr->mRope0Hp : (s8)pBr->mRope1Hp;
             if (n <= 1) {
                 *gabi::at<be<u8>>(size0) = 0;
             } else if (n == 2) {
                 *gabi::at<be<u8>>(size0) = 1;
             }
-            copy_words(gabi::ea(&pBr->m3A8[line]), segment0);
+            copy_words(gabi::ea(&pBr->mRopeMidPos[line]), segment0);
         } else if (j == 1 || j == 3) {
             fVar2 = 0.7f;
         } else {
@@ -79,17 +79,17 @@ static inline void draw_plank_rope(bridge_class *i_this, br_s *pBr, int line, u8
     }
 }
 
-/* one chain model (type 1 bridges): rope 0 hangs from m11C, rope 1 from m0F8 */
+/* one chain model (type 1 bridges): rope 0 hangs from mSide0Pos, rope 1 from mSide1Pos */
 static inline void draw_chain(bridge_class *i_this, br_s *pBr, int side, f32 dx, f32 dy, f32 dz) {
     s16 atan = (s16)-cM_atan2s(dy, dz);
     s16 atan2 = cM_atan2s(dx, std_sqrtf(gabi::fmadds(dy, dy, dz * dz)));
-    cXyz *top = side == 0 ? &pBr->m11C[1] : &pBr->m0F8[1];
+    cXyz *top = side == 0 ? &pBr->mSide0Pos[1] : &pBr->mSide1Pos[1];
     MtxTrans(top->x, top->y, top->z, 0);
-    s16 m3A0 = pBr->m3A0[side];
+    s16 mRopeHitTimer = pBr->mRopeHitTimer[side];
     s16 sVar8;
-    if (m3A0 != 0) {
-        s16 sVar7 = i_this->m0300;
-        sVar8 = (s16)gabi::ftoi(cM_ssin(sVar7 * 6) * (f32)m3A0 * 100.0f);
+    if (mRopeHitTimer != 0) {
+        s16 sVar7 = i_this->mAnmPhase;
+        sVar8 = (s16)gabi::ftoi(cM_ssin(sVar7 * 6) * (f32)mRopeHitTimer * 100.0f);
         cMtx_YrotM(calc_mtx(), sVar7);
     } else {
         sVar8 = 0;
@@ -106,11 +106,11 @@ static inline void draw_chain(bridge_class *i_this, br_s *pBr, int side, f32 dx,
 
 /* the side ropes (mLineMat line `line`): from home.pos to the far end (or the partner bridge) */
 static inline void side_rope_end(bridge_class *i_this, int line, cXyz *sp54, cXyz *sp48) {
-    u32 segment1 = lineMat_pos(&i_this->mLineMat, line) + i_this->m030C * 0xC + 0xC;
+    u32 segment1 = lineMat_pos(&i_this->mLineMat, line) + i_this->mSideRopeNum * 0xC + 0xC;
     if ((i_this->mTypeBits & 2) != 0) {
         bridge_class *aite = i_this->mpAite;
         if (aite != nullptr) {
-            copy_words(segment1, gabi::ea(line == 0 ? &aite->m032C : &aite->m0320));
+            copy_words(segment1, gabi::ea(line == 0 ? &aite->mEndRopePos0 : &aite->mEndRopePos1));
         }
     } else {
         MtxPosition(sp54, sp48);
@@ -134,18 +134,18 @@ BOOL daBridge_Draw(bridge_class *i_this) {
         mDoExt_modelUpdateDL(pBr->mpModel);
         dComIfGd_setList();
 
-        if ((pBr->m408 & 4) == 0) {
+        if ((pBr->mRopeFlags & 4) == 0) {
             continue;
         }
 
-        cMtx_YrotS(calc_mtx(), i_this->m0300);
+        cMtx_YrotS(calc_mtx(), i_this->mAnmPhase);
         sp84->x = 0.0f;
         sp84->y = 0.0f;
         sp84->z = 1.0f;
         MtxPosition(sp84, sp78);
-        cXyz_mi(&pBr->m11C[0], diff, &pBr->m11C[1]);
+        cXyz_mi(&pBr->mSide0Pos[0], diff, &pBr->mSide0Pos[1]);
         f32 sp6Cx = diff->x, sp6Cy = diff->y, sp6Cz = diff->z;
-        cXyz_mi(&pBr->m0F8[0], diff, &pBr->m0F8[1]);
+        cXyz_mi(&pBr->mSide1Pos[0], diff, &pBr->mSide1Pos[1]);
         f32 sp60x = diff->x, sp60y = diff->y, sp60z = diff->z;
 
         if ((i_this->mTypeBits & 1) == 0) {
@@ -158,10 +158,10 @@ BOOL daBridge_Draw(bridge_class *i_this) {
             continue;
         }
 
-        if ((pBr->m408 & 1) != 0) {
+        if ((pBr->mRopeFlags & 1) != 0) {
             draw_chain(i_this, pBr, 0, sp6Cx, sp6Cy, sp6Cz);
         }
-        if ((pBr->m408 & 2) != 0) {
+        if ((pBr->mRopeFlags & 2) != 0) {
             draw_chain(i_this, pBr, 1, sp60x, sp60y, sp60z);
         }
     }
@@ -198,7 +198,7 @@ BOOL daBridge_Draw(bridge_class *i_this) {
         if ((i_this->mTypeBits & 2) != 0 && i_this->home.angle.y > 0) {
             extra = 1;
         }
-        BridgeHD::SDK::mDoExt_3DlineMat1_update_w(&i_this->mLineMat, (u16)(i_this->m030C + extra), tmp,
+        BridgeHD::SDK::mDoExt_3DlineMat1_update_w(&i_this->mLineMat, (u16)(i_this->mSideRopeNum + extra), tmp,
                                                   BridgeHD::sideRopeColor() /* {150, 150, 150, 255} */, 0,
                                                   &i_this->tevStr);
         BridgeHD::SDK::dComIfGd_set3DlineMat(&i_this->mLineMat);

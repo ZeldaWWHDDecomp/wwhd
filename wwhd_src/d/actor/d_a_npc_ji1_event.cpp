@@ -27,7 +27,7 @@ enum {
 };
 
 /* setAction(p, arg) with a PTMF read from memory (eventAction:
- * setAction(field_0x2C8, 0)) */
+ * setAction(mEventReturnAction, 0)) */
 static inline void ji1_setActionP(daNpc_Ji1_c *t, Ji1EventProcHD &src,
                                   void *arg) {
   s16 ad = src.d;
@@ -42,14 +42,14 @@ static inline void ji1_setActionP(daNpc_Ji1_c *t, Ji1EventProcHD &src,
   }
   if (!eq) {
     if (mi != 0) {
-      t->field_0xC78 = -1;
+      t->mActionPhase = -1;
       ptmf_invoke(t->mAction, t, arg);
     }
-    ptmf_copy(t->field_0x2BC, t->mAction);
+    ptmf_copy(t->mPrevAction, t->mAction);
     t->mAction.d = ad;
     t->mAction.i = ai;
     t->mAction.f = af;
-    t->field_0xC78 = 0;
+    t->mActionPhase = 0;
     ptmf_invoke(t->mAction, t, arg);
   }
 }
@@ -84,7 +84,7 @@ u32 daNpc_Ji1_c::setParticleAT(int max, f32 rate, f32 spread) {
   if (mSmokeCbAT.mpEmitter.get() == nullptr) {
     s8 roomNo = fopAcM_GetRoomNo(this);
     JPABaseEmitter *emitter = dPa_control_set(
-        dComIfGp_getParticle(), 2, ID_AK_JT_ELEMENTSMOKE00, &field_0x320,
+        dComIfGp_getParticle(), 2, ID_AK_JT_ELEMENTSMOKE00, &mSmokePos,
         nullptr, nullptr, 0xB9, (dPa_levelEcallBack *)&mSmokeCbAT, roomNo,
         nullptr, nullptr, nullptr);
     if (mSmokeCbAT.mpEmitter.get()) {
@@ -107,7 +107,7 @@ u32 daNpc_Ji1_c::setParticleAT(int max, f32 rate, f32 spread) {
 /* 02255358 */
 void daNpc_Ji1_c::setHitParticle(cXyz *param_1, u32 param_2) {
 
-  cXyz *pRVec = &field_0x7E0.mGObjTg.mRVec;
+  cXyz *pRVec = &mGuardCyl.mGObjTg.mRVec;
   // HD: preserve the angle and scale layout of the native temporary block.
   gabi::Local<Ji1EventHitParticleArgsHD> loc;
   cXyz *scale = &loc->scale;
@@ -118,13 +118,13 @@ void daNpc_Ji1_c::setHitParticle(cXyz *param_1, u32 param_2) {
   if (param_1) {
     scale->copy(*param_1);
   }
-  dComIfGp_particle_set(ID_AK_JN_OK, field_0x7E0.GetTgHitPosP(), angle, scale);
-  dComIfGp_particle_set(ID_AK_JN_CRITICALHITFLASH, field_0x7E0.GetTgHitPosP(),
+  dComIfGp_particle_set(ID_AK_JN_OK, mGuardCyl.GetTgHitPosP(), angle, scale);
+  dComIfGp_particle_set(ID_AK_JN_CRITICALHITFLASH, mGuardCyl.GetTgHitPosP(),
                         nullptr, scale);
   ji1_seStart(this, JA_SE_CM_JI_DAMAGE, 0);
   ji1_seStart(this, param_2, 0);
   gabi::Local<cXyz> pos;
-  cXyz *hit = field_0x7E0.GetTgHitPosP();
+  cXyz *hit = mGuardCyl.GetTgHitPosP();
   pos->z = (f32)hit->z;
   pos->y = (f32)hit->y;
   pos->x = (f32)hit->x;
@@ -143,9 +143,9 @@ static void *ji1EventInitPosObjectHD(void *pActor, void *pData) {
 
   if (fopAc_IsActor(pActor) && pActor != nullptr &&
       fpcM_GetName(pActor) == fpcNm_TSUBO_e) {
-    /* daTsubo::Act_c::pos_init() (inline; m678 at 0x794) */
+    /* daTsubo::Act_c::pos_init() (inline; mMode at 0x794) */
     auto *a = reinterpret_cast<Ji1EventTsuboHD *>(pActor);
-    if (a->m678 == 2) {
+    if (a->mMode == 2) {
       a->current.pos.set(a->home.pos.x, a->home.pos.y, a->home.pos.z);
       a->current.angle.x = (s16)a->home.angle.x;
       a->current.angle.y = (s16)a->home.angle.y;
@@ -180,8 +180,8 @@ void daNpc_Ji1_c::initPos(int param_1) {
   }
   fopAcIt_Judge(gabi::guest_fn((const void *)ji1EventInitPosObjectHD),
                 this); /* fopAcM_Search */
-  old.pos.copy(field_0xD28);
-  current.pos.copy(field_0xD28);
+  old.pos.copy(mInitPos);
+  current.pos.copy(mInitPos);
   gabi::Local<csXyz> a;
   csXyz *r = ji1EventConstructAnglesHD(a.get(), (s16)home.angle.y, (s16)0,
                                        (s16)0); /* csXyz::csXyz returns this */
@@ -203,7 +203,7 @@ void daNpc_Ji1_c::createItem() {
     itemNo = dItemNo_PURPLE_RUPEE_e;
   } else if (dComIfGs_getEventReg(0xD003) == 2) {
     itemNo = dItemNo_ORANGE_RUPEE_e;
-  } else if (field_0xD70 >= l_hio.field_0x60[3] &&
+  } else if (mTeachStep >= l_hio.field_0x60[3] &&
              dComIfGs_isEventBit(0x0F10)) {
     itemNo = dItemNo_SILVER_RUPEE_e;
   } else {
@@ -221,28 +221,28 @@ void daNpc_Ji1_c::createItem() {
 /* 022596CC */
 BOOL daNpc_Ji1_c::eventAction(void *arg) {
 
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     s32 staffIdx =
         dComIfGp_evmng_getMyStaffId(mEventCut.getActorName(), nullptr, 0);
     if (!eventInfo_checkCommandDemoAccrpt(this) && staffIdx == -1) {
-      fopAcM_orderOtherEventId(this, mEventIdx[field_0xC84], 0xFF, 0xFFFF, 0,
+      fopAcM_orderOtherEventId(this, mEventIdx[mEventNo], 0xFF, 0xFFFF, 0,
                                1);
       eventInfo_onCondition(this, 2 /* dEvtCnd_UNK2_e */);
       return false;
     }
-    field_0xC78 += 1;
-  } else if (field_0xC78 == -1) {
-    field_0xC84 = 0x12;
+    mActionPhase += 1;
+  } else if (mActionPhase == -1) {
+    mEventNo = 0x12;
   } else {
     s32 staffIdx =
         dComIfGp_evmng_getMyStaffId(mEventCut.getActorName(), nullptr, 0);
     privateCut();
     AnimeControlToWait();
-    if (dComIfGp_evmng_endCheck(mEventIdx[field_0xC84])) {
+    if (dComIfGp_evmng_endCheck(mEventIdx[mEventNo])) {
       dComIfGp_event_reset();
-      ji1_setActionP(this, field_0x2C8, nullptr);
+      ji1_setActionP(this, mEventReturnAction, nullptr);
     } else if (staffIdx == -1) {
-      ji1_setActionP(this, field_0x2C8, nullptr);
+      ji1_setActionP(this, mEventReturnAction, nullptr);
     }
   }
   return true;
@@ -271,7 +271,7 @@ u32 daNpc_Ji1_c::evn_setAnm_init(int staffIdx) {
     if (fData) {
       fVal = f32(*fData);
     }
-    if (field_0xD84 != Ji1Event_HARPOON_HELD && iVal == Ji1Event_BCK_KAMAE) {
+    if (mHarpoonState != Ji1Event_HARPOON_HELD && iVal == Ji1Event_BCK_KAMAE) {
       iVal = Ji1Event_BCK_WAIT02;
     }
     setAnm(iVal, fVal, 0);
@@ -300,9 +300,9 @@ u32 daNpc_Ji1_c::evn_talk_init(int staffIdx) {
         mMsgNo = 0x9A7;
       }
     } else if (no == 0x9B7) {
-      if (ptmf_eq(field_0x2C8, ACT_kaitenwaitAction)) {
+      if (ptmf_eq(mEventReturnAction, ACT_kaitenwaitAction)) {
         mMsgNo = 0x95E;
-      } else if (ptmf_eq(field_0x2C8, ACT_teachAction)) {
+      } else if (ptmf_eq(mEventReturnAction, ACT_teachAction)) {
         mMsgNo = 0x95D;
       }
     }
@@ -341,10 +341,10 @@ static inline u32 ji1_talk_proc(daNpc_Ji1_c *t) {
     } else if (ji1EventMessageStatusHD(mgr) == fopMsgStts_MSG_ENDS_e) {
       if (t->mMsgNo == 0x9BA) {
         t->field_0xD7B = 0;
-        t->field_0xD6C = 0;
+        t->mSubActionPhase = 0;
       } else if (t->mMsgNo == 0x95A) {
         t->field_0xD7C = 0;
-        t->field_0xD6C = 0;
+        t->mSubActionPhase = 0;
       }
     }
     return false;
@@ -458,10 +458,10 @@ u32 daNpc_Ji1_c::evn_harpoon_proc_init(int staffIdx) {
     harpoonRelease(nullptr);
     break;
   case 1:
-    field_0xD84 = Ji1Event_HARPOON_HIDDEN;
+    mHarpoonState = Ji1Event_HARPOON_HIDDEN;
     break;
   case 2:
-    field_0xD84 = Ji1Event_HARPOON_HELD;
+    mHarpoonState = Ji1Event_HARPOON_HELD;
     break;
   }
   return true;
@@ -471,10 +471,10 @@ u32 daNpc_Ji1_c::evn_harpoon_proc_init(int staffIdx) {
 u32 daNpc_Ji1_c::evn_RollAtControl_init(int staffIdx) {
 
   fopAc_ac_c *player = daPy_getPlayerActorClass();
-  field_0xD18 = 400.0f;
+  mRollAtRadius = 400.0f;
   s16 a = cLib_targetAngleY(&current.pos, &player->current.pos);
-  field_0xD16 = (s16)(a + 0x2000);
-  field_0xC30 = 30;
+  mRollAtAngle = (s16)(a + 0x2000);
+  mBattleTimer = 30;
   field_0xD68 = 0;
   return 1;
 }
@@ -490,23 +490,23 @@ u32 daNpc_Ji1_c::evn_RollAtControl() {
     hit_scale->z = 1.25f;
     hit_scale->y = 1.25f;
   }
-  field_0xD16 = (s16)(field_0xD16 + 0x540);
-  cLib_chaseF(&field_0xD18, 0.0f, 1.0f);
+  mRollAtAngle = (s16)(mRollAtAngle + 0x540);
+  cLib_chaseF(&mRollAtRadius, 0.0f, 1.0f);
   f32 z = current.pos.z;
   f32 y = current.pos.y;
   f32 x = current.pos.x;
-  field_0xD1C.z = z;
-  field_0xD1C.x = x;
-  field_0xD1C.y = y;
-  f32 d18 = field_0xD18;
-  field_0xD1C.x = gabi::fmadds(d18, cM_ssin(field_0xD16), x);
-  field_0xD1C.z = gabi::fmadds(d18, cM_scos(field_0xD16), z);
-  dComIfGp_evmng_setGoal(&field_0xD1C);
-  field_0x6B0.SetC(&current.pos);
-  dComIfG_Ccsp_Set(&field_0x6B0);
-  field_0x7E0.SetC(&current.pos);
-  dComIfG_Ccsp_Set(&field_0x7E0);
-  if (field_0xC30 == 0xA) {
+  mRollAtPos.z = z;
+  mRollAtPos.x = x;
+  mRollAtPos.y = y;
+  f32 d18 = mRollAtRadius;
+  mRollAtPos.x = gabi::fmadds(d18, cM_ssin(mRollAtAngle), x);
+  mRollAtPos.z = gabi::fmadds(d18, cM_scos(mRollAtAngle), z);
+  dComIfGp_evmng_setGoal(&mRollAtPos);
+  mCyl.SetC(&current.pos);
+  dComIfG_Ccsp_Set(&mCyl);
+  mGuardCyl.SetC(&current.pos);
+  dComIfG_Ccsp_Set(&mGuardCyl);
+  if (mBattleTimer == 0xA) {
     setAnm(Ji1Event_BCK_DAMAGE, 0.0f, 0);
     BackSlideInit();
     setHitParticle(hit_scale, JA_SE_CV_JI_FUTTOBI);
@@ -527,8 +527,8 @@ u32 daNpc_Ji1_c::evn_RollAtControl() {
     }
     BackSlide(120.0f, 10.0f);
   }
-  if (field_0xC30 > 0) {
-    field_0xC30 -= 1;
+  if (mBattleTimer > 0) {
+    mBattleTimer -= 1;
   } else {
     return true;
   }

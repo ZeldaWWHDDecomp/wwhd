@@ -51,9 +51,9 @@ static inline void copy3f(u32 destination, u32 source) {
 }
 /* inlined into useItem0EvCamera/useItem1EvCamera */
 static inline void setDone(u32 c) {
-    at<dCamera_c>(c)->m102 = 1;
-    at<dCamera_c>(c)->m101 = 1;
-    at<dCamera_c>(c)->m100 = 1;
+    at<dCamera_c>(c)->mStyleSettle2 = 1;
+    at<dCamera_c>(c)->mStyleSettle1 = 1;
+    at<dCamera_c>(c)->mStyleSettle0 = 1;
 }
 /* centre from the item's centre offset, eye = centre + direction */
 /* inlined into useItem0EvCamera/useItem1EvCamera */
@@ -242,7 +242,7 @@ u32 ItemEventCamera_c::useItem0EvCamera() {
     ev8_cSAngle_default(gabi::ea(&at<ItemCameraFrame0HD>(F)->mYaw)); /* cSAngle() */
     ev8_cSAngle_default(gabi::ea(&at<ItemCameraFrame0HD>(F)->mPitch));
     u32 s;
-    if (this->m11C == 0) {
+    if (this->mCurStyleTimer == 0) {
         s = ITEM_INIT;
         work.mState = ITEM_INIT;
     } else {
@@ -338,7 +338,7 @@ u32 ItemEventCamera_c::useItem0EvCamera() {
         return 0;
     }
     work.mFrame = 0;
-    if ((this->m07C & 7) == 0) {
+    if ((this->mFrameCounter & 7) == 0) {
         u32 type = work.mType;
         if (type >= 2 && type <= 3) { /* swap the first two eye offsets */
             u32 p = at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mEyeOffsets[0]) + (type << 2))
@@ -378,10 +378,10 @@ u32 ItemEventCamera_c::useItem0EvCamera() {
         ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame0HD>(F)->mPosition),
                        this->mpPlayerActor.v.get());
         if (at<cXyz>(E)[0].y.get() <
-            at<ItemCameraFrame0HD>(F)->mPosition.y + this->m368) { /* bge: taken on NaN */
+            at<ItemCameraFrame0HD>(F)->mPosition.y + this->mBushHeight) { /* bge: taken on NaN */
             ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame0HD>(F)->mPlayerPosition),
                            this->mpPlayerActor.v.get());
-            at<cXyz>(E)[0].y = at<ItemCameraFrame0HD>(F)->mPlayerPosition.y + this->m368;
+            at<cXyz>(E)[0].y = at<ItemCameraFrame0HD>(F)->mPlayerPosition.y + this->mBushHeight;
         }
         u32 item = 0;
         s32 pad = (s32)this->mPadId;
@@ -584,7 +584,7 @@ u32 ItemEventCamera_c::useItem1EvCamera() {
     u32 ctrTab = gabi::ea(&at<ItemCameraFrame1HD>(F)->mCenterOffsets[0]),
         eyeTab = gabi::ea(&at<ItemCameraFrame1HD>(F)->mEyeOffsets[0]);
     u32 s;
-    if (this->m11C == 0) {
+    if (this->mCurStyleTimer == 0) {
         s = ITEM_INIT;
         work.mState = ITEM_INIT;
     } else {
@@ -686,7 +686,7 @@ u32 ItemEventCamera_c::useItem1EvCamera() {
         work.mHoldFrames = ITEM_INIT;
     }
     work.mFrame = 0;
-    if ((this->m07C & 7) == 0) {
+    if ((this->mFrameCounter & 7) == 0) {
         u32 type = work.mType;
         if (type >= 2 && type <= 3) {
             u32 p = at<be<u32>>(eyeTab + (type << 2))->get();
@@ -719,10 +719,10 @@ u32 ItemEventCamera_c::useItem1EvCamera() {
         ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPosition),
                        this->mpPlayerActor.v.get());
         if (at<cXyz>(E)[0].y.get() <
-            at<ItemCameraFrame1HD>(F)->mPosition.y + this->m368) { /* bge: taken on NaN */
+            at<ItemCameraFrame1HD>(F)->mPosition.y + this->mBushHeight) { /* bge: taken on NaN */
             ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPlayerPosition),
                            this->mpPlayerActor.v.get());
-            at<cXyz>(E)[0].y = at<ItemCameraFrame1HD>(F)->mPlayerPosition.y + this->m368;
+            at<cXyz>(E)[0].y = at<ItemCameraFrame1HD>(F)->mPlayerPosition.y + this->mBushHeight;
         }
         if (ev8_lineBGCheck(i_this, gabi::ea(&work.mCenter), E, 0x8F))
             continue;

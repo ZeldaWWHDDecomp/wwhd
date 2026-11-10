@@ -42,13 +42,13 @@ WWHD_OFFSET(Ji1EventEmitterHD, mVolumeSweep, 0x7C);
 // daTsubo::Act_c fields keep their GameCube names with the HD +0x11C shift.
 struct Ji1EventTsuboHD : fopAc_ac_c {
   u8 _3AC[0x794 - 0x3AC];
-  be<s32> m678;
+  be<s32> mMode;  /* was m678: daTsubo::Act_c::mMode (d_a_tsubo.h) */
   u8 _798[0x7A4 - 0x798];
   be<s16> m688, m68A, m68C, m68E, m690, m692;
   u8 _7B0[0x7D8 - 0x7B0];
   Mtx34 mPoseMtx;
 };
-WWHD_OFFSET(Ji1EventTsuboHD, m678, 0x794);
+WWHD_OFFSET(Ji1EventTsuboHD, mMode, 0x794);
 WWHD_OFFSET(Ji1EventTsuboHD, mPoseMtx, 0x7D8);
 struct Ji1EventPlayerHD : fopAc_ac_c {
   u8 _3AC[0x3B8 - 0x3AC];

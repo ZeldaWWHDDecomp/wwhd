@@ -4,11 +4,11 @@
 #include "bindings.h"
 struct JAISound;
 struct AtmosCamera {
-    gptr<cXyz> field_0x0;
+    gptr<cXyz> position;  /* was field_0x0: JAInter::Camera::position (JSystem/JAudio/JAIBasic.h; the base class JAIBasic's mAudioCamera); seaEnvSePlay 0201C524 places the four sea points around it */
     be<u32> mUnaccessed;
-    gptr<void> field_0x8;
+    gptr<void> matrix;  /* was field_0x8: JAInter::Camera::matrix (JSystem/JAudio/JAIBasic.h; the base class JAIBasic's mAudioCamera); seaEnvSePlay 0201C524 / waterfallSePlay 0201CF54 transform by it */
 };
-WWHD_OFFSET(AtmosCamera, field_0x8, 8);
+WWHD_OFFSET(AtmosCamera, matrix, 8);
 struct AtmosSafeString;
 struct AtmosSafeStringVtable {
     u8 mUnaccessed[0x14];
@@ -22,48 +22,48 @@ class JAIZelBasic {
   public:
     gptr<AtmosCamera> mAudioCamera;
     u8 mUnaccessed4[0x2C];
-    be<u8> field_0x0020;
+    be<u8> mIsMenuIn;  /* was field_0x0020: JAIZelBasic::mIsMenuIn (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed31[0x33];
-    cXyz field_0x0054;
+    cXyz mCameraPolygonPos;  /* was field_0x0054: JAIZelBasic::mCameraPolygonPos (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed70[0x38];
-    be<f32> field_0x0098;
+    be<f32> mMainBgmTaktVolume;  /* was field_0x0098: JAIZelBasic::mMainBgmTaktVolume (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessedAC[0x1BC];
-    be<u8> field_0x01f8;
+    be<u8> mNoCameraTimer;  /* was field_0x01f8: JAIZelBasic::mNoCameraTimer (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed269[0x8];
-    be<u8> field_0x0201;
+    be<u8> mAllSeMuted;  /* was field_0x0201: JAIZelBasic::mAllSeMuted (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed272[0x2];
-    be<u8> field_0x0204;
+    be<u8> mSeaEnvSeOff;  /* was field_0x0204: JAIZelBasic::mSeaEnvSeOff (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed275[0x1];
-    be<u8> field_0x0206;
-    be<u8> field_0x0207;
+    be<u8> mFanfareActive;  /* was field_0x0206: JAIZelBasic::mFanfareActive (JAZelAudio/JAIZelBasic.h) */
+    be<u8> mTaktSeTimer;  /* was field_0x0207: JAIZelBasic::mTaktSeTimer (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed278[0x10];
     // HD: the sea-group byte aliases the low byte of the GC field_0x0218 word.
     union {
- be<u32> field_0x0218;
+ be<u32> mCameraMapInfo;  /* was field_0x0218: JAIZelBasic::mCameraMapInfo (JAZelAudio/JAIZelBasic.h) */
  struct {u8 mUnaccessedGroup[3]; be<u8> mSeaEnvGroupHD;} mGroupBytes;
  };
     u8 mUnaccessed28C[0x8];
-    be<s32> field_0x0224;
+    be<s32> mSceneNo;  /* was field_0x0224: JAIZelBasic::mSceneNo (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed298[0x5];
-    be<u8> field_0x022d;
+    be<u8> mSceneActive;  /* was field_0x022d: JAIZelBasic::mSceneActive (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed29E[0x1352];
     cXyz mSeaEnvPos[64];
     cXyz mSeaEnvCameraPos[64];
-    be<s32> field_0x1b80;
+    be<s32> mSeaEnvPosCount;  /* was field_0x1b80: JAIZelBasic::mSeaEnvPosCount (JAZelAudio/JAIZelBasic.h) */
     cXyz mSeaShorePos;
     // HD: 48 stored entries; registration still compares against 64 before resetting to 47.
     cXyz mRiverPos[48];
-    be<s32> field_0x1dd0;
-    be<u8> field_0x1dd4;
+    be<s32> mRiverPosCount;  /* was field_0x1dd0: JAIZelBasic::mRiverPosCount (JAZelAudio/JAIZelBasic.h) */
+    be<u8> mBstHoriSeOn;  /* was field_0x1dd4: JAIZelBasic::mBstHoriSeOn (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed1E45[0x3];
     cXyz mWaterfallPos[16];
-    be<s32> field_0x1e98;
+    be<s32> mWaterfallPosCount;  /* was field_0x1e98: JAIZelBasic::mWaterfallPosCount (JAZelAudio/JAIZelBasic.h) */
     cXyz mWindowPos[3];
-    be<s32> field_0x1ec0;
-    gptr<JAISound> field_0x1ec4;
-    gptr<JAISound> field_0x1ec8;
-    gptr<JAISound> field_0x1ecc;
-    gptr<JAISound> field_0x1ed0;
+    be<s32> mWindowPosCount;  /* was field_0x1ec0: JAIZelBasic::mWindowPosCount (JAZelAudio/JAIZelBasic.h) */
+    gptr<JAISound> mpSeaEnvSoundL;  /* was field_0x1ec4: JAIZelBasic::mpSeaEnvSoundL (JAZelAudio/JAIZelBasic.h) */
+    gptr<JAISound> mpSeaEnvSoundR;  /* was field_0x1ec8: JAIZelBasic::mpSeaEnvSoundR (JAZelAudio/JAIZelBasic.h) */
+    gptr<JAISound> mpSeaEnvSoundS;  /* was field_0x1ecc: JAIZelBasic::mpSeaEnvSoundS (JAZelAudio/JAIZelBasic.h) */
+    gptr<JAISound> mpSeaShoreSound;  /* was field_0x1ed0: JAIZelBasic::mpSeaShoreSound (JAZelAudio/JAIZelBasic.h) */
     f32 calcPosPanLR(cXyz* pos);
     f32 calcPosPanSR(cXyz* pos, f32 scale);
     f32 calcPosVolume(cXyz* pos, f32 scale);
@@ -80,33 +80,33 @@ class JAIZelBasic {
     s32 registWindowPos(cXyz* pos);
     void rainPlay(s32 type);
 };
-WWHD_OFFSET(JAIZelBasic, field_0x0020, 0x30);
-WWHD_OFFSET(JAIZelBasic, field_0x0054, 0x64);
-WWHD_OFFSET(JAIZelBasic, field_0x0098, 0xA8);
-WWHD_OFFSET(JAIZelBasic, field_0x01f8, 0x268);
-WWHD_OFFSET(JAIZelBasic, field_0x0201, 0x271);
-WWHD_OFFSET(JAIZelBasic, field_0x0204, 0x274);
-WWHD_OFFSET(JAIZelBasic, field_0x0206, 0x276);
-WWHD_OFFSET(JAIZelBasic, field_0x0207, 0x277);
-WWHD_OFFSET(JAIZelBasic, field_0x0218, 0x288);
+WWHD_OFFSET(JAIZelBasic, mIsMenuIn, 0x30);
+WWHD_OFFSET(JAIZelBasic, mCameraPolygonPos, 0x64);
+WWHD_OFFSET(JAIZelBasic, mMainBgmTaktVolume, 0xA8);
+WWHD_OFFSET(JAIZelBasic, mNoCameraTimer, 0x268);
+WWHD_OFFSET(JAIZelBasic, mAllSeMuted, 0x271);
+WWHD_OFFSET(JAIZelBasic, mSeaEnvSeOff, 0x274);
+WWHD_OFFSET(JAIZelBasic, mFanfareActive, 0x276);
+WWHD_OFFSET(JAIZelBasic, mTaktSeTimer, 0x277);
+WWHD_OFFSET(JAIZelBasic, mCameraMapInfo, 0x288);
 WWHD_OFFSET(JAIZelBasic, mGroupBytes.mSeaEnvGroupHD, 0x28B);
-WWHD_OFFSET(JAIZelBasic, field_0x0224, 0x294);
-WWHD_OFFSET(JAIZelBasic, field_0x022d, 0x29D);
+WWHD_OFFSET(JAIZelBasic, mSceneNo, 0x294);
+WWHD_OFFSET(JAIZelBasic, mSceneActive, 0x29D);
 WWHD_OFFSET(JAIZelBasic, mSeaEnvPos, 0x15F0);
 WWHD_OFFSET(JAIZelBasic, mSeaEnvCameraPos, 0x18F0);
-WWHD_OFFSET(JAIZelBasic, field_0x1b80, 0x1BF0);
+WWHD_OFFSET(JAIZelBasic, mSeaEnvPosCount, 0x1BF0);
 WWHD_OFFSET(JAIZelBasic, mSeaShorePos, 0x1BF4);
 WWHD_OFFSET(JAIZelBasic, mRiverPos, 0x1C00);
-WWHD_OFFSET(JAIZelBasic, field_0x1dd0, 0x1E40);
-WWHD_OFFSET(JAIZelBasic, field_0x1dd4, 0x1E44);
+WWHD_OFFSET(JAIZelBasic, mRiverPosCount, 0x1E40);
+WWHD_OFFSET(JAIZelBasic, mBstHoriSeOn, 0x1E44);
 WWHD_OFFSET(JAIZelBasic, mWaterfallPos, 0x1E48);
-WWHD_OFFSET(JAIZelBasic, field_0x1e98, 0x1F08);
+WWHD_OFFSET(JAIZelBasic, mWaterfallPosCount, 0x1F08);
 WWHD_OFFSET(JAIZelBasic, mWindowPos, 0x1F0C);
-WWHD_OFFSET(JAIZelBasic, field_0x1ec0, 0x1F30);
-WWHD_OFFSET(JAIZelBasic, field_0x1ec4, 0x1F34);
-WWHD_OFFSET(JAIZelBasic, field_0x1ec8, 0x1F38);
-WWHD_OFFSET(JAIZelBasic, field_0x1ecc, 0x1F3C);
-WWHD_OFFSET(JAIZelBasic, field_0x1ed0, 0x1F40);
+WWHD_OFFSET(JAIZelBasic, mWindowPosCount, 0x1F30);
+WWHD_OFFSET(JAIZelBasic, mpSeaEnvSoundL, 0x1F34);
+WWHD_OFFSET(JAIZelBasic, mpSeaEnvSoundR, 0x1F38);
+WWHD_OFFSET(JAIZelBasic, mpSeaEnvSoundS, 0x1F3C);
+WWHD_OFFSET(JAIZelBasic, mpSeaShoreSound, 0x1F40);
 WWHD_SIZE(JAIZelBasic, 0x1F44);
 enum AtmosSoundId : u32 {
     JA_SE_ATM_RAIN_1 = 0x105B,

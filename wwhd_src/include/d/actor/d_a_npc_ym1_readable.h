@@ -58,12 +58,12 @@ struct Ym1PartAState {
     /* 0x9F0 */ u8 _9F0[8];
     /* 0x9F8 */ be<u32> mEyePositionEnabled;
     /* 0x9FC */ u8 _9FC[12];
-    /* 0xA08 */ be<u8> mMorfAnimationStopped;
+    /* 0xA08 */ be<u8> mAnimationStopped;  /* was mMorfAnimationStopped (misnamed): view of daNpc_Ym1_c mAnimationStopped (d_a_npc_ym1.h); one name per field. play_animation 022F79D0 sets it from mpMorf->play() and also when the frame wraps, and the actions test it as the animation's end, so the class / ym1_b::State name stays */
     /* 0xA09 */ u8 _A09[0x11];
     /* 0xA1A */ be<s8> mBtpNum;
-    /* 0xA1B */ be<s8> mAnimationAttribute;
+    /* 0xA1B */ be<s8> mAnmNum;  /* was mAnimationAttribute (misnamed): view of daNpc_Ym1_c mAnmNum (d_a_npc_ym1.h), the animation number setAnm_anm 022F9170 stores; the message animation attribute is daNpc_Ym1_c mAnimationAttribute at 0xA18 */
     /* 0xA1C */ u8 _A1C[6];
-    /* 0xA22 */ be<s8> mActionState;
+    /* 0xA22 */ be<s8> mActionPhase;  /* was mActionState (misnamed): view of daNpc_Ym1_c mActionPhase (d_a_npc_ym1.h); one name per field. set_action 022F7388 sets 9 / 0 and wait_action1 022FA828 .. step it from setup (0) to running (1), a phase of the current action, so the class / ym1_b::State name stays */
     /* 0xA23 */ u8 _A23;
 };
 WWHD_OFFSET(Ym1PartAState, mItemModel, 0x7E8);
@@ -73,10 +73,10 @@ WWHD_OFFSET(Ym1PartAState, mNbtAttentionPosition, 0x9D4);
 WWHD_OFFSET(Ym1PartAState, mHeadPosition, 0x9E0);
 WWHD_OFFSET(Ym1PartAState, mPreviousMorfFrame, 0x9EC);
 WWHD_OFFSET(Ym1PartAState, mEyePositionEnabled, 0x9F8);
-WWHD_OFFSET(Ym1PartAState, mMorfAnimationStopped, 0xA08);
+WWHD_OFFSET(Ym1PartAState, mAnimationStopped, 0xA08);
 WWHD_OFFSET(Ym1PartAState, mBtpNum, 0xA1A);
-WWHD_OFFSET(Ym1PartAState, mAnimationAttribute, 0xA1B);
-WWHD_OFFSET(Ym1PartAState, mActionState, 0xA22);
+WWHD_OFFSET(Ym1PartAState, mAnmNum, 0xA1B);
+WWHD_OFFSET(Ym1PartAState, mActionPhase, 0xA22);
 WWHD_SIZE(Ym1PartAState, 0xA24);
 inline Ym1PartAState *ym1State(daNpc_Ym1_c *actor) {
     return reinterpret_cast<Ym1PartAState *>(actor);

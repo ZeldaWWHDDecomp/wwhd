@@ -162,7 +162,7 @@ s8 daNpc_Os_c::getFinishOrderEventNum() {
 /* 022ABE84 */
 BOOL daNpc_Os_c::checkGoalRoom() {
     if (current.roomNo == 7 && wakeupCheck() && !finishCheck()) {
-        field_0x7A5 = getFinishOrderEventNum();
+        mOrderEventNum = getFinishOrderEventNum();
         return TRUE;
     }
     return FALSE;
@@ -170,19 +170,19 @@ BOOL daNpc_Os_c::checkGoalRoom() {
 
 /* 022AC030 */
 void daNpc_Os_c::eventOrderCheck() {
-    if (field_0x7A5 == -1) {
+    if (mOrderEventNum == -1) {
         s8 roomNo = current.roomNo;
         if (argument == 0) {
-            if (roomNo == 7 && dComIfGs_isSwitch(field_0x794, roomNo) && !dComIfGs_isEventBit(0x2510)) {
-                field_0x7A5 = 7;
+            if (roomNo == 7 && dComIfGs_isSwitch(mSwitchNo, roomNo) && !dComIfGs_isEventBit(0x2510)) {
+                mOrderEventNum = 7;
             }
         } else if (argument == 1) {
-            if (roomNo == 7 && dComIfGs_isSwitch(field_0x794, roomNo) && !dComIfGs_isEventBit(0x2608)) {
-                field_0x7A5 = 8;
+            if (roomNo == 7 && dComIfGs_isSwitch(mSwitchNo, roomNo) && !dComIfGs_isEventBit(0x2608)) {
+                mOrderEventNum = 8;
             }
         } else if (argument == 2) {
-            if (roomNo == 7 && dComIfGs_isSwitch(field_0x794, roomNo) && !dComIfGs_isEventBit(0x2604)) {
-                field_0x7A5 = 9;
+            if (roomNo == 7 && dComIfGs_isSwitch(mSwitchNo, roomNo) && !dComIfGs_isEventBit(0x2604)) {
+                mOrderEventNum = 9;
             }
         }
     }
@@ -190,16 +190,16 @@ void daNpc_Os_c::eventOrderCheck() {
 
 /* 022ABF7C */
 void daNpc_Os_c::makeBeam(int param_1) {
-    if (field_0x738.mpBaseEmitter == nullptr) {
-        daNpc_Os_infiniteEcallBack_makeEmitter(&field_0x738, os_a::ID_AK_SN_OTOMOBEAM00, &current.pos,
+    if (mBeamCallBack0.mpBaseEmitter == nullptr) {
+        daNpc_Os_infiniteEcallBack_makeEmitter(&mBeamCallBack0, os_a::ID_AK_SN_OTOMOBEAM00, &current.pos,
                                                &shape_angle, nullptr);
         if (param_1) {
             s32 reverb = dComIfGp_getReverb(current.roomNo);
             mDoAud_seStart(os_a::JA_SE_OBJ_OSTATUE_LIGHT_ST, &current.pos, 0, reverb);
         }
     }
-    if (field_0x740.mpBaseEmitter == nullptr) {
-        daNpc_Os_infiniteEcallBack_makeEmitter(&field_0x740, os_a::ID_AK_SN_OTOMOBEAM01, &current.pos,
+    if (mBeamCallBack1.mpBaseEmitter == nullptr) {
+        daNpc_Os_infiniteEcallBack_makeEmitter(&mBeamCallBack1, os_a::ID_AK_SN_OTOMOBEAM01, &current.pos,
                                                &shape_angle, nullptr);
     }
 }
@@ -207,7 +207,7 @@ void daNpc_Os_c::makeBeam(int param_1) {
 /* 022ABD30 */
 void daNpc_Os_c::npcAction(void* param_1) {
     if (mNpcAction.i == 0) { /* !mNpcAction */
-        s8 brk = field_0x7A2;
+        s8 brk = mBrkAnmIdx;
         speedF = 0.0f;
         if (brk == 8) {
             Os_initBrkHD(this, 6, 1);
@@ -254,8 +254,8 @@ BOOL daNpc_Os_c::returnLinkCheck() {
 
 /* 022AB6DC */
 BOOL daNpc_Os_c::eventProc() {
-    if (eventInfo.checkCommandDemoAccrpt() && field_0x7A5 != -1) {
-        if (field_0x7A5 == 0) {
+    if (eventInfo.checkCommandDemoAccrpt() && mOrderEventNum != -1) {
+        if (mOrderEventNum == 0) {
             if (Os_startCheckHD(dComIfGp_getPEvtManager(), "OPTION_CHAR_END") ||
                 Os_endCheckNameHD(dComIfGp_getPEvtManager(), "OPTION_CHAR_END")) {
                 fopAc_ac_c* link = dComIfGp_getLinkPlayer();
@@ -263,23 +263,23 @@ BOOL daNpc_Os_c::eventProc() {
                 Os_controlSoundHD(os_a::JA_SE_CTRL_NPC_TO_LINK);
             } else {
                 m4E4 = m4E4 & ~1u;
-                field_0x7A5 = -1;
+                mOrderEventNum = -1;
             }
-        } else if (field_0x7A5 != 2 && field_0x7A5 != 4 && field_0x7A5 != 6) {
-            if ((u32)(field_0x7A5 - 0xA) <= 5) {
+        } else if (mOrderEventNum != 2 && mOrderEventNum != 4 && mOrderEventNum != 6) {
+            if ((u32)(mOrderEventNum - 0xA) <= 5) {
                 Os_setNpcActionHD(this, &l_actionDescriptors.mWaitNpc, nullptr);
                 mNoResetFlg1 = (mNoResetFlg1 & ~2u) | 0x40;
                 Os_clearCbPlayerHD();
                 setFinish();
-            } else if (field_0x7A5 == 8) {
+            } else if (mOrderEventNum == 8) {
                 dComIfGs_onEventBit(0x2608);
-            } else if (field_0x7A5 == 9) {
+            } else if (mOrderEventNum == 9) {
                 dComIfGs_onEventBit(0x2604);
             }
         }
-        if (field_0x7A5 != -1) {
+        if (mOrderEventNum != -1) {
             u32 f = m4E4;
-            field_0x7A5 = -1;
+            mOrderEventNum = -1;
             m4E4 = f | 2;
         }
     }
@@ -301,15 +301,15 @@ BOOL daNpc_Os_c::eventProc() {
             }
         }
         if (m4E4 & 2) {
-            s16 id = field_0x7C4[field_0x7AA];
+            s16 id = mEventIdx[mEventNo];
             if (Os_endCheckHD(dComIfGp_getPEvtManager(), (s32)id)) {
                 dComIfGp_event_reset();
                 m4E4 = m4E4 & ~2u;
-                if (field_0x7AA == 0) {
+                if (mEventNo == 0) {
                     returnLinkPlayer();
                     m4E4 = m4E4 & ~1u;
                 }
-                field_0x7AA = -1;
+                mEventNo = -1;
             }
             return TRUE;
         }
@@ -332,21 +332,21 @@ void daNpc_Os_c::eventOrder() {
     if (m4E4 & 2) {
         return;
     }
-    if (field_0x7A5 == 0x12 || field_0x7A5 == 0x11) {
+    if (mOrderEventNum == 0x12 || mOrderEventNum == 0x11) {
         eventInfo.onCondition(dEvtCnd_CANTALK_e);
-        if (field_0x7A5 == 0x12) {
+        if (mOrderEventNum == 0x12) {
             fopAcM_orderSpeakEvent(this);
         }
-    } else if (field_0x7A5 != -1 && field_0x7A5 < 0x10) {
-        field_0x7AA = field_0x7A5;
-        Os_orderEventHD(this, (s32)field_0x7C4[field_0x7AA], 0xFF, 0xFFFF, 0, 1);
+    } else if (mOrderEventNum != -1 && mOrderEventNum < 0x10) {
+        mEventNo = mOrderEventNum;
+        Os_orderEventHD(this, (s32)mEventIdx[mEventNo], 0xFF, 0xFFFF, 0, 1);
     }
 }
 
 /* 022ABCB0 */
 void daNpc_Os_c::checkOrder() {
-    if (eventInfo.checkCommandTalk() && (field_0x7A5 == 0x12 || field_0x7A5 == 0x11)) {
-        field_0x7A5 = -1;
+    if (eventInfo.checkCommandTalk() && (mOrderEventNum == 0x12 || mOrderEventNum == 0x11)) {
+        mOrderEventNum = -1;
         Os_setNpcActionHD(this, &l_actionDescriptors.mTalk, nullptr);
         fopAcM_cancelCarryNow(this);
     }
@@ -390,7 +390,7 @@ BOOL daNpc_Os_c::execute() {
         l_waterScales.mRippleScale.z = 1.0f;
         l_waterScales.mRippleScale.y = 1.0f;
     }
-    field_0x784 = field_0x784 & ~0x10u;
+    mStatus = mStatus & ~0x10u;
     actor_status = actor_status & ~fopAcStts_SHOWMAP_e;
     checkPlayerRoom();
     if (!finishCheck()) {
@@ -430,14 +430,14 @@ BOOL daNpc_Os_c::execute() {
     mpPedestal = ped;
 
     if (ped != nullptr) {
-        if (!(field_0x784 & 1) /* !isFinish() */) {
+        if (!(mStatus & 1) /* !isFinish() */) {
             if (finishCheck()) {
                 fopAc_ac_c* p = mpPedestal;
                 home.pos.x = p->current.pos.x;
                 home.pos.y = p->current.pos.y + 240.0f;
                 home.pos.z = p->current.pos.z;
             }
-        } else if (!(field_0x784 & 2) /* !isSetHomePos() */) {
+        } else if (!(mStatus & 2) /* !isSetHomePos() */) {
             fopAc_ac_c* p = mpPedestal;
             home.pos.x = ped->current.pos.x;
             home.pos.y = p->current.pos.y + 240.0f;
@@ -450,19 +450,19 @@ BOOL daNpc_Os_c::execute() {
                 current.roomNo = pedRoom;
             }
             mAcch.CrrPos(dComIfG_Bgsp());
-            field_0x784 = field_0x784 | 0x10;
+            mStatus = mStatus | 0x10;
             if (os_groundH(this) != -1000000000.0f) {
                 tevStr.mRoomNo = (u8)Os_groundRoomHD(dComIfG_Bgsp(), os_gnd(this)); /* tevStr.mRoomNo */
                 u8 color = (u8)Os_groundColorHD(dComIfG_Bgsp(), os_gnd(this));
-                u32 f = field_0x784;
+                u32 f = mStatus;
                 tevStr.mEnvrIdxOverride = color; /* tevStr.mEnvrIdxOverride */
-                field_0x784 = f | 2;
+                mStatus = f | 2;
             }
         }
     }
 
     if (finishCheck()) {
-        u32 f = field_0x784;
+        u32 f = mStatus;
         s8 roomNo = current.roomNo;
         if (f & 1) {
             current.pos.copy(home.pos);
@@ -478,13 +478,13 @@ BOOL daNpc_Os_c::execute() {
             gabi::Local<ProcFunc_l> fn;
             Os_copyActionHD(fn, &l_actionDescriptors.mWaitNpc);
             setNpcAction(fn, nullptr);
-            field_0x7A3 = 0;
+            mAttnSetCount = 0;
             endBeam();
             return TRUE;
         }
-        if (field_0x7A8 && Os_polygonSafeHD(dComIfG_Bgsp(), &field_0x7FC) &&
-            Os_isMovingBackgroundHD(dComIfG_Bgsp(), &field_0x7FC)) {
-            Os_correctMovingBackgroundHD(dComIfG_Bgsp(), &field_0x7FC, 1, &old.pos, 0, 0);
+        if (mGroundHit && Os_polygonSafeHD(dComIfG_Bgsp(), &mGroundPolyInfo) &&
+            Os_isMovingBackgroundHD(dComIfG_Bgsp(), &mGroundPolyInfo)) {
+            Os_correctMovingBackgroundHD(dComIfG_Bgsp(), &mGroundPolyInfo, 1, &old.pos, 0, 0);
         }
     }
 
@@ -497,8 +497,8 @@ BOOL daNpc_Os_c::execute() {
                             (s32)h->mNpc.mMaxTurnStep);
     }
 
-    if (!(field_0x784 & 1) /* !isFinish() */) {
-        if (!(actor_status & fopAcStts_CARRY_e) && (field_0x784 & 8) &&
+    if (!(mStatus & 1) /* !isFinish() */) {
+        if (!(actor_status & fopAcStts_CARRY_e) && (mStatus & 8) &&
             Os_positionMoveCheckHD(this, gabi::at<OsNamesHD>(0x101C28E4)->mNames[(s8)argument])) {
             u16 ang = current.angle.y;
             f32 sy = speed.y;
@@ -521,7 +521,7 @@ BOOL daNpc_Os_c::execute() {
             Os_movePositionHD(this, &mStts);
         }
         mAcch.CrrPos(dComIfG_Bgsp());
-        field_0x784 = field_0x784 | 0x10;
+        mStatus = mStatus | 0x10;
 
         f32 gndY = os_groundH(this);
         if ((os_isPmf(&mPlayerAction, OS_WALK_PLAYER_ACTION_HD) ||
@@ -540,24 +540,24 @@ BOOL daNpc_Os_c::execute() {
             cBgS_PolyInfo_l* gnd = os_gnd(this);
             u32 pla = Os_trianglePlaneHD(dComIfG_Bgsp(), (u32)gnd->mBgIndex, (u32)gnd->mPolyIndex);
             if (pla) {
-                field_0x7F0.copy(*gabi::at<cXyz>(pla)); /* plane->mNormal */
+                mGroundNormal.copy(*gabi::at<cXyz>(pla)); /* plane->mNormal */
             }
             s8 roomNo = (s8)Os_groundRoomHD(dComIfG_Bgsp(), gnd);
             current.roomNo = roomNo;
             tevStr.mRoomNo = roomNo; /* tevStr.mRoomNo */
             u8 color = (u8)Os_groundColorHD(dComIfG_Bgsp(), gnd);
-            field_0x7FC.mpBgW = (u32)gnd->mpBgW; /* field_0x7FC.SetPolyInfo(m_gnd) */
-            field_0x7FC.mPolyIndex = gnd->mPolyIndex;
-            field_0x7FC.mBgIndex = gnd->mBgIndex;
+            mGroundPolyInfo.mpBgW = (u32)gnd->mpBgW; /* mGroundPolyInfo.SetPolyInfo(m_gnd) */
+            mGroundPolyInfo.mPolyIndex = gnd->mPolyIndex;
+            mGroundPolyInfo.mBgIndex = gnd->mBgIndex;
             tevStr.mEnvrIdxOverride = color;
             mStts.mRoomId = roomNo; /* mStts.SetRoomId(roomNo) */
-            field_0x7FC.mProcId = (u32)gnd->mProcId;
+            mGroundPolyInfo.mProcId = (u32)gnd->mProcId;
             if (roomNo != 7) {
                 mpPedestal = nullptr;
             }
         }
 
-        field_0x7A8 = (mAcch.m_flags >> 5) & 1;
+        mGroundHit = (mAcch.m_flags >> 5) & 1;
         if (!(actor_status & fopAcStts_CARRY_e)) {
             if (os_groundH(this) == -1000000000.0f || Os_groundCodeHD(dComIfG_Bgsp(), os_gnd(this)) == 4) {
                 u8 c = m4E8;
@@ -592,8 +592,8 @@ BOOL daNpc_Os_c::execute() {
             }
             if (mAcch.m_flags & 0x1000) {
                 Os_restartLinkHD(dComIfGp_getLinkPlayer(), 5, 0xC9, -1.0f, 0);
-                if (!(field_0x784 & 4) /* !isWaterHit() */) {
-                    field_0x784 = field_0x784 | 4;
+                if (!(mStatus & 4) /* !isWaterHit() */) {
+                    mStatus = mStatus | 4;
                     u32 splash = gabi::ea(
                         dPa_control_set(dComIfGp_getParticle(), 0, os_a::ID_IT_JN_WP_SHIBUKI, &current.pos,
                                         nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
@@ -614,7 +614,7 @@ BOOL daNpc_Os_c::execute() {
     } else {
         mAcch.CrrPos(dComIfG_Bgsp());
         f32 gh = os_groundH(this);
-        field_0x784 = field_0x784 | 0x10;
+        mStatus = mStatus | 0x10;
         if (gh != -1000000000.0f) {
             tevStr.mRoomNo = (u8)Os_groundRoomHD(dComIfG_Bgsp(), os_gnd(this));
             tevStr.mEnvrIdxOverride = (u8)Os_groundColorHD(dComIfG_Bgsp(), os_gnd(this));
@@ -635,7 +635,7 @@ BOOL daNpc_Os_c::execute() {
                 u32 flg = m4E4;
                 actor_status = (st & ~0x3Fu) | 0x33;
                 if (flg & 1) {
-                    field_0x7A5 = 0;
+                    mOrderEventNum = 0;
                 } else {
                     playerAction(nullptr);
                     if (returnLinkCheck()) {
@@ -655,7 +655,7 @@ BOOL daNpc_Os_c::execute() {
             }
             checkGoalRoom();
         }
-        if (field_0x78C == 2 || field_0x78C == 4) {
+        if (mAnmPrmIdx == 2 || mAnmPrmIdx == 4) {
             makeBeam(0);
         } else {
             endBeam();
@@ -665,7 +665,7 @@ BOOL daNpc_Os_c::execute() {
 
     eventOrder();
     setBaseMtx();
-    if (field_0x738.mpBaseEmitter != nullptr || field_0x740.mpBaseEmitter != nullptr) {
+    if (mBeamCallBack0.mpBaseEmitter != nullptr || mBeamCallBack1.mpBaseEmitter != nullptr) {
         s32 reverb = dComIfGp_getReverb(current.roomNo);
         mDoAud_seStart(os_a::JA_SE_OBJ_OSTATUE_LIGHT_SUS, &current.pos, 0, reverb);
     }

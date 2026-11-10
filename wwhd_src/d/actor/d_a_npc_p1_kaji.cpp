@@ -17,7 +17,7 @@ using namespace p1_cpp;
 /* 022B2830 */
 BOOL daNpc_P1_c::kaji_anm() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m671 != 0) {
+    if (mbAtKaji != 0) {
         if (mAnmNum == 0xA || mAnmNum == 0xB) {
             if (p1_checkEnd(mpMorf, 1.0f)) {
                 setAnm(9, -1.0f);
@@ -58,18 +58,18 @@ BOOL daNpc_P1_c::kaji_anm() {
     }
     if (mType == TYPE_P1B_e && mParam == 2) {
         if (!p1_checkAction(this, P1_talkAction)) {
-            if (mAnmNum == 0xE && p1_checkEnd(mpMorf, 1.0f) && (m66C = m66C - 1) <= 0) {
+            if (mAnmNum == 0xE && p1_checkEnd(mpMorf, 1.0f) && (mAnmLoopCnt = mAnmLoopCnt - 1) <= 0) {
                 setAnm(0xF, -1.0f);
                 if (cM_rndF(1.0f) > 0.5f) {
-                    m66C = 1;
+                    mAnmLoopCnt = 1;
                 } else {
-                    m66C = 2;
+                    mAnmLoopCnt = 2;
                 }
             } else if (mAnmNum == 0xF) {
                 if (p1_checkEnd(mpMorf, 1.0f)) {
-                    if ((m66C = m66C - 1) <= 0) {
+                    if ((mAnmLoopCnt = mAnmLoopCnt - 1) <= 0) {
                         setAnm(0xE, -1.0f);
-                        m66C = 4;
+                        mAnmLoopCnt = 4;
                     }
                 }
             }
@@ -98,7 +98,7 @@ BOOL daNpc_P1_c::lookBack() {
     gabi::Local<cXyz> eye;
     cXyz* dstPos_p;
     u8 look_at_target = 1;
-    if (m671 == 1) {
+    if (mbAtKaji == 1) {
         if (mAnmNum == 9 && p1_checkAction(this, P1_talkAction)) {
             dNpc_playerEyePos(eye.get(), 0.0f);
             p1_copy12(gabi::ea(dstPos.get()), gabi::ea(eye.get()));

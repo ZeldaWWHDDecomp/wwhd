@@ -50,22 +50,22 @@ enum {
 struct ssk_class : fopEn_enemy_c {
     enum : u32 { __vt = 0x1003D304, __aabVt = 0x1003D2C4 }; // HD: TU-specific vtables.
     /* 0x3C8 */ request_of_phase_process_class mPhase;
-    /* 0x3D0 */ be<u8> m2B4;
-    /* 0x3D1 */ be<u8> m2B5;
-    /* 0x3D2 */ be<u8> m2B6;
-    /* 0x3D3 */ be<u8> m2B7;
-    /* 0x3D4 */ be<s16> m2B8;
-    /* 0x3D6 */ be<s16> m2BA;
-    /* 0x3D8 */ be<s16> m2BC;
+    /* 0x3D0 */ be<u8> mType;  /* was m2B4: daSsk_Create 0248E770: parameter bits 0-7; 0xFF starts the tentacle fully out (mMoveState SSK_ACTIVE, mKtanaScale 1); nomal_move (in daSsk_Execute 0248DC20): type 1 retracts once the player is farther than mRetractDist */
+    /* 0x3D1 */ be<u8> mRadiusPrm;  /* was m2B5: daSsk_Create 0248E770: parameter bits 8-15 (0xFF read as 0); times 10 gives mAppearDist */
+    /* 0x3D2 */ be<u8> mSwitchNo;  /* was m2B6: daSsk_Create 0248E770: parameter bits 24-31; daSsk_Create and nomal_move (in daSsk_Execute 0248DC20) test dComIfGs_isSwitch on it (not 0xFF): delete at once / retract, then delete */
+    /* 0x3D3 */ be<u8> mMoveSePlayed;  /* was m2B7: nomal_move (in daSsk_Execute 0248DC20): set when JA_SE_OBJ_SHOKU_LIFT_MOVE starts as joint 1's wobble (mJointAngle[1].z) nears 0x1000, cleared when it leaves, so the sound plays once per swing */
+    /* 0x3D4 */ be<s16> mAction;  /* was m2B8: daSsk_Execute 0248DC20: switch, case 0 runs nomal_move; daSsk_Create 0248E770: 0 */
+    /* 0x3D6 */ be<s16> mMoveState;  /* was m2BA: nomal_move (in daSsk_Execute 0248DC20): the SskMoveState switch (wait, rock appear, rise, retract, active); daSsk_Create 0248E770: SSK_ACTIVE for type 0xFF */
+    /* 0x3D8 */ be<s16> mHitTimer;  /* was m2BC: body_atari_check (in daSsk_Execute 0248DC20): 8 on a hit, counted down; no hit is taken while above 0 */
     /* 0x3DA */ u8 _3DA[2];
-    /* 0x3DC */ be<f32> m2C0;
-    /* 0x3E0 */ be<f32> m2C4;
+    /* 0x3DC */ be<f32> mAppearDist;  /* was m2C0: daSsk_Create 0248E770: mRadiusPrm * 10; nomal_move (in daSsk_Execute 0248DC20): the tentacle appears when the player comes closer (SSK_WAIT) */
+    /* 0x3E0 */ be<f32> mRetractDist;  /* was m2C4: daSsk_Execute 0248DC20: mAppearDist + 100; nomal_move (in daSsk_Execute): type 1 retracts when the player is farther (SSK_ACTIVE) */
     /* 0x3E4 */ gptr<mDoExt_McaMorf> mpMorf1;
     /* 0x3E8 */ gptr<mDoExt_McaMorf> mpMorf2;
-    /* 0x3EC */ dPa_smokeEcallBack m2D0;
-    /* 0x40C */ be<s16> m2F0;
-    /* 0x40E */ csXyz m2F4[5]; /* HD: m2F2 removed */
-    /* 0x42C */ cXyz m350;     /* HD: m314[5] removed */
+    /* 0x3EC */ dPa_smokeEcallBack mSmokeCb;  /* was m2D0: nomal_move (in daSsk_Execute 0248DC20): smoke callback of the ID_IT_ST_TGSYOKU_SMOKE00 particles; daSsk_Create 0248E770 constructs it, daSsk_Delete 0248E504 removes it; after TWW mSmokeCb (dPa_smokeEcallBack of other actors) */
+    /* 0x40C */ be<s16> mWobbleTimer;  /* was m2F0: nomal_move (in daSsk_Execute 0248DC20): random at appear, +1 per frame from SSK_RISE on; phase of the joints' sine wobble (mJointAngle) */
+    /* 0x40E */ csXyz mJointAngle[5];  /* was m2F4: nodeCallBack 0248D880: [jntNo] rotates joint jntNo (Y, X, Z) of the tentacle model (mpMorf1); nomal_move (in daSsk_Execute 0248DC20) sets [1..4].y/.z to the wobble; HD: m2F2 removed */
+    /* 0x42C */ cXyz mKtanaScale;  /* was m350: draw_sub 0248D9B4: base scale of the ktana_00 model (mpMorf2, useHeapInit 0248E554), drawn by daSsk_Draw 0248DB4C only above 0.01; nomal_move (in daSsk_Execute 0248DC20) grows it to 1 (SSK_ROCK_APPEAR) and shrinks it to 0 (SSK_RETRACT); HD: m314[5] removed */
     /* 0x438 */ u8 m35C[0x470 - 0x438];
     /* 0x470 */ dBgS_AcchCir mAcchCir;
     /* 0x4B0 */ dBgS_ObjAcch mAcch;
@@ -74,19 +74,19 @@ struct ssk_class : fopEn_enemy_c {
     /* 0x7E0 */ be<u8> mColliderActive; /* HD: collider active */
     /* 0x7E1 */ u8 _7E1[3];
     /* 0x7E4 */ be<f32> mWobbleAmplitude; /* HD: wobble amplitude */
-    /* 0x7E8 */ gptr<JntHit_c> m708;
+    /* 0x7E8 */ gptr<JntHit_c> mpJntHit;  /* was m708: useHeapInit 0248E554: sskCreateJntHit(mpMorf1 model, search_data, 3) result (also stored in the enemy's jntHit); after TWW mpJntHit (JntHit_c* of other actors) */
 };
-WWHD_OFFSET(ssk_class, m2B4, 0x3D0);
-WWHD_OFFSET(ssk_class, m2F0, 0x40C);
-WWHD_OFFSET(ssk_class, m350, 0x42C);
-WWHD_OFFSET(ssk_class, m2D0, 0x3EC);
+WWHD_OFFSET(ssk_class, mType, 0x3D0);
+WWHD_OFFSET(ssk_class, mWobbleTimer, 0x40C);
+WWHD_OFFSET(ssk_class, mKtanaScale, 0x42C);
+WWHD_OFFSET(ssk_class, mSmokeCb, 0x3EC);
 WWHD_OFFSET(ssk_class, mAcchCir, 0x470);
 WWHD_OFFSET(ssk_class, mAcch, 0x4B0);
 WWHD_OFFSET(ssk_class, mColliderActive, 0x7E0);
 WWHD_OFFSET(ssk_class, mWobbleAmplitude, 0x7E4);
 WWHD_OFFSET(ssk_class, mStts, 0x674);
 WWHD_OFFSET(ssk_class, mCyl, 0x6B0);
-WWHD_OFFSET(ssk_class, m708, 0x7E8);
+WWHD_OFFSET(ssk_class, mpJntHit, 0x7E8);
 WWHD_SIZE(ssk_class, 0x7EC);
 
 namespace ssk_detail {

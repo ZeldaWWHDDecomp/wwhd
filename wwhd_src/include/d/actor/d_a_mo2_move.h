@@ -68,113 +68,113 @@ struct damagereaction {
   /* 0x0008 */ be<s16> mEnemyType;
   /* 0x000A */ u8 _000A[0x2];
   /* 0x000C */ be<s32> mTimer;
-  /* 0x0010 */ csXyz m010[21];
-  /* 0x008E */ csXyz m088[21];
-  /* 0x010C */ cXyz m100[21];
-  /* 0x0208 */ cXyz m1F0[21];
+  /* 0x0010 */ csXyz mJntTargetAngle[21];
+  /* 0x008E */ csXyz mJntAngle[21];
+  /* 0x010C */ cXyz mJntPos[21];
+  /* 0x0208 */ cXyz mJntGroundPos[21];
   /* 0x0304 */ cXyz m2E0[21];
-  /* 0x0400 */ be<s32> m3D0[15];
-  /* 0x043C */ be<s32> m408;
-  /* 0x0440 */ be<s32> m40C;
-  /* 0x0444 */ be<s32> m410;
-  /* 0x0448 */ be<s32> m414;
-  /* 0x044C */ be<s32> m418;
-  /* 0x0450 */ u8 _0450[0x4];
-  /* 0x0454 */ be<s32> m420;
-  /* 0x0458 */ be<s32> m424;
-  /* 0x045C */ be<f32> m428;
-  /* 0x0460 */ cXyz m42C;
+  /* 0x0400 */ be<s32> mJntGroundState[14];
+  /* 0x0438 */ be<s32> mJnt10LineBlocked;
+  /* 0x043C */ be<s32> mJnt11LineBlocked;
+  /* 0x0440 */ be<s32> mJnt8LineBlocked;
+  /* 0x0444 */ be<s32> mJnt9LineBlocked;
+  /* 0x0448 */ be<s32> mJnt12LineBlocked;
+  /* 0x044C */ u8 _044C[0x8];
+  /* 0x0454 */ be<s32> mJntBgCheckTimer;
+  /* 0x0458 */ be<s32> mHitFlags;
+  /* 0x045C */ be<f32> mKnockbackPower;
+  /* 0x0460 */ cXyz mHitVec;
   /* 0x046C */ be<s32> m438;
   /* 0x0470 */ u8 _0470[0x4];
-  /* 0x0474 */ be<s16> m440;
-  /* 0x0476 */ be<s16> m442;
-  /* 0x0478 */ be<s16> m444;
-  /* 0x047A */ be<s16> m446;
-  /* 0x047C */ be<s16> m448;
+  /* 0x0474 */ be<s16> mJnt10Pitch;
+  /* 0x0476 */ be<s16> mJnt11Pitch;
+  /* 0x0478 */ be<s16> mJnt8Pitch;
+  /* 0x047A */ be<s16> mJnt9Pitch;
+  /* 0x047C */ be<s16> mJnt12Pitch;
   /* 0x047E */ u8 _047E[0x2];
-  /* 0x0480 */ cXyz m44C;
-  /* 0x048C */ cXyz m458;
+  /* 0x0480 */ cXyz mPivot;
+  /* 0x048C */ cXyz mBodyOffset;
   /* 0x0498 */ u8 _0498[0x4];
-  /* 0x049C */ be<f32> m468;
-  /* 0x04A0 */ be<f32> m46C;
-  /* 0x04A4 */ be<f32> m470;
-  /* 0x04A8 */ be<f32> m474;
-  /* 0x04AC */ be<f32> m478;
-  /* 0x04B0 */ be<s32> m47C;
-  /* 0x04B4 */ be<s16> m480;
-  /* 0x04B6 */ be<s16> m482;
-  /* 0x04B8 */ be<s16> m484;
-  /* 0x04BA */ be<s16> m486;
-  /* 0x04BC */ be<s16> m488;
-  /* 0x04BE */ be<s16> m48A;
-  /* 0x04C0 */ csXyz m48C;
-  /* 0x04C6 */ be<s16> m492;
-  /* 0x04C8 */ be<s16> m494;
-  /* 0x04CA */ be<s16> m496;
-  /* 0x04CC */ be<s16> m498;
-  /* 0x04CE */ be<s16> m49A;
-  /* 0x04D0 */ be<s16> m49C;
-  /* 0x04D2 */ be<s16> m49E;
-  /* 0x04D4 */ be<s16> m4A0;
-  /* 0x04D6 */ be<s16> m4A2;
-  /* 0x04D8 */ be<s16> m4A4;
-  /* 0x04DA */ be<s16> m4A6;
-  /* 0x04DC */ be<s16> m4A8;
-  /* 0x04DE */ be<s16> m4AA;
-  /* 0x04E0 */ be<s16> m4AC;
-  /* 0x04E2 */ be<s16> m4AE;
-  /* 0x04E4 */ be<s16> m4B0;
-  /* 0x04E6 */ be<s16> m4B2;
-  /* 0x04E8 */ be<s16> m4B4;
-  /* 0x04EA */ be<s16> m4B6;
-  /* 0x04EC */ be<s16> m4B8;
-  /* 0x04EE */ be<s16> m4BA;
-  /* 0x04F0 */ be<s16> m4BC;
-  /* 0x04F2 */ be<s16> m4BE;
-  /* 0x04F4 */ be<s16> m4C0;
+  /* 0x049C */ be<f32> mCarryOffsetY;
+  /* 0x04A0 */ be<f32> mCarryOffsetZ;
+  /* 0x04A4 */ be<f32> mFlinchBend;
+  /* 0x04A8 */ be<f32> mShakeAmplitude;
+  /* 0x04AC */ be<f32> mKnockbackSpeed;
+  /* 0x04B0 */ be<s32> mLaunched;
+  /* 0x04B4 */ be<s16> mFallPitch;
+  /* 0x04B6 */ be<s16> mKnockbackAngleY;
+  /* 0x04B8 */ be<s16> mSpinAngleY;
+  /* 0x04BA */ be<s16> mFallPitchTarget;
+  /* 0x04BC */ be<s16> mKnockedDown;
+  /* 0x04BE */ be<s16> mHitStunTimer;
+  /* 0x04C0 */ csXyz mSlopeTilt;
+  /* 0x04C6 */ be<s16> mJnt12SlopeY;
+  /* 0x04C8 */ be<s16> mJnt12SlopeZ;
+  /* 0x04CA */ be<s16> mJnt18AddY;
+  /* 0x04CC */ be<s16> mJnt13AddY;
+  /* 0x04CE */ be<s16> mJnt18AddYTarget;
+  /* 0x04D0 */ be<s16> mJnt13AddYTarget;
+  /* 0x04D2 */ be<s16> mParalysisTimer;
+  /* 0x04D4 */ be<s16> mJnt0AddZ;
+  /* 0x04D6 */ be<s16> mJnt1AddZ;
+  /* 0x04D8 */ be<s16> mJnt2AddZ;
+  /* 0x04DA */ be<s16> mJnt3AddZ;
+  /* 0x04DC */ be<s16> mJnt0AddZTarget;
+  /* 0x04DE */ be<s16> mJnt1AddZTarget;
+  /* 0x04E0 */ be<s16> mJnt2AddZTarget;
+  /* 0x04E2 */ be<s16> mJnt3AddZTarget;
+  /* 0x04E4 */ be<s16> mJnt2LandZ;
+  /* 0x04E6 */ be<s16> mJnt3LandZ;
+  /* 0x04E8 */ be<s16> mJnt6LandZ;
+  /* 0x04EA */ be<s16> mJnt7LandZ;
+  /* 0x04EC */ be<s16> mJnt6AddY;
+  /* 0x04EE */ be<s16> mJnt7AddY;
+  /* 0x04F0 */ be<s16> mJnt4AddY;
+  /* 0x04F2 */ be<s16> mJnt5AddY;
+  /* 0x04F4 */ be<s16> mLandAngleY;
   /* 0x04F6 */ u8 _04F6[0x6];
-  /* 0x04FC */ be<s16> m4C8[3];
+  /* 0x04FC */ be<s16> mDownTimers[3];
   /* 0x0502 */ be<s16> mInvincibleTimer;
-  /* 0x0504 */ be<s16> m4D0;
+  /* 0x0504 */ be<s16> mTurnTargetY;
   /* 0x0506 */ u8 _0506[0x2];
-  /* 0x0508 */ be<f32> m4D4;
+  /* 0x0508 */ be<f32> mPushback;
   /* 0x050C */ u8 _050C[0x4];
   /* 0x0510 */ dBgS_AcchCir mAcchCir;
   /* 0x0550 */ dBgS_ObjAcch mAcch;
-  /* 0x0714 */ be<s32> m6E0;
+  /* 0x0714 */ be<s32> mSpinLeft;
   /* 0x0718 */ be<f32> mSpawnY;
-  /* 0x071C */ cXyz m6E8;
+  /* 0x071C */ cXyz mPrevGroundPos;
   /* 0x0728 */ cXyz m6F4[2];
-  /* 0x0740 */ be<u8> m70C;
-  /* 0x0741 */ be<u8> m70D;
-  /* 0x0742 */ be<u8> m70E;
+  /* 0x0740 */ be<u8> mBounceCount;
+  /* 0x0741 */ be<u8> mFaceDown;
+  /* 0x0742 */ be<u8> mShakeJntMask;
   /* 0x0743 */ u8 _0743[0x1];
-  /* 0x0744 */ be<u8> m710;
-  /* 0x0745 */ be<u8> m711;
+  /* 0x0744 */ be<u8> mLookMode;
+  /* 0x0745 */ be<u8> mDefencePose;
   /* 0x0746 */ be<u8> m712;
-  /* 0x0747 */ be<u8> m713;
-  /* 0x0748 */ gptr<fopAc_ac_c> m714;
-  /* 0x074C */ be<s16> m718;
-  /* 0x074E */ be<s16> m71A;
+  /* 0x0747 */ be<u8> mPlayerInView;
+  /* 0x0748 */ gptr<fopAc_ac_c> mpLookTarget;
+  /* 0x074C */ be<s16> mLookPitch;
+  /* 0x074E */ be<s16> mLookYaw;
   /* 0x0750 */ u8 _0750[0x2];
-  /* 0x0752 */ be<s16> m71E;
+  /* 0x0752 */ be<s16> mBodyBgCheckDelay;
   /* 0x0754 */ be<f32> mMaxFallDistance;
   /* 0x0758 */ dCcD_Stts mStts;
   /* 0x0794 */ cXyz mParticlePos;
   /* 0x07A0 */ csXyz mParticleAngle;
   /* 0x07A6 */ u8 _07A6[0x2];
   /* 0x07A8 */ dPa_smokeEcallBack mParticleCallBack;
-  /* 0x07C8 */ be<s16> m794;
+  /* 0x07C8 */ be<s16> mWallSmokeTimer;
   /* 0x07CA */ u8 _07CA[0x2];
-  /* 0x07CC */ be<f32> m798;
-  /* 0x07D0 */ gptr<cXyz> m79C;
-  /* 0x07D4 */ cXyz m7A0;
-  /* 0x07E0 */ csXyz m7AC;
-  /* 0x07E6 */ be<s16> m7B2;
-  /* 0x07E8 */ be<s16> m7B4;
-  /* 0x07EA */ be<u8> m7B6;
+  /* 0x07CC */ be<f32> mHangMoveSpeed;
+  /* 0x07D0 */ gptr<cXyz> mpHangPos;
+  /* 0x07D4 */ cXyz mHangPos;
+  /* 0x07E0 */ csXyz mHangAngle;
+  /* 0x07E6 */ be<s16> mBridgeRideTimer;
+  /* 0x07E8 */ be<s16> mBridgeRideRoll;
+  /* 0x07EA */ be<u8> mSkipMoveOnce;
   /* 0x07EB */ u8 _07EB[0x1];
-  /* 0x07EC */ be<u32> m7B8;
+  /* 0x07EC */ be<u32> mHangBridgeId;
 };
 WWHD_SIZE(damagereaction, 0x7F0);
 struct enemyice {
@@ -242,71 +242,71 @@ struct mo2_class {
   /* 0x03DA */ be<u8> mPathIndex;
   /* 0x03DB */ be<u8> mEnableSpawnSwitch;
   /* 0x03DC */ be<u8> mDeathSwitch;
-  /* 0x03DD */ be<u8> m02C1;
+  /* 0x03DD */ be<u8> mAppearWait;  /* was m02C1: daMo2_Create 021CCB00: mEnableSpawnSwitch + 1 (0 = none; cleared for the statue mode 0xF); daMo2_Execute 021C9B1C waits until that switch is on, then clears it and sets the lock-on flag; daMo2_Draw 021C7344 draws nothing while it is set */
   /* 0x03DE */ u8 _03DE[0x2];
   /* 0x03E0 */ gptr<mDoExt_McaMorf> mpMorf;
-  /* 0x03E4 */ mDoExt_btpAnm m02C8;
-  /* 0x0458 */ be<u8> m02DC;
-  /* 0x0459 */ be<u8> m02DD;
-  /* 0x045A */ be<u8> m02DE;
+  /* 0x03E4 */ mDoExt_btpAnm mEyeBtpAnm;  /* was m02C8: tex_anm_set 021C6368: mDoExt_btpAnm_init with the BTP mo2_tex_anm_idx[idx]; createHeap 021CC524 inits it with BTP 3; daMo2_Draw 021C7344 enters it at mEyeBtpFrame; stepped by mo2_eye_tex_anm (in daMo2_Execute 021C9B1C) */
+  /* 0x0458 */ be<u8> mEyeBtpFrame;  /* was m02DC: tex_anm_set 021C6368 clears it; mo2_eye_tex_anm (in daMo2_Execute 021C9B1C) adds 1 up to mEyeBtpMaxFrame; daMo2_Draw 021C7344 enters mEyeBtpAnm at this frame */
+  /* 0x0459 */ be<u8> mEyeBtpPlaying;  /* was m02DD: tex_anm_set 021C6368 sets 1; mo2_eye_tex_anm (in daMo2_Execute 021C9B1C) clears it at mEyeBtpMaxFrame and starts BTP 3 only while it is 0 */
+  /* 0x045A */ be<u8> mEyeBtpMaxFrame;  /* was m02DE: tex_anm_set 021C6368: mo2_tex_max_frame[idx]; mo2_eye_tex_anm (in daMo2_Execute 021C9B1C) stops the eye BTP there */
   /* 0x045B */ u8 _045B[0x1];
-  /* 0x045C */ be<s16> m02E0;
-  /* 0x045E */ be<s16> m02E2;
-  /* 0x0460 */ be<u32> m02E8;
+  /* 0x045C */ be<s16> mEyeAnmWait;  /* was m02E0: mo2_eye_tex_anm (in daMo2_Execute 021C9B1C) counts it down, then reloads rnd(50)+10 and starts BTP 3 unless one is playing; nage 021CD958 / p_lost 021CDE6C / defence 021CE46C / Mo2_move 021D0A14 hold it at 2 */
+  /* 0x045E */ be<s16> mWeaponViewWait;  /* was m02E2: wepon_search 021CF0F4 sets 70 when it gives up the run to the weapon; daMo2_Execute 021C9B1C counts it down; daMo2_wepon_view_check 021C872C finds no weapon while it is not 0 */
+  /* 0x0460 */ be<u32> mLanternId;  /* was m02E8: kantera_get_init (in daMo2_Create 021CCB00): fpcSCtRq_Request(fpcNm_KANTERA_e) result, then fopAcM_SearchByID(it) to give the lantern this actor's id */
   /* 0x0464 */ u8 _0464[0x284];
   /* 0x06E8 */ mDoExt_3DlineMat0 m0570;
-  /* 0x0830 */ gptr<J3DModel> m058C;
-  /* 0x0834 */ be<f32> m0590;
-  /* 0x0838 */ be<s32> m0594;
-  /* 0x083C */ be<s32> m0598;
-  /* 0x0840 */ be<s32> m059C;
-  /* 0x0844 */ be<s32> m05A0;
-  /* 0x0848 */ be<s16> m05A4[5];
-  /* 0x0852 */ be<s16> m05AE;
-  /* 0x0854 */ be<s16> m05B0;
-  /* 0x0856 */ be<s16> m05B2;
-  /* 0x0858 */ be<s16> m05B4;
-  /* 0x085A */ be<s16> m05B6;
+  /* 0x0830 */ gptr<J3DModel> mpBlurModel;  /* was m058C: createHeap 021CC524: mDoExt_J3DModel__create of the spear-trail BMD (HD index 0x7E); br_draw (in daMo2_Draw 021C7344) places it on joint MO_JNT_MO_YARI_e and draws it */
+  /* 0x0834 */ be<f32> mBlurScaleX;  /* was m0590: fight (in Mo2_move 021D0A14): moveHIO m0E0[] / m110[] by the attack frame; br_draw (in daMo2_Draw 021C7344) scales the blur model x by l_mo2HIO.m014 * it */
+  /* 0x0838 */ be<s32> mBlurOn;  /* was m0594: daMo2_Execute 021C9B1C clears it each frame; fight (in Mo2_move 021D0A14) sets 1 inside the swing frames of attack kinds 1 / 2; br_draw (in daMo2_Draw 021C7344) draws only while it is set */
+  /* 0x083C */ be<s32> mBlurUseB;  /* was m0598: daMo2_Execute 021C9B1C clears it each frame; fight (in Mo2_move 021D0A14) sets 1 for the middle swing frames; br_draw (in daMo2_Draw 021C7344) shows the blur model's shape 2 instead of 1 when set */
+  /* 0x0840 */ be<s32> mFrameCounter;  /* was m059C: daMo2_Execute 021C9B1C adds 1 per frame; p_lost 021CDE6C / yogan_fail 021CEEB0 / hip_damage 021CF900 / ground_smoke_set (in daMo2_Execute) / fight_run (in Mo2_move 021D0A14) test its low bits */
+  /* 0x0844 */ be<s32> mOshiCount;  /* was m05A0: fight_run (in Mo2_move 021D0A14) adds 1 per frame while the armed Moblin is close and sees the target, at 15 starts ACTION_OSHI (push) with 50 %, else clears it; damage_check (in daMo2_Execute 021C9B1C) clears it on a hit */
+  /* 0x0848 */ be<s16> mTimers[5];  /* was m05A4: daMo2_Execute 021C9B1C counts all 5 down each frame; the actions load [0]..[4] (e.g. wait_set 021C8E30 [1], nage 021CD958 [0]/[1]/[2], attack_set 021C9310 [4]) */
+  /* 0x0852 */ be<s16> mWeaponRunTimer;  /* was m05AE: wepon_search 021CF0F4 sets l_mo2HIO.m08A when the run to a weapon starts and gives up at 0; yari_off_check (in daMo2_Execute 021C9B1C) sets it when it spawns the dropped weapon actor; daMo2_Execute counts it down; jyunkai (in Mo2_move 021D0A14) sets mWeaponSearchGaveUp at 0 */
+  /* 0x0854 */ be<s16> mDashStopTimer;  /* was m05B0: fight_run (in Mo2_move 021D0A14) sets rnd(10)+15 when a dash longer than 20 frames stops (BCK GAKEDEMO) and waits for it; anm_init 021C6440 sets no new animation while it is not 0; daMo2_Execute 021C9B1C counts it down and keeps smoke type 4 going */
+  /* 0x0856 */ be<s16> mAnmStopTimer;  /* was m05B2: wepon_search 021CF0F4 sets 5 when it sees a weapon and turns only once it is 0; daMo2_Execute 021C9B1C counts it down and plays mpMorf only while it is 0 */
+  /* 0x0858 */ be<s16> mNoHitTimer;  /* was m05B4: damage_check (in daMo2_Execute 021C9B1C) takes a Tg hit only while it is 0 and reloads it (4, 10, 0x32, 200); fail 021CED78 / yogan_fail 021CEEB0 / d_sit 021CFFA4 / d_dozou 021D0064 / e3_demo 021D0570 / Mo2_move 021D0A14 hold it at 5; daMo2_Execute moves the head sphere 20000 down while it is not 0 */
+  /* 0x085A */ be<s16> mNoGuardTimer;  /* was m05B6: damage_check (in daMo2_Execute 021C9B1C) sets 25 after a hit; daMo2_Execute counts it down; fight_run (in Mo2_move 021D0A14) guards (ACTION_DEFENCE) only while it is 0 */
   /* 0x085C */ u8 _085C[0x2];
-  /* 0x085E */ be<s16> m05BA;
-  /* 0x0860 */ be<s16> m05BC;
-  /* 0x0862 */ be<u8> m05BE;
-  /* 0x0863 */ be<u8> m05BF;
-  /* 0x0864 */ be<f32> m05C0;
-  /* 0x0868 */ be<f32> m05C0_dy_hd; /* HD: |dy| to the target (Mo2_move) */
-  /* 0x086C */ cXyz m05C4;
+  /* 0x085E */ be<s16> mSideStepTimer;  /* was m05BA: fight_run (in Mo2_move 021D0A14) sets 0x10 / 0x20 when a side step starts (and fight on a bounce); side-step reaction (dr.mLookMode 3/4) while it is not 0; daMo2_Execute 021C9B1C counts it down */
+  /* 0x0860 */ be<s16> mSideStepWait;  /* was m05BC: fight_run (in Mo2_move 021D0A14) reloads rnd(100)+30 when it is 0 and then picks the next side step; daMo2_Execute 021C9B1C counts it down */
+  /* 0x0862 */ be<u8> mSideStepDir;  /* was m05BE: fight_run (in Mo2_move 021D0A14): 0 / 1 / 2 by mGroundCheck 4 / 8 / 2 when a side step starts; selects dr.mLookMode 3 / 4 while mSideStepTimer runs */
+  /* 0x0863 */ be<u8> mGroundCheck;  /* was m05BF: fight_run (in Mo2_move 021D0A14): ground_4_check 021C7EDC result (4 directions); 2 / 4 / 8 select the side step and the move-angle offset */
+  /* 0x0864 */ be<f32> mTargetDist;  /* was m05C0: Mo2_move 021D0A14: xz distance to the target (dr.mpLookTarget or mSoundTargetPos); nage 021CD958 / hukki 021CE6E8 / fight_run (in Mo2_move) compare it with the l_mo2HIO attack ranges */
+  /* 0x0868 */ be<f32> mTargetDistY;  /* was m05C0_dy_hd: Mo2_move 021D0A14: |dy| to the target; fight_run (in Mo2_move) also needs it below REG_F(10,3) + 250 before an attack; HD: |dy| to the target (Mo2_move) */
+  /* 0x086C */ cXyz mPathTargetPos;  /* was m05C4: jyunkai (in Mo2_move 021D0A14) copies the current path point there (way_pos_check 021C7C30 adjusts it) and walks toward it; path_check2 (in Mo2_move) line-checks to it */
   /* 0x0878 */ u8 m05D0[4];
-  /* 0x087C */ be<s16> m05D4;
-  /* 0x087E */ be<s16> m05D6;
-  /* 0x0880 */ be<s16> m05D8;
-  /* 0x0882 */ be<s16> m05DA;
-  /* 0x0884 */ cXyz m05DC;
-  /* 0x0890 */ csXyz m05E8;
-  /* 0x0896 */ be<s16> m05EE;
-  /* 0x0898 */ be<s16> m05F0;
-  /* 0x089A */ be<u8> m05F2;
-  /* 0x089B */ be<u8> m05F3;
-  /* 0x089C */ dPa_smokeEcallBack m05F4;
+  /* 0x087C */ be<s16> mHeadAngleY;  /* was m05D4: nodeCallBack 021C6854: atan2 of the face joint (MO_JNT_KAO_J_e) direction (or angle.y); search_bomb 021C8378 / daMo2_player_view_check 021C8C14 measure the sight cone from it */
+  /* 0x087E */ be<s16> mTargetAngleY;  /* was m05D6: Mo2_move 021D0A14: cM_atan2s to the target; nage 021CD958 / fight_run (in Mo2_move) / carry_drop turn to it */
+  /* 0x0880 */ be<s16> mMoveAngleOffset;  /* was m05D8: fight_run (in Mo2_move 021D0A14) sets +-0x4000 for side steps; Mo2_move 021D0A14 clears it and moves along angle.y + it */
+  /* 0x0882 */ be<s16> mSpitTimer;  /* was m05DA: damage_check / daMo2_Execute 021C9B1C damage cases set 1 / 3 / 5 / 10; daMo2_Execute counts it down and at 0 sets particle ID_AK_JN_TUBA00 at mSpitPos */
+  /* 0x0884 */ cXyz mSmokePos;  /* was m05DC: ground_smoke_set (in daMo2_Execute 021C9B1C) computes it (MtxPosition); smoke_set_s 021C6578 drops it to the ground and sets the ELEMENTSMOKE particle there */
+  /* 0x0890 */ csXyz mEffectAngle;  /* was m05E8: smoke_set_s 021C6578 / ground_smoke_set (in daMo2_Execute 021C9B1C): smoke particle angle; daMo2_Execute / yogan_fail 021CEEB0: TUBA00 particle angle */
+  /* 0x0896 */ be<s16> mSmokeAngleY;  /* was m05EE: ground_smoke_set (in daMo2_Execute 021C9B1C) rotates the smoke offset by it and adds 2000 / 0x1FA0 / 0x2000 per call; fight (in Mo2_move 021D0A14) seeds it from angle.y */
+  /* 0x0898 */ be<s16> mSmokeTimer;  /* was m05F0: ground_smoke_set (in daMo2_Execute 021C9B1C) counts it down and sets smoke while it is >= l_mo2HIO.m024; b_nige 021CE138 / hukki 021CE6E8 / wepon_search 021CF0F4 / fight load m024 + n */
+  /* 0x089A */ be<u8> mSmokeType;  /* was m05F2: ground_smoke_set (in daMo2_Execute 021C9B1C): switch 0..4 selects where the smoke comes from; b_nige 021CE138 sets 4, hukki 021CE6E8 3, daMo2_Execute 1 */
+  /* 0x089B */ be<u8> mSmokeCount;  /* was m05F3: ground_smoke_set (in daMo2_Execute 021C9B1C) clears it; smoke_set_s 021C6578 adds 1 per smoke set and tests it with the ground attribute */
+  /* 0x089C */ dPa_smokeEcallBack mSmokeCallBack;  /* was m05F4: mo2_class_ct 021CC91C: dPa_smokeEcallBack_ct; smoke_set_s 021C6578 passes it to the smoke emitter; daMo2_Delete 021CC44C removes it */
   /* 0x08BC */ damagereaction mDamageReaction;
   /* 0x10AC */ u8 _10AC[0x4];
   /* 0x10B0 */ be<s8> mbHasInnateWeapon;
   /* 0x10B1 */ be<s8> mSpawnWeaponActor;
   /* 0x10B2 */ be<s8> mSpawnWeaponActorMode;
   /* 0x10B3 */ be<s8> mbThrowWeapon;
-  /* 0x10B4 */ ke_s m0DD8[16];
+  /* 0x10B4 */ ke_s mSpearHair[16];  /* was m0DD8: nodeCallBack_P 021C6BE0 places the 16 strand roots on joint MO_JNT_MO_YARI_e (spear); ke_control 021C6F14 / ke_disp (in daMo2_Draw 021C7344) move and draw the strands (ke_s, tww d217e2b ke_control / ke_disp) */
   /* 0x22F4 */ mDoExt_3DlineMat0 m3Dline;
-  /* 0x243C */ cXyz m2034;
-  /* 0x2448 */ cXyz m2040[2];
+  /* 0x243C */ cXyz mSpearJointPos;  /* was m2034: nodeCallBack_P 021C6BE0: origin of joint MO_JNT_MO_YARI_e (joint_check 0x14, the spear joint, as for mSpearShaftPos); never read */
+  /* 0x2448 */ cXyz mSpearEndPos[2];  /* was m2040: nodeCallBack_P 021C6BE0: [0] point x 165, [1] point x -130 on joint MO_JNT_MO_YARI_e (the spear's two ends, beside mSpearShaftPos at x -50); never read */
   /* 0x2460 */ u8 _2460[0x8];
-  /* 0x2468 */ be<s32> m2060;
-  /* 0x246C */ be<s32> m2064;
-  /* 0x2470 */ be<f32> m2068;
-  /* 0x2474 */ be<f32> m206C;
-  /* 0x2478 */ be<f32> m2070;
-  /* 0x247C */ be<f32> m2074;
-  /* 0x2480 */ be<f32> m2078;
-  /* 0x2484 */ be<s16> m207C;
-  /* 0x2486 */ be<s8> m207E;
+  /* 0x2468 */ be<s32> mAttackKind;  /* was m2060: attack_set 021C9310 sets 0..5; indexes attack_info / mo2_attack_ready_SE and the move attack tables (fight, yari_hit_check in Mo2_move 021D0A14) */
+  /* 0x246C */ be<s32> mAttackStep;  /* was m2064: attack_set 021C9310 clears it; fight (in Mo2_move 021D0A14) steps +1 / -1 through attack_info[mAttackKind][it] animations; hukki 021CE6E8 sets 1 */
+  /* 0x2470 */ be<f32> mAttackFrame;  /* was m2068: attack_set 021C9310 clears it; fight (in Mo2_move 021D0A14) adds the step speed; compared with mAtStartFrame / mAtEndFrame, the blur frames and mTurnEndFrame */
+  /* 0x2474 */ be<f32> mAtStartFrame;  /* was m206C: attack_set 021C9310 sets 3..36 per kind; yari_hit_check (in Mo2_move 021D0A14): no At before it, attack SE at it */
+  /* 0x2478 */ be<f32> mAtEndFrame;  /* was m2070: attack_set 021C9310 sets 8..52 per kind; yari_hit_check (in Mo2_move 021D0A14): no At after it */
+  /* 0x247C */ be<f32> mLookStartFrame;  /* was m2074: attack_set 021C9310 sets 0 / 10 / 59 / 75 per attack kind (hukki 021CE6E8 0, wepon_search 021CF0F4 75); fight (in Mo2_move 021D0A14) sets mDamageReaction.mLookMode = 1 (head toward mpLookTarget) once mAttackFrame is past it and the target is in view */
+  /* 0x2480 */ be<f32> mTurnEndFrame;  /* was m2078: attack_set 021C9310: l_mo2HIO m0CC..m0D6 per kind; fight (in Mo2_move 021D0A14) keeps turning to mTargetAngleY while mAttackFrame is below it */
+  /* 0x2484 */ be<s16> mAtWaitTimer;  /* was m207C: yari_hit_check (in Mo2_move 021D0A14) counts it down and does no spear hit check while it runs; nothing sets it (same in tww d217e2b) */
+  /* 0x2486 */ be<s8> mAttackDir;  /* was m207E: attack_set 021C9310 sets 1; fight (in Mo2_move 021D0A14) sets -1 when the player guards (plays back) and steps by it; yari_hit_check has no At while < 0 */
   /* 0x2487 */ u8 _2487[0xD];
   /* 0x2494 */ dCcD_Cyl mCoCyl;
   /* 0x25C4 */ dCcD_Cyl mTgCyl;
@@ -315,78 +315,78 @@ struct mo2_class {
   /* 0x294C */ dCcD_Sph mWeaponSph;
   /* 0x2A78 */ dCcD_Sph mWeapon2Sph;
   /* 0x2BA4 */ dCcD_Sph m279C;
-  /* 0x2CD0 */ cXyz m28C8;
-  /* 0x2CDC */ cXyz m28D4;
-  /* 0x2CE8 */ cXyz m28E0;
-  /* 0x2CF4 */ cXyz m28EC;
-  /* 0x2D00 */ cXyz m28F8;
-  /* 0x2D0C */ cXyz m2904;
-  /* 0x2D18 */ cXyz m2910;
-  /* 0x2D24 */ cXyz m291C;
-  /* 0x2D30 */ cXyz m2928;
+  /* 0x2CD0 */ cXyz mSpitPos;  /* was m28C8: nodeCallBack 021C6854: point (20.75, 18.5) on the face joint MO_JNT_KAO_J_e; daMo2_Execute 021C9B1C / yogan_fail 021CEEB0 set particle ID_AK_JN_TUBA00 there */
+  /* 0x2CDC */ cXyz mSpearHeadPos;  /* was m28D4: nodeCallBack_P 021C6BE0 copies the first mSpearHair root (x 98 on MO_JNT_MO_YARI_e); yari_hit_check (in Mo2_move 021D0A14) uses it as mAtPos for spear kinds 0..2; fight plays LANCE_HIT_FLOOR there */
+  /* 0x2CE8 */ cXyz mSpearShaftPos;  /* was m28E0: nodeCallBack_P 021C6BE0: point x -50 on joint MO_JNT_MO_YARI_e; yari_hit_check (in Mo2_move 021D0A14) copies it to mAt2Pos, defence 021CE46C to mDefenseSphPos */
+  /* 0x2CF4 */ cXyz mLeftHandPos;  /* was m28EC: nodeCallBack_P 021C6BE0: point (17.5, -8.75) on joint MO_JNT_TEL_J_e (left hand); yari_hit_check (in Mo2_move 021D0A14) uses it as mAtPos for kinds 3 / 4 */
+  /* 0x2D00 */ cXyz mRightHandPos;  /* was m28F8: nodeCallBack_P 021C6BE0: origin of joint MO_JNT_TER_J_e (right hand); yari_hit_check (in Mo2_move 021D0A14) uses it as mAtPos for kind 5 */
+  /* 0x2D0C */ cXyz mAtPos;  /* was m2904: yari_hit_check (in Mo2_move 021D0A14): mRightHandPos / mLeftHandPos / mSpearHeadPos by mAttackKind; mWeaponSph starts / moves there; ground_smoke_set (in daMo2_Execute 021C9B1C) */
+  /* 0x2D18 */ cXyz mAt2Pos;  /* was m2910: yari_hit_check (in Mo2_move 021D0A14): mSpearShaftPos for the spear kinds; mWeapon2Sph starts / moves there */
+  /* 0x2D24 */ cXyz mPrevAtPos;  /* was m291C: yari_hit_check (in Mo2_move 021D0A14) copies mAtPos here before it picks the new one; never read */
+  /* 0x2D30 */ cXyz mDefenseSphPos;  /* was m2928: defence 021CE46C copies mSpearShaftPos; damage_check (in daMo2_Execute 021C9B1C) centres mDefenseSph on it, sets the KIKUZU particle there and moves it to y -10000 */
   /* 0x2D3C */ cXyz m2934;
   /* 0x2D48 */ be<u8> m2940;
-  /* 0x2D49 */ be<u8> m2941;
-  /* 0x2D4A */ be<u8> m2942;
-  /* 0x2D4B */ be<u8> m2943;
-  /* 0x2D4C */ be<s16> m2944;
-  /* 0x2D4E */ be<s16> m2946;
-  /* 0x2D50 */ be<s16> m2948;
-  /* 0x2D52 */ be<s16> m294A;
-  /* 0x2D54 */ be<s16> m294C;
-  /* 0x2D56 */ be<s16> m294E;
+  /* 0x2D49 */ be<u8> mAtStarted;  /* was m2941: attack_set 021C9310 clears it; yari_hit_check (in Mo2_move 021D0A14) starts the At spheres while it is 0 and sets it, then only moves them */
+  /* 0x2D4A */ be<u8> mTurnAlways;  /* was m2942: hukki 021CE6E8 sets 1 when it attacks out of getting up, attack_set 021C9310 clears it; fight (in Mo2_move 021D0A14) keeps turning to the target while it is set */
+  /* 0x2D4B */ be<u8> mWeaponSearchGaveUp;  /* was m2943: wepon_search 021CF0F4 sets 1 when the run to a weapon ends at a cliff / wall / timeout and clears it at the start; jyunkai (in Mo2_move 021D0A14) sets it when mWeaponRunTimer ran out; has_weapon / wait_set 021C8E30 / path_check 021C9004 treat it as armed */
+  /* 0x2D4C */ be<s16> mBtCounter;  /* was m2944: attack_set 021C9310 clears it for attack kinds 1 / 2 / 5; daMo2_Execute 021C9B1C adds 1 per frame up to 200 (then -1 = off) and opens the parry window at mBtWindow1Start / mBtWindow2Start; damage_check sets -1 */
+  /* 0x2D4E */ be<s16> mBtWindow1Start;  /* was m2946: attack_set 021C9310: l_mo2HIO m144 / m14C / m154; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow1Len when mBtCounter reaches it */
+  /* 0x2D50 */ be<s16> mBtWindow1Len;  /* was m2948: attack_set 021C9310: l_mo2HIO m146 / m14E / m156; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow1Start */
+  /* 0x2D52 */ be<s16> mBtWindow2Start;  /* was m294A: attack_set 021C9310: l_mo2HIO m148 / m150 / m158; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow2Len when mBtCounter reaches it */
+  /* 0x2D54 */ be<s16> mBtWindow2Len;  /* was m294C: attack_set 021C9310: l_mo2HIO m14A / m152 / m15A; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow2Start */
+  /* 0x2D56 */ be<s16> mBtWindowTimer;  /* was m294E: daMo2_Execute 021C9B1C counts it down and sets mBtNowFrame 5 (inside the parry window) while it is not 0, else 100; damage_check clears it */
   /* 0x2D58 */ be<u8> mParryOpeningType;
-  /* 0x2D59 */ be<s8> m2951;
-  /* 0x2D5A */ be<s16> m2952;
-  /* 0x2D5C */ be<u32> m2954;
+  /* 0x2D59 */ be<s8> mItemStolen;  /* was m2951: damage_check (in daMo2_Execute 021C9B1C) sets 1 at the first steal hit (type 0xE) and starts ACTION_P_LOST; daMo2_Draw 021C7344 hides the mo_e1 shape while it is set */
+  /* 0x2D5A */ be<s16> mJawAngleZ;  /* was m2952: nodeCallBack 021C6854: ZrotM of joint MO_JNT_JAWA_J_e by it; aite_miru 021CEC44 / fight_run (in Mo2_move 021D0A14) ease it to 12000, Mo2_move 021D0A14 back to 0 */
+  /* 0x2D5C */ be<u32> mHitActorId;  /* was m2954: attack_set 021C9310 clears it; fight (in Mo2_move 021D0A14) stores the id of a Moblin its attack hit; aite_miru 021CEC44 looks at that actor and clears it */
   /* 0x2D60 */ be<u32> mWeaponPcId;
   /* 0x2D64 */ gptr<fopAc_ac_c> mpBomb;
-  /* 0x2D68 */ be<u16> m2960;
+  /* 0x2D68 */ be<u16> mCutBits;  /* was m2960: damage_check (in daMo2_Execute 021C9B1C) ORs atInfo->mPlCutBit in; fight_run (in Mo2_move 021D0A14) guards against those cuts; search_bomb 021C8378 looks for bombs only once bit 0x200 is set */
   /* 0x2D6A */ u8 _2D6A[0x2];
-  /* 0x2D6C */ be<s32> m2964;
-  /* 0x2D70 */ be<s8> m2968;
-  /* 0x2D71 */ be<s8> m2969;
-  /* 0x2D72 */ be<s8> mHasPath;
+  /* 0x2D6C */ be<s32> mDashFrames;  /* was m2964: fight_run (in Mo2_move 021D0A14) sets 1 when the armed Moblin starts the DASH animation, adds 1 per frame and stops the dash after 20 frames; 0 = not dashing */
+  /* 0x2D70 */ be<s8> mPathOn;  /* was m2968: path_check 021C9004: 0 or mPathIndex + 1; jyunkai (in Mo2_move 021D0A14) follows the path while it is not 0 */
+  /* 0x2D71 */ be<s8> mPathPoint;  /* was m2969: path_check 021C9004 picks the start point; jyunkai (in Mo2_move 021D0A14) steps it by mPathDir and indexes ppd->m_points with it; nage 021CD958 steps it back */
+  /* 0x2D72 */ be<s8> mPathDir;  /* was mHasPath (misnamed; TWW calls it mHasPath): daMo2_Create 021CCB00 sets 1 with a path; jyunkai (in Mo2_move 021D0A14) adds it to mPathPoint, sets -1 / 1 at the path ends and negates it; path_check 021C9004 / nage 021CD958 step mPathPoint back by it. tww d217e2b src/d/actor/d_a_mo2.cpp (same field, same class) does the same: added to the path index (line 1325), set to 0xff / 1 (lines 1330 / 1340), negated at the path ends (line 1386) */
   /* 0x2D73 */ u8 _2D73[0x1];
   /* 0x2D74 */ gptr<dPath> ppd;
   /* 0x2D78 */ be<s8> m2970;
   /* 0x2D79 */ u8 _2D79[0x3];
   /* 0x2D7C */ ga_s m2978[3];
-  /* 0x2E0C */ be<s8> m2A08;
+  /* 0x2E0C */ be<s8> mLanternStep;  /* was m2A08: kantera_get_init (in daMo2_Create 021CCB00): 0 creates the lantern, then counts the frames until it exists (deletes the Moblin after 20), 100 = lantern linked; daMo2_Draw 021C7344 draws nothing while it is 1..99 */
   /* 0x2E0D */ be<u8> m2A09;
-  /* 0x2E0E */ be<u8> m2A0A;
-  /* 0x2E0F */ be<s8> m2A0B;
-  /* 0x2E10 */ be<s16> m2A0C;
+  /* 0x2E0E */ be<u8> mHioOwner;  /* was m2A0A: daMo2_Create 021CCB00 sets 1 when it created the l_mo2HIO child; daMo2_Delete 021CC44C deletes the HIO child only then */
+  /* 0x2E0F */ be<s8> mParalyzeDelay;  /* was m2A0B: damage_check (in daMo2_Execute 021C9B1C) sets REG_S(13,3) + 8 for attack type 10; Mo2_move 021D0A14 counts it down and starts ACTION_D_MAHI at 0 */
+  /* 0x2E10 */ be<s16> mSoundTargetTimer;  /* was m2A0C: jyunkai (in Mo2_move 021D0A14) sets 30 when it hears a sound (dKy_Sound_get); Mo2_move 021D0A14 counts it down and targets mSoundTargetPos instead of the player while it runs */
   /* 0x2E12 */ u8 _2E12[0x2];
-  /* 0x2E14 */ cXyz m2A10;
-  /* 0x2E20 */ be<s8> m2A1C;
-  /* 0x2E21 */ be<s8> m2A1D;
-  /* 0x2E22 */ be<s16> m2A1E;
-  /* 0x2E24 */ cXyz m2A20;
-  /* 0x2E30 */ cXyz m2A2C;
+  /* 0x2E14 */ cXyz mSoundTargetPos;  /* was m2A10: jyunkai (in Mo2_move 021D0A14) copies the heard sound's position (dKy_Sound_get); Mo2_move 021D0A14 measures mTargetDist / mTargetAngleY to it while mSoundTargetTimer runs */
+  /* 0x2E20 */ be<s8> mDefeated;  /* was m2A1C: fail 021CED78 sets 1 for a boss-status Moblin instead of deleting it; daMo2_Draw 021C7344 draws nothing, Mo2_move 021D0A14 turns Co off and mo2_demo_camera (in daMo2_Execute 021C9B1C) stops following while it is set */
+  /* 0x2E21 */ be<s8> mDemoCamMode;  /* was m2A1D: mo2_demo_camera (in daMo2_Execute 021C9B1C): switch of the demo camera steps; nage 021CD958 sets 2 / 10, damage_check 0x32, daMo2_Execute 1 */
+  /* 0x2E22 */ be<s16> mDemoCamTimer;  /* was m2A1E: mo2_demo_camera (in daMo2_Execute 021C9B1C): cleared per step, +1 per frame, compared with 150 */
+  /* 0x2E24 */ cXyz mDemoCamEye;  /* was m2A20: mo2_demo_camera (in daMo2_Execute 021C9B1C): copies the camera's eye and passes it to dCamera_Set as the eye */
+  /* 0x2E30 */ cXyz mDemoCamCenter;  /* was m2A2C: mo2_demo_camera (in daMo2_Execute 021C9B1C): actor position / camera centre eased toward the actor (+230); passed to dCamera_Set as the centre */
   /* 0x2E3C */ be<f32> m2A38;
   /* 0x2E40 */ be<f32> m2A3C;
   /* 0x2E44 */ be<f32> m2A40;
-  /* 0x2E48 */ be<f32> m2A44;
-  /* 0x2E4C */ be<s16> m2A48;
-  /* 0x2E4E */ be<u8> m2A4A;
-  /* 0x2E4F */ be<u8> m2A4B;
-  /* 0x2E50 */ be<s16> m2A4C;
+  /* 0x2E48 */ be<f32> mDemoCamFovy;  /* was m2A44: mo2_demo_camera (in daMo2_Execute 021C9B1C): 55 eased to 30; passed to dCamera_Set as the fovy */
+  /* 0x2E4C */ be<s16> mCatchDemoDelay;  /* was m2A48: AtHitCallback 021C9AA0 sets 1 when the spear hits a hooded player (prison mode); daMo2_Execute 021C9B1C counts it down and at 0 starts ACTION_E3_DEMO */
+  /* 0x2E4E */ be<u8> mCatchEventPending;  /* was m2A4A: AtHitCallback 021C9AA0 sets 1 with mCatchDemoDelay; daMo2_Execute 021C9B1C orders a potential event each frame until it is accepted, then clears it */
+  /* 0x2E4F */ be<u8> mSendToPrison;  /* was m2A4B: e3_demo 021D0570 sets 1 at the end of the catch demo; daMo2_Execute 021C9B1C then sets the next stage "majroom" */
+  /* 0x2E50 */ be<s16> mCatchTimer;  /* was m2A4C: AtHitCallback 021C9AA0 sets 200; daMo2_Execute 021C9B1C counts it down, stops JA_SE_MAJUTOU_ALERM at 30 and sets the next stage "majroom" at 1 */
   /* 0x2E52 */ u8 _2E52[0x2];
   /* 0x2E54 */ enemyice mEnemyIce;
   /* 0x320C */ enemyfire mEnemyFire;
   /* 0x3438 */ gptr<JntHit_c> mpJntHit;
 };
 WWHD_SIZE(mo2_class, 0x343C);
-WWHD_OFFSET(mo2_class, m02DC, 0x458);
-WWHD_OFFSET(mo2_class, m05B0, 0x854);
-WWHD_OFFSET(mo2_class, m05D4, 0x87C);
-WWHD_OFFSET(mo2_class, m05C4, 0x86C);
+WWHD_OFFSET(mo2_class, mEyeBtpFrame, 0x458);
+WWHD_OFFSET(mo2_class, mDashStopTimer, 0x854);
+WWHD_OFFSET(mo2_class, mHeadAngleY, 0x87C);
+WWHD_OFFSET(mo2_class, mPathTargetPos, 0x86C);
 WWHD_OFFSET(mo2_class, mDamageReaction, 0x8BC);
 WWHD_OFFSET(mo2_class, mbHasInnateWeapon, 0x10B0);
 WWHD_OFFSET(mo2_class, mCoCyl, 0x2494);
-WWHD_OFFSET(mo2_class, m2952, 0x2D5A);
-WWHD_OFFSET(mo2_class, m2A08, 0x2E0C);
+WWHD_OFFSET(mo2_class, mJawAngleZ, 0x2D5A);
+WWHD_OFFSET(mo2_class, mLanternStep, 0x2E0C);
 WWHD_OFFSET(mo2_class, mEnemyIce, 0x2E54);
 WWHD_OFFSET(mo2_class, mpJntHit, 0x3438);
 

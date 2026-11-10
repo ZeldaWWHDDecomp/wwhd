@@ -13,14 +13,14 @@ static u32 l_heapMgr;
 void dMagma_ballBoss_c::calc(f32 param_1, u8 param_2, s32 param_3) {
     btd_class* boss = btd;
     // HD: the negated comparison also sends a NaN boss height to the submerged case.
-    if (boss && !(boss->m6E84 > -150.0f)) {
+    if (boss && !(boss->mMagmaBallOffsetY > -150.0f)) {
         mPos.y = -200.0f;
         return;
     }
     if (boss) {
         f32 z = mPos.z, x = mPos.x;
         f32 radius = std_sqrtf(gabi::fmadds(x, x, gabi::fmuls_ppc(z, z)));
-        f32 diff = std::fabs(gabi::fsubs_ppc(boss->m6E7C, radius));
+        f32 diff = std::fabs(gabi::fsubs_ppc(boss->mWaveRadius, radius));
         if (diff < 300.0f) {
             f32 adjustment = REG0_F(5), base = mBaseY;
             f32 targetY =
@@ -88,7 +88,7 @@ void dMagma_ballBoss_c::setup(f32 param_1, u8 param_2, s32 param_3) {
         gabi::at<btd_class>(dMagma_searchActorHD(gabi::guest_fn((const void*)b_a_sub), 0u));
     btd = boss;
     if (boss) {
-        if (boss->m6E88 == 1) {
+        if (boss->mMagmaRiseCenter == 1) {
             f32 vz = mPos.z, vx = mPos.x;
             f32 dist = std_sqrtf(gabi::fmadds(vx, vx, gabi::fmuls_ppc(vz, vz)));
             f32 target_dist = gabi::fadds_ppc(REG0_F(16), 800.0f);
@@ -99,9 +99,9 @@ void dMagma_ballBoss_c::setup(f32 param_1, u8 param_2, s32 param_3) {
                 mBaseY = height;
             }
             boss = btd;
-            mBaseY = gabi::fadds_ppc(height, boss->m6E84);
+            mBaseY = gabi::fadds_ppc(height, boss->mMagmaBallOffsetY);
         } else {
-            f32 delta = boss->m6E84, height = mBaseY;
+            f32 delta = boss->mMagmaBallOffsetY, height = mBaseY;
             // HD: keep the boss operand first when both values carry NaN payloads.
             mBaseY = gabi::fadds_ppc(delta, height);
         }

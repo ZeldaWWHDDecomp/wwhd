@@ -79,49 +79,49 @@ struct daNpc_Kp1_c : fopNpc_npc_c {
     /* 0x7F8 */ u8 mBtpAnm[0x74]; /* mDoExt_btpAnm (HD 0x74) */
     /* 0x86C */ be<u8> mBtpFrame;
     /* 0x86D */ be<u8> field_0x6F1;
-    /* 0x86E */ be<s16> field_0x6F2;
+    /* 0x86E */ be<s16> mBlinkTimer;  /* was field_0x6F2: playTexPatternAnm 0227B854 counts it down while the blink pattern runs and restarts it with 30 + rnd(60); init_btp 0227B1D0 0; after daNpcPeople_c::mBlinkTimer (npcs.md) */
     /* 0x870 */ Kp1ActionFunc mAction; /* field_0x6F4 */
     /* 0x878 */ dNpc_EventCut_c mEventCut;
-    /* 0x8E4 */ csXyz field_0x76C;
+    /* 0x8E4 */ csXyz mInitialAngle;  /* was field_0x76C: _execute 0227C774 copies current.angle on the first run (with mInitialPos, then mbRanExecute = 1); wait01 0227D3C8 faces its y (mDesiredYRot = it.y); same code as daNpc_Bm1_c / daNpc_Hi1_c::mInitialAngle */
     /* 0x8EA */ u8 _8EA[2];
-    /* 0x8EC */ cXyz field_0x774;
+    /* 0x8EC */ cXyz mInitialPos;  /* was field_0x774: _execute 0227C774 copies current.pos on the first run; written only; after tww daNpc_Bm1_c mInitialPos (same code) */
     /* 0x8F8 */ cXyz mAttPos;
     /* 0x904 */ cXyz mEyePos;
-    /* 0x910 */ cXyz field_0x798;
-    /* 0x91C */ be<f32> field_0x7A4;
+    /* 0x910 */ cXyz mLookPos;  /* was field_0x798: createInit 0227BC14 current.pos; lookBack 0227C41C looks at it; same code as daNpc_Bm1_c::mLookPos (createInit current.pos, lookBack dstPos) */
+    /* 0x91C */ be<f32> mPrevMorfFrame;  /* was field_0x7A4: setMtx 0227B9AC: a morf frame below it means the animation wrapped, then it takes the frame; setAnm_anm 0227CB88 0; after tww daNpc_Ls1_c mPrevMorfFrame */
     /* 0x920 */ u8 _920[4];
     /* 0x924 */ be<f32> field_0x7AC;
-    /* 0x928 */ be<s16> field_0x7B0;
-    /* 0x92A */ be<s16> field_0x7B2;
-    /* 0x92C */ be<s8> field_0x7B4;
-    /* 0x92D */ be<s8> field_0x7B5;
-    /* 0x92E */ be<u8> field_0x7B6;
+    /* 0x928 */ be<s16> mLookAtMaxVel;  /* was field_0x7B0: lookBack 0227C41C eases it to HIO field_12 while turning, else 0, and passes it as the look-at's maxVel; after tww daNpc_Bm1_c mHeadLookAtMaxVel / daNpc_Ah_c mLookAtMaxVel */
+    /* 0x92A */ be<s16> mDesiredYRot;  /* was field_0x7B2: lookBack 0227C41C: the look-at's default Y angle (targetY = it); wait01 0227D3C8 sets mInitialAngle.y; same code as daNpc_Bm1_c::mDesiredYRot */
+    /* 0x92C */ be<s8> mbMorfAnimStopped;  /* was field_0x7B4: setMtx 0227B9AC: the morf's play() result, or 1; setAnm_anm 0227CB88 0; ctrlAnmAtr 0227CDE4 tests it; after tww daNpc_Ls1_c mbMorfAnimStopped (same code) */
+    /* 0x92D */ be<s8> mAnmLoopCount;  /* was field_0x7B5: setAnm_anm 0227CB88 0; ctrlAnmAtr 0227CDE4 counts the morf stops and changes the attribute at 2; same code as daNpc_Bm1_c::mAnmLoopCount */
+    /* 0x92E */ be<u8> mPreItemNo;  /* was field_0x7B6: chk_talk 0227D348: dComIfGp_event_getPreItemNo(), else 0xFF; getMsg 0227D104 picks the message by it; createInit 0227BC14 / talk01 0227D480 0xFF; same code as daNpc_Bm1_c::mPreItemNo */
     /* 0x92F */ be<u8> mLetterEventEnded;     /* Kp1: getMsg flag (event 1 ended) */
     /* 0x930 */ be<u8> mHeartPieceEventEnded; /* Kp1: getMsg flag (event 2 ended) */
     /* 0x931 */ be<u8> mLetterOffered;        /* Kp1: next_msgStatus/getMsg flag */
     /* 0x932 */ be<u8> mCancelPresent;        /* Kp1: present to cancel (talk01) */
-    /* 0x933 */ be<u8> field_0x7B8;           /* _execute: first-frame init done */
+    /* 0x933 */ be<u8> mbRanExecute;  /* was field_0x7B8: _execute 0227C774: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1; after tww daNpc_Bm1_c mbRanExecute (same code) */
     /* 0x934 */ be<s32> field_0x7BC;
-    /* 0x938 */ be<s32> field_0x7C0;
-    /* 0x93C */ be<u8> field_0x7C4;
-    /* 0x93D */ be<u8> field_0x7C5;
+    /* 0x938 */ be<s32> mbSetEyePos;  /* was field_0x7C0: wait_action1 0227D558 stores talk01() / wait01(); setAttention 0227B94C tests it; after tww daNpc_Ls1_c mbSetEyePos (same code) */
+    /* 0x93C */ be<u8> mHasAttention;  /* was field_0x7C4: wait_action1 0227D558: chkAttention(); wait01 0227D3C8 looks at the player while it is set; after tww daNpc_Hi1_c mHasAttention (mHasAttention = chkAttention()) */
+    /* 0x93D */ be<u8> mTalking;  /* was field_0x7C5: checkOrder 0227BF00 sets 1 on the talk command; wait01 0227D3C8 starts the talk while it is set; talk01 0227D480 clears it; same code as daNpc_Hi1_c::mTalking */
     /* 0x93E */ be<u8> mHeadOnlyFollow;
-    /* 0x93F */ be<u8> field_0x7C7;
+    /* 0x93F */ be<u8> mInDemo;  /* was field_0x7C7: demo 0227BFE0: 1 while demoActorID is set, 0 otherwise, and returns it; setMtx 0227B9AC / _execute 0227C774 test it; same code as daNpc_Hi1_c::mInDemo */
     /* 0x940 */ be<u8> field_0x7C8;
-    /* 0x941 */ be<s8> field_0x7C9;
-    /* 0x942 */ be<s8> field_0x7CA;
-    /* 0x943 */ be<u8> field_0x7CB;
-    /* 0x944 */ be<u8> field_0x7CC;
-    /* 0x945 */ be<s8> field_0x7CD;
-    /* 0x946 */ be<s8> field_0x7CE;
-    /* 0x947 */ be<s8> field_0x7CF;
-    /* 0x948 */ be<s8> field_0x7D0;
-    /* 0x949 */ be<s8> field_0x7D1;
-    /* 0x94A */ be<s8> field_0x7D2;
+    /* 0x941 */ be<s8> mActIdx;  /* was field_0x7C9: privateCut 0227C32C: dComIfGp_evmng_getMyActIdx(..), -1 ends; after tww daNpc_Hi1_c mActIdx (same code) */
+    /* 0x942 */ be<s8> mEventActionNo;  /* was field_0x7CA: event_actionInit 0227C1E0 stores the cut's action number (*actionNumber); event_action 0227C268 switches on it */
+    /* 0x943 */ be<u8> mAnmAtrNo;  /* was field_0x7CB: chngAnmAtr 0227CD8C stores the attribute; setAnm_ATR 0227CD1C plays a_anm_prm_tbl[it]; ctrlAnmAtr 0227CDE4 / setStt 0227CF10 / endEvent 0227C1A0 use it; same code as daNpc_Hi1_c::mAnmAtrNo */
+    /* 0x944 */ be<u8> mMesgAnimeTag;  /* was field_0x7CC: anmAtr 0227CE54: the message's animation tag when it changes (if (uVar1 != 0xFF && uVar1 != it)); after tww daNpc_Ls1_c mMesgAnimeTag (same code) */
+    /* 0x945 */ be<s8> mBtpNum;  /* was field_0x7CD: setAnm_tex 0227CB64 stores the btp number when it changes; init_btp 0227B1D0 / initTexPatternAnm 0227B2FC / playTexPatternAnm 0227B854 / CreateHeap 0227B340 use it; after tww daNpc_Ls1_c mBtpNum */
+    /* 0x946 */ be<s8> mBckNum;  /* was field_0x7CE: setAnm_anm 0227CB88: skips an entry whose bckNum is < 0 or equal to it, else stores it; after tww daNpc_Ls1_c mBckNum (same code) */
+    /* 0x947 */ be<s8> mOrderEvent;  /* was field_0x7CF: eventOrder 0227C714 orders by it (1 / 2 the talk, 3 / 4 the events); checkOrder 0227BF00 clears it once they start; next_msgStatus 0227CF50 3 / 4; event_proc 0227C600 / wait01 0227D3C8 set it; same code as daNpc_Hi1_c::mOrderEvent */
+    /* 0x948 */ be<s8> mStt;  /* was field_0x7D0: setStt 0227CF10 stores the new state; setAnm 0227CCB0 plays a_anm_prm_tbl[it]; wait_action1 0227D558 switches on it; same code as daNpc_Hi1_c::mStt */
+    /* 0x949 */ be<s8> mPrevStt;  /* was field_0x7D1: setStt 0227CF10 keeps the previous mStt; talk01 0227D480 returns to it (setStt(it)); same code as daNpc_Hi1_c::mPrevStt */
+    /* 0x94A */ be<s8> mLookMode;  /* was field_0x7D2: lookBack 0227C41C switches on it; setStt 0227CF10 / wait01 0227D3C8 set 1 / 3; same code as daNpc_Hi1_c::mLookMode */
     /* 0x94B */ be<s8> field_0x7D3;
     /* 0x94C */ be<s8> field_0x7D4;
-    /* 0x94D */ be<s8> field_0x7D5;
-    /* 0x94E */ be<s8> field_0x7D6;
+    /* 0x94D */ be<s8> mActionStatus;  /* was field_0x7D5: set_action 0227B728 sets -1 for the leaving action and 0 for the new one; wait_action1 0227D558 switches on it; after tww daNpc_Bs1_c mActionStatus */
+    /* 0x94E */ be<s8> mAnmAtrSetCnt;  /* was field_0x7D6: anmAtr 0227CE54: applies the message's animation attribute only when it is 0, then adds 1; same code as daNpc_Hi1_c::mAnmAtrSetCnt */
     /* 0x94F */ be<s8> field_0x7D7;
 };
 WWHD_OFFSET(daNpc_Kp1_c, m_head_tex_pattern, 0x7F4);
@@ -129,7 +129,7 @@ WWHD_OFFSET(daNpc_Kp1_c, mAction, 0x870);
 WWHD_OFFSET(daNpc_Kp1_c, mEventCut, 0x878);
 WWHD_OFFSET(daNpc_Kp1_c, mEyePos, 0x904);
 WWHD_OFFSET(daNpc_Kp1_c, field_0x7BC, 0x934);
-WWHD_OFFSET(daNpc_Kp1_c, field_0x7CD, 0x945);
+WWHD_OFFSET(daNpc_Kp1_c, mBtpNum, 0x945);
 WWHD_SIZE(daNpc_Kp1_c, 0x950);
 
 // HD: Kp1 keeps the HIO vtable first.

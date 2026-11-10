@@ -735,20 +735,20 @@ static s32 wall_angle_get(u32 actor, s32 angle) {
 /* inlined into caller */
 static void dr_body_bg_check(damagereaction* dr, u32 scratch) {
 
-    f32 lift = dr->m488 == 1 ? 12.5f : 0.0f;
-    if (dr->m71E == 0) {
-        dr->mpEnemy->current.pos.y -= dr->m44C.y + lift;
-        dr->mpEnemy->old.pos.y -= dr->m44C.y + lift;
+    f32 lift = dr->mKnockedDown == 1 ? 12.5f : 0.0f;
+    if (dr->mBodyBgCheckDelay == 0) {
+        dr->mpEnemy->current.pos.y -= dr->mPivot.y + lift;
+        dr->mpEnemy->old.pos.y -= dr->mPivot.y + lift;
         dr->mpEnemy->speed.y *= 0.25f;
         dr->mAcch.CrrPos(dComIfG_Bgsp());
         dr->mpEnemy->speed.y *= 4.0f;
-        dr->mpEnemy->current.pos.y += dr->m44C.y + lift;
-        dr->mpEnemy->old.pos.y += dr->m44C.y + lift;
-        dr->m6E8.copy(dr->mpEnemy->old.pos);
-        dr->m6E8.y = dr->mSpawnY;
+        dr->mpEnemy->current.pos.y += dr->mPivot.y + lift;
+        dr->mpEnemy->old.pos.y += dr->mPivot.y + lift;
+        dr->mPrevGroundPos.copy(dr->mpEnemy->old.pos);
+        dr->mPrevGroundPos.y = dr->mSpawnY;
         dr->mSpawnY = dr->mAcch.GetGroundH();
     } else
-        dr->m71E--;
+        dr->mBodyBgCheckDelay--;
     if (dr->mAction != 21 && dr->mAction != 22) {
         DamageGround* chk = gabi::at<DamageGround>(scratch);
         chk->Init(true);
@@ -761,7 +761,7 @@ static void dr_body_bg_check(damagereaction* dr, u32 scratch) {
         if (height != -1000000000.0f && !(dr->mpEnemy->current.pos.y > height)) {
             dr->mpEnemy->current.pos.y = height + REG0_F(13);
             dr->mMode = 0;
-            dr->m47C = 0;
+            dr->mLaunched = 0;
             u32 grp = gabi::call<u32>(0x024EEE30, dComIfG_Bgsp(), gabi::ea(chk) + 0x14, 0x100);
             (&point)->set(x, height, z);
             if (grp) {
@@ -779,7 +779,7 @@ static void dr_body_bg_check(damagereaction* dr, u32 scratch) {
         f32 sea = daSea_calcWave((f32)dr->mpEnemy->current.pos.x, (f32)dr->mpEnemy->current.pos.z);
         sea -= 40.0f;
         sea = REG0_F(13) + sea;
-        sea = (f32)dr->m44C.y + sea;
+        sea = (f32)dr->mPivot.y + sea;
         if (!(dr->mpEnemy->current.pos.y > sea)) {
             dr->mpEnemy->current.pos.y = sea;
             cXyz pos;
@@ -804,28 +804,28 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
     DamageGround& gndChk = *gabi::at<DamageGround>(auxiliary);
     gndChk.Init(false);
 
-    if (dr->m420 != 0) {
-        dr->m420--;
-        if (dr->m420 == 0 && dr->m70D == 1) {
+    if (dr->mJntBgCheckTimer != 0) {
+        dr->mJntBgCheckTimer--;
+        if (dr->mJntBgCheckTimer == 0 && dr->mFaceDown == 1) {
             result = 2;
         }
 
         for (int i = 0; i < 0xE; i++) {
-            dr->m1F0[i].set(dr->m100[i].x, dr->m100[i].y, dr->m100[i].z);
-            dr->m1F0[i].y += gabi::fmadds(REG0_F(7), 10.0f, 200.0f);
-            gndChk.SetPos(&dr->m1F0[i]);
-            dr->m1F0[i].y = cBgS_GroundCross(dComIfG_Bgsp(), &gndChk);
-            if (dr->m1F0[i].y == -1000000000.0f) {
-                dr->m1F0[i].y = 1000000000.0f;
+            dr->mJntGroundPos[i].set(dr->mJntPos[i].x, dr->mJntPos[i].y, dr->mJntPos[i].z);
+            dr->mJntGroundPos[i].y += gabi::fmadds(REG0_F(7), 10.0f, 200.0f);
+            gndChk.SetPos(&dr->mJntGroundPos[i]);
+            dr->mJntGroundPos[i].y = cBgS_GroundCross(dComIfG_Bgsp(), &gndChk);
+            if (dr->mJntGroundPos[i].y == -1000000000.0f) {
+                dr->mJntGroundPos[i].y = 1000000000.0f;
             }
 
             if (i == 0 || i == 1 || i == 2 || i == 3) {
-                if (dr->m1F0[i].y == 1000000000.0f) {
-                    dr->m3D0[i] = 2;
-                } else if (dr->m100[i].y - dr->m1F0[i].y > gabi::fmadds(REG0_F(8), 10.0f, 200.0f)) {
-                    dr->m3D0[i] = 0;
+                if (dr->mJntGroundPos[i].y == 1000000000.0f) {
+                    dr->mJntGroundState[i] = 2;
+                } else if (dr->mJntPos[i].y - dr->mJntGroundPos[i].y > gabi::fmadds(REG0_F(8), 10.0f, 200.0f)) {
+                    dr->mJntGroundState[i] = 0;
                 } else {
-                    dr->m3D0[i] = 1;
+                    dr->mJntGroundState[i] = 1;
                 }
             }
         }
@@ -839,9 +839,9 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
         cXyz& temp2 = *(&t2);
         temp.x = 0.0f;
         temp.y = 0.0f;
-        f32 diffX = dr->m100[0xE].x - dr->m100[0xA].x;
-        f32 diffY = dr->m100[0xE].y - dr->m100[0xA].y;
-        f32 diffZ = dr->m100[0xE].z - dr->m100[0xA].z;
+        f32 diffX = dr->mJntPos[0xE].x - dr->mJntPos[0xA].x;
+        f32 diffY = dr->mJntPos[0xE].y - dr->mJntPos[0xA].y;
+        f32 diffZ = dr->mJntPos[0xE].z - dr->mJntPos[0xA].z;
         temp.z = std_sqrtf(gabi::fmadds(diffZ, diffZ, gabi::fmadds(diffX, diffX, diffY * diffY)));
         s16 angleY = cM_atan2s(diffX, diffZ);
         s16 angleX = 0;
@@ -849,40 +849,40 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
             mDoMtx_YrotS(calc_mtx(), angleY);
             mDoMtx_XrotM(calc_mtx(), angleX);
             MtxPosition(&temp, &temp2);
-            temp2.x = temp2.x + dr->m100[0xA].x;
-            temp2.y = temp2.y + dr->m100[0xA].y;
-            temp2.z = temp2.z + dr->m100[0xA].z;
-            linChk.Set(&dr->m100[0xA], &temp2, dr->mpEnemy);
+            temp2.x = temp2.x + dr->mJntPos[0xA].x;
+            temp2.y = temp2.y + dr->mJntPos[0xA].y;
+            temp2.z = temp2.z + dr->mJntPos[0xA].z;
+            linChk.Set(&dr->mJntPos[0xA], &temp2, dr->mpEnemy);
             if (!cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
                 break;
             }
         }
 
         if (angleX != 0) {
-            dr->m440 = angleX + 0x400;
-            dr->m408 = 2;
+            dr->mJnt10Pitch = angleX + 0x400;
+            dr->mJnt10LineBlocked = 2;
         } else {
-            f32 diff2X = dr->m1F0[6].x - dr->m1F0[0xA].x;
-            f32 diff2Y = dr->m1F0[6].y - dr->m1F0[0xA].y;
-            f32 diff2Z = dr->m1F0[6].z - dr->m1F0[0xA].z;
-            dr->m440 = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
-            dr->m408 = 0;
+            f32 diff2X = dr->mJntGroundPos[6].x - dr->mJntGroundPos[0xA].x;
+            f32 diff2Y = dr->mJntGroundPos[6].y - dr->mJntGroundPos[0xA].y;
+            f32 diff2Z = dr->mJntGroundPos[6].z - dr->mJntGroundPos[0xA].z;
+            dr->mJnt10Pitch = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
+            dr->mJnt10LineBlocked = 0;
 
-            if (dr->m70D == 1) {
-                dr->m4B4 = 0;
-                dr->m4B0 = 0;
+            if (dr->mFaceDown == 1) {
+                dr->mJnt6LandZ = 0;
+                dr->mJnt2LandZ = 0;
             }
         }
 
-        if (dr->m440 > 7000) {
-            dr->m440 = 7000;
-        } else if (dr->m440 < -10000) {
-            dr->m440 = -10000;
+        if (dr->mJnt10Pitch > 7000) {
+            dr->mJnt10Pitch = 7000;
+        } else if (dr->mJnt10Pitch < -10000) {
+            dr->mJnt10Pitch = -10000;
         }
 
-        diffX = dr->m100[0xF].x - dr->m100[0xB].x;
-        diffY = dr->m100[0xF].y - dr->m100[0xB].y;
-        diffZ = dr->m100[0xF].z - dr->m100[0xB].z;
+        diffX = dr->mJntPos[0xF].x - dr->mJntPos[0xB].x;
+        diffY = dr->mJntPos[0xF].y - dr->mJntPos[0xB].y;
+        diffZ = dr->mJntPos[0xF].z - dr->mJntPos[0xB].z;
         temp.z = std_sqrtf(gabi::fmadds(diffZ, diffZ, gabi::fmadds(diffX, diffX, diffY * diffY)));
         angleY = cM_atan2s(diffX, diffZ);
         angleX = 0;
@@ -890,34 +890,34 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
             mDoMtx_YrotS(calc_mtx(), angleY);
             mDoMtx_XrotM(calc_mtx(), angleX);
             MtxPosition(&temp, &temp2);
-            temp2.x = temp2.x + dr->m100[0xB].x;
-            temp2.y = temp2.y + dr->m100[0xB].y;
-            temp2.z = temp2.z + dr->m100[0xB].z;
-            linChk.Set(&dr->m100[0xB], &temp2, dr->mpEnemy);
+            temp2.x = temp2.x + dr->mJntPos[0xB].x;
+            temp2.y = temp2.y + dr->mJntPos[0xB].y;
+            temp2.z = temp2.z + dr->mJntPos[0xB].z;
+            linChk.Set(&dr->mJntPos[0xB], &temp2, dr->mpEnemy);
             if (!cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
                 break;
             }
         }
 
         if (angleX != 0) {
-            dr->m442 = angleX + 0x400;
-            dr->m40C = 2;
+            dr->mJnt11Pitch = angleX + 0x400;
+            dr->mJnt11LineBlocked = 2;
         } else {
-            f32 diff2X = dr->m1F0[7].x - dr->m1F0[0xB].x;
-            f32 diff2Y = dr->m1F0[7].y - dr->m1F0[0xB].y;
-            f32 diff2Z = dr->m1F0[7].z - dr->m1F0[0xB].z;
-            dr->m442 = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
-            dr->m40C = 0;
+            f32 diff2X = dr->mJntGroundPos[7].x - dr->mJntGroundPos[0xB].x;
+            f32 diff2Y = dr->mJntGroundPos[7].y - dr->mJntGroundPos[0xB].y;
+            f32 diff2Z = dr->mJntGroundPos[7].z - dr->mJntGroundPos[0xB].z;
+            dr->mJnt11Pitch = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
+            dr->mJnt11LineBlocked = 0;
 
-            if (dr->m70D == 1) {
-                dr->m4B6 = 0;
-                dr->m4B2 = 0;
+            if (dr->mFaceDown == 1) {
+                dr->mJnt7LandZ = 0;
+                dr->mJnt3LandZ = 0;
             }
         }
 
-        diffX = dr->m100[0x10].x - dr->m100[0x8].x;
-        diffY = dr->m100[0x10].y - dr->m100[0x8].y;
-        diffZ = dr->m100[0x10].z - dr->m100[0x8].z;
+        diffX = dr->mJntPos[0x10].x - dr->mJntPos[0x8].x;
+        diffY = dr->mJntPos[0x10].y - dr->mJntPos[0x8].y;
+        diffZ = dr->mJntPos[0x10].z - dr->mJntPos[0x8].z;
         temp.z = std_sqrtf(gabi::fmadds(diffZ, diffZ, gabi::fmadds(diffX, diffX, diffY * diffY)));
         angleY = cM_atan2s(diffX, diffZ);
         angleX = 0;
@@ -925,29 +925,29 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
             mDoMtx_YrotS(calc_mtx(), angleY);
             mDoMtx_XrotM(calc_mtx(), angleX);
             MtxPosition(&temp, &temp2);
-            temp2.x = temp2.x + dr->m100[0x8].x;
-            temp2.y = temp2.y + dr->m100[0x8].y;
-            temp2.z = temp2.z + dr->m100[0x8].z;
-            linChk.Set(&dr->m100[0x8], &temp2, dr->mpEnemy);
+            temp2.x = temp2.x + dr->mJntPos[0x8].x;
+            temp2.y = temp2.y + dr->mJntPos[0x8].y;
+            temp2.z = temp2.z + dr->mJntPos[0x8].z;
+            linChk.Set(&dr->mJntPos[0x8], &temp2, dr->mpEnemy);
             if (!cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
                 break;
             }
         }
 
         if (angleX != 0) {
-            dr->m444 = angleX + 0x400;
-            dr->m410 = 2;
+            dr->mJnt8Pitch = angleX + 0x400;
+            dr->mJnt8LineBlocked = 2;
         } else {
-            f32 diff2X = dr->m1F0[4].x - dr->m1F0[0x8].x;
-            f32 diff2Y = dr->m1F0[4].y - dr->m1F0[0x8].y;
-            f32 diff2Z = dr->m1F0[4].z - dr->m1F0[0x8].z;
-            dr->m444 = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
-            dr->m410 = 0;
+            f32 diff2X = dr->mJntGroundPos[4].x - dr->mJntGroundPos[0x8].x;
+            f32 diff2Y = dr->mJntGroundPos[4].y - dr->mJntGroundPos[0x8].y;
+            f32 diff2Z = dr->mJntGroundPos[4].z - dr->mJntGroundPos[0x8].z;
+            dr->mJnt8Pitch = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
+            dr->mJnt8LineBlocked = 0;
         }
 
-        diffX = dr->m100[0x11].x - dr->m100[0x9].x;
-        diffY = dr->m100[0x11].y - dr->m100[0x9].y;
-        diffZ = dr->m100[0x11].z - dr->m100[0x9].z;
+        diffX = dr->mJntPos[0x11].x - dr->mJntPos[0x9].x;
+        diffY = dr->mJntPos[0x11].y - dr->mJntPos[0x9].y;
+        diffZ = dr->mJntPos[0x11].z - dr->mJntPos[0x9].z;
         temp.z = std_sqrtf(gabi::fmadds(diffZ, diffZ, gabi::fmadds(diffX, diffX, diffY * diffY)));
         angleY = cM_atan2s(diffX, diffZ);
         angleX = 0;
@@ -955,29 +955,29 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
             mDoMtx_YrotS(calc_mtx(), angleY);
             mDoMtx_XrotM(calc_mtx(), angleX);
             MtxPosition(&temp, &temp2);
-            temp2.x = temp2.x + dr->m100[0x9].x;
-            temp2.y = temp2.y + dr->m100[0x9].y;
-            temp2.z = temp2.z + dr->m100[0x9].z;
-            linChk.Set(&dr->m100[0x9], &temp2, dr->mpEnemy);
+            temp2.x = temp2.x + dr->mJntPos[0x9].x;
+            temp2.y = temp2.y + dr->mJntPos[0x9].y;
+            temp2.z = temp2.z + dr->mJntPos[0x9].z;
+            linChk.Set(&dr->mJntPos[0x9], &temp2, dr->mpEnemy);
             if (!cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
                 break;
             }
         }
 
         if (angleX != 0) {
-            dr->m446 = angleX + 0x400;
-            dr->m414 = 2;
+            dr->mJnt9Pitch = angleX + 0x400;
+            dr->mJnt9LineBlocked = 2;
         } else {
-            f32 diff2X = dr->m1F0[5].x - dr->m1F0[0x9].x;
-            f32 diff2Y = dr->m1F0[5].y - dr->m1F0[0x9].y;
-            f32 diff2Z = dr->m1F0[5].z - dr->m1F0[0x9].z;
-            dr->m446 = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
-            dr->m414 = 0;
+            f32 diff2X = dr->mJntGroundPos[5].x - dr->mJntGroundPos[0x9].x;
+            f32 diff2Y = dr->mJntGroundPos[5].y - dr->mJntGroundPos[0x9].y;
+            f32 diff2Z = dr->mJntGroundPos[5].z - dr->mJntGroundPos[0x9].z;
+            dr->mJnt9Pitch = -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
+            dr->mJnt9LineBlocked = 0;
         }
 
-        diffX = dr->m100[0x12].x - dr->m100[0xC].x;
-        diffY = dr->m100[0x12].y - dr->m100[0xC].y;
-        diffZ = dr->m100[0x12].z - dr->m100[0xC].z;
+        diffX = dr->mJntPos[0x12].x - dr->mJntPos[0xC].x;
+        diffY = dr->mJntPos[0x12].y - dr->mJntPos[0xC].y;
+        diffZ = dr->mJntPos[0x12].z - dr->mJntPos[0xC].z;
         temp.z = std_sqrtf(gabi::fmadds(diffZ, diffZ, gabi::fmadds(diffX, diffX, diffY * diffY)));
         angleY = cM_atan2s(diffX, diffZ);
 
@@ -987,31 +987,31 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
                 mDoMtx_YrotS(calc_mtx(), angleY);
                 mDoMtx_XrotM(calc_mtx(), angleX);
                 MtxPosition(&temp, &temp2);
-                temp2.x = temp2.x + dr->m100[0xC].x;
-                temp2.y = temp2.y + dr->m100[0xC].y;
-                temp2.z = temp2.z + dr->m100[0xC].z;
-                linChk.Set(&dr->m100[0xC], &temp2, dr->mpEnemy);
+                temp2.x = temp2.x + dr->mJntPos[0xC].x;
+                temp2.y = temp2.y + dr->mJntPos[0xC].y;
+                temp2.z = temp2.z + dr->mJntPos[0xC].z;
+                linChk.Set(&dr->mJntPos[0xC], &temp2, dr->mpEnemy);
                 if (!cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
                     break;
                 }
             }
 
             if (angleX != 0) {
-                dr->m448 = angleX + 0x400;
-                dr->m418 = 2;
+                dr->mJnt12Pitch = angleX + 0x400;
+                dr->mJnt12LineBlocked = 2;
             } else {
-                f32 diff2X = dr->m1F0[0xD].x - dr->m1F0[0xC].x;
-                f32 diff2Y = dr->m1F0[0xD].y - dr->m1F0[0xC].y;
-                f32 diff2Z = dr->m1F0[0xD].z - dr->m1F0[0xC].z;
-                dr->m448 =
+                f32 diff2X = dr->mJntGroundPos[0xD].x - dr->mJntGroundPos[0xC].x;
+                f32 diff2Y = dr->mJntGroundPos[0xD].y - dr->mJntGroundPos[0xC].y;
+                f32 diff2Z = dr->mJntGroundPos[0xD].z - dr->mJntGroundPos[0xC].z;
+                dr->mJnt12Pitch =
                     -cM_atan2s(diff2Y, std_sqrtf(gabi::fmadds(diff2X, diff2X, diff2Z * diff2Z)));
-                dr->m418 = 0;
+                dr->mJnt12LineBlocked = 0;
             }
 
-            if (dr->m448 > 13000) {
-                dr->m448 = 13000;
-            } else if (dr->m448 < -13000) {
-                dr->m448 = -13000;
+            if (dr->mJnt12Pitch > 13000) {
+                dr->mJnt12Pitch = 13000;
+            } else if (dr->mJnt12Pitch < -13000) {
+                dr->mJnt12Pitch = -13000;
             }
         }
         linChk.End();
@@ -1031,8 +1031,8 @@ static s32 kado_check(u32 dr) {
     u32 ln = gabi::ea(line.get()), st = gabi::ea((&start)), en = gabi::ea((&end)),
         de = gabi::ea((&delta));
     line_init(ln);
-    cMtx_YrotS(damageView<Mtx34>(gabi::ea(calc_mtx())), static_cast<s16>(reaction->m482));
-    cMtx_XrotM(damageView<Mtx34>(gabi::ea(calc_mtx())), static_cast<s16>(reaction->m480));
+    cMtx_YrotS(damageView<Mtx34>(gabi::ea(calc_mtx())), static_cast<s16>(reaction->mKnockbackAngleY));
+    cMtx_XrotM(damageView<Mtx34>(gabi::ea(calc_mtx())), static_cast<s16>(reaction->mFallPitch));
     f32 c31 = 150.0f, c30 = -70.0f, c29 = 1.0f, c28 = 50.0f, c27 = 100.0f;
     u32 hit = 0;
     for (u32 i = 0; i < 2; i++) {
@@ -1074,14 +1074,14 @@ static s16 hang_ang_get(damagereaction* dr, u32 scratch, u32 auxiliary) {
     cXyz tmp;
     cXyz* v = (&t);
     cXyz* center = (&tmp);
-    cXyz_mi(damageView<cXyz>(&dr->m7A0), damageView<cXyz>(v),
+    cXyz_mi(damageView<cXyz>(&dr->mHangPos), damageView<cXyz>(v),
             damageView<cXyz>(&dr->mpEnemy->current.pos));
     mDoMtx_YrotS(calc_mtx(), cM_atan2s(v->x, v->z));
     v->set(0, 0, -100);
     MtxPosition(v, center);
     PSVECAdd(damageView<cXyz>(center), damageView<cXyz>(&dr->mpEnemy->current.pos),
              damageView<cXyz>(center));
-    center->y = dr->m7A0.y - 5.0f;
+    center->y = dr->mHangPos.y - 5.0f;
     v->set(10, 0, 250);
     cXyz* dst[2] = {gabi::at<cXyz>(auxiliary), gabi::at<cXyz>(auxiliary + 12)};
     for (u32 i = 0; i < 2; i++) {
@@ -1128,26 +1128,26 @@ static s32 dr_damage_set(u32 address) {
     cXyz& temp4 = *(&t4);
     cXyz& temp3 = *(&t3);
 
-    if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN && dr->m488 == 0) {
+    if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN && dr->mKnockedDown == 0) {
         // HD: this status bit suppresses the Bokoblin fall-distance reaction.
         if (dr->mAction < 0x13 && !(static_cast<u32>(dr->mpEnemy->actor_status) & 0x100000) &&
             dr->mpEnemy->current.pos.y - dr->mSpawnY > dr->mMaxFallDistance) {
-            if (dr->m7B2 != 0 && dr->mMode > -100) {
+            if (dr->mBridgeRideTimer != 0 && dr->mMode > -100) {
                 dr->mAction = 0x13;
                 dr->mMode = 0;
-                dr->m71E = 2;
+                dr->mBodyBgCheckDelay = 2;
             } else {
-                if (dr->m6E8.y - dr->mSpawnY > 300.0f) {
-                    dr->m7A0.copy(dr->m6E8);
-                    dr->m7AC.y = hang_ang_get(dr, scratch, auxiliary);
-                    if (dr->m7AC.y == 0xDCF) {
+                if (dr->mPrevGroundPos.y - dr->mSpawnY > 300.0f) {
+                    dr->mHangPos.copy(dr->mPrevGroundPos);
+                    dr->mHangAngle.y = hang_ang_get(dr, scratch, auxiliary);
+                    if (dr->mHangAngle.y == 0xDCF) {
                         temp = true;
                         dr->mpEnemy->health = 0;
                     } else {
                         dr->mAction = 0x13;
                         dr->mMode = 0;
-                        dr->m71E = 2;
-                        dr->m7B8 = 0xFFFFFFFF;
+                        dr->mBodyBgCheckDelay = 2;
+                        dr->mHangBridgeId = 0xFFFFFFFF;
                     }
                 } else {
                     temp = true;
@@ -1161,126 +1161,126 @@ static s32 dr_damage_set(u32 address) {
             dr->mpEnemy->health = 0;
     }
 
-    switch (dr->m488) {
+    switch (dr->mKnockedDown) {
     case 0:
-        if (temp || (dr->m424 != 0 && dr->m428 > 25.0f)) {
+        if (temp || (dr->mHitFlags != 0 && dr->mKnockbackPower > 25.0f)) {
             dr->mMode = -100;
-            dr->m488 = 1;
-            dr->m713 = 0;
-            dr->m44C.y = -125.0f;
-            dr->m486 = 0x4000;
-            temp2.copy(dr->m42C);
+            dr->mKnockedDown = 1;
+            dr->mPlayerInView = 0;
+            dr->mPivot.y = -125.0f;
+            dr->mFallPitchTarget = 0x4000;
+            temp2.copy(dr->mHitVec);
 
             if (temp) {
-                dr->m482 = dr->mpEnemy->shape_angle.y;
-                dr->m478 = 0.0f;
+                dr->mKnockbackAngleY = dr->mpEnemy->shape_angle.y;
+                dr->mKnockbackSpeed = 0.0f;
                 dr->mpEnemy->speed.y = 0.0f;
-                dr->m71E = 10;
-            } else if (dr->m424 & 0x40) {
+                dr->mBodyBgCheckDelay = 10;
+            } else if (dr->mHitFlags & 0x40) {
                 if (dr->m712) {
-                    dr->m478 = -7.0f;
+                    dr->mKnockbackSpeed = -7.0f;
                     dr->mpEnemy->speed.y = 72.0f;
                 } else {
-                    dr->m478 = -20.0f;
+                    dr->mKnockbackSpeed = -20.0f;
                     dr->mpEnemy->speed.y = 96.0f;
                 }
 
-                dr->m482 = cM_atan2s(temp2.x, temp2.z) + 0x8000;
+                dr->mKnockbackAngleY = cM_atan2s(temp2.x, temp2.z) + 0x8000;
             } else {
-                dr->m482 = cM_atan2s(temp2.x, temp2.z);
-                dr->m478 = dr->m428;
+                dr->mKnockbackAngleY = cM_atan2s(temp2.x, temp2.z);
+                dr->mKnockbackSpeed = dr->mKnockbackPower;
 
                 if (((dr->mEnemyType == damagereaction::TYPE_BOKOBLIN) &&
                      (fopAcM_GetParam(dr->mpEnemy) & 0xF) == 0xA) ||
                     REG0_S(5) != 0) {
-                    dr->mpEnemy->speed.y = dr->m478 * 0.8f * (REG0_F(7) + 0.8f);
+                    dr->mpEnemy->speed.y = dr->mKnockbackSpeed * 0.8f * (REG0_F(7) + 0.8f);
                 } else {
-                    dr->mpEnemy->speed.y = dr->m478 * 0.9f * 1.2f;
+                    dr->mpEnemy->speed.y = dr->mKnockbackSpeed * 0.9f * 1.2f;
                 }
             }
 
             temp2.x = 0.0f;
             temp2.y = 0.0f;
-            temp2.z = dr->m478;
-            mDoMtx_YrotS(calc_mtx(), dr->m482);
+            temp2.z = dr->mKnockbackSpeed;
+            mDoMtx_YrotS(calc_mtx(), dr->mKnockbackAngleY);
             MtxPosition(&temp2, &temp4);
             damageWord(dr->mpEnemy->speed.x) = static_cast<u32>(damageWord(temp4.x));
             damageWord(dr->mpEnemy->speed.z) = static_cast<u32>(damageWord(temp4.z));
-            dr->m47C = 1;
-            dr->m4AE = cM_rndF(20000.0f);
-            dr->m4AC = cM_rndF(20000.0f);
-            dr->m4AA = cM_rndF(-20000.0f);
-            dr->m4A8 = cM_rndF(-20000.0f);
-            dr->m70C = 0;
-            dr->m474 = 2000.0f;
-            dr->m70E = 0xFF;
+            dr->mLaunched = 1;
+            dr->mJnt3AddZTarget = cM_rndF(20000.0f);
+            dr->mJnt2AddZTarget = cM_rndF(20000.0f);
+            dr->mJnt1AddZTarget = cM_rndF(-20000.0f);
+            dr->mJnt0AddZTarget = cM_rndF(-20000.0f);
+            dr->mBounceCount = 0;
+            dr->mShakeAmplitude = 2000.0f;
+            dr->mShakeJntMask = 0xFF;
 
             if (dr->mEnemyType == damagereaction::TYPE_DARKNUT) {
-                dr->m4BC = -cM_rndF(9000.0f);
-                dr->m4BE = cM_rndF(9000.0f);
+                dr->mJnt4AddY = -cM_rndF(9000.0f);
+                dr->mJnt5AddY = cM_rndF(9000.0f);
             } else {
-                dr->m4B8 = cM_rndF(6000.0f) + 1000.0f;
-                dr->m4BA = cM_rndF(6000.0f) + 1000.0f;
-                dr->m4BC = cM_rndF(10000.0f) + 5000.0f;
-                dr->m4BE = cM_rndF(10000.0f) + 5000.0f;
+                dr->mJnt6AddY = cM_rndF(6000.0f) + 1000.0f;
+                dr->mJnt7AddY = cM_rndF(6000.0f) + 1000.0f;
+                dr->mJnt4AddY = cM_rndF(10000.0f) + 5000.0f;
+                dr->mJnt5AddY = cM_rndF(10000.0f) + 5000.0f;
             }
 
             react = temp ? 0x1E : 1;
 
-            dr->m48A = 0;
-        } else if (dr->m424 & 0x10) {
-            dr->m470 = REG0_F(0xD) + 4000.0f;
-            dr->m474 = REG0_F(0xE) + 4000.0f;
-            dr->m70E = 7;
+            dr->mHitStunTimer = 0;
+        } else if (dr->mHitFlags & 0x10) {
+            dr->mFlinchBend = REG0_F(0xD) + 4000.0f;
+            dr->mShakeAmplitude = REG0_F(0xE) + 4000.0f;
+            dr->mShakeJntMask = 7;
             react = 5;
         }
 
         break;
     case 1: {
         s16 temp5;
-        if (dr->m486 > 0) {
+        if (dr->mFallPitchTarget > 0) {
             temp5 = 0x350;
         } else {
             temp5 = 0x800;
         }
         if (test_sw != 0) {
-            dr->m486 = 0;
+            dr->mFallPitchTarget = 0;
         }
-        cLib_addCalcAngleS2(&dr->m480, dr->m486, 3, temp5);
+        cLib_addCalcAngleS2(&dr->mFallPitch, dr->mFallPitchTarget, 3, temp5);
 
-        if (dr->m70C != 0 && !(dr->m474 > 0.01f) && dr->m4C8[2] == 0 && test_sw == 0) {
+        if (dr->mBounceCount != 0 && !(dr->mShakeAmplitude > 0.01f) && dr->mDownTimers[2] == 0 && test_sw == 0) {
             if (dr->mpEnemy->health <= 0) {
                 dr->mAction = 0x14;
                 dr->mMode = 0;
-                dr->m4C8[2] = 10000;
+                dr->mDownTimers[2] = 10000;
             } else {
-                dr->m4BE = 0;
-                dr->m4BC = 0;
-                dr->m4BA = 0;
-                dr->m4B8 = 0;
-                dr->m49C = 0;
-                dr->m49A = 0;
-                dr->m4B2 = 0;
-                dr->m4B6 = 0;
-                dr->m4B0 = 0;
-                dr->m4B4 = 0;
+                dr->mJnt5AddY = 0;
+                dr->mJnt4AddY = 0;
+                dr->mJnt7AddY = 0;
+                dr->mJnt6AddY = 0;
+                dr->mJnt13AddYTarget = 0;
+                dr->mJnt18AddYTarget = 0;
+                dr->mJnt3LandZ = 0;
+                dr->mJnt7LandZ = 0;
+                dr->mJnt2LandZ = 0;
+                dr->mJnt6LandZ = 0;
 
-                if (dr->m70D == 0) {
+                if (dr->mFaceDown == 0) {
                     dr->mMode = 10;
                 } else {
                     dr->mMode = 0xC;
                 }
 
                 dr->mAction = 0xB;
-                dr->m48A = 0;
+                dr->mHitStunTimer = 0;
                 // HD: recovery clears this mode instead of setting the GameCube value 2.
-                dr->m488 = 0;
-                dr->mpEnemy->current.angle.y += dr->m484;
-                dr->mpEnemy->shape_angle.y += dr->m484;
-                dr->m4C0 += dr->m484;
-                dr->m7B6 = 1;
-                dr->m484 = 0;
-                dr->m6E0 = 0;
+                dr->mKnockedDown = 0;
+                dr->mpEnemy->current.angle.y += dr->mSpinAngleY;
+                dr->mpEnemy->shape_angle.y += dr->mSpinAngleY;
+                dr->mLandAngleY += dr->mSpinAngleY;
+                dr->mSkipMoveOnce = 1;
+                dr->mSpinAngleY = 0;
+                dr->mSpinLeft = 0;
             }
         }
     }
@@ -1292,15 +1292,15 @@ static s32 dr_damage_set(u32 address) {
         break;
     }
 
-    if (dr->m7B6 == 0 && test_sw == 0) {
-        if (dr->m4C8[0] == 0) {
+    if (dr->mSkipMoveOnce == 0 && test_sw == 0) {
+        if (dr->mDownTimers[0] == 0) {
             // HD: action 18 cancels the additional forward displacement.
             if (dr->mAction == 18)
-                dr->m4D4 = 0;
-            mDoMtx_YrotS(calc_mtx(), cM_atan2s(-dr->m42C.x, -dr->m42C.z));
+                dr->mPushback = 0;
+            mDoMtx_YrotS(calc_mtx(), cM_atan2s(-dr->mHitVec.x, -dr->mHitVec.z));
             temp2.x = 0.0f;
             temp2.y = 0.0f;
-            temp2.z = dr->m4D4;
+            temp2.z = dr->mPushback;
             MtxPosition(&temp2, &temp3);
             f32 forwardX = gabi::fmadds((f32)dr->mpEnemy->speed.x, 0.25f, (f32)temp3.x);
             dr->mpEnemy->current.pos.x = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.x, forwardX);
@@ -1331,13 +1331,13 @@ static s32 dr_damage_set(u32 address) {
                 }
             }
 
-            cLib_addCalc0(&dr->m4D4, 1.0f, 10.0f);
-        } else if (dr->m4C8[0] == 1 && dr->m486 == 0) {
-            dr->m486 = -0x4000;
-            dr->m4AE = cM_rndF(20000.0f);
-            dr->m4AC = cM_rndF(20000.0f);
-            dr->m4AA = cM_rndF(-20000.0f);
-            dr->m4A8 = cM_rndF(-20000.0f);
+            cLib_addCalc0(&dr->mPushback, 1.0f, 10.0f);
+        } else if (dr->mDownTimers[0] == 1 && dr->mFallPitchTarget == 0) {
+            dr->mFallPitchTarget = -0x4000;
+            dr->mJnt3AddZTarget = cM_rndF(20000.0f);
+            dr->mJnt2AddZTarget = cM_rndF(20000.0f);
+            dr->mJnt1AddZTarget = cM_rndF(-20000.0f);
+            dr->mJnt0AddZTarget = cM_rndF(-20000.0f);
         }
 
         dr_body_bg_check(dr, scratch);
@@ -1345,33 +1345,33 @@ static s32 dr_damage_set(u32 address) {
             react = 2;
         }
     } else {
-        dr->m7B6 = 0;
+        dr->mSkipMoveOnce = 0;
     }
 
-    if (dr->m478 != 0.0f && react == 0 && dr->mAcch.ChkWallHit()) {
+    if (dr->mKnockbackSpeed != 0.0f && react == 0 && dr->mAcch.ChkWallHit()) {
         react = 0x15;
-        dr->m47C = 0;
+        dr->mLaunched = 0;
         dr->mpEnemy->speed.y = 0.0f;
         dr->mpEnemy->speed.x *= -0.4f;
         dr->mpEnemy->speed.z *= -0.4f;
 
-        if (dr->m70C == 0 && std::fabs(dr->m478) > 30.0f) {
-            dr->m474 = 6000.0f;
-            dr->m70E = 0xFF;
+        if (dr->mBounceCount == 0 && std::fabs(dr->mKnockbackSpeed) > 30.0f) {
+            dr->mShakeAmplitude = 6000.0f;
+            dr->mShakeJntMask = 0xFF;
 
             if (dr->mpEnemy->current.pos.y - dr->mSpawnY > REG_F(14, 6) + 50.0f) {
-                dr->m4C8[0] = 10;
-                dr->m486 = 0;
+                dr->mDownTimers[0] = 10;
+                dr->mFallPitchTarget = 0;
             } else {
                 dr->mpEnemy->speed.z = 0.0f;
                 dr->mpEnemy->speed.x = 0.0f;
-                dr->m486 = 0x4000;
+                dr->mFallPitchTarget = 0x4000;
             }
 
             int kado_check_temp = kado_check(address);
             if (kado_check_temp != 0) {
-                dr->m4C8[0] = 0;
-                dr->m486 = 0x4000;
+                dr->mDownTimers[0] = 0;
+                dr->mFallPitchTarget = 0x4000;
 
                 int temp;
                 if (dr->mpEnemy->current.pos.y - dr->mSpawnY > REG0_F(6) + 90.0f) {
@@ -1381,29 +1381,29 @@ static s32 dr_damage_set(u32 address) {
                 }
 
                 if (kado_check_temp == 2) {
-                    dr->m6E0 += temp;
-                    temp2.x = dr->m478 * 0.5f;
+                    dr->mSpinLeft += temp;
+                    temp2.x = dr->mKnockbackSpeed * 0.5f;
                 } else {
-                    dr->m6E0 -= temp;
-                    temp2.x = dr->m478 * -0.5f;
+                    dr->mSpinLeft -= temp;
+                    temp2.x = dr->mKnockbackSpeed * -0.5f;
                 }
                 temp2.y = 0.0f;
-                temp2.z = dr->m478 * 0.5f;
-                mDoMtx_YrotS(calc_mtx(), dr->m482);
+                temp2.z = dr->mKnockbackSpeed * 0.5f;
+                mDoMtx_YrotS(calc_mtx(), dr->mKnockbackAngleY);
                 MtxPosition(&temp2, &temp4);
                 dr->mpEnemy->speed.x = temp4.x;
                 dr->mpEnemy->speed.z = temp4.z;
             }
         }
 
-        dr->m478 = 0.0f;
-        dr->m4A8 = 0;
-        dr->m4AA = 0;
-        dr->m4AC = 0;
-        dr->m4AE = 0;
-        dr->mParticlePos.copy(dr->m100[0xC]);
+        dr->mKnockbackSpeed = 0.0f;
+        dr->mJnt0AddZTarget = 0;
+        dr->mJnt1AddZTarget = 0;
+        dr->mJnt2AddZTarget = 0;
+        dr->mJnt3AddZTarget = 0;
+        dr->mParticlePos.copy(dr->mJntPos[0xC]);
         dr->mParticleAngle.z = 0;
-        s16 wallYaw = cM_atan2s(-dr->m42C.x, -dr->m42C.z);
+        s16 wallYaw = cM_atan2s(-dr->mHitVec.x, -dr->mHitVec.z);
         fopAc_ac_c* wallActor = dr->mpEnemy.get();
         dr->mParticleAngle.y = static_cast<s16>(wall_angle_get(gabi::ea(wallActor), wallYaw));
         dr->mParticleAngle.x = 0x4000;
@@ -1427,47 +1427,47 @@ static s32 dr_damage_set(u32 address) {
             vec_copy(emitter + 0x238, gabi::ea(&vec));
             (&vec)->set(scale + scale, scale + scale, scale + scale);
             vec_copy(emitter + 0x238, gabi::ea(&vec));
-            dr->m794 = 6;
+            dr->mWallSmokeTimer = 6;
         }
     }
 
     if (dr->mAcch.ChkGroundHit()) {
-        if (dr->m488 != 0 && react == 0 && (dr->m70C == 0 || !(dr->mpEnemy->speed.y > -100.0f))) {
+        if (dr->mKnockedDown != 0 && react == 0 && (dr->mBounceCount == 0 || !(dr->mpEnemy->speed.y > -100.0f))) {
             react = 0x14;
             dr->mpEnemy->speed.x *= 0.75f;
             dr->mpEnemy->speed.z *= 0.75f;
-            dr->m70E = 0xFF;
+            dr->mShakeJntMask = 0xFF;
 
             if (dr->m712 != 0) {
                 dr->mpEnemy->speed.y = 60.0f;
-                dr->m474 = gabi::fmadds(REG0_F(0xC), 100.0f, 9000.0f);
+                dr->mShakeAmplitude = gabi::fmadds(REG0_F(0xC), 100.0f, 9000.0f);
             } else {
                 dr->mpEnemy->speed.y = 60.0f;
-                dr->m474 = 8000.0f;
+                dr->mShakeAmplitude = 8000.0f;
             }
 
-            dr->m70C += 1;
-            dr->m47C = 0;
-            dr->m420 = REG0_S(3) + 1;
+            dr->mBounceCount += 1;
+            dr->mLaunched = 0;
+            dr->mJntBgCheckTimer = REG0_S(3) + 1;
 
-            s16 temp5 = dr->m482;
+            s16 temp5 = dr->mKnockbackAngleY;
             s16 temp6 = dr->mpEnemy->current.angle.y - temp5;
             if (temp6 < 0) {
                 temp6 = -temp6;
             }
 
             if (temp6 < 0x4000) {
-                dr->m4C0 = temp5;
+                dr->mLandAngleY = temp5;
             } else {
-                dr->m4C0 = temp5 + 0x8000;
+                dr->mLandAngleY = temp5 + 0x8000;
             }
 
-            dr->m49A = cM_rndFX(18000.0f);
-            dr->m49C = cM_rndFX(10000.0f);
-            dr->m4B0 = cM_rndF(20000.0f);
-            dr->m4B4 = dr->m4B0 / 2;
-            dr->m4B2 = cM_rndF(20000.0f);
-            dr->m4B6 = dr->m4B2 / 2;
+            dr->mJnt18AddYTarget = cM_rndFX(18000.0f);
+            dr->mJnt13AddYTarget = cM_rndFX(10000.0f);
+            dr->mJnt2LandZ = cM_rndF(20000.0f);
+            dr->mJnt6LandZ = dr->mJnt2LandZ / 2;
+            dr->mJnt3LandZ = cM_rndF(20000.0f);
+            dr->mJnt7LandZ = dr->mJnt3LandZ / 2;
 
             if (dr->mpEnemy->health <= 0) {
                 damage_sound_inline(dr->mpEnemy.get(), 0x580C);
@@ -1484,27 +1484,27 @@ static s32 dr_damage_set(u32 address) {
             int kado_check_temp = kado_check(address);
             if (kado_check_temp != 0) {
                 if (kado_check_temp == 2) {
-                    dr->m6E0 += 0x8000;
-                    temp2.x = dr->m478 * 0.3f;
+                    dr->mSpinLeft += 0x8000;
+                    temp2.x = dr->mKnockbackSpeed * 0.3f;
                 } else {
-                    dr->m6E0 += -0x8000;
-                    temp2.x = dr->m478 * -0.3f;
+                    dr->mSpinLeft += -0x8000;
+                    temp2.x = dr->mKnockbackSpeed * -0.3f;
                 }
                 temp2.y = 0.0f;
-                temp2.z = dr->m478 * 0.75f;
-                mDoMtx_YrotS(calc_mtx(), dr->m482);
+                temp2.z = dr->mKnockbackSpeed * 0.75f;
+                mDoMtx_YrotS(calc_mtx(), dr->mKnockbackAngleY);
                 MtxPosition(&temp2, &temp4);
                 dr->mpEnemy->speed.x = temp4.x;
                 dr->mpEnemy->speed.z = temp4.z;
             }
         } else {
-            if (dr->m478 != 0) {
-                dr->m420 = 1;
+            if (dr->mKnockbackSpeed != 0) {
+                dr->mJntBgCheckTimer = 1;
             }
 
-            dr->m478 = 0.0f;
+            dr->mKnockbackSpeed = 0.0f;
 
-            if (dr->m6E0 == 0) {
+            if (dr->mSpinLeft == 0) {
                 dr->mpEnemy->speed.z = 0.0f;
                 dr->mpEnemy->speed.x = 0.0f;
             } else {
@@ -1513,40 +1513,40 @@ static s32 dr_damage_set(u32 address) {
             }
             dr->mpEnemy->speed.y = -1.0f;
 
-            dr->m4A8 = 0;
-            dr->m4AA = 0;
-            dr->m4AC = 0;
-            dr->m4AE = 0;
+            dr->mJnt0AddZTarget = 0;
+            dr->mJnt1AddZTarget = 0;
+            dr->mJnt2AddZTarget = 0;
+            dr->mJnt3AddZTarget = 0;
 
-            if (dr->m70D != 0) {
-                dr->m4A8 = 0;
-                dr->m4AA = 0;
-                dr->m4AC = 0;
-                dr->m4AE = 0;
-                dr->m4A0 = 0;
-                dr->m4A2 = 0;
-                dr->m4A4 = 0;
-                dr->m4A6 = 0;
+            if (dr->mFaceDown != 0) {
+                dr->mJnt0AddZTarget = 0;
+                dr->mJnt1AddZTarget = 0;
+                dr->mJnt2AddZTarget = 0;
+                dr->mJnt3AddZTarget = 0;
+                dr->mJnt0AddZ = 0;
+                dr->mJnt1AddZ = 0;
+                dr->mJnt2AddZ = 0;
+                dr->mJnt3AddZ = 0;
             }
         }
     }
 
-    if (dr->m6E0 != 0) {
-        if (dr->m6E0 > 0) {
-            dr->m6E0 += -0x1000;
-            dr->m484 += -0x1000;
+    if (dr->mSpinLeft != 0) {
+        if (dr->mSpinLeft > 0) {
+            dr->mSpinLeft += -0x1000;
+            dr->mSpinAngleY += -0x1000;
         } else {
-            dr->m6E0 += 0x1000;
-            dr->m484 += 0x1000;
+            dr->mSpinLeft += 0x1000;
+            dr->mSpinAngleY += 0x1000;
         }
     }
 
-    if (dr->m70C != 0) {
-        if (dr->m488 != 0) {
-            cLib_addCalcAngleS2(&dr->mpEnemy->current.angle.y, dr->m4C0, 1, 0x500);
+    if (dr->mBounceCount != 0) {
+        if (dr->mKnockedDown != 0) {
+            cLib_addCalcAngleS2(&dr->mpEnemy->current.angle.y, dr->mLandAngleY, 1, 0x500);
         }
 
-        cLib_addCalc0(&dr->m474, 1.0f, gabi::fmadds(REG0_F(5), 10.0f, 300.0f));
+        cLib_addCalc0(&dr->mShakeAmplitude, 1.0f, gabi::fmadds(REG0_F(5), 10.0f, 300.0f));
     }
 
     return react;
@@ -1558,16 +1558,16 @@ static void dr_damage_anime(damagereaction* dr) {
     csXyz& csxyz_temp = *(&angleTemp);
 
     for (int i = 0; i < 0x14; i++) {
-        dr->m010[i].x = dr->m010[i].y = dr->m010[i].z = 0;
+        dr->mJntTargetAngle[i].x = dr->mJntTargetAngle[i].y = dr->mJntTargetAngle[i].z = 0;
     }
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
     s16 maxSpeed;
-    if (dr->m47C != 0 || test_sw != 0) {
+    if (dr->mLaunched != 0 || test_sw != 0) {
         maxSpeed = 0x3000;
 
-        f32 temp = (s16)(dr->m482 + 0x8000 - dr->mpEnemy->current.angle.y);
+        f32 temp = (s16)(dr->mKnockbackAngleY + 0x8000 - dr->mpEnemy->current.angle.y);
         f32 zero = 0.0f;
         f32 temp2 = temp;
         if (temp2 > 5000.0f) {
@@ -1576,10 +1576,10 @@ static void dr_damage_anime(damagereaction* dr) {
         if (temp2 < -22000.0f) {
             temp2 = -22000.0f;
         }
-        dr->m010[8].y = (0.4f * temp2) + 8192.0f;
-        dr->m010[4].z = -(0.4f * temp2) - 8192.0f;
-        dr->m010[8].z = 0.4f * zero + 0x2000;
-        dr->m010[4].y = 0.4f * zero + 0x2000;
+        dr->mJntTargetAngle[8].y = (0.4f * temp2) + 8192.0f;
+        dr->mJntTargetAngle[4].z = -(0.4f * temp2) - 8192.0f;
+        dr->mJntTargetAngle[8].z = 0.4f * zero + 0x2000;
+        dr->mJntTargetAngle[4].y = 0.4f * zero + 0x2000;
 
         f32 temp3 = temp;
         if (temp3 > 22000.0f) {
@@ -1588,10 +1588,10 @@ static void dr_damage_anime(damagereaction* dr) {
         if (temp3 < -5000.0f) {
             temp3 = -5000.0f;
         }
-        dr->m010[9].y = gabi::fmadds(temp3, 0.4f, -8192.0f);
-        dr->m010[5].z = gabi::fmadds(temp3, 0.4f, -8192.0f);
-        dr->m010[9].z = 0.4f * zero + 0x2000;
-        dr->m010[5].y = 0.4f * -zero - 0x2000;
+        dr->mJntTargetAngle[9].y = gabi::fmadds(temp3, 0.4f, -8192.0f);
+        dr->mJntTargetAngle[5].z = gabi::fmadds(temp3, 0.4f, -8192.0f);
+        dr->mJntTargetAngle[9].z = 0.4f * zero + 0x2000;
+        dr->mJntTargetAngle[5].y = 0.4f * -zero - 0x2000;
 
         f32 temp4 = temp;
         if (temp4 > 20000.0f) {
@@ -1600,10 +1600,10 @@ static void dr_damage_anime(damagereaction* dr) {
         if (temp4 < -20000.0f) {
             temp4 = -20000.0f;
         }
-        dr->m010[0x0C].x = 0.2f * temp4;
-        dr->m010[0x13].x = 0.2f * temp4;
-        dr->m010[0x0C].z = 0.2f * -zero;
-        dr->m010[0x13].z = 0.2f * -zero;
+        dr->mJntTargetAngle[0x0C].x = 0.2f * temp4;
+        dr->mJntTargetAngle[0x13].x = 0.2f * temp4;
+        dr->mJntTargetAngle[0x0C].z = 0.2f * -zero;
+        dr->mJntTargetAngle[0x13].z = 0.2f * -zero;
 
         f32 temp5 = temp;
         if (temp5 > 7000.0f) {
@@ -1612,8 +1612,8 @@ static void dr_damage_anime(damagereaction* dr) {
         if (temp5 < -10000.0f) {
             temp5 = -10000.0f;
         }
-        dr->m010[6].x = (3000.0f - temp5) + REG0_S(0);
-        dr->m010[6].z = (-zero - 0x4000) + REG0_S(1);
+        dr->mJntTargetAngle[6].x = (3000.0f - temp5) + REG0_S(0);
+        dr->mJntTargetAngle[6].z = (-zero - 0x4000) + REG0_S(1);
 
         f32 temp6 = temp;
         if (temp6 > 10000.0f) {
@@ -1622,101 +1622,101 @@ static void dr_damage_anime(damagereaction* dr) {
         if (temp6 < -7000.0f) {
             temp6 = -7000.0f;
         }
-        dr->m010[7].x = (-temp6 - 3000.0f);
-        dr->m010[7].z = (-zero - 0x4000);
+        dr->mJntTargetAngle[7].x = (-temp6 - 3000.0f);
+        dr->mJntTargetAngle[7].z = (-zero - 0x4000);
     } else {
-        dr->m010[6].y += dr->m4B8;
-        dr->m010[7].y -= dr->m4BA;
-        dr->m010[4].y += dr->m4BC;
-        dr->m010[5].y -= dr->m4BE;
+        dr->mJntTargetAngle[6].y += dr->mJnt6AddY;
+        dr->mJntTargetAngle[7].y -= dr->mJnt7AddY;
+        dr->mJntTargetAngle[4].y += dr->mJnt4AddY;
+        dr->mJntTargetAngle[5].y -= dr->mJnt5AddY;
         maxSpeed = 0x400;
     }
 
-    cLib_addCalcAngleS2(&dr->m4A6, dr->m4AE, 1, 0x800);
-    cLib_addCalcAngleS2(&dr->m4A4, dr->m4AC, 1, 0x800);
-    cLib_addCalcAngleS2(&dr->m4A2, dr->m4AA, 1, 0x800);
-    cLib_addCalcAngleS2(&dr->m4A0, dr->m4A8, 1, 0x800);
-    cLib_addCalcAngleS2(&dr->m496, dr->m49A, 2, 0x200);
-    cLib_addCalcAngleS2(&dr->m498, dr->m49C, 2, 0x400);
+    cLib_addCalcAngleS2(&dr->mJnt3AddZ, dr->mJnt3AddZTarget, 1, 0x800);
+    cLib_addCalcAngleS2(&dr->mJnt2AddZ, dr->mJnt2AddZTarget, 1, 0x800);
+    cLib_addCalcAngleS2(&dr->mJnt1AddZ, dr->mJnt1AddZTarget, 1, 0x800);
+    cLib_addCalcAngleS2(&dr->mJnt0AddZ, dr->mJnt0AddZTarget, 1, 0x800);
+    cLib_addCalcAngleS2(&dr->mJnt18AddY, dr->mJnt18AddYTarget, 2, 0x200);
+    cLib_addCalcAngleS2(&dr->mJnt13AddY, dr->mJnt13AddYTarget, 2, 0x400);
 
-    dr->m010[6].z = dr->m010[6].z - dr->m4A4 / 2 - dr->m4B4;
-    dr->m010[2].z = dr->m010[2].z + dr->m4A4 + dr->m4B0;
-    dr->m010[7].z = dr->m010[7].z - dr->m4A6 / 2 - dr->m4B6;
-    dr->m010[3].z = dr->m010[3].z + dr->m4A6 + dr->m4B2;
-    dr->m010[0].z += dr->m4A0;
-    dr->m010[1].z += dr->m4A2;
-    dr->m010[0x12].y += dr->m496;
-    dr->m010[0xD].y += dr->m498;
+    dr->mJntTargetAngle[6].z = dr->mJntTargetAngle[6].z - dr->mJnt2AddZ / 2 - dr->mJnt6LandZ;
+    dr->mJntTargetAngle[2].z = dr->mJntTargetAngle[2].z + dr->mJnt2AddZ + dr->mJnt2LandZ;
+    dr->mJntTargetAngle[7].z = dr->mJntTargetAngle[7].z - dr->mJnt3AddZ / 2 - dr->mJnt7LandZ;
+    dr->mJntTargetAngle[3].z = dr->mJntTargetAngle[3].z + dr->mJnt3AddZ + dr->mJnt3LandZ;
+    dr->mJntTargetAngle[0].z += dr->mJnt0AddZ;
+    dr->mJntTargetAngle[1].z += dr->mJnt1AddZ;
+    dr->mJntTargetAngle[0x12].y += dr->mJnt18AddY;
+    dr->mJntTargetAngle[0xD].y += dr->mJnt13AddY;
 
-    if (dr->m70D != 0) {
-        dr->m010[0x13].z += -0x960;
+    if (dr->mFaceDown != 0) {
+        dr->mJntTargetAngle[0x13].z += -0x960;
     }
 
-    if (dr->m70C != 0 && dr->mpEnemy->speed.y > 0.0f) {
-        dr->m010[0xC].z += -3000;
-        dr->m010[0x13].z += -3000;
+    if (dr->mBounceCount != 0 && dr->mpEnemy->speed.y > 0.0f) {
+        dr->mJntTargetAngle[0xC].z += -3000;
+        dr->mJntTargetAngle[0x13].z += -3000;
     }
 
     cXyz vectorTemp;
     cXyz vectorTemp2;
     cXyz& cxyz_temp = *(&vectorTemp);
     cXyz& cxyz_temp2 = *(&vectorTemp2);
-    if (dr->m470 > 200.0f) {
-        s16 angle = cM_atan2s(-dr->m42C.x, -dr->m42C.z);
+    if (dr->mFlinchBend > 200.0f) {
+        s16 angle = cM_atan2s(-dr->mHitVec.x, -dr->mHitVec.z);
         cxyz_temp.x = 0.0f;
         cxyz_temp.y = 0.0f;
-        cxyz_temp.z = dr->m470;
+        cxyz_temp.z = dr->mFlinchBend;
         mDoMtx_YrotS(calc_mtx(), angle - dr->mpEnemy->current.angle.y);
         MtxPosition(&cxyz_temp, &cxyz_temp2);
 
         if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN) {
-            dr->m010[0xC].z -= cxyz_temp2.z * 4.0f;
-            dr->m010[0xC].y += cxyz_temp2.x * 4.0f;
-            dr->m010[0xD].y += cxyz_temp2.x * 6.0f;
-            dr->m010[0xD].z -= cxyz_temp2.z * 6.0f;
+            dr->mJntTargetAngle[0xC].z -= cxyz_temp2.z * 4.0f;
+            dr->mJntTargetAngle[0xC].y += cxyz_temp2.x * 4.0f;
+            dr->mJntTargetAngle[0xD].y += cxyz_temp2.x * 6.0f;
+            dr->mJntTargetAngle[0xD].z -= cxyz_temp2.z * 6.0f;
         } else if (dr->mEnemyType == damagereaction::TYPE_DARKNUT) {
-            dr->m010[0xD].y += (s16)gabi::ftoi((f32)cxyz_temp2.z * (REG_F(8, 5) + 2.0f));
-            dr->m010[0x12].y += (s16)gabi::ftoi((f32)cxyz_temp2.z * (REG_F(8, 5) + 2.0f));
-            dr->m010[0xC].y += (s16)gabi::ftoi((f32)cxyz_temp2.z * (REG_F(8, 5) + 2.0f));
-            dr->m010[0xD].x += (s16)gabi::ftoi((f32)cxyz_temp2.x * (REG_F(8, 6) + -2.0f));
-            dr->m010[0x12].x += (s16)gabi::ftoi((f32)cxyz_temp2.x * (REG_F(8, 6) + -2.0f));
-            dr->m010[0xC].x += (s16)gabi::ftoi((f32)cxyz_temp2.x * (REG_F(8, 6) + -2.0f));
+            dr->mJntTargetAngle[0xD].y += (s16)gabi::ftoi((f32)cxyz_temp2.z * (REG_F(8, 5) + 2.0f));
+            dr->mJntTargetAngle[0x12].y += (s16)gabi::ftoi((f32)cxyz_temp2.z * (REG_F(8, 5) + 2.0f));
+            dr->mJntTargetAngle[0xC].y += (s16)gabi::ftoi((f32)cxyz_temp2.z * (REG_F(8, 5) + 2.0f));
+            dr->mJntTargetAngle[0xD].x += (s16)gabi::ftoi((f32)cxyz_temp2.x * (REG_F(8, 6) + -2.0f));
+            dr->mJntTargetAngle[0x12].x += (s16)gabi::ftoi((f32)cxyz_temp2.x * (REG_F(8, 6) + -2.0f));
+            dr->mJntTargetAngle[0xC].x += (s16)gabi::ftoi((f32)cxyz_temp2.x * (REG_F(8, 6) + -2.0f));
         } else {
-            dr->m010[0x13].z -= cxyz_temp2.z;
-            dr->m010[0x13].y += cxyz_temp2.x;
-            dr->m010[0xC].z -= cxyz_temp2.z;
-            dr->m010[0xC].y += cxyz_temp2.x;
-            dr->m010[0xD].y += cxyz_temp2.x * 4.0f;
-            dr->m010[0xD].z -= cxyz_temp2.z * 4.0f;
+            dr->mJntTargetAngle[0x13].z -= cxyz_temp2.z;
+            dr->mJntTargetAngle[0x13].y += cxyz_temp2.x;
+            dr->mJntTargetAngle[0xC].z -= cxyz_temp2.z;
+            dr->mJntTargetAngle[0xC].y += cxyz_temp2.x;
+            dr->mJntTargetAngle[0xD].y += cxyz_temp2.x * 4.0f;
+            dr->mJntTargetAngle[0xD].z -= cxyz_temp2.z * 4.0f;
         }
 
         maxSpeed = 0x3000;
-    } else if (dr->m710 != 0 || dr->m49E != 0) {
+    } else if (dr->mLookMode != 0 || dr->mParalysisTimer != 0) {
         f32 f31 = 0.5f;
         maxSpeed = 0x800;
 
         s16 temp;
         s16 temp2;
-        if (dr->m710 == 1 || dr->m710 == 5 || dr->m49E != 0) {
-            if (dr->m710 == 1 || dr->m49E != 0) {
-                if (dr->m49E != 0) {
-                    dr->m49E--;
+        if (dr->mLookMode == 1 || dr->mLookMode == 5 || dr->mParalysisTimer != 0) {
+            if (dr->mLookMode == 1 || dr->mParalysisTimer != 0) {
+                if (dr->mParalysisTimer != 0) {
+                    dr->mParalysisTimer--;
                     maxSpeed = 0x2000;
                     temp2 = (s16)gabi::ftoi((REG0_F(6) + 1000.0f) *
-                                            cM_ssin(dr->m49E * (REG0_S(5) + 16000)));
+                                            cM_ssin(dr->mParalysisTimer * (REG0_S(5) + 16000)));
                     temp = 0;
                 } else {
-                    cxyz_temp.x = dr->m714->eyePos.x - dr->mpEnemy->current.pos.x;
-                    cxyz_temp.y = dr->m714->eyePos.y - (dr->mpEnemy->current.pos.y + 100.0f);
-                    cxyz_temp.z = dr->m714->eyePos.z - dr->mpEnemy->current.pos.z;
+                    cxyz_temp.x = dr->mpLookTarget->eyePos.x - dr->mpEnemy->current.pos.x;
+                    cxyz_temp.y = dr->mpLookTarget->eyePos.y - (dr->mpEnemy->current.pos.y + 100.0f);
+                    cxyz_temp.z = dr->mpLookTarget->eyePos.z - dr->mpEnemy->current.pos.z;
                     temp2 = cM_atan2s(cxyz_temp.x, cxyz_temp.z) - dr->mpEnemy->current.angle.y;
                     temp = -cM_atan2s(cxyz_temp.y,
                                       std_sqrtf(gabi::fmadds((f32)cxyz_temp.x, (f32)cxyz_temp.x,
                                                              (f32)cxyz_temp.z * (f32)cxyz_temp.z)));
                 }
             } else {
-                temp = dr->m718;
-                temp2 = dr->m71A;
+                temp = dr->mLookPitch;
+                temp2 = dr->mLookYaw;
             }
 
             if (temp2 > 0x2000) {
@@ -1731,142 +1731,142 @@ static void dr_damage_anime(damagereaction* dr) {
             }
 
             if (dr->mEnemyType == damagereaction::TYPE_DARKNUT) {
-                dr->m010[0xD].x += temp2 >> 2;
-                dr->m010[0xD].y -= temp >> 2;
-                dr->m010[0x12].x += temp2 >> 2;
-                dr->m010[0x12].y -= temp >> 2;
-            } else if (dr->m710 == 1) {
+                dr->mJntTargetAngle[0xD].x += temp2 >> 2;
+                dr->mJntTargetAngle[0xD].y -= temp >> 2;
+                dr->mJntTargetAngle[0x12].x += temp2 >> 2;
+                dr->mJntTargetAngle[0x12].y -= temp >> 2;
+            } else if (dr->mLookMode == 1) {
                 if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN) {
-                    dr->m010[0xD].x += temp2;
-                    dr->m010[0xD].y -= temp2 >> 2;
-                    dr->m010[0xD].z += temp;
+                    dr->mJntTargetAngle[0xD].x += temp2;
+                    dr->mJntTargetAngle[0xD].y -= temp2 >> 2;
+                    dr->mJntTargetAngle[0xD].z += temp;
                 } else {
-                    dr->m010[0xD].y -= temp2;
-                    dr->m010[0xC].y -= temp2 * f31;
-                    dr->m010[0xC].x = dr->m010[0xC].y + temp2 * f31;
-                    dr->m010[0xD].z += temp;
+                    dr->mJntTargetAngle[0xD].y -= temp2;
+                    dr->mJntTargetAngle[0xC].y -= temp2 * f31;
+                    dr->mJntTargetAngle[0xC].x = dr->mJntTargetAngle[0xC].y + temp2 * f31;
+                    dr->mJntTargetAngle[0xD].z += temp;
                 }
             } else {
-                dr->m010[0xD].y -= (int)temp2;
-                dr->m010[0xC].x = dr->m010[0xC].y + temp2;
-                dr->m010[0xD].z += temp;
+                dr->mJntTargetAngle[0xD].y -= (int)temp2;
+                dr->mJntTargetAngle[0xC].x = dr->mJntTargetAngle[0xC].y + temp2;
+                dr->mJntTargetAngle[0xD].z += temp;
             }
-        } else if (dr->m710 == 3) {
+        } else if (dr->mLookMode == 3) {
             temp = -6000;
             temp2 = -10000;
-        } else if (dr->m710 == 4) {
+        } else if (dr->mLookMode == 4) {
             temp = 6000;
             temp2 = 10000;
-        } else if (dr->m710 == 6) {
-            dr->m010[0x12].y += dr->m71A;
-            dr->m010[0x12].x += REG0_S(6);
-            dr->m010[0x12].z += dr->m718;
+        } else if (dr->mLookMode == 6) {
+            dr->mJntTargetAngle[0x12].y += dr->mLookYaw;
+            dr->mJntTargetAngle[0x12].x += REG0_S(6);
+            dr->mJntTargetAngle[0x12].z += dr->mLookPitch;
 
             maxSpeed = 0x300;
         }
 
-        if (dr->m710 == 3 || dr->m710 == 4) {
+        if (dr->mLookMode == 3 || dr->mLookMode == 4) {
             maxSpeed = 0x800;
 
-            dr->m010[0xC].x -= (int)temp;
-            dr->m010[0xC].y += (int)temp;
-            dr->m010[0xD].y += temp2;
+            dr->mJntTargetAngle[0xC].x -= (int)temp;
+            dr->mJntTargetAngle[0xC].y += (int)temp;
+            dr->mJntTargetAngle[0xD].y += temp2;
         }
     }
 
-    if (dr->m711 != 0) {
-        dr->m010[8].x = 8000;
-        dr->m010[9].x = -8000;
+    if (dr->mDefencePose != 0) {
+        dr->mJntTargetAngle[8].x = 8000;
+        dr->mJntTargetAngle[9].x = -8000;
         maxSpeed = 0x3000;
     }
 
-    if (dr->mAction != 5 && dr->m488 != 1) {
-        cxyz_temp.x = dr->m48C.z;
+    if (dr->mAction != 5 && dr->mKnockedDown != 1) {
+        cxyz_temp.x = dr->mSlopeTilt.z;
         cxyz_temp.y = 0.0f;
-        cxyz_temp.z = dr->m48C.x;
+        cxyz_temp.z = dr->mSlopeTilt.x;
         mDoMtx_YrotS(calc_mtx(), dr->mpEnemy->current.angle.y);
         MtxPosition(&cxyz_temp, &cxyz_temp2);
-        cLib_addCalcAngleS2(&dr->m492, (s16)gabi::ftoi((f32)cxyz_temp2.x), 4, 0x100);
-        cLib_addCalcAngleS2(&dr->m494, (s16)gabi::ftoi((f32)cxyz_temp2.z), 4, 0x100);
+        cLib_addCalcAngleS2(&dr->mJnt12SlopeY, (s16)gabi::ftoi((f32)cxyz_temp2.x), 4, 0x100);
+        cLib_addCalcAngleS2(&dr->mJnt12SlopeZ, (s16)gabi::ftoi((f32)cxyz_temp2.z), 4, 0x100);
     } else {
-        cLib_addCalcAngleS2(&dr->m492, 0, 4, 0x100);
-        cLib_addCalcAngleS2(&dr->m494, 0, 4, 0x100);
+        cLib_addCalcAngleS2(&dr->mJnt12SlopeY, 0, 4, 0x100);
+        cLib_addCalcAngleS2(&dr->mJnt12SlopeZ, 0, 4, 0x100);
     }
 
-    dr->m010[0xC].y -= (f32)dr->m492;
-    dr->m010[0xC].z -= (f32)dr->m494;
+    dr->mJntTargetAngle[0xC].y -= (f32)dr->mJnt12SlopeY;
+    dr->mJntTargetAngle[0xC].z -= (f32)dr->mJnt12SlopeZ;
 
-    cLib_addCalc0(&dr->m470, 0.5f, 200.0f);
+    cLib_addCalc0(&dr->mFlinchBend, 0.5f, 200.0f);
 
-    if (dr->m478 == 0.0f && dr->m488 == 1) {
-        if (dr->m70D == 0) {
-            if (dr->m3D0[2] == 0 && dr->m408 == 0) {
-                dr->m010[6].z += dr->m4B4;
-                dr->m010[2].z = dr->m010[2].z - dr->m4B0 + 13000;
+    if (dr->mKnockbackSpeed == 0.0f && dr->mKnockedDown == 1) {
+        if (dr->mFaceDown == 0) {
+            if (dr->mJntGroundState[2] == 0 && dr->mJnt10LineBlocked == 0) {
+                dr->mJntTargetAngle[6].z += dr->mJnt6LandZ;
+                dr->mJntTargetAngle[2].z = dr->mJntTargetAngle[2].z - dr->mJnt2LandZ + 13000;
 
-                if (dr->m440 > 2000) {
-                    dr->m010[2].z += -7000;
+                if (dr->mJnt10Pitch > 2000) {
+                    dr->mJntTargetAngle[2].z += -7000;
                 }
             }
 
-            if (dr->m3D0[3] == 0 && dr->m40C == 0) {
-                dr->m010[7].z += dr->m4B6;
-                dr->m010[3].z = dr->m010[3].z - dr->m4B2 + 13000;
+            if (dr->mJntGroundState[3] == 0 && dr->mJnt11LineBlocked == 0) {
+                dr->mJntTargetAngle[7].z += dr->mJnt7LandZ;
+                dr->mJntTargetAngle[3].z = dr->mJntTargetAngle[3].z - dr->mJnt3LandZ + 13000;
 
-                if (dr->m442 > 2000) {
-                    dr->m010[3].z += -7000;
+                if (dr->mJnt11Pitch > 2000) {
+                    dr->mJntTargetAngle[3].z += -7000;
                 }
             }
         } else {
-            if (dr->m3D0[0] == 0) {
-                dr->m010[0].z += -10000;
+            if (dr->mJntGroundState[0] == 0) {
+                dr->mJntTargetAngle[0].z += -10000;
             }
 
-            if (dr->m3D0[1] == 0) {
-                dr->m010[1].z += -10000;
+            if (dr->mJntGroundState[1] == 0) {
+                dr->mJntTargetAngle[1].z += -10000;
             }
         }
     }
 
-    if (dr->m478 == 0.0f && dr->m488 == 1) {
+    if (dr->mKnockbackSpeed == 0.0f && dr->mKnockedDown == 1) {
         s16 temp = 1;
-        if (dr->m70D == 0) {
+        if (dr->mFaceDown == 0) {
             temp = -1;
         }
 
-        dr->m010[6].z -= dr->m440 * temp;
-        dr->m010[7].z -= dr->m442 * temp;
-        dr->m010[4].z -= dr->m444 * temp;
-        dr->m010[5].z -= dr->m446 * temp;
-        dr->m010[0xC].z += temp * (s16)(dr->m448 / 2);
-        dr->m010[0x13].z += temp * (s16)(dr->m448 / 2);
+        dr->mJntTargetAngle[6].z -= dr->mJnt10Pitch * temp;
+        dr->mJntTargetAngle[7].z -= dr->mJnt11Pitch * temp;
+        dr->mJntTargetAngle[4].z -= dr->mJnt8Pitch * temp;
+        dr->mJntTargetAngle[5].z -= dr->mJnt9Pitch * temp;
+        dr->mJntTargetAngle[0xC].z += temp * (s16)(dr->mJnt12Pitch / 2);
+        dr->mJntTargetAngle[0x13].z += temp * (s16)(dr->mJnt12Pitch / 2);
 
-        if (dr->m418 == 2) {
-            dr->m010[0xD].z += temp * (s16)(dr->m448 / 2);
-            dr->m010[0x12].z += temp * (s16)(dr->m448 / 2);
+        if (dr->mJnt12LineBlocked == 2) {
+            dr->mJntTargetAngle[0xD].z += temp * (s16)(dr->mJnt12Pitch / 2);
+            dr->mJntTargetAngle[0x12].z += temp * (s16)(dr->mJnt12Pitch / 2);
         }
     }
 
     switch (dr->mEnemyType) {
     case damagereaction::TYPE_MOBLIN:
     case damagereaction::TYPE_BOKOBLIN:
-        dr->m010[0].y = -dr->m010[0].z;
-        dr->m010[0].z = 0;
-        dr->m010[1].y = dr->m010[1].z;
-        dr->m010[1].z = 0;
+        dr->mJntTargetAngle[0].y = -dr->mJntTargetAngle[0].z;
+        dr->mJntTargetAngle[0].z = 0;
+        dr->mJntTargetAngle[1].y = dr->mJntTargetAngle[1].z;
+        dr->mJntTargetAngle[1].z = 0;
 
         if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN) {
-            dr->m010[0].y = -dr->m010[0].y;
-            dr->m010[0].x = -dr->m010[0].x;
+            dr->mJntTargetAngle[0].y = -dr->mJntTargetAngle[0].y;
+            dr->mJntTargetAngle[0].x = -dr->mJntTargetAngle[0].x;
         }
 
         {
-            s16 temp = dr->m010[4].z;
-            dr->m010[4].z = dr->m010[4].y;
-            dr->m010[4].y = -temp;
-            s16 temp2 = dr->m010[5].z;
-            dr->m010[5].z = -dr->m010[5].y;
-            dr->m010[5].y = temp2;
+            s16 temp = dr->mJntTargetAngle[4].z;
+            dr->mJntTargetAngle[4].z = dr->mJntTargetAngle[4].y;
+            dr->mJntTargetAngle[4].y = -temp;
+            s16 temp2 = dr->mJntTargetAngle[5].z;
+            dr->mJntTargetAngle[5].z = -dr->mJntTargetAngle[5].y;
+            dr->mJntTargetAngle[5].y = temp2;
         }
 
         break;
@@ -1875,21 +1875,21 @@ static void dr_damage_anime(damagereaction* dr) {
             if (i != 0xD && i != 0x12) {
                 csXyz cleared;
                 csXyz* value = csXyz_ct(&cleared, 0, 0, 0);
-                dr->m010[i].x = static_cast<s16>(value->x);
-                dr->m010[i].y = static_cast<s16>(value->y);
-                dr->m010[i].z = static_cast<s16>(value->z);
+                dr->mJntTargetAngle[i].x = static_cast<s16>(value->x);
+                dr->mJntTargetAngle[i].y = static_cast<s16>(value->y);
+                dr->mJntTargetAngle[i].z = static_cast<s16>(value->z);
             }
         }
 
-        dr->m010[8].z = dr->m4BC;
-        dr->m010[9].z = dr->m4BE;
+        dr->mJntTargetAngle[8].z = dr->mJnt4AddY;
+        dr->mJntTargetAngle[9].z = dr->mJnt5AddY;
 
-        if (dr->m47C != 0) {
+        if (dr->mLaunched != 0) {
             if (test_sw != 0) {
-                dr->m482 = fopAcM_searchPlayerAngleY(dr->mpEnemy) + 0x8000 + REG0_S(3);
+                dr->mKnockbackAngleY = fopAcM_searchPlayerAngleY(dr->mpEnemy) + 0x8000 + REG0_S(3);
             }
 
-            f32 temp = -(s16)(dr->m482 + 0x8000 - dr->mpEnemy->current.angle.y);
+            f32 temp = -(s16)(dr->mKnockbackAngleY + 0x8000 - dr->mpEnemy->current.angle.y);
             f32 temp2 = temp;
             if (temp2 > 20000.0f) {
                 temp2 = 20000.0f;
@@ -1897,11 +1897,11 @@ static void dr_damage_anime(damagereaction* dr) {
             if (temp2 < -9000.0f) {
                 temp2 = -9000.0f;
             }
-            dr->m010[4].x = temp2;
-            dr->m010[8].y = -5000;
-            dr->m010[8].z = -5000;
-            dr->m010[0].y = -10000;
-            dr->m010[4].z = -15000;
+            dr->mJntTargetAngle[4].x = temp2;
+            dr->mJntTargetAngle[8].y = -5000;
+            dr->mJntTargetAngle[8].z = -5000;
+            dr->mJntTargetAngle[0].y = -10000;
+            dr->mJntTargetAngle[4].z = -15000;
 
             f32 temp3 = temp;
             if (temp3 > 9000.0f) {
@@ -1910,13 +1910,13 @@ static void dr_damage_anime(damagereaction* dr) {
             if (temp3 < -20000.0f) {
                 temp3 = -20000.0f;
             }
-            dr->m010[5].x = temp3;
-            dr->m010[9].y = -5000;
-            dr->m010[9].z = 5000;
-            dr->m010[1].y = -10000;
-            dr->m010[5].z = 15000;
-            dr->m010[0xA].y = -15000;
-            dr->m010[0xB].y = -15000;
+            dr->mJntTargetAngle[5].x = temp3;
+            dr->mJntTargetAngle[9].y = -5000;
+            dr->mJntTargetAngle[9].z = 5000;
+            dr->mJntTargetAngle[1].y = -10000;
+            dr->mJntTargetAngle[5].z = 15000;
+            dr->mJntTargetAngle[0xA].y = -15000;
+            dr->mJntTargetAngle[0xB].y = -15000;
 
             f32 temp4 = temp;
             if (temp4 > 10000.0f) {
@@ -1925,9 +1925,9 @@ static void dr_damage_anime(damagereaction* dr) {
             if (temp4 < -10000.0f) {
                 temp4 = -10000.0f;
             }
-            dr->m010[0xA].z = temp4;
-            dr->m010[0XB].z = temp4;
-            dr->m010[0XC].y = 5000;
+            dr->mJntTargetAngle[0xA].z = temp4;
+            dr->mJntTargetAngle[0XB].z = temp4;
+            dr->mJntTargetAngle[0XC].y = 5000;
 
             if (temp > 8000.0f) {
                 temp = 8000.0f;
@@ -1935,7 +1935,7 @@ static void dr_damage_anime(damagereaction* dr) {
             if (temp < -8000.0f) {
                 temp = -8000.0f;
             }
-            dr->m010[0xC].z = temp;
+            dr->mJntTargetAngle[0xC].z = temp;
         }
 
         break;
@@ -1945,43 +1945,43 @@ static void dr_damage_anime(damagereaction* dr) {
     csxyz_temp.y = 0;
     csxyz_temp.z = 0;
     for (int i = 0; i < 20; i++) {
-        if ((dr->m474 > 0.1f && (i == 2 || i == 6 || i == 7 || i == 3) && (dr->m70E & 8)) ||
-            ((i == 0 || i == 4 || i == 5 || i == 1) && (dr->m70E & 4)) ||
-            (i == 0x13 && (dr->m70E & 2)) || (i == 0xD && (dr->m70E & 1))) {
-            dr->m010[i].y = gabi::fmadds(cM_ssin((u32)dr->mTimer * 5000 + i * 0xED8), (f32)dr->m474,
-                                         (f32)(s16)dr->m010[i].y);
-            dr->m010[i].z = gabi::fmadds(cM_scos((u32)dr->mTimer * 4000 + i * 0xC80), (f32)dr->m474,
-                                         (f32)(s16)dr->m010[i].z);
+        if ((dr->mShakeAmplitude > 0.1f && (i == 2 || i == 6 || i == 7 || i == 3) && (dr->mShakeJntMask & 8)) ||
+            ((i == 0 || i == 4 || i == 5 || i == 1) && (dr->mShakeJntMask & 4)) ||
+            (i == 0x13 && (dr->mShakeJntMask & 2)) || (i == 0xD && (dr->mShakeJntMask & 1))) {
+            dr->mJntTargetAngle[i].y = gabi::fmadds(cM_ssin((u32)dr->mTimer * 5000 + i * 0xED8), (f32)dr->mShakeAmplitude,
+                                         (f32)(s16)dr->mJntTargetAngle[i].y);
+            dr->mJntTargetAngle[i].z = gabi::fmadds(cM_scos((u32)dr->mTimer * 4000 + i * 0xC80), (f32)dr->mShakeAmplitude,
+                                         (f32)(s16)dr->mJntTargetAngle[i].z);
         }
 
-        cLib_addCalcAngleS2(&dr->m088[i].x, dr->m010[i].x + csxyz_temp.x, 2, (int)maxSpeed);
-        cLib_addCalcAngleS2(&dr->m088[i].y, dr->m010[i].y + csxyz_temp.y, 2, (int)maxSpeed);
-        cLib_addCalcAngleS2(&dr->m088[i].z, dr->m010[i].z + csxyz_temp.z, 2, (int)maxSpeed);
+        cLib_addCalcAngleS2(&dr->mJntAngle[i].x, dr->mJntTargetAngle[i].x + csxyz_temp.x, 2, (int)maxSpeed);
+        cLib_addCalcAngleS2(&dr->mJntAngle[i].y, dr->mJntTargetAngle[i].y + csxyz_temp.y, 2, (int)maxSpeed);
+        cLib_addCalcAngleS2(&dr->mJntAngle[i].z, dr->mJntTargetAngle[i].z + csxyz_temp.z, 2, (int)maxSpeed);
     }
 }
 
 /* inlined into caller */
 static void dr_matrix_set(damagereaction* dr) {
-    MtxTrans(dr->mpEnemy->current.pos.x + dr->m458.x, dr->mpEnemy->current.pos.y + dr->m458.y,
-             dr->mpEnemy->current.pos.z + dr->m458.z, 0);
-    mDoMtx_XrotM(calc_mtx(), dr->m48C.x);
-    mDoMtx_ZrotM(calc_mtx(), dr->m48C.z);
-    MtxTrans(-dr->m44C.x, -dr->m44C.y, -dr->m44C.z, 1);
-    mDoMtx_YrotM(calc_mtx(), dr->m482);
-    mDoMtx_XrotM(calc_mtx(), dr->m480);
-    mDoMtx_YrotM(calc_mtx(), dr->m484);
-    mDoMtx_YrotM(calc_mtx(), -(s16)dr->m482);
-    MtxTrans(dr->m44C.x, dr->m44C.y, dr->m44C.z, 1);
+    MtxTrans(dr->mpEnemy->current.pos.x + dr->mBodyOffset.x, dr->mpEnemy->current.pos.y + dr->mBodyOffset.y,
+             dr->mpEnemy->current.pos.z + dr->mBodyOffset.z, 0);
+    mDoMtx_XrotM(calc_mtx(), dr->mSlopeTilt.x);
+    mDoMtx_ZrotM(calc_mtx(), dr->mSlopeTilt.z);
+    MtxTrans(-dr->mPivot.x, -dr->mPivot.y, -dr->mPivot.z, 1);
+    mDoMtx_YrotM(calc_mtx(), dr->mKnockbackAngleY);
+    mDoMtx_XrotM(calc_mtx(), dr->mFallPitch);
+    mDoMtx_YrotM(calc_mtx(), dr->mSpinAngleY);
+    mDoMtx_YrotM(calc_mtx(), -(s16)dr->mKnockbackAngleY);
+    MtxTrans(dr->mPivot.x, dr->mPivot.y, dr->mPivot.z, 1);
     mDoMtx_YrotM(calc_mtx(), dr->mpEnemy->shape_angle.y);
     mDoMtx_XrotM(calc_mtx(), dr->mpEnemy->shape_angle.x);
     mDoMtx_ZrotM(calc_mtx(), dr->mpEnemy->shape_angle.z);
-    MtxTrans(0.0f, dr->m468, dr->m46C, 1);
+    MtxTrans(0.0f, dr->mCarryOffsetY, dr->mCarryOffsetZ, 1);
     cXyz v;
     cXyz out;
     (&v)->set(0.0f, 0.0f, 10000.0f);
     MtxPosition((&v), (&out));
-    dr->m70D = (&out)->y < dr->mpEnemy->current.pos.y ? 1 : 0;
-    dr->m424 = 0;
+    dr->mFaceDown = (&out)->y < dr->mpEnemy->current.pos.y ? 1 : 0;
+    dr->mHitFlags = 0;
 }
 
 /* 02041F94 */
@@ -1990,8 +1990,8 @@ static s32 damage_reaction(u32 address) {
     damagereaction* dr = gabi::at<damagereaction>(address);
     dr->mTimer++;
     for (u32 i = 0; i < 3; i++)
-        if (dr->m4C8[i] != 0)
-            dr->m4C8[i]--;
+        if (dr->mDownTimers[i] != 0)
+            dr->mDownTimers[i]--;
     s32 result = 0;
     if (dr->mInvincibleTimer != 0) {
         dr->mInvincibleTimer--;
@@ -2000,13 +2000,13 @@ static s32 damage_reaction(u32 address) {
         result = dr_damage_set(address);
     dr_damage_anime(dr);
     dr_matrix_set(dr);
-    if (dr->m794 != 0) {
-        dr->m794--;
-        if (dr->m794 == 0)
+    if (dr->mWallSmokeTimer != 0) {
+        dr->mWallSmokeTimer--;
+        if (dr->mWallSmokeTimer == 0)
             dr->mParticleCallBack.end();
     }
-    if (dr->m7B2 != 0)
-        dr->m7B2--;
+    if (dr->mBridgeRideTimer != 0)
+        dr->mBridgeRideTimer--;
     return result;
 }
 

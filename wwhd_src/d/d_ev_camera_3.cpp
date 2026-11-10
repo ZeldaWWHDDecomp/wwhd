@@ -19,9 +19,9 @@ static void copyPoint(cXyz* destination, const cXyz* source) {
     out->z = in->z;
 }
 static void SkipSmoother(dCamera_c* camera) {
-    camera->m102 = 1;
-    camera->m101 = 1;
-    camera->m100 = 1;
+    camera->mStyleSettle2 = 1;
+    camera->mStyleSettle1 = 1;
+    camera->mStyleSettle0 = 1;
 }
 static void runStyleEngine(dCamera_c* camera, s32 style) {
     auto* entry = engineEntry(camStyleAlg(style));
@@ -41,7 +41,7 @@ static void runStyleEngine(dCamera_c* camera, s32 style) {
 u32 maptoolIdEvCamera(u32 i_this) {
     auto* camera = gabi::at<dCamera_c>(i_this);
     StageEvent* event;
-    if (camera->m108 != 0) {
+    if (camera->mCurModeTimer != 0) {
         event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
         if (!event)
             return 1;
@@ -50,7 +50,7 @@ u32 maptoolIdEvCamera(u32 i_this) {
         cameraStyleGetEvIntData(camera, &id, mapId.text, -1);
         s32 mapIdValue = id;
         camera->mEventData.field_0x08 = 0;
-        camera->m11C = 0;
+        camera->mCurStyleTimer = 0;
         auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
         if (mapIdValue == -1) {
             event = cameraStyleGetStageEventDt(&play->mEvtCtrl);
@@ -80,7 +80,7 @@ u32 maptoolIdEvCamera(u32 i_this) {
         }
         if (flags & MAP_CLEAR_COUNTER) {
             event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
-            camera->m068 = 0;
+            camera->mBumpCheckFlags = 0;
             flags = event->field_0x12;
         }
         if (flags & MAP_SOUND_NOW)
@@ -88,7 +88,7 @@ u32 maptoolIdEvCamera(u32 i_this) {
         if (flags & MAP_SOUND_LATER)
             soundFrame = 30;
     }
-    if (camera->m108 == soundFrame)
+    if (camera->mCurModeTimer == soundFrame)
         cameraStyleSoundStart(MAP_CAMERA_SOUND);
     s32 cameraType = cameraStyleGetCameraTypeFromMapToolID(camera, type, room);
     camera->mEventData.field_0x0c = cameraType;
@@ -100,18 +100,18 @@ u32 maptoolIdEvCamera(u32 i_this) {
     runStyleEngine(camera, style);
     event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
     u32 duration = event->field_0x11;
-    if (duration != MAP_KEEP_EVENT && camera->m11C <= duration * 10)
+    if (duration != MAP_KEEP_EVENT && camera->mCurStyleTimer <= duration * 10)
         return !event ? 1 : 0;
     auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
     auto* next = cameraStyleNextStageEventDt(&play->mEvtCtrl, event);
-    camera->m100 = 0;
-    camera->m102 = 0;
+    camera->mStyleSettle0 = 0;
+    camera->mStyleSettle2 = 0;
     camera->mEventData.field_0xcc = gabi::ea(next);
-    camera->m101 = 0;
+    camera->mStyleSettle1 = 0;
     if (!next)
         return 1;
     event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
-    camera->m11C = 0xFFFFFFFF;
+    camera->mCurStyleTimer = 0xFFFFFFFF;
     return !event ? 1 : 0;
 }
 
@@ -119,9 +119,9 @@ u32 maptoolIdEvCamera(u32 i_this) {
 u32 tactEvCamera(u32 i_this) {
     auto* camera = gabi::at<dCamera_c>(i_this);
     auto* work = reinterpret_cast<TactWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         work->mTimer = 0;
-        work->mMirror = ((static_cast<u32>(camera->m07C) >> 1) & 1) ^ 1;
+        work->mMirror = ((static_cast<u32>(camera->mFrameCounter) >> 1) & 1) ^ 1;
         f32 fovy = camera->mViewCache.mFovy;
         camera->mEventData.field_0x20 = 0;
         SkipSmoother(camera);
@@ -167,15 +167,15 @@ u32 tactEvCamera(u32 i_this) {
 /* 02538A54 */
 u8 styleEvCamera(u32 i_this) {
     auto* camera = gabi::at<dCamera_c>(i_this);
-    if (camera->m108 == 0) {
-        camera->m11C = 0;
+    if (camera->mCurModeTimer == 0) {
+        camera->mCurStyleTimer = 0;
         camera->mEventData.field_0x08 = 0;
     }
     auto* name = cameraStyleGetEvStringPntData(camera, styleName.text, defaultStyle.text);
     s32 style = cameraStyleSearchStyle(camera->mCamParam, *name);
     runStyleEngine(camera, style);
     u8 done = 0;
-    if (camera->m100 != 0 && camera->m101 != 0 && camera->m102 != 0)
+    if (camera->mStyleSettle0 != 0 && camera->mStyleSettle1 != 0 && camera->mStyleSettle2 != 0)
         done = 1;
     return done;
 }
@@ -198,7 +198,7 @@ u32 saveEvCamera(u32 i_this) {
         SkipSmoother(camera);
         return 1;
     }
-    auto* saved = &camera->m0A4[static_cast<u32>(index)];
+    auto* saved = &camera->mSavedViewStack[static_cast<u32>(index)];
     copyPoint(&saved->mCenter, &camera->mViewCache.mCenter);
     copyPoint(&saved->mEye, &camera->mViewCache.mEye);
     saved->mFovY = camera->mViewCache.mFovy;
@@ -227,7 +227,7 @@ u32 loadEvCamera(u32 i_this) {
         SkipSmoother(camera);
         return 1;
     }
-    auto* saved = &camera->m0A4[static_cast<u32>(index)];
+    auto* saved = &camera->mSavedViewStack[static_cast<u32>(index)];
     copyPoint(&camera->mViewCache.mCenter, &saved->mCenter);
     copyPoint(&camera->mViewCache.mEye, &saved->mEye);
     camera->mViewCache.mFovy = saved->mFovY;

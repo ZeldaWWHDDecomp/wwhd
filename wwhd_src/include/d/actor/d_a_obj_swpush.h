@@ -67,7 +67,7 @@ struct Act_c : fopAc_ac_c {
     /* 0x3B4 */ request_of_phase_process_class mHhbotPhs;
     /* 0x3BC */ gptr<swpushHD::Background> mpBgW;
     /* 0x3C0 */ Mtx34 mMtx;
-    /* 0x3F0 */ be<f32> m2D4;
+    /* 0x3F0 */ be<f32> mOpVtxBaseY;  /* was m2D4: Mthd_Create 023975B0: the Y of the moving top vertex in mpBgW's vertex table (tww GetVtxTbl()[M_op_vtx[0]].y); Mthd_Execute 02398014 sets those vertices to it + mTopPos */
     /* 0x3F4 */ gptr<J3DModel> mpModel;
     /* 0x3F8 */ mDoExt_btpAnm mBtpAnm;
     /* 0x46C */ be<s32> mType;
@@ -91,12 +91,12 @@ struct Act_c : fopAc_ac_c {
     /* 0x48C */ be<f32> mTargetHFrac;
     /* 0x490 */ be<f32> mCurHFrac;
     /* 0x494 */ be<f32> mSpeed;
-    /* 0x498 */ be<f32> m31C;
-    /* 0x49C */ be<f32> m320;
-    /* 0x4A0 */ be<s16> m324;
+    /* 0x498 */ be<f32> mBottomPos;  /* was m31C: calc_top_pos 02397E70: (1 - mCurHFrac) * -35.5 limited to [-36.5, 1] (tww calc_top_pos), the lower bound of mTopPos; jnodeCB 02396BC8 translates the joint by it; Mthd_Execute 02398014 eyePos; Mthd_Create 023975B0 0 / -35.5 (as daObjSwheavy::Act_c::mBottomPos) */
+    /* 0x49C */ be<f32> mTopAimHFrac;  /* was m320: calc_top_pos 02397E70: takes mTopAimReqHFrac when mTopAimTimer runs out and is the top's height fraction outside MODE_UPPER; Mthd_Create 023975B0 1 / 0 */
+    /* 0x4A0 */ be<s16> mTopAimTimer;  /* was m324: top_bg_aim_req 0239833C sets it (tww param_2); calc_top_pos 02397E70 counts it down and copies mTopAimReqHFrac into mTopAimHFrac at 0; Mthd_Create 023975B0 0 */
     /* 0x4A2 */ u8 _4a2[2];
-    /* 0x4A4 */ be<f32> m328;
-    /* 0x4A8 */ be<f32> m32C;
+    /* 0x4A4 */ be<f32> mTopAimReqHFrac;  /* was m328: top_bg_aim_req 0239833C stores the requested height fraction (tww param_1); calc_top_pos 02397E70 copies it into mTopAimHFrac when mTopAimTimer reaches 0; Mthd_Create 023975B0 0 */
+    /* 0x4A8 */ be<f32> mTopHFrac;  /* was m32C: calc_top_pos 02397E70: mCurHFrac in MODE_UPPER, else mTopAimHFrac; mTopPos = (1 - it) * -35.5 (tww calc_top_pos); Mthd_Create 023975B0 1 / 0 */
     /* 0x4AC */ be<f32> mTopPos;
     /* 0x4B0 */ be<s16> mDebounceTimer;
     /* 0x4B2 */ u8 _4b2[2];
@@ -163,7 +163,7 @@ WWHD_OFFSET(Act_c, mKbotaPhs, 0x3AC);
 WWHD_OFFSET(Act_c, mHhbotPhs, 0x3B4);
 WWHD_OFFSET(Act_c, mpBgW, 0x3BC);
 WWHD_OFFSET(Act_c, mMtx, 0x3C0);
-WWHD_OFFSET(Act_c, m2D4, 0x3F0);
+WWHD_OFFSET(Act_c, mOpVtxBaseY, 0x3F0);
 WWHD_OFFSET(Act_c, mpModel, 0x3F4);
 WWHD_OFFSET(Act_c, mBtpAnm, 0x3F8);
 WWHD_OFFSET(Act_c, mType, 0x46C);
@@ -186,11 +186,11 @@ WWHD_OFFSET(Act_c, mChangingState, 0x48B);
 WWHD_OFFSET(Act_c, mTargetHFrac, 0x48C);
 WWHD_OFFSET(Act_c, mCurHFrac, 0x490);
 WWHD_OFFSET(Act_c, mSpeed, 0x494);
-WWHD_OFFSET(Act_c, m31C, 0x498);
-WWHD_OFFSET(Act_c, m320, 0x49C);
-WWHD_OFFSET(Act_c, m324, 0x4A0);
-WWHD_OFFSET(Act_c, m328, 0x4A4);
-WWHD_OFFSET(Act_c, m32C, 0x4A8);
+WWHD_OFFSET(Act_c, mBottomPos, 0x498);
+WWHD_OFFSET(Act_c, mTopAimHFrac, 0x49C);
+WWHD_OFFSET(Act_c, mTopAimTimer, 0x4A0);
+WWHD_OFFSET(Act_c, mTopAimReqHFrac, 0x4A4);
+WWHD_OFFSET(Act_c, mTopHFrac, 0x4A8);
 WWHD_OFFSET(Act_c, mTopPos, 0x4AC);
 WWHD_OFFSET(Act_c, mDebounceTimer, 0x4B0);
 } // namespace daObjSwpush

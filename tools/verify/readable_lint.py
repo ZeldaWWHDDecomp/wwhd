@@ -17,7 +17,9 @@ counted. Columns:
             gc_api / bindings, whose signatures are checked)
   addr      guest data addresses written as numbers (0x10xxxxxx / 0x104xxxxx globals, STR(0x...)
             literals); named statics / gc_api objects instead
-  fieldnum  unnamed fields: field_0x123, unk_123/unk123, mXXXX hex names (m3522), _0x.. members
+  fieldnum  unnamed fields: field_0x123, field_123 (2-5 hex digits), unk_123/unk123, unk_0x60,
+            mXXX..mXXXXX hex names (m3522, m0FD7C), _0x.. members; field_/unk_0x u8 padding arrays
+            (u8 field_48[8]) are not counted
   fnnum     functions named after addresses (fn_/sub_/func_/FUN_ + hex, or a name ending in an
             8-digit address)
   scaffold  harness scaffolding written by hand: WWHD_FUNC(...) and VERIFY(...) lines (a glue source
@@ -45,7 +47,9 @@ PATTERNS = [
                           r"|\b(?:ld|st)(?:8|16|32|s8|s16|f|d|u8|u16|u32)?\s*\(")),
     ("fnwrap", re.compile(r"\bfn::\w+")),
     ("addr", re.compile(r"\b0x10[0-9A-Fa-f]{6}\b|\bSTR\s*\(\s*0x")),
-    ("fieldnum", re.compile(r"\bfield_0x[0-9A-Fa-f]+\b|\bunk_?[0-9A-Fa-f]{2,}\b|\bm[0-9A-F]{3,4}\b|(?<![0-9A-Za-z])_0x[0-9A-Fa-f]+\b")),
+    ("fieldnum", re.compile(r"\bfield_0x[0-9A-Fa-f]+\b|\bunk_?[0-9A-Fa-f]{2,}\b|\bm[0-9A-F]{3,5}\b|(?<![0-9A-Za-z])_0x[0-9A-Fa-f]+\b"
+                            # field_2BC (no 0x) and unk_0x60 offset names; not u8 padding arrays (u8 field_48[8])
+                            r"|(?<!\bu8 )\bfield_[0-9A-Fa-f]{2,5}\b|(?<!\bu8 )\bunk_0x[0-9A-Fa-f]+\b")),
     ("fnnum", re.compile(r"\b(?:fn|sub|func|FUN)_[0-9A-Fa-f]{6,8}\w*\b|\b[A-Za-z]\w*_[0-9A-F]{8}\s*\(")),
     ("scaffold", re.compile(r"\bWWHD_FUNC\s*\(|^\s*VERIFY\s*\(", re.M)),
     ("local_l", re.compile(r"\b[A-Za-z]\w*_l\b")),

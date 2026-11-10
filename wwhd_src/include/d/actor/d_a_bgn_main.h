@@ -285,9 +285,9 @@ struct BgnMaterialPE {
 };
 struct BgnPhaseTwoView {
     u8 _000[0x316C];
-    be<f32> m2E7C;
+    be<f32> mFogFade;
 };
-WWHD_OFFSET(BgnPhaseTwoView, m2E7C, 0x316C);
+WWHD_OFFSET(BgnPhaseTwoView, mFogFade, 0x316C);
 WWHD_SIZE(BgnPhaseTwoView, 0x3170);
 
 enum {

@@ -448,6 +448,15 @@ field 0240CDD0 450000B0 u32 2,0
 field 0240CDD0 101CEF14 s16 0,1,5
 field 0240CDD0 101CEF16 u16 0,1,2
 field 0240CDD0 r3+0x6A94 u32 0,0x4F000000
+# The game's state at the fault (TV frames 1837-1840, Link's idle animation with sound): mpSeAnmFrameCtrl set,
+# the word at 0x77FC (inside mWindCyl) zero; the sound name is read from mAnmRatioUnder[0]'s animation (0x57FC), never 0x77FC
+field 0240CDD0 r3+0x77FC u32 0
+# ... and mAnmRatioUnder[0]'s animation (0x57FC) with its name entry (+8) and name offset (+4), as in the game
+field 0240CDD0 r3+0x57FC u32 0x4E000000
+field 0240CDD0 4E000008 u32 0x4E000100
+field 0240CDD0 4E000104 u32 0x10,0
+# assureSoundName's SafeString (string pointer + vtable): compared, so a wrong name source differs without -nulltrap too
+callee 02444F48 r3=8
 field 0240CDD0 r3+0x69C4 u32 0,1
 # dBgS::GetAttributeCode: lava/void (6/8) reach checkLavaFace and the proc 0xB2 lava-surface branch; 0xB sand
 ret 024EF0F4 6,8,0xB,0,1
@@ -525,3 +534,91 @@ stable 57000000 0x20
 fieldstr 02402FFC 0x54005134 8 @stages,"GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01"
 fieldstr 024198D4 0x54005134 8 @stages,"MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
 fieldstr 024131D0 0x54005134 8 @stages,"PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren"
+
+# ---- zero-page steers (2026-11-10): `this` in the original daPy_lk_c layout, member vtables from the
+# image as the original constructors store them (daPy_lk_ct 0240FE40 and the member constructors it calls) ----
+# 0240EBF0 playerDelete: mFootEffect[2] (0x65FC, 0x4C each; daPy_footEffect_c ctor 024443E4: dPa_smokeEcallBack
+# 025A5B18 vtable 10052410 at +0, dPa_followEcallBack 025A5894 vtable 100523C8 at +0x20), the smoke callback at 0x6710
+# (025A5B18), the fan-swing emitter (0x6810: none or an emitter fixture)
+arg! 0240EBF0 r3 0x40000000
+field 0240EBF0 r3+0x65FC u32 0x10052410
+field 0240EBF0 r3+0x661C u32 0x100523C8
+field 0240EBF0 r3+0x6648 u32 0x10052410
+field 0240EBF0 r3+0x6668 u32 0x100523C8
+field 0240EBF0 r3+0x6710 u32 0x10052410
+field 0240EBF0 r3+0x6810 u32 0,0x70000000
+stable 400065FC 4
+stable 4000661C 4
+stable 40006648 4
+stable 40006668 4
+stable 40006710 4
+# mpCLModel (this+0x448, J3DModel): the joint-matrix block at model+0x2C (u16 flags +4, matrix array pointer +0x10),
+# read by the inline getAnmMtx/setAnmMtx of every function below; `this` pinned so the member word stays stable
+arg! 02400C4C r3 0x40000000
+field 02400C4C r3+0x448 u32 0x71000000
+field 02400C4C 7100002C u32 0x71000100
+field 02400C4C 71000110 u32 0x71001000
+arg! 02403150 r3 0x40000000
+field 02403150 r3+0x448 u32 0x71000000
+field 02403150 7100002C u32 0x71000100
+field 02403150 71000110 u32 0x71001000
+arg! 024038A0 r3 0x40000000
+field 024038A0 r3+0x448 u32 0x71000000
+field 024038A0 7100002C u32 0x71000100
+field 024038A0 71000110 u32 0x71001000
+arg! 02403C24 r3 0x40000000
+field 02403C24 r3+0x448 u32 0x71000000
+field 02403C24 7100002C u32 0x71000100
+field 02403C24 71000110 u32 0x71001000
+arg! 024076CC r3 0x40000000
+field 024076CC r3+0x448 u32 0x71000000
+field 024076CC 7100002C u32 0x71000100
+field 024076CC 71000110 u32 0x71001000
+arg! 0240B7F4 r3 0x40000000
+field 0240B7F4 r3+0x448 u32 0x71000000
+field 0240B7F4 7100002C u32 0x71000100
+field 0240B7F4 71000110 u32 0x71001000
+arg! 024131D0 r3 0x40000000
+field 024131D0 r3+0x448 u32 0x71000000
+field 024131D0 7100002C u32 0x71000100
+field 024131D0 71000110 u32 0x71001000
+stable 40000448 4
+stable 7100002C 4
+stable 71000110 4
+# 02403150 jointCB1: m_old_fdata (this+0x65CC): old-frame flag byte +0, quaternions +0x1C (0x10 each), transform
+# infos +0x20 (0x20 each), joints up to 38
+field 02403150 r3+0x65CC u32 0x72000000
+field 02403150 72000000 u8 0,1,1,1
+field 02403150 7200001C u32 0x72001000
+field 02403150 72000020 u32 0x72002000
+stable 400065CC 4
+stable 72000000 0x24
+stable 40006810 4
+# 024038A0 setBootsModel: the two boot models (r4 = J3DModel*[2]) with their joint-matrix blocks
+arg! 024038A0 r4 0x74000000
+field 024038A0 74000000 u32 0x74000100
+field 024038A0 74000004 u32 0x74000200
+field 024038A0 7400012C u32 0x74000400
+field 024038A0 74000410 u32 0x74001000
+field 024038A0 7400022C u32 0x74000500
+field 024038A0 74000510 u32 0x74002000
+stable 74000000 8
+stable 7400012C 4
+stable 74000410 4
+stable 7400022C 4
+stable 74000510 4
+# 02410BE8 playerInit: mpCLModel (0x448, the model above; playerInit stores this at model+0xB8) and the Ymgcs00 model
+# (0x5700; +0xB8 owner, +0xAC its model data: material count +4, material table +8, 0x1C each)
+arg! 02410BE8 r3 0x40000000
+field 02410BE8 r3+0x448 u32 0x71000000
+field 02410BE8 r3+0x5700 u32 0x76000000
+field 02410BE8 760000AC u32 0x76000100
+field 02410BE8 76000104 u32 0,1,3
+field 02410BE8 76000108 u32 0x76001000
+stable 40005700 4
+stable 760000AC 4
+stable 76000104 8
+# 02400C4C setNeckAngle: m_tex_eye_scroll[2] (this+0x604/0x608, daPy_matAnm_c*: scroll values at +0x74/+0x78)
+field 02400C4C r3+0x604 u32 0x77000000
+field 02400C4C r3+0x608 u32 0x77000100
+stable 40000604 8

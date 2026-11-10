@@ -181,7 +181,7 @@ bool daObj_Warpt_c::createHutaHeap() {
   if (mpLidBgW == nullptr)
     return false;
   data = resource(dRes_INDEX_LTUBW_DZB_ITUHT_e);
-  if (Warpt_bgSet((u8 *)mpLidBgW, data, 1, m344))
+  if (Warpt_bgSet((u8 *)mpLidBgW, data, 1, mLidBgWMtx))
     return false;
   data = resource(dRes_INDEX_LTUBW_BDL_YWPFM00_e);
   if (!data)
@@ -206,13 +206,13 @@ bool daObj_Warpt_c::createBodyHeap() {
   if (mpBodyBgW2 == nullptr)
     return false;
   data = resource(dRes_INDEX_LTUBW_DZB_ITUBW_e);
-  if (Warpt_bgSet((u8 *)mpBodyBgW2, data, 1, m310))
+  if (Warpt_bgSet((u8 *)mpBodyBgW2, data, 1, mBodyBgW2Mtx))
     return false;
   mpBodyBgW1 = Warpt_bgNew((u8 *)nullptr);
   if (mpBodyBgW1 == nullptr)
     return false;
   data = resource(dRes_INDEX_LTUBW_DZB_ITUSO_e);
-  return Warpt_bgSet((u8 *)mpBodyBgW1, data, 1, m2DC) == 0;
+  return Warpt_bgSet((u8 *)mpBodyBgW1, data, 1, mBodyBgW1Mtx) == 0;
 }
 /* 023B9E88 */
 static void ride_CB(u8 *bg, daObj_Warpt_c *self, fopAc_ac_c *rider) {
@@ -226,34 +226,34 @@ void daObj_Warpt_c::_ride(fopAc_ac_c *rider) {
   u32 player = Warpt_guest<WarptPlay>(p)->mpPlayer;
   Warpt_searchPlayerAngleY(this, Warpt_guest<u8>(player));
   gabi::Local<cXyz> position;
-  *position = m830;
+  *position = mLidPos;
   Warpt_checkPlayerInCircle(position.get(), 1.0f, 20.0f);
   if (l_HIO.m06)
     return;
   u32 table = rider->__vtbl;
   if (Warpt_checkPlayerFly(table, rider))
     return;
-  if (m290 == MODE_EVENT_WARP)
+  if (mCurMode == MODE_EVENT_WARP)
     return;
   gabi::Local<cXyz> inner;
-  *inner = m830;
+  *inner = mLidPos;
   f32 radius = l_HIO.m0C;
   if (Warpt_checkPlayerInCircle(inner.get(), radius, 20.0f))
     modeProc(PROC_INIT_e, 3);
 }
 /* 023B985C */
 u8 daObj_Warpt_c::isHuta() {
-  return m2C6;
+  return mLidClosed;
 }
 /* 023B9864 */
 bool daObj_Warpt_c::isSp() {
-  return ((u32)(s32)m2B4 - 2u) <= 2;
+  return ((u32)(s32)mPotType - 2u) <= 2;
 }
 /* 023B9884 */
 bool daObj_Warpt_c::isOtherHuta() {
   if (!isSp())
     return false;
-  s32 sw = m2AC;
+  s32 sw = mLidSwNo;
   if (sw == 255)
     return false;
   u32 s = save();
@@ -272,17 +272,17 @@ void daObj_Warpt_c::warp(s32 stage) {
 }
 /* 023B9E94 */
 void daObj_Warpt_c::onWarpBit(u8 bit) {
-  u32 index = m2B8, s = save();
+  u32 index = mEventRegNo, s = save();
   u16 event = m_event_reg[(index * 2) / 2];
   u32 flags = Warpt_getEventReg(&Warpt_guest<WarptSave>(s)->mEvent, event);
-  index = m2B8;
+  index = mEventRegNo;
   s = save();
   event = m_event_reg[(index * 2) / 2];
   Warpt_setEventReg(&Warpt_guest<WarptSave>(s)->mEvent, event, (u8)(flags | bit));
 }
 /* 023B9F1C */
 bool daObj_Warpt_c::isWarpBit(u8 bit) {
-  u32 index = m2B8, s = save();
+  u32 index = mEventRegNo, s = save();
   u16 event = m_event_reg[(index * 2) / 2];
   return (u8)(Warpt_getEventReg(&Warpt_guest<WarptSave>(s)->mEvent, event) & bit) != 0;
 }
@@ -292,28 +292,28 @@ void daObj_Warpt_c::setMtx() {
   Warpt_YrotM(l_matrix, shape_angle.y);
   Warpt_scaleM((f32)scale.x, (f32)scale.y, (f32)scale.z);
   warptModelMatrix(mpBodyModel);
-  Warpt_matrixCopy(l_matrix, m310);
-  Warpt_matrixCopy(l_matrix, m2DC);
+  Warpt_matrixCopy(l_matrix, mBodyBgW2Mtx);
+  Warpt_matrixCopy(l_matrix, mBodyBgW1Mtx);
   Warpt_bgMove((u8 *)mpBodyBgW1);
-  m830.z = current.pos.z;
-  m830.x = current.pos.x;
+  mLidPos.z = current.pos.z;
+  mLidPos.x = current.pos.x;
   f32 y = current.pos.y;
-  m830.y = y;
-  m830.y = y + l_HIO.m08;
+  mLidPos.y = y;
+  mLidPos.y = y + l_HIO.m08;
   play();
-  if (m840 == 1 && mpBodyBgW2 != nullptr && !used(mpBodyBgW2)) {
+  if (mBgW2RegistTimer == 1 && mpBodyBgW2 != nullptr && !used(mpBodyBgW2)) {
     u32 p = play();
     Warpt_bgRegist(&Warpt_guest<WarptPlay>(p)->mBgS, (u8 *)mpBodyBgW2, this);
   }
   if (used(mpBodyBgW2))
     Warpt_bgMove((u8 *)mpBodyBgW2);
   if (mpLidBgW != nullptr && mpLidModel1 != nullptr) {
-    Warpt_transS(l_matrix, (f32)m830.x, (f32)m830.y, (f32)m830.z);
+    Warpt_transS(l_matrix, (f32)mLidPos.x, (f32)mLidPos.y, (f32)mLidPos.z);
     Warpt_YrotM(l_matrix, shape_angle.y);
     Warpt_scaleM((f32)scale.x, (f32)scale.y, (f32)scale.z);
     warptModelMatrix(mpLidModel1);
     warptModelMatrix(mpLidModel2);
-    Warpt_matrixCopy(l_matrix, m344);
+    Warpt_matrixCopy(l_matrix, mLidBgWMtx);
     Warpt_bgMove((u8 *)mpLidBgW);
   }
 }
@@ -335,7 +335,7 @@ void daObj_Warpt_c::setCollision() {
   Warpt_collisionSet(&Warpt_guest<WarptPlay>(p)->mCcS, &mCyl1);
   if (mpLidBgW != nullptr && mpLidModel1 != nullptr) {
     mCyl2.mObjCo.mSPrm = mCyl2.mObjCo.mSPrm & ~1u;
-    Warpt_cylinderSetC(&mCyl2.mCyl, &m830);
+    Warpt_cylinderSetC(&mCyl2.mCyl, &mLidPos);
     p = play();
     Warpt_collisionSet(&Warpt_guest<WarptPlay>(p)->mCcS, &mCyl2);
   }
@@ -347,17 +347,17 @@ void daObj_Warpt_c::breakHuta(s32 type) {
   if (type == 0) {
     u32 p = play();
     u32 control = Warpt_guest<WarptPlay>(p)->mpParticle;
-    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8165, &m830, (u8 *)nullptr, (u8 *)nullptr, 255, (u8 *)nullptr, -1, (u8 *)nullptr, (u8 *)nullptr, 0);
+    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8165, &mLidPos, (u8 *)nullptr, (u8 *)nullptr, 255, (u8 *)nullptr, -1, (u8 *)nullptr, (u8 *)nullptr, 0);
     p = play();
     control = Warpt_guest<WarptPlay>(p)->mpParticle;
-    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8166, &m830, (u8 *)nullptr, (u8 *)nullptr, 255, (u8 *)nullptr, -1, (u8 *)nullptr, (u8 *)nullptr, 0);
+    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8166, &mLidPos, (u8 *)nullptr, (u8 *)nullptr, 255, (u8 *)nullptr, -1, (u8 *)nullptr, (u8 *)nullptr, 0);
   } else if (type == 1) {
     s32 reverb = Warpt_getReverb((s8)current.roomNo);
     Warpt_seStartCurrent(0x6847, &eyePos, 0, reverb);
     u32 p = play();
     u32 control = Warpt_guest<WarptPlay>(p)->mpParticle;
     void *color = &tevStr.mColorK0;
-    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x3E5, &m830, (u8 *)nullptr, (u8 *)nullptr, 255, (u8 *)nullptr, -1, color, color, 0);
+    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x3E5, &mLidPos, (u8 *)nullptr, (u8 *)nullptr, 255, (u8 *)nullptr, -1, color, color, 0);
     if (used(mpLidBgW)) {
       p = play();
       Warpt_bgRelease(&Warpt_guest<WarptPlay>(p)->mBgS, (u8 *)mpLidBgW);
@@ -369,14 +369,14 @@ void daObj_Warpt_c::openHuta() {
   if (isSp()) {
     if (m2BC == 255)
       Warpt_seStartGlobal(0x806);
-    onWarpBit(m2C4);
+    onWarpBit(mWarpBit);
   } else {
     s8 room = stay();
     u32 s = save();
-    s32 sw = m2AC;
+    s32 sw = mLidSwNo;
     Warpt_onSwitch(&Warpt_guest<WarptSave>(s)->mZone, sw, room);
   }
-  m2C6 = 0;
+  mLidClosed = 0;
 }
 /* 023BABD8 */
 void daObj_Warpt_c::checkHitSE() {
@@ -416,14 +416,14 @@ void daObj_Warpt_c::checkHitSE() {
 }
 /* 023BB2A4 */
 void daObj_Warpt_c::modeOpenInit() {
-  if (m844.mEmitter == nullptr) {
-    warptColor(Warpt_guest<u8>(gabi::ea(&m86C)));
-    warptColor(Warpt_guest<u8>(gabi::ea(&m870)));
+  if (mOpenSmokeCallBack.mEmitter == nullptr) {
+    warptColor(Warpt_guest<u8>(gabi::ea(&mSmokePrmColor)));
+    warptColor(Warpt_guest<u8>(gabi::ea(&mSmokeEnvColor)));
     u32 p = play();
     u32 control = Warpt_guest<WarptPlay>(p)->mpParticle;
-    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8161, &current.pos, (u8 *)nullptr, (u8 *)nullptr, 255, &m844, -1, &m86C, &m870, 0);
+    Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8161, &current.pos, (u8 *)nullptr, (u8 *)nullptr, 255, &mOpenSmokeCallBack, -1, &mSmokePrmColor, &mSmokeEnvColor, 0);
   }
-  Warpt_followRemove(&m858);
+  Warpt_followRemove(&mCloseSmokeCallBack);
 }
 /* 023BB338 */
 void daObj_Warpt_c::modeOpen() {
@@ -432,11 +432,11 @@ void daObj_Warpt_c::modeOpen() {
 }
 /* 023BB380 */
 void daObj_Warpt_c::modeCloseInit() {
-  warptColor(Warpt_guest<u8>(gabi::ea(&m86C)));
-  warptColor(Warpt_guest<u8>(gabi::ea(&m870)));
+  warptColor(Warpt_guest<u8>(gabi::ea(&mSmokePrmColor)));
+  warptColor(Warpt_guest<u8>(gabi::ea(&mSmokeEnvColor)));
   u32 p = play();
   u32 control = Warpt_guest<WarptPlay>(p)->mpParticle;
-  Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8162, &current.pos, (u8 *)nullptr, (u8 *)nullptr, 255, &m858, -1, &m86C, &m870, 0);
+  Warpt_setParticle(Warpt_guest<u8>(control), 0, 0x8162, &current.pos, (u8 *)nullptr, (u8 *)nullptr, 255, &mCloseSmokeCallBack, -1, &mSmokePrmColor, &mSmokeEnvColor, 0);
 }
 /* 023BB488 */
 void daObj_Warpt_c::modeClose() {
@@ -456,7 +456,7 @@ void daObj_Warpt_c::modeClose() {
   } else {
     s8 room = stay();
     u32 s = save();
-    s32 sw = m2AC;
+    s32 sw = mLidSwNo;
     if (Warpt_isSwitch(&Warpt_guest<WarptSave>(s)->mZone, sw, room)) {
       openHuta();
       modeProc(PROC_INIT_e, 0);
@@ -467,12 +467,12 @@ void daObj_Warpt_c::modeClose() {
 void daObj_Warpt_c::modeBreakFireInit() {
   s32 reverb = Warpt_getReverb((s8)current.roomNo);
   Warpt_seStartCurrent(0x69EC, &eyePos, 0, reverb);
-  m83C = 60;
+  mBreakFireTimer = 60;
 }
 /* 023BB5CC */
 void daObj_Warpt_c::modeBreakFire() {
   Warpt_animationPlay(&mLidBrk);
-  if (!Warpt_calcTimerInt(&m83C)) {
+  if (!Warpt_calcTimerInt(&mBreakFireTimer)) {
     if (used(mpLidBgW)) {
       u32 p = play();
       u8 *bg = mpLidBgW;
@@ -511,7 +511,7 @@ void daObj_Warpt_c::modeEventWarp() {
   p = play();
   if (Warpt_eventEndCheck(&Warpt_guest<WarptPlay>(p)->mEventManager, "DEFAULT_WARP") &&
       !warped) {
-    m840 = 30;
+    mBgW2RegistTimer = 30;
     p = play();
     Warpt_guest<WarptPlay>(p)->mEventFlags = Warpt_guest<WarptPlay>(p)->mEventFlags | 8;
     Warpt_guest<WarptPlayer>(player)->mNoResetFlg1 = Warpt_guest<WarptPlayer>(player)->mNoResetFlg1 | 0x10000;
@@ -522,36 +522,36 @@ void daObj_Warpt_c::modeEventWarp() {
 bool daObj_Warpt_c::normalWarp() {
   s8 room = stay();
   u32 s = save();
-  s32 sw = m2B0;
+  s32 sw = mWarpSwNo;
   if (!Warpt_isSwitch(&Warpt_guest<WarptSave>(s)->mZone, sw, room))
     return false;
-  warp(m29C);
+  warp(mWarpSclsNo);
   return true;
 }
 /* 023BB6A4 */
 bool daObj_Warpt_c::spWarp() {
-  switch ((s32)m2B4) {
+  switch ((s32)mPotType) {
   case 2:
     if (isWarpBit(2))
-      warp(m2A4);
+      warp(mSpSclsNo2);
     else if (isWarpBit(4))
-      warp(m2A8);
+      warp(mSpSclsNo4);
     else
       return false;
     break;
   case 3:
     if (isWarpBit(4))
-      warp(m2A8);
+      warp(mSpSclsNo4);
     else if (isWarpBit(1))
-      warp(m2A0);
+      warp(mSpSclsNo1);
     else
       return false;
     break;
   case 4:
     if (isWarpBit(1))
-      warp(m2A0);
+      warp(mSpSclsNo1);
     else if (isWarpBit(2))
-      warp(m2A4);
+      warp(mSpSclsNo2);
     else
       return false;
     break;
@@ -573,28 +573,28 @@ void daObj_Warpt_c::modeEventOpen() {
 /* 023B9CB0 */
 void daObj_Warpt_c::modeProc(s32 operation, s32 mode) {
   if (operation == PROC_INIT_e) {
-    m290 = mode;
+    mCurMode = mode;
     (this->*Warpt_init(mode_tbl[(u32)mode]))();
   } else if (operation == PROC_EXEC_e)
-    (this->*Warpt_run(mode_tbl[(u32)(s32)m290]))();
+    (this->*Warpt_run(mode_tbl[(u32)(s32)mCurMode]))();
 }
 /* 023BAD74 */
 BOOL daObj_Warpt_c::_execute() {
-  u32 emitter = gabi::ea((u8 *)m844.mEmitter);
+  u32 emitter = gabi::ea((u8 *)mOpenSmokeCallBack.mEmitter);
   if (emitter) {
     if (warptCustomColor(gabi::ea(&l_HIO.m14)))
       warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mPrmColor, gabi::ea(&l_HIO.m14));
     if (warptCustomColor(gabi::ea(&l_HIO.m18))) {
-      emitter = gabi::ea((u8 *)m844.mEmitter);
+      emitter = gabi::ea((u8 *)mOpenSmokeCallBack.mEmitter);
       warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mEnvColor, gabi::ea(&l_HIO.m18));
     }
   }
-  emitter = gabi::ea((u8 *)m858.mEmitter);
+  emitter = gabi::ea((u8 *)mCloseSmokeCallBack.mEmitter);
   if (emitter) {
     if (warptCustomColor(gabi::ea(&l_HIO.m14)))
       warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mPrmColor, gabi::ea(&l_HIO.m14));
     if (warptCustomColor(gabi::ea(&l_HIO.m18))) {
-      emitter = gabi::ea((u8 *)m858.mEmitter);
+      emitter = gabi::ea((u8 *)mCloseSmokeCallBack.mEmitter);
       warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mEnvColor, gabi::ea(&l_HIO.m18));
     }
   }
@@ -610,7 +610,7 @@ BOOL daObj_Warpt_c::_execute() {
   setMtx();
   setCollision();
   checkHitSE();
-  Warpt_calcTimerChar(&m840);
+  Warpt_calcTimerChar(&mBgW2RegistTimer);
   return 1;
 }
 /* 023BB074 */
@@ -623,9 +623,9 @@ BOOL daObj_Warpt_c::_draw() {
   Warpt_modelUpdateDL((u8 *)mpBodyModel, 0);
   warptDrawLists(false);
   if (isHuta()) {
-    if (m290 == MODE_BREAK_FIRE && mpLidModel2 != nullptr) {
+    if (mCurMode == MODE_BREAK_FIRE && mpLidModel2 != nullptr) {
       env = Warpt_getEnvLight();
-      Warpt_settingTevStruct(Warpt_guest<u8>(env), 0, &m830, &tevStr);
+      Warpt_settingTevStruct(Warpt_guest<u8>(env), 0, &mLidPos, &tevStr);
       env = Warpt_getEnvLight();
       Warpt_setLightTevColorType(Warpt_guest<u8>(env), (u8 *)mpLidModel2, &tevStr);
       u32 model = gabi::ea((u8 *)mpLidModel2);
@@ -638,7 +638,7 @@ BOOL daObj_Warpt_c::_draw() {
     if (mpLidBgW != nullptr && mpLidModel1 != nullptr) {
       warptDrawLists(true);
       env = Warpt_getEnvLight();
-      Warpt_settingTevStruct(Warpt_guest<u8>(env), 0, &m830, &tevStr);
+      Warpt_settingTevStruct(Warpt_guest<u8>(env), 0, &mLidPos, &tevStr);
       env = Warpt_getEnvLight();
       Warpt_setLightTevColorType(Warpt_guest<u8>(env), (u8 *)mpLidModel1, &tevStr);
       Warpt_modelUpdateDL((u8 *)mpLidModel1, 0);
@@ -652,52 +652,52 @@ void daObj_Warpt_c::getArg() {
   u32 parameters = mParameters;
   s16 z = home.angle.z;
   s16 x = home.angle.x;
-  m2B4 = parameters & 15;
+  mPotType = parameters & 15;
   if (!isSp()) {
-    m29C = (parameters >> 12) & 255;
+    mWarpSclsNo = (parameters >> 12) & 255;
     m298 = (parameters >> 4) & 255;
-    m2AC = (u8)x;
-    m2B0 = ((u16)x >> 8);
-    if (m2B4 == 1) {
+    mLidSwNo = (u8)x;
+    mWarpSwNo = ((u16)x >> 8);
+    if (mPotType == 1) {
       s8 room = stay();
       u32 s = save();
-      Warpt_onSwitch(&Warpt_guest<WarptSave>(s)->mZone, (s32)m2AC, room);
+      Warpt_onSwitch(&Warpt_guest<WarptSave>(s)->mZone, (s32)mLidSwNo, room);
     }
     s8 room = stay();
     u32 s = save();
-    m2C6 = !Warpt_isSwitch(&Warpt_guest<WarptSave>(s)->mZone, (s32)m2AC, room);
+    mLidClosed = !Warpt_isSwitch(&Warpt_guest<WarptSave>(s)->mZone, (s32)mLidSwNo, room);
   } else {
-    m2A0 = (parameters >> 8) & 255;
-    m2A8 = parameters >> 24;
-    m2B8 = (parameters >> 4) & 15;
-    m2A4 = (parameters >> 16) & 255;
-    switch ((s32)m2B4) {
+    mSpSclsNo1 = (parameters >> 8) & 255;
+    mSpSclsNo4 = parameters >> 24;
+    mEventRegNo = (parameters >> 4) & 15;
+    mSpSclsNo2 = (parameters >> 16) & 255;
+    switch ((s32)mPotType) {
     case 2:
-      m2C4 = 1;
+      mWarpBit = 1;
       m2C5 = 0;
       break;
     case 3:
-      m2C4 = 2;
+      mWarpBit = 2;
       m2C5 = 1;
       break;
     case 4:
-      m2C4 = 4;
+      mWarpBit = 4;
       m2C5 = 2;
       break;
     }
-    m2AC = (u8)x;
-    m2B0 = (u16)x >> 8;
+    mLidSwNo = (u8)x;
+    mWarpSwNo = (u16)x >> 8;
     m2BC = (u8)z;
     m2C0 = (u16)z >> 8;
     if (m2C0 != 255)
-      onWarpBit(m2C4);
-    m2C6 = !isWarpBit(m2C4);
+      onWarpBit(mWarpBit);
+    mLidClosed = !isWarpBit(mWarpBit);
   }
 }
 /* 023BA4E0 */
 void daObj_Warpt_c::createInit() {
-  m86C = m_def_smoke_prm_color[(u32)(s32)m2B4];
-  m870 = m_def_smoke_env_color[(u32)(s32)m2B4];
+  mSmokePrmColor = m_def_smoke_prm_color[(u32)(s32)mPotType];
+  mSmokeEnvColor = m_def_smoke_env_color[(u32)(s32)mPotType];
   u32 model = gabi::ea((u8 *)mpBodyModel);
   cullMtx = model ? gabi::ea(&Warpt_guest<WarptModel>(model)->mBaseTransformMtx) : 0;
   Warpt_setCullBox(this, -80.0f, -0.0f, -80.0f, 80.0f, 160.0f, 80.0f);
@@ -725,7 +725,7 @@ void daObj_Warpt_c::createInit() {
   s32 cooldown = 5;
   if (Warpt_checkPlayerInCircle(position.get(), 50.0f, 100.0f))
     cooldown = 30;
-  m840 = cooldown;
+  mBgW2RegistTimer = cooldown;
   setMtx();
 }
 /* 023BA6F0 */
@@ -760,8 +760,8 @@ s32 daObj_Warpt_c::_create() {
       mAcch.mObject = 1;
       mAcch.mPolyVtable = gc_tu.mAcchPolyVtable;
       Warpt_acchCirCtor(&mAcchCir);
-      Warpt_followCtor(&m844, (u8 *)nullptr, (u8 *)nullptr);
-      Warpt_followCtor(&m858, (u8 *)nullptr, (u8 *)nullptr);
+      Warpt_followCtor(&mOpenSmokeCallBack, (u8 *)nullptr, (u8 *)nullptr);
+      Warpt_followCtor(&mCloseSmokeCallBack, (u8 *)nullptr, (u8 *)nullptr);
       flags = actor_condition;
     }
     actor_condition = flags | 8;
@@ -791,8 +791,8 @@ BOOL daObj_Warpt_c::_delete() {
     u32 p = play();
     Warpt_bgRelease(&Warpt_guest<WarptPlay>(p)->mBgS, (u8 *)mpBodyBgW1);
   }
-  Warpt_removeFollow(&m844);
-  Warpt_removeFollow(&m858);
+  Warpt_removeFollow(&mOpenSmokeCallBack);
+  Warpt_removeFollow(&mCloseSmokeCallBack);
   return 1;
 }
 /* 023BA8C4 */

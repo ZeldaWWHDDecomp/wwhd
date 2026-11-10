@@ -39,12 +39,12 @@ static u32 l_smallDynamicsGuard;
 static u32 l_smallParticleGuard;
 static u32 PrmAbstract(Act_c*, s32, s32);
 static Act_c* construct(Act_c*);
-// HD: assertion text names the tww m644 member M_type. Guest indexing still wraps.
+// HD: the original assertion text calls this member (tww m644, here mType) M_type. Guest indexing still wraps.
 static Attr_c* checkedAttr(Act_c* a, const char* file, const char* message) {
-    u32 type = a->m644;
+    u32 type = a->mType;
     if (type >= Act_c::Type_Max) {
         JUT_ASSERT_fail(file, 0x247, message);
-        type = a->m644;
+        type = a->mType;
     }
     return stone2::attributeAt(&M_attr, type);
 }
@@ -57,10 +57,10 @@ static u32 prm(Act_c* a, s32 width, s32 shift) {
 /* 0249E2D0 */
 void daStone2::Act_c::prmZ_init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m656)
+    if (mPrmZInit)
         return;
     s16 angle = home.angle.z;
-    m656 = 1;
+    mPrmZInit = 1;
     home.angle.z = 0;
     mPrmZ = (u16)angle;
     current.angle.z = 0;
@@ -89,12 +89,12 @@ void daStone2::Act_c::on_switch() {
 /* 0249E5B8 */
 BOOL daStone2::Act_c::CreateHeap() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
-    u32 type = m644;
+    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
+    u32 type = mType;
     const char* name = attr->resName;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
         attr = stone2::attributeAt(&M_attr, type);
     }
     s16 index = attr->m04;
@@ -104,7 +104,7 @@ BOOL daStone2::Act_c::CreateHeap() {
     key->vtable = gc_tu.safeString;
     J3DModelData* data = stoneObjectResource(manager, key.get(), index);
     if (!data)
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x256, "model_data != NULL");
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x256, "model_data != 0");
     mpModel = mDoExt_J3DModel__create(data, 0x80000, 0x11000022);
     return mpModel != nullptr;
 }
@@ -114,19 +114,19 @@ BOOL daStone2::Act_c::Create() {
 
     mStts.Init(255, 255, this);
     mCyl.Set(reinterpret_cast<const dCcD_SrcCyl*>(&M_cyl_src));
-    u32 type = m644;
+    u32 type = mType;
     mCyl.mStts = &mStts;
     auto attrFor = [&](u32 t) {
         if (t >= Type_Max) {
-            JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-            t = m644;
+            JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+            t = mType;
         }
         return stone2::attributeAt(&M_attr, t);
     };
     Attr_c* attr = attrFor(type);
     f32 radius = attr->m12;
     mCyl.mCyl.SetR(radius);
-    attr = attrFor(m644);
+    attr = attrFor(mType);
     f32 height = attr->m14;
     mCyl.mCyl.SetH(height);
     stone2::words(&mCyl.mGObjAt.mVec)->x = stone2::words(&l_zeroVector)->x;
@@ -134,7 +134,7 @@ BOOL daStone2::Act_c::Create() {
     stone2::words(&mCyl.mGObjAt.mVec)->z = stone2::words(&l_zeroVector)->z;
     stone2::words(&mCyl.mGObjTg.mVec)->x = stone2::words(&l_zeroVector)->x;
     stone2::words(&mCyl.mGObjTg.mVec)->y = stone2::words(&l_zeroVector)->y;
-    type = m644;
+    type = mType;
     stone2::words(&mCyl.mGObjTg.mVec)->z = stone2::words(&l_zeroVector)->z;
     attr = attrFor(type);
     radius = attr->m12;
@@ -142,11 +142,11 @@ BOOL daStone2::Act_c::Create() {
     mAcchCir.SetWall(wall, radius);
     mAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, &current.angle, &shape_angle);
     u32 flags = mAcch.m_flags;
-    type = m644;
+    type = mType;
     mAcch.m_flags = flags & ~8u;
     attr = attrFor(type);
     f32 roof = attr->m10;
-    type = m644;
+    type = mType;
     mAcch.m_roof_crr_height = roof;
     attr = attrFor(type);
     gravity = attr->m30;
@@ -158,7 +158,7 @@ BOOL daStone2::Act_c::Create() {
     current.pos.x = x;
     current.pos.y = y;
     flags = mAcch.m_flags;
-    type = m644;
+    type = mType;
     attention_info.flags = attention | 0x10;
     f32 z = home.pos.z;
     mAcch.m_flags = flags & ~0x80u;
@@ -166,7 +166,7 @@ BOOL daStone2::Act_c::Create() {
     attr = attrFor(type);
     u32 status = actor_status;
     x = current.pos.x;
-    type = m644;
+    type = mType;
     u8 distance = attr->m0C;
     actor_status = status | 0x10000;
     attention_info.distances[4] = distance;
@@ -175,17 +175,17 @@ BOOL daStone2::Act_c::Create() {
     y = current.pos.y;
     z = current.pos.z;
     f32 offset = attr->m38;
-    m6A8 = 0;
-    m658 = 0;
-    m657 = 1;
+    mLiftSmokeUsed = 0;
+    mGrabbedUp = 0;
+    mForceExecute = 1;
     attention_info.position.y = y + offset;
     attention_info.position.z = z;
-    m6A9 = 0;
-    m65A = 2;
+    mLiftSmokeActive = 0;
+    mBgLockTimer = 2;
     mode_wait_init();
     u8 id = (u8)(u16)mPrmZ;
     p = play();
-    m650 = stoneEventIdx(&p->play.mEvtManager, 0, id);
+    mEventIdx = stoneEventIdx(&p->play.mEvtManager, 0, id);
     demo_non_init();
     J3DModel* model = mpModel;
     cullMtx = stone2::cullMatrixAddress(model);
@@ -210,27 +210,27 @@ BOOL daStone2::Act_c::Mthd_Create() {
         actor_condition = flags | 8;
     }
     prmZ_init();
-    m644 = prm(this, PRM_TYPE_W, PRM_TYPE_S);
+    mType = prm(this, PRM_TYPE_W, PRM_TYPE_S);
     u8 appears = chk_appear();
-    m659 = appears;
+    mAppear = appears;
     s32 phase = 5;
     if (appears) {
-        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
         const char* name = attr->resName;
         phase = stoneResLoad(&mPhase, name);
         if (phase == cPhs_COMPLEATE_e) {
-            attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
-            u32 type = m644;
+            attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
+            u32 type = mType;
             Attr_c *first = attr, *second;
             if (type >= Type_Max) {
-                JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-                type = m644;
+                JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+                type = mType;
                 attr = stone2::attributeAt(&M_attr, type);
             }
             second = attr;
             if (type >= Type_Max) {
-                JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-                type = m644;
+                JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+                type = mType;
                 attr = stone2::attributeAt(&M_attr, type);
             }
             u32 heap = attr->heapSize;
@@ -247,7 +247,7 @@ BOOL daStone2::Act_c::Mthd_Create() {
 /* 0249F968 */
 BOOL daStone2::Act_c::Delete() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    m65C.remove();
+    mBreakSmokeCb.remove();
     eff_lift_smoke_remove();
     return TRUE;
 }
@@ -255,9 +255,9 @@ BOOL daStone2::Act_c::Delete() {
 BOOL daStone2::Act_c::Mthd_Delete() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     BOOL result = TRUE;
-    if (m659) {
+    if (mAppear) {
         result = stoneMoveBGDelete(this);
-        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
         const char* name = attr->resName;
         stoneResDelete(&mPhase, name);
     }
@@ -266,10 +266,10 @@ BOOL daStone2::Act_c::Mthd_Delete() {
 /* 0249E6DC */
 void daStone2::Act_c::set_mtx() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    bool dropping = m648 == Mode_Drop;
+    bool dropping = mMode == Mode_Drop;
     f32 x = current.pos.x, y, z;
     if (dropping) {
-        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
         y = current.pos.y;
         f32 height = attr->m34;
         z = current.pos.z;
@@ -283,7 +283,7 @@ void daStone2::Act_c::set_mtx() {
     s16 rx = shape_angle.x, ry = shape_angle.y, rz = shape_angle.z;
     stoneRotateZXY(matrix, rx, ry, rz);
     if (dropping) {
-        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+        Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
         f32 zero = (f32)l_zero, height = attr->m34;
         stoneTranslateMatrix(zero, -height, zero);
     }
@@ -310,24 +310,24 @@ void daStone2::Act_c::init_mtx() {
 /* 0249F57C */
 void daStone2::Act_c::cull_set_draw() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    Attr_c* first = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
-    u32 type = m644;
+    Attr_c* first = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
+    u32 type = mType;
     Attr_c *second = first, *third, *fourth;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
         second = stone2::attributeAt(&M_attr, type);
     }
     third = second;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
         third = stone2::attributeAt(&M_attr, type);
     }
     fourth = third;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
         fourth = stone2::attributeAt(&M_attr, type);
     }
     f32 x = first->m28, y = second->m2A, z = third->m2C, radius = fourth->m2E;
@@ -336,17 +336,17 @@ void daStone2::Act_c::cull_set_draw() {
 /* 0249EC74 */
 void daStone2::Act_c::cull_set_move() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
-    u32 type = m644;
+    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
+    u32 type = mType;
     if (attr->m26 < 0) {
-        m657 = 1;
+        mForceExecute = 1;
         return;
     }
     Attr_c* slots[4];
     for (u32 i = 0; i < 4; i++) {
         if (type >= Type_Max) {
-            JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-            type = m644;
+            JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+            type = mType;
             attr = stone2::attributeAt(&M_attr, type);
         }
         slots[i] = attr;
@@ -364,12 +364,12 @@ void daStone2::Act_c::damaged(s32 cause) {
     s8 room = home.roomNo;
     fopAcM_createItemFromTable(&current.pos, item, saved, room, 0, angle.get(), cause, 0);
     fopAcM_cancelCarryNow(this);
-    (this->*stone2::procedureAt(&eff_break_proc, (u32)(s32)m644))();
-    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+    (this->*stone2::procedureAt(&eff_break_proc, (u32)(s32)mType))();
+    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
     if (attr->m50 > 0) {
         dComIfG_inf_c* p = play();
         dVibration_c* vibration = &p->play.mVibration;
-        attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+        attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
         f32 zero = (f32)l_zero, one = (f32)l_one;
         ProtectedLocal<cXyz> direction;
         direction->x = zero;
@@ -379,7 +379,7 @@ void daStone2::Act_c::damaged(s32 cause) {
         stoneShock(vibration, strength, -33, direction.get());
     }
     set_senv(255, 10);
-    attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+    attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
     room = current.roomNo;
     u32 sound = attr->m18;
     s8 reverb = stoneReverb(room);
@@ -397,7 +397,7 @@ BOOL daStone2::Act_c::damage_cc_proc() {
         wasDamaged = TRUE;
     } else if (mCyl.ChkTgHit()) {
         dCcD_GObjInf* hit = static_cast<dCcD_GObjInf*>(mCyl.GetTgHitObj());
-        if (hit && m644 != 3 && (hit->mAtType & 0x20)) {
+        if (hit && mType != 3 && (hit->mAtType & 0x20)) {
             damaged(7);
             wasDamaged = TRUE;
         }
@@ -413,7 +413,7 @@ BOOL daStone2::Act_c::damage_bg_proc() {
 /* 0249F32C */
 BOOL daStone2::Act_c::damage_bg_proc_directly() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m648 != Mode_Drop)
+    if (mMode != Mode_Drop)
         return FALSE;
     u32 flags = mAcch.m_flags;
     bool ground = flags & 0x20, wall = flags & 0x10, roof = flags & 0x200;
@@ -439,7 +439,7 @@ void daStone2::Act_c::eff_m_break(u16 effect, u16 frame) {
     manager = dComIfG_resControl();
     second->name = gabi::guest_addr("Always");
     J3DModelData* animation = stoneObjectResource(manager, second.get(), 0x66);
-    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
+    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
     f32 scaleValue = attr->m54;
     ProtectedLocal<cXyz> scale;
     scale->x = scaleValue;
@@ -478,11 +478,11 @@ static void breakSmoke(Act_c* a, u16 modelEffect, u16 burstEffect, u16 frame, cX
     }
     J3DModel* model = a->mpModel;
     PSMTXCopy(model ? &model->mBaseTransformMtx : nullptr, mDoMtx_stack_c::get());
-    stoneTransformVector(mDoMtx_stack_c::get(), offset, &a->m67C);
+    stoneTransformVector(mDoMtx_stack_c::get(), offset, &a->mBreakSmokePos);
     dComIfG_inf_c* p = play();
     dPa_control_c* manager = p->play.mParticle;
     stone2::Emitter* emitter =
-        stoneSetParticle(manager, 2, 0x2027, &a->m67C, 0, 0, 200, &a->m65C, -1, 0, 0, 0);
+        stoneSetParticle(manager, 2, 0x2027, &a->mBreakSmokePos, 0, 0, 200, &a->mBreakSmokeCb, -1, 0, 0, 0);
     if (!emitter)
         return;
     f32 rate = l_wallHeight;
@@ -521,12 +521,12 @@ void daStone2::Act_c::eff_b_break(u16 effect) {
     ProtectedLocal<Color4> color;
     color->b = (u8)tevStr.mColorC0.b;
     color->g = (u8)tevStr.mColorC0.g;
-    u32 type = m644;
+    u32 type = mType;
     color->r = (u8)tevStr.mColorC0.r;
     color->a = (u8)tevStr.mColorC0.a;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
     }
     u32 scaleBits = stone2::attributeFloatBits(stone2::attributeAt(&M_attr, type), &Attr_c::m58);
     f32 value = gabi::f32_from_bits(scaleBits);
@@ -569,10 +569,10 @@ void daStone2::Act_c::eff_break_ebrock2() {
 /* 0249FA68 */
 void daStone2::Act_c::eff_lift_smoke_start() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m6A9)
+    if (mLiftSmokeActive)
         return;
-    m6A8 = 1;
-    m6A9 = 1;
+    mLiftSmokeUsed = 1;
+    mLiftSmokeActive = 1;
     // HD: dKy_tevstr_init clears 0x72 words, matching the HD stack slot's 0x1C8 bytes.
     ProtectedLocal<dKy_tevstr_c> tev;
     // HD: default light objects occupy three parts of the enlarged lighting temporary.
@@ -608,12 +608,12 @@ void daStone2::Act_c::eff_lift_smoke_start() {
     ProtectedLocal<Color4> color;
     color->r = (u8)tev->mColorC0.r;
     color->b = (u8)tev->mColorC0.b;
-    u32 type = m644;
+    u32 type = mType;
     color->a = (u8)tev->mColorC0.a;
     color->g = (u8)tev->mColorC0.g;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
     }
     f32 scaleValue = stone2::attributeAt(&M_attr, type)->m5C;
     ProtectedLocal<cXyz> scale;
@@ -622,21 +622,21 @@ void daStone2::Act_c::eff_lift_smoke_start() {
     scale->y = scaleValue;
     dComIfG_inf_c* p = play();
     dPa_control_c* manager = p->play.mParticle;
-    stoneSetParticle(manager, 2, 0x23F2, &current.pos, 0, scale.get(), 128, &m688, -1, color.get(),
+    stoneSetParticle(manager, 2, 0x23F2, &current.pos, 0, scale.get(), 128, &mLiftSmokeCb, -1, color.get(),
                      &tev->mColorK0, 0);
 }
 /* 0249F17C */
 void daStone2::Act_c::eff_lift_smoke_end() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m6A9) {
-        m6A9 = 0;
-        m688.end();
+    if (mLiftSmokeActive) {
+        mLiftSmokeActive = 0;
+        mLiftSmokeCb.end();
     }
 }
 /* 0249F958 */
 void daStone2::Act_c::eff_lift_smoke_remove() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    m688.remove();
+    mLiftSmokeCb.remove();
 }
 /* 0249EE10 */
 void daStone2::Act_c::set_senv(s32 sound, s32 radius) {
@@ -663,7 +663,7 @@ void daStone2::Act_c::mode_wait_init() {
     u32 at = mCyl.mObjAt.mSPrm, co = mCyl.mObjCo.mSPrm, tg = mCyl.mObjTg.mSPrm;
     mCyl.mObjAt.mSPrm = at & ~1u;
     mCyl.mObjCo.mSPrm = co & ~1u;
-    m648 = Mode_Wait;
+    mMode = Mode_Wait;
     mCyl.mObjTg.mSPrm = tg | 1u;
 }
 /* 0249FA28 */
@@ -673,10 +673,10 @@ void daStone2::Act_c::mode_wait() {
         mode_carry_init();
         return;
     }
-    u8 delay = m65A;
+    u8 delay = mBgLockTimer;
     if (delay) {
         delay = (u8)(delay - 1);
-        m65A = delay;
+        mBgLockTimer = delay;
         if (!delay) {
             stone2::Background* bg = mpBgW;
             u8 flags = bg->mFlags;
@@ -697,7 +697,7 @@ void daStone2::Act_c::mode_carry_init() {
     stone2::Background* bg = mpBgW;
     stoneReleaseBackground(&p->play.mBgS, bg);
     on_switch();
-    m648 = Mode_Carry;
+    mMode = Mode_Carry;
 }
 /* 0249FF48 */
 void daStone2::Act_c::mode_carry() {
@@ -705,7 +705,7 @@ void daStone2::Act_c::mode_carry() {
     dComIfG_inf_c* p = play();
     stone2::Player* player = reinterpret_cast<stone2::Player*>((fopAc_ac_c*)p->play.mPlayerInfo[0].mpPlayer);
     if (player->mGrabFlags & 0x8000)
-        m658 = 1;
+        mGrabbedUp = 1;
     p = play();
     player = reinterpret_cast<stone2::Player*>((fopAc_ac_c*)p->play.mPlayerInfo[0].mpPlayer);
     if (player->mGrabFlags & 0x8000)
@@ -722,43 +722,43 @@ void daStone2::Act_c::mode_carry() {
 /* 0249FD5C */
 void daStone2::Act_c::mode_drop_init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "m644 >= 0 && m644 < Type_Max");
-    u32 at = mCyl.mObjAt.mSPrm, type = m644, co = mCyl.mObjCo.mSPrm, tg = mCyl.mObjTg.mSPrm;
+    Attr_c* attr = checkedAttr(this, "d_a_stone2.cpp", "M_type >= 0 && M_type < Type_Max");
+    u32 at = mCyl.mObjAt.mSPrm, type = mType, co = mCyl.mObjCo.mSPrm, tg = mCyl.mObjTg.mSPrm;
     f32 forward = attr->m40;
     mCyl.mObjCo.mSPrm = co | 1u;
     mCyl.mObjAt.mSPrm = at | 1u;
     mCyl.mObjTg.mSPrm = tg | 1u;
     mStts.m_weight = 200;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
     }
     attr = stone2::attributeAt(&M_attr, type);
-    type = m644;
+    type = mType;
     f32 vertical = attr->m3C;
     speedF = forward;
     speed.y = vertical;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
     }
     gravity = stone2::attributeAt(&M_attr, type)->m30;
     demo_req_init();
-    m648 = Mode_Drop;
+    mMode = Mode_Drop;
 }
 /* 0249FE90 */
 void daStone2::Act_c::mode_drop() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     stoneSetRoom(this, &mAcch.m_gnd);
-    u32 type = m644;
+    u32 type = mType;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
     }
     Attr_c *first = stone2::attributeAt(&M_attr, type), *second = first;
     if (type >= Type_Max) {
-        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-        type = m644;
+        JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+        type = mType;
         second = stone2::attributeAt(&M_attr, type);
     }
     f32 stream = first->m44, damping = second->m48;
@@ -781,19 +781,19 @@ void daStone2::Act_c::mode_fine_init() {
     if (actor_status & 0x2000)
         fopAcM_cancelCarryNow(this);
     u32 attention = attention_info.flags;
-    m654 = 1;
-    m648 = Mode_Fine;
+    mFineTimer = 1;
+    mMode = Mode_Fine;
     attention_info.flags = attention & ~0x10u;
 }
 /* 0249FFE0 */
 void daStone2::Act_c::mode_fine() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    s16 timer = m654;
+    s16 timer = mFineTimer;
     if (timer > 0) {
         timer = (s16)(timer - 1);
-        m654 = timer;
-        if (!timer && m644 == 3) {
-            s16 event = m650;
+        mFineTimer = timer;
+        if (!timer && mType == 3) {
+            s16 event = mEventIdx;
             dComIfG_inf_c* p = play();
             if (!stoneEventExists(&p->play.mEvtManager, event))
                 stoneStartSystemSound(0x806);
@@ -803,22 +803,22 @@ void daStone2::Act_c::mode_fine() {
 /* 0249F3D0 */
 BOOL daStone2::Act_c::mode_proc_call() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    (this->*stone2::procedureAt(&mode_proc, (u32)(s32)m648))();
-    s32 mode = m648;
+    (this->*stone2::procedureAt(&mode_proc, (u32)(s32)mMode))();
+    s32 mode = mMode;
     if (!mode)
         return TRUE;
     if (mode != Mode_Fine) {
         f32 y = current.pos.y, z = current.pos.z, x = current.pos.x;
         dComIfG_inf_c* p = play();
         mAcch.CrrPos(&p->play.mBgS);
-        if (m648 == Mode_Carry) {
+        if (mMode == Mode_Carry) {
             current.pos.y = y;
             current.pos.x = x;
             current.pos.z = z;
         }
     }
     if (!damage_bg_proc_directly()) {
-        if (m648 != Mode_Carry) {
+        if (mMode != Mode_Carry) {
             u8 room = current.roomNo;
             tevStr.mRoomNo = room;
             dComIfG_inf_c* p = play();
@@ -827,8 +827,8 @@ BOOL daStone2::Act_c::mode_proc_call() {
         }
     } else
         mode_fine_init();
-    if (m648 == Mode_Fine && m64C == Demo_Non && (m65C.m10 & 1)) {
-        if (!m6A8 || (m688.m10 & 1))
+    if (mMode == Mode_Fine && mDemo == Demo_Non && (mBreakSmokeCb.m10 & 1)) {
+        if (!mLiftSmokeUsed || (mLiftSmokeCb.m10 & 1))
             return FALSE;
     }
     return TRUE;
@@ -836,7 +836,7 @@ BOOL daStone2::Act_c::mode_proc_call() {
 /* 0249E6D0 */
 void daStone2::Act_c::demo_non_init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    m64C = Demo_Non;
+    mDemo = Demo_Non;
 }
 /* 024A0B10 */
 void daStone2::Act_c::demo_non() {
@@ -846,19 +846,19 @@ void daStone2::Act_c::demo_non() {
 /* 0249F238 */
 void daStone2::Act_c::demo_req_init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m64C == Demo_Non) {
+    if (mDemo == Demo_Non) {
         u8 id = (u8)(u16)mPrmZ;
-        s16 event = m650;
+        s16 event = mEventIdx;
         stoneOrderEvent(this, event, id, 65535, 0, 1);
         u16 flags = eventInfo.mCondition;
-        m64C = Demo_Req;
+        mDemo = Demo_Req;
         eventInfo.mCondition = flags | 2;
     }
 }
 /* 024A0060 */
 void daStone2::Act_c::demo_req() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    s16 event = m650;
+    s16 event = mEventIdx;
     dComIfG_inf_c* p = play();
     if (!stoneEventExists(&p->play.mEvtManager, event)) {
         demo_non_init();
@@ -869,7 +869,7 @@ void daStone2::Act_c::demo_req() {
         return;
     }
     u8 id = (u8)(u16)mPrmZ;
-    event = m650;
+    event = mEventIdx;
     stoneOrderEvent(this, event, id, 65535, 0, 1);
     u16 flags = (u16)eventInfo.mCondition;
     eventInfo.mCondition = flags | 2;
@@ -877,12 +877,12 @@ void daStone2::Act_c::demo_req() {
 /* 024A0054 */
 void daStone2::Act_c::demo_run_init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    m64C = Demo_Run;
+    mDemo = Demo_Run;
 }
 /* 024A0128 */
 void daStone2::Act_c::demo_run() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    s16 event = m650;
+    s16 event = mEventIdx;
     dComIfG_inf_c* p = play();
     if (stoneEventEnd(&p->play.mEvtManager, event)) {
         p = play();
@@ -894,13 +894,13 @@ void daStone2::Act_c::demo_run() {
 /* 0249F2A4 */
 void daStone2::Act_c::demo_proc_call() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    (this->*stone2::procedureAt(&demo_proc, (u32)(s32)m64C))();
+    (this->*stone2::procedureAt(&demo_proc, (u32)(s32)mDemo))();
 }
 /* 0249F6CC */
 BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     cull_set_move();
-    bool active = m657 || m648 != Mode_Wait;
+    bool active = mForceExecute || mMode != Mode_Wait;
     // HD: the actor-condition bit bypasses the culling call.
     if (!active) {
         u32 cull = prm(this, PRM_CULL_W, PRM_CULL_S);
@@ -910,8 +910,8 @@ BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
             active = !stoneCullingCheck(this);
     }
     if (active) {
-        s32 mode = m648;
-        m657 = 0;
+        s32 mode = mMode;
+        mForceExecute = 0;
         if (mode != Mode_Fine && (damage_cc_proc() || damage_bg_proc())) {
             eff_lift_smoke_end();
             mode_fine_init();
@@ -919,23 +919,23 @@ BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
         }
         demo_proc_call();
         if (mode_proc_call()) {
-            if (m648 != Mode_Fine) {
+            if (mMode != Mode_Fine) {
                 u8 room = current.roomNo;
                 mStts.mRoomId = room;
                 stoneMoveCollision(&mCyl, &current.pos);
                 dComIfG_inf_c* p = play();
                 stoneRegisterCollision(&p->play.mCcS, &mCyl);
-                if (m648 == Mode_Drop) {
+                if (mMode == Mode_Drop) {
                     p = play();
                     stoneSetMass(stone2::massManager(p), &mCyl, 3);
                 }
             }
-            u32 type = m644;
+            u32 type = mType;
             f32 x = current.pos.x;
             attention_info.position.x = x;
             if (type >= Type_Max) {
-                JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "m644 >= 0 && m644 < Type_Max");
-                type = m644;
+                JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
+                type = mType;
             }
             f32 y = current.pos.y, eyeX = attention_info.position.x,
                 height = stone2::attributeAt(&M_attr, type)->m38, z = current.pos.z;
@@ -956,7 +956,7 @@ BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
 /* 0249F8B4 */
 BOOL daStone2::Act_c::Draw() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m648 != Mode_Fine) {
+    if (mMode != Mode_Fine) {
         dScnKy_env_light_c* env = dKy_getEnvlight();
         settingTevStruct(env, 1, &current.pos, &tevStr);
         env = dKy_getEnvlight();
@@ -1031,8 +1031,8 @@ static Act_c* construct(Act_c* a) {
     a->mCyl.__vtbl_hitinf = stone2::HitInfoVtable;
     a->mCyl.mCyl.__vtbl = stone2::CylinderVtable;
     stone2::shape(&a->mCyl)->mVtable = stone2::ShapeVtable;
-    stoneSmokeConstruct(&a->m65C, 1);
-    stoneSmokeConstruct(&a->m688, 1);
+    stoneSmokeConstruct(&a->mBreakSmokeCb, 1);
+    stoneSmokeConstruct(&a->mLiftSmokeCb, 1);
     return a;
 }
 /* 024A09C0 */
@@ -1111,34 +1111,34 @@ data l_smallOffsetGuard 1046E0F0
 data l_smallDynamicsGuard 1046E0F4
 data l_smallParticleGuard 1046E0F8
 str 1003E438 "d_a_stone2.cpp" in 0249E3A0
-str 1003E448 "m644 >= 0 && m644 < Type_Max" renamed in 0249E3A0
+str 1003E448 "M_type >= 0 && M_type < Type_Max" in 0249E3A0
 str 1003E4B0 "d_a_stone2.cpp" in 0249E528
-str 1003E4C0 "m644 >= 0 && m644 < Type_Max" renamed in 0249E528
+str 1003E4C0 "M_type >= 0 && M_type < Type_Max" in 0249E528
 str 1003E4F4 "d_a_stone2.cpp" in 0249E5B8
-str 1003E504 "m644 >= 0 && m644 < Type_Max" renamed in 0249E5B8
+str 1003E504 "M_type >= 0 && M_type < Type_Max" in 0249E5B8
 str 1003E52C "d_a_stone2.cpp" in 0249E6DC
-str 1003E53C "m644 >= 0 && m644 < Type_Max" renamed in 0249E6DC
+str 1003E53C "M_type >= 0 && M_type < Type_Max" in 0249E6DC
 str 1003E56C "d_a_stone2.cpp" in 0249E8BC
-str 1003E57C "m644 >= 0 && m644 < Type_Max" renamed in 0249E8BC
+str 1003E57C "M_type >= 0 && M_type < Type_Max" in 0249E8BC
 str 1003E5A0 "d_a_stone2.cpp" in 0249EC74
-str 1003E5B0 "m644 >= 0 && m644 < Type_Max" renamed in 0249EC74
+str 1003E5B0 "M_type >= 0 && M_type < Type_Max" in 0249EC74
 str 1003E5FC "d_a_stone2.cpp" in 0249EEAC
-str 1003E60C "m644 >= 0 && m644 < Type_Max" renamed in 0249EEAC
+str 1003E60C "M_type >= 0 && M_type < Type_Max" in 0249EEAC
 str 1003E668 "d_a_stone2.cpp" in 0249F57C
-str 1003E678 "m644 >= 0 && m644 < Type_Max" renamed in 0249F57C
+str 1003E678 "M_type >= 0 && M_type < Type_Max" in 0249F57C
 str 1003E69C "d_a_stone2.cpp" in 0249F6CC
-str 1003E6AC "m644 >= 0 && m644 < Type_Max" renamed in 0249F6CC
+str 1003E6AC "M_type >= 0 && M_type < Type_Max" in 0249F6CC
 str 1003E6D4 "d_a_stone2.cpp" in 0249FA68
-str 1003E6E4 "m644 >= 0 && m644 < Type_Max" renamed in 0249FA68
+str 1003E6E4 "M_type >= 0 && M_type < Type_Max" in 0249FA68
 str 1003E708 "d_a_stone2.cpp" in 0249FD5C
-str 1003E718 "m644 >= 0 && m644 < Type_Max" renamed in 0249FD5C
+str 1003E718 "M_type >= 0 && M_type < Type_Max" in 0249FD5C
 str 1003E73C "d_a_stone2.cpp" in 0249FE90
-str 1003E74C "m644 >= 0 && m644 < Type_Max" renamed in 0249FE90
+str 1003E74C "M_type >= 0 && M_type < Type_Max" in 0249FE90
 str 1003E778 "d_a_stone2.cpp" in 024A018C
-str 1003E788 "m644 >= 0 && m644 < Type_Max" renamed in 024A018C
+str 1003E788 "M_type >= 0 && M_type < Type_Max" in 024A018C
 str 1003E7AC "d_a_stone2.cpp" in 024A02F0
-str 1003E7BC "m644 >= 0 && m644 < Type_Max" renamed in 024A02F0
-str 1003E4E4 "model_data != NULL" renamed
+str 1003E7BC "M_type >= 0 && M_type < Type_Max" in 024A02F0
+str 1003E4E4 "model_data != 0"
 str 1003E46C "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 str 1003E770 "Always"
 ext 025BA0C0 u32 stoneIsSwitch(dSv_info_c*, u32, s32)

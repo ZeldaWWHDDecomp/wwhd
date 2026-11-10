@@ -36,11 +36,11 @@ static BOOL daDEMO_DK_Draw(demo_dk_class* i_this) {
 /* 02122980 */
 static void anm_init(demo_dk_class* i_this, s32 bckAnmIdx, f32 morf, u8 loopMode, f32 playSpeed, s32 soundIdx) {
     if (soundIdx >= 0) {
-        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("DEMO_DK", bckAnmIdx);
-        void* snd = dComIfG_getObjectRes("DEMO_DK", soundIdx);
+        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Demo_Dk", bckAnmIdx);
+        void* snd = dComIfG_getObjectRes("Demo_Dk", soundIdx);
         i_this->mpMorf->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, snd);
     } else {
-        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("DEMO_DK", bckAnmIdx);
+        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Demo_Dk", bckAnmIdx);
         i_this->mpMorf->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, nullptr);
     }
 }
@@ -50,13 +50,13 @@ static inline void mode_wait(demo_dk_class* i_this) {
     if (i_this->mpMorf->isStop()) {
         f32 tmp = 0.099999995f;
 
-        if (i_this->unk_2C0 > 0) {
-            i_this->unk_2C0 = i_this->unk_2C0 - 1;
+        if (i_this->mYawnWait > 0) {
+            i_this->mYawnWait = i_this->mYawnWait - 1;
         }
 
-        if (i_this->unk_2C0 == 0 && cM_rnd() < tmp) {
+        if (i_this->mYawnWait == 0 && cM_rnd() < tmp) {
             anm_init(i_this, dRes_INDEX_DEMO_DK_BCK_DK_L_AKUBI1_e, 5.0f, 0, 1.0f, 0);
-            i_this->unk_2B6 = demo_dk_class::MODE_AKUBI_e;
+            i_this->mMode = demo_dk_class::MODE_AKUBI_e;
         } else {
             anm_init(i_this, dRes_INDEX_DEMO_DK_BCK_DK_L_WAIT1_e, 0.0f, 0, 1.0f, 0);
         }
@@ -67,20 +67,20 @@ static inline void mode_wait(demo_dk_class* i_this) {
 static inline void mode_akubi(demo_dk_class* i_this) {
     if (i_this->mpMorf->isStop()) {
         anm_init(i_this, dRes_INDEX_DEMO_DK_BCK_DK_L_WAIT1_e, 5.0f, 0, 2.0f, 0);
-        i_this->unk_2C0 = 3;
-        i_this->unk_2B6 = demo_dk_class::MODE_WAIT_e;
+        i_this->mYawnWait = 3;
+        i_this->mMode = demo_dk_class::MODE_WAIT_e;
     }
 }
 
 /* 02122AA8 */
 static BOOL daDEMO_DK_Execute(demo_dk_class* i_this) {
     for (s32 i = 0; i < 2; i++) {
-        if (i_this->unk_2BC[i] != 0) {
-            i_this->unk_2BC[i] = i_this->unk_2BC[i] - 1;
+        if (i_this->mTimers[i] != 0) {
+            i_this->mTimers[i] = i_this->mTimers[i] - 1;
         }
     }
 
-    switch (i_this->unk_2B6) {
+    switch (i_this->mMode) {
     case demo_dk_class::MODE_WAIT_e:
         mode_wait(i_this);
         break;
@@ -91,7 +91,7 @@ static BOOL daDEMO_DK_Execute(demo_dk_class* i_this) {
 
     i_this->actor.scale.x = 1.0f;
     i_this->actor.scale.z = i_this->actor.scale.y = 1.0f;
-    i_this->actor.current.pos.y = i_this->unk_2C4.y;
+    i_this->actor.current.pos.y = i_this->mBasePos.y;
     fopAcM_setCullSizeFar(&i_this->actor, 10.0f);
 
     i_this->mpMorf->play(nullptr, 0, 0);
@@ -115,7 +115,7 @@ static BOOL daDEMO_DK_IsDelete(demo_dk_class*) {
 
 /* 02122D5C */
 static BOOL daDEMO_DK_Delete(demo_dk_class* i_this) {
-    dComIfG_resDelete(&i_this->mPhase, "DEMO_DK");
+    dComIfG_resDelete(&i_this->mPhase, "Demo_Dk");
     return TRUE;
 }
 
@@ -123,8 +123,8 @@ static BOOL daDEMO_DK_Delete(demo_dk_class* i_this) {
 static BOOL useHeapInit(fopAc_ac_c* a_this) {
     demo_dk_class* i_this = (demo_dk_class*)a_this;
 
-    J3DModelData* data = (J3DModelData*)dComIfG_getObjectRes("DEMO_DK", dRes_INDEX_DEMO_DK_BMD_DK_L_e);
-    J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("DEMO_DK", dRes_INDEX_DEMO_DK_BCK_DK_L_WAIT1_e);
+    J3DModelData* data = (J3DModelData*)dComIfG_getObjectRes("Demo_Dk", dRes_INDEX_DEMO_DK_BMD_DK_L_e);
+    J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Demo_Dk", dRes_INDEX_DEMO_DK_BCK_DK_L_WAIT1_e);
     i_this->mpMorf = mDoExt_McaMorf::create(nullptr, data, nullptr, nullptr, anm, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 1,
                                             nullptr, 0, 0x11020203);
 
@@ -139,9 +139,9 @@ static cPhs_State daDEMO_DK_Create(fopAc_ac_c* a_this) {
     demo_dk_class* i_this = (demo_dk_class*)a_this;
 
     fopAcM_ct(a_this, demo_dk_class);
-    cPhs_State ret = dComIfG_resLoad(&i_this->mPhase, "DEMO_DK");
+    cPhs_State ret = dComIfG_resLoad(&i_this->mPhase, "Demo_Dk");
     if (ret == cPhs_COMPLEATE_e) {
-        i_this->unk_2C4.copy(a_this->current.pos);
+        i_this->mBasePos.copy(a_this->current.pos);
         if (!fopAcM_entrySolidHeap(a_this, useHeapInit, 0x6000)) {
             return cPhs_ERROR_e;
         }
@@ -184,10 +184,10 @@ static void SafeString_assureTermination(SafeString*) {
 }
 
 /* WWHD glue (tools/verify/autoglue.py)
-str 1000DA2C "DEMO_DK" renamed
-str 1000DA48 "DEMO_DK" renamed in 02122D5C
-str 1000DA50 "DEMO_DK" renamed in 02122D8C
-str 1000DA60 "DEMO_DK" renamed in 02122E78
+str 1000DA2C "Demo_Dk"
+str 1000DA48 "Demo_Dk" in 02122D5C
+str 1000DA50 "Demo_Dk" in 02122D8C
+str 1000DA60 "Demo_Dk" in 02122E78
 ext 025D672C void fopAcM_SetMin(fopAc_ac_c*, f32, f32, f32)
 ext 025D673C void fopAcM_SetMax(fopAc_ac_c*, f32, f32, f32)
 */

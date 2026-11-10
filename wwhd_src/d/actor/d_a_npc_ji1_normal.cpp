@@ -64,26 +64,26 @@ static inline BOOL ji1_checkEndFrame(daNpc_Ji1_c *i_this, f32 d) {
   mDoExt_McaMorf *m = i_this->mpOrcaMorf;
   return m->checkFrame(m->getEndFrame() - d);
 }
-/* dComIfGp_particle_set(ID_AK_JN_NG, field_0x7E0.GetTgHitPosP()) */
+/* dComIfGp_particle_set(ID_AK_JN_NG, mGuardCyl.GetTgHitPosP()) */
 static inline void ji1_ng_particle(daNpc_Ji1_c *i_this) {
   dComIfGp_particle_set(dPa_name::Ji1Normal_ID_AK_JN_NG,
-                        i_this->field_0x7E0.GetTgHitPosP());
+                        i_this->mGuardCyl.GetTgHitPosP());
 }
 /* inlined into normalSubActionHarpoonGuard, normalSubActionGuard */
 static inline bool ji1_guard_event(daNpc_Ji1_c *i_this, u32 n) {
   i_this->setAnm(Ji1Normal_KAMAE, 4.0f, 0);
-  i_this->field_0xC84 = n;
-  ptmf_copy(i_this->field_0x2C8, i_this->mAction);
+  i_this->mEventNo = n;
+  ptmf_copy(i_this->mEventReturnAction, i_this->mAction);
   ji1_setAction(i_this, ACT_eventAction, nullptr);
   return true;
 }
 
 /* 0224FCC4 */
 void daNpc_Ji1_c::normalSubActionHarpoonGuard(s16 param_1) {
-  if (field_0xD6C == 0) {
-    if (field_0x7E0.ChkTgHit()) {
-      field_0xD6C = 1;
-      field_0xD74 += 1;
+  if (mSubActionPhase == 0) {
+    if (mGuardCyl.ChkTgHit()) {
+      mSubActionPhase = 1;
+      mGuardCount += 1;
       field_0xD68 = 0;
       setAnm(Ji1Normal_YKGUARD, 0.0f, 1);
       ji1_ng_particle(this);
@@ -102,7 +102,7 @@ void daNpc_Ji1_c::normalSubActionHarpoonGuard(s16 param_1) {
     }
   }
 
-  if (field_0xD6C == 1) {
+  if (mSubActionPhase == 1) {
     cLib_addCalcAngleS2(&current.angle.y, param_1, 2, 0x2000);
     if (mAnimation == Ji1Normal_TOKAMAE) {
       if (ji1_checkEndFrame(this, 14.0f)) {
@@ -113,7 +113,7 @@ void daNpc_Ji1_c::normalSubActionHarpoonGuard(s16 param_1) {
         s32 n = field_0xD68;
         field_0xD68 = n + 1;
         if (n > 2) {
-          field_0xD6C = 0;
+          mSubActionPhase = 0;
           setAnm(Ji1Normal_WAIT01, 16.0f, 0);
         } else {
           setAnm(Ji1Normal_TOKAMAE, 4.0f, 1);
@@ -122,14 +122,14 @@ void daNpc_Ji1_c::normalSubActionHarpoonGuard(s16 param_1) {
       }
     } else {
       if (ji1_checkEndFrame(this, 2.0f)) {
-        field_0xD6C = 0;
-        if (field_0xD74 == 3) {
+        mSubActionPhase = 0;
+        if (mGuardCount == 3) {
           ji1_guard_event(this, Ji1Normal_CUT_GUARD_THREE);
-        } else if (field_0xD74 == 5) {
+        } else if (mGuardCount == 5) {
           ji1_guard_event(this, Ji1Normal_CUT_GUARD_FIVE);
-        } else if (field_0xD74 > 5) {
+        } else if (mGuardCount > 5) {
           ji1_guard_event(this, Ji1Normal_CUT_GUARD_MANY);
-          field_0xD74 = 0;
+          mGuardCount = 0;
         } else {
           setAnm(Ji1Normal_WARAI, 8.0f, 0);
         }
@@ -140,27 +140,27 @@ void daNpc_Ji1_c::normalSubActionHarpoonGuard(s16 param_1) {
 
 /* 022504E4 */
 void daNpc_Ji1_c::normalSubActionGuard(s16 param_1) {
-  if (field_0xD6C == 0) {
-    if (field_0x7E0.ChkTgHit()) {
-      field_0xD6C = 1;
+  if (mSubActionPhase == 0) {
+    if (mGuardCyl.ChkTgHit()) {
+      mSubActionPhase = 1;
       field_0xD68 = 0;
       setAnm(Ji1Normal_GUARD, 0.0f, 1);
       ji1_seStart(this, JA_SE_CV_JI_DEFENCE, 0);
     }
   }
 
-  if (field_0xD6C == 1) {
+  if (mSubActionPhase == 1) {
     cLib_addCalcAngleS2(&current.angle.y, param_1, 2, 0x2000);
     if (ji1_checkEndFrame(this, 2.0f)) {
       s32 n = field_0xD68;
       field_0xD68 = n + 1;
       if (n > 1) {
-        field_0xD6C = 0;
-        if (field_0xD74 == 3) {
+        mSubActionPhase = 0;
+        if (mGuardCount == 3) {
           ji1_guard_event(this, Ji1Normal_CUT_GUARD_THREE);
-        } else if (field_0xD74 == 5) {
+        } else if (mGuardCount == 5) {
           ji1_guard_event(this, Ji1Normal_CUT_GUARD_FIVE);
-        } else if (field_0xD74 > 5) {
+        } else if (mGuardCount > 5) {
           ji1_guard_event(this, Ji1Normal_CUT_GUARD_MANY);
         } else {
           setAnm(Ji1Normal_WAIT02, 8.0f, 0);
@@ -175,9 +175,9 @@ BOOL daNpc_Ji1_c::normalAction(void *arg) {
   fopAc_ac_c *player = daPy_getPlayerActorClass();
   f32 temp = ji1_absXZ_diff(&player->current.pos, &current.pos);
 
-  if (field_0xC78 == 0) {
-    field_0x7E0.mGObjTg.mSPrm |= 1; /* OnTgShield (dCcD_GObjTg SPrm) */
-    if (field_0xD84 == 1) {
+  if (mActionPhase == 0) {
+    mGuardCyl.mGObjTg.mSPrm |= 1; /* OnTgShield (dCcD_GObjTg SPrm) */
+    if (mHarpoonState == 1) {
       setAnm(Ji1Normal_WAIT01, 8.0f, 0);
     } else {
       setAnm(Ji1Normal_WAIT02, 8.0f, 0);
@@ -185,8 +185,8 @@ BOOL daNpc_Ji1_c::normalAction(void *arg) {
     if (dComIfGs_isEventBit(Ji1NormalEventFlag::UNK_0520)) {
       eventInfo.mpCheckCB = kXyCheckCallbackHD;
     }
-    field_0xC78 += 1;
-  } else if (field_0xC78 != -1) {
+    mActionPhase += 1;
+  } else if (mActionPhase != -1) {
     dComIfGp_get(); /* HD: a daPy_getPlayerActorClass() whose result is unused
                      */
     s16 temp2 = ji1_atan2_diff(&player->current.pos, &current.pos);
@@ -209,7 +209,7 @@ BOOL daNpc_Ji1_c::normalAction(void *arg) {
       }
     }
 
-    if (field_0xD84 == 1) {
+    if (mHarpoonState == 1) {
       normalSubActionHarpoonGuard(temp2);
     } else {
       normalSubActionGuard(temp2);
@@ -246,7 +246,7 @@ BOOL daNpc_Ji1_c::kaitenExpAction(void *arg) {
     }
   }
 
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     setAnm(Ji1Normal_BTKAMASI, 4.0f, 0);
     if (!eventInfo.checkCommandDemoAccrpt()) {
       fopAcM_orderOtherEventId(this, mEventIdx[Ji1Normal_EVENT_SPIN_EXPLAIN],
@@ -254,8 +254,8 @@ BOOL daNpc_Ji1_c::kaitenExpAction(void *arg) {
       eventInfo.onCondition(dEvtCmd_INDEMO_e);
       return false;
     }
-    field_0xC78 += 1;
-  } else if (field_0xC78 != -1) {
+    mActionPhase += 1;
+  } else if (mActionPhase != -1) {
     s32 staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     if (getEventActionNo(staffIdx) == 2) {
       ji1_setAction(this, ACT_kaitenspeakAction, nullptr);
@@ -269,10 +269,10 @@ BOOL daNpc_Ji1_c::kaitenExpAction(void *arg) {
 
 /* 02251424 */
 BOOL daNpc_Ji1_c::kaitenspeakAction(void *arg) {
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     setAnm(Ji1Normal_WAIT02, 8.0f, 0);
-    field_0xC78 += 1;
-  } else if (field_0xC78 != -1) {
+    mActionPhase += 1;
+  } else if (mActionPhase != -1) {
     fopAc_ac_c *player = daPy_getPlayerActorClass();
     s16 temp2 = (s16)(ji1_atan2_diff(&player->current.pos, &current.pos) -
                       current.angle.y);
@@ -298,19 +298,19 @@ BOOL daNpc_Ji1_c::kaitenwaitAction(void *arg) {
   fopAc_ac_c *player = daPy_getPlayerActorClass();
   f32 temp = ji1_absXZ_diff(&player->current.pos, &current.pos);
 
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     if (!dComIfGs_isEventBit(Ji1NormalEventFlag::UNK_0501)) {
       setAnm(Ji1Normal_UDEGUMI, 16.0f, 0);
     } else {
       setAnm(Ji1Normal_WAIT02, 4.0f, 0);
     }
-    field_0xC78 += 1;
-  } else if (field_0xC78 != -1) {
+    mActionPhase += 1;
+  } else if (mActionPhase != -1) {
     if (!dComIfGs_isEventBit(Ji1NormalEventFlag::UNK_0501) &&
         daNpc_Ji1_plRoomOutCheck()) {
-      field_0xC84 = Ji1Normal_CUT_WAIT;
+      mEventNo = Ji1Normal_CUT_WAIT;
       ji1_setAction(this, ACT_eventAction, nullptr);
-      ptmf_set(field_0x2C8, ACT_kaitenwaitAction);
+      ptmf_set(mEventReturnAction, ACT_kaitenwaitAction);
       return true;
     }
 
@@ -353,7 +353,7 @@ BOOL daNpc_Ji1_c::kaitenwaitAction(void *arg) {
       ji1_setAction(this, ACT_kaitenAction, nullptr);
     }
 
-    if (field_0xD84 == 1) {
+    if (mHarpoonState == 1) {
       normalSubActionHarpoonGuard(temp2);
     } else {
       normalSubActionGuard(temp2);
@@ -367,7 +367,7 @@ BOOL daNpc_Ji1_c::kaitenwaitAction(void *arg) {
 /* 02251ED0 */
 BOOL daNpc_Ji1_c::kaitenAction(void *arg) {
   Ji1NormalMessageHD *mgr = l_messageManager.get();
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     if (!eventInfo.checkCommandDemoAccrpt()) {
       fopAcM_orderOtherEventId(this, mEventIdx[Ji1Normal_EVENT_SPIN], 0xFF,
                                0xFFFF, 0, 1);
@@ -379,8 +379,8 @@ BOOL daNpc_Ji1_c::kaitenAction(void *arg) {
     mMsgNo = Ji1Normal_MSG_SPIN_START;
     dComIfGp_evmng_cutEnd(staffIdx);
     current.angle.y = 0;
-    field_0xC78 += 1;
-  } else if (field_0xC78 != -1) {
+    mActionPhase += 1;
+  } else if (mActionPhase != -1) {
     s32 staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     int actionNo = getEventActionNo(staffIdx);
     if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
@@ -401,14 +401,14 @@ BOOL daNpc_Ji1_c::kaitenAction(void *arg) {
         setAnm(Ji1Normal_AKIRE, 8.0f, 0);
         dComIfGp_evmng_cutEnd(staffIdx);
       }
-    } else if (field_0xC78 == 1) {
+    } else if (mActionPhase == 1) {
       if (actionNo == Ji1Normal_CUT_TALK) {
         gabi::Local<cXyz> v;
         v->set(0.0f, 1.0f, 0.0f);
         dComIfGp_getVibration_StartShock(5, -0x11, v);
         ji1NormalSoundHD(JA_SE_CM_AJ_ANGRY_FOOT, nullptr);
       }
-      field_0xC78 += 1;
+      mActionPhase += 1;
     } else if (ji1NormalMessageStatusHD(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
       // HD: next_msgStatus is passed on without narrowing its native return
       // register.
@@ -423,7 +423,7 @@ BOOL daNpc_Ji1_c::kaitenAction(void *arg) {
         ji1NormalSetMessageStatusHD(mgr, fopMsgStts_MSG_DESTROYED_e);
         l_msgId = fpcM_ERROR_PROCESS_ID_e;
         mMsgNo = Ji1Normal_MSG_SPIN_END;
-        field_0xC78 = 1;
+        mActionPhase = 1;
         return true;
       }
       if (staffIdx != -1) {
@@ -431,11 +431,11 @@ BOOL daNpc_Ji1_c::kaitenAction(void *arg) {
       }
       if (dComIfGp_evmng_endCheck(mEventIdx[Ji1Normal_EVENT_SPIN])) {
         dComIfGs_onEventBit(Ji1NormalEventFlag::UNK_0501);
-        field_0xD28.copy(home.pos);
+        mInitPos.copy(home.pos);
         home.angle.y = 0;
         ji1NormalSetMessageStatusHD(mgr, fopMsgStts_MSG_DESTROYED_e);
         if (mMsgNo == Ji1Normal_MSG_OPENING) {
-          field_0xD70 = -1;
+          mTeachStep = -1;
           ji1_seStart(this, JA_SE_VS_JI_OPENING, 0);
           ji1NormalBgmStopHD(45);
           ji1_setAction(this, ACT_plmoveAction, nullptr);

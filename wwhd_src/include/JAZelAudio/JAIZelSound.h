@@ -6,20 +6,20 @@
 
 struct JAISound {
     struct PositionInfo_t {
-        be<f32> field_0x0;
+        be<f32> currentX;  /* was field_0x0: JAInter::SePositionInfo::current.x (JSystem/JAudio/JAISound.h) */
         u8 padding_04[4];
-        be<f32> field_0x8;
+        be<f32> currentZ;  /* was field_0x8: JAInter::SePositionInfo::current.z (JSystem/JAudio/JAISound.h); setSeDistanceDolby 0202B3C8 dolby from it */
         u8 padding_0c[12];
-        be<f32> field_0x18;
+        be<f32> distance;  /* was field_0x18: JAInter::SePositionInfo::distance (JSystem/JAudio/JAISound.h); setDistanceVolumeCommon 0202AD20 reads it per camera */
     };
     u8 padding_00[4];
-    be<u8> field_0x8;
+    be<u8> cameraIndex;  /* was field_0x8: JAISound::cameraIndex (JSystem/JAudio/JAISound.h, +4); setDistanceVolumeCommon 0202AD20 indexes mPositionInfo with it (4 = nearest camera) */
     u8 padding_05[15];
-    be<u32> field_0x18;
+    be<u32> frameCounter;  /* was field_0x18: JAISound::frameCounter (JSystem/JAudio/JAISound.h, +0x14); setSeDistance* skip after frame 1 when the sw bit says so */
     u8 padding_18[4];
     gptr<PositionInfo_t> mPositionInfo;
     u8 padding_20[4];
-    gptr<cXyz> field_0x28;
+    gptr<cXyz> position;  /* was field_0x28: JAISound::position (JSystem/JAudio/JAISound.h, +0x24); setSeDistanceDolby 0202B3C8 returns dolby 0 when NULL */
     u8 padding_28[28];
     struct Vtable {
         u8 padding_00[0x24];
@@ -36,10 +36,10 @@ struct JAISound {
     void setSeInterDolby(u32, f32, u32, u32);
 };
 WWHD_SIZE(JAISound::PositionInfo_t, 0x1c);
-WWHD_OFFSET(JAISound, field_0x8, 4);
-WWHD_OFFSET(JAISound, field_0x18, 0x14);
+WWHD_OFFSET(JAISound, cameraIndex, 4);
+WWHD_OFFSET(JAISound, frameCounter, 0x14);
 WWHD_OFFSET(JAISound, mPositionInfo, 0x1c);
-WWHD_OFFSET(JAISound, field_0x28, 0x24);
+WWHD_OFFSET(JAISound, position, 0x24);
 WWHD_OFFSET(JAISound, __vtbl, 0x44);
 WWHD_SIZE(JAISound, 0x48);
 

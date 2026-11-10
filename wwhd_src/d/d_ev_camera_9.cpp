@@ -45,9 +45,9 @@ static f32 vectorLength(cXyz* vector) {
     return cameraRollingSqrt(cameraRollingSquareMag(vector));
 }
 static void SkipSmoother(dCamera_c* camera) {
-    camera->m102 = 1;
-    camera->m101 = 1;
-    camera->m100 = 1;
+    camera->mStyleSettle2 = 1;
+    camera->mStyleSettle1 = 1;
+    camera->mStyleSettle0 = 1;
 }
 /* inlined into rollingEvCamera */
 static void relativeOffset(dCamera_c* camera, fopAc_ac_c* actor, cXyz* offset, cXyz* destination) {
@@ -105,7 +105,7 @@ static void relativeCenter(dCamera_c* camera, RollingWork* work, char mode) {
 /* 025369BC */
 u32 rollingEvCamera(dCamera_c* camera) {
     auto* work = reinterpret_cast<RollingWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         cXyz fallback;
         f32 x = camera->mEye.x;
         f32 y = camera->mEye.y;
@@ -152,7 +152,7 @@ u32 rollingEvCamera(dCamera_c* camera) {
             if (eyeMode == 'o') {
                 relativeOffset(camera, work->mpRelActor.get(), &work->mEyeOffset, &work->mEye);
             } else if (eyeMode == 'r') {
-                if (camera->m080 & 1)
+                if (camera->mTicks & 1)
                     mirrorX(&work->mEyeOffset);
                 relativeOffset(camera, work->mpRelActor.get(), &work->mEyeOffset, &work->mEye);
                 if (cameraRollingLineBGCheck(camera, &work->mCenter, &work->mEye, 0x8F))
@@ -185,11 +185,11 @@ u32 rollingEvCamera(dCamera_c* camera) {
         auto* result = cameraRollingAngleShortCtor(&temporary.m1, *latitude);
         camera->mViewCache.mDirection.mV = *result;
     }
-    f32 timer = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->m11C)));
+    f32 timer = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->mCurStyleTimer)));
     auto* roll = cameraRollingAngleFloatCtor(&angles.m0, timer * work->mRoll);
     cameraRollingAngleAdd(&camera->mViewCache.mDirection.mU, &angles.m1, roll);
     auto* result = cameraRollingAngleShortCtor(&angles.m2, angles.m1);
-    f32 radiusTimer = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->m11C)));
+    f32 radiusTimer = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->mCurStyleTimer)));
     camera->mViewCache.mDirection.mU = *result;
     camera->mViewCache.mDirection.mRadius =
         gabi::fmadds(radiusTimer, work->mRadiusAdd, camera->mViewCache.mDirection.mRadius);
@@ -205,7 +205,7 @@ u32 rollingEvCamera(dCamera_c* camera) {
         camera->mEventFlags = flags | 0x400;
         camera->mViewCache.mBank = bank;
     }
-    if (work->mTimerSet != 0 && camera->m11C < work->mTimer)
+    if (work->mTimerSet != 0 && camera->mCurStyleTimer < work->mTimer)
         return 0;
     return 1;
 }
@@ -237,7 +237,7 @@ u32 windDirectionEvCamera(dCamera_c* camera) {
     setPoint(&points[5], -25.0f, -30.0f, 90.0f);
     f32 cushion = 0.02f;
     f32 ratio = 1.0f;
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         work->mState = WIND_INITIAL;
         work->mCounter = 0;
         auto* wind = reinterpret_cast<WindAnglesView*>(dKy_getEnvlight());

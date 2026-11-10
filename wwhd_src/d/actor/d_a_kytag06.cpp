@@ -50,12 +50,12 @@ static BOOL daKytag06_Execute(kytag06_class* i_this) {
     dComIfGs_setDate(date);
 
     dKy_change_colpat(1);
-    date = gabi::ftoi(i_this->field_0x294 * 250.0f);
+    date = gabi::ftoi(i_this->mRainLevel * 250.0f);
     if (date > g_env_light.mRainCount) {
         dKyw_rain_set(date);
     }
     g_env_light.mThunderEff.mMode = 1;
-    cLib_addCalc(&i_this->field_0x294, 1.0f, 0.1f, 0.001f, 0.0001f);
+    cLib_addCalc(&i_this->mRainLevel, 1.0f, 0.1f, 0.001f, 0.0001f);
     return TRUE;
 }
 
@@ -80,7 +80,7 @@ static cPhs_State daKytag06_Create(fopAc_ac_c* i_this) {
     if (kytag06_dComIfGs_isSymbol(dSymbol_NAYRU_e)) {
         phase_state = cPhs_ERROR_e;
     } else {
-        a_this->field_0x294 = 0.0f;
+        a_this->mRainLevel = 0.0f;
         phase_state = cPhs_COMPLEATE_e;
     }
 

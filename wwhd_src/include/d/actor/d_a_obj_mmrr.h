@@ -57,21 +57,21 @@ struct Act_c : fopAc_ac_c {
     /* 0x3B8 */ gptr<J3DModel> mpBeamModel;
     /* 0x3BC */ mDoExt_btkAnm mMirrorBtkAnm;        /* HD 0x74 (GameCube 0x14) */
     /* 0x430 */ mDoExt_btkAnm mBeamBtkAnm;
-    /* 0x4A4 */ dCcD_Tri field_0x2C8[5];
-    /* 0xB34 */ dCcD_Stts field_0x958[5];
-    /* 0xC60 */ dCcD_Cps field_0xA84;
-    /* 0xD98 */ dCcD_Stts field_0xBBC;
-    /* 0xDD4 */ be<u8> field_0xBF8;
-    /* 0xDD5 */ be<u8> field_0xBF9;
+    /* 0x4A4 */ dCcD_Tri mTri[5];  /* was field_0x2C8: init_cc 023751B0 sets the 5 dCcD_Tri from M_tri_src; set_cc_rec_pos 02374E98 places them; _execute 02375644 registers them; chk_light 02375504 tests their hits */
+    /* 0xB34 */ dCcD_Stts mTriStts[5];  /* was field_0x958: init_cc 023751B0: Init(0xff, 0xff, this) and mTri[i].SetStts(&it[i]) */
+    /* 0xC60 */ dCcD_Cps mBeamCps;  /* was field_0xA84: init_cc 023751B0 sets the dCcD_Cps from M_cps_src; set_cc_trans_pos 02374FC0 sets it along the reflected beam; _execute 02375644 registers it while mReflecting */
+    /* 0xD98 */ dCcD_Stts mBeamStts;  /* was field_0xBBC: init_cc 023751B0: Init(0xff, 0xff, this) and mBeamCps.SetStts(&it) */
+    /* 0xDD4 */ be<u8> mPosChanged;  /* was field_0xBF8: TWW inline setup(pos) sets it with current.pos; _execute 02375644 re-places mTri (set_cc_rec_pos) and the beam while set, then clears it; _create 02375300 clears it */
+    /* 0xDD5 */ be<u8> mReflecting;  /* was field_0xBF9: _execute 02375644: mLightRate > 0.999; on the rising edge JA_SE_OBJ_MIRROR_REFLECT and eff_start, on the falling edge eff_stop; set_cull 02375264 / _draw 02375860 include the beam while set */
     /* 0xDD6 */ u8 _DD6[2];
-    /* 0xDD8 */ be<f32> field_0xBFC;
-    /* 0xDDC */ be<f32> field_0xC00;
-    /* 0xDE0 */ Eff_c field_0xC04;
+    /* 0xDD8 */ be<f32> mLightRate;  /* was field_0xBFC: _execute 02375644: cLib_chaseF to 1 while chk_light, else to 0, by 0.2; _create 02375300 clears it */
+    /* 0xDDC */ be<f32> mBeamLenRate;  /* was field_0xC00: set_cc_trans_pos 02374FC0: beam length up to the light line check hit over attr 0xD0; set_mtx 02374D2C scales the beam model's z by it */
+    /* 0xDE0 */ Eff_c mEff;  /* was field_0xC04: _create 02375300 constructs the Eff_c (dPa_followEcallBack); eff_start 023755D4 / eff_stop 0237563C / eff_remove 023754BC use it */
 };
 WWHD_OFFSET(Act_c, mBeamBtkAnm, 0x430);
-WWHD_OFFSET(Act_c, field_0xA84, 0xC60);
-WWHD_OFFSET(Act_c, field_0xBF8, 0xDD4);
-WWHD_OFFSET(Act_c, field_0xC04, 0xDE0);
+WWHD_OFFSET(Act_c, mBeamCps, 0xC60);
+WWHD_OFFSET(Act_c, mPosChanged, 0xDD4);
+WWHD_OFFSET(Act_c, mEff, 0xDE0);
 WWHD_SIZE(Act_c, 0xDF4);
 
 }

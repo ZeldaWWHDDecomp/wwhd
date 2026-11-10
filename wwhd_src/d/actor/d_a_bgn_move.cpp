@@ -16,16 +16,16 @@ void action_s_himo(bgn_class *i_this, move_s *param_2, int param_3);
 static inline void bgn_mtx_set(J3DModel *m) { J3DModel_setBaseTRMtx(m, calc_mtx()); }
 
 /* the string's rest pose for a limb end: HIO offset + the string's sway, turned with the body, at
- * mC308 */
+ * mBodyPos */
 static inline void bgn_limb_end(bgn_class *i_this, cXyz *local_8c, be<f32> *hio, move_s *m,
                                 cXyz *dst) {
-    cMtx_YrotS(calc_mtx(), i_this->mC314.y);
+    cMtx_YrotS(calc_mtx(), i_this->mBodyAngle.y);
     local_8c->z = hio[2];
     local_8c->y = hio[1];
     local_8c->x = hio[0];
-    PSVECAdd(local_8c, &m->m2D4, local_8c);
+    PSVECAdd(local_8c, &m->mPose, local_8c);
     MtxPosition(local_8c, dst);
-    PSVECAdd(dst, &i_this->mC308, dst);
+    PSVECAdd(dst, &i_this->mBodyPos, dst);
 }
 static inline void bgn_copy3(cXyz *dst, const cXyz *src) {
     auto *d = bgn_move_detail::words(dst);
@@ -45,21 +45,21 @@ static inline void bgn_emitter_scale(JPABaseEmitter *e, f32 s) {
 void move(bgn_class *i_this) {
     fopAc_ac_c *actor = i_this;
     dComIfGp_get();
-    bgn_copy3(&i_this->mC734, &i_this->mC728);
+    bgn_copy3(&i_this->mBodyOffsetOld, &i_this->mBodyOffset);
     mDoExt_baseAnm_play(i_this->mJyakutenCBrkAnm.get());
     mDoExt_baseAnm_play(i_this->mJyakutenBBrkAnm.get());
-    if (i_this->m02B5 != 0) {
-        i_this->mC748 = 10;
+    if (i_this->mForm != 0) {
+        i_this->mAction = 10;
         actor->current.pos.x = 0.0f;
         actor->current.pos.y = 30000.0f;
         actor->current.pos.z = 0.0f;
         actor->attention_info.flags = 0;
-        i_this->mCC80 = gabi::fadds_ppc(REG0_F(25), 1.0f);
-        i_this->mCC84 = REG0_F(20);
-        i_this->mCC88 = REG0_F(21);
+        i_this->mPartLengthScale = gabi::fadds_ppc(REG0_F(25), 1.0f);
+        i_this->mChestSquash = REG0_F(20);
+        i_this->mFogFade = REG0_F(21);
         return;
     }
-    if (i_this->mC748 == 10) {
+    if (i_this->mAction == 10) {
         auto *h = bgn_move_detail::words(&actor->home.pos);
         auto *p = bgn_move_detail::words(&actor->current.pos);
         u32 hx = (u32)h->x, hy = (u32)h->y;
@@ -67,24 +67,24 @@ void move(bgn_class *i_this) {
         u32 hz = (u32)h->z;
         p->y = hy;
         p->z = hz;
-        i_this->mC748 = 0;
-        i_this->mC74A = 0;
+        i_this->mAction = 0;
+        i_this->mMode = 0;
         actor->health = 3;
     }
     actor->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
     actor->attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 0x22;
     {
         gabi::Local<cXyz> sum;
-        cXyz_pl(&actor->current.pos, sum, &i_this->mC728);
-        i_this->mC308.x = sum->x;
-        i_this->mC308.y = sum->y;
-        i_this->mC308.z = sum->z;
+        cXyz_pl(&actor->current.pos, sum, &i_this->mBodyOffset);
+        i_this->mBodyPos.x = sum->x;
+        i_this->mBodyPos.y = sum->y;
+        i_this->mBodyPos.z = sum->z;
     }
-    f32 y = gabi::fadds_ppc(i_this->mC308.y, l_HIO().m04C);
-    i_this->mC308.y = y;
-    f32 c = gabi::fadds_ppc(gabi::fadds_ppc(i_this->mC7BC, 100.0f), REG0_F(0));
+    f32 y = gabi::fadds_ppc(i_this->mBodyPos.y, l_HIO().m04C);
+    i_this->mBodyPos.y = y;
+    f32 c = gabi::fadds_ppc(gabi::fadds_ppc(i_this->mGroundY, 100.0f), REG0_F(0));
     if (!(y > c))
-        i_this->mC308.y = c;
+        i_this->mBodyPos.y = c;
     s16 lz = actor->shape_angle.z;
     s16 ly = actor->shape_angle.y;
     s16 lx = actor->shape_angle.x;
@@ -102,72 +102,72 @@ void move(bgn_class *i_this) {
         auto *g = gndChk.get();
         g->m_pos.y = py;
         g->m_pos.x = actor->current.pos.x;
-        i_this->mC7BC = gabi::fadds_ppc(REG0_F(16), 90.0f);
+        i_this->mGroundY = gabi::fadds_ppc(REG0_F(16), 90.0f);
         g->m_pos.z = pos->z;
     }
     s16 sVar1 = 0;
-    if (i_this->mAAA8[0].m2D0 != 0)
+    if (i_this->mMove[0].mCut != 0)
         sVar1 = 8000;
-    if (i_this->mAAA8[1].m2D0 != 0)
+    if (i_this->mMove[1].mCut != 0)
         sVar1 = (s16)(sVar1 - 8000);
     cLib_addCalcAngleS2(&i_this->mC744, sVar1, 8, 0x400);
-    if (i_this->mAAA8[2].m2D0 == 0)
-        lx = (s16)(lx + (s16)gabi::ftoi(gabi::fmuls_ppc(i_this->mAAA8[2].m2D4.y,
+    if (i_this->mMove[2].mCut == 0)
+        lx = (s16)(lx + (s16)gabi::ftoi(gabi::fmuls_ppc(i_this->mMove[2].mPose.y,
                                                         gabi::fadds_ppc(REG0_F(11), 8.0f))));
-    if (i_this->mAAA8[3].m2D0 != 0) {
+    if (i_this->mMove[3].mCut != 0) {
         lz = (s16)(lz - (REG0_S(0) + 3000));
     } else {
         s16 dz = (s16)gabi::ftoi(
-            gabi::fmuls_ppc(i_this->mAAA8[3].m2D4.y, gabi::fadds_ppc(REG0_F(12), 5.0f)));
+            gabi::fmuls_ppc(i_this->mMove[3].mPose.y, gabi::fadds_ppc(REG0_F(12), 5.0f)));
         s16 dy = (s16)gabi::ftoi(
-            -(f32)gabi::fmuls_ppc(i_this->mAAA8[3].m2D4.z, gabi::fadds_ppc(REG0_F(13), 5.0f)));
+            -(f32)gabi::fmuls_ppc(i_this->mMove[3].mPose.z, gabi::fadds_ppc(REG0_F(13), 5.0f)));
         lz = (s16)(lz + dz);
         ly = (s16)(ly + dy);
     }
-    if (i_this->mAAA8[4].m2D0 != 0) {
+    if (i_this->mMove[4].mCut != 0) {
         lz = (s16)(lz + (REG0_S(0) + 3000));
     } else {
         s16 dz = (s16)gabi::ftoi(
-            -(f32)gabi::fmuls_ppc(i_this->mAAA8[4].m2D4.y, gabi::fadds_ppc(REG0_F(12), 5.0f)));
+            -(f32)gabi::fmuls_ppc(i_this->mMove[4].mPose.y, gabi::fadds_ppc(REG0_F(12), 5.0f)));
         s16 dy = (s16)gabi::ftoi(
-            gabi::fmuls_ppc(i_this->mAAA8[4].m2D4.z, gabi::fadds_ppc(REG0_F(13), 5.0f)));
+            gabi::fmuls_ppc(i_this->mMove[4].mPose.z, gabi::fadds_ppc(REG0_F(13), 5.0f)));
         lz = (s16)(lz + dz);
         ly = (s16)(ly + dy);
     }
-    cLib_addCalcAngleS2(&i_this->mC314.x, lx, 4, 0x200);
-    cLib_addCalcAngleS2(&i_this->mC31A, ly, 4, 0x1000);
-    cLib_addCalcAngleS2(&i_this->mC314.z, lz, 4, 0x200);
-    i_this->mC314.y = (s16)(i_this->mC31A + i_this->mC750);
+    cLib_addCalcAngleS2(&i_this->mBodyAngle.x, lx, 4, 0x200);
+    cLib_addCalcAngleS2(&i_this->mBaseAngleY, ly, 4, 0x1000);
+    cLib_addCalcAngleS2(&i_this->mBodyAngle.z, lz, 4, 0x200);
+    i_this->mBodyAngle.y = (s16)(i_this->mBaseAngleY + i_this->mDanceAngleY);
     if (l_HIO().m029 != 0)
-        i_this->mAAA8[0].m2D0 = 1;
+        i_this->mMove[0].mCut = 1;
     if (l_HIO().m02A != 0)
-        i_this->mAAA8[1].m2D0 = 1;
+        i_this->mMove[1].mCut = 1;
     if (l_HIO().m02B != 0)
-        i_this->mAAA8[2].m2D0 = 1;
+        i_this->mMove[2].mCut = 1;
     if (l_HIO().m02C != 0)
-        i_this->mAAA8[3].m2D0 = 1;
+        i_this->mMove[3].mCut = 1;
     if (l_HIO().m02D != 0)
-        i_this->mAAA8[4].m2D0 = 1;
+        i_this->mMove[4].mCut = 1;
     if (l_HIO().m02E != 0)
-        i_this->mAAA8[5].m2D0 = 1;
+        i_this->mMove[5].mCut = 1;
     if (l_HIO().m02F != 0)
-        i_this->mAAA8[6].m2D0 = 1;
+        i_this->mMove[6].mCut = 1;
     if (l_HIO().m030 != 0)
-        i_this->mAAA8[7].m2D0 = 1;
+        i_this->mMove[7].mCut = 1;
     {
         f32 fVar9 = 0.0f;
         gabi::Local<cXyz> d1;
         gabi::Local<cXyz> d2;
         gabi::Local<cXyz> local_e4;
         for (s32 i = 0; i < 2; i++) {
-            if (i == 0 && i_this->mC778 != 0) {
+            if (i == 0 && i_this->mLeftPunchOn != 0) {
                 s32 hm = BGN_HAND_MAX();
-                cXyz_mi(&i_this->mLeftArmParts[hm].m0D4, d1, &i_this->mLeftArmParts[hm - 1].m0D4);
+                cXyz_mi(&i_this->mLeftArmParts[hm].mPartPos, d1, &i_this->mLeftArmParts[hm - 1].mPartPos);
                 bgn_copy3(local_e4, d1.get());
                 fVar9 = std_sqrtf(PSVECSquareMag(local_e4));
-            } else if (i == 1 && i_this->mC779 != 0) {
+            } else if (i == 1 && i_this->mRightPunchOn != 0) {
                 s32 hm = BGN_HAND_MAX();
-                cXyz_mi(&i_this->mRightArmParts[hm].m0D4, d2, &i_this->mRightArmParts[hm - 1].m0D4);
+                cXyz_mi(&i_this->mRightArmParts[hm].mPartPos, d2, &i_this->mRightArmParts[hm - 1].mPartPos);
                 auto *s = bgn_move_detail::words(d2.get());
                 auto *d = bgn_move_detail::words(local_e4.get());
                 u32 z = (u32)s->z, x = (u32)s->x, yy = (u32)s->y;
@@ -184,56 +184,56 @@ void move(bgn_class *i_this) {
             } else {
                 fVar9 = 0.0f;
             }
-            cLib_addCalc2(&i_this->mC324[i], gabi::fadds_ppc(m124, fVar9), 1.0f,
+            cLib_addCalc2(&i_this->mArmLength[i], gabi::fadds_ppc(m124, fVar9), 1.0f,
                           gabi::fadds_ppc(REG0_F(4), 20.0f));
-            cLib_addCalc0(&i_this->mC32C[i], 0.05f, 0.02f);
+            cLib_addCalc0(&i_this->mArmStretch[i], 0.05f, 0.02f);
         }
     }
     /* size_set (inline). HD: the steps are divided (GameCube: reciprocal multiplied) */
     {
         daBgn_HIO_c &h = l_HIO();
-        i_this->mHeadParts[0].m0F4 = h.m0F8;
-        i_this->mPelvisParts[0].m0F4 = h.m100;
-        i_this->mPelvisParts[1].m0F4 = h.m100;
+        i_this->mHeadParts[0].mPartScale = h.m0F8;
+        i_this->mPelvisParts[0].mPartScale = h.m100;
+        i_this->mPelvisParts[1].mPartScale = h.m100;
         f32 m104 = h.m104;
         f32 fVar2 = gabi::fsubs_ppc(m104, h.m108) / (f32)(BGN_HAND_MAX() - 2);
-        i_this->mLeftArmParts[0].m0F4 = gabi::fsubs_ppc(m104, fVar2);
-        i_this->mRightArmParts[0].m0F4 = gabi::fsubs_ppc(h.m104, fVar2);
+        i_this->mLeftArmParts[0].mPartScale = gabi::fsubs_ppc(m104, fVar2);
+        i_this->mRightArmParts[0].mPartScale = gabi::fsubs_ppc(h.m104, fVar2);
         for (s32 i = 1; i < BGN_HAND_MAX(); i++) {
-            i_this->mLeftArmParts[i].m0F4 = gabi::fnmsubs(fVar2, (f32)(i - 1), h.m104);
-            i_this->mRightArmParts[i].m0F4 = gabi::fnmsubs(fVar2, (f32)(i - 1), h.m104);
+            i_this->mLeftArmParts[i].mPartScale = gabi::fnmsubs(fVar2, (f32)(i - 1), h.m104);
+            i_this->mRightArmParts[i].mPartScale = gabi::fnmsubs(fVar2, (f32)(i - 1), h.m104);
         }
-        i_this->mLeftArmParts[BGN_HAND_MAX()].m0F4 = h.m108;
-        i_this->mRightArmParts[BGN_HAND_MAX()].m0F4 = h.m108;
+        i_this->mLeftArmParts[BGN_HAND_MAX()].mPartScale = h.m108;
+        i_this->mRightArmParts[BGN_HAND_MAX()].mPartScale = h.m108;
         f32 a = h.m104, b = h.m108;
         fVar2 = gabi::fmadds(gabi::fsubs_ppc(a, b), 0.5f, b);
         for (s32 i = 0; i < BGN_HAND_MAX(); i++) {
-            f32 l = i_this->mLeftArmParts[i].m0F4;
-            f32 dl = gabi::fmuls_ppc(gabi::fsubs_ppc(fVar2, l), i_this->mC32C[0]);
-            i_this->mLeftArmParts[i].m0F4 = gabi::fadds_ppc(l, gabi::fadds_ppc(dl, dl));
-            f32 r = i_this->mRightArmParts[i].m0F4;
-            f32 dr = gabi::fmuls_ppc(gabi::fsubs_ppc(fVar2, r), i_this->mC32C[1]);
-            i_this->mRightArmParts[i].m0F4 = gabi::fadds_ppc(r, gabi::fadds_ppc(dr, dr));
+            f32 l = i_this->mLeftArmParts[i].mPartScale;
+            f32 dl = gabi::fmuls_ppc(gabi::fsubs_ppc(fVar2, l), i_this->mArmStretch[0]);
+            i_this->mLeftArmParts[i].mPartScale = gabi::fadds_ppc(l, gabi::fadds_ppc(dl, dl));
+            f32 r = i_this->mRightArmParts[i].mPartScale;
+            f32 dr = gabi::fmuls_ppc(gabi::fsubs_ppc(fVar2, r), i_this->mArmStretch[1]);
+            i_this->mRightArmParts[i].mPartScale = gabi::fadds_ppc(r, gabi::fadds_ppc(dr, dr));
         }
         fVar2 = gabi::fmuls_ppc(gabi::fsubs_ppc(h.m10C, h.m110), 0.5f);
         for (s32 i = 0; i < 3; i++) {
-            i_this->mLeftLegParts[i].m0F4 = gabi::fnmsubs(fVar2, (f32)i, h.m10C);
-            i_this->mRightLegParts[i].m0F4 = gabi::fnmsubs(fVar2, (f32)i, h.m10C);
+            i_this->mLeftLegParts[i].mPartScale = gabi::fnmsubs(fVar2, (f32)i, h.m10C);
+            i_this->mRightLegParts[i].mPartScale = gabi::fnmsubs(fVar2, (f32)i, h.m10C);
         }
-        i_this->mLeftLegParts[3].m0F4 = h.m110;
-        i_this->mRightLegParts[3].m0F4 = h.m110;
+        i_this->mLeftLegParts[3].mPartScale = h.m110;
+        i_this->mRightLegParts[3].mPartScale = h.m110;
         f32 m114 = h.m114;
         fVar2 = gabi::fsubs_ppc(m114, h.m118) / (f32)(BGN_TAIL_MAX() - 1);
         for (s32 i = 0; i < BGN_TAIL_MAX(); i++) {
             m114 = h.m114;
-            i_this->mTailParts[i].m0F4 = gabi::fnmsubs(fVar2, (f32)i, m114);
+            i_this->mTailParts[i].mPartScale = gabi::fnmsubs(fVar2, (f32)i, m114);
         }
         if (BGN_TAIL_MAX() > 0)
             m114 = h.m114;
-        i_this->mRightLegParts[BGN_TAIL_MAX() + 3].m0F4 = gabi::fmuls_ppc(m114, 0.7f);
-        i_this->mTailParts[BGN_TAIL_MAX()].m0F4 = gabi::fmuls_ppc(h.m114, 0.7f);
+        i_this->mRightLegParts[BGN_TAIL_MAX() + 3].mPartScale = gabi::fmuls_ppc(m114, 0.7f);
+        i_this->mTailParts[BGN_TAIL_MAX()].mPartScale = gabi::fmuls_ppc(h.m114, 0.7f);
     }
-    OffAtSetBit(&i_this->mC7FC);
+    OffAtSetBit(&i_this->mBodyAtSph);
     OffAtSetBit(&i_this->mPelvisParts[0].mPartSph);
     OffAtSetBit(&i_this->mLeftArmParts[BGN_HAND_MAX() - 1].mPartSph);
     OffAtSetBit(&i_this->mRightArmParts[BGN_HAND_MAX() - 1].mPartSph);
@@ -243,17 +243,17 @@ void move(bgn_class *i_this) {
     dComIfGp_get();
 
     /* damage_check (inline) */
-    if (i_this->mC7B6 == 0) {
+    if (i_this->mDamageTimer == 0) {
         u32 hitObj = 0;
         gabi::Local<be<u32>> atObj;
         if (i_this->mCoreSph.ChkTgHit()) {
             *atObj = gabi::ea(i_this->mCoreSph.GetTgHitObj());
-            i_this->m0302 = 1;
-            i_this->mC7B6 = 100;
-            i_this->mC748 = 5;
-            i_this->mC74A = 0;
-            i_this->mC779 = 0;
-            i_this->mC778 = 0;
+            i_this->mCoreHitFrame = 1;
+            i_this->mDamageTimer = 100;
+            i_this->mAction = 5;
+            i_this->mMode = 0;
+            i_this->mRightPunchOn = 0;
+            i_this->mLeftPunchOn = 0;
             s8 health = actor->health;
             if (health != 0) {
                 s8 room = fopAcM_GetRoomNo(actor);
@@ -264,14 +264,14 @@ void move(bgn_class *i_this) {
                 if (actor->health == 0) {
                     mDoAud_bgmStop(30);
                     gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mItemLifeCount = 0.0f;
-                    i_this->mC748 = 6;
-                    i_this->mC74A = 0;
+                    i_this->mAction = 6;
+                    i_this->mMode = 0;
                     JPABaseEmitter *e = dComIfGp_particle_set(
-                        bgn_move_detail::ID_AK_SN_KGTBREAKWEAKPOINT00, &i_this->mCA54);
+                        bgn_move_detail::ID_AK_SN_KGTBREAKWEAKPOINT00, &i_this->mCorePos);
                     if (e != nullptr)
                         bgn_emitter_scale(e, s);
                     e = dComIfGp_particle_set(bgn_move_detail::ID_AK_SN_KGTBREAKWEAKPOINT01,
-                                              &i_this->mCA54);
+                                              &i_this->mCorePos);
                     if (e != nullptr)
                         bgn_emitter_scale(e, s);
                     mDoAud_monsSeStart(bgn_move_detail::JA_SE_CV_BGN_HIT_2, nullptr, 0,
@@ -282,7 +282,7 @@ void move(bgn_class *i_this) {
                                    dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
                 } else {
                     JPABaseEmitter *e = dComIfGp_particle_set(
-                        bgn_move_detail::ID_AK_SN_KGTHITWEAKPOINT00, &i_this->mCA54);
+                        bgn_move_detail::ID_AK_SN_KGTHITWEAKPOINT00, &i_this->mCorePos);
                     if (e != nullptr)
                         bgn_emitter_scale(e, s);
                     mDoAud_monsSeStart(bgn_move_detail::JA_SE_CV_BGN_HIT_1, nullptr, 0,
@@ -291,8 +291,8 @@ void move(bgn_class *i_this) {
             }
         }
         s8 cVar5 = 0;
-        if (i_this->mC7FC.ChkTgHit()) {
-            *atObj = gabi::ea(i_this->mC7FC.GetTgHitObj());
+        if (i_this->mBodyAtSph.ChkTgHit()) {
+            *atObj = gabi::ea(i_this->mBodyAtSph.GetTgHitObj());
             cVar5 = 1;
         }
         if (i_this->mHeadParts[0].mPartSph.ChkTgHit()) {
@@ -331,8 +331,8 @@ void move(bgn_class *i_this) {
                 cVar5 = 8;
             }
         }
-        if (cVar5 != 0 && i_this->mC7B8 == 0) {
-            i_this->mC7B8 = 10;
+        if (cVar5 != 0 && i_this->mPartHitSeTimer == 0) {
+            i_this->mPartHitSeTimer = 10;
             def_se_set(actor, hitObj, 0x44);
         }
     }
@@ -343,14 +343,14 @@ void move(bgn_class *i_this) {
     gabi::Local<cXyz> sum;
     {
         f32 hy = (f32)(s32)(s16)l_HIO().m0A8;
-        f32 c2 = gabi::fadds_ppc(gabi::fadds_ppc(i_this->mC7BC, 100.0f), REG0_F(0));
-        f32 by = gabi::fadds_ppc(i_this->mC308.y, hy);
-        f32 bz = i_this->mC308.z;
-        s16 m0302 = i_this->m0302;
-        f32 bx = i_this->mC308.x;
+        f32 c2 = gabi::fadds_ppc(gabi::fadds_ppc(i_this->mGroundY, 100.0f), REG0_F(0));
+        f32 by = gabi::fadds_ppc(i_this->mBodyPos.y, hy);
+        f32 bz = i_this->mBodyPos.z;
+        s16 mCoreHitFrame = i_this->mCoreHitFrame;
+        f32 bx = i_this->mBodyPos.x;
         if (!(by > c2))
             by = c2;
-        if (m0302 == 0xD) {
+        if (mCoreHitFrame == 0xD) {
             i_this->mArrowHitFlashTimer = 50;
             i_this->mArrowHitEffectTimer = 100;
         }
@@ -358,33 +358,33 @@ void move(bgn_class *i_this) {
     }
     s16 sVar8 = 0;
     s16 sVar5 = 0;
-    if (i_this->mC770 != 0) {
-        s16 t = (s16)(i_this->mC770 - 1);
-        i_this->mC770 = t;
-        s16 c746 = i_this->mC746;
+    if (i_this->mShakeTimer != 0) {
+        s16 t = (s16)(i_this->mShakeTimer - 1);
+        i_this->mShakeTimer = t;
+        s16 c746 = i_this->mFrameCounter;
         f32 f = gabi::fmuls_ppc((f32)t, gabi::fadds_ppc(REG0_F(14), 300.0f));
         sVar8 = (s16)gabi::ftoi(gabi::fmuls_ppc(cM_ssin(c746 * 0x1C00), f));
         sVar5 = (s16)gabi::ftoi(gabi::fmuls_ppc(cM_scos(c746 * 0x1900), f));
     }
-    cMtx_YrotM(calc_mtx(), i_this->mC314.y);
-    cMtx_XrotM(calc_mtx(), (s16)(i_this->mC314.x + sVar8));
-    cMtx_ZrotM(calc_mtx(), (s16)(i_this->mC314.z + sVar5));
+    cMtx_YrotM(calc_mtx(), i_this->mBodyAngle.y);
+    cMtx_XrotM(calc_mtx(), (s16)(i_this->mBodyAngle.x + sVar8));
+    cMtx_ZrotM(calc_mtx(), (s16)(i_this->mBodyAngle.z + sVar5));
     f32 dVar12 = gabi::fmuls_ppc(l_HIO().m0FC, l_HIO().m0F4);
     MtxScale(dVar12, dVar12, dVar12, true);
     MtxPush();
     cMtx_XrotM(calc_mtx(), l_HIO().m004);
-    if (i_this->mCC84 > 0.0f) {
-        s16 s = (s16)(i_this->mC746 * (REG0_S(4) + 0x900));
+    if (i_this->mChestSquash > 0.0f) {
+        s16 s = (s16)(i_this->mFrameCounter * (REG0_S(4) + 0x900));
         cMtx_ZrotM(calc_mtx(), s);
-        f32 k = i_this->mCC84;
+        f32 k = i_this->mChestSquash;
         f32 a = gabi::fadds_ppc(k, 1.0f);
         MtxScale(a, gabi::fsubs_ppc(1.0f, k), a, true);
         cMtx_ZrotM(calc_mtx(), (s16)-s);
     }
     bgn_mtx_set(i_this->mpChestModel);
-    i_this->mC7FC.SetR(gabi::fmuls_ppc(dVar12, gabi::fadds_ppc(REG0_F(1), 120.0f)));
-    i_this->mC7FC.SetC(&i_this->mC308);
-    dComIfG_Ccsp_Set(&i_this->mC7FC);
+    i_this->mBodyAtSph.SetR(gabi::fmuls_ppc(dVar12, gabi::fadds_ppc(REG0_F(1), 120.0f)));
+    i_this->mBodyAtSph.SetC(&i_this->mBodyPos);
+    dComIfG_Ccsp_Set(&i_this->mBodyAtSph);
     if (i_this->mArrowHitEffectTimer != 0) {
         s16 t = (s16)(i_this->mArrowHitEffectTimer - 1);
         i_this->mArrowHitEffectTimer = t;
@@ -392,10 +392,10 @@ void move(bgn_class *i_this) {
             gabi::fmuls_ppc(gabi::fmuls_ppc(dVar12, (f32)t), gabi::fadds_ppc(REG_F(8, 1), 0.03f));
         if (i_this->mpArrowHitEmitter1 == nullptr) {
             i_this->mpArrowHitEmitter1 =
-                dComIfGp_particle_set(bgn_move_detail::ID_AK_JN_CCTHUNDER00, &i_this->mC308);
+                dComIfGp_particle_set(bgn_move_detail::ID_AK_JN_CCTHUNDER00, &i_this->mBodyPos);
         } else {
-            JPABaseEmitter_setGlobalTranslation(i_this->mpArrowHitEmitter1, i_this->mC308.x,
-                                                i_this->mC308.y, i_this->mC308.z);
+            JPABaseEmitter_setGlobalTranslation(i_this->mpArrowHitEmitter1, i_this->mBodyPos.x,
+                                                i_this->mBodyPos.y, i_this->mBodyPos.z);
             bgn_emitter_scale(i_this->mpArrowHitEmitter1, fVar3);
         }
         if (i_this->mpArrowHitEmitter2 == nullptr) {
@@ -403,10 +403,10 @@ void move(bgn_class *i_this) {
             local_8c->z = dVar12;
             local_8c->x = dVar12;
             i_this->mpArrowHitEmitter2 =
-                dComIfGp_particle_set(bgn_move_detail::ID_AK_JN_CCTHUNDER01, &i_this->mC308);
+                dComIfGp_particle_set(bgn_move_detail::ID_AK_JN_CCTHUNDER01, &i_this->mBodyPos);
         } else {
-            JPABaseEmitter_setGlobalTranslation(i_this->mpArrowHitEmitter2, i_this->mC308.x,
-                                                i_this->mC308.y, i_this->mC308.z);
+            JPABaseEmitter_setGlobalTranslation(i_this->mpArrowHitEmitter2, i_this->mBodyPos.x,
+                                                i_this->mBodyPos.y, i_this->mBodyPos.z);
             bgn_emitter_scale(i_this->mpArrowHitEmitter2, fVar3);
         }
     } else {
@@ -422,23 +422,23 @@ void move(bgn_class *i_this) {
     MtxPull();
     f32 dVar12b = gabi::fmuls_ppc(l_HIO().m11C, l_HIO().m0F4);
     f32 dVar11 = gabi::fmuls_ppc(l_HIO().m120, l_HIO().m0F4);
-    f32 dVar10 = gabi::fmuls_ppc(i_this->mC324[0], l_HIO().m0F4);
-    f32 dVar9 = gabi::fmuls_ppc(i_this->mC324[1], l_HIO().m0F4);
+    f32 dVar10 = gabi::fmuls_ppc(i_this->mArmLength[0], l_HIO().m0F4);
+    f32 dVar9 = gabi::fmuls_ppc(i_this->mArmLength[1], l_HIO().m0F4);
     f32 dVar13 = gabi::fmuls_ppc(l_HIO().m128, l_HIO().m0F4);
     MtxPush();
     local_8c->y = l_HIO().m130;
     local_8c->x = l_HIO().m12C;
     local_8c->z = l_HIO().m134;
-    MtxPosition(local_8c, &i_this->mHeadParts[0].m0D4);
-    part_control_0(i_this, 1, &i_this->mHeadParts[0], &i_this->mAAA8[0], dVar12b);
-    if (i_this->mAAA8[0].m2D0 == 0 || i_this->mAAA8[1].m2D0 == 0) {
-        bgn_limb_end(i_this, local_8c, &l_HIO().m054, &i_this->mAAA8[0],
-                     &i_this->mHeadParts[1].m0D4);
+    MtxPosition(local_8c, &i_this->mHeadParts[0].mPartPos);
+    part_control_0(i_this, 1, &i_this->mHeadParts[0], &i_this->mMove[0], dVar12b);
+    if (i_this->mMove[0].mCut == 0 || i_this->mMove[1].mCut == 0) {
+        bgn_limb_end(i_this, local_8c, &l_HIO().m054, &i_this->mMove[0],
+                     &i_this->mHeadParts[1].mPartPos);
         part_control_2(i_this, 1, &i_this->mHeadParts[0], dVar12b);
     }
     part_mtx_set(i_this, 1, &i_this->mHeadParts[0], 0, 0);
     {
-        auto *src = bgn_move_detail::words(&i_this->mHeadParts[0].m0D4);
+        auto *src = bgn_move_detail::words(&i_this->mHeadParts[0].mPartPos);
         auto *eyePos = bgn_move_detail::words(&actor->eyePos);
         auto *attentionPos = bgn_move_detail::words(&actor->attention_info.position);
         u32 x = (u32)src->x, yy = (u32)src->y;
@@ -455,159 +455,159 @@ void move(bgn_class *i_this) {
     MtxPull();
     MtxPush();
     {
-        f32 k = i_this->mCC80;
+        f32 k = i_this->mPartLengthScale;
         local_8c->x = gabi::fmuls_ppc(l_HIO().m144, k);
         local_8c->y = gabi::fmuls_ppc(gabi::fadds_ppc(l_HIO().m148, 20.0f), k);
         local_8c->z = gabi::fmuls_ppc(l_HIO().m14C, k);
     }
-    MtxPosition(local_8c, &i_this->mPelvisParts[0].m0D4);
-    part_control_0(i_this, 1, &i_this->mPelvisParts[0], &i_this->mAAA8[2], dVar12b);
-    if (i_this->mAAA8[2].m2D0 == 0) {
-        bgn_limb_end(i_this, local_8c, &l_HIO().m060, &i_this->mAAA8[2],
-                     &i_this->mPelvisParts[1].m0D4);
+    MtxPosition(local_8c, &i_this->mPelvisParts[0].mPartPos);
+    part_control_0(i_this, 1, &i_this->mPelvisParts[0], &i_this->mMove[2], dVar12b);
+    if (i_this->mMove[2].mCut == 0) {
+        bgn_limb_end(i_this, local_8c, &l_HIO().m060, &i_this->mMove[2],
+                     &i_this->mPelvisParts[1].mPartPos);
         part_control_2(i_this, 1, &i_this->mPelvisParts[0], dVar12b);
     }
     part_mtx_set(i_this, 1, &i_this->mPelvisParts[0], 2, 0);
     MtxPull();
     MtxPush();
     {
-        f32 k = i_this->mCC80;
+        f32 k = i_this->mPartLengthScale;
         local_8c->x = gabi::fmuls_ppc(l_HIO().m138, k);
         local_8c->y = gabi::fmuls_ppc(l_HIO().m13C, k);
         local_8c->z = gabi::fmuls_ppc(l_HIO().m140, k);
     }
-    MtxPosition(local_8c, &i_this->mLeftArmParts[0].m0D4);
-    if (i_this->mAAA8[3].m2D0 == 0) {
-        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mLeftArmParts[0], &i_this->mAAA8[3],
+    MtxPosition(local_8c, &i_this->mLeftArmParts[0].mPartPos);
+    if (i_this->mMove[3].mCut == 0) {
+        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mLeftArmParts[0], &i_this->mMove[3],
                        dVar10);
-        if (i_this->mC778 != 0) {
-            bgn_copy3(&i_this->mLeftArmParts[BGN_HAND_MAX()].m0D4, &i_this->mC77C);
+        if (i_this->mLeftPunchOn != 0) {
+            bgn_copy3(&i_this->mLeftArmParts[BGN_HAND_MAX()].mPartPos, &i_this->mLeftPunchPos);
         } else {
-            cMtx_YrotS(calc_mtx(), i_this->mC314.y);
+            cMtx_YrotS(calc_mtx(), i_this->mBodyAngle.y);
             local_8c->x = l_HIO().m06C;
             local_8c->z = l_HIO().m074;
             local_8c->y = l_HIO().m070;
-            PSVECAdd(local_8c, &i_this->mAAA8[3].m2D4, local_8c);
-            MtxPosition(local_8c, &i_this->mLeftArmParts[BGN_HAND_MAX()].m0D4);
-            cXyz *e = &i_this->mLeftArmParts[BGN_HAND_MAX()].m0D4;
-            PSVECAdd(e, &i_this->mC308, e);
+            PSVECAdd(local_8c, &i_this->mMove[3].mPose, local_8c);
+            MtxPosition(local_8c, &i_this->mLeftArmParts[BGN_HAND_MAX()].mPartPos);
+            cXyz *e = &i_this->mLeftArmParts[BGN_HAND_MAX()].mPartPos;
+            PSVECAdd(e, &i_this->mBodyPos, e);
         }
         part_control_2(i_this, BGN_HAND_MAX(), &i_this->mLeftArmParts[0], dVar10);
     } else {
-        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mLeftArmParts[0], &i_this->mAAA8[3],
+        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mLeftArmParts[0], &i_this->mMove[3],
                        dVar10);
     }
     part_mtx_set(i_this, BGN_HAND_MAX(), &i_this->mLeftArmParts[0], 3, BGN_HAND_MAX() - 1);
     MtxPull();
     {
-        f32 k = i_this->mCC80;
+        f32 k = i_this->mPartLengthScale;
         local_8c->x = gabi::fmuls_ppc(-(f32)l_HIO().m138, k);
         local_8c->y = gabi::fmuls_ppc(l_HIO().m13C, k);
         local_8c->z = gabi::fmuls_ppc(l_HIO().m140, k);
     }
-    MtxPosition(local_8c, &i_this->mRightArmParts[0].m0D4);
-    if (i_this->mAAA8[4].m2D0 == 0) {
-        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mRightArmParts[0], &i_this->mAAA8[4],
+    MtxPosition(local_8c, &i_this->mRightArmParts[0].mPartPos);
+    if (i_this->mMove[4].mCut == 0) {
+        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mRightArmParts[0], &i_this->mMove[4],
                        dVar9);
-        if (i_this->mC779 != 0) {
-            bgn_copy3(&i_this->mRightArmParts[BGN_HAND_MAX()].m0D4, &i_this->mC788);
+        if (i_this->mRightPunchOn != 0) {
+            bgn_copy3(&i_this->mRightArmParts[BGN_HAND_MAX()].mPartPos, &i_this->mRightPunchPos);
         } else {
-            cMtx_YrotS(calc_mtx(), i_this->mC314.y);
+            cMtx_YrotS(calc_mtx(), i_this->mBodyAngle.y);
             local_8c->x = l_HIO().m078;
             local_8c->z = l_HIO().m080;
             local_8c->y = l_HIO().m07C;
-            PSVECAdd(local_8c, &i_this->mAAA8[4].m2D4, local_8c);
-            MtxPosition(local_8c, &i_this->mRightArmParts[BGN_HAND_MAX()].m0D4);
-            cXyz *e = &i_this->mRightArmParts[BGN_HAND_MAX()].m0D4;
-            PSVECAdd(e, &i_this->mC308, e);
+            PSVECAdd(local_8c, &i_this->mMove[4].mPose, local_8c);
+            MtxPosition(local_8c, &i_this->mRightArmParts[BGN_HAND_MAX()].mPartPos);
+            cXyz *e = &i_this->mRightArmParts[BGN_HAND_MAX()].mPartPos;
+            PSVECAdd(e, &i_this->mBodyPos, e);
         }
         part_control_2(i_this, BGN_HAND_MAX(), &i_this->mRightArmParts[0], dVar9);
     } else {
-        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mRightArmParts[0], &i_this->mAAA8[4],
+        part_control_0(i_this, BGN_HAND_MAX(), &i_this->mRightArmParts[0], &i_this->mMove[4],
                        dVar9);
     }
     part_mtx_set(i_this, BGN_HAND_MAX(), &i_this->mRightArmParts[0], 4, BGN_HAND_MAX() - 1);
-    cMtx_XrotS(calc_mtx(), i_this->mPelvisParts[0].m0E0.x);
-    cMtx_YrotM(calc_mtx(), i_this->mPelvisParts[0].m0E0.y);
-    cMtx_ZrotM(calc_mtx(), (s16)-i_this->mPelvisParts[0].m0E0.z);
+    cMtx_XrotS(calc_mtx(), i_this->mPelvisParts[0].mPartAngle.x);
+    cMtx_YrotM(calc_mtx(), i_this->mPelvisParts[0].mPartAngle.y);
+    cMtx_ZrotM(calc_mtx(), (s16)-i_this->mPelvisParts[0].mPartAngle.z);
     {
         f32 s = gabi::fmuls_ppc(l_HIO().m100, l_HIO().m0F4);
         MtxScale(s, s, s, true);
     }
     MtxPush();
     {
-        f32 k = i_this->mCC80;
+        f32 k = i_this->mPartLengthScale;
         local_8c->x = gabi::fmuls_ppc(l_HIO().m150, k);
         local_8c->y = gabi::fmuls_ppc(l_HIO().m154, k);
         local_8c->z = gabi::fmuls_ppc(l_HIO().m158, k);
     }
     MtxPosition(local_8c, cStack_98);
-    cXyz_pl(&i_this->mPelvisParts[0].m0D4, sum, cStack_98);
-    bgn_copy3(&i_this->mLeftLegParts[0].m0D4, sum.get());
-    part_control_0(i_this, 3, &i_this->mLeftLegParts[0], &i_this->mAAA8[5], dVar11);
-    if (i_this->mAAA8[5].m2D0 == 0) {
-        bgn_limb_end(i_this, local_8c, &l_HIO().m084, &i_this->mAAA8[5],
-                     &i_this->mLeftLegParts[3].m0D4);
+    cXyz_pl(&i_this->mPelvisParts[0].mPartPos, sum, cStack_98);
+    bgn_copy3(&i_this->mLeftLegParts[0].mPartPos, sum.get());
+    part_control_0(i_this, 3, &i_this->mLeftLegParts[0], &i_this->mMove[5], dVar11);
+    if (i_this->mMove[5].mCut == 0) {
+        bgn_limb_end(i_this, local_8c, &l_HIO().m084, &i_this->mMove[5],
+                     &i_this->mLeftLegParts[3].mPartPos);
         part_control_2(i_this, 3, &i_this->mLeftLegParts[0], dVar11);
     }
     part_mtx_set(i_this, 3, &i_this->mLeftLegParts[0], 5, 2);
     MtxPull();
     MtxPush();
     {
-        f32 k = i_this->mCC80;
+        f32 k = i_this->mPartLengthScale;
         local_8c->x = gabi::fmuls_ppc(-(f32)l_HIO().m150, k);
         local_8c->y = gabi::fmuls_ppc(l_HIO().m154, k);
         local_8c->z = gabi::fmuls_ppc(l_HIO().m158, k);
     }
     MtxPosition(local_8c, cStack_98);
-    cXyz_pl(&i_this->mPelvisParts[0].m0D4, sum, cStack_98);
-    bgn_copy3(&i_this->mRightLegParts[0].m0D4, sum.get());
-    part_control_0(i_this, 3, &i_this->mRightLegParts[0], &i_this->mAAA8[6], dVar11);
-    if (i_this->mAAA8[6].m2D0 == 0) {
-        bgn_limb_end(i_this, local_8c, &l_HIO().m090, &i_this->mAAA8[6],
-                     &i_this->mRightLegParts[3].m0D4);
+    cXyz_pl(&i_this->mPelvisParts[0].mPartPos, sum, cStack_98);
+    bgn_copy3(&i_this->mRightLegParts[0].mPartPos, sum.get());
+    part_control_0(i_this, 3, &i_this->mRightLegParts[0], &i_this->mMove[6], dVar11);
+    if (i_this->mMove[6].mCut == 0) {
+        bgn_limb_end(i_this, local_8c, &l_HIO().m090, &i_this->mMove[6],
+                     &i_this->mRightLegParts[3].mPartPos);
         part_control_2(i_this, 3, &i_this->mRightLegParts[0], dVar11);
     }
     part_mtx_set(i_this, 3, &i_this->mRightLegParts[0], 6, 2);
     MtxPull();
     {
-        f32 k = i_this->mCC80;
+        f32 k = i_this->mPartLengthScale;
         local_8c->x = gabi::fmuls_ppc(l_HIO().m15C, k);
         local_8c->y = gabi::fmuls_ppc(l_HIO().m160, k);
         local_8c->z = gabi::fmuls_ppc(l_HIO().m164, k);
     }
     MtxPosition(local_8c, cStack_98);
-    cXyz_pl(&i_this->mPelvisParts[0].m0D4, sum, cStack_98);
-    bgn_copy3(&i_this->mTailParts[0].m0D4, sum.get());
+    cXyz_pl(&i_this->mPelvisParts[0].mPartPos, sum, cStack_98);
+    bgn_copy3(&i_this->mTailParts[0].mPartPos, sum.get());
     s32 tailMax = BGN_TAIL_MAX();
-    if (i_this->mAAA8[7].m2D0 == 0) {
-        part_control_0(i_this, tailMax, &i_this->mTailParts[0], &i_this->mAAA8[7], dVar13);
-        cMtx_YrotS(calc_mtx(), i_this->mC314.y);
+    if (i_this->mMove[7].mCut == 0) {
+        part_control_0(i_this, tailMax, &i_this->mTailParts[0], &i_this->mMove[7], dVar13);
+        cMtx_YrotS(calc_mtx(), i_this->mBodyAngle.y);
         local_8c->x = l_HIO().m09C;
         local_8c->y = l_HIO().m0A0;
         local_8c->z = l_HIO().m0A4;
-        PSVECAdd(local_8c, &i_this->mAAA8[7].m2D4, local_8c);
-        MtxPosition(local_8c, &i_this->mTailParts[BGN_TAIL_MAX()].m0D4);
-        cXyz *e = &i_this->mTailParts[BGN_TAIL_MAX()].m0D4;
-        PSVECAdd(e, &i_this->mC308, e);
-        f32 c3 = i_this->mC7BC;
+        PSVECAdd(local_8c, &i_this->mMove[7].mPose, local_8c);
+        MtxPosition(local_8c, &i_this->mTailParts[BGN_TAIL_MAX()].mPartPos);
+        cXyz *e = &i_this->mTailParts[BGN_TAIL_MAX()].mPartPos;
+        PSVECAdd(e, &i_this->mBodyPos, e);
+        f32 c3 = i_this->mGroundY;
         part_s *last = &i_this->mTailParts[BGN_TAIL_MAX()];
-        if (!(last->m0D4.y > c3))
-            last->m0D4.y = c3;
+        if (!(last->mPartPos.y > c3))
+            last->mPartPos.y = c3;
         part_control_2(i_this, BGN_TAIL_MAX(), &i_this->mTailParts[0], dVar13);
         part_mtx_set(i_this, BGN_TAIL_MAX(), &i_this->mTailParts[0], 7, BGN_TAIL_MAX() - 1);
     } else {
         /* part_control_0Z (inline) */
         s32 param_2 = tailMax;
         part_s *param_3 = &i_this->mTailParts[0];
-        move_s *param_4 = &i_this->mAAA8[7];
+        move_s *param_4 = &i_this->mMove[7];
         f32 param_5 = dVar13;
         gabi::Local<cXyz> local_f8;
         gabi::Local<cXyz> local_128;
         gabi::Local<cXyz> local_134;
         gabi::Local<cXyz> cStack_104;
         gabi::Local<cXyz> psum;
-        cMtx_YrotS(calc_mtx(), i_this->mC314.y);
+        cMtx_YrotS(calc_mtx(), i_this->mBodyAngle.y);
         if (param_3 == &i_this->mLeftArmParts[0]) {
             local_f8->y = 0.0f;
             local_f8->z = 0.0f;
@@ -625,34 +625,34 @@ void move(bgn_class *i_this) {
             local_f8->z = gabi::fadds_ppc(REG0_F(6), -5.0f);
             MtxPosition(local_f8, local_128);
         }
-        f32 dVar10z = i_this->mC7BC;
+        f32 dVar10z = i_this->mGroundY;
         f32 dVar9z = l_HIO().m170;
         param_3++;
         for (s32 i = 1; i < param_2 + 1; i++, param_3++) {
             part_s *prev = param_3 - 1;
-            f32 py = param_3->m0D4.y;
+            f32 py = param_3->mPartPos.y;
             f32 dVar11z = gabi::fadds_ppc(py, dVar9z);
             if (!(dVar11z > dVar10z)) {
                 dVar11z = dVar10z;
-                if ((u32)i == (u32)param_2 && (i_this->mC746 & 7) == 0) {
+                if ((u32)i == (u32)param_2 && (i_this->mFrameCounter & 7) == 0) {
                     local_134->y = py;
-                    local_134->x = param_3->m0D4.x;
-                    local_134->z = param_3->m0D4.z;
+                    local_134->x = param_3->mPartPos.x;
+                    local_134->z = param_3->mPartPos.z;
                     if (!gr_check(i_this, local_134)) {
                         dComIfGp_particle_setSimple(bgn_move_detail::ID_AK_SN_O_KGTCOMMONHAMON03,
                                                     local_134, 0xFF);
-                        if (i_this->m0304 == 0) {
+                        if (i_this->mRippleSeTimer == 0) {
                             f32 r = gabi::fadds_ppc(cM_rndF(20.0f), 20.0f);
                             u32 sx = (u32)bgn_move_detail::words(local_134.get())->y,
                                 sz = (u32)bgn_move_detail::words(local_134.get())->z,
                                 sxx = (u32)bgn_move_detail::words(local_134.get())->x;
-                            auto *dst = bgn_move_detail::words(&i_this->m0308);
+                            auto *dst = bgn_move_detail::words(&i_this->mRipplePos);
                             dst->x = sxx;
                             dst->y = sx;
                             dst->z = sz;
-                            i_this->m0304 = (s16)gabi::ftoi(r);
+                            i_this->mRippleSeTimer = (s16)gabi::ftoi(r);
                             mDoAud_seStart(bgn_move_detail::JA_SE_CM_BGN_BODY_RIPPLE,
-                                           &i_this->m0308, 0,
+                                           &i_this->mRipplePos, 0,
                                            dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
                         }
                     }
@@ -660,34 +660,34 @@ void move(bgn_class *i_this) {
             }
             f32 f1 = (f32)(param_2 - i);
             s16 c3 = REG0_S(3);
-            f32 m2f4 = param_4->m2F4;
-            f32 x = gabi::fmadds(local_128->x, f1, gabi::fsubs_ppc(param_3->m0D4.x, prev->m0D4.x));
+            f32 m2f4 = param_4->mLimbShakeAmplitude;
+            f32 x = gabi::fmadds(local_128->x, f1, gabi::fsubs_ppc(param_3->mPartPos.x, prev->mPartPos.x));
             s16 iVar2 =
-                (s16)gabi::ftoi(gabi::fmuls_ppc(cM_ssin(param_4->m2FA + i * (c3 + 8000)), m2f4));
-            f32 dz = gabi::fsubs_ppc(param_3->m0D4.z, prev->m0D4.z);
-            f32 yv = gabi::fsubs_ppc(dVar11z, prev->m0D4.y);
+                (s16)gabi::ftoi(gabi::fmuls_ppc(cM_ssin(param_4->mPhaseSin + i * (c3 + 8000)), m2f4));
+            f32 dz = gabi::fsubs_ppc(param_3->mPartPos.z, prev->mPartPos.z);
+            f32 yv = gabi::fsubs_ppc(dVar11z, prev->mPartPos.y);
             f32 z = gabi::fmadds(local_128->z, f1, dz);
             s16 iVar4 = (s16)gabi::ftoi(
-                gabi::fmuls_ppc(cM_scos(param_4->m2FC + i * (REG0_S(4) + 9000)), m2f4));
+                gabi::fmuls_ppc(cM_scos(param_4->mPhaseCos + i * (REG0_S(4) + 9000)), m2f4));
             s16 a = cM_atan2s(x, z);
-            prev->m0E0.y = (s16)(a + iVar4);
+            prev->mPartAngle.y = (s16)(a + iVar4);
             f32 sq = std_sqrtf(gabi::fmadds(x, x, gabi::fmuls_ppc(z, z)));
             s16 b = cM_atan2s(yv, sq);
-            s16 ry = prev->m0E0.y;
-            prev->m0E0.x = (s16)(iVar2 - b);
+            s16 ry = prev->mPartAngle.y;
+            prev->mPartAngle.x = (s16)(iVar2 - b);
             cMtx_YrotS(calc_mtx(), ry);
-            cMtx_XrotM(calc_mtx(), prev->m0E0.x);
+            cMtx_XrotM(calc_mtx(), prev->mPartAngle.x);
             local_f8->x = 0.0f;
             local_f8->y = 0.0f;
-            local_f8->z = gabi::fmuls_ppc(gabi::fmuls_ppc(param_5, prev->m0F4), i_this->mCC80);
+            local_f8->z = gabi::fmuls_ppc(gabi::fmuls_ppc(param_5, prev->mPartScale), i_this->mPartLengthScale);
             MtxPosition(local_f8, cStack_104);
-            cXyz_pl(&prev->m0D4, psum, cStack_104);
-            bgn_copy3(&param_3->m0D4, psum.get());
+            cXyz_pl(&prev->mPartPos, psum, cStack_104);
+            bgn_copy3(&param_3->mPartPos, psum.get());
         }
         part_mtx_set(i_this, BGN_TAIL_MAX(), &i_this->mTailParts[0], 7, BGN_TAIL_MAX() - 1);
     }
     for (s32 i = 0; i < 8; i++)
-        action_s_himo(i_this, &i_this->mAAA8[i], i);
+        action_s_himo(i_this, &i_this->mMove[i], i);
     /* ~dBgS_GndChk (inline): the base vtables back, then ~cBgS_Chk */
     {
         auto *g = gndChk.get();

@@ -11,20 +11,20 @@ struct Kk1ActionFields {
     u8 _870[0x18];
     /* 0x888 */ csXyz mHomeAngle;
     u8 _88E[0x1A];
-    /* 0x8A8 */ cXyz mLookTarget;
+    /* 0x8A8 */ cXyz mLookPos;  /* was mLookTarget (misnamed): view of daNpc_Kk1_c mLookPos (d_a_npc_kk1.h); one name per field. lookBack 0226E604 looks at it; same code as daNpc_Bm1_c / daNpc_Ko1_c::mLookPos; the Kk1EventState name stays */
     u8 _8B4[0x2C];
     /* 0x8E0 */ csXyz mPreviousLookAngles;
     u8 _8E6[0x2];
-    /* 0x8E8 */ be<u32> mActionResult;
+    /* 0x8E8 */ be<u32> mbSetEyePos;  /* was mActionResult (misnamed): view of daNpc_Kk1_c mbSetEyePos (d_a_npc_kk1.h); one name per field. the state function's result (wait_action1 02271084) decides whether setAttention 0226BD78 copies the eye position to eyePos; same code as daNpc_Bm1_c / daNpc_Ko1_c::mbSetEyePos (tww Bm1 mbSetEyePos = wait_1()) */
     u8 _8EC[0x4];
     /* 0x8F0 */ be<s16> mPickEventId;
     u8 _8F2[0xA];
-    /* 0x8FC */ be<s16> mEventAction;
+    /* 0x8FC */ be<s16> mEventIdx;  /* was mEventAction (misnamed): view of daNpc_Kk1_c mEventIdx (d_a_npc_kk1.h); one name per field. eventOrder 0226E92C stores the ordered event's index and checkOrder / event_proc pick mEventIds by it; same code as daNpc_Bm1_c::mEventIdx (tww Bm1 mEventIdx) */
     u8 _8FE[0x4];
     /* 0x902 */ be<s16> mTurnRatio;
     /* 0x904 */ be<s16> mTurnMaxStep;
     u8 _906[0x2];
-    /* 0x908 */ be<s16> mTurnTimer;
+    /* 0x908 */ be<s16> mCutTimer;  /* was mTurnTimer (misnamed): view of daNpc_Kk1_c mCutTimer (d_a_npc_kk1.h); one name per field. the cuts (cut_init_RUN 0226CD04 ..) and the comment actions (init_CMT_TRN 0227066C / move_CMT_TRN 022706E4) both count it down to end the current step; the Kk1EventState name stays (daNpc_Kk1_c mTurnTimer is 0x90A) */
     u8 _90A[0x4];
     /* 0x90E */ be<s16> mAfterTalkTimer;
     u8 _910[0x2];
@@ -47,15 +47,15 @@ struct Kk1ActionFields {
     u8 _92B[0x7];
     /* 0x932 */ be<u8> mAttentionSelected;
     /* 0x933 */ be<u8> mTalkRequested;
-    /* 0x934 */ be<u8> mUseLookTarget;
+    /* 0x934 */ be<u8> mHeadOnlyFollow;  /* was mUseLookTarget (misnamed): view of daNpc_Kk1_c mHeadOnlyFollow (d_a_npc_kk1.h); one name per field. lookBack 0226E604 passes it as the joint look-at's head-only flag; same code as daNpc_Bm1_c / daNpc_Ko1_c::mHeadOnlyFollow (tww Bm1 headOnlyFollow = m896) */
     /* 0x935 */ be<u8> mPlayerFar;
     u8 _936[0x18C];
     /* 0xAC2 */ be<u8> mCommentAction;
     /* 0xAC3 */ be<u8> mTalkAnimation;
     /* 0xAC4 */ be<u8> mMessageTag;
     u8 _AC5[0x1];
-    /* 0xAC6 */ be<u8> mAnimationNo;
-    /* 0xAC7 */ be<u8> mEventState;
+    /* 0xAC6 */ be<u8> mAnmNum;  /* was mAnimationNo (misnamed): view of daNpc_Kk1_c mAnmNum (d_a_npc_kk1.h); one name per field. setAnm_anm 0226C660 stores the animation number and play_animation switches on it; same code as daNpc_Bm1_c::mAnmNum (tww Bm1 mAnmNum) */
+    /* 0xAC7 */ be<u8> mOrderEvent;  /* was mEventState (misnamed): view of daNpc_Kk1_c mOrderEvent (d_a_npc_kk1.h); one name per field. eventOrder 0226E92C orders by it and checkOrder 0226C7DC clears it, the waits set 2; same code as daNpc_Bm1_c / daNpc_Ko1_c::mOrderEvent (tww Bm1 m8FD) */
     /* 0xAC8 */ be<u8> mActionState;
     /* 0xAC9 */ be<u8> mPreviousState;
     /* 0xACA */ be<u8> mLookMode;
@@ -68,14 +68,14 @@ struct Kk1ActionFields {
 WWHD_SIZE(Kk1ActionFields, 0xAD0);
 WWHD_OFFSET(Kk1ActionFields, mPartnerId, 0x86C);
 WWHD_OFFSET(Kk1ActionFields, mHomeAngle, 0x888);
-WWHD_OFFSET(Kk1ActionFields, mLookTarget, 0x8A8);
+WWHD_OFFSET(Kk1ActionFields, mLookPos, 0x8A8);
 WWHD_OFFSET(Kk1ActionFields, mPreviousLookAngles, 0x8E0);
-WWHD_OFFSET(Kk1ActionFields, mActionResult, 0x8E8);
+WWHD_OFFSET(Kk1ActionFields, mbSetEyePos, 0x8E8);
 WWHD_OFFSET(Kk1ActionFields, mPickEventId, 0x8F0);
-WWHD_OFFSET(Kk1ActionFields, mEventAction, 0x8FC);
+WWHD_OFFSET(Kk1ActionFields, mEventIdx, 0x8FC);
 WWHD_OFFSET(Kk1ActionFields, mTurnRatio, 0x902);
 WWHD_OFFSET(Kk1ActionFields, mTurnMaxStep, 0x904);
-WWHD_OFFSET(Kk1ActionFields, mTurnTimer, 0x908);
+WWHD_OFFSET(Kk1ActionFields, mCutTimer, 0x908);
 WWHD_OFFSET(Kk1ActionFields, mAfterTalkTimer, 0x90E);
 WWHD_OFFSET(Kk1ActionFields, mTalkLookTimer, 0x912);
 WWHD_OFFSET(Kk1ActionFields, mActionTimer, 0x914);
@@ -90,13 +90,13 @@ WWHD_OFFSET(Kk1ActionFields, mPartnerEventEnabled, 0x928);
 WWHD_OFFSET(Kk1ActionFields, mNightMessageFlag, 0x92A);
 WWHD_OFFSET(Kk1ActionFields, mAttentionSelected, 0x932);
 WWHD_OFFSET(Kk1ActionFields, mTalkRequested, 0x933);
-WWHD_OFFSET(Kk1ActionFields, mUseLookTarget, 0x934);
+WWHD_OFFSET(Kk1ActionFields, mHeadOnlyFollow, 0x934);
 WWHD_OFFSET(Kk1ActionFields, mPlayerFar, 0x935);
 WWHD_OFFSET(Kk1ActionFields, mCommentAction, 0xAC2);
 WWHD_OFFSET(Kk1ActionFields, mTalkAnimation, 0xAC3);
 WWHD_OFFSET(Kk1ActionFields, mMessageTag, 0xAC4);
-WWHD_OFFSET(Kk1ActionFields, mAnimationNo, 0xAC6);
-WWHD_OFFSET(Kk1ActionFields, mEventState, 0xAC7);
+WWHD_OFFSET(Kk1ActionFields, mAnmNum, 0xAC6);
+WWHD_OFFSET(Kk1ActionFields, mOrderEvent, 0xAC7);
 WWHD_OFFSET(Kk1ActionFields, mActionState, 0xAC8);
 WWHD_OFFSET(Kk1ActionFields, mPreviousState, 0xAC9);
 WWHD_OFFSET(Kk1ActionFields, mLookMode, 0xACA);

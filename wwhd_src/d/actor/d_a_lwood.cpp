@@ -70,7 +70,7 @@ void daLwood_c::set_mtx() {
 BOOL daLwood_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arcname, dRes_INDEX_LWOOD_BDL_ALWD_e, gc_tu.safeString);
     if (modelData == nullptr) /* JUT_ASSERT(0xBA, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_lwood.cpp", 0xBA, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_lwood.cpp", 0xBA, "modelData != (0)");
     J3DModel* model = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     mModel = model;
     if (model == nullptr)
@@ -242,7 +242,7 @@ static void empty_virtual(void* p) {
 /* WWHD glue
 str 10014228
 str 100141B4
-str 100141C4 "modelData != NULL"
+str 100141C4 "modelData != (0)"
 str 10014210
 ext 027F68FC lwood_layout::ResourceHeader* getJointResource(J3DModelData*)
 ext 027DF9B0 s32 JUTNameTab_getIndex(void*, const char*)

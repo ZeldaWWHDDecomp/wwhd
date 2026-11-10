@@ -25,15 +25,15 @@ static void setPoint(cXyz* point, f32 x, f32 y, f32 z) {
     point->z = z;
 }
 static void SkipSmoother(dCamera_c* camera) {
-    camera->m102 = 1;
-    camera->m101 = 1;
-    camera->m100 = 1;
+    camera->mStyleSettle2 = 1;
+    camera->mStyleSettle1 = 1;
+    camera->mStyleSettle0 = 1;
 }
 }
 /* 025383D0 */
 bool event_camera_pair::dCamera_c::tornadoWarpEvCamera() {
     auto& work = mWork.tornadoWarp;
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         work.mTimer = 0;
         work.mState = TORNADO_CHOOSE_EYE;
         SkipSmoother(this);
@@ -70,7 +70,7 @@ bool event_camera_pair::dCamera_c::tornadoWarpEvCamera() {
         setPoint(farPoint.get(), -180000.0f, 750.0f, -200000.0f); /* (-180000, 750, -200000) */
         cameraPairRelational(this, difference.get(), pl, centerOffset.get());
         copyPoint(center.get(), difference.get());
-        if (m786 != 0) {
+        if (mInSeaCenter != 0) {
             /* the table entry whose eye is closest to (-180000, 750, -200000) */
             s32 best = 3;
             f32 bestDistance = 100000000.0f; /* 1e8 */
@@ -192,7 +192,7 @@ bool event_camera_pair::dCamera_c::twoActor0EvCamera() {
         zeroData->mZero.y = zero;
     }
     auto& work = mWork.twoActor;
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         work.mpActor1 = cameraPairGetActor(this, "Actor1", "@PLAYER");
         fopAc_ac_c* b = cameraPairGetActor(this, "Actor2", "@STARTER");
         fopAc_ac_c* a = work.mpActor1;

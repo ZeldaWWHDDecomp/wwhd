@@ -1,7 +1,7 @@
 /* pt_class (Miniblin), WWHD layout. 
  *
- * GameCube -> WWHD: +0x11C up to the timers (the GameCube header's m2C0.. are +0x11C); four bytes
- * fewer before the collision members (+0x118 from m328 on: GameCube 0x328 -> 0x440).
+ * GameCube -> WWHD: +0x11C up to the timers (the GameCube header's mpMorf.. are +0x11C); four bytes
+ * fewer before the collision members (+0x118 from mAcchCir on: GameCube 0x328 -> 0x440).
  * enemyice keeps its GameCube layout (0x3B8); enemyfire is 0x22C (GameCube 0x228: one float
  * appended, set to 1.0 by its constructor). Size 0xEE4 (constructor 02446CF4).
  * Offsets from the verified functions. */
@@ -95,37 +95,37 @@ struct pt_class : fopEn_enemy_c {
     /* 0x3D3 */ be<u8> mEnableSpawnSwitch;
     /* 0x3D4 */ be<u8> mDisableRespawnSwitch;
     /* 0x3D5 */ be<s8> mInitialSpawnWaitsUntilOffScreen;          /* GameCube 0x2B9: not drawn, no action (waits for its spawn switch) */
-    /* 0x3D6 */ be<s8> m2BA;       /* GameCube 0x2BA: Delete creates a new Miniblin */
+    /* 0x3D6 */ be<s8> mRespawn;  /* was m2BA: daPt_Execute 02446374 (fell below home - 3000) and action 02447300 (killed) set 1 for behaviour 0; daPt_Delete 024468E4 then creates a new Miniblin at the home position (if the spawn switches allow); GameCube 0x2BA: Delete creates a new Miniblin */
     /* 0x3D7 */ u8 _3D7[0x3DC - 0x3D7];
-    /* 0x3DC */ gptr<mDoExt_McaMorf> m2C0;
-    /* 0x3E0 */ gptr<PtMaterialAnimation> m2C4;
-    /* 0x3E4 */ gptr<PtMaterialAnimation> m2C8;
-    /* 0x3E8 */ be<s32> m2CC;      /* body colour (random 0..3) */
-    /* 0x3EC */ be<s16> m2D0;
-    /* 0x3EE */ be<s16> m2D2;        /* GameCube 0x2D2 */
+    /* 0x3DC */ gptr<mDoExt_McaMorf> mpMorf;  /* was m2C0: useHeapInit 02446A4C creates the mDoExt_McaMorf; anm_init 02445DBC sets its animations, daPt_Execute 02446374 plays / calcs it, daPt_Draw 02445EE4 draws its model; daPt_Create 02446E54 gives it to mEnemyFire */
+    /* 0x3E0 */ gptr<PtMaterialAnimation> mpBtpAnm;  /* was m2C4: useHeapInit 02446A4C initialises it as the btp (pt_btpInit); daPt_Execute 02446374 sets its frame from mBlinkTimer (blink), daPt_Draw 02445EE4 enters it (mDoExt_btpAnm_entry) */
+    /* 0x3E4 */ gptr<PtMaterialAnimation> mpBrkAnm;  /* was m2C8: useHeapInit 02446A4C initialises it as the brk (pt_brkInit); daPt_Execute 02446374 sets its frame to mColorNo, daPt_Draw 02445EE4 enters it (mDoExt_brkAnm_entry) */
+    /* 0x3E8 */ be<s32> mColorNo;  /* was m2CC: useHeapInit 02446A4C: random 0..3; daPt_Execute 02446374 shows that frame of mpBrkAnm (body colour); pt_attack (in action 02447300) waits it * 3 + 10 frames; body colour (random 0..3) */
+    /* 0x3EC */ be<s16> mFrameCounter;  /* was m2D0: daPt_Execute 02446374 increments it every frame and checks the fall-out-of-the-world condition every 32nd frame */
+    /* 0x3EE */ be<s16> mAction;  /* was m2D2: action 02447300 switches on it (PT_WAIT, PT_MOVE, PT_ATTACK, PT_KOKE, PT_PLES, PT_BAT); daPt_Create 02446E54 sets PT_WAIT, the action functions and damage_check (in action) switch it; GameCube 0x2D2 */
     /* 0x3F0 */ be<s16> mMode;
-    /* 0x3F2 */ be<s16> m2D6;
+    /* 0x3F2 */ be<s16> mBlinkTimer;  /* was m2D6: daPt_Execute 02446374: counted down, its last 8 frames are the btp (blink) frames; restarts at random 20..50 */
     /* 0x3F4 */ be<s16> mInitialSpawnDelay; /* home angle.x */
     /* 0x3F6 */ u8 _3F6[0x404 - 0x3F6];
     /* 0x404 */ cXyz mJumpTarget;       /* landing point found by next_pos_set */
-    /* 0x410 */ gptr<cXyz> m2F8;  /* bait (esa) or player position */
-    /* 0x414 */ be<s16> m2FC;
+    /* 0x410 */ gptr<cXyz> mpTargetPos;  /* was m2F8: action 02447300: the position of the bait (esa) actor if there is one, else the player's; pt_move / pt_attack (in action) jump toward it; bait (esa) or player position */
+    /* 0x414 */ be<s16> mTargetAngleY;  /* was m2FC: action 02447300: angle to the bait (cM_atan2s) or the player (fopAcM_searchPlayerAngleY); next_pos_set / pt_attack (in action) aim with it */
     /* 0x416 */ u8 _416[2];
-    /* 0x418 */ be<f32> m300;
-    /* 0x41C */ be<f32> m304;
+    /* 0x418 */ be<f32> mTargetDist;  /* was m300: action 02447300: distance to the bait or the player (fopAcM_searchPlayerDistance); pt_attack (in action) goes back to PT_MOVE when it lands at > 700 */
+    /* 0x41C */ be<f32> mTargetDistXZ;  /* was m304: action 02447300: XZ distance to the bait or the player (fopAcM_searchPlayerDistanceXZ); pt_move (in action) attacks at < 500 */
     /* 0x420 */ be<s16> mTimers[3];
-    /* 0x426 */ be<s16> m30E;
+    /* 0x426 */ be<s16> mNoHitTimer;  /* was m30E: action 02447300 runs damage_check only while it is 0; daPt_Execute 02446374 counts it down; pt_wait / pt_ples / pt_bat / damage_check (in action) set 5..100 */
     /* 0x428 */ be<s16> mSpinSpeed;     /* pt_koke modes 10..12 */
     /* 0x42A */ u8 _42A[2];
-    /* 0x42C */ be<f32> m314;
-    /* 0x430 */ be<f32> m318;
-    /* 0x434 */ be<f32> m31C;
-    /* 0x438 */ be<f32> m320;
-    /* 0x43C */ be<s16> m324;
+    /* 0x42C */ be<f32> mFallSpeedY;  /* was m314: daPt_Execute 02446374 keeps speed.y before mAcch.CrrPos; pt_attack (in action 02447300) switches to PT_KOKE (falls over) when it lands at < -100 */
+    /* 0x430 */ be<f32> mHopY;  /* was m318: action 02447300: height of the hop drawn on top of the movement (adds mHopSpeed, floor 0); daPt_Execute 02446374 translates the model up by it */
+    /* 0x434 */ be<f32> mHopSpeed;  /* was m31C: jump_target_set (in action 02447300) sets the jump distance * 0.1 (max 50); action adds it to mHopY and lowers it by 5 per frame */
+    /* 0x438 */ be<f32> mKnockbackSpeed;  /* was m320: damage_check (in action 02447300) sets 40 / 80 / 90..120 / 110 at a hit; action moves back along mKnockbackAngleY by it, eases it to 0 (step 7) and kills a dead Miniblin when it ends or hits a wall; pt_koke waits for < 0.05 */
+    /* 0x43C */ be<s16> mKnockbackAngleY;  /* was m324: damage_check (in action 02447300) sets the player angle, pt_bat a random flight angle; action moves back by mKnockbackSpeed along it */
     /* 0x43E */ be<s8> mbBgCheck;       /* cleared by Draw */
     /* 0x43F */ be<s8> mbAttack;
-    /* 0x440 */ dBgS_AcchCir m328;
-    /* 0x480 */ dBgS_ObjAcch m368;
+    /* 0x440 */ dBgS_AcchCir mAcchCir;  /* was m328: pt_class_ct 02446CF4 / pt_class_dt 02449B54 construct / destroy the dBgS_AcchCir; daPt_Create 02446E54 sets its wall (50, 50) and passes it to mAcch.Set */
+    /* 0x480 */ dBgS_ObjAcch mAcch;  /* was m368: pt_class_ct 02446CF4 constructs the dBgS_ObjAcch; daPt_Create 02446E54 sets it (with mAcchCir), daPt_Execute 02446374 runs CrrPos; pt_attack (in action 02447300) reads its ground / wall flags */
     /* 0x644 */ dCcD_Stts mStts;
     /* 0x680 */ dCcD_Sph mSph;          /* body (tg/co) */
     /* 0x7AC */ dCcD_Sph mAtSph;        /* attack */
@@ -134,11 +134,11 @@ struct pt_class : fopEn_enemy_c {
     /* 0x8DC */ PtSmokeCallback mSmokeCb;
     /* 0x8FC */ enemyice mEnemyIce;
     /* 0xCB4 */ enemyfire mEnemyFire;
-    /* 0xEE0 */ be<u8> mDC4;
+    /* 0xEE0 */ be<u8> mHioOwner;  /* was mDC4: daPt_Create 02446E54 sets 1 when this actor created the l_HIO child (hio_set); daPt_Delete 024468E4 deletes the HIO child only then */
     /* 0xEE1 */ u8 _EE1[3];
 };
-WWHD_OFFSET(pt_class, m2C0, 0x3DC);
-WWHD_OFFSET(pt_class, m328, 0x440);
+WWHD_OFFSET(pt_class, mpMorf, 0x3DC);
+WWHD_OFFSET(pt_class, mAcchCir, 0x440);
 WWHD_OFFSET(pt_class, mStts, 0x644);
 WWHD_OFFSET(pt_class, mSmokeCb, 0x8DC);
 WWHD_OFFSET(pt_class, mEnemyIce, 0x8FC);

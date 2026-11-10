@@ -276,12 +276,12 @@ static void daShip_initStartPos(void *ship, void *pos, s16 rotY) {
   sdk::removeWave(actor->mWaveR);
   sdk::removeSplash(actor->mSplash);
   sdk::removeTrack(actor->mTrack);
-  sdk::endRipple(actor->mRipple);
+  sdk::endRipple(&actor->mRipple);
   // HD: these two follow callbacks dispatch through their virtual end slot.
-  view<FollowCallback>(gabi::ea(&actor->m1984))->endVirtual();
-  view<FollowCallback>(gabi::ea(&actor->m1998))->endVirtual();
-  sdk::endFollow(&actor->m19AC);
-  sdk::endRipple(actor->m19C0);
+  view<FollowCallback>(gabi::ea(&actor->mWarpSplash))->endVirtual();
+  view<FollowCallback>(gabi::ea(&actor->mWarpSplashBack))->endVirtual();
+  sdk::endFollow(&actor->mRopeDrip);
+  sdk::endRipple(&actor->mRopeRipple);
 }
 
 /* 024833BC __sinit_d_a_ship_static_cpp (ctor list 1018B480): the header statics only */

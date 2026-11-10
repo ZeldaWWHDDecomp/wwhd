@@ -157,10 +157,10 @@ void magmaRegisterModuleObject(void *);
 f32 magmaPow(f32, f32);
 void magmaClear(void *, u32);
 void magmaSubmitShaderCommands(void *, u32);
-void magmaDrawIndexed(u32, void *, u32, u32, u32, u32);
-void magmaBindGeometryBuffer(s32, u32, u32);
-void magmaBindVertexBuffer(s32, u32, u32);
-void magmaBindIndexBuffer(s32, u32, u32);
+void GX2DrawIndexedEx(u32, void *, u32, u32, u32, u32);
+void GX2SetGeometryUniformBlock(s32, u32, u32);
+void GX2SetPixelUniformBlock(s32, u32, u32);
+void GX2SetVertexUniformBlock(s32, u32, u32);
 
 static MagmaFloat magmaSamplerParameter;
 static MagmaFloat magmaColorMaximum;
@@ -391,14 +391,15 @@ static bool magmaDrawMaterial(u32 self, u32 context, bool floor) {
         auto *buffer =
             at<dMagma::HdRenderBuffer>(bufferBase + u32(packet->mActiveBuffer) * u32(sizeof(dMagma::HdRenderBuffer)));
         MagmaBindingDescriptor *desc = u32(selected->mBindingCount) ? selected->mpBindings.get() : nullptr;
-        s32 first = desc->mIndexBuffer, second = desc->mVertexBuffer, third = desc->mGeometryBuffer;
-        u32 size = buffer->mSize, data = ea(buffer->mpData.get());
+        s32 first = desc->mVertexLocation, second = desc->mPixelLocation, third = desc->mGeometryLocation;
+        // HD: the size goes through an explicit at/ea round trip, as the original object code does.
+        u32 data = buffer->mCpuStorage.v, size = ea(at<void>(u32(buffer->mStride)));
         if (second != -1)
-            magmaBindVertexBuffer(second, data, size);
+            GX2SetPixelUniformBlock(second, size, data);
         if (first != -1)
-            magmaBindIndexBuffer(first, data, size);
+            GX2SetVertexUniformBlock(first, size, data);
         if (third != -1)
-            magmaBindGeometryBuffer(third, data, size);
+            GX2SetGeometryUniformBlock(third, size, data);
         auto *render = floor ? &at<dMagma::HdFloorRenderState>(self)->mSecondObject
                              : &at<dMagma::HdBallRenderState>(self)->mSecondObject;
         auto *firstRender = floor ? &at<dMagma::HdFloorRenderState>(self)->mFirstObject
@@ -445,17 +446,18 @@ static bool magmaDrawMaterial(u32 self, u32 context, bool floor) {
     magmaBindResourceHandle(active == 0 ? table->mSecond.mpItems.get() : table->mFirst.mpItems.get());
     auto &indexBuffer = material->mIndexBuffer;
     if (floor) {
-        void *indices = indexBuffer.mpIndices;
-        if (indices)
-            magmaDrawIndexed(indexBuffer.mPrimitiveType, indices, indexBuffer.mIndexCount, indexBuffer.mIndexOffset, 0,
+        // HD: the count goes to the glue's void* parameter through at<void>(), as before (object-identical).
+        void *count = at<void>(u32(indexBuffer.mIndexCount));
+        if (count)
+            GX2DrawIndexedEx(indexBuffer.mPrimitiveType, count, indexBuffer.mFormat, indexBuffer.mStorage.v, 0,
                              1);
     } else {
         for (s32 i = 0; i < s32(magmaBallStripCount.value); ++i) {
-            void *indices = magmaBallStrips.indices[u32(i)];
+            void *count = at<void>(u32(magmaBallStrips.mIndexCounts[u32(i)]));
             u32 offset = u32(magmaBallStripVertices.value) * u32(i);
-            if (indices)
-                magmaDrawIndexed(indexBuffer.mPrimitiveType, indices, indexBuffer.mIndexCount,
-                                 u32(indexBuffer.mIndexOffset) + u32(indexBuffer.mIndexStride) * offset, 0, 1);
+            if (count)
+                GX2DrawIndexedEx(indexBuffer.mPrimitiveType, count, indexBuffer.mFormat,
+                                 u32(indexBuffer.mStorage.v) + u32(indexBuffer.mIndexBytes) * offset, 0, 1);
         }
     }
     magmaApplyGraphicsState(&magmaDefaultGraphicsState);
@@ -1641,10 +1643,10 @@ ext 028F026C void magmaRegisterModuleObject(void*)
 ext 028F4560 f32 magmaPow(f32,f32)
 ext 028F521C void magmaClear(void*,u32)
 ext C00060E0 void magmaSubmitShaderCommands(void*,u32)
-ext C0006178 void magmaDrawIndexed(u32,void*,u32,u32,u32,u32)
-ext C00068A8 void magmaBindGeometryBuffer(s32,u32,u32)
-ext C0006900 void magmaBindVertexBuffer(s32,u32,u32)
-ext C0006A38 void magmaBindIndexBuffer(s32,u32,u32)
+ext C0006178 void GX2DrawIndexedEx(u32,void*,u32,u32,u32,u32) # was magmaDrawIndexed: build/gen/imports.json slot C0006178 = gx2 GX2DrawIndexedEx
+ext C00068A8 void GX2SetGeometryUniformBlock(s32,u32,u32) # was magmaBindGeometryBuffer: build/gen/imports.json slot C00068A8 = gx2 GX2SetGeometryUniformBlock
+ext C0006900 void GX2SetPixelUniformBlock(s32,u32,u32) # was magmaBindVertexBuffer: build/gen/imports.json slot C0006900 = gx2 GX2SetPixelUniformBlock
+ext C0006A38 void GX2SetVertexUniformBlock(s32,u32,u32) # was magmaBindIndexBuffer: build/gen/imports.json slot C0006A38 = gx2 GX2SetVertexUniformBlock
 ext 0258AF68 void magmaPrepareFloor(MagmaFloor*)
 ext 0258C170 void magmaRemoveFloor(MagmaFloor*)
 ext 027F0E04 void magmaEntryPacket(void*, MagmaPacket*, u32)

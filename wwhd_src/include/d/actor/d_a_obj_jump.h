@@ -14,29 +14,29 @@ struct Attr_c {
   be<f32> field_0x018;
   be<f32> field_0x01C;
   be<f32> field_0x020;
-  be<f32> field_0x024;
-  be<f32> field_0x028;
-  be<f32> field_0x02C;
-  be<f32> field_0x030;
-  be<f32> field_0x034;
-  be<f32> field_0x038;
-  be<f32> field_0x03C;
-  be<u8> field_0x040;
-  be<u8> field_0x041;
-  be<u8> field_0x042;
-  be<u8> field_0x043;
-  be<u8> field_0x044;
-  be<u8> field_0x045;
-  be<u8> field_0x046;
-  be<u8> field_0x047;
-  be<u8> field_0x048;
+  /* 0x24 */ be<f32> mScalePivotY;  /* was field_0x024: set_mtx 023660A4: the Y about which the body is scaled (tww transM(0, it, 0), scaleM, transM(0, -it, 0)) */
+  /* 0x28 */ be<f32> mSpringDamping;  /* was field_0x028: calc_vib_pos 02366668: mScaleSpeed -= mScaleSpeed * it (tww) */
+  /* 0x2C */ be<f32> mSpringStiffness;  /* was field_0x02C: calc_vib_pos 02366668: mScaleSpeed -= (mScale - mScaleTarget) * it (tww) */
+  /* 0x30 */ be<f32> mPushImpulse;  /* was field_0x030: mode_wait 0236687C / mode_lower 023669E0: added to mScaleSpeed on a push */
+  /* 0x34 */ be<f32> mFastRideImpulse;  /* was field_0x034: Execute 023666C8: added to mScaleSpeed while mbFastRide */
+  /* 0x38 */ be<f32> mLowerScale;  /* was field_0x038: mode_w_l_init 0236685C: mScaleTarget when lowering */
+  /* 0x3C */ be<f32> mUpperScale;  /* was field_0x03C: mode_l_u_init 023669C0: mScaleTarget when rising */
+  /* 0x40 */ be<u8> mHeavyRideFrames;  /* was field_0x040: mode_wait 0236687C: lowers (JA_SE_OBJ_JUMP_SPR_CLOSE) once mHeavyRideCount exceeds it (tww) */
+  /* 0x41 */ be<u8> mHeavyUnrideFrames;  /* was field_0x041: mode_lower 023669E0: rises (JA_SE_OBJ_JUMP_SPR_OPEN) once mHeavyUnrideCount exceeds it (tww) */
+  /* 0x42 */ be<u8> mUpperTime;  /* was field_0x042: mode_upper_init 02366AD4: mTimer = it (tww mode_upper_init) */
+  /* 0x43 */ be<u8> mRidePulseFrames;  /* was field_0x043: set_push_flag 0236642C: mbRidePulse when mRideCount reaches it */
+  /* 0x44 */ be<u8> mUnridePulseFrames;  /* was field_0x044: set_push_flag 0236642C: mbUnridePulse when mUnrideCount reaches it */
+  /* 0x45 */ be<u8> mHangPulseFrames;  /* was field_0x045: set_push_flag 0236642C: mbHangPulse when mHangCount reaches it */
+  /* 0x46 */ be<u8> mHeavyRidePulseFrames;  /* was field_0x046: set_push_flag 0236642C: mbHeavyRidePulse when mHeavyRideCount reaches it */
+  /* 0x47 */ be<u8> mHeavyUnridePulseFrames;  /* was field_0x047: set_push_flag 0236642C: mbHeavyUnridePulse when mHeavyUnrideCount reaches it */
+  /* 0x48 */ be<u8> mPushInterval;  /* was field_0x048: mode_wait 0236687C / mode_lower 023669E0: mPushTimer after a push */
   u8 _49[3];
-  be<f32> field_0x04C;
+  /* 0x4C */ be<f32> mFastRideSpeed;  /* was field_0x04C: rideCB 02366268: mbFastRide when the riding player's speedF exceeds it */
 };
 WWHD_OFFSET(Attr_c, springJntNum, 0x16);
 WWHD_OFFSET(Attr_c, field_0x018, 0x18);
-WWHD_OFFSET(Attr_c, field_0x040, 0x40);
-WWHD_OFFSET(Attr_c, field_0x04C, 0x4C);
+WWHD_OFFSET(Attr_c, mHeavyRideFrames, 0x40);
+WWHD_OFFSET(Attr_c, mFastRideSpeed, 0x4C);
 WWHD_SIZE(Attr_c, 0x50);
 struct Act_c : dBgS_MoveBgActor {
   enum Type_e { Type_SPRING_e, Type_SPRING_ON_BOX_e };
@@ -58,15 +58,25 @@ struct Act_c : dBgS_MoveBgActor {
   /* 0x3F8 */ be<s16> mTimer;
   /* 0x3FA */ be<u8> mIsSetup;
   /* 0x3FB */ u8 pad;
-  /* 0x3FC */ be<f32> field_0x338, field_0x33C, field_0x340;
-  /* 0x408 */ be<u8> mIsRide, field_0x345, field_0x346, field_0x347,
-      field_0x348;
-  /* 0x40D */ be<u8> mIsPlayerRide, field_0x34a, field_0x34b;
-  /* 0x410 */ be<u8> mIsHeavyRide, field_0x34d, field_0x34e, field_0x34f,
-      field_0x350;
+  /* 0x3FC */ be<f32> mScaleTarget;  /* was field_0x338: calc_vib_pos 02366668: the spring target of mScale (tww calc_vib_pos); Create 023662E4 / mode_wait_init 023662C8 1, mode_w_l_init 0236685C attr mLowerScale, mode_l_u_init 023669C0 attr mUpperScale; mode_w_l 023669AC / mode_l_u compare mScale with it */
+  /* 0x400 */ be<f32> mScale;  /* was field_0x33C: calc_vib_pos 02366668 adds mScaleSpeed to it; jnodeCB_lower 02365DD8 scales the joint by (it, 1, 1) and back (tww scaleM(i_this->field_0x33C, 1, 1)); set_mtx 023660A4 offsets by it; Create 023662E4 1 */
+  /* 0x404 */ be<f32> mScaleSpeed;  /* was field_0x340: calc_vib_pos 02366668: spring speed (pull attr mSpringStiffness toward mScaleTarget, damping attr mSpringDamping); mode_wait 0236687C / mode_lower 023669E0 add the push impulse attr mPushImpulse, Execute 023666C8 attr mFastRideImpulse; mode_l_u 02366AF4 0 */
+  /* 0x408 */ be<u8> mIsRide;
+  /* 0x409 */ be<u8> mbRidePulse;  /* was field_0x345: set_push_flag 0236642C: 1 for the frame mRideCount reaches attr mRidePulseFrames (tww set_push_flag); mode_wait 0236687C pushes on it */
+  /* 0x40A */ be<u8> mbUnridePulse;  /* was field_0x346: set_push_flag 0236642C: 1 for the frame mUnrideCount reaches attr mUnridePulseFrames; mode_wait 0236687C pushes on it */
+  /* 0x40B */ be<u8> mRideCount;  /* was field_0x347: set_push_flag 0236642C: frames with something riding (mIsRide), capped at 0xFF, 0 otherwise */
+  /* 0x40C */ be<u8> mUnrideCount;  /* was field_0x348: set_push_flag 0236642C: frames with nothing riding, capped at 0xFF, 0 while ridden */
+  /* 0x40D */ be<u8> mIsPlayerRide;
+  /* 0x40E */ be<u8> mbHangPulse;  /* was field_0x34a: set_push_flag 0236642C: 1 for the frame mHangCount reaches attr mHangPulseFrames; mode_wait 0236687C pushes on it */
+  /* 0x40F */ be<u8> mHangCount;  /* was field_0x34b: set_push_flag 0236642C: frames the player rides it while hanging (tww mIsPlayerRide && daPyStts0_HANG_e), capped at 0xFF */
+  /* 0x410 */ be<u8> mIsHeavyRide;
+  /* 0x411 */ be<u8> mbHeavyRidePulse;  /* was field_0x34d: set_push_flag 0236642C: 1 for the frame mHeavyRideCount reaches attr mHeavyRidePulseFrames; mode_wait 0236687C pushes on it */
+  /* 0x412 */ be<u8> mbHeavyUnridePulse;  /* was field_0x34e: set_push_flag 0236642C: 1 for the frame mHeavyUnrideCount reaches attr mHeavyUnridePulseFrames; mode_lower 023669E0 pushes on it */
+  /* 0x413 */ be<u8> mHeavyRideCount;  /* was field_0x34f: set_push_flag 0236642C: frames ridden with the Iron Boots (mIsHeavyRide), capped at 0xFF; mode_wait 0236687C lowers above attr mHeavyRideFrames */
+  /* 0x414 */ be<u8> mHeavyUnrideCount;  /* was field_0x350: set_push_flag 0236642C: frames without the Iron Boots on it, capped at 0xFF; mode_lower 023669E0 rises above attr mHeavyUnrideFrames */
   /* 0x415 */ u8 pad2;
-  /* 0x416 */ be<s16> field_0x352;
-  /* 0x418 */ be<u8> field_0x354;
+  /* 0x416 */ be<s16> mPushTimer;  /* was field_0x352: mode_wait 0236687C / mode_lower 023669E0: after a push it is set to attr mPushInterval and counts down, no new push before 0; mode_wait_init 023662C8 / mode_lower_init 02366998 0 */
+  /* 0x418 */ be<u8> mbFastRide;  /* was field_0x354: rideCB 02366268 sets it when the riding player's speedF exceeds attr mFastRideSpeed (tww rideCB); clear_push_flag 023666B0 clears it; Execute 023666C8 adds attr mFastRideImpulse to mScaleSpeed in Mode_WAIT_e / Mode_LOWER_e while set */
   /* 0x419 */ u8 pad3[3];
   s32 Mthd_Create();
   s32 Mthd_Delete();
@@ -101,13 +111,13 @@ WWHD_OFFSET(Act_c, mMode, 0x3F4);
 WWHD_OFFSET(Act_c, mTimer, 0x3F8);
 WWHD_OFFSET(Act_c, mIsSetup, 0x3FA);
 WWHD_OFFSET(Act_c, pad, 0x3FB);
-WWHD_OFFSET(Act_c, field_0x338, 0x3FC);
+WWHD_OFFSET(Act_c, mScaleTarget, 0x3FC);
 WWHD_OFFSET(Act_c, mIsRide, 0x408);
 WWHD_OFFSET(Act_c, mIsPlayerRide, 0x40D);
 WWHD_OFFSET(Act_c, mIsHeavyRide, 0x410);
 WWHD_OFFSET(Act_c, pad2, 0x415);
-WWHD_OFFSET(Act_c, field_0x352, 0x416);
-WWHD_OFFSET(Act_c, field_0x354, 0x418);
+WWHD_OFFSET(Act_c, mPushTimer, 0x416);
+WWHD_OFFSET(Act_c, mbFastRide, 0x418);
 WWHD_OFFSET(Act_c, pad3, 0x419);
 WWHD_SIZE(Act_c, 0x41C);
 } // namespace daObjJump

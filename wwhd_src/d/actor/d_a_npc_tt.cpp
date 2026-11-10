@@ -62,7 +62,7 @@ static BOOL nodeCallBack_Tt(J3DNode* node, int calcTiming) {
                 temp.z = 0.0f;
                 cMtx_YrotM(calc_mtx(), (s16)-i_this->m_jnt.mAngles[0][1]);
                 cMtx_ZrotM(calc_mtx(),
-                           (s16) - (i_this->m_jnt.mAngles[0][0] + i_this->mHeadAnm.field_0x00.x));
+                           (s16) - (i_this->m_jnt.mAngles[0][0] + i_this->mHeadAnm.mSwingAngle.x));
                 MtxPosition(&temp, &temp2);
                 i_this->mAttnBasePos.copy(temp2); /* setAttentionBasePos( &temp2) */
                 temp.x = 20.0f;
@@ -547,21 +547,21 @@ void daNpc_Tt_c::demoInitPatten() {
     danceInit(0);
     be<s32>* cnt = (be<s32>*)dComIfGp_evmng_getMyIntegerP(mStaffIdx, "Cnt" /* "Cnt" */);
     if (cnt != nullptr) {
-        field_0xE7A = (u8)*cnt;
+        mDanceCount = (u8)*cnt;
     } else {
-        field_0xE7A = 2;
+        mDanceCount = 2;
     }
 }
 
 /* 022EFF38 */
 bool daNpc_Tt_c::demoProcPatten() {
 
-    if (field_0xE7A == 0) {
+    if (mDanceCount == 0) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
         clrEvFlag(0x4);
     } else {
         if (danceProc()) {
-            field_0xE7A = field_0xE7A - 1;
+            mDanceCount = mDanceCount - 1;
         }
         if (mSoundTimer > 0) {
             mSoundTimer = mSoundTimer - 1;
@@ -882,8 +882,8 @@ void tt_ke_s::ke_control(f32 param_1) {
     temp.x = 0.0f;
     temp.y = 0.0f;
     temp.z = 7.875f;
-    cXyz* temp2 = &field_0x00[1];
-    cXyz* temp3 = &field_0x78[1];
+    cXyz* temp2 = &mPos[1];
+    cXyz* temp3 = &mVelocity[1];
     for (int i = 1; i < 10; i++, temp2++, temp3++) {
         cXyz* prev = temp2 - 1;
         f32 x4 = gabi::fadds_ppc(gabi::fsubs_ppc(temp2->x, prev->x), temp3->x);
@@ -914,7 +914,7 @@ void tt_ke_s::ke_control(f32 param_1) {
 void tt_ke_s::ke_pos_set(cXyz* i_param) {
 
     for (int i = 0; i < 10; i_param++) {
-        i_param->copy(field_0x00[i]);
+        i_param->copy(mPos[i]);
         i++;
     }
 }
@@ -930,19 +930,19 @@ void daNpc_Tt_c::set_ke_root(int param_1, int param_2, int param_3) {
     temp.y = 0.0f;
     temp.z = 0.0f;
     PSMTXCopy(mpMorf->getModel()->getAnmMtx(param_1), calc_mtx());
-    cXyz* k0 = &mLineKe[param_3].field_0x00[0];
+    cXyz* k0 = &mLineKe[param_3].mPos[0];
     MtxPosition(&temp, k0);
     PSMTXCopy(mpMorf->getModel()->getAnmMtx(param_2), calc_mtx());
-    cXyz* k3 = &mLineKe[param_3 + 3].field_0x00[0];
+    cXyz* k3 = &mLineKe[param_3 + 3].mPos[0];
     MtxPosition(&temp, k3);
     cXyz_mi(k3, &a, k0);
     cXyz_ml(&a, &b, 0.3333f);
     cXyz_pl(&b, &c, k0);
-    mLineKe[param_3 + 1].field_0x00[0].copy(c);
+    mLineKe[param_3 + 1].mPos[0].copy(c);
     cXyz_mi(k3, &c, k0);
     cXyz_ml(&c, &b, 0.6667f);
     cXyz_pl(&b, &a, k0);
-    mLineKe[param_3 + 2].field_0x00[0].copy(a);
+    mLineKe[param_3 + 2].mPos[0].copy(a);
 }
 
 /* 022EE32C */
@@ -1044,14 +1044,14 @@ cPhs_State daNpc_Tt_c::_create() {
         if (this != nullptr) {
             Tt_actorCtor(this); /* fopAc_ac_c::fopAc_ac_c */
             /* dNpc_HeadAnm_c::dNpc_HeadAnm_c() (inline) */
-            mHeadAnm.field_0x14 = 0.0f;
-            mHeadAnm.field_0x18 = 0.0f;
-            mHeadAnm.field_0x1C = 0;
-            mHeadAnm.field_0x1E = 0;
-            mHeadAnm.field_0x20 = 0;
-            mHeadAnm.field_0x00.x = 0;
-            mHeadAnm.field_0x00.y = 0;
-            mHeadAnm.field_0x00.z = 0;
+            mHeadAnm.mVerticalAmplitude = 0.0f;
+            mHeadAnm.mHorizontalAmplitude = 0.0f;
+            mHeadAnm.mSwingPhase = 0;
+            mHeadAnm.mSwingPhaseStep = 0;
+            mHeadAnm.mSwingCount = 0;
+            mHeadAnm.mSwingAngle.x = 0;
+            mHeadAnm.mSwingAngle.y = 0;
+            mHeadAnm.mSwingAngle.z = 0;
             __vtbl = 0x10022DB4;
             Tt_btpCtor(mBtpAnm); /* mDoExt_btpAnm::mDoExt_btpAnm */
             dBgS_ObjAcch_ct(&mObjAcch, dBgS_ObjAcch_vt{0x10022D84, 0x10022DA4, 0x10022D94});

@@ -4367,8 +4367,10 @@ BOOL daPy_lk_c::execute() {
         }
         u32 se = mpSeAnmFrameCtrl; /* mpSeAnmFrameCtrl */
         if (se != 0 && !LinkUpdateApi::checkDemoSound()) {
-            u32 nm = (u32)LinkUpdateSound(this).mpAnimationSoundResource->mpNameEntry->mNameOffset;
-            u32 r9 = nm != 0 ? gabi::ea(&LinkUpdateSound(this).mpAnimationSoundResource->mpNameEntry->mNameOffset) + nm : 0;
+            /* the sound animation's name: the name of mAnmRatioUnder[0]'s animation */
+            LinkUpdateSoundNameEntry* entry = LinkUpdateUnderAnimation(this)->mpNameEntry.get();
+            u32 nm = (u32)entry->mNameOffset;
+            u32 r9 = nm != 0 ? gabi::ea(&entry->mNameOffset) + nm : 0;
             gabi::Local<lk_SafeString_l> s;
             s->mStr = r9;
             s->__vtbl = LK_SAFESTRING_VTBL;

@@ -72,7 +72,7 @@ static inline void pt_wait(pt_class* i_this) {
     gabi::Local<PtLineCheck> linChk;
     dBgS_LinChk_ct(linChk);
     i_this->attention_info.flags = 0; /* attention_info.flags */
-    i_this->m30E = 6;
+    i_this->mNoHitTimer = 6;
     s16 delay = i_this->mInitialSpawnDelay;
     if (delay != 0) {
         i_this->mInitialSpawnDelay = delay - 1;
@@ -105,7 +105,7 @@ static inline void pt_wait(pt_class* i_this) {
                 i_this->mInitialSpawnWaitsUntilOffScreen = 0;
                 i_this->actor_status |= 0x36;
                 i_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
-                i_this->m2D2 = PT_MOVE;
+                i_this->mAction = PT_MOVE;
                 i_this->mMode = 0;
             }
         }
@@ -128,7 +128,7 @@ static inline void jump_target_set(pt_class* i_this, PtLineCheck* linChk, cXyz* 
     diff->copy(*tmp);
     f32 h = std_sqrtf(PSVECSquareMag(diff)) * 0.1f;
     if (h > 50.0f) h = 50.0f;
-    i_this->m31C = h;
+    i_this->mHopSpeed = h;
 }
 
 /* pt_move mode 0: pick the next spot to jump to; false when there is none (back to pt_attack) */
@@ -141,7 +141,7 @@ static inline bool next_pos_set(pt_class* i_this) {
     gabi::Local<cXyz> p2;
     if ((u32)(i_this->current.angle.x + 0x1FFF) < 0x3FFF) {
         /* on the floor: jump towards the target (away from it when the switches say so) */
-        s16 ang = i_this->m2FC;
+        s16 ang = i_this->mTargetAngleY;
         if (i_this->mTimers[1] != 0 || !spawn_switch_ok(i_this)) {
             ang -= 0x8000;
         }
@@ -195,7 +195,7 @@ static inline bool next_pos_set(pt_class* i_this) {
         return true;
     }
     dBgS_LinChk_dt(linChk);
-    i_this->m2D2 = PT_ATTACK;
+    i_this->mAction = PT_ATTACK;
     i_this->mMode = 0;
     return false;
 }
@@ -226,7 +226,7 @@ static inline void pt_move(pt_class* i_this) {
         if (std_sqrtf(PSVECSquareMag(d)) < step->z * 1.5f) {
             /* arrived */
             if (cM_rndF(1.0f) < 0.02f && (u32)(i_this->current.angle.x + 0xFFF) < 0x1FFF) {
-                i_this->m2D2 = PT_KOKE;
+                i_this->mAction = PT_KOKE;
                 i_this->mMode = 0;
                 pt_smokeSet(i_this, 3);
             } else {
@@ -258,8 +258,8 @@ static inline void pt_move(pt_class* i_this) {
         break;
     }
     }
-    if (i_this->current.pos.y - i_this->m2F8->y > -50.0f && i_this->m304 < 500.0f) {
-        i_this->m2D2 = PT_ATTACK;
+    if (i_this->current.pos.y - i_this->mpTargetPos->y > -50.0f && i_this->mTargetDistXZ < 500.0f) {
+        i_this->mAction = PT_ATTACK;
         i_this->mMode = 0;
     }
 }
@@ -267,16 +267,16 @@ static inline void pt_move(pt_class* i_this) {
 /* action 2: on the ground, running at the target and attacking */
 /* inlined into action */
 static inline void pt_attack(pt_class* i_this) {
-    f32 targetDist = i_this->m300;
-    s16 target = i_this->m2FC;
+    f32 targetDist = i_this->mTargetDist;
+    s16 target = i_this->mTargetAngleY;
     if (i_this->mTimers[1] != 0) target -= 0x8000;
     cLib_addCalcAngleS2(&i_this->current.angle.y, target, 2, 0x1000);
     cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 2, 0x1000);
     cLib_addCalcAngleS2(&i_this->current.angle.z, 0, 2, 0x1000);
-    u32 groundHit = i_this->m368.m_flags & dBgS_Acch::GROUND_HIT;
-    if (groundHit && i_this->m314 < -100.0f) {
+    u32 groundHit = i_this->mAcch.m_flags & dBgS_Acch::GROUND_HIT;
+    if (groundHit && i_this->mFallSpeedY < -100.0f) {
         /* landed hard */
-        i_this->m2D2 = PT_KOKE;
+        i_this->mAction = PT_KOKE;
         i_this->mMode = cM_rndF(1.0f) < 0.5f;
         pt_smokeSet(i_this, 5);
         return;
@@ -294,7 +294,7 @@ static inline void pt_attack(pt_class* i_this) {
     case 1:
         if (groundHit) {
             if (cM_rndF(1.0f) < 0.02f) {
-                i_this->m2D2 = PT_KOKE;
+                i_this->mAction = PT_KOKE;
                 i_this->mMode = 0;
                 pt_smokeSet(i_this, 3);
             } else {
@@ -321,7 +321,7 @@ static inline void pt_attack(pt_class* i_this) {
         i_this->speed.z = (f32)spd->z;
         if (targetDist < 300.0f) {
             gabi::Local<cXyz> pos;
-            cXyz* tp = i_this->m2F8;
+            cXyz* tp = i_this->mpTargetPos;
             pos->x = (f32)tp->x;
             f32 y = tp->y;
             pos->y = y;
@@ -333,7 +333,7 @@ static inline void pt_attack(pt_class* i_this) {
             BOOL hit = cBgS_LineCross(dComIfG_Bgsp(), linChk);
             dBgS_LinChk_dt(linChk);
             if (!hit) {
-                i_this->mTimers[2] = i_this->m2CC * 3 + 10;
+                i_this->mTimers[2] = i_this->mColorNo * 3 + 10;
                 i_this->mMode = 3;
                 pt_anmInit(i_this, 0xC, 3.0f, 2, 1.0f, -1);
             }
@@ -351,12 +351,12 @@ static inline void pt_attack(pt_class* i_this) {
         i_this->speed.x *= 0.8f;
         i_this->speed.z *= 0.8f;
         if (i_this->mTimers[2] == 0) {
-            f32 frame = i_this->m2C0->getFrame();
-            if (!(frame < 11.0f) && !(i_this->m2C0->getFrame() > 14.0f)) {
+            f32 frame = i_this->mpMorf->getFrame();
+            if (!(frame < 11.0f) && !(i_this->mpMorf->getFrame() > 14.0f)) {
                 i_this->mbAttack = 1;
             }
         }
-        if (i_this->m2C0->isStop()) {
+        if (i_this->mpMorf->isStop()) {
             i_this->mMode = 1;
         }
         break;
@@ -365,11 +365,11 @@ static inline void pt_attack(pt_class* i_this) {
     PSVECAdd(&i_this->current.pos, &i_this->speed, &i_this->current.pos);
     f32 vy = i_this->speed.y - 7.0f;
     if (vy < -120.0f) vy = -120.0f;
-    u32 flags = i_this->m368.m_flags;
+    u32 flags = i_this->mAcch.m_flags;
     i_this->speed.y = vy;
     i_this->mbBgCheck = 1;
-    if ((flags & dBgS_Acch::GROUND_HIT) && i_this->m300 > 700.0f) {
-        i_this->m2D2 = PT_MOVE;
+    if ((flags & dBgS_Acch::GROUND_HIT) && i_this->mTargetDist > 700.0f) {
+        i_this->mAction = PT_MOVE;
         i_this->mMode = 0;
     }
 }
@@ -411,11 +411,11 @@ static inline void pt_koke(pt_class* i_this) {
         if (i_this != nullptr) mons_se_start(i_this, JA_SE_CV_PT_KOKE2);
         break;
     case 4:
-        if (gabi::ftoi(i_this->m2C0->getFrame()) == 6 && i_this != nullptr) se_start(i_this, JA_SE_OBJ_PT_FALL);
+        if (gabi::ftoi(i_this->mpMorf->getFrame()) == 6 && i_this != nullptr) se_start(i_this, JA_SE_OBJ_PT_FALL);
         /* fallthrough */
     case 5:
         if (i_this->mTimers[1] == 0) {
-            if (i_this->m2C0->isStop() || i_this->mTimers[0] == 1) end = true;
+            if (i_this->mpMorf->isStop() || i_this->mTimers[0] == 1) end = true;
         }
         break;
     case 10:
@@ -425,8 +425,8 @@ static inline void pt_koke(pt_class* i_this) {
         break;
     case 11:
         i_this->current.angle.y = i_this->current.angle.y + i_this->mSpinSpeed;
-        if (gabi::ftoi(i_this->m2C0->getFrame()) == 6) se_start(i_this, JA_SE_OBJ_PT_FALL);
-        if (i_this->m320 < 0.05f) {
+        if (gabi::ftoi(i_this->mpMorf->getFrame()) == 6) se_start(i_this, JA_SE_OBJ_PT_FALL);
+        if (i_this->mKnockbackSpeed < 0.05f) {
             i_this->mMode = 12;
             i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(30.0f));
         }
@@ -436,7 +436,7 @@ static inline void pt_koke(pt_class* i_this) {
         break;
     }
     if (end) {
-        i_this->m2D2 = PT_MOVE;
+        i_this->mAction = PT_MOVE;
         i_this->mMode = 0;
         pt_anmInit(i_this, 9, 3.0f, 0, 1.0f, -1);
     }
@@ -448,7 +448,7 @@ static inline void pt_koke(pt_class* i_this) {
 static inline int pt_ples(pt_class* i_this) {
     i_this->current.angle.z = 0;
     i_this->current.angle.x = 0;
-    i_this->m30E = 5;
+    i_this->mNoHitTimer = 5;
     switch ((u16)i_this->mMode) {
     case 0:
         i_this->mTimers[0] = 0x23;
@@ -468,7 +468,7 @@ static inline int pt_ples(pt_class* i_this) {
 /* action 5: batted away (returns: dies) */
 /* inlined into action */
 static inline int pt_bat(pt_class* i_this) {
-    i_this->m30E = 5;
+    i_this->mNoHitTimer = 5;
     switch ((u16)i_this->mMode) {
     case 0: {
         i_this->mTimers[0] = 0x96;
@@ -476,7 +476,7 @@ static inline int pt_bat(pt_class* i_this) {
         pt_anmInit(i_this, 0xC, 1.0f, 0, 5.0f, -1);
         s16 a = fopAcM_searchPlayerAngleY(i_this);
         s16 ang = a + (s16)gabi::ftoi(cM_rndFX(6000.0f)) + 0x8000;
-        i_this->m324 = ang;
+        i_this->mKnockbackAngleY = ang;
         cMtx_YrotS(calc_mtx(), ang);
         gabi::Local<cXyz> v;
         v->x = 0.0f;
@@ -496,7 +496,7 @@ static inline int pt_bat(pt_class* i_this) {
     PSVECAdd(&i_this->current.pos, &i_this->speed, &i_this->current.pos);
     f32 vy = i_this->speed.y - 5.0f;
     if (vy < -120.0f) vy = -120.0f;
-    u32 flags = i_this->m368.m_flags;
+    u32 flags = i_this->mAcch.m_flags;
     i_this->speed.y = vy;
     if (flags & dBgS_Acch::WALL_HIT) return 1;
     if (vy < 0.0f && (flags & dBgS_Acch::GROUND_HIT)) return 1;
@@ -515,12 +515,12 @@ static inline void damage_check(pt_class* i_this, fopAc_ac_c* player) {
             if (hitAc != nullptr && fpcM_GetName(hitAc) == fpcNm_PLAYER_e) {
                 /* hit the player: bounce off a guard */
                 if (pt_checkGuard(player)) {
-                    i_this->m324 = fopAcM_searchPlayerAngleY(i_this);
-                    i_this->m320 = 40.0f;
+                    i_this->mKnockbackAngleY = fopAcM_searchPlayerAngleY(i_this);
+                    i_this->mKnockbackSpeed = 40.0f;
                 } else {
-                    i_this->m2D2 = PT_KOKE;
+                    i_this->mAction = PT_KOKE;
                     i_this->mMode = 2;
-                    i_this->m30E = 6;
+                    i_this->mNoHitTimer = 6;
                     return;
                 }
             }
@@ -533,18 +533,18 @@ static inline void damage_check(pt_class* i_this, fopAc_ac_c* player) {
         cXyz_mi(&player->current.pos, tmp, &i_this->current.pos);
         d->copy(*tmp);
         if (std_sqrtf(PSVECSquareMag(d)) < 350.0f) {
-            i_this->m2D2 = PT_KOKE;
+            i_this->mAction = PT_KOKE;
             i_this->mMode = 0;
             i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(30.0f) + 20.0f);
             pt_smokeSet(i_this, 3);
-            i_this->m30E = 10;
+            i_this->mNoHitTimer = 10;
             i_this->speed.y = 350.0f;
             return;
         }
     }
     if (!i_this->mSph.ChkTgHit()) return;
 
-    i_this->m30E = 6;
+    i_this->mNoHitTimer = 6;
     gabi::Local<PtAttackInfo> atInfo;
     void* hitObj = i_this->mSph.GetTgHitObj();
     atInfo->mpObj = gabi::ea(hitObj);
@@ -560,14 +560,14 @@ static inline void damage_check(pt_class* i_this, fopAc_ac_c* player) {
     if (reinterpret_cast<dCcD_GObjInf*>(hitObj)->mAtType & 0x40200) {
         /* fire */
         i_this->mEnemyFire.mFireDuration = 100;
-        i_this->m30E = 50;
+        i_this->mNoHitTimer = 50;
     }
     if (reinterpret_cast<dCcD_GObjInf*>(hitObj)->mAtType & 0x200000) {
-        i_this->m324 = fopAcM_searchPlayerAngleY(i_this);
+        i_this->mKnockbackAngleY = fopAcM_searchPlayerAngleY(i_this);
         pt_smokeSet(i_this, 5);
-        i_this->m320 = cM_rndF(30.0f) + 90.0f;
+        i_this->mKnockbackSpeed = cM_rndF(30.0f) + 90.0f;
         i_this->mSpinSpeed = (s16)gabi::ftoi(cM_rndFX(2000.0f));
-        i_this->m2D2 = PT_KOKE;
+        i_this->mAction = PT_KOKE;
         i_this->mMode = 10;
         pt_smokeSet(i_this, 10);
         if (i_this != nullptr) mons_se_start(i_this, JA_SE_CV_PT_DAMAGE);
@@ -576,29 +576,29 @@ static inline void damage_check(pt_class* i_this, fopAc_ac_c* player) {
     pt_checkAttack(i_this, atInfo);
     if (atInfo->mResultingAttackType == 9) {
         if (reinterpret_cast<PtPlayer*>(player)->mCutType == 0x11) {
-            i_this->m2D2 = PT_BAT;
+            i_this->mAction = PT_BAT;
             pt_smokeSet(i_this, 0x1E);
             i_this->mMode = 0;
         } else {
-            i_this->m2D2 = PT_PLES;
+            i_this->mAction = PT_PLES;
             i_this->mMode = 0;
         }
         if (i_this != nullptr) mons_se_start(i_this, JA_SE_CV_PT_DIE);
-        i_this->m30E = 50;
+        i_this->mNoHitTimer = 50;
         return;
     }
-    i_this->m324 = fopAcM_searchPlayerAngleY(i_this);
+    i_this->mKnockbackAngleY = fopAcM_searchPlayerAngleY(i_this);
     pt_smokeSet(i_this, 10);
     if (i_this->health > 0) {
         mons_se_start(i_this, JA_SE_CV_PT_DAMAGE);
-        i_this->m2D2 = PT_ATTACK;
+        i_this->mAction = PT_ATTACK;
         i_this->mMode = 1;
-        i_this->m320 = 80.0f;
+        i_this->mKnockbackSpeed = 80.0f;
     } else {
-        i_this->m30E = 100;
+        i_this->mNoHitTimer = 100;
         mons_se_start(i_this, JA_SE_CV_PT_DIE);
-        i_this->m2D2 = PT_ATTACK;
-        i_this->m320 = 110.0f;
+        i_this->mAction = PT_ATTACK;
+        i_this->mKnockbackSpeed = 110.0f;
         i_this->mMode = 1;
     }
 }
@@ -637,24 +637,24 @@ static inline int water_check(pt_class* i_this) {
 void action(pt_class* i_this) {
     fopAc_ac_c* esa = (fopAc_ac_c*)fpcM_Search(PT_ESA_SEARCH_CALLBACK, i_this);
     if (esa != nullptr) {
-        i_this->m2F8 = &esa->current.pos;
+        i_this->mpTargetPos = &esa->current.pos;
         gabi::Local<cXyz> tmp;
         gabi::Local<cXyz> d;
         cXyz_mi(&esa->current.pos, tmp, &i_this->current.pos);
         d->copy(*tmp);
-        i_this->m300 = std_sqrtf(PSVECSquareMag(d));
+        i_this->mTargetDist = std_sqrtf(PSVECSquareMag(d));
         d->y = 0.0f;
-        i_this->m304 = std_sqrtf(PSVECSquareMag(d));
-        i_this->m2FC = cM_atan2s(d->x, d->z);
+        i_this->mTargetDistXZ = std_sqrtf(PSVECSquareMag(d));
+        i_this->mTargetAngleY = cM_atan2s(d->x, d->z);
     } else {
-        i_this->m2F8 = &dComIfGp_getPlayer(0)->current.pos;
-        i_this->m300 = fopAcM_searchPlayerDistance(i_this);
-        i_this->m304 = fopAcM_searchPlayerDistanceXZ(i_this);
-        i_this->m2FC = fopAcM_searchPlayerAngleY(i_this);
+        i_this->mpTargetPos = &dComIfGp_getPlayer(0)->current.pos;
+        i_this->mTargetDist = fopAcM_searchPlayerDistance(i_this);
+        i_this->mTargetDistXZ = fopAcM_searchPlayerDistanceXZ(i_this);
+        i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
     }
 
     int dead = 0;
-    switch ((u16)i_this->m2D2) {
+    switch ((u16)i_this->mAction) {
     case PT_WAIT: pt_wait(i_this); break;
     case PT_MOVE: pt_move(i_this); break;
     case PT_ATTACK: pt_attack(i_this); break;
@@ -664,28 +664,28 @@ void action(pt_class* i_this) {
     }
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    if (i_this->m30E == 0) {
+    if (i_this->mNoHitTimer == 0) {
         damage_check(i_this, player);
     }
     dead += water_check(i_this);
 
-    if (i_this->m320 > 0.01f) {
+    if (i_this->mKnockbackSpeed > 0.01f) {
         /* knock-back */
         i_this->current.pos.x = (f32)i_this->old.pos.x;
         i_this->current.pos.z = (f32)i_this->old.pos.z;
         gabi::Local<cXyz> v;
         gabi::Local<cXyz> mv;
-        f32 s = i_this->m320;
-        s16 a = i_this->m324;
+        f32 s = i_this->mKnockbackSpeed;
+        s16 a = i_this->mKnockbackAngleY;
         v->y = 0.0f;
         v->x = 0.0f;
         v->z = -s;
         cMtx_YrotS(calc_mtx(), a);
         MtxPosition(v, mv);
         PSVECAdd(&i_this->current.pos, mv, &i_this->current.pos);
-        cLib_addCalc0(&i_this->m320, 1.0f, 7.0f);
+        cLib_addCalc0(&i_this->mKnockbackSpeed, 1.0f, 7.0f);
         if (i_this->health <= 0) {
-            if ((i_this->m368.m_flags & dBgS_Acch::WALL_HIT) || i_this->m320 < 0.1f) dead++;
+            if ((i_this->mAcch.m_flags & dBgS_Acch::WALL_HIT) || i_this->mKnockbackSpeed < 0.1f) dead++;
         }
         i_this->mbBgCheck = 1;
     }
@@ -695,11 +695,11 @@ void action(pt_class* i_this) {
     cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 4, 0x1000);
 
     /* the hop drawn on top of the movement */
-    f32 dy = i_this->m31C;
-    f32 y = i_this->m318 + dy;
-    i_this->m318 = y;
-    i_this->m31C = dy - 5.0f;
-    if (y < 0.0f) i_this->m318 = 0.0f;
+    f32 dy = i_this->mHopSpeed;
+    f32 y = i_this->mHopY + dy;
+    i_this->mHopY = y;
+    i_this->mHopSpeed = dy - 5.0f;
+    if (y < 0.0f) i_this->mHopY = 0.0f;
 
     if (i_this->mSmokeType != 0) {
         s8 t = i_this->mSmokeType - 1;
@@ -716,7 +716,7 @@ void action(pt_class* i_this) {
         fopAcM_delete(i_this);
         dComIfGs_onActor(i_this->setID, i_this->home.roomNo);
         if (i_this->mBehaviorType == 0) {
-            i_this->m2BA = 1;
+            i_this->mRespawn = 1;
             return;
         }
         if (i_this->mDisableRespawnSwitch != 0xFF) {

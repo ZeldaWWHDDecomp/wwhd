@@ -6,10 +6,10 @@ static gptr<JAIZelBasic>& l_zelBasic = *gabi::at<gptr<JAIZelBasic>>(0x101FFC78);
 /* 0201B71C */
 void JAIZelAnime::startAnimSound(JAIZelBasic* basic, u32 id, gptr<JAISound>* sound,
                                  JAInter::Actor* actor, u32 flag) {
-    if (basic->field_0x0207 != 0)
+    if (basic->mTaktSeTimer != 0)
         return;
-    if ((s32)basic->field_0x0224 == 0x12 && basic->mIslandRoomNo == 0x2C &&
-        basic->field_0x0239 == 9 && basic->field_0x0028 < 30)
+    if ((s32)basic->mSceneNo == 0x12 && basic->mIslandRoomNo == 0x2C &&
+        basic->mLayerNo == 9 && basic->mSceneFrameCount < 30)
         return;
     switch (id) {
     case JA_SE_FT_PW_RUN_AWAY:
@@ -18,13 +18,13 @@ void JAIZelAnime::startAnimSound(JAIZelBasic* basic, u32 id, gptr<JAISound>* sou
     case JA_SE_CV_DRG_MTOP_AKUBI:
     case JA_SE_CM_DRG_MTOP_HAND:
         /* mDoAud_seStart(id, actor->pos) */
-        JAIZel_seStart((JAIZelBasic*)l_zelBasic, id, actor->field_0x4, 0, 0, 0, 1.0f, 1.0f, -1.0f,
+        JAIZel_seStart((JAIZelBasic*)l_zelBasic, id, actor->mPosition, 0, 0, 0, 1.0f, 1.0f, -1.0f,
                        -1.0f);
         return;
     }
-    if (basic->field_0x0201 == 1)
+    if (basic->mAllSeMuted == 1)
         return;
-    if (basic->field_0x0206 == 1)
+    if (basic->mFanfareActive == 1)
         return;
     if (JAIZel_checkStreamPlaying(basic, JA_STRM_BOSS_CLEAR) ||
         JAIZel_checkStreamPlaying(basic, JA_STRM_BST_CLEAR) ||
@@ -33,7 +33,7 @@ void JAIZelAnime::startAnimSound(JAIZelBasic* basic, u32 id, gptr<JAISound>* sou
         if (id == JA_SE_LK_FT_WALK || id == JA_SE_LK_FT_JUMP)
             return;
     }
-    if (basic->field_0x0046 == 1) {
+    if (basic->mLinkBootsType == 1) {
         switch (id) {
         case JA_SE_LK_FT_WALK:
         case JA_SE_FT_LADDER_CLIMB:
@@ -48,7 +48,7 @@ void JAIZelAnime::startAnimSound(JAIZelBasic* basic, u32 id, gptr<JAISound>* sou
         id = JA_SE_LK_FT_WALK;
     }
     if (JAIZel_checkStreamPlaying(basic, JA_STRM_DEMO_04_01)) {
-        switch (actor->field_0xc) {
+        switch (actor->mMapInfo) {
         case 0x13:
         case 0x14:
         case 0x16:
@@ -56,16 +56,16 @@ void JAIZelAnime::startAnimSound(JAIZelBasic* basic, u32 id, gptr<JAISound>* sou
             return;
         }
     }
-    u32 info = actor->field_0xc;
+    u32 info = actor->mMapInfo;
     u32 reverb = info >> 24;
-    actor->field_0xc = info & 0xFFFFFF;
-    if (actor->field_0x4 != 0) {
+    actor->mMapInfo = info & 0xFFFFFF;
+    if (actor->mPosition != 0) {
         JAIZelCameraView* cam = basic->mCameras;
-        cXyz* pos = actor->field_0x4;
+        cXyz* pos = actor->mPosition;
         gabi::Local<cXyz> v;
         cXyz* sp = v.get();
         *sp = *pos; // GHS word copy preserves NaN payloads.
-        JAIZel_multVec(cam->field_0x8, sp, sp);
+        JAIZel_multVec(cam->matrix, sp, sp);
         f32 y = sp->y, x = sp->x, z = sp->z;
         f32 distance = JAIZel_sqrt(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y)));
         if (id < JA_SE_CM_DK_FOOTNOTE) {
@@ -101,15 +101,15 @@ void JAIZelAnime::startAnimSound(JAIZelBasic* basic, u32 id, gptr<JAISound>* sou
                 return;
         }
     }
-    u32 kind = actor->field_0xc;
+    u32 kind = actor->mMapInfo;
     if (kind == 0xF) {
-        JAIZel_seStart(basic, JA_SE_FT_SUSBRIDGE_R, actor->field_0x4, kind, (s8)reverb, 0, 1.0f,
+        JAIZel_seStart(basic, JA_SE_FT_SUSBRIDGE_R, actor->mPosition, kind, (s8)reverb, 0, 1.0f,
                        1.0f, -1.0f, -1.0f);
     } else if (kind == 0x10) {
-        JAIZel_seStart(basic, JA_SE_FT_SUSBRIDGE_C, actor->field_0x4, kind, (s8)reverb, 0, 1.0f,
+        JAIZel_seStart(basic, JA_SE_FT_SUSBRIDGE_C, actor->mPosition, kind, (s8)reverb, 0, 1.0f,
                        1.0f, -1.0f, -1.0f);
     }
-    if (basic->field_0x0045 == 1) {
+    if (basic->mLinkSwordShieldOnBack == 1) {
         switch (id) {
         case JA_SE_LK_FT_WALK:
         case JA_SE_LK_FT_JUMP:
@@ -118,7 +118,7 @@ void JAIZelAnime::startAnimSound(JAIZelBasic* basic, u32 id, gptr<JAISound>* sou
         case JA_SE_FT_LADDER_CLIMB_D:
         case JA_SE_LK_WALK_HEAVY:
         case JA_SE_LK_JUMP_HEAVY:
-            JAIZel_seStart(basic, JA_SE_LK_FT_SW_SHIELD, actor->field_0x4, 0, (s8)reverb, 0, 1.0f,
+            JAIZel_seStart(basic, JA_SE_LK_FT_SW_SHIELD, actor->mPosition, 0, (s8)reverb, 0, 1.0f,
                            1.0f, -1.0f, -1.0f);
             break;
         }
@@ -136,7 +136,7 @@ void JAIZelAnime::setSpeedModifySound(JAISound* sound, JAIAnimeFrameSoundData* d
     s32 pitchFactor = (s8)data->mPitchFactor;
     f32 base_pitch = data->mPitch;
     if (pitchFactor != 0) {
-        u32 type = sound->field_0x1c;
+        u32 type = sound->mapInfo;
         if (type != 6 && !(type >= 0x12 && type <= 0x16)) {
             base_pitch = gabi::fmadds((f32)pitchFactor * (rate - 1.0f), 0.03125f, base_pitch);
         }
@@ -158,7 +158,7 @@ void JAIZelAnime::setSpeedModifySound(JAISound* sound, JAIAnimeFrameSoundData* d
             }
         } else {
             f32 d = rate - 1.0f;
-            if (sound->field_0x1c == 0x13) {
+            if (sound->mapInfo == 0x13) {
                 base_volume =
                     (s16)(base_volume + (s16)gabi::ftoi((f32)(s8)data->mVolumeFactor * d));
             } else {
@@ -175,7 +175,7 @@ void JAIZelAnime::setSpeedModifySound(JAISound* sound, JAIAnimeFrameSoundData* d
         }
     }
     if (JAISound_getID(sound) == JA_SE_LK_HOFUKU) {
-        if (sound->field_0x18 <= 1)
+        if (sound->frameCounter <= 1)
             JAISound_setVolume(sound, 0, 5, (f32)(u8)base_volume / 127.0f);
     } else {
         JAISound_setVolume(sound, 0, 5, (f32)(u8)base_volume / 127.0f);

@@ -152,7 +152,10 @@ struct daObj_Ikada_c : fopAc_ac_c {
     void _nodeControl(void*, J3DModel*);
     void debugDraw();
     /* 0x3AC */ be<s32> mType;
-    /* 0x3B0 */ be<u32> m0294, m0298, m029C, m02A0;
+    /* 0x3B0 */ be<u32> m0294;
+    /* 0x3B4 */ be<u32> m0298;
+    /* 0x3B8 */ be<u32> m029C;
+    /* 0x3BC */ be<u32> m02A0;
     /* 0x3C0 */ be<u8> mPathId;
     /* 0x3C1 */ u8 _3C1[3];
     /* 0x3C4 */ cXyz mCurPathP0;
@@ -160,40 +163,50 @@ struct daObj_Ikada_c : fopAc_ac_c {
     /* 0x3D1 */ u8 _3D1[3];
     /* 0x3D4 */ gptr<path_layout::dPath> mpPath;
     /* 0x3D8 */ u8 _3D8[4];
-    /* 0x3DC */ cXyz mCurPathP1, m02CC;
+    /* 0x3DC */ cXyz mCurPathP1;
+    /* 0x3E8 */ cXyz m02CC;
     /* 0x3F4 */ be<f32> mVelocityFwdTarget;
     /* 0x3F8 */ cXyz mPathPosTarget;
     /* 0x404 */ u8 _404[4];
     /* 0x408 */ be<u8> mbCraneMode;
     /* 0x409 */ u8 _409[3];
-    /* 0x40C */ be<s32> mCurMode, m02F4;
-    /* 0x414 */ IkadaWaveCallback mWaveLCallback, mWaveRCallback;
+    /* 0x40C */ be<s32> mCurMode;
+    /* 0x410 */ be<s32> mPrevMode;  /* was m02F4: _execute 02362C54: mCurMode saved before the switch to MODE_STOP_e (tww it = mCurMode; modeProcInit(9)); modeStop 02364668 returns to it (MODE_CRANE_DOWN_e for 7, MODE_PATH_MOVE_e for 9) and keeps the path move going while it is 8 (tww) */
+    /* 0x414 */ IkadaWaveCallback mWaveLCallback;
+    /* 0x478 */ IkadaWaveCallback mWaveRCallback;
     /* 0x4DC */ IkadaSplashCallback mSplashCallBack;
     /* 0x4F8 */ IkadaTrackCallback mTrackCallBack;
     /* 0x548 */ IkadaRippleCallback mRippleCallBack;
-    /* 0x55C */ be<u8> m0440;
+    /* 0x55C */ be<u8> mWpillarTimer;  /* was m0440: setRopePos 023620F0: a water pillar (fopKyM_createWpillar at mRopeWaterPos) only while it is 0, then 19 (tww 0x14); counted down each call (tww) */
     /* 0x55D */ u8 _55D[3];
-    /* 0x560 */ cXyz m0444, mWavePos;
+    /* 0x560 */ cXyz mRopeWaterPos;  /* was m0444: setRopePos 023620F0: the rope point at the water height, where the ripple particle (mRippleCallBack) and the water pillar go (tww it.x = ptr->x; it.y = water; ..) */
+    /* 0x56C */ cXyz mWavePos;
     /* 0x578 */ csXyz mWaveRot;
     /* 0x57E */ u8 _57E[2];
     /* 0x580 */ be<f32> mSplashScaleTimer;
-    /* 0x584 */ cXyz mTrackPos, m0474;
+    /* 0x584 */ cXyz mTrackPos;
+    /* 0x590 */ cXyz mCranePos;  /* was m0474: TWW name (tww d_a_obj_ikada.h 0x0474 mCranePos); createInit 023614C8 / setRopePos 023620F0: the translation of the crane joint matrix (tww mDoMtx_stack_c::multVecZero(&mCranePos)) */
     /* 0x59C */ IkadaFollowCallback mBombSmokeEasterEgg;
     /* 0x5B0 */ csXyz mBombSmokeRot;
     /* 0x5B6 */ u8 _5B6[2];
     /* 0x5B8 */ cXyz mBombSmokePos;
-    /* 0x5C4 */ be<s32> m04A8;
+    /* 0x5C4 */ be<s32> mBombSmokeTimer;  /* was m04A8: _execute 02362C54 removes mBombSmokeEasterEgg when cLib_calcTimer(&it) reaches 0 (tww); tww checkTgHit sets 230 with that smoke particle (our checkTgHit 02364854 has no such write) */
     /* 0x5C8 */ be<s16> mBombSmokeAngle;
     /* 0x5CA */ u8 _5CA[2];
     /* 0x5CC */ IkadaFollowCallback mFireParticle;
     /* 0x5E0 */ cXyz mFirePos;
     /* 0x5EC */ Mtx34 mLightMtx;
-    /* 0x61C */ be<f32> mLightPower, mLightPowerTarget, m0508, m050C;
-    /* 0x62C */ be<s32> mEpTimer0, mEpTimer1;
+    /* 0x61C */ be<f32> mLightPower;
+    /* 0x620 */ be<f32> mLightPowerTarget;
+    /* 0x624 */ be<f32> mLightAlpha;  /* was m0508: epProc 02361E40 eases it to mLightAlphaTarget (tww cLib_addCalc2(&it, m050C, 1.0, ..)); tww _draw uses it as the alpha of the light sphere (setAlphaModel(TYPE_SPHERE, mLightMtx, it)) */
+    /* 0x628 */ be<f32> mLightAlphaTarget;  /* was m050C: epProc 02361E40: a random 8 .. 12 target, renewed when mEpTimer0 runs out (tww); mLightAlpha eases to it */
+    /* 0x62C */ be<s32> mEpTimer0;
+    /* 0x630 */ be<s32> mEpTimer1;
     /* 0x634 */ u8 _634[4];
     /* 0x638 */ be<s32> mTimer;
     /* 0x63C */ u8 _63C[8];
-    /* 0x644 */ be<s16> mLightRotX, mLightRotY;
+    /* 0x644 */ be<s16> mLightRotX;
+    /* 0x646 */ be<s16> mLightRotY;
     /* 0x648 */ request_of_phase_process_class mPhase;
     /* 0x650 */ gptr<J3DModel> mpModel;
     /* 0x654 */ mDoExt_bckAnm mBckAnm;
@@ -208,21 +221,26 @@ struct daObj_Ikada_c : fopAc_ac_c {
     /* 0x92C */ be<f32> mFlagScale;
     /* 0x930 */ gptr<J3DModel> mpRopeEnd;
     /* 0x934 */ mDoExt_3DlineMat1_c mRopeLine;
-    /* 0xABC */ be<s32> m07D8;
-    /* 0xAC0 */ cXyz m07DC[200];
+    /* 0xABC */ be<s32> mRopeCnt;  /* was m07D8: incRopeCnt 02363D28 adds the increment (tww it = (s16)(it + arg)); setRopePos 023620F0 / _draw 02363B78 the number of rope points (tww mRopeLine.update(it, ..)); createInit 023614C8 15; the crane modes compare it with l_HIO limits */
+    /* 0xAC0 */ cXyz mRopeVelocity[200];  /* was m07DC: setRopePos 023620F0: per rope point velocity (our local velocity) added to and damped on the mRopeLine points (tww pcVar7 = &it[m07D8 - 1]); incRopeCnt 02363D28 / createInit 023614C8 zero the new entries */
     /* 0x1420 */ csXyz mJointRot[4];
-    /* 0x1438 */ be<s32> m1154;
+    /* 0x1438 */ be<s32> mFrame;  /* was m1154: TWW name (tww d_a_obj_ikada.h 0x1154 mFrame, accessor getFrame() read by daNpc_Sv_c); HandleRight 02363F30 adds and HandleLeft 02364098 subtracts the handle speed, wrapping at the bck start / end; _execute 02362C54 sets the bck frame from it */
     /* 0x143C */ gptr<J3DModel> mpSeaModel;
     /* 0x1440 */ mDoExt_btkAnm mSeaBtk;
-    be<s16> m1158, m115A, m115C, m115E, mLinkRideRockTimer,
-    /* 0x14BE */ mLinkRideRockAmpl, mWaveAnimTimer;
-    /* 0x14C2 */ be<u8> m1166;
+    /* 0x14B4 */ be<s16> mCraneAngleTarget;  /* was m1158: modeCraneTurn 02364274: 0x4000 or -0x4000 from mSvDirection, modeCraneReset 02364354 0; mCraneAngle eases to it and the mode ends within 0x100 (tww cLib_distanceAngleS(m115A, it)) */
+    /* 0x14B6 */ be<s16> mCraneAngle;  /* was m115A: modeCraneTurn 02364274 / modeCraneReset 02364354 ease it to mCraneAngleTarget (tww cLib_addCalcAngleS2(&it, m1158, 10, 0x100)); _nodeControl 0235FE84 turns the crane joint by it plus the shake (tww XrotM(it + m115E * .. * sin(m115C))) */
+    /* 0x14B8 */ be<s16> mCraneShakePhase;  /* was m115C: modeCraneDown 02364148 / modeCraneTurn 02364274 / modeCraneReset 02364354 advance it by 0x1830 (tww); _nodeControl 0235FE84: the sine phase of the crane shake (our local phase) */
+    /* 0x14BA */ be<s16> mCraneShakeAmpl;  /* was m115E: modeCraneDownInit 0236408C / modeCraneTurnInit 0236425C / modeCraneResetInit 0236433C 150; the modes ease it to 0 and act below 20 (tww); _nodeControl 0235FE84 the shake amplitude (tww it * (REG12_S(5) + 5) * sin(m115C)) */
+    /* 0x14BC */ be<s16> mLinkRideRockTimer;
+    /* 0x14BE */ be<s16> mLinkRideRockAmpl;
+    /* 0x14C0 */ be<s16> mWaveAnimTimer;
+    /* 0x14C2 */ be<u8> mPlayerNearby;  /* was m1166: tww accessors setStart() { it = 1; } / setStop() { it = 0; }, which daNpc_Sv_c calls while its mbNearPlayer is set / clear (tww d_a_npc_sv.cpp); our SvShip view of this class (d_a_npc_sv.h) already names it mPlayerNearby; _execute 02362C54 switches to MODE_STOP_e while it is set (tww); modeStop 02364668 pulls the rope in while it is set and lets it out / resumes mPrevMode while it is 0 (tww) */
     /* 0x14C3 */ u8 _14C3;
-    /* 0x14C4 */ be<s32> m1168;
+    /* 0x14C4 */ be<s32> mSvDirection;  /* was m1168: tww accessor getSvDirection() { return it; } (read by daNpc_Sv_c for its look angle); modePathMoveInit 02364460: random 0 or 1 (tww); modeCraneTurn 02364274 turns to 0x4000 when it is 1, else -0x4000 (tww) */
     /* 0x14C8 */ be<u32> mSvId[4];
     /* 0x14D8 */ dCcD_Sph mSph;
     /* 0x1604 */ dCcD_Stts mStts;
-    /* 0x1640 */ be<s32> m12E4;
+    /* 0x1640 */ be<s32> mHitTimer;  /* was m12E4: checkTgHit 02364854: hits count only once cLib_calcTimer(&it) is 0, then it is set (60 in ours; tww 5) */
     /* 0x1644 */ cXyz mSePos;
     /* 0x1650 */ be<s32> mStopTimer;
     /* 0x1654 */ IkadaWave mWave;
@@ -231,7 +249,8 @@ struct daObj_Ikada_c : fopAc_ac_c {
     /* 0x1688 */ cXyz mInitPos;
     /* 0x1694 */ be<u8> mHDMotionMode;
     /* 0x1695 */ u8 _1695;
-    /* 0x1696 */ be<s16> mHDPitch, mHDRoll;
+    /* 0x1696 */ be<s16> mHDPitch;
+    /* 0x1698 */ be<s16> mHDRoll;
     /* 0x169A */ u8 _169A[2];
     /* 0x169C */ be<f32> mHDWaterOffset;
     void modeProc(Proc_e proc, s32 mode);
@@ -286,9 +305,9 @@ WWHD_OFFSET(daObj_Ikada_c, mBckAnm, 0x654);
 WWHD_OFFSET(daObj_Ikada_c, mbIsLinkRiding, 0x6E0);
 WWHD_OFFSET(daObj_Ikada_c, mObjAcch, 0x718);
 WWHD_OFFSET(daObj_Ikada_c, mRopeLine, 0x934);
-WWHD_OFFSET(daObj_Ikada_c, m07D8, 0xABC);
+WWHD_OFFSET(daObj_Ikada_c, mRopeCnt, 0xABC);
 WWHD_OFFSET(daObj_Ikada_c, mJointRot, 0x1420);
-WWHD_OFFSET(daObj_Ikada_c, m1158, 0x14B4);
+WWHD_OFFSET(daObj_Ikada_c, mCraneAngleTarget, 0x14B4);
 WWHD_OFFSET(daObj_Ikada_c, mSph, 0x14D8);
 WWHD_OFFSET(daObj_Ikada_c, mPLight, 0x1664);
 WWHD_OFFSET(daObj_Ikada_c, mInitPos, 0x1688);
@@ -445,30 +464,30 @@ WWHD_OFFSET(daObj_Ikada_c, m02CC, 0x3E8);
 WWHD_OFFSET(daObj_Ikada_c, mVelocityFwdTarget, 0x3F4);
 WWHD_OFFSET(daObj_Ikada_c, mPathPosTarget, 0x3F8);
 WWHD_OFFSET(daObj_Ikada_c, mbCraneMode, 0x408);
-WWHD_OFFSET(daObj_Ikada_c, m02F4, 0x410);
+WWHD_OFFSET(daObj_Ikada_c, mPrevMode, 0x410);
 WWHD_OFFSET(daObj_Ikada_c, mWaveLCallback, 0x414);
 WWHD_OFFSET(daObj_Ikada_c, mWaveRCallback, 0x478);
 WWHD_OFFSET(daObj_Ikada_c, mSplashCallBack, 0x4DC);
 WWHD_OFFSET(daObj_Ikada_c, mTrackCallBack, 0x4F8);
 WWHD_OFFSET(daObj_Ikada_c, mRippleCallBack, 0x548);
-WWHD_OFFSET(daObj_Ikada_c, m0440, 0x55C);
-WWHD_OFFSET(daObj_Ikada_c, m0444, 0x560);
+WWHD_OFFSET(daObj_Ikada_c, mWpillarTimer, 0x55C);
+WWHD_OFFSET(daObj_Ikada_c, mRopeWaterPos, 0x560);
 WWHD_OFFSET(daObj_Ikada_c, mWavePos, 0x56C);
 WWHD_OFFSET(daObj_Ikada_c, mWaveRot, 0x578);
 WWHD_OFFSET(daObj_Ikada_c, mSplashScaleTimer, 0x580);
 WWHD_OFFSET(daObj_Ikada_c, mTrackPos, 0x584);
-WWHD_OFFSET(daObj_Ikada_c, m0474, 0x590);
+WWHD_OFFSET(daObj_Ikada_c, mCranePos, 0x590);
 WWHD_OFFSET(daObj_Ikada_c, mBombSmokeEasterEgg, 0x59C);
 WWHD_OFFSET(daObj_Ikada_c, mBombSmokeRot, 0x5B0);
 WWHD_OFFSET(daObj_Ikada_c, mBombSmokePos, 0x5B8);
-WWHD_OFFSET(daObj_Ikada_c, m04A8, 0x5C4);
+WWHD_OFFSET(daObj_Ikada_c, mBombSmokeTimer, 0x5C4);
 WWHD_OFFSET(daObj_Ikada_c, mBombSmokeAngle, 0x5C8);
 WWHD_OFFSET(daObj_Ikada_c, mFireParticle, 0x5CC);
 WWHD_OFFSET(daObj_Ikada_c, mFirePos, 0x5E0);
 WWHD_OFFSET(daObj_Ikada_c, mLightPower, 0x61C);
 WWHD_OFFSET(daObj_Ikada_c, mLightPowerTarget, 0x620);
-WWHD_OFFSET(daObj_Ikada_c, m0508, 0x624);
-WWHD_OFFSET(daObj_Ikada_c, m050C, 0x628);
+WWHD_OFFSET(daObj_Ikada_c, mLightAlpha, 0x624);
+WWHD_OFFSET(daObj_Ikada_c, mLightAlphaTarget, 0x628);
 WWHD_OFFSET(daObj_Ikada_c, mEpTimer0, 0x62C);
 WWHD_OFFSET(daObj_Ikada_c, mEpTimer1, 0x630);
 WWHD_OFFSET(daObj_Ikada_c, mTimer, 0x638);
@@ -483,21 +502,21 @@ WWHD_OFFSET(daObj_Ikada_c, mFlagPcId, 0x91C);
 WWHD_OFFSET(daObj_Ikada_c, mFlagOffset, 0x920);
 WWHD_OFFSET(daObj_Ikada_c, mFlagScale, 0x92C);
 WWHD_OFFSET(daObj_Ikada_c, mpRopeEnd, 0x930);
-WWHD_OFFSET(daObj_Ikada_c, m07DC, 0xAC0);
-WWHD_OFFSET(daObj_Ikada_c, m1154, 0x1438);
+WWHD_OFFSET(daObj_Ikada_c, mRopeVelocity, 0xAC0);
+WWHD_OFFSET(daObj_Ikada_c, mFrame, 0x1438);
 WWHD_OFFSET(daObj_Ikada_c, mpSeaModel, 0x143C);
 WWHD_OFFSET(daObj_Ikada_c, mSeaBtk, 0x1440);
-WWHD_OFFSET(daObj_Ikada_c, m115A, 0x14B6);
-WWHD_OFFSET(daObj_Ikada_c, m115C, 0x14B8);
-WWHD_OFFSET(daObj_Ikada_c, m115E, 0x14BA);
+WWHD_OFFSET(daObj_Ikada_c, mCraneAngle, 0x14B6);
+WWHD_OFFSET(daObj_Ikada_c, mCraneShakePhase, 0x14B8);
+WWHD_OFFSET(daObj_Ikada_c, mCraneShakeAmpl, 0x14BA);
 WWHD_OFFSET(daObj_Ikada_c, mLinkRideRockTimer, 0x14BC);
 WWHD_OFFSET(daObj_Ikada_c, mLinkRideRockAmpl, 0x14BE);
 WWHD_OFFSET(daObj_Ikada_c, mWaveAnimTimer, 0x14C0);
-WWHD_OFFSET(daObj_Ikada_c, m1166, 0x14C2);
-WWHD_OFFSET(daObj_Ikada_c, m1168, 0x14C4);
+WWHD_OFFSET(daObj_Ikada_c, mPlayerNearby, 0x14C2);
+WWHD_OFFSET(daObj_Ikada_c, mSvDirection, 0x14C4);
 WWHD_OFFSET(daObj_Ikada_c, mSvId, 0x14C8);
 WWHD_OFFSET(daObj_Ikada_c, mStts, 0x1604);
-WWHD_OFFSET(daObj_Ikada_c, m12E4, 0x1640);
+WWHD_OFFSET(daObj_Ikada_c, mHitTimer, 0x1640);
 WWHD_OFFSET(daObj_Ikada_c, mSePos, 0x1644);
 WWHD_OFFSET(daObj_Ikada_c, mStopTimer, 0x1650);
 WWHD_OFFSET(daObj_Ikada_c, mWave, 0x1654);

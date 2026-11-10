@@ -1,9 +1,11 @@
 /* himo2_class (Grappling Hook rope), WWHD layout. 
  *
- * GameCube -> WWHD: fopAc_ac_c +0x11C up to m1F30. mDoExt_3DlineMat1_c grew from 0x3C to 0x188
- * (constructor 025EB82C), so m1F6C..m1FD8 shift and dCcD_Stts m2014 is at 0x2514. HD keeps only
- * 100 entries of m218C (GameCube 200). After mpHookModel HD inserts four mDoExt_J3DModelPacketS
- * (0xB0 each, constructor 02080404), so the members from m24B4 on are +0x630. Size 0x2D68.
+ * GameCube -> WWHD: fopAc_ac_c +0x11C up to mRopeLine (GameCube 0x1F30). mDoExt_3DlineMat1_c
+ * grew from 0x3C to 0x188 (constructor 025EB82C), so mRopePointNum..mHandLine (GameCube
+ * 0x1F6C..0x1FD8) shift and dCcD_Stts mStts (GameCube 0x2014) is at 0x2514. HD keeps only 100
+ * entries of mCandidates (GameCube 0x218C, 200 entries). After mpHookModel HD inserts four
+ * mDoExt_J3DModelPacketS (0xB0 each, constructor 02080404), so the members from mWrapOffsetZ
+ * (GameCube 0x24B4) on are +0x630. Size 0x2D68.
  * Offsets measured from daHimo2_Create, CallbackCreateHeap, s_a_d_sub and himo2_bg_check. */
 #pragma once
 #include "gc_api/gc_api.h"
@@ -98,32 +100,32 @@ WWHD_SIZE(himo2_camera_c, 0x249);
 // Only the tww boss members used by the rope sequences are exposed here.
 struct himo2_dr_c : fopAc_ac_c {
     u8 _3AC[0x526 - 0x3AC];
-    /* 0x526 */ be<u8> unk_40A;
+    /* 0x526 */ be<u8> mTailState; /* was unk_40A: dr2_class mTailState (0x526); new_himo2_move 0216F7FC sets 3 (rock shake) / 0 in the boss-fall demo */
     u8 _527[9];
-    /* 0x530 */ be<f32> unk_414;
+    /* 0x530 */ be<f32> mShakeAmplitude; /* was unk_414: dr2_class mShakeAmplitude (0x530); new_himo2_move 0216F7FC eases it to 2000 / 100 in the boss-fall demo */
     u8 _534[0x5D6 - 0x534];
-    /* 0x5D6 */ be<s16> unk_4BA;
+    /* 0x5D6 */ be<s16> mRockState; /* was unk_4BA: dr2_class mRockState (0x5D6); new_himo2_move 0216F7FC tests >= 10 (rock broken) */
     u8 _5D8[0x0E];
-    /* 0x5E6 */ be<s16> unk_4CA;
+    /* 0x5E6 */ be<s16> mRockFallTimer; /* was unk_4CA: dr2_class mRockFallTimer (0x5E6); new_himo2_move 0216F7FC sets 0x5A in the rope jump demo */
     u8 _5E8[0x40];
-    /* 0x628 */ be<u8> unk_50C;
+    /* 0x628 */ be<u8> mShowDragon; /* was unk_50C: dr2_class mShowDragon (0x628); new_himo2_move 0216F7FC sets 1 / 0 in the rope demo */
     u8 _629[3];
 };
-WWHD_OFFSET(himo2_dr_c, unk_40A, 0x526);
-WWHD_OFFSET(himo2_dr_c, unk_414, 0x530);
-WWHD_OFFSET(himo2_dr_c, unk_4BA, 0x5D6);
-WWHD_OFFSET(himo2_dr_c, unk_4CA, 0x5E6);
-WWHD_OFFSET(himo2_dr_c, unk_50C, 0x628);
+WWHD_OFFSET(himo2_dr_c, mTailState, 0x526);
+WWHD_OFFSET(himo2_dr_c, mShakeAmplitude, 0x530);
+WWHD_OFFSET(himo2_dr_c, mRockState, 0x5D6);
+WWHD_OFFSET(himo2_dr_c, mRockFallTimer, 0x5E6);
+WWHD_OFFSET(himo2_dr_c, mShowDragon, 0x628);
 WWHD_SIZE(himo2_dr_c, 0x62C);
 struct himo2_btd_c : fopAc_ac_c {
     u8 _3AC[0x63D4 - 0x3AC];
-    /* 0x63D4 */ be<u8> m6190;
+    /* 0x63D4 */ be<u8> mCrackStage;
     u8 _63D5[0x7059 - 0x63D5];
-    /* 0x7059 */ be<u8> m6E15;
+    /* 0x7059 */ be<u8> mBlurRate;
     u8 _705A[2];
 };
-WWHD_OFFSET(himo2_btd_c, m6190, 0x63D4);
-WWHD_OFFSET(himo2_btd_c, m6E15, 0x7059);
+WWHD_OFFSET(himo2_btd_c, mCrackStage, 0x63D4);
+WWHD_OFFSET(himo2_btd_c, mBlurRate, 0x7059);
 WWHD_SIZE(himo2_btd_c, 0x705C);
 
 enum himo2_demo_state_e {
@@ -190,94 +192,94 @@ WWHD_SIZE(himo2_modelPacket_c, 0xB0);
 struct himo2_class : fopAc_ac_c {
     BOOL setTargetPos(cXyz*, be<f32>*, be<f32>*);
     /* 0x03AC */ u8 _3AC[0x3B8 - 0x3AC];
-    /* 0x03B8 */ be<s16> m029C;
-    /* 0x03BA */ be<s16> m029E;
-    /* 0x03BC */ be<s16> m02A0;
-    /* 0x03BE */ be<s16> m02A2;
-    /* 0x03C0 */ be<s16> m02A4;
+    /* 0x03B8 */ be<s16> mDemoTimer;  /* was m029C: new_himo2_move 0216F7FC: counted down every frame; set 120/50/210/220/10 by the demo states (mDemoState SET_ROCK..BOSS_END), which act on frame numbers of it (30, 200, 170, 0) */
+    /* 0x03BA */ be<s16> mHideTimer;  /* was m029E: daHimo2_Draw 0216CA5C draws nothing while it is not 0; new_himo2_move 0216F7FC: REG + 0x14 when the hook is back at the hand (states 8/9), 0 on lock-on and on throw; counted down */
+    /* 0x03BC */ be<s16> mCancelWait;  /* was m02A0: new_himo2_move 0216F7FC: REG + 10 on throw, counted down; X/Y/Z cancels the flight (states 2/3) only while it is 0 */
+    /* 0x03BE */ be<s16> mHitWait;  /* was m02A2: new_himo2_move 0216F7FC: 3 on throw, counted down; while it is not 0 himo2_bg_check 0216DE7C returns at once and At hits (ChkAtHit) are ignored */
+    /* 0x03C0 */ be<s16> mControlEndWait;  /* was m02A4: new_himo2_move 0216F7FC: 20 when the swing-control demo (HIMO2_DEMO_CONTROL) starts; the demo ends on !checkPlayerFly() only once it is 0 */
     /* 0x03C2 */ u8 _3C2[0x3D0 - 0x3C2];
-    /* 0x03D0 */ cXyz m02B4;
+    /* 0x03D0 */ cXyz mRootPos;  /* was m02B4: daHimo2_Execute 0216E194: copy of mHandPos[0]; segments 0..mRootSegment of mSegments are set to it; himo2_draw (in daHimo2_Draw 0216CA5C) starts the rope line there */
     /* 0x03DC */ u8 _3DC[0x3E8 - 0x3DC];
-    /* 0x03E8 */ be<s32> m02CC;
+    /* 0x03E8 */ be<s32> mRootSegment;  /* was m02CC: daHimo2_Execute 0216E194: segments 0..it of mSegments sit at mRootPos, himo2_control/himo2_control2 simulate from it + 1; new_himo2_move 0216F7FC sets 0x61 - distance * k (more rope out = lower), at least 2 */
     /* 0x03EC */ u8 _3EC[0x3F4 - 0x3EC];
-    /* 0x03F4 */ be<u32> m02D8;
-    /* 0x03F8 */ be<s32> m02DC;
-    /* 0x03FC */ be<s8> m02E0;
+    /* 0x03F4 */ be<u32> mFrameCounter;  /* was m02D8: daHimo2_Execute 0216E194: + 1 every frame; new_himo2_move 0216F7FC / himo2_control2 use it as the phase of the spin, sway and camera shake (it * 0x2000 etc.) */
+    /* 0x03F8 */ be<s32> mState;  /* was m02DC: new_himo2_move 0216F7FC: switch over the rope states (himo2_state_e HIMO2_WAIT .. HIMO2_HANG); himo2_bg_check 0216DE7C sets HIMO2_REBOUND; daPy_lk_c::checkNextActionRopeReady 023EC084 reads it (view player02::ropeMode_c) */
+    /* 0x03FC */ be<s8> mRockfallSeStep;  /* was m02E0: new_himo2_move 0216F7FC (HIMO2_DEMO_CONTROL): 0/1/2+ selects JA_SE_CV_DRG_ROCKFALL_1 / _1_2 / _1_3 every 50 frames, + 1 each time; 0 when the rock is dropped */
     /* 0x03FD */ u8 _3FD[3];
-    /* 0x0400 */ be<f32> m02E4;
+    /* 0x0400 */ be<f32> mSagY;  /* was m02E4: himo2_control (in daHimo2_Execute 0216E194) adds it to each segment's height difference (the rope's droop); new_himo2_move 0216F7FC: 0 on throw, -5 when wrapped round a body, -> -6.25 while hooked */
     /* 0x0404 */ u8 _404[4];
-    /* 0x0408 */ cXyz m02EC[2];
+    /* 0x0408 */ cXyz mHandPos[2];  /* was m02EC: daHimo2_Execute 0216E194: [0]/[1] = MtxPosition(4, 0, 0) of the left/right hand matrices, [0] the hand holding the rope (getRopeGrabRightHand); new_himo2_move 0216F7FC pulls the hook back to [0]; daHimo2_Draw 0216CA5C draws the coils at [1] */
     /* 0x0420 */ u8 _420[4];
-    /* 0x0424 */ be<s16> m0308;
+    /* 0x0424 */ be<s16> mStateTimer;  /* was m0308: new_himo2_move 0216F7FC: counted down; set on each state change (throw, rebound 30/40, max length 50); at 0 the spin throws (state 1), the flight stops at max length (2) or pulls back (3); himo2_bg_check 0216DE7C sets 30 */
     /* 0x0426 */ u8 _426[0x42C - 0x426];
-    /* 0x042C */ himo2_s m0310[100];
+    /* 0x042C */ himo2_s mSegments[100];  /* was m0310: daHimo2_Execute 0216E194: the 100 rope segments (himo2_s), positions set from mRootPos, simulated by himo2_control/himo2_control2, [99] = the hook position; himo2_draw (in daHimo2_Draw 0216CA5C) draws them */
     /* 0x123C */ himo2_s m1120[100];
-    /* 0x204C */ himo2_lineMat_c m1F30;
-    /* 0x21D4 */ be<s32> m1F6C;
-    /* 0x21D8 */ be<f32> m1F70[5];
-    /* 0x21EC */ cXyz m1F84;
-    /* 0x21F8 */ be<s16> m1F90;
-    /* 0x21FA */ be<s16> m1F92;
-    /* 0x21FC */ be<s16> m1F94;
+    /* 0x204C */ himo2_lineMat_c mRopeLine;  /* was m1F30: CallbackCreateHeap 0216E9E0: mDoExt_3DlineMat1_c init(1, 200, rope texture); daHimo2_Draw 0216CA5C fills it with the rope points (spin_draw, himo2_draw, himo_hang_draw) and updates it */
+    /* 0x21D4 */ be<s32> mRopePointNum;  /* was m1F6C: daHimo2_Draw 0216CA5C: 0 at the start, + 1 per point written into mRopeLine (spin_draw / himo2_draw / himo_hang_draw); the line is updated with it as the point count (nothing above 200) */
+    /* 0x21D8 */ be<f32> mCoilRadiusRate[5];  /* was m1F70: daHimo2_Draw 0216CA5C: per coil i (5), -> 0 while mHandDist * (REG + 3) + REG - 120 is above (4 - i) * 300, else -> 1; the coil radius is it * 15, and [0] scales the line between the hands */
+    /* 0x21EC */ cXyz mOldCoilHandPos;  /* was m1F84: daHimo2_Draw 0216CA5C: mHandPos[1] of the previous frame; the movement mHandPos[1] - it sets the coil swing angles */
+    /* 0x21F8 */ be<s16> mCoilAngleX;  /* was m1F90: daHimo2_Draw 0216CA5C: follows the hand movement (z) into the coils' X rotation (cLib_addCalcAngleS2, then mDoMtx_XrotM) */
+    /* 0x21FA */ be<s16> mCoilFlipAngleZ;  /* was m1F92: daHimo2_Draw 0216CA5C: -> -0x8000 when the hand moves down (below REG - 20), else -> 0; added to the coils' Z rotation */
+    /* 0x21FC */ be<s16> mCoilAngleZ;  /* was m1F94: daHimo2_Draw 0216CA5C: follows the hand movement (x) and is the per-coil step of the coils' Z rotation ((it - 2000) * i) */
     /* 0x21FE */ u8 _21FE[2];
-    /* 0x2200 */ himo2_lineMat_c m1F98;
-    /* 0x2388 */ be<f32> m1FD4;
-    /* 0x238C */ himo2_lineMat_c m1FD8;
-    /* 0x2514 */ dCcD_Stts m2014;
-    /* 0x2550 */ dCcD_Sph m2050;
-    /* 0x267C */ gptr<fopAc_ac_c> m217C;
-    /* 0x2680 */ be<u32> m2180;
-    /* 0x2684 */ be<f32> m2184;
-    /* 0x2688 */ be<f32> m2188;
-    /* 0x268C */ gptr<fopAc_ac_c> m218C[100]; /* HD: 100 (GameCube 200) */
-    /* 0x281C */ be<u8> m24AC;
+    /* 0x2200 */ himo2_lineMat_c mCoilLine;  /* was m1F98: CallbackCreateHeap 0216E9E0: mDoExt_3DlineMat1_c init(5, 0x20, rope texture); daHimo2_Draw 0216CA5C fills 5 circles of 32 points round mHandPos[1] (the coiled rope in the hand) */
+    /* 0x2388 */ be<f32> mHandLineSag;  /* was m1FD4: daHimo2_Draw 0216CA5C: -> REG + 15 or 0 by the bits of the rope distance; lowers/widens the sine curve of mHandLine */
+    /* 0x238C */ himo2_lineMat_c mHandLine;  /* was m1FD8: CallbackCreateHeap 0216E9E0: mDoExt_3DlineMat1_c init(1, 0x10, rope texture); daHimo2_Draw 0216CA5C fills 16 points from mHandPos[1] to mHandPos[0] (the rope between the hands) */
+    /* 0x2514 */ dCcD_Stts mStts;  /* was m2014: daHimo2_Create 0216EC18: dCcD_Stts, Init(0xFF, 0xFF, this), the status of mSph */
+    /* 0x2550 */ dCcD_Sph mSph;  /* was m2050: daHimo2_Create 0216EC18: dCcD_Sph set from cc_sph_src; daHimo2_Execute 0216E194 places it at the hook (R 20 in flight, else -100); new_himo2_move 0216F7FC tests ChkAtHit */
+    /* 0x267C */ gptr<fopAc_ac_c> mpTarget;  /* was m217C: himo2_class::setTargetPos 0216EEB8 stores the target found by search_target; new_himo2_move 0216F7FC: the lock-on target on throw, the hooked actor (kui / body) whose health it sets */
+    /* 0x2680 */ be<u32> mTargetId;  /* was m2180: new_himo2_move 0216F7FC: fopAcM_GetID(the lock-on target) on throw (else -1); states 3/4 look the actor up with fopAcM_SearchByID(it) */
+    /* 0x2684 */ be<f32> mWrapRadius;  /* was m2184: new_himo2_move 0216F7FC (state 4, hooked on a body): the radius of the hook circling the target's eyePos (rotated by mFrameCounter << 13), -> 0; below 0.1 the hook is done */
+    /* 0x2688 */ be<f32> mHandDist;  /* was m2188: new_himo2_move 0216F7FC: |current.pos - mHandPos[0]| every frame; sets mRootSegment and the segment length in himo2_control/himo2_control2 (in daHimo2_Execute 0216E194) */
+    /* 0x268C */ gptr<fopAc_ac_c> mCandidates[100];  /* was m218C: s_a_d_sub 0216DD3C appends each hook target found by fpcM_Search; search_target (in setTargetPos 0216EEB8) clears and walks them; HD: 100 (GameCube 200) */
+    /* 0x281C */ be<u8> mCandidateNum;  /* was m24AC: s_a_d_sub 0216DD3C: index of the next free mCandidates entry (assert < 100), + 1 per candidate; search_target (in setTargetPos 0216EEB8) clears it */
     /* 0x281D */ u8 _281D[3];
     /* 0x2820 */ gptr<J3DModel> mpHookModel;
     /* 0x2824 */ himo2_modelPacket_c mPackets[4]; /* HD: mDoExt_J3DModelPacketS x4 */
-    /* 0x2AE4 */ be<f32> m24B4;
-    /* 0x2AE8 */ be<f32> m24B8;
-    /* 0x2AEC */ be<s32> m24BC;
-    /* 0x2AF0 */ be<s32> m24C0;
-    /* 0x2AF4 */ be<f32> m24C4;
-    /* 0x2AF8 */ be<s16> m24C8;
-    /* 0x2AFA */ be<s16> m24CA;
-    /* 0x2AFC */ cXyz m24CC;
-    /* 0x2B08 */ be<s8> m24D8;
-    /* 0x2B09 */ be<s8> m24D9;
+    /* 0x2AE4 */ be<f32> mWrapOffsetZ;  /* was m24B4: new_himo2_move 0216F7FC: REG - 400 when the wrap demo starts, -> -144 (HIMO2_DEMO_COIL); spin_draw (in daHimo2_Draw 0216CA5C): z of the wrap's start point relative to the target */
+    /* 0x2AE8 */ be<f32> mWrapOffsetX;  /* was m24B8: new_himo2_move 0216F7FC: REG - 90 (body) or 0 when the wrap demo starts, -> 0 (HIMO2_DEMO_COIL); spin_draw (in daHimo2_Draw 0216CA5C): x of the wrap's start point relative to the target */
+    /* 0x2AEC */ be<s32> mWrapCount;  /* was m24BC: new_himo2_move 0216F7FC (HIMO2_DEMO_COIL): wrap progress, + (mWrapSpeed / size) + 1 per frame up to 400, coil sounds at 0/13/26/39, hook sound past 49, wrap done past 0x82; spin_draw (in daHimo2_Draw 0216CA5C) bends segments up to it + 49 */
+    /* 0x2AF0 */ be<s32> mOldWrapCount;  /* was m24C0: new_himo2_move 0216F7FC (HIMO2_DEMO_COIL): mWrapCount before this frame's step */
+    /* 0x2AF4 */ be<f32> mWrapSpeed;  /* was m24C4: new_himo2_move 0216F7FC (HIMO2_DEMO_COIL): 0 at the start, + REG + 2 per frame; mWrapCount advances by it / (target size) + 1 */
+    /* 0x2AF8 */ be<s16> mWrapAngleStep;  /* was m24C8: new_himo2_move 0216F7FC (HIMO2_DEMO_COIL): -> 4000 - 2000 * (target scale.y - 1); spin_draw (in daHimo2_Draw 0216CA5C) adds it per wrapped segment to the bend angle */
+    /* 0x2AFA */ be<s16> mHookAngleX;  /* was m24CA: new_himo2_move 0216F7FC: 0 when the wrap starts, 9000 (with the hook sound) then 0x238C; spin_draw (in daHimo2_Draw 0216CA5C): X rotation of the hook model at the rope end */
+    /* 0x2AFC */ cXyz mHookTipPos;  /* was m24CC: spin_draw / himo2_draw (in daHimo2_Draw 0216CA5C): MtxPosition((0, 0, 15)) in the hook model's matrix, the hook's tip */
+    /* 0x2B08 */ be<s8> mWrapDrawMode;  /* was m24D8: new_himo2_move 0216F7FC: 1 when hooked, 2 when the wrap is done, 0 on release; daHimo2_Draw 0216CA5C draws the wrap (spin_draw) when not 0, below 2 also its first 50 points */
+    /* 0x2B09 */ be<s8> mDemoState;  /* was m24D9: new_himo2_move 0216F7FC: switch over the hook demos (himo2_demo_state_e HIMO2_DEMO_REQUEST .. BOSS_END); daHimo2_Draw 0216CA5C draws nothing while below HIMO2_DEMO_INACTIVE */
     /* 0x2B0A */ u8 _2B0A[2];
-    /* 0x2B0C */ cXyz m24DC;
-    /* 0x2B18 */ cXyz m24E8;
-    /* 0x2B24 */ be<f32> m24F4;
-    /* 0x2B28 */ be<f32> m24F8;
-    /* 0x2B2C */ be<f32> m24FC;
-    /* 0x2B30 */ be<f32> m2500;
-    /* 0x2B34 */ cXyz m2504;
-    /* 0x2B40 */ be<s16> m2510;
-    /* 0x2B42 */ be<s16> m2512;
-    /* 0x2B44 */ be<f32> m2514;
-    /* 0x2B48 */ be<f32> m2518;
-    /* 0x2B4C */ be<s8> m251C;
+    /* 0x2B0C */ cXyz mCamEye;  /* was m24DC: new_himo2_move 0216F7FC: the demo camera's eye (cameraSet / cameraReset e argument, with the shake), moved by the demo states */
+    /* 0x2B18 */ cXyz mCamCenter;  /* was m24E8: new_himo2_move 0216F7FC: the demo camera's center (cameraSet / cameraReset c argument, with the shake): the target, the player or the boss */
+    /* 0x2B24 */ be<f32> mCamFovy;  /* was m24F4: new_himo2_move 0216F7FC: the f32 (fovy) argument of cameraSet 02514FE8 in the demos; 65 at the control demo, -> mCamFovyTarget */
+    /* 0x2B28 */ be<f32> mCamFovyTarget;  /* was m24F8: new_himo2_move 0216F7FC: 65 at the control demo, moved by the sub stick Y (REG + 20 .. REG + 70); mCamFovy follows it */
+    /* 0x2B2C */ be<f32> mCamEyeDist;  /* was m24FC: new_himo2_move 0216F7FC (HIMO2_DEMO_COIL): scale of the eye offset added to mCamEye each frame; REG + 3.5 (body) / REG + 3 at the start, -> REG + 1.8 / REG + 1.2 */
+    /* 0x2B30 */ be<f32> mReturnSpeedRate;  /* was m2500: new_himo2_move 0216F7FC: scales the speed the hook returns to the hand (200 * it in HIMO2_WAIT, (REG + 400) * it in mv_pull_back), -> 1; 0 on throw, 0.1/0.02 on a hit / time out; daHimo2_Create 0216EC18 sets 1 */
+    /* 0x2B34 */ cXyz mHangPos;  /* was m2504: spin_draw (in daHimo2_Draw 0216CA5C): the wrap point REG + 48 (where the rope leaves the target); new_himo2_move 0216F7FC puts the hook there in HIMO2_HOOKED/HANG; himo_hang_draw draws the rope from it to mHandPos[0] */
+    /* 0x2B40 */ be<s16> mCamAngleY;  /* was m2510: new_himo2_move 0216F7FC: target angle +-0x4000 at the wrap demo, player angle + 0x8000 at the control demo, -> mCamAngleYTarget; YrotS for the camera eye offset; spin_draw (in daHimo2_Draw 0216CA5C) uses it as the wrap's Y angle */
+    /* 0x2B42 */ be<s16> mCamAngleYTarget;  /* was m2512: new_himo2_move 0216F7FC (control demo): set with mCamAngleY, + sub stick X * (REG + 1000) per frame; mCamAngleY follows it */
+    /* 0x2B44 */ be<f32> mCamEyeSignX;  /* was m2514: new_himo2_move 0216F7FC: -1 at the wrap demo; multiplies the x of the eye offset (HIMO2_DEMO_COIL) */
+    /* 0x2B48 */ be<f32> mCamEyeSignZ;  /* was m2518: new_himo2_move 0216F7FC: REG + 1 (body) or -1 at the wrap demo; multiplies the z of the eye offset (HIMO2_DEMO_COIL) */
+    /* 0x2B4C */ be<s8> mWrapMirror;  /* was m251C: search_target (in setTargetPos 0216EEB8): 1 when the player is on the negative-angle side of a plain kui, else 0; new_himo2_move 0216F7FC: mCamAngleY = target angle - 0x4000 when set, + 0x4000 when not */
     /* 0x2B4D */ u8 _2B4D[3];
-    /* 0x2B50 */ be<f32> m2520;
-    /* 0x2B54 */ cXyz m2524;
-    /* 0x2B60 */ be<f32> m2530;
-    /* 0x2B64 */ dBgS_AcchCir m2534;
-    /* 0x2BA4 */ dBgS_ObjAcch m2574;
+    /* 0x2B50 */ be<f32> mCamShake;  /* was m2520: new_himo2_move 0216F7FC: REG + 50 at the boss-fall demo, -> 0; sin/cos(mFrameCounter) * it shakes mCamEye/mCamCenter, cos * it * 7.5 is the camera bank */
+    /* 0x2B54 */ cXyz mTargetPos;  /* was m2524: himo2_class::setTargetPos 0216EEB8 stores its cXyz argument; new_himo2_move 0216F7FC: the lock-on target's eyePos, limited to REG * 100 + 1000 from the camera eye; the free throw flies to it */
+    /* 0x2B60 */ be<f32> mSwayAmp;  /* was m2530: new_himo2_move 0216F7FC: REG + 4 on throw; himo2_control2 (in daHimo2_Execute 0216E194): sway amplitude it * (99 - i) * 0.01 of the flying rope (states 1-3) */
+    /* 0x2B64 */ dBgS_AcchCir mAcchCir;  /* was m2534: daHimo2_Create 0216EC18: dBgS_AcchCir, SetWall(30, 30), the circle of mAcch */
+    /* 0x2BA4 */ dBgS_ObjAcch mAcch;  /* was m2574: daHimo2_Create 0216EC18: dBgS_ObjAcch set on current/old pos with mAcchCir; himo2_bg_check 0216DE7C CrrPos and the wall/roof/ground hit */
 };
-WWHD_OFFSET(himo2_class, m02CC, 0x3E8);
-WWHD_OFFSET(himo2_class, m0310, 0x42C);
-WWHD_OFFSET(himo2_class, m1F30, 0x204C);
-WWHD_OFFSET(himo2_class, m1F98, 0x2200);
-WWHD_OFFSET(himo2_class, m1FD8, 0x238C);
-WWHD_OFFSET(himo2_class, m2014, 0x2514);
-WWHD_OFFSET(himo2_class, m2050, 0x2550);
-WWHD_OFFSET(himo2_class, m218C, 0x268C);
-WWHD_OFFSET(himo2_class, m24AC, 0x281C);
+WWHD_OFFSET(himo2_class, mRootSegment, 0x3E8);
+WWHD_OFFSET(himo2_class, mSegments, 0x42C);
+WWHD_OFFSET(himo2_class, mRopeLine, 0x204C);
+WWHD_OFFSET(himo2_class, mCoilLine, 0x2200);
+WWHD_OFFSET(himo2_class, mHandLine, 0x238C);
+WWHD_OFFSET(himo2_class, mStts, 0x2514);
+WWHD_OFFSET(himo2_class, mSph, 0x2550);
+WWHD_OFFSET(himo2_class, mCandidates, 0x268C);
+WWHD_OFFSET(himo2_class, mCandidateNum, 0x281C);
 WWHD_OFFSET(himo2_class, mpHookModel, 0x2820);
-WWHD_OFFSET(himo2_class, m24B4, 0x2AE4);
-WWHD_OFFSET(himo2_class, m2500, 0x2B30);
-WWHD_OFFSET(himo2_class, m2534, 0x2B64);
-WWHD_OFFSET(himo2_class, m2574, 0x2BA4);
+WWHD_OFFSET(himo2_class, mWrapOffsetZ, 0x2AE4);
+WWHD_OFFSET(himo2_class, mReturnSpeedRate, 0x2B30);
+WWHD_OFFSET(himo2_class, mAcchCir, 0x2B64);
+WWHD_OFFSET(himo2_class, mAcch, 0x2BA4);
 WWHD_SIZE(himo2_class, 0x2D68);
 
 /* himo2HIO_c (HD: vtable after the members), l_himo2HIO at 0x1046469C */

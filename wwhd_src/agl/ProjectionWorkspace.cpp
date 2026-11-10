@@ -1,6 +1,7 @@
 // Projection polygon workspace (agl::gx2util::GeometryWorkspace): construction, point-list allocation, slot acquire and
 // the reset that writes the box's six faces from its eight corners into the next polygon set.
 #include "agl/ProjectionPolygonWorkspace.h"
+#include "sead/ElementAt.h"
 using namespace agl::render;
 void* allocateGeometryStorage(u32);
 // Constructor defaults: diameter 0.0, clip tolerance 0.05.
@@ -94,7 +95,7 @@ static void appendGeometryCorner(GeometryPointList* list,const agl::gx2util::Vec
     agl::gx2util::GeometryTriple* points = static_cast<agl::gx2util::GeometryTriple*>(list->mData.get());
     list->mCount = used + 1u;
     f32 x = corner->x.mValue;
-    agl::gx2util::GeometryTriple* point = used < capacity ? points + used : points;
+    agl::gx2util::GeometryTriple* point = &sead::elementAt<agl::gx2util::GeometryTriple>(gabi::ea(points),used < capacity ? used : 0u); /* guest EA arithmetic: wraps at 32 bits as on the console */
     point->x = x;
     point->y = (f32)corner->y.mValue;
     point->z = (f32)corner->z.mValue;

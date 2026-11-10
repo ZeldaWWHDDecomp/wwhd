@@ -38,10 +38,10 @@ WWHD_SIZE(andsw0_class, 0x3C0);
 // HD: private view of the Bokoblin's one field used by the opening sequence.
 struct bk_class : fopEn_enemy_c {
     u8 _3C8[0x137C - 0x3C8];
-    /* 0x137C */ be<s8> m121C;
+    /* 0x137C */ be<s8> mPathEnd;  /* was m121C: the name bk_class (d_a_bk.h) has for this offset; hajimarinomori_check 02051174 sets 1 on its Bokoblins by event bits (daBk_Draw 0209971C then draws nothing) */
     u8 _137D[0x19A4 - 0x137D];
 };
-WWHD_OFFSET(bk_class, m121C, 0x137C);
+WWHD_OFFSET(bk_class, mPathEnd, 0x137C);
 WWHD_SIZE(bk_class, 0x19A4);
 
 namespace dSv_event_flag_c { enum { UNK_0004 = 0x0004, UNK_0301 = 0x0301, UNK_0480 = 0x0480 }; }

@@ -57,18 +57,18 @@ static inline void tensor_damp(be<s16>* ang, Act_c* a, be<f32> Act_c::Data_c::*f
 
 /* the water/lava level of calc_drop_param / calc_afl_param: false when neither applies */
 static inline bool drop_level(Act_c* a, f32* d3) {
-    bool hasLava = a->m4FC != -1000000000.0f;
-    bool belowWater = a->m4F8 > a->current.pos.y;
+    bool hasLava = a->mWaterY != -1000000000.0f;
+    bool belowWater = a->mLavaY > a->current.pos.y;
     if (!hasLava && !belowWater) {
         return false;
     }
     f32 lv;
     if (hasLava && belowWater) {
-        lv = (a->m4FC - a->m4F8 >= 0.0f) ? (f32)a->m4FC : (f32)a->m4F8; /* GHS fsel preserves the unordered comparison. */
+        lv = (a->mWaterY - a->mLavaY >= 0.0f) ? (f32)a->mWaterY : (f32)a->mLavaY; /* GHS fsel preserves the unordered comparison. */
     } else if (hasLava) {
-        lv = a->m4FC;
+        lv = a->mWaterY;
     } else {
-        lv = a->m4F8;
+        lv = a->mLavaY;
     }
     *d3 = a->current.pos.y - lv;
     return true;
@@ -274,10 +274,10 @@ void daTsuboMode::Act_c::mode_walk(u32 r4, u32 r5, u32 r6, u32 r7, u32 harness_r
         Act_c::Data_c* d = data(this);
         s16 deg = (s16)gabi::ftoi(((f32)(s16)d->m56 - 0.5f) * 182.04445f); /* cM_deg2s */
         gabi::Local<u32> r8tmp; /* harness: the original's r8 is this stack address here */
-        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &m7F4, *sp0C, *sp10, pNorm, d->m5C, cM_scos((u16)deg), &m6F0,
+        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &mWindVec, *sp0C, *sp10, pNorm, d->m5C, cM_scos((u16)deg), &m6F0,
                              gabi::ea(r8tmp.get()));
     } else {
-        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &m7F4, *sp0C, *sp10, nullptr, 0.0f, 0.0f, &m6F0, harness_r8);
+        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &mWindVec, *sp0C, *sp10, nullptr, 0.0f, 0.0f, &m6F0, harness_r8);
     }
     if (mAcch.ChkGroundHit()) {
         attn_onBit(this, fopAc_Attn_ACTION_CARRY_e);
@@ -334,7 +334,7 @@ void daTsuboMode::Act_c::mode_carry(u32 r4, u32 harness_r5) {
     if (actor_status & 0x102000) { /* fopAcM_checkCarryNow || fopAcM_checkHookCarryNow */
         spec_mode_carry(bVar2);
     } else {
-        m6FC = current.pos.y;
+        mFallStartY = current.pos.y;
         if (speedF > 0.0f && m684 == 0) {
             init_rot_throw();
             mode_drop_init();
@@ -365,7 +365,7 @@ void daTsuboMode::Act_c::mode_drop_init() {
     }
     speedF = fVar1;
     m810 = 0;
-    m678 = 5;
+    mMode = 5;
     gravity = data(this)->mGravity;
 }
 
@@ -382,7 +382,7 @@ void daTsuboMode::Act_c::mode_drop() {
     gabi::Local<be<f32>> sp10, sp08, sp0C;
     calc_drop_param(sp10, sp08, sp0C);
     gravity = *sp10;
-    daObj_posMoveF_stream(this, &mStts.m_cc_move, &m7F4, *sp08, *sp0C);
+    daObj_posMoveF_stream(this, &mStts.m_cc_move, &mWindVec, *sp08, *sp0C);
 }
 
 /* 024CFAB8 */
@@ -398,7 +398,7 @@ void daTsuboMode::Act_c::mode_afl() {
     tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
     cXyz* pStreamSpd = tsuboMode_daObj_get_path_spd(Acch_gnd(&mAcch), 30.0f);
     cXyz sp20;
-    cXyz_ml(&m7F4, &sp20, data(this)->m20);
+    cXyz_ml(&mWindVec, &sp20, data(this)->m20);
     gabi::Local<be<f32>> sp08, sp0C, sp10;
     calc_afl_param(sp08, sp0C, sp10);
     s32 t = gabi::ftoi(cM_rndF(400.0f));
@@ -412,10 +412,10 @@ void daTsuboMode::Act_c::mode_afl() {
 
 /* 024CE454 */
 bool daTsuboMode::Act_c::mode_proc_call() {
-    if ((actor_status & 0x102000) && m678 != 4) { /* fopAcM_checkCarryNow || fopAcM_checkHookCarryNow */
+    if ((actor_status & 0x102000) && mMode != 4) { /* fopAcM_checkCarryNow || fopAcM_checkHookCarryNow */
         tsuboMode_mode_carry_init(this);
     }
-    s32 mode = m678;
+    s32 mode = mMode;
     cXyz sp08;
     sp08.x = current.pos.x;
     sp08.y = current.pos.y;
@@ -431,14 +431,14 @@ bool daTsuboMode::Act_c::mode_proc_call() {
         tsuboMode_bound(this, verticalSpeed);
     }
     moment_proc_call();
-    (this->*set_tensor_proc.mProc[m678])();
-    if (m678 != 4) {
+    (this->*set_tensor_proc.mProc[mMode])();
+    if (mMode != 4) {
         tevStr.mRoomNo = fopAcM_GetRoomNo(this);
         tevStr.mEnvrIdxOverride = tsuboMode_dBgS_GetPolyColor(dComIfG_Bgsp(), Acch_gnd(&mAcch));
     }
-    PSVECScale(&m7F4, &m7F4, 0.95f);
-    if (PSVECSquareMag(&m7F4) < 0.1f) {
-        m7F4.set(0.0f, 0.0f, 0.0f);
+    PSVECScale(&mWindVec, &mWindVec, 0.95f);
+    if (PSVECSquareMag(&mWindVec) < 0.1f) {
+        mWindVec.set(0.0f, 0.0f, 0.0f);
     }
     PSVECScale(&m814, &m814, 0.6f);
     if (PSVECSquareMag(&m814) < 0.1f) {
@@ -454,8 +454,8 @@ bool daTsuboMode::Act_c::mode_proc_call() {
 /* 024CFA48 */
 void daTsuboMode::Act_c::water_tention() {
     if (tsuboMode_chk_sink_water(this)) {
-        if (m4FC != -1000000000.0f && m500 != -1000000000.0f) {
-            f32 d = m4FC - m500;
+        if (mWaterY != -1000000000.0f && mWaterYOld != -1000000000.0f) {
+            f32 d = mWaterY - mWaterYOld;
             f32 k = d >= 0.0f ? 0.2f : 0.8f;
             current.pos.y = gabi::fmadds(d, k, current.pos.y);
         }
@@ -531,7 +531,7 @@ void daTsuboMode::Act_c::moment_proc_call() {
     m6F0.x = cXyz_Zero->x;
     m6F0.y = cXyz_Zero->y;
     m6F0.z = cXyz_Zero->z;
-    if (m678 == 3) {
+    if (mMode == 3) {
         void* pla = nullptr;
         if (mAcch.ChkGroundHit()) {
             pla = dBgS_GetTriPla(dComIfG_Bgsp(), Acch_gnd(&mAcch));
@@ -539,7 +539,7 @@ void daTsuboMode::Act_c::moment_proc_call() {
         if (pla != nullptr) {
             (this->*moment_proc.mProc[mType])((const cXyz*)pla);
         } else {
-            cLib_addCalc0(&m6EC, 0.4f, (f32)(u8)data(this)->mAcchRoofHeight * 0.125f);
+            cLib_addCalc0(&mOffsetY, 0.4f, (f32)(u8)data(this)->mAcchRoofHeight * 0.125f);
         }
     }
 }
@@ -716,11 +716,11 @@ void daTsuboMode::Act_c::eff_break_pinecone() {
 
 /* 024CE3D0 */
 void daTsuboMode::Act_c::eff_kutani_set() {
-    if (m798 != 0) {
-        m798 = (u8)(m798 - 1);
-        if (m798 == 0) {
+    if (mKutaniTimer != 0) {
+        mKutaniTimer = (u8)(mKutaniTimer - 1);
+        if (mKutaniTimer == 0) {
             dComIfGp_particle_set(ID_AK_SN_KUTANIVESSEL, &current.pos, nullptr, nullptr, 0xFF,
-                                  (dPa_levelEcallBack*)&m784);
+                                  (dPa_levelEcallBack*)&mKutaniCb);
         }
     }
 }
@@ -799,7 +799,7 @@ bool daTsuboMode::Act_c::_execute() {
         hiddenBySwitch = false;
     }
     if (!hiddenBySwitch) {
-        if (m682 != 0 || m678 != 2 || !mAcch.ChkGroundHit() || mAcch.ChkGroundLanding() || prm_get_cull(this) == 0 ||
+        if (m682 != 0 || mMode != 2 || !mAcch.ChkGroundHit() || mAcch.ChkGroundLanding() || prm_get_cull(this) == 0 ||
             !(actor_condition & 4) || !tsuboMode_fopAcM_cullingCheck(this) || m800 != 0 || prm_get_moveBg(this)) {
             m682 = 0;
             BOOL shouldDelete = TRUE;
@@ -813,12 +813,12 @@ bool daTsuboMode::Act_c::_execute() {
                         shouldDelete = FALSE;
                         tsuboMode_set_mtx(this);
                         tsuboMode_spec_carry_spec(this);
-                        if (m678 != 0) {
+                        if (mMode != 0) {
                             mStts.mRoomId = current.roomNo;
                             tsuboMode_dCcD_Cyl_MoveCAtTg(&mCyl, &current.pos);
                             dComIfG_Ccsp_Set(&mCyl);
                         }
-                        if (m678 == 5 || m678 == 6 || m678 == 3 || m683 != 0) {
+                        if (mMode == 5 || mMode == 6 || mMode == 3 || m683 != 0) {
                             dComIfG_Ccsp_SetMass(&mCyl, 3);
                         }
                         f32 x = current.pos.x;
@@ -832,7 +832,7 @@ bool daTsuboMode::Act_c::_execute() {
                 }
             }
             tsuboMode_spec_clr_actor(this);
-            model = (m678 == 4 && m686) ? (u32)mpModel.v : 0u; /* fopAcM_SetModel */
+            model = (mMode == 4 && m686) ? (u32)mpModel.v : 0u; /* fopAcM_SetModel */
             if (shouldDelete) {
                 fopAcM_delete(this);
             }
@@ -844,7 +844,7 @@ bool daTsuboMode::Act_c::_execute() {
 
 /* 024CE994 */
 bool daTsuboMode::Act_c::_draw() {
-    if (m678 == 0 || prm_get_moveBg(this)) {
+    if (mMode == 0 || prm_get_moveBg(this)) {
         return true;
     }
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);

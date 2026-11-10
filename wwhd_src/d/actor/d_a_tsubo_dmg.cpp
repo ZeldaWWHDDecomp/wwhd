@@ -103,7 +103,7 @@ void daTsuboDamage::Act_c::mode_walk_init() {
     mAcch.OffLineCheck();
     m67F = 0;
     tsuboDamage_init_rot_clean(this);
-    m678 = 3;
+    mMode = 3;
 }
 
 /* 024CD4C8 */
@@ -132,7 +132,7 @@ void daTsuboDamage::Act_c::mode_carry_init() {
     prm_off_stick(this);
     m685 = 0;
     m686 = 0;
-    m678 = 4;
+    mMode = 4;
 }
 
 /* 024CCE64 */
@@ -150,7 +150,7 @@ void daTsuboDamage::Act_c::mode_sink_init() {
     gravity = data(this)->mGravity + data(this)->m3C;
     limit_speed(this);
     daTsubo::attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
-    m678 = 6;
+    mMode = 6;
 }
 
 /* 024CCD44 */
@@ -168,7 +168,7 @@ void daTsuboDamage::Act_c::mode_afl_init() {
     daTsubo::attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
     m804 = (s16)gabi::ftoi(cM_rndFX(32768.0f));
     s16 v = (s16)gabi::ftoi(cM_rndFX(32768.0f));
-    m678 = 7;
+    mMode = 7;
     m806 = v;
 }
 
@@ -212,7 +212,7 @@ VERIFY(0x024CC238, (void (daTsuboDamage::Act_c::*)(s32, cBgS_PolyInfo*))&daTsubo
 /* 024CD108 */
 void daTsuboDamage::Act_c::damaged_lava() {
     cXyz sp08;
-    f32 h = m4F8 - 80.0f;
+    f32 h = mLavaY - 80.0f;
     sp08.set(current.pos.x, h, current.pos.z);
     cXyz* p;
     if (current.pos.y < h) {
@@ -296,11 +296,11 @@ bool daTsuboDamage::Act_c::damage_cc_proc() {
         if (obj != nullptr && (!(data(this)->mFlag & Act_c::DATA_FLAG_10_e) || !(obj->GetAtType() & AT_TYPE_HOOKSHOT))) {
             if ((obj->GetAtType() & AT_TYPE_WIND) && !prm_get_stick(this)) {
                 set_wind_vec();
-                if (m678 == 2) {
+                if (mMode == 2) {
                     mode_walk_init();
                 }
             } else {
-                if (damage_tg_acc() && m678 == 2 && mType == 7) {
+                if (damage_tg_acc() && mMode == 2 && mType == 7) {
                     if (prm_get_stick(this)) {
                         m800 = 0x4B0; /* M_attrSpine.m30 */
                         if (prm_get_stick(this)) {
@@ -375,7 +375,7 @@ bool daTsuboDamage::Act_c::damage_bg_proc() {
     bool cVar3 = chk_sink_lava();
     bool bVar7 = false;
 
-    if (m678 == 2 || m678 == 3) {
+    if (mMode == 2 || mMode == 3) {
         if (cVar2) {
             se_fall_water();
             eff_hit_water_splash();
@@ -392,7 +392,7 @@ bool daTsuboDamage::Act_c::damage_bg_proc() {
             damaged_lava();
             bVar7 = true;
         }
-    } else if (m678 == 5) {
+    } else if (mMode == 5) {
         if (cVar2) {
             se_fall_water();
             eff_hit_water_splash();
@@ -409,12 +409,12 @@ bool daTsuboDamage::Act_c::damage_bg_proc() {
         } else if (mType == 7 && uVar6) {
             mode_walk_init();
         }
-    } else if (m678 == 6) {
+    } else if (mMode == 6) {
         if (chk_sinkdown_water()) {
             damaged(2, m505 ? nullptr : Acch_wtr(this), false, &current.pos);
             bVar7 = true;
         }
-    } else if (m678 == 7 && uVar6 && !cVar2) {
+    } else if (mMode == 7 && uVar6 && !cVar2) {
         tsuboDamage_mode_wait_init(this);
     }
     return bVar7;
@@ -427,9 +427,9 @@ bool daTsuboDamage::Act_c::damage_bg_proc_directly() {
     bool uVar8 = (flags & dBgS_Acch::GROUND_LANDING) != 0;
     bool iVar10 = false;
 
-    if (m678 == 2 || m678 == 3) {
+    if (mMode == 2 || mMode == 3) {
         bool uVar7 = (flags & dBgS_Acch::ROOF_HIT) != 0;
-        if (uVar8 && m6FC - current.pos.y > data(this)->m38) {
+        if (uVar8 && mFallStartY - current.pos.y > data(this)->m38) {
             damaged(2, nullptr);
             iVar10 = true;
         } else if (uVar11 && uVar7) {
@@ -440,20 +440,20 @@ bool daTsuboDamage::Act_c::damage_bg_proc_directly() {
             }
         }
         if (uVar11) {
-            m6FC = current.pos.y;
+            mFallStartY = current.pos.y;
         }
-    } else if (m678 == 5) {
+    } else if (mMode == 5) {
         bool uVar7 = (flags & dBgS_Acch::ROOF_HIT) != 0;
         bool uVar9 = (flags & dBgS_Acch::WALL_HIT) != 0;
         bool cVar5 = chk_sink_water();
         bool cVar3 = chk_sink_lava();
         if (mType == 7) {
-            if (uVar8 && m6FC - current.pos.y > data(this)->m38) {
+            if (uVar8 && mFallStartY - current.pos.y > data(this)->m38) {
                 damaged(2, nullptr);
                 iVar10 = true;
             }
             if (uVar11) {
-                m6FC = current.pos.y;
+                mFallStartY = current.pos.y;
             }
         } else if (uVar11) {
             damaged(2, nullptr);
@@ -468,15 +468,15 @@ bool daTsuboDamage::Act_c::damage_bg_proc_directly() {
         if (uVar11 || uVar9 || uVar7 || cVar5 || cVar3) {
             cam_lockoff();
         }
-    } else if (m678 == 7) {
-        m6FC = current.pos.y;
+    } else if (mMode == 7) {
+        mFallStartY = current.pos.y;
     }
 
     if (m681 > 0) {
         m681 = m681 - 1;
     } else if (uVar11) {
         if (m680 == 0) {
-            u32 st = m678;
+            u32 st = mMode;
             if ((st >= 1 && st <= 3) || st == 5) {
                 if (!iVar10) {
                     if (mType == 2) {
@@ -518,7 +518,7 @@ bool daTsuboDamage::Act_c::damage_kill_proc() {
 void daTsuboDamage::Act_c::crr_pos(const cXyz* arg1) {
     f32 sx = arg1->x, sy = arg1->y, sz = arg1->z;
     bool bVar1 = prm_get_moveBg(this);
-    if (m678 == 0 || m678 == 4 || m678 == 6 || prm_get_stick(this)) {
+    if (mMode == 0 || mMode == 4 || mMode == 6 || prm_get_stick(this)) {
         sx = current.pos.x;
         sy = current.pos.y;
         sz = current.pos.z;
@@ -534,7 +534,7 @@ void daTsuboDamage::Act_c::crr_pos(const cXyz* arg1) {
         if (prm_get_moveBg(this)) {
             mParameters = mParameters | 0xC000;
             sy = mAcch.GetGroundH();
-            m6FC = sy;
+            mFallStartY = sy;
         }
     }
     if (bVar1) {
@@ -553,7 +553,7 @@ void daTsuboDamage::Act_c::crr_pos_water() {
     bool bVar3 = mAcch.ChkWaterIn() && fVar2 < fVar1;
     bool bVar4 = bVar5 && fVar2 < fVar7;
 
-    m500 = m4FC;
+    mWaterYOld = mWaterY;
     if (bVar3 && bVar4) {
         if (fVar1 > fVar7) {
             bVar4 = false;
@@ -562,31 +562,31 @@ void daTsuboDamage::Act_c::crr_pos_water() {
         }
     }
     if (bVar3) {
-        m4FC = fVar1;
+        mWaterY = fVar1;
         m505 = 0;
         m504 = 1;
     } else if (bVar4) {
-        m4FC = fVar7;
+        mWaterY = fVar7;
         m504 = 1;
         m505 = 1;
     } else {
         m504 = 0;
         m505 = 0;
-        m4FC = G_CM3D_F_INF_NEG;
+        mWaterY = G_CM3D_F_INF_NEG;
     }
 }
 
 /* 024CD70C */
 void daTsuboDamage::Act_c::crr_pos_lava() {
     if (m67F != 0) {
-        m4F8 = G_CM3D_F_INF_NEG;
+        mLavaY = G_CM3D_F_INF_NEG;
     } else {
         f32 y = old.pos.y + data(this)->m04 + 1.0f;
         cXyz* p = &reinterpret_cast<dBgS_GndChk*>(&mGndChkYogan)->m_pos; /* SetPos */
         p->z = current.pos.z;
         p->x = current.pos.x;
         p->y = y;
-        m4F8 = cBgS_GroundCross(dComIfG_Bgsp(), &mGndChkYogan);
+        mLavaY = cBgS_GroundCross(dComIfG_Bgsp(), &mGndChkYogan);
     }
 }
 
@@ -679,7 +679,7 @@ void daTsuboDamage::Act_c::set_wind_vec() {
         f32 fVar1 = 1.0f;
         if (shapeAttr->GetNVec( &current.pos, &sp3C)) {
             PSVECScale(&sp3C, &sp3C, 45.0f);
-            PSVECSquareMag(&m7F4);
+            PSVECSquareMag(&mWindVec);
             fopAc_ac_c* hit = mCyl.GetTgHitAc();
             if (hit != nullptr && hit != nullptr && hit->mProfName == fpcNm_PLAYER_e) {
                 s16 ang = cM_atan2s(sp3C.x, sp3C.z);
@@ -709,7 +709,7 @@ void daTsuboDamage::Act_c::set_wind_vec() {
         cXyz_ml(&sp3C, &t2, m2);
         cXyz_ml(&t2, &t3, fVar1);
         cXyz_pl(&t1, &res, &t3);
-        m7F4.copy(res);
+        mWindVec.copy(res);
     }
 }
 
@@ -717,14 +717,14 @@ void daTsuboDamage::Act_c::set_wind_vec() {
 void daTsuboDamage::Act_c::eff_drop_water() {
     for (s32 i = 0; i < 3; i++) {
         if (followEcallBack_isEnd(&m70C[i])) {
-            dComIfGp_particle_set(dPa_ID_IT_SN_WPOT_PITYA, &m700, &shape_angle, nullptr, 0xFF,
+            dComIfGp_particle_set(dPa_ID_IT_SN_WPOT_PITYA, &mWaterDropPos, &shape_angle, nullptr, 0xFF,
                                   (dPa_levelEcallBack*)&m70C[i], -1, nullptr, nullptr, nullptr);
             break;
         }
     }
     for (s32 i = 0; i < 3; i++) {
         if (followEcallBack_isEnd(&m748[i])) {
-            dComIfGp_particle_set(dPa_ID_IT_SN_WPOT_PITYA_C, &m700, &shape_angle, nullptr, 0xFF,
+            dComIfGp_particle_set(dPa_ID_IT_SN_WPOT_PITYA_C, &mWaterDropPos, &shape_angle, nullptr, 0xFF,
                                   (dPa_levelEcallBack*)&m748[i], -1, nullptr, nullptr, nullptr);
             break;
         }
@@ -739,14 +739,14 @@ void daTsuboDamage::Act_c::eff_land_smoke() {
 /* 024CCCEC */
 void daTsuboDamage::Act_c::eff_hit_water_splash() {
     cXyz sp08;
-    sp08.set(current.pos.x, m4FC, current.pos.z);
+    sp08.set(current.pos.x, mWaterY, current.pos.z);
     fopKyM_createWpillar(&sp08, data(this)->mBC, data(this)->mC0, 0);
 }
 
 /* 024CD0B8 */
 void daTsuboDamage::Act_c::eff_hit_lava_splash() {
     cXyz sp08;
-    sp08.set(current.pos.x, m4F8, current.pos.z);
+    sp08.set(current.pos.x, mLavaY, current.pos.z);
     tsuboDamage_fopKyM_createMpillar(&sp08, data(this)->mC4);
 }
 
@@ -757,7 +757,7 @@ bool daTsuboDamage::Act_c::chk_sink_lava() {
     }
     f32 m04 = data(this)->m04;
     f32 fVar1 = (20.0f - m04 >= 0.0f) ? m04 : 20.0f; /* fsel */
-    return m4F8 > current.pos.y + fVar1;
+    return mLavaY > current.pos.y + fVar1;
 }
 
 // HD: the water correction caches this result.
@@ -768,7 +768,7 @@ u8 daTsuboDamage::Act_c::chk_sink_water() {
 
 /* 024CD170 */
 bool daTsuboDamage::Act_c::chk_sinkdown_water() {
-    return m4FC != G_CM3D_F_INF_NEG && m4FC > current.pos.y + (f32)data(this)->mAcchRoofHeight + 50.0f;
+    return mWaterY != G_CM3D_F_INF_NEG && mWaterY > current.pos.y + (f32)data(this)->mAcchRoofHeight + 50.0f;
 }
 
 /* 024CCBA0 */

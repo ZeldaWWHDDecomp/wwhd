@@ -35,23 +35,23 @@ inline f32 fsel(f32 test, f32 positive, f32 negative) {
 }
 } // namespace
 f32 JAIZelBasic::calcMainBgmVol() {
-    f32 volume = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-    volume = gabi::fmuls_ppc(volume, field_0x0088);
-    volume = gabi::fmuls_ppc(volume, field_0x008c);
-    volume = gabi::fmuls_ppc(volume, field_0x0090);
-    volume = gabi::fmuls_ppc(volume, field_0x0094);
-    volume = gabi::fmuls_ppc(volume, field_0x0098);
-    volume = gabi::fmuls_ppc(volume, field_0x009c);
-    return gabi::fmuls_ppc(volume, field_0x00ac);
+    f32 volume = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmMenuVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmSubBgmVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmSceneVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmSeaVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmTaktVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmCbPracticeVolume);
+    return gabi::fmuls_ppc(volume, mMainBgmHeightVolume);
 }
 f32 JAIZelBasic::calcMainBgmVolWithoutFanfare() {
-    f32 volume = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-    volume = gabi::fmuls_ppc(volume, field_0x0088);
-    volume = gabi::fmuls_ppc(volume, field_0x0090);
-    volume = gabi::fmuls_ppc(volume, field_0x0094);
-    volume = gabi::fmuls_ppc(volume, field_0x0098);
-    volume = gabi::fmuls_ppc(volume, field_0x009c);
-    return gabi::fmuls_ppc(volume, field_0x00ac);
+    f32 volume = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmMenuVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmSceneVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmSeaVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmTaktVolume);
+    volume = gabi::fmuls_ppc(volume, mMainBgmCbPracticeVolume);
+    return gabi::fmuls_ppc(volume, mMainBgmHeightVolume);
 }
 
 /* 02021290 */
@@ -99,7 +99,7 @@ void JAIZelBasic::processLevObjSE() {
         f32 vol = fsel(gabi::fsubs_ppc(r, l), r, l);
         f32 pan = 0.5f;
         vol = fsel(gabi::fsubs_ppc(s, vol), s, vol);
-        u32 b277 = field_0x0207;
+        u32 b277 = mTaktSeTimer;
         if (l != 0.0f || r != 0.0f)
             pan = r / gabi::fadds_ppc(l, r);
         if (b277 == 0) {
@@ -137,20 +137,20 @@ s32 JAIZelBasic::checkCbPracticePlay() {
 /* 02021534 */
 void JAIZelBasic::cbPracticeProcess() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (field_0x00d0.get() == 0)
+    if (mpCbPracticePos.get() == 0)
         return;
     f32 duck = 1.0f;
     Sound *main;
     if (checkCbPracticePlay() == 0) {
-        if (field_0x009c == 1.0f)
+        if (mMainBgmCbPracticeVolume == 1.0f)
             return;
         main = mpMainBgmSound.get();
-        field_0x009c = 1.0f;
+        mMainBgmCbPracticeVolume = 1.0f;
         if (main == 0)
             return;
     } else {
         void *matrix = cameraMatrix();
-        VectorWords *source = field_0x00d0.get();
+        VectorWords *source = mpCbPracticePos.get();
         // HD: initialize and copy all three words, including NaN payloads, in original order.
         gabi::Local<VectorWords> position;
         position->w[0] = l_defaultPosition.w[0];
@@ -169,30 +169,30 @@ void JAIZelBasic::cbPracticeProcess() {
         f32 lr = calcPosPanLR(position.get());
         f32 sr = calcPosPanSR(position.get(), 1.0f);
         Sound *sub = mpSubBgmSound.get();
-        field_0x00a8 = vol;
+        mSubBgmCbPracticeVolume = vol;
         if (sub != 0) {
-            sub->setVolume(gabi::fmuls_ppc(gabi::fmuls_ppc(field_0x00a0, field_0x00a4), vol), 0, 0);
+            sub->setVolume(gabi::fmuls_ppc(gabi::fmuls_ppc(mSubBgmTalkMenuVolume, mSubBgmTaktVolume), vol), 0, 0);
             mpSubBgmSound.get()->setPan(lr, 0, 0);
             mpSubBgmSound.get()->setDolby(sr, 0, 0);
         }
         // HD: this scene applies reduced practice-tune ducking.
-        if ((s32)field_0x0224 == 0x27)
+        if ((s32)mSceneNo == 0x27)
             duck = gabi::fnmsubs(vol, 0.4f, 1.0f);
         else
             duck = gabi::fsubs_ppc(1.0f, vol);
         main = mpMainBgmSound.get();
-        field_0x009c = duck;
+        mMainBgmCbPracticeVolume = duck;
         if (main == 0)
             return;
     }
-    f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-    v = gabi::fmuls_ppc(v, field_0x0088);
-    v = gabi::fmuls_ppc(v, field_0x008c);
-    v = gabi::fmuls_ppc(v, field_0x0090);
-    v = gabi::fmuls_ppc(v, field_0x0094);
-    v = gabi::fmuls_ppc(v, field_0x0098);
+    f32 v = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmMenuVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmSubBgmVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmSceneVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmSeaVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmTaktVolume);
     v = gabi::fmuls_ppc(v, duck);
-    v = gabi::fmuls_ppc(v, field_0x00ac);
+    v = gabi::fmuls_ppc(v, mMainBgmHeightVolume);
     main->setVolume(v, 0, 0);
 }
 
@@ -276,7 +276,7 @@ void JAIZelBasic::hdStreamVolume(u32 fade, f32 v) {
 /* 02021B88 */
 void JAIZelBasic::muteMainBgmAll() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x008c = 0.0f;
+    mMainBgmSubBgmVolume = 0.0f;
     for (u32 i = 0; i < getParamSeqPlayTrackMax(); i++) {
         SeqUpdateData *info = getPlayTrackInfo(i);
         if (info == 0)
@@ -288,14 +288,14 @@ void JAIZelBasic::muteMainBgmAll() {
             continue;
         s->setVolume(calcMainBgmVol(), 1, 0);
     }
-    hdStreamVolume(1, gabi::fmuls_ppc(gabi::fmuls_ppc(field_0x0084, field_0x008c), field_0x0098));
+    hdStreamVolume(1, gabi::fmuls_ppc(gabi::fmuls_ppc(mMainBgmTalkVolume, mMainBgmSubBgmVolume), mMainBgmTaktVolume));
 }
 
 /* 02021C7C */
 void JAIZelBasic::unmuteMainBgmAll() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     Sound *main = mpMainBgmSound.get();
-    field_0x008c = 1.0f;
+    mMainBgmSubBgmVolume = 1.0f;
     if (main != 0)
         main->setVolume(calcMainBgmVolWithoutFanfare(), 2, 0);
     for (u32 i = 0; i < getParamSeqPlayTrackMax(); i++) {
@@ -310,22 +310,22 @@ void JAIZelBasic::unmuteMainBgmAll() {
         s->setVolume(calcMainBgmVol(), 0x2D, 0);
     }
     hdStreamVolume(0x2D,
-                   gabi::fmuls_ppc(gabi::fmuls_ppc(field_0x0084, field_0x008c), field_0x0098));
+                   gabi::fmuls_ppc(gabi::fmuls_ppc(mMainBgmTalkVolume, mMainBgmSubBgmVolume), mMainBgmTaktVolume));
 }
 
 /* 02021DC4 */
 void JAIZelBasic::processDemoFanfareMute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 r = checkDemoFanfarePlaying();
-    u32 c9 = field_0x00b9;
+    u32 c9 = mDemoFanfareMuted;
     if (r != 0) {
         if (c9 == 0)
             muteMainBgmAll();
-        field_0x00b9 = 1;
+        mDemoFanfareMuted = 1;
     } else {
         if (c9 != 0)
             unmuteMainBgmAll();
-        field_0x00b9 = 0;
+        mDemoFanfareMuted = 0;
     }
 }
 
@@ -383,21 +383,21 @@ void JAIZelBasic::bgmStop(u32 fade, s32 keepSub) {
             sub->stop(fade);
             mpSubBgmSound = nullptr;
         }
-        field_0x00bb = 0;
+        mFanfareResumePending = 0;
         mSubBgmNum = (u32)-1;
-        field_0x008c = 1.0f;
-        field_0x0206 = 0;
+        mMainBgmSubBgmVolume = 1.0f;
+        mFanfareActive = 0;
     }
     demoBgmStop(fade);
-    field_0x1f3c = 0;
-    field_0x0032 = 0;
-    field_0x00cb = 0xFF;
-    field_0x0064 = 0;
-    field_0x00cc = 0;
-    field_0x0201 = 0;
-    field_0x00b8 = 0;
+    mIslandLinkBgm = 0;
+    mMorningBgmPlaying = 0;
+    mEnemyNearbyDelay = 0xFF;
+    mTalkInBlocked = 0;
+    mDkMaskBroken = 0;
+    mAllSeMuted = 0;
+    mStreamBgmStarted = 0;
     mLastMinibossSubBGMType = 0;
-    field_0x0065 = 0;
+    mMtDragonMuteRequest = 0;
 }
 
 // clang-format off

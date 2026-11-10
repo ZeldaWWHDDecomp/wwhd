@@ -3,6 +3,7 @@
 // and a copy of it goes into the next command-table slot, which joins the submitted list. Replay: the submitted
 // commands' display lists are called again.
 #include "agl/DisplayFrameState.h"
+#include "sead/ElementAt.h"
 using namespace agl::render;
 void callDisplayList(void*,u32);
 void synchronizeMemory();
@@ -32,7 +33,7 @@ void agl::render::DisplayFrameState::submitDisplayLists(u32 rebuild) {
             if (index < count) copy = mSubmittedCommands.at(index);
             (*slot)->copyTo(copy);
             do { index = gabi::load_reserved(counter); } while (!gabi::store_conditional(counter,index + 1u));
-            submittedCommands()[index] = copy;
+            sead::elementAt<gptr<agl::gx2util::TimedCounter>>(gabi::ea(submittedCommands()),index) = copy; /* guest EA arithmetic: wraps at 32 bits as on the console */
         }
     } else {
         GuestRange<gptr<agl::gx2util::TimedCounter>> submitted = pointerRange<agl::gx2util::TimedCounter>(mSubmitted);

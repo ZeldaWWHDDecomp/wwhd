@@ -4,15 +4,15 @@
 
 namespace daComing2 {
 struct _barrel_info_ {
-    be<u32> unk_00;
-    be<s16> unk_04;
-    be<u8> unk_06;
-    u8 padding;
-    cXyz unk_08;
+    /* 0x00 */ be<u32> mBarrelId;  /* was unk_00: the barrel's process ID (fpcM_ERROR_PROCESS_ID_e = none); init_barrelN_info 0211321C clears it, coming_game_main 02114630 stores the made barrel, barrel_execute 02113754 fopAcM_SearchByID it (tww) */
+    /* 0x04 */ be<s16> mExitTimer;  /* was unk_04: coming_game_main 02114630 sets 0x93 - mBarrelIdx; barrel_execute 02113754 counts it down and calls request_barrel_exitN at 0 (tww) */
+    /* 0x06 */ be<u8> mItemGive;  /* was unk_06: barrel_execute 02113754 copies the barrel's item-give flag (tww barrel->chk_item_give()) */
+    /* 0x07 */ u8 padding;
+    /* 0x08 */ cXyz mPos;  /* was unk_08: coming_game_main 02114630 stores the barrel's position; renew_scope_info 021134F8 measures from the previous barrel's mPos */
 };
 struct _start_buoy_ {
-    be<u32> unk_00;
-    cXyz unk_04;
+    /* 0x00 */ be<u32> mBuoyId;  /* was unk_00: the start buoy's process ID (fpcM_ERROR_PROCESS_ID_e = none); init_flag_info 021132F4 clears both, coming_setF_main 02114298 stores the made buoys (tww) */
+    /* 0x04 */ cXyz mPos;  /* was unk_04: coming_setF_main 02114298 stores the buoy position; coming_checkS_main 021144C4 checks the ship crossing the line mStartBuoy[0].mPos - mStartBuoy[1].mPos (tww checkLineCrossXZ) */
 };
 struct Act_c : fopAc_ac_c {
     // HD: BOOL lifecycle results and full signed process argument retain the verified register
@@ -46,35 +46,41 @@ struct Act_c : fopAc_ac_c {
     BOOL coming_wait_init();
     BOOL coming_checkS_init();
     BOOL coming_game_init();
-    /* 0x3AC */ be<s32> unk_294;
-    /* 0x3B0 */ be<s8> unk_298, unk_299;
-    /* 0x3B2 */ be<s16> unk_29A, unk_29C;
-    u8 pad3B6[2];
-    /* 0x3B8 */ be<f32> unk_2A0;
-    /* 0x3BC */ be<s16> unk_2A4, unk_2A6, unk_2A8, unk_2AA;
+    /* 0x3AC */ be<s32> mGameCount;  /* was unk_294: coming_game_init 02114604 counts it up once per game start (tww unk_294++) */
+    /* 0x3B0 */ be<s8> mStartRoomNo;  /* was unk_298: coming_setF_init 021140E0 stores the player's room; coming_game_init 02114604 copies it back into mPlayerRoomNo */
+    /* 0x3B1 */ be<s8> mPlayerRoomNo;  /* was unk_299: the player's last room: _create 021133BC -1; coming_wait_main 02113FD4 / coming_checkS_main 021144C4 / coming_clear_init 02113F18 store current.roomNo; coming_wait_main starts the course when the player has left it (tww) */
+    /* 0x3B2 */ be<s16> mMakeReq;  /* was unk_29A: barrel_execute 02113754 / coming_game_init 02114604 set 1; coming_game_main 02114630 makes the next barrel while it is 1 and clears it once made; init_coming_info 02113288 0 */
+    /* 0x3B4 */ be<s16> mScopeSide;  /* was unk_29C: init_coming_info 02113288: cM_rndF(2) & 1; renew_scope_info 021134F8 picks the turn sign ((mBarrelIdx + it) & 1 ? -0x546 : 0x546) */
+    /* 0x3B6 */ u8 pad3B6[2];
+    /* 0x3B8 */ be<f32> mSpeed;  /* was unk_2A0: renew_scope_info 021134F8: the ship's speed (tww get_speed(this)); coming_wait_main 02113FD4 needs it above 35; coming_setF_main 02114298 places the start ahead by it * 120 */
+    /* 0x3BC */ be<s16> mBarrelIdx;  /* was unk_2A4: the next barrel's index in mBarrelInfo (barrels made so far): init_coming_info 02113288 / coming_wait_init 02113FBC 0; coming_game_main 02114630 advances it; barrel_execute 02113754 ends at 15; make_coming_param 02113E50 / renew_scope_info 021134F8 index by it */
+    /* 0x3BE */ be<s16> mWaitTimer;  /* was unk_2A6: init_coming_info 02113288 / coming_wait_init 02113FBC 600; coming_wait_main 02113FD4 counts it down and starts the course only at 0 */
+    /* 0x3C0 */ be<s16> mMakeTimer;  /* was unk_2A8: coming_game_main 02114630: frames since the last barrel attempt, retried at 60 (tww unk_2A8++ >= 60); init_coming_info 02113288 / coming_game_init 02114604 0 */
+    /* 0x3C2 */ be<s16> unk_2AA;
     /* 0x3C4 */ _barrel_info_
         mBarrelInfo[20]; // Capacity 20; the actual active pool has 15 entries.
     struct _start_stat_ {
-        be<s16> unk_00;
+        be<s16> mAngleY;  /* was unk_00: coming_wait_main 02113FD4 / _create 021133BC store shape_angle.y with mStartPos; renew_scope_info 021134F8 and the buoy / barrel rotations start from it (tww) */
     } mStartStat;
-    u8 pad556[2];
-    /* 0x558 */ cXyz unk_440;
+    /* 0x556 */ u8 pad556[2];
+    /* 0x558 */ cXyz mStartPos;  /* was unk_440: _create 021133BC / coming_wait_main 02113FD4: current.pos saved together with mStartStat (the start angle) when the course starts (tww) */
     /* 0x564 */ _start_buoy_ mStartBuoy[2];
-    /* 0x584 */ be<s16> unk_46C, unk_46E;
-    u8 pad588[6];
+    /* 0x584 */ be<s16> mCheckTimer;  /* was unk_46C: coming_checkS_init 021144B4 0; coming_checkS_main 021144C4 counts it up to 180 */
+    /* 0x586 */ be<s16> mProcessIdx;  /* was unk_46E: coming_process_init 02113304 stores the process index; coming_process_main 02113680 calls main_table[it] (as daComing3::Act_c::mProcessIdx) */
+    /* 0x588 */ u8 pad588[6];
     /* 0x58E */ be<u8> unk_476;
-    u8 pad58F[0x31];
-    /* 0x5C0 */ cXyz unk_4A8;
+    /* 0x58F */ u8 pad58F[0x31];
+    /* 0x5C0 */ cXyz mScopePos;  /* was unk_4A8: renew_scope_info 021134F8: the point ahead of the ship (matrix times the forward vector, tww cMtx_multVec(.., &unk_4A8)); tww make_coming_param places the next barrel from it */
 };
 WWHD_SIZE(_barrel_info_, 0x14);
 WWHD_SIZE(_start_buoy_, 0x10);
 WWHD_SIZE(Act_c, 0x5CC); // HD: actor profile size.
-WWHD_OFFSET(Act_c, unk_294, 0x3AC);
+WWHD_OFFSET(Act_c, mGameCount, 0x3AC);
 WWHD_OFFSET(Act_c, mBarrelInfo, 0x3C4);
 WWHD_OFFSET(Act_c, mStartStat, 0x554);
 WWHD_OFFSET(Act_c, mStartBuoy, 0x564);
-WWHD_OFFSET(Act_c, unk_46C, 0x584);
-WWHD_OFFSET(Act_c, unk_4A8, 0x5C0);
+WWHD_OFFSET(Act_c, mCheckTimer, 0x584);
+WWHD_OFFSET(Act_c, mScopePos, 0x5C0);
 } // namespace daComing2
 
 namespace daComing2 {

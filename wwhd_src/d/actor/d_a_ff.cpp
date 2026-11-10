@@ -187,15 +187,15 @@ static BOOL daFf_Execute(ff_class* i_this) {
             i_this->mMode = 2;
             i_this->mTimers[3] = (s16)gabi::ftoi(cM_rndF(100.0f) + 1000.0f);
         } else {
-            PSVECAdd(&i_this->mVelImpulse, &i_this->m2C0,
-                     &i_this->mVelImpulse); /* mVelImpulse += m2C0 */
+            PSVECAdd(&i_this->mVelImpulse, &i_this->mVelAccel,
+                     &i_this->mVelImpulse); /* mVelImpulse += mVelAccel */
             if (cM_rndF(1.0f) < REG13_F(0) + 0.1f) {
-                i_this->m2C0.x = cM_rndFX(REG13_F(1) + 1.0f);
+                i_this->mVelAccel.x = cM_rndFX(REG13_F(1) + 1.0f);
             }
             if (cM_rndF(1.0f) < REG13_F(0) + 0.1f) {
-                i_this->m2C0.z = cM_rndFX(REG13_F(1) + 1.0f);
+                i_this->mVelAccel.z = cM_rndFX(REG13_F(1) + 1.0f);
             }
-            i_this->m2C0.y = REG13_F(2) + 2.0f;
+            i_this->mVelAccel.y = REG13_F(2) + 2.0f;
             f32 lim = REG13_F(3) + 10.0f;
             if (i_this->mVelImpulse.y > lim) {
                 i_this->mVelImpulse.y = lim;
@@ -281,7 +281,7 @@ static BOOL useHeapInit(fopAc_ac_c* i_ac) {
         u32 bmd = ho_bmd[i];
         J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Ff", bmd, SAFESTRING_VTBL);
         if (modelData == nullptr) { /* JUT_ASSERT(741, modelData != NULL) */
-            JUT_ASSERT_fail("d_a_ff.cpp", 0x2E5, "modelData != NULL");
+            JUT_ASSERT_fail("d_a_ff.cpp", 0x2E5, "modelData != (0)");
             return FALSE;
         }
         a_this->mpModel[i] = mDoExt_J3DModel__create(modelData, 0x10000, 0x11020203);
@@ -421,7 +421,7 @@ str 1000EBAC "Ff" in 02133AC0
 str 1000EBB4 "Ff" in 02133B10
 str 1000EBDC "Ff" in 02133D80
 str 1000EBB8
-str 1000EBC4 "modelData != NULL"
+str 1000EBC4 "modelData != (0)"
 ext 025E80D0 mDoExt_brkAnm* ffBrkConstruct(mDoExt_brkAnm*)
 ext 025D5600 fopAcM_prm_class* ffCreateAppend()
 ext 025E14A8 u32 ffRequestCreate(layer_class*,s16,u32,u32,fopAcM_prm_class*)

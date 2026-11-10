@@ -6,15 +6,15 @@
 
 struct btd_class : fopAc_ac_c {
     u8 _btd[0x70C0 - sizeof(fopAc_ac_c)];
-    /* 0x70C0 */ be<f32> m6E7C;
+    /* 0x70C0 */ be<f32> mWaveRadius;
     u8 _70C4[4];
-    /* 0x70C8 */ be<f32> m6E84;
-    /* 0x70CC */ be<u8> m6E88;
+    /* 0x70C8 */ be<f32> mMagmaBallOffsetY;
+    /* 0x70CC */ be<u8> mMagmaRiseCenter;
     u8 _70CD[0x70D8 - 0x70CD];
 };
-WWHD_OFFSET(btd_class, m6E7C, 0x70C0);
-WWHD_OFFSET(btd_class, m6E84, 0x70C8);
-WWHD_OFFSET(btd_class, m6E88, 0x70CC);
+WWHD_OFFSET(btd_class, mWaveRadius, 0x70C0);
+WWHD_OFFSET(btd_class, mMagmaBallOffsetY, 0x70C8);
+WWHD_OFFSET(btd_class, mMagmaRiseCenter, 0x70CC);
 WWHD_SIZE(btd_class, 0x70D8);
 enum : s16 { fpcNm_BTD_e = 234 };
 

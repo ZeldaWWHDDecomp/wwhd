@@ -8,7 +8,7 @@
  * - members from mPhase (GameCube 0x4EC) on are +0x11C up to the btp animation;
  *   mDoExt_btpAnm / mDoExt_btkAnm grew from 0x14 to 0x74 (+0x60 each), and mShadowId
  *   (GameCube 0x548) is gone (HD shadows): +0x1D8 from mAcchCir to mJntCtrl;
- * - dDlst_mirrorPacket grew from 0x24DC to 0x3428: +0x1124 from m304C to m30D0;
+ * - dDlst_mirrorPacket grew from 0x24DC to 0x3428: +0x1124 from mMirrorShieldCb to mBtpFrame;
  * - the two pointers to member (GHS: 8 bytes, GameCube 12): +0x111C from mMsgNo to the end.
  * Field names are the GameCube ones (mNNNN = GameCube offset). */
 #pragma once
@@ -197,9 +197,9 @@ struct daNpc_Md_c : daPy_npc_l {
     };
 
     /* inline accessors (GameCube header) */
-    void setBitStatus(u32 s) { m30F0 = m30F0 | s; }
-    void clearStatus(u32 s) { m30F0 = m30F0 & ~s; }
-    BOOL checkStatus(u32 s) { return (m30F0 & s) != 0; }
+    void setBitStatus(u32 s) { mStatus = mStatus | s; }
+    void clearStatus(u32 s) { mStatus = mStatus & ~s; }
+    BOOL checkStatus(u32 s) { return (mStatus & s) != 0; }
     BOOL isTypeShipRide() { return mType == 7; }
 
     /* methods (address in d_a_npc_md_pending.cpp) */
@@ -356,8 +356,8 @@ struct daNpc_Md_c : daPy_npc_l {
     /* 0x0618 */ gptr<mDoExt_McaMorf2> mpMorf;
     /* 0x061C */ gptr<mDoExt_McaMorf2> mpArmMorf;
     /* 0x0620 */ gptr<mDoExt_McaMorf> mpWingMorf;
-    /* 0x0624 */ be<u32> m0508[6];                         /* JPABaseEmitter* */
-    /* 0x063C */ u8 m0520[0x74];                           /* mDoExt_btpAnm (HD 0x74), GameCube 0x520 */
+    /* 0x0624 */ be<u32> mEmitters[6];  /* was m0508: setWingEmitter 0228C1B4 / setHane02Emitter 0228E2D4 set ID_IT_SN_MD_HANE* emitters in it; demoFlyNpcAction 022921B4 / flyPlayerAction 02294160 delete them (emitterDelete); JPABaseEmitter* */
+    /* 0x063C */ u8 mBtpAnm[0x74];  /* was m0520: initTexPatternAnm 022846EC / playTexPatternAnm 0228729C init and play it as the eye texture pattern; draw 02289E2C enters it (btpAnm_entry); mDoExt_btpAnm (HD 0x74), GameCube 0x520 */
     /* 0x06B0 */ mDoExt_btkAnm mLightBtkAnm;               /* HD 0x74, GameCube 0x534 */
     /* HD: no mShadowId (GameCube 0x548) */
     /* 0x0724 */ dBgS_AcchCir mAcchCir[2];                 /* GameCube 0x54C */
@@ -368,34 +368,34 @@ struct daNpc_Md_c : daPy_npc_l {
     /* 0x0AAC */ dCcD_Cyl mCyl3;
     /* 0x0BDC */ dCcD_Cps mCps;                            /* GameCube 0xA04 */
     /* 0x0D14 */ dNpc_JntCtrl_c mJntCtrl;                  /* GameCube 0xB3C */
-    /* 0x0D48 */ u8 m0B70[0x3428];                         /* dDlst_mirrorPacket (HD 0x3428, GameCube 0x24DC) */
-    /* 0x4170 */ daPy_mtxFollowEcallBack_l m304C;          /* GameCube 0x304C */
+    /* 0x0D48 */ u8 mMirrorPacket[0x3428];  /* was m0B70: draw 02289E2C updates it (mirrorPacket_update) and enters it in the XLU list; daNpc_Md_dt 0228A254 destroys it; dDlst_mirrorPacket (HD 0x3428, GameCube 0x24DC) */
+    /* 0x4170 */ daPy_mtxFollowEcallBack_l mMirrorShieldCb;  /* was m304C: lightHitCheck 02287754 makes its ID_AK_SN_MIRRORSHIELD00 emitter on the harp light model's matrix; daNpc_Md_dt 0228A254 ends it; GameCube 0x304C */
     /* 0x417C */ daNpc_Md_followEcallBack_c m3058;
-    /* 0x4198 */ dPa_rippleEcallBack_md m3074;
-    /* 0x41AC */ cXyz m3088;                               /* GameCube 0x3088 */
-    /* 0x41B8 */ cXyz m3094;
-    /* 0x41C4 */ cXyz m30A0;
+    /* 0x4198 */ dPa_rippleEcallBack_md mRippleCb;  /* was m3074: execute 02288B08 sets the water ripple emitter with it when it has none; daNpc_Md_dt 0228A254 ends it */
+    /* 0x41AC */ cXyz mEyePos;  /* was m3088: nodeCallBack 02283614: the head matrix times l_offsetEyePos; setAttention 02285984 copies it to eyePos; TWW getEyePos(); GameCube 0x3088 */
+    /* 0x41B8 */ cXyz mAttentionBasePos;  /* was m3094: nodeCallBack 02283614: the head matrix times l_offsetAttPos; init 02285580 copies current.pos; TWW getAttentionBasePos() */
+    /* 0x41C4 */ cXyz mThrowPos;  /* was m30A0: throwNpcAction 02291094 copies current.pos; glidingNpcAction 02291304 subtracts it from current.pos */
     /* 0x41D0 */ cXyz m30AC;
-    /* 0x41DC */ cXyz m30B8;
+    /* 0x41DC */ cXyz mTurnTargetPos;  /* was m30B8: initialTurnEvent 0228D150 sets the event's position; actionTurnEvent 0228D32C turns to it (lookBack) */
     /* 0x41E8 */ cXyz m30C4;
-    /* 0x41F4 */ be<f32> m30D0;
+    /* 0x41F4 */ be<f32> mBtpFrame;  /* was m30D0: setAnm 02286D7C / initialSetAnmEvent 0228D564 copy the body morf frame; playTexPatternAnm 0228729C sets the eye texture pattern frame to it */
     /* 0x41F8 */ ProcFunc_l mCurrPlayerActionFunc;         /* GameCube 0x30D4 (12 bytes) */
     /* 0x4200 */ ProcFunc_l mCurrNpcActionFunc;            /* GameCube 0x30E0 */
     /* 0x4208 */ be<u32> mMsgNo;                           /* GameCube 0x30EC */
-    /* 0x420C */ be<u32> m30F0;
+    /* 0x420C */ be<u32> mStatus;  /* was m30F0: init 02285580 sets 0 / daMdStts_UNK8; setBaseMtx 02285A6C tests daMdStts bits; TWW setStatus/checkStatus */
     /* 0x4210 */ be<u32> m30F4;
     /* 0x4214 */ be<f32> m30F8;
     /* 0x4218 */ be<f32> mRunRate;
-    /* 0x421C */ be<s32> m3100;
+    /* 0x421C */ be<s32> mSwitchNo;  /* was m3100: init 02285580: (param >> 16) & 0xFF; waitNpcAction 0228EB88 tests dComIfGs_isSwitch(it) */
     /* 0x4220 */ be<s32> m3104;
     /* 0x4224 */ be<f32> m3108;
-    /* 0x4228 */ be<f32> m310C;
-    /* 0x422C */ be<s16> m3110;
-    /* 0x422E */ be<s16> m3112;
-    /* 0x4230 */ be<s16> m3114;
-    /* 0x4232 */ be<s16> m3116;
-    /* 0x4234 */ be<s16> m3118;
-    /* 0x4236 */ be<s16> m311A;
+    /* 0x4228 */ be<f32> mStickValue;  /* was m310C: mkamaePlayerAction 02294984 sets md_stickValue(0); waitPlayerAction 02293840 clears it; lookBackWaist 0228DFF8 reads it */
+    /* 0x422C */ be<s16> mLookMaxVel;  /* was m3110: demoFlyNpcAction 022921B4 eases it to HIO mMaxHeadTurnVel, else clears it; passed to dNpc_JntCtrl lookAtTarget as maxVel */
+    /* 0x422E */ be<s16> mBtpFrameMax;  /* was m3112: initTexPatternAnm 022846EC: J3DAnm_getFrameMax of the eye texture pattern; playTexPatternAnm 0228729C restarts it with this length */
+    /* 0x4230 */ be<s16> mWaistRotX;  /* was m3114: lookBackWaist 0228DFF8 eases it; waistNodeCallBack 022837D0 rotates the waist by it; TWW getWaistRotX() */
+    /* 0x4232 */ be<s16> mWaistRotY;  /* was m3116: lookBackWaist 0228DFF8 eases it toward HIO m22 * stick; waistNodeCallBack 022837D0 rotates the waist by it; TWW getWaistRotY() */
+    /* 0x4234 */ be<s16> mEventTimer;  /* was m3118: initialFlyEvent 0228C1C4 sets 60 * 30, initialWalkEvent 0228C4A4 20 * 30; actionFlyEvent 0228C234 ends the event when it runs out */
+    /* 0x4236 */ be<s16> mStickAngY;  /* was m311A: mkamaePlayerAction 02294984 sets getStickAngY(FALSE); waitPlayerAction 02293840 clears it */
     /* 0x4238 */ be<s8> m_backbone1_jnt_num;
     /* 0x4239 */ be<s8> m_backbone2_jnt_num;
     /* 0x423A */ be<s8> m_armR_jnt_num;
@@ -411,24 +411,24 @@ struct daNpc_Md_c : daPy_npc_l {
     /* 0x4244 */ be<s8> m_wingL3_jnt_num;
     /* 0x4245 */ be<s8> m_handL_jnt_num;
     /* 0x4246 */ be<s8> m312A;
-    /* 0x4247 */ be<u8> m312B;
+    /* 0x4247 */ be<u8> mAttnSetCount;  /* was m312B: setAttention 02285984 / nodeCallBack 02283614 add 1 up to 0xFF; execute 02288B08 clears it; TWW incAttnSetCount() */
     /* 0x4248 */ be<u8> m312C;
-    /* 0x4249 */ be<s8> m312D;
+    /* 0x4249 */ be<s8> mAnmTblIdx;  /* was m312D: setAnm 02286D7C stores the animation table index (and skips when it and the speed are unchanged); getMsg 0228DDEC tests == 0x10 */
     /* 0x424A */ be<s8> mCurEventMode;
     /* 0x424B */ be<u8> m312F;
     /* 0x424C */ be<u8> m3130;
     /* 0x424D */ be<u8> m3131;
     /* 0x424E */ be<s8> mActionStatus;
-    /* 0x424F */ be<u8> m3133;
-    /* 0x4250 */ be<u8> m3134;
-    /* 0x4251 */ be<u8> m3135;
+    /* 0x424F */ be<u8> mBlinkTimer;  /* was m3133: initTexPatternAnm 022846EC clears it; playTexPatternAnm 0228729C counts it down and restarts the eye pattern with 30 + rnd(60) */
+    /* 0x4250 */ be<u8> mHairMode;  /* was m3134: hairNodeCallBack 02283A78 tests and sets bits; TWW checkBitHairMode / setBitHairMode */
+    /* 0x4251 */ be<u8> mEffectStatus;  /* was m3135: flyPlayerAction 02294160 / landPlayerAction 02294838 set bit 1; execute 02288B08 tests it; TWW setBitEffectStatus / checkBitEffectStatus */
     /* 0x4252 */ be<u8> m3136;
-    /* 0x4253 */ be<u8> m3137;
+    /* 0x4253 */ be<u8> mBtpAnmTblIdx;  /* was m3137: initTexPatternAnm 022846EC stores the texture pattern table index; setAnm 02286D7C re-inits the pattern when it differs */
     /* 0x4254 */ be<u8> mType;
     /* 0x4255 */ be<s8> mCurEvent;
     /* 0x4256 */ be<u8> m313A;
     /* 0x4257 */ u8 m313B;
-    /* 0x4258 */ be<u8> m313C;
+    /* 0x4258 */ be<u8> mPiyo2TalkCnt;  /* was m313C: getMsg 0228DDEC reads and clears it; init 02285580 clears it; TWW getPiyo2TalkCNT / setPiyo2TalkCNT */
     /* 0x4259 */ be<u8> m313D;
     /* 0x425A */ be<u8> m313E;
     /* 0x425B */ be<s8> m313F;
@@ -444,10 +444,10 @@ struct daNpc_Md_c : daPy_npc_l {
     /* 0x4270 */ be<f32> m3154;
     /* 0x4274 */ be<s16> mEventIdxTable[10];
     /* 0x4288 */ be<s8> m_hair_jnt_nums[8];
-    /* 0x4290 */ cXyz m3174[8];
-    /* 0x42F0 */ cXyz m31D4[8];
-    /* 0x4350 */ cXyz m3234[4];
-    /* 0x4380 */ be<f32> m3264[8];
+    /* 0x4290 */ cXyz mHairPos[8];  /* was m3174: hairTopNodeCallBack 022839F0 / hairNodeCallBack 02283A78: the hair joint positions; TWW getPHairPos(i) */
+    /* 0x42F0 */ cXyz mHairVec[8];  /* was m31D4: hairNodeCallBack 02283A78: per hair joint vector; TWW getPHairVec(i) */
+    /* 0x4350 */ cXyz mHairWall[4];  /* was m3234: waistNodeCallBack 022837D0: four waist points (waistVecDat) the hair collides with (hairCross); TWW getPHairWall() */
+    /* 0x4380 */ be<f32> mHairDist[8];  /* was m3264: hairNodeCallBack 02283A78: per hair joint distance; TWW getPHairDist(i) */
     /* 0x43A0 */ char mModelArcName[3];
     /* 0x43A3 */ u8 m3287[0x43B4 - 0x43A3];
     /* 0x43B4 */ cXyz m3298;
@@ -455,14 +455,14 @@ struct daNpc_Md_c : daPy_npc_l {
     /* 0x43CC */ cBgS_PolyInfo_l mPolyInfo;
 };
 WWHD_OFFSET(daNpc_Md_c, mPhase, 0x608);
-WWHD_OFFSET(daNpc_Md_c, m0520, 0x63C);
+WWHD_OFFSET(daNpc_Md_c, mBtpAnm, 0x63C);
 WWHD_OFFSET(daNpc_Md_c, mAcchCir, 0x724);
 WWHD_OFFSET(daNpc_Md_c, mStts, 0x810);
 WWHD_OFFSET(daNpc_Md_c, mCyl1, 0x84C);
 WWHD_OFFSET(daNpc_Md_c, mCps, 0xBDC);
 WWHD_OFFSET(daNpc_Md_c, mJntCtrl, 0xD14);
-WWHD_OFFSET(daNpc_Md_c, m304C, 0x4170);
-WWHD_OFFSET(daNpc_Md_c, m3074, 0x4198);
+WWHD_OFFSET(daNpc_Md_c, mMirrorShieldCb, 0x4170);
+WWHD_OFFSET(daNpc_Md_c, mRippleCb, 0x4198);
 WWHD_OFFSET(daNpc_Md_c, mCurrPlayerActionFunc, 0x41F8);
 WWHD_OFFSET(daNpc_Md_c, mCurrNpcActionFunc, 0x4200);
 WWHD_OFFSET(daNpc_Md_c, mMsgNo, 0x4208);

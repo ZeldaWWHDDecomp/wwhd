@@ -29,10 +29,10 @@ enum BWD_BTK {
 
 // HD: generated history indices retain 32-bit guest address wrapping.
 inline csXyz* historyAngles(bwd_class* actor, u32 index) {
-    return gabi::at<csXyz>(gabi::ea(&actor->m1108[0]) + sizeof(csXyz) * index);
+    return gabi::at<csXyz>(gabi::ea(&actor->mAngleHistory[0]) + sizeof(csXyz) * index);
 }
 inline cXyz* historyPosition(bwd_class* actor, u32 index) {
-    return gabi::at<cXyz>(gabi::ea(&actor->m0508[0]) + sizeof(cXyz) * index);
+    return gabi::at<cXyz>(gabi::ea(&actor->mPosHistory[0]) + sizeof(cXyz) * index);
 }
 
 struct CollisionOffsets {
@@ -56,9 +56,9 @@ inline void setOutPower(PlayerVtable* table, fopAc_ac_c* player, f32 power, s16 
 // HD: the timer loops span named fields and padding in the original actor layout.
 struct Timers {
     u8 mUnused[0x1B50];
-    be<s16> mAction[5];
+    be<s16> mTimers[5];  /* was mAction (misnamed): bwd_execute 020FA614 counts bwd_class mTimers[0] / [1], mActionTimer and the two padding words down in one sweep (zeldaret/tww daBwd_Execute m18CC[i], i < 5) */
 };
-WWHD_OFFSET(Timers, mAction, 0x1B50);
+WWHD_OFFSET(Timers, mTimers, 0x1B50);
 WWHD_SIZE(Timers, 0x1B5A);
 struct EffectTimers {
     u8 mUnused[0x3D58];

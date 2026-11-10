@@ -97,18 +97,18 @@ static bool sameStage(SafeString* first, SafeString* second) {
 }
 
 static void faceHome(daNpcMt_c* a) {
-    a->m728 = 0;
-    a->m740 = static_cast<s16>(a->m732);
-    a->m74F = 2;
+    a->mHeadOnlyFollow = 0;
+    a->mDesiredYRot = static_cast<s16>(a->mHomeAngleY);
+    a->mLookMode = 2;
     a->m_jnt.mbTrn = 1;
 }
 static void playerGaze(daNpcMt_c* a, cXyz* eye) {
     u8 turn = static_cast<u8>(a->m750), look = static_cast<u8>(a->m751);
     u32 x = Mt_floatWord(eye->x), y = Mt_floatWord(eye->y), z = Mt_floatWord(eye->z);
-    a->m728 = turn == 0;
+    a->mHeadOnlyFollow = turn == 0;
     Mt_storeFloatWord(a->mLookAtPos.z, z);
     Mt_storeFloatWord(a->mLookAtPos.y, y);
-    a->m74F = 1;
+    a->mLookMode = 1;
     Mt_storeFloatWord(a->mLookAtPos.x, x);
     if (!look)
         faceHome(a);
@@ -125,16 +125,16 @@ daNpcMt_c* daNpcMt_construct(daNpcMt_c* a) {
     a->__vtbl = MT_ACTOR_VTABLE_HD;
     mDoExt_btpAnm::ct(&a->mBtpAnm);
     a->mNpcNo = a->getPrmNpcNo();
-    a->m732 = static_cast<s16>(a->home.angle.y);
-    a->m71C = -1.0f;
+    a->mHomeAngleY = static_cast<s16>(a->home.angle.y);
+    a->mNextMorf = -1.0f;
     a->m747 = 0;
     a->m718 = 0.0f;
-    a->m74A = 0;
+    a->mAnmIdx = 0;
     a->m736 = 0;
-    a->m728 = 1;
+    a->mHeadOnlyFollow = 1;
     a->m72C = 0;
-    a->m74F = 0;
-    a->m746 = 0;
+    a->mLookMode = 0;
+    a->mMoveProcIdx = 0;
     return a;
 }
 
@@ -221,7 +221,7 @@ s32 daNpcMt_c::_create() { return Mt_phaseHandlerHD(&mPhs, l_method.function, th
 BOOL daNpcMt_c::createHeap() {
     J3DModelData* data = static_cast<J3DModelData*>(objectResource(l_bmd_ix_tbl.index[0]));
     J3DAnmTransform* animation =
-        static_cast<J3DAnmTransform*>(objectResource(l_bck_ix_tbl.index[static_cast<u8>(m74A)]));
+        static_cast<J3DAnmTransform*>(objectResource(l_bck_ix_tbl.index[static_cast<u8>(mAnmIdx)]));
     mpMorf = mDoExt_McaMorf::create(nullptr, data, nullptr, nullptr, animation, 2, 1.0f, 0, -1, 1, nullptr,
                                     0x80000, 0x11020022);
     for (u32 part = 0; part < 2; ++part) {
@@ -270,11 +270,11 @@ s32 daNpcMt_c::createInit() {
     eventInfo.setXyCheckCB(reinterpret_cast<dEvt_info_c::CallbackFunc>(daNpcMt_XyCheckCB));
     mEventCut.setActorInfo2(l_my_name, this);
     mDoExt_McaMorf* morph = mpMorf;
-    m742 = 0;
+    mTalking = 0;
     m752 = 0;
     m753 = 0;
-    m743 = 0;
-    this->m73E = 0;
+    mInAttention = 0;
+    this->mTurnSpeed = 0;
     J3DModel* model = morph->getModel();
     cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
     fopAcM_setCullSizeBox(this, -70.0f, 0.0f, -70.0f, 70.0f, 200.0f, 70.0f);
@@ -361,7 +361,7 @@ BOOL daNpcMt_c::_execute() {
     if (dComIfGp_event_runCheck() && eventInfo.mCommand != dEvtCmd_INTALK_e)
         eventMove();
     else {
-        (this->*moveProc.function[static_cast<u8>(m746)])();
+        (this->*moveProc.function[static_cast<u8>(mMoveProcIdx)])();
     }
     eventOrder();
     playTexPatternAnm();
@@ -389,11 +389,11 @@ BOOL daNpcMt_c::_execute() {
 /* 022A1C4C */
 u32 daNpcMt_c::executeCommon() {
 
-    this->m744 = static_cast<u8>(this->m743) != 0;
-    u8 result = static_cast<u8>(this->m742);
-    if (result == 1 && static_cast<u8>(this->m746) != 1) {
+    this->mOrderState = static_cast<u8>(this->mInAttention) != 0;
+    u8 result = static_cast<u8>(this->mTalking);
+    if (result == 1 && static_cast<u8>(this->mMoveProcIdx) != 1) {
         executeSetMode(1);
-        result = static_cast<u8>(this->m742);
+        result = static_cast<u8>(this->mTalking);
     }
     return result;
 }
@@ -401,7 +401,7 @@ u32 daNpcMt_c::executeCommon() {
 /* 022A0DFC */
 void daNpcMt_c::executeSetMode(u8 mode) {
     m718 = 0.0f;
-    m746 = (this->*l_execute_init.function[mode])();
+    mMoveProcIdx = (this->*l_execute_init.function[mode])();
 }
 
 /* 022A1CAC */
@@ -420,7 +420,7 @@ s32 daNpcMt_c::executeWaitInit() {
 /* 022A1D2C */
 void daNpcMt_c::executeWait() {
     executeCommon();
-    if (static_cast<u8>(this->m74A))
+    if (static_cast<u8>(this->mAnmIdx))
         setAnmTbl(&l_npc_anm_wait);
 }
 
@@ -431,7 +431,7 @@ s32 daNpcMt_c::executeTalkInit() { return 1; }
 void daNpcMt_c::executeTalk() {
     executeCommon();
     if (talk2(1) == 0x12) {
-        this->m742 = 0;
+        this->mTalking = 0;
         executeSetMode(0);
         dComIfGp_event_reset();
     } else
@@ -443,20 +443,20 @@ void daNpcMt_c::checkOrder() {
     u16 status = eventInfo.mCommand;
     if (status == 2) {
         s16 event = static_cast<s16>(this->mMtGetItemEventIdx);
-        if (dComIfGp_evmng_startCheck(event) && static_cast<u8>(this->m744) == 3)
-            this->m744 = 0;
-    } else if (status == 1 && (static_cast<u8>(this->m744) == 1 || static_cast<u8>(this->m744) == 2)) {
-        this->m742 = 1;
+        if (dComIfGp_evmng_startCheck(event) && static_cast<u8>(this->mOrderState) == 3)
+            this->mOrderState = 0;
+    } else if (status == 1 && (static_cast<u8>(this->mOrderState) == 1 || static_cast<u8>(this->mOrderState) == 2)) {
+        this->mTalking = 1;
         executeSetMode(1);
     }
 }
 
 /* 022A1500 */
 void daNpcMt_c::eventOrder() {
-    u8 mode = static_cast<u8>(this->m744);
+    u8 mode = static_cast<u8>(this->mOrderState);
     if (mode == 1 || mode == 2) {
         u16 flags = eventInfo.mCondition;
-        mode = m744;
+        mode = mOrderState;
         eventInfo.mCondition = flags | 0x21;
         if (mode == 2)
             fopAcM_orderSpeakEvent(this);
@@ -487,14 +487,14 @@ void daNpcMt_c::privateCut() {
     if (staff == -1)
         return;
     s8 action = static_cast<s8>(dComIfGp_evmng_getMyActIdx(staff, l_cut_action.action, 2, 1, 0));
-    this->m74D = action;
+    this->mActIdx = action;
     dEvent_manager_c* event = dComIfGp_getPEvtManager();
     if (action == -1) {
         Mt_cutEndHD(event, staff);
         return;
     }
     if (Mt_getIsAddvanceHD(event, staff)) {
-        action = static_cast<s8>(this->m74D);
+        action = static_cast<s8>(this->mActIdx);
         if (action == 0)
             eventMesSetInit(staff);
         else if (action == 1)
@@ -504,7 +504,7 @@ void daNpcMt_c::privateCut() {
             return;
         }
     }
-    action = static_cast<s8>(this->m74D);
+    action = static_cast<s8>(this->mActIdx);
     if (action != 0 || eventMesSet())
         dComIfGp_evmng_cutEnd(staff);
 }
@@ -540,11 +540,11 @@ BOOL daNpcMt_c::eventMesSet() {
         if (flags & 1) {
             this->m749 = flags & 0xFE;
             this->mItemNo = 7;
-            this->m744 = 3;
+            this->mOrderState = 3;
         } else if (flags & 2) {
             this->m749 = flags & 0xFD;
             this->mItemNo = 5;
-            this->m744 = 3;
+            this->mOrderState = 3;
         }
     }
     return result == 0x12;
@@ -575,7 +575,7 @@ u16 daNpcMt_c::talk2(s32 init) {
         this->mCurrMsgBsPcId = id;
         if (id != -1) {
             this->mbHasMsg = 0;
-            this->m734 = 0xFFFF;
+            this->mMsgStatus = 0xFFFF;
         }
     } else if (!static_cast<u8>(this->mbHasMsg))
         this->mbHasMsg = 1;
@@ -590,7 +590,7 @@ u16 daNpcMt_c::talk2(s32 init) {
             actor->setStatus(0x13);
             this->mCurrMsgBsPcId = -1;
         }
-        this->m734 = status;
+        this->mMsgStatus = status;
         dispatchAnmAtr(status);
     }
     return status;
@@ -754,14 +754,14 @@ void daNpcMt_c::chkAttention() {
         f32 z = static_cast<f32>(this->mEventCut.mPos.z), y = static_cast<f32>(this->mEventCut.mPos.y);
         u8 turn = static_cast<u8>(this->m750);
         this->mLookAtPos.z = z;
-        this->m74F = 1;
+        this->mLookMode = 1;
         this->mLookAtPos.y = y;
         this->mLookAtPos.x = static_cast<f32>(this->mEventCut.mPos.x);
         if (turn) {
-            this->m728 = 0;
+            this->mHeadOnlyFollow = 0;
             this->m_jnt.mbTrn = 1;
         } else
-            this->m728 = 1;
+            this->mHeadOnlyFollow = 1;
         close = true;
     } else {
         fopAc_ac_c* player = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.getPlayerPtr(0);
@@ -777,7 +777,7 @@ void daNpcMt_c::chkAttention() {
         f32 radius = static_cast<f32>(this->m720);
         s32 cone = static_cast<s16>(this->m730);
         dNpc_calc_DisXZ_AngY(origin, target, distance, angle);
-        u8 wasNear = static_cast<u8>(this->m743);
+        u8 wasNear = static_cast<u8>(this->mInAttention);
         s16 difference = (s16)(angle.get()->get() - static_cast<s16>(this->shape_angle.y));
         if (wasNear) {
             radius += 40.0f;
@@ -793,7 +793,7 @@ void daNpcMt_c::chkAttention() {
             close = true;
         } else {
             if (wasNear == 1) {
-                this->m743 = 0;
+                this->mInAttention = 0;
                 this->m72E = static_cast<s16>(l_npc_dat.field_0x48);
             }
             if (static_cast<f32>(l_npc_dat.field_0x24) > separation || static_cast<u8>(this->m753)) {
@@ -803,7 +803,7 @@ void daNpcMt_c::chkAttention() {
                 this->m752 = 1;
             } else {
                 u32 message = static_cast<u32>(this->m6F0);
-                this->m74F = 0;
+                this->mLookMode = 0;
                 if (!message) {
                     s16 timer = static_cast<s16>(this->m72E);
                     if (timer)
@@ -814,27 +814,27 @@ void daNpcMt_c::chkAttention() {
             }
         }
     }
-    if (close && !static_cast<u8>(this->m743))
-        this->m743 = 1;
-    this->m73C = static_cast<s16>(l_npc_dat.field_0x2A);
+    if (close && !static_cast<u8>(this->mInAttention))
+        this->mInAttention = 1;
+    this->mTurnSpeedTarget = static_cast<s16>(l_npc_dat.field_0x2A);
 }
 
 /* 022A1708 */
 void daNpcMt_c::lookBack() {
 
-    s8 mode = static_cast<s8>(this->m74F);
+    s8 mode = static_cast<s8>(this->mLookMode);
     f32 x = static_cast<f32>(this->eyePos.x), y = static_cast<f32>(this->eyePos.y),
         z = static_cast<f32>(this->eyePos.z);
-    s16 yaw = static_cast<s16>(this->current.angle.y), targetAngle = static_cast<s16>(this->m73C);
-    u32 enabled = static_cast<u8>(this->m728);
+    s16 yaw = static_cast<s16>(this->current.angle.y), targetAngle = static_cast<s16>(this->mTurnSpeedTarget);
+    u32 enabled = static_cast<u8>(this->mHeadOnlyFollow);
     gabi::Local<cXyz> target, eye;
     cXyz* targetPtr = nullptr;
     if (mode == 1) {
         Mt_copyFloatWordsHD(target, &mLookAtPos);
         targetPtr = target;
     } else if (mode == 2)
-        yaw = static_cast<s16>(this->m740);
-    bool forced = static_cast<u8>(this->m742) && static_cast<u8>(this->m750);
+        yaw = static_cast<s16>(this->mDesiredYRot);
+    bool forced = static_cast<u8>(this->mTalking) && static_cast<u8>(this->m750);
     if (forced) {
         this->m_jnt.mbTrn = 1;
         enabled = 0;
@@ -844,10 +844,10 @@ void daNpcMt_c::lookBack() {
         s16 eventAngle = static_cast<s16>(this->mEventCut.mTurnSpeed);
         if (eventAngle)
             targetAngle = eventAngle;
-        cLib_addCalcAngleS2(&m73E, targetAngle, 4, 0x800);
-        turn = static_cast<s16>(this->m73E);
+        cLib_addCalcAngleS2(&mTurnSpeed, targetAngle, 4, 0x800);
+        turn = static_cast<s16>(this->mTurnSpeed);
     } else
-        this->m73E = 0;
+        this->mTurnSpeed = 0;
     eye->x = x;
     eye->y = y;
     eye->z = z;
@@ -901,11 +901,11 @@ void daNpcMt_c::playAnm() {
     this->mAnmFlag = flags & 0xFE;
     if (!morph->play(nullptr, 0, 0) || !static_cast<u32>(this->mpAnmDat.v))
         return;
-    s8 count = static_cast<s8>(this->m74C);
+    s8 count = static_cast<s8>(this->mAnmTimer);
     if (count <= 0)
         return;
     --count;
-    this->m74C = count;
+    this->mAnmTimer = count;
     if (count == 0) {
         u32 table = static_cast<u32>(this->mpAnmDat.v) + 3;
         this->mpAnmDat.v = table;
@@ -918,14 +918,14 @@ void daNpcMt_c::playAnm() {
 /* 022A01A4 */
 void daNpcMt_c::setAnm(u8 animation, s32 attr, f32 blend) {
 
-    f32 override = static_cast<f32>(this->m71C);
+    f32 override = static_cast<f32>(this->mNextMorf);
     if (!(override < 0.0f)) {
         blend = override;
-        this->m71C = -1.0f;
+        this->mNextMorf = -1.0f;
     }
     J3DAnmTransform* resource = static_cast<J3DAnmTransform*>(objectResource(l_bck_ix_tbl.index[animation]));
     mpMorf->setAnm(resource, attr, blend, 1.0f, 0.0f, -1.0f, nullptr);
-    this->m74A = animation;
+    this->mAnmIdx = animation;
 }
 
 /* 022A02B0 */
@@ -936,9 +936,9 @@ BOOL daNpcMt_c::setAnmTbl(sMtAnmDat* table) {
     }
     mpAnmDat = table;
     s8 count = table->field_0x02;
-    m74C = count;
+    mAnmTimer = count;
     u8 animation = table->field_0x00;
-    if (count > 0 || static_cast<u8>(m74A) != animation) {
+    if (count > 0 || static_cast<u8>(mAnmIdx) != animation) {
         setAnm(animation, count > 0 ? 0 : 2, static_cast<f32>(static_cast<u8>(table->field_0x01)));
     }
     return FALSE;

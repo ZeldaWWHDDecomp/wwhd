@@ -91,78 +91,78 @@ static BOOL daKokiie_Draw(kokiie_class* i_this) {
 /* kokiie_move (inlined into daKokiie_Execute) */
 static inline void kokiie_move(kokiie_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    i_this->m298 += 1;
-    u32 mode = (u32)(s32)i_this->m29A;
+    i_this->mFrameCounter += 1;
+    u32 mode = (u32)(s32)i_this->mMode;
     if (mode < 1) {
         int ropeMask = 0;
         for (int i = 0; i < 5; i++) {
-            if (i_this->m32C[i] == 2) {
-                i_this->m32C[i] = 0;
-                i_this->m338 = 0.0f;
+            if (i_this->mRopeState[i] == 2) {
+                i_this->mRopeState[i] = 0;
+                i_this->mTiltStepRate = 0.0f;
             }
-            if (i_this->m32C[i] != 0) {
-                if (i_this->m32C[i] == 1) {
-                    i_this->m338 = 1.0f;
-                    i_this->m32C[i] = 5;
+            if (i_this->mRopeState[i] != 0) {
+                if (i_this->mRopeState[i] == 1) {
+                    i_this->mTiltStepRate = 1.0f;
+                    i_this->mRopeState[i] = 5;
                 }
                 ropeMask |= himo_off_check[i];
             }
         }
         s16 targetYaw = himo_off_ya[ropeMask];
         s16 target = himo_off_xa[ropeMask];
-        cLib_addCalc2(&i_this->m2D0, REG8_F(4) - (f32)himo_off_yp[ropeMask], 0.1f, 50.0f * i_this->m338);
+        cLib_addCalc2(&i_this->mSagY, REG8_F(4) - (f32)himo_off_yp[ropeMask], 0.1f, 50.0f * i_this->mTiltStepRate);
         if (ropeMask == 0x1F && dComIfGs_checkGetItem(dItemNo_BOOMERANG_e)) {
             actor->health = 0;
-            i_this->m29A = 1;
-            i_this->m378 = 1;
+            i_this->mMode = 1;
+            i_this->mDemoMode = 1;
         }
-        s16 maxSpeed = (s16)gabi::ftoi(10000.0f * i_this->m338);
-        cLib_addCalcAngleS2(&i_this->m334, target, 4, maxSpeed);
+        s16 maxSpeed = (s16)gabi::ftoi(10000.0f * i_this->mTiltStepRate);
+        cLib_addCalcAngleS2(&i_this->mTiltX, target, 4, maxSpeed);
         if (target != 0) {
-            cLib_addCalcAngleS2(&i_this->m332, targetYaw, 2, maxSpeed);
+            cLib_addCalcAngleS2(&i_this->mTiltAngleY, targetYaw, 2, maxSpeed);
         }
-        cLib_addCalc2(&i_this->m338, 1.0f, 1.0f, REG8_F(14) + 0.001f);
+        cLib_addCalc2(&i_this->mTiltStepRate, 1.0f, 1.0f, REG8_F(14) + 0.001f);
         cLib_addCalcAngleS2(&actor->current.angle.x, 0, 10, 0x200);
         cLib_addCalcAngleS2(&actor->current.angle.z, 0, 10, 0x200);
-        s16 t = i_this->m298;
-        i_this->m2C8.x = (s16)gabi::ftoi(cM_ssin(t * 900) * i_this->m2BC);
-        i_this->m2C8.z = (s16)gabi::ftoi(cM_ssin(t * 700) * i_this->m2C4);
-        cLib_addCalc2(&i_this->m2BC, REG14_F(9) + 300.0f, 1.0f, REG14_F(3) + 20.0f);
-        cLib_addCalc2(&i_this->m2C4, REG14_F(9) + 300.0f, 1.0f, REG14_F(3) + 20.0f);
-        t = i_this->m298;
-        i_this->m2A4.x = cM_ssin(t * 0x2EE) * i_this->m2B0;
-        i_this->m2A4.z = cM_ssin(t * 900) * i_this->m2B8;
-        cLib_addCalc0(&i_this->m2B0, 1.0f, 0.25f);
-        cLib_addCalc0(&i_this->m2B8, 1.0f, 0.25f);
-        /* actor->shape_angle = actor->current.angle + i_this->m2C8 */
+        s16 t = i_this->mFrameCounter;
+        i_this->mWobbleAngle.x = (s16)gabi::ftoi(cM_ssin(t * 900) * i_this->mWobbleAmpX);
+        i_this->mWobbleAngle.z = (s16)gabi::ftoi(cM_ssin(t * 700) * i_this->mWobbleAmpZ);
+        cLib_addCalc2(&i_this->mWobbleAmpX, REG14_F(9) + 300.0f, 1.0f, REG14_F(3) + 20.0f);
+        cLib_addCalc2(&i_this->mWobbleAmpZ, REG14_F(9) + 300.0f, 1.0f, REG14_F(3) + 20.0f);
+        t = i_this->mFrameCounter;
+        i_this->mSwayOffset.x = cM_ssin(t * 0x2EE) * i_this->mSwayX;
+        i_this->mSwayOffset.z = cM_ssin(t * 900) * i_this->mSwayZ;
+        cLib_addCalc0(&i_this->mSwayX, 1.0f, 0.25f);
+        cLib_addCalc0(&i_this->mSwayZ, 1.0f, 0.25f);
+        /* actor->shape_angle = actor->current.angle + i_this->mWobbleAngle */
         u32 w0, w1;
-        csXyz_pl_regs(&actor->current.angle, &i_this->m2C8, &w0, &w1);
+        csXyz_pl_regs(&actor->current.angle, &i_this->mWobbleAngle, &w0, &w1);
         actor->shape_angle.x = (s16)(w0 >> 16);
         actor->shape_angle.y = (s16)w0;
         actor->shape_angle.z = (s16)(w1 >> 16);
-        /* actor->current.pos = actor->home.pos + i_this->m2A4 */
+        /* actor->current.pos = actor->home.pos + i_this->mSwayOffset */
         gabi::Local<cXyz> sum;
-        cXyz_pl(&actor->home.pos, sum, &i_this->m2A4);
+        cXyz_pl(&actor->home.pos, sum, &i_this->mSwayOffset);
         actor->current.pos.x = sum->x;
         actor->current.pos.y = sum->y;
         actor->current.pos.z = sum->z;
-        actor->current.pos.y = actor->current.pos.y + i_this->m2D0;
-        cLib_addCalc0(&i_this->m2A4.y, 0.05f, REG0_F(7) + 2.0f);
+        actor->current.pos.y = actor->current.pos.y + i_this->mSagY;
+        cLib_addCalc0(&i_this->mSwayOffset.y, 0.05f, REG0_F(7) + 2.0f);
     } else if (mode == 1) {
         cLib_addCalcAngleS2(&actor->shape_angle.x, 0, 10, 0x800);
         cLib_addCalcAngleS2(&actor->shape_angle.z, 0, 10, 0x800);
-        cLib_addCalcAngleS2(&i_this->m334, 0, 4, 0x200);
+        cLib_addCalcAngleS2(&i_this->mTiltX, 0, 4, 0x200);
         f32 vy = actor->speed.y;
         actor->current.pos.y = actor->current.pos.y + vy;
         actor->speed.y = vy - (REG12_F(14) + 3.0f);
-        if (i_this->m37A == (s16)(REG0_S(4) + 0x1B)) {
-            if (i_this->m2A2 != 0xFF) {
-                dComIfGs_onSwitch(i_this->m2A2, fopAcM_GetRoomNo(i_this));
+        if (i_this->mDemoTimer == (s16)(REG0_S(4) + 0x1B)) {
+            if (i_this->mSwitchNo != 0xFF) {
+                dComIfGs_onSwitch(i_this->mSwitchNo, fopAcM_GetRoomNo(i_this));
             }
             fopAcM_seStartCurrent(i_this, JA_SE_OBJ_KOKIRI_H_CRASH, 0);
             StartShock(0, 2, 4);
         }
-        if (i_this->m37A == (s16)(REG0_S(5) + 0x40)) {
+        if (i_this->mDemoTimer == (s16)(REG0_S(5) + 0x40)) {
             gabi::Local<cXyz> sp44;
             sp44->x = actor->current.pos.x;
             sp44->y = actor->current.pos.y;
@@ -173,16 +173,16 @@ static inline void kokiie_move(kokiie_class* i_this) {
             dComIfGp_particle_set(ID_AK_SN_KOKIRIHOUSEHAMON00, &actor->current.pos);
             dComIfGp_particle_set(ID_AK_SN_KOKIRIHOUSEHAMON01, sp44);
         }
-        i_this->m374 = REG0_F(9) + 1380.0f; // HD: (REG0_F(9) + 5180) - 3800 is folded.
-        if (!(actor->current.pos.y > i_this->m374)) {
-            actor->current.pos.y = i_this->m374;
+        i_this->mFallGroundY = REG0_F(9) + 1380.0f; // HD: (REG0_F(9) + 5180) - 3800 is folded.
+        if (!(actor->current.pos.y > i_this->mFallGroundY)) {
+            actor->current.pos.y = i_this->mFallGroundY;
             if (actor->speed.y < -20.0f) {
                 StartShock(6, 2, 7);
                 fopAcM_seStartCurrent(i_this, JA_SE_OBJ_KOKIRI_H_LANDING, 0);
-                i_this->m39C = REG12_F(10) + 90.0f; // HD: REG12_F(10) + 40 + 50 is folded.
+                i_this->mShakeAmp = REG12_F(10) + 90.0f; // HD: REG12_F(10) + 40 + 50 is folded.
             }
             actor->speed.y = 0.0f;
-            cLib_addCalcAngleS2(&i_this->m334, 0, 2, 0x2000);
+            cLib_addCalcAngleS2(&i_this->mTiltX, 0, 2, 0x2000);
         }
     }
 }
@@ -194,7 +194,7 @@ static inline bool demo_camera(kokiie_class* i_this) {
     auto camera = reinterpret_cast<KokiieCameraProcess*>(dComIfGp_getCamera(dComIfGp_getPlayerCameraID(0)));
     KokiieCamera* cam = &camera->mCamera;
     cMtx_YrotS(calc_mtx(), actor->shape_angle.y);
-    u32 mode = (u32)(s32)i_this->m378;
+    u32 mode = (u32)(s32)i_this->mDemoMode;
     if (mode == 1 || mode == 2) {
         if (mode == 1) {
             if (!eventInfo_checkCommandDemoAccrpt(actor)) {
@@ -202,69 +202,69 @@ static inline bool demo_camera(kokiie_class* i_this) {
                 eventInfo_onCondition(actor, 2 /* dEvtCnd_UNK2_e */);
                 return false;
             }
-            i_this->m378 = (s16)(mode + 1);
+            i_this->mDemoMode = (s16)(mode + 1);
             Kokiie_cameraStop(cam);
             Kokiie_cameraTrim(cam, 2);
-            i_this->m37C.copy(actor->current.pos);
+            i_this->mDemoEye.copy(actor->current.pos);
             gabi::Local<cXyz> sp5C, sp50;
             sp5C->x = REG12_F(2) + 500.0f; // HD: (REG12_F(2) + 1300) - 800 is folded.
             sp5C->y = 0.0f;
             sp5C->z = REG12_F(4) - 1000.0f;
             MtxPosition(sp5C, sp50);
             f32 px = actor->current.pos.x;
-            i_this->m37C.x = px + sp50->x;
-            i_this->m37C.y = REG12_F(5) + 1730.0f; // HD: ((REG12_F(5) + 4030) - 3800) + 1500 is folded.
+            i_this->mDemoEye.x = px + sp50->x;
+            i_this->mDemoEye.y = REG12_F(5) + 1730.0f; // HD: ((REG12_F(5) + 4030) - 3800) + 1500 is folded.
             f32 pz = actor->current.pos.z;
-            i_this->m37C.z = pz + sp50->z;
-            i_this->m388.x = px;
+            i_this->mDemoEye.z = pz + sp50->z;
+            i_this->mDemoCenter.x = px;
             f32 py = actor->current.pos.y;
-            i_this->m388.y = py;
-            i_this->m388.z = pz;
-            i_this->m388.y = py + (REG12_F(6) + -450.0f);
-            i_this->m3A0 = REG12_F(18) + 65.0f;
-            i_this->m37A = 0;
+            i_this->mDemoCenter.y = py;
+            i_this->mDemoCenter.z = pz;
+            i_this->mDemoCenter.y = py + (REG12_F(6) + -450.0f);
+            i_this->mDemoFovy = REG12_F(18) + 65.0f;
+            i_this->mDemoTimer = 0;
         }
-        if (i_this->m37A < (s16)(REG12_S(3) + 10)) {
+        if (i_this->mDemoTimer < (s16)(REG12_S(3) + 10)) {
             actor->speed.y = 0.0f;
         }
-        cLib_addCalc2(&i_this->m388.y, (actor->current.pos.y - 450.0f) + REG12_F(6), REG12_F(7) + 0.5f, REG12_F(8) + 200.0f);
-        if (i_this->m37A > (s16)(REG12_S(4) + 0x32)) {
-            cLib_addCalc2(&i_this->m3A0, REG12_F(19) + 80.0f, 0.02f, REG12_F(20) + 0.5f);
+        cLib_addCalc2(&i_this->mDemoCenter.y, (actor->current.pos.y - 450.0f) + REG12_F(6), REG12_F(7) + 0.5f, REG12_F(8) + 200.0f);
+        if (i_this->mDemoTimer > (s16)(REG12_S(4) + 0x32)) {
+            cLib_addCalc2(&i_this->mDemoFovy, REG12_F(19) + 80.0f, 0.02f, REG12_F(20) + 0.5f);
         }
-        if (i_this->m37A == 100) {
+        if (i_this->mDemoTimer == 100) {
             mDoAud_seStart_noPos(JA_SE_READ_RIDDLE_1);
         }
-        if (i_this->m37A == 0x96 && REG0_S(3) == 0) {
-            i_this->m378 = 0;
+        if (i_this->mDemoTimer == 0x96 && REG0_S(3) == 0) {
+            i_this->mDemoMode = 0;
             dComIfGp_event_reset();
             gabi::Local<cXyz> center, eye;
-            center->x = i_this->m388.x;
-            center->y = i_this->m388.y;
-            center->z = i_this->m388.z;
-            eye->x = i_this->m37C.x;
-            eye->y = i_this->m37C.y;
-            eye->z = i_this->m37C.z;
+            center->x = i_this->mDemoCenter.x;
+            center->y = i_this->mDemoCenter.y;
+            center->z = i_this->mDemoCenter.z;
+            eye->x = i_this->mDemoEye.x;
+            eye->y = i_this->mDemoEye.y;
+            eye->z = i_this->mDemoEye.z;
             Kokiie_cameraReset(cam, center, eye);
             Kokiie_cameraStart(cam);
             Kokiie_cameraTrim(cam, 0);
         }
     }
-    if (i_this->m378 != 0) {
-        s16 cnt = i_this->m37A;
-        f32 sin = cM_ssin(cnt * 0x3300) * i_this->m39C;
-        f32 cos = cM_scos(cnt * 0x3000) * i_this->m39C;
+    if (i_this->mDemoMode != 0) {
+        s16 cnt = i_this->mDemoTimer;
+        f32 sin = cM_ssin(cnt * 0x3300) * i_this->mShakeAmp;
+        f32 cos = cM_scos(cnt * 0x3000) * i_this->mShakeAmp;
         gabi::Local<cXyz> sp38, sp44;
-        sp44->x = i_this->m37C.x + sin;
-        sp38->x = i_this->m388.x + sin;
-        sp38->y = i_this->m388.y + cos;
-        sp44->y = i_this->m37C.y + cos;
-        sp44->z = i_this->m37C.z;
-        sp38->z = i_this->m388.z;
-        s16 iVar1 = (s16)gabi::ftoi(cM_scos(i_this->m298 * 0x1C00) * i_this->m39C * 8.0f);
-        Kokiie_cameraSet(cam, sp38, sp44, iVar1, i_this->m3A0);
-        cLib_addCalc0(&i_this->m39C, 1.0f, REG0_F(16) + 5.0f);
-        JUTReport(0x19A, 0x1AE, "K SUB  COUNT  %d", i_this->m37A);
-        i_this->m37A += 1;
+        sp44->x = i_this->mDemoEye.x + sin;
+        sp38->x = i_this->mDemoCenter.x + sin;
+        sp38->y = i_this->mDemoCenter.y + cos;
+        sp44->y = i_this->mDemoEye.y + cos;
+        sp44->z = i_this->mDemoEye.z;
+        sp38->z = i_this->mDemoCenter.z;
+        s16 iVar1 = (s16)gabi::ftoi(cM_scos(i_this->mFrameCounter * 0x1C00) * i_this->mShakeAmp * 8.0f);
+        Kokiie_cameraSet(cam, sp38, sp44, iVar1, i_this->mDemoFovy);
+        cLib_addCalc0(&i_this->mShakeAmp, 1.0f, REG0_F(16) + 5.0f);
+        JUTReport(0x19A, 0x1AE, "K SUB  COUNT  %d", i_this->mDemoTimer);
+        i_this->mDemoTimer += 1;
     }
     return true;
 }
@@ -278,14 +278,14 @@ static BOOL daKokiie_Execute(kokiie_class* i_this) {
     kokiie_move(i_this);
     MtxTrans(actor->current.pos.x, actor->current.pos.y, actor->current.pos.z, 0);
     cMtx_YrotM(calc_mtx(), actor->shape_angle.y);
-    cMtx_YrotM(calc_mtx(), i_this->m332);
-    cMtx_XrotM(calc_mtx(), i_this->m334);
-    cMtx_YrotM(calc_mtx(), (s16)-i_this->m332);
+    cMtx_YrotM(calc_mtx(), i_this->mTiltAngleY);
+    cMtx_XrotM(calc_mtx(), i_this->mTiltX);
+    cMtx_YrotM(calc_mtx(), (s16)-i_this->mTiltAngleY);
     cMtx_XrotM(calc_mtx(), actor->shape_angle.x);
     cMtx_ZrotM(calc_mtx(), actor->shape_angle.z);
     cMtx_YrotM(calc_mtx(), 0xB54);
     i_this->mpModel->setBaseTRMtx(calc_mtx());
-    PSMTXCopy(calc_mtx(), &i_this->m340);
+    PSMTXCopy(calc_mtx(), &i_this->mBgMtx);
     dBgW_Move(i_this->pm_bgw);
     cMtx_YrotM(calc_mtx(), -0xB54);
     for (s32 i = 0; i < 5; i++) {
@@ -295,7 +295,7 @@ static BOOL daKokiie_Execute(kokiie_class* i_this) {
         sp08->x = 0.0f;
         sp08->y = REG0_F(5) + -170.0f;
         sp08->z = REG0_F(6) + 400.0f;
-        MtxPosition(sp08, &i_this->m2F0[i]);
+        MtxPosition(sp08, &i_this->mRopeEndPos[i]);
         MtxPull();
     }
     demo_camera(i_this);
@@ -326,12 +326,12 @@ static BOOL CallbackCreateHeap(fopAc_ac_c* a_this) {
         return FALSE;
     }
     if (modelData == nullptr) /* JUT_ASSERT(945, modelData != NULL) */
-        JUT_ASSERT_fail(__FILE_NAME__, 0x3B1, "modelData != NULL");
+        JUT_ASSERT_fail(__FILE_NAME__, 0x3B1, "modelData != (0)");
     actor->pm_bgw = new_dBgW();
     if (actor->pm_bgw == nullptr) /* JUT_ASSERT(950, actor->pm_bgw != NULL) */
-        JUT_ASSERT_fail(__FILE_NAME__, 0x3B6, "actor->pm_bgw != NULL");
+        JUT_ASSERT_fail(__FILE_NAME__, 0x3B6, "actor->pm_bgw != (0)");
     cBgD_t* dzb = (cBgD_t*)dComIfG_getObjectRes("Kokiie", dRes_INDEX_KOKIIE_DZB_KOKI_00_e, SAFESTRING_VTBL);
-    cBgW_Set(actor->pm_bgw, dzb, cBgW_MOVE_BG_e, &actor->m340);
+    cBgW_Set(actor->pm_bgw, dzb, cBgW_MOVE_BG_e, &actor->mBgMtx);
     /* SetCrrFunc(dBgS_MoveBGProc_Typical) */
     reinterpret_cast<KokiieBgW*>(actor->pm_bgw.get())->mCrrFunc = 0x024EE658;
     return TRUE;
@@ -340,12 +340,12 @@ static BOOL CallbackCreateHeap(fopAc_ac_c* a_this) {
 /* himo_create (inlined into daKokiie_Create) */
 static inline BOOL himo_create(kokiie_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    if (i_this->m2A2 != 0xFF && fopAcM_isSwitch(actor, i_this->m2A2)) {
+    if (i_this->mSwitchNo != 0xFF && fopAcM_isSwitch(actor, i_this->mSwitchNo)) {
         return FALSE;
     }
     s32 createdCount = 0;
     for (s32 i = 0; i < 5; i++) {
-        u32 st = i_this->m2E8[i];
+        u32 st = i_this->mShandCreateStep[i];
         if (st < 1) {
             KokiieAppend* p = Kokiie_createAppend();
             p->position.x = actor->current.pos.x;
@@ -355,19 +355,19 @@ static inline BOOL himo_create(kokiie_class* i_this) {
             p->parameters = 0xFFFFFF01;
             p->angle.y = ay;
             p->roomNo = actor->current.roomNo;
-            i_this->m2D4[i] = fopAcM_Create(fpcNm_SHAND_e, p);
-            i_this->m2E8[i] += 1;
+            i_this->mShandIds[i] = fopAcM_Create(fpcNm_SHAND_e, p);
+            i_this->mShandCreateStep[i] += 1;
         } else if (st != 1) {
             continue;
         }
         /* case 1 */
-        fopAc_ac_c* shand = fopAcM_SearchByID(i_this->m2D4[i]);
+        fopAc_ac_c* shand = fopAcM_SearchByID(i_this->mShandIds[i]);
         if (shand != nullptr) {
             auto child = static_cast<KokiieShand*>(shand);
-            child->field_308 = fopAcM_GetID(actor);
-            child->field_310 = &i_this->m2F0[i];
-            child->field_314 = &i_this->m32C[i];
-            i_this->m2E8[i] += 1;
+            child->mParentId = fopAcM_GetID(actor);
+            child->mpRootPos = &i_this->mRopeEndPos[i];
+            child->mpParentState = &i_this->mRopeState[i];
+            i_this->mShandCreateStep[i] += 1;
             createdCount++;
         }
     }
@@ -384,8 +384,8 @@ static cPhs_State daKokiie_Create(fopAc_ac_c* a_this) {
         return phase;
     }
     u8 prm = fopAcM_GetParam(a_this) & 0xFF;
-    i_this->m2A0 = (prm == 0xFF) ? 0 : prm;
-    i_this->m2A2 = fopAcM_GetParam(a_this) >> 0x18;
+    i_this->mSizeType = (prm == 0xFF) ? 0 : prm;
+    i_this->mSwitchNo = fopAcM_GetParam(a_this) >> 0x18;
     if (himo_create(i_this)) {
         return FALSE;
     }
@@ -397,7 +397,7 @@ static cPhs_State daKokiie_Create(fopAc_ac_c* a_this) {
         if (dBgS_Regist(bgs, i_this->pm_bgw, a_this))
             return cPhs_ERROR_e;
     }
-    switch (i_this->m2A0) {
+    switch (i_this->mSizeType) {
     case 1:
         a_this->scale.x = 0.9f;
         a_this->scale.z = 0.9f;
@@ -421,9 +421,9 @@ static cPhs_State daKokiie_Create(fopAc_ac_c* a_this) {
     fopAcM_SetMax(a_this, 1000.0f * a_this->scale.x, 1000.0f, 1000.0f * a_this->scale.z);
     i_this->mpModel->setBaseScale(a_this->scale);
     a_this->health = 1;
-    if (i_this->m2A2 != 0xFF && fopAcM_isSwitch(a_this, i_this->m2A2)) {
-        a_this->current.pos.y = (i_this->m374 + 770.0f) + REG0_F(17); /* m374 + 50 + 720 + REG0_F(17) */
-        i_this->m29A = 1;
+    if (i_this->mSwitchNo != 0xFF && fopAcM_isSwitch(a_this, i_this->mSwitchNo)) {
+        a_this->current.pos.y = (i_this->mFallGroundY + 770.0f) + REG0_F(17); /* mFallGroundY + 50 + 720 + REG0_F(17) */
+        i_this->mMode = 1;
         a_this->health = 0;
     }
     for (s32 i = 0; i < 2; i++) {
@@ -466,8 +466,8 @@ str 10013568 "Kokiie" in 021A63C0
 str 10013570 "Kokiie" in 021A6418
 str 100135CC "Kokiie" in 021A652C
 str 10013578 "d_a_kokiie.cpp" in 021A6418
-str 10013588 "modelData != NULL"
-str 1001359C "actor->pm_bgw != NULL"
+str 10013588 "modelData != (0)"
+str 1001359C "actor->pm_bgw != (0)"
 str 100134D4 "K SUB  COUNT  %d"
 data himo_off_check 101B868C
 data himo_off_ya 101B86B4

@@ -764,8 +764,7 @@ static void bindDrawUniforms(ShaderMaterial *material, DrawInfo *draw) {
 static void drawIndices(IndexBuffer *buffer) {
     const u32 count = buffer->mCount;
     if (count)
-        woodGX2DrawIndexed(gabi::ea(buffer->mpIndices), count, buffer->mPrimitive,
-                           buffer->mIndexType, 0, 1);
+        GX2DrawIndexedEx(gabi::ea(gabi::at<void>(buffer->mPrimitiveMode)), count, buffer->mFormat, buffer->mStorage.v, 0, 1);
 }
 /* 025CECD8 */
 void dWood::Packet_c::draw_fade(DrawInfo *draw) {
@@ -1333,10 +1332,10 @@ u32 hdWood_packetCreate(u32 self) {
         woodUniformSetState(gabi::ea(packet->mFadeTransforms) + i * 0xA8, 0);
     woodIndexBufferSet(r, gabi::ea(woodGeometry.mLeafIndices), 4,
                        (u32)woodGeometry.mLeafIndexCount);
-    packet->mLeafIndices.mpIndices.v = 4;
+    packet->mLeafIndices.mPrimitiveMode = 4;
     woodIndexBufferSet(gabi::ea(&packet->mTrunkIndices), gabi::ea(woodGeometry.mTrunkIndices), 4,
                        (u32)woodGeometry.mTrunkIndexCount);
-    packet->mTrunkIndices.mpIndices.v = 4;
+    packet->mTrunkIndices.mPrimitiveMode = 4;
     fillVertices(material, 0);
     fillVertices(material, 1);
     // Cache both buffer pointers once per vertex, then interleave scalar float transfers as native.
@@ -1723,7 +1722,7 @@ ext 028F0164 void woodArrayDestroy(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a
 ext 028F026C void woodRegisterStatic(u32 a0)
 ext 028F521C void woodClearUniformData(u32 a0, u32 a1)
 ext C00060E0 void woodGX2BindProgram(u32 a0, u32 a1)
-ext C0006178 void woodGX2DrawIndexed(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5)
+ext C0006178 void GX2DrawIndexedEx(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5) # was woodGX2DrawIndexed: build/gen/imports.json slot C0006178 = gx2 GX2DrawIndexedEx
 ext C00068A8 void woodGX2GeometryUniform(u32 a0, u32 a1, u32 a2)
 ext C0006900 void woodGX2PixelUniform(u32 a0, u32 a1, u32 a2)
 ext C0006A38 void woodGX2VertexUniform(u32 a0, u32 a1, u32 a2)

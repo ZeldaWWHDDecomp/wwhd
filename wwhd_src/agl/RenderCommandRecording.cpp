@@ -2,6 +2,7 @@
 // current frame's slice of its ring from the ring's fill offset, and on end advances the offset by the aligned
 // recorded size. Both ends are timed and run under the graphics access manager's local lock.
 #include "agl/RenderCommandPool.h"
+#include "sead/ElementAt.h"
 #include "agl/RenderRecording.h"
 #include "agl/GraphicsAccess.h"
 using namespace agl::render;
@@ -51,8 +52,8 @@ u32 agl::render::RenderCommandPool::beginCommand(const sead::SafeText* name,u32 
 agl::gx2util::TimedCounter* agl::render::RenderCommandPool::endCommand(u32 index,u32 ring) {
     gabi::AutoFrame frame{gabi::current_function()};
     gx2util::TimedCounter* command = mCommands;
-    if (index < (u32)mCommandCapacity) command += index;
-    RenderCommandRing* target = &mRings[ring];
+    if (index < (u32)mCommandCapacity) command = &sead::elementAt<gx2util::TimedCounter>(gabi::ea(command),index); /* guest EA arithmetic: wraps at 32 bits as on the console */
+    RenderCommandRing* target = &sead::elementAt<RenderCommandRing>(gabi::ea(mRings),ring);
     u32 used = recordingOf(command)->end(0);
     u32 offset = (u32)target->mOffset + used;
     offset += agl::RecordingPolicy::alignment() - 1u;

@@ -144,26 +144,26 @@ s32 daObjSwheavy::Act_c::_create() {
     mVSpeed = 0.0f;
     mPrevRiding = 0;
     mMiniPushTimer = 0;
-    m330 = 0;
+    mTopAimTimer = 0;
     mHeavyRiding = 0;
-    m334 = 0.0f;
+    mTopAimReqHFrac = 0.0f;
     mMiniPushFlg = 0;
     mRiding = 0;
     type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
     if ((static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_IS_TOGGLE) || !isSwitch(this)) {
         mTopPos = 0.0f;
-        m328 = 0.0f;
+        mBottomPos = 0.0f;
         mCurHFrac = 1.0f;
-        m32C = 1.0f;
-        m338 = 1.0f;
+        mTopAimHFrac = 1.0f;
+        mTopHFrac = 1.0f;
         mTargetHFrac = 1.0f;
         mode_upper_init();
     } else {
         mTopPos = -35.5f;
-        m328 = -35.5f;
-        m32C = 0.0f;
+        mBottomPos = -35.5f;
+        mTopAimHFrac = 0.0f;
         mTargetHFrac = 0.0f;
-        m338 = 0.0f;
+        mTopHFrac = 0.0f;
         mCurHFrac = 0.0f;
         mode_lower_init();
     }
@@ -188,7 +188,7 @@ BOOL daObjSwheavy::Act_c::_delete() {
 void daObjSwheavy::Act_c::set_mtx() {
     translateRotate(this);
     copyModelMtx(mpModel1);
-    f32 height = m328, old = static_cast<f32>(mDoMtx_stack_c::get()->m[1][3]);
+    f32 height = mBottomPos, old = static_cast<f32>(mDoMtx_stack_c::get()->m[1][3]);
     mDoMtx_stack_c::get()->m[1][3] = old + height;
     copyModelMtx(mpModel2);
     translateRotate(this);
@@ -248,7 +248,7 @@ void daObjSwheavy::Act_c::calc_top_pos() {
     current = current + speed;
     mCurHFrac = current;
     f32 height = (1.0f - current) * -35.5f;
-    s16 timer = m330;
+    s16 timer = mTopAimTimer;
     mVSpeed = speed;
     if (height < -36.5f)
         height = -36.5f;
@@ -256,26 +256,26 @@ void daObjSwheavy::Act_c::calc_top_pos() {
         f32 delta = height - 1.0f;
         height = delta >= 0.0f ? 1.0f : height;
     }
-    m328 = height;
+    mBottomPos = height;
     if (timer > 0) {
         timer = (s16)(timer - 1);
-        m330 = timer;
+        mTopAimTimer = timer;
         if (timer == 0)
-            m32C = m334;
+            mTopAimHFrac = mTopAimReqHFrac;
     }
-    f32 fraction = mMode == 0 ? (f32)mCurHFrac : (f32)m32C;
+    f32 fraction = mMode == 0 ? (f32)mCurHFrac : (f32)mTopAimHFrac;
     f32 top = (1.0f - fraction) * -35.5f;
-    f32 bottom = m328;
+    f32 bottom = mBottomPos;
     mTopPos = top;
-    m338 = fraction;
+    mTopHFrac = fraction;
     if (top < bottom)
         mTopPos = bottom;
 }
 
 /* 02394ADC */
 void daObjSwheavy::Act_c::top_bg_aim_req(f32 target, s16 timer) {
-    m334 = target;
-    m330 = timer;
+    mTopAimReqHFrac = target;
+    mTopAimTimer = timer;
 }
 
 /* 02394510 */
@@ -450,7 +450,7 @@ BOOL daObjSwheavy::Act_c::_execute() {
     set_mtx();
     mpBgW1->Move();
     mpBgW2->Move();
-    f32 height = m328, y = current.pos.y;
+    f32 height = mBottomPos, y = current.pos.y;
     y = (y + height) - -35.5f;
     f32 x = current.pos.x, z = current.pos.z;
     eyePos.x = x;

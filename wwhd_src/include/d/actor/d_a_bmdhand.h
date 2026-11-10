@@ -1,7 +1,7 @@
 /* bmdhand_class (Kalle Demos ceiling tentacle), WWHD layout. 
  *
  * GameCube members +0x11C up to mLineMat; mDoExt_3DlineMat1_c is 0x188 in HD (GameCube 0x3C),
- * so the colliders and m824 move by a further +0x14C. */
+ * so the colliders and mHioOwner move by a further +0x14C. */
 #pragma once
 #include "bindings.h"
 #include "gc_api/f_op/f_op_actor.h"
@@ -18,42 +18,42 @@ WWHD_SIZE(hand_s, 0x1C);
 struct bmdhand_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3D4 */ be<s16> m2B8;
-    /* 0x3D6 */ be<s16> m2BA;
-    /* 0x3D8 */ be<s16> m2BC;
-    /* 0x3DA */ be<s16> m2BE;
-    /* 0x3DC */ be<s16> m2C0[4];
-    /* 0x3E4 */ be<s16> m2C8;
-    /* 0x3E6 */ be<s16> m2CA;
-    /* 0x3E8 */ cXyz m2CC;
-    /* 0x3F4 */ cXyz m2D8;
-    /* 0x400 */ cXyz m2E4;
-    /* 0x40C */ cXyz m2F0;
-    /* 0x418 */ be<f32> m2FC;
-    /* 0x41C */ be<s16> m300;
-    /* 0x41E */ be<s16> m302;
-    /* 0x420 */ be<s8> m304;
+    /* 0x3D4 */ be<s16> mFrameCounter;  /* was m2B8: daBmdhand_Execute 020B8D9C adds 1 per frame (daBmdhand_Create 020BAD4C starts it random); the sway phase of control1 / cut_control 020B88C4; hand_calc checks the ceiling every 16 frames; hand_move picks the mChainSph segment by it */
+    /* 0x3D6 */ be<s16> mAction;  /* was m2BA: hand_move (in daBmdhand_Execute 020B8D9C) switch on the Bmdhand_* actions (Attached, Cut, BossDown, Intro, Disappear, RegrowWait); daBmdhand_Create 020BAD4C sets Intro */
+    /* 0x3D8 */ be<s16> mHandStep;  /* was m2BC: hand_calc (in daBmdhand_Execute 020B8D9C) switch: 0 reach the ceiling, 1 hold, 2 move the hand to a new place; hand_move lets the tentacle be cut only above 0 */
+    /* 0x3DA */ be<s16> mIntroStep;  /* was m2BE: hand_move (in daBmdhand_Execute 020B8D9C), Intro action: 0 wait for mVineCommand 5, 1 random delay, 2 grow to the ceiling (adds to mVineCount), 3 grown */
+    /* 0x3DC */ be<s16> mTimers[4];  /* was m2C0: daBmdhand_Execute 020B8D9C counts all 4 down; hand_calc / hand_move load [0] (hand moves, regrow delay l_HIO.m0C) and [1] (boss-down delay) and wait on them */
+    /* 0x3E4 */ be<s16> mCcOffTimer;  /* was m2C8: hand_move (in daBmdhand_Execute 020B8D9C) sets 20 / 10 / 70 and moves both spheres out of reach (no lock-on) while it runs; daBmdhand_Execute counts it down */
+    /* 0x3E6 */ be<s16> mBloodTimer;  /* was m2CA: hand_move (in daBmdhand_Execute 020B8D9C) sets 2 when the tentacle is cut; cut_control 020B88C4 emits ID_AK_SN_O_BKMTENTACLEBLOOD00 at the cut end while it runs; daBmdhand_Execute counts it down */
+    /* 0x3E8 */ cXyz mCeilingPos;  /* was m2CC: hand_ceiling_check (in daBmdhand_Execute 020B8D9C): the ceiling hit of a line 2500 up from mHandPos, + l_HIO.m08; hand_calc holds the hand at its height; daBmdhand_Execute opens / closes the hand model when it crosses it */
+    /* 0x3F4 */ cXyz mHandPos;  /* was m2D8: hand_calc (in daBmdhand_Execute 020B8D9C) moves it toward mHandTargetPos; control2 pulls the last chain point to it; the vine-set sound plays there; daBmdhand_Delete 020BABAC deletes its sound object */
+    /* 0x400 */ cXyz mHandTargetPos;  /* was m2E4: hand_calc / start_hand_calc (in daBmdhand_Execute 020B8D9C) set it 250 / 350 in front of the root at the ceiling height and move mHandPos toward it */
+    /* 0x40C */ cXyz mHandModelPos;  /* was m2F0: control_tail (in daBmdhand_Execute 020B8D9C) copies the last chain point; hand_mtx_set 020B8724 places the hand model there; cut_control3 020B8C74 eases it to the ceiling */
+    /* 0x418 */ be<f32> mHandModelPosYOld;  /* was m2FC: daBmdhand_Execute 020B8D9C keeps mHandModelPos.y of the previous frame to see it cross the ceiling height */
+    /* 0x41C */ be<s16> mHandAngleX;  /* was m300: control_tail (in daBmdhand_Execute 020B8D9C) sets it from the last chain segment; hand_mtx_set 020B8724 turns the hand model about x by it */
+    /* 0x41E */ be<s16> mHandAngleY;  /* was m302: control_tail (in daBmdhand_Execute 020B8D9C) sets it from the last chain segment; hand_mtx_set 020B8724 turns the hand model about y by it */
+    /* 0x420 */ be<s8> mCloseTimer;  /* was m304: daBmdhand_Execute 020B8D9C sets 3 when the hand rises past the ceiling height, counts it down and closes the hand (FOOK_TOJIRU) at 0 */
     /* 0x421 */ u8 _421[3];
-    /* 0x424 */ be<f32> m308;
-    /* 0x428 */ be<f32> m30C;
-    /* 0x42C */ be<f32> m310;
-    /* 0x430 */ be<f32> m314;
-    /* 0x434 */ be<f32> m318;
-    /* 0x438 */ be<f32> m31C;
-    /* 0x43C */ be<f32> m320;
-    /* 0x440 */ hand_s m324[20];
+    /* 0x424 */ be<f32> mHandMoveRate;  /* was m308: hand_calc / start_hand_calc (in daBmdhand_Execute 020B8D9C) set 0 and ease it to 1; the step of mHandPos toward mHandTargetPos is 30 / 50 * it */
+    /* 0x428 */ be<f32> mAttachRate;  /* was m30C: control2 (in daBmdhand_Execute 020B8D9C) pulls the last chain point to mHandPos at 50 * it and eases it to 1; hand_calc starts holding above 0.9; hand_move sets 0 / 1 / random 0.2 */
+    /* 0x42C */ be<f32> mSegmentLength;  /* was m310: control1 / control2 / cut_control 020B88C4 place the chain points it apart; hand_move (in daBmdhand_Execute 020B8D9C) eases it to 30 / 20, 0 when it disappears; daBmdhand_Draw 020B8650 draws only above 0.1 */
+    /* 0x430 */ be<f32> mDriftY;  /* was m314: control1 / cut_control 020B88C4 / start_control1 (in daBmdhand_Execute 020B8D9C) add it to every chain segment as y drift and ease it to -10 / -3 / 0; hand_move sets 3 on a cut */
+    /* 0x434 */ be<f32> mDriftZ;  /* was m318: control1 / cut_control 020B88C4 / start_control1 (in daBmdhand_Execute 020B8D9C) add it to every chain segment as forward drift and ease it to 50 / 30 / 5; hand_move sets 40 on a cut */
+    /* 0x438 */ be<f32> mSwayAmp;  /* was m31C: control1 / cut_control 020B88C4 multiply the chain sway (sin / cos of mFrameCounter) by it; hand_move (in daBmdhand_Execute 020B8D9C) sets it and eases it to 70 / 200 */
+    /* 0x43C */ be<f32> mHandScale;  /* was m320: hand_mtx_set 020B8724 scales the hand model by it; daBmdhand_Draw 020B8650 draws the hand only above 0.01; hand_move (in daBmdhand_Execute 020B8D9C) eases it to 1 or 0 */
+    /* 0x440 */ hand_s mChain[20];  /* was m324: control1 / control2 / cut_control 020B88C4 (in daBmdhand_Execute 020B8D9C) move the 20 chain points from the root to the hand; hand_move copies them to mLineMat; control3 020B882C sets their widths */
     /* 0x670 */ mDoExt_3DlineMat1_c mLineMat;
     /* 0x7F8 */ dCcD_Stts mStts;
-    /* 0x834 */ dCcD_Sph m5CC;
-    /* 0x960 */ dCcD_Sph m6F8;
-    /* 0xA8C */ be<u8> m824;
+    /* 0x834 */ dCcD_Sph mEyeSph;  /* was m5CC: daBmdhand_Create 020BAD4C sets it up (r 110 / 90); hand_move (in daBmdhand_Execute 020B8D9C) centres it on chain point 6 (= eyePos); a hit cuts the tentacle */
+    /* 0x960 */ dCcD_Sph mChainSph;  /* was m6F8: daBmdhand_Create 020BAD4C sets it up; hand_move (in daBmdhand_Execute 020B8D9C) centres it on chain point 3 + 4 * (mFrameCounter & 3); a hit cuts the tentacle */
+    /* 0xA8C */ be<u8> mHioOwner;  /* was m824: daBmdhand_Create 020BAD4C sets 1 when it created the l_HIO child; daBmdhand_Delete 020BABAC deletes the HIO child only then (same use as bgn_class mHioOwner) */
     /* 0xA8D */ u8 _A8D[3];
 };
-WWHD_OFFSET(bmdhand_class, m324, 0x440);
+WWHD_OFFSET(bmdhand_class, mChain, 0x440);
 WWHD_OFFSET(bmdhand_class, mLineMat, 0x670);
 WWHD_OFFSET(bmdhand_class, mStts, 0x7F8);
-WWHD_OFFSET(bmdhand_class, m6F8, 0x960);
-WWHD_OFFSET(bmdhand_class, m824, 0xA8C);
+WWHD_OFFSET(bmdhand_class, mChainSph, 0x960);
+WWHD_OFFSET(bmdhand_class, mHioOwner, 0xA8C);
 
 /* bmd_class (Kalle Demos), the fields the tentacles use (HD offsets) */
 struct BmdhandBossView {
@@ -62,18 +62,18 @@ struct BmdhandBossView {
     /* 0x32E */ u8 _32E[0x3D0 - 0x32E];
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpBodyMorf;
     /* 0x3D4 */ u8 _3D4[0x424 - 0x3D4];
-    /* 0x424 */ be<s16> m302; /* GameCube 0x302 */
+    /* 0x424 */ be<s16> mSubMode; /* GameCube 0x302 */
     /* 0x426 */ u8 _426[4];
-    /* 0x42A */ be<s16> m308_0; /* GameCube m308[0] */
+    /* 0x42A */ be<s16> mTimers0; /* GameCube mTimers[0] */
     /* 0x42C */ u8 _42C[0x434 - 0x42C];
-    /* 0x434 */ be<s16> m312;
+    /* 0x434 */ be<s16> mVineCutTimer;
     /* 0x436 */ u8 _436[0x448 - 0x436];
-    /* 0x448 */ be<f32> m328;
+    /* 0x448 */ be<f32> mGroundY;
     /* 0x44C */ u8 _44C[0x451 - 0x44C];
-    /* 0x451 */ be<s8> m331;
-    /* 0x452 */ be<s8> m332;
+    /* 0x451 */ be<s8> mVineCount;
+    /* 0x452 */ be<s8> mVineCommand;
 };
-WWHD_OFFSET(BmdhandBossView, m332, 0x452);
+WWHD_OFFSET(BmdhandBossView, mVineCommand, 0x452);
 
 struct daBmdhand_HIO_c {
     /* 0x00 */ be<s8> mNo;

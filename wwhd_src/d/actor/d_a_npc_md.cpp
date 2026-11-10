@@ -442,14 +442,14 @@ BOOL daNpc_Md_c::demoFlyNpcAction(void* arg) {
         current.angle.y = 0x5700;
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus == ACTION_ENDING) {
-        emitterDelete(m0508);
+        emitterDelete(mEmitters);
     } else {
         md_attnFlags(this) = 0;
         if (mActionStatus == ACTION_ONGOING_1) {
             if (mJntCtrl.mbTrn != 0) { /* trnChk() */
-                cLib_addCalcAngleS2(&m3110, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
+                cLib_addCalcAngleS2(&mLookMaxVel, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
             } else {
-                m3110 = 0;
+                mLookMaxVel = 0;
                 setAnm(0x18);
                 mActionStatus = mActionStatus + 1;
             }
@@ -462,7 +462,7 @@ BOOL daNpc_Md_c::demoFlyNpcAction(void* arg) {
             eye.x = x;
             eye.y = y;
             eye.z = z;
-            md_lookAtTarget(&mJntCtrl, &shape_angle.y, &lookTarget, &eye, current.angle.y, m3110, false);
+            md_lookAtTarget(&mJntCtrl, &shape_angle.y, &lookTarget, &eye, current.angle.y, mLookMaxVel, false);
         } else if (mActionStatus == ACTION_ONGOING_2) {
             if (m312A != 0) {
                 setAnm(0x19);
@@ -886,10 +886,10 @@ BOOL daNpc_Md_c::waitPlayerAction(void* arg) {
         setAnm(0);
         speedF = 0.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
-        m311A = 0;
-        m310C = 0.0f;
-        m3114 = 0;
-        m3116 = 0;
+        mStickAngY = 0;
+        mStickValue = 0.0f;
+        mWaistRotX = 0;
+        mWaistRotY = 0;
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING && !flyCheck()) {
         Attention* attention = reinterpret_cast<Attention*>(dComIfGp_getAttention()); /* dComIfGp_getAttention() */
@@ -1082,7 +1082,7 @@ BOOL daNpc_Md_c::flyPlayerAction(void* arg) {
         m_flying = 1; /* onFlying() */
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus == ACTION_ENDING) {
-        emitterDelete(m0508);
+        emitterDelete(mEmitters);
         deleteHane03Emitter();
         m_flying = 0; /* offFlying() */
     } else {
@@ -1116,7 +1116,7 @@ BOOL daNpc_Md_c::flyPlayerAction(void* arg) {
             }
             if (*flyingTimer == 0 || m3144 == 0 || md_trigB(0)) {
                 if (checkStatus(daMdStts_UNK1)) {
-                    m3135 = m3135 | 1; /* setBitEffectStatus(1) */
+                    mEffectStatus = mEffectStatus | 1; /* setBitEffectStatus(1) */
                 }
                 MD_SET_PLAYER_ACTION(action_jumpPlayer);
                 if (*flyingTimer == 0) {
@@ -1224,7 +1224,7 @@ BOOL daNpc_Md_c::landPlayerAction(void* arg) {
         s32 reverb = dComIfGp_getReverb(current.roomNo);
         mDoAud_monsSeStart_md(JA_SE_CV_MD_LANDING /* JA_SE_CV_MD_LANDING */, &current.pos, md_procId(this), reverb);
         if (checkStatus(daMdStts_UNK1)) {
-            m3135 = m3135 | 1; /* setBitEffectStatus(1) */
+            mEffectStatus = mEffectStatus | 1; /* setBitEffectStatus(1) */
         }
         clearStatus(daMdStts_UNK1 | daMdStts_UNK2 | daMdStts_UNK4 | daMdStts_FLY);
         setAnm(0xe);
@@ -1278,13 +1278,13 @@ BOOL daNpc_Md_c::mkamaePlayerAction(void* arg) {
             } else {
                 Attention* attention = reinterpret_cast<Attention*>(dComIfGp_getAttention()); /* dComIfGp_getAttention() */
                 if (!(md_stickValue(0) < l_HIO().m104) || md_attention_Lockon(attention)) {
-                    m311A = getStickAngY(FALSE);
-                    m310C = md_stickValue(0);
+                    mStickAngY = getStickAngY(FALSE);
+                    mStickValue = md_stickValue(0);
                 } else {
-                    m311A = 0;
-                    m310C = 0.0f;
+                    mStickAngY = 0;
+                    mStickValue = 0.0f;
                 }
-                lookBackWaist(m311A, m310C);
+                lookBackWaist(mStickAngY, mStickValue);
             }
         } else if (m312A != 0) {
             MD_SET_PLAYER_ACTION(action_waitPlayer);

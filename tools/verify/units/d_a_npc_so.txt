@@ -54,10 +54,10 @@ arg 022E48B4 r3 0,0x40000000          # HIO ctor: allocate or construct in place
 ret 0273AD10 0,0x57000000             # operator new
 arg 022E4BB8 r3 0,0x40000000
 arg 022E4B84 r3 0,0x40000000
-field 022DF060 r3+0x7E4 i32 0,1,15            # m6CC (0xF: Triforce chart scale)
-field 022DF6EC r3+0x7E4 i32 0,1,5,15          # m6CC
-field 022DF6EC r3+0xBF4 f32 0,0,100           # mA7C (0: search the tag)
-field 022DF6EC r3+0xD53 u8 0,1                # mBDB
+field 022DF060 r3+0x7E4 i32 0,1,15            # mMode (0xF: Triforce chart scale)
+field 022DF6EC r3+0x7E4 i32 0,1,5,15          # mMode
+field 022DF6EC r3+0xBF4 f32 0,0,100           # mJumpRange (0: search the tag)
+field 022DF6EC r3+0xD53 u8 0,1                # mNoPosMove
 ret 0211D2F8 0,1                              # cLib_calcTimer<int>
 arg 022DE004 r4 0,1,2                         # XyCheckCB button
 field 022DE004 54005BBB u8 0x82,0x83,0x81     # select item X
@@ -78,23 +78,23 @@ field 022E160C 40400010 u32 0x4000,0,0x4001   # hit object's AtType
 ret 02689174 0,1                      # HD map: isSaveArriveGrid
 ret 025B7E00 8,7                      # getTriforceNum
 field 022E179C r4+0 u32 0x32D5,0x633,0x32CA,0x32CB,0x32CC,0x32CD,0x32CE,0x32CF,0x32D0,0x32D1,0x32D2,0x32D3,0x32D4,0x32D6,0x32D7,0x32D8,0x32D9,0x32DA,0x32DB,0x32DC,0x32DD,0x32DE,0x32DF,0x32E0,0x32E1,0x32E2,0x1234
-field 022E179C r3+0x7E8 i16 0x32D5     # m6D0
-field 022E179C r3+0xD50 u8 0,1         # mBD8
+field 022E179C r3+0x7E8 i16 0x32D5     # mParamMsgNo
+field 022E179C r3+0xD50 u8 0,1         # mMapopenDone
 field 022E179C r3+0x326 i8 0xD,0xC     # room
 field 022E179C 54005134 u32 0x73656100,0x73656101  # start stage "sea"
 field 022E179C 104686FB u8 0,1         # l_HIO m2F
 field 022E179C 104686FC u8 0,1         # l_HIO m30
-field 022E179C r3+0xD26 u8 0,1         # mBAE
+field 022E179C r3+0xD26 u8 0,1         # mMiniGameTagFound
 field 022E179C 101F84DC u32 0x41000000 # save
 field 022E179C 41000068 u8 0xFF,0      # bow slot
 field 022E179C 54005CF0 u32 0,1        # timer
 field 022E179C 101F4B5C u32 0x42000000 # message manager
 field 022E179C 42000948 u32 0,1        # select number
-field 022E1CA8 r3+0xC84 u8 0,1         # mB0C
+field 022E1CA8 r3+0xC84 u8 0,1         # mBowEventDone
 field 022E1CA8 104686FA u8 0,1         # l_HIO m2E
-field 022E1CA8 r3+0xCF4 i32 0,1,2,9,10,11  # mB7C
-field 022E1CA8 r3+0xD51 u8 0,1         # mBD9
-field 022E1CA8 r3+0xD50 u8 0,1         # mBD8
+field 022E1CA8 r3+0xCF4 i32 0,1,2,9,10,11  # mMiniGameHitCount
+field 022E1CA8 r3+0xD51 u8 0,1         # mGetRupeeDone
+field 022E1CA8 r3+0xD50 u8 0,1         # mMapopenDone
 field 022E1CA8 r3+0x326 i8 0xD,0xC
 field 022E1CA8 54005134 u32 0x73656100,0x73656101
 field 022E140C 1047BD5A i16 0,1        # REG12_S(9)
@@ -116,19 +116,19 @@ ret 0200F764 0,1                     # cLib_chasePosXZ
 callee 028E8F64 r4=12 r5=out12      # PSMTXMultVec(m, in, out)
 callee 028E8D88 r3=12 r4=12 r5=out12 # PSVECAdd(a, b, out)
 callee 02018D40 r4=12                # cM3dGSph::SetC(center)
-field 022E3484 r3+0xCEC i32 0,1,2,3,4,5,6,7,7,7,7,8,-1   # mB74 (the mini-game step)
-field 022E3484 r3+0xCF0 i32 0,8,9,10,11            # mB78 (arrows shot)
-field 022E3484 r3+0xCF8 i32 0,8,9,10               # mB80 (jumps)
-field 022E3484 r3+0xCF4 i32 0,0,9,10,11              # mB7C (hits)
+field 022E3484 r3+0xCEC i32 0,1,2,3,4,5,6,7,7,7,7,8,-1   # mMiniGameStep (the mini-game step)
+field 022E3484 r3+0xCF0 i32 0,8,9,10,11            # mMiniGameShotCount (arrows shot)
+field 022E3484 r3+0xCF8 i32 0,8,9,10               # mMiniGameJumpCount (jumps)
+field 022E3484 r3+0xCF4 i32 0,0,9,10,11              # mMiniGameHitCount (hits)
 field 022E3484 r3+0xCFC u8 0,1                     # mB84
-field 022E3484 r3+0x7F0 i32 0,1                    # m6D8
+field 022E3484 r3+0x7F0 i32 0,1                    # mTgHitTimer
 ret 022E160C 0,1                                   # checkTgHit
 callee 0200FCD8 r3=12 r4=out12      # MtxPosition(in, out)
 callee 024832E0 r4=12                # daShip_c::initStartPos(pos, angle)
 fret 025871F8 0,50,100,-50             # dLib_getWaterY: equal to the steered heights
 field 022E3484 r3+0x318 f32 0,100,150  # current.pos.y (landing / sphere edges)
 field 022E20EC r3+0x318 f32 0,100      # current.pos.y (landing edge)
-field 022E2C5C r3+0xD34 i32 0,1,2,3    # mBBC (the map-open jump step)
+field 022E2C5C r3+0xD34 i32 0,1,2,3    # mMapopenStep (the map-open jump step)
 stable 40000318 4                      # current.pos.y: not clobbered (landing edge y == water)
 field 022E2830 1047BCEC f32 0,0,5      # REG12_F(7)
 

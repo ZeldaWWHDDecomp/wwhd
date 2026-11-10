@@ -12,20 +12,20 @@ static inline f32 REG8_F(int i) { return REG_F(8, i); }
 struct nzg_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhs;
     /* 0x3D0 */ gptr<J3DModel> mpModel;
-    /* 0x3D4 */ be<u8> m2B8;
-    /* 0x3D5 */ be<u8> m2B9;
-    /* 0x3D6 */ be<u8> m2BA;
-    /* 0x3D7 */ be<u8> m2BB;
+    /* 0x3D4 */ be<u8> mSpawnRangePrm;  /* was m2B8: daNZG_Create 0231175C: param bits 0-7; mSpawnRange = it * 10 */
+    /* 0x3D5 */ be<u8> mMaxRatsPrm;  /* was m2B9: daNZG_Create 0231175C: param bits 8-15; mMaxRats = it (0 -> 1) */
+    /* 0x3D6 */ be<u8> mSpawnMode;  /* was m2BA: daNZG_Create 0231175C: param bits 16-23 (> 2 -> 0); mode 0 also creates an NpcNz child; nzg_00_move (in daNZG_Execute 02311240) gives the rat param 0x100 (no player-range wait) always for 1, by 50 % for 2 */
+    /* 0x3D7 */ be<u8> mBlocked;  /* was m2BB: nzg_00_move (in daNZG_Execute 02311240) sets 1 when another actor (not a rat, bomb, item or bait) touches the hole cylinder; daNZG_Execute switches on it; nzg_01_move clears it once that actor is 80 away */
     /* 0x3D8 */ u8 m2BC[2];
-    /* 0x3DA */ be<s16> m2BE;
-    /* 0x3DC */ be<s16> m2C0;
-    /* 0x3DE */ be<s16> m2C2[5];
-    /* 0x3E8 */ be<f32> m2CC;
-    /* 0x3EC */ be<f32> m2D0;
-    /* 0x3F0 */ be<u32> m2D4;
+    /* 0x3DA */ be<s16> mRatCount;  /* was m2BE: nzg_00_move (in daNZG_Execute 02311240) adds 1 per rat created (fopAcM_createChild fpcNm_NZ_e) and creates no more once it reaches mMaxRats */
+    /* 0x3DC */ be<s16> mMaxRats;  /* was m2C0: daNZG_Create 0231175C: mMaxRatsPrm or 1; nzg_00_move (in daNZG_Execute 02311240) stops creating rats at it */
+    /* 0x3DE */ be<s16> mTimers[5];  /* was m2C2: daNZG_Execute 02311240 counts all 5 down; nzg_00_move (in daNZG_Execute) sets [0] to (child id & 3) * 10 + 20 after a rat and waits for it */
+    /* 0x3E8 */ be<f32> mSpawnRange;  /* was m2CC: daNZG_Create 0231175C: mSpawnRangePrm * 10; nzg_00_move (in daNZG_Execute 02311240) creates rats without param 0x100 only while the player is within it * 0.5 */
+    /* 0x3EC */ be<f32> mNoSpawnRange;  /* was m2D0: daNZG_Execute 02311240 sets 400 each frame; nzg_00_move (in daNZG_Execute) creates a rat only while the player is farther than it * 0.5 */
+    /* 0x3F0 */ be<u32> mBlockerId;  /* was m2D4: nzg_00_move (in daNZG_Execute 02311240) stores the id of the actor on the hole; nzg_01_move (in daNZG_Execute) checks its distance and resets it to fpcM_ERROR_PROCESS_ID_e */
     /* 0x3F4 */ gptr<dPath> mpPath;
     /* 0x3F8 */ u8 m2DC[0x405 - 0x3F8];
-    /* 0x405 */ be<u8> m2E9;
+    /* 0x405 */ be<u8> mPathNo;  /* was m2E9: daNZG_Create 0231175C: param bits 24-31; dPath_GetRoomPath(it, room) into mpPath when it is not 0xFF */
     /* 0x406 */ u8 _406[2];
     /* 0x408 */ dCcD_Stts mStts;
     /* 0x444 */ dCcD_Cyl mCyl;

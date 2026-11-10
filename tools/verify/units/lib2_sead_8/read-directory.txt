@@ -1,0 +1,178 @@
+# verify: -only 02743B1C
+# SEAD#8 companion: CafeFileDevice::doReadDirectory on a fixture device, handle and entry array.
+src wwhd_src/sead/FileDevice.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+stackfill periodic
+# The empty text object points at an empty string.
+field * 104A0CD8 u32 0x5E000A00
+fieldstr * 5E000A00 16 ""
+# Device list of the manager: a pinned manager whose list holds up to three devices (stable links).
+arg! 02741B38 r3 0x5E000000
+field 02741B38 5E000014 u32 0x5E000010,0x5E001000
+field 02741B38 5E001004 u32 0x5E000010,0x5E002000
+field 02741B38 5E002004 u32 0x5E000010,0x5E003000
+field 02741B38 5E003004 u32 0x5E000010
+field 02741B38 5E001008 u32 0x5E001000
+field 02741B38 5E002008 u32 0x5E002000
+field 02741B38 5E003008 u32 0x5E003000
+field 02741B38 5E001020 u32 0x5E00102C
+field 02741B38 5E002020 u32 0x5E00202C
+field 02741B38 5E003020 u32 0x5E00302C,0x5E100000
+fieldstr 02741B38 5E00102C 32 "main","content","save",""
+fieldstr 02741B38 5E00202C 32 "main","content","cont",""
+fieldstr 02741B38 5E00302C 32 "main","host","content"
+arg! 02741B38 r4 0x5E000800
+field 02741B38 5E000800 u32 0x5E000900,0x5E000900,0x5E000900,0x5E00202C,0x5E100004
+fill 02741B38 5E100000 0x40100 0x41
+fieldstr 02741B38 5E000900 32 "content","main","conten","",@keep
+stable 5E000010 0x10
+stable 5E001000 0x8
+stable 5E002000 0x8
+stable 5E003000 0x8
+# Destructors: with and without the manager singleton / as the registered disposer.
+field 02740A38 101F8B08 u32 0,0x5E000000
+arg 02741F44 r3 0,0x5E004000
+field 02741F44 101F8B0C u32 0x5E004000,0
+# Chunked reads and directory reads through the Cafe device vtable, so the per-call read counts
+# (written by the mocked virtual) and the match test can be steered.
+field 02740C9C r3+0x50 u32 0x10144080
+field 02740C9C r5+0x38 u32 0,1,4,16
+arg 02740C9C r7 0,1,3,4,8,16,64
+ret 0274120C 0,1,1,1
+ret 027434E0 0,1,1,1
+mockfield 027434E0 r4+0 u32 0,1,4,16,0x100
+field 02741144 r3+0x50 u32 0x10144080
+arg 02741144 r7 0,1,2,4
+mockfield 02743B1C r4+0 u32 0,1,2,5,100
+# Default load: caller buffer or not, buffer sizes against the file size, alignments, each step failing.
+field 02741220 r4+8 u32 0,0x5E400000
+field 02741220 r4+0xC u32 0,0x10,0x40,0x1000
+field 02741220 r4+0x14 s32 -0x80000000,-0x80,-4,0,4,0x40,0x80
+ret 02740B24 0,0x5E000000
+mockfield 02740B24 r4+0x14 u32 0,0x5E000000
+ret 02740F7C 0,1,1,1
+mockfield 02740F7C r4+0 u32 0,1,0x10,0x40,0x41,0x1000,0x2000
+ret 02740C9C 0,1,1
+ret 02740BE0 0,1,1
+# Constructors: NULL object (allocation), a member at address 0, allocation failures, no heap manager.
+arg 02741900 r3 0,0xFFFFFFF0,0x5E500000
+arg 02742110 r3 0,0xFFFFFFE0,0x5E500000
+arg 02743128 r3 0,0xFFFFFFE0,0x5E500000
+# zero-page rule (2026-11-10, 02743128 LOW clean 244/1000, LOST blocks 8/9): the drive
+# name and mount point SafeTexts {mText, vtable} the constructor copies and terminates are fixtures (generated pointers
+# near 0 faulted the original at their loads), with the image's sCafeTextVtable / sCafePathVtable.
+arg! 02743128 r4 0x5EF30000
+arg! 02743128 r5 0x5EF30010
+field 02743128 0x5EF30000 u32 0x5EF30100
+field 02743128 0x5EF30004 u32 0x10143EA0,0x10143EE8
+field 02743128 0x5EF30010 u32 0x5EF30200
+field 02743128 0x5EF30014 u32 0x10143EA0,0x10143EE8
+stable 0x5EF30000 0x18
+ret 0273AD10 0,0x5E500000
+ret 0273B050 0,0x5E700000
+field 02741900 101F8B4C u32 0,0x5E600000
+# Mount: empty, equal and long (past the length limit) drive names.
+arg! 02741770 r5 0x5E000800
+field 02741770 5E000800 u32 0x5E000900,0x5E000A00,0x5E100000
+field 02741770 104A0CD8 u32 0x5E000A00,0x5E100004
+fieldstr 02741770 5E000900 32 "","main","content"
+fill 02741770 5E100000 0x40100 0x41
+field 02741770 r4+0x28 s32 0,1,4,32
+field 02741770 r4+0xC u32 0,0x5E000010
+# Path helpers: pinned output buffer and path texts with drive, scheme, extension and directory parts.
+arg! 027423A4 r3 0x5E000200
+arg! 027426B0 r3 0x5E000200
+arg! 02742B8C r3 0x5E000200
+field 027423A4 5E000200 u32 0x5E000300
+field 027426B0 5E000200 u32 0x5E000300
+field 02742B8C 5E000200 u32 0x5E000300,0x5E000300,0x5E100000
+field 027423A4 5E000208 s32 -1,0,1,2,3,8,32,256
+field 027426B0 5E000208 s32 -1,0,1,2,3,8,32,256
+field 02742B8C 5E000208 s32 -1,0,1,2,3,8,32,256
+fieldstr 027423A4 5E000300 16 "","abc"
+fieldstr 027426B0 5E000300 16 "","abc"
+fieldstr 02742B8C 5E000300 16 "","abcdefgh"
+arg! 027423A4 r4 0x5E000400
+arg! 027426B0 r4 0x5E000400
+arg! 02742B8C r4 0x5E000400
+field 027423A4 5E000400 u32 0x5E000500,0x5E000500,0x5E000500,0x5E100000
+field 027426B0 5E000400 u32 0x5E000500,0x5E000500,0x5E000500,0x5E100000
+field 02742B8C 5E000400 u32 0x5E000500,0x5E000500,0x5E000500,0x5E100000
+fieldstr 027423A4 5E000500 64 "content:/a","content://a/b","main:","a:b:c",":x","abc","","x:",@keep
+fieldstr 027426B0 5E000500 64 "a/b.txt","a.b/c","file.","noext",".x","a.b.c","dir.d/","a/.b","",@keep
+fieldstr 02742B8C 5E000500 64 "content://a/b","://","main://x","a:/b","ab://","x","",@keep
+fill 027423A4 5E100000 0x40100 0x41
+fill 027426B0 5E100000 0x40100 0x41
+fill 02742B8C 5E100000 0x40100 0x41
+stable 5E000500 0x40
+# Cafe stat: found, not found, other error.
+ret C0008DF0 0,0xFFFFFFFA,0xFFFFFFFF
+# Cafe device construction with a drive name past the length limit.
+arg 02743128 r4 0x5E000800
+field 02743128 5E000800 u32 0x5E000900,0x5E000900,0x5E100000
+fieldstr 02743128 5E000900 16 "content","",@keep
+fill 02743128 5E100000 0x40100 0x41
+# The manager singleton is zero in the image: give it both states where it is read.
+field 02741A20 101F8B08 u32 0,0x5E000000
+field 02741F44 101F8B08 u32 0,0x5E000000
+field 027432DC 101F8B08 u32 0,0x5E000000
+# Stack objects passed to callees are compared in full: the default load's handle and read count,
+# the manager's drive-name and path buffers, the forwarded load request, the FS state-change
+# parameters and the content device's name texts.
+callee 02740B24 r4=60 r5=268 r6=0 r7=0
+callee 02740F7C r4=4 r5=60
+callee 02740C9C r4=4 r5=60 r6=0 r7=0
+callee 02740BE0 r4=60
+callee 027423A4 r3=44
+callee 02741B38 r4=44
+callee 02742B8C r3=268
+callee 02741C24 r5=268
+callee 02740AE8 r4=40
+callee C0008F58 r4=12
+callee 02743128 r4=8 r5=8
+# Arguments the device entry points pass on to virtual calls are compared as registers (the live-in
+# analysis cannot see through a virtual call); count outputs on the stack are compared too.
+callee 02740E08 r4=4 r6=0 r7=0
+callee 02740EB8 r4=0 r5=0 r6=0
+callee 02740FB0 r4=0 r5=0
+callee 02740FDC r4=0 r5=0
+callee 02741088 r4=0
+callee 02741144 r4=4 r5=0 r6=0 r7=0
+# The text constructors' termination hooks get the temporary text object.
+callee 0274310C r3=8
+callee 027445FC r3=8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5
+
+# zero-page rule (2026-11-10, LOW clean 270/1000, LOST block 16): doReadDirectory
+# 02743B1C reads the FS handle through getCafeDirectoryHandle 02743970 (-> FileDevice::getHandleBackend 02741428: the
+# address of the handle's inline mBackend storage) and copies each name into entries[i].mName unchecked; as a generic
+# mock the getter answered near-0 values (load 00000000) and generated entry pointers faulted too. Both getters are the
+# image's one-line accessors and run for real on a fixture handle 0x5EF40000; the device is a fixture 0x5EF60000; the
+# entries are a fixture array of four DirectoryEntry (0x110 bytes each: FixedSafeText<256> {mText -> its storage,
+# sCafeTextVtable 10143EA0, capacity 256}, flag) and count is 0..4.
+real 02743970 02741428
+arg! 02743B1C r3 0x5EF60000
+arg! 02743B1C r5 0x5EF40000
+arg! 02743B1C r6 0x5EF50000
+arg! 02743B1C r7 0,1,2,3,4
+field 02743B1C 0x5EF50000 u32 0x5EF5000C
+field 02743B1C 0x5EF50004 u32 0x10143EA0
+field 02743B1C 0x5EF50008 s32 256
+stable 0x5EF50000 0xC
+field 02743B1C 0x5EF50110 u32 0x5EF5011C
+field 02743B1C 0x5EF50114 u32 0x10143EA0
+field 02743B1C 0x5EF50118 s32 256
+stable 0x5EF50110 0xC
+field 02743B1C 0x5EF50220 u32 0x5EF5022C
+field 02743B1C 0x5EF50224 u32 0x10143EA0
+field 02743B1C 0x5EF50228 s32 256
+stable 0x5EF50220 0xC
+field 02743B1C 0x5EF50330 u32 0x5EF5033C
+field 02743B1C 0x5EF50334 u32 0x10143EA0
+field 02743B1C 0x5EF50338 s32 256
+stable 0x5EF50330 0xC
+# readCount (r4): NULL (tested by the original) or a fixture word.
+arg! 02743B1C r4 0,0x5EF70000

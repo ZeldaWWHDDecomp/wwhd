@@ -4,6 +4,15 @@
 src wwhd_src/agl/FilterAaParameters.cpp
 # Unchanged canonical data-only owner; approved by root for shared registry linkage.
 src wwhd_src/sead/HeapRegistryStatics.cpp
+# Producer setups (2026-11-10): first fault analysed: setup 02779BFC (ctor) -> ParameterObject::create 027A84B8 reads
+# the shared empty SafeString 104A0CD8 (vtable + text), whose only producer is the startup static initialiser 02759B40
+# (section 2 of shared/agl_world.txt); it never ran here, so +0x14 of a NULL vtable was loaded. The startup producer runs
+# as a setup (and stays stable, as in the world). Not rebuilt on the whole world: its global reals (0273B0D4, 02755FEC,
+# nestedret 02756140 ...) replace this spec's per-function heap fixtures and lose rows (n20: 027796EC 10/16, 0277A488
+# 20/26 vs 16/16, 22/26); kept per function.
+setup * 02759B40
+real 02759B40
+stable 104A0CD8 0x10
 stackfill
 # Complete nonwrapping prefix/value objects; null only at entries that accept it.
 arg! * r3 0x56000000

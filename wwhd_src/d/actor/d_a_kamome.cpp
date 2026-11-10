@@ -63,7 +63,7 @@ static void* s_a_d_sub(void* ac1, void* ac2) {
     // HD: also requires the bait's mState == 1
     if (esa_check_count < 100 && fopAc_IsActor(ac1) && ac1 != nullptr && fpcM_GetName(ac1) == fpcNm_ESA_e) {
         esa_class* esa = (esa_class*)ac1;
-        if (esa->field_0x298 == 0 && esa->mState == 1) {
+        if (esa->mTaken == 0 && esa->mState == 1) {
             cXyz sp14;
             cXyz sp08;
 
@@ -98,7 +98,7 @@ static fopAc_ac_c* search_esa(kamome_class* i_this) {
             f32 x = esa->actor.current.pos.x - i_this->actor.current.pos.x;
             f32 z = esa->actor.current.pos.z - i_this->actor.current.pos.z;
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) < fVar3) {
-                esa->field_0x298 = 1;
+                esa->mTaken = 1;
                 return &esa->actor;
             }
 
@@ -310,7 +310,7 @@ static BOOL daKamome_IsDelete(kamome_class*) {
 static BOOL daKamome_Delete(kamome_class* i_this) {
 
     dComIfG_resDelete(&i_this->mPhase, "Kamome");
-    if (i_this->m688 != 0) {
+    if (i_this->mHioSet != 0) {
         s8 no = l_kamomeHIO.mNo;
         hio_set = false;
         mDoHIO_deleteChild(no);
@@ -421,12 +421,12 @@ static cPhs_State daKamome_Create(fopAc_ac_c* a_this) {
 
         if (!hio_set) {
             l_kamomeHIO.mNo = mDoHIO_createChild("J", &l_kamomeHIO);
-            i_this->m688 = 1;
+            i_this->mHioSet = 1;
             hio_set = true;
         }
 
         if ((i_this->mType != 6) && (i_this->mType == 7)) {
-            i_this->m2B4 = (s16)gabi::ftoi(cM_rndF(10000.0f));
+            i_this->mHeisouTimer = (s16)gabi::ftoi(cM_rndF(10000.0f));
             fopAcM_setStageLayer(a_this);
             a_this->current.roomNo = (s8)0xff; /* fopAcM_SetRoomNo */
         }

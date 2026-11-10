@@ -123,14 +123,14 @@ void daObjIceisland_c::CreateInit() {
         mBrkAnm.mFrameCtrl.mFrame = (f32)(s16)mBrkAnm.mFrameCtrl.mEnd;
         IceSave *save = iceSave();
         if ((s16)save->mStartPoint == 2 && (s8)current.roomNo == (s8)save->mRestartRoomNo)
-            field_0x39C = WaitFailure;
+            mState = WaitFailure;
         else
-            field_0x39C = Melted;
-        field_0x396 = 0;
+            mState = Melted;
+        mWindSeVolume = 0;
     } else {
         daObjIceisland_particle_set();
-        field_0x39C = Frozen;
-        field_0x396 = 100;
+        mState = Frozen;
+        mWindSeVolume = 100;
     }
     auto *p = icePlay();
     mMeltIceEventIdx = iceEventIdx(&p->mEventManager, STR(0x1002B280), 255);
@@ -184,7 +184,7 @@ BOOL daObjIceisland_c::_draw() {
 void daObjIceisland_c::daObjIceisland_freeze_main() {
     if (isSwitch(this)) {
         order(this, mMeltIceEventIdx);
-        field_0x39C = WaitMelt;
+        mState = WaitMelt;
     }
 }
 static void retire(IceEmitter *emitter) {
@@ -206,7 +206,7 @@ void daObjIceisland_c::daObjIceisland_melt_demo_wait() {
             retire(emitter);
             mEmitter2 = 0;
         }
-        field_0x39C = MeltDemo;
+        mState = MeltDemo;
         mBrkAnm.mFrameCtrl.mRate = 1.0f;
     } else
         order(this, mMeltIceEventIdx);
@@ -217,7 +217,7 @@ static void finishDemo(Actor *a, be<s16> *eventIndex, u32 state) {
     auto *p = icePlay();
     if (iceEventEnd(&p->mEventManager, event)) {
         dComIfGp_event_reset();
-        a->field_0x39C = state;
+        a->mState = state;
     }
 }
 /* 0235F574 */
@@ -228,14 +228,14 @@ void daObjIceisland_c::daObjIceisland_melt_demo() {
 void daObjIceisland_c::daObjIceisland_melt_main() {
     if (!isSwitch(this)) {
         order(this, mFreezeIceEventIdx);
-        field_0x39C = WaitFreeze;
+        mState = WaitFreeze;
     }
 }
 /* 0235F658 */
 void daObjIceisland_c::daObjIceisland_freeze_demo_wait() {
     if (eventInfo.checkCommandDemoAccrpt()) {
         daObjIceisland_particle_set();
-        field_0x39C = FreezeDemo;
+        mState = FreezeDemo;
         mBrkAnm.mFrameCtrl.mRate = -1.0f;
     } else
         order(this, mFreezeIceEventIdx);
@@ -248,7 +248,7 @@ void daObjIceisland_c::daObjIceisland_freeze_demo() {
 void daObjIceisland_c::daObjIceisland_fail_demo_wait() {
     if (!isSwitch(this)) {
         daObjIceisland_particle_set();
-        field_0x39C = FailureDemo;
+        mState = FailureDemo;
         mBrkAnm.mFrameCtrl.mRate = 1.0f;
     }
 }
@@ -278,7 +278,7 @@ static f32 toLinear(u32 channel) {
 }
 /* 0235F8F0 */
 BOOL daObjIceisland_c::_execute() {
-    switch ((u32)field_0x39C) {
+    switch ((u32)mState) {
     case Frozen:
         daObjIceisland_freeze_main();
         break;
@@ -309,15 +309,15 @@ BOOL daObjIceisland_c::_execute() {
     set_mtx();
     BOOL active = isSwitch(this);
     s8 room = current.roomNo;
-    s16 volume = field_0x396;
+    s16 volume = mWindSeVolume;
     if (active) {
         if (volume > 0) {
             volume = (s16)(volume - 1);
-            field_0x396 = volume;
+            mWindSeVolume = volume;
         }
     } else if (volume < 100) {
         volume = (s16)(volume + 1);
-        field_0x396 = volume;
+        mWindSeVolume = volume;
     }
     s32 reverb = dComIfGp_getReverb(room);
     mDoAud_seStart(0x1072, &current.pos, volume, reverb);

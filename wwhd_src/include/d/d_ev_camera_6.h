@@ -49,9 +49,9 @@ struct dCamera_c {
     /* 0x000 */ u8 mPadding0[0x3C];
     /* 0x03C */ CameraEventViewHD mViewCache;
     /* 0x064 */ u8 mPadding64[0x100 - 0x64];
-    /* 0x100 */ be<u8> m100, m101, m102;
+    /* 0x100 */ be<u8> mStyleSettle0, mStyleSettle1, mStyleSettle2;
     /* 0x103 */ u8 mPadding103[0x11C - 0x103];
-    /* 0x11C */ be<u32> m11C;
+    /* 0x11C */ be<u32> mCurStyleTimer;
     /* 0x120 */ u8 mPadding120[8];
     /* 0x128 */ gptr<fopAc_ac_c> mpPlayerActor;
     /* 0x12C */ u8 mPadding12C[0x37C - 0x12C];
@@ -59,19 +59,19 @@ struct dCamera_c {
     /* 0x3CC */ u8 mPadding3CC[0x510 - 0x3CC];
     /* 0x510 */ be<u32> mEventFlags;
     /* 0x514 */ u8 mPadding514[0x8DA - 0x514];
-    /* 0x8DA */ be<u8> m786;
+    /* 0x8DA */ be<u8> mInSeaCenter;
     /* 0x8DB */ u8 mPadding8DB[5];
 };
 WWHD_OFFSET(dCamera_c, mViewCache.mCenter, 0x44);
 WWHD_OFFSET(dCamera_c, mViewCache.mEye, 0x50);
 WWHD_OFFSET(dCamera_c, mViewCache.mBank, 0x5C);
 WWHD_OFFSET(dCamera_c, mViewCache.mFovy, 0x60);
-WWHD_OFFSET(dCamera_c, m100, 0x100);
-WWHD_OFFSET(dCamera_c, m11C, 0x11C);
+WWHD_OFFSET(dCamera_c, mStyleSettle0, 0x100);
+WWHD_OFFSET(dCamera_c, mCurStyleTimer, 0x11C);
 WWHD_OFFSET(dCamera_c, mpPlayerActor, 0x128);
 WWHD_OFFSET(dCamera_c, mWork, 0x37C);
 WWHD_OFFSET(dCamera_c, mEventFlags, 0x510);
-WWHD_OFFSET(dCamera_c, m786, 0x8DA);
+WWHD_OFFSET(dCamera_c, mInSeaCenter, 0x8DA);
 WWHD_SIZE(dCamera_c, 0x8E0);
 struct TwoActorDefaultsHD {
     be<f32> mCenterCushion, mEyeCushion, mFovy;

@@ -122,12 +122,13 @@ struct TAdaptor_particle : TAdaptor {
     gptr<JPAEmitterManager> mEmitterManager;
     gptr<Emitter> mEmitter;
     TJPACallback_ mCallback;
-    // tww retains these unknown names: ID, fade mode, duration, elapsed.
-    be<u32> field_0x1B0, field_0x1B4, field_0x1B8, field_0x1BC;
+    // tww keeps GameCube offset names here.
+    /* was field_0x1B0: adaptor_do_PARTICLE 0283EA94: operation 0x19 stores the particle id; TAdaptor_particle_construct 0283E784 sets -1; was field_0x1B4: Particle_beginFade 0283EB98 sets 1, Particle_endFade 0283ECE8 sets 2, adaptor_do_update 0283EA48 clears a finished fade-in; endFade reads it; was field_0x1B8: Particle_beginFade 0283EB98 / Particle_endFade 0283ECE8 store the fade frames; adaptor_do_update 0283EA48 ends the fade when mFadeElapsed reaches it; was field_0x1BC: adaptor_do_update 0283EA48 adds the frames; the emitter callback derives the fade alpha from it and mFadeDuration */
+    be<u32> mParticleID, mFadeState, mFadeDuration, mFadeElapsed;
     be<u32> mSystem;
     gptr<StageObject> mObject;
-    be<u32> field_0x1C8;
-    be<u8> field_0x1CC;
+    be<u32> mNodeID;  /* was field_0x1C8: same word as ParticleParentPrefix::mNodeID (JStudio_JParticle/object-particle.h; adaptor_do_PARENT_NODE 0283EB00 sets it); the emitter callback passes it to JSGGetNodeTransformation */
+    be<u8> mEnabled;  /* was field_0x1CC: same byte as ParticleParentPrefix::mEnabled (adaptor_do_PARENT_ENABLE 0283EB7C); the emitter callback follows the parent node when set */
     void adaptor_do_update(TObject *, u32);
 };
 struct TAdaptor_actor : TAdaptor {

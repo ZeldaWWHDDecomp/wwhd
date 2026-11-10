@@ -181,18 +181,19 @@ fopAc_ac_c* Sv_searchFromName(const char*, u32, u32);
 void Sv_soundStart(u32);
 void Sv_xyzRotate(Mtx34*, s16, s16, s16);
 BOOL Sv_searchByID(fpc_ProcID, be<u32>*);
+// View of daObj_Ikada_c (the ship / crane the salvage NPC stands on); field names follow d_a_obj_ikada.h.
 struct SvShip : fopAc_ac_c {
-    u8 _3AC[0x40C - 0x3AC]; be<s32> mMode;
-    u8 _410[0x590 - 0x410]; cXyz mRopeEndPos;
-    u8 _59C[0x1438 - 0x59C]; be<s32> mAnimationFrame;
+    u8 _3AC[0x40C - 0x3AC]; be<s32> mCurMode;  /* was mMode (misnamed): daObj_Ikada_c::mCurMode (tww getMode() { return mCurMode; }, which daNpc_Sv_c reads); the class field at 0x40C holds the Mode_e the ship runs (d_a_obj_ikada.h) */
+    u8 _410[0x590 - 0x410]; cXyz mCranePos;  /* was mRopeEndPos (misnamed): daObj_Ikada_c::mCranePos, a TWW name (tww getCranePos() { return mCranePos; }, which daNpc_Sv_c uses as its look-at position); createInit 023614C8 / setRopePos 023620F0 set it to the crane joint translation */
+    u8 _59C[0x1438 - 0x59C]; be<s32> mFrame;  /* was mAnimationFrame (misnamed): daObj_Ikada_c::mFrame, a TWW name (tww getFrame() { return mFrame; }, which daNpc_Sv_c reads into mIkadaFrame); HandleRight 02363F30 / HandleLeft 02364098 step it */
     u8 _143C[0x14C2 - 0x143C]; be<u8> mPlayerNearby; u8 _14C3;
-    be<u32> mCraneSide;
+    be<u32> mSvDirection;  /* was mCraneSide (misnamed): daObj_Ikada_c::mSvDirection (tww getSvDirection() { return m1168; }, which daNpc_Sv_c reads for its look angle); modePathMoveInit 02364460 picks 0 or 1, modeCraneTurn 02364274 turns by it */
 };
-WWHD_OFFSET(SvShip, mMode, 0x40C);
-WWHD_OFFSET(SvShip, mRopeEndPos, 0x590);
-WWHD_OFFSET(SvShip, mAnimationFrame, 0x1438);
+WWHD_OFFSET(SvShip, mCurMode, 0x40C);
+WWHD_OFFSET(SvShip, mCranePos, 0x590);
+WWHD_OFFSET(SvShip, mFrame, 0x1438);
 WWHD_OFFSET(SvShip, mPlayerNearby, 0x14C2);
-WWHD_OFFSET(SvShip, mCraneSide, 0x14C4);
+WWHD_OFFSET(SvShip, mSvDirection, 0x14C4);
 WWHD_SIZE(SvShip, 0x14C8);
 inline SvShip* Sv_ship(u32 address) { return gabi::at<SvShip>(address); }
 inline fopAc_ac_c* Sv_actor(u32 address) { return gabi::at<fopAc_ac_c>(address); }

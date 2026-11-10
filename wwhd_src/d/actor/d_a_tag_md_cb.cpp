@@ -506,7 +506,7 @@ BOOL daTag_MdCb_c::messageAction(void *parameter) {
         if (argument == 5)
             m2B4 = 2;
         else if ((u32)actor->actor_status & fopAcStts_CARRY_e) {
-            if (!((u32) reinterpret_cast<MedliView *>(actor)->m30F0 & daMdStts_CARRY_ACTION))
+            if (!((u32) reinterpret_cast<MedliView *>(actor)->mStatus & daMdStts_CARRY_ACTION))
                 m2B4 = 1;
         } else
             m2B4 = 0;

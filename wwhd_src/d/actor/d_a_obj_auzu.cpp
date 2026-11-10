@@ -165,12 +165,12 @@ void Act_c::ship_whirl() {
         s32 link = parameter(this, PRM_LINK_ID_W, PRM_LINK_ID_S);
         if (distance < inner) {
             ship->mWhirlID = id;
-            ship->m03B2 = (u16)link;
-            ship->m0352 = 1;
+            ship->mWhirlLinkID = (u16)link;
+            ship->mWhirlCircleFlg = 1;
         } else {
-            ship->m03B2 = (u16)link;
+            ship->mWhirlLinkID = (u16)link;
             ship->mWhirlID = id;
-            ship->m0352 = 0;
+            ship->mWhirlCircleFlg = 0;
         }
     } else {
         ship->mWhirlActor = 0;

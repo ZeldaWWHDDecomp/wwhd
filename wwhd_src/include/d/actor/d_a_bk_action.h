@@ -8,15 +8,15 @@
 // HD: the shared Bokoblin header defines br_s as opaque, so use a private prefix view.
 struct bkActionBridgeSegment {
     /* 0x000 */ u8 _000[0x658];
-    /* 0x658 */ be<f32> m3F4;
+    /* 0x658 */ be<f32> mRideSag; /* was m3F4: view of br_s::mRideSag (d_a_bridge.h) */
     /* 0x65C */ u8 _65C[0x664 - 0x65C];
-    /* 0x664 */ be<s16> m400;
+    /* 0x664 */ be<s16> mRideRollTarget; /* was m400: view of br_s::mRideRollTarget (d_a_bridge.h) */
     /* 0x666 */ u8 _666[0x66A - 0x666];
-    /* 0x66A */ be<u8> m406;
+    /* 0x66A */ be<u8> mPlankRideTimer; /* was m406: view of br_s::mPlankRideTimer (d_a_bridge.h) */
 };
-WWHD_OFFSET(bkActionBridgeSegment, m3F4, 0x658);
-WWHD_OFFSET(bkActionBridgeSegment, m400, 0x664);
-WWHD_OFFSET(bkActionBridgeSegment, m406, 0x66A);
+WWHD_OFFSET(bkActionBridgeSegment, mRideSag, 0x658);
+WWHD_OFFSET(bkActionBridgeSegment, mRideRollTarget, 0x664);
+WWHD_OFFSET(bkActionBridgeSegment, mPlankRideTimer, 0x66A);
 WWHD_SIZE(bkActionBridgeSegment, 0x66B);
 struct bkActionBridgeView : fopAc_ac_c {
     /* 0x3AC */ request_of_phase_process_class mPhase;

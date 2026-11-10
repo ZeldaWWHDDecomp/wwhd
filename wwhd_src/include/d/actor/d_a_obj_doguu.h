@@ -1,8 +1,8 @@
 /* daObjDoguu_c (Triangle Island goddess statue).
  * GameCube -> WWHD: NPC base +0x118; brk storage grows by 0x60, each bck by 0x7C.
  * mStts through mPos therefore move +0x2EC. LIGHT_INFLUENCE grows by four bytes;
- * field_0x8FC moves +0x2F0, and the actor grows from 0x900 to 0xBF0.
- * field_0xNNN member names are the GameCube offsets. */
+ * mLightPower moves +0x2F0, and the actor grows from 0x900 to 0xBF0.
+ * The `was field_0xNNN` comments keep the GameCube offset names. */
 #pragma once
 #include "gc_api/gc_api.h"
 #include "d/d_npc.h"
@@ -66,10 +66,10 @@ struct daObjDoguu_c : fopNpc_npc_c {
         ACT_SETLIGHT_e = 8,
     };
     /* 0x7DC */ request_of_phase_process_class mPhs;
-    /* 0x7E4 */ gptr<J3DModel> field_0x6CC;
-    /* 0x7E8 */ gptr<J3DModel> field_0x6D0;
-    /* 0x7EC */ gptr<J3DModel> field_0x6D4;
-    /* 0x7F0 */ gptr<J3DModel> field_0x6D8;
+    /* 0x7E4 */ gptr<J3DModel> mMainModel;  /* was field_0x6CC: CreateHeap 02334BE8: the VGSMA model (local main) with the vgsm material table; _draw 02335CA4 draws it with the eye-flash mBrk while the head/body pair is hidden (tww: the model mBrk.init / mBrk.entry use); CreateInit 02335548 gives its base matrix to cullMtx */
+    /* 0x7E8 */ gptr<J3DModel> mHeadModel;  /* was field_0x6D0: CreateHeap 02334BE8: the bdl_vgsh model (local head) that mBckHead animates (tww bck_head); set_mtx 0233528C puts it on the body's head1 joint (tww setBaseTRMtx(field_0x6D4->getAnmMtx(mHead1JntNo))); _draw 02335CA4 entries mBckHead on it */
+    /* 0x7EC */ gptr<J3DModel> mBodyModel;  /* was field_0x6D4: CreateHeap 02334BE8: the VGSBA model (local body) that mBckBody animates (tww bck_body) and whose joint "head1" gives mHead1JntNo; _draw 02335CA4 entries mBckBody on it */
+    /* 0x7F0 */ gptr<J3DModel> mCrystalModel;  /* was field_0x6D8: CreateHeap 02334BE8: the bdl_vgsp model (local crystal) that mBckCrystal animates (tww bck_crystal); _draw 02335CA4 draws it while mDrawCrystal; privateCut 02336408 / _execute 023368F0 read the light position from its joint mCrystalJntNo */
     /* 0x7F4 */ mDoExt_brkAnm mBrk;
     /* 0x86C */ mDoExt_bckAnm mBckHead;
     /* 0x8F8 */ mDoExt_bckAnm mBckBody;
@@ -78,28 +78,28 @@ struct daObjDoguu_c : fopNpc_npc_c {
     /* 0xA4C */ dCcD_Cyl mCyl;
     /* 0xB7C */ be<u8> mItemNo;
     /* 0xB7D */ u8 _B7D[3];
-    /* 0xB80 */ be<s32> field_0x894;
+    /* 0xB80 */ be<s32> mVariant;  /* was field_0x894: _create 02335B6C: argument - 1 or the low parameter byte (tww); selects the Din / Farore / Nayru pearl (CreateInit 02335548 mItemNo), the resource indices (CreateHeap 02334BE8), the light colour (setPointLight 0233516C), the finish event (setFinishMyEvent 023368B0) and the particle (privateCut 02336408); our code's local name is variant */
     /* 0xB84 */ be<u32> mHead1JntNo;
-    /* 0xB88 */ be<u32> field_0x89C;
-    /* 0xB8C */ be<u8> field_0x8A0;
-    /* 0xB8D */ be<u8> field_0x8A1;
-    /* 0xB8E */ be<u8> field_0x8A2;
-    /* 0xB8F */ be<u8> field_0x8A3;
+    /* 0xB88 */ be<u32> mCrystalJntNo;  /* was field_0x89C: CreateHeap 02334BE8 1 (tww); privateCut 02336408 / _execute 023368F0: the joint of mCrystalModel whose animation matrix gives mPos (tww getAnmMtx(it)) */
+    /* 0xB8C */ be<u8> mDrawCrystal;  /* was field_0x8A0: _draw 02335CA4 draws mCrystalModel only while it is set (tww if (it == true) mBckCrystal.entry(..)); privateCut 02336408 sets it on ACT_SETBALL_e; CreateInit 02335548 sets it when the pearl is already placed */
+    /* 0xB8D */ be<u8> mDrawHeadBody;  /* was field_0x8A1: _draw 02335CA4: set draws mHeadModel + mBodyModel, clear draws mMainModel with mBrk (tww); _execute 023368F0 sets it from the demo shape (mShape != 0) and plays mBrk only while it is clear; CreateInit 02335548 1 once all three pearls are placed */
+    /* 0xB8E */ be<u8> mEyeFlash;  /* was field_0x8A2: privateCut 02336408 sets it on ACT_EYEFLASH_e; _execute 023368F0 plays mBrk (sound 0x6A31 at its start) while it is set and mDrawHeadBody is not (tww); CreateInit 02335548 sets it when the pearl is already placed */
+    /* 0xB8F */ be<u8> mLightState;  /* was field_0x8A3: _execute 023368F0 moves mPos to the crystal joint and drives mLightPower while it is not 0 (1: dim target 0.15, 2: bright target 0.8); privateCut 02336408 1 on ACT_SETBALL_e, 2 at SETLIGHT frame 80; CreateInit 02335548 2 when the pearl is shown, else 0 (tww a bool) */
     /* 0xB90 */ be<s16> mDoguuDemo1EventIdx;
     /* 0xB92 */ be<s16> mDoguuDemo2EventIdx;
     /* 0xB94 */ be<s16> mDoguuDemo3EventIdx;
     /* 0xB96 */ be<s16> mMegamiDemoEventIdx;
-    /* 0xB98 */ be<s32> field_0x8AC;
+    /* 0xB98 */ be<s32> mState;  /* was field_0x8AC: CreateInit 02335548 / _execute 023368F0: the State enum the _execute switch runs (STATE_WAIT_PEARL_e .. STATE_DONE_e) (tww switch (it) with 0..14) */
     /* 0xB9C */ be<s8> mActIdx;
     /* 0xB9D */ u8 _B9D[3];
-    /* 0xBA0 */ cXyz field_0x8B4;
+    /* 0xBA0 */ cXyz mGoalPos;  /* was field_0x8B4: setGoal 02336194: the goal position handed to the event manager (tww it = pos; dComIfGp_evmng_setGoal(&it)) */
     /* 0xBAC */ be<s32> mTimer;
-    /* 0xBB0 */ be<s32> field_0x8C4;
+    /* 0xBB0 */ be<s32> mLightTimer;  /* was field_0x8C4: privateCut 02336408: 0 on ACT_SETLIGHT_e, counted to 200 in that cut; mAllColRatio dims below 160, the light particle starts at 40, mLightState 2 at 80 (tww 125) */
     /* 0xBB4 */ be<f32> mAllColRatio;
     /* 0xBB8 */ be<u32> mShape;
     /* 0xBBC */ cXyz mPos;
     /* 0xBC8 */ LIGHT_INFLUENCE mLightInfluence;
-    /* 0xBEC */ be<f32> field_0x8FC;
+    /* 0xBEC */ be<f32> mLightPower;  /* was field_0x8FC: setPointLight 0233516C scales the light colour and mPower (300 * it) by it (tww); _execute 023368F0 eases it to a jittered target (cLib_addCalc2); CreateInit 02335548 0 */
     BOOL _delete();
     void CreateInit();
     s32 _create();
@@ -119,10 +119,10 @@ struct daObjDoguu_c : fopNpc_npc_c {
     void setJDemo(s32);
 };
 WWHD_OFFSET(daObjDoguu_c, mPhs, 0x7DC);
-WWHD_OFFSET(daObjDoguu_c, field_0x6CC, 0x7E4);
-WWHD_OFFSET(daObjDoguu_c, field_0x6D0, 0x7E8);
-WWHD_OFFSET(daObjDoguu_c, field_0x6D4, 0x7EC);
-WWHD_OFFSET(daObjDoguu_c, field_0x6D8, 0x7F0);
+WWHD_OFFSET(daObjDoguu_c, mMainModel, 0x7E4);
+WWHD_OFFSET(daObjDoguu_c, mHeadModel, 0x7E8);
+WWHD_OFFSET(daObjDoguu_c, mBodyModel, 0x7EC);
+WWHD_OFFSET(daObjDoguu_c, mCrystalModel, 0x7F0);
 WWHD_OFFSET(daObjDoguu_c, mBrk, 0x7F4);
 WWHD_OFFSET(daObjDoguu_c, mBckHead, 0x86C);
 WWHD_OFFSET(daObjDoguu_c, mBckBody, 0x8F8);
@@ -130,27 +130,27 @@ WWHD_OFFSET(daObjDoguu_c, mBckCrystal, 0x984);
 WWHD_OFFSET(daObjDoguu_c, mStts, 0xA10);
 WWHD_OFFSET(daObjDoguu_c, mCyl, 0xA4C);
 WWHD_OFFSET(daObjDoguu_c, mItemNo, 0xB7C);
-WWHD_OFFSET(daObjDoguu_c, field_0x894, 0xB80);
+WWHD_OFFSET(daObjDoguu_c, mVariant, 0xB80);
 WWHD_OFFSET(daObjDoguu_c, mHead1JntNo, 0xB84);
-WWHD_OFFSET(daObjDoguu_c, field_0x89C, 0xB88);
-WWHD_OFFSET(daObjDoguu_c, field_0x8A0, 0xB8C);
-WWHD_OFFSET(daObjDoguu_c, field_0x8A1, 0xB8D);
-WWHD_OFFSET(daObjDoguu_c, field_0x8A2, 0xB8E);
-WWHD_OFFSET(daObjDoguu_c, field_0x8A3, 0xB8F);
+WWHD_OFFSET(daObjDoguu_c, mCrystalJntNo, 0xB88);
+WWHD_OFFSET(daObjDoguu_c, mDrawCrystal, 0xB8C);
+WWHD_OFFSET(daObjDoguu_c, mDrawHeadBody, 0xB8D);
+WWHD_OFFSET(daObjDoguu_c, mEyeFlash, 0xB8E);
+WWHD_OFFSET(daObjDoguu_c, mLightState, 0xB8F);
 WWHD_OFFSET(daObjDoguu_c, mDoguuDemo1EventIdx, 0xB90);
 WWHD_OFFSET(daObjDoguu_c, mDoguuDemo2EventIdx, 0xB92);
 WWHD_OFFSET(daObjDoguu_c, mDoguuDemo3EventIdx, 0xB94);
 WWHD_OFFSET(daObjDoguu_c, mMegamiDemoEventIdx, 0xB96);
-WWHD_OFFSET(daObjDoguu_c, field_0x8AC, 0xB98);
+WWHD_OFFSET(daObjDoguu_c, mState, 0xB98);
 WWHD_OFFSET(daObjDoguu_c, mActIdx, 0xB9C);
-WWHD_OFFSET(daObjDoguu_c, field_0x8B4, 0xBA0);
+WWHD_OFFSET(daObjDoguu_c, mGoalPos, 0xBA0);
 WWHD_OFFSET(daObjDoguu_c, mTimer, 0xBAC);
-WWHD_OFFSET(daObjDoguu_c, field_0x8C4, 0xBB0);
+WWHD_OFFSET(daObjDoguu_c, mLightTimer, 0xBB0);
 WWHD_OFFSET(daObjDoguu_c, mAllColRatio, 0xBB4);
 WWHD_OFFSET(daObjDoguu_c, mShape, 0xBB8);
 WWHD_OFFSET(daObjDoguu_c, mPos, 0xBBC);
 WWHD_OFFSET(daObjDoguu_c, mLightInfluence, 0xBC8);
-WWHD_OFFSET(daObjDoguu_c, field_0x8FC, 0xBEC);
+WWHD_OFFSET(daObjDoguu_c, mLightPower, 0xBEC);
 WWHD_SIZE(daObjDoguu_c, 0xBF0);
 
 namespace DoguuHD {

@@ -55,7 +55,7 @@ field 021D74F8 r3+0x2F0 f32 0,1040,1040.5,3000,8000   # home.y (1040: the 1000 b
 field 021D74F8 r3+0x318 f32 0,0,-100,100            # current.y after CrrPos
 field 021D74F8 1047B61C f32 0,0,0,5                 # REG0_F(3)
 field 021D74F8 r3+0xDF8 f32 -20000,-6000,-4960,-4960.5,-4000,0  # ground height (-4960: the 5000 boundary)
-# daMt_Delete: re-created after falling out (m1DD4, m3D2, m3D6 switch)
+# daMt_Delete: re-created after falling out (mDeleteRequested, mUseAngleParam, mAngleParam switch)
 field 021DC634 r3+0x1DD4 i8 0,1,1
 field 021DC634 r3+0x3D2 u8 0,1,1
 field 021DC634 r3+0x3D6 u8 0,1,5

@@ -111,10 +111,10 @@ static hdSoundPlayer* constructSoundPlayer(hdSoundPlayer* i_this) {
     hdPlayerInitializeFader(&i_this->mBgmFaders[1], one);
     i_this->mMenuFlag = 0;
     i_this->mMode = 0;
-    i_this->field_0x1f7 = 0;
-    i_this->field_0x1f5 = 0;
-    i_this->field_0x1f8 = 0;
-    i_this->field_0x1f6 = 0;
+    i_this->mGameOverMode = 0;
+    i_this->mPictographMode = 0;
+    i_this->mWarpMode = 0;
+    i_this->mSaveDataMode = 0;
     be<u32>* pause = i_this->pauseForConstruction();
     if (pause == NULL) pause = (be<u32>*)operator_new(sizeof(be<u32>));
     if (pause != NULL) *pause = 0;
@@ -224,7 +224,7 @@ static void updatePlayerVolumes(hdSoundPlayer* i_this) {
     setPlayerChannelVolume(streamBgm, PLAYER_CHANNEL_DRC, drc);
     setPlayerChannelVolume(subBgm, PLAYER_CHANNEL_TV, tv);
     setPlayerChannelVolume(subBgm, PLAYER_CHANNEL_DRC, drc);
-    bool loud = i_this->field_0x1f7 != 0 || i_this->field_0x1f8 != 0; /* read before the DRC_GAME calls */
+    bool loud = i_this->mGameOverMode != 0 || i_this->mWarpMode != 0; /* read before the DRC_GAME calls */
     f32 one = sOne;
     setPlayerChannelVolume(drcGame, PLAYER_CHANNEL_TV, tv);
     setPlayerChannelVolume(drcGame, PLAYER_CHANNEL_DRC, loud ? drc : one);
@@ -233,7 +233,7 @@ static void updatePlayerVolumes(hdSoundPlayer* i_this) {
     if (drcMode) {
         setPlayerChannelVolume(menu, PLAYER_CHANNEL_TV, tvScale);
         setPlayerChannelVolume(menu, PLAYER_CHANNEL_DRC, zero);
-    } else if (i_this->field_0x1f6 != 0 || i_this->field_0x1f7 != 0 || i_this->field_0x1f8 != 0) {
+    } else if (i_this->mSaveDataMode != 0 || i_this->mGameOverMode != 0 || i_this->mWarpMode != 0) {
         setPlayerChannelVolume(menu, PLAYER_CHANNEL_TV, tv);
         setPlayerChannelVolume(menu, PLAYER_CHANNEL_DRC, drc);
     } else {

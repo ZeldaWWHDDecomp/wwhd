@@ -143,16 +143,16 @@ void dMeter_magicAlpha(sub_meter_class *meter) {
 /* 0259C2BC */
 void dMeter_gaugeAlpha(sub_meter_class *meter) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    f32 hearts = (f32)meter->field_0x2fbc, magic = (f32)meter->field_0x2fc0;
+    f32 hearts = (f32)meter->mHeartAlpha, magic = (f32)meter->mMagicAlpha;
     for (u32 i = 0; i < 20; i++) {
         fopMsgM_setNowAlpha(&meter->mHeart[i], hearts);
         fopMsgM_setNowAlpha(&meter->mHeartShadow[i], hearts);
     }
-    meter->field_0x0f00.mNowAlpha =
-        (u8)((u8)ftoi(fmuls_ppc((f32)(u8)meter->field_0x0f00.mNowAlpha, hearts)));
+    meter->mHeartLight.mNowAlpha =
+        (u8)((u8)ftoi(fmuls_ppc((f32)(u8)meter->mHeartLight.mNowAlpha, hearts)));
     for (u32 i = 0; i < 8; i++)
-        fopMsgM_setNowAlpha(&meter->field_0x0f38[i], magic);
-    for (auto pane : {&meter->field_0x10f8, &meter->field_0x11a0, &meter->field_0x11d8})
+        fopMsgM_setNowAlpha(&meter->mMagicBar[i], magic);
+    for (auto pane : {&meter->mMagicGauge3, &meter->mMagicGauge1, &meter->mMagicGaugeShadow1})
         fopMsgM_setNowAlpha(pane, magic);
 }
 // HD: publish metronome HUD visibility separately from the GC menu path.
@@ -262,10 +262,10 @@ void dMeter_windMove(sub_meter_class *meter) {
 void dMeter_rupyMove(sub_meter_class *meter) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 state = (u32)l_saveRoot;
-    if ((u32)(s32)(s16)meter->field_0x19f0[1].mUserArea !=
+    if ((u32)(s32)(s16)meter->mRupyDigitA[1].mUserArea !=
         (u8)meterSave(state)->mSave.mSavedata.mPlayer.mPlayerStatusA.mWalletSize) {
         dMeter_walletChange(meter);
-        meter->field_0x19f0[1].mUserArea =
+        meter->mRupyDigitA[1].mUserArea =
             (u16)((u8)meterSave((u32)l_saveRoot)
                       ->mSave.mSavedata.mPlayer.mPlayerStatusA.mWalletSize);
     }
@@ -344,19 +344,19 @@ void dMeter_rupyMove(sub_meter_class *meter) {
         dMeter_showCounter(2);
     f32 alpha =
         (hide
-             ? dMeter_alphaClose(&meter->field_0x2a20.mUserArea, &meter->field_0x19f0[0].mUserArea)
-             : dMeter_alphaOpen(&meter->field_0x2a20.mUserArea, &meter->field_0x19f0[0].mUserArea));
+             ? dMeter_alphaClose(&meter->mRupyIcon.mUserArea, &meter->mRupyDigitA[0].mUserArea)
+             : dMeter_alphaOpen(&meter->mRupyIcon.mUserArea, &meter->mRupyDigitA[0].mUserArea));
     u32 emitter = (u32)meter->mpRupyParticle;
     if (emitter) {
         u32 bits = (u32)meterParticle(emitter)->mFlags;
         meterParticle(emitter)->mFlags = (u32)(hide ? bits | 4u : bits & ~4u);
     }
     for (u32 i = 0; i < 4; i++) {
-        fopMsgM_setNowAlpha(&meter->field_0x19f0[i], alpha);
-        fopMsgM_setNowAlpha(&meter->field_0x1b40[i], alpha);
+        fopMsgM_setNowAlpha(&meter->mRupyDigitA[i], alpha);
+        fopMsgM_setNowAlpha(&meter->mRupyDigitB[i], alpha);
     }
-    fopMsgM_setNowAlpha(&meter->field_0x2a20, alpha);
-    fopMsgM_setNowAlpha(&meter->field_0x2a58, alpha);
+    fopMsgM_setNowAlpha(&meter->mRupyIcon, alpha);
+    fopMsgM_setNowAlpha(&meter->mRupyIconB, alpha);
     meter->mRupyAlpha = (f32)(alpha);
 }
 
@@ -370,19 +370,19 @@ void dMeter_keyMove(sub_meter_class *meter) {
             u32 state = (u32)l_saveRoot;
             s32 total = (s16)((u8)meterSave(state)->mSave.mMemory.mMembit.mKeyNum +
                               (s16)meterGame(game)->play.mItemKeyNumCount);
-            u32 current = (u8)meter->field_0x301d;
+            u32 current = (u8)meter->mDispKeyNum;
             total = total > 99 ? 99 : (total < 0 ? 0 : total);
-            meter->field_0x300e = (u16)((u32)total - current);
+            meter->mKeyNumPending = (u16)((u32)total - current);
             meterSave((u32)l_saveRoot)->mSave.mMemory.mMembit.mKeyNum = (u8)(total);
             meterGame(dComIfGp_ea())->play.mItemKeyNumCount = (u16)(0);
         }
-        s32 pending = (s16)meter->field_0x300e;
+        s32 pending = (s16)meter->mKeyNumPending;
         if (pending > 0) {
-            meter->field_0x300e = (u16)(pending - 1);
-            meter->field_0x301d = (u8)((u8)meter->field_0x301d + 1);
+            meter->mKeyNumPending = (u16)(pending - 1);
+            meter->mDispKeyNum = (u8)((u8)meter->mDispKeyNum + 1);
         } else if (pending < 0) {
-            meter->field_0x301d = (u8)((u8)meter->field_0x301d - 1);
-            meter->field_0x300e = (u16)(pending + 1);
+            meter->mDispKeyNum = (u8)((u8)meter->mDispKeyNum - 1);
+            meter->mKeyNumPending = (u16)(pending + 1);
         }
     }
     Local<Thresholds> thresholds;
@@ -413,29 +413,29 @@ void dMeter_keyMove(sub_meter_class *meter) {
         dMeter_showCounter(3);
     f32 alpha =
         (hide
-             ? dMeter_alphaClose(&meter->field_0x1c90.mUserArea, &meter->field_0x1ad0[0].mUserArea)
-             : dMeter_alphaOpen(&meter->field_0x1c90.mUserArea, &meter->field_0x1ad0[0].mUserArea));
+             ? dMeter_alphaClose(&meter->mKeyIcon.mUserArea, &meter->mKeyDigitA[0].mUserArea)
+             : dMeter_alphaOpen(&meter->mKeyIcon.mUserArea, &meter->mKeyDigitA[0].mUserArea));
     for (u32 i = 0; i < 2; i++) {
-        fopMsgM_setNowAlpha(&meter->field_0x1ad0[i], alpha);
-        fopMsgM_setNowAlpha(&meter->field_0x1c20[i], alpha);
+        fopMsgM_setNowAlpha(&meter->mKeyDigitA[i], alpha);
+        fopMsgM_setNowAlpha(&meter->mKeyDigitB[i], alpha);
     }
-    fopMsgM_setNowAlpha(&meter->field_0x1c90, alpha);
-    if ((s16)meter->field_0x19b8.mUserArea == 1) {
-        f32 rnd = cM_rndFX((f32)(s16)g_meterHIO.field_0x9a);
-        s16 threshold = (s16)ftoi(fadds_ppc((f32)(s16)g_meterHIO.field_0x90, rnd));
-        meter->field_0x2fda[0] = (u16)(threshold);
+    fopMsgM_setNowAlpha(&meter->mKeyIcon, alpha);
+    if ((s16)meter->mKeyLight2.mUserArea == 1) {
+        f32 rnd = cM_rndFX((f32)(s16)g_meterHIO.mKeyLightStartRange);
+        s16 threshold = (s16)ftoi(fadds_ppc((f32)(s16)g_meterHIO.mKeyLightStart, rnd));
+        meter->mKeyLight2Frames[0] = (u16)(threshold);
         for (u32 i = 0; i < 3; i++) {
-            rnd = cM_rndFX((f32)(s16)g_meterHIO.field_0x92[i]);
-            s32 base = threshold + (s16)g_meterHIO.field_0x88[i];
+            rnd = cM_rndFX((f32)(s16)g_meterHIO.mKeyLightStepRange[i]);
+            s32 base = threshold + (s16)g_meterHIO.mKeyLightStep[i];
             threshold = (s16)ftoi(fadds_ppc((f32)base, rnd));
-            meter->field_0x2fda[1 + i] = (u16)(threshold);
+            meter->mKeyLight2Frames[1 + i] = (u16)(threshold);
         }
-        f32 base = (f32)(threshold + (s16)g_meterHIO.field_0x8e);
-        rnd = cM_rndFX((f32)(s16)g_meterHIO.field_0x98);
-        meter->field_0x2fda[4] = (u16)((s16)ftoi(fadds_ppc(base, rnd)));
+        f32 base = (f32)(threshold + (s16)g_meterHIO.mKeyLightEndStep);
+        rnd = cM_rndFX((f32)(s16)g_meterHIO.mKeyLightEndRange);
+        meter->mKeyLight2Frames[4] = (u16)((s16)ftoi(fadds_ppc(base, rnd)));
     }
-    dMeter_keyLight(&meter->field_0x1980, thresholds.get(), alpha);
-    dMeter_keyLight(&meter->field_0x19b8, &meter->field_0x2fda[0], alpha);
+    dMeter_keyLight(&meter->mKeyLight1, thresholds.get(), alpha);
+    dMeter_keyLight(&meter->mKeyLight2, &meter->mKeyLight2Frames[0], alpha);
     meter->mKeyAlpha = (f32)(alpha);
 }
 
@@ -613,18 +613,18 @@ void dMeter_magicGaugeMove(sub_meter_class *meter) {
             } else
                 dMeter_flyGaugeMove(meter, 0, 1, 1);
         }
-        if ((s16)meter->field_0x0f38[2].mUserArea == 1)
-            meter->field_0x0f38[2].mUserArea = (u16)(0);
-        meter->field_0x0f38[5].mUserArea = (u16)(1);
+        if ((s16)meter->mMagicBar[2].mUserArea == 1)
+            meter->mMagicBar[2].mUserArea = (u16)(0);
+        meter->mMagicBar[5].mUserArea = (u16)(1);
         return;
     }
     f32 divisor = (f32)l_magicGaugeDivisor, length = (f32)l_one;
-    if ((s16)meter->field_0x0f38[0].mUserArea == 1) {
-        meter->field_0x0f38[0].mUserArea = (u16)(0);
+    if ((s16)meter->mMagicBar[0].mUserArea == 1) {
+        meter->mMagicBar[0].mUserArea = (u16)(0);
         f32 zero = (f32)l_zero;
         dMeter_magicTransScale(meter, zero, zero, length);
         dMeter_magicInitTrans(meter);
-        dMeter_magicChange(meter, ((f32)(u16)meter->field_0x3016 / divisor));
+        dMeter_magicChange(meter, ((f32)(u16)meter->mDispMagic / divisor));
     }
     u32 game = dComIfGp_ea();
     if ((s16)meterGame(game)->play.mItemMaxMagicCount) {
@@ -638,31 +638,31 @@ void dMeter_magicGaugeMove(sub_meter_class *meter) {
         meterGame(dComIfGp_ea())->play.mItemMaxMagicCount = (u16)(0);
     }
     u32 save = (u32)l_saveRoot;
-    u32 displayed = (u8)meter->field_0x3018,
+    u32 displayed = (u8)meter->mDispMaxMagic,
         capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
     bool finalLength = false;
     if (displayed < capacity) {
         displayed = (u8)(displayed + 1);
-        meter->field_0x3018 = (u8)(displayed);
+        meter->mDispMaxMagic = (u8)(displayed);
         dMeter_magicLength(meter, fmuls_ppc((f32)displayed, (f32)l_magicLengthScale));
         save = (u32)l_saveRoot;
         capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
-        finalLength = (u8)meter->field_0x3018 == capacity;
-    } else if (displayed > capacity || (s16)meter->field_0x0f38[2].mUserArea == 0) {
+        finalLength = (u8)meter->mDispMaxMagic == capacity;
+    } else if (displayed > capacity || (s16)meter->mMagicBar[2].mUserArea == 0) {
         if (displayed > capacity) {
             displayed = (u8)(displayed - 1);
-            meter->field_0x3018 = (u8)(displayed);
+            meter->mDispMaxMagic = (u8)(displayed);
         }
         dMeter_magicLength(meter, fmuls_ppc((f32)displayed, (f32)l_magicLengthScale));
         save = (u32)l_saveRoot;
         capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
-        finalLength = (u8)meter->field_0x3018 == capacity;
+        finalLength = (u8)meter->mDispMaxMagic == capacity;
     }
     if (finalLength) {
         if (capacity <= 16)
             length = (f32)l_half;
         dMeter_magicLength(meter, length);
-        meter->field_0x0f38[2].mUserArea = (u16)(1);
+        meter->mMagicBar[2].mUserArea = (u16)(1);
         save = (u32)l_saveRoot;
         capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
     }
@@ -698,45 +698,45 @@ void dMeter_magicGaugeMove(sub_meter_class *meter) {
         }
     }
     if (blocked)
-        meter->field_0x0f38[5].mUserArea = (u16)(1);
+        meter->mMagicBar[5].mUserArea = (u16)(1);
     else {
         save = (u32)l_saveRoot;
         f32 scaled = fmuls_ppc(
             fmuls_ppc((f32)(u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMagic,
-                      (f32)meter->field_0x0f38[0].mSizeOrig.x),
+                      (f32)meter->mMagicBar[0].mSizeOrig.x),
             (f32)l_magicGaugeScale);
-        u32 desired = (u16)ftoi(scaled), shown = (u16)meter->field_0x3016;
+        u32 desired = (u16)ftoi(scaled), shown = (u16)meter->mDispMagic;
         if (desired != shown) {
             if (desired > shown) {
                 shown = desired - shown < 625 ? desired : (u16)(shown + 625);
-                meter->field_0x3016 = (u16)(shown);
+                meter->mDispMagic = (u16)(shown);
                 if (shown % 1250 == 0) {
                     mDoAud_seStartLevel(0x87D, 0, shown / 1250);
-                    shown = (u16)meter->field_0x3016;
+                    shown = (u16)meter->mDispMagic;
                 }
             } else {
                 if (shown - desired < 625) {
-                    meter->field_0x3016 = (u16)(0);
+                    meter->mDispMagic = (u16)(0);
                     mDoAud_seStart(0x87E);
-                    shown = (u16)meter->field_0x3016;
+                    shown = (u16)meter->mDispMagic;
                 } else {
                     shown = (u16)(shown - 625);
-                    meter->field_0x3016 = (u16)(shown);
+                    meter->mDispMagic = (u16)(shown);
                     if (shown % 1250 == 0) {
                         mDoAud_seStart(0x87E);
-                        shown = (u16)meter->field_0x3016;
+                        shown = (u16)meter->mDispMagic;
                     }
                 }
                 if (!shown) {
                     mDoAud_seStart(0x881);
-                    shown = (u16)meter->field_0x3016;
+                    shown = (u16)meter->mDispMagic;
                 }
             }
             dMeter_magicChange(meter, ((f32)shown / divisor));
-            meter->field_0x0f38[5].mUserArea = (u16)(1);
-        } else if ((s16)meter->field_0x0f38[5].mUserArea) {
+            meter->mMagicBar[5].mUserArea = (u16)(1);
+        } else if ((s16)meter->mMagicBar[5].mUserArea) {
             dMeter_magicChange(meter, ((f32)shown / divisor));
-            meter->field_0x0f38[5].mUserArea = (u16)(0);
+            meter->mMagicBar[5].mUserArea = (u16)(0);
         }
     }
     bool pulse = false;
@@ -763,16 +763,16 @@ void dMeter_magicGaugeMove(sub_meter_class *meter) {
         }
     }
     if (pulse) {
-        if (!(s16)meter->field_0x0f38[4].mUserArea)
-            meter->field_0x0f38[4].mUserArea = (u16)(1);
-        s32 timer = (s16)meter->field_0x0f38[3].mUserArea;
+        if (!(s16)meter->mMagicBar[4].mUserArea)
+            meter->mMagicBar[4].mUserArea = (u16)(1);
+        s32 timer = (s16)meter->mMagicBar[3].mUserArea;
         s32 value;
         if (timer >= 29) {
-            meter->field_0x0f38[3].mUserArea = (u16)(0);
+            meter->mMagicBar[3].mUserArea = (u16)(0);
             value = 0;
         } else {
             timer = (s16)(timer + 1);
-            meter->field_0x0f38[3].mUserArea = (u16)(timer);
+            meter->mMagicBar[3].mUserArea = (u16)(timer);
             value = timer < 15 ? timer : 30 - timer;
         }
         fopMsgM_valueIncrease(15, value, 0);
@@ -780,8 +780,8 @@ void dMeter_magicGaugeMove(sub_meter_class *meter) {
         meterScene(game)->mMagicPulse = (u8)((u8)meterScene(game)->mMagicPulse & 0xFE);
         l_magicPulse = (u8)(1);
     } else {
-        if ((s16)meter->field_0x0f38[4].mUserArea == 1)
-            meter->field_0x0f38[4].mUserArea = (u16)(0);
+        if ((s16)meter->mMagicBar[4].mUserArea == 1)
+            meter->mMagicBar[4].mUserArea = (u16)(0);
         l_magicPulse = (u8)(0);
     }
     save = (u32)l_saveRoot;
@@ -814,22 +814,22 @@ void dMeter_magicGaugeMove(sub_meter_class *meter) {
     s32 timer;
     if (hide) {
         dMeter_hideCounter(1);
-        timer = (s16)meter->field_0x10f8.mUserArea;
+        timer = (s16)meter->mMagicGauge3.mUserArea;
         timer = timer > 0 ? (s16)(timer - 1) : 0;
     } else if ((u32)meter->mStatusFlags & (dMtrStts_UNK8_e | dMtrStts_UNK10_e)) {
         dMeter_hideCounter(1);
-        timer = (s16)meter->field_0x10f8.mUserArea;
+        timer = (s16)meter->mMagicGauge3.mUserArea;
         timer = timer > 3 ? (s16)(timer - 1) : (timer < 3 ? (s16)(timer + 1) : 3);
     } else {
         dMeter_showCounter(1);
-        timer = (s16)meter->field_0x10f8.mUserArea;
+        timer = (s16)meter->mMagicGauge3.mUserArea;
         timer = timer < 5 ? (s16)(timer + 1) : 5;
     }
-    meter->field_0x10f8.mUserArea = (u16)(timer);
+    meter->mMagicGauge3.mUserArea = (u16)(timer);
     f32 alpha = fopMsgM_valueIncrease(5, timer, 0);
-    meter->field_0x2fc0 = (f32)(alpha);
-    if ((s16)meter->field_0x11d8.mUserArea)
-        meter->field_0x11d8.mUserArea = (u16)(0);
+    meter->mMagicAlpha = (f32)(alpha);
+    if ((s16)meter->mMagicGaugeShadow1.mUserArea)
+        meter->mMagicGaugeShadow1.mUserArea = (u16)(0);
 }
 /* 0259ACD4 */
 void dMeter_enemyMove(sub_meter_class *meter) {
@@ -962,7 +962,7 @@ void dMeter_enemyMove(sub_meter_class *meter) {
         else if (ratio > one)
             ratio = one;
     } else
-        ratio = (f32)g_meterHIO.field_0xc;
+        ratio = (f32)g_meterHIO.mBossLifeRatioDefault;
     l_bossHealth = (f32)(ratio);
     l_bossVisible = (u8)(1);
 }
@@ -1041,7 +1041,7 @@ void dMeter_xyMove(sub_meter_class *meter) {
                      (u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mArrowNum;
         }
         if (change) {
-            if ((u8)g_meterHIO.field_0x62)
+            if ((u8)g_meterHIO.mIgnoreArrowNumCount)
                 meterGame(dComIfGp_ea())->play.mItemArrowNumCount = (u16)(0);
             game = dComIfGp_ea();
             save = (u32)l_saveRoot;
@@ -1070,7 +1070,7 @@ void dMeter_xyMove(sub_meter_class *meter) {
                      (u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mBombNum;
         }
         if (change) {
-            if ((u8)g_meterHIO.field_0x63)
+            if ((u8)g_meterHIO.mIgnoreBombNumCount)
                 meterGame(dComIfGp_ea())->play.mItemBombNumCount = (u16)(0);
             game = dComIfGp_ea();
             save = (u32)l_saveRoot;

@@ -51,20 +51,20 @@ void daComing2::Act_c::renew_scope_info() {
     f32 x = (f32)current.pos.x - (f32)old.pos.x;
     f32 speed = coming2SquareRoot(gabi::fmadds(x, x, z * z));
     // HD: keep the z-before-x loads, fused square sum and original NaN-sensitive clamp.
-    unk_2A0 = speed;
+    mSpeed = speed;
     f32 clamped = speed - 35.0f >= 0.0f ? speed : 35.0f;
     gabi::Local<cXyz> ahead;
     ahead->set(0.0f, 100.0f, clamped * 135.0f);
-    s32 index = unk_2A4;
-    s32 angle = ((index + (s16)unk_29C) & 1) ? -0x546 : 0x546;
+    s32 index = mBarrelIdx;
+    s32 angle = ((index + (s16)mScopeSide) & 1) ? -0x546 : 0x546;
     s32 spread = (((u32)index >> 2) & 15) * 360;
-    angle = (s16)((s16)mStartStat.unk_00 + (angle > 0 ? angle + spread : angle - spread));
-    const cXyz *origin = index == 0 ? &current.pos : &mBarrelInfo[index - 1].unk_08;
+    angle = (s16)((s16)mStartStat.mAngleY + (angle > 0 ? angle + spread : angle - spread));
+    const cXyz *origin = index == 0 ? &current.pos : &mBarrelInfo[index - 1].mPos;
     coming2MatrixTrans(ptr(0x1048D0CC), (f32)origin->x, (f32)origin->y, (f32)origin->z);
     coming2MatrixYRotate(ptr(0x1048D0CC), angle);
     gabi::Local<Mtx34> matrix;
     coming2MatrixCopy(ptr(0x1048D0CC), matrix.get());
-    coming2MatrixVector(matrix.get(), ahead.get(), &unk_4A8);
+    coming2MatrixVector(matrix.get(), ahead.get(), &mScopePos);
 }
 
 /* 021139AC */
@@ -180,10 +180,10 @@ BOOL daComing2::Act_c::get_water_height(be<f32> *height, const cXyz *position) {
 /* 0211321C */
 void daComing2::Act_c::init_barrelN_info(s32 index) {
     auto &barrel = mBarrelInfo[index];
-    barrel.unk_00 = fpcM_ERROR_PROCESS_ID_e;
-    barrel.unk_04 = 0;
-    barrel.unk_06 = 0;
-    barrel.unk_08 = current.pos;
+    barrel.mBarrelId = fpcM_ERROR_PROCESS_ID_e;
+    barrel.mExitTimer = 0;
+    barrel.mItemGive = 0;
+    barrel.mPos = current.pos;
 }
 
 /* 02113254 */
@@ -194,37 +194,37 @@ void daComing2::Act_c::init_barrel_info() {
 
 /* 021132F4 */
 void daComing2::Act_c::init_flag_info() {
-    mStartBuoy[0].unk_00 = fpcM_ERROR_PROCESS_ID_e;
-    mStartBuoy[1].unk_00 = fpcM_ERROR_PROCESS_ID_e;
+    mStartBuoy[0].mBuoyId = fpcM_ERROR_PROCESS_ID_e;
+    mStartBuoy[1].mBuoyId = fpcM_ERROR_PROCESS_ID_e;
 }
 
 /* 02113288 */
 void daComing2::Act_c::init_coming_info() {
-    unk_2A4 = 0;
-    unk_2A6 = 600;
-    unk_29C = gabi::ftoi(coming2RandomF(2.0f)) & 1;
-    unk_29A = 0;
-    unk_2A8 = 0;
+    mBarrelIdx = 0;
+    mWaitTimer = 600;
+    mScopeSide = gabi::ftoi(coming2RandomF(2.0f)) & 1;
+    mMakeReq = 0;
+    mMakeTimer = 0;
 }
 
 /* 02113E50 */
 BOOL daComing2::Act_c::make_coming_param(cXyz *position, be<s32> *type, be<s32> *item,
                                          be<u8> *hasFlag) {
     gabi::Local<cXyz> waterPosition;
-    *waterPosition = unk_4A8;
+    *waterPosition = mScopePos;
     if (!get_water_height(&waterPosition->y, waterPosition.get()))
         return 0;
     *position = *waterPosition;
     *type = 1;
     *hasFlag = 0;
-    u32 index = (s32)(s16)unk_2A4;
+    u32 index = (s32)(s16)mBarrelIdx;
     *item = index < 15 ? coming_make_item_no_table[index] : dItemNo_RECOVER_FAIRY_e;
     return 1;
 }
 
 /* 021136D8 */
 BOOL daComing2::Act_c::request_barrel_exitN(s32 index) {
-    u32 id = mBarrelInfo[index].unk_00;
+    u32 id = mBarrelInfo[index].mBarrelId;
     if (id == fpcM_ERROR_PROCESS_ID_e)
         return 1;
     gabi::Local<be<u32>> barrel;
@@ -248,43 +248,43 @@ BOOL daComing2::Act_c::request_all_barrel_exit() {
 BOOL daComing2::Act_c::request_all_flag_exit() {
     gabi::Local<be<u32>> buoy;
     for (s32 index = 0; index < 2; ++index) {
-        u32 id = mStartBuoy[index].unk_00;
+        u32 id = mStartBuoy[index].mBuoyId;
         if (id != fpcM_ERROR_PROCESS_ID_e && coming2SearchByID(id, buoy.get()) && *buoy != 0) {
             gabi::at<Coming2BarrelHD>(*buoy)->mExitReq = 1;
-            mStartBuoy[index].unk_00 = fpcM_ERROR_PROCESS_ID_e;
+            mStartBuoy[index].mBuoyId = fpcM_ERROR_PROCESS_ID_e;
         }
     }
-    return mStartBuoy[0].unk_00 == fpcM_ERROR_PROCESS_ID_e &&
-           mStartBuoy[1].unk_00 == fpcM_ERROR_PROCESS_ID_e;
+    return mStartBuoy[0].mBuoyId == fpcM_ERROR_PROCESS_ID_e &&
+           mStartBuoy[1].mBuoyId == fpcM_ERROR_PROCESS_ID_e;
 }
 
 /* 02113754 */
 void daComing2::Act_c::barrel_execute(s32 index) {
     auto &barrel = mBarrelInfo[index];
-    u32 id = barrel.unk_00;
+    u32 id = barrel.mBarrelId;
     if (id == fpcM_ERROR_PROCESS_ID_e)
         return;
     gabi::Local<be<u32>> found;
     if (coming2SearchByID(id, found.get()) == 1) {
-        s16 timer = barrel.unk_04; // HD: the reload occurs before reading the found actor's flag.
+        s16 timer = barrel.mExitTimer; // HD: the reload occurs before reading the found actor's flag.
         if (*found != 0)
-            barrel.unk_06 = (gabi::at<Coming2BarrelHD>(*found)->mItemGive);
+            barrel.mItemGive = (gabi::at<Coming2BarrelHD>(*found)->mItemGive);
         if (timer == 0)
             request_barrel_exitN(index);
         else if (timer > 0)
-            barrel.unk_04 = timer - 1;
-    } else if (barrel.unk_06 == 0) {
+            barrel.mExitTimer = timer - 1;
+    } else if (barrel.mItemGive == 0) {
         init_barrelN_info(index);
         coming_process_init(0);
     }
     // HD: accepts any nonzero flag here, unlike GC's final equality with 1.
-    if (barrel.unk_06 != 0) {
-        if ((u32)(s32)(s16)unk_2A4 >= 15)
+    if (barrel.mItemGive != 0) {
+        if ((u32)(s32)(s16)mBarrelIdx >= 15)
             coming_process_init(0);
         else {
             request_barrel_exitN(index);
             init_barrelN_info(index);
-            unk_29A = 1;
+            mMakeReq = 1;
         }
     }
 }
@@ -299,7 +299,7 @@ void daComing2::Act_c::barrel_main() {
 BOOL daComing2::Act_c::coming_clear_init() {
     u32 currentPlayer = player();
     if (currentPlayer)
-        unk_299 = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
+        mPlayerRoomNo = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
     return 1;
 }
 
@@ -315,8 +315,8 @@ void daComing2::Act_c::coming_clear_main() {
 
 /* 02113FBC */
 BOOL daComing2::Act_c::coming_wait_init() {
-    unk_2A6 = 600;
-    unk_2A4 = 0;
+    mWaitTimer = 600;
+    mBarrelIdx = 0;
     return 1;
 }
 
@@ -326,25 +326,25 @@ void daComing2::Act_c::coming_wait_main() {
     if (!currentPlayer)
         return;
     if ((gabi::at<Coming2PlayHD>(play())->mPlayerStatus) & COMING2_SHIP_RIDE) {
-        if ((f32)unk_2A0 > 35.0f &&
+        if ((f32)mSpeed > 35.0f &&
             (s32)coming2GetEventReg(ptr(dComIfGs_ea(), 0x644), COMING2_POINT_EVENT_REG) >= 2) {
-            s16 timer = unk_2A6;
+            s16 timer = mWaitTimer;
             if (timer > 0) {
                 timer = (s16)(timer - 1);
-                unk_2A6 = timer;
+                mWaitTimer = timer;
             }
-            if ((s8)unk_299 != (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo) &&
+            if ((s8)mPlayerRoomNo != (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo) &&
                 timer == 0) {
-                unk_440.y = current.pos.y;
-                mStartStat.unk_00 = shape_angle.y;
-                unk_440.z = current.pos.z;
-                unk_440.x = current.pos.x;
+                mStartPos.y = current.pos.y;
+                mStartStat.mAngleY = shape_angle.y;
+                mStartPos.z = current.pos.z;
+                mStartPos.x = current.pos.x;
                 coming_process_init(2);
             }
         } else
             coming_process_init(1);
     } else {
-        unk_299 = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
+        mPlayerRoomNo = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
         coming_process_init(1);
     }
 }
@@ -354,7 +354,7 @@ BOOL daComing2::Act_c::coming_setF_init() {
     u32 currentPlayer = player();
     if (!currentPlayer)
         return 0;
-    unk_298 = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
+    mStartRoomNo = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
     // HD: consumes two points as two distinct get/decrement/set operations.
     for (s32 i = 0; i < 2; ++i) {
         u32 count = coming2GetEventReg(ptr(dComIfGs_ea(), 0x644), COMING2_POINT_EVENT_REG);
@@ -375,7 +375,7 @@ void daComing2::Act_c::coming_setF_main() {
         cXyz point[2];
     };
     gabi::Local<Positions> offsets;
-    f32 forward = (f32)unk_2A0 * 120.0f;
+    f32 forward = (f32)mSpeed * 120.0f;
     offsets->point[0].set(lateral + 500.0f, 0.0f, forward);
     offsets->point[1].set(lateral + -500.0f, 0.0f, forward);
     coming2MatrixTrans(ptr(0x1048D0CC), (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
@@ -385,22 +385,22 @@ void daComing2::Act_c::coming_setF_main() {
     gabi::Local<cXyz> position;
     gabi::Local<csXyz> rotation;
     for (s32 index = 0; index < 2; ++index) {
-        if (mStartBuoy[index].unk_00 == fpcM_ERROR_PROCESS_ID_e) {
+        if (mStartBuoy[index].mBuoyId == fpcM_ERROR_PROCESS_ID_e) {
             coming2MatrixVector(matrix.get(), &offsets->point[index], position.get());
             if (get_water_height(&position->y, position.get()) &&
                 check_in_large_sea(position.get()) &&
                 coming2_position_is_none_obj(position.get()) && no_ship_obstacle(position.get())) {
-                coming2AngleConstruct(rotation.get(), 0, (s32)(s16)mStartStat.unk_00, 0);
+                coming2AngleConstruct(rotation.get(), 0, (s32)(s16)mStartStat.mAngleY, 0);
                 u32 id = coming2ActorCreate(fpcNm_Obj_Barrel2_e, 0x117F043F, position.get(), -1,
                                             rotation.get(), 0, -1, 0);
-                mStartBuoy[index].unk_00 = id;
+                mStartBuoy[index].mBuoyId = id;
                 if (id != fpcM_ERROR_PROCESS_ID_e)
-                    mStartBuoy[index].unk_04 = *position;
+                    mStartBuoy[index].mPos = *position;
             }
         }
     }
-    if (mStartBuoy[0].unk_00 != fpcM_ERROR_PROCESS_ID_e &&
-        mStartBuoy[1].unk_00 != fpcM_ERROR_PROCESS_ID_e)
+    if (mStartBuoy[0].mBuoyId != fpcM_ERROR_PROCESS_ID_e &&
+        mStartBuoy[1].mBuoyId != fpcM_ERROR_PROCESS_ID_e)
         coming_process_init(3);
     else
         coming_process_init(0);
@@ -408,17 +408,17 @@ void daComing2::Act_c::coming_setF_main() {
 
 /* 021144B4 */
 BOOL daComing2::Act_c::coming_checkS_init() {
-    unk_46C = 0;
+    mCheckTimer = 0;
     return 1;
 }
 
 /* 021144C4 */
 void daComing2::Act_c::coming_checkS_main() {
-    if ((s16)unk_46C < 180) {
+    if ((s16)mCheckTimer < 180) {
         f32 ax = old.pos.x, az = old.pos.z;
         f32 bx = current.pos.x, bz = current.pos.z;
-        f32 cx = mStartBuoy[0].unk_04.x, cz = mStartBuoy[0].unk_04.z;
-        f32 dx = mStartBuoy[1].unk_04.x, dz = mStartBuoy[1].unk_04.z;
+        f32 cx = mStartBuoy[0].mPos.x, cz = mStartBuoy[0].mPos.z;
+        f32 dx = mStartBuoy[1].mPos.x, dz = mStartBuoy[1].mPos.z;
         f32 segmentX = bx - ax, segmentZ = bz - az;
         f32 side0 = gabi::fmsubs(segmentX, cz - az, segmentZ * (cx - ax));
         f32 side1 = gabi::fmsubs(segmentX, dz - az, segmentZ * (dx - ax));
@@ -431,11 +431,11 @@ void daComing2::Act_c::coming_checkS_main() {
                 coming_process_init(4);
             }
         }
-        unk_46C = (s16)unk_46C + 1;
+        mCheckTimer = (s16)mCheckTimer + 1;
     } else {
         u32 currentPlayer = player();
         if (currentPlayer) {
-            unk_299 = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
+            mPlayerRoomNo = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
             coming_process_init(0);
         }
     }
@@ -443,25 +443,25 @@ void daComing2::Act_c::coming_checkS_main() {
 
 /* 02114604 */
 BOOL daComing2::Act_c::coming_game_init() {
-    s8 startingRoom = unk_298;
-    u32 count = unk_294;
-    unk_29A = 1;
-    unk_299 = startingRoom;
-    unk_294 = count + 1;
-    unk_2A8 = 0;
+    s8 startingRoom = mStartRoomNo;
+    u32 count = mGameCount;
+    mMakeReq = 1;
+    mPlayerRoomNo = startingRoom;
+    mGameCount = count + 1;
+    mMakeTimer = 0;
     return 1;
 }
 
 /* 02114630 */
 void daComing2::Act_c::coming_game_main() {
-    u32 originalIndex = (s32)(s16)unk_2A4;
+    u32 originalIndex = (s32)(s16)mBarrelIdx;
     if (originalIndex >= 15)
         return;
-    if ((s16)unk_29A == 1) {
+    if ((s16)mMakeReq == 1) {
         gabi::Local<cXyz> position;
         gabi::Local<be<s32>> type, item;
         gabi::Local<be<u8>> hasFlag;
-        if (mBarrelInfo[originalIndex].unk_00 == fpcM_ERROR_PROCESS_ID_e &&
+        if (mBarrelInfo[originalIndex].mBarrelId == fpcM_ERROR_PROCESS_ID_e &&
             make_coming_param(position.get(), type.get(), item.get(), hasFlag.get())) {
             if (check_in_large_sea(position.get())) {
                 if (coming2_position_is_none_obj(position.get()) &&
@@ -469,38 +469,38 @@ void daComing2::Act_c::coming_game_main() {
                     s32 barrelType = *type, droppedItem = *item;
                     u32 flag = *hasFlag;
                     gabi::Local<csXyz> rotation;
-                    coming2AngleConstruct(rotation.get(), 0, (s32)(s16)mStartStat.unk_00, 0);
+                    coming2AngleConstruct(rotation.get(), 0, (s32)(s16)mStartStat.mAngleY, 0);
                     u32 parameters = (droppedItem & 0x3F) | 0x007F0000 | ((u32)barrelType << 24) |
                                      ((flag ^ 1) << 8) | 0x10000000;
                     u32 id = coming2ActorCreate(fpcNm_Obj_Barrel2_e, parameters, position.get(), -1,
                                                 rotation.get(), 0, -1, 0);
-                    mBarrelInfo[(s16)unk_2A4].unk_00 = id;
+                    mBarrelInfo[(s16)mBarrelIdx].mBarrelId = id;
                     if (id != fpcM_ERROR_PROCESS_ID_e) {
-                        unk_29A = 0;
-                        mBarrelInfo[originalIndex].unk_06 = 0;
-                        mBarrelInfo[(s16)unk_2A4].unk_08 = *position;
-                        mBarrelInfo[(s16)unk_2A4].unk_04 = 0x93 - (s16)unk_2A4;
+                        mMakeReq = 0;
+                        mBarrelInfo[originalIndex].mItemGive = 0;
+                        mBarrelInfo[(s16)mBarrelIdx].mPos = *position;
+                        mBarrelInfo[(s16)mBarrelIdx].mExitTimer = 0x93 - (s16)mBarrelIdx;
                         // HD: stores 1 and returns immediately; GC stores 0 then increments below.
-                        unk_2A8 = 1;
-                        unk_2A4 = (s16)unk_2A4 + 1;
+                        mMakeTimer = 1;
+                        mBarrelIdx = (s16)mBarrelIdx + 1;
                         return;
                     }
                 }
             } else
                 coming_process_init(0);
         }
-        s16 timer = unk_2A8;
-        unk_2A8 = timer + 1;
+        s16 timer = mMakeTimer;
+        mMakeTimer = timer + 1;
         if (timer >= 60)
             coming_process_init(0);
     } else
-        unk_2A8 = 0;
+        mMakeTimer = 0;
 }
 
 /* 02113304 */
 BOOL daComing2::Act_c::coming_process_init(s32 process) {
     if ((u32)process < 5 && dispatch(this, COMING2_INIT_TABLE + (u32)process * 8)) {
-        unk_46E = process;
+        mProcessIdx = process;
         return 1;
     }
     return 0;
@@ -508,7 +508,7 @@ BOOL daComing2::Act_c::coming_process_init(s32 process) {
 
 /* 02113680 */
 void daComing2::Act_c::coming_process_main() {
-    s32 process = unk_46E;
+    s32 process = mProcessIdx;
     if ((u32)process < 5)
         dispatch(this, COMING2_MAIN_TABLE + (u32)process * 8);
 }
@@ -522,18 +522,18 @@ s32 daComing2::Act_c::_create() {
         }
         actor_condition = (u32)actor_condition | 8;
     }
-    unk_299 = -1;
+    mPlayerRoomNo = -1;
     init_barrel_info();
     init_coming_info();
     init_flag_info();
     coming_process_init(0);
     u32 currentPlayer = player();
-    unk_440.x = current.pos.x;
-    unk_440.z = current.pos.z;
-    unk_440.y = current.pos.y;
-    mStartStat.unk_00 = shape_angle.y;
+    mStartPos.x = current.pos.x;
+    mStartPos.z = current.pos.z;
+    mStartPos.y = current.pos.y;
+    mStartStat.mAngleY = shape_angle.y;
     if (currentPlayer)
-        unk_299 = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
+        mPlayerRoomNo = (gabi::at<fopAc_ac_c>(currentPlayer)->current.roomNo);
     return 4;
 }
 
@@ -549,7 +549,7 @@ BOOL daComing2::Act_c::_execute() {
             if ((gabi::at<Coming2PlayHD>(play())->mEventRunning) != 0 ||
                 (gabi::at<Coming2ShipHD>(ship)->mTornadoActor) != 0 ||
                 (gabi::at<Coming2ShipHD>(ship)->mWhirlActor) != 0) {
-                unk_299 = (gabi::at<fopAc_ac_c>(player())->current.roomNo);
+                mPlayerRoomNo = (gabi::at<fopAc_ac_c>(player())->current.roomNo);
                 coming_process_init(0);
             } else
                 coming_process_main();

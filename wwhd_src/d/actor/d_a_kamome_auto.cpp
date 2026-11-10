@@ -28,7 +28,7 @@ static s16 REG6_S(int i) { return REG_S(6, i); }
 
 
 /* esa_class fields used */
-static void esa_set_field_0x298(fopAc_ac_c* esa, u8 v) { kamomeBait(esa)->field_0x298 = v; }
+static void esa_set_mTaken(fopAc_ac_c* esa, u8 v) { kamomeBait(esa)->mTaken = v; }
 
 
 // HD: dBgS_GndChk on the stack (0x54 bytes; sub-object vtables after the members)
@@ -166,7 +166,7 @@ static void kamome_auto_move(kamome_class* i_this) {
                 i_this->mAnimState = 10;
                 a_this->speed.y = 0.0f;
                 s16 r = (s16)gabi::ftoi(cM_rndFX(15000.0f));
-                i_this->m2FC = a_this->current.angle.y + r;
+                i_this->mLandAngleY = a_this->current.angle.y + r;
                 i_this->mTimers[2] = 0x3c;
                 moveType = -1;
             }
@@ -183,7 +183,7 @@ static void kamome_auto_move(kamome_class* i_this) {
         a_this->current.pos.y += a_this->speed.y;
         if (frame > REG6_S(2) + 0xf) {
             a_this->speed.y -= REG6_F(7) + 0.8f;
-            cLib_addCalcAngleS2(&a_this->current.angle.y, i_this->m2FC, 2, 1000);
+            cLib_addCalcAngleS2(&a_this->current.angle.y, i_this->mLandAngleY, 2, 1000);
         }
         cLib_addCalcAngleS2(&a_this->current.angle.x, 0, 5, 0x800);
         cLib_addCalcAngleS2(&a_this->current.angle.z, 0, 5, 0x800);
@@ -271,7 +271,7 @@ static void kamome_auto_move(kamome_class* i_this) {
 
     case 0x17:
         moveType = 1;
-        i_this->m2AB = 1;
+        i_this->mLookAround = 1;
         frame = getFrame(i_this->mpMorf);
         if ((frame >= l_kamomeHIO.m06) && (frame <= l_kamomeHIO.m08)) {
             i_this->mVelocityFwdTarget = i_this->mScale * 5.0f;
@@ -334,7 +334,7 @@ static void kamome_auto_move(kamome_class* i_this) {
             i_this->mRiseTimer = REG0_S(4) + 10;
             if (i_this->mPathIdx != 0xff) {
                 i_this->mbUsePathMovement = i_this->mPathIdx + 1;
-                i_this->m308 = 1;
+                i_this->mPathStart = 1;
             } else {
                 i_this->mTimers[1] = 0x32;
                 i_this->mRotVel = gabi::fmadds(REG0_F(4), 10.0f, 1000.0f);
@@ -372,7 +372,7 @@ static void kamome_auto_move(kamome_class* i_this) {
                 i_this->mMoveState = 0;
                 fopAc_ac_c* pfVar5 = fopAcM_SearchByID(i_this->mEsaProcID);
                 if (pfVar5 != nullptr) {
-                    esa_set_field_0x298(pfVar5, 0);
+                    esa_set_mTaken(pfVar5, 0);
                 }
                 i_this->mAnimState = 0;
                 i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(60.0f) + 20.0f);
@@ -380,7 +380,7 @@ static void kamome_auto_move(kamome_class* i_this) {
                 if (i_this->mPathIdx != 0xff) {
                     i_this->mbUsePathMovement = i_this->mPathIdx + 1;
                     s16 t = (s16)gabi::ftoi(cM_rndF(250.0f) + 250.0f);
-                    i_this->m308 = 1;
+                    i_this->mPathStart = 1;
                     i_this->mTimers[3] = t;
                 } else {
                     i_this->mTimers[1] = 0x32;

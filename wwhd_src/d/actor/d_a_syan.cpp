@@ -22,15 +22,15 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         if (i_this != nullptr) {
             PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
             if (jntNo == SYAN_JNT_JOINT5_e) {
-                cMtx_YrotM(calc_mtx(), i_this->field_0x2a4[0].y);
-                cMtx_XrotM(calc_mtx(), -i_this->field_0x2a4[0].x);
-                cMtx_ZrotM(calc_mtx(), i_this->field_0x2a4[0].z);
+                cMtx_YrotM(calc_mtx(), i_this->mSwingAngle[0].y);
+                cMtx_XrotM(calc_mtx(), -i_this->mSwingAngle[0].x);
+                cMtx_ZrotM(calc_mtx(), i_this->mSwingAngle[0].z);
                 model->setAnmMtx(jntNo, calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
             } else if (jntNo == SYAN_JNT_JOINT8_e) {
-                cMtx_YrotM(calc_mtx(), i_this->field_0x2b0.y);
-                cMtx_XrotM(calc_mtx(), -(i_this->field_0x2a4[1].x + i_this->field_0x2b0.x));
-                cMtx_ZrotM(calc_mtx(), i_this->field_0x2b0.z);
+                cMtx_YrotM(calc_mtx(), i_this->mSwayAngle.y);
+                cMtx_XrotM(calc_mtx(), -(i_this->mSwingAngle[1].x + i_this->mSwayAngle.x));
+                cMtx_ZrotM(calc_mtx(), i_this->mSwayAngle.z);
                 model->setAnmMtx(jntNo, calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
 
@@ -83,33 +83,33 @@ static BOOL daSyan_Execute(syan_class* i_this) {
 
     i_this->morf->calc();
     i_this->frameCount = i_this->frameCount + 1;
-    i_this->field_0x2c4 = i_this->field_0x2c4 + i_this->field_0x2cc;
-    i_this->field_0x2c8 = i_this->field_0x2c8 + i_this->field_0x2d0;
-    i_this->field_0x2a4[0].x = (s16)gabi::ftoi(i_this->field_0x2bc * cM_ssin(gabi::ftoi(i_this->field_0x2c4)));
-    i_this->field_0x2a4[1].x = (s16)gabi::ftoi(i_this->field_0x2c0 * cM_ssin(gabi::ftoi(i_this->field_0x2c8)));
-    i_this->field_0x2b0.y = (s16)gabi::ftoi(i_this->field_0x2b8 * cM_ssin((s16)i_this->frameCount * (REG0_S(8) + 800)));
-    i_this->field_0x2b0.z = (s16)gabi::ftoi(i_this->field_0x2b8 * cM_ssin((s16)i_this->frameCount * (REG0_S(9) + 700)));
+    i_this->mSwingPhase0 = i_this->mSwingPhase0 + i_this->mSwingSpeed0;
+    i_this->mSwingPhase1 = i_this->mSwingPhase1 + i_this->mSwingSpeed1;
+    i_this->mSwingAngle[0].x = (s16)gabi::ftoi(i_this->mSwingAmp0 * cM_ssin(gabi::ftoi(i_this->mSwingPhase0)));
+    i_this->mSwingAngle[1].x = (s16)gabi::ftoi(i_this->mSwingAmp1 * cM_ssin(gabi::ftoi(i_this->mSwingPhase1)));
+    i_this->mSwayAngle.y = (s16)gabi::ftoi(i_this->mSwayAmp * cM_ssin((s16)i_this->frameCount * (REG0_S(8) + 800)));
+    i_this->mSwayAngle.z = (s16)gabi::ftoi(i_this->mSwayAmp * cM_ssin((s16)i_this->frameCount * (REG0_S(9) + 700)));
 
     switch ((u32)i_this->state) {
     case 0:
         break;
     case 1:
-        cLib_addCalcAngleS2(&i_this->field_0x2b0.x, REG0_S(1) + 2500, 2, REG0_S(2) + 250);
-        cLib_addCalc2(&i_this->field_0x2bc, gabi::fmadds(REG0_F(1), 100.0f, 1500.0f), 0.5f, gabi::fmadds(REG0_F(12), 100.0f, 150.0f));
-        cLib_addCalc2(&i_this->field_0x2c0, 2500.0f, 0.5f, 250.0f);
-        cLib_addCalc2(&i_this->field_0x2b8, 2000.0f, 0.5f, 200.0f);
+        cLib_addCalcAngleS2(&i_this->mSwayAngle.x, REG0_S(1) + 2500, 2, REG0_S(2) + 250);
+        cLib_addCalc2(&i_this->mSwingAmp0, gabi::fmadds(REG0_F(1), 100.0f, 1500.0f), 0.5f, gabi::fmadds(REG0_F(12), 100.0f, 150.0f));
+        cLib_addCalc2(&i_this->mSwingAmp1, 2500.0f, 0.5f, 250.0f);
+        cLib_addCalc2(&i_this->mSwayAmp, 2000.0f, 0.5f, 200.0f);
         if (i_this->timer[0] == 0)
             i_this->state = i_this->state + 1;
         break;
     case 2: {
-        cLib_addCalc2(&i_this->field_0x2cc, gabi::fmadds(REG0_F(4), 100.0f, 500.0f), 0.1f, gabi::fmadds(REG0_F(5), 100.0f, 50.0f));
-        cLib_addCalc2(&i_this->field_0x2d0, gabi::fmadds(REG0_F(6), 100.0f, 1000.0f), 0.1f, gabi::fmadds(REG0_F(7), 100.0f, 20.0f));
+        cLib_addCalc2(&i_this->mSwingSpeed0, gabi::fmadds(REG0_F(4), 100.0f, 500.0f), 0.1f, gabi::fmadds(REG0_F(5), 100.0f, 50.0f));
+        cLib_addCalc2(&i_this->mSwingSpeed1, gabi::fmadds(REG0_F(6), 100.0f, 1000.0f), 0.1f, gabi::fmadds(REG0_F(7), 100.0f, 20.0f));
         f32 t = i_this->field_0x2dc * gabi::fmadds(REG0_F(8), 100.0f, 300.0f);
-        cLib_addCalc2(&i_this->field_0x2bc, t, 0.1f, gabi::fmadds(REG0_F(9), 100.0f, 10.0f));
+        cLib_addCalc2(&i_this->mSwingAmp0, t, 0.1f, gabi::fmadds(REG0_F(9), 100.0f, 10.0f));
         t = i_this->field_0x2dc * gabi::fmadds(REG0_F(10), 100.0f, 300.0f);
-        cLib_addCalc2(&i_this->field_0x2c0, t, 0.1f, gabi::fmadds(REG0_F(11), 100.0f, 10.0f));
-        cLib_addCalcAngleS2(&i_this->field_0x2b0.x, REG0_S(1) + 2500, 2, REG0_S(2) + 2000);
-        cLib_addCalc2(&i_this->field_0x2b8, i_this->field_0x2dc * 500.0f, 0.2f, REG0_F(13) + 5.0f);
+        cLib_addCalc2(&i_this->mSwingAmp1, t, 0.1f, gabi::fmadds(REG0_F(11), 100.0f, 10.0f));
+        cLib_addCalcAngleS2(&i_this->mSwayAngle.x, REG0_S(1) + 2500, 2, REG0_S(2) + 2000);
+        cLib_addCalc2(&i_this->mSwayAmp, i_this->field_0x2dc * 500.0f, 0.2f, REG0_F(13) + 5.0f);
         break;
     }
     }
@@ -117,20 +117,20 @@ static BOOL daSyan_Execute(syan_class* i_this) {
     syan_set_mtx(i_this);
 
     for (s32 i = 0; i < syan_class::kEmtrNum; i++) {
-        if (i_this->field_0x58c[i] == 0) {
+        if (i_this->mPartAlphaTimer[i] == 0) {
             f32 r = cM_rndF(REG0_F(2) + 10.0f);
-            i_this->field_0x58c[i] = (s16)gabi::ftoi(r + 5.0f + REG0_F(3));
+            i_this->mPartAlphaTimer[i] = (s16)gabi::ftoi(r + 5.0f + REG0_F(3));
             r = cM_rndF(REG0_F(6) + 4.0f);
-            i_this->field_0x52c[i] = r + 4.0f + REG0_F(7);
+            i_this->mPartAlphaTarget[i] = r + 4.0f + REG0_F(7);
         }
-        if (i_this->field_0x598[i] == 0) {
-            i_this->field_0x598[i] = (s16)gabi::ftoi(cM_rndF(6.0f) + 3.0f);
-            i_this->field_0x55c[i] = cM_rndF(0.075f) + 0.75f;
+        if (i_this->mPartScale1Timer[i] == 0) {
+            i_this->mPartScale1Timer[i] = (s16)gabi::ftoi(cM_rndF(6.0f) + 3.0f);
+            i_this->mPartScale1Target[i] = cM_rndF(0.075f) + 0.75f;
         }
-        cLib_addCalc2(&i_this->partAlpha[i], i_this->field_0x52c[i], 1.0f, REG0_F(4) + 0.1f);
-        cLib_addCalc2(&i_this->partScale1[i], i_this->field_0x55c[i], 0.4f, 0.04f);
+        cLib_addCalc2(&i_this->partAlpha[i], i_this->mPartAlphaTarget[i], 1.0f, REG0_F(4) + 0.1f);
+        cLib_addCalc2(&i_this->partScale1[i], i_this->mPartScale1Target[i], 0.4f, 0.04f);
         i_this->partRotY[i] = i_this->partRotY[i] + 0x100;
-        if (i_this->field_0x5a4[i] == 0) {
+        if (i_this->mFireStartTimer[i] == 0) {
             cLib_addCalc2(&i_this->partScale2[i], REG0_F(9) + 0.75f, 0.5f, 0.05f);
             if (!i_this->emtrEnabled[i]) {
                 i_this->emtrEnabled[i] = true;
@@ -165,12 +165,12 @@ static BOOL daSyan_Execute(syan_class* i_this) {
             }
         }
 
-        if (i_this->field_0x58c[i] != 0)
-            i_this->field_0x58c[i] = i_this->field_0x58c[i] - 1;
-        if (i_this->field_0x598[i] != 0)
-            i_this->field_0x598[i] = i_this->field_0x598[i] - 1;
-        if (i_this->field_0x5a4[i] != 0)
-            i_this->field_0x5a4[i] = i_this->field_0x5a4[i] - 1;
+        if (i_this->mPartAlphaTimer[i] != 0)
+            i_this->mPartAlphaTimer[i] = i_this->mPartAlphaTimer[i] - 1;
+        if (i_this->mPartScale1Timer[i] != 0)
+            i_this->mPartScale1Timer[i] = i_this->mPartScale1Timer[i] - 1;
+        if (i_this->mFireStartTimer[i] != 0)
+            i_this->mFireStartTimer[i] = i_this->mFireStartTimer[i] - 1;
     }
 
     return TRUE;
@@ -239,11 +239,11 @@ static cPhs_State daSyan_Create(fopAc_ac_c* i_ac) {
             fopAcM_SetMax(i_this, 1000.0f, 5000.0f, 1000.0f);
             fopAcM_SetMtx(i_this, i_this->morf->getModel()->getBaseTRMtx());
             model->setUserArea((uintptr_t)i_this);
-            i_this->field_0x2b8 = 200.0f;
+            i_this->mSwayAmp = 200.0f;
 
             static s16 fire_time[] = {0, 5, 10, 15, 20, 25};
             for (s32 i = 0; i < syan_class::kEmtrNum; i++)
-                i_this->field_0x5a4[i] = fire_time[i];
+                i_this->mFireStartTimer[i] = fire_time[i];
         } else {
             rt = cPhs_ERROR_e;
         }

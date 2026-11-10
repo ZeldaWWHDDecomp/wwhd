@@ -176,8 +176,8 @@ WWHD_OFFSET(MoveboxEmitterHD, mInitialVelDir, 0x70);
 WWHD_SIZE(MoveboxEmitterHD, 0x74);
 
 struct EffSmokeCB : dPa_smokeEcallBack {
-    cXyz field_0x20;
-    csXyz field_0x2C;
+    /* 0x20 */ cXyz mPos;  /* was field_0x20: eff_set_slip_smoke_pos 02379010: PSMTXMultVec of the smoke base position into it (tww multVec(&base_pos[i])); eff_smoke_slip_start 0237918C passes it as the position of particle 0x2022 (ID_AK_JT_ELEMENTSMOKE00) */
+    /* 0x2C */ csXyz mAngle;  /* was field_0x2C: eff_set_slip_smoke_pos 02379010: (0, push angle, 0) (tww set(0, angle, 0)); eff_smoke_slip_start 0237918C passes it as the angle of particle 0x2022 */
     u8 _32[2];
 };
 WWHD_SIZE(EffSmokeCB, 0x34);
@@ -226,30 +226,45 @@ struct Act_c : dBgS_MoveBgActor {
     static const be<s16> (&M_dir_base)[4];
     static gptr<const char> (&M_arcname)[13];
     static Attr_c (&M_attr)[13];
-    request_of_phase_process_class mPhs;
-    Mtx34 mMtx;
-    gptr<J3DModel> mpModel;
-    be<s32> mMode;
-    dCcD_Stts mStts;
-    dCcD_Cyl mCyl;
-    Bgc_c mBgc;
-    be<s32> mType;
-    be<u16> mPrmZ, mPrmX;
-    gptr<MoveboxPathHD> mpPath;
-    be<s16> m604;
-    u8 _71E[2];
-    be<f32> m608, m60C, m610, m614, m618, m61C, m620, m624;
-    be<s32> m628, m62C;
-    be<f32> m630;
-    be<s32> m634;
-    be<u32> mPPLabel;
-    be<s16> mMomentCnt[4], m644, m646, m648;
-    be<u8> m64A;
-    be<s8> mReverb;
-    be<u8> mbShouldAppear, mbPrmZInitialized, mbPrmXInitialized, m64F;
-    EffSmokeCB mSmokeCbs[2];
-    be<u32> mChildPID;
-    be<s32> mbRollCrash;
+    /* 0x3E0 */ request_of_phase_process_class mPhs;
+    /* 0x3E8 */ Mtx34 mMtx;
+    /* 0x418 */ gptr<J3DModel> mpModel;
+    /* 0x41C */ be<s32> mMode;
+    /* 0x420 */ dCcD_Stts mStts;
+    /* 0x45C */ dCcD_Cyl mCyl;
+    /* 0x58C */ Bgc_c mBgc;
+    /* 0x710 */ be<s32> mType;
+    /* 0x714 */ be<u16> mPrmZ;
+    /* 0x716 */ be<u16> mPrmX;
+    /* 0x718 */ gptr<MoveboxPathHD> mpPath;
+    /* 0x71C */ be<s16> mAflBobAngle;  /* was m604: mode_afl 0237A0A8 adds attr m38 * (1 + cM_rnd()) to it each frame; the gravity gets attr m34 * cM_ssin(it) (tww mode_afl); Create 02377C1C 0 */
+    /* 0x71E */ u8 _71E[2];
+    /* 0x720 */ be<f32> mRideSinkAccel;  /* was m608: RideCallBack 02377308 adds the rider's push-down (attr m2C player / m30 other, scaled by distance), clamped; mode_afl 0237A0A8 adds it to the gravity and clears it */
+    /* 0x724 */ be<f32> mSwayTargetX;  /* was m60C: RideCallBack 02377308 adds the rider's x offset times attr m74 * m44/m48; afl_sway 02379D00 clamps (mSwayTargetX, mSwayTargetZ) to attr m4C, springs mSwayX toward it, then clears it */
+    /* 0x728 */ be<f32> mSwayTargetZ;  /* was m610: RideCallBack 02377308 adds the rider's z offset times attr m74 * m44/m48; afl_sway 02379D00 springs mSwayZ toward it, then clears it */
+    /* 0x72C */ be<f32> mSwayX;  /* was m614: afl_sway 02379D00 += mSwaySpeedX, zeroed on a left/right wall touch; set_mtx 02377764 tilts the floating box by the up vector (mSwayX, 1, mSwayZ) (tww set_mtx) */
+    /* 0x730 */ be<f32> mSwayZ;  /* was m618: afl_sway 02379D00 += mSwaySpeedZ, zeroed on a front/back wall touch; set_mtx 02377764 uses it as the up vector's z */
+    /* 0x734 */ be<f32> mSwaySpeedX;  /* was m61C: afl_sway 02379D00: spring speed of mSwayX (attr m50 pull toward mSwayTargetX, attr m54 damping) */
+    /* 0x738 */ be<f32> mSwaySpeedZ;  /* was m620: afl_sway 02379D00: spring speed of mSwayZ (attr m50 pull toward mSwayTargetZ, attr m54 damping) */
+    /* 0x73C */ be<f32> mSinkDepth;  /* was m624: mode_afl 0237A0A8: mBgc.mWaterY - current.pos.y clamped to [0, attr m68]; set_mtx 02377764 rotates the floating box about that height (transM(0, it, 0) ... transM(0, -it, 0)); Create 02377C1C attr m68 * 0.5 */
+    /* 0x740 */ be<s32> mGridX;  /* was m628: mode_wait 02379308 / mode_walk 02379834: x position in pushes (transM(it * attr m0C, 0, mGridZ * attr m0C)); mode_walk steps it by +-1 per finished push (directions 1 / 3) */
+    /* 0x744 */ be<s32> mGridZ;  /* was m62C: mode_wait 02379308 / mode_walk 02379834: z position in pushes; mode_walk steps it by +-1 per finished push (directions 0 / 2) */
+    /* 0x748 */ be<f32> mWalkAngleStep;  /* was m630: mode_wait 02379308: 0x8000 / the push length (attr m0A or m04); mode_walk 02379834 eases with cM_scos(mWalkTimer * it) */
+    /* 0x74C */ be<s32> mWalkDir;  /* was m634: mode_wait 02379308: the direction from check_to_walk (index into M_dir_base, -1 none; mode_wait_init 02377B84 -1); mode_walk 02379834 / eff_set_slip_smoke_pos 02379010 use it */
+    /* 0x750 */ be<u32> mPPLabel;
+    /* 0x754 */ be<s16> mMomentCnt[4];
+    /* 0x75C */ be<s16> mWalkTimer;  /* was m644: mode_wait 02379308: the push length in frames (attr m0A or m04); mode_walk 02379834 counts it down and ends the push at 0 */
+    /* 0x75E */ be<s16> mAflCooldown;  /* was m646: Execute 02378638 sets 20 when an afloat box lands (mode_wait_init); mode_wait 02379308 counts it down; a waiting box goes afloat again only at 0 (tww Execute) */
+    /* 0x760 */ be<s16> mLandFxDelay;  /* was m648: Create 02377C1C 0x14; Execute 02378638 counts it down and plays the landing sound / vibration / smoke only once it is 0 */
+    /* 0x762 */ be<u8> mbPushPullHit;  /* was m64A: PPCallBack 023775DC sets it after counting mMomentCnt; check_to_walk 02378D18 starts a walk only when set (and on the ground), then clears it */
+    /* 0x763 */ be<s8> mReverb;
+    /* 0x764 */ be<u8> mbShouldAppear;
+    /* 0x765 */ be<u8> mbPrmZInitialized;
+    /* 0x766 */ be<u8> mbPrmXInitialized;
+    /* 0x767 */ be<u8> mbPathSaved;  /* was m64F: Create 02377C1C true; mode_walk_init 023792E8 false; mode_wait 02379308 sets it on landing and calls path_save() */
+    /* 0x768 */ EffSmokeCB mSmokeCbs[2];
+    /* 0x7D0 */ be<u32> mChildPID;
+    /* 0x7D4 */ be<s32> mbRollCrash;
     s32 prm(s32 width, s32 shift) const { return moveboxGetParameterBits(this, width, shift); }
     s32 prm_get_swSave1();
     u8 pathId() const { return mType == 11 ? 255 : (mPrmZ & 255); }

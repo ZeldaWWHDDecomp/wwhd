@@ -23,7 +23,7 @@ ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
 field * 54005134 u8 0x58,0x41       # start stage name[0]
 field * 10191C14 u8 0 1             # hio_set
 field * r3+0x2E4 u32 0,8            # actor_condition INIT
-field * r3+0xA8C u8 0 1             # m824
+field * r3+0xA8C u8 0 1             # mHioOwner
 
 # s_a_d_sub: process name fpcNm_BMD_e (0xEB)
 field 020B8D4C r3+8 i16 0xEA,0xEB,0xEB

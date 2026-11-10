@@ -1,0 +1,108 @@
+# verify: -only 02764968,02764A28,027651B8 -strictnan -calleesp -footprint
+# SEAD#18 companion: AudioArchiveLoader::openFile/openMemory with the archive allocated and constructed, AudioLaunchConfiguration::openArchive with a player.
+stackfill
+src wwhd_src/sead/HeapRegistryStatics.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+src wwhd_src/sead/AudioStatics.cpp
+src wwhd_src/sead/AudioSystemRuntime.cpp
+src wwhd_src/sead/AudioPlayer.cpp
+src wwhd_src/sead/AudioArchive.cpp
+src wwhd_src/sead/AudioSoundHeap.cpp
+src wwhd_src/sead/AudioLaunchConfiguration.cpp
+arg 027631F4 r4 0,0x101FD958,0x101FD95c
+arg 02763C08 r4 0,0x101FD950,0x101FD954
+arg 02764C40 r4 0,0x101FDFC8
+arg 02764C90 r4 0,0x101FDFC0,0x101FDFC8
+arg 02764D1C r4 0,0x101FDFC4,0x101FDFC8
+field * 101FD648 u32 0,1
+field * 101FD588 u32 0,1
+field * 101FD634 u32 0,1
+field * 101FD2D8 u32 0,1
+field * 101FD63C u32 0,1
+field * 101FD640 u32 0,1
+field * 101FD644 u32 0,1
+
+# Valid voice counts exercise empty, single and repeated stop dispatch.
+field 027632E4 r3+0x1C u32 0,1,2,4,8,32
+
+field * 101FD8C8 u32 0,1
+arg 02762BC8 r4 0,1,2,3,0xFFFFFFFF
+
+# Valid NUL-terminated path pointers for the file-open contract; private fixture storage.
+arg! 0276424C r4 0x5AD00000
+field 0276424C r3+0x648 u32 0x5AD01000
+fieldstr 0276424C 5AD00000 512 "","archive.bfsar","audio/test.bfsar"
+fieldstr 0276424C 5AD01000 512 "","content/Audio","external"
+
+# Valid runtime objects for startSound: AudioSystem::isKindOf and playback busy query.
+field 02763498 101F8BA8 u32 0x5AA00000
+field 02763498 5AA00014 u32 0,0x5AA01000
+field 02763498 5AA01000 u32 0x1015EB28
+field 02763498 5AA00018 u32 0x5AA02000
+field 02763498 5AA02004 u32 0x1015ED3C
+field 02763498 r3+0x151 u8 0,1
+
+# Stack records handed to callees: the playback configuration, the storage-scale record and the opened path.
+callee 02893868 r4=36
+callee 02763AC4 r4=16
+callee 028880A0 r5=cstr:1024
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5
+
+# zero-page rule (2026-11-10, LOW clean 0/1000): finalizeEntry 0276297C and quitEntry
+# 02762DBC run on the audio launch thread and read sAudioServices (101F8BA8, class AudioServices, set up by the shipped
+# game before the audio system starts) ->mBackend (+0x14), checked with the original AudioSystem isKindOf (vtable
+# 1015EB28). Same object layout as startSound above (0x5AA00000 services, 0x5AA01000 audio system); the backend is fixed
+# to the audio system (a null backend faults at system->finalize/quitDevice in the original as well).
+field 0276297C 101F8BA8 u32 0x5AA00000
+field 0276297C 5AA00014 u32 0x5AA01000
+field 0276297C 5AA01000 u32 0x1015EB28
+field 02762DBC 101F8BA8 u32 0x5AA00000
+field 02762DBC 5AA00014 u32 0x5AA01000
+field 02762DBC 5AA01000 u32 0x1015EB28
+
+# zero-page rule (2026-11-10, LOW clean 29/1000 and 62/1000): openFile 02764968 and
+# openMemory 02764A28 allocate the archive (allocateAlignedObject 0273B050, mocked, 64-byte aligned), construct it
+# (AudioFileArchive::construct 02764184 / AudioMemoryArchive::construct 02764660, mocked) and call through
+# archive->mVtable (+4) unchecked; the generic answers put that load on page 0 (trace steerS/tr-02764A28.txt: load 00000005).
+# Allocators (2026-11-10): the allocator returns a fixture block. No allocfail: a
+# NULL archive faults the original at the same vtable load. The constructors return their object with the vtable the
+# originals store last: sAudioFileArchiveVtable 1015EE58, sAudioMemoryArchiveVtable 1015EEE8.
+alloc 0273B050 r3 0x5E800000 align=r5
+retarg 02764184 r3
+mockfield 02764184 r3+0x4 u32 0x1015EE58
+retarg 02764660 r3
+mockfield 02764660 r3+0x4 u32 0x1015EEE8
+# The loader and the file name are fixtures (generated pointers near 0 put their accesses on page 0 in the original):
+# the loader 0x5EA00000 (mArchive +0x220, mRootDirectory +0x22C generated), and for openFile the configuration's file
+# name AudioLaunchText {mText, mVtable = sAudioLaunchTextVtable 1015F054} that openArchive 027651B8 passes.
+arg! 02764968 r3 0x5EA00000
+arg! 02764A28 r3 0x5EA00000
+arg! 02764968 r4 0x5EA10000
+field 02764968 0x5EA10000 u32 0x5EA10100
+field 02764968 0x5EA10004 u32 0x1015F054
+stable 0x5EA10000 8
+# The archive's vtable word is written only by its constructor; the mocked setters (setLoadStrings, setRootDirectory,
+# setStreamOption) receive the archive and the generic mock's clobber regenerated it before the mOpen call (load +0x24).
+stable 0x5E800004 4
+# AudioLaunchConfiguration::openArchive 027651B8 (LOW clean 264/1000, blocks 12/13 LOST): the services' output service
+# (+0x1C) must be an AudioPlayer (isKindOf through its vtable +0xC) before player->mLoader (+0x144) is used unchecked;
+# with generated objects the kind test failed or the pointers were near 0. Fixtures: services 0x5EB00000, player
+# 0x5EB10000 whose vtable 0x5EB20000 has an isKindOf fixture answering 1 (the image's AudioPlayer type test for the
+# AudioPlayer type), loader 0x5EB30000 (its openFile/openMemory/setRootDirectory are mocked).
+arg! 027651B8 r4 0x5EB00000
+field 027651B8 0x5EB0001C u32 0x5EB10000
+field 027651B8 0x5EB10000 u32 0x5EB20000
+field 027651B8 0x5EB2000C u32 0x7C5E0000
+field 027651B8 0x5EB10144 u32 0x5EB30000
+callee 7C5E0000 fixture r3=0 r4=0
+ret 7C5E0000 1
+stable 0x5EB0001C 4
+stable 0x5EB10000 4
+stable 0x5EB2000C 4
+stable 0x5EB10144 4
+# The configuration itself is a fixture 0x5EC00000 (its first store, mServices +0x38, reached page 0 for generated
+# pointers near 0); its fields stay generated.
+arg! 027651B8 r3 0x5EC00000

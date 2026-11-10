@@ -321,7 +321,7 @@ void daObjFlame::Act_c::create_mode_init() {
     a = attr();
     if (!a->mSimpleEmitter)
         em_manual_set();
-    m457 = 1;
+    mbEmPosUpdate = 1;
 }
 
 /* 02343AE4 */
@@ -370,7 +370,7 @@ void daObjFlame::Act_c::init_mtx() {
 
 /* 02343D7C */
 void daObjFlame::Act_c::em_position() {
-    if (!(s8)m457)
+    if (!(s8)mbEmPosUpdate)
         return;
     Mtx34* mtx = mDoMtx_stack_c::get();
     f32 z = current.pos.z, y = current.pos.y, x = current.pos.x;
@@ -405,17 +405,17 @@ void daObjFlame::Act_c::em_position() {
         type = mType;
     }
     a = attr();
-    f32 height = mHeight, sy = a->mVerticalScale, ratio = m46C;
+    f32 height = mHeight, sy = a->mVerticalScale, ratio = mHeightRatio;
     mDoMtx_stack_c::transM(0.0f, ((height * 1500.0f) * sy) * ratio, 0.0f);
     PSMTXMultVec(mtx, &l_origin, &eyePos);
     height = mHeight;
-    m434 = gabi::fmsubs(1500.0f, height, 300.0f) > 0.0f;
-    if (!m434)
+    mbCpsActive = gabi::fmsubs(1500.0f, height, 300.0f) > 0.0f;
+    if (!mbCpsActive)
         return;
     type = mType;
     a = attr();
     sy = a->mVerticalScale;
-    ratio = m46C;
+    ratio = mHeightRatio;
     mDoMtx_stack_c::transM(0.0f, (-300.0f * sy) * ratio, 0.0f);
     PSMTXMultVec(mtx, &l_origin, &mCpsP1);
 }
@@ -432,7 +432,7 @@ void daObjFlame::Act_c::em_simple_set() {
     };
     FlameAttr* a = attr();
     s8 state = mEm0State;
-    bool blocked = a->mBlockEmitter != 0 && m459 != 0;
+    bool blocked = a->mBlockEmitter != 0 && mbLiftingObj != 0;
     auto particle = [](u32 id, cXyz* pos) { dComIfGp_particle_setSimple(id, pos); };
     if (state == 1 && !blocked) {
         f32 x = eyePos.x;
@@ -476,7 +476,7 @@ void daObjFlame::Act_c::em_manual_set() {
         return &l_attr.mType[type];
     };
     FlameAttr* a = attr();
-    bool blocked = a->mBlockEmitter != 0 && m459 != 0;
+    bool blocked = a->mBlockEmitter != 0 && mbLiftingObj != 0;
     auto particle = [&](u32 id, cXyz* scale) {
         return reinterpret_cast<FlameEmitter*>(dPa_control_set(dComIfGp_getParticle(), 0, id, &home.pos, &home.angle,
                                                                scale, 255, nullptr, -1, nullptr, nullptr, nullptr));
@@ -538,7 +538,7 @@ void daObjFlame::Act_c::em_manual_inv() {
     }
     bool enabled = l_attr.mType[type].mBlockEmitter != 0;
     s8 first = mEm0State;
-    bool stop = enabled && m459 != 0;
+    bool stop = enabled && mbLiftingObj != 0;
     s8 last = mEm2State;
     if (first == 2 && stop) {
         first = 3;
@@ -560,35 +560,35 @@ void daObjFlame::Act_c::em_manual_inv() {
 void daObjFlame::Act_c::ki_init() {
     s32 count = (s32)((u32)prm(5, 8) + 1);
     if (count != 32 && count > 0) {
-        m464 = 0;
-        m45A = 1;
-        m460 = 0;
+        mKiCount = 0;
+        mbKiMake = 1;
+        mKiTimer = 0;
     }
 }
 /* 02345068 */
 void daObjFlame::Act_c::ki_make() {
-    if (!m45A)
+    if (!mbKiMake)
         return;
-    if (m45C > 0) {
-        m45A = 0;
-        m45C = (s32)((u32)(s32)m45C - 1);
+    if (mKiDelay > 0) {
+        mbKiMake = 0;
+        mKiDelay = (s32)((u32)(s32)mKiDelay - 1);
         return;
     }
     s32 count = (s32)((u32)prm(5, 8) + 1);
     if (count == 32)
         count = 0;
-    if (m464 >= count) {
-        m45A = 0;
-        m45C = prm(2, 13);
+    if (mKiCount >= count) {
+        mbKiMake = 0;
+        mKiDelay = prm(2, 13);
         return;
     }
-    s32 timer = (s32)((u32)(s32)m460 - 1);
+    s32 timer = (s32)((u32)(s32)mKiTimer - 1);
     if (timer > 0) {
-        m460 = timer;
+        mKiTimer = timer;
         return;
     }
-    m460 = 5;
-    m464 = (s32)((u32)(s32)m464 + 1);
+    mKiTimer = 5;
+    mKiCount = (s32)((u32)(s32)mKiCount + 1);
     f32 angle = cM_rndFX(32768.0f);
     gabi::Local<csXyz> rotation;
     csXyz_ct(rotation.get(), 0, (s16)gabi::ftoi(angle), 0);
@@ -652,11 +652,11 @@ s32 liftup_magmarock(fopAc_ac_c* rock, Act_c* actor) {
     } else
         boost = 270.0f;
     a = attr();
-    f32 ratio = actor->m46C, scale = a->mVerticalScale;
+    f32 ratio = actor->mHeightRatio, scale = a->mVerticalScale;
     offset *= scale * ratio;
     a = attr();
     scale = a->mVerticalScale;
-    ratio = actor->m46C;
+    ratio = actor->mHeightRatio;
     f32 x = actor->eyePos.x, y = actor->eyePos.y, z = actor->eyePos.z;
     s32 mode = actor->mModeProc;
     gabi::Local<cXyz> destination;
@@ -666,7 +666,7 @@ s32 liftup_magmarock(fopAc_ac_c* rock, Act_c* actor) {
     auto* vt = Flame_liftVtable(rock);
     u32 call = (mode == MODE_WAIT2 || mode == MODE_L_BEFORE) ? vt->mWait : vt->mLift;
     gabi::call_ptr(call, rock, destination.get());
-    actor->m459 = 1;
+    actor->mbLiftingObj = 1;
     return 0;
 }
 /* 023446B0 */
@@ -695,10 +695,10 @@ s32 liftup_mflft(fopAc_ac_c* platform, Act_c* actor) {
         return &l_attr.mType[type];
     };
     FlameAttr* a = attr();
-    f32 ratio = actor->m46C, scale = a->mVerticalScale;
+    f32 ratio = actor->mHeightRatio, scale = a->mVerticalScale;
     offset *= scale * ratio;
     a = attr();
-    ratio = actor->m46C;
+    ratio = actor->mHeightRatio;
     scale = a->mVerticalScale;
     f32 y = actor->eyePos.y, base = actor->current.pos.y, x = actor->eyePos.x, z = actor->eyePos.z;
     y = gabi::fmadds(boost, scale * ratio, y + offset);
@@ -714,8 +714,8 @@ s32 liftup_mflft(fopAc_ac_c* platform, Act_c* actor) {
         u32 call = vt->mLift;
         gabi::call_ptr(call, platform, destination.get());
     }
-    actor->m459 = 1;
-    Flame_addCalc(&actor->m46C, 1.0f, 0.30000001192092896f, 0.10000000149011612f, 0.009999999776482582f);
+    actor->mbLiftingObj = 1;
+    Flame_addCalc(&actor->mHeightRatio, 1.0f, 0.30000001192092896f, 0.10000000149011612f, 0.009999999776482582f);
     Flame_addCalc(&actor->mExtraScaleY, desired, 0.30000001192092896f, 0.10000000149011612f, 0.009999999776482582f);
     return 0;
 }
@@ -739,13 +739,13 @@ void daObjFlame::Act_c::mode_wait() {
         mTimer = 23.0f;
         ki_init();
         mEm0State = 1;
-        m457 = 1;
+        mbEmPosUpdate = 1;
         mEm1State = 1;
         mEm2State = 1;
     } else {
         mModeProc = MODE_WAIT2;
         mTimer = 127.0f;
-        m457 = 1;
+        mbEmPosUpdate = 1;
         mEm0State = 1;
         mEm2State = 1;
         mEm1State = 1;
@@ -767,10 +767,10 @@ void daObjFlame::Act_c::mode_wait2() {
 /* 02344C50 */
 u32 daObjFlame::Act_c::mode_l_before() {
     f32 timer = mTimer;
-    m457 = 0;
+    mbEmPosUpdate = 0;
     if (timer > 0.0f)
         return se_fireblast_omen();
-    s32 rev = m458;
+    s32 rev = mReverb;
     mModeProc = MODE_L_U;
     mTimer = 22.0f;
     return Flame_audio(JA_SE_FIREBLAST_BLOW, &eyePos, 0u, rev); /* mDoAud_seStart */
@@ -778,7 +778,7 @@ u32 daObjFlame::Act_c::mode_l_before() {
 /* 02344CA4 */
 void daObjFlame::Act_c::mode_l_u() {
     f32 timer = mTimer;
-    m457 = 1;
+    mbEmPosUpdate = 1;
     mHeight = 0.04545454680919647f * (22.0f - timer);
     if (timer > 0.0f)
         return;
@@ -796,7 +796,7 @@ void daObjFlame::Act_c::mode_u() {
 /* 02344D28 */
 void daObjFlame::Act_c::mode_u_l() {
     f32 timer = mTimer;
-    m457 = 1;
+    mbEmPosUpdate = 1;
     mHeight = 0.03999999910593033f * timer;
     if (timer > 0.0f)
         return;
@@ -854,10 +854,10 @@ void daObjFlame::Act_c::mode_proc_call() {
         mDoExt_brkAnm* brk = mpBrkAnm;
         if (brk)
             brk->play();
-        s32 rev = m458;
+        s32 rev = mReverb;
         mDoAud_seStart(JA_SE_FIREBLAST_NOISE, &eyePos, 0, rev);
     }
-    if (!m434)
+    if (!mbCpsActive)
         return;
     if (mModeProc == MODE_U_L) {
         a = attr();
@@ -909,7 +909,7 @@ cPhs_State daObjFlame::Act_c::_create() {
     auto* scaleWords = reinterpret_cast<FlameVecWords*>(&scale);
     auto* origWords = reinterpret_cast<FlameVecWords*>(&mOrigScale);
     u32 x = scaleWords->mX, y = scaleWords->mY, z;
-    m46C = 1.f;
+    mHeightRatio = 1.f;
     origWords->mX = x;
     s32 type = mType;
     z = scaleWords->mZ;
@@ -950,18 +950,18 @@ cPhs_State daObjFlame::Act_c::_create() {
     p1->mZ = z;
     a = attr();
     f32 radius = a->mRadiusScale * 145.f;
-    m434 = 0;
+    mbCpsActive = 0;
     mCpsRad = radius;
     em_position();
     s32 rev = dComIfGp_getReverb(home.roomNo);
-    m458 = rev;
-    m459 = 0;
+    mReverb = rev;
+    mbLiftingObj = 0;
     s32 bound = static_cast<s32>(u32(prm(2, 13)) + 1);
     f32 random = cM_rndF(f32(bound));
     s32 delay = gabi::ftoi(random), mode = mModeProc;
-    m45C = delay;
+    mKiDelay = delay;
     if (mode != MODE_WAIT && delay == 0)
-        m45C = 1;
+        mKiDelay = 1;
     return result;
 }
 
@@ -1000,7 +1000,7 @@ s32 Flame_Method_Execute(Act_c* actor) {
     } else
         actor->mRotY = (s16)(rot + 400);
     s32 mode = actor->mModeProc;
-    actor->m459 = 0;
+    actor->mbLiftingObj = 0;
     if ((u32)(mode - 1) <= 3) {
         Flame_search(liftup_magmarock, actor);
         if (actor->mType == 1)

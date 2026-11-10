@@ -236,7 +236,7 @@ static void se_start(u32 a, u32 sfx, u32 param) {
     }
 }
 
-/* HD material loop (body_draw / torituki_draw): K color 3 alpha = m47E, then the HD material
+/* HD material loop (body_draw / torituki_draw): K color 3 alpha = mAlpha, then the HD material
  * constant-color block is refreshed from it (vcalls on the material's TEV block at +0x18). */
 static void bpw_material_alpha(u32 a, u32 md) {
     u16 i = 0;
@@ -253,7 +253,7 @@ static void bpw_material_alpha(u32 a, u32 md) {
         u32 c =
             call_ptr<u32>(u32(at<BpwTevVtableHD>(at<BpwTevBlockHD>(tev)->mpVtable)->getTevKColor),
                           tev, 3); // getTevKColor(3)
-        at<GXColor>(c)->a = (u8)s16(at<bpw_class>(a)->m47E);
+        at<GXColor>(c)->a = (u8)s16(at<bpw_class>(a)->mAlpha);
         tev = u32(at<BpwMaterialHD>(mat)->mpTevBlock);
         c = call_ptr<u32>(u32(at<BpwTevVtableHD>(at<BpwTevBlockHD>(tev)->mpVtable)->getTevKColor),
                           tev, 3);
@@ -369,20 +369,20 @@ static u32 search_by_id(u32 id) {
         return 0;
     return BpwHD_fopAcIt_Judge(0x025E1234u, key.get());
 }
-/* cLib_addCalc2(p, target, scale, fabs(*p - target) * k * m43C) */
+/* cLib_addCalc2(p, target, scale, fabs(*p - target) * k * mDemoCamBlend) */
 static void demo_calc(u32 a, be<f32> *field, f32 target, f32 scale, u32 kn, u32 ki, f32 kb) {
     f32 v = *field;
     f32 d = __builtin_fabsf(sub(v, target));
-    f32 step = mul(mul(d, regf(kn, ki, kb)), f32(at<bpw_class>(a)->m43C));
+    f32 step = mul(mul(d, regf(kn, ki, kb)), f32(at<bpw_class>(a)->mDemoCamBlend));
     BpwHD_cLib_addCalc2_4(ea(field), target, scale, step);
 }
 static void set_cam_pos(u32 a, f32 cx, f32 cy, f32 cz, f32 ex, f32 ey, f32 ez) {
-    at<bpw_class>(a)->m40C.x = cx;
-    at<bpw_class>(a)->m40C.y = cy;
-    at<bpw_class>(a)->m40C.z = cz;
-    at<bpw_class>(a)->m418.x = ex;
-    at<bpw_class>(a)->m418.y = ey;
-    at<bpw_class>(a)->m418.z = ez;
+    at<bpw_class>(a)->mDemoCamCenter.x = cx;
+    at<bpw_class>(a)->mDemoCamCenter.y = cy;
+    at<bpw_class>(a)->mDemoCamCenter.z = cz;
+    at<bpw_class>(a)->mDemoCamEye.x = ex;
+    at<bpw_class>(a)->mDemoCamEye.y = ey;
+    at<bpw_class>(a)->mDemoCamEye.z = ez;
 }
 
 void body_execute(bpw_class *i_this);
@@ -535,17 +535,17 @@ static void action_dousa(bpw_class *i_this) {
     bool idle = false; // states 10..13 skip the angle/alpha part
     switch (s16(at<bpw_class>(a)->mActionState)) {
     case 0: {
-        at<bpw_class>(a)->m488 = 1.f;
+        at<bpw_class>(a)->mSpeedStep = 1.f;
         search_get_skull(i_this, 2);
         clear_timers();
-        if (u32(at<bpw_class>(a)->m3F8) != 0x2A)
+        if (u32(at<bpw_class>(a)->mBckFileIdx) != 0x2A)
             anm_init(i_this, dRes_INDEX_BPW_BCK_WAIT1_e, 15.f, 2, 1.f, -1); // WAIT1
         at<bpw_class>(a)->mSomeCountdownTimers[0] = 10;
         f32 r = BpwHD_cM_rndF(10.f);
-        s16 m = s16(at<bpw_class>(a)->m3F6);
+        s16 m = s16(at<bpw_class>(a)->mBattlePhase);
         at<bpw_class>(a)->mSomeCountdownTimers[0] = (s16)((s16)ftoi(r) + 10);
         if ((u32)(s32)m <= 2)
-            at<bpw_class>(a)->m47A = l_turnLimit[m]; // m47A = {0x100,0x300,0x500}[m3F6]
+            at<bpw_class>(a)->mTurnStep = l_turnLimit[m]; // mTurnStep = {0x100,0x300,0x500}[mBattlePhase]
         inc_state(a);
     }
         /* fallthrough */
@@ -556,15 +556,15 @@ static void action_dousa(bpw_class *i_this) {
         /* fallthrough */
     case 2: {
         at<bpw_class>(a)->mSomeCountdownTimers[0] = 0x41;
-        at<bpw_class>(a)->m490 = 10.f;
+        at<bpw_class>(a)->mTargetSpeed = 10.f;
         f32 r = BpwHD_cM_rndF(65.f);
-        s16 m = s16(at<bpw_class>(a)->m3F6);
-        at<bpw_class>(a)->m488 = 1.f;
-        u32 anm = u32(at<bpw_class>(a)->m3F8);
+        s16 m = s16(at<bpw_class>(a)->mBattlePhase);
+        at<bpw_class>(a)->mSpeedStep = 1.f;
+        u32 anm = u32(at<bpw_class>(a)->mBckFileIdx);
         at<bpw_class>(a)->mSomeCountdownTimers[0] = (s16)((s16)ftoi(r) + 0x41);
         if (m == 2) {
-            at<bpw_class>(a)->m490 = mul(f32(at<bpw_class>(a)->m490), regf(8, 0, 1.35f));
-            at<bpw_class>(a)->m488 = 5.f;
+            at<bpw_class>(a)->mTargetSpeed = mul(f32(at<bpw_class>(a)->mTargetSpeed), regf(8, 0, 1.35f));
+            at<bpw_class>(a)->mSpeedStep = 5.f;
         }
         if (anm != 0x1D)
             anm_init(i_this, dRes_INDEX_BPW_BCK_MOVEF1_e, 15.f, 2, 1.f, -1); // MOVEF1
@@ -574,8 +574,8 @@ static void action_dousa(bpw_class *i_this) {
     case 3: {
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[0]) != 0)
             break;
-        s16 m = s16(at<bpw_class>(a)->m3F6);
-        at<bpw_class>(a)->m490 = 0.f;
+        s16 m = s16(at<bpw_class>(a)->mBattlePhase);
+        at<bpw_class>(a)->mTargetSpeed = 0.f;
         if (m == 0) {
             at<bpw_class>(a)->mBodyAction = ACTION_ATTACK_KOUGEKI;
             at<bpw_class>(a)->mActionState = 0x14;
@@ -614,10 +614,10 @@ static void action_dousa(bpw_class *i_this) {
         maai_sub(i_this);
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[0]) != 0)
             break;
-        at<bpw_class>(a)->m3E6 = 1;
+        at<bpw_class>(a)->mIsCurseDash = 1;
         at<bpw_class>(a)->actor.speedF = regf(8, 12, 75.f);
-        at<bpw_class>(a)->m488 = regf(8, 13, 2.f);
-        at<bpw_class>(a)->m490 = 0.f;
+        at<bpw_class>(a)->mSpeedStep = regf(8, 13, 2.f);
+        at<bpw_class>(a)->mTargetSpeed = 0.f;
         anm_init(i_this, dRes_INDEX_BPW_BCK_MOVES1_e, 15.f, 2, 1.f, -1); // MOVES1
         inc_state(a);
         /* fallthrough */
@@ -630,17 +630,17 @@ static void action_dousa(bpw_class *i_this) {
         v->x = 0.f;
         v->y = 0.f;
         v->z = 500.f;
-        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->m328));
-        BpwHD_PSVECAdd_2(ea(&at<bpw_class>(a)->m328), ea(&at<bpw_class>(a)->actor.current.pos),
-                         ea(&at<bpw_class>(a)->m328));
-        f32 x = f32(at<bpw_class>(a)->actor.current.pos.x), my = f32(at<bpw_class>(a)->m328[0].y),
+        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->mLinChkEnd));
+        BpwHD_PSVECAdd_2(ea(&at<bpw_class>(a)->mLinChkEnd), ea(&at<bpw_class>(a)->actor.current.pos),
+                         ea(&at<bpw_class>(a)->mLinChkEnd));
+        f32 x = f32(at<bpw_class>(a)->actor.current.pos.x), my = f32(at<bpw_class>(a)->mLinChkEnd[0].y),
             z = f32(at<bpw_class>(a)->actor.current.pos.z),
             y = f32(at<bpw_class>(a)->actor.current.pos.y);
-        at<bpw_class>(a)->m304[0].x = x;
-        at<bpw_class>(a)->m328[0].y = add(my, 400.f);
-        at<bpw_class>(a)->m304[0].z = z;
-        at<bpw_class>(a)->m304[0].y = add(y, 400.f);
-        BpwHD_dBgS_LinChk_Set_2(l, ea(&at<bpw_class>(a)->m304), ea(&at<bpw_class>(a)->m328), a);
+        at<bpw_class>(a)->mLinChkStart[0].x = x;
+        at<bpw_class>(a)->mLinChkEnd[0].y = add(my, 400.f);
+        at<bpw_class>(a)->mLinChkStart[0].z = z;
+        at<bpw_class>(a)->mLinChkStart[0].y = add(y, 400.f);
+        BpwHD_dBgS_LinChk_Set_2(l, ea(&at<bpw_class>(a)->mLinChkStart), ea(&at<bpw_class>(a)->mLinChkEnd), a);
         bool stop;
         if (BpwHD_cBgS_LineCross_2(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mBgS), l)) {
             at<bpw_class>(a)->actor.speedF = 0.f;
@@ -661,34 +661,34 @@ static void action_dousa(bpw_class *i_this) {
     case 10:
         search_get_skull(i_this, 2);
         clear_timers();
-        if (u32(at<bpw_class>(a)->m3F8) != 0x2A)
+        if (u32(at<bpw_class>(a)->mBckFileIdx) != 0x2A)
             anm_init(i_this, dRes_INDEX_BPW_BCK_WAIT1_e, 15.f, 2, 1.f, -1);
         inc_state(a);
         /* fallthrough */
     case 11:
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m47E), 0, 1, 10);
-        if (s16(at<bpw_class>(a)->m47E) < 2) {
-            at<bpw_class>(a)->m47E = 0;
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mAlpha), 0, 1, 10);
+        if (s16(at<bpw_class>(a)->mAlpha) < 2) {
+            at<bpw_class>(a)->mAlpha = 0;
             if (kantera_pos_search(i_this))
                 inc_state(a);
         }
         break;
     case 12:
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m47E), 0x96, 1, 0x1E);
-        if (s16(at<bpw_class>(a)->m47E) >= 0x95) {
-            at<bpw_class>(a)->m47E = 0x96;
-            at<bpw_class>(a)->m480 = 0x96;
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mAlpha), 0x96, 1, 0x1E);
+        if (s16(at<bpw_class>(a)->mAlpha) >= 0x95) {
+            at<bpw_class>(a)->mAlpha = 0x96;
+            at<bpw_class>(a)->mBaseAlpha = 0x96;
             anm_init(i_this, dRes_INDEX_BPW_BCK_HIROU1_e, 15.f, 0, 1.f, -1); // HIROU1
             kantera_pos_search(i_this);
             inc_state(a);
         }
         break;
     case 13:
-        if (s16(at<bpw_class>(a)->m462) == 0)
+        if (s16(at<bpw_class>(a)->mPoeCount) == 0)
             kantera_pos_search(i_this);
         if (BpwHD_J3DFrameCtrl_checkPass(u32(at<bpw_class>(a)->mpMorf) + 0x98, 12.f)) {
             se_start(a, 0x5967, 0); // JA_SE_CM_BPW_GET_KANTERA
-            u32 id = u32(at<bpw_class>(a)->m3FC);
+            u32 id = u32(at<bpw_class>(a)->mKanteraId);
             if (id != 0xFFFFFFFF) {
                 u32 k = search_by_id(id);
                 if (k) {
@@ -699,14 +699,14 @@ static void action_dousa(bpw_class *i_this) {
                     at<fopAc_ac_c>(k)->speed.z = 0.f;
                     at<bpw_class>(k)->actor.attention_info.flags = 0;
                     at<bpw_class>(k)->mActionState = 0;
-                    at<bpw_class>(a)->m462 = 1;
+                    at<bpw_class>(a)->mPoeCount = 1;
                 }
             }
-            at<bpw_class>(a)->m482 = 0;
+            at<bpw_class>(a)->mKanteraSwingPhase = 0;
             at<bpw_class>(a)->mAttWaitTimer = 1;
-            at<bpw_class>(a)->m388 = 0.f;
+            at<bpw_class>(a)->mKanteraSwingX = 0.f;
             at<bpw_class>(a)->m38C = 0.f;
-            at<bpw_class>(a)->m390 = 0.f;
+            at<bpw_class>(a)->mKanteraSwingZ = 0.f;
         }
         if (morf_isStop(u32(at<bpw_class>(a)->mpMorf))) {
             next_status_clear(i_this, 1);
@@ -717,16 +717,16 @@ static void action_dousa(bpw_class *i_this) {
         break;
     }
     (void)idle;
-    at<bpw_class>(a)->m4A0 = 0.f;
-    BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->actor.speedF), f32(at<bpw_class>(a)->m490), 1.f,
-                          f32(at<bpw_class>(a)->m488));
-    BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->m48C), 1.f, 10.f);
+    at<bpw_class>(a)->mCoSphOffsetY = 0.f;
+    BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->actor.speedF), f32(at<bpw_class>(a)->mTargetSpeed), 1.f,
+                          f32(at<bpw_class>(a)->mSpeedStep));
+    BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->mBgOffsetY), 1.f, 10.f);
     u32 st = (u32)(s32)s16(at<bpw_class>(a)->mActionState);
     if (st == 6) {
         alpha_anime(i_this);
         fuwafuwa_calc(i_this);
     } else if (!(st >= 10 && st <= 13)) {
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_by_play());
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_by_play());
         alpha_anime(i_this);
         fuwafuwa_calc(i_this);
     }
@@ -744,19 +744,19 @@ static void action_kougeki(bpw_class *i_this) {
             break;
         for (u32 i = 0; i < 10; i++)
             at<BpwResetTimersHD>(a)->mResetTimers[i] = 0;
-        if (u32(at<bpw_class>(a)->m3F8) != 0x2B)
+        if (u32(at<bpw_class>(a)->mBckFileIdx) != 0x2B)
             anm_init(i_this, dRes_INDEX_BPW_BCK_WARAU1_e, 15.f, 2, 1.f, -1); // WARAU1
-        at<bpw_class>(a)->m4A0 = 0.f;
-        at<bpw_class>(a)->m47A = 0x500;
+        at<bpw_class>(a)->mCoSphOffsetY = 0.f;
+        at<bpw_class>(a)->mTurnStep = 0x500;
         at<bpw_class>(a)->mSomeCountdownTimers[0] = 30;
         inc_state(a);
         /* fallthrough */
     case 0x15: {
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
         maai_sub(i_this);
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[0]) != 0)
             break;
-        s16 m = s16(at<bpw_class>(a)->m3F6);
+        s16 m = s16(at<bpw_class>(a)->mBattlePhase);
         if (m == 0 || ((u32)(s32)m <= 2 && !(u32(at<daPy_py_c>(pl)->mNoResetFlg1) & 0x100))) {
             at<bpw_class>(a)->mActionState = 0x28;
             if (BpwHD_fopAcM_searchActorDistance_2(a, player_by_play()) < 1050.f)
@@ -764,9 +764,9 @@ static void action_kougeki(bpw_class *i_this) {
         } else if ((u32)(s32)m <= 2) {
             at<bpw_class>(a)->mActionState = 0x3C;
         }
-        if (u8(at<bpw_class>(a)->m3E9) != 0) {
+        if (u8(at<bpw_class>(a)->mIsReformed) != 0) {
             at<bpw_class>(a)->mActionState = 0x32;
-            at<bpw_class>(a)->m3E9 = 0;
+            at<bpw_class>(a)->mIsReformed = 0;
         }
         break;
     }
@@ -776,28 +776,28 @@ static void action_kougeki(bpw_class *i_this) {
         anm_init(i_this, dRes_INDEX_BPW_BCK_SUIKOMU1_e, 15.f, 2, 1.f, -1); // SUIKOMU1
         at<bpw_class>(a)->mSomeCountdownTimers[0] = 30;
         f32 r = BpwHD_cM_rndF(30.f);
-        u32 em = u32(at<bpw_class>(a)->m540.mpEmitter.v);
+        u32 em = u32(at<bpw_class>(a)->mInhaleCb.mpEmitter.v);
         at<bpw_class>(a)->mSomeCountdownTimers[0] = (s16)((s16)ftoi(r) + 30);
         if (em)
-            dPa_set(0x82CE, ea(&at<bpw_class>(a)->m394), 0, 0,
+            dPa_set(0x82CE, ea(&at<bpw_class>(a)->mWaistPos), 0, 0,
                     ea(&at<bpw_class>(a)
-                            ->m540)); // BPWINHALE01 (only when the emitter exists, as GameCube)
+                            ->mInhaleCb)); // BPWINHALE01 (only when the emitter exists, as GameCube)
         inc_state(a);
     }
         /* fallthrough */
     case 0x29: {
         s32 reverb = BpwHD_dComIfGp_getReverb((s32)s8(at<bpw_class>(a)->actor.current.roomNo));
-        BpwHD_mDoAud_seStart_2(0x7054u, ea(&at<bpw_class>(a)->m3C4), 0u,
-                               reverb); // JA_SE_OBJ_BPW_BREATH_IN at m3C4
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
+        BpwHD_mDoAud_seStart_2(0x7054u, ea(&at<bpw_class>(a)->mJawPos), 0u,
+                               reverb); // JA_SE_OBJ_BPW_BREATH_IN at mJawPos
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
         search_get_skull(i_this, 0);
-        u32 em = u32(at<bpw_class>(a)->m540.mpEmitter.v);
+        u32 em = u32(at<bpw_class>(a)->mInhaleCb.mpEmitter.v);
         if (em)
             emitter_srt_jnt2(a, em);
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[1]) == 0) {
             u32 play = BpwHD_getGameInfo();
             u32 e2 = BpwHD_dPa_control_c_set_7(u32(at<dComIfG_inf_c>(play)->play.mParticle.v), 0,
-                                               0x82CD, ea(&at<bpw_class>(a)->m394),
+                                               0x82CD, ea(&at<bpw_class>(a)->mWaistPos),
                                                ea(&at<bpw_class>(a)->actor.shape_angle), 0, 0xFF, 0,
                                                -1, 0, 0, 0); // BPWINHALE00
             if (e2)
@@ -808,35 +808,35 @@ static void action_kougeki(bpw_class *i_this) {
             if (BpwHD_fopAcM_searchActorDistance_2(a, player_by_play()) > 300.f)
                 set_out_power(a, pl, 10.f, (s16)0x8000);
         } else {
-            BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->m540));    // m540.remove()
+            BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mInhaleCb));    // mInhaleCb.remove()
             anm_init(i_this, dRes_INDEX_BPW_BCK_IKI1_e, 15.f, 0, 1.f, -1); // IKI1
             inc_state(a);
         }
         break;
     }
     case 0x2A: {
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
         search_get_skull(i_this, 2);
         if (!morf_isStop(u32(at<bpw_class>(a)->mpMorf)))
             break;
         at<bpw_class>(a)->mSomeCountdownTimers[0] = 0x5A;
         f32 r = BpwHD_cM_rndF(90.f);
-        u32 em = u32(at<bpw_class>(a)->m52C.mpEmitter.v);
+        u32 em = u32(at<bpw_class>(a)->mBlowCb.mpEmitter.v);
         at<bpw_class>(a)->mSomeCountdownTimers[0] = (s16)((s16)ftoi(r) + 0x5A);
         if (!em)
-            dPa_set(0x82CF, ea(&at<bpw_class>(a)->m394), 0, 0,
-                    ea(&at<bpw_class>(a)->m52C)); // BPWBLOW00
+            dPa_set(0x82CF, ea(&at<bpw_class>(a)->mWaistPos), 0, 0,
+                    ea(&at<bpw_class>(a)->mBlowCb)); // BPWBLOW00
         fire_pos_ground(a);
         at<bpw_class>(a)->mFire1DousaRot.x = u16(at<bpw_class>(a)->actor.shape_angle.x);
         at<bpw_class>(a)->mFire1DousaRot.y = u16(at<bpw_class>(a)->actor.shape_angle.y);
         at<bpw_class>(a)->mFire1DousaRot.z = u16(at<bpw_class>(a)->actor.shape_angle.z);
-        if (!u32(at<bpw_class>(a)->m50C.mpEmitter.v)) {
+        if (!u32(at<bpw_class>(a)->mBlowSmokeCb.mpEmitter.v)) {
             s32 room = s8(at<bpw_class>(a)->actor.current.roomNo);
             u32 play = BpwHD_getGameInfo();
             BpwHD_dPa_control_c_set_8(u32(at<dComIfG_inf_c>(play)->play.mParticle.v), 2, 0xA2D0,
                                       ea(&at<bpw_class>(a)->mFire1DousaPos),
                                       ea(&at<bpw_class>(a)->mFire1DousaRot), 0, 0xA0,
-                                      ea(&at<bpw_class>(a)->m50C), room, 0, 0, 0); // BPWBLOWSMOKE00
+                                      ea(&at<bpw_class>(a)->mBlowSmokeCb), room, 0, 0, 0); // BPWBLOWSMOKE00
         }
         anm_init(i_this, dRes_INDEX_BPW_BCK_IKI_WAIT1_e, 0.f, 2, 1.f, -1); // IKI_WAIT1
         inc_state(a);
@@ -844,11 +844,11 @@ static void action_kougeki(bpw_class *i_this) {
     }
     case 0x2B: {
         s32 reverb = BpwHD_dComIfGp_getReverb((s32)s8(at<bpw_class>(a)->actor.current.roomNo));
-        BpwHD_mDoAud_seStart_2(0x7055u, ea(&at<bpw_class>(a)->m3C4), 0u,
+        BpwHD_mDoAud_seStart_2(0x7055u, ea(&at<bpw_class>(a)->mJawPos), 0u,
                                reverb); // JA_SE_OBJ_BPW_BREATH_OUT
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
         search_get_skull(i_this, 1);
-        u32 em = u32(at<bpw_class>(a)->m52C.mpEmitter.v);
+        u32 em = u32(at<bpw_class>(a)->mBlowCb.mpEmitter.v);
         if (em)
             emitter_srt_jnt2(a, em);
         fire_pos_ground(a);
@@ -875,10 +875,10 @@ static void action_kougeki(bpw_class *i_this) {
         /* fallthrough */
     case 0x33: {
         s32 reverb = BpwHD_dComIfGp_getReverb((s32)s8(at<bpw_class>(a)->actor.current.roomNo));
-        BpwHD_mDoAud_seStart_2(0x7054u, ea(&at<bpw_class>(a)->m3C4), 0u, reverb);
+        BpwHD_mDoAud_seStart_2(0x7054u, ea(&at<bpw_class>(a)->mJawPos), 0u, reverb);
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[1]) != 0)
-            at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_by_play());
-        at<bpw_class>(a)->m47A = regf_t(21, 2, 140.f);
+            at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_by_play());
+        at<bpw_class>(a)->mTurnStep = regf_t(21, 2, 140.f);
         search_get_skull(i_this, 0);
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[0]) != 0) {
             if (BpwHD_fopAcM_searchActorDistance_2(a, player_by_play()) > 300.f)
@@ -890,22 +890,22 @@ static void action_kougeki(bpw_class *i_this) {
         break;
     }
     case 0x34: {
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
-        at<bpw_class>(a)->m47A = regf_t(21, 2, 140.f);
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
+        at<bpw_class>(a)->mTurnStep = regf_t(21, 2, 140.f);
         search_get_skull(i_this, 2);
         if (!morf_isStop(u32(at<bpw_class>(a)->mpMorf)))
             break;
-        u32 k = search_by_id(u32(at<bpw_class>(a)->m3FC));
+        u32 k = search_by_id(u32(at<bpw_class>(a)->mKanteraId));
         if (!k)
             break;
-        u32 id = BpwHD_fopAcM_create_2(0xD3, 2, ea(&at<bpw_class>(k)->m358),
+        u32 id = BpwHD_fopAcM_create_2(0xD3, 2, ea(&at<bpw_class>(k)->mCoSphCenter),
                                        (s32)s8(at<bpw_class>(a)->actor.current.roomNo),
                                        ea(&at<bpw_class>(a)->actor.current.angle), 0, -1, 0);
-        at<bpw_class>(a)->m400 = id;
+        at<bpw_class>(a)->mFireId = id;
         at<bpw_class>(a)->mSomeCountdownTimers[0] = 0x46;
         f32 r = BpwHD_cM_rndF(70.f);
         at<bpw_class>(a)->mSomeCountdownTimers[0] = (s16)((s16)ftoi(r) + 0x46);
-        at<bpw_class>(a)->m47A = 0x300;
+        at<bpw_class>(a)->mTurnStep = 0x300;
         at<bpw_class>(a)->mSomeCountdownTimers[5] = 0;
         GOUEN_FIRE_HIT = 0;                                                  // GOUEN_FIRE_HIT = 0
         anm_init(i_this, dRes_INDEX_BPW_BCK_HONOO_WAIT1_e, 0.f, 2, 1.f, -1); // HONOO_WAIT1
@@ -914,17 +914,17 @@ static void action_kougeki(bpw_class *i_this) {
     }
     case 0x35: {
         s32 reverb = BpwHD_dComIfGp_getReverb((s32)s8(at<bpw_class>(a)->actor.current.roomNo));
-        BpwHD_mDoAud_seStart_2(0x7056u, ea(&at<bpw_class>(a)->m3C4), 0u,
+        BpwHD_mDoAud_seStart_2(0x7056u, ea(&at<bpw_class>(a)->mJawPos), 0u,
                                reverb); // JA_SE_OBJ_BPW_FIREBLAST
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
         gouen_maai_sub(a);
-        u32 k = search_by_id(u32(at<bpw_class>(a)->m3FC));
+        u32 k = search_by_id(u32(at<bpw_class>(a)->mKanteraId));
         if (k) {
-            u32 f = search_by_id(u32(at<bpw_class>(a)->m400));
+            u32 f = search_by_id(u32(at<bpw_class>(a)->mFireId));
             if (f) {
-                Bpw_copyWord(&at<bpw_class>(f)->actor.current.pos.x, &at<bpw_class>(k)->m358.x);
-                Bpw_copyWord(&at<bpw_class>(f)->actor.current.pos.y, &at<bpw_class>(k)->m358.y);
-                Bpw_copyWord(&at<bpw_class>(f)->actor.current.pos.z, &at<bpw_class>(k)->m358.z);
+                Bpw_copyWord(&at<bpw_class>(f)->actor.current.pos.x, &at<bpw_class>(k)->mCoSphCenter.x);
+                Bpw_copyWord(&at<bpw_class>(f)->actor.current.pos.y, &at<bpw_class>(k)->mCoSphCenter.y);
+                Bpw_copyWord(&at<bpw_class>(f)->actor.current.pos.z, &at<bpw_class>(k)->mCoSphCenter.z);
                 at<fopAc_ac_c>(f)->current.angle.x = u16(at<bpw_class>(a)->actor.shape_angle.x);
                 at<fopAc_ac_c>(f)->current.angle.y = u16(at<bpw_class>(a)->actor.shape_angle.y);
                 at<fopAc_ac_c>(f)->current.angle.z = u16(at<bpw_class>(a)->actor.shape_angle.z);
@@ -939,7 +939,7 @@ static void action_kougeki(bpw_class *i_this) {
                 at<fopAc_ac_c>(f)->shape_angle.x = (s16)-BpwHD_cM_atan2s(dy, h);
             }
         }
-        at<bpw_class>(a)->m47A = regf_t(21, 2, 140.f);
+        at<bpw_class>(a)->mTurnStep = regf_t(21, 2, 140.f);
         if (s16(BpwHio(8).mShort[4]) != 0)
             break;
         if (GOUEN_FIRE_HIT == 0 && s16(at<bpw_class>(a)->mSomeCountdownTimers[0]) != 0)
@@ -955,7 +955,7 @@ static void action_kougeki(bpw_class *i_this) {
     case 0x3C: {
         at<bpw_class>(a)->mSomeCountdownTimers[0] = 0x28;
         f32 r = BpwHD_cM_rndF(40.f);
-        u32 anm = u32(at<bpw_class>(a)->m3F8);
+        u32 anm = u32(at<bpw_class>(a)->mBckFileIdx);
         at<bpw_class>(a)->mKankyouHendouState = 1;
         at<bpw_class>(a)->mSomeCountdownTimers[0] = (s16)((s16)ftoi(r) + 0x28);
         at<bpw_class>(a)->mSomeCountdownTimers[5] = 0;
@@ -969,11 +969,11 @@ static void action_kougeki(bpw_class *i_this) {
         /* fallthrough */
     case 0x3D: {
         maai_sub(i_this);
-        at<bpw_class>(a)->m476 = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
+        at<bpw_class>(a)->mTargetAngleY = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
         se_start(a, 0x515F, 0); // JA_SE_CM_BPW_SWING_KANTERA
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[1]) == 0) {
             se_start(a, 0x6A3A, 0); // JA_SE_OBJ_BPW_FIRE_OUT
-            u32 k = search_by_id(u32(at<bpw_class>(a)->m3FC));
+            u32 k = search_by_id(u32(at<bpw_class>(a)->mKanteraId));
             if (k) {
                 BpwHD_mDoMtx_YrotS_2(u32(l_calcMtx),
                                      (s32)s16(at<bpw_class>(a)->actor.shape_angle.y));
@@ -982,11 +982,11 @@ static void action_kougeki(bpw_class *i_this) {
                 v->y = 0.f;
                 v->z = 20.f;
                 BpwHD_MtxPosition_2(v.get(), out.get());
-                BpwHD_PSVECAdd(out.get(), ea(&at<bpw_class>(k)->m358), out.get());
+                BpwHD_PSVECAdd(out.get(), ea(&at<bpw_class>(k)->mCoSphCenter), out.get());
                 u32 id = BpwHD_fopAcM_create_3(
                     0xD3, 0x102, out.get(), (s32)s8(at<bpw_class>(a)->actor.current.roomNo),
                     ea(&at<bpw_class>(a)->actor.current.angle), 0, -1, 0);
-                at<bpw_class>(a)->m400 = id;
+                at<bpw_class>(a)->mFireId = id;
                 at<bpw_class>(a)->mSomeCountdownTimers[1] = (s16)(s16(BpwHio(12).mShort[4]) + 7);
                 if (u32(at<daPy_py_c>(pl)->mNoResetFlg1) & 0x100)
                     at<bpw_class>(a)->mSomeCountdownTimers[1] =
@@ -1018,7 +1018,7 @@ static void action_karada_taore(bpw_class *i_this) {
     case 0x46:
         for (u32 i = 0; i < 10; i++)
             at<BpwResetTimersHD>(a)->mResetTimers[i] = 0;
-        if (u32(at<bpw_class>(a)->m3F8) != 0x28)
+        if (u32(at<bpw_class>(a)->mBckFileIdx) != 0x28)
             anm_init(i_this, dRes_INDEX_BPW_BCK_TAME1_e, 15.f, 0, 1.f, -1); // TAME1
         mons_se(a, 0x4969, 0, true);                                        // JA_SE_CV_BPW_CURSE
         noroi_brk_check(i_this, 0);
@@ -1029,23 +1029,23 @@ static void action_karada_taore(bpw_class *i_this) {
     case 0x47: {
         s16 ang = BpwHD_fopAcM_searchActorAngleY(a, player_by_play());
         u32 morf = u32(at<bpw_class>(a)->mpMorf);
-        at<bpw_class>(a)->m476 = ang;
+        at<bpw_class>(a)->mTargetAngleY = ang;
         if (!BpwHD_J3DFrameCtrl_checkPass_3(ea(&at<mDoExt_McaMorf>(morf)->mFrameCtrl), 26.f))
             break;
         fire_pos_ground(a);
-        BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->m5E0[1])); // m5E0[1].remove()
-        toon_smoke(a, 0xA401, ea(&at<bpw_class>(a)->m5E0[1]));        // BPWJUMPSMOKE00
+        BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->mSmokeCb[1])); // mSmokeCb[1].remove()
+        toon_smoke(a, 0xA401, ea(&at<bpw_class>(a)->mSmokeCb[1]));        // BPWJUMPSMOKE00
         se_start_e(a, 0x596A, 0);                                     // JA_SE_CM_BPW_J_BPRESS_JUMP
         at<bpw_class>(a)->actor.speed.y = regf(8, 6, 100.f);
         at<bpw_class>(a)->actor.gravity = -regf(8, 7, 6.f);
         f32 sp = regf(8, 8, 30.f);
         inc_state(a);
-        at<bpw_class>(a)->m4A8 = 500.f;
+        at<bpw_class>(a)->mBodyAtSphR = 500.f;
         at<bpw_class>(a)->actor.speedF = sp;
         break;
     }
     case 0x48:
-        if (morf_isStop(u32(at<bpw_class>(a)->mpMorf)) && u32(at<bpw_class>(a)->m3F8) != 0x19) {
+        if (morf_isStop(u32(at<bpw_class>(a)->mpMorf)) && u32(at<bpw_class>(a)->mBckFileIdx) != 0x19) {
             anm_init(i_this, dRes_INDEX_BPW_BCK_JUMP1_e, 0.f, 2, 1.f, -1); // JUMP1
             at<bpw_class>(a)->mAttWaitTimer = 0;
             inc_state(a);
@@ -1063,28 +1063,28 @@ static void action_karada_taore(bpw_class *i_this) {
         /* fallthrough */
     case 0x4A: {
         fire_and_emitter_clear(i_this);
-        at<bpw_class>(a)->m47E = 200;
-        at<bpw_class>(a)->m480 = 200;
-        at<bpw_class>(a)->m4A4 = 100.f;
+        at<bpw_class>(a)->mAlpha = 200;
+        at<bpw_class>(a)->mBaseAlpha = 200;
+        at<bpw_class>(a)->mEyeHeight = 100.f;
         search_get_skull(i_this, 2);
         at<bpw_class>(a)->actor.gravity = -3.f;
         anm_init(i_this, dRes_INDEX_BPW_BCK_PRESS1_e, 0.f, 0, 1.f, -1); // PRESS1
-        at<bpw_class>(a)->m3E8 = 2;
+        at<bpw_class>(a)->mVibMode = 2;
         s16 t6 = regf_t(21, 0, 20.f);
         f32 ground = f32(at<bpw_class>(a)->mAcch.m_ground_h);
         Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->actor.current.pos.x);
         at<bpw_class>(a)->mSomeCountdownTimers[6] = t6;
         at<bpw_class>(a)->mFire1DousaPos.y = ground;
         Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->actor.current.pos.z);
-        BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->m5E0[2])); // m5E0[2].remove()
-        toon_smoke(a, 0xA402, ea(&at<bpw_class>(a)->m5E0[2]));        // BPWPRESSSMOKE00
+        BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->mSmokeCb[2])); // mSmokeCb[2].remove()
+        toon_smoke(a, 0xA402, ea(&at<bpw_class>(a)->mSmokeCb[2]));        // BPWPRESSSMOKE00
         inc_state(a);
         break;
     }
     case 0x4B:
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m3AC.y), 240.f, 1.f, 10.f);
-        at<bpw_class>(a)->m47E = 200;
-        at<bpw_class>(a)->m480 = 200;
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mModelOffset.y), 240.f, 1.f, 10.f);
+        at<bpw_class>(a)->mAlpha = 200;
+        at<bpw_class>(a)->mBaseAlpha = 200;
         if (!(u32(at<bpw_class>(a)->mAcch.m_flags) & 0x20))
             break;
         at<bpw_class>(a)->actor.speed.x = 0.f;
@@ -1095,13 +1095,13 @@ static void action_karada_taore(bpw_class *i_this) {
         inc_state(a);
         /* fallthrough */
     case 0x4C: {
-        u32 anm = u32(at<bpw_class>(a)->m3F8);
+        u32 anm = u32(at<bpw_class>(a)->mBckFileIdx);
         if (anm == 0x23) {
             if (!(f32(at<mDoExt_McaMorf>(at<bpw_class>(a)->mpMorf)->mFrameCtrl.mFrame) <
                   regf(8, 1, 40.f)) &&
                 s16(at<bpw_class>(a)->mAttWaitTimer) == 0)
                 at<bpw_class>(a)->mAttWaitTimer = 1;
-            BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m3AC.y), 340.f, 1.f, 10.f);
+            BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mModelOffset.y), 340.f, 1.f, 10.f);
         } else if (anm == 0x25) {
             if (!(f32(at<mDoExt_McaMorf>(at<bpw_class>(a)->mpMorf)->mFrameCtrl.mFrame) <
                   regf(8, 1, 30.f)) &&
@@ -1110,7 +1110,7 @@ static void action_karada_taore(bpw_class *i_this) {
         }
         if (!morf_isStop(u32(at<bpw_class>(a)->mpMorf)))
             break;
-        at<bpw_class>(a)->m3AC.y = 340.f;
+        at<bpw_class>(a)->mModelOffset.y = 340.f;
         noroi_brk_check(i_this, 1);
         next_status_clear(i_this, 1);
         if (!next_att_wait_check(i_this) && (u32(at<daPy_py_c>(pl)->mNoResetFlg1) & 0x100)) {
@@ -1121,10 +1121,10 @@ static void action_karada_taore(bpw_class *i_this) {
     }
     case 0x4D:
         fire_and_emitter_clear(i_this);
-        at<bpw_class>(a)->m47E = 200;
-        at<bpw_class>(a)->m480 = 200;
-        at<bpw_class>(a)->m4A4 = 100.f;
-        at<bpw_class>(a)->m4A8 = regf(8, 16, 220.f);
+        at<bpw_class>(a)->mAlpha = 200;
+        at<bpw_class>(a)->mBaseAlpha = 200;
+        at<bpw_class>(a)->mEyeHeight = 100.f;
+        at<bpw_class>(a)->mBodyAtSphR = regf(8, 16, 220.f);
         search_get_skull(i_this, 2);
         at<bpw_class>(a)->actor.speed.x = 0.f;
         at<bpw_class>(a)->actor.speed.y = 0.f;
@@ -1139,22 +1139,22 @@ static void action_karada_taore(bpw_class *i_this) {
         inc_state(a);
         break;
     case 0x4E: {
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m3AC.y), 240.f, 1.f, 10.f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mModelOffset.y), 240.f, 1.f, 10.f);
         if (!(f32(at<mDoExt_McaMorf>(at<bpw_class>(a)->mpMorf)->mFrameCtrl.mFrame) > 20.f)) {
             s16 ang = BpwHD_fopAcM_searchActorAngleY(a, player_by_play());
-            at<bpw_class>(a)->m476 = ang;
+            at<bpw_class>(a)->mTargetAngleY = ang;
         }
         if (!(f32(at<mDoExt_McaMorf>(at<bpw_class>(a)->mpMorf)->mFrameCtrl.mFrame) < 40.f))
             BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->actor.speedF), 1.f, 0.55f);
         if (BpwHD_J3DFrameCtrl_checkPass(u32(at<bpw_class>(a)->mpMorf) + 0x98, 40.f)) {
             fire_pos_ground(a);
-            BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->m5E0[3])); // m5E0[3].remove()
-            toon_smoke(a, 0xA403, ea(&at<bpw_class>(a)->m5E0[3]));        // BPWPRESSSMOKE01
+            BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->mSmokeCb[3])); // mSmokeCb[3].remove()
+            toon_smoke(a, 0xA403, ea(&at<bpw_class>(a)->mSmokeCb[3]));        // BPWPRESSSMOKE01
             at<bpw_class>(a)->actor.gravity = -3.f;
             se_start_e(a, 0x5969, 0); // JA_SE_CM_BPW_BODY_PRESS
-            at<bpw_class>(a)->m3E8 = 1;
+            at<bpw_class>(a)->mVibMode = 1;
             at<bpw_class>(a)->mSomeCountdownTimers[6] = regf_t(21, 1, 20.f);
-            at<bpw_class>(a)->m4A8 = regf(8, 17, 400.f);
+            at<bpw_class>(a)->mBodyAtSphR = regf(8, 17, 400.f);
         }
         if (morf_isStop(u32(at<bpw_class>(a)->mpMorf))) {
             at<bpw_class>(a)->mSomeCountdownTimers[0] = 5;
@@ -1208,12 +1208,12 @@ static void cam_reset_start(u32 a, u32 cam, u32 pl) {
     BpwHD_dVibration_c_StopQuake(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mVibration),
                                  0x20); // StopQuake(0x20)
     Local<BpwVecHD> center, eye;
-    eye->z = f32(at<bpw_class>(a)->m418.z);
-    center->y = f32(at<bpw_class>(a)->m40C.y);
-    eye->x = f32(at<bpw_class>(a)->m418.x);
-    center->x = f32(at<bpw_class>(a)->m40C.x);
-    eye->y = f32(at<bpw_class>(a)->m418.y);
-    center->z = f32(at<bpw_class>(a)->m40C.z);
+    eye->z = f32(at<bpw_class>(a)->mDemoCamEye.z);
+    center->y = f32(at<bpw_class>(a)->mDemoCamCenter.y);
+    eye->x = f32(at<bpw_class>(a)->mDemoCamEye.x);
+    center->x = f32(at<bpw_class>(a)->mDemoCamCenter.x);
+    eye->y = f32(at<bpw_class>(a)->mDemoCamEye.y);
+    center->z = f32(at<bpw_class>(a)->mDemoCamCenter.z);
     BpwHD_dCamera_c_Reset(ea(&at<BpwCameraHD>(cam)->mCamera), center.get(), eye.get());
     BpwHD_dCamera_c_Start(ea(&at<BpwCameraHD>(cam)->mCamera));
     BpwHD_dCamera_c_SetTrimSize(ea(&at<BpwCameraHD>(cam)->mCamera), 0);
@@ -1252,21 +1252,21 @@ BOOL body_nodeCallBack(u32 node, s32 calcTiming) {
     Local<BpwVecHD> v;
     if (jnt == BPW_JNT_BPW_ALLROOT_e) { // BPW_ALLROOT
         v->x = 0.f;
-        v->y = f32(at<bpw_class>(a)->m4A0);
+        v->y = f32(at<bpw_class>(a)->mCoSphOffsetY);
         v->z = 0.f;
-        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->m358)); // m358
+        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->mCoSphCenter)); // mCoSphCenter
         v->x = 0.f;
         v->y = -50.f;
         v->z = 0.f;
-        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->m370)); // m370
+        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->mAtSphCenter)); // mAtSphCenter
     } else {
         v->x = 0.f;
         v->y = 0.f;
         v->z = 0.f;
-        cXyz *dst = jnt == BPW_JNT_J_BPW_KOSI1_e    ? &at<bpw_class>(a)->m394
-                    : jnt == BPW_JNT_J_BPW_UDE_R3_e ? &at<bpw_class>(a)->m3B8
+        cXyz *dst = jnt == BPW_JNT_J_BPW_KOSI1_e    ? &at<bpw_class>(a)->mWaistPos
+                    : jnt == BPW_JNT_J_BPW_UDE_R3_e ? &at<bpw_class>(a)->mRightArmPos
                     : jnt == BPW_JNT_J_BPW_ITEM_e   ? &at<bpw_class>(a)->mChildActorPos
-                                                    : &at<bpw_class>(a)->m3C4;
+                                                    : &at<bpw_class>(a)->mJawPos;
         BpwHD_MtxPosition(v.get(), ea(dst));
     }
     bpw_joint_store(model, jnt);
@@ -1293,7 +1293,7 @@ BOOL kantera_nodeCallBack(u32 node, s32 calcTiming) {
         v->x = 0.f;
         v->y = -100.f;
         v->z = 0.f;
-        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->m358)); // m358
+        BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->mCoSphCenter)); // mCoSphCenter
     }
     bpw_joint_store(model, jnt);
     return TRUE;
@@ -1305,13 +1305,13 @@ void draw_SUB(bpw_class *i_this) {
     at<BpwModelHD>(model)->mBaseScale.x = f32(at<bpw_class>(a)->actor.scale.x);
     at<BpwModelHD>(model)->mBaseScale.z = f32(at<bpw_class>(a)->actor.scale.z);
     at<BpwModelHD>(model)->mBaseScale.y = f32(at<bpw_class>(a)->actor.scale.y);
-    f32 y = f32(at<bpw_class>(a)->actor.current.pos.y), oz = f32(at<bpw_class>(a)->m3AC.z),
-        ox = f32(at<bpw_class>(a)->m3AC.x), x = f32(at<bpw_class>(a)->actor.current.pos.x);
-    f32 oy = f32(at<bpw_class>(a)->m3AC.y), z = f32(at<bpw_class>(a)->actor.current.pos.z);
+    f32 y = f32(at<bpw_class>(a)->actor.current.pos.y), oz = f32(at<bpw_class>(a)->mModelOffset.z),
+        ox = f32(at<bpw_class>(a)->mModelOffset.x), x = f32(at<bpw_class>(a)->actor.current.pos.x);
+    f32 oy = f32(at<bpw_class>(a)->mModelOffset.y), z = f32(at<bpw_class>(a)->actor.current.pos.z);
     BpwHD_PSMTXTrans(stack_now, add(x, ox), add(y, oy), add(z, oz));
-    BpwHD_mDoMtx_YrotM(stack_now, (s32)s16(at<bpw_class>(a)->m3D6.y));
-    BpwHD_mDoMtx_XrotM(stack_now, (s32)s16(at<bpw_class>(a)->m3D6.x));
-    BpwHD_mDoMtx_YrotM(stack_now, (s32)(s16)-s16(at<bpw_class>(a)->m3D6.y));
+    BpwHD_mDoMtx_YrotM(stack_now, (s32)s16(at<bpw_class>(a)->mRollRot.y));
+    BpwHD_mDoMtx_XrotM(stack_now, (s32)s16(at<bpw_class>(a)->mRollRot.x));
+    BpwHD_mDoMtx_YrotM(stack_now, (s32)(s16)-s16(at<bpw_class>(a)->mRollRot.y));
     BpwHD_mDoMtx_YrotM(stack_now, (s32)s16(at<bpw_class>(a)->actor.shape_angle.y));
     BpwHD_mDoMtx_XrotM(stack_now, (s32)s16(at<bpw_class>(a)->actor.shape_angle.x));
     BpwHD_mDoMtx_ZrotM(stack_now, (s32)s16(at<bpw_class>(a)->actor.shape_angle.z));
@@ -1342,8 +1342,8 @@ void kantera_draw_SUB(bpw_class *i_this) {
     BpwHD_mDoMtx_YrotM_2(u32(l_calcMtx), (s32)s16(at<bpw_class>(a)->actor.shape_angle.y));
     BpwHD_mDoMtx_XrotM_2(u32(l_calcMtx), (s32)s16(at<bpw_class>(a)->actor.shape_angle.x));
     BpwHD_mDoMtx_ZrotM_2(u32(l_calcMtx), (s32)s16(at<bpw_class>(a)->actor.shape_angle.z));
-    BpwHD_MtxTrans(f32(at<bpw_class>(a)->m3AC.x), f32(at<bpw_class>(a)->m3AC.y),
-                   f32(at<bpw_class>(a)->m3AC.z), 1);
+    BpwHD_MtxTrans(f32(at<bpw_class>(a)->mModelOffset.x), f32(at<bpw_class>(a)->mModelOffset.y),
+                   f32(at<bpw_class>(a)->mModelOffset.z), 1);
     u32 mtx = u32(l_calcMtx);
     f32 m[12];
     for (u32 i = 0; i < 12; i++)
@@ -1364,13 +1364,13 @@ void kantera_draw_SUB(bpw_class *i_this) {
 BOOL daBPW_Draw(bpw_class *i_this) {
     u32 a = ea(i_this);
     u32 model = u32(at<mDoExt_McaMorf>(u32(at<bpw_class>(a)->mpMorf))->mpModel.v);
-    s16 blur = s16(at<bpw_class>(a)->m408); // m408
+    s16 blur = s16(at<bpw_class>(a)->mBlureRate); // mBlureRate
     if (blur > 1) {
         l_blur.mRate = (u8)blur;
         BpwHD_mDoGph_gInf_c_onBlure();
     } // setBlureRate, onBlure
     else if (blur == 1) {
-        at<bpw_class>(a)->m408 = 0;
+        at<bpw_class>(a)->mBlureRate = 0;
         l_blur.mEnabled = 0;
     } // offBlure
     if (u8(at<bpw_class>(a)->mType) != ACTOR_TYPE_DAMAGE_BALL) {
@@ -1385,19 +1385,19 @@ BOOL daBPW_Draw(bpw_class *i_this) {
         u32 m = u32(at<mDoExt_McaMorf>(u32(at<bpw_class>(a)->mpMorf))->mpModel.v),
             md = u32(at<BpwModelHD>(m)->mpModelData);
         bpw_material_alpha(a, md);
-        if (u8(at<bpw_class>(a)->m3E0) == 0) {
+        if (u8(at<bpw_class>(a)->mIsLightFrozen) == 0) {
             setListMaskOff();
             BpwHD_J3DModel_setVisibility(m, 1);
         } else
             BpwHD_J3DModel_setVisibility(m, 0);
         u32 md2 = u32(at<BpwModelHD>(m)->mpModelData);
         u32 brk;
-        if (u8(at<bpw_class>(a)->m3E0))
+        if (u8(at<bpw_class>(a)->mIsLightFrozen))
             brk = u32(at<bpw_class>(a)->mpLightFreezeBrkAnm);
-        else if (u8(at<bpw_class>(a)->m3E1))
+        else if (u8(at<bpw_class>(a)->mIsLightStunned))
             brk = u32(at<bpw_class>(a)->mpLightStunBrkAnm);
         else {
-            u8 e2 = u8(at<bpw_class>(a)->m3E2);
+            u8 e2 = u8(at<bpw_class>(a)->mCurseBrkState);
             brk = u32(at<bpw_class>(a)->*(e2 == 2   ? &bpw_class::mpCurseStartBrkAnm
                                           : e2 == 1 ? &bpw_class::mpCurseEndBrkAnm
                                                     : &bpw_class::mpDefaultBrkAnm));
@@ -1405,19 +1405,19 @@ BOOL daBPW_Draw(bpw_class *i_this) {
         brk_entry(brk, md2);
         BpwHD_mDoExt_McaMorf_entryDL(u32(at<bpw_class>(a)->mpMorf)); // entryDL
         setList();
-        if (u8(at<bpw_class>(a)->m3E0) == 0)
+        if (u8(at<bpw_class>(a)->mIsLightFrozen) == 0)
             BpwHD_mDoExt_invisibleModel_entryMaskOff(
                 ea(&at<bpw_class>(a)->mInvisibleModel)); // mInvisibleModel.entryMaskOff()
         else
             BpwHD_mDoExt_invisibleModel_entry(
                 ea(&at<bpw_class>(a)->mInvisibleModel)); // mInvisibleModel.entry()
-        u8 e0 = u8(at<bpw_class>(a)->m3E0);
+        u8 e0 = u8(at<bpw_class>(a)->mIsLightFrozen);
         u32 md3 = u32(at<BpwModelHD>(m)->mpModelData);
         // HD: keep the otherwise unused conditional field load.
-        if (e0 == 0 && u8(at<bpw_class>(a)->m3E1) == 0)
-            (void)u8(at<bpw_class>(a)->m3E2);
+        if (e0 == 0 && u8(at<bpw_class>(a)->mIsLightStunned) == 0)
+            (void)u8(at<bpw_class>(a)->mCurseBrkState);
         at<BpwModelDataHD>(md3)->mpTevRegAnimator = 0; // brk remove()
-        if (s16(at<bpw_class>(a)->m47E) == 0)
+        if (s16(at<bpw_class>(a)->mAlpha) == 0)
             return TRUE;
         if (u32(at<bpw_class>(a)->actor.actor_status) & 0x2000)
             return TRUE;                               // fopAcM_checkCarryNow
@@ -1431,16 +1431,16 @@ BOOL daBPW_Draw(bpw_class *i_this) {
         zero->x = 0.f;
         zero->z = 0.f;
         zero->y = 0.f;
-        if (u8(at<bpw_class>(a)->m3E7) == 0) {
+        if (u8(at<bpw_class>(a)->mKanteraHidden) == 0) {
             brk_entry(u32(at<bpw_class>(a)->mpLanternGlowBrkAnm),
                       u32(at<BpwModelHD>(m)->mpModelData));
             morf = u32(at<bpw_class>(a)->mpMorf);
         }
         BpwHD_mDoExt_McaMorf_entryDL_2(morf);
-        if (u8(at<bpw_class>(a)->m3E7) != 0)
+        if (u8(at<bpw_class>(a)->mKanteraHidden) != 0)
             return TRUE;
         at<BpwModelDataHD>(at<BpwModelHD>(m)->mpModelData)->mpTevRegAnimator = 0;
-        if (u8(at<bpw_class>(a)->m3E7) != 0)
+        if (u8(at<bpw_class>(a)->mKanteraHidden) != 0)
             return TRUE;
         u32 bm = u32(at<mDoExt_McaMorf>(u32(at<bpw_class>(a)->mpMorf))->mpModel.v);
         u32 mtx = u32(l_calcMtx);
@@ -1448,7 +1448,7 @@ BOOL daBPW_Draw(bpw_class *i_this) {
         BpwHD_MtxPosition_2(zero.get(), pos.get());
         BpwHD_MtxTrans_2((f32)pos->x, (f32)pos->y, (f32)pos->z, 0);
         BpwHD_MtxScale(3.f, 3.f, 3.f, 1);
-        BpwHD_PSMTXCopy_3(u32(l_calcMtx), ea(&at<bpw_class>(a)->m2D4)); // m2D4
+        BpwHD_PSMTXCopy_3(u32(l_calcMtx), ea(&at<bpw_class>(a)->mAlphaModelMtx)); // mAlphaModelMtx
         return TRUE;
     }
     case 2: { // damage_ball_draw
@@ -1459,7 +1459,7 @@ BOOL daBPW_Draw(bpw_class *i_this) {
                        f32(at<bpw_class>(a)->actor.current.pos.z), 0);
         BpwHD_MtxScale(0.8f, 0.8f, 0.8f, 1);
         BpwHD_mDoMtx_YrotM_2(u32(l_calcMtx), (s32)s16(at<bpw_class>(a)->actor.shape_angle.y));
-        BpwHD_PSMTXCopy_3(u32(l_calcMtx), ea(&at<bpw_class>(a)->m2D4));
+        BpwHD_PSMTXCopy_3(u32(l_calcMtx), ea(&at<bpw_class>(a)->mAlphaModelMtx));
         return TRUE;
     }
     case 3: { // torituki_draw
@@ -1480,7 +1480,7 @@ BOOL daBPW_Draw(bpw_class *i_this) {
 void anm_init(bpw_class *i_this, s32 bckFileIdx, f32 morf, u8 loopMode, f32 speed,
               s32 soundFileIdx) {
     u32 a = ea(i_this);
-    at<bpw_class>(a)->m3F8 = bckFileIdx; // m3F8
+    at<bpw_class>(a)->mBckFileIdx = bckFileIdx; // mBckFileIdx
     if (soundFileIdx >= 0) {
         u32 bck = getObjectRes(0x1000B160, bckFileIdx);
         u32 snd = getObjectRes(0x1000B160, soundFileIdx);
@@ -1499,7 +1499,7 @@ BOOL body_atari_check(bpw_class *i_this) {
     u32 a = ea(i_this);
     u32 player = player_actor();
     at<bpw_class>(a)->mHitType = 0; // mHitType
-    if (s16(at<bpw_class>(a)->m47E) == 0)
+    if (s16(at<bpw_class>(a)->mAlpha) == 0)
         return FALSE;
     BpwHD_dCcD_GStts_Move(ea(&at<bpw_class>(a)->mStts.__vtbl_gstts)); // mStts.Move()
     if (!BpwHD_dCcD_GObjInf_ChkTgHit(ea(&at<bpw_class>(a)->mBodyCoSph)))
@@ -1509,7 +1509,7 @@ BOOL body_atari_check(bpw_class *i_this) {
         return FALSE;
     BpwHD_dCcD_GObjInf_GetTgHitObj(ea(&at<bpw_class>(a)->mBodyCoSph));
     at<bpw_class>(a)->mHitType = 1;
-    if (u8(at<bpw_class>(a)->m3E0) == 0) { // m3E0
+    if (u8(at<bpw_class>(a)->mIsLightFrozen) == 0) { // mIsLightFrozen
         u32 type = u32(at<dCcD_GObjInf>(hit)->mAtType);
         if (type == 0x100000 || type == 0x800000) { // AT_TYPE_LIGHT_ARROW / AT_TYPE_LIGHT
             at<bpw_class>(a)->mHitType = type == 0x100000 ? 0xB : 0xA;
@@ -1599,14 +1599,14 @@ BOOL body_atari_check(bpw_class *i_this) {
 /* 020D1B90 */
 void BG_check(bpw_class *i_this) {
     u32 a = ea(i_this);
-    BpwHD_dBgS_AcchCir_SetWall(ea(&at<bpw_class>(a)->mAcchCir), f32(at<bpw_class>(a)->m498),
-                               f32(at<bpw_class>(a)->m49C)); // mAcchCir.SetWall(m498, m49C)
-    f32 off = f32(at<bpw_class>(a)->m48C);                   // m48C
+    BpwHD_dBgS_AcchCir_SetWall(ea(&at<bpw_class>(a)->mAcchCir), f32(at<bpw_class>(a)->mWallHalfHeight),
+                               f32(at<bpw_class>(a)->mWallRadius)); // mAcchCir.SetWall(mWallHalfHeight, mWallRadius)
+    f32 off = f32(at<bpw_class>(a)->mBgOffsetY);                   // mBgOffsetY
     at<bpw_class>(a)->actor.current.pos.y = sub(f32(at<bpw_class>(a)->actor.current.pos.y), off);
     at<bpw_class>(a)->actor.old.pos.y = sub(f32(at<bpw_class>(a)->actor.old.pos.y), off);
     u32 play = BpwHD_getGameInfo();
     BpwHD_dBgS_Acch_CrrPos(ea(&at<bpw_class>(a)->mAcch), play + 0x12A0);
-    off = f32(at<bpw_class>(a)->m48C);
+    off = f32(at<bpw_class>(a)->mBgOffsetY);
     f32 y = f32(at<bpw_class>(a)->actor.current.pos.y), oy = f32(at<bpw_class>(a)->actor.old.pos.y);
     at<bpw_class>(a)->actor.current.pos.y = add(y, off);
     at<bpw_class>(a)->actor.old.pos.y = add(oy, off);
@@ -1620,23 +1620,23 @@ void BG_check(bpw_class *i_this) {
 /* 020D1C40 */
 void alpha_anime(bpw_class *i_this) {
     u32 a = ea(i_this);
-    if (u8(at<bpw_class>(a)->m3E0) != 0)
-        return; // m3E0
+    if (u8(at<bpw_class>(a)->mIsLightFrozen) != 0)
+        return; // mIsLightFrozen
     u32 play = BpwHD_getGameInfo();
     if (BpwHD_dDetect_c_chk_light(
             play + 0x5A20,
             ea(&at<bpw_class>(a)
                     ->actor.current.pos))) { // dComIfGp_getDetect().chk_light(&current.pos)
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m47E), 0, 1,
-                                  0x14); // cLib_addCalcAngleS2(&m47E, 0, 1, 0x14)
-        at<bpw_class>(a)->m480 = 0;
-        at<bpw_class>(a)->m478 = 0;
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mAlpha), 0, 1,
+                                  0x14); // cLib_addCalcAngleS2(&mAlpha, 0, 1, 0x14)
+        at<bpw_class>(a)->mBaseAlpha = 0;
+        at<bpw_class>(a)->mAlphaWavePhase = 0;
     } else {
-        at<bpw_class>(a)->m478 = (s16)(s16(at<bpw_class>(a)->m478) + 0x400);
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m480), 0x96, 1, 10);
-        f32 base = (f32)s16(at<bpw_class>(a)->m480);
-        f32 v = fmadds(Bpw_sin(u16(at<bpw_class>(a)->m478)), 30.f, base);
-        at<bpw_class>(a)->m47E = (s16)ftoi(v);
+        at<bpw_class>(a)->mAlphaWavePhase = (s16)(s16(at<bpw_class>(a)->mAlphaWavePhase) + 0x400);
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mBaseAlpha), 0x96, 1, 10);
+        f32 base = (f32)s16(at<bpw_class>(a)->mBaseAlpha);
+        f32 v = fmadds(Bpw_sin(u16(at<bpw_class>(a)->mAlphaWavePhase)), 30.f, base);
+        at<bpw_class>(a)->mAlpha = (s16)ftoi(v);
     }
 }
 
@@ -1645,9 +1645,9 @@ void alpha_anime(bpw_class *i_this) {
 void fuwafuwa_calc(bpw_class *i_this) {
     u32 a = ea(i_this);
     BpwHD_getGameInfo();
-    s16 t = (s16)(s16(at<bpw_class>(a)->m47C) + 700);     // m47C
+    s16 t = (s16)(s16(at<bpw_class>(a)->mFloatPhase) + 700);     // mFloatPhase
     f32 ground = f32(at<bpw_class>(a)->mAcch.m_ground_h); // mAcch.GetGroundH()
-    at<bpw_class>(a)->m47C = t;
+    at<bpw_class>(a)->mFloatPhase = t;
     f32 y = add(ground, 30.f);
     at<bpw_class>(a)->actor.current.pos.y = y;
     at<bpw_class>(a)->actor.current.pos.y = fmadds(Bpw_sin((u16)t), 30.f, y);
@@ -1693,10 +1693,10 @@ void kankyou_hendou(bpw_class *i_this) {
     default:
         break;
     }
-    BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m3EC), target, 1.f,
-                        0.1f); // cLib_addCalc2(&m3EC, ...)
+    BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mKankyouBlend), target, 1.f,
+                        0.1f); // cLib_addCalc2(&mKankyouBlend, ...)
     u32 base = u8(at<bpw_class>(a)->mKankyouHendouState) < 6 ? 4 : 3;
-    f32 v = f32(at<bpw_class>(a)->m3EC);
+    f32 v = f32(at<bpw_class>(a)->mKankyouBlend);
     if (v > 0.5f)
         BpwHD_dKy_custom_colset(base, col, v);
     else
@@ -1709,17 +1709,17 @@ void noroi_check(bpw_class *i_this) {
     u32 player = player_actor();
     if (u32(at<daPy_py_c>(player)->mNoResetFlg1) & 0x100)
         return; // checkConfuse()
-    if (s16(at<bpw_class>(a)->m47E) == 0)
-        return; // m47E
+    if (s16(at<bpw_class>(a)->mAlpha) == 0)
+        return; // mAlpha
     s16 t = s16(at<bpw_class>(a)->mAttWaitTimer);
     if (t != 1 && t != 2 && t != 0)
         return;
-    if (s16(at<bpw_class>(a)->m3F6) != 0 && u8(at<bpw_class>(a)->m3E6) == 0 &&
+    if (s16(at<bpw_class>(a)->mBattlePhase) != 0 && u8(at<bpw_class>(a)->mIsCurseDash) == 0 &&
         s16(at<bpw_class>(a)->mBodyAction) != ACTION_BODY_DOWN_KARADA_TAORE) {
         s16 st = s16(at<bpw_class>(a)->mActionState);
         if (st == 10 || st == 11 || st == 12 || st == 13)
             return;
-        u32 anm = u32(at<bpw_class>(a)->m3F8);
+        u32 anm = u32(at<bpw_class>(a)->mBckFileIdx);
         if (!(anm == 0x1C || anm == 0x1D || anm == 0x2A || anm == 0x2B))
             return;
         u32 play = BpwHD_getGameInfo();
@@ -1745,7 +1745,7 @@ void noroi_check(bpw_class *i_this) {
         return;
     at<bpw_class>(a)->mBodyCoSph.mObjTg.mSPrm =
         u32(at<bpw_class>(a)->mBodyCoSph.mObjTg.mSPrm) & ~1u; // mBodyCoSph.OffTgSetBit()
-    at<bpw_class>(a)->m490 = 0.f;
+    at<bpw_class>(a)->mTargetSpeed = 0.f;
     at<bpw_class>(a)->actor.speedF = 0.f;
     BpwHD_dCcD_GObjInf_ClrTgHit(ea(&at<bpw_class>(a)->mBodyCoSph)); // mBodyCoSph.ClrTgHit()
     at<daPy_py_c>(player)->mNoResetFlg1 =
@@ -1779,22 +1779,22 @@ void noroi_check(bpw_class *i_this) {
 /* 020D22B8 */
 void fire_and_emitter_clear(bpw_class *i_this) {
     u32 a = ea(i_this);
-    u32 id = u32(at<bpw_class>(a)->m400); // m400
+    u32 id = u32(at<bpw_class>(a)->mFireId); // mFireId
     if (id != 0xFFFFFFFF) {
         Local<be<u32>> key;
         key->set(id);
         u32 other = BpwHD_fopAcIt_Judge(0x025E1234u, key.get()); // fopAcM_SearchByID
         if (other && u8(at<bpw_class>(other)->mUnknownParam2) == 0) {
             BpwHD_fopAcM_delete(other);
-            at<bpw_class>(a)->m400 = 0xFFFFFFFF;
+            at<bpw_class>(a)->mFireId = 0xFFFFFFFF;
         }
     }
     BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mFire1Dousa_Pa_followEcallBack));
     BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mFire1Dousa_Pa_followEcallBack2));
-    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->m590));
-    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->m540));
-    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->m52C));
-    BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->m50C));
+    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mFlameHitCb));
+    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mInhaleCb));
+    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mBlowCb));
+    BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->mBlowSmokeCb));
 }
 
 /* HD: calls BpwHD_getGameInfo() first (result unused) */
@@ -1805,19 +1805,19 @@ void noroi_brk_check(bpw_class *i_this, u8 mode) {
     u32 model = u32(at<mDoExt_McaMorf>(u32(at<bpw_class>(a)->mpMorf))->mpModel.v);
     switch (mode) {
     case 0:
-        if (u8(at<bpw_class>(a)->m3E2) != 2) {
-            at<bpw_class>(a)->m3E2 = 2;
+        if (u8(at<bpw_class>(a)->mCurseBrkState) != 2) {
+            at<bpw_class>(a)->mCurseBrkState = 2;
             brk_init(a, &bpw_class::mpCurseStartBrkAnm, model, 0x1000B180, 0x37);
         }
         break;
     case 1:
-        if (u8(at<bpw_class>(a)->m3E2) == 2) {
-            at<bpw_class>(a)->m3E2 = 1;
+        if (u8(at<bpw_class>(a)->mCurseBrkState) == 2) {
+            at<bpw_class>(a)->mCurseBrkState = 1;
             brk_init(a, &bpw_class::mpCurseEndBrkAnm, model, 0x1000B180, 0x36);
         }
         break;
     case 2:
-        at<bpw_class>(a)->m3E2 = 0;
+        at<bpw_class>(a)->mCurseBrkState = 0;
         brk_init(a, &bpw_class::mpDefaultBrkAnm, model, 0x1000B180, 0x33);
         break;
     }
@@ -1850,23 +1850,23 @@ void next_status_clear(bpw_class *i_this, u8 keepAlpha) {
     at<bpw_class>(a)->actor.speed.y = 0.f;
     at<bpw_class>(a)->actor.speed.z = 0.f; // speed
     at<bpw_class>(a)->actor.speedF = 0.f;
-    at<bpw_class>(a)->m490 = 0.f; // speedF, m490
-    at<bpw_class>(a)->m3E6 = 0;
-    at<bpw_class>(a)->m3E5 = 0;                                     // m3E6, m3E5
-    at<bpw_class>(a)->m4A8 = add(f32(BpwHio(8).mFloat[16]), 220.f); // m4A8 = REG8_F(16) + 220
-    at<bpw_class>(a)->m3AC.y = 340.f;                               // m3AC.y
+    at<bpw_class>(a)->mTargetSpeed = 0.f; // speedF, mTargetSpeed
+    at<bpw_class>(a)->mIsCurseDash = 0;
+    at<bpw_class>(a)->mIsThrown = 0;                                     // mIsCurseDash, mIsThrown
+    at<bpw_class>(a)->mBodyAtSphR = add(f32(BpwHio(8).mFloat[16]), 220.f); // mBodyAtSphR = REG8_F(16) + 220
+    at<bpw_class>(a)->mModelOffset.y = 340.f;                               // mModelOffset.y
     noroi_brk_check(i_this, 1);
-    u8 e1 = u8(at<bpw_class>(a)->m3E1);
+    u8 e1 = u8(at<bpw_class>(a)->mIsLightStunned);
     at<bpw_class>(a)->actor.shape_angle.x = 0;
-    at<bpw_class>(a)->m4A4 = 300.f; // m4A4
+    at<bpw_class>(a)->mEyeHeight = 300.f; // mEyeHeight
     if (keepAlpha == 0) {
-        at<bpw_class>(a)->m480 = 0;
-        at<bpw_class>(a)->m478 = 0;
-        at<bpw_class>(a)->m3E0 = 0;
+        at<bpw_class>(a)->mBaseAlpha = 0;
+        at<bpw_class>(a)->mAlphaWavePhase = 0;
+        at<bpw_class>(a)->mIsLightFrozen = 0;
     }
     if (e1 != 0) {
         u32 model = u32(at<mDoExt_McaMorf>(u32(at<bpw_class>(a)->mpMorf))->mpModel.v);
-        at<bpw_class>(a)->m3E1 = 0;
+        at<bpw_class>(a)->mIsLightStunned = 0;
         brk_init(a, &bpw_class::mpDefaultBrkAnm, model, 0x1000B198, 0x33);
     }
     if (s16(at<bpw_class>(a)->mAttWaitTimer) == 0)
@@ -1880,9 +1880,9 @@ void next_status_clear(bpw_class *i_this, u8 keepAlpha) {
         u32(at<bpw_class>(a)->mBodyCoSph.mObjTg.mSPrm) | 1u; // mBodyCoSph.OnTgSetBit()
     at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm =
         u32(at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm) & ~1u; // mBodyCoSph.ClrCoSet()
-    at<bpw_class>(a)->m498 = 350.f;
-    at<bpw_class>(a)->m49C = 400.f;
-    at<bpw_class>(a)->m47A = 0x500; // m47A
+    at<bpw_class>(a)->mWallHalfHeight = 350.f;
+    at<bpw_class>(a)->mWallRadius = 400.f;
+    at<bpw_class>(a)->mTurnStep = 0x500; // mTurnStep
 }
 
 /* HD: BpwHD_getGameInfo() first (unused); timer 240 + rnd(120) (GameCube USA values) */
@@ -1891,7 +1891,7 @@ void light_on_off(bpw_class *i_this) {
     u32 a = ea(i_this);
     BpwHD_getGameInfo();
     s32 idx = ftoi(BpwHD_cM_rndF(2.99f));
-    s16 state = s16(at<bpw_class>(a)->m3F6); // m3F6
+    s16 state = s16(at<bpw_class>(a)->mBattlePhase); // mBattlePhase
     if (state == 0)
         return;
     u8 sw = u8(at<bpw_class>(a)->mLightState); // mLightState
@@ -1919,7 +1919,7 @@ void light_on_off(bpw_class *i_this) {
         offSwitch(a, no);
     idx++;
     no = u8(at<bpw_class>(a)->mLightState) + light_on_dt[idx];
-    if (s16(at<bpw_class>(a)->m3F6) == 2)
+    if (s16(at<bpw_class>(a)->mBattlePhase) == 2)
         onSwitch(a, no);
     else
         offSwitch(a, no);
@@ -1927,7 +1927,7 @@ void light_on_off(bpw_class *i_this) {
         offSwitch(a, no);
     idx++;
     no = u8(at<bpw_class>(a)->mLightState) + light_on_dt[idx];
-    if (s16(at<bpw_class>(a)->m3F6) == 2)
+    if (s16(at<bpw_class>(a)->mBattlePhase) == 2)
         offSwitch(a, no);
     else
         onSwitch(a, no);
@@ -2048,7 +2048,7 @@ void maai_sub(bpw_class *i_this) {
 /* 020D2ED8 */
 s32 kantera_pos_search(bpw_class *i_this) {
     u32 a = ea(i_this);
-    u32 id = u32(at<bpw_class>(a)->m3FC); // m3FC
+    u32 id = u32(at<bpw_class>(a)->mKanteraId); // mKanteraId
     if (id == 0xFFFFFFFF)
         return 0;
     Local<be<u32>> key;
@@ -2075,14 +2075,14 @@ s32 kantera_pos_search(bpw_class *i_this) {
     f32 ex = sub(f32(at<bpw_class>(a)->actor.current.pos.x), (f32)out->x);
     f32 ez = sub(f32(at<bpw_class>(a)->actor.current.pos.z), (f32)out->z);
     f32 s = fmadds(ez, ez, fmadds(ex, ex, mul(ey, ey)));
-    at<bpw_class>(a)->m476 = ang2; // m476
+    at<bpw_class>(a)->mTargetAngleY = ang2; // mTargetAngleY
     f32 len = BpwHD_sqrtf(s);
     if (len < 2.f)
         return 1;
     return 0;
 }
 
-/* inlines wall_HIT_check. HD: m5E0[0].remove() -> end(); smoke via dPa set (group 2) */
+/* inlines wall_HIT_check. HD: mSmokeCb[0].remove() -> end(); smoke via dPa set (group 2) */
 /* 020D72BC */
 void action_damage(bpw_class *i_this) {
     u32 a = ea(i_this);
@@ -2091,7 +2091,7 @@ void action_damage(bpw_class *i_this) {
     u32 model = u32(at<mDoExt_McaMorf>(morf)->mpModel.v);
     constexpr u32 str = 0x1000B078;
     auto speed_tail = [&] {
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->actor.speedF), f32(at<bpw_class>(a)->m490), 1.f,
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->actor.speedF), f32(at<bpw_class>(a)->mTargetSpeed), 1.f,
                               1.f);
     };
     auto initBrk = [&](be<u32> bpw_class::*field, u32 res, u32 mode) {
@@ -2125,13 +2125,13 @@ void action_damage(bpw_class *i_this) {
             }
         }
         next_status_clear(i_this, 1);
-        at<bpw_class>(a)->m4A4 = 300.f;
+        at<bpw_class>(a)->mEyeHeight = 300.f;
         fire_and_emitter_clear(i_this);
-        at<bpw_class>(a)->m478 = 0;
-        at<bpw_class>(a)->m47E = 200;
-        at<bpw_class>(a)->m490 = 0.f;
+        at<bpw_class>(a)->mAlphaWavePhase = 0;
+        at<bpw_class>(a)->mAlpha = 200;
+        at<bpw_class>(a)->mTargetSpeed = 0.f;
         at<bpw_class>(a)->actor.speedF = 0.f;
-        at<bpw_class>(a)->m480 = 200;
+        at<bpw_class>(a)->mBaseAlpha = 200;
         anm_init(i_this, dRes_INDEX_BPW_BCK_HIT1_e, 15.f, 2, 1.f, -1); // HIT1
         at<bpw_class>(a)->mSomeCountdownTimers[9] = 0;
         u32 play = BpwHD_getGameInfo();
@@ -2140,7 +2140,7 @@ void action_damage(bpw_class *i_this) {
         s16 st = s16(at<bpw_class>(a)->mActionState);
         at<bpw_class>(a)->actor.current.angle.y = ang;
         at<bpw_class>(a)->actor.shape_angle.y = ang;
-        at<bpw_class>(a)->m476 = ang;
+        at<bpw_class>(a)->mTargetAngleY = ang;
         at<bpw_class>(a)->mActionState = (s16)(st + 1);
     }
     /* fallthrough */
@@ -2149,32 +2149,32 @@ void action_damage(bpw_class *i_this) {
         bool solid = false;
         if (hit == 0xB) {
             se_start(a, 0x5961, 0); // JA_SE_CM_BPW_SOLID_END
-            at<bpw_class>(a)->m47E = 0xFF;
-            at<bpw_class>(a)->m478 = 0;
+            at<bpw_class>(a)->mAlpha = 0xFF;
+            at<bpw_class>(a)->mAlphaWavePhase = 0;
             solid = true;
         } else if (hit == 0xA) {
-            at<bpw_class>(a)->m47E = (s16)(s16(at<bpw_class>(a)->m47E) + 1);
+            at<bpw_class>(a)->mAlpha = (s16)(s16(at<bpw_class>(a)->mAlpha) + 1);
             se_start(a, 0x5160, 0); // JA_SE_CM_BPW_BECOME_SOLID
             if (s16(at<bpw_class>(a)->mSomeCountdownTimers[9]) == 0) {
                 mons_se(a, 0x4963, 0, true); // JA_SE_CV_BPW_LIGHT_DAMAGE
                 at<bpw_class>(a)->mSomeCountdownTimers[9] = 30;
             }
-            if (u8(at<bpw_class>(a)->m3E1) == 0) {
-                at<bpw_class>(a)->m3E1 = 1;
-                at<bpw_class>(a)->m3E2 = 0;
+            if (u8(at<bpw_class>(a)->mIsLightStunned) == 0) {
+                at<bpw_class>(a)->mIsLightStunned = 1;
+                at<bpw_class>(a)->mCurseBrkState = 0;
                 initBrk(&bpw_class::mpLightStunBrkAnm, dRes_INDEX_BPW_BRK_HIT_e, 2); // HIT
             }
-            if (s16(at<bpw_class>(a)->m47E) < 0xFF)
+            if (s16(at<bpw_class>(a)->mAlpha) < 0xFF)
                 break;
-            at<bpw_class>(a)->m47E = 0xFF;
-            at<bpw_class>(a)->m478 = 0;
+            at<bpw_class>(a)->mAlpha = 0xFF;
+            at<bpw_class>(a)->mAlphaWavePhase = 0;
             solid = true;
         }
         if (solid) {
             se_start(a, 0x5961, 0);
             s16 t = s16(at<bpw_class>(a)->mAttWaitTimer);
             at<bpw_class>(a)->mSomeCountdownTimers[0] = 0x12;
-            at<bpw_class>(a)->m3E0 = 1;
+            at<bpw_class>(a)->mIsLightFrozen = 1;
             if ((u32)(s32)t <= 2)
                 at<bpw_class>(a)->mAttWaitTimer = 3;
             initBrk(&bpw_class::mpLightFreezeBrkAnm, dRes_INDEX_BPW_BRK_HIRARU1_e, 0); // HIRARU1
@@ -2182,22 +2182,22 @@ void action_damage(bpw_class *i_this) {
             at<bpw_class>(a)->mBodyAtSph.mObjAt.mSPrm =
                 u32(at<bpw_class>(a)->mBodyAtSph.mObjAt.mSPrm) & ~1u; // mBodyAtSph.ClrAtSet()
             at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
-            at<bpw_class>(a)->m4A0 = 50.f; // m4A0
+            at<bpw_class>(a)->mCoSphOffsetY = 50.f; // mCoSphOffsetY
             speed_tail();
             return;
         }
         at<bpw_class>(a)->mSomeCountdownTimers[2] =
             reg_ftoi(0x6E4, 90.f); // mSomeCountdownTimers[2] = REG12_F(7) + 90
         BOOL r = next_att_wait_check(i_this);
-        u32 anm = u32(at<bpw_class>(a)->m3F8);
+        u32 anm = u32(at<bpw_class>(a)->mBckFileIdx);
         if (!r) {
             at<bpw_class>(a)->mBodyAction = ACTION_ATTACK_KOUGEKI;
             at<bpw_class>(a)->mActionState = 0x14;
         }
         if (anm != 0x2A)
             anm_init(i_this, dRes_INDEX_BPW_BCK_WAIT1_e, 15.f, 2, 1.f, -1); // WAIT1
-        if (u8(at<bpw_class>(a)->m3E1) != 0) {
-            at<bpw_class>(a)->m3E1 = 0;
+        if (u8(at<bpw_class>(a)->mIsLightStunned) != 0) {
+            at<bpw_class>(a)->mIsLightStunned = 0;
             initBrk(&bpw_class::mpDefaultBrkAnm, dRes_INDEX_BPW_BRK_DEFAULT_e, 0); // DEFAULT
         }
         break;
@@ -2207,7 +2207,7 @@ void action_damage(bpw_class *i_this) {
             mons_se(a, 0x4964, 0, true); // JA_SE_CV_BPW_BECOME_SOLID
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[0]) != 0)
             break;
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m48C), -120.f, 1.f, 10.f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mBgOffsetY), -120.f, 1.f, 10.f);
         at<bpw_class>(a)->actor.gravity = -2.f;
         if (!(u32(at<bpw_class>(a)->mAcch.m_flags) & 0x20))
             break; // mAcch.ChkGroundHit()
@@ -2217,8 +2217,8 @@ void action_damage(bpw_class *i_this) {
         at<bpw_class>(a)->actor.speed.z = 0.f;
         at<bpw_class>(a)->mBodyCoSph.mGObjTg.mSPrm =
             u32(at<bpw_class>(a)->mBodyCoSph.mGObjTg.mSPrm) | 1u; // mBodyCoSph.OnTgShield()
-        at<bpw_class>(a)->m3E8 = 1;
-        at<bpw_class>(a)->m48C = -120.f;
+        at<bpw_class>(a)->mVibMode = 1;
+        at<bpw_class>(a)->mBgOffsetY = -120.f;
         at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm =
             u32(at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm) | 1u; // mBodyCoSph.OnCoSetBit()
         at<bpw_class>(a)->mSomeCountdownTimers[6] =
@@ -2235,21 +2235,21 @@ void action_damage(bpw_class *i_this) {
         return;
     }
     case 0x53: {
-        if (u32(at<bpw_class>(a)->m3F8) != 0xC && morf_isStop(morf)) {
+        if (u32(at<bpw_class>(a)->mBckFileIdx) != 0xC && morf_isStop(morf)) {
             anm_init(i_this, dRes_INDEX_BPW_BCK_DOSUN_WAIT1_e, 15.f, 2, 1.f, -1); // DOSUN_WAIT1
             at<bpw_class>(a)->mSomeCountdownTimers[1] = 450;
             at<bpw_class>(a)->actor.attention_info.flags =
                 u32(at<bpw_class>(a)->actor.attention_info.flags) | 0x10;
-            at<bpw_class>(a)->m684 = s16(at<bpw_class>(a)->actor.shape_angle.y);
+            at<bpw_class>(a)->mCarryAngleY = s16(at<bpw_class>(a)->actor.shape_angle.y);
         }
         if (u32(at<bpw_class>(a)->actor.actor_status) & 0x2000) {
             anm_init(i_this, dRes_INDEX_BPW_BCK_JITA1_e, 15.f, 2, 1.f, -1); // JITA1
             at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm =
                 u32(at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm) & ~1u;
             s16 t1 = s16(at<bpw_class>(a)->mSomeCountdownTimers[1]);
-            at<bpw_class>(a)->m3AC.y = 300.f;
+            at<bpw_class>(a)->mModelOffset.y = 300.f;
             at<bpw_class>(a)->actor.current.angle.y = s16(at<fopAc_ac_c>(player)->shape_angle.y);
-            at<bpw_class>(a)->m47A = 0;
+            at<bpw_class>(a)->mTurnStep = 0;
             at<bpw_class>(a)->mSomeCountdownTimers[9] = 0;
             at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
             if (t1 != 1)
@@ -2263,10 +2263,10 @@ void action_damage(bpw_class *i_this) {
     case ACTION_STATE_DAMAGE_CARRIED: {
         s16 py = s16(at<fopAc_ac_c>(player)->shape_angle.y);
         if (s16(BpwHio(8).mShort[3]) != 0) { // REG8_S(3)
-            s16 v = (s16)(s16(at<bpw_class>(a)->m684) +
+            s16 v = (s16)(s16(at<bpw_class>(a)->mCarryAngleY) +
                           (py - s16(at<bpw_class>(a)->actor.current.angle.y)));
             at<bpw_class>(a)->actor.shape_angle.y = v;
-            at<bpw_class>(a)->m684 = v;
+            at<bpw_class>(a)->mCarryAngleY = v;
             at<bpw_class>(a)->actor.current.angle.y = s16(at<fopAc_ac_c>(player)->shape_angle.y);
             if (s16(at<bpw_class>(a)->mSomeCountdownTimers[9]) == 0) {
                 mons_se(a, 0x4965, 0, false);
@@ -2290,20 +2290,20 @@ void action_damage(bpw_class *i_this) {
         }
         at<bpw_class>(a)->actor.gravity = -3.f;
         at<bpw_class>(a)->actor.speed.y = 10.f;
-        at<bpw_class>(a)->m3AC.y = 340.f;
-        at<bpw_class>(a)->m490 = 120.f;
-        at<bpw_class>(a)->m47A = 0;
+        at<bpw_class>(a)->mModelOffset.y = 340.f;
+        at<bpw_class>(a)->mTargetSpeed = 120.f;
+        at<bpw_class>(a)->mTurnStep = 0;
         u32 flags = u32(at<bpw_class>(a)->actor.attention_info.flags);
         if (s16(BpwHio(8).mShort[3]) != 0) {
-            at<bpw_class>(a)->m3D6.y = s16(at<fopAc_ac_c>(player)->shape_angle.y);
+            at<bpw_class>(a)->mRollRot.y = s16(at<fopAc_ac_c>(player)->shape_angle.y);
             at<bpw_class>(a)->actor.shape_angle.x = -0x4000;
         } else {
             at<bpw_class>(a)->actor.shape_angle.x = 0;
         }
         at<bpw_class>(a)->actor.shape_angle.z = 0;
         at<bpw_class>(a)->actor.attention_info.flags = flags & ~0x10u;
-        at<bpw_class>(a)->m49C = 300.f;
-        at<bpw_class>(a)->m3E5 = 1;
+        at<bpw_class>(a)->mWallRadius = 300.f;
+        at<bpw_class>(a)->mIsThrown = 1;
         at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm =
             u32(at<bpw_class>(a)->mBodyCoSph.mObjCo.mSPrm) | 1u;
         mons_se(a, 0x4966, 0, false);                                  // JA_SE_CV_BPW_THROWN
@@ -2315,7 +2315,7 @@ void action_damage(bpw_class *i_this) {
     case ACTION_STATE_DAMAGE_THROWN: {
         se_start(a, 0x5163, 0); // JA_SE_CM_BPW_ROLLING
         if (s16(BpwHio(8).mShort[3]) != 0)
-            at<bpw_class>(a)->m3D6.x = (s16)(s16(at<bpw_class>(a)->m3D6.x) + 5000);
+            at<bpw_class>(a)->mRollRot.x = (s16)(s16(at<bpw_class>(a)->mRollRot.x) + 5000);
         else
             at<bpw_class>(a)->actor.shape_angle.x =
                 (s16)(s16(at<bpw_class>(a)->actor.shape_angle.x) + 0x1000);
@@ -2340,17 +2340,17 @@ void action_damage(bpw_class *i_this) {
                                   0, 0);
         s32 res;
         if (attr == 9) {
-            at<bpw_class>(a)->m3E5 = 0;
-            at<bpw_class>(a)->m408 = 0xB5;
+            at<bpw_class>(a)->mIsThrown = 0;
+            at<bpw_class>(a)->mBlureRate = 0xB5;
             res = 2;
         } // dBgS_Attr_DAMAGE_e
         else {
             res = 1;
-            at<bpw_class>(a)->m3E5 = 0;
+            at<bpw_class>(a)->mIsThrown = 0;
         }
-        at<bpw_class>(a)->m3D6.x = 0;
-        at<bpw_class>(a)->m3D6.y = 0;
-        at<bpw_class>(a)->m3D6.z = 0;
+        at<bpw_class>(a)->mRollRot.x = 0;
+        at<bpw_class>(a)->mRollRot.y = 0;
+        at<bpw_class>(a)->mRollRot.z = 0;
         u32 cam = u32(at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mCameraInfo[0].mpCamera);
         BpwHD_dCamera_c_ForceLockOff(ea(&at<BpwCameraHD>(cam)->mCamera),
                                      actor_id(a)); // ForceLockOff
@@ -2362,7 +2362,7 @@ void action_damage(bpw_class *i_this) {
                 se_start_e(a, 0x5964, 0);
                 mons_se(a, 0x4967, 0, false);
             } // DAMAGE_TOGE, CV_DAMAGE
-            at<bpw_class>(a)->m3E8 = 2;
+            at<bpw_class>(a)->mVibMode = 2;
             at<bpw_class>(a)->mSomeCountdownTimers[6] = reg_ftoi(0xBD8, 20.f);
             at<bpw_class>(a)->mActionState = 100;
         } else {
@@ -2371,7 +2371,7 @@ void action_damage(bpw_class *i_this) {
                 mons_se(a, 0x4968, 0, false);
             } // BOUND_NO_DMG, LANDING
             at<bpw_class>(a)->actor.shape_angle.x = 0;
-            at<bpw_class>(a)->m3E8 = 1;
+            at<bpw_class>(a)->mVibMode = 1;
             at<bpw_class>(a)->mSomeCountdownTimers[6] = reg_ftoi(0xBDC, 20.f);
             at<bpw_class>(a)->mActionState = 0x5A;
         }
@@ -2382,8 +2382,8 @@ void action_damage(bpw_class *i_this) {
         at<bpw_class>(a)->actor.speed.y = add(f32(BpwHio(12).mFloat[4]), 30.f);
         at<bpw_class>(a)->actor.gravity = -add(f32(BpwHio(12).mFloat[5]), 3.f);
         at<bpw_class>(a)->actor.speedF = add(f32(BpwHio(12).mFloat[6]), 20.f);
-        at<bpw_class>(a)->m490 = add(f32(BpwHio(12).mFloat[6]), 20.f);
-        at<bpw_class>(a)->m47A = 0;
+        at<bpw_class>(a)->mTargetSpeed = add(f32(BpwHio(12).mFloat[6]), 20.f);
+        at<bpw_class>(a)->mTurnStep = 0;
         anm_init(i_this, dRes_INDEX_BPW_BCK_DOSUN1_e, 0.f, 0, 1.f, -1);
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
         speed_tail();
@@ -2405,10 +2405,10 @@ void action_damage(bpw_class *i_this) {
         speed_tail();
         return;
     case 100:
-        at<bpw_class>(a)->m47A = 0;
+        at<bpw_class>(a)->mTurnStep = 0;
         at<bpw_class>(a)->actor.speedF = 5.f;
         at<bpw_class>(a)->actor.gravity = -3.f;
-        at<bpw_class>(a)->m490 = 5.f;
+        at<bpw_class>(a)->mTargetSpeed = 5.f;
         at<bpw_class>(a)->actor.speed.y = 70.f;
         anm_init(i_this, dRes_INDEX_BPW_BCK_DAMAGE1_e, 15.f, 2, 1.f, -1); // DAMAGE1
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
@@ -2420,20 +2420,20 @@ void action_damage(bpw_class *i_this) {
         BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->actor.shape_angle), 0, 10, 0x2000);
         if (!(u32(at<bpw_class>(a)->mAcch.m_flags) & 0x20))
             break;
-        at<bpw_class>(a)->m3E8 = 2;
+        at<bpw_class>(a)->mVibMode = 2;
         s16 t6 = reg_ftoi(0xBD8, 20.f);
         f32 ground = f32(at<bpw_class>(a)->mAcch.m_ground_h);
         at<bpw_class>(a)->mSomeCountdownTimers[6] = t6;
         Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->actor.current.pos.x);
         at<bpw_class>(a)->mFire1DousaPos.y = ground;
         Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->actor.current.pos.z);
-        BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->m5E0)); // m5E0[0].remove()
+        BpwHD_dPa_smokeEcallBack_end(ea(&at<bpw_class>(a)->mSmokeCb)); // mSmokeCb[0].remove()
         s32 room = s8(at<bpw_class>(a)->actor.current.roomNo);
         u32 play = BpwHD_getGameInfo();
         u32 em = BpwHD_dPa_control_c_set_3(u32(at<dComIfG_inf_c>(play)->play.mParticle.v), 2,
                                            0xA404, ea(&at<bpw_class>(a)->mFire1DousaPos),
                                            ea(&at<bpw_class>(a)->actor.shape_angle), 0, 0xB9,
-                                           ea(&at<bpw_class>(a)->m5E0), room, 0, 0, 0);
+                                           ea(&at<bpw_class>(a)->mSmokeCb), room, 0, 0, 0);
         if (em) {
             Local<be<u32>> c1, c2;
             BpwHD_dKy_get_seacolor(c1.get(), c2.get()); // dKy_get_seacolor
@@ -2466,7 +2466,7 @@ void action_damage(bpw_class *i_this) {
         pos->y = f32(at<bpw_class>(a)->actor.current.pos.y);
         pos->z = f32(at<bpw_class>(a)->actor.current.pos.z);
         s32 hp = s8(at<bpw_class>(a)->actor.health);
-        at<bpw_class>(a)->m3E9 = 0;
+        at<bpw_class>(a)->mIsReformed = 0;
         f32 q = 65536.f / (f32)hp;
         pos->y = add(f32(at<bpw_class>(a)->mAcch.m_ground_h), 20.f);
         for (u32 i = 0; i < 15; i++)
@@ -2504,9 +2504,9 @@ void action_damage(bpw_class *i_this) {
     speed_tail();
 }
 
-/* . HD: hp phase thresholds from a table (m3F6 0..2); the camera targets move toward
+/* . HD: hp phase thresholds from a table (mBattlePhase 0..2); the camera targets move toward
  * REG + constant (the GameCube decompilation passes the distance); SearchByID skips invalid ids;
- * player demo calls are inline stores; m5E0/m554 remove() -> end(). */
+ * player demo calls are inline stores; mSmokeCb/mOpeningSmokeCb remove() -> end(). */
 /* 020D8564 */
 void action_bunri_dousa(bpw_class *i_this) {
     u32 a = ea(i_this);
@@ -2528,7 +2528,7 @@ void action_bunri_dousa(bpw_class *i_this) {
         at<bpw_class>(a)->mKankyouHendouState = 3;
         set_timer(1, 0);
         set_timer(2, 0);
-        at<bpw_class>(a)->m47C = 0;                                    // m47C
+        at<bpw_class>(a)->mFloatPhase = 0;                                    // mFloatPhase
         anm_init(i_this, dRes_INDEX_BPW_BCK_CORE1_e, 0.f, 2, 1.f, -1); // CORE1
         at<bpw_class>(a)->mBodyAtSph.mObjAt.mSPrm =
             u32(at<bpw_class>(a)->mBodyAtSph.mObjAt.mSPrm) & ~1u;
@@ -2549,17 +2549,17 @@ void action_bunri_dousa(bpw_class *i_this) {
             s16 st = s16(at<bpw_class>(a)->mActionState);
             Bpw_copyWord(&at<bpw_class>(a)->actor.current.pos.x, &at<bpw_class>(a)->mBodyPos.x);
             Bpw_copyWord(&at<bpw_class>(a)->actor.current.pos.y, &at<bpw_class>(a)->mBodyPos.y);
-            at<bpw_class>(a)->m47A = 0x500;
+            at<bpw_class>(a)->mTurnStep = 0x500;
             at<bpw_class>(a)->actor.attention_info.flags = 0;
             Bpw_copyWord(&at<bpw_class>(a)->actor.current.pos.z, &at<bpw_class>(a)->mBodyPos.z);
             set_timer(0, 0x1A4);
             at<bpw_class>(a)->mActionState = (s16)(st + 1);
-            at<bpw_class>(a)->m3E6 = 0;
-            at<bpw_class>(a)->m3E5 = 0;
+            at<bpw_class>(a)->mIsCurseDash = 0;
+            at<bpw_class>(a)->mIsThrown = 0;
         }
         /* fallthrough */
     case ACTION_STATE_SEPARATE_BUNRI_DOUSA_EXECUTE: {
-        s16 m = s16(at<bpw_class>(a)->m3F6);
+        s16 m = s16(at<bpw_class>(a)->mBattlePhase);
         s32 thr = 0;
         if ((u32)(s32)m <= 2)
             thr = l_healthThreshold[m]; // {10, 5, 0}
@@ -2602,7 +2602,7 @@ void action_bunri_dousa(bpw_class *i_this) {
             if (p && s8(at<fopAc_ac_c>(p)->health) > 0)
                 at<fopAc_ac_c>(p)->health = 0x14;
         }
-        at<bpw_class>(a)->m47E = 0;
+        at<bpw_class>(a)->mAlpha = 0;
         inc_state(a);
         /* fallthrough */
     case 0x71: {
@@ -2614,14 +2614,14 @@ void action_bunri_dousa(bpw_class *i_this) {
         anm_init(i_this, dRes_INDEX_BPW_BCK_CORE1_e, 0.f, 2, 1.f, -1);
         BpwHD_dCamera_c_Stop(ea(&at<BpwCameraHD>(cam)->mCamera));
         BpwHD_dCamera_c_SetTrimSize(ea(&at<BpwCameraHD>(cam)->mCamera), 2);
-        at<bpw_class>(a)->m440 = 50.f;
+        at<bpw_class>(a)->mDemoCamFovy = 50.f;
         Local<BpwVecHD> p;
         p->x = 0.f;
-        at<bpw_class>(a)->m480 = 0x96;
+        at<bpw_class>(a)->mBaseAlpha = 0x96;
         at<bpw_class>(a)->mSomeCountdownTimers[2] = 0xF;
         p->z = 1625.f;
-        at<bpw_class>(a)->m474 = 1;
-        at<bpw_class>(a)->m3E0 = 0;
+        at<bpw_class>(a)->mDemoCamActive = 1;
+        at<bpw_class>(a)->mIsLightFrozen = 0;
         p->y = 0.f;
         u32 vt = u32(at<fopAc_ac_c>(pl)->__vtbl);
         s16 ang = BpwHD_fopAcM_searchActorAngleY(pl, a);
@@ -2636,19 +2636,19 @@ void action_bunri_dousa(bpw_class *i_this) {
         if (timer(2) != 0)
             break;
         s16 ang = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
-        at<bpw_class>(a)->m476 = ang;
+        at<bpw_class>(a)->mTargetAngleY = ang;
         at<bpw_class>(a)->actor.current.angle.y = ang;
         at<bpw_class>(a)->actor.shape_angle.y = ang;
-        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->m47E), (s32)s16(at<bpw_class>(a)->m480),
+        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->mAlpha), (s32)s16(at<bpw_class>(a)->mBaseAlpha),
                                     1, 0xF);
         BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->actor.scale), 1.f, 1.f, 0.1f);
         f32 s = f32(at<bpw_class>(a)->actor.scale.x);
         at<bpw_class>(a)->actor.scale.z = s;
         at<bpw_class>(a)->actor.scale.y = s;
-        if (u8(at<bpw_class>(a)->m3E9) == 0 && f32(at<bpw_class>(a)->actor.scale.x) > 0.9f) {
+        if (u8(at<bpw_class>(a)->mIsReformed) == 0 && f32(at<bpw_class>(a)->actor.scale.x) > 0.9f) {
             at<bpw_class>(a)->actor.scale.x = 1.f;
             at<bpw_class>(a)->actor.scale.y = 1.f;
-            at<bpw_class>(a)->m3E9 = 1;
+            at<bpw_class>(a)->mIsReformed = 1;
             at<bpw_class>(a)->actor.scale.z = 1.f;
             set_timer(5, (s16)(s16(BpwHio(21).mShort[2]) + 10));
             set_timer(1, 300);
@@ -2658,7 +2658,7 @@ void action_bunri_dousa(bpw_class *i_this) {
                     at<fopAc_ac_c>(p)->actor_status = u32(at<fopAc_ac_c>(p)->actor_status) | 0x4000;
             }
         }
-        if (u32(at<bpw_class>(a)->m3F8) == 9) {
+        if (u32(at<bpw_class>(a)->mBckFileIdx) == 9) {
             if (morf_isStop(u32(at<bpw_class>(a)->mpMorf)))
                 anm_init(i_this, dRes_INDEX_BPW_BCK_CORE1_e, 15.f, 2, 1.f, -1);
             se_start_e(a, 0x623D, 0); // JA_SE_OBJ_BPW_MASK_LAUGH
@@ -2673,16 +2673,16 @@ void action_bunri_dousa(bpw_class *i_this) {
             call_ptr<void>(u32(at<BpwPlayerVtableHD>(vt)->setPlayerPosAndAngle), pl, p.get(),
                            (s32)a2);
         }
-        if (s16(at<bpw_class>(a)->m464) != 0) {
+        if (s16(at<bpw_class>(a)->mPoeMerged) != 0) {
             anm_init(i_this, dRes_INDEX_BPW_BCK_CORE_NIGE1_e, 0.f, 0, 1.f, -1);
-            at<bpw_class>(a)->m464 = 0;
+            at<bpw_class>(a)->mPoeMerged = 0;
         }
-        if (timer(1) == 1 || s16(at<bpw_class>(a)->m462) >= s8(at<bpw_class>(a)->actor.health)) {
+        if (timer(1) == 1 || s16(at<bpw_class>(a)->mPoeCount) >= s8(at<bpw_class>(a)->actor.health)) {
             anm_init(i_this, dRes_INDEX_BPW_BCK_CORE_NIGE1_e, 0.f, 2, 1.f, -1); // CORE_NIGE1
             set_timer(0, 30);
             inc_state(a);
         }
-        at<bpw_class>(a)->m3AC.y = 140.f;
+        at<bpw_class>(a)->mModelOffset.y = 140.f;
         fuwafuwa_calc(i_this);
         break;
     }
@@ -2694,18 +2694,18 @@ void action_bunri_dousa(bpw_class *i_this) {
         anm_init(i_this, dRes_INDEX_BPW_BCK_HUKKATU1_e, 15.f, 0, 1.f, -1); // HUKKATU1
         se_start(a, 0x5966, 0); // JA_SE_CM_BPW_MASK_TO_BPW
         inc_state(a);
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         break;
     case ACTION_STATE_SEPARATE_BUNRI_DOUSA_END_GROW:
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, regf(20, 12, 152.f), 1.f, 20, 18, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, regf(20, 13, 498.f), 1.f, 20, 18, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, regf(20, 14, 983.f), 1.f, 20, 18, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.x, regf(20, 15, 181.f), 1.f, 20, 18, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.y, regf(20, 16, 504.f), 1.f, 20, 18, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.z, regf(20, 17, 1196.f), 1.f, 20, 18, 0.08f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
-        BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->m48C), 1.f, 10.f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m3AC.y), 340.f, 1.f, 10.f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, regf(20, 12, 152.f), 1.f, 20, 18, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, regf(20, 13, 498.f), 1.f, 20, 18, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, regf(20, 14, 983.f), 1.f, 20, 18, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.x, regf(20, 15, 181.f), 1.f, 20, 18, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.y, regf(20, 16, 504.f), 1.f, 20, 18, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.z, regf(20, 17, 1196.f), 1.f, 20, 18, 0.08f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
+        BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->mBgOffsetY), 1.f, 10.f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mModelOffset.y), 340.f, 1.f, 10.f);
         if (!morf_isStop(u32(at<bpw_class>(a)->mpMorf)))
             break;
         if (!reg20_step())
@@ -2724,9 +2724,9 @@ void action_bunri_dousa(bpw_class *i_this) {
         next_att_wait_check(i_this);
         s32 hp = s8(at<bpw_class>(a)->actor.health);
         if (hp <= 5)
-            at<bpw_class>(a)->m3F6 = 2;
+            at<bpw_class>(a)->mBattlePhase = 2;
         else if (hp <= 10)
-            at<bpw_class>(a)->m3F6 = 1;
+            at<bpw_class>(a)->mBattlePhase = 1;
         at<bpw_class>(a)->actor.attention_info.flags = 4;
         at<bpw_class>(a)->actor.actor_status = u32(at<bpw_class>(a)->actor.actor_status) & ~0x4000u;
         break;
@@ -2735,7 +2735,7 @@ void action_bunri_dousa(bpw_class *i_this) {
         if (!demo_accept(a))
             break;
         set_timer(5, 3);
-        at<bpw_class>(a)->m3F6 = 3;
+        at<bpw_class>(a)->mBattlePhase = 3;
         for (u32 i = 0; i < 10; i++)
             at<BpwResetTimersHD>(a)->mResetTimers[i] = 0;
         f32 by = f32(at<bpw_class>(a)->mBodyPos.y);
@@ -2749,11 +2749,11 @@ void action_bunri_dousa(bpw_class *i_this) {
         at<bpw_class>(a)->actor.scale.x = 0.f;
         at<bpw_class>(a)->actor.scale.y = 0.f;
         at<bpw_class>(a)->actor.scale.z = 0.f;
-        at<bpw_class>(a)->m48C = r1;
-        at<bpw_class>(a)->m3E6 = 0;
-        at<bpw_class>(a)->m3E5 = 0;
+        at<bpw_class>(a)->mBgOffsetY = r1;
+        at<bpw_class>(a)->mIsCurseDash = 0;
+        at<bpw_class>(a)->mIsThrown = 0;
         anm_init(i_this, dRes_INDEX_BPW_BCK_CORE1_e, 15.f, 2, 1.f, -1);
-        u32 kid = u32(at<bpw_class>(a)->m3FC);
+        u32 kid = u32(at<bpw_class>(a)->mKanteraId);
         if (kid != 0xFFFFFFFF) {
             Local<be<u32>> key;
             key->set(kid);
@@ -2764,66 +2764,66 @@ void action_bunri_dousa(bpw_class *i_this) {
         }
         for (s32 i = 0; i < s8(at<bpw_class>(a)->actor.max_health); i++) {
             u32 p = poe(i);
-            if (p && u8(at<BpwChildPoeHD>(p)->m344) != 0) { // pw_class m344
+            if (p && u8(at<BpwChildPoeHD>(p)->mKilledJalhalla) != 0) { // pw_class mKilledJalhalla
                 at<fopAc_ac_c>(p)->actor_status = u32(at<fopAc_ac_c>(p)->actor_status) | 0x4000;
-                at<bpw_class>(a)->m462 = (s16)i;
-                Bpw_copyWord(&at<bpw_class>(a)->m424.x, &at<bpw_class>(p)->actor.current.pos.x);
-                Bpw_copyWord(&at<bpw_class>(a)->m424.y, &at<bpw_class>(p)->actor.current.pos.y);
-                Bpw_copyWord(&at<bpw_class>(a)->m424.z, &at<bpw_class>(p)->actor.current.pos.z);
-                at<bpw_class>(a)->m464 = BpwHD_fopAcM_searchActorAngleY(p, player_by_play());
+                at<bpw_class>(a)->mPoeCount = (s16)i;
+                Bpw_copyWord(&at<bpw_class>(a)->mChildPoePos.x, &at<bpw_class>(p)->actor.current.pos.x);
+                Bpw_copyWord(&at<bpw_class>(a)->mChildPoePos.y, &at<bpw_class>(p)->actor.current.pos.y);
+                Bpw_copyWord(&at<bpw_class>(a)->mChildPoePos.z, &at<bpw_class>(p)->actor.current.pos.z);
+                at<bpw_class>(a)->mPoeMerged = BpwHD_fopAcM_searchActorAngleY(p, player_by_play());
             }
         }
-        at<bpw_class>(a)->m47E = 0;
-        at<bpw_class>(a)->m480 = 0x96;
+        at<bpw_class>(a)->mAlpha = 0;
+        at<bpw_class>(a)->mBaseAlpha = 0x96;
         at<daPy_py_c>(pl)->mDemo.mParam0 = 0;
         at<daPy_py_c>(pl)->mDemo.mDemoMode = 0x1A;
         at<daPy_py_c>(pl)->mDemo.mDemoType = 3; // DEMO_LOOKUP
         BpwHD_dCamera_c_Stop(ea(&at<BpwCameraHD>(cam)->mCamera));
         BpwHD_dCamera_c_SetTrimSize(ea(&at<BpwCameraHD>(cam)->mCamera), 2);
         BpwHD_mDoAud_bgmStop(0x1E); // mDoAud_bgmStop(30)
-        at<bpw_class>(a)->m474 = 1;
+        at<bpw_class>(a)->mDemoCamActive = 1;
         set_timer(0, regf_t(20, 0, 135.f));
         inc_state(a);
         {
-            u32 p = poe(s16(at<bpw_class>(a)->m462));
+            u32 p = poe(s16(at<bpw_class>(a)->mPoeCount));
             if (p) {
-                Bpw_copyWord(&at<bpw_class>(a)->m40C.x, &at<bpw_class>(p)->actor.current.pos.x);
-                Bpw_copyWord(&at<bpw_class>(a)->m40C.y, &at<bpw_class>(p)->actor.current.pos.y);
-                Bpw_copyWord(&at<bpw_class>(a)->m40C.z, &at<bpw_class>(p)->actor.current.pos.z);
+                Bpw_copyWord(&at<bpw_class>(a)->mDemoCamCenter.x, &at<bpw_class>(p)->actor.current.pos.x);
+                Bpw_copyWord(&at<bpw_class>(a)->mDemoCamCenter.y, &at<bpw_class>(p)->actor.current.pos.y);
+                Bpw_copyWord(&at<bpw_class>(a)->mDemoCamCenter.z, &at<bpw_class>(p)->actor.current.pos.z);
             }
         }
     }
         /* fallthrough */
     case 0x79: {
-        u32 p = poe(s16(at<bpw_class>(a)->m462));
+        u32 p = poe(s16(at<bpw_class>(a)->mPoeCount));
         if (p) {
-            Bpw_copyWord(&at<bpw_class>(a)->m424.x, &at<bpw_class>(p)->actor.current.pos.x);
-            Bpw_copyWord(&at<bpw_class>(a)->m424.y, &at<bpw_class>(p)->actor.current.pos.y);
-            Bpw_copyWord(&at<bpw_class>(a)->m424.z, &at<bpw_class>(p)->actor.current.pos.z);
-            at<bpw_class>(a)->m464 = BpwHD_fopAcM_searchActorAngleY(p, player_by_play());
+            Bpw_copyWord(&at<bpw_class>(a)->mChildPoePos.x, &at<bpw_class>(p)->actor.current.pos.x);
+            Bpw_copyWord(&at<bpw_class>(a)->mChildPoePos.y, &at<bpw_class>(p)->actor.current.pos.y);
+            Bpw_copyWord(&at<bpw_class>(a)->mChildPoePos.z, &at<bpw_class>(p)->actor.current.pos.z);
+            at<bpw_class>(a)->mPoeMerged = BpwHD_fopAcM_searchActorAngleY(p, player_by_play());
         }
-        f32 mx = f32(at<bpw_class>(a)->m424.x);
-        at<bpw_class>(a)->m440 = 50.f;
-        f32 mz = f32(at<bpw_class>(a)->m424.z), my = f32(at<bpw_class>(a)->m424.y);
-        at<bpw_class>(a)->m40C.x = mx;
-        at<bpw_class>(a)->m40C.z = mz;
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m40C.y),
+        f32 mx = f32(at<bpw_class>(a)->mChildPoePos.x);
+        at<bpw_class>(a)->mDemoCamFovy = 50.f;
+        f32 mz = f32(at<bpw_class>(a)->mChildPoePos.z), my = f32(at<bpw_class>(a)->mChildPoePos.y);
+        at<bpw_class>(a)->mDemoCamCenter.x = mx;
+        at<bpw_class>(a)->mDemoCamCenter.z = mz;
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamCenter.y),
                             add(add(my, 150.f), f32(BpwHio(12).mFloat[17])), 0.1f, 10.f);
-        BpwHD_mDoMtx_YrotS_2(u32(l_calcMtx), (s32)s16(at<bpw_class>(a)->m464));
+        BpwHD_mDoMtx_YrotS_2(u32(l_calcMtx), (s32)s16(at<bpw_class>(a)->mPoeMerged));
         Local<BpwVecHD> v, out;
         v->x = 0.f;
         v->y = 0.f;
         v->z = 800.f;
         BpwHD_MtxPosition_2(v.get(), out.get());
-        f32 ox = add((f32)out->x, f32(at<bpw_class>(a)->m424.x));
-        f32 oz = add((f32)out->z, f32(at<bpw_class>(a)->m424.z));
-        f32 oy = fmadds(f32(at<bpw_class>(a)->m424.y), 0.3f, (f32)out->y);
+        f32 ox = add((f32)out->x, f32(at<bpw_class>(a)->mChildPoePos.x));
+        f32 oz = add((f32)out->z, f32(at<bpw_class>(a)->mChildPoePos.z));
+        f32 oy = fmadds(f32(at<bpw_class>(a)->mChildPoePos.y), 0.3f, (f32)out->y);
         out->x = ox;
         out->z = oz;
         out->y = oy;
-        at<bpw_class>(a)->m418.x = ox;
-        at<bpw_class>(a)->m418.y = add(oy, 100.f);
-        at<bpw_class>(a)->m418.z = oz;
+        at<bpw_class>(a)->mDemoCamEye.x = ox;
+        at<bpw_class>(a)->mDemoCamEye.y = add(oy, 100.f);
+        at<bpw_class>(a)->mDemoCamEye.z = oz;
         if (timer(0) != 0)
             break;
         set_timer(0, regf_t(20, 1, 25.f));
@@ -2833,11 +2833,11 @@ void action_bunri_dousa(bpw_class *i_this) {
         {
             Local<BpwVecHD> q;
             q->x = -36.f;
-            f32 m424x = f32(at<bpw_class>(a)->m424.x);
+            f32 m424x = f32(at<bpw_class>(a)->mChildPoePos.x);
             q->y = f32(at<fopAc_ac_c>(pl)->current.pos.y);
             q->z = -777.f;
             f32 px = f32(at<fopAc_ac_c>(pl)->current.pos.x),
-                pz = f32(at<fopAc_ac_c>(pl)->current.pos.z), m424z = f32(at<bpw_class>(a)->m424.z);
+                pz = f32(at<fopAc_ac_c>(pl)->current.pos.z), m424z = f32(at<bpw_class>(a)->mChildPoePos.z);
             u32 vt = u32(at<fopAc_ac_c>(pl)->__vtbl);
             s16 ang = BpwHD_cM_atan2s(sub(px, m424x), sub(pz, m424z));
             call_ptr<void>(u32(at<BpwPlayerVtableHD>(vt)->setPlayerPosAndAngle), pl, q.get(),
@@ -2850,8 +2850,8 @@ void action_bunri_dousa(bpw_class *i_this) {
         s16 ang = BpwHD_fopAcM_searchActorAngleY(a, player_actor());
         at<bpw_class>(a)->actor.shape_angle.y = ang;
         at<bpw_class>(a)->actor.current.angle.y = ang;
-        at<bpw_class>(a)->m476 = ang;
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(20, 2, 50.f), 1.f, 0.5f);
+        at<bpw_class>(a)->mTargetAngleY = ang;
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(20, 2, 50.f), 1.f, 0.5f);
         set_cam_pos(a, -484.f, 628.f, -1495.f, -527.f, 698.f, -1645.f);
         player_to_room_face(a, pl);
         s16 t0 = timer(0);
@@ -2862,7 +2862,7 @@ void action_bunri_dousa(bpw_class *i_this) {
         }
         at<daPy_py_c>(pl)->mDemo.mDemoMode = 0x31; // DEMO_S_SURP
         BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->actor.scale), 1.f, 1.f, 0.1f);
-        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->m47E), (s32)s16(at<bpw_class>(a)->m480),
+        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->mAlpha), (s32)s16(at<bpw_class>(a)->mBaseAlpha),
                                     1, 0xF);
         f32 s = f32(at<bpw_class>(a)->actor.scale.x);
         at<bpw_class>(a)->actor.scale.z = s;
@@ -2877,7 +2877,7 @@ void action_bunri_dousa(bpw_class *i_this) {
         set_timer(0, regf_t(20, 9, 10.f));
         set_timer(1, regf_t(20, 10, 100.f));
         set_timer(4, regf_t(12, 12, 30.f));
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         inc_state(a);
     }
         /* fallthrough */
@@ -2887,15 +2887,15 @@ void action_bunri_dousa(bpw_class *i_this) {
             set_timer(4, regf_t(12, 12, 30.f));
             break;
         }
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(20, 11, 50.f), 1.f, 0.5f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, regf(20, 12, -114.f), 0.1f, 20, 18, 0.02f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, regf(20, 13, 95.f), 0.1f, 20, 18, 0.02f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, regf(20, 14, -293.f), 0.1f, 20, 18, 0.02f);
-        demo_calc(a, &at<bpw_class>(a)->m418.x, regf(20, 15, -169.f), 1.f, 20, 18, 0.02f);
-        demo_calc(a, &at<bpw_class>(a)->m418.y, regf(20, 16, 98.f), 1.f, 20, 18, 0.02f);
-        demo_calc(a, &at<bpw_class>(a)->m418.z, regf(20, 17, -462.f), 1.f, 20, 18, 0.02f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
-        if (u32(at<bpw_class>(a)->m3F8) == 0x1B) {
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(20, 11, 50.f), 1.f, 0.5f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, regf(20, 12, -114.f), 0.1f, 20, 18, 0.02f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, regf(20, 13, 95.f), 0.1f, 20, 18, 0.02f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, regf(20, 14, -293.f), 0.1f, 20, 18, 0.02f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.x, regf(20, 15, -169.f), 1.f, 20, 18, 0.02f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.y, regf(20, 16, 98.f), 1.f, 20, 18, 0.02f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.z, regf(20, 17, -462.f), 1.f, 20, 18, 0.02f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
+        if (u32(at<bpw_class>(a)->mBckFileIdx) == 0x1B) {
             if (BpwHD_J3DFrameCtrl_checkPass(u32(at<bpw_class>(a)->mpMorf) + 0x98, 1.f))
                 mons_se(a, 0x496A, 0, true); // LOOK_RIGHT
             if (BpwHD_J3DFrameCtrl_checkPass(u32(at<bpw_class>(a)->mpMorf) + 0x98, 41.f))
@@ -2912,7 +2912,7 @@ void action_bunri_dousa(bpw_class *i_this) {
         inc_state(a);
         /* fallthrough */
     case 0x7C:
-        if (u32(at<bpw_class>(a)->m3F8) == 0x1B) {
+        if (u32(at<bpw_class>(a)->mBckFileIdx) == 0x1B) {
             if (BpwHD_J3DFrameCtrl_checkPass(u32(at<bpw_class>(a)->mpMorf) + 0x98, 1.f))
                 mons_se(a, 0x496A, 0, true);
             if (BpwHD_J3DFrameCtrl_checkPass(u32(at<bpw_class>(a)->mpMorf) + 0x98, 41.f))
@@ -2926,35 +2926,35 @@ void action_bunri_dousa(bpw_class *i_this) {
         inc_state(a);
         /* fallthrough */
     case 0x7D:
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(19, 1, 50.f), 1.f, 0.5f);
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(19, 1, 50.f), 1.f, 0.5f);
         set_cam_pos(a, 61.f, 125.f, -159.f, -146.f, 39.f, -965.f);
         if (timer(0) != 0)
             break;
         if (!reg20_step())
             break;
         anm_init(i_this, dRes_INDEX_BPW_BCK_CORE_NIGE1_e, 8.f, 2, 1.f, -1);
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         set_timer(0, 4);
         inc_state(a);
         /* fallthrough */
     case 0x7E: {
         if (timer(0) == 0)
             se_start(a, 0x516C, 0); // JA_SE_CM_BPW_MASK_RUN_AWAY
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(19, 9, 50.f), 1.f, 0.5f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, regf(19, 10, -471.f), 0.1f, 19, 12, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, regf(19, 10, 120.f), 0.1f, 19, 12, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, regf(19, 11, -498.f), 0.1f, 19, 12, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m418.x, regf(20, 15, 115.f), 1.f, 19, 12, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m418.y, regf(20, 16, 58.f), 1.f, 19, 12, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m418.z, regf(20, 17, -1062.f), 1.f, 19, 12, 0.05f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(19, 9, 50.f), 1.f, 0.5f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, regf(19, 10, -471.f), 0.1f, 19, 12, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, regf(19, 10, 120.f), 0.1f, 19, 12, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, regf(19, 11, -498.f), 0.1f, 19, 12, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.x, regf(20, 15, 115.f), 1.f, 19, 12, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.y, regf(20, 16, 58.f), 1.f, 19, 12, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.z, regf(20, 17, -1062.f), 1.f, 19, 12, 0.05f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
         BpwHD_cLib_addCalc2_5(ea(&at<bpw_class>(a)->actor.current.pos), -1130.f, 1.f,
                               regf(19, 13, 20.f));
         BpwHD_cLib_addCalc2_5(ea(&at<bpw_class>(a)->actor.current.pos.z), 30.f, 1.f,
                               regf(19, 13, 20.f));
         f32 dx = sub(f32(at<bpw_class>(a)->actor.current.pos.x), -1130.f);
         f32 dz = sub(f32(at<bpw_class>(a)->actor.current.pos.z), 30.f);
-        at<bpw_class>(a)->m476 = (s16)(BpwHD_cM_atan2s(dx, dz) + 0x8000);
+        at<bpw_class>(a)->mTargetAngleY = (s16)(BpwHD_cM_atan2s(dx, dz) + 0x8000);
         player_to_room_face(a, pl);
         if (!(BpwHD_sqrtf(fmadds(dx, dx, mul(dz, dz))) < 5.f))
             break;
@@ -2963,15 +2963,15 @@ void action_bunri_dousa(bpw_class *i_this) {
         at<bpw_class>(a)->actor.speed.y = 0.f;
         at<bpw_class>(a)->actor.speed.z = 0.f;
         at<bpw_class>(a)->actor.speedF = 0.f;
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m476), -0x8000, 1, 0x2000);
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mTargetAngleY), -0x8000, 1, 0x2000);
         if (!reg20_step())
             break;
-        at<bpw_class>(a)->m47C = 0;
+        at<bpw_class>(a)->mFloatPhase = 0;
         set_timer(0, regf_t(18, 5, 63.f));
         set_timer(1, regf_t(18, 6, 75.f));
         BpwHD_mDoAud_bgmStreamPrepare(0xC0000003u); // mDoAud_bgmStreamPrepare(JA_STRM_BOSS_CLEAR)
         inc_state(a);
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         break;
     }
     case 0x7F: {
@@ -2979,20 +2979,20 @@ void action_bunri_dousa(bpw_class *i_this) {
             se_start(a, 0x516C, 0);
         if (timer(1) == 1)
             BpwHD_mDoAud_bgmStreamPlay(); // mDoAud_bgmStreamPlay()
-        u16 ph = (u16)ftoi(add((f32)s16(at<bpw_class>(a)->m47C), regf(18, 2, 700.f)));
-        at<bpw_class>(a)->m47C = ph;
+        u16 ph = (u16)ftoi(add((f32)s16(at<bpw_class>(a)->mFloatPhase), regf(18, 2, 700.f)));
+        at<bpw_class>(a)->mFloatPhase = ph;
         f32 sn = Bpw_sin(ph);
-        at<bpw_class>(a)->m3AC.x = mul(regf(18, 3, 30.f), sn);
-        at<bpw_class>(a)->m3AC.z = mul(regf(18, 4, 30.f), sn);
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m476), -0x8000, 1, 0x2000);
+        at<bpw_class>(a)->mModelOffset.x = mul(regf(18, 3, 30.f), sn);
+        at<bpw_class>(a)->mModelOffset.z = mul(regf(18, 4, 30.f), sn);
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mTargetAngleY), -0x8000, 1, 0x2000);
         at<bpw_class>(a)->actor.speed.y = regf(19, 14, 30.f);
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(19, 15, 50.f), 1.f, 0.5f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, regf(19, 16, -538.f), 0.1f, 19, 19, 0.04f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, regf(19, 17, 748.f), 0.1f, 19, 19, 0.04f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, regf(19, 18, -567.f), 0.1f, 19, 19, 0.04f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(19, 15, 50.f), 1.f, 0.5f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, regf(19, 16, -538.f), 0.1f, 19, 19, 0.04f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, regf(19, 17, 748.f), 0.1f, 19, 19, 0.04f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, regf(19, 18, -567.f), 0.1f, 19, 19, 0.04f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
         if (timer(0) == 1) {
-            at<bpw_class>(a)->m3F6 = 4;
+            at<bpw_class>(a)->mBattlePhase = 4;
             se_start_e(a, 0x6A3F, 0); // JA_SE_OBJ_BPW_LIGHT_ON
             set_timer(5, 0);
             at<bpw_class>(a)->mKankyouHendouState = 3;
@@ -3007,7 +3007,7 @@ void action_bunri_dousa(bpw_class *i_this) {
         at<bpw_class>(a)->actor.speed.z = 0.f;
         if (!reg20_step())
             break;
-        at<bpw_class>(a)->m3F6 = 4;
+        at<bpw_class>(a)->mBattlePhase = 4;
         mons_se(a, 0x496D, 0, false); // JA_SE_CV_BPW_DIE
         set_timer(0, regf_t(18, 8, 40.f));
         inc_state(a);
@@ -3018,29 +3018,29 @@ void action_bunri_dousa(bpw_class *i_this) {
             BpwHD_mDoAud_bgmStreamPlay();
         if (timer(0) != 0)
             break;
-        at<bpw_class>(a)->m3AC.x = 0.f;
-        at<bpw_class>(a)->m3AC.y = 0.f;
-        at<bpw_class>(a)->m3AC.z = 0.f;
-        at<bpw_class>(a)->m480 = 0xFF;
+        at<bpw_class>(a)->mModelOffset.x = 0.f;
+        at<bpw_class>(a)->mModelOffset.y = 0.f;
+        at<bpw_class>(a)->mModelOffset.z = 0.f;
+        at<bpw_class>(a)->mBaseAlpha = 0xFF;
         inc_state(a);
         /* fallthrough */
     case 0x81:
         if (timer(1) == 1)
             BpwHD_mDoAud_bgmStreamPlay();
-        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->m47E), (s32)s16(at<bpw_class>(a)->m480),
+        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->mAlpha), (s32)s16(at<bpw_class>(a)->mBaseAlpha),
                                     1, 5);
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(18, 9, 50.f), 1.f, 0.5f);
-        at<bpw_class>(a)->m476 = -0x483F;
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(18, 9, 50.f), 1.f, 0.5f);
+        at<bpw_class>(a)->mTargetAngleY = -0x483F;
         at<bpw_class>(a)->actor.shape_angle.y = -0x483F;
         at<bpw_class>(a)->actor.shape_angle.x = -0x2337;
         at<bpw_class>(a)->actor.shape_angle.z = 0x3E9;
         set_cam_pos(a, -1030.f, 2017.f, 119.f, -1332.f, 2722.f, -153.f);
-        if (s16(at<bpw_class>(a)->m47E) < 0xFE)
+        if (s16(at<bpw_class>(a)->mAlpha) < 0xFE)
             break;
         if (!reg20_step())
             break;
-        at<bpw_class>(a)->m3E0 = 1;
-        at<bpw_class>(a)->m47E = 0xFF;
+        at<bpw_class>(a)->mIsLightFrozen = 1;
+        at<bpw_class>(a)->mAlpha = 0xFF;
         at<mDoExt_McaMorf>(at<bpw_class>(a)->mpMorf)->mFrameCtrl.mRate =
             0.f; // mpMorf->setPlaySpeed(0)
         set_timer(0, regf_t(18, 17, 40.f));
@@ -3062,51 +3062,51 @@ void action_bunri_dousa(bpw_class *i_this) {
         at<bpw_class>(a)->actor.gravity = -3.f;
         /* fallthrough */
     case 0x84:
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(6, 7, 50.f), 1.f, 0.5f);
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(6, 7, 50.f), 1.f, 0.5f);
         set_cam_pos(a, -893.f, 1874.f, 66.f, 142.f, 68.f, -1348.f);
         if (!reg20_step())
             break;
         at<daPy_py_c>(pl)->mDemo.mDemoMode = 0x1D; // DEMO_UNK_029
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         inc_state(a);
         /* fallthrough */
     case 0x85:
         BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->actor.shape_angle),
                                     (s32)(s16)ftoi(regf(18, 19, 49152.f)), 1, 0x300);
         BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->actor.shape_angle.z), 0, 1, 0x300);
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(6, 7, 50.f), 1.f, 0.5f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, regf(6, 8, -1352.f), 0.1f, 6, 6, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, regf(6, 9, 174.f), 0.1f, 6, 6, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, regf(6, 10, 680.f), 0.1f, 6, 6, 0.05f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
-        BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->m3AC.y), 1.f, 3.f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m48C), -120.f, 1.f, 3.f);
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(6, 7, 50.f), 1.f, 0.5f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, regf(6, 8, -1352.f), 0.1f, 6, 6, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, regf(6, 9, 174.f), 0.1f, 6, 6, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, regf(6, 10, 680.f), 0.1f, 6, 6, 0.05f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
+        BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->mModelOffset.y), 1.f, 3.f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mBgOffsetY), -120.f, 1.f, 3.f);
         player_to_room_face(a, pl);
         if (add(add(f32(at<bpw_class>(a)->mAcch.m_ground_h), 1350.f), f32(BpwHio(6).mFloat[19])) <
             f32(at<bpw_class>(a)->actor.current.pos.y))
             break;
         if (!reg20_step())
             break;
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         inc_state(a);
         /* fallthrough */
     case 0x86: {
-        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(6, 11, 50.f), 1.f, 0.5f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, regf(6, 12, -2340.f), 0.1f, 6, 18, 0.1f);
-        { // m40C.y: target REG12_F(13) + 186, scale 0.5, step from REG6_F(13) + 36
-            f32 v = f32(at<bpw_class>(a)->m40C.y);
+        BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(6, 11, 50.f), 1.f, 0.5f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, regf(6, 12, -2340.f), 0.1f, 6, 18, 0.1f);
+        { // mDemoCamCenter.y: target REG12_F(13) + 186, scale 0.5, step from REG6_F(13) + 36
+            f32 v = f32(at<bpw_class>(a)->mDemoCamCenter.y);
             f32 d = __builtin_fabsf(sub(v, regf(6, 13, 36.f)));
             f32 k = regf(6, 18, 0.1f);
-            f32 step = mul(mul(d, k), f32(at<bpw_class>(a)->m43C));
-            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->m40C.y), regf(12, 13, 186.f), 0.5f, step);
+            f32 step = mul(mul(d, k), f32(at<bpw_class>(a)->mDemoCamBlend));
+            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->mDemoCamCenter.y), regf(12, 13, 186.f), 0.5f, step);
         }
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, regf(6, 14, 1442.f), 0.1f, 6, 18, 0.1f);
-        demo_calc(a, &at<bpw_class>(a)->m418.x, regf(6, 15, -744.f), 1.f, 6, 18, 0.1f);
-        demo_calc(a, &at<bpw_class>(a)->m418.y, regf(6, 16, 74.f), 1.f, 6, 18, 0.1f);
-        demo_calc(a, &at<bpw_class>(a)->m418.z, regf(6, 17, -432.f), 1.f, 6, 18, 0.1f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
-        BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->m3AC.y), 1.f, 3.f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m48C), -120.f, 1.f, 3.f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, regf(6, 14, 1442.f), 0.1f, 6, 18, 0.1f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.x, regf(6, 15, -744.f), 1.f, 6, 18, 0.1f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.y, regf(6, 16, 74.f), 1.f, 6, 18, 0.1f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.z, regf(6, 17, -432.f), 1.f, 6, 18, 0.1f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
+        BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->mModelOffset.y), 1.f, 3.f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mBgOffsetY), -120.f, 1.f, 3.f);
         if (add(f32(at<bpw_class>(a)->mAcch.m_ground_h), f32(BpwHio(12).mFloat[14])) <
             f32(at<bpw_class>(a)->actor.current.pos.y))
             break;
@@ -3152,24 +3152,24 @@ void action_bunri_dousa(bpw_class *i_this) {
         /* fallthrough */
     case 0x87: {
         if (timer(0) != 0) {
-            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->m40C.y), regf(12, 13, 186.f), 0.3f,
+            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->mDemoCamCenter.y), regf(12, 13, 186.f), 0.3f,
                                   regf(12, 14, 100.f));
             break;
         }
         player_to_room_body(a, pl);
-        at<bpw_class>(a)->m40C.x = 0.f;
-        at<bpw_class>(a)->m40C.y = 0.f;
-        at<bpw_class>(a)->m40C.z = 0.f;
+        at<bpw_class>(a)->mDemoCamCenter.x = 0.f;
+        at<bpw_class>(a)->mDemoCamCenter.y = 0.f;
+        at<bpw_class>(a)->mDemoCamCenter.z = 0.f;
         f32 rad = regf(9, 1, 1400.f);
-        at<bpw_class>(a)->m3F0 = rad;
+        at<bpw_class>(a)->mDemoCamDist = rad;
         u16 an = (u16)ftoi(regf(9, 2, -15000.f));
-        at<bpw_class>(a)->m3F4 = an;
-        at<bpw_class>(a)->m418.x = mul(Bpw_sin(an), rad);
-        at<bpw_class>(a)->m418.y = regf(9, 3, 900.f);
-        at<bpw_class>(a)->m418.z = mul(Bpw_cos(an), rad);
+        at<bpw_class>(a)->mDemoCamAngleY = an;
+        at<bpw_class>(a)->mDemoCamEye.x = mul(Bpw_sin(an), rad);
+        at<bpw_class>(a)->mDemoCamEye.y = regf(9, 3, 900.f);
+        at<bpw_class>(a)->mDemoCamEye.z = mul(Bpw_cos(an), rad);
         if (!reg20_step())
             break;
-        at<bpw_class>(a)->m462 = 0;
+        at<bpw_class>(a)->mPoeCount = 0;
         if (s16(BpwHio(0).mShort[3]) == 0)
             BpwHD_dSv_memBit_c_onDungeonItem(u32(l_saveInfo) + 0x798,
                                              3); // dComIfGs_onStageBossEnemy()
@@ -3183,7 +3183,7 @@ void action_bunri_dousa(bpw_class *i_this) {
         player_to_room_body(a, pl);
         s16 t9 = timer(9), t2 = timer(2);
         if (t9 == 1) {
-            at<bpw_class>(a)->m3EC = 0.f;
+            at<bpw_class>(a)->mKankyouBlend = 0.f;
             at<bpw_class>(a)->mKankyouHendouState = 6;
         }
         if (t2 != 0) {
@@ -3193,20 +3193,20 @@ void action_bunri_dousa(bpw_class *i_this) {
                                               0); // fopAcM_createWarpFlower
                 set_timer(9, (s16)(s16(BpwHio(6).mShort[5]) + 30));
             }
-            BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->m440), regf(9, 6, 50.f), 1.f, 0.5f);
-            s16 an = (s16)(s16(at<bpw_class>(a)->m3F4) + (s16)ftoi(regf(9, 7, 33.f)));
+            BpwHD_cLib_addCalc2(ea(&at<bpw_class>(a)->mDemoCamFovy), regf(9, 6, 50.f), 1.f, 0.5f);
+            s16 an = (s16)(s16(at<bpw_class>(a)->mDemoCamAngleY) + (s16)ftoi(regf(9, 7, 33.f)));
             if (an > 0)
                 an = 0;
-            at<bpw_class>(a)->m3F4 = an;
-            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->m3F0), regf(9, 8, 600.f), 1.f,
+            at<bpw_class>(a)->mDemoCamAngleY = an;
+            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->mDemoCamDist), regf(9, 8, 600.f), 1.f,
                                   regf(9, 9, 2.f));
-            u16 a1 = u16(at<bpw_class>(a)->m3F4);
-            at<bpw_class>(a)->m418.x = mul(Bpw_sin(a1), f32(at<bpw_class>(a)->m3F0));
-            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->m418.y), regf(9, 10, 900.f), 1.f,
+            u16 a1 = u16(at<bpw_class>(a)->mDemoCamAngleY);
+            at<bpw_class>(a)->mDemoCamEye.x = mul(Bpw_sin(a1), f32(at<bpw_class>(a)->mDemoCamDist));
+            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->mDemoCamEye.y), regf(9, 10, 900.f), 1.f,
                                   regf(9, 11, 10.f));
-            u16 a2 = u16(at<bpw_class>(a)->m3F4);
+            u16 a2 = u16(at<bpw_class>(a)->mDemoCamAngleY);
             f32 c = Bpw_cos(a2);
-            at<bpw_class>(a)->m418.z = mul(c, f32(at<bpw_class>(a)->m3F0));
+            at<bpw_class>(a)->mDemoCamEye.z = mul(c, f32(at<bpw_class>(a)->mDemoCamDist));
             break;
         }
         if (!(f32(BpwHio(9).mFloat[13]) == 0.f)) {
@@ -3228,20 +3228,20 @@ void action_bunri_dousa(bpw_class *i_this) {
     }
     }
     if (s16(at<bpw_class>(a)->mActionState) >= 0x78) {
-        at<bpw_class>(a)->m498 = 0.f;
-        at<bpw_class>(a)->m3AC.y = 100.f;
-        at<bpw_class>(a)->m49C = 160.f;
+        at<bpw_class>(a)->mWallHalfHeight = 0.f;
+        at<bpw_class>(a)->mModelOffset.y = 100.f;
+        at<bpw_class>(a)->mWallRadius = 160.f;
     }
-    if (s16(at<bpw_class>(a)->m474) != 0) {
+    if (s16(at<bpw_class>(a)->mDemoCamActive) != 0) {
         Local<BpwVecHD> center, eye;
-        eye->x = f32(at<bpw_class>(a)->m418.x);
-        center->y = f32(at<bpw_class>(a)->m40C.y);
-        eye->z = f32(at<bpw_class>(a)->m418.z);
-        center->x = f32(at<bpw_class>(a)->m40C.x);
-        eye->y = f32(at<bpw_class>(a)->m418.y);
-        center->z = f32(at<bpw_class>(a)->m40C.z);
+        eye->x = f32(at<bpw_class>(a)->mDemoCamEye.x);
+        center->y = f32(at<bpw_class>(a)->mDemoCamCenter.y);
+        eye->z = f32(at<bpw_class>(a)->mDemoCamEye.z);
+        center->x = f32(at<bpw_class>(a)->mDemoCamCenter.x);
+        eye->y = f32(at<bpw_class>(a)->mDemoCamEye.y);
+        center->z = f32(at<bpw_class>(a)->mDemoCamCenter.z);
         BpwHD_dCamera_c_Set(ea(&at<BpwCameraHD>(cam)->mCamera), center.get(), eye.get(),
-                            f32(at<bpw_class>(a)->m440), 0);
+                            f32(at<bpw_class>(a)->mDemoCamFovy), 0);
     }
 }
 
@@ -3263,7 +3263,7 @@ void action_start_demo(bpw_class *i_this) {
         at<bpw_class>(a)->actor.scale.x = 0.f;
         at<bpw_class>(a)->actor.scale.y = 0.f;
         at<bpw_class>(a)->actor.scale.z = 0.f;
-        at<bpw_class>(a)->m47E = 0;
+        at<bpw_class>(a)->mAlpha = 0;
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
         /* fallthrough */
     case 0xC9:
@@ -3283,10 +3283,10 @@ void action_start_demo(bpw_class *i_this) {
         at<daPy_py_c>(player)->mDemo.mParam0 = 0; // changeOriginalDemo()
         at<daPy_py_c>(player)->mDemo.mDemoType = 3;
         at<daPy_py_c>(player)->mDemo.mDemoMode = 0x31; // changeDemoMode(DEMO_S_SURP_e)
-        at<bpw_class>(a)->m3AC.y = 140.f;
+        at<bpw_class>(a)->mModelOffset.y = 140.f;
         BpwHD_dCamera_c_Stop(ea(&at<BpwCameraHD>(cam)->mCamera));           // Stop()
         BpwHD_dCamera_c_SetTrimSize(ea(&at<BpwCameraHD>(cam)->mCamera), 2); // SetTrimSize(2)
-        at<bpw_class>(a)->m440 = regf(6, 0, 55.f);
+        at<bpw_class>(a)->mDemoCamFovy = regf(6, 0, 55.f);
         at<bpw_class>(a)->mSomeCountdownTimers[0] = regf_t(9, 0, 40.f);
         anm_init(i_this, dRes_INDEX_BPW_BCK_CORE1_e, 0.f, 2, 1.f, -1); // CORE1
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
@@ -3301,7 +3301,7 @@ void action_start_demo(bpw_class *i_this) {
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
         /* fallthrough */
     case 0xCB:
-        at<bpw_class>(a)->m440 = regf(6, 1, 50.f);
+        at<bpw_class>(a)->mDemoCamFovy = regf(6, 1, 50.f);
         set_cam_pos(a, 1646.f, 1215.f, -72.f, 1767.f, 1321.f, -129.f);
         if (timer(0) != 0)
             break;
@@ -3313,7 +3313,7 @@ void action_start_demo(bpw_class *i_this) {
         /* fallthrough */
     case 0xCC:
         if (timer(1) == 1) {
-            at<bpw_class>(a)->m3EA = 1;
+            at<bpw_class>(a)->mStartDemoStep = 1;
             BpwHD_mDoAud_bgmStreamPlay();
         } // mDoAud_bgmStreamPlay()
         if (timer(0) != 0)
@@ -3323,10 +3323,10 @@ void action_start_demo(bpw_class *i_this) {
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
         /* fallthrough */
     case 0xCD:
-        at<bpw_class>(a)->m440 = regf(6, 2, 55.f);
+        at<bpw_class>(a)->mDemoCamFovy = regf(6, 2, 55.f);
         set_cam_pos(a, 72.f, 103.f, 1618.f, 89.f, 108.f, 1788.f);
         if (timer(1) == 0)
-            at<bpw_class>(a)->m3EA = 2;
+            at<bpw_class>(a)->mStartDemoStep = 2;
         if (timer(0) != 0)
             break;
         at<daPy_py_c>(player)->mDemo.mDemoMode = 0x18; // changeDemoMode(DEMO_SURPRISED_e)
@@ -3334,36 +3334,36 @@ void action_start_demo(bpw_class *i_this) {
             break;
         at<bpw_class>(a)->mSomeCountdownTimers[0] = regf_t(18, 0, 40.f);
         at<bpw_class>(a)->mSomeCountdownTimers[1] = regf_t(18, 1, 110.f);
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         at<bpw_class>(a)->mSomeCountdownTimers[2] = regf_t(18, 11, 20.f);
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
         /* fallthrough */
     case 0xCE:
         if (timer(2) == 1)
-            at<bpw_class>(a)->m3EA = 3;
+            at<bpw_class>(a)->mStartDemoStep = 3;
         if (timer(0) != 0)
             break;
-        demo_calc(a, &at<bpw_class>(a)->m440, regf(6, 3, 55.f), 1.f, 18, 2, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, 0.f, 0.1f, 18, 2, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, 233.f, 0.1f, 18, 2, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, 552.f, 0.1f, 18, 2, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m418.x, 0.f, 1.f, 18, 2, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m418.y, 270.f, 1.f, 18, 2, 0.05f);
-        demo_calc(a, &at<bpw_class>(a)->m418.z, 722.f, 1.f, 18, 2, 0.05f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
-        at<bpw_class>(a)->m3EA = 4;
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamFovy, regf(6, 3, 55.f), 1.f, 18, 2, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, 0.f, 0.1f, 18, 2, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, 233.f, 0.1f, 18, 2, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, 552.f, 0.1f, 18, 2, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.x, 0.f, 1.f, 18, 2, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.y, 270.f, 1.f, 18, 2, 0.05f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.z, 722.f, 1.f, 18, 2, 0.05f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
+        at<bpw_class>(a)->mStartDemoStep = 4;
         if (timer(1) != 0)
             break;
         if (!reg20_step())
             break;
-        at<bpw_class>(a)->m3EA = 5;
+        at<bpw_class>(a)->mStartDemoStep = 5;
         at<bpw_class>(a)->mSomeCountdownTimers[0] = regf_t(18, 3, 30.f);
-        at<bpw_class>(a)->m480 = 0x96;
+        at<bpw_class>(a)->mBaseAlpha = 0x96;
         se_start(a, 0x6A3C, 0); // JA_SE_OBJ_BPW_MASK_APPEAR
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
         /* fallthrough */
     case 0xCF: {
-        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->m47E), (s32)s16(at<bpw_class>(a)->m480),
+        BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(a)->mAlpha), (s32)s16(at<bpw_class>(a)->mBaseAlpha),
                                     1, 5);
         BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->actor.scale), 1.f, 1.f, 0.1f);
         f32 s = f32(at<bpw_class>(a)->actor.scale.x);
@@ -3371,7 +3371,7 @@ void action_start_demo(bpw_class *i_this) {
         at<bpw_class>(a)->actor.scale.y = s;
         if (timer(0) != 0)
             break;
-        at<bpw_class>(a)->m3EA = 6;
+        at<bpw_class>(a)->mStartDemoStep = 6;
         if (!reg20_step())
             break;
         at<bpw_class>(a)->mSomeCountdownTimers[5] = (s16)(s16(BpwHio(21).mShort[2]) + 10);
@@ -3379,93 +3379,93 @@ void action_start_demo(bpw_class *i_this) {
         break;
     }
     case 0xD0:
-        if (u32(at<bpw_class>(a)->m3F8) == 9) {
+        if (u32(at<bpw_class>(a)->mBckFileIdx) == 9) {
             if (morf_isStop(u32(at<bpw_class>(a)->mpMorf)))
                 anm_init(i_this, dRes_INDEX_BPW_BCK_CORE1_e, 15.f, 2, 1.f, -1);
-            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->m3AC.y), regf(18, 12, 100.f), 1.f,
+            BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->mModelOffset.y), regf(18, 12, 100.f), 1.f,
                                   regf(18, 13, 10.f));
             se_start(a, 0x623D, 0); // JA_SE_OBJ_BPW_MASK_LAUGH
         } else {
-            BpwHD_cLib_addCalc2_5(ea(&at<bpw_class>(a)->m3AC.y), 140.f, 1.f, regf(18, 13, 10.f));
+            BpwHD_cLib_addCalc2_5(ea(&at<bpw_class>(a)->mModelOffset.y), 140.f, 1.f, regf(18, 13, 10.f));
         }
-        if (s16(at<bpw_class>(a)->m464) != 0) {
+        if (s16(at<bpw_class>(a)->mPoeMerged) != 0) {
             anm_init(i_this, dRes_INDEX_BPW_BCK_CORE_NIGE1_e, 0.f, 2, 1.f, -1);
-            at<bpw_class>(a)->m464 = 0;
+            at<bpw_class>(a)->mPoeMerged = 0;
         } // CORE_NIGE1
-        if (s16(at<bpw_class>(a)->m462) < 15)
+        if (s16(at<bpw_class>(a)->mPoeCount) < 15)
             break;
         if (!reg20_step())
             break;
         at<bpw_class>(a)->mSomeCountdownTimers[0] = regf_t(18, 4, 30.f);
         at<bpw_class>(a)->mSomeCountdownTimers[1] = regf_t(18, 5, 55.f);
-        at<bpw_class>(a)->m43C = 0.f;
+        at<bpw_class>(a)->mDemoCamBlend = 0.f;
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
         /* fallthrough */
     case 0xD1: {
         if (timer(1) != 0)
             break;
-        demo_calc(a, &at<bpw_class>(a)->m440, regf(6, 4, 65.f), 1.f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, 281.f, 0.1f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, 93.f, 0.1f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, 725.f, 0.1f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.x, 336.f, 1.f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.y, 30.f, 1.f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.z, 877.f, 1.f, 18, 8, 0.08f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamFovy, regf(6, 4, 65.f), 1.f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, 281.f, 0.1f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, 93.f, 0.1f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, 725.f, 0.1f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.x, 336.f, 1.f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.y, 30.f, 1.f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.z, 877.f, 1.f, 18, 8, 0.08f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
         if (!reg20_step())
             break;
         if (timer(0) != 0)
             break;
         anm_init(i_this, dRes_INDEX_BPW_BCK_OPENING1_e, regf(18, 7, 10.f), 0, 1.f, -1); // OPENING1
-        u32 k = search_by_id(u32(at<bpw_class>(a)->m3FC));
+        u32 k = search_by_id(u32(at<bpw_class>(a)->mKanteraId));
         if (k)
             anm_init((bpw_class *)at<bpw_class>(k), dRes_INDEX_BPW_BCK_OPENING_KAN1_e,
                      regf(18, 7, 10.f), 0, 1.f, -1); // OPENING_KAN1
-        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->m3B8.x);
-        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->m3B8.y);
+        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->mRightArmPos.x);
+        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->mRightArmPos.y);
         Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z,
-                     &at<bpw_class>(a)->m3B8.z); // mFire1DousaPos = m3B8
+                     &at<bpw_class>(a)->mRightArmPos.z); // mFire1DousaPos = mRightArmPos
         Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaRot.x, &at<bpw_class>(a)->actor.shape_angle.x);
         at<bpw_class>(a)->mFire1DousaRot.z =
             u16(at<bpw_class>(a)->actor.shape_angle.z);     // mFire1DousaRot = shape_angle
-        if (u32(at<bpw_class>(a)->m554.mpEmitter.v) == 0) { // m554.getEmitter() == NULL
+        if (u32(at<bpw_class>(a)->mOpeningSmokeCb.mpEmitter.v) == 0) { // mOpeningSmokeCb.getEmitter() == NULL
             u32 play = BpwHD_getGameInfo();
             BpwHD_dPa_control_c_set_4(u32(at<dComIfG_inf_c>(play)->play.mParticle.v), 0, 0x845A,
                                       ea(&at<bpw_class>(a)->mFire1DousaPos),
                                       ea(&at<bpw_class>(a)->mFire1DousaRot), 0, 0xFF,
-                                      ea(&at<bpw_class>(a)->m554), -1, 0, 0, 0);
+                                      ea(&at<bpw_class>(a)->mOpeningSmokeCb), -1, 0, 0, 0);
         }
         se_start_e(a, 0x5966, 0); // JA_SE_CM_BPW_MASK_TO_BPW
         at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
     }
         /* fallthrough */
     case 0xD2:
-        if (u32(at<bpw_class>(a)->m554.mpEmitter.v) != 0) {
-            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->m3B8.x);
-            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->m3B8.y);
-            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->m3B8.z);
+        if (u32(at<bpw_class>(a)->mOpeningSmokeCb.mpEmitter.v) != 0) {
+            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->mRightArmPos.x);
+            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->mRightArmPos.y);
+            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->mRightArmPos.z);
             Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaRot.x,
                          &at<bpw_class>(a)->actor.shape_angle.x);
             at<bpw_class>(a)->mFire1DousaRot.z = u16(at<bpw_class>(a)->actor.shape_angle.z);
         }
-        demo_calc(a, &at<bpw_class>(a)->m440, regf(6, 4, 65.f), 1.f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.x, 281.f, 0.1f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.y, 93.f, 0.1f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m40C.z, 725.f, 0.1f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.x, 336.f, 1.f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.y, 30.f, 1.f, 18, 8, 0.08f);
-        demo_calc(a, &at<bpw_class>(a)->m418.z, 877.f, 1.f, 18, 8, 0.08f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m43C), 1.f, 1.f, 0.04f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m3AC.y), 340.f, 1.f, 5.f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamFovy, regf(6, 4, 65.f), 1.f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.x, 281.f, 0.1f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.y, 93.f, 0.1f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamCenter.z, 725.f, 0.1f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.x, 336.f, 1.f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.y, 30.f, 1.f, 18, 8, 0.08f);
+        demo_calc(a, &at<bpw_class>(a)->mDemoCamEye.z, 877.f, 1.f, 18, 8, 0.08f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mDemoCamBlend), 1.f, 1.f, 0.04f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mModelOffset.y), 340.f, 1.f, 5.f);
         if (!reg20_step())
             break;
         if (!morf_isStop(u32(at<bpw_class>(a)->mpMorf)))
             break;
-        BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->m554)); // m554.remove()
+        BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mOpeningSmokeCb)); // mOpeningSmokeCb.remove()
         at<bpw_class>(a)->mSomeCountdownTimers[0] = regf_t(6, 5, 40.f);
         anm_init(i_this, dRes_INDEX_BPW_BCK_OPENING2_e, 0.f, 2, 1.f, -1); // OPENING2
         {
-            u32 k = search_by_id(u32(at<bpw_class>(a)->m3FC));
+            u32 k = search_by_id(u32(at<bpw_class>(a)->mKanteraId));
             if (k)
                 anm_init((bpw_class *)at<bpw_class>(k), dRes_INDEX_BPW_BCK_OPENING_KAN2_e, 0.f, 2,
                          1.f, -1); // OPENING_KAN2
@@ -3484,22 +3484,22 @@ void action_start_demo(bpw_class *i_this) {
             break;
         BpwHD_dVibration_c_StopQuake(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mVibration),
                                      0x20); // StopQuake(0x20)
-        u32 k = search_by_id(u32(at<bpw_class>(a)->m3FC));
+        u32 k = search_by_id(u32(at<bpw_class>(a)->mKanteraId));
         if (k)
             anm_init((bpw_class *)at<bpw_class>(k), dRes_INDEX_BPW_BCK_KAN_DEFAULT1_e, 0.f, 0, 1.f,
                      -1); // KAN_DEFAULT1
         at<bpw_class>(a)->mSomeCountdownTimers[1] = 0;
-        at<bpw_class>(a)->m3F6 = 4;
+        at<bpw_class>(a)->mBattlePhase = 4;
         light_on_off(i_this);
         Local<BpwVecHD> center, eye;
-        center->y = f32(at<bpw_class>(a)->m40C.y);
-        eye->x = f32(at<bpw_class>(a)->m418.x);
-        center->z = f32(at<bpw_class>(a)->m40C.z);
-        center->x = f32(at<bpw_class>(a)->m40C.x);
-        eye->y = f32(at<bpw_class>(a)->m418.y);
-        eye->z = f32(at<bpw_class>(a)->m418.z);
+        center->y = f32(at<bpw_class>(a)->mDemoCamCenter.y);
+        eye->x = f32(at<bpw_class>(a)->mDemoCamEye.x);
+        center->z = f32(at<bpw_class>(a)->mDemoCamCenter.z);
+        center->x = f32(at<bpw_class>(a)->mDemoCamCenter.x);
+        eye->y = f32(at<bpw_class>(a)->mDemoCamEye.y);
+        eye->z = f32(at<bpw_class>(a)->mDemoCamEye.z);
         BpwHD_dCamera_c_Reset(ea(&at<BpwCameraHD>(cam)->mCamera), center.get(),
-                              eye.get());                                   // Reset(m40C, m418)
+                              eye.get());                                   // Reset(mDemoCamCenter, mDemoCamEye)
         BpwHD_dCamera_c_Start(ea(&at<BpwCameraHD>(cam)->mCamera));          // Start()
         BpwHD_dCamera_c_SetTrimSize(ea(&at<BpwCameraHD>(cam)->mCamera), 0); // SetTrimSize(0)
         at<daPy_py_c>(player)->mDemo.mDemoType = 2;
@@ -3511,7 +3511,7 @@ void action_start_demo(bpw_class *i_this) {
         BpwHD_mDoAud_bgmStart_2(0x80000048u); // mDoAud_bgmStart(JA_BGM_BIG_POW)
         BpwHD_dSv_memBit_c_onDungeonItem(u32(l_saveInfo) + 0x798, 5); // dComIfGs_onStageBossDemo()
         at<bpw_class>(a)->mBodyAction = ACTION_MOVE_DOUSA;
-        at<bpw_class>(a)->m3F6 = 0;
+        at<bpw_class>(a)->mBattlePhase = 0;
         at<bpw_class>(a)->actor.actor_status = u32(at<bpw_class>(a)->actor.actor_status) & ~0x4000u;
         at<bpw_class>(a)->mActionState = 0;
         break;
@@ -3519,11 +3519,11 @@ void action_start_demo(bpw_class *i_this) {
     default:
         break;
     }
-    u32 anm = u32(at<bpw_class>(a)->m3F8);
+    u32 anm = u32(at<bpw_class>(a)->mBckFileIdx);
     if (anm == 0x1F) {
         if (BpwHD_J3DFrameCtrl_checkPass(u32(at<bpw_class>(a)->mpMorf) + 0x98, 170.f))
             mons_se(a, 0x4961, 0, true); // CV_BPW_LAUGH_ENTER
-        anm = u32(at<bpw_class>(a)->m3F8);
+        anm = u32(at<bpw_class>(a)->mBckFileIdx);
     }
     bool swing =
         (anm == 0x1F &&
@@ -3534,7 +3534,7 @@ void action_start_demo(bpw_class *i_this) {
             s32 reverb = BpwHD_dComIfGp_getReverb((s32)s8(at<bpw_class>(a)->actor.current.roomNo));
             BpwHD_mDoAud_seStart_2(0x515Fu, ea(&at<bpw_class>(a)->actor.eyePos), 0u,
                                    reverb); // JA_SE_CM_BPW_SWING_KANTERA
-            anm = u32(at<bpw_class>(a)->m3F8);
+            anm = u32(at<bpw_class>(a)->mBckFileIdx);
         }
         if ((anm == 0x1F &&
              !(f32(at<mDoExt_McaMorf>(at<bpw_class>(a)->mpMorf)->mFrameCtrl.mFrame) < 60.f)) ||
@@ -3546,22 +3546,22 @@ void action_start_demo(bpw_class *i_this) {
     }
     if (s16(at<bpw_class>(a)->mActionState) >= 0xCA) {
         Local<BpwVecHD> center, eye;
-        center->x = f32(at<bpw_class>(a)->m40C.x);
-        center->y = f32(at<bpw_class>(a)->m40C.y);
-        eye->z = f32(at<bpw_class>(a)->m418.z);
-        eye->y = f32(at<bpw_class>(a)->m418.y);
-        eye->x = f32(at<bpw_class>(a)->m418.x);
-        center->z = f32(at<bpw_class>(a)->m40C.z);
+        center->x = f32(at<bpw_class>(a)->mDemoCamCenter.x);
+        center->y = f32(at<bpw_class>(a)->mDemoCamCenter.y);
+        eye->z = f32(at<bpw_class>(a)->mDemoCamEye.z);
+        eye->y = f32(at<bpw_class>(a)->mDemoCamEye.y);
+        eye->x = f32(at<bpw_class>(a)->mDemoCamEye.x);
+        center->z = f32(at<bpw_class>(a)->mDemoCamCenter.z);
         BpwHD_dCamera_c_Set(ea(&at<BpwCameraHD>(cam)->mCamera), center.get(), eye.get(),
-                            f32(at<bpw_class>(a)->m440), 0); // Set(m40C, m418, m440, 0)
+                            f32(at<bpw_class>(a)->mDemoCamFovy), 0); // Set(mDemoCamCenter, mDemoCamEye, mDemoCamFovy, 0)
         if (s16(at<bpw_class>(a)->mActionState) >= 0xD1) {
-            u32 k = search_by_id(u32(at<bpw_class>(a)->m3FC));
+            u32 k = search_by_id(u32(at<bpw_class>(a)->mKanteraId));
             if (k) {
                 BpwHD_mDoExt_McaMorf_play(u32(at<bpw_class>(k)->mpMorf), 0, 0, 0);
                 if (BpwHD_J3DFrameCtrl_checkPass_2(u32(at<bpw_class>(k)->mpMorf) + 0x98,
                                                    regf(8, 9, 128.f))) {
                     se_start(a, 0x596E, 0); // JA_SE_CM_BPW_KANTERA_APPEAR
-                    at<bpw_class>(k)->m3E7 = 0;
+                    at<bpw_class>(k)->mKanteraHidden = 0;
                 }
             }
         }
@@ -3572,7 +3572,7 @@ void action_start_demo(bpw_class *i_this) {
 void kantera_calc(bpw_class *i_this) {
     u32 a = ea(i_this);
     u32 player = player_actor();
-    u32 id = u32(at<bpw_class>(a)->m3FC);
+    u32 id = u32(at<bpw_class>(a)->mKanteraId);
     if (id == 0xFFFFFFFF)
         return;
     Local<be<u32>> key;
@@ -3605,16 +3605,16 @@ void kantera_calc(bpw_class *i_this) {
     case 1:
         if (s16(at<bpw_class>(a)->mBodyAction) == ACTION_START_DEMO)
             break;
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m484), 3000, 1, 100);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m388), 2000.f, 1.f, 1000.f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m390), 2000.f, 1.f, 1000.f);
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mKanteraSwingSpeed), 3000, 1, 100);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mKanteraSwingX), 2000.f, 1.f, 1000.f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mKanteraSwingZ), 2000.f, 1.f, 1000.f);
         if (s16(at<bpw_class>(a)->mAttWaitTimer) == 4)
             return;
         break;
     case 2:
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m484), 6000, 1, 100);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m388), 6000.f, 1.f, 1000.f);
-        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->m390), 6000.f, 1.f, 1000.f);
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mKanteraSwingSpeed), 6000, 1, 100);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mKanteraSwingX), 6000.f, 1.f, 1000.f);
+        BpwHD_cLib_addCalc2_3(ea(&at<bpw_class>(a)->mKanteraSwingZ), 6000.f, 1.f, 1000.f);
         if (s16(at<bpw_class>(a)->mAttWaitTimer) == 4)
             return;
         break;
@@ -3646,14 +3646,14 @@ void kantera_calc(bpw_class *i_this) {
                                 0x1000);
     BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(k)->actor.shape_angle.z),
                                 (s32)s16(at<bpw_class>(a)->actor.shape_angle.z), 1, 0x1000);
-    s16 ph = (s16)(s16(at<bpw_class>(a)->m482) + s16(at<bpw_class>(a)->m484)); // m482 += m484
-    f32 amp = f32(at<bpw_class>(a)->m388);
-    at<bpw_class>(a)->m482 = ph;
+    s16 ph = (s16)(s16(at<bpw_class>(a)->mKanteraSwingPhase) + s16(at<bpw_class>(a)->mKanteraSwingSpeed)); // mKanteraSwingPhase += mKanteraSwingSpeed
+    f32 amp = f32(at<bpw_class>(a)->mKanteraSwingX);
+    at<bpw_class>(a)->mKanteraSwingPhase = ph;
     BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(k)->mKanteraDousaRot),
                                 (s32)(s16)ftoi(mul(Bpw_sin((u16)ph), amp)), 1, 0x1000);
     BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(k)->mKanteraDousaRot.y), 0, 1, 0x1000);
-    u16 ph2 = u16(at<bpw_class>(a)->m482);
-    f32 amp2 = f32(at<bpw_class>(a)->m390);
+    u16 ph2 = u16(at<bpw_class>(a)->mKanteraSwingPhase);
+    f32 amp2 = f32(at<bpw_class>(a)->mKanteraSwingZ);
     BpwHD_cLib_addCalcAngleS2_2(ea(&at<bpw_class>(k)->mKanteraDousaRot.z),
                                 (s32)(s16)ftoi(mul(Bpw_cos(ph2), amp2)), 1, 0x1000);
 }
@@ -3665,9 +3665,9 @@ void kantera_calc(bpw_class *i_this) {
 void body_execute(bpw_class *i_this) {
     u32 a = ea(i_this);
     Local<BpwVecHD> c;
-    c->x = f32(at<bpw_class>(a)->m358.x);
-    c->y = f32(at<bpw_class>(a)->m358.y);
-    c->z = f32(at<bpw_class>(a)->m358.z); // local_28 = m358
+    c->x = f32(at<bpw_class>(a)->mCoSphCenter.x);
+    c->y = f32(at<bpw_class>(a)->mCoSphCenter.y);
+    c->z = f32(at<bpw_class>(a)->mCoSphCenter.z); // local_28 = mCoSphCenter
     if (s16(BpwHio(8).mShort[2]) != 0) {
         f32 x = f32(at<bpw_class>(a)->actor.current.pos.x),
             y = f32(at<bpw_class>(a)->actor.current.pos.y),
@@ -3683,11 +3683,11 @@ void body_execute(bpw_class *i_this) {
         BpwHD_cM3dGSph_SetR_2(ea(&at<bpw_class>(a)->mBodyCoSph.mSph), 240.f);
         BpwHD_cCcS_Set(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mCcS),
                        ea(&at<bpw_class>(a)->mBodyCoSph));
-        Bpw_copyWord(&c.get()->x, &at<bpw_class>(a)->m370.x);
-        Bpw_copyWord(&c.get()->y, &at<bpw_class>(a)->m370.y);
-        Bpw_copyWord(&c.get()->z, &at<bpw_class>(a)->m370.z);
+        Bpw_copyWord(&c.get()->x, &at<bpw_class>(a)->mAtSphCenter.x);
+        Bpw_copyWord(&c.get()->y, &at<bpw_class>(a)->mAtSphCenter.y);
+        Bpw_copyWord(&c.get()->z, &at<bpw_class>(a)->mAtSphCenter.z);
         BpwHD_cM3dGSph_SetC_2(ea(&at<bpw_class>(a)->mBodyAtSph.mSph), c.get());
-        BpwHD_cM3dGSph_SetR_2(ea(&at<bpw_class>(a)->mBodyAtSph.mSph), f32(at<bpw_class>(a)->m4A8));
+        BpwHD_cM3dGSph_SetR_2(ea(&at<bpw_class>(a)->mBodyAtSph.mSph), f32(at<bpw_class>(a)->mBodyAtSphR));
         BpwHD_cCcS_Set(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mCcS),
                        ea(&at<bpw_class>(a)->mBodyAtSph));
         return;
@@ -3712,21 +3712,21 @@ void body_execute(bpw_class *i_this) {
         action_start_demo(i_this);
         break;
     }
-    if (u8(at<bpw_class>(a)->m3E5) == 0) {
+    if (u8(at<bpw_class>(a)->mIsThrown) == 0) {
         BpwHD_cLib_addCalcAngleS2_3(ea(&at<bpw_class>(a)->actor.current.angle.y),
-                                    (s32)s16(at<bpw_class>(a)->m476), 1,
-                                    (s32)s16(at<bpw_class>(a)->m47A));
+                                    (s32)s16(at<bpw_class>(a)->mTargetAngleY), 1,
+                                    (s32)s16(at<bpw_class>(a)->mTurnStep));
         BpwHD_cLib_addCalcAngleS2_3(ea(&at<bpw_class>(a)->actor.shape_angle.y),
                                     (s32)s16(at<bpw_class>(a)->actor.current.angle.y), 1,
-                                    (s32)s16(at<bpw_class>(a)->m47A));
+                                    (s32)s16(at<bpw_class>(a)->mTurnStep));
     }
     BpwHD_mDoExt_McaMorf_play(u32(at<bpw_class>(a)->mpMorf), 0, 0, 0);
-    if (u8(at<bpw_class>(a)->m3E0))
+    if (u8(at<bpw_class>(a)->mIsLightFrozen))
         BpwHD_mDoExt_baseAnm_play(u32(at<bpw_class>(a)->mpLightFreezeBrkAnm));
-    else if (u8(at<bpw_class>(a)->m3E1))
+    else if (u8(at<bpw_class>(a)->mIsLightStunned))
         BpwHD_mDoExt_baseAnm_play(u32(at<bpw_class>(a)->mpLightStunBrkAnm));
     else {
-        u8 e2 = u8(at<bpw_class>(a)->m3E2);
+        u8 e2 = u8(at<bpw_class>(a)->mCurseBrkState);
         if (e2 == 2) {
             BpwHD_mDoExt_baseAnm_play(u32(at<bpw_class>(a)->mpCurseStartBrkAnm));
             BpwHD_seStart(a, 0x7058, 0);
@@ -3751,22 +3751,22 @@ void body_execute(bpw_class *i_this) {
     at<bpw_class>(a)->actor.attention_info.position.z = z;
     f32 x = f32(at<bpw_class>(a)->actor.current.pos.x);
     at<bpw_class>(a)->actor.attention_info.position.x = x;
-    f32 h = f32(at<bpw_class>(a)->m4A4);
+    f32 h = f32(at<bpw_class>(a)->mEyeHeight);
     at<bpw_class>(a)->actor.eyePos.x = x;
     at<bpw_class>(a)->actor.eyePos.y = y;
     at<bpw_class>(a)->actor.attention_info.position.y = add(y, add(add(h, h), 100.f));
     at<bpw_class>(a)->actor.eyePos.z = z;
-    at<bpw_class>(a)->actor.eyePos.y = add(y, f32(at<bpw_class>(a)->m4A4));
+    at<bpw_class>(a)->actor.eyePos.y = add(y, f32(at<bpw_class>(a)->mEyeHeight));
     BpwHD_cM3dGSph_SetC_2(ea(&at<bpw_class>(a)->mBodyCoSph.mSph), c.get());
     BpwHD_cM3dGSph_SetR(ea(&at<bpw_class>(a)->mBodyCoSph.mSph),
                         add((f32)s16(BpwHio(0).mShort[6]), 260.f));
     BpwHD_cCcS_Set(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mCcS),
                    ea(&at<bpw_class>(a)->mBodyCoSph));
-    Bpw_copyWord(&c.get()->x, &at<bpw_class>(a)->m370.x);
-    Bpw_copyWord(&c.get()->y, &at<bpw_class>(a)->m370.y);
-    Bpw_copyWord(&c.get()->z, &at<bpw_class>(a)->m370.z);
+    Bpw_copyWord(&c.get()->x, &at<bpw_class>(a)->mAtSphCenter.x);
+    Bpw_copyWord(&c.get()->y, &at<bpw_class>(a)->mAtSphCenter.y);
+    Bpw_copyWord(&c.get()->z, &at<bpw_class>(a)->mAtSphCenter.z);
     BpwHD_cM3dGSph_SetC_2(ea(&at<bpw_class>(a)->mBodyAtSph.mSph), c.get());
-    BpwHD_cM3dGSph_SetR_2(ea(&at<bpw_class>(a)->mBodyAtSph.mSph), f32(at<bpw_class>(a)->m4A8));
+    BpwHD_cM3dGSph_SetR_2(ea(&at<bpw_class>(a)->mBodyAtSph.mSph), f32(at<bpw_class>(a)->mBodyAtSphR));
     BpwHD_cCcS_Set(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mCcS),
                    ea(&at<bpw_class>(a)->mBodyAtSph));
     body_atari_check(i_this);
@@ -3781,11 +3781,11 @@ BOOL daBPW_Execute(bpw_class *i_this) {
     u32 a = ea(i_this);
     if (u8(*at<be<u8>>(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mCurStage.mName[0]))) ==
         0x58)
-        at<bpw_class>(a)->m408 = 0x32;
+        at<bpw_class>(a)->mBlureRate = 0x32;
     else {
-        s16 b = s16(at<bpw_class>(a)->m408);
+        s16 b = s16(at<bpw_class>(a)->mBlureRate);
         if (b > 2)
-            at<bpw_class>(a)->m408 = (s16)(b - 2);
+            at<bpw_class>(a)->mBlureRate = (s16)(b - 2);
     }
     for (u32 i = 0; i < 10; i++) {
         s16 t = s16(at<bpw_class>(a)->mSomeCountdownTimers[i]);
@@ -3800,9 +3800,9 @@ BOOL daBPW_Execute(bpw_class *i_this) {
         break;
     case 1: { /* kantera_execute */
         Local<BpwVecHD> c;
-        c->x = f32(at<bpw_class>(a)->m358.x);
-        c->y = f32(at<bpw_class>(a)->m358.y);
-        c->z = f32(at<bpw_class>(a)->m358.z);
+        c->x = f32(at<bpw_class>(a)->mCoSphCenter.x);
+        c->y = f32(at<bpw_class>(a)->mCoSphCenter.y);
+        c->z = f32(at<bpw_class>(a)->mCoSphCenter.z);
         if (s16(at<bpw_class>(a)->mBodyAction) == ACTION_MOVE_DOUSA) { /* action_kantera_dousa */
             BpwHD_getGameInfo();
             BpwHD_getGameInfo();
@@ -3811,27 +3811,27 @@ BOOL daBPW_Execute(bpw_class *i_this) {
             case 0:
                 for (u32 i = 0; i < 10; i++)
                     at<BpwResetTimersHD>(a)->mResetTimers[i] = 0;
-                at<bpw_class>(a)->m3E4 = 0;
+                at<bpw_class>(a)->mReturnToParent = 0;
                 at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
-                at<bpw_class>(a)->m498 = 50.f;
-                at<bpw_class>(a)->m3AC.x = 0.f;
-                at<bpw_class>(a)->m3AC.y = 0.f;
-                at<bpw_class>(a)->m3AC.z = 0.f;
-                at<bpw_class>(a)->m49C = 200.f;
+                at<bpw_class>(a)->mWallHalfHeight = 50.f;
+                at<bpw_class>(a)->mModelOffset.x = 0.f;
+                at<bpw_class>(a)->mModelOffset.y = 0.f;
+                at<bpw_class>(a)->mModelOffset.z = 0.f;
+                at<bpw_class>(a)->mWallRadius = 200.f;
                 at<bpw_class>(a)->mKanteraCoSph.mObjCo.mSPrm =
                     u32(at<bpw_class>(a)->mKanteraCoSph.mObjCo.mSPrm) &
                     ~1u; // mKanteraCoSph.ClrCoSet()
-                at<bpw_class>(a)->m48C = 60.f;
+                at<bpw_class>(a)->mBgOffsetY = 60.f;
                 break;
             case 2:
                 at<bpw_class>(a)->actor.speed.y = 10.f;
                 at<bpw_class>(a)->actor.speedF = 10.f;
-                at<bpw_class>(a)->m3AC.y = 140.f;
+                at<bpw_class>(a)->mModelOffset.y = 140.f;
                 at<bpw_class>(a)->actor.gravity = -3.f;
                 at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
                 /* fallthrough */
             case 3:
-                switch (s16(at<bpw_class>(a)->m462)) { // m462
+                switch (s16(at<bpw_class>(a)->mPoeCount)) { // mPoeCount
                 case 0:
                     if (u32(at<bpw_class>(a)->mAcch.m_flags) & 0x20) {
                         at<bpw_class>(a)->mKanteraCoSph.mObjCo.mSPrm =
@@ -3839,7 +3839,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                         at<bpw_class>(a)->actor.speed.y = 17.f;
                         at<bpw_class>(a)->actor.speedF = 0.f;
                         se_start_e(a, 0x6A3E, 0); // JA_SE_OBJ_BPW_KANTERA_FALL
-                        at<bpw_class>(a)->m462 = (s16)(s16(at<bpw_class>(a)->m462) + 1);
+                        at<bpw_class>(a)->mPoeCount = (s16)(s16(at<bpw_class>(a)->mPoeCount) + 1);
                     }
                     break;
                 case 1:
@@ -3852,7 +3852,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                     if (BpwHD_cLib_distanceAngleS_2((s32)s16(at<bpw_class>(a)->actor.shape_angle.z),
                                                     0x4000) < 0x100 &&
                         (u32(at<bpw_class>(a)->mAcch.m_flags) & 0x20)) {
-                        at<bpw_class>(a)->m462 = (s16)(s16(at<bpw_class>(a)->m462) + 1);
+                        at<bpw_class>(a)->mPoeCount = (s16)(s16(at<bpw_class>(a)->mPoeCount) + 1);
                         at<bpw_class>(a)->actor.shape_angle.x = 0x2000;
                         at<bpw_class>(a)->actor.shape_angle.z = 0x4000;
                     }
@@ -3869,31 +3869,31 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                     at<bpw_class>(a)->actor.current.angle.y =
                         (s16)(s16(at<bpw_class>(a)->actor.current.angle.y) - 0x4000); // ChkWallHit
                 at<bpw_class>(a)->actor.shape_angle.y =
-                    (s16)(s16(at<bpw_class>(a)->actor.shape_angle.y) + s16(at<bpw_class>(a)->m464));
-                BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m464), 0, 1, 0x200);
+                    (s16)(s16(at<bpw_class>(a)->actor.shape_angle.y) + s16(at<bpw_class>(a)->mPoeMerged));
+                BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mPoeMerged), 0, 1, 0x200);
                 BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->actor.speedF), 1.f, 3.f);
                 if (f32(at<bpw_class>(a)->actor.speedF) < 1.f) {
                     at<bpw_class>(a)->actor.current.angle.y =
                         s16(at<bpw_class>(a)->actor.shape_angle.y);
                     at<bpw_class>(a)->actor.speedF = 0.f;
-                    at<bpw_class>(a)->m462 = 1;
+                    at<bpw_class>(a)->mPoeCount = 1;
                     at<bpw_class>(a)->mActionState = 3;
                 }
                 break;
             case 5: {
-                u32 p = search_by_id(u32(at<bpw_class>(a)->m404)); // m404
+                u32 p = search_by_id(u32(at<bpw_class>(a)->mParentId)); // mParentId
                 if (p)
                     at<bpw_class>(a)->actor.current.angle.y = BpwHD_fopAcM_searchActorAngleY(a, p);
                 BpwHD_cLib_addCalc0(ea(&at<bpw_class>(a)->actor.speedF), 1.f, 3.f);
                 if (f32(at<bpw_class>(a)->actor.speedF) < 1.f) {
-                    at<bpw_class>(a)->m3E4 = 0;
+                    at<bpw_class>(a)->mReturnToParent = 0;
                     at<bpw_class>(a)->mActionState = 3;
                 }
                 break;
             }
             }
             s16 st = s16(at<bpw_class>(a)->mActionState);
-            if (u8(at<bpw_class>(a)->m3E4) != 0 && st != 5) {
+            if (u8(at<bpw_class>(a)->mReturnToParent) != 0 && st != 5) {
                 at<bpw_class>(a)->actor.speedF = 15.f;
                 at<bpw_class>(a)->mKanteraDousaRot.x = 0;
                 at<bpw_class>(a)->mKanteraDousaRot.y = 0;
@@ -3920,7 +3920,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                         se_start_e(a, 0x2855, 0x42); // JA_SE_LK_HAMMER_HIT
                         at<bpw_class>(a)->mKanteraDousaRot.x = 0;
                         at<bpw_class>(a)->mKanteraDousaRot.y = 0;
-                        at<bpw_class>(a)->m464 = 0x2000;
+                        at<bpw_class>(a)->mPoeMerged = 0x2000;
                         at<bpw_class>(a)->mActionState = 4;
                         at<bpw_class>(a)->mKanteraDousaRot.z = 0;
                     }
@@ -3928,7 +3928,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
             }
         }
         ccs_set(a, ea(&at<bpw_class>(a)->mKanteraCoSph), ea(c.get()), nullptr);
-        if (u8(at<bpw_class>(a)->m3E7) == 0)
+        if (u8(at<bpw_class>(a)->mKanteraHidden) == 0)
             BpwHD_mDoExt_baseAnm_play(
                 u32(at<bpw_class>(a)->mpLanternGlowBrkAnm)); // mpLanternGlowBrkAnm->play()
         if (BpwHD_dCcD_GObjInf_ChkTgHit(ea(&at<bpw_class>(a)->mKanteraCoSph))) {
@@ -3957,17 +3957,17 @@ BOOL daBPW_Execute(bpw_class *i_this) {
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[0]) == 0) {
             at<bpw_class>(a)->mSomeCountdownTimers[0] = (s16)ftoi(BpwHD_cM_rndF(5.f));
             f32 r = BpwHD_cM_rndF(5.f);
-            at<bpw_class>(a)->m47E = (s16)ftoi(add(r, 8.f));
+            at<bpw_class>(a)->mAlpha = (s16)ftoi(add(r, 8.f));
         }
-        f32 x = f32(at<bpw_class>(a)->m358.x), y = f32(at<bpw_class>(a)->m358.y),
-            z = f32(at<bpw_class>(a)->m358.z);
+        f32 x = f32(at<bpw_class>(a)->mCoSphCenter.x), y = f32(at<bpw_class>(a)->mCoSphCenter.y),
+            z = f32(at<bpw_class>(a)->mCoSphCenter.z);
         at<bpw_class>(a)->actor.attention_info.position.x = x;
         at<bpw_class>(a)->actor.attention_info.position.z = z;
         at<bpw_class>(a)->actor.attention_info.position.y = add(y, 50.f); // attention_info.position
         at<bpw_class>(a)->actor.eyePos.x = x;                             // eyePos
-        y = f32(at<bpw_class>(a)->m358.y);
+        y = f32(at<bpw_class>(a)->mCoSphCenter.y);
         at<bpw_class>(a)->actor.eyePos.y = y;
-        at<bpw_class>(a)->actor.eyePos.z = f32(at<bpw_class>(a)->m358.z);
+        at<bpw_class>(a)->actor.eyePos.z = f32(at<bpw_class>(a)->mCoSphCenter.z);
         at<bpw_class>(a)->actor.eyePos.y = add(y, 50.f);
         break;
     }
@@ -3999,8 +3999,8 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                     for (u32 i = 0; i < 10; i++)
                         at<BpwResetTimersHD>(a)->mResetTimers[i] = 0;
                     u32 e = u32(at<bpw_class>(a)->mFire1Dousa_Pa_followEcallBack.mpEmitter.v);
-                    at<bpw_class>(a)->m498 = 0.f;
-                    at<bpw_class>(a)->m49C = 40.f;
+                    at<bpw_class>(a)->mWallHalfHeight = 0.f;
+                    at<bpw_class>(a)->mWallRadius = 40.f;
                     if (!e)
                         dPa_set(0x8310, ea(&at<bpw_class>(a)->mFire1DousaPos),
                                 ea(&at<bpw_class>(a)->mFire1DousaRot), 0,
@@ -4013,23 +4013,23 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                                         ->mFire1Dousa_Pa_followEcallBack2)); // BPWFLAMETHROWER01
                     at<bpw_class>(a)->mSomeCountdownTimers[0] = 5;
                     at<bpw_class>(a)->mActionState = (s16)(s16(at<bpw_class>(a)->mActionState) + 1);
-                    Bpw_copyWord(&at<bpw_class>(a)->m3A0.x, &at<bpw_class>(a)->actor.current.pos.x);
-                    Bpw_copyWord(&at<bpw_class>(a)->m3A0.y, &at<bpw_class>(a)->actor.current.pos.y);
-                    Bpw_copyWord(&at<bpw_class>(a)->m3A0.z,
-                                 &at<bpw_class>(a)->actor.current.pos.z); // m3A0 = pos
+                    Bpw_copyWord(&at<bpw_class>(a)->mFlameBallPos.x, &at<bpw_class>(a)->actor.current.pos.x);
+                    Bpw_copyWord(&at<bpw_class>(a)->mFlameBallPos.y, &at<bpw_class>(a)->actor.current.pos.y);
+                    Bpw_copyWord(&at<bpw_class>(a)->mFlameBallPos.z,
+                                 &at<bpw_class>(a)->actor.current.pos.z); // mFlameBallPos = pos
                 }
                 s16 ph =
-                    (s16)(s16(at<bpw_class>(a)->m462) + (s16)(s16(BpwHio(6).mShort[0]) + 0x5DC));
-                at<bpw_class>(a)->m462 = ph;
-                at<bpw_class>(a)->m494 = (f32)(s32)(s16(BpwHio(6).mShort[1]) + 0x32); // m494
+                    (s16)(s16(at<bpw_class>(a)->mPoeCount) + (s16)(s16(BpwHio(6).mShort[0]) + 0x5DC));
+                at<bpw_class>(a)->mPoeCount = ph;
+                at<bpw_class>(a)->mDamageBallRadius = (f32)(s32)(s16(BpwHio(6).mShort[1]) + 0x32); // mDamageBallRadius
                 f32 amp = add((f32)s16(BpwHio(6).mShort[2]), 2000.f);
                 s16 d = (s16)ftoi(mul(Bpw_sin((u16)ph), amp));
                 s16 ry = (s16)(s16(at<bpw_class>(a)->actor.shape_angle.y) + d);
                 at<bpw_class>(a)->actor.shape_angle.y = ry;
-                Bpw_copyWord(&at<bpw_class>(a)->m304[0].x, &at<bpw_class>(a)->actor.current.pos.x);
-                Bpw_copyWord(&at<bpw_class>(a)->m304[0].y, &at<bpw_class>(a)->actor.current.pos.y);
-                Bpw_copyWord(&at<bpw_class>(a)->m304[0].z,
-                             &at<bpw_class>(a)->actor.current.pos.z); // m304[0] = pos
+                Bpw_copyWord(&at<bpw_class>(a)->mLinChkStart[0].x, &at<bpw_class>(a)->actor.current.pos.x);
+                Bpw_copyWord(&at<bpw_class>(a)->mLinChkStart[0].y, &at<bpw_class>(a)->actor.current.pos.y);
+                Bpw_copyWord(&at<bpw_class>(a)->mLinChkStart[0].z,
+                             &at<bpw_class>(a)->actor.current.pos.z); // mLinChkStart[0] = pos
                 BpwHD_mDoMtx_YrotS_2(u32(l_calcMtx), (s32)ry);
                 BpwHD_mDoMtx_XrotM_2(u32(l_calcMtx),
                                      (s32)s16(at<bpw_class>(a)->actor.shape_angle.x));
@@ -4037,13 +4037,13 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                 v->x = 0.f;
                 v->y = 0.f;
                 v->z = 1000.f;
-                BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->m328));
-                BpwHD_PSVECAdd_2(ea(&at<bpw_class>(a)->m328),
+                BpwHD_MtxPosition(v.get(), ea(&at<bpw_class>(a)->mLinChkEnd));
+                BpwHD_PSVECAdd_2(ea(&at<bpw_class>(a)->mLinChkEnd),
                                  ea(&at<bpw_class>(a)->actor.current.pos),
-                                 ea(&at<bpw_class>(a)->m328));
-                BpwHD_dBgS_LinChk_Set(lc.get(), ea(&at<bpw_class>(a)->m304),
-                                      ea(&at<bpw_class>(a)->m328),
-                                      a); // linChk.Set(m304, m328, actor)
+                                 ea(&at<bpw_class>(a)->mLinChkEnd));
+                BpwHD_dBgS_LinChk_Set(lc.get(), ea(&at<bpw_class>(a)->mLinChkStart),
+                                      ea(&at<bpw_class>(a)->mLinChkEnd),
+                                      a); // linChk.Set(mLinChkStart, mLinChkEnd, actor)
                 if (BpwHD_cBgS_LineCross(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mBgS),
                                          lc.get())) {
                     u32 play = BpwHD_getGameInfo();
@@ -4054,22 +4054,22 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                     f32 cx = f32(at<dBgS_LinChk>(l)->mLin.mEnd.x),
                         cy = f32(at<dBgS_LinChk>(l)->mLin.mEnd.y),
                         cz = f32(at<dBgS_LinChk>(l)->mLin.mEnd.z);
-                    at<bpw_class>(a)->m66C.x = cx;
-                    at<bpw_class>(a)->m66C.y = cy;
-                    at<bpw_class>(a)->m66C.z = cz; // m66C = *GetCrossP()
+                    at<bpw_class>(a)->mFlameHitPos.x = cx;
+                    at<bpw_class>(a)->mFlameHitPos.y = cy;
+                    at<bpw_class>(a)->mFlameHitPos.z = cz; // mFlameHitPos = *GetCrossP()
                     if (pla && f32(at<BpwPlaneHD>(pla)->mNormal.y) == 1.f) {
-                        at<bpw_class>(a)->m67E = 0;
+                        at<bpw_class>(a)->mFlameHitRotX = 0;
                     } else {
-                        f32 dx = sub(f32(at<bpw_class>(a)->m304[0].x), cx),
-                            dz = sub(f32(at<bpw_class>(a)->m304[0].z), cz);
-                        at<bpw_class>(a)->m67E = 0x4000;
-                        at<bpw_class>(a)->m680 = BpwHD_cM_atan2s(dx, dz);
+                        f32 dx = sub(f32(at<bpw_class>(a)->mLinChkStart[0].x), cx),
+                            dz = sub(f32(at<bpw_class>(a)->mLinChkStart[0].z), cz);
+                        at<bpw_class>(a)->mFlameHitRotX = 0x4000;
+                        at<bpw_class>(a)->mFlameHitRotY = BpwHD_cM_atan2s(dx, dz);
                     }
-                    if (!u32(at<bpw_class>(a)->m590.mpEmitter.v))
-                        dPa_set(0x8312, ea(&at<bpw_class>(a)->m66C), ea(&at<bpw_class>(a)->m67E), 0,
-                                ea(&at<bpw_class>(a)->m590)); // BPWFLAMETHROWER02
+                    if (!u32(at<bpw_class>(a)->mFlameHitCb.mpEmitter.v))
+                        dPa_set(0x8312, ea(&at<bpw_class>(a)->mFlameHitPos), ea(&at<bpw_class>(a)->mFlameHitRotX), 0,
+                                ea(&at<bpw_class>(a)->mFlameHitCb)); // BPWFLAMETHROWER02
                 } else {
-                    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->m590)); // m590.remove()
+                    BpwHD_dPa_followEcallBack_end(ea(&at<bpw_class>(a)->mFlameHitCb)); // mFlameHitCb.remove()
                 }
                 Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x,
                              &at<bpw_class>(a)->actor.current.pos.x);
@@ -4080,31 +4080,31 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                 at<bpw_class>(a)->mFire1DousaRot.x = u16(at<bpw_class>(a)->actor.shape_angle.x);
                 at<bpw_class>(a)->mFire1DousaRot.y = u16(at<bpw_class>(a)->actor.shape_angle.y);
                 at<bpw_class>(a)->mFire1DousaRot.z = u16(at<bpw_class>(a)->actor.shape_angle.z);
-                f32 mx = f32(at<bpw_class>(a)->m328[0].x), my = f32(at<bpw_class>(a)->m328[0].y),
-                    mz = f32(at<bpw_class>(a)->m328[0].z);
+                f32 mx = f32(at<bpw_class>(a)->mLinChkEnd[0].x), my = f32(at<bpw_class>(a)->mLinChkEnd[0].y),
+                    mz = f32(at<bpw_class>(a)->mLinChkEnd[0].z);
                 f32 tx = mx, ty = my, tz = mz;
-                if (s16(at<bpw_class>(a)->m464) != 0) {
-                    tx = f32(at<bpw_class>(a)->m304[0].x);
-                    ty = f32(at<bpw_class>(a)->m304[0].y);
-                    tz = f32(at<bpw_class>(a)->m304[0].z);
+                if (s16(at<bpw_class>(a)->mPoeMerged) != 0) {
+                    tx = f32(at<bpw_class>(a)->mLinChkStart[0].x);
+                    ty = f32(at<bpw_class>(a)->mLinChkStart[0].y);
+                    tz = f32(at<bpw_class>(a)->mLinChkStart[0].z);
                 }
                 BpwHD_cLib_addCalc2_2(
-                    ea(&at<bpw_class>(a)->m3A0), tx, 1.f,
-                    mul(__builtin_fabsf(sub(f32(at<bpw_class>(a)->m304[0].x), mx)), 0.3f));
-                BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->m3A0.y), ty, 1.f,
-                                      mul(__builtin_fabsf(sub(f32(at<bpw_class>(a)->m304[0].y),
-                                                              f32(at<bpw_class>(a)->m328[0].y))),
+                    ea(&at<bpw_class>(a)->mFlameBallPos), tx, 1.f,
+                    mul(__builtin_fabsf(sub(f32(at<bpw_class>(a)->mLinChkStart[0].x), mx)), 0.3f));
+                BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->mFlameBallPos.y), ty, 1.f,
+                                      mul(__builtin_fabsf(sub(f32(at<bpw_class>(a)->mLinChkStart[0].y),
+                                                              f32(at<bpw_class>(a)->mLinChkEnd[0].y))),
                                           0.3f));
-                BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->m3A0.z), tz, 1.f,
-                                      mul(__builtin_fabsf(sub(f32(at<bpw_class>(a)->m304[0].z),
-                                                              f32(at<bpw_class>(a)->m328[0].z))),
+                BpwHD_cLib_addCalc2_2(ea(&at<bpw_class>(a)->mFlameBallPos.z), tz, 1.f,
+                                      mul(__builtin_fabsf(sub(f32(at<bpw_class>(a)->mLinChkStart[0].z),
+                                                              f32(at<bpw_class>(a)->mLinChkEnd[0].z))),
                                           0.3f));
-                f32 ey = sub(f32(at<bpw_class>(a)->m3A0.y), ty),
-                    ex = sub(f32(at<bpw_class>(a)->m3A0.x), tx),
-                    ez = sub(f32(at<bpw_class>(a)->m3A0.z), tz);
+                f32 ey = sub(f32(at<bpw_class>(a)->mFlameBallPos.y), ty),
+                    ex = sub(f32(at<bpw_class>(a)->mFlameBallPos.x), tx),
+                    ez = sub(f32(at<bpw_class>(a)->mFlameBallPos.z), tz);
                 f32 len = BpwHD_sqrtf(fmadds(ez, ez, fmadds(ex, ex, mul(ey, ey))));
                 if (len < 2.f)
-                    at<bpw_class>(a)->m464 = (s16)((s16(at<bpw_class>(a)->m464) + 1) & 1);
+                    at<bpw_class>(a)->mPoeMerged = (s16)((s16(at<bpw_class>(a)->mPoeMerged) + 1) & 1);
             }
             at<dBgS_LinChk>(l)->dBgS_PolyPassChk::__vtbl = 0x1000B114;
             at<dBgS_LinChk>(l)->dBgS_GrpPassChk::__vtbl = 0x1000B0A4;
@@ -4118,11 +4118,11 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                 if (ac && ac == pl)
                     GOUEN_FIRE_HIT = 1; // GOUEN_FIRE_HIT
             }
-            Bpw_copyWord(&cen.get()->x, &at<bpw_class>(a)->m3A0.x);
-            Bpw_copyWord(&cen.get()->y, &at<bpw_class>(a)->m3A0.y);
-            Bpw_copyWord(&cen.get()->z, &at<bpw_class>(a)->m3A0.z);
+            Bpw_copyWord(&cen.get()->x, &at<bpw_class>(a)->mFlameBallPos.x);
+            Bpw_copyWord(&cen.get()->y, &at<bpw_class>(a)->mFlameBallPos.y);
+            Bpw_copyWord(&cen.get()->z, &at<bpw_class>(a)->mFlameBallPos.z);
             ccs_set(a, ea(&at<bpw_class>(a)->mDamageBallCoSph), ea(cen.get()),
-                    &at<bpw_class>(a)->m494);
+                    &at<bpw_class>(a)->mDamageBallRadius);
         } else if (act == 1) { /* action_b_fire_2_dousa */
             u32 pl = player_actor();
             struct SVec {
@@ -4139,8 +4139,8 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                 for (u32 i = 0; i < 10; i++)
                     at<BpwResetTimersHD>(a)->mResetTimers[i] = 0;
                 u32 e = u32(at<bpw_class>(a)->mFireDousa2_Pa_followEcallBack.mpEmitter.v);
-                at<bpw_class>(a)->m498 = 0.f;
-                at<bpw_class>(a)->m49C = 40.f;
+                at<bpw_class>(a)->mWallHalfHeight = 0.f;
+                at<bpw_class>(a)->mWallRadius = 40.f;
                 if (!e)
                     dPa_set(0x82D1, ea(&at<bpw_class>(a)->mFire1DousaPos),
                             ea(&at<bpw_class>(a)->mFire1DousaRot), 0,
@@ -4167,7 +4167,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                 at<bpw_class>(a)->actor.shape_angle.x = -0x2000;
                 at<bpw_class>(a)->actor.speed.y = add(25.f, r);
                 at<bpw_class>(a)->actor.gravity = -3.f;
-                at<bpw_class>(a)->m494 = (f32)(s32)(s16(BpwHio(6).mShort[3]) + 0x1E);
+                at<bpw_class>(a)->mDamageBallRadius = (f32)(s32)(s16(BpwHio(6).mShort[3]) + 0x1E);
                 at<bpw_class>(a)->mFire1DousaRot.x = u16(at<bpw_class>(a)->actor.shape_angle.x);
                 at<bpw_class>(a)->mFire1DousaRot.y = u16(at<bpw_class>(a)->actor.shape_angle.y);
                 at<bpw_class>(a)->mFire1DousaRot.z = u16(at<bpw_class>(a)->actor.shape_angle.z);
@@ -4214,7 +4214,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                     if (s16(at<bpw_class>(a)->mSomeCountdownTimers[1]) == 0) {
                         at<bpw_class>(a)->mSomeCountdownTimers[1] = (s16)ftoi(BpwHD_cM_rndF(5.f));
                         f32 r = BpwHD_cM_rndF(5.f);
-                        at<bpw_class>(a)->m47E = (s16)ftoi(add(r, 8.f));
+                        at<bpw_class>(a)->mAlpha = (s16)ftoi(add(r, 8.f));
                     }
                     at<bpw_class>(a)->mSomeCountdownTimers[0] = 0x5A;
                     at<bpw_class>(a)->actor.speedF = 0.f;
@@ -4222,7 +4222,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                     at<bpw_class>(a)->actor.speed.x = 0.f;
                     at<bpw_class>(a)->actor.speed.y = 0.f;
                     at<bpw_class>(a)->actor.speed.z = 0.f;
-                    at<bpw_class>(a)->m494 = (f32)(s32)(s16(BpwHio(6).mShort[4]) + 0x23);
+                    at<bpw_class>(a)->mDamageBallRadius = (f32)(s32)(s16(BpwHio(6).mShort[4]) + 0x23);
                     at<bpw_class>(a)->mActionState = 0x16;
                 } else if ((fl & 0x10) ||
                            BpwHD_dCcD_GObjInf_ChkAtHit(ea(&at<bpw_class>(a)->mDamageBallCoSph))) {
@@ -4240,13 +4240,13 @@ BOOL daBPW_Execute(bpw_class *i_this) {
                     if (s16(at<bpw_class>(a)->mSomeCountdownTimers[1]) == 0) {
                         at<bpw_class>(a)->mSomeCountdownTimers[1] = (s16)ftoi(BpwHD_cM_rndF(5.f));
                         f32 r = BpwHD_cM_rndF(5.f);
-                        at<bpw_class>(a)->m47E = (s16)ftoi(add(r, 8.f));
+                        at<bpw_class>(a)->mAlpha = (s16)ftoi(add(r, 8.f));
                         t0 = s16(at<bpw_class>(a)->mSomeCountdownTimers[0]);
                     }
                 } else {
-                    s16 al = s16(at<bpw_class>(a)->m47E);
+                    s16 al = s16(at<bpw_class>(a)->mAlpha);
                     if (al > 0) {
-                        at<bpw_class>(a)->m47E = (s16)(al - 1);
+                        at<bpw_class>(a)->mAlpha = (s16)(al - 1);
                         t0 = s16(at<bpw_class>(a)->mSomeCountdownTimers[0]);
                     }
                 }
@@ -4279,10 +4279,10 @@ BOOL daBPW_Execute(bpw_class *i_this) {
             at<bpw_class>(a)->mLightInfluence.mPower = 450.f;
             at<bpw_class>(a)->mLightInfluence.mFluctuation = 250.f;
             ccs_set(a, ea(&at<bpw_class>(a)->mDamageBallCoSph), ea(cen.get()),
-                    &at<bpw_class>(a)->m494);
+                    &at<bpw_class>(a)->mDamageBallRadius);
         } else {
             ccs_set(a, ea(&at<bpw_class>(a)->mDamageBallCoSph), ea(cen.get()),
-                    &at<bpw_class>(a)->m494);
+                    &at<bpw_class>(a)->mDamageBallRadius);
         }
         break;
     }
@@ -4354,15 +4354,15 @@ BOOL daBPW_Execute(bpw_class *i_this) {
         }
         }
         BpwHD_mDoExt_McaMorf_play(u32(at<bpw_class>(a)->mpMorf), 0, 0, 0);
-        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->m47E), 0xFF, 1, 10);
+        BpwHD_cLib_addCalcAngleS2(ea(&at<bpw_class>(a)->mAlpha), 0xFF, 1, 10);
         if (s16(at<bpw_class>(a)->mActionState) == 2) {
             f32 hx = f32(at<daPy_py_c>(pl0)->mHeadTopPos.x),
                 hz = f32(at<daPy_py_c>(pl0)->mHeadTopPos.z),
                 hy = f32(at<daPy_py_c>(pl0)->mHeadTopPos.y);
             at<bpw_class>(a)->actor.current.pos.x = hx;
-            s16 t = (s16)(s16(at<bpw_class>(a)->m47C) + 700);
-            at<bpw_class>(a)->m47C = t;
-            u16 ph = u16(at<bpw_class>(a)->m47C);
+            s16 t = (s16)(s16(at<bpw_class>(a)->mFloatPhase) + 700);
+            at<bpw_class>(a)->mFloatPhase = t;
+            u16 ph = u16(at<bpw_class>(a)->mFloatPhase);
             at<bpw_class>(a)->actor.current.pos.z = hz;
             f32 y = add(hy, 100.f);
             at<bpw_class>(a)->actor.current.pos.y = y;
@@ -4397,25 +4397,25 @@ BOOL daBPW_Execute(bpw_class *i_this) {
             BG_check(i_this);
         }
         kantera_draw_SUB(i_this);
-        if (u8(at<bpw_class>(a)->m3E7) != 0)
+        if (u8(at<bpw_class>(a)->mKanteraHidden) != 0)
             break;
-        u32 em = u32(at<bpw_class>(a)->m5CC.mpEmitter.v);
+        u32 em = u32(at<bpw_class>(a)->mTorchCb.mpEmitter.v);
         if (!em) {
-            dPa_set(0x1EA, ea(&at<bpw_class>(a)->m358), 0, ea(&at<bpw_class>(a)->actor.scale),
-                    ea(&at<bpw_class>(a)->m5CC)); // ID_AK_JN_TORCH
-            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->m358.x);
-            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->m358.y);
-            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->m358.z);
-            em = u32(at<bpw_class>(a)->m5CC.mpEmitter.v);
+            dPa_set(0x1EA, ea(&at<bpw_class>(a)->mCoSphCenter), 0, ea(&at<bpw_class>(a)->actor.scale),
+                    ea(&at<bpw_class>(a)->mTorchCb)); // ID_AK_JN_TORCH
+            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->mCoSphCenter.x);
+            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->mCoSphCenter.y);
+            Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->mCoSphCenter.z);
+            em = u32(at<bpw_class>(a)->mTorchCb.mpEmitter.v);
         }
         if (!em)
             break;
         f32 k = add(f32(BpwHio(0).mFloat[4]), -0.03f);
         f32 vx =
-            mul(sub(f32(at<bpw_class>(a)->m358.x), f32(at<bpw_class>(a)->mFire1DousaPos.x)), k);
+            mul(sub(f32(at<bpw_class>(a)->mCoSphCenter.x), f32(at<bpw_class>(a)->mFire1DousaPos.x)), k);
         clamp1(vx);
         f32 vz =
-            mul(sub(f32(at<bpw_class>(a)->m358.z), f32(at<bpw_class>(a)->mFire1DousaPos.z)), k);
+            mul(sub(f32(at<bpw_class>(a)->mCoSphCenter.z), f32(at<bpw_class>(a)->mFire1DousaPos.z)), k);
         clamp1(vz);
         at<BpwEmitterHD>(em)->mLocalDirection.x = vx;
         at<BpwEmitterHD>(em)->mLocalDirection.y = 0.1f;
@@ -4431,12 +4431,12 @@ BOOL daBPW_Execute(bpw_class *i_this) {
         at<BpwEmitterHD>(em)->mGlobalParticleScale.x = 1.f;
         at<BpwEmitterHD>(em)->mGlobalParticleScale.y = sy;
         at<BpwEmitterHD>(em)->mGlobalParticleScale.z = 1.f; // setGlobalParticleScale
-        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->m358.x);
-        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->m358.y);
-        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->m358.z);
+        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.x, &at<bpw_class>(a)->mCoSphCenter.x);
+        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.y, &at<bpw_class>(a)->mCoSphCenter.y);
+        Bpw_copyWord(&at<bpw_class>(a)->mFire1DousaPos.z, &at<bpw_class>(a)->mCoSphCenter.z);
         s32 reverb = BpwHD_dComIfGp_getReverb((s32)s8(at<bpw_class>(a)->actor.current.roomNo));
-        BpwHD_mDoAud_seStart_2(0x6103u, ea(&at<bpw_class>(a)->m358), 0u,
-                               reverb); // mDoAud_seStart(JA_SE_OBJ_TORCH_BURNING, &m358)
+        BpwHD_mDoAud_seStart_2(0x6103u, ea(&at<bpw_class>(a)->mCoSphCenter), 0u,
+                               reverb); // mDoAud_seStart(JA_SE_OBJ_TORCH_BURNING, &mCoSphCenter)
         break;
     }
     case 2:
@@ -4452,7 +4452,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
         return TRUE;
     kantera_calc(i_this);
     BpwHD_getGameInfo();
-    u8 vib = u8(at<bpw_class>(a)->m3E8);
+    u8 vib = u8(at<bpw_class>(a)->mVibMode);
     switch (vib) { /* vib_mode_check */
     case 1:
     case 2: {
@@ -4462,14 +4462,14 @@ BOOL daBPW_Execute(bpw_class *i_this) {
         dir->y = 1.f;
         dir->z = 0.f;
         BpwHD_dVibration_c_StartShock(play + 0x599C, vib == 1 ? 5 : 3, -0x21, dir.get());
-        at<bpw_class>(a)->m3E8 = 0;
+        at<bpw_class>(a)->mVibMode = 0;
         break;
     }
     case 3:
         if (s16(at<bpw_class>(a)->mSomeCountdownTimers[6]) == 0) {
             BpwHD_dVibration_c_StopQuake(
                 ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mVibration), -1);
-            at<bpw_class>(a)->m3E8 = 0;
+            at<bpw_class>(a)->mVibMode = 0;
         }
         break;
     }
@@ -4488,15 +4488,15 @@ BOOL daBPW_IsDelete(bpw_class *i_this) {
 /* 020D57A8 */
 BOOL daBPW_Delete(bpw_class *i_this) {
     u32 a = ea(i_this);
-    BpwHD_JAIZelBasic_seDeleteObject(ea(&at<bpw_class>(a)->m358)); // mDoAud_seDeleteObject(&m358)
-    BpwHD_JAIZelBasic_seDeleteObject(ea(&at<bpw_class>(a)->m3C4)); // mDoAud_seDeleteObject(&m3C4)
+    BpwHD_JAIZelBasic_seDeleteObject(ea(&at<bpw_class>(a)->mCoSphCenter)); // mDoAud_seDeleteObject(&mCoSphCenter)
+    BpwHD_JAIZelBasic_seDeleteObject(ea(&at<bpw_class>(a)->mJawPos)); // mDoAud_seDeleteObject(&mJawPos)
     BpwHD_dComIfG_resDelete(ea(&at<bpw_class>(a)->mPhase),
                             0x1000B228u); // dComIfG_resDeleteDemo(&mPhase, "BPW")
     auto remove = [&](u32 o) { at<dPa_followEcallBack>(a + o)->remove(); };
     if (u8(at<bpw_class>(a)->mType) == ACTOR_TYPE_KANTERA)
-        remove(0x6E8); // m5CC
+        remove(0x6E8); // mTorchCb
     for (u32 i = 0; i < 4; i++)
-        remove(0x6FC + i * 0x20); // m5E0[i]
+        remove(0x6FC + i * 0x20); // mSmokeCb[i]
     remove(0x684);
     remove(0x698);
     remove(0x6AC);
@@ -4657,7 +4657,7 @@ s32 daBPW_Create(bpw_class *i_this) {
         if (s16(BpwHio(0).mShort[1]) != 0) {
             at<bpw_class>(a)->actor.max_health = 1;
             at<bpw_class>(a)->actor.health = 1;
-            at<bpw_class>(a)->m3F6 = 2;
+            at<bpw_class>(a)->mBattlePhase = 2;
         }
         Bpw_copyWord(&at<bpw_class>(a)->mBodyPos.x, &at<bpw_class>(a)->actor.current.pos.x);
         Bpw_copyWord(&at<bpw_class>(a)->mBodyPos.y, &at<bpw_class>(a)->actor.current.pos.y);
@@ -4681,30 +4681,30 @@ s32 daBPW_Create(bpw_class *i_this) {
         BpwHD_dCcD_Sph_Set(ea(&at<bpw_class>(a)->mBodyAtSph),
                            0x10192598u); // mBodyAtSph.Set(body_at_sph_src)
         at<bpw_class>(a)->mBodyAtSph.mStts = &at<bpw_class>(a)->mStts;
-        at<bpw_class>(a)->m476 = s16(at<bpw_class>(a)->actor.current.angle.y);
+        at<bpw_class>(a)->mTargetAngleY = s16(at<bpw_class>(a)->actor.current.angle.y);
         at<bpw_class>(a)->actor.model =
             u32(at<mDoExt_McaMorf>(u32(at<bpw_class>(a)->mpMorf))->mpModel.v);
-        at<bpw_class>(a)->m4A4 = 300.f;
-        at<bpw_class>(a)->m4A0 = 0.f;
+        at<bpw_class>(a)->mEyeHeight = 300.f;
+        at<bpw_class>(a)->mCoSphOffsetY = 0.f;
         for (u32 i = 0; i < 4; i++)
-            at<bpw_class>(a)->m5E0[i].m11 = 0; // m5E0[i].setRateOff(0)
+            at<bpw_class>(a)->mSmokeCb[i].m11 = 0; // mSmokeCb[i].setRateOff(0)
         at<bpw_class>(a)->mAttWaitTimer = 1;
-        at<bpw_class>(a)->m3AC.y = 340.f;
-        at<bpw_class>(a)->m4A8 = add(f32(BpwHio(8).mFloat[16]), 220.f);
+        at<bpw_class>(a)->mModelOffset.y = 340.f;
+        at<bpw_class>(a)->mBodyAtSphR = add(f32(BpwHio(8).mFloat[16]), 220.f);
         Bpw_copyWord(&at<bpw_class>(a)->mChildActorPos.x, &at<bpw_class>(a)->actor.current.pos.x);
         Bpw_copyWord(&at<bpw_class>(a)->mChildActorPos.y, &at<bpw_class>(a)->actor.current.pos.y);
         Bpw_copyWord(&at<bpw_class>(a)->mChildActorPos.z,
                      &at<bpw_class>(a)->actor.current.pos.z); // mChildActorPos
         for (u32 i = 0; i < 3; i++) {
-            Bpw_copyWord(&at<bpw_class>(a)->m304[i].x, &at<bpw_class>(a)->actor.current.pos.x);
-            Bpw_copyWord(&at<bpw_class>(a)->m304[i].y, &at<bpw_class>(a)->actor.current.pos.y);
-            Bpw_copyWord(&at<bpw_class>(a)->m304[i].z, &at<bpw_class>(a)->actor.current.pos.z);
-            Bpw_copyWord(&at<bpw_class>(a)->m328[i].x, &at<bpw_class>(a)->actor.current.pos.x);
-            Bpw_copyWord(&at<bpw_class>(a)->m328[i].y, &at<bpw_class>(a)->actor.current.pos.y);
-            Bpw_copyWord(&at<bpw_class>(a)->m328[i].z, &at<bpw_class>(a)->actor.current.pos.z);
+            Bpw_copyWord(&at<bpw_class>(a)->mLinChkStart[i].x, &at<bpw_class>(a)->actor.current.pos.x);
+            Bpw_copyWord(&at<bpw_class>(a)->mLinChkStart[i].y, &at<bpw_class>(a)->actor.current.pos.y);
+            Bpw_copyWord(&at<bpw_class>(a)->mLinChkStart[i].z, &at<bpw_class>(a)->actor.current.pos.z);
+            Bpw_copyWord(&at<bpw_class>(a)->mLinChkEnd[i].x, &at<bpw_class>(a)->actor.current.pos.x);
+            Bpw_copyWord(&at<bpw_class>(a)->mLinChkEnd[i].y, &at<bpw_class>(a)->actor.current.pos.y);
+            Bpw_copyWord(&at<bpw_class>(a)->mLinChkEnd[i].z, &at<bpw_class>(a)->actor.current.pos.z);
         }
-        at<bpw_class>(a)->m498 = 350.f;
-        at<bpw_class>(a)->m49C = 400.f;
+        at<bpw_class>(a)->mWallHalfHeight = 350.f;
+        at<bpw_class>(a)->mWallRadius = 400.f;
         BpwHD_mDoExt_McaMorf_play(u32(at<bpw_class>(a)->mpMorf), 0, 0,
                                   0); // mpMorf->play(NULL, 0, 0)
         BG_check(i_this);
@@ -4714,7 +4714,7 @@ s32 daBPW_Create(bpw_class *i_this) {
         u32 kid =
             BpwHD_fopAcM_createChild(0xD3, actor_id(a), 1, ea(&at<bpw_class>(a)->mChildActorPos),
                                      room, sp18.get(), 0, -1, 0);
-        at<bpw_class>(a)->m3FC = kid;
+        at<bpw_class>(a)->mKanteraId = kid;
         at<bpw_class>(a)->mAttWaitTimer = 1;
         kantera_calc(i_this);
         if (start_demo_check()) {
@@ -4751,11 +4751,11 @@ s32 daBPW_Create(bpw_class *i_this) {
                     k = 0;
                 prm = (k << 9) | 0xFF000004u;
             }
-            at<bpw_class>(a)->m3F6 = 3;
+            at<bpw_class>(a)->mBattlePhase = 3;
             light_on_off(i_this);
             at<bpw_class>(a)->mKankyouHendouState = 3;
             at<bpw_class>(a)->mSomeCountdownTimers[5] = 0;
-            at<bpw_class>(a)->m3EC = 1.f;
+            at<bpw_class>(a)->mKankyouBlend = 1.f;
             kankyou_hendou(i_this);
             at<bpw_class>(a)->mBodyAction = ACTION_START_DEMO;
             at<bpw_class>(a)->mActionState = 200;
@@ -4786,18 +4786,18 @@ s32 daBPW_Create(bpw_class *i_this) {
         at<bpw_class>(a)->mKanteraCoSph.mObjCo.mSPrm =
             u32(at<bpw_class>(a)->mKanteraCoSph.mObjCo.mSPrm) & ~1u;
         at<bpw_class>(a)->mKanteraCoSph.mStts = &at<bpw_class>(a)->mStts;
-        at<bpw_class>(a)->m404 = parent; // m404
+        at<bpw_class>(a)->mParentId = parent; // mParentId
         at<bpw_class>(a)->mActionState = 0;
         if (parent == 0xFFFFFFFF)
             BpwHD_fopAcM_delete(a);
         at<bpw_class>(a)->actor.actor_status = u32(at<bpw_class>(a)->actor.actor_status) | 0x4000;
         if (start_demo_check()) {
-            at<bpw_class>(a)->m3E7 = 1;
+            at<bpw_class>(a)->mKanteraHidden = 1;
             anm_init(i_this, dRes_INDEX_BPW_BCK_OPENING_KAN1_e, f32(BpwHio(18).mFloat[4]), 0, 0.f,
                      -1); // REG18_F(4)
         }
-        at<bpw_class>(a)->m498 = 0.f;
-        at<bpw_class>(a)->m49C = 200.f;
+        at<bpw_class>(a)->mWallHalfHeight = 0.f;
+        at<bpw_class>(a)->mWallRadius = 200.f;
         BG_check(i_this);
         kantera_draw_SUB(i_this);
         break;
@@ -4805,9 +4805,9 @@ s32 daBPW_Create(bpw_class *i_this) {
     case 2: { // damage ball
         if (!BpwHD_fopAcM_entrySolidHeap(a, 0x020D5EF0u, 0x14C0u))
             return 5;
-        Bpw_copyWord(&at<bpw_class>(a)->m358.x, &at<bpw_class>(a)->actor.current.pos.x);
-        Bpw_copyWord(&at<bpw_class>(a)->m358.y, &at<bpw_class>(a)->actor.current.pos.y);
-        Bpw_copyWord(&at<bpw_class>(a)->m358.z, &at<bpw_class>(a)->actor.current.pos.z); // m358
+        Bpw_copyWord(&at<bpw_class>(a)->mCoSphCenter.x, &at<bpw_class>(a)->actor.current.pos.x);
+        Bpw_copyWord(&at<bpw_class>(a)->mCoSphCenter.y, &at<bpw_class>(a)->actor.current.pos.y);
+        Bpw_copyWord(&at<bpw_class>(a)->mCoSphCenter.z, &at<bpw_class>(a)->actor.current.pos.z); // mCoSphCenter
         BpwHD_getGameInfo();
         set_mtx_and_cull(a, -100.f, 100.f);
         acch_set(a);
@@ -4835,7 +4835,7 @@ s32 daBPW_Create(bpw_class *i_this) {
     case 3: { // torituki
         if (!BpwHD_fopAcM_entrySolidHeap(a, 0x020D5FC0u, 0x10000u))
             return 5;
-        at<bpw_class>(a)->m3E0 = 1;
+        at<bpw_class>(a)->mIsLightFrozen = 1;
         at<bpw_class>(a)->actor.scale.x = 0.f;
         at<bpw_class>(a)->actor.scale.y = 0.f;
         at<bpw_class>(a)->actor.scale.z = 0.f;
@@ -4862,7 +4862,7 @@ s32 daBPW_Create(bpw_class *i_this) {
 
 /* ---- compiler-generated / out-of-line inline helpers of this TU ---- */
 
-/* array element constructor of m5E0 (dPa_smokeEcallBack(1)) */
+/* array element constructor of mSmokeCb (dPa_smokeEcallBack(1)) */
 /* 020D60C0 */
 u32 bpw_smoke_ctor(u32 object) {
     return BpwHD_dPa_smokeEcallBack_dPa_smokeEcallBack(object, 1);
@@ -4933,10 +4933,10 @@ u32 bpw_class_ct(u32 a) {
     BpwHD_fopAc_ac_c_fopAc_ac_c(a);
     at<bpw_class>(a)->mLightInfluence.mHD20 = 1.f;
     at<bpw_class>(a)->actor.__vtbl = l_actorVtable;
-    BpwHD_dPa_smokeEcallBack_dPa_smokeEcallBack_2(ea(&at<bpw_class>(a)->m50C), 1);
+    BpwHD_dPa_smokeEcallBack_dPa_smokeEcallBack_2(ea(&at<bpw_class>(a)->mBlowSmokeCb), 1);
     for (u32 o = 0x648; o <= 0x6E8; o += 0x14)
         BpwHD_dPa_followEcallBack_dPa_followEcallBack(a + o, 0, 0);
-    BpwHD___construct_array(ea(&at<bpw_class>(a)->m5E0), 4, 0x20, 0x020D60C0u);
+    BpwHD___construct_array(ea(&at<bpw_class>(a)->mSmokeCb), 4, 0x20, 0x020D60C0u);
     BpwHD_dBgS_AcchCir_dBgS_AcchCir(ea(&at<bpw_class>(a)->mAcchCir));
     BpwHD_dBgS_Acch_dBgS_Acch(ea(&at<bpw_class>(a)->mAcch));
     at<bpw_class>(a)->mAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcch.v14;
@@ -4970,7 +4970,7 @@ void bpw_class_dt(u32 a, u32 flags) {
     at<bpw_class>(a)->mAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcch.v14;
     BpwHD_dBgS_Acch_destroy(ea(&at<bpw_class>(a)->mAcch), 0);
     BpwHD_cM3dGPla_destroy(ea(&at<bpw_class>(a)->mAcchCir.m_cir), 2);
-    BpwHD___destroy_arr(ea(&at<bpw_class>(a)->m5E0), 4, 0x20, 0x020DEEACu, 0, 0);
+    BpwHD___destroy_arr(ea(&at<bpw_class>(a)->mSmokeCb), 4, 0x20, 0x020DEEACu, 0, 0);
     BpwHD_fopAc_ac_c_destroy_fopAc_ac_c(a, 0);
     if (flags & 1)
         BpwHD___dl(a);

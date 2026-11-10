@@ -23,22 +23,22 @@ u16 daNpcPhoto_c::next_msgStatus(be<u32>* pMsgNo) {
     if (msgNo == 0x2A3A || msgNo == 0x2A3D) {
         if (gabi::object_at<dMesg_core_c>(mgr).mSelectNum /* mSelectNum */ != 0) {
             *pMsgNo = 0x2A3B;
-            field_0x9D0 = 0;
-            field_0x980 = nullptr;
+            mpMsgCameraList = 0;
+            mpMsgList = nullptr;
             return 0xF; /* fopMsgStts_MSG_CONTINUES_e */
         }
     } else if (msgNo >= 0x378A && msgNo <= 0x378B) {
         field_0x9C6 = field_0x9C6 | 0x20;
         return 0x10; /* fopMsgStts_MSG_ENDS_e */
     }
-    if (field_0x980.get() == nullptr) {
+    if (mpMsgList.get() == nullptr) {
         return 0x10;
     }
-    field_0x980 = field_0x980.get() + 1;
-    if (field_0x9D0 != 0) {
-        field_0x9D0 = field_0x9D0 + 1;
+    mpMsgList = mpMsgList.get() + 1;
+    if (mpMsgCameraList != 0) {
+        mpMsgCameraList = mpMsgCameraList + 1;
     }
-    u32 v = *field_0x980;
+    u32 v = *mpMsgList;
     switch (v) {
     case 7:
         mItemNo = 0x26; // HD: dItemNo_DELUXE_PICTO_BOX_e
@@ -59,11 +59,11 @@ u16 daNpcPhoto_c::next_msgStatus(be<u32>* pMsgNo) {
             if ((s32)dComIfGs_getRupee() < (s32)msgRupee) {
                 *pMsgNo = 0x378B;
             } else {
-                field_0x980 = field_0x980.get() + 1;
-                if (field_0x9D0 != 0) {
-                    field_0x9D0 = field_0x9D0 + 1;
+                mpMsgList = mpMsgList.get() + 1;
+                if (mpMsgCameraList != 0) {
+                    mpMsgCameraList = mpMsgCameraList + 1;
                 }
-                *pMsgNo = *field_0x980;
+                *pMsgNo = *mpMsgList;
                 /* dComIfGp_setItemRupeeCount(-dComIfGp_getMessageRupee()) */
                 s16 rupee = dComIfGp_getMessageRupee();
                 u32 play = dComIfGp_ea();
@@ -71,7 +71,7 @@ u16 daNpcPhoto_c::next_msgStatus(be<u32>* pMsgNo) {
                 dComIfGs_onTmpBit(0x0301 /* UNK_0301 */);
             }
         } else {
-            field_0x980 = nullptr;
+            mpMsgList = nullptr;
             *pMsgNo = 0x378A;
         }
         return 0xF;
@@ -96,8 +96,8 @@ u16 daNpcPhoto_c::next_msgStatus(be<u32>* pMsgNo) {
     }
         /* fall through */
     case 0:
-        field_0x980 = nullptr;
-        field_0x9D0 = 0;
+        mpMsgList = nullptr;
+        mpMsgCameraList = 0;
         return 0x10;
     default:
         *pMsgNo = v;
@@ -171,8 +171,8 @@ u32 daNpcPhoto_c::getMsg() {
     u32 msgNo = 0;
     mReplaceDateMessages = 0;
     u8 eventReg = dComIfGs_getEventReg(0xC407 /* l_save_dat.field_0x06 */);
-    field_0x980 = nullptr;
-    field_0x9D0 = 0;
+    mpMsgList = nullptr;
+    mpMsgCameraList = 0;
     if (photo_inPhotoEvent()) {
         if (eventReg < 1) {
             msgNo = 0x2A5C;
@@ -180,8 +180,8 @@ u32 daNpcPhoto_c::getMsg() {
             if (eventReg == 2) {
                 msgNo = 0x2A57;
             } else if (isPhotoOk()) {
-                field_0x9D0 = 0;
-                field_0x980 = MSG(l_msg_1st_order_xy);
+                mpMsgCameraList = 0;
+                mpMsgList = MSG(l_msg_1st_order_xy);
             } else {
                 msgNo = 0x2A5D;
             }
@@ -189,16 +189,16 @@ u32 daNpcPhoto_c::getMsg() {
             if (eventReg == 4) {
                 msgNo = 0x2A57;
             } else if (isPhotoOk()) {
-                field_0x9D0 = 0;
-                field_0x980 = MSG(l_msg_2nd_order_xy);
+                mpMsgCameraList = 0;
+                mpMsgList = MSG(l_msg_2nd_order_xy);
             } else {
                 msgNo = 0x2A5D;
             }
         } else if (eventReg < 6) {
             if (isPhotoOk()) {
-                field_0x9D0 = 0;
+                mpMsgCameraList = 0;
                 mReplaceDateMessages = 1; /* HD */
-                field_0x980 = MSG(l_msg_3rd_order_xy);
+                mpMsgList = MSG(l_msg_3rd_order_xy);
             } else {
                 msgNo = 0x2A5D;
             }
@@ -211,7 +211,7 @@ u32 daNpcPhoto_c::getMsg() {
             if (dComIfGs_isTmpBit(0x0302 /* UNK_0302 */)) {
                 if (photo_getPictureNum() < 0xC) { // HD: 12 pictures (GameCube 3)
                     mItemNo = 0x9F; /* HD (GameCube dItemNo_LEGENDARY_PICTOGRAPH_e) */
-                    field_0x980 = MSG(l_msg_xy_buy_photo);
+                    mpMsgList = MSG(l_msg_xy_buy_photo);
                 } else {
                     msgNo = 0x3787;
                 }
@@ -221,8 +221,8 @@ u32 daNpcPhoto_c::getMsg() {
         } else if (itemNo == dItemNo_FIREFLY_BOTTLE_e) {
             // HD: no check of the Deluxe Picto Box, no mItemNo
             if (eventReg >= 6) {
-                field_0x9D0 = 0;
-                field_0x980 = MSG(l_msg_color_xy);
+                mpMsgCameraList = 0;
+                mpMsgList = MSG(l_msg_color_xy);
                 dComIfGs_setEquipBottleItemEmpty();
             } else {
                 msgNo = 0x2A57;
@@ -231,56 +231,56 @@ u32 daNpcPhoto_c::getMsg() {
             msgNo = 0x2A56;
         }
     } else if (field_0x9C1 == 3) {
-        field_0x9D0 = 0;
-        field_0x980 = MSG(l_msg_down);
+        mpMsgCameraList = 0;
+        mpMsgList = MSG(l_msg_down);
     } else if (field_0x9C1 == 4) {
-        field_0x9D0 = 0;
-        field_0x980 = MSG(l_msg_ub4);
+        mpMsgCameraList = 0;
+        mpMsgList = MSG(l_msg_ub4);
     } else if (dComIfGs_isEventBit(0x1601 /* l_save_dat.field_0x04 */)) {
         if (field_0x9C1 == 1) {
             msgNo = mMsgNno;
         } else if (dComIfGs_checkGetItem(dItemNo_DELUXE_PICTO_BOX_e)) {
             if (dComIfGs_isTmpBit(0x0301 /* UNK_0301 */)) {
-                field_0x9D0 = 0;
-                field_0x980 = MSG(l_msg_buy_photo);
+                mpMsgCameraList = 0;
+                mpMsgList = MSG(l_msg_buy_photo);
             } else if (dComIfGs_isTmpBit(0x0302 /* UNK_0302 */)) {
-                field_0x9D0 = 0;
-                field_0x980 = MSG(l_msg_get_photo);
+                mpMsgCameraList = 0;
+                mpMsgList = MSG(l_msg_get_photo);
             } else if (isPhotoDxOk()) {
                 dComIfGs_onTmpBit(0x0302);
                 if (!dComIfGs_isEventBit(0x3808 /* UNK_3808 */)) {
                     dComIfGs_onEventBit(0x3808);
-                    field_0x9D0 = 0;
-                    field_0x980 = MSG(l_msg_week_1st);
+                    mpMsgCameraList = 0;
+                    mpMsgList = MSG(l_msg_week_1st);
                 } else {
                     u32 list = l_msg_week[dKy_get_dayofweek()];
-                    field_0x9D0 = 0;
-                    field_0x980 = MSG(list);
+                    mpMsgCameraList = 0;
+                    mpMsgList = MSG(list);
                 }
             } else {
-                field_0x980 = MSG(l_msg_color);
-                field_0x9D0 = reinterpret_cast<be<s8>*>(l_msg_color_c);
+                mpMsgList = MSG(l_msg_color);
+                mpMsgCameraList = reinterpret_cast<be<s8>*>(l_msg_color_c);
             }
         } else {
             eventReg = dComIfGs_getEventReg(0xC407);
             if (eventReg < 1) {
-                field_0x980 = MSG(l_msg_1st_order);
-                field_0x9D0 = reinterpret_cast<be<s8>*>(l_msg_1st_order_c);
+                mpMsgList = MSG(l_msg_1st_order);
+                mpMsgCameraList = reinterpret_cast<be<s8>*>(l_msg_1st_order_c);
             } else if (eventReg < 2) {
-                field_0x9D0 = reinterpret_cast<be<s8>*>(l_msg_1st_order_not_end_c);
-                field_0x980 = MSG(l_msg_1st_order_not_end);
+                mpMsgCameraList = reinterpret_cast<be<s8>*>(l_msg_1st_order_not_end_c);
+                mpMsgList = MSG(l_msg_1st_order_not_end);
             } else if (eventReg < 3) {
-                field_0x980 = MSG(l_msg_2nd_order);
-                field_0x9D0 = reinterpret_cast<be<s8>*>(l_msg_2nd_order_c);
+                mpMsgList = MSG(l_msg_2nd_order);
+                mpMsgCameraList = reinterpret_cast<be<s8>*>(l_msg_2nd_order_c);
             } else if (eventReg < 4) {
-                field_0x980 = MSG(l_msg_2nd_order_not_end);
-                field_0x9D0 = reinterpret_cast<be<s8>*>(l_msg_2nd_order_not_end_c);
+                mpMsgList = MSG(l_msg_2nd_order_not_end);
+                mpMsgCameraList = reinterpret_cast<be<s8>*>(l_msg_2nd_order_not_end_c);
             } else if (eventReg < 5) {
-                field_0x9D0 = reinterpret_cast<be<s8>*>(l_msg_3rd_order_c);
-                field_0x980 = MSG(l_msg_3rd_order);
+                mpMsgCameraList = reinterpret_cast<be<s8>*>(l_msg_3rd_order_c);
+                mpMsgList = MSG(l_msg_3rd_order);
             } else if (eventReg < 6) {
-                field_0x980 = MSG(l_msg_3rd_order_not_end);
-                field_0x9D0 = reinterpret_cast<be<s8>*>(l_msg_3rd_order_not_end_c);
+                mpMsgList = MSG(l_msg_3rd_order_not_end);
+                mpMsgCameraList = reinterpret_cast<be<s8>*>(l_msg_3rd_order_not_end_c);
             } else {
                 // HD: no l_msg_3rd_order_end / l_msg_not_color
                 msgNo = 0x2A57;
@@ -288,28 +288,28 @@ u32 daNpcPhoto_c::getMsg() {
         }
     } else if (dComIfGs_checkGetItem(dItemNo_PICTO_BOX_e) || dComIfGs_checkGetItem(dItemNo_DELUXE_PICTO_BOX_e)) {
         BOOL got = dComIfGs_isEventBit(0x1701 /* l_save_dat.field_0x02 */);
-        field_0x9D0 = 0;
+        mpMsgCameraList = 0;
         if (!got) {
-            field_0x980 = MSG(l_msg_1st_photo);
+            mpMsgList = MSG(l_msg_1st_photo);
             dComIfGs_onEventBit(0x1701);
             initTexPatternAnm(true, 1);
         } else {
-            field_0x980 = MSG(l_msg_2nd_photo);
+            mpMsgList = MSG(l_msg_2nd_photo);
         }
     } else {
         BOOL talked = dComIfGs_isEventBit(0x1208 /* l_save_dat.field_0x00 */);
-        field_0x9D0 = 0;
+        mpMsgCameraList = 0;
         if (!talked) {
-            field_0x980 = MSG(l_msg_1st_talk);
+            mpMsgList = MSG(l_msg_1st_talk);
             dComIfGs_onEventBit(0x1208);
             field_0x9C6 = field_0x9C6 | 4;
         } else {
-            field_0x980 = MSG(l_msg_2nd_talk);
+            mpMsgList = MSG(l_msg_2nd_talk);
             field_0x9C6 = field_0x9C6 | 4;
         }
     }
-    if (field_0x980.get() != nullptr) {
-        msgNo = *field_0x980;
+    if (mpMsgList.get() != nullptr) {
+        msgNo = *mpMsgList;
     }
     return msgNo;
 }

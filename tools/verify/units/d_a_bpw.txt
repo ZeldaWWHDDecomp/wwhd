@@ -114,8 +114,8 @@ field 020D8564 1047C1CA i16 0,1
 field 020D8564 1047C1C8 i16 0,1
 field 020D8564 1047BB54 f32 0,0,1
 field 020D8564 1047BB50 f32 0,0,1
-# bunri 0x6F: m3F6 > 2 reads an uninitialised register in the original (GameCube: uninitialised
-# hpAmountToEndPhaseAt) -> infeasible; keep m3F6 (this = 0x40000000) in 0..2 across clobbering.
+# bunri 0x6F: mBattlePhase > 2 reads an uninitialised register in the original (GameCube: uninitialised
+# hpAmountToEndPhaseAt) -> infeasible; keep mBattlePhase (this = 0x40000000) in 0..2 across clobbering.
 stable 40000512 2
 
 # play object / player fixtures (as d_a_pw): play at 0x54000000, player at 0x55000000
@@ -215,7 +215,7 @@ stackfill periodic
 #   (with the callee mocked, seed 7 reaches it, as it does its hp <= 5 twin, block 128).
 # - action_bunri_dousa block 306 (020DB074): case 0x87 falls into 0x88 right after setting timer 9
 #   to 0, so the "timer 9 == 1" test of the duplicated case-0x88 head cannot hold.
-# - body_execute 020DC704 block 296 (020DE8EC): tests m3E5 (+0x501) != 0 right after
+# - body_execute 020DC704 block 296 (020DE8EC): tests mIsThrown (+0x501) != 0 right after
 #   next_status_clear cleared it (noroi_check does not write it).
 
 # Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:

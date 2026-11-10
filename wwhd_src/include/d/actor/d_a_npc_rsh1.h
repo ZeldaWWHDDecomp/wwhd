@@ -152,11 +152,11 @@ struct daNpc_Rsh1_c : fopAc_ac_c {
     /* 0x7E0 */ dNpc_EventCut_c mEventCut;
     /* 0x84C */ RshStickControl mSTControl;
     /* 0x874 */ gptr<dPath> mpPath;
-    /* 0x878 */ be<s8> m704;
+    /* 0x878 */ be<s8> mPathPntIdx;  /* was m704: pathGet 022D71D4: the index of the path point with arg3 1 (the start); pathMove 022D9F74: steps it by 1 toward mShopPathPntIdx[aim] and stores it once the point is reached (tww same code) */
     /* 0x879 */ u8 _879[3];
     /* 0x87C */ cXyz mPathPointPos[5];
-    /* 0x8B8 */ be<s8> m744[5];
-    /* 0x8BD */ be<s8> m749;
+    /* 0x8B8 */ be<s8> mShopPathPntIdx[5];  /* was m744: pathGet 022D71D4: [arg3] = the index of the path point with that arg3 (the shop positions, as mPathPointPos[arg3]); pathMove 022D9F74 walks to [aim] (tww same code) */
+    /* 0x8BD */ be<s8> mbItemMsgSet;  /* was m749: shop_talk 022D9ACC: 1 when the item selection (now_triggercheck) set a new message in mCurrMsgNo; the next displayed/continue status is then taken without advancing and clears it; CreateInit 022D75E8 0 (tww same code) */
     /* 0x8BE */ u8 _8BE[0x8CC - 0x8BE];
     /* 0x8CC */ cXyz mAttnBasePos;
     /* 0x8D8 */ be<s16> mLookAtMaxVel;
@@ -165,36 +165,36 @@ struct daNpc_Rsh1_c : fopAc_ac_c {
     /* 0x8E2 */ be<s8> mMorfIsStop;
     /* 0x8E3 */ be<u8> m76F;
     /* 0x8E4 */ be<u8> mbAttention;
-    /* 0x8E5 */ be<u8> m771;
+    /* 0x8E5 */ be<u8> mTalking;  /* was m771: checkOrder 022D7D4C: 1 on the talk command; wait01 022DA1C4 saves mLookMode and looks at the player while set; talk01 022DA4C4 clears it when the box closes (after our decomp's daNpcMt_c mTalking, the same role; tww same code) */
     /* 0x8E6 */ u8 _8E6[2];
     /* 0x8E8 */ be<f32> mMorfPrevFrame;
-    /* 0x8EC */ be<u32> m778;
-    /* 0x8F0 */ be<u32> m77C;
-    /* 0x8F4 */ be<u32> m780;
-    /* 0x8F8 */ be<u32> m784;
+    /* 0x8EC */ be<u32> mCurrMsgNo;  /* was m778: talk 022D9C18: getMsg() on a new talk, then the message manager's mMsgNo; normal_talk 022D96E4 advances it by next_msgStatus; evn_talk_init 022DAF30 the event's "MsgNo"; talk01 022DA4C4 picks the item demo by it (tww same code) */
+    /* 0x8F0 */ be<u32> mShopMsgNo;  /* was m77C: shop_talk 022D9ACC: a copy of mCurrMsgNo, advanced by next_msgStatus(&it, &mCurrMsgNo) and set as the next message; talk 022D9C18 0 (tww same code) */
+    /* 0x8F4 */ be<u32> mNextMsgNo;  /* was m780: getMsg 022D94B8: returned once (then 0) before the default messages; checkOrder 022D7D4C / wait01 022DA1C4 0x2883, getdemo_action 022DA818 0x2857/0x288F/0x2860 (tww same code) */
+    /* 0x8F8 */ be<u32> mEndMsgNo;  /* was m784: evn_talk_init 022DAF30: the event's "EndMsgNo"; evn_talk 022DB12C ends the talk when mCurrMsgNo reaches it, then clears it (tww same code) */
     /* 0x8FC */ be<s32> mShopIdx;
-    /* 0x900 */ be<s32> m78C;
+    /* 0x900 */ be<s32> mShopNum;  /* was m78C: createShopList 022D6FDC: the number of shop item sets (at least 1); pl_shop_out_action 022DAA78 walks to that shop position (tww same code) */
     /* 0x904 */ be<s16> mShopOutEventIdx;
     /* 0x906 */ be<u8> mShopSelectItemNo;
-    /* 0x907 */ be<u8> m793;
-    /* 0x908 */ cXyz m794;
-    /* 0x914 */ cXyz m7A0;
+    /* 0x907 */ be<u8> mbShopOut;  /* was m793: wait01 022DA1C4: 1 when the player bumps into the actor (with mNextMsgNo 0x2883); talk01 022DA4C4 starts pl_shop_out_action after message 0x2883 while set; pl_shop_out_action 022DAA78 / CreateInit 022D75E8 0 (tww same code) */
+    /* 0x908 */ cXyz mCollisionPos;  /* was m794: setCollision 022D8738: mCyl.SetC(&it); pl_shop_out_action 022DAA78 puts it 140 behind the actor (setShopOutPos) and eases it back to current.pos (tww same code) */
+    /* 0x914 */ cXyz mModelOffset;  /* was m7A0: set_mtx 022D729C: the model is drawn at current.pos + it; pl_shop_out_action 022DAA78 eases it out to 100 ahead and back to zero; CreateInit 022D75E8 zero (tww same code) */
     /* 0x920 */ ProcStorage mCurrProc;
     /* 0x928 */ RshShopCamera mShopCamAct;
     /* 0x978 */ gptr<RshShopItems> mpShopItems;
     /* 0x97C */ RshShopItems mShopItemsArr[4];
     /* 0xA8C */ be<u32> mShopItemDataPtrs[12];
     /* 0xABC */ gptr<RshShopCursor> mpShopCursor;
-    /* 0xAC0 */ be<s8> m958;
-    /* 0xAC1 */ be<s8> m959;
-    /* 0xAC2 */ be<s8> m95A;
-    /* 0xAC3 */ be<s8> m95B;
-    /* 0xAC4 */ be<s8> m95C;
-    /* 0xAC5 */ be<u8> m95D;
-    /* 0xAC6 */ be<s8> m95E;
+    /* 0xAC0 */ be<s8> mTexAnmIdx;  /* was m958: setTexAnm 022D8380: the texture pattern index; initTexPatternAnm 022D6BB0 loads l_btp_ix_tbl[it]; CreateHeap 022D6CC4 0 (tww same code) */
+    /* 0xAC1 */ be<s8> mAnmIdx;  /* was m959: setAnm 022D8B20: the animation index; setAnmFromMsgTag 022D8B7C counts the loops of animation 4 (tww same code) */
+    /* 0xAC2 */ be<s8> mAnmLoopCnt;  /* was m95A: setAnmFromMsgTag 022D8B7C: 2 with animation 4, minus 1 per loop end, back to animation 0 at 0 (tww same code) */
+    /* 0xAC3 */ be<s8> mOrderState;  /* was m95B: eventOrder 022D808C: 5 shop-out event, 4 RSH_GET_DEMO, 1-3 can talk (1/2 order the speak event); checkOrder 022D7D4C starts them and clears it; wait01 022DA1C4 / talk01 022DA4C4 set it (after our decomp's daNpcMt_c mOrderState, the same role; tww same code) */
+    /* 0xAC4 */ be<s8> mLookMode;  /* was m95C: lookBack 022D83A8: switch (it) picks the look target; wait01 022DA1C4 2 while talking, wait_action 022DA748 1 (tww same code) */
+    /* 0xAC5 */ be<u8> mPrevLookMode;  /* was m95D: wait01 022DA1C4: mLookMode saved when the talk starts; event_action 022DB4A4 restores it (tww same code) */
+    /* 0xAC6 */ be<s8> mType;  /* was m95E: _create 022D7998: (param >> 20) & 0xF, every value maps to 0; CreateInit 022D75E8 sets up type 0 (tww switch (it)) */
     /* 0xAC7 */ u8 _AC7;
     /* 0xAC8 */ be<s8> mActionStatus;
-    /* 0xAC9 */ be<s8> m961;
+    /* 0xAC9 */ be<s8> mTalkStep;  /* was m961: talk 022D9C18: 0 starts (getMsg), 1 waits for the message, 2 normal_talk, 3 shop_talk, -1 stops; talkInit 022D7D40 0 (tww same code) */
     /* 0xACA */ be<s8> m962;
     /* 0xACB */ be<u8> mItemNo;
     /* 0xACC */ u8 _ACC[4];

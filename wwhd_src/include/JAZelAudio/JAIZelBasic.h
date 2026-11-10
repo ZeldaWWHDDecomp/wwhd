@@ -256,25 +256,25 @@ struct Sound : ::JAISound {
     void setTempoProportion(f32, u32);
 };
 struct SoundHead {
-    be<u8> field_0x4, mState;
+    be<u8> track, mState;  /* was field_0x4: JAISound::track (JSystem/JAudio/JAISound.h; byte 0 of the sound handle, GC +4) */
 };
 struct AudioCamera {
-    gptr<cXyz> field_0x0, field_0x4;
-    /* 0x04 */ gptr<Mtx34> field_0x8;
+    gptr<cXyz> position, previousPosition;  /* was field_0x0: JAInter::Camera::position (JSystem/JAudio/JAIBasic.h; the base class JAIBasic's mAudioCamera); getCameraInfo 02027558 stores the camera position (or mCameraOldPos); was field_0x4: JAInter::Camera::previousPosition (JSystem/JAudio/JAIBasic.h; the base class JAIBasic's mAudioCamera); getCameraInfo 02027558 points it at mCameraOldPos */
+    /* 0x08 */ gptr<Mtx34> matrix;  /* was field_0x8: JAInter::Camera::matrix (JSystem/JAudio/JAIBasic.h; the base class JAIBasic's mAudioCamera); getCameraInfo 02027558 stores the camera matrix */
 };
 struct VectorWords {
     be<u32> w[3];
 };
 struct MonsterSlot {
-    be<u32> field_0x00;
-    gptr<Sound> field_0x04;
+    be<u32> mActorId;  /* was field_0x00: monsSeStart 020299D8: the actor id argument (fopAcM_monsSeStart passes the actor's id) owning the slot; -1 free (monsSeInit 0202573C) */
+    gptr<Sound> mpSound;  /* was field_0x04: monsSeStart 020299D8: handle of the slot's sound (stopped when the actor starts a new one) */
 };
 struct AllocationRecord {
     be<u32> count;
     gptr<Sound> sound;
 };
 struct Random {
-    /* 0x04 */ be<u32> field_0x0, field_0x4, field_0x8[32];
+    be<u32> mSeed, mValue, mShuffle[32];  /* was field_0x0: JMath::TRandom_enough_::mSeed (JSystem/JMath/random.h): mRandomHD is a TRandom_enough_ (createJAIZelBasic seeds it, 0x88 bytes); was field_0x4: JMath::TRandom_enough_::mValue (JSystem/JMath/random.h); was field_0x8: JMath::TRandom_enough_::mShuffle (JSystem/JMath/random.h) */
 };
 struct SeqUpdateData {
     u8 padding[0x48];
@@ -320,41 +320,41 @@ struct JAIZelBasic {
         return gabi::at<AudioCamera>(mAudioCamera.v);
     }
     /* 0x0 */ gptr<AudioCamera> mAudioCamera;
-    /* 0x04 */ gptr<void> field_0x8;
+    /* 0x04 */ gptr<void> mHeap;  /* was field_0x8: JAIBasic::mHeap (JSystem/JAudio/JAIBasic.h, the base class: heap at +4); makeSound 0201D414 allocates the Sound arrays from it (l_defaultHeap / the default audio heap when NULL) */
     u8 padding8[0x24];
     /* 0x2C */ gptr<void> __vtbl;
-    /* 0x30 */ be<u8> field_0x0020;
-    /* 0x31 */ be<u8> field_0x0021;
+    /* 0x30 */ be<u8> mIsMenuIn;  /* was field_0x0020: menuIn 0201E5E0 sets 1, menuOut 0201DCD4 clears; seaEnvSePlay 0201C524 / seaShoreSE 0201CA10 play at 0.33 while set */
+    /* 0x31 */ be<u8> mSceneBgmStartedOnce;  /* was field_0x0021: sceneBgmStart 020234A4 sets 1 (never cleared); setScene 0202677C checks the dungeon stage items only once it is set */
     u8 padding32[0x2];
-    /* 0x34 */ gptr<be<u8>> field_0x0024;
-    /* 0x38 */ be<u32> field_0x0028;
+    /* 0x34 */ gptr<be<u8>> mpEventBits;  /* was field_0x0024: setEventBit 020277A4 stores the pointer; checkEventBit 0201E480 tests bit (flag & 0xFF) of byte (flag >> 8) */
+    /* 0x38 */ be<u32> mSceneFrameCount;  /* was field_0x0028: zeldaGFrameWork 02024478 counts up (saturating) while mSceneActive, else 0; seStart 0201EBA0 / startAnimSound 0201B71C test < 30 */
     /* 0x3C */ be<u8> mHour;
     /* 0x3D */ be<u8> mMinute;
     /* 0x3E */ be<u8> mWeekday;
     /* 0x3F */ be<u8> field_0x002f;
-    /* 0x40 */ be<u16> field_0x0030;
-    /* 0x42 */ be<u8> field_0x0032;
-    /* 0x43 */ be<u8> field_0x0033;
-    /* 0x44 */ be<s32> field_0x0034;
-    /* 0x48 */ be<s32> field_0x0038;
-    /* 0x4C */ be<f32> field_0x003c;
-    /* 0x50 */ be<u8> field_0x0040;
-    /* 0x51 */ be<u8> field_0x0041;
-    /* 0x52 */ be<u8> field_0x0042;
-    /* 0x53 */ be<u8> field_0x0043;
-    /* 0x54 */ be<u8> field_0x0044;
-    /* 0x55 */ be<u8> field_0x0045;
-    /* 0x56 */ be<u8> field_0x0046;
-    /* 0x57 */ be<u8> field_0x0047;
-    /* 0x58 */ cXyz field_0x0048;
-    /* 0x64 */ cXyz field_0x0054;
+    /* 0x40 */ be<u16> mPrevTime;  /* was field_0x0030: processTime 020239C8: the previous (hour << 8) + minute, compared against 0x53B / 0x1400 for the morning and night BGM */
+    /* 0x42 */ be<u8> mMorningBgmPlaying;  /* was field_0x0032: processTime 020239C8 sets 1 when it starts JA_BGM_MORNING; processMorningToNormal 02023930 / bgmStop 02021F28 clear; sceneBgmStart 020234A4 / changeSeaBgm 02023A94 return while set */
+    /* 0x43 */ be<u8> mDayNightSwitched;  /* was field_0x0033: seStart 0201EBA0 sets 1 on JA_SE_CHUYA_SWITCH (with JA_BGM_TAKT_CHUYA); sceneBgmStart 020234A4 clears; sceneChange 020264F8 drops the sea BGM by day while set */
+    /* 0x44 */ be<s32> mLinkHp;  /* was field_0x0034: setLinkHp 02027B0C first argument; processHeartGaugeSound 02024334 picks the ALMOST_DIE alarm from it (<= 2 / 4 / 6) */
+    /* 0x48 */ be<s32> mLinkMaxHp;  /* was field_0x0038: setLinkHp 02027B0C second argument (divisor of the hp ratio) */
+    /* 0x4C */ be<f32> mLinkHpRatio;  /* was field_0x003c: setLinkHp 02027B0C: hp / max clamped to 1 (1 when max is 0); drives the battle BGM tempo */
+    /* 0x50 */ be<u8> mHeartGaugeTimer;  /* was field_0x0040: heartGaugeOn 02027D40 sets 2; processHeartGaugeSound 02024334 plays the low-health alarm while nonzero and counts it down */
+    /* 0x51 */ be<u8> mLinkSwordType;  /* was field_0x0041: setLinkSwordType 02027C50 first argument; setLinkShieldType 02027C9C reads it (TWW d_a_player_main.cpp setLinkSwordType callers) */
+    /* 0x52 */ be<u8> mLinkSwordPlace;  /* was field_0x0042: setLinkSwordType 02027C50 second argument (TWW d_a_player_main.cpp callers: 1 = in the hand, 2 = on the back) */
+    /* 0x53 */ be<u8> mLinkShieldType;  /* was field_0x0043: setLinkShieldType 02027C9C first argument (TWW d_a_player_main.cpp: 0 none, 1 shield, 2 mirror shield); setScene 0202677C scene 0xB tests it */
+    /* 0x54 */ be<u8> mLinkShieldPlace;  /* was field_0x0044: setLinkShieldType 02027C9C second argument (TWW d_a_player_main.cpp callers: 1 = in the hand, 2 = on the back) */
+    /* 0x55 */ be<u8> mLinkSwordShieldOnBack;  /* was field_0x0045: setLinkSwordType 02027C50 / setLinkShieldType 02027C9C: 1 when sword and shield are both on the back; seStart 0201EBA0 adds JA_SE_LK_FT_SW_SHIELD to ladder steps */
+    /* 0x56 */ be<u8> mLinkBootsType;  /* was field_0x0046: setLinkBootsType 02027CEC; seStart 0201EBA0 turns ladder steps into JA_SE_LK_WALK_HEAVY when 1 (startAnimSound 0201B71C likewise) */
+    /* 0x57 */ be<u8> mLinkOnBoard;  /* was field_0x0047: setLinkOnBoard 02027CF4; checkLinkOnBoardSea 02025AF4, subBgmStart 0201DE00 (JA_BGM_SEA_ENEMY mute) read it */
+    /* 0x58 */ cXyz mCameraOldPos;  /* was field_0x0048: getCameraInfo 02027558 copies the previous camera position here (1e7 when none); camera +4 always points here, camera +0 too when no position */
+    /* 0x64 */ cXyz mCameraPolygonPos;  /* was field_0x0054: setCameraPolygonPos 02027754 copies the position; riverSePlay 0201CDA0 registers it as a river point when the camera map info is 0x18 */
     /* 0x70 */ be<u8> mbLandingDemoStarted;
-    /* 0x71 */ be<u8> field_0x0061;
-    /* 0x72 */ be<u8> field_0x0062;
-    /* 0x73 */ be<u8> field_0x0063;
-    /* 0x74 */ be<u8> field_0x0064;
-    /* 0x75 */ be<u8> field_0x0065;
-    /* 0x76 */ be<u8> field_0x0066;
+    /* 0x71 */ be<u8> mEventTimer;  /* was field_0x0061: zeldaGFrameWork 02024478: 5 while dComIfGp_event_runCheck(), else counted down to 0 */
+    /* 0x72 */ be<u8> mKamomeFlag;  /* was field_0x0062: set 1/0 by the seagull (d_a_npc_kamome kam_setAudioFlag, GC interface byte +0x62); changeSeaBgm 02023A94 returns while set; load1stDynamicWave 02026E04 clears */
+    /* 0x73 */ be<u8> mBgmDisabled;  /* was field_0x0063: only cleared by createJAIZelBasic 02025B44; bgmStart 0202204C, subBgmStart 0201DE00, bgmStreamPrepare 02027168, bgmStreamPlay 02027F04, bgmNowBattle 0202879C return while set */
+    /* 0x74 */ be<u8> mTalkInBlocked;  /* was field_0x0064: subBgmStart 0201DE00 (item-get fanfares) and bgmStart 0202204C (0xC0000006) set 1, subBgmStopInner 0201D9C8 / bgmStop 02021F28 clear; talkIn 02027D4C returns while 1 */
+    /* 0x75 */ be<u8> mMtDragonMuteRequest;  /* was field_0x0065: bgmMuteMtDragon 020283D8 sets 1; zeldaGFrameWork 02024478 then mutes JA_BGM_D_RYU_MT (mMainBgmSceneVolume 0) and clears it */
+    /* 0x76 */ be<u8> mSelectBgmOnly;  /* was field_0x0066: setSceneName 02027814 sets 1 for spot 0x75, else 0; bgmStart 0202204C then only starts JA_BGM_SELECT */
     u8 padding77[0x1];
     /* 0x78 */ gptr<Sound> mpMainBgmSound;
     /* 0x7C */ gptr<Sound> mpSubBgmSound;
@@ -362,126 +362,126 @@ struct JAIZelBasic {
     /* 0x84 */ be<u32> mSubBgmNum;
     /* 0x88 */ be<u32> mMainBgmNum;
     /* 0x8C */ be<u32> mStreamBgmNum;
-    /* 0x90 */ be<f32> field_0x0080;
-    /* 0x94 */ be<f32> field_0x0084;
-    /* 0x98 */ be<f32> field_0x0088;
-    /* 0x9C */ be<f32> field_0x008c;
-    /* 0xA0 */ be<f32> field_0x0090;
-    /* 0xA4 */ be<f32> field_0x0094;
-    /* 0xA8 */ be<f32> field_0x0098;
-    /* 0xAC */ be<f32> field_0x009c;
-    /* 0xB0 */ be<f32> field_0x00a0;
-    /* 0xB4 */ be<f32> field_0x00a4;
-    /* 0xB8 */ be<f32> field_0x00a8;
-    /* 0xBC */ be<f32> field_0x00ac;
-    /* 0xC0 */ be<u32> field_0x00b0;
+    /* 0x90 */ be<f32> mMainBgmMuteVolume;  /* was field_0x0080: main BGM volume factor: bgmAllMute 0202844C sets 0, subBgmStopInner 0201D9C8 1 (first of the eight factors multiplied in talkIn 02027D4C etc.) */
+    /* 0x94 */ be<f32> mMainBgmTalkVolume;  /* was field_0x0084: main BGM volume factor: talkIn 02027D4C sets VOL_BGM_TALKING, talkOut 0201DB50 VOL_BGM_DEFAULT */
+    /* 0x98 */ be<f32> mMainBgmMenuVolume;  /* was field_0x0088: main BGM volume factor: menuIn 0201E5E0 sets VOL_BGM_PAUSING, menuOut 0201DCD4 VOL_BGM_DEFAULT */
+    /* 0x9C */ be<f32> mMainBgmSubBgmVolume;  /* was field_0x008c: main BGM volume factor: subBgmStart 0201DE00 / bgmNowBattle 0202879C set 0 while a sub BGM plays, subBgmStopInner 0201D9C8 / bgmBattleGFrame 02023E0C 1 */
+    /* 0xA0 */ be<f32> mMainBgmSceneVolume;  /* was field_0x0090: main BGM volume factor set by scene logic: Forest Haven / scene 0x35 distance fades (zeldaGFrameWork 02024478, bgmStart 0202204C), D_RYU_MT mute, sea-game talk (linkVoiceStart 020293CC) */
+    /* 0xA4 */ be<f32> mMainBgmSeaVolume;  /* was field_0x0094: main BGM volume factor: changeSeaBgm 02023A94 fades it by the distance to the island area (calcMainBgmVolWithSeaFactor); processMorningToNormal 02023930 sets 1 */
+    /* 0xA8 */ be<f32> mMainBgmTaktVolume;  /* was field_0x0098: main BGM volume factor: taktModeMute 02028518 sets 0, taktModeMuteOff 0202862C 1; talkIn 02027D4C / bgmNowBattle 0202879C return while 0 */
+    /* 0xAC */ be<f32> mMainBgmCbPracticeVolume;  /* was field_0x009c: main BGM volume factor: cbPracticePlay 02028038 / cbPracticeProcess 02021534 duck it against the practice position volume, 1 when practice stops */
+    /* 0xB0 */ be<f32> mSubBgmTalkMenuVolume;  /* was field_0x00a0: sub BGM volume factor: talkIn 02027D4C VOL_BGM_TALKING, menuIn 0201E5E0 VOL_BGM_PAUSING, talkOut 0201DB50 VOL_BGM_DEFAULT; subBgmStart 0201DE00 setSeqInterVolume */
+    /* 0xB4 */ be<f32> mSubBgmTaktVolume;  /* was field_0x00a4: sub BGM volume factor: taktModeMute 02028518 sets 0, taktModeMuteOff 0202862C 1 */
+    /* 0xB8 */ be<f32> mSubBgmCbPracticeVolume;  /* was field_0x00a8: sub BGM volume factor: cbPracticePlay 02028038 / cbPracticeProcess 02021534 set the position volume of the practice sound */
+    /* 0xBC */ be<f32> mMainBgmHeightVolume;  /* was field_0x00ac: main BGM volume factor: zeldaGFrameWork 02024478 fades it by camera height (Outset, Dragon Roost, scene 0x19) */
+    /* 0xC0 */ be<u32> mSubBgmStopTimer;  /* was field_0x00b0: subBgmStop 0201D8BC sets 0xF; zeldaGFrameWork 02024478 counts down and calls subBgmStopInner at 0; -1 idle (subBgmStopInner 0201D9C8), -2 from seStart 0201EBA0 */
     /* 0xC4 */ be<u8> field_0x00b4;
     /* 0xC5 */ be<u8> mSomeSpecialBGMFlag;
     /* 0xC6 */ be<u8> mLastMinibossSubBGMType;
-    /* 0xC7 */ be<u8> field_0x00b7;
-    /* 0xC8 */ be<u8> field_0x00b8;
-    /* 0xC9 */ be<u8> field_0x00b9;
-    /* 0xCA */ be<u8> field_0x00ba;
-    /* 0xCB */ be<u8> field_0x00bb;
-    /* 0xCC */ be<u8> field_0x00bc;
-    /* 0xCD */ be<u8> field_0x00bd;
-    /* 0xCE */ be<u8> field_0x00be;
-    /* 0xCF */ be<u8> field_0x00bf;
-    /* 0xD0 */ be<u8> field_0x00c0;
-    /* 0xD1 */ be<s8> field_0x00c1;
+    /* 0xC7 */ be<u8> mSkyCloistersTimer;  /* was field_0x00b7: stSkyCloisters 020283E4 sets 4 (JA_BGM_UNK_126); stSkyCloistersProcess 02024278 counts down and restarts JA_BGM_KAMI_TOWER at 1; stWaterLevelUp 020284B0 waits for 0 */
+    /* 0xC8 */ be<u8> mStreamBgmStarted;  /* was field_0x00b8: bgmStreamPlay 02027F04 sets 1, bgmStop 02021F28 clears; linkVoiceStart 020293CC skips voice 0x10 during JA_STRM_DEMO_GO_MAJU while set */
+    /* 0xC9 */ be<u8> mDemoFanfareMuted;  /* was field_0x00b9: processDemoFanfareMute 02021DC4: 1 while a demo fanfare plays (muteMainBgmAll on the rising edge, unmuteMainBgmAll on the falling edge) */
+    /* 0xCA */ be<u8> mTetraFlyStreamStarted;  /* was field_0x00ba: bgmStreamPlay 02027F04 sets 1 for JA_STRM_DEMO_TETRA_FLY; initSe 02025760 clears */
+    /* 0xCB */ be<u8> mFanfareResumePending;  /* was field_0x00bb: subBgmStart 0201DE00 sets 2 for item-get fanfares; zeldaGFrameWork 02024478 restarts the miniboss sub BGM (mLastMinibossSubBGMType) when the fanfare ends and clears it */
+    /* 0xCC */ be<u8> mPendingBgmStart;  /* was field_0x00bc: zeldaGFrameWork 02024478: once no BGM plays, 1 starts the sea BGM, 2 sceneBgmStart, 3 the island BGM, then clears */
+    /* 0xCD */ be<u8> mSceneBgmLocked;  /* was field_0x00bd: setScene 0202677C sets 1 at the Flight Control Platform layers 2/3 (else 0); changeSeaBgm 02023A94 / setCameraGroupInfo 02027670 return while set */
+    /* 0xCE */ be<u8> mTalkSeBlocked;  /* was field_0x00be: seStart 0201EBA0 (JA_SE_CM_BST_GOKOU) / bgmStreamPrepare 02027168 (JA_STRM_BST_START) set 1, bgmStart / subBgmStart clear; seStart drops the talk-window SEs while set */
+    /* 0xCF */ be<u8> mCameraGroupLocked;  /* was field_0x00bf: mDoAud_setSpecialBgmFlag 025E201C sets it (d_a_npc_so_cut mini game); setCameraGroupInfo 02027670 returns while set; resetRecover 0202736C clears */
+    /* 0xD0 */ be<u8> mBattleBgmFadeDelay;  /* was field_0x00c0: bgmNowBattle 0202879C sets COMMON_BATTLE_FO_DELAY; bgmBattleGFrame 02023E0C counts down and stops the battle BGM at 0 */
+    /* 0xD1 */ be<s8> mEnemyNearbyOn;  /* was field_0x00c1: bgmNowBattle 0202879C / mbossBgmNearByProcess 02025940 set 1 when the enemy-nearby track is faded in, 0 when it fades out */
     u8 paddingD2[0x2];
-    /* 0xD4 */ be<u32> field_0x00c4;
-    /* 0xD8 */ be<u8> field_0x00c8;
-    /* 0xD9 */ be<u8> field_0x00c9;
-    /* 0xDA */ be<u8> field_0x00ca;
-    /* 0xDB */ be<s8> field_0x00cb;
-    /* 0xDC */ be<u8> field_0x00cc;
-    /* 0xDD */ be<u8> field_0x00cd;
-    /* 0xDE */ be<u8> field_0x00ce;
+    /* 0xD4 */ be<u32> mEnemyNearbyFadeTimer;  /* was field_0x00c4: bgmNowBattle 0202879C / mbossBgmNearByProcess 02025940 set ENEMY_NEARBY_FADEOUT_TIME; bgmBattleGFrame 02023E0C / mbossBgmMuteProcess 02024018 fade the track out at 1 */
+    /* 0xD8 */ be<u8> mKaitengiriTimer;  /* was field_0x00c8: bgmNowKaitengiri 02028D6C sets 2 (fades the spin-attack track in); bgmBattleGFrame 02023E0C / mbossBgmMuteProcess 02024018 fade it out once counted down */
+    /* 0xD9 */ be<u8> mSwordUsing;  /* was field_0x00c9: bgmSetSwordUsing 02028FE0; bgmNowBattle 0202879C / mbossBgmMuteProcess 02024018 pick the SWORD_USING / SWORD_NOT_USING tracks */
+    /* 0xDA */ be<u8> mBattleBgmDisabled;  /* was field_0x00ca: bgmStart 0202204C (JA_BGM_DIE_LINK) / seStart 0201EBA0 (JA_SE_OBJ_OTOSHIANA_OPEN) set 1, sceneBgmStart 020234A4 clears; bgmNowBattle 0202879C returns while 1 */
+    /* 0xDB */ be<s8> mEnemyNearbyDelay;  /* was field_0x00cb: enemyNearBy 020259E8 sets COMMON_BATTLE_FO_DELAY; enemyNearByGFrame 02024190 counts down and restarts JA_BGM_DK_BATTLE / JA_BGM_MJ_TOWER_BATTLE at 0; -1 idle */
+    /* 0xDC */ be<u8> mDkMaskBroken;  /* was field_0x00cc: seStart 0201EBA0 sets 1 on JA_SE_CM_DK_BREAK_MASK, bgmStop 02021F28 clears; enemyNearBy 020259E8 / enemyNearByGFrame 02024190 pick the JA_BGM_DK_BATTLE variant */
+    /* 0xDD */ be<u8> mSkipSceneStream;  /* was field_0x00cd: setScene 0202677C sets 1 when isStageItem(.., 5); load2ndDynamicWave 020271E4 then does not prepare the scene's start stream */
+    /* 0xDE */ be<u8> mBattleBgmHoldTimer;  /* was field_0x00ce: subBgmStop 0201D8BC / subBgmStopInner 0201D9C8 set 0x14 after a miniboss sub BGM; zeldaGFrameWork 02024478 counts down; bgmNowBattle 0202879C returns while nonzero */
     u8 paddingDF[0x1];
-    /* 0xE0 */ gptr<cXyz> field_0x00d0;
+    /* 0xE0 */ gptr<cXyz> mpCbPracticePos;  /* was field_0x00d0: cbPracticePlay 02028038 stores the position; cbPracticeProcess 02021534 positions the practice sound from it (returns when NULL) */
     /* 0xE4 */ gptr<Sound> mpSeSound[32];
     /* 0x164 */ be<u32> mSeNum[32];
-    /* 0x1E4 */ be<u32> field_0x0194[32];
-    /* 0x264 */ be<u32> field_0x01f4;
-    /* 0x268 */ be<u8> field_0x01f8;
-    /* 0x269 */ be<u8> field_0x01f9;
-    /* 0x26A */ be<u8> field_0x01fa;
-    /* 0x26B */ be<u8> field_0x01fb;
-    /* 0x26C */ be<u8> field_0x01fc;
-    /* 0x26D */ be<u8> field_0x01fd;
-    /* 0x26E */ be<u8> field_0x01fe;
-    /* 0x26F */ be<u8> field_0x01ff;
-    /* 0x270 */ be<u8> field_0x0200;
-    /* 0x271 */ be<u8> field_0x0201;
-    /* 0x272 */ be<u8> field_0x0202[2];
-    /* 0x274 */ be<u8> field_0x0204;
-    /* 0x275 */ be<u8> field_0x0205;
-    /* 0x276 */ be<u8> field_0x0206;
-    /* 0x277 */ be<u8> field_0x0207;
-    /* 0x278 */ be<u8> field_0x0208;
+    /* 0x1E4 */ be<u32> mSePosAddr[32];  /* was field_0x0194: seStart 0201EBA0 stores the position address per SE slot and restarts the slot whose id and position match; seStop 0201E538 clears */
+    /* 0x264 */ be<u32> mSeSlotIndex;  /* was field_0x01f4: seStart 0201EBA0: rotating index of the next free mpSeSound slot (mod 32) */
+    /* 0x268 */ be<u8> mNoCameraTimer;  /* was field_0x01f8: getCameraInfo 02027558 sets 10 when there is no camera position, else counts down; seaEnvSePlay 0201C524, riverSePlay 0201CDA0, changeSeaBgm 02023A94 return while set */
+    /* 0x269 */ be<u8> mAddGrassSePlayed;  /* was field_0x01f9: seStart 0201EBA0: JA_SE_FT_ADD_GRASS once per frame (zeldaGFrameWork 02024478 clears) */
+    /* 0x26A */ be<u8> mCutGrassSeTimer;  /* was field_0x01fa: seStart 0201EBA0: JA_SE_LK_CUT_GRASS at most every 4 frames (zeldaGFrameWork 02024478 counts down) */
+    /* 0x26B */ be<u8> mBrkWrailKSePlayed;  /* was field_0x01fb: seStart 0201EBA0: JA_SE_OBJ_BRK_WRAIL_K once per frame (zeldaGFrameWork 02024478 clears) */
+    /* 0x26C */ be<u8> mColBrkWrailingSePlayed;  /* was field_0x01fc: seStart 0201EBA0: JA_SE_OBJ_COL_BRK_WRAILING once per frame (zeldaGFrameWork 02024478 clears) */
+    /* 0x26D */ be<u8> mBgnStringRippleSeTimer;  /* was field_0x01fd: seStart 0201EBA0: JA_SE_CM_BGN_STRING_RIPPLE at most every 0x14 frames (zeldaGFrameWork 02024478 counts down) */
+    /* 0x26E */ be<u8> mBgnBodyRippleSeTimer;  /* was field_0x01fe: seStart 0201EBA0: JA_SE_CM_BGN_BODY_RIPPLE at most every 0x14 frames (zeldaGFrameWork 02024478 counts down) */
+    /* 0x26F */ be<u8> mBgnHeadRippleSeTimer;  /* was field_0x01ff: seStart 0201EBA0: JA_SE_CM_BGN_M_HEAD_RIPPLE at most every 0x14 frames (zeldaGFrameWork 02024478 counts down) */
+    /* 0x270 */ be<u8> mBgnTailRippleSeTimer;  /* was field_0x0200: seStart 0201EBA0: JA_SE_CM_BGN_M_TAIL_RIPPL at most every 0x14 frames (zeldaGFrameWork 02024478 counts down) */
+    /* 0x271 */ be<u8> mAllSeMuted;  /* was field_0x0201: bgmStreamPlay 02027F04 sets 1 for JA_STRM_DEMO_TETRA_FLY, bgmStop 02021F28 / resetRecover 0202736C clear; seStart 0201EBA0 and the ambience players return while 1 */
+    /* 0x272 */ be<u8> mSwingSeTimers[2];  /* was field_0x0202: seStart 0201EBA0: [0] JA_SE_OBJ_TREE_SWING(_S), [1] JA_SE_OBJ_COL_SWC_CHNS at most every 2 frames (zeldaGFrameWork 02024478 counts down) */
+    /* 0x274 */ be<u8> mSeaEnvSeOff;  /* was field_0x0204: seStart 0201EBA0 (JA_SE_ATM_MAGMA_CHILL) / setScene 0202677C (scene 2 with stage item 3) set 1, load1stDynamicWave 02026E04 clears; seaEnvSePlay 0201C524 returns while 1 */
+    /* 0x275 */ be<u8> mForceBack;  /* was field_0x0205: seStart 0201EBA0 sets 1 on JA_SE_FORCE_BACK, sceneBgmStart 020234A4 clears; zeldaGFrameWork 02024478 keeps the Forest Haven distance volume while set */
+    /* 0x276 */ be<u8> mFanfareActive;  /* was field_0x0206: subBgmStart 0201DE00 sets 1 for item-get / open-box fanfares, cleared when they end; seStart 0201EBA0 then plays only system SEs; ambience, alarm, battle BGM wait */
+    /* 0x277 */ be<u8> mTaktSeTimer;  /* was field_0x0207: seStart 0201EBA0 sets 2 on JA_SE_WTAKT_AMBIENT (zeldaGFrameWork 02024478 counts down); while set only the Wind Waker SEs play, talk/level-object/waterfall SEs and battle BGM wait */
+    /* 0x278 */ be<u8> mPirateSailSePlayed;  /* was field_0x0208: seStart 0201EBA0: JA_SE_OBJ_PIRATE_SAIL on Windfall layer 0xA only once (unless stream 0x17 plays); load1stDynamicWave 02026E04 clears */
     u8 padding279[0x3];
     /* 0x27C */ be<u32> field_0x020c;
     /* 0x280 */ be<u32> field_0x0210;
-    /* 0x284 */ gptr<Sound> field_0x0214;
-    /* 0x288 */ be<u32> field_0x0218;
+    /* 0x284 */ gptr<Sound> mpTelescopeSound;  /* was field_0x0214: seStart 0201EBA0: handle of JA_SE_TELESCOPE_ZOOM (pitch and volume set from the zoom) */
+    /* 0x288 */ be<u32> mCameraMapInfo;  /* was field_0x0218: getCameraMapInfo 02027668 stores it; riverSePlay 0201CDA0 tests 0x18 (JAIZelAtmos.h reads the sea-env group from its low byte) */
     /* 0x28C */ be<u8> mCameraSeaFloorGroupInfo;
     /* 0x28D */ be<u8> mLinkSeaFloorGroupInfo;
     /* 0x28E */ be<u8> field_0x021e;
     u8 padding28F[0x1];
-    /* 0x290 */ be<s32> field_0x0220;
-    /* 0x294 */ be<s32> field_0x0224;
+    /* 0x290 */ be<s32> mNextSceneNo;  /* was field_0x0220: setScene 0202677C stores the scene; load1stDynamicWave 02026E04 copies it to mSceneNo */
+    /* 0x294 */ be<s32> mSceneNo;  /* was field_0x0224: load1stDynamicWave 02026E04 copies mNextSceneNo; tested against scene numbers throughout (seStart 0201EBA0, zeldaGFrameWork 02024478, bgmNowBattle 0202879C, ...) */
     /* 0x298 */ be<u32> mNextSceneBgmId;
-    /* 0x29C */ be<u8> field_0x022c;
-    /* 0x29D */ be<u8> field_0x022d;
-    /* 0x29E */ be<u8> field_0x022e;
-    /* 0x29F */ be<u8> field_0x022f;
-    /* 0x2A0 */ be<u8> field_0x0230;
-    /* 0x2A1 */ be<u8> field_0x0231;
+    /* 0x29C */ be<u8> mSceneSetPending;  /* was field_0x022c: setScene 0202677C sets 1 (returns while set), load1stDynamicWave 02026E04 clears */
+    /* 0x29D */ be<u8> mSceneActive;  /* was field_0x022d: sceneBgmStart 020234A4 sets 1, setScene 0202677C / load1stDynamicWave 02026E04 / resetProcess 020263C0 clear; gates sea BGM, shore SE, Link voice, battle BGM, mSceneFrameCount */
+    /* 0x29E */ be<u8> mSceneBgmChanged;  /* was field_0x022e: sceneChange 020264F8: 1 when the next scene BGM differs from the playing one (stops the BGM); sceneBgmStart 020234A4 starts mNextSceneBgmId only then, and clears it */
+    /* 0x29F */ be<u8> mWaveToReload;  /* was field_0x022f: load1stDynamicWave 02026E04 loads this wave when mWaveBankReload is set */
+    /* 0x2A0 */ be<u8> mWaveBankToErase;  /* was field_0x0230: load1stDynamicWave 02026E04 erases this wave bank and heap (eraseWaveBank / eraseWaveHeap / resetWaveBank) when mWaveBankReload is set */
+    /* 0x2A1 */ be<u8> mWaveBankReload;  /* was field_0x0231: load1stDynamicWave 02026E04 erases mWaveBankToErase and loads mWaveToReload while set; sceneChange 020264F8 clears */
     /* 0x2A2 */ be<u8> mFirstDynamicSceneWaveIndex;
-    /* 0x2A3 */ be<u8> field_0x0233;
+    /* 0x2A3 */ be<u8> mPrevFirstDynamicSceneWaveIndex;  /* was field_0x0233: sceneChange 020264F8 saves mFirstDynamicSceneWaveIndex here before replacing it; load1stDynamicWave 02026E04 unloads its banks */
     /* 0x2A4 */ be<u8> mSetNum;
     /* 0x2A5 */ be<u8> mSecondDynamicSceneWaveIndex;
-    /* 0x2A6 */ be<u8> field_0x0236;
-    /* 0x2A7 */ be<u8> field_0x0237;
+    /* 0x2A6 */ be<u8> mPrevSecondDynamicSceneWaveIndex;  /* was field_0x0236: sceneChange 020264F8 saves mSecondDynamicSceneWaveIndex here before replacing it; load1stDynamicWave 02026E04 unloads its banks */
+    /* 0x2A7 */ be<u8> mSecondDynamicWaveChanged;  /* was field_0x0237: sceneChange 020264F8 sets 1 when the 2nd wave set changes; load1stDynamicWave 02026E04 / load2ndDynamicWave 020271E4 reload the 2nd banks while set */
     /* 0x2A8 */ be<u8> mIslandRoomNo;
-    /* 0x2A9 */ be<u8> field_0x0239;
-    /* 0x2AA */ be<u8> field_0x023a;
+    /* 0x2A9 */ be<u8> mLayerNo;  /* was field_0x0239: setScene 0202677C stores the layer argument; seStart 0201EBA0 / startAnimSound 0201B71C test it with the scene and island room */
+    /* 0x2AA */ be<u8> mInitialized;  /* was field_0x023a: init 02026044 sets 1 at the end of the audio setup */
     u8 padding2AB[0x1];
     /* 0x2AC */ be<u32> mBgmWaveCountHD;
     /* 0x2B0 */ gptr<be<u8>> mBgmWaveInfoHD;
     /* 0x2B4 */ LevelObjectSound mLevelObjectSoundsHD[15];
     /* 0x15EC */ be<u32> mLevelObjectSoundCountHD;
     u8 padding15F0[0x600];
-    /* 0x1BF0 */ be<u32> field_0x1b80;
+    /* 0x1BF0 */ be<u32> mSeaEnvPosCount;  /* was field_0x1b80: initSeaEnvPos 0201C4B8 / registSeaEnvPos 0201C4C4 (max 0x3F) / seaEnvSePlay 0201C524: number of registered sea ambience points */
     /* 0x1BF4 */ cXyz mSeaPositionHD;
     u8 padding1C00[0x240];
-    /* 0x1E40 */ be<u32> field_0x1dd0;
-    /* 0x1E44 */ be<u8> field_0x1dd4;
+    /* 0x1E40 */ be<u32> mRiverPosCount;  /* was field_0x1dd0: initRiverPos 0201CC44 / registRiverPos 0201CC50 (max 0x2F) / riverSePlay 0201CDA0: number of registered river points */
+    /* 0x1E44 */ be<u8> mBstHoriSeOn;  /* was field_0x1dd4: riverSePlay 0201CDA0: river type 3 plays JA_SE_CM_BST_HORI only while set; load1stDynamicWave 02026E04 clears */
     u8 padding1E45[0xC3];
-    /* 0x1F08 */ be<u32> field_0x1e98;
+    /* 0x1F08 */ be<u32> mWaterfallPosCount;  /* was field_0x1e98: waterfallSePlay 0201CF54: index of the next mWaterfallPos entry (max 0xF), zeldaGFrameWork 02024478 resets it each frame */
     u8 padding1F0C[0x24];
-    /* 0x1F30 */ be<u32> field_0x1ec0;
-    /* 0x1F34 */ be<u32> field_0x1ec4;
-    /* 0x1F38 */ be<u32> field_0x1ec8;
-    /* 0x1F3C */ be<u32> field_0x1ecc;
-    /* 0x1F40 */ be<u32> field_0x1ed0;
-    /* 0x1F44 */ VectorWords field_0x1ed4[8];
-    /* 0x1FA4 */ be<u32> field_0x1f34;
-    /* 0x1FA8 */ gptr<Sound> field_0x1f38;
-    /* 0x1FAC */ be<u8> field_0x1f3c;
+    /* 0x1F30 */ be<u32> mWindowPosCount;  /* was field_0x1ec0: initWindowPos 0201D140 / registWindowPos 0201D14C (max 2) / rainPlay 0201D1AC: number of registered window points */
+    /* 0x1F34 */ be<u32> mpSeaEnvSoundL;  /* was field_0x1ec4: seaEnvSePlay 0201C524: handle of the sea ambience played at pan 1.0 with the left volume */
+    /* 0x1F38 */ be<u32> mpSeaEnvSoundR;  /* was field_0x1ec8: seaEnvSePlay 0201C524: handle of the sea ambience played at pan 0.0 with the right volume */
+    /* 0x1F3C */ be<u32> mpSeaEnvSoundS;  /* was field_0x1ecc: seaEnvSePlay 0201C524: handle of the sea ambience played at pan 0.5, dolby 1.0 with the surround volume */
+    /* 0x1F40 */ be<u32> mpSeaShoreSound;  /* was field_0x1ed0: seaShoreSE 0201CA10: handle of the JA_SE_SEASHORE_* sound at mSeaShorePos */
+    /* 0x1F44 */ VectorWords mFireblastPos[8];  /* was field_0x1ed4: seStart 0201EBA0: JA_SE_FIREBLAST_BLOW stores a height-clamped copy of each position here (mFireblastPosCount entries) and plays it from the copy */
+    /* 0x1FA4 */ be<u32> mFireblastPosCount;  /* was field_0x1f34: seStart 0201EBA0: next mFireblastPos entry; zeldaGFrameWork 02024478 resets it each frame */
+    /* 0x1FA8 */ gptr<Sound> mpWindSound;  /* was field_0x1f38: zeldaGFrameWork 02024478: handle of JA_SE_ATM_WIND_I_LINK / JA_SE_ATM_WIND_MJT, volume by camera height */
+    /* 0x1FAC */ be<u8> mIslandLinkBgm;  /* was field_0x1f3c: bgmStart 0202204C sets 1 for JA_BGM_ISLAND_LINK(_0/_2); bgmStop 02021F28, bgmStreamPlay 02027F04, load1stDynamicWave 02026E04 clear */
     /* 0x1FAD */ be<u8> mIsSailing;
     u8 padding1FAE[0x2];
-    /* 0x1FB0 */ be<f32> field_0x1f40;
-    /* 0x1FB4 */ gptr<Sound> field_0x1f44;
-    /* 0x1FB8 */ gptr<Sound> field_0x1f48;
-    /* 0x1FBC */ MonsterSlot field_0x1f4c[30];
-    /* 0x20AC */ be<u8> field_0x203c;
-    /* 0x20AD */ be<u8> field_0x203d;
+    /* 0x1FB0 */ be<f32> mShipSpeed;  /* was field_0x1f40: shipCruiseSePlay 02029638 stores the speed argument; bgmStart 0202204C mutes the sea BGM track when not sailing and below 0.2 */
+    /* 0x1FB4 */ gptr<Sound> mpShipCruiseSound;  /* was field_0x1f44: shipCruiseSePlay 02029638: handle of JA_SE_SHIP_GO_NORMAL */
+    /* 0x1FB8 */ gptr<Sound> mpShipWaveSound;  /* was field_0x1f48: shipCruiseSePlay 02029638: handle of JA_SE_SHIP_WAVE_S (or the second wave sound) */
+    /* 0x1FBC */ MonsterSlot mMonsSe[30];  /* was field_0x1f4c: monsSeStart 020299D8: 30 {object, sound handle} slots for monster sounds; monsSeInit 0202573C resets them */
+    /* 0x20AC */ be<u8> mKuroboMotionCount;  /* was field_0x203c: kuroboMotionPlay 0201D57C: at most 4 motion sounds per frame (zeldaGFrameWork 02024478 resets) */
+    /* 0x20AD */ be<u8> mKuroboVoiceCount;  /* was field_0x203d: kuroboVoicePlay 0202587C: at most 4 voices per frame (zeldaGFrameWork 02024478 resets) */
     u8 padding20AE[0x2];
-    /* 0x20B0 */ gptr<Sound> field_0x2040[4];
-    /* 0x20C0 */ gptr<Sound> field_0x2050[4];
-    /* 0x20D0 */ gptr<Sound> field_0x2060;
+    /* 0x20B0 */ gptr<Sound> mpKuroboMotionSound[4];  /* was field_0x2040: kuroboMotionPlay 0201D57C: 4 handles, the first free one is used */
+    /* 0x20C0 */ gptr<Sound> mpKuroboVoiceSound[4];  /* was field_0x2050: kuroboVoicePlay 0202587C: 4 handles, the first free one is used */
+    /* 0x20D0 */ gptr<Sound> mpCharVoiceSound;  /* was field_0x2060: charVoicePlay 02029074: handle of JA_SE_CV_COMMON_PEOPLE (ports 8 and 9 set) */
     /* 0x20D4 */ be<u16> mVoiceIndexHD;
     u8 padding20D6[0xE];
     /* 0x20E4 */ gptr<Sound> mSystemSoundHD;
@@ -491,150 +491,150 @@ struct JAIZelBasic {
 };
 WWHD_OFFSET(JAIZelBasic, mAudioCamera, 0x0);
 WWHD_OFFSET(JAIZelBasic, __vtbl, 0x2C);
-WWHD_OFFSET(JAIZelBasic, field_0x0020, 0x30);
-WWHD_OFFSET(JAIZelBasic, field_0x0021, 0x31);
-WWHD_OFFSET(JAIZelBasic, field_0x0024, 0x34);
-WWHD_OFFSET(JAIZelBasic, field_0x0028, 0x38);
+WWHD_OFFSET(JAIZelBasic, mIsMenuIn, 0x30);
+WWHD_OFFSET(JAIZelBasic, mSceneBgmStartedOnce, 0x31);
+WWHD_OFFSET(JAIZelBasic, mpEventBits, 0x34);
+WWHD_OFFSET(JAIZelBasic, mSceneFrameCount, 0x38);
 WWHD_OFFSET(JAIZelBasic, mHour, 0x3C);
 WWHD_OFFSET(JAIZelBasic, mMinute, 0x3D);
 WWHD_OFFSET(JAIZelBasic, mWeekday, 0x3E);
 WWHD_OFFSET(JAIZelBasic, field_0x002f, 0x3F);
-WWHD_OFFSET(JAIZelBasic, field_0x0030, 0x40);
-WWHD_OFFSET(JAIZelBasic, field_0x0032, 0x42);
-WWHD_OFFSET(JAIZelBasic, field_0x0033, 0x43);
-WWHD_OFFSET(JAIZelBasic, field_0x0034, 0x44);
-WWHD_OFFSET(JAIZelBasic, field_0x0038, 0x48);
-WWHD_OFFSET(JAIZelBasic, field_0x003c, 0x4C);
-WWHD_OFFSET(JAIZelBasic, field_0x0040, 0x50);
-WWHD_OFFSET(JAIZelBasic, field_0x0041, 0x51);
-WWHD_OFFSET(JAIZelBasic, field_0x0042, 0x52);
-WWHD_OFFSET(JAIZelBasic, field_0x0043, 0x53);
-WWHD_OFFSET(JAIZelBasic, field_0x0044, 0x54);
-WWHD_OFFSET(JAIZelBasic, field_0x0045, 0x55);
-WWHD_OFFSET(JAIZelBasic, field_0x0046, 0x56);
-WWHD_OFFSET(JAIZelBasic, field_0x0047, 0x57);
-WWHD_OFFSET(JAIZelBasic, field_0x0048, 0x58);
-WWHD_OFFSET(JAIZelBasic, field_0x0054, 0x64);
+WWHD_OFFSET(JAIZelBasic, mPrevTime, 0x40);
+WWHD_OFFSET(JAIZelBasic, mMorningBgmPlaying, 0x42);
+WWHD_OFFSET(JAIZelBasic, mDayNightSwitched, 0x43);
+WWHD_OFFSET(JAIZelBasic, mLinkHp, 0x44);
+WWHD_OFFSET(JAIZelBasic, mLinkMaxHp, 0x48);
+WWHD_OFFSET(JAIZelBasic, mLinkHpRatio, 0x4C);
+WWHD_OFFSET(JAIZelBasic, mHeartGaugeTimer, 0x50);
+WWHD_OFFSET(JAIZelBasic, mLinkSwordType, 0x51);
+WWHD_OFFSET(JAIZelBasic, mLinkSwordPlace, 0x52);
+WWHD_OFFSET(JAIZelBasic, mLinkShieldType, 0x53);
+WWHD_OFFSET(JAIZelBasic, mLinkShieldPlace, 0x54);
+WWHD_OFFSET(JAIZelBasic, mLinkSwordShieldOnBack, 0x55);
+WWHD_OFFSET(JAIZelBasic, mLinkBootsType, 0x56);
+WWHD_OFFSET(JAIZelBasic, mLinkOnBoard, 0x57);
+WWHD_OFFSET(JAIZelBasic, mCameraOldPos, 0x58);
+WWHD_OFFSET(JAIZelBasic, mCameraPolygonPos, 0x64);
 WWHD_OFFSET(JAIZelBasic, mbLandingDemoStarted, 0x70);
-WWHD_OFFSET(JAIZelBasic, field_0x0061, 0x71);
-WWHD_OFFSET(JAIZelBasic, field_0x0062, 0x72);
-WWHD_OFFSET(JAIZelBasic, field_0x0063, 0x73);
-WWHD_OFFSET(JAIZelBasic, field_0x0064, 0x74);
-WWHD_OFFSET(JAIZelBasic, field_0x0065, 0x75);
-WWHD_OFFSET(JAIZelBasic, field_0x0066, 0x76);
+WWHD_OFFSET(JAIZelBasic, mEventTimer, 0x71);
+WWHD_OFFSET(JAIZelBasic, mKamomeFlag, 0x72);
+WWHD_OFFSET(JAIZelBasic, mBgmDisabled, 0x73);
+WWHD_OFFSET(JAIZelBasic, mTalkInBlocked, 0x74);
+WWHD_OFFSET(JAIZelBasic, mMtDragonMuteRequest, 0x75);
+WWHD_OFFSET(JAIZelBasic, mSelectBgmOnly, 0x76);
 WWHD_OFFSET(JAIZelBasic, mpMainBgmSound, 0x78);
 WWHD_OFFSET(JAIZelBasic, mpSubBgmSound, 0x7C);
 WWHD_OFFSET(JAIZelBasic, mpStreamBgmSound, 0x80);
 WWHD_OFFSET(JAIZelBasic, mSubBgmNum, 0x84);
 WWHD_OFFSET(JAIZelBasic, mMainBgmNum, 0x88);
 WWHD_OFFSET(JAIZelBasic, mStreamBgmNum, 0x8C);
-WWHD_OFFSET(JAIZelBasic, field_0x0080, 0x90);
-WWHD_OFFSET(JAIZelBasic, field_0x0084, 0x94);
-WWHD_OFFSET(JAIZelBasic, field_0x0088, 0x98);
-WWHD_OFFSET(JAIZelBasic, field_0x008c, 0x9C);
-WWHD_OFFSET(JAIZelBasic, field_0x0090, 0xA0);
-WWHD_OFFSET(JAIZelBasic, field_0x0094, 0xA4);
-WWHD_OFFSET(JAIZelBasic, field_0x0098, 0xA8);
-WWHD_OFFSET(JAIZelBasic, field_0x009c, 0xAC);
-WWHD_OFFSET(JAIZelBasic, field_0x00a0, 0xB0);
-WWHD_OFFSET(JAIZelBasic, field_0x00a4, 0xB4);
-WWHD_OFFSET(JAIZelBasic, field_0x00a8, 0xB8);
-WWHD_OFFSET(JAIZelBasic, field_0x00ac, 0xBC);
-WWHD_OFFSET(JAIZelBasic, field_0x00b0, 0xC0);
+WWHD_OFFSET(JAIZelBasic, mMainBgmMuteVolume, 0x90);
+WWHD_OFFSET(JAIZelBasic, mMainBgmTalkVolume, 0x94);
+WWHD_OFFSET(JAIZelBasic, mMainBgmMenuVolume, 0x98);
+WWHD_OFFSET(JAIZelBasic, mMainBgmSubBgmVolume, 0x9C);
+WWHD_OFFSET(JAIZelBasic, mMainBgmSceneVolume, 0xA0);
+WWHD_OFFSET(JAIZelBasic, mMainBgmSeaVolume, 0xA4);
+WWHD_OFFSET(JAIZelBasic, mMainBgmTaktVolume, 0xA8);
+WWHD_OFFSET(JAIZelBasic, mMainBgmCbPracticeVolume, 0xAC);
+WWHD_OFFSET(JAIZelBasic, mSubBgmTalkMenuVolume, 0xB0);
+WWHD_OFFSET(JAIZelBasic, mSubBgmTaktVolume, 0xB4);
+WWHD_OFFSET(JAIZelBasic, mSubBgmCbPracticeVolume, 0xB8);
+WWHD_OFFSET(JAIZelBasic, mMainBgmHeightVolume, 0xBC);
+WWHD_OFFSET(JAIZelBasic, mSubBgmStopTimer, 0xC0);
 WWHD_OFFSET(JAIZelBasic, field_0x00b4, 0xC4);
 WWHD_OFFSET(JAIZelBasic, mSomeSpecialBGMFlag, 0xC5);
 WWHD_OFFSET(JAIZelBasic, mLastMinibossSubBGMType, 0xC6);
-WWHD_OFFSET(JAIZelBasic, field_0x00b7, 0xC7);
-WWHD_OFFSET(JAIZelBasic, field_0x00b8, 0xC8);
-WWHD_OFFSET(JAIZelBasic, field_0x00b9, 0xC9);
-WWHD_OFFSET(JAIZelBasic, field_0x00ba, 0xCA);
-WWHD_OFFSET(JAIZelBasic, field_0x00bb, 0xCB);
-WWHD_OFFSET(JAIZelBasic, field_0x00bc, 0xCC);
-WWHD_OFFSET(JAIZelBasic, field_0x00bd, 0xCD);
-WWHD_OFFSET(JAIZelBasic, field_0x00be, 0xCE);
-WWHD_OFFSET(JAIZelBasic, field_0x00bf, 0xCF);
-WWHD_OFFSET(JAIZelBasic, field_0x00c0, 0xD0);
-WWHD_OFFSET(JAIZelBasic, field_0x00c1, 0xD1);
-WWHD_OFFSET(JAIZelBasic, field_0x00c4, 0xD4);
-WWHD_OFFSET(JAIZelBasic, field_0x00c8, 0xD8);
-WWHD_OFFSET(JAIZelBasic, field_0x00c9, 0xD9);
-WWHD_OFFSET(JAIZelBasic, field_0x00ca, 0xDA);
-WWHD_OFFSET(JAIZelBasic, field_0x00cb, 0xDB);
-WWHD_OFFSET(JAIZelBasic, field_0x00cc, 0xDC);
-WWHD_OFFSET(JAIZelBasic, field_0x00cd, 0xDD);
-WWHD_OFFSET(JAIZelBasic, field_0x00ce, 0xDE);
-WWHD_OFFSET(JAIZelBasic, field_0x00d0, 0xE0);
+WWHD_OFFSET(JAIZelBasic, mSkyCloistersTimer, 0xC7);
+WWHD_OFFSET(JAIZelBasic, mStreamBgmStarted, 0xC8);
+WWHD_OFFSET(JAIZelBasic, mDemoFanfareMuted, 0xC9);
+WWHD_OFFSET(JAIZelBasic, mTetraFlyStreamStarted, 0xCA);
+WWHD_OFFSET(JAIZelBasic, mFanfareResumePending, 0xCB);
+WWHD_OFFSET(JAIZelBasic, mPendingBgmStart, 0xCC);
+WWHD_OFFSET(JAIZelBasic, mSceneBgmLocked, 0xCD);
+WWHD_OFFSET(JAIZelBasic, mTalkSeBlocked, 0xCE);
+WWHD_OFFSET(JAIZelBasic, mCameraGroupLocked, 0xCF);
+WWHD_OFFSET(JAIZelBasic, mBattleBgmFadeDelay, 0xD0);
+WWHD_OFFSET(JAIZelBasic, mEnemyNearbyOn, 0xD1);
+WWHD_OFFSET(JAIZelBasic, mEnemyNearbyFadeTimer, 0xD4);
+WWHD_OFFSET(JAIZelBasic, mKaitengiriTimer, 0xD8);
+WWHD_OFFSET(JAIZelBasic, mSwordUsing, 0xD9);
+WWHD_OFFSET(JAIZelBasic, mBattleBgmDisabled, 0xDA);
+WWHD_OFFSET(JAIZelBasic, mEnemyNearbyDelay, 0xDB);
+WWHD_OFFSET(JAIZelBasic, mDkMaskBroken, 0xDC);
+WWHD_OFFSET(JAIZelBasic, mSkipSceneStream, 0xDD);
+WWHD_OFFSET(JAIZelBasic, mBattleBgmHoldTimer, 0xDE);
+WWHD_OFFSET(JAIZelBasic, mpCbPracticePos, 0xE0);
 WWHD_OFFSET(JAIZelBasic, mpSeSound, 0xE4);
 WWHD_OFFSET(JAIZelBasic, mSeNum, 0x164);
-WWHD_OFFSET(JAIZelBasic, field_0x0194, 0x1E4);
-WWHD_OFFSET(JAIZelBasic, field_0x01f4, 0x264);
-WWHD_OFFSET(JAIZelBasic, field_0x01f8, 0x268);
-WWHD_OFFSET(JAIZelBasic, field_0x01f9, 0x269);
-WWHD_OFFSET(JAIZelBasic, field_0x01fa, 0x26A);
-WWHD_OFFSET(JAIZelBasic, field_0x01fb, 0x26B);
-WWHD_OFFSET(JAIZelBasic, field_0x01fc, 0x26C);
-WWHD_OFFSET(JAIZelBasic, field_0x01fd, 0x26D);
-WWHD_OFFSET(JAIZelBasic, field_0x01fe, 0x26E);
-WWHD_OFFSET(JAIZelBasic, field_0x01ff, 0x26F);
-WWHD_OFFSET(JAIZelBasic, field_0x0200, 0x270);
-WWHD_OFFSET(JAIZelBasic, field_0x0201, 0x271);
-WWHD_OFFSET(JAIZelBasic, field_0x0202, 0x272);
-WWHD_OFFSET(JAIZelBasic, field_0x0204, 0x274);
-WWHD_OFFSET(JAIZelBasic, field_0x0205, 0x275);
-WWHD_OFFSET(JAIZelBasic, field_0x0206, 0x276);
-WWHD_OFFSET(JAIZelBasic, field_0x0207, 0x277);
-WWHD_OFFSET(JAIZelBasic, field_0x0208, 0x278);
+WWHD_OFFSET(JAIZelBasic, mSePosAddr, 0x1E4);
+WWHD_OFFSET(JAIZelBasic, mSeSlotIndex, 0x264);
+WWHD_OFFSET(JAIZelBasic, mNoCameraTimer, 0x268);
+WWHD_OFFSET(JAIZelBasic, mAddGrassSePlayed, 0x269);
+WWHD_OFFSET(JAIZelBasic, mCutGrassSeTimer, 0x26A);
+WWHD_OFFSET(JAIZelBasic, mBrkWrailKSePlayed, 0x26B);
+WWHD_OFFSET(JAIZelBasic, mColBrkWrailingSePlayed, 0x26C);
+WWHD_OFFSET(JAIZelBasic, mBgnStringRippleSeTimer, 0x26D);
+WWHD_OFFSET(JAIZelBasic, mBgnBodyRippleSeTimer, 0x26E);
+WWHD_OFFSET(JAIZelBasic, mBgnHeadRippleSeTimer, 0x26F);
+WWHD_OFFSET(JAIZelBasic, mBgnTailRippleSeTimer, 0x270);
+WWHD_OFFSET(JAIZelBasic, mAllSeMuted, 0x271);
+WWHD_OFFSET(JAIZelBasic, mSwingSeTimers, 0x272);
+WWHD_OFFSET(JAIZelBasic, mSeaEnvSeOff, 0x274);
+WWHD_OFFSET(JAIZelBasic, mForceBack, 0x275);
+WWHD_OFFSET(JAIZelBasic, mFanfareActive, 0x276);
+WWHD_OFFSET(JAIZelBasic, mTaktSeTimer, 0x277);
+WWHD_OFFSET(JAIZelBasic, mPirateSailSePlayed, 0x278);
 WWHD_OFFSET(JAIZelBasic, field_0x020c, 0x27C);
 WWHD_OFFSET(JAIZelBasic, field_0x0210, 0x280);
-WWHD_OFFSET(JAIZelBasic, field_0x0214, 0x284);
-WWHD_OFFSET(JAIZelBasic, field_0x0218, 0x288);
+WWHD_OFFSET(JAIZelBasic, mpTelescopeSound, 0x284);
+WWHD_OFFSET(JAIZelBasic, mCameraMapInfo, 0x288);
 WWHD_OFFSET(JAIZelBasic, mCameraSeaFloorGroupInfo, 0x28C);
 WWHD_OFFSET(JAIZelBasic, mLinkSeaFloorGroupInfo, 0x28D);
 WWHD_OFFSET(JAIZelBasic, field_0x021e, 0x28E);
-WWHD_OFFSET(JAIZelBasic, field_0x0220, 0x290);
-WWHD_OFFSET(JAIZelBasic, field_0x0224, 0x294);
+WWHD_OFFSET(JAIZelBasic, mNextSceneNo, 0x290);
+WWHD_OFFSET(JAIZelBasic, mSceneNo, 0x294);
 WWHD_OFFSET(JAIZelBasic, mNextSceneBgmId, 0x298);
-WWHD_OFFSET(JAIZelBasic, field_0x022c, 0x29C);
-WWHD_OFFSET(JAIZelBasic, field_0x022d, 0x29D);
-WWHD_OFFSET(JAIZelBasic, field_0x022e, 0x29E);
-WWHD_OFFSET(JAIZelBasic, field_0x022f, 0x29F);
-WWHD_OFFSET(JAIZelBasic, field_0x0230, 0x2A0);
-WWHD_OFFSET(JAIZelBasic, field_0x0231, 0x2A1);
+WWHD_OFFSET(JAIZelBasic, mSceneSetPending, 0x29C);
+WWHD_OFFSET(JAIZelBasic, mSceneActive, 0x29D);
+WWHD_OFFSET(JAIZelBasic, mSceneBgmChanged, 0x29E);
+WWHD_OFFSET(JAIZelBasic, mWaveToReload, 0x29F);
+WWHD_OFFSET(JAIZelBasic, mWaveBankToErase, 0x2A0);
+WWHD_OFFSET(JAIZelBasic, mWaveBankReload, 0x2A1);
 WWHD_OFFSET(JAIZelBasic, mFirstDynamicSceneWaveIndex, 0x2A2);
-WWHD_OFFSET(JAIZelBasic, field_0x0233, 0x2A3);
+WWHD_OFFSET(JAIZelBasic, mPrevFirstDynamicSceneWaveIndex, 0x2A3);
 WWHD_OFFSET(JAIZelBasic, mSetNum, 0x2A4);
 WWHD_OFFSET(JAIZelBasic, mSecondDynamicSceneWaveIndex, 0x2A5);
-WWHD_OFFSET(JAIZelBasic, field_0x0236, 0x2A6);
-WWHD_OFFSET(JAIZelBasic, field_0x0237, 0x2A7);
+WWHD_OFFSET(JAIZelBasic, mPrevSecondDynamicSceneWaveIndex, 0x2A6);
+WWHD_OFFSET(JAIZelBasic, mSecondDynamicWaveChanged, 0x2A7);
 WWHD_OFFSET(JAIZelBasic, mIslandRoomNo, 0x2A8);
-WWHD_OFFSET(JAIZelBasic, field_0x0239, 0x2A9);
-WWHD_OFFSET(JAIZelBasic, field_0x023a, 0x2AA);
+WWHD_OFFSET(JAIZelBasic, mLayerNo, 0x2A9);
+WWHD_OFFSET(JAIZelBasic, mInitialized, 0x2AA);
 WWHD_OFFSET(JAIZelBasic, mBgmWaveCountHD, 0x2AC);
 WWHD_OFFSET(JAIZelBasic, mBgmWaveInfoHD, 0x2B0);
 WWHD_OFFSET(JAIZelBasic, mLevelObjectSoundCountHD, 0x15EC);
-WWHD_OFFSET(JAIZelBasic, field_0x1b80, 0x1BF0);
+WWHD_OFFSET(JAIZelBasic, mSeaEnvPosCount, 0x1BF0);
 WWHD_OFFSET(JAIZelBasic, mSeaPositionHD, 0x1BF4);
-WWHD_OFFSET(JAIZelBasic, field_0x1dd0, 0x1E40);
-WWHD_OFFSET(JAIZelBasic, field_0x1dd4, 0x1E44);
-WWHD_OFFSET(JAIZelBasic, field_0x1e98, 0x1F08);
-WWHD_OFFSET(JAIZelBasic, field_0x1ec0, 0x1F30);
-WWHD_OFFSET(JAIZelBasic, field_0x1ec4, 0x1F34);
-WWHD_OFFSET(JAIZelBasic, field_0x1ec8, 0x1F38);
-WWHD_OFFSET(JAIZelBasic, field_0x1ecc, 0x1F3C);
-WWHD_OFFSET(JAIZelBasic, field_0x1ed0, 0x1F40);
-WWHD_OFFSET(JAIZelBasic, field_0x1f34, 0x1FA4);
-WWHD_OFFSET(JAIZelBasic, field_0x1f38, 0x1FA8);
-WWHD_OFFSET(JAIZelBasic, field_0x1f3c, 0x1FAC);
+WWHD_OFFSET(JAIZelBasic, mRiverPosCount, 0x1E40);
+WWHD_OFFSET(JAIZelBasic, mBstHoriSeOn, 0x1E44);
+WWHD_OFFSET(JAIZelBasic, mWaterfallPosCount, 0x1F08);
+WWHD_OFFSET(JAIZelBasic, mWindowPosCount, 0x1F30);
+WWHD_OFFSET(JAIZelBasic, mpSeaEnvSoundL, 0x1F34);
+WWHD_OFFSET(JAIZelBasic, mpSeaEnvSoundR, 0x1F38);
+WWHD_OFFSET(JAIZelBasic, mpSeaEnvSoundS, 0x1F3C);
+WWHD_OFFSET(JAIZelBasic, mpSeaShoreSound, 0x1F40);
+WWHD_OFFSET(JAIZelBasic, mFireblastPosCount, 0x1FA4);
+WWHD_OFFSET(JAIZelBasic, mpWindSound, 0x1FA8);
+WWHD_OFFSET(JAIZelBasic, mIslandLinkBgm, 0x1FAC);
 WWHD_OFFSET(JAIZelBasic, mIsSailing, 0x1FAD);
-WWHD_OFFSET(JAIZelBasic, field_0x1f40, 0x1FB0);
-WWHD_OFFSET(JAIZelBasic, field_0x1f44, 0x1FB4);
-WWHD_OFFSET(JAIZelBasic, field_0x1f48, 0x1FB8);
-WWHD_OFFSET(JAIZelBasic, field_0x1f4c, 0x1FBC);
-WWHD_OFFSET(JAIZelBasic, field_0x203c, 0x20AC);
-WWHD_OFFSET(JAIZelBasic, field_0x203d, 0x20AD);
-WWHD_OFFSET(JAIZelBasic, field_0x2040, 0x20B0);
-WWHD_OFFSET(JAIZelBasic, field_0x2050, 0x20C0);
-WWHD_OFFSET(JAIZelBasic, field_0x2060, 0x20D0);
+WWHD_OFFSET(JAIZelBasic, mShipSpeed, 0x1FB0);
+WWHD_OFFSET(JAIZelBasic, mpShipCruiseSound, 0x1FB4);
+WWHD_OFFSET(JAIZelBasic, mpShipWaveSound, 0x1FB8);
+WWHD_OFFSET(JAIZelBasic, mMonsSe, 0x1FBC);
+WWHD_OFFSET(JAIZelBasic, mKuroboMotionCount, 0x20AC);
+WWHD_OFFSET(JAIZelBasic, mKuroboVoiceCount, 0x20AD);
+WWHD_OFFSET(JAIZelBasic, mpKuroboMotionSound, 0x20B0);
+WWHD_OFFSET(JAIZelBasic, mpKuroboVoiceSound, 0x20C0);
+WWHD_OFFSET(JAIZelBasic, mpCharVoiceSound, 0x20D0);
 WWHD_OFFSET(JAIZelBasic, mVoiceIndexHD, 0x20D4);
 WWHD_OFFSET(JAIZelBasic, mSystemSoundHD, 0x20E4);
 WWHD_OFFSET(JAIZelBasic, mAllocationRecordsHD, 0x20E8);
@@ -734,8 +734,8 @@ u32 checkSoundPointer(cXyz *);
 WWHD_SIZE(jaizel12::LevelObjectSound, 0x148);
 WWHD_SIZE(jaizel12::LevelObjectInstance, 16);
 WWHD_OFFSET(jaizel12::JAIZelBasic, mLevelObjectSoundsHD, 0x2B4);
-WWHD_OFFSET(jaizel12::JAIZelBasic, field_0x1ed4, 0x1F44);
-WWHD_OFFSET(jaizel12::JAIZelBasic, field_0x8, 4);
+WWHD_OFFSET(jaizel12::JAIZelBasic, mFireblastPos, 0x1F44);
+WWHD_OFFSET(jaizel12::JAIZelBasic, mHeap, 4);
 
 WWHD_OFFSET(jaizel12::LevelObjectSound, id, 0);
 WWHD_OFFSET(jaizel12::LevelObjectSound, count, 4);

@@ -891,8 +891,8 @@ WWHD_SIZE(Player01FootCallback, 0x20);
 WWHD_OFFSET(Player01FootEffect, mOtherCallback, 0x20);
 WWHD_OFFSET(Player01FootEffect, mID, 0x48);
 WWHD_SIZE(Player01FootEffect, 0x4C);
-struct Player01BarrelState { u8 _actor[0x738]; be<s16> m61C; };
-WWHD_OFFSET(Player01BarrelState, m61C, 0x738);
+struct Player01BarrelState { u8 _actor[0x738]; be<s16> mSlantAngle; /* was m61C: view of daObjBarrel::Act_c::mSlantAngle (tww get_slant_angle() / set_slant_angle()); cleared by freeGrabItem 023DCF8C */ };
+WWHD_OFFSET(Player01BarrelState, mSlantAngle, 0x738);
 // HD: the sword-tip model exposes native texture/material controller words.
 struct Player01SwordTipModelData {
     u8 _modelData[0x40];

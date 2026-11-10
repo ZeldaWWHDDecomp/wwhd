@@ -92,13 +92,13 @@ struct sub_meter_class {
     u8 before_mHeart[0x644];
     fopMsgM_pane_class mHeart[20];
     fopMsgM_pane_class mHeartShadow[20];
-    fopMsgM_pane_class field_0x0f00;
-    fopMsgM_pane_class field_0x0f38[8];
-    fopMsgM_pane_class field_0x10f8;
-    fopMsgM_pane_class field_0x1130;
-    fopMsgM_pane_class field_0x1168;
-    fopMsgM_pane_class field_0x11a0;
-    fopMsgM_pane_class field_0x11d8;
+    fopMsgM_pane_class mHeartLight;  /* was field_0x0f00: pane 'htfl' (dMeter_screenDataSet in dMeter_Create 02595C6C): the light on the current heart; dMeter_heartInit 02591B4C copies the current heart's position and size into it and clears its mUserArea (frame counter, also cleared by the life change in dMeter_Execute 02593B10); dMeter_gaugeAlpha 0259C2BC scales its alpha by mHeartAlpha; TWW d_meter.cpp dMeter_heartLightMove pulses its alpha and size */
+    fopMsgM_pane_class mMagicBar[8];  /* was field_0x0f38: panes 'mbr1'..'mbr8' (dMeter_screenDataSet in dMeter_Create 02595C6C): the magic fill segments; dMeter_magicChange 02592A88 shows, shortens or hides each by the shown magic (mDispMagic / 100), dMeter_gaugeAlpha 0259C2BC fades them with mMagicAlpha; their mUserArea fields are dMeter_magicGaugeMove 0259B698 / dMeter_flyGaugeMove 02592EE8 state ([0] fly colours set, [2] capacity reached, [3]/[4] pulse timer/flag, [5] redraw) */
+    fopMsgM_pane_class mMagicGauge3;  /* was field_0x10f8: pane 'mbb3' (dMeter_screenDataSet in dMeter_Create 02595C6C): dMeter_magicLength 02592888 sets its width from the shown capacity (mDispMaxMagic), mMagicGauge1/2 follow that width; its mUserArea is the fade counter behind mMagicAlpha (dMeter_magicGaugeMove 0259B698); moved with the gauge (dMeter_magicTransNowInit 0259295C, dMeter_magicTransScale 02592CD8) and faded by dMeter_gaugeAlpha 0259C2BC */
+    fopMsgM_pane_class mMagicGauge2;  /* was field_0x1130: pane 'mbb2' (dMeter_screenDataSet in dMeter_Create 02595C6C): dMeter_magicLength 02592888 sizes it to mMagicGauge3's width plus its own margin; dMeter_magicTransScale 02592CD8 scales its position and size (a child of mMagicGauge1); its mUserArea is dMeter_flyGaugeMove 02592EE8's 50-frame move-to-the-flyer timer; TWW dMeter_magicColor colours it with mMagicGauge1 */
+    fopMsgM_pane_class mMagicGaugeShadow2;  /* was field_0x1168: pane 'mbk2' (dMeter_screenDataSet in dMeter_Create 02595C6C): dMeter_magicTransScale 02592CD8 scales its position and size like mMagicGauge2 (a child of mMagicGauge1); the shadow of 'mbb2' by the tag pattern of mHeart/mHeartShadow ('ht'/'hk') */
+    fopMsgM_pane_class mMagicGauge1;  /* was field_0x11a0: pane 'mbb1' (dMeter_screenDataSet in dMeter_Create 02595C6C): dMeter_magicLength 02592888 sizes it to mMagicGauge3's width plus its own margin; its centre is the anchor dMeter_magicTransScale 02592CD8 scales the other gauge panes about; its mUserArea is dMeter_flyGaugeMove 02592EE8's fade counter; moved with the gauge (dMeter_magicTransNowInit 0259295C) and faded by dMeter_gaugeAlpha 0259C2BC */
+    fopMsgM_pane_class mMagicGaugeShadow1;  /* was field_0x11d8: pane 'mbk1' (dMeter_screenDataSet in dMeter_Create 02595C6C): moves, scales and fades with mMagicGauge1 (dMeter_magicTransNowInit 0259295C, dMeter_magicInitTrans 02592BC4, dMeter_magicTransScale 02592CD8, dMeter_gaugeAlpha 0259C2BC); dMeter_magicGaugeMove 0259B698 clears its mUserArea; the 'k' tags are the shadow panes as for mHeart/mHeartShadow ('ht'/'hk') */
     fopMsgM_pane_class field_0x1210;
     fopMsgM_pane_class field_0x1248;
     fopMsgM_pane_class field_0x1280;
@@ -123,13 +123,13 @@ struct sub_meter_class {
     fopMsgM_pane_class field_0x1868[3];
     fopMsgM_pane_class field_0x1910;
     fopMsgM_pane_class field_0x1948;
-    fopMsgM_pane_class field_0x1980;
-    fopMsgM_pane_class field_0x19b8;
-    fopMsgM_pane_class field_0x19f0[4];
-    fopMsgM_pane_class field_0x1ad0[2];
-    fopMsgM_pane_class field_0x1b40[4];
-    fopMsgM_pane_class field_0x1c20[2];
-    fopMsgM_pane_class field_0x1c90;
+    fopMsgM_pane_class mKeyLight1;  /* was field_0x1980: pane 'kyl1' (dMeter_screenDataSet, inlined into dMeter_Create 02595C6C); dMeter_keyMove 0259C7FC runs dMeter_keyLight on it with the fixed frames {30,40,45,50,58} (its mUserArea is the frame counter); dMeter_Create sets the counter to 1; same code TWW d_meter.cpp dMeter_keyMove/dMeter_keyInit */
+    fopMsgM_pane_class mKeyLight2;  /* was field_0x19b8: pane 'kyl2' (dMeter_screenDataSet in dMeter_Create 02595C6C); dMeter_keyMove 0259C7FC runs dMeter_keyLight on it with mKeyLight2Frames and re-rolls those frames when its counter is 1; dMeter_Create sets the counter to 1 */
+    fopMsgM_pane_class mRupyDigitA[4];  /* was field_0x19f0: panes 'nm00'..'nm03' on sMainParts2 (dMeter_screenDataSet in dMeter_Create 02595C6C): the rupee count digits (TWW dMeter_rupyInit / dMeter_walletChange give them the same digit textures as mRupyDigitB); dMeter_rupyMove 0259C454 fades them; [0].mUserArea is its dMeter_alphaOpen/alphaClose second counter (dMeter_Create sets 1), [1].mUserArea the shown wallet size (dMeter_rupyMove calls dMeter_walletChange 025931CC when the saved mWalletSize differs); dMeter_walletChange moves mRupyIcon by the [1]-[0] x distance */
+    fopMsgM_pane_class mKeyDigitA[2];  /* was field_0x1ad0: panes 'nm03'/'nm04' (dMeter_screenDataSet in dMeter_Create 02595C6C): the tens/ones digits of the key count (TWW dMeter_keyInit/dMeter_keyMove blendInit/blendDraw them with the same digit as mKeyDigitB); dMeter_keyMove 0259C7FC sets their alpha, [0].mUserArea is the second dMeter_alphaOpen/alphaClose counter */
+    fopMsgM_pane_class mRupyDigitB[4];  /* was field_0x1b40: panes 'nm04'..'nm07' on sMainParts2 (dMeter_screenDataSet in dMeter_Create 02595C6C): the second copy of the rupee count digits (same digit textures as mRupyDigitA in TWW dMeter_rupyInit / dMeter_walletChange); dMeter_rupyMove 0259C454 fades them with mRupyDigitA */
+    fopMsgM_pane_class mKeyDigitB[2];  /* was field_0x1c20: panes 'nm08'/'nm09' (dMeter_screenDataSet in dMeter_Create 02595C6C): the second copy of the key count digits (same digit as mKeyDigitA in TWW dMeter_keyInit/dMeter_keyMove); dMeter_keyMove 0259C7FC sets their alpha */
+    fopMsgM_pane_class mKeyIcon;  /* was field_0x1c90: pane 'key0' (dMeter_screenDataSet in dMeter_Create 02595C6C); dMeter_keyMove 0259C7FC fades it with the key digits (its mUserArea is the dMeter_alphaOpen/alphaClose counter); dMeter_Create clears it */
     fopMsgM_pane_class field_0x1cc8;
     fopMsgM_pane_class field_0x1d00;
     fopMsgM_pane_class field_0x1d38;
@@ -170,8 +170,8 @@ struct sub_meter_class {
     fopMsgM_pane_class field_0x2908;
     fopMsgM_pane_class field_0x2940[2];
     fopMsgM_pane_class field_0x29b0[2];
-    fopMsgM_pane_class field_0x2a20;
-    fopMsgM_pane_class field_0x2a58;
+    fopMsgM_pane_class mRupyIcon;  /* was field_0x2a20: pane 'rup1' on sMainParts2 (dMeter_screenDataSet in dMeter_Create 02595C6C): the rupee icon; dMeter_rupyMove 0259C454 fades it (its mUserArea is the dMeter_alphaOpen/alphaClose counter, dMeter_Create clears it), dMeter_walletChange 025931CC moves it with mRupyIconB; TWW dMeter_walletChange sets its wallet colours */
+    fopMsgM_pane_class mRupyIconB;  /* was field_0x2a58: pane 'rup2' on sMainParts2 (dMeter_screenDataSet in dMeter_Create 02595C6C): the second rupee icon pane; dMeter_rupyMove 0259C454 fades it and dMeter_walletChange 025931CC moves it together with mRupyIcon (same in TWW dMeter_rupyMove / dMeter_walletChange) */
     fopMsgM_pane_class field_0x2a90[9];
     fopMsgM_pane_class field_0x2c88;
     fopMsgM_pane_class field_0x2cc0;
@@ -202,16 +202,16 @@ struct sub_meter_class {
     be<u32> field_0x2f54[3];
     be<u32> moveIconTex[2];
     be<f32> field_0x2f68;
-    be<f32> field_0x2f6c;
+    be<f32> mCompassAlpha;  /* was field_0x2f6c: the compass alpha ratio: the alpha step inlined into dMeter_Execute 02593B10 (meterUpdateAlphaControl) fades it over dMeter_HIO_c mCompassFadeFrames when the 2D show flag changes and holds it at 0.5 / 0 while the menu window is open; dMeter_Create 02595C6C sets 1.0; TWW dMeter_alphaControl computes it the same way and dMeter_compassAlpha applies it to the compass and map panes */
     be<f32> field_0x2f70;
     be<f32> field_0x2f74[9];
     be<f32> field_0x2f98[9];
-    be<f32> field_0x2fbc;
-    be<f32> field_0x2fc0;
+    be<f32> mHeartAlpha;  /* was field_0x2fbc: alpha ratio of the hearts: dMeter_Execute 02593B10 (inlined heart alpha step) sets valueIncrease(5, mHeartAlphaStep); dMeter_gaugeAlpha 0259C2BC applies it to mHeart, mHeartShadow and mHeartLight; dMeter_heartInit 02591B4C clears it; dMeter_Execute copies it to the HD state (MeterUpdateSharedState mHeartAlpha); same code TWW dMeter_heartAlpha / dMeter_gaugeAlpha */
+    be<f32> mMagicAlpha;  /* was field_0x2fc0: alpha ratio of the magic gauge: dMeter_magicGaugeMove 0259B698 sets valueIncrease(5, mMagicGauge3.mUserArea), dMeter_flyGaugeMove 02592EE8 sets its own fade; dMeter_gaugeAlpha 0259C2BC applies it to mMagicBar, mMagicGauge3, mMagicGauge1, mMagicGaugeShadow1; dMeter_Create 02595C6C clears it; dMeter_Execute 02593B10 copies it to the HD state (MeterUpdateSharedState mMagicAlpha); same code TWW dMeter_magicAlpha / dMeter_gaugeAlpha */
     be<s16> field_0x2fc4;
     u8 before_field_0x2fd8[0x12];
-    be<s16> field_0x2fd8;
-    be<s16> field_0x2fda[5];
+    be<s16> mCompassFadeTimer;  /* was field_0x2fd8: the frame counter of the mCompassAlpha fade: the alpha step inlined into dMeter_Execute 02593B10 counts it down / up and passes it to valueIncrease(mCompassFadeFrames, ...); dMeter_Create 02595C6C starts it at mCompassFadeFrames; same code TWW dMeter_alphaControl / dMeter_Create */
+    be<s16> mKeyLight2Frames[5];  /* was field_0x2fda: dMeter_keyMove 0259C7FC: the five dMeter_keyLight frame thresholds of mKeyLight2, rolled from the dMeter_HIO_c mKeyLight* values when mKeyLight2's counter is 1 */
     be<s16> field_0x2fe4;
     u8 before_field_0x2fe8[0x2];
     be<s16> field_0x2fe8;
@@ -226,17 +226,17 @@ struct sub_meter_class {
     be<u16> mRupyCount;
     be<s16> mAdjustHp;
     be<s16> field_0x300c;
-    be<s16> field_0x300e;
+    be<s16> mKeyNumPending;  /* was field_0x300e: dMeter_keyMove 0259C7FC sets it to the new saved key count minus mDispKeyNum when play.mItemKeyNumCount is applied, then counts it to 0 while mDispKeyNum follows */
     be<s16> field_0x3010;
     be<s16> field_0x3012;
-    be<s16> field_0x3014;
-    be<u16> field_0x3016;
-    be<u8> field_0x3018;
+    be<s16> mHeartAlphaStep;  /* was field_0x3014: the heart fade step 0..5: the heart alpha step inlined into dMeter_Execute 02593B10 (meterUpdateActionFade) moves it toward 0, 3 or 5 by the meter state and sets mHeartAlpha = valueIncrease(5, it); dMeter_heartInit 02591B4C sets 5; same code TWW dMeter_heartAlpha / dMeter_heartInit */
+    be<u16> mDispMagic;  /* was field_0x3016: the shown magic, in 1/100 of the mMagicBar width: dMeter_Create 02595C6C sets it from the saved magic; dMeter_magicGaugeMove 0259B698 steps it by 625 toward magic * mMagicBar[0] width * 25 and passes it / 100 to dMeter_magicChange; same code TWW dMeter_magicInit / dMeter_magicGaugeMove */
+    be<u8> mDispMaxMagic;  /* was field_0x3018: the shown magic capacity: dMeter_Create 02595C6C sets it from the saved mMaxMagic; dMeter_magicGaugeMove 0259B698 steps it by one per frame toward the saved mMaxMagic and calls dMeter_magicLength with it / 32; same code TWW dMeter_magicInit / dMeter_magicGaugeMove */
     be<u8> field_0x3019;
     be<u8> field_0x301a;
     be<u8> field_0x301b;
     be<u8> field_0x301c;
-    be<u8> field_0x301d;
+    be<u8> mDispKeyNum;  /* was field_0x301d: dMeter_Create 02595C6C stores dComIfGs_getKeyNum(); dMeter_keyMove 0259C7FC steps it by one per frame toward the saved key count (mKeyNumPending); the shown key count */
     be<u8> mMaxHP;
     be<u8> mCurrHP;
     be<u8> field_0x3020;
@@ -258,13 +258,13 @@ struct sub_meter_class {
 };
 WWHD_OFFSET(sub_meter_class, mHeart, 0x644);
 WWHD_OFFSET(sub_meter_class, mHeartShadow, 0xAA4);
-WWHD_OFFSET(sub_meter_class, field_0x0f00, 0xF04);
-WWHD_OFFSET(sub_meter_class, field_0x0f38, 0xF3C);
-WWHD_OFFSET(sub_meter_class, field_0x10f8, 0x10FC);
-WWHD_OFFSET(sub_meter_class, field_0x1130, 0x1134);
-WWHD_OFFSET(sub_meter_class, field_0x1168, 0x116C);
-WWHD_OFFSET(sub_meter_class, field_0x11a0, 0x11A4);
-WWHD_OFFSET(sub_meter_class, field_0x11d8, 0x11DC);
+WWHD_OFFSET(sub_meter_class, mHeartLight, 0xF04);
+WWHD_OFFSET(sub_meter_class, mMagicBar, 0xF3C);
+WWHD_OFFSET(sub_meter_class, mMagicGauge3, 0x10FC);
+WWHD_OFFSET(sub_meter_class, mMagicGauge2, 0x1134);
+WWHD_OFFSET(sub_meter_class, mMagicGaugeShadow2, 0x116C);
+WWHD_OFFSET(sub_meter_class, mMagicGauge1, 0x11A4);
+WWHD_OFFSET(sub_meter_class, mMagicGaugeShadow1, 0x11DC);
 WWHD_OFFSET(sub_meter_class, field_0x1210, 0x1214);
 WWHD_OFFSET(sub_meter_class, field_0x1248, 0x124C);
 WWHD_OFFSET(sub_meter_class, field_0x1280, 0x1284);
@@ -289,13 +289,13 @@ WWHD_OFFSET(sub_meter_class, field_0x1830, 0x1834);
 WWHD_OFFSET(sub_meter_class, field_0x1868, 0x186C);
 WWHD_OFFSET(sub_meter_class, field_0x1910, 0x1914);
 WWHD_OFFSET(sub_meter_class, field_0x1948, 0x194C);
-WWHD_OFFSET(sub_meter_class, field_0x1980, 0x1984);
-WWHD_OFFSET(sub_meter_class, field_0x19b8, 0x19BC);
-WWHD_OFFSET(sub_meter_class, field_0x19f0, 0x19F4);
-WWHD_OFFSET(sub_meter_class, field_0x1ad0, 0x1AD4);
-WWHD_OFFSET(sub_meter_class, field_0x1b40, 0x1B44);
-WWHD_OFFSET(sub_meter_class, field_0x1c20, 0x1C24);
-WWHD_OFFSET(sub_meter_class, field_0x1c90, 0x1C94);
+WWHD_OFFSET(sub_meter_class, mKeyLight1, 0x1984);
+WWHD_OFFSET(sub_meter_class, mKeyLight2, 0x19BC);
+WWHD_OFFSET(sub_meter_class, mRupyDigitA, 0x19F4);
+WWHD_OFFSET(sub_meter_class, mKeyDigitA, 0x1AD4);
+WWHD_OFFSET(sub_meter_class, mRupyDigitB, 0x1B44);
+WWHD_OFFSET(sub_meter_class, mKeyDigitB, 0x1C24);
+WWHD_OFFSET(sub_meter_class, mKeyIcon, 0x1C94);
 WWHD_OFFSET(sub_meter_class, field_0x1cc8, 0x1CCC);
 WWHD_OFFSET(sub_meter_class, field_0x1d00, 0x1D04);
 WWHD_OFFSET(sub_meter_class, field_0x1d38, 0x1D3C);
@@ -336,8 +336,8 @@ WWHD_OFFSET(sub_meter_class, field_0x28d0, 0x28D4);
 WWHD_OFFSET(sub_meter_class, field_0x2908, 0x290C);
 WWHD_OFFSET(sub_meter_class, field_0x2940, 0x2944);
 WWHD_OFFSET(sub_meter_class, field_0x29b0, 0x29B4);
-WWHD_OFFSET(sub_meter_class, field_0x2a20, 0x2A24);
-WWHD_OFFSET(sub_meter_class, field_0x2a58, 0x2A5C);
+WWHD_OFFSET(sub_meter_class, mRupyIcon, 0x2A24);
+WWHD_OFFSET(sub_meter_class, mRupyIconB, 0x2A5C);
 WWHD_OFFSET(sub_meter_class, field_0x2a90, 0x2A94);
 WWHD_OFFSET(sub_meter_class, field_0x2c88, 0x2C8C);
 WWHD_OFFSET(sub_meter_class, field_0x2cc0, 0x2CC4);
@@ -368,15 +368,15 @@ WWHD_OFFSET(sub_meter_class, xyIconTex, 0x2F4C);
 WWHD_OFFSET(sub_meter_class, field_0x2f54, 0x2F58);
 WWHD_OFFSET(sub_meter_class, moveIconTex, 0x2F64);
 WWHD_OFFSET(sub_meter_class, field_0x2f68, 0x2F6C);
-WWHD_OFFSET(sub_meter_class, field_0x2f6c, 0x2F70);
+WWHD_OFFSET(sub_meter_class, mCompassAlpha, 0x2F70);
 WWHD_OFFSET(sub_meter_class, field_0x2f70, 0x2F74);
 WWHD_OFFSET(sub_meter_class, field_0x2f74, 0x2F78);
 WWHD_OFFSET(sub_meter_class, field_0x2f98, 0x2F9C);
-WWHD_OFFSET(sub_meter_class, field_0x2fbc, 0x2FC0);
-WWHD_OFFSET(sub_meter_class, field_0x2fc0, 0x2FC4);
+WWHD_OFFSET(sub_meter_class, mHeartAlpha, 0x2FC0);
+WWHD_OFFSET(sub_meter_class, mMagicAlpha, 0x2FC4);
 WWHD_OFFSET(sub_meter_class, field_0x2fc4, 0x2FC8);
-WWHD_OFFSET(sub_meter_class, field_0x2fd8, 0x2FDC);
-WWHD_OFFSET(sub_meter_class, field_0x2fda, 0x2FDE);
+WWHD_OFFSET(sub_meter_class, mCompassFadeTimer, 0x2FDC);
+WWHD_OFFSET(sub_meter_class, mKeyLight2Frames, 0x2FDE);
 WWHD_OFFSET(sub_meter_class, field_0x2fe4, 0x2FE8);
 WWHD_OFFSET(sub_meter_class, field_0x2fe8, 0x2FEC);
 WWHD_OFFSET(sub_meter_class, field_0x2fec, 0x2FF0);
@@ -387,17 +387,17 @@ WWHD_OFFSET(sub_meter_class, mStatusFlags, 0x3008);
 WWHD_OFFSET(sub_meter_class, mRupyCount, 0x300C);
 WWHD_OFFSET(sub_meter_class, mAdjustHp, 0x300E);
 WWHD_OFFSET(sub_meter_class, field_0x300c, 0x3010);
-WWHD_OFFSET(sub_meter_class, field_0x300e, 0x3012);
+WWHD_OFFSET(sub_meter_class, mKeyNumPending, 0x3012);
 WWHD_OFFSET(sub_meter_class, field_0x3010, 0x3014);
 WWHD_OFFSET(sub_meter_class, field_0x3012, 0x3016);
-WWHD_OFFSET(sub_meter_class, field_0x3014, 0x3018);
-WWHD_OFFSET(sub_meter_class, field_0x3016, 0x301A);
-WWHD_OFFSET(sub_meter_class, field_0x3018, 0x301C);
+WWHD_OFFSET(sub_meter_class, mHeartAlphaStep, 0x3018);
+WWHD_OFFSET(sub_meter_class, mDispMagic, 0x301A);
+WWHD_OFFSET(sub_meter_class, mDispMaxMagic, 0x301C);
 WWHD_OFFSET(sub_meter_class, field_0x3019, 0x301D);
 WWHD_OFFSET(sub_meter_class, field_0x301a, 0x301E);
 WWHD_OFFSET(sub_meter_class, field_0x301b, 0x301F);
 WWHD_OFFSET(sub_meter_class, field_0x301c, 0x3020);
-WWHD_OFFSET(sub_meter_class, field_0x301d, 0x3021);
+WWHD_OFFSET(sub_meter_class, mDispKeyNum, 0x3021);
 WWHD_OFFSET(sub_meter_class, mMaxHP, 0x3022);
 WWHD_OFFSET(sub_meter_class, mCurrHP, 0x3023);
 WWHD_OFFSET(sub_meter_class, field_0x3020, 0x3024);
@@ -452,18 +452,18 @@ struct Thresholds {
 };
 struct dMeter_HIO_c {
     u8 before_C[0xC];
-    be<f32> field_0xc;
+    be<f32> mBossLifeRatioDefault;  /* was field_0xc: named as the dMeter_HIO_c class field (d_meter_01.h), evidence there */
     u8 before_62[0x52];
-    be<u8> field_0x62;
-    be<u8> field_0x63;
+    be<u8> mIgnoreArrowNumCount;  /* was field_0x62: named as the dMeter_HIO_c class field (d_meter_01.h), evidence there */
+    be<u8> mIgnoreBombNumCount;  /* was field_0x63: named as the dMeter_HIO_c class field (d_meter_01.h), evidence there */
     u8 before_88[0x24];
     // Contiguous tww fields 0x88/0x8a/0x8c and 0x92/0x94/0x96 are indexed as groups.
-    be<s16> field_0x88[3];
-    be<s16> field_0x8e;
-    be<s16> field_0x90;
-    be<s16> field_0x92[3];
-    be<s16> field_0x98;
-    be<s16> field_0x9a;
+    be<s16> mKeyLightStep[3];  /* was field_0x88: dMeter_keyMove 0259C7FC: mKeyLight2Frames[i+1] = previous frame + mKeyLightStep[i] + cM_rndFX(mKeyLightStepRange[i]), i = 0..2 (0x88/0x8A/0x8C) */
+    be<s16> mKeyLightEndStep;  /* was field_0x8e: dMeter_keyMove 0259C7FC: mKeyLight2Frames[4] = mKeyLight2Frames[3] + mKeyLightEndStep + cM_rndFX(mKeyLightEndRange) */
+    be<s16> mKeyLightStart;  /* was field_0x90: dMeter_keyMove 0259C7FC: base of mKeyLight2Frames[0] (plus cM_rndFX(mKeyLightStartRange)) */
+    be<s16> mKeyLightStepRange[3];  /* was field_0x92: dMeter_keyMove 0259C7FC: cM_rndFX ranges for the mKeyLightStep steps (0x92/0x94/0x96) */
+    be<s16> mKeyLightEndRange;  /* was field_0x98: dMeter_keyMove 0259C7FC: cM_rndFX range of the last mKeyLight2Frames step */
+    be<s16> mKeyLightStartRange;  /* was field_0x9a: dMeter_keyMove 0259C7FC: cM_rndFX range added to mKeyLightStart for mKeyLight2Frames[0] */
 };
 // HD: these verified scene bytes have different semantics from the inferred shared fields/gaps.
 // This private view stays until the scene block is verified.

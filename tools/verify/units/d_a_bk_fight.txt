@@ -11,8 +11,8 @@ ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
 
 # p_lost
 field 020A27F8 r3+0x4A0 i16 -10,-9,0,1,2
-field 020A27F8 r3+0x418 i16 0 1               # m0300[0]
-field 020A27F8 r3+0x41A i16 0,1,9,10,11       # m0300[1]
+field 020A27F8 r3+0x418 i16 0 1               # mTimers[0]
+field 020A27F8 r3+0x41A i16 0,1,9,10,11       # mTimers[1]
 field 020A27F8 r3+0x3D8 u32 0x50000000 0x50000000   # mpMorf
 field 020A27F8 5000009C f32 10.5,11,11.5,25,0  # frame
 field 020A27F8 50000098 f32 0 1
@@ -25,19 +25,19 @@ callee 028E8DD0 r3=12       # PSVECSquareMag
 # fight_run
 field 020A0A98 r3+0x4A0 i16 0,1,2,3,4,5,6,7,8,33,34,-10
 field 020A0A98 r3+0xA14 u32 0,0x10,0x20,0x30   # dr.mAcch flags (wall/ground)
-field 020A0A98 r3+0x41A i16 0 1          # m0300[1]
-field 020A0A98 r3+0x420 i16 0 1          # m0300[4]
-field 020A0A98 r3+0xC90 i32 0 1          # m0B30
-field 020A0A98 r3+0x1353 u8 0 1          # m11F3
-field 020A0A98 r3+0x1370 u8 0 3          # m1210
-field 020A0A98 r3+0x136C i32 0 1         # m120C
+field 020A0A98 r3+0x41A i16 0 1          # mTimers[1]
+field 020A0A98 r3+0x420 i16 0 1          # mTimers[4]
+field 020A0A98 r3+0xC90 i32 0 1          # mHoldWeapon
+field 020A0A98 r3+0x1353 u8 0 1          # mBareHanded
+field 020A0A98 r3+0x1370 u8 0 3          # mJumpStep
+field 020A0A98 r3+0x136C i32 0 1         # mJumpMove
 field 020A0A98 r3+0x1372 i16 0,0x10,0x30,0x40
-field 020A0A98 r3+0x3F9 u8 0,2,4,8,0xC,0xD   # m02DD
-field 020A0A98 r3+0x3F0 u8 0 1           # m02D4
-field 020A0A98 r3+0x42C i16 0 3          # m0314
-field 020A0A98 r3+0x42E i16 0 1          # m0316
-field 020A0A98 r3+0x428 i16 0 1          # m0310
-field 020A0A98 r3+0x430 u8 0 2           # m0318
+field 020A0A98 r3+0x3F9 u8 0,2,4,8,0xC,0xD   # mGroundCheck
+field 020A0A98 r3+0x3F0 u8 0 1           # mHasShield
+field 020A0A98 r3+0x42C i16 0 3          # mSideStepTimer
+field 020A0A98 r3+0x42E i16 0 1          # mSideStepWait
+field 020A0A98 r3+0x428 i16 0 1          # mRecentHitTimer
+field 020A0A98 r3+0x430 u8 0 2           # mSideStepDir
 field 020A0A98 r3+0x410 u32 0,0x10
 field 020A0A98 r3+0x370 f32 -40 40       # speedF
 field 020A0A98 r3+0x434 f32 100,170,177.5,200,240,302.5,400,475,475.5,500   # mPlayerDistance (HIO boundaries)
@@ -72,23 +72,23 @@ field 020A2A54 r3+0x41A i16 0 1
 # fight
 field 020A1AAC r3+0x4A0 i16 -10,-9,0,1,2
 field 020A1AAC r3+0xA14 u32 0,0x20
-field 020A1AAC r3+0xC90 i32 0 1          # m0B30
-field 020A1AAC r3+0x1353 u8 0 1          # m11F3
-field 020A1AAC r3+0x3F1 u8 0 1           # m02D5
-field 020A1AAC r3+0xCBC i32 0 2          # m0B5C
-field 020A1AAC r3+0xCC0 i32 0 2          # m0B60
-field 020A1AAC r3+0xCDA i8 -1,0,1,1,1   # m0B7A
-field 020A1AAC r3+0xCD8 i16 0,0,0,1    # m0B78
-field 020A1AAC r3+0xCC4 f32 0,3,5,10,12,15,20,25,26,30,40   # m0B64
-field 020A1AAC r3+0xCC8 f32 5,10,15   # m0B68
-field 020A1AAC r3+0xCCC f32 20,25,30   # m0B6C
-field 020A1AAC r3+0xCD0 f32 0 40         # m0B70
-field 020A1AAC r3+0xCD4 f32 0 40         # m0B74
-field 020A1AAC r3+0x1352 u8 0 1          # m11F2
-field 020A1AAC r3+0x1351 u8 0,1,1,1   # m11F1
+field 020A1AAC r3+0xC90 i32 0 1          # mHoldWeapon
+field 020A1AAC r3+0x1353 u8 0 1          # mBareHanded
+field 020A1AAC r3+0x3F1 u8 0 1           # mHasMachete
+field 020A1AAC r3+0xCBC i32 0 2          # mAttackKind
+field 020A1AAC r3+0xCC0 i32 0 2          # mAttackStep
+field 020A1AAC r3+0xCDA i8 -1,0,1,1,1   # mAttackDir
+field 020A1AAC r3+0xCD8 i16 0,0,0,1    # mAtHitWait
+field 020A1AAC r3+0xCC4 f32 0,3,5,10,12,15,20,25,26,30,40   # mAttackFrame
+field 020A1AAC r3+0xCC8 f32 5,10,15   # mAtStartFrame
+field 020A1AAC r3+0xCCC f32 20,25,30   # mAtEndFrame
+field 020A1AAC r3+0xCD0 f32 0 40         # mLookStartFrame
+field 020A1AAC r3+0xCD4 f32 0 40         # mTurnEndFrame
+field 020A1AAC r3+0x1352 u8 0 1          # mTurnAlways
+field 020A1AAC r3+0x1351 u8 0,1,1,1   # mAtStarted
 field 020A1AAC r3+0x1350 u8 0 2          # m11F0
-field 020A1AAC r3+0x135C u32 0xFFFFFFFE 0xFFFFFFFF  # m11FC
-field 020A1AAC r3+0x464 i16 0 1          # m034C
+field 020A1AAC r3+0x135C u32 0xFFFFFFFE 0xFFFFFFFF  # mHitActorId
+field 020A1AAC r3+0x464 i16 0 1          # mSmokeTimer
 field 020A1AAC r3+0x434 f32 300,400,500   # mPlayerDistance
 field 020A1AAC 10462390 f32 400 400      # hio m02C
 field 020A1AAC 10462404 i16 5 5          # hio m0A0
@@ -109,5 +109,5 @@ field 020A1AAC 5A00000C u32 0x5B000000 0x5B000000
 field 020A1AAC 5B000008 i16 0xA8,0xBD,0xA8,0
 field 020A0A98 1047B9A4 f32 -5 5          # REG6_F(13)
 field 020A0A98 104623E0 f32 0,0.5,1       # hio m07C (vs cM_rndF(100) edges)
-field 020A0A98 r3+0x414 i32 23 26         # m02FC
+field 020A0A98 r3+0x414 i32 23 26         # mOshiCount
 callee 025A847C r8=12        # dPa_control_c::set: scale

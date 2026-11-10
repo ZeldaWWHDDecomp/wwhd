@@ -72,16 +72,16 @@ static inline void initDebugColor(be<u32>* guard, be<u32>* dst, const be<u32>* s
 /* 0226E92C */
 void daNpc_Kk1_c::eventOrder() {
     Kk1EventState& state = kk1Event(this);
-    s8 order = (s8)state.mEventOrder;
+    s8 order = (s8)state.mOrderEvent;
     if (order == 1 || order == 2) {
-        s8 v = (s8)state.mEventOrder;
+        s8 v = (s8)state.mOrderEvent;
         eventInfo.onCondition(dEvtCnd_CANTALK_e);
         if (v == 1) {
             fopAcM_orderSpeakEvent(this);
         }
     } else if (order >= 3) {
         s16 idx = (s16)(order - 3);
-        state.mEventIndex = idx;
+        state.mEventIdx = idx;
         fopAcM_orderOtherEventId(this, state.mEventIds[idx], 0xFF, 0xFFFF, 0, 1);
     }
 }
@@ -89,19 +89,19 @@ void daNpc_Kk1_c::eventOrder() {
 /* 0226E604 */
 void daNpc_Kk1_c::lookBack() {
     Kk1EventState& state = kk1Event(this);
-    state.mLookAngle.y = m_jnt.mAngles[0][1];
+    state.mPreviousLookAngles.y = m_jnt.mAngles[0][1];
     s16 yrot = current.angle.y;
     f32 srcX = current.pos.x;
-    state.mLookAngle.x = yrot;
+    state.mPreviousLookAngles.x = yrot;
     cXyz dst;
     dst.x = 0.0f;
-    u8 headOnly = state.mHeadOnly;
+    u8 headOnly = state.mHeadOnlyFollow;
     f32 srcZ = current.pos.z;
     dst.y = 0.0f;
     f32 srcY = eyePos.y;
     cXyz* target = nullptr;
     dst.z = 0.0f;
-    state.mLookAngle.z = m_jnt.mAngles[1][1];
+    state.mPreviousLookAngles.z = m_jnt.mAngles[1][1];
     switch ((u32)(s32)(s8)state.mLookMode) {
     case 1: {
         cXyz eye;
@@ -182,9 +182,9 @@ void daNpc_Kk1_c::cut_init_RUN(int staffIdx) {
         state.mCutTimer = (s16)(s32)*timer;
     }
     setAnm_NUM(4, 1);
-    state.mFollowPath = 1;
-    state.mMoveAnm = 2;
-    state.mPathArg = 0;
+    state.mOnPath = 1;
+    state.mMoveMode = 2;
+    state.mCommentAction = 0;
 }
 
 /* 0226DB64 */
@@ -207,8 +207,8 @@ void daNpc_Kk1_c::cut_init_CATCH_START(int staffIdx) {
 /* 0226DBB0 */
 bool daNpc_Kk1_c::cut_move_CATCH_START() {
     Kk1EventState& state = kk1Event(this);
-    if ((s8)state.mAnmEnded != 0) {
-        state.mMessageHandle = 0;
+    if ((s8)state.mAnimationEnded != 0) {
+        state.mbSetEyePos = 0;
         return true;
     }
     return false;
@@ -222,20 +222,20 @@ void daNpc_Kk1_c::cut_init_CATCH_END(int staffIdx) {
     setAnm_NUM(0, 1);
     mpMorf->setMorf(0.0f);
     m_jnt.mbTrn = 1;
-    state.mHeadOnly = 0;
+    state.mHeadOnlyFollow = 0;
     state.mLookMode = 1;
 }
 
 /* 0226CE6C */
 void daNpc_Kk1_c::cut_init_TRN(int staffIdx) {
     Kk1EventState& state = kk1Event(this);
-    if ((s8)state.mPathArg != 5) {
+    if ((s8)state.mCommentAction != 5) {
         u8 orgIdx = mPathRun.mIdx;
         if ((u32)(orgIdx - 0x19) < 0x10) {
             // HD: the local turn-around table is copied from read-only data.
             u8 next = turnPointTable[orgIdx - 0x19];
             state.mLookMode = 0;
-            state.mHeadOnly = 1;
+            state.mHeadOnlyFollow = 1;
             mPathRun.mIdx = next;
             return;
         }
@@ -280,7 +280,7 @@ void daNpc_Kk1_c::cut_init_TRN(int staffIdx) {
         }
     }
     state.mLookMode = 0;
-    state.mHeadOnly = 1;
+    state.mHeadOnlyFollow = 1;
 }
 
 /* 0226DBD4 */
@@ -323,8 +323,8 @@ void daNpc_Kk1_c::cut_init_BYE(int staffIdx) {
         state.mKeepMoving = (s16)(s32)*prm0;
     }
     setAnm_NUM(4, 1);
-    state.mMoveAnm = 2;
-    state.mFollowPath = 1;
+    state.mMoveMode = 2;
+    state.mOnPath = 1;
 }
 
 /* 0226DC70 */
@@ -466,10 +466,10 @@ void daNpc_Kk1_c::cut_init_RUNAWAY_START(int staffIdx) {
 /* 0226DDD8 */
 bool daNpc_Kk1_c::cut_move_RUNAWAY_START() {
     Kk1EventState& state = kk1Event(this);
-    if ((s8)state.mAnmState != 8) {
+    if ((s8)state.mAnmNum != 8) {
         return true;
     }
-    if ((s8)state.mAnmEnded == 0) {
+    if ((s8)state.mAnimationEnded == 0) {
         return false;
     }
     current.angle.y = cLib_targetAngleY(&current.pos, &kk1Player()->current.pos);
@@ -482,7 +482,7 @@ bool daNpc_Kk1_c::cut_move_RUNAWAY_START() {
 void daNpc_Kk1_c::cut_init_RUNAWAY_END(int staffIdx) {
     Kk1EventState& state = kk1Event(this);
     kk1Player()->offNoResetFlg0(kk1PlayerEventFlag);
-    state.mFollowPath = 0;
+    state.mOnPath = 0;
     state.mHide = 1;
     speedF = 0.0f;
 }
@@ -537,14 +537,14 @@ void daNpc_Kk1_c::privateCut(int staffIdx) {
 /* 0226E21C */
 void daNpc_Kk1_c::event_proc(int staffIdx) {
     Kk1EventState& state = kk1Event(this);
-    s16 evId = state.mEventIds[state.mEventIndex];
+    s16 evId = state.mEventIds[state.mEventIdx];
     if (!dComIfGp_evmng_endCheck(evId)) {
         if (!mEventCut.cutProc()) {
             privateCut(staffIdx);
         }
         return;
     }
-    u32 ev = (u32)(s32)state.mEventIndex;
+    u32 ev = (u32)(s32)state.mEventIdx;
     if (ev < 3) {
         if (ev <= 1) {
             setStt(5);
@@ -553,25 +553,25 @@ void daNpc_Kk1_c::event_proc(int staffIdx) {
             switch (mCurrMsgNo) {
             case 0x1C98:
             case 0x1C9C:
-                state.mEventOrder = 7;
+                state.mOrderEvent = 7;
                 state.mLookMode = 1;
-                state.mHeadOnly = 1;
+                state.mHeadOnlyFollow = 1;
                 break;
             case 0x1C9A:
                 state.mLookMode = 0;
-                state.mHeadOnly = 1;
-                state.mEventOrder = 10;
+                state.mHeadOnlyFollow = 1;
+                state.mOrderEvent = 10;
                 break;
             case 0x1C9F:
                 setStt(6);
                 state.mLookMode = 0;
-                state.mHeadOnly = 1;
-                state.mEventOrder = 6;
+                state.mHeadOnlyFollow = 1;
+                state.mOrderEvent = 6;
                 break;
             }
         }
     } else if (ev < 4) {
-        state.mEventOrder = 1;
+        state.mOrderEvent = 1;
         dComIfGs_onEventBit(0xE08);
         state.mByeComplete = 1;
     } else if (ev == 4 || (ev >= 6 && ev <= 7)) {
@@ -606,21 +606,21 @@ bool daNpc_Kk1_c::event_move(bool i_chkArg) {
     if (path == nullptr || !(path->m_closed & 1)) {
         return true;
     }
-    if (state.mFollowPath != 0 && kk1_chkPointPass(&current.pos, &mPathRun)) {
+    if (state.mOnPath != 0 && kk1_chkPointPass(&current.pos, &mPathRun)) {
         kk1PathNext(&mPathRun);
         if (i_chkArg) {
             s8 arg = kk1PathPointArg(&mPathRun, mPathRun.mIdx);
             if (arg >= 0) {
                 arg = (s8)(arg + 1);
                 if (arg == 2 || arg == 3) {
-                    state.mMoveAnm = arg;
-                    state.mPathArg = 0;
-                    state.mFollowPath = 1;
+                    state.mMoveMode = arg;
+                    state.mCommentAction = 0;
+                    state.mOnPath = 1;
                 } else {
-                    state.mFollowPath = 0;
+                    state.mOnPath = 0;
                 }
             } else {
-                state.mFollowPath = 0;
+                state.mOnPath = 0;
             }
         }
     }
@@ -630,14 +630,14 @@ bool daNpc_Kk1_c::event_move(bool i_chkArg) {
     s16 oldY = current.angle.y;
     cLib_addCalcAngleS(&current.angle.y, ang, kk1Parameters().mTurnRate, kk1Parameters().mTurnStep, 0x80);
     f32 factor, step, target;
-    if ((s8)state.mMoveAnm == 2) {
+    if ((s8)state.mMoveMode == 2) {
         factor = kk1Parameters().mWalkRate;
         step = kk1Parameters().mWalkStep;
-        target = state.mFollowPath == 0 ? 0.0f : kk1Parameters().mWalkSpeed;
+        target = state.mOnPath == 0 ? 0.0f : kk1Parameters().mWalkSpeed;
     } else {
         factor = kk1Parameters().mRunRate;
         step = kk1Parameters().mRunStep;
-        target = state.mFollowPath == 0 ? 0.0f : kk1Parameters().mRunSpeed;
+        target = state.mOnPath == 0 ? 0.0f : kk1Parameters().mRunSpeed;
     }
     f32 rate = speedF * factor;
     cLib_chaseF(&speedF, target, step);
@@ -657,7 +657,7 @@ bool daNpc_Kk1_c::event_move(bool i_chkArg) {
     if (arg >= 0) {
         arg = (s8)(arg + 1);
     }
-    state.mPathArg = arg;
+    state.mCommentAction = arg;
     return true;
 }
 
@@ -717,11 +717,11 @@ BOOL daNpc_Kk1_c::_draw() {
     mDoExt_btpAnm_entry((mDoExt_btpAnm*)(void*)mBtpAnm, model_data, mBtpFrame);
     mpMorf->entryDL();
     kk1Animations(model_data).mPattern = nullptr; /* mBtpAnm.remove() */
-    if (state.mHideEffect == 0) {
+    if (state.mEffectHidden == 0) {
         /* the second model (state.mEffectModel): brk/btk animations */
         J3DModel* m2 = state.mEffectModel.get();
-        kk1EntryColorAnimation(mBrkAnm, m2->getModelData(), (f32)state.mEffectAnmFrame.x); /* mDoExt_brkAnm::entry */
-        f32 btkFrame = (f32)state.mEffectAnmFrame.y;
+        kk1EntryColorAnimation(mBrkAnm, m2->getModelData(), (f32)state.mEffectFrame.x); /* mDoExt_brkAnm::entry */
+        f32 btkFrame = (f32)state.mEffectFrame.y;
         m2 = state.mEffectModel.get();
         mBtkAnm.entry(m2->getModelData(), btkFrame);
         mDoExt_modelEntryDL(state.mEffectModel.get());
@@ -779,9 +779,9 @@ BOOL daNpc_Kk1_c::_execute() {
         state.mDemoSuspend = 0;
         eventOrder();
     }
-    state.mLastAngle.x = current.angle.x;
-    state.mLastAngle.y = current.angle.y;
-    state.mLastAngle.z = current.angle.z;
+    state.mModelAngle.x = current.angle.x;
+    state.mModelAngle.y = current.angle.y;
+    state.mModelAngle.z = current.angle.z;
     if (state.mPreserveShapeAngle == 0) {
         shape_angle.x = current.angle.x;
         shape_angle.y = current.angle.y;
@@ -791,8 +791,8 @@ BOOL daNpc_Kk1_c::_execute() {
     tevStr.mRoomNo = dBgS_GetRoomId(dComIfG_Bgsp(), gnd);
     tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), gnd);
     setMtx(false);
-    if (state.mDisableCollision == 0 && state.mHideBody == 0) {
-        if ((s8)state.mAnmState == 1) {
+    if (state.mInDemo == 0 && state.mHideBody == 0) {
+        if ((s8)state.mAnmNum == 1) {
             setCollision(60.0f, 140.0f);
         } else {
             setCollision(40.0f, 140.0f);

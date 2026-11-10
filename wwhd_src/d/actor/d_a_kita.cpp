@@ -447,9 +447,9 @@ static inline BOOL himo_create(kita_class* i_this) {
             fopAc_ac_c* shand_i = fopAcM_SearchByID(i_this->field_2D4[i]);
             if (shand_i != nullptr) {
                 auto* shand = static_cast<KitaShandView*>(shand_i);
-                shand->field_308 = fopAcM_GetID(i_this);
-                shand->field_310 = &i_this->field_2E8[i];
-                shand->field_314 = &i_this->field_318[i];
+                shand->mParentId = fopAcM_GetID(i_this);
+                shand->mpRootPos = &i_this->field_2E8[i];
+                shand->mpParentState = &i_this->field_318[i];
                 i_this->field_2E4[i] = (u8)(i_this->field_2E4[i] + 1);
                 shand_count++;
             }

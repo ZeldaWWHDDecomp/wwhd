@@ -24,7 +24,7 @@ Sound *JAIZelBasic::makeSound(s32 n) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 idx = mAllocationRecordIndexHD;
     AllocationRecord *entry = indexed(mAllocationRecordsHD, idx);
-    void *heap = field_0x8;
+    void *heap = mHeap;
     if (heap == nullptr)
         heap = l_defaultHeap;
     if (n > 0) {
@@ -54,17 +54,17 @@ Sound *JAIZelBasic::makeSound(s32 n) {
 /* 0201D57C */
 void JAIZelBasic::kuroboMotionPlay(u32 id, cXyz *pos, u32 info, u32 reverb) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 c = field_0x203c.get();
+    u32 c = mKuroboMotionCount.get();
     if (c >= 4)
         return;
-    field_0x203c = c + 1;
+    mKuroboMotionCount = c + 1;
     u32 i;
     for (i = 0; i < 4; i++)
-        if (field_0x2040[i].get() == 0)
+        if (mpKuroboMotionSound[i].get() == 0)
             break;
     if (i == 4)
         return;
-    gptr<Sound> *h = &field_0x2040[i];
+    gptr<Sound> *h = &mpKuroboMotionSound[i];
     startSoundVec(id, h, pos, 0, info, 4);
     if (h->get() != 0)
         h->get()->setPortData(9, reverb & 0xFFFF);
@@ -166,22 +166,22 @@ void JAIZelBasic::subBgmStop() {
     if (keep)
         return;
     u32 m = mSubBgmNum.get();
-    field_0x00b0 = 0xF;
+    mSubBgmStopTimer = 0xF;
     mLastMinibossSubBGMType = 0;
     if (m == JA_BGM_MBOSS || m == JA_BGM_MBOSS_S)
-        field_0x00ce = 0x14;
+        mBattleBgmHoldTimer = 0x14;
 }
 
 /* 0201D9C8 */
 void JAIZelBasic::subBgmStopInner() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if ((s32)field_0x00b0.get() == -1)
+    if ((s32)mSubBgmStopTimer.get() == -1)
         return;
     u32 n = mSubBgmNum.get();
     Sound *s = mpSubBgmSound.get();
     if (n == JA_BGM_MBOSS || n == JA_BGM_MBOSS_S)
-        field_0x00ce = 0x14;
-    field_0x0064 = 0;
+        mBattleBgmHoldTimer = 0x14;
+    mTalkInBlocked = 0;
     mLastMinibossSubBGMType = 0;
     if (s != 0) {
         s->stop(45);
@@ -190,23 +190,23 @@ void JAIZelBasic::subBgmStopInner() {
     }
     Sound *main = mpMainBgmSound.get();
     mSubBgmNum = (u32)-1;
-    field_0x0080 = 1.0f;
+    mMainBgmMuteVolume = 1.0f;
     mpSubBgmSound = 0;
-    field_0x008c = 1.0f;
+    mMainBgmSubBgmVolume = 1.0f;
     if (main != 0) {
         // The leading volume factor was just set to1.
-        f32 v = mul(field_0x0084.get(), field_0x0088.get());
-        v = mul(v, field_0x008c.get());
-        v = mul(v, field_0x0090.get());
-        v = mul(v, field_0x0094.get());
-        v = mul(v, field_0x0098.get());
-        v = mul(v, field_0x009c.get());
-        v = mul(v, field_0x00ac.get());
+        f32 v = mul(mMainBgmTalkVolume.get(), mMainBgmMenuVolume.get());
+        v = mul(v, mMainBgmSubBgmVolume.get());
+        v = mul(v, mMainBgmSceneVolume.get());
+        v = mul(v, mMainBgmSeaVolume.get());
+        v = mul(v, mMainBgmTaktVolume.get());
+        v = mul(v, mMainBgmCbPracticeVolume.get());
+        v = mul(v, mMainBgmHeightVolume.get());
         main->setVolume(v, 45, 0);
     }
-    field_0x00c4 = 0;
-    field_0x00c1 = 0;
-    field_0x00b0 = (u32)-1;
+    mEnemyNearbyFadeTimer = 0;
+    mEnemyNearbyOn = 0;
+    mSubBgmStopTimer = (u32)-1;
 }
 
 // HD: stream status comes from the HD sound manager.
@@ -225,24 +225,24 @@ void JAIZelBasic::talkOut(u32 fade) {
         return;
     Sound *main = mpMainBgmSound.get();
     f32 def = VOL_BGM_DEFAULT.get(); /* JAIZelParam::VOL_BGM_DEFAULT */
-    field_0x0084 = def;
+    mMainBgmTalkVolume = def;
     if (main != 0) {
-        f32 v = mul(field_0x0080.get(), def);
-        v = mul(v, field_0x0088.get());
-        v = mul(v, field_0x008c.get());
-        v = mul(v, field_0x0090.get());
-        v = mul(v, field_0x0094.get());
-        v = mul(v, field_0x0098.get());
-        v = mul(v, field_0x009c.get());
-        v = mul(v, field_0x00ac.get());
+        f32 v = mul(mMainBgmMuteVolume.get(), def);
+        v = mul(v, mMainBgmMenuVolume.get());
+        v = mul(v, mMainBgmSubBgmVolume.get());
+        v = mul(v, mMainBgmSceneVolume.get());
+        v = mul(v, mMainBgmSeaVolume.get());
+        v = mul(v, mMainBgmTaktVolume.get());
+        v = mul(v, mMainBgmCbPracticeVolume.get());
+        v = mul(v, mMainBgmHeightVolume.get());
         main->setVolume(v, fade, 0);
     }
     Sound *sub = mpSubBgmSound.get();
     f32 def2 = VOL_BGM_DEFAULT.get();
-    field_0x00a0 = def2;
+    mSubBgmTalkMenuVolume = def2;
     if (sub != 0) {
-        f32 v = mul(def2, field_0x00a4.get());
-        v = mul(v, field_0x00a8.get());
+        f32 v = mul(def2, mSubBgmTaktVolume.get());
+        v = mul(v, mSubBgmCbPracticeVolume.get());
         sub->setSeqInterVolume(0, v, fade);
     }
     for (u32 c = 0; c < 8; c++)
@@ -252,9 +252,9 @@ void JAIZelBasic::talkOut(u32 fade) {
 /* 0201DCD4 */
 void JAIZelBasic::menuOut() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0088 = VOL_BGM_DEFAULT.get();
+    mMainBgmMenuVolume = VOL_BGM_DEFAULT.get();
     talkOut(2);
-    field_0x0020 = 0;
+    mIsMenuIn = 0;
 }
 
 /* 0201DD18 */
@@ -277,8 +277,8 @@ void JAIZelBasic::bgmMute(gptr<Sound> *h, u32 bgm, u32 set, u32 fade) {
 /* 0201DE00 */
 void JAIZelBasic::subBgmStart(u32 id) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x00be = 0;
-    if (field_0x0063.get() != 0)
+    mTalkSeBlocked = 0;
+    if (mBgmDisabled.get() != 0)
         return;
     if (id == 0xFFFFFFFF)
         return;
@@ -317,9 +317,9 @@ void JAIZelBasic::subBgmStart(u32 id) {
     }
     switch (kind) {
     case 1:
-        field_0x00bb = 2;
-        field_0x0064 = 1;
-        field_0x0206 = 1;
+        mFanfareResumePending = 2;
+        mTalkInBlocked = 1;
+        mFanfareActive = 1;
         break;
     case 2:
         mLastMinibossSubBGMType = 1;
@@ -331,11 +331,11 @@ void JAIZelBasic::subBgmStart(u32 id) {
         mLastMinibossSubBGMType = 3;
         break;
     case 5:
-        field_0x0206 = 1;
+        mFanfareActive = 1;
         break;
     }
     if (mpSubBgmSound.get() != 0 && id == mSubBgmNum.get()) {
-        field_0x00b0 = (u32)-1;
+        mSubBgmStopTimer = (u32)-1;
         return;
     }
     /* no fade-in for these */
@@ -353,24 +353,24 @@ void JAIZelBasic::subBgmStart(u32 id) {
     if (mpSubBgmSound.get() != 0) {
         bool ok = true;
         if (id != JA_BGM_BGN_GET_BOX) {
-            mpSubBgmSound.get()->setSeqInterVolume(0, field_0x00a0.get(), 0);
+            mpSubBgmSound.get()->setSeqInterVolume(0, mSubBgmTalkMenuVolume.get(), 0);
             ok = mpSubBgmSound.get() != 0;
         }
         if (ok) {
             if (id == JA_BGM_SEA_ENEMY) {
-                if (field_0x0047.get() == 1)
+                if (mLinkOnBoard.get() == 1)
                     bgmMute(&mpSubBgmSound, id, 0, 0);
                 else
                     bgmMute(&mpSubBgmSound, id, 1, 0);
             } else if (id <= JA_BGM_MBOSS_S && id >= JA_BGM_MBOSS) {
                 bgmMute(&mpSubBgmSound, id, 0, 0);
-                if (field_0x00c9.get() != 0)
+                if (mSwordUsing.get() != 0)
                     mpSubBgmSound.get()->setTrackVolume(MBOSS_BTL_SWORD_USING_TRACK.get(), 1.0f, 0);
             }
         }
     }
     Sound *main = mpMainBgmSound.get();
-    field_0x008c = 0.0f;
+    mMainBgmSubBgmVolume = 0.0f;
     if (main != 0) {
         bool quick2;
         if (id < JA_BGM_GET_SONG)
@@ -382,24 +382,24 @@ void JAIZelBasic::subBgmStart(u32 id) {
         else
             quick2 = id == JA_BGM_TRIFORCE_DEMO || id == JA_BGM_BGN_GET_BOX ||
                      id == JA_BGM_GET_PEARL || id == JA_BGM_P_GANON_1;
-        f32 v = mul(field_0x0080.get(), field_0x0084.get());
-        v = mul(v, field_0x0088.get());
+        f32 v = mul(mMainBgmMuteVolume.get(), mMainBgmTalkVolume.get());
+        v = mul(v, mMainBgmMenuVolume.get());
         v = mul(v, 0.0f);
-        v = mul(v, field_0x0090.get());
-        v = mul(v, field_0x0094.get());
-        v = mul(v, field_0x0098.get());
-        v = mul(v, field_0x009c.get());
-        v = mul(v, field_0x00ac.get());
+        v = mul(v, mMainBgmSceneVolume.get());
+        v = mul(v, mMainBgmSeaVolume.get());
+        v = mul(v, mMainBgmTaktVolume.get());
+        v = mul(v, mMainBgmCbPracticeVolume.get());
+        v = mul(v, mMainBgmHeightVolume.get());
         main->setVolume(v, quick2 ? 1 : 0x3C, 0);
     }
     mSubBgmNum = id;
-    field_0x00b0 = (u32)-1;
+    mSubBgmStopTimer = (u32)-1;
 }
 
 /* 0201E480 */
 s32 JAIZelBasic::checkEventBit(u32 flag) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    be<u8> *ev = field_0x0024;
+    be<u8> *ev = mpEventBits;
     if (ev == 0)
         return 0;
     return (ev[(flag >> 8) & 0xFF].get() & flag & 0xFF) != 0;
@@ -439,7 +439,7 @@ void JAIZelBasic::seStop(u32 id, u32 fade) {
         s->stop(fade);
         mpSeSound[i] = 0;
         mSeNum[i] = 0;
-        field_0x0194[i] = 0;
+        mSePosAddr[i] = 0;
     }
 }
 
@@ -455,29 +455,29 @@ void JAIZelBasic::menuIn() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     Sound *main = mpMainBgmSound.get();
     f32 p = VOL_BGM_PAUSING.get(); /* JAIZelParam::VOL_BGM_PAUSING */
-    field_0x0088 = p;
+    mMainBgmMenuVolume = p;
     if (main != 0) {
-        f32 v = mul(field_0x0080.get(), field_0x0084.get());
+        f32 v = mul(mMainBgmMuteVolume.get(), mMainBgmTalkVolume.get());
         v = mul(v, p);
-        v = mul(v, field_0x008c.get());
-        v = mul(v, field_0x0090.get());
-        v = mul(v, field_0x0094.get());
-        v = mul(v, field_0x0098.get());
-        v = mul(v, field_0x009c.get());
-        v = mul(v, field_0x00ac.get());
+        v = mul(v, mMainBgmSubBgmVolume.get());
+        v = mul(v, mMainBgmSceneVolume.get());
+        v = mul(v, mMainBgmSeaVolume.get());
+        v = mul(v, mMainBgmTaktVolume.get());
+        v = mul(v, mMainBgmCbPracticeVolume.get());
+        v = mul(v, mMainBgmHeightVolume.get());
         main->setVolume(v, 2, 0);
     }
     Sound *sub = mpSubBgmSound.get();
     f32 p2 = VOL_BGM_PAUSING.get();
-    field_0x00a0 = p2;
+    mSubBgmTalkMenuVolume = p2;
     if (sub != 0) {
-        f32 v = mul(p2, field_0x00a4.get());
-        v = mul(v, field_0x00a8.get());
+        f32 v = mul(p2, mSubBgmTaktVolume.get());
+        v = mul(v, mSubBgmCbPracticeVolume.get());
         sub->setSeqInterVolume(0, v, 2);
     }
     for (u32 c = 0; c < 8; c++)
         setSeCategoryVolume(c, l_pauseCategoryVolumes.entries[c].get());
-    field_0x0020 = 1;
+    mIsMenuIn = 1;
 }
 
 } // namespace jaizel12

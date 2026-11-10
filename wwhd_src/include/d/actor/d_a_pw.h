@@ -57,18 +57,18 @@ struct pw_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ be<u32> mpMorf;
     /* 0x3D4 */ u8 _3D4[4];
-    /* 0x3D8 */ be<u32> m2BC;
-    /* 0x3DC */ be<u32> m2C0;
-    /* 0x3E0 */ be<u32> m2C4;
-    /* 0x3E4 */ be<u32> m2C8;
-    /* 0x3E8 */ cXyz m2CC;
-    /* 0x3F4 */ cXyz m2D8;
-    /* 0x400 */ cXyz m2E4;
-    /* 0x40C */ cXyz m2F0;
-    /* 0x418 */ cXyz m2FC;
-    /* 0x424 */ cXyz m308;
-    /* 0x430 */ cXyz m314;
-    /* 0x43C */ cXyz m320;
+    /* 0x3D8 */ be<u32> mpColorBtp;  /* was m2BC: useHeapInit 0244DE14 creates the BTP_IROGAE1 (colour change) animation into it; daPW_Draw 02449F80 sets its frame from mColorIndex */
+    /* 0x3DC */ be<u32> mpMaterializeBrk;  /* was m2C0: useHeapInit 0244DE14: BRK_JITTAIKA1; daPW_Draw 02449F80 enters it while mMaterialized; action_itai sets it up again */
+    /* 0x3E0 */ be<u32> mpHitBrk;  /* was m2C4: useHeapInit 0244DE14: BRK_HIT; action_itai (in daPW_Execute 0244B3E4) starts it with mHitBrkOn; daPW_Draw 02449F80 enters it while mHitBrkOn */
+    /* 0x3E4 */ be<u32> mpDefaultBrk;  /* was m2C8: useHeapInit 0244DE14: BRK_DEFAULT; daPW_Draw 02449F80 enters it when neither mMaterialized nor mHitBrkOn */
+    /* 0x3E8 */ cXyz mLanternHandPos;  /* was m2CC: nodeCallBack 02449C60: world position of joint 0x17 (the hand); kantera_calc 0244F730 puts the lantern (proc 0xC1) there; daPW_Create 0244E398 seeds it */
+    /* 0x3F4 */ cXyz mLanternSphPos;  /* was m2D8: kantera_calc 0244F730 copies the lantern's mBonPos; daPW_Execute 0244B3E4 makes it the centre of the 40-unit lantern sphere mSph */
+    /* 0x400 */ cXyz mPrevLanternHandPos;  /* was m2E4: nodeCallBack 02449C60 copies mLanternHandPos here before updating it; no other use */
+    /* 0x40C */ cXyz mHomePos;  /* was m2F0: daPW_Create 0244E398 copies the spawn position; hani_check 0244B058 keeps a pathless Poe within 1000 of it; fuwafuwa_calc 0244AA98 hovers at its height; next_dousa_check 0244B1B8 moves x/z to the current position */
+    /* 0x418 */ cXyz mPathAreaCenter;  /* was m2FC: action_dousa (in daPW_Execute 0244B3E4) mode 20 copies the position every frame while following the path; hani_check 0244B058 keeps a path Poe within 500 of it */
+    /* 0x424 */ cXyz mLineStart;  /* was m308: Line_check 0244A7F0: actor position + 80 in y, start of the dBgS_LinChk */
+    /* 0x430 */ cXyz mLineEnd;  /* was m314: Line_check 0244A7F0: target position (+ 80 in y), end of the dBgS_LinChk */
+    /* 0x43C */ cXyz mCircleCenter;  /* was m320: action_kougeki (in daPW_Execute 0244B3E4) copies the position after an attack; fuwafuwa_calc 0244AA98 circles around it in mode 0x26 */
     /* 0x448 */ csXyz m32C[2];
     /* 0x454 */ be<u8> mBehaviorType;
     /* 0x455 */ be<u8> mHoversAtInitialYPos;
@@ -76,15 +76,15 @@ struct pw_class : fopEn_enemy_c {
     /* 0x457 */ be<u8> mColorIndex;
     /* 0x458 */ be<u8> mHitByWhat;
     /* 0x459 */ be<u8> _459;
-    /* 0x45A */ be<u8> m33E;
-    /* 0x45B */ be<u8> m33F;
-    /* 0x45C */ be<u8> m340;
-    /* 0x45D */ be<u8> m341;
-    /* 0x45E */ be<u8> m342;
-    /* 0x45F */ be<u8> m343;
-    /* 0x460 */ be<u8> m344;
-    /* 0x461 */ be<u8> m345;
-    /* 0x462 */ be<s16> m346;
+    /* 0x45A */ be<u8> mMaterialized;  /* was m33E: set 1 by action_torituku 0244FE24 mode 0x50, daPW_Create 0244E398 (type 3) and action_itai (light hit); cleared by action_big_demo 024500C0, action_dousa and action_itai mode 60; daPW_Draw 02449F80 draws with the JITTAIKA brk when set; alpha_anime 0244A9E4 runs only while 0 */
+    /* 0x45B */ be<u8> mHitBrkOn;  /* was m33F: action_itai (in daPW_Execute 0244B3E4) mode 53 sets 1 and starts BRK_HIT; mode 60 / action_dousa clear it and go back to BRK_DEFAULT; daPW_Draw 02449F80 picks mpHitBrk while set */
+    /* 0x45C */ be<u8> mNoTurn;  /* was m340: daPW_Execute 0244B3E4 turns current/shape angle toward mTargetAngleY only while 0; set 1 for the appear spin (action_dousa mode 1), the jump attack (action_kougeki mode 110), action_demo; Big_pow_gattai_check 0244A5A8 clears */
+    /* 0x45D */ be<u8> mLanternSwingMode;  /* was m341: kantera_calc 0244F730: 0 slow swing (speed 3000, amplitudes 5000/-1000), 1 fast swing (4000, 10000/-10000), 2 no swing; action_dousa sets 0 / 2, action_kougeki and action_itai 1 */
+    /* 0x45E */ be<u8> mLanternHitLatch;  /* was m342: kantera_atari_check 0244F28C: set at a lantern hit and cleared when there is none, so one contact takes one lantern health */
+    /* 0x45F */ be<u8> mPossessing;  /* was m343: action_kougeki (in daPW_Execute 0244B3E4) sets 1 together with global TORITUKI_ON = 1 (the Poe possesses Link); action_torituku 0244FE24 and daPW_Delete 0244DD6C clear both */
+    /* 0x460 */ be<u8> mKilledJalhalla;  /* was m344: Big_pow_down_check 0244A67C sets 1 when this Poe's hit takes Jalhalla's health to 0; daBPW checks it on its child Poes (view BpwChildPoeHD in d_a_bpw.h) */
+    /* 0x461 */ be<u8> mJalhallaHitDone;  /* was m345: Big_pow_down_check 0244A67C sets 1 after this dead Poe took one health from Jalhalla and returns early while it is set */
+    /* 0x462 */ be<s16> mLanternState;  /* was m346: daPW_Create 0244E398 sets -1 (0 for the other types); kantera_break 0244A4A8 and action_dousa mode 0 set 0 (no lantern); action_dousa sets 1 once the lantern is held; daPW_Execute 0244B3E4 runs kantera_calc / kantera_atari_check only at 1, kantera_calc 0244F730 returns at <= 0 */
     /* 0x464 */ be<u32> mpPath;
     /* 0x468 */ u8 _468[0xC];
     /* 0x474 */ be<s8> mPathPntIdx;
@@ -96,38 +96,38 @@ struct pw_class : fopEn_enemy_c {
     /* 0x488 */ be<u32> mJalhallaID;
     /* 0x48C */ be<u32> mKanteraID;
     /* 0x490 */ be<s32> mBckIdx;
-    /* 0x494 */ be<s16> m378;
-    /* 0x496 */ be<s16> m37A;
-    /* 0x498 */ be<s16> m37C;
-    /* 0x49A */ be<s16> m37E;
-    /* 0x49C */ be<s16> m380;
-    /* 0x49E */ be<s16> m382;
+    /* 0x494 */ be<s16> mActionTimer;  /* was m378: daPW_Execute 0244B3E4 counts it down (first of 6 timers); the wait times of action_dousa (rnd 60/120), action_torituku (300), action_demo (30), action_itai (stun mStunTime + 75) */
+    /* 0x496 */ be<s16> mObstacleCheckTimer;  /* was m37A: action_dousa / action_big_demo 024500C0: Line_check and hani_check are skipped while it runs; reloaded 10 / rnd(20)+20 after hitting an obstacle; counted down by daPW_Execute 0244B3E4 */
+    /* 0x498 */ be<s16> mAttackWaitTimer;  /* was m37C: next_dousa_check 0244B1B8 and action_kougeki set rnd(70)+70; action_dousa (in daPW_Execute 0244B3E4) checks for an attack (modes 14/16/20) only when it is 0 */
+    /* 0x49A */ be<s16> mWanderTurnTimer;  /* was m37E: action_dousa / action_big_demo 024500C0: when 0, adds a random yaw to mTargetAngleY and reloads rnd(15)+15; action_itai sets 3 and runs alpha_anime only when it is 0 */
+    /* 0x49C */ be<s16> mAnmHoldTimer;  /* was m380: action_dousa mode 8 sets 2 every frame, action_itai clears; daPW_Execute 0244B3E4 plays the body animation only while it is 0 */
+    /* 0x49E */ be<s16> mLanternSettleTimer;  /* was m382: action_dousa sets 5 / 3 after creating the lantern (fopAcM_create 0xC1); daPW_Execute 0244B3E4 runs kantera_atari_check and kantera_calc 0244F730 only while 0, body_atari_check 0244E960 ignores light while set */
     /* 0x4A0 */ be<s16> m384;
     /* 0x4A2 */ be<s16> m386;
     /* 0x4A4 */ be<s16> m388;
-    /* 0x4A6 */ be<s16> m38A;
-    /* 0x4A8 */ be<s16> m38C;
-    /* 0x4AA */ be<s16> m38E;
-    /* 0x4AC */ be<s16> m390;
-    /* 0x4AE */ be<s16> m392;
-    /* 0x4B0 */ be<s16> mFloatPhase;
-    /* 0x4B2 */ be<s16> mFloatPhaseStep;
-    /* 0x4B4 */ be<s16> m398;
-    /* 0x4B6 */ be<s16> m39A;
-    /* 0x4B8 */ be<s16> m39C;
-    /* 0x4BA */ be<s16> m39E;
+    /* 0x4A6 */ be<s16> mSilentVanish;  /* was m38A: action_torituku 0244FE24 sets 1 when the possession ends (light, button or hit); action_itai mode 60/61 then skips the death sound/voice and fopAcM_createDisappear */
+    /* 0x4A8 */ be<s16> mTargetAngleY;  /* was m38C: daPW_Execute 0244B3E4 turns current.angle.y toward it; set by hani_check 0244B058 (atan2 home), Line_check, Big_pow_gattai_check 0244A5A8, action_dousa wander */
+    /* 0x4AA */ be<s16> mAlphaPhase;  /* was m38E: alpha_anime 0244A9E4: +0x400 per frame, the sine of it pulses mAlpha around mAlphaBase */
+    /* 0x4AC */ be<s16> mBobPhase;  /* was m390: fuwafuwa_calc 0244AA98: +700 per frame, the sine of it bobs the height; daPW_Create 0244E398 seeds it with cM_rndFX(0x4000) */
+    /* 0x4AE */ be<s16> mCirclePhase;  /* was m392: fuwafuwa_calc 0244AA98 mode 0x26: +1000 per frame, the sine of it circles around mCircleCenter */
+    /* 0x4B0 */ be<s16> mLanternSwingPhase;  /* was mFloatPhase (misnamed): kantera_calc 0244F730 adds mLanternSwingSpeed per frame; its sine/cosine set the lantern joint's x/z rotation (the lantern swing), not the float */
+    /* 0x4B2 */ be<s16> mLanternSwingSpeed;  /* was mFloatPhaseStep (misnamed): kantera_calc 0244F730 eases it to 3000 / 4000 by mLanternSwingMode and adds it to mLanternSwingPhase each frame */
+    /* 0x4B4 */ be<s16> mLanternHealth;  /* was m398: daPW_Create 0244E398 sets 4; kantera_atari_check 0244F28C subtracts per hit; action_itai breaks the lantern (kantera_break) at 0 */
+    /* 0x4B6 */ be<s16> mAlpha;  /* was m39A: alpha_anime 0244A9E4 writes it; daPW_Draw 02449F80 uses it as the konst alpha; action_itai raises it to 255 (fully visible) under light */
+    /* 0x4B8 */ be<s16> mAlphaBase;  /* was m39C: alpha_anime 0244A9E4 eases it to 100 and pulses mAlpha around it; action_itai sets 200 / 0 */
+    /* 0x4BA */ be<s16> mBigDemoTurnStep;  /* was m39E: daPW_Create 0244E398 sets 0x1000; action_big_demo 024500C0 eases/sets it; daPW_Execute 0244B3E4 uses it as the turn step in PW_ACTION_BIG_DEMO */
     /* 0x4BC */ be<f32> mCorrectionOffsetY;
-    /* 0x4C0 */ be<f32> m3A4;
+    /* 0x4C0 */ be<f32> mDrawOffsetY;  /* was m3A4: draw_SUB 02449DA8 adds it to the model's y; action_dousa mode 1 sets -80 and eases it to 0 (the appear) */
     /* 0x4C4 */ be<f32> mNoticeRange;
-    /* 0x4C8 */ be<f32> m3AC;
-    /* 0x4CC */ be<f32> m3B0;
+    /* 0x4C8 */ be<f32> mGiveUpRange;  /* was m3AC: daPW_Create 0244E398: mNoticeRange + 5000; action_dousa mode 8 waits until Link is within it */
+    /* 0x4CC */ be<f32> mLanternSwingAmpX;  /* was m3B0: kantera_calc 0244F730: eased to 5000 / 10000 by mLanternSwingMode; sine(mLanternSwingPhase) * it is the lantern joint's x rotation */
     /* 0x4D0 */ u8 _4D0[4];
-    /* 0x4D4 */ be<f32> mLightRadius;
+    /* 0x4D4 */ be<f32> mLanternSwingAmpZ;  /* was mLightRadius (misnamed): kantera_calc 0244F730 eases it to -1000 / -10000 by mLanternSwingMode; cos(mLanternSwingPhase) * it is the lantern joint's z rotation, not a light radius */
     /* 0x4D8 */ dBgS_AcchCir mAcchCir;
     /* 0x518 */ dBgS_ObjAcch mAcch;
     // HD: retain the four-byte gap after the shared 0x1C4 Acch layout.
     u8 _6DC[4];
-    /* 0x6E0 */ PwFollowCallback m5C4;
+    /* 0x6E0 */ PwFollowCallback mAttackEcallBack;  /* was m5C4: action_kougeki (in daPW_Execute 0244B3E4) mode 110 starts particle 0x8445 into it at the jump attack; mode 111 ends it on landing; daPW_Delete 0244DD6C ends it */
     /* 0x6F4 */ actor_place mActorPlace;
     /* 0x708 */ dCcD_Stts mStts;
     /* 0x744 */ dCcD_Cyl mCyl;
@@ -140,18 +140,18 @@ WWHD_SIZE(pw_class, 0xF8C);
 WWHD_OFFSET(pw_class, mPhase, 0x3C8);
 WWHD_OFFSET(pw_class, mpMorf, 0x3D0);
 WWHD_OFFSET(pw_class, _3D4, 0x3D4);
-WWHD_OFFSET(pw_class, m2BC, 0x3D8);
-WWHD_OFFSET(pw_class, m2C0, 0x3DC);
-WWHD_OFFSET(pw_class, m2C4, 0x3E0);
-WWHD_OFFSET(pw_class, m2C8, 0x3E4);
-WWHD_OFFSET(pw_class, m2CC, 0x3E8);
-WWHD_OFFSET(pw_class, m2D8, 0x3F4);
-WWHD_OFFSET(pw_class, m2E4, 0x400);
-WWHD_OFFSET(pw_class, m2F0, 0x40C);
-WWHD_OFFSET(pw_class, m2FC, 0x418);
-WWHD_OFFSET(pw_class, m308, 0x424);
-WWHD_OFFSET(pw_class, m314, 0x430);
-WWHD_OFFSET(pw_class, m320, 0x43C);
+WWHD_OFFSET(pw_class, mpColorBtp, 0x3D8);
+WWHD_OFFSET(pw_class, mpMaterializeBrk, 0x3DC);
+WWHD_OFFSET(pw_class, mpHitBrk, 0x3E0);
+WWHD_OFFSET(pw_class, mpDefaultBrk, 0x3E4);
+WWHD_OFFSET(pw_class, mLanternHandPos, 0x3E8);
+WWHD_OFFSET(pw_class, mLanternSphPos, 0x3F4);
+WWHD_OFFSET(pw_class, mPrevLanternHandPos, 0x400);
+WWHD_OFFSET(pw_class, mHomePos, 0x40C);
+WWHD_OFFSET(pw_class, mPathAreaCenter, 0x418);
+WWHD_OFFSET(pw_class, mLineStart, 0x424);
+WWHD_OFFSET(pw_class, mLineEnd, 0x430);
+WWHD_OFFSET(pw_class, mCircleCenter, 0x43C);
 WWHD_OFFSET(pw_class, m32C, 0x448);
 WWHD_OFFSET(pw_class, mBehaviorType, 0x454);
 WWHD_OFFSET(pw_class, mHoversAtInitialYPos, 0x455);
@@ -159,15 +159,15 @@ WWHD_OFFSET(pw_class, mNoticeRangeParam, 0x456);
 WWHD_OFFSET(pw_class, mColorIndex, 0x457);
 WWHD_OFFSET(pw_class, mHitByWhat, 0x458);
 WWHD_OFFSET(pw_class, _459, 0x459);
-WWHD_OFFSET(pw_class, m33E, 0x45A);
-WWHD_OFFSET(pw_class, m33F, 0x45B);
-WWHD_OFFSET(pw_class, m340, 0x45C);
-WWHD_OFFSET(pw_class, m341, 0x45D);
-WWHD_OFFSET(pw_class, m342, 0x45E);
-WWHD_OFFSET(pw_class, m343, 0x45F);
-WWHD_OFFSET(pw_class, m344, 0x460);
-WWHD_OFFSET(pw_class, m345, 0x461);
-WWHD_OFFSET(pw_class, m346, 0x462);
+WWHD_OFFSET(pw_class, mMaterialized, 0x45A);
+WWHD_OFFSET(pw_class, mHitBrkOn, 0x45B);
+WWHD_OFFSET(pw_class, mNoTurn, 0x45C);
+WWHD_OFFSET(pw_class, mLanternSwingMode, 0x45D);
+WWHD_OFFSET(pw_class, mLanternHitLatch, 0x45E);
+WWHD_OFFSET(pw_class, mPossessing, 0x45F);
+WWHD_OFFSET(pw_class, mKilledJalhalla, 0x460);
+WWHD_OFFSET(pw_class, mJalhallaHitDone, 0x461);
+WWHD_OFFSET(pw_class, mLanternState, 0x462);
 WWHD_OFFSET(pw_class, mpPath, 0x464);
 WWHD_OFFSET(pw_class, _468, 0x468);
 WWHD_OFFSET(pw_class, mPathPntIdx, 0x474);
@@ -179,36 +179,36 @@ WWHD_OFFSET(pw_class, _486, 0x486);
 WWHD_OFFSET(pw_class, mJalhallaID, 0x488);
 WWHD_OFFSET(pw_class, mKanteraID, 0x48C);
 WWHD_OFFSET(pw_class, mBckIdx, 0x490);
-WWHD_OFFSET(pw_class, m378, 0x494);
-WWHD_OFFSET(pw_class, m37A, 0x496);
-WWHD_OFFSET(pw_class, m37C, 0x498);
-WWHD_OFFSET(pw_class, m37E, 0x49A);
-WWHD_OFFSET(pw_class, m380, 0x49C);
-WWHD_OFFSET(pw_class, m382, 0x49E);
+WWHD_OFFSET(pw_class, mActionTimer, 0x494);
+WWHD_OFFSET(pw_class, mObstacleCheckTimer, 0x496);
+WWHD_OFFSET(pw_class, mAttackWaitTimer, 0x498);
+WWHD_OFFSET(pw_class, mWanderTurnTimer, 0x49A);
+WWHD_OFFSET(pw_class, mAnmHoldTimer, 0x49C);
+WWHD_OFFSET(pw_class, mLanternSettleTimer, 0x49E);
 WWHD_OFFSET(pw_class, m384, 0x4A0);
 WWHD_OFFSET(pw_class, m386, 0x4A2);
 WWHD_OFFSET(pw_class, m388, 0x4A4);
-WWHD_OFFSET(pw_class, m38A, 0x4A6);
-WWHD_OFFSET(pw_class, m38C, 0x4A8);
-WWHD_OFFSET(pw_class, m38E, 0x4AA);
-WWHD_OFFSET(pw_class, m390, 0x4AC);
-WWHD_OFFSET(pw_class, m392, 0x4AE);
-WWHD_OFFSET(pw_class, mFloatPhase, 0x4B0);
-WWHD_OFFSET(pw_class, mFloatPhaseStep, 0x4B2);
-WWHD_OFFSET(pw_class, m398, 0x4B4);
-WWHD_OFFSET(pw_class, m39A, 0x4B6);
-WWHD_OFFSET(pw_class, m39C, 0x4B8);
-WWHD_OFFSET(pw_class, m39E, 0x4BA);
+WWHD_OFFSET(pw_class, mSilentVanish, 0x4A6);
+WWHD_OFFSET(pw_class, mTargetAngleY, 0x4A8);
+WWHD_OFFSET(pw_class, mAlphaPhase, 0x4AA);
+WWHD_OFFSET(pw_class, mBobPhase, 0x4AC);
+WWHD_OFFSET(pw_class, mCirclePhase, 0x4AE);
+WWHD_OFFSET(pw_class, mLanternSwingPhase, 0x4B0);
+WWHD_OFFSET(pw_class, mLanternSwingSpeed, 0x4B2);
+WWHD_OFFSET(pw_class, mLanternHealth, 0x4B4);
+WWHD_OFFSET(pw_class, mAlpha, 0x4B6);
+WWHD_OFFSET(pw_class, mAlphaBase, 0x4B8);
+WWHD_OFFSET(pw_class, mBigDemoTurnStep, 0x4BA);
 WWHD_OFFSET(pw_class, mCorrectionOffsetY, 0x4BC);
-WWHD_OFFSET(pw_class, m3A4, 0x4C0);
+WWHD_OFFSET(pw_class, mDrawOffsetY, 0x4C0);
 WWHD_OFFSET(pw_class, mNoticeRange, 0x4C4);
-WWHD_OFFSET(pw_class, m3AC, 0x4C8);
-WWHD_OFFSET(pw_class, m3B0, 0x4CC);
+WWHD_OFFSET(pw_class, mGiveUpRange, 0x4C8);
+WWHD_OFFSET(pw_class, mLanternSwingAmpX, 0x4CC);
 WWHD_OFFSET(pw_class, _4D0, 0x4D0);
-WWHD_OFFSET(pw_class, mLightRadius, 0x4D4);
+WWHD_OFFSET(pw_class, mLanternSwingAmpZ, 0x4D4);
 WWHD_OFFSET(pw_class, mAcchCir, 0x4D8);
 WWHD_OFFSET(pw_class, mAcch, 0x518);
-WWHD_OFFSET(pw_class, m5C4, 0x6E0);
+WWHD_OFFSET(pw_class, mAttackEcallBack, 0x6E0);
 WWHD_OFFSET(pw_class, mActorPlace, 0x6F4);
 WWHD_OFFSET(pw_class, mStts, 0x708);
 WWHD_OFFSET(pw_class, mCyl, 0x744);
@@ -494,24 +494,24 @@ WWHD_OFFSET(PwDebugRegisters, mDemoRandomTimer, 0x54C);
 // HD: partial view; only offsets read by this unit are exposed.
 struct PwJalhallaView {
     u8 _0[0x505];
-    /* 0x505 */ be<u8> mMergeState;
-    /* 0x506 */ be<u8> mAction;
+    /* 0x505 */ be<u8> mIsReformed; /* was mMergeState: bpw_class mIsReformed (0x505); Big_pow_gattai_check 0244A5A8 merges this Poe only while it is set */
+    /* 0x506 */ be<u8> mStartDemoStep; /* was mAction: bpw_class mStartDemoStep (0x506), set 1..6 by action_start_demo 020DB380; action_big_demo 024500C0 follows each step */
     u8 _507;
     u8 _508[0xA];
-    /* 0x512 */ be<s16> mMode;
+    /* 0x512 */ be<s16> mBattlePhase; /* was mMode: bpw_class mBattlePhase (0x512); action_dousa (in daPW_Execute 0244B3E4) retreats while it is 2 */
     u8 _514[0x4E];
-    /* 0x562 */ be<s16> mKnockdown;
+    /* 0x562 */ be<s16> mActionState; /* was mKnockdown (misnamed): bpw_class mActionState (zeldaret/tww name, 0x562); Big_pow_down_check 0244A67C tests it for 0x6F, ACTION_STATE_SEPARATE_BUNRI_DOUSA_EXECUTE in zeldaret/tww (the separation running), not a knockdown */
     u8 _564[0x6];
-    /* 0x56A */ be<s16> mMergeAllowed;
+    /* 0x56A */ be<s16> mSomeCountdownTimers0; /* was mMergeAllowed (misnamed): bpw_class mSomeCountdownTimers[0] (zeldaret/tww name, 0x56A), a countdown timer; Big_pow_down_check 0244A67C takes Jalhalla's health only while it is above 3 */
     u8 _56C[0x12];
-    /* 0x57E */ be<s16> mPoeCount;
-    /* 0x580 */ be<s16> mPoeMerged;
+    /* 0x57E */ be<s16> mPoeCount; /* bpw_class mPoeCount (0x57E); action_big_demo 024500C0 adds 1 when this Poe merges back */
+    /* 0x580 */ be<s16> mPoeMerged; /* bpw_class mPoeMerged (0x580); action_big_demo 024500C0 sets 1 when this Poe merges back */
 };
-WWHD_OFFSET(PwJalhallaView, mMergeState, 0x505);
-WWHD_OFFSET(PwJalhallaView, mAction, 0x506);
-WWHD_OFFSET(PwJalhallaView, mMode, 0x512);
-WWHD_OFFSET(PwJalhallaView, mKnockdown, 0x562);
-WWHD_OFFSET(PwJalhallaView, mMergeAllowed, 0x56A);
+WWHD_OFFSET(PwJalhallaView, mIsReformed, 0x505);
+WWHD_OFFSET(PwJalhallaView, mStartDemoStep, 0x506);
+WWHD_OFFSET(PwJalhallaView, mBattlePhase, 0x512);
+WWHD_OFFSET(PwJalhallaView, mActionState, 0x562);
+WWHD_OFFSET(PwJalhallaView, mSomeCountdownTimers0, 0x56A);
 WWHD_OFFSET(PwJalhallaView, mPoeCount, 0x57E);
 WWHD_OFFSET(PwJalhallaView, mPoeMerged, 0x580);
 
@@ -595,10 +595,10 @@ inline be<s16>& pwDamageTimer(pw_class* actor, u32 index) {
     return *gabi::at<be<s16>>(gabi::ea(actor) + offsetof(pw_class, m384) + index * sizeof(s16));
 }
 inline be<s16>& pwTimer(pw_class* actor, u32 index) {
-    return *gabi::at<be<s16>>(gabi::ea(actor) + offsetof(pw_class, m378) + index * sizeof(s16));
+    return *gabi::at<be<s16>>(gabi::ea(actor) + offsetof(pw_class, mActionTimer) + index * sizeof(s16));
 }
 inline be<u32>& pwRegisterAnimation(pw_class* actor, u32 index) {
-    return *gabi::at<be<u32>>(gabi::ea(actor) + offsetof(pw_class, m2C0) + index * sizeof(u32));
+    return *gabi::at<be<u32>>(gabi::ea(actor) + offsetof(pw_class, mpMaterializeBrk) + index * sizeof(u32));
 }
 
 struct PwLanternTail {
@@ -764,21 +764,21 @@ WWHD_OFFSET(pw_class, speedF, 0x370);
 WWHD_OFFSET(pw_class, eyePos, 0x37C);
 WWHD_OFFSET(pw_class, attention_info.position, 0x390);
 WWHD_OFFSET(pw_class, mPhase, 0x3C8);
-WWHD_OFFSET(pw_class, m2CC, 0x3E8);
-WWHD_OFFSET(pw_class, m2D8, 0x3F4);
-WWHD_OFFSET(pw_class, m308, 0x424);
-WWHD_OFFSET(pw_class, mFloatPhaseStep, 0x4B2);
-WWHD_OFFSET(pw_class, m39A, 0x4B6);
-WWHD_OFFSET(pw_class, m39C, 0x4B8);
-WWHD_OFFSET(pw_class, m39E, 0x4BA);
-WWHD_OFFSET(pw_class, m3A4, 0x4C0);
-WWHD_OFFSET(pw_class, m3B0, 0x4CC);
-WWHD_OFFSET(pw_class, mLightRadius, 0x4D4);
+WWHD_OFFSET(pw_class, mLanternHandPos, 0x3E8);
+WWHD_OFFSET(pw_class, mLanternSphPos, 0x3F4);
+WWHD_OFFSET(pw_class, mLineStart, 0x424);
+WWHD_OFFSET(pw_class, mLanternSwingSpeed, 0x4B2);
+WWHD_OFFSET(pw_class, mAlpha, 0x4B6);
+WWHD_OFFSET(pw_class, mAlphaBase, 0x4B8);
+WWHD_OFFSET(pw_class, mBigDemoTurnStep, 0x4BA);
+WWHD_OFFSET(pw_class, mDrawOffsetY, 0x4C0);
+WWHD_OFFSET(pw_class, mLanternSwingAmpX, 0x4CC);
+WWHD_OFFSET(pw_class, mLanternSwingAmpZ, 0x4D4);
 WWHD_OFFSET(pw_class, mAcchCir, 0x4D8);
 WWHD_OFFSET(pw_class, mAcchCir.m_cir, 0x4EC);
 WWHD_OFFSET(pw_class, mAcch, 0x518);
 WWHD_OFFSET(pw_class, mAcch.m_gnd.mPolyIndex, 0x600);
-WWHD_OFFSET(pw_class, m5C4, 0x6E0);
+WWHD_OFFSET(pw_class, mAttackEcallBack, 0x6E0);
 WWHD_OFFSET(pw_class, mActorPlace.pos, 0x6F4);
 WWHD_OFFSET(pw_class, mActorPlace.angle, 0x700);
 WWHD_OFFSET(pw_class, mStts, 0x708);

@@ -4,8 +4,8 @@
 #include "bindings.h"
 struct JAIBasicView {
     u8 _00[0x11];
-    /* 0x11 */ be<u8> field_0xd;  // GameCube name; HD output mode.
-    /* 0x12 */ be<u16> field_0xe; // GameCube flags; stream buffer cut is bit11.
+    /* 0x11 */ be<u8> mOutputMode;  /* was field_0xd (GameCube name): JAIBasic::mOutputMode (JSystem/JAudio/JAIBasic.h, +0x11); setParamSoundOutputMode 02804508 stores it */
+    /* 0x12 */ be<u16> mFlags;  /* was field_0xe (GameCube name; flags, the stream buffer cut is bit 11): JAIBasic::mFlags (JSystem/JAudio/JAIBasic.h, +0x12); setParamStreamInsideBufferCut 02804598 sets bit 11 */
 };
 struct AudioHeaderStatics {
     be<u32> mWords[4];
@@ -13,8 +13,8 @@ struct AudioHeaderStatics {
 struct AudioDestructorRecord {
     be<u32> mWords[3];
 };
-WWHD_OFFSET(JAIBasicView, field_0xd, 0x11);
-WWHD_OFFSET(JAIBasicView, field_0xe, 0x12);
+WWHD_OFFSET(JAIBasicView, mOutputMode, 0x11);
+WWHD_OFFSET(JAIBasicView, mFlags, 0x12);
 WWHD_SIZE(JAIBasicView, 0x14);
 WWHD_SIZE(AudioHeaderStatics, 0x10);
 WWHD_SIZE(AudioDestructorRecord, 0xC);

@@ -180,12 +180,12 @@ void dMeter_heartInit(dMeterPrefixHD *i_Meter) {
       fmuls_ppc((f32)i_Meter->mHeart[0].mSizeOrig.y, (f32)sHeartHeightScale);
   f32 zero = (f32)sZero;
   i_Meter->field_0x2f70 = (f32)sOne;
-  i_Meter->field_0x2fbc = zero;
+  i_Meter->mHeartAlpha = zero;
   i_Meter->mMaxHP = (u16)sSaveInfo->mMaxLife;
   i_Meter->mCurrHP = (u16)sSaveInfo->mLife;
-  i_Meter->field_0x3014 = 5;
-  i_Meter->field_0x0f00.mUserArea = 0;
-  meter00_setNowAlphaZero(&i_Meter->field_0x0f00);
+  i_Meter->mHeartAlphaStep = 5;
+  i_Meter->mHeartLight.mUserArea = 0;
+  meter00_setNowAlphaZero(&i_Meter->mHeartLight);
   u32 maximum = (u8)i_Meter->mMaxHP >> 2;
   s32 current = ((s32)(u8)i_Meter->mCurrHP - 1) / 4;
   for (u32 i = 0; i < 20; i++) {
@@ -206,7 +206,7 @@ void dMeter_heartInit(dMeterPrefixHD *i_Meter) {
       meter00_setNowHeartScaleNative(front);
       meter00_setNowHeartScaleNative(back);
       auto *dst =
-          reinterpret_cast<dMeterHeartWordCopyHD *>(&i_Meter->field_0x0f00);
+          reinterpret_cast<dMeterHeartWordCopyHD *>(&i_Meter->mHeartLight);
       auto *src = reinterpret_cast<dMeterHeartWordCopyHD *>(front);
       dst->mTopLeft[0] = (u32)src->mTopLeft[0];
       dst->mTopLeft[1] = (u32)src->mTopLeft[1];
@@ -390,85 +390,85 @@ void dMeter_flyGaugeMove(dMeterPrefixHD *i_Meter, u32 active, s32 maximum,
         fmuls_ppc(fmuls_ppc(ratio, (f32)sFlyGaugeWidth), (f32)sMagicSegments);
     meter00_magicInitTransNative(i_Meter);
     meter00_magicChangeNative(i_Meter, length);
-    if (!(s16)i_Meter->field_0x0f38[0].mUserArea) {
-      i_Meter->field_0x1130.mUserArea = 0;
-      i_Meter->field_0x0f38[0].mUserArea = 1;
-      i_Meter->field_0x0f38[1].mUserArea = 20;
+    if (!(s16)i_Meter->mMagicBar[0].mUserArea) {
+      i_Meter->mMagicGauge2.mUserArea = 0;
+      i_Meter->mMagicBar[0].mUserArea = 1;
+      i_Meter->mMagicBar[1].mUserArea = 20;
     }
     meter00_maxLifeCountdownNative(1);
-    s32 counter = (s16)i_Meter->field_0x11a0.mUserArea;
+    s32 counter = (s16)i_Meter->mMagicGauge1.mUserArea;
     f32 one = (f32)sOne;
     if (counter < 5) {
       counter = (s16)(counter + 1);
-      i_Meter->field_0x11a0.mUserArea = counter;
+      i_Meter->mMagicGauge1.mUserArea = counter;
       alpha = meter00_valueIncrease(5, counter, 0);
     } else
       alpha = one;
-    counter = (s16)i_Meter->field_0x1130.mUserArea;
+    counter = (s16)i_Meter->mMagicGauge2.mUserArea;
     if (counter < 50) {
-      i_Meter->field_0x1130.mUserArea = counter + 1;
+      i_Meter->mMagicGauge2.mUserArea = counter + 1;
       dMeterGameInfoHD *state = meter00_getGameInfo();
       cXyz point;
       meter00_project(&state->mpCb1Player->eyePos, &point);
       sHeartTimers.mProjectedEye.x = (f32)point.x;
       sHeartTimers.mProjectedEye.y = (f32)point.y;
       sHeartTimers.mProjectedEye.z = (f32)point.z;
-      counter = (s16)i_Meter->field_0x1130.mUserArea;
+      counter = (s16)i_Meter->mMagicGauge2.mUserArea;
       f32 half = (f32)sHalf, blend, fade;
       if (counter > 30) {
         blend = meter00_valueIncrease(20, 50 - counter, 0);
-        counter = (s16)i_Meter->field_0x1130.mUserArea;
+        counter = (s16)i_Meter->mMagicGauge2.mUserArea;
         fade = meter00_valueIncrease(20, counter - 30, 0);
         f32 x = fmuls_ppc(fsubs_ppc((f32)point.x,
-                                    (f32)i_Meter->field_0x11a0.mPosCenter.x),
+                                    (f32)i_Meter->mMagicGauge1.mPosCenter.x),
                           blend),
             y = fmuls_ppc(fsubs_ppc((f32)point.y,
-                                    (f32)i_Meter->field_0x11a0.mPosCenter.y),
+                                    (f32)i_Meter->mMagicGauge1.mPosCenter.y),
                           blend);
         meter00_magicTransScaleNative(i_Meter, x, y, fmadds(half, fade, half));
       } else {
         fade = zero;
         blend = one;
         f32 x = fsubs_ppc((f32)point.x,
-                          (f32)i_Meter->field_0x11a0.mPosCenter.x),
+                          (f32)i_Meter->mMagicGauge1.mPosCenter.x),
             y = fsubs_ppc((f32)point.y,
-                          (f32)i_Meter->field_0x11a0.mPosCenter.y);
+                          (f32)i_Meter->mMagicGauge1.mPosCenter.y);
         meter00_magicTransScaleNative(i_Meter, x, y, half);
       }
       sHeartTimers.mFlyBlend = blend;
       sHeartTimers.mFlyFade = fade;
-      i_Meter->field_0x2fc0 = alpha;
+      i_Meter->mMagicAlpha = alpha;
       return;
     }
   } else {
     meter00_heartScaleCountdownNative(1);
-    s32 counter = (s16)i_Meter->field_0x11a0.mUserArea;
+    s32 counter = (s16)i_Meter->mMagicGauge1.mUserArea;
     if (counter > 0) {
       counter = (s16)(counter - 1);
-      i_Meter->field_0x11a0.mUserArea = counter;
+      i_Meter->mMagicGauge1.mUserArea = counter;
       alpha = meter00_valueIncrease(5, counter, 0);
     } else {
-      i_Meter->field_0x11a0.mUserArea = 0;
+      i_Meter->mMagicGauge1.mUserArea = 0;
       alpha = zero;
       meter00_magicTransNowInitNative(i_Meter);
     }
-    if ((s16)i_Meter->field_0x1130.mUserArea)
-      i_Meter->field_0x1130.mUserArea = 0;
+    if ((s16)i_Meter->mMagicGauge2.mUserArea)
+      i_Meter->mMagicGauge2.mUserArea = 0;
   }
-  i_Meter->field_0x2fc0 = alpha;
+  i_Meter->mMagicAlpha = alpha;
 }
 
 /* 02592A88 */
 void dMeter_magicChange(dMeterPrefixHD *i_Meter, f32 remaining) {
   f32 ratio =
-      (f32)((f64)remaining / (f64)(f32)i_Meter->field_0x0f38[0].mSizeOrig.x);
+      (f32)((f64)remaining / (f64)(f32)i_Meter->mMagicBar[0].mSizeOrig.x);
   s16 amount = (s16)ftoi(fmuls_ppc(ratio, (f32)sMagicUnits));
   dMeterGameInfoHD *state = meter00_getGameInfo();
   state->mItemNowMagic = (u16)amount;
   meter00_magicTransNowInitNative(i_Meter);
   f32 one = (f32)sOne, zero = (f32)sZero;
   for (u32 i = 0; i < 8; ++i) {
-    fopMsgM_pane_class *pane = &i_Meter->field_0x0f38[i];
+    fopMsgM_pane_class *pane = &i_Meter->mMagicBar[i];
     if (!(remaining < (f32)pane->mSizeOrig.x)) {
       meter00_paneScaleXY(pane, one);
       remaining = fsubs_ppc(remaining, (f32)pane->mSizeOrig.x);
@@ -482,18 +482,18 @@ void dMeter_magicChange(dMeterPrefixHD *i_Meter, f32 remaining) {
 /* 0259295C */
 void dMeter_magicTransNowInit(dMeterPrefixHD *i_Meter) {
   u16 life = (u16)sSaveInfo->mMaxLife;
-  f32 x = fsubs_ppc((f32)i_Meter->field_0x10f8.mPosCenter.x,
-                    (f32)i_Meter->field_0x10f8.mPosCenterOrig.x);
+  f32 x = fsubs_ppc((f32)i_Meter->mMagicGauge3.mPosCenter.x,
+                    (f32)i_Meter->mMagicGauge3.mPosCenterOrig.x);
   f32 y = (life <= 43 ? (f32)sLowLifeMagicY : (f32)sZero);
-  meter00_paneTrans(&i_Meter->field_0x10f8, x, y);
-  x = fsubs_ppc((f32)i_Meter->field_0x11a0.mPosCenter.x,
-                (f32)i_Meter->field_0x11a0.mPosCenterOrig.x);
-  meter00_paneTrans(&i_Meter->field_0x11a0, x, y);
-  x = fsubs_ppc((f32)i_Meter->field_0x11d8.mPosCenter.x,
-                (f32)i_Meter->field_0x11d8.mPosCenterOrig.x);
-  meter00_paneTrans(&i_Meter->field_0x11d8, x, y);
+  meter00_paneTrans(&i_Meter->mMagicGauge3, x, y);
+  x = fsubs_ppc((f32)i_Meter->mMagicGauge1.mPosCenter.x,
+                (f32)i_Meter->mMagicGauge1.mPosCenterOrig.x);
+  meter00_paneTrans(&i_Meter->mMagicGauge1, x, y);
+  x = fsubs_ppc((f32)i_Meter->mMagicGaugeShadow1.mPosCenter.x,
+                (f32)i_Meter->mMagicGaugeShadow1.mPosCenterOrig.x);
+  meter00_paneTrans(&i_Meter->mMagicGaugeShadow1, x, y);
   for (u32 i = 0; i < 8; ++i) {
-    fopMsgM_pane_class *pane = &i_Meter->field_0x0f38[i];
+    fopMsgM_pane_class *pane = &i_Meter->mMagicBar[i];
     f32 origin = (f32)pane->mPosCenterOrig.x,
         position = (f32)pane->mPosCenter.x;
     meter00_paneTrans(pane, fsubs_ppc(position, origin), y);
@@ -505,60 +505,60 @@ void dMeter_magicInitTrans(dMeterPrefixHD *i_Meter) {
   u16 life = (u16)sSaveInfo->mMaxLife;
   f32 zero = (f32)sZero;
   f32 y = life <= 43 ? (f32)sLowLifeMagicY : zero;
-  meter00_paneTrans(&i_Meter->field_0x10f8, zero, y);
-  meter00_paneTrans(&i_Meter->field_0x11a0, zero, y);
-  meter00_paneTrans(&i_Meter->field_0x11d8, zero, y);
+  meter00_paneTrans(&i_Meter->mMagicGauge3, zero, y);
+  meter00_paneTrans(&i_Meter->mMagicGauge1, zero, y);
+  meter00_paneTrans(&i_Meter->mMagicGaugeShadow1, zero, y);
   for (u32 i = 0; i < 8; ++i)
-    meter00_paneTrans(&i_Meter->field_0x0f38[i], zero, y);
+    meter00_paneTrans(&i_Meter->mMagicBar[i], zero, y);
 }
 
 /* 02592CD8 */
 void dMeter_magicTransScale(dMeterPrefixHD *i_Meter, f32 x, f32 y, f32 scale) {
   if ((u16)sSaveInfo->mMaxLife <= 43)
     y = fadds_ppc(y, (f32)sLowLifeMagicY);
-  meter00_paneScaleXY(&i_Meter->field_0x11a0, scale);
-  meter00_paneTrans(&i_Meter->field_0x11a0, x, y);
-  f32 a = (f32)i_Meter->field_0x1130.mPosCenterOrig.x,
-      b = (f32)i_Meter->field_0x1130.mPosCenterOrig.y;
-  i_Meter->field_0x1130.mPosCenter.x = fmuls_ppc(a, scale);
-  i_Meter->field_0x1130.mPosCenter.y = fmuls_ppc(b, scale);
-  meter00_paneScaleXY(&i_Meter->field_0x1130, scale);
-  a = (f32)i_Meter->field_0x10f8.mPosCenterOrig.x;
-  f32 originX = (f32)i_Meter->field_0x11a0.mPosCenterOrig.x,
-      originY = (f32)i_Meter->field_0x11a0.mPosCenterOrig.y;
+  meter00_paneScaleXY(&i_Meter->mMagicGauge1, scale);
+  meter00_paneTrans(&i_Meter->mMagicGauge1, x, y);
+  f32 a = (f32)i_Meter->mMagicGauge2.mPosCenterOrig.x,
+      b = (f32)i_Meter->mMagicGauge2.mPosCenterOrig.y;
+  i_Meter->mMagicGauge2.mPosCenter.x = fmuls_ppc(a, scale);
+  i_Meter->mMagicGauge2.mPosCenter.y = fmuls_ppc(b, scale);
+  meter00_paneScaleXY(&i_Meter->mMagicGauge2, scale);
+  a = (f32)i_Meter->mMagicGauge3.mPosCenterOrig.x;
+  f32 originX = (f32)i_Meter->mMagicGauge1.mPosCenterOrig.x,
+      originY = (f32)i_Meter->mMagicGauge1.mPosCenterOrig.y;
   f32 dx = fsubs_ppc(a, originX);
-  b = (f32)i_Meter->field_0x10f8.mPosCenterOrig.y;
+  b = (f32)i_Meter->mMagicGauge3.mPosCenterOrig.y;
   f32 nx = fadds_ppc(fmadds(dx, scale, originX), x);
   f32 ny = fadds_ppc(fmadds(fsubs_ppc(b, originY), scale, originY), y);
-  i_Meter->field_0x10f8.mPosCenter.x = nx;
-  i_Meter->field_0x10f8.mPosCenter.y = ny;
-  meter00_paneScaleXY(&i_Meter->field_0x10f8, scale);
-  a = (f32)i_Meter->field_0x11d8.mPosCenterOrig.x;
-  originX = (f32)i_Meter->field_0x11a0.mPosCenterOrig.x;
-  originY = (f32)i_Meter->field_0x11a0.mPosCenterOrig.y;
+  i_Meter->mMagicGauge3.mPosCenter.x = nx;
+  i_Meter->mMagicGauge3.mPosCenter.y = ny;
+  meter00_paneScaleXY(&i_Meter->mMagicGauge3, scale);
+  a = (f32)i_Meter->mMagicGaugeShadow1.mPosCenterOrig.x;
+  originX = (f32)i_Meter->mMagicGauge1.mPosCenterOrig.x;
+  originY = (f32)i_Meter->mMagicGauge1.mPosCenterOrig.y;
   dx = fsubs_ppc(a, originX);
-  b = (f32)i_Meter->field_0x11d8.mPosCenterOrig.y;
+  b = (f32)i_Meter->mMagicGaugeShadow1.mPosCenterOrig.y;
   nx = fadds_ppc(fmadds(dx, scale, originX), x);
   ny = fadds_ppc(fmadds(fsubs_ppc(b, originY), scale, originY), y);
-  i_Meter->field_0x11d8.mPosCenter.x = nx;
-  i_Meter->field_0x11d8.mPosCenter.y = ny;
-  meter00_paneScaleXY(&i_Meter->field_0x11d8, scale);
-  a = (f32)i_Meter->field_0x1168.mPosCenterOrig.x;
-  b = (f32)i_Meter->field_0x1168.mPosCenterOrig.y;
-  i_Meter->field_0x1168.mPosCenter.x = fmuls_ppc(a, scale);
-  i_Meter->field_0x1168.mPosCenter.y = fmuls_ppc(b, scale);
-  meter00_paneScaleXY(&i_Meter->field_0x1168, scale);
+  i_Meter->mMagicGaugeShadow1.mPosCenter.x = nx;
+  i_Meter->mMagicGaugeShadow1.mPosCenter.y = ny;
+  meter00_paneScaleXY(&i_Meter->mMagicGaugeShadow1, scale);
+  a = (f32)i_Meter->mMagicGaugeShadow2.mPosCenterOrig.x;
+  b = (f32)i_Meter->mMagicGaugeShadow2.mPosCenterOrig.y;
+  i_Meter->mMagicGaugeShadow2.mPosCenter.x = fmuls_ppc(a, scale);
+  i_Meter->mMagicGaugeShadow2.mPosCenter.y = fmuls_ppc(b, scale);
+  meter00_paneScaleXY(&i_Meter->mMagicGaugeShadow2, scale);
   f32 half = (f32)sHalf;
   for (u32 i = 0; i < 8; ++i) {
-    fopMsgM_pane_class *pane = &i_Meter->field_0x0f38[i];
+    fopMsgM_pane_class *pane = &i_Meter->mMagicBar[i];
     a = (f32)pane->mPosCenterOrig.x;
-    originX = (f32)i_Meter->field_0x11a0.mPosCenterOrig.x;
+    originX = (f32)i_Meter->mMagicGauge1.mPosCenterOrig.x;
     nx = fadds_ppc(fmadds(fsubs_ppc(a, originX), scale, originX), x);
     f32 width = (f32)pane->mSizeOrig.x;
     b = (f32)pane->mPosCenterOrig.y;
     f32 scaledWidth = fmuls_ppc(width, scale);
     pane->mPosCenter.x = nx;
-    originY = (f32)i_Meter->field_0x11a0.mPosCenterOrig.y;
+    originY = (f32)i_Meter->mMagicGauge1.mPosCenterOrig.y;
     f32 dy = fsubs_ppc(b, originY),
         left = dMeter_negativeMultiplySubtractHD(scaledWidth, half, nx),
         offset = (f32)pane->mSize.x;
@@ -579,8 +579,8 @@ void dMeter_magicTransScale(dMeterPrefixHD *i_Meter, f32 x, f32 y, f32 scale) {
 /* 02592888 */
 void dMeter_magicLength(dMeterPrefixHD *i_Meter, f32 scale) {
   f32 edge =
-      fmuls_ppc((f32)i_Meter->field_0x0f38[0].mSizeOrig.x, (f32)sMagicSegments);
-  f32 width = (f32)i_Meter->field_0x10f8.mSizeOrig.x;
+      fmuls_ppc((f32)i_Meter->mMagicBar[0].mSizeOrig.x, (f32)sMagicSegments);
+  f32 width = (f32)i_Meter->mMagicGauge3.mSizeOrig.x;
   f32 delta = fsubs_ppc(width, edge);
   f32 half = (f32)sHalf;
   f32 value;
@@ -592,26 +592,26 @@ void dMeter_magicLength(dMeterPrefixHD *i_Meter, f32 scale) {
     value = ppc_qnan(scale);
   else
     value = fmadds(edge, scale, delta);
-  f32 left = fmadds(value, half, (f32)i_Meter->field_0x10f8.mPosTopLeftOrig.x);
-  i_Meter->field_0x10f8.mSize.x = value;
-  i_Meter->field_0x10f8.mPosCenter.x = left;
-  meter00_cposMove(&i_Meter->field_0x10f8);
-  f32 origin = (f32)i_Meter->field_0x10f8.mSizeOrig.x,
-      length = (f32)i_Meter->field_0x11a0.mSizeOrig.x;
-  value = (f32)((f64)(f32)i_Meter->field_0x10f8.mSize.x +
+  f32 left = fmadds(value, half, (f32)i_Meter->mMagicGauge3.mPosTopLeftOrig.x);
+  i_Meter->mMagicGauge3.mSize.x = value;
+  i_Meter->mMagicGauge3.mPosCenter.x = left;
+  meter00_cposMove(&i_Meter->mMagicGauge3);
+  f32 origin = (f32)i_Meter->mMagicGauge3.mSizeOrig.x,
+      length = (f32)i_Meter->mMagicGauge1.mSizeOrig.x;
+  value = (f32)((f64)(f32)i_Meter->mMagicGauge3.mSize.x +
                 (f64)fsubs_ppc(length, origin));
-  left = fmadds(value, half, (f32)i_Meter->field_0x11a0.mPosTopLeftOrig.x);
-  i_Meter->field_0x11a0.mSize.x = value;
-  i_Meter->field_0x11a0.mPosCenter.x = left;
-  meter00_cposMove(&i_Meter->field_0x11a0);
-  length = (f32)i_Meter->field_0x1130.mSizeOrig.x;
-  origin = (f32)i_Meter->field_0x10f8.mSizeOrig.x;
-  value = (f32)((f64)(f32)i_Meter->field_0x10f8.mSize.x +
+  left = fmadds(value, half, (f32)i_Meter->mMagicGauge1.mPosTopLeftOrig.x);
+  i_Meter->mMagicGauge1.mSize.x = value;
+  i_Meter->mMagicGauge1.mPosCenter.x = left;
+  meter00_cposMove(&i_Meter->mMagicGauge1);
+  length = (f32)i_Meter->mMagicGauge2.mSizeOrig.x;
+  origin = (f32)i_Meter->mMagicGauge3.mSizeOrig.x;
+  value = (f32)((f64)(f32)i_Meter->mMagicGauge3.mSize.x +
                 (f64)fsubs_ppc(length, origin));
-  left = fmadds(value, half, (f32)i_Meter->field_0x1130.mPosTopLeftOrig.x);
-  i_Meter->field_0x1130.mSize.x = value;
-  i_Meter->field_0x1130.mPosCenter.x = left;
-  meter00_cposMove(&i_Meter->field_0x1130);
+  left = fmadds(value, half, (f32)i_Meter->mMagicGauge2.mPosTopLeftOrig.x);
+  i_Meter->mMagicGauge2.mSize.x = value;
+  i_Meter->mMagicGauge2.mPosCenter.x = left;
+  meter00_cposMove(&i_Meter->mMagicGauge2);
 }
 
 /* 025931A8 */
@@ -628,12 +628,12 @@ void dMeter_setMagicPositionHD(dMeterPrefixHD *i_Meter) {
   u8 mode = (u8)sSaveInfo->mMagicMode;
   f32 y = (f32)sZero, x;
   if (!mode)
-    x = fsubs_ppc((f32)i_Meter->field_0x19f0[1].mPosTopLeftOrig.x,
-                  (f32)i_Meter->field_0x19f0[0].mPosTopLeftOrig.x);
+    x = fsubs_ppc((f32)i_Meter->mRupyDigitA[1].mPosTopLeftOrig.x,
+                  (f32)i_Meter->mRupyDigitA[0].mPosTopLeftOrig.x);
   else
     x = y;
-  meter00_paneTrans(&i_Meter->field_0x2a20, x, y);
-  meter00_paneTrans(&i_Meter->field_0x2a58, x, y);
+  meter00_paneTrans(&i_Meter->mRupyIcon, x, y);
+  meter00_paneTrans(&i_Meter->mRupyIconB, x, y);
 }
 
 /* 02593284 */

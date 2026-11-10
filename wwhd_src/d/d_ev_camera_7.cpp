@@ -75,9 +75,9 @@ static inline void copy3(u32 d, u32 s) {
 
 /* inlined into possessedEvCamera/gameOverEvCamera */
 static inline void setDone(u32 c) {
-    at<dCamera_c>(c)->m102 = 1;
-    at<dCamera_c>(c)->m101 = 1;
-    at<dCamera_c>(c)->m100 = 1;
+    at<dCamera_c>(c)->mStyleSettle2 = 1;
+    at<dCamera_c>(c)->mStyleSettle1 = 1;
+    at<dCamera_c>(c)->mStyleSettle0 = 1;
 }
 /* the blur effect and a short rumble */
 /* inlined into possessedEvCamera/gameOverEvCamera */
@@ -111,7 +111,7 @@ u32 PossessedEventCamera_c::possessedEvCamera() {
     u32 w = gabi::ea(mWork);
     auto& work = *at<PossessedCameraWork>(w);
     u32 state;
-    if (this->m11C != 0) {
+    if (this->mCurStyleTimer != 0) {
         state = work.mState;
     } else {
         state = POSSESSED_INIT;
@@ -152,22 +152,22 @@ u32 PossessedEventCamera_c::possessedEvCamera() {
             ev7_cSAngle_pl(gabi::ea(&work.mLongitude), ap + 2, ap);
             ev7_cSGlobe_ValRVU(gabi::ea(&work.mTargetDirection), work.mRadius,
                                gabi::ea(&work.mLatitude), ap + 2);
-            /* keep the current view in m0A4[1] */
+            /* keep the current view in mSavedViewStack[1] */
             s16 bank = this->mViewCache.mBank;
             u32 x = at<be<u32>>(gabi::ea(&this->mViewCache.mCenter.x))->get();
-            this->m0A4[1].mBank = (u16)bank;
+            this->mSavedViewStack[1].mBank = (u16)bank;
             for (u32 i = 0; i < 0x18; i += 4)
-                *at<be<u32>>(gabi::ea(&this->m0A4[1].mCenter) + i) =
+                *at<be<u32>>(gabi::ea(&this->mSavedViewStack[1].mCenter) + i) =
                     i == 0 ? x : at<be<u32>>(gabi::ea(&this->mViewCache.mCenter) + i)->get();
-            this->m0A4[1].m1E = 2;
-            this->m0A4[1].mFovY = this->mViewCache.mFovy;
+            this->mSavedViewStack[1].m1E = 2;
+            this->mSavedViewStack[1].mFovY = this->mViewCache.mFovy;
         } else {
             gabi::Local<cXyz> e;
             gabi::Local<cXyz> x;
             u32 ee = gabi::ea(e.get()), xx = gabi::ea(x.get());
             ev7_eyePos(i_this, ee, act);
             copy3(gabi::ea(&this->mViewCache.mCenter), ee);
-            ev7_cXyz_mi(gabi::ea(&this->m0A4[1].mEye), ee, gabi::ea(&this->m0A4[1].mCenter));
+            ev7_cXyz_mi(gabi::ea(&this->mSavedViewStack[1].mEye), ee, gabi::ea(&this->mSavedViewStack[1].mCenter));
             ev7_cSGlobe_Val(gabi::ea(&work.mTargetDirection), ee);
             ev7_directionOf(i_this, ap, work.mpTarget.v.get());
             ev7_cSAngle_pl(gabi::ea(&work.mLongitude), ap + 2, ap);
@@ -266,9 +266,9 @@ static inline void gameOverEye(u32 c, u32 ofs, u32 ang, u32 eye, u32 tmpAng) {
     copy3(eye, rr);
     ev7_positionOf(c, rr, at<dCamera_c>(c)->mpPlayerActor.v.get());
     if (at<cXyz>(eye)->y.get() <
-        at<cXyz>(rr)->y.get() + at<dCamera_c>(c)->m368) { /* bge: taken on NaN */
+        at<cXyz>(rr)->y.get() + at<dCamera_c>(c)->mBushHeight) { /* bge: taken on NaN */
         ev7_positionOf(c, pp, at<dCamera_c>(c)->mpPlayerActor.v.get());
-        at<cXyz>(eye)->y = at<cXyz>(pp)->y.get() + at<dCamera_c>(c)->m368;
+        at<cXyz>(eye)->y = at<cXyz>(pp)->y.get() + at<dCamera_c>(c)->mBushHeight;
     }
 }
 
@@ -354,17 +354,17 @@ u32 PossessedEventCamera_c::gameOverEvCamera() {
     at<cXyz>(C)->x = c0;
     at<cXyz>(C)->y = ev7CloseCenterY;
     at<cXyz>(C)->z = ev7CloseCenterZ; /* (0, -40, -35) */
-    if (this->m11C == 0) {
+    if (this->mCurStyleTimer == 0) {
         work.mState = GAMEOVER_SEARCH;
         work.mTimer = 0;
-        work.mMirror = ((this->m07C >> 1) & 1) ^ 1;
+        work.mMirror = ((this->mFrameCounter >> 1) & 1) ^ 1;
         s32 pad = (s32)this->mPadId;
         u32 g = dComIfGp_ea();
         if (at<dComIfG_inf_c>(g)->play.mPlayerStatus[pad][0].get() & 0x100000)
             work.mState = GAMEOVER_FIXED_INIT;
-        this->m102 = 1;
-        this->m100 = 1;
-        this->m101 = 1;
+        this->mStyleSettle2 = 1;
+        this->mStyleSettle0 = 1;
+        this->mStyleSettle1 = 1;
     }
     u32 ang = gabi::ea(&at<GameOverCameraFrame>(f)->mAngle);
     ev7_cSAngle_default(ang); /* cSAngle() */
@@ -464,9 +464,9 @@ u32 PossessedEventCamera_c::gameOverEvCamera() {
     ev7_relationalPosA(i_this, rr, this->mpPlayerActor.v.get(), gabi::ea(&work.mEyeOffset), ap);
     copy3(gabi::ea(&this->mViewCache.mEye), rr);
     work.mTimer = work.mTimer + 1;
-    this->m102 = 1;
-    this->m100 = 1;
-    this->m101 = 1;
+    this->mStyleSettle2 = 1;
+    this->mStyleSettle0 = 1;
+    this->mStyleSettle1 = 1;
     return 1;
 }
 

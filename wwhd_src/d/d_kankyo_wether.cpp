@@ -1926,9 +1926,9 @@ void dKankyo_star_Packet::setColor(u32 colorIndex) {
             for (u32 half = 0; half < 2; ++half) {
                 if (static_cast<u32>(geometry->mpMaterial))
                     weatherBindGeometryMaterial(element + 0x158);
-                weatherDrawIndexed(static_cast<u32>(weatherTrianglePrimitive), (u32)3,
-                                   static_cast<u32>(weatherTriangleIndexType),
-                                   static_cast<u32>(weatherTriangleIndices), (u32)0, (u32)1);
+                GX2DrawIndexedEx(static_cast<u32>(weatherTrianglePrimitive), (u32)3,
+                                 static_cast<u32>(weatherTriangleIndexType),
+                                 static_cast<u32>(weatherTriangleIndices), (u32)0, (u32)1);
                 element += 0x4A8;
             }
             count = (s16) static_cast<u16>(packetView->mEffectNum);
@@ -2044,11 +2044,11 @@ static void bind_weather_uniforms(u32 renderer, u32 materialField) {
     u32 data = uniform->mpData;
     s32 geometry = descriptor->mGeometrySlot;
     if (pixel != -1)
-        weatherSetPixelUniforms((u32)pixel, size, data);
+        GX2SetPixelUniformBlock((u32)pixel, size, data);
     if (vertex != -1)
-        weatherSetVertexUniforms((u32)vertex, size, data);
+        GX2SetVertexUniformBlock((u32)vertex, size, data);
     if (geometry != -1)
-        weatherSetGeometryUniforms((u32)geometry, size, data);
+        GX2SetGeometryUniformBlock((u32)geometry, size, data);
 }
 /* 025817B0 */
 void dKankyo_poison_Packet::render() {
@@ -2095,9 +2095,9 @@ void dKankyo_poison_Packet::render() {
             u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
             if (static_cast<u32>(pair->mpMaterial))
                 weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-            weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                               static_cast<u32>(weatherQuadIndexType),
-                               static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+            GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                             static_cast<u32>(weatherQuadIndexType),
+                             static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
         }
         count = (s32) static_cast<u32>(dKy_getWeatherEnvlight()->mPoisonCount);
     }
@@ -2144,9 +2144,9 @@ void dKankyo_cloud_Packet::render(s32 count) {
             u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
             if (static_cast<u32>(pair->mpMaterial))
                 weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-            weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                               static_cast<u32>(weatherQuadIndexType),
-                               static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+            GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                             static_cast<u32>(weatherQuadIndexType),
+                             static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
         }
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
@@ -2202,9 +2202,9 @@ void dKankyo_housi_Packet::render() {
                 u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
                 if (static_cast<u32>(pair->mpMaterial))
                     weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-                weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                                   static_cast<u32>(weatherQuadIndexType),
-                                   static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+                GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                                 static_cast<u32>(weatherQuadIndexType),
+                                 static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
             }
             count = (s32) static_cast<u32>(dKy_getWeatherEnvlight()->mHousiCount);
         }
@@ -2221,11 +2221,11 @@ static void emit_weather_uniforms(u32 infoAddress, u32 descriptorAddress) {
     u32 size = uniform->mSize;
     s32 geometry = descriptor->mGeometrySlot;
     if (pixel != -1)
-        weatherSetPixelUniforms((u32)pixel, size, data);
+        GX2SetPixelUniformBlock((u32)pixel, size, data);
     if (vertex != -1)
-        weatherSetVertexUniforms((u32)vertex, size, data);
+        GX2SetVertexUniformBlock((u32)vertex, size, data);
     if (geometry != -1)
-        weatherSetGeometryUniforms((u32)geometry, size, data);
+        GX2SetGeometryUniformBlock((u32)geometry, size, data);
 }
 /* 02582650 */
 void dKankyo_wave_Packet::render(u32 context) {
@@ -2279,9 +2279,9 @@ void dKankyo_wave_Packet::render(u32 context) {
             u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
             if (static_cast<u32>(pair->mpMaterial))
                 weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-            weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                               static_cast<u32>(weatherQuadIndexType),
-                               static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+            GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                             static_cast<u32>(weatherQuadIndexType),
+                             static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
         }
         count = (s16) static_cast<u16>(dKy_getWeatherEnvlight()->mWaveChan.mWaveCount);
     }
@@ -2423,9 +2423,9 @@ void dKankyo_rain_Packet::renderSplashes() {
                 u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
                 if (static_cast<u32>(pair->mpMaterial))
                     weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-                weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                                   static_cast<u32>(weatherQuadIndexType),
-                                   static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+                GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                                 static_cast<u32>(weatherQuadIndexType),
+                                 static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
             }
             count = (s16) static_cast<u16>(packetView->mRainCount);
         }
@@ -2473,9 +2473,9 @@ void dKankyo_rain_Packet::renderStreaks() {
         u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
         if (static_cast<u32>(pair->mpMaterial))
             weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-        weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                           static_cast<u32>(weatherQuadIndexType),
-                           static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+        GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                         static_cast<u32>(weatherQuadIndexType),
+                         static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
         count = static_cast<s32>(dKy_getWeatherEnvlight()->mRainCount) >> 1;
     }
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
@@ -2521,9 +2521,9 @@ void dKankyo_snow_Packet::renderSplashes() {
             u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
             if (static_cast<u32>(pair->mpMaterial))
                 weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-            weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                               static_cast<u32>(weatherQuadIndexType),
-                               static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+            GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                             static_cast<u32>(weatherQuadIndexType),
+                             static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
         }
         count = static_cast<s16>(packetView->mEffCount);
     }
@@ -2582,9 +2582,9 @@ void dKankyo_snow_Packet::renderParticles(u32 count, u32 blendStart) {
         u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
         if (static_cast<u32>(pair->mpMaterial))
             weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-        weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                           static_cast<u32>(weatherQuadIndexType),
-                           static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+        GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                         static_cast<u32>(weatherQuadIndexType),
+                         static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
     }
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
@@ -3812,9 +3812,9 @@ void d_kankyo_wether_cpp::dKankyo_sun_Packet::render(u32 firstTexture, u32 enabl
         u32 side = static_cast<u32>(gabi::at<WeatherGeometryPair>(pair)->mBufferIndex) == 0 ? 1 : 0;
         if (static_cast<u32>(gabi::at<WeatherGeometryPair>(pair)->mpMaterial))
             weatherBindGeometryMaterial(pair + side * 0x254 + 0x158);
-        weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                           static_cast<u32>(weatherQuadIndexType),
-                           static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+        GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                         static_cast<u32>(weatherQuadIndexType),
+                         static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
     }
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
@@ -3884,9 +3884,9 @@ void d_kankyo_wether_cpp::dKankyo_sunlenz_Packet::render() {
         u32 side = static_cast<u32>(pairView->mBufferIndex) == 0 ? 1 : 0;
         if (static_cast<u32>(pairView->mpMaterial))
             weatherBindGeometryMaterial(pair + side * 0x254 + 0x158);
-        weatherDrawIndexed(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                           static_cast<u32>(weatherQuadIndexType),
-                           static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+        GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
+                         static_cast<u32>(weatherQuadIndexType),
+                         static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
     }
     weatherConstructRenderState(state.a);
     configure_cloud_render_state(state.a, zero);
@@ -3913,9 +3913,9 @@ void d_kankyo_wether_cpp::dKankyo_sunlenz_Packet::render() {
     for (u32 i = 0; i < 16; ++i) {
         if (static_cast<u32>(gabi::at<WeatherCloudGeometry>(geometry)->mpMaterial))
             weatherBindGeometryMaterial(geometry + side * 0x254 + i * 0x4A8 + 0x158);
-        weatherDrawIndexed(static_cast<u32>(weatherTrianglePrimitive), (u32)3,
-                           static_cast<u32>(weatherTriangleIndexType),
-                           static_cast<u32>(weatherTriangleIndices), (u32)0, (u32)1);
+        GX2DrawIndexedEx(static_cast<u32>(weatherTrianglePrimitive), (u32)3,
+                         static_cast<u32>(weatherTriangleIndexType),
+                         static_cast<u32>(weatherTriangleIndices), (u32)0, (u32)1);
     }
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
@@ -4239,10 +4239,10 @@ ext 028F0164 void weatherDestroyArray(u32,u32,u32,u32,u32,u32)
 ext 028F4384 f32 weatherSqrt(f32)
 ext 028F521C void weatherClear(u32,u32)
 ext C00060E0 void weatherBindShader(u32,u32)
-ext C0006178 void weatherDrawIndexed(u32,u32,u32,u32,u32,u32)
-ext C00068A8 void weatherSetGeometryUniforms(u32,u32,u32)
-ext C0006900 void weatherSetPixelUniforms(u32,u32,u32)
-ext C0006A38 void weatherSetVertexUniforms(u32,u32,u32)
+ext C0006178 void GX2DrawIndexedEx(u32,u32,u32,u32,u32,u32) # was weatherDrawIndexed: build/gen/imports.json slot C0006178 = gx2 GX2DrawIndexedEx
+ext C00068A8 void GX2SetGeometryUniformBlock(u32,u32,u32) # was weatherSetGeometryUniforms: build/gen/imports.json slot C00068A8 = gx2 GX2SetGeometryUniformBlock
+ext C0006900 void GX2SetPixelUniformBlock(u32,u32,u32) # was weatherSetPixelUniforms: build/gen/imports.json slot C0006900 = gx2 GX2SetPixelUniformBlock
+ext C0006A38 void GX2SetVertexUniformBlock(u32,u32,u32) # was weatherSetVertexUniforms: build/gen/imports.json slot C0006A38 = gx2 GX2SetVertexUniformBlock
 ext 0255F84C void weatherSetFog()
 ext 0256A448 void weatherMoveWave()
 ext 0256BB6C void weatherMoveCloudShadow()

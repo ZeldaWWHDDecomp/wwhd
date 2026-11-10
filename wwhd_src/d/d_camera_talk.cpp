@@ -36,9 +36,9 @@ static void talkEye(dCamera_c* c) {
     c->mViewCache.mEye.copy(*e);
 }
 static inline void flagsDone(dCamera_c* c) {
-    c->m102 = 1;
-    c->m101 = 1;
-    c->m100 = 1;
+    c->mStyleSettle2 = 1;
+    c->mStyleSettle1 = 1;
+    c->mStyleSettle0 = 1;
 }
 /* m10 = m04 + m28.Xyz(), then pushed out by radiusActorInSight */
 static void talkFinish(dCamera_c* c, TalkWork* work, fopAc_ac_c* a1, fopAc_ac_c* a2) {
@@ -153,7 +153,7 @@ bool dCamera_c::talktoCamera(s32 style) {
     f32 maxLatitude = camParamVal(style, 19);
     f32 latitudeScale = camParamVal(style, 3);
     bool ret = true;
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         work->mShotFrames = 0;
         work->mSide = -1;
         work->mTransitionFrames = 20;
@@ -204,7 +204,7 @@ bool dCamera_c::talktoCamera(s32 style) {
         same = a1 == a2;
     } else if (reinterpret_cast<TalkEventManagerHD*>(dComIfGp_getPEvtManager())
                    ->mCameraPlay.get() != 0) {
-        u32 c11C = m11C;
+        u32 c11C = mCurStyleTimer;
         a1 = work->mpListener.get();
         if (c11C != 0)
             a2 = talk_getEvActor(this, talkEventNames.mSpeaker, talkEventNames.mTalkPartner);
@@ -221,8 +221,8 @@ bool dCamera_c::talktoCamera(s32 style) {
         return false;
     }
     if (work->mpPreviousSpeaker.get() != a2) {
-        m11C = 0;
-        m100 = 0;
+        mCurStyleTimer = 0;
+        mStyleSettle0 = 0;
         work->mShotFrames = 0;
         work->mpPreviousSpeaker = a2;
     }
@@ -238,7 +238,7 @@ bool dCamera_c::talktoCamera(s32 style) {
     talk_angleFromDegrees(latLo.get(), minLatitude);
     talk_angleFromDegrees(lonMax.get(), 180.0f - minLongitude);
     talk_angleFromDegrees(lonMin.get(), minLongitude);
-    u32 c11C = m11C;
+    u32 c11C = mCurStyleTimer;
     if (c11C == 0 || (a2 != nullptr && fpcM_GetName(a2) == fpcNm_SHIP_e && c11C <= 1)) {
         gabi::Local<cXyz> ofs, at1, at2, ep, r;
         ofs->x = centerOffsetX;
@@ -371,10 +371,10 @@ bool dCamera_c::talktoCamera(s32 style) {
                         cXyz_pl(&work->mCenter, e, x);
                         work->mEye.copy(*e);
                         positionOf(pp, mpPlayerActor.get());
-                        if (work->mEye.y < pp->y + m368) {
+                        if (work->mEye.y < pp->y + mBushHeight) {
                             gabi::Local<cXyz> pp2, dd;
                             positionOf(pp2, mpPlayerActor.get());
-                            work->mEye.y = (pp2->y + m368) + 10.0f;
+                            work->mEye.y = (pp2->y + mBushHeight) + 10.0f;
                             cXyz_mi(&work->mEye, dd, &work->mCenter);
                             cSGlobe_Val(&work->mDirection, dd);
                         }
@@ -437,7 +437,7 @@ bool dCamera_c::talktoCamera(s32 style) {
             talk_relationalPos(this, r.get(), a1, a2, ofs.get(), 0.25f);
             work->mCenter.copy(*r);
         }
-        if (m100 != 0) {
+        if (mStyleSettle0 != 0) {
             mViewCache.mCenter.copy(work->mCenter);
             copyTalkFloatBits(&mViewCache.mDirection.mRadius, &work->mDirection.mRadius);
             copyTalkFloatBits(&mViewCache.mDirection.mV, &work->mDirection.mV);

@@ -23,17 +23,17 @@ static inline int morf_frame(bk_class* i_this) { return gabi::ftoi(i_this->mpMor
 
 /* GameCube walk_set (inlined in jyunkai) */
 static inline void walk_set(bk_class* i_this) {
-    if (i_this->m0B30 != 0 || i_this->m1214 != 0) {
+    if (i_this->mHoldWeapon != 0 || i_this->mWeaponPending != 0) {
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_WALK_e, 10.0f, 2, 1.0f, dRes_INDEX_BK_BAS_BK_WALK_e);
-    } else if (i_this->m11F3 == 0) {
+    } else if (i_this->mBareHanded == 0) {
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_NIGERU_e, 5.0f, 2, 1.0f,
                  dRes_INDEX_BK_BAS_BK_NIGERU_e);
     } else {
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_WALK_e, 10.0f, 2, 1.0f, dRes_INDEX_BK_BAS_BK_WALK_e);
     }
-    if (i_this->m0B30 == 0 && i_this->m121F != 0) {
+    if (i_this->mHoldWeapon == 0 && i_this->mWeaponLost != 0) {
         fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_LOST_BOKO, 0);
-        i_this->m121F = 0;
+        i_this->mWeaponLost = 0;
     }
 }
 
@@ -53,9 +53,9 @@ static inline void jyunkai(bk_class* i_this) {
     } else if (i_this->mType == 9) {
         i_this->dr.mAction = BK_ACTION_PATH_RUN;
         i_this->dr.mMode = 0;
-        i_this->m0300[2] = 0;
-        i_this->m120C = 0;
-        i_this->m1210 = 0;
+        i_this->mTimers[2] = 0;
+        i_this->mJumpMove = 0;
+        i_this->mJumpStep = 0;
         path_check(i_this, 0);
         return;
     }
@@ -66,16 +66,16 @@ static inline void jyunkai(bk_class* i_this) {
         // Fall-through
     case -1:
         i_this->dr.mMode = 1;
-        if (i_this->m0B30 != 0 || i_this->m11F3 != 0) {
-            if (i_this->m1215 != 0) {
-                s8 idx = i_this->m1216 + i_this->m1217;
-                i_this->m1216 = idx;
+        if (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0) {
+            if (i_this->mPathOn != 0) {
+                s8 idx = i_this->mPathPoint + i_this->mPathDir;
+                i_this->mPathPoint = idx;
                 if (idx >= (s8)path_num(i_this)) {
                     if (path_closed(i_this)) {
-                        i_this->m1216 = 0;
+                        i_this->mPathPoint = 0;
                     } else {
-                        i_this->m1217 = -1;
-                        i_this->m1216 = (s8)(path_num(i_this) - 2);
+                        i_this->mPathDir = -1;
+                        i_this->mPathPoint = (s8)(path_num(i_this) - 2);
                     }
                     if (path_nextID(i_this) != 0xFFFF) {
                         i_this->ppd =
@@ -85,24 +85,24 @@ static inline void jyunkai(bk_class* i_this) {
                         }
                     }
                 } else if (idx < 0) {
-                    i_this->m1217 = 1;
-                    i_this->m1216 = 1;
+                    i_this->mPathDir = 1;
+                    i_this->mPathPoint = 1;
                 }
-                dPnt_mv* point = path_point(i_this, i_this->m1216);
+                dPnt_mv* point = path_point(i_this, i_this->mPathPoint);
                 copy_f(&i_this->m0320, &point->m_position);
             } else {
                 way_pos_check(i_this, &i_this->m0320);
             }
         } else {
             way_pos_check(i_this, &i_this->m0320);
-            i_this->m0300[1] = (s16)gabi::ftoi(30.0f + cM_rndF(25.0f));
+            i_this->mTimers[1] = (s16)gabi::ftoi(30.0f + cM_rndF(25.0f));
         }
-        i_this->m0300[2] = 30;
+        i_this->mTimers[2] = 30;
         // Fall-through
     case 1: {
         s16 r29;
         f32 f31;
-        if (i_this->m0B30 != 0 || i_this->m11F3 != 0) {
+        if (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0) {
             r29 = 0x400;
             f31 = l_bkHIO().m04C;
         } else {
@@ -112,13 +112,13 @@ static inline void jyunkai(bk_class* i_this) {
 
         f32 x = i_this->m0320.x - i_this->current.pos.x;
         f32 z = i_this->m0320.z - i_this->current.pos.z;
-        i_this->dr.m4D0 = cM_atan2s(x, z);
+        i_this->dr.mTurnTargetY = cM_atan2s(x, z);
 
-        if (i_this->m1215 != 0 && (i_this->m0B30 != 0 || i_this->m11F3 != 0)) {
+        if (i_this->mPathOn != 0 && (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0)) {
             f32 d = std_sqrtf(gabi::fmadds(x, x, z * z));
             f32 t = f31 * 0.25f;
             if (d < t + t) {
-                if (path_point(i_this, i_this->m1216)->mArg3 == 3) {
+                if (path_point(i_this, i_this->mPathPoint)->mArg3 == 3) {
                     wait_set(i_this);
                     i_this->dr.mMode = 2;
                 } else {
@@ -128,29 +128,29 @@ static inline void jyunkai(bk_class* i_this) {
         } else {
             f32 d = std_sqrtf(gabi::fmadds(x, x, z * z));
             f32 t = f31 * 0.25f;
-            if (d < t + t || (i_this->m0300[2] == 0 &&
+            if (d < t + t || (i_this->mTimers[2] == 0 &&
                               (i_this->dr.mAcch.ChkWallHit() ||
                                ground_4_check(i_this, 1, i_this->current.angle.y, 200.0f)))) {
                 wait_set(i_this);
                 i_this->dr.mMode = 2;
             }
         }
-        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.m4D0, 4, r29);
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, r29);
         cLib_addCalc2(&i_this->speedF, f31, 1.0f, 5.0f);
         break;
     }
     case 2:
         i_this->speedF = 0.0f;
-        if (i_this->m0B30 == 0 && i_this->m11F3 == 0) {
+        if (i_this->mHoldWeapon == 0 && i_this->mBareHanded == 0) {
             int frame = morf_frame(i_this);
             if ((frame == 0xB || frame == 0x19) && cM_rndF(1.0f) < 0.5f) {
                 fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_SEARCH, 0);
             }
         }
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             i_this->dr.mMode = 0;
-            if (i_this->m0B30 == 0 && i_this->m11F3 == 0 && i_this->m030A == 0) {
-                i_this->m11F3 = 1;
+            if (i_this->mHoldWeapon == 0 && i_this->mBareHanded == 0 && i_this->mWeaponRunTimer == 0) {
+                i_this->mBareHanded = 1;
             }
         }
         break;
@@ -160,7 +160,7 @@ static inline void jyunkai(bk_class* i_this) {
         if (frame == 3 || frame == 0x35) {
             fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_SEARCH, 0);
         }
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             i_this->dr.mMode = 0;
         }
         break;
@@ -170,15 +170,15 @@ static inline void jyunkai(bk_class* i_this) {
     s32 r3 = fopAcM_otoCheck(i_actor, 1000.0f);
     r3 += search_sp();
 
-    if (i_this->m0B30 != 0 || i_this->m11F3 != 0) {
+    if (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0) {
         if (r3 != 0 || (i_this->mPlayerDistance < l_bkHIO().m028 &&
-                        daBk_player_view_check(i_this, &i_this->dr.m714->current.pos, i_this->m0332,
+                        daBk_player_view_check(i_this, &i_this->dr.mpLookTarget->current.pos, i_this->mTargetAngleY,
                                                l_bkHIO().m034))) {
             i_this->dr.mAction = BK_ACTION_FIGHT_RUN;
-            i_this->m0300[1] = 0;
+            i_this->mTimers[1] = 0;
             i_this->dr.mMode = 0;
         }
-    } else if (i_this->m11F3 == 0 && i_this->dr.mMode == 2) {
+    } else if (i_this->mBareHanded == 0 && i_this->dr.mMode == 2) {
         int frame = morf_frame(i_this);
         if ((frame == 0xB || frame == 0x19) && cM_rndF(1.0f) < 0.5f) {
             fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_SEARCH_BOKO, 0);
@@ -186,7 +186,7 @@ static inline void jyunkai(bk_class* i_this) {
     }
 
     /* HD: daBk_wepon_view_check is an out-of-line function (0209AB64) */
-    if (i_this->m0B30 == 0 && daBk_wepon_view_check_mv(i_this)) {
+    if (i_this->mHoldWeapon == 0 && daBk_wepon_view_check_mv(i_this)) {
         i_this->dr.mAction = BK_ACTION_WEPON_SEARCH;
         i_this->dr.mMode = -1;
     }
@@ -200,23 +200,23 @@ static inline void jyunkai(bk_class* i_this) {
 /* common tail of stand / stand2: player sighting and bombs */
 static inline void stand_sight(bk_class* i_this) {
     f32 f1;
-    if (i_this->m02B5 != 0xFF) {
-        f1 = (f32)(u32)i_this->m02B5 * 10.0f;
+    if (i_this->mSightRangePrm != 0xFF) {
+        f1 = (f32)(u32)i_this->mSightRangePrm * 10.0f;
     } else {
         f1 = 500.0f;
     }
 
     if (i_this->mPlayerDistance < f1 &&
-        daBk_player_view_check(i_this, &i_this->dr.m714->current.pos, i_this->m0332,
+        daBk_player_view_check(i_this, &i_this->dr.mpLookTarget->current.pos, i_this->mTargetAngleY,
                                l_bkHIO().m034)) {
         if (i_this->dr.mMode >= 50) {
             i_this->dr.mAction = BK_ACTION_FIGHT_RUN;
-            i_this->m0300[1] = 0;
+            i_this->mTimers[1] = 0;
             i_this->dr.mMode = 0;
         } else {
             i_this->dr.mMode = 20;
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_BIKKURI_e, 3.0f, 0, 1.0f, -1);
-            i_this->m0300[1] = 30;
+            i_this->mTimers[1] = 30;
             fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_FOUND_LINK, 0);
         }
     }
@@ -230,7 +230,7 @@ static inline void stand_sight(bk_class* i_this) {
 /* GameCube stand (inlined) */
 static inline void stand(bk_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    i_this->dr.m710 = 0;
+    i_this->dr.mLookMode = 0;
     bool r28 = false;
     bool r27 = false;
 
@@ -241,11 +241,11 @@ static inline void stand(bk_class* i_this) {
         i_this->actor_status |= fopAcStts_UNK4000_e;
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_WAIT_e, 10.0f, 2, 1.0f, dRes_INDEX_BK_BAS_BK_WAIT_e);
         i_this->dr.mMode = -19;
-        i_this->m0300[1] = 20;
-        i_this->m02B5 = 0;
+        i_this->mTimers[1] = 20;
+        i_this->mSightRangePrm = 0;
         // Fall-through
     case -19:
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             fopAc_ac_c* ken = (fopAc_ac_c*)fpcM_Search(0x0209B67C /* ken_s_sub */, i_this);
             set_ken(ken);
             if (ken) {
@@ -254,7 +254,7 @@ static inline void stand(bk_class* i_this) {
                 cXyz_mi(&player->current.pos, tmp, &ken->current.pos);
                 sp28->copy(*tmp);
                 if (std_sqrtf(PSVECSquareMag(sp28)) < 800.0f) {
-                    i_this->m1234 = 1;
+                    i_this->mDemoCamMode = 1;
                     i_this->dr.mMode = -18;
                 }
             } else {
@@ -266,64 +266,64 @@ static inline void stand(bk_class* i_this) {
         break;
     case 0: {
         f32 r = cM_rndF((f32)(s32)(l_bkHIO().m106 - l_bkHIO().m104));
-        i_this->m0300[1] = (s16)gabi::ftoi(r + (f32)(s32)l_bkHIO().m104);
+        i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)(s32)l_bkHIO().m104);
     }
         // Fall-through
     case -1:
         i_this->dr.mMode = 1;
-        if (i_this->m02DC != 0) {
+        if (i_this->mHasTelescope != 0) {
             if (cM_rndF(1.0f) < 0.5f) {
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_NOZOKU_e, 10.0f, 2, 1.0f, -1);
-                i_this->m0300[1] = (s16)gabi::ftoi(cM_rndF(200.0f) + 200.0f);
+                i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(200.0f) + 200.0f);
             } else {
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_TATAKU_e, 10.0f, 2, 1.0f, -1);
-                i_this->m0300[1] = (s16)gabi::ftoi(cM_rndF(100.0f) + 100.0f);
+                i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(100.0f) + 100.0f);
             }
         } else {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_WAIT_e, 10.0f, 2, 1.0f,
                      dRes_INDEX_BK_BAS_BK_WAIT_e);
         }
-        i_this->m121E++;
+        i_this->mStandWaitCount++;
         // Fall-through
     case 1:
         cLib_addCalc2(&i_this->current.pos.x, i_this->home.pos.x, 0.5f, i_this->speed.x * 0.25f);
         cLib_addCalc2(&i_this->current.pos.z, i_this->home.pos.z, 0.5f, i_this->speed.z * 0.25f);
         cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->home.angle.y, 2, 0x800);
         i_this->speedF = 0.0f;
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_NOBI_e, 10.0f, 0, 1.0f,
                      dRes_INDEX_BK_BAS_BK_NOBI_e);
             fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_NOBI, 0);
-            if (i_this->m121E < 3) {
+            if (i_this->mStandWaitCount < 3) {
                 i_this->dr.mMode = 2;
             } else {
                 i_this->dr.mMode = 3;
-                i_this->m121E = 0;
+                i_this->mStandWaitCount = 0;
             }
         }
         break;
     case 2:
         r28 = true;
-        i_this->m02CA = 2;
+        i_this->mBlinkTimer = 2;
         if (i_this->mpMorf->isStop()) {
             i_this->dr.mMode = 0;
         }
         break;
     case 3:
         r28 = true;
-        i_this->m02CA = 2;
+        i_this->mBlinkTimer = 2;
         if (i_this->mpMorf->isStop()) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_SLEEP_e, 10.0f, 2, 1.0f,
                      dRes_INDEX_BK_BAS_BK_SLEEP_e);
             f32 r = cM_rndF((f32)(s32)(l_bkHIO().m10A - l_bkHIO().m108));
-            i_this->m0300[1] = (s16)gabi::ftoi(r + (f32)(s32)l_bkHIO().m108);
+            i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)(s32)l_bkHIO().m108);
             i_this->dr.mMode += 1;
         }
         break;
     case 4:
         r28 = true;
-        i_this->m02CA = 2;
-        if (i_this->m0300[1] == 0) {
+        i_this->mBlinkTimer = 2;
+        if (i_this->mTimers[1] == 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_NOBI_e, 10.0f, 0, 1.0f,
                      dRes_INDEX_BK_BAS_BK_NOBI_e);
             fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_NOBI, 0);
@@ -331,28 +331,28 @@ static inline void stand(bk_class* i_this) {
         }
         break;
     case 10:
-        if (i_this->m0300[1] == 30) {
+        if (i_this->mTimers[1] == 30) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_BIKKURI_e, 3.0f, 0, 1.0f, -1);
         }
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_KYORO2_e, 10.0f, 2, 1.0f,
                      dRes_INDEX_BK_BAS_BK_KYORO2_e);
             i_this->dr.mMode = 11;
-            i_this->m0300[3] = (s16)gabi::ftoi(30.0f + cM_rndF(30.0f));
+            i_this->mTimers[3] = (s16)gabi::ftoi(30.0f + cM_rndF(30.0f));
         }
         break;
     case 11:
-        if (i_this->m0300[3] == 0) {
+        if (i_this->mTimers[3] == 0) {
             i_this->dr.mMode = 0;
         }
         break;
     case 20:
-        if (i_this->m0300[1] < 10) {
-            i_this->dr.m710 = 1;
+        if (i_this->mTimers[1] < 10) {
+            i_this->dr.mLookMode = 1;
         }
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             i_this->dr.mAction = BK_ACTION_FIGHT_RUN;
-            i_this->m0300[1] = 0;
+            i_this->mTimers[1] = 0;
             i_this->dr.mMode = 0;
             return;
         }
@@ -361,18 +361,18 @@ static inline void stand(bk_class* i_this) {
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_KYORO1_e, 10.0f, 2, 1.0f,
                  dRes_INDEX_BK_BAS_BK_KYORO1_e);
         i_this->dr.mMode += 1;
-        i_this->m0300[1] = 50;
+        i_this->mTimers[1] = 50;
         // Fall-through
     case 51:
         i_this->speedF = 0.0f;
-        if (i_this->m0300[1] > 25) {
+        if (i_this->mTimers[1] > 25) {
             r28 = true;
         }
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, 1.0f,
                      dRes_INDEX_BK_BAS_BK_RUN_e);
             i_this->dr.mMode += 1;
-            i_this->m0300[2] = 60;
+            i_this->mTimers[2] = 60;
         }
         break;
     case 52: {
@@ -380,18 +380,18 @@ static inline void stand(bk_class* i_this) {
         gabi::Local<cXyz> sp28;
         cXyz_mi(&i_this->home.pos, tmp, &i_this->current.pos);
         copy_f(sp28, tmp);
-        i_this->dr.m4D0 = cM_atan2s(sp28->x, sp28->z);
+        i_this->dr.mTurnTargetY = cM_atan2s(sp28->x, sp28->z);
         f32 d = std_sqrtf(gabi::fmadds(sp28->x, sp28->x, sp28->z * sp28->z));
         if (d < l_bkHIO().m054 * 0.25f * 5.0f) {
             i_this->dr.mMode = 0;
         }
-        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.m4D0, 4, 0x1000);
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, 0x1000);
         cLib_addCalc2(&i_this->speedF, l_bkHIO().m054, 1.0f, 5.0f);
 
         if (i_this->dr.mAcch.ChkGroundHit() && i_this->dr.mAcch.ChkWallHit()) {
-            if (i_this->m02DC != 0) {
+            if (i_this->mHasTelescope != 0) {
                 i_this->dr.mMode = 60;
-                i_this->m0300[2] = 20;
+                i_this->mTimers[2] = 20;
                 break;
             }
 
@@ -418,9 +418,9 @@ static inline void stand(bk_class* i_this) {
         }
         break;
     case 60:
-        cLib_addCalcAngleS2(&i_this->current.angle.y, (s16)(i_this->dr.m4D0 + 0x4000), 4, 0x1000);
+        cLib_addCalcAngleS2(&i_this->current.angle.y, (s16)(i_this->dr.mTurnTargetY + 0x4000), 4, 0x1000);
         cLib_addCalc2(&i_this->speedF, l_bkHIO().m054, 1.0f, 5.0f);
-        if (i_this->m0300[2] == 0) {
+        if (i_this->mTimers[2] == 0) {
             i_this->dr.mMode = 52;
         }
         break;
@@ -431,12 +431,12 @@ static inline void stand(bk_class* i_this) {
     }
     if (i_this->dr.mMode < 10 && r31 != 0) {
         i_this->dr.mMode = 10;
-        i_this->m0300[1] = (s16)gabi::ftoi(cM_rndF(10.0f) + 45.0f);
+        i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(10.0f) + 45.0f);
     }
-    if (!r28 && i_this->m0300[2] == 0 && i_this->dr.mMode != 20) {
+    if (!r28 && i_this->mTimers[2] == 0 && i_this->dr.mMode != 20) {
         stand_sight(i_this);
     }
-    if (i_this->m0B30 == 0 && daBk_wepon_view_check_mv(i_this)) {
+    if (i_this->mHoldWeapon == 0 && daBk_wepon_view_check_mv(i_this)) {
         i_this->dr.mAction = BK_ACTION_WEPON_SEARCH;
         i_this->dr.mMode = -1;
     }
@@ -445,7 +445,7 @@ static inline void stand(bk_class* i_this) {
 /* GameCube stand2 (inlined): beside a search light */
 static inline void stand2(bk_class* i_this) {
     dComIfGp_get(); /* HD: unused accessor call */
-    i_this->dr.m710 = 0;
+    i_this->dr.mLookMode = 0;
     s32 r31 = fopAcM_otoCheck(i_this, 1000.0f);
 
     if (i_this->mpSearchLight == nullptr) {
@@ -481,29 +481,29 @@ static inline void stand2(bk_class* i_this) {
         if (i_this->mpSearchLight != nullptr) {
             daObj_Search_setBkControl(i_this->mpSearchLight, true);
         }
-        i_this->dr.m710 = 6;
-        if (i_this->m0300[3] == 0) {
-            i_this->m0300[3] = (s16)gabi::ftoi(cM_rndF(150.0f) + 80.0f);
+        i_this->dr.mLookMode = 6;
+        if (i_this->mTimers[3] == 0) {
+            i_this->mTimers[3] = (s16)gabi::ftoi(cM_rndF(150.0f) + 80.0f);
             i_this->m1212 = (s16)gabi::ftoi(cM_rndF(30.0f));
-        } else if (i_this->m0300[3] < (s16)(i_this->m1212 + 30)) {
-            i_this->dr.m71A = 10000;
-            i_this->dr.m718 = -10000;
-        } else if (i_this->m0300[4] == 0) {
-            i_this->m0300[4] = (s16)gabi::ftoi(cM_rndF(30.0f) + 10.0f);
-            i_this->dr.m71A = (s16)gabi::ftoi(3000.0f - cM_rndF(10000.0f));
-            i_this->dr.m718 = (s16)gabi::ftoi(-cM_rndF(2000.0f));
+        } else if (i_this->mTimers[3] < (s16)(i_this->m1212 + 30)) {
+            i_this->dr.mLookYaw = 10000;
+            i_this->dr.mLookPitch = -10000;
+        } else if (i_this->mTimers[4] == 0) {
+            i_this->mTimers[4] = (s16)gabi::ftoi(cM_rndF(30.0f) + 10.0f);
+            i_this->dr.mLookYaw = (s16)gabi::ftoi(3000.0f - cM_rndF(10000.0f));
+            i_this->dr.mLookPitch = (s16)gabi::ftoi(-cM_rndF(2000.0f));
         }
 
-        i_this->m0B7B = 1;
-        s16 r28 = i_this->m1224 - i_this->m1228;
-        if (i_this->m122A >= 0 && r28 < 0) {
+        i_this->mWeaponAtHome = 1;
+        s16 r28 = i_this->mRotAngle - i_this->mPrevRotAngle;
+        if (i_this->mRotStep >= 0 && r28 < 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_MIGIROT_e, 5.0f, 2, 1.0f, -1);
         }
-        if (i_this->m122A <= 0 && r28 > 0) {
+        if (i_this->mRotStep <= 0 && r28 > 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_HIDARIROT_e, 5.0f, 2, 1.0f, -1);
         }
-        i_this->m122A = r28;
-        i_this->m1228 = i_this->m1224;
+        i_this->mRotStep = r28;
+        i_this->mPrevRotAngle = i_this->mRotAngle;
 
         cLib_addCalc2(&i_this->current.pos.x, i_this->home.pos.x, 0.5f,
                       gabi::fmadds(i_this->speed.x, 0.25f, 10.0f));
@@ -514,30 +514,30 @@ static inline void stand2(bk_class* i_this) {
         break;
     }
     case 10:
-        i_this->m0B7B = 1;
-        if (i_this->m0300[1] == 30) {
+        i_this->mWeaponAtHome = 1;
+        if (i_this->mTimers[1] == 30) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_BIKKURI_e, 3.0f, 0, 1.0f, -1);
         }
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_KYORO2_e, 10.0f, 2, 1.0f,
                      dRes_INDEX_BK_BAS_BK_KYORO2_e);
             i_this->dr.mMode = 11;
-            i_this->m0300[3] = (s16)gabi::ftoi(30.0f + cM_rndF(30.0f));
+            i_this->mTimers[3] = (s16)gabi::ftoi(30.0f + cM_rndF(30.0f));
         }
         break;
     case 11:
-        if (i_this->m0300[3] == 0) {
+        if (i_this->mTimers[3] == 0) {
             i_this->dr.mMode = 0;
         }
         break;
     case 20:
-        i_this->m0B7B = 1;
-        if (i_this->m0300[1] < 10) {
-            i_this->dr.m710 = 1;
+        i_this->mWeaponAtHome = 1;
+        if (i_this->mTimers[1] < 10) {
+            i_this->dr.mLookMode = 1;
         }
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             i_this->dr.mAction = BK_ACTION_FIGHT_RUN;
-            i_this->m0300[1] = 0;
+            i_this->mTimers[1] = 0;
             i_this->dr.mMode = 0;
             return;
         }
@@ -546,27 +546,27 @@ static inline void stand2(bk_class* i_this) {
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_KYORO1_e, 10.0f, 2, 1.0f,
                  dRes_INDEX_BK_BAS_BK_KYORO1_e);
         i_this->dr.mMode += 1;
-        i_this->m0300[1] = 50;
+        i_this->mTimers[1] = 50;
         // Fall-through
     case 51:
         i_this->speedF = 0.0f;
-        if (i_this->m0300[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, 1.0f,
                      dRes_INDEX_BK_BAS_BK_RUN_e);
             i_this->dr.mMode += 1;
             path_check(i_this, 1);
-            if (i_this->m1216 >= 4) {
-                i_this->m1217 = 1;
+            if (i_this->mPathPoint >= 4) {
+                i_this->mPathDir = 1;
             } else {
-                i_this->m1217 = -1;
+                i_this->mPathDir = -1;
             }
-            i_this->m0300[2] = 60;
+            i_this->mTimers[2] = 60;
         }
         break;
     case 52:
     case 60: {
         if (i_this->dr.mMode == 52) {
-            dPnt_mv* pnt = path_point(i_this, i_this->m1216);
+            dPnt_mv* pnt = path_point(i_this, i_this->mPathPoint);
             copy_f(&i_this->m0320, &pnt->m_position);
             cXyz_mi(&i_this->m0320, tmp, &i_this->current.pos);
             copy_f(sp24, tmp);
@@ -574,25 +574,25 @@ static inline void stand2(bk_class* i_this) {
             cXyz_mi(&i_this->home.pos, tmp, &i_this->current.pos);
             copy_f(sp24, tmp);
         }
-        i_this->dr.m4D0 = cM_atan2s(sp24->x, sp24->z);
+        i_this->dr.mTurnTargetY = cM_atan2s(sp24->x, sp24->z);
         f32 d = std_sqrtf(gabi::fmadds(sp24->x, sp24->x, sp24->z * sp24->z));
         if (d < l_bkHIO().m054 * 0.25f * 5.0f) {
             if (i_this->dr.mMode == 60) {
                 i_this->dr.mMode = 0;
-            } else if (i_this->m1216 == 0) {
+            } else if (i_this->mPathPoint == 0) {
                 i_this->dr.mMode = 60;
             } else {
-                s8 idx = i_this->m1216 + i_this->m1217;
-                i_this->m1216 = idx;
+                s8 idx = i_this->mPathPoint + i_this->mPathDir;
+                i_this->mPathPoint = idx;
                 u16 num = path_num(i_this);
                 if (idx >= (s8)num) {
-                    i_this->m1216 = 0;
+                    i_this->mPathPoint = 0;
                 } else if (idx < 0) {
-                    i_this->m1216 = (s8)(num - 1);
+                    i_this->mPathPoint = (s8)(num - 1);
                 }
             }
         }
-        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.m4D0, 4, 0x1000);
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, 0x1000);
         cLib_addCalc2(&i_this->speedF, l_bkHIO().m054, 1.0f, 5.0f);
         break;
     }
@@ -600,14 +600,14 @@ static inline void stand2(bk_class* i_this) {
 
     if (i_this->dr.mMode < 10 && r31 != 0) {
         i_this->dr.mMode = 10;
-        i_this->m0300[1] = (s16)gabi::ftoi(cM_rndF(10.0f) + 45.0f);
+        i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(10.0f) + 45.0f);
     }
 
-    if (i_this->m0300[2] == 0 && i_this->dr.mMode != 20) {
+    if (i_this->mTimers[2] == 0 && i_this->dr.mMode != 20) {
         stand_sight(i_this);
     }
 
-    if (i_this->m0B30 == 0 && daBk_wepon_view_check_mv(i_this)) {
+    if (i_this->mHoldWeapon == 0 && daBk_wepon_view_check_mv(i_this)) {
         i_this->dr.mAction = BK_ACTION_WEPON_SEARCH;
         i_this->dr.mMode = -1;
     }
@@ -616,7 +616,7 @@ static inline void stand2(bk_class* i_this) {
 /* GameCube path_run (inlined) */
 static inline void path_run(bk_class* i_this) {
     dComIfGp_get(); /* HD: unused accessor call */
-    i_this->dr.m710 = 0;
+    i_this->dr.mLookMode = 0;
 
     switch ((s16)i_this->dr.mMode) {
     case 0:
@@ -625,67 +625,67 @@ static inline void path_run(bk_class* i_this) {
         i_this->dr.mMode = 1;
         // Fall-through
     case 1: {
-        dPnt_mv* point = path_point(i_this, i_this->m1216);
+        dPnt_mv* point = path_point(i_this, i_this->mPathPoint);
         f32 x = point->m_position.x + i_this->m0320.x;
         f32 z = point->m_position.z + i_this->m0320.z;
         f32 dx = x - i_this->current.pos.x;
         f32 dz = z - i_this->current.pos.z;
-        i_this->dr.m4D0 = cM_atan2s(dx, dz);
+        i_this->dr.mTurnTargetY = cM_atan2s(dx, dz);
 
         if (std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) < 100.0f) {
-            s8 idx = i_this->m1216 + i_this->m1217;
-            i_this->m1216 = idx;
+            s8 idx = i_this->mPathPoint + i_this->mPathDir;
+            i_this->mPathPoint = idx;
             u16 num = path_num(i_this);
             if (idx >= (s8)num) {
-                i_this->m1216 = (s8)(num - 1);
-                i_this->m1217 = -1;
-                i_this->m121C = 1;
+                i_this->mPathPoint = (s8)(num - 1);
+                i_this->mPathDir = -1;
+                i_this->mPathEnd = 1;
             } else if (idx < 0) {
-                i_this->m1216 = 0;
-                i_this->m1217 = 1;
-                i_this->m121C = 1;
+                i_this->mPathPoint = 0;
+                i_this->mPathDir = 1;
+                i_this->mPathEnd = 1;
             }
         }
 
-        if (i_this->m0300[1] == 0) {
-            i_this->m0300[1] = (s16)gabi::ftoi(cM_rndF(50.0f) + 30.0f);
+        if (i_this->mTimers[1] == 0) {
+            i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(50.0f) + 30.0f);
             i_this->m0320.x = cM_rndFX(50.0f);
             i_this->m0320.z = cM_rndFX(50.0f);
         }
 
         if (i_this->dr.mAcch.ChkGroundHit()) {
             s16 maxStep = 0x600;
-            if (i_this->m120C != 0) {
+            if (i_this->mJumpMove != 0) {
                 maxStep = 0x2000;
             }
-            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.m4D0, 4, maxStep);
+            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, maxStep);
         }
 
-        if (i_this->m120C == 0) {
+        if (i_this->mJumpMove == 0) {
             i_this->speedF = l_bkHIO().m054;
-            if (i_this->m0300[2] == 0) {
-                i_this->m0300[2] = (s16)gabi::ftoi(cM_rndF(100.0f) + 50.0f);
+            if (i_this->mTimers[2] == 0) {
+                i_this->mTimers[2] = (s16)gabi::ftoi(cM_rndF(100.0f) + 50.0f);
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP1_e, 2.0f, 0, 1.0f,
                          dRes_INDEX_BK_BAS_BK_JUMP1_e);
-                i_this->m120C = 1;
-                i_this->m1210 = 0;
+                i_this->mJumpMove = 1;
+                i_this->mJumpStep = 0;
             }
         } else {
-            switch (i_this->m1210) {
+            switch (i_this->mJumpStep) {
             case 0:
                 i_this->speedF = l_bkHIO().m054 * 1.2f;
                 if (i_this->dr.mAcch.ChkGroundHit() && i_this->mpMorf->isStop()) {
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP2_e, 0.0f, 0, 1.0f,
                              dRes_INDEX_BK_BAS_BK_JUMP2_e);
-                    i_this->m1210 = 1;
-                    i_this->m034C = l_bkHIO().m00C + 2;
-                    i_this->m034E = 4;
+                    i_this->mJumpStep = 1;
+                    i_this->mSmokeTimer = l_bkHIO().m00C + 2;
+                    i_this->mSmokeType = 4;
                 }
                 break;
             case 1:
                 i_this->speedF = 0.0f;
                 if (i_this->dr.mAcch.ChkGroundHit() && i_this->mpMorf->isStop()) {
-                    i_this->m1210 = 0;
+                    i_this->mJumpStep = 0;
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP1_e, 2.0f, 0, 1.0f,
                              dRes_INDEX_BK_BAS_BK_JUMP1_e);
                     f32 r = cM_rndF(REG8_F(7) + 10.0f);
@@ -693,11 +693,11 @@ static inline void path_run(bk_class* i_this) {
                     fopAcM_monsSeStart_mv(i_this, JA_SE_CV_BK_JUMP, 0);
                 }
 
-                if (i_this->m0300[2] == 0) {
-                    i_this->m0300[2] = (s16)gabi::ftoi(cM_rndF(100.0f) + 50.0f);
+                if (i_this->mTimers[2] == 0) {
+                    i_this->mTimers[2] = (s16)gabi::ftoi(cM_rndF(100.0f) + 50.0f);
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, l_bkHIO().m070,
                              dRes_INDEX_BK_BAS_BK_RUN_e);
-                    i_this->m120C = 0;
+                    i_this->mJumpMove = 0;
                 }
                 break;
             }
@@ -707,17 +707,17 @@ static inline void path_run(bk_class* i_this) {
     }
 
     if (i_this->mPlayerDistance < l_bkHIO().m028 &&
-        daBk_player_view_check(i_this, &i_this->dr.m714->current.pos, i_this->m0332,
+        daBk_player_view_check(i_this, &i_this->dr.mpLookTarget->current.pos, i_this->mTargetAngleY,
                                l_bkHIO().m034)) {
         i_this->dr.mAction = BK_ACTION_FIGHT_RUN;
-        i_this->m0300[1] = 0;
+        i_this->mTimers[1] = 0;
         i_this->dr.mMode = 0;
     }
 }
 
 /* GameCube search_target (inlined) */
 static inline BOOL search_target(bk_class* i_this) {
-    i_this->dr.m714 = dComIfGp_getPlayer(0);
+    i_this->dr.mpLookTarget = dComIfGp_getPlayer(0);
     return FALSE;
 }
 
@@ -726,63 +726,63 @@ void Bk_move(bk_class* i_this) {
     fopAc_ac_c* actor = i_this;
 
     dComIfGp_get(); /* HD: unused accessor call */
-    i_this->m0334 = 0;
-    i_this->dr.m710 = 0;
-    i_this->dr.m711 = 0;
-    cLib_addCalcAngleS2(&i_this->m11F4, 0, 2, 0x800);
+    i_this->mMoveAngleOffset = 0;
+    i_this->dr.mLookMode = 0;
+    i_this->dr.mDefencePose = 0;
+    cLib_addCalcAngleS2(&i_this->mHeadAngleZ, 0, 2, 0x800);
 
     if (i_this->dr.mMode <= -100) {
-        i_this->m030E = 5;
-        if (std::fabs((f32)i_this->dr.m478) > 40.0f && !i_this->dr.mAcch.ChkGroundHit()) {
-            i_this->m1040.SetC(&i_this->dr.m100[12]);
-            i_this->m1040.SetR(40.0f);
-            i_this->m1040.OffAtSPrmBit(4); /* OffAtVsPlayerBit */
-            i_this->m1040.SetAtSpl(1);     /* dCcG_At_Spl_UNK1 */
-            dComIfG_Ccsp_Set(&i_this->m1040);
-            dComIfG_Ccsp_SetMass(&i_this->m1040, 3);
+        i_this->mNoHitTimer = 5;
+        if (std::fabs((f32)i_this->dr.mKnockbackSpeed) > 40.0f && !i_this->dr.mAcch.ChkGroundHit()) {
+            i_this->mWeaponSph.SetC(&i_this->dr.mJntPos[12]);
+            i_this->mWeaponSph.SetR(40.0f);
+            i_this->mWeaponSph.OffAtSPrmBit(4); /* OffAtVsPlayerBit */
+            i_this->mWeaponSph.SetAtSpl(1);     /* dCcG_At_Spl_UNK1 */
+            dComIfG_Ccsp_Set(&i_this->mWeaponSph);
+            dComIfG_Ccsp_SetMass(&i_this->mWeaponSph, 3);
 
-            if (i_this->m1040.ChkAtHit() && actor->speed.y < -50.0f) {
+            if (i_this->mWeaponSph.ChkAtHit() && actor->speed.y < -50.0f) {
                 actor->speed.y = 0.0f;
-                i_this->dr.m474 = 8000.0f;
+                i_this->dr.mShakeAmplitude = 8000.0f;
             }
-            i_this->m0B88.OffCoSPrmBit(1); /* OffCoSetBit */
+            i_this->mCoCyl.OffCoSPrmBit(1); /* OffCoSetBit */
         }
         return;
     }
 
-    i_this->m1040.OnAtSPrmBit(4); /* OnAtVsPlayerBit */
-    if (i_this->m02DE == 0) {
-        i_this->m0B88.OnCoSPrmBit(1);
+    i_this->mWeaponSph.OnAtSPrmBit(4); /* OnAtVsPlayerBit */
+    if (i_this->mDefeated == 0) {
+        i_this->mCoCyl.OnCoSPrmBit(1);
     } else {
-        i_this->m0B88.OffCoSPrmBit(1);
+        i_this->mCoCyl.OffCoSPrmBit(1);
     }
 
-    if (i_this->dr.m48A != 0 && i_this->dr.m488 == 0) {
-        if (i_this->dr.m48A == 1) {
+    if (i_this->dr.mHitStunTimer != 0 && i_this->dr.mKnockedDown == 0) {
+        if (i_this->dr.mHitStunTimer == 1) {
             i_this->dr.mAction = BK_ACTION_FIGHT_RUN;
             i_this->dr.mMode = 0;
-            i_this->m0300[1] = 0;
+            i_this->mTimers[1] = 0;
         } else {
-            i_this->dr.m4D0 = i_this->m0332;
+            i_this->dr.mTurnTargetY = i_this->mTargetAngleY;
             actor->speedF = -30.0f;
-            i_this->m034C = l_bkHIO().m00C + 3;
-            i_this->m034E = 4;
+            i_this->mSmokeTimer = l_bkHIO().m00C + 3;
+            i_this->mSmokeType = 4;
         }
     } else {
         search_target(i_this);
 
-        f32 x = i_this->dr.m714->current.pos.x - actor->current.pos.x;
-        f32 z = i_this->dr.m714->current.pos.z - actor->current.pos.z;
+        f32 x = i_this->dr.mpLookTarget->current.pos.x - actor->current.pos.x;
+        f32 z = i_this->dr.mpLookTarget->current.pos.z - actor->current.pos.z;
         i_this->mPlayerDistance = std_sqrtf(gabi::fmadds(x, x, z * z));
 
-        i_this->m0332 = cM_atan2s(x, z);
+        i_this->mTargetAngleY = cM_atan2s(x, z);
 
-        if (i_this->m122C != 0) {
-            i_this->m122C = i_this->m122C - 1;
-            if (i_this->m122C == 0) {
-                /* HD: also clears dr.m468/m46C and current.angle.x/z */
-                i_this->dr.m46C = 0.0f;
-                i_this->dr.m468 = 0.0f;
+        if (i_this->mParalyzeDelay != 0) {
+            i_this->mParalyzeDelay = i_this->mParalyzeDelay - 1;
+            if (i_this->mParalyzeDelay == 0) {
+                /* HD: also clears dr.mCarryOffsetY/mCarryOffsetZ and current.angle.x/z */
+                i_this->dr.mCarryOffsetZ = 0.0f;
+                i_this->dr.mCarryOffsetY = 0.0f;
                 i_this->dr.mAction = BK_ACTION_D_MAHI;
                 i_this->dr.mMode = 0;
                 i_this->current.angle.z = 0;
@@ -874,8 +874,8 @@ void Bk_move(bk_class* i_this) {
         sp28->copy(*tmp);
 
         f32 f31;
-        if (i_this->m02B5 != 0xFF) {
-            f31 = (f32)(u32)i_this->m02B5 * 10.0f * 1.5f;
+        if (i_this->mSightRangePrm != 0xFF) {
+            f31 = (f32)(u32)i_this->mSightRangePrm * 10.0f * 1.5f;
         } else {
             f31 = 750.0f;
         }
@@ -888,8 +888,8 @@ void Bk_move(bk_class* i_this) {
                 i_this->dr.mAction = BK_ACTION_STAND2;
             }
             i_this->dr.mMode = 51;
-            i_this->m0300[1] = 0;
-            i_this->m0300[2] = 60;
+            i_this->mTimers[1] = 0;
+            i_this->mTimers[2] = 60;
         }
     }
 
@@ -900,11 +900,11 @@ void Bk_move(bk_class* i_this) {
         sp28->y = 0.0f;
         fcopy(sp28->z, actor->speedF);
         if (i_this->dr.mAction != BK_ACTION_HUKKI && i_this->dr.mAction != BK_ACTION_FAIL &&
-            i_this->dr.m48A == 0) {
-            i_this->dr.m482 = actor->current.angle.y;
-            cMtx_YrotS(calc_mtx(), (s16)(actor->current.angle.y + i_this->m0334));
+            i_this->dr.mHitStunTimer == 0) {
+            i_this->dr.mKnockbackAngleY = actor->current.angle.y;
+            cMtx_YrotS(calc_mtx(), (s16)(actor->current.angle.y + i_this->mMoveAngleOffset));
         } else {
-            cMtx_YrotS(calc_mtx(), i_this->dr.m4D0);
+            cMtx_YrotS(calc_mtx(), i_this->dr.mTurnTargetY);
         }
         MtxPosition(sp28, sp1C);
         fcopy(actor->speed.x, sp1C->x);

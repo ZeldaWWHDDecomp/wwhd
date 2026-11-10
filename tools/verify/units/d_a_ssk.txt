@@ -28,5 +28,5 @@ field 0248DC20 r3+0x3D8 i16 0,0,0,1,5,-1
 field 0248DC20 r3+0x7E0 u8 0,1
 field * r3+0x42C f32 0,0.005,0.01,0.011,0.98,0.99,0.995,1
 field * r3+0x334 f32 0,0.005,0.01,0.011,0.98,0.99,0.995,1
-# Create: parameters (m2B4 byte, m2B5 radius, m2B6 switch)
+# Create: parameters (mType byte, mRadiusPrm radius, mSwitchNo switch)
 field 0248E770 r3+0xB0 u32 0x00000000,0x000000FF,0x0000FF01,0xFF00FF00,0x05000A01,0xFF0000FF,0x0500FFFF

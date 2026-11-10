@@ -1,6 +1,6 @@
 /**
  * d_a_coming3.cpp (WWHD)
- * Coming3 - barrel unk_47E spawner (daComing3::Act_c)
+ * Coming3 - barrel mChallengeNo spawner (daComing3::Act_c)
  *
  * Written from the WWHD code with
  * the GameCube decompilation (zeldaret/tww src/d/actor/d_a_coming3.cpp) as reference, verified
@@ -102,7 +102,7 @@ void *position_is_safety_call_back(fopAc_ac_c *actor, SafetyCallback *cb) {
 }
 
 /* 02115694 */
-s32 daComing3::Act_c::get_challenge_id() { return (unk_47E - 1) & 1; }
+s32 daComing3::Act_c::get_challenge_id() { return (mChallengeNo - 1) & 1; }
 
 /* 021156A4 */
 f32 daComing3::Act_c::get_limit_dist() {
@@ -115,10 +115,10 @@ f32 daComing3::Act_c::get_limit_dist() {
 
 /* 02115668 */
 BOOL daComing3::Act_c::coming_start_init() {
-    unk_404 = 3;
-    unk_400 = 0xffffffff;
-    unk_478 = 0;
-    unk_47C = 30;
+    mGameState = 3;
+    mBarrelId = 0xffffffff;
+    mPlayerDist = 0;
+    mSpawnTimer = 30;
     return TRUE;
 }
 
@@ -135,18 +135,18 @@ void daComing3::Act_c::coming_start_main() {
     playerPos->y = 0;
     f32 squared = coming3SquareDistance(playerPos.get(), actorPos.get());
     f32 distance = coming3SquareRoot(squared);
-    unk_478 = distance;
+    mPlayerDist = distance;
     f32 limit = get_limit_dist();
     if (!(distance > limit)) {
-        unk_47C = 30;
+        mSpawnTimer = 30;
         return;
     }
-    s16 delay = unk_47C;
+    s16 delay = mSpawnTimer;
     if (delay < 0)
         return;
     if (delay > 0) {
         delay = (s16)(delay - 1);
-        unk_47C = delay;
+        mSpawnTimer = delay;
         if (delay)
             return;
     }
@@ -163,7 +163,7 @@ void daComing3::Act_c::coming_start_main() {
     position->x = current.pos.x;
     position->y = *water;
     position->z = current.pos.z;
-    if (unk_400 == 0xffffffff) {
+    if (mBarrelId == 0xffffffff) {
         s32 room = current.roomNo;
         s32 idx = get_challenge_id();
         u32 item = (u32)(*gabi::at<be<u32>[2]>(0x101B3D14))[idx];
@@ -171,7 +171,7 @@ void daComing3::Act_c::coming_start_main() {
         coming3AngleConstruct(angle.get(), 0, (s32)(s16)shape_angle.y, 0);
         u32 parameters = 0x117F0100 | (item & 63);
         u32 id = coming3ActorCreate(457, parameters, position.get(), room, angle.get(), 0, -1, 0);
-        unk_400 = id;
+        mBarrelId = id;
         if (id == 0xffffffff)
             return;
     }
@@ -180,17 +180,17 @@ void daComing3::Act_c::coming_start_main() {
 
 /* 02115958 */
 BOOL daComing3::Act_c::coming_game_init() {
-    unk_404 = 0;
-    return unk_400 != 0xffffffff;
+    mGameState = 0;
+    return mBarrelId != 0xffffffff;
 }
 
 /* 02115978 */
 void daComing3::Act_c::coming_game_main() {
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     gabi::Local<gptr<Coming3BarrelHD>> barrel;
-    s32 found = coming3SearchByID((u32)unk_400, barrel.get());
+    s32 found = coming3SearchByID((u32)mBarrelId, barrel.get());
     Coming3BarrelHD *b = *barrel;
-    s32 state = unk_404;
+    s32 state = mGameState;
     if (b) {
         current.pos.copy(b->current.pos);
         shape_angle.x = b->shape_angle.x;
@@ -202,34 +202,34 @@ void daComing3::Act_c::coming_game_main() {
         if (player) {
             f32 sq = coming3SquareDistance(&player->current.pos, &current.pos);
             f32 dist = coming3SquareRoot(sq);
-            unk_478 = dist;
+            mPlayerDist = dist;
             b = *barrel;
         }
         if (b)
-            unk_404 = 1;
+            mGameState = 1;
         break;
     case 1:
         if (player) {
             f32 sq = coming3SquareDistance(&player->current.pos, &current.pos);
-            unk_478 = coming3SquareRoot(sq);
+            mPlayerDist = coming3SquareRoot(sq);
         }
         if (collision_main() || !found) {
-            unk_404 = 3;
+            mGameState = 3;
             eff_break_tsubo();
         } else {
             f32 limit = get_limit_dist();
-            if (!((f32)unk_478 > limit)) {
+            if (!((f32)mPlayerDist > limit)) {
                 b = *barrel;
                 if (b) {
                     b->mExitReq = 1;
-                    unk_404 = 2;
+                    mGameState = 2;
                 }
             }
         }
         break;
     case 2:
         if (!found) {
-            unk_400 = 0xffffffff;
+            mBarrelId = 0xffffffff;
             coming_process_init(0);
         }
         break;
@@ -246,14 +246,14 @@ void daComing3::Act_c::coming_game_main() {
 
 /* 02115B40 */
 BOOL daComing3::Act_c::coming_wait_init() {
-    unk_404 = 3;
+    mGameState = 3;
     return TRUE;
 }
 
 /* 02115B50 */
 void daComing3::Act_c::coming_wait_main() {
     gabi::Local<gptr<Coming3BarrelHD>> barrel;
-    coming3SearchByID((u32)unk_400, barrel.get());
+    coming3SearchByID((u32)mBarrelId, barrel.get());
     Coming3BarrelHD *b = *barrel;
     if (b) {
         gabi::Local<gptr<Act_c>> item;
@@ -273,7 +273,7 @@ bool daComing3::Act_c::coming_process_init(s32 idx) {
     u32 target = memberFunctionTarget(receiver, 0x1000CB2C, idx);
     if (!gabi::call_ptr<s32>(target, receiver))
         return false;
-    unk_444 = idx;
+    mProcessIdx = idx;
     return true;
 }
 
@@ -298,7 +298,7 @@ void daComing3::Act_c::eff_break_tsubo() {
     origin->x = 0;
     origin->y = 0;
     origin->z = 0;
-    coming3MatrixVector(&unk_410, origin.get(), center.get());
+    coming3MatrixVector(&mMtx, origin.get(), center.get());
     void *modelData = dComIfG_getObjectRes("Always", 49, 0x1000C9A0);
     void *pattern = dComIfG_getObjectRes("Always", 103, 0x1000C9A0);
     void *emitter = coming3ParticleSet(dComIfGp_getParticle(), 0, 23, center.get(), nullptr,
@@ -326,7 +326,7 @@ void daComing3::Act_c::eff_break_tsubo() {
 
 /* 02114F04 */
 void daComing3::Act_c::coming_process_main() {
-    s16 idx = unk_444;
+    s16 idx = mProcessIdx;
     if ((u32)(s32)idx >= 3)
         return;
     Act_c *receiver = this;
@@ -336,7 +336,7 @@ void daComing3::Act_c::coming_process_main() {
 
 /* 02114C60 */
 void daComing3::Act_c::set_mtx() {
-    J3DModel *m = unk_440;
+    J3DModel *m = mpModel;
     m->mBaseScale.z = 2;
     m->mBaseScale.y = 2;
     m->mBaseScale.x = 2;
@@ -346,9 +346,9 @@ void daComing3::Act_c::set_mtx() {
     coming3MatrixZXYRotate(mDoMtx_stack_c::get(), rx, ry, rz);
     mDoMtx_stack_c::transM(0, 390, 0);
     mDoMtx_stack_c::scaleM(2, 2, 2);
-    J3DModel_setBaseTRMtx(unk_440, mDoMtx_stack_c::get());
-    coming3MatrixCopy(mDoMtx_stack_c::get(), &unk_410);
-    coming3ModelCalc(unk_440.get());
+    J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
+    coming3MatrixCopy(mDoMtx_stack_c::get(), &mMtx);
+    coming3ModelCalc(mpModel.get());
 }
 
 /* 02114B2C */
@@ -376,7 +376,7 @@ bool daComing3::Act_c::collision_main() {
     origin->x = 0;
     origin->y = 0;
     origin->z = 0;
-    coming3MatrixVector(&unk_410, origin.get(), center.get());
+    coming3MatrixVector(&mMtx, origin.get(), center.get());
     coming3CylinderRadius(&mCyl.mCyl, 130.f);
     coming3CylinderHeight(&mCyl.mCyl, 225.f);
     coming3CylinderCenter(&mCyl.mCyl, center.get());
@@ -402,7 +402,7 @@ bool daComing3::Act_c::create_heap() {
     if (!data)
         coming3Panic("d_a_coming3.cpp", 847, "mdl_data != 0");
     J3DModel *m = coming3CreateModel(data, 0, 0x11020203);
-    unk_440 = m;
+    mpModel = m;
     return data && m;
 }
 
@@ -432,7 +432,7 @@ s32 daComing3::Act_c::_create() {
     s32 result = coming3ResourceLoad(&mPhase, "Always");
     if (result == 4) {
         if (coming3SolidHeap(this, COMING3_HEAP_CALLBACK, 0)) {
-            unk_47E = (s16)(shape_angle.z + 1);
+            mChallengeNo = (s16)(shape_angle.z + 1);
             collision_init();
             coming_process_init(0);
             set_mtx();
@@ -457,13 +457,13 @@ bool daComing3::Act_c::_execute() {
 
 /* 02114F94 */
 bool daComing3::Act_c::_draw() {
-    s32 state = unk_404;
+    s32 state = mGameState;
     if (state == 1 || state == 2) {
         void *env = dKy_getEnvlight();
         coming3SettingTevStruct(env, 0, &current.pos, &tevStr);
         env = dKy_getEnvlight();
-        coming3SetLightTevColor(env, unk_440.get(), &tevStr);
-        coming3ModelUpdate(unk_440.get(), 0);
+        coming3SetLightTevColor(env, mpModel.get(), &tevStr);
+        coming3ModelUpdate(mpModel.get(), 0);
     }
     return true;
 }

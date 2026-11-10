@@ -104,13 +104,13 @@ void daNpc_P1_c::setAnimFromMsg() {
         return;
     }
     if (mAnmNum == 8 && p1_checkEnd(mpMorf, 1.0f)) {
-        m66C = m66C - 1;
-        if (m66C <= 0) {
+        mAnmLoopCnt = mAnmLoopCnt - 1;
+        if (mAnmLoopCnt <= 0) {
             setAnm(4, 15.0f);
         }
     } else if (mAnmNum == 12 && p1_checkEnd(mpMorf, 1.0f)) {
-        m66C = m66C - 1;
-        if (m66C <= 0) {
+        mAnmLoopCnt = mAnmLoopCnt - 1;
+        if (mAnmLoopCnt <= 0) {
             setAnm(9, 8.0f);
         }
     }
@@ -139,7 +139,7 @@ void daNpc_P1_c::setAnimFromMsg() {
         break;
     case 7:
         iVar1 = 0xC;
-        m66C = 4;
+        mAnmLoopCnt = 4;
         break;
     case 8:
         iVar1 = 0xD;
@@ -167,7 +167,7 @@ void daNpc_P1_c::setAnimFromMsg() {
         break;
     case 0x10:
         iVar1 = 8;
-        m66C = 6;
+        mAnmLoopCnt = 6;
         break;
     default:
         return;
@@ -390,7 +390,7 @@ void daNpc_P1_c::demo_end_init() {
         }
     }
     m_jnt.mbBackBoneLock = 0; /* offBackBoneLock */
-    m670 = 0;
+    mbDemoActive = 0;
     m_jnt.mbHeadLock = 0; /* offHeadLock */
 }
 
@@ -410,14 +410,14 @@ BOOL daNpc_P1_c::demo_move() {
         actor = p1DemoActor(obj, (u32)id);
     }
     if (!actor) {
-        if (m670 == 1) {
+        if (mbDemoActive == 1) {
             demo_end_init();
         }
         return FALSE;
     }
     m_jnt.mbBackBoneLock = 1; /* onBackBoneLock */
     m_jnt.mbHeadLock = 1;     /* onHeadLock */
-    m670 = 1;
+    mbDemoActive = 1;
     J3DAnmTexPattern* btp = p1DemoBtp(actor, "P1");
     if (btp) {
         p1c_btpInit(&mBtp, J3DModel_getModelData(mpHeadModel), btp, 1, 2, 1.0f, 0, -1, 1, 0);
@@ -534,24 +534,24 @@ BOOL daNpc_P1_c::minigameExplainCut() {
         mbAttentionFlag = 0;
         return FALSE;
     }
-    if (m65A == 0) {
+    if (mExplainStep == 0) {
         l_msgId = 0xFFFFFFFF;
         p1_onCameraAttentionStatus4();
         mPrevMesg = mCurrMesg;
         mCurrMesg = 0xFAD;
-        m65A = (s8)(m65A + 1);
+        mExplainStep = (s8)(mExplainStep + 1);
         return TRUE;
     }
-    if (m65A == -1) {
+    if (mExplainStep == -1) {
         return TRUE;
     }
     if (l_msgId == 0xFFFFFFFF) {
         l_msgId = p1_msgSet(mgr, mCurrMesg, &eyePos);
         return TRUE;
     }
-    if (m65A == 1) {
+    if (mExplainStep == 1) {
         /* HD: no fopMsgM_SearchByID */
-        m65A = (s8)(m65A + 1);
+        mExplainStep = (s8)(mExplainStep + 1);
     } else if (p1_msgGetStatus(mgr) == fopMsgStts_MSG_DISPLAYED_e /* fopMsgStts_MSG_DISPLAYED_e */) {
         if (mCurrMesg == 0xFAD) {
             p1_msgSetStatus(mgr, fopMsgStts_MSG_CONTINUES_e /* fopMsgStts_MSG_CONTINUES_e */);
@@ -647,8 +647,8 @@ static BOOL nodeCallBack1(J3DNode* i_node, int i_param_2) {
                 headOffset->x = REG_F(10, 0);
                 headOffset->y = REG_F(10, 1);
                 headOffset->z = REG_F(10, 2);
-                cMtx_YrotM(calc_mtx(), (s16) - (i_this->m_jnt.mAngles[0][1] + i_this->mHeadAnm.field_0x00.y));
-                cMtx_ZrotM(calc_mtx(), (s16) - (i_this->m_jnt.mAngles[0][0] + i_this->mHeadAnm.field_0x00.x));
+                cMtx_YrotM(calc_mtx(), (s16) - (i_this->m_jnt.mAngles[0][1] + i_this->mHeadAnm.mSwingAngle.y));
+                cMtx_ZrotM(calc_mtx(), (s16) - (i_this->m_jnt.mAngles[0][0] + i_this->mHeadAnm.mSwingAngle.x));
                 MtxPosition(headOffset, &i_this->eyePos);
             }
             if (jntNo == (u32)(s32)i_this->m_jnt.mBackboneJntNum) {
@@ -742,7 +742,7 @@ BOOL daNpc_P1_c::_execute() {
         mpMorf->play(&current.pos, mtrlSndId, (s8)reverb);
         if (p1_eventMode() == 0 || eventInfo.checkCommandTalk()) {
             p1_pmf_call(this, &mActionFunc, nullptr);
-            m65A = 0;
+            mExplainStep = 0;
             mbAttentionFlag = 0;
         } else {
             event_move();
@@ -751,7 +751,7 @@ BOOL daNpc_P1_c::_execute() {
     kaji_anm();
     lookBack();
     setAttentionPos(&attention_info.position); /* &attention_info.position */
-    if (m670 == 0) {
+    if (mbDemoActive == 0) {
         fopAcM_posMoveF(this, &mStts.m_cc_move); /* mStts.GetCCMoveP() */
         mObjAcch.CrrPos(dComIfG_Bgsp());
     }

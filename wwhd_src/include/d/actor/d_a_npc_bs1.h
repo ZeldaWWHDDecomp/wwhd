@@ -145,7 +145,7 @@ struct daNpc_Bs1_c : fopAc_ac_c {
     /* 0x3C8 */ mDoExt_btpAnm mBtpAnm; /* mDoExt_btpAnm (HD 0x74) */
     /* 0x43C */ be<u8> mFrame;
     /* 0x43D */ be<u8> m2C5;
-    /* 0x43E */ be<s16> m2C6;
+    /* 0x43E */ be<s16> mBlinkTimer;  /* was m2C6: initTexPatternAnm 02212704 clears it; playTexPatternAnm 0221391C counts it down (cLib_calcTimer) and restarts the head texture pattern with 30 + rnd(100) (tww the same; tww daNpc_Rsh1_c calls it mTimer); same role as daNpcPeople_c::mBlinkTimer (npcs.md) */
     /* 0x440 */ gptr<J3DModel> mpHelmetModel;
     /* 0x444 */ dBgS_ObjAcch mAcch;
     /* 0x608 */ dBgS_AcchCir mAcchCir;
@@ -153,53 +153,53 @@ struct daNpc_Bs1_c : fopAc_ac_c {
     /* 0x684 */ dCcD_Cyl mCyl;
     /* 0x7B4 */ be<s8> m_head_jnt_num;
     /* 0x7B5 */ be<s8> m_backbone_jnt_num;
-    /* 0x7B6 */ be<s16> m63E;
+    /* 0x7B6 */ be<s16> mEvnWaitTimer;  /* was m63E: evn_wait_init 02216C18 stores the cut's "Timer" (0 without one); evn_wait 02216C80 counts it down and ends the cut at 0 (tww the same) */
     /* 0x7B8 */ dNpc_EventCut_c mEventCut;
     /* 0x824 */ dNpc_JntCtrl_c mJntCtrl;
     /* 0x858 */ Bs1StickControl mStickControl;
-    /* 0x880 */ be<s8> m708;
+    /* 0x880 */ be<s8> mbItemMsgSet;  /* was m708: shop_talk 02215F2C: 1 when the item selection (now_triggercheck) set a new message in mCurrMsgNo; the next displayed/continue status is then taken without advancing and clears it (tww the same); after our decomp's daNpc_Rsh1_c mbItemMsgSet (same code) */
     /* 0x881 */ u8 m70C[0x890 - 0x881];
-    /* 0x890 */ cXyz m718;
-    /* 0x89C */ be<s16> m724;
-    /* 0x89E */ csXyz m726;
+    /* 0x890 */ cXyz mAttnBasePos;  /* was m718: nodeCallBack_Bs 0221225C stores the head position (tww setAttentionBasePos(pos) { m718 = value; }); setAttention 02216368 puts attention at it plus the HIO Y offset (tww) */
+    /* 0x89C */ be<s16> mLookAtMaxVel;  /* was m724: lookBack 022163B0 eases it to HIO mMaxHeadTurnVel while turning, else 0, and passes it as the look-at's maxVel (tww the same); after tww daNpc_Rsh1_c mLookAtMaxVel (same code) */
+    /* 0x89E */ csXyz mActorAngle;  /* was m726: CreateInit 02213060 copies current.angle; setCollision 02213D5C rotates the collision offset by its y (tww the same); after tww daNpc_Rsh1_c mActorAngle (same CreateInit code) */
     /* 0x8A4 */ be<u16> m72C;
-    /* 0x8A6 */ be<u8> m72E;
-    /* 0x8A7 */ be<u8> m72F;
-    /* 0x8A8 */ be<u8> m730;
-    /* 0x8A9 */ be<u8> m731;
+    /* 0x8A6 */ be<u8> mMorfIsStop;  /* was m72E: _execute 02213E18 stores mpMorf->play()'s result (1 without a morf) (tww the same); after tww daNpc_Rsh1_c mMorfIsStop (same code) */
+    /* 0x8A7 */ be<u8> mAttnSetCount;  /* was m72F: nodeCallBack_Bs 0221225C adds 1 up to 0xFF (tww incAttnSetCount()); setAttention 02216368 needs it >= 2 (tww); same name as npcs.md mAttnSetCount */
+    /* 0x8A8 */ be<u8> mbAttention;  /* was m730: wait_action 02217258 stores chkAttention()'s result; lookBack 022163B0 / wait01 02216748 look at the player while it is set (tww the same); after tww daNpc_Rsh1_c mbAttention (same code) */
+    /* 0x8A9 */ be<u8> mTalking;  /* was m731: checkOrder 022139EC: 1 on the talk command; wait01 02216748 saves mLookMode and looks at the player while set; talk01 022167F0 / wait_action 02217258 clear it (tww the same); after our decomp's daNpc_Rsh1_c mTalking (same code) */
     /* 0x8AA */ be<u8> m732;
     /* 0x8AB */ be<u8> m733;
-    /* 0x8AC */ be<f32> m734;
-    /* 0x8B0 */ be<u32> m738;
-    /* 0x8B4 */ be<u32> m73C;
-    /* 0x8B8 */ be<u32> m740;
-    /* 0x8BC */ be<u32> m744;
+    /* 0x8AC */ be<f32> mMorfPrevFrame;  /* was m734: _execute 02213E18: a morf frame below it means the animation wrapped; it then takes the frame (tww the same); after tww daNpc_Rsh1_c mMorfPrevFrame (same code) */
+    /* 0x8B0 */ be<u32> mCurrMsgNo;  /* was m738: evn_talk_init 022168EC the event's "MsgNo"; normal_talk 02215DA0 advances it by next_msgStatus; shop_talk 02215F2C passes it to now_triggercheck; talk01 022167F0 checks it (tww the same); after our decomp's daNpc_Rsh1_c mCurrMsgNo (same code) */
+    /* 0x8B4 */ be<u32> mShopMsgNo;  /* was m73C: shop_talk 02215F2C: a copy of mCurrMsgNo, advanced by next_msgStatus(&it, &mCurrMsgNo) and set as the next message; talk 02216154 0 (tww the same); after our decomp's daNpc_Rsh1_c mShopMsgNo (same code) */
+    /* 0x8B8 */ be<u32> mNextMsgNo;  /* was m740: getMsg 022157C8: returned once (then 0) before the default messages; getdemo_action 02217368 0xF4C / 0xF4E / 0x2F53 (tww the same); after our decomp's daNpc_Rsh1_c mNextMsgNo (same code) */
+    /* 0x8BC */ be<u32> mEndMsgNo;  /* was m744: evn_talk_init 022168EC / evn_continue_talk_init 02216994: the event's "EndMsgNo"; evn_talk 022169F8 ends the talk when mCurrMsgNo reaches it, then clears it (tww the same); after our decomp's daNpc_Rsh1_c mEndMsgNo (same code) */
     /* 0x8C0 */ cXyz mItemPosOffsets[3];
-    /* 0x8E4 */ be<u8> m76C[3];
+    /* 0x8E4 */ be<u8> mItemSoldOut[3];  /* was m76C: createShopList 02212BA0: 1 for the item sets marked sold out (bombs without the bomb bag, arrows without the bow); next_msgStatus 02214858 1 for the bought item; _draw 02214104 draws mpSoldSignModels[i] and _execute 02213E18 places it while [i] is set (tww the same) */
     /* 0x8E7 */ u8 m76F;
     /* 0x8E8 */ Bs1ActionFunc mCurrActionFunc;
     /* 0x8F0 */ Bs1ShopCam mShopCamAction;
     /* 0x940 */ Bs1ShopItems mShopItems;
     /* 0x984 */ gptr<Bs1ShopCursor> mpShopCursor;
     /* 0x988 */ be<u32> mpItemSetList[3];
-    /* 0x994 */ be<s8> m828;
-    /* 0x995 */ be<s8> m829;
-    /* 0x996 */ be<s8> m82A;
-    /* 0x997 */ be<s8> m82B;
+    /* 0x994 */ be<s8> mTexAnmIdx;  /* was m828: setTexAnm 02214360: the texture pattern index; initTexPatternAnm 02212704 loads l_btp_ix_tbl[it]; CreateHeap 02212818 1 (tww the same); after our decomp's daNpc_Rsh1_c mTexAnmIdx (same code) */
+    /* 0x995 */ be<s8> mAnmIdx;  /* was m829: setAnm 022142F8: the animation index; setAnmFromMsgTag 02214388 goes back to the wait animation when animation 2/4/6/8/9 ends (tww the same); after our decomp's daNpc_Rsh1_c mAnmIdx (same code) */
+    /* 0x996 */ be<s8> mOrderState;  /* was m82A: eventOrder 02213D00: 3 orders BS1/BS2_GETDEMO, 1/2 the talk; checkOrder 022139EC starts them (and 4) and clears it; next_msgStatus 02214858 3 after a purchase (tww the same); after our decomp's daNpc_Rsh1_c mOrderState (same code) */
+    /* 0x997 */ be<s8> mXyEventIdx;  /* was m82B: XyEventCB 02212008: 0 for the Complimentary ID (PUT_PRAICE_TICKET), 1 for the Fill-Up Coupon (PUT_FULL_TICKET); event_action 0221709C waits for mEventIdxs[it] to end and sets 2; CreateInit 02213060 2 (tww the same) */
     /* 0x998 */ be<s16> mEventIdxs[2];
-    /* 0x99C */ be<s8> m830;
-    /* 0x99D */ be<u8> m831;
+    /* 0x99C */ be<s8> mLookMode;  /* was m830: lookBack 022163B0: switch (it) picks the look target; wait01 02216748 2 while talking, wait_action 02217258 1 (tww the same); after our decomp's daNpc_Rsh1_c mLookMode (same code) */
+    /* 0x99D */ be<u8> mPrevLookMode;  /* was m831: wait01 02216748: mLookMode saved when the talk starts; talk01 022167F0 / getdemo_action 02217368 restore it (tww the same); after our decomp's daNpc_Rsh1_c mPrevLookMode (same code) */
     /* 0x99E */ be<s8> mType;
     /* 0x99F */ be<s8> mShopIndex;
     /* 0x9A0 */ be<s8> mActionStatus;
-    /* 0x9A1 */ be<s8> m835;
-    /* 0x9A2 */ be<s8> m836;
-    /* 0x9A3 */ be<s8> m837;
-    /* 0x9A4 */ be<s8> m838;
+    /* 0x9A1 */ be<s8> mTalkStep;  /* was m835: talk 02216154: 0 starts (getMsg), 1 waits for the message, 2 normal_talk, 3 shop_talk, -1 stops; talkInit 022139E0 0; shop_talk 02215F2C 2 on message 0xF3F (tww the same); after our decomp's daNpc_Rsh1_c mTalkStep (same code) */
+    /* 0x9A2 */ be<s8> mbTalkedBefore;  /* was m836: getMsg 022157C8 sets it with the first greeting (0xF3D / 0xF5A / 0xF5C, type 1: 0x2F45..0x2F5E) and gives the repeat greeting (0xF41 / 0xF5B / 0xF5D / 0x2F46 ..) while it is set (tww the same) */
+    /* 0x9A3 */ be<s8> mbBombMsgDone;  /* was m837: getMsg 022157C8 sets it with the bomb-sale message (0xF55 / 0x2F64, event bit 0x1F20) and gives 0xF58 / 0x2F67 while it is set; CreateInit 02213060 0 (tww the same) */
+    /* 0x9A4 */ be<s8> mbMsg2F5FDone;  /* was m838: getMsg 022157C8 (type 1) sets 1 with message 0x2F5F (event bit 0x2040 first set) and then gives 0x2F60 instead of 0x2F61 (tww the same) */
     /* 0x9A5 */ be<u8> m839;
-    /* 0x9A6 */ be<s16> m83A;
-    /* 0x9A8 */ be<u32> m83C;
-    /* 0x9AC */ be<u32> m840;
+    /* 0x9A6 */ be<s16> mGetDemoEventIdx;  /* was m83A: CreateInit 02213060: dComIfGp_evmng_getEventIdx("BS1_GETDEMO" / "BS2_GETDEMO"); eventOrder 02213D00 orders it; getdemo_action 02217368 waits for its end (tww the same) */
+    /* 0x9A8 */ be<u32> mMessageRupee;  /* was m83C: next_msgStatus 02214858 stores dComIfGp_getMessageRupee() for the sell questions (0xF78 ..) and pays it per item (daNpc_Bs1_setPayRupee(it, getBuyItem())) on the answer (tww the same) */
+    /* 0x9AC */ be<u32> mSellItemNo;  /* was m840: getMsg 022157C8 stores the spoils item (isEmono) the player shows; next_msgStatus 02214858 counts it (daNpc_Bs1_getBuyItemMax(mMessageRupee, it)) (tww the same) */
 };
 WWHD_OFFSET(daNpc_Bs1_c, mPhase, 0x3AC);
 WWHD_OFFSET(daNpc_Bs1_c, mBtpAnm, 0x3C8);
@@ -509,18 +509,18 @@ inline void bs1_CreateInit_common(daNpc_Bs1_c* a) {
     u32 py = (u32)bs1_words(&a->current.pos)->y;
     u32 px = (u32)bs1_words(&a->current.pos)->x;
     u32 pz = (u32)bs1_words(&a->current.pos)->z;
-    bs1_words(&a->m718)->x = px; /* m718 = current.pos */
-    bs1_words(&a->m718)->y = py;
-    bs1_words(&a->m718)->z = pz;
+    bs1_words(&a->mAttnBasePos)->x = px; /* mAttnBasePos = current.pos */
+    bs1_words(&a->mAttnBasePos)->y = py;
+    bs1_words(&a->mAttnBasePos)->z = pz;
     a->eventInfo.mpEventCB = 0x02212258; /* eventInfo.setXyEventCB(daNpc_Bs1_XyEventCB) */
     a->mStts.Init(0xFF, 0xFF, a);
     a->mCyl.Set(&l_cyl_src /* l_cyl_src */);
-    a->m708 = 0;
-    a->m740 = 0;
+    a->mbItemMsgSet = 0;
+    a->mNextMsgNo = 0;
     a->mShopIndex = (s8)(u8) reinterpret_cast<be<u8>*>(&a->mParameters)[3]; /* fopAcM_GetParam(this) & 0xFF */
-    a->m837 = 0;
+    a->mbBombMsgDone = 0;
     a->mCyl.SetStts(&a->mStts); /* mCyl.SetStts(&mStts) */
-    a->m836 = 0;
+    a->mbTalkedBefore = 0;
 }
 
 // HD: unit-local adapters for the original guest ABI.

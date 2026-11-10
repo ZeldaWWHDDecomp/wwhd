@@ -112,10 +112,10 @@ WWHD_SIZE(Rope2, 0x3FC);
 WWHD_OFFSET(Rope2, m02DC, 0x3F8);
 struct Rope3 {
     /* 0x0000 */ u8 mWork[0x1914];
-    /* 0x1914 */ be<f32> m15FC;
+    /* 0x1914 */ be<f32> mPlayerMoveLength; /* was m15FC: view of himo3_class::mPlayerMoveLength (d_a_himo3.h, tww getPlayerMoveLength()) */
 };
 WWHD_SIZE(Rope3, 0x1918);
-WWHD_OFFSET(Rope3, m15FC, 0x1914);
+WWHD_OFFSET(Rope3, mPlayerMoveLength, 0x1914);
 
 // HD: the system root owns wind direction, tact input and learned-song state.
 struct WindState {
@@ -456,7 +456,7 @@ struct Ship : fopAc_ac_c {
     /* 0x0636 */ be<u8> mNextMode;
     /* 0x0637 */ be<u8> mPart;
     /* 0x0638 */ u8 mModeWork[2];
-    /* 0x063A */ be<u8> m0351;
+    /* 0x063A */ be<u8> mDemoMode;  /* was m0351: daShip_c::mDemoMode (d_a_ship.h 0x63A) */
     /* 0x063B */ u8 mDemoWork[9];
     /* 0x0644 */ be<u32> mStateFlag;
     /* 0x0648 */ u8 mCraneWork[0x682 - 0x648];
@@ -472,7 +472,7 @@ struct Ship : fopAc_ac_c {
     /* 0x0710 */ u8 mWarpIDWork[4];
     /* 0x0714 */ be<u32> mTactWarpID;
     /* 0x0718 */ u8 mRopeWork[0x132C - 0x718];
-    /* 0x132C */ cXyz m1044;
+    /* 0x132C */ cXyz mBeltSpeed;  /* was m1044: daShip_c::mBeltSpeed (d_a_ship.h 0x132C) */
     void setPaddleMove() { mNextMode = MODE_PADDLE_MOVE_e; }
     void setReadySecond() { mNextMode = MODE_READY_SECOND_e; }
     void setGetOffFirst() { mNextMode = MODE_GET_OFF_FIRST_e; }
@@ -482,13 +482,13 @@ WWHD_SIZE(Ship, 0x1338);
 WWHD_OFFSET(Ship, mpBodyAnm, 0x3B4);
 WWHD_OFFSET(Ship, mNextMode, 0x636);
 WWHD_OFFSET(Ship, mPart, 0x637);
-WWHD_OFFSET(Ship, m0351, 0x63A);
+WWHD_OFFSET(Ship, mDemoMode, 0x63A);
 WWHD_OFFSET(Ship, mStateFlag, 0x644);
 WWHD_OFFSET(Ship, mCraneBaseAngle, 0x682);
 WWHD_OFFSET(Ship, mRopeCnt, 0x686);
 WWHD_OFFSET(Ship, mTornadoActor, 0x704);
 WWHD_OFFSET(Ship, mWhirlActor, 0x70C);
-WWHD_OFFSET(Ship, m1044, 0x132C);
+WWHD_OFFSET(Ship, mBeltSpeed, 0x132C);
 WWHD_OFFSET(Ship, mTactWarpPosNum, 0x6AC);
 WWHD_OFFSET(Ship, mTactWarpID, 0x714);
 inline Ship* ship(u32 address) { return gabi::at<Ship>(address); }

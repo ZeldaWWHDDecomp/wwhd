@@ -83,23 +83,23 @@ static daNpcRoten_c* daNpcRoten_c_ct(daNpcRoten_c* i_this) {
     mDoExt_btpAnm::ct(&i_this->mBtpAnm); /* mDoExt_btpAnm::mDoExt_btpAnm */
     dCcD_Cyl_ct(&i_this->mCyl2, l_cylinderVtable);
     roten_constructSphere(&i_this->mSph); /* dCcD_Sph::dCcD_Sph */
-    i_this->field_0x9C8 = 1;
-    i_this->field_0x9C7 = 0;
-    i_this->field_0x9CA = 0;
+    i_this->mDrawHead = 1;
+    i_this->mNoBackboneTurn = 0;
+    i_this->mWindHit = 0;
     i_this->mShownItemBtn = daNpcRoten_c::dItemBtn_NONE_e;
     i_this->field_0x6FC = fpcM_ERROR_PROCESS_ID_e;
-    i_this->field_0x98C = nullptr;
-    i_this->field_0x990 = 0.0f;
+    i_this->mpMsgList = nullptr;
+    i_this->mSpeedF = 0.0f;
     i_this->field_0x9C9 = 0;
-    i_this->field_0x994 = -1.0f;
-    i_this->field_0x9C6 = 0;
-    i_this->field_0x9C4 = 0;
-    i_this->field_0x9BB = 0;
-    i_this->field_0x9BC = 0;
-    i_this->field_0x9C1 = 0;
-    i_this->field_0x99C = 1;
-    i_this->field_0x9B2 = 0;
-    i_this->field_0x9C0 = 0;
+    i_this->mMorf = -1.0f;
+    i_this->mBodyTurn = 0;
+    i_this->mLookMode = 0;
+    i_this->mExecuteMode = 0;
+    i_this->mResFlag = 0;
+    i_this->mAnmTblFlags = 0;
+    i_this->mLookHeadOnly = 1;
+    i_this->mEventFlags = 0;
+    i_this->mAnmIdx = 0;
     return i_this;
 }
 
@@ -141,7 +141,7 @@ static cPhs_State phase_1(daNpcRoten_c* i_this) {
     if (!dComIfGs_isEventBit(0x1108)) {
         return cPhs_STOP_e;
     }
-    i_this->field_0x9BC = 1; /* setResFlag(1) */
+    i_this->mResFlag = 1; /* setResFlag(1) */
     return cPhs_NEXT_e;
 }
 
@@ -179,7 +179,7 @@ BOOL daNpcRoten_c::createHeap() {
     J3DModelData* modelData =
         (J3DModelData*)dComIfG_getObjectIDRes(arcname(mNpcNo), l_bmd_ix_tbl.entries[mNpcNo]);
     J3DAnmTransform* bck = (J3DAnmTransform*)dComIfG_getObjectIDRes(
-        arcname(mNpcNo), l_bck_ix_tbl.entries[mNpcNo][field_0x9C0]);
+        arcname(mNpcNo), l_bck_ix_tbl.entries[mNpcNo][mAnmIdx]);
     // HD: the same differed display list flags for all three merchants (GameCube l_diff_flag_tbl)
     mpMorf = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, bck, 2 /* EMode_LOOP */,
                                     1.0f, 0, -1, 1, nullptr, 0x80000, 0x11020203);
@@ -190,12 +190,12 @@ BOOL daNpcRoten_c::createHeap() {
         (J3DModelData*)dComIfG_getObjectIDRes(arcname(mNpcNo), l_head_bmd_ix_tbl.entries[mNpcNo]);
     J3DAnmTransform* headBck = (J3DAnmTransform*)dComIfG_getObjectIDRes(
         arcname(mNpcNo), l_head_bck_ix_tbl.entries[mNpcNo]);
-    field_0x6D8 = mDoExt_McaMorf::create(nullptr, headModelData, nullptr, nullptr, headBck, 2, 1.0f,
+    mpHeadMorf = mDoExt_McaMorf::create(nullptr, headModelData, nullptr, nullptr, headBck, 2, 1.0f,
                                          0, -1, 1, nullptr, 0x80000, 0x37441422);
-    if (field_0x6D8.get() == nullptr || field_0x6D8->getModel() == nullptr) {
+    if (mpHeadMorf.get() == nullptr || mpHeadMorf->getModel() == nullptr) {
         return FALSE;
     }
-    field_0x6D4 = field_0x6D8->getModel();
+    mpHeadModel = mpHeadMorf->getModel();
 
     m_jnt.mHeadJntNum =
         roten_getJointIndex(gabi::ea(modelData->getJointName()), "head" /* "head" */);
@@ -262,19 +262,19 @@ cPhs_State daNpcRoten_c::createInit() {
         a->y = current.pos.y;
         a->z = current.pos.z;
         dNpc_calc_DisXZ_AngY(a, b, nullptr, &current.angle.y);
-        field_0x9A6 = 1;
+        mWaitTimer = 1;
         weight = 0xFE;
     }
     gravity = -9.0f;
-    field_0x99E = dComIfGp_evmng_getEventIdx("ROTEN_EXCHANGE_1ST", 0xFF); /* "ROTEN_EXCHANGE_1ST" */
-    field_0x9A0 = dComIfGp_evmng_getEventIdx("ROTEN_EXCHANGE_2ND", 0xFF); /* "ROTEN_EXCHANGE_2ND" */
-    field_0x9A2 = dComIfGp_evmng_getEventIdx("ROTEN_CHANGE_ITEM", 0xFF);  /* "ROTEN_CHANGE_ITEM" */
-    field_0x9A4 = dComIfGp_evmng_getEventIdx("ROTEN_GET_MAP", 0xFF);      /* "ROTEN_GET_MAP" */
+    mExchange1stEventIdx = dComIfGp_evmng_getEventIdx("ROTEN_EXCHANGE_1ST", 0xFF); /* "ROTEN_EXCHANGE_1ST" */
+    mExchange2ndEventIdx = dComIfGp_evmng_getEventIdx("ROTEN_EXCHANGE_2ND", 0xFF); /* "ROTEN_EXCHANGE_2ND" */
+    mChangeItemEventIdx = dComIfGp_evmng_getEventIdx("ROTEN_CHANGE_ITEM", 0xFF);  /* "ROTEN_CHANGE_ITEM" */
+    mGetMapEventIdx = dComIfGp_evmng_getEventIdx("ROTEN_GET_MAP", 0xFF);      /* "ROTEN_GET_MAP" */
     mEventCut.setActorInfo2(l_npc_staff_id.entries[mNpcNo].get(), this);
-    field_0x9AC = 0;
-    field_0x9AE = 0;
-    field_0x9B4 = 0;
-    field_0x9B5 = 0;
+    mLookMaxVelTarget = 0;
+    mLookMaxVel = 0;
+    mTalking = 0;
+    mInAttention = 0;
     eventInfo.setXyEventCB(daNpcRoten_XyEventCB); /* eventInfo.setXyEventCB(daNpcRoten_XyEventCB) */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAA;  /* attention_info.distances[TALK] */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xAA; /* attention_info.distances[SPEAK] */
@@ -295,7 +295,7 @@ cPhs_State daNpcRoten_c::createInit() {
     mCyl.SetStts(&mStts);
     mCyl2.Set(&dNpc_cyl_src);
     mCyl2.SetStts(&mStts);
-    setCollision(npc_dat(mNpcNo).field_0x2C, 200.0f);
+    setCollision(npc_dat(mNpcNo).mCylRadius, 200.0f);
     setCollisionB();
     mSph.Set(&l_sph_src);
     mSph.SetStts(&mStts);
@@ -321,14 +321,14 @@ bool daNpcRoten_c::_draw() {
     dScnKy_env_light_c* env = dKy_getEnvlight();
     setLightTevColorType(env, morf->getModel(), &tevStr);
     env = dKy_getEnvlight();
-    setLightTevColorType(env, field_0x6D4, &tevStr);
-    mBtpAnm.entry(modelData, field_0x9B8);
+    setLightTevColorType(env, mpHeadModel, &tevStr);
+    mBtpAnm.entry(modelData, mBtpFrame);
     // HD: no l_bmt_ix_tbl material table
     mpMorf->updateDL();
-    if (field_0x9C8 != 0) {
+    if (mDrawHead != 0) {
         Mtx34* headMtx = getAnmMtx(pModel, m_jnt.mHeadJntNum);
-        J3DModel_setBaseTRMtx(field_0x6D4, headMtx);
-        field_0x6D8->updateDL();
+        J3DModel_setBaseTRMtx(mpHeadModel, headMtx);
+        mpHeadMorf->updateDL();
     }
     static_cast<RotenModelData*>(modelData)->mpTexNoAnm = 0; /* mBtpAnm.remove(modelData) */
     // HD: no shadow
@@ -348,19 +348,19 @@ u16 daNpcRoten_c::next_msgStatus(be<u32>* pMsgNo) {
         status = fopMsgStts_MSG_ENDS_e;
         break;
     default:
-        if (field_0x98C.get() != nullptr) {
-            field_0x98C = field_0x98C.get() + 1;
-            u32 v = *field_0x98C;
+        if (mpMsgList.get() != nullptr) {
+            mpMsgList = mpMsgList.get() + 1;
+            u32 v = *mpMsgList;
             switch (v) {
             case 0:
-                field_0x98C = nullptr;
+                mpMsgList = nullptr;
                 status = 0x10;
                 break;
             case 1:
                 if ((u32)msg->mSelectNum != 0) { /* mSelectNum */
-                    field_0x9B2 = field_0x9B2 | 8;
+                    mEventFlags = mEventFlags | 8;
                 }
-                field_0x98C = nullptr;
+                mpMsgList = nullptr;
                 status = 0x10;
                 break;
             case 2:
@@ -368,8 +368,8 @@ u16 daNpcRoten_c::next_msgStatus(be<u32>* pMsgNo) {
                     dComIfG_inf_c* play = gabi::at<dComIfG_inf_c>(dComIfGp_ea());
                     if ((s32)dComIfGs_getRupee() <
                         (s32)(s16)play->play.mMessageRupee /* getMessageRupee */) {
-                        field_0x9B2 = field_0x9B2 | 0x20;
-                        field_0x98C = nullptr;
+                        mEventFlags = mEventFlags | 0x20;
+                        mpMsgList = nullptr;
                         status = 0x10;
                         break;
                     }
@@ -377,21 +377,21 @@ u16 daNpcRoten_c::next_msgStatus(be<u32>* pMsgNo) {
                     dComIfG_inf_c* play2 = gabi::at<dComIfG_inf_c>(
                         dComIfGp_ea()); /* dComIfGp_setItemRupeeCount(-rupee) */
                     play2->play.mItemRupeeCount = (s32)play2->play.mItemRupeeCount - rupee;
-                    u8 temp = item_dat(mNpcNo, field_0x9BE);
+                    u8 temp = item_dat(mNpcNo, mTradeItemIdx);
                     u8 reg = dComIfGs_getEventReg(save_dat(mNpcNo, 2));
                     dComIfGs_setEventReg(save_dat(mNpcNo, 2), (u8)(reg + 1));
                     if (dComIfGs_isGetItemReserve(temp)) {
                         *pMsgNo = l_msg_xy_koukan_end.entries[mNpcNo];
-                        field_0x9B2 = field_0x9B2 | 0x40;
+                        mEventFlags = mEventFlags | 0x40;
                     } else {
                         *pMsgNo = l_msg_xy_koukan_first.entries[mNpcNo];
                     }
                     dComIfGs_setReserveItemChange(mShownItemBtn,
                                                   (u8)(temp + dItemNo_TOWN_FLOWER_e));
-                    field_0x98C = nullptr;
+                    mpMsgList = nullptr;
                 } else {
-                    field_0x9B2 = field_0x9B2 | 0x10;
-                    field_0x98C = nullptr;
+                    mEventFlags = mEventFlags | 0x10;
+                    mpMsgList = nullptr;
                     status = 0x10;
                 }
                 break;
@@ -413,52 +413,52 @@ u16 daNpcRoten_c::next_msgStatus(be<u32>* pMsgNo) {
 /* 022D6304 */
 u32 daNpcRoten_c::getMsg() {
     u32 msgNo = 0;
-    field_0x98C = nullptr;
-    u16 flags = field_0x9B2;
+    mpMsgList = nullptr;
+    u16 flags = mEventFlags;
     if (flags & 8) {
-        field_0x9B2 = flags & ~8;
+        mEventFlags = flags & ~8;
         msgNo = l_msg_xy_koukan_no.entries[mNpcNo];
     } else if (flags & 0x10) {
-        field_0x9B2 = flags & ~0x10;
+        mEventFlags = flags & ~0x10;
         msgNo = l_msg_xy_koukan_no.entries[mNpcNo];
     } else if (flags & 0x20) {
-        field_0x9B2 = flags & ~0x20;
+        mEventFlags = flags & ~0x20;
         msgNo = l_msg_xy_koukan_rupee.entries[mNpcNo];
     } else if (dComIfGp_event_chkTalkXY()) {
         u8 itemNo = dComIfGp_event_getPreItemNo();
         if (isGetMap(itemNo)) {
-            field_0x98C = l_msg_try_force.entries;
+            mpMsgList = l_msg_try_force.entries;
             dComIfGs_setReserveItemEmpty();
             dComIfGs_onEventBit(0x3E04);
         } else if (dComIfGs_getEventReg(save_dat(mNpcNo, 2)) >= 3) {
-            field_0x98C = l_msg_xy_exchange3.entries[mNpcNo].get();
+            mpMsgList = l_msg_xy_exchange3.entries[mNpcNo].get();
         } else if (!isHaitatuItem(itemNo)) {
-            field_0x98C = l_msg_xy_no_roten_item.entries[mNpcNo].get();
+            mpMsgList = l_msg_xy_no_roten_item.entries[mNpcNo].get();
         } else if (!isKoukanItem(itemNo)) {
-            field_0x98C = l_msg_xy_invalid_item.entries[mNpcNo].get();
+            mpMsgList = l_msg_xy_invalid_item.entries[mNpcNo].get();
         } else {
             u8 npcNo = mNpcNo;
             u8 idx = (u8)(itemNo - dItemNo_TOWN_FLOWER_e);
-            field_0x9BE = idx;
-            field_0x98C = l_msg_xy_koukan_item.entries[npcNo][idx].get();
+            mTradeItemIdx = idx;
+            mpMsgList = l_msg_xy_koukan_item.entries[npcNo][idx].get();
             dComIfGs_onEventBit(save_dat(npcNo, 6));
         }
     } else {
         if (!dComIfGs_isEventBit(save_dat(mNpcNo, 0))) {
-            field_0x98C = l_msg_1st_talk.entries[mNpcNo].get();
+            mpMsgList = l_msg_1st_talk.entries[mNpcNo].get();
             dComIfGs_onEventBit(save_dat(mNpcNo, 0));
         } else if (dComIfGs_getEventReg(save_dat(mNpcNo, 2)) >= 3) {
-            field_0x98C = l_msg_exchange3.entries[mNpcNo].get();
+            mpMsgList = l_msg_exchange3.entries[mNpcNo].get();
         } else if (mNpcNo == 1 && dComIfGs_isEventBit(0x3E04)) {
-            field_0x98C = l_msg_collect_map.entries;
+            mpMsgList = l_msg_collect_map.entries;
         } else if (dComIfGs_isEventBit(save_dat(mNpcNo, 6))) {
-            field_0x98C = l_msg_exchange.entries[mNpcNo].get();
+            mpMsgList = l_msg_exchange.entries[mNpcNo].get();
         } else {
-            field_0x98C = l_msg_etc.entries[mNpcNo].get();
+            mpMsgList = l_msg_etc.entries[mNpcNo].get();
         }
     }
-    if (field_0x98C.get() != nullptr) {
-        msgNo = *field_0x98C;
+    if (mpMsgList.get() != nullptr) {
+        msgNo = *mpMsgList;
     }
     return msgNo;
 }
@@ -507,71 +507,71 @@ BOOL daNpcRoten_c::initTexPatternAnm(u8 modify) {
                       -1, (u32)modify, 0, 1.0f) == 0) { /* mBtpAnm.init */
         return FALSE;
     }
-    field_0x9B8 = 0;
-    field_0x9AA = 0;
+    mBtpFrame = 0;
+    mBlinkTimer = 0;
     return TRUE;
 }
 
 /* 022D50D4 */
 void daNpcRoten_c::playTexPatternAnm() {
-    if (cLib_calcTimer(&field_0x9AA) == 0) {
+    if (cLib_calcTimer(&mBlinkTimer) == 0) {
         s32 frameMax = J3DAnm_getFrameMax(m_head_tex_pattern);
-        if ((s32)field_0x9B8 >= frameMax) {
+        if ((s32)mBtpFrame >= frameMax) {
             frameMax = J3DAnm_getFrameMax(m_head_tex_pattern);
-            u8 f = field_0x9B8;
-            field_0x9AA = 0x78;
-            field_0x9B8 = (u8)(f - frameMax);
+            u8 f = mBtpFrame;
+            mBlinkTimer = 0x78;
+            mBtpFrame = (u8)(f - frameMax);
         } else {
-            field_0x9B8 = (u8)(field_0x9B8 + 1);
+            mBtpFrame = (u8)(mBtpFrame + 1);
         }
     }
 }
 
 /* 022D5174 */
 void daNpcRoten_c::playAnm() {
-    if (mpMorf->play(nullptr, 0, 0) && field_0x988.get() != nullptr && field_0x9C2 > 0) {
-        s8 n = (s8)(field_0x9C2 - 1);
-        field_0x9C2 = n;
+    if (mpMorf->play(nullptr, 0, 0) && mpAnmTbl.get() != nullptr && mAnmLoopCount > 0) {
+        s8 n = (s8)(mAnmLoopCount - 1);
+        mAnmLoopCount = n;
         if (n == 0) {
-            field_0x988 = field_0x988.get() + 1;
-            if (setAnmTbl(field_0x988)) {
-                field_0x9C1 = field_0x9C1 | 1;
+            mpAnmTbl = mpAnmTbl.get() + 1;
+            if (setAnmTbl(mpAnmTbl)) {
+                mAnmTblFlags = mAnmTblFlags | 1;
             }
         } else {
-            setAnm(field_0x988->field_0x00, 0, 0.0f);
+            setAnm(mpAnmTbl->mAnmIdx, 0, 0.0f);
         }
     }
 }
 
 /* 022D43B0 */
 void daNpcRoten_c::setAnm(u8 param_1, int param_2, f32 param_3) {
-    f32 f = field_0x994;
+    f32 f = mMorf;
     if (!(f < 0.0f)) {
         param_3 = f;
-        field_0x994 = -1.0f;
+        mMorf = -1.0f;
     }
     J3DAnmTransform* pAnmRes = (J3DAnmTransform*)dComIfG_getObjectIDRes(
         arcname(mNpcNo), l_bck_ix_tbl.entries[mNpcNo][param_1]);
     mpMorf->setAnm(pAnmRes, param_2, param_3, 1.0f, 0.0f, -1.0f, nullptr);
-    field_0x9C0 = param_1;
-    field_0x998 = param_2;
+    mAnmIdx = param_1;
+    mAnmPlayMode = param_2;
 }
 
 /* 022D44D0 */
 bool daNpcRoten_c::setAnmTbl(sRotenAnmDat* param_1) {
-    field_0x9C1 = field_0x9C1 & ~1;
-    if (param_1->field_0x00 == 0xFF) {
-        field_0x988 = nullptr;
+    mAnmTblFlags = mAnmTblFlags & ~1;
+    if (param_1->mAnmIdx == 0xFF) {
+        mpAnmTbl = nullptr;
         return true;
     }
-    field_0x988 = param_1;
-    s8 cnt = (s8)param_1->field_0x02;
-    field_0x9C2 = cnt;
-    u8 anm = param_1->field_0x00;
+    mpAnmTbl = param_1;
+    s8 cnt = (s8)param_1->mLoopCount;
+    mAnmLoopCount = cnt;
+    u8 anm = param_1->mAnmIdx;
     if (cnt > 0) {
-        setAnm(anm, 0, (f32)param_1->field_0x01);
-    } else if (field_0x9C0 != anm || field_0x998 == 0) {
-        setAnm(anm, 2, (f32)param_1->field_0x01);
+        setAnm(anm, 0, (f32)param_1->mMorf);
+    } else if (mAnmIdx != anm || mAnmPlayMode == 0) {
+        setAnm(anm, 2, (f32)param_1->mMorf);
     }
     return false;
 }
@@ -597,7 +597,7 @@ BOOL daNpcRoten_c::isGetMap(u8 itemNo) {
 /* 022D3388 */
 s16 daNpcRoten_c::XyEventCB(int i_itemBtn) {
     u8 itemNo = dComIfGp_getSelectItem(i_itemBtn);
-    field_0x9BE = (u8)(itemNo - dItemNo_TOWN_FLOWER_e);
+    mTradeItemIdx = (u8)(itemNo - dItemNo_TOWN_FLOWER_e);
     if (isKoukanItem(itemNo) && dComIfGs_getEventReg(save_dat(mNpcNo, 2)) < 3 &&
         !isGetMap(itemNo)) {
         u8 btn = dComIfGp_event_getTalkXYBtn();
@@ -610,12 +610,12 @@ s16 daNpcRoten_c::XyEventCB(int i_itemBtn) {
         } else {
             mShownItemBtn = dItemBtn_NONE_e;
         }
-        field_0x9B2 = field_0x9B2 | 0xC000;
-        return field_0x99E;
+        mEventFlags = mEventFlags | 0xC000;
+        return mExchange1stEventIdx;
     }
     if (isGetMap(itemNo)) {
-        field_0x9B2 = field_0x9B2 | 0xC000;
-        return field_0x9A4;
+        mEventFlags = mEventFlags | 0xC000;
+        return mGetMapEventIdx;
     }
     return dComIfGp_evmng_getEventIdx("DEFAULT_TALK_XY", 0xFF); /* "DEFAULT_TALK_XY" */
 }
@@ -638,11 +638,11 @@ void daNpcRoten_c::setCollisionB() {
     dNpc_calc_DisXZ_AngY(a, b, nullptr, angle);
     s16 ang = *angle;
     NpcDatStruct& dat = npc_dat(mNpcNo);
-    temp->x = gabi::fmadds(cM_ssin(ang), dat.field_0x34, temp->x);
+    temp->x = gabi::fmadds(cM_ssin(ang), dat.mCyl2Dist, temp->x);
     temp->y = current.pos.y;
-    temp->z = gabi::fmadds(cM_scos(ang), dat.field_0x34, temp->z);
+    temp->z = gabi::fmadds(cM_scos(ang), dat.mCyl2Dist, temp->z);
     mCyl2.SetC(temp);
-    mCyl2.SetR(npc_dat(mNpcNo).field_0x30);
+    mCyl2.SetR(npc_dat(mNpcNo).mCyl2Radius);
     mCyl2.SetH(200.0f);
     dComIfG_Ccsp_Set(&mCyl2);
 }
@@ -651,7 +651,7 @@ void daNpcRoten_c::setCollisionB() {
 void daNpcRoten_c::setCollisionH() {
     Mtx34* mtx = getAnmMtx(mpMorf->getModel(), m_jnt.mHeadJntNum);
     PSMTXCopy(mtx, calc_mtx());
-    mDoMtx_stack_c::transS(npc_dat(mNpcNo).field_0x3C, 0.0f, 0.0f);
+    mDoMtx_stack_c::transS(npc_dat(mNpcNo).mSphOffsetX, 0.0f, 0.0f);
     roten_PSMTXConcat(calc_mtx(), mDoMtx_stack_c::get(), calc_mtx());
     gabi::Local<cXyz> temp;
     Mtx34* m = calc_mtx();
@@ -659,11 +659,11 @@ void daNpcRoten_c::setCollisionH() {
     temp->y = m->m[1][3];
     temp->z = m->m[2][3];
     mSph.SetC(temp);
-    mSph.SetR(npc_dat(mNpcNo).field_0x38);
+    mSph.SetR(npc_dat(mNpcNo).mSphRadius);
     dComIfG_Ccsp_Set(&mSph);
-    if (field_0x9CA == 0 && mSph.ChkTgHit()) {
+    if (mWindHit == 0 && mSph.ChkTgHit()) {
         executeSetMode(MODE_WIND);
-        field_0x9CA = 1;
+        mWindHit = 1;
     }
 }
 

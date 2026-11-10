@@ -71,7 +71,7 @@ static inline void shandLineCheckDestroyBase(void* c, s32 f) { gabi::call(0x0200
 struct shand_s {
     /* 0x00 */ cXyz mPos;
     /* 0x0C */ u8 _pad[0x18 - 0xC];
-    /* 0x18 */ be<f32> field_18;
+    /* 0x18 */ be<f32> mThickness;  /* was field_18: set_thickness (in daShand_Execute 0246FB78) sets it to shand_class mThickness for links 0..11 and thinner toward the tip for 12..19; hand_move (in daShand_Execute 0246FB78) writes it (ftoi) as the link's line width into mLineMat. tww d217e2b src/d/actor/d_a_shand.cpp keeps the offset name field_18 (same uses, lines 113 / 116 / 285) */
 };
 WWHD_SIZE(shand_s, 0x1C);
 
@@ -82,26 +82,26 @@ struct shand_class : fopEn_enemy_c {
     /* 0x3D0 */ be<s16> mExecuteCount;
     /* 0x3D2 */ be<s16> unused_2B6;
     /* 0x3D4 */ be<s16> mState;
-    /* 0x3D6 */ be<s16> field_2BA;
-    /* 0x3D8 */ be<s16> field_2BC[4];
-    /* 0x3E0 */ be<s16> field_2C4;
+    /* 0x3D6 */ be<s16> mTipMode;  /* was field_2BA: normal (in daShand_Execute 0246FB78): 0 while the tip (mLinks[19]) moves to mTipTargetPos, 1 once it is within 10 (then it tells the parent *mpParentState = 2) and keeps the target at mTipGroundPos; daShand_Create 02470E24 sets 1, cut_control (regrow) and hand_move (parent dead / cut) set 0 */
+    /* 0x3D8 */ be<s16> mTimers[4];  /* was field_2BC: daShand_Execute 0246FB78 counts all 4 down; hand_move (in daShand_Execute) sets [0] (regrow wait, l_HIO) and [1] (no new cut) after a cut and checks them */
+    /* 0x3E0 */ be<s16> mNoHitTimer;  /* was field_2C4: hand_move (in daShand_Execute 0246FB78) checks the mCylArr / mSph TG hits only while it is 0 and sets 10 after a hit; daShand_Execute counts it down; daShand_Create 02470E24 sets 30 */
     /* 0x3E2 */ u8 _3E2[2];
-    /* 0x3E4 */ cXyz field_2C8;
-    /* 0x3F0 */ cXyz field_2D4;
+    /* 0x3E4 */ cXyz mTipGroundPos;  /* was field_2C8: normal (in daShand_Execute 0246FB78): the ground point under the tip found by the line check while mGroundSetTimer runs; the tip goes back there (mTipTargetPos = it) and its height below home sets mLinkLen */
+    /* 0x3F0 */ cXyz mTipTargetPos;  /* was field_2D4: control1 (in daShand_Execute 0246FB78) moves the tip link (mLinks[19]) toward it with step mTipSpeedRate * 50; normal sets it to mTipGroundPos */
     /* 0x3FC */ u8 unused_2E0[0x40C - 0x3FC];
-    /* 0x40C */ be<f32> field_2F0;
-    /* 0x410 */ be<f32> field_2F4;
-    /* 0x414 */ be<f32> field_2F8;
-    /* 0x418 */ be<f32> field_2FC;
-    /* 0x41C */ be<f32> field_300;
-    /* 0x420 */ be<f32> field_304;
-    /* 0x424 */ be<u32> field_308;
-    /* 0x428 */ gptr<fopAc_ac_c> field_30C;
-    /* 0x42C */ gptr<cXyz> field_310;
-    /* 0x430 */ gptr<be<u8>> field_314;
-    /* 0x434 */ be<s16> field_318;
+    /* 0x40C */ be<f32> mTipSpeedRate;  /* was field_2F0: control1 (in daShand_Execute 0246FB78): rate of the tip's move to mTipTargetPos (step * 50), eased up to 1; daShand_Create 02470E24 sets 1, cut_control resets it to 0 when the hand regrows */
+    /* 0x410 */ be<f32> mLinkLen;  /* was field_2F4: control1 / control2 (in daShand_Execute 0246FB78): z of the per-link offset (the link length); normal eases it to the tip's depth below home * 0.05, cut_control to 20 */
+    /* 0x414 */ be<f32> mBendY;  /* was field_2F8: control1 / control2 (in daShand_Execute 0246FB78): y of the per-link bend offset, eased to a REG value (0 / -5); a cut sets 3 */
+    /* 0x418 */ be<f32> mBendZ;  /* was field_2FC: control1 / control2 (in daShand_Execute 0246FB78): z of the per-link bend offset, eased to a REG value (0 / 20); a cut sets 40 */
+    /* 0x41C */ be<f32> mWobbleAmp;  /* was field_300: control1 / control2 (in daShand_Execute 0246FB78): amplitude of the sine / cosine wobble of the links (phase mExecuteCount); normal eases it to 10, control2 to 0, a cut sets 30..50 */
+    /* 0x420 */ be<f32> mThickness;  /* was field_304: set_thickness (in daShand_Execute 0246FB78): base thickness of each link (shand_s mThickness), thinner toward the end; daShand_Create 02470E24 sets 15.75 / 10.5 by type */
+    /* 0x424 */ be<u32> mParentId;  /* was field_308: the parent Kokiie's process id: himo_create (in Kokiie 021A6418) sets it; hand_move (in daShand_Execute 0246FB78) looks the parent up by it (mpParent) */
+    /* 0x428 */ gptr<fopAc_ac_c> mpParent;  /* was field_30C: hand_move (in daShand_Execute 0246FB78): the parent actor found by mParentId; the hand follows its position / shape angle and is cut when its health is 0 */
+    /* 0x42C */ gptr<cXyz> mpRootPos;  /* was field_310: himo_create (in Kokiie 021A6418) points it at the parent's anchor position (kokiie mRopeEndPos[i]); hand_move (in daShand_Execute 0246FB78) puts the hand's root there */
+    /* 0x430 */ gptr<be<u8>> mpParentState;  /* was field_314: himo_create (in Kokiie 021A6418) points it at the parent's per-hand state byte (kokiie mRopeState[i]); the hand writes 1 when it is cut and 2 when its tip is back in place */
+    /* 0x434 */ be<s16> mGroundSetTimer;  /* was field_318: daShand_Create 02470E24 sets 10; normal (in daShand_Execute 0246FB78) line-checks the ground under the tip and sets mTipGroundPos / mTipTargetPos / the tip position each frame while it counts down */
     /* 0x436 */ u8 _436[2];
-    /* 0x438 */ shand_s field_31C[20];
+    /* 0x438 */ shand_s mLinks[20];  /* was field_31C: the 20 shand_s links of the hand (position, thickness mThickness): control1 / control2 / set_thickness (in daShand_Execute 0246FB78) move them, [0] is put at the root, [19] is the tip */
     /* 0x668 */ ShandLineMat mLineMat;
     /* 0x7F0 */ dCcD_Stts mStts;
     /* 0x82C */ dCcD_Sph mSph;
@@ -109,8 +109,8 @@ struct shand_class : fopEn_enemy_c {
     /* 0xF48 */ be<f32> ground_y;
     /* 0xF4C */ be<u8> mHasHIO;
 };
-WWHD_OFFSET(shand_class, field_2F0, 0x40C);
-WWHD_OFFSET(shand_class, field_31C, 0x438);
+WWHD_OFFSET(shand_class, mTipSpeedRate, 0x40C);
+WWHD_OFFSET(shand_class, mLinks, 0x438);
 WWHD_OFFSET(shand_class, mStts, 0x7F0);
 WWHD_OFFSET(shand_class, mCylArr, 0x958);
 WWHD_OFFSET(shand_class, mHasHIO, 0xF4C);

@@ -60,7 +60,7 @@ static daNpc_Pm1_HIO_c *daNpc_Pm1_HIO_c_ct(daNpc_Pm1_HIO_c *i_this) {
     i_this->__vtbl = PM1_HIO_VTBL;
     memcpy_g(&i_this->mPrmTbl, &a_prm_tbl, 0x1C);
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 
@@ -111,7 +111,7 @@ bool daNpc_Pm1_c::createInit() {
     gravity = -4.0f;
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAB;  /* attention_info.distances[TALK] */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xA9; /* attention_info.distances[SPEAK] */
-    field_0x798.copy(current.pos);
+    mLookPos.copy(current.pos);
     gabi::Local<Pm1Action> pmf; // HD: eight-byte outgoing action descriptor.
     pm1_pmf_load(pmf, a_wait_action);
     set_action(pmf, nullptr);
@@ -122,20 +122,20 @@ bool daNpc_Pm1_c::createInit() {
     mCyl.SetStts(&mStts);
     mCyl.Set(&dNpc_cyl_src /* dNpc_cyl_src */);
     mpMorf->setMorf(0.0f);
-    field_0x7BC = 1;
+    mbInitEyePos = 1;
     setMtx();
     return true;
 }
 
 /* 022D15F0 */
 void daNpc_Pm1_c::setMtx() {
-    if (field_0x7C7 == 0) {
+    if (mbDemo == 0) {
         playTexPatternAnm();
-        field_0x7B4 = (s8)mpMorf->play(&eyePos, 0, 0);
-        if (mpMorf->getFrame() < field_0x7A4) {
-            field_0x7B4 = 1;
+        mbMorfAnimStopped = (s8)mpMorf->play(&eyePos, 0, 0);
+        if (mpMorf->getFrame() < mPrevMorfFrame) {
+            mbMorfAnimStopped = 1;
         }
-        field_0x7A4 = mpMorf->getFrame();
+        mPrevMorfFrame = mpMorf->getFrame();
         mObjAcch.CrrPos(dComIfG_Bgsp());
     }
     tevStr.mRoomNo =
@@ -170,8 +170,8 @@ void daNpc_Pm1_c::BtpNum2ResID(int i_num, be<s32> *o_btp_num) {
 
 /* 022D2300 */
 u32 daNpc_Pm1_c::setAnm_tex(s8 i_param_1) {
-    if (i_param_1 >= 0 && i_param_1 != field_0x7CD) {
-        field_0x7CD = i_param_1;
+    if (i_param_1 >= 0 && i_param_1 != mBtpNum) {
+        mBtpNum = i_param_1;
         return initTexPatternAnm(true);
     }
     return (u32)gabi::ea(this); /* original: r3 still this */
@@ -191,7 +191,7 @@ bool daNpc_Pm1_c::init_btp(u32 param_1, int param_2) {
                                    2 /* EMode_LOOP */, 1.0f, 0, -1, param_1, FALSE) == 0) {
             return false;
         }
-        field_0x6F2 = 0;
+        mBlinkTimer = 0;
         mBtpFrame = 0;
     }
     return true;
@@ -200,7 +200,7 @@ bool daNpc_Pm1_c::init_btp(u32 param_1, int param_2) {
 /* 022D1060 */
 bool daNpc_Pm1_c::initTexPatternAnm(u32 param_1) {
     bool success = false;
-    if (init_btp(param_1, field_0x7CD)) {
+    if (init_btp(param_1, mBtpNum)) {
         success = true;
     }
     return success;
@@ -208,7 +208,7 @@ bool daNpc_Pm1_c::initTexPatternAnm(u32 param_1) {
 
 /* 022D14A4 */
 void daNpc_Pm1_c::playTexPatternAnm() {
-    if (field_0x7CD == 0 && cLib_calcTimer(&field_0x6F2) != 0) {
+    if (mBtpNum == 0 && cLib_calcTimer(&mBlinkTimer) != 0) {
         return;
     }
     u8 frame = (u8)(mBtpFrame + 1);
@@ -216,11 +216,11 @@ void daNpc_Pm1_c::playTexPatternAnm() {
     if (frame < pm1_J3DAnm_getFrameMax(m_head_tex_pattern)) {
         return;
     }
-    if (field_0x7CD) {
+    if (mBtpNum) {
         mBtpFrame = (u8)pm1_J3DAnm_getFrameMax(m_head_tex_pattern);
     } else {
         mBtpFrame = 0;
-        field_0x6F2 = (s16)gabi::ftoi(cM_rndF(60.0f) + 30.0f);
+        mBlinkTimer = (s16)gabi::ftoi(cM_rndF(60.0f) + 30.0f);
     }
 }
 
@@ -228,8 +228,8 @@ void daNpc_Pm1_c::playTexPatternAnm() {
 s32 daNpc_Pm1_c::setAnm_anm(anm_prm_c *i_anm_ptr) {
     s32 changed = 0;
     s8 num = i_anm_ptr->bckNum;
-    if (num >= 0 && field_0x7CE != num) {
-        field_0x7CE = num;
+    if (num >= 0 && mBckNum != num) {
+        mBckNum = num;
         if (mpMorf.get() != nullptr) {
             gabi::Local<be<s32>> bckId; // HD: separate four-byte animation output slots.
             gabi::Local<be<s32>> basId;
@@ -241,22 +241,22 @@ s32 daNpc_Pm1_c::setAnm_anm(anm_prm_c *i_anm_ptr) {
             changed = 1;
         }
         field_0x7B5 = 0;
-        field_0x7A4 = 0.0f;
-        field_0x7B4 = 0;
+        mPrevMorfFrame = 0.0f;
+        mbMorfAnimStopped = 0;
     }
     return changed;
 }
 
 /* 022D23E0 */
 void daNpc_Pm1_c::setAnm() {
-    setAnm_tex(a_anm_prm_tbl[field_0x7D0].btpNum);
-    setAnm_anm(&a_anm_prm_tbl[field_0x7D0]);
+    setAnm_tex(a_anm_prm_tbl[mStt].btpNum);
+    setAnm_anm(&a_anm_prm_tbl[mStt]);
 }
 
 /* 022D24B0 */
 void daNpc_Pm1_c::chngAnmAtr(u32 param_1) {
-    if (param_1 < 1 && param_1 != field_0x7CB) {
-        field_0x7CB = param_1;
+    if (param_1 < 1 && param_1 != mAnmAtr) {
+        mAnmAtr = param_1;
         setAnm_ATR(1);
     }
 }
@@ -267,37 +267,37 @@ void daNpc_Pm1_c::setAnm_ATR(int param_1) {
         // HD: the one-entry table is indexed with 0 here
         setAnm_tex(a_atr_prm_tbl[0].btpNum);
     }
-    setAnm_anm(&a_atr_prm_tbl[field_0x7CB]);
+    setAnm_anm(&a_atr_prm_tbl[mAnmAtr]);
 }
 
 /* 022D24D4 */
 void daNpc_Pm1_c::anmAtr(u16 i_msgStatus) {
     if (i_msgStatus == MSG_TYPING) {
-        if (field_0x7D6 == 0) {
-            field_0x7CC = 0xFF;
+        if (mAtrSet == 0) {
+            mMesgAnimeTag = 0xFF;
             chngAnmAtr(dComIfGp_getMesgAnimeAttrInfo());
-            field_0x7D6 = field_0x7D6 + 1;
+            mAtrSet = mAtrSet + 1;
         }
         u8 value = dComIfGp_getMesgAnimeTagInfo(); /* dComIfGp_getMesgAnimeTagInfo() */
-        if (value != 0xFF && value != field_0x7CC) {
+        if (value != 0xFF && value != mMesgAnimeTag) {
             dComIfGp_clearMesgAnimeTagInfo();
-            field_0x7CC = value;
+            mMesgAnimeTag = value;
             /* chngAnmTag(): empty */
         }
     } else if (i_msgStatus == MSG_DISPLAYED) {
-        field_0x7D6 = 0;
+        mAtrSet = 0;
     }
     /* ctrlAnmAtr(), ctrlAnmTag(): empty */
 }
 
 /* 022D2594 */
 void daNpc_Pm1_c::setStt(s8 param_1) {
-    s8 value = field_0x7D0;
-    field_0x7D0 = param_1;
+    s8 value = mStt;
+    mStt = param_1;
     if (param_1 == STATE_TALK) {
-        field_0x7D1 = value;
-        field_0x7CB = 0xFF;
-        field_0x7D2 = LOOK_PLAYER;
+        mPrevStt = value;
+        mAnmAtr = 0xFF;
+        mLookMode = LOOK_PLAYER;
         return;
     }
     setAnm();
@@ -311,8 +311,8 @@ u32 daNpc_Pm1_c::getMsg() { return 0; }
 
 /* 022D1F38 */
 void daNpc_Pm1_c::eventOrder() {
-    if (field_0x7CF == 1 || field_0x7CF == 2) {
-        s8 v = field_0x7CF;
+    if (mEvtState == 1 || mEvtState == 2) {
+        s8 v = mEvtState;
         eventInfo.onCondition(dEvtCnd_CANTALK_e); /* eventInfo.onCondition(dEvtCnd_CANTALK_e) */
         if (v == 1) {
             fopAcM_orderSpeakEvent(this);
@@ -329,11 +329,11 @@ void daNpc_Pm1_c::checkOrder() {
     if (command != dEvtCmd_INTALK_e) {
         return;
     }
-    if (field_0x7CF != 1 && field_0x7CF != 2) {
+    if (mEvtState != 1 && mEvtState != 2) {
         return;
     }
-    field_0x7CF = 0;
-    field_0x7C5 = 1;
+    mEvtState = 0;
+    mbTalk = 1;
 }
 
 /* 022D1CF4 */
@@ -348,7 +348,7 @@ void daNpc_Pm1_c::lookBack() {
     vec1.y = 0.0f;
     s16 targetY = current.angle.y;
     cXyz *dstPos = nullptr;
-    switch ((u32)(s32)field_0x7D2) {
+    switch ((u32)(s32)mLookMode) {
     case LOOK_PLAYER: {
         cXyz eye;
         dNpc_playerEyePos(&eye, -20.0f);
@@ -360,25 +360,25 @@ void daNpc_Pm1_c::lookBack() {
         break;
     }
     case LOOK_POSITION:
-        vec1.copy(field_0x798);
+        vec1.copy(mLookPos);
         srcZ = current.pos.z;
         srcX = current.pos.x;
         dstPos = &vec1;
         break;
     case LOOK_ANGLE:
-        targetY = field_0x7B2;
+        targetY = mLookAngleY;
         break;
     }
     if (m_jnt.mbTrn != 0) { /* m_jnt.trnChk() */
-        cLib_addCalcAngleS2(&field_0x7B0, l_HIO.mPrmTbl.field_12, 4, 0x800);
+        cLib_addCalcAngleS2(&mTurnSpeed, l_HIO.mPrmTbl.mTurnSpeedTarget, 4, 0x800);
     } else {
-        field_0x7B0 = 0;
+        mTurnSpeed = 0;
     }
     cXyz vec2; /* passed by value: a copy */
     vec2.x = srcX;
     vec2.y = srcY;
     vec2.z = srcZ;
-    pm1_dNpc_JntCtrl_lookAtTarget(&m_jnt, &current.angle.y, dstPos, &vec2, targetY, field_0x7B0,
+    pm1_dNpc_JntCtrl_lookAtTarget(&m_jnt, &current.angle.y, dstPos, &vec2, targetY, mTurnSpeed,
                                   headOnlyFollow);
 }
 
@@ -399,7 +399,7 @@ void daNpc_Pm1_c::setAttention() {
     attPos->x = x;
     attPos->y = y;
     attPos->z = current.pos.z;
-    if (!field_0x7BC && !field_0x7C0) {
+    if (!mbInitEyePos && !mbSetEyePos) {
         return;
     }
     f32 z = mEyePos.z;
@@ -408,7 +408,7 @@ void daNpc_Pm1_c::setAttention() {
     f32 ey = mEyePos.y;
     eyePos.x = ex;
     eyePos.y = ey;
-    field_0x7BC = 0;
+    mbInitEyePos = 0;
 }
 
 /* 022D1350 */
@@ -440,18 +440,18 @@ void daNpc_Pm1_c::privateCut() {
     if (staffIdx == -1) {
         return;
     }
-    field_0x7C9 = pm1_dComIfGp_evmng_getMyActIdx(staffIdx, cut_name_tbl, 1, TRUE, 0);
-    if (field_0x7C9 == -1) {
+    mActionIndex = pm1_dComIfGp_evmng_getMyActIdx(staffIdx, cut_name_tbl, 1, TRUE, 0);
+    if (mActionIndex == -1) {
         dComIfGp_evmng_cutEnd(staffIdx);
         return;
     }
     if (dComIfGp_evmng_getIsAddvance(staffIdx)) {
-        if (field_0x7C9 == 0) {
+        if (mActionIndex == 0) {
             event_actionInit(staffIdx);
         }
     }
     bool ended = true;
-    if (field_0x7C9 == 0) {
+    if (mActionIndex == 0) {
         ended = event_action();
     }
     if (ended) {
@@ -462,7 +462,7 @@ void daNpc_Pm1_c::privateCut() {
 /* 022D265C */
 void daNpc_Pm1_c::endEvent() {
     dComIfGp_event_reset();
-    field_0x7CB = 0xFF;
+    mAnmAtr = 0xFF;
 }
 
 /* 022D1ED8 */
@@ -494,36 +494,36 @@ bool daNpc_Pm1_c::set_action(Pm1Action *i_action, void *param_2) {
         newD = i_action->d;
     }
     if (cur->i != 0) {
-        field_0x7D5 = -1;
+        mActState = -1;
         pm1_pmf_call(this, cur, param_2);
     }
     cur->f = newF;
     cur->d = newD;
     cur->i = newI;
-    field_0x7D5 = 0;
+    mActState = 0;
     pm1_pmf_call(this, cur, param_2);
     return true;
 }
 
 /* 022D269C */
 BOOL daNpc_Pm1_c::wait01() {
-    if (field_0x7C5 != 0) {
-        field_0x7B7 = 0xFF;
+    if (mbTalk != 0) {
+        mItemNo = 0xFF;
         if (dComIfGp_event_chkTalkXY()) {
             if (dComIfGp_evmng_ChkPresentEnd() == 0) {
                 return TRUE;
             }
-            field_0x7B7 = dComIfGp_event_getPreItemNo();
+            mItemNo = dComIfGp_event_getPreItemNo();
         }
         setStt(STATE_TALK);
     } else {
-        field_0x7CF = 2;
-        if (field_0x7C4) {
-            field_0x7D2 = LOOK_PLAYER;
+        mEvtState = 2;
+        if (mbAttention) {
+            mLookMode = LOOK_PLAYER;
         } else {
-            s16 y = field_0x76C.y;
-            field_0x7D2 = LOOK_ANGLE;
-            field_0x7B2 = y;
+            s16 y = mHomeAngle.y;
+            mLookMode = LOOK_ANGLE;
+            mLookAngleY = y;
             m_jnt.mbTrn = 1; /* setTrn() */
         }
     }
@@ -536,10 +536,10 @@ BOOL daNpc_Pm1_c::talk01() {
     // HD: the message status comes from the message manager (GameCube: mpCurrMsg->mStatus)
     if (mbHasMsg) {
         if (pm1_fopMsgM_getStatus() == MSG_DESTROYED) {
-            field_0x7B7 = 0xFF;
-            setStt(field_0x7D1);
+            mItemNo = 0xFF;
+            setStt(mPrevStt);
             field_0x7C8 = 0;
-            field_0x7C5 = 0;
+            mbTalk = 0;
             endEvent();
         }
     }
@@ -548,20 +548,20 @@ BOOL daNpc_Pm1_c::talk01() {
 
 /* 022D27DC */
 BOOL daNpc_Pm1_c::wait_action1(void *) {
-    if (field_0x7D5 == 0) {
+    if (mActState == 0) {
         setStt(STATE_WAIT);
-        field_0x7D5 = field_0x7D5 + 1;
-    } else if (field_0x7D5 != -1) {
-        field_0x7C4 = chkAttention();
-        switch ((u32)(s32)field_0x7D0) {
+        mActState = mActState + 1;
+    } else if (mActState != -1) {
+        mbAttention = chkAttention();
+        switch ((u32)(s32)mStt) {
         case STATE_TALK:
-            field_0x7C0 = talk01();
+            mbSetEyePos = talk01();
             break;
         case STATE_WAIT:
-            field_0x7C0 = wait01();
+            mbSetEyePos = wait01();
             break;
         default:
-            field_0x7C0 = 0;
+            mbSetEyePos = 0;
             break;
         }
         lookBack();
@@ -572,12 +572,12 @@ BOOL daNpc_Pm1_c::wait_action1(void *) {
 /* 022D1A9C */
 u8 daNpc_Pm1_c::demo() {
     if (demoActorID == 0) {
-        if (field_0x7C7 != 0) {
-            field_0x7C7 = 0;
+        if (mbDemo != 0) {
+            mbDemo = 0;
         }
     } else {
         u8 id = demoActorID;
-        field_0x7C7 = 1;
+        mbDemo = 1;
         /* dComIfGp_demo_getActor(demoActorID) (HD inline with a range check; result unused) */
         if (id != 0 && id <= 0x20) {
             void *obj = demoObject.get();
@@ -589,7 +589,7 @@ u8 daNpc_Pm1_c::demo() {
         }
         pm1_dDemo_setDemoData(this, 0x6A, mpMorf, "Pm", 0, nullptr, 0, 0);
     }
-    return field_0x7C7;
+    return mbDemo;
 }
 
 /* static initialisation of a 4-byte function-local constant on first use */
@@ -622,16 +622,16 @@ BOOL daNpc_Pm1_c::_draw() {
 
 /* 022D1F70 */
 BOOL daNpc_Pm1_c::_execute() {
-    if (field_0x7B8 == 0) {
-        field_0x774.copy(current.pos);
-        field_0x76C.x = current.angle.x;
-        field_0x76C.y = current.angle.y;
-        field_0x76C.z = current.angle.z;
-        field_0x7B8 = 1;
+    if (mbHomeSet == 0) {
+        mHomePos.copy(current.pos);
+        mHomeAngle.x = current.angle.x;
+        mHomeAngle.y = current.angle.y;
+        mHomeAngle.z = current.angle.z;
+        mbHomeSet = 1;
     }
     daNpc_Pm1_HIO_c::hio_prm_c &prm = l_HIO.mPrmTbl;
-    m_jnt.setParam(prm.field_8, prm.field_A, prm.field_C, prm.field_E, prm.field_0, prm.field_2,
-                   prm.field_4, prm.field_6, prm.field_10);
+    m_jnt.setParam(prm.mMaxBackboneX, prm.mMaxBackboneY, prm.mMinBackboneX, prm.mMinBackboneY, prm.mMaxHeadX, prm.mMaxHeadY,
+                   prm.mMinHeadX, prm.mMinHeadY, prm.mMaxTurnStep);
     checkOrder();
     if (demo() == 0) {
         if (dComIfGp_event_runCheck() && eventInfo.getCommand() != dEvtCmd_INTALK_e) {
@@ -644,7 +644,7 @@ BOOL daNpc_Pm1_c::_execute() {
         }
     }
     eventOrder();
-    if (field_0x7C7 == 0) {
+    if (mbDemo == 0) {
         fopAcM_posMoveF(this, &mStts.m_cc_move); /* &mStts.m_cc_move */
     }
     setMtx();
@@ -659,9 +659,9 @@ BOOL daNpc_Pm1_c::_delete() {
     if (mpMorf.get() != nullptr) {
         mpMorf->stopZelAnime();
     }
-    if (l_HIO.field_0x8 >= 0) {
-        s32 n = l_HIO.field_0x8 - 1;
-        l_HIO.field_0x8 = n;
+    if (l_HIO.mRefCount >= 0) {
+        s32 n = l_HIO.mRefCount - 1;
+        l_HIO.mRefCount = n;
         if (n < 0) {
             mDoHIO_deleteChild(l_HIO.mNo);
         }
@@ -692,10 +692,10 @@ cPhs_State daNpc_Pm1_c::_create() {
     if (resLoadResult != cPhs_COMPLEATE_e) {
         return resLoadResult;
     }
-    if (l_HIO.field_0x8 < 0) {
+    if (l_HIO.mRefCount < 0) {
         l_HIO.mNo = mDoHIO_createChild("Poor Maggie" /* (HIO name) */, &l_HIO);
     }
-    l_HIO.field_0x8 = l_HIO.field_0x8 + 1;
+    l_HIO.mRefCount = l_HIO.mRefCount + 1;
 
     if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void *)CheckCreateHeap),
                                a_heap_size_tbl[0])) {
@@ -728,7 +728,7 @@ BOOL daNpc_Pm1_c::CreateHeap() {
             pm1_JUTNameTab_getIndex(gabi::ea(a_mdl_data->getJointName()), "backbone");
         if (m_backbone_jnt_num < 0)
             JUT_ASSERT_fail("d_a_npc_pm1.cpp", 0x547, "m_backbone_jnt_num >= 0");
-        field_0x7CD = a_tex_pattern_num_tbl[0]; /* a_tex_pattern_num_tbl[0] (HD: always entry 0) */
+        mBtpNum = a_tex_pattern_num_tbl[0]; /* a_tex_pattern_num_tbl[0] (HD: always entry 0) */
         if (initTexPatternAnm(false) != 0) {
             // HD: no shadow model
             for (u16 i = 0; i < a_mdl_data->getJointNum(); i++) {

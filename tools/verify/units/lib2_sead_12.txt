@@ -124,3 +124,13 @@ stable 54200000 0x200
 field 0274FBF8 101F8B94 u32 0x54400000
 field 0274FCCC 101F8B94 u32 0x54400000
 stable 54400000 0x100
+# zero-page rule (2026-11-10, clean 521/1000 after the sThreadManager steer above):
+# GraphicsDevice::release 0274FCCC reads this->mLockCallback (+0x54), mLockCount (+0x14) and, when the count drops to 0,
+# mTable (+0xC) ->mRelease (+0x94); generated receivers near 0 faulted the original at the +0x54 load (load 0000005B).
+# this (r3) = the shipped game's graphics driver (fixture 0x54200000, as 02750E24 / acquire_owned), mTable = the driver
+# vtable sGraphicsDriverVtable 101456CC (image word +0x94 = 027517C4, its release). mLockCallback is 0 as GraphicsDevice::create
+# 0274FB24 leaves it, or a fixture callee so the callback path keeps its coverage.
+arg! 0274FCCC r3 0x54200000
+field 0274FCCC r3+0xC u32 0x101456CC
+field 0274FCCC r3+0x54 u32 0,0,0,0x7C5C1000
+callee 7C5C1000 fixture r3=0

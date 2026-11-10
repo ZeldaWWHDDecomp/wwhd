@@ -357,13 +357,13 @@ static BOOL daAM_Delete(am_class* i_this) {
         dPa_smokeEcallBack* cb = &i_this->mSmokeCbs[2];
         cb->remove();
     }
-    if (i_this->m033C) {
-        JPA_becomeInvalidEmitter(i_this->m033C);
-        i_this->m033C = nullptr;
+    if (i_this->mpBombEyeEmitter) {
+        JPA_becomeInvalidEmitter(i_this->mpBombEyeEmitter);
+        i_this->mpBombEyeEmitter = nullptr;
     }
-    if (i_this->m0340) {
-        JPA_becomeInvalidEmitter(i_this->m0340);
-        i_this->m0340 = nullptr;
+    if (i_this->mpBombMouthEmitter) {
+        JPA_becomeInvalidEmitter(i_this->mpBombMouthEmitter);
+        i_this->mpBombMouthEmitter = nullptr;
     }
 
     return TRUE;

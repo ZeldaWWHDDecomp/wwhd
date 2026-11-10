@@ -9,7 +9,7 @@ static void bstFlyAnimator(bst_class* i_this, be<u16>* table, bool brk, s32 loop
                            u32 resourceName = BST_FLY_ARCHIVE) {
     u8 part = (u8)i_this->mBstPartType;
     u32 resources = (u32)bstMoveResourceTable();
-    u32 morph = (u32)i_this->m02B8.v, model = gabi::ea((J3DModel*)bstMoveMorf(morph)->mpModel);
+    u32 morph = (u32)i_this->mpMorf.v, model = gabi::ea((J3DModel*)bstMoveMorf(morph)->mpModel);
     u16 id = (u16)table[part];
     SafeString name;
     name.mTextPtr = resourceName;
@@ -29,7 +29,7 @@ static void bstDispatchSound(bst_class* i_this, u32 sound) {
 }
 /* inlined into daBst_move */
 static void bstFixedAnimator(bst_class* i_this, u32 id, bool brk, f32 one) {
-    u32 morph = (u32)i_this->m02B8.v, resources = (u32)bstMoveResourceTable(),
+    u32 morph = (u32)i_this->mpMorf.v, resources = (u32)bstMoveResourceTable(),
         model = gabi::ea((J3DModel*)bstMoveMorf(morph)->mpModel);
     SafeString name;
     name.mTextPtr = BST_HEAD_ARCHIVE;
@@ -131,7 +131,7 @@ static void stay(bst_class* actor, f32 zero, f32 one, f32 ten) {
         f32 shake =
             gabi::fadds_ppc((f32)bstMoveTuning().mRegF[10], (f32)bstMoveConstants().mFifteen);
         u32 head = (u32)bstMoveGlobals().boss;
-        bstMoveActor(head)->m2ECC = shake;
+        bstMoveActor(head)->mCamShake = shake;
         state = (s16)i_this->mDamage;
         i_this->mDamage = (s16)(state + 1);
         u32 matrix = (u32)bstMoveCalcMatrix();
@@ -140,11 +140,11 @@ static void stay(bst_class* actor, f32 zero, f32 one, f32 ten) {
         BstMove_transformVector(&local, &transformed);
         BstMove_vectorAddResult(&i_this->current.pos, &sum, &transformed);
         actor->mTargetPos.copy(sum);
-        i_this->m10FC[3] = 15;
+        i_this->mTimers[3] = 15;
     }
-    if ((u8)i_this->mBstPartType != 0 && (s16)i_this->m10FC[3] != 0) {
+    if ((u8)i_this->mBstPartType != 0 && (s16)i_this->mTimers[3] != 0) {
         for (u32 i = 0; i < 15; ++i) {
-            u32 morph = (u32)i_this->m02B8.v,
+            u32 morph = (u32)i_this->mpMorf.v,
                 model = gabi::ea((J3DModel*)bstMoveMorf(morph)->mpModel),
                 block = gabi::ea((J3DMtxBuffer_hd*)bstMoveModel(model)->mpMtxBuffer);
             u16 flags = (u16)bstMoveMatrixBuffer(block)->mFlags;
@@ -180,13 +180,13 @@ static void fly(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) {
     u32 player =
         gabi::ea((fopAc_ac_c*)reinterpret_cast<dComIfG_inf_c*>(play)->play.mPlayerInfo[0].mpPlayer);
     s16 timer = (s16)i_this->mState;
-    if (part && (s16)i_this->m10D8 == 6)
+    if (part && (s16)i_this->mPrevAction == 6)
         *reinterpret_cast<be<u8>*>(&i_this->health) = 4;
-    i_this->m10D8 = 1;
+    i_this->mPrevAction = 1;
     if (timer == 0)
         BstMove_setHandCo(actor, 1);
     u32 head = (u32)bstMoveGlobals().boss;
-    bool face = (s8)bstMoveActor(head)->m2E9A != 0;
+    bool face = (s8)bstMoveActor(head)->mDemoCamMode != 0;
     if (!face && ((s16)i_this->mUpdateLastFacingDirIfMultipleOf32 & 31) == 0)
         face = BstMove_random(one) < half;
     if (face)
@@ -201,15 +201,15 @@ static void fly(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) {
         u32 controller = (u32)i_this->mpTevRegAnimator.v;
         bstMoveFrame(controller)->mFrame = (f32)((s32)frame + 29);
         state = (s16)i_this->mDamage;
-        i_this->m02D4 = 1;
-        i_this->m02C4 = 1;
+        i_this->mPedestalAnmOn = 1;
+        i_this->mBodyAnmOn = 1;
         i_this->mDamage = (s16)(state + 1);
     } else {
         if (state == 1) {
             bstFlyAnimator(i_this, bstMove_fly_brk(), true, 2, one);
             bstFlyAnimator(i_this, bstMove_fly_btk(), false, 2, one);
             state = (s16)i_this->mDamage;
-            i_this->m10EC.y = zero;
+            i_this->mMoveParam.y = zero;
             i_this->mDamage = (s16)(state + 1);
             state = 2;
         }
@@ -230,7 +230,7 @@ static void fly(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) {
                 local.x = zero;
                 local.z = gabi::fadds_ppc(depth, (f32)bstMoveConstants().mThousand);
                 head = (u32)bstMoveGlobals().boss;
-                if ((s8)bstMoveActor(head)->m2E7C == 11)
+                if ((s8)bstMoveActor(head)->mBattlePhase == 11)
                     local.y = gabi::fadds_ppc(height, (f32)bstMoveConstants().mThreeFifty);
             } else {
                 local.z = gabi::fadds_ppc(depth, eightHundred);
@@ -274,7 +274,7 @@ static void fly(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) {
                 bool headFlight = false;
                 if (!part) {
                     head = (u32)bstMoveGlobals().boss;
-                    headFlight = (s8)bstMoveActor(head)->m2E7C == 11;
+                    headFlight = (s8)bstMoveActor(head)->mBattlePhase == 11;
                 }
                 f32 speed = headFlight ? ten : (f32)bstMoveConstants().mThirty;
                 f32 acceleration =
@@ -286,7 +286,7 @@ static void fly(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) {
             }
             f32 turn = gabi::fadds_ppc((f32)bstMoveTuning().mRegF[5],
                                        (f32)bstMoveConstants().mFifteenHundred);
-            i_this->m10EC.x = turn;
+            i_this->mMoveParam.x = turn;
             play = BstMove_play();
             u32 currentPlayer = gabi::ea(
                 (fopAc_ac_c*)reinterpret_cast<dComIfG_inf_c*>(play)->play.mPlayerInfo[0].mpPlayer);
@@ -296,14 +296,14 @@ static void fly(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) {
             bool headFlight = false;
             if (!part) {
                 head = (u32)bstMoveGlobals().boss;
-                headFlight = (s8)bstMoveActor(head)->m2E7C == 11;
+                headFlight = (s8)bstMoveActor(head)->mBattlePhase == 11;
             }
             BstMove_approachAngle(&i_this->shape_angle.x, headFlight ? 0 : 3000, 10, 0x100);
             BstMove_approachAngle(&i_this->shape_angle.z, 0, 8, 0x200);
             f32 shake =
                 gabi::fadds_ppc((f32)bstMoveTuning().mRegF[11], (f32)bstMoveConstants().mFifty);
             f32 acceleration = (f32)bstMoveConstants().mTwo;
-            BstMove_approach(&i_this->m10EC.z, shake, one, acceleration);
+            BstMove_approach(&i_this->mMoveParam.z, shake, one, acceleration);
         }
     }
     BstMove_moveFly(actor, 0);
@@ -326,7 +326,7 @@ static void down_attack(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) 
     BstMove_approachAngle(&i_this->shape_angle.x, 0, 10, 0x200);
     s16 state = (s16)i_this->mDamage;
     if (state == 0) {
-        i_this->m10EC.y = zero;
+        i_this->mMoveParam.y = zero;
         i_this->mDamage = (s16)(state + 1);
         f32 x = (f32)bstMoveActor(player)->current.pos.x;
         i_this->mTargetPos.x = x;
@@ -335,7 +335,7 @@ static void down_attack(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) 
         f32 z = (f32)bstMoveActor(player)->current.pos.z,
             threeHundred = (f32)bstMoveConstants().mThreeHundred;
         i_this->mTargetPos.z = z;
-        i_this->m10FC[0] = 100;
+        i_this->mTimers[0] = 100;
         f32 height = (f32)bstMoveTuning().mRegF[7], targetY = (f32)i_this->mTargetPos.y;
         i_this->mTargetPos.y = gabi::fadds_ppc(targetY, gabi::fadds_ppc(height, threeHundred));
         state = 1;
@@ -345,11 +345,11 @@ static void down_attack(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) 
         BstMove_approach(&i_this->speedF, (f32)bstMoveConstants().mForty, one, step);
         f32 turn =
             gabi::fadds_ppc((f32)bstMoveTuning().mRegF[5], (f32)bstMoveConstants().mTwoThousand);
-        i_this->m10EC.x = turn;
+        i_this->mMoveParam.x = turn;
         f32 distance = bstDownDistance(i_this),
             boundary = gabi::fadds_ppc((f32)bstMoveTuning().mRegF[12],
                                        (f32)bstMoveConstants().mTwoHundred);
-        if (distance < boundary || (s16)i_this->m10FC[0] == 0)
+        if (distance < boundary || (s16)i_this->mTimers[0] == 0)
             i_this->mDamage = (s16)((s16)i_this->mDamage + 1);
         BstMove_approachAngle(&i_this->shape_angle.y, (s16)i_this->current.angle.y, 4, 0x400);
         BstMove_moveFly(actor, 0);
@@ -367,22 +367,22 @@ static void down_attack(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) 
             BstMove_anmInit(actor, animation, ten, 2, one, -1);
             i_this->mDamage = (s16)((s16)i_this->mDamage + 1);
             i_this->speed.y = zero;
-            i_this->m10FC[0] = 30;
+            i_this->mTimers[0] = 30;
             s16 debug = (s16)bstMoveTuning().mRegS[0], yaw = (s16)i_this->shape_angle.y;
             part = (u8)i_this->mBstPartType;
-            i_this->m2E6E = (s16)(yaw + (debug == 1 ? 0x4000 : -0x4000));
+            i_this->mDownAttackYaw = (s16)(yaw + (debug == 1 ? 0x4000 : -0x4000));
             i_this->mFacingDir = part == 2 ? 0x4000 : -0x4000;
             bstDownSound(i_this, 0x58D8);
         }
     } else if (state == 3) {
-        BstMove_approach(&i_this->m1114, (f32)bstMoveConstants().mMinusTwoHundred, one,
+        BstMove_approach(&i_this->mBodyOffsetY, (f32)bstMoveConstants().mMinusTwoHundred, one,
                          (f32)bstMoveConstants().mTwentyFive);
         bstDownApproach(i_this, 0, half);
         bstDownApproach(i_this, 8, half);
         BstMove_approachAngle(&i_this->shape_angle.z, (s16)i_this->mFacingDir, 4, 0x1000);
-        BstMove_approachAngle(&i_this->shape_angle.y, (s16)i_this->m2E6E, 4, 0x1000);
+        BstMove_approachAngle(&i_this->shape_angle.y, (s16)i_this->mDownAttackYaw, 4, 0x1000);
         f32 y = (f32)i_this->current.pos.y, velocity = (f32)i_this->speed.y;
-        s16 timer = (s16)i_this->m10FC[0];
+        s16 timer = (s16)i_this->mTimers[0];
         i_this->current.pos.y = gabi::fadds_ppc(y, velocity);
         if (timer) {
             f32 acceleration = gabi::fadds_ppc((f32)bstMoveTuning().mRegF[14], half);
@@ -410,10 +410,10 @@ static void down_attack(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) 
                 impulse.z = zero;
                 BstMove_startShock(&bstMoveInfo(play)->play.mVibration, strength + 5, -33,
                                    &impulse);
-                i_this->m112A = (s16)((s16)bstMoveTuning().mRegS[7] + 10);
+                i_this->mImpactShakeTimer = (s16)((s16)bstMoveTuning().mRegS[7] + 10);
                 bstDownSound(i_this, 0x6992);
                 i_this->mDamage = (s16)((s16)i_this->mDamage + 1);
-                i_this->m10FC[0] = 30;
+                i_this->mTimers[0] = 30;
                 cXyz position;
                 position.x = (f32)i_this->current.pos.x;
                 position.y = (f32)i_this->current.pos.y;
@@ -431,9 +431,9 @@ static void down_attack(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) 
             }
         }
     } else if (state == 4) {
-        BstMove_approach(&i_this->m1114, (f32)bstMoveConstants().mMinusTwoHundred, one,
+        BstMove_approach(&i_this->mBodyOffsetY, (f32)bstMoveConstants().mMinusTwoHundred, one,
                          (f32)bstMoveConstants().mTwentyFive);
-        if ((s16)i_this->m10FC[0] == 0) {
+        if ((s16)i_this->mTimers[0] == 0) {
             normalEnd = true;
             abort = true;
         }
@@ -467,13 +467,13 @@ static void down_attack(bst_class* actor, f32 zero, f32 one, f32 half, f32 ten) 
 /* inlined into daBst_move */
 static void sleep(bst_class* actor, f32 zero, f32 one, f32 ten) {
     bst_class* i_this = actor;
-    i_this->m10D8 = 6;
+    i_this->mPrevAction = 6;
     BstMove_setHandCo(actor, 1);
     i_this->attention_info.flags = 0;
     f32 fifty = (f32)bstMoveConstants().mFifty;
     i_this->mState = 10;
     f32 shake = (f32)bstMoveTuning().mRegF[11], two = (f32)bstMoveConstants().mTwo;
-    BstMove_approach(&i_this->m10EC.z, gabi::fadds_ppc(shake, fifty), one, two);
+    BstMove_approach(&i_this->mMoveParam.z, gabi::fadds_ppc(shake, fifty), one, two);
     s16 state = (s16)i_this->mDamage;
     if (state == 0) {
         f32 twenty = (f32)bstMoveConstants().mTwenty;
@@ -488,7 +488,7 @@ static void sleep(bst_class* actor, f32 zero, f32 one, f32 ten) {
         state = 1;
     }
     if (state == 1) {
-        if ((s16)i_this->m10FC[0] == 0) {
+        if ((s16)i_this->mTimers[0] == 0) {
             f32 x = BstMove_randomSymmetric((f32)bstMoveConstants().mFifteenHundred);
             i_this->mTargetPos.x = x;
             f32 y = BstMove_random((f32)bstMoveConstants().mTwoHundred);
@@ -501,13 +501,13 @@ static void sleep(bst_class* actor, f32 zero, f32 one, f32 ten) {
             f32 z = BstMove_randomSymmetric((f32)bstMoveConstants().mFifteenHundred);
             i_this->mTargetPos.z = z;
             f32 duration = BstMove_random((f32)bstMoveConstants().mThirty);
-            i_this->m10FC[0] = (s16)gabi::ftoi(duration);
+            i_this->mTimers[0] = (s16)gabi::ftoi(duration);
         }
         f32 turn =
             gabi::fadds_ppc((f32)bstMoveTuning().mRegF[5], (f32)bstMoveConstants().mFiveHundred);
-        i_this->m10EC.x = turn;
+        i_this->mMoveParam.x = turn;
         f32 speed = (f32)bstMoveTuning().mRegF[6];
-        s16 duration = (s16)i_this->m10FC[1];
+        s16 duration = (s16)i_this->mTimers[1];
         i_this->speedF = gabi::fadds_ppc(speed, ten);
         if (duration == 0) {
             i_this->mActionType = ACTION_FLY_e;
@@ -533,13 +533,13 @@ static void damage(bst_class* actor, f32 zero, f32 one) {
         bstFlyAnimator(i_this, bstMove_damage_btk(), false, 0, one, BST_DAMAGE_ARCHIVE);
         state = (s16)i_this->mDamage;
         i_this->mDamage = (s16)(state + 1);
-        i_this->m10FC[0] = 30;
-    } else if (state == 1 && (s16)i_this->m10FC[0] == 0) {
+        i_this->mTimers[0] = 30;
+    } else if (state == 1 && (s16)i_this->mTimers[0] == 0) {
         u8 part = (u8)i_this->mBstPartType;
         if (part && (s8)i_this->health <= 0) {
             part = (u8)i_this->mBstPartType;
             i_this->mActionType = ACTION_SLEEP_e;
-            i_this->m10FC[1] = 300;
+            i_this->mTimers[1] = 300;
             u32 hand = (u32)bstMoveGlobals().hand[part == 1 ? 0 : 1];
             if ((s16)bstMoveActor(hand)->mActionType != ACTION_SLEEP_e)
                 BstMove_bgmStart(part == 1 ? 0x80000120 : 0x80000121);
@@ -554,11 +554,11 @@ static void damage(bst_class* actor, f32 zero, f32 one) {
 static void head_damage(bst_class* actor, f32 zero, f32 one) {
     bst_class* i_this = actor;
     i_this->mState = 10;
-    i_this->m2E74[0] = 10;
-    i_this->m2E74[1] = 10;
+    i_this->mEyeCloseTimer[0] = 10;
+    i_this->mEyeCloseTimer[1] = 10;
     BstMove_approachAngle(&i_this->shape_angle.x, 0, 8, 0x200);
     BstMove_approachAngle(&i_this->shape_angle.z, 0, 8, 0x200);
-    BstMove_approachZero(&i_this->m10EC.z, one, (f32)bstMoveConstants().mFive);
+    BstMove_approachZero(&i_this->mMoveParam.z, one, (f32)bstMoveConstants().mFive);
     s16 state = (s16)i_this->mDamage;
     s16 entryState = state;
     bool processBomb = state == 4;
@@ -566,7 +566,7 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
         i_this->speedF = zero;
         i_this->speed.y = zero;
         i_this->mDamage = (s16)(state + 1);
-        i_this->m10FC[0] = 40;
+        i_this->mTimers[0] = 40;
         bstFixedAnimator(i_this, dRes_INDEX_BST_BRK_BST_END_e, true, one);
         bstFixedAnimator(i_this, dRes_INDEX_BST_BTK_BST_END_e, false, one);
         bstDispatchSound(i_this, 0x58DD);
@@ -590,7 +590,7 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
             BstMove_approach(&i_this->current.pos.z, target, (f32)bstMoveConstants().mBoundaryRatio,
                              (f32)bstMoveConstants().mThirty);
         }
-        if ((s16)i_this->m10FC[0] == 0) {
+        if ((s16)i_this->mTimers[0] == 0) {
             f32 y = (f32)i_this->current.pos.y, speed = (f32)i_this->speed.y;
             y = gabi::fadds_ppc(y, speed);
             f32 five = (f32)bstMoveConstants().mFive;
@@ -616,7 +616,7 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
                 BstMove_setParticle(bstMoveOpaque(control), 2, 0xA1DB, &i_this->current.pos,
                                     nullptr, nullptr, 185, &i_this->mPa_smokeEcallBack, room, 0,
                                     nullptr, nullptr);
-                i_this->m112A = (s16)((s16)bstMoveTuning().mRegS[7] + 4);
+                i_this->mImpactShakeTimer = (s16)((s16)bstMoveTuning().mRegS[7] + 4);
                 bstDispatchSound(i_this, 0x698A);
                 bstDispatchSound(i_this, 0x58DE);
                 BstMove_anmInit(actor, dRes_INDEX_BST_BCK_KUTI_OPEN_e, one, 0, one, -1);
@@ -626,12 +626,12 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
             }
         }
     } else if (state == 2) {
-        u32 morph = (u32)i_this->m02B8.v;
+        u32 morph = (u32)i_this->mpMorf.v;
         if (((u8)bstMoveMorf(morph)->mFrameCtrl.mState & 1) ||
             (f32)bstMoveMorf(morph)->mFrameCtrl.mRate == zero) {
             BstMove_anmInit(actor, dRes_INDEX_BST_BCK_KUTI_OPEN_LOOP_e, one, 2, one, -1);
             state = (s16)i_this->mDamage;
-            i_this->m10FC[0] = 300;
+            i_this->mTimers[0] = 300;
             i_this->mDamage = (s16)(state + 1);
         }
     } else if (state == 3) {
@@ -655,13 +655,13 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
                 BstMove_bombSetRestTime(bstMoveOpaque(bomb), 200);
                 state = (s16)i_this->mDamage;
                 i_this->mDamage = (s16)(state + 1);
-                i_this->m10FC[0] = 10;
+                i_this->mTimers[0] = 10;
                 captured = true;
             }
         }
         if (captured)
             processBomb = true;
-        else if ((s16)i_this->m10FC[0] == 0) {
+        else if ((s16)i_this->mTimers[0] == 0) {
             i_this->mActionType = ACTION_HEAD_HUKKI_e;
             i_this->mDamage = 0;
             BstMove_bgmStart(0x80000122);
@@ -692,7 +692,7 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
             step = (f32)bstMoveConstants().mThirty;
             BstMove_approach(&bstMoveActor(bomb)->current.pos.z, target, one, step);
         }
-        if ((s16)i_this->m10FC[0] == 0) {
+        if ((s16)i_this->mTimers[0] == 0) {
             BstMove_anmInit(actor, dRes_INDEX_BST_BCK_BOM_NOMI_e, one, 0, one, -1);
             state = (s16)i_this->mDamage;
             i_this->mDamage = (s16)(state + 1);
@@ -702,28 +702,28 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
             u32 emitter =
                 BstMove_setParticle(bstMoveOpaque(control), 0, 0x81E3, &i_this->current.pos,
                                     nullptr, nullptr, 255, nullptr, -1, 0, nullptr, nullptr);
-            i_this->m2EE0[0].v = emitter;
+            i_this->mpBombEmitter[0].v = emitter;
             if (i_this)
                 bstDispatchSound(i_this, 0x58E1);
-            u32 morph = (u32)i_this->m02B8.v;
-            i_this->m10FC[0] = 60;
+            u32 morph = (u32)i_this->mpMorf.v;
+            i_this->mTimers[0] = 60;
             checkExplosion = true;
         }
     }
     if (entryState == 5) {
-        s16 timer = (s16)i_this->m10FC[0];
+        s16 timer = (s16)i_this->mTimers[0];
         if (timer == 50 && i_this) {
             bstDispatchSound(i_this, 0x58E3);
-            timer = (s16)i_this->m10FC[0];
+            timer = (s16)i_this->mTimers[0];
         }
         if (timer == 30 && i_this)
             bstDispatchSound(i_this, 0x698B);
     }
     if (checkExplosion) {
-        u32 morph = (u32)i_this->m02B8.v;
+        u32 morph = (u32)i_this->mpMorf.v;
         if (((u8)bstMoveMorf(morph)->mFrameCtrl.mState & 1) ||
             (f32)bstMoveMorf(morph)->mFrameCtrl.mRate == zero) {
-            bstRetireEmitter(&i_this->m2EE0[0]);
+            bstRetireEmitter(&i_this->mpBombEmitter[0]);
             u32 bomb = bstHeldBomb(i_this);
             if (bomb)
                 BstMove_deleteActor(bstMoveOpaque(bomb));
@@ -735,7 +735,7 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
                 reinterpret_cast<dComIfG_inf_c*>(play)->play.mItemLifeCount = zero;
                 i_this->mActionType = ACTION_END_DEMO_e;
                 i_this->mDamage = 0;
-                i_this->m2E9A = 50;
+                i_this->mDemoCamMode = 50;
                 BstMove_anmInit(actor, dRes_INDEX_BST_BCK_BST_DEAD_e, one, 0, one, -1);
                 bstMoveActor((u32)bstMoveGlobals().hand[0])->mActionType = ACTION_END_DEMO_e;
                 bstMoveActor((u32)bstMoveGlobals().hand[0])->mDamage = 10;
@@ -758,37 +758,37 @@ static void head_damage(bst_class* actor, f32 zero, f32 one) {
                 u32 emitter =
                     BstMove_setParticle(bstMoveOpaque(control), 0, effect, &i_this->current.pos,
                                         nullptr, nullptr, 255, nullptr, -1, 0, nullptr, nullptr);
-                i_this->m2EE0[i + 1].v = emitter;
+                i_this->mpBombEmitter[i + 1].v = emitter;
             }
-            i_this->m10FC[3] = 81;
+            i_this->mTimers[3] = 81;
         }
     } else if (entryState == 6) {
-        u32 morph = (u32)i_this->m02B8.v;
+        u32 morph = (u32)i_this->mpMorf.v;
         s32 frame = gabi::ftoi((f32)bstMoveMorf(morph)->mFrameCtrl.mFrame);
         if (frame == 8 && i_this) {
             bstDispatchSound(i_this, 0x698D);
-            morph = (u32)i_this->m02B8.v;
+            morph = (u32)i_this->mpMorf.v;
         }
         if (((u8)bstMoveMorf(morph)->mFrameCtrl.mState & 1) ||
             (f32)bstMoveMorf(morph)->mFrameCtrl.mRate == zero) {
             state = (s16)i_this->mDamage;
-            i_this->m10FC[0] = 30;
+            i_this->mTimers[0] = 30;
             i_this->mDamage = (s16)(state + 1);
             BstMove_bgmStart(0x80000023);
         }
-    } else if (entryState == 7 && (s16)i_this->m10FC[0] == 0) {
+    } else if (entryState == 7 && (s16)i_this->mTimers[0] == 0) {
         i_this->mActionType = ACTION_HEAD_HUKKI_e;
         i_this->mDamage = 0;
     }
     for (u32 i = 0; i < 5; ++i) {
-        BstEmitter* emitter = bstEmitter(i_this->m2EE0[i]);
+        BstEmitter* emitter = bstEmitter(i_this->mpBombEmitter[i]);
         if (!emitter)
             continue;
-        if (i > 0 && (s16)i_this->m10FC[3] == 1) {
+        if (i > 0 && (s16)i_this->mTimers[3] == 1) {
             emitter->becomeInvalidEmitter();
-            i_this->m2EE0[i] = nullptr;
+            i_this->mpBombEmitter[i] = nullptr;
         } else {
-            u32 morph = (u32)i_this->m02B8.v,
+            u32 morph = (u32)i_this->mpMorf.v,
                 model = gabi::ea((J3DModel*)bstMoveMorf(morph)->mpModel),
                 block = gabi::ea((J3DMtxBuffer_hd*)bstMoveModel(model)->mpMtxBuffer);
             u16 flags = (u16)bstMoveMatrixBuffer(block)->mFlags;
@@ -807,9 +807,9 @@ static void head_hukki(bst_class* actor, f32 zero, f32 one) {
     if (state == 0) {
         i_this->mDamage = (s16)(state + 1);
         s16 duration = (s16)bstMoveTuning().mRegS[0];
-        i_this->m10F8 = zero;
-        i_this->m10EC.y = zero;
-        i_this->m10FC[0] = (s16)(duration + 40);
+        i_this->mSwayAngle = zero;
+        i_this->mMoveParam.y = zero;
+        i_this->mTimers[0] = (s16)(duration + 40);
         state = 1;
     }
     if (state == 1) {
@@ -817,19 +817,19 @@ static void head_hukki(bst_class* actor, f32 zero, f32 one) {
             fourThousand = (f32)bstMoveConstants().mFourThousand,
             hundred = (f32)bstMoveConstants().mHundred;
         f32 step = (f32)bstMoveTuning().mRegF[5];
-        BstMove_approach(&i_this->m10F8, gabi::fadds_ppc(strength, fourThousand), one,
+        BstMove_approach(&i_this->mSwayAngle, gabi::fadds_ppc(strength, fourThousand), one,
                          gabi::fadds_ppc(step, hundred));
-        if ((s16)i_this->m10FC[0] == 0) {
+        if ((s16)i_this->mTimers[0] == 0) {
             state = (s16)i_this->mDamage;
             i_this->mDamage = (s16)(state + 1);
-            i_this->m10FC[0] = (s16)((s16)bstMoveTuning().mRegS[1] + 80);
+            i_this->mTimers[0] = (s16)((s16)bstMoveTuning().mRegS[1] + 80);
         }
     } else if (state == 2) {
         f32 step = gabi::fadds_ppc((f32)bstMoveTuning().mRegF[6], (f32)bstMoveConstants().mFifty);
-        BstMove_approachZero(&i_this->m10F8, one, step);
-        if ((s16)i_this->m10FC[0] == 0) {
+        BstMove_approachZero(&i_this->mSwayAngle, one, step);
+        if ((s16)i_this->mTimers[0] == 0) {
             i_this->speedF = zero;
-            i_this->m10EC.y = zero;
+            i_this->mMoveParam.y = zero;
             i_this->mActionType = ACTION_FLY_e;
             i_this->mDamage = 0;
             i_this->mEyeHealth[1] = 2;
@@ -838,16 +838,16 @@ static void head_hukki(bst_class* actor, f32 zero, f32 one) {
     }
     s16 frequency = (s16)bstMoveTuning().mRegS[6],
         frame = (s16)i_this->mUpdateLastFacingDirIfMultipleOf32;
-    f32 strength = (f32)i_this->m10F8,
+    f32 strength = (f32)i_this->mSwayAngle,
         sine = (f32)bstMoveTrig()[((u16)(frame * (frequency + 700)) >> 3)].mSin;
     i_this->shape_angle.x = (s16)gabi::ftoi(gabi::fmuls_ppc(sine, strength));
     frequency = (s16)bstMoveTuning().mRegS[6];
     frame = (s16)i_this->mUpdateLastFacingDirIfMultipleOf32;
-    strength = (f32)i_this->m10F8;
+    strength = (f32)i_this->mSwayAngle;
     sine = (f32)bstMoveTrig()[((u16)(frame * (frequency + 600)) >> 3)].mSin;
     f32 fourHundred = (f32)bstMoveConstants().mFourHundred, forty = (f32)bstMoveConstants().mForty;
     s16 roll = (s16)gabi::ftoi(gabi::fmuls_ppc(sine, strength));
-    f32 progress = (f32)i_this->m10EC.y;
+    f32 progress = (f32)i_this->mMoveParam.y;
     i_this->shape_angle.z = roll;
     f32 height = (f32)bstMoveTuning().mRegF[11];
     f32 step = gabi::fmuls_ppc(forty, progress),
@@ -855,8 +855,8 @@ static void head_hukki(bst_class* actor, f32 zero, f32 one) {
     BstMove_approach(&i_this->current.pos.y, gabi::fadds_ppc(height, fourHundred), ratio, step);
     f32 shake = gabi::fadds_ppc((f32)bstMoveTuning().mRegF[11], (f32)bstMoveConstants().mFifty);
     step = (f32)bstMoveConstants().mTwo;
-    BstMove_approach(&i_this->m10EC.z, shake, one, step);
-    BstMove_approach(&i_this->m10EC.y, one, one, (f32)bstMoveConstants().mProgressStep);
+    BstMove_approach(&i_this->mMoveParam.z, shake, one, step);
+    BstMove_approach(&i_this->mMoveParam.y, one, one, (f32)bstMoveConstants().mProgressStep);
 }
 
 /* 020EB4BC */
@@ -867,9 +867,9 @@ void daBst_move(bst_class* actor) {
     f32 zero = (f32)bstMoveConstants().mZero;
     if (part) {
         u32 head = (u32)bstMoveGlobals().boss;
-        s8 phase = (s8)bstMoveActor(head)->m2E9A;
+        s8 phase = (s8)bstMoveActor(head)->mDemoCamMode;
         if ((u32)((s32)phase - 1) < 9) {
-            s8 action = (s8)bstMoveActor(head)->m2E7C;
+            s8 action = (s8)bstMoveActor(head)->mBattlePhase;
             i_this->mActionType = action == 11 ? ACTION_FLY_e : ACTION_SLEEP_e;
             i_this->mDamage = 0;
             i_this->speedF = zero;

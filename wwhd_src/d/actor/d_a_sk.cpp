@@ -29,7 +29,7 @@ sk_class::sk_class() {
     fopAc_ac_c_ct(this);
     __vtbl = 0x1003CE8C;
     dCcD_Stts_ct(&mStts);
-    Sk_constructArray(m348, 4, sizeof(dCcD_Sph), 0x025166F0);
+    Sk_constructArray(mSph, 4, sizeof(dCcD_Sph), 0x025166F0);
 }
 
 // HD: only joints 1..4, the rotations/positions of joint j are stored at [j - 1], the
@@ -43,15 +43,15 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         u32 jntNo = joint->mJntNo;
         if (i_this != NULL && jntNo - 1 < 4) {
             PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
-            cMtx_YrotM(calc_mtx(), i_this->m2C2[jntNo - 1].y);
-            cMtx_XrotM(calc_mtx(), i_this->m2C2[jntNo - 1].x);
-            cMtx_ZrotM(calc_mtx(), i_this->m2C2[jntNo - 1].z);
+            cMtx_YrotM(calc_mtx(), i_this->mJointAngle[jntNo - 1].y);
+            cMtx_XrotM(calc_mtx(), i_this->mJointAngle[jntNo - 1].x);
+            cMtx_ZrotM(calc_mtx(), i_this->mJointAngle[jntNo - 1].z);
             gabi::Local<cXyz> offset;
             f32 zero = joint_offsets[0];
             offset->y = zero;
             offset->x = zero;
             offset->z = joint_offsets[jntNo];
-            MtxPosition(offset, &i_this->m2DC[jntNo - 1]);
+            MtxPosition(offset, &i_this->mJointPos[jntNo - 1]);
             /* model->setAnmMtx(jntNo, *calc_mtx) */
             Mtx34* src = calc_mtx();
             Mtx34* dst = model->getAnmMtx(jntNo);
@@ -76,36 +76,36 @@ static BOOL daSk_Draw(sk_class* i_this) {
 static inline void dousa_move(sk_class* i_this) {
     for (s32 i = 0; i < 3; i++) {
         f32 amp = gabi::fmadds((f32)i, 1000.0f, 1500.0f);
-        i_this->m2C2[i].x = (s16)gabi::ftoi(cM_ssin(i_this->m2BE * 1800 - i * 16000) * amp);
-        i_this->m2C2[i].y = (s16)gabi::ftoi(cM_ssin(i_this->m2BE * 1400 - i * 16000) * amp);
-        i_this->m2C2[i].z = 0;
+        i_this->mJointAngle[i].x = (s16)gabi::ftoi(cM_ssin(i_this->mSwayTimer * 1800 - i * 16000) * amp);
+        i_this->mJointAngle[i].y = (s16)gabi::ftoi(cM_ssin(i_this->mSwayTimer * 1400 - i * 16000) * amp);
+        i_this->mJointAngle[i].z = 0;
     }
 
-    s16 angle = cLib_distanceAngleS(i_this->m2C2[1].z, 0x1000);
+    s16 angle = cLib_distanceAngleS(i_this->mJointAngle[1].z, 0x1000);
     if (angle < 0x1000) {
-        if (!i_this->m2BC) {
+        if (!i_this->mMoveSePlayed) {
             fopAcM_seStart(i_this, JA_SE_OBJ_SHOKU_LIFT_MOVE, 0);
-            i_this->m2BC = true;
+            i_this->mMoveSePlayed = true;
         }
     } else {
-        i_this->m2BC = false;
+        i_this->mMoveSePlayed = false;
     }
 }
 
 /* body_atari_check (inlined in Execute) */
 static inline void body_atari_check(sk_class* i_this) {
-    if (i_this->m2C0 > 0) {
-        i_this->m2C0 -= 1;
+    if (i_this->mHitTimer > 0) {
+        i_this->mHitTimer -= 1;
         return;
     }
 
     for (s32 i = 0; i < 4; i++) {
-        if (i_this->m348[i].ChkTgHit()) {
-            SkHitObject* hitObj = static_cast<SkHitObject*>(i_this->m348[i].GetTgHitObj());
+        if (i_this->mSph[i].ChkTgHit()) {
+            SkHitObject* hitObj = static_cast<SkHitObject*>(i_this->mSph[i].GetTgHitObj());
             if (hitObj == NULL) {
                 break;
             }
-            i_this->m2C0 = 8;
+            i_this->mHitTimer = 8;
 
             switch (hitObj->GetAtType()) {
             case AT_TYPE_SWORD:
@@ -147,7 +147,7 @@ static BOOL daSk_Execute(sk_class* i_this) {
     mDoExt_McaMorf* morf = i_this->mpMorf;
     f32 sy = i_this->scale.y;
     f32 sx = i_this->scale.x;
-    i_this->m2BE += 1;
+    i_this->mSwayTimer += 1;
     J3DModel* model = morf->getModel();
     f32 sz = i_this->scale.z;
     model->mBaseScale.x = sx;
@@ -161,9 +161,9 @@ static BOOL daSk_Execute(sk_class* i_this) {
     i_this->mpMorf->calc();
 
     for (s32 i = 0; i < 4; i++) {
-        i_this->m348[i].SetC(&i_this->m2DC[i]);
-        i_this->m348[i].SetR(sphere_radii[i]); /* {220, 180, 120, 70} */
-        dComIfG_Ccsp_Set(&i_this->m348[i]);
+        i_this->mSph[i].SetC(&i_this->mJointPos[i]);
+        i_this->mSph[i].SetR(sphere_radii[i]); /* {220, 180, 120, 70} */
+        dComIfG_Ccsp_Set(&i_this->mSph[i]);
     }
     body_atari_check(i_this);
     return TRUE;
@@ -200,9 +200,9 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
         }
     }
 
-    i_this->m924 = JntHit_create(i_this->mpMorf->getModel(), search_data, 3);
-    if (i_this->m924 != 0) {
-        i_this->jntHit = i_this->m924;
+    i_this->mpJntHit = JntHit_create(i_this->mpMorf->getModel(), search_data, 3);
+    if (i_this->mpJntHit != 0) {
+        i_this->jntHit = i_this->mpJntHit;
     } else {
         return FALSE;
     }
@@ -221,8 +221,8 @@ static cPhs_State daSk_Create(fopAc_ac_c* a_this) {
             i_this->m2B4 = 0;
         }
 
-        i_this->m2B5 = fopAcM_GetParam(i_this) >> 0x18;
-        if (i_this->m2B5 != 0xff && fopAcM_isSwitch(a_this, i_this->m2B5)) {
+        i_this->mSwitchNo = fopAcM_GetParam(i_this) >> 0x18;
+        if (i_this->mSwitchNo != 0xff && fopAcM_isSwitch(a_this, i_this->mSwitchNo)) {
             return cPhs_ERROR_e;
         }
 
@@ -235,14 +235,14 @@ static cPhs_State daSk_Create(fopAc_ac_c* a_this) {
         fopAcM_SetMin(a_this, -800.0f, -200.0f, -400.0f); /* fopAcM_SetMin */
         fopAcM_SetMax(a_this, 500.0f, 1000.0f, 1000.0f);  /* fopAcM_SetMax */
         a_this->attention_info.flags = 0;              /* attention_info.flags */
-        i_this->m2BE = (s16)((u8)fopAcM_GetID(a_this) << 0xC);
+        i_this->mSwayTimer = (s16)((u8)fopAcM_GetID(a_this) << 0xC);
 
         for (s32 i = 0; i < 4; i++) {
-            i_this->m348[i].Set(reinterpret_cast<const dCcD_SrcSph*>(body_co_sph_src));
-            i_this->m348[i].SetStts(&i_this->mStts);
+            i_this->mSph[i].Set(reinterpret_cast<const dCcD_SrcSph*>(body_co_sph_src));
+            i_this->mSph[i].SetStts(&i_this->mStts);
         }
         i_this->mStts.Init(0x32, 0, a_this);
-        i_this->m2C0 = 8;
+        i_this->mHitTimer = 8;
         daSk_Execute(i_this);
     }
     return PVar2;
@@ -263,7 +263,7 @@ static void SafeString_dt(void* p, s32 flags) {
 /* 02489014 */
 static void sk_class_dt(sk_class* i_this, s32 flags) {
     if (i_this != nullptr) {
-        Sk_destroyArray(i_this->m348, 4, 0x12C, 0x02515AE8 /* dCcD_Sph::~dCcD_Sph */, 0);
+        Sk_destroyArray(i_this->mSph, 4, 0x12C, 0x02515AE8 /* dCcD_Sph::~dCcD_Sph */, 0);
         dCcD_Stts_dt(&i_this->mStts, 2);
         __dt(static_cast<fopAc_ac_c*>(i_this));
         if (flags & 1)

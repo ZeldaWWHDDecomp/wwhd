@@ -59,7 +59,7 @@ enum : u32 { JA_SE_OBJ_OSTATUE_PUT = 0x58FE, ID_AK_ST_OTOMOSMOKE00 = 0xA328, ID_
 /* talkNpcAction's common tail */
 static inline void os_talkTail(daNpc_Os_c* t) {
     t->mJntCtrl.mbTrn = 1; /* setTrn */
-    os_lookBack(t, t->field_0x7A4, 0, 0);
+    os_lookBack(t, t->mInAttention, 0, 0);
     t->current.angle.y = t->shape_angle.y;
     os_setAttention(t, os_isMorf(t));
 }
@@ -97,37 +97,37 @@ static inline void os_lookAtStick(daNpc_Os_c* t, be<s16>* temp2, cXyz* temp) {
 
 /* 022AE504 */
 BOOL daNpc_Os_c::waitNpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         maxFallSpeed = -100.0f;
         gravity = Os_actionHioHD()->field_0x8C;
         speedF = 0.0f;
-        field_0x788 = 120.0f;
-        field_0x7A9 = field_0x7A9 + 1;
+        mCylH = 120.0f;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 == -1) {
+    if (mActionPhase == -1) {
         return TRUE;
     }
-    if (field_0x78C != 0 && mReachedAnimEnd != 0) {
+    if (mAnmPrmIdx != 0 && mReachedAnimEnd != 0) {
         os_setAnm(this, 0);
     }
 
-    if (field_0x7A9 == 1) {
+    if (mActionPhase == 1) {
         if (os_wakeupCheck(this) && dComIfGp_getCb1Player() == this) {
             if (mNoResetFlg1 & 0x40 /* checkNpcNotChange() */) {
                 mNoResetFlg1 &= ~0x40u;
                 os_initBrkAnm(this, 4, 1);
-                field_0x7A1 = 0;
-                field_0x7A9 = field_0x7A9 + 1;
+                mBrkAnmEnd = 0;
+                mActionPhase = mActionPhase + 1;
             } else {
-                field_0x7A9 = field_0x7A9 + 1;
+                mActionPhase = mActionPhase + 1;
             }
         }
     } else {
         attention_info.flags |= fopAc_Attn_ACTION_CARRY_e;
-        field_0x7A4 = (u8)os_chkAttentionHere(this);
+        mInAttention = (u8)os_chkAttentionHere(this);
         if (os_chkArea(this, &current.pos)) {
-            os_lookBack(this, field_0x7A4, 0, 1);
+            os_lookBack(this, mInAttention, 0, 1);
         }
         current.angle.y = shape_angle.y;
         if (os_finishCheck(this)) {
@@ -149,7 +149,7 @@ BOOL daNpc_Os_c::waitNpcAction(void* param_1) {
             os_pmf_npc(this, &os_actions()->mSearchNpc, nullptr);
         }
     } else {
-        field_0x7A5 = os_getWakeupOrderEventNum(this);
+        mOrderEventNum = os_getWakeupOrderEventNum(this);
     }
     os_setAttention(this, 1);
     return TRUE;
@@ -157,24 +157,24 @@ BOOL daNpc_Os_c::waitNpcAction(void* param_1) {
 
 /* 022AE834 */
 BOOL daNpc_Os_c::finish01NpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         if (dComIfGp_getCb1Player() == this) {
             mNoResetFlg1 |= 0x40; /* onNpcNotChange */
             Os_clearCbPlayerHD(); /* dComIfGp_setCb1Player(NULL) */
         }
         os_setAnm(this, 0);
         os_initBrkAnm(this, 0, 1);
-        field_0x7A1 = 0;
+        mBrkAnmEnd = 0;
         maxFallSpeed = -100.0f;
         gravity = Os_actionHioHD()->field_0x8C;
         speedF = 0.0f;
-        field_0x788 = 120.0f;
-        field_0x7A9 = field_0x7A9 + 1;
+        mCylH = 120.0f;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 != -1) {
-        os_lookAtZero(this, &shape_angle.y, shape_angle.y, field_0x798, 1);
-        if (field_0x7A1 != 0) {
+    if (mActionPhase != -1) {
+        os_lookAtZero(this, &shape_angle.y, shape_angle.y, mLookMaxVel, 1);
+        if (mBrkAnmEnd != 0) {
             os_pmf_npc(this, &os_actions()->mFinish02Npc, nullptr);
         }
         os_setAttention(this, 1);
@@ -184,7 +184,7 @@ BOOL daNpc_Os_c::finish01NpcAction(void* param_1) {
 
 /* 022AE980 */
 BOOL daNpc_Os_c::finish02NpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         if (param_1 == nullptr) {
             s32 anm = 1;
             if (dComIfGs_isEventBit(0x1B01)) {
@@ -192,44 +192,44 @@ BOOL daNpc_Os_c::finish02NpcAction(void* param_1) {
             }
             os_setAnm_brkAnm(this, anm);
         }
-        field_0x784 |= 1; /* onFinish */
+        mStatus |= 1; /* onFinish */
         maxFallSpeed = -100.0f;
         gravity = Os_actionHioHD()->field_0x8C;
-        field_0x788 = 120.0f;
+        mCylH = 120.0f;
         speedF = 0.0f;
-        field_0x7A9 = field_0x7A9 + 1;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 != -1) {
-        os_lookAtZero(this, &shape_angle.y, shape_angle.y, field_0x798, 1);
+    if (mActionPhase != -1) {
+        os_lookAtZero(this, &shape_angle.y, shape_angle.y, mLookMaxVel, 1);
     }
     return TRUE;
 }
 
 /* 022AEA8C */
 BOOL daNpc_Os_c::talkNpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         *gabi::at<be<u32>>(0x10467DF0) = fpcM_ERROR_PROCESS_ID_e;
-        field_0x780 = os_getMsg(this);
-        field_0x7A9 = field_0x7A9 + 1;
+        mMsgNo = os_getMsg(this);
+        mActionPhase = mActionPhase + 1;
         attention_info.flags &= ~u32(fopAc_Attn_ACTION_CARRY_e);
-        field_0x7A3 = 0;
+        mAttnSetCount = 0;
         return TRUE;
     }
-    if (field_0x7A9 == -1) {
+    if (mActionPhase == -1) {
         return TRUE;
     }
-    field_0x7A4 = (u8)os_chkAttentionHere(this);
-    if (field_0x7A9 == 1) {
+    mInAttention = (u8)os_chkAttentionHere(this);
+    if (mActionPhase == 1) {
         if (os_talk_init(this)) {
-            field_0x7A9 = 2;
+            mActionPhase = 2;
         }
-    } else if (field_0x7A9 == 2) {
+    } else if (mActionPhase == 2) {
         if (os_talk(this)) {
             os_pmf_npc(this, &os_actions()->mWaitNpc, nullptr);
             dComIfGp_event_reset();
         }
-    } else if (field_0x7A9 == 3) {
+    } else if (mActionPhase == 3) {
         os_pmf_npc(this, &os_actions()->mWaitNpc, nullptr);
     }
     os_talkTail(this);
@@ -239,27 +239,27 @@ BOOL daNpc_Os_c::talkNpcAction(void* param_1) {
 // HD: a roof hit without a wall throws towards the current angle.
 /* 022AECD4 */
 BOOL daNpc_Os_c::carryNpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         os_setAnm(this, 0);
         attention_info.flags &= ~u32(fopAc_Attn_ACTION_CARRY_e);
         mNoResetFlg1 &= ~2u; /* offNpcCallCommand */
         fopAc_ac_c* pl = dComIfGp_getPlayer(0);
         s16 a = shape_angle.y;
-        field_0x788 = 120.0f;
-        field_0x7A9 = field_0x7A9 + 1;
-        field_0x7AC = (s16)(a - pl->shape_angle.y); /* fopAcM_toPlayerShapeAngleY */
+        mCylH = 120.0f;
+        mActionPhase = mActionPhase + 1;
+        mCarryAngleY = (s16)(a - pl->shape_angle.y); /* fopAcM_toPlayerShapeAngleY */
         return TRUE;
     }
-    if (field_0x7A9 == -1) {
-        field_0x7E4.y = 0.0f;
-        field_0x7E4.z = 0.0f;
+    if (mActionPhase == -1) {
+        mCarryOffset.y = 0.0f;
+        mCarryOffset.z = 0.0f;
         return TRUE;
     }
     os_setRestart(this, os_getRestartNumber(this));
     dComIfGp_get(); /* HD: a dead dComIfGp_get() before the HIO reads */
-    cLib_chaseF(&field_0x7E4.x, Os_actionHioHD()->field_0x90, 1.0f);
-    cLib_chaseF(&field_0x7E4.y, Os_actionHioHD()->field_0x94, 1.0f);
-    cLib_chaseF(&field_0x7E4.z, Os_actionHioHD()->field_0x98, 1.0f);
+    cLib_chaseF(&mCarryOffset.x, Os_actionHioHD()->field_0x90, 1.0f);
+    cLib_chaseF(&mCarryOffset.y, Os_actionHioHD()->field_0x94, 1.0f);
+    cLib_chaseF(&mCarryOffset.z, Os_actionHioHD()->field_0x98, 1.0f);
 
     s32 wallHit = os_wallHitCheck(this);
     if (wallHit >= 0 || ((u32)mAcch.m_flags & 0x200) /* mAcch.ChkRoofHit() */) {
@@ -289,7 +289,7 @@ BOOL daNpc_Os_c::carryNpcAction(void* param_1) {
 
 /* 022AEF70 */
 BOOL daNpc_Os_c::throwNpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         if (param_1 != nullptr) {
             speedF = 8.0f;
             speed.y = 0.0f;
@@ -301,10 +301,10 @@ BOOL daNpc_Os_c::throwNpcAction(void* param_1) {
         }
         maxFallSpeed = -100.0f;
         gravity = Os_actionHioHD()->field_0x8C;
-        field_0x7A9 = field_0x7A9 + 1;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 != -1) {
+    if (mActionPhase != -1) {
         if ((u32)mAcch.m_flags & 0x20 /* mAcch.ChkGroundHit() */) {
             os_seStartCurrent(this, JA_SE_OBJ_OSTATUE_PUT);
             os_smokeSet(this, ID_AK_ST_OTOMOSMOKE01);
@@ -317,7 +317,7 @@ BOOL daNpc_Os_c::throwNpcAction(void* param_1) {
 
 /* 022AFBF4 */
 BOOL daNpc_Os_c::jumpNpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         os_setAnm(this, 0);
         if (param_1 != nullptr) {
             speed.y = *static_cast<be<f32>*>(param_1);
@@ -325,10 +325,10 @@ BOOL daNpc_Os_c::jumpNpcAction(void* param_1) {
         speedF = 50.0f;
         maxFallSpeed = -100.0f;
         gravity = Os_actionHioHD()->field_0x8C;
-        field_0x7A9 = field_0x7A9 + 1;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 != -1) {
+    if (mActionPhase != -1) {
         if ((u32)mAcch.m_flags & 0x20 /* mAcch.ChkGroundHit() */) {
             os_smokeSet(this, ID_AK_ST_OTOMOSMOKE01);
             os_pmf_npc(this, &os_actions()->mWaitNpc, nullptr);
@@ -341,10 +341,10 @@ BOOL daNpc_Os_c::jumpNpcAction(void* param_1) {
 /* 022AF2F0 */
 void daNpc_Os_c::routeAngCheck(cXyz* param_1, be<s16>* param_2) {
     gabi::Local<cXyz> cross;
-    Os_crossProductHD(&field_0x7F0, cross.get(), param_1); /* field_0x7F0.outprod(*param_1) */
+    Os_crossProductHD(&mGroundNormal, cross.get(), param_1); /* mGroundNormal.outprod(*param_1) */
     s16 angle = cM_atan2s(cross->x, cross->z);
     bool flip;
-    if (!(field_0x7F0.y < 1.0f) && cLib_distanceAngleS(angle, *param_2) > 0x4000) {
+    if (!(mGroundNormal.y < 1.0f) && cLib_distanceAngleS(angle, *param_2) > 0x4000) {
         flip = true;
     } else {
         fopAc_ac_c* pl = dComIfGp_getPlayer(0);
@@ -420,7 +420,7 @@ BOOL daNpc_Os_c::routeCheck(f32 param_1, be<s16>* param_2) {
     if (!((u32)mAcch.m_flags & 0x20) /* !mAcch.ChkGroundHit() */) {
         current.pos.copy(old.pos);
         speedF = 0.0f;
-        field_0x7A8 = 1;
+        mGroundHit = 1;
 
         gabi::Local<OsGroundCheckHD> gnd_chk;
         dBgS_GndChk_ct(gnd_chk, OS_GNDCHK_VT, false);
@@ -486,16 +486,16 @@ BOOL daNpc_Os_c::routeCheck(f32 param_1, be<s16>* param_2) {
 // HD: the door branch no longer sets animation speed to 4.0.
 /* 022AF8D4 */
 BOOL daNpc_Os_c::searchNpcAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         attention_info.flags |= fopAc_Attn_ACTION_CARRY_e;
         os_setAnm(this, 1);
-        field_0x7A9 = field_0x7A9 + 1;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 == -1) {
+    if (mActionPhase == -1) {
         return TRUE;
     }
-    field_0x7A4 = 1;
+    mInAttention = 1;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     BOOL door = player->eventInfo.mCommand == dEvtCmd_INDOOR_e;        /* eventInfo.checkCommandDoor() */
     f64 dist_sq = Os_distanceXZSquaredHD(this, dComIfGp_getPlayer(0)); /* fopAcM_searchPlayerDistanceXZ2 */
@@ -545,14 +545,14 @@ BOOL daNpc_Os_c::searchNpcAction(void* param_1) {
 
 /* 022AFCE0 */
 BOOL daNpc_Os_c::waitPlayerAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         speedF = 0.0f;
         os_setAnm(this, 0);
         os_initBrkAnm(this, 8, 1);
-        field_0x7A9 = field_0x7A9 + 1;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 == -1) {
+    if (mActionPhase == -1) {
         return TRUE;
     }
     auto* att = reinterpret_cast<OsAttentionFlagsHD*>(dComIfGp_getAttention());
@@ -590,14 +590,14 @@ BOOL daNpc_Os_c::waitPlayerAction(void* param_1) {
 
 /* 022AFF94 */
 BOOL daNpc_Os_c::walkPlayerAction(void* param_1) {
-    if (field_0x7A9 == 0) {
+    if (mActionPhase == 0) {
         speedF = 0.0f;
         os_setAnm(this, 1);
         os_initBrkAnm(this, 8, 1);
-        field_0x7A9 = field_0x7A9 + 1;
+        mActionPhase = mActionPhase + 1;
         return TRUE;
     }
-    if (field_0x7A9 == -1) {
+    if (mActionPhase == -1) {
         return TRUE;
     }
     f64 stickValue = os_stickValue();

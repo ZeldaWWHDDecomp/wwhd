@@ -2,9 +2,9 @@
  *
  * GameCube -> WWHD (size 0x1260 -> 0x13D8, constructor 02061C70):
  * - +0x11C up to mBtpAnm (fopEn_enemy_c: mPhase at 0x3C8, mpMorf 0x3D0);
- * - mDoExt_btpAnm is 0x74 (GameCube 0x14): +0x17C for unk_2CC..unk_2D0;
- * - the shadow id unk_2D4 is gone (HD shadows): +0x176 for unk_2D8..unk_2E0;
- * - from unk_2E4 on (4-byte alignment) +0x174, up to the end; enemyice keeps its size (0x3B8),
+ * - mDoExt_btpAnm is 0x74 (GameCube 0x14): +0x17C for mEyeFrame..mBlinkWait;
+ * - the shadow id unk_2D4 is gone (HD shadows): +0x176 for mPrmMode..mDropCarried;
+ * - from mpCarriedActor on (4-byte alignment) +0x174, up to the end; enemyice keeps its size (0x3B8),
  *   enemyfire is 0x22C (LIGHT_INFLUENCE 0x24).
  * Offsets from the verified functions. */
 #pragma once
@@ -156,119 +156,119 @@ struct bb_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf;
     /* 0x3D4 */ mDoExt_btpAnm mBtpAnm;
-    /* 0x448 */ be<u8> unk_2CC;
-    /* 0x449 */ be<u8> unk_2CD;
-    /* 0x44A */ be<u8> unk_2CE;
+    /* 0x448 */ be<u8> mEyeFrame;  /* was unk_2CC: tex_anm_set 0205D964 clears it; bb_eye_tex_anm (in daBb_Execute 0205EA58) advances it up to mEyeMaxFrame; daBb_Draw 0205E420 enters mBtpAnm at this frame */
+    /* 0x449 */ be<u8> mEyeAnmOn;  /* was unk_2CD: tex_anm_set 0205D964 sets 1 when an eye BTP starts; bb_eye_tex_anm (in daBb_Execute 0205EA58) clears it at mEyeMaxFrame and starts a blink only while it is 0 */
+    /* 0x44A */ be<u8> mEyeMaxFrame;  /* was unk_2CE: tex_anm_set 0205D964: bb_tex_max_frame[idx], the last frame of the eye BTP; bb_eye_tex_anm (in daBb_Execute 0205EA58) stops there */
     /* 0x44B */ u8 _44B;
-    /* 0x44C */ be<s16> unk_2D0;
+    /* 0x44C */ be<s16> mBlinkWait;  /* was unk_2D0: bb_eye_tex_anm (in daBb_Execute 0205EA58): counts down, then reloads rnd(50)+10 and starts the blink BTP (tex_anm_set 4); bb_atack_move sets 2 */
     /* (GameCube unk_2D4 shadow id: gone) */
-    /* 0x44E */ be<u8> unk_2D8;
-    /* 0x44F */ be<u8> unk_2D9;
-    /* 0x450 */ be<u8> unk_2DA;
-    /* 0x451 */ be<u8> unk_2DB;
-    /* 0x452 */ be<u8> unk_2DC;
-    /* 0x453 */ be<u8> unk_2DD;
+    /* 0x44E */ be<u8> mPrmMode;  /* was unk_2D8: daBb_Create 02061DEC: param bits 0-7 (BB_MODE_*), copied to mBehavior; bb_atack_move (in daBb_Execute 0205EA58) returns to the wait modes it names */
+    /* 0x44F */ be<u8> mSightRangePrm;  /* was unk_2D9: daBb_Create 02061DEC: param bits 8-15; bb_player_view_check 0205DFC0 sees the player within it * 100 (0xFF: l_bbHIO ranges) */
+    /* 0x450 */ be<u8> mPathNo;  /* was unk_2DA: daBb_Create 02061DEC: param bits 16-23, dPath_GetRoomPath(it, room) when not 0xFF; path_check 0205E14C / bb_atack_move store it + 1 in mPathOn */
+    /* 0x451 */ be<u8> mAppearSwitchNo;  /* was unk_2DB: daBb_Create 02061DEC: param bits 24-31; when not 0xFF mAppearWait = it + 1 */
+    /* 0x452 */ be<u8> mDeleteSwitchNo;  /* was unk_2DC: daBb_Create 02061DEC: home.angle.z (0xFF -> 0); the actor is not created when event bit 0x1101 and this switch are set */
+    /* 0x453 */ be<u8> mBehavior;  /* was unk_2DD: daBb_Create 02061DEC: from mPrmMode; daBb_Execute 0205EA58 picks bb_atack_move / bb_wait_move / bb_su_wait_move / bb_auto_move by it (BB_MODE_*); damage_check 0206432C and bb_player_view_check 0205DFC0 switch it to BB_MODE_ATTACK */
     /* 0x454 */ be<u8> unk_2DE;
-    /* 0x455 */ be<u8> unk_2DF;
-    /* 0x456 */ be<u8> unk_2E0;
+    /* 0x455 */ be<u8> mCarryState;  /* was unk_2DF: daBb_Create 02061DEC 1 for BB_MODE_CARRY_MOBLIN / _BOKOBLIN; daBb_Execute 0205EA58: 1 FLYC animation, 2 waits for the carried actor, 3 holds it between the feet, 0 when dropped; anm_init 0205DA3C changes animations only below 3 */
+    /* 0x456 */ be<u8> mDropCarried;  /* was unk_2E0: bb_path_move (in daBb_Execute 0205EA58) sets 1; daBb_Execute then lets the carried Moblin / Bokoblin go (damage reaction action 31, speedF 40) and ends mCarryState */
     /* 0x457 */ u8 _457;
-    /* 0x458 */ gptr<fopAc_ac_c> unk_2E4;
-    /* 0x45C */ be<u32> unk_2E8;
-    /* 0x460 */ be<s32> unk_2EC;
-    /* 0x464 */ be<s8> unk_2F0;
-    /* 0x465 */ be<s8> unk_2F1;
-    /* 0x466 */ be<u8> unk_2F2;
+    /* 0x458 */ gptr<fopAc_ac_c> mpCarriedActor;  /* was unk_2E4: daBb_Execute 0205EA58: the carried actor once fpcSCtRq created it (mCarryState 3 places it between mFootPos) */
+    /* 0x45C */ be<u32> mCarriedRequestId;  /* was unk_2E8: daBb_Create 02061DEC: fpcSCtRq_Request id of the carried MO2 / BK; daBb_Execute 0205EA58 looks the actor up by it */
+    /* 0x460 */ be<s32> mCarriedProcName;  /* was unk_2EC: daBb_Create 02061DEC: fpcNm_MO2_e or fpcNm_BK_e; daBb_Execute 0205EA58 picks the carried actor's damage reaction layout by it */
+    /* 0x464 */ be<s8> mFlyAnmState;  /* was unk_2F0: bb_path_move / bb_kamome_attack (in daBb_Execute 0205EA58): 0 flapping (FLY01), 1 gliding (FLY02) while above mTargetPos, 10 landing (LAND01, bb_auto_move 020625E8 / bb_wait_move) */
+    /* 0x465 */ be<s8> mMode;  /* was unk_2F1: step within the current move: bb_path_move, bb_kamome_attack, bb_atack_move (in daBb_Execute 0205EA58), bb_auto_move 020625E8, bb_wait_move 0206348C switch on it; damage_check 0206432C clears it */
+    /* 0x466 */ be<u8> mAppearWait;  /* was unk_2F2: daBb_Create 02061DEC: mAppearSwitchNo + 1; daBb_Execute 0205EA58 does nothing and daBb_Draw 0205E420 draws nothing until switch (it - 1) is set, then 0 */
     /* 0x467 */ u8 _467;
-    /* 0x468 */ cXyz unk_2F4;
-    /* 0x474 */ be<f32> unk_300;
-    /* 0x478 */ be<f32> unk_304;
-    /* 0x47C */ be<f32> unk_308;
-    /* 0x480 */ be<f32> unk_30C;
-    /* 0x484 */ be<f32> unk_310;
+    /* 0x468 */ cXyz mTargetPos;  /* was unk_2F4: bb_pos_move 0205E638 / bb_ground_pos_move 0205E8AC fly to it; path point position (bb_path_move), circle centre (bb_atack_move); bb_water_check 02063404 tests the sea there */
+    /* 0x474 */ be<f32> mTargetSpeed;  /* was unk_300: bb_pos_move 0205E638 / bb_ground_pos_move 0205E8AC: speedF eases to it by mSpeedStep; the moves set 0..30 */
+    /* 0x478 */ be<f32> mSpeedStep;  /* was unk_304: bb_pos_move 0205E638 / bb_ground_pos_move 0205E8AC: step of speedF towards mTargetSpeed */
+    /* 0x47C */ be<f32> mTurnScale;  /* was unk_308: bb_pos_move 0205E638 / bb_ground_pos_move 0205E8AC: turn step = mTurnSpeed * it, eased back to 1; the moves set 0 to stop turning; bb_atack_move also scales the circle approach by it */
+    /* 0x480 */ be<f32> mAttackTurnScale;  /* was unk_30C: bb_atack_move (in daBb_Execute 0205EA58): turn steps of angle y/x/z scaled by it, cleared at a new attack and eased to 1 */
+    /* 0x484 */ be<f32> mTurnSpeed;  /* was unk_310: bb_pos_move 0205E638 / bb_ground_pos_move 0205E8AC: maximum turn step (times mTurnScale); the moves set 400..5000 */
     /* 0x488 */ u8 unk314[4];
-    /* 0x48C */ be<s16> unk_318[6];
-    /* 0x498 */ be<s16> unk_324;
-    /* 0x49A */ be<s16> unk_326;
+    /* 0x48C */ be<s16> mTimers[6];  /* was unk_318: daBb_Execute 0205EA58 counts all 6 down each frame; [0] move waits, [1] attack time, [2] path point wait, [3] bait search delay (daBb_Create 300..500), [5] next swoop */
+    /* 0x498 */ be<s16> mLiftTimer;  /* was unk_324: bb_pos_move 0205E638: while it counts down pos.y rises 5 per frame; bb_path_move / bb_auto_move 020625E8 set REG0_S(4) + 10 at take-off */
+    /* 0x49A */ be<s16> mGuardedTimer;  /* was unk_326: bb_atack_move (in daBb_Execute 0205EA58) sets 10 when Link's guard stops the head attack (mHeadAtSph hit, LK_ROPE_HOOK_METAL sound); daBb_Execute counts it down; never read (same in tww d217e2b) */
     /* 0x49C */ be<f32> unk_328;
-    /* 0x4A0 */ be<f32> unk_32C;
-    /* 0x4A4 */ be<u32> unk_330;
+    /* 0x4A0 */ be<f32> mKeyTurnSpeed;  /* was unk_32C: no use in WWHD; tww d217e2b bb_key_move (a stick-steered flight mode that WWHD does not have) eases it toward stick X * -400 and adds it to current.angle.y */
+    /* 0x4A4 */ be<u32> mEsaId;  /* was unk_330: bb_path_move (in daBb_Execute 0205EA58): process id of the bait (ESA) found by search_esa 0205DCFC; bb_auto_move 020625E8 flies to it (fopAcM_SearchByID) */
     /* 0x4A8 */ u8 unk334[2];
-    /* 0x4AA */ be<s16> unk_336;
-    /* 0x4AC */ be<s16> unk_338;
+    /* 0x4AA */ be<s16> mPlayerAngleY;  /* was unk_336: daBb_Execute 0205EA58: cM_atan2s towards the player; bb_atack_move / wait_move_body turn to it; bb_player_view_check 0205DFC0 tests the view cone with it */
+    /* 0x4AC */ be<s16> mPlayerAngleX;  /* was unk_338: daBb_Execute 0205EA58: pitch towards the player's y + 100; bb_atack_move turns angle.x to it */
     /* 0x4AE */ u8 _4AE[2];
-    /* 0x4B0 */ be<f32> unk_33C;
-    /* 0x4B4 */ be<s16> unk_340;
-    /* 0x4B6 */ be<s16> unk_342;
-    /* 0x4B8 */ be<s16> unk_344;
+    /* 0x4B0 */ be<f32> mPlayerDistXZ;  /* was unk_33C: daBb_Execute 0205EA58: horizontal distance to the player; bb_player_view_check 0205DFC0 and bb_atack_move compare it */
+    /* 0x4B4 */ be<s16> mHitCooldown;  /* was unk_340: damage_check 0206432C ignores hits while it is not 0, sets 5 (50 for fire); daBb_Execute 0205EA58 counts it down */
+    /* 0x4B6 */ be<s16> mKnockbackAngleY;  /* was unk_342: damage_check 0206432C: mPlayerAngleY or the attack's direction; daBb_Execute 0205EA58 pushes the body back along it by mKnockbackDist */
+    /* 0x4B8 */ be<s16> mKnockbackAngleX;  /* was unk_344: damage_check 0206432C: mPlayerAngleX or 0; daBb_Execute 0205EA58 pitch of the knock-back push */
     /* 0x4BA */ u8 _4BA[2];
-    /* 0x4BC */ be<f32> unk_348;
-    /* 0x4C0 */ be<f32> unk_34C;
-    /* 0x4C4 */ be<s16> unk_350;
-    /* 0x4C6 */ be<s16> unk_352;
-    /* 0x4C8 */ be<s16> unk_354;
+    /* 0x4BC */ be<f32> mKnockbackDist;  /* was unk_348: damage_check 0206432C: l_bbHIO knock-back distance (dead / alive); daBb_Execute 0205EA58 moves the body by it and eases it to 0 */
+    /* 0x4C0 */ be<f32> mBodyShakeAmp;  /* was unk_34C: damage_check 0206432C 5000 / 3000; daBb_Execute 0205EA58 shakes the 11 mJointRot joints by sines of it (at most 4000) and eases it to 0 */
+    /* 0x4C4 */ be<s16> mKnockbackSpinSpeed;  /* was unk_350: damage_check 0206432C: +-(5000..8000) on a kill, 0 otherwise; daBb_Execute 0205EA58 adds it to angle.y and eases it to 0 */
+    /* 0x4C6 */ be<s16> mFrameCounter;  /* was unk_352: daBb_Execute 0205EA58: +1 per frame (daBb_Create starts it at rnd(10000)); phase of the joint shake, tail wave (tail_control 0205D4BC) and the random head turns / calls */
+    /* 0x4C8 */ be<s16> mMoveCounter;  /* was unk_354: bb_atack_move (in daBb_Execute 0205EA58): +1 per frame, phase of the circling sines; bb_auto_move 020625E8 / bb_wait_move: frames since landing (compared with l_bbHIO) */
     /* 0x4CA */ u8 _4CA[2];
-    /* 0x4CC */ be<f32> unk_358;
+    /* 0x4CC */ be<f32> mPrevEyeY;  /* was unk_358: head_water_check (in daBb_Execute 0205EA58): eyePos.y of the last frame; a splash when the eye crosses the wave height */
     /* 0x4D0 */ u8 unk35C;
-    /* 0x4D1 */ be<s8> unk_35D;
-    /* 0x4D2 */ be<s8> unk_35E;
-    /* 0x4D3 */ be<s8> unk_35F;
+    /* 0x4D1 */ be<s8> mPathOn;  /* was unk_35D: path_check 0205E14C / daBb_Create 02061DEC: mPathNo + 1 while the path is followed, 0 otherwise; daBb_Execute 0205EA58 runs bb_path_move while it is set */
+    /* 0x4D2 */ be<s8> mPathPoint;  /* was unk_35E: path_check 0205E14C / bb_path_move (in daBb_Execute 0205EA58): index of the current path point (ppd->getPoint(it)) */
+    /* 0x4D3 */ be<s8> mPathDir;  /* was unk_35F: bb_path_move (in daBb_Execute 0205EA58): +1 / -1 step through the path points (reverses at the end of an open path); daBb_Create 02061DEC 1 */
     /* 0x4D4 */ gptr<BbPath> ppd;
-    /* 0x4D8 */ be<u8> unk_364;
+    /* 0x4D8 */ be<u8> mPathReentry;  /* was unk_364: bb_auto_move 020625E8 sets 1 when it goes back to the path; bb_path_move (in daBb_Execute 0205EA58) then starts at speed 25 / step 2 and clears it */
     /* 0x4D9 */ u8 _4D9;
-    /* 0x4DA */ be<s16> unk_366;
-    /* 0x4DC */ be<s16> unk_368;
+    /* 0x4DA */ be<s16> mBodyPitchOffset;  /* was unk_366: daBb_Execute 0205EA58 adds it to current.angle.x in both body matrix rotations (XrotM); nothing in WWHD sets it; tww d217e2b bb_key_move eases it toward stick Y * 5000 */
+    /* 0x4DC */ be<s16> mBodyYawOffset;  /* was unk_368: daBb_Execute 0205EA58 adds it to current.angle.y in both body matrix rotations (YrotM); nothing in WWHD sets it; tww d217e2b bb_key_move eases it toward stick X * -5000 */
     /* 0x4DE */ u8 unk36A[0xE];
     /* 0x4EC */ dBgS_AcchCir mAcchCir;
     /* 0x52C */ dBgS_ObjAcch mAcch;
-    /* 0x6F0 */ be<u8> unk_57C;
+    /* 0x6F0 */ be<u8> mNoBgCheck;  /* was unk_57C: bb_wait_move 0206348C sets 1 while perched / landing; daBb_Execute 0205EA58 skips mAcch.CrrPos that frame and clears it */
     /* 0x6F1 */ u8 _6F1[3];
     /* 0x6F4 */ dCcD_Stts mStts;
     /* 0x730 */ dCcD_Sph mHeadAtSph;
     /* 0x85C */ dCcD_Sph mHeadTgSph;
     /* 0x988 */ dCcD_Sph mBodyTgSph;
     /* 0xAB4 */ dCcD_Sph mBodyCoSph;
-    /* 0xBE0 */ cXyz unk_A6C[2];
-    /* 0xBF8 */ gptr<J3DModel> unk_A84[9];
-    /* 0xC1C */ cXyz unk_AA8[10];
-    /* 0xC94 */ csXyz unk_B20[10];
-    /* 0xCD0 */ cXyz unk_B5C[10];
-    /* 0xD48 */ cXyz unk_BD4[2];
-    /* 0xD60 */ be<s16> unk_BEC;
-    /* 0xD62 */ be<s16> unk_BEE;
+    /* 0xBE0 */ cXyz mFootPos[2];  /* was unk_A6C: nodeCallBack 0205D078: positions of the FOOTL / FOOTR joints; daBb_Execute 0205EA58 holds the carried actor at their midpoint */
+    /* 0xBF8 */ gptr<J3DModel> mpTailModels[9];  /* was unk_A84: useHeapInit 020619D0: 9 tail feather models; daBb_Draw 0205E420 places them along mTailPos / mTailAngle */
+    /* 0xC1C */ cXyz mTailPos[10];  /* was unk_AA8: tail_control 0205D4BC: positions of the 10 tail segments ([0] = the OB joint, copied in daBb_Execute 0205EA58); daBb_Draw 0205E420 draws the feathers there */
+    /* 0xC94 */ csXyz mTailAngle[10];  /* was unk_B20: tail_control 0205D4BC: angle of each tail segment towards the next; daBb_Draw 0205E420 rotates the feathers by it */
+    /* 0xCD0 */ cXyz mTailSpeed[10];  /* was unk_B5C: tail_control 0205D4BC: per segment movement of the last frame (times REG0_F(2) + 0.8), added back as inertia */
+    /* 0xD48 */ cXyz mTailBasePos[2];  /* was unk_BD4: nodeCallBack 0205D078: positions of the OA and OB (tail base) joints; tail_control 0205D4BC takes the tail direction from them */
+    /* 0xD60 */ be<s16> mTailBaseAngleX;  /* was unk_BEC: tail_control 0205D4BC: pitch from mTailBasePos[0] to [1] */
+    /* 0xD62 */ be<s16> mTailBaseAngleY;  /* was unk_BEE: tail_control 0205D4BC: yaw from mTailBasePos[0] to [1] */
     /* 0xD64 */ u8 unkBF0[4];
-    /* 0xD68 */ cXyz unk_BF4;
-    /* 0xD74 */ csXyz unk_C00[11];
+    /* 0xD68 */ cXyz mTailBaseDir;  /* was unk_BF4: tail_control 0205D4BC: a 5-unit step along mTailBaseAngleX/Y, added (scaled down per segment) to every tail segment */
+    /* 0xD74 */ csXyz mJointRot[11];  /* was unk_C00: nodeCallBack 0205D078 rotates the joints listed in callback_check_index by it [0..10]; daBb_Execute 0205EA58 clears it per frame and adds the shake / head turn / beak angles */
     /* 0xDB6 */ csXyz unk_C42[2];
-    /* 0xDC2 */ be<s16> unk_C4E;
-    /* 0xDC4 */ be<s16> unk_C50;
-    /* 0xDC6 */ be<s16> unk_C52;
-    /* 0xDC8 */ be<u32> unk_C54;
-    /* 0xDCC */ be<f32> unk_C58;
-    /* 0xDD0 */ be<s16> unk_C5C;
-    /* 0xDD2 */ be<s16> unk_C5E;
-    /* 0xDD4 */ be<u8> unk_C60;
+    /* 0xDC2 */ be<s16> mBeakOpenAngle;  /* was unk_C4E: daBb_Execute 0205EA58 eases it to 0x2000 while mBeakOpenTimer runs; nodeCallBack 0205D078 opens the KUCHIA / KUCHIB joints by it */
+    /* 0xDC4 */ be<s16> mBeakOpenTimer;  /* was unk_C50: kuti_open 0205DE54 sets it (when 0); daBb_Execute 0205EA58 counts it down and keeps the beak open */
+    /* 0xDC6 */ be<s16> mBeakSeFrame;  /* was unk_C52: kuti_open 0205DE54: open time - 3; daBb_Execute 0205EA58 plays mBeakSeId when mBeakOpenTimer reaches it */
+    /* 0xDC8 */ be<u32> mBeakSeId;  /* was unk_C54: kuti_open 0205DE54: the voice sound; daBb_Execute 0205EA58 fopAcM_monsSeStart(it) */
+    /* 0xDCC */ be<f32> mHeadShakeAmp;  /* was unk_C58: damage_check 0206432C 10000 for a hit that is not mbDead; daBb_Execute 0205EA58 turns the neck / head joints by it, shakes mHeadTargetAngleY, eases it to 0 */
+    /* 0xDD0 */ be<s16> mHeadAngleY;  /* was unk_C5C: daBb_Execute 0205EA58: eased to mHeadTargetAngleY, subtracted from the head joints' x; bb_player_view_check 0205DFC0 adds it to the view direction */
+    /* 0xDD2 */ be<s16> mHeadTargetAngleY;  /* was unk_C5E: daBb_Execute 0205EA58: by mHeadLookMode, towards the player (+-15000), random, or the damage shake */
+    /* 0xDD4 */ be<u8> mHeadLookMode;  /* was unk_C60: the moves set it per frame (1 look at the player, 2 look around and call, 0 none); daBb_Execute 0205EA58 sets 3 while mHeadShakeAmp > 1, uses it and clears it */
     /* 0xDD5 */ u8 unkC61[7];
     /* 0xDDC */ dPa_followEcallBack mParticleCallBack;
-    /* 0xDF0 */ be<s8> unk_C7C;
+    /* 0xDF0 */ be<s8> mWasHit;  /* was unk_C7C: damage_check 0206432C sets 1; bb_atack_move (in daBb_Execute 0205EA58) clears it, restarts mTimers[5] and flies off (mode 4, FLYB01) */
     /* 0xDF1 */ u8 unkC7D;
-    /* 0xDF2 */ be<u8> unk_C7E;
+    /* 0xDF2 */ be<u8> mDying;  /* was unk_C7E: damage_check 0206432C sets 1 when health is <= 0 after the hit (FAINTED voice); daBb_Execute 0205EA58 then runs bb_fail_move instead of the other moves */
     /* 0xDF3 */ u8 _DF3;
     /* 0xDF4 */ enemyice mEnemyIce;
     /* 0x11AC */ enemyfire mEnemyFire;
 };
 WWHD_OFFSET(bb_class, mpMorf, 0x3D0);
-WWHD_OFFSET(bb_class, unk_2CC, 0x448);
-WWHD_OFFSET(bb_class, unk_2D8, 0x44E);
-WWHD_OFFSET(bb_class, unk_2E4, 0x458);
+WWHD_OFFSET(bb_class, mEyeFrame, 0x448);
+WWHD_OFFSET(bb_class, mPrmMode, 0x44E);
+WWHD_OFFSET(bb_class, mpCarriedActor, 0x458);
 WWHD_OFFSET(bb_class, ppd, 0x4D4);
 WWHD_OFFSET(bb_class, mAcchCir, 0x4EC);
 WWHD_OFFSET(bb_class, mAcch, 0x52C);
 WWHD_OFFSET(bb_class, mStts, 0x6F4);
 WWHD_OFFSET(bb_class, mBodyCoSph, 0xAB4);
-WWHD_OFFSET(bb_class, unk_A84, 0xBF8);
-WWHD_OFFSET(bb_class, unk_BD4, 0xD48);
-WWHD_OFFSET(bb_class, unk_C00, 0xD74);
-WWHD_OFFSET(bb_class, unk_C4E, 0xDC2);
+WWHD_OFFSET(bb_class, mpTailModels, 0xBF8);
+WWHD_OFFSET(bb_class, mTailBasePos, 0xD48);
+WWHD_OFFSET(bb_class, mJointRot, 0xD74);
+WWHD_OFFSET(bb_class, mBeakOpenAngle, 0xDC2);
 WWHD_OFFSET(bb_class, mParticleCallBack, 0xDDC);
 WWHD_OFFSET(bb_class, mEnemyIce, 0xDF4);
 WWHD_OFFSET(bb_class, mEnemyFire, 0x11AC);
@@ -277,7 +277,7 @@ WWHD_SIZE(bb_class, 0x13D8);
 /* esa_class (bait): the field read here */
 struct esa_class : fopAc_ac_c {
     /* 0x3AC */ u8 _3AC[8];
-    /* 0x3B4 */ be<u8> field_0x298;
+    /* 0x3B4 */ be<u8> mTaken;  /* was field_0x298: esa_class mTaken (d_a_esa.h) */
 };
 
 /* ---- resources / enums ---- */
@@ -505,13 +505,13 @@ inline void bbAcchDestroy(dBgS_ObjAcch* p) {
 struct BbDamageReaction {
     u8 mPrefix[6]; be<s16> mAction;
     // HD: the damage-reaction prefix grows by 0x34.
-    u8 mUnused[0x49C - 8]; be<f32> m468, m46C;
+    u8 mUnused[0x49C - 8]; be<f32> mCarryOffsetY, mCarryOffsetZ;
 };
 struct BbCarriedMo2 : fopAc_ac_c { u8 mUnused[0x8BC - sizeof(fopAc_ac_c)]; BbDamageReaction mDamageReaction; };
 struct BbCarriedBk : fopAc_ac_c { u8 mUnused[0x49C - sizeof(fopAc_ac_c)]; BbDamageReaction dr; };
 WWHD_OFFSET(BbCarriedMo2, mDamageReaction, 0x8BC);
 WWHD_OFFSET(BbCarriedBk, dr, 0x49C);
-WWHD_OFFSET(BbDamageReaction, m468, 0x49C);
+WWHD_OFFSET(BbDamageReaction, mCarryOffsetY, 0x49C);
 WWHD_OFFSET(BbDamageReaction, mAction, 6);
 inline BOOL bbPlayerGuard(fopAc_ac_c* player) { return gabi::call_ptr<BOOL>(gabi::load<u32>(player->__vtbl + 0x3C), player); }
 inline void* bbTrigTable() { return gabi::at<void>(0x104A44F8); }

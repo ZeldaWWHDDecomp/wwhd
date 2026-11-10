@@ -408,12 +408,12 @@ static bool tn_demoAnimationStopped(mDoExt_McaMorf* body, f32 zero) {
 static bool tn_processAirborneAttack(tn_class* actor, f32 zero) {
     if (actor->mDamageReaction.mMode > -100) return false;
     const u32 base = gabi::ea(actor);
-    const f32 knockback = static_cast<f32>(actor->mDamageReaction.m478);
+    const f32 knockback = static_cast<f32>(actor->mDamageReaction.mKnockbackSpeed);
     const f32 activeThreshold = 40.0f;
-    actor->m03F0 = static_cast<s16>(5);
+    actor->mNoDamageTimer = static_cast<s16>(5);
     if (!(std::fabs(knockback) > activeThreshold)) return true;
     if ((static_cast<u32>(actor->mDamageReaction.mAcch.m_flags) & 0x20u) != 0) return true;
-    tn_abi::sphereSetCenter(reinterpret_cast<u8*>(&actor->mWeponSph.mSph), &actor->mDamageReaction.m100[12]);
+    tn_abi::sphereSetCenter(reinterpret_cast<u8*>(&actor->mWeponSph.mSph), &actor->mDamageReaction.mJntPos[12]);
     tn_abi::sphereSetRadius(reinterpret_cast<u8*>(&actor->mWeponSph.mSph), 60.0f);
     const u32 weaponFlags = static_cast<u32>(actor->mWeponSph.mObjAt.mSPrm);
     const u32 attackFlags = static_cast<u32>(actor->mWeponSph.mObjCo.mSPrm);
@@ -431,7 +431,7 @@ static bool tn_processAirborneAttack(tn_class* actor, f32 zero) {
         if (verticalSpeed < stopThreshold) {
             const f32 impulse = 8000.0f;
             actor->speed.y = static_cast<f32>(zero);
-            actor->mDamageReaction.m474 = static_cast<f32>(impulse);
+            actor->mDamageReaction.mShakeAmplitude = static_cast<f32>(impulse);
         }
     }
     actor->mCoCyl.mObjCo.mSPrm = static_cast<u32>(static_cast<u32>(actor->mCoCyl.mObjCo.mSPrm) & ~1u);
@@ -439,14 +439,14 @@ static bool tn_processAirborneAttack(tn_class* actor, f32 zero) {
 }
 
 static void tn_updateMovementTarget(tn_class* actor, fopAc_ac_c* player) {
-    const s16 targetTimer = static_cast<s16>(actor->m1436);
+    const s16 targetTimer = static_cast<s16>(actor->mMoveTargetTimer);
     cXyz* target;
     if (targetTimer != 0) {
-        actor->m1436 = static_cast<u16>(static_cast<u16>(static_cast<u16>(targetTimer) - 1u));
-        target = &actor->m1438;
+        actor->mMoveTargetTimer = static_cast<u16>(static_cast<u16>(static_cast<u16>(targetTimer) - 1u));
+        target = &actor->mMoveTargetPos;
     } else {
         target = gabi::at<cXyz>(gabi::ea(player) + 0x314u);
-        actor->mDamageReaction.m714 = gabi::at<fopAc_ac_c>(gabi::ea(player));
+        actor->mDamageReaction.mpLookTarget = gabi::at<fopAc_ac_c>(gabi::ea(player));
     }
     gabi::Local<cXyz> delta;
     tn_abi::subtractPosition(target, delta.get(), &actor->current.pos);
@@ -461,10 +461,10 @@ static void tn_updateMovementTarget(tn_class* actor, fopAc_ac_c* player) {
     const f32 radiusOffset = 80.0f;
     const f32 radiusTuning = REG0_F(3);
     tn_abi::cylinderSetRadius(reinterpret_cast<u8*>(&actor->mCoCyl.mCyl), radiusTuning + radiusOffset);
-    const s8 cooldown = static_cast<s8>(actor->m1434);
+    const s8 cooldown = static_cast<s8>(actor->mMahiDelay);
     if (cooldown != 0) {
         const u8 next = static_cast<u8>(static_cast<u8>(cooldown) - 1u);
-        actor->m1434 = static_cast<u8>(next);
+        actor->mMahiDelay = static_cast<u8>(next);
         if (next == 0) {
             actor->mDamageReaction.mAction = ACTION_D_MAHI;
             actor->mDamageReaction.mMode = 0;
@@ -476,10 +476,10 @@ static void tn_updateMovementTarget(tn_class* actor, fopAc_ac_c* player) {
 static bool tn_prepareNormalMovement(tn_class* actor, fopAc_ac_c* player) {
     const u32 weaponFlags = static_cast<u32>(actor->mWeponSph.mObjAt.mSPrm);
     const u32 bodyFlags = static_cast<u32>(actor->mCoCyl.mObjCo.mSPrm);
-    const s16 reaction = static_cast<s16>(actor->mDamageReaction.m48A);
+    const s16 reaction = static_cast<s16>(actor->mDamageReaction.mHitStunTimer);
     actor->mWeponSph.mObjAt.mSPrm = static_cast<u32>(weaponFlags | 4u);
     actor->mCoCyl.mObjCo.mSPrm = static_cast<u32>(bodyFlags | 1u);
-    if (reaction != 0 && static_cast<s16>(actor->mDamageReaction.m488) == 0) {
+    if (reaction != 0 && static_cast<s16>(actor->mDamageReaction.mKnockedDown) == 0) {
         if (reaction == 1) {
             actor->mCountDownTimers[1] = static_cast<s16>(0);
             actor->mDamageReaction.mAction = ACTION_FIGHT_RUN;
@@ -487,7 +487,7 @@ static bool tn_prepareNormalMovement(tn_class* actor, fopAc_ac_c* player) {
         } else {
             const f32 reactionSpeed = -30.0f;
             const s16 heading = static_cast<s16>(actor->mTargetAngle);
-            actor->mDamageReaction.m4D0 = static_cast<s16>(heading);
+            actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
             actor->speedF = static_cast<f32>(reactionSpeed);
         }
         return false;
@@ -547,14 +547,14 @@ static void tn_finishMovement(tn_class* actor, s16 action, f32 zero, f32 rangeSc
     forward->x = zero;
     forward->z = static_cast<f32>(actor->speedF);
     s16 heading;
-    if (action != ACTION_HUKKI && action != ACTION_FAIL && static_cast<s16>(actor->mDamageReaction.m48A) == 0) {
+    if (action != ACTION_HUKKI && action != ACTION_FAIL && static_cast<s16>(actor->mDamageReaction.mHitStunTimer) == 0) {
         const s16 currentHeading = static_cast<s16>(actor->current.angle.y);
-        const s16 headingOffset = static_cast<s16>(actor->m0418);
-        actor->mDamageReaction.m482 = static_cast<s16>(currentHeading);
+        const s16 headingOffset = static_cast<s16>(actor->mSideStepAngle);
+        actor->mDamageReaction.mKnockbackAngleY = static_cast<s16>(currentHeading);
         const s16 reloadedHeading = static_cast<s16>(actor->current.angle.y);
         heading = static_cast<s16>(static_cast<u16>(reloadedHeading) + static_cast<u16>(headingOffset));
     } else {
-        heading = static_cast<s16>(actor->mDamageReaction.m4D0);
+        heading = static_cast<s16>(actor->mDamageReaction.mTurnTargetY);
     }
     const u32 matrix = gabi::ea(calc_mtx());
     tn_abi::cMtx_YrotS(gabi::at<u8>(matrix), heading);
@@ -570,22 +570,22 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
     const u32 base = gabi::ea(actor);
     dComIfGp_get();
     const f32 groundOffset = 1000.0f;
-    actor->mDamageReaction.m710 = static_cast<u8>(0);
+    actor->mDamageReaction.mLookMode = static_cast<u8>(0);
     u32 contact = tn_abi::fopAcM_otoCheck(actor, groundOffset);
     const u32 mantleId = actor->mMantPcId;
     if (mantleId != 0xFFFF) {
         gabi::Local<be<u32>> id;
         *id = mantleId;
         const u32 mantle = mantleId == 0xFFFFFFFFu ? 0 : tn_abi::actorJudgeAddress(TN_ACTOR_ID_JUDGE, id.get());
-        if (mantle != 0 && static_cast<s16>(gabi::at<TnMantle>(mantle)->m1C0E) != 0) contact |= 2u;
+        if (mantle != 0 && static_cast<s16>(gabi::at<TnMantle>(mantle)->mWindTimer) != 0) contact |= 2u;
     }
     s16 mode = actor->mDamageReaction.mMode;
     switch (mode) {
     case 0: {
-        const s32 pathDriven = actor->m0C34;
+        const s32 pathDriven = actor->mHasWepon;
         actor->mDamageReaction.mMode = 1;
-        anm_init(actor, pathDriven == 0 ? 0x3D : 0x39, static_cast<f32>(actor->m151C), J3DFrameCtrl::EMode_LOOP, one, -1);
-        yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YKIHON1_e, static_cast<f32>(actor->m151C), J3DFrameCtrl::EMode_NONE, one);
+        anm_init(actor, pathDriven == 0 ? 0x3D : 0x39, static_cast<f32>(actor->mReturnAnmMorf), J3DFrameCtrl::EMode_LOOP, one, -1);
+        yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YKIHON1_e, static_cast<f32>(actor->mReturnAnmMorf), J3DFrameCtrl::EMode_NONE, one);
         [[fallthrough]];
     }
     case 1: {
@@ -623,7 +623,7 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
         break;
     case 20:
         if (static_cast<s16>(actor->mCountDownTimers[1]) < 10) {
-            actor->mDamageReaction.m710 = static_cast<u8>(1);
+            actor->mDamageReaction.mLookMode = static_cast<u8>(1);
             if (static_cast<s16>(actor->mCountDownTimers[1]) == 0) {
                 actor->mCountDownTimers[1] = static_cast<s16>(0);
                 actor->mDamageReaction.mAction = ACTION_FIGHT_RUN;
@@ -653,12 +653,12 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
         const f32 dx = homeDelta->x;
         const f32 dz = homeDelta->z;
         const s16 heading = cM_atan2s(dx, dz);
-        actor->mDamageReaction.m4D0 = static_cast<s16>(heading);
+        actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
         const f32 distance = tn_sqrtf(gabi::fmadds(dx, dx, dz * dz));
         const f32 runSpeed = static_cast<f32>(l_tnHIO.m054);
         const f32 stepScale = 0.25f;
         const f32 closeDistance = (runSpeed * stepScale) * acceleration;
-        const s16 targetHeading = static_cast<s16>(actor->mDamageReaction.m4D0);
+        const s16 targetHeading = static_cast<s16>(actor->mDamageReaction.mTurnTargetY);
         if (distance < closeDistance) actor->mDamageReaction.mMode = 0;
         cLib_addCalcAngleS2(&actor->current.angle.y, targetHeading, 4, 0x1000);
         cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m054), one, acceleration);
@@ -680,7 +680,7 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
         bool visible = false;
         if (distance < detectionRange) {
             const s16 viewLimit = get_view_H(actor);
-            const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.m714));
+            const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.mpLookTarget));
             const s16 heading = static_cast<s16>(actor->mTargetAngle);
             visible = daTn_player_view_check(actor, gabi::at<cXyz>(target + 0x314u), heading, viewLimit) != 0;
         }
@@ -702,7 +702,7 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
             actor->mDamageReaction.mMode = 0;
         }
     }
-    if (actor->m0C34 == 0 && search_wepon(actor) != 0) {
+    if (actor->mHasWepon == 0 && search_wepon(actor) != 0) {
         actor->mDamageReaction.mAction = ACTION_WEPON_SEARCH;
         actor->mDamageReaction.mMode = -1;
     }
@@ -711,42 +711,42 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
 // Path target advancement shared by the patrol action's entry modes.
 // indexed point record; missing linked paths enter the native assertion call.
 static void tn_advancePatrolTarget(tn_class* actor) {
-    const s32 pathDriven = actor->m0C34;
+    const s32 pathDriven = actor->mHasWepon;
     actor->mDamageReaction.mMode = 1;
-    if (pathDriven == 0 && actor->m13FF == 0) {
+    if (pathDriven == 0 && actor->mWeponSearchGaveUp == 0) {
         way_pos_check(actor, &actor->mPathXyz);
         const f32 random = cM_rndF(25.0f);
         actor->mCountDownTimers[1] = static_cast<s16>(static_cast<s16>(gabi::ftoi(random + 30.0f)));
-    } else if (static_cast<s8>(actor->m1424) == 0) {
+    } else if (static_cast<s8>(actor->mPathNo) == 0) {
         way_pos_check(actor, &actor->mPathXyz);
     } else {
-        const u8 oldPoint = static_cast<u8>(actor->m1425);
-        const u8 lookahead = actor->m1426;
+        const u8 oldPoint = static_cast<u8>(actor->mPathPoint);
+        const u8 lookahead = actor->mPathDir;
         s8 pointIndex = static_cast<s8>(static_cast<u8>(oldPoint + lookahead));
         u32 path = gabi::ea(static_cast<tn_path*>(actor->ppd));
-        actor->m1425 = pointIndex;
+        actor->mPathPoint = pointIndex;
         const s8 countLow = static_cast<s8>(static_cast<u16>(gabi::at<tn_path>(path)->m_num));
         if (pointIndex >= countLow) {
             if ((static_cast<u8>(gabi::at<tn_path>(path)->m_closed) & 1u) != 0) {
                 pointIndex = 0;
-                actor->m1425 = 0;
+                actor->mPathPoint = 0;
             } else {
-                actor->m1426 = 0xFF;
+                actor->mPathDir = 0xFF;
                 pointIndex = static_cast<s8>(static_cast<u8>(static_cast<u16>(gabi::at<tn_path>(path)->m_num) - 2u));
-                actor->m1425 = pointIndex;
+                actor->mPathPoint = pointIndex;
             }
             const u16 nextPath = static_cast<u16>(gabi::at<tn_path>(path)->m_nextID);
             if (nextPath != 0xFFFF) {
                 tn_path* linked = tn_abi::dPath_GetRoomPath(nextPath, static_cast<s8>(actor->current.roomNo));
                 actor->ppd = linked;
                 if (linked == nullptr) tn_abi::assertCondition(STR(0x100404B0), 0x7CC, STR(0x100404BC));
-                pointIndex = actor->m1425;
+                pointIndex = actor->mPathPoint;
                 path = gabi::ea(static_cast<tn_path*>(actor->ppd));
             }
         } else if (pointIndex < 0) {
             path = gabi::ea(static_cast<tn_path*>(actor->ppd));
-            actor->m1426 = 1;
-            actor->m1425 = 1;
+            actor->mPathDir = 1;
+            actor->mPathPoint = 1;
             pointIndex = 1;
         }
         const u32 points = gabi::ea(static_cast<path_layout::dPnt*>(gabi::at<tn_path>(path)->m_points));
@@ -763,7 +763,7 @@ static void tn_advancePatrolTarget(tn_class* actor) {
 
 static u32 tn_currentPatrolPoint(tn_class* actor) {
     const u32 path = gabi::ea(static_cast<tn_path*>(actor->ppd));
-    const s8 index = actor->m1425;
+    const s8 index = actor->mPathPoint;
     return gabi::ea(static_cast<path_layout::dPnt*>(gabi::at<tn_path>(path)->m_points)) + static_cast<u32>(static_cast<s32>(index)) * 16u;
 }
 
@@ -775,14 +775,14 @@ static u32 tn_patrolContact(tn_class* actor) {
         gabi::Local<be<u32>> id;
         *id = mantleId;
         const u32 mantle = mantleId == 0xFFFFFFFFu ? 0 : tn_abi::actorJudgeAddress(TN_ACTOR_ID_JUDGE, id.get());
-        if (mantle != 0 && static_cast<s16>(gabi::at<TnMantle>(mantle)->m1C0E) != 0) contact |= 2u;
+        if (mantle != 0 && static_cast<s16>(gabi::at<TnMantle>(mantle)->mWindTimer) != 0) contact |= 2u;
     }
     return contact;
 }
 
 // ordinary wandering from path patrol; reaching selected path points pauses.
 static void tn_patrolLocomotion(tn_class* actor, f32 one, f32 acceleration) {
-    const bool usePath = actor->m0C34 != 0 || actor->m13FF != 0;
+    const bool usePath = actor->mHasWepon != 0 || actor->mWeponSearchGaveUp != 0;
     const f32 targetX = static_cast<f32>(actor->mPathXyz.x);
     const f32 currentX = actor->current.pos.x;
     const f32 currentZ = actor->current.pos.z;
@@ -791,9 +791,9 @@ static void tn_patrolLocomotion(tn_class* actor, f32 one, f32 acceleration) {
     const f32 speed = (usePath ? static_cast<f32>(l_tnHIO.m04C) : static_cast<f32>(l_tnHIO.m050));
     const s32 turnLimit = usePath ? 0x400 : 0x1000;
     const s16 heading = cM_atan2s(dx, dz);
-    const s8 activePath = static_cast<s8>(actor->m1424);
-    actor->mDamageReaction.m4D0 = static_cast<s16>(heading);
-    const bool followsPath = activePath != 0 && (actor->m0C34 != 0 || actor->m13FF != 0);
+    const s8 activePath = static_cast<s8>(actor->mPathNo);
+    actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
+    const bool followsPath = activePath != 0 && (actor->mHasWepon != 0 || actor->mWeponSearchGaveUp != 0);
     const f32 distance = tn_sqrtf(gabi::fmadds(dx, dx, dz * dz));
     const f32 stepScale = 0.25f;
     if (followsPath) {
@@ -827,7 +827,7 @@ static void tn_patrolLocomotion(tn_class* actor, f32 one, f32 acceleration) {
             actor->mDamageReaction.mMode = 2;
         }
     }
-    const s16 desiredHeading = static_cast<s16>(actor->mDamageReaction.m4D0);
+    const s16 desiredHeading = static_cast<s16>(actor->mDamageReaction.mTurnTargetY);
     cLib_addCalcAngleS2(&actor->current.angle.y, desiredHeading, 4, turnLimit);
     cLib_addCalc2(&actor->speedF, speed, one, acceleration);
 }
@@ -871,7 +871,7 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         const s16 timer = static_cast<s16>(actor->mCountDownTimers[1]);
         actor->speedF = static_cast<f32>(zero);
         if (timer != 0) break;
-        if (static_cast<s8>(actor->m1424) != 0 && (actor->m0C34 != 0 || actor->m13FF != 0)) {
+        if (static_cast<s8>(actor->mPathNo) != 0 && (actor->mHasWepon != 0 || actor->mWeponSearchGaveUp != 0)) {
             const u32 point = tn_currentPatrolPoint(actor);
             const u8 type = static_cast<u8>(gabi::at<path_layout::dPnt>(point)->mArg3);
             if (type == 7 || type == 8) {
@@ -880,19 +880,19 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
                 const f32 minimum = 100.0f;
                 actor->mCountDownTimers[1] = static_cast<s16>(static_cast<s16>(gabi::ftoi(random + minimum)));
                 const u8 pointType = static_cast<u8>(gabi::at<path_layout::dPnt>(point)->mArg3);
-                const u16 heading = static_cast<u16>(actor->mDamageReaction.m4D0);
+                const u16 heading = static_cast<u16>(actor->mDamageReaction.mTurnTargetY);
                 const u16 offset = pointType == 7 ? 0xC000 : 0x4000;
-                actor->mDamageReaction.m4D0 = static_cast<u16>(heading + offset);
+                actor->mDamageReaction.mTurnTargetY = static_cast<u16>(heading + offset);
                 break;
             }
         }
-        const s32 pathDriven = actor->m0C34;
+        const s32 pathDriven = actor->mHasWepon;
         actor->mDamageReaction.mMode = 0;
-        if (pathDriven == 0 && actor->m13FF == 0 && static_cast<s16>(actor->m03EA) == 0) actor->m13FF = 1;
+        if (pathDriven == 0 && actor->mWeponSearchGaveUp == 0 && static_cast<s16>(actor->mWeponRunTimer) == 0) actor->mWeponSearchGaveUp = 1;
         break;
     }
     case 4:
-        cLib_addCalcAngleS2(&actor->current.angle.y, static_cast<s16>(actor->mDamageReaction.m4D0), 4, 0x1000);
+        cLib_addCalcAngleS2(&actor->current.angle.y, static_cast<s16>(actor->mDamageReaction.mTurnTargetY), 4, 0x1000);
         [[fallthrough]];
     case 3:
         actor->speedF = static_cast<f32>(zero);
@@ -901,27 +901,27 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     default: break;
     }
     const u32 contact = tn_patrolContact(actor);
-    s32 pathDriven = actor->m0C34;
+    s32 pathDriven = actor->mHasWepon;
     const s8 encounter = static_cast<s8>(search_sp);
     const u32 reaction = contact + static_cast<u32>(static_cast<s32>(encounter));
-    if (pathDriven != 0 || actor->m13FF != 0) {
+    if (pathDriven != 0 || actor->mWeponSearchGaveUp != 0) {
         bool notice = reaction != 0;
         if (!notice) {
             const f32 distance = static_cast<f32>(actor->mPlayerDistance);
             const f32 detectionRange = static_cast<f32>(l_tnHIO.m028);
             if (distance < detectionRange) {
                 const s16 viewLimit = get_view_H(actor);
-                const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.m714));
+                const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.mpLookTarget));
                 const s16 heading = static_cast<s16>(actor->mTargetAngle);
                 notice = daTn_player_view_check(actor, gabi::at<cXyz>(target + 0x314u), heading, viewLimit) != 0;
-                if (!notice) pathDriven = actor->m0C34;
+                if (!notice) pathDriven = actor->mHasWepon;
             }
         }
         if (notice) {
             actor->mDamageReaction.mAction = ACTION_FIGHT_RUN;
             actor->mDamageReaction.mMode = -10;
             if (base != 0) tn_playBombReactionSound(actor, 0x4885);
-            pathDriven = actor->m0C34;
+            pathDriven = actor->mHasWepon;
         }
     }
     if (pathDriven == 0 && search_wepon(actor) != 0) {
@@ -987,7 +987,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
     }
     case 2: {
         const f32 steeringThreshold = 0.1f;
-        const s32 pathDriven = actor->m0C34;
+        const s32 pathDriven = actor->mHasWepon;
         s16 nextMode;
         if (std::fabs(steering) > steeringThreshold) {
             anm_init(actor, pathDriven != 0 ? 0x3B : 0x53, blend, J3DFrameCtrl::EMode_LOOP, one, pathDriven != 0 ? 0x10 : 0x23);
@@ -1010,7 +1010,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
         if (static_cast<s16>(actor->mCountDownTimers[1]) == 0) actor->mDamageReaction.mMode = 2;
         break;
     case 4:
-        if (static_cast<u8>(actor->m03FE) == 2) {
+        if (static_cast<u8>(actor->mObstacleSide) == 2) {
             actor->mDamageReaction.mMode = 3;
             anm_init(actor, dRes_INDEX_TN_BCK_AWALK1_e, blend, J3DFrameCtrl::EMode_LOOP, one, dRes_INDEX_TN_BAS_AWALK1_e);
         } else {
@@ -1019,7 +1019,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
         }
         break;
     case 5: case 6: {
-        const u8 obstacle = static_cast<u8>(actor->m03FE);
+        const u8 obstacle = static_cast<u8>(actor->mObstacleSide);
         s16 side = mode;
         if (mode == 5 && obstacle == 4) {
             side = 6;
@@ -1028,7 +1028,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
             side = 5;
             actor->mDamageReaction.mMode = 5;
         }
-        actor->m0418 = static_cast<u16>(side == 5 ? 0x4000 : 0xC000);
+        actor->mSideStepAngle = static_cast<u16>(side == 5 ? 0x4000 : 0xC000);
         cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m060), one, 30.0f);
         if (static_cast<s16>(actor->mCountDownTimers[1]) == 0) actor->mDamageReaction.mMode = 2;
         break;
@@ -1059,7 +1059,7 @@ static bool tn_combatRangeTransition(tn_class* actor, fopAc_ac_c* player) {
         actor->mDamageReaction.mMode = 0;
         return true;
     }
-    if (actor->m0C34 != 0) {
+    if (actor->mHasWepon != 0) {
         if (tn_checkCutCharge(player) != 0) {
             actor->mDamageReaction.mAction = ACTION_FIGHT;
             actor->mDamageReaction.mMode = 10;
@@ -1094,7 +1094,7 @@ static bool tn_combatRangeTransition(tn_class* actor, fopAc_ac_c* player) {
 // Combat response to an incoming thrown object or the player's attack.
 static bool tn_combatDefensiveReaction(tn_class* actor, fopAc_ac_c* player, f32 one, f32 blend) {
     const u32 base = gabi::ea(actor);
-    if (static_cast<s16>(actor->m03F2) != 0) return false;
+    if (static_cast<s16>(actor->mNoGuardTimer) != 0) return false;
     const u32 thrown = tn_abi::searchActors(gabi::guest_fn((const void*)&shot_s_sub), actor);
     bool incoming = false;
     if (thrown != 0 && static_cast<f32>(gabi::at<fopAc_ac_c>(thrown)->speedF) > blend) {
@@ -1113,7 +1113,7 @@ static bool tn_combatDefensiveReaction(tn_class* actor, fopAc_ac_c* player, f32 
             (static_cast<u32>(gabi::at<TnAttention>(playerAttention)->mFlags) & 0x20000000u) == 0) return false;
         if (tn_abi::attentionActionTarget(gabi::at<u8>(playerAttention), 0) != base) return false;
     }
-    const u32 frameCounter = static_cast<u32>(actor->m03D8);
+    const u32 frameCounter = static_cast<u32>(actor->mFrameCount);
     if ((frameCounter & 3u) == 0) {
         const s8 pieces = actor->mRemainingEquipmentPieces;
         if ((static_cast<u8>(pieces) & 4u) != 0) {
@@ -1134,10 +1134,10 @@ static bool tn_combatDefensiveReaction(tn_class* actor, fopAc_ac_c* player, f32 
     } else if ((static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0) {
         return false;
     }
-    const s32 pathDriven = actor->m0C34;
+    const s32 pathDriven = actor->mHasWepon;
     actor->mDamageReaction.mAction = ACTION_FIGHT;
     actor->mDamageReaction.mMode = -20;
-    actor->m03F0 = static_cast<s16>(10);
+    actor->mNoDamageTimer = static_cast<s16>(10);
     anm_init(actor, pathDriven != 0 ? 0x48 : 0x49, 2.0f, J3DFrameCtrl::EMode_NONE, one, pathDriven != 0 ? 0x1B : 0x1C);
     const f32 forwardTuning = REG0_F(3);
     const f32 forwardBase = -60.0f;
@@ -1150,7 +1150,7 @@ static bool tn_combatDefensiveReaction(tn_class* actor, fopAc_ac_c* player, f32 
 }
 
 static void tn_combatObstacles(tn_class* actor) {
-    const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.m714));
+    const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.mpLookTarget));
     if (daTn_player_bg_check(actor, gabi::at<cXyz>(target + 0x314u)) != 0) {
         actor->mDamageReaction.mAction = ACTION_JYUNKAI;
         path_check(actor);
@@ -1158,7 +1158,7 @@ static void tn_combatObstacles(tn_class* actor) {
         actor->mDamageReaction.mMode = -10;
         return;
     }
-    if (actor->m0C34 == 0 && search_wepon(actor) != 0) {
+    if (actor->mHasWepon == 0 && search_wepon(actor) != 0) {
         actor->mDamageReaction.mAction = ACTION_WEPON_SEARCH;
         actor->mDamageReaction.mMode = -1;
     }
@@ -1170,7 +1170,7 @@ static void tn_combatObstacles(tn_class* actor) {
     const f32 distanceBase = 90.0f;
     const s16 heading = static_cast<s16>(actor->current.angle.y);
     const u32 obstruction = tn_abi::groundCheck(actor, 4, heading, distanceTuning + distanceBase);
-    actor->m03FE = static_cast<u8>(obstruction);
+    actor->mObstacleSide = static_cast<u8>(obstruction);
     actor->mCountDownTimers[4] = static_cast<s16>(50);
 }
 
@@ -1179,10 +1179,10 @@ static void tn_moveCombat(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     const u32 playerAddress = gabi::ea(static_cast<fopAc_ac_c*>(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mPlayerInfo[0].mpPlayer));
     fopAc_ac_c* player = gabi::at<fopAc_ac_c>(playerAddress);
     const f32 steering = tn_abi::padStickX(0);
-    const s16 frozen = actor->m03EC;
+    const s16 frozen = actor->mAnmLock;
     const s16 heading = static_cast<s16>(actor->mTargetAngle);
-    actor->mDamageReaction.m710 = static_cast<u8>(1);
-    actor->mDamageReaction.m4D0 = static_cast<s16>(heading);
+    actor->mDamageReaction.mLookMode = static_cast<u8>(1);
+    actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
     if (frozen == 0) {
         const s16 mode = actor->mDamageReaction.mMode;
         if (mode != 0) cLib_addCalcAngleS2(&actor->current.angle.y, heading, 4, mode == 1 ? 0x800 : 0x400);
@@ -1199,53 +1199,53 @@ static void tn_moveCombat(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     tn_combatObstacles(actor);
 }
 
-// The following phase must reload m0C48, as the native caller does.
+// The following phase must reload mAttackType, as the native caller does.
 static void tn_chooseAttack(tn_class* actor, f32 one, f32 armorBlend) {
     const u32 base = gabi::ea(actor);
-    const s32 pathDriven = actor->m0C34;
+    const s32 pathDriven = actor->mHasWepon;
     const f32 random = cM_rndF(100.0f);
     if (pathDriven != 0) {
         if (random < static_cast<f32>(l_tnHIO.m078)) {
             const bool armor = (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0;
             anm_init(actor, armor ? 0x2E : 0x46, armorBlend, J3DFrameCtrl::EMode_NONE, one, armor ? 0x0B : 0x19);
             yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YAT_TATE1_e, armorBlend, J3DFrameCtrl::EMode_NONE, one);
-            actor->m0C48 = 0;
+            actor->mAttackType = 0;
         } else {
             const bool armor = (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0;
             anm_init(actor, armor ? 0x2F : 0x47, armorBlend, J3DFrameCtrl::EMode_NONE, one, armor ? 0x0C : 0x1A);
             yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YAT_YOKO1_e, armorBlend, J3DFrameCtrl::EMode_NONE, one);
-            actor->m0C48 = 1;
+            actor->mAttackType = 1;
             if (base != 0) tn_playBombReactionSound(actor, 0x4886);
         }
     } else {
         const f32 threshold = static_cast<f32>(l_tnHIO.m07C);
         if (random < threshold || (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0) {
             anm_init(actor, dRes_INDEX_TN_BCK_BAT_SYOUTEI_S1_e, 3.0f, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_BAT_SYOUTEI_S1_e);
-            actor->m0C48 = 2;
+            actor->mAttackType = 2;
             if (base != 0) tn_playBombReactionSound(actor, 0x488F);
         } else {
             anm_init(actor, dRes_INDEX_TN_BCK_BAT_KERI1_e, 3.0f, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_BAT_KERI1_e);
-            actor->m0C48 = 3;
+            actor->mAttackType = 3;
             if (base != 0) tn_playBombReactionSound(actor, 0x4891);
         }
     }
-    actor->m13FD = 0;
+    actor->mWeponAtStarted = 0;
     actor->mCountDownTimers[2] = static_cast<s16>(8);
-    actor->m0C66 = 1;
-    actor->m0C67 = static_cast<u8>(0);
+    actor->mAttackState = 1;
+    actor->mKickLunge = static_cast<u8>(0);
     actor->mDamageReaction.mMode = 1;
 }
 
 static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
                                f32 one, f32 blend, f32 acceleration) {
     const u32 base = gabi::ea(actor);
-    const s32 type = actor->m0C48;
+    const s32 type = actor->mAttackType;
     u32 body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
     bool decay = true;
     if (type == 3) {
         const f32 frame = static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame);
         if (!(frame < 12.0f || frame > 30.0f)) {
-            const bool jumping = static_cast<s8>(actor->m0C67) != 0;
+            const bool jumping = static_cast<s8>(actor->mKickLunge) != 0;
             actor->speedF = static_cast<f32>(jumping
                 ? REG0_F(10) + 80.0f
                 : REG0_F(9) + 50.0f);
@@ -1267,8 +1267,8 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
     f32 start = 1000.0f;
     f32 end = start;
     u8 attackClass = 0;
-    if (actor->m0C66 > 0) {
-        s32 activeType = actor->m0C48;
+    if (actor->mAttackState > 0) {
+        s32 activeType = actor->mAttackType;
         body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
         if (activeType == 0) {
             const s32 frame = gabi::ftoi(static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame));
@@ -1277,7 +1277,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
             end = 25.0f;
             if (frame == 20 && base != 0 && base + 0x37Cu != 0) {
                 tn_playBombReactionSound(actor, 0x4887);
-                activeType = actor->m0C48;
+                activeType = actor->mAttackType;
                 body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
             }
         } else if (activeType == 1) {
@@ -1286,16 +1286,16 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
             start = zero;
             end = 25.0f;
             if (frame == static_cast<u32>(static_cast<s32>(REG0_S(2)) + 13)) {
-                actor->m0432 = static_cast<u8>(0);
+                actor->mGroundSmokeType = static_cast<u8>(0);
                 const s32 timing = static_cast<s32>(REG0_S(3)) + static_cast<s16>(l_tnHIO.m020) + 14;
-                actor->m0430 = static_cast<u16>(timing);
+                actor->mGroundSmokeTimer = static_cast<u16>(timing);
                 const s32 angle = static_cast<s32>(static_cast<s16>(actor->current.angle.y)) + REG0_S(8) + 0x2000;
-                actor->m042E = static_cast<u16>(angle);
+                actor->mSmokeAngle = static_cast<u16>(angle);
                 body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
             }
             if (gabi::ftoi(static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame)) == 20 && base != 0 && base + 0x37Cu != 0)
                 tn_playBombReactionSound(actor, 0x4887);
-            activeType = actor->m0C48;
+            activeType = actor->mAttackType;
             body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
         }
         if (activeType == 0 || activeType == 4) {
@@ -1320,11 +1320,11 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
     fopAc_ac_c* hit = wepon_hit_check(actor);
     if (hit != nullptr && static_cast<s16>(hit->mProcName) == 0xA8) {
         if (tn_checkPlayerGuard(player) != 0) {
-            const s32 activeType = actor->m0C48;
+            const s32 activeType = actor->mAttackType;
             if (activeType == 0 || activeType == 1) {
                 body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
                 gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mRate = -1.0f;
-                actor->m0C66 = -1;
+                actor->mAttackState = -1;
                 body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
                 tn_abi::morfPlay(gabi::at<mDoExt_McaMorf>(body), &actor->eyePos, 0, 0);
                 anm_init(actor, dRes_INDEX_TN_BCK_AHAJIKI1_e, REG0_F(4) + acceleration, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_AHAJIKI1_e);
@@ -1335,7 +1335,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
     body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
     if (static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame) < blend) {
         const s16 heading = static_cast<s16>(actor->mTargetAngle);
-        actor->mDamageReaction.m4D0 = static_cast<s16>(heading);
+        actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
         cLib_addCalcAngleS2(&actor->current.angle.y, heading, 4, 0x400);
         body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
     }
@@ -1347,7 +1347,7 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
                             bool specialStance, s16 mode, f32 zero, f32 one, f32 acceleration) {
     const u32 base = gabi::ea(actor);
     if (mode == 10) {
-        actor->m0C48 = 5;
+        actor->mAttackType = 5;
         actor->mDamageReaction.mMode = 12;
         if (base != 0 && base + 0x37Cu != 0) tn_playBombReactionSound(actor, 0x4888);
         mode = 12;
@@ -1378,7 +1378,7 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
         cLib_addCalc2(&actor->speedF, mode == 14 ? -speed : speed, one,
                      20.0f);
     } else if (mode == 15 || mode == 16) {
-        actor->m0418 = static_cast<s16>(mode == 15 ? 0x4000 : -0x4000);
+        actor->mSideStepAngle = static_cast<s16>(mode == 15 ? 0x4000 : -0x4000);
         cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m060), one,
                      30.0f);
     } else {
@@ -1399,7 +1399,7 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
 static void tn_finishAttack(tn_class* actor, f32 one, f32 blend) {
     if (static_cast<f32>(actor->mPlayerDistance) < static_cast<f32>(l_tnHIO.m02C)) {
         const s16 limit = get_view_H(actor);
-        const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.m714));
+        const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.mpLookTarget));
         const s16 heading = static_cast<s16>(actor->mTargetAngle);
         if (daTn_player_view_check(actor, gabi::at<cXyz>(target + 0x314u), heading, limit) != 0) {
             const f32 random = cM_rndF(one);
@@ -1426,7 +1426,7 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     const u32 playerBase = gabi::ea(static_cast<fopAc_ac_c*>(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mPlayerInfo[0].mpPlayer));
     fopAc_ac_c* player = gabi::at<fopAc_ac_c>(playerBase);
     const f32 steering = tn_abi::padStickX(0);
-    actor->mDamageReaction.m710 = static_cast<u8>(1);
+    actor->mDamageReaction.mLookMode = static_cast<u8>(1);
     const u8 playerMode = static_cast<u8>(gabi::at<TnPlayer>(playerBase)->mCutType);
     const bool specialStance = playerMode == 8 || playerMode == 9;
     const s16 mode = actor->mDamageReaction.mMode;
@@ -1436,20 +1436,20 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         if (tn_demoAnimationStopped(actor->mpBodyMorf, zero)) {
             const f32 random = cM_rndF(one);
             if (random < 0.5f) {
-                if (actor->m0C34 != 0) {
+                if (actor->mHasWepon != 0) {
                     anm_init(actor, dRes_INDEX_TN_BCK_BAT_JUMP1_e, 3.0f, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_BAT_JUMP1_e);
-                    actor->m0C48 = 4;
+                    actor->mAttackType = 4;
                     if (base != 0 && base + 0x37Cu != 0) tn_playBombReactionSound(actor, 0x488A);
                 } else {
                     anm_init(actor, dRes_INDEX_TN_BCK_BAT_KERI1_e, 3.0f, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_BAT_KERI1_e);
-                    actor->m0C48 = 3;
-                    actor->m0C67 = static_cast<u8>(1);
+                    actor->mAttackType = 3;
+                    actor->mKickLunge = static_cast<u8>(1);
                 }
-                actor->m13FD = 0;
+                actor->mWeponAtStarted = 0;
                 const u32 contact = static_cast<u32>(actor->mDamageReaction.mAcch.m_flags);
                 actor->mCountDownTimers[2] = static_cast<s16>(8);
                 actor->mDamageReaction.mMode = 1;
-                actor->m0C66 = 1;
+                actor->mAttackState = 1;
                 if ((contact & 0x20u) != 0) actor->speedF = static_cast<f32>(zero);
                 break;
             }
@@ -1471,12 +1471,12 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         actor->mDamageReaction.mMode = 21;
         anm_init(actor, dRes_INDEX_TN_BCK_AAT_KAITEN3_e, one, J3DFrameCtrl::EMode_LOOP, one, dRes_INDEX_TN_BAS_AAT_KAITEN3_e);
         yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YAT_KAITEN3_e, one, J3DFrameCtrl::EMode_LOOP, one);
-        actor->m14F4 = static_cast<s16>(1);
+        actor->mCutTurnStep = static_cast<s16>(1);
         [[fallthrough]];
     case 21: {
         actor->speedF = static_cast<f32>(zero);
         const u8 stance = static_cast<u8>(gabi::at<TnPlayer>(playerBase)->mCutType);
-        actor->m14F6 = static_cast<s16>(stance == 9 ? 7 : 3);
+        actor->mCutTurnTimer = static_cast<s16>(stance == 9 ? 7 : 3);
         wepon_hit_check(actor);
         if (!specialStance) {
             actor->mDamageReaction.mMode = 22;
@@ -1490,9 +1490,9 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
             *id = mantleId;
             const u32 mantle = mantleId == 0xFFFFFFFFu ? 0 : tn_abi::actorJudgeAddress(TN_ACTOR_ID_JUDGE, id.get());
             if (mantle != 0) {
-                cLib_addCalc2(&gabi::at<TnMantle>(mantle)->m1BF8, REG0_F(6) + 50.0f,
+                cLib_addCalc2(&gabi::at<TnMantle>(mantle)->mSegmentLen, REG0_F(6) + 50.0f,
                              one, 20.0f);
-                cLib_addCalc2(&gabi::at<TnMantle>(mantle)->m1BFC, REG0_F(7) + 0.9f,
+                cLib_addCalc2(&gabi::at<TnMantle>(mantle)->mSpeedRate, REG0_F(7) + 0.9f,
                              one, 0.2f);
             }
         }
@@ -1569,7 +1569,7 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
             tn_abi::saveOnActor(gabi::at<void>(save + 0x20),
                        static_cast<u16>(actor->setID), static_cast<s8>(actor->home.roomNo));
             fopAcM_delete(actor);
-            if (actor->m0C34 != 0) {
+            if (actor->mHasWepon != 0) {
                 const u32 weapon = findActor(actor->mBokoPcId);
                 if (weapon != 0) fopAcM_delete(gabi::at<fopAc_ac_c>(weapon));
             }
@@ -1606,7 +1606,7 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
         tn_abi::morfCalc(actor->mpBodyMorf.get());
         tn_abi::morfCalc(actor->mpShieldMorf.get());
         moveDetachedParts(actor);
-        actor->m02DD = static_cast<u8>(0);
+        actor->mPartDetachFlags = static_cast<u8>(0);
         if (actor->mEnemyIce.mFreezeTimer == 1) {
             path_check(actor);
             wait_set(actor);
@@ -1616,26 +1616,26 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
     }
 
     // HD runs this block unconditionally; no GC HIO/pad pause gate is inserted.
-    actor->m03D8 = static_cast<u32>(static_cast<u32>(actor->m03D8) + 1);
+    actor->mFrameCount = static_cast<u32>(static_cast<u32>(actor->mFrameCount) + 1);
     for (auto& timer : actor->mCountDownTimers) decrementShort(&timer);
-    for (be<s16>* timer : {&actor->m03EA, &actor->m03FC, &actor->m1402,
-                           &actor->mDamageReaction.m48A, &actor->m03F0, &actor->m03F2})
+    for (be<s16>* timer : {&actor->mWeponRunTimer, &actor->mWeponSearchWait, &actor->mArmorShakeTimer,
+                           &actor->mDamageReaction.mHitStunTimer, &actor->mNoDamageTimer, &actor->mNoGuardTimer})
         decrementShort(timer);
-    if (static_cast<s8>(actor->m140C) != 0) {
+    if (static_cast<s8>(actor->mWeponCarryPending) != 0) {
         const u32 weapon = findActor(actor->mBokoPcId);
         if (weapon != 0) {
-            actor->m140C = static_cast<u8>(0);
+            actor->mWeponCarryPending = static_cast<u8>(0);
             tn_abi::fopAcM_setCarryNow(gabi::at<void>(weapon), 0);
         }
     }
     const f32 zero = 0.0f;
     bool attentionSuppressed;
-    if (actor->m02C1 != 0) {
+    if (actor->mWaitSpawnSwitch != 0) {
         bool released = REG0_S(0) != 0;
         if (!released) {
             const u32 save = dComIfGs_ea();
             released = tn_abi::saveIsSwitch(gabi::at<void>(save + 0x20),
-                static_cast<u8>(actor->m02C1) - 1, static_cast<s8>(actor->current.roomNo)) != 0;
+                static_cast<u8>(actor->mWaitSpawnSwitch) - 1, static_cast<s8>(actor->current.roomNo)) != 0;
         }
         if (!released) {
             actor->attention_info.flags = static_cast<u32>(0);
@@ -1652,8 +1652,8 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
                     const f32 x = -10000.0f;
                     const f32 y = 20000.0f;
                     const f32 z = -21000.0f;
-                    for (cXyz* position : {&gabi::at<TnMantle>(mantle)->m1BE0,
-                                          &gabi::at<TnMantle>(mantle)->m1BEC}) {
+                    for (cXyz* position : {&gabi::at<TnMantle>(mantle)->mShoulderPosR,
+                                          &gabi::at<TnMantle>(mantle)->mShoulderPosL}) {
                         position->x = x;
                         position->y = y;
                         position->z = z;
@@ -1662,14 +1662,14 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
             }
             return PrefixResult::Finished;
         }
-        actor->m02C1 = 0;
-        attentionSuppressed = static_cast<s8>(actor->m14F8) != 0;
-    } else attentionSuppressed = static_cast<s8>(actor->m14F8) != 0;
+        actor->mWaitSpawnSwitch = 0;
+        attentionSuppressed = static_cast<s8>(actor->mDemoMode) != 0;
+    } else attentionSuppressed = static_cast<s8>(actor->mDemoMode) != 0;
     if (!attentionSuppressed) {
         actor->attention_info.flags = static_cast<u32>(4);
         actor->actor_status = static_cast<u32>(actor->actor_status) | 0x20;
     } else actor->attention_info.flags = static_cast<u32>(0);
-    if (static_cast<s16>(actor->m03EE) == 0) {
+    if (static_cast<s16>(actor->mWeponTurnWait) == 0) {
         playBody(actor); playArmor(actor);
         if ((static_cast<u8>(actor->mRemainingEquipmentPieces) & 4) != 0) playShield(actor);
     }
@@ -1685,7 +1685,7 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
     const u32 play = gabi::ea(dComIfGp_get());
     const u32 cameraOwner = tn_abi::dCam_getCamera(gabi::at<void>(play));
     const u32 camera = tn_abi::dCam_getBody(gabi::at<void>(cameraOwner));
-    s8 demo = static_cast<s8>(actor->m14F8);
+    s8 demo = static_cast<s8>(actor->mDemoMode);
     bool setCamera = demo != 0;
     if (demo == 50) {
         if (static_cast<u16>(actor->eventInfo.mCommand) != 2) {
@@ -1695,7 +1695,7 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
         } else {
             tn_abi::cameraStop(gabi::at<void>(camera));
             tn_abi::cameraTrimSize(gabi::at<void>(camera), 1);
-            actor->m14F8 = static_cast<s8>(51);
+            actor->mDemoMode = static_cast<s8>(51);
             const u32 currentPlay = gabi::ea(dComIfGp_get());
             const u32 view = static_cast<u32>(gabi::at<dComIfG_inf_c>(currentPlay)->play.mCameraInfo[0].mpCamera);
             actor->mCameraEyePos.x = gabi::at<TnCameraView>(view)->mEye.x;
@@ -1704,17 +1704,17 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
             actor->mCenterPos.x = gabi::at<TnCameraView>(view)->mCenter.x;
             actor->mCenterPos.y = gabi::at<TnCameraView>(view)->mCenter.y;
             actor->mCenterPos.z = gabi::at<TnCameraView>(view)->mCenter.z;
-            actor->m1514 = static_cast<f32>(55.0f);
-            actor->m14FA = static_cast<s16>(0);
+            actor->mDemoCamFovy = static_cast<f32>(55.0f);
+            actor->mDemoTimer = static_cast<s16>(0);
             demo = 51;
         }
     }
     if (demo == 51) {
-        cLib_addCalc2(&actor->m1514,
+        cLib_addCalc2(&actor->mDemoCamFovy,
             gabi::fadds_ppc(REG0_F(13), 30.0f),
             0.2f,
             gabi::fadds_ppc(REG0_F(14), 0.4f));
-        if (static_cast<s8>(actor->m1520) == 0) {
+        if (static_cast<s8>(actor->mNoDraw) == 0) {
             cLib_addCalc2(&actor->mCenterPos.x,
                 static_cast<f32>(actor->current.pos.x), 0.1f, 100.0f);
             const f32 targetY = gabi::fadds_ppc(
@@ -1725,8 +1725,8 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
             cLib_addCalc2(&actor->mCenterPos.z,
                 static_cast<f32>(actor->current.pos.z), 0.1f, 100.0f);
         }
-        const s16 elapsed = static_cast<s16>(static_cast<s16>(actor->m14FA) + 1);
-        actor->m14FA = static_cast<s16>(elapsed);
+        const s16 elapsed = static_cast<s16>(static_cast<s16>(actor->mDemoTimer) + 1);
+        actor->mDemoTimer = static_cast<s16>(elapsed);
         if (elapsed > 150) {
             tn_abi::cameraTrimSize(gabi::at<void>(camera), 0);
             tn_abi::cameraStart(gabi::at<void>(camera));
@@ -1741,39 +1741,39 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
         *cameraCenter = *&actor->mCenterPos;
         *cameraEye = *&actor->mCameraEyePos;
         tn_abi::cameraSet(gabi::at<void>(camera), cameraCenter.get(), cameraEye.get(),
-            0, static_cast<f32>(actor->m1514));
+            0, static_cast<f32>(actor->mDemoCamFovy));
     }
-    if (static_cast<s16>(actor->m0430) != 0) {
-        const s16 remaining = static_cast<s16>(static_cast<s16>(actor->m0430) - 1);
-        actor->m0430 = static_cast<s16>(remaining);
+    if (static_cast<s16>(actor->mGroundSmokeTimer) != 0) {
+        const s16 remaining = static_cast<s16>(static_cast<s16>(actor->mGroundSmokeTimer) - 1);
+        actor->mGroundSmokeTimer = static_cast<s16>(remaining);
         if (remaining >= static_cast<s16>(l_tnHIO.m020)) {
             smokeOffset->x = 0.0f;
             smokeOffset->y = 0.0f;
-            actor->m0428.x = static_cast<s16>(0); actor->m0428.z = static_cast<s16>(0);
+            actor->mEffectAngle.x = static_cast<s16>(0); actor->mEffectAngle.z = static_cast<s16>(0);
             MtxTrans(static_cast<f32>(actor->current.pos.x), gabi::fadds_ppc(static_cast<f32>(actor->current.pos.y), 7.5f), static_cast<f32>(actor->current.pos.z), 0);
-            const u8 mode = static_cast<u8>(actor->m0432);
+            const u8 mode = static_cast<u8>(actor->mGroundSmokeType);
             if (mode == 0 || mode == 1) {
                 if (mode == 1)
                     tn_abi::cMtx_YrotM(calc_mtx(), static_cast<s16>(actor->current.angle.y));
                 smokeOffset->z = mode == 0
                     ? gabi::fadds_ppc(REG0_F(4), -200.0f)
                     : -55.0f;
-                tn_abi::cMtx_YrotM(calc_mtx(), static_cast<s16>(actor->m042E));
-                MtxPosition(smokeOffset.get(), &actor->m041C);
-                actor->m0428.y = static_cast<s16>(actor->m042E);
+                tn_abi::cMtx_YrotM(calc_mtx(), static_cast<s16>(actor->mSmokeAngle));
+                MtxPosition(smokeOffset.get(), &actor->mSmokePos);
+                actor->mEffectAngle.y = static_cast<s16>(actor->mSmokeAngle);
                 smoke_set_s(actor, gabi::fadds_ppc(
                     (mode == 0 ? REG0_F(15) : REG0_F(20)),
                     (mode == 0 ? 3.0f : 4.0f)));
                 const int increment = mode == 0 ? REG0_S(7) + 2000 : 0x1FA0;
-                actor->m042E = static_cast<s16>(static_cast<s16>(static_cast<s16>(actor->m042E) + increment));
+                actor->mSmokeAngle = static_cast<s16>(static_cast<s16>(static_cast<s16>(actor->mSmokeAngle) + increment));
             }
-        } else actor->m041C.y = gabi::fadds_ppc(static_cast<f32>(actor->mDamageReaction.mSpawnY), 25000.0f);
-        if (static_cast<s16>(actor->m0430) == 0) {
+        } else actor->mSmokePos.y = gabi::fadds_ppc(static_cast<f32>(actor->mDamageReaction.mSpawnY), 25000.0f);
+        if (static_cast<s16>(actor->mGroundSmokeTimer) == 0) {
             tn_abi::smokeEnd(reinterpret_cast<void*>(&actor->mSmokeCb1));
-            actor->m0433 = static_cast<u8>(0);
+            actor->mSmokeCount = static_cast<u8>(0);
         }
     }
-    decrementShort(&actor->m03EE);
+    decrementShort(&actor->mWeponTurnWait);
     actor->mDamageReaction.mpEnemy = actor;
     actor->mDamageReaction.mEnemyType = static_cast<s16>(damagereaction::TYPE_DARKNUT);
 }
@@ -1798,9 +1798,9 @@ static void updateCollisionShapes(tn_class* actor, u32 initialPlayer) {
     tn_abi::setCollision(gabi::at<void>(play + 0x26A4), reinterpret_cast<void*>(&actor->mCoCyl));
     play = gabi::ea(dComIfGp_get());
     tn_abi::setCollisionMass(gabi::at<void>(play + 0x4EF8), reinterpret_cast<void*>(&actor->mCoCyl), 3);
-    *headCenter = *&actor->m1384;
+    *headCenter = *&actor->mHeadPos;
     *bodyCenter = actor->current.pos;
-    if (static_cast<s16>(actor->m03F0) != 0) {
+    if (static_cast<s16>(actor->mNoDamageTimer) != 0) {
         headCenter->y = gabi::fsubs_ppc(headCenter->y, 20000.0f);
         bodyCenter->y = gabi::fsubs_ppc(bodyCenter->y, 20000.0f);
     }
@@ -1830,14 +1830,14 @@ static void updateCollisionShapes(tn_class* actor, u32 initialPlayer) {
     }
     play = gabi::ea(dComIfGp_get());
     tn_abi::setCollision(gabi::at<void>(play + 0x26A4), reinterpret_cast<void*>(&actor->mHeadSph));
-    if (static_cast<s16>(actor->m041A) != 0) {
-        const s16 remaining = static_cast<s16>(static_cast<s16>(actor->m041A) - 1);
-        actor->m041A = static_cast<s16>(remaining);
+    if (static_cast<s16>(actor->mTubaEffectTimer) != 0) {
+        const s16 remaining = static_cast<s16>(static_cast<s16>(actor->mTubaEffectTimer) - 1);
+        actor->mTubaEffectTimer = static_cast<s16>(remaining);
         if (remaining == 0) {
-            actor->m0428.y = static_cast<s16>(actor->current.angle.y);
+            actor->mEffectAngle.y = static_cast<s16>(actor->current.angle.y);
             play = gabi::ea(dComIfGp_get());
             tn_abi::particleSet( gabi::at<void>(gabi::ea(static_cast<dPa_control_c*>(gabi::at<dComIfG_inf_c>(play)->play.mParticle))),
-                0, 0x0E, &actor->m1384, &actor->m0428,
+                0, 0x0E, &actor->mHeadPos, &actor->mEffectAngle,
                 nullptr, 0xFF, nullptr, -1, nullptr, nullptr, 0);
         }
     }
@@ -1846,7 +1846,7 @@ static void updateCollisionShapes(tn_class* actor, u32 initialPlayer) {
 static void updateGroundTilt(tn_class* actor) {
     if ((static_cast<u32>(actor->mDamageReaction.mAcch.m_flags) & 0x20) == 0) return;
     s16 pitch = 0x7FFF, roll = 0x7FFF;
-    if (static_cast<s16>(actor->mDamageReaction.m480) == 0) pitch = roll = 0;
+    if (static_cast<s16>(actor->mDamageReaction.mFallPitch) == 0) pitch = roll = 0;
     else {
         gabi::Local<tn_groundcheck> check;
         gabi::Local<u8[16]> outgoingLinkage;
@@ -1866,7 +1866,7 @@ static void updateGroundTilt(tn_class* actor) {
         const f32 invalidHeight = -1000000000.0f;
         check->mPosition.x = x;
         check->mPosition.y = gabi::fadds_ppc(static_cast<f32>(actor->current.pos.y),
-            gabi::fsubs_ppc(sampleOffset, static_cast<f32>(actor->mDamageReaction.m44C.y)));
+            gabi::fsubs_ppc(sampleOffset, static_cast<f32>(actor->mDamageReaction.mPivot.y)));
         check->mPosition.z = z;
         u32 play = gabi::ea(dComIfGp_get());
         const f32 groundY = tn_abi::GroundCross(gabi::at<void>(play + 0x12A0), check.get());
@@ -1897,8 +1897,8 @@ static void updateGroundTilt(tn_class* actor) {
         check->mGroupPassVtable = 0x100403C0;
         tn_abi::cBgS_Chk_destroy(check.get(), 0);
     }
-    if (pitch != 0x7FFF) cLib_addCalcAngleS2(reinterpret_cast<be<s16>*>(&actor->mDamageReaction.m48C), pitch, 1, 0x400);
-    if (roll != 0x7FFF) cLib_addCalcAngleS2(&actor->mDamageReaction.m48C.z, roll, 1, 0x400);
+    if (pitch != 0x7FFF) cLib_addCalcAngleS2(reinterpret_cast<be<s16>*>(&actor->mDamageReaction.mSlopeTilt), pitch, 1, 0x400);
+    if (roll != 0x7FFF) cLib_addCalcAngleS2(&actor->mDamageReaction.mSlopeTilt.z, roll, 1, 0x400);
 }
 
 // Mark joint matrices current, then perform the original guest matrix copy.
@@ -1912,7 +1912,7 @@ static void copyBodyJointToCalc(tn_class* actor, u32 matrixOffset) {
         calc_mtx());
 }
 static void updateHeldWeapon(tn_class* actor) {
-    if (static_cast<u32>(actor->m0C34) == 0) return;
+    if (static_cast<u32>(actor->mHasWepon) == 0) return;
     gabi::Local<tn_linecheck> check;
     gabi::Local<cXyz> origin;
     gabi::Local<u8[16]> outgoingLinkage;
@@ -1928,12 +1928,12 @@ static void updateHeldWeapon(tn_class* actor) {
             const u32 weaponModel = gabi::ea(static_cast<J3DModel*>(gabi::at<TnBoko>(weapon)->mpModel));
             if (weaponModel != 0) copyBaseMatrix(gabi::ea(calc_mtx()), weaponModel + 0xC8);
         } else tn_abi::fopAcM_setCarryNow(gabi::at<void>(weapon), 0);
-    } else if (static_cast<s8>(actor->m140C) == 0) actor->m0C34 = static_cast<u32>(0);
-    if (static_cast<u32>(actor->m0C38) == 0) return;
+    } else if (static_cast<s8>(actor->mWeponCarryPending) == 0) actor->mHasWepon = static_cast<u32>(0);
+    if (static_cast<u32>(actor->mWeponDropMode) == 0) return;
     weapon = findActor(static_cast<u32>(actor->mBokoPcId));
     if (weapon != 0) {
         tn_abi::cancelCarry(gabi::at<void>(weapon));
-        if (static_cast<u32>(actor->m0C38) != 2) {
+        if (static_cast<u32>(actor->mWeponDropMode) != 2) {
             const f32 spin = cM_rndFX(2000.0f);
             gabi::at<TnBoko>(weapon)->m2C2 = static_cast<s16>(gabi::ftoi(spin));
             const s32 baseYaw = static_cast<s16>(actor->shape_angle.y) + 0x8000;
@@ -1971,14 +1971,14 @@ static void updateHeldWeapon(tn_class* actor) {
         check->mLineVtable = 0x100403B0;
         cBgS_LinChk_dt(check.get(), 0);
     }
-    actor->m0C38 = static_cast<u32>(0); actor->m0C34 = static_cast<u32>(0);
+    actor->mWeponDropMode = static_cast<u32>(0); actor->mHasWepon = static_cast<u32>(0);
 }
 
 static void finishNormalEffects(tn_class* actor) {
     const u32 a = gabi::ea(actor);
     moveDetachedParts(actor);
-    actor->m02DD = static_cast<u8>(0);
-    if (static_cast<s16>(actor->m14F4) != 0) {
+    actor->mPartDetachFlags = static_cast<u8>(0);
+    if (static_cast<s16>(actor->mCutTurnStep) != 0) {
         gabi::Local<cXyz> tipOffset;
         gabi::Local<cXyz> worldTip;
         gabi::Local<cXyz> relativeTip;
@@ -1992,7 +1992,7 @@ static void finishNormalEffects(tn_class* actor) {
         for (int i = 0; i < 10; ++i) {
             const s16 yaw = static_cast<s16>(i * (REG0_S(2) - 0x320));
             tn_abi::cMtx_YrotS(calc_mtx(), yaw);
-            cXyz* sample = &actor->m147C[i];
+            cXyz* sample = &actor->mCutTurnPoints[i];
             MtxPosition(tipOffset.get(), sample);
             tn_VECAdd(sample, &actor->current.pos, sample);
         }
@@ -2019,12 +2019,12 @@ static void finishNormalEffects(tn_class* actor) {
         }
         for (int i = 0; i < 3; ++i) {
             const u32 callback = a + 0x159C + 0x10*i;
-            if (static_cast<s16>(actor->m14F6) == 0) {
+            if (static_cast<s16>(actor->mCutTurnTimer) == 0) {
                 tn_abi::cutTurnEnd(gabi::at<void>(callback));
                 continue;
             }
-            if (static_cast<s16>(actor->m14F4) == 1) {
-                const bool late = static_cast<s16>(actor->m14F6) >= 5;
+            if (static_cast<s16>(actor->mCutTurnStep) == 1) {
+                const bool late = static_cast<s16>(actor->mCutTurnTimer) >= 5;
                 const u32 primary = late ? (i == 1 ? 0x101D2458 : 0x101D2454)
                                          : (i == 1 ? 0x101D244C : 0x101D2448);
                 const u32 environment = late ? 0x101D245C : 0x101D2450;
@@ -2037,13 +2037,13 @@ static void finishNormalEffects(tn_class* actor) {
                     gabi::at<void>(callback), room, gabi::at<void>(primary),
                     gabi::at<void>(environment), 0);
                 if (emitter != 0) gabi::at<TnEmitterColors>(emitter)->mGlobalParticleWidthScale = gabi::fadds_ppc(REG0_F(17), 1.5f);
-                actor->m14F4 = static_cast<s16>(static_cast<s16>(static_cast<s16>(actor->m14F4) + 1));
+                actor->mCutTurnStep = static_cast<s16>(static_cast<s16>(static_cast<s16>(actor->mCutTurnStep) + 1));
             }
-            gabi::at<TnCutTurnCallback>(callback)->mpPoints = &actor->m147C[0];
+            gabi::at<TnCutTurnCallback>(callback)->mpPoints = &actor->mCutTurnPoints[0];
             gabi::at<TnCutTurnCallback>(callback)->mCount = 10;
         }
-        if (static_cast<s16>(actor->m14F6) == 0) actor->m14F4 = static_cast<s16>(0);
-        else decrementShort(&actor->m14F6);
+        if (static_cast<s16>(actor->mCutTurnTimer) == 0) actor->mCutTurnStep = static_cast<s16>(0);
+        else decrementShort(&actor->mCutTurnTimer);
     }
     const u32 environment = tn_abi::environmentLight();
     tn_abi::settingTevStruct(gabi::at<void>(environment), 0, &actor->current.pos, &actor->tevStr);
@@ -2055,19 +2055,19 @@ static void updateDamageAnimation(tn_class* actor, u32 damagePower) {
     actor->shape_angle.z = actor->current.angle.z;
     const u32 reaction = tn_abi::damage_reaction(reinterpret_cast<void*>(&actor->mDamageReaction));
     if (reaction != 0) {
-        actor->m0430 = static_cast<s16>(1);
-        actor->m1408 = static_cast<u32>(0xFFFFFFFFu);
+        actor->mGroundSmokeTimer = static_cast<s16>(1);
+        actor->mLookTargetId = static_cast<u32>(0xFFFFFFFFu);
         switch (reaction) {
         case 1:
             anm_init(actor, dRes_INDEX_TN_BCK_BDOWN_A1_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
-            if (static_cast<u32>(actor->m0C34) != 0) {
+            if (static_cast<u32>(actor->mHasWepon) != 0) {
                 bool drop = static_cast<s8>(actor->health) <= 0 || damagePower >= 4;
                 if (!drop) {
                     const f32 random = cM_rndF(1.0f);
                     // Native bge tests !CR-less; unordered skips the drop branch.
                     drop = random < 0.5f;
                 }
-                if (drop) actor->m0C38 = static_cast<u32>(1);
+                if (drop) actor->mWeponDropMode = static_cast<u32>(1);
             }
             actor->mDamageReaction.mAction = ACTION_JYUNKAI;
             break;
@@ -2080,7 +2080,7 @@ static void updateDamageAnimation(tn_class* actor, u32 damagePower) {
                 actor->mDamageReaction.mAction = ACTION_FIGHT_RUN; actor->mDamageReaction.mMode = static_cast<s16>(0);
                 actor->mCountDownTimers[1] = static_cast<s16>(30);
             }
-            actor->m041A = static_cast<s16>(5); actor->m0428.x = static_cast<s16>(-0x4000);
+            actor->mTubaEffectTimer = static_cast<s16>(5); actor->mEffectAngle.x = static_cast<s16>(-0x4000);
             break;
         case 10:
             wait_set(actor);
@@ -2088,18 +2088,18 @@ static void updateDamageAnimation(tn_class* actor, u32 damagePower) {
             path_check(actor);
             break;
         case 20:
-            actor->m041A = static_cast<s16>(1); actor->m0428.x = static_cast<s16>(-0x4000);
-            actor->m0430 = static_cast<s16>(static_cast<s16>(static_cast<s16>(l_tnHIO.m020) + 16));
-            actor->m0432 = static_cast<u8>(1);
-            actor->mDamageReaction.m4C8[2] = static_cast<s16>(l_tnHIO.m080);
+            actor->mTubaEffectTimer = static_cast<s16>(1); actor->mEffectAngle.x = static_cast<s16>(-0x4000);
+            actor->mGroundSmokeTimer = static_cast<s16>(static_cast<s16>(static_cast<s16>(l_tnHIO.m020) + 16));
+            actor->mGroundSmokeType = static_cast<u8>(1);
+            actor->mDamageReaction.mDownTimers[2] = static_cast<s16>(l_tnHIO.m080);
             break;
         case 21:
-            actor->m041A = static_cast<s16>(1); actor->m0428.x = static_cast<s16>(0);
-            actor->mDamageReaction.m4C8[2] = static_cast<s16>(l_tnHIO.m080);
+            actor->mTubaEffectTimer = static_cast<s16>(1); actor->mEffectAngle.x = static_cast<s16>(0);
+            actor->mDamageReaction.mDownTimers[2] = static_cast<s16>(l_tnHIO.m080);
             break;
         case 30:
             anm_init(actor, dRes_INDEX_TN_BCK_BDOWN_U1_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
-            if (static_cast<u32>(actor->m0C34) != 0) actor->m0C38 = static_cast<u32>(1);
+            if (static_cast<u32>(actor->mHasWepon) != 0) actor->mWeponDropMode = static_cast<u32>(1);
             actor->mDamageReaction.mAction = ACTION_JYUNKAI;
             break;
         default: break;
@@ -2142,13 +2142,13 @@ static DamageSetup prepareDamage(tn_class* actor, DamageInfo* info) {
     gabi::Local<cXyz> origin;
     gabi::Local<cXyz> hiddenCenter;
     gabi::Local<u8[16]> outgoingLinkage;
-    if (static_cast<s8>(actor->m1444) != 0) {
-        actor->m1444 = static_cast<s8>(static_cast<s8>(static_cast<s8>(actor->m1444) - 1));
+    if (static_cast<s8>(actor->mDefenceSphOn) != 0) {
+        actor->mDefenceSphOn = static_cast<s8>(static_cast<s8>(static_cast<s8>(actor->mDefenceSphOn) - 1));
         copyBodyJointToCalc(actor, 0x2D0);
         origin->x = origin->y = origin->z = 0.0f;
-        MtxPosition(origin.get(), &actor->m13E4);
+        MtxPosition(origin.get(), &actor->mDefenceSphPos);
         tn_abi::sphereSetRadius(reinterpret_cast<void*>(&actor->mDefenceSph.mSph), 70.0f);
-        tn_abi::sphereSetCenter(reinterpret_cast<void*>(&actor->mDefenceSph.mSph), &actor->m13E4);
+        tn_abi::sphereSetCenter(reinterpret_cast<void*>(&actor->mDefenceSph.mSph), &actor->mDefenceSphPos);
     } else {
         *hiddenCenter = actor->current.pos;
         hiddenCenter->y = -20000.0f;
@@ -2162,15 +2162,15 @@ static DamageSetup prepareDamage(tn_class* actor, DamageInfo* info) {
         tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(actor->shape_angle.y));
         origin->x = origin->y = 0.0f;
         origin->z = -10.0f;
-        MtxPosition(origin.get(), &actor->mDamageReaction.m42C);
-        actor->mDamageReaction.m4D4 = static_cast<f32>(-10.0f);
+        MtxPosition(origin.get(), &actor->mDamageReaction.mHitVec);
+        actor->mDamageReaction.mPushback = static_cast<f32>(-10.0f);
         state.defenceHit = true;
         return state;
     }
-    if (static_cast<s16>(actor->m03F0) != 0) return state;
+    if (static_cast<s16>(actor->mNoDamageTimer) != 0) return state;
     if (tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mHeadSph)) == 0 &&
         tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mTgCyl)) == 0) return state;
-    actor->m03F0 = static_cast<s16>(static_cast<s16>(REG0_S(7) + 5));
+    actor->mNoDamageTimer = static_cast<s16>(static_cast<s16>(REG0_S(7) + 5));
     info->hitObject = 0;
     if (tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mHeadSph)) != 0) {
         state.hitPart = 1;
@@ -2220,10 +2220,10 @@ static bool applyIceOrShatter(tn_class* actor, u32 hitObject, int hitPart) {
         }
     }
     tn_abi::enemy_fire_remove(reinterpret_cast<void*>(&actor->mEnemyFire));
-    actor->m0430 = static_cast<s16>(0);
+    actor->mGroundSmokeTimer = static_cast<s16>(0);
     for (u32 offset : {0x159Cu, 0x15ACu, 0x15BCu}) tn_abi::cutTurnEnd(gabi::at<void>(a + offset));
     for (u32 offset : {0x550u, 0x570u, 0xD38u}) tn_abi::smokeEnd(gabi::at<void>(a + offset));
-    if (static_cast<u32>(actor->m0C34) != 0) actor->m0C38 = static_cast<u32>(2);
+    if (static_cast<u32>(actor->mHasWepon) != 0) actor->mWeponDropMode = static_cast<u32>(2);
     deleteMantle(actor);
     return true;
 }
@@ -2243,20 +2243,20 @@ static int applyOrdinaryDamage(tn_class* actor, DamageInfo* info, const DamageSe
     const s8 oldHealth = static_cast<s8>(actor->health);
     tn_abi::at_power_check(info);
     if (info->kind == 10 || info->kind == 14) actor->health = static_cast<s8>(20);
-    actor->stealItemBitNo = static_cast<s8>(actor->m1400);
+    actor->stealItemBitNo = static_cast<s8>(actor->mItemStolen);
     info->attackActor = tn_abi::cc_at_check(actor, info);
     if (info->kind == 10 || info->kind == 14) {
         actor->health = static_cast<s8>(oldHealth);
-        if (info->kind == 14 && static_cast<s8>(actor->m1400) == 0) actor->m1400 = static_cast<s8>(1);
+        if (info->kind == 14 && static_cast<s8>(actor->mItemStolen) == 0) actor->mItemStolen = static_cast<s8>(1);
     }
     gabi::Local<cXyz> soundPosition;
     gabi::Local<u8[16]> outgoingLinkage;
     *soundPosition = actor->current.pos;
-    actor->m03F2 = static_cast<s16>(25);
+    actor->mNoGuardTimer = static_cast<s16>(25);
     tn_abi::dKy_Sound_set(soundPosition.get(), 100, static_cast<u32>(actor->mBsPcId), 5);
-    if (info->kind == 12) actor->m03F0 = static_cast<s16>(10);
-    actor->m141C = static_cast<u16>(static_cast<u16>(actor->m141C) | static_cast<u16>(info->flags));
-    actor->m1434 = static_cast<s8>(info->kind == 10
+    if (info->kind == 12) actor->mNoDamageTimer = static_cast<s16>(10);
+    actor->mHitTypeFlags = static_cast<u16>(static_cast<u16>(actor->mHitTypeFlags) | static_cast<u16>(info->flags));
+    actor->mMahiDelay = static_cast<s8>(info->kind == 10
         ? static_cast<s8>(REG0_S(3) + 8) : 0);
     if (info->kind == 1) {
         if (static_cast<u8>(gabi::at<TnPlayer>(state.player)->mCutType) == 5) return 2;
@@ -2270,35 +2270,35 @@ static int applyOrdinaryDamage(tn_class* actor, DamageInfo* info, const DamageSe
 static void updateKnockback(tn_class* actor, DamageInfo* info, int reaction) {
     if ((reaction >= 1 && reaction <= 5) || reaction == 7) {
         const u32 flag = reaction == 2 || reaction == 3 ? 0x40 : reaction == 5 ? 0x20 : 0x10;
-        actor->mDamageReaction.m424 = static_cast<u32>(static_cast<u32>(actor->mDamageReaction.m424) | flag);
+        actor->mDamageReaction.mHitFlags = static_cast<u32>(static_cast<u32>(actor->mDamageReaction.mHitFlags) | flag);
         if (reaction == 2) {
             tn_abi::cMtx_YrotS(calc_mtx(),
                 static_cast<s16>(static_cast<s16>(actor->current.angle.y) + 0x8000));
-            actor->mDamageReaction.m428 = static_cast<f32>(26.0f);
+            actor->mDamageReaction.mKnockbackPower = static_cast<f32>(26.0f);
         } else {
-            actor->mDamageReaction.m428 = static_cast<f32>((reaction == 4 || reaction == 5 ? 23.0f : 26.0f));
+            actor->mDamageReaction.mKnockbackPower = static_cast<f32>((reaction == 4 || reaction == 5 ? 23.0f : 26.0f));
             if (reaction != 7) tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(actor->mTargetAngle));
         }
         if (reaction == 5) {
             anm_init(actor, dRes_INDEX_TN_BCK_BDOWN_A1_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
-            actor->mDamageReaction.m48A = static_cast<s16>(10); actor->mDamageReaction.m70E = static_cast<u8>(7);
-            actor->mDamageReaction.m474 = static_cast<f32>(5000.0f);
-            if (static_cast<s16>(actor->m041A) == 0) {
-                actor->m041A = static_cast<s16>(3); actor->m0428.x = static_cast<s16>(0);
+            actor->mDamageReaction.mHitStunTimer = static_cast<s16>(10); actor->mDamageReaction.mShakeJntMask = static_cast<u8>(7);
+            actor->mDamageReaction.mShakeAmplitude = static_cast<f32>(5000.0f);
+            if (static_cast<s16>(actor->mTubaEffectTimer) == 0) {
+                actor->mTubaEffectTimer = static_cast<s16>(3); actor->mEffectAngle.x = static_cast<s16>(0);
             }
         }
     }
-    if (static_cast<u32>(actor->mDamageReaction.m424) != 0) {
+    if (static_cast<u32>(actor->mDamageReaction.mHitFlags) != 0) {
         gabi::Local<cXyz> offset;
         gabi::Local<u8[16]> outgoingLinkage;
         offset->x = offset->y = 0.0f;
         offset->z = -10.0f;
-        MtxPosition(offset.get(), &actor->mDamageReaction.m42C);
-        if (static_cast<f32>(actor->mDamageReaction.m428) < 25.0f) {
-            actor->mDamageReaction.m4D4 = static_cast<f32>(-static_cast<f32>(l_tnHIO.m0D0));
+        MtxPosition(offset.get(), &actor->mDamageReaction.mHitVec);
+        if (static_cast<f32>(actor->mDamageReaction.mKnockbackPower) < 25.0f) {
+            actor->mDamageReaction.mPushback = static_cast<f32>(-static_cast<f32>(l_tnHIO.m0D0));
         } else {
             const f32 random = cM_rndF(10.0f);
-            actor->mDamageReaction.m428 = static_cast<f32>(gabi::fadds_ppc(random, 70.0f));
+            actor->mDamageReaction.mKnockbackPower = static_cast<f32>(gabi::fadds_ppc(random, 70.0f));
         }
     }
     if (reaction == 0) return;
@@ -2306,7 +2306,7 @@ static void updateKnockback(tn_class* actor, DamageInfo* info, int reaction) {
         monsterSound(actor, 0x488E);
         if ((static_cast<u32>(actor->actor_status) & 0x04000000) != 0) {
             if (static_cast<s8>(s_check) == 0) {
-                actor->m14F8 = static_cast<s8>(50); tn_abi::mDoAud_subBgmStop();
+                actor->mDemoMode = static_cast<s8>(50); tn_abi::mDoAud_subBgmStop();
             } else s_check = static_cast<s8>(0);
         }
     } else monsterSound(actor, 0x488D);
@@ -2342,8 +2342,8 @@ static bool applyArmoredHit(tn_class* actor, DamageInfo* info, const DamageSetup
     if (state.hitPart == 1) {
         tn_abi::at_power_check(info); tn_abi::mDoAud_onEnemyDamage();
         tn_abi::mDoAud_bgmHitSound(gabi::at<void>(static_cast<u32>(info->soundHandle)));
-        actor->m02DD = static_cast<u8>(static_cast<u8>(actor->m02DD) | 2);
-        actor->mDamageReaction.mAction = ACTION_D_SIT; actor->m03F0 = static_cast<s16>(20);
+        actor->mPartDetachFlags = static_cast<u8>(static_cast<u8>(actor->mPartDetachFlags) | 2);
+        actor->mDamageReaction.mAction = ACTION_D_SIT; actor->mNoDamageTimer = static_cast<s16>(20);
         actor->actor_status = static_cast<u32>(static_cast<u32>(actor->actor_status) & ~0x100u);
         actor->mDamageReaction.mMode = static_cast<s16>(10);
         l_pauseTimer = static_cast<u8>(REG0_S(7) + 6);
@@ -2362,13 +2362,13 @@ static bool applyArmoredHit(tn_class* actor, DamageInfo* info, const DamageSetup
     bool mantleBusy = false;
     if (static_cast<u32>(actor->mMantPcId) != 0xFFFF) {
         const u32 mantle = findActor(static_cast<u32>(actor->mMantPcId));
-        mantleBusy = mantle != 0 && (static_cast<s8>(gabi::at<TnMantle>(mantle)->m2834) != 0 || static_cast<s16>(gabi::at<TnMantle>(mantle)->m2836) != 0);
+        mantleBusy = mantle != 0 && (static_cast<s8>(gabi::at<TnMantle>(mantle)->mMeshHitOn) != 0 || static_cast<s16>(gabi::at<TnMantle>(mantle)->mHitWait) != 0);
     }
     if (!mantleBusy && yawMagnitude > 0x4000) {
         actor->mDamageReaction.mAction = ACTION_D_SIT;
-        actor->m02DD = static_cast<u8>(static_cast<u8>(actor->m02DD) | 1);
+        actor->mPartDetachFlags = static_cast<u8>(static_cast<u8>(actor->mPartDetachFlags) | 1);
         actor->actor_status = static_cast<u32>(static_cast<u32>(actor->actor_status) & ~0x100u);
-        actor->mDamageReaction.mMode = static_cast<s16>(0); actor->m03F0 = static_cast<s16>(20);
+        actor->mDamageReaction.mMode = static_cast<s16>(0); actor->mNoDamageTimer = static_cast<s16>(20);
         l_pauseTimer = static_cast<u8>(REG0_S(7) + 6);
         tn_abi::at_power_check(info); tn_abi::mDoAud_onEnemyDamage();
         tn_abi::mDoAud_bgmHitSound(gabi::at<void>(static_cast<u32>(info->soundHandle)));
@@ -2379,13 +2379,13 @@ static bool applyArmoredHit(tn_class* actor, DamageInfo* info, const DamageSetup
     }
     tn_abi::def_se_set(actor, gabi::at<void>(static_cast<u32>(info->hitObject)), 0x40);
     impactParticle(actor, 0x0D, rotation.get(), scale.get());
-    actor->m1402 = static_cast<s16>(15); tn_abi::at_power_check(info);
+    actor->mArmorShakeTimer = static_cast<s16>(15); tn_abi::at_power_check(info);
     const s8 health = static_cast<s8>(static_cast<u8>(actor->health) - info->power);
     actor->health = static_cast<s8>(health);
     if (health <= 0) {
         actor->mDamageReaction.mAction = ACTION_D_SIT; actor->mDamageReaction.mMode = static_cast<s16>(10);
         actor->mRemainingEquipmentPieces = static_cast<u8>(static_cast<u8>(actor->mRemainingEquipmentPieces) & ~1u);
-        actor->m03F0 = static_cast<s16>(20);
+        actor->mNoDamageTimer = static_cast<s16>(20);
         actor->actor_status = static_cast<u32>(static_cast<u32>(actor->actor_status) | 0x200000);
         l_pauseTimer = static_cast<u8>(REG0_S(7) + 6);
         actor->mParts[0].m08 = -1;
@@ -2401,7 +2401,7 @@ static bool applyArmoredHit(tn_class* actor, DamageInfo* info, const DamageSetup
 /* 024B91E4 */
 void anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f32 speed, int soundFileIdx) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (i_this->m03EC != 0)
+    if (i_this->mAnmLock != 0)
         return;
     J3DAnmTransform* animation =
         static_cast<J3DAnmTransform*>(dComIfG_getObjectRes("Tn", bckFileIdx, TN_SAFESTRING_VTABLE));
@@ -2416,7 +2416,7 @@ void anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f32 spee
 /* 024B931C */
 void tate_anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f32 speed) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (i_this->m03EC != 0)
+    if (i_this->mAnmLock != 0)
         return;
     J3DAnmTransform* animation =
         static_cast<J3DAnmTransform*>(dComIfG_getObjectRes("Tn", bckFileIdx, TN_SAFESTRING_VTABLE));
@@ -2427,7 +2427,7 @@ void tate_anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f32
 /* 024B93E8 */
 void yoroi_anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f32 speed) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (i_this->m03EC != 0)
+    if (i_this->mAnmLock != 0)
         return;
     if ((static_cast<u8>(i_this->mRemainingEquipmentPieces) & EQUIPMENT_PIECE_BODY_ARMOR) == 0)
         return;
@@ -2442,9 +2442,9 @@ void smoke_set_s(tn_class* i_this, f32 scale) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     gabi::Local<tn_linecheck> check;
     tn_constructLineCheck(check.get());
-    const f32 x = i_this->m041C.x;
-    const f32 z = i_this->m041C.z;
-    const f32 y = i_this->m041C.y;
+    const f32 x = i_this->mSmokePos.x;
+    const f32 z = i_this->mSmokePos.z;
+    const f32 y = i_this->mSmokePos.y;
     const f32 height = 100.0f;
     gabi::Local<cXyz> startpoint;
     gabi::Local<cXyz> endpoint;
@@ -2462,28 +2462,28 @@ void smoke_set_s(tn_class* i_this, f32 scale) {
         const f32 hitY = check->mIntersection.y;
         const f32 hitZ = check->mIntersection.z;
         endpoint->x = hitX;
-        i_this->m041C.y = hitY;
+        i_this->mSmokePos.y = hitY;
         endpoint->z = hitZ;
         endpoint->y = hitY;
         dComIfG_inf_c* refreshedPlay = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
         groundType =
             tn_GetAttributeCode(&refreshedPlay->play.mBgS, gabi::at<u8>(gabi::ea(check.get()) + 0x14u));
     } else {
-        const f32 smokeY = i_this->m041C.y;
+        const f32 smokeY = i_this->mSmokePos.y;
         const f32 fall = 20000.0f;
-        i_this->m041C.y = smokeY - fall;
+        i_this->mSmokePos.y = smokeY - fall;
     }
 
-    const u8 oldCounter = i_this->m0433;
+    const u8 oldCounter = i_this->mSmokeCount;
     if (oldCounter == 0 || groundType == 4) {
-        i_this->m0433 = static_cast<u8>(static_cast<u32>(oldCounter) + 1u);
+        i_this->mSmokeCount = static_cast<u8>(static_cast<u32>(oldCounter) + 1u);
         if (groundType < 4 || groundType == 11) {
             dPa_smokeEcallBack_end(reinterpret_cast<dPa_smokeEcallBack*>(&i_this->mSmokeCb1));
             const s8 room = i_this->current.roomNo;
             const u8 alpha = static_cast<u8>(l_tnHIO.m01E);
             dPa_control_c* particle = dComIfGp_getParticle();
             JPABaseEmitter* emitter = dPa_control_set(
-                particle, 2, 0x2022, &i_this->m041C, &i_this->m0428, nullptr, alpha,
+                particle, 2, 0x2022, &i_this->mSmokePos, &i_this->mEffectAngle, nullptr, alpha,
                 reinterpret_cast<dPa_levelEcallBack*>(&i_this->mSmokeCb1), room, nullptr, nullptr, nullptr);
             if (emitter != nullptr) {
                 reinterpret_cast<DamageEmitter*>(emitter)->mRate = scale;
@@ -2498,7 +2498,7 @@ void smoke_set_s(tn_class* i_this, f32 scale) {
                 reinterpret_cast<DamageEmitter*>(emitter)->mGlobalParticleScale.z = particleScale;
             }
         } else if (groundType == 4) {
-            JPABaseEmitter* emitter = dComIfGp_particle_set(0x24, &i_this->m041C, &i_this->m0428);
+            JPABaseEmitter* emitter = dComIfGp_particle_set(0x24, &i_this->mSmokePos, &i_this->mEffectAngle);
             if (emitter != nullptr) {
                 const f32 waterScale = scale * 0.5f;
                 emitter->mMaxFrame = 3;
@@ -2580,10 +2580,10 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         const f32 headingX = static_cast<f32>(forwardPoint->x) - eyeX;
         const f32 headingZ = static_cast<f32>(forwardPoint->z) - eyeZ;
         const s16 heading = cM_atan2s(headingX, headingZ);
-        i_this->m0414 = heading;
+        i_this->mHeadAngleY = heading;
         offset->x = 20.75f;
         offset->z = 10.0f;
-        MtxPosition(offset.get(), &i_this->m1384);
+        MtxPosition(offset.get(), &i_this->mHeadPos);
         offset->y = -45.0f;
     } else {
         if (positionIndex >= 100)
@@ -2644,15 +2644,15 @@ BOOL nodeCallBack_P(J3DNode* node, int calcTiming) {
     if (positionIndex == 17) {
         offset->x = 17.5f;
         offset->y = -8.75f;
-        MtxPosition(offset.get(), &i_this->m13A8);
+        MtxPosition(offset.get(), &i_this->mLeftArmPos);
     } else if (positionIndex == 16) {
-        MtxPosition(offset.get(), &i_this->m13B4);
+        MtxPosition(offset.get(), &i_this->mRightArmPos);
     } else if (positionIndex == 20) {
-        MtxPosition(offset.get(), &i_this->m0C3C);
+        MtxPosition(offset.get(), &i_this->mRightItemPos);
         offset->x = -50.0f;
-        MtxPosition(offset.get(), &i_this->m139C);
+        MtxPosition(offset.get(), &i_this->mRightItemBackPos);
         offset->x = 165.0f;
-        MtxPosition(offset.get(), &i_this->m1390);
+        MtxPosition(offset.get(), &i_this->mRightItemFrontPos);
     } else if (static_cast<u32>(static_cast<s32>(positionIndex)) >= 21u) {
         JUT_ASSERT_fail("d_a_tn.cpp", 0x420, "no >= 0 && no < 20+1");
     }
@@ -2765,10 +2765,10 @@ void part_draw(tn_class* i_this, int frozen) {
 /* 024BA238 */
 BOOL daTn_Draw(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    const s8 drawPaused = i_this->m1520;
+    const s8 drawPaused = i_this->mNoDraw;
     mDoExt_McaMorf* body = i_this->mpBodyMorf;
     J3DModel* model = body->getModel();
-    if (drawPaused != 0 || i_this->m02C1 != 0)
+    if (drawPaused != 0 || i_this->mWaitSpawnSwitch != 0)
         return 1;
     if (i_this->mEnemyIce.mFreezeTimer > 20) {
         tn_iceEntryDL(body, -1, nullptr);
@@ -2813,7 +2813,7 @@ BOOL daTn_Draw(tn_class* i_this) {
     J3DShape* shape = gabi::at<J3DMaterial>(material)->mShape;
     bool hidden = debugHide != 0;
     if (!hidden)
-        hidden = i_this->m1400 != 0;
+        hidden = i_this->mItemStolen != 0;
     shape->mVisible = hidden ? 0 : 1;
     body = i_this->mpBodyMorf;
     body->entryDL();
@@ -2961,7 +2961,7 @@ void* s_w_sub(fopAc_ac_c* i_this, void* context) {
 /* 024BAFAC */
 BOOL search_wepon(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (i_this->m03FC != 0)
+    if (i_this->mWeponSearchWait != 0)
         return 0;
     target_info_count = 0;
     for (u32 i = 0; i < 10; ++i)
@@ -2992,7 +2992,7 @@ BOOL search_wepon(tn_class* i_this) {
             const f32 height = (candidate->current.pos.y + radiusStep) - i_this->eyePos.y;
             if (!(std::fabs(height) > l_tnHIO.m038)) {
                 const s16 heading = cM_atan2s(dx, dz);
-                const s16 actorHeading = i_this->m0414;
+                const s16 actorHeading = i_this->mHeadAngleY;
                 const s16 difference = static_cast<s16>(static_cast<s32>(actorHeading) - heading);
                 const u16 magnitude = difference < 0 ? static_cast<u16>(-static_cast<s32>(difference))
                                                      : static_cast<u16>(difference);
@@ -3054,7 +3054,7 @@ void* s_b_sub(fopAc_ac_c* i_this, void* context) {
 /* 024BAB8C */
 fopAc_ac_c* search_bomb(tn_class* i_this, int requireView) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if ((i_this->m141C & 0x200u) == 0)
+    if ((i_this->mHitTypeFlags & 0x200u) == 0)
         return nullptr;
     target_info_count = 0;
     for (u32 i = 0; i < 10; ++i)
@@ -3090,7 +3090,7 @@ fopAc_ac_c* search_bomb(tn_class* i_this, int requireView) {
                     const f32 height = (candidate->current.pos.y + radiusStep) - i_this->eyePos.y;
                     if (!(std::fabs(height) > l_tnHIO.m038)) {
                         const s16 heading = cM_atan2s(dx, dz);
-                        const s16 actorHeading = i_this->m0414;
+                        const s16 actorHeading = i_this->mHeadAngleY;
                         const s16 difference = static_cast<s16>(static_cast<s32>(actorHeading) - heading);
                         const u16 magnitude = difference < 0 ? static_cast<u16>(-static_cast<s32>(difference))
                                                              : static_cast<u16>(difference);
@@ -3146,7 +3146,7 @@ BOOL daTn_player_bg_check(tn_class* i_this, cXyz* target) {
     const BOOL blocked = cBgS_LineCross(&play->play.mBgS, check.get()) != 0;
     tn_prepareLineCheckDestruction(check.get());
     if (blocked != 0)
-        i_this->mDamageReaction.m713 = 0;
+        i_this->mDamageReaction.mPlayerInView = 0;
     cBgS_LinChk_dt(check.get(), 0);
     return blocked;
 }
@@ -3168,12 +3168,12 @@ BOOL daTn_player_view_check(tn_class* i_this, cXyz* target, s16 heading, s16 ang
     if (std::fabs(heightDifference) > l_tnHIO.m038)
         return 0;
 
-    const s16 actorHeading = i_this->m0414;
+    const s16 actorHeading = i_this->mHeadAngleY;
     const s16 difference = static_cast<s16>(static_cast<s32>(actorHeading) - heading);
     const u16 magnitude =
         difference < 0 ? static_cast<u16>(-static_cast<s32>(difference)) : static_cast<u16>(difference);
     if (static_cast<s32>(magnitude) < angleLimit) {
-        i_this->mDamageReaction.m713 = 1;
+        i_this->mDamageReaction.mPlayerInView = 1;
         return 1;
     }
 
@@ -3190,11 +3190,11 @@ BOOL daTn_player_view_check(tn_class* i_this, cXyz* target, s16 heading, s16 ang
         std::fabs(static_cast<f32>(relative->y)) < l_tnHIO.m040) {
         const f32 z = relative->z;
         if (z > l_tnHIO.m048 && z < l_tnHIO.m044) {
-            i_this->mDamageReaction.m713 = 2;
+            i_this->mDamageReaction.mPlayerInView = 2;
             return 1;
         }
     }
-    i_this->mDamageReaction.m713 = 0;
+    i_this->mDamageReaction.mPlayerInView = 0;
     return 0;
 }
 
@@ -3228,7 +3228,7 @@ void fight_run_set(tn_class* i_this) {
                  dRes_INDEX_TN_BAS_AWALK1_e);
         yoroi_anm_init(i_this, dRes_INDEX_TN_BCK_YWALK1_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.5f);
     } else {
-        if (i_this->m0C34 != 0) {
+        if (i_this->mHasWepon != 0) {
             anm_init(i_this, dRes_INDEX_TN_BCK_BRUN1_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                      dRes_INDEX_TN_BAS_BRUN1_e);
         } else {
@@ -3245,7 +3245,7 @@ void path_check(tn_class* i_this) {
     tn_path* path = i_this->ppd;
     if (path == nullptr)
         return;
-    if (i_this->m0C34 == 0 && i_this->m13FF == 0)
+    if (i_this->mHasWepon == 0 && i_this->mWeponSearchGaveUp == 0)
         return;
     gabi::Local<tn_linecheck> check;
     tn_constructLineCheck(check.get());
@@ -3289,13 +3289,13 @@ void path_check(tn_class* i_this) {
             path = i_this->ppd;
             count = path->m_num;
             if (distance < radius) {
-                const s8 selected = static_cast<s8>(i - static_cast<u32>(i_this->m1426));
-                i_this->m1425 = selected;
+                const s8 selected = static_cast<s8>(i - static_cast<u32>(i_this->mPathDir));
+                i_this->mPathPoint = selected;
                 if (selected >= static_cast<s8>(count))
-                    i_this->m1425 = static_cast<s8>(count);
+                    i_this->mPathPoint = static_cast<s8>(count);
                 else if (selected < 0)
-                    i_this->m1425 = 0;
-                i_this->m1424 = static_cast<u8>(static_cast<u32>(i_this->mPathIndex) + 1u);
+                    i_this->mPathPoint = 0;
+                i_this->mPathNo = static_cast<u8>(static_cast<u32>(i_this->mPathIndex) + 1u);
                 found = true;
                 break;
             }
@@ -3306,7 +3306,7 @@ void path_check(tn_class* i_this) {
     }
     tn_prepareLineCheckDestruction(check.get());
     if (!found)
-        i_this->m1424 = 0;
+        i_this->mPathNo = 0;
     cBgS_LinChk_dt(check.get(), 0);
 }
 
@@ -3328,14 +3328,14 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     dComIfGp_get();
     const u32 oldX = damageWord(i_this->mWeponSphMove.x);
     i_this->m13FC = 0;
-    damageWord(i_this->m13D8.x) = oldX;
+    damageWord(i_this->mPrevWeponSphMove.x) = oldX;
     mDoExt_McaMorf* body = i_this->mpBodyMorf;
     const u32 oldY = damageWord(i_this->mWeponSphMove.y);
     const u32 oldZ = damageWord(i_this->mWeponSphMove.z);
-    damageWord(i_this->m13D8.y) = oldY;
-    damageWord(i_this->m13D8.z) = oldZ;
+    damageWord(i_this->mPrevWeponSphMove.y) = oldY;
+    damageWord(i_this->mPrevWeponSphMove.z) = oldZ;
     const f32 animationFrame = body->mFrameCtrl.mFrame;
-    const s32 attackType = i_this->m0C48;
+    const s32 attackType = i_this->mAttackType;
     const s32 frame = gabi::ftoi(animationFrame);
     int firstFrame = 0;
     int lastFrame = 0;
@@ -3369,11 +3369,11 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
         lastFrame = 1000;
         break;
     }
-    if (frame < firstFrame || frame > lastFrame || i_this->m0C66 < 0)
+    if (frame < firstFrame || frame > lastFrame || i_this->mAttackState < 0)
         return nullptr;
     bool footAttack = false;
     if ((static_cast<u8>(i_this->mEquipmentType) & 1u) != 0) {
-        const s32 matrixAttack = i_this->m0C48;
+        const s32 matrixAttack = i_this->mAttackType;
         footAttack = matrixAttack == 3;
         const u8 power = static_cast<u8>(atp_1.m[attackType]);
         body = i_this->mpBodyMorf;
@@ -3388,7 +3388,7 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     } else {
         body = i_this->mpBodyMorf;
         const u8 power = static_cast<u8>(atp_0.m[attackType]);
-        const s32 matrixAttack = i_this->m0C48;
+        const s32 matrixAttack = i_this->mAttackType;
         footAttack = matrixAttack == 3;
         i_this->mWepon2Sph.SetAtAtp(power);
         i_this->mWeponSph.SetAtAtp(power);
@@ -3402,15 +3402,15 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     gabi::Local<cXyz> offset;
     offset->x = 0.0f;
     offset->y = 0.0f;
-    offset->z = footAttack || i_this->m0C48 == 2 ? 0.0f : 150.0f;
+    offset->z = footAttack || i_this->mAttackType == 2 ? 0.0f : 150.0f;
     MtxPosition(offset.get(), &i_this->mWeponSphMove);
     offset->z = static_cast<f32>(offset->z) * 0.3333f;
     MtxPosition(offset.get(), &i_this->mWepon2SphMove);
-    const u8 initialized = i_this->m13FD;
+    const u8 initialized = i_this->mWeponAtStarted;
     i_this->mWeponSph.SetAtType(8);
     i_this->mWepon2Sph.SetAtType(8);
     if (initialized == 0) {
-        i_this->m13FD = 1;
+        i_this->mWeponAtStarted = 1;
         tn_StartCAt(&i_this->mWeponSph, &i_this->mWeponSphMove);
         tn_StartCAt(&i_this->mWepon2Sph, &i_this->mWepon2SphMove);
         return nullptr;
@@ -3419,7 +3419,7 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     tn_MoveCAt(&i_this->mWeponSph, &i_this->mWeponSphMove);
     tn_MoveCAt(&i_this->mWepon2Sph, &i_this->mWepon2SphMove);
     i_this->mWepon2Sph.SetR(l_weapon2Radius + 40.0f);
-    const s32 splAttack = i_this->m0C48;
+    const s32 splAttack = i_this->mAttackType;
     if (splAttack <= 1 || splAttack == 4 || splAttack == 5) {
         const u8 special = splAttack <= 1 ? 6 : 7;
         i_this->mWepon2Sph.SetAtSpl(special);
@@ -3447,7 +3447,7 @@ void p_lost(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     tn_abi::playLookupWithReceiver(i_this);
     const s16 mode = i_this->mDamageReaction.mMode;
-    i_this->mDamageReaction.m710 = static_cast<u8>(0);
+    i_this->mDamageReaction.mLookMode = static_cast<u8>(0);
     if (mode == 0) {
         i_this->mDamageReaction.mMode = 1;
         anm_init(i_this, dRes_INDEX_TN_BCK_AKYORO1_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
@@ -3470,7 +3470,7 @@ void p_lost(tn_class* i_this) {
     // This avoids an undefined host float-to-integer conversion.
     if (static_cast<f32>(body->mFrameCtrl.mFrame) >= 26.0f) {
         const s16 angleLimit = get_view_H(i_this);
-        const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(i_this->mDamageReaction.m714));
+        const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(i_this->mDamageReaction.mpLookTarget));
         const s16 heading = static_cast<s16>(i_this->mTargetAngle);
         if (daTn_player_view_check(i_this, gabi::at<cXyz>(target + 0x314u),
                                   heading, angleLimit) != 0) {
@@ -3504,7 +3504,7 @@ void wepon_search(tn_class* i_this) {
         const f32 dz = weaponZ - static_cast<f32>(i_this->current.pos.z);
         const s16 heading = cM_atan2s(dx, dz);
         const f32 squaredDistance = gabi::fmadds(dx, dx, dz * dz);
-        i_this->mDamageReaction.m4D0 = static_cast<s16>(heading);
+        i_this->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
         distance = tn_sqrtf(squaredDistance);
         mode = i_this->mDamageReaction.mMode;
     }
@@ -3514,25 +3514,25 @@ void wepon_search(tn_class* i_this) {
     case -1: {
         const f32 blend = 3.0f;
         i_this->mDamageReaction.mMode = 0;
-        i_this->m13FF = 0;
+        i_this->mWeponSearchGaveUp = 0;
         anm_init(i_this, dRes_INDEX_TN_BCK_AKIDUKU1_e, blend, J3DFrameCtrl::EMode_NONE, one, -1);
         yoroi_anm_init(i_this, dRes_INDEX_TN_BCK_YKIDUKU1_e, blend, J3DFrameCtrl::EMode_NONE, one);
         i_this->mCountDownTimers[1] = static_cast<s16>(distance < 900.0f ? 20 : 200);
-        i_this->m03EE = static_cast<s16>(5);
+        i_this->mWeponTurnWait = static_cast<s16>(5);
         return;
     }
     case 0: {
-        const s16 delay = static_cast<s16>(i_this->m03EE);
+        const s16 delay = static_cast<s16>(i_this->mWeponTurnWait);
         i_this->speedF = static_cast<f32>(zero);
         if (delay != 0) return;
         cLib_addCalcAngleS2(&i_this->current.angle.y,
-                   static_cast<s16>(i_this->mDamageReaction.m4D0), 2, 0x3000);
+                   static_cast<s16>(i_this->mDamageReaction.mTurnTargetY), 2, 0x3000);
         mDoExt_McaMorf* body = i_this->mpBodyMorf;
         if ((static_cast<u8>(body->mFrameCtrl.mState) & 1u) == 0 &&
             static_cast<f32>(body->mFrameCtrl.mRate) != zero &&
             static_cast<s16>(i_this->mCountDownTimers[1]) != 0) return;
         i_this->mDamageReaction.mMode = 1;
-        i_this->m03EA = static_cast<s16>(l_tnHIO.m082);
+        i_this->mWeponRunTimer = static_cast<s16>(l_tnHIO.m082);
         fight_run_set(i_this);
         return;
     }
@@ -3540,22 +3540,22 @@ void wepon_search(tn_class* i_this) {
         cLib_addCalc2(&i_this->speedF, static_cast<f32>(l_tnHIO.m058),
                       one, 10.0f);
         cLib_addCalcAngleS2(&i_this->current.angle.y,
-                   static_cast<s16>(i_this->mDamageReaction.m4D0), 4, 0x1000);
+                   static_cast<s16>(i_this->mDamageReaction.mTurnTargetY), 4, 0x1000);
         if (distance < REG_F(8, 2) + 150.0f) {
             i_this->mDamageReaction.mMode = 2;
             anm_init(i_this, dRes_INDEX_TN_BCK_BHIROU_K1_e, 2.0f, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_BHIROU_K1_e);
             i_this->mCountDownTimers[1] = static_cast<s16>(29);
             return;
         }
-        if (static_cast<s16>(i_this->m03EA) == 0) {
+        if (static_cast<s16>(i_this->mWeponRunTimer) == 0) {
             i_this->mCountDownTimers[1] = static_cast<s16>(0);
-            i_this->m13FF = 1;
+            i_this->mWeponSearchGaveUp = 1;
             i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
             return;
         }
         if ((static_cast<u32>(i_this->mDamageReaction.mAcch.m_flags) & 0x30u) == 0x30u) {
             tn_leaveWeaponSearch(i_this);
-            i_this->m03FC = static_cast<s16>(70);
+            i_this->mWeponSearchWait = static_cast<s16>(70);
         }
         return;
     }
@@ -3565,7 +3565,7 @@ void wepon_search(tn_class* i_this) {
         s16 timer = static_cast<s16>(i_this->mCountDownTimers[1]);
         if (timer == pickupFrame) {
             if (weapon != 0 && (static_cast<u32>(gabi::at<fopAc_ac_c>(weapon)->actor_status) & 0x2000u) == 0) {
-                i_this->m0C34 = 2;
+                i_this->mHasWepon = 2;
                 tn_abi::fopAcM_setCarryNow(gabi::at<fopAc_ac_c>(weapon), 0);
                 timer = static_cast<s16>(i_this->mCountDownTimers[1]);
             } else {
@@ -3575,8 +3575,8 @@ void wepon_search(tn_class* i_this) {
         }
         if (timer < 14) {
             const s16 target = static_cast<s16>(i_this->mTargetAngle);
-            i_this->mDamageReaction.m710 = static_cast<u8>(1);
-            i_this->mDamageReaction.m4D0 = static_cast<s16>(target);
+            i_this->mDamageReaction.mLookMode = static_cast<u8>(1);
+            i_this->mDamageReaction.mTurnTargetY = static_cast<s16>(target);
             cLib_addCalcAngleS2(&i_this->current.angle.y, target, 3, 0x800);
         }
         mDoExt_McaMorf* body = i_this->mpBodyMorf;
@@ -3592,7 +3592,7 @@ void wepon_search(tn_class* i_this) {
 void b_nige(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     fopAc_ac_c* bomb = search_bomb(i_this, 0);
-    i_this->m1418 = bomb;
+    i_this->mpBomb = bomb;
     if (bomb == nullptr) {
         tn_leaveWeaponSearch(i_this);
         return;
@@ -3606,7 +3606,7 @@ void b_nige(tn_class* i_this) {
     const s16 away = cM_atan2s(-dx, -dz);
     const s16 mode = i_this->mDamageReaction.mMode;
     const f32 zero = 0.0f;
-    i_this->mDamageReaction.m4D0 = static_cast<s16>(away);
+    i_this->mDamageReaction.mTurnTargetY = static_cast<s16>(away);
     const f32 safeDistance = 800.0f;
     const f32 one = 1.0f;
     bool enterWait = false;
@@ -3618,11 +3618,11 @@ void b_nige(tn_class* i_this) {
         i_this->mCountDownTimers[1] = static_cast<s16>(10);
         [[fallthrough]];
     case 1: {
-        const s16 turnTarget = static_cast<s16>(static_cast<s32>(static_cast<s16>(i_this->mDamageReaction.m4D0)) + 0x8000);
+        const s16 turnTarget = static_cast<s16>(static_cast<s32>(static_cast<s16>(i_this->mDamageReaction.mTurnTargetY)) + 0x8000);
         i_this->speedF = static_cast<f32>(zero);
         cLib_addCalcAngleS2(&i_this->current.angle.y, turnTarget, 2, 0x3000);
         if (static_cast<s16>(i_this->mCountDownTimers[1]) != 0) return;
-        const s32 pathDriven = i_this->m0C34;
+        const s32 pathDriven = i_this->mHasWepon;
         i_this->mDamageReaction.mMode = 2;
         anm_init(i_this, pathDriven != 0 ? 0x48 : 0x49,
                  2.0f, J3DFrameCtrl::EMode_NONE, one, pathDriven != 0 ? 0x1B : 0x1C);
@@ -3652,7 +3652,7 @@ void b_nige(tn_class* i_this) {
     }
     case 3: {
         const f32 speed = static_cast<f32>(l_tnHIO.m058);
-        const s16 target = static_cast<s16>(i_this->mDamageReaction.m4D0);
+        const s16 target = static_cast<s16>(i_this->mDamageReaction.mTurnTargetY);
         i_this->speedF = static_cast<f32>(speed);
         cLib_addCalcAngleS2(&i_this->current.angle.y, target, 4, 0x1000);
         const f32 distance = tn_sqrtf(gabi::fmadds(dx, dx, dz * dz));
@@ -3663,7 +3663,7 @@ void b_nige(tn_class* i_this) {
     case 4: {
         const s16 target = static_cast<s16>(i_this->mTargetAngle);
         i_this->speedF = static_cast<f32>(zero);
-        i_this->mDamageReaction.m4D0 = static_cast<s16>(target);
+        i_this->mDamageReaction.mTurnTargetY = static_cast<s16>(target);
         cLib_addCalcAngleS2(&i_this->current.angle.y, target, 3, 0x1000);
         const f32 distance = tn_sqrtf(gabi::fmadds(dx, dx, dz * dz));
         if (distance < 700.0f) i_this->mDamageReaction.mMode = 0;
@@ -3672,7 +3672,7 @@ void b_nige(tn_class* i_this) {
     default: return;
     }
     if (enterWait) {
-        const s32 pathDriven = i_this->m0C34;
+        const s32 pathDriven = i_this->mHasWepon;
         const f32 blend = 5.0f;
         i_this->mDamageReaction.mMode = 4;
         anm_init(i_this, pathDriven != 0 ? 0x35 : 0x4D, blend, J3DFrameCtrl::EMode_LOOP, one, -1);
@@ -3685,12 +3685,12 @@ void defence(tn_class* i_this) {
     const u32 play = gabi::ea(dComIfGp_get());
     const s16 targetAngle = static_cast<s16>(i_this->mTargetAngle);
     const u32 player = gabi::ea(static_cast<fopAc_ac_c*>(gabi::at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer));
-    i_this->mDamageReaction.m710 = static_cast<u8>(1);
-    i_this->mDamageReaction.m4D0 = static_cast<s16>(targetAngle);
+    i_this->mDamageReaction.mLookMode = static_cast<u8>(1);
+    i_this->mDamageReaction.mTurnTargetY = static_cast<s16>(targetAngle);
     cLib_addCalcAngleS2(&i_this->current.angle.y, targetAngle, 4, 1024);
     const s16 mode = i_this->mDamageReaction.mMode;
     if (mode == 0) {
-        const s32 pathDriven = i_this->m0C34;
+        const s32 pathDriven = i_this->mHasWepon;
         i_this->mDamageReaction.mMode = 1;
         const int animation = pathDriven != 0 ? 0x30 : 0x31;
         anm_init(i_this, animation, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
@@ -3700,7 +3700,7 @@ void defence(tn_class* i_this) {
         return;
     }
     const s16 timer = i_this->mCountDownTimers[1];
-    i_this->m1444 = static_cast<u8>(1);
+    i_this->mDefenceSphOn = static_cast<u8>(1);
     i_this->speedF = 0.0f;
     if (timer == 0 && static_cast<u8>(gabi::at<TnPlayer>(player)->mCutType) == 0) {
         i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
@@ -3714,10 +3714,10 @@ void defence(tn_class* i_this) {
 void hukki(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     const u32 play = gabi::ea(dComIfGp_get());
-    const f32 joint13Z = i_this->mDamageReaction.m100[13].z;
-    const f32 joint10X = i_this->mDamageReaction.m100[10].x;
-    const f32 joint13X = i_this->mDamageReaction.m100[13].x;
-    const f32 joint10Z = i_this->mDamageReaction.m100[10].z;
+    const f32 joint13Z = i_this->mDamageReaction.mJntPos[13].z;
+    const f32 joint10X = i_this->mDamageReaction.mJntPos[10].x;
+    const f32 joint13X = i_this->mDamageReaction.mJntPos[13].x;
+    const f32 joint10Z = i_this->mDamageReaction.mJntPos[10].z;
     const f32 directionX = joint10X - joint13X;
     const u32 matrix = gabi::ea(calc_mtx());
     const f32 directionZ = joint10Z - joint13Z;
@@ -3733,8 +3733,8 @@ void hukki(tn_class* i_this) {
     offset->y = zero;
     if (mode == 14) {
         const s16 target = static_cast<s16>(i_this->mTargetAngle);
-        i_this->mDamageReaction.m710 = static_cast<u8>(1);
-        i_this->mDamageReaction.m4D0 = static_cast<s16>(target);
+        i_this->mDamageReaction.mLookMode = static_cast<u8>(1);
+        i_this->mDamageReaction.mTurnTargetY = static_cast<s16>(target);
         cLib_addCalcAngleS2(&i_this->current.angle.y, target, 3, 0x1000);
         if (static_cast<s16>(i_this->mCountDownTimers[1]) == 0) {
             i_this->mDamageReaction.mAction = ACTION_FIGHT;
@@ -3751,17 +3751,17 @@ void hukki(tn_class* i_this) {
         i_this->mCountDownTimers[2] = static_cast<s16>(timer);
         const s32 immunity = static_cast<s32>(REG_S(10, 2)) + 35;
         i_this->speedF = static_cast<f32>(zero);
-        i_this->m03F0 = static_cast<s16>(immunity);
+        i_this->mNoDamageTimer = static_cast<s16>(immunity);
         i_this->mDamageReaction.mMode = 13;
-        i_this->mDamageReaction.m480 = static_cast<s16>(0);
-        MtxPosition(offset.get(), &i_this->mDamageReaction.m458);
+        i_this->mDamageReaction.mFallPitch = static_cast<s16>(0);
+        MtxPosition(offset.get(), &i_this->mDamageReaction.mBodyOffset);
         const f32 currentY = static_cast<f32>(i_this->current.pos.y);
-        const f32 heightCorrection = static_cast<f32>(i_this->mDamageReaction.m44C.y);
+        const f32 heightCorrection = static_cast<f32>(i_this->mDamageReaction.mPivot.y);
         const f32 oldY = static_cast<f32>(i_this->old.pos.y);
         i_this->current.pos.y = static_cast<f32>(currentY - heightCorrection);
-        if (mode == 10) i_this->mDamageReaction.m44C.y = static_cast<f32>(zero);
+        if (mode == 10) i_this->mDamageReaction.mPivot.y = static_cast<f32>(zero);
         i_this->old.pos.y = static_cast<f32>(oldY - heightCorrection);
-        if (mode == 12) i_this->mDamageReaction.m44C.y = static_cast<f32>(zero);
+        if (mode == 12) i_this->mDamageReaction.mPivot.y = static_cast<f32>(zero);
     }
     const s32 slideStart = static_cast<s32>(REG_S(6, 5)) + 6;
     if (static_cast<s16>(i_this->mCountDownTimers[2]) <= slideStart) {
@@ -3769,9 +3769,9 @@ void hukki(tn_class* i_this) {
         const f32 baseStep = 100.0f;
         const f32 stepScale = 0.25f;
         const f32 stepX = (tuning + baseStep) * stepScale;
-        cLib_addCalc0(reinterpret_cast<be<f32>*>(&i_this->mDamageReaction.m458), one, stepX);
+        cLib_addCalc0(reinterpret_cast<be<f32>*>(&i_this->mDamageReaction.mBodyOffset), one, stepX);
         const f32 stepZ = (REG_F(6, 5) + baseStep) * stepScale;
-        cLib_addCalc0(&i_this->mDamageReaction.m458.z, one, stepZ);
+        cLib_addCalc0(&i_this->mDamageReaction.mBodyOffset.z, one, stepZ);
         const s32 slideEnd = static_cast<s32>(REG_S(6, 6)) + 1;
         if (static_cast<s16>(i_this->mCountDownTimers[2]) >= slideEnd) {
             offset->z = 25.0f;
@@ -3790,13 +3790,13 @@ void hukki(tn_class* i_this) {
         static_cast<f32>(i_this->mPlayerDistance) < static_cast<f32>(l_tnHIO.m02C)) {
         i_this->mDamageReaction.mMode = 14;
         i_this->mCountDownTimers[1] = static_cast<s16>(10);
-        i_this->mDamageReaction.m488 = static_cast<s16>(0);
+        i_this->mDamageReaction.mKnockedDown = static_cast<s16>(0);
     } else {
         i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
         path_check(i_this);
         wait_set(i_this);
         i_this->mDamageReaction.mMode = 0;
-        i_this->mDamageReaction.m488 = static_cast<s16>(0);
+        i_this->mDamageReaction.mKnockedDown = static_cast<s16>(0);
     }
 }
 
@@ -3813,16 +3813,16 @@ void aite_miru(tn_class* i_this) {
         return;
     }
     cLib_addCalcAngleS2(&i_this->m1404, 12000, 2, 6144);
-    const u32 targetId = static_cast<u32>(i_this->m1408);
-    i_this->mDamageReaction.m710 = static_cast<u8>(1);
+    const u32 targetId = static_cast<u32>(i_this->mLookTargetId);
+    i_this->mDamageReaction.mLookMode = static_cast<u8>(1);
     if (targetId != 0xFFFFFFFFu) {
         gabi::Local<be<u32>> searchId;
         *searchId = targetId;
         fopAc_ac_c* target = tn_abi::actorJudge(gabi::at<void>(TN_ACTOR_ID_JUDGE), searchId.get());
-        if (target != nullptr) i_this->mDamageReaction.m714 = gabi::at<fopAc_ac_c>(gabi::ea(target));
+        if (target != nullptr) i_this->mDamageReaction.mpLookTarget = gabi::at<fopAc_ac_c>(gabi::ea(target));
     }
     if (i_this->mCountDownTimers[1] == 0) {
-        i_this->m1408 = static_cast<u32>(0xFFFFFFFFu);
+        i_this->mLookTargetId = static_cast<u32>(0xFFFFFFFFu);
         i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
         i_this->mDamageReaction.mMode = 0;
         path_check(i_this);
@@ -3833,7 +3833,7 @@ void aite_miru(tn_class* i_this) {
 void fail(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     i_this->attention_info.flags = static_cast<u32>(0);
-    i_this->m03F0 = static_cast<s16>(5);
+    i_this->mNoDamageTimer = static_cast<s16>(5);
     const s16 mode = i_this->mDamageReaction.mMode;
     i_this->speedF = 0.0f;
     i_this->speed.y = 0.0f;
@@ -3849,10 +3849,10 @@ void fail(tn_class* i_this) {
     const u8 itemBits = i_this->stealItemBitNo;
     fopAcM_createDisappear(i_this, dropPosition.get(), 10, timer >= 1000 ? 1 : 0, itemBits);
 
-    if (static_cast<s8>(i_this->m14F8) != 0) {
+    if (static_cast<s8>(i_this->mDemoMode) != 0) {
         const s16 oldMode = i_this->mDamageReaction.mMode;
         const u8 switchNo = i_this->mDisableSpawnOnDeathSwitch;
-        i_this->m1520 = 1;
+        i_this->mNoDraw = 1;
         i_this->mDamageReaction.mMode = static_cast<s16>(static_cast<s32>(oldMode) + 1);
         if (switchNo != 0) {
             const u32 save = dComIfGs_ea();
@@ -3878,28 +3878,28 @@ void fail(tn_class* i_this) {
 /* 024C2BEC */
 void yogan_fail(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    i_this->m03F0 = static_cast<s16>(5);
+    i_this->mNoDamageTimer = static_cast<s16>(5);
     const s16 mode = i_this->mDamageReaction.mMode;
     i_this->attention_info.flags = static_cast<u32>(0);
     i_this->speedF = 0.0f;
     if (mode != 0 && mode != 1) return;
     if (mode == 0) {
-        const s32 pathDriven = i_this->m0C34;
+        const s32 pathDriven = i_this->mHasWepon;
         i_this->mDamageReaction.mMode = 1;
         const f32 upwardSpeed = REG0_F(19) + 190.0f;
-        i_this->mDamageReaction.m458.y = static_cast<f32>(0.0f);
-        i_this->mDamageReaction.m44C.y = static_cast<f32>(0.0f);
+        i_this->mDamageReaction.mBodyOffset.y = static_cast<f32>(0.0f);
+        i_this->mDamageReaction.mPivot.y = static_cast<f32>(0.0f);
         i_this->speed.y = upwardSpeed;
-        if (pathDriven != 0) i_this->m0C38 = static_cast<u32>(1);
+        if (pathDriven != 0) i_this->mWeponDropMode = static_cast<u32>(1);
     }
     dComIfGp_particle_setSimple(0x8061, &i_this->current.pos);
     dComIfGp_particle_setSimple(0x8058, &i_this->current.pos);
-    if ((static_cast<u32>(i_this->m03D8) & 3u) == 0) {
+    if ((static_cast<u32>(i_this->mFrameCount) & 3u) == 0) {
         const f32 randomAngle = cM_rndF(65536.0f);
-        i_this->m0428.y = static_cast<s16>(static_cast<s16>(gabi::ftoi(randomAngle)));
-        i_this->m0428.x = static_cast<s16>(-8192);
-        dComIfGp_particle_set(0x0E, &i_this->m1384,
-                              &i_this->m0428);
+        i_this->mEffectAngle.y = static_cast<s16>(static_cast<s16>(gabi::ftoi(randomAngle)));
+        i_this->mEffectAngle.x = static_cast<s16>(-8192);
+        dComIfGp_particle_set(0x0E, &i_this->mHeadPos,
+                              &i_this->mEffectAngle);
     }
     cLib_addCalcAngleS2(&i_this->current.angle.x, -16384, 10, 0x200);
     if (static_cast<f32>(i_this->speed.y) < 0.0f) {
@@ -3975,7 +3975,7 @@ void d_sit(tn_class* i_this) {
 void d_dozou(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     const s16 mode = i_this->mDamageReaction.mMode;
-    i_this->m03F0 = static_cast<s16>(5);
+    i_this->mNoDamageTimer = static_cast<s16>(5);
     i_this->attention_info.flags = static_cast<u32>(0);
     if (mode == 0 || mode == 1) {
         if (mode == 0) {
@@ -4024,7 +4024,7 @@ void d_dozou(tn_class* i_this) {
 /* 024C3348 */
 void s_demo(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    i_this->m03F0 = static_cast<s16>(5);
+    i_this->mNoDamageTimer = static_cast<s16>(5);
     i_this->attention_info.flags = static_cast<u32>(0);
     mDoExt_McaMorf* body = i_this->mpBodyMorf;
     const f32 zero = 0.0f;
@@ -4083,14 +4083,14 @@ void s_demo(tn_class* i_this) {
             const f32 xOffset = 250.0f;
             const f32 yOffset = 2750.0f;
             const f32 homeY = static_cast<f32>(i_this->home.pos.y);
-            i_this->m1519 = static_cast<u8>(1);
+            i_this->mDemoSide = static_cast<u8>(1);
             i_this->current.pos.x = x + xOffset;
             i_this->current.pos.y = homeY + yOffset;
         } else {
             const f32 homeY = static_cast<f32>(i_this->home.pos.y);
             const f32 xOffset = -130.0f;
             const f32 yOffset = 2000.0f;
-            i_this->m1519 = static_cast<u8>(0);
+            i_this->mDemoSide = static_cast<u8>(0);
             i_this->current.pos.x = x + xOffset;
             i_this->current.pos.y = homeY + yOffset;
         }
@@ -4119,7 +4119,7 @@ void s_demo(tn_class* i_this) {
         if ((static_cast<u32>(i_this->mDamageReaction.mAcch.m_flags) & 0x20u) == 0) return;
         tn_setDemoAnimationRates(i_this, i_this->mpBodyMorf, one);
         tn_playPartImpact(i_this, 0x592A);
-        const s8 side = static_cast<s8>(i_this->m1519);
+        const s8 side = static_cast<s8>(i_this->mDemoSide);
         const f32 homeX = static_cast<f32>(i_this->home.pos.x);
         i_this->mDamageReaction.mMode = side != 0 ? 13 : 12;
         const u32 vibration = gabi::ea(dComIfGp_get()) + 0x599Cu;
@@ -4183,8 +4183,8 @@ void Tn_move(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     const u32 playerBase = gabi::ea(static_cast<fopAc_ac_c*>(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mPlayerInfo[0].mpPlayer));
     fopAc_ac_c* player = gabi::at<fopAc_ac_c>(playerBase);
-    i_this->m0418 = static_cast<s16>(0);
-    i_this->mDamageReaction.m710 = static_cast<u8>(0);
+    i_this->mSideStepAngle = static_cast<s16>(0);
+    i_this->mDamageReaction.mLookMode = static_cast<u8>(0);
     cLib_addCalcAngleS2(&i_this->m1404, 0, 2, 0x800);
     const f32 zero = 0.0f;
     if (tn_processAirborneAttack(i_this, zero)) return;
@@ -4269,7 +4269,7 @@ void part_move(tn_class* i_this, int index) {
     if (state == 0) {
         tn_selectJointMatrix(i_this->mpBodyMorf, joint);
         MtxPosition(offset.get(), &part->m0C);
-        const u8 detachFlags = static_cast<u8>(i_this->m02DD);
+        const u8 detachFlags = static_cast<u8>(i_this->mPartDetachFlags);
         if ((index == 0 && (detachFlags & 1u) != 0) ||
             (index == 1 && (detachFlags & 2u) != 0) ||
             (index == 2 && (detachFlags & 4u) != 0)) {
@@ -4296,10 +4296,10 @@ void part_move(tn_class* i_this, int index) {
             if (index == 0) {
                 const u32 status = static_cast<u32>(i_this->actor_status);
                 const u8 equipment = i_this->mRemainingEquipmentPieces;
-                const u8 count = i_this->m02DC;
+                const u8 count = i_this->mPartsAttached;
                 i_this->actor_status = static_cast<u32>(status | 0x200000u);
                 i_this->mRemainingEquipmentPieces = equipment & 0xFEu;
-                i_this->m02DC = static_cast<u8>(count - 1u);
+                i_this->mPartsAttached = static_cast<u8>(count - 1u);
             } else if (index == 1) {
                 i_this->mRemainingEquipmentPieces = static_cast<u8>(i_this->mRemainingEquipmentPieces) & 0xFDu;
                 tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(gabi::at<fopAc_ac_c>(player)->shape_angle.y));
@@ -4309,10 +4309,10 @@ void part_move(tn_class* i_this, int index) {
                 MtxPosition(offset.get(), &part->m24);
                 part->m36.x = tn_randomPartRotation(randomRotation);
                 part->m36.y = tn_randomPartRotation(randomRotation);
-                i_this->m02DC = static_cast<u8>(static_cast<u8>(i_this->m02DC) - 1u);
+                i_this->mPartsAttached = static_cast<u8>(static_cast<u8>(i_this->mPartsAttached) - 1u);
             } else {
                 if (index == 2) i_this->mRemainingEquipmentPieces = static_cast<u8>(i_this->mRemainingEquipmentPieces) & 0xFBu;
-                i_this->m02DC = static_cast<u8>(static_cast<u8>(i_this->m02DC) - 1u);
+                i_this->mPartsAttached = static_cast<u8>(static_cast<u8>(i_this->mPartsAttached) - 1u);
             }
         }
     } else if (state == 5) {
@@ -4328,7 +4328,7 @@ void part_move(tn_class* i_this, int index) {
         mtx_copy(&model->mBaseTransformMtx, calc_mtx());
     } else if (transformMode == 0) {
         tn_selectJointMatrix(i_this->mpBodyMorf, joint);
-        s16 wobble = static_cast<s16>(i_this->m1402);
+        s16 wobble = static_cast<s16>(i_this->mArmorShakeTimer);
         if (index == 0 && wobble != 0) {
             const u32 firstAngle = (static_cast<u32>(static_cast<s32>(wobble)) * 0x5100u & 0xFFFFu) & ~7u;
             const f32 cosine = cM_scos(firstAngle);
@@ -4337,14 +4337,14 @@ void part_move(tn_class* i_this, int index) {
             const f32 one = 1.0f;
             const f32 scale = gabi::fmadds(scalar, factor, one);
             MtxScale(scale, scale, scale, 1);
-            wobble = static_cast<s16>(i_this->m1402);
+            wobble = static_cast<s16>(i_this->mArmorShakeTimer);
             const u32 secondAngle = (static_cast<u32>(static_cast<s32>(wobble)) * 0x3900u & 0xFFFFu) & ~7u;
             const f32 baseAngle = 0.01f;
             const f32 tuning = REG0_F(16);
             const f32 amplitude = static_cast<f32>(wobble) * (tuning + baseAngle);
             const f32 cosine2 = cM_scos(secondAngle);
             tn_MtxRotY(1, cosine2 * amplitude);
-            wobble = static_cast<s16>(i_this->m1402);
+            wobble = static_cast<s16>(i_this->mArmorShakeTimer);
             const u32 thirdAngle = (static_cast<u32>(static_cast<s32>(wobble)) * 0x4200u & 0xFFFFu) & ~7u;
             const f32 sine = cM_ssin(thirdAngle);
             tn_abi::MtxRotX(1, sine * amplitude);
@@ -4366,7 +4366,7 @@ void part_move(tn_class* i_this, int index) {
                 const f32 offsetZ = REG0_F(2);
                 offset->x = offsetX + xConstant;
                 offset->z = offsetZ + -43.0f;
-                MtxPosition(offset.get(), &gabi::at<TnMantle>(mantle)->m1BE0);
+                MtxPosition(offset.get(), &gabi::at<TnMantle>(mantle)->mShoulderPosR);
                 tn_selectJointMatrix(i_this->mpArmorMorf, static_cast<u32>(static_cast<s32>(REG_S(6, 6)) + 4));
                 const f32 secondX = REG0_F(3);
                 const f32 secondConstant = 2.0f;
@@ -4375,7 +4375,7 @@ void part_move(tn_class* i_this, int index) {
                 offset->x = secondX + secondConstant;
                 offset->y = secondY + launchSpeed;
                 offset->z = REG0_F(5) + zConstant;
-                MtxPosition(offset.get(), &gabi::at<TnMantle>(mantle)->m1BEC);
+                MtxPosition(offset.get(), &gabi::at<TnMantle>(mantle)->mShoulderPosL);
                 gabi::at<TnMantle>(mantle)->current.pos.x = i_this->eyePos.x; gabi::at<TnMantle>(mantle)->current.pos.y = i_this->eyePos.y; gabi::at<TnMantle>(mantle)->current.pos.z = i_this->eyePos.z;
                 gabi::at<TnMantle>(mantle)->current.angle.x = i_this->current.angle.x; gabi::at<TnMantle>(mantle)->current.angle.y = i_this->current.angle.y; gabi::at<TnMantle>(mantle)->current.angle.z = i_this->current.angle.z;
             }
@@ -4428,15 +4428,15 @@ BOOL daTn_Delete(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     dComIfG_resDelete(&i_this->mPhaseTkwn, STR(0x1004069C));
     dComIfG_resDelete(&i_this->mPhaseTn, STR(0x100406A4));
-    if (i_this->m1433 != 0) {
+    if (i_this->mHioSet != 0) {
         const s8 hio = static_cast<s8>(l_tnHIO.mNo);
         hio_set = 0;
         tn_abi::mDoHIO_deleteChild(hio);
     }
     const u32 base = gabi::ea(i_this);
-    tn_abi::cutTurnEnd(reinterpret_cast<u8*>(&i_this->m144C));
-    tn_abi::cutTurnEnd(reinterpret_cast<u8*>(&i_this->m144C[1]));
-    tn_abi::cutTurnEnd(reinterpret_cast<u8*>(&i_this->m144C[2]));
+    tn_abi::cutTurnEnd(reinterpret_cast<u8*>(&i_this->mCutTurnEcallBack));
+    tn_abi::cutTurnEnd(reinterpret_cast<u8*>(&i_this->mCutTurnEcallBack[1]));
+    tn_abi::cutTurnEnd(reinterpret_cast<u8*>(&i_this->mCutTurnEcallBack[2]));
     tn_removeParticleCallback(base + 0x550);
     tn_removeParticleCallback(base + 0x570);
     tn_removeParticleCallback(base + 0xD38);
@@ -4558,7 +4558,7 @@ int daTn_Create(tn_class* i_this) {
     }
     const u8 spawnSwitch = static_cast<u8>(i_this->mEnableSpawnSwitch);
     if (spawnSwitch != 0xFF) {
-        i_this->m02C1 = static_cast<u8>(spawnSwitch + 1u);
+        i_this->mWaitSpawnSwitch = static_cast<u8>(spawnSwitch + 1u);
         i_this->actor_status = static_cast<u32>(static_cast<u32>(i_this->actor_status) | 0x4000u);
         i_this->mStatusTimer = static_cast<u8>(10);
     }
@@ -4589,7 +4589,7 @@ int daTn_Create(tn_class* i_this) {
             i_this->actor_status = static_cast<u32>(static_cast<u32>(i_this->actor_status) | 0x4000u);
             i_this->current.pos.y = y + initialGroundHeight;
         }
-        i_this->m02C1 = static_cast<u8>(0);
+        i_this->mWaitSpawnSwitch = static_cast<u8>(0);
         i_this->mBehaviorType = BEHAVIOR_ROAMS_AROUND;
         i_this->mDamageReaction.mAction = ACTION_S_DEMO;
         behavior = 0;
@@ -4601,7 +4601,7 @@ int daTn_Create(tn_class* i_this) {
     }
     if (behavior == 4) i_this->mDamageReaction.mAction = ACTION_STAND;
     else if (behavior == 15) {
-        i_this->m02C1 = static_cast<u8>(0);
+        i_this->mWaitSpawnSwitch = static_cast<u8>(0);
         i_this->mDamageReaction.mAction = ACTION_D_DOZOU;
     }
     const u32 play = gabi::ea(dComIfGp_get());
@@ -4611,7 +4611,7 @@ int daTn_Create(tn_class* i_this) {
     if (static_cast<u8>(hio_set) == 0) {
         const u8 hio = tn_abi::mDoHIO_createChild(STR(0x1004070C), reinterpret_cast<u8*>(&l_tnHIO.mNo));
         l_tnHIO.mNo = static_cast<u8>(hio);
-        i_this->m1433 = 1;
+        i_this->mHioSet = 1;
         hio_set = 1;
     }
     const f32 minY = -50.0f;
@@ -4626,7 +4626,7 @@ int daTn_Create(tn_class* i_this) {
     i_this->mBtBodyR = static_cast<f32>(maxX);
     i_this->mBtHeight = static_cast<f32>(culling);
     i_this->cullMtx = bodyModel == 0 ? 0 : bodyModel + 0xC8u;
-    i_this->mDamageReaction.m70C = static_cast<u8>(1);
+    i_this->mDamageReaction.mBounceCount = static_cast<u8>(1);
     const f32 y = i_this->current.pos.y;
     i_this->mDamageReaction.mMaxFallDistance = static_cast<f32>(initialGroundHeight);
     i_this->mDamageReaction.mSpawnY = static_cast<f32>(y);
@@ -4636,8 +4636,8 @@ int daTn_Create(tn_class* i_this) {
         i_this->ppd = tn_abi::dPath_GetRoomPath(static_cast<u8>(i_this->mPathIndex), static_cast<s8>(i_this->current.roomNo));
         if (i_this->ppd == nullptr) return 5;
         const u8 pathIndex = i_this->mPathIndex;
-        i_this->m1426 = 1;
-        i_this->m1424 = static_cast<u8>(pathIndex + 1u);
+        i_this->mPathDir = 1;
+        i_this->mPathNo = static_cast<u8>(pathIndex + 1u);
     }
     tn_abi::dBgS_Acch_Set(reinterpret_cast<u8*>(&i_this->mDamageReaction.mAcch), &i_this->current.pos,
                reinterpret_cast<cXyz*>(&i_this->old.pos.x), i_this, 1, reinterpret_cast<u8*>(&i_this->mDamageReaction.mAcchCir),
@@ -4650,7 +4650,7 @@ int daTn_Create(tn_class* i_this) {
     i_this->mDamageReaction.mAcch.m_flags = static_cast<u32>(acchFlags & ~8u);
     i_this->mDamageReaction.mAcch.m_roof_crr_height = static_cast<f32>(wallHeight);
     tn_initializeColliders(i_this, armorType);
-    i_this->m02DC = 3;
+    i_this->mPartsAttached = 3;
     gabi::Local<cXyz> weaponPosition;
     const f32 weaponHeight = REG0_F(12);
     const f32 actorY = i_this->current.pos.y;
@@ -4659,8 +4659,8 @@ int daTn_Create(tn_class* i_this) {
     const s8 room = i_this->current.roomNo;
     weaponPosition->z = i_this->current.pos.z;
     i_this->mBokoPcId = fopAcM_create(0x1CF, 3, weaponPosition.get(), room, nullptr, nullptr, -1, 0);
-    i_this->m0C34 = 1;
-    i_this->m140C = static_cast<u8>(1);
+    i_this->mHasWepon = 1;
+    i_this->mWeponCarryPending = static_cast<u8>(1);
     u32 mantle = 0xFFFF;
     if (i_this->mEquipmentType >= EQUIPMENT_SHIELD_AND_CAPE) mantle = fopAcM_create(0xC0, 0, &i_this->current.pos, i_this->current.roomNo, nullptr, nullptr, -1, 0);
     i_this->mEnemyIce.mpActor = i_this;
@@ -4684,11 +4684,11 @@ int daTn_Create(tn_class* i_this) {
         const f32 radius = static_cast<f32>(fire_sc.m[i]);
         i_this->mEnemyFire.mParticleScale[i] = radius;
     }
-    i_this->m151C = static_cast<f32>(1.0f);
+    i_this->mReturnAnmMorf = static_cast<f32>(1.0f);
     i_this->stealItemLeft = 5;
     for (int i = 0; i < 3; ++i) daTn_Execute(i_this);
     const s16 action = i_this->mDamageReaction.mAction;
-    i_this->m151C = static_cast<f32>(10.0f);
+    i_this->mReturnAnmMorf = static_cast<f32>(10.0f);
     if (action == ACTION_D_DOZOU) {
         const u32 save = dComIfGs_ea();
         const BOOL set = tn_abi::saveIsEventBit(gabi::at<u8>(save + 0x644u), 0x3802);
@@ -4713,7 +4713,7 @@ BOOL daTn_checkNearbyBomb(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if ((static_cast<u8>(i_this->mRemainingEquipmentPieces) & EQUIPMENT_PIECE_BODY_ARMOR) == 0) {
         fopAc_ac_c* bomb = search_bomb(i_this, 1);
-        i_this->m1418 = bomb;
+        i_this->mpBomb = bomb;
         if (bomb != nullptr)
             return 1;
     }
@@ -4780,7 +4780,7 @@ tn_class* tn_class_construct(tn_class* i_this) {
     tn_abi::dCcD_Sph_construct(&i_this->mDefenceSph);
     tn_abi::dCcD_Sph_construct(&i_this->mWeponSph);
     tn_abi::dCcD_Sph_construct(&i_this->mWepon2Sph);
-    tn_abi::constructArray(reinterpret_cast<u8*>(&i_this->m144C), 3, 0x10,
+    tn_abi::constructArray(reinterpret_cast<u8*>(&i_this->mCutTurnEcallBack), 3, 0x10,
                gabi::at<void>(gabi::guest_fn((const void*)&tnCutTurn_construct)));
 
     // Ice status/cylinder and background checks; fire is a separate constructor.
@@ -4924,7 +4924,7 @@ void tn_class_destroy(tn_class* i_this, int flags) {
     tn_abi::dCcD_Stts_destroy(reinterpret_cast<u8*>(&i_this->mEnemyIce.mStts), 2);
 
     // Native array cleanup: three 0x10-byte cut-turn callbacks.
-    tn_abi::destroyArray(reinterpret_cast<u8*>(&i_this->m144C), 3, 0x10,
+    tn_abi::destroyArray(reinterpret_cast<u8*>(&i_this->mCutTurnEcallBack), 3, 0x10,
                gabi::at<void>(gabi::guest_fn((const void*)&tnCutTurn_destroy)), 0, 0);
     tn_abi::dCcD_Sph_destroy(&i_this->mWepon2Sph, 2);
     tn_abi::dCcD_Sph_destroy(&i_this->mWeponSph, 2);

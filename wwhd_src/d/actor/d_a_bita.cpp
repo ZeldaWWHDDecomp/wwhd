@@ -71,7 +71,7 @@ static void base_mtx_set(bita_class *i_this) {
 static inline void mode_normal(bita_class *i_this) {
     BitaBossHD *b = btd;
     if (b != nullptr) {
-        if (b->m6E16 >= 100) { /* btd->m6E16 (HD +0x705A) */
+        if (b->mDemoCamMode >= 100) { /* btd->mDemoCamMode (HD +0x705A) */
             gabi::Local<cXyz> delta;
             BitaCameraHD *cam = ((BitaPlayHD *)dComIfGp_get())->mCamera;
             cXyz_mi(&cam->mEye, delta, &i_this->current.pos);

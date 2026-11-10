@@ -197,7 +197,7 @@ static inline void body_control1(Actor* i_this) {
             f32 s = i_this->mSegmentScale[i];
             mDoMtx_stack_c::scaleM(s, s * i_this->mSegmentScaleY[i], 1.0f);
         }
-        mDoMtx_stack_c::transM(0.0f, 0.0f, i_this->mBodyOffset);
+        mDoMtx_stack_c::transM(0.0f, 0.0f, i_this->mModelOffsetZ);
         J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
         if (i == 0) {
             cXyz v;
@@ -454,7 +454,7 @@ static inline void mt_move(Actor* i_this) {
         i_this->mWavePauseTimer = 0;
         anm_init(i_this, 10, 20.0f, 2, 1.0f, 0);
     }
-    cLib_addCalc2(&i_this->mBodyOffset, -10.0f, 1.0f, 1.0f);
+    cLib_addCalc2(&i_this->mModelOffsetZ, -10.0f, 1.0f, 1.0f);
 
     if (gabi::ea(&i_this->mStts) != 0) {
         i_this->current.pos.x = i_this->current.pos.x + i_this->mStts.m_cc_move.x;
@@ -709,7 +709,7 @@ static inline void mt_fight(Actor* i_this) {
         /* knocked back */
         i_this->current.angle.x = (s16)(i_this->current.angle.x - 0x500);
         cLib_addCalcAngleS2(&i_this->current.angle.y, (s16)(cM_atan2s(i_this->speed.x, i_this->speed.z) + 0x8000), 2, 0x400);
-        cLib_addCalc2(&i_this->mKnockbackRate, 0.9f, 1.0f, 0.1f);
+        cLib_addCalc2(&i_this->mSegmentSpeedScale, 0.9f, 1.0f, 0.1f);
         if (i_this->speed.y > 1.0f) {
             mt_fall(i_this);
         } else if (i_this->mDamageMode != 0) {
@@ -998,7 +998,7 @@ static inline void mt_action(Actor* i_this, fopAc_ac_c* player) {
         mt_bg_check(i_this);
         if (i_this->mActionTimer != 0) {
             i_this->mJointWavePhase = 0;
-            cLib_addCalc0(&i_this->mWobbleAmplitude, 0.05f, REG0_F(12) + 0.02f);
+            cLib_addCalc0(&i_this->mBodyWaveScale, 0.05f, REG0_F(12) + 0.02f);
             if (i_this->mActionTimer == 1) {
                 bakuha(i_this);
             }
@@ -1013,11 +1013,11 @@ static inline void mt_action(Actor* i_this, fopAc_ac_c* player) {
             anm_init(i_this, 10, 20.0f, 2, 1.0f, 0);
             i_this->mSph[0].mObjAt.mSPrm = (i_this->mSph[0].mObjAt.mSPrm & ~0xAu) | 4;
         } else {
-            i_this->mWobbleAmplitude = REG0_F(13) + 0.2f;
+            i_this->mBodyWaveScale = REG0_F(13) + 0.2f;
             if (i_this->mAtSph.ChkTgHit()) {
                 i_this->health = 0;
                 i_this->mActionTimer = REG0_S(3) + 0x28;
-                i_this->mWobbleAmplitude = REG0_F(13) + 1.5f;
+                i_this->mBodyWaveScale = REG0_F(13) + 1.5f;
                 mt_fopAcM_seStart(i_this, 0x2828, 0);
                 mt_fopAcM_monsSeStart(i_this, 0x4803, 0);
                 AttackInfo atInfo;
@@ -1187,7 +1187,7 @@ BOOL daMt_Execute(mt_class* actor) {
         if (i_this->mHitEffectTimer != 0) i_this->mHitEffectTimer = i_this->mHitEffectTimer - 1;
         if (i_this->mInvulnerableTimer != 0) i_this->mInvulnerableTimer = i_this->mInvulnerableTimer - 1;
         if (i_this->mShakeTimer != 0) i_this->mShakeTimer = i_this->mShakeTimer - 1;
-        if (i_this->mSteamTimer != 0) i_this->mSteamTimer = i_this->mSteamTimer - 1;
+        if (i_this->mWaterSteamTimer != 0) i_this->mWaterSteamTimer = i_this->mWaterSteamTimer - 1;
         if (i_this->mWavePauseTimer != 0) {
             i_this->mWavePauseTimer = i_this->mWavePauseTimer - 1;
             i_this->mWaveExtent = i_this->mWaveExtent + 1;

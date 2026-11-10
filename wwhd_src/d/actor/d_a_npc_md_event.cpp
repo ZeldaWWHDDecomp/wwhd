@@ -126,13 +126,13 @@ static inline void md_set_pos(daNpc_Md_c* i_this, cXyz* local_24) {
     word(i_this->current.pos.z) = word(local_24->z);
     word(i_this->current.pos.x) = word(local_24->x);
 }
-/* mJntCtrl.setTrn(); mJntCtrl.lookAtTarget(&shape_angle.y, &local_24, current.pos, current.angle.y, m3110, false) */
+/* mJntCtrl.setTrn(); mJntCtrl.lookAtTarget(&shape_angle.y, &local_24, current.pos, current.angle.y, mLookMaxVel, false) */
 static inline void md_walk_look(daNpc_Md_c* i_this, cXyz* local_24, cXyz* eye) {
     eye->z = i_this->current.pos.z;
     eye->y = i_this->current.pos.y;
     eye->x = i_this->current.pos.x;
     i_this->mJntCtrl.mbTrn = 1;
-    dNpc_JntCtrl_lookAtTarget(&i_this->mJntCtrl, &i_this->shape_angle.y, local_24, eye, i_this->current.angle.y, i_this->m3110, false);
+    dNpc_JntCtrl_lookAtTarget(&i_this->mJntCtrl, &i_this->shape_angle.y, local_24, eye, i_this->current.angle.y, i_this->mLookMaxVel, false);
 }
 
 /* HD frame controls: mDoExt_McaMorf2 (play speed +0xA4, frame +0xA8, end +0xAE, loop frame +0xB0),
@@ -225,19 +225,19 @@ BOOL daNpc_Md_c::mirrorCancelCheck() {
 
 /* 0228C1B4 */
 void daNpc_Md_c::setWingEmitter() {
-    particle_set(&m0508[0], ID_IT_SN_MD_HANE00);
+    particle_set(&mEmitters[0], ID_IT_SN_MD_HANE00);
 }
 
 /* 0228E2D4 */
 void daNpc_Md_c::setHane02Emitter() {
-    particle_set(&m0508[2], ID_IT_SN_MD_HANE02);
-    particle_set(&m0508[3], ID_IT_SN_MD_HANE02);
+    particle_set(&mEmitters[2], ID_IT_SN_MD_HANE02);
+    particle_set(&mEmitters[3], ID_IT_SN_MD_HANE02);
 }
 
 /* 0228E328 */
 void daNpc_Md_c::setHane03Emitter() {
-    particle_set(&m0508[4], ID_IT_SN_MD_HANE03);
-    particle_set(&m0508[5], ID_IT_SN_MD_HANE03);
+    particle_set(&mEmitters[4], ID_IT_SN_MD_HANE03);
+    particle_set(&mEmitters[5], ID_IT_SN_MD_HANE03);
 }
 
 /* 0228C4D0 */
@@ -597,7 +597,7 @@ void daNpc_Md_c::initialFlyEvent(int) {
     speed.y = 20.0f;
     gravity = l_HIO().m188;
     maxFallSpeed = 10.0f;
-    m3118 = 60 * 30;
+    mEventTimer = 60 * 30;
 }
 
 /* 0228C234 */
@@ -608,7 +608,7 @@ BOOL daNpc_Md_c::actionFlyEvent(int staffIdx) {
         high = *p;
     }
     if (current.pos.y > high) {
-        emitterDelete(&m0508[0]);
+        emitterDelete(&mEmitters[0]);
         return TRUE;
     }
     if (m3104 == 0x19) {
@@ -620,7 +620,7 @@ BOOL daNpc_Md_c::actionFlyEvent(int staffIdx) {
     if (mAcch.ChkRoofHit()) {
         return TRUE;
     }
-    return cLib_calcTimer(&m3118) == 0 ? TRUE : FALSE;
+    return cLib_calcTimer(&mEventTimer) == 0 ? TRUE : FALSE;
 }
 
 /* 0228C338 */
@@ -667,8 +667,8 @@ BOOL daNpc_Md_c::actionLandingEvent(int) {
 
 /* 0228C4A4 */
 void daNpc_Md_c::initialWalkEvent(int) {
-    // HD: also sets the wall circle (GameCube: speedF = 0, m3118 = 20 s only)
-    m3118 = 20 * 30;
+    // HD: also sets the wall circle (GameCube: speedF = 0, mEventTimer = 20 s only)
+    mEventTimer = 20 * 30;
     speedF = 0.0f;
     mAcchCir[1].SetWall(60.0f, 20.0f);
 }
@@ -690,9 +690,9 @@ BOOL daNpc_Md_c::actionWalkEvent(int staffIdx) {
         }
         current.angle.y = cM_atan2s(dx, dz);
         if (mJntCtrl.mbTrn != 0) { /* mJntCtrl.trnChk() */
-            cLib_addCalcAngleS2(&m3110, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
+            cLib_addCalcAngleS2(&mLookMaxVel, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
         } else {
-            m3110 = 0;
+            mLookMaxVel = 0;
             if (pfVar3 != nullptr) {
                 speedF = *pfVar3;
             } else {
@@ -712,7 +712,7 @@ BOOL daNpc_Md_c::actionWalkEvent(int staffIdx) {
             speedF = 0.0f;
             return TRUE;
         }
-        if (cLib_calcTimer(&m3118) != 0) {
+        if (cLib_calcTimer(&mEventTimer) != 0) {
             return FALSE;
         }
         md_set_pos(this, &local_24);
@@ -736,9 +736,9 @@ BOOL daNpc_Md_c::actionDashEvent(int staffIdx) {
         }
         current.angle.y = cM_atan2s(dx, dz);
         if (mJntCtrl.mbTrn != 0) {
-            cLib_addCalcAngleS2(&m3110, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
+            cLib_addCalcAngleS2(&mLookMaxVel, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
         } else {
-            m3110 = 0;
+            mLookMaxVel = 0;
             speedF = 17.0f;
             mRunRate = 1.0f;
             setAnm(2);
@@ -750,7 +750,7 @@ BOOL daNpc_Md_c::actionDashEvent(int staffIdx) {
             return TRUE;
         }
         setAttention(true);
-        if (cLib_calcTimer(&m3118) != 0) {
+        if (cLib_calcTimer(&mEventTimer) != 0) {
             return FALSE;
         }
         md_set_pos(this, &local_24);
@@ -946,20 +946,20 @@ void daNpc_Md_c::initialOnLinkEvent(int) {
 void daNpc_Md_c::initialTurnEvent(int staffIdx) {
     be<s32>* t = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "Timer");
     if (t != nullptr) {
-        m3118 = (s16)*t;
+        mEventTimer = (s16)*t;
     } else {
-        m3118 = 0;
+        mEventTimer = 0;
     }
     cXyz* pos = (cXyz*)dComIfGp_evmng_getMyVec3dP(staffIdx, "Pos");
     if (pos != nullptr) {
-        m30B8.x = pos->x;
-        m30B8.y = pos->y;
-        m30B8.z = pos->z;
+        mTurnTargetPos.x = pos->x;
+        mTurnTargetPos.y = pos->y;
+        mTurnTargetPos.z = pos->z;
     } else {
         f32 z = 0.0f;
-        m30B8.y = z;
-        m30B8.x = z;
-        m30B8.z = z;
+        mTurnTargetPos.y = z;
+        mTurnTargetPos.x = z;
+        mTurnTargetPos.z = z;
     }
 }
 
@@ -991,9 +991,9 @@ BOOL daNpc_Md_c::actionTurnEvent(int staffIdx) {
     if (md_streq(buf, gabi::guest_addr("@PLAYER"))) {
         lookBack(1, 0, iVar4);
     } else {
-        lookBack(&m30B8, 1, iVar4);
+        lookBack(&mTurnTargetPos, 1, iVar4);
     }
-    if (cLib_calcTimer(&m3118) != 0) {
+    if (cLib_calcTimer(&mEventTimer) != 0) {
         return FALSE;
     }
     return TRUE;
@@ -1024,7 +1024,7 @@ void daNpc_Md_c::initialSetAnmEvent(int staffIdx) {
         loopAtFrame(MdEvent::morf(mpMorf.get())->mLoopFrame, MdEvent::morf(mpMorf.get())->mFrame);
         loopAtFrame(MdEvent::morf(mpArmMorf.get())->mLoopFrame, MdEvent::morf(mpArmMorf.get())->mFrame);
         loopAtFrame(MdEvent::morf(mpWingMorf.get())->mLoopFrame, MdEvent::morf(mpWingMorf.get())->mFrame);
-        m30D0 = (f32)MdEvent::morf(mpMorf.get())->mFrame; /* mpMorf->getFrame() */
+        mBtpFrame = (f32)MdEvent::morf(mpMorf.get())->mFrame; /* mpMorf->getFrame() */
     }
     pfVar2 = (be<f32>*)dComIfGp_evmng_getMyFloatP(staffIdx, "MorfFrame");
     if (pfVar2 != nullptr) {
@@ -1070,7 +1070,7 @@ BOOL daNpc_Md_c::actionLookDown(int) {
     local_38.x = x;
     local_38.y = y;
     local_38.z = z;
-    dNpc_JntCtrl_lookAtTarget(&mJntCtrl, &shape_angle.y, &local_14, &local_38, desiredYRot, m3110, false);
+    dNpc_JntCtrl_lookAtTarget(&mJntCtrl, &shape_angle.y, &local_14, &local_38, desiredYRot, mLookMaxVel, false);
     return TRUE;
 }
 
@@ -1433,15 +1433,15 @@ u32 daNpc_Md_c::getMsg() {
         }
     } else if (mType == 1) { /* isTypeAdanmae() */
         if (checkStatus(daMdStts_UNK40)) {
-            if (m312D == 0x10) {
-                u8 count = m313C; /* getPiyo2TalkCNT() */
+            if (mAnmTblIdx == 0x10) {
+                u8 count = mPiyo2TalkCnt; /* getPiyo2TalkCNT() */
                 msgNo = (u32)l_msg_num.values[count]; /* l_msg_num */
                 /* countPiyo2TalkCNT() */
                 u8 n = count + 1;
                 if (n >= 3) {
-                    m313C = 0;
+                    mPiyo2TalkCnt = 0;
                 } else {
-                    m313C = n;
+                    mPiyo2TalkCnt = n;
                 }
             } else {
                 msgNo = 0x17F6;
@@ -1500,9 +1500,9 @@ void MdEventLookActor::lookBack(cXyz* param_1, int param_2, int param_3) {
     f32 x = 0.0f, y = 0.0f, z = 0.0f; /* local_3c.setall(0.0f) */
     s16 desiredYRot = shape_angle.y;
     if (mJntCtrl.mbTrn != 0) { /* mJntCtrl.trnChk() */
-        cLib_addCalcAngleS2(&m3110, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
+        cLib_addCalcAngleS2(&mLookMaxVel, l_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
     } else {
-        m3110 = 0;
+        mLookMaxVel = 0;
     }
     if (param_2 != 0) {
         /* &local_30 = *param_1 (integer copy) */
@@ -1517,7 +1517,7 @@ void MdEventLookActor::lookBack(cXyz* param_1, int param_2, int param_3) {
     local_3c.x = x;
     local_3c.y = y;
     local_3c.z = z;
-    dNpc_JntCtrl_lookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, &local_3c, desiredYRot, m3110, param_3 != 0);
+    dNpc_JntCtrl_lookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, &local_3c, desiredYRot, mLookMaxVel, param_3 != 0);
 }
 
 /* 0228DFF8 */
@@ -1538,13 +1538,13 @@ s32 daNpc_Md_c::lookBackWaist(s16 param_1, f32 param_2) {
     } else {
         sVar3 = (s16)gabi::ftoi((f32)l_HIO().m034.m1E * fVar1);
     }
-    sVar3 = cLib_addCalcAngleS(&m3114, sVar3, 4, 0xC00, 0x180);
-    s16 sVar4 = cLib_addCalcAngleS(&m3116, (s16)gabi::ftoi((f32)l_HIO().m034.m22 * dVar6), 4, 0xC00, 0x180);
-    // HD: while m310C > 0.9, a body turn towards a target far to the side
-    f32 rate = m310C;
+    sVar3 = cLib_addCalcAngleS(&mWaistRotX, sVar3, 4, 0xC00, 0x180);
+    s16 sVar4 = cLib_addCalcAngleS(&mWaistRotY, (s16)gabi::ftoi((f32)l_HIO().m034.m22 * dVar6), 4, 0xC00, 0x180);
+    // HD: while mStickValue > 0.9, a body turn towards a target far to the side
+    f32 rate = mStickValue;
     if (rate > 0.9f) {
         f32 s = cM_ssin(iVar2);
-        if (std::fabs(s) > 0.91f || std::fabs(cM_ssin((u16)m311A)) > 0.95f) {
+        if (std::fabs(s) > 0.91f || std::fabs(cM_ssin((u16)mStickAngY)) > 0.95f) {
             s16 d = (s16)gabi::ftoi(512.0f * (rate - 0.5f) * s);
             cLib_addCalcAngleS(&shape_angle.y, (s16)(shape_angle.y + d), 4, 0x40, 0x10);
         }

@@ -58,7 +58,7 @@ enum {
 // HD: the message is driven through the message manager (status get/set); the animation is set only once the message exists
 BOOL daNpc_Ji1_c::startspeakAction(void* arg) {
     Ji1MessageManager* mgr = l_messageManager;
-    if (field_0xC78 == 0) {
+    if (mActionPhase == 0) {
         if (!eventInfo.checkCommandDemoAccrpt()) {
             ji1_orderOtherEvent(this, mEventIdx[0]);
             eventInfo.onCondition(dEvtCnd_UNK2_e);
@@ -81,16 +81,16 @@ BOOL daNpc_Ji1_c::startspeakAction(void* arg) {
         } else {
             mMsgNo = 0x969;
         }
-        field_0xC78 = field_0xC78 + 1;
+        mActionPhase = mActionPhase + 1;
         l_msgId = fpcM_ERROR_PROCESS_ID_e;
-    } else if (field_0xC78 != -1) {
+    } else if (mActionPhase != -1) {
         if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
             l_msgId = Ji1_messageSet(mgr, mMsgNo, &eyePos);
             if (l_msgId != fpcM_ERROR_PROCESS_ID_e) {
                 setAnm(5, 4.0f, 0);
             }
-        } else if (field_0xC78 == 1) {
-            field_0xC78 = field_0xC78 + 1;
+        } else if (mActionPhase == 1) {
+            mActionPhase = mActionPhase + 1;
         } else if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
             Ji1_setMessageStatus(mgr, Ji1_nextMessageStatus(this, &mMsgNo));
             if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_CONTINUES_e) {
@@ -104,10 +104,10 @@ BOOL daNpc_Ji1_c::startspeakAction(void* arg) {
             if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
                 Ji1_setMessageStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
                 u32 no = mMsgNo;
-                field_0xD70 = 0;
+                mTeachStep = 0;
                 if (no == 0x969) {
                     field_0xC94 = 0;
-                    field_0xC98 = (s16)l_HIO().field_0x54[0];
+                    mTeachHitsLeft = (s16)l_HIO().field_0x54[0];
                     ji1_setAction(this, ACT_teachAction, nullptr);
                 } else if (no == 0x98C || no == 0x98E || no == 0x990 || no == 0x992 || no == 0x994) {
                     ji1_setAction(this, ACT_battleAction, nullptr);
@@ -128,7 +128,7 @@ BOOL daNpc_Ji1_c::endspeakAction(void* arg) {
     Ji1MessageManager* mgr = l_messageManager;
     int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     int actionNo = getEventActionNo(staffIdx);
-    if (field_0xC78 == 0) {
+    if (mActionPhase == 0) {
         if (!eventInfo.checkCommandDemoAccrpt()) {
             ji1_orderOtherEvent(this, mEventIdx[2]);
             eventInfo.onCondition(dEvtCnd_UNK2_e);
@@ -146,16 +146,16 @@ BOOL daNpc_Ji1_c::endspeakAction(void* arg) {
         } else {
             mMsgNo = 0x954;
         }
-        field_0xC78 = field_0xC78 + 1;
+        mActionPhase = mActionPhase + 1;
         l_msgId = fpcM_ERROR_PROCESS_ID_e;
-    } else if (field_0xC78 != -1) {
+    } else if (mActionPhase != -1) {
         if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
             l_msgId = Ji1_messageSet(mgr, mMsgNo, &eyePos);
             if (l_msgId != fpcM_ERROR_PROCESS_ID_e) {
                 setAnm(5, 4.0f, 0);
             }
-        } else if (field_0xC78 == 1) {
-            field_0xC78 = field_0xC78 + 1;
+        } else if (mActionPhase == 1) {
+            mActionPhase = mActionPhase + 1;
         } else if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
             setAnimFromMsgNo(mMsgNo);
             Ji1_setMessageStatus(mgr, Ji1_nextMessageStatus(this, &mMsgNo));
@@ -177,7 +177,7 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
     Ji1MessageManager* mgr = l_messageManager;
     int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     int actionNo = getEventActionNo(staffIdx);
-    if (field_0xC78 == 0) {
+    if (mActionPhase == 0) {
         if (actionNo == 1) {
             dComIfGp_evmng_cutEnd(staffIdx);
             return FALSE;
@@ -195,7 +195,7 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
         }
         mDoAud_bgmStart(JA_BGM_HOUSE_G);
         if (dComIfGs_isEventBit(0x0520)) {
-            s32 n = field_0xD70;
+            s32 n = mTeachStep;
             if (n == 0) {
                 mMsgNo = 0x997;
             } else {
@@ -210,14 +210,14 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
         } else {
             mMsgNo = 0x955;
         }
-        field_0xC78 = field_0xC78 + 1;
+        mActionPhase = mActionPhase + 1;
         l_msgId = fpcM_ERROR_PROCESS_ID_e;
         Ji1_onCameraAttention();
-    } else if (field_0xC78 != -1) {
+    } else if (mActionPhase != -1) {
         if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
             l_msgId = Ji1_messageSet(mgr, mMsgNo, &eyePos);
-        } else if (field_0xC78 == 1) {
-            field_0xC78 = field_0xC78 + 1;
+        } else if (mActionPhase == 1) {
+            mActionPhase = mActionPhase + 1;
         } else if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
             Ji1_setMessageStatus(mgr, Ji1_nextMessageStatus(this, &mMsgNo));
             if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_CONTINUES_e) {
@@ -248,7 +248,7 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
                 ji1_setAction(this, ACT_normalAction, nullptr);
                 dComIfGp_event_reset();
                 Ji1_offCameraAttention();
-                field_0xD74 = 0;
+                mGuardCount = 0;
             }
         }
     }
@@ -259,15 +259,15 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
 BOOL daNpc_Ji1_c::plmoveAction(void* arg) {
     int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     int actionNo = getEventActionNo(staffIdx);
-    if (field_0xC78 == 0) {
+    if (mActionPhase == 0) {
         if (dComIfGp_evmng_startCheck(mEventIdx[4])) {
             dComIfGp_evmng_cutEnd(staffIdx);
-            field_0xC78 = field_0xC78 + 1;
+            mActionPhase = mActionPhase + 1;
         } else {
             ji1_orderOtherEvent(this, mEventIdx[4]);
             eventInfo.onCondition(dEvtCnd_UNK2_e);
         }
-    } else if (field_0xC78 != -1) {
+    } else if (mActionPhase != -1) {
         if (mAnimation == 0xB) {
             if (ji1_checkFrameEnd(mpOrcaMorf, 14.0f)) {
                 ji1_seStart(this, JA_SE_CM_JI_ATTACK, 0);
@@ -291,7 +291,7 @@ BOOL daNpc_Ji1_c::plmoveAction(void* arg) {
                 setAnm(0xC, 8.0f, 0);
             } else if (actionNo == 1) {
                 dComIfGp_evmng_cutEnd(staffIdx);
-                field_0xD84 = 1;
+                mHarpoonState = 1;
                 initPos(0);
                 BOOL ev = dComIfGs_isEventBit(0x0520);
                 if (field_0xD7B == 0) {

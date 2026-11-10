@@ -125,7 +125,7 @@ static BOOL daKajiExecute(void* i_this) {
 
 /* inlined into daKajiDraw */
 bool daKaji_c::_draw() {
-    if (!l_p_ship->m2CC) {
+    if (!l_p_ship->mAppeared) {
         return true;
     }
     g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &current.pos, &tevStr);

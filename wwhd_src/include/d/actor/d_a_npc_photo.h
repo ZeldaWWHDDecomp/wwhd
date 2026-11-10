@@ -130,17 +130,17 @@ struct daNpcPhoto_c : fopNpc_npc_c {
     /* 0x7EC */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
     /* 0x7F0 */ mDoExt_btpAnm mBtpAnm;          /* mDoExt_btpAnm (HD 0x74) */
     /* 0x864 */ dNpc_PathRun_c mPathRun;   // HD: no mShadowId before it
-    /* 0x86C */ dCcD_Cyl field_0x6F8[2];
-    /* 0xACC */ cXyz field_0x958;
+    /* 0x86C */ dCcD_Cyl mCounterCyl[2];  /* was field_0x6F8: _execute 022CF17C sets the two cylinders at l_counter_pos (radius 110, height 150) while field_0x9C1 is 2; executeWait 022CF6C4 sets mCounterHit when either touches the player; createInit 022CC8D0 Set(l_cyl_src2) (tww the same) */
+    /* 0xACC */ cXyz mCylOffset;  /* was field_0x958: _execute 022CF17C / createInit 022CC8D0: the collision cylinder center is current.pos + it; executeWait 022CF6C4 sets (0, 0, npc dat 0x34) or clears it */
     /* 0xAD8 */ cXyz mLookAtPos;
     /* 0xAE4 */ cXyz mEyePos;
     /* 0xAF0 */ gptr<sPhotoAnmDat> mpAnmDat;
-    /* 0xAF4 */ gptr<be<u32>> field_0x980;
-    /* 0xAF8 */ be<f32> field_0x984;
-    /* 0xAFC */ be<f32> field_0x988;
-    /* 0xB00 */ be<f32> field_0x98C;
+    /* 0xAF4 */ gptr<be<u32>> mpMsgList;  /* was field_0x980: eventMesSetInit 022CD580 points it at a message number list (l_msg_1st_talk_photo, ...) and sets *it; next_msgStatus 022CFE34 / getMsg 022D031C step through it */
+    /* 0xAF8 */ be<f32> mTargetSpeed;  /* was field_0x984: _execute 022CF17C chases speedF to it (cLib_chaseF 0.1 / 0.5); executeWalk 022CFB4C sets npc dat 0x3C (* 0x40), executeSetMode 022CD190 clears it */
+    /* 0xAFC */ be<f32> mCylR;  /* was field_0x988: the constructor 022CC418 sets 60; createInit 022CC8D0 passes it to setCollision as the radius */
+    /* 0xB00 */ be<f32> mMorf;  /* was field_0x98C: setAnm 022CCFAC uses it as the morf frames once when not negative, then sets -1; the constructor 022CC418 sets -1 */
     /* 0xB04 */ be<s32> mMsgNno;
-    /* 0xB08 */ be<u8> field_0x994;
+    /* 0xB08 */ be<u8> mLookHeadOnly;  /* was field_0x994: lookBack 022CEF70 passes it to lookAtTarget as the head-only flag (d_npc.h lookAtTarget headOnly) unless talking with mBodyTurn; chkAttention 022CCD4C sets it (0 = turn the body), eventLookUb 022CE468 clears it (tww the same); same role as daNpcRoten_c::mLookHeadOnly */
     /* 0xB09 */ u8 _B09;
     /* 0xB0A */ be<s16> mPhotoLinkBackEventIdx;
     /* 0xB0C */ be<s16> mPhotoGetItemEventIdx;
@@ -150,42 +150,42 @@ struct daNpcPhoto_c : fopNpc_npc_c {
     /* 0xB14 */ be<s16> mPhotoCounterTalk0EventIdx;
     /* 0xB16 */ be<s16> mPhotoCounterTalk1EventIdx;
     /* 0xB18 */ be<s16> mPhotoDateUB4EventIdx;
-    /* 0xB1A */ be<s16> field_0x9A6;
-    /* 0xB1C */ be<s16> field_0x9A8;
+    /* 0xB1A */ be<s16> mCounterTalkEventIdx;  /* was field_0x9A6: createInit 022CC8D0 copies mPhotoCounterTalk0EventIdx; eventMove 022CE97C waits for that event's end and then resets the talk (tww the same) */
+    /* 0xB1C */ be<s16> mWaitTimer;  /* was field_0x9A8: executeSetMode 022CD190 sets npc dat 0x4A / 0x4E + random; executeWait 022CF6C4 counts it down before executeSetMode(3); createInit 022CC8D0 sets 1 (tww the same); same role as daNpcRoten_c::mWaitTimer */
     /* 0xB1E */ u8 _B1E[2];
-    /* 0xB20 */ be<s16> field_0x9AC;
-    /* 0xB22 */ be<s16> field_0x9AE;
+    /* 0xB20 */ be<s16> mHomeTurnDelay;  /* was field_0x9AC: chkAttention 022CCD4C sets 30 when the player leaves the attention range and counts it down before turning back to mTargetAngleY (tww the same); same role as daNpcRoten_c::mHomeTurnDelay */
+    /* 0xB22 */ be<s16> mTargetAngleY;  /* was field_0x9AE: the constructor 022CC418 sets home.angle.y; eventPosSetInit 022CD764 / eventTurnToPlayerInit 022CDCDC set it; eventTurnToPlayer 022CE434 ends when current.angle.y equals it */
     /* 0xB24 */ be<s16> field_0x9B0;
-    /* 0xB26 */ be<s16> field_0x9B2;
+    /* 0xB26 */ be<s16> mMaxAttnAngleY;  /* was field_0x9B2: createInit 022CC8D0 copies npc dat 0x28; chkAttention 022CCD4C: the player is in attention while the angle to them is below it (+0x71C while mInAttention) (tww the same) */
     /* 0xB28 */ be<s16> mTimer;
-    /* 0xB2A */ be<s16> field_0x9B6;
-    /* 0xB2C */ be<s16> field_0x9B8;
-    /* 0xB2E */ be<s16> field_0x9BA;
-    /* 0xB30 */ be<u8> field_0x9BC;
-    /* 0xB31 */ be<u8> field_0x9BD;
-    /* 0xB32 */ be<u8> field_0x9BE;
+    /* 0xB2A */ be<s16> mLookMaxVelTarget;  /* was field_0x9B6: chkAttention 022CCD4C / executeWalk 022CFB4C set npc dat 0x16 / 0x18; lookBack 022CEF70 eases mLookMaxVel toward it */
+    /* 0xB2C */ be<s16> mLookMaxVel;  /* was field_0x9B8: lookBack 022CEF70 eases it toward mLookMaxVelTarget (cLib_addCalcAngleS2 4, 0x800), else clears it, and passes it to lookAtTarget as maxVel */
+    /* 0xB2E */ be<s16> mLookAngleY;  /* was field_0x9BA: lookBack 022CEF70: the target angle in look mode 2; chkAttention 022CCD4C sets mTargetAngleY, executeWalk 022CFB4C / executeTurn 022CFD7C the path angle (tww the same); same role as daNpcRoten_c::mLookAngleY */
+    /* 0xB30 */ be<u8> mTalking;  /* was field_0x9BC: checkOrder 022CD3F8 sets it when the talk starts; executeCommon 022CF670 switches to the talk mode while 1 and returns it; executeTalk 022CFA00 / eventMove 022CE97C / eventOrder 022CEB58 clear it (tww the same); same role as daNpcRoten_c::mTalking */
+    /* 0xB31 */ be<u8> mInAttention;  /* was field_0x9BD: chkAttention 022CCD4C: 1 once the player is in the attention range (distance +40 and angle +0x71C while set), 0 when they leave (tww the same); executeWait 022CF6C4 tests it; same pattern as daNpcRoten_c::mInAttention */
+    /* 0xB32 */ be<u8> mOrderEvent;  /* was field_0x9BE: eventOrder 022CEB58 orders by it; checkOrder 022CD3F8 clears 3-6 once PHOTO_LINK_BACK / GET_ITEM / GET_ITEM2 / GET_PHOTO starts; executeWait 022CF6C4 / eventMove 022CE97C set it (tww the same); after daNpc_Cb1_c::mOrderEvent */
     /* 0xB33 */ be<u8> mFrame;
-    /* 0xB34 */ be<u8> field_0x9C0;
+    /* 0xB34 */ be<u8> mExecuteMode;  /* was field_0x9C0: executeSetMode 022CD190 stores the mode; _execute 022CF17C calls moveProc[it]; chkAttention 022CCD4C tests 0 (tww the same); same role as daNpcRoten_c::mExecuteMode */
     /* 0xB35 */ be<u8> field_0x9C1;
     /* 0xB36 */ be<u8> field_0x9C2;
     /* 0xB37 */ be<u8> field_0x9C3;
     /* 0xB38 */ be<u8> field_0x9C4;
     /* 0xB39 */ be<u8> mItemNo;
     /* 0xB3A */ be<u8> field_0x9C6;
-    /* 0xB3B */ be<u8> field_0x9C7;
-    /* 0xB3C */ be<u8> field_0x9C8;
+    /* 0xB3B */ be<u8> mModeInTalk;  /* was field_0x9C7: _execute 022CF17C runs the mode (not eventMove) during a talk only while set; the constructor 022CC418, executeWait 022CF6C4, eventMove 022CE97C, eventOrder 022CEB58 set it, XyEventCB 022CC690 clears it (tww the same) */
+    /* 0xB3C */ be<u8> mAnmIdx;  /* was field_0x9C8: setAnm 022CCFAC stores the animation index; createHeap 022CC160 loads the bck by it; setAnmTbl 022CD0B8 / _execute 022CF17C test it (tww the same); same role as daNpcRoten_c::mAnmIdx */
     /* 0xB3D */ be<u8> field_0x9C9;
-    /* 0xB3E */ be<s8> field_0x9CA;
+    /* 0xB3E */ be<s8> mAnmLoopCount;  /* was field_0x9CA: setAnmTbl 022CD0B8 sets the table entry's count (+0x02); playAnm 022CEE30 counts it down before the next entry */
     /* 0xB3F */ be<s8> mActIdx;
     /* 0xB40 */ be<u8> field_0x9CC;
-    /* 0xB41 */ be<u8> field_0x9CD;
+    /* 0xB41 */ be<u8> mCounterHit;  /* was field_0x9CD: executeWait 022CF6C4 clears it, then sets it when an mCounterCyl touches the player; chkAttention 022CCD4C treats the player as in attention while set (tww the same) */
     /* 0xB42 */ u8 _B42[2];
-    /* 0xB44 */ gptr<be<s8>> field_0x9D0;       /* u8* (camera index list) */
+    /* 0xB44 */ gptr<be<s8>> mpMsgCameraList;  /* was field_0x9D0: eventMesSetInit 022CD580 points it at the message's camera index list (or 0) and steps it; setMsgCamera 022CDE3C reads the camera from it (tww the same); u8* (camera index list) */
     /* 0xB48 */ be<u8> field_0x9D4;
     /* 0xB49 */ be<u8> field_0x9D5;
-    /* 0xB4A */ be<s8> field_0x9D6;
-    /* 0xB4B */ be<u8> field_0x9D7;
-    /* 0xB4C */ be<u8> field_0x9D8;
+    /* 0xB4A */ be<s8> mLookMode;  /* was field_0x9D6: lookBack 022CEF70 switches on it: 1 looks at mLookAtPos, 2 turns to mLookAngleY, 0 neither; chkAttention 022CCD4C / eventLookUb 022CE468 set it (tww the same); same role as daNpcRoten_c::mLookMode */
+    /* 0xB4B */ be<u8> mBodyTurn;  /* was field_0x9D7: createInit 022CC8D0 copies npc dat 0x52, eventMove 022CE97C sets it after PHOTO_DATE_UB4; while set chkAttention 022CCD4C and lookBack 022CEF70 (when talking) turn the body (mLookHeadOnly 0) (tww the same); same role as daNpcRoten_c::mBodyTurn */
+    /* 0xB4C */ be<u8> mLookAtPlayer;  /* was field_0x9D8: createInit 022CC8D0 copies npc dat 0x53, eventMove 022CE97C sets it after PHOTO_DATE_UB4; chkAttention 022CCD4C: while 0 the player in range only turns him to mTargetAngleY instead of being looked at (tww the same) */
     /* 0xB4D */ u8 _B4D;
     /* 0xB4E */ be<u8> mReplaceDateMessages;            /* HD only: zeroed by the constructor */
     /* 0xB4F */ u8 _B4F;
@@ -193,12 +193,12 @@ struct daNpcPhoto_c : fopNpc_npc_c {
 WWHD_OFFSET(daNpcPhoto_c, mPhs1, 0x7DC);
 WWHD_OFFSET(daNpcPhoto_c, mBtpAnm, 0x7F0);
 WWHD_OFFSET(daNpcPhoto_c, mPathRun, 0x864);
-WWHD_OFFSET(daNpcPhoto_c, field_0x6F8, 0x86C);
-WWHD_OFFSET(daNpcPhoto_c, field_0x958, 0xACC);
+WWHD_OFFSET(daNpcPhoto_c, mCounterCyl, 0x86C);
+WWHD_OFFSET(daNpcPhoto_c, mCylOffset, 0xACC);
 WWHD_OFFSET(daNpcPhoto_c, mMsgNno, 0xB04);
-WWHD_OFFSET(daNpcPhoto_c, field_0x9AE, 0xB22);
+WWHD_OFFSET(daNpcPhoto_c, mTargetAngleY, 0xB22);
 WWHD_OFFSET(daNpcPhoto_c, mFrame, 0xB33);
-WWHD_OFFSET(daNpcPhoto_c, field_0x9D0, 0xB44);
+WWHD_OFFSET(daNpcPhoto_c, mpMsgCameraList, 0xB44);
 WWHD_OFFSET(daNpcPhoto_c, mReplaceDateMessages, 0xB4E);
 WWHD_SIZE(daNpcPhoto_c, 0xB50);
 

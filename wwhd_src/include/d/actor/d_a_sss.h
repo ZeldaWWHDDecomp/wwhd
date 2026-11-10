@@ -100,69 +100,69 @@ struct sss_class : fopAc_ac_c {
     /* 0x3AC */ u8 _3AC[0x3C8 - 0x3AC];
     /* 0x3C8 */ request_of_phase_process_class mPhs;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3D4 */ be<u8> field_0x2B8;
-    /* 0x3D5 */ be<u8> field_0x2B9;
-    /* 0x3D6 */ be<u8> field_0x2BA;
+    /* 0x3D4 */ be<u8> mType;  /* was field_0x2B8: daSss_Create 0248F140: SSS_WATER_e (param byte 0 == 1) or SSS_LAND_e; daSss_Draw 0248EC3C draws and daSss_Execute 0248EEEC moves only while it is set; hand_move 0248F484 picks SVINE_OUT_WATER / SVINE_OUT by it */
+    /* 0x3D5 */ be<u8> mOpenRangePrm;  /* was field_0x2B9: daSss_Create 0248F140: param bits 8-15; hand_move 0248F484 opens the hand (SSS_WAIT_e -> SSS_OPEN_e) when the player is within it * 10 (0xFF: 1000) and closes again 100 beyond */
+    /* 0x3D6 */ be<u8> mSwitchNo;  /* was field_0x2BA: daSss_Create 0248F140: param switch (0xFF -> 0); hand_move 0248F484 (SSS_WAIT_e) opens the hand when that switch is on instead of by distance */
     /* 0x3D7 */ u8 _3D7;
-    /* 0x3D8 */ be<s16> field_0x2BC;
+    /* 0x3D8 */ be<s16> mFrameCounter;  /* was field_0x2BC: daSss_Create 0248F140: rnd(10000); daSss_Execute 0248EEEC adds 1 per frame; hand_move 0248F484 / control1 / cut_control1 (in hand_move) use it as the sway phase and its low bits for the magic drain and the sphere points */
     /* 0x3DA */ u8 _3DA[2];
-    /* 0x3DC */ be<s16> field_0x2C0;
-    /* 0x3DE */ be<s16> field_0x2C2[3];
-    /* 0x3E4 */ cXyz field_0x2C8;
-    /* 0x3F0 */ cXyz field_0x2D4;
-    /* 0x3FC */ be<s16> field_0x2E0;
-    /* 0x3FE */ be<s16> field_0x2E2;
+    /* 0x3DC */ be<s16> mAction;  /* was field_0x2C0: hand_move 0248F484: switch over SSS_WAIT_e / SSS_OPEN_e / SSS_REACH_e / SSS_CATCH_e / SSS_CUT_e / SSS_SINK_e */
+    /* 0x3DE */ be<s16> mTimers[3];  /* was field_0x2C2: daSss_Execute 0248EEEC counts the 3 down; indexed by SSS_ACTION_TIMER_e / SSS_EMITTER_TIMER_e / SSS_HIT_TIMER_e in hand_move 0248F484 and cut_control1 (in hand_move) */
+    /* 0x3E4 */ cXyz mHandPos;  /* was field_0x2C8: hand_move 0248F484: the hand position, eased toward the player / the open point and falling after the cut; control2 (in hand_move) makes it the last vine point */
+    /* 0x3F0 */ cXyz mHandMtxPos;  /* was field_0x2D4: control2 / cut_control2 (in hand_move 0248F484) copy the last vine point; hand_mtx_set 0248EDD0 places the hand model there */
+    /* 0x3FC */ be<s16> mHandAngleX;  /* was field_0x2E0: control2 / cut_control2 (in hand_move 0248F484): -atan2 of the last vine segment; hand_mtx_set 0248EDD0 rotates the hand model x by it */
+    /* 0x3FE */ be<s16> mHandAngleY;  /* was field_0x2E2: control2 / cut_control2 (in hand_move 0248F484): atan2 of the last vine segment; hand_mtx_set 0248EDD0 rotates the hand model y by it */
     /* 0x400 */ u8 _400[4];
-    /* 0x404 */ be<f32> field_0x2E8;
+    /* 0x404 */ be<f32> mSegmentLen;  /* was field_0x2E8: hand_move 0248F484 eases it to 0 / 25 / 30 by action; control1 / control2 / cut_control2 (in hand_move) use it as the length of each vine segment */
     /* 0x408 */ u8 _408[4];
-    /* 0x40C */ be<f32> field_0x2F0;
-    /* 0x410 */ be<f32> field_0x2F4;
-    /* 0x414 */ be<f32> field_0x2F8;
-    /* 0x418 */ be<f32> field_0x2FC;
-    /* 0x41C */ SssLineMaterial field_0x300;
-    /* 0x5A4 */ sss_s field_0x33C[10];
-    /* 0x6BC */ SssLineMaterial field_0x454;
-    /* 0x844 */ sss_s field_0x490[5];
+    /* 0x40C */ be<f32> mReachPull;  /* was field_0x2F0: hand_move 0248F484 eases it to 10 in SSS_REACH_e, else 0; control1 (in hand_move) adds it along the vine direction to every segment */
+    /* 0x410 */ be<f32> mSwayAmp;  /* was field_0x2F4: hand_move 0248F484: 10 (catch) / 50 (cut), eased to 5 / 50 / 0; control1 / cut_control2 (in hand_move) scale the segment sway by it */
+    /* 0x414 */ be<f32> mCutGroundY;  /* was field_0x2F8: hand_move 0248F484 (SSS_CUT_e): ground height under the falling hand; cut_control2 (in hand_move) keeps the vine points above it + 5 */
+    /* 0x418 */ be<f32> mCutSegmentLen;  /* was field_0x2FC: hand_move 0248F484 sets 1.5 * the 5th segment length at the cut and eases it to 0; cut_control1 (in hand_move) uses it as the segment length of the cut-off piece; daSss_Draw 0248EC3C draws that piece while it is > 0.1 */
+    /* 0x41C */ SssLineMaterial mVineLine;  /* was field_0x300: useHeapInit 0248EFEC: init(1, 10, BTI); hand_move 0248F484 copies the 10 vine points into it; daSss_Draw 0248EC3C updates and draws it (l_color) */
+    /* 0x5A4 */ sss_s mVine[10];  /* was field_0x33C: control1 / control2 (in hand_move 0248F484): the 10 vine points from the root (current.pos) to the hand; size_d[] widths; copied into mVineLine */
+    /* 0x6BC */ SssLineMaterial mCutLine;  /* was field_0x454: useHeapInit 0248EFEC: init(1, 5, BTI); hand_move 0248F484 copies the 5 cut-piece points into it; daSss_Draw 0248EC3C draws it (l_cutColor) while mCutSegmentLen > 0.1 */
+    /* 0x844 */ sss_s mCutVine[5];  /* was field_0x490: hand_move 0248F484 copies the first 5 vine points at the cut; cut_control1 (in hand_move) moves them and sets the TSURU_TAIEKI00 particle at the end */
     /* 0x8D0 */ dCcD_Stts mStts;
-    /* 0x90C */ dCcD_Sph field_0x558[3];
-    /* 0xC90 */ dCcD_Sph field_0x8DC;
-    /* 0xDBC */ be<f32> field_0xA08;
-    /* 0xDC0 */ be<s16> field_0xA0C;
+    /* 0x90C */ dCcD_Sph mVineSph[3];  /* was field_0x558: daSss_Create 0248F140: Set(tg_sph_src) x3; hand_move 0248F484 places them on vine points (by mFrameCounter) and cuts the vine on a Tg hit */
+    /* 0xC90 */ dCcD_Sph mHandSph;  /* was field_0x8DC: daSss_Create 0248F140: Set(bm_sph_src); hand_move 0248F484 centres it on eyePos; a Tg hit cuts the vine, attack type 8 pushes the hand away instead */
+    /* 0xDBC */ be<f32> mPushDist;  /* was field_0xA08: hand_move 0248F484 sets 300 when mHandSph is hit by attack type 8 and eases it to 0; the hand moves to 100 up / it away from the root while it is > 1 */
+    /* 0xDC0 */ be<s16> mPushAngleY;  /* was field_0xA0C: hand_move 0248F484: player angle + 0x8000 at that hit; direction of the push (mPushDist) */
     /* 0xDC2 */ u8 _DC2[2];
     /* 0xDC4 */ gptr<SssEmitter> mpEmitter1;
     /* 0xDC8 */ gptr<SssEmitter> mpEmitter2;
-    /* 0xDCC */ be<u8> field_0xA18;
+    /* 0xDCC */ be<u8> mCutEffectOn;  /* was field_0xA18: hand_move 0248F484 sets 1 at the cut; cut_control1 / cut_control2 (in hand_move) start the TSURU_TAIEKI00 emitters only while it is set; cut_control2 clears it when its emitter ends */
     /* 0xDCD */ u8 _DCD[3];
 };
-WWHD_OFFSET(sss_class, field_0x33C, 0x5A4);
-WWHD_OFFSET(sss_class, field_0x490, 0x844);
-WWHD_OFFSET(sss_class, field_0x558, 0x90C);
+WWHD_OFFSET(sss_class, mVine, 0x5A4);
+WWHD_OFFSET(sss_class, mCutVine, 0x844);
+WWHD_OFFSET(sss_class, mVineSph, 0x90C);
 WWHD_OFFSET(sss_class, mpEmitter1, 0xDC4);
 WWHD_OFFSET(sss_class, mPhs, 0x3C8);
 WWHD_OFFSET(sss_class, mpMorf, 0x3D0);
-WWHD_OFFSET(sss_class, field_0x2B8, 0x3D4);
-WWHD_OFFSET(sss_class, field_0x2B9, 0x3D5);
-WWHD_OFFSET(sss_class, field_0x2BA, 0x3D6);
-WWHD_OFFSET(sss_class, field_0x2BC, 0x3D8);
-WWHD_OFFSET(sss_class, field_0x2C0, 0x3DC);
-WWHD_OFFSET(sss_class, field_0x2C2, 0x3DE);
-WWHD_OFFSET(sss_class, field_0x2C8, 0x3E4);
-WWHD_OFFSET(sss_class, field_0x2D4, 0x3F0);
-WWHD_OFFSET(sss_class, field_0x2E0, 0x3FC);
-WWHD_OFFSET(sss_class, field_0x2E2, 0x3FE);
-WWHD_OFFSET(sss_class, field_0x2E8, 0x404);
-WWHD_OFFSET(sss_class, field_0x2F0, 0x40C);
-WWHD_OFFSET(sss_class, field_0x2F4, 0x410);
-WWHD_OFFSET(sss_class, field_0x2F8, 0x414);
-WWHD_OFFSET(sss_class, field_0x2FC, 0x418);
-WWHD_OFFSET(sss_class, field_0x300, 0x41C);
-WWHD_OFFSET(sss_class, field_0x454, 0x6BC);
+WWHD_OFFSET(sss_class, mType, 0x3D4);
+WWHD_OFFSET(sss_class, mOpenRangePrm, 0x3D5);
+WWHD_OFFSET(sss_class, mSwitchNo, 0x3D6);
+WWHD_OFFSET(sss_class, mFrameCounter, 0x3D8);
+WWHD_OFFSET(sss_class, mAction, 0x3DC);
+WWHD_OFFSET(sss_class, mTimers, 0x3DE);
+WWHD_OFFSET(sss_class, mHandPos, 0x3E4);
+WWHD_OFFSET(sss_class, mHandMtxPos, 0x3F0);
+WWHD_OFFSET(sss_class, mHandAngleX, 0x3FC);
+WWHD_OFFSET(sss_class, mHandAngleY, 0x3FE);
+WWHD_OFFSET(sss_class, mSegmentLen, 0x404);
+WWHD_OFFSET(sss_class, mReachPull, 0x40C);
+WWHD_OFFSET(sss_class, mSwayAmp, 0x410);
+WWHD_OFFSET(sss_class, mCutGroundY, 0x414);
+WWHD_OFFSET(sss_class, mCutSegmentLen, 0x418);
+WWHD_OFFSET(sss_class, mVineLine, 0x41C);
+WWHD_OFFSET(sss_class, mCutLine, 0x6BC);
 WWHD_OFFSET(sss_class, mStts, 0x8D0);
-WWHD_OFFSET(sss_class, field_0x8DC, 0xC90);
-WWHD_OFFSET(sss_class, field_0xA08, 0xDBC);
-WWHD_OFFSET(sss_class, field_0xA0C, 0xDC0);
+WWHD_OFFSET(sss_class, mHandSph, 0xC90);
+WWHD_OFFSET(sss_class, mPushDist, 0xDBC);
+WWHD_OFFSET(sss_class, mPushAngleY, 0xDC0);
 WWHD_OFFSET(sss_class, mpEmitter2, 0xDC8);
-WWHD_OFFSET(sss_class, field_0xA18, 0xDCC);
+WWHD_OFFSET(sss_class, mCutEffectOn, 0xDCC);
 WWHD_SIZE(sss_class, 0xDD0);
 
 // HD: attack work area written by at_power_check; exact guest stack size.

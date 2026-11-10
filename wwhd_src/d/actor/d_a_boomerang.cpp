@@ -438,12 +438,12 @@ static void boomerangDrawBlurRing(u32 a, u32 ring, u32 top, u32 root, s32 count,
     for (s32 i = count; i >= 0; --i) {
         u32 pointIndex = (selector == 0) + 2u * static_cast<u32>(i);
         boomerang_bindVertexDeclaration(at<void>(ring + 0x254 * pointIndex + 0x158));
-        u32 primitive = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mPrimitive);
-        if (primitive) {
-            u32 vertices = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mpIndices.v),
-                offset = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mOffset),
-                number = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mCount);
-            boomerang_drawIndexed(number, primitive, at<void>(vertices), offset, 0, 1);
+        u32 indexCount = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mCount);
+        if (indexCount) {
+            u32 indexFormat = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mIndexFormat),
+                indices = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mpIndices.v),
+                mode = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mPrimitiveMode);
+            boomerang_drawIndexed(mode, indexCount, at<void>(indexFormat), indices, 0, 1);
         }
         if (i != 0)
             selector = static_cast<u32>(at<boomerangBlurRing_c>(ring)->mWriteBuffer);
@@ -808,12 +808,12 @@ void daBoomerang_sightPacket_c::draw() {
                        at<void>(resource));
         u32 selected = static_cast<u32>(this->mWriteBuffer) == 0;
         boomerang_bindVertexDeclaration(at<void>(ea(&this->mPoints[selected].mDeclaration)));
-        u32 primitive = static_cast<u32>(this->mIndexBuffer.mPrimitive);
-        if (primitive) {
-            u32 vertices = static_cast<u32>(this->mIndexBuffer.mpIndices.v),
-                vertexOffset = static_cast<u32>(this->mIndexBuffer.mOffset),
-                count = static_cast<u32>(this->mIndexBuffer.mCount);
-            boomerang_drawIndexed(count, primitive, at<void>(vertices), vertexOffset, 0, 1);
+        u32 indexCount = static_cast<u32>(this->mIndexBuffer.mCount);
+        if (indexCount) {
+            u32 indexFormat = static_cast<u32>(this->mIndexBuffer.mIndexFormat),
+                indices = static_cast<u32>(this->mIndexBuffer.mpIndices.v),
+                mode = static_cast<u32>(this->mIndexBuffer.mPrimitiveMode);
+            boomerang_drawIndexed(mode, indexCount, at<void>(indexFormat), indices, 0, 1);
         }
     }
 }
@@ -1825,7 +1825,7 @@ void daBoomerang_sightPacket_c::setup() {
     this->mIndices[3] = 3;
     boomerang_setupIndexBuffer(at<void>(ea(&this->mIndexBuffer)), at<void>(ea(&this->mIndices)), 4,
                                4);
-    this->mIndexBuffer.mCount = 6;
+    this->mIndexBuffer.mPrimitiveMode = 6;
     u32 index = static_cast<u32>(at<boomerangSightBuffers_c>(points)->mWriteBuffer);
     u32 buffer = static_cast<u32>(at<boomerangRenderPoint_c>(points)[index].mVertices.v);
     boomerangZeroCacheRange(buffer, 0x40);
@@ -1953,7 +1953,7 @@ void daBoomerang_blur_c::setup() {
     boomerang_setupIndexBuffer(at<void>(ea(&this->mIndexBuffer)), at<void>(ea(&this->mIndices)), 4,
                                4);
     f32 zero = static_cast<f32>(l_zero), one = static_cast<f32>(l_one);
-    this->mIndexBuffer.mCount = 6;
+    this->mIndexBuffer.mPrimitiveMode = 6;
     boomerangInitializeBlurRing(a + 0xBEC, zero, one);
     boomerangInitializeBlurRing(a + 0x12364, zero, one);
     u32 graphics = static_cast<u32>(l_graphicsContext);

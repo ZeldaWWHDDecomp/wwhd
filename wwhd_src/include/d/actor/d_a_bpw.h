@@ -3,7 +3,8 @@
  * HD constructor 020D60C8 allocates 0xE9C bytes (GameCube 0xD80). Every GameCube field is
  * shifted by the fopAc_ac_c delta (+0x11C); confirmed by this unit's loads/stores (embedded
  * effect callbacks, background check, colliders and the invisible model sit at the shifted
- * offsets). Member names follow the GameCube actor. */
+ * offsets). Member names follow the GameCube actor (zeldaret/tww); fields it leaves offset-named are
+ * named from their uses (`was mXXX` comments). */
 #pragma once
 #include "wwhd.h"
 #include "f_op/f_op_actor.h"
@@ -26,123 +27,145 @@ WWHD_OFFSET(BpwLightInfluenceHD, mPower, 0x14);
 WWHD_OFFSET(BpwLightInfluenceHD, mHD20, 0x20);
 
 struct bpw_class {
-    fopEn_enemy_c actor;
-    request_of_phase_process_class mPhase; // 0x3C8
-    be<u32> mpMorf;                        // 0x3D0
-    u8 opaque_3D4[4];
-    be<u32> mpLightFreezeBrkAnm; // 0x3D8
-    be<u32> mpLanternGlowBrkAnm; // 0x3DC
-    be<u32> mpLightStunBrkAnm;   // 0x3E0
-    be<u32> mpCurseStartBrkAnm;  // 0x3E4
-    be<u32> mpCurseEndBrkAnm;    // 0x3E8
-    be<u32> mpDefaultBrkAnm;     // 0x3EC
-    be<f32> m2D4[12];            // 0x3F0
-    cXyz m304[3];                // 0x420
-    cXyz m328[3];                // 0x444
-    cXyz mBodyPos;               // 0x468
-    cXyz m358;                   // 0x474
-    u8 opaque_480[0xC];
-    cXyz m370;              // 0x48C
-    cXyz mChildActorPos;    // 0x498
-    be<f32> m388;           // 0x4A4
-    be<f32> m38C;           // 0x4A8
-    be<f32> m390;           // 0x4AC
-    cXyz m394;              // 0x4B0
-    cXyz m3A0;              // 0x4BC
-    cXyz m3AC;              // 0x4C8
-    cXyz m3B8;              // 0x4D4
-    cXyz m3C4;              // 0x4E0
-    csXyz mKanteraDousaRot; // 0x4EC
-    csXyz m3D6;             // 0x4F2
-    be<u8> mType;           // 0x4F8
-    be<u8> mUnknownParam2;  // 0x4F9
-    be<u8> mLightState;     // 0x4FA
-    be<u8> mHitType;        // 0x4FB
-    be<u8> m3E0;            // 0x4FC
-    be<u8> m3E1;            // 0x4FD
-    be<u8> m3E2;            // 0x4FE
-    u8 opaque_4FF;
-    be<u8> m3E4, m3E5, m3E6, m3E7, m3E8, m3E9, m3EA; // 0x500..0x506
-    be<u8> mKankyouHendouState;                      // 0x507
-    be<f32> m3EC;                                    // 0x508
-    be<f32> m3F0;                                    // 0x50C
-    be<s16> m3F4;                                    // 0x510
-    be<s16> m3F6;                                    // 0x512
-    be<s32> m3F8;                                    // 0x514
-    be<u32> m3FC;                                    // 0x518
-    be<u32> m400;                                    // 0x51C
-    be<u32> m404;                                    // 0x520
-    be<s16> m408;                                    // 0x524
-    u8 opaque_526[2];
-    cXyz m40C; // 0x528
-    cXyz m418; // 0x534
-    cXyz m424; // 0x540
-    u8 opaque_54C[0xC];
-    be<f32> m43C;         // 0x558
-    be<f32> m440;         // 0x55C
-    be<s16> mBodyAction;  // 0x560
-    be<s16> mActionState; // 0x562
-    u8 opaque_564[4];
-    be<s16> mAttWaitTimer;            // 0x568
-    be<s16> mSomeCountdownTimers[10]; // 0x56A
-    be<s16> m462;                     // 0x57E
-    be<s16> m464;                     // 0x580
-    u8 opaque_582[0xE];
-    be<s16> m474, m476, m478, m47A, m47C, m47E, m480, m482, m484; // 0x590..0x5A0
-    u8 opaque_5A2[2];
-    be<f32> m488, m48C, m490, m494, m498, m49C, m4A0, m4A4, m4A8; // 0x5A4..0x5C4
-    be<s32> mChildPoeIds[15];                                     // 0x5C8
+    /* 0x000 */ fopEn_enemy_c actor;
+    /* 0x3C8 */ request_of_phase_process_class mPhase;
+    /* 0x3D0 */ be<u32> mpMorf;
+    /* 0x3D4 */ u8 opaque_3D4[4];
+    /* 0x3D8 */ be<u32> mpLightFreezeBrkAnm;
+    /* 0x3DC */ be<u32> mpLanternGlowBrkAnm;
+    /* 0x3E0 */ be<u32> mpLightStunBrkAnm;
+    /* 0x3E4 */ be<u32> mpCurseStartBrkAnm;
+    /* 0x3E8 */ be<u32> mpCurseEndBrkAnm;
+    /* 0x3EC */ be<u32> mpDefaultBrkAnm;
+    /* 0x3F0 */ be<f32> mAlphaModelMtx[12];  /* was m2D4: kantera_draw / damage_ball_draw (in daBPW_Draw 020D1334) copy calc_mtx into it and pass it to dComIfGd_setAlphaModel */
+    /* 0x420 */ cXyz mLinChkStart[3];  /* was m304: action_dousa (in body_execute 020DC704) and action_b_fire_1_dousa (in daBPW_Execute 020D3464) set [0] to current.pos (+400 y in action_dousa) and pass it as the start of linChk.Set; daBPW_Create 020D6268 seeds all 3 with current.pos */
+    /* 0x444 */ cXyz mLinChkEnd[3];  /* was m328: action_dousa (in body_execute 020DC704) and action_b_fire_1_dousa (in daBPW_Execute 020D3464) set [0] to a point ahead of current.pos and pass it as the end of linChk.Set; daBPW_Create 020D6268 seeds all 3 with current.pos */
+    /* 0x468 */ cXyz mBodyPos;
+    /* 0x474 */ cXyz mCoSphCenter;  /* was m358: body_nodeCallBack 020D0C04 puts it mCoSphOffsetY above the root joint, kantera_nodeCallBack 020D0DF0 100 below the lantern joint; body_execute 020DC704 / kantera_execute (in daBPW_Execute 020D3464) centre mBodyCoSph / mKanteraCoSph on it; the lantern's torch particle and burning sound sit there */
+    /* 0x480 */ u8 opaque_480[0xC];
+    /* 0x48C */ cXyz mAtSphCenter;  /* was m370: body_nodeCallBack 020D0C04 puts it 50 below the root joint; body_execute 020DC704 centres mBodyAtSph on it */
+    /* 0x498 */ cXyz mChildActorPos;
+    /* 0x4A4 */ be<f32> mKanteraSwingX;  /* was m388: kantera_calc 020D30EC eases it to 2000 / 6000 and swings the lantern's mKanteraDousaRot.x by it * sin(mKanteraSwingPhase); action_dousa (in body_execute 020DC704) sets 0 */
+    /* 0x4A8 */ be<f32> m38C;
+    /* 0x4AC */ be<f32> mKanteraSwingZ;  /* was m390: kantera_calc 020D30EC eases it to 2000 / 6000 and swings the lantern's mKanteraDousaRot.z by it * cos(mKanteraSwingPhase); action_dousa (in body_execute 020DC704) sets 0 */
+    /* 0x4B0 */ cXyz mWaistPos;  /* was m394: body_nodeCallBack 020D0C04 stores the J_BPW_KOSI1 (waist) joint position; action_kougeki (in body_execute 020DC704) emits the inhale / blow particles there */
+    /* 0x4BC */ cXyz mFlameBallPos;  /* was m3A0: action_b_fire_1_dousa (in daBPW_Execute 020D3464) starts it at current.pos and eases it along the flame line (mLinChkStart / mLinChkEnd); damage_ball_execute (same) centres mDamageBallCoSph on it */
+    /* 0x4C8 */ cXyz mModelOffset;  /* was m3AC: draw_SUB 020D0FEC translates the body model by current.pos + it, kantera_draw_SUB 020D1158 the lantern model by it; next_status_clear 020D257C, action_damage 020D72BC, action_bunri_dousa 020D8564 and action_start_demo 020DB380 set or ease its y */
+    /* 0x4D4 */ cXyz mRightArmPos;  /* was m3B8: body_nodeCallBack 020D0C04 stores the J_BPW_UDE_R3 joint position; action_start_demo 020DB380 copies it to mFire1DousaPos for the opening smoke */
+    /* 0x4E0 */ cXyz mJawPos;  /* was m3C4: body_nodeCallBack 020D0C04 stores the J_BPW_AGO1 (jaw) joint position; action_kougeki (in body_execute 020DC704) plays the breath-in / breath-out / fire-blast sounds there; daBPW_Delete 020D57A8 deletes its sound object */
+    /* 0x4EC */ csXyz mKanteraDousaRot;
+    /* 0x4F2 */ csXyz mRollRot;  /* was m3D6: draw_SUB 020D0FEC rotates the body by Y(y) X(x) Y(-y); action_damage 020D72BC sets y to the player's angle and adds 5000 to x per frame while thrown (debug REG8_S(3) path), 0 on landing */
+    /* 0x4F8 */ be<u8> mType;
+    /* 0x4F9 */ be<u8> mUnknownParam2;
+    /* 0x4FA */ be<u8> mLightState;
+    /* 0x4FB */ be<u8> mHitType;
+    /* 0x4FC */ be<u8> mIsLightFrozen;  /* was m3E0: action_damage 020D72BC sets 1 when the light freezes the body; while it is set daBPW_Draw 020D1334 uses mpLightFreezeBrkAnm, body_execute 020DC704 plays it, body_atari_check 020D6D98 and alpha_anime 020D1C40 skip; next_status_clear 020D257C sets 0 */
+    /* 0x4FD */ be<u8> mIsLightStunned;  /* was m3E1: action_damage 020D72BC sets 1 (light hit before the freeze) and 0; while it is set daBPW_Draw 020D1334 and body_execute 020DC704 use mpLightStunBrkAnm; next_status_clear 020D257C clears it */
+    /* 0x4FE */ be<u8> mCurseBrkState;  /* was m3E2: noroi_brk_check 020D2350 sets 2 (curse start), 1 (curse end), 0; daBPW_Draw 020D1334 and body_execute 020DC704 pick mpCurseStartBrkAnm at 2, mpCurseEndBrkAnm at 1 */
+    /* 0x4FF */ u8 opaque_4FF;
+    /* 0x500 */ be<u8> mReturnToParent;  /* was m3E4: action_kantera_dousa (in daBPW_Execute 020D3464): while it is set the lantern goes to state 5 and slides toward its parent (mParentId), which clears it; no setter in HD or zeldaret/tww */
+    /* 0x501 */ be<u8> mIsThrown;  /* was m3E5: action_damage 020D72BC sets 1 when the carried body is thrown and 0 when it hits a wall; body_execute 020DC704 turns toward mTargetAngleY only while it is 0; next_status_clear 020D257C clears it */
+    /* 0x502 */ be<u8> mIsCurseDash;  /* was m3E6: action_dousa (in body_execute 020DC704) sets 1 when the curse dash starts; noroi_check 020D2058 drops the body on a nearby player only while it is 0; next_status_clear 020D257C clears it */
+    /* 0x503 */ be<u8> mKanteraHidden;  /* was m3E7: daBPW_Create 020D6268 sets 1 for the lantern; while it is 0 daBPW_Draw 020D1334 draws the lantern glow and daBPW_Execute 020D3464 plays it and lights the torch particle; action_start_demo 020DB380 clears it on the lantern when it appears */
+    /* 0x504 */ be<u8> mVibMode;  /* was m3E8: action_damage 020D72BC and action_karada_taore (in body_execute 020DC704) set 1 / 2; vib_mode_check (in daBPW_Execute 020D3464) starts the matching shock or quake and sets 0 */
+    /* 0x505 */ be<u8> mIsReformed;  /* was m3E9: action_bunri_dousa 020D8564 sets 1 when the regrowing body reaches full scale; action_kougeki (in body_execute 020DC704) then goes to state 0x32 and clears it; Big_pow_gattai_check 0244A5A8 (d_a_pw) merges a Poe only while it is set */
+    /* 0x506 */ be<u8> mStartDemoStep;  /* was m3EA: action_start_demo 020DB380 sets 1..6 as the opening goes on; the child Poes (d_a_pw, 024500C0) follow each step */
+    /* 0x507 */ be<u8> mKankyouHendouState;
+    /* 0x508 */ be<f32> mKankyouBlend;  /* was m3EC: kankyou_hendou 020D1DA8 eases it to 0 / 1 and uses it as the dKy_custom_colset blend; daBPW_Create 020D6268 sets 1, action_bunri_dousa 020D8564 0 */
+    /* 0x50C */ be<f32> mDemoCamDist;  /* was m3F0: action_bunri_dousa 020D8564 sets it and eases it to 600; the demo camera eye is mDemoCamDist * sin / cos(mDemoCamAngleY) */
+    /* 0x510 */ be<s16> mDemoCamAngleY;  /* was m3F4: action_bunri_dousa 020D8564 sets it and steps it toward 0; the demo camera eye is mDemoCamDist * sin / cos(it) */
+    /* 0x512 */ be<s16> mBattlePhase;  /* was m3F6: action_bunri_dousa 020D8564 sets 1 / 2 as health drops to 10 / 5 (and 3 / 4 in the defeat demo) and ends each separation at the matching health; action_dousa (in body_execute 020DC704) takes the turn speed from it; light_on_off 020D271C and noroi_check 020D2058 read it; action_start_demo 020DB380 sets 0 */
+    /* 0x514 */ be<s32> mBckFileIdx;  /* was m3F8: anm_init 020D1A64 stores its bckFileIdx argument; action_dousa / action_kougeki / action_karada_taore (in body_execute 020DC704), action_damage 020D72BC, action_bunri_dousa 020D8564 and action_start_demo 020DB380 compare it with BCK indices */
+    /* 0x518 */ be<u32> mKanteraId;  /* was m3FC: daBPW_Create 020D6268 stores the id of the lantern child it creates; kantera_calc 020D30EC, kantera_pos_search 020D2ED8, action_bunri_dousa 020D8564 and action_start_demo 020DB380 search it */
+    /* 0x51C */ be<u32> mFireId;  /* was m400: action_kougeki (in body_execute 020DC704) stores the id of the fire actor it creates at the lantern; fire_and_emitter_clear 020D22B8 deletes it and sets -1 */
+    /* 0x520 */ be<u32> mParentId;  /* was m404: daBPW_Create 020D6268 (kantera_create_init) stores parentActorID; action_kantera_dousa (in daBPW_Execute 020D3464) turns the lantern toward that actor */
+    /* 0x524 */ be<s16> mBlureRate;  /* was m408: daBPW_Draw 020D1334 passes it to the blur (setBlureRate) while above 1 and clears it at 1; action_damage 020D72BC (wall hit) sets 0xB5; daBPW_Execute 020D3464 sets 0x32 / steps it down by 2 */
+    /* 0x526 */ u8 opaque_526[2];
+    /* 0x528 */ cXyz mDemoCamCenter;  /* was m40C: action_bunri_dousa 020D8564 and action_start_demo 020DB380 set and ease it and pass it as the center to dCamera_c::Set / Reset */
+    /* 0x534 */ cXyz mDemoCamEye;  /* was m418: action_bunri_dousa 020D8564 and action_start_demo 020DB380 set and ease it and pass it as the eye to dCamera_c::Set / Reset */
+    /* 0x540 */ cXyz mChildPoePos;  /* was m424: action_bunri_dousa 020D8564 copies the watched child Poe's current.pos; the demo camera center and the player's placement follow it */
+    /* 0x54C */ u8 opaque_54C[0xC];
+    /* 0x558 */ be<f32> mDemoCamBlend;  /* was m43C: action_bunri_dousa 020D8564 and action_start_demo 020DB380 set 0 at each camera cut and ease it to 1; the demo camera steps (demo_calc) are scaled by it */
+    /* 0x55C */ be<f32> mDemoCamFovy;  /* was m440: action_bunri_dousa 020D8564 and action_start_demo 020DB380 set and ease it and pass it as the fovy to dCamera_c::Set */
+    /* 0x560 */ be<s16> mBodyAction;
+    /* 0x562 */ be<s16> mActionState;
+    /* 0x564 */ u8 opaque_564[4];
+    /* 0x568 */ be<s16> mAttWaitTimer;
+    /* 0x56A */ be<s16> mSomeCountdownTimers[10];
+    /* 0x57E */ be<s16> mPoeCount;  /* was m462: body: action_big_demo 024500C0 (d_a_pw, view PwJalhallaView) adds 1 for each Poe that merges back; action_bunri_dousa 020D8564 ends the separation when it reaches health and reuses it as the mChildPoeIds index of the Poe the camera follows; action_dousa (in body_execute 020DC704) sets 1, action_bunri_dousa 0. Other roles of the same word: the lantern's landing step in action_kantera_dousa and the flame's sweep phase in action_b_fire_1_dousa (both in daBPW_Execute 020D3464) */
+    /* 0x580 */ be<s16> mPoeMerged;  /* was m464: body: action_big_demo 024500C0 (d_a_pw, view PwJalhallaView) sets 1 when a Poe merges back; action_bunri_dousa 020D8564 and action_start_demo 020DB380 then play BCK_CORE_NIGE1 and clear it; action_bunri_dousa also keeps the child Poe's angle to the player there for the camera. Other roles of the same word: the lantern's spin in action_kantera_dousa and the flame's sweep direction in action_b_fire_1_dousa (both in daBPW_Execute 020D3464) */
+    /* 0x582 */ u8 opaque_582[0xE];
+    /* 0x590 */ be<s16> mDemoCamActive;  /* was m474: action_bunri_dousa 020D8564 sets 1 when a demo starts and sets the camera from mDemoCamCenter / mDemoCamEye / mDemoCamFovy each frame while it is set */
+    /* 0x592 */ be<s16> mTargetAngleY;  /* was m476: action_dousa / action_kougeki / action_karada_taore (in body_execute 020DC704), action_damage 020D72BC, action_bunri_dousa 020D8564 and kantera_pos_search 020D2ED8 set it (mostly the angle to the player); body_execute turns current.angle.y toward it by mTurnStep */
+    /* 0x594 */ be<s16> mAlphaWavePhase;  /* was m478: alpha_anime 020D1C40 adds 0x400 per frame and sets mAlpha to mBaseAlpha + sin(it) * 30; next_status_clear 020D257C and action_damage 020D72BC set 0 */
+    /* 0x596 */ be<s16> mTurnStep;  /* was m47A: body_execute 020DC704 turns current.angle.y toward mTargetAngleY by it; action_dousa (same) takes it from {0x100, 0x300, 0x500}[mBattlePhase]; action_kougeki sets 0x500 / 0x300 / 140, action_damage 020D72BC 0 */
+    /* 0x598 */ be<s16> mFloatPhase;  /* was m47C: fuwafuwa_calc 020D1D3C and torituki_execute (in daBPW_Execute 020D3464) add 700 per frame and bob current.pos.y by sin(it) * 30; action_bunri_dousa 020D8564 sets 0 and swings mModelOffset by it */
+    /* 0x59A */ be<s16> mAlpha;  /* was m47E: daBPW_Draw 020D1334 writes it to the materials' K color 3 alpha and the alpha models; alpha_anime 020D1C40, action_dousa (in body_execute 020DC704), action_damage 020D72BC and action_bunri_dousa 020D8564 fade it; body_atari_check 020D6D98 takes no hit at 0 */
+    /* 0x59C */ be<s16> mBaseAlpha;  /* was m480: alpha_anime 020D1C40 eases it to 0x96 and sets mAlpha to it + sin(mAlphaWavePhase) * 30; action_bunri_dousa 020D8564 eases mAlpha toward it; action_dousa / action_karada_taore (in body_execute 020DC704) set 0x96 / 200 */
+    /* 0x59E */ be<s16> mKanteraSwingPhase;  /* was m482: kantera_calc 020D30EC adds mKanteraSwingSpeed per frame and swings the lantern by sin / cos(it); action_dousa (in body_execute 020DC704) sets 0 */
+    /* 0x5A0 */ be<s16> mKanteraSwingSpeed;  /* was m484: kantera_calc 020D30EC eases it to 3000 / 6000 and adds it to mKanteraSwingPhase */
+    /* 0x5A2 */ u8 opaque_5A2[2];
+    /* 0x5A4 */ be<f32> mSpeedStep;  /* was m488: action_dousa (in body_execute 020DC704) sets 1 / 5 / 2 and eases speedF toward mTargetSpeed by it */
+    /* 0x5A8 */ be<f32> mBgOffsetY;  /* was m48C: BG_check 020D1B90 lowers current / old pos.y by it before the ground check and raises them after; action_dousa (in body_execute 020DC704) eases it to 0, action_damage 020D72BC / action_bunri_dousa 020D8564 to -120, action_kantera_dousa (in daBPW_Execute 020D3464) sets 60 */
+    /* 0x5AC */ be<f32> mTargetSpeed;  /* was m490: action_dousa (in body_execute 020DC704) eases speedF toward it by mSpeedStep and sets 10 / * 1.35 / 0; action_damage 020D72BC sets 120 / 20 / 5; next_status_clear 020D257C 0 */
+    /* 0x5B0 */ be<f32> mDamageBallRadius;  /* was m494: action_b_fire_1_dousa / action_b_fire_2_dousa (in daBPW_Execute 020D3464) set 50 / 30 / 35; damage_ball_execute (same) passes it to mDamageBallCoSph.SetR */
+    /* 0x5B4 */ be<f32> mWallHalfHeight;  /* was m498: BG_check 020D1B90 passes it as the half height to mAcchCir.SetWall; next_status_clear 020D257C sets 350, daBPW_Execute 020D3464 50 / 0, action_bunri_dousa 020D8564 0 */
+    /* 0x5B8 */ be<f32> mWallRadius;  /* was m49C: BG_check 020D1B90 passes it as the radius to mAcchCir.SetWall; next_status_clear 020D257C sets 400, action_damage 020D72BC 300, action_bunri_dousa 020D8564 160, daBPW_Execute 020D3464 200 / 40 */
+    /* 0x5BC */ be<f32> mCoSphOffsetY;  /* was m4A0: body_nodeCallBack 020D0C04 puts mCoSphCenter this far above the root joint; action_damage 020D72BC sets 50, action_dousa / action_kougeki (in body_execute 020DC704) 0 */
+    /* 0x5C0 */ be<f32> mEyeHeight;  /* was m4A4: body_execute 020DC704 sets eyePos.y to current.pos.y + it and the attention point at + 2 * it + 100; action_karada_taore (same) sets 100, action_damage 020D72BC / next_status_clear 020D257C 300 */
+    /* 0x5C4 */ be<f32> mBodyAtSphR;  /* was m4A8: body_execute 020DC704 passes it to mBodyAtSph.SetR; action_karada_taore (same) sets 500 / 220 / 400, next_status_clear 020D257C and daBPW_Create 020D6268 220 */
+    /* 0x5C8 */ be<s32> mChildPoeIds[15];
     /* HD: no mShadowId (the ground shadow is gone); LIGHT_INFLUENCE starts at 0x604 and is
      * 0x24 bytes (the constructor stores 1.0f at its +0x20) */
-    BpwLightInfluenceHD mLightInfluence;                 // 0x604
-    dPa_smokeEcallBack m50C;                             // 0x628 dPa_smokeEcallBack (HD 0x20)
-    dPa_followEcallBack m52C;                            // 0x648 dPa_followEcallBack
-    dPa_followEcallBack m540;                            // 0x65C
-    dPa_followEcallBack m554;                            // 0x670
-    dPa_followEcallBack mFire1Dousa_Pa_followEcallBack;  // 0x684
-    dPa_followEcallBack mFire1Dousa_Pa_followEcallBack2; // 0x698
-    dPa_followEcallBack m590;                            // 0x6AC
-    dPa_followEcallBack mFireDousa2_Pa_followEcallBack;  // 0x6C0
-    dPa_followEcallBack mFireDousa2_Pa_followEcallBack2; // 0x6D4
-    dPa_followEcallBack m5CC;                            // 0x6E8
-    dPa_smokeEcallBack m5E0[4];                          // 0x6FC
-    cXyz mFire1DousaPos;                                 // 0x77C
-    cXyz m66C;                                           // 0x788
-    csXyz mFire1DousaRot;                                // 0x794
-    be<s16> m67E;                                        // 0x79A
-    be<s16> m680;                                        // 0x79C
-    u8 opaque_79E[2];
-    be<s16> m684; // 0x7A0
-    u8 opaque_7A2[2];
-    dBgS_AcchCir mAcchCir;     // 0x7A4
-    dBgS_ObjAcch mAcch;        // 0x7E4
-    dCcD_Stts mStts;           // 0x9A8
-    dCcD_Sph mBodyCoSph;       // 0x9E4
-    dCcD_Sph mBodyAtSph;       // 0xB10
-    dCcD_Sph mKanteraCoSph;    // 0xC3C
-    dCcD_Sph mDamageBallCoSph; // 0xD68
-    u8 mInvisibleModel[8];     // 0xE94
+    /* 0x604 */ BpwLightInfluenceHD mLightInfluence;
+    /* 0x628 */ dPa_smokeEcallBack mBlowSmokeCb;  /* was m50C: action_kougeki (in body_execute 020DC704) passes it to the BPWBLOWSMOKE00 particle; fire_and_emitter_clear 020D22B8 ends it; HD 0x20 */
+    /* 0x648 */ dPa_followEcallBack mBlowCb;  /* was m52C: action_kougeki (in body_execute 020DC704) passes it to the BPWBLOW00 particle; fire_and_emitter_clear 020D22B8 ends it */
+    /* 0x65C */ dPa_followEcallBack mInhaleCb;  /* was m540: action_kougeki (in body_execute 020DC704) passes it to the BPWINHALE01 particle and ends it; fire_and_emitter_clear 020D22B8 ends it */
+    /* 0x670 */ dPa_followEcallBack mOpeningSmokeCb;  /* was m554: action_start_demo 020DB380 passes it to the BPWOPENINGSMOKE00 particle (0x845A) and ends it */
+    /* 0x684 */ dPa_followEcallBack mFire1Dousa_Pa_followEcallBack;
+    /* 0x698 */ dPa_followEcallBack mFire1Dousa_Pa_followEcallBack2;
+    /* 0x6AC */ dPa_followEcallBack mFlameHitCb;  /* was m590: action_b_fire_1_dousa (in daBPW_Execute 020D3464) passes it to the BPWFLAMETHROWER02 particle at mFlameHitPos and ends it when the line misses; fire_and_emitter_clear 020D22B8 ends it */
+    /* 0x6C0 */ dPa_followEcallBack mFireDousa2_Pa_followEcallBack;
+    /* 0x6D4 */ dPa_followEcallBack mFireDousa2_Pa_followEcallBack2;
+    /* 0x6E8 */ dPa_followEcallBack mTorchCb;  /* was m5CC: daBPW_Execute 020D3464 passes it to the lantern's ID_AK_JN_TORCH particle at mCoSphCenter; daBPW_Delete 020D57A8 ends it */
+    /* 0x6FC */ dPa_smokeEcallBack mSmokeCb[4];  /* was m5E0: action_damage 020D72BC uses [0] (BPWSIRIMOTISMOKE00), action_karada_taore (in body_execute 020DC704) [1] (BPWJUMPSMOKE00) and [2] / [3] (BPWPRESSSMOKE00 / 01); daBPW_Delete 020D57A8 ends all 4 */
+    /* 0x77C */ cXyz mFire1DousaPos;
+    /* 0x788 */ cXyz mFlameHitPos;  /* was m66C: action_b_fire_1_dousa (in daBPW_Execute 020D3464) stores the line-check cross point and emits BPWFLAMETHROWER02 there */
+    /* 0x794 */ csXyz mFire1DousaRot;
+    /* 0x79A */ be<s16> mFlameHitRotX;  /* was m67E: action_b_fire_1_dousa (in daBPW_Execute 020D3464) sets 0 on a floor, 0x4000 on a wall, and passes it as the start of the particle's csXyz angle */
+    /* 0x79C */ be<s16> mFlameHitRotY;  /* was m680: action_b_fire_1_dousa (in daBPW_Execute 020D3464) sets the wall angle (atan2 from mFlameHitPos to the flame start); the y of the particle angle that starts at mFlameHitRotX */
+    /* 0x79E */ u8 opaque_79E[2];
+    /* 0x7A0 */ be<s16> mCarryAngleY;  /* was m684: action_damage 020D72BC stores shape_angle.y when the body can be picked up and, while carried, adds the player's turn and sets shape_angle.y from it */
+    /* 0x7A2 */ u8 opaque_7A2[2];
+    /* 0x7A4 */ dBgS_AcchCir mAcchCir;
+    /* 0x7E4 */ dBgS_ObjAcch mAcch;
+    /* 0x9A8 */ dCcD_Stts mStts;
+    /* 0x9E4 */ dCcD_Sph mBodyCoSph;
+    /* 0xB10 */ dCcD_Sph mBodyAtSph;
+    /* 0xC3C */ dCcD_Sph mKanteraCoSph;
+    /* 0xD68 */ dCcD_Sph mDamageBallCoSph;
+    /* 0xE94 */ u8 mInvisibleModel[8];
 };
 WWHD_SIZE(bpw_class, 0xE9C);
 WWHD_OFFSET(bpw_class, mpMorf, 0x3D0);
-WWHD_OFFSET(bpw_class, m2D4, 0x3F0);
-WWHD_OFFSET(bpw_class, m358, 0x474);
+WWHD_OFFSET(bpw_class, mAlphaModelMtx, 0x3F0);
+WWHD_OFFSET(bpw_class, mCoSphCenter, 0x474);
 WWHD_OFFSET(bpw_class, mKanteraDousaRot, 0x4EC);
 WWHD_OFFSET(bpw_class, mType, 0x4F8);
-WWHD_OFFSET(bpw_class, m3E4, 0x500);
-WWHD_OFFSET(bpw_class, m3EC, 0x508);
-WWHD_OFFSET(bpw_class, m40C, 0x528);
-WWHD_OFFSET(bpw_class, m43C, 0x558);
+WWHD_OFFSET(bpw_class, mReturnToParent, 0x500);
+WWHD_OFFSET(bpw_class, mKankyouBlend, 0x508);
+WWHD_OFFSET(bpw_class, mDemoCamCenter, 0x528);
+WWHD_OFFSET(bpw_class, mDemoCamBlend, 0x558);
 WWHD_OFFSET(bpw_class, mAttWaitTimer, 0x568);
-WWHD_OFFSET(bpw_class, m474, 0x590);
-WWHD_OFFSET(bpw_class, m488, 0x5A4);
+WWHD_OFFSET(bpw_class, mDemoCamActive, 0x590);
+WWHD_OFFSET(bpw_class, mSpeedStep, 0x5A4);
 WWHD_OFFSET(bpw_class, mChildPoeIds, 0x5C8);
 WWHD_OFFSET(bpw_class, mLightInfluence, 0x604);
-WWHD_OFFSET(bpw_class, m50C, 0x628);
-WWHD_OFFSET(bpw_class, m5CC, 0x6E8);
-WWHD_OFFSET(bpw_class, m5E0, 0x6FC);
+WWHD_OFFSET(bpw_class, mBlowSmokeCb, 0x628);
+WWHD_OFFSET(bpw_class, mTorchCb, 0x6E8);
+WWHD_OFFSET(bpw_class, mSmokeCb, 0x6FC);
 WWHD_OFFSET(bpw_class, mFire1DousaPos, 0x77C);
-WWHD_OFFSET(bpw_class, m684, 0x7A0);
+WWHD_OFFSET(bpw_class, mCarryAngleY, 0x7A0);
 WWHD_OFFSET(bpw_class, mAcchCir, 0x7A4);
 WWHD_OFFSET(bpw_class, mAcch, 0x7E4);
 WWHD_OFFSET(bpw_class, mStts, 0x9A8);
@@ -459,7 +482,7 @@ WWHD_SIZE(BpwDrawListHD, 0x5C);
 WWHD_OFFSET(BpwDrawListHD, mpOpaList, 0x48);
 WWHD_OFFSET(BpwDrawListHD, mpOpaListMaskOff, 0x54);
 
-// HD: the ten-short reset starts after mSomeCountdownTimers and reaches m474.
+// HD: the ten-short reset starts after mSomeCountdownTimers and reaches mDemoCamActive.
 struct BpwResetTimersHD {
     u8 _00[0x57E];
     be<s16> mResetTimers[10];
@@ -531,7 +554,7 @@ struct BpwCameraHD {
 WWHD_SIZE(BpwCameraHD, 0x249);
 struct BpwChildPoeHD {
     u8 _00[0x460];
-    be<u8> m344;
+    be<u8> mKilledJalhalla;  /* pw_class view; was m344: Big_pow_down_check 0244A67C sets 1 when this Poe's hit takes Jalhalla's health to 0 */
 };
 WWHD_SIZE(BpwChildPoeHD, 0x461);
 

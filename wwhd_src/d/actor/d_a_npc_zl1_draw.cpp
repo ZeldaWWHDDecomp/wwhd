@@ -152,12 +152,12 @@ void daNpc_Zl1_c::_nodeCB_Head(J3DNode* i_node, J3DModel* i_pModel) {
     u32 jointIdx = drawJointNumber(i_node);
     Mtx34* stk = mDoMtx_stack_c::get();
     PSMTXCopy(drawAnimationMatrix(i_pModel, jointIdx), stk);
-    field_0x770.x = stk->m[0][3];
-    field_0x770.y = stk->m[1][3];
-    field_0x770.z = stk->m[2][3];
-    mDoMtx_YrotM(stk, -field_0x83C);
-    mDoMtx_ZrotM(stk, -field_0x83E);
-    PSMTXMultVec(stk, a_eye_pos_off, &field_0x74C);
+    mHeadPos.x = stk->m[0][3];
+    mHeadPos.y = stk->m[1][3];
+    mHeadPos.z = stk->m[2][3];
+    mDoMtx_YrotM(stk, -mHeadAngleY);
+    mDoMtx_ZrotM(stk, -mHeadAngleZ);
+    PSMTXMultVec(stk, a_eye_pos_off, &mEyePos);
     PSMTXCopy(stk, &sCurrentMatrix);
     mtx_copy(drawAnimationMatrix(i_pModel, jointIdx), stk);
 }
@@ -198,7 +198,7 @@ static BOOL nodeCB_BackBone(J3DNode* i_node, int i_param) {
 /* 023045E0 */
 void daNpc_Zl1_c::play_animation() {
     u32 mtrlSnd = 0;
-    if (field_0x848 == 1 && field_0x7D0 != 0) {
+    if (mBtkNum == 1 && field_0x7D0 != 0) {
         setEyeCtrl();
     } else {
         clrEyeCtrl();
@@ -209,18 +209,18 @@ void daNpc_Zl1_c::play_animation() {
         mtrlSnd = dBgS_GetMtrlSndId(dComIfG_Bgsp(), daNpc_gndPoly(this));
     }
     s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(this));
-    field_0x7C3 = (s8)mpMorf->play(&eyePos, mtrlSnd, (s8)reverb);
+    mbMorfAnimStopped = (s8)mpMorf->play(&eyePos, mtrlSnd, (s8)reverb);
     if (mpMorf->getFrame() < mFrame) {
-        field_0x7C3 = 1;
+        mbMorfAnimStopped = 1;
     }
     mFrame = mpMorf->getFrame();
-    switch ((u32)(s32)field_0x847) {
+    switch ((u32)(s32)mBtpNum) {
     case 0xD:
     case 0xE:
         mBtpAnmFrame = (u8)gabi::ftoi(mpMorf->getFrame());
         break;
     }
-    switch ((u32)(s32)field_0x848) {
+    switch ((u32)(s32)mBtkNum) {
     case 6:
     case 7:
     case 8:
@@ -276,14 +276,14 @@ void daNpc_Zl1_c::setMtx(u32 param_1) {
         J3DModel_setBaseTRMtx(mpModel, drawAnimationMatrix(mpMorf->getModel(), m_bbone_jnt_num));
         J3DModel_calc(mpModel);
     }
-    if (!field_0x7D9) {
+    if (!mInDemo) {
         setWaterRipple();
         setEff();
     } else if (safestring_equal(reinterpret_cast<be<u8>*>(&sDemoName),
                                 reinterpret_cast<be<u8>*>(&sStageName))) {
         // HD: in the demo stage "Demo37" the ripple runs with the water flag set
 
-        field_0x7C8 = 1;
+        mbWaterIn = 1;
         setWaterRipple();
     }
     setAttention(param_1);
@@ -293,11 +293,11 @@ void daNpc_Zl1_c::setMtx(u32 param_1) {
 void daNpc_Zl1_c::play_btp_anm() {
     u8 frame =
         (u8)animationLastFrame(reinterpret_cast<Zl1Draw::BtpAnimation*>(mBtpAnm)->mpAnimation);
-    if (field_0x847 != 1 || cLib_calcTimer(&mTimer) == 0) {
+    if (mBtpNum != 1 || cLib_calcTimer(&mTimer) == 0) {
         u8 f = (u8)(mBtpAnmFrame + 1);
         mBtpAnmFrame = f;
         if (f >= frame) {
-            if (field_0x847 != 1) {
+            if (mBtpNum != 1) {
                 mBtpAnmFrame = frame;
             } else {
                 mTimer = (s16)cLib_getRndValue(0x3C, 0x5A);
@@ -310,10 +310,10 @@ void daNpc_Zl1_c::play_btp_anm() {
 /* 02304310 */
 void daNpc_Zl1_c::eye_ctrl() {
     f32 temp, temp2;
-    if (field_0x7D1) {
+    if (mEyeCtrl) {
         f32 div = (f32)(s32)sDrawHio.mPrmTbl.field_5E;
-        temp = ((f32)(s32)field_0x842 / div) * 0.1f;
-        temp2 = ((f32)(s32)field_0x840 / div) * 0.1f;
+        temp = ((f32)(s32)mEyeAngleX / div) * 0.1f;
+        temp2 = ((f32)(s32)mEyeAngleY / div) * 0.1f;
 
         temp = temp < -1.0f ? -1.0f : fsel(temp - 1.0f, 1.0f, temp);
         temp2 = temp2 < -1.0f ? -1.0f : fsel(temp2 - 1.0f, 1.0f, temp2);
@@ -321,14 +321,14 @@ void daNpc_Zl1_c::eye_ctrl() {
         temp = 0.0f;
         temp2 = temp;
     }
-    if (field_0x6D4[0].get() != nullptr) {
-        cLib_addCalc(&field_0x6D4[0]->mOffsetX, temp2, 0.5f, 0.1f, 0.03f);
-        cLib_addCalc(&field_0x6D4[0]->mOffsetY, temp, 0.5f, 0.1f, 0.03f);
+    if (mpEyeMatAnm[0].get() != nullptr) {
+        cLib_addCalc(&mpEyeMatAnm[0]->mOffsetX, temp2, 0.5f, 0.1f, 0.03f);
+        cLib_addCalc(&mpEyeMatAnm[0]->mOffsetY, temp, 0.5f, 0.1f, 0.03f);
     }
     temp2 = -temp2;
-    if (field_0x6D4[1].get() != nullptr) {
-        cLib_addCalc(&field_0x6D4[1]->mOffsetX, temp2, 0.5f, 0.1f, 0.03f);
-        cLib_addCalc(&field_0x6D4[1]->mOffsetY, temp, 0.5f, 0.1f, 0.03f);
+    if (mpEyeMatAnm[1].get() != nullptr) {
+        cLib_addCalc(&mpEyeMatAnm[1]->mOffsetX, temp2, 0.5f, 0.1f, 0.03f);
+        cLib_addCalc(&mpEyeMatAnm[1]->mOffsetY, temp, 0.5f, 0.1f, 0.03f);
     }
 }
 
@@ -351,9 +351,9 @@ void daNpc_Zl1_c::play_btk_anm() {
 /* 02304824 */
 void daNpc_Zl1_c::setWaterRipple() {
     if (!field_0x7CA) {
-        // HD: tests field_0x7C8 (the water flag _execute stored) instead of mObjAcch.ChkWaterIn()
+        // HD: tests mbWaterIn (the water flag _execute stored) instead of mObjAcch.ChkWaterIn()
 
-        if (field_0x7C8) {
+        if (mbWaterIn) {
             if (reinterpret_cast<Zl1Draw::Ripple*>(mRippleCallBack)->mpEmitter.get() == 0) {
 
                 dPa_control_set(dComIfGp_getParticle(), Zl1Draw::PARTICLE_SHIP_TAIL,
@@ -374,7 +374,7 @@ void daNpc_Zl1_c::setWaterRipple() {
 /* 023048F4 */
 void daNpc_Zl1_c::setWaterSplash() {
     gabi::Local<be<s32>> temp;
-    Zl1Draw::Emitter* pEmitter = createLandEmitter(daNpc_gndPoly(this), &field_0x77C, &field_0x744,
+    Zl1Draw::Emitter* pEmitter = createLandEmitter(daNpc_gndPoly(this), &mEffPos, &mEffAngle,
                                                    1.25f, 0.65f, 1.0f, &tevStr, temp, 6);
     if (pEmitter != 0) {
         pEmitter->mLifeTime = 0xF;
@@ -391,7 +391,7 @@ void daNpc_Zl1_c::set_simpleLand(u32 param_1) {
     if ((u8)param_1) {
         temp2 = 7;
     }
-    Zl1Draw::Emitter* pEmitter = createLandEmitter(daNpc_gndPoly(this), &field_0x77C, &field_0x744,
+    Zl1Draw::Emitter* pEmitter = createLandEmitter(daNpc_gndPoly(this), &mEffPos, &mEffAngle,
                                                    1.25f, 0.65f, 0.6f, &tevStr, temp, temp2);
     if (pEmitter != 0) {
         switch ((u32)*temp) {
@@ -410,19 +410,19 @@ void daNpc_Zl1_c::set_simpleLand(u32 param_1) {
 
 /* 02304A6C */
 void daNpc_Zl1_c::setEff() {
-    if (field_0x849 == 0xB || field_0x7C6) {
-        // HD: tests field_0x7C8 (the water flag _execute stored) instead of mObjAcch.ChkWaterIn()
+    if (mAnmNo == 0xB || field_0x7C6) {
+        // HD: tests mbWaterIn (the water flag _execute stored) instead of mObjAcch.ChkWaterIn()
 
-        if (field_0x7C8) {
+        if (mbWaterIn) {
             if (!field_0x7C6) {
                 s16 ang = shape_angle.y;
-                field_0x77C.x = gabi::fmadds(40.0f, cM_ssin(ang), current.pos.x);
-                field_0x77C.z = gabi::fmadds(40.0f, cM_scos(ang), current.pos.z);
-                field_0x744.z = 0;
-                field_0x744.x = 0;
-                field_0x744.y = (s16)(ang - 0x8000);
+                mEffPos.x = gabi::fmadds(40.0f, cM_ssin(ang), current.pos.x);
+                mEffPos.z = gabi::fmadds(40.0f, cM_scos(ang), current.pos.z);
+                mEffAngle.z = 0;
+                mEffAngle.x = 0;
+                mEffAngle.y = (s16)(ang - 0x8000);
             }
-            field_0x77C.y = mObjAcch.m_wtr.m_height;
+            mEffPos.y = mObjAcch.m_wtr.m_height;
             if (getPolyAttribute(dComIfG_Bgsp(), daNpc_gndPoly(this)) == 0x13) {
                 f32 y = current.pos.y + 40.0f;
                 if (mObjAcch.m_wtr.m_height > y) {
@@ -433,10 +433,10 @@ void daNpc_Zl1_c::setEff() {
             if (!field_0x7C6) {
                 gabi::Local<csXyz> temp;
                 csXyz* t = constructAngles(temp.get(), (s16)current.angle.y, (s16)0, (s16)0);
-                field_0x744.x = t->x;
-                field_0x744.y = t->y;
-                field_0x744.z = t->z;
-                field_0x77C.copy(current.pos);
+                mEffAngle.x = t->x;
+                mEffAngle.y = t->y;
+                mEffAngle.z = t->z;
+                mEffPos.copy(current.pos);
             }
         }
         if (mObjAcch.ChkGroundHit() && (mpMorf->mFrameCtrl.checkPass(13.0f) ||
@@ -531,7 +531,7 @@ BOOL daNpc_Zl1_c::setFrontWallType() {
 BOOL daNpc_Zl1_c::_draw() {
     J3DModel* pModel = mpMorf->getModel();
     J3DModelData* modelData = pModel->getModelData();
-    if (field_0x7D2 || field_0x7D4) {
+    if (field_0x7D2 || mNoDraw) {
         return TRUE;
     }
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
@@ -630,7 +630,7 @@ BOOL daNpc_Zl1_c::_draw() {
     }
 
     if (sDrawHio.mPrmTbl.field_20 != 0) {
-        if (field_0x84F == 3) {
+        if (mType == 3) {
             local_static_init(&sColorGuardA, &sColorA, &sColorSourceA);
             dComIfGp_get();
             local_static_init(&sColorGuardB, &sColorB, &sColorSourceB);

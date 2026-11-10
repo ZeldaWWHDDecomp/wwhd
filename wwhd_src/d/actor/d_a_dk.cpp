@@ -66,9 +66,9 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
             pos_vec->y = 0.0f;
             pos_vec->x = 0.0f;
             pos_vec->z = 0.0f;
-            MtxPosition(pos_vec, &a_this->tails[tail_idx].field_0x150[1]);
+            MtxPosition(pos_vec, &a_this->tails[tail_idx].mRootPos[1]);
             pos_vec->x = -10.0f;
-            MtxPosition(pos_vec, &a_this->tails[tail_idx].field_0x150[0]);
+            MtxPosition(pos_vec, &a_this->tails[tail_idx].mRootPos[0]);
         }
     }
 
@@ -77,7 +77,7 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
 
 /* inlined into daDk_Draw */
 static inline void kamen_draw(dk_class *a_this) {
-    J3DModel *morfModel = a_this->field_0x2B8->getModel();
+    J3DModel *morfModel = a_this->mpMorf->getModel();
     auto buffer = morfModel->mpMtxBuffer.get();
     u16 flags = buffer->mFlags;
     u32 mtx = buffer->mpAnmMtx;
@@ -99,8 +99,8 @@ static inline void kamen_draw(dk_class *a_this) {
 /* inlined into daDk_Draw */
 static inline void tail_draw(dk_class *a_this, tail_s *tail) {
     for (int i = 0; i < 9; i++) {
-        cXyz *trans = &tail->field_0x024[i];
-        csXyz *rot = &tail->field_0x09C[i];
+        cXyz *trans = &tail->mJointPos[i];
+        csXyz *rot = &tail->mJointAngle[i];
         f32 scale = tial_scale[i] * l_HIO.field_0x0C;
 
         MtxTrans(trans->x, trans->y, trans->z, 0);
@@ -119,16 +119,16 @@ static inline void tail_draw(dk_class *a_this, tail_s *tail) {
 /* 02124C44 */
 static BOOL daDk_Draw(dk_class *a_this) {
     /* HD: l_HIO.field_0x14 is gone (0) */
-    if (a_this->field_0xAEE != 0) {
+    if (a_this->mNotInDemo != 0) {
         return TRUE;
     }
 
-    if (a_this->field_0xAC5 > 2) {
-        J3DModel *model = a_this->field_0x2B8->getModel();
+    if (a_this->mEventState > 2) {
+        J3DModel *model = a_this->mpMorf->getModel();
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &a_this->current.pos, &a_this->tevStr);
         setLightTevColorType(dKy_getEnvlight(), model, &a_this->tevStr);
 
-        a_this->field_0x2B8->entryDL();
+        a_this->mpMorf->entryDL();
 
         kamen_draw(a_this);
         for (s32 i = 0; i < 4; i++) {
@@ -142,43 +142,43 @@ static BOOL daDk_Draw(dk_class *a_this) {
 static inline void tail_control(dk_class *a_this, tail_s *tail) {
     gabi::Local<cXyz> diff;
     gabi::Local<cXyz> vec;
-    cXyz_mi(&tail->field_0x150[1], diff, &tail->field_0x150[0]);
+    cXyz_mi(&tail->mRootPos[1], diff, &tail->mRootPos[0]);
     vec->z = diff->z;
     vec->y = diff->y;
     vec->x = diff->x;
 
-    tail->field_0x168.y = cM_atan2s(vec->x, vec->z);
+    tail->mRootAngle.y = cM_atan2s(vec->x, vec->z);
     f32 xz_dist = std_sqrtf(gabi::fmadds(vec->x, vec->x, vec->z * vec->z));
-    tail->field_0x168.x = -cM_atan2s(vec->y, xz_dist);
+    tail->mRootAngle.x = -cM_atan2s(vec->y, xz_dist);
 
     f32 vz = REG0_F(5) + 30.0f; /* REG0_F(5) + 25.0f + 5.0f */
     vec->x = 0.0f;
     vec->y = 0.0f;
     vec->z = vz;
-    cMtx_YrotS(calc_mtx(), tail->field_0x168.y);
-    cMtx_XrotM(calc_mtx(), tail->field_0x168.x);
-    MtxPosition(vec, &tail->field_0x170);
+    cMtx_YrotS(calc_mtx(), tail->mRootAngle.y);
+    cMtx_XrotM(calc_mtx(), tail->mRootAngle.x);
+    MtxPosition(vec, &tail->mRootDir);
 
-    tail->field_0x024[0].copy(tail->field_0x150[1]);
+    tail->mJointPos[0].copy(tail->mRootPos[1]);
 
     f32 f22 = REG0_F(2) + 0.77000004f;
     f32 f21;
-    if (a_this->field_0x2B4 >= 2) {
+    if (a_this->mType >= 2) {
         f21 = -1000000000.0f; /* -G_CM3D_F_INF */
     } else {
-        f21 = a_this->field_0x900.GetGroundH() + 5.0f;
+        f21 = a_this->mAcch.GetGroundH() + 5.0f;
     }
 
     gabi::Local<cXyz> pos_vec;
     for (int i = 1; i < 10; i++) {
-        cXyz *cur = &tail->field_0x024[i];
-        cXyz *prev = &tail->field_0x024[i - 1];
-        cXyz *d8 = &tail->field_0x0D8[i];
+        cXyz *cur = &tail->mJointPos[i];
+        cXyz *prev = &tail->mJointPos[i - 1];
+        cXyz *d8 = &tail->mJointMoveVec[i];
 
         f32 multiplier = gabi::fnmsubs((f32)(i - 1), REG0_F(4) + 0.1f, 1.0f);
-        f32 new_x = gabi::fmadds(tail->field_0x170.x, multiplier, d8->x);
-        f32 new_y = gabi::fmadds(tail->field_0x170.y, multiplier, d8->y);
-        f32 new_z = gabi::fmadds(tail->field_0x170.z, multiplier, d8->z);
+        f32 new_x = gabi::fmadds(tail->mRootDir.x, multiplier, d8->x);
+        f32 new_y = gabi::fmadds(tail->mRootDir.y, multiplier, d8->y);
+        f32 new_z = gabi::fmadds(tail->mRootDir.z, multiplier, d8->z);
 
         f32 y_base = cur->y + new_y;
         if (y_base < f21) {
@@ -192,8 +192,8 @@ static inline void tail_control(dk_class *a_this, tail_s *tail) {
         s16 new_y_angle = cM_atan2s(tx, tz);
         f32 xz = std_sqrtf(gabi::fmadds(tx, tx, tz * tz));
         s16 new_x_angle = -cM_atan2s(ty, xz);
-        tail->field_0x09C[i - 1].y = new_y_angle;
-        tail->field_0x09C[i - 1].x = new_x_angle;
+        tail->mJointAngle[i - 1].y = new_y_angle;
+        tail->mJointAngle[i - 1].x = new_x_angle;
 
         f32 len = 20.0f * gabi::fmadds((f32)i, 0.03f, 0.25f);
         len = len + len;
@@ -223,11 +223,11 @@ static inline void tail_control(dk_class *a_this, tail_s *tail) {
 
 /* 02124F00 */
 static BOOL daDk_Execute(dk_class *a_this) {
-    a_this->field_0x2BC = a_this->field_0x2BC + 1;
+    a_this->mFrameCounter = a_this->mFrameCounter + 1;
 
     for (s32 i = 0; i < 5; i++) {
-        if (a_this->field_0x2C0[i] != 0) {
-            a_this->field_0x2C0[i] = a_this->field_0x2C0[i] - 1;
+        if (a_this->mTimers[i] != 0) {
+            a_this->mTimers[i] = a_this->mTimers[i] - 1;
         }
     }
 
@@ -240,37 +240,37 @@ static BOOL daDk_Execute(dk_class *a_this) {
         a_this->eyePos.x = x;
         a_this->eyePos.y = y + 100.0f;
 
-        BOOL demo_set = dDemo_setDemoData(a_this, 0x6A, a_this->field_0x2B8, l_demoArcName.mText /* "Dk" */,
+        BOOL demo_set = dDemo_setDemoData(a_this, 0x6A, a_this->mpMorf, l_demoArcName.mText /* "Dk" */,
                                           0, nullptr, 0, 0);
 
         if (demo_set) {
-            a_this->field_0xAEE = 0;
+            a_this->mNotInDemo = 0;
             /* daDk_delete_Bdk() */
             fopAc_ac_c *actor = fopAcM_searchFromName(l_bdkName.mText /* "Bdk" */, 0, 0);
             if (actor != nullptr) {
                 fopAcM_delete(actor);
             }
         } else {
-            a_this->field_0x2B8->play(&a_this->eyePos, 0, 0);
-            a_this->field_0xAEE = 1;
+            a_this->mpMorf->play(&a_this->eyePos, 0, 0);
+            a_this->mNotInDemo = 1;
         }
 
-        switch (a_this->field_0xAC5) {
+        switch (a_this->mEventState) {
         case 0:
             /* HD: returns at once until the event bit is set */
             if (!dComIfGs_isEventBit(0x0310)) {
                 return TRUE;
             }
-            a_this->field_0xAC5 = 2;
+            a_this->mEventState = 2;
             break;
         case 2:
             if (Dk_startCheckOld(dComIfGp_getPEvtManager(), l_flyEventName.mText /* "zelda_fly" */)) {
-                a_this->field_0xAC5 = 3;
+                a_this->mEventState = 3;
             }
             // fallthrough
         case 3:
             if (dComIfGs_isEventBit(0x0001)) {
-                a_this->field_0xAC5 = -1;
+                a_this->mEventState = -1;
                 fopAcM_delete(a_this); /* HD */
             }
             break;
@@ -279,12 +279,12 @@ static BOOL daDk_Execute(dk_class *a_this) {
         }
     }
 
-    if (a_this->field_0x2B4 < 2) {
-        a_this->field_0x900.CrrPos(dComIfG_Bgsp());
+    if (a_this->mType < 2) {
+        a_this->mAcch.CrrPos(dComIfG_Bgsp());
     }
 
     /* HD: the scale is not set from l_HIO.field_0x08 */
-    J3DModel *model = a_this->field_0x2B8->getModel();
+    J3DModel *model = a_this->mpMorf->getModel();
     J3DModel_setBaseScale(model, &a_this->scale);
 
     mDoMtx_stack_c::transS(a_this->current.pos.x, a_this->current.pos.y, a_this->current.pos.z);
@@ -293,7 +293,7 @@ static BOOL daDk_Execute(dk_class *a_this) {
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), a_this->current.angle.z);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
 
-    a_this->field_0x2B8->calc();
+    a_this->mpMorf->calc();
     for (s32 i = 0; i < 4; i++) {
         tail_control(a_this, &a_this->tails[i]);
     }
@@ -374,7 +374,7 @@ static BOOL daDk_IsDelete(dk_class *) { return TRUE; }
 /* 02125808 */
 static BOOL daDk_Delete(dk_class *a_this) {
     dComIfG_resDelete(&a_this->mPhs, l_deleteArcName.mText /* "Dk" */);
-    a_this->field_0xACC.remove();
+    a_this->mSmokeCb.remove();
     return TRUE;
 }
 
@@ -386,24 +386,24 @@ static BOOL useHeapInit(fopAc_ac_c *i_this) {
         (J3DModelData *)dComIfG_getObjectIDRes(l_heapArcName.mText /* "Dk" */, dRes_ID_DK_BDL_DK_e);
     J3DAnmTransform *anm =
         (J3DAnmTransform *)dComIfG_getObjectIDRes(l_heapArcName.mText, dRes_ID_DK_BCK_FLY1_e);
-    a_this->field_0x2B8 =
+    a_this->mpMorf =
         mDoExt_McaMorf::create(nullptr, data, nullptr, nullptr, anm, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 1,
                                nullptr, 0x80000, 0x11020002);
 
-    if (a_this->field_0x2B8 == nullptr || a_this->field_0x2B8->getModel() == nullptr) {
+    if (a_this->mpMorf == nullptr || a_this->mpMorf->getModel() == nullptr) {
         return FALSE;
     }
 
-    for (u16 i = 0; i < a_this->field_0x2B8->getModel()->getModelData()->getJointNum(); i++) {
+    for (u16 i = 0; i < a_this->mpMorf->getModel()->getModelData()->getJointNum(); i++) {
         if (i == DK_JNT_J_DK_O_LA2_e || i == DK_JNT_J_DK_O_LB2_e || i == DK_JNT_J_DK_O_RA2_e ||
             i == DK_JNT_J_DK_O_RB2_e) {
             /* getModelData()->getJointNodePointer(i)->setCallBack(nodeCallBack) (HD joint array, 0x1C per
              * joint) */
-            a_this->field_0x2B8->getModel()->getModelData()->getJointNodePointer(i)->setCallBack(
+            a_this->mpMorf->getModel()->getModelData()->getJointNodePointer(i)->setCallBack(
                 nodeCallBack);
         }
     }
-    a_this->field_0x2B8->getModel()->mUserArea = gabi::ea(a_this); /* setUserArea */
+    a_this->mpMorf->getModel()->mUserArea = gabi::ea(a_this); /* setUserArea */
 
     J3DModelData *modelData =
         (J3DModelData *)dComIfG_getObjectIDRes(l_heapArcName.mText, dRes_ID_DK_BDL_DK_KAMEN_e);
@@ -436,23 +436,23 @@ static cPhs_State daDk_Create(fopAc_ac_c *i_this) {
         if (i_this != nullptr) {
             fopAc_ac_c_ct(i_this);
             i_this->__vtbl = DK_VTBL;
-            dBgS_AcchCir_ct(&a_this->field_0x8C0);
-            dBgS_ObjAcch_ct(&a_this->field_0x900, gc_tu.objAcch);
-            dPa_smokeEcallBack_ct(&a_this->field_0xACC, 1, 1, 0, 0);
+            dBgS_AcchCir_ct(&a_this->mAcchCir);
+            dBgS_ObjAcch_ct(&a_this->mAcch, gc_tu.objAcch);
+            dPa_smokeEcallBack_ct(&a_this->mSmokeCb, 1, 1, 0, 0);
         }
         fopAcM_OnCondition(i_this, fopAcCnd_INIT_e);
     }
 
     /* HD: the event checks of Execute's state 0 moved here */
     u8 prm = fopAcM_GetParam(a_this) & 0xFF;
-    a_this->field_0x2B4 = prm;
+    a_this->mType = prm;
     if (prm == 1) {
         if (dComIfGs_isEventBit(0x0310) && dComIfGs_isEventBit(0x0001)) {
             return cPhs_ERROR_e;
         }
-        a_this->field_0xAC5 = 0;
+        a_this->mEventState = 0;
     } else {
-        a_this->field_0xAC5 = 10;
+        a_this->mEventState = 10;
     }
 
     cPhs_State res = dComIfG_resLoad(&a_this->mPhs, l_createArcName.mText /* "Dk" */);
@@ -462,16 +462,16 @@ static cPhs_State daDk_Create(fopAc_ac_c *i_this) {
         }
 
         i_this->cullMtx =
-            gabi::ea(J3DModel_getBaseTRMtx(a_this->field_0x2B8->getModel())); /* fopAcM_SetMtx */
+            gabi::ea(J3DModel_getBaseTRMtx(a_this->mpMorf->getModel())); /* fopAcM_SetMtx */
         fopAcM_SetMin_l(i_this, -1000.0f, -1000.0f, -1000.0f);
         fopAcM_SetMax_l(i_this, 1000.0f, 1000.0f, 1000.0f);
 
         /* HD: no mDoHIO_createChild */
-        if (a_this->field_0x2B4 < 2) {
-            a_this->field_0x900.Set(&i_this->current.pos, &i_this->old.pos, a_this, 1, &a_this->field_0x8C0,
+        if (a_this->mType < 2) {
+            a_this->mAcch.Set(&i_this->current.pos, &i_this->old.pos, a_this, 1, &a_this->mAcchCir,
                                     &i_this->speed, nullptr, nullptr);
         }
-        a_this->field_0x8C0.SetWall(0.0f, 300.0f);
+        a_this->mAcchCir.SetWall(0.0f, 300.0f);
         a_this->field_0xAC8 = 0;
     }
 
@@ -497,10 +497,10 @@ static void SafeString_dt(SafeString *s, s32 flags) {
 /* 02125DA0 */
 static void dk_class_dt(dk_class *i_this, s32 flags) {
     if (i_this != nullptr) {
-        i_this->field_0x900.dBgS_GrpPassChk::__vtbl = gc_tu.objAcchDt[0];
-        i_this->field_0x900.dBgS_PolyPassChk::__vtbl = gc_tu.objAcchDt[1];
-        Dk_destroyAcch(&i_this->field_0x900, 0);
-        Dk_destroyCircle(&i_this->field_0x8C0.m_cir, 2);
+        i_this->mAcch.dBgS_GrpPassChk::__vtbl = gc_tu.objAcchDt[0];
+        i_this->mAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcchDt[1];
+        Dk_destroyAcch(&i_this->mAcch, 0);
+        Dk_destroyCircle(&i_this->mAcchCir.m_cir, 2);
         Dk_destroyActor(i_this, 0);
         if (flags & 1)
             operator_delete(i_this);

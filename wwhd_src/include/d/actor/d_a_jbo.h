@@ -38,7 +38,7 @@ struct jbo_class : fopAc_ac_c {
     /* 0x3D4 */ be<u8> mType;
     /* 0x3D5 */ u8 m2B9;
     /* 0x3D6 */ be<u8> m2BA;
-    /* 0x3D7 */ be<u8> m2BB;
+    /* 0x3D7 */ be<u8> mAction;  /* was m2BB: daJBO_Execute 021846B8: switch, case 0 runs jbo_move (as ssk_class mAction) */
     /* 0x3D8 */ be<u8> mMode;
     /* 0x3D9 */ u8 _3D9;
     /* 0x3DA */ be<s16> mFramesUntilJump;

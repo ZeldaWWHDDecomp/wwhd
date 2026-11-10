@@ -38,11 +38,11 @@ bool dCamera_c::lockonCamera(s32 style) {
     f32 v3 = camParamVal(style, 3);
     f32 v4 = camParamVal(style, 4);
     u32 attn = gabi::ea(dComIfGp_getAttention()); /* dComIfGp_getAttention() */
-    if (m108 == 0) {
+    if (mCurModeTimer == 0) {
         gabi::Local<cXyz> a, d;
-        m100 = 1;
-        m101 = 1;
-        m102 = 1;
+        mStyleSettle0 = 1;
+        mStyleSettle1 = 1;
+        mStyleSettle2 = 1;
         work->m378 = 0x4C4F434B; /* 'LOCK' */
         work->m380 = 0;
         work->m38C = 0;
@@ -62,7 +62,7 @@ bool dCamera_c::lockonCamera(s32 style) {
         if (mpLockonTarget.get() != nullptr)
             radiusActorInSight(mpPlayerActor.get(), mpLockonTarget.get());
     }
-    if (m31D != 0)
+    if (mFollowMoveBg != 0)
         lockon_MoveBgMatrixCrrPos(gabi::ea(dComIfG_Bgsp()),
                                   gabi::ea(static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04)), 1,
                                   &work->m390, 0, 0); /* MoveBgMatrixCrrPos */
@@ -88,8 +88,8 @@ bool dCamera_c::lockonCamera(s32 style) {
                  ->mFlags.get(); /* attention flags */
     if ((af & 8) || (af & 0x20)) {
         mEventFlags = mEventFlags & ~0x100u;
-        m11C = 0;
-        m108 = 0;
+        mCurStyleTimer = 0;
+        mCurModeTimer = 0;
     }
 
     gabi::Local<cSGlobe_l> targetDirection;
@@ -135,11 +135,11 @@ bool dCamera_c::lockonCamera(s32 style) {
     cSAngle_ct(targetLongitude, &targetDirection->mU);
     s16 lon = lockon_LockonLongitude(gabi::ea(mCamParam), ratio); /* LockonLongitude */
     cSAngle_ct(lockonLongitude, lon);
-    u32 c11C = m11C;
+    u32 c11C = mCurStyleTimer;
     u32 fl = mEventFlags;
     if (c11C < (u32)m0B0) {
         if (!(fl & 0x100))
-            lockon_angleMultiplyAssign(lockonLongitude.get(), (f32)(u32)m108 / (f32)m0B0); /* *= */
+            lockon_angleMultiplyAssign(lockonLongitude.get(), (f32)(u32)mCurModeTimer / (f32)m0B0); /* *= */
     } else {
         mEventFlags = fl | 0x100;
     }
@@ -192,7 +192,7 @@ bool dCamera_c::lockonCamera(s32 style) {
         f32 b = 0.01f;
         work->m3B8 = b;
         work->m3B8 = gabi::fmadds(b - b, setup.mCusCus.get(), b);
-    } else if (m360 == 0) {
+    } else if (mPlayerOnFloor == 0) {
         f32 b = work->m3B8;
         work->m3B8 = gabi::fmadds(setup.mJumpCushion.get() - b, setup.mCusCus.get(),
                                   b); /* Cushion4Jump, CusCus */
@@ -301,7 +301,7 @@ bool dCamera_c::lockonCamera(s32 style) {
             if (l == zero) {
                 k = 0.15f;
             } else {
-                u32 n11C = m11C;
+                u32 n11C = mCurStyleTimer;
                 f32 frac = (f32)n11C / (f32)m0B0;
                 f32 x = -((f32)(s16)*longitudeError / (f32)l);
                 f32 cr = lockon_customRBRatio(x, cw);
@@ -375,7 +375,7 @@ bool dCamera_c::lockonCamera(s32 style) {
             lockon_shortMinusAngle(t60.get(), lat, viewLatitude.get());
             lockon_angleMultiply(t60, t5e, 0.05f);
             lockon_angleAddAssign(viewLatitude, t5e);
-        } else if (m360 == 0 && !(dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_UNK400_e)) {
+        } else if (mPlayerOnFloor == 0 && !(dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_UNK400_e)) {
             gabi::Local<cSAngle_l> t66, t64, t62;
             lockon_angleSubtract(&viewEyeDirection->mV, t66, viewLatitude);
             lockon_angleMultiply(t66, t64, cRatio);
@@ -399,7 +399,7 @@ bool dCamera_c::lockonCamera(s32 style) {
             } else {
                 eq = mpLockonTarget.get() == nullptr;
             }
-            if (eq && m784 != 0) {
+            if (eq && mIsGanonKMap != 0) {
                 gabi::Local<cSAngle_l> t68;
                 lockon_angleMultiply(viewLatitude, t68, setup.m028.get());
                 lockon_angleSubtractAssign(viewLatitude, t68);

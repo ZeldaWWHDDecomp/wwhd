@@ -68,7 +68,7 @@ BOOL daNpc_Ko1_c::talk_1() {
             mbTalkTriggered = 1;
             break;
         }
-        mTalkFlag = 0;
+        mTalking = 0;
         mMessageSelector = 0xFF;
         switch (mSpecificType) {
         case 1:
@@ -122,23 +122,23 @@ BOOL daNpc_Ko1_c::manzai() {
         u32 idx = actors->mIndexAndActors[0];
         if (gabi::ea(this) != (u32)actors->mIndexAndActors[idx]) {
             /* the partner speaks: follow its message status */
-            if (mAnimationSelector == 0xFF) {
+            if (mAnmAtrNo == 0xFF) {
                 return TRUE;
             }
             if (mSpecificType == 1 || mSpecificType == 6) {
-                mAnimationMode = 1;
-                mAnimationSelector = 0xFF;
+                mLookBackState = 1;
+                mAnmAtrNo = 0xFF;
                 m_jnt.mbTrn = 1;
                 return TRUE;
             }
             s8 prev = mResumeStatus;
-            mAnimationMode = 3;
-            mTurnAngle = mInitialAngle.y;
+            mLookBackState = 3;
+            mDesiredYRot = mInitialAngle.y;
             mStatus = prev;
             m_jnt.mbTrn = 1;
             Ko1_setAnm(this); /* setAnm() */
             mStatus = 0x14;
-            mAnimationSelector = 0xFF;
+            mAnmAtrNo = 0xFF;
             return TRUE;
         }
         if (partner != nullptr) {
@@ -160,11 +160,11 @@ BOOL daNpc_Ko1_c::manzai() {
 /* 0227A110 */
 BOOL daNpc_Ko1_c::neru_1() {
     s32 a_anm_num_tbl[2] = {7, 8};
-    if (Ko1_calcTimer(&mSleepTimer) == 0) {
+    if (Ko1_calcTimer(&mSttTimer) == 0) {
         u8 n = mSleepState ^ 1;
         mSleepState = n;
         Ko1_setAnm_NUM(this, a_anm_num_tbl[n & 1], (s32)1); /* setAnm_NUM(.., 1) */
-        mSleepTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
+        mSttTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
     }
     return TRUE;
 }
@@ -174,14 +174,14 @@ BOOL daNpc_Ko1_c::neru_2() {
     s32 a_anm_num_tbl[3] = {9, 0xC, 0xA};
     switch (mSleepState) {
     case 0:
-        if (Ko1_calcTimer(&mSleepTimer) == 0) {
+        if (Ko1_calcTimer(&mSttTimer) == 0) {
             if (Ko1_calcTimer(&mBalloonTimer) == 0) {
                 mSleepState = 1;
                 Ko1_setAnm_NUM(this, a_anm_num_tbl[1], (s32)1);
                 Ko1_set_balloonAnm_NUM(this, (s32)1);
                 mBalloonTimer = (s16)Ko1_getRndValue(3, 10);
             }
-            mSleepTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
+            mSttTimer = (s16)gabi::ftoi(cM_rndF(180.0f) + 180.0f);
         }
         return TRUE;
     case 1:
@@ -205,47 +205,47 @@ BOOL daNpc_Ko1_c::neru_2() {
     }
 }
 
-/* the action functions: mActionPhase is the phase (0: init, 1..3: run, else (e.g. 9 on exit): nothing);
- * mStatus is the status set by setStt; mStatusResult keeps the status function's result */
+/* the action functions: mActionStatus is the phase (0: init, 1..3: run, else (e.g. 9 on exit): nothing);
+ * mStatus is the status set by setStt; mbSetEyePos keeps the status function's result */
 /* 0227A374 */
 BOOL daNpc_Ko1_c::hana_action1(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_ko_setPthPos(this); /* ko_setPthPos() */
         Ko1_setStt(this, (s32)STATUS_WALK_1);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) {
+    if ((u32)(s32)mActionStatus > 3) {
         return TRUE;
     }
     mAttention = (u8)Ko1_chkAttention(this);
     switch ((u32)(s32)mStatus) {
     case STATUS_TALK:
-        mStatusResult = talk_1();
+        mbSetEyePos = talk_1();
         break;
     case STATUS_WALK_1:
-        mStatusResult = Ko1_walk_1(this);
+        mbSetEyePos = Ko1_walk_1(this);
         break;
     case STATUS_WAIT_3:
-        mStatusResult = Ko1_wait_3(this);
+        mbSetEyePos = Ko1_wait_3(this);
         break;
     case STATUS_ATTACK_1:
-        mStatusResult = Ko1_attk_1(this);
+        mbSetEyePos = Ko1_attk_1(this);
         break;
     case STATUS_SWIM_1:
-        mStatusResult = Ko1_swim_1(this);
+        mbSetEyePos = Ko1_swim_1(this);
         break;
     case STATUS_SWIM_2:
-        mStatusResult = Ko1_swim_2(this);
+        mbSetEyePos = Ko1_swim_2(this);
         break;
     case STATUS_DOWN_1:
-        mStatusResult = Ko1_down_1(this, (s32)10);
+        mbSetEyePos = Ko1_down_1(this, (s32)10);
         break;
     case STATUS_WAIT_4:
-        mStatusResult = Ko1_wait_4(this);
+        mbSetEyePos = Ko1_wait_4(this);
         break;
     case STATUS_WALK_3:
-        mStatusResult = Ko1_walk_3(this);
+        mbSetEyePos = Ko1_walk_3(this);
         break;
     }
     Ko1_lookBack(this); /* lookBack() */
@@ -254,31 +254,31 @@ BOOL daNpc_Ko1_c::hana_action1(void*) {
 
 /* 0227A4DC */
 BOOL daNpc_Ko1_c::hana_action2(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_WAIT_7);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) return TRUE;
+    if ((u32)(s32)mActionStatus > 3) return TRUE;
     mAttention = (u8)Ko1_chkAttention(this);
     switch ((u32)(s32)mStatus) {
     case STATUS_TALK:
-        mStatusResult = talk_1();
+        mbSetEyePos = talk_1();
         break;
     case STATUS_ATTACK_3:
-        mStatusResult = Ko1_attk_3(this);
+        mbSetEyePos = Ko1_attk_3(this);
         break;
     case STATUS_DOWN_3:
-        mStatusResult = Ko1_down_1(this, (s32)0x13);
+        mbSetEyePos = Ko1_down_1(this, (s32)0x13);
         break;
     case STATUS_WAIT_7:
-        mStatusResult = Ko1_wait_7(this);
+        mbSetEyePos = Ko1_wait_7(this);
         break;
     case STATUS_MANZAI:
-        mStatusResult = manzai();
+        mbSetEyePos = manzai();
         break;
     case STATUS_TALK_END:
-        mStatusResult = talk_2();
+        mbSetEyePos = talk_2();
         break;
     }
     Ko1_lookBack(this);
@@ -287,31 +287,31 @@ BOOL daNpc_Ko1_c::hana_action2(void*) {
 
 /* 0227A60C */
 BOOL daNpc_Ko1_c::hana_action3(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_WAIT_5_ALT);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) return TRUE;
+    if ((u32)(s32)mActionStatus > 3) return TRUE;
     mAttention = (u8)Ko1_chkAttention(this);
     switch ((u32)(s32)mStatus) {
     case STATUS_TALK:
-        mStatusResult = talk_1();
+        mbSetEyePos = talk_1();
         break;
     case STATUS_WAIT_5_ALT:
-        mStatusResult = Ko1_wait_5(this, (s32)0x17);
+        mbSetEyePos = Ko1_wait_5(this, (s32)0x17);
         break;
     case STATUS_ATTACK_2_ALT:
-        mStatusResult = Ko1_attk_2(this, (s32)0x19, (s32)0x18);
+        mbSetEyePos = Ko1_attk_2(this, (s32)0x19, (s32)0x18);
         break;
     case STATUS_WALK_2_ALT:
-        mStatusResult = Ko1_walk_2(this, (s32)0x16, (s32)0x17);
+        mbSetEyePos = Ko1_walk_2(this, (s32)0x16, (s32)0x17);
         break;
     case STATUS_DOWN_ALT:
-        mStatusResult = Ko1_down_1(this, (s32)0x1A);
+        mbSetEyePos = Ko1_down_1(this, (s32)0x1A);
         break;
     case STATUS_WAIT_9:
-        mStatusResult = Ko1_wait_9(this);
+        mbSetEyePos = Ko1_wait_9(this);
         break;
     }
     Ko1_lookBack(this);
@@ -320,25 +320,25 @@ BOOL daNpc_Ko1_c::hana_action3(void*) {
 
 /* 0227A750 */
 BOOL daNpc_Ko1_c::hana_action4(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_WAIT_A);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) return TRUE;
+    if ((u32)(s32)mActionStatus > 3) return TRUE;
     mAttention = (u8)Ko1_chkAttention(this);
     switch ((u32)(s32)mStatus) {
     case STATUS_TALK:
-        mStatusResult = talk_1();
+        mbSetEyePos = talk_1();
         break;
     case STATUS_MANZAI:
-        mStatusResult = manzai();
+        mbSetEyePos = manzai();
         break;
     case STATUS_TALK_END:
-        mStatusResult = talk_2();
+        mbSetEyePos = talk_2();
         break;
     case STATUS_WAIT_A:
-        mStatusResult = Ko1_wait_a(this);
+        mbSetEyePos = Ko1_wait_a(this);
         break;
     }
     Ko1_lookBack(this);
@@ -347,15 +347,15 @@ BOOL daNpc_Ko1_c::hana_action4(void*) {
 
 /* 0227A830 */
 BOOL daNpc_Ko1_c::hana_action5(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_SLEEP_2);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) return TRUE;
+    if ((u32)(s32)mActionStatus > 3) return TRUE;
     mAttention = (u8)Ko1_chkAttention(this);
     if (mStatus == STATUS_SLEEP_2) {
-        mStatusResult = neru_2();
+        mbSetEyePos = neru_2();
     }
     Ko1_lookBack(this);
     return TRUE;
@@ -363,12 +363,12 @@ BOOL daNpc_Ko1_c::hana_action5(void*) {
 
 /* 0227A8C8 */
 BOOL daNpc_Ko1_c::wait_action1(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_WAIT_1);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) {
+    if ((u32)(s32)mActionStatus > 3) {
         return TRUE;
     }
     if (!dComIfGs_isEventBit(0x0104)) {
@@ -377,13 +377,13 @@ BOOL daNpc_Ko1_c::wait_action1(void*) {
     mAttention = (u8)Ko1_chkAttention(this);
     switch ((u32)(s32)mStatus) {
     case STATUS_WAIT_1:
-        mStatusResult = Ko1_wait_1(this);
+        mbSetEyePos = Ko1_wait_1(this);
         break;
     case STATUS_WAIT_2:
-        mStatusResult = Ko1_wait_2(this);
+        mbSetEyePos = Ko1_wait_2(this);
         break;
     case STATUS_TALK:
-        mStatusResult = talk_1();
+        mbSetEyePos = talk_1();
         break;
     }
     Ko1_lookBack(this);
@@ -392,37 +392,37 @@ BOOL daNpc_Ko1_c::wait_action1(void*) {
 
 /* 0227A9C0 */
 BOOL daNpc_Ko1_c::wait_action2(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_WAIT_5);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) return TRUE;
+    if ((u32)(s32)mActionStatus > 3) return TRUE;
     mAttention = (u8)Ko1_chkAttention(this);
     switch ((u32)(s32)mStatus) {
     case STATUS_TALK:
-        mStatusResult = talk_1();
+        mbSetEyePos = talk_1();
         break;
     case STATUS_WAIT_5:
-        mStatusResult = Ko1_wait_5(this, (s32)0xD);
+        mbSetEyePos = Ko1_wait_5(this, (s32)0xD);
         break;
     case STATUS_ATTACK_2:
-        mStatusResult = Ko1_attk_2(this, (s32)0x10, (s32)0xF);
+        mbSetEyePos = Ko1_attk_2(this, (s32)0x10, (s32)0xF);
         break;
     case STATUS_WAIT_6:
-        mStatusResult = Ko1_wait_6(this);
+        mbSetEyePos = Ko1_wait_6(this);
         break;
     case STATUS_WALK_2:
-        mStatusResult = Ko1_walk_2(this, (s32)0xC, (s32)0xD);
+        mbSetEyePos = Ko1_walk_2(this, (s32)0xC, (s32)0xD);
         break;
     case STATUS_DOWN_2:
-        mStatusResult = Ko1_down_1(this, (s32)0xE);
+        mbSetEyePos = Ko1_down_1(this, (s32)0xE);
         break;
     case STATUS_MANZAI:
-        mStatusResult = manzai();
+        mbSetEyePos = manzai();
         break;
     case STATUS_TALK_END:
-        mStatusResult = talk_2();
+        mbSetEyePos = talk_2();
         break;
     }
     Ko1_lookBack(this);
@@ -431,25 +431,25 @@ BOOL daNpc_Ko1_c::wait_action2(void*) {
 
 /* 0227AB28 */
 BOOL daNpc_Ko1_c::wait_action3(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_WAIT_A);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) return TRUE;
+    if ((u32)(s32)mActionStatus > 3) return TRUE;
     mAttention = (u8)Ko1_chkAttention(this);
     switch ((u32)(s32)mStatus) {
     case STATUS_TALK:
-        mStatusResult = talk_1();
+        mbSetEyePos = talk_1();
         break;
     case STATUS_MANZAI:
-        mStatusResult = manzai();
+        mbSetEyePos = manzai();
         break;
     case STATUS_TALK_END:
-        mStatusResult = talk_2();
+        mbSetEyePos = talk_2();
         break;
     case STATUS_WAIT_A:
-        mStatusResult = Ko1_wait_a(this);
+        mbSetEyePos = Ko1_wait_a(this);
         break;
     }
     Ko1_lookBack(this);
@@ -458,15 +458,15 @@ BOOL daNpc_Ko1_c::wait_action3(void*) {
 
 /* 0227AC08 */
 BOOL daNpc_Ko1_c::wait_action4(void*) {
-    if (mActionPhase == 0) {
+    if (mActionStatus == 0) {
         Ko1_setStt(this, (s32)STATUS_SLEEP_1);
-        mActionPhase = mActionPhase + 1;
+        mActionStatus = mActionStatus + 1;
         return TRUE;
     }
-    if ((u32)(s32)mActionPhase > 3) return TRUE;
+    if ((u32)(s32)mActionStatus > 3) return TRUE;
     mAttention = (u8)Ko1_chkAttention(this);
     if (mStatus == STATUS_SLEEP_1) {
-        mStatusResult = neru_1();
+        mbSetEyePos = neru_1();
     }
     Ko1_lookBack(this);
     return TRUE;

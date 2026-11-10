@@ -25,23 +25,23 @@ public:
     void setParam(u32 param_1, f32 param_2);
     void onSwitch(u32 param_1);
     void setFirFilter(be<s16>* param_1);
-    /* 0x00 */ be<u16> field_0x0;
-    /* 0x02 */ be<u16> field_0x2;
+    /* 0x00 */ be<u16> mOuterSwitch;  /* was field_0x0: setOuterSwitch 02816C68 / checkOuterSwitch 02816C70: the OUTERPARAM_* flags that are switched on */
+    /* 0x02 */ be<u16> mOuterUpdate;  /* was field_0x2: setOuterUpdate 02816C84 / getOuterUpdate 02816C8C: the OUTERPARAM_* flags to update */
     /* 0x04 */ be<f32> mVolume;
     /* 0x08 */ be<f32> mPitch;
     /* 0x0C */ be<f32> mFxmix;
     /* 0x10 */ be<f32> mDolby;
     /* 0x14 */ be<f32> mPan;
     /* 0x18 */ be<f32> mTempo;
-    /* 0x1C */ be<s16> field_0x1c[8];
+    /* 0x1C */ be<s16> mFirFilter[8];  /* was field_0x1c: setFirFilter 02816D7C / getIntFirFilter 02816C94: 8 FIR8 filter words; initExtBuffer 02816C58 clears */
 };
-WWHD_OFFSET(TOuterParam, field_0x0, 0x00);
-WWHD_OFFSET(TOuterParam, field_0x2, 0x02);
+WWHD_OFFSET(TOuterParam, mOuterSwitch, 0x00);
+WWHD_OFFSET(TOuterParam, mOuterUpdate, 0x02);
 WWHD_OFFSET(TOuterParam, mVolume, 0x04);
 WWHD_OFFSET(TOuterParam, mPitch, 0x08);
 WWHD_OFFSET(TOuterParam, mFxmix, 0x0C);
 WWHD_OFFSET(TOuterParam, mDolby, 0x10);
 WWHD_OFFSET(TOuterParam, mPan, 0x14);
 WWHD_OFFSET(TOuterParam, mTempo, 0x18);
-WWHD_OFFSET(TOuterParam, field_0x1c, 0x1C);
+WWHD_OFFSET(TOuterParam, mFirFilter, 0x1C);
 WWHD_SIZE(TOuterParam, 0x2C);

@@ -38,6 +38,18 @@ field 0274C00C 534010CC u32 0x0274C264
 stable 53400024 4
 stable 53401000 0x100
 stopat 0274C00C 0274C264 2
+# zero-page rule (2026-11-10, LOW clean 165/1000, LOST block 10): processFrame 0274C264
+# calls its frame methods through the framework's vtable (+0x24: before-frame +0xD0, frame update +0xD8, update +0x68,
+# prepare-render +0xE8, after-frame +0xE0) and the optional frame callback mReserved4C (+0x4C); generated words sent
+# those calls to page-0 targets in the original (fetch 000002C3 / 00000004). The framework is a fixture 0x53E00000 with
+# the image's sCafeGameFrameworkVtable 10144F9C (its slots are game code: generic mocks) and the callback either absent
+# or a fixture callee.
+arg! 0274C264 r3 0x53E00000
+field 0274C264 0x53E00024 u32 0x10144F9C
+field 0274C264 0x53E0004C u32 0,0x7C5C0000
+stable 0x53E00024 4
+stable 0x53E0004C 4
+callee 7C5C0000 fixture r3=0
 arg 0274DA08 r6 0,1,2,3,4,5,6,0xFFFFFFFF
 # Scan-buffer construction fixes its virtual type and returns its live receiver.
 # The graphics initializer calls this only after a nonnull allocation.
@@ -370,3 +382,19 @@ stable 53B0022C 4
 stable 53B002D8 4
 stable 53B00288 4
 stable 53B00334 4
+
+# zero-page rule (2026-11-10, clean 457/1000, LOST blocks): ColorChannels::equals
+# 0274D4C0 compares the four f32 channels (r, g, b, a at +0, +4, +8, +0xC) of `this` and `other` in turn; with
+# generated pointers the later compares were reached mostly on page-0 inputs (both sides reading zeros). Both are
+# fixture colors whose channels are 1.0 on most inputs, so every compare is reached; 0.0 against -0.0 (equal) and
+# NaN / 2.0 (unequal) keep each early exit.
+arg! 0274D4C0 r3 0x53F00000
+arg! 0274D4C0 r4 0x53F00100
+field 0274D4C0 0x53F00000 u32 0x3F800000,0x3F800000,0x3F800000,0,0x7FC00000
+field 0274D4C0 0x53F00004 u32 0x3F800000,0x3F800000,0x3F800000,0,0x7FC00000
+field 0274D4C0 0x53F00008 u32 0x3F800000,0x3F800000,0x3F800000,0,0x7FC00000
+field 0274D4C0 0x53F0000C u32 0x3F800000,0x3F800000,0x3F800000,0,0x7FC00000
+field 0274D4C0 0x53F00100 u32 0x3F800000,0x3F800000,0x3F800000,0x80000000,0x40000000
+field 0274D4C0 0x53F00104 u32 0x3F800000,0x3F800000,0x3F800000,0x80000000,0x40000000
+field 0274D4C0 0x53F00108 u32 0x3F800000,0x3F800000,0x3F800000,0x80000000,0x40000000
+field 0274D4C0 0x53F0010C u32 0x3F800000,0x3F800000,0x3F800000,0x80000000,0x40000000

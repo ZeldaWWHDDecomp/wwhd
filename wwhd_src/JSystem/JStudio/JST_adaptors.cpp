@@ -82,21 +82,21 @@ void Sound_endFade(SoundFadeOutput *self, f32 value, TAdaptor_sound *adaptor) {
 void TAdaptor_particle::adaptor_do_update(TObject *object, u32 frames) {
     // HD: replay the original prologue and preserve fixed guest frame slots.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 duration = this->field_0x1B8;
+    u32 duration = this->mFadeDuration;
     if (!duration)
         return;
-    u32 elapsed = this->field_0x1BC;
+    u32 elapsed = this->mFadeElapsed;
     if (elapsed >= duration)
         return;
-    duration = this->field_0x1B8;
+    duration = this->mFadeDuration;
     elapsed += frames;
-    this->field_0x1BC = elapsed;
+    this->mFadeElapsed = elapsed;
     if (elapsed < duration)
         return;
-    if (this->field_0x1B4 != 2)
-        this->field_0x1B4 = 0;
-    this->field_0x1BC = 0;
-    this->field_0x1B8 = 0;
+    if (this->mFadeState != 2)
+        this->mFadeState = 0;
+    this->mFadeElapsed = 0;
+    this->mFadeDuration = 0;
 }
 
 /* 0283EB98 */
@@ -105,7 +105,7 @@ void Particle_beginFade(ParticleFadeOutput *self, f32 value, TAdaptor_particle *
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     FrameLocal<Vec> position(8);
     Emitter *emitter = adaptor->mEmitter;
-    u32 id = adaptor->field_0x1B0;
+    u32 id = adaptor->mParticleID;
     if (emitter)
         forceDeleteEmitter(adaptor->mEmitterManager, emitter, u32(0));
     if (!l_zero.initialized) {
@@ -124,9 +124,9 @@ void Particle_beginFade(ParticleFadeOutput *self, f32 value, TAdaptor_particle *
     adaptor->mEmitter = emitter;
     if (emitter) {
         emitter->mFlags = emitter->mFlags | JPAEmtrStts_Immortal;
-        adaptor->field_0x1B4 = 1;
-        adaptor->field_0x1B8 = duration32(value);
-        adaptor->field_0x1BC = 0;
+        adaptor->mFadeState = 1;
+        adaptor->mFadeDuration = duration32(value);
+        adaptor->mFadeElapsed = 0;
     }
 }
 
@@ -136,21 +136,21 @@ void Particle_endFade(ParticleFadeOutput *self, f32 value, TAdaptor_particle *ad
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (!adaptor->mEmitter)
         return;
-    if (adaptor->field_0x1B4 == 1 && adaptor->field_0x1BC) {
-        u32 duration = adaptor->field_0x1B8;
-        u32 elapsed = adaptor->field_0x1BC;
+    if (adaptor->mFadeState == 1 && adaptor->mFadeElapsed) {
+        u32 duration = adaptor->mFadeDuration;
+        u32 elapsed = adaptor->mFadeElapsed;
         f64 ratio = static_cast<f64>(duration) / static_cast<f64>(elapsed);
         f64 total = static_cast<f64>(value) * ratio;
-        adaptor->field_0x1B4 = 2;
+        adaptor->mFadeState = 2;
         // The second conversion uses the saved ratio and original float input.
         u32 totalFrames = duration64(total);
         f64 remaining = static_cast<f64>(value) * (ratio - 1.0);
-        adaptor->field_0x1B8 = totalFrames;
-        adaptor->field_0x1BC = duration64(remaining);
+        adaptor->mFadeDuration = totalFrames;
+        adaptor->mFadeElapsed = duration64(remaining);
     } else {
-        adaptor->field_0x1B4 = 2;
-        adaptor->field_0x1B8 = duration32(value);
-        adaptor->field_0x1BC = 0;
+        adaptor->mFadeState = 2;
+        adaptor->mFadeDuration = duration32(value);
+        adaptor->mFadeElapsed = 0;
     }
 }
 
@@ -280,20 +280,20 @@ void TAdaptor_particle::TJPACallback_::execute(Emitter *emitter) {
     u32 status = emitter->mFlags;
     if ((status & JPAEmtrStts_EnableDeleteEmitter) &&
         emitter->mActiveParticles.mLength + emitter->mChildParticles.mLength == 0) {
-        this->mAdaptor->field_0x1B4 = 0;
-        this->mAdaptor->field_0x1B8 = 0;
-        this->mAdaptor->field_0x1BC = 0;
+        this->mAdaptor->mFadeState = 0;
+        this->mAdaptor->mFadeDuration = 0;
+        this->mAdaptor->mFadeElapsed = 0;
         TAdaptor_particle *adaptor = this->mAdaptor;
         forceDeleteEmitter(adaptor->mEmitterManager, emitter, u32(0));
         this->mAdaptor->mEmitter = 0;
         return;
     }
     TAdaptor_particle *adaptor = this->mAdaptor;
-    u32 duration = adaptor->field_0x1B8;
-    u32 mode = adaptor->field_0x1B4;
+    u32 duration = adaptor->mFadeDuration;
+    u32 mode = adaptor->mFadeState;
     f64 alpha = 1.0;
     if (mode == 1 && duration) {
-        alpha = static_cast<f64>(adaptor->field_0x1BC) / static_cast<f64>(duration);
+        alpha = static_cast<f64>(adaptor->mFadeElapsed) / static_cast<f64>(duration);
     } else if (mode == 2) {
         if (!duration) {
             status |= JPAEmtrStts_StopEmit;
@@ -301,7 +301,7 @@ void TAdaptor_particle::TJPACallback_::execute(Emitter *emitter) {
             emitter->mMaxFrame = 1;
             alpha = 0.0;
         } else {
-            u32 elapsed = adaptor->field_0x1BC;
+            u32 elapsed = adaptor->mFadeElapsed;
             alpha = static_cast<f64>(duration - elapsed) / static_cast<f64>(duration);
         }
     }
@@ -312,7 +312,7 @@ void TAdaptor_particle::TJPACallback_::execute(Emitter *emitter) {
     adaptor_getVariableValue_Vec(this->mAdaptor, &storage->srts[1], &particleRotation);
     adaptor_getVariableValue_Vec(this->mAdaptor, &storage->scaling, &particleScaling);
     adaptor = this->mAdaptor;
-    if (!adaptor->field_0x1CC) {
+    if (!adaptor->mEnabled) {
         Vec *sr = &storage->srts[0];
         if (control->mTransformOnSet) {
             MTXMultVec(&control->mTransformOnSet_Matrix, &storage->srts[0],
@@ -348,7 +348,7 @@ void TAdaptor_particle::TJPACallback_::execute(Emitter *emitter) {
         if (!parent)
             return;
         u32 fn = parent->mVtable->JSGGetNodeTransformation;
-        u32 node = adaptor->field_0x1C8;
+        u32 node = adaptor->mNodeID;
         if (!call_ptr<u32>(fn, parent, node, &storage->transformed[0]))
             return;
         getTransformation_SRxyzT(&storage->local, &storage->scaling, &storage->srts[1],

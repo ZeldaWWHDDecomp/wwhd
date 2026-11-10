@@ -221,8 +221,8 @@ void JAIBasic::startSoundVec(u32 id, gptr<JAISound>* sound, cXyz* position, u32 
     JAInter::Actor actor;
     actor.field_0x0 = position;
     actor.field_0x8 = position;
-    actor.field_0x4 = position;
-    actor.field_0xc = flags;
+    actor.mPosition = position;
+    actor.mMapInfo = flags;
     startSoundActor(id, sound, &actor, info, owner);
 }
 /* 02802DFC */

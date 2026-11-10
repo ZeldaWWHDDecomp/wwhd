@@ -24,58 +24,58 @@ void eff_hane_set(bdk_class *i_this, cXyz *offset, int param_3, s8 param_4) {
         if (iVar4 >= param_3) {
             break;
         }
-        s8 idx = i_this->m261A;
-        bdk_eff_s *eff = &i_this->m261C[idx];
+        s8 idx = i_this->mEffNext;
+        bdk_eff_s *eff = &i_this->mEff[idx];
         s8 next = (s8)(idx + 1);
         if (next > 0x26) {
             next = 0;
         }
-        i_this->m261A = next;
+        i_this->mEffNext = next;
 
-        eff->m000 = 1;
-        eff->m03E = 2000;
-        eff->m001 = 0;
-        eff->m040 = 0;
-        eff->m02C = 1.0f;
+        eff->mType = 1;
+        eff->mLifeTimer = 2000;
+        eff->mVanish = 0;
+        eff->mBlowTimer = 0;
+        eff->mScale = 1.0f;
 
         u32 xb = bdkSubBits(offset->x);
-        bdkSubBits(eff->m004.x) = xb;
-        bdk_fcopy(eff->m004.y, offset->y);
-        bdk_fcopy(eff->m004.z, offset->z);
+        bdkSubBits(eff->mPos.x) = xb;
+        bdk_fcopy(eff->mPos.y, offset->y);
+        bdk_fcopy(eff->mPos.z, offset->z);
         f32 x = gabi::f32_from_bits(xb);
         if (param_4 < 0) { /* HD: the feathers start scattered around the point */
             f32 r = cM_rndFX(500.0f);
-            eff->m004.x = fadds_ppc(x, r);
+            eff->mPos.x = fadds_ppc(x, r);
             r = cM_rndFX(500.0f);
-            eff->m004.z = fadds_ppc(eff->m004.z, r);
+            eff->mPos.z = fadds_ppc(eff->mPos.z, r);
             r = cM_rndF(500.0f);
-            eff->m004.y = fadds_ppc(eff->m004.y, r);
+            eff->mPos.y = fadds_ppc(eff->mPos.y, r);
         }
 
-        eff->m024 = 0.0f;
-        eff->m03C = (s16)gabi::ftoi(cM_rndF(65536.0f));
-        eff->m036.z = (s16)gabi::ftoi(cM_rndFX(fadds_ppc(REG8_F(10), 1200.0f)));
-        eff->m036.x = (s16)gabi::ftoi(cM_rndFX(fadds_ppc(REG8_F(16), 800.0f)));
+        eff->mPivotHeight = 0.0f;
+        eff->mFrameCounter = (s16)gabi::ftoi(cM_rndF(65536.0f));
+        eff->mSpin.z = (s16)gabi::ftoi(cM_rndFX(fadds_ppc(REG8_F(10), 1200.0f)));
+        eff->mSpin.x = (s16)gabi::ftoi(cM_rndFX(fadds_ppc(REG8_F(16), 800.0f)));
         iVar4++;
 
         if (param_4 > 0) {
             s16 r = (s16)gabi::ftoi(cM_rndFX(5000.0f));
-            eff->m030.y = actor->shape_angle.y + r;
+            eff->mAngle.y = actor->shape_angle.y + r;
             f32 a = fadds_ppc(cM_rndF(10.0f), 20.0f);
-            eff->m020 = fadds_ppc(a, REG8_F(8));
+            eff->mSpeedF = fadds_ppc(a, REG8_F(8));
             f32 b = fsubs_ppc(cM_rndFX(5.0f), 10.0f);
-            eff->m01C = fadds_ppc(b, REG8_F(9));
-            eff->m040 = (s8)gabi::ftoi(fadds_ppc(cM_rndF(20.0f), 20.0f));
+            eff->mSpeedY = fadds_ppc(b, REG8_F(9));
+            eff->mBlowTimer = (s8)gabi::ftoi(fadds_ppc(cM_rndF(20.0f), 20.0f));
         } else {
             if (param_4 < 0) {
-                eff->m020 = cM_rndF(10.0f);
+                eff->mSpeedF = cM_rndF(10.0f);
             } else {
                 f32 a = fadds_ppc(cM_rndF(5.0f), 5.0f);
-                eff->m020 = fadds_ppc(a, REG8_F(8));
+                eff->mSpeedF = fadds_ppc(a, REG8_F(8));
             }
             f32 b = fadds_ppc(cM_rndF(5.0f), 5.0f);
-            eff->m01C = fadds_ppc(b, REG8_F(9));
-            eff->m030.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
+            eff->mSpeedY = fadds_ppc(b, REG8_F(9));
+            eff->mAngle.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
         }
     }
 }
@@ -84,12 +84,12 @@ void eff_hane_set(bdk_class *i_this, cXyz *offset, int param_3, s8 param_4) {
 void anm_init(bdk_class *i_this, int bckFileIdx, f32 morf, u8 loopMode, f32 speed, int soundFileIdx,
               u8 param7) {
     if (param7 == 0) {
-        i_this->m2590 = loopMode;
-        i_this->m2588 = bckFileIdx;
-        i_this->m2591 = 0;
-        i_this->m258C = soundFileIdx;
+        i_this->mBaseLoopMode = loopMode;
+        i_this->mBaseBck = bckFileIdx;
+        i_this->mReturnToBase = 0;
+        i_this->mBaseSound = soundFileIdx;
     } else {
-        i_this->m2591 = 1;
+        i_this->mReturnToBase = 1;
     }
 
     if (soundFileIdx >= 0) {
@@ -113,7 +113,7 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
         if (bdk != nullptr) {
             PSMTXCopy(bdk_getAnmMtx(model, jnt_no), calc_mtx());
             if (jnt_no == DK_JNT_J_DK_KUBI1_e) {
-                cMtx_XrotM(calc_mtx(), bdk->mF12);
+                cMtx_XrotM(calc_mtx(), bdk->mNeckAngleX);
                 bdk_mtx_copy(bdk_getAnmMtx(model, jnt_no), calc_mtx());
                 PSMTXCopy(calc_mtx(), bdk_J3DSys_mCurrentMtx());
             } else if ((u32)(jnt_no - DK_JNT_J_DK_TOSAKA_A1_e) <
@@ -135,10 +135,10 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
                 offset.y = 0.0f;
                 offset.z = 0.0f;
                 if ((u32)idx < 4) {
-                    bdk_tail_s *tail = &bdk->m300[idx];
-                    MtxPosition(&offset, &tail->m0150[1]);
+                    bdk_tail_s *tail = &bdk->mTails[idx];
+                    MtxPosition(&offset, &tail->mRootPos[1]);
                     offset.x = -10.0f;
-                    MtxPosition(&offset, &tail->m0150[0]);
+                    MtxPosition(&offset, &tail->mRootPos[0]);
                 }
             }
         }
@@ -153,7 +153,7 @@ void pos_move(bdk_class *i_this) {
     cXyz out;
     {
         cXyz tmp;
-        cXyz_mi(&i_this->m2CC, &tmp, &actor->current.pos);
+        cXyz_mi(&i_this->mTargetPos, &tmp, &actor->current.pos);
         bdk_fcopy(diff.x, tmp.x);
         bdk_fcopy(diff.y, tmp.y);
         bdk_fcopy(diff.z, tmp.z);
@@ -161,7 +161,7 @@ void pos_move(bdk_class *i_this) {
     s16 targetAngleXZ = cM_atan2s(diff.x, diff.z);
     f32 dz = diff.z;
     s16 targetAngleY = (s16)-cM_atan2s(diff.y, std_sqrtf(gabi::fmadds(diff.x, diff.x, dz * dz)));
-    s16 step = (s16)gabi::ftoi(i_this->m2DC * i_this->m2E0);
+    s16 step = (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnSpeedRate);
     s16 sVar1 = actor->current.angle.y;
     cLib_addCalcAngleS2(&actor->current.angle.y, targetAngleXZ, (s16)(REG0_S(3) + 10), step);
 
@@ -172,13 +172,13 @@ void pos_move(bdk_class *i_this) {
     } else if (d < -(s32)lim) {
         d = (s16) - (s32)lim;
     }
-    step = (s16)gabi::ftoi(i_this->m2DC * i_this->m2E0 * 0.5f);
+    step = (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnSpeedRate * 0.5f);
     cLib_addCalcAngleS2(&actor->current.angle.z, d, (s16)(REG0_S(3) + 10), step);
-    step = (s16)gabi::ftoi(i_this->m2DC * i_this->m2E0);
+    step = (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnSpeedRate);
     cLib_addCalcAngleS2(&actor->current.angle.x, targetAngleY, (s16)(REG0_S(3) + 10), step);
 
-    cLib_addCalc2(&i_this->m2E0, 1.0f, 1.0f, 0.05f);
-    cLib_addCalc2(&actor->speedF, i_this->m2E4, 1.0f, i_this->m2E8);
+    cLib_addCalc2(&i_this->mTurnSpeedRate, 1.0f, 1.0f, 0.05f);
+    cLib_addCalc2(&actor->speedF, i_this->mTargetSpeed, 1.0f, i_this->mSpeedStep);
 
     diff.x = 0.0f;
     diff.y = 0.0f;
@@ -186,7 +186,7 @@ void pos_move(bdk_class *i_this) {
     cMtx_YrotS(calc_mtx(), actor->current.angle.y);
     cMtx_XrotM(calc_mtx(), actor->current.angle.x);
 
-    if (i_this->m2591 == 0) {
+    if (i_this->mReturnToBase == 0) {
         MtxPosition(&diff, &actor->speed);
     } else {
         MtxPosition(&diff, &out);
@@ -208,7 +208,7 @@ void ground_move(bdk_class *i_this) {
     cXyz out;
     cLib_addCalcAngleS2(&actor->current.angle.z, 0, 2, 0x800);
     cLib_addCalcAngleS2(&actor->current.angle.x, 0, 2, 0x800);
-    cLib_addCalc2(&actor->speedF, i_this->m2E4, 1.0f, i_this->m2E8);
+    cLib_addCalc2(&actor->speedF, i_this->mTargetSpeed, 1.0f, i_this->mSpeedStep);
 
     diff.x = 0.0f;
     diff.y = 0.0f;
@@ -222,35 +222,35 @@ void ground_move(bdk_class *i_this) {
 
     {
         cXyz tmp;
-        cXyz_mi(&i_this->m2CC, &tmp, &actor->current.pos);
+        cXyz_mi(&i_this->mTargetPos, &tmp, &actor->current.pos);
         bdk_fcopy(diff.x, tmp.x);
         bdk_fcopy(diff.y, tmp.y);
         bdk_fcopy(diff.z, tmp.z);
     }
     s16 target = cM_atan2s(diff.x, diff.z);
     cLib_addCalcAngleS2(&actor->current.angle.y, target, 2,
-                        (s16)gabi::ftoi(i_this->m2DC * i_this->m2E0));
-    cLib_addCalc2(&i_this->m2E0, 1.0f, 1.0f, 0.1f);
+                        (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnSpeedRate));
+    cLib_addCalc2(&i_this->mTurnSpeedRate, 1.0f, 1.0f, 0.1f);
 }
 
 /* 02066798 */
 void wind_set(bdk_class *i_this, cXyz *param2) {
     fopAc_ac_c *actor = i_this;
     cXyz vec1;
-    if ((i_this->m2C4 & 1) == 0) {
+    if ((i_this->mFrameCounter & 1) == 0) {
         fopAc_ac_c *player = dComIfGp_getPlayer(0);
         vec1.y = 0.0f;
         vec1.x = 0.0f;
         vec1.z = fadds_ppc(REG0_F(4), 100.0f);
         for (s32 i = 0; i < 10; i++) {
-            if (i_this->m2488[i] == 0) {
-                i_this->m2488[i] = 1;
+            if (i_this->mWindAge[i] == 0) {
+                i_this->mWindAge[i] = 1;
                 Mtx34 *m = calc_mtx();
                 s16 r = (s16)gabi::ftoi(cM_rndFX(6000.0f));
                 cMtx_YrotS(m, (s16)(actor->current.angle.y + r));
-                MtxPosition(&vec1, &i_this->m250C[i]);
-                i_this->m2494[i].copy(*param2);
-                bdk_fcopy(i_this->m2494[i].y, player->current.pos.y);
+                MtxPosition(&vec1, &i_this->mWindSpeed[i]);
+                i_this->mWindPos[i].copy(*param2);
+                bdk_fcopy(i_this->mWindPos[i].y, player->current.pos.y);
                 break;
             }
         }

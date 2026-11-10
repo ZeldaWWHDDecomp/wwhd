@@ -8,22 +8,22 @@ struct dMeterPrefixHD {
   /* 0x0000 */ u8 mUnaccessed0[0x644];
   /* 0x0644 */ fopMsgM_pane_class mHeart[20];
   /* 0x0AA4 */ fopMsgM_pane_class mHeartShadow[20];
-  /* 0x0F04 */ fopMsgM_pane_class field_0x0f00;
-  /* 0x0F3C */ fopMsgM_pane_class field_0x0f38[8];
-  /* 0x10FC */ fopMsgM_pane_class field_0x10f8;
-  /* 0x1134 */ fopMsgM_pane_class field_0x1130;
-  /* 0x116C */ fopMsgM_pane_class field_0x1168;
-  /* 0x11A4 */ fopMsgM_pane_class field_0x11a0;
-  /* 0x11DC */ fopMsgM_pane_class field_0x11d8;
+  /* 0x0F04 */ fopMsgM_pane_class mHeartLight;  /* was field_0x0f00: named as sub_meter_class mHeartLight (d_meter_02.h), evidence there */
+  /* 0x0F3C */ fopMsgM_pane_class mMagicBar[8];  /* was field_0x0f38: named as sub_meter_class mMagicBar (d_meter_02.h), evidence there */
+  /* 0x10FC */ fopMsgM_pane_class mMagicGauge3;  /* was field_0x10f8: named as sub_meter_class mMagicGauge3 (d_meter_02.h), evidence there */
+  /* 0x1134 */ fopMsgM_pane_class mMagicGauge2;  /* was field_0x1130: named as sub_meter_class mMagicGauge2 (d_meter_02.h), evidence there */
+  /* 0x116C */ fopMsgM_pane_class mMagicGaugeShadow2;  /* was field_0x1168: named as sub_meter_class mMagicGaugeShadow2 (d_meter_02.h), evidence there */
+  /* 0x11A4 */ fopMsgM_pane_class mMagicGauge1;  /* was field_0x11a0: named as sub_meter_class mMagicGauge1 (d_meter_02.h), evidence there */
+  /* 0x11DC */ fopMsgM_pane_class mMagicGaugeShadow1;  /* was field_0x11d8: named as sub_meter_class mMagicGaugeShadow1 (d_meter_02.h), evidence there */
   /* 0x1214 */ u8 mUnaccessed1214[0xE0];
   /* 0x12F4 */ fopMsgM_pane_class field_0x12f0;
   /* 0x132C */ u8 mUnaccessed132C[0x620];
   /* 0x194C */ fopMsgM_pane_class field_0x1948;
   /* 0x1984 */ u8 mUnaccessed1984[0x70];
-  /* 0x19F4 */ fopMsgM_pane_class field_0x19f0[4];
+  /* 0x19F4 */ fopMsgM_pane_class mRupyDigitA[4];  /* was field_0x19f0: named as sub_meter_class mRupyDigitA (d_meter_02.h), evidence there */
   /* 0x1AD4 */ u8 mUnaccessed1AD4[0xF50];
-  /* 0x2A24 */ fopMsgM_pane_class field_0x2a20;
-  /* 0x2A5C */ fopMsgM_pane_class field_0x2a58;
+  /* 0x2A24 */ fopMsgM_pane_class mRupyIcon;  /* was field_0x2a20: named as sub_meter_class mRupyIcon (d_meter_02.h), evidence there */
+  /* 0x2A5C */ fopMsgM_pane_class mRupyIconB;  /* was field_0x2a58: named as sub_meter_class mRupyIconB (d_meter_02.h), evidence there */
   /* 0x2A94 */ u8 mUnaccessed2A94[0x4B8];
   /* 0x2F4C */ gptr<void> xyIconTex[3];
   /* 0x2F58 */ u8 mUnaccessed2F58[0x14];
@@ -31,13 +31,13 @@ struct dMeterPrefixHD {
   /* 0x2F70 */ u8 mUnaccessed2F70[0x4];
   /* 0x2F74 */ be<f32> field_0x2f70;
   /* 0x2F78 */ u8 mUnaccessed2F78[0x48];
-  /* 0x2FC0 */ be<f32> field_0x2fbc;
-  /* 0x2FC4 */ be<f32> field_0x2fc0;
+  /* 0x2FC0 */ be<f32> mHeartAlpha;  /* was field_0x2fbc: named as sub_meter_class mHeartAlpha (d_meter_02.h), evidence there */
+  /* 0x2FC4 */ be<f32> mMagicAlpha;  /* was field_0x2fc0: named as sub_meter_class mMagicAlpha (d_meter_02.h), evidence there */
   /* 0x2FC8 */ u8 mUnaccessed2FC8[0x40];
   /* 0x3008 */ be<u32> mStatusFlags;
   /* 0x300C */ u8 mUnaccessed300C[0xA];
   /* 0x3016 */ be<u16> field_0x3012;
-  /* 0x3018 */ be<u16> field_0x3014;
+  /* 0x3018 */ be<u16> mHeartAlphaStep;  /* was field_0x3014: named as sub_meter_class mHeartAlphaStep (d_meter_02.h), evidence there */
   /* 0x301A */ u8 mUnaccessed301A[0x8];
   /* 0x3022 */ be<u8> mMaxHP;
   /* 0x3023 */ be<u8> mCurrHP;
@@ -47,26 +47,26 @@ struct dMeterPrefixHD {
 };
 WWHD_OFFSET(dMeterPrefixHD, mHeart, 0x644);
 WWHD_OFFSET(dMeterPrefixHD, mHeartShadow, 0xAA4);
-WWHD_OFFSET(dMeterPrefixHD, field_0x0f00, 0xF04);
-WWHD_OFFSET(dMeterPrefixHD, field_0x0f38, 0xF3C);
-WWHD_OFFSET(dMeterPrefixHD, field_0x10f8, 0x10FC);
-WWHD_OFFSET(dMeterPrefixHD, field_0x1130, 0x1134);
-WWHD_OFFSET(dMeterPrefixHD, field_0x1168, 0x116C);
-WWHD_OFFSET(dMeterPrefixHD, field_0x11a0, 0x11A4);
-WWHD_OFFSET(dMeterPrefixHD, field_0x11d8, 0x11DC);
+WWHD_OFFSET(dMeterPrefixHD, mHeartLight, 0xF04);
+WWHD_OFFSET(dMeterPrefixHD, mMagicBar, 0xF3C);
+WWHD_OFFSET(dMeterPrefixHD, mMagicGauge3, 0x10FC);
+WWHD_OFFSET(dMeterPrefixHD, mMagicGauge2, 0x1134);
+WWHD_OFFSET(dMeterPrefixHD, mMagicGaugeShadow2, 0x116C);
+WWHD_OFFSET(dMeterPrefixHD, mMagicGauge1, 0x11A4);
+WWHD_OFFSET(dMeterPrefixHD, mMagicGaugeShadow1, 0x11DC);
 WWHD_OFFSET(dMeterPrefixHD, field_0x12f0, 0x12F4);
 WWHD_OFFSET(dMeterPrefixHD, field_0x1948, 0x194C);
-WWHD_OFFSET(dMeterPrefixHD, field_0x19f0, 0x19F4);
-WWHD_OFFSET(dMeterPrefixHD, field_0x2a20, 0x2A24);
-WWHD_OFFSET(dMeterPrefixHD, field_0x2a58, 0x2A5C);
+WWHD_OFFSET(dMeterPrefixHD, mRupyDigitA, 0x19F4);
+WWHD_OFFSET(dMeterPrefixHD, mRupyIcon, 0x2A24);
+WWHD_OFFSET(dMeterPrefixHD, mRupyIconB, 0x2A5C);
 WWHD_OFFSET(dMeterPrefixHD, xyIconTex, 0x2F4C);
 WWHD_OFFSET(dMeterPrefixHD, field_0x2f68, 0x2F6C);
 WWHD_OFFSET(dMeterPrefixHD, field_0x2f70, 0x2F74);
-WWHD_OFFSET(dMeterPrefixHD, field_0x2fbc, 0x2FC0);
-WWHD_OFFSET(dMeterPrefixHD, field_0x2fc0, 0x2FC4);
+WWHD_OFFSET(dMeterPrefixHD, mHeartAlpha, 0x2FC0);
+WWHD_OFFSET(dMeterPrefixHD, mMagicAlpha, 0x2FC4);
 WWHD_OFFSET(dMeterPrefixHD, mStatusFlags, 0x3008);
 WWHD_OFFSET(dMeterPrefixHD, field_0x3012, 0x3016);
-WWHD_OFFSET(dMeterPrefixHD, field_0x3014, 0x3018);
+WWHD_OFFSET(dMeterPrefixHD, mHeartAlphaStep, 0x3018);
 WWHD_OFFSET(dMeterPrefixHD, mMaxHP, 0x3022);
 WWHD_OFFSET(dMeterPrefixHD, mCurrHP, 0x3023);
 WWHD_OFFSET(dMeterPrefixHD, field_0x3020, 0x3024);

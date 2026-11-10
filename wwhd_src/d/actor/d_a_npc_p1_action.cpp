@@ -16,7 +16,7 @@ BOOL daNpc_P1_c::normalAction(void*) {
     f32 fVar4 = p1_absXZ_mi(&player->current.pos, &current.pos);
     if (mActionStatus == ACTION_STARTING_e) {
         if (mType == TYPE_P1A_e) {
-            if (m671 == 1) {
+            if (mbAtKaji == 1) {
                 if (p1_checkEnd(mpMorf, 1.0f)) {
                     setAnm(9, -1.0f);
                 } else {
@@ -64,8 +64,8 @@ BOOL daNpc_P1_c::confuseAction(void*) {
         }
         mActionStatus = (s8)(mActionStatus + 1);
     } else if (p1_checkEnd(mpMorf, 2.0f)) {
-        m66C = m66C + 1;
-        if (m66C > 3) {
+        mAnmLoopCnt = mAnmLoopCnt + 1;
+        if (mAnmLoopCnt > 3) {
             if (mAnmNum == 1) {
                 setAnm(2, -1.0f);
                 mpMorf->setPlaySpeed(2.0f);
@@ -73,7 +73,7 @@ BOOL daNpc_P1_c::confuseAction(void*) {
                 setAnm(1, -1.0f);
                 mpMorf->setPlaySpeed(2.0f);
             }
-            m66C = 0;
+            mAnmLoopCnt = 0;
         }
     }
     return TRUE;

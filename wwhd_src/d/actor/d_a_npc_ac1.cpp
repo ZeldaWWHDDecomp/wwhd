@@ -75,11 +75,11 @@ void daNpc_Ac1_c::nodeWngControl(J3DNode* i_node, J3DModel* i_model) {
 
     u32 jointIdx = reinterpret_cast<J3DJoint*>(i_node)->getJntNo();
     PSMTXCopy(i_model->getAnmMtx(jointIdx), mDoMtx_stack_c::get());
-    if (jointIdx == (u32)(s32)m700) {
+    if (jointIdx == (u32)(s32)m_wngL1_jnt_num) {
         PSMTXCopy(&mArmLMtx, J3DSys::mCurrentMtx);
         mtx_copy(i_model->getAnmMtx(jointIdx), &mArmLMtx);
     }
-    if (jointIdx == (u32)(s32)m701) {
+    if (jointIdx == (u32)(s32)m_wngR1_jnt_num) {
         PSMTXCopy(&mArmRMtx, J3DSys::mCurrentMtx);
         mtx_copy(i_model->getAnmMtx(jointIdx), &mArmRMtx);
     }
@@ -103,11 +103,11 @@ void daNpc_Ac1_c::nodeArmControl(J3DNode* i_node, J3DModel* i_model) {
 
     u32 jointIdx = reinterpret_cast<J3DJoint*>(i_node)->getJntNo();
     PSMTXCopy(i_model->getAnmMtx(jointIdx), mDoMtx_stack_c::get());
-    if (jointIdx == (u32)(s32)m_armL_loc_jnt_num) {
+    if (jointIdx == (u32)(s32)m_armL1_jnt_num) {
         PSMTXCopy(&mArmLMtx, J3DSys::mCurrentMtx);
         mtx_copy(i_model->getAnmMtx(jointIdx), &mArmLMtx);
     }
-    if (jointIdx == (u32)(s32)m_armR_loc_jnt_num) {
+    if (jointIdx == (u32)(s32)m_armR1_jnt_num) {
         PSMTXCopy(&mArmRMtx, J3DSys::mCurrentMtx);
         mtx_copy(i_model->getAnmMtx(jointIdx), &mArmRMtx);
     }
@@ -139,19 +139,19 @@ void daNpc_Ac1_c::nodeAc1Control(J3DNode* i_node, J3DModel* i_model) {
     }
     u32 jointIdx = reinterpret_cast<J3DJoint*>(i_node)->getJntNo();
     PSMTXCopy(i_model->getAnmMtx(jointIdx), mDoMtx_stack_c::get());
-    if (jointIdx == (u32)(s32)m6CC) {
+    if (jointIdx == (u32)(s32)m_hed_jnt_num) {
         mDoMtx_XrotM(mDoMtx_stack_c::get(), m_jnt.mAngles[0][1]);
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), -m_jnt.mAngles[0][0]);
         PSMTXMultVec(mDoMtx_stack_c::get(), &a_eye_pos_off, &mTransformedEyePos);
     }
-    if (jointIdx == (u32)(s32)m6CD) {
+    if (jointIdx == (u32)(s32)m_bbone_jnt_num) {
         mDoMtx_XrotM(mDoMtx_stack_c::get(), m_jnt.mAngles[1][1]);
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), -m_jnt.mAngles[1][0]);
     }
-    if (jointIdx == (u32)(s32)m6CE) {
+    if (jointIdx == (u32)(s32)m_arm_L_jnt_num) {
         PSMTXCopy(mDoMtx_stack_c::get(), &mArmLMtx);
     }
-    if (jointIdx == (u32)(s32)m6CF) {
+    if (jointIdx == (u32)(s32)m_arm_R_jnt_num) {
         PSMTXCopy(mDoMtx_stack_c::get(), &mArmRMtx);
     }
     PSMTXCopy(mDoMtx_stack_c::get(), J3DSys::mCurrentMtx);
@@ -174,7 +174,7 @@ bool daNpc_Ac1_c::init_AC1_0() {
 /* 021E35E4 */
 bool daNpc_Ac1_c::createInit() {
 
-    m814.copy(current.pos);
+    mLookPos.copy(current.pos);
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xA9; /* attention_info.distances[SPEAK] */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xA9;  /* attention_info.distances[TALK] */
     attention_info.flags =
@@ -191,7 +191,7 @@ bool daNpc_Ac1_c::createInit() {
             ~u32(fopAcStts_NOCULLEXEC_e); /* fopAcM_OffStatus(this, fopAcStts_NOCULLEXEC_e) */
     }
     mEventCut.setActorInfo2("Ac1" /* "Ac1" */, (fopNpc_npc_c*)this);
-    m871 = 4;
+    mAnmNum = 4;
     if (m879 != 0) {
         return false;
     }
@@ -205,10 +205,10 @@ bool daNpc_Ac1_c::createInit() {
     mCyl.SetStts(&mStts);
     mCyl.Set(&dNpc_cyl_src /* dNpc_cyl_src */);
     mpMorf->setMorf(0.0f);
-    if (!m85E) {
-        m6FC->setMorf(0.0f);
+    if (!mbHasArms) {
+        mpWingMorf->setMorf(0.0f);
     } else {
-        m708->setMorf(0.0f);
+        mpArmMorf->setMorf(0.0f);
     }
     setMtx(true);
     return true;
@@ -217,17 +217,17 @@ bool daNpc_Ac1_c::createInit() {
 /* 021E3358 */
 void daNpc_Ac1_c::setMtx(u32 param_1) {
 
-    if (!m86B) {
+    if (!mInDemo) {
         plyTexPttrnAnm();
-        m858 = (s8)mpMorf->play(&eyePos, 0, 0);
-        if (mpMorf->getFrame() < m82C) {
-            m858 = 1;
+        mbMorfAnimStopped = (s8)mpMorf->play(&eyePos, 0, 0);
+        if (mpMorf->getFrame() < mPrevMorfFrame) {
+            mbMorfAnimStopped = 1;
         }
-        m82C = mpMorf->getFrame();
-        if (m85E) {
-            m708->play(&eyePos, 0, 0);
+        mPrevMorfFrame = mpMorf->getFrame();
+        if (mbHasArms) {
+            mpArmMorf->play(&eyePos, 0, 0);
         } else {
-            m6FC->play(&eyePos, 0, 0);
+            mpWingMorf->play(&eyePos, 0, 0);
         }
         mObjAcch.CrrPos(dComIfG_Bgsp());
     }
@@ -240,14 +240,14 @@ void daNpc_Ac1_c::setMtx(u32 param_1) {
     mDoMtx_stack_c::YrotM(current.angle.y);
     J3DModel_setBaseTRMtx(mpMorf->getModel(), mDoMtx_stack_c::get());
     mpMorf->calc();
-    if (!m85E) {
-        m6FC->calc();
+    if (!mbHasArms) {
+        mpWingMorf->calc();
     } else {
-        m708->calc();
+        mpArmMorf->calc();
     }
-    if (m6D4.get() != nullptr && m85E) {
-        J3DModel_setBaseTRMtx(m6D4, m708->getModel()->getAnmMtx(m_handR_jnt_num));
-        J3DModel_calc(m6D4);
+    if (mpItemModel.get() != nullptr && mbHasArms) {
+        J3DModel_setBaseTRMtx(mpItemModel, mpArmMorf->getModel()->getAnmMtx(m_hnd_R_jnt_num));
+        J3DModel_calc(mpItemModel);
     }
     setAttention(param_1);
 }
@@ -276,14 +276,14 @@ bool daNpc_Ac1_c::setBtp(u32 i_param_1, int i_btp_num) {
 
     J3DModelData* model_data = mpMorf->getModel()->getModelData();
     int res_id = btpNum_toResID(i_btp_num);
-    m6DC = (J3DAnmTexPattern*)dComIfG_getObjectIDRes("Ac" /* "Ac" */, res_id);
-    if (m6DC.get() == nullptr) /* JUT_ASSERT(572, m6DC != NULL) */
+    m_hed_tex_pttrn = (J3DAnmTexPattern*)dComIfG_getObjectIDRes("Ac" /* "Ac" */, res_id);
+    if (m_hed_tex_pttrn.get() == nullptr) /* JUT_ASSERT(572, m_hed_tex_pttrn != NULL) */
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x23C, "m_hed_tex_pttrn != (0)");
-    int iVar1 = Ac1_btpInit(mBtpAnim, model_data, m6DC, 1, 2, 1.0f, 0, -1, i_param_1, 0);
+    int iVar1 = Ac1_btpInit(mBtpAnim, model_data, m_hed_tex_pttrn, 1, 2, 1.0f, 0, -1, i_param_1, 0);
     bool o_retval = iVar1 == 1;
     if (o_retval) {
         mBlinkTimer = 0;
-        m6F4 = 0;
+        mBlinkFrame = 0;
     }
     return o_retval;
 }
@@ -292,21 +292,21 @@ bool daNpc_Ac1_c::setBtp(u32 i_param_1, int i_btp_num) {
 // HD: the tail call preserves the complete return register, without narrowing to bool.
 u32 daNpc_Ac1_c::iniTexPttrnAnm(u32 i_param_1) {
 
-    return Ac1_setBtpResult(this, i_param_1, (s32)m870); /* setBtp(i_param_1, m870) */
+    return Ac1_setBtpResult(this, i_param_1, (s32)mBtpNum); /* setBtp(i_param_1, mBtpNum) */
 }
 
 /* 021E3230 */
 void daNpc_Ac1_c::plyTexPttrnAnm() {
 
-    if (m870 != 0 || !Ac1_calcTimer(&mBlinkTimer)) {
-        u8 frame = (u8)(m6F4 + 1);
-        m6F4 = frame;
-        if ((s32)frame >= Ac1_frameMax(m6DC)) {
-            if (m870 != 0) {
-                m6F4 = (u8)Ac1_frameMax(m6DC);
+    if (mBtpNum != 0 || !Ac1_calcTimer(&mBlinkTimer)) {
+        u8 frame = (u8)(mBlinkFrame + 1);
+        mBlinkFrame = frame;
+        if ((s32)frame >= Ac1_frameMax(m_hed_tex_pttrn)) {
+            if (mBtpNum != 0) {
+                mBlinkFrame = (u8)Ac1_frameMax(m_hed_tex_pttrn);
             } else {
                 s16 t = (s16)gabi::ftoi(cM_rndF(60.0f) + 30.0f);
-                m6F4 = 0;
+                mBlinkFrame = 0;
                 mBlinkTimer = t;
             }
         }
@@ -316,8 +316,8 @@ void daNpc_Ac1_c::plyTexPttrnAnm() {
 /* 021E4384 */
 u32 daNpc_Ac1_c::setAnm_tex(s8 i_btp_num) {
 
-    if (m870 != i_btp_num) {
-        m870 = i_btp_num;
+    if (mBtpNum != i_btp_num) {
+        mBtpNum = i_btp_num;
         return iniTexPttrnAnm(true);
     }
     return (u32)gabi::ea(this); // HD: unchanged-animation path returns the original this register.
@@ -326,26 +326,26 @@ u32 daNpc_Ac1_c::setAnm_tex(s8 i_btp_num) {
 /* 021E43A4 */
 BOOL daNpc_Ac1_c::setAnm_anm(daNpc_Ac1_c::anm_prm_c* i_anmPrmP) {
 
-    if (m871 == i_anmPrmP->mAnmNum) {
+    if (mAnmNum == i_anmPrmP->mAnmNum) {
         return TRUE;
     }
-    m871 = i_anmPrmP->mAnmNum;
-    int resID = anmNum_toResID(m871);
+    mAnmNum = i_anmPrmP->mAnmNum;
+    int resID = anmNum_toResID(mAnmNum);
     dNpc_setAnmIDRes(mpMorf, i_anmPrmP->mLoopMode, i_anmPrmP->mMorf, i_anmPrmP->mSpeed, resID, -1,
                      "Ac" /* "Ac" */);
-    m85E = i_anmPrmP->mbArm == 1;
-    if (m85E) {
-        int armID = armAnmNum_toResID(m871);
-        dNpc_setAnmIDRes(m708, i_anmPrmP->mLoopMode, i_anmPrmP->mMorf, i_anmPrmP->mSpeed, armID, -1,
+    mbHasArms = i_anmPrmP->mbArm == 1;
+    if (mbHasArms) {
+        int armID = armAnmNum_toResID(mAnmNum);
+        dNpc_setAnmIDRes(mpArmMorf, i_anmPrmP->mLoopMode, i_anmPrmP->mMorf, i_anmPrmP->mSpeed, armID, -1,
                          "Ac");
     } else {
-        u32 name = wingAnmNum_toResID(m871);
-        Ac1_setWingAnimation(m6FC, i_anmPrmP->mLoopMode, i_anmPrmP->mMorf, i_anmPrmP->mSpeed, name,
+        u32 name = wingAnmNum_toResID(mAnmNum);
+        Ac1_setWingAnimation(mpWingMorf, i_anmPrmP->mLoopMode, i_anmPrmP->mMorf, i_anmPrmP->mSpeed, name,
                              0, "Ac");
     }
     mAnimationLoopCount = 0;
-    m82C = 0.0f;
-    m858 = 0;
+    mPrevMorfFrame = 0.0f;
+    mbMorfAnimStopped = 0;
     return TRUE;
 }
 
@@ -353,11 +353,11 @@ BOOL daNpc_Ac1_c::setAnm_anm(daNpc_Ac1_c::anm_prm_c* i_anmPrmP) {
 bool daNpc_Ac1_c::setAnm() {
 
     anm_prm_c* a_anm_prm_tbl = a_anm_state_tbl; /* [3] */
-    if (a_anm_prm_tbl[m875].mBtpNum >= 0) {
-        setAnm_tex(a_anm_prm_tbl[m875].mBtpNum);
+    if (a_anm_prm_tbl[mStt].mBtpNum >= 0) {
+        setAnm_tex(a_anm_prm_tbl[mStt].mBtpNum);
     }
-    if (a_anm_prm_tbl[m875].mAnmNum >= 0) {
-        setAnm_anm(&a_anm_prm_tbl[m875]);
+    if (a_anm_prm_tbl[mStt].mAnmNum >= 0) {
+        setAnm_anm(&a_anm_prm_tbl[mStt]);
     }
     return true;
 }
@@ -365,10 +365,10 @@ bool daNpc_Ac1_c::setAnm() {
 /* 021E45D0 */
 void daNpc_Ac1_c::chg_anmAtr(u8 i_param_1) {
 
-    if ((i_param_1 >= 6) || (i_param_1 == m86E)) {
+    if ((i_param_1 >= 6) || (i_param_1 == mAnmAtrNo)) {
         return;
     }
-    m86E = i_param_1;
+    mAnmAtrNo = i_param_1;
     setAnm_ATR(1);
 }
 
@@ -377,9 +377,9 @@ void daNpc_Ac1_c::setAnm_ATR(int i_param_1) {
 
     anm_prm_c* a_anm_prm_tbl = a_anm_attr_tbl; /* [6] */
     if (i_param_1 != 0) {
-        setAnm_tex(a_anm_prm_tbl[m86E].mBtpNum);
+        setAnm_tex(a_anm_prm_tbl[mAnmAtrNo].mBtpNum);
     }
-    setAnm_anm(&a_anm_prm_tbl[m86E]);
+    setAnm_anm(&a_anm_prm_tbl[mAnmAtrNo]);
 }
 
 /* 021E45F4 */
@@ -388,7 +388,7 @@ void daNpc_Ac1_c::anmAtr(u16 i_param_1) {
     switch (i_param_1) {
     case AC1_MSG_TYPING: {
         if (mMessageAnimationStarted == 0) {
-            m86E = 0xFF;
+            mAnmAtrNo = 0xFF;
             chg_anmAtr(dComIfGp_getMesgAnimeAttrInfo());
             mMessageAnimationStarted = mMessageAnimationStarted + 1;
         }
@@ -410,8 +410,8 @@ void daNpc_Ac1_c::anmAtr(u16 i_param_1) {
 /* 021E3F58 */
 void daNpc_Ac1_c::eventOrder() {
 
-    if (m874 == 1 || m874 == 2) {
-        s8 state = m874;
+    if (mOrderEvent == 1 || mOrderEvent == 2) {
+        s8 state = mOrderEvent;
         eventInfo.onCondition(dEvtCnd_CANTALK_e);
         if (state == 1) {
             fopAcM_orderSpeakEvent(this);
@@ -427,9 +427,9 @@ void daNpc_Ac1_c::checkOrder() {
         return;
     }
     if (command == dEvtCmd_INTALK_e) {
-        if (m874 == 1 || m874 == 2) {
-            m874 = 0;
-            m869 = 1;
+        if (mOrderEvent == 1 || mOrderEvent == 2) {
+            mOrderEvent = 0;
+            mTalking = 1;
         }
     }
 }
@@ -472,7 +472,7 @@ void daNpc_Ac1_c::lookBack() {
     dstPos_p = nullptr;
     u8 headOnlyFollow = mHeadOnlyFollow;
 
-    switch ((u32)(s32)m877) {
+    switch ((u32)(s32)mLookMode) {
     case 1: {
         gabi::Local<cXyz> eye;
         dNpc_playerEyePos(eye, -20.0f);
@@ -484,25 +484,25 @@ void daNpc_Ac1_c::lookBack() {
         break;
     }
     case 2:
-        dstPos->copy(m814);
+        dstPos->copy(mLookPos);
         dstPos_p = dstPos;
         srcZ = current.pos.z;
         srcX = current.pos.x;
         srcY = eyePos.y;
         break;
     case 3:
-        desiredYrot = m854;
+        desiredYrot = mDesiredYRot;
         break;
     }
-    cLib_addCalcAngleS2(&m852, l_HIO.mPrmTbl.mCalcAngleTarget, 4, 0x800);
+    cLib_addCalcAngleS2(&mLookAtMaxVel, l_HIO.mPrmTbl.mCalcAngleTarget, 4, 0x800);
     if (!m_jnt.mbTrn) { /* !m_jnt.trnChk() */
-        m852 = 0;
+        mLookAtMaxVel = 0;
     }
     gabi::Local<cXyz> src_pos; /* passed by value: a copy on the stack */
     src_pos->x = srcX;
     src_pos->y = srcY;
     src_pos->z = srcZ;
-    Ac1_lookAtTarget(&m_jnt, &current.angle.y, dstPos_p, src_pos, desiredYrot, m852,
+    Ac1_lookAtTarget(&m_jnt, &current.angle.y, dstPos_p, src_pos, desiredYrot, mLookAtMaxVel,
                      headOnlyFollow);
 }
 
@@ -644,7 +644,7 @@ void daNpc_Ac1_c::privateCut(int i_staffIdx) {
 void daNpc_Ac1_c::endEvent() {
 
     dComIfGp_event_reset();
-    m86E = 0xFF;
+    mAnmAtrNo = 0xFF;
 }
 
 /* 021E3B44 */
@@ -696,13 +696,13 @@ BOOL daNpc_Ac1_c::set_action(Ac1ActionFunc* i_newProcFunc, void* i_argsP) {
 /* 021E4A38 */
 void daNpc_Ac1_c::setStt(s8 i_status) {
 
-    s8 prev = m875;
-    m875 = i_status;
-    m84C = 0;
+    s8 prev = mStt;
+    mStt = i_status;
+    mSttTimer = 0;
     if (i_status == 2) {
-        m876 = prev;
-        m86E = 0xFF;
-        m877 = 1;
+        mPrevStt = prev;
+        mAnmAtrNo = 0xFF;
+        mLookMode = 1;
         m_jnt.mbTrn = 1; /* m_jnt.setTrn() */
         return;
     }
@@ -712,24 +712,24 @@ void daNpc_Ac1_c::setStt(s8 i_status) {
 /* 021E4A74 */
 BOOL daNpc_Ac1_c::wait_1() {
 
-    if (m874 == 1 || m874 >= 3) {
+    if (mOrderEvent == 1 || mOrderEvent >= 3) {
         return TRUE;
     }
-    if (m869) {
+    if (mTalking) {
         if (chk_talk()) {
             setStt(AC1_TALK);
         }
         return TRUE;
     }
-    m874 = 2;
+    mOrderEvent = 2;
     if (mbAttention) {
-        m84C = 60;
+        mSttTimer = 60;
     }
-    if (Ac1_calcTimer(&m84C)) {
-        m877 = 1;
+    if (Ac1_calcTimer(&mSttTimer)) {
+        mLookMode = 1;
     } else {
-        m877 = 3;
-        m854 = m800.y;
+        mLookMode = 3;
+        mDesiredYRot = mInitialAngle.y;
         m_jnt.mbTrn = 1; /* m_jnt.setTrn() */
     }
     return TRUE;
@@ -751,9 +751,9 @@ BOOL daNpc_Ac1_c::talk_1() {
         if (Ac1_messageStatus(msgMng) == AC1_MSG_DESTROYED) {
             dComIfGs_onEventBit(0x3F02);
             mItemNo = 0xFF;
-            m869 = 0;
-            setStt(m876);
-            m84C = 60;
+            mTalking = 0;
+            setStt(mPrevStt);
+            mSttTimer = 60;
             endEvent();
         }
     }
@@ -768,7 +768,7 @@ BOOL daNpc_Ac1_c::wait_action1(void*) {
         mActState = mActState + 1;
     } else if ((u32)(s32)mActState <= 3) {
         mbAttention = chkAttention();
-        switch ((u32)(s32)m875) {
+        switch ((u32)(s32)mStt) {
         case 1:
             mbSetEyePos = wait_1();
             lookBack();
@@ -786,17 +786,17 @@ BOOL daNpc_Ac1_c::wait_action1(void*) {
 }
 
 /* 021E3990 */
-/* returns the m86B byte (typed u8) */
+/* returns the mInDemo byte (typed u8) */
 u8 daNpc_Ac1_c::demo() {
 
     if (demoActorID == 0) {
-        if (m86B != 0) {
-            m86B = 0;
+        if (mInDemo != 0) {
+            mInDemo = 0;
         }
         return 0;
     }
     u8 id = demoActorID;
-    m86B = 1;
+    mInDemo = 1;
     /* dComIfGp_demo_getActor(demoActorID): HD inline with a range check, the demo object
      * (0x101D5FFC) asserted */
     void* demo_actor = nullptr;
@@ -808,27 +808,27 @@ u8 daNpc_Ac1_c::demo() {
         }
         demo_actor = Ac1_demoGetActor(obj, id);
     }
-    if (m6DC.get() != nullptr) {
-        u8 frame = (u8)(m6F4 + 1);
-        m6F4 = frame;
-        if ((s32)frame >= Ac1_frameMax(m6DC)) {
-            m6F4 = (u8)Ac1_frameMax(m6DC);
+    if (m_hed_tex_pttrn.get() != nullptr) {
+        u8 frame = (u8)(mBlinkFrame + 1);
+        mBlinkFrame = frame;
+        if ((s32)frame >= Ac1_frameMax(m_hed_tex_pttrn)) {
+            mBlinkFrame = (u8)Ac1_frameMax(m_hed_tex_pttrn);
         }
     }
     // HD: demo_actor is checked for NULL
     if (demo_actor != nullptr) {
         J3DAnmTexPattern* demopattern = Ac1_demoBtp(demo_actor, "Ac" /* "Ac" */);
         if (demopattern != nullptr) {
-            m6DC = demopattern;
+            m_hed_tex_pttrn = demopattern;
             J3DModelData* md = mpMorf->getModel()->getModelData();
             if (Ac1_btpInit(mBtpAnim, md, demopattern, 1, 2, 1.0f, 0, -1, 1, 0)) {
-                m6F4 = 0;
-                m870 = 3;
+                mBlinkFrame = 0;
+                mBtpNum = 3;
             }
         }
     }
     Ac1_demoData(this, 0x6A, mpMorf, "Ac" /* "Ac" */, 0, nullptr, 0, 0);
-    return m86B;
+    return mInDemo;
 }
 
 /* 021E417C */
@@ -842,22 +842,22 @@ BOOL daNpc_Ac1_c::_draw() {
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
     setLightTevColorType(dKy_getEnvlight(), morf_model, &tevStr);
     dComIfGp_get(); // HD: an unused accessor call
-    mDoExt_btpAnm_entry((mDoExt_btpAnm*)(void*)mBtpAnim, model_data, m6F4);
+    mDoExt_btpAnm_entry((mDoExt_btpAnm*)(void*)mBtpAnim, model_data, mBlinkFrame);
     mpMorf->entryDL();
     Ac1_view<Ac1ModelAnimation>(model_data)->mpBtpAnimation = 0; /* mBtpAnim.remove(model_data) */
-    if (m85E) {
-        J3DModel* m = m708->getModel();
+    if (mbHasArms) {
+        J3DModel* m = mpArmMorf->getModel();
         setLightTevColorType(dKy_getEnvlight(), m, &tevStr);
-        m708->entryDL();
+        mpArmMorf->entryDL();
     } else {
-        J3DModel* m = m6FC->getModel();
+        J3DModel* m = mpWingMorf->getModel();
         setLightTevColorType(dKy_getEnvlight(), m, &tevStr);
-        m6FC->entryDL();
+        mpWingMorf->entryDL();
     }
-    if (m6D4.get() != nullptr && m85E) {
+    if (mpItemModel.get() != nullptr && mbHasArms) {
         dScnKy_env_light_c* env = dKy_getEnvlight();
-        setLightTevColorType(env, m6D4, &tevStr);
-        mDoExt_modelEntryDL(m6D4);
+        setLightTevColorType(env, mpItemModel, &tevStr);
+        mDoExt_modelEntryDL(mpItemModel);
     }
     // HD: no shadowDraw()
     /* debug leftovers: function-local static colors initialised on first use */
@@ -878,12 +878,12 @@ BOOL daNpc_Ac1_c::_draw() {
 /* 021E3F90 */
 BOOL daNpc_Ac1_c::_execute() {
 
-    if (!m863) {
-        m7F4.copy(current.pos);
-        m800.z = current.angle.z;
-        m800.x = current.angle.x;
-        m800.y = current.angle.y;
-        m863 = 1;
+    if (!mbRanExecute) {
+        mInitialPos.copy(current.pos);
+        mInitialAngle.z = current.angle.z;
+        mInitialAngle.x = current.angle.x;
+        mInitialAngle.y = current.angle.y;
+        mbRanExecute = 1;
     }
     daNpc_Ac1_HIO_c::hio_prm_c& prm = l_HIO.mPrmTbl;
     m_jnt.setParam(prm.mMaxBackboneX, prm.mMaxBackboneY, prm.mMinBackboneX, prm.mMinBackboneY,
@@ -891,7 +891,7 @@ BOOL daNpc_Ac1_c::_execute() {
     if (m85D && demoActorID == 0) {
         return TRUE;
     }
-    m860 = 0;
+    mSkipPosMove = 0;
     m85D = 0;
     checkOrder();
     if (!demo()) {
@@ -907,10 +907,10 @@ BOOL daNpc_Ac1_c::_execute() {
         if (!ran) {
             Ac1_callAction(this, &mCurrProcFunc, nullptr); /* (this->*mCurrProcFunc)(NULL) */
         }
-        if (!m860) {
+        if (!mSkipPosMove) {
             fopAcM_posMoveF(this, &mStts.m_cc_move); /* mStts.GetCCMoveP() */
         }
-        if (!m85F) {
+        if (!mbNoShapeAngle) {
             shape_angle.z = current.angle.z;
             shape_angle.y = current.angle.y;
             shape_angle.x = current.angle.x;
@@ -918,7 +918,7 @@ BOOL daNpc_Ac1_c::_execute() {
     }
     eventOrder();
     setMtx(false);
-    if (!m86B) {
+    if (!mInDemo) {
         setCollision(50.0f, 140.0f);
     }
     return TRUE;
@@ -931,10 +931,10 @@ BOOL daNpc_Ac1_c::_delete() {
     if (heap.get() != nullptr) {
         if (mpMorf.get() != nullptr)
             mpMorf->stopZelAnime();
-        if (m6FC.get() != nullptr)
-            m6FC->stopZelAnime();
-        if (m708.get() != nullptr)
-            m708->stopZelAnime();
+        if (mpWingMorf.get() != nullptr)
+            mpWingMorf->stopZelAnime();
+        if (mpArmMorf.get() != nullptr)
+            mpArmMorf->stopZelAnime();
     }
     return TRUE;
 }
@@ -998,17 +998,17 @@ J3DModelData* daNpc_Ac1_c::create_Anm() {
         mpMorf = nullptr;
         return nullptr;
     }
-    m6CC = (s8)a_mdl_dat->getJointName()->getIndex("head" /* "head" */);
-    if (m6CC < 0)
+    m_hed_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("head" /* "head" */);
+    if (m_hed_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x71F, "m_hed_jnt_num >= 0");
-    m6CD = (s8)a_mdl_dat->getJointName()->getIndex("backbone" /* "backbone" */);
-    if (m6CD < 0)
+    m_bbone_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("backbone" /* "backbone" */);
+    if (m_bbone_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x722, "m_bbone_jnt_num >= 0");
-    m6CE = (s8)a_mdl_dat->getJointName()->getIndex("armL" /* "armL" */);
-    if (m6CE < 0)
+    m_arm_L_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("armL" /* "armL" */);
+    if (m_arm_L_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x725, "m_arm_L_jnt_num >= 0");
-    m6CF = (s8)a_mdl_dat->getJointName()->getIndex("armR" /* "armR" */);
-    if (m6CF < 0)
+    m_arm_R_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("armR" /* "armR" */);
+    if (m_arm_R_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x728, "m_arm_R_jnt_num >= 0");
     return a_mdl_dat;
 }
@@ -1021,23 +1021,23 @@ J3DModelData* daNpc_Ac1_c::create_wng_Anm() {
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x745, "a_mdl_dat != (0)");
     J3DAnmTransform* anm =
         (J3DAnmTransform*)Ac1_objectResource("Ac", "acwing_wait01.fskb" /* "acwing_wait01.fskb" */);
-    m6FC = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, anm, 2, 1.0f, 0, -1, 1,
+    mpWingMorf = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, anm, 2, 1.0f, 0, -1, 1,
                                   nullptr, 0x80000, 0x11000002);
-    mDoExt_McaMorf* morf = m6FC;
+    mDoExt_McaMorf* morf = mpWingMorf;
     if (morf == nullptr) {
         return nullptr;
     }
     if (morf->getModel() == nullptr) {
         if (morf != nullptr)
             Ac1_destroyMorf(morf);
-        m6FC = nullptr;
+        mpWingMorf = nullptr;
         return nullptr;
     }
-    m700 = (s8)a_mdl_dat->getJointName()->getIndex("wingL_loc" /* "wingL_loc" */);
-    if (m700 < 0)
+    m_wngL1_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("wingL_loc" /* "wingL_loc" */);
+    if (m_wngL1_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x760, "m_wngL1_jnt_num >= 0");
-    m701 = (s8)a_mdl_dat->getJointName()->getIndex("wingR_loc" /* "wingR_loc" */);
-    if (m701 < 0)
+    m_wngR1_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("wingR_loc" /* "wingR_loc" */);
+    if (m_wngR1_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x763, "m_wngR1_jnt_num >= 0");
     return a_mdl_dat;
 }
@@ -1049,26 +1049,26 @@ J3DModelData* daNpc_Ac1_c::create_arm_Anm() {
     if (a_mdl_dat == nullptr)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x77A, "a_mdl_dat != (0)");
     J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectIDRes("Ac", 0);
-    m708 = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, anm, 2, 1.0f, 0, -1, 1,
+    mpArmMorf = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, anm, 2, 1.0f, 0, -1, 1,
                                   nullptr, 0x80000, 0x11000002);
-    mDoExt_McaMorf* morf = m708;
+    mDoExt_McaMorf* morf = mpArmMorf;
     if (morf == nullptr) {
         return nullptr;
     }
     if (morf->getModel() == nullptr) {
         if (morf != nullptr)
             Ac1_destroyMorf(morf);
-        m708 = nullptr;
+        mpArmMorf = nullptr;
         return nullptr;
     }
-    m_handR_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("handR" /* "handR" */);
-    if (m_handR_jnt_num < 0)
+    m_hnd_R_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("handR" /* "handR" */);
+    if (m_hnd_R_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x791, "m_hnd_R_jnt_num >= 0");
-    m_armL_loc_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("armL_loc" /* "armL_loc" */);
-    if (m_armL_loc_jnt_num < 0)
+    m_armL1_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("armL_loc" /* "armL_loc" */);
+    if (m_armL1_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x794, "m_armL1_jnt_num >= 0");
-    m_armR_loc_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("armR_loc" /* "armR_loc" */);
-    if (m_armR_loc_jnt_num < 0)
+    m_armR1_jnt_num = (s8)a_mdl_dat->getJointName()->getIndex("armR_loc" /* "armR_loc" */);
+    if (m_armR1_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x797, "m_armR1_jnt_num >= 0");
     return a_mdl_dat;
 }
@@ -1076,7 +1076,7 @@ J3DModelData* daNpc_Ac1_c::create_arm_Anm() {
 /* 021E2C88 */
 bool daNpc_Ac1_c::create_itm_Mdl() {
 
-    m6D4 = nullptr;
+    mpItemModel = nullptr;
     J3DModelData* a_mdl_dat;
     if (dComIfGs_isEventBit(0x1580)) {
         a_mdl_dat = (J3DModelData*)dComIfG_getObjectIDRes("Ac" /* "Ac" */, 0xF);
@@ -1085,7 +1085,7 @@ bool daNpc_Ac1_c::create_itm_Mdl() {
     }
     if (a_mdl_dat == nullptr)
         JUT_ASSERT_fail("d_a_npc_ac1.cpp", 0x7BA, "a_mdl_dat != (0)");
-    m6D4 = mDoExt_J3DModel__create(a_mdl_dat, 0x80000, 0x11000022);
+    mpItemModel = mDoExt_J3DModel__create(a_mdl_dat, 0x80000, 0x11000022);
     return true;
 }
 
@@ -1096,7 +1096,7 @@ BOOL daNpc_Ac1_c::CreateHeap() {
     if (body_mdl == nullptr) {
         return FALSE;
     }
-    m870 = 0;
+    mBtpNum = 0;
     J3DModelData* wng_mdl;
     if (!iniTexPttrnAnm(false) || (wng_mdl = create_wng_Anm()) == nullptr) {
         mpMorf = nullptr;
@@ -1105,20 +1105,20 @@ BOOL daNpc_Ac1_c::CreateHeap() {
     J3DModelData* arm_mdl = create_arm_Anm();
     if (arm_mdl != nullptr && create_itm_Mdl()) {
         for (u16 i = 0; i < wng_mdl->getJointNum(); i++) {
-            if (i == (u32)(s32)m700 || i == (u32)(s32)m701)
-                m6FC->getModel()->getModelData()->getJointNodePointer(i)->setCallBack(
+            if (i == (u32)(s32)m_wngL1_jnt_num || i == (u32)(s32)m_wngR1_jnt_num)
+                mpWingMorf->getModel()->getModelData()->getJointNodePointer(i)->setCallBack(
                     nodeCallBack_Wng);
         }
-        m6FC->getModel()->setUserArea((uintptr_t)this); /* setUserArea(this) */
+        mpWingMorf->getModel()->setUserArea((uintptr_t)this); /* setUserArea(this) */
         for (u16 i = 0; i < arm_mdl->getJointNum(); i++) {
-            if (i == (u32)(s32)m_armL_loc_jnt_num || i == (u32)(s32)m_armR_loc_jnt_num)
-                m708->getModel()->getModelData()->getJointNodePointer(i)->setCallBack(
+            if (i == (u32)(s32)m_armL1_jnt_num || i == (u32)(s32)m_armR1_jnt_num)
+                mpArmMorf->getModel()->getModelData()->getJointNodePointer(i)->setCallBack(
                     nodeCallBack_Arm);
         }
-        m708->getModel()->setUserArea((uintptr_t)this);
+        mpArmMorf->getModel()->setUserArea((uintptr_t)this);
         for (u16 i = 0; i < body_mdl->getJointNum(); i++) {
-            if (i == (u32)(s32)m6CC || i == (u32)(s32)m6CD || i == (u32)(s32)m6CE ||
-                i == (u32)(s32)m6CF)
+            if (i == (u32)(s32)m_hed_jnt_num || i == (u32)(s32)m_bbone_jnt_num || i == (u32)(s32)m_arm_L_jnt_num ||
+                i == (u32)(s32)m_arm_R_jnt_num)
                 mpMorf->getModel()->getModelData()->getJointNodePointer(i)->setCallBack(
                     nodeCallBack_Ac1);
         }
@@ -1128,7 +1128,7 @@ BOOL daNpc_Ac1_c::CreateHeap() {
         return TRUE;
     }
     mpMorf = nullptr;
-    m6FC = nullptr;
+    mpWingMorf = nullptr;
     return FALSE;
 }
 

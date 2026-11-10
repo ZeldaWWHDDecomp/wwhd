@@ -50,17 +50,17 @@ static inline void rsh1m_copyF(cXyz* dst, const cXyz* src) {
 
 /* setAction(&daNpc_Rsh1_c::wait_action, NULL) (inline; HD: GHS pointer to member, no previous action) */
 
-/* m794 = current.pos - (sin, 0, cos)(angle.y) * 140 */
+/* mCollisionPos = current.pos - (sin, 0, cos)(angle.y) * 140 */
 static inline void rsh1m_setShopOutPos(daNpc_Rsh1_c* a, f32 amp) {
     u16 ang = (u16)a->current.angle.y;
     f32 x = a->current.pos.x;
     f32 y = a->current.pos.y;
-    a->m794.x = x;
+    a->mCollisionPos.x = x;
     f32 z = a->current.pos.z;
-    a->m794.y = y;
-    a->m794.z = z;
-    a->m794.x = gabi::fnmsubs(amp, cM_ssin(ang), x);
-    a->m794.z = gabi::fnmsubs(amp, cM_scos(ang), z);
+    a->mCollisionPos.y = y;
+    a->mCollisionPos.z = z;
+    a->mCollisionPos.x = gabi::fnmsubs(amp, cM_ssin(ang), x);
+    a->mCollisionPos.z = gabi::fnmsubs(amp, cM_scos(ang), z);
 }
 
 /* 022D8F58 */
@@ -240,7 +240,7 @@ u32 daNpc_Rsh1_c::next_msgStatus(be<u32>* o_pMsgNo, be<u32>* o_pMsgNo2) {
             dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
             play->play.mItemRupeeCount = play->play.mItemRupeeCount - msg_rupee;
             if (!rsh1m_checkItemGet(i_this->mpShopItems->getSelectItemNo(), TRUE)) {
-                i_this->m95B = 4;
+                i_this->mOrderState = 4;
                 msg_status = 0x10; /* fopMsgStts_MSG_ENDS_e */
                 break;
             }
@@ -265,9 +265,9 @@ u32 daNpc_Rsh1_c::next_msgStatus(be<u32>* o_pMsgNo, be<u32>* o_pMsgNo2) {
 
 /* 022D94B8 */
 u32 daNpc_Rsh1_c::getMsg() {
-    u32 msg_no = m780;
+    u32 msg_no = mNextMsgNo;
     if (msg_no != 0) {
-        m780 = 0;
+        mNextMsgNo = 0;
         return msg_no;
     }
     if (!rsh1m_checkItemGet(dItemNo_MAGIC_ARMOR_e, TRUE) && daNpc_Rsh1_countShop() >= 3) {
@@ -326,9 +326,9 @@ u16 daNpc_Rsh1_c::normal_talk() {
     RshMessageManager* mng = rsh1_messageManager();
     u16 status = rsh1m_msgGetStatus(mng);
     if (status == 0xE /* fopMsgStts_MSG_DISPLAYED_e */) {
-        rsh1m_msgSetStatus(mng, rsh1m_next_msgStatus(this, &m778, nullptr));
+        rsh1m_msgSetStatus(mng, rsh1m_next_msgStatus(this, &mCurrMsgNo, nullptr));
         if (rsh1m_msgGetStatus(mng) == 0xF) {
-            rsh1m_msgSet(mng, m778, nullptr);
+            rsh1m_msgSet(mng, mCurrMsgNo, nullptr);
         }
     } else if (status == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
         rsh1m_msgSetStatus(mng, 0x13);
@@ -342,7 +342,7 @@ u16 daNpc_Rsh1_c::normal_talk() {
     }
     mpShopCursor->hide();
     if (rsh1m_play_u8(0x5BD2) == 1) { /* dComIfGp_checkMesgSendButton() */
-        m778 = mng->mMsgNo;
+        mCurrMsgNo = mng->mMsgNo;
         /* function-local statics rel_cam_ctr_data (0x10468560, guard 0x1046860C) and
          * rel_cam_eye_data (0x10468578, guard 0x10468610) */
         cXyz* ctr = rsh1_statics().mTalkCenter;
@@ -366,7 +366,7 @@ u16 daNpc_Rsh1_c::normal_talk() {
             eye[1].z = 215.0f;
         }
         s32 sel;
-        switch ((u32)m778) {
+        switch ((u32)mCurrMsgNo) {
         case 0x2846:
         case 0x284E:
         case 0x2858:
@@ -412,20 +412,20 @@ u16 daNpc_Rsh1_c::normal_talk() {
 u16 daNpc_Rsh1_c::shop_talk() {
     RshMessageManager* mng = rsh1_messageManager();
     mpShopCursor->show();
-    if (mpShopItems && rsh1m_now_triggercheck(&mSTControl, gabi::ea(mpShopItems.get()), &m778, 0, 0)) {
-        m77C = 0;
-        m749 = 1;
+    if (mpShopItems && rsh1m_now_triggercheck(&mSTControl, gabi::ea(mpShopItems.get()), &mCurrMsgNo, 0, 0)) {
+        mShopMsgNo = 0;
+        mbItemMsgSet = 1;
     }
     u16 status = rsh1m_msgGetStatus(mng);
     if (status == 0xE || status == 0xF) {
         // HD: also skipped when the message manager's cancel flag is set
-        if (m749 != 0 || mng->mCancel != 0) {
-            m749 = 0;
+        if (mbItemMsgSet != 0 || mng->mCancel != 0) {
+            mbItemMsgSet = 0;
         } else {
-            m77C = m778;
-            rsh1m_msgSetStatus(mng, rsh1m_next_msgStatus(this, &m77C, &m778));
+            mShopMsgNo = mCurrMsgNo;
+            rsh1m_msgSetStatus(mng, rsh1m_next_msgStatus(this, &mShopMsgNo, &mCurrMsgNo));
             if (rsh1m_msgGetStatus(mng) == 0xF) {
-                rsh1m_msgSet(mng, m77C, nullptr);
+                rsh1m_msgSet(mng, mShopMsgNo, nullptr);
             }
         }
     } else if (status == 0x12) {
@@ -443,27 +443,27 @@ u16 daNpc_Rsh1_c::shop_talk() {
 u16 daNpc_Rsh1_c::talk() {
     RshMessageManager* mng = rsh1_messageManager();
     u16 status = 0xFF;
-    if (m961 == 0) {
+    if (mTalkStep == 0) {
         rsh1_messageId() = 0xFFFFFFFF; // HD: no l_msg
-        m778 = getMsg();
-        m77C = 0;
-        m961 = 1;
+        mCurrMsgNo = getMsg();
+        mShopMsgNo = 0;
+        mTalkStep = 1;
         mShopSelectItemNo = 0xFF;
-    } else if (m961 != -1) {
+    } else if (mTalkStep != -1) {
         if (rsh1_messageId() == 0xFFFFFFFF) {
-            u32 id = rsh1m_msgSet(mng, m778, &eyePos);
+            u32 id = rsh1m_msgSet(mng, mCurrMsgNo, &eyePos);
             rsh1_messageId() = id;
             // HD: the talk step is chosen as soon as the message is set
             if (id != 0xFFFFFFFF) {
-                if (!daNpc_Rsh1_shopStickMoveMsgCheck(m778)) {
-                    m961 = 2;
+                if (!daNpc_Rsh1_shopStickMoveMsgCheck(mCurrMsgNo)) {
+                    mTalkStep = 2;
                 } else {
-                    m961 = 3;
+                    mTalkStep = 3;
                 }
             }
         } else {
             setAnmFromMsgTag();
-            s8 step = m961;
+            s8 step = mTalkStep;
             if (step == 2) {
                 status = normal_talk();
             } else if (step == 3) {
@@ -471,19 +471,19 @@ u16 daNpc_Rsh1_c::talk() {
             }
             if (rsh1m_play_u8(0x5BD2) != 0) {
                 u32 msgNo = mng->mMsgNo;
-                m778 = msgNo;
+                mCurrMsgNo = msgNo;
                 if (!daNpc_Rsh1_shopStickMoveMsgCheck(msgNo)) {
                     if (!daNpc_Rsh1_shopMsgCheck(msgNo) && mpShopItems) {
                         mpShopItems->mSelectedItemIdx = -1;
                         mpShopItems->showItem();
                     }
-                    m961 = 2;
+                    mTalkStep = 2;
                 } else {
                     if (msgNo == 0x2863 && mpShopItems) {
                         mpShopItems->mSelectedItemIdx = -1;
                         mpShopItems->showItem();
                     }
-                    m961 = 3;
+                    mTalkStep = 3;
                 }
             }
         }
@@ -501,7 +501,7 @@ BOOL daNpc_Rsh1_c::pl_shop_out_action(void*) {
         setAnm(6);
         rsh1m_setShopOutPos(this, trig_amplitude_1);
         mActionStatus = (s8)(mActionStatus + 1);
-        m793 = 0;
+        mbShopOut = 0;
     } else if (mActionStatus != -1) {
         // HD: when the global byte 0x101D5F45 is set, Zunari goes straight back to waiting
         if (rsh1_forceWait()) {
@@ -510,7 +510,7 @@ BOOL daNpc_Rsh1_c::pl_shop_out_action(void*) {
             return TRUE;
         }
         gabi::Local<be<s32>> temp_78C;
-        *temp_78C = (s32)m78C;
+        *temp_78C = (s32)mShopNum;
         fopAc_ac_c* link_p = dComIfGp_getLinkPlayer(); /* daPy_getPlayerLinkActorClass() */
         cXyz link_pos;
         rsh1m_copyF(&link_pos, &link_p->current.pos);
@@ -518,11 +518,11 @@ BOOL daNpc_Rsh1_c::pl_shop_out_action(void*) {
         if (pathMove(temp_78C.get())) {
             cXyz temp;
             rsh1m_copyF(&temp, &cXyz::Zero); /* cXyz::Zero */
-            f32 calc_pos = rsh1m_addCalcPos(&m794, &current.pos, 0.25f, REG_F(10, 1) + 5.0f, 1.0f);
+            f32 calc_pos = rsh1m_addCalcPos(&mCollisionPos, &current.pos, 0.25f, REG_F(10, 1) + 5.0f, 1.0f);
             cLib_addCalcAngleS2(&current.angle.y, target, 4, 0x1000);
             if (calc_pos < 1.0f) {
-                rsh1m_addCalcPos(&m7A0, &temp, 0.25f, REG_F(10, 1) + 5.0f, 1.0f);
-                f32 mag = std_sqrtf(PSVECSquareMag(&m7A0));
+                rsh1m_addCalcPos(&mModelOffset, &temp, 0.25f, REG_F(10, 1) + 5.0f, 1.0f);
+                f32 mag = std_sqrtf(PSVECSquareMag(&mModelOffset));
                 if (mag <= 1.0f) {
                     setAnm(0);
                     rsh1m_setAction(this, RSH1_wait_action);
@@ -534,7 +534,7 @@ BOOL daNpc_Rsh1_c::pl_shop_out_action(void*) {
                 u16 ang = (u16)current.angle.y;
                 temp.x = gabi::fmadds(trig_amplitude_2, cM_ssin(ang), temp.x);
                 temp.z = gabi::fmadds(trig_amplitude_2, cM_scos(ang), temp.z);
-                rsh1m_addCalcPos(&m7A0, &temp, 0.25f, REG_F(10, 1) + 5.0f, 1.0f);
+                rsh1m_addCalcPos(&mModelOffset, &temp, 0.25f, REG_F(10, 1) + 5.0f, 1.0f);
             }
         } else {
             rsh1m_setShopOutPos(this, trig_amplitude_1);

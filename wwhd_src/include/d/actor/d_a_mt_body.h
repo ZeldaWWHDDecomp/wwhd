@@ -61,7 +61,7 @@ WWHD_SIZE(mtBodyEmitterView, 0x258);
 struct mtBodyActorView : fopEn_enemy_c {
     u8 _pad3C8[0x18];
     /* 0x3E0 */ gptr<mDoExt_McaMorf> mpMorf[MT_PART_NUM];
-    /* 0x400 */ be<u8> mTextureFrameMode;
+    /* 0x400 */ be<u8> mMaterialMode;  /* was mTextureFrameMode (misnamed): mt_class (d_a_mt.h) has the evidence for mMaterialMode */
     u8 _pad401[0x4B];
     /* 0x44C */ be<f32> mBodyWaveAmplitude;
     u8 _pad450[0x4];
@@ -73,40 +73,40 @@ struct mtBodyActorView : fopEn_enemy_c {
     u8 _pad468[0x104];
     /* 0x56C */ gptr<JPABaseEmitter> mpEmitter;
     /* 0x570 */ be<u8> mAction;
-    /* 0x571 */ be<u8> mRollMode;
-    /* 0x572 */ be<s16> mRollCollisionTimer;
-    /* 0x574 */ be<s16> mActionTimer;
+    /* 0x571 */ be<u8> mMode;  /* was mRollMode (misnamed): mt_class (d_a_mt.h) has the evidence for mMode */
+    /* 0x572 */ be<s16> mActionTimer;  /* was mRollCollisionTimer (misnamed): mt_class (d_a_mt.h) has the evidence for mActionTimer */
+    /* 0x574 */ be<s16> mPauseTimer;  /* was mActionTimer (misnamed): mt_class (d_a_mt.h) has the evidence for mPauseTimer */
     u8 _pad576[0x6];
-    /* 0x57C */ be<s16> mShrinkColliderTimer;
+    /* 0x57C */ be<s16> mInvulnerableTimer;  /* was mShrinkColliderTimer (misnamed): mt_class (d_a_mt.h) has the evidence for mInvulnerableTimer */
     u8 _pad57E[0x2];
-    /* 0x580 */ be<s16> mRollingStateTimer;
-    /* 0x582 */ be<s16> mCrawlPhase;
+    /* 0x580 */ be<s16> mBlinkTimer;  /* was mRollingStateTimer (misnamed): mt_class (d_a_mt.h) has the evidence for mBlinkTimer */
+    /* 0x582 */ be<s16> mRollTimer;  /* was mCrawlPhase (misnamed): mt_class (d_a_mt.h) has the evidence for mRollTimer */
     /* 0x584 */ be<s16> mHeadWobbleAngle;
-    /* 0x586 */ be<s16> mBodyWavePhase;
+    /* 0x586 */ be<s16> mFrameCounter;  /* was mBodyWavePhase (misnamed): mt_class (d_a_mt.h) has the evidence for mFrameCounter */
     u8 _pad588[0x4];
     /* 0x58C */ be<f32> mModelOffsetZ;
     /* 0x590 */ be<f32> mBodyWaveScale;
-    /* 0x594 */ be<f32> mCrawlSegmentOffset;
+    /* 0x594 */ be<f32> mRollBodyOffset;  /* was mCrawlSegmentOffset (misnamed): mt_class (d_a_mt.h) has the evidence for mRollBodyOffset */
     u8 _pad598[0xE];
-    /* 0x5A6 */ be<s16> mSegmentPitchStep;
+    /* 0x5A6 */ be<s16> mRollPitchStep;  /* was mSegmentPitchStep (misnamed): mt_class (d_a_mt.h) has the evidence for mRollPitchStep */
     u8 _pad5A8[0x2];
-    /* 0x5AA */ be<s16> mSuppressBodyWave;
+    /* 0x5AA */ be<s16> mWavePauseTimer;  /* was mSuppressBodyWave (misnamed): mt_class (d_a_mt.h) has the evidence for mWavePauseTimer */
     u8 _pad5AC[0x10];
-    /* 0x5BC */ cXyz mSegmentPositions[MT_PART_NUM];
-    /* 0x61C */ cXyz mPreviousSegmentPositions[MT_PART_NUM];
-    /* 0x67C */ csXyz mSegmentAngles[MT_PART_NUM];
+    /* 0x5BC */ cXyz mSegmentPos[MT_PART_NUM];  /* was mSegmentPositions: the spelling mt_class (d_a_mt.h) uses */
+    /* 0x61C */ cXyz mOldSegmentPos[MT_PART_NUM];  /* was mPreviousSegmentPositions: the spelling mt_class (d_a_mt.h) uses */
+    /* 0x67C */ csXyz mSegmentAngle[MT_PART_NUM];  /* was mSegmentAngles: the spelling mt_class (d_a_mt.h) uses */
     /* 0x6AC */ cXyz mSegmentSpeeds[MT_PART_NUM];
     /* 0x70C */ be<s16> mScatterDelay[MT_PART_NUM];
-    /* 0x71C */ be<f32> mSegmentScales[MT_PART_NUM];
+    /* 0x71C */ be<f32> mSegmentScale[MT_PART_NUM];  /* was mSegmentScales: the spelling mt_class (d_a_mt.h) uses */
     /* 0x73C */ be<f32> mSegmentScaleY[MT_PART_NUM];
     u8 _pad75C[0xB4];
-    /* 0x810 */ cXyz mTrailPositions[MT_JOINT_NUM];
-    /* 0xB10 */ csXyz mTrailAngles[MT_JOINT_NUM];
+    /* 0x810 */ cXyz mTrailPos[MT_JOINT_NUM];  /* was mTrailPositions: the spelling mt_class (d_a_mt.h) uses */
+    /* 0xB10 */ csXyz mTrailAngle[MT_JOINT_NUM];  /* was mTrailAngles: the spelling mt_class (d_a_mt.h) uses */
     u8 _padC90[0x80];
-    /* 0xD10 */ be<s32> mTrailState;
+    /* 0xD10 */ be<s32> mTrailIndex;  /* was mTrailState (misnamed): mt_class (d_a_mt.h) has the evidence for mTrailIndex */
     u8 _padD14[0x8];
-    /* 0xD1C */ be<u8> mTrailTableSelect;
-    /* 0xD1D */ be<u8> mWriteTrail;
+    /* 0xD1C */ be<u8> mFastTrail;  /* was mTrailTableSelect (misnamed): mt_class (d_a_mt.h) has the evidence for mFastTrail */
+    /* 0xD1D */ be<u8> mStoreTrail;  /* was mWriteTrail: the spelling mt_class (d_a_mt.h) uses */
     u8 _padD1E[0x2];
     /* 0xD20 */ be<u8> mHeadColliderMode;
     u8 _padD21[0x43];
@@ -117,48 +117,48 @@ struct mtBodyActorView : fopEn_enemy_c {
     u8 _pad19F0[0x1C];
     /* 0x1A0C */ be<f32> mHeadScale;
     /* 0x1A10 */ be<f32> mSegmentSpeedScale;
-    /* 0x1A14 */ be<s8> mImpactState;
+    /* 0x1A14 */ be<s8> mDamageMode;  /* was mImpactState (misnamed): mt_class (d_a_mt.h) has the evidence for mDamageMode */
     u8 _pad1A15[0x1];
-    /* 0x1A16 */ be<u8> mSuppressUnrollHop;
+    /* 0x1A16 */ be<u8> mInLava;  /* was mSuppressUnrollHop (misnamed): mt_class (d_a_mt.h) has the evidence for mInLava */
     u8 _pad1A17[0x1];
-    /* 0x1A18 */ be<s16> mCrawlPitchFlags;
+    /* 0x1A18 */ be<s16> mHitEffectTimer;  /* was mCrawlPitchFlags (misnamed): mt_class (d_a_mt.h) has the evidence for mHitEffectTimer */
     u8 _pad1A1A[0x3BE];
 };
 WWHD_SIZE(mtBodyActorView, 0x1DD8);
 WWHD_OFFSET(mtBodyActorView, mSegmentSpeedScale, 0x1A10);
-WWHD_OFFSET(mtBodyActorView, mImpactState, 0x1A14);
-WWHD_OFFSET(mtBodyActorView, mSuppressUnrollHop, 0x1A16);
-WWHD_OFFSET(mtBodyActorView, mCrawlPitchFlags, 0x1A18);
-WWHD_OFFSET(mtBodyActorView, mTextureFrameMode, 0x400);
+WWHD_OFFSET(mtBodyActorView, mDamageMode, 0x1A14);
+WWHD_OFFSET(mtBodyActorView, mInLava, 0x1A16);
+WWHD_OFFSET(mtBodyActorView, mHitEffectTimer, 0x1A18);
+WWHD_OFFSET(mtBodyActorView, mMaterialMode, 0x400);
 WWHD_OFFSET(mtBodyActorView, mBodyWaveAmplitude, 0x44C);
 WWHD_OFFSET(mtBodyActorView, mWaterSteamState, 0x464);
 WWHD_OFFSET(mtBodyActorView, mWaterSteamTimer, 0x466);
 WWHD_OFFSET(mtBodyActorView, mAction, 0x570);
-WWHD_OFFSET(mtBodyActorView, mRollMode, 0x571);
-WWHD_OFFSET(mtBodyActorView, mRollCollisionTimer, 0x572);
-WWHD_OFFSET(mtBodyActorView, mActionTimer, 0x574);
-WWHD_OFFSET(mtBodyActorView, mShrinkColliderTimer, 0x57C);
-WWHD_OFFSET(mtBodyActorView, mRollingStateTimer, 0x580);
-WWHD_OFFSET(mtBodyActorView, mCrawlPhase, 0x582);
+WWHD_OFFSET(mtBodyActorView, mMode, 0x571);
+WWHD_OFFSET(mtBodyActorView, mActionTimer, 0x572);
+WWHD_OFFSET(mtBodyActorView, mPauseTimer, 0x574);
+WWHD_OFFSET(mtBodyActorView, mInvulnerableTimer, 0x57C);
+WWHD_OFFSET(mtBodyActorView, mBlinkTimer, 0x580);
+WWHD_OFFSET(mtBodyActorView, mRollTimer, 0x582);
 WWHD_OFFSET(mtBodyActorView, mHeadWobbleAngle, 0x584);
-WWHD_OFFSET(mtBodyActorView, mBodyWavePhase, 0x586);
+WWHD_OFFSET(mtBodyActorView, mFrameCounter, 0x586);
 WWHD_OFFSET(mtBodyActorView, mModelOffsetZ, 0x58C);
 WWHD_OFFSET(mtBodyActorView, mBodyWaveScale, 0x590);
-WWHD_OFFSET(mtBodyActorView, mCrawlSegmentOffset, 0x594);
-WWHD_OFFSET(mtBodyActorView, mSegmentPitchStep, 0x5A6);
-WWHD_OFFSET(mtBodyActorView, mSuppressBodyWave, 0x5AA);
-WWHD_OFFSET(mtBodyActorView, mSegmentPositions, 0x5BC);
-WWHD_OFFSET(mtBodyActorView, mPreviousSegmentPositions, 0x61C);
-WWHD_OFFSET(mtBodyActorView, mSegmentAngles, 0x67C);
+WWHD_OFFSET(mtBodyActorView, mRollBodyOffset, 0x594);
+WWHD_OFFSET(mtBodyActorView, mRollPitchStep, 0x5A6);
+WWHD_OFFSET(mtBodyActorView, mWavePauseTimer, 0x5AA);
+WWHD_OFFSET(mtBodyActorView, mSegmentPos, 0x5BC);
+WWHD_OFFSET(mtBodyActorView, mOldSegmentPos, 0x61C);
+WWHD_OFFSET(mtBodyActorView, mSegmentAngle, 0x67C);
 WWHD_OFFSET(mtBodyActorView, mSegmentSpeeds, 0x6AC);
 WWHD_OFFSET(mtBodyActorView, mScatterDelay, 0x70C);
-WWHD_OFFSET(mtBodyActorView, mSegmentScales, 0x71C);
+WWHD_OFFSET(mtBodyActorView, mSegmentScale, 0x71C);
 WWHD_OFFSET(mtBodyActorView, mSegmentScaleY, 0x73C);
-WWHD_OFFSET(mtBodyActorView, mTrailPositions, 0x810);
-WWHD_OFFSET(mtBodyActorView, mTrailAngles, 0xB10);
-WWHD_OFFSET(mtBodyActorView, mTrailState, 0xD10);
-WWHD_OFFSET(mtBodyActorView, mTrailTableSelect, 0xD1C);
-WWHD_OFFSET(mtBodyActorView, mWriteTrail, 0xD1D);
+WWHD_OFFSET(mtBodyActorView, mTrailPos, 0x810);
+WWHD_OFFSET(mtBodyActorView, mTrailAngle, 0xB10);
+WWHD_OFFSET(mtBodyActorView, mTrailIndex, 0xD10);
+WWHD_OFFSET(mtBodyActorView, mFastTrail, 0xD1C);
+WWHD_OFFSET(mtBodyActorView, mStoreTrail, 0xD1D);
 WWHD_OFFSET(mtBodyActorView, mHeadColliderMode, 0xD20);
 
 struct mtBodyHIOView {

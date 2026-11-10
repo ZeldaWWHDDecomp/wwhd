@@ -102,7 +102,7 @@ field 021D87A0 r3+0x1A14 i8 -1,0,0,1,2,3
 field 021D87A0 r3+0xD8C u32 0,0x20                # acch flags (ground)
 field 021D87A0 r3+0x374 f32 -1 2                  # gravity
 field 021D87A0 r3+0xDF8 f32 -300,-140,-140,-140,0  # ground height (cur.y - 40 = -140)
-# the attack timeline (l_HIO m30..m3E) against the attack frame mD1E
+# the attack timeline (l_HIO m30..m3E) against the attack frame mAttackFrame
 field 021D87A0 104658A0 i16 5 5                   # m30: attack window start
 field 021D87A0 104658A2 i16 10 10                 # m32: attack window end
 field 021D87A0 104658A8 i16 20 20                 # m38: lunge target set
@@ -111,7 +111,7 @@ field 021D87A0 104658AC i16 15 15                 # m3C: bite animation
 field 021D87A0 104658AE i16 25 25                 # m3E: close animation
 field 021D87A0 1047B68E i16 0 1                   # REG0_S(3)
 field 021D87A0 1047B9F6 i16 0 1                   # REG6_S(7)
-# the trail is flat (mB10[8k].x) when the player is near
+# the trail is flat (mTrailAngle[8k].x) when the player is near
 field 021D87A0 r3+0xB10 i16 -0x1100 0x1000
 field 021D87A0 r3+0xB40 i16 -0x1000 0x1000
 field 021D87A0 r3+0xB70 i16 -0x1000 0x1000

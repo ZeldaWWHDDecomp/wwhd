@@ -31,9 +31,9 @@ static void setPoint(cXyz* point, f32 x, f32 y, f32 z) {
     point->z = z;
 }
 static void SkipSmoother(dCamera_c* camera) {
-    camera->m102 = 1;
-    camera->m101 = 1;
-    camera->m100 = 1;
+    camera->mStyleSettle2 = 1;
+    camera->mStyleSettle1 = 1;
+    camera->mStyleSettle0 = 1;
 }
 /* inlined into getItemEvCamera */
 static void eyeFromGlobe(dCamera_c* camera) {
@@ -82,7 +82,7 @@ bool event_camera_transition::dCamera_c::restorePosEvCamera() {
         gaps->mRestoreGuard = 1;
     }
     auto& work = mWork.restore;
-    if ((u32)m11C == 0) {
+    if ((u32)mCurStyleTimer == 0) {
         gabi::Local<cXyz> def;
         auto* d = def.get();
         f32 z = (f32)gaps->mRestoreGap.z, y = (f32)gaps->mRestoreGap.y, x = (f32)gaps->mRestoreGap.x;
@@ -105,8 +105,8 @@ bool event_camera_transition::dCamera_c::restorePosEvCamera() {
             work.mSavedView.mBank = (s16)play->mSavedView.mBank;
         } else {
             const CameraSavedViewHD* source =
-                dest == 0 ? &m0A4[0] : dest == 1 ? &m0A4[1]
-                                                 : reinterpret_cast<CameraSavedViewHD*>(&m084);
+                dest == 0 ? &mSavedViewStack[0] : dest == 1 ? &mSavedViewStack[1]
+                                                 : reinterpret_cast<CameraSavedViewHD*>(&mSavedCenter);
             copySavedPositions(&work.mSavedView, source);
             work.mSavedView.mFovY = (f32)source->mFovY;
         }
@@ -139,7 +139,7 @@ bool event_camera_transition::dCamera_c::restorePosEvCamera() {
         return true;
     }
     if (mode == RESTORE_JUMP) {
-        if ((u32)m11C == 0) {
+        if ((u32)mCurStyleTimer == 0) {
             if ((u32)work.mTargetType == 1) copyPoint(&mViewCache.mCenter, &work.mSavedView.mCenter);
             else copyPoint(&mViewCache.mCenter, &work.mTargetCenter);
             restoreGlobe(&mViewCache.mDirection, &work.mSavedView.mEye, &work.mSavedView.mCenter);
@@ -155,8 +155,8 @@ bool event_camera_transition::dCamera_c::restorePosEvCamera() {
         SkipSmoother(this);
         return true;
     }
-    if ((u32)m11C == 0) restoreGlobe(&work.mDirection, &work.mSavedView.mEye, &work.mSavedView.mCenter);
-    u32 elapsed = (u32)m11C;
+    if ((u32)mCurStyleTimer == 0) restoreGlobe(&work.mDirection, &work.mSavedView.mEye, &work.mSavedView.mCenter);
+    u32 elapsed = (u32)mCurStyleTimer;
     if (elapsed >= (u32)work.mFarTimer) {
         SkipSmoother(this);
         return true;
@@ -205,7 +205,7 @@ bool event_camera_transition::dCamera_c::turnToActorEvCamera() {
         gaps->mTurnGap.z = z0;
     }
     auto& work = mWork.turn;
-    if ((u32)m11C == 0) {
+    if ((u32)mCurStyleTimer == 0) {
         gabi::Local<cXyz> def;
         auto* d = def.get();
         f32 x = (f32)gaps->mTurnGap.x, y = (f32)gaps->mTurnGap.y;
@@ -225,7 +225,7 @@ bool event_camera_transition::dCamera_c::turnToActorEvCamera() {
         }
         cameraTransitionAttention(this, d, targetActor);
         copyPoint(&work.mTargetPosition, d);
-        u32 elapsed = (u32)m11C;
+        u32 elapsed = (u32)mCurStyleTimer;
         SkipSmoother(this);
         if (elapsed == 0) {
             gabi::Local<cXyz> c;
@@ -284,7 +284,7 @@ bool event_camera_transition::dCamera_c::turnToActorEvCamera() {
             copyPoint(&work.mCenter, pp);
         }
     }
-    u32 elapsed = (u32)m11C;
+    u32 elapsed = (u32)mCurStyleTimer;
     if (elapsed >= (u32)work.mTimer) {
         SkipSmoother(this);
         return true;
@@ -342,7 +342,7 @@ bool event_camera_transition::dCamera_c::getItemEvCamera() {
     cameraTransitionAngleDefault(au); /* cSAngle() */
     cameraTransitionAngleDefault(av);
     u32 state;
-    if ((u32)m11C == 0) {
+    if ((u32)mCurStyleTimer == 0) {
         state = 0;
         work.mState = 0;
     } else {
@@ -390,10 +390,10 @@ bool event_camera_transition::dCamera_c::getItemEvCamera() {
             cameraTransitionRelational(this, ee, mpPlayerActor.get(), eo + k);
             copyPoint(ey, ee);
             cameraTransitionPosition(this, ee, mpPlayerActor.get());
-            f32 floor = (f32)ee->y + (f32)m368;
+            f32 floor = (f32)ee->y + (f32)mBushHeight;
             if ((f32)ey->y < floor) { /* bge: taken on NaN */
                 cameraTransitionPosition(this, pp, mpPlayerActor.get());
-                ey->y = (f32)pp->y + (f32)m368;
+                ey->y = (f32)pp->y + (f32)mBushHeight;
             }
             fopAc_ac_c* ship = nullptr;
             s32 pad = (s32)(u32)mPadId;

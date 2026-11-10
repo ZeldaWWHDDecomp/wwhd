@@ -286,7 +286,7 @@ static void* searchEsa_CB(void* param_1, void* i_this) {
 void* daNpc_Nz_c::_searchEsa(fopAc_ac_c* pActor) {
     if (fopAcM_GetName(pActor) == fpcNm_ESA_e) {
         esa_class* pBait = static_cast<esa_class*>(pActor);
-        if (pBait->field_0x298 == 0) {
+        if (pBait->mTaken == 0) {
             cXyz delta = pBait->current.pos - current.pos;
             if (mpMorf->getFrame() < 6.0f) {
                 cLib_addCalcPos2(&pBait->current.pos, current.pos, 0.1f, 2.5f);

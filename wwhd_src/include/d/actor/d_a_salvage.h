@@ -73,7 +73,7 @@ struct Ship : fopAc_ac_c {
     u8 pad637[0x644 - 0x637];
     be<u32> mStateFlag;
     u8 pad648[0x680 - 0x648];
-    be<s16> m0398;
+    be<s16> mCraneAngle;  /* was m0398: daShip_c::mCraneAngle (d_a_ship.h 0x680) */
     u8 pad682[0x704 - 0x682];
     be<u32> mTornadoActor;
     u8 pad708[4];

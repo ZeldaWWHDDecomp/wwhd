@@ -174,7 +174,7 @@ BOOL daNpcPeople_c::createHeap() {
     people_set_r(7, npc * 4);
     J3DModelData* bodyModelData = people_getRes(npc, l_bmd_ix_tbl[npc]);
     u32 npc2 = mNpcNo;
-    s32 bck = getBck(m793);
+    s32 bck = getBck(mAnmIdx);
     people_set_r(7, npc2 * 4);
     J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectIDRes(people_arcname(npc2), bck);
     /* HD: l_diff_flag_tbl is 0x11020203 for every NPC (a constant) */
@@ -194,7 +194,7 @@ BOOL daNpcPeople_c::createHeap() {
         }
     } else {
         u32 npc4 = mNpcNo;
-        s32 hbck = getHeadBck(m793);
+        s32 hbck = getHeadBck(mAnmIdx);
         const char* arc = people_arcname(npc4);
         people_set_r(6, gabi::ea(arc));
         J3DAnmTransform* hanm = (J3DAnmTransform*)dComIfG_getObjectIDRes(arc, hbck);
@@ -232,7 +232,7 @@ BOOL daNpcPeople_c::createHeap() {
         if (mpEtcModel.get() == nullptr) {
             return false;
         }
-        m7A3 = peopleJointNameIndex(bodyModelData->getJointName(), "handR" /* "handR" */);
+        mHandRJntNo = peopleJointNameIndex(bodyModelData->getJointName(), "handR" /* "handR" */);
     }
     return true;
 }
@@ -252,54 +252,54 @@ cPhs_State daNpcPeople_c::createInit() {
         old.pos.copy(*point);
         current.pos.copy(*point);
         dNpc_PathRun_incIdxLoop(&mPathRun);
-        m76E = 1;
+        mWaitTimer = 1;
         temp = 0xFE;
         m7A1 = 1;
     }
     gravity = -9.0f;
     setWaitAnm();
     for (int i = 0; i < 4; i++) {
-        m766[i] = -1;
+        mEventIdx[i] = -1;
     }
     switch (mNpcNo) {
     case NPC_UO1:
-        m766[0] = people_getEventIdx("UO1_GET_ITEM"); /* "UO1_GET_ITEM" */
+        mEventIdx[0] = people_getEventIdx("UO1_GET_ITEM"); /* "UO1_GET_ITEM" */
         break;
     case NPC_UB1:
     case NPC_UB2:
-        m766[0] = people_getEventIdx("UB1_TALK"); /* "UB1_TALK" */
-        m766[1] = people_getEventIdx("UB1_TALK_XY"); /* "UB1_TALK_XY" */
-        m766[1] = people_getEventIdx("UB1_TALK_PHOTO"); /* "UB1_TALK_PHOTO" */
+        mEventIdx[0] = people_getEventIdx("UB1_TALK"); /* "UB1_TALK" */
+        mEventIdx[1] = people_getEventIdx("UB1_TALK_XY"); /* "UB1_TALK_XY" */
+        mEventIdx[1] = people_getEventIdx("UB1_TALK_PHOTO"); /* "UB1_TALK_PHOTO" */
         {
             s16 idx = people_getEventIdx("UB1_TALK_PHOTO_GET_ITEM"); /* "UB1_TALK_PHOTO_GET_ITEM" */
             m79C = 0;
-            m766[3] = idx;
+            mEventIdx[3] = idx;
         }
-        eventInfo.setEventId(m766[0]);
+        eventInfo.setEventId(mEventIdx[0]);
         break;
     case NPC_UB4:
-        m766[0] = people_getEventIdx("UB4_GET_ITEM"); /* "UB4_GET_ITEM" */
+        mEventIdx[0] = people_getEventIdx("UB4_GET_ITEM"); /* "UB4_GET_ITEM" */
         break;
     case NPC_UW2:
-        m766[0] = people_getEventIdx("UW2_GET_ITEM"); /* "UW2_GET_ITEM" */
+        mEventIdx[0] = people_getEventIdx("UW2_GET_ITEM"); /* "UW2_GET_ITEM" */
         break;
     case NPC_UM1:
-        m766[0] = people_getEventIdx("UM1_GET_ITEM"); /* "UM1_GET_ITEM" */
-        m766[1] = people_getEventIdx("UM1_TALK"); /* "UM1_TALK" */
+        mEventIdx[0] = people_getEventIdx("UM1_GET_ITEM"); /* "UM1_GET_ITEM" */
+        mEventIdx[1] = people_getEventIdx("UM1_TALK"); /* "UM1_TALK" */
         break;
     case NPC_UM3:
-        m766[0] = people_getEventIdx("UM3_TELESCOPE_TALK"); /* "UM3_TELESCOPE_TALK" */
-        m766[1] = people_getEventIdx("UM3_GET_ITEM"); /* "UM3_GET_ITEM" */
+        mEventIdx[0] = people_getEventIdx("UM3_TELESCOPE_TALK"); /* "UM3_TELESCOPE_TALK" */
+        mEventIdx[1] = people_getEventIdx("UM3_GET_ITEM"); /* "UM3_GET_ITEM" */
         if (mbIsNight) {
             mEtcFlag = mEtcFlag | 0x40000000;
         }
         break;
     case NPC_SA3:
-        m766[0] = people_getEventIdx("SA3_GET_ITEM"); /* "SA3_GET_ITEM" */
+        mEventIdx[0] = people_getEventIdx("SA3_GET_ITEM"); /* "SA3_GET_ITEM" */
         break;
     case NPC_SA5: {
-        m766[0] = people_getEventIdx("SA5_TALK_XY"); /* "SA5_TALK_XY" */
-        m766[1] = people_getEventIdx("SA5_GET_ITEM"); /* "SA5_GET_ITEM" */
+        mEventIdx[0] = people_getEventIdx("SA5_TALK_XY"); /* "SA5_TALK_XY" */
+        mEventIdx[1] = people_getEventIdx("SA5_GET_ITEM"); /* "SA5_GET_ITEM" */
         u8 reg = dComIfGs_getTmpReg(0xFD07 /* UNK_FD07 */);
         for (int i = 0; i < 3; i++) {
             if (reg & (1 << i)) {
@@ -307,10 +307,10 @@ cPhs_State daNpcPeople_c::createInit() {
                 if (pig != 0) {
                     /* kb_class::taura_pos_set(current.pos) */
                     f32 y = current.pos.y, x = current.pos.x, z = current.pos.z;
-                    pig->m450.x = x;
-                    pig->m450.y = y;
-                    pig->m408 = 1;
-                    pig->m450.z = z;
+                    pig->mTauraPos.x = x;
+                    pig->mTauraPos.y = y;
+                    pig->mTauraPosSet = 1;
+                    pig->mTauraPos.z = z;
                     pig->current.pos.copy(current.pos);
                 }
             }
@@ -339,10 +339,10 @@ cPhs_State daNpcPeople_c::createInit() {
     case NPC_UG2:
         if (getPrmArg0() == 0) {
             temp = 0x50;
-            m76E = 1;
+            mWaitTimer = 1;
             mEtcFlag = 0x1000;
         }
-        m766[0] = people_getEventIdx("UG1_TALK"); /* "UG1_TALK" */
+        mEventIdx[0] = people_getEventIdx("UG1_TALK"); /* "UG1_TALK" */
         m7A1 = 1;
         break;
     default:
@@ -352,30 +352,30 @@ cPhs_State daNpcPeople_c::createInit() {
     eventInfo.setXyEventCB(&daNpcPeople_XyEventCB);
     eventInfo.mpPhotoCB = gabi::guest_fn((const void*)&daNpcPeople_photoCB);
     mEventCut.setActorInfo2(l_npc_staff_id()[mNpcNo], this);
-    m784 = 0;
+    mLookMaxVel = 0;
     mTalk = 0;
-    m789 = 0;
+    mInAttention = 0;
     m78A = 0;
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel())); /* fopAcM_SetMtx */
     fopAcM_setCullSizeBox(this, -70.0f, 0.0f, -70.0f, 70.0f, 200.0f, 70.0f);
-    cullSizeFar = mpNpcDat->field_0x30 / peopleClipperFar();
+    cullSizeFar = mpNpcDat->mCullFarDist / peopleClipperFar();
     be<u8>* dist = &l_npc_dist_tbl()[mNpcNo][mbIsNight];
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = *dist; /* attention_info.distances[fopAc_Attn_TYPE_TALK_e] */
     attention_info.flags = 0x0100000A; /* attention_info.flags */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = *dist; /* attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] */
     daNpcPeople_c__l_npc_dat* dat = mpNpcDat;
-    m_jnt.setParam(dat->field_0x04, dat->field_0x06, dat->field_0x0C, dat->field_0x0E, dat->field_0x00, dat->field_0x02,
-                   dat->field_0x08, dat->field_0x0A, dat->field_0x10);
+    m_jnt.setParam(dat->mMaxBackboneX, dat->mMaxBackboneY, dat->mMinBackboneX, dat->mMinBackboneY, dat->mMaxHeadX, dat->mMaxHeadY,
+                   dat->mMinHeadX, dat->mMinHeadY, dat->mMaxTurnStep);
     if (mNpcNo == NPC_UM3 && !mbIsNight) {
         dComIfGs_checkGetItem(dItemNo_COLLECT_MAP_15_e);
     }
-    m79D = mpNpcDat->field_0x5A;
-    m79E = mpNpcDat->field_0x5C;
+    mBodyTurn = mpNpcDat->mBodyTurn;
+    mLookAtPlayer = mpNpcDat->mLookAtPlayer;
     m79F = mpNpcDat->field_0x5D;
-    m748 = mpNpcDat->field_0x28;
-    m776 = mpNpcDat->field_0x34;
-    m778 = mpNpcDat->field_0x36;
-    m74C = mpNpcDat->field_0x3C;
+    mMaxAttnDistXZ = mpNpcDat->mMaxAttnDistXZ;
+    mMaxAttnAngleY = mpNpcDat->mMaxAttnAngleY;
+    mMaxLookAngleY = mpNpcDat->mMaxLookAngleY;
+    mCylR = mpNpcDat->mCylRadius;
     if (mNpcNo != NPC_UM3) {
         mObjAcch.CrrPos(dComIfG_Bgsp());
         f32 gnd = mObjAcch.GetGroundH();
@@ -393,7 +393,7 @@ cPhs_State daNpcPeople_c::createInit() {
     center->x = current.pos.x;
     center->y = current.pos.y;
     center->z = current.pos.z;
-    setCollision(&mCyl, center.get(), m74C, mpNpcDat->field_0x40);
+    setCollision(&mCyl, center.get(), mCylR, mpNpcDat->mCylHeight);
     return cPhs_COMPLEATE_e;
 }
 
@@ -427,7 +427,7 @@ bool daNpcPeople_c::_draw() {
     setLightTevColorType(env, morf->getModel(), &tevStr);
     setLightTevColorType(dKy_getEnvlight(), headModel, &tevStr);
     if (l_btp_ix_tbl[mNpcNo] >= 0) {
-        mDoExt_btpAnm_entry((mDoExt_btpAnm*)(void*)mBtpAnm, headModelData, m78E);
+        mDoExt_btpAnm_entry((mDoExt_btpAnm*)(void*)mBtpAnm, headModelData, mBtpFrame);
     }
     /* HD: no l_bmt_ix_tbl material table */
     mpMorf->updateDL();
@@ -442,14 +442,14 @@ bool daNpcPeople_c::_draw() {
     }
     if (mpEtcModel.get() != nullptr && (mEtcFlag & 0x40000001)) {
         setLightTevColorType(dKy_getEnvlight(), mpEtcModel, &tevStr);
-        people_setBaseTRMtx_anm(mpEtcModel, bodyModel, m7A3);
+        people_setBaseTRMtx_anm(mpEtcModel, bodyModel, mHandRJntNo);
         mDoExt_modelUpdateDL(mpEtcModel);
     }
     /* HD: no dComIfGd_setShadow / addRealShadow */
-    if (m7A6 != 0xFF) {
+    if (mPsoNo != 0xFF) {
         gabi::Local<dSnap_Obj_l> obj;
         dSnap_Obj_ct(obj.get());
-        PsoData_l* pso = l_pso_tbl()[m7A6];
+        PsoData_l* pso = l_pso_tbl()[mPsoNo];
         gabi::Local<cXyz> temp;
         temp->x = pso->field_0x00;
         temp->y = pso->field_0x04;
@@ -458,7 +458,7 @@ bool daNpcPeople_c::_draw() {
         dSnap_Obj_SetInf(obj.get(), pso->photoNo, this, pso->field_0x16, pso->field_0x17, 0x7FFF);
         dSnap_Obj_SetGeo(obj.get(), temp.get(), pso->field_0x0C, pso->field_0x10, pso->field_0x14 + current.angle.y);
         dSnap_RegistSnapObj(obj.get());
-        /* HD: m7A6 is not reset to 0xFF */
+        /* HD: mPsoNo is not reset to 0xFF */
     } else {
         dSnap_RegistFig(l_photo_no[mNpcNo], this, 1.0f, 1.0f, 1.0f);
     }
@@ -523,8 +523,8 @@ BOOL daNpcPeople_c::initTexPatternAnm(u32 param_1) {
             return false;
         }
     }
-    m78E = 0;
-    m780 = 0;
+    mBtpFrame = 0;
+    mBlinkTimer = 0;
     return true;
 }
 
@@ -549,15 +549,15 @@ void daNpcPeople_c::setAnm(u32 param_1, int param_2, f32 morf, f32 param_4) {
         JUT_ASSERT_fail("d_a_npc_people.cpp", 0x246A, "mNpcNo >= 0 && mNpcNo < daNpcPeople_c::Npc_No_Max"); /* HD: l_arcname_tbl bound check */
     }
     if (mNpcNo == NPC_UW1) {
-        if (m793 == 4 && param_1 == 0) {
+        if (mAnmIdx == 4 && param_1 == 0) {
             morf = 12.0f;
-        } else if (m793 == 3 && param_1 == 1) {
+        } else if (mAnmIdx == 3 && param_1 == 1) {
             morf = 12.0f;
         }
     }
-    if (!(m744 < 0.0f)) {
-        morf = m744;
-        m744 = -1.0f;
+    if (!(mMorf < 0.0f)) {
+        morf = mMorf;
+        mMorf = -1.0f;
     }
     const char* arc = people_arcname(mNpcNo);
     s32 bck = getBck(param_1);
@@ -570,55 +570,55 @@ void daNpcPeople_c::setAnm(u32 param_1, int param_2, f32 morf, f32 param_4) {
         J3DAnmTransform* pHeadAnm = (J3DAnmTransform*)dComIfG_getObjectIDRes(arc2, head_bck);
         mpHeadMorf->setAnm(pHeadAnm, param_2, morf, param_4, 0.0f, -1.0f, nullptr);
     }
-    m793 = param_1;
-    m760 = param_2;
+    mAnmIdx = param_1;
+    mAnmPlayMode = param_2;
 }
 
 /* 022BED70 */
 bool daNpcPeople_c::setAnmTbl(sPeopleAnmDat* param_1, int param_2) {
     if (mNpcNo == NPC_SA5) {
-        if (m793 == 1) {
-            m744 = 16.0f;
+        if (mAnmIdx == 1) {
+            mMorf = 16.0f;
         }
     } else if (mNpcNo == NPC_SA4) {
-        if (m793 == 1) {
-            m744 = 13.0f;
+        if (mAnmIdx == 1) {
+            mMorf = 13.0f;
         }
-    } else if (mNpcNo == NPC_UM3 && m793 == 5) {
-        m744 = 13.0f;
+    } else if (mNpcNo == NPC_UM3 && mAnmIdx == 5) {
+        mMorf = 13.0f;
         if (param_1->field_0x00 == 1) {
-            m744 = 6.0f;
+            mMorf = 6.0f;
         }
     }
     mAnmFlag = mAnmFlag & ~0x1;
     if (param_1->field_0x00 == 0xFF && param_2 != 0) {
-        m728 = nullptr;
+        mpAnmTbl = nullptr;
         return true;
     }
-    m728 = param_1;
-    m796 = m728->field_0x02;
-    m750 = 1.0f;
+    mpAnmTbl = param_1;
+    mAnmLoopCount = mpAnmTbl->field_0x02;
+    mAnmSpeed = 1.0f;
     int temp = 2;
-    if (m796 != 0) {
+    if (mAnmLoopCount != 0) {
         temp = 0;
     }
-    if (m796 < 0) {
-        m796 = -m796;
-        m750 = -1.0f;
+    if (mAnmLoopCount < 0) {
+        mAnmLoopCount = -mAnmLoopCount;
+        mAnmSpeed = -1.0f;
     }
-    if (m793 != m728->field_0x00 || temp == 0 || m760 == 0) {
-        setAnm(m728->field_0x00, temp, (f32)m728->field_0x01, m750);
+    if (mAnmIdx != mpAnmTbl->field_0x00 || temp == 0 || mAnmPlayMode == 0) {
+        setAnm(mpAnmTbl->field_0x00, temp, (f32)mpAnmTbl->field_0x01, mAnmSpeed);
     }
     return false;
 }
 
 /* 022BEEDC */
 void daNpcPeople_c::setWaitAnm() {
-    if (mNpcNo == NPC_UB3 && m789 != 0) {
+    if (mNpcNo == NPC_UB3 && mInAttention != 0) {
         setAnmTbl(l_npc_anm_wait(), 0);
     } else if (mNpcNo == NPC_UM3 && !mbIsNight && dComIfGs_checkGetItem(dItemNo_COLLECT_MAP_15_e)) {
         setAnmTbl(l_npc_anm_um3_wait3(), 1);
-    } else if (mNpcNo == NPC_UW2 && m793 == 1) {
+    } else if (mNpcNo == NPC_UW2 && mAnmIdx == 1) {
         setAnmTbl(l_npc_anm_talkH2(), 1);
     } else {
         if (!(mNpcNo < NPC_NO_MAX)) {
@@ -686,7 +686,7 @@ s16 daNpcPeople_c::XyEventCB(int i_itemBtn) {
     case NPC_UB1:
     case NPC_UB2:
         if (itemNo != dItemNo_JOY_PENDANT_e) {
-            ret = m766[1];
+            ret = mEventIdx[1];
             m79C = 0;
             break;
         }
@@ -694,7 +694,7 @@ s16 daNpcPeople_c::XyEventCB(int i_itemBtn) {
         break;
     case NPC_SA5:
         if (itemNo == dItemNo_SKULL_NECKLACE_e) {
-            ret = m766[0];
+            ret = mEventIdx[0];
             m79C = 0;
             break;
         }
@@ -714,9 +714,9 @@ s16 daNpcPeople_c::photoCB(int param_1) {
     case NPC_UB1:
     case NPC_UB2:
         if (dComIfGp_getPictureResult() == 5 && !is1GetMap20()) {
-            ret = m766[3];
+            ret = mEventIdx[3];
         } else {
-            ret = m766[1];
+            ret = mEventIdx[1];
         }
     }
     return ret;
@@ -784,7 +784,7 @@ void daNpcPeople_c::warp() {
             dNpc_PathRun_incIdxLoop(&mPathRun);
         }
         speedF = 0.0f;
-        m740 = 0.0f;
+        mTargetSpeed = 0.0f;
     }
 }
 
@@ -843,23 +843,23 @@ static daNpcPeople_c* daNpcPeople_c_ct(daNpcPeople_c* i_this) {
     mDoExt_btpAnm_ct(i_this->mBtpAnm);
     i_this->mNpcNo = i_this->getPrmNpcNo();
     i_this->mResFlag = 0;
-    i_this->m78F = 0;
-    i_this->m740 = 0.0f;
-    i_this->m76E = 0;
-    i_this->m744 = -1.0f;
-    i_this->m799 = 0;
-    i_this->m764 = true;
+    i_this->mExecuteMode = 0;
+    i_this->mTargetSpeed = 0.0f;
+    i_this->mWaitTimer = 0;
+    i_this->mMorf = -1.0f;
+    i_this->mLookMode = 0;
+    i_this->mLookHeadOnly = true;
     i_this->m79C = 1;
-    i_this->m738 = nullptr;
-    i_this->m77A = i_this->home.angle.y;
-    i_this->m793 = 0;
-    i_this->m760 = 0;
-    i_this->m794 = 0;
+    i_this->mpUbMsg = nullptr;
+    i_this->mTargetAngleY = i_this->home.angle.y;
+    i_this->mAnmIdx = 0;
+    i_this->mAnmPlayMode = 0;
+    i_this->mLastRandNo = 0;
     i_this->mEtcFlag = 0;
     i_this->m7A1 = 0;
     i_this->mbIsNight = dKy_daynight_check() & 1;
     i_this->mpNpcDat = l_npc_dat()[i_this->mNpcNo][i_this->mbIsNight];
-    i_this->m730 = nullptr;
+    i_this->mpTalkPartner = nullptr;
     return i_this;
 }
 

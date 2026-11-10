@@ -3,7 +3,7 @@ src wwhd_src/d/actor/d_a_npc_os_c.cpp
 ret 025200D4 0x54000000 0x54000000      # play object at a fixed address
 field * 54005B34 u32 0x55000000 0x55000000   # link player
 field * 54005B2C u32 0x55000000 0x55000000   # player 0
-field * r3+0x919 i8 0,1,2,-1             # field_0x7A9 (action phase)
+field * r3+0x919 i8 0,1,2,-1             # mActionPhase (action phase)
 field * r3+0x2DD i8 0 2                  # argument
 arg 022AE504 r3 0x5A000000,0x5A000000,0x5B000000
 field 022AE504 54005B38 u32 0x5A000000,0

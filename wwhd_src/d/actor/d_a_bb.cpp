@@ -53,9 +53,9 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
             PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
 
             if (idx >= 0 && idx <= 10) {
-                cMtx_YrotM(calc_mtx(), i_this->unk_C00[idx].y);
-                cMtx_XrotM(calc_mtx(), i_this->unk_C00[idx].x);
-                cMtx_ZrotM(calc_mtx(), i_this->unk_C00[idx].z);
+                cMtx_YrotM(calc_mtx(), i_this->mJointRot[idx].y);
+                cMtx_XrotM(calc_mtx(), i_this->mJointRot[idx].x);
+                cMtx_ZrotM(calc_mtx(), i_this->mJointRot[idx].z);
                 mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
             }
 
@@ -77,26 +77,26 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
                 v.x = REG_F(10, 1) + 10.0f; // HD: GameCube uses REG0_F(10) * 10.0f + 10.0f.
                 v.y = REG0_F(11) * 10.0f;
                 v.z = REG0_F(12) * 10.0f;
-                MtxPosition(&v, &i_this->unk_BD4[jntNo - BB_JNT_OA_e]);
+                MtxPosition(&v, &i_this->mTailBasePos[jntNo - BB_JNT_OA_e]);
             } else if (jntNo == BB_JNT_OA_e) {
                 v.x = 0.0f;
                 v.z = 0.0f;
                 v.y = 0.0f;
-                MtxPosition(&v, &i_this->unk_BD4[jntNo - BB_JNT_OA_e]);
+                MtxPosition(&v, &i_this->mTailBasePos[jntNo - BB_JNT_OA_e]);
             } else if (jntNo == BB_JNT_FOOTL_e || jntNo == BB_JNT_FOOTR_e) {
                 v.x = gabi::fmadds(REG0_F(10), 10.0f, 5.0f);
                 v.y = REG0_F(11) * 10.0f;
                 v.z = REG0_F(12) * 10.0f;
                 if (jntNo == BB_JNT_FOOTL_e) {
-                    MtxPosition(&v, &i_this->unk_A6C[0]);
+                    MtxPosition(&v, &i_this->mFootPos[0]);
                 } else {
-                    MtxPosition(&v, &i_this->unk_A6C[1]);
+                    MtxPosition(&v, &i_this->mFootPos[1]);
                 }
             } else if (jntNo == BB_JNT_KUCHIA_e) {
-                cMtx_ZrotM(calc_mtx(), (s16)-i_this->unk_C4E);
+                cMtx_ZrotM(calc_mtx(), (s16)-i_this->mBeakOpenAngle);
                 mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
             } else if (jntNo == BB_JNT_KUCHIB_e) {
-                cMtx_YrotM(calc_mtx(), i_this->unk_C4E);
+                cMtx_YrotM(calc_mtx(), i_this->mBeakOpenAngle);
                 mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
             }
             PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
@@ -109,24 +109,24 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
 void tail_control(bb_class* i_this) {
     cXyz sp28;
     cXyz sp1C;
-    f32 x = i_this->unk_BD4[1].x - i_this->unk_BD4[0].x;
-    f32 y = i_this->unk_BD4[1].y - i_this->unk_BD4[0].y;
-    f32 z = i_this->unk_BD4[1].z - i_this->unk_BD4[0].z;
+    f32 x = i_this->mTailBasePos[1].x - i_this->mTailBasePos[0].x;
+    f32 y = i_this->mTailBasePos[1].y - i_this->mTailBasePos[0].y;
+    f32 z = i_this->mTailBasePos[1].z - i_this->mTailBasePos[0].z;
 
-    i_this->unk_BEE = cM_atan2s(x, z);
-    i_this->unk_BEC = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
+    i_this->mTailBaseAngleY = cM_atan2s(x, z);
+    i_this->mTailBaseAngleX = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
 
     sp28.x = 0.0f;
     sp28.y = 0.0f;
     sp28.z = REG0_F(5) + 5.0f;
 
-    cMtx_YrotS(calc_mtx(), i_this->unk_BEE);
-    cMtx_XrotM(calc_mtx(), i_this->unk_BEC);
-    MtxPosition(&sp28, &i_this->unk_BF4);
+    cMtx_YrotS(calc_mtx(), i_this->mTailBaseAngleY);
+    cMtx_XrotM(calc_mtx(), i_this->mTailBaseAngleX);
+    MtxPosition(&sp28, &i_this->mTailBaseDir);
 
-    cXyz* AA8 = &i_this->unk_AA8[1];
-    csXyz* B20 = &i_this->unk_B20[1];
-    cXyz* B5C = &i_this->unk_B5C[1];
+    cXyz* AA8 = &i_this->mTailPos[1];
+    csXyz* B20 = &i_this->mTailAngle[1];
+    cXyz* B5C = &i_this->mTailSpeed[1];
 
     f32 reg2 = REG0_F(2) + 0.8f;
     f32 reg3 = REG0_F(3);
@@ -135,20 +135,20 @@ void tail_control(bb_class* i_this) {
 
     for (s32 i = 1; i < 10; i++, AA8++, B20++, B5C++) {
         f32 tmp = gabi::fnmsubs((f32)(i - 1), REG0_F(4) + 0.1f, 1.0f);
-        f32 sx = gabi::fmadds(i_this->unk_BF4.x, tmp, B5C->x);
-        f32 sy = gabi::fmadds(i_this->unk_BF4.y, tmp, B5C->y);
-        f32 sz = gabi::fmadds(i_this->unk_BF4.z, tmp, B5C->z);
+        f32 sx = gabi::fmadds(i_this->mTailBaseDir.x, tmp, B5C->x);
+        f32 sy = gabi::fmadds(i_this->mTailBaseDir.y, tmp, B5C->y);
+        f32 sz = gabi::fmadds(i_this->mTailBaseDir.z, tmp, B5C->z);
 
         if (wave) {
             s16 s5 = REG0_S(5);
             s16 s6 = REG0_S(6);
-            s16 t = i_this->unk_352;
+            s16 t = i_this->mFrameCounter;
             sp28.z = 0.0f;
             sp28.x = cM_ssin(t * (s5 + 1200) + i * (s6 + 6000)) * reg3;
             sp28.y = cM_ssin(t * (s5 + 1000) + i * (s6 + 5000)) * reg3;
 
-            cMtx_YrotS(calc_mtx(), i_this->unk_BEE);
-            cMtx_XrotM(calc_mtx(), i_this->unk_BEC);
+            cMtx_YrotS(calc_mtx(), i_this->mTailBaseAngleY);
+            cMtx_XrotM(calc_mtx(), i_this->mTailBaseAngleX);
             MtxPosition(&sp28, &sp1C);
 
             sx += sp1C.x;
@@ -196,9 +196,9 @@ void tail_control(bb_class* i_this) {
 
 /* 0205D964 */
 void tex_anm_set(bb_class* i_this, u16 idx) {
-    i_this->unk_2CD = 1;
-    i_this->unk_2CE = (u8)bb_tex_max_frame[idx];
-    i_this->unk_2CC = 0;
+    i_this->mEyeAnmOn = 1;
+    i_this->mEyeMaxFrame = (u8)bb_tex_max_frame[idx];
+    i_this->mEyeFrame = 0;
 
     J3DAnmTexPattern* btp = (J3DAnmTexPattern*)dComIfG_getObjectRes("Bb", bb_tex_anm_idx[idx], SAFESTRING_VTBL);
     if (btp == nullptr) JUT_ASSERT_fail("d_a_bb.cpp", 0x2A6, "btp");
@@ -208,7 +208,7 @@ void tex_anm_set(bb_class* i_this, u16 idx) {
 
 /* 0205DA3C */
 void anm_init(bb_class* i_this, int animFileIdx, f32 morf, u8 loopMode, f32 speed, int soundFileIdx) {
-    if (i_this->unk_2DF < 3) {
+    if (i_this->mCarryState < 3) {
         if (soundFileIdx >= 0) {
             J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(BB_ARC, animFileIdx, SAFESTRING_VTBL);
             void* bas = dComIfG_getObjectRes(BB_ARC, soundFileIdx, SAFESTRING_VTBL);
@@ -228,7 +228,7 @@ void* s_a_d_sub(void* ac1, void* ac2) {
     if (esa_check_count < 100 && fopAc_IsActor(ac1) && ac1 != nullptr && fpcM_GetName(ac1) == fpcNm_ESA_e) {
         esa_class* esa1 = (esa_class*)ac1;
         fopAc_ac_c* esa2 = (fopAc_ac_c*)ac2;
-        if (esa1->field_0x298 == 0) {
+        if (esa1->mTaken == 0) {
             cXyz sp14;
             cXyz sp8;
             auto p = esa1->current.pos.get();
@@ -261,7 +261,7 @@ esa_class* search_esa(bb_class* i_this) {
             f32 x = esa->current.pos.x - i_this->current.pos.x;
             f32 z = esa->current.pos.z - i_this->current.pos.z;
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) < fDist) {
-                esa->field_0x298 = 1;
+                esa->mTaken = 1;
                 return esa;
             }
             i++;
@@ -279,10 +279,10 @@ esa_class* search_esa(bb_class* i_this) {
 
 /* 0205DE54 */
 void kuti_open(bb_class* i_this, s16 arg1, u32 sfxId) {
-    if (i_this->unk_C50 == 0) {
-        i_this->unk_C50 = arg1;
-        i_this->unk_C52 = arg1 - 3;
-        i_this->unk_C54 = sfxId;
+    if (i_this->mBeakOpenTimer == 0) {
+        i_this->mBeakOpenTimer = arg1;
+        i_this->mBeakSeFrame = arg1 - 3;
+        i_this->mBeakSeId = sfxId;
     }
 }
 
@@ -315,19 +315,19 @@ s32 bb_player_view_check(bb_class* i_this) {
         return 1;
     }
 
-    if (i_this->unk_2D9 != 0xFF) {
-        if (i_this->unk_33C > (f32)(u8)i_this->unk_2D9 * 100.0f || bb_player_bg_check(i_this)) {
+    if (i_this->mSightRangePrm != 0xFF) {
+        if (i_this->mPlayerDistXZ > (f32)(u8)i_this->mSightRangePrm * 100.0f || bb_player_bg_check(i_this)) {
             return 0;
         }
-    } else if (i_this->unk_2DD == BB_MODE_WAIT || i_this->unk_2DD == BB_MODE_NEST_WAIT) {
-        if (i_this->unk_33C > l_bbHIO.unk_6C || bb_player_bg_check(i_this)) {
+    } else if (i_this->mBehavior == BB_MODE_WAIT || i_this->mBehavior == BB_MODE_NEST_WAIT) {
+        if (i_this->mPlayerDistXZ > l_bbHIO.unk_6C || bb_player_bg_check(i_this)) {
             return 0;
         }
-    } else if (i_this->unk_33C > l_bbHIO.unk_68 || bb_player_bg_check(i_this)) {
+    } else if (i_this->mPlayerDistXZ > l_bbHIO.unk_68 || bb_player_bg_check(i_this)) {
         return 0;
     }
 
-    if (i_this->unk_2DD == BB_MODE_WAIT || i_this->unk_2DD == BB_MODE_NEST_WAIT) {
+    if (i_this->mBehavior == BB_MODE_WAIT || i_this->mBehavior == BB_MODE_NEST_WAIT) {
         var_r5 = l_bbHIO.unk_72;
         var_f2 = l_bbHIO.unk_78;
     } else {
@@ -336,7 +336,7 @@ s32 bb_player_view_check(bb_class* i_this) {
     }
 
     if (std::fabs(player->current.pos.y - i_this->eyePos.y) < var_f2) {
-        s16 tmp = i_this->current.angle.y - i_this->unk_C5C - i_this->unk_336;
+        s16 tmp = i_this->current.angle.y - i_this->mHeadAngleY - i_this->mPlayerAngleY;
         if (tmp < 0) {
             tmp = -tmp;
         }
@@ -383,12 +383,12 @@ void path_check(bb_class* i_this) {
                 f32 x = i_this->current.pos.x - point->m_position.x;
                 f32 z = i_this->current.pos.z - point->m_position.z;
                 if (std_sqrtf(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y))) < fDist) {
-                    i_this->unk_35E = (s8)(i - (u8)i_this->unk_35F);
+                    i_this->mPathPoint = (s8)(i - (u8)i_this->mPathDir);
                     u16 num = i_this->ppd->m_num;
-                    if (i_this->unk_35E >= (s8)num) {
-                        i_this->unk_35E = (s8)num;
-                    } else if (i_this->unk_35E < 0) {
-                        i_this->unk_35E = 0;
+                    if (i_this->mPathPoint >= (s8)num) {
+                        i_this->mPathPoint = (s8)num;
+                    } else if (i_this->mPathPoint < 0) {
+                        i_this->mPathPoint = 0;
                     }
                     r7 = true;
                     break;
@@ -402,9 +402,9 @@ void path_check(bb_class* i_this) {
     }
 
     if (!r7) {
-        i_this->unk_35D = 0;
+        i_this->mPathOn = 0;
     } else {
-        i_this->unk_35D = (s8)(i_this->unk_2DA + 1);
+        i_this->mPathOn = (s8)(i_this->mPathNo + 1);
     }
     dBgS_LinChk_dt(&linChk);
 }
@@ -412,7 +412,7 @@ void path_check(bb_class* i_this) {
 // HD: blob shadows are removed; tail drawing adds a local Z translation.
 /* 0205E420 */
 BOOL daBb_Draw(bb_class* i_this) {
-    if (i_this->unk_2F2 != 0) {
+    if (i_this->mAppearWait != 0) {
         return TRUE;
     }
 
@@ -424,13 +424,13 @@ BOOL daBb_Draw(bb_class* i_this) {
         return TRUE;
     }
 
-    i_this->mBtpAnm.entry(J3DModel_getModelData(model), i_this->unk_2CC);
+    i_this->mBtpAnm.entry(J3DModel_getModelData(model), i_this->mEyeFrame);
     i_this->mpMorf->entryDL();
     bbRemoveTexPattern(J3DModel_getModelData(model));
 
     /* tail_draw */
-    cXyz* AA8 = &i_this->unk_AA8[0];
-    csXyz* B20 = &i_this->unk_B20[0];
+    cXyz* AA8 = &i_this->mTailPos[0];
+    csXyz* B20 = &i_this->mTailAngle[0];
     for (s32 i = 0; i < 9; AA8++, B20++, i++) {
         MtxTrans(AA8->x, AA8->y, AA8->z, 0);
         f32 scale = tial_scale[i];
@@ -439,7 +439,7 @@ BOOL daBb_Draw(bb_class* i_this) {
         cMtx_XrotM(calc_mtx(), B20->x);
         MtxTrans(0.0f, 0.0f, REG_F(10, 0) + 25.0f, 1); /* HD */
 
-        J3DModel* tail = i_this->unk_A84[i];
+        J3DModel* tail = i_this->mpTailModels[i];
         tail->setBaseTRMtx(calc_mtx()); /* setBaseTRMtx */
         setLightTevColorType(dKy_getEnvlight(), tail, &i_this->tevStr);
         mDoExt_modelUpdate(tail);
@@ -450,9 +450,9 @@ BOOL daBb_Draw(bb_class* i_this) {
 
 /* 0205E638 */
 void bb_pos_move(bb_class* i_this) {
-    f32 x = i_this->unk_2F4.x - i_this->current.pos.x;
-    f32 z = i_this->unk_2F4.z - i_this->current.pos.z;
-    f32 y = i_this->unk_2F4.y - i_this->current.pos.y;
+    f32 x = i_this->mTargetPos.x - i_this->current.pos.x;
+    f32 z = i_this->mTargetPos.z - i_this->current.pos.z;
+    f32 y = i_this->mTargetPos.y - i_this->current.pos.y;
 
     s16 atan = cM_atan2s(x, z);
     f32 sqrt = std_sqrtf(gabi::fmadds(x, x, z * z));
@@ -460,7 +460,7 @@ void bb_pos_move(bb_class* i_this) {
 
     s16 old_y = i_this->current.angle.y;
     cLib_addCalcAngleS2(&i_this->current.angle.y, atan, (s16)(REG0_S(3) + 10),
-                          (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308));
+                          (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnScale));
     old_y = (s16)((old_y - i_this->current.angle.y) * 32);
 
     s16 target = REG0_S(1) + 5500;
@@ -471,11 +471,11 @@ void bb_pos_move(bb_class* i_this) {
     }
 
     cLib_addCalcAngleS2(&i_this->current.angle.z, old_y, (s16)(REG0_S(3) + 10),
-                          (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308 * 0.5f));
+                          (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnScale * 0.5f));
     cLib_addCalcAngleS2(&i_this->current.angle.x, atan2, (s16)(REG0_S(3) + 10),
-                          (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308));
-    cLib_addCalc2(&i_this->unk_308, 1.0f, 1.0f, 0.04f);
-    cLib_addCalc2(&i_this->speedF, i_this->unk_300, 1.0f, i_this->unk_304);
+                          (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnScale));
+    cLib_addCalc2(&i_this->mTurnScale, 1.0f, 1.0f, 0.04f);
+    cLib_addCalc2(&i_this->speedF, i_this->mTargetSpeed, 1.0f, i_this->mSpeedStep);
 
     cXyz v;
     v.x = 0.0f;
@@ -490,8 +490,8 @@ void bb_pos_move(bb_class* i_this) {
     i_this->current.pos.y = i_this->current.pos.y + i_this->speed.y;
     i_this->current.pos.z = i_this->current.pos.z + i_this->speed.z;
 
-    if (i_this->unk_324 != 0) {
-        i_this->unk_324 = i_this->unk_324 - 1;
+    if (i_this->mLiftTimer != 0) {
+        i_this->mLiftTimer = i_this->mLiftTimer - 1;
         i_this->current.pos.y = i_this->current.pos.y + 5.0f;
     }
 }
@@ -501,11 +501,11 @@ void bb_ground_pos_move(bb_class* i_this) {
     cXyz v;
     cXyz v2;
 
-    s16 atan = cM_atan2s(i_this->unk_2F4.x - i_this->current.pos.x, i_this->unk_2F4.z - i_this->current.pos.z);
+    s16 atan = cM_atan2s(i_this->mTargetPos.x - i_this->current.pos.x, i_this->mTargetPos.z - i_this->current.pos.z);
     cLib_addCalcAngleS2(&i_this->current.angle.y, atan, (s16)(REG0_S(3) + 2),
-                          (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308));
-    cLib_addCalc2(&i_this->unk_308, 1.0f, 1.0f, 0.1f);
-    cLib_addCalc2(&i_this->speedF, i_this->unk_300, 1.0f, i_this->unk_304);
+                          (s16)gabi::ftoi(i_this->mTurnSpeed * i_this->mTurnScale));
+    cLib_addCalc2(&i_this->mTurnScale, 1.0f, 1.0f, 0.1f);
+    cLib_addCalc2(&i_this->speedF, i_this->mTargetSpeed, 1.0f, i_this->mSpeedStep);
 
     v.x = 0.0f;
     v.y = 0.0f;
@@ -533,8 +533,8 @@ void bb_ground_pos_move(bb_class* i_this) {
 
 /* 02063404 */
 void bb_water_check(bb_class* i_this) {
-    if (daSea_ChkArea(i_this->unk_2F4.x, i_this->unk_2F4.z)) {
-        f32 waveHeight = daSea_calcWave(i_this->unk_2F4.x, i_this->unk_2F4.z);
+    if (daSea_ChkArea(i_this->mTargetPos.x, i_this->mTargetPos.z)) {
+        f32 waveHeight = daSea_calcWave(i_this->mTargetPos.x, i_this->mTargetPos.z);
         waveHeight = waveHeight + REG0_F(0);
         waveHeight = waveHeight + 100.0f;
         if (!(i_this->current.pos.y > waveHeight)) { /* GHS: bgt over the store */
@@ -561,8 +561,8 @@ void damage_check(bb_class* i_this) {
     i_this->mStts.Move();
 
     bool bodyHit = i_this->mBodyTgSph.ChkTgHit() != 0;
-    if ((bodyHit || i_this->mHeadTgSph.ChkTgHit()) && i_this->unk_340 == 0) {
-        i_this->unk_340 = 5;
+    if ((bodyHit || i_this->mHeadTgSph.ChkTgHit()) && i_this->mHitCooldown == 0) {
+        i_this->mHitCooldown = 5;
         tex_anm_set(i_this, 2);
 
         if (bodyHit) {
@@ -577,8 +577,8 @@ void damage_check(bb_class* i_this) {
         if (atType & AT_TYPE_LIGHT_ICE_ARROW) {
             if (sp30.mpObj->mAtType & AT_TYPE_ICE_ARROW) {
                 i_this->mEnemyIce.mFreezeDuration = REG0_S(3) + 300;
-                i_this->unk_2DD = BB_MODE_ATTACK;
-                i_this->unk_2F1 = 0;
+                i_this->mBehavior = BB_MODE_ATTACK;
+                i_this->mMode = 0;
                 anm_init(i_this, dRes_INDEX_BB_BCK_DAMAGEP_e, 0.0f, 0, 1.0f, -1);
             } else {
                 i_this->mEnemyIce.mLightShrinkTimer = 1;
@@ -589,7 +589,7 @@ void damage_check(bb_class* i_this) {
 
         if (atType & AT_TYPE_FIRE_ARROW_FIRE) {
             i_this->mEnemyFire.mFireDuration = REG0_S(2) + 100;
-            i_this->unk_340 = 50;
+            i_this->mHitCooldown = 50;
         }
 
         s8 old_health = i_this->health;
@@ -623,16 +623,16 @@ void damage_check(bb_class* i_this) {
 
         if (sp30.mbDead) {
             if (i_this->health <= 0) {
-                i_this->unk_C7E = 1;
-                i_this->unk_2F1 = 0;
+                i_this->mDying = 1;
+                i_this->mMode = 0;
                 fopAcM_monsSeStart(i_this, JA_SE_CV_BB_FAINTED, 0);
             } else {
                 fopAcM_monsSeStart(i_this, JA_SE_CV_BB_DAMAGE, 0);
             }
-            i_this->unk_34C = gabi::fmadds(REG0_F(13), 100.0f, 5000.0f);
+            i_this->mBodyShakeAmp = gabi::fmadds(REG0_F(13), 100.0f, 5000.0f);
         } else {
-            i_this->unk_C58 = gabi::fmadds(REG0_F(9), 200.0f, 10000.0f);
-            i_this->unk_34C = gabi::fmadds(REG0_F(13), 100.0f, 3000.0f);
+            i_this->mHeadShakeAmp = gabi::fmadds(REG0_F(9), 200.0f, 10000.0f);
+            i_this->mBodyShakeAmp = gabi::fmadds(REG0_F(13), 100.0f, 3000.0f);
             fopAcM_monsSeStart(i_this, JA_SE_CV_BB_DAMAGE, 0);
         }
 
@@ -659,33 +659,33 @@ void damage_check(bb_class* i_this) {
         }
 
         if (sp30.mResultingAttackType == 1) {
-            i_this->unk_342 = i_this->unk_336;
-            i_this->unk_344 = i_this->unk_338;
+            i_this->mKnockbackAngleY = i_this->mPlayerAngleY;
+            i_this->mKnockbackAngleX = i_this->mPlayerAngleX;
         } else {
-            i_this->unk_342 = sp30.m0C.y;
-            i_this->unk_344 = 0;
+            i_this->mKnockbackAngleY = sp30.m0C.y;
+            i_this->mKnockbackAngleX = 0;
         }
 
-        if (i_this->unk_2DD != BB_MODE_ATTACK) {
-            i_this->unk_2DD = BB_MODE_ATTACK;
+        if (i_this->mBehavior != BB_MODE_ATTACK) {
+            i_this->mBehavior = BB_MODE_ATTACK;
             f32 r = cM_rndF((f32)(l_bbHIO.unk_18 - l_bbHIO.unk_16));
-            i_this->unk_35D = 0;
-            i_this->unk_318[1] = (s16)gabi::ftoi(r + (f32)l_bbHIO.unk_16);
+            i_this->mPathOn = 0;
+            i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)l_bbHIO.unk_16);
         }
 
         if (sp30.mbDead) {
-            i_this->unk_348 = l_bbHIO.unk_58;
+            i_this->mKnockbackDist = l_bbHIO.unk_58;
             if (cM_rndF(1.0f) < 0.5f) {
-                i_this->unk_350 = (s16)gabi::ftoi(cM_rndF(3000.0f) + 5000.0f);
+                i_this->mKnockbackSpinSpeed = (s16)gabi::ftoi(cM_rndF(3000.0f) + 5000.0f);
             } else {
-                i_this->unk_350 = (s16)gabi::ftoi(-(cM_rndF(3000.0f) + 5000.0f));
+                i_this->mKnockbackSpinSpeed = (s16)gabi::ftoi(-(cM_rndF(3000.0f) + 5000.0f));
             }
         } else {
-            i_this->unk_348 = l_bbHIO.unk_5C;
-            i_this->unk_350 = 0;
+            i_this->mKnockbackDist = l_bbHIO.unk_5C;
+            i_this->mKnockbackSpinSpeed = 0;
         }
 
-        i_this->unk_C7C = 1;
+        i_this->mWasHit = 1;
         anm_init(i_this, dRes_INDEX_BB_BCK_DAMAGEP_e, 0.0f, 0, 1.0f, -1);
     }
 }
@@ -725,8 +725,8 @@ BOOL useHeapInit(fopAc_ac_c* ac) {
     if (modelData == nullptr) JUT_ASSERT_fail("d_a_bb.cpp", 0x11C4, "modelData != (0)");
 
     for (s32 i = 0; i < 9; i++) {
-        i_this->unk_A84[i] = mDoExt_J3DModel__create(modelData, 0x80000, 0x33221202);
-        if (i_this->unk_A84[i] == nullptr) {
+        i_this->mpTailModels[i] = mDoExt_J3DModel__create(modelData, 0x80000, 0x33221202);
+        if (i_this->mpTailModels[i] == nullptr) {
             return FALSE;
         }
     }
@@ -755,21 +755,21 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
     }
 
     if (ret == cPhs_COMPLEATE_e) {
-        i_this->unk_2D8 = (u8)fopAcM_GetParam(i_this);
-        i_this->unk_2DD = i_this->unk_2D8;
-        i_this->unk_2D9 = (u8)(fopAcM_GetParam(i_this) >> 8);
-        i_this->unk_2DA = (u8)(fopAcM_GetParam(i_this) >> 16);
-        i_this->unk_2DB = (u8)(fopAcM_GetParam(i_this) >> 24);
-        i_this->unk_2DC = (u8)a_this->home.angle.z;
+        i_this->mPrmMode = (u8)fopAcM_GetParam(i_this);
+        i_this->mBehavior = i_this->mPrmMode;
+        i_this->mSightRangePrm = (u8)(fopAcM_GetParam(i_this) >> 8);
+        i_this->mPathNo = (u8)(fopAcM_GetParam(i_this) >> 16);
+        i_this->mAppearSwitchNo = (u8)(fopAcM_GetParam(i_this) >> 24);
+        i_this->mDeleteSwitchNo = (u8)a_this->home.angle.z;
         a_this->current.angle.z = 0;
         a_this->current.angle.x = 0;
 
-        if (i_this->unk_2DC == 0xFF) {
-            i_this->unk_2DC = 0;
+        if (i_this->mDeleteSwitchNo == 0xFF) {
+            i_this->mDeleteSwitchNo = 0;
         }
 
-        if (dComIfGs_isEventBit(0x1101) && i_this->unk_2DC != 0 &&
-            dComIfGs_isSwitch(i_this->unk_2DC, fopAcM_GetRoomNo(a_this))) {
+        if (dComIfGs_isEventBit(0x1101) && i_this->mDeleteSwitchNo != 0 &&
+            dComIfGs_isSwitch(i_this->mDeleteSwitchNo, fopAcM_GetRoomNo(a_this))) {
             return cPhs_ERROR_e;
         }
 
@@ -798,21 +798,21 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
 
         model->setUserArea(reinterpret_cast<uintptr_t>(i_this)); /* setUserArea */
 
-        if (i_this->unk_2DA != 0xFF) {
-            i_this->ppd = (BbPath*)dPath_GetRoomPath(i_this->unk_2DA, fopAcM_GetRoomNo(a_this));
+        if (i_this->mPathNo != 0xFF) {
+            i_this->ppd = (BbPath*)dPath_GetRoomPath(i_this->mPathNo, fopAcM_GetRoomNo(a_this));
             if (i_this->ppd == nullptr) {
                 return cPhs_ERROR_e;
             }
-            i_this->unk_35D = (s8)(i_this->unk_2DA + 1);
-            i_this->unk_35F = 1;
+            i_this->mPathOn = (s8)(i_this->mPathNo + 1);
+            i_this->mPathDir = 1;
         }
 
-        if (i_this->unk_2DB != 0xFF) {
-            i_this->unk_2F2 = i_this->unk_2DB + 1;
+        if (i_this->mAppearSwitchNo != 0xFF) {
+            i_this->mAppearWait = i_this->mAppearSwitchNo + 1;
         }
 
-        if (i_this->unk_2DD == BB_MODE_CARRY_MOBLIN || i_this->unk_2DD == BB_MODE_CARRY_BOKOBLIN) {
-            i_this->unk_2DF = 1;
+        if (i_this->mBehavior == BB_MODE_CARRY_MOBLIN || i_this->mBehavior == BB_MODE_CARRY_BOKOBLIN) {
+            i_this->mCarryState = 1;
 
             BbCreateAppend* ac = fopAcM_CreateAppend();
             ac->base.position.copy(a_this->current.pos);
@@ -822,15 +822,15 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
             ac->room_no = fopAcM_GetRoomNo(a_this);
             ac->base.parameters = (fopAcM_GetParam(i_this) & 0xFF000000) | 0xFFFF05;
 
-            if (i_this->unk_2DD == BB_MODE_CARRY_MOBLIN) {
-                i_this->unk_2E8 = fpcSCtRq_Request(fpcLy_CurrentLayer(), fpcNm_MO2_e, 0, 0, ac);
-                i_this->unk_2EC = fpcNm_MO2_e;
+            if (i_this->mBehavior == BB_MODE_CARRY_MOBLIN) {
+                i_this->mCarriedRequestId = fpcSCtRq_Request(fpcLy_CurrentLayer(), fpcNm_MO2_e, 0, 0, ac);
+                i_this->mCarriedProcName = fpcNm_MO2_e;
             } else {
-                i_this->unk_2E8 = fpcSCtRq_Request(fpcLy_CurrentLayer(), fpcNm_BK_e, 0, 0, ac);
-                i_this->unk_2EC = fpcNm_BK_e;
+                i_this->mCarriedRequestId = fpcSCtRq_Request(fpcLy_CurrentLayer(), fpcNm_BK_e, 0, 0, ac);
+                i_this->mCarriedProcName = fpcNm_BK_e;
             }
-        } else if (i_this->unk_2D8 == BB_MODE_ATTACK) {
-            i_this->unk_2DD = BB_MODE_ATTACK;
+        } else if (i_this->mPrmMode == BB_MODE_ATTACK) {
+            i_this->mBehavior = BB_MODE_ATTACK;
         }
 
         a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->mpMorf->getModel()));
@@ -854,8 +854,8 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
         i_this->mBodyTgSph.SetStts(&i_this->mStts);
         i_this->mBodyCoSph.SetStts(&i_this->mStts);
 
-        i_this->unk_318[3] = (s16)gabi::ftoi(cM_rndF(200.0f) + 300.0f);
-        i_this->unk_352 = (s16)gabi::ftoi(cM_rndF(10000.0f));
+        i_this->mTimers[3] = (s16)gabi::ftoi(cM_rndF(200.0f) + 300.0f);
+        i_this->mFrameCounter = (s16)gabi::ftoi(cM_rndF(10000.0f));
         i_this->mEnemyIce.mpActor = a_this;
         i_this->mEnemyIce.mWallRadius = REG0_F(4) + 50.0f;
         i_this->mEnemyIce.mYOffset = -2.0f;

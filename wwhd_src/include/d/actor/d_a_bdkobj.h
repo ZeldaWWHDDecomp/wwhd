@@ -18,25 +18,25 @@ enum : u16 {
 enum { JA_SE_OBJ_MJ_WBOARD_BRK = 0x6968 };
 
 struct bdo_eff_s {
-    /* 0x000 */ be<s8> m000;
+    /* 0x000 */ be<s8> mState;  /* was m000: daBdkobj_Execute 020729A8 sets 1 for the three block / pole fragments, tower_kaidan_move (in daBdkobj_Execute 020729A8) 2 for the two stair fragments; hahen_move (same) runs top_hahen_move at 1 and kaidan_hahen_move at 2; 0 = off (daBdkobj_Draw 020728A8 draws only the others; a type-9 hit, y < 8500 or no ground clears it) */
     /* 0x001 */ u8 _001[3];
     /* 0x004 */ gptr<J3DModel> mpModel;
-    /* 0x008 */ cXyz m008;
-    /* 0x014 */ cXyz m014;
-    /* 0x020 */ be<f32> m020;
+    /* 0x008 */ cXyz mPos;  /* was m008: top_hahen_move / kaidan_hahen_move (in daBdkobj_Execute 020729A8): the fragment's position (moved by mSpeedF / mSpeedY, ground and wall checks); eff_set_mtx places the model there, mSph is centred on it */
+    /* 0x014 */ cXyz mPosOld;  /* was m014: top_hahen_move / kaidan_hahen_move (in daBdkobj_Execute 020729A8) copy mPos before moving; on a wall hit x / z go back to it */
+    /* 0x020 */ be<f32> mSpeedF;  /* was m020: daBdkobj_Execute 020729A8 sets 20..35 (+ reg) for a block / pole fragment; top_hahen_move (same) moves it forward along mAngle.y, eases it to 0 on the ground and clears it at a wall */
     /* 0x024 */ be<f32> mHorizontalSpeedX; /* HD: horizontal speed of the stair fragments */
     /* 0x028 */ be<f32> mHorizontalSpeedZ;
-    /* 0x02C */ be<f32> m024;
-    /* 0x030 */ be<f32> m028; /* scale */
-    /* 0x034 */ be<f32> m02C;
-    /* 0x038 */ csXyz m030;
-    /* 0x03E */ csXyz m036;
+    /* 0x02C */ be<f32> mSpeedY;  /* was m024: daBdkobj_Execute 020729A8 sets 60..80 (+ reg); top_hahen_move (in daBdkobj_Execute 020729A8) -5 and kaidan_hahen_move -3 per frame, bounced (* -0.3) or cleared on the ground */
+    /* 0x030 */ be<f32> mScale;  /* was m028: daBdkobj_Execute 020729A8 / tower_kaidan_move (in daBdkobj_Execute 020729A8) set 0.7 +- 0.25; eff_set_mtx scales the model by it, top_hahen_move sizes the sphere, ground offset and push by it; scale */
+    /* 0x034 */ be<f32> mSpinRate;  /* was m02C: top_hahen_move (in daBdkobj_Execute 020729A8): random +-100 on each bounce; on the ground mAngleSpeed.y = mSpeedF * it */
+    /* 0x038 */ csXyz mAngle;  /* was m030: daBdkobj_Execute 020729A8 / tower_kaidan_move (in daBdkobj_Execute 020729A8) set a random angle; top_hahen_move / kaidan_hahen_move add mAngleSpeed each frame; eff_set_mtx rotates the model by it */
+    /* 0x03E */ csXyz mAngleSpeed;  /* was m036: daBdkobj_Execute 020729A8 / tower_kaidan_move (in daBdkobj_Execute 020729A8) set random +-6000 / +-800; added to mAngle each frame; top_hahen_move / kaidan_hahen_move ease or set it on the ground */
     /* 0x044 */ dCcD_Stts mStts;
     /* 0x080 */ dCcD_Sph mSph;
-    /* 0x1AC */ be<f32> m1A4;
-    /* 0x1B0 */ be<s16> m1A8;
-    /* 0x1B2 */ be<s16> m1AA;
-    /* 0x1B4 */ be<s16> m1AC;
+    /* 0x1AC */ be<f32> mPushSpeed;  /* was m1A4: top_hahen_move (in daBdkobj_Execute 020729A8): set on a type-8 hit (15 + rnd) * (1 - mScale), moves the fragment along mPushAngleY while > 0.1 and eases to 0; a new push only below 1 */
+    /* 0x1B0 */ be<s16> mPushAngleY;  /* was m1A8: top_hahen_move (in daBdkobj_Execute 020729A8): the hitting actor's shape_angle.y +- 2000; YrotS by it for the push */
+    /* 0x1B2 */ be<s16> mPushSpinY;  /* was m1AA: top_hahen_move (in daBdkobj_Execute 020729A8): random +-400 on a push, added to mAngle.y while the push runs */
+    /* 0x1B4 */ be<s16> mFrameCounter;  /* was m1AC: hahen_move (in daBdkobj_Execute 020729A8) adds 1 per frame; tower_kaidan_move sets a random start; kaidan_hahen_move uses it as the phase of the rocking sines */
     /* 0x1B6 */ u8 _1B6[2];
 };
 WWHD_OFFSET(bdo_eff_s, mSph, 0x80);
@@ -44,20 +44,20 @@ WWHD_SIZE(bdo_eff_s, 0x1B8);
 
 struct bdkobj_class : fopAc_ac_c {
     /* 0x3AC */ request_of_phase_process_class mPhase;
-    /* 0x3B4 */ be<u8> m298;
-    /* 0x3B5 */ be<s8> m299;
+    /* 0x3B4 */ be<u8> mType;  /* was m298: daBdkobj_Create 020745AC: parameter byte 0 (0xFF -> 0); 0 = block, 1 = pole (BLOCK / POLE break particles in daBdkobj_Execute 020729A8), 2 = tower stairs (dBgW, tower_kaidan_move); useHeapInit 02074330 picks the models by it */
+    /* 0x3B5 */ be<s8> mBreakTimer;  /* was m299: tower_kaidan_move (in daBdkobj_Execute 020729A8) sets 100 when the stairs break; daBdkobj_Execute 020729A8 counts it down; at 90 or less the bridge smoke fades */
     /* 0x3B6 */ u8 _3B6[2];
     /* 0x3B8 */ bdo_eff_s mEffs[3];
     /* 0x8E0 */ dCcD_Stts mStts;
     /* 0x91C */ dCcD_Cyl mCyl;
-    /* 0xA4C */ dPa_smokeEcallBack m918;
-    /* 0xA6C */ be<u8> m938;
+    /* 0xA4C */ dPa_smokeEcallBack mSmokeCb;  /* was m918: daBdkobj_Execute 020729A8 / tower_kaidan_move (in daBdkobj_Execute 020729A8) pass it to the BLOCK / POLE / BRIDGE smoke particles (toon group) and end it first; daBdkobj_Create 020745AC sets follow off; daBdkobj_Delete 020742C4 removes it */
+    /* 0xA6C */ be<u8> mSmokeAlpha;  /* was m938: tower_kaidan_move (in daBdkobj_Execute 020729A8): 0xB4 when the bridge smoke starts, -2 per frame once mBreakTimer is 90 or less; the smoke emitter's global alpha */
     /* 0xA6D */ u8 _A6D[3];
     /* 0xA70 */ Mtx34 mMtx;
     /* 0xAA0 */ gptr<dBgW> pm_bgw;
 };
 WWHD_OFFSET(bdkobj_class, mStts, 0x8E0);
-WWHD_OFFSET(bdkobj_class, m918, 0xA4C);
+WWHD_OFFSET(bdkobj_class, mSmokeCb, 0xA4C);
 WWHD_OFFSET(bdkobj_class, mCyl, 0x91C);
 WWHD_OFFSET(bdkobj_class, mMtx, 0xA70);
 WWHD_SIZE(bdkobj_class, 0xAA4);

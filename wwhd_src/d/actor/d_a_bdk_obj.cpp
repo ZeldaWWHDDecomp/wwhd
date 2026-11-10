@@ -43,23 +43,23 @@ void kankyo_cont(bdk_class* i_this) {
 
     for (s32 i = 0; i < 10; i++) {
         dCcD_Sph* sph = &i_this->mWindAtSph[i];
-        if (i_this->m2488[i] != 0) {
-            PSVECAdd(&i_this->m2494[i], &i_this->m250C[i], &i_this->m2494[i]);
+        if (i_this->mWindAge[i] != 0) {
+            PSVECAdd(&i_this->mWindPos[i], &i_this->mWindSpeed[i], &i_this->mWindPos[i]);
             if (i_this->m2B4 == 1) {
                 sph->SetR(fadds_ppc(REG8_F(7), 600.0f));
             } else {
                 sph->SetR(fadds_ppc(REG8_F(6), 300.0f));
             }
-            if (i_this->m2488[i] == 1) {
-                dCcD_Sph_StartCAt(sph, &i_this->m2494[i]);
+            if (i_this->mWindAge[i] == 1) {
+                dCcD_Sph_StartCAt(sph, &i_this->mWindPos[i]);
             } else {
-                dCcD_Sph_MoveCAt(sph, &i_this->m2494[i]);
+                dCcD_Sph_MoveCAt(sph, &i_this->mWindPos[i]);
             }
-            u8 age = (u8)(i_this->m2488[i] + 1);
+            u8 age = (u8)(i_this->mWindAge[i] + 1);
             if (age > 25) {
-                i_this->m2488[i] = 0;
+                i_this->mWindAge[i] = 0;
             } else {
-                i_this->m2488[i] = age;
+                i_this->mWindAge[i] = age;
             }
         } else {
             sph->SetC(&non_pos);
@@ -71,22 +71,22 @@ void kankyo_cont(bdk_class* i_this) {
 /* 0206FC6C */
 void obj_move(bdk_class* i_this) {
     if (BdkObject_isDungeonItem(&l_save.mpSave->mSave.mMemory.mMembit, 3)) {
-        cLib_addCalc2(&i_this->m62D4, -500.0f, 1.0f, 20.0f);
+        cLib_addCalc2(&i_this->mTogeOffsetY, -500.0f, 1.0f, 20.0f);
     }
-    f32 y = fadds_ppc(fadds_ppc(REG0_F(11), 9800.0f), i_this->m62D4);
+    f32 y = fadds_ppc(fadds_ppc(REG0_F(11), 9800.0f), i_this->mTogeOffsetY);
     MtxTrans(fadds_ppc(REG0_F(10), 4755.0f), y, fsubs_ppc(REG0_F(12), 4700.0f), 0);
     cMtx_YrotM(calc_mtx(), (s16)(REG0_S(0) - 7000));
     bdkObject_setBaseTRMtx(i_this->mp62D8, calc_mtx());
-    PSMTXCopy(calc_mtx(), &i_this->m62DC);
+    PSMTXCopy(calc_mtx(), &i_this->mBgwMtx);
     dBgW_Move(i_this->pm_bgw);
-    MtxTrans(3595.0f, fadds_ppc(fadds_ppc(i_this->m6324, 9800.0f), REG8_F(2)), -3820.0f, 0);
+    MtxTrans(3595.0f, fadds_ppc(fadds_ppc(i_this->mShutterOffsetY, 9800.0f), REG8_F(2)), -3820.0f, 0);
     for (s32 i = 0; i < 3; i++) {
         MtxRotY(2.094395160675049f /* M_PI * 2 / 3 */, 1);
         MtxPush();
-        MtxRotY(i_this->m631C, 1);
-        MtxTrans(0.0f, 0.0f, fadds_ppc(i_this->m6320, REG8_F(3)), 1);
+        MtxRotY(i_this->mShutterRotY, 1);
+        MtxTrans(0.0f, 0.0f, fadds_ppc(i_this->mShutterSlide, REG8_F(3)), 1);
         bdkObject_setBaseTRMtx(i_this->mp6310[i], calc_mtx());
-        PSMTXCopy(calc_mtx(), &i_this->m632C[i]);
+        PSMTXCopy(calc_mtx(), &i_this->mObjBgwMtx[i]);
         dBgW_Move(i_this->mp63BC[i]);
         MtxPull();
     }

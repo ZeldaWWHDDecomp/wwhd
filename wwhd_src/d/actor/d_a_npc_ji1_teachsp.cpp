@@ -100,22 +100,22 @@ BOOL daNpc_Ji1_c::teachSpRollCutMove(f32 param_1) {
 BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
   fopAc_ac_c *player = daPy_getPlayerActorClass();
 
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     dComIfGp_setItemMagicCount(dComIfGs_getMaxMagic());
     setAnm(Ji1Teachsp_KAMAE, 0.0f, 0);
     attention_info.flags |= fopAc_Attn_LOCKON_MISC_e;
-    field_0xC30 = 0;
+    mBattleTimer = 0;
     field_0xD34 = 0;
     field_0xC90 = 0;
     dComIfGs_onTmpBit(Ji1TeachspTmpFlag::UNK_0402);
-    field_0xD70 = 6;
-    field_0xC78 += 1;
-  } else if (field_0xC78 != -1) {
+    mTeachStep = 6;
+    mActionPhase += 1;
+  } else if (mActionPhase != -1) {
     dComIfGp_setItemMagicCount(dComIfGs_getMaxMagic());
     if (daNpc_Ji1_plRoomOutCheck()) {
-      field_0xC84 = Ji1Teachsp_CUT_LEAVE_ROOM;
+      mEventNo = Ji1Teachsp_CUT_LEAVE_ROOM;
       ji1_setAction(this, ACT_eventAction, nullptr);
-      ptmf_set(field_0x2C8, ACT_teachSPRollCutAction);
+      ptmf_set(mEventReturnAction, ACT_teachSPRollCutAction);
       return true;
     }
 
@@ -134,22 +134,22 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
       dComIfGs_onEventBit(Ji1TeachspEventFlag::UNK_0B20);
       dComIfGs_offTmpBit(Ji1TeachspTmpFlag::UNK_0402);
       dComIfGp_setItemBeastNumCount(Ji1Teachsp_KNIGHTS_CREST, -10);
-      OffTgShield(&field_0x7E0);
-      field_0xC84 = Ji1Teachsp_CUT_SPIN_SUCCESS;
+      OffTgShield(&mGuardCyl);
+      mEventNo = Ji1Teachsp_CUT_SPIN_SUCCESS;
       ji1_setAction(this, ACT_eventAction, nullptr);
-      ptmf_set(field_0x2C8, ACT_normalAction);
+      ptmf_set(mEventReturnAction, ACT_normalAction);
       return TRUE;
     }
     if (cutType == CUT_TYPE_CUT_TURN) {
-      field_0xC84 = Ji1Teachsp_CUT_TURN;
+      mEventNo = Ji1Teachsp_CUT_TURN;
       ji1_setAction(this, ACT_eventAction, nullptr);
-      ptmf_set(field_0x2C8, ACT_teachSPRollCutAction);
+      ptmf_set(mEventReturnAction, ACT_teachSPRollCutAction);
       return TRUE;
     }
 
-    OnTgShield(&field_0x7E0);
-    if (field_0x7E0.ChkTgHit() && field_0xD6C != 1) {
-      switch ((u32)field_0xC24) {
+    OnTgShield(&mGuardCyl);
+    if (mGuardCyl.ChkTgHit() && mSubActionPhase != 1) {
+      switch ((u32)mHitCutType) {
       case CUT_TYPE_CUT_A:
       case CUT_TYPE_CUT_EA:
       case CUT_TYPE_CUT_TURN:
@@ -159,33 +159,33 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
         break;
       case CUT_TYPE_JUMPCUT_SWORD:
         setAnm(Ji1Teachsp_JPGUARD, 0.0f, 1);
-        field_0xD38.copy(current.pos);
-        field_0xC9C = 0.0f;
+        mBackSlideStartPos.copy(current.pos);
+        mBackSlideDist = 0.0f;
         break;
       default:
         setAnm(Ji1Teachsp_YKGUARD, 0.0f, 1);
         break;
       }
-      if (field_0xC24 == CUT_TYPE_CUT_ROLL) {
+      if (mHitCutType == CUT_TYPE_CUT_ROLL) {
         setHitParticle(nullptr, JA_SE_CV_JI_DEFENCE);
-        field_0xD38.copy(current.pos);
-        field_0xC9C = 0.0f;
+        mBackSlideStartPos.copy(current.pos);
+        mBackSlideDist = 0.0f;
         setParticle(0x10, 1.0f, 0.1f);
       } else {
         setGuardParticle();
       }
-      field_0xD6C = 1;
-      field_0xC8C = field_0xC24;
+      mSubActionPhase = 1;
+      mTeachCutType = mHitCutType;
     }
 
-    if (field_0xD6C == 1) {
+    if (mSubActionPhase == 1) {
       if (!static_cast<Ji1TeachspPlayerHD *>(player)->getCutAtFlg() ||
           mpOrcaMorf->getFrame() > endFrame(this) - 2.0f) {
         if (field_0xC90 == 0) {
-          if (field_0xC8C == CUT_TYPE_CUT_ROLL) {
-            field_0xC84 = Ji1Teachsp_CUT_SPIN_SUCCESS;
+          if (mTeachCutType == CUT_TYPE_CUT_ROLL) {
+            mEventNo = Ji1Teachsp_CUT_SPIN_SUCCESS;
             ji1_setAction(this, ACT_eventAction, nullptr);
-            ptmf_set(field_0x2C8, ACT_normalAction);
+            ptmf_set(mEventReturnAction, ACT_normalAction);
             return true;
           }
           orderOtherEvent(this, mEventIdx[Ji1Teachsp_EVENT_BAD_CUT]);
@@ -195,16 +195,16 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
       }
 
       if (mAnimation == Ji1Teachsp_JPGUARD &&
-          field_0xC8C == CUT_TYPE_CUT_ROLL) {
+          mTeachCutType == CUT_TYPE_CUT_ROLL) {
         f32 h34 = l_hio.field_0x34;
-        cLib_addCalc2(&field_0xC9C, h34 + h34, 0.25f, l_hio.field_0x38);
+        cLib_addCalc2(&mBackSlideDist, h34 + h34, 0.25f, l_hio.field_0x38);
         gabi::Local<cXyz> temp3;
-        f32 x = field_0xD38.x;
-        f32 c9c = field_0xC9C;
-        f32 y = field_0xD38.y;
+        f32 x = mBackSlideStartPos.x;
+        f32 c9c = mBackSlideDist;
+        f32 y = mBackSlideStartPos.y;
         f32 s = cM_ssin(current.angle.y);
         f32 c = cM_scos(current.angle.y);
-        f32 z = field_0xD38.z;
+        f32 z = mBackSlideStartPos.z;
         temp3->x = gabi::fnmsubs(c9c, s, x);
         temp3->y = y;
         temp3->z = gabi::fnmsubs(c9c, c, z);
@@ -217,18 +217,18 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
       }
 
       if (mpOrcaMorf->getFrame() > endFrame(this) - 2.0f) {
-        OffTgShield(&field_0x6B0);
-        OnTgShield(&field_0x7E0);
-        field_0xC9C = 0.0f;
-        field_0xD6C = 0;
+        OffTgShield(&mCyl);
+        OnTgShield(&mGuardCyl);
+        mBackSlideDist = 0.0f;
+        mSubActionPhase = 0;
         if (field_0xC90 == 2) {
-          field_0xD38.copy(current.pos);
-          field_0xC4C = 0.0f;
-          field_0xC50 = 0.0f;
-          field_0xC2C = 0;
+          mBackSlideStartPos.copy(current.pos);
+          mCoCorrectSum = 0.0f;
+          mBgCorrectSum = 0.0f;
+          mAttackEndWait = 0;
           ji1_setAction(this, ACT_speakBadAction, nullptr);
         } else {
-          field_0xD38.copy(current.pos);
+          mBackSlideStartPos.copy(current.pos);
           field_0xC90 = 0;
           ji1_setAction(this, ACT_speakAction, nullptr);
         }
@@ -241,10 +241,10 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
       }
     }
 
-    if (field_0xD6C != 1) {
+    if (mSubActionPhase != 1) {
       dtParticle();
     }
-    if (field_0xD6C != 1 && isGuardAnim()) {
+    if (mSubActionPhase != 1 && isGuardAnim()) {
       if (mpOrcaMorf->getFrame() > endFrame(this) - 2.0f) {
         setAnm(Ji1Teachsp_KAMAE, 4.0f, 0);
       }
@@ -255,9 +255,9 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
 
 /* 0225A534 */
 BOOL daNpc_Ji1_c::battleGuardCheck() {
-  if (field_0x7E0.ChkTgHit() && field_0xD6C != 1) {
+  if (mGuardCyl.ChkTgHit() && mSubActionPhase != 1) {
     int anm = Ji1Teachsp_YKGUARD;
-    switch ((u32)field_0xC24) {
+    switch ((u32)mHitCutType) {
     case CUT_TYPE_BT_ROLLCUT:
     case CUT_TYPE_BT_VERTICALJUMPCUT:
       battleSubActionJumpInit();
@@ -293,7 +293,7 @@ BOOL daNpc_Ji1_c::battleGuardCheck() {
       } else {
         if (attackFrame == 0) {
           battleSubActionNockBackInit(1);
-          field_0xD6C = 1;
+          mSubActionPhase = 1;
           return 0;
         }
         if (attackFrame == 1) {
@@ -307,7 +307,7 @@ BOOL daNpc_Ji1_c::battleGuardCheck() {
     }
     }
 
-    s32 c24 = field_0xC24;
+    s32 c24 = mHitCutType;
     if (c24 == CUT_TYPE_NONE) {
       setGuardParticle();
     } else {
@@ -322,27 +322,27 @@ BOOL daNpc_Ji1_c::battleGuardCheck() {
           scale->z = 1.25f;
           scale->y = 1.25f;
         }
-        if (field_0xC24 == CUT_TYPE_BT_JUMPCUT) {
+        if (mHitCutType == CUT_TYPE_BT_JUMPCUT) {
           setHitParticle(scale, JA_SE_CV_JI_FUTTOBI);
         } else {
           setHitParticle(scale, JA_SE_CV_JI_DEFENCE);
         }
         s32 lim = l_hio.field_0x60[3] - 1;
-        if (field_0xD70 < lim) {
-          field_0xD70 += 2;
+        if (mTeachStep < lim) {
+          mTeachStep += 2;
           dComIfGp_plusMiniGameRupee(2);
         } else {
-          field_0xD70 += 1;
+          mTeachStep += 1;
           dComIfGp_plusMiniGameRupee(1);
         }
       } else {
         setHitParticle(nullptr, JA_SE_CV_JI_DEFENCE);
-        field_0xD70 += 1;
+        mTeachStep += 1;
         dComIfGp_plusMiniGameRupee(1);
       }
 
-      if (field_0xD70 >= l_hio.field_0x60[3]) {
-        field_0xC84 = Ji1Teachsp_CUT_HIT_LIMIT;
+      if (mTeachStep >= l_hio.field_0x60[3]) {
+        mEventNo = Ji1Teachsp_CUT_HIT_LIMIT;
         s32 c38;
         if (dComIfGs_isEventBit(Ji1TeachspEventFlag::UNK_0F20)) {
           c38 = 2;
@@ -351,34 +351,34 @@ BOOL daNpc_Ji1_c::battleGuardCheck() {
         }
         field_0xC38 = c38;
         ji1_setAction(this, ACT_eventAction, nullptr);
-        dComIfGp_setMessageCountNumber((s16)field_0xD70);
-        ptmf_set(field_0x2C8, ACT_normalAction);
+        dComIfGp_setMessageCountNumber((s16)mTeachStep);
+        ptmf_set(mEventReturnAction, ACT_normalAction);
         if (dComIfG_getTimerPtr()) {
           ji1TeachspDeleteTimerHD(dComIfG_getTimerPtr());
-          setClearRecord((s16)field_0xD70);
+          setClearRecord((s16)mTeachStep);
         }
         return TRUE;
       }
     }
-    field_0xD6C = 1;
+    mSubActionPhase = 1;
     mBtNowFrame = 30.0f; /* setBtNowFrame */
   }
 
-  if (!ChkAtShieldHit(&field_0xA40) && field_0xA40.ChkAtHit()) {
-    field_0xA40.ClrAtHit();
+  if (!ChkAtShieldHit(&mAtCps) && mAtCps.ChkAtHit()) {
+    mAtCps.ClrAtHit();
   }
 
-  if (field_0xC3C > 2) {
+  if (mAtHitCount > 2) {
     if (ptmf_eq(mAction, ACT_battleAction)) {
       if (dComIfG_getTimerPtr() != 0) {
         ji1TeachspDeleteTimerHD(dComIfG_getTimerPtr());
       }
-      if (isClearRecord((s16)field_0xD70)) {
-        setClearRecord((s16)field_0xD70);
-        field_0xC84 = Ji1Teachsp_CUT_NEW_RECORD;
+      if (isClearRecord((s16)mTeachStep)) {
+        setClearRecord((s16)mTeachStep);
+        mEventNo = Ji1Teachsp_CUT_NEW_RECORD;
         ji1_setAction(this, ACT_eventAction, nullptr);
-        dComIfGp_setMessageCountNumber((s16)field_0xD70);
-        ptmf_set(field_0x2C8, ACT_normalAction);
+        dComIfGp_setMessageCountNumber((s16)mTeachStep);
+        ptmf_set(mEventReturnAction, ACT_normalAction);
       } else {
         ji1_setAction(this, ACT_endspeakAction, nullptr);
       }

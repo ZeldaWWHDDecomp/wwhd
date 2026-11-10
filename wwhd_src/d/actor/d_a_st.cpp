@@ -67,9 +67,9 @@ bool line_cross(gabi::Local<LineCheckLocal> &local, cXyz *start, cXyz *end, st_c
 
 /* inlined into ground_wait, kan_wait */
 bool ambush_trigger(st_class *i_this) {
-    if ((u8)i_this->m02B9 != 0xFF)
+    if ((u8)i_this->mAmbushTrigger != 0xFF)
         return dSv_info_c_isSwitch<s32>(at<void>((u32)stSaveContext() + 0x20),
-                                        (s32)(u8)i_this->m02B9 - 1,
+                                        (s32)(u8)i_this->mAmbushTrigger - 1,
                                         (s8)i_this->current.roomNo) != 0;
     f32 range =
         i_this->mAmbushSightRange == 0xFF ? 500.0f : (f32)(u8)i_this->mAmbushSightRange * 10.0f;
@@ -276,11 +276,11 @@ void collision_register(u32 sphere) {
 /* inlined into daSt_Execute */
 void move_visible_parts(st_class *i_this) {
     for (u32 joint = 0; joint < 26; ++joint)
-        if (i_this->mParts[joint].mpPartModel && (!i_this->m1DC8 || (joint != 3 && joint != 4)))
+        if (i_this->mParts[joint].mpPartModel && (!i_this->mNunMode || (joint != 3 && joint != 4)))
             part_move(i_this, joint);
-    if (i_this->mActionState != ST_ACTION_LOWER_BODY && i_this->m02C4 != 35)
+    if (i_this->mActionState != ST_ACTION_LOWER_BODY && i_this->mMode != 35)
         ke_control(i_this);
-    if (i_this->m1DC8)
+    if (i_this->mNunMode)
         nun_control(i_this);
 }
 
@@ -289,25 +289,25 @@ void smoke_set_s(st_class *i_this, f32 rate) {
     gabi::Local<LineCheckLocal> line;
     initialize_line(line);
     gabi::Local<VectorLocal> start, end;
-    copyVectorWords(gabi::ea(&start->value), gabi::ea(&i_this->m1F6C));
-    copyVectorWords(gabi::ea(&end->value), gabi::ea(&i_this->m1F6C));
+    copyVectorWords(gabi::ea(&start->value), gabi::ea(&i_this->mSpinSmokePos));
+    copyVectorWords(gabi::ea(&end->value), gabi::ea(&i_this->mSpinSmokePos));
     start->value.y = (f32)start->value.y + 100.0f;
     end->value.y = (f32)end->value.y - 100.0f;
     u32 attribute = 0;
     if (line_cross(line, &start->value, &end->value, i_this)) {
         u32 check = gabi::ea(&line->check);
-        i_this->m1F6C.y = line->check.mLin.mEnd.y + 30.0f;
+        i_this->mSpinSmokePos.y = line->check.mLin.mEnd.y + 30.0f;
         u32 play = stGetGameInfoWithLinkage<u32>();
         attribute =
             dBgS_GetAttributeCode<u32>(at<StGameInfoView>(play)->mBgS, at<void>(check + 0x14));
     } else
-        i_this->m1F6C.y = (f32)i_this->m1F6C.y - 20000.0f;
-    if (!i_this->m1F83 || attribute == 4) {
-        ++i_this->m1F83;
+        i_this->mSpinSmokePos.y = (f32)i_this->mSpinSmokePos.y - 20000.0f;
+    if (!i_this->mSpinSmokeCount || attribute == 4) {
+        ++i_this->mSpinSmokeCount;
         if (attribute < 4 || attribute == 11) {
-            dPa_smokeEcallBack_end(&i_this->m1E88[2]);
+            dPa_smokeEcallBack_end(&i_this->mSmokeCallBack[2]);
             u32 emitter =
-                toon_particle(i_this, 0x2022, &i_this->m1F6C, &i_this->m1F78, &i_this->m1E88[2]);
+                toon_particle(i_this, 0x2022, &i_this->mSpinSmokePos, &i_this->mSpinSmokeAngle, &i_this->mSmokeCallBack[2]);
             if (emitter) {
                 stEmitter(emitter).mRate = rate;
                 stEmitter(emitter).mSpread = 1.0f;
@@ -320,7 +320,7 @@ void smoke_set_s(st_class *i_this, f32 rate) {
                 stEmitter(emitter).mGlobalParticleScale.z = scale;
             }
         } else if (attribute == 4) {
-            u32 emitter = particle_with_angle(0x24, &i_this->m1F6C, &i_this->m1F78);
+            u32 emitter = particle_with_angle(0x24, &i_this->mSpinSmokePos, &i_this->mSpinSmokeAngle);
             if (emitter) {
                 stEmitter(emitter).mMaxFrame = 3;
                 stEmitter(emitter).mRate = rate * 0.5f;
@@ -332,33 +332,33 @@ void smoke_set_s(st_class *i_this, f32 rate) {
 
 /* inlined into daSt_Execute */
 void spin_smoke_move(st_class *i_this) {
-    if (!i_this->m1F80)
+    if (!i_this->mSpinSmokeTimer)
         return;
-    --i_this->m1F80;
-    if (i_this->m1F80 >= 10) {
+    --i_this->mSpinSmokeTimer;
+    if (i_this->mSpinSmokeTimer >= 10) {
         gabi::Local<VectorLocal> direction;
         direction->value.x = 0.0f;
         direction->value.y = 0.0f;
-        i_this->m1F78.x = 0;
-        i_this->m1F78.z = 0;
+        i_this->mSpinSmokeAngle.x = 0;
+        i_this->mSpinSmokeAngle.z = 0;
         MtxTrans(0, (f32)i_this->current.pos.x, (f32)i_this->current.pos.y + 7.5f,
                  (f32)i_this->current.pos.z);
         direction->value.z = (REG0_F(2) + 1.0f) * -175.0f;
-        mDoMtx_YrotM(stCalcMatrix().get(), (s16)i_this->m1F7E);
-        MtxPosition(&direction->value, &i_this->m1F6C);
-        i_this->m1F78.y = i_this->m1F7E;
+        mDoMtx_YrotM(stCalcMatrix().get(), (s16)i_this->mSpinSmokeAngleY);
+        MtxPosition(&direction->value, &i_this->mSpinSmokePos);
+        i_this->mSpinSmokeAngle.y = i_this->mSpinSmokeAngleY;
         smoke_set_s(i_this, REG0_F(3) + 3.0f);
-        if (i_this->m1F82 == 2)
-            i_this->m1F7E += (s16)gabi::ftoi((REG0_F(11) + 5000.0f) * (f32)i_this->m0308);
+        if (i_this->mSpinSmokeDir == 2)
+            i_this->mSpinSmokeAngleY += (s16)gabi::ftoi((REG0_F(11) + 5000.0f) * (f32)i_this->mSpinSpeed);
         else {
             s16 step = REG0_S(7) + 2000;
-            i_this->m1F7E += (i_this->m1F82 == 0 ? step : -step);
+            i_this->mSpinSmokeAngleY += (i_this->mSpinSmokeDir == 0 ? step : -step);
         }
     } else
-        i_this->m1F6C.y = (f32)i_this->current.pos.y + 20000.0f;
-    if (!i_this->m1F80) {
-        dPa_smokeEcallBack_end(&i_this->m1E88[2]);
-        i_this->m1F83 = 0;
+        i_this->mSpinSmokePos.y = (f32)i_this->current.pos.y + 20000.0f;
+    if (!i_this->mSpinSmokeTimer) {
+        dPa_smokeEcallBack_end(&i_this->mSmokeCallBack[2]);
+        i_this->mSpinSmokeCount = 0;
     }
 }
 
@@ -387,7 +387,7 @@ void ke_control(st_class *i_this) {
     for (u32 chainIndex = 0; chainIndex < 3; ++chainIndex) {
         auto *chain = &i_this->mKe[chainIndex];
         f32 floor = -1000000000.0f;
-        if (i_this->m1DD8) {
+        if (i_this->mHeadState) {
             gabi::Local<GroundCheckLocal> ground;
             u32 check = gabi::ea(&ground->check);
             cBgS_GndChk_cBgS_GndChk(at<void>(check));
@@ -500,21 +500,21 @@ void nun_control(st_class *i_this) {
     direction->value.y = REG0_F(11);
     direction->value.x = REG0_F(10);
     MtxPosition(&direction->value, &chain->m00[1]);
-    if (i_this->m1DC8 == 2) {
+    if (i_this->mNunMode == 2) {
         bias->value.x = 0.0f;
         bias->value.y = 0.0f;
         bias->value.z = 0.0f;
         s16 angle = (s16)((s16)i_this->shape_angle.y - 8000 + REG8_S(3));
         mDoMtx_YrotS(stCalcMatrix().get(), angle);
         mDoMtx_XrotM(stCalcMatrix().get(), (s16)REG8_S(4));
-        s32 count = i_this->m02E8;
+        s32 count = i_this->mFrameCounter;
         angle = (s16)((u32)count * (u32)(REG8_S(5) + 0x1800));
         mDoMtx_ZrotM(stCalcMatrix().get(), angle);
         direction->value.y = 0.0f;
         direction->value.z = 0.0f;
         direction->value.x = REG8_F(1) + 200.0f;
         MtxPosition(&direction->value, &bias->value);
-        if (!(i_this->m02E8 & 7))
+        if (!(i_this->mFrameCounter & 7))
             sound_at(i_this, 0x5898, &i_this->eyePos);
     } else {
         bias->value.x = 0.0f;
@@ -525,7 +525,7 @@ void nun_control(st_class *i_this) {
     direction->value.x = 0.0f;
     direction->value.y = 0.0f;
     direction->value.z = REG6_F(4) + 30.0f;
-    s8 state = i_this->m1DC8;
+    s8 state = i_this->mNunMode;
     if (state == 2)
         damping = 0.3f;
     else if (state == 3)
@@ -575,20 +575,20 @@ void nun_control(st_class *i_this) {
 
 /* 02491F34 */
 BOOL daSt_Draw(st_class *i_this) {
-    if (i_this->m02B9 || i_this->mCountdownToDeath || i_this->m02FA)
+    if (i_this->mAmbushTrigger || i_this->mCountdownToDeath || i_this->mDeleteRequest)
         return 1;
     dSnap_RegistFig(0xC3, i_this, 1.0f, 1.0f, 1.0f);
     for (u32 i = 0; i < 26; ++i) {
         if (i_this->mParts[i].mPartState >= 10)
             continue;
-        if (i_this->m1DC8 && (i == 5 || i == 6 || i == 7))
+        if (i_this->mNunMode && (i == 5 || i == 6 || i == 7))
             continue;
         if (i == 11)
             continue;
         u32 model = gabi::ea((void *)i_this->mParts[i].mpPartModel);
         if (!model)
             continue;
-        if ((i == 15 || i == 16 || i == 17) && i_this->m1DD8 == 2) {
+        if ((i == 15 || i == 16 || i == 17) && i_this->mHeadState == 2) {
             if (i != 15)
                 continue;
             model = stMorf(gabi::ea((void *)i_this->mpMorf2)).mpModel.v.get();
@@ -603,7 +603,7 @@ BOOL daSt_Draw(st_class *i_this) {
             mDoExt_modelUpdateDL(at<void>(model), 0);
         }
     }
-    if (i_this->mActionState == ST_ACTION_LOWER_BODY || i_this->m02C4 == 0x23 ||
+    if (i_this->mActionState == ST_ACTION_LOWER_BODY || i_this->mMode == 0x23 ||
         i_this->mEnemyIce.mLightShrinkTimer || i_this->mTimers[2])
         return 1;
     mDoExt_3DlineMat0_c_update(&i_this->mLineMat, 10, 1.2f, at<void>(0x101D0E74), 2,
@@ -617,9 +617,9 @@ BOOL daSt_Draw(st_class *i_this) {
 
 /* 0249210C */
 void wait_set(st_class *i_this) {
-    if (i_this->m1DC8) {
+    if (i_this->mNunMode) {
         anm_init(i_this, dRes_INDEX_ST_BCK_HYUNHYUN_e, 10.0f, 2, 1.0f, -1);
-        i_this->m1DC8 = 2;
+        i_this->mNunMode = 2;
         if (i_this && gabi::ea(i_this) + 0x37C) {
             s8 room = i_this->current.roomNo;
             u32 id = i_this->mBsPcId;
@@ -627,45 +627,45 @@ void wait_set(st_class *i_this) {
             mDoAud_monsSeStart(0x4882, &i_this->eyePos, id, 0, reverb);
         }
     } else {
-        anm_init(i_this, i_this->m02CC ? 0x21 : 0x33, 10.0f, 2, 1.0f, -1);
+        anm_init(i_this, i_this->mLeftStance ? 0x21 : 0x33, 10.0f, 2, 1.0f, -1);
     }
 }
 
 /* 024961B8 */
 void speed_pos_calc(st_class *i_this) {
     gabi::Local<VectorLocal> direction, rotated;
-    if ((i_this->mAcch.m_flags & 0x20) && i_this->m02E4) {
+    if ((i_this->mAcch.m_flags & 0x20) && i_this->mTurnStep) {
         f32 x = i_this->mPlayerPos.x - i_this->current.pos.x;
         f32 z = i_this->mPlayerPos.z - i_this->current.pos.z;
         s16 angle = cM_atan2s<s16>(x, z);
-        s16 step = i_this->m02E4;
+        s16 step = i_this->mTurnStep;
         cLib_addCalcAngleS2(&i_this->current.angle.y, angle, 2, step);
-        i_this->m02E4 = 0;
+        i_this->mTurnStep = 0;
     }
-    s16 angle = (s16)((s16)i_this->current.angle.y + i_this->m0302);
+    s16 angle = (s16)((s16)i_this->current.angle.y + i_this->mMoveAngleOffset);
     mDoMtx_YrotS(stCalcMatrix().get(), angle);
     direction->value.x = 0.0f;
     direction->value.y = 0.0f;
     direction->value.z = i_this->speedF;
     MtxPosition(&direction->value, &rotated->value);
-    f32 target = i_this->m02DC, step = i_this->m02E0;
+    f32 target = i_this->mTargetSpeed, step = i_this->mSpeedStep;
     cLib_addCalc2(&i_this->speedF, target, 1.0f, step);
     i_this->speed.x = rotated->value.x;
-    f32 extra = i_this->m1DE0;
+    f32 extra = i_this->mKnockbackSpeed;
     i_this->speed.z = rotated->value.z;
-    i_this->m02E0 = 1.0f;
+    i_this->mSpeedStep = 1.0f;
     // PPC ble skips the branch for unordered comparisons.
     if (extra > 0.1f) {
-        s16 extraAngle = i_this->m1DDE;
+        s16 extraAngle = i_this->mKnockbackAngleY;
         mDoMtx_YrotS(stCalcMatrix().get(), extraAngle);
         direction->value.x = 0.0f;
         direction->value.y = 0.0f;
-        direction->value.z = i_this->m1DE0;
+        direction->value.z = i_this->mKnockbackSpeed;
         MtxPosition(&direction->value, &rotated->value);
         PSVECAdd(&i_this->speed, &rotated->value, &i_this->speed);
     }
     f32 decay = REG0_F(9) + 2.5f;
-    cLib_addCalc0(&i_this->m1DE0, 1.0f, decay);
+    cLib_addCalc0(&i_this->mKnockbackSpeed, 1.0f, decay);
     f32 x = i_this->current.pos.x, vertical = i_this->speed.y, dx = i_this->speed.x;
     f32 falling = vertical - 5.0f, y = i_this->current.pos.y;
     i_this->current.pos.x = x + dx;
@@ -684,23 +684,23 @@ void jyunkai(st_class *i_this) {
     u32 player = player_pointer();
     i_this->attention_info.flags = 4;
     i_this->actor_status = (u32)i_this->actor_status | 0x20;
-    i_this->m02DC = 0.0f;
-    i_this->m02E0 = 5.0f;
-    switch ((s16)i_this->m02C4) {
+    i_this->mTargetSpeed = 0.0f;
+    i_this->mSpeedStep = 5.0f;
+    switch ((s16)i_this->mMode) {
     case 0: {
-        i_this->m1F84 = 2;
+        i_this->mDragSmokeMode = 2;
         s32 frame = gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame);
         s16 start1 = l_HIO.m06, start2 = l_HIO.m08;
         if ((frame >= start1 && frame <= l_HIO.m0A) || (frame >= start2 && frame <= l_HIO.m0C)) {
-            i_this->m02DC = l_HIO.m10;
-            i_this->m02E4 = 0x800;
+            i_this->mTargetSpeed = l_HIO.m10;
+            i_this->mTurnStep = 0x800;
             if (frame == start1 || frame == start2)
                 sound_at_level(i_this, 0x3832, 0);
         }
         copyVectorWords(gabi::ea(&i_this->mPlayerPos), gabi::ea(&stActor(player).current.pos));
         if (!i_this->mTimers[0]) {
             wait_set(i_this);
-            i_this->m02C4 = 1;
+            i_this->mMode = 1;
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(60.0f) + 100.0f);
         }
         break;
@@ -708,31 +708,31 @@ void jyunkai(st_class *i_this) {
     case 1:
         if (!i_this->mTimers[0]) {
             f32 speed = REG8_F(0) + 1.0f;
-            if (i_this->m1DC8) {
+            if (i_this->mNunMode) {
                 anm_init(i_this, dRes_INDEX_ST_BCK_HYUNHYUN_e, 10.0f, 2, 1.0f, -1);
-                i_this->m1DC8 = 2;
+                i_this->mNunMode = 2;
                 monster_sound(i_this, 0x4882, 0);
             } else
-                anm_init(i_this, i_this->m02CC ? 0x22 : 0x34, 10.0f, 2, speed, -1);
-            i_this->m02C4 = 0;
+                anm_init(i_this, i_this->mLeftStance ? 0x22 : 0x34, 10.0f, 2, speed, -1);
+            i_this->mMode = 0;
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(60.0f) + 100.0f);
-            i_this->m1F84 = 1;
+            i_this->mDragSmokeMode = 1;
         }
         break;
     }
     u32 play = stGetGameInfoWithLinkage<u32>();
     if (!*at<be<u8>>(play, 0x5292) && !i_this->mTimers[1] && player_distance(i_this) < 280.0f) {
-        if (i_this->m1DD0 == 10) {
+        if (i_this->mWeaponState == 10) {
             i_this->mActionState = ST_ACTION_FIGHT;
-            i_this->m02C4 = 0;
-            i_this->m0308 = 0.0f;
+            i_this->mMode = 0;
+            i_this->mSpinSpeed = 0.0f;
             if (random_positive(1.0f) < 0.5f)
-                i_this->mFightBehavior = i_this->m02CC ? 5 : 0;
+                i_this->mFightBehavior = i_this->mLeftStance ? 5 : 0;
             else
-                i_this->mFightBehavior = i_this->m02CC ? 15 : 10;
-        } else if (!i_this->m1DD0) {
+                i_this->mFightBehavior = i_this->mLeftStance ? 15 : 10;
+        } else if (!i_this->mWeaponState) {
             i_this->mActionState = ST_ACTION_FIGHT_UNARMED;
-            i_this->m02C4 = i_this->m1DC8 ? 3 : 0;
+            i_this->mMode = i_this->mNunMode ? 3 : 0;
         }
     }
 }
@@ -745,14 +745,14 @@ void attack_set(st_class *i_this, s32 animation, f32 morph, u32 loop) {
 /* inlined into fight */
 void buki_smoke_set(st_class *i_this) {
     gabi::Local<VectorLocal> direction, center, start, end;
-    dPa_smokeEcallBack_end(&i_this->m1E88[1]);
+    dPa_smokeEcallBack_end(&i_this->mSmokeCallBack[1]);
     joint_matrix(i_this, ST_JNT_BUKI_e);
     direction->value.x = REG0_F(13) + 110.0f;
     direction->value.y = 0.0f;
     direction->value.z = 0.0f;
     MtxPosition(&direction->value, &center->value);
     center->value.y = (i_this->mAcch.m_ground_h + 30.0f) + REG0_F(8);
-    u32 emitter = toon_particle(i_this, 0x2027, &center->value, nullptr, &i_this->m1E88[1]);
+    u32 emitter = toon_particle(i_this, 0x2027, &center->value, nullptr, &i_this->mSmokeCallBack[1]);
     if (emitter) {
         stEmitter(emitter).mMaxFrame = 1;
         stEmitter(emitter).mRate = 20.0f;
@@ -790,13 +790,13 @@ void fight(st_class *i_this) {
     spinStep = 0.02f;
     distance = player_distance(i_this);
     copyVectorWords(gabi::ea(&i_this->mPlayerPos), gabi::ea(&stActor(player).current.pos));
-    i_this->m02E4 = 0x200;
-    switch (i_this->m02C4) {
+    i_this->mTurnStep = 0x200;
+    switch (i_this->mMode) {
     case 0:
-        i_this->m02DC = 0.0f;
+        i_this->mTargetSpeed = 0.0f;
         break;
     }
-    i_this->m0ED1 = 0;
+    i_this->mAtMode = 0;
     switch (i_this->mFightBehavior) {
     case 0:
         attack_set(i_this, dRes_INDEX_ST_BCK_ATTACKR1_e, 5.0f, 0);
@@ -815,11 +815,11 @@ void fight(st_class *i_this) {
     case 2:
         if (gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame) == 6) {
             sound_at_level(i_this, 0x5894, 0);
-            i_this->m1F80 = (REG0_S(5)) + 0x17;
-            i_this->m1F82 = 0;
-            i_this->m1F7E = (i_this->current.angle.y + 0x4ee0) + (REG0_S(6));
+            i_this->mSpinSmokeTimer = (REG0_S(5)) + 0x17;
+            i_this->mSpinSmokeDir = 0;
+            i_this->mSpinSmokeAngleY = (i_this->current.angle.y + 0x4ee0) + (REG0_S(6));
         }
-        i_this->m0ED1 = 1;
+        i_this->mAtMode = 1;
         if (animation_stopped(i_this)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_OTOTOR_e, 1.0f, 2);
             i_this->mFightBehavior++;
@@ -827,18 +827,18 @@ void fight(st_class *i_this) {
         }
         break;
     case 3:
-        i_this->m02DC = (REG8_F(3)) + -2.0f;
-        i_this->m0302 =
-            gabi::ftoi(((REG0_F(13)) + 10000.0f) * angle_sine(i_this->m02E8 * ((REG0_S(8)) + 500)));
+        i_this->mTargetSpeed = (REG8_F(3)) + -2.0f;
+        i_this->mMoveAngleOffset =
+            gabi::ftoi(((REG0_F(13)) + 10000.0f) * angle_sine(i_this->mFrameCounter * ((REG0_S(8)) + 500)));
         if (i_this->mTimers[0] == 0) {
             if ((random_positive(1.0f) < 0.5f) || (distance < 300.0f)) {
                 if (random_positive(1.0f) < 0.5f) {
                     attack_set(i_this, dRes_INDEX_ST_BCK_ATTACKREND_e, 5.0f, 0);
-                    i_this->m02CC = 1;
+                    i_this->mLeftStance = 1;
                     i_this->mFightBehavior = 0x65;
                 } else {
                     attack_set(i_this, dRes_INDEX_ST_BCK_ATTACKR2_e, 5.0f, 0);
-                    i_this->m02CC = 0;
+                    i_this->mLeftStance = 0;
                     i_this->mFightBehavior = 100;
                 }
             } else {
@@ -863,11 +863,11 @@ void fight(st_class *i_this) {
     case 7:
         if (gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame) == 8) {
             sound_at_level(i_this, 0x5894, 0);
-            i_this->m1F80 = (REG0_S(5)) + 0x17;
-            i_this->m1F82 = 1;
-            i_this->m1F7E = (i_this->current.angle.y + 0x10000 + (REG0_S(6))) - 0x72a0;
+            i_this->mSpinSmokeTimer = (REG0_S(5)) + 0x17;
+            i_this->mSpinSmokeDir = 1;
+            i_this->mSpinSmokeAngleY = (i_this->current.angle.y + 0x10000 + (REG0_S(6))) - 0x72a0;
         }
-        i_this->m0ED1 = 1;
+        i_this->mAtMode = 1;
         if (animation_stopped(i_this)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_OTOTOL_e, 1.0f, 2);
             i_this->mFightBehavior++;
@@ -875,18 +875,18 @@ void fight(st_class *i_this) {
         }
         break;
     case 8:
-        i_this->m02DC = (REG8_F(3)) + -2.0f;
-        i_this->m0302 =
-            gabi::ftoi(((REG0_F(13)) + 10000.0f) * angle_sine(i_this->m02E8 * ((REG0_S(8)) + 500)));
+        i_this->mTargetSpeed = (REG8_F(3)) + -2.0f;
+        i_this->mMoveAngleOffset =
+            gabi::ftoi(((REG0_F(13)) + 10000.0f) * angle_sine(i_this->mFrameCounter * ((REG0_S(8)) + 500)));
         if (i_this->mTimers[0] == 0) {
             if ((random_positive(1.0f) < 0.5f) || (distance < 300.0f)) {
                 if (random_positive(1.0f) < 0.5f) {
                     attack_set(i_this, dRes_INDEX_ST_BCK_ATTACKLEND_e, 5.0f, 0);
-                    i_this->m02CC = 0;
+                    i_this->mLeftStance = 0;
                     i_this->mFightBehavior = 0x65;
                 } else {
                     attack_set(i_this, dRes_INDEX_ST_BCK_ATTACKL2_e, 5.0f, 0);
-                    i_this->m02CC = 1;
+                    i_this->mLeftStance = 1;
                     i_this->mFightBehavior = 100;
                 }
             } else {
@@ -911,25 +911,25 @@ void fight(st_class *i_this) {
         if (animation_stopped(i_this)) {
             i_this->mFightBehavior++;
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
-            i_this->m1F80 = 0xf;
-            i_this->m1F82 = 2;
-            i_this->m1F7E = (i_this->current.angle.y + 0x2000) + (REG0_S(8));
+            i_this->mSpinSmokeTimer = 0xf;
+            i_this->mSpinSmokeDir = 2;
+            i_this->mSpinSmokeAngleY = (i_this->current.angle.y + 0x2000) + (REG0_S(8));
         }
         break;
     case 0xd:
-        i_this->m1F80 = 0xf;
-        i_this->m02DC = (REG8_F(3)) + 10.0f;
+        i_this->mSpinSmokeTimer = 0xf;
+        i_this->mTargetSpeed = (REG8_F(3)) + 10.0f;
         spinTarget = 1.0f;
         spinStep = 0.1f;
-        i_this->m0302 = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
-                                        angle_sine(i_this->m02E8 * ((REG0_S(8)) + 500)));
-        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->m0304)) && (i_this->m0304 < 0x400)) {
+        i_this->mMoveAngleOffset = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
+                                        angle_sine(i_this->mFrameCounter * ((REG0_S(8)) + 500)));
+        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->mSpinAngleY)) && (i_this->mSpinAngleY < 0x400)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_KAITENR1_END_e, 1.0f, 0);
             i_this->mFightBehavior++;
         }
         break;
     case 0xe:
-        if ((animation_stopped(i_this)) && (std::fabs(i_this->m0308) < 0.01f)) {
+        if ((animation_stopped(i_this)) && (std::fabs(i_this->mSpinSpeed) < 0.01f)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_OTOTOR_e, 5.0f, 2);
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
             i_this->mFightBehavior = 3;
@@ -952,25 +952,25 @@ void fight(st_class *i_this) {
         if (animation_stopped(i_this)) {
             i_this->mFightBehavior++;
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
-            i_this->m1F80 = 0xf;
-            i_this->m1F82 = 2;
-            i_this->m1F7E = (i_this->current.angle.y + 0x2000) + (REG0_S(9));
+            i_this->mSpinSmokeTimer = 0xf;
+            i_this->mSpinSmokeDir = 2;
+            i_this->mSpinSmokeAngleY = (i_this->current.angle.y + 0x2000) + (REG0_S(9));
         }
         break;
     case 0x12:
-        i_this->m1F80 = 0xf;
-        i_this->m02DC = (REG8_F(3)) + 10.0f;
+        i_this->mSpinSmokeTimer = 0xf;
+        i_this->mTargetSpeed = (REG8_F(3)) + 10.0f;
         spinTarget = -1.0f;
         spinStep = 0.1f;
-        i_this->m0302 = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
-                                        angle_sine(i_this->m02E8 * ((REG0_S(8)) + 500)));
-        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->m0304)) && (i_this->m0304 < 0x400)) {
+        i_this->mMoveAngleOffset = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
+                                        angle_sine(i_this->mFrameCounter * ((REG0_S(8)) + 500)));
+        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->mSpinAngleY)) && (i_this->mSpinAngleY < 0x400)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_KAITENL1_END_e, 1.0f, 0);
             i_this->mFightBehavior++;
         }
         break;
     case 0x13:
-        if ((animation_stopped(i_this)) && (std::fabs(i_this->m0308) < 0.01f)) {
+        if ((animation_stopped(i_this)) && (std::fabs(i_this->mSpinSpeed) < 0.01f)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_OTOTOL_e, 5.0f, 2);
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
             i_this->mFightBehavior = 8;
@@ -986,25 +986,25 @@ void fight(st_class *i_this) {
         if (animation_stopped(i_this)) {
             i_this->mFightBehavior++;
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
-            i_this->m1F80 = 0xf;
-            i_this->m1F82 = 2;
-            i_this->m1F7E = (i_this->current.angle.y + 0x2000) + (REG0_S(8));
+            i_this->mSpinSmokeTimer = 0xf;
+            i_this->mSpinSmokeDir = 2;
+            i_this->mSpinSmokeAngleY = (i_this->current.angle.y + 0x2000) + (REG0_S(8));
         }
         break;
     case 0x16:
-        i_this->m1F80 = 0xf;
-        i_this->m02DC = (REG8_F(3)) + 10.0f;
+        i_this->mSpinSmokeTimer = 0xf;
+        i_this->mTargetSpeed = (REG8_F(3)) + 10.0f;
         spinTarget = 1.0f;
         spinStep = 0.1f;
-        i_this->m0302 = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
-                                        angle_sine(i_this->m02E8 * ((REG0_S(8)) + 500)));
-        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->m0304)) && (i_this->m0304 < 0x400)) {
+        i_this->mMoveAngleOffset = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
+                                        angle_sine(i_this->mFrameCounter * ((REG0_S(8)) + 500)));
+        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->mSpinAngleY)) && (i_this->mSpinAngleY < 0x400)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_KAITENR2_END_e, 1.0f, 0);
             i_this->mFightBehavior++;
         }
         break;
     case 0x17:
-        if ((animation_stopped(i_this)) && (std::fabs(i_this->m0308) < 0.01f)) {
+        if ((animation_stopped(i_this)) && (std::fabs(i_this->mSpinSpeed) < 0.01f)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_OTOTOR_e, 5.0f, 2);
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
             i_this->mFightBehavior = 3;
@@ -1015,31 +1015,31 @@ void fight(st_class *i_this) {
         i_this->mFightBehavior++;
         break;
     case 0x1a:
-        i_this->m0ED1 = 2;
+        i_this->mAtMode = 2;
         spinTarget = -1.0f;
         spinStep = 0.1f;
         if (animation_stopped(i_this)) {
             i_this->mFightBehavior++;
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
-            i_this->m1F80 = 0xf;
-            i_this->m1F82 = 2;
-            i_this->m1F7E = (i_this->current.angle.y + 0x2000) + (REG0_S(9));
+            i_this->mSpinSmokeTimer = 0xf;
+            i_this->mSpinSmokeDir = 2;
+            i_this->mSpinSmokeAngleY = (i_this->current.angle.y + 0x2000) + (REG0_S(9));
         }
         break;
     case 0x1b:
-        i_this->m1F80 = 0xf;
-        i_this->m02DC = (REG8_F(3)) + 10.0f;
+        i_this->mSpinSmokeTimer = 0xf;
+        i_this->mTargetSpeed = (REG8_F(3)) + 10.0f;
         spinTarget = -1.0f;
         spinStep = 0.1f;
-        i_this->m0302 = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
-                                        angle_sine(i_this->m02E8 * ((REG0_S(8)) + 500)));
-        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->m0304)) && (i_this->m0304 < 0x400)) {
+        i_this->mMoveAngleOffset = (s16)gabi::ftoi(((REG0_F(13)) + 10000.0f) *
+                                        angle_sine(i_this->mFrameCounter * ((REG0_S(8)) + 500)));
+        if (((i_this->mTimers[0] == 0) && (-0x400 < i_this->mSpinAngleY)) && (i_this->mSpinAngleY < 0x400)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_KAITENL2_END_e, 1.0f, 0);
             i_this->mFightBehavior++;
         }
         break;
     case 0x1c:
-        if ((animation_stopped(i_this)) && (std::fabs(i_this->m0308) < 0.01f)) {
+        if ((animation_stopped(i_this)) && (std::fabs(i_this->mSpinSpeed) < 0.01f)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_OTOTOL_e, 5.0f, 2);
             i_this->mFightBehavior = 8;
             i_this->mTimers[0] = gabi::ftoi((f32)random_positive(50.0f) + 30.0f);
@@ -1052,54 +1052,54 @@ void fight(st_class *i_this) {
         if (gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame) == 24) {
             buki_smoke_set(i_this);
         }
-        i_this->m0ED1 = 1;
+        i_this->mAtMode = 1;
     case 0x65:
         if (animation_stopped(i_this)) {
             i_this->mActionState = ST_ACTION_PATROL;
             wait_set(i_this);
-            i_this->m02C4 = 1;
+            i_this->mMode = 1;
             i_this->mTimers[1] = gabi::ftoi(random_positive(40.0f));
         }
         break;
     }
-    cLib_addCalc2(&i_this->m0308, spinTarget, 1.0f, spinStep);
-    i_this->m0304 += (s16)gabi::ftoi(((REG0_F(11)) + 5000.0f) * i_this->m0308);
-    if (std::fabs(i_this->m0308) > 0.05f) {
-        s16 r4 = i_this->m02CA;
-        i_this->m02CA = r4 + gabi::ftoi(((REG0_F(11)) + 5000.0f) * std::fabs(i_this->m0308));
-        if ((i_this->m02CA >= 100) && (r4 < 100)) {
-            u32 r23 = gabi::ftoi(std::fabs((f32)i_this->m0308 * 100.0f));
+    cLib_addCalc2(&i_this->mSpinSpeed, spinTarget, 1.0f, spinStep);
+    i_this->mSpinAngleY += (s16)gabi::ftoi(((REG0_F(11)) + 5000.0f) * i_this->mSpinSpeed);
+    if (std::fabs(i_this->mSpinSpeed) > 0.05f) {
+        s16 r4 = i_this->mSpinSeCounter;
+        i_this->mSpinSeCounter = r4 + gabi::ftoi(((REG0_F(11)) + 5000.0f) * std::fabs(i_this->mSpinSpeed));
+        if ((i_this->mSpinSeCounter >= 100) && (r4 < 100)) {
+            u32 r23 = gabi::ftoi(std::fabs((f32)i_this->mSpinSpeed * 100.0f));
             if (r23 < 0x32) {
                 r23 = 0x32;
             }
             sound_at_level(i_this, 0x5895, r23);
         }
     } else {
-        i_this->m02CA = 0;
+        i_this->mSpinSeCounter = 0;
     }
     joint_matrix(i_this, ST_JNT_BUKI_e);
     local_d8.x = (REG0_F(10)) + 80.0f;
     local_d8.y = 0.0f;
     local_d8.z = 0.0f;
-    copyVectorWords(gabi::ea(&i_this->m0EC4), gabi::ea(&i_this->m0EB8));
-    MtxPosition(&local_d8, &i_this->m0EB8);
-    if (std::fabs(i_this->m0308) > 0.5f) {
+    copyVectorWords(gabi::ea(&i_this->mWeaponLinePosOld), gabi::ea(&i_this->mWeaponLinePos));
+    MtxPosition(&local_d8, &i_this->mWeaponLinePos);
+    if (std::fabs(i_this->mSpinSpeed) > 0.5f) {
         gabi::Local<LineCheckLocal> line;
         initialize_line(line);
-        i_this->m0ED1 = 2;
-        if ((std::fabs(i_this->m0308) > 0.9f) &&
-            (std::fabs(i_this->speedF) > std::fabs(i_this->m02DC) * 0.9f)) {
-            if (line_cross(line, &i_this->m0EC4, &i_this->m0EB8, i_this)) {
+        i_this->mAtMode = 2;
+        if ((std::fabs(i_this->mSpinSpeed) > 0.9f) &&
+            (std::fabs(i_this->speedF) > std::fabs(i_this->mTargetSpeed) * 0.9f)) {
+            if (line_cross(line, &i_this->mWeaponLinePosOld, &i_this->mWeaponLinePos, i_this)) {
                 i_this->mActionState = ST_ACTION_PATROL;
                 wait_set(i_this);
-                i_this->m02C4 = 1;
+                i_this->mMode = 1;
                 i_this->mTimers[1] = gabi::ftoi(random_positive(40.0f));
             }
         }
         finish_line(line);
     }
-    if (std::fabs(i_this->m0308) > 0.5f) {
-        i_this->m0ED1 = 2;
+    if (std::fabs(i_this->mSpinSpeed) > 0.5f) {
+        i_this->mAtMode = 2;
     }
 }
 
@@ -1114,30 +1114,30 @@ void fight2(st_class *i_this) {
     local_2c.x = 0.0f;
     local_2c.y = 0.0f;
     local_2c.z = 0.0f;
-    i_this->m02DC = 0.0f;
-    switch (i_this->m02C4) {
+    i_this->mTargetSpeed = 0.0f;
+    switch (i_this->mMode) {
     case 0:
-        i_this->m02F6 = 10;
-        i_this->m0ED0 = 1;
+        i_this->mNoHitTimer = 10;
+        i_this->mTgMode = 1;
         attack_set(i_this, dRes_INDEX_ST_BCK_KYORO_e, 5.0f, 0);
-        i_this->m02C4++;
+        i_this->mMode++;
         monster_sound(i_this, 0x4881, 0);
         break;
     case 1:
-        i_this->m02F6 = 10;
-        i_this->m0ED0 = 1;
+        i_this->mNoHitTimer = 10;
+        i_this->mTgMode = 1;
         if (animation_stopped(i_this)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_NUKU1_e, 1.0f, 0);
-            i_this->m02C4++;
+            i_this->mMode++;
         }
         break;
     case 2:
-        i_this->m02F6 = 10;
-        i_this->m0ED0 = 1;
+        i_this->mNoHitTimer = 10;
+        i_this->mTgMode = 1;
         if (animation_stopped(i_this)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_NUKU2_e, 1.0f, 0);
-            i_this->m02C4 = 0x65;
-            i_this->m1DC8 = 1;
+            i_this->mMode = 0x65;
+            i_this->mNunMode = 1;
             joint_matrix(i_this, ST_JNT_KATAL_e);
             MtxPosition(&local_2c, &cStack_38);
             particle_with_angle(0x817A, &cStack_38, &i_this->shape_angle);
@@ -1145,14 +1145,14 @@ void fight2(st_class *i_this) {
         }
         break;
     case 3:
-        i_this->m1DC8 = 3;
+        i_this->mNunMode = 3;
         attack_set(i_this, dRes_INDEX_ST_BCK_HONE_ATTACK_e, 3.0f, 2);
-        i_this->m02C4++;
+        i_this->mMode++;
         i_this->mTimers[0] = gabi::ftoi(random_positive(3.0f)) * 0x28;
         monster_sound(i_this, 0x4883, 0);
         break;
     case 4:
-        i_this->m0ED1 = 1;
+        i_this->mAtMode = 1;
         if ((((gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame) == 1) ||
               (gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame) == 11)) ||
              (gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame) == 21)) ||
@@ -1165,36 +1165,36 @@ void fight2(st_class *i_this) {
         break;
     case 0x32:
         anm_init(i_this, dRes_INDEX_ST_BCK_WAIT_e, 10.0f, 2, 1.0f, -1);
-        i_this->m1DC8 = 1;
-        i_this->m02C4++;
+        i_this->mNunMode = 1;
+        i_this->mMode++;
         i_this->mTimers[0] = 0x14;
     case 0x33:
-        i_this->m02F6 = 10;
-        i_this->m0ED0 = 1;
+        i_this->mNoHitTimer = 10;
+        i_this->mTgMode = 1;
         if (i_this->mTimers[0] == 0) {
             attack_set(i_this, dRes_INDEX_ST_BCK_TUKERU1_e, 5.0f, 0);
-            i_this->m02C4++;
+            i_this->mMode++;
         }
         break;
     case 0x34:
-        i_this->m02F6 = 10;
-        i_this->m0ED0 = 1;
+        i_this->mNoHitTimer = 10;
+        i_this->mTgMode = 1;
         if (animation_stopped(i_this)) {
             attack_set(i_this, dRes_INDEX_ST_BCK_TUKERU2_e, 1.0f, 0);
-            i_this->m02C4++;
-            i_this->m1DC8 = 0;
+            i_this->mMode++;
+            i_this->mNunMode = 0;
         }
         break;
     case 0x35:
-        i_this->m02F6 = 10;
-        i_this->m0ED0 = 1;
+        i_this->mNoHitTimer = 10;
+        i_this->mTgMode = 1;
         if (animation_stopped(i_this)) {
-            i_this->m02C4 = 100;
+            i_this->mMode = 100;
             anm_init(i_this, dRes_INDEX_ST_BCK_FUKKI_WAIT_e, 10.0f, 2, 1.0f, -1);
         }
         break;
     case 0x64:
-        if (i_this->m1DD0 == 10) {
+        if (i_this->mWeaponState == 10) {
             r30 = true;
         }
         break;
@@ -1207,31 +1207,31 @@ void fight2(st_class *i_this) {
     if (r30) {
         i_this->mActionState = ST_ACTION_PATROL;
         wait_set(i_this);
-        i_this->m02C4 = 1;
+        i_this->mMode = 1;
         i_this->mTimers[1] = gabi::ftoi(random_positive(40.0f));
     }
 }
 
 /* inlined into St_move */
 void ground_wait(st_class *i_this) {
-    i_this->m02F6 = 10;
-    i_this->m0ED0 = 2;
-    switch ((s16)i_this->m02C4) {
+    i_this->mNoHitTimer = 10;
+    i_this->mTgMode = 2;
+    switch ((s16)i_this->mMode) {
     case 0:
         i_this->attention_info.flags = 0;
         i_this->actor_status = (u32)i_this->actor_status & ~0x20u;
         if (ambush_trigger(i_this))
-            i_this->m02C4 = 1;
+            i_this->mMode = 1;
         break;
     case 1:
-        i_this->m02B9 = 0;
+        i_this->mAmbushTrigger = 0;
         sound_at_level(i_this, 0x589A, 0);
         anm_init(i_this, dRes_INDEX_ST_BCK_START_e, 1.0f, 0, 1.0f, -1);
-        i_this->m02C4 = 2;
+        i_this->mMode = 2;
         i_this->attention_info.flags = 4;
         i_this->actor_status = (u32)i_this->actor_status | 0x20;
-        dPa_smokeEcallBack_end(&i_this->m1E88[0]);
-        toon_particle(i_this, 0xA17C, &i_this->current.pos, nullptr, &i_this->m1E88[0]);
+        dPa_smokeEcallBack_end(&i_this->mSmokeCallBack[0]);
+        toon_particle(i_this, 0xA17C, &i_this->current.pos, nullptr, &i_this->mSmokeCallBack[0]);
         i_this->mTimers[0] = 60;
         break;
     case 2:
@@ -1247,7 +1247,7 @@ void ground_wait(st_class *i_this) {
         }
         if (animation_stopped(i_this)) {
             i_this->mActionState = ST_ACTION_PATROL;
-            i_this->m02C4 = 0;
+            i_this->mMode = 0;
         }
         break;
     }
@@ -1255,27 +1255,27 @@ void ground_wait(st_class *i_this) {
 
 /* inlined into St_move */
 void kan_wait(st_class *i_this) {
-    i_this->m02F6 = 10;
-    i_this->m0ED0 = 2;
-    switch ((s16)i_this->m02C4) {
+    i_this->mNoHitTimer = 10;
+    i_this->mTgMode = 2;
+    switch ((s16)i_this->mMode) {
     case 0:
         i_this->attention_info.flags = 0;
         i_this->actor_status = (u32)i_this->actor_status & ~0x20u;
         if (ambush_trigger(i_this))
-            i_this->m02C4 = 1;
+            i_this->mMode = 1;
         break;
     case 1:
         anm_init(i_this, i_this->mBehaviorType == BEHAVIOR_IN_HORIZONTAL_COFFIN ? 0x35 : 0x2C, 1.0f,
                  0, 0.0f, -1);
-        i_this->m02C4 = 2;
-        i_this->m02B9 = 0;
+        i_this->mMode = 2;
+        i_this->mAmbushTrigger = 0;
         i_this->mTimers[0] = l_HIO.m18;
         i_this->mTimers[2] = (s16)i_this->mTimers[0] + 20;
         [[fallthrough]];
     case 2:
         if (!i_this->mTimers[0]) {
             stMorf(gabi::ea((void *)i_this->mpMorf)).mRate = 1.0f;
-            i_this->m02C4 = 3;
+            i_this->mMode = 3;
             i_this->attention_info.flags = 4;
             i_this->actor_status = (u32)i_this->actor_status | 0x20;
         }
@@ -1283,7 +1283,7 @@ void kan_wait(st_class *i_this) {
     case 3:
         if (animation_stopped(i_this)) {
             i_this->mActionState = ST_ACTION_PATROL;
-            i_this->m02C4 = 0;
+            i_this->mMode = 0;
         }
         break;
     }
@@ -1291,24 +1291,24 @@ void kan_wait(st_class *i_this) {
 
 /* 024963A4 */
 void st_break_wait(st_class *i_this) {
-    auto &state = i_this->m02C4;
+    auto &state = i_this->mMode;
     auto &recoverTimer = i_this->mTimers[0];
-    auto &lifetime = i_this->m02F8;
-    i_this->m02DC = 0.0f;
-    if (!i_this->m1DDC)
-        i_this->m02F6 = 10;
-    i_this->m0ED0 = 1;
+    auto &lifetime = i_this->mDisappearTimer;
+    i_this->mTargetSpeed = 0.0f;
+    if (!i_this->mReassembleWait)
+        i_this->mNoHitTimer = 10;
+    i_this->mTgMode = 1;
     switch ((s16)state) {
     case 0:
         anm_init(i_this, dRes_INDEX_ST_BCK_FUKKI_WAIT_e, 10.0f, 2, 1.0f, -1);
         state = 1;
         recoverTimer = l_HIO.m1A;
-        i_this->m1DDC = l_HIO.m1A;
+        i_this->mReassembleWait = l_HIO.m1A;
         [[fallthrough]];
     case 1:
         if (!recoverTimer) {
             state = 2;
-            i_this->m0ED3 = 2;
+            i_this->mPartCommand = 2;
             sound_at(i_this, 0x5892, &i_this->current.pos);
             lifetime = 0x1F3; // The HD body stores499, unlike GC500.
             return;
@@ -1317,9 +1317,9 @@ void st_break_wait(st_class *i_this) {
     case 2:
     case 3:
     case 0xB:
-        i_this->m0ED0 = 2;
-        i_this->m1F68 = 1;
-        if (i_this->m0ED2 >= 25 && ((s16)state != 3 || i_this->m1DD0 == 10)) {
+        i_this->mTgMode = 2;
+        i_this->mBreakEffMode = 1;
+        if (i_this->mPartsAttached >= 25 && ((s16)state != 3 || i_this->mWeaponState == 10)) {
             state = 100;
             recoverTimer = 10;
         }
@@ -1327,16 +1327,16 @@ void st_break_wait(st_class *i_this) {
     case 0xA:
         anm_init(i_this, dRes_INDEX_ST_BCK_FUKKI_WAIT_e, 10.0f, 2, 1.0f, -1);
         state = 0xB;
-        i_this->m0ED0 = 2;
-        i_this->m1F68 = 1;
-        if (i_this->m0ED2 >= 25) {
+        i_this->mTgMode = 2;
+        i_this->mBreakEffMode = 1;
+        if (i_this->mPartsAttached >= 25) {
             state = 100;
             recoverTimer = 10;
         }
         break;
     case 0x14:
     case 0x23:
-        i_this->m1DDC = 100;
+        i_this->mReassembleWait = 100;
         recoverTimer = 100;
         if (state == 0x23) {
             i_this->attention_info.flags = 0;
@@ -1344,13 +1344,13 @@ void st_break_wait(st_class *i_this) {
         }
         break;
     case 100:
-        i_this->m1F68 = 2;
+        i_this->mBreakEffMode = 2;
         if (!recoverTimer) {
             i_this->mActionState = ST_ACTION_PATROL;
             wait_set(i_this);
             state = 1;
             f64 random = cM_rndF<f64>(40.0f);
-            i_this->m1E84 = 16;
+            i_this->mBreakHealth = 16;
             i_this->mTimers[1] = (s16)gabi::ftoi(random);
         }
         break;
@@ -1392,8 +1392,8 @@ void head_damage(st_class *i_this) {
     angle->value.y = i_this->shape_angle.y;
     angle->value.z = i_this->shape_angle.z;
     angle->value.y = (s16)((s16)angle->value.y - 0x8000);
-    i_this->m02DC = 0.0f;
-    auto &state = i_this->m02C4;
+    i_this->mTargetSpeed = 0.0f;
+    auto &state = i_this->mMode;
     switch ((s16)state) {
     case 0:
     case 10: {
@@ -1432,7 +1432,7 @@ void head_damage(st_class *i_this) {
 void ue_move(st_class *i_this) {
     u32 player = player_pointer();
     i_this->actor_status = (u32)i_this->actor_status | 0x20;
-    auto &state = i_this->m02C4;
+    auto &state = i_this->mMode;
     i_this->attention_info.flags = 4;
     switch ((s16)state) {
     case -1:
@@ -1446,7 +1446,7 @@ void ue_move(st_class *i_this) {
         i_this->current.angle.y = (s16)(player_angle(i_this) + 0x8000);
         i_this->speed.y = 40.0f;
         i_this->speedF = 20.0f;
-        i_this->m02DC = 20.0f;
+        i_this->mTargetSpeed = 20.0f;
         break;
     case 1:
         if (i_this->mAcch.m_flags & 0x20) {
@@ -1496,8 +1496,8 @@ void ue_move(st_class *i_this) {
                                       &stEmitter(emitter).mGlobalTranslation);
             }
         }
-        i_this->m02E4 = 0x1000;
-        i_this->m02DC = REG8_F(1) + 10.0f;
+        i_this->mTurnStep = 0x1000;
+        i_this->mTargetSpeed = REG8_F(1) + 10.0f;
         if (!i_this->mTimers[0])
             state = 3;
         if (player_distance(i_this) > 530.0f) {
@@ -1508,8 +1508,8 @@ void ue_move(st_class *i_this) {
         break;
     }
     case 5:
-        i_this->m02DC = 0.0f;
-        i_this->m02E4 = 0x2000;
+        i_this->mTargetSpeed = 0.0f;
+        i_this->mTurnStep = 0x2000;
         copyVectorWords(gabi::ea(i_this) + 0x3EC, gabi::ea(&stActor(player).current.pos));
         if (!i_this->mTimers[0] && player_distance(i_this) < 480.0f)
             state = -1;
@@ -1540,7 +1540,7 @@ void sita_move(st_class *i_this) {
     i_this->attention_info.flags = 4;
     i_this->actor_status = (u32)i_this->actor_status | 0x20;
     i_this->attention_info.position.z = z;
-    auto &state = i_this->m02C4;
+    auto &state = i_this->mMode;
     switch ((s16)state) {
     case 0: {
         state = 1;
@@ -1556,20 +1556,20 @@ void sita_move(st_class *i_this) {
         state = 3;
         [[fallthrough]];
     case 3:
-        i_this->m02E4 = 0x800;
-        i_this->m02DC = REG8_F(1) + 10.0f;
+        i_this->mTurnStep = 0x800;
+        i_this->mTargetSpeed = REG8_F(1) + 10.0f;
         copyVectorWords(gabi::ea(i_this) + 0x3EC, gabi::ea(&stActor(player).current.pos));
         if (!i_this->mTimers[0] && player_distance(i_this) < 260.0f)
             state = 5;
         break;
     case 5:
         copyVectorWords(gabi::ea(i_this) + 0x3EC, gabi::ea(&stActor(player).current.pos));
-        i_this->m02E4 = 0x2000;
+        i_this->mTurnStep = 0x2000;
         anm_init(i_this, dRes_INDEX_ST_BCK_KICK1_e, 3.0f, 0, 1.0f, -1);
         state = 6;
         break;
     case 6:
-        i_this->m02DC = REG8_F(1) + 5.0f;
+        i_this->mTargetSpeed = REG8_F(1) + 5.0f;
         if (animation_stopped(i_this)) {
             anm_init(i_this, dRes_INDEX_ST_BCK_KICK2_e, 1.0f, 0, 1.0f, -1);
             state = 7;
@@ -1577,8 +1577,8 @@ void sita_move(st_class *i_this) {
         break;
     case 7:
         if (gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame) < 10)
-            i_this->m0ED1 = 3;
-        i_this->m02DC = REG8_F(1);
+            i_this->mAtMode = 3;
+        i_this->mTargetSpeed = REG8_F(1);
         if (animation_stopped(i_this)) {
             state = 1;
             i_this->mTimers[0] = 20;
@@ -1593,15 +1593,15 @@ void sita_move(st_class *i_this) {
     if (upper) {
         s16 timer = i_this->mTimers[1];
         if (timer < 5)
-            i_this->m0ED0 = 2;
-        i_this->m1E86 = 1;
+            i_this->mTgMode = 2;
+        i_this->mUpperSeparate = 1;
         if (!timer) {
-            i_this->m0ED3 = 11;
+            i_this->mPartCommand = 11;
             i_this->mActionState = ST_ACTION_BREAK_WAIT;
             state = 10;
-            i_this->m02F8 = 0;
+            i_this->mDisappearTimer = 0;
             fopAcM_delete(at<void>(upper));
-            i_this->m1E86 = 0;
+            i_this->mUpperSeparate = 0;
         }
     }
 }
@@ -1614,8 +1614,8 @@ void St_move(st_class *i_this) {
     direction->value.x = 160.0f;
     direction->value.y = REG0_F(11);
     direction->value.z = REG0_F(12);
-    MtxPosition(&direction->value, &i_this->m0EAC);
-    i_this->m1F84 = 0;
+    MtxPosition(&direction->value, &i_this->mWeaponTipPos);
+    i_this->mDragSmokeMode = 0;
     switch ((s16)i_this->mActionState) {
     case ST_ACTION_PATROL:
         i_this->bodyForm = 0;
@@ -1655,24 +1655,24 @@ void St_move(st_class *i_this) {
     }
     if (i_this->mActionState != ST_ACTION_COFFIN_WAIT)
         speed_pos_calc(i_this);
-    if (i_this->m1F84 && i_this->m1DD0 == 10) {
-        if (i_this->m1F84 == 1 && !word(gabi::ea(i_this) + 0x21D4))
-            toon_particle(i_this, 0xA17D, &i_this->m0EAC, &i_this->shape_angle, &i_this->m1F88);
+    if (i_this->mDragSmokeMode && i_this->mWeaponState == 10) {
+        if (i_this->mDragSmokeMode == 1 && !word(gabi::ea(i_this) + 0x21D4))
+            toon_particle(i_this, 0xA17D, &i_this->mWeaponTipPos, &i_this->shape_angle, &i_this->mDragSmokeCallBack);
     } else
-        dPa_smokeEcallBack_end(&i_this->m1F88);
+        dPa_smokeEcallBack_end(&i_this->mDragSmokeCallBack);
 }
 
 /* inlined into daSt_Execute */
 void damage_check(st_class *i_this) {
     u32 player = player_pointer();
     dCcD_GStts_Move(&i_this->mStts.__vtbl_gstts);
-    if (!i_this->m02F6) {
+    if (!i_this->mNoHitTimer) {
         gabi::Local<AttackInfoLocal> local;
         auto &atInfo = local->value;
         atInfo.mPlCutBit = 0;
         atInfo.mHitSoundId = 0;
         for (u32 index = 0; index < 7; ++index) {
-            u32 sphere = gabi::ea(&i_this->m054C[index]);
+            u32 sphere = gabi::ea(&i_this->mBodySph[index]);
             if (!dCcD_GObjInf_ChkTgHit<s32>(at<void>(sphere)))
                 continue;
             u32 object = dCcD_GObjInf_GetTgHitObj<u32>(at<void>(sphere));
@@ -1683,17 +1683,17 @@ void damage_check(st_class *i_this) {
                 u32 held = find_actor(i_this->mHeldWeaponEntityId);
                 if (held)
                     fopAcM_cancelCarryNow(at<void>(held));
-                i_this->m1DD0 = 0;
+                i_this->mWeaponState = 0;
                 return;
             }
-            i_this->m02F6 = 5;
-            if (index == 0 && i_this->m1DD8) {
+            i_this->mNoHitTimer = 5;
+            if (index == 0 && i_this->mHeadState) {
                 s8 remaining = i_this->stealItemLeft;
                 i_this->stealItemLeft = 0;
                 cc_at_check(i_this, &atInfo);
                 i_this->stealItemLeft = remaining;
                 if (atInfo.mResultingAttackType == 1 && stPlayer(player).mJumpCutExtraDamage)
-                    i_this->m02F6 = 2;
+                    i_this->mNoHitTimer = 2;
                 auto *head = &i_this->mParts[15];
                 if (i_this->health <= 0 || atInfo.mResultingAttackType == 9 ||
                     atInfo.mResultingAttackType == 2) {
@@ -1727,7 +1727,7 @@ void damage_check(st_class *i_this) {
                     head_anm_init(i_this, dRes_INDEX_ST_BCK_HEADB_DAMAGE_e, 1.0f, 0, 1.0f, -1);
                     head->mPartState = 7;
                     head->mWaitTimer = 127;
-                    i_this->m1E82 = REG8_S(2) + 20;
+                    i_this->mHeadShakeTimer = REG8_S(2) + 20;
                     monster_sound(i_this, 0x487B, 0);
                 }
             } else {
@@ -1746,60 +1746,60 @@ void damage_check(st_class *i_this) {
                 if ((attacker && *at<be<s16>>(attacker, 8) == 0xA8) ||
                     atInfo.mResultingAttackType == 2) {
                     if (atInfo.mResultingAttackType == 2)
-                        i_this->m1E84 = 0;
+                        i_this->mBreakHealth = 0;
                     def_se_set(i_this, (void *)atInfo.mpObj, 0x34);
                     monster_sound(i_this, 0x487B, 0);
-                    i_this->m1E84 = (s8)i_this->m1E84 - (u8)atInfo.mDamage;
-                    i_this->m1DE4 = REG6_S(atInfo.mResultingAttackType == 9 ? 7 : 6) +
+                    i_this->mBreakHealth = (s8)i_this->mBreakHealth - (u8)atInfo.mDamage;
+                    i_this->mShakeTimer = REG6_S(atInfo.mResultingAttackType == 9 ? 7 : 6) +
                                     (atInfo.mResultingAttackType == 9 ? 20 : 10);
                     if (atInfo.mResultingAttackType == 1 && stPlayer(player).mJumpCutExtraDamage) {
-                        i_this->m02F6 = 2;
+                        i_this->mNoHitTimer = 2;
                         u8 cut = stPlayer(player).mCutType;
                         if (cut == 8 || cut == 9)
-                            i_this->m1E84 = (u8)i_this->m1E84 - (u8)atInfo.mDamage;
+                            i_this->mBreakHealth = (u8)i_this->mBreakHealth - (u8)atInfo.mDamage;
                     }
                     mDoAud_bgmHitSound((s32)atInfo.mHitSoundId);
-                    if ((s8)i_this->m1E84 <= 0) {
-                        i_this->m1DC8 = 0;
+                    if ((s8)i_this->mBreakHealth <= 0) {
+                        i_this->mNunMode = 0;
                         u8 form = i_this->bodyForm;
                         if (atInfo.mPlCutBit == 0x80 && !form) {
                             i_this->mActionState = ST_ACTION_LOWER_BODY;
-                            i_this->m02C4 = 0;
-                            i_this->m0ED3 = 10;
+                            i_this->mMode = 0;
+                            i_this->mPartCommand = 10;
                             i_this->mUpperBodyEntityId = fopAcM_create<u32>(
                                 0xBE, 0xE, &i_this->current.pos, (s8)i_this->current.roomNo,
                                 &i_this->home.angle, (void *)nullptr, -1, (void *)nullptr);
-                            i_this->m1E84 = 5;
-                            i_this->m1E86 = 0;
+                            i_this->mBreakHealth = 5;
+                            i_this->mUpperSeparate = 0;
                         } else {
-                            i_this->m02C4 = form == 2 ? 35 : form == 1 ? 20 : 0;
+                            i_this->mMode = form == 2 ? 35 : form == 1 ? 20 : 0;
                             i_this->mActionState = ST_ACTION_BREAK_WAIT;
-                            i_this->m0ED3 = 1;
-                            i_this->m02F8 = 0;
+                            i_this->mPartCommand = 1;
+                            i_this->mDisappearTimer = 0;
                             sound_at_level(i_this, 0x5891, 0);
                             monster_sound(i_this, 0x487C, 0);
                         }
                     }
                 } else if (index == 0) {
-                    i_this->m1DE4 = REG6_S(7) + 5;
+                    i_this->mShakeTimer = REG6_S(7) + 5;
                     u8 form = i_this->bodyForm;
                     if (form == 1) {
                         i_this->mActionState = ST_ACTION_HEAD_DAMAGE;
-                        i_this->m02C4 = 10;
+                        i_this->mMode = 10;
                     } else if (!form) {
                         i_this->mActionState = ST_ACTION_HEAD_DAMAGE;
-                        i_this->m02C4 = 0;
+                        i_this->mMode = 0;
                     }
                     sound_at_level(i_this, 0x588E, 0);
                     monster_sound(i_this, 0x487A, 0);
                 } else {
                     def_se_set(i_this, (void *)atInfo.mpObj, 0x34);
                     monster_sound(i_this, 0x487B, 0);
-                    i_this->m1DE4 = REG6_S(7) + 8;
+                    i_this->mShakeTimer = REG6_S(7) + 8;
                     if (!i_this->bodyForm) {
                         i_this->mActionState = ST_ACTION_PATROL;
                         wait_set(i_this);
-                        i_this->m02C4 = 1;
+                        i_this->mMode = 1;
                         i_this->mTimers[1] = 10;
                     }
                 }
@@ -1807,8 +1807,8 @@ void damage_check(st_class *i_this) {
             break;
         }
     }
-    if (i_this->m1DE4)
-        --i_this->m1DE4;
+    if (i_this->mShakeTimer)
+        --i_this->mShakeTimer;
 }
 
 /* 02492210 */
@@ -1907,17 +1907,17 @@ void part_move(st_class *i_this, s32 joint) {
         case 0:
             joint_matrix(i_this, joint);
             MtxPosition(&direction->value, &part->mPartPos);
-            if (i_this->m0ED3 == 1) {
+            if (i_this->mPartCommand == 1) {
                 scatter_part(part);
-                if (i_this->m0ED2 && joint != 11)
-                    --i_this->m0ED2;
+                if (i_this->mPartsAttached && joint != 11)
+                    --i_this->mPartsAttached;
                 if (joint == 15) {
-                    i_this->m1DD8 = 1;
+                    i_this->mHeadState = 1;
                     part->mPartState = 6;
                     part->mPartRotAdd.x = 0;
                     part->mPartRotAdd.y = 0;
                     part->mPartRotAdd.z = 0;
-                    i_this->m1DDA = part->mPartRot.y;
+                    i_this->mHeadTargetAngleY = part->mPartRot.y;
                     head_anm_init(i_this, dRes_INDEX_ST_BCK_HEADB_JUMP1_e, 1.0f, 0, 1.0f, -1);
                 } else {
                     part->mPartState = 5;
@@ -1925,7 +1925,7 @@ void part_move(st_class *i_this, s32 joint) {
                     part->mPartRotAdd.y = (s16)gabi::ftoi(random_signed(6000.0f));
                 }
             }
-            if (i_this->m0ED3 == 10) {
+            if (i_this->mPartCommand == 10) {
                 if (joint < 19) {
                     part->mPartState = 10;
                     if (joint == 11) {
@@ -1934,13 +1934,13 @@ void part_move(st_class *i_this, s32 joint) {
                         part->mPartRotAdd.x = (s16)gabi::ftoi(random_signed(6000.0f));
                         part->mPartRotAdd.y = (s16)gabi::ftoi(random_signed(6000.0f));
                     }
-                    if (i_this->m0ED2 && joint != 11)
-                        --i_this->m0ED2;
+                    if (i_this->mPartsAttached && joint != 11)
+                        --i_this->mPartsAttached;
                 }
-            } else if (i_this->m0ED3 == 20 && joint >= 19) {
+            } else if (i_this->mPartCommand == 20 && joint >= 19) {
                 part->mPartState = 11;
-                if (i_this->m0ED2 && joint != 11)
-                    --i_this->m0ED2;
+                if (i_this->mPartsAttached && joint != 11)
+                    --i_this->mPartsAttached;
             }
             break;
         case 1:
@@ -2009,12 +2009,12 @@ void part_move(st_class *i_this, s32 joint) {
             if (!(magnitude(&direction->value) > 5.0f)) {
                 part->mPartState = 0;
                 part->m05 = 0;
-                if (i_this->m0ED2 < 25 && joint != 11)
-                    ++i_this->m0ED2;
+                if (i_this->mPartsAttached < 25 && joint != 11)
+                    ++i_this->mPartsAttached;
                 if (joint == 11)
-                    i_this->m1DD0 = 10;
+                    i_this->mWeaponState = 10;
                 if (joint == 15)
-                    i_this->m1DD8 = 0;
+                    i_this->mHeadState = 0;
             }
             break;
         }
@@ -2026,9 +2026,9 @@ void part_move(st_class *i_this, s32 joint) {
             }
             if (!(part->mPartPos.y > floor)) {
                 part->mPartPos.y = floor;
-                if (joint == 11 && weapon && i_this->m1DD0 >= 2) {
+                if (joint == 11 && weapon && i_this->mWeaponState >= 2) {
                     fopAcM_cancelCarryNow(at<void>(weapon));
-                    i_this->m1DD0 = 0;
+                    i_this->mWeaponState = 0;
                 }
                 if (part->mPartVelocity.y < -40.0f) {
                     part->mPartVelocity.y = (f32)(random_positive(10.0f) + 20.0f);
@@ -2047,7 +2047,7 @@ void part_move(st_class *i_this, s32 joint) {
                     cLib_addCalcAngleS2(&part->mPartRot.y, 0, 1, 0xC00);
                 }
             }
-            s8 command = i_this->m0ED3;
+            s8 command = i_this->mPartCommand;
             if (command == 2 || command == 11) {
                 part->m3E = (s16)gabi::ftoi(random_positive(65536.0f));
                 part->m44 = 0.0f;
@@ -2056,18 +2056,18 @@ void part_move(st_class *i_this, s32 joint) {
                         fopAcM_setCarryNow(at<void>(weapon), 0);
                         copyVectorWords(gabi::ea(&part->mPartPos),
                                         gabi::ea(&stActor(weapon).current.pos));
-                        i_this->m1DD0 = 2;
+                        i_this->mWeaponState = 2;
                         part->mWaitTimer = 0;
                         part->mPartRotAdd.y = 0x800;
                         part->mPartRotAdd.x = 0;
                         part->mPartState = 1;
-                        if (i_this->m1DC8) {
+                        if (i_this->mNunMode) {
                             i_this->mActionState = ST_ACTION_FIGHT_UNARMED;
-                            i_this->m02C4 = 50;
+                            i_this->mMode = 50;
                         } else {
                             i_this->mActionState = ST_ACTION_BREAK_WAIT;
-                            i_this->m02C4 = 3;
-                            i_this->m02F8 = 500;
+                            i_this->mMode = 3;
+                            i_this->mDisappearTimer = 500;
                             anm_init(i_this, dRes_INDEX_ST_BCK_FUKKI_WAIT_e, 10.0f, 2, 1.0f, -1);
                         }
                     }
@@ -2081,7 +2081,7 @@ void part_move(st_class *i_this, s32 joint) {
             break;
         }
         case 6: {
-            if (!i_this->m1DDC && !(part->mPartVelocity.y > 0.0f)) {
+            if (!i_this->mReassembleWait && !(part->mPartVelocity.y > 0.0f)) {
                 part->m3E = (s16)gabi::ftoi(random_positive(65536.0f));
                 part->m44 = 0.0f;
                 part->mPartState = 1;
@@ -2111,7 +2111,7 @@ void part_move(st_class *i_this, s32 joint) {
                         s16 angle =
                             cM_atan2s<s16>((f32)direction->value.x, (f32)direction->value.z);
                         angle = (s16)(angle + (s16)gabi::ftoi(random_signed(20000.0f)));
-                        i_this->m1DDA = angle;
+                        i_this->mHeadTargetAngleY = angle;
                         mDoMtx_YrotS(stCalcMatrix().get(), angle);
                         direction->value.x = 0.0f;
                         f64 random = random_positive(35.0f);
@@ -2125,7 +2125,7 @@ void part_move(st_class *i_this, s32 joint) {
                     }
                 }
                 cLib_addCalcAngleS2(&part->mPartRot.x, 0, 2, 0xC00);
-                cLib_addCalcAngleS2(&part->mPartRot.y, (s16)i_this->m1DDA, 2, 0xC00);
+                cLib_addCalcAngleS2(&part->mPartRot.y, (s16)i_this->mHeadTargetAngleY, 2, 0xC00);
             } else {
                 s32 frame = gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf2)).mFrame);
                 if (frame == 5) {
@@ -2140,7 +2140,7 @@ void part_move(st_class *i_this, s32 joint) {
             break;
         }
         case 7: {
-            if (!i_this->m1DDC && !(part->mPartVelocity.y > 0.0f)) {
+            if (!i_this->mReassembleWait && !(part->mPartVelocity.y > 0.0f)) {
                 part->m3E = (s16)gabi::ftoi(random_positive(65536.0f));
                 part->m44 = 0.0f;
                 part->mPartState = 1;
@@ -2166,7 +2166,7 @@ void part_move(st_class *i_this, s32 joint) {
             break;
         }
         case 8: {
-            i_this->m02F6 = 10;
+            i_this->mNoHitTimer = 10;
             f32 floor = part_posmove(i_this, part) + 20.0f;
             if (std::fabs((f32)i_this->home.pos.y - (f32)part->mPartPos.y) > 3000.0f)
                 floor = part->mPartPos.y;
@@ -2193,7 +2193,7 @@ void part_move(st_class *i_this, s32 joint) {
             return;
         }
         case 10:
-            if (i_this->m0ED3 == 11) {
+            if (i_this->mPartCommand == 11) {
                 u32 upper = find_actor(i_this->mUpperBodyEntityId);
                 if (upper) {
                     part->mPartState = 1;
@@ -2225,28 +2225,28 @@ void part_move(st_class *i_this, s32 joint) {
     switch ((s8)part->m05) {
     case 0: {
         joint_matrix(i_this, joint);
-        s8 shake = i_this->m1DE4;
+        s8 shake = i_this->mShakeTimer;
         if (shake) {
             f32 amplitude = (f32)shake * (REG8_F(7) + 2.0f);
-            u32 count = i_this->m02E8;
+            u32 count = i_this->mFrameCounter;
             f32 x = angle_sine(count * 0x3800 + (u32)joint * 0x3000) * amplitude;
             f32 z = angle_cosine(count * 0x3A00 + (u32)joint * 0x3100) * amplitude;
             f32 y = angle_cosine(count * 0x3C00 + (u32)joint * 0x2800) * amplitude;
             MtxTrans(1, x, y, z);
         }
         copy_model_matrix(gabi::ea((void *)part->mpPartModel), stCalcMatrix().v.get());
-        if (joint == 11 && weapon && i_this->m1DD0) {
-            s8 state = i_this->m1DD0;
+        if (joint == 11 && weapon && i_this->mWeaponState) {
+            s8 state = i_this->mWeaponState;
             if (state == 1) {
                 fopAcM_setCarryNow(at<void>(weapon), 0);
-                i_this->m1DD0 = 10;
+                i_this->mWeaponState = 10;
                 return;
             } else if (state >= 2 && ((u32)stActor(weapon).actor_status & 0x2000)) {
                 mDoMtx_YrotM(stCalcMatrix().get(), (s16)(REG8_S(1) + 16000));
                 mDoMtx_XrotM(stCalcMatrix().get(), (s16)REG8_S(2));
                 mDoMtx_ZrotM(stCalcMatrix().get(), (s16)REG8_S(3));
                 MtxTrans(1, (f32)REG8_F(9), (f32)REG8_F(10), REG8_F(11) + 65.0f);
-                if (i_this->m02B9)
+                if (i_this->mAmbushTrigger)
                     MtxTrans(0, 20000.0f, 20000.0f, 20000.0f);
                 u32 model = stHeldWeapon(weapon).mpModel.v.get();
                 if (model)
@@ -2254,7 +2254,7 @@ void part_move(st_class *i_this, s32 joint) {
             }
         }
         if (joint == 15) {
-            csXyz___pl(&i_this->shape_angle, &i_this->m02FC);
+            csXyz___pl(&i_this->shape_angle, &i_this->mHeadAngleOffset);
             // csXyz value return occupies r3/r4 in the guest ABI.
             u32 first = gabi::cpu->r[3], second = gabi::cpu->r[4];
             part->mPartRot.x = first >> 16;
@@ -2269,25 +2269,25 @@ void part_move(st_class *i_this, s32 joint) {
         mDoMtx_XrotM(stCalcMatrix().get(), (s16)part->mPartRot.x);
         f32 scaleX = i_this->mEnemyIce.mScaleXZ, scaleY = i_this->mEnemyIce.mScaleY;
         MtxScale(1, scaleX, scaleY, scaleX);
-        if (joint == 15 && i_this->m1DD8) {
-            auto &shakeTimer = i_this->m1E82;
+        if (joint == 15 && i_this->mHeadState) {
+            auto &shakeTimer = i_this->mHeadShakeTimer;
             if (shakeTimer) {
                 --shakeTimer;
                 f32 amplitude = (f32)(s16)shakeTimer * (REG8_F(5) + 1.0f);
-                u32 count = i_this->m02E8;
+                u32 count = i_this->mFrameCounter;
                 MtxTrans(1, amplitude * angle_sine(count * 0x3800), 0.0f,
                          amplitude * angle_cosine(count * 0x3C00));
             }
             u32 model = stMorf(gabi::ea((void *)i_this->mpMorf2)).mpModel.v.get();
             copy_model_matrix(model, stCalcMatrix().v.get());
-            i_this->m1DD8 = 2;
+            i_this->mHeadState = 2;
             if (i_this->mEnemyIce.mLightShrinkTimer) {
                 i_this->mEnemyIce.mYOffset = REG8_F(3) + 10.0f;
                 copyVectorWords(gabi::ea(&i_this->current.pos), gabi::ea(&part->mPartPos));
             }
         } else
             copy_model_matrix(gabi::ea((void *)part->mpPartModel), stCalcMatrix().v.get());
-        if (weapon && joint == 11 && i_this->m1DD0 >= 2) {
+        if (weapon && joint == 11 && i_this->mWeaponState >= 2) {
             u32 model = stHeldWeapon(weapon).mpModel.v.get();
             if (model)
                 copy_model_matrix(model, stCalcMatrix().v.get());
@@ -2296,14 +2296,14 @@ void part_move(st_class *i_this, s32 joint) {
     }
     }
     if (joint == 15) {
-        if (!i_this->m1E86) {
+        if (!i_this->mUpperSeparate) {
             copyVectorWords(gabi::ea(&i_this->eyePos), gabi::ea(&part->mPartPos));
             i_this->attention_info.position.x = part->mPartPos.x;
             i_this->attention_info.position.y = part->mPartPos.y;
             i_this->attention_info.position.z = part->mPartPos.z;
             i_this->attention_info.position.y = (f32)i_this->attention_info.position.y + 30.0f;
         }
-        if (i_this->m1DD8 == 2) {
+        if (i_this->mHeadState == 2) {
             u32 matrix = animation_matrix(gabi::ea((void *)i_this->mpMorf2), 2);
             PSMTXCopy(at<void>(matrix), stCalcMatrix().get());
             direction->value.x = REG0_F(4);
@@ -2343,17 +2343,17 @@ void cc_set(st_class *i_this) {
     disabledWeapon->value.z = 0.0f;
     for (u32 index = 0; index < 7; ++index) {
         bool active = false;
-        if (i_this->m0ED0 != 2) {
-            if (i_this->mActionState == ST_ACTION_LOWER_BODY || i_this->m02C4 == 35)
-                active = !i_this->m0ED0 && index >= 5;
-            else if (i_this->m0ED0)
+        if (i_this->mTgMode != 2) {
+            if (i_this->mActionState == ST_ACTION_LOWER_BODY || i_this->mMode == 35)
+                active = !i_this->mTgMode && index >= 5;
+            else if (i_this->mTgMode)
                 active = index == 0;
             else
                 active = i_this->mActionState != ST_ACTION_UPPER_BODY || index < 5;
         }
-        u32 sphere = gabi::ea(&i_this->m054C[index]);
+        u32 sphere = gabi::ea(&i_this->mBodySph[index]);
         if (active) {
-            if (!index && i_this->m1DD8) {
+            if (!index && i_this->mHeadState) {
                 u32 model = stMorf(gabi::ea((void *)i_this->mpMorf2)).mpModel.v.get();
                 PSMTXCopy(at<void>(model ? model + 0xC8 : 0), stCalcMatrix().get());
             } else
@@ -2368,12 +2368,12 @@ void cc_set(st_class *i_this) {
         }
         collision_register(sphere);
     }
-    u32 weapon = gabi::ea(&i_this->m0D80);
-    if (i_this->m0ED1 && !i_this->m0ED0) {
-        if (i_this->m1DC8) {
+    u32 weapon = gabi::ea(&i_this->mWeaponSph);
+    if (i_this->mAtMode && !i_this->mTgMode) {
+        if (i_this->mNunMode) {
             copyVectorWords(gabi::ea(&center->value), gabi::ea(i_this) + 0x1FCC);
             cM3dGSph_SetR(&stSphere(weapon).mSph, 30.0f);
-        } else if (i_this->m0ED1 == 3) {
+        } else if (i_this->mAtMode == 3) {
             joint_matrix(i_this, ST_JNT_ASIR_e);
             zero->value.x = 0.0f;
             zero->value.y = 0.0f;
@@ -2385,66 +2385,66 @@ void cc_set(st_class *i_this) {
             stSphere(weapon).mGObjAt.mSpl = 6;
             joint_matrix(i_this, ST_JNT_BUKI_e);
             f32 factor = 1.0f;
-            if (i_this->m0ED1 == 2) {
-                f32 blend = std::fabs((f32)i_this->m0308);
+            if (i_this->mAtMode == 2) {
+                f32 blend = std::fabs((f32)i_this->mSpinSpeed);
                 if (blend > 0.5f)
                     stSphere(weapon).mGObjAt.mSpl = 7;
                 factor = blend * 1.5f;
             }
-            bool odd = (u32)i_this->m02E8 & 1;
+            bool odd = (u32)i_this->mFrameCounter & 1;
             zero->value.x = REG0_F(10) + (odd ? 80.0f : 30.0f);
             cM3dGSph_SetR(&stSphere(weapon).mSph, factor * (odd ? 70.0f : 50.0f));
             zero->value.y = 0.0f;
             zero->value.z = 0.0f;
             MtxPosition(&zero->value, &center->value);
         }
-        if (i_this->m1E87)
-            dCcD_Sph_MoveCAt(&i_this->m0D80, &center->value);
+        if (i_this->mAtStarted)
+            dCcD_Sph_MoveCAt(&i_this->mWeaponSph, &center->value);
         else {
-            dCcD_Sph_StartCAt(&i_this->m0D80, &center->value);
-            ++i_this->m1E87;
+            dCcD_Sph_StartCAt(&i_this->mWeaponSph, &center->value);
+            ++i_this->mAtStarted;
         }
         stSphere(weapon).mObjAt.mSPrm = (u32)stSphere(weapon).mObjAt.mSPrm | 1;
     } else {
-        i_this->m1E87 = 0;
+        i_this->mAtStarted = 0;
         cM3dGSph_SetC(&stSphere(weapon).mSph, &disabledWeapon->value);
     }
     collision_register(weapon);
-    i_this->m0ED0 = 0;
-    i_this->m0ED1 = 0;
+    i_this->mTgMode = 0;
+    i_this->mAtMode = 0;
 }
 
 /* inlined into daSt_Execute */
 void eff_move(st_class *i_this) {
-    if (i_this->m1F60)
-        --i_this->m1F60;
-    if (i_this->m1F68 == 1) {
-        i_this->m1F64 = 1.0f;
-        if (!i_this->m1F60) {
-            i_this->m1F60 = 15;
+    if (i_this->mBreakEffWait)
+        --i_this->mBreakEffWait;
+    if (i_this->mBreakEffMode == 1) {
+        i_this->mBreakEffScale = 1.0f;
+        if (!i_this->mBreakEffWait) {
+            i_this->mBreakEffWait = 15;
             for (u32 index = 0; index < 20; ++index)
-                if (!i_this->m1EE8[index]) {
+                if (!i_this->mBreakEmitter[index]) {
                     u32 emitter = particle(0x817B, &i_this->current.pos);
-                    i_this->m1EE8[index] = at<void>(emitter);
+                    i_this->mBreakEmitter[index] = at<void>(emitter);
                     if (emitter) {
                         stEmitter(emitter).mFlags = (u32)stEmitter(emitter).mFlags | 0x40;
-                        i_this->m1F38[index] = 200;
+                        i_this->mBreakEmitterTimer[index] = 200;
                     }
                     break;
                 }
         }
     }
-    if (i_this->m1F68 == 2)
-        cLib_addCalc0(&i_this->m1F64, 1.0f, 0.1f);
+    if (i_this->mBreakEffMode == 2)
+        cLib_addCalc0(&i_this->mBreakEffScale, 1.0f, 0.1f);
     for (u32 index = 0; index < 20; ++index) {
-        u32 emitter = gabi::ea((void *)i_this->m1EE8[index]);
+        u32 emitter = gabi::ea((void *)i_this->mBreakEmitter[index]);
         if (emitter) {
-            stEmitter(emitter).mGlobalParticleScale.x = i_this->m1F64;
-            if (i_this->m1F38[index] && (--i_this->m1F38[index], !i_this->m1F38[index])) {
-                emitter = gabi::ea((void *)i_this->m1EE8[index]);
+            stEmitter(emitter).mGlobalParticleScale.x = i_this->mBreakEffScale;
+            if (i_this->mBreakEmitterTimer[index] && (--i_this->mBreakEmitterTimer[index], !i_this->mBreakEmitterTimer[index])) {
+                emitter = gabi::ea((void *)i_this->mBreakEmitter[index]);
                 stEmitter(emitter).mMaxFrame = 0xFFFFFFFF;
                 stEmitter(emitter).mFlags = (u32)stEmitter(emitter).mFlags | 1;
-                i_this->m1EE8[index] = nullptr;
+                i_this->mBreakEmitter[index] = nullptr;
             }
         }
     }
@@ -2459,7 +2459,7 @@ s32 daSt_Execute(st_class *i_this) {
             fopAcM_delete(i_this);
         return 1;
     }
-    if (i_this->m02FA || ((f32)i_this->home.pos.y - (f32)i_this->current.pos.y > 4000.0f)) {
+    if (i_this->mDeleteRequest || ((f32)i_this->home.pos.y - (f32)i_this->current.pos.y > 4000.0f)) {
         fopAcM_delete(i_this);
         return 1;
     }
@@ -2469,7 +2469,7 @@ s32 daSt_Execute(st_class *i_this) {
         u32 model = stMorf(gabi::ea((void *)i_this->mpMorf)).mpModel.v.get();
         MtxTrans(0, (f32)i_this->current.pos.x, (f32)i_this->current.pos.y,
                  (f32)i_this->current.pos.z);
-        mDoMtx_YrotM(stCalcMatrix().get(), (s16)((s16)i_this->shape_angle.y + (s16)i_this->m0304));
+        mDoMtx_YrotM(stCalcMatrix().get(), (s16)((s16)i_this->shape_angle.y + (s16)i_this->mSpinAngleY));
         f32 horizontal = i_this->mEnemyIce.mScaleXZ, vertical = i_this->mEnemyIce.mScaleY;
         MtxScale(1, horizontal, vertical, horizontal);
         copy_model_matrix(model, stCalcMatrix().v.get());
@@ -2492,19 +2492,19 @@ s32 daSt_Execute(st_class *i_this) {
             return 1;
         }
     }
-    ++i_this->m02E8;
+    ++i_this->mFrameCounter;
     for (u32 index = 0; index < 5; ++index)
         if (i_this->mTimers[index])
             --i_this->mTimers[index];
-    if (i_this->m02F6)
-        --i_this->m02F6;
-    if (i_this->m1DDC)
-        --i_this->m1DDC;
+    if (i_this->mNoHitTimer)
+        --i_this->mNoHitTimer;
+    if (i_this->mReassembleWait)
+        --i_this->mReassembleWait;
     St_move(i_this);
     damage_check(i_this);
     cLib_addCalcAngleS2(&i_this->shape_angle.y,
-                        (s16)((s16)i_this->current.angle.y + (s16)i_this->m0302), 2, 0x1000);
-    i_this->m0302 = 0;
+                        (s16)((s16)i_this->current.angle.y + (s16)i_this->mMoveAngleOffset), 2, 0x1000);
+    i_this->mMoveAngleOffset = 0;
     mDoExt_McaMorf_play((void *)i_this->mpMorf, &i_this->eyePos, 0, 0);
     mDoExt_McaMorf_play((void *)i_this->mpMorf2, &i_this->eyePos, 0, 0);
     u32 model = stMorf(gabi::ea((void *)i_this->mpMorf)).mpModel.v.get();
@@ -2513,20 +2513,20 @@ s32 daSt_Execute(st_class *i_this) {
     stModel(model).mBaseScale.y = sy;
     stModel(model).mBaseScale.z = sz;
     MtxTrans(0, (f32)i_this->current.pos.x, (f32)i_this->current.pos.y, (f32)i_this->current.pos.z);
-    mDoMtx_YrotM(stCalcMatrix().get(), (s16)((s16)i_this->shape_angle.y + (s16)i_this->m0304));
+    mDoMtx_YrotM(stCalcMatrix().get(), (s16)((s16)i_this->shape_angle.y + (s16)i_this->mSpinAngleY));
     copy_model_matrix(model, stCalcMatrix().v.get());
     mDoExt_McaMorf_calc((void *)i_this->mpMorf);
     mDoExt_McaMorf_calc((void *)i_this->mpMorf2);
     cc_set(i_this);
     for (u32 joint = 0; joint < 26; ++joint)
-        if (i_this->mParts[joint].mpPartModel && (!i_this->m1DC8 || (joint != 3 && joint != 4)))
+        if (i_this->mParts[joint].mpPartModel && (!i_this->mNunMode || (joint != 3 && joint != 4)))
             part_move(i_this, joint);
-    if (i_this->m0ED3 != 2)
-        i_this->m0ED3 = 0;
-    cLib_addCalcAngleS2(&i_this->m0304, 0, 2, 0x40);
-    if (i_this->mActionState != ST_ACTION_LOWER_BODY && i_this->m02C4 != 35)
+    if (i_this->mPartCommand != 2)
+        i_this->mPartCommand = 0;
+    cLib_addCalcAngleS2(&i_this->mSpinAngleY, 0, 2, 0x40);
+    if (i_this->mActionState != ST_ACTION_LOWER_BODY && i_this->mMode != 35)
         ke_control(i_this);
-    if (i_this->m1DC8)
+    if (i_this->mNunMode)
         nun_control(i_this);
     eff_move(i_this);
     spin_smoke_move(i_this);
@@ -2542,7 +2542,7 @@ BOOL daSt_IsDelete(st_class *i_this) { return 1; }
 /* 024957B4 */
 BOOL daSt_Delete(st_class *i_this) {
     dComIfG_resDelete(&i_this->mPhase, stArcDelete);
-    if (i_this->m02FB) {
+    if (i_this->mHioOwner) {
         s8 child = l_HIO.mNo;
         hio_set = 0;
         mDoHIO_subRoot_c_deleteChild(child);
@@ -2554,12 +2554,12 @@ BOOL daSt_Delete(st_class *i_this) {
     u32 callback = gabi::ea(i_this) + 0x21D0;
     callVirtualWithLinkage(word(word(callback) + 0x44), at<void>(callback));
     for (u32 i = 0; i < 20; ++i) {
-        u32 emitter = gabi::ea((void *)i_this->m1EE8[i]);
+        u32 emitter = gabi::ea((void *)i_this->mBreakEmitter[i]);
         if (emitter) {
             u32 flags = stEmitter(emitter).mFlags;
             stEmitter(emitter).mMaxFrame = 0xFFFFFFFF;
             stEmitter(emitter).mFlags = flags | 1;
-            i_this->m1EE8[i] = nullptr;
+            i_this->mBreakEmitter[i] = nullptr;
         }
     }
     return 1;
@@ -2610,7 +2610,7 @@ cPhs_State daSt_Create(st_class *i_this) {
     if (phase != 4)
         return phase;
     for (u32 i = 0; i < 2; ++i)
-        i_this->m1E88[i].m12 = 1;
+        i_this->mSmokeCallBack[i].m12 = 1;
     u32 parameters = i_this->mParameters;
     s16 deathSwitch = i_this->current.angle.z;
     i_this->gbaName = 4;
@@ -2638,7 +2638,7 @@ cPhs_State daSt_Create(st_class *i_this) {
     if (!hio_set) {
         s32 child = mDoHIO_subRoot_c_createChild<s32>(stHioName, &l_HIO);
         l_HIO.mNo = child;
-        i_this->m02FB = 1;
+        i_this->mHioOwner = 1;
         hio_set = 1;
     }
     u32 body = gabi::ea((void *)i_this->mpMorf);
@@ -2648,7 +2648,7 @@ cPhs_State daSt_Create(st_class *i_this) {
     if (behavior == 1 || behavior == 2 || behavior == 3) {
         i_this->mActionState = behavior == 1 ? 0xF : 0x10;
         u8 ambushSwitch = i_this->mAmbushSwitch;
-        i_this->m02B9 = ambushSwitch == 0xFF ? 0xFF : (u8)(ambushSwitch + 1);
+        i_this->mAmbushTrigger = ambushSwitch == 0xFF ? 0xFF : (u8)(ambushSwitch + 1);
     }
     i_this->actor_status = (u32)i_this->actor_status | 0x4000;
     i_this->m2364 = 5;
@@ -2663,35 +2663,35 @@ cPhs_State daSt_Create(st_class *i_this) {
     dBgS_AcchCir_SetWall(&i_this->mAcchCir, 60.0f, 100.0f);
     dCcD_Stts_Init(&i_this->mStts, 0x32, 2, i_this);
     for (u32 i = 0; i < 7; ++i) {
-        dCcD_Sph_Set(&i_this->m054C[i], (i ? &body_sph_src : &head_sph_src));
-        i_this->m054C[i].mStts = &i_this->mStts;
+        dCcD_Sph_Set(&i_this->mBodySph[i], (i ? &body_sph_src : &head_sph_src));
+        i_this->mBodySph[i].mStts = &i_this->mStts;
     }
-    dCcD_Sph_Set(&i_this->m0D80, &wepon_sph_src);
-    i_this->m0D80.mStts = &i_this->mStts;
+    dCcD_Sph_Set(&i_this->mWeaponSph, &wepon_sph_src);
+    i_this->mWeaponSph.mStts = &i_this->mStts;
     if (i_this->mBehaviorType != 14) {
         u32 weapon = fopAcM_create<u32>(0x1CF, 2, &i_this->current.pos, (s8)i_this->current.roomNo,
                                         (void *)nullptr, (void *)nullptr, -1, (void *)nullptr);
         i_this->mEnemyIce.mpActor = i_this;
         i_this->health = 16;
-        i_this->m1E84 = 16;
+        i_this->mBreakHealth = 16;
         i_this->max_health = 16;
-        i_this->m0ED2 = 0x19;
+        i_this->mPartsAttached = 0x19;
         i_this->mHeldWeaponEntityId = weapon;
         i_this->mUpperBodyEntityId = 0xFFF;
-        i_this->m1DD0 = 1;
+        i_this->mWeaponState = 1;
     } else {
         i_this->health = 16;
-        i_this->m1E84 = 5;
+        i_this->mBreakHealth = 5;
         i_this->mActionState = ST_ACTION_UPPER_BODY;
         i_this->mUpperBodyEntityId = 0xFFF;
         i_this->mEnemyIce.mpActor = i_this;
-        i_this->m0ED3 = 0x14;
+        i_this->mPartCommand = 0x14;
         i_this->max_health = 16;
-        i_this->m0ED2 = 0x19;
+        i_this->mPartsAttached = 0x19;
     }
     i_this->mEnemyIce.mDeathSwitch = i_this->mDeathSwitch;
     i_this->stealItemLeft = 3;
-    i_this->m02F6 = 15;
+    i_this->mNoHitTimer = 15;
     native_daSt_Execute(i_this);
     return phase;
 }
@@ -2749,14 +2749,14 @@ st_class *actor_construct(st_class *i_this) {
     dCcD_GStts_dCcD_GStts(&i_this->mStts.__vtbl_gstts);
     i_this->mStts.__vtbl = 0x1004AE88;
     i_this->mStts.__vtbl_gstts = 0x1004AEC0;
-    __construct_array(&i_this->m054C, 7, 0x12C, at<void>(0x025166F0));
-    dCcD_Sph_construct(&i_this->m0D80);
+    __construct_array(&i_this->mBodySph, 7, 0x12C, at<void>(0x025166F0));
+    dCcD_Sph_construct(&i_this->mWeaponSph);
     __construct_array(&i_this->mParts, 26, 0x6C,
                       at<void>(gabi::guest_fn((const void *)part_construct)));
     mDoExt_3DlineMat0_c_construct(&i_this->mLineMat);
-    __construct_array(&i_this->m1E88, 3, 0x20,
+    __construct_array(&i_this->mSmokeCallBack, 3, 0x20,
                       at<void>(gabi::guest_fn((const void *)smoke_construct)));
-    dPa_smokeEcallBack_dPa_smokeEcallBack(&i_this->m1F88, 1);
+    dPa_smokeEcallBack_dPa_smokeEcallBack(&i_this->mDragSmokeCallBack, 1);
     cCcD_Stts_construct(&i_this->mEnemyIce.mStts);
     dCcD_GStts_dCcD_GStts(&i_this->mEnemyIce.mStts.__vtbl_gstts);
     i_this->mEnemyIce.mStts.__vtbl = 0x1004AE88;
@@ -2787,13 +2787,13 @@ void actor_destroy(st_class *i_this, u32 flags) {
     cM3dGCir_destroy(&i_this->mEnemyIce.mBgAcchCir.m_cir, 2);
     dCcD_Cyl_destroy(&i_this->mEnemyIce.mCyl, 2);
     dCcD_Stts_destroy(&i_this->mEnemyIce.mStts, 2);
-    __destroy_arr(&i_this->m1E88, 3, 0x20, at<void>(gabi::guest_fn((const void *)smoke_destroy)), 0,
+    __destroy_arr(&i_this->mSmokeCallBack, 3, 0x20, at<void>(gabi::guest_fn((const void *)smoke_destroy)), 0,
                   0);
     mDoExt_3DlineMat0_c_destroy(&i_this->mLineMat, 2);
     __destroy_arr(&i_this->mParts, 26, 0x6C, at<void>(gabi::guest_fn((const void *)part_destroy)),
                   0, 0);
-    dCcD_Sph_destroy(&i_this->m0D80, 2);
-    __destroy_arr(&i_this->m054C, 7, 0x12C, at<void>(0x02515AE8), 0, 0);
+    dCcD_Sph_destroy(&i_this->mWeaponSph, 2);
+    __destroy_arr(&i_this->mBodySph, 7, 0x12C, at<void>(0x02515AE8), 0, 0);
     dCcD_Stts_destroy(&i_this->mStts, 2);
     i_this->mAcch.dBgS_GrpPassChk::__vtbl = 0x1003D55C;
     i_this->mAcch.dBgS_PolyPassChk::__vtbl = 0x1003D56C;

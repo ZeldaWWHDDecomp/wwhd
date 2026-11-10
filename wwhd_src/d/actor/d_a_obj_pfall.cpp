@@ -106,17 +106,17 @@ static daObj_PfallHIO_c *pfallHioConstruct(daObj_PfallHIO_c *self) {
         self = static_cast<daObj_PfallHIO_c *>(pfallAllocate(0x10));
     if (self) {
         self->mVtable = PFALL_HIO_VTABLE;
-        self->field_0x08 = ropeDrop;
-        self->field_0x0C = 0;
-        self->field_0x06 = 0;
+        self->mHimoOffsetY = ropeDrop;
+        self->mWaitTime = 0;
+        self->mNoWarp = 0;
         self->mNo = -1;
-        self->field_0x05 = 0;
+        self->mDebugInit = 0;
     }
     return self;
 }
 /* 02383794 */
 void daObj_Pfall_c::setAnm() {
-    pfallSetAnm("Pfall", mpMorf, &mBckIdx, &field_0x481, &mOldAnmPrmIdx, a_anm_bcks_tbl,
+    pfallSetAnm("Pfall", mpMorf, &mBckIdx, &mAnmPrmIdx, &mOldAnmPrmIdx, a_anm_bcks_tbl,
                 a_anm_prm_tbl, 0);
 }
 /* 0238299C */
@@ -134,7 +134,7 @@ void daObj_Pfall_c::set_mtx() {
         rightInitialized = 1;
         offset_pos_right.y = zero;
     }
-    J3DModel *model = field_0x3C4;
+    J3DModel *model = mpModel;
     f32 x = scale.x, y = scale.y, z = scale.z;
     model->mBaseScale.x = x;
     model->mBaseScale.z = z;
@@ -144,14 +144,14 @@ void daObj_Pfall_c::set_mtx() {
     mDoMtx_stack_c::transM(offset_pos_left.x, offset_pos_left.y, offset_pos_left.z);
     f32 down = hingeDown;
     mDoMtx_stack_c::transM(zero, down, zero);
-    mDoMtx_stack_c::ZrotM((s16)field_0x3B4);
+    mDoMtx_stack_c::ZrotM((s16)mFloorAngle);
     f32 up = hingeUp;
     mDoMtx_stack_c::transM(zero, up, zero);
-    modelMatrix(field_0x3C4);
-    MTXCopy(mDoMtx_stack_c::get(), &field_0x3CC);
+    modelMatrix(mpModel);
+    MTXCopy(mDoMtx_stack_c::get(), &mBgMtx);
     x = scale.x;
     y = scale.y;
-    model = field_0x3FC;
+    model = mpModel2;
     z = scale.z;
     model->mBaseScale.x = x;
     model->mBaseScale.y = y;
@@ -161,10 +161,10 @@ void daObj_Pfall_c::set_mtx() {
     mDoMtx_stack_c::transM(offset_pos_right.x, offset_pos_right.y, offset_pos_right.z);
     mDoMtx_stack_c::YrotM(-0x8000);
     mDoMtx_stack_c::transM(zero, down, zero);
-    mDoMtx_stack_c::ZrotM((s16)field_0x3B4);
+    mDoMtx_stack_c::ZrotM((s16)mFloorAngle);
     mDoMtx_stack_c::transM(zero, up, zero);
-    modelMatrix(field_0x3FC);
-    MTXCopy(mDoMtx_stack_c::get(), &field_0x404);
+    modelMatrix(mpModel2);
+    MTXCopy(mDoMtx_stack_c::get(), &mBgMtx2);
     model = mpMorf->getModel();
     if (!ratOffsetInitialized) {
         offset_pos.y = zero;
@@ -189,8 +189,8 @@ void daObj_Pfall_c::set_mtx() {
     mDoMtx_stack_c::YrotM(current.angle.y);
     mDoMtx_stack_c::transM(offset_pos.x, offset_pos.y, offset_pos.z);
     modelMatrix(model);
-    f32 lift = l_HIO.field_0x08;
-    f32 offset = field_0x438;
+    f32 lift = l_HIO.mHimoOffsetY;
+    f32 offset = mHimoY;
     mDoMtx_stack_c::transM(zero, offset + lift, zero);
     mDoMtx_stack_c::YrotM(-0x8000);
     modelMatrix(mpHimoModel);
@@ -200,9 +200,9 @@ void daObj_Pfall_c::set_mtx() {
 BOOL daObj_Pfall_c::CreateHeap() {
     J3DModelData *data = pfallResource(BDL_AOTSI);
     resourceAssert(data, 0xD1, "modelData != (0)");
-    field_0x3C4 = mDoExt_J3DModel__create(data, 0, 0x11020203);
-    field_0x3FC = mDoExt_J3DModel__create(data, 0, 0x11020203);
-    if (field_0x3C4 == nullptr || field_0x3FC == nullptr)
+    mpModel = mDoExt_J3DModel__create(data, 0, 0x11020203);
+    mpModel2 = mDoExt_J3DModel__create(data, 0, 0x11020203);
+    if (mpModel == nullptr || mpModel2 == nullptr)
         return 0;
     data = pfallResource(BDL_PSUZU);
     resourceAssert(data, 0xD9, "himoModelData != (0)");
@@ -222,20 +222,20 @@ BOOL daObj_Pfall_c::CreateHeap() {
     if (mpBgW == nullptr)
         return 0;
     data = pfallResource(DZB_AOTOSI);
-    if (pfallSetBackground(mpBgW, reinterpret_cast<cBgD_t *>(data), 1, &field_0x3CC))
+    if (pfallSetBackground(mpBgW, reinterpret_cast<cBgD_t *>(data), 1, &mBgMtx))
         return 0;
     mpBgW2 = pfallNewBackground(nullptr);
     if (mpBgW2 == nullptr)
         return 0;
     data = pfallResource(DZB_AOTOSI);
-    return pfallSetBackground(mpBgW2, reinterpret_cast<cBgD_t *>(data), 1, &field_0x404) == 0;
+    return pfallSetBackground(mpBgW2, reinterpret_cast<cBgD_t *>(data), 1, &mBgMtx2) == 0;
 }
 /* 023830E4 */
 void daObj_Pfall_c::CreateInit() {
     dComIfG_Bgsp()->Regist(mpBgW, this);
     dComIfG_Bgsp()->Regist(mpBgW2, this);
     set_mtx();
-    field_0x481 = ANM_WAIT;
+    mAnmPrmIdx = ANM_WAIT;
     mode_wait_init();
 }
 /* 0238314C */
@@ -313,9 +313,9 @@ void daObj_Pfall_c::cutWaitStart(s32 staff) {
 /* 02383378 */
 void daObj_Pfall_c::cutWaitProc(s32 staff) {
     if (!pfallCalcTimer(&mTimer)) {
-        if (!field_0x483) {
+        if (!mLaughSePlayed) {
             s8 room = current.roomNo;
-            field_0x483 = 1;
+            mLaughSePlayed = 1;
             s32 reverb = pfallGetReverb(room);
             pfallMonsterSound(JA_SE_CV_NZ_LAUGH, &eyePos, (u32)mBsPcId, 0, reverb);
         }
@@ -325,14 +325,14 @@ void daObj_Pfall_c::cutWaitProc(s32 staff) {
 /* 02383310 */
 void daObj_Pfall_c::cutOpenStart(s32 staff) {
     s8 room = current.roomNo;
-    field_0x3B4 = 0;
-    field_0x3B0 = 0;
+    mFloorAngle = 0;
+    mOpenStep = 0;
     s32 reverb = pfallGetReverb(room);
     mDoAud_seStart(JA_SE_OBJ_TC_JAIL_FLR_BRK, &eyePos, 0, reverb);
 }
 /* 02383404 */
 void daObj_Pfall_c::cutOpenProc(s32 staff) {
-    s32 step = field_0x3B0;
+    s32 step = mOpenStep;
     if (step >= 7) {
         cutEnd(staff);
         return;
@@ -346,27 +346,27 @@ void daObj_Pfall_c::cutOpenProc(s32 staff) {
     (*targets)[5] = -0x30D4;
     (*targets)[6] = -0x31CE;
     s16 target = *gabi::at<be<s16>>(gabi::ea(targets.get()) + (u32)step * 2);
-    s16 difference = cLib_addCalcAngleS(&field_0x3B4, target, 4, 0x2000, 0x100);
+    s16 difference = cLib_addCalcAngleS(&mFloorAngle, target, 4, 0x2000, 0x100);
     s16 magnitude = (s16)(difference < 0 ? -(s32)difference : (s32)difference);
     if (magnitude <= 0x100)
-        field_0x3B0 = (u32)field_0x3B0 + 1;
+        mOpenStep = (u32)mOpenStep + 1;
 }
 /* 0238336C */
-void daObj_Pfall_c::cutHikuStart(s32 staff) { field_0x481 = ANM_HIKU; }
+void daObj_Pfall_c::cutHikuStart(s32 staff) { mAnmPrmIdx = ANM_HIKU; }
 /* 02383510 */
 void daObj_Pfall_c::cutHikuProc(s32 staff) {
-    if (field_0x481 == ANM_HIKU) {
+    if (mAnmPrmIdx == ANM_HIKU) {
         if (mpMorf->isStop()) {
             cutEnd(staff);
-            field_0x481 = ANM_WAIT;
+            mAnmPrmIdx = ANM_WAIT;
         }
     }
 }
 /* 023830CC */
 void daObj_Pfall_c::mode_wait_init() {
-    s16 wait = l_HIO.field_0x0C;
-    field_0x3A8 = MODE_WAIT;
-    field_0x3B8 = wait;
+    s16 wait = l_HIO.mWaitTime;
+    mCurMode = MODE_WAIT;
+    mWaitTimer = wait;
 }
 /* 02383D24 */
 void daObj_Pfall_c::mode_wait() {
@@ -376,19 +376,19 @@ void daObj_Pfall_c::mode_wait() {
     position->z = current.pos.z;
     if (pfallCheckPlayer(position.get(), 100.0f, 100.0f)) {
         fopAc_ac_c *player = dComIfGp_getPlayer(0);
-        if (player->speedF == 0.0f && !pfallCalcTimer(&field_0x3B8))
+        if (player->speedF == 0.0f && !pfallCalcTimer(&mWaitTimer))
             mode_event_init();
     }
     mpBgW->Move();
     mpBgW2->Move();
 }
 /* 02383D18 */
-void daObj_Pfall_c::mode_event_init() { field_0x3A8 = MODE_EVENT; }
+void daObj_Pfall_c::mode_event_init() { mCurMode = MODE_EVENT; }
 /* 02383DC4 */
 void daObj_Pfall_c::mode_event() {
     if (eventInfo.mCommand == 2) {
         if (pfallEndCheck(eventManager(), "NZFALL")) {
-            if (l_HIO.field_0x06)
+            if (l_HIO.mNoWarp)
                 mode_wait_init();
             else
                 pfallNextStage("sea", 15, 11, -1, 0.0f, 0, 1, 0);
@@ -399,7 +399,7 @@ void daObj_Pfall_c::mode_event() {
     mpBgW2->Move();
 }
 /* 02383748 */
-void daObj_Pfall_c::mode_proc_call() { (this->*mode_proc[(u32)field_0x3A8])(); }
+void daObj_Pfall_c::mode_proc_call() { (this->*mode_proc[(u32)mCurMode])(); }
 /* 023837E4 */
 BOOL daObj_Pfall_c::_execute() {
     // HD: copy position bits without quieting signaling NaNs; retain store order.
@@ -415,7 +415,7 @@ BOOL daObj_Pfall_c::_execute() {
         cutProc();
     f32 zero = zeroValue;
     mDoExt_McaMorf *morph;
-    if (field_0x481 == ANM_HIKU) {
+    if (mAnmPrmIdx == ANM_HIKU) {
         morph = mpMorf;
         f32 six = pullFrame;
         if (morph->getFrame() == six) {
@@ -427,20 +427,20 @@ BOOL daObj_Pfall_c::_execute() {
         if (!(frame > zero && frame <= six)) {
             f32 ten = hingeUp;
             if (frame > six && !(frame > ten)) {
-                field_0x438 = (f32)field_0x438 + ropeStep;
+                mHimoY = (f32)mHimoY + ropeStep;
                 morph = mpMorf;
             } else {
                 f32 twentyThree = releaseFrame;
                 if (!(frame > ten && frame <= twentyThree) && frame > twentyThree &&
                     !(frame > endFrame)) {
-                    field_0x438 = (f32)field_0x438 - ropeDrop;
+                    mHimoY = (f32)mHimoY - ropeDrop;
                     morph = mpMorf;
                 }
             }
         }
     } else {
         morph = mpMorf;
-        field_0x438 = zero;
+        mHimoY = zero;
     }
     morph->play(nullptr, 0, 0);
     fopAcM_posMoveF(this, nullptr);
@@ -476,13 +476,13 @@ BOOL daObj_Pfall_c::_draw() {
     dScnKy_env_light_c *env = dKy_getEnvlight();
     settingTevStruct(env, 1, &current.pos, &tevStr);
     env = dKy_getEnvlight();
-    setLightTevColorType(env, field_0x3C4.get(), &tevStr);
+    setLightTevColorType(env, mpModel.get(), &tevStr);
     env = dKy_getEnvlight();
-    setLightTevColorType(env, field_0x3FC.get(), &tevStr);
-    mDoExt_modelUpdateDL(field_0x3C4);
-    mDoExt_modelUpdateDL(field_0x3FC);
+    setLightTevColorType(env, mpModel2.get(), &tevStr);
+    mDoExt_modelUpdateDL(mpModel);
+    mDoExt_modelUpdateDL(mpModel2);
     nz_draw();
-    if (l_HIO.field_0x05 && !debugInitialized) {
+    if (l_HIO.mDebugInit && !debugInitialized) {
         debugInitialized = 1;
         pfallDebugInit(debugObject, "", 4);
     }

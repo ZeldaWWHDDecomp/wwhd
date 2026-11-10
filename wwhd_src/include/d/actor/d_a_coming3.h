@@ -25,22 +25,22 @@ struct Act_c : fopAc_ac_c {
     bool _draw();
     /* 0x3AC */ dCcD_Stts mStts;
     /* 0x3E8 */ dCcD_Cyl mCyl;
-    /* 0x518 */ be<u32> unk_400;
-    /* 0x51C */ be<s32> unk_404;
+    /* 0x518 */ be<u32> mBarrelId;  /* was unk_400: coming_start_main 02115788 stores the process ID of the barrel it makes (tww: daObjBarrel2::Act_c::make_coming), fpcM_ERROR_PROCESS_ID_e (0xFFFFFFFF) = none (coming_start_init 02115668); coming_game_main 02115978 / coming_wait_main 02115B50 fopAcM_SearchByID it */
+    /* 0x51C */ be<s32> mGameState;  /* was unk_404: coming_game_main 02115978 switches on it (0 wait for the barrel, 1 follow it, 2 barrel told to exit, 3 done); coming_game_init 02115958 0, coming_start_init 02115668 / coming_wait_init 02115B40 3; _draw 02114F94 draws only in 1 / 2 */
     /* 0x520 */ request_of_phase_process_class mPhase;
-    /* 0x528 */ Mtx34 unk_410;
-    /* 0x558 */ gptr<J3DModel> unk_440;
-    /* 0x55C */ be<s16> unk_444;
+    /* 0x528 */ Mtx34 mMtx;  /* was unk_410: set_mtx 02114C60: copy of mDoMtx_stack_c (tww MTXCopy) after the model's base TR matrix is set; collision_main 02115004 / eff_break_tsubo 021153B4 transform local points with it */
+    /* 0x558 */ gptr<J3DModel> mpModel;  /* was unk_440: create_heap 02114A78: the J3DModel (tww mDoExt_J3DModel__create); set_mtx 02114C60 / _draw 02114F94 use it */
+    /* 0x55C */ be<s16> mProcessIdx;  /* was unk_444: coming_process_init 02114BA8 stores the index after init_table[idx] succeeds; coming_process_main 02114F04 calls main_table[it] */
     /* 0x55E */ u8 unk446[0x32];
-    /* 0x590 */ be<f32> unk_478;
-    /* 0x594 */ be<s16> unk_47C;
-    /* 0x596 */ be<s16> unk_47E;
+    /* 0x590 */ be<f32> mPlayerDist;  /* was unk_478: coming_start_main 02115788 / coming_game_main 02115978: sqrt of the player's square distance, compared with get_limit_dist(); coming_start_init 02115668 0 */
+    /* 0x594 */ be<s16> mSpawnTimer;  /* was unk_47C: coming_start_init 02115668 30; coming_start_main 02115788 counts it down while the player is beyond get_limit_dist() and makes the barrel at 0, else resets 30 */
+    /* 0x596 */ be<s16> mChallengeNo;  /* was unk_47E: _create 02114D90: shape_angle.z + 1; get_challenge_id 02115694 returns (it - 1) & 1 */
 };
 WWHD_OFFSET(Act_c, mStts, 0x3AC);
 WWHD_OFFSET(Act_c, mCyl, 0x3E8);
-WWHD_OFFSET(Act_c, unk_400, 0x518);
-WWHD_OFFSET(Act_c, unk_440, 0x558);
-WWHD_OFFSET(Act_c, unk_478, 0x590);
+WWHD_OFFSET(Act_c, mBarrelId, 0x518);
+WWHD_OFFSET(Act_c, mpModel, 0x558);
+WWHD_OFFSET(Act_c, mPlayerDist, 0x590);
 WWHD_SIZE(Act_c, 0x598);
 struct SafetyCallback {
     gptr<cXyz> pos;

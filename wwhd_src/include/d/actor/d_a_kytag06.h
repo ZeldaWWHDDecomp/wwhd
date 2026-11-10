@@ -6,7 +6,7 @@ struct kytag06_class : fopAc_ac_c {
     kytag06_class();
     enum : u32 { __vt = 0x10013C04 };
     /* 0x3AC */ be<s32> field_0x290;
-    /* 0x3B0 */ be<f32> field_0x294;
+    /* 0x3B0 */ be<f32> mRainLevel;  /* was field_0x294: daKytag06_Create 021B0E78: 0; daKytag06_Execute 021B0D44: eased to 1 (cLib_addCalc 0.1 / 0.001); dKyw_rain_set(it * 250) whenever that is above g_env_light.mRainCount */
 };
 WWHD_SIZE(kytag06_class, 0x3B4);
 

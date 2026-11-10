@@ -123,7 +123,7 @@ cXyz* dCamera_c::positionPntOf(fopAc_ac_c* actor) { return &actor->current.pos; 
 
 /* 0250D464 */
 void dCamera_c::ResetBlure(s32 p) {
-    m58C = p;
+    mBlureType = p;
     mBlureAlpha = 0.75f;
     mBlurePositionType = 0;
     mBlurePosition.x = 0.5f;
@@ -158,9 +158,9 @@ bool dCamera_c::followCamera2(s32 p) { return followCamera(p); }
 // SetTypeForce(s32, fopAc_ac_c*)
 /* 02514EB8 */
 bool CameraTypeForceIdHD::SetTypeForce(s32 type, fopAc_ac_c* actor) {
-    if (m524 == 0xFF) {
-        m524 = type;
-        m528 = actor;
+    if (mForceType == 0xFF) {
+        mForceType = type;
+        mpForceTypeActor = actor;
         if (type != 0xFF)
             return true;
     }
@@ -274,45 +274,45 @@ bool dCamera_c::SetTrimTypeForce(s32 force) {
 }
 
 // HD: both pattern buffers have five bytes. GameCube's 32-bit pattern wrote past
-// the four-byte m544 into m548[0].
+// the four-byte mShakePattern into mShakeCyclePattern[0].
 /* 02515298 */
 s32 CameraAccessorsHD::StartShake(s32 i_length, u8* i_pattern, s32 i_flags, cXyz* i_pos) {
     u32 len = (u32)i_length;
     if (len > 0x20)
         len = 0x20; /* also catches negative lengths */
-    m550 = (s32)len;
+    mShakeLength = (s32)len;
     auto& pattern = *reinterpret_cast<CameraShakePatternCoreHD*>(this);
     auto* input = reinterpret_cast<be<u8>*>(i_pattern);
     s32 i;
     for (i = 0; i < 5; i++) {
-        pattern.m548[i] = 0;
-        pattern.m544[i] = 0;
+        pattern.mShakeCyclePattern[i] = 0;
+        pattern.mShakePattern[i] = 0;
     }
     s32 n = (s32)len >> 3;
     for (i = 0; i < n; i++) {
         u8 v = input[i].get();
-        pattern.m548[i] = v;
-        pattern.m544[i] = v;
+        pattern.mShakeCyclePattern[i] = v;
+        pattern.mShakePattern[i] = v;
     }
     u32 r = len & 7;
     u32 m = input[i].get() & (0xFFu << (8 - r));
-    pattern.m544[i] = (u8)m;
+    pattern.mShakePattern[i] = (u8)m;
     if (len == 0x20)
         m |= (u32)input[0].get() >> r;
-    pattern.m548[i] = (u8)m;
+    pattern.mShakeCyclePattern[i] = (u8)m;
     gabi::Local<cXyz> nrm;
     camCore_cXyzNorm(i_pos, nrm.get()); /* cXyz::norm */
-    m55C.copy(*nrm);
-    m554 = 0;
-    m588 = i_flags;
+    mShakeDirection.copy(*nrm);
+    mShakeFrame = 0;
+    mShakeFlags = i_flags;
     return 1;
 }
 
 /* 025153D4 */
 bool dCamera_c::StopShake() {
-    m550 = 0;
-    m588 = 0;
-    m554 = 0;
+    mShakeLength = 0;
+    mShakeFlags = 0;
+    mShakeFrame = 0;
     return true;
 }
 
@@ -468,7 +468,7 @@ static void d_camera_string_destructor(void* p, u32 flags) {
         operator_delete(p);
 }
 
-// HD: compiler-generated constructor of the m0A4[] elements (allocates when NULL)
+// HD: compiler-generated constructor of the mSavedViewStack[] elements (allocates when NULL)
 /* 0251558C */
 static dCamera_c::PosSet* dCamera_PosSet_ct(dCamera_c::PosSet* p) {
     if (p == nullptr) {

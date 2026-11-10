@@ -41,7 +41,7 @@ s16 daNpc_Ji1_XyCheckCB(void *p, int i_itemBtn) {
 void daJi1_CoHitCallback(fopAc_ac_c *i_this, dCcD_GObjInf *p2,
                          fopAc_ac_c *actor, dCcD_GObjInf *p4) {
   if (actor == dComIfGp_getPlayer(0)) {
-    static_cast<daNpc_Ji1_c *>(i_this)->field_0xC28 = 1;
+    static_cast<daNpc_Ji1_c *>(i_this)->mCoHit = 1;
   }
 }
 
@@ -51,7 +51,7 @@ void daJi1_TgHitCallback(fopAc_ac_c *i_this, dCcD_GObjInf *p2,
   auto *player = reinterpret_cast<Ji1PlayerHD *>(daPy_getPlayerActorClass());
   u32 type = player->getCutType();
   if (actor) {
-    static_cast<daNpc_Ji1_c *>(i_this)->field_0xC24 = type;
+    static_cast<daNpc_Ji1_c *>(i_this)->mHitCutType = type;
   }
 }
 
@@ -66,7 +66,7 @@ void daJi1_AtHitCallback(fopAc_ac_c *i_this, dCcD_GObjInf *param_2,
         a->mHitCooldownHD = 10;
         /* ChkAtShieldHit: mGObjAt.mRPrm bit 0 */
         if (!(param_2->mGObjAt.mRPrm & 1)) {
-          a->field_0xC3C += 1;
+          a->mAtHitCount += 1;
         } else {
           a->battleSubActionNockBackInit(0);
         }
@@ -209,9 +209,9 @@ f32 daNpc_Ji1_c::calcCoCorrectValue() {
   temp.x = cM_ssin(current.angle.y);
   temp.y = 0.0f;
   temp.z = cM_scos(current.angle.y);
-  f32 d = PSVECDotProduct(&field_0x638.m_cc_move, &temp);
-  f32 v = field_0xC4C + d;
-  field_0xC4C = v;
+  f32 d = PSVECDotProduct(&mStts.m_cc_move, &temp);
+  f32 v = mCoCorrectSum + d;
+  mCoCorrectSum = v;
   return v;
 }
 
@@ -222,12 +222,12 @@ f32 daNpc_Ji1_c::calcBgCorrectValue() {
   temp.y = 0.0f;
   temp.z = cM_scos(current.angle.y);
   if (mAcch.ChkWallHit()) {
-    f32 d = PSVECDotProduct(&field_0xC40, &temp);
-    f32 v = field_0xC50 + d;
-    field_0xC50 = v;
+    f32 d = PSVECDotProduct(&mBgCorrectVec, &temp);
+    f32 v = mBgCorrectSum + d;
+    mBgCorrectSum = v;
     return v;
   }
-  return field_0xC50;
+  return mBgCorrectSum;
 }
 
 /* 0225589C */
@@ -240,8 +240,8 @@ void daNpc_Ji1_c::teachSubActionAttackInit() {
 /* 022552E4 */
 void daNpc_Ji1_c::teachSubActionJumpInit() {
   setAnm(Ji1_ANM_TOKAMAE, 0.0f, 1);
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
 }
 
 /* 02249058 */
@@ -252,7 +252,7 @@ u32 playerCutAtCheck() {
 
 /* 0225A2C8 */
 void daNpc_Ji1_c::battleSubActionWaitInit() {
-  field_0xC9C = 0.0f;
+  mBackSlideDist = 0.0f;
   ji1_setSubAction(this, SUB_battleSubActionWait);
 }
 
@@ -261,8 +261,8 @@ void daNpc_Ji1_c::battleSubActionNockBackInit(int param_1) {
   if (param_1) {
     setGuardParticle();
   }
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
   mpOrcaMorf->setPlaySpeed(-1.0f);
   ji1_setSubAction(this, SUB_battleSubActionNockBack);
   mBtNowFrame = 30.0f; /* setBtNowFrame */
@@ -273,7 +273,7 @@ void daNpc_Ji1_c::battleSubActionAttackInit() {
   setAnm(Ji1_ANM_INASI, 0.0f, 0);
   mpOrcaMorf->setPlaySpeed(l_HIO().field_0x6C);
   ji1_seStart(this, JA_SE_CV_JI_ATTACK, 0);
-  field_0xC34 = 0;
+  mNockBackTimer = 0;
   ji1_setSubAction(this, SUB_battleSubActionAttack);
 }
 
@@ -282,7 +282,7 @@ void daNpc_Ji1_c::battleSubActionTateAttackInit() {
   setAnm(Ji1_ANM_TATEATTACK, 0.0f, 0);
   mpOrcaMorf->setPlaySpeed(l_HIO().field_0x78);
   ji1_seStart(this, JA_SE_CV_JI_ATTACK, 0);
-  field_0xC34 = 0;
+  mNockBackTimer = 0;
   ji1_setSubAction(this, SUB_battleSubActionTateAttack);
 }
 
@@ -291,15 +291,15 @@ void daNpc_Ji1_c::battleSubActionYokoAttackInit() {
   setAnm(Ji1_ANM_YOKOATTACK, 0.0f, 0);
   mpOrcaMorf->setPlaySpeed(l_HIO().field_0x80);
   ji1_seStart(this, JA_SE_CV_JI_ATTACK, 0);
-  field_0xC34 = 0;
+  mNockBackTimer = 0;
   ji1_setSubAction(this, SUB_battleSubActionYokoAttack);
 }
 
 /* 0225A2F4 */
 void daNpc_Ji1_c::battleSubActionJumpInit() {
   setAnm(Ji1_ANM_TOKAMAE, 0.0f, 1);
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
   ji1_setSubAction(this, SUB_battleSubActionJump);
 }
 
@@ -307,23 +307,23 @@ void daNpc_Ji1_c::battleSubActionJumpInit() {
 void daNpc_Ji1_c::battleSubActionDamageInit() {
   setAnm(Ji1_ANM_DAMAGE, 0.0f, 1);
   mpOrcaMorf->setPlaySpeed(1.5f);
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
   ji1_setSubAction(this, SUB_battleSubActionDamage);
 }
 
 /* 0225A4A4 */
 void daNpc_Ji1_c::battleSubActionJpGuardInit() {
   setAnm(Ji1_ANM_JPGUARD, 0.0f, 1);
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
   ji1_setSubAction(this, SUB_battleSubActionJpGuard);
 }
 
 /* 0225A424 */
 void daNpc_Ji1_c::battleSubActionGuardInit() {
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
   setParticle(0x10, 1.0f, 0.1f);
   ji1_setSubAction(this, SUB_battleSubActionGuard);
 }
@@ -338,11 +338,11 @@ static BOOL CheckCreateHeap(fopAc_ac_c *i_this) {
 
 /* 02248D3C */
 void daNpc_Ji1_c::setGuardParticle() {
-  dComIfGp_particle_set(dPa_ID_AK_JN_NG, field_0x7E0.GetTgHitPosP());
+  dComIfGp_particle_set(dPa_ID_AK_JN_NG, mGuardCyl.GetTgHitPosP());
   ji1_seStart(this, JA_SE_OBJ_COL_SWS_NMTLP, 0);
   ji1_seStart(this, JA_SE_CV_JI_DEFENCE, 0);
   cXyz pos;
-  cXyz *hit = field_0x7E0.GetTgHitPosP();
+  cXyz *hit = mGuardCyl.GetTgHitPosP();
   pos.x = (f32)hit->x;
   pos.y = (f32)hit->y;
   pos.z = (f32)hit->z;
@@ -351,20 +351,20 @@ void daNpc_Ji1_c::setGuardParticle() {
 
 /* 0224DE14 */
 void daNpc_Ji1_c::BackSlideInit() {
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
 }
 
 /* 022525B4 */
 void daNpc_Ji1_c::BackSlide(f32 param_1, f32 param_2) {
-  cLib_addCalc2(&field_0xC9C, param_1, 0.25f, 50.0f);
+  cLib_addCalc2(&mBackSlideDist, param_1, 0.25f, 50.0f);
   cXyz temp;
-  f32 x = field_0xD38.x;
-  f32 c9c = field_0xC9C;
-  f32 y = field_0xD38.y;
+  f32 x = mBackSlideStartPos.x;
+  f32 c9c = mBackSlideDist;
+  f32 y = mBackSlideStartPos.y;
   f32 s = cM_ssin(current.angle.y);
   f32 c = cM_scos(current.angle.y);
-  f32 z = field_0xD38.z;
+  f32 z = mBackSlideStartPos.z;
   temp.x = gabi::fnmsubs(c9c, s, x);
   temp.y = y;
   temp.z = gabi::fnmsubs(c9c, c, z);

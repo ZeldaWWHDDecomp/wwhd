@@ -54,14 +54,14 @@ static daNpcAh_c* Ah_actorCtor(daNpcAh_c* p) {
     p->__vtbl = AH_VTBL;
     mDoExt_btpAnm::ct(&p->mBtpAnm); /* mDoExt_btpAnm::mDoExt_btpAnm */
     p->mBckIdx = 0;
-    p->field_0x747 = 0; /* setResFlag(0) */
-    p->field_0x71C = -1.0f;
+    p->mResFlag = 0; /* setResFlag(0) */
+    p->mNextMorf = -1.0f;
     p->field_0x736 = 0;
-    p->field_0x732 = p->home.angle.y;
+    p->mHomeAngleY = p->home.angle.y;
     p->field_0x718 = 0.0f;
     p->mHeadOnlyFollow = 1;
     p->mMoveState = 0;
-    p->field_0x74E = 0;
+    p->mLookMode = 0;
     p->field_0x72C = 0;
     return p;
 }
@@ -118,7 +118,7 @@ static cPhs_State phase_1(daNpcAh_c* i_this) {
         }
         break;
     }
-    i_this->field_0x747 = 1; /* setResFlag(1) */
+    i_this->mResFlag = 1; /* setResFlag(1) */
     return cPhs_NEXT_e;
 }
 
@@ -172,8 +172,8 @@ cPhs_State daNpcAh_c::createInit() {
     setAnmTbl(&l_npc_anm_wait);
     mEventCut.setActorInfo2(l_npc_staff_id[0], this);
     mLookAtMaxVel = 0;
-    field_0x743 = 0;
-    field_0x742 = 0;
+    mInAttention = 0;
+    mTalking = 0;
     field_0x751 = 0;
     cullMtx = gabi::ea(mpMorf->getModel()->getBaseTRMtx()); /* fopAcM_SetMtx */
     fopAcM_setCullSizeBox(this, -70.0f, 0.0f, -70.0f, 70.0f, 200.0f, 70.0f);
@@ -185,8 +185,8 @@ cPhs_State daNpcAh_c::createInit() {
                    dat->mMax_head_y, dat->mMin_head_x, dat->mMin_head_y, dat->mMax_turn_step);
     field_0x74F = (u8)dat->field_0x52;
     field_0x750 = (u8)dat->field_0x53;
-    wcopy(&field_0x720, &dat->field_0x28);
-    field_0x730 = dat->field_0x30;
+    wcopy(&mAttnDistXZ, &dat->field_0x28);
+    mAttnAngle = dat->field_0x30;
     mObjAcch.CrrPos(dComIfG_Bgsp());
     // HD: matrix and collision setup follow the post-demo GameCube version.
     setMtx();
@@ -202,7 +202,7 @@ cPhs_State daNpcAh_c::createInit() {
 
 /* 021E5B78 */
 BOOL daNpcAh_c::_delete() {
-    if (field_0x747 != 0) {
+    if (mResFlag != 0) {
         dComIfG_resDelete(&mPhs, l_arcname_tbl[0]); // HD: dComIfG_resDelete (GameCube dComIfG_resDeleteDemo)
     }
     if (heap != nullptr && mpMorf != nullptr) {
@@ -276,9 +276,9 @@ BOOL daNpcAh_c::_execute() {
 
 /* 021E6BC0 */
 u8 daNpcAh_c::executeCommon() {
-    field_0x744 = field_0x743 != 0 ? 1 : 0;
-    if (field_0x742 == 1 && mMoveState != 1) executeSetMode(1);
-    return field_0x742;
+    mOrderState = mInAttention != 0 ? 1 : 0;
+    if (mTalking == 1 && mMoveState != 1) executeSetMode(1);
+    return mTalking;
 }
 
 /* 021E5EB0 */
@@ -311,7 +311,7 @@ BOOL daNpcAh_c::executeTalkInit() {
 void daNpcAh_c::executeTalk() {
     executeCommon();
     if (talk2(1) == fopMsgStts_BOX_CLOSED_e) {
-        field_0x742 = 0;
+        mTalking = 0;
         executeSetMode(0);
         dComIfGp_event_reset();
     } else {
@@ -325,17 +325,17 @@ void daNpcAh_c::checkOrder() {
     if (cmd == dEvtCmd_INDEMO_e) {
         return;
     }
-    if (cmd == dEvtCmd_INTALK_e && (field_0x744 == 2 || field_0x744 == 1)) {
-        field_0x742 = 1;
+    if (cmd == dEvtCmd_INTALK_e && (mOrderState == 2 || mOrderState == 1)) {
+        mTalking = 1;
         executeSetMode(1);
     }
 }
 
 /* 021E64E0 */
 void daNpcAh_c::eventOrder() {
-    if (field_0x744 == 2 || field_0x744 == 1) {
+    if (mOrderState == 2 || mOrderState == 1) {
         eventInfo_onCondition(this, dEvtCnd_CANTALK_e);
-        if (field_0x744 == 2) {
+        if (mOrderState == 2) {
             fopAcM_orderSpeakEvent(this);
         }
     }
@@ -426,11 +426,11 @@ BOOL daNpcAh_c::eventMesSet() {
         if ((f & 1) != 0) {
             field_0x748 = f & ~1;
             mItemNo = 7;
-            field_0x744 = 3;
+            mOrderState = 3;
         } else if ((f & 2) != 0) {
             field_0x748 = f & ~2;
             mItemNo = 5;
-            field_0x744 = 3;
+            mOrderState = 3;
         }
     }
     return talkVal == fopMsgStts_BOX_CLOSED_e;
@@ -454,7 +454,7 @@ u16 daNpcAh_c::talk2(int i_param) {
         // HD: the message is reached through the manager; the flag replaces mpCurrMsg
         if (mCurrMsgBsPcId != fpcM_ERROR_PROCESS_ID_e) {
             mbHasMsg = 0;
-            field_0x734 = 0xFFFF;
+            mMsgStatus = 0xFFFF;
         }
     } else if (mbHasMsg != 0) {
         msg_status = (u16)Ah_messageStatus(mng);
@@ -471,7 +471,7 @@ u16 daNpcAh_c::talk2(int i_param) {
             mCurrMsgBsPcId = fpcM_ERROR_PROCESS_ID_e;
             break;
         }
-        field_0x734 = msg_status;
+        mMsgStatus = msg_status;
         Ah_animationAttribute(this, msg_status);
     } else {
         mbHasMsg = 1; /* mpCurrMsg = Ah_messageStatus(mCurrMsgBsPcId) */
@@ -559,15 +559,15 @@ void daNpcAh_c::chkAttention() {
     field_0x751 = 0;
     if (mEventCut.mbAttention != 0) { /* mEventCut.getAttnFlag() */
         wcopy3(&mEyePos, &mEventCut.mPos);
-        field_0x74E = 1;
+        mLookMode = 1;
         if (field_0x74F != 0) {
             mHeadOnlyFollow = 0;
             m_jnt.mbTrn = 1;
         } else {
             mHeadOnlyFollow = 1;
         }
-        if (field_0x743 == 0) {
-            field_0x743 = 1;
+        if (mInAttention == 0) {
+            mInAttention = 1;
         }
     } else {
         fopAc_ac_c* player = dComIfGp_getPlayer(0);
@@ -575,12 +575,12 @@ void daNpcAh_c::chkAttention() {
         wcopy3(pos, &current.pos);
         gabi::Local<cXyz> plPos;
         wcopy3(plPos, &player->current.pos);
-        f32 temp720 = field_0x720;
-        s32 temp730 = field_0x730;
+        f32 temp720 = mAttnDistXZ;
+        s32 temp730 = mAttnAngle;
         gabi::Local<be<f32>> distXZ;
         gabi::Local<be<s16>> angle;
         dNpc_calc_DisXZ_AngY(pos, plPos, distXZ, angle);
-        u8 attn = field_0x743;
+        u8 attn = mInAttention;
         if (attn != 0) {
             temp720 = temp720 + 40.0f;
             temp730 += 0x71C;
@@ -594,44 +594,44 @@ void daNpcAh_c::chkAttention() {
             dNpc_playerEyePos(eye, dat->field_0x14);
             wcopy3(&mEyePos, eye);
             mHeadOnlyFollow = field_0x74F == 0;
-            field_0x74E = 1;
+            mLookMode = 1;
             if (field_0x750 == 0) {
-                mTargetYRot = field_0x732;
+                mTargetYRot = mHomeAngleY;
                 mHeadOnlyFollow = 0;
-                field_0x74E = 2;
+                mLookMode = 2;
                 m_jnt.mbTrn = 1;
             }
-            if (field_0x743 == 0) {
-                field_0x743 = 1;
+            if (mInAttention == 0) {
+                mInAttention = 1;
             }
         } else {
             if (attn == 1) {
-                field_0x743 = 0;
-                field_0x72E = dat->field_0x50;
+                mInAttention = 0;
+                mTurnBackTimer = dat->field_0x50;
             }
             if (dat->field_0x2C > dist) {
                 gabi::Local<cXyz> eye;
                 dNpc_playerEyePos(eye, dat->field_0x14);
                 wcopy3(&mEyePos, eye);
                 mHeadOnlyFollow = field_0x74F == 0;
-                field_0x74E = 1;
+                mLookMode = 1;
                 if (field_0x750 == 0) {
-                    mTargetYRot = field_0x732;
+                    mTargetYRot = mHomeAngleY;
                     mHeadOnlyFollow = 0;
-                    field_0x74E = 2;
+                    mLookMode = 2;
                     m_jnt.mbTrn = 1;
                 }
                 field_0x751 = 1;
             } else {
                 u32 path = gabi::ea(mPathRun.mPath.get());
-                field_0x74E = 0;
+                mLookMode = 0;
                 if (path == 0) { /* !mPathRun.isPath() */
-                    if (field_0x72E != 0) {
-                        field_0x72E = field_0x72E - 1;
+                    if (mTurnBackTimer != 0) {
+                        mTurnBackTimer = mTurnBackTimer - 1;
                     } else {
-                        mTargetYRot = field_0x732;
+                        mTargetYRot = mHomeAngleY;
                         mHeadOnlyFollow = 0;
-                        field_0x74E = 2;
+                        mLookMode = 2;
                         m_jnt.mbTrn = 1;
                     }
                 }
@@ -643,7 +643,7 @@ void daNpcAh_c::chkAttention() {
 
 /* 021E6680 */
 void daNpcAh_c::lookBack() {
-    s8 mode = field_0x74E;
+    s8 mode = mLookMode;
     u32 eyeX = Ah_word(&eyePos.x); /* cXyz eyePosFollow = eyePos */
     s16 desiredYRot = current.angle.y;
     u8 headOnlyFollow = mHeadOnlyFollow;
@@ -662,7 +662,7 @@ void daNpcAh_c::lookBack() {
         break;
     }
     bool turn;
-    if (field_0x742 != 0 && field_0x74F != 0) {
+    if (mTalking != 0 && field_0x74F != 0) {
         headOnlyFollow = 0;
         m_jnt.mbTrn = 1;
         turn = true;
@@ -725,10 +725,10 @@ void daNpcAh_c::playAnm() {
     field_0x74A = field_0x74A & ~1;
     if (morf->play(nullptr, 0, 0)) {
         if (mpAnmDat != nullptr) {
-            s8 n = field_0x74B;
+            s8 n = mAnmTimer;
             if (n > 0) {
                 n = (s8)(n - 1);
-                field_0x74B = n;
+                mAnmTimer = n;
                 if (n == 0) {
                     sAhAnmDat* next = mpAnmDat.get() + 1;
                     mpAnmDat = next;
@@ -745,10 +745,10 @@ void daNpcAh_c::playAnm() {
 
 /* 021E55D8 */
 void daNpcAh_c::setAnm(u8 bck_ix, int loopMode, f32 morf) {
-    f32 tempMorf = field_0x71C;
+    f32 tempMorf = mNextMorf;
     if (!(tempMorf < 0.0f)) {
         morf = tempMorf;
-        field_0x71C = -1.0f;
+        mNextMorf = -1.0f;
     }
     J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectIDRes(l_arcname_tbl[0], l_bck_ix_tbl[bck_ix]);
     mpMorf->setAnm(anm, loopMode, morf, 1.0f, 0.0f, -1.0f, nullptr);
@@ -763,7 +763,7 @@ BOOL daNpcAh_c::setAnmTbl(sAhAnmDat* i_anmDat) {
     }
     mpAnmDat = i_anmDat;
     s8 n = i_anmDat->field_0x02;
-    field_0x74B = n;
+    mAnmTimer = n;
     u8 bck = i_anmDat->mBckIdx;
     if (n > 0) {
         setAnm(bck, J3DFrameCtrl::EMode_NONE, (f32)i_anmDat->mMorf);

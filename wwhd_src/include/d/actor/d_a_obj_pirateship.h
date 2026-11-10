@@ -161,42 +161,42 @@ struct Act_c : fopAc_ac_c {
     u8 mBgMtxPrefix[0x2C];
     u8 reserved3DC[6];
     /* 0x3E2 */ be<s16> m2CA;
-    be<u8> m2CC, m2CD, m2CE;
+    be<u8> mAppeared, mPiratesCreated, mSailSeOn;  /* mAppeared was m2CC: executeShip (inlined into _execute 02385B70 / _create 023852E0): while 0 the ship waits for the demo and event 0x0310, then creates the wake, registers the dBgW and sets 1; Draw 02384FB4 draws only when set; sound_proc 02384A78 runs only when 1; mPiratesCreated was m2CD: pirateCreate 023844DC sets 1; executeShip (_execute 02385B70) calls pirateCreate(create_idx_tbl_1stIsland_demo) once event 0x0001 is set and it is still 0; mSailSeOn was m2CE: _create 023852E0 sets (mParameters & 15) != 0; sound_proc 02384A78 starts JA_SE_OBJ_PIRATE_SAIL only when set */
     u8 reserved3E7;
     /* 0x3E8 */ gptr<J3DModel> mModel;
     /* 0x3EC */ request_of_phase_process_class mPhase;
     u8 reserved3F4[8];
     /* 0x3FC */ gptr<J3DModel> mSeaModel;
     /* 0x400 */ mDoExt_btkAnm mSeaBtk;
-    /* 0x474 */ gptr<fopAc_ac_c> m2E4;
+    /* 0x474 */ gptr<fopAc_ac_c> mpSail;  /* was m2E4: executeShip (_execute 02385B70): searchPart(m_sail_id, it), the actor of the Psail child */
     /* 0x478 */ be<u32> m_sail_id;
-    /* 0x47C */ gptr<fopAc_ac_c> m2EC;
-    /* 0x480 */ be<u32> m2F0;
+    /* 0x47C */ gptr<fopAc_ac_c> mpFlag;  /* was m2EC: executeShip (_execute 02385B70): searchPart(mFlagId, it), the pirate flag child */
+    /* 0x480 */ be<u32> mFlagId;  /* was m2F0: partsCreate 0238418C: fopAcM_createChild(fpcNm_PIRATE_FLAG_e, ...) */
     u8 reserved484[4];
-    /* 0x488 */ be<u32> m2F8;
-    /* 0x48C */ gptr<fopAc_ac_c> m2FC;
-    /* 0x490 */ be<u32> m300;
-    /* 0x494 */ gptr<fopAc_ac_c> m304;
-    /* 0x498 */ be<u32> m308;
-    /* 0x49C */ cXyz m30C, m318;
+    /* 0x488 */ be<u32> mTousekikiId;  /* was m2F8: partsCreate 0238418C: fopAcM_createChild(fpcNm_Obj_Tousekiki_e, ...) (the catapult) */
+    /* 0x48C */ gptr<fopAc_ac_c> mpKaji;  /* was m2FC: executeShip (_execute 02385B70): searchPart(mKajiId, it), the steering wheel (Kaji) child */
+    /* 0x490 */ be<u32> mKajiId;  /* was m300: partsCreate 0238418C: fopAcM_createChild(fpcNm_Kaji_e, ...); TWW accessor getKajiID() { return m300; } (zeldaret/tww d_a_obj_pirateship.h); view PirateShipView::mKajiId (d_a_npc_p1.h) */
+    /* 0x494 */ gptr<fopAc_ac_c> mpDoor;  /* was m304: partsCreate 0238418C clears it; set_mtx 02384690 searches mDoorId and then places the door (pirateshipDoorSetPos) 400 up / 475 ahead; TWW type daKnob00_c* */
+    /* 0x498 */ be<u32> mDoorId;  /* was m308: partsCreate 0238418C: fopAcM_createChild(fpcNm_KNOB00_e, ...); set_mtx 02384690 searches it */
+    /* 0x49C */ cXyz mCruiseSePos, mSailSePos;  /* mCruiseSePos was m30C: sound_proc 02384A78: (0, 800, 2000) in ship space, position of JA_SE_OBJ_PIRATE_CRUISE; _delete 02385AEC mDoAud_seDeleteObject; mSailSePos was m318: sound_proc 02384A78: (0, 1500, 300) in ship space, position of JA_SE_OBJ_PIRATE_SAIL; _delete 02385AEC mDoAud_seDeleteObject */
     u8 reserved4B4[10];
-    /* 0x4BE */ be<s16> m32E, m330;
+    /* 0x4BE */ be<s16> mSwayAngle, mSwaySpeed;  /* mSwayAngle was m32E: executeShip (_execute 02385B70): adds mSwaySpeed each frame, pos.y = home.y + amplitude * sin(it); after the angle parameter of daObjPirateship::getShipOffsetY 025269A8 (d_com_static.cpp); mSwaySpeed was m330: executeShip (_execute 02385B70): cLib_addCalcAngleS2 towards the HIO speed by the sway half; after the speed parameter of daObjPirateship::getShipOffsetY 025269A8 */
     u8 reserved4C2[6];
-    /* 0x4C8 */ dCcD_Stts m338;
+    /* 0x4C8 */ dCcD_Stts mStts;  /* was m338: _create 023852E0 constructs the dCcD_Stts; pirateship_Act_c_dt 02386148 destroys it */
     /* 0x504 */ PirateshipCylinder mCyl;
-    /* 0x634 */ be<s8> m4A4;
+    /* 0x634 */ be<s8> mPathPntNo;  /* was m4A4: executeShip (_execute 02385B70): dLib_pathMove's point number (s8*) argument; _create 023852E0 clears it */
     u8 reserved635[3];
-    /* 0x638 */ gptr<dPath> m4A8;
-    /* 0x63C */ dPa_trackEcallBack m4AC;
-    /* 0x68C */ gptr<PirateshipEmitter> m4FC;
-    /* 0x690 */ GXColor m500;
-    /* 0x694 */ dBgS_ObjAcch m504;
-    /* 0x858 */ cXyz m6C8;
+    /* 0x638 */ gptr<dPath> mpPath;  /* was m4A8: _create 023852E0: dPath_GetRoomPath; executeShip (_execute 02385B70) moves along it with dLib_pathMove */
+    /* 0x63C */ dPa_trackEcallBack mWakeCb;  /* was m4AC: CreateWave 02384570: the dPa_trackEcallBack of the PIRATESHIP_TAIL wake emitter; SetWave 02384C2C sets its water height/speed; DeleteWave 02384A48 removes it */
+    /* 0x68C */ gptr<PirateshipEmitter> mpSplashEmitter;  /* was m4FC: CreateWave 02384570: the PIRATESHIP_SPLASH emitter; SetWave 02384C2C sets its colour/translation/rotation; DeleteWave 02384A48 stops it */
+    /* 0x690 */ GXColor mSplashColor;  /* was m500: CreateWave 02384570 / SetWave 02384C2C: dKy_get_seacolor, the splash emitter's prm colour */
+    /* 0x694 */ dBgS_ObjAcch mAcch;  /* was m504: _create 023852E0 constructs the dBgS_ObjAcch; SetWave 02384C2C takes its water height (m_wtr) when in water */
+    /* 0x858 */ cXyz mWakePos;  /* was m6C8: CreateWave 02384570: current.pos, the wake emitter's position; SetWave 02384C2C: ship matrix times HIO offset, its y is the wake water height */
 };
 WWHD_OFFSET(Act_c, mModel, 0x3E8);
-WWHD_OFFSET(Act_c, m304, 0x494);
-WWHD_OFFSET(Act_c, m4AC, 0x63C);
-WWHD_OFFSET(Act_c, m6C8, 0x858);
+WWHD_OFFSET(Act_c, mpDoor, 0x494);
+WWHD_OFFSET(Act_c, mWakeCb, 0x63C);
+WWHD_OFFSET(Act_c, mWakePos, 0x858);
 WWHD_SIZE(Act_c, 0x864);
 
 } // namespace daObjPirateship
@@ -302,10 +302,10 @@ WWHD_OFFSET(daObjPirateship::Act_c, mPhase, 0x3EC);
 WWHD_OFFSET(daObjPirateship::Act_c, mSeaModel, 0x3FC);
 WWHD_OFFSET(daObjPirateship::Act_c, mSeaBtk, 0x400);
 WWHD_OFFSET(daObjPirateship::Act_c, m_sail_id, 0x478);
-WWHD_OFFSET(daObjPirateship::Act_c, m338, 0x4C8);
+WWHD_OFFSET(daObjPirateship::Act_c, mStts, 0x4C8);
 WWHD_OFFSET(daObjPirateship::Act_c, mCyl, 0x504);
-WWHD_OFFSET(daObjPirateship::Act_c, m4A4, 0x634);
-WWHD_OFFSET(daObjPirateship::Act_c, m4A8, 0x638);
-WWHD_OFFSET(daObjPirateship::Act_c, m4FC, 0x68C);
-WWHD_OFFSET(daObjPirateship::Act_c, m500, 0x690);
-WWHD_OFFSET(daObjPirateship::Act_c, m504, 0x694);
+WWHD_OFFSET(daObjPirateship::Act_c, mPathPntNo, 0x634);
+WWHD_OFFSET(daObjPirateship::Act_c, mpPath, 0x638);
+WWHD_OFFSET(daObjPirateship::Act_c, mpSplashEmitter, 0x68C);
+WWHD_OFFSET(daObjPirateship::Act_c, mSplashColor, 0x690);
+WWHD_OFFSET(daObjPirateship::Act_c, mAcch, 0x694);

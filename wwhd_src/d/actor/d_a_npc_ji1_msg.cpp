@@ -28,7 +28,7 @@ enum {
   fopMsgStts_BOX_CLOSED_e = 0x12,
   fopMsgStts_MSG_DESTROYED_e = 0x13,
 };
-/* setAction(field_0x2BC, arg): the PTMF argument is copied on entry */
+/* setAction(mPrevAction, arg): the PTMF argument is copied on entry */
 static inline void ji1_setActionP(daNpc_Ji1_c *t, ProcFunc_l &src, void *arg) {
   s16 nd = src.d;
   s16 ni = src.i;
@@ -42,14 +42,14 @@ static inline void ji1_setActionP(daNpc_Ji1_c *t, ProcFunc_l &src, void *arg) {
   }
   if (!eq) {
     if (ptmf_nonnull(m)) {
-      t->field_0xC78 = -1;
+      t->mActionPhase = -1;
       ptmf_invoke(m, t, arg);
     }
-    ptmf_copy(t->field_0x2BC, m);
+    ptmf_copy(t->mPrevAction, m);
     m.d = nd;
     m.i = ni;
     m.f = nf;
-    t->field_0xC78 = 0;
+    t->mActionPhase = 0;
     ptmf_invoke(m, t, arg);
   }
 }
@@ -76,8 +76,8 @@ u32 daNpc_Ji1_c::getMsg1stType() {
     if (field_0xD79) {
       return 0x977;
     }
-    if (!field_0xD78) {
-      field_0xD78 = 1;
+    if (!mFirstMsgDone) {
+      mFirstMsgDone = 1;
       return 0x978;
     }
     return 0x97B;
@@ -258,7 +258,7 @@ static inline void talk_backslide(daNpc_Ji1_c *t) {
 /* 0225268C */
 BOOL daNpc_Ji1_c::talkAction(void *arg) {
   Ji1MsgManagerHD *mgr = l_messageManager.get();
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     if (dComIfGp_event_chkTalkXY() && !dComIfGp_evmng_ChkPresentEnd()) {
       if (dComIfGs_isEventBit(Ji1MsgEventFlag::UNK_0D80) == 0) {
         fopAc_ac_c *player = daPy_getPlayerActorClass();
@@ -278,9 +278,9 @@ BOOL daNpc_Ji1_c::talkAction(void *arg) {
     }
     field_0xD7E = 0;
     mMsgNo = getMsg();
-    field_0xC78 = field_0xC78 + 1;
+    mActionPhase = mActionPhase + 1;
     l_msgId = fpcM_ERROR_PROCESS_ID_e;
-  } else if (field_0xC78 != -1) {
+  } else if (mActionPhase != -1) {
     u32 msgNo = mMsgNo;
     if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
       l_msgId = ji1MsgMessageSetHD(mgr, msgNo, &eyePos);
@@ -304,7 +304,7 @@ BOOL daNpc_Ji1_c::talkAction(void *arg) {
         dComIfGp_evmng_cutEnd(staffIdx);
         if (dComIfGp_evmng_endCheck(mEventIdx[Ji1Msg_EVENT_SPIN])) {
           if (mMsgNo == 0x98A) {
-            field_0xD70 = -1;
+            mTeachStep = -1;
             ji1_seStart(this, JA_SE_VS_JI_OPENING, 0);
             ji1MsgBgmStopHD(45);
             ji1_setAction(this, ACT_plmoveAction, nullptr);
@@ -317,14 +317,14 @@ BOOL daNpc_Ji1_c::talkAction(void *arg) {
         if (mMsgNo == 0x9B4) {
           field_0xD7B = 1;
         }
-        field_0xD70 = -1;
+        mTeachStep = -1;
         ji1_seStart(this, JA_SE_VS_JI_OPENING, 0);
         ji1MsgBgmStopHD(45);
         ji1_setAction(this, ACT_plmoveAction, nullptr);
       } else if (mMsgNo == 0x995) {
         ji1_setAction(this, ACT_normalAction, nullptr);
       } else {
-        ji1_setActionP(this, field_0x2BC, nullptr);
+        ji1_setActionP(this, mPrevAction, nullptr);
       }
     }
     talk_backslide(this);
@@ -336,7 +336,7 @@ BOOL daNpc_Ji1_c::talkAction(void *arg) {
 /* 02252FD0 */
 BOOL daNpc_Ji1_c::speakAction(void *arg) {
   Ji1MsgManagerHD *mgr = l_messageManager.get();
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     if (!eventInfo.checkCommandDemoAccrpt()) {
       fopAcM_orderOtherEventId(this, mEventIdx[Ji1Msg_EVENT_REPLY], 0xFF,
                                0xFFFF, 0, 1);
@@ -344,11 +344,11 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
       return FALSE;
     }
     dComIfGp_evmng_cutEnd(dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0));
-    if (field_0xD70 == -1) {
+    if (mTeachStep == -1) {
       mMsgNo = 0x969;
       l_replyFlag = 0;
     } else {
-      switch ((u32)field_0xD70) {
+      switch ((u32)mTeachStep) {
       case 0:
         if (field_0xC90 == 1) {
           mMsgNo = 0x97C;
@@ -421,7 +421,7 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         break;
       }
       if (field_0xC90 == 3) {
-        field_0xD70 = field_0xD70 + 1;
+        mTeachStep = mTeachStep + 1;
         field_0xC94 = 0;
         reinterpret_cast<Ji1MsgHeadAnmHD *>(mHeadAnm)->swing_vertical_init(
             2, 0x1000, 0x800, 1);
@@ -431,9 +431,9 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         setAnm(Ji1Msg_KAMAE, 4.0f, 0);
       }
     }
-    field_0xC78 = field_0xC78 + 1;
+    mActionPhase = mActionPhase + 1;
     l_msgId = fpcM_ERROR_PROCESS_ID_e;
-  } else if (field_0xC78 != -1) {
+  } else if (mActionPhase != -1) {
     if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
       l_msgId = ji1MsgMessageSetHD(mgr, mMsgNo, &eyePos);
       if (l_msgId != fpcM_ERROR_PROCESS_ID_e) {
@@ -441,8 +441,8 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
       }
     } else {
       setAnimFromMsgNo(mMsgNo);
-      if (field_0xC78 == 1) {
-        field_0xC78 = field_0xC78 + 1;
+      if (mActionPhase == 1) {
+        mActionPhase = mActionPhase + 1;
       } else if (ji1MsgStatusHD(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
         // HD: pass next_msgStatus r3 without narrowing it to the declared u16.
         ji1MsgSetStatusHD(mgr, ji1MsgNextStatusHD(this, &mMsgNo));
@@ -457,15 +457,15 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         if (dComIfGp_evmng_endCheck(mEventIdx[Ji1Msg_EVENT_REPLY])) {
           ji1MsgSetStatusHD(mgr, fopMsgStts_MSG_DESTROYED_e);
           if (mMsgNo == 0x969) {
-            field_0xD70 = 0;
+            mTeachStep = 0;
             field_0xC94 = 0;
-            field_0xC98 = l_hio.field_0x54[0];
+            mTeachHitsLeft = l_hio.field_0x54[0];
             ji1_setAction(this, ACT_teachAction, nullptr);
           } else {
             if (field_0xC90 != 1) {
-              field_0xC98 = l_hio.field_0x54[(s32)field_0xD70];
+              mTeachHitsLeft = l_hio.field_0x54[(s32)mTeachStep];
             }
-            ji1_setActionP(this, field_0x2BC, nullptr);
+            ji1_setActionP(this, mPrevAction, nullptr);
           }
           dComIfGp_event_reset();
         }
@@ -480,7 +480,7 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
 BOOL daNpc_Ji1_c::speakBadAction(void *arg) {
   Ji1MsgManagerHD *mgr = l_messageManager.get();
   int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     if (!eventInfo.checkCommandDemoAccrpt()) {
       fopAcM_orderOtherEventId(this, mEventIdx[Ji1Msg_EVENT_BAD_CUT], 0xFF,
                                0xFFFF, 0, 1);
@@ -491,7 +491,7 @@ BOOL daNpc_Ji1_c::speakBadAction(void *arg) {
       return false;
     }
     dComIfGp_evmng_cutEnd(staffIdx);
-    switch ((u32)field_0xD70) {
+    switch ((u32)mTeachStep) {
     case 0:
       mMsgNo = 0x96F;
       break;
@@ -515,9 +515,9 @@ BOOL daNpc_Ji1_c::speakBadAction(void *arg) {
       break;
     }
     setAnm(Ji1Msg_INASI, 4.0f, 0);
-    field_0xC78 = field_0xC78 + 1;
+    mActionPhase = mActionPhase + 1;
     l_msgId = fpcM_ERROR_PROCESS_ID_e;
-  } else if (field_0xC78 != -1) {
+  } else if (mActionPhase != -1) {
     if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
       if (mAnimation == Ji1Msg_INASI) {
         if (mpOrcaMorf->getFrame() > mpOrcaMorf->getEndFrame() - 2.0f) {
@@ -540,8 +540,8 @@ BOOL daNpc_Ji1_c::speakBadAction(void *arg) {
         }
       }
     } else {
-      if (field_0xC78 == 1) {
-        field_0xC78 = field_0xC78 + 1;
+      if (mActionPhase == 1) {
+        mActionPhase = mActionPhase + 1;
       } else {
         if (ji1MsgStatusHD(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
           setAnimFromMsgNo(mMsgNo);
@@ -558,10 +558,10 @@ BOOL daNpc_Ji1_c::speakBadAction(void *arg) {
           if (dComIfGp_evmng_endCheck(mEventIdx[Ji1Msg_EVENT_BAD_CUT])) {
             ji1MsgSetStatusHD(mgr, fopMsgStts_MSG_DESTROYED_e);
             if (mMsgNo == 0x969) {
-              field_0xD70 = 0;
+              mTeachStep = 0;
               ji1_setAction(this, ACT_teachAction, nullptr);
             } else {
-              ji1_setActionP(this, field_0x2BC, nullptr);
+              ji1_setActionP(this, mPrevAction, nullptr);
             }
             dComIfGp_event_reset();
           }

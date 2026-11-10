@@ -56,10 +56,10 @@ enum BgmID : u32 {
 /* 0202204C */
 void JAIZelBasic::bgmStart(u32 id, u32 fade, u32 keepSub) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x00be = 0;
-    if (field_0x0063 != 0)
+    mTalkSeBlocked = 0;
+    if (mBgmDisabled != 0)
         return;
-    if (field_0x0066 != 0) {
+    if (mSelectBgmOnly != 0) {
         if (id != JA_BGM_SELECT)
             return;
     } else {
@@ -79,7 +79,7 @@ void JAIZelBasic::bgmStart(u32 id, u32 fade, u32 keepSub) {
     SubBgmPolicy subBgmPolicy = ClearSubBgm;
     switch (id) {
     case JA_BGM_DIE_LINK:
-        field_0x00ca = 1;
+        mBattleBgmDisabled = 1;
         subBgmPolicy = PreserveSubBgmPolicy;
         break;
     case JA_BGM_I_MAJU:
@@ -155,7 +155,7 @@ void JAIZelBasic::bgmStart(u32 id, u32 fade, u32 keepSub) {
         subBgmPolicy = KeepSubBgm;
         break;
     case 0xC0000006:
-        field_0x0064 = 1;
+        mTalkInBlocked = 1;
         subBgmPolicy = PreserveSubBgmPolicy;
         break;
     }
@@ -255,7 +255,7 @@ void JAIZelBasic::bgmStart(u32 id, u32 fade, u32 keepSub) {
     /* start the new bgm */
     bgmStop(0, keepSub);
     startSoundVec(id, &mpMainBgmSound, 0, fade, 0, 4);
-    if ((s32)field_0x0224 == 0x12 && mIslandRoomNo == 0x29) {
+    if ((s32)mSceneNo == 0x12 && mIslandRoomNo == 0x29) {
         // HD: Forest Haven fades its BGM near this point.
         VectorWords *cp = cameraPosition();
         if (cp != 0) {
@@ -272,21 +272,21 @@ void JAIZelBasic::bgmStart(u32 id, u32 fade, u32 keepSub) {
             }
             if (mMainBgmNum == JA_BGM_DIE_LINK)
                 v = 1.0f;
-            field_0x0090 = v;
+            mMainBgmSceneVolume = v;
         }
     }
     if (id == JA_BGM_DIE_LINK) {
-        field_0x0090 = 1.0f;
-        field_0x008c = 1.0f;
+        mMainBgmSceneVolume = 1.0f;
+        mMainBgmSubBgmVolume = 1.0f;
     } else {
-        f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-        v = gabi::fmuls_ppc(v, field_0x0088);
-        v = gabi::fmuls_ppc(v, field_0x008c);
-        v = gabi::fmuls_ppc(v, field_0x0090);
-        v = gabi::fmuls_ppc(v, field_0x0094);
-        v = gabi::fmuls_ppc(v, field_0x0098);
-        v = gabi::fmuls_ppc(v, field_0x009c);
-        v = gabi::fmuls_ppc(v, field_0x00ac);
+        f32 v = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+        v = gabi::fmuls_ppc(v, mMainBgmMenuVolume);
+        v = gabi::fmuls_ppc(v, mMainBgmSubBgmVolume);
+        v = gabi::fmuls_ppc(v, mMainBgmSceneVolume);
+        v = gabi::fmuls_ppc(v, mMainBgmSeaVolume);
+        v = gabi::fmuls_ppc(v, mMainBgmTaktVolume);
+        v = gabi::fmuls_ppc(v, mMainBgmCbPracticeVolume);
+        v = gabi::fmuls_ppc(v, mMainBgmHeightVolume);
         if (v != 1.0f && id != JA_BGM_BIRDMAN_GOAL && id != JA_BGM_BIRDMAN_FAIL) {
             Sound *m = mpMainBgmSound.get();
             if (m != 0)
@@ -313,7 +313,7 @@ void JAIZelBasic::bgmStart(u32 id, u32 fade, u32 keepSub) {
         break;
     case JA_BGM_SEA:
     case JA_BGM_SEA_STORM:
-        if (mIsSailing == 0 && field_0x1f40 < 0.2f)
+        if (mIsSailing == 0 && mShipSpeed < 0.2f)
             bgmMute(h, requestedID, 1, 0);
         else
             bgmMute(h, requestedID, 0, 0);
@@ -357,7 +357,7 @@ void JAIZelBasic::bgmStart(u32 id, u32 fade, u32 keepSub) {
     }
     mMainBgmNum = id;
     if (id == JA_BGM_ISLAND_LINK_0 || id == JA_BGM_ISLAND_LINK || id == JA_BGM_ISLAND_LINK_2)
-        field_0x1f3c = 1;
+        mIslandLinkBgm = 1;
 }
 
 // clang-format off

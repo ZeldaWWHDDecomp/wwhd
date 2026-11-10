@@ -95,9 +95,9 @@ static void negateX(cXyz* v) {
     v->x = -(f32)v->x;
 }
 static void setDone(dCamera_c* c) {
-    c->m102 = 1;
-    c->m101 = 1;
-    c->m100 = 1;
+    c->mStyleSettle2 = 1;
+    c->mStyleSettle1 = 1;
+    c->mStyleSettle0 = 1;
 }
 static f32 vectorLength(cXyz* v) {
     return cameraUniformSqrt(cameraUniformSquareMag(v));
@@ -141,7 +141,7 @@ static void relativeSide(dCamera_c* c, MoveWork* w, cXyz* center, cXyz* eye) {
     cXyz b;
     cameraUniformRelationalPos(c, &r, w->mpRelActor, center);
     copyWords(&a, &r);
-    if (c->m080 & 1)
+    if (c->mTicks & 1)
         negateX(eye);
     cameraUniformRelationalPos(c, &r, w->mpRelActor, eye);
     copyWords(&b, &r);
@@ -337,7 +337,7 @@ static void moveTail(dCamera_c* c, MoveWork* w, f32 ratio, MoveKind kind) {
 /* 02531D20 */
 u32 uniformTransEvCamera(dCamera_c* camera) {
     auto* work = reinterpret_cast<MoveWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         if (!cameraUniformGetRequiredInt(camera, &work->mTimer, transTimerName.text))
             return 1;
         cameraUniformGetInt(camera, &work->mTrans.mBSpCurve, transCurveName.text, 1);
@@ -447,7 +447,7 @@ u32 uniformTransEvCamera(dCamera_c* camera) {
     }
     u32 result = 0;
     f32 ratio = 1.0f;
-    u32 frame = camera->m11C;
+    u32 frame = camera->mCurStyleTimer;
     u32 timer = work->mTimer;
     if (frame >= timer)
         result = 1;
@@ -547,7 +547,7 @@ static f32 brakeStep(MoveWork* w, f32 step) {
 /* 0253BC1C */
 u32 uniformBrakeEvCamera(dCamera_c* camera) {
     auto* w = reinterpret_cast<MoveWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         if (!cameraUniformGetRequiredInt(camera, &w->mTimer, brakeTimerName.text))
             return 1;
         cameraUniformGetInt(camera, &w->mBrake.mFullFrames, brakingPointName.text, 0);
@@ -561,7 +561,7 @@ u32 uniformBrakeEvCamera(dCamera_c* camera) {
         return 1;
     u32 result = 0;
     f32 ratio = 1.0f;
-    u32 frame = camera->m11C;
+    u32 frame = camera->mCurStyleTimer;
     u32 timer = w->mTimer;
     if (frame >= timer)
         result = 1;
@@ -581,7 +581,7 @@ u32 uniformBrakeEvCamera(dCamera_c* camera) {
 /* 0253D1A4 */
 u32 uniformAcceleEvCamera(dCamera_c* camera) {
     auto* w = reinterpret_cast<MoveWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         if (!cameraUniformGetRequiredInt(camera, &w->mTimer, acceleTimerName.text))
             return 1;
         cameraUniformGetInt(camera, &w->mBrake.mRampFrames, acceleRampName.text,
@@ -595,7 +595,7 @@ u32 uniformAcceleEvCamera(dCamera_c* camera) {
         return 1;
     u32 result = 0;
     f32 ratio = 1.0f;
-    u32 frame = camera->m11C;
+    u32 frame = camera->mCurStyleTimer;
     u32 timer = w->mTimer;
     if (frame >= timer)
         result = 1;

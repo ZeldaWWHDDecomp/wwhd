@@ -69,8 +69,8 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         s32 jntNo = (u16)kiJoint(joint)->mJntNo;
         if (i_this != nullptr) {
             PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
-            cMtx_YrotM(calc_mtx(), i_this->m328);
-            cMtx_ZrotM(calc_mtx(), i_this->m326);
+            cMtx_YrotM(calc_mtx(), i_this->mHeadAngleX);
+            cMtx_ZrotM(calc_mtx(), i_this->mHeadAngleY);
             Mtx34* dst = model->getAnmMtx(jntNo);
             mtx_copy(dst, calc_mtx());
             PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
@@ -112,15 +112,15 @@ static void anm_init(ki_class* i_this, int anmResIdx, float morf, unsigned char 
 
 /* 021994B0 */
 static void tex_anm_set(ki_class* i_this, unsigned short idx) {
-    i_this->m335 = 1;
+    i_this->mEyeAnmOn = 1;
     // HD: the fire keese has its own eye patterns
     u16 res = i_this->mDamageType != 0 ? fk_tex_anm_idx[idx] : ki_tex_anm_idx[idx];
     J3DAnmTexPattern* pat = (J3DAnmTexPattern*)dComIfG_getObjectRes("Ki", res, SAFESTRING_VTBL);
-    i_this->m336 = (u8)ki_tex_max_frame[idx];
-    i_this->m337 = ki_tex_loop[idx];
-    i_this->m32C = pat;
-    i_this->m334 = 0;
-    kiPattern(pat)->mFrame = 0.0f; /* m32C->setFrame(0.0f); HD: frame at +0 */
+    i_this->mEyeMaxFrame = (u8)ki_tex_max_frame[idx];
+    i_this->mEyeLoop = ki_tex_loop[idx];
+    i_this->mBtpPattern = pat;
+    i_this->mEyeFrame = 0;
+    kiPattern(pat)->mFrame = 0.0f; /* mBtpPattern->setFrame(0.0f); HD: frame at +0 */
     // HD: no J3DTexNoAnm loop (the pattern is applied through an mDoExt_btpAnm in Draw)
 }
 
@@ -150,7 +150,7 @@ static BOOL ki_player_bg_check(ki_class* i_this) {
 static BOOL daKi_Draw(ki_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
 
-    if (i_this->m2D4 != 0) {
+    if (i_this->mAppearSwitch != 0) {
         return TRUE;
     }
 
@@ -165,10 +165,10 @@ static BOOL daKi_Draw(ki_class* i_this) {
     a_this->model = gabi::ea(pModel);
     dSnap_RegistFig(DSNAP_TYPE_KI, a_this, 1.0f, 1.0f, 1.0f);
     // HD: the eye pattern goes through an mDoExt_btpAnm (GameCube: setTexNoAnimator)
-    kiPattern(i_this->m32C)->mFrame = (f32)(u8)i_this->m334;
-    mDoExt_btpAnm_init(i_this->m330, pModel->getModelData(), i_this->m32C, 1, 2, 1.0f, 0, -1,
+    kiPattern(i_this->mBtpPattern)->mFrame = (f32)(u8)i_this->mEyeFrame;
+    mDoExt_btpAnm_init(i_this->mBtpAnm, pModel->getModelData(), i_this->mBtpPattern, 1, 2, 1.0f, 0, -1,
                        true, 0);
-    mDoExt_btpAnm_entry(i_this->m330, pModel->getModelData(), i_this->m334);
+    mDoExt_btpAnm_entry(i_this->mBtpAnm, pModel->getModelData(), i_this->mEyeFrame);
 
     J3DModelData* md = pModel->getModelData();
     if (i_this->mDamageType == 0) {
@@ -189,7 +189,7 @@ static BOOL daKi_Draw(ki_class* i_this) {
 
         dComIfGd_setList();
     } else {
-        mDoExt_btkAnm_entry(i_this->m920, md, i_this->m920->getFrame());
+        mDoExt_btkAnm_entry(i_this->mBtkAnm, md, i_this->mBtkAnm->getFrame());
 
         dComIfGd_setListMaskOff();
         i_this->mpMorf->entryDL();
@@ -209,8 +209,8 @@ static void ki_pos_move(ki_class* i_this, s8 arg1) {
         s16 xzAngle = cM_atan2s(x, z);
         s16 iVar6 = -cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
 
-        cLib_addCalcAngleS2(&i_this->actor.current.angle.y, xzAngle, 5, gabi::ftoi(i_this->m304 * i_this->mPosMoveDist));
-        cLib_addCalcAngleS2(&i_this->actor.current.angle.x, iVar6, 5, gabi::ftoi(i_this->m304 * i_this->mPosMoveDist));
+        cLib_addCalcAngleS2(&i_this->actor.current.angle.y, xzAngle, 5, gabi::ftoi(i_this->mTurnScale * i_this->mPosMoveDist));
+        cLib_addCalcAngleS2(&i_this->actor.current.angle.x, iVar6, 5, gabi::ftoi(i_this->mTurnScale * i_this->mPosMoveDist));
         cLib_addCalc2(&i_this->mPosMoveDist, 1.0f, 1.0f, 0.04f);
     }
 
@@ -236,7 +236,7 @@ static BOOL daKi_IsDelete(ki_class* i_this) {
 static BOOL daKi_Delete(ki_class* i_this) {
     dComIfG_resDelete(&i_this->mPhase, "Ki");
 
-    if (i_this->m339 != 0) {
+    if (i_this->mHioOwner != 0) {
         hio_set = 0;
         mDoHIO_deleteChild(l_kiHIO.mNo);
     }
@@ -246,8 +246,8 @@ static BOOL daKi_Delete(ki_class* i_this) {
     }
 
     if (i_this->mDamageType != 0) {
-        /* m908.remove(): virtual (HD vtable at +0, slot +0x44) */
-        kiRemoveFollow(&i_this->m908);
+        /* mFireCallBack.remove(): virtual (HD vtable at +0, slot +0x44) */
+        kiRemoveFollow(&i_this->mFireCallBack);
     }
 
     enemy_fire_remove(&i_this->mEnemyFire);
@@ -292,14 +292,14 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
              * still holds the McaMorf constructor's stack argument (1) */
             KiCtorFrame fr;
             fr.w[2] = 1;
-            i_this->m920 = p != nullptr ? mDoExt_btkAnm_ct(p) : nullptr;
+            i_this->mBtkAnm = p != nullptr ? mDoExt_btkAnm_ct(p) : nullptr;
         }
-        if (i_this->m920 == nullptr) {
+        if (i_this->mBtkAnm == nullptr) {
             return FALSE;
         }
 
         void* key = dComIfG_getObjectRes("Ki", dRes_INDEX_KI_BTK_FK_e, SAFESTRING_VTBL);
-        if (!mDoExt_btkAnm_init(i_this->m920, model->getModelData(), key, 1,
+        if (!mDoExt_btkAnm_init(i_this->mBtkAnm, model->getModelData(), key, 1,
                                 J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0)) {
             return FALSE;
         }
@@ -322,8 +322,8 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     }
 
     // HD: an mDoExt_btpAnm replaces the J3DTexNoAnm array
-    i_this->m330 = new_mDoExt_btpAnm();
-    mDoExt_btpAnm_init(i_this->m330, model->getModelData(), anmTexPattern,
+    i_this->mBtpAnm = new_mDoExt_btpAnm();
+    mDoExt_btpAnm_init(i_this->mBtpAnm, model->getModelData(), anmTexPattern,
                        1, 2, 1.0f, 0, -1, false, 0);
 
     // HD: no tex_anm_set(i_this, 1) here
@@ -363,7 +363,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
         }
     }
     if (eq) {
-        ki_packet_init(i_this->m2B8, 0);
+        ki_packet_init(i_this->mModelPacket, 0);
     }
     return TRUE;
 }
@@ -391,17 +391,17 @@ static cPhs_State daKi_Create(fopAc_ac_c* a_this) {
         u32 param = fopAcM_GetParam(a_this);
         i_this->mParameters = prm;
         i_this->mAction = prm;
-        i_this->m2CD = (param >> 8) & 0x7F;
+        i_this->mAttackRangePrm = (param >> 8) & 0x7F;
         i_this->mDamageType = (param >> 8) & 0x80;
         i_this->mKiPathIndex = param >> 0x10;
-        i_this->m2CF = param >> 0x18;
+        i_this->mAppearSwitchPrm = param >> 0x18;
         a_this->itemTableIdx = dComIfGp_CharTbl_GetNameIndex("keeth" /* "keeth" */, 0);
 
         if (!fopAcM_entrySolidHeap(a_this, gabi::guest_fn((const void*)&useHeapInit), 0x4E00)) {
             return cPhs_ERROR_e;
         }
 
-        switch (i_this->m2CD) {
+        switch (i_this->mAttackRangePrm) {
         case 0:
             i_this->mMaxAttackMoveDist300 = 300.0f;
             break;
@@ -423,11 +423,11 @@ static cPhs_State daKi_Create(fopAc_ac_c* a_this) {
                 return cPhs_ERROR_e;
             }
             i_this->mCurrKiPathIndex = i_this->mKiPathIndex + 1;
-            i_this->m2D7 = 1;
+            i_this->mPathDir = 1;
         }
 
-        if (i_this->m2CF != 0xFF) {
-            i_this->m2D4 = i_this->m2CF + 1;
+        if (i_this->mAppearSwitchPrm != 0xFF) {
+            i_this->mAppearSwitch = i_this->mAppearSwitchPrm + 1;
         }
 
         a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->mpMorf->getModel()));
@@ -435,29 +435,29 @@ static cPhs_State daKi_Create(fopAc_ac_c* a_this) {
         i_this->mAcchCir.SetWall(20.0f, 50.0f);
         a_this->health = 1;
         a_this->max_health = 1;
-        i_this->m320 = (s16)gabi::ftoi(cM_rndF(10000.0f));
+        i_this->mFrameCounter = (s16)gabi::ftoi(cM_rndF(10000.0f));
 
         i_this->mStts.Init(0x32, 2, a_this);
 
-        i_this->m580.Set(&at_sph_src);          /* at_sph_src */
-        i_this->m6AC.Set(&co_sph_src);          /* co_sph_src */
+        i_this->mAtSph.Set(&at_sph_src);          /* at_sph_src */
+        i_this->mCoSph.Set(&co_sph_src);          /* co_sph_src */
         i_this->mDamageSphere.Set(&tg_sph_src); /* tg_sph_src */
 
-        i_this->m580.SetStts(&i_this->mStts);
-        i_this->m6AC.SetStts(&i_this->mStts);
+        i_this->mAtSph.SetStts(&i_this->mStts);
+        i_this->mCoSph.SetStts(&i_this->mStts);
         i_this->mDamageSphere.SetStts(&i_this->mStts);
 
         if (i_this->mDamageType != 0) {
-            i_this->m580.SetAtType(KiAttackType::FIRE);
+            i_this->mAtSph.SetAtType(KiAttackType::FIRE);
             i_this->mDamageSphere.SetTgType(0xFF3DFCFF);
         }
 
-        i_this->m580.OffAtSPrmBit(2 /* cCcD_AtSPrm_VsEnemy_e */);
+        i_this->mAtSph.OffAtSPrmBit(2 /* cCcD_AtSPrm_VsEnemy_e */);
         a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e; /* attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e */
 
         if (!hio_set) {
             l_kiHIO.mNo = mDoHIO_createChild("L[X" /* "キース" */, &l_kiHIO);
-            i_this->m339 = 1;
+            i_this->mHioOwner = 1;
             hio_set = 1;
         }
 
@@ -512,14 +512,14 @@ static ki_class* ki_class_ct(ki_class* p) {
     }
     fopAc_ac_c_ct(&p->actor);
     p->actor.__vtbl = KI_VTBL;
-    kiMain_packetCtor(p->m2B8); /* mDoExt_J3DModelPacketS (HD) */
+    kiMain_packetCtor(p->mModelPacket); /* mDoExt_J3DModelPacketS (HD) */
     kiMain_circleCtor(&p->mAcchCir);
     ki_ObjAcch_ct(&p->mAcch);
     dCcD_Stts_ct(&p->mStts);
-    kiMain_sphereCtor(&p->m580);
-    kiMain_sphereCtor(&p->m6AC);
+    kiMain_sphereCtor(&p->mAtSph);
+    kiMain_sphereCtor(&p->mCoSph);
     kiMain_sphereCtor(&p->mDamageSphere);
-    kiMain_followCtor(&p->m908, 0, 0); /* dPa_followEcallBack(0, 0) */
+    kiMain_followCtor(&p->mFireCallBack, 0, 0); /* dPa_followEcallBack(0, 0) */
     /* enemyice (inline) */
     dCcD_Stts_ct(&p->mEnemyIce.mStts);
     dCcD_Cyl_ct(&p->mEnemyIce.mCyl, KI_CYLINDER_VTABLE);
@@ -591,12 +591,12 @@ static void ki_class_dt(ki_class* p, s32 flags) {
         dCcD_Cyl_dt(&p->mEnemyIce.mCyl, 2);
         dCcD_Stts_dt(&p->mEnemyIce.mStts, 2);
         kiMain_sphereDtor(&p->mDamageSphere, 2);
-        kiMain_sphereDtor(&p->m6AC, 2);
-        kiMain_sphereDtor(&p->m580, 2);
+        kiMain_sphereDtor(&p->mCoSph, 2);
+        kiMain_sphereDtor(&p->mAtSph, 2);
         dCcD_Stts_dt(&p->mStts, 2);
         ki_ObjAcch_dt(&p->mAcch);
         kiMain_circleDtor(&p->mAcchCir.m_cir, 2);
-        kiMain_packetDtor(p->m2B8, 2); /* mDoExt_J3DModelPacketS::~ */
+        kiMain_packetDtor(p->mModelPacket, 2); /* mDoExt_J3DModelPacketS::~ */
         kiMain_actorDtor(p, 0);        /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(p);

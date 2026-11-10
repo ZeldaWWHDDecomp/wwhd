@@ -432,9 +432,9 @@ BOOL daSalvage_c::proc_wait() {
     attentionWords->y = y;
     attentionWords->z = z;
     if (type == 1)
-        this->m2E9 = ship->m0398 < 0 ? 1 : 2;
+        this->m2E9 = ship->mCraneAngle < 0 ? 1 : 2;
     else if (kind == 5 || type == 0 || type == 2 || type == 3)
-        this->m2E9 = ship->m0398 < 0 ? 3 : 4;
+        this->m2E9 = ship->mCraneAngle < 0 ? 3 : 4;
     return TRUE;
 }
 

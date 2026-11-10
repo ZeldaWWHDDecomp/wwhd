@@ -191,7 +191,7 @@ bool daNpc_Kk1_c::createInit() {
     attention_info.distances[3] = 0xA9; /* attention_info.distances */
     attention_info.distances[1] = 0xA9;
     gravity = -4.5f;
-    Kk1A_fields(this).mAnimationNo = 0xC;
+    Kk1A_fields(this).mAnmNum = 0xC;
     attention_info.flags = 0xA; /* attention_info.flags */
     if (Kk1A_fields(this).mMessageType != 0) {
         return false;
@@ -249,7 +249,7 @@ void daNpc_Kk1_c::play_animation() {
         Kk1A_fields(this).mAnimationEnded = 1;
     }
     Kk1A_fields(this).mPreviousFrame = mpMorf->getFrame();
-    switch ((s32)(s8)Kk1A_fields(this).mAnimationNo) {
+    switch ((s32)(s8)Kk1A_fields(this).mAnmNum) {
     case 8:
         if (mpMorf->checkFrame(4.0f)) {
             gabi::Local<cXyz> ofs;
@@ -374,15 +374,15 @@ void daNpc_Kk1_c::play_eff_anm() {
 /* 0226C660 */
 void daNpc_Kk1_c::setAnm_anm(anm_prm_c* i_prm) {
     s8 num = i_prm->mAnmNo;
-    if (num < 0 || (s8)Kk1A_fields(this).mAnimationNo == num) {
+    if (num < 0 || (s8)Kk1A_fields(this).mAnmNum == num) {
         return;
     }
     s32 bck = bckResID(num);
     Kk1A_setAnmIDRes(mpMorf, i_prm->mLoopMode, i_prm->mMorf, i_prm->mSpeed, bck, -1, mArcName);
-    Kk1A_fields(this).mAnimationNo = (u8)(s8)i_prm->mAnmNo;
+    Kk1A_fields(this).mAnmNum = (u8)(s8)i_prm->mAnmNo;
     delAse();
     Kk1A_fields(this).mEffectHidden = 1;
-    if ((s8)Kk1A_fields(this).mAnimationNo == 1) {
+    if ((s8)Kk1A_fields(this).mAnmNum == 1) {
         setAse();
         Kk1A_fields(this).mEffectFrame.y = 0;
         Kk1A_fields(this).mEffectFrame.x = 0;
@@ -414,17 +414,17 @@ void daNpc_Kk1_c::setAnm() {
 void daNpc_Kk1_c::checkOrder() {
     if (eventInfo.mCommand == 2) { /* eventInfo.checkCommandDemoAccrpt() */
         be<s16>* evtIdx = Kk1A_eventIds(this);
-        if (dComIfGp_evmng_startCheck(evtIdx[Kk1A_fields(this).mEventAction]) && (s8)Kk1A_fields(this).mEventState >= 3) {
-            if (Kk1A_fields(this).mEventAction == 4) {
+        if (dComIfGp_evmng_startCheck(evtIdx[Kk1A_fields(this).mEventIdx]) && (s8)Kk1A_fields(this).mOrderEvent >= 3) {
+            if (Kk1A_fields(this).mEventIdx == 4) {
                 setAnm_NUM(0, 1);
             }
-            Kk1A_fields(this).mEventState = 0;
+            Kk1A_fields(this).mOrderEvent = 0;
             Kk1A_fields(this).mMessageTag = 0xFF;
             Kk1A_fields(this).mTalkAnimation = 0xFF;
         }
     } else if (checkCommandTalk()) {
-        if ((s8)Kk1A_fields(this).mEventState == 1 || (s8)Kk1A_fields(this).mEventState == 2) {
-            Kk1A_fields(this).mEventState = 0;
+        if ((s8)Kk1A_fields(this).mOrderEvent == 1 || (s8)Kk1A_fields(this).mOrderEvent == 2) {
+            Kk1A_fields(this).mOrderEvent = 0;
             Kk1A_fields(this).mTalkRequested = 1;
         }
     }
@@ -479,7 +479,7 @@ void daNpc_Kk1_c::setAttention(u32 i_force) {
     attPos->x = current.pos.x;
     attPos->y = current.pos.y + l_HIO_kk1().mAttentionYOffset;
     attPos->z = current.pos.z;
-    if (Kk1A_fields(this).mActionResult == 0 && !i_force) {
+    if (Kk1A_fields(this).mbSetEyePos == 0 && !i_force) {
         return;
     }
     eyePos.z = (f32)mAttPos.z;
@@ -566,25 +566,25 @@ void daNpc_Kk1_c::setStt(s8 i_stt) {
     case KK1A_ACTION_WAIT_NEAR:
     case KK1A_ACTION_WAIT_FAR:
         Kk1A_fields(this).mActionTimer = 0;
-        Kk1A_fields(this).mEventState = 0;
+        Kk1A_fields(this).mOrderEvent = 0;
         speedF = 0.0f;
         break;
     case KK1A_ACTION_TALK:
         Kk1A_fields(this).mPreviousState = old;
         Kk1A_fields(this).mTalkAnimation = 0xFF;
         Kk1A_fields(this).mMessageAnimationStarted = 0;
-        Kk1A_fields(this).mEventState = 0;
+        Kk1A_fields(this).mOrderEvent = 0;
         Kk1A_fields(this).mTalkLookTimer = 0;
         Kk1A_fields(this).mMessageTag = 0xFF;
         break;
     case KK1A_ACTION_WALK:
-        Kk1A_fields(this).mEventState = 0;
+        Kk1A_fields(this).mOrderEvent = 0;
         break;
     case KK1A_ACTION_COMMENT:
-        Kk1A_fields(this).mEventState = 0;
+        Kk1A_fields(this).mOrderEvent = 0;
         Kk1A_fields(this).mCommentAction = 0;
         Kk1A_fields(this).mOnPath = 1;
-        Kk1A_fields(this).mLookState = 2;
+        Kk1A_fields(this).mMoveMode = 2;
         break;
     }
     setAnm();
@@ -666,7 +666,7 @@ u8 daNpc_Kk1_c::demo() {
         m_jnt.mAngles[0][1] = 0;
         m_jnt.mAngles[1][0] = 0;
         Kk1A_fields(this).mInDemo = 1;
-        Kk1A_fields(this).mDemoAnimation = 0;
+        Kk1A_fields(this).mPreserveShapeAngle = 0;
         m_jnt.mAngles[0][0] = 0;
         id = demoActorID;
         m_jnt.mAngles[1][1] = 0;

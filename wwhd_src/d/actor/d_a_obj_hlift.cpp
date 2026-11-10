@@ -50,7 +50,7 @@ static s32 Hlift_PrmAbstract(Act_c* a, s32 width, s32 shift) {
 }
 
 static f32 distance(Act_c* a) {
-    return f32(M_up_dist.mValues[u32(s32(a->field_0x2D8))]);
+    return f32(M_up_dist.mValues[u32(s32(a->mDistIdx))]);
 }
 
 static void sound(Act_c* a, u32 id) {
@@ -61,7 +61,7 @@ static void sound(Act_c* a, u32 id) {
 
 static void lagSet(Act_c* a) {
     s32 lag = s32(L_time_lag_num.mValue);
-    a->field_0x2F4 = L_time_lag.mValues[u32(lag)];
+    a->mTimeLag = L_time_lag.mValues[u32(lag)];
     lag = s32(L_time_lag_num.mValue);
     s32 next = s32(u32(lag) + 1);
     L_time_lag_num.mValue = next % 5;
@@ -69,7 +69,7 @@ static void lagSet(Act_c* a) {
 
 /* 023561E4 */
 s32 Act_c::CreateHeap() {
-    s16 resource = M_data_size.mValues[u32(s32(field_0x2DC))].field_0x00;
+    s16 resource = M_data_size.mValues[u32(s32(mSizeIdx))].field_0x00;
     auto* model_data = static_cast<J3DModelData*>(dComIfG_getObjectRes("Hlift", resource, gc_tu.safeString));
     if (!model_data)
         JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x120, "model_data != 0");
@@ -85,14 +85,14 @@ s32 Act_c::CreateHeap() {
 
 /* 023564F4 */
 s32 Act_c::Create() {
-    field_0x2EC = 0;
+    mVibOffsetY = 0;
     s32 sw = Hlift_PrmAbstract(this, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
     if (fopAcM_isSwitch(this, sw))
         mode_upper_init();
     else
         mode_lower_init();
-    field_0x2E4 = Mode_UNK;
-    field_0x2F6 = 0;
+    mNextMode = Mode_UNK;
+    mDemoRunning = 0;
     u8 event = Hlift_PrmAbstract(this, Act_c::PRM_EVENTID_W, Act_c::PRM_EVENTID_S);
     s16 eid = dComIfGp_evmng_getEventIdx("Hlift_up", event);
     u32 model = gabi::ea(mModel1.get());
@@ -116,9 +116,9 @@ cPhs_State Act_c::Mthd_Create() {
     }
     cPhs_State state = dComIfG_resLoad(&mPhase, "Hlift");
     if (state == 4) {
-        field_0x2D8 = Hlift_PrmAbstract(this, Act_c::PRM_DIST_W, Act_c::PRM_DIST_S);
+        mDistIdx = Hlift_PrmAbstract(this, Act_c::PRM_DIST_W, Act_c::PRM_DIST_S);
         s32 size = Hlift_PrmAbstract(this, Act_c::PRM_SIZE_W, Act_c::PRM_SIZE_S);
-        field_0x2DC = size;
+        mSizeIdx = size;
         auto* row = &M_data_size.mValues[u32(size)];
         u32 heap = row->field_0x02;
         s16 dzb = row->field_0x01;
@@ -148,7 +148,7 @@ s32 Act_c::Mthd_Delete() {
 /* 02356344 */
 void Act_c::mode_lower_init() {
     f32 y = this->home.pos.y;
-    field_0x2E0 = Mode_LOWER;
+    mMode = Mode_LOWER;
     current.pos.y = y;
 }
 
@@ -162,30 +162,30 @@ void Act_c::mode_lower() {
 /* 02356B2C */
 void Act_c::mode_l_u_init() {
     vib_set();
-    field_0x2F0 = 0;
-    field_0x2E0 = Mode_L_U;
+    mMoveSpeed = 0;
+    mMode = Mode_L_U;
     sound(this, JA_SE_OBJ_PRT_LIFT_UD);
     lagSet(this);
 }
 
 /* 02356BD0 */
 void Act_c::mode_l_u() {
-    s16 lag = field_0x2F4;
+    s16 lag = mTimeLag;
     if (lag > 0) {
-        field_0x2F4 = lag - 1;
+        mTimeLag = lag - 1;
         return;
     }
     f32 y = current.pos.y, home = this->home.pos.y;
     f32 height = y - home;
     if (height < 50.f)
-        cLib_chaseF(&field_0x2F0, 10.f, 0.3f);
+        cLib_chaseF(&mMoveSpeed, 10.f, 0.3f);
     else if (height < distance(this) - 50.f)
-        field_0x2F0 = 10.f;
+        mMoveSpeed = 10.f;
     else
-        cLib_chaseF(&field_0x2F0, 2.f, 1.2f);
+        cLib_chaseF(&mMoveSpeed, 2.f, 1.2f);
     f32 d = distance(this);
     home = this->home.pos.y;
-    f32 speed = field_0x2F0;
+    f32 speed = mMoveSpeed;
     if (cLib_chaseF(&current.pos.y, home + d, speed)) {
         vib_set();
         sound(this, JA_SE_OBJ_PRT_LIFT_STOP);
@@ -197,7 +197,7 @@ void Act_c::mode_l_u() {
 void Act_c::mode_upper_init() {
     f32 d = distance(this);
     f32 y = this->home.pos.y;
-    field_0x2E0 = Mode_UPPER;
+    mMode = Mode_UPPER;
     current.pos.y = y + d;
 }
 
@@ -211,29 +211,29 @@ void Act_c::mode_upper() {
 /* 02356E40 */
 void Act_c::mode_u_l_init() {
     vib_set();
-    field_0x2F0 = 0;
+    mMoveSpeed = 0;
     sound(this, JA_SE_OBJ_PRT_LIFT_UD);
     lagSet(this);
-    field_0x2E0 = Mode_U_L;
+    mMode = Mode_U_L;
 }
 
 /* 02356EE0 */
 void Act_c::mode_u_l() {
-    s16 lag = field_0x2F4;
+    s16 lag = mTimeLag;
     if (lag > 0) {
-        field_0x2F4 = lag - 1;
+        mTimeLag = lag - 1;
         return;
     }
     f32 home = this->home.pos.y, y = current.pos.y;
     f32 height = y - home;
     if (height < 50.f)
-        cLib_chaseF(&field_0x2F0, 2.f, 1.2f);
+        cLib_chaseF(&mMoveSpeed, 2.f, 1.2f);
     else if (height < distance(this) - 50.f)
-        field_0x2F0 = 10.f;
+        mMoveSpeed = 10.f;
     else
-        cLib_chaseF(&field_0x2F0, 10.f, 0.3f);
+        cLib_chaseF(&mMoveSpeed, 10.f, 0.3f);
     home = this->home.pos.y;
-    f32 speed = field_0x2F0;
+    f32 speed = mMoveSpeed;
     if (cLib_chaseF(&current.pos.y, home, speed)) {
         vib_set();
         sound(this, JA_SE_OBJ_PRT_LIFT_STOP);
@@ -245,13 +245,13 @@ void Act_c::mode_u_l() {
 void Act_c::mode_demoreq_init(Mode_e next) {
     if (next != Mode_U_L && next != Mode_L_U)
         JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x241, "(next == Mode_U_L) || (next == Mode_L_U)");
-    field_0x2E4 = next;
-    field_0x2F6 = 0;
+    mNextMode = next;
+    mDemoRunning = 0;
     u8 event = Hlift_PrmAbstract(this, Act_c::PRM_EVENTID_W, Act_c::PRM_EVENTID_S);
     s16 id = mEventId;
     fopAcM_orderOtherEventId(this, id, event, 0xFFFF, 0, 1);
     u16 flags = u16(eventInfo.mCondition);
-    field_0x2E0 = Mode_DEMOREQ;
+    mMode = Mode_DEMOREQ;
     eventInfo.mCondition = flags | dEvtCnd_UNK2_e;
 }
 
@@ -259,8 +259,8 @@ void Act_c::mode_demoreq_init(Mode_e next) {
 void Act_c::mode_demoreq() {
     s16 id = mEventId;
     if (dComIfGp_evmng_existence(id) && eventInfo.checkCommandDemoAccrpt())
-        field_0x2F6 = 1;
-    if (s32(field_0x2E4) == Mode_U_L)
+        mDemoRunning = 1;
+    if (s32(mNextMode) == Mode_U_L)
         mode_u_l_init();
     else
         mode_l_u_init();
@@ -268,7 +268,7 @@ void Act_c::mode_demoreq() {
 
 /* 02356358 */
 void Act_c::set_mtx() {
-    f32 offset = field_0x2EC;
+    f32 offset = mVibOffsetY;
     f32 y = current.pos.y;
     y = (y + offset) + 30.0f;
     f32 z = current.pos.z;
@@ -303,37 +303,37 @@ void Act_c::rot_set() {
 
 /* 02356A00 */
 void Act_c::vib_set() {
-    field_0x2E8 = 10;
-    field_0x2EA = 0x4000;
+    mVibTimer = 10;
+    mVibAngle = 0x4000;
 }
 
 /* 02356728 */
 void Act_c::vib_proc() {
-    s16 timer = field_0x2E8;
+    s16 timer = mVibTimer;
     if (timer > 0) {
-        u16 angle = field_0x2EA;
+        u16 angle = mVibAngle;
         // HD: retain fused multiply-add and the original constant rounding.
         f32 factor = gabi::fmadds(f32(10 - timer), 0.05000000074505806f, 0.5f);
         f32 sine = cM_ssin(angle);
-        timer = field_0x2E8;
-        field_0x2EA = angle + 0x4000;
-        field_0x2E8 = timer - 1;
-        field_0x2EC = sine * (2.5f * factor);
+        timer = mVibTimer;
+        mVibAngle = angle + 0x4000;
+        mVibTimer = timer - 1;
+        mVibOffsetY = sine * (2.5f * factor);
     } else
-        field_0x2EC = 0;
+        mVibOffsetY = 0;
 }
 
 /* 02356664 */
 u8 Act_c::chk_demo_end() {
-    u8 demo = field_0x2F6;
+    u8 demo = mDemoRunning;
     if (demo) {
         s16 id = mEventId;
         if (dComIfGp_evmng_endCheck(id)) {
             dComIfGp_event_reset();
-            field_0x2F6 = 0;
+            mDemoRunning = 0;
             demo = 0;
         } else
-            demo = field_0x2F6;
+            demo = mDemoRunning;
     }
     // HD: XOR the byte, including non-canonical values, without boolean conversion.
     return demo ^ 1;
@@ -351,8 +351,8 @@ void Act_c::se_whole() {
 /* 02356828 */
 s32 Act_c::Execute(gptr<Mtx34>* out) {
     chk_demo_end();
-    (this->*mode_proc.mProc[u32(s32(field_0x2E0))])();
-    s32 mode = field_0x2E0;
+    (this->*mode_proc.mProc[u32(s32(mMode))])();
+    s32 mode = mMode;
     if (mode == Mode_L_U || mode == Mode_U_L || mode == Mode_DEMOREQ)
         M_lift_move_flag.mValue = 1;
     rot_set();

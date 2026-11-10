@@ -93,21 +93,21 @@ struct ki_class {
     /* 0x000 */ fopEn_enemy_c actor;
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3D4 */ u8 m2B8[0xB0];               /* mDoExt_J3DModelPacketS (HD 0xB0; set up only in GanonK) */
+    /* 0x3D4 */ u8 mModelPacket[0xB0];  /* was m2B8: ki_class_ct 0219D3F4 / ki_class_dt 0219DAD8 construct / destroy it as an mDoExt_J3DModelPacketS (HD 0xB0 bytes); useHeapInit 0219CF38 sets it up (ki_packet_init); mDoExt_J3DModelPacketS (HD 0xB0; set up only in GanonK) */
     /* 0x484 */ be<u8> mParameters;
-    /* 0x485 */ be<u8> m2CD;
+    /* 0x485 */ be<u8> mAttackRangePrm;  /* was m2CD: daKi_Create 0219D568: param bits 8-14; picks mMaxAttackMoveDist300 = 300 / 800 / 1500 / 3000 (0 / 1 / 2 / 3 and above) */
     /* 0x486 */ be<u8> mKiPathIndex;
-    /* 0x487 */ be<u8> m2CF;
+    /* 0x487 */ be<u8> mAppearSwitchPrm;  /* was m2CF: daKi_Create 0219D568: param bits 24-31; when not 0xFF, mAppearSwitch = it + 1 */
     /* 0x488 */ u8 _488;
     /* 0x489 */ be<u8> mAction;
     /* 0x48A */ u8 _48A;
     /* 0x48B */ be<s8> mBehaviorType;
-    /* 0x48C */ be<u8> m2D4;
+    /* 0x48C */ be<u8> mAppearSwitch;  /* was m2D4: daKi_Create 0219D568 sets mAppearSwitchPrm + 1; while it is not 0 daKi_Draw 02199748 draws nothing and daKi_Execute 0219AAE8 waits (no attention) until switch (it - 1) is on, then clears it and flies off */
     /* 0x48D */ be<s8> mCurrKiPathIndex;
-    /* 0x48E */ be<s8> m2D6;
-    /* 0x48F */ be<s8> m2D7;
+    /* 0x48E */ be<s8> mPathPoint;  /* was m2D6: ki_path_move (in daKi_Execute 0219AAE8): index of the current point of ppd (ki_path_point), stepped by mPathDir and turned round at either end */
+    /* 0x48F */ be<s8> mPathDir;  /* was m2D7: daKi_Create 0219D568 sets 1; ki_path_move (in daKi_Execute 0219AAE8) adds it to mPathPoint and sets -1 at the path's end */
     /* 0x490 */ gptr<dPath> ppd;
-    /* 0x494 */ be<u8> m2DC;
+    /* 0x494 */ be<u8> mVanish;  /* was m2DC: ki_fire_set_move (in daKi_Execute 0219AAE8) sets 1 after the flight timer runs out or when far from the player behind a wall; daKi_Execute then shrinks scale to 0 and deletes the actor */
     /* 0x495 */ u8 _495[3];                   /* HD: no shadow id (GameCube m2E0) */
     /* 0x498 */ be<f32> mMaxAttackMoveDist300;
     /* 0x49C */ cXyz mPosMove;
@@ -115,54 +115,54 @@ struct ki_class {
     /* 0x4AC */ be<f32> mPosMoveMaxSpeed;
     /* 0x4B0 */ be<f32> mPosMoveDist;
     /* 0x4B4 */ u8 _4B4[4];
-    /* 0x4B8 */ be<f32> m304;
+    /* 0x4B8 */ be<f32> mTurnScale;  /* was m304: ki_pos_move 02199A64 turns current.angle y / x by at most it * mPosMoveDist; ki_atack_move 02199C48 sets 10000, ki_fly_move / ki_path_move (in daKi_Execute 0219AAE8) 3000 / 4000 */
     /* 0x4BC */ u8 _4BC[4];
     /* 0x4C0 */ be<s16> mTimers[4];
-    /* 0x4C8 */ be<s16> m314;
-    /* 0x4CA */ be<s16> m316;
+    /* 0x4C8 */ be<s16> mNoHitTimer;  /* was m314: daKi_Execute 0219AAE8 counts it down and handles a mDamageSphere hit only while it is 0, then sets 10 (0x32 after fire); ki_damage_move keeps it at 3 */
+    /* 0x4CA */ be<s16> mKnockbackAngleY;  /* was m316: daKi_Execute 0219AAE8 sets the player angle (fopAcM_searchPlayerAngleY) at a hit; ki_damage_move (in daKi_Execute) turns shape_angle.y to it and moves along it by mKnockbackSpeed */
     /* 0x4CC */ be<s16> mRand2000;
     /* 0x4CE */ u8 _4CE[2];
-    /* 0x4D0 */ be<f32> m31C;
-    /* 0x4D4 */ be<s16> m320;
-    /* 0x4D6 */ be<s16> m322;
-    /* 0x4D8 */ be<s16> m324;
-    /* 0x4DA */ be<s16> m326;
-    /* 0x4DC */ be<s16> m328;
+    /* 0x4D0 */ be<f32> mKnockbackSpeed;  /* was m31C: daKi_Execute 0219AAE8 sets 100 (wind) / 150 / l_kiHIO.m34 / m38 at a hit; ki_damage_move (in daKi_Execute) moves back by it while > 0.1 and eases it to 0 (l_kiHIO.m40) */
+    /* 0x4D4 */ be<s16> mFrameCounter;  /* was m320: daKi_Create 0219D568 starts it at random(10000); daKi_Execute 0219AAE8 increments it every frame; ki_atack_move 02199C48 uses it as the phase of its sine / cosine circling offsets */
+    /* 0x4D6 */ be<s16> mHeadTargetAngleY;  /* was m322: ki_wait_move (in daKi_Execute 0219AAE8): the player's direction relative to current.angle.y, clamped to +-10000; daKi_Execute eases mHeadAngleY to it and clears it */
+    /* 0x4D8 */ be<s16> mHeadTargetAngleX;  /* was m324: ki_wait_move (in daKi_Execute 0219AAE8): the player's elevation (-atan2(y, xz)), clamped to -0x38E..0x1FF6; daKi_Execute eases mHeadAngleX to it and clears it */
+    /* 0x4DA */ be<s16> mHeadAngleY;  /* was m326: daKi_Execute 0219AAE8 eases it to mHeadTargetAngleY; nodeCallBack 021991AC (on KI_JNT_J_KI_HEAD_e) applies it as the joint's Z rotation */
+    /* 0x4DC */ be<s16> mHeadAngleX;  /* was m328: daKi_Execute 0219AAE8 eases it to mHeadTargetAngleX; nodeCallBack 021991AC (on KI_JNT_J_KI_HEAD_e) applies it as the joint's Y rotation */
     /* 0x4DE */ u8 _4DE[2];
-    /* 0x4E0 */ gptr<J3DAnmTexPattern> m32C;
-    /* 0x4E4 */ gptr<mDoExt_btpAnm> m330;     /* HD: an mDoExt_btpAnm (GameCube J3DTexNoAnm[]) */
-    /* 0x4E8 */ be<u8> m334;
-    /* 0x4E9 */ be<u8> m335;
-    /* 0x4EA */ be<u8> m336;
-    /* 0x4EB */ be<u8> m337;
-    /* 0x4EC */ be<s8> m338;
-    /* 0x4ED */ be<s8> m339;
+    /* 0x4E0 */ gptr<J3DAnmTexPattern> mBtpPattern;  /* was m32C: tex_anm_set 021994B0 stores the J3DAnmTexPattern it picked and resets its frame; daKi_Draw 02199748 sets its frame to mEyeFrame and (re)initialises mBtpAnm with it */
+    /* 0x4E4 */ gptr<mDoExt_btpAnm> mBtpAnm;  /* was m330: useHeapInit 0219CF38 creates the mDoExt_btpAnm; daKi_Draw 02199748 initialises it with mBtpPattern and enters it at mEyeFrame; HD: an mDoExt_btpAnm (GameCube J3DTexNoAnm[]) */
+    /* 0x4E8 */ be<u8> mEyeFrame;  /* was m334: tex_anm_set 021994B0 resets it to 0; ki_eye_tex_anm (in daKi_Execute 0219AAE8) counts it up to mEyeMaxFrame; daKi_Draw 02199748 shows the texture pattern frame it names */
+    /* 0x4E9 */ be<u8> mEyeAnmOn;  /* was m335: tex_anm_set 021994B0 sets 1; ki_eye_tex_anm (in daKi_Execute 0219AAE8) advances mEyeFrame only while it is set and clears it at the end of a non-looping pattern */
+    /* 0x4EA */ be<u8> mEyeMaxFrame;  /* was m336: tex_anm_set 021994B0: ki_tex_max_frame[pattern]; ki_eye_tex_anm (in daKi_Execute 0219AAE8) advances mEyeFrame until it */
+    /* 0x4EB */ be<u8> mEyeLoop;  /* was m337: tex_anm_set 021994B0: ki_tex_loop[pattern]; ki_eye_tex_anm (in daKi_Execute 0219AAE8) restarts mEyeFrame at 0 while it is set, else stops */
+    /* 0x4EC */ be<s8> mAnmPause;  /* was m338: ki_wait_move (in daKi_Execute 0219AAE8) sets 1 (state 3); daKi_Execute skips mpMorf->play for that frame and clears it */
+    /* 0x4ED */ be<s8> mHioOwner;  /* was m339: daKi_Create 0219D568 sets 1 when this actor created the l_kiHIO child (hio_set); daKi_Delete 0219CE98 deletes the HIO child only then */
     /* 0x4EE */ u8 _4EE[2];
     /* 0x4F0 */ dBgS_AcchCir mAcchCir;
     /* 0x530 */ dBgS_ObjAcch mAcch;
-    /* 0x6F4 */ be<u8> m540;
+    /* 0x6F4 */ be<u8> mBgCheckOn;  /* was m540: daKi_Execute 0219AAE8 clears it each frame and runs mAcch.CrrPos (with the position lowered by 30) only while it is set; ki_atack_move 02199C48, ki_fly_move, ki_damage_move and ki_fire_set_move (in daKi_Execute) set it */
     /* 0x6F5 */ u8 _6F5[3];
     /* 0x6F8 */ dCcD_Stts mStts;
-    /* 0x734 */ dCcD_Sph m580;
-    /* 0x860 */ dCcD_Sph m6AC;
+    /* 0x734 */ dCcD_Sph mAtSph;  /* was m580: daKi_Create 0219D568 sets it from at_sph_src (attack type fire); ki_atack_move 02199C48 gives it radius 30 / attack power 1-2 and checks its AT hit; daKi_Execute 0219AAE8 resets the radius to 0 every frame */
+    /* 0x860 */ dCcD_Sph mCoSph;  /* was m6AC: daKi_Create 0219D568 sets it from co_sph_src; daKi_Execute 0219AAE8 gives it radius l_kiHIO.m58 at current.pos every frame, ki_atack_move 02199C48 0 */
     /* 0x98C */ dCcD_Sph mDamageSphere;
-    /* 0xAB8 */ be<u8> m904;
+    /* 0xAB8 */ be<u8> mFallSpinDir;  /* was m904: ki_damage_move (in daKi_Execute 0219AAE8): random 0 / 1 when it hits a wall; then turns shape_angle.z by -0x250 (0) or +0x250 (1) per frame while falling */
     /* 0xAB9 */ be<u8> mDamageType;
     /* 0xABA */ u8 _ABA[2];
-    /* 0xABC */ dPa_followEcallBack_l m908;
-    /* 0xAD0 */ gptr<JPABaseEmitter> m91C;
-    /* 0xAD4 */ gptr<mDoExt_btkAnm> m920;
+    /* 0xABC */ dPa_followEcallBack_l mFireCallBack;  /* was m908: ki_class_ct 0219D3F4 constructs the dPa_followEcallBack; ki_fire_set_move (in daKi_Execute 0219AAE8) passes it to the fire particle IT_SN_FIREK_FIRE_A and removes it with that emitter; daKi_Delete 0219CE98 removes it */
+    /* 0xAD0 */ gptr<JPABaseEmitter> mFireEmitter;  /* was m91C: ki_fire_set_move (in daKi_Execute 0219AAE8): the emitter of IT_SN_FIREK_FIRE_A (with mFireCallBack) while the fire Keese is flung out, force-deleted when it lands */
+    /* 0xAD4 */ gptr<mDoExt_btkAnm> mBtkAnm;  /* was m920: useHeapInit 0219CF38 creates and initialises the mDoExt_btkAnm; daKi_Execute 0219AAE8 plays it, daKi_Draw 02199748 enters it */
     /* 0xAD8 */ enemyice_l mEnemyIce;
     /* 0xE90 */ enemyfire_l mEnemyFire;
 };
 WWHD_OFFSET(ki_class, mParameters, 0x484);
 WWHD_OFFSET(ki_class, mMaxAttackMoveDist300, 0x498);
-WWHD_OFFSET(ki_class, m32C, 0x4E0);
+WWHD_OFFSET(ki_class, mBtpPattern, 0x4E0);
 WWHD_OFFSET(ki_class, mAcchCir, 0x4F0);
 WWHD_OFFSET(ki_class, mAcch, 0x530);
 WWHD_OFFSET(ki_class, mStts, 0x6F8);
 WWHD_OFFSET(ki_class, mDamageSphere, 0x98C);
-WWHD_OFFSET(ki_class, m908, 0xABC);
+WWHD_OFFSET(ki_class, mFireCallBack, 0xABC);
 WWHD_OFFSET(ki_class, mEnemyIce, 0xAD8);
 WWHD_OFFSET(ki_class, mEnemyFire, 0xE90);
 WWHD_SIZE(ki_class, 0x10BC);
@@ -427,57 +427,57 @@ WWHD_OFFSET(enemyfire_l, m228, 0x228);
 WWHD_OFFSET(ki_class, actor, 0x000);
 WWHD_OFFSET(ki_class, mPhase, 0x3C8);
 WWHD_OFFSET(ki_class, mpMorf, 0x3D0);
-WWHD_OFFSET(ki_class, m2B8, 0x3D4);
-WWHD_OFFSET(ki_class, m2CD, 0x485);
+WWHD_OFFSET(ki_class, mModelPacket, 0x3D4);
+WWHD_OFFSET(ki_class, mAttackRangePrm, 0x485);
 WWHD_OFFSET(ki_class, mKiPathIndex, 0x486);
-WWHD_OFFSET(ki_class, m2CF, 0x487);
+WWHD_OFFSET(ki_class, mAppearSwitchPrm, 0x487);
 WWHD_OFFSET(ki_class, _488, 0x488);
 WWHD_OFFSET(ki_class, mAction, 0x489);
 WWHD_OFFSET(ki_class, _48A, 0x48A);
 WWHD_OFFSET(ki_class, mBehaviorType, 0x48B);
-WWHD_OFFSET(ki_class, m2D4, 0x48C);
+WWHD_OFFSET(ki_class, mAppearSwitch, 0x48C);
 WWHD_OFFSET(ki_class, mCurrKiPathIndex, 0x48D);
-WWHD_OFFSET(ki_class, m2D6, 0x48E);
-WWHD_OFFSET(ki_class, m2D7, 0x48F);
+WWHD_OFFSET(ki_class, mPathPoint, 0x48E);
+WWHD_OFFSET(ki_class, mPathDir, 0x48F);
 WWHD_OFFSET(ki_class, ppd, 0x490);
-WWHD_OFFSET(ki_class, m2DC, 0x494);
+WWHD_OFFSET(ki_class, mVanish, 0x494);
 WWHD_OFFSET(ki_class, _495, 0x495);
 WWHD_OFFSET(ki_class, mPosMove, 0x49C);
 WWHD_OFFSET(ki_class, mPosMoveTarget, 0x4A8);
 WWHD_OFFSET(ki_class, mPosMoveMaxSpeed, 0x4AC);
 WWHD_OFFSET(ki_class, mPosMoveDist, 0x4B0);
 WWHD_OFFSET(ki_class, _4B4, 0x4B4);
-WWHD_OFFSET(ki_class, m304, 0x4B8);
+WWHD_OFFSET(ki_class, mTurnScale, 0x4B8);
 WWHD_OFFSET(ki_class, _4BC, 0x4BC);
 WWHD_OFFSET(ki_class, mTimers, 0x4C0);
-WWHD_OFFSET(ki_class, m314, 0x4C8);
-WWHD_OFFSET(ki_class, m316, 0x4CA);
+WWHD_OFFSET(ki_class, mNoHitTimer, 0x4C8);
+WWHD_OFFSET(ki_class, mKnockbackAngleY, 0x4CA);
 WWHD_OFFSET(ki_class, mRand2000, 0x4CC);
 WWHD_OFFSET(ki_class, _4CE, 0x4CE);
-WWHD_OFFSET(ki_class, m31C, 0x4D0);
-WWHD_OFFSET(ki_class, m320, 0x4D4);
-WWHD_OFFSET(ki_class, m322, 0x4D6);
-WWHD_OFFSET(ki_class, m324, 0x4D8);
-WWHD_OFFSET(ki_class, m326, 0x4DA);
-WWHD_OFFSET(ki_class, m328, 0x4DC);
+WWHD_OFFSET(ki_class, mKnockbackSpeed, 0x4D0);
+WWHD_OFFSET(ki_class, mFrameCounter, 0x4D4);
+WWHD_OFFSET(ki_class, mHeadTargetAngleY, 0x4D6);
+WWHD_OFFSET(ki_class, mHeadTargetAngleX, 0x4D8);
+WWHD_OFFSET(ki_class, mHeadAngleY, 0x4DA);
+WWHD_OFFSET(ki_class, mHeadAngleX, 0x4DC);
 WWHD_OFFSET(ki_class, _4DE, 0x4DE);
-WWHD_OFFSET(ki_class, m330, 0x4E4);
-WWHD_OFFSET(ki_class, m334, 0x4E8);
-WWHD_OFFSET(ki_class, m335, 0x4E9);
-WWHD_OFFSET(ki_class, m336, 0x4EA);
-WWHD_OFFSET(ki_class, m337, 0x4EB);
-WWHD_OFFSET(ki_class, m338, 0x4EC);
-WWHD_OFFSET(ki_class, m339, 0x4ED);
+WWHD_OFFSET(ki_class, mBtpAnm, 0x4E4);
+WWHD_OFFSET(ki_class, mEyeFrame, 0x4E8);
+WWHD_OFFSET(ki_class, mEyeAnmOn, 0x4E9);
+WWHD_OFFSET(ki_class, mEyeMaxFrame, 0x4EA);
+WWHD_OFFSET(ki_class, mEyeLoop, 0x4EB);
+WWHD_OFFSET(ki_class, mAnmPause, 0x4EC);
+WWHD_OFFSET(ki_class, mHioOwner, 0x4ED);
 WWHD_OFFSET(ki_class, _4EE, 0x4EE);
-WWHD_OFFSET(ki_class, m540, 0x6F4);
+WWHD_OFFSET(ki_class, mBgCheckOn, 0x6F4);
 WWHD_OFFSET(ki_class, _6F5, 0x6F5);
-WWHD_OFFSET(ki_class, m580, 0x734);
-WWHD_OFFSET(ki_class, m6AC, 0x860);
-WWHD_OFFSET(ki_class, m904, 0xAB8);
+WWHD_OFFSET(ki_class, mAtSph, 0x734);
+WWHD_OFFSET(ki_class, mCoSph, 0x860);
+WWHD_OFFSET(ki_class, mFallSpinDir, 0xAB8);
 WWHD_OFFSET(ki_class, mDamageType, 0xAB9);
 WWHD_OFFSET(ki_class, _ABA, 0xABA);
-WWHD_OFFSET(ki_class, m91C, 0xAD0);
-WWHD_OFFSET(ki_class, m920, 0xAD4);
+WWHD_OFFSET(ki_class, mFireEmitter, 0xAD0);
+WWHD_OFFSET(ki_class, mBtkAnm, 0xAD4);
 
 WWHD_OFFSET(kiHIO_c, mNo, 0x00);
 WWHD_OFFSET(kiHIO_c, m05, 0x01);

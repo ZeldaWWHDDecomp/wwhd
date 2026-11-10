@@ -67,7 +67,7 @@ BOOL daArrow_Iceeff_c::CreateHeap() {
     if (field_0xA38 == 0) {
         modelData = (J3DModelData*)dComIfG_getObjectRes("Link", dRes_INDEX_LINK_BDL_GICER00_e);
         if (modelData == nullptr) /* JUT_ASSERT(87, modelData != NULL) */
-            JUT_ASSERT_fail("d_a_arrow_iceeff.cpp", 0x57, "modelData != NULL");
+            JUT_ASSERT_fail("d_a_arrow_iceeff.cpp", 0x57, "modelData != (0)");
         for (int i = 0; i < 30; i++) {
             J3DModel* m = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
             field_0x298[i] = m;
@@ -79,7 +79,7 @@ BOOL daArrow_Iceeff_c::CreateHeap() {
     } else {
         modelData = (J3DModelData*)dComIfG_getObjectRes("Link", dRes_INDEX_LINK_BDL_GICER01_e);
         if (modelData == nullptr) /* JUT_ASSERT(98, modelData != NULL) */
-            JUT_ASSERT_fail("d_a_arrow_iceeff.cpp", 0x65, "modelData != NULL");
+            JUT_ASSERT_fail("d_a_arrow_iceeff.cpp", 0x65, "modelData != (0)");
         J3DModel* m = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         mpModel = m;
         if (m == nullptr) {
@@ -90,7 +90,7 @@ BOOL daArrow_Iceeff_c::CreateHeap() {
         J3DAnmTransform* bck =
             (J3DAnmTransform*)dComIfG_getObjectRes("Link", dRes_INDEX_LINK_BCK_GICER01_e);
         if (bck == nullptr) /* JUT_ASSERT(107, bck != NULL) */
-            JUT_ASSERT_fail("d_a_arrow_iceeff.cpp", 0x72, "bck != NULL");
+            JUT_ASSERT_fail("d_a_arrow_iceeff.cpp", 0x72, "bck != 0");
         if (!mBck.init(modelData, bck, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false)) {
             return false;
         }
@@ -408,8 +408,8 @@ static void empty_virtual(void* p) {}
 /* WWHD glue
 str 10007500 "Link"
 str 10007508 "d_a_arrow_iceeff.cpp"
-str 10007520 "modelData != NULL" renamed
-str 10007534 "bck != NULL" renamed
+str 10007520 "modelData != (0)"
+str 10007534 "bck != 0"
 ext 025F181C void mDoMtx_ZrotS(Mtx34*,s16)
 ext 028E9108 void PSMTXConcat(const Mtx34*,const Mtx34*,Mtx34*)
 ext 025D9F70 BOOL fopAcM_getWaterY(const cXyz*,be<f32>*)

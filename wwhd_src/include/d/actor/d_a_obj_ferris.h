@@ -12,12 +12,12 @@ struct Act_c : fopAc_ac_c {
     /* 0x3C4 */ be<s32> mRideState[6];
     /* 0x3DC */ cXyz mRidePos;
     /* 0x3E8 */ request_of_phase_process_class mPhs;
-    /* 0x3F0 */ dCcD_Stts field_0x02d4[5];
-    /* 0x51C */ dCcD_Cyl field_0x0400[5];
-    /* 0xB0C */ dCcD_Stts field_0x09f0[5];
-    /* 0xC38 */ dCcD_Cyl field_0x0b1c[5];
-    /* 0x1228 */ dCcD_Stts field_0x110c[5];
-    /* 0x1354 */ dCcD_Sph field_0x1238[5];
+    /* 0x3F0 */ dCcD_Stts mGondolaStts[5];  /* was field_0x02d4: _create 0233DD60: dCcD_Stts::Init of each gondola's first cylinder (tww: mGondolaCyl[i].SetStts(&it[i])) */
+    /* 0x51C */ dCcD_Cyl mGondolaCyl[5];  /* was field_0x0400: set_collision 0233E9C4: per gondola, R 50 / H 195 at gondola-local (0, -100, -135) while the gondola is below 1820 (tww set_collision, M_cyl_src); _create 0233DD60 constructs / Sets it */
+    /* 0xB0C */ dCcD_Stts mGondolaStts2[5];  /* was field_0x09f0: _create 0233DD60: dCcD_Stts::Init of each gondola's second cylinder (tww: mGondolaCyl2[i].SetStts(&it[i])) */
+    /* 0xC38 */ dCcD_Cyl mGondolaCyl2[5];  /* was field_0x0b1c: set_collision 0233E9C4: per gondola, R 50 / H 148 at gondola-local (0, -56, 127) (tww set_collision, M_cyl_src) */
+    /* 0x1228 */ dCcD_Stts mHangStts[5];  /* was field_0x110c: _create 0233DD60: dCcD_Stts::Init of each hanging-point sphere (tww: mHangSph[i].SetStts(&it[i])) */
+    /* 0x1354 */ dCcD_Sph mHangSph[5];  /* was field_0x1238: set_collision 0233E9C4: per gondola, R 30 sphere at the gondola's hanging point on the turning wheel (the five rim offsets rotated by mRotAngle) while below 1820 (tww set_collision, M_sph_src) */
     /* 0x1930 */ gptr<J3DModel> mpModel[6];
     /* 0x1948 */ Mtx34 mMtx[6];
     /* 0x1A68 */ be<s16> mRotTimer;
@@ -54,12 +54,12 @@ WWHD_OFFSET(Act_c, mpBgW, 0x3AC);
 WWHD_OFFSET(Act_c, mRideState, 0x3C4);
 WWHD_OFFSET(Act_c, mRidePos, 0x3DC);
 WWHD_OFFSET(Act_c, mPhs, 0x3E8);
-WWHD_OFFSET(Act_c, field_0x02d4, 0x3F0);
-WWHD_OFFSET(Act_c, field_0x0400, 0x51C);
-WWHD_OFFSET(Act_c, field_0x09f0, 0xB0C);
-WWHD_OFFSET(Act_c, field_0x0b1c, 0xC38);
-WWHD_OFFSET(Act_c, field_0x110c, 0x1228);
-WWHD_OFFSET(Act_c, field_0x1238, 0x1354);
+WWHD_OFFSET(Act_c, mGondolaStts, 0x3F0);
+WWHD_OFFSET(Act_c, mGondolaCyl, 0x51C);
+WWHD_OFFSET(Act_c, mGondolaStts2, 0xB0C);
+WWHD_OFFSET(Act_c, mGondolaCyl2, 0xC38);
+WWHD_OFFSET(Act_c, mHangStts, 0x1228);
+WWHD_OFFSET(Act_c, mHangSph, 0x1354);
 WWHD_OFFSET(Act_c, mpModel, 0x1930);
 WWHD_OFFSET(Act_c, mMtx, 0x1948);
 WWHD_OFFSET(Act_c, mRotTimer, 0x1A68);

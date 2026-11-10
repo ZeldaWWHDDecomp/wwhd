@@ -172,7 +172,7 @@ BOOL daNpcPhoto_c::initTexPatternAnm(u32 i_modify, int i_param2) {
 /* 022CC160 */
 BOOL daNpcPhoto_c::createHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectIDRes(l_arcname_tbl[0], dRes_ID_PO_BDL_PO_e);
-    J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectIDRes(l_arcname_tbl[0], l_bck_ix_tbl[field_0x9C8]);
+    J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectIDRes(l_arcname_tbl[0], l_bck_ix_tbl[mAnmIdx]);
     mpMorf = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 1, nullptr,
                                     0x80000, 0x11020022);
     if (mpMorf.get() == nullptr || mpMorf->getModel() == nullptr) {
@@ -219,24 +219,24 @@ static daNpcPhoto_c* daNpcPhoto_c_ct(daNpcPhoto_c* i_this) {
     photo_actorConstruct(i_this); /* fopNpc_npc_c::fopNpc_npc_c */
     i_this->__vtbl = PHOTO_VTBL;
     mDoExt_btpAnm::ct(&i_this->mBtpAnm); /* mDoExt_btpAnm::mDoExt_btpAnm */
-    __construct_array(i_this->field_0x6F8, 2, 0x130, gabi::guest_fn((const void*)&dCcD_Cyl_ct_tu));
+    __construct_array(i_this->mCounterCyl, 2, 0x130, gabi::guest_fn((const void*)&dCcD_Cyl_ct_tu));
     i_this->field_0x9C3 = 0;
     i_this->field_0x9C2 = false;
-    i_this->field_0x9C0 = 0;
+    i_this->mExecuteMode = 0;
     i_this->field_0x9C1 = 0;
-    i_this->field_0x984 = 0.0f;
-    i_this->field_0x9A8 = 0;
-    i_this->field_0x988 = 60.0f;
-    i_this->field_0x958.x = 0.0f;
-    i_this->field_0x958.y = 0.0f;
-    i_this->field_0x958.z = 0.0f;
-    i_this->field_0x9CD = false;
-    i_this->field_0x9D6 = 0;
-    i_this->field_0x994 = true;
-    i_this->field_0x9AE = i_this->home.angle.y;
-    i_this->field_0x9C8 = false;
-    i_this->field_0x9C7 = true;
-    i_this->field_0x98C = -1.0f;
+    i_this->mTargetSpeed = 0.0f;
+    i_this->mWaitTimer = 0;
+    i_this->mCylR = 60.0f;
+    i_this->mCylOffset.x = 0.0f;
+    i_this->mCylOffset.y = 0.0f;
+    i_this->mCylOffset.z = 0.0f;
+    i_this->mCounterHit = false;
+    i_this->mLookMode = 0;
+    i_this->mLookHeadOnly = true;
+    i_this->mTargetAngleY = i_this->home.angle.y;
+    i_this->mAnmIdx = false;
+    i_this->mModeInTalk = true;
+    i_this->mMorf = -1.0f;
     i_this->mReplaceDateMessages = 0; /* HD */
     return i_this;
 }
@@ -289,7 +289,7 @@ s16 daNpcPhoto_c::XyEventCB(int i_itemBtn) {
         // HD: up to 12 pictures (GameCube 3)
         if (photo_getPictureNum() < 0xC) {
             s16 eventIdx = mPhotoGetPhotoEventIdx;
-            field_0x9C7 = false;
+            mModeInTalk = false;
             return eventIdx;
         }
         return dComIfGp_evmng_getEventIdx("DEFAULT_TALK_XY" /* "DEFAULT_TALK_XY" */, 0xFF);
@@ -336,7 +336,7 @@ cPhs_State daNpcPhoto_c::createInit() {
             old.pos.copy(*point);
             current.pos.copy(old.pos);
             mPathRun.incIdxLoop();
-            field_0x9A8 = 1;
+            mWaitTimer = 1;
             field_0x9C1 = 2;
         }
         temp = 0xFE;
@@ -350,11 +350,11 @@ cPhs_State daNpcPhoto_c::createInit() {
     mPhotoCounterTalk0EventIdx = dComIfGp_evmng_getEventIdx("PHOTO_COUNTER_TALK0" /* "PHOTO_COUNTER_TALK0" */, 0xFF);
     mPhotoCounterTalk1EventIdx = dComIfGp_evmng_getEventIdx("PHOTO_COUNTER_TALK1" /* "PHOTO_COUNTER_TALK1" */, 0xFF);
     mPhotoDateUB4EventIdx = dComIfGp_evmng_getEventIdx("PHOTO_DATE_UB4" /* "PHOTO_DATE_UB4" */, 0xFF);
-    field_0x9A6 = mPhotoCounterTalk0EventIdx;
+    mCounterTalkEventIdx = mPhotoCounterTalk0EventIdx;
     mEventCut.setActorInfo2(l_npc_staff_id /* "Po" */, this);
-    field_0x9B6 = 0;
-    field_0x9BC = false;
-    field_0x9BD = false;
+    mLookMaxVelTarget = 0;
+    mTalking = false;
+    mInAttention = false;
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel())); /* fopAcM_SetMtx */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 173; /* attention_info.distances[fopAc_Attn_TYPE_TALK_e] */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 173; /* attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] */
@@ -362,13 +362,13 @@ cPhs_State daNpcPhoto_c::createInit() {
     eventInfo.setXyCheckCB(daNpcPhoto_XyCheckCB); /* eventInfo.setXyCheckCB(daNpcPhoto_XyCheckCB) */
     eventInfo.setXyEventCB(daNpcPhoto_XyEventCB); /* eventInfo.setXyEventCB(daNpcPhoto_XyEventCB) */
     if (field_0x9C1 == 4) {
-        field_0x9D7 = false;
-        field_0x9D8 = false;
+        mBodyTurn = false;
+        mLookAtPlayer = false;
     } else {
-        field_0x9D7 = l_npc_dat.field_0x52;
-        field_0x9D8 = l_npc_dat.field_0x53;
+        mBodyTurn = l_npc_dat.field_0x52;
+        mLookAtPlayer = l_npc_dat.field_0x53;
     }
-    field_0x9B2 = l_npc_dat.field_0x28;
+    mMaxAttnAngleY = l_npc_dat.field_0x28;
     mObjAcch.CrrPos(dComIfG_Bgsp());
     f32 gnd = mObjAcch.GetGroundH();
     if (gnd != -1000000000.0f /* -G_CM3D_F_INF */) {
@@ -381,12 +381,12 @@ cPhs_State daNpcPhoto_c::createInit() {
     mCyl.Set(&photo_npcCylinderSource /* dNpc_cyl_src */);
     mCyl.SetStts(&mStts);
     gabi::Local<cXyz> center;
-    cXyz_pl(&current.pos, center.get(), &field_0x958);
-    setCollision(&mCyl, center.get(), field_0x988, 150.0f);
-    field_0x6F8[0].Set(reinterpret_cast<dCcD_SrcCyl*>(&l_cyl_src2));
-    field_0x6F8[0].SetStts(&mStts);
-    field_0x6F8[1].Set(reinterpret_cast<dCcD_SrcCyl*>(&l_cyl_src2));
-    field_0x6F8[1].SetStts(&mStts);
+    cXyz_pl(&current.pos, center.get(), &mCylOffset);
+    setCollision(&mCyl, center.get(), mCylR, 150.0f);
+    mCounterCyl[0].Set(reinterpret_cast<dCcD_SrcCyl*>(&l_cyl_src2));
+    mCounterCyl[0].SetStts(&mStts);
+    mCounterCyl[1].Set(reinterpret_cast<dCcD_SrcCyl*>(&l_cyl_src2));
+    mCounterCyl[1].SetStts(&mStts);
     return cPhs_COMPLEATE_e;
 }
 /* 022CCC50 */
@@ -483,7 +483,7 @@ static BOOL daNpc_PhotoIsDelete(void*) {
 /*: daNpcPhoto_c deleting destructor (compiler-generated, HD virtual destructor) */
 static void daNpcPhoto_dt(daNpcPhoto_c* p, s32 flags) {
     if (p != nullptr) {
-        photo_destroyArray(p->field_0x6F8, 2, 0x130, gabi::guest_fn((const void*)&photo_cylElementDestroy), 0, 0); /* __destroy_arr */
+        photo_destroyArray(p->mCounterCyl, 2, 0x130, gabi::guest_fn((const void*)&photo_cylElementDestroy), 0, 0); /* __destroy_arr */
         __dt(&p->mCyl);                                    /* ~dCcD_Cyl */
         __dt(&p->mStts);                                   /* ~dCcD_Stts */
         __dt(&p->mAcchCir); /* ~cM3dGCir */

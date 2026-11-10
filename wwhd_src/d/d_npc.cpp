@@ -636,27 +636,27 @@ void npc_readable::dNpc_HeadAnm_c::swing_vertical_init(s32 count, s32 step, s32 
     if (resume && mProcIndex == -1 && !mProcDelta && mProcFunc == SWING_VERTICAL)
         return;
     mProcFunc = SWING_VERTICAL;
-    field_0x1C = 0;
-    field_0x20 = count;
-    field_0x1E = step;
+    mSwingPhase = 0;
+    mSwingCount = count;
+    mSwingPhaseStep = step;
     mProcDelta = 0;
     mProcIndex = -1;
-    field_0x14 = signedFloat(amplitude);
+    mVerticalAmplitude = signedFloat(amplitude);
 }
 /* 0259F448 */
 void npc_readable::dNpc_HeadAnm_c::swing_vertical() {
     gabi::AutoFrame frame{0x0259F448};
-    s16 before = field_0x1C;
-    u16 phase = (u16)((s32)before + (s32)field_0x1E);
-    f32 amplitude = field_0x14;
-    field_0x1C = phase;
+    s16 before = mSwingPhase;
+    u16 phase = (u16)((s32)before + (s32)mSwingPhaseStep);
+    f32 amplitude = mVerticalAmplitude;
+    mSwingPhase = phase;
     f32 wave = cM_ssin(phase);
     s16 target = (s16)gabi::ftoi(gabi::fmuls_ppc(amplitude, wave));
-    npc_addCalcAngle(&field_0x00.x, target, 4, 0x1000, 0x100);
-    npc_addCalcAngle(&field_0x00.y, 0, 4, 0x1000, 0x100);
-    if (before < 0 && field_0x1C >= 0) {
-        s16 count = (s16)((s16)field_0x20 - 1);
-        field_0x20 = count;
+    npc_addCalcAngle(&mSwingAngle.x, target, 4, 0x1000, 0x100);
+    npc_addCalcAngle(&mSwingAngle.y, 0, 4, 0x1000, 0x100);
+    if (before < 0 && mSwingPhase >= 0) {
+        s16 count = (s16)((s16)mSwingCount - 1);
+        mSwingCount = count;
         if (count <= 0) {
             mProcFunc = 0;
             mProcDelta = 0;
@@ -671,28 +671,28 @@ void npc_readable::dNpc_HeadAnm_c::swing_horizone_init(s32 count, s32 step, s32 
     // The horizone initializer also tests the vertical procedure, as in tww.
     if (resume && mProcIndex == -1 && !mProcDelta && mProcFunc == SWING_VERTICAL)
         return;
-    field_0x1C = 0;
-    field_0x20 = count;
+    mSwingPhase = 0;
+    mSwingCount = count;
     mProcFunc = SWING_HORIZONE;
-    field_0x1E = step;
+    mSwingPhaseStep = step;
     mProcDelta = 0;
     mProcIndex = -1;
-    field_0x18 = signedFloat(amplitude);
+    mHorizontalAmplitude = signedFloat(amplitude);
 }
 /* 0259F5A4 */
 void npc_readable::dNpc_HeadAnm_c::swing_horizone() {
     gabi::AutoFrame frame{0x0259F5A4};
-    s16 before = field_0x1C;
-    u16 phase = (u16)((s32)before + (s32)field_0x1E);
-    f32 amplitude = field_0x18;
-    field_0x1C = phase;
+    s16 before = mSwingPhase;
+    u16 phase = (u16)((s32)before + (s32)mSwingPhaseStep);
+    f32 amplitude = mHorizontalAmplitude;
+    mSwingPhase = phase;
     f32 wave = cM_ssin(phase);
     s16 target = (s16)gabi::ftoi(gabi::fmuls_ppc(amplitude, wave));
-    npc_addCalcAngle(&field_0x00.x, 0, 4, 0x1000, 0x100);
-    npc_addCalcAngle(&field_0x00.y, target, 4, 0x1000, 0x100);
-    if (before < 0 && field_0x1C >= 0) {
-        s16 count = (s16)((s16)field_0x20 - 1);
-        field_0x20 = count;
+    npc_addCalcAngle(&mSwingAngle.x, 0, 4, 0x1000, 0x100);
+    npc_addCalcAngle(&mSwingAngle.y, target, 4, 0x1000, 0x100);
+    if (before < 0 && mSwingPhase >= 0) {
+        s16 count = (s16)((s16)mSwingCount - 1);
+        mSwingCount = count;
         if (count <= 0) {
             mProcFunc = 0;
             mProcDelta = 0;
@@ -710,8 +710,8 @@ void npc_readable::dNpc_HeadAnm_c::move() {
             reinterpret_cast<gabi::ptmf<void (npc_readable::dNpc_HeadAnm_c::*)()>*>(&mProcDelta);
         (this->*(*proc))();
     } else {
-        npc_addCalcAngle(&field_0x00.x, 0, 4, 0x1000, 0x100);
-        npc_addCalcAngle(&field_0x00.y, 0, 4, 0x1000, 0x100);
+        npc_addCalcAngle(&mSwingAngle.x, 0, 4, 0x1000, 0x100);
+        npc_addCalcAngle(&mSwingAngle.y, 0, 4, 0x1000, 0x100);
     }
 }
 /* 0259F740 */
@@ -739,10 +739,10 @@ static u32 dNpc_EventCut_c__ct(npc_readable::dNpc_EventCut_c* self) {
     self->mCurActIdx = 0;
     self->mSetId = 0;
     self->mbAttention = 0;
-    self->field_0x52 = 0;
+    self->mTalkActive = 0;
     self->mbNoTurn = 0;
     self->mTurnSpeed = 0;
-    self->field_0x44 = 0;
+    self->mLastTurnDiff = 0;
     self->mAddAngle = 0;
     return gabi::ea(self);
 }
@@ -853,7 +853,7 @@ void npc_readable::dNpc_EventCut_c::cutTalkMsgStart() {
     actor->mCurrMsgNo = first;
     actor = mpTalkActor.get();
     actor->mEndMsgNo = end ? (u32)(s32)*end : 0xFFFFFFFFu;
-    field_0x52 = 1;
+    mTalkActive = 1;
 }
 /* 025A1178 */
 void npc_readable::dNpc_EventCut_c::cutContinueTalkStart() {
@@ -868,13 +868,13 @@ void npc_readable::dNpc_EventCut_c::cutTalkMsgProc() {
     gabi::AutoFrame frame{0x025A1388};
     auto* actor = mpTalkActor.get();
     bool end = false;
-    if (!actor || !field_0x52)
+    if (!actor || !mTalkActive)
         end = true;
     else {
         // HD: this caller tests the entire return register from the message routine.
         u32 state = npc_talk(actor, 0);
         if (state == 18) {
-            field_0x52 = 0;
+            mTalkActive = 0;
             end = true;
         } else if (state == 2 || state == 6) {
             actor = mpTalkActor.get();
@@ -1198,7 +1198,7 @@ void npc_readable::dNpc_EventCut_c::cutTurnToActorStart() {
     auto* dist = dComIfGp_evmng_getMyFloatP(mEvtStaffId, "DelDistance");
     pDelDistance = dist ? (f32)*dist : zero;
     auto* noTurn = dComIfGp_evmng_getMyIntegerP(mEvtStaffId, "NoTurn");
-    field_0x44 = 0;
+    mLastTurnDiff = 0;
     mbNoTurn = noTurn != nullptr;
 }
 /* 0259FD08 */
@@ -1264,7 +1264,7 @@ void npc_readable::dNpc_EventCut_c::cutTurnToPosStart() {
     mbNoTurn = noTurn != nullptr;
     auto* angle = dComIfGp_evmng_getMyIntegerP(mEvtStaffId, "AddAngle");
     mAddAngle = angle ? eventLow(angle) : 0;
-    field_0x44 = 0;
+    mLastTurnDiff = 0;
 }
 static void npc_endCut(dNpc_EventCut_c* self) {
     s32 staff = self->mEvtStaffId;
@@ -1286,14 +1286,14 @@ void npc_readable::dNpc_EventCut_c::cutTurnToPosProc() {
     }
     // HD: the difference is a full-width signed integer before GHS float conversion.
     f32 absolute = std::fabs(signedFloat((s32)(yaw - (u32)(s32)mpActor->current.angle.y)));
-    if (signedFloat(field_0x44) == absolute && absolute < npc_turnTolerance)
+    if (signedFloat(mLastTurnDiff) == absolute && absolute < npc_turnTolerance)
         npc_calcTimer(&mTimer);
     if (!mTimer) {
         mTurnSpeed = 0;
         npc_endCut(this);
     }
     absolute = std::fabs(signedFloat((s32)(yaw - (u32)(s32)mpActor->current.angle.y)));
-    field_0x44 = gabi::ftoi(absolute);
+    mLastTurnDiff = gabi::ftoi(absolute);
 }
 /* 025A0D5C */
 void npc_readable::dNpc_EventCut_c::cutMoveToPosStart() {
@@ -1565,14 +1565,14 @@ void npc_readable::dNpc_EventCut_c::cutTurnToActorProc() {
     mbAttention = 1;
     u32 yaw = npc_targetAngleY(&mpActor->current.pos, &mPos);
     f32 absolute = std::fabs(signedFloat((s32)(yaw - (u32)(s32)mpActor->current.angle.y)));
-    if (signedFloat(field_0x44) == absolute && absolute < npc_turnTolerance)
+    if (signedFloat(mLastTurnDiff) == absolute && absolute < npc_turnTolerance)
         npc_calcTimer(&mTimer);
     if (!mTimer) {
         mTurnSpeed = 0;
         npc_endCut(this);
     }
     absolute = std::fabs(signedFloat((s32)(yaw - (u32)(s32)mpActor->current.angle.y)));
-    field_0x44 = gabi::ftoi(absolute);
+    mLastTurnDiff = gabi::ftoi(absolute);
 }
 /* 025A0730 */
 void npc_readable::dNpc_EventCut_c::cutMoveToActorProc() {

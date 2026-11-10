@@ -116,14 +116,14 @@ static void mo2_class_dt(mo2_class* i_this, s32 flags);
 
 /* 021C6368 */
 static void tex_anm_set(mo2_class* i_this, u16 idx) {
-    i_this->m02DD = 1;
-    i_this->m02DE = (u8)mo2_tex_max_frame[idx];
-    i_this->m02DC = 0;
+    i_this->mEyeBtpPlaying = 1;
+    i_this->mEyeBtpMaxFrame = (u8)mo2_tex_max_frame[idx];
+    i_this->mEyeBtpFrame = 0;
     J3DAnmTexPattern* btp =
         (J3DAnmTexPattern*)dComIfG_getObjectRes("Mo2", mo2_tex_anm_idx[idx], SAFESTRING_VTBL);
     if (btp == nullptr)
         JUT_ASSERT_fail("d_a_mo2.cpp", 0x237, "btp");
-    mDoExt_btpAnm_init(&i_this->m02C8, J3DModel_getModelData(i_this->mpMorf->getModel()), btp, 0, 2,
+    mDoExt_btpAnm_init(&i_this->mEyeBtpAnm, J3DModel_getModelData(i_this->mpMorf->getModel()), btp, 0, 2,
                        1.0f, 0, -1, 1, 0);
 }
 
@@ -131,7 +131,7 @@ static void tex_anm_set(mo2_class* i_this, u16 idx) {
 /* 021C6440 */
 static void anm_init(mo2_class* i_this, int bckFileIdx, f32 morf, u8 loopMode, f32 speed,
                      int soundFileIdx) {
-    if (i_this->m05B0 == 0) {
+    if (i_this->mDashStopTimer == 0) {
         if (soundFileIdx >= 0) {
             J3DAnmTransform* anm =
                 (J3DAnmTransform*)dComIfG_getObjectRes("Mo2", bckFileIdx, SAFESTRING_VTBL);
@@ -153,9 +153,9 @@ static void smoke_set_s(mo2_class* i_this, f32 rate) {
     s32 attribCode = 0;
     gabi::Local<cXyz> startPos;
     gabi::Local<cXyz> endPos;
-    f32 x = i_this->m05DC.x;
-    f32 y = i_this->m05DC.y;
-    f32 z = i_this->m05DC.z;
+    f32 x = i_this->mSmokePos.x;
+    f32 y = i_this->mSmokePos.y;
+    f32 z = i_this->mSmokePos.z;
     startPos->x = x;
     startPos->y = y + 100.0f;
     startPos->z = z;
@@ -167,28 +167,28 @@ static void smoke_set_s(mo2_class* i_this, f32 rate) {
         cXyz* cross = &linChk->mCross; /* GetCross() */
         auto c = cross->get();
         *endPos = c;
-        i_this->m05DC.y = c.y;
+        i_this->mSmokePos.y = c.y;
         attribCode = dBgS_GetAttributeCode(dComIfG_Bgsp(), &linChk->_14[0]);
     } else {
-        i_this->m05DC.y -= 20000.0f;
+        i_this->mSmokePos.y -= 20000.0f;
     }
-    if (i_this->m05F3 != 0 && attribCode != 4 /* dBgS_Attr_GRASS_e */) {
+    if (i_this->mSmokeCount != 0 && attribCode != 4 /* dBgS_Attr_GRASS_e */) {
         dBgS_LinChk_dt(linChk, LINCHK_VTBLS);
         return;
     }
-    i_this->m05F3++;
+    i_this->mSmokeCount++;
     switch ((u32)attribCode) {
     case 0:
     case 1:
     case 2:
     case 3:
     case 0xB: {
-        dPa_smokeEcallBack_end_l(&i_this->m05F4);
+        dPa_smokeEcallBack_end_l(&i_this->mSmokeCallBack);
         s8 room = fopAcM_GetRoomNo(i_this);
         u8 alpha = (u8)l_mo2HIO.m022;
         JPABaseEmitter* emitter1 =
-            dComIfGp_particle_setToon(0x2022 /* ID_AK_JT_ELEMENTSMOKE00 */, &i_this->m05DC,
-                                      &i_this->m05E8, nullptr, alpha, &i_this->m05F4, room);
+            dComIfGp_particle_setToon(0x2022 /* ID_AK_JT_ELEMENTSMOKE00 */, &i_this->mSmokePos,
+                                      &i_this->mEffectAngle, nullptr, alpha, &i_this->mSmokeCallBack, room);
         if (emitter1 != nullptr) {
             JPA_setRate(emitter1, rate);
             JPA_setSpread(emitter1, 1.0f);
@@ -199,7 +199,7 @@ static void smoke_set_s(mo2_class* i_this, f32 rate) {
     }
     case 4: {
         JPABaseEmitter* emitter2 = dComIfGp_particle_set(0x24 /* ID_AK_JN_ELEMENTKUSA00 */,
-                                                         &i_this->m05DC, &i_this->m05E8);
+                                                         &i_this->mSmokePos, &i_this->mEffectAngle);
         if (emitter2 != nullptr) {
             JPA_setRate(emitter2, rate * 0.5f);
             JPA_setMaxFrame(emitter2, 3);
@@ -228,13 +228,13 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         if (i_this != nullptr) {
             PSMTXCopy(model_getAnmMtx(model, jntNo), calc_mtx());
             if (jntNo == MO_JNT_JAWA_J_e) {
-                cMtx_ZrotM(calc_mtx(), i_this->m2952);
+                cMtx_ZrotM(calc_mtx(), i_this->mJawAngleZ);
                 mtx_copy(model_getAnmMtx(model, jntNo), calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
             } else {
-                cMtx_YrotM(calc_mtx(), i_this->mDamageReaction.m088[r28].y);
-                cMtx_XrotM(calc_mtx(), i_this->mDamageReaction.m088[r28].x);
-                cMtx_ZrotM(calc_mtx(), i_this->mDamageReaction.m088[r28].z);
+                cMtx_YrotM(calc_mtx(), i_this->mDamageReaction.mJntAngle[r28].y);
+                cMtx_XrotM(calc_mtx(), i_this->mDamageReaction.mJntAngle[r28].x);
+                cMtx_ZrotM(calc_mtx(), i_this->mDamageReaction.mJntAngle[r28].z);
                 mtx_copy(model_getAnmMtx(model, jntNo), calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
 
@@ -257,21 +257,21 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
                     attnPos->z = i_this->eyePos.z;
                     attnPos->y = attnPos->y + l_mo2HIO.m028;
                     if (l_mo2HIO.m008 == 0) {
-                        i_this->m05D4 =
+                        i_this->mHeadAngleY =
                             cM_atan2s(sp08->x - i_this->eyePos.x, sp08->z - i_this->eyePos.z);
                     } else {
-                        i_this->m05D4 = i_this->current.angle.y;
+                        i_this->mHeadAngleY = i_this->current.angle.y;
                     }
                     offset->x = 20.75f;
                     offset->y = 18.5f;
                     offset->z = 0.0f;
-                    MtxPosition(offset, &i_this->m28C8);
+                    MtxPosition(offset, &i_this->mSpitPos);
                     offset->y = -45.0f;
                 } else {
                     offset->y = 0.0f;
                     offset->x = 0.0f;
                 }
-                MtxPosition(offset, &i_this->mDamageReaction.m100[r28]);
+                MtxPosition(offset, &i_this->mDamageReaction.mJntPos[r28]);
             }
         }
     }
@@ -300,22 +300,22 @@ static BOOL nodeCallBack_P(J3DNode* node, int calcTiming) {
                 offset->z = 0.0f;
                 offset->y = -8.75f;
                 offset->x = 17.5f;
-                MtxPosition(offset, &i_this->m28EC);
+                MtxPosition(offset, &i_this->mLeftHandPos);
             } else {
                 offset->z = 0.0f;
                 offset->x = 0.0f;
                 if (r30 == 0x10) {
                     offset->y = 0.0f;
-                    MtxPosition(offset, &i_this->m28F8);
+                    MtxPosition(offset, &i_this->mRightHandPos);
                 } else if (r30 == 0x14) {
                     offset->y = 0.0f;
-                    MtxPosition(offset, &i_this->m2034);
+                    MtxPosition(offset, &i_this->mSpearJointPos);
                     offset->x = -50.0f;
-                    MtxPosition(offset, &i_this->m28E0);
+                    MtxPosition(offset, &i_this->mSpearShaftPos);
                     offset->x = 165.0f;
-                    MtxPosition(offset, &i_this->m2040[0]);
+                    MtxPosition(offset, &i_this->mSpearEndPos[0]);
                     offset->x = -130.0f;
-                    MtxPosition(offset, &i_this->m2040[1]);
+                    MtxPosition(offset, &i_this->mSpearEndPos[1]);
                     offset->z = 15.0f;
                     gabi::Local<cXyz> cStack_c8;
                     for (s32 i = 0; i < 16; i++) {
@@ -326,16 +326,16 @@ static BOOL nodeCallBack_P(J3DNode* node, int calcTiming) {
                         MtxRotX(fi * 0.73919827f, 0);
                         MtxPosition(offset, cStack_c8);
                         MtxPull();
-                        MtxPosition(cStack_c8, &i_this->m0DD8[i].m000[0]);
+                        MtxPosition(cStack_c8, &i_this->mSpearHair[i].m000[0]);
                     }
-                    i_this->m28D4.copy(i_this->m0DD8[0].m000[0]);
+                    i_this->mSpearHeadPos.copy(i_this->mSpearHair[0].m000[0]);
                 } else if (r30 == 0x0E || r30 == 0x0F) {
                     offset->y = 25.0f;
                 } else {
                     offset->y = 0.0f;
                 }
             }
-            MtxPosition(offset, &i_this->mDamageReaction.m100[r30]);
+            MtxPosition(offset, &i_this->mDamageReaction.mJntPos[r30]);
         }
     }
     return TRUE;
@@ -373,22 +373,22 @@ static inline void search_check_draw(mo2_class* i_this) {
     sp08->z = l_mo2HIO.m02C;
     MtxTrans(i_this->current.pos.x, i_this->eyePos.y, i_this->current.pos.z, 0);
     MtxPush();
-    cMtx_YrotM(calc_mtx(), i_this->m05D4 - l_mo2HIO.m038);
+    cMtx_YrotM(calc_mtx(), i_this->mHeadAngleY - l_mo2HIO.m038);
     sp08->y = l_mo2HIO.m03C;
     MtxPosition(sp08, sp14[1]);
     MtxPull();
     MtxPush();
     sp08->y = l_mo2HIO.m03C;
-    cMtx_YrotM(calc_mtx(), i_this->m05D4 + l_mo2HIO.m038);
+    cMtx_YrotM(calc_mtx(), i_this->mHeadAngleY + l_mo2HIO.m038);
     MtxPosition(sp08, sp14[2]);
     MtxPull();
     MtxPush();
-    cMtx_YrotM(calc_mtx(), i_this->m05D4 - l_mo2HIO.m038);
+    cMtx_YrotM(calc_mtx(), i_this->mHeadAngleY - l_mo2HIO.m038);
     sp08->y = -l_mo2HIO.m03C;
     MtxPosition(sp08, sp14[4]);
     MtxPull();
     sp08->y = -l_mo2HIO.m03C;
-    cMtx_YrotM(calc_mtx(), i_this->m05D4 + l_mo2HIO.m038);
+    cMtx_YrotM(calc_mtx(), i_this->mHeadAngleY + l_mo2HIO.m038);
     MtxPosition(sp08, sp14[5]);
 
     f32 m03C = l_mo2HIO.m03C;
@@ -488,15 +488,15 @@ static void ke_control(mo2_class* i_this, ke_s* param_2, int param_3) {
 
 /* ke_disp (inlined; HD: no wind / cM_initRnd2, extra warm-up while frozen in a statue pose) */
 static inline void ke_disp(mo2_class* i_this) {
-    if (i_this->mDamageReaction.mAction == ACTION_D_DOZOU && i_this->m05A4[0] != 0) {
+    if (i_this->mDamageReaction.mAction == ACTION_D_DOZOU && i_this->mTimers[0] != 0) {
         for (s32 j = 0; j < REG_S(10, 6) + 0x46; j++) {
             for (s32 i = 0; i < 16; i++) {
-                ke_control(i_this, &i_this->m0DD8[i], i);
+                ke_control(i_this, &i_this->mSpearHair[i], i);
             }
         }
     }
     for (s32 i = 0; i < 16; i++) {
-        ke_s* ke = &i_this->m0DD8[i];
+        ke_s* ke = &i_this->mSpearHair[i];
         ke_control(i_this, ke, i);
         /* ke_draw */
         Mo2HairLine* lines = i_this->m3Dline.mpLines;
@@ -511,17 +511,17 @@ static inline void ke_disp(mo2_class* i_this) {
 
 /* inlined into daMo2_Draw */
 static inline void br_draw(mo2_class* i_this) {
-    if (i_this->m0594 == 0) {
+    if (i_this->mBlurOn == 0) {
         return;
     }
-    J3DModel* model = i_this->m058C;
+    J3DModel* model = i_this->mpBlurModel;
     for (u16 i = 0; i < mo2JointNum(model); i++) {
         Mo2ModelData* modelData = mo2ModelData(model);
         Mo2Joint* joint = modelData->getJointNodePointer(i);
         Mo2Material* material = joint->mpMesh;
         while (material != nullptr) {
             Mo2Shape* shape = material->mpShape;
-            if (i_this->m0598 == 0) {
+            if (i_this->mBlurUseB == 0) {
                 shape->mVisible = i == 1;
             } else {
                 shape->mVisible = i == 2;
@@ -533,7 +533,7 @@ static inline void br_draw(mo2_class* i_this) {
               calc_mtx());
     MtxTrans(l_mo2HIO.m138 + 150.0f, 0.0f, 0.0f, 1);
     cMtx_ZrotM(calc_mtx(), 0x4000);
-    MtxScale(l_mo2HIO.m014 * i_this->m0590, l_mo2HIO.m014, l_mo2HIO.m014, 1);
+    MtxScale(l_mo2HIO.m014 * i_this->mBlurScaleX, l_mo2HIO.m014, l_mo2HIO.m014, 1);
     J3DModel_setBaseTRMtx(model, calc_mtx());
     dScnKy_env_light_c* env = dKy_getEnvlight();
     setLightTevColorType(env, model, &i_this->tevStr);
@@ -545,7 +545,7 @@ static inline void br_draw(mo2_class* i_this) {
 static BOOL daMo2_Draw(mo2_class* i_this) {
     J3DModel* model = i_this->mpMorf->getModel();
     /* HD: no m2970 test */
-    if (i_this->m02C1 != 0 || i_this->m2A1C != 0 || (i_this->m2A08 != 0 && i_this->m2A08 != 100)) {
+    if (i_this->mAppearWait != 0 || i_this->mDefeated != 0 || (i_this->mLanternStep != 0 && i_this->mLanternStep != 100)) {
         return TRUE;
     }
     dScnKy_env_light_c* env = dKy_getEnvlight();
@@ -557,7 +557,7 @@ static BOOL daMo2_Draw(mo2_class* i_this) {
     modelData = mo2ModelData(model);
     material = mo2MaterialByName(modelData, "mo_e1");
     Mo2Shape* shape = material->mpShape;
-    if (REG_S(17, 1) != 0 || i_this->m2951 != 0) {
+    if (REG_S(17, 1) != 0 || i_this->mItemStolen != 0) {
         shape->mVisible = 0;
     } else {
         shape->mVisible = 1;
@@ -566,14 +566,14 @@ static BOOL daMo2_Draw(mo2_class* i_this) {
         dMat_ice_entryDL(i_this->mpMorf, -1, nullptr);
         return TRUE; /* HD: no blob shadow */
     }
-    mDoExt_btpAnm_entry((mDoExt_btpAnm*)&i_this->m02C8,
-                        reinterpret_cast<J3DModelData*>(mo2ModelData(model)), i_this->m02DC);
+    mDoExt_btpAnm_entry((mDoExt_btpAnm*)&i_this->mEyeBtpAnm,
+                        reinterpret_cast<J3DModelData*>(mo2ModelData(model)), i_this->mEyeBtpFrame);
     if (!dScnPly_isPause()) {
         br_draw(i_this);
     }
     search_check_draw(i_this);
     i_this->mpMorf->entryDL();
-    mo2ModelData(model)->mpTexPattern = 0; /* m02C8.remove(modelData) */
+    mo2ModelData(model)->mpTexPattern = 0; /* mEyeBtpAnm.remove(modelData) */
     if (i_this->mbHasInnateWeapon == 1 && l_mo2HIO.m020 <= 1) {
         ke_disp(i_this);
     }
@@ -714,7 +714,7 @@ static void* s_b_sub(void* param_1, void*) {
 //
 /* 021C8378 */
 static fopAc_ac_c* search_bomb(mo2_class* i_this, int r26) {
-    if (!(i_this->m2960 & 0x0200)) {
+    if (!(i_this->mCutBits & 0x0200)) {
         return nullptr;
     }
     target_info_count = 0;
@@ -736,13 +736,13 @@ static fopAc_ac_c* search_bomb(mo2_class* i_this, int r26) {
             sp28->z = dz;
             f32 f0 = std_sqrtf(gabi::fmadds(dx, dx, dz * dz));
             /* `<=` written as !(>) : GHS branches on the negated comparison (NaN) */
-            if (f0 < f29 && !(f0 > i_this->m05C0 + 30.0f) &&
+            if (f0 < f29 && !(f0 > i_this->mTargetDist + 30.0f) &&
                 (!daMo2_other_bg_check(i_this, r24) || !r26)) {
                 if (r26) {
                     if (!(std::fabs((r24->current.pos.y + 50.0f) - i_this->eyePos.y) >
                           l_mo2HIO.m03C)) {
                         s16 ang = cM_atan2s(sp28->x, sp28->z);
-                        s16 angleDiff = i_this->m05D4 - ang;
+                        s16 angleDiff = i_this->mHeadAngleY - ang;
                         if (angleDiff < 0) {
                             angleDiff = -angleDiff;
                         }
@@ -780,7 +780,7 @@ static fopAc_ac_c* search_bomb(mo2_class* i_this, int r26) {
 // daMo2_wepon_view_check, search_wepon inlined (the matcher names it search_wepon)
 /* 021C872C */
 static s32 daMo2_wepon_view_check(mo2_class* i_this) {
-    if (i_this->m02E2 != 0) {
+    if (i_this->mWeaponViewWait != 0) {
         return FALSE;
     }
     /* search_wepon */
@@ -805,7 +805,7 @@ static s32 daMo2_wepon_view_check(mo2_class* i_this) {
             if (f4 < f29 && !daMo2_other_bg_check(i_this, r25)) {
                 if (!(std::fabs((r25->current.pos.y + 50.0f) - i_this->eyePos.y) > l_mo2HIO.m03C)) {
                     s16 ang = cM_atan2s(sp18->x, sp18->z);
-                    s16 angleDiff = i_this->m05D4 - ang;
+                    s16 angleDiff = i_this->mHeadAngleY - ang;
                     if (angleDiff < 0) {
                         angleDiff = -angleDiff;
                     }
@@ -857,7 +857,7 @@ static s32 daMo2_player_bg_check(mo2_class* i_this, cXyz* r22) {
     if (search_sp != 0) {
         return FALSE;
     }
-    if (i_this->mDamageReaction.m713 == 0 && std::fabs(player->speedF) < 0.1f &&
+    if (i_this->mDamageReaction.mPlayerInView == 0 && std::fabs(player->speedF) < 0.1f &&
         daPy_checkGrabWear(player)) {
         return 2;
     }
@@ -872,7 +872,7 @@ static s32 daMo2_player_bg_check(mo2_class* i_this, cXyz* r22) {
     sp14->y = i_this->eyePos.y;
     dBgS_LinChk_Set(linChk, sp14, sp08, i_this);
     if (cBgS_LineCross(dComIfG_Bgsp(), linChk)) {
-        i_this->mDamageReaction.m713 = 0;
+        i_this->mDamageReaction.mPlayerInView = 0;
         dBgS_LinChk_dt(linChk, LINCHK_VTBLS);
         return TRUE;
     }
@@ -893,12 +893,12 @@ static BOOL daMo2_player_view_check(mo2_class* i_this, cXyz* r30, s16 r27, s16 r
     if (std::fabs((player->current.pos.y + 50.0f) - i_this->eyePos.y) > l_mo2HIO.m03C) {
         return FALSE;
     }
-    s16 angleDiff = i_this->m05D4 - r27;
+    s16 angleDiff = i_this->mHeadAngleY - r27;
     if (angleDiff < 0) {
         angleDiff = -angleDiff;
     }
     if ((u16)angleDiff < r31) {
-        i_this->mDamageReaction.m713 = 1;
+        i_this->mDamageReaction.mPlayerInView = 1;
         return TRUE;
     }
     cMtx_YrotS(calc_mtx(), -i_this->current.angle.y);
@@ -910,10 +910,10 @@ static BOOL daMo2_player_view_check(mo2_class* i_this, cXyz* r30, s16 r27, s16 r
     MtxPosition(sp14, sp08);
     if (std::fabs(sp08->x) < l_mo2HIO.m040.x && std::fabs(sp08->y) < l_mo2HIO.m040.y &&
         sp08->z > l_mo2HIO.m04C && sp08->z < l_mo2HIO.m040.z) {
-        i_this->mDamageReaction.m713 = 2;
+        i_this->mDamageReaction.mPlayerInView = 2;
         return TRUE;
     } else {
-        i_this->mDamageReaction.m713 = 0;
+        i_this->mDamageReaction.mPlayerInView = 0;
         return FALSE;
     }
 }
@@ -935,16 +935,16 @@ static s32 daMo2_player_way_check(mo2_class* i_this) {
 //
 /* 021C8E30 */
 static void wait_set(mo2_class* i_this) {
-    if (i_this->mbHasInnateWeapon != 0 || i_this->m2943 != 0) {
+    if (i_this->mbHasInnateWeapon != 0 || i_this->mWeaponSearchGaveUp != 0) {
         if (i_this->mMode == 1) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_KWAIT_e, 15.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                      dRes_INDEX_MO2_BAS_KWAIT_e);
-            i_this->m05A4[1] = (s16)gabi::ftoi(cM_rndF(100.0f) + 100.0f);
+            i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(100.0f) + 100.0f);
             return;
         }
         anm_init(i_this, dRes_INDEX_MO2_BCK_WAIT_e, 15.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                  dRes_INDEX_MO2_BAS_WAIT_e);
-        i_this->m05A4[1] = (s16)gabi::ftoi(cM_rndF(60.0f) + 40.0f);
+        i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(60.0f) + 40.0f);
         return;
     }
     if (i_this->mDamageReaction.mAction >= ACTION_FIGHT_RUN) {
@@ -954,7 +954,7 @@ static void wait_set(mo2_class* i_this) {
         anm_init(i_this, dRes_INDEX_MO2_BCK_SKYORO_e, 10.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                  dRes_INDEX_MO2_BAS_SKYORO_e);
     }
-    i_this->m05A4[1] = (s16)gabi::ftoi(cM_rndF(30.0f) + 50.0f);
+    i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(30.0f) + 50.0f);
 }
 
 //
@@ -972,7 +972,7 @@ static void fight_run_set(mo2_class* i_this) {
 //
 /* 021C9004 */
 static void path_check(mo2_class* i_this) {
-    if (ppd(i_this) != nullptr && (i_this->mbHasInnateWeapon != 0 || i_this->m2943 != 0)) {
+    if (ppd(i_this) != nullptr && (i_this->mbHasInnateWeapon != 0 || i_this->mWeaponSearchGaveUp != 0)) {
         gabi::Local<dBgS_LinChk_l> chk;
         dBgS_LinChk_ct(chk, LINCHK_VTBLS);
         gabi::Local<cXyz> local_c8;
@@ -998,13 +998,13 @@ static void path_check(mo2_class* i_this) {
                     f32 y = i_this->current.pos.y - point->m_position.y;
                     f32 z = i_this->current.pos.z - point->m_position.z;
                     if (std_sqrtf(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y))) < fDist) {
-                        s8 n = (s8)(i - (u8)i_this->mHasPath);
-                        i_this->m2969 = n;
+                        s8 n = (s8)(i - (u8)i_this->mPathDir);
+                        i_this->mPathPoint = n;
                         u16 num = ppd(i_this)->m_num;
                         if (n >= (s8)num) {
-                            i_this->m2969 = (s8)num;
+                            i_this->mPathPoint = (s8)num;
                         } else if (n < 0) {
-                            i_this->m2969 = 0;
+                            i_this->mPathPoint = 0;
                         }
                         r7 = true;
                         break;
@@ -1017,9 +1017,9 @@ static void path_check(mo2_class* i_this) {
             fDist += 50.0f;
         }
         if (!r7) {
-            i_this->m2968 = 0;
+            i_this->mPathOn = 0;
         } else {
-            i_this->m2968 = i_this->mPathIndex + 1;
+            i_this->mPathOn = i_this->mPathIndex + 1;
         }
         dBgS_LinChk_dt(chk, LINCHK_VTBLS);
     }
@@ -1029,105 +1029,105 @@ static void path_check(mo2_class* i_this) {
 /* 021C9310 */
 static void attack_set(mo2_class* i_this, u8 param_2) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    i_this->m2060 = 0;
-    i_this->m2941 = 0;
-    i_this->m2954 = fpcM_ERROR_PROCESS_ID_e;
-    i_this->m2942 = 0;
-    i_this->m2068 = 0.0f;
-    i_this->m05A4[4] = 0;
+    i_this->mAttackKind = 0;
+    i_this->mAtStarted = 0;
+    i_this->mHitActorId = fpcM_ERROR_PROCESS_ID_e;
+    i_this->mTurnAlways = 0;
+    i_this->mAttackFrame = 0.0f;
+    i_this->mTimers[4] = 0;
     f32 dVar7 = cM_rndF(100.0f);
     i_this->mWeaponSph.SetR(100.0f);
     if (i_this->mbHasInnateWeapon != 0) {
         if (daPy_checkPlayerGuard(player) && cM_rndF(1.0f) < 0.5f && param_2 == 0) {
-            i_this->m2060 = 3;
-            i_this->m206C = 9.0f;
-            i_this->m2070 = 16.0f;
-            i_this->m2074 = 0.0f;
-            i_this->m2078 = (f32)l_mo2HIO.m0D2;
+            i_this->mAttackKind = 3;
+            i_this->mAtStartFrame = 9.0f;
+            i_this->mAtEndFrame = 16.0f;
+            i_this->mLookStartFrame = 0.0f;
+            i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D2;
         } else if (param_2 == 2) {
-            i_this->m2060 = 2;
-            i_this->m206C = 36.0f;
-            i_this->m2070 = 52.0f;
-            i_this->m2074 = 75.0f;
-            i_this->m2078 = (f32)l_mo2HIO.m0D0;
+            i_this->mAttackKind = 2;
+            i_this->mAtStartFrame = 36.0f;
+            i_this->mAtEndFrame = 52.0f;
+            i_this->mLookStartFrame = 75.0f;
+            i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D0;
         } else if (param_2 == 1) {
-            i_this->m2060 = 1;
-            i_this->m206C = 26.0f;
-            i_this->m2070 = 34.0f;
-            i_this->m2074 = 59.0f;
-            i_this->m2078 = (f32)l_mo2HIO.m0CE;
+            i_this->mAttackKind = 1;
+            i_this->mAtStartFrame = 26.0f;
+            i_this->mAtEndFrame = 34.0f;
+            i_this->mLookStartFrame = 59.0f;
+            i_this->mTurnEndFrame = (f32)l_mo2HIO.m0CE;
         } else if (daMo2_player_way_check(i_this)) {
             if (dVar7 < l_mo2HIO.m07C) {
-                i_this->m2060 = 0;
-                i_this->m206C = 17.0f;
-                i_this->m2070 = 27.0f;
-                i_this->m2074 = 10.0f;
-                i_this->m2078 = (f32)l_mo2HIO.m0CC;
+                i_this->mAttackKind = 0;
+                i_this->mAtStartFrame = 17.0f;
+                i_this->mAtEndFrame = 27.0f;
+                i_this->mLookStartFrame = 10.0f;
+                i_this->mTurnEndFrame = (f32)l_mo2HIO.m0CC;
             } else if ((dVar7 - l_mo2HIO.m07C) < l_mo2HIO.m080) {
-                i_this->m2060 = 1;
-                i_this->m206C = 26.0f;
-                i_this->m2070 = 36.0f;
-                i_this->m2074 = 59.0f;
-                i_this->m2078 = (f32)l_mo2HIO.m0CE;
+                i_this->mAttackKind = 1;
+                i_this->mAtStartFrame = 26.0f;
+                i_this->mAtEndFrame = 36.0f;
+                i_this->mLookStartFrame = 59.0f;
+                i_this->mTurnEndFrame = (f32)l_mo2HIO.m0CE;
             } else {
-                i_this->m2060 = 2;
-                i_this->m206C = 36.0f;
-                i_this->m2070 = 52.0f;
-                i_this->m2074 = 75.0f;
-                i_this->m2078 = (f32)l_mo2HIO.m0D0;
+                i_this->mAttackKind = 2;
+                i_this->mAtStartFrame = 36.0f;
+                i_this->mAtEndFrame = 52.0f;
+                i_this->mLookStartFrame = 75.0f;
+                i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D0;
             }
         } else {
-            i_this->m2060 = 2;
-            i_this->m206C = 36.0f;
-            i_this->m2070 = 52.0f;
-            i_this->m2074 = 75.0f;
-            i_this->m2078 = (f32)l_mo2HIO.m0D0;
+            i_this->mAttackKind = 2;
+            i_this->mAtStartFrame = 36.0f;
+            i_this->mAtEndFrame = 52.0f;
+            i_this->mLookStartFrame = 75.0f;
+            i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D0;
         }
     } else if (dVar7 < l_mo2HIO.m084) {
         i_this->mWeaponSph.SetR(50.0f);
-        i_this->m2060 = 4;
-        i_this->m206C = 3.0f;
-        i_this->m2070 = 8.0f;
-        i_this->m2074 = 0.0f;
-        i_this->m2078 = (f32)l_mo2HIO.m0D4;
+        i_this->mAttackKind = 4;
+        i_this->mAtStartFrame = 3.0f;
+        i_this->mAtEndFrame = 8.0f;
+        i_this->mLookStartFrame = 0.0f;
+        i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D4;
     } else {
-        i_this->m2060 = 5;
-        i_this->m206C = 32.0f;
-        i_this->m2070 = 39.0f;
-        i_this->m2074 = 0.0f;
-        i_this->m2078 = (f32)l_mo2HIO.m0D6;
+        i_this->mAttackKind = 5;
+        i_this->mAtStartFrame = 32.0f;
+        i_this->mAtEndFrame = 39.0f;
+        i_this->mLookStartFrame = 0.0f;
+        i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D6;
     }
-    i_this->m207E = 1;
-    i_this->m2064 = 0;
-    attack_info_s* info = attack_info.mAttacks[i_this->m2060];
+    i_this->mAttackDir = 1;
+    i_this->mAttackStep = 0;
+    attack_info_s* info = attack_info.mAttacks[i_this->mAttackKind];
     anm_init(i_this, info->bckFileIdx, 5.0f, J3DFrameCtrl::EMode_NONE, info->speed,
              info->soundFileIdx);
-    s32 se = mo2_attack_ready_SE[i_this->m2060];
+    s32 se = mo2_attack_ready_SE[i_this->mAttackKind];
     if (se != -0xDCF) {
         if (i_this != nullptr) {
             fopAcM_monsSeStart(i_this, se, 0);
         }
     }
-    if (i_this->m2060 == 1) {
-        i_this->m2946 = l_mo2HIO.m144;
-        i_this->m2948 = l_mo2HIO.m146;
-        i_this->m294A = l_mo2HIO.m148;
-        i_this->m294C = l_mo2HIO.m14A;
-        i_this->m2944 = 0;
+    if (i_this->mAttackKind == 1) {
+        i_this->mBtWindow1Start = l_mo2HIO.m144;
+        i_this->mBtWindow1Len = l_mo2HIO.m146;
+        i_this->mBtWindow2Start = l_mo2HIO.m148;
+        i_this->mBtWindow2Len = l_mo2HIO.m14A;
+        i_this->mBtCounter = 0;
         i_this->mParryOpeningType = OPENING_ROLL_PARRY;
-    } else if (i_this->m2060 == 2) {
-        i_this->m2946 = l_mo2HIO.m14C;
-        i_this->m2948 = l_mo2HIO.m14E;
-        i_this->m294A = l_mo2HIO.m150;
-        i_this->m294C = l_mo2HIO.m152;
-        i_this->m2944 = 0;
+    } else if (i_this->mAttackKind == 2) {
+        i_this->mBtWindow1Start = l_mo2HIO.m14C;
+        i_this->mBtWindow1Len = l_mo2HIO.m14E;
+        i_this->mBtWindow2Start = l_mo2HIO.m150;
+        i_this->mBtWindow2Len = l_mo2HIO.m152;
+        i_this->mBtCounter = 0;
         i_this->mParryOpeningType = OPENING_JUMP_PARRY;
-    } else if (i_this->m2060 == 5) {
-        i_this->m2946 = l_mo2HIO.m154;
-        i_this->m2948 = l_mo2HIO.m156;
-        i_this->m294A = l_mo2HIO.m158;
-        i_this->m294C = l_mo2HIO.m15A;
-        i_this->m2944 = 0;
+    } else if (i_this->mAttackKind == 5) {
+        i_this->mBtWindow1Start = l_mo2HIO.m154;
+        i_this->mBtWindow1Len = l_mo2HIO.m156;
+        i_this->mBtWindow2Start = l_mo2HIO.m158;
+        i_this->mBtWindow2Len = l_mo2HIO.m15A;
+        i_this->mBtCounter = 0;
         i_this->mParryOpeningType = OPENING_JUMP_PARRY;
     }
 }
@@ -1146,34 +1146,34 @@ static void AtHitCallback(fopAc_ac_c* a_this, dCcD_GObjInf*, fopAc_ac_c* actor, 
     if (!daPy_checkGrabWear(dComIfGp_getPlayer(0))) {
         return;
     }
-    i_this->m2A4A = 1;
-    i_this->m2A4C = 200;
-    i_this->m2A48 = 1;
+    i_this->mCatchEventPending = 1;
+    i_this->mCatchTimer = 200;
+    i_this->mCatchDemoDelay = 1;
 }
 
-// nage: HD-changed (the -8 state chases the player before throwing; no m713 == 2 shortcut)
+// nage: HD-changed (the -8 state chases the player before throwing; no mPlayerInView == 2 shortcut)
 /* 021CD958 */
 static void nage(mo2_class* i_this) {
     dComIfGp_getPlayer(0);
     u8 iVar5 = 0;
     s16 maxSpeed = 0x400;
-    i_this->m02E0 = 2;
-    i_this->mDamageReaction.m710 = 1;
-    i_this->mDamageReaction.m4D0 = i_this->m05D6;
+    i_this->mEyeAnmWait = 2;
+    i_this->mDamageReaction.mLookMode = 1;
+    i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
     switch ((u16)i_this->mDamageReaction.mMode) {
     case (u16)-10:
-        if (i_this->m05B4 != 0 || i_this->m2A0C != 0 ||
-            daMo2_player_view_check(i_this, &i_this->mDamageReaction.m714->current.pos,
-                                    i_this->m05D6, l_mo2HIO.m038)) {
-            i_this->m05A4[1] = l_mo2HIO.m00A + l_mo2HIO.m00C;
-            i_this->m05A4[2] = l_mo2HIO.m00C;
+        if (i_this->mNoHitTimer != 0 || i_this->mSoundTargetTimer != 0 ||
+            daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
+                                    i_this->mTargetAngleY, l_mo2HIO.m038)) {
+            i_this->mTimers[1] = l_mo2HIO.m00A + l_mo2HIO.m00C;
+            i_this->mTimers[2] = l_mo2HIO.m00C;
             anm_init(i_this, dRes_INDEX_MO2_BCK_KKEIKAI_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                      dRes_INDEX_MO2_BAS_KKEIKAI_e);
-            i_this->mDamageReaction.m713 = 0;
+            i_this->mDamageReaction.mPlayerInView = 0;
             i_this->mDamageReaction.mMode = -9;
-            i_this->m05A4[0] = REG0_S(7) + 0xf;
+            i_this->mTimers[0] = REG0_S(7) + 0xf;
             if (camera_mode == 0) {
-                i_this->m2A1D = 2;
+                i_this->mDemoCamMode = 2;
                 i_this->m2A40 = REG_F(8, 3) + 50.0f;
             }
         } else {
@@ -1182,21 +1182,21 @@ static void nage(mo2_class* i_this) {
         }
         /* fallthrough */
     case (u16)-9:
-        maxSpeed = i_this->m05A4[0] != 0 ? (s16)0 : (s16)0x1000;
-        if (i_this->m05A4[1] == 0) {
+        maxSpeed = i_this->mTimers[0] != 0 ? (s16)0 : (s16)0x1000;
+        if (i_this->mTimers[1] == 0) {
             i_this->speedF = 0.0f;
             iVar5 = 2;
             break;
         }
-        if (i_this->m05A4[2] == 0 &&
-            daMo2_player_view_check(i_this, &i_this->mDamageReaction.m714->current.pos,
-                                    i_this->m05D6, l_mo2HIO.m038)) {
+        if (i_this->mTimers[2] == 0 &&
+            daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
+                                    i_this->mTargetAngleY, l_mo2HIO.m038)) {
             /* HD: run at the player first (state -8) */
             i_this->mDamageReaction.mMode = -8;
             fight_run_set(i_this);
             i_this->speedF = 0.0f;
-            i_this->m05A4[0] = 0x50;
-            i_this->mDamageReaction.m713 = 0;
+            i_this->mTimers[0] = 0x50;
+            i_this->mDamageReaction.mPlayerInView = 0;
             break;
         }
         i_this->speedF = 0.0f;
@@ -1204,31 +1204,31 @@ static void nage(mo2_class* i_this) {
     case (u16)-8:
         /* HD */
         cLib_addCalc2(&i_this->speedF, l_mo2HIO.m058, 1.0f, 20.0f);
-        if (i_this->m05A4[0] == 0 || i_this->m05C0 < l_mo2HIO.m030 * 0.5f) {
-            if (daMo2_player_view_check(i_this, &i_this->mDamageReaction.m714->current.pos,
-                                        i_this->m05D6, l_mo2HIO.m038)) {
+        if (i_this->mTimers[0] == 0 || i_this->mTargetDist < l_mo2HIO.m030 * 0.5f) {
+            if (daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
+                                        i_this->mTargetAngleY, l_mo2HIO.m038)) {
                 i_this->mDamageReaction.mMode = -5;
                 if (i_this != nullptr) {
                     fopAcM_monsSeStart(i_this, JA_SE_CV_MO_ALERT, 0);
                 }
-                i_this->m2A4A = 1;
-                i_this->m2A48 = 1;
+                i_this->mCatchEventPending = 1;
+                i_this->mCatchDemoDelay = 1;
             } else {
                 i_this->mDamageReaction.mMode = 2;
                 s16 base = l_mo2HIO.m00A + l_mo2HIO.m00C;
-                i_this->m05A4[1] = base + (s16)gabi::ftoi(cM_rndF(40.0f) + 60.0f);
-                i_this->m05A4[2] = l_mo2HIO.m00C;
+                i_this->mTimers[1] = base + (s16)gabi::ftoi(cM_rndF(40.0f) + 60.0f);
+                i_this->mTimers[2] = l_mo2HIO.m00C;
                 anm_init(i_this, dRes_INDEX_MO2_BCK_KKEIKAI_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                          dRes_INDEX_MO2_BAS_KKEIKAI_e);
-                i_this->mDamageReaction.m713 = 0;
+                i_this->mDamageReaction.mPlayerInView = 0;
                 i_this->mDamageReaction.mMode = -9;
-                i_this->m05A4[0] = REG0_S(7) + 0xf;
+                i_this->mTimers[0] = REG0_S(7) + 0xf;
             }
         }
         break;
     case 0:
         maxSpeed = 0;
-        if (i_this->m05A4[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             i_this->mDamageReaction.mMode = 1;
             anm_init(i_this, dRes_INDEX_MO2_BCK_KWALK_e, 10.0f, J3DFrameCtrl::EMode_LOOP, 2.0f,
                      dRes_INDEX_MO2_BAS_KWALK_e);
@@ -1237,7 +1237,7 @@ static void nage(mo2_class* i_this) {
         break;
     case 1:
         cLib_addCalc2(&i_this->speedF, l_mo2HIO.m058, 1.0f, 20.0f);
-        if (i_this->m05C0 < l_mo2HIO.m030) {
+        if (i_this->mTargetDist < l_mo2HIO.m030) {
             i_this->mDamageReaction.mMode = 2;
             anm_init(i_this, dRes_INDEX_MO2_BCK_KNAGE_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_KNAGE_e);
@@ -1257,18 +1257,18 @@ static void nage(mo2_class* i_this) {
         break;
     }
     }
-    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 3, maxSpeed);
+    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, maxSpeed);
     if (iVar5 != 0 ||
-        daMo2_player_bg_check(i_this, &i_this->mDamageReaction.m714->current.pos) == 1) {
+        daMo2_player_bg_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos) == 1) {
         i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
         wait_set(i_this);
         if (iVar5 == 2) {
-            i_this->m05A4[1] = 0;
+            i_this->mTimers[1] = 0;
         }
         i_this->mDamageReaction.mMode = 2;
-        i_this->m2969 = i_this->m2969 - i_this->mHasPath;
-        if (i_this->m2A1D != 0) {
-            i_this->m2A1D = 10;
+        i_this->mPathPoint = i_this->mPathPoint - i_this->mPathDir;
+        if (i_this->mDemoCamMode != 0) {
+            i_this->mDemoCamMode = 10;
         }
     }
 }
@@ -1277,24 +1277,24 @@ static void nage(mo2_class* i_this) {
 /* 021CDE6C */
 static void p_lost(mo2_class* i_this) {
     dComIfGp_getPlayer(0);
-    i_this->m02E0 = 2;
-    i_this->mDamageReaction.m710 = 0;
+    i_this->mEyeAnmWait = 2;
+    i_this->mDamageReaction.mLookMode = 0;
     switch ((u16)i_this->mDamageReaction.mMode) {
     case (u16)-10:
-        if (i_this->mDamageReaction.m470 < 200.0f) {
+        if (i_this->mDamageReaction.mFlinchBend < 200.0f) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_UKYADEMO_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      -1);
             i_this->mDamageReaction.mMode = -9;
             tex_anm_set(i_this, 4);
-            i_this->m05A4[1] = 0x23;
+            i_this->mTimers[1] = 0x23;
         }
         break;
     case (u16)-9:
         i_this->speedF = 0.0f;
-        if (i_this->m05A4[1] == (s16)(REG_S(17, 5) + 0x19)) {
+        if (i_this->mTimers[1] == (s16)(REG_S(17, 5) + 0x19)) {
             fopAcM_monsSeStart(i_this, JA_SE_CV_MO_STOLEN, 0);
         }
-        if (i_this->m05A4[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
             i_this->mDamageReaction.mMode = 2;
         }
@@ -1307,19 +1307,19 @@ static void p_lost(mo2_class* i_this) {
         break;
     case 1:
         i_this->speedF = 0.0f;
-        if ((i_this->m059C & 0x1F) == 0 && cM_rndF(1.0f) < 0.5f) {
+        if ((i_this->mFrameCounter & 0x1F) == 0 && cM_rndF(1.0f) < 0.5f) {
             fopAcM_monsSeStart(i_this, JA_SE_CV_MO_SEARCH, 0);
         }
         if (i_this->mpMorf->isStop()) {
             i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
             path_check(i_this);
             wait_set(i_this);
-            i_this->m05A4[1] = 0;
+            i_this->mTimers[1] = 0;
             i_this->mDamageReaction.mMode = 2;
         }
     }
-    if (gabi::ftoi(i_this->mpMorf->getFrame()) > 25 && i_this->m05A4[1] == 0 &&
-        daMo2_player_view_check(i_this, &i_this->mDamageReaction.m714->current.pos, i_this->m05D6,
+    if (gabi::ftoi(i_this->mpMorf->getFrame()) > 25 && i_this->mTimers[1] == 0 &&
+        daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos, i_this->mTargetAngleY,
                                 l_mo2HIO.m038)) {
         i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
         i_this->mDamageReaction.mMode = 2;
@@ -1340,19 +1340,19 @@ static void b_nige(mo2_class* i_this) {
         fopAc_ac_c* r3 = i_this->mpBomb;
         f32 x = r3->current.pos.x - i_this->current.pos.x;
         f32 z = r3->current.pos.z - i_this->current.pos.z;
-        i_this->mDamageReaction.m4D0 = cM_atan2s(-x, -z);
+        i_this->mDamageReaction.mTurnTargetY = cM_atan2s(-x, -z);
         switch ((u16)i_this->mDamageReaction.mMode) {
         case 0:
             i_this->mDamageReaction.mMode = 1;
             anm_init(i_this, dRes_INDEX_MO2_BCK_SHAKKEN_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_SHAKKEN_e);
-            i_this->m05A4[1] = 0x14;
+            i_this->mTimers[1] = 0x14;
             /* fallthrough */
         case 1:
             i_this->speedF = 0.0f;
             cLib_addCalcAngleS2(&i_this->current.angle.y,
-                                (s16)(i_this->mDamageReaction.m4D0 + 0x8000), 2, 0x3000);
-            if (i_this->m05A4[1] == 0) {
+                                (s16)(i_this->mDamageReaction.mTurnTargetY + 0x8000), 2, 0x3000);
+            if (i_this->mTimers[1] == 0) {
                 i_this->mDamageReaction.mMode = 2;
                 anm_init(i_this, dRes_INDEX_MO2_BCK_NWALK_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                          dRes_INDEX_MO2_BAS_NWALK_e);
@@ -1360,9 +1360,9 @@ static void b_nige(mo2_class* i_this) {
             break;
         case 2:
             i_this->speedF = l_mo2HIO.m060;
-            i_this->m05F0 = l_mo2HIO.m024 + 3;
-            i_this->m05F2 = 4;
-            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 4, 0x1000);
+            i_this->mSmokeTimer = l_mo2HIO.m024 + 3;
+            i_this->mSmokeType = 4;
+            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 4, 0x1000);
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) > 800.0f) {
                 i_this->mDamageReaction.mMode = 3;
                 anm_init(i_this, dRes_INDEX_MO2_BCK_NBWAIT_e, 10.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
@@ -1371,8 +1371,8 @@ static void b_nige(mo2_class* i_this) {
             break;
         case 3:
             i_this->speedF = 0.0f;
-            i_this->mDamageReaction.m4D0 = i_this->m05D6;
-            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 3, 0x1000);
+            i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
+            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, 0x1000);
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) < 700.0f) {
                 i_this->mDamageReaction.mMode = 0;
             }
@@ -1384,30 +1384,30 @@ static void b_nige(mo2_class* i_this) {
 /* 021CE46C */
 static void defence(mo2_class* i_this) {
     dComIfGp_getPlayer(0); /* GameCube: unused `player` local; HD still calls the accessor */
-    i_this->m02E0 = 2;
-    i_this->mDamageReaction.m710 = 1;
-    i_this->mDamageReaction.m4D0 = i_this->m05D6;
-    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 4, 0x400);
-    i_this->mDamageReaction.m711 = 1;
+    i_this->mEyeAnmWait = 2;
+    i_this->mDamageReaction.mLookMode = 1;
+    i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
+    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 4, 0x400);
+    i_this->mDamageReaction.mDefencePose = 1;
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
         i_this->mDamageReaction.mMode = 1;
         anm_init(i_this, dRes_INDEX_MO2_BCK_BWALKFB_e, 5.0f, J3DFrameCtrl::EMode_NONE, -1.0f,
                  dRes_INDEX_MO2_BAS_BWALKFB_e);
-        i_this->m05A4[1] = REG_S(6, 3) + 0x1e;
+        i_this->mTimers[1] = REG_S(6, 3) + 0x1e;
         tex_anm_set(i_this, 4);
         i_this->speedF = -20.0f;
         /* fallthrough */
     case 1:
         i_this->mDefenseSph.SetR(62.5f);
-        i_this->m2928.copy(i_this->m28E0);
+        i_this->mDefenseSphPos.copy(i_this->mSpearShaftPos);
         if (i_this->mpMorf->isStop()) {
             i_this->speedF = 0.0f;
         }
-        if (i_this->m05A4[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
             i_this->mDamageReaction.mMode = 0;
-            i_this->m05A4[1] = 0;
+            i_this->mTimers[1] = 0;
         }
         break;
     }
@@ -1417,9 +1417,9 @@ static void defence(mo2_class* i_this) {
 /* 021CE5B8 */
 static void oshi(mo2_class* i_this) {
     dComIfGp_getPlayer(0);
-    i_this->m02E0 = 2;
-    i_this->mDamageReaction.m4D0 = i_this->m05D6;
-    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 3, 0x800);
+    i_this->mEyeAnmWait = 2;
+    i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
+    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, 0x800);
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
         i_this->mDamageReaction.mMode = 1;
@@ -1429,12 +1429,12 @@ static void oshi(mo2_class* i_this) {
         i_this->speedF = 0.0f;
         /* fallthrough */
     case 1:
-        i_this->m2928.copy(i_this->m28E0);
+        i_this->mDefenseSphPos.copy(i_this->mSpearShaftPos);
         i_this->mDefenseSph.SetR(87.5f);
         if (i_this->mpMorf->isStop()) {
             i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
             i_this->mDamageReaction.mMode = 0;
-            i_this->m05A4[1] = 0;
+            i_this->mTimers[1] = 0;
         }
         break;
     }
@@ -1446,15 +1446,15 @@ static void hukki(mo2_class* i_this) {
     gabi::Local<cXyz> local_2c;
     gabi::Local<cXyz> local_38;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    f32 dx = i_this->mDamageReaction.m100[10].x - i_this->mDamageReaction.m100[0xd].x;
+    f32 dx = i_this->mDamageReaction.mJntPos[10].x - i_this->mDamageReaction.mJntPos[0xd].x;
     local_2c->x = dx;
-    f32 dz = i_this->mDamageReaction.m100[10].z - i_this->mDamageReaction.m100[0xd].z;
+    f32 dz = i_this->mDamageReaction.mJntPos[10].z - i_this->mDamageReaction.mJntPos[0xd].z;
     local_2c->z = dz;
     Mtx34* m = calc_mtx();
     cMtx_YrotS(m, cM_atan2s(dx, dz));
     local_2c->x = 0.0f;
     local_2c->y = 0.0f;
-    /* HD: no `m05B4 = 2` here; it is set (REG10_S(0) + 0x23) when getting up starts */
+    /* HD: no `mNoHitTimer = 2` here; it is set (REG10_S(0) + 0x23) when getting up starts */
     const u16 mode = i_this->mDamageReaction.mMode;
     switch (mode) {
     case 10:
@@ -1462,74 +1462,74 @@ static void hukki(mo2_class* i_this) {
         if (mode == 10) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_OKIRUA_e, 0.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_OKIRUA_e);
-            i_this->m05A4[2] = 0xF;
+            i_this->mTimers[2] = 0xF;
         } else {
             anm_init(i_this, dRes_INDEX_MO2_BCK_OKIRUU_e, 0.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_OKIRUU_e);
-            i_this->m05A4[2] = REG0_S(5) + 0xF;
+            i_this->mTimers[2] = REG0_S(5) + 0xF;
         }
         tex_anm_set(i_this, 5);
         i_this->speedF = 0.0f;
         i_this->mDamageReaction.mMode = 0xD;
-        i_this->mDamageReaction.m480 = 0;
+        i_this->mDamageReaction.mFallPitch = 0;
         local_2c->z = 125.0f;
-        MtxPosition(local_2c, &i_this->mDamageReaction.m458);
-        i_this->current.pos.y -= i_this->mDamageReaction.m44C.y;
-        i_this->old.pos.y -= i_this->mDamageReaction.m44C.y;
-        i_this->mDamageReaction.m44C.y = 0.0f;
-        i_this->m05B4 = REG_S(10, 0) + 0x23;
+        MtxPosition(local_2c, &i_this->mDamageReaction.mBodyOffset);
+        i_this->current.pos.y -= i_this->mDamageReaction.mPivot.y;
+        i_this->old.pos.y -= i_this->mDamageReaction.mPivot.y;
+        i_this->mDamageReaction.mPivot.y = 0.0f;
+        i_this->mNoHitTimer = REG_S(10, 0) + 0x23;
         /* fallthrough */
     case 13:
-        i_this->m02E0 = 2;
-        if (i_this->m05A4[2] <= REG_S(6, 5) + 6) {
-            cLib_addCalc0(&i_this->mDamageReaction.m458.x, 1.0f, (REG_F(6, 5) + 100.0f) * 0.25f);
-            cLib_addCalc0(&i_this->mDamageReaction.m458.z, 1.0f, (REG_F(6, 5) + 100.0f) * 0.25f);
-            if (i_this->m05A4[2] >= REG_S(6, 6) + 1) {
+        i_this->mEyeAnmWait = 2;
+        if (i_this->mTimers[2] <= REG_S(6, 5) + 6) {
+            cLib_addCalc0(&i_this->mDamageReaction.mBodyOffset.x, 1.0f, (REG_F(6, 5) + 100.0f) * 0.25f);
+            cLib_addCalc0(&i_this->mDamageReaction.mBodyOffset.z, 1.0f, (REG_F(6, 5) + 100.0f) * 0.25f);
+            if (i_this->mTimers[2] >= REG_S(6, 6) + 1) {
                 local_2c->z = 25.0f;
                 MtxPosition(local_2c, local_38);
                 i_this->current.pos.x += local_38->x;
                 i_this->current.pos.z += local_38->z;
             }
         }
-        if (i_this->m05A4[2] == 1) {
-            i_this->m05F0 = l_mo2HIO.m024 + 6;
-            i_this->m05F2 = 3;
+        if (i_this->mTimers[2] == 1) {
+            i_this->mSmokeTimer = l_mo2HIO.m024 + 6;
+            i_this->mSmokeType = 3;
         }
         if (i_this->mpMorf->isStop()) {
-            if (!daPy_checkGrabWear(player) && i_this->m05C0 < l_mo2HIO.m030) {
-                i_this->mDamageReaction.m488 = 0;
+            if (!daPy_checkGrabWear(player) && i_this->mTargetDist < l_mo2HIO.m030) {
+                i_this->mDamageReaction.mKnockedDown = 0;
                 i_this->mDamageReaction.mMode = 0xe;
-                i_this->m05A4[1] = 10;
+                i_this->mTimers[1] = 10;
             } else {
                 i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
                 path_check(i_this);
                 wait_set(i_this);
-                i_this->mDamageReaction.m488 = 0;
+                i_this->mDamageReaction.mKnockedDown = 0;
                 i_this->mDamageReaction.mMode = 2;
             }
         }
         break;
     case 14:
-        i_this->mDamageReaction.m710 = 1;
-        i_this->mDamageReaction.m4D0 = i_this->m05D6;
-        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 3, 0x1000);
-        if (i_this->m05A4[1] == 0) {
+        i_this->mDamageReaction.mLookMode = 1;
+        i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, 0x1000);
+        if (i_this->mTimers[1] == 0) {
             if (l_mo2HIO.m009 == 0) {
-                i_this->m2060 = 5;
+                i_this->mAttackKind = 5;
                 i_this->mDamageReaction.mAction = ACTION_FIGHT;
-                i_this->m2068 = REG0_F(8) + 29.0f;
-                i_this->m206C = 32.0f;
-                i_this->m2070 = 39.0f;
-                i_this->m2074 = 0.0f;
-                i_this->m2078 = (f32)l_mo2HIO.m0D6;
+                i_this->mAttackFrame = REG0_F(8) + 29.0f;
+                i_this->mAtStartFrame = 32.0f;
+                i_this->mAtEndFrame = 39.0f;
+                i_this->mLookStartFrame = 0.0f;
+                i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D6;
                 i_this->mWeaponSph.SetR(REG_F(10, 13) + 100.0f); /* HD */
-                i_this->m2064 = 1;
-                i_this->m207E = 1;
-                attack_info_s* info = attack_info.mAttacks[i_this->m2060];
+                i_this->mAttackStep = 1;
+                i_this->mAttackDir = 1;
+                attack_info_s* info = attack_info.mAttacks[i_this->mAttackKind];
                 info++;
                 anm_init(i_this, info->bckFileIdx, 5.0f, 0, info->speed, info->soundFileIdx);
                 tex_anm_set(i_this, 6);
-                i_this->m2942 = 1;
+                i_this->mTurnAlways = 1;
                 i_this->mDamageReaction.mMode = 1;
             } else {
                 i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
@@ -1545,23 +1545,23 @@ static void hukki(mo2_class* i_this) {
 static void aite_miru(mo2_class* i_this) {
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
-        i_this->m05A4[1] = REG0_S(8) + 0x14;
+        i_this->mTimers[1] = REG0_S(8) + 0x14;
         i_this->speedF = 0.0f;
         i_this->mDamageReaction.mMode = 1;
         tex_anm_set(i_this, 4);
         fopAcM_monsSeStart(i_this, JA_SE_CV_MO_SEARCH, 0);
         /* fallthrough */
     case 1: {
-        cLib_addCalcAngleS2(&i_this->m2952, 12000, 2, 0x1800);
-        i_this->mDamageReaction.m710 = 1;
-        if (i_this->m2954 != fpcM_ERROR_PROCESS_ID_e) {
-            fopAc_ac_c* pfVar2 = fopAcM_SearchByID(i_this->m2954);
+        cLib_addCalcAngleS2(&i_this->mJawAngleZ, 12000, 2, 0x1800);
+        i_this->mDamageReaction.mLookMode = 1;
+        if (i_this->mHitActorId != fpcM_ERROR_PROCESS_ID_e) {
+            fopAc_ac_c* pfVar2 = fopAcM_SearchByID(i_this->mHitActorId);
             if (pfVar2 != nullptr) {
-                i_this->mDamageReaction.m714 = pfVar2;
+                i_this->mDamageReaction.mpLookTarget = pfVar2;
             }
         }
-        if (i_this->m05A4[1] == 0) {
-            i_this->m2954 = fpcM_ERROR_PROCESS_ID_e;
+        if (i_this->mTimers[1] == 0) {
+            i_this->mHitActorId = fpcM_ERROR_PROCESS_ID_e;
             i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
             i_this->mDamageReaction.mMode = 0;
             path_check(i_this);
@@ -1573,7 +1573,7 @@ static void aite_miru(mo2_class* i_this) {
 //
 /* 021CED78 */
 static void fail(mo2_class* i_this) {
-    i_this->m05B4 = 5;
+    i_this->mNoHitTimer = 5;
     attention_flags(i_this) = 0;
     i_this->speedF = 0.0f;
     i_this->speed.y = 0.0f;
@@ -1582,12 +1582,12 @@ static void fail(mo2_class* i_this) {
         *local_18 = i_this->current.pos.get();
         local_18->y += l_mo2HIO.m01C + 100.0f;
         u8 var_r6 = 0;
-        if (i_this->m05A4[2] >= 0x3E8) {
+        if (i_this->mTimers[2] >= 0x3E8) {
             var_r6 = 1;
         }
         fopAcM_createDisappear(i_this, local_18, 10, var_r6, i_this->stealItemBitNo);
         if (fopAcM_CheckStatus(i_this, fopAcStts_BOSS_e)) {
-            i_this->m2A1C = 1;
+            i_this->mDefeated = 1;
             i_this->mDamageReaction.mMode++;
         } else {
             fopAcM_delete(i_this);
@@ -1602,7 +1602,7 @@ static void fail(mo2_class* i_this) {
 //
 /* 021CEEB0 */
 static void yogan_fail(mo2_class* i_this) {
-    i_this->m05B4 = 5;
+    i_this->mNoHitTimer = 5;
     attention_flags(i_this) = 0;
     i_this->speedF = 0.0f;
     switch ((u16)i_this->mDamageReaction.mMode) {
@@ -1611,8 +1611,8 @@ static void yogan_fail(mo2_class* i_this) {
         i_this->mDamageReaction.mMode = 1;
         i_this->speed.y = REG0_F(0x13) + 190.0f;
         fopAcM_monsSeStart(i_this, JA_SE_CV_MO_ALERT, 0);
-        i_this->mDamageReaction.m458.y = 0.0f;
-        i_this->mDamageReaction.m44C.y = 0.0f;
+        i_this->mDamageReaction.mBodyOffset.y = 0.0f;
+        i_this->mDamageReaction.mPivot.y = 0.0f;
         if (i_this->mbHasInnateWeapon != 0) {
             i_this->mSpawnWeaponActor = 1;
         }
@@ -1620,16 +1620,16 @@ static void yogan_fail(mo2_class* i_this) {
     case 1:
         dComIfGp_particle_setSimple(0x8061 /* ID_IT_SN_O_FIREK_KASU */, &i_this->current.pos);
         dComIfGp_particle_setSimple(0x8058 /* ID_IT_SN_O_MAGT_FCHIP */, &i_this->current.pos);
-        if ((i_this->m059C & 3U) == 0) {
-            i_this->m05E8.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
-            i_this->m05E8.x = -0x2000;
-            dComIfGp_particle_set(0xE /* ID_AK_JN_TUBA00 */, &i_this->m28C8, &i_this->m05E8);
+        if ((i_this->mFrameCounter & 3U) == 0) {
+            i_this->mEffectAngle.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
+            i_this->mEffectAngle.x = -0x2000;
+            dComIfGp_particle_set(0xE /* ID_AK_JN_TUBA00 */, &i_this->mSpitPos, &i_this->mEffectAngle);
         }
         cLib_addCalcAngleS2(&i_this->current.angle.x, -0x4000, 10, 0x200);
         if (i_this->speed.y < 0.0f) {
             i_this->mDamageReaction.mAction = ACTION_FAIL;
             i_this->mDamageReaction.mMode = 0;
-            i_this->m05A4[2] = 2000;
+            i_this->mTimers[2] = 2000;
         }
     }
 }
@@ -1648,21 +1648,21 @@ static void wepon_search(mo2_class* i_this) {
     if (boko != nullptr) {
         f32 dx = boko->current.pos.x - i_this->current.pos.x;
         f32 dz = boko->current.pos.z - i_this->current.pos.z;
-        i_this->mDamageReaction.m4D0 = cM_atan2s(dx, dz);
+        i_this->mDamageReaction.mTurnTargetY = cM_atan2s(dx, dz);
         dVar9 = std_sqrtf(gabi::fmadds(dx, dx, dz * dz));
     }
     switch ((u16)i_this->mDamageReaction.mMode) {
     case (u16)-1:
         i_this->mDamageReaction.mMode = 0;
-        i_this->m2943 = 0;
+        i_this->mWeaponSearchGaveUp = 0;
         anm_init(i_this, dRes_INDEX_MO2_BCK_SHAKKEN_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_MO2_BAS_SHAKKEN_e);
         if (dVar9 < 900.0f) {
-            i_this->m05A4[1] = 0x14;
+            i_this->mTimers[1] = 0x14;
         } else {
-            i_this->m05A4[1] = 200;
+            i_this->mTimers[1] = 200;
         }
-        i_this->m05B2 = 5;
+        i_this->mAnmStopTimer = 5;
         tex_anm_set(i_this, 2);
         if (i_this != nullptr) {
             fopAcM_monsSeStart(i_this, JA_SE_CV_MO_FIND_LANCE, 0);
@@ -1670,11 +1670,11 @@ static void wepon_search(mo2_class* i_this) {
         break;
     case 0:
         i_this->speedF = 0.0f;
-        if (i_this->m05B2 == 0) {
-            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 2, 0x3000);
-            if (i_this->mpMorf->isStop() || i_this->m05A4[1] == 0) {
+        if (i_this->mAnmStopTimer == 0) {
+            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 2, 0x3000);
+            if (i_this->mpMorf->isStop() || i_this->mTimers[1] == 0) {
                 i_this->mDamageReaction.mMode = 1;
-                i_this->m05AE = l_mo2HIO.m08A;
+                i_this->mWeaponRunTimer = l_mo2HIO.m08A;
                 anm_init(i_this, dRes_INDEX_MO2_BCK_SWALK_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                          dRes_INDEX_MO2_BAS_SWALK_e);
             }
@@ -1682,30 +1682,30 @@ static void wepon_search(mo2_class* i_this) {
         break;
     case 1:
         i_this->speedF = l_mo2HIO.m060;
-        i_this->m05F0 = l_mo2HIO.m024 + 3;
-        i_this->m05F2 = 4;
-        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 4, 0x1000);
+        i_this->mSmokeTimer = l_mo2HIO.m024 + 3;
+        i_this->mSmokeType = 4;
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 4, 0x1000);
         if (ground_4_check(i_this, 1, i_this->current.angle.y, 300.0f)) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_GAKEDEMO_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      -1);
             i_this->mDamageReaction.mMode = 3;
-            i_this->m05A4[1] = 0x1e;
-            i_this->m2943 = 1;
+            i_this->mTimers[1] = 0x1e;
+            i_this->mWeaponSearchGaveUp = 1;
         } else if (dVar9 < 300.0f) {
             i_this->mDamageReaction.mMode = 2;
             anm_init(i_this, dRes_INDEX_MO2_BCK_SCATCH_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_SCATCH_e);
-            i_this->m05A4[1] = 0x1d;
-        } else if (i_this->m05AE == 0 || i_this->mDamageReaction.mAcch.ChkWallHit()) {
-            i_this->m02E2 = 0x46;
+            i_this->mTimers[1] = 0x1d;
+        } else if (i_this->mWeaponRunTimer == 0 || i_this->mDamageReaction.mAcch.ChkWallHit()) {
+            i_this->mWeaponViewWait = 0x46;
             i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
-            i_this->m05A4[1] = 0;
-            i_this->m2943 = 1;
+            i_this->mTimers[1] = 0;
+            i_this->mWeaponSearchGaveUp = 1;
         }
         break;
     case 2:
         i_this->speedF = 0.0f;
-        if (i_this->m05A4[1] == 0x18) {
+        if (i_this->mTimers[1] == 0x18) {
             if (boko != nullptr && !fopAcM_checkCarryNow(boko)) {
                 i_this->mbHasInnateWeapon = 1;
                 fopAcM_delete(boko);
@@ -1714,30 +1714,30 @@ static void wepon_search(mo2_class* i_this) {
                 back_to_jyunkai(i_this);
             }
         }
-        if (i_this->m05A4[1] < 0xe) {
-            i_this->mDamageReaction.m710 = 1;
-            i_this->mDamageReaction.m4D0 = i_this->m05D6;
-            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 3, 0x800);
+        if (i_this->mTimers[1] < 0xe) {
+            i_this->mDamageReaction.mLookMode = 1;
+            i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
+            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, 0x800);
         }
         if (i_this->mpMorf->isStop()) {
             if (l_mo2HIO.m009 == 0 && !daPy_checkGrabWear(player) &&
-                i_this->m05C0 < l_mo2HIO.m030) {
+                i_this->mTargetDist < l_mo2HIO.m030) {
                 i_this->mDamageReaction.mAction = ACTION_FIGHT;
-                i_this->m2060 = 2;
-                i_this->m2068 = REG0_F(8) + 33.0f;
-                i_this->m206C = 36.0f;
-                i_this->m2070 = 52.0f;
-                i_this->m2074 = 75.0f;
-                i_this->m2078 = (f32)l_mo2HIO.m0D0;
-                i_this->m207E = 1;
-                i_this->m2064 = 1;
+                i_this->mAttackKind = 2;
+                i_this->mAttackFrame = REG0_F(8) + 33.0f;
+                i_this->mAtStartFrame = 36.0f;
+                i_this->mAtEndFrame = 52.0f;
+                i_this->mLookStartFrame = 75.0f;
+                i_this->mTurnEndFrame = (f32)l_mo2HIO.m0D0;
+                i_this->mAttackDir = 1;
+                i_this->mAttackStep = 1;
                 attack_info_s* info = attack_info.mAttacks[2];
                 info++;
                 anm_init(i_this, info->bckFileIdx, 5.0f, J3DFrameCtrl::EMode_NONE, info->speed,
                          info->soundFileIdx);
                 tex_anm_set(i_this, 6);
                 i_this->mDamageReaction.mMode = 1;
-                i_this->m2942 = 1;
+                i_this->mTurnAlways = 1;
             } else {
                 back_to_jyunkai(i_this);
             }
@@ -1750,15 +1750,15 @@ static void wepon_search(mo2_class* i_this) {
             if (i_this != nullptr) {
                 fopAcM_seStart(i_this, JA_SE_CM_LANCE_PICKUP, 0);
             }
-            i_this->m05A4[1] = 0x1d;
+            i_this->mTimers[1] = 0x1d;
             i_this->speedF = 0.0f;
         } else {
             cLib_addCalc0(&i_this->speedF, 1.0f, REG0_F(8) + 7.0f);
             if (i_this->speedF > 1.0f) {
-                i_this->m05F0 = l_mo2HIO.m024 + 4;
-                i_this->m05F2 = 4;
+                i_this->mSmokeTimer = l_mo2HIO.m024 + 4;
+                i_this->mSmokeType = 4;
             }
-            if (i_this->m05A4[1] == 0) {
+            if (i_this->mTimers[1] == 0) {
                 back_to_jyunkai(i_this);
             }
         }
@@ -1775,34 +1775,34 @@ static void hip_damage(mo2_class* i_this) {
         anm_init(i_this, dRes_INDEX_MO2_BCK_HIPDMG01_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_MO2_BAS_HIPDMG01_e);
         i_this->speedF = REG_F(6, 0) + 100.0f;
-        i_this->m05A4[0] = 0xF;
-        i_this->m05F0 = l_mo2HIO.m024 + 3;
-        i_this->m05F2 = 4;
+        i_this->mTimers[0] = 0xF;
+        i_this->mSmokeTimer = l_mo2HIO.m024 + 3;
+        i_this->mSmokeType = 4;
         /* fallthrough */
     case 1:
         cLib_addCalc2(&i_this->speedF, 0.0f, 1.0f, REG_F(6, 1) + 10.0f);
-        if (i_this->m05A4[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             i_this->mDamageReaction.mMode = 2;
             anm_init(i_this, dRes_INDEX_MO2_BCK_HIPDMG02_e, 3.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                      dRes_INDEX_MO2_BAS_HIPDMG02_e);
-            i_this->m05A4[0] = 0x3c;
-            i_this->mDamageReaction.m4D0 = i_this->current.angle.y + 0x8000;
+            i_this->mTimers[0] = 0x3c;
+            i_this->mDamageReaction.mTurnTargetY = i_this->current.angle.y + 0x8000;
         }
         break;
     case 2:
-        if ((i_this->m059C & 7) == 0) {
-            i_this->m05E8.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
-            i_this->m05E8.x = -0x2000;
-            dComIfGp_particle_set(0xE /* ID_AK_JN_TUBA00 */, &i_this->m28C8, &i_this->m05E8);
+        if ((i_this->mFrameCounter & 7) == 0) {
+            i_this->mEffectAngle.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
+            i_this->mEffectAngle.x = -0x2000;
+            dComIfGp_particle_set(0xE /* ID_AK_JN_TUBA00 */, &i_this->mSpitPos, &i_this->mEffectAngle);
         }
         i_this->speedF = REG_F(6, 2) + 50.0f;
-        if (i_this->m05A4[0] < REG_S(6, 1) + 0x28) {
-            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 4, 0x500);
-            if (i_this->m05A4[0] == 0) {
+        if (i_this->mTimers[0] < REG_S(6, 1) + 0x28) {
+            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 4, 0x500);
+            if (i_this->mTimers[0] == 0) {
                 i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
                 i_this->mDamageReaction.mMode = 0;
-                i_this->m05B4 = 0;
-                i_this->m05A4[1] = 0;
+                i_this->mNoHitTimer = 0;
+                i_this->mTimers[1] = 0;
                 break;
             }
         }
@@ -1817,20 +1817,20 @@ static void d_mahi(mo2_class* i_this) {
         i_this->mDamageReaction.mMode = 1;
         anm_init(i_this, dRes_INDEX_MO2_BCK_KOKERUF_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_MO2_BAS_KOKERUF_e);
-        i_this->m05A4[0] = 100;
+        i_this->mTimers[0] = 100;
         /* fallthrough */
     case 1:
-        if (i_this->m05A4[0] <= 0x50 && i_this->m05A4[0] >= 0x28) {
-            if (i_this->m05A4[0] == 0x50) {
+        if (i_this->mTimers[0] <= 0x50 && i_this->mTimers[0] >= 0x28) {
+            if (i_this->mTimers[0] == 0x50) {
                 enemy_piyo_set(i_this);
             }
             fopAcM_seStart(i_this, JA_SE_CM_MD_PIYO, 0);
         }
         i_this->speedF = 0.0f;
-        if (i_this->m05A4[0] == 0x1E) {
-            i_this->mDamageReaction.m49E = 0xF;
+        if (i_this->mTimers[0] == 0x1E) {
+            i_this->mDamageReaction.mParalysisTimer = 0xF;
         }
-        if (i_this->m05A4[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
             path_check(i_this);
             wait_set(i_this);
@@ -1838,7 +1838,7 @@ static void d_mahi(mo2_class* i_this) {
         }
     }
     /* HD: in Hyrule, keep a paralysed Moblin out of the wall behind it */
-    if (i_this->m05A4[0] > 0x50 &&
+    if (i_this->mTimers[0] > 0x50 &&
         SafeString_eq("Hyrule", dComIfGp_getStartStageName(), SAFESTRING_VTBL)) {
         gabi::Local<dBgS_LinChk_l> linChk;
         dBgS_LinChk_ct(linChk, LINCHK_VTBLS);
@@ -1871,17 +1871,17 @@ static void d_mahi(mo2_class* i_this) {
 //
 /* 021CFFA4 */
 static void d_sit(mo2_class* i_this) {
-    i_this->m05B4 = 5;
+    i_this->mNoHitTimer = 5;
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
         i_this->mDamageReaction.mMode = 1;
         anm_init(i_this, dRes_INDEX_MO2_BCK_KOKERUF_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_MO2_BAS_KOKERUF_e);
-        i_this->m05A4[0] = 0x32;
+        i_this->mTimers[0] = 0x32;
         /* fallthrough */
     case 1:
         i_this->speedF = 0.0f;
-        if (i_this->m05A4[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
             path_check(i_this);
             wait_set(i_this);
@@ -1893,8 +1893,8 @@ static void d_sit(mo2_class* i_this) {
 //
 /* 021D0064 */
 static void d_dozou(mo2_class* i_this) {
-    i_this->m05B4 = 5;
-    i_this->m02E0 = 2;
+    i_this->mNoHitTimer = 5;
+    i_this->mEyeAnmWait = 2;
     attention_flags(i_this) = 0;
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
@@ -1938,11 +1938,11 @@ static void carry(mo2_class* i_this) {
 //
 /* 021D0294 */
 static void carry_drop(mo2_class* i_this) {
-    cLib_addCalc0(&i_this->mDamageReaction.m468, 1.0f, 5.5f);
-    cLib_addCalc0(&i_this->mDamageReaction.m46C, 1.0f, 0.5f);
+    cLib_addCalc0(&i_this->mDamageReaction.mCarryOffsetY, 1.0f, 5.5f);
+    cLib_addCalc0(&i_this->mDamageReaction.mCarryOffsetZ, 1.0f, 0.5f);
     cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 1, 0x100);
     cLib_addCalcAngleS2(&i_this->shape_angle.z, 0, 1, 0x100);
-    cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->m05D6, 4, 0x800);
+    cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->mTargetAngleY, 4, 0x800);
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
         i_this->mDamageReaction.mMode = 1;
@@ -1954,16 +1954,16 @@ static void carry_drop(mo2_class* i_this) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_JEND_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_JEND_e);
             i_this->mDamageReaction.mMode = 2;
-            i_this->m05F0 = l_mo2HIO.m024 + 6;
-            i_this->m05F2 = 3;
+            i_this->mSmokeTimer = l_mo2HIO.m024 + 6;
+            i_this->mSmokeType = 3;
             i_this->mDamageReaction.mMaxFallDistance = 300.0f;
             fopAcM_monsSeStart(i_this, JA_SE_CV_MO_JAB, 0);
             fopAcM_seStart(i_this, JA_SE_CM_MO_BB_LANDING, 0);
         }
         break;
     case 2:
-        cLib_addCalc0(&i_this->mDamageReaction.m468, 1.0f, 50.0f);
-        cLib_addCalc0(&i_this->mDamageReaction.m46C, 1.0f, 50.0f);
+        cLib_addCalc0(&i_this->mDamageReaction.mCarryOffsetY, 1.0f, 50.0f);
+        cLib_addCalc0(&i_this->mDamageReaction.mCarryOffsetZ, 1.0f, 50.0f);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 1, 0x1000);
         cLib_addCalcAngleS2(&i_this->shape_angle.z, 0, 1, 0x1000);
         cLib_addCalc0(&i_this->speedF, 1.0f, 1.0f);
@@ -1983,19 +1983,19 @@ static void carry_drop(mo2_class* i_this) {
 static void e3_demo(mo2_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     u8* camera = dComIfGp_getPlayerCamera0();
-    i_this->m05B4 = 5;
-    i_this->mDamageReaction.m4D0 = fopAcM_searchPlayerAngleY(i_this);
+    i_this->mNoHitTimer = 5;
+    i_this->mDamageReaction.mTurnTargetY = fopAcM_searchPlayerAngleY(i_this);
     dCamera_SetTrimSize(camera + 0x248, 2);
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
         anm_init(i_this, dRes_INDEX_MO2_BCK_UKYADEMO_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
-        i_this->m05A4[1] = 0x19;
+        i_this->mTimers[1] = 0x19;
         i_this->mDamageReaction.mMode = 1;
         dMeter_mtrHide();
-        i_this->m2A4C = 200;
+        i_this->mCatchTimer = 200;
         /* fallthrough */
     case 1:
-        if (i_this->m05A4[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_SWALK_e, 10.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                      dRes_INDEX_MO2_BAS_SWALK_e);
             i_this->mDamageReaction.mMode = 2;
@@ -2009,7 +2009,7 @@ static void e3_demo(mo2_class* i_this) {
     case 2:
         cLib_addCalc0(&i_this->m2A40, 0.1f, 3.0f);
         cLib_addCalc2(&i_this->speedF, l_mo2HIO.m058, 1.0f, 20.0f);
-        if (i_this->m05C0 < l_mo2HIO.m030 ||
+        if (i_this->mTargetDist < l_mo2HIO.m030 ||
             ground_4_check(i_this, 1, i_this->current.angle.y, 100.0f)) {
             i_this->mDamageReaction.mMode = 3;
             anm_init(i_this, dRes_INDEX_MO2_BCK_KNAGE_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
@@ -2036,7 +2036,7 @@ static void e3_demo(mo2_class* i_this) {
             i_this->mDamageReaction.mMode = 5;
             anm_init(i_this, dRes_INDEX_MO2_BCK_WAITDEMO_e, 15.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                      -1);
-            i_this->m05A4[1] = 0x1E;
+            i_this->mTimers[1] = 0x1E;
             mDoAud_seStop(JA_SE_MAJUTOU_ALERM, 30);
             daPy_changeOriginalDemo(player);
             daPy_changeDemoMode(player, DEMO_HOLDUP_e);
@@ -2044,22 +2044,22 @@ static void e3_demo(mo2_class* i_this) {
         break;
     case 5:
         i_this->speedF = 0.0f;
-        if (i_this->m05A4[1] == 0) {
-            i_this->m2A4B = 1;
+        if (i_this->mTimers[1] == 0) {
+            i_this->mSendToPrison = 1;
         }
     }
-    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.m4D0, 4, 0x800);
+    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 4, 0x800);
     if (!daPy_checkGrabWear(player)) {
-        cLib_addCalcAngleS2(&player->current.angle.y, (s16)(i_this->mDamageReaction.m4D0 + 0x8000),
+        cLib_addCalcAngleS2(&player->current.angle.y, (s16)(i_this->mDamageReaction.mTurnTargetY + 0x8000),
                             4, 0x400);
-        cLib_addCalcAngleS2(&player->shape_angle.y, (s16)(i_this->mDamageReaction.m4D0 + 0x8000), 4,
+        cLib_addCalcAngleS2(&player->shape_angle.y, (s16)(i_this->mDamageReaction.mTurnTargetY + 0x8000), 4,
                             0x400);
     }
 }
 
 /* inlined into daMo2_Create */
 static inline s32 kantera_get_init(mo2_class* i_this) {
-    if (i_this->m2A08 == 0) {
+    if (i_this->mLanternStep == 0) {
         Mo2CreateAppend* params = reinterpret_cast<Mo2CreateAppend*>(fopAcM_CreateAppend());
         params->mPosition.x = i_this->current.pos.x;
         params->mPosition.y = i_this->current.pos.y;
@@ -2068,19 +2068,19 @@ static inline s32 kantera_get_init(mo2_class* i_this) {
         params->mParameters = (fopAcM_GetParam(i_this) & 0xFF000000U) | 0xFFFF23;
         params->mRoomNo = fopAcM_GetRoomNo(i_this);
         u32 layer = fpcLy_CurrentLayer();
-        i_this->m02E8 = fpcSCtRq_Request(layer, fpcNm_KANTERA_e, 0, 0, params); /* fopAcM_Create */
-        i_this->m2A08++;
+        i_this->mLanternId = fpcSCtRq_Request(layer, fpcNm_KANTERA_e, 0, 0, params); /* fopAcM_Create */
+        i_this->mLanternStep++;
         return TRUE;
-    } else if (i_this->m2A08 != 100) {
-        fopAc_ac_c* kantera = fopAcM_SearchByID(i_this->m02E8);
+    } else if (i_this->mLanternStep != 100) {
+        fopAc_ac_c* kantera = fopAcM_SearchByID(i_this->mLanternId);
         if (kantera != nullptr) {
             reinterpret_cast<Mo2Lantern*>(kantera)->mTargetActorID =
                 fopAcM_GetID(i_this); /* mTargetActorID */
-            i_this->m2A08 = 100;
+            i_this->mLanternStep = 100;
             return FALSE;
         }
-        i_this->m2A08++;
-        if (i_this->m2A08 > 0x14) {
+        i_this->mLanternStep++;
+        if (i_this->mLanternStep > 0x14) {
             fopAcM_delete(i_this);
         }
         return TRUE;
@@ -2099,7 +2099,7 @@ static BOOL daMo2_IsDelete(mo2_class*) {
 static BOOL daMo2_Delete(mo2_class* i_this) {
     dComIfG_resDelete(&i_this->mPhsMo2, "Mo2");
     dComIfG_resDelete(&i_this->mPhsSpear, "Spear");
-    if (i_this->m2A0A != 0) {
+    if (i_this->mHioOwner != 0) {
         hio_set = 0;
         mDoHIO_deleteChild(l_mo2HIO.mNo);
         camera_mode = 0;
@@ -2107,10 +2107,10 @@ static BOOL daMo2_Delete(mo2_class* i_this) {
     if (i_this->heap != nullptr) {
         i_this->mpMorf->stopZelAnime();
     }
-    dPa_smokeEcallBack_remove(&i_this->m05F4);
+    dPa_smokeEcallBack_remove(&i_this->mSmokeCallBack);
     dPa_smokeEcallBack_remove(&i_this->mDamageReaction.mParticleCallBack);
     enemy_fire_remove(&i_this->mEnemyFire);
-    mDoAud_seDeleteObject(&i_this->m28D4);
+    mDoAud_seDeleteObject(&i_this->mSpearHeadPos);
     mDoAud_seDeleteObject(&i_this->m2934);
     return TRUE;
 }
@@ -2156,7 +2156,7 @@ static BOOL createHeap(fopAc_ac_c* a_this) {
         (J3DAnmTexPattern*)dComIfG_getObjectRes("Mo2", mo2_tex_anm_idx[3], SAFESTRING_VTBL);
     if (btp == nullptr)
         JUT_ASSERT_fail("d_a_mo2.cpp", 0x1B39, "btp");
-    if (!mDoExt_btpAnm_init(&i_this->m02C8, J3DModel_getModelData(i_this->mpMorf->getModel()), btp,
+    if (!mDoExt_btpAnm_init(&i_this->mEyeBtpAnm, J3DModel_getModelData(i_this->mpMorf->getModel()), btp,
                             0, 2, 1.0f, 0, -1, 0, 0)) {
         return FALSE;
     }
@@ -2165,11 +2165,11 @@ static BOOL createHeap(fopAc_ac_c* a_this) {
         "Mo2", 0x7E /* HD index of the spear-trail BMD (GameCube BMD_KB 0x7B) */, SAFESTRING_VTBL);
     if (modelData == nullptr)
         JUT_ASSERT_fail("d_a_mo2.cpp", 0x1B5C, "modelData != (0)");
-    i_this->m058C = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
-    if (i_this->m058C == nullptr) {
+    i_this->mpBlurModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
+    if (i_this->mpBlurModel == nullptr) {
         return FALSE;
     }
-    J3DModel_setBaseScale(i_this->m058C, &a_this->scale);
+    J3DModel_setBaseScale(i_this->mpBlurModel, &a_this->scale);
     /* useArrowHeapInit */
     i_this->mpJntHit = JntHit_create(i_this->mpMorf->getModel(), 0x101BA93C /* search_data */, 0xF);
     if (i_this->mpJntHit == nullptr) {
@@ -2242,7 +2242,7 @@ static cPhs_State daMo2_Create(fopAc_ac_c* a_this) {
             reinterpret_cast<const char*>(mo2HioName) /* モ２ (Shift-JIS) */, &l_mo2HIO);
         l_mo2HIO.m020 = 0;
         camera_mode = 0;
-        i_this->m2A0A = 1;
+        i_this->mHioOwner = 1;
         hio_set = 1;
         alerm_set = 0;
     }
@@ -2255,7 +2255,7 @@ static cPhs_State daMo2_Create(fopAc_ac_c* a_this) {
     i_this->mDamageReaction.mSpawnY = a_this->current.pos.y;
     i_this->mBtHeight = 162.5f;
     i_this->mbHasInnateWeapon = 1;
-    i_this->mDamageReaction.m70C = 1;
+    i_this->mDamageReaction.mBounceCount = 1;
     i_this->mDamageReaction.mMaxFallDistance = 1000.0f;
     i_this->mDamageReaction.mInvincibleTimer = 5;
     if (dComIfGs_isCollect(0, 0) || dComIfGs_isCollect(0, 1) || dComIfGs_isCollect(0, 2) ||
@@ -2278,19 +2278,19 @@ static cPhs_State daMo2_Create(fopAc_ac_c* a_this) {
         if (i_this->ppd == nullptr) {
             return cPhs_ERROR_e;
         }
-        i_this->mHasPath = 1;
-        i_this->m2968 = i_this->mPathIndex + 1;
+        i_this->mPathDir = 1;
+        i_this->mPathOn = i_this->mPathIndex + 1;
     }
     if (i_this->mEnableSpawnSwitch != 0xFF) {
-        i_this->m02C1 = i_this->mEnableSpawnSwitch + 1;
+        i_this->mAppearWait = i_this->mEnableSpawnSwitch + 1;
     }
     if (i_this->mMode == 0xf) {
-        i_this->m02C1 = 0;
+        i_this->mAppearWait = 0;
         i_this->mDamageReaction.mAction = ACTION_D_DOZOU;
         /* HD: unless a save byte (+0x2E) is 0x39, 0x3E or 0x3A, wait 5 frames */
         u8 b = mo2SaveView()->mDungeonFlags;
         if (b != 0x39 && b != 0x3E && b != 0x3A) {
-            i_this->m05A4[0] = 5;
+            i_this->mTimers[0] = 5;
         }
     }
     i_this->mDamageReaction.mAcch.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1,
@@ -2364,9 +2364,9 @@ static mo2_class* mo2_class_ct(mo2_class* i_this) {
     }
     fopAc_ac_c_ct(i_this);
     i_this->__vtbl = MO2_VTBL;
-    mDoExt_btpAnm_ct(&i_this->m02C8);     /* mDoExt_btpAnm */
+    mDoExt_btpAnm_ct(&i_this->mEyeBtpAnm);     /* mDoExt_btpAnm */
     mDoExt_3DlineMat0_ct(&i_this->m0570); /* mDoExt_3DlineMat0_c */
-    dPa_smokeEcallBack_ct(&i_this->m05F4, 1);
+    dPa_smokeEcallBack_ct(&i_this->mSmokeCallBack, 1);
     dBgS_AcchCir_ct(&i_this->mDamageReaction.mAcchCir);
     dBgS_ObjAcch_ct(&i_this->mDamageReaction.mAcch);
     dCcD_Stts_ct(&i_this->mDamageReaction.mStts);

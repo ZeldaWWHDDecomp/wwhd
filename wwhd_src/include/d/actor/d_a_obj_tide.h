@@ -48,23 +48,23 @@ struct Act_c : fopAc_ac_c {
     /* 0x3F8 */ gptr<J3DModel> mModel2;
     /* 0x3FC */ gptr<mDoExt_brkAnm> mBrk2;
     /* 0x400 */ be<s32> M_type;
-    /* 0x404 */ be<s32> m2EC;
-    /* 0x408 */ be<f32> m2F0;
-    /* 0x40C */ be<s16> m2F4;
-    /* 0x40E */ be<u8> m2F6;
-    /* 0x40F */ be<u8> m2F7;
-    /* 0x410 */ be<u8> m2F8;
-    /* 0x411 */ be<u8> m2F9;
-    /* 0x412 */ be<u8> m2FA;
-    /* 0x413 */ be<u8> m2FB;
+    /* 0x404 */ be<s32> mMode;  /* was m2EC: mode_norm_init 023A0DC0 / mode_gmtw_pre_init 023A0D58 / mode_gmtw_demo_init 023A1644 / mode_gmtw_init 023A16AC set MODE_*; Execute 023A0F08 calls tideModeProc[it] */
+    /* 0x408 */ be<f32> mMoveSpeed;  /* was m2F0: move_to_aim 023A1258: the step of the height chase (cLib_addCalc), grows by attr m24 per frame between attr m2C and m28, 0 once at the aim; Create 023A0DCC clears it */
+    /* 0x40C */ be<s16> mTimer;  /* was m2F4: mode_norm 023A14A8: counts down from attr m42 and restarts the second brk when it reaches 0; mode_gmtw_demo 023A1D68: set 90 when the rise starts, counted down to step 2 (water particle and dBgW at 59) */
+    /* 0x40E */ be<u8> mDemoStep;  /* was m2F6: mode_gmtw_demo 023A1D68: 0 waits for gmtw_demo_up_start, 1 counts mTimer, 2 rises; mode_gmtw_init 023A16AC sets 2; se_set_gmtw 023A19AC plays the out/up sounds in step 2 (step 1 once mBgRegistered) */
+    /* 0x40F */ be<u8> mBgRegistered;  /* was m2F7: Mthd_Create 023A0484 sets 1 after the move dBgW is created; mode_gmtw_pre 023A1798 releases the dBgW and clears it; mode_gmtw_demo 023A1D68 registers it again and sets 1 */
+    /* 0x410 */ be<u8> mSeGopoOn;  /* was m2F8: se_set_gmtw 023A19AC: on while the water is not finished; starts/stops the gurgle sound (se_start_gopo / se_stop_gopo, M_id_gopo) on a change; se_init_gmtw 023A0418 clears it */
+    /* 0x411 */ be<u8> mSeOutOn;  /* was m2F9: se_set_gmtw 023A19AC: on in demo step 2 (or 1 with mBgRegistered); starts/stops se_start_out / se_stop_out (M_id_out) on a change; se_init_gmtw 023A0418 clears it */
+    /* 0x412 */ be<u8> mSeUpOn;  /* was m2FA: se_set_gmtw 023A19AC: on with mSeOutOn; se_start_up on the rising edge, se_pos_up while on, se_stop_up on the falling edge (M_id_up); se_init_gmtw 023A0418 clears it */
+    /* 0x413 */ be<u8> mSePachaOn;  /* was m2FB: se_set_gmtw 023A19AC: set when the water is finished (boss beaten or at home.y + 2923.5); then starts JA_SE_ATM_MJ_WATER_PACHA at eyePos; se_init_gmtw 023A0418 clears it */
     /* 0x414 */ be<s32> M_id_gopo;
     /* 0x418 */ be<s32> M_id_out;
     /* 0x41C */ be<s32> M_id_up;
-    /* 0x420 */ be<u8> m308;
-    /* 0x421 */ be<u8> m309;
-    /* 0x422 */ be<u8> m30A;
-    /* 0x423 */ be<u8> m30B;
-    /* 0x424 */ be<s32> m30C;
+    /* 0x420 */ be<u8> mSwLatched;  /* was m308: mode_gmtw 023A1B78: set once the PRM_SWSAVE switch is seen on; from then the aim is home.y + 2923.5 and the height snaps there while the switch is off; mode_gmtw_init 023A16AC clears it */
+    /* 0x421 */ be<u8> mUseRes;  /* was m309: Mthd_Create 023A0484 sets 1 (create fails with cPhs_ERROR_e while 0); Mthd_Delete 023A0658 deletes the move dBgW and the resource only when set */
+    /* 0x422 */ be<u8> mDeleteReq;  /* was m30A: mode_gmtw 023A1B78 sets it when mRescueTimer runs out after RESCUE_COMPLETE; Execute 023A0F08 deletes the actor when set; Create 023A0DCC clears it */
+    /* 0x423 */ be<u8> mBossDead;  /* was m30B: se_init_gmtw 023A0418: dungeon membit STAGE_BOSS_ENEMY; se_set_gmtw 023A19AC treats the water as finished when set */
+    /* 0x424 */ be<s32> mRescueTimer;  /* was m30C: mode_gmtw_init 023A16AC sets 300; mode_gmtw 023A1B78 counts it down while the RESCUE_COMPLETE tmp bit is set (300 otherwise), then sets mDeleteReq */
 };
 } // namespace daObjTide
 WWHD_SIZE(daObjTide::Act_c, 0x428);
@@ -77,15 +77,15 @@ WWHD_OFFSET(daObjTide::Act_c, mBtk, 0x3F4);
 WWHD_OFFSET(daObjTide::Act_c, mModel2, 0x3F8);
 WWHD_OFFSET(daObjTide::Act_c, mBrk2, 0x3FC);
 WWHD_OFFSET(daObjTide::Act_c, M_type, 0x400);
-WWHD_OFFSET(daObjTide::Act_c, m2EC, 0x404);
-WWHD_OFFSET(daObjTide::Act_c, m2F0, 0x408);
-WWHD_OFFSET(daObjTide::Act_c, m2F4, 0x40C);
-WWHD_OFFSET(daObjTide::Act_c, m2F6, 0x40E);
-WWHD_OFFSET(daObjTide::Act_c, m2F7, 0x40F);
-WWHD_OFFSET(daObjTide::Act_c, m2F8, 0x410);
+WWHD_OFFSET(daObjTide::Act_c, mMode, 0x404);
+WWHD_OFFSET(daObjTide::Act_c, mMoveSpeed, 0x408);
+WWHD_OFFSET(daObjTide::Act_c, mTimer, 0x40C);
+WWHD_OFFSET(daObjTide::Act_c, mDemoStep, 0x40E);
+WWHD_OFFSET(daObjTide::Act_c, mBgRegistered, 0x40F);
+WWHD_OFFSET(daObjTide::Act_c, mSeGopoOn, 0x410);
 WWHD_OFFSET(daObjTide::Act_c, M_id_gopo, 0x414);
-WWHD_OFFSET(daObjTide::Act_c, m308, 0x420);
-WWHD_OFFSET(daObjTide::Act_c, m30C, 0x424);
+WWHD_OFFSET(daObjTide::Act_c, mSwLatched, 0x420);
+WWHD_OFFSET(daObjTide::Act_c, mRescueTimer, 0x424);
 
 namespace daObjTide {
 struct Attr_c {
@@ -247,14 +247,14 @@ WWHD_SIZE(tideHD::HeaderZeros, 0x10);
 WWHD_SIZE(tideHD::DestructorRecord, 0xC);
 WWHD_SIZE(tideHD::ActorVtableView, 0xB8);
 
-WWHD_OFFSET(daObjTide::Act_c, m2F9, 0x411);
-WWHD_OFFSET(daObjTide::Act_c, m2FA, 0x412);
-WWHD_OFFSET(daObjTide::Act_c, m2FB, 0x413);
+WWHD_OFFSET(daObjTide::Act_c, mSeOutOn, 0x411);
+WWHD_OFFSET(daObjTide::Act_c, mSeUpOn, 0x412);
+WWHD_OFFSET(daObjTide::Act_c, mSePachaOn, 0x413);
 WWHD_OFFSET(daObjTide::Act_c, M_id_out, 0x418);
 WWHD_OFFSET(daObjTide::Act_c, M_id_up, 0x41C);
-WWHD_OFFSET(daObjTide::Act_c, m309, 0x421);
-WWHD_OFFSET(daObjTide::Act_c, m30A, 0x422);
-WWHD_OFFSET(daObjTide::Act_c, m30B, 0x423);
+WWHD_OFFSET(daObjTide::Act_c, mUseRes, 0x421);
+WWHD_OFFSET(daObjTide::Act_c, mDeleteReq, 0x422);
+WWHD_OFFSET(daObjTide::Act_c, mBossDead, 0x423);
 WWHD_SIZE(tideHD::SaveBlock, sizeof(dSv_info_c) + 0x20);
 WWHD_SIZE(tideHD::DrawLists, 0x5D80);
 WWHD_SIZE(tideHD::DemoActor, 0x50);

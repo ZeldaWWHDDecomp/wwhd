@@ -47,9 +47,9 @@ WWHD_OFFSET(PlayerVtable, setPlayerPosAndAngle, 0x114);
 WWHD_SIZE(PlayerVtable, 0x118);
 struct Phase2 {
     u8 _000[0x33BC];
-    be<u8> m2ED0;
+    be<u8> mKiSetCount;
 };
-WWHD_OFFSET(Phase2, m2ED0, 0x33BC);
+WWHD_OFFSET(Phase2, mKiSetCount, 0x33BC);
 WWHD_SIZE(Phase2, 0x33BD);
 struct Play {
     u8 _000[0x5B2C];

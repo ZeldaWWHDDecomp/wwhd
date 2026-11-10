@@ -159,7 +159,7 @@ struct tn_class : fopEn_enemy_c {
     /* 0x03DA */ be<u8> mPathIndex;
     /* 0x03DB */ be<u8> mEnableSpawnSwitch;
     /* 0x03DC */ be<u8> mDisableSpawnOnDeathSwitch;
-    /* 0x03DD */ be<u8> m02C1;
+    /* 0x03DD */ be<u8> mWaitSpawnSwitch;  /* was m02C1: daTn_Create 024C0B0C: mEnableSpawnSwitch + 1 (0 = none); executePrefix (in daTn_Execute 024BD170) waits until that switch is on, then clears it; daTn_Draw 024BA238 draws nothing while it is set */
     /* 0x03DE */ u8 _03DE[2];
     /* 0x03E0 */ gptr<mDoExt_McaMorf> mpBodyMorf;
     /* 0x03E4 */ gptr<mDoExt_McaMorf> mpShieldMorf;
@@ -167,52 +167,52 @@ struct tn_class : fopEn_enemy_c {
     /* 0x03EC */ be<s8> mRemainingEquipmentPieces;
     /* 0x03ED */ u8 _03ED[3];
     /* 0x03F0 */ gptr<mDoExt_brkAnm> mpBrkAnm;
-    /* 0x03F4 */ be<u8> m02DC;
-    /* 0x03F5 */ be<u8> m02DD;
+    /* 0x03F4 */ be<u8> mPartsAttached;  /* was m02DC: daTn_Create 024C0B0C sets 3; part_move 024BC3EC subtracts 1 each time an armour part (helmet, armour, shield) falls off */
+    /* 0x03F5 */ be<u8> mPartDetachFlags;  /* was m02DD: applyArmoredHit (in daTn_Execute 024BD170) ORs 1 / 2 for the part that was hit off; part_move 024BC3EC detaches the part whose bit is set; executePrefix clears it */
     /* 0x03F6 */ u8 _03F6[2];
     /* 0x03F8 */ tn_p mParts[3];
     /* 0x04DC */ be<u8> mArmorColorIndex;
     /* 0x04DD */ be<u8> mEquipmentType;
     /* 0x04DE */ u8 _04DE[0x04F0 - 0x04DE];
-    /* 0x04F0 */ be<u32> m03D8;
+    /* 0x04F0 */ be<u32> mFrameCount;  /* was m03D8: executePrefix (in daTn_Execute 024BD170) adds 1 every frame; tn_combatDefensiveReaction (in Tn_move 024C3E64) and yogan_fail 024C2BEC act only every 4th frame (& 3) */
     /* 0x04F4 */ u8 _04F4[4];
     /* 0x04F8 */ be<s16> mCountDownTimers[5];
-    /* 0x0502 */ be<s16> m03EA;
-    /* 0x0504 */ be<s16> m03EC;
-    /* 0x0506 */ be<s16> m03EE;
-    /* 0x0508 */ be<s16> m03F0;
-    /* 0x050A */ be<s16> m03F2;
+    /* 0x0502 */ be<s16> mWeponRunTimer;  /* was m03EA: wepon_search 024C1A3C sets l_tnHIO.m082 when the Darknut starts running to a dropped weapon and gives up (mWeponSearchGaveUp) when it reaches 0; counted down by executePrefix (in daTn_Execute 024BD170) */
+    /* 0x0504 */ be<s16> mAnmLock;  /* was m03EC: anm_init 024B91E4, tate_anm_init 024B931C and yoroi_anm_init 024B93E8 return at once while it is set, and tn_moveCombat (in Tn_move 024C3E64) skips the turn toward mTargetAngle; nothing sets it (same in tww d217e2b) */
+    /* 0x0506 */ be<s16> mWeponTurnWait;  /* was m03EE: wepon_search 024C1A3C sets 5 and turns toward the weapon only once it is 0; counted down in updateDemoCameraAndSmoke (in daTn_Execute 024BD170) */
+    /* 0x0508 */ be<s16> mNoDamageTimer;  /* was m03F0: prepareDamage (in daTn_Execute 024BD170) returns at once while it runs and sets REG0_S(7) + 5 after a hit; applyArmoredHit sets 20; updateCollisionShapes moves the head sphere away while it runs; counted down by executePrefix */
+    /* 0x050A */ be<s16> mNoGuardTimer;  /* was m03F2: applyOrdinaryDamage (in daTn_Execute 024BD170) sets 25; tn_combatDefensiveReaction (in Tn_move 024C3E64) does not guard while it runs; counted down by executePrefix */
     /* 0x050C */ u8 _050C[8];
-    /* 0x0514 */ be<s16> m03FC;
-    /* 0x0516 */ be<u8> m03FE;
+    /* 0x0514 */ be<s16> mWeponSearchWait;  /* was m03FC: wepon_search 024C1A3C sets 70 when it runs into a wall; search_wepon 024BAFAC finds no weapon while it runs; counted down by executePrefix (in daTn_Execute 024BD170) */
+    /* 0x0516 */ be<u8> mObstacleSide;  /* was m03FE: tn_combatObstacles (in Tn_move 024C3E64) stores the ground_4_check result (2 / 4 / 8 = side blocked); tn_combatLocomotion picks the sidestep from it */
     /* 0x0517 */ u8 _0517;
     /* 0x0518 */ be<f32> mPlayerDistance;
     // HD: an extra height-distance float precedes the path target.
     /* 0x051C */ be<f32> mPlayerHeightDistance;
     /* 0x0520 */ cXyz mPathXyz;
     /* 0x052C */ u8 _052C[4];
-    /* 0x0530 */ be<s16> m0414;
+    /* 0x0530 */ be<s16> mHeadAngleY;  /* was m0414: nodeCallBack 024B97A0: atan2 from the eye toward a point ahead of the head joint; search_wepon 024BAFAC compares weapon directions with it (view cone) */
     /* 0x0532 */ be<s16> mTargetAngle;
-    /* 0x0534 */ be<s16> m0418;
-    /* 0x0536 */ be<s16> m041A;
-    /* 0x0538 */ cXyz m041C;
-    /* 0x0544 */ csXyz m0428;
-    /* 0x054A */ be<s16> m042E;
-    /* 0x054C */ be<s16> m0430;
-    /* 0x054E */ be<u8> m0432;
-    /* 0x054F */ be<u8> m0433;
+    /* 0x0534 */ be<s16> mSideStepAngle;  /* was m0418: tn_combatLocomotion / tn_attackCircle (in Tn_move 024C3E64) set +-0x4000; tn_finishMovement adds it to the move heading; Tn_move 024C3E64 clears it */
+    /* 0x0536 */ be<s16> mTubaEffectTimer;  /* was m041A: updateDamageAnimation / updateKnockback (in daTn_Execute 024BD170) set 5 / 3 / 1; updateCollisionShapes counts it down and at 0 sets particle 0x0E at mHeadPos with mEffectAngle (tww d217e2b calls it dPa_name::ID_AK_JN_TUBA00) */
+    /* 0x0538 */ cXyz mSmokePos;  /* was m041C: updateDemoCameraAndSmoke (in daTn_Execute 024BD170) puts it on the smoke ring around the body (MtxPosition) or 25000 above mSpawnY when idle; smoke_set_s 024B94C0 drops it to the ground and emits the smoke there */
+    /* 0x0544 */ csXyz mEffectAngle;  /* was m0428: updateDemoCameraAndSmoke (in daTn_Execute 024BD170) sets y = mSmokeAngle for the ground smoke; updateCollisionShapes sets y = angle.y for particle 0x0E at mHeadPos; updateDamageAnimation / updateKnockback set x (-0x4000 / 0) */
+    /* 0x054A */ be<s16> mSmokeAngle;  /* was m042E: tn_attackAnimation (in Tn_move 024C3E64) seeds it from the heading; updateDemoCameraAndSmoke (in daTn_Execute 024BD170) rotates mSmokePos by it and adds a step each frame */
+    /* 0x054C */ be<s16> mGroundSmokeTimer;  /* was m0430: tn_attackAnimation (in Tn_move 024C3E64) and updateDamageAnimation (in daTn_Execute 024BD170) set it (l_tnHIO.m020 + 16 ...); updateDemoCameraAndSmoke emits ground smoke while it counts down; applyIceOrShatter clears it */
+    /* 0x054E */ be<u8> mGroundSmokeType;  /* was m0432: tn_attackAnimation (in Tn_move 024C3E64) sets 0 (attack ring, radius 200), updateDamageAnimation (in daTn_Execute 024BD170) 1 (fall, radius 55); updateDemoCameraAndSmoke picks the smoke ring by it */
+    /* 0x054F */ be<u8> mSmokeCount;  /* was m0433: smoke_set_s 024B94C0 counts the smoke puffs (the first one differs); updateDemoCameraAndSmoke (in daTn_Execute 024BD170) clears it when the ground smoke ends */
     /* 0x0550 */ dPa_smokeEcallBack mSmokeCb1;
     /* 0x0570 */ dPa_smokeEcallBack mSmokeCb2;
     // HD: the reaction has 21 joint entries and a larger tail.
     /* 0x0590 */ damagereaction mDamageReaction;
     /* 0x0D80 */ u8 _0D80[4];
-    /* 0x0D84 */ be<s32> m0C34;
-    /* 0x0D88 */ be<u32> m0C38;
-    /* 0x0D8C */ cXyz m0C3C;
-    /* 0x0D98 */ be<s32> m0C48;
+    /* 0x0D84 */ be<s32> mHasWepon;  /* was m0C34: tn_moveReturnHome / tn_movePatrol / path_check use it as "holding a weapon" (armed patrol, BCK 0x39 vs 0x3D); updateHeldWeapon (in daTn_Execute 024BD170) clears it when the weapon drops (tww d217e2b yari_off_check) */
+    /* 0x0D88 */ be<u32> mWeponDropMode;  /* was m0C38: updateDamageAnimation (in daTn_Execute 024BD170) and yogan_fail 024C2BEC set 1 (throw the weapon), applyIceOrShatter 2 (drop it in place); updateHeldWeapon releases the weapon by it and clears it with mHasWepon */
+    /* 0x0D8C */ cXyz mRightItemPos;  /* was m0C3C: nodeCallBack_P 024B9C1C: MtxPosition of reaction joint 20 (model joint 23, J_TN_ITEM_R1: joint_check at 101D2558 and tww d217e2b joint_check / Tn.h), the hand that holds the weapon; never read */
+    /* 0x0D98 */ be<s32> mAttackType;  /* was m0C48: tn_chooseAttack (in Tn_move 024C3E64) sets 0..3 (and 4); tn_attackAnimation and wepon_hit_check 024BBB3C pick the swing animation and the hit frame window by it */
     /* 0x0D9C */ u8 _0D9C[0x0DB6 - 0x0D9C];
-    /* 0x0DB6 */ be<s8> m0C66;
-    /* 0x0DB7 */ be<s8> m0C67;
+    /* 0x0DB6 */ be<s8> mAttackState;  /* was m0C66: tn_chooseAttack (in Tn_move 024C3E64) sets 1 at an attack start; tn_attackAnimation sets -1 when Link's guard bounces it; wepon_hit_check 024BBB3C does no hit while it is < 0 */
+    /* 0x0DB7 */ be<s8> mKickLunge;  /* was m0C67: tn_moveAttack (in Tn_move 024C3E64) sets 1 for the kick; tn_attackAnimation moves forward (speed 80) during it; tn_chooseAttack clears it */
     /* 0x0DB8 */ u8 _0DB8[0x0DC4 - 0x0DB8];
     /* 0x0DC4 */ dCcD_Cyl mCoCyl;
     /* 0x0EF4 */ dCcD_Cyl mTgCyl;
@@ -220,62 +220,62 @@ struct tn_class : fopEn_enemy_c {
     /* 0x1150 */ dCcD_Sph mDefenceSph;
     /* 0x127C */ dCcD_Sph mWeponSph;
     /* 0x13A8 */ dCcD_Sph mWepon2Sph;
-    /* 0x14D4 */ cXyz m1384;
-    /* 0x14E0 */ cXyz m1390;
-    /* 0x14EC */ cXyz m139C;
-    /* 0x14F8 */ cXyz m13A8;
-    /* 0x1504 */ cXyz m13B4;
+    /* 0x14D4 */ cXyz mHeadPos;  /* was m1384: nodeCallBack 024B97A0: MtxPosition of the head joint; updateCollisionShapes (in daTn_Execute 024BD170) sets particle 0x0E there; yogan_fail 024C2BEC emits particle 0x0E there */
+    /* 0x14E0 */ cXyz mRightItemFrontPos;  /* was m1390: nodeCallBack_P 024B9C1C: MtxPosition of offset x = 165 on reaction joint 20 (J_TN_ITEM_R1, see mRightItemPos); never read */
+    /* 0x14EC */ cXyz mRightItemBackPos;  /* was m139C: nodeCallBack_P 024B9C1C: MtxPosition of offset x = -50 on reaction joint 20 (J_TN_ITEM_R1, see mRightItemPos); never read */
+    /* 0x14F8 */ cXyz mLeftArmPos;  /* was m13A8: nodeCallBack_P 024B9C1C: MtxPosition of offset (17.5, -8.75, 0) on reaction joint 17 (model joint 14, J_TN_UDE_L3: joint_check at 101D2558 and tww d217e2b joint_check / Tn.h); never read */
+    /* 0x1504 */ cXyz mRightArmPos;  /* was m13B4: nodeCallBack_P 024B9C1C: MtxPosition of reaction joint 16 (model joint 22, J_TN_UDE_R3: joint_check at 101D2558 and tww d217e2b joint_check / Tn.h); never read */
     /* 0x1510 */ cXyz mWeponSphMove;
     /* 0x151C */ cXyz mWepon2SphMove;
-    /* 0x1528 */ cXyz m13D8;
-    /* 0x1534 */ cXyz m13E4;
+    /* 0x1528 */ cXyz mPrevWeponSphMove;  /* was m13D8: wepon_hit_check 024BBB3C copies mWeponSphMove here before it computes the new one */
+    /* 0x1534 */ cXyz mDefenceSphPos;  /* was m13E4: prepareDamage (in daTn_Execute 024BD170): MtxPosition of the body joint; the centre of mDefenceSph */
     /* 0x1540 */ u8 _1540[0x154C - 0x1540];
     /* 0x154C */ be<u8> m13FC;
-    /* 0x154D */ be<u8> m13FD;
+    /* 0x154D */ be<u8> mWeponAtStarted;  /* was m13FD: wepon_hit_check 024BBB3C starts the weapon spheres (StartCAt) while 0 and sets 1, then only moves them; tn_chooseAttack (in Tn_move 024C3E64) clears it at a new attack */
     /* 0x154E */ u8 _154E;
-    /* 0x154F */ be<u8> m13FF;
-    /* 0x1550 */ be<s8> m1400;
+    /* 0x154F */ be<u8> mWeponSearchGaveUp;  /* was m13FF: tn_movePatrol (in Tn_move 024C3E64) sets 1 when mWeponRunTimer ran out without the weapon; the patrol then follows the path as if armed (mHasWepon || it); wepon_search 024C1A3C clears it */
+    /* 0x1550 */ be<s8> mItemStolen;  /* was m1400: applyOrdinaryDamage (in daTn_Execute 024BD170) sets 1 after a steal hit (kind 14) and passes it as stealItemBitNo; daTn_Draw 024BA238 hides shape 0 while it is set */
     /* 0x1551 */ u8 _1551;
-    /* 0x1552 */ be<s16> m1402;
+    /* 0x1552 */ be<s16> mArmorShakeTimer;  /* was m1402: applyArmoredHit (in daTn_Execute 024BD170) sets 15; part_move 024BC3EC wobbles the helmet part by it; counted down by executePrefix */
     /* 0x1554 */ be<s16> m1404;
     /* 0x1556 */ u8 _1556[2];
-    /* 0x1558 */ be<u32> m1408;
-    /* 0x155C */ be<s8> m140C;
+    /* 0x1558 */ be<u32> mLookTargetId;  /* was m1408: aite_miru 024C29CC looks at the actor with this process id while it waits and resets it to -1 at the end; updateDamageAnimation (in daTn_Execute 024BD170) sets -1 */
+    /* 0x155C */ be<s8> mWeponCarryPending;  /* was m140C: daTn_Create 024C0B0C sets 1; executePrefix (in daTn_Execute 024BD170) clears it once the weapon actor exists (and puts it in the hand); updateHeldWeapon keeps mHasWepon only while it is 0 or the weapon is held */
     /* 0x155D */ u8 _155D[3];
     /* 0x1560 */ be<u32> mBokoPcId;
     /* 0x1564 */ u8 _1564[4];
-    /* 0x1568 */ gptr<fopAc_ac_c> m1418;
-    /* 0x156C */ be<u16> m141C;
+    /* 0x1568 */ gptr<fopAc_ac_c> mpBomb;  /* was m1418: b_nige 024C1ED4 stores search_bomb's bomb; the run-away move flees from it */
+    /* 0x156C */ be<u16> mHitTypeFlags;  /* was m141C: applyOrdinaryDamage (in daTn_Execute 024BD170) ORs the flags of every hit in; search_bomb 024BAB8C looks for bombs only once bit 0x200 is set */
     /* 0x156E */ u8 _156E[2];
     /* 0x1570 */ be<s32> m1420;
-    /* 0x1574 */ be<u8> m1424;
-    /* 0x1575 */ be<s8> m1425;
-    /* 0x1576 */ be<u8> m1426;
+    /* 0x1574 */ be<u8> mPathNo;  /* was m1424: daTn_Create 024C0B0C and path_check 024BB800: mPathIndex + 1 (0 = no path); tn_advancePatrolTarget / tn_patrolLocomotion (in Tn_move 024C3E64) follow the path only when it is set */
+    /* 0x1575 */ be<s8> mPathPoint;  /* was m1425: path_check 024BB800 picks the nearest point; tn_advancePatrolTarget (in Tn_move 024C3E64) steps it by mPathDir and wraps; tn_currentPatrolPoint reads it */
+    /* 0x1576 */ be<u8> mPathDir;  /* was m1426: daTn_Create 024C0B0C sets 1; tn_advancePatrolTarget (in Tn_move 024C3E64) flips it to -1 (0xFF) / 1 at the path ends; path_check 024BB800 offsets the start point by it */
     /* 0x1577 */ u8 _1577;
     /* 0x1578 */ gptr<tn_path> ppd;
     /* 0x157C */ u8 _157C[6];
-    /* 0x1582 */ be<u8> m1433;
-    /* 0x1583 */ be<s8> m1434;
-    /* 0x1584 */ be<s16> m1436;
+    /* 0x1582 */ be<u8> mHioSet;  /* was m1433: daTn_Create 024C0B0C sets 1 when it created the l_tnHIO child; daTn_Delete 024C0194 deletes the child only then */
+    /* 0x1583 */ be<s8> mMahiDelay;  /* was m1434: applyOrdinaryDamage (in daTn_Execute 024BD170) sets REG0_S(3) + 8 at a kind-10 hit, else 0; tn_updateMovementTarget (in Tn_move 024C3E64) counts it down and starts ACTION_D_MAHI at 0 */
+    /* 0x1584 */ be<s16> mMoveTargetTimer;  /* was m1436: tn_updateMovementTarget (in Tn_move 024C3E64) counts it down and moves toward mMoveTargetPos instead of the player while it runs; nothing sets it (same in tww d217e2b) */
     /* 0x1586 */ u8 _1586[2];
-    /* 0x1588 */ cXyz m1438;
-    /* 0x1594 */ be<s8> m1444;
+    /* 0x1588 */ cXyz mMoveTargetPos;  /* was m1438: tn_updateMovementTarget (in Tn_move 024C3E64) uses it as the move target while mMoveTargetTimer runs; nothing sets it (same in tww d217e2b) */
+    /* 0x1594 */ be<s8> mDefenceSphOn;  /* was m1444: defence 024C2430 sets 1; prepareDamage (in daTn_Execute 024BD170) then places mDefenceSph at mDefenceSphPos and counts it down */
     /* 0x1595 */ u8 _1595[3];
     /* 0x1598 */ be<u32> mMantPcId;
-    /* 0x159C */ TnCutTurnCallback m144C[3];
-    /* 0x15CC */ cXyz m147C[10];
-    /* 0x1644 */ be<s16> m14F4;
-    /* 0x1646 */ be<s16> m14F6;
-    /* 0x1648 */ be<s8> m14F8;
+    /* 0x159C */ TnCutTurnCallback mCutTurnEcallBack[3];  /* was m144C: tn_class_construct 024C0924 constructs the 3 callbacks; finishNormalEffects (in daTn_Execute 024BD170) drives the spin-attack trails with them; daTn_Delete 024C0194 ends them */
+    /* 0x15CC */ cXyz mCutTurnPoints[10];  /* was m147C: finishNormalEffects (in daTn_Execute 024BD170) fills the 10 trail points around the sword and hands them to mCutTurnEcallBack (mpPoints) */
+    /* 0x1644 */ be<s16> mCutTurnStep;  /* was m14F4: tn_moveAttack (in Tn_move 024C3E64) sets 1 at a spin attack; finishNormalEffects (in daTn_Execute 024BD170) draws the trails while it is set, steps it, clears it when mCutTurnTimer ends */
+    /* 0x1646 */ be<s16> mCutTurnTimer;  /* was m14F6: tn_moveAttack (in Tn_move 024C3E64) sets 7 / 3; finishNormalEffects (in daTn_Execute 024BD170) counts it down, picks the trail colours by it (>= 5) and ends the trails at 0 */
+    /* 0x1648 */ be<s8> mDemoMode;  /* was m14F8: updateKnockback (in daTn_Execute 024BD170) sets 50 (death demo request, stops the sub BGM); updateDemoCameraAndSmoke sets 51 when the event runs and drives the demo camera; executePrefix suppresses attention while set; fail 024C2AAC checks it */
     /* 0x1649 */ u8 _1649;
-    /* 0x164A */ be<s16> m14FA;
+    /* 0x164A */ be<s16> mDemoTimer;  /* was m14FA: updateDemoCameraAndSmoke (in daTn_Execute 024BD170): cleared when the death demo starts, +1 per demo frame */
     /* 0x164C */ cXyz mCameraEyePos;
     /* 0x1658 */ cXyz mCenterPos;
-    /* 0x1664 */ be<f32> m1514;
-    /* 0x1668 */ be<s8> m1520;
-    /* 0x1669 */ be<s8> m1519;
+    /* 0x1664 */ be<f32> mDemoCamFovy;  /* was m1514: updateDemoCameraAndSmoke (in daTn_Execute 024BD170): 55 at the demo start, eased to 30; passed as the fovy of the demo camera set */
+    /* 0x1668 */ be<s8> mNoDraw;  /* was m1520: fail 024C2AAC sets 1; daTn_Draw 024BA238 draws nothing while it is set; updateDemoCameraAndSmoke (in daTn_Execute 024BD170) stops moving the camera centre (GameCube offset 0x1518: tww d217e2b names it m1518) */
+    /* 0x1669 */ be<s8> mDemoSide;  /* was m1519: s_demo 024C3348 sets 1 / 0 for the two start positions; picks demo mode 13 / 12 from it */
     /* 0x166A */ u8 _166A[2];
-    /* 0x166C */ be<f32> m151C;
+    /* 0x166C */ be<f32> mReturnAnmMorf;  /* was m151C: tn_moveReturnHome (in Tn_move 024C3E64) uses it as the morf of the return animations; daTn_Create 024C0B0C sets 1 for the 3 create-time executes, then 10 */
     /* 0x1670 */ be<s8> mStatusTimer; // HD: delayed actor-status release.
     /* 0x1671 */ u8 _1671[3];
     /* 0x1674 */ tn_enemyice mEnemyIce;
@@ -290,18 +290,18 @@ WWHD_OFFSET(tn_class, mpBrkAnm, 0x3F0);
 WWHD_OFFSET(tn_class, mParts, 0x3F8);
 WWHD_OFFSET(tn_class, mEquipmentType, 0x4DD);
 WWHD_OFFSET(tn_class, mArmorColorIndex, 0x4DC);
-WWHD_OFFSET(tn_class, m03EC, 0x504);
+WWHD_OFFSET(tn_class, mAnmLock, 0x504);
 WWHD_OFFSET(tn_class, mCountDownTimers, 0x4F8);
-WWHD_OFFSET(tn_class, m0C34, 0xD84);
-WWHD_OFFSET(tn_class, m0C48, 0xD98);
-WWHD_OFFSET(tn_class, m0C66, 0xDB6);
+WWHD_OFFSET(tn_class, mHasWepon, 0xD84);
+WWHD_OFFSET(tn_class, mAttackType, 0xD98);
+WWHD_OFFSET(tn_class, mAttackState, 0xDB6);
 static_assert(offsetof(tn_class, mDamageReaction) + offsetof(damagereaction, mMode) == 0x594);
 static_assert(offsetof(tn_class, mDamageReaction) + offsetof(damagereaction, mAction) == 0x596);
-static_assert(offsetof(tn_class, mDamageReaction) + offsetof(damagereaction, m100) == 0x69C);
-static_assert(offsetof(tn_class, mDamageReaction) + offsetof(damagereaction, m088) == 0x61E);
+static_assert(offsetof(tn_class, mDamageReaction) + offsetof(damagereaction, mJntPos) == 0x69C);
+static_assert(offsetof(tn_class, mDamageReaction) + offsetof(damagereaction, mJntAngle) == 0x61E);
 WWHD_OFFSET(tn_class, mSmokeCb1, 0x550);
-WWHD_OFFSET(tn_class, m041C, 0x538);
-WWHD_OFFSET(tn_class, m0433, 0x54F);
+WWHD_OFFSET(tn_class, mSmokePos, 0x538);
+WWHD_OFFSET(tn_class, mSmokeCount, 0x54F);
 static_assert(offsetof(tn_class, mDamageReaction) + offsetof(damagereaction, mpEnemy) == 0x590);
 WWHD_OFFSET(tn_class, mCoCyl, 0xDC4);
 WWHD_OFFSET(tn_class, mTgCyl, 0xEF4);
@@ -309,19 +309,19 @@ WWHD_OFFSET(tn_class, mHeadSph, 0x1024);
 WWHD_OFFSET(tn_class, mDefenceSph, 0x1150);
 WWHD_OFFSET(tn_class, mWeponSph, 0x127C);
 WWHD_OFFSET(tn_class, mWepon2Sph, 0x13A8);
-WWHD_OFFSET(tn_class, m1418, 0x1568);
-WWHD_OFFSET(tn_class, m1384, 0x14D4);
+WWHD_OFFSET(tn_class, mpBomb, 0x1568);
+WWHD_OFFSET(tn_class, mHeadPos, 0x14D4);
 WWHD_OFFSET(tn_class, mWeponSphMove, 0x1510);
-WWHD_OFFSET(tn_class, m13FD, 0x154D);
-WWHD_OFFSET(tn_class, m13FF, 0x154F);
+WWHD_OFFSET(tn_class, mWeponAtStarted, 0x154D);
+WWHD_OFFSET(tn_class, mWeponSearchGaveUp, 0x154F);
 WWHD_OFFSET(tn_class, mBokoPcId, 0x1560);
-WWHD_OFFSET(tn_class, m1424, 0x1574);
+WWHD_OFFSET(tn_class, mPathNo, 0x1574);
 WWHD_OFFSET(tn_class, ppd, 0x1578);
 WWHD_OFFSET(tn_class, mEnemyFire, 0x1A2C);
-WWHD_OFFSET(tn_class, m1433, 0x1582);
+WWHD_OFFSET(tn_class, mHioSet, 0x1582);
 WWHD_OFFSET(tn_class, mMantPcId, 0x1598);
-WWHD_OFFSET(tn_class, m144C, 0x159C);
-WWHD_OFFSET(tn_class, m1520, 0x1668);
+WWHD_OFFSET(tn_class, mCutTurnEcallBack, 0x159C);
+WWHD_OFFSET(tn_class, mNoDraw, 0x1668);
 WWHD_OFFSET(tn_class, mEnemyIce, 0x1674);
 WWHD_OFFSET(tn_class, mpJntHit, 0x1C58);
 WWHD_SIZE(tn_class, 0x1C5C);
@@ -510,11 +510,11 @@ WWHD_OFFSET(TnResource, mMaterialNameOffset, 0x18);
 
 // HD: preserve wrapping guest indexing when the diagnostic asserts and continues.
 inline DamageAngles* tn_jointAngles(tn_class* actor, s8 index) {
-    return gabi::at<DamageAngles>(gabi::ea(&actor->mDamageReaction.m088[0]) +
+    return gabi::at<DamageAngles>(gabi::ea(&actor->mDamageReaction.mJntAngle[0]) +
                                   static_cast<u32>(static_cast<s32>(index)) * 6u);
 }
 inline cXyz* tn_jointPosition(tn_class* actor, s8 index) {
-    return gabi::at<cXyz>(gabi::ea(&actor->mDamageReaction.m100[0]) +
+    return gabi::at<cXyz>(gabi::ea(&actor->mDamageReaction.mJntPos[0]) +
                           static_cast<u32>(static_cast<s32>(index)) * 12u);
 }
 
@@ -684,61 +684,61 @@ WWHD_OFFSET(tn_class, mRangeOrFrozenAnim, 0x03D9);
 WWHD_OFFSET(tn_class, mPathIndex, 0x03DA);
 WWHD_OFFSET(tn_class, mEnableSpawnSwitch, 0x03DB);
 WWHD_OFFSET(tn_class, mDisableSpawnOnDeathSwitch, 0x03DC);
-WWHD_OFFSET(tn_class, m02C1, 0x03DD);
-WWHD_OFFSET(tn_class, m02DC, 0x03F4);
-WWHD_OFFSET(tn_class, m02DD, 0x03F5);
-WWHD_OFFSET(tn_class, m03D8, 0x04F0);
-WWHD_OFFSET(tn_class, m03EA, 0x0502);
-WWHD_OFFSET(tn_class, m03EE, 0x0506);
-WWHD_OFFSET(tn_class, m03F0, 0x0508);
-WWHD_OFFSET(tn_class, m03F2, 0x050A);
-WWHD_OFFSET(tn_class, m03FC, 0x0514);
-WWHD_OFFSET(tn_class, m03FE, 0x0516);
+WWHD_OFFSET(tn_class, mWaitSpawnSwitch, 0x03DD);
+WWHD_OFFSET(tn_class, mPartsAttached, 0x03F4);
+WWHD_OFFSET(tn_class, mPartDetachFlags, 0x03F5);
+WWHD_OFFSET(tn_class, mFrameCount, 0x04F0);
+WWHD_OFFSET(tn_class, mWeponRunTimer, 0x0502);
+WWHD_OFFSET(tn_class, mWeponTurnWait, 0x0506);
+WWHD_OFFSET(tn_class, mNoDamageTimer, 0x0508);
+WWHD_OFFSET(tn_class, mNoGuardTimer, 0x050A);
+WWHD_OFFSET(tn_class, mWeponSearchWait, 0x0514);
+WWHD_OFFSET(tn_class, mObstacleSide, 0x0516);
 WWHD_OFFSET(tn_class, mPlayerDistance, 0x0518);
 WWHD_OFFSET(tn_class, mPlayerHeightDistance, 0x051C);
 WWHD_OFFSET(tn_class, mPathXyz, 0x0520);
-WWHD_OFFSET(tn_class, m0414, 0x0530);
+WWHD_OFFSET(tn_class, mHeadAngleY, 0x0530);
 WWHD_OFFSET(tn_class, mTargetAngle, 0x0532);
-WWHD_OFFSET(tn_class, m0418, 0x0534);
-WWHD_OFFSET(tn_class, m041A, 0x0536);
-WWHD_OFFSET(tn_class, m0428, 0x0544);
-WWHD_OFFSET(tn_class, m042E, 0x054A);
-WWHD_OFFSET(tn_class, m0430, 0x054C);
-WWHD_OFFSET(tn_class, m0432, 0x054E);
-WWHD_OFFSET(tn_class, m0C38, 0x0D88);
-WWHD_OFFSET(tn_class, m0C3C, 0x0D8C);
-WWHD_OFFSET(tn_class, m0C67, 0x0DB7);
-WWHD_OFFSET(tn_class, m1390, 0x14E0);
-WWHD_OFFSET(tn_class, m139C, 0x14EC);
-WWHD_OFFSET(tn_class, m13A8, 0x14F8);
-WWHD_OFFSET(tn_class, m13B4, 0x1504);
+WWHD_OFFSET(tn_class, mSideStepAngle, 0x0534);
+WWHD_OFFSET(tn_class, mTubaEffectTimer, 0x0536);
+WWHD_OFFSET(tn_class, mEffectAngle, 0x0544);
+WWHD_OFFSET(tn_class, mSmokeAngle, 0x054A);
+WWHD_OFFSET(tn_class, mGroundSmokeTimer, 0x054C);
+WWHD_OFFSET(tn_class, mGroundSmokeType, 0x054E);
+WWHD_OFFSET(tn_class, mWeponDropMode, 0x0D88);
+WWHD_OFFSET(tn_class, mRightItemPos, 0x0D8C);
+WWHD_OFFSET(tn_class, mKickLunge, 0x0DB7);
+WWHD_OFFSET(tn_class, mRightItemFrontPos, 0x14E0);
+WWHD_OFFSET(tn_class, mRightItemBackPos, 0x14EC);
+WWHD_OFFSET(tn_class, mLeftArmPos, 0x14F8);
+WWHD_OFFSET(tn_class, mRightArmPos, 0x1504);
 WWHD_OFFSET(tn_class, mWepon2SphMove, 0x151C);
-WWHD_OFFSET(tn_class, m13D8, 0x1528);
-WWHD_OFFSET(tn_class, m13E4, 0x1534);
+WWHD_OFFSET(tn_class, mPrevWeponSphMove, 0x1528);
+WWHD_OFFSET(tn_class, mDefenceSphPos, 0x1534);
 WWHD_OFFSET(tn_class, m13FC, 0x154C);
-WWHD_OFFSET(tn_class, m1400, 0x1550);
-WWHD_OFFSET(tn_class, m1402, 0x1552);
+WWHD_OFFSET(tn_class, mItemStolen, 0x1550);
+WWHD_OFFSET(tn_class, mArmorShakeTimer, 0x1552);
 WWHD_OFFSET(tn_class, m1404, 0x1554);
-WWHD_OFFSET(tn_class, m1408, 0x1558);
-WWHD_OFFSET(tn_class, m140C, 0x155C);
-WWHD_OFFSET(tn_class, m141C, 0x156C);
+WWHD_OFFSET(tn_class, mLookTargetId, 0x1558);
+WWHD_OFFSET(tn_class, mWeponCarryPending, 0x155C);
+WWHD_OFFSET(tn_class, mHitTypeFlags, 0x156C);
 WWHD_OFFSET(tn_class, m1420, 0x1570);
-WWHD_OFFSET(tn_class, m1425, 0x1575);
-WWHD_OFFSET(tn_class, m1426, 0x1576);
-WWHD_OFFSET(tn_class, m1434, 0x1583);
-WWHD_OFFSET(tn_class, m1436, 0x1584);
-WWHD_OFFSET(tn_class, m1438, 0x1588);
-WWHD_OFFSET(tn_class, m1444, 0x1594);
-WWHD_OFFSET(tn_class, m147C, 0x15CC);
-WWHD_OFFSET(tn_class, m14F4, 0x1644);
-WWHD_OFFSET(tn_class, m14F6, 0x1646);
-WWHD_OFFSET(tn_class, m14F8, 0x1648);
-WWHD_OFFSET(tn_class, m14FA, 0x164A);
+WWHD_OFFSET(tn_class, mPathPoint, 0x1575);
+WWHD_OFFSET(tn_class, mPathDir, 0x1576);
+WWHD_OFFSET(tn_class, mMahiDelay, 0x1583);
+WWHD_OFFSET(tn_class, mMoveTargetTimer, 0x1584);
+WWHD_OFFSET(tn_class, mMoveTargetPos, 0x1588);
+WWHD_OFFSET(tn_class, mDefenceSphOn, 0x1594);
+WWHD_OFFSET(tn_class, mCutTurnPoints, 0x15CC);
+WWHD_OFFSET(tn_class, mCutTurnStep, 0x1644);
+WWHD_OFFSET(tn_class, mCutTurnTimer, 0x1646);
+WWHD_OFFSET(tn_class, mDemoMode, 0x1648);
+WWHD_OFFSET(tn_class, mDemoTimer, 0x164A);
 WWHD_OFFSET(tn_class, mCameraEyePos, 0x164C);
 WWHD_OFFSET(tn_class, mCenterPos, 0x1658);
-WWHD_OFFSET(tn_class, m1514, 0x1664);
-WWHD_OFFSET(tn_class, m1519, 0x1669);
-WWHD_OFFSET(tn_class, m151C, 0x166C);
+WWHD_OFFSET(tn_class, mDemoCamFovy, 0x1664);
+WWHD_OFFSET(tn_class, mDemoSide, 0x1669);
+WWHD_OFFSET(tn_class, mReturnAnmMorf, 0x166C);
 WWHD_OFFSET(tn_class, mStatusTimer, 0x1670);
 
 void path_check(tn_class* i_this);
@@ -935,16 +935,16 @@ WWHD_SIZE(TnShapeAttr, 0x20);
 // Private partial actor views avoid importing the mantle renderer's TU types.
 struct TnMantle : fopAc_ac_c {
     u8 _3AC[0x362C - 0x3AC];
-    /* 0x362C */ cXyz m1BE0;
-    /* 0x3638 */ cXyz m1BEC;
-    /* 0x3644 */ be<f32> m1BF8;
-    /* 0x3648 */ be<f32> m1BFC;
+    /* 0x362C */ cXyz mShoulderPosR;
+    /* 0x3638 */ cXyz mShoulderPosL;
+    /* 0x3644 */ be<f32> mSegmentLen;
+    /* 0x3648 */ be<f32> mSpeedRate;
     u8 _364C[0x365A - 0x364C];
-    /* 0x365A */ be<s16> m1C0E;
+    /* 0x365A */ be<s16> mWindTimer;
     u8 _365C[0x4280 - 0x365C];
-    /* 0x4280 */ be<s8> m2834;
+    /* 0x4280 */ be<s8> mMeshHitOn;
     u8 _4281;
-    /* 0x4282 */ be<s16> m2836;
+    /* 0x4282 */ be<s16> mHitWait;
     u8 _4284[4];
 };
 WWHD_SIZE(TnMantle, 0x4288);
@@ -956,13 +956,13 @@ struct TnBoko : fopAc_ac_c {
     u8 _43C[0xA34 - 0x43C];
 };
 WWHD_SIZE(TnBoko, 0xA34);
-WWHD_OFFSET(TnMantle, m1BE0, 0x362C);
-WWHD_OFFSET(TnMantle, m1BEC, 0x3638);
-WWHD_OFFSET(TnMantle, m1BF8, 0x3644);
-WWHD_OFFSET(TnMantle, m1BFC, 0x3648);
-WWHD_OFFSET(TnMantle, m1C0E, 0x365A);
-WWHD_OFFSET(TnMantle, m2834, 0x4280);
-WWHD_OFFSET(TnMantle, m2836, 0x4282);
+WWHD_OFFSET(TnMantle, mShoulderPosR, 0x362C);
+WWHD_OFFSET(TnMantle, mShoulderPosL, 0x3638);
+WWHD_OFFSET(TnMantle, mSegmentLen, 0x3644);
+WWHD_OFFSET(TnMantle, mSpeedRate, 0x3648);
+WWHD_OFFSET(TnMantle, mWindTimer, 0x365A);
+WWHD_OFFSET(TnMantle, mMeshHitOn, 0x4280);
+WWHD_OFFSET(TnMantle, mHitWait, 0x4282);
 WWHD_OFFSET(TnBoko, mpModel, 0x3B4);
 WWHD_OFFSET(TnBoko, m2C2, 0x43A);
 WWHD_OFFSET(TnEmitterColors, mGlobalParticleWidthScale, 0x238);

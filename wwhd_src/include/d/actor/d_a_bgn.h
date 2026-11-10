@@ -7,7 +7,7 @@
  * - mDoExt_J3DModelPacketS grew from 0x14 to 0xB0 (constructor 02080404) and dKy_tevstr_c from
  *   0xB0 to 0x1C8, so part_s is 0x3F0 (GameCube 0x23C);
  * - mDoExt_3DlineMat1_c grew from 0x3C to 0x188;
- * - HD inserts three more model packets after mC724 (0x14C84, 0x14D34, 0x14DE4).
+ * - HD inserts three more model packets after mLastHimoSway (0x14C84, 0x14D34, 0x14DE4).
  * Size 0x15768 (GameCube 0xCC94). */
 #pragma once
 #include "bindings.h"
@@ -48,49 +48,49 @@ WWHD_SIZE(dKy_tevstr_l, 0x1C8);
 
 struct part_s {
     /* 0x000 */ gptr<J3DModel> mpPartModel;
-    /* 0x004 */ mDoExt_J3DModelPacketS_l m004;
+    /* 0x004 */ mDoExt_J3DModelPacketS_l mPartPacket;  /* was m004: part_init 0207FDA4 / useHeapInit 0207FE14 set it up (the part's HD reflection packet); part_draw 0207ACD0 gives it the part model and updates it while l_HIO.m00C is set; part_s_ct 02080498 / part_s_dt 0208AC78 construct and destroy it (as bgn_class mChestPacket) */
     /* 0x0B4 */ dKy_tevstr_l mPartTevStr;
-    /* 0x27C */ be<s16> m0C8;
+    /* 0x27C */ be<s16> mPartFogColorAdd;  /* was m0C8: part_draw 0207ACD0 eases it to 0x118 / 0 while mPartArrowHitFlashTimer runs (above / below 40) and adds it to the fog colour of mPartTevStr (same use as bgn_class mFogColorAdd) */
     /* 0x27E */ u8 _27E[2];
-    /* 0x280 */ be<f32> m0CC;
+    /* 0x280 */ be<f32> mPartFogStartAdd;  /* was m0CC: part_draw 0207ACD0 eases it to -50000 / 0 while mPartArrowHitFlashTimer runs and adds it to mFogStartZ of mPartTevStr (same use as bgn_class mFogStartAdd) */
     /* 0x284 */ be<s16> mPartArrowHitFlashTimer;
-    /* 0x286 */ be<s8> m0D2;
+    /* 0x286 */ be<s8> mPartCoreHitFrame;  /* was m0D2: useHeapInit 0207FE14 sets 16 (head), 10 (pelvis), i * 3 + 13 (arms), i * 3 + 10 (legs), 11 - i (tail); part_mtx_set 0207DE64 starts the part's arrow-hit flash (mPartArrowHitFlashTimer 50, mPartArrowHitEffectTimer 100) when bgn_class mCoreHitFrame equals it */
     /* 0x287 */ u8 _287[1];
-    /* 0x288 */ cXyz m0D4;
-    /* 0x294 */ csXyz m0E0;
+    /* 0x288 */ cXyz mPartPos;  /* was m0D4: move 0208857C (MtxPosition) and part_control_0 0207D858 / part_control_2 0207DC84 chain the parts by it; part_mtx_set 0207DE64 translates the part matrix to it (not below mGroundY) and puts the arrow-hit emitters there; part_draw 0207ACD0 lights the part at it; punch_LR (in action_main 02086130) / hensin 02084D6C read the hand / head position from it */
+    /* 0x294 */ csXyz mPartAngle;  /* was m0E0: part_control_0 0207D858 and move 0208857C (part_control_0Z) set .x / .y from the chain direction; part_mtx_set 0207DE64 eases .z toward mBodyAngle.y and rotates the part matrix by it; move rotates the leg roots by the pelvis part's */
     /* 0x29A */ u8 _29A[0x2A8 - 0x29A];
-    /* 0x2A8 */ be<f32> m0F4;
+    /* 0x2A8 */ be<f32> mPartScale;  /* was m0F4: move 0208857C (size_set) sets it per limb from l_HIO.m0F8 .. m114; part_mtx_set 0207DE64 scales the part matrix and mPartSph by it * l_HIO.m0F4; part_control_0 0207D858 / part_control_2 0207DC84 space the chain by it; part_draw 0207ACD0 compares the camera distance with l_HIO.m008 * it */
     /* 0x2AC */ dCcD_Sph mPartSph;
-    /* 0x3D8 */ cXyz m224;
+    /* 0x3D8 */ cXyz mPartCenter;  /* was m224: part_mtx_set 0207DE64 stores the transformed part origin (also the mPartSph centre) in it; part_draw 0207ACD0 measures its distance to the camera eye and draws the part only beyond l_HIO.m008 * mPartScale */
     /* 0x3E4 */ gptr<JPABaseEmitter> mpPartArrowHitEmitter1;
     /* 0x3E8 */ gptr<JPABaseEmitter> mpPartArrowHitEmitter2;
     /* 0x3EC */ be<s16> mPartArrowHitEffectTimer;
     /* 0x3EE */ u8 _3EE[2];
 };
 WWHD_OFFSET(part_s, mPartTevStr, 0xB4);
-WWHD_OFFSET(part_s, m0D4, 0x288);
+WWHD_OFFSET(part_s, mPartPos, 0x288);
 WWHD_OFFSET(part_s, mPartSph, 0x2AC);
 WWHD_SIZE(part_s, 0x3F0);
 
 struct move_s {
     /* 0x000 */ cXyz mHimo[60];
-    /* 0x2D0 */ be<u8> m2D0;
+    /* 0x2D0 */ be<u8> mCut;  /* was m2D0: daAtt_Execute 020587B4 (d_a_att, view bgn_att_move_s) sets 1 when the string's mHitPoints reach 0; part_control_0 0207D858 / part_mtx_set 0207DE64 let the hanging part drop while it is set; head_recover 02084B90 clears it; action_s 02085630 clears it in HIO pose mode */
     /* 0x2D1 */ u8 _2D1[3];
-    /* 0x2D4 */ cXyz m2D4;
-    /* 0x2E0 */ csXyz m2E0;
+    /* 0x2D4 */ cXyz mPose;  /* was m2D4: action_s 02085630 eases it toward mPoseTarget by mPoseSpeed; dance_0 (in action_main 02086130) and the part code add it to the string's limb position */
+    /* 0x2E0 */ csXyz mPoseTarget;  /* was m2E0: start 020844F4 / dance_0 and tail_attack 0208459C (in action_main 02086130) load the pose angles (bgnPoses, dance_pause tables); action_s 02085630 eases mPose toward it */
     /* 0x2E6 */ u8 _2E6[2];
     /* 0x2E8 */ be<f32> m2E8;
-    /* 0x2EC */ be<f32> m2EC;
+    /* 0x2EC */ be<f32> mSwayAmplitude;  /* was m2EC: damage 02084804 / body_attack (in action_main 02086130) ease it to 250; action_s_himo 020859AC eases it to 0 and swings the rope points by sin * it; daAtt_Execute 020587B4 (d_a_att, view bgn_att_move_s) targets the string only below 1 */
     /* 0x2F0 */ u8 _2F0[4];
-    /* 0x2F4 */ be<f32> m2F4;
-    /* 0x2F8 */ be<s16> m2F8;
-    /* 0x2FA */ be<s16> m2FA;
-    /* 0x2FC */ be<s16> m2FC;
+    /* 0x2F4 */ be<f32> mLimbShakeAmplitude;  /* was m2F4: action_s 02085630 eases it to 300 + mLimbShakeTimer * 20; damage 02084804 / hensin 02084D6C / punch_LR (in action_main 02086130) set 8000 / 6000 / 5000; part_control_0 0207D858 and move 0208857C shake the limb by sin / cos * it */
+    /* 0x2F8 */ be<s16> mLimbShakeTimer;  /* was m2F8: damage 02084804 / hensin 02084D6C / dance_0 (in action_main 02086130) set it (0x46, 60, ...); action_s 02085630 counts it down and raises the mLimbShakeAmplitude target by it */
+    /* 0x2FA */ be<s16> mPhaseSin;  /* was m2FA: daBgn_Create 02080BA4 sets a random start; action_s 02085630 adds 2600 + 3 * index per frame; the phase of the sin terms of mLimbShakeAmplitude (part_control_0 0207D858, move 0208857C) and mCutSwayAmplitude (action_s_himo 020859AC) */
+    /* 0x2FC */ be<s16> mPhaseCos;  /* was m2FC: daBgn_Create 02080BA4 sets a random start; action_s 02085630 adds 2300 + 3 * index per frame; the phase of the cos terms of mLimbShakeAmplitude and mCutSwayAmplitude */
     /* 0x2FE */ be<s16> m2FE;
-    /* 0x300 */ be<s16> m300;
+    /* 0x300 */ be<s16> mPluckTimer;  /* was m300: daAtt_Execute 020587B4 (d_a_att, view bgn_att_move_s) sets 15 when a hit does not cut the string; action_s_himo 020859AC counts it down and vibrates the rope by it * sin; part_mtx_set 0207DE64 sums [0] + [1] */
     /* 0x302 */ u8 _302[2];
-    /* 0x304 */ be<f32> m304;
-    /* 0x308 */ be<s8> m308;
+    /* 0x304 */ be<f32> mCutSwayAmplitude;  /* was m304: daAtt_Execute 020587B4 (d_a_att, view bgn_att_move_s) sets 6000 when the string is cut; action_s_himo 020859AC swings the rope by sin / cos (mPhaseSin / mPhaseCos) * it while above 0.01 and eases it to 0 */
+    /* 0x308 */ be<s8> mHitPoints;  /* was m308: daAtt_Execute 020587B4 (d_a_att, view bgn_att_move_s) subtracts 1 per hit on the string and cuts it (mCut) at 0; head_recover 02084B90 sets 2 on the restored strings, daBgn_Create 02080BA4 3 */
     /* 0x309 */ u8 _309[3];
 };
 WWHD_SIZE(move_s, 0x30C);
@@ -106,14 +106,14 @@ struct mDoExt_3DlineMat1_bgn {
 WWHD_SIZE(mDoExt_3DlineMat1_bgn, 0x188);
 
 struct bgn_class : fopEn_enemy_c {
-    /* 0x3C8 */ be<u32> m3C8;                       /* HD: `this` (stored by the constructor) */
+    /* 0x3C8 */ be<u32> mSelf;  /* was m3C8: bgn_class_ct 0208064C stores gabi::ea(this) (HD); daBgn_Draw 0207B2CC sets mHdPacket[i].mA4 from it + 0x110; HD: `this` (stored by the constructor) */
     /* 0x3CC */ request_of_phase_process_class mPhase;
-    /* 0x3D4 */ be<u8> m02B4;
-    /* 0x3D5 */ be<s8> m02B5;
+    /* 0x3D4 */ be<u8> mParam;  /* was m02B4: daBgn_Create 02080BA4: (u8)fopAcM_GetParam; 0xFF makes daBgn_Execute 0207E7B4 return at once and daBgn_Create skip the setup */
+    /* 0x3D5 */ be<s8> mForm;  /* was m02B5: daBgn_Draw 0207B2CC draws the bgn (0), bgn2 (1) or bgn3 (2) form by it; hensin 02084D6C sets 1, daBgn_Execute 0207E7B4 2 / 3; move 0208857C acts only at 0 */
     /* 0x3D6 */ u8 _3D6[2];
     /* 0x3D8 */ gptr<mDoExt_McaMorf> mpMorf;
     /* 0x3DC */ gptr<J3DModel> mpChestModel;
-    /* 0x3E0 */ mDoExt_J3DModelPacketS_l m02C0;
+    /* 0x3E0 */ mDoExt_J3DModelPacketS_l mChestPacket;  /* was m02C0: daBgn_Draw 0207B2CC: model packet of mpChestModel (setModel + update); useHeapInit 0207FE14 sets it up */
     /* 0x490 */ gptr<JPABaseEmitter> mpArrowHitEmitter1;
     /* 0x494 */ gptr<JPABaseEmitter> mpArrowHitEmitter2;
     /* 0x498 */ be<s16> mArrowHitEffectTimer;
@@ -124,14 +124,14 @@ struct bgn_class : fopEn_enemy_c {
     /* 0x4A8 */ gptr<mDoExt_brkAnm> mJyakutenCBrkAnm;
     /* 0x4AC */ gptr<mDoExt_brkAnm> mJyakutenBBrkAnm;
     /* 0x4B0 */ u8 _4B0[4];
-    /* 0x4B4 */ be<s16> m02F8;
+    /* 0x4B4 */ be<s16> mFogColorAdd;  /* was m02F8: daBgn_Draw 0207B2CC (bgn_fog_flash): eased to 0x118 / 0, added to the fog colour of tevStr */
     /* 0x4B6 */ u8 _4B6[2];
-    /* 0x4B8 */ be<f32> m02FC;
+    /* 0x4B8 */ be<f32> mFogStartAdd;  /* was m02FC: daBgn_Draw 0207B2CC (bgn_fog_flash): eased to -50000 / 0, added to mFogStartZ of tevStr */
     /* 0x4BC */ be<s16> mArrowHitFlashTimer;
-    /* 0x4BE */ be<s16> m0302;
-    /* 0x4C0 */ be<s16> m0304;
+    /* 0x4BE */ be<s16> mCoreHitFrame;  /* was m0302: move 0208857C (damage_check) sets 1 on a core hit; daBgn_Execute 0207E7B4 counts it up to 100, then clears it; at 0xD move starts the arrow hit flash; part_mtx_set 0207DE64 compares it with part mPartCoreHitFrame */
+    /* 0x4C0 */ be<s16> mRippleSeTimer;  /* was m0304: action_s_himo 020859AC: cM_rndF(20) + 20 frames until the next ripple sound; daBgn_Execute 0207E7B4 counts it down */
     /* 0x4C2 */ u8 _4C2[2];
-    /* 0x4C4 */ cXyz m0308;
+    /* 0x4C4 */ cXyz mRipplePos;  /* was m0308: action_s_himo 020859AC / move 0208857C: position of the JA_SE_CM_BGN_STRING_RIPPLE / BODY_RIPPLE sound; daBgn_Delete 0207FC64 deletes its sound object */
     /* 0x4D0 */ part_s mHeadParts[2];
     /* 0xCB0 */ part_s mPelvisParts[2];
     /* 0x1490 */ part_s mLeftArmParts[21];
@@ -139,94 +139,94 @@ struct bgn_class : fopEn_enemy_c {
     /* 0xB9F0 */ part_s mLeftLegParts[4];
     /* 0xC9B0 */ part_s mRightLegParts[4];
     /* 0xD970 */ part_s mTailParts[21];
-    /* 0x12C20 */ move_s mAAA8[8];
-    /* 0x14480 */ cXyz mC308;
-    /* 0x1448C */ csXyz mC314;
-    /* 0x14492 */ be<s16> mC31A;
+    /* 0x12C20 */ move_s mMove[8];  /* was mAAA8: the 8 move_s (strings and their limb pose: mCut cut, mPoseTarget pose target); part_control_0 0207D858 / part_mtx_set 0207DE64 / start 020844F4 / action_main 02086130 per string */
+    /* 0x14480 */ cXyz mBodyPos;  /* was mC308: move 0208857C places the chest model there (+ l_HIO.m0A8, at least mGroundY + 100); hensin 02084D6C hands it to the bgn2 form as current.pos; body_attack (in action_main 02086130) reads it */
+    /* 0x1448C */ csXyz mBodyAngle;  /* was mC314: move 0208857C rotates the chest model by it (y = mBaseAngleY + mDanceAngleY); hensin 02084D6C hands it to the bgn2 form as current.angle / shape_angle */
+    /* 0x14492 */ be<s16> mBaseAngleY;  /* was mC31A: move 0208857C eases it (cLib_addCalcAngleS2) and sets mBodyAngle.y = it + mDanceAngleY */
     /* 0x14494 */ u8 _14494[8];
-    /* 0x1449C */ be<f32> mC324[2];
-    /* 0x144A4 */ be<f32> mC32C[2];
-    /* 0x144AC */ be<f32> mC334;
-    /* 0x144B0 */ be<f32> mC338;
-    /* 0x144B4 */ cXyz mC33C[8];
+    /* 0x1449C */ be<f32> mArmLength[2];  /* was mC324: move 0208857C eases [i] toward l_HIO.m124 + stretch and passes it (* l_HIO.m0F4) to part_control_0 for the arms; part_mtx_set 0207DE64 scales the arm parts by it */
+    /* 0x144A4 */ be<f32> mArmStretch[2];  /* was mC32C: punch_LR (in action_main 02086130) eases [i] to 1, move 0208857C back to 0; size_set (in move) pulls the arm part lengths toward the middle by it */
+    /* 0x144AC */ be<f32> mPoseSpeed;  /* was mC334: action_s 02085630: step of cLib_addCalc2 of each move_s pose (m2D4 toward m2E0); action_main 02086130 eases it to mPoseSpeedTarget */
+    /* 0x144B0 */ be<f32> mPoseSpeedTarget;  /* was mC338: punch_LR (in action_main 02086130) sets 50 / 130 / 200, action_main l_HIO.m0D4; mPoseSpeed is eased to it */
+    /* 0x144B4 */ cXyz mHimoTopPos[8];  /* was mC33C: part_mtx_set 0207DE64: MtxPosition of each string's attach point; action_s_himo 020859AC starts string [i] from it */
     /* 0x14514 */ mDoExt_3DlineMat1_bgn mBlueRopeMat;
     /* 0x1469C */ mDoExt_3DlineMat1_bgn mRedRopeMat;
     /* 0x14824 */ mDoExt_3DlineMat1_bgn mDefeatCSRopeMat;
-    /* 0x149AC */ cXyz mC450[60];
-    /* 0x14C7C */ be<s8> mC720;
+    /* 0x149AC */ cXyz mLastHimoPos[60];  /* was mC450: last_himo_control (in daBgn_Execute 0207E7B4): the 60 points of the last string ([0] fixed at (-15, 4441.46, 375.17)); drawn while mLastHimoState is set */
+    /* 0x14C7C */ be<s8> mLastHimoState;  /* was mC720: daBgn_Execute 0207E7B4 sets 1 at the final explosion; last_himo_control turns 1 into 2 (start); daBgn_Draw 0207B2CC draws the last string while it is set */
     /* 0x14C7D */ u8 _14C7D[3];
-    /* 0x14C80 */ be<f32> mC724;
+    /* 0x14C80 */ be<f32> mLastHimoSway;  /* was mC724: last_himo_control (in daBgn_Execute 0207E7B4): set 5000 (+REG) on start, decays (addCalc0); sin / cos amplitude of the string points */
     /* 0x14C84 */ mDoExt_J3DModelPacketS_l mHdPacket[3]; /* HD */
-    /* 0x14E94 */ cXyz mC728;
-    /* 0x14EA0 */ cXyz mC734;
+    /* 0x14E94 */ cXyz mBodyOffset;  /* was mC728: tail_attack 0208459C / damage 02084804 / head_recover 02084B90 / dance_0: height offset of the body (y eased, + speed.y, clamped); move_se_set 0207D04C sounds by its change */
+    /* 0x14EA0 */ cXyz mBodyOffsetOld;  /* was mC734: move 0208857C copies mBodyOffset; move_se_set 0207D04C: mBodyOffset - it (last frame's offset) */
     /* 0x14EAC */ u8 _14EAC[4];
     /* 0x14EB0 */ be<s16> mC744;
-    /* 0x14EB2 */ be<s16> mC746;
-    /* 0x14EB4 */ be<s16> mC748;
-    /* 0x14EB6 */ be<s16> mC74A;
-    /* 0x14EB8 */ be<s16> mC74C;
-    /* 0x14EBA */ be<s16> mC74E;
-    /* 0x14EBC */ be<s16> mC750;
-    /* 0x14EBE */ be<s16> mC752;
-    /* 0x14EC0 */ be<s16> mC754;
+    /* 0x14EB2 */ be<s16> mFrameCounter;  /* was mC746: daBgn_Execute 0207E7B4 adds 1 per frame; sin / cos phase of the dance, the body shake, the ripples and the camera bank */
+    /* 0x14EB4 */ be<s16> mAction;  /* was mC748: action_main 02086130: switch (it) of the action (0 .. 7, 10); move 0208857C sets 5 on a core hit, daBgn_Create 02080BA4 7, dance_0 1 .. 4 */
+    /* 0x14EB6 */ be<s16> mMode;  /* was mC74A: tail_attack 0208459C / hensin 02084D6C / dance_0: switch (it) inside each action, +1 per step; damage 02084804 sets 2 */
+    /* 0x14EB8 */ be<s16> mDanceType;  /* was mC74C: dance_0 (in action_main 02086130) sets 0 / 1 and runs dance_A (0) or dance_B (1); start 020844F4 clears it */
+    /* 0x14EBA */ be<s16> mDanceStep;  /* was mC74E: dance_A (in action_main 02086130): switch (it) of the dance_pause_1 / dance_pause_2 poses, +1 per step */
+    /* 0x14EBC */ be<s16> mDanceAngleY;  /* was mC750: dance_A adds mDanceAngleSpeed, dance_B eases it to +-0x1555 (in action_main 02086130); move 0208857C: mBodyAngle.y = mBaseAngleY + it; hensin 02084D6C clears it */
+    /* 0x14EBE */ be<s16> mDanceAngleSpeed;  /* was mC752: dance_A (in action_main 02086130): cleared on start, added to mDanceAngleY per frame, eased toward the turn target */
+    /* 0x14EC0 */ be<s16> mDanceCount;  /* was mC754: start 020844F4 sets 1; dance_0 (in action_main 02086130) adds 1 per dance, wraps after 5, and picks the attack by it */
     /* 0x14EC2 */ u8 _14EC2[2];
-    /* 0x14EC4 */ cXyz mC758;
+    /* 0x14EC4 */ cXyz mTargetPos;  /* was mC758: dance_0 (in action_main 02086130) sets a random x / z (cM_rndFX(1500)), tail_attack 0208459C the player position; current.pos is eased toward it by mMoveSpeed */
     /* 0x14ED0 */ be<s16> mC764;
     /* 0x14ED2 */ u8 _14ED2[6];
-    /* 0x14ED8 */ be<f32> mC76C;
-    /* 0x14EDC */ be<s16> mC770;
+    /* 0x14ED8 */ be<f32> mMoveSpeed;  /* was mC76C: tail_attack 0208459C / dance_0 (in action_main 02086130): step of cLib_addCalc2 of current.pos toward mTargetPos, eased up from 0 */
+    /* 0x14EDC */ be<s16> mShakeTimer;  /* was mC770: damage 02084804 sets 0x32, hensin 02084D6C 0x14 (+REG); move 0208857C counts it down and shakes the chest (X / Z rotation) by it * 300 */
     /* 0x14EDE */ u8 _14EDE[2];
     /* 0x14EE0 */ be<f32> mC774;
-    /* 0x14EE4 */ be<s8> mC778;
-    /* 0x14EE5 */ be<s8> mC779;
+    /* 0x14EE4 */ be<s8> mLeftPunchOn;  /* was mC778: punch_LR (in action_main 02086130) sets 1 while the left punch flies, 0 after; move 0208857C moves the left arm (i == 0) to mLeftPunchPos while it is set */
+    /* 0x14EE5 */ be<s8> mRightPunchOn;  /* was mC779: punch_LR (in action_main 02086130) sets 1 while the right punch flies, 0 after; move 0208857C moves the right arm (i == 1) to mRightPunchPos while it is set */
     /* 0x14EE6 */ u8 _14EE6[2];
-    /* 0x14EE8 */ cXyz mC77C;
-    /* 0x14EF4 */ cXyz mC788;
-    /* 0x14F00 */ cXyz mC794;
-    /* 0x14F0C */ cXyz mC7A0;
-    /* 0x14F18 */ be<s16> mC7AC[5];
-    /* 0x14F22 */ be<s16> mC7B6;
-    /* 0x14F24 */ be<s16> mC7B8;
+    /* 0x14EE8 */ cXyz mLeftPunchPos;  /* was mC77C: punch_LR (in action_main 02086130): copied from the left hand part (mPartPos), + mLeftPunchSpeed per frame; daBgn_Delete 0207FC64 deletes its sound object */
+    /* 0x14EF4 */ cXyz mRightPunchPos;  /* was mC788: punch_LR (in action_main 02086130): copied from the right hand part (mPartPos), + mRightPunchSpeed per frame; daBgn_Delete 0207FC64 deletes its sound object */
+    /* 0x14F00 */ cXyz mLeftPunchSpeed;  /* was mC794: punch_LR (in action_main 02086130): bgn_punch_aim velocity, added to mLeftPunchPos */
+    /* 0x14F0C */ cXyz mRightPunchSpeed;  /* was mC7A0: punch_LR (in action_main 02086130): bgn_punch_aim velocity, added to mRightPunchPos */
+    /* 0x14F18 */ be<s16> mTimers[5];  /* was mC7AC: daBgn_Execute 0207E7B4 counts all 5 down each frame; the actions load them (tail_attack 0208459C [0] = 100, dance_A [3] = l_HIO.m0DA) */
+    /* 0x14F22 */ be<s16> mDamageTimer;  /* was mC7B6: move 0208857C (damage_check) sets 100 on a core hit and takes no core hit while it is set; daBgn_Execute 0207E7B4 counts it down */
+    /* 0x14F24 */ be<s16> mPartHitSeTimer;  /* was mC7B8: move 0208857C (damage_check) sets 10 when a part sphere is hit (def_se_set), no new part hit sound while it is set; daBgn_Execute 0207E7B4 counts it down */
     /* 0x14F26 */ u8 _14F26[2];
-    /* 0x14F28 */ be<f32> mC7BC;
+    /* 0x14F28 */ be<f32> mGroundY;  /* was mC7BC: part_control_0 0207D858 / part_mtx_set 0207DE64 keep the part positions at or above it; punch_LR (in action_main 02086130) tests the hand y against it + 30 */
     /* 0x14F2C */ dCcD_Stts mStts;
-    /* 0x14F68 */ dCcD_Sph mC7FC;
+    /* 0x14F68 */ dCcD_Sph mBodyAtSph;  /* was mC7FC: daBgn_Create 02080BA4: Set(cc_sph_src); body_attack (in action_main 02086130) turns its At on (OnAtSetBit) */
     /* 0x15094 */ dCcD_Sph mCoreSph;
-    /* 0x151C0 */ cXyz mCA54;
-    /* 0x151CC */ be<s16> mCA60;
+    /* 0x151C0 */ cXyz mCorePos;  /* was mCA54: part_mtx_set 0207DE64: centre of mCoreSph (the weak point); move 0208857C (damage_check) sets the weak point hit / break particles there; daBgn_Delete 0207FC64 deletes its sound object */
+    /* 0x151CC */ be<s16> mBlurRate;  /* was mCA60: daBgn_Draw 0207B2CC: mDoGph_setBlureRate(it) while > 1, off and cleared at 1; bgn_demo_end (in daBgn_Execute 0207E7B4) sets 1, hensin 02084D6C eases it to 0xB4 */
     /* 0x151CE */ be<s8> mCSMode;
     /* 0x151CF */ u8 _151CF[1];
     /* 0x151D0 */ be<s16> mKSubCount;
     /* 0x151D2 */ u8 _151D2[2];
     /* 0x151D4 */ cXyz mCSCamEye;
-    /* 0x151E0 */ cXyz mCA74;
+    /* 0x151E0 */ cXyz mCSCamEyeOffset;  /* was mCA74: daBgn_Execute 0207E7B4 (demo camera): set to (200, 2100, 2500), eased; rotated by the bgn2 shape angle into mCSCamEye */
     /* 0x151EC */ cXyz mCSCamCenter;
     /* 0x151F8 */ u8 _151F8[0xC];
-    /* 0x15204 */ be<f32> mCA98;
-    /* 0x15208 */ be<f32> mCA9C;
+    /* 0x15204 */ be<f32> mCalcSpeed;  /* was mCA98: head_recover 02084B90 / the demo camera (in daBgn_Execute 0207E7B4) scale their cLib_addCalc2 steps by it and ease it up; dance_0 (in action_main 02086130) clears it */
+    /* 0x15208 */ be<f32> mCSCamShake;  /* was mCA9C: hensin 02084D6C sets 20 / 15 / 10, daBgn_Execute 0207E7B4 30 (+REG): sin / cos amplitude of the demo camera eye / centre and bank */
     /* 0x1520C */ be<f32> mCSFovY;
     /* 0x15210 */ gptr<J3DModel> mpWater0Model;
     /* 0x15214 */ gptr<J3DModel> mpWater1Model;
     /* 0x15218 */ dKy_tevstr_l mWaterTevStr;
     /* 0x153E0 */ gptr<J3DModel> mpRoomReflectionModel;
-    /* 0x153E4 */ mDoExt_J3DModelPacketS_l mCB60;
+    /* 0x153E4 */ mDoExt_J3DModelPacketS_l mRoomReflectionPacket;  /* was mCB60: daBgn_Draw 0207B2CC: model packet of mpRoomReflectionModel (setModel + update); useHeapInit 0207FE14 sets it up */
     /* 0x15494 */ dKy_tevstr_l mRoomTevStr;
-    /* 0x1565C */ mDoExt_J3DModelPacketS_l mCC24;
+    /* 0x1565C */ mDoExt_J3DModelPacketS_l mObjPacket;  /* was mCC24: ten_a_d_sub 0207B040: model packet of the searched object's model (setModel + update); useHeapInit 0207FE14 sets it up */
     /* 0x1570C */ be<s8> mCC38;
     /* 0x1570D */ u8 _1570D[3];
     /* 0x15710 */ u8 mPunchSmokeCb[2][0x20];      /* dPa_smokeEcallBack (HD 0x20) */
     /* 0x15750 */ be<s8> mKeeseSpawnNum;
     /* 0x15751 */ u8 _15751[3];
-    /* 0x15754 */ be<f32> mCC80;
-    /* 0x15758 */ be<f32> mCC84;
-    /* 0x1575C */ be<f32> mCC88;
-    /* 0x15760 */ gptr<JPABaseEmitter> mCC8C;
-    /* 0x15764 */ be<s8> mCC90;
-    /* 0x15765 */ be<u8> mCC91;
+    /* 0x15754 */ be<f32> mPartLengthScale;  /* was mCC80: action_main 02086130 sets 1, hensin 02084D6C eases it to 0; part_control_0 0207D858 / action_s_himo 020859AC scale the part and string lengths by it */
+    /* 0x15758 */ be<f32> mChestSquash;  /* was mCC84: hensin 02084D6C eases it to 0.22; move 0208857C scales the chest by (1 + it, 1 - it, 1 + it) while it is > 0 */
+    /* 0x1575C */ be<f32> mFogFade;  /* was mCC88: hensin 02084D6C eases it to 1; part_draw 0207ACD0 / daBgn_Draw 0207B2CC move the fog start by -50000 * it */
+    /* 0x15760 */ gptr<JPABaseEmitter> mpChestEmitter;  /* was mCC8C: hensin 02084D6C: particle_set (TWW: ID_AK_SN_KGTT2CHESTPOTA00) on the chest joint, made invalid when done */
+    /* 0x15764 */ be<s8> mFormRequest;  /* was mCC90: daBgn_Execute 0207E7B4: 1 switches to the bgn3 form (mForm = 2), 2 starts the next stage (GanonK); the demo camera / bgn2 set it */
+    /* 0x15765 */ be<u8> mHioOwner;  /* was mCC91: daBgn_Create 02080BA4 sets 1 when it created the l_HIO child; daBgn_Delete 0207FC64 deletes the HIO child only then */
     /* 0x15766 */ u8 _15766[2];
 };
 WWHD_OFFSET(bgn_class, mPhase, 0x3CC);
-WWHD_OFFSET(bgn_class, m0308, 0x4C4);
+WWHD_OFFSET(bgn_class, mRipplePos, 0x4C4);
 WWHD_OFFSET(bgn_class, mHeadParts, 0x4D0);
 WWHD_OFFSET(bgn_class, mPelvisParts, 0xCB0);
 WWHD_OFFSET(bgn_class, mLeftArmParts, 0x1490);
@@ -234,23 +234,23 @@ WWHD_OFFSET(bgn_class, mRightArmParts, 0x6740);
 WWHD_OFFSET(bgn_class, mLeftLegParts, 0xB9F0);
 WWHD_OFFSET(bgn_class, mRightLegParts, 0xC9B0);
 WWHD_OFFSET(bgn_class, mTailParts, 0xD970);
-WWHD_OFFSET(bgn_class, mAAA8, 0x12C20);
-WWHD_OFFSET(bgn_class, mC308, 0x14480);
+WWHD_OFFSET(bgn_class, mMove, 0x12C20);
+WWHD_OFFSET(bgn_class, mBodyPos, 0x14480);
 WWHD_OFFSET(bgn_class, mBlueRopeMat, 0x14514);
-WWHD_OFFSET(bgn_class, mC450, 0x149AC);
+WWHD_OFFSET(bgn_class, mLastHimoPos, 0x149AC);
 WWHD_OFFSET(bgn_class, mHdPacket, 0x14C84);
-WWHD_OFFSET(bgn_class, mC728, 0x14E94);
-WWHD_OFFSET(bgn_class, mC77C, 0x14EE8);
+WWHD_OFFSET(bgn_class, mBodyOffset, 0x14E94);
+WWHD_OFFSET(bgn_class, mLeftPunchPos, 0x14EE8);
 WWHD_OFFSET(bgn_class, mStts, 0x14F2C);
 WWHD_OFFSET(bgn_class, mCoreSph, 0x15094);
-WWHD_OFFSET(bgn_class, mCA54, 0x151C0);
-WWHD_OFFSET(bgn_class, mCA60, 0x151CC);
+WWHD_OFFSET(bgn_class, mCorePos, 0x151C0);
+WWHD_OFFSET(bgn_class, mBlurRate, 0x151CC);
 WWHD_OFFSET(bgn_class, mWaterTevStr, 0x15218);
-WWHD_OFFSET(bgn_class, mCB60, 0x153E4);
-WWHD_OFFSET(bgn_class, mCC24, 0x1565C);
+WWHD_OFFSET(bgn_class, mRoomReflectionPacket, 0x153E4);
+WWHD_OFFSET(bgn_class, mObjPacket, 0x1565C);
 WWHD_OFFSET(bgn_class, mPunchSmokeCb, 0x15710);
-WWHD_OFFSET(bgn_class, mCC80, 0x15754);
-WWHD_OFFSET(bgn_class, mCC91, 0x15765);
+WWHD_OFFSET(bgn_class, mPartLengthScale, 0x15754);
+WWHD_OFFSET(bgn_class, mHioOwner, 0x15765);
 WWHD_SIZE(bgn_class, 0x15768);
 
 /* daBgn_HIO_c (HD: GameCube offsets - 4, the vtable pointer is the last word 0x178); size 0x17C */

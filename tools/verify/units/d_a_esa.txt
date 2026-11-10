@@ -11,7 +11,7 @@ field 021300C4 r3+0x3BC i8 -1,0,1,2,3,4,5   # mActionState
 field 021300C4 r3+0x3BD i8 0,1,2,3          # mState
 field 021300C4 r3+0x3C4 u32 0,0x57000000    # ripple emitter
 field 021300C4 r3+0x3DC i16 0,1,2           # mTimer[0]
-field 021300C4 r3+0x3B4 u8 0,0x23           # field_0x298
+field 021300C4 r3+0x3B4 u8 0,0x23           # mTaken
 field 021300C4 r3+0x370 f32 0 0.4           # speedF (vs 0.1)
 field 021300C4 r3+0x340 f32 -10 10          # speed.y
 field 021300C4 r3+0x330 f32 0 0.1           # scale.x (vs 0.05)

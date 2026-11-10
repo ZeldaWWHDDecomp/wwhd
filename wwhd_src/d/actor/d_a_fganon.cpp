@@ -175,7 +175,7 @@ BOOL daFganon_Draw(fganon_class *actor) {
     fg_setLightTevColorType(env, model, gabi::ea(&actor->tevStr));
     brkEntry((u32)actor->mpBrkAnm1.v, model, false);
     fg_mDoExt_McaMorf_entryDL((u32)actor->mpMorf.v);
-    if ((s8)actor->m2D0 != 2) {
+    if ((s8)actor->mKenState != 2) {
         model = (u32)actor->mpKenModel.v;
         env = (unsigned int)fg_dComIfGp_getEnvLight();
         fg_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&actor->current.pos),
@@ -185,7 +185,7 @@ BOOL daFganon_Draw(fganon_class *actor) {
         brkEntry((u32)actor->mpBrkAnm2.v, model, false);
         fg_mDoExt_modelUpdateDL(model, 0);
     }
-    if ((s8)actor->m671) {
+    if ((s8)actor->mDarkBallState) {
         model = (u32)actor->mpEnergySphereModel.v;
         brkEntry((u32)actor->mpBrkAnm3.v, model, false);
         brkEntry((u32)actor->mpBtkAnm.v, model, true);
@@ -239,7 +239,7 @@ void start(fganon_class *actor) {
     u32 player = (u32)fgView<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v;
     s16 mode = (s16)actor->mMode;
     actor->attention_info.flags = (u32)(0);
-    actor->m3AE = (s16)(3);
+    actor->mNoDamageTimer = (s16)(3);
     switch (mode) {
     case 0: {
         gabi::Local<cXyz> offset;
@@ -247,10 +247,10 @@ void start(fganon_class *actor) {
                      gabi::ea(&actor->home.pos));
         f32 x = offset->x, z = offset->z;
         f32 distance = fg_sqrtf(gabi::fmadds(x, x, z * z));
-        f32 radius = (f32)(u8)actor->m2BD * 10.0f;
+        f32 radius = (f32)(u8)actor->mStartDist * 10.0f;
         if (distance < radius) {
             actor->mMode = (s16)(1);
-            actor->mB54 = (s16)(1);
+            actor->mDemoCamMode = (s16)(1);
             anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 0, 2, 1, -1);
             fg_mDoAud_bgmAllMute(30);
         }
@@ -270,17 +270,17 @@ void start(fganon_class *actor) {
         break;
     case 4:
         actor->mMode = (s16)(5);
-        actor->m3A4[0] = (s16)((s16)((s16)l_reg0.s[0] + 0x50));
+        actor->mTimers[0] = (s16)((s16)((s16)l_reg0.s[0] + 0x50));
         anm_init(actor, dRes_INDEX_FGANON_BCK_TAME1_e, 10, 2, 1, -1);
         [[fallthrough]];
     case 5: {
         s16 trigger = (s16)((s16)l_reg0.s[0] + 0x4B);
-        if ((s16)actor->m3A4[0] == trigger) {
-            actor->m408 = (s8)(1);
+        if ((s16)actor->mTimers[0] == trigger) {
+            actor->mBallState = (s8)(1);
             fg_mDoAud_subBgmStart(0x80000041u);
             trigger = (s16)((s16)l_reg0.s[0] + 0x4B);
         }
-        if ((s16)actor->m3A4[0] <= trigger)
+        if ((s16)actor->mTimers[0] <= trigger)
             sound(actor, 0x5152);
         gabi::Local<cXyz> offset;
         offset->x = 0;
@@ -290,7 +290,7 @@ void start(fganon_class *actor) {
         fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(&actor->speed));
         fg_PSVECAdd(gabi::ea(&actor->current.pos), gabi::ea(&actor->speed),
                     gabi::ea(&actor->current.pos));
-        f32 target = (s16)actor->m3A4[0] == 0 ? 0 : (f32)l_reg0.f[7] + 20;
+        f32 target = (s16)actor->mTimers[0] == 0 ? 0 : (f32)l_reg0.f[7] + 20;
         f32 max = (f32)l_reg0.f[5] + 0.5f;
         fg_cLib_addCalc2(gabi::ea(&actor->speedF), target, 1.0f, max);
         break;
@@ -303,13 +303,13 @@ void end(fganon_class *actor) {
     fg_dComIfGp_getGameInfoDiscard();
     actor->attention_info.flags = (u32)(0);
     u32 morf = (u32)actor->mpMorf.v;
-    actor->m3AE = (s16)(3);
+    actor->mNoDamageTimer = (s16)(3);
     s32 frame = gabi::ftoi((f32)fgView<mDoExt_McaMorf>(morf)->mFrameCtrl.mFrame);
     switch ((s16)actor->mMode) {
     case 0:
         actor->mMode = (s16)(1);
         anm_init(actor, dRes_INDEX_FGANON_BCK_LAST_DAMAGE1_e, 2, 0, 1, -1);
-        actor->mB54 = (s16)(50);
+        actor->mDemoCamMode = (s16)(50);
         fg_dSv_event_c_onEventBit(
             gabi::ea(&fgView<FganonSaveView>((u32)l_saveInfo)->mSave.mSavedata.mEvent), 0x3F20);
         break;
@@ -370,12 +370,12 @@ void down(fganon_class *actor) {
         [[fallthrough]];
     case 1: {
         u32 ground = (u32)actor->mAcch.m_flags;
-        actor->m3AE = (s16)(5);
+        actor->mNoDamageTimer = (s16)(5);
         if ((ground & 0x20) && animationStopped(actor)) {
             actor->mMode = (s16)((s16)((s16)actor->mMode + 1));
             anm_init(actor, dRes_INDEX_FGANON_BCK_TYAKUTI1_e, 2, 0, 1, -1);
         }
-        actor->m3A4[0] = (s16)((s16)l_HIO.m48);
+        actor->mTimers[0] = (s16)((s16)l_HIO.m48);
         break;
     }
     case 2:
@@ -414,8 +414,8 @@ void down(fganon_class *actor) {
     f32 height = fg_cBgS_GroundCross(gabi::ea(&fgView<dComIfG_inf_c>(play)->play.mBgS),
                                      gabi::ea(ground.get()));
     bool below = height != -1000000000.0f && !((f32)actor->current.pos.y > height);
-    if (below || (s16)actor->m3A4[0] == 0) {
-        u8 variant = (u8)actor->m2BC;
+    if (below || (s16)actor->mTimers[0] == 0) {
+        u8 variant = (u8)actor->mType;
         actor->mAction = ACT_KIERU;
         actor->mMode = (s16)(0);
         if (variant)
@@ -439,7 +439,7 @@ void spinattack2(fganon_class *actor) {
     s32 frame = gabi::ftoi((f32)fgView<mDoExt_McaMorf>(morf)->mFrameCtrl.mFrame);
     switch (mode) {
     case 0: {
-        u8 copy = (u8)actor->m68F;
+        u8 copy = (u8)actor->mCloneNo;
         s16 playerYaw = (s16)fgView<fopAc_ac_c>(player)->shape_angle.y;
         actor->shape_angle.y = (s16)((s16)(playerYaw + copy * 0x3333));
         actor->mMode = (s16)(1);
@@ -462,7 +462,7 @@ void spinattack2(fganon_class *actor) {
         anm_init(actor, dRes_INDEX_FGANON_BCK_KAITEN_S1_e, 1, 2, 1, -1);
         actor->mMode = (s16)(2);
         deru_brk(actor);
-        actor->m38C.copy(*&fgView<fopAc_ac_c>(player)->current.pos);
+        actor->mTargetPos.copy(*&fgView<fopAc_ac_c>(player)->current.pos);
         [[fallthrough]];
     }
     case 2: {
@@ -472,13 +472,13 @@ void spinattack2(fganon_class *actor) {
         actor->speedF = (f32)(speed);
         pos_move(actor, 1);
         gabi::Local<cXyz> result, offset;
-        fg_cXyz___mi(gabi::ea(&actor->m38C), gabi::ea(result.get()), gabi::ea(&actor->current.pos));
+        fg_cXyz___mi(gabi::ea(&actor->mTargetPos), gabi::ea(result.get()), gabi::ea(&actor->current.pos));
         offset->copy(*result.get());
         f32 magnitude = fg_PSVECSquareMag(gabi::ea(offset.get()));
         f32 distance = fg_sqrtf(magnitude);
         if (distance < (f32)l_HIO.m38) {
             anm_init(actor, dRes_INDEX_FGANON_BCK_KAITEN1_e, 2, 0, 1, -1);
-            u8 copy = (u8)actor->m68F;
+            u8 copy = (u8)actor->mCloneNo;
             actor->mMode = (s16)(3);
             actor->speedF = (f32)(0);
             if (copy == 0)
@@ -487,19 +487,19 @@ void spinattack2(fganon_class *actor) {
         break;
     }
     case 3: {
-        if (frame == 14 && (u8)actor->m68F == 0)
+        if (frame == 14 && (u8)actor->mCloneNo == 0)
             sound(actor, 0x5951);
-        actor->m685 = (u8)(1);
+        actor->mWeponAtOn = (u8)(1);
         actor->mWeponSph.mAtp = (u8)(8);
         s16 trigger = (s16)l_HIO.m3E;
         morf = (u32)actor->mpMorf.v;
         if ((u32)frame == (u32)(s32)trigger)
-            actor->m6AC = (s8)((s8)((s16)l_HIO.m40 - trigger));
+            actor->mBtAttackTimer = (s8)((s8)((s16)l_HIO.m40 - trigger));
         if (((u8)fgView<mDoExt_McaMorf>(morf)->mFrameCtrl.mState & 1) ||
             (f32)fgView<mDoExt_McaMorf>(morf)->mFrameCtrl.mRate == 0) {
-            if ((u8)actor->m68F == 0) {
+            if ((u8)actor->mCloneNo == 0) {
                 actor->mMode = (s16)(4);
-                actor->m3A4[0] = (s16)(40);
+                actor->mTimers[0] = (s16)(40);
                 anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 10, 2, 1, -1);
             } else {
                 actor->mAction = ACT_KIERU;
@@ -509,7 +509,7 @@ void spinattack2(fganon_class *actor) {
         break;
     }
     case 4:
-        if ((s16)actor->m3A4[0] == 0) {
+        if ((s16)actor->mTimers[0] == 0) {
             actor->mAction = ACT_KIERU;
             actor->mMode = (s16)(0);
         }
@@ -525,33 +525,33 @@ void spinattack2(fganon_class *actor) {
 void last_end(fganon_class *actor) {
     fg_dComIfGp_getGameInfoDiscard();
     s16 mode = (s16)actor->mMode;
-    actor->m3AE = (s16)(3);
+    actor->mNoDamageTimer = (s16)(3);
     actor->attention_info.flags = (u32)(0);
     switch (mode) {
     case 0:
         actor->mMode = (s16)(1);
         anm_init(actor, dRes_INDEX_FGANON_BCK_MOGAKU1_e, 2, 0, 1, -1);
-        actor->mB54 = (s16)(100);
-        actor->m3C0 = (f32)(10000);
-        actor->m3A4[1] = (s16)(150);
-        actor->m3A4[0] = (s16)((s16)((s16)l_reg0.s[4] + 25));
+        actor->mDemoCamMode = (s16)(100);
+        actor->mFadeFogEndZ = (f32)(10000);
+        actor->mTimers[1] = (s16)(150);
+        actor->mTimers[0] = (s16)((s16)((s16)l_reg0.s[4] + 25));
         break;
     case 1:
-        if ((s16)actor->m3A4[1] == 0) {
-            s16 counter = (s16)actor->mB54;
-            actor->m2D0 = (s8)(1);
+        if ((s16)actor->mTimers[1] == 0) {
+            s16 counter = (s16)actor->mDemoCamMode;
+            actor->mKenState = (s8)(1);
             actor->mMode = (s16)(2);
-            actor->mB54 = (s16)((s16)(counter + 1));
-            actor->m3A4[1] = (s16)(20);
+            actor->mDemoCamMode = (s16)((s16)(counter + 1));
+            actor->mTimers[1] = (s16)(20);
         }
         break;
     case 2:
         fg_cLib_addCalc2(gabi::ea(&actor->scale.x), 0.1f, 1.0f, 0.05f);
         fg_cLib_addCalc2(gabi::ea(&actor->scale.z), 0.1f, 1.0f, 0.05f);
         fg_cLib_addCalc2(gabi::ea(&actor->scale.y), 0.1f, 1.0f, 0.05f);
-        if ((s16)actor->m3A4[1] == 0) {
+        if ((s16)actor->mTimers[1] == 0) {
             actor->mMode = (s16)(3);
-            actor->m3A4[1] = (s16)(30);
+            actor->mTimers[1] = (s16)(30);
             sound(actor, 0x5905);
         }
         break;
@@ -559,16 +559,16 @@ void last_end(fganon_class *actor) {
         fg_cLib_addCalc0(gabi::ea(&actor->scale.x), 0.1f, 0.05f);
         fg_cLib_addCalc0(gabi::ea(&actor->scale.z), 0.1f, 0.05f);
         fg_cLib_addCalc2(gabi::ea(&actor->scale.y), 10.0f, 0.1f, 1.0f);
-        if ((s16)actor->m3A4[1] == 0) {
+        if ((s16)actor->mTimers[1] == 0) {
             actor->mMode = (s16)(4);
             actor->scale.x = (f32)(0);
-            actor->m3A4[1] = (s16)(30);
+            actor->mTimers[1] = (s16)(30);
             actor->scale.y = (f32)(0);
             actor->scale.z = (f32)(0);
         }
         break;
     case 4: {
-        s16 timer = (s16)actor->m3A4[1];
+        s16 timer = (s16)actor->mTimers[1];
         if (timer <= 4) {
             u32 id;
             if (timer == 4) {
@@ -583,7 +583,7 @@ void last_end(fganon_class *actor) {
             if (id != 0xFFFFFFFF)
                 boko = (unsigned int)fg_fopAcIt_Judge(l_judgeById, gabi::ea(local.get()));
             if (boko) {
-                actor->m2D0 = (s8)(2);
+                actor->mKenState = (s8)(2);
                 if (!((u32)fgView<fopAc_ac_c>(boko)->actor_status & 0x2000))
                     fg_fopAcM_setCarryNow(boko, 0);
                 u32 source = (u32)actor->mpKenModel.v;
@@ -598,20 +598,20 @@ void last_end(fganon_class *actor) {
                         fgView<J3DModel>(destination)->mBaseTransformMtx.m[i / 4][i % 4] =
                             values[i];
                 }
-                if ((s16)actor->m3A4[1] == 1) {
+                if ((s16)actor->mTimers[1] == 1) {
                     fg_fopAcM_cancelCarryNow(boko);
-                    s16 counter = (s16)actor->mB54;
-                    actor->mB56 = (s16)(0);
+                    s16 counter = (s16)actor->mDemoCamMode;
+                    actor->mDemoTimer = (s16)(0);
                     actor->mMode = (s16)(5);
-                    actor->mB54 = (s16)((s16)(counter + 1));
+                    actor->mDemoCamMode = (s16)((s16)(counter + 1));
                 }
             }
         }
         break;
     }
     }
-    f32 fogEnd = (f32)actor->m3C0;
-    s16 timer = (s16)actor->m3A4[0];
+    f32 fogEnd = (f32)actor->mFadeFogEndZ;
+    s16 timer = (s16)actor->mTimers[0];
     actor->tevStr.mFogColor.b = (u16)(0xFF);
     actor->tevStr.mFogColor.g = (u16)(0xFF);
     actor->tevStr.mFogColor.r = (u16)(0xFF);
@@ -620,11 +620,11 @@ void last_end(fganon_class *actor) {
     actor->tevStr.mFogStartZ = (f32)(fogStart);
     if (timer <= 1) {
         if (timer == 1) {
-            actor->m68E = (s8)(1);
-            actor->m3C0 = (f32)(5100);
+            actor->mCapeOff = (s8)(1);
+            actor->mFadeFogEndZ = (f32)(5100);
         }
         f32 max = (f32)l_reg0.f[4] + 63.5f;
-        fg_cLib_addCalc2(gabi::ea(&actor->m3C0), 100.0f, 1.0f, max);
+        fg_cLib_addCalc2(gabi::ea(&actor->mFadeFogEndZ), 100.0f, 1.0f, max);
     }
     fg_cLib_addCalcAngleS2(gabi::ea(&actor->current.angle.x), 0, 4, 0x800);
 }
@@ -655,11 +655,11 @@ static void emitterJointMatrix(fganon_class *actor, u32 emitter, u32 index) {
                              gabi::ea(&fgView<FganonEmitter>(emitter)->mGlobalTranslation));
 }
 static void tama_set(fganon_class *actor) {
-    if ((s8)actor->m671 == 0)
+    if ((s8)actor->mDarkBallState == 0)
         return;
     fg_mDoMtx_YrotS((u32)l_calcMtx, (s16)actor->shape_angle.y);
     gabi::Local<cXyz> offset, transformed, position;
-    f32 distance = (f32)actor->m680;
+    f32 distance = (f32)actor->mDarkBallDist;
     offset->x = 0;
     offset->z = distance;
     offset->y = -distance;
@@ -669,13 +669,13 @@ static void tama_set(fganon_class *actor) {
     y = y + (f32)l_reg8.f[4];
     y = y + transformed->y;
     f32 z = (f32)actor->current.pos.z + transformed->z;
-    s8 state = (s8)actor->m671;
+    s8 state = (s8)actor->mDarkBallState;
     position->x = x;
     position->y = y;
     position->z = z;
-    actor->m664.x = (f32)(x);
-    actor->m664.y = (f32)(y);
-    actor->m664.z = (f32)(z);
+    actor->mDarkBallPos.x = (f32)(x);
+    actor->mDarkBallPos.y = (f32)(y);
+    actor->mDarkBallPos.z = (f32)(z);
     switch (state) {
     case 1: {
         invalidateEmitter(actor, 4);
@@ -685,45 +685,45 @@ static void tama_set(fganon_class *actor) {
         emitter = createParticle(0x821B, position.get());
         actor->mEmitters3[1].v = (u32)(emitter);
         u32 brk = (u32)actor->mpBrkAnm3.v;
-        actor->m672 = (u8)(250);
-        actor->m671 = (s8)(2);
+        actor->mDarkBallAlpha = (u8)(250);
+        actor->mDarkBallState = (s8)(2);
         fgView<mDoExt_baseAnm>(brk)->mFrameCtrl.mRate = 1;
         break;
     }
     case 3:
         actor->mpBrkAnm3->mFrameCtrl.mRate = -1;
-        actor->m671 = (s8)(4);
+        actor->mDarkBallState = (s8)(4);
         createParticle(0x8242, position.get(), &actor->shape_angle);
         createParticle(0x8243, position.get(), &actor->shape_angle);
         break;
     case 4: {
-        u8 alpha = (u8)((u8)actor->m672 - 50);
-        actor->m672 = (u8)(alpha);
+        u8 alpha = (u8)((u8)actor->mDarkBallAlpha - 50);
+        actor->mDarkBallAlpha = (u8)(alpha);
         for (u32 slot = 4; slot < 6; ++slot) {
             u32 emitter = (u32)fgEmitterAt(actor, slot).v;
             if (emitter) {
                 fgView<FganonEmitter>(emitter)->mGlobalAlpha = (u8)(alpha);
-                alpha = (u8)actor->m672;
+                alpha = (u8)actor->mDarkBallAlpha;
             }
         }
         if (alpha == 0)
-            actor->m671 = (s8)(5);
+            actor->mDarkBallState = (s8)(5);
         break;
     }
     case 5:
     case 6:
     case 7:
     case 8:
-        actor->m671 = (s8)((s8)(state + 1));
+        actor->mDarkBallState = (s8)((s8)(state + 1));
         break;
     case 9:
-        actor->m671 = (s8)(0);
+        actor->mDarkBallState = (s8)(0);
         break;
     }
     for (u32 slot = 4; slot < 6; ++slot) {
         u32 emitter = (u32)fgEmitterAt(actor, slot).v;
         if (emitter) {
-            if ((u8)actor->m672) {
+            if ((u8)actor->mDarkBallAlpha) {
                 f32 emitterY = position->y;
                 if ((u8)fgView<FganonEmitter>(emitter)->mParticleCount >= 7)
                     emitterY = -emitterY;
@@ -776,19 +776,19 @@ void shot2(fganon_class *actor) {
         if (animationStopped(actor)) {
             anm_init(actor, dRes_INDEX_FGANON_BCK_TAME_S2_e, 1, 2, 1, -1);
             s16 modeNow = (s16)actor->mMode;
-            actor->m3A4[0] = (s16)((s16)l_HIO.m3C);
+            actor->mTimers[0] = (s16)((s16)l_HIO.m3C);
             actor->mMode = (s16)((s16)(modeNow + 1));
             invalidateEmitter(actor, 2);
             invalidateEmitter(actor, 3);
         }
         if (frame == 28) {
-            actor->m680 = (f32)(0);
-            actor->m671 = (s8)(1);
+            actor->mDarkBallDist = (f32)(0);
+            actor->mDarkBallState = (s8)(1);
         }
         break;
     case 2:
         sound(actor, 0x5153);
-        if ((s16)actor->m3A4[0] != 0)
+        if ((s16)actor->mTimers[0] != 0)
             break;
         anm_init(actor, dRes_INDEX_FGANON_BCK_NAGERU_S1_e, 3, 0, 1, -1);
         actor->mMode = (s16)((s16)((s16)actor->mMode + 1));
@@ -809,14 +809,14 @@ void shot2(fganon_class *actor) {
         if (frame >= trigger) {
             f32 target = (f32)l_reg8.f[6] + 250;
             f32 max = (f32)l_reg8.f[7] + 50;
-            fg_cLib_addCalc2(gabi::ea(&actor->m680), target, 1.0f, max);
+            fg_cLib_addCalc2(gabi::ea(&actor->mDarkBallDist), target, 1.0f, max);
             if ((u32)frame == (u32)(s32)(s16)((s16)l_reg8.s[6] + 16))
-                actor->m671 = (s8)(3);
+                actor->mDarkBallState = (s8)(3);
             if ((u32)frame == (u32)(s32)(s16)((s16)l_reg8.s[7] + 16)) {
                 for (u32 i = 0; i < 8; ++i)
-                    fg_fopAcM_create1(0xF2, i, gabi::ea(&actor->m664), (s8)actor->current.roomNo, 0,
+                    fg_fopAcM_create1(0xF2, i, gabi::ea(&actor->mDarkBallPos), (s8)actor->current.roomNo, 0,
                                       0, -1, 0);
-                actor->m670 = (s8)(0);
+                actor->mMahouHitCount = (s8)(0);
             }
         }
         for (u32 i = 0; i < 2; ++i) {
@@ -826,7 +826,7 @@ void shot2(fganon_class *actor) {
         }
         if (animationStopped(actor)) {
             anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 10, 2, 1, -1);
-            actor->m3A4[0] = (s16)(60);
+            actor->mTimers[0] = (s16)(60);
             actor->mMode = (s16)(4);
             invalidateEmitter(actor, 2);
             invalidateEmitter(actor, 3);
@@ -834,9 +834,9 @@ void shot2(fganon_class *actor) {
         break;
     }
     case 4:
-        if ((s8)actor->m68A == 1)
+        if ((s8)actor->mLaughTimer == 1)
             anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 10, 2, 1, -1);
-        if ((s16)actor->m3A4[0] == 0) {
+        if ((s16)actor->mTimers[0] == 0) {
             actor->mAction = ACT_FLY2;
             actor->mMode = (s16)(0);
         }
@@ -878,25 +878,25 @@ static void hitFlash(fganon_class *actor, cXyz *position, f32 size, bool critica
 static void knockDown(fganon_class *actor, u32 player) {
     actor->mMode = (s16)(0);
     actor->mAction = ACT_DOWN;
-    actor->m3B0 = (f32)((f32)l_reg8.f[11] + 80);
-    actor->m3B8 = (s16)((s16)((s16)l_reg8.s[2] + 7));
+    actor->mKnockbackDist = (f32)((f32)l_reg8.f[11] + 80);
+    actor->mHitShakeTimer = (s16)((s16)((s16)l_reg8.s[2] + 7));
     gabi::Local<cXyz> delta;
     fg_cXyz___mi(gabi::ea(&actor->current.pos), gabi::ea(delta.get()),
                  gabi::ea(&fgView<fopAc_ac_c>(player)->current.pos));
     s16 yaw = (short)fg_cM_atan2s((f32)delta->x, (f32)delta->z);
     f32 x = delta->x, z = delta->z;
-    actor->m3B4 = (s16)(yaw);
+    actor->mKnockbackAngleY = (s16)(yaw);
     f32 distance = fg_sqrtf(gabi::fmadds(x, x, z * z));
     s16 pitch = (short)fg_cM_atan2s((f32)delta->y, distance);
     actor->speedF = (f32)(0);
-    actor->m3B6 = (s16)((s16)-pitch);
+    actor->mKnockbackAngleX = (s16)((s16)-pitch);
 }
 /* 0213A6FC */
 void damage_check(fganon_class *actor) {
     u32 play = (unsigned int)fg_dComIfGp_getGameInfo();
     u32 player = (u32)fgView<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v;
     fg_dCcD_GStts_Move(gabi::ea(&actor->mStts.__vtbl_gstts));
-    if ((s16)actor->m3AE != 0)
+    if ((s16)actor->mNoDamageTimer != 0)
         return;
     // HD: attack information includes the callee-written result word at +0x18.
     gabi::Local<FganonAttackInfo> info;
@@ -907,7 +907,7 @@ void damage_check(fganon_class *actor) {
         if (hit) {
             info->pParticlePos = (u32)(gabi::ea(&actor->mCyl.mGObjTg.mHitPos));
             u32 status = (u32)fgView<dCcD_GObjInf>(hit)->mStts.v;
-            u8 variant = (u8)actor->m2BC;
+            u8 variant = (u8)actor->mType;
             u32 source = status ? (u32)fgView<dCcD_Stts>(status)->mp_actor.v : 0;
             info->mpActor = source;
             if (variant == 2) {
@@ -916,11 +916,11 @@ void damage_check(fganon_class *actor) {
                     sound(actor, 0x5957);
                     hitFlash(actor, &actor->eyePos, 2, true, true);
                     actor->mMode = (s16)(0);
-                    actor->m3AE = (s16)(1000);
+                    actor->mNoDamageTimer = (s16)(1000);
                     actor->mAction = ACT_LAST_END;
                     fg_mDoAud_subBgmStop();
-                    if ((s8)actor->m408 != 0)
-                        actor->m408 = (s8)(35);
+                    if ((s8)actor->mBallState != 0)
+                        actor->mBallState = (s8)(35);
                     sound(actor, 0x5904);
                     u32 emitter = createParticle(0x8405, &actor->current.pos);
                     if (emitter)
@@ -930,23 +930,23 @@ void damage_check(fganon_class *actor) {
                         emitterJointMatrix(actor, emitter, 10);
                     actor->speedF = (f32)(0);
                 } else {
-                    s8 soundState = (s8)actor->m408;
+                    s8 soundState = (s8)actor->mBallState;
                     actor->mMode = (s16)(0);
                     actor->mAction = ACT_KIERU;
                     if (soundState == 1 || soundState == 2)
-                        actor->m408 = (s8)(35);
+                        actor->mBallState = (s8)(35);
                 }
-                actor->m671 = (s8)(0);
+                actor->mDarkBallState = (s8)(0);
                 invalidateEmitter(actor, 4);
                 invalidateEmitter(actor, 5);
                 return;
             }
             if (source && (s16)fgView<fopAc_ac_c>(source)->mProcName == 0xF2) {
-                actor->m670 = (s8)((s8)((u8)actor->m670 + 1));
+                actor->mMahouHitCount = (s8)((s8)((u8)actor->mMahouHitCount + 1));
                 anm_init(actor, dRes_INDEX_FGANON_BCK_DAMAGE1_e, 2, 0, 1, -1);
-                actor->m3A4[0] = (s16)(60);
+                actor->mTimers[0] = (s16)(60);
                 monsterSound(actor, 0x493F);
-                if ((s8)actor->m670 < 5)
+                if ((s8)actor->mMahouHitCount < 5)
                     return;
                 hitFlash(actor, &actor->eyePos, 2, true, true);
                 knockDown(actor, player);
@@ -954,7 +954,7 @@ void damage_check(fganon_class *actor) {
             }
         }
     }
-    if ((u8)actor->m68F) {
+    if ((u8)actor->mCloneNo) {
         if ((int)fg_dCcD_GObjInf_ChkTgHit(gabi::ea(&actor->mCyl)) ||
             (s16)fgView<fganon_class>(master)->mAction == ACT_DOWN) {
             u32 emitter = createParticle(0x826B, &actor->current.pos);
@@ -964,9 +964,9 @@ void damage_check(fganon_class *actor) {
         }
         return;
     }
-    if (!(int)fg_dCcD_GObjInf_ChkTgHit(gabi::ea(&actor->mCyl)) && (s8)actor->m68C == 0)
+    if (!(int)fg_dCcD_GObjInf_ChkTgHit(gabi::ea(&actor->mCyl)) && (s8)actor->mBallHitSelf == 0)
         return;
-    actor->m3AE = (s16)(6);
+    actor->mNoDamageTimer = (s16)(6);
     if ((int)fg_dCcD_GObjInf_ChkTgHit(gabi::ea(&actor->mCyl))) {
         s16 action = (s16)actor->mAction;
         if (action != 8 && action != 7 && action != 10)
@@ -986,7 +986,7 @@ void damage_check(fganon_class *actor) {
         info->mpActor = source;
         if ((u8)info->mResultingAttackType == 1 &&
             (u8)fgView<FganonPlayerCut>(player)->mCutType != 0)
-            actor->m3AE = (s16)(2);
+            actor->mNoDamageTimer = (s16)(2);
         bool dead = (u8)info->mbDead != 0;
         if (dead)
             createParticle(0x10, &actor->eyePos);
@@ -1011,21 +1011,21 @@ void damage_check(fganon_class *actor) {
             actor->mAction = ACT_DOWN;
             return;
         }
-        u8 variant = (u8)actor->m2BC;
+        u8 variant = (u8)actor->mType;
         if (variant == 0) {
             if ((s8)actor->health <= 0) {
                 actor->mMode = (s16)(0);
-                actor->m3AE = (s16)(1000);
+                actor->mNoDamageTimer = (s16)(1000);
                 actor->mAction = ACT_END;
                 fg_mDoAud_subBgmStop();
             } else {
-                s8 remaining = (s8)((u8)actor->m690 - (u8)info->mDamage);
+                s8 remaining = (s8)((u8)actor->mDownHealth - (u8)info->mDamage);
                 if (remaining <= 0) {
                     actor->mMode = (s16)(0);
                     actor->mAction = ACT_KIERU;
-                    actor->m690 = (s8)(10);
+                    actor->mDownHealth = (s8)(10);
                 } else {
-                    actor->m690 = (s8)(remaining);
+                    actor->mDownHealth = (s8)(remaining);
                     actor->mMode = (s16)(10);
                 }
             }
@@ -1082,12 +1082,12 @@ static bool kabe_check(fganon_class *actor) {
 static void deru(fganon_class *actor) {
     // This accessor call is retained even when the selected mode does no work.
     fg_dComIfGp_getGameInfoDiscard();
-    actor->m3AE = 3;
+    actor->mNoDamageTimer = 3;
     if (actor->mMode != 0)
         return;
     u8 choice = (u8)l_HIO.m06;
     if (choice == 0) {
-        if (actor->m2BC == 0)
+        if (actor->mType == 0)
             choice = fg_cM_rndF(1.0f) < 0.5f ? 1 : 2;
         else if (fg_cM_rndF(1.0f) < 0.4f && !kabe_check(actor))
             choice = 4;
@@ -1098,7 +1098,7 @@ static void deru(fganon_class *actor) {
     case 1:
         actor->mAction = ACT_FLY;
         actor->mMode = -10;
-        actor->m3A4[2] = (s16)l_HIO.m0A;
+        actor->mTimers[2] = (s16)l_HIO.m0A;
         break;
     case 2:
         actor->mAction = ACT_SPIN;
@@ -1107,7 +1107,7 @@ static void deru(fganon_class *actor) {
     case 3:
         actor->mAction = ACT_FLY2;
         actor->mMode = -10;
-        actor->m3A4[2] = (s16)l_HIO.m0A;
+        actor->mTimers[2] = (s16)l_HIO.m0A;
         break;
     case 4:
         actor->mAction = ACT_SPIN2;
@@ -1117,22 +1117,22 @@ static void deru(fganon_class *actor) {
 }
 static void kieru(fganon_class *actor) {
     fg_dComIfGp_getGameInfoDiscard();
-    actor->m3AE = 3;
+    actor->mNoDamageTimer = 3;
     switch ((s16)actor->mMode) {
     case 0:
-        if (actor->m408 == 1 || actor->m408 == 2)
-            actor->m408 = 35;
+        if (actor->mBallState == 1 || actor->mBallState == 2)
+            actor->mBallState = 35;
         kieru_brk(actor, 0);
-        if (actor->m68F) {
+        if (actor->mCloneNo) {
             actor->mMode = 1;
-            actor->m3A4[0] = 30;
+            actor->mTimers[0] = 30;
         } else {
             actor->mAction = ACT_STANDBY;
             actor->mMode = 0;
         }
         break;
     case 1:
-        if (actor->m3A4[0] == 0)
+        if (actor->mTimers[0] == 0)
             fopAcM_delete(actor);
         break;
     }
@@ -1140,35 +1140,35 @@ static void kieru(fganon_class *actor) {
 static void standby(fganon_class *actor) {
     u32 player =
         (u32)fgView<dComIfG_inf_c>(fg_dComIfGp_getGameInfo())->play.mPlayerInfo[0].mpPlayer.v;
-    actor->m3AE = 3;
+    actor->mNoDamageTimer = 3;
     switch ((s16)actor->mMode) {
     case -1: {
-        if ((actor->m2BC == 2 && !(int)fg_dComIfGs_checkGetItem(0x36)) ||
-            (actor->m2BC == 1 && (int)fg_dComIfGs_checkGetItem(0x36))) {
+        if ((actor->mType == 2 && !(int)fg_dComIfGs_checkGetItem(0x36)) ||
+            (actor->mType == 1 && (int)fg_dComIfGs_checkGetItem(0x36))) {
             actor->current.pos.y = (f32)(-20000.0f);
             break;
         }
         f32 z = (f32)fgView<fopAc_ac_c>(player)->current.pos.z - (f32)actor->home.pos.z;
         f32 x = (f32)fgView<fopAc_ac_c>(player)->current.pos.x - (f32)actor->home.pos.x;
         f32 distance = fg_sqrtf(gabi::fmadds(x, x, z * z));
-        if (distance < (f32)(u8)actor->m2BD * 10.0f) {
-            actor->m3A4[0] = (s16)l_HIO.m08;
-            actor->mB89 = 22;
+        if (distance < (f32)(u8)actor->mStartDist * 10.0f) {
+            actor->mTimers[0] = (s16)l_HIO.m08;
+            actor->mBgmStartTimer = 22;
             actor->mMode = 1;
             actor->actor_status = (u32)((u32)actor->actor_status | 0x20);
         }
         break;
     }
     case 0:
-        actor->m3A4[0] = (s16)l_HIO.m08;
+        actor->mTimers[0] = (s16)l_HIO.m08;
         actor->mMode = (s16)actor->mMode + 1;
         [[fallthrough]];
     case 1:
-        if (actor->m3A4[0] == 0) {
-            actor->m69C = 0;
-            actor->m698 = 0;
+        if (actor->mTimers[0] == 0) {
+            actor->mSwordFallAccel = 0;
+            actor->mSwordFallSpeed = 0;
             actor->mAction = ACT_DERU;
-            actor->m694 = 0;
+            actor->mSwordFallAngle = 0;
             actor->mMode = 0;
         }
         break;
@@ -1176,7 +1176,7 @@ static void standby(fganon_class *actor) {
 }
 static void fail(fganon_class *actor) {
     fg_dComIfGp_getGameInfoDiscard();
-    actor->m3AE = 3;
+    actor->mNoDamageTimer = 3;
     switch ((s16)actor->mMode) {
     case 0:
         kieru_brk(actor, 1);
@@ -1187,7 +1187,7 @@ static void fail(fganon_class *actor) {
         if (!animationStopped(actor))
             break;
         actor->mMode = 2;
-        actor->m3A4[0] = 30;
+        actor->mTimers[0] = 30;
         gabi::Local<dBgS_LinChk> line;
 
         dBgS_LinChk_ct(line.get(), l_lineCheckVtables, false);
@@ -1218,44 +1218,44 @@ static void fail(fganon_class *actor) {
         }
         s16 angle = (short)fg_cM_atan2s((f32)transformed->x - (f32)offset->x,
                                         (f32)transformed->z - (f32)offset->z);
-        actor->m6A0 = (s16)actor->shape_angle.y - angle + 0x7058 + (s16)l_swordFallOffset;
-        actor->m6A8 = 100;
-        actor->m6A4 = (s16)l_reg0.s[5] + 0x80;
+        actor->mSwordFallDir = (s16)actor->shape_angle.y - angle + 0x7058 + (s16)l_swordFallOffset;
+        actor->mSwordFallSeVolume = 100;
+        actor->mSwordTiltStep = (s16)l_reg0.s[5] + 0x80;
         destroyMovementLine(line.get());
         break;
     }
     case 2:
-        if (actor->m3A4[0] == 0) {
-            s16 step = (s16)((s16)gabi::ftoi(actor->m69C) + (s16)actor->m6A4);
-            fg_cLib_addCalcAngleS2(gabi::ea(&actor->m6A2), (s16)actor->m6A0, 1, step);
-            actor->m694 = (f32)actor->m694 + (f32)actor->m698;
-            actor->m698 = (f32)actor->m698 + (f32)actor->m69C;
-            actor->m69C = (f32)actor->m69C + ((f32)l_reg12.f[10] + 3.0f);
+        if (actor->mTimers[0] == 0) {
+            s16 step = (s16)((s16)gabi::ftoi(actor->mSwordFallAccel) + (s16)actor->mSwordTiltStep);
+            fg_cLib_addCalcAngleS2(gabi::ea(&actor->mSwordTilt), (s16)actor->mSwordFallDir, 1, step);
+            actor->mSwordFallAngle = (f32)actor->mSwordFallAngle + (f32)actor->mSwordFallSpeed;
+            actor->mSwordFallSpeed = (f32)actor->mSwordFallSpeed + (f32)actor->mSwordFallAccel;
+            actor->mSwordFallAccel = (f32)actor->mSwordFallAccel + ((f32)l_reg12.f[10] + 3.0f);
             f32 limit = (f32)l_reg12.f[3] + 1000.0f;
-            if (actor->m69C > limit)
-                actor->m69C = limit;
-            if (!(actor->m694 < 15884.0f)) {
-                actor->m694 = 15884.0f;
-                actor->m6A4 = (s16)l_reg0.s[6] + 0x800;
-                if (actor->m698 > (f32)l_reg12.f[1] + 700.0f) {
-                    actor->m698 = -((f32)actor->m698 * ((f32)l_reg12.f[2] + 0.4f));
-                    sound(actor, 0x6998, actor->m6A8);
-                    if (actor->m6A8 >= 30)
-                        actor->m6A8 = (u32)actor->m6A8 - 20;
-                    if (actor->m6A6 == 0)
-                        actor->m6A6 = (s16)l_reg0.s[1] + 30;
+            if (actor->mSwordFallAccel > limit)
+                actor->mSwordFallAccel = limit;
+            if (!(actor->mSwordFallAngle < 15884.0f)) {
+                actor->mSwordFallAngle = 15884.0f;
+                actor->mSwordTiltStep = (s16)l_reg0.s[6] + 0x800;
+                if (actor->mSwordFallSpeed > (f32)l_reg12.f[1] + 700.0f) {
+                    actor->mSwordFallSpeed = -((f32)actor->mSwordFallSpeed * ((f32)l_reg12.f[2] + 0.4f));
+                    sound(actor, 0x6998, actor->mSwordFallSeVolume);
+                    if (actor->mSwordFallSeVolume >= 30)
+                        actor->mSwordFallSeVolume = (u32)actor->mSwordFallSeVolume - 20;
+                    if (actor->mSwordShakeTimer == 0)
+                        actor->mSwordShakeTimer = (s16)l_reg0.s[1] + 30;
                 } else {
-                    actor->m698 = 0;
-                    actor->m3A4[0] = 0;
+                    actor->mSwordFallSpeed = 0;
+                    actor->mTimers[0] = 0;
                     actor->mMode = 3;
                 }
             }
         }
         break;
     case 3:
-        if (actor->m3A4[0] == 0) {
+        if (actor->mTimers[0] == 0) {
             kieru_brk(actor, 2);
-            actor->m3A4[0] = 10;
+            actor->mTimers[0] = 10;
             actor->mMode = 4;
             actor->mBokoID = (unsigned int)fg_fopAcM_create2(
                 0x1CF, 5, gabi::ea(&actor->current.pos), (s8)actor->current.roomNo, 0, 0, -1, 0);
@@ -1280,7 +1280,7 @@ static void fail(fganon_class *actor) {
             for (u32 i = 0; i < 12; ++i)
                 fgView<J3DModel>(destination)->mBaseTransformMtx.m[i / 4][i % 4] = matrix[i];
         }
-        if (actor->m3A4[0] == 0) {
+        if (actor->mTimers[0] == 0) {
             fopAcM_delete(actor);
             fgView<FganonBoko>(boko)->mFloorFlg = (u8)(1);
             fg_fopAcM_cancelCarryNow(boko);
@@ -1295,8 +1295,8 @@ static void fly_common(fganon_class *actor, bool second) {
     gabi::Local<dBgS_LinChk> line;
 
     dBgS_LinChk_ct(line.get(), l_lineCheckVtables, false);
-    if (((actor->m384 & 15) == 0 && fg_cM_rndF(1.0f) < 0.5f) || actor->mMode == -10)
-        actor->m398 = (s16)fgView<fopAc_ac_c>(player)->shape_angle.y;
+    if (((actor->mFrameCounter & 15) == 0 && fg_cM_rndF(1.0f) < 0.5f) || actor->mMode == -10)
+        actor->mTargetAngleY = (s16)fgView<fopAc_ac_c>(player)->shape_angle.y;
     switch ((s16)actor->mMode) {
     case -10: {
         deru_brk(actor);
@@ -1309,19 +1309,19 @@ static void fly_common(fganon_class *actor, bool second) {
             gabi::ea(actor), (u32)fgView<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v));
         actor->mMode = 1;
         anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 20.0f, 2, 1.0f, -1);
-        actor->m3A4[1] = second ? 40 : 60;
+        actor->mTimers[1] = second ? 40 : 60;
         break;
     }
     case 0:
         anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 20.0f, 2, 1.0f, -1);
         actor->mMode = (s16)actor->mMode + 1;
-        actor->m3A0 = 0;
-        actor->m3A4[1] = (s16)gabi::ftoi(fg_cM_rndF(50.0f) + 50.0f);
+        actor->mTurnSpeedRate = 0;
+        actor->mTimers[1] = (s16)gabi::ftoi(fg_cM_rndF(50.0f) + 50.0f);
         [[fallthrough]];
     case 1: {
-        if (actor->m68A == 1)
+        if (actor->mLaughTimer == 1)
             anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 10.0f, 2, 1.0f, -1);
-        fg_mDoMtx_YrotS((u32)l_calcMtx, (s16)actor->m398);
+        fg_mDoMtx_YrotS((u32)l_calcMtx, (s16)actor->mTargetAngleY);
         gabi::Local<cXyz> offset, transformed, temporary;
         offset->x = 0;
         offset->z = (second ? (f32)l_HIO.m14 : (f32)l_HIO.m0C);
@@ -1329,8 +1329,8 @@ static void fly_common(fganon_class *actor, bool second) {
         fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(transformed.get()));
         fg_cXyz___pl(gabi::ea(&fgView<fopAc_ac_c>(player)->current.pos), gabi::ea(temporary.get()),
                      gabi::ea(transformed.get()));
-        actor->m38C = *temporary.get();
-        fg_cXyz___mi(gabi::ea(&actor->m38C), gabi::ea(temporary.get()),
+        actor->mTargetPos = *temporary.get();
+        fg_cXyz___mi(gabi::ea(&actor->mTargetPos), gabi::ea(temporary.get()),
                      gabi::ea(&actor->current.pos));
         *offset.get() = *temporary.get();
         f32 length = fg_sqrtf(fg_PSVECSquareMag(gabi::ea(offset.get())));
@@ -1339,22 +1339,22 @@ static void fly_common(fganon_class *actor, bool second) {
                              (f32)l_reg0.f[13] + 2.0f);
         else
             fg_cLib_addCalc0(gabi::ea(&actor->speedF), 1.0f, (f32)l_reg0.f[14] + 1.0f);
-        actor->m39C = (f32)l_reg0.f[5] + 1500.0f;
+        actor->mTurnSpeed = (f32)l_reg0.f[5] + 1500.0f;
         u32 play = (unsigned int)fg_dComIfGp_getGameInfo();
         s16 yaw = (short)fg_fopAcM_searchActorAngleY(
             gabi::ea(actor), (u32)fgView<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v);
         fg_cLib_addCalcAngleS2(gabi::ea(&actor->shape_angle.y), yaw, 10, 0x400);
-        fg_cLib_addCalc2(gabi::ea(&actor->m3BC), (f32)l_reg0.f[11] + 50.0f, 1.0f, 2.0f);
+        fg_cLib_addCalc2(gabi::ea(&actor->mSwayAmplitude), (f32)l_reg0.f[11] + 50.0f, 1.0f, 2.0f);
         break;
     }
     }
     pos_move(actor, 0);
     fly_se_set(actor);
-    if (actor->m3A4[1] == 0) {
+    if (actor->mTimers[1] == 0) {
         actor->mAction = second ? ACT_SHOT2 : ACT_SHOT;
         actor->mMode = 0;
     }
-    if (actor->m3A4[2] == 0) {
+    if (actor->mTimers[2] == 0) {
         actor->mAction = ACT_KIERU;
         actor->mMode = 0;
     }
@@ -1368,19 +1368,19 @@ static void shot(fganon_class *actor) {
     fg_cLib_addCalcAngleS2(gabi::ea(&actor->shape_angle.y), yaw, 10, 0x400);
     switch ((s16)actor->mMode) {
     case 0:
-        if (actor->m408 != 0)
+        if (actor->mBallState != 0)
             break;
         anm_init(actor, dRes_INDEX_FGANON_BCK_TAME1_e, 10.0f, 2, 1.0f, -1);
         actor->mMode = (s16)actor->mMode + 1;
-        actor->m3A4[0] = 40;
+        actor->mTimers[0] = 40;
         monsterSound(actor, 0x493A);
         [[fallthrough]];
     case 1:
-        if (actor->m3A4[0] == 30)
-            actor->m408 = 1;
-        if (actor->m3A4[0] < 30)
+        if (actor->mTimers[0] == 30)
+            actor->mBallState = 1;
+        if (actor->mTimers[0] < 30)
             sound(actor, 0x5152);
-        if (actor->m3A4[0] == 0) {
+        if (actor->mTimers[0] == 0) {
             anm_init(actor, dRes_INDEX_FGANON_BCK_NAGERU1_e, 3.0f, 0, 1.0f, -1);
             actor->mMode = (s16)actor->mMode + 1;
             monsterSound(actor, 0x493C);
@@ -1389,10 +1389,10 @@ static void shot(fganon_class *actor) {
         break;
     case 2:
         if (gabi::ftoi((f32)actor->mpMorf->mFrameCtrl.mFrame) == (s32)(s16)l_reg0.s[0] + 14) {
-            actor->m688 = 0;
-            actor->m687 = 0;
-            actor->m689 = 0;
-            actor->m409 = 1;
+            actor->mRallyCount = 0;
+            actor->mSwingCount = 0;
+            actor->mStopReturn = 0;
+            actor->mBallThrow = 1;
         }
         if (animationStopped(actor)) {
             anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 3.0f, 2, 1.0f, -1);
@@ -1400,26 +1400,26 @@ static void shot(fganon_class *actor) {
         }
         [[fallthrough]];
     case 3:
-        if (actor->m408 == 5) {
+        if (actor->mBallState == 5) {
             gabi::Local<cXyz> temporary, offset;
-            fg_cXyz___mi(gabi::ea(&actor->m3E0), gabi::ea(temporary.get()),
+            fg_cXyz___mi(gabi::ea(&actor->mBallPos), gabi::ea(temporary.get()),
                          gabi::ea(&actor->eyePos));
             *offset.get() = *temporary.get();
             f32 length = fg_sqrtf(fg_PSVECSquareMag(gabi::ea(offset.get())));
             f32 limit =
-                gabi::fmadds((f32)actor->m404, (f32)l_reg0.f[0] + 10.0f, 400.0f) + (f32)l_reg0.f[1];
+                gabi::fmadds((f32)actor->mBallSpeed, (f32)l_reg0.f[0] + 10.0f, 400.0f) + (f32)l_reg0.f[1];
             if (!(length < limit))
                 break;
-            if (actor->m689 == 0) {
+            if (actor->mStopReturn == 0) {
                 s32 animation = fg_cM_rndF(1.0f) < 0.5f ? 0x13 : 0x14;
                 anm_init(actor, animation, 0.0f, 0, 1.0f, -1);
                 actor->mMode = (s16)actor->mMode + 1;
                 monsterSound(actor, 0x493E);
                 sound(actor, 0x5950);
-                actor->m687 = (s8)((s8)actor->m687 + 1);
-                if (actor->m688 >= 7 || (actor->m687 >= 4 && fg_cM_rndF(1.0f) < 0.3f))
-                    actor->m689 = 1;
-            } else if (actor->m2BC == 2) {
+                actor->mSwingCount = (s8)((s8)actor->mSwingCount + 1);
+                if (actor->mRallyCount >= 7 || (actor->mSwingCount >= 4 && fg_cM_rndF(1.0f) < 0.3f))
+                    actor->mStopReturn = 1;
+            } else if (actor->mType == 2) {
                 actor->mAction = ACT_KIERU;
                 actor->mMode = 0;
                 return;
@@ -1430,9 +1430,9 @@ static void shot(fganon_class *actor) {
         u32 morf = (u32)actor->mpMorf.v;
         s32 frame = gabi::ftoi((f32)fgView<mDoExt_McaMorf>(morf)->mFrameCtrl.mFrame);
         if (frame >= 5 && frame <= 15)
-            actor->m686 = 1;
+            actor->mBallSwing = 1;
         if (animationStopped(actor) ||
-            (actor->m2BC != 0 && !((f32)fgView<mDoExt_McaMorf>(morf)->mFrameCtrl.mFrame < 20.0f))) {
+            (actor->mType != 0 && !((f32)fgView<mDoExt_McaMorf>(morf)->mFrameCtrl.mFrame < 20.0f))) {
             anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 10.0f, 2, 1.0f, -1);
             actor->mMode = 3;
         }
@@ -1442,12 +1442,12 @@ static void shot(fganon_class *actor) {
     fg_cLib_addCalc0(gabi::ea(&actor->speedF), 1.0f, (f32)l_reg0.f[14] + 1.0f);
     pos_move(actor, 0);
     fly_se_set(actor);
-    if (actor->mMode >= 2 && actor->m408 == 0) {
+    if (actor->mMode >= 2 && actor->mBallState == 0) {
         actor->mAction = ACT_FLY;
         actor->mMode = 0;
     } else if (actor->mMode == 3 || actor->mMode == 4) {
         s32 reverb = (int)fg_dComIfGp_getReverb((s8)actor->current.roomNo);
-        fg_mDoAud_monsSeStartPos(0x6237, gabi::ea(&actor->m3E0), 100, reverb);
+        fg_mDoAud_monsSeStartPos(0x6237, gabi::ea(&actor->mBallPos), 100, reverb);
     }
 }
 static void spinattack(fganon_class *actor) {
@@ -1483,12 +1483,12 @@ static void spinattack(fganon_class *actor) {
         actor->current.pos.y = (f32)((f32)actor->current.pos.y - 100.0f);
         anm_init(actor, dRes_INDEX_FGANON_BCK_WAIT1_e, 1.0f, 2, 1.0f, -1);
         actor->mMode = 2;
-        actor->m3A4[0] = 30;
+        actor->mTimers[0] = 30;
         deru_brk(actor);
         [[fallthrough]];
     }
     case 2:
-        if (actor->m3A4[0] == 0) {
+        if (actor->mTimers[0] == 0) {
             anm_init(actor, dRes_INDEX_FGANON_BCK_KAITEN1_e, 2.0f, 0, 1.0f, -1);
             actor->speedF = (f32)(0);
             actor->mMode = 3;
@@ -1498,10 +1498,10 @@ static void spinattack(fganon_class *actor) {
     case 3:
         if (frame == 14)
             sound(actor, 0x5951);
-        actor->m685 = 1;
+        actor->mWeponAtOn = 1;
         actor->mWeponSph.mAtp = (u8)(8);
         if (frame == (s16)l_HIO.m3E)
-            actor->m6AC = (s16)l_HIO.m40 - (s16)l_HIO.m3E;
+            actor->mBtAttackTimer = (s16)l_HIO.m40 - (s16)l_HIO.m3E;
         fg_cLib_addCalc2(gabi::ea(&actor->speedF), (u32)(frame - 13) < 12 ? 20.0f : 0.0f, 1.0f,
                          4.0f);
         actor->current.angle.y = (s16)((s16)actor->shape_angle.y);
@@ -1524,12 +1524,12 @@ s32 move(fganon_class *actor) {
             actor->mAction != ACT_STANDBY) {
             u32 type = actor->mAction == ACT_SPIN2
                            ? gabi::ea(l_cameraType3)
-                           : (actor->m2BC == 1 ? gabi::ea(l_cameraType2) : gabi::ea(l_cameraType1));
+                           : (actor->mType == 1 ? gabi::ea(l_cameraType2) : gabi::ea(l_cameraType1));
             u32 camera = (unsigned int)fg_dCam_getBody();
             fg_dCamera_c_SetTypeForce(camera, type, 0);
         }
     }
-    if (actor->m2BC == 0 && actor->mAction < ACT_START) {
+    if (actor->mType == 0 && actor->mAction < ACT_START) {
         play = (unsigned int)fg_dComIfGp_getGameInfo();
         u32 player = (u32)fgView<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v;
         if (actor->mAction == ACT_STANDBY &&
@@ -1594,23 +1594,23 @@ s32 move(fganon_class *actor) {
         break;
     }
     damage_check(actor);
-    actor->m68C = 0;
+    actor->mBallHitSelf = 0;
     if (gabi::ea(&actor->mStts)) {
         for (u32 i = 0; i < 3; ++i)
             fgVectorFloat(&actor->current.pos, i) = (f32)fgVectorFloat(&actor->current.pos, i) +
                                                     (f32)fgVectorFloat(&actor->mStts.m_cc_move, i);
     }
-    if (actor->m3B0 > 0.01f) {
+    if (actor->mKnockbackDist > 0.01f) {
         gabi::Local<cXyz> offset, transformed;
         offset->x = 0;
         offset->y = 0;
-        offset->z = actor->m3B0;
-        fg_mDoMtx_YrotS((u32)l_calcMtx, (s16)actor->m3B4);
-        fg_mDoMtx_XrotM((u32)l_calcMtx, (s16)actor->m3B6);
+        offset->z = actor->mKnockbackDist;
+        fg_mDoMtx_YrotS((u32)l_calcMtx, (s16)actor->mKnockbackAngleY);
+        fg_mDoMtx_XrotM((u32)l_calcMtx, (s16)actor->mKnockbackAngleX);
         fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(transformed.get()));
         fg_PSVECAdd(gabi::ea(&actor->current.pos), gabi::ea(transformed.get()),
                     gabi::ea(&actor->current.pos));
-        fg_cLib_addCalc0(gabi::ea(&actor->m3B0), 1.0f, 7.0f);
+        fg_cLib_addCalc0(gabi::ea(&actor->mKnockbackDist), 1.0f, 7.0f);
     }
     return result;
 }
@@ -1640,9 +1640,9 @@ static void execute_model(fganon_class *actor) {
     zero->x = 0;
     zero->y = 0;
     zero->z = 0;
-    if (actor->mB89 >= 2) {
-        actor->mB89 = (s8)((s8)actor->mB89 - 1);
-        if (actor->mB89 == 1)
+    if (actor->mBgmStartTimer >= 2) {
+        actor->mBgmStartTimer = (s8)((s8)actor->mBgmStartTimer - 1);
+        if (actor->mBgmStartTimer == 1)
             fg_mDoAud_subBgmStart(0x80000047u);
     }
     fg_fpcEx_Search(l_searchMagicSound, gabi::ea(actor));
@@ -1650,23 +1650,23 @@ static void execute_model(fganon_class *actor) {
     fg_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&actor->current.pos),
                                            gabi::ea(&actor->tevStr));
     s16 action = actor->mAction;
-    if ((action == 5 || action == 7 || (action >= 9 && action <= 11)) && actor->m68B != 0 &&
-        actor->m68A == 0) {
-        actor->m68B = 0;
+    if ((action == 5 || action == 7 || (action >= 9 && action <= 11)) && actor->mLaughRequest != 0 &&
+        actor->mLaughTimer == 0) {
+        actor->mLaughRequest = 0;
         anm_init(actor, dRes_INDEX_FGANON_BCK_WARAU1_e, 6.0f, 2, 1.0f, -1);
-        actor->m68A = 60;
+        actor->mLaughTimer = 60;
         monsterSound(actor, 0x4941);
     }
-    actor->m384 = (s16)((s16)actor->m384 + 1);
+    actor->mFrameCounter = (s16)((s16)actor->mFrameCounter + 1);
     for (u32 i = 0; i < 5; ++i)
-        if (actor->m3A4[i] != 0)
-            actor->m3A4[i] = (s16)((s16)actor->m3A4[i] - 1);
-    if (actor->m68A != 0)
-        actor->m68A = (s8)((s8)actor->m68A - 1);
-    if (actor->m3AE != 0)
-        actor->m3AE = (s16)((s16)actor->m3AE - 1);
-    if (actor->m3B8 != 0)
-        actor->m3B8 = (s16)((s16)actor->m3B8 - 1);
+        if (actor->mTimers[i] != 0)
+            actor->mTimers[i] = (s16)((s16)actor->mTimers[i] - 1);
+    if (actor->mLaughTimer != 0)
+        actor->mLaughTimer = (s8)((s8)actor->mLaughTimer - 1);
+    if (actor->mNoDamageTimer != 0)
+        actor->mNoDamageTimer = (s16)((s16)actor->mNoDamageTimer - 1);
+    if (actor->mHitShakeTimer != 0)
+        actor->mHitShakeTimer = (s16)((s16)actor->mHitShakeTimer - 1);
     if ((u8)l_HIO.m05 == 0) {
         actor->attention_info.flags = (u32)(actor->mbIsMaterialized ? 4 : 0);
         if (move(actor) != 0) {
@@ -1678,13 +1678,13 @@ static void execute_model(fganon_class *actor) {
         fg_mDoExt_baseAnm_play((u32)actor->mpBrkAnm1.v);
         fg_mDoExt_baseAnm_play((u32)actor->mpBrkAnm2.v);
     }
-    s16 phase = actor->m384;
+    s16 phase = actor->mFrameCounter;
     s16 adjustment = regShort(6);
-    f32 amplitude = actor->m3BC;
+    f32 amplitude = actor->mSwayAmplitude;
     offset->x = angleSine(phase * (adjustment + 700)) * amplitude;
     offset->y = angleSine(phase * (adjustment + 1000)) * amplitude;
     offset->z = angleCosine(phase * (adjustment + 800)) * amplitude;
-    fg_cLib_addCalc0(gabi::ea(&actor->m3BC), 1.0f, 1.0f);
+    fg_cLib_addCalc0(gabi::ea(&actor->mSwayAmplitude), 1.0f, 1.0f);
     fg_cXyz___pl(gabi::ea(&actor->current.pos), gabi::ea(temporary.get()), gabi::ea(offset.get()));
     fg_cXyz___mi(gabi::ea(&actor->mHdPreviousPos), gabi::ea(delta.get()),
                  gabi::ea(temporary.get()));
@@ -1701,8 +1701,8 @@ static void execute_model(fganon_class *actor) {
     fg_cXyz___pl(gabi::ea(&actor->current.pos), gabi::ea(temporary.get()), gabi::ea(offset.get()));
     *&actor->mHdPreviousPos = *temporary.get();
     fg_PSMTXTrans(l_mtxStack, (f32)temporary->x, (f32)temporary->y, (f32)temporary->z);
-    phase = actor->m384;
-    f32 wobble = (f32)(s16)actor->m3B8 * (regFloat(14) + 500.0f);
+    phase = actor->mFrameCounter;
+    f32 wobble = (f32)(s16)actor->mHitShakeTimer * (regFloat(14) + 500.0f);
     s16 yaw =
         (s16)((s16)actor->shape_angle.y + (s16)gabi::ftoi(angleSine(phase * 0x2100) * wobble));
     s16 pitchWobble = (s16)gabi::ftoi(angleCosine(phase * 0x2300) * wobble);
@@ -1720,24 +1720,24 @@ static void execute_model(fganon_class *actor) {
     actor->attention_info.position.x = (f32)(eyeX);
     actor->attention_info.position.z = (f32)(eyeZ);
     actor->attention_info.position.y = (f32)(eyeY + 30.0f);
-    if (actor->m2D0 == 0) {
+    if (actor->mKenState == 0) {
         fg_PSMTXCopy(jointMatrix(morfModel(actor), 24), (u32)l_calcMtx);
         fg_mDoMtx_YrotM((u32)l_calcMtx, (s16)((s16)l_reg8.s[1] - 400));
         fg_mDoMtx_XrotM((u32)l_calcMtx, (s16)((s16)l_reg8.s[2] - 400));
         fg_mDoMtx_ZrotM((u32)l_calcMtx, (s16)((s16)l_reg8.s[3] + 0x8000));
         fg_MtxTrans(1, (f32)l_reg8.f[9], (f32)l_reg8.f[10], (f32)l_reg8.f[11] + 85.0f);
         fg_MtxTrans(1, regFloat(12), regFloat(13), regFloat(14) + 90.0f);
-        fg_mDoMtx_ZrotM((u32)l_calcMtx, (s16)actor->m6A0);
-        fg_mDoMtx_XrotM((u32)l_calcMtx, (s16)gabi::ftoi(actor->m694));
-        fg_mDoMtx_ZrotM((u32)l_calcMtx, (s16) - (s16)actor->m6A0);
+        fg_mDoMtx_ZrotM((u32)l_calcMtx, (s16)actor->mSwordFallDir);
+        fg_mDoMtx_XrotM((u32)l_calcMtx, (s16)gabi::ftoi(actor->mSwordFallAngle));
+        fg_mDoMtx_ZrotM((u32)l_calcMtx, (s16) - (s16)actor->mSwordFallDir);
         s16 rotation = 0;
-        if (actor->m6A6 != 0) {
-            s16 countdown = actor->m6A6;
+        if (actor->mSwordShakeTimer != 0) {
+            s16 countdown = actor->mSwordShakeTimer;
             f32 displacement = angleSine(countdown * (regShort(2) + 0x1800)) * (f32)countdown;
             rotation = (s16)gabi::ftoi(displacement * (regFloat(14) + 400.0f));
-            actor->m6A6 = (s16)(countdown - 1);
+            actor->mSwordShakeTimer = (s16)(countdown - 1);
         }
-        fg_mDoMtx_ZrotM((u32)l_calcMtx, (s16)((s16)actor->m6A2 + rotation));
+        fg_mDoMtx_ZrotM((u32)l_calcMtx, (s16)((s16)actor->mSwordTilt + rotation));
         fg_MtxTrans(1, -regFloat(12), -regFloat(13), -(regFloat(14) + 90.0f));
         copyMatrixStorage((u32)l_calcMtx, gabi::ea(&actor->mpKenModel->mBaseTransformMtx));
     }
@@ -1760,28 +1760,28 @@ static void aimEnergyBall(fganon_class *actor, cXyz *delta, cXyz *offset, bool i
         fg_sqrtf(gabi::fmadds((f32)delta->x, (f32)delta->x, (f32)delta->z * (f32)delta->z));
     s16 pitch = (short)fg_cM_atan2s((f32)delta->y, horizontal);
     fg_mDoMtx_XrotM(matrix, (s16)-pitch);
-    offset->z = initial ? (actor->m2BC == 0 ? (f32)l_HIO.m1C : (f32)l_HIO.m20) : (f32)actor->m404;
+    offset->z = initial ? (actor->mType == 0 ? (f32)l_HIO.m1C : (f32)l_HIO.m20) : (f32)actor->mBallSpeed;
     if (initial)
-        actor->m404 = offset->z;
-    fg_MtxPosition(gabi::ea(offset), gabi::ea(&actor->m3F8));
+        actor->mBallSpeed = offset->z;
+    fg_MtxPosition(gabi::ea(offset), gabi::ea(&actor->mBallVelocity));
 }
 static bool ball_bg_check(fganon_class *actor) {
     gabi::Local<dBgS_LinChk> line;
 
     dBgS_LinChk_ct(line.get(), l_lineCheckVtables, false);
     gabi::Local<cXyz> difference, scaled, temporary, end;
-    fg_cXyz___mi(gabi::ea(&actor->m3E0), gabi::ea(difference.get()), gabi::ea(&actor->m3EC));
+    fg_cXyz___mi(gabi::ea(&actor->mBallPos), gabi::ea(difference.get()), gabi::ea(&actor->mBallPosOld));
     fg_cXyz___ml(gabi::ea(difference.get()), gabi::ea(scaled.get()), 1.05f);
-    fg_cXyz___pl(gabi::ea(&actor->m3E0), gabi::ea(temporary.get()), gabi::ea(scaled.get()));
+    fg_cXyz___pl(gabi::ea(&actor->mBallPos), gabi::ea(temporary.get()), gabi::ea(scaled.get()));
     *end.get() = *temporary.get();
-    fg_dBgS_LinChk_Set(gabi::ea(line.get()), gabi::ea(&actor->m3E0), gabi::ea(end.get()),
+    fg_dBgS_LinChk_Set(gabi::ea(line.get()), gabi::ea(&actor->mBallPos), gabi::ea(end.get()),
                        gabi::ea(actor));
     u32 play = (unsigned int)fg_dComIfGp_getGameInfo();
     bool hit = (int)fg_cBgS_LineCross(gabi::ea(&fgView<dComIfG_inf_c>(play)->play.mBgS),
                                       gabi::ea(line.get())) != 0;
     if (hit)
         for (u32 i = 0; i < 3; ++i)
-            fgVectorWord(&actor->m3E0, i) = fgVectorWord(&line->mLin.mEnd, i);
+            fgVectorWord(&actor->mBallPos, i) = fgVectorWord(&line->mLin.mEnd, i);
     destroyMovementLine(line.get());
     return hit;
 }
@@ -1792,85 +1792,85 @@ static void energy_ball_move(fganon_class *actor) {
     offset->x = 0;
     offset->y = 0;
     offset->z = 0;
-    if (actor->m408 == 0)
+    if (actor->mBallState == 0)
         return;
 
     gabi::Local<FganonAttackInfo> info;
     info->pParticlePos = (u32)(0);
-    if (actor->m408 == 35) {
-        if (actor->m688 != 0) {
+    if (actor->mBallState == 35) {
+        if (actor->mRallyCount != 0) {
             fg_mDoAud_changeSubBgmStatus(8);
-            actor->m688 = 0;
+            actor->mRallyCount = 0;
         }
         invalidateEmitter(actor, 2);
         invalidateEmitter(actor, 3);
-        actor->m408 = 0;
+        actor->mBallState = 0;
         return;
     }
-    if (actor->m408 == 1) {
+    if (actor->mBallState == 1) {
         invalidateEmitter(actor, 2);
         invalidateEmitter(actor, 3);
         actor->mEmitters2[0].v = (u32)(createParticle(0x81CE, &actor->current.pos));
         actor->mEmitters2[1].v = (u32)(createParticle(0x81CF, &actor->current.pos));
-        actor->m408 = 2;
+        actor->mBallState = 2;
     }
-    if (actor->m408 == 2) {
+    if (actor->mBallState == 2) {
         fg_PSMTXCopy(jointMatrix(morfModel(actor), 14), (u32)l_calcMtx);
         fg_MtxTrans(1, (f32)l_reg12.f[0] + 30.0f, (f32)l_reg12.f[1] + 30.0f, (f32)l_reg12.f[2]);
-        fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(&actor->m3E0));
+        fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(&actor->mBallPos));
         for (u32 i = 0; i < 2; ++i)
             emitterMatrix((u32)actor->mEmitters2[i].v, (u32)l_calcMtx);
-        if (actor->m409 != 0) {
-            actor->m409 = 0;
-            actor->m408 = 3;
+        if (actor->mBallThrow != 0) {
+            actor->mBallThrow = 0;
+            actor->mBallState = 3;
             fg_cXyz___mi(gabi::ea(&fgView<fopAc_ac_c>(player)->eyePos), gabi::ea(temporary.get()),
-                         gabi::ea(&actor->m3E0));
+                         gabi::ea(&actor->mBallPos));
             *delta.get() = *temporary.get();
             delta->y = (f32)delta->y - (regFloat(18) + 50.0f);
             aimEnergyBall(actor, delta.get(), offset.get(), true);
-            actor->m40A = 5;
+            actor->mBallNoHitTimer = 5;
             fg_dCcD_GObjInf_ClrAtHit(gabi::ea(&actor->mBallAtSph));
         }
     }
-    if (actor->m408 >= 3) {
-        actor->m3EC = actor->m3E0;
-        fg_PSVECAdd(gabi::ea(&actor->m3E0), gabi::ea(&actor->m3F8), gabi::ea(&actor->m3E0));
-        fg_PSMTXTrans(l_mtxStack, (f32)actor->m3E0.x, (f32)actor->m3E0.y, (f32)actor->m3E0.z);
+    if (actor->mBallState >= 3) {
+        actor->mBallPosOld = actor->mBallPos;
+        fg_PSVECAdd(gabi::ea(&actor->mBallPos), gabi::ea(&actor->mBallVelocity), gabi::ea(&actor->mBallPos));
+        fg_PSMTXTrans(l_mtxStack, (f32)actor->mBallPos.x, (f32)actor->mBallPos.y, (f32)actor->mBallPos.z);
         for (u32 i = 0; i < 2; ++i)
             emitterMatrix((u32)actor->mEmitters2[i].v, l_mtxStack);
         bool sword = false, bottle = false, reflected = false;
-        fg_cXyz___mi(gabi::ea(&actor->eyePos), gabi::ea(temporary.get()), gabi::ea(&actor->m3E0));
+        fg_cXyz___mi(gabi::ea(&actor->eyePos), gabi::ea(temporary.get()), gabi::ea(&actor->mBallPos));
         *delta.get() = *temporary.get();
         delta->y = (f32)delta->y - 50.0f;
-        if (vectorLength(delta.get()) < (f32)actor->m404 + 200.0f + regFloat(3)) {
-            if (actor->m686 != 0)
+        if (vectorLength(delta.get()) < (f32)actor->mBallSpeed + 200.0f + regFloat(3)) {
+            if (actor->mBallSwing != 0)
                 sword = true;
-            else if (actor->m408 == 5) {
-                if (actor->m2BC != 2)
-                    actor->m68C = 1;
+            else if (actor->mBallState == 5) {
+                if (actor->mType != 2)
+                    actor->mBallHitSelf = 1;
                 else {
-                    if (actor->m40A != 0)
+                    if (actor->mBallNoHitTimer != 0)
                         return;
-                    actor->m40A = 50;
+                    actor->mBallNoHitTimer = 50;
                     actor->mAction = ACT_KIERU;
                     actor->mMode = 0;
                     return;
                 }
             }
         }
-        if (actor->m408 == 4) {
+        if (actor->mBallState == 4) {
             u32 vt = (u32)fgView<fopAc_ac_c>(player)->__vtbl;
             if (gabi::call_ptr<s32>((u32)fgView<FganonPlayerVirtuals>(vt)->checkBottleSwing,
                                     player)) {
                 fg_cXyz___mi(gabi::ea(&fgView<fopAc_ac_c>(player)->eyePos),
-                             gabi::ea(temporary.get()), gabi::ea(&actor->m3E0));
+                             gabi::ea(temporary.get()), gabi::ea(&actor->mBallPos));
                 *delta.get() = *temporary.get();
                 delta->y = (f32)delta->y - 30.0f;
                 bottle = vectorLength(delta.get()) < regFloat(2) + 100.0f;
             }
         }
         if (((int)fg_dCcD_GObjInf_ChkTgHit(gabi::ea(&actor->mBallTgSph)) || sword || bottle) &&
-            actor->m40A == 0) {
+            actor->mBallNoHitTimer == 0) {
             if ((int)fg_dCcD_GObjInf_ChkTgHit(gabi::ea(&actor->mBallTgSph))) {
                 info->mpObj =
                     (u32)((unsigned int)fg_dCcD_GObjInf_GetTgHitObj(gabi::ea(&actor->mBallTgSph)));
@@ -1888,17 +1888,17 @@ static void energy_ball_move(fganon_class *actor) {
             }
             if (masterSword || bottle) {
                 fg_cXyz___mi(gabi::ea(&actor->eyePos), gabi::ea(temporary.get()),
-                             gabi::ea(&actor->m3E0));
+                             gabi::ea(&actor->mBallPos));
                 *delta.get() = *temporary.get();
                 delta->y = (f32)delta->y - (regFloat(17) + 30.0f);
                 aimEnergyBall(actor, delta.get(), offset.get());
-                actor->m408 = 5;
+                actor->mBallState = 5;
                 l_pauseTimer = (u8)(2);
-                s32 status = (s8)actor->m688 + 2;
+                s32 status = (s8)actor->mRallyCount + 2;
                 if (status > 7)
                     status = 7;
                 fg_mDoAud_changeSubBgmStatus(status);
-                actor->m688 = (s8)((s8)actor->m688 + 1);
+                actor->mRallyCount = (s8)((s8)actor->mRallyCount + 1);
                 u32 soundPlayer = (u32)fgView<dComIfG_inf_c>(fg_dComIfGp_getGameInfo())
                                       ->play.mPlayerInfo[0]
                                       .mpPlayer.v;
@@ -1914,36 +1914,36 @@ static void energy_ball_move(fganon_class *actor) {
                 reflected = true;
             } else if (sword) {
                 fg_cXyz___mi(gabi::ea(&fgView<fopAc_ac_c>(player)->eyePos),
-                             gabi::ea(temporary.get()), gabi::ea(&actor->m3E0));
+                             gabi::ea(temporary.get()), gabi::ea(&actor->mBallPos));
                 *delta.get() = *temporary.get();
                 delta->y = (f32)delta->y - (regFloat(18) + 50.0f);
                 aimEnergyBall(actor, delta.get(), offset.get());
-                actor->m408 = 4;
+                actor->mBallState = 4;
                 reflected = true;
             }
             if (reflected) {
-                actor->m404 =
-                    (f32)actor->m404 + (actor->m2BC == 0 ? (f32)l_HIO.m24 : (f32)l_HIO.m28);
+                actor->mBallSpeed =
+                    (f32)actor->mBallSpeed + (actor->mType == 0 ? (f32)l_HIO.m24 : (f32)l_HIO.m28);
                 gabi::Local<csXyz> angles;
                 fg_csXyz_csXyz(gabi::ea(angles.get()), 0, 0, 0);
-                angles->y = (short)fg_cM_atan2s((f32)actor->m3F8.x, (f32)actor->m3F8.z);
-                createParticle(0x81F0, &actor->m3E0, angles.get());
+                angles->y = (short)fg_cM_atan2s((f32)actor->mBallVelocity.x, (f32)actor->mBallVelocity.z);
+                createParticle(0x81F0, &actor->mBallPos, angles.get());
                 s32 reverb = (int)fg_dComIfGp_getReverb((s8)actor->current.roomNo);
-                fg_mDoAud_seStart(0x28A5, gabi::ea(&actor->m3E0), 0, reverb);
-                fg_PSVECAdd(gabi::ea(&actor->m3E0), gabi::ea(&actor->m3F8), gabi::ea(&actor->m3E0));
-                actor->m40A = 5;
+                fg_mDoAud_seStart(0x28A5, gabi::ea(&actor->mBallPos), 0, reverb);
+                fg_PSVECAdd(gabi::ea(&actor->mBallPos), gabi::ea(&actor->mBallVelocity), gabi::ea(&actor->mBallPos));
+                actor->mBallNoHitTimer = 5;
             }
         }
-        *collisionPosition.get() = actor->m3E0;
-        if (actor->m40A != 0) {
-            actor->m40A = (s8)((s8)actor->m40A - 1);
+        *collisionPosition.get() = actor->mBallPos;
+        if (actor->mBallNoHitTimer != 0) {
+            actor->mBallNoHitTimer = (s8)((s8)actor->mBallNoHitTimer - 1);
             collisionPosition->x = -20000;
             collisionPosition->y = -20000;
             collisionPosition->z = 20000;
         }
-        if (actor->m408 == 3) {
+        if (actor->mBallState == 3) {
             fg_dCcD_Sph_StartCAt(gabi::ea(&actor->mBallAtSph), gabi::ea(collisionPosition.get()));
-            actor->m408 = 4;
+            actor->mBallState = 4;
         } else
             fg_dCcD_Sph_MoveCAt(gabi::ea(&actor->mBallAtSph), gabi::ea(collisionPosition.get()));
         fg_cM3dGSph_SetR(gabi::ea(&actor->mBallAtSph.mSph), regFloat(6) + 25.0f);
@@ -1955,27 +1955,27 @@ static void energy_ball_move(fganon_class *actor) {
         play = (unsigned int)fg_dComIfGp_getGameInfo();
         fg_cCcS_Set(gabi::ea(&fgView<dComIfG_inf_c>(play)->play.mCcS),
                     gabi::ea(&actor->mBallAtSph));
-        if (actor->m68C != 0 || ball_bg_check(actor) ||
+        if (actor->mBallHitSelf != 0 || ball_bg_check(actor) ||
             (int)fg_dCcD_GObjInf_ChkAtHit(gabi::ea(&actor->mBallAtSph))) {
-            if (actor->m688 != 0) {
+            if (actor->mRallyCount != 0) {
                 s32 status =
-                    actor->m68C != 0
+                    actor->mBallHitSelf != 0
                         ? 10
                         : ((int)fg_dCcD_GObjInf_ChkAtHit(gabi::ea(&actor->mBallAtSph)) ? 9 : 8);
                 fg_mDoAud_changeSubBgmStatus(status);
-                actor->m688 = 0;
+                actor->mRallyCount = 0;
             }
-            actor->m408 = 0;
+            actor->mBallState = 0;
             u32 emitter = (u32)actor->mEmitters2[0].v;
             if (emitter)
                 fgView<FganonEmitter>(emitter)->mGlobalAlpha = (u8)(0);
             invalidateEmitter(actor, 3);
             gabi::Local<csXyz> angles;
             fg_csXyz_csXyz(gabi::ea(angles.get()), 0, 0, 0);
-            createParticle(0x81EE, &actor->m3E0, angles.get());
-            createParticle(0x81EF, &actor->m3E0, angles.get());
+            createParticle(0x81EE, &actor->mBallPos, angles.get());
+            createParticle(0x81EF, &actor->mBallPos, angles.get());
             s32 reverb = (int)fg_dComIfGp_getReverb((s8)actor->current.roomNo);
-            fg_mDoAud_seStart(0x6A35, gabi::ea(&actor->m3E0), 100, reverb);
+            fg_mDoAud_seStart(0x6A35, gabi::ea(&actor->mBallPos), 100, reverb);
             if ((int)fg_dCcD_GObjInf_ChkAtHit(gabi::ea(&actor->mBallAtSph))) {
                 u32 hit = (unsigned int)fg_dCcD_GObjInf_GetAtHitObj(gabi::ea(&actor->mBallAtSph));
                 u32 status = hit ? (u32)fgView<dCcD_GObjInf>(hit)->mStts.v : 0;
@@ -1983,18 +1983,18 @@ static void energy_ball_move(fganon_class *actor) {
                 info->mpActor = (u32)(source);
                 if (source && (s16)fgView<fopAc_ac_c>(source)->mProcName == 0xA8 &&
                     actor->mAction != ACT_LAST_END) {
-                    actor->m68B = 1;
+                    actor->mLaughRequest = 1;
                     actor->mAction = ACT_FLY;
                     actor->mMode = 1;
-                    actor->m3A4[1] = (s16)gabi::ftoi(fg_cM_rndF(30.0f) + 70.0f);
+                    actor->mTimers[1] = (s16)gabi::ftoi(fg_cM_rndF(30.0f) + 70.0f);
                 }
             }
         }
     }
-    fg_cXyz___mi(gabi::ea(&actor->home.pos), gabi::ea(temporary.get()), gabi::ea(&actor->m3E0));
+    fg_cXyz___mi(gabi::ea(&actor->home.pos), gabi::ea(temporary.get()), gabi::ea(&actor->mBallPos));
     *delta.get() = *temporary.get();
     if (vectorLength(delta.get()) > 10000.0f)
-        actor->m408 = 35;
+        actor->mBallState = 35;
 }
 static void execute_collision(fganon_class *actor) {
     gabi::Local<cXyz> zero, center, weaponPosition;
@@ -2027,9 +2027,9 @@ static void execute_collision(fganon_class *actor) {
         fg_MtxPosition(gabi::ea(zero.get()), gabi::ea(center.get()));
         center->y = (f32)center->y - (regFloat(0) + 150.0f);
         u32 flags = (u32)actor->mCyl.mObjCo.mSPrm;
-        actor->mCyl.mObjCo.mSPrm = (u32)(actor->m68F ? flags & ~1u : flags | 1);
+        actor->mCyl.mObjCo.mSPrm = (u32)(actor->mCloneNo ? flags & ~1u : flags | 1);
     } else {
-        u8 hidden = actor->m68F;
+        u8 hidden = actor->mCloneNo;
         u32 flags = (u32)actor->mCyl.mObjCo.mSPrm;
         center->x = 20000;
         center->y = 20000;
@@ -2044,52 +2044,52 @@ static void execute_collision(fganon_class *actor) {
     weaponPosition->x = -10000;
     weaponPosition->y = -10000;
     weaponPosition->z = -10000;
-    if (actor->m685 != 0) {
+    if (actor->mWeponAtOn != 0) {
         fg_cM3dGSph_SetR(gabi::ea(&actor->mWeponSph.mSph), regFloat(13) + 60.0f);
         fg_PSMTXCopy(jointMatrix(morfModel(actor), 24), (u32)l_calcMtx);
         zero->x = 0;
         zero->y = 0;
         zero->z = 100;
         fg_MtxPosition(gabi::ea(zero.get()), gabi::ea(weaponPosition.get()));
-        s8 active = actor->m684;
-        actor->m685 = 0;
+        s8 active = actor->mWeponAtStarted;
+        actor->mWeponAtOn = 0;
         if (active == 0) {
             fg_dCcD_Sph_StartCAt(gabi::ea(&actor->mWeponSph), gabi::ea(weaponPosition.get()));
-            actor->m684 = 1;
+            actor->mWeponAtStarted = 1;
         } else
             fg_dCcD_Sph_MoveCAt(gabi::ea(&actor->mWeponSph), gabi::ea(weaponPosition.get()));
     } else {
-        actor->m684 = 0;
+        actor->mWeponAtStarted = 0;
         fg_cM3dGSph_SetC(gabi::ea(&actor->mWeponSph.mSph), gabi::ea(weaponPosition.get()));
     }
     play = (unsigned int)fg_dComIfGp_getGameInfo();
     fg_cCcS_Set(gabi::ea(&fgView<dComIfG_inf_c>(play)->play.mCcS), gabi::ea(&actor->mWeponSph));
     u32 capeID = actor->mCapeID;
-    actor->m686 = 0;
+    actor->mBallSwing = 0;
     u32 cape = (unsigned int)fg_fopAcM_SearchByID(capeID);
     if (cape) {
         fg_PSMTXCopy(jointMatrix(morfModel(actor), (s32)regShort(5) + 20), (u32)l_calcMtx);
         zero->x = regFloat(0) + 35.0f;
         zero->y = regFloat(1);
         zero->z = regFloat(2) - 30.0f;
-        fg_MtxPosition(gabi::ea(zero.get()), gabi::ea(&fgView<FganonCape>(cape)->m1BE0));
+        fg_MtxPosition(gabi::ea(zero.get()), gabi::ea(&fgView<FganonCape>(cape)->mShoulderPosR));
         fg_PSMTXCopy(jointMatrix(morfModel(actor), (s32)regShort(6) + 11), (u32)l_calcMtx);
         zero->x = regFloat(3) + 35.0f;
         zero->y = regFloat(4);
         zero->z = regFloat(5) + 30.0f;
-        fg_MtxPosition(gabi::ea(zero.get()), gabi::ea(&fgView<FganonCape>(cape)->m1BEC));
+        fg_MtxPosition(gabi::ea(zero.get()), gabi::ea(&fgView<FganonCape>(cape)->mShoulderPosL));
         for (u32 i = 0; i < 3; ++i)
             fgVectorWord(&fgView<fopAc_ac_c>(cape)->current.pos, i) =
                 fgVectorWord(&actor->eyePos, i);
         for (u32 i = 0; i < 3; ++i)
             fgAngleWord(&fgView<fopAc_ac_c>(cape)->current.angle, i) =
                 fgAngleWord(&actor->current.angle, i);
-        f32 target = actor->mbIsMaterialized != 0 && actor->m68E == 0 ? 1.0f : 0.0f;
+        f32 target = actor->mbIsMaterialized != 0 && actor->mCapeOff == 0 ? 1.0f : 0.0f;
         fg_cLib_addCalc2(gabi::ea(&fgView<fopAc_ac_c>(cape)->scale.y), target, 1.0f,
                          regFloat(8) + 0.1f);
     }
-    if (actor->m6AC != 0) {
-        actor->m6AC = (s8)((s8)actor->m6AC - 1);
+    if (actor->mBtAttackTimer != 0) {
+        actor->mBtAttackTimer = (s8)((s8)actor->mBtAttackTimer - 1);
         actor->mBtStartFrame = (f32)(0);
         actor->mBtEndFrame = (f32)(10);
         actor->mBtMaxDis = (f32)(10000);
@@ -2135,7 +2135,7 @@ static void cameraReset(fganon_class *actor, u32 camera) {
     u32 play = (unsigned int)fg_dComIfGp_getGameInfo();
     fgView<dComIfG_inf_c>(play)->play.mEvtCtrl.mEventFlag =
         (u16)((u16)fgView<dComIfG_inf_c>(play)->play.mEvtCtrl.mEventFlag | 8);
-    actor->mB54 = 0;
+    actor->mDemoCamMode = 0;
 }
 static void demo_camera(fganon_class *actor) {
     u32 player =
@@ -2146,7 +2146,7 @@ static void demo_camera(fganon_class *actor) {
                      ->play.mCameraInfo[(s32)cameraId]
                      .mpCamera;
     gabi::Local<cXyz> offset, transformed, temporary;
-    s16 mode = actor->mB54;
+    s16 mode = actor->mDemoCamMode;
     switch (mode) {
     case 1:
     case 50:
@@ -2156,12 +2156,12 @@ static void demo_camera(fganon_class *actor) {
             actor->eventInfo.mCondition = (u16)((u16)actor->eventInfo.mCondition | 2);
             return;
         }
-        actor->mB54 = (s16)(mode + 1);
+        actor->mDemoCamMode = (s16)(mode + 1);
         fg_dCamera_c_Stop(gabi::ea(&fgView<FganonCameraView>(camera)->mBody));
         fg_dCamera_c_SetTrimSize(gabi::ea(&fgView<FganonCameraView>(camera)->mBody), 2);
-        actor->mB56 = 0;
-        actor->mB84 = mode == 50 ? 55.0f : 60.0f;
-        actor->mB80 = 0;
+        actor->mDemoTimer = 0;
+        actor->mDemoCamFovy = mode == 50 ? 55.0f : 60.0f;
+        actor->mDemoCamSpeed = 0;
         if (mode == 1) {
             fgView<FganonPlayerDemo>(player)->mDemoParam = (u32)(0);
             fgView<FganonPlayerDemo>(player)->mDemoMode = (u32)(0x18);
@@ -2176,10 +2176,10 @@ static void demo_camera(fganon_class *actor) {
                                      ->play.mCameraInfo[0]
                                      .mpCamera;
                 for (u32 i = 0; i < 3; ++i)
-                    fgVectorWord(&actor->mB5C, i) =
+                    fgVectorWord(&actor->mDemoCamEye, i) =
                         fgVectorWord(&fgView<FganonCameraView>(mainCamera)->mEye, i);
                 for (u32 i = 0; i < 3; ++i)
-                    fgVectorWord(&actor->mB68, i) =
+                    fgVectorWord(&actor->mDemoCamCenter, i) =
                         fgVectorWord(&fgView<FganonCameraView>(mainCamera)->mCenter, i);
                 u32 play = (unsigned int)fg_dComIfGp_getGameInfo();
                 actor->shape_angle.y = (s16)((short)fg_fopAcM_searchActorAngleY(
@@ -2194,13 +2194,13 @@ static void demo_camera(fganon_class *actor) {
     case 2:
         setVector(transformed.get(), -300306.0f, 715.0f, -303407.0f);
         playerPosition(player, transformed.get(), -0x7BCD);
-        setVector(&actor->mB68, -300319.0f, 812.0f, -303342.0f);
-        setVector(&actor->mB5C, -300440.0f, 787.0f, -303137.0f);
-        if (actor->mB56 == 2)
+        setVector(&actor->mDemoCamCenter, -300319.0f, 812.0f, -303342.0f);
+        setVector(&actor->mDemoCamEye, -300440.0f, 787.0f, -303137.0f);
+        if (actor->mDemoTimer == 2)
             cameraLaugh(actor);
-        if (actor->mB56 == 30)
+        if (actor->mDemoTimer == 30)
             fgView<FganonPlayerDemo>(player)->mDemoMode = (u32)(0x35);
-        if (actor->mB56 == 45) {
+        if (actor->mDemoTimer == 45) {
             initBrk(&actor->mpBrkAnm1, morfModel(actor), gabi::ea(l_archiveDemo),
                     dRes_INDEX_FGANON_BRK_DERU_MAIN2_e);
             initBrk(&actor->mpBrkAnm2, (u32)actor->mpKenModel.v, gabi::ea(l_archiveDemo),
@@ -2208,38 +2208,38 @@ static void demo_camera(fganon_class *actor) {
             sound(actor, 0x594E);
             actor->mbIsMaterialized = 1;
         }
-        if (actor->mB56 != 47)
+        if (actor->mDemoTimer != 47)
             break;
-        actor->mB54 = 3;
-        actor->mB56 = 0;
+        actor->mDemoCamMode = 3;
+        actor->mDemoTimer = 0;
         setVector(&actor->current.pos, reg8Float(0) - 300294.0f, reg8Float(1) + 745.0f,
                   reg8Float(2) - 303109.0f);
-        setVector(&actor->mB5C, reg8Float(3) - 300169.0f, reg8Float(4) + 770.0f,
+        setVector(&actor->mDemoCamEye, reg8Float(3) - 300169.0f, reg8Float(4) + 770.0f,
                   reg8Float(5) - 303635.0f);
-        actor->mB68 = *&actor->current.pos;
-        actor->mB68.y = (f32)actor->mB68.y + (regFloat(0) + 160.0f);
+        actor->mDemoCamCenter = *&actor->current.pos;
+        actor->mDemoCamCenter.y = (f32)actor->mDemoCamCenter.y + (regFloat(0) + 160.0f);
         [[fallthrough]];
     case 3:
-        if (actor->mB56 > 60) {
-            fg_cLib_addCalc2(gabi::ea(&actor->mB5C.x), -300269.0f, 0.1f, 100.0f * (f32)actor->mB80);
-            fg_cLib_addCalc2(gabi::ea(&actor->mB5C.y), 870.0f, 0.1f, 100.0f * (f32)actor->mB80);
-            fg_cLib_addCalc2(gabi::ea(&actor->mB5C.z), -303335.0f, 0.1f, 300.0f * (f32)actor->mB80);
-            actor->mB68.x = (f32)actor->current.pos.x;
-            actor->mB68.z = (f32)actor->current.pos.z;
-            fg_cLib_addCalc2(gabi::ea(&actor->mB68.y), (f32)actor->current.pos.y + 215.0f, 0.1f,
-                             55.0f * (f32)actor->mB80);
-            fg_cLib_addCalc2(gabi::ea(&actor->mB80), 0.1f, 1.0f, reg8Float(7) + 0.01f);
-            if (actor->mB56 == 110)
+        if (actor->mDemoTimer > 60) {
+            fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamEye.x), -300269.0f, 0.1f, 100.0f * (f32)actor->mDemoCamSpeed);
+            fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamEye.y), 870.0f, 0.1f, 100.0f * (f32)actor->mDemoCamSpeed);
+            fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamEye.z), -303335.0f, 0.1f, 300.0f * (f32)actor->mDemoCamSpeed);
+            actor->mDemoCamCenter.x = (f32)actor->current.pos.x;
+            actor->mDemoCamCenter.z = (f32)actor->current.pos.z;
+            fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamCenter.y), (f32)actor->current.pos.y + 215.0f, 0.1f,
+                             55.0f * (f32)actor->mDemoCamSpeed);
+            fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamSpeed), 0.1f, 1.0f, reg8Float(7) + 0.01f);
+            if (actor->mDemoTimer == 110)
                 actor->mMode = 2;
-            if (actor->mB56 == 180)
+            if (actor->mDemoTimer == 180)
                 actor->mMode = 4;
-            if (actor->mB56 == 280) {
+            if (actor->mDemoTimer == 280) {
                 actor->mAction = ACT_SHOT;
                 actor->mMode = 1;
-                actor->m3A4[0] = 29;
-                actor->mB54 = 150;
-                if (actor->m2BF != 0xFF)
-                    cameraSwitch(actor, actor->m2BF, true);
+                actor->mTimers[0] = 29;
+                actor->mDemoCamMode = 150;
+                if (actor->mBattleSwitchNo != 0xFF)
+                    cameraSwitch(actor, actor->mBattleSwitchNo, true);
             }
         }
         break;
@@ -2250,20 +2250,20 @@ static void demo_camera(fganon_class *actor) {
         fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(transformed.get()));
         fg_cXyz___pl(gabi::ea(&actor->current.pos), gabi::ea(temporary.get()),
                      gabi::ea(transformed.get()));
-        actor->mB5C = *temporary.get();
+        actor->mDemoCamEye = *temporary.get();
         setVector(offset.get(), regFloat(3), 0, regFloat(5) + 280.0f);
         fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(transformed.get()));
         fg_PSVECAdd(gabi::ea(transformed.get()), gabi::ea(&actor->current.pos),
                     gabi::ea(transformed.get()));
         transformed->y = 715;
         playerPosition(player, transformed.get(), -0x8000);
-        actor->mB68 = *&actor->eyePos;
-        actor->mB68.y = (f32)actor->mB68.y + (regFloat(6) - 40.0f);
-        if (actor->mB56 > 150) {
-            setVector(&actor->mB68, -299898.0f, 1188.0f, -301158.0f);
-            setVector(&actor->mB5C, -299703.0f, 921.0f, -300851.0f);
-            actor->mB54 = (s16)((s16)actor->mB54 + 1);
-            actor->mB56 = 0;
+        actor->mDemoCamCenter = *&actor->eyePos;
+        actor->mDemoCamCenter.y = (f32)actor->mDemoCamCenter.y + (regFloat(6) - 40.0f);
+        if (actor->mDemoTimer > 150) {
+            setVector(&actor->mDemoCamCenter, -299898.0f, 1188.0f, -301158.0f);
+            setVector(&actor->mDemoCamEye, -299703.0f, 921.0f, -300851.0f);
+            actor->mDemoCamMode = (s16)((s16)actor->mDemoCamMode + 1);
+            actor->mDemoTimer = 0;
             fgView<FganonPlayerDemo>(player)->mDemoMode = (u32)(0x1A);
         }
         break;
@@ -2271,69 +2271,69 @@ static void demo_camera(fganon_class *actor) {
         setVector(transformed.get(), -300202.0f, (f32)fgView<fopAc_ac_c>(player)->current.pos.y,
                   -301859.0f);
         playerPosition(player, transformed.get(), 0);
-        if (actor->mB56 == 10)
+        if (actor->mDemoTimer == 10)
             actor->mMode = (s16)((s16)actor->mMode + 1);
-        actor->current.pos.x = (f32)((f32)actor->mB68.x - 50.0f + regFloat(4));
-        actor->current.pos.y = (f32)((f32)actor->mB68.y + regFloat(5));
-        actor->current.pos.z = (f32)((f32)actor->mB68.z - 100.0f + regFloat(6));
+        actor->current.pos.x = (f32)((f32)actor->mDemoCamCenter.x - 50.0f + regFloat(4));
+        actor->current.pos.y = (f32)((f32)actor->mDemoCamCenter.y + regFloat(5));
+        actor->current.pos.z = (f32)((f32)actor->mDemoCamCenter.z - 100.0f + regFloat(6));
         actor->shape_angle.y = (s16)(regShort(0) + 2000);
-        if (actor->mB56 == 40) {
-            actor->mB54 = (s16)((s16)actor->mB54 + 1);
-            actor->mB56 = 0;
+        if (actor->mDemoTimer == 40) {
+            actor->mDemoCamMode = (s16)((s16)actor->mDemoCamMode + 1);
+            actor->mDemoTimer = 0;
         }
         break;
     case 53:
-        setVector(&actor->mB68, -300098.0f, 580.0f, -301997.0f);
-        setVector(&actor->mB5C, -300274.0f, 929.0f, -301770.0f);
-        if (actor->mB56 != 30)
+        setVector(&actor->mDemoCamCenter, -300098.0f, 580.0f, -301997.0f);
+        setVector(&actor->mDemoCamEye, -300274.0f, 929.0f, -301770.0f);
+        if (actor->mDemoTimer != 30)
             break;
-        setVector(&actor->mB5C, -299703.0f, 921.0f, -300851.0f);
-        actor->mB54 = (s16)((s16)actor->mB54 + 1);
-        actor->mB56 = 0;
+        setVector(&actor->mDemoCamEye, -299703.0f, 921.0f, -300851.0f);
+        actor->mDemoCamMode = (s16)((s16)actor->mDemoCamMode + 1);
+        actor->mDemoTimer = 0;
         actor->speed.y = (f32)(0);
-        actor->mB68 = *&actor->eyePos;
-        actor->mB68.y = (f32)actor->mB68.y - (regFloat(11) + 30.0f);
+        actor->mDemoCamCenter = *&actor->eyePos;
+        actor->mDemoCamCenter.y = (f32)actor->mDemoCamCenter.y - (regFloat(11) + 30.0f);
         actor->mMode = (s16)((s16)actor->mMode + 1);
         [[fallthrough]];
     case 54:
-        fg_cLib_addCalc2(gabi::ea(&actor->mB68.y), (f32)actor->eyePos.y - 30.0f + regFloat(11),
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamCenter.y), (f32)actor->eyePos.y - 30.0f + regFloat(11),
                          0.1f, 20.0f);
-        if (actor->mB56 != 100)
+        if (actor->mDemoTimer != 100)
             break;
-        actor->mB54 = 55;
+        actor->mDemoCamMode = 55;
         fgView<FganonPlayerDemo>(player)->mDemoMode = (u32)(0xF);
-        actor->mB56 = 0;
+        actor->mDemoTimer = 0;
         [[fallthrough]];
     case 55:
-        if (actor->mB56 == 20)
+        if (actor->mDemoTimer == 20)
             cameraLaugh(actor);
         for (u32 i = 0; i < 3; ++i)
-            fgVectorWord(&actor->mB68, i) =
+            fgVectorWord(&actor->mDemoCamCenter, i) =
                 fgVectorWord(&fgView<fopAc_ac_c>(player)->current.pos, i);
-        actor->mB68.y = (f32)actor->mB68.y + reg8Float(3);
+        actor->mDemoCamCenter.y = (f32)actor->mDemoCamCenter.y + reg8Float(3);
         setVector(offset.get(), 0, reg8Float(4) + 1500.0f, reg8Float(5) + 2000.0f);
         fg_mDoMtx_YrotS((u32)l_calcMtx, (s16)((s16)fgView<fopAc_ac_c>(player)->shape_angle.y +
-                                              (s16)actor->mB76 + reg8Short(5)));
+                                              (s16)actor->mDemoCamAngleY + reg8Short(5)));
         fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(transformed.get()));
-        actor->mB76 = (s16)((s16)actor->mB76 + reg8Short(6) + 30);
+        actor->mDemoCamAngleY = (s16)((s16)actor->mDemoCamAngleY + reg8Short(6) + 30);
         fg_cXyz___pl(gabi::ea(&fgView<fopAc_ac_c>(player)->current.pos), gabi::ea(temporary.get()),
                      gabi::ea(transformed.get()));
-        actor->mB5C = *temporary.get();
-        if (actor->mB56 == 130) {
+        actor->mDemoCamEye = *temporary.get();
+        if (actor->mDemoTimer == 130) {
             if (actor->mSwitchNo != 0xFF)
                 cameraSwitch(actor, actor->mSwitchNo, true);
-            if (actor->m2BF != 0xFF)
-                cameraSwitch(actor, actor->m2BF, false);
-            actor->mB54 = 150;
+            if (actor->mBattleSwitchNo != 0xFF)
+                cameraSwitch(actor, actor->mBattleSwitchNo, false);
+            actor->mDemoCamMode = 150;
             fopAcM_delete(actor);
             cameraReset(actor, camera);
             return;
         }
         break;
     case 101: {
-        fg_cLib_addCalc2(gabi::ea(&actor->mB68.x), (f32)actor->current.pos.x, 0.1f, 200.0f);
-        fg_cLib_addCalc2(gabi::ea(&actor->mB68.y), (f32)actor->eyePos.y - 50.0f, 0.1f, 200.0f);
-        fg_cLib_addCalc2(gabi::ea(&actor->mB68.z), (f32)actor->current.pos.z, 0.1f, 200.0f);
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamCenter.x), (f32)actor->current.pos.x, 0.1f, 200.0f);
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamCenter.y), (f32)actor->eyePos.y - 50.0f, 0.1f, 200.0f);
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamCenter.z), (f32)actor->current.pos.z, 0.1f, 200.0f);
         fg_mDoMtx_YrotS((u32)l_calcMtx, (s16)actor->shape_angle.y);
         setVector(offset.get(), 0, reg8Float(0) - 100.0f, reg8Float(1) + 400.0f);
         fg_MtxPosition(gabi::ea(offset.get()), gabi::ea(transformed.get()));
@@ -2341,7 +2341,7 @@ static void demo_camera(fganon_class *actor) {
                     gabi::ea(transformed.get()));
         gabi::Local<dBgS_LinChk> line;
         dBgS_LinChk_ct(line.get(), l_lineCheckVtables, false);
-        fg_dBgS_LinChk_Set(gabi::ea(line.get()), gabi::ea(&actor->mB68),
+        fg_dBgS_LinChk_Set(gabi::ea(line.get()), gabi::ea(&actor->mDemoCamCenter),
                            gabi::ea(transformed.get()), gabi::ea(actor));
         u32 play = (unsigned int)fg_dComIfGp_getGameInfo();
         if ((int)fg_cBgS_LineCross(gabi::ea(&fgView<dComIfG_inf_c>(play)->play.mBgS),
@@ -2351,23 +2351,23 @@ static void demo_camera(fganon_class *actor) {
             transformed->z = (f32)line->mLin.mEnd.z;
         }
         destroyMovementLine(line.get());
-        fg_cLib_addCalc2(gabi::ea(&actor->mB5C.x), (f32)transformed->x, 0.1f,
-                         50.0f * (f32)actor->mB80);
-        fg_cLib_addCalc2(gabi::ea(&actor->mB5C.y), (f32)transformed->y, 0.1f,
-                         50.0f * (f32)actor->mB80);
-        fg_cLib_addCalc2(gabi::ea(&actor->mB5C.z), (f32)transformed->z, 0.1f,
-                         50.0f * (f32)actor->mB80);
-        fg_cLib_addCalc2(gabi::ea(&actor->mB80), 1.0f, 1.0f, reg8Float(7) + 0.1f);
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamEye.x), (f32)transformed->x, 0.1f,
+                         50.0f * (f32)actor->mDemoCamSpeed);
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamEye.y), (f32)transformed->y, 0.1f,
+                         50.0f * (f32)actor->mDemoCamSpeed);
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamEye.z), (f32)transformed->z, 0.1f,
+                         50.0f * (f32)actor->mDemoCamSpeed);
+        fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamSpeed), 1.0f, 1.0f, reg8Float(7) + 0.1f);
         break;
     }
     case 103:
-        if (actor->mB56 > regShort(2) + 8)
-            fg_cLib_addCalc2(gabi::ea(&actor->mB68.y),
+        if (actor->mDemoTimer > regShort(2) + 8)
+            fg_cLib_addCalc2(gabi::ea(&actor->mDemoCamCenter.y),
                              (f32)fgView<fopAc_ac_c>(player)->current.pos.y + regFloat(9), 0.8f,
                              regFloat(10) + 30.0f);
-        if (actor->mB56 <= regShort(3) + 80)
+        if (actor->mDemoTimer <= regShort(3) + 80)
             break;
-        actor->mB54 = 150;
+        actor->mDemoCamMode = 150;
         fopAcM_delete(actor);
         if (regShort(3) == 0)
             cameraSwitch(actor, actor->mSwitchNo, true);
@@ -2376,14 +2376,14 @@ static void demo_camera(fganon_class *actor) {
         cameraReset(actor, camera);
         return;
     }
-    if (actor->mB54 != 0) {
+    if (actor->mDemoCamMode != 0) {
         gabi::Local<cXyz> center, eye;
-        *center.get() = actor->mB68;
-        *eye.get() = actor->mB5C;
+        *center.get() = actor->mDemoCamCenter;
+        *eye.get() = actor->mDemoCamEye;
         fg_dCamera_c_Set(gabi::ea(&fgView<FganonCameraView>(camera)->mBody), gabi::ea(center.get()),
-                         gabi::ea(eye.get()), (f32)actor->mB84, 0);
-        fg_JUTReport(410, 430, gabi::ea(l_subCountFormat), (s16)actor->mB56);
-        actor->mB56 = (s16)((s16)actor->mB56 + 1);
+                         gabi::ea(eye.get()), (f32)actor->mDemoCamFovy, 0);
+        fg_JUTReport(410, 430, gabi::ea(l_subCountFormat), (s16)actor->mDemoTimer);
+        actor->mDemoTimer = (s16)((s16)actor->mDemoTimer + 1);
     }
 }
 /* 02134B28 */
@@ -2400,7 +2400,7 @@ void pos_move(fganon_class *actor, u8 direct) {
     gabi::Local<cXyz> delta;
     if (direct == 0) {
         gabi::Local<cXyz> result;
-        fg_cXyz___mi(gabi::ea(&actor->m38C), gabi::ea(result.get()), gabi::ea(&actor->current.pos));
+        fg_cXyz___mi(gabi::ea(&actor->mTargetPos), gabi::ea(result.get()), gabi::ea(&actor->current.pos));
         delta->x = result->x;
         delta->y = result->y;
         delta->z = result->z;
@@ -2408,15 +2408,15 @@ void pos_move(fganon_class *actor, u8 direct) {
         f32 z = delta->z, x = delta->x;
         f32 horizontal = fg_sqrtf(gabi::fmadds(x, x, z * z));
         s16 pitch = (s16)(-(short)fg_cM_atan2s((f32)delta->y, horizontal));
-        f32 max = (f32)actor->m39C * (f32)actor->m3A0;
+        f32 max = (f32)actor->mTurnSpeed * (f32)actor->mTurnSpeedRate;
         s16 scale = (s16)((s16)l_reg0.s[3] + 5);
         fg_cLib_addCalcAngleS2(gabi::ea(&actor->current.angle.y), yaw, scale, (s16)gabi::ftoi(max));
-        max = (f32)actor->m39C * (f32)actor->m3A0;
+        max = (f32)actor->mTurnSpeed * (f32)actor->mTurnSpeedRate;
         scale = (s16)((s16)l_reg0.s[3] + 5);
         fg_cLib_addCalcAngleS2(gabi::ea(&actor->current.angle.x), pitch, scale,
                                (s16)gabi::ftoi(max));
     }
-    fg_cLib_addCalc2(gabi::ea(&actor->m3A0), 1.0f, 1.0f, 0.05f);
+    fg_cLib_addCalc2(gabi::ea(&actor->mTurnSpeedRate), 1.0f, 1.0f, 0.05f);
     delta->y = 0.0f;
     delta->x = 0.0f;
     delta->z = (f32)actor->speedF;
@@ -2463,19 +2463,19 @@ BOOL daFganon_IsDelete(fganon_class *actor) {
 
 /* 02137810 */
 BOOL daFganon_Delete(fganon_class *actor) {
-    if ((u8)actor->mB8A != 0) {
+    if ((u8)actor->mResLoadState != 0) {
         fg_dComIfG_resDelete(gabi::ea(&actor->mPhs2),
                              gabi::ea(fgView<const char>(gabi::ea(l_archiveSwordDelete))));
-        if ((u8)actor->mB8A != 1)
+        if ((u8)actor->mResLoadState != 1)
             fg_dComIfG_resDelete(gabi::ea(&actor->mPhs1),
                                  gabi::ea(fgView<const char>(gabi::ea(l_archiveDelete))));
     }
-    if ((u8)actor->mB88 != 0) {
+    if ((u8)actor->mHioOwner != 0) {
         s8 child = (s8)l_HIO.mNo;
         hio_set = (u8)(0);
         fg_mDoHIO_subRoot_c_deleteChild(child);
     }
-    fg_JAIZelBasic_seDeleteObject(gabi::ea(&actor->m3E0.x));
+    fg_JAIZelBasic_seDeleteObject(gabi::ea(&actor->mBallPos.x));
     u32 capeId = (u32)actor->mCapeID;
     if (capeId != 0xFFFF) {
         gabi::Local<be<u32>> id;
@@ -2485,7 +2485,7 @@ BOOL daFganon_Delete(fganon_class *actor) {
             cape = fgView<void>(fg_fopAcIt_Judge(l_judgeById, gabi::ea(id.get())));
         fg_fopAcM_delete(gabi::ea(cape));
     }
-    if ((s8)actor->mB89 != 0)
+    if ((s8)actor->mBgmStartTimer != 0)
         fg_mDoAud_subBgmStop();
     for (u32 offset = 2; offset < 6; ++offset) {
         u32 emitter = (u32)fgEmitterAt(actor, offset).v;
@@ -2684,31 +2684,31 @@ cPhs_State daFganon_Create(fopAc_ac_c *base) {
             return cPhs_ERROR_e;
         }
     }
-    actor->mB8A = (u8)(1);
+    actor->mResLoadState = (u8)(1);
     cPhs_State result = (int)fg_dComIfG_resLoad(
         gabi::ea(&actor->mPhs2), gabi::ea(fgView<const char>(gabi::ea(l_archiveSwordCreate))));
     if (result != cPhs_COMPLEATE_e)
         return result;
-    actor->mB8A = (u8)(2);
+    actor->mResLoadState = (u8)(2);
     result = (int)fg_dComIfG_resLoad(gabi::ea(&actor->mPhs1),
                                      gabi::ea(fgView<const char>(gabi::ea(l_archiveCreate))));
     if (result != cPhs_COMPLEATE_e)
         return result;
     u32 params = (u32)actor->mParameters;
-    actor->m2BC = (u8)(params & 15);
-    actor->m2BD = (u8)((u8)(params >> 8));
+    actor->mType = (u8)(params & 15);
+    actor->mStartDist = (u8)((u8)(params >> 8));
     actor->mSwitchNo = (u8)((u8)(params >> 16));
-    actor->m2BF = (u8)((u8)(params >> 24));
+    actor->mBattleSwitchNo = (u8)((u8)(params >> 24));
     if ((params & 15) == 3)
-        actor->m68F = (u8)((u8)(((u32)actor->mParameters >> 4) & 15));
+        actor->mCloneNo = (u8)((u8)(((u32)actor->mParameters >> 4) & 15));
     if (!(int)fg_fopAcM_entrySolidHeap(gabi::ea(actor), l_useHeapInit, 0x96000))
         return cPhs_ERROR_e;
     actor->attention_info.flags = (u32)(4);
     actor->attention_info.distances[2] = (u8)(4);
     if ((u8)hio_set == 0) {
-        actor->mB88 = (u8)(1);
+        actor->mHioOwner = (u8)(1);
         hio_set = (u8)(1);
-        u8 variant = (u8)actor->m2BC;
+        u8 variant = (u8)actor->mType;
         u32 label = variant == 2   ? gabi::ea(l_hioLabel1)
                     : variant == 1 ? gabi::ea(l_hioLabel2)
                                    : gabi::ea(l_hioLabel3);
@@ -2734,18 +2734,18 @@ cPhs_State daFganon_Create(fopAc_ac_c *base) {
     fg_dCcD_Sph_Set(gabi::ea(&actor->mBallAtSph), gabi::ea(l_ballAtSphSrc));
     actor->mBallAtSph.mStts.v = (u32)(status);
     fg_dCcD_Sph_Set(gabi::ea(&actor->mWeponSph), gabi::ea(l_weponSphSrc));
-    u8 copy = (u8)actor->m68F;
+    u8 copy = (u8)actor->mCloneNo;
     actor->mWeponSph.mStts.v = (u32)(status);
     if (copy == 0) {
         master = (u32)(gabi::ea(actor));
-        if ((u8)actor->m2BC == 0) {
+        if ((u8)actor->mType == 0) {
             actor->mMode = (s16)(0);
             actor->mAction = ACT_START;
             kieru_brk(actor, 0);
             f32 y = (f32)actor->current.pos.y;
             actor->health = (u8)(30);
             actor->max_health = (u8)(30);
-            actor->m690 = (s8)(10);
+            actor->mDownHealth = (s8)(10);
             actor->current.pos.y = (f32)(y + 10000);
         } else {
             f32 y = (f32)actor->current.pos.y;

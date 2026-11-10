@@ -1,5 +1,6 @@
 // This unit's own copies of the sead pointer-buffer storage, erase and heap-sort methods (render pointer arrays).
 #include "agl/RenderInputCollections.h"
+#include "sead/ElementAt.h"
 using namespace agl::render;
 /* 027D78FC */
 void agl::render::RenderPointerArray::adoptStorage(s32 capacity,be<u32>* storage) {
@@ -41,33 +42,35 @@ void agl::render::RenderPointerArray::eraseRange(s32 first,s32 length) {
     mCount = (u32)count - (u32)length;
 }
 // Moves `held` down from the 1-based heap position `hole` of the first `count` entries (max-heap under `compare`).
+// guest EA arithmetic for the heap slots: wraps at 32 bits as on the console
+static inline be<u32>& slotAt(be<u32>* storage,s32 index) { return sead::elementAt<be<u32>>(gabi::ea(storage),(u32)index); }
 static void siftRenderPointers(be<u32>* storage,s32 count,s32 hole,u32 held,u32 compare) {
     s32 child = hole * 2;
     while (child <= count) {
         if (child < count) {
-            u32 right = storage[child];
-            u32 left = storage[child - 1];
+            u32 right = slotAt(storage,child);
+            u32 left = slotAt(storage,child - 1);
             if (gabi::call_ptr<s32>(compare,left,right) < 0) ++child;
         }
-        u32 candidate = storage[child - 1];
+        u32 candidate = slotAt(storage,child - 1);
         if (gabi::call_ptr<s32>(compare,held,candidate) >= 0) break;
-        storage[hole - 1] = storage[child - 1];
+        slotAt(storage,hole - 1) = slotAt(storage,child - 1);
         hole = child;
         child = hole * 2;
     }
-    storage[hole - 1] = held;
+    slotAt(storage,hole - 1) = held;
 }
 /* 027D7A4C */
 void agl::render::RenderPointerArray::sort(u32 compare) {
     gabi::AutoFrame frame{gabi::current_function()};
     s32 count = mCount;
     be<u32>* storage = entries();
-    for (s32 root = count / 2; root > 0; --root) siftRenderPointers(storage,count,root,storage[root - 1],compare);
+    for (s32 root = count / 2; root > 0; --root) siftRenderPointers(storage,count,root,slotAt(storage,root - 1),compare);
     while (count > 1) {
-        u32 first = storage[0];
+        u32 first = slotAt(storage,0);
         --count;
-        u32 held = storage[count];
-        storage[count] = first;
+        u32 held = slotAt(storage,count);
+        slotAt(storage,count) = first;
         siftRenderPointers(storage,count,1,held,compare);
     }
 }

@@ -69,10 +69,10 @@ s32 daNpcPeople_c::executeKyoroInit() {
 
     gabi::Local<gptr<fopAc_ac_c>> mailbox;
     if (ugSearchByName(fpcNm_OBJ_TORIPOST_e, mailbox.get()) == true && mailbox->get() != nullptr) {
-        calcDisXZAngY(&current.pos, &mailbox->get()->current.pos, nullptr, &m77A);
+        calcDisXZAngY(&current.pos, &mailbox->get()->current.pos, nullptr, &mTargetAngleY);
     }
-    m79D = 0;
-    m79E = 0;
+    mBodyTurn = 0;
+    mLookAtPlayer = 0;
     mEtcFlag = mEtcFlag & ~0x00000008;
     setAnmTbl(l_npc_anm_kyoro, 1);
     return peopleUgHD::MODE_KYORO;
@@ -84,25 +84,25 @@ void daNpcPeople_c::executeKyoro() {
     if (executeCommon() == false) {
         if (mAnmFlag & 1) {
             mEtcFlag = mEtcFlag | 8;
-            if (m78A || m789) {
-                m79D = 1;
-                m79E = 1;
+            if (m78A || mInAttention) {
+                mBodyTurn = 1;
+                mLookAtPlayer = 1;
                 executeSetMode(peopleUgHD::MODE_WAIT);
             } else {
                 executeSetMode(peopleUgHD::MODE_TURN);
             }
         }
     } else {
-        m79D = 1;
-        m79E = 1;
+        mBodyTurn = 1;
+        mLookAtPlayer = 1;
     }
 }
 
 /* 022C4F54 */
 s32 daNpcPeople_c::executeLetterInit() {
 
-    m79D = 0;
-    m79E = 0;
+    mBodyTurn = 0;
+    mLookAtPlayer = 0;
     setAnmTbl(l_npc_anm_letter, 1);
     mEtcFlag = mEtcFlag & ~0x00400000;
     return peopleUgHD::MODE_LETTER;
@@ -118,30 +118,30 @@ void daNpcPeople_c::executeLetter() {
             mEtcFlag = mEtcFlag & ~0x1;
         } else {
             mEtcFlag = mEtcFlag | 1;
-            m7A6 = 1;
+            mPsoNo = 1;
         }
         if (mAnmFlag & 1) {
             mEtcFlag = mEtcFlag | 0x400002;
             mEtcFlag = mEtcFlag & ~0x8;
-            m79D = 1;
-            m79E = 1;
+            mBodyTurn = 1;
+            mLookAtPlayer = 1;
             mPathRun.mbDir = mPathRun.mbDir ^ 1; /* turnDir() */
             executeSetMode(peopleUgHD::MODE_KYORO);
         }
     } else {
         mEtcFlag = mEtcFlag | 1;
-        m79D = 1;
-        m79E = 1;
+        mBodyTurn = 1;
+        mLookAtPlayer = 1;
     }
 }
 
 /* 022C509C */
 s32 daNpcPeople_c::executeLookInit() {
 
-    m76E = 0x5A; // HD: 90 frames (GameCube 0x3C)
-    m748 = 0.0f;
-    m79D = 0;
-    m79E = 0;
+    mWaitTimer = 0x5A; // HD: 90 frames (GameCube 0x3C)
+    mMaxAttnDistXZ = 0.0f;
+    mBodyTurn = 0;
+    mLookAtPlayer = 0;
     setAnmTbl(l_npc_anm_wait, 1);
     daNpcPeople_c* actor = (daNpcPeople_c*)ugSearchFromName(l_npc_staff_id[NPC_UW2], 0, 0);
     if (actor != nullptr) {
@@ -157,31 +157,31 @@ void daNpcPeople_c::executeLook() {
         daNpcPeople_c* pActor = (daNpcPeople_c*)ugSearchFromName(l_npc_staff_id[NPC_UW2], 0, 0);
         if (pActor) {
             mLookAtPos.copy(pActor->eyePos);
-            m799 = 1;
-            m764 = true;
+            mLookMode = 1;
+            mLookHeadOnly = true;
             pActor->setEtcFlag(0x10);
         }
-        m76E = m76E - 1;
-        if (m76E == 0) {
-            m748 = mpNpcDat->field_0x28;
-            m79D = 1;
-            m79E = 1;
+        mWaitTimer = mWaitTimer - 1;
+        if (mWaitTimer == 0) {
+            mMaxAttnDistXZ = mpNpcDat->mMaxAttnDistXZ;
+            mBodyTurn = 1;
+            mLookAtPlayer = 1;
             executeSetMode(peopleUgHD::MODE_TURN);
         }
-        m7A6 = 4;
+        mPsoNo = 4;
     } else {
-        m748 = mpNpcDat->field_0x28;
-        m79D = 1;
-        m79E = 1;
+        mMaxAttnDistXZ = mpNpcDat->mMaxAttnDistXZ;
+        mBodyTurn = 1;
+        mLookAtPlayer = 1;
     }
 }
 
 /* 022C5208 */
 s32 daNpcPeople_c::executeLook2Init() {
 
-    m748 = 0.0f;
-    m79D = 0;
-    m79E = 0;
+    mMaxAttnDistXZ = 0.0f;
+    mBodyTurn = 0;
+    mLookAtPlayer = 0;
     setAnmTbl(l_npc_anm_wait, 1);
     mEtcFlag = mEtcFlag | 0x20;
     return peopleUgHD::MODE_LOOK2;
@@ -195,21 +195,21 @@ void daNpcPeople_c::executeLook2() {
             fopAc_ac_c* pActor = ugSearchFromName(l_npc_staff_id[NPC_UM2], 0, 0);
             if (pActor) {
                 mLookAtPos.copy(pActor->eyePos);
-                m799 = 1;
-                m764 = true;
+                mLookMode = 1;
+                mLookHeadOnly = true;
             }
         } else {
-            m748 = mpNpcDat->field_0x28;
-            m79D = 1;
-            m79E = 1;
+            mMaxAttnDistXZ = mpNpcDat->mMaxAttnDistXZ;
+            mBodyTurn = 1;
+            mLookAtPlayer = 1;
             mEtcFlag = mEtcFlag & ~0x20;
             executeSetMode(peopleUgHD::MODE_WAIT);
         }
-        m7A6 = 3;
+        mPsoNo = 3;
     } else {
-        m748 = mpNpcDat->field_0x28;
-        m79D = 1;
-        m79E = 1;
+        mMaxAttnDistXZ = mpNpcDat->mMaxAttnDistXZ;
+        mBodyTurn = 1;
+        mLookAtPlayer = 1;
         mEtcFlag = mEtcFlag & ~0x20;
     }
     mEtcFlag = mEtcFlag & ~0x10;
@@ -344,18 +344,18 @@ void daNpcPeople_c::executeUgWalk() {
         } else if (temp4 > f3) {
             temp4 = f3;
         }
-        f32 f48 = mpNpcDat->field_0x48;
-        m740 = (10.0f - f48) * temp4 / f3 + f48;
+        f32 f48 = mpNpcDat->mWalkSpeed;
+        mTargetSpeed = (10.0f - f48) * temp4 / f3 + f48;
         gabi::Local<be<s16>> angle;
         calcDisXZAngY(&current.pos, &m71C, nullptr, angle.get());
         s16 a = *angle;
-        m764 = false;
-        m77A = a;
-        m786 = a;
-        f32 num = (f32)(s32)mpNpcDat->field_0x3A * m740;
+        mLookHeadOnly = false;
+        mTargetAngleY = a;
+        mLookAngleY = a;
+        f32 num = (f32)(s32)mpNpcDat->mWalkHeadTurnVel * mTargetSpeed;
         m_jnt.mbTrn = 1; /* setTrn() */
-        m799 = 2;
-        m782 = (s16)gabi::ftoi(num / mpNpcDat->field_0x48);
+        mLookMode = 2;
+        mLookMaxVelTarget = (s16)gabi::ftoi(num / mpNpcDat->mWalkSpeed);
     }
 }
 
@@ -398,10 +398,10 @@ void daNpcPeople_c::executeUgTurn() {
         gabi::Local<be<s16>> temp;
         calcDisXZAngY(&current.pos, &m71C, nullptr, temp.get());
         s16 t = *temp;
-        m799 = 2;
-        m764 = false;
+        mLookMode = 2;
+        mLookHeadOnly = false;
         m_jnt.mbTrn = 1; /* setTrn() */
-        m786 = t;
+        mLookAngleY = t;
         if (current.angle.y == t) {
             executeSetMode(peopleUgHD::MODE_UG_WALK);
         }
@@ -411,7 +411,7 @@ void daNpcPeople_c::executeUgTurn() {
 /* 022C5DFC */
 s32 daNpcPeople_c::executeUgLookInit() {
 
-    m76E = 0x78;
+    mWaitTimer = 0x78;
     setAnmTbl(l_npc_anm_wait, 1);
     daNpcPeople_c* actor = (daNpcPeople_c*)ugSearchFromName(l_npc_staff_id[NPC_UG2], 0, 0);
     if (actor != nullptr) {
@@ -427,11 +427,11 @@ void daNpcPeople_c::executeUgLook() {
         fopAc_ac_c* pActor = ugSearchFromName(l_npc_staff_id[NPC_UG2], 0, 0);
         if (pActor) {
             mLookAtPos.copy(pActor->eyePos);
-            m799 = 1;
-            m764 = false;
+            mLookMode = 1;
+            mLookHeadOnly = false;
         }
-        m76E = m76E - 1;
-        if (m76E == 0) {
+        mWaitTimer = mWaitTimer - 1;
+        if (mWaitTimer == 0) {
             executeSetMode(peopleUgHD::MODE_UG_TURN);
         }
     }
@@ -440,7 +440,7 @@ void daNpcPeople_c::executeUgLook() {
 /* 022C5EF4 */
 s32 daNpcPeople_c::executeUgLook2Init() {
 
-    m76E = 0x78;
+    mWaitTimer = 0x78;
     setAnmTbl(l_npc_anm_wait, 1);
     mEtcFlag = mEtcFlag & ~0x00004000;
     return peopleUgHD::MODE_UG_LOOK2;
@@ -453,11 +453,11 @@ void daNpcPeople_c::executeUgLook2() {
         fopAc_ac_c* pActor = ugSearchFromName(l_npc_staff_id[NPC_UG1], 0, 0);
         if (pActor) {
             mLookAtPos.copy(pActor->eyePos);
-            m799 = 1;
-            m764 = false;
+            mLookMode = 1;
+            mLookHeadOnly = false;
         }
-        m76E = m76E - 1;
-        if (m76E == 0) {
+        mWaitTimer = mWaitTimer - 1;
+        if (mWaitTimer == 0) {
             executeSetMode(peopleUgHD::MODE_UG_TURN);
         }
     }
@@ -468,8 +468,8 @@ void daNpcPeople_c::executeUgLook2() {
 s32 daNpcPeople_c::executeUgSitInit() {
 
     setAnmTbl(l_npc_anm_sit_ug, 1);
-    m79D = 0;
-    m79E = 0;
+    mBodyTurn = 0;
+    mLookAtPlayer = 0;
     mEtcFlag = mEtcFlag | 0x00080000;
     return peopleUgHD::MODE_UG_SIT;
 }
@@ -479,15 +479,15 @@ void daNpcPeople_c::executeUgSit() {
 
     if (!executeCommon()) {
         if (mAnmFlag & 1) {
-            m79D = 1;
-            m79E = 1;
+            mBodyTurn = 1;
+            mLookAtPlayer = 1;
             mEtcFlag = mEtcFlag & ~0x00080000;
             setAnmTbl(l_npc_anm_wait, 1);
             executeSetMode(peopleUgHD::MODE_UG_TURN);
         }
     } else {
-        m79D = 1;
-        m79E = 1;
+        mBodyTurn = 1;
+        mLookAtPlayer = 1;
     }
 }
 /* WWHD glue

@@ -58,8 +58,8 @@ struct dr_class : fopAc_ac_c {
     /* 0x3D6 */ be<s16> mCountDownTimers[3];
     /* 0x3DC */ be<s32> mCurrBckIdx;
     /* 0x3E0 */ gptr<JPABaseEmitter> mpBreathEmitter;
-    /* 0x3E4 */ be<s8> m2C8;
-    /* 0x3E5 */ be<s8> m2C9;
+    /* 0x3E4 */ be<s8> mBikuRequest;  /* was m2C8: move (in daDr_Execute 0212A00C): when not 0 (or idle with l_HIO m0C / a quake) it is cleared and mMode 10 starts the flinch (BCK DR_BIKU1); nothing in d_a_dr sets it */
+    /* 0x3E5 */ be<s8> mBikuDone;  /* was m2C9: move (in daDr_Execute 0212A00C): 0 when the flinch (mMode 10, DR_BIKU1) starts, 1 once its animation stopped; while 0, frame 15 sets mCountDownTimers[1] = 5 */
     /* 0x3E6 */ u8 m2CA[2];
 };
 WWHD_OFFSET(dr_class, mPhs, 0x3C8);

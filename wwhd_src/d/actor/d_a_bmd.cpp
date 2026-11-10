@@ -28,11 +28,11 @@ static BOOL core_nodeCallBack(J3DNode* node, int calcTiming) {
         if (i_this != nullptr && jntNo != BKM_COA_JNT_KUBI1_e && jntNo != BKM_COA_JNT_SITAAGO_e) {
             PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
             if (jntNo < BKM_COA_JNT_TOSAKA1_e) {
-                cMtx_XrotM(calc_mtx(), i_this->m90C[0].x);
-                cMtx_ZrotM(calc_mtx(), i_this->m90C[0].z);
+                cMtx_XrotM(calc_mtx(), i_this->mCoreSway[0].x);
+                cMtx_ZrotM(calc_mtx(), i_this->mCoreSway[0].z);
             } else {
-                cMtx_XrotM(calc_mtx(), i_this->m90C[1].x);
-                cMtx_ZrotM(calc_mtx(), i_this->m90C[1].z);
+                cMtx_XrotM(calc_mtx(), i_this->mCoreSway[1].x);
+                cMtx_ZrotM(calc_mtx(), i_this->mCoreSway[1].z);
             }
             model->setAnmMtx(jntNo, calc_mtx());
             PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
@@ -45,13 +45,13 @@ static BOOL core_nodeCallBack(J3DNode* node, int calcTiming) {
 /* mk_draw inlined. HD: no simple shadow; the snap picture includes Makar */
 static BOOL daBmd_Draw(bmd_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    s16 blur = i_this->mB72;
+    s16 blur = i_this->mBlurRate;
     if (blur >= 1) {
         if (blur > 1) {
             mDoGph_getState()->mBlureRate = (u8)blur;
             mDoGph_gInf_c::onBlure();
         } else {
-            i_this->mB72 = 0;
+            i_this->mBlurRate = 0;
             mDoGph_getState()->mBlureFlag = 0;
         }
     }
@@ -59,26 +59,26 @@ static BOOL daBmd_Draw(bmd_class* i_this) {
     J3DModel* model = i_this->mpBodyMorf->getModel();
     dScnKy_env_light_c* env = dKy_getEnvlight();
     setLightTevColorType(env, model, &actor->tevStr);
-    if (i_this->mB70 != 0) {
+    if (i_this->mBodyTexAnmOn != 0) {
         mDoExt_baseAnm* brk = i_this->mpBrkAnm;
         ((mDoExt_brkAnm*)brk)->entry(model->getModelData(), brk->getFrame());
         mDoExt_baseAnm* btk = i_this->mpBtkAnm;
         ((mDoExt_btkAnm*)btk)->entry(model->getModelData(), btk->getFrame());
     }
     i_this->mpBodyMorf->entryDL();
-    if (i_this->m306 < 100) {
+    if (i_this->mCoreMode < 100) {
         J3DModel* m = i_this->mpHeadMorf->getModel();
         env = dKy_getEnvlight();
         setLightTevColorType(env, m, &actor->tevStr);
         i_this->mpHeadMorf->entryDL();
-    } else if (i_this->m306 < 0x6E) {
+    } else if (i_this->mCoreMode < 0x6E) {
         J3DModel* m = i_this->mpHeadDeadMorf->getModel();
         env = dKy_getEnvlight();
         setLightTevColorType(env, m, &actor->tevStr);
         i_this->mpHeadDeadMorf->entryDL();
     }
     /* mk_draw */
-    if (i_this->m2DC != 0) {
+    if (i_this->mMakarMode != 0) {
         mDoExt_McaMorf* body = i_this->mpBodyMorf;
         env = dKy_getEnvlight();
         setLightTevColorType(env, body->getModel(), &actor->tevStr);
@@ -114,17 +114,17 @@ static BOOL daBmd_Draw(bmd_class* i_this) {
         ((mDoExt_brkAnm*)brk)->entry(ef->getModelData(), brk->getFrame());
     }
     mDoExt_modelUpdateDL(i_this->mpR00_EFModel, 0);
-    if (i_this->m2DC != 0) {
+    if (i_this->mMakarMode != 0) {
         /* HD: the picture is taken at Makar */
         J3DModel* mk = (J3DModel*)i_this->mpMakarMorf->getModel();
         s32 jnt = i_this->mMakarSnapJnt;
         gabi::Local<Mtx34> mtx;
         PSMTXCopy(mk->getAnmMtx(jnt), mtx);
         gabi::Local<cXyz> pos;
-        pos->x = i_this->m2E0.x;
-        pos->z = i_this->m2E0.z;
+        pos->x = i_this->mMakarPos.x;
+        pos->z = i_this->mMakarPos.z;
         pos->y = mtx->m[1][3] - 20.0f;
-        dSnap_RegistFig(0x9C, actor, pos, i_this->m2FA, 1.0f, 1.0f, 1.0f);
+        dSnap_RegistFig(0x9C, actor, pos, i_this->mMakarAngleY, 1.0f, 1.0f, 1.0f);
     } else {
         dSnap_RegistFig(DSNAP_TYPE_BMD, actor, 1.0f, 1.0f, 1.0f);
     }
@@ -156,35 +156,35 @@ void move1(bmd_class* i_this) {
     local_28->z = actor->speedF;
     MtxPosition(local_28, &actor->speed);
     PSVECAdd(&actor->current.pos, &actor->speed, &actor->current.pos); /* current.pos += speed */
-    cLib_addCalc2(&i_this->m324, cM_ssin(i_this->m2FE * 400) * 20.0f, 0.1f, 10.0f);
-    cLib_addCalcAngleS2(&actor->shape_angle.x, (s16)gabi::ftoi(cM_ssin(i_this->m2FE * 500) * 700.0f), 0x10,
+    cLib_addCalc2(&i_this->mBobHeight, cM_ssin(i_this->mFrameCounter * 400) * 20.0f, 0.1f, 10.0f);
+    cLib_addCalcAngleS2(&actor->shape_angle.x, (s16)gabi::ftoi(cM_ssin(i_this->mFrameCounter * 500) * 700.0f), 0x10,
                         0x80);
-    cLib_addCalcAngleS2(&actor->shape_angle.z, (s16)gabi::ftoi(cM_scos(i_this->m2FE * 300) * 700.0f), 0x10,
+    cLib_addCalcAngleS2(&actor->shape_angle.z, (s16)gabi::ftoi(cM_scos(i_this->mFrameCounter * 300) * 700.0f), 0x10,
                         0x80);
 }
 
 /* 020AEA40 */
 void mk_voice_set(bmd_class* i_this, u32 param_2) {
     s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(i_this));
-    mDoAudioApi::monsSeStart(param_2, &i_this->m2E0, 0, reverb);
+    mDoAudioApi::monsSeStart(param_2, &i_this->mMakarPos, 0, reverb);
 }
 
 /* 020AEA94 */
-/* HD: Link standing on the flower while it is closed (m304 == 0) hides the core
- * (m314 = 20) */
+/* HD: Link standing on the flower while it is closed (mFlowerState == 0) hides the core
+ * (mBgOffTimer = 20) */
 static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
     bmd_class* i_this = (bmd_class*)i_ac;
-    if (i_this->m304 == 3 && !dScnPly_isPause()) {
+    if (i_this->mFlowerState == 3 && !dScnPly_isPause()) {
         cLib_addCalc2(&i_pt->current.pos.x, i_ac->current.pos.x, 1.0f, REG0_F(2) + 400.0f);
         cLib_addCalc2(&i_pt->current.pos.y, i_ac->current.pos.y, 1.0f, REG0_F(2) + 400.0f);
         cLib_addCalc2(&i_pt->current.pos.z, i_ac->current.pos.z, 1.0f, REG0_F(2) + 400.0f);
         i_pt->old.pos.copy(i_pt->current.pos);
         if (i_pt != nullptr && fpcM_GetName(i_pt) == 0xA8 /* fpcNm_PLAYER_e */) {
-            i_this->m942 = 5;
+            i_this->mRideCaught = 5;
         }
     }
-    if (i_this->m304 == 0 && i_pt != nullptr && fpcM_GetName(i_pt) == 0xA8 /* fpcNm_PLAYER_e */) {
-        i_this->m314 = 20;
+    if (i_this->mFlowerState == 0 && i_pt != nullptr && fpcM_GetName(i_pt) == 0xA8 /* fpcNm_PLAYER_e */) {
+        i_this->mBgOffTimer = 20;
     }
 }
 
@@ -209,7 +209,7 @@ static BOOL daBmd_Delete(bmd_class* i_this) {
         i_this->mSmokeCb[i].remove();
     }
     dKyw_pntwind_cut(&i_this->mWindInfluence);
-    mDoAud_seDeleteObject(&i_this->m2E0);
+    mDoAud_seDeleteObject(&i_this->mMakarPos);
     return TRUE;
 }
 
@@ -277,7 +277,7 @@ static BOOL useHeapInit(bmd_class* i_this) {
         return FALSE;
     {
         cBgD_t* dzb = (cBgD_t*)dComIfG_getObjectRes(arc, dRes_INDEX_BMD_DZB_COLL1_e, SAFESTRING_VTBL);
-        cBgW_Set(i_this->pm_bgw[5], dzb, cBgW_MOVE_BG_e, &i_this->mA34);
+        cBgW_Set(i_this->pm_bgw[5], dzb, cBgW_MOVE_BG_e, &i_this->mBodyBgMtx);
     }
     ((BmdBackgroundView*)(dBgW*)i_this->pm_bgw[5])->SetCrrFunc(dBgS_MoveBGProc_Typical);
     ((BmdBackgroundView*)(dBgW*)i_this->pm_bgw[5])->SetRideCallback(ride_call_back);
@@ -288,7 +288,7 @@ static BOOL useHeapInit(bmd_class* i_this) {
         if (i_this->pm_bgw[i] == nullptr)
             return FALSE;
         cBgD_t* dzb = (cBgD_t*)dComIfG_getObjectRes(arc, dRes_INDEX_BMD_DZB_COLL2_e, SAFESTRING_VTBL);
-        cBgW_Set(i_this->pm_bgw[i], dzb, cBgW_MOVE_BG_e, &i_this->m944[i]);
+        cBgW_Set(i_this->pm_bgw[i], dzb, cBgW_MOVE_BG_e, &i_this->mPetalBgMtx[i]);
         ((BmdBackgroundView*)(dBgW*)i_this->pm_bgw[i])->SetCrrFunc(dBgS_MoveBGProc_Typical);
         ((BmdBackgroundView*)(dBgW*)i_this->pm_bgw[i])->SetRideCallback(ride_call_back);
     }
@@ -374,7 +374,7 @@ static cPhs_State daBmd_Create(fopAc_ac_c* a_this) {
     f32 y = a_this->home.pos.y + (REG0_F(2) + 20.0f);
     a_this->current.pos.y = y;
     a_this->home.pos.y = y;
-    i_this->m328 = y;
+    i_this->mGroundY = y;
     i_this->mAcch.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &i_this->mAcchCir, &a_this->speed);
     i_this->mAcchCir.SetWall(500.0f, 1000.0f);
     i_this->mStts.Init(0xFF, 0, a_this);
@@ -384,19 +384,19 @@ static cPhs_State daBmd_Create(fopAc_ac_c* a_this) {
     i_this->mCoreSph.Set(gabi::at<dCcD_SrcSph>(0x10191A44) /* core_sph_src */);
     i_this->mCoCyl.SetStts(&i_this->mStts);
     i_this->mCoCyl.Set(gabi::at<dCcD_SrcCyl>(0x10191A84) /* co_cyl_src */);
-    i_this->m308[2] = 200;
+    i_this->mTimers[2] = 200;
     if (!dComIfGs_isStageBossDemo() /* isStageBossDemo */ && bmd_startStageName0() != 'X') {
         dComIfGs_offTmpBit(0x480 /* dSv_event_tmp_flag_c::UNK_0480 */);
         i_this->mMode = 10;
-        i_this->mBE0 = 1;
-        i_this->mBDC = 1.0f;
+        i_this->mKankyoMode = 1;
+        i_this->mColBlend = 1.0f;
     } else {
         if (bmd_startStageName0() == 'X') {
             mDoAudioApi::bgmStart(JA_BGM_PAST_BKM);
         } else {
             mDoAudioApi::bgmStart(JA_BGM_KINDAN_BOSS);
         }
-        i_this->mB71 = 1;
+        i_this->mCamTypeMode = 1;
     }
     dKyw_pntwind_set(&i_this->mWindInfluence);
     a_this->attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 4;

@@ -71,15 +71,15 @@ static void ride_call_back(dBgW *i_arg0, fopAc_ac_c *i_arg1,
   daObj_Stair_c *i_this = (daObj_Stair_c *)i_arg1;
   // HD: profile checks tolerate a null actor.
   if (i_arg2 != nullptr && (s16)i_arg2->mProfName == fpcNm_PLAYER_e &&
-      i_this->field_0x2E0 < l_HIO.m18) {
-    i_this->field_0x2E4 = 1;
+      i_this->mBreakTimer < l_HIO.m18) {
+    i_this->mBreaking = 1;
     cXyz d;
     d = i_arg2->current.pos - i_arg1->current.pos;
-    i_this->field_0x2C8.copy(d);
-    i_this->field_0x2D4.x = 0.0f;
-    i_this->field_0x2EC = 1.0f;
-    i_this->field_0x2D4.y = -1.0f;
-    i_this->field_0x2D4.z = 0.0f;
+    i_this->mHitOffset.copy(d);
+    i_this->mBreakDir.x = 0.0f;
+    i_this->mBreakPower = 1.0f;
+    i_this->mBreakDir.y = -1.0f;
+    i_this->mBreakDir.z = 0.0f;
   }
 }
 
@@ -105,14 +105,14 @@ BOOL daObj_Stair_c::Create() {
 /* 02391328 */
 BOOL daObj_Stair_c::Execute(Mtx34 **mtx) {
   Quaternion quat;
-  mDoMtx_quatMultiply(&field_0x4A0, &field_0x4B0, &quat);
-  copyQuaternionWords(&field_0x4A0, &quat);
+  mDoMtx_quatMultiply(&mRot, &mRotSpeed, &quat);
+  copyQuaternionWords(&mRot, &quat);
 
   mpModel->setBaseScale(scale);
-  mDoMtx_stack_c::transS(current.pos.x, current.pos.y + field_0x2E8,
+  mDoMtx_stack_c::transS(current.pos.x, current.pos.y + mShakeY,
                          current.pos.z);
-  mDoMtx_stack_c::quatM(&field_0x4A0);
-  if (field_0x2E4 == 1) {
+  mDoMtx_stack_c::quatM(&mRot);
+  if (mBreaking == 1) {
     cXyz temp;
     temp.set(0.0f, 0.0f, 0.0f);
     f32 r = cM_rndFX(175.0f);
@@ -122,8 +122,8 @@ BOOL daObj_Stair_c::Execute(Mtx34 **mtx) {
     PSMTXMultVec(mDoMtx_stack_c::get(), &temp, &field_0x4C0);
   }
   mpModel->setBaseTRMtx(mDoMtx_stack_c::get());
-  PSMTXCopy(mDoMtx_stack_c::get(), &field_0x2FC);
-  *reinterpret_cast<gptr<Mtx34> *>(mtx) = &field_0x2FC;
+  PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
+  *reinterpret_cast<gptr<Mtx34> *>(mtx) = &mMtx;
   return TRUE;
 }
 
@@ -176,16 +176,16 @@ cPhs_State daObj_Stair_c::_create() {
           "d_a_obj_stair.cpp", 0x113,
           "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)");
 
-    field_0x4A0.x = f29;
-    field_0x4A0.y = sn;
-    field_0x4A0.z = f29;
-    field_0x4A0.w = cs;
-    auto *words = reinterpret_cast<StairQuaternionWordsHD *>(&field_0x4B0);
+    mRot.x = f29;
+    mRot.y = sn;
+    mRot.z = f29;
+    mRot.w = cs;
+    auto *words = reinterpret_cast<StairQuaternionWordsHD *>(&mRotSpeed);
     words->mWords[0] = q0;
     words->mWords[1] = q1;
     words->mWords[2] = q2;
     words->mWords[3] = q3;
-    field_0x2E0 = 0;
+    mBreakTimer = 0;
 
     reinterpret_cast<StairBackgroundHD *>(mpBgW.get())
         ->SetRideCallback(ride_call_back);
@@ -206,8 +206,8 @@ cPhs_State daObj_Stair_c::_create() {
     end.x = ex;
     end.z = ez;
     stairSetCapsuleStartEnd(&mCps.mCapsule, &start, &end);
-    field_0x2E8 = 0.0f;
-    field_0x2EC = 0.0f;
+    mShakeY = 0.0f;
+    mBreakPower = 0.0f;
     mCps.mCapsule.mRadius = 50.0f;
   }
   return phase_state;
@@ -225,56 +225,56 @@ bool daObj_Stair_c::_delete() {
 
 /* 02390AC4 */
 bool daObj_Stair_c::_execute() {
-  if (field_0x2E4 == 1) {
-    if (field_0x2E0 == l_HIO.m18) {
+  if (mBreaking == 1) {
+    if (mBreakTimer == l_HIO.m18) {
       cXyz temp;
-      temp = field_0x2C8.normZP();
+      temp = mHitOffset.normZP();
       cXyz op;
-      op = temp.outprod(field_0x2D4);
+      op = temp.outprod(mBreakDir);
       cXyz temp2;
       temp2.copy(op);
 
       if (stairAbs(&temp2) > 8e-11f) {
         cXyz temp3;
         temp3 = temp2.normZP();
-        f32 len = stairAbs(&field_0x2C8);
-        f32 f2EC = field_0x2EC;
+        f32 len = stairAbs(&mHitOffset);
+        f32 f2EC = mBreakPower;
         f32 temp4 = l_HIO.m10 * 0.5f * len * 0.01f * f2EC;
         s16 ang = (s16)gabi::ftoi(temp4 * 182.04444885253906f); /* DEG2S */
         f32 sn = cM_ssin(ang);
         f32 cs = cM_scos(ang);
 
-        field_0x4B0.w = cs;
-        field_0x4B0.y = sn * temp3.y;
-        field_0x4B0.x = sn * temp3.x;
-        field_0x4B0.z = sn * temp3.z;
+        mRotSpeed.w = cs;
+        mRotSpeed.y = sn * temp3.y;
+        mRotSpeed.x = sn * temp3.x;
+        mRotSpeed.z = sn * temp3.z;
 
-        speed.x = l_HIO.m14 * cs * f2EC * field_0x2D4.x;
-        speed.y = l_HIO.m14 * cs * f2EC * field_0x2D4.y;
-        speed.z = l_HIO.m14 * cs * field_0x2EC * field_0x2D4.z;
+        speed.x = l_HIO.m14 * cs * f2EC * mBreakDir.x;
+        speed.y = l_HIO.m14 * cs * f2EC * mBreakDir.y;
+        speed.z = l_HIO.m14 * cs * mBreakPower * mBreakDir.z;
       } else {
-        field_0x4B0.y = 0.0f;
-        field_0x4B0.z = 0.0f;
-        field_0x4B0.x = 0.0f;
-        field_0x4B0.w = 1.0f;
+        mRotSpeed.y = 0.0f;
+        mRotSpeed.z = 0.0f;
+        mRotSpeed.x = 0.0f;
+        mRotSpeed.w = 1.0f;
 
-        f32 f2EC = field_0x2EC;
-        speed.x = f2EC * l_HIO.m14 * field_0x2D4.x;
-        speed.y = f2EC * l_HIO.m14 * field_0x2D4.y;
-        speed.z = f2EC * l_HIO.m14 * field_0x2D4.z;
+        f32 f2EC = mBreakPower;
+        speed.x = f2EC * l_HIO.m14 * mBreakDir.x;
+        speed.y = f2EC * l_HIO.m14 * mBreakDir.y;
+        speed.z = f2EC * l_HIO.m14 * mBreakDir.z;
       }
       /* fopAcM_seStart(this, JA_SE_OBJ_BREAK_STEPS, 0) */
       s32 reverb = dComIfGp_getReverb(current.roomNo);
       mDoAud_seStart(JA_SE_OBJ_BREAK_STEPS, &eyePos, 0, reverb);
     }
 
-    field_0x2E0 = field_0x2E0 + 1;
+    mBreakTimer = mBreakTimer + 1;
 
-    if (field_0x2E0 > l_HIO.m18) {
+    if (mBreakTimer > l_HIO.m18) {
       cLib_addCalc2(&speed.y, l_HIO.m0C, 0.5f, l_HIO.m08);
       current.pos.y = current.pos.y + speed.y;
     }
-    if (field_0x2E0 > l_HIO.m18 + 0xF0) {
+    if (mBreakTimer > l_HIO.m18 + 0xF0) {
       fopAcM_delete(this);
     }
   } else {
@@ -288,69 +288,69 @@ bool daObj_Stair_c::_execute() {
             (s16)ac->mProfName == fpcNm_BOMB_e) {
           f32 sn = cM_ssin(current.angle.y);
           f32 cs = cM_scos(current.angle.y);
-          field_0x2E4 = 1;
+          mBreaking = 1;
           cXyz d;
           d = ac->current.pos - current.pos;
-          field_0x2C8.copy(d);
+          mHitOffset.copy(d);
           d = current.pos - ac->current.pos;
           cXyz temp4;
           cXyz temp5;
           temp4.set(cs, 0.0f, -sn);
           temp5.set(sn, 0.0f, cs);
-          field_0x2D4.copy(d);
-          f32 dot1 = PSVECDotProduct(&temp4, &field_0x2D4);
-          f32 dot2 = PSVECDotProduct(&temp5, &field_0x2D4);
+          mBreakDir.copy(d);
+          f32 dot1 = PSVECDotProduct(&temp4, &mBreakDir);
+          f32 dot2 = PSVECDotProduct(&temp5, &mBreakDir);
           if (dot1 > 175.0f) {
-            field_0x2D4.x = gabi::fnmsubs(175.0f, cs, field_0x2D4.x);
-            field_0x2D4.z = gabi::fnmsubs(-175.0f, sn, field_0x2D4.z);
+            mBreakDir.x = gabi::fnmsubs(175.0f, cs, mBreakDir.x);
+            mBreakDir.z = gabi::fnmsubs(-175.0f, sn, mBreakDir.z);
           } else if (dot1 < -175.0f) {
-            field_0x2D4.z = gabi::fmadds(-175.0f, sn, field_0x2D4.z);
-            field_0x2D4.x = gabi::fmadds(175.0f, cs, field_0x2D4.x);
+            mBreakDir.z = gabi::fmadds(-175.0f, sn, mBreakDir.z);
+            mBreakDir.x = gabi::fmadds(175.0f, cs, mBreakDir.x);
           } else {
-            field_0x2D4.x = gabi::fnmsubs(dot1, cs, field_0x2D4.x);
-            field_0x2D4.z = gabi::fmadds(dot1, sn, field_0x2D4.z);
+            mBreakDir.x = gabi::fnmsubs(dot1, cs, mBreakDir.x);
+            mBreakDir.z = gabi::fmadds(dot1, sn, mBreakDir.z);
           }
 
           if (dot2 > 40.0f) {
-            field_0x2D4.x = gabi::fnmsubs(40.0f, sn, field_0x2D4.x);
-            field_0x2D4.z = gabi::fnmsubs(40.0f, cs, field_0x2D4.z);
+            mBreakDir.x = gabi::fnmsubs(40.0f, sn, mBreakDir.x);
+            mBreakDir.z = gabi::fnmsubs(40.0f, cs, mBreakDir.z);
           } else if (dot2 < -40.0f) {
-            field_0x2D4.x = gabi::fmadds(40.0f, sn, field_0x2D4.x);
-            field_0x2D4.z = gabi::fmadds(40.0f, cs, field_0x2D4.z);
+            mBreakDir.x = gabi::fmadds(40.0f, sn, mBreakDir.x);
+            mBreakDir.z = gabi::fmadds(40.0f, cs, mBreakDir.z);
           } else {
-            field_0x2D4.x = gabi::fnmsubs(dot2, sn, field_0x2D4.x);
-            field_0x2D4.z = gabi::fnmsubs(dot2, cs, field_0x2D4.z);
+            mBreakDir.x = gabi::fnmsubs(dot2, sn, mBreakDir.x);
+            mBreakDir.z = gabi::fnmsubs(dot2, cs, mBreakDir.z);
           }
-          d = field_0x2D4.normZP();
-          field_0x2D4.copy(d);
-          f32 a2 = PSVECSquareMag(&field_0x2C8);
+          d = mBreakDir.normZP();
+          mBreakDir.copy(d);
+          f32 a2 = PSVECSquareMag(&mHitOffset);
           s16 sub = (s16)gabi::ftoi(0.0002f * a2);
-          field_0x2E0 = l_HIO.m18 - sub;
-          if (stairAbs(&field_0x2C8) < 80.0f) {
-            field_0x2EC = 0.7f;
+          mBreakTimer = l_HIO.m18 - sub;
+          if (stairAbs(&mHitOffset) < 80.0f) {
+            mBreakPower = 0.7f;
           } else {
-            field_0x2EC = 56.0f / stairAbs(&field_0x2C8);
+            mBreakPower = 56.0f / stairAbs(&mHitOffset);
           }
         } else {
-          field_0x2E4 = 1;
+          mBreaking = 1;
           cXyz d;
           d = *mCps.GetTgHitPosP() - current.pos;
-          field_0x2C8.copy(d);
-          field_0x2D4.copy(mCps.mGObjTg.mRVec); /* *mCps.GetTgRVecP() */
-          d = field_0x2D4.normZP();
-          field_0x2D4.copy(d);
+          mHitOffset.copy(d);
+          mBreakDir.copy(mCps.mGObjTg.mRVec); /* *mCps.GetTgRVecP() */
+          d = mBreakDir.normZP();
+          mBreakDir.copy(d);
 
-          field_0x2E0 = l_HIO.m18 - 2;
-          field_0x2EC = 1.0f;
+          mBreakTimer = l_HIO.m18 - 2;
+          mBreakPower = 1.0f;
         }
       }
     }
   }
-  s32 temp5 = field_0x2E0;
+  s32 temp5 = mBreakTimer;
   s32 m18 = l_HIO.m18;
   if (temp5 > m18 - 10 && temp5 < m18) {
     f32 sinResult = cM_ssin((((temp5 - m18) + 10) & 0x3) << 14);
-    field_0x2E8 = 1.5f * sinResult;
+    mShakeY = 1.5f * sinResult;
   }
   return MoveBGExecute() != 0;
 }

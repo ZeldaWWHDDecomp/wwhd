@@ -81,12 +81,12 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
             }
             u32 jntNo = reinterpret_cast<J3DJoint *>(node)->getJntNo();
             PSMTXCopy(os_getAnmMtx(model, jntNo), os_now());
-            PSMTXMultVec(os_now(), &osMain_offsetAttPos, &i_this->field_0x754);
+            PSMTXMultVec(os_now(), &osMain_offsetAttPos, &i_this->mAttentionBasePos);
             mDoMtx_XrotM(os_now(), i_this->mJntCtrl.mAngles[0][1]);
             mDoMtx_ZrotM(os_now(), (s16)-i_this->mJntCtrl.mAngles[0][0]);
-            PSMTXMultVec(os_now(), &osMain_offsetEyePos, &i_this->field_0x748);
-            if (i_this->field_0x7A3 != 0xFF) { /* incAttnSetCount */
-                i_this->field_0x7A3 = i_this->field_0x7A3 + 1;
+            PSMTXMultVec(os_now(), &osMain_offsetEyePos, &i_this->mEyePos);
+            if (i_this->mAttnSetCount != 0xFF) { /* incAttnSetCount */
+                i_this->mAttnSetCount = i_this->mAttnSetCount + 1;
             }
             PSMTXCopy(os_now(), os_mCurrentMtx());
             mtx_copy(os_getAnmMtx(model, jntNo), os_now()); /* model->setAnmMtx(jntNo, now) */
@@ -186,7 +186,7 @@ BOOL daNpc_Os_c::finishCheck() {
 BOOL daNpc_Os_c::initBrkAnm(u8 param_1, bool param_2) {
     J3DModelData *modelData = os_modelData(mpMorf->getModel());
     BOOL ret = FALSE;
-    if ((u32)(s32)field_0x7A2 != (u32)param_1) {
+    if ((u32)(s32)mBrkAnmIdx != (u32)param_1) {
         const auto *e = gabi::at<const OsMainBrkEntry>(
             gabi::ea(&osMain_brkAnmTbl) +
             param_1 * sizeof(OsMainBrkEntry)); /* brkAnmTbl[param_1] */
@@ -196,13 +196,13 @@ BOOL daNpc_Os_c::initBrkAnm(u8 param_1, bool param_2) {
         }
         if (os_brkAnm_init(&mBrkAnm, modelData, a_brk, true, e->loopMode, e->speed, 0, -1, param_2,
                            0)) {
-            field_0x7A2 = (s8)param_1;
+            mBrkAnmIdx = (s8)param_1;
             if (e->unk_4 < 0) {
                 f32 end = (f32)(s16)mBrkAnm.mFrameCtrl.mEnd; /* setFrame(getEndFrame()) */
                 mBrkAnm.mFrameCtrl.mFrame = end;
-                field_0x764 = end;
+                mBrkLastFrame = end;
             } else {
-                field_0x764 = mBrkAnm.mFrameCtrl.mFrame;
+                mBrkLastFrame = mBrkAnm.mFrameCtrl.mFrame;
             }
             ret = TRUE;
         }
@@ -275,7 +275,7 @@ BOOL daNpc_Os_c::createHeap() {
     } else {
         anm_ = 5;
     }
-    field_0x7A2 = 9;
+    mBrkAnmIdx = 9;
     if (!initBrkAnm(anm_, false)) {
         return FALSE;
     }
@@ -299,13 +299,13 @@ void daNpc_Os_c::setBaseMtx() {
     if (actor_status & 0x2000 /* fopAcM_checkCarryNow */) {
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_stack_c::YrotM(shape_angle.y);
-        mDoMtx_stack_transM(field_0x7E4.x, field_0x7E4.y, field_0x7E4.z);
+        mDoMtx_stack_transM(mCarryOffset.x, mCarryOffset.y, mCarryOffset.z);
         mDoMtx_XrotM(os_now(), shape_angle.x);
         mDoMtx_ZrotM(os_now(), shape_angle.z);
     } else {
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y + 95.0f, current.pos.z);
         mDoMtx_stack_c::YrotM(shape_angle.y);
-        mDoMtx_stack_transM(field_0x7E4.x, field_0x7E4.y, field_0x7E4.z);
+        mDoMtx_stack_transM(mCarryOffset.x, mCarryOffset.y, mCarryOffset.z);
         mDoMtx_XrotM(os_now(), shape_angle.x);
         mDoMtx_ZrotM(os_now(), shape_angle.z);
         mDoMtx_stack_transM(0.0f, -95.0f, 0.0f);
@@ -335,7 +335,7 @@ BOOL daNpc_Os_c::setAction(ProcFunc_l *cur, ProcFunc_l *newFunc, void *arg) {
         callPrevious = cur->i != 0;
     }
     if (callPrevious) {
-        field_0x7A9 = -1;
+        mActionPhase = -1;
         md_pmf_call<BOOL>(this, cur, arg);
     }
     cur->i = newI;
@@ -345,8 +345,8 @@ BOOL daNpc_Os_c::setAction(ProcFunc_l *cur, ProcFunc_l *newFunc, void *arg) {
     field_0x7B2 = 0;
     field_0x7AE = 0;
     field_0x7B0 = 0;
-    field_0x7AC = 0;
-    field_0x7A9 = 0;
+    mCarryAngleY = 0;
+    mActionPhase = 0;
     md_pmf_call<BOOL>(this, cur, arg);
     return TRUE;
 }
@@ -376,13 +376,13 @@ BOOL daNpc_Os_c::dNpc_Os_setAnm(mDoExt_McaMorf *pMorf, int loopMode, f32 morf, f
 
 /* 022AA88C */
 void daNpc_Os_c::setAnm(int param_1) {
-    field_0x78C = param_1;
+    mAnmPrmIdx = param_1;
     const auto *prm = gabi::at<const OsMainAnmPrm>(
         gabi::ea(&osMain_anmPrm) + (u32)param_1 * sizeof(OsMainAnmPrm)); /* l_anmPrm[param_1] */
     s8 idx = prm->mAnmTblIdx;
     f32 playSpeed = prm->mPlaySpeed;
-    if (idx != field_0x7A0 || !(playSpeed == mpMorf->mFrameCtrl.mRate /* getPlaySpeed */)) {
-        field_0x7A0 = idx;
+    if (idx != mAnmTblIdx || !(playSpeed == mpMorf->mFrameCtrl.mRate /* getPlaySpeed */)) {
+        mAnmTblIdx = idx;
         mReachedAnimEnd = 0;
         mPrevMorfFrame = 0.0f;
         s8 anm = *gabi::at<be<s8>>(gabi::ea(&osMain_anmTbl) + (u32)idx); /* l_anmTbl */
@@ -507,19 +507,19 @@ static inline s16 os_getEventIdx(u32 name) {
 BOOL daNpc_Os_c::init() {
     attention_info.distances[fopAc_Attn_TYPE_CARRY_e] =
         0x27; /* attention_info.distances[fopAc_Attn_TYPE_CARRY_e] */
-    field_0x794 = (mParameters >> 0x10) & 0xFF; /* fopAcM_GetParam */
+    mSwitchNo = (mParameters >> 0x10) & 0xFF; /* fopAcM_GetParam */
     os_copy_tevstr(this);
     osMain_smokeLighting = gabi::ea(&osMain_smokeTevStr); /* m_smoke.setTevStr(&m_smoke_tevstr) */
     *gabi::at<be<u8>>(gabi::ea(&osMain_playerRooms) + (u32)argument) =
         0;           /* offPlayerRoom(argument) */
-    field_0x784 = 0; /* clearStatus() */
-    field_0x7A0 = 3;
+    mStatus = 0; /* clearStatus() */
+    mAnmTblIdx = 3;
     gravity = (f32)osMain_HIO.field_0x8C; /* l_HIO gravity */
-    field_0x78C = 5;
+    mAnmPrmIdx = 5;
     if (wakeupCheck()) {
-        field_0x784 = field_0x784 | os_b::STATUS_GRAVITY;
+        mStatus = mStatus | os_b::STATUS_GRAVITY;
     } else {
-        field_0x784 = field_0x784 & ~os_b::STATUS_GRAVITY;
+        mStatus = mStatus & ~os_b::STATUS_GRAVITY;
     }
     gabi::Local<ProcFunc_l> fn;
     if (finishCheck()) {
@@ -530,17 +530,17 @@ BOOL daNpc_Os_c::init() {
         Os_copyActionHD(fn, &osMain_waitAction); /* &daNpc_Os_c::waitNpcAction */
         setNpcAction(fn, nullptr);
     }
-    field_0x7A5 = -1;
-    field_0x748.copy(current.pos);
+    mOrderEventNum = -1;
+    mEyePos.copy(current.pos);
     mpPedestal = nullptr;
-    field_0x754.copy(current.pos);
-    field_0x788 = 120.0f;
-    field_0x7AA = -1;
+    mAttentionBasePos.copy(current.pos);
+    mCylH = 120.0f;
+    mEventNo = -1;
     mStts.Init(0xFF, 0xFF, this);
     mCyl.Set(&osMain_cylSrc);
     mCyl.SetStts(&mStts);
     for (int i = 0; i < 0x10; i++) {
-        field_0x7C4[i] = os_getEventIdx((u32)osMain_eventNames.entries[i]); /* event_name_tbl[i] */
+        mEventIdx[i] = os_getEventIdx((u32)osMain_eventNames.entries[i]); /* event_name_tbl[i] */
     }
     os_hd_register(this, argument); /* HD */
     return TRUE;
@@ -557,13 +557,13 @@ static inline void os_ct(daNpc_Os_c *p) {
     dCcD_Stts_ct(&p->mStts);
     dCcD_Cyl_ct(&p->mCyl, AAB_VTABLE_HD /* this TU's cM3dGAab vtable */);
     OsMain_constructJointCtrl(&p->mJntCtrl); /* dNpc_JntCtrl_c::dNpc_JntCtrl_c */
-    p->field_0x7FC.mpBgW = 0;
-    p->field_0x7FC.__vtbl = POLY_INFO_VTABLE_HD; /* cBgS_PolyInfo vtable */
-    p->field_0x7FC.mPolyIndex = 0xFFFF;
-    p->field_0x738.__vtbl = INFINITE_CALLBACK_VTABLE_HD; /* daNpc_Os_infiniteEcallBack_c vtable */
-    p->field_0x7FC.mProcId = -1;                         /* actor id */
-    p->field_0x7FC.mBgIndex = 0x100;
-    p->field_0x740.__vtbl = INFINITE_CALLBACK_VTABLE_HD;
+    p->mGroundPolyInfo.mpBgW = 0;
+    p->mGroundPolyInfo.__vtbl = POLY_INFO_VTABLE_HD; /* cBgS_PolyInfo vtable */
+    p->mGroundPolyInfo.mPolyIndex = 0xFFFF;
+    p->mBeamCallBack0.__vtbl = INFINITE_CALLBACK_VTABLE_HD; /* daNpc_Os_infiniteEcallBack_c vtable */
+    p->mGroundPolyInfo.mProcId = -1;                         /* actor id */
+    p->mGroundPolyInfo.mBgIndex = 0x100;
+    p->mBeamCallBack1.__vtbl = INFINITE_CALLBACK_VTABLE_HD;
 }
 
 /* 022AAEE0 */
@@ -657,8 +657,8 @@ static void daNpc_Os_infiniteEcallBack_end(daNpc_Os_infiniteEcallBack_l *cb) {
 
 /* 022AB28C */
 void daNpc_Os_c::endBeam() {
-    daNpc_Os_infiniteEcallBack_end(&field_0x738);
-    daNpc_Os_infiniteEcallBack_end(&field_0x740);
+    daNpc_Os_infiniteEcallBack_end(&mBeamCallBack0);
+    daNpc_Os_infiniteEcallBack_end(&mBeamCallBack1);
 }
 
 /* 022AB2BC */
@@ -667,7 +667,7 @@ void daNpc_Os_c::setCollision() {
     temp->copy(current.pos);
     mCyl.mCyl.SetC(temp);
     mCyl.mCyl.SetR(30.0f);
-    mCyl.mCyl.SetH(field_0x788);
+    mCyl.mCyl.SetH(mCylH);
     mStts.SetWeight(dComIfGp_getPlayer(0) == this ? 0xFE : 0xFF); /* mStts.SetWeight */
     cCcS_Set(dComIfG_Ccsp(), &mCyl);
 }
@@ -681,18 +681,18 @@ void daNpc_Os_c::smokeSet(u16 particle) {
 
 /* 022AB3C4 */
 void daNpc_Os_c::playBrkAnm() {
-    field_0x7A1 = (s8)OsMain_playBrk(&mBrkAnm); /* mBrkAnm.play() */
+    mBrkAnmEnd = (s8)OsMain_playBrk(&mBrkAnm); /* mBrkAnm.play() */
     f32 rate = mBrkAnm.mFrameCtrl.mRate;
     f32 frame = mBrkAnm.mFrameCtrl.mFrame;
     if (rate < 0.0f) {
-        if (frame > field_0x764) {
-            field_0x7A1 = 1;
+        if (frame > mBrkLastFrame) {
+            mBrkAnmEnd = 1;
         }
-    } else if (frame < field_0x764) {
-        field_0x7A1 = 1;
+    } else if (frame < mBrkLastFrame) {
+        mBrkAnmEnd = 1;
     }
-    field_0x764 = frame;
-    if (field_0x7A2 == 6 && frame > 5.0f && frame < 50.0f) {
+    mBrkLastFrame = frame;
+    if (mBrkAnmIdx == 6 && frame > 5.0f && frame < 50.0f) {
         os_seStartCurrent(this, 0x50FF /* JA_SE_OBJ_OSTATUE_BLINK */, 0);
     }
 }
@@ -700,7 +700,7 @@ void daNpc_Os_c::playBrkAnm() {
 /* 022AB488 */
 void daNpc_Os_c::animationPlay() {
     u32 mtrlSndId = 0;
-    if ((field_0x784 & 0x10) && (mAcch.m_flags & dBgS_Acch::GROUND_HIT) &&
+    if ((mStatus & 0x10) && (mAcch.m_flags & dBgS_Acch::GROUND_HIT) &&
         OsMain_polygonSafe(dComIfG_Bgsp(),
                            reinterpret_cast<cBgS_PolyInfo_l *>(static_cast<cBgS_PolyInfo *>(
                                &mAcch.m_gnd))) /* ChkPolySafe(m_gnd) */) {
@@ -719,7 +719,7 @@ void daNpc_Os_c::animationPlay() {
         mReachedAnimEnd = 1;
     }
     mPrevMorfFrame = frame;
-    if (field_0x78C == 1 && mpMorf->checkFrame(17.0f) /* checkFrame(17) */) {
+    if (mAnmPrmIdx == 1 && mpMorf->checkFrame(17.0f) /* checkFrame(17) */) {
         smokeSet(0xA328 /* ID_AK_ST_OTOMOSMOKE00 */);
     }
     playBrkAnm();

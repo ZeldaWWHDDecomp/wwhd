@@ -67,30 +67,35 @@ struct HdMaterialRecord {
     HdResourceArray mSecond;
 };
 WWHD_SIZE(HdMaterialRecord, 0x14);
+// View of agl::IndexBufferLayout (include/agl/IndexBufferLayout.h; constructed by 027B5430); names follow it.
 struct HdIndexBuffer {
-    be<u32> mIndexCount;
+    be<u32> mFormat;  /* was mIndexCount: GX2DrawIndexedEx indexType (r5) at 0258924C / 0258AC80; agl::IndexBufferLayout::mFormat */
     be<u32> mPrimitiveType;
-    be<u32> mIndexOffset;
-    gptr<void> mpIndices;
-    be<u32> mIndexStride;
+    gptr<void> mStorage;  /* was mIndexOffset: GX2DrawIndexedEx indices (r6) at 0258AC80, base of the per-strip index pointer at 0258924C; agl::IndexBufferLayout::mStorage */
+    be<u32> mIndexCount;  /* was mpIndices: GX2DrawIndexedEx count (r4) at 0258AC80, tested for 0 first; agl::IndexBufferLayout::mIndexCount */
+    be<u32> mIndexBytes;  /* was mIndexStride: multiplies the strip's first index into a byte offset from mStorage at 0258924C; agl::IndexBufferLayout::mIndexBytes */
     u8 mTail[4];
 };
 WWHD_SIZE(HdIndexBuffer, 0x18);
+WWHD_OFFSET(HdIndexBuffer, mStorage, 8);
+WWHD_OFFSET(HdIndexBuffer, mIndexCount, 0xC);
 struct HdShapeArray {
     be<s32> mCount;
     gptr<void> mpShapes;
     u8 mTail[4];
 };
 WWHD_SIZE(HdShapeArray, 0xC);
+// Uniform buffer of one shape record; the fields used follow agl::RenderUniformBuffer_l (JSystem/J3DGraph/RenderUniformPair.h).
 struct HdRenderBuffer {
     be<u32> mFlags;
-    be<u32> mSize;
+    gptr<void> mCpuStorage;  /* was mSize: GX2Set{Pixel,Vertex,Geometry}UniformBlock data (r5) at 02588F50/02588F68/02588F80; agl::RenderUniformBuffer_l::mCpuStorage */
     u8 mPadding[4];
-    gptr<void> mpData;
+    be<u32> mStride;  /* was mpData: GX2Set{Pixel,Vertex,Geometry}UniformBlock size (r4) at 02588F50/02588F68/02588F80; agl::RenderUniformBuffer_l::mStride */
     u8 mPayload[12];
 };
 WWHD_SIZE(HdRenderBuffer, 0x1C);
-WWHD_OFFSET(HdRenderBuffer, mpData, 12);
+WWHD_OFFSET(HdRenderBuffer, mCpuStorage, 4);
+WWHD_OFFSET(HdRenderBuffer, mStride, 12);
 struct HdRenderObject {
     u8 mPrefix[12];
     be<u32> __vtbl;
@@ -400,7 +405,9 @@ struct MagmaShader {
 WWHD_SIZE(MagmaShader, 0x80);
 struct MagmaBindingDescriptor {
     u8 mPrefix[12];
-    be<s16> mIndexBuffer, mVertexBuffer, mGeometryBuffer;
+    be<s16> mVertexLocation;  /* was mIndexBuffer: location (r3) for GX2SetVertexUniformBlock at 02588F68; j3d::RenderUniformBinding_l::mVertexLocation */
+    be<s16> mPixelLocation;  /* was mVertexBuffer: location (r3) for GX2SetPixelUniformBlock at 02588F50; j3d::RenderUniformBinding_l::mPixelLocation */
+    be<s16> mGeometryLocation;  /* was mGeometryBuffer: location (r3) for GX2SetGeometryUniformBlock at 02588F80; j3d::RenderUniformBinding_l::mGeometryLocation */
 };
 WWHD_SIZE(MagmaBindingDescriptor, 0x12);
 struct MagmaMaterialTexture {
@@ -451,9 +458,10 @@ struct MagmaGraphicsSystem {
 };
 WWHD_SIZE(MagmaGraphicsSystem, 0x150);
 struct MagmaBallStripTable {
-    gptr<void> indices[6];
+    be<u32> mIndexCounts[6];  /* was indices: entry i is GX2DrawIndexedEx count (r4) of ball strip i at 0258924C (lwzx from 101E9C84), skipped when 0 */
 };
 WWHD_SIZE(MagmaBallStripTable, 0x18);
+WWHD_OFFSET(MagmaBallStripTable, mIndexCounts, 0);
 struct MagmaShaderRecord {
     u8 mPayload[0x84];
 };

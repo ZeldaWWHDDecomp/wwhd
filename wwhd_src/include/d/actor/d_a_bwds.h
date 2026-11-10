@@ -1,8 +1,9 @@
 /* bwds_class (Molgera larva), WWHD layout. 
  *
- * GameCube -> WWHD: fopEn_enemy_c is +0x11C; the members up to m0320 stay +0x11C. HD dropped
- * m0326 (the knockback pitch): m0324 is the knockback yaw, m0328 follows it, so the members from
- * m0328 on are +0x11A and from m032C on +0x118. Size 0x19E4 (constructor 02108B2C).
+ * GameCube -> WWHD: fopEn_enemy_c is +0x11C; the members up to mKnockbackDist (GC 0x320) stay +0x11C.
+ * HD dropped GC m0326 (the knockback pitch): mKnockbackAngleY (GC 0x324) is the knockback yaw,
+ * mHitShakeTimer (GC 0x328) follows it, so the members from there on are +0x11A and from mBodyPos
+ * (GC 0x32C) on +0x118. Size 0x19E4 (constructor 02108B2C).
  * Offsets from the verified functions. */
 #pragma once
 #include "bindings.h"
@@ -17,68 +18,68 @@ struct dPa_smokeEcallBack_bw {
 };
 
 struct bwds_class : fopEn_enemy_c {
-    /* 0x3C8 */ request_of_phase_process_class m02AC;
-    /* 0x3D0 */ be<u8> m02B4;
+    /* 0x3C8 */ request_of_phase_process_class mPhs;  /* was m02AC: daBwds_Create 02108BF0: dComIfG_resLoad of "Bwds" into it; daBwds_Delete 02108750 deletes the resource with it */
+    /* 0x3D0 */ be<u8> mType;  /* was m02B4: daBwds_Create 02108BF0: parameter byte 0; 0x23 starts in mode -10 (jumps out of the sand at once, at a random angle) */
     /* 0x3D1 */ u8 _3D1[3];
     /* 0x3D4 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3D8 */ gptr<J3DModel> mp02BC[0xE];
-    /* 0x410 */ be<s16> m02F4;
-    /* 0x412 */ be<s16> m02F6;  /* action */
-    /* 0x414 */ be<s16> m02F8;  /* mode */
-    /* 0x416 */ be<s8> m02FA;
-    /* 0x417 */ be<s8> m02FB;
-    /* 0x418 */ cXyz m02FC;
+    /* 0x3D8 */ gptr<J3DModel> mpBodyModels[0xE];  /* was mp02BC: useHeapInit 021087FC creates the 13 body segment models (array of 14); body_control (in daBwds_Execute 0210602C) places segment i - 1 at mBodyPos[i]; daBwds_Draw 02105F00 / daBwds_Execute 0210602C use the 13 - mBurstCount still alive */
+    /* 0x410 */ be<s16> mFrameCounter;  /* was m02F4: daBwds_Execute 0210602C adds 1 per frame; ug_move (in daBwds_Execute 0210602C) and body_control use it as the phase of the weave and segment pulse sines, daBwds_Execute 0210602C as the phase of the hit shake */
+    /* 0x412 */ be<s16> mAction;  /* was m02F6: move (in daBwds_Execute 0210602C) switches on it (ACTION_UG_MOVE / HOOK_ON / HOOK_CHANCE / FAIL); damage_check / hook_on / hook_chance set it; action */
+    /* 0x414 */ be<s16> mMode;  /* was m02F8: ug_move / hook_on / hook_chance / fail (in daBwds_Execute 0210602C) step through it; daBwds_Create 02108BF0 sets -10 for mType 0x23; mode */
+    /* 0x416 */ be<s8> mInSand;  /* was m02FA: move (in daBwds_Execute 0210602C): 1 while current.pos.y is at most mSandY + 20; daBwds_Execute 0210602C then raises eyePos by 90 and moves the head sphere up with a smaller radius */
+    /* 0x417 */ be<s8> mVulnerable;  /* was m02FB: ug_move (jump) / hook_chance (in daBwds_Execute 0210602C) set 1 each frame; damage_check takes a head hit only while it is 1; move clears it every frame */
+    /* 0x418 */ cXyz mTargetPos;  /* was m02FC: ug_move (in daBwds_Execute 0210602C): the player's position, a random point near the actor or a point 2000 ahead (set_jump_target); pos_move turns current.angle.y toward it */
     /* 0x424 */ u8 m0308[4];
-    /* 0x428 */ be<f32> m030C;
-    /* 0x42C */ be<f32> m0310;
-    /* 0x430 */ be<s16> m0314[5];
-    /* 0x43A */ be<s16> m031E;
-    /* 0x43C */ be<f32> m0320;  /* knockback speed */
-    /* 0x440 */ be<s16> m0324;  /* knockback yaw (HD: no pitch m0326) */
-    /* 0x442 */ be<s16> m0328;
-    /* 0x444 */ cXyz m032C[0xF];
-    /* 0x4F8 */ csXyz m03E0[0xF];
+    /* 0x428 */ be<f32> mTurnSpeed;  /* was m030C: ug_move (in daBwds_Execute 0210602C) sets 3000 / 1000 (+ reg); pos_move: angle step = it * mTurnSpeedRate */
+    /* 0x42C */ be<f32> mTurnSpeedRate;  /* was m0310: pos_move (in daBwds_Execute 0210602C) eases it to 1 and multiplies mTurnSpeed by it */
+    /* 0x430 */ be<s16> mTimers[5];  /* was m0314: daBwds_Execute 0210602C counts all 5 down each frame; ug_move / hook_chance / fail (in daBwds_Execute 0210602C) load them ([0] = 0x23, l_HIO.m014; [1] / [2] random waits) */
+    /* 0x43A */ be<s16> mNoDamageTimer;  /* was m031E: damage_check (in daBwds_Execute 0210602C) runs only while it is 0 and sets 10 / 6 after a hit; hook_on / fail keep it at 3; daBwds_Execute 0210602C counts it down */
+    /* 0x43C */ be<f32> mKnockbackDist;  /* was m0320: damage_check (in daBwds_Execute 0210602C) sets 40 (+ reg) on a hit; move moves the actor back by it along mKnockbackAngleY and eases it to 0; knockback speed */
+    /* 0x440 */ be<s16> mKnockbackAngleY;  /* was m0324: damage_check (in daBwds_Execute 0210602C): fopAcM_searchPlayerAngleY; move (in daBwds_Execute 0210602C) YrotS by it for the knockback; knockback yaw (HD: no pitch m0326) */
+    /* 0x442 */ be<s16> mHitShakeTimer;  /* was m0328: damage_check (in daBwds_Execute 0210602C) sets 15 (+ reg); daBwds_Execute 0210602C counts it down and shakes the model's Y / X rotation by it * 500 */
+    /* 0x444 */ cXyz mBodyPos[0xF];  /* was m032C: body_control (in daBwds_Execute 0210602C): [0] head joint position, [1..14] each segment trailing the previous one; segment spheres m0670[i] centre on it; fail bursts at [12 - mBurstCount] */
+    /* 0x4F8 */ csXyz mBodyAngle[0xF];  /* was m03E0: body_control (in daBwds_Execute 0210602C): [0] shape_angle, [i - 1] the atan2 angles toward segment i; the segment models are rotated by it */
     /* 0x552 */ u8 _552[2];
-    /* 0x554 */ cXyz m043C[0xF];
-    /* 0x608 */ be<s32> m04F0;
-    /* 0x60C */ be<s8> m04F4;
-    /* 0x60D */ be<s8> m04F5;
+    /* 0x554 */ cXyz mBodyMoveVec[0xF];  /* was m043C: body_control (in daBwds_Execute 0210602C): last frame's segment position, then (new - old) * stiffness; added back to the next frame's trail direction (the body's swing) */
+    /* 0x608 */ be<s32> mBurstCount;  /* was m04F0: fail (in daBwds_Execute 0210602C) adds 1 per segment burst (SIBOUBAKUEN particle) and moves on after 13; daBwds_Execute 0210602C / daBwds_Draw 02105F00 handle only the 13 - it segments left */
+    /* 0x60C */ be<s8> mDeleteRequest;  /* was m04F4: ko_delete_sub 020F9AA0 (d_a_bwd, view bwd_detail::Larva) sets 1 for every larva; damage_check (in daBwds_Execute 0210602C) then deletes the actor */
+    /* 0x60D */ be<s8> mBodyFollowMode;  /* was m04F5: hook_chance / fail (in daBwds_Execute 0210602C) set 1 (segments kept above the ground, inertia on), ug_move 2 (diving); body_control changes the trail direction and stiffness on it; daBwds_Execute 0210602C clears it every frame */
     /* 0x60E */ u8 _60E[0x614 - 0x60E];
-    /* 0x614 */ be<s16> m04FC;
+    /* 0x614 */ be<s16> mTargetAngleX;  /* was m04FC: hook_chance (in daBwds_Execute 0210602C): 0 or 0x7F00 at random per bounce; current.angle.x is eased to it */
     /* 0x616 */ u8 _616[2];
     /* 0x618 */ be<s16> m0500;
-    /* 0x61A */ be<s16> m0502;
-    /* 0x61C */ be<f32> m0504;
-    /* 0x620 */ dCcD_Stts m0508;
-    /* 0x65C */ dCcD_Sph m0544;
-    /* 0x788 */ dCcD_Sph m0670[0xF];
-    /* 0x191C */ cXyz m1804;
-    /* 0x1928 */ cXyz m1810;
-    /* 0x1934 */ be<s8> m181C;
-    /* 0x1935 */ be<s8> m181D;
-    /* 0x1936 */ be<s8> m181E;
+    /* 0x61A */ be<s16> mBounceTurnY;  /* was m0502: hook_chance (in daBwds_Execute 0210602C): random +-2500 per bounce, added to current.angle.y every frame */
+    /* 0x61C */ be<f32> mSandY;  /* was m0504: daBwds_Execute 0210602C: ground cross - 90 under the actor (sand surface level); ug_move / hook_chance / fail (in daBwds_Execute 0210602C) and move compare current.pos.y with it */
+    /* 0x620 */ dCcD_Stts mStts;  /* was m0508: daBwds_Create 02108BF0: Init(0xFA, 0) and SetStts of every sphere; damage_check (in daBwds_Execute 0210602C) Move() */
+    /* 0x65C */ dCcD_Sph mHsSph;  /* was m0544: daBwds_Create 02108BF0: Set(hs_sph_src) (the hookshot target sphere); daBwds_Execute 0210602C sets its centre on the head and radius l_HIO.m01C * scale */
+    /* 0x788 */ dCcD_Sph mBodySph[0xF];  /* was m0670: daBwds_Create 02108BF0: [0] Set(cc_sph_src) (head), [1..14] Set(body_sph_src); daBwds_Execute 0210602C / body_control place them on the head and mBodyPos; damage_check reads their Tg hits */
+    /* 0x191C */ cXyz mSandSplashPos;  /* was m1804: daBwds_Execute 0210602C: y = ground cross under the actor, x / z the actor's position when it leaves or dives into the sand; the OUT / DIVE smoke and sand particles start there */
+    /* 0x1928 */ cXyz mMoveSmokePos;  /* was m1810: daBwds_Execute 0210602C: the actor's x / z on the ground cross; the IDOU (moving) smoke and sand particles follow it */
+    /* 0x1934 */ be<s8> mMoveSmokeState;  /* was m181C: ug_move (in daBwds_Execute 0210602C) sets 1 when the larva goes under the sand; daBwds_Execute 0210602C starts the IDOU smoke / sand at 1 (then 2) and ends them once the larva is above the sand */
+    /* 0x1935 */ be<s8> mOutSmokeTimer;  /* was m181D: daBwds_Execute 0210602C sets 5 (+ reg) when the larva leaves the sand (OUT_SMOKE00), counts it down and ends that smoke at 0 */
+    /* 0x1936 */ be<s8> mDiveSmokeTimer;  /* was m181E: daBwds_Execute 0210602C sets 5 (+ reg) when the larva dives into the sand (DIVE_SMOKE00), counts it down and ends that smoke at 0 */
     /* 0x1937 */ u8 _1937;
-    /* 0x1938 */ dPa_smokeEcallBack_bw m1820[3];
-    /* 0x1998 */ dPa_followEcallBack m1880;
-    /* 0x19AC */ be<s8> m1894[2];
+    /* 0x1938 */ dPa_smokeEcallBack_bw mSmokeCb[3];  /* was m1820: daBwds_Execute 0210602C: [0] IDOU_MOKO00 (moving), [1] OUT_SMOKE00, [2] DIVE_SMOKE00 smoke callbacks; daBwds_Delete 02108750 removes them */
+    /* 0x1998 */ dPa_followEcallBack mMoveSandCb;  /* was m1880: daBwds_Execute 0210602C passes it to the IDOU_SUNA00 (moving sand) particle and ends it with the moving smoke; daBwds_Delete 02108750 removes it */
+    /* 0x19AC */ be<s8> mSplashFrame[2];  /* was m1894: daBwds_Execute 0210602C: [0] leaving / [1] diving into the sand; set 1, + 1 per frame up to 60, then 0; it - 1 is the frame of the splash model's animations; daBwds_Draw 02105F00 draws the splash while it is set */
     /* 0x19AE */ u8 _19AE[2];
-    /* 0x19B0 */ cXyz m1898[2];
-    /* 0x19C8 */ gptr<mDoExt_McaMorf> mp18B0[2];
-    /* 0x19D0 */ gptr<mDoExt_btkAnm> mp18B8[2];
-    /* 0x19D8 */ gptr<mDoExt_brkAnm> mp18C0[2];
-    /* 0x19E0 */ be<u8> m18C8;
+    /* 0x19B0 */ cXyz mSplashPos[2];  /* was m1898: daBwds_Execute 0210602C: the actor's position when the splash starts; the splash model is placed there */
+    /* 0x19C8 */ gptr<mDoExt_McaMorf> mpSplashMorf[2];  /* was mp18B0: useHeapInit 021087FC creates the 2 sand splash models (Bwd BDL_GSP00 / GSP01, one for leaving and one for diving); daBwds_Execute 0210602C sets their frame and matrix, daBwds_Draw 02105F00 draws them */
+    /* 0x19D0 */ gptr<mDoExt_btkAnm> mpSplashBtk[2];  /* was mp18B8: useHeapInit 021087FC: btk of each splash model; daBwds_Execute 0210602C sets its frame, daBwds_Draw 02105F00 enters it */
+    /* 0x19D8 */ gptr<mDoExt_brkAnm> mpSplashBrk[2];  /* was mp18C0: useHeapInit 021087FC: brk of each splash model; daBwds_Execute 0210602C sets its frame, daBwds_Draw 02105F00 enters it */
+    /* 0x19E0 */ be<u8> mHioOwner;  /* was m18C8: daBwds_Create 02108BF0 sets 1 when it created the l_HIO child; daBwds_Delete 02108750 deletes the HIO child only then */
     /* 0x19E1 */ u8 _19E1[3];
 };
 WWHD_OFFSET(bwds_class, mpMorf, 0x3D4);
-WWHD_OFFSET(bwds_class, m02FC, 0x418);
-WWHD_OFFSET(bwds_class, m0328, 0x442);
-WWHD_OFFSET(bwds_class, m043C, 0x554);
-WWHD_OFFSET(bwds_class, m0508, 0x620);
-WWHD_OFFSET(bwds_class, m0670, 0x788);
-WWHD_OFFSET(bwds_class, m1804, 0x191C);
-WWHD_OFFSET(bwds_class, m1820, 0x1938);
-WWHD_OFFSET(bwds_class, m1894, 0x19AC);
-WWHD_OFFSET(bwds_class, m18C8, 0x19E0);
+WWHD_OFFSET(bwds_class, mTargetPos, 0x418);
+WWHD_OFFSET(bwds_class, mHitShakeTimer, 0x442);
+WWHD_OFFSET(bwds_class, mBodyMoveVec, 0x554);
+WWHD_OFFSET(bwds_class, mStts, 0x620);
+WWHD_OFFSET(bwds_class, mBodySph, 0x788);
+WWHD_OFFSET(bwds_class, mSandSplashPos, 0x191C);
+WWHD_OFFSET(bwds_class, mSmokeCb, 0x1938);
+WWHD_OFFSET(bwds_class, mSplashFrame, 0x19AC);
+WWHD_OFFSET(bwds_class, mHioOwner, 0x19E0);
 WWHD_SIZE(bwds_class, 0x19E4);
 
 /* l_HIO (0x10462C44): daBwds_HIO_c, HD layout {mNo, m005, m008.., vtable last} */

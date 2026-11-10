@@ -15,15 +15,15 @@ struct Kk1EventState {
     u8 _reserved1[0x8];
     /* 0x87C */ cXyz mHomePos;
     /* 0x888 */ csXyz mHomeAngle;
-    /* 0x88E */ csXyz mLastAngle;
+    /* 0x88E */ csXyz mModelAngle;  /* was mLastAngle (misnamed): view of daNpc_Kk1_c mModelAngle (d_a_npc_kk1.h); one name per field. createInit 0226BFD0 sets it and setMtx 0226BDCC rotates the model by it; _execute only refreshes it from current.angle; same code as daNpc_Ko1_c::mModelAngle; the Kk1CreationFields name stays */
     u8 _reserved2[0x14];
     /* 0x8A8 */ cXyz mLookPos;
     u8 _reserved3[0x2C];
-    /* 0x8E0 */ csXyz mLookAngle;
+    /* 0x8E0 */ csXyz mPreviousLookAngles;  /* was mLookAngle (misnamed): view of daNpc_Kk1_c mPreviousLookAngles (d_a_npc_kk1.h); one name per field. lookBack 0226E604 stores the look angles and chk_parts_notMov 0226F6EC compares them with the current ones; the Kk1ActionFields name stays */
     u8 _reserved4[0x2];
-    /* 0x8E8 */ be<u32> mMessageHandle;
+    /* 0x8E8 */ be<u32> mbSetEyePos;  /* was mMessageHandle (misnamed): view of daNpc_Kk1_c mbSetEyePos (d_a_npc_kk1.h); one name per field. the state function's result (wait_action1 02271084) decides whether setAttention 0226BD78 copies the eye position to eyePos; same code as daNpc_Bm1_c / daNpc_Ko1_c::mbSetEyePos (tww Bm1 mbSetEyePos = wait_1()) */
     /* 0x8EC */ be<s16> mEventIds[8];
-    /* 0x8FC */ be<s16> mEventIndex;
+    /* 0x8FC */ be<s16> mEventIdx;  /* was mEventIndex (misnamed): view of daNpc_Kk1_c mEventIdx (d_a_npc_kk1.h); one name per field. eventOrder 0226E92C stores the ordered event's index and checkOrder / event_proc pick mEventIds by it; same code as daNpc_Bm1_c::mEventIdx (tww Bm1 mEventIdx) */
     u8 _reserved6[0x4];
     /* 0x902 */ be<s16> mLookDelay;
     /* 0x904 */ be<s16> mLookTimer;
@@ -34,33 +34,33 @@ struct Kk1EventState {
     /* 0x91C */ be<s16> mLookYaw;
     u8 _reserved8[0x2];
     /* 0x920 */ be<s16> mKeepMoving;
-    /* 0x922 */ be<u8> mAnmEnded;
+    /* 0x922 */ be<u8> mAnimationEnded;  /* was mAnmEnded (misnamed): view of daNpc_Kk1_c mAnimationEnded (d_a_npc_kk1.h); one name per field. the Kk1CreationFields / Kk1ActionFields name stays (same field: play_animation 0226BB5C stores the morf's play() result) */
     u8 _reserved9[0x3];
-    /* 0x926 */ be<u8> mFollowPath;
+    /* 0x926 */ be<u8> mOnPath;  /* was mFollowPath (misnamed): view of daNpc_Kk1_c mOnPath (d_a_npc_kk1.h); one name per field. the Kk1CreationFields / Kk1ActionFields name stays (same field: set while the actor walks its path; event_move 0226D83C follows the path while it is set) */
     u8 _reserved10[0x3];
     /* 0x92A */ be<u8> mByeComplete;
     /* 0x92B */ be<u8> mHideBody;
     u8 _reserved11[0x1];
     /* 0x92D */ be<u8> mDemoSuspend;
-    /* 0x92E */ be<u8> mHideEffect;
+    /* 0x92E */ be<u8> mEffectHidden;  /* was mHideEffect (misnamed): view of daNpc_Kk1_c mEffectHidden (d_a_npc_kk1.h); one name per field. setAnm_anm 0226C660 sets it by the animation and _draw 0226ECA8 skips the effect model while it is set; the Kk1CreationFields name stays */
     /* 0x92F */ be<u8> mPreserveShapeAngle;
     /* 0x930 */ be<u8> mHide;
     /* 0x931 */ be<u8> mHomeInitialized;
     u8 _reserved12[0x2];
-    /* 0x934 */ be<u8> mHeadOnly;
+    /* 0x934 */ be<u8> mHeadOnlyFollow;  /* was mHeadOnly (misnamed): view of daNpc_Kk1_c mHeadOnlyFollow (d_a_npc_kk1.h); one name per field. lookBack 0226E604 passes it as the joint look-at's head-only flag; same code as daNpc_Bm1_c / daNpc_Ko1_c::mHeadOnlyFollow (tww Bm1 headOnlyFollow = m896) */
     u8 _reserved13[0x1];
-    /* 0x936 */ be<u8> mDisableCollision;
+    /* 0x936 */ be<u8> mInDemo;  /* was mDisableCollision (misnamed): view of daNpc_Kk1_c mInDemo (d_a_npc_kk1.h); one name per field. demo 0226C8D8 sets and clears it and returns by it; _execute only skips the collision while it is set; same name as daNpc_Ko1_c::mInDemo; the Kk1CreationFields name stays */
     u8 _reserved14[0x175];
-    /* 0xAAC */ csXyz mEffectAnmFrame;
+    /* 0xAAC */ csXyz mEffectFrame;  /* was mEffectAnmFrame (misnamed): view of daNpc_Kk1_c mEffectFrame (d_a_npc_kk1.h); one name per field. play_eff_anm 0226BA48 steps the effect frames and setMtx / _draw use them; the Kk1CreationFields name stays */
     u8 _reserved15[0x2];
     /* 0xAB4 */ gptr<J3DModel> mEffectModel;
     u8 _reserved16[0x8];
     /* 0xAC0 */ be<u8> mCutIndex;
-    /* 0xAC1 */ be<u8> mMoveAnm;
-    /* 0xAC2 */ be<u8> mPathArg;
+    /* 0xAC1 */ be<u8> mMoveMode;  /* was mMoveAnm (misnamed): view of daNpc_Kk1_c mMoveMode (d_a_npc_kk1.h); one name per field. event_move 0226D83C walks at 2 and runs otherwise (the path point's argument 2 / 3), setStt 0226CB44 sets 2 for the comment state; it selects the move speed, not a look state or an animation */
+    /* 0xAC2 */ be<u8> mCommentAction;  /* was mPathArg (misnamed): view of daNpc_Kk1_c mCommentAction (d_a_npc_kk1.h); one name per field. cmmt_1 02270AE0 switches on it and the move_CMT_* functions reset it; event_move 0226D83C only clears it; the Kk1CreationFields / Kk1ActionFields name stays */
     u8 _reserved17[0x3];
-    /* 0xAC6 */ be<u8> mAnmState;
-    /* 0xAC7 */ be<u8> mEventOrder;
+    /* 0xAC6 */ be<u8> mAnmNum;  /* was mAnmState (misnamed): view of daNpc_Kk1_c mAnmNum (d_a_npc_kk1.h); one name per field. setAnm_anm 0226C660 stores the animation number and play_animation switches on it; same code as daNpc_Bm1_c::mAnmNum (tww Bm1 mAnmNum) */
+    /* 0xAC7 */ be<u8> mOrderEvent;  /* was mEventOrder (misnamed): view of daNpc_Kk1_c mOrderEvent (d_a_npc_kk1.h); one name per field. eventOrder 0226E92C orders by it and checkOrder 0226C7DC clears it, the waits set 2; same code as daNpc_Bm1_c / daNpc_Ko1_c::mOrderEvent (tww Bm1 m8FD) */
     u8 _reserved18[0x2];
     /* 0xACA */ be<u8> mLookMode;
     u8 _tail[0x5];
@@ -70,11 +70,11 @@ WWHD_OFFSET(Kk1EventState, mPartnerId, 0x86C);
 WWHD_OFFSET(Kk1EventState, mLookActorId, 0x870);
 WWHD_OFFSET(Kk1EventState, mHomePos, 0x87C);
 WWHD_OFFSET(Kk1EventState, mHomeAngle, 0x888);
-WWHD_OFFSET(Kk1EventState, mLastAngle, 0x88E);
+WWHD_OFFSET(Kk1EventState, mModelAngle, 0x88E);
 WWHD_OFFSET(Kk1EventState, mLookPos, 0x8A8);
-WWHD_OFFSET(Kk1EventState, mLookAngle, 0x8E0);
-WWHD_OFFSET(Kk1EventState, mMessageHandle, 0x8E8);
-WWHD_OFFSET(Kk1EventState, mEventIndex, 0x8FC);
+WWHD_OFFSET(Kk1EventState, mPreviousLookAngles, 0x8E0);
+WWHD_OFFSET(Kk1EventState, mbSetEyePos, 0x8E8);
+WWHD_OFFSET(Kk1EventState, mEventIdx, 0x8FC);
 WWHD_OFFSET(Kk1EventState, mLookDelay, 0x902);
 WWHD_OFFSET(Kk1EventState, mLookTimer, 0x904);
 WWHD_OFFSET(Kk1EventState, mLookPoint, 0x906);
@@ -82,24 +82,24 @@ WWHD_OFFSET(Kk1EventState, mCutTimer, 0x908);
 WWHD_OFFSET(Kk1EventState, mTurnTimer, 0x90A);
 WWHD_OFFSET(Kk1EventState, mLookYaw, 0x91C);
 WWHD_OFFSET(Kk1EventState, mKeepMoving, 0x920);
-WWHD_OFFSET(Kk1EventState, mAnmEnded, 0x922);
-WWHD_OFFSET(Kk1EventState, mFollowPath, 0x926);
+WWHD_OFFSET(Kk1EventState, mAnimationEnded, 0x922);
+WWHD_OFFSET(Kk1EventState, mOnPath, 0x926);
 WWHD_OFFSET(Kk1EventState, mByeComplete, 0x92A);
 WWHD_OFFSET(Kk1EventState, mHideBody, 0x92B);
 WWHD_OFFSET(Kk1EventState, mDemoSuspend, 0x92D);
-WWHD_OFFSET(Kk1EventState, mHideEffect, 0x92E);
+WWHD_OFFSET(Kk1EventState, mEffectHidden, 0x92E);
 WWHD_OFFSET(Kk1EventState, mPreserveShapeAngle, 0x92F);
 WWHD_OFFSET(Kk1EventState, mHide, 0x930);
 WWHD_OFFSET(Kk1EventState, mHomeInitialized, 0x931);
-WWHD_OFFSET(Kk1EventState, mHeadOnly, 0x934);
-WWHD_OFFSET(Kk1EventState, mDisableCollision, 0x936);
-WWHD_OFFSET(Kk1EventState, mEffectAnmFrame, 0xAAC);
+WWHD_OFFSET(Kk1EventState, mHeadOnlyFollow, 0x934);
+WWHD_OFFSET(Kk1EventState, mInDemo, 0x936);
+WWHD_OFFSET(Kk1EventState, mEffectFrame, 0xAAC);
 WWHD_OFFSET(Kk1EventState, mEffectModel, 0xAB4);
 WWHD_OFFSET(Kk1EventState, mCutIndex, 0xAC0);
-WWHD_OFFSET(Kk1EventState, mMoveAnm, 0xAC1);
-WWHD_OFFSET(Kk1EventState, mPathArg, 0xAC2);
-WWHD_OFFSET(Kk1EventState, mAnmState, 0xAC6);
-WWHD_OFFSET(Kk1EventState, mEventOrder, 0xAC7);
+WWHD_OFFSET(Kk1EventState, mMoveMode, 0xAC1);
+WWHD_OFFSET(Kk1EventState, mCommentAction, 0xAC2);
+WWHD_OFFSET(Kk1EventState, mAnmNum, 0xAC6);
+WWHD_OFFSET(Kk1EventState, mOrderEvent, 0xAC7);
 WWHD_OFFSET(Kk1EventState, mLookMode, 0xACA);
 inline Kk1EventState& kk1Event(daNpc_Kk1_c* actor) {
     return *reinterpret_cast<Kk1EventState*>(actor);

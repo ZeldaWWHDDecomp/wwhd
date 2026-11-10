@@ -189,7 +189,7 @@ BOOL daNpc_Os_c::actionDefault(int) {
 /* 022AD36C */
 void daNpc_Os_c::initialWaitEvent(int staffIdx) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x7C0 = -1;
+    mEventTimer = -1;
 
     cXyz* posData = (cXyz*)dComIfGp_evmng_getMySubstanceP(staffIdx, "pos", 1);
     if (posData) {
@@ -209,7 +209,7 @@ void daNpc_Os_c::initialWaitEvent(int staffIdx) {
     }
 
     if (dComIfGp_evmng_getMySubstanceP(staffIdx, "gravity", 3)) {
-        field_0x784 |= STATUS_GRAVITY; /* onGravity */
+        mStatus |= STATUS_GRAVITY; /* onGravity */
         maxFallSpeed = -100.0f;
         gravity = f32(l_osHIO.field_0x8C);
     }
@@ -226,17 +226,17 @@ void daNpc_Os_c::initialWaitEvent(int staffIdx) {
 
     be<s32>* timerData = (be<s32>*)dComIfGp_evmng_getMySubstanceP(staffIdx, "timer", 3);
     if (timerData) {
-        field_0x7C0 = (s16)(s32)*timerData;
+        mEventTimer = (s16)(s32)*timerData;
     }
 }
 
 /* 022AD4F0 */
 BOOL daNpc_Os_c::actionWaitEvent(int) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (field_0x7C0 < 0) {
+    if (mEventTimer < 0) {
         return TRUE;
     }
-    return osCalcTimer(&field_0x7C0) == 0 ? TRUE : FALSE; /* cLib_calcTimer<s16> */
+    return osCalcTimer(&mEventTimer) == 0 ? TRUE : FALSE; /* cLib_calcTimer<s16> */
 }
 
 /* 022AD598 */
@@ -248,14 +248,14 @@ void daNpc_Os_c::initialWakeupEvent(int) {
         gravity = f32(l_osHIO.field_0x8C);
         mNoResetFlg1 &= ~u32(NPC_NOT_CHANGE); /* offNpcNotChange */
         os_initBrkAnm(this, 4, 1);
-        field_0x7A1 = 0;
+        mBrkAnmEnd = 0;
     }
 }
 
 /* 022AD614 */
 BOOL daNpc_Os_c::actionWakeupEvent(int) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (field_0x7A1) {
+    if (mBrkAnmEnd) {
         os_initBrkAnm(this, 6, 1);
         return TRUE;
     }
@@ -363,7 +363,7 @@ void daNpc_Os_c::initialFinishEvent(int staffIdx) {
         value = *data;
     }
     setAnm_brkAnm(value);
-    if (field_0x78C == 2 || field_0x78C == 4) {
+    if (mAnmPrmIdx == 2 || mAnmPrmIdx == 4) {
         osMakeBeam(this, 1); /* makeBeam(1) */
     } else {
         os_endBeam(this);
@@ -373,7 +373,7 @@ void daNpc_Os_c::initialFinishEvent(int staffIdx) {
 /* 022ADB4C */
 BOOL daNpc_Os_c::actionFinishEvent(int) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    return field_0x7A1 != 0 ? TRUE : FALSE;
+    return mBrkAnmEnd != 0 ? TRUE : FALSE;
 }
 
 /* 022ADB60 */
@@ -382,7 +382,7 @@ void daNpc_Os_c::initialMsgSetEvent(int staffIdx) {
     l_msgId = -1;
     be<u32>* data = (be<u32>*)dComIfGp_evmng_getMySubstanceP(staffIdx, "MsgNo", 3);
     if (data) {
-        field_0x780 = *data;
+        mMsgNo = *data;
     }
 }
 
@@ -402,8 +402,8 @@ BOOL daNpc_Os_c::actionMsgEndEvent(int) {
 void daNpc_Os_c::initialSwitchOnEvent(int) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     s8 roomNo = current.roomNo;
-    if (roomNo == 7 && !osIsSwitch(save()->savedata, (u32)field_0x794, 7) /* isSwitch */) {
-        osOnSwitch(save()->savedata, (u32)field_0x794, 7); /* onSwitch */
+    if (roomNo == 7 && !osIsSwitch(save()->savedata, (u32)mSwitchNo, 7) /* isSwitch */) {
+        osOnSwitch(save()->savedata, (u32)mSwitchNo, 7); /* onSwitch */
     }
 }
 
@@ -415,11 +415,11 @@ void daNpc_Os_c::initialNextEvent(int staffIdx) {
         mDoAud_seStart(JA_SE_OBJ_OSTATUE_PUT, &current.pos, 0, reverb);
     }
     if (argument == 0) {
-        field_0x7A5 = 2;
+        mOrderEventNum = 2;
     } else if (argument == 1) {
-        field_0x7A5 = 4;
+        mOrderEventNum = 4;
     } else if (argument == 2) {
-        field_0x7A5 = 6;
+        mOrderEventNum = 6;
     }
 }
 
@@ -440,7 +440,7 @@ BOOL daNpc_Os_c::talk_init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 mgr = u32(l_messageManager);
     if (s32(l_msgId) == -1) {
-        l_msgId = osMessageSet(mgr, (u32)field_0x780, &eyePos);
+        l_msgId = osMessageSet(mgr, (u32)mMsgNo, &eyePos);
         return FALSE;
     }
     return TRUE; // HD: the manager owns the message; no actor search.
@@ -453,10 +453,10 @@ BOOL daNpc_Os_c::talk() {
     u16 status = (u16)osMessageStatus(mgr);
     dComIfGp_get(); // HD: retain the unused play accessor call.
     if (status == MSG_DISPLAYED_e /* MSG_DISPLAYED */) {
-        u16 next = next_msgStatus(&field_0x780);
+        u16 next = next_msgStatus(&mMsgNo);
         osMessageSetStatus(mgr, (u32)next);
         if ((s32)osMessageStatus(mgr) == MSG_CONTINUES_e) {
-            osMessageSet(mgr, (u32)field_0x780, nullptr);
+            osMessageSet(mgr, (u32)mMsgNo, nullptr);
         }
     } else if (status != MSG_OTHER_e && status != MSG_WAIT_e && status == MSG_BOX_CLOSED_e /* BOX_CLOSED */) {
         osMessageSetStatus(mgr, MSG_DESTROYED_e); /* MSG_DESTROYED */
@@ -471,7 +471,7 @@ void daNpc_Os_c::setAnm_brkAnm(int param_1) {
     BrkTableEntry* e = brkEntry(anmBrkTbl, param_1); /* anmBrkTbl[param_1] */
     os_setAnm(this, u8(e->unk_1));
     os_initBrkAnm(this, u8(e->unk_2), 1);
-    field_0x7A1 = 0;
+    mBrkAnmEnd = 0;
 }
 
 // HD: preserve the byte result without changing the shared GameCube BOOL declaration.
@@ -485,7 +485,7 @@ static u8 osCheckAttention(daNpc_Os_c* actor, cXyz* param_1, s16 param_2) {
     s32 maxAngle = s16(l_osHIO.mNpc.mMaxAttnAngleY);
     f32 dist = std_sqrtf(gabi::fmadds(dx, dx, dz * dz));
     s16 angle = cM_atan2s(dx, dz);
-    if (actor->field_0x7A4) {
+    if (actor->mInAttention) {
         maxDist = maxDist + 40.0f;
         maxAngle += 0x71C;
     }
@@ -532,12 +532,12 @@ u32 daNpc_Os_c::getMsg() {
 /* 022AD6CC */
 void daNpc_Os_c::setAttention(bool param_1) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (!param_1 && field_0x7A3 >= 2) {
+    if (!param_1 && mAttnSetCount >= 2) {
         return;
     }
-    eyePos.x = field_0x748.x;
-    eyePos.y = field_0x748.y;
-    eyePos.z = field_0x748.z;
+    eyePos.x = mEyePos.x;
+    eyePos.y = mEyePos.y;
+    eyePos.z = mEyePos.z;
     cXyz* att = &attention_info.position;
     f32 y = current.pos.y + f32(l_osHIO.mNpc.mAttnYOffset);
     att->z = current.pos.z;
@@ -552,9 +552,9 @@ void daNpc_Os_c::lookBack(int param_1, int param_2, int param_3) {
     u32 dstPos = 0;
     s16 targetY = shape_angle.y;
     if (mJntCtrl.mbTrn != 0) { /* mJntCtrl.trnChk() */
-        cLib_addCalcAngleS2(&field_0x798, s16(l_osHIO.mNpc.mMaxHeadTurnVel), 4, 0x800);
+        cLib_addCalcAngleS2(&mLookMaxVel, s16(l_osHIO.mNpc.mMaxHeadTurnVel), 4, 0x800);
     } else {
-        field_0x798 = 0;
+        mLookMaxVel = 0;
     }
     gabi::Local<cXyz> eye, dst, temp;
     if (param_1) {
@@ -568,7 +568,7 @@ void daNpc_Os_c::lookBack(int param_1, int param_2, int param_3) {
     temp->x = tx;
     temp->y = ty;
     temp->z = tz;
-    osLookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, temp.get(), targetY, (s32)(s16)field_0x798,
+    osLookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, temp.get(), targetY, (s32)(s16)mLookMaxVel,
                    param_3 != 0 ? 1 : 0);
 }
 

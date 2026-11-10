@@ -58,9 +58,9 @@ struct AuzuShip {
     u8 pad0[8];
     be<s16> mProcName;
     u8 padA[0x63B - 10];
-    be<u8> m0352;
+    be<u8> mWhirlCircleFlg;  /* was m0352: daShip_c::mWhirlCircleFlg (d_a_ship.h 0x63B) */
     u8 pad63C[0x69A - 0x63C];
-    be<s16> m03B2;
+    be<s16> mWhirlLinkID;  /* was m03B2: daShip_c::mWhirlLinkID (d_a_ship.h 0x69A) */
     u8 pad69C[0x708 - 0x69C];
     be<u32> mWhirlID, mWhirlActor;
 };

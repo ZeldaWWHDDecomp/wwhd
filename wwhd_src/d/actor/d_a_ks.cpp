@@ -149,19 +149,19 @@ void draw_SUB(ks_class* i_this) {
     s16 iVar4 = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
 
     f32 fVar1 = 0.0f;
-    if (i_this->m2D0) {
-        fVar1 = i_this->m304;
+    if (i_this->mFrozen) {
+        fVar1 = i_this->mBgOffsetY;
     }
 
     mDoMtx_stack_c::transS(actor->current.pos.x, actor->current.pos.y + fVar1, actor->current.pos.z);
     mDoMtx_stack_c::YrotM(iVar3);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), iVar4);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.z + i_this->m2FA));
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.z + i_this->mSpinAngle));
 
-    i_this->m2FA += i_this->m2FE;
+    i_this->mSpinAngle += i_this->mSpinSpeed;
 
     mDoMtx_stack_c::scaleM(1.0f, 1.0f, 1.0f);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.z - i_this->m2FA));
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.z - i_this->mSpinAngle));
     J3DModel_setBaseTRMtx(pBodyModel, mDoMtx_stack_c::get());
 
     mDoMtx_stack_c::transS(actor->current.pos.x, actor->current.pos.y + fVar1, actor->current.pos.z);
@@ -190,22 +190,22 @@ static BOOL daKS_Draw(ks_class* i_this) {
 
     dSnap_RegistFig(DSNAP_TYPE_KS, actor, 1.0f, 1.0f, 1.0f);
 
-    if (i_this->m2C8 == 6) {
+    if (i_this->mType == 6) {
         return TRUE;
     }
 
-    if (i_this->m2D0 == 0 && i_this->m2CD == 0) {
+    if (i_this->mFrozen == 0 && i_this->mDrawSubDone == 0) {
         draw_SUB(i_this);
     }
 
-    i_this->m2CD = 0;
+    i_this->mDrawSubDone = 0;
 
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
     setLightTevColorType(dKy_getEnvlight(), pBodyModel, &actor->tevStr);
 
     mDoExt_brkAnm* brk = i_this->mpBodyBrkAnm;
     mDoExt_brkAnm_entry(brk, J3DModel_getModelData(pBodyModel), anm_frame(brk));
-    anm_setFrame(i_this->mpBodyBrkAnm, i_this->m320);
+    anm_setFrame(i_this->mpBodyBrkAnm, i_this->mBrkFrame);
     i_this->mpBodyMorf->updateDL();
     brk_remove(pBodyModel);
 
@@ -213,11 +213,11 @@ static BOOL daKS_Draw(ks_class* i_this) {
 
     mDoExt_btkAnm* btk = i_this->mpEyeBtkAnm;
     mDoExt_btkAnm_entry(btk, J3DModel_getModelData(pEyeModel), anm_frame(btk));
-    anm_setFrame(i_this->mpEyeBtkAnm, (f32)(s16)i_this->m302);
+    anm_setFrame(i_this->mpEyeBtkAnm, (f32)(s16)i_this->mEyeBtkFrame);
 
     brk = i_this->mpEyeBrkAnm;
     mDoExt_brkAnm_entry(brk, J3DModel_getModelData(pEyeModel), anm_frame(brk));
-    anm_setFrame(i_this->mpEyeBrkAnm, i_this->m320);
+    anm_setFrame(i_this->mpEyeBrkAnm, i_this->mBrkFrame);
     i_this->mpEyeMorf->updateDL();
 
     brk_remove(pEyeModel);
@@ -256,9 +256,9 @@ BOOL ks_kuttuki_check(ks_class* i_this) {
             i_this->mSph.mObjCo.mSPrm &= ~1u; /* ClrCoSet */
             i_this->mSph.ClrTgHit();
 
-            if (i_this->m2CF) {
-                i_this->m2CF = 0;
-                ripple_remove(i_this->m52C);
+            if (i_this->mRippleOn) {
+                i_this->mRippleOn = 0;
+                ripple_remove(i_this->mRipple);
             }
 
             i_this->mAction = KS_ATTACHED;
@@ -315,7 +315,7 @@ BOOL body_atari_check(ks_class* i_this) {
             i_this->mMode = 30;
             return FALSE;
         case AT_TYPE_SWORD: {
-            if (i_this->mMode != 43 || i_this->m2CE) {
+            if (i_this->mMode != 43 || i_this->mFirstStuck) {
                 dScnPly_setPauseTimer(2);
                 actor->stealItemBitNo = 1;
             }
@@ -348,7 +348,7 @@ BOOL body_atari_check(ks_class* i_this) {
             break;
         case AT_TYPE_ICE_ARROW:
             i_this->mEnemyIce.mFreezeDuration = 200;
-            i_this->m2D0 = 1;
+            i_this->mFrozen = 1;
             i_this->mEnemyIce.mParticleScale = 0.2f;
             i_this->mEnemyIce.mYOffset = 0.0f;
             enemy_fire_remove(&i_this->mEnemyFire);
@@ -357,7 +357,7 @@ BOOL body_atari_check(ks_class* i_this) {
             i_this->mEnemyIce.mLightShrinkTimer = 1;
             i_this->mEnemyIce.mParticleScale = 0.2f;
             i_this->mEnemyIce.mYOffset = 0.0f;
-            i_this->m2D0 = 1;
+            i_this->mFrozen = 1;
             break;
         default: {
             f32 s = REG_F(8, 0) + 0.8f;
@@ -399,7 +399,7 @@ void speed_keisan(ks_class* i_this, s16 i_speed) {
 
     cMtx_YrotS(calc_mtx(), i_speed);
 
-    s16 sVar1 = (s16)gabi::ftoi(cM_ssin((u16)i_this->m2F0[0]) * i_this->m30C);
+    s16 sVar1 = (s16)gabi::ftoi(cM_ssin((u16)i_this->m2F0[0]) * i_this->mSwayAmp);
 
     cXyz local_14;
     local_14.z = 0.0f;
@@ -484,13 +484,13 @@ void BG_check(ks_class* i_this) {
     fopAc_ac_c* actor = i_this;
 
     // HD: no mAcchCir.SetWall(30, 30) here (daKS_Create sets the wall once)
-    f32 h = i_this->m304;
+    f32 h = i_this->mBgOffsetY;
     actor->current.pos.y = actor->current.pos.y - h;
     actor->old.pos.y = actor->old.pos.y - h;
 
     i_this->mAcch.CrrPos(dComIfG_Bgsp());
 
-    h = i_this->m304;
+    h = i_this->mBgOffsetY;
     actor->current.pos.y = actor->current.pos.y + h;
     actor->old.pos.y = actor->old.pos.y + h;
 }
@@ -506,7 +506,7 @@ static BOOL daKS_Delete(ks_class* i_this) {
 
     dComIfG_resDelete(&i_this->mPhs, "Ks");
 
-    ripple_remove(i_this->m52C);
+    ripple_remove(i_this->mRipple);
 
     enemy_fire_remove(&i_this->mEnemyFire);
 
@@ -616,7 +616,7 @@ static ks_class* ks_class_ct(ks_class* p) {
     ksMain_packetCtor(p->mPacket[1]);
     dBgS_AcchCir_ct(&p->mAcchCir);
     ksAcchCtor(&p->mAcch);
-    ksMain_rippleCtor(p->m52C); /* dPa_rippleEcallBack::dPa_rippleEcallBack */
+    ksMain_rippleCtor(p->mRipple); /* dPa_rippleEcallBack::dPa_rippleEcallBack */
     dCcD_Stts_ct(&p->mStts);
     ksMain_sphereCtor(&p->mSph); /* dCcD_Sph::dCcD_Sph */
     /* enemyice::enemyice (inline) */
@@ -649,31 +649,31 @@ static cPhs_State daKS_Create(fopAc_ac_c* i_this) {
     }
 
     u32 prm = fopAcM_GetParam(i_this);
-    a_this->m2C8 = prm;
-    a_this->m2C9 = prm >> 8;
-    a_this->m2CA = prm >> 0x10;
+    a_this->mType = prm;
+    a_this->mBirthNum = prm >> 8;
+    a_this->mSearchRangePrm = prm >> 0x10;
 
-    if (a_this->m2C8 == 0xff) {
-        a_this->m2C8 = 0;
+    if (a_this->mType == 0xff) {
+        a_this->mType = 0;
     }
 
-    if (a_this->m2C8 <= 1 && (a_this->m2C9 > 0x15 || a_this->m2C9 == 0)) {
-        a_this->m2C9 = 1;
+    if (a_this->mType <= 1 && (a_this->mBirthNum > 0x15 || a_this->mBirthNum == 0)) {
+        a_this->mBirthNum = 1;
     }
 
-    if (a_this->m2CA == 0xff) {
-        a_this->m2CA = 0;
+    if (a_this->mSearchRangePrm == 0xff) {
+        a_this->mSearchRangePrm = 0;
     }
 
-    a_this->m318 = (f32)(u8)a_this->m2CA * 10.0f;
+    a_this->mSearchRange = (f32)(u8)a_this->mSearchRangePrm * 10.0f;
 
-    if (a_this->m2C8 <= 1) {
+    if (a_this->mType <= 1) {
         u32 param = 2;
-        if (a_this->m2C8 == 0) {
+        if (a_this->mType == 0) {
             param = 3;
         }
 
-        for (int i = 0; i < a_this->m2C9; i++) {
+        for (int i = 0; i < a_this->mBirthNum; i++) {
             cXyz local_4c;
             local_4c.y = i_this->current.pos.y;
             local_4c.x = i_this->current.pos.x;
@@ -730,15 +730,15 @@ static cPhs_State daKS_Create(fopAc_ac_c* i_this) {
     i_this->max_health = 1;
     i_this->health = 1;
 
-    a_this->m304 = 25.0f;
+    a_this->mBgOffsetY = 25.0f;
 
     f32 t = cM_rndFX(25.0f) + 50.0f;
     a_this->m2DC.x = 1.0f;
     a_this->m2DC.y = 1.0f;
     a_this->m2DC.z = 1.0f;
-    a_this->m2E8[0] = (s16)gabi::ftoi(t);
+    a_this->mTimers[0] = (s16)gabi::ftoi(t);
 
-    a_this->m2FE = (fopAcM_GetID(i_this) & 7) * 0x32 + 1000;
+    a_this->mSpinSpeed = (fopAcM_GetID(i_this) & 7) * 0x32 + 1000;
 
     a_this->mSph.Set(&body_co_sph_src);
     a_this->mSph.SetStts(&a_this->mStts);
@@ -759,23 +759,23 @@ static cPhs_State daKS_Create(fopAc_ac_c* i_this) {
 
     i_this->itemTableIdx = dComIfGp_CharTbl_GetNameIndex("kuro_s", 0);
 
-    if (a_this->m2C8 == 4 || a_this->m2C8 == 5) {
+    if (a_this->mType == 4 || a_this->mType == 5) {
         a_this->mGmID = i_this->parentActorID; /* fopAcM_GetLinkId */
         if (a_this->mGmID == fpcM_ERROR_PROCESS_ID_e) {
             return cPhs_ERROR_e;
         }
 
         fopAc_ac_c* gm_actor = fopAcM_SearchByID(a_this->mGmID);
-        if (gm_actor && fopAc_IsActor(gm_actor) && gm_actor && fpcM_GetName(gm_actor) == fpcNm_GM_e && a_this->m2C8 == 5) {
+        if (gm_actor && fopAc_IsActor(gm_actor) && gm_actor && fpcM_GetName(gm_actor) == fpcNm_GM_e && a_this->mType == 5) {
             i_this->current.angle.y = (s16)gabi::ftoi((f32)(s16)i_this->current.angle.y + cM_rndFX(0x2000));
             i_this->speedF = cM_rndF(6.0f) + 34.0f;
             i_this->speed.y = cM_rndF(8.0f) + 22.0f;
         }
     }
 
-    a_this->m31C = 20.0f;
+    a_this->mSphRadius = 20.0f;
 
-    if (a_this->m2C8 == 6) {
+    if (a_this->mType == 6) {
         a_this->mSph.mObjTg.mSPrm &= ~1u; /* OffTgSetBit */
         a_this->mSph.mObjCo.mSPrm &= ~1u; /* OffCoSetBit */
         a_this->mSph.ClrTgHit();
@@ -786,7 +786,7 @@ static cPhs_State daKS_Create(fopAc_ac_c* i_this) {
         return res;
     }
 
-    if (a_this->m2C8 == 7) {
+    if (a_this->mType == 7) {
         i_this->actor_status |= 0x4000; /* fopAcStts_UNK4000_e */
 
         a_this->mAction = KS_BIRTH;
@@ -795,7 +795,7 @@ static cPhs_State daKS_Create(fopAc_ac_c* i_this) {
         return res;
     }
 
-    if (a_this->m2C8 == 2) {
+    if (a_this->mType == 2) {
         a_this->mAction = KS_MOVE;
         a_this->mMode = 3;
 

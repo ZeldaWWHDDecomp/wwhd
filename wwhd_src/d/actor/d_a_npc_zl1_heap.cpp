@@ -201,7 +201,7 @@ u32 daNpc_Zl1_c::setBtp(s32 param_1, u32 param_2) {
     }
     void* a_btp = zl1Heap::objectResource(mArcName, zl1Heap::text(zl1Heap_btpResID(this, param_1) /* btpResID */));
     // HD: the GameCube resource assertion is absent.
-    field_0x847 = (s8)param_1;
+    mBtpNum = (s8)param_1;
     mBtpAnmFrame = 0;
     mTimer = 0;
     s32 ret = zl1Heap_btpInit(mBtpAnm, model->getModelData(), a_btp, 1, 0, 1.0f, 0, -1, param_2, 0);
@@ -261,7 +261,7 @@ void daNpc_Zl1_c::setMat() {
         zl1Heap::assure(name);
         s32 index = zl1Heap_nameIndex(gabi::ea(resource->mMaterialNames.get()), zl1Heap::text(name->mTextPtr));
         zl1Heap::Material* material = zl1Heap::materialByIndex(data, index);
-        field_0x6D4[i] = material->mpMaterialAnm.get();
+        mpEyeMatAnm[i] = material->mpMaterialAnm.get();
     }
 }
 
@@ -274,7 +274,7 @@ u32 daNpc_Zl1_c::setBtk(s32 param_1, u32 param_2) {
     }
     void* a_btk = zl1Heap::objectResource(mArcName, zl1Heap::text(zl1Heap_btkResID(this, param_1) /* btkResID */));
     // HD: the GameCube resource assertion is absent.
-    field_0x848 = (s8)param_1;
+    mBtkNum = (s8)param_1;
     mBtkAnmFrame = 0;
     if (zl1Heap_btkInit(mBtkAnm, model->getModelData(), a_btk, 1, 0, 1.0f, 0, -1, param_2, 0) != 0) {
         if (!param_2) {
@@ -311,7 +311,7 @@ cPhs_State daNpc_Zl1_c::_create() {
     if (!mStateIsComplaete) {
         return state;
     }
-    if (!fopAcM_entrySolidHeap(this, zl1Heap::CheckCreateHeap, a_siz_tbl[field_0x84E])) {
+    if (!fopAcM_entrySolidHeap(this, zl1Heap::CheckCreateHeap, a_siz_tbl[mHeapSizeIdx])) {
         return cPhs_ERROR_e;
     }
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel())); /* fopAcM_SetMtx */
@@ -385,7 +385,7 @@ BOOL daNpc_Zl1_c::bodyCreateHeap() {
 
 /* 02303400 */
 BOOL daNpc_Zl1_c::itemCreateHeap() {
-    if (field_0x84F != 1) {
+    if (mType != 1) {
         mpModel = nullptr;
         return TRUE;
     }

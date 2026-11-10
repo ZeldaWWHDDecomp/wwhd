@@ -82,9 +82,9 @@ void daObj_Ikada_c::_nodeControl(void *node, J3DModel *model) {
     ikadaApi_rotateZXY(matrix, (s16)rotation->x, (s16)rotation->y, (s16)rotation->z);
     if (index == 1) {
         s32 product =
-            (s32)((u32)(s32)(s16)m115E * (u32)(REG_S(12, 5) + 5));
-        u16 phase = m115C;
-        s16 base = m115A;
+            (s32)((u32)(s32)(s16)mCraneShakeAmpl * (u32)(REG_S(12, 5) + 5));
+        u16 phase = mCraneShakePhase;
+        s16 base = mCraneAngle;
         f32 sine = cM_ssin(phase);
         s16 angle = (s16)gabi::ftoi(gabi::fmadds((f32)product, sine, (f32)base));
         ikadaApi_rotateX(matrix, angle);
@@ -205,11 +205,11 @@ s32 daObj_Ikada_c::checkTgHit() {
         }
     }
     ikadaApi_dCcD_GStts_Move(gabi::ea(this) + 0x1620);
-    if (!ikadaApi_calcTimer(&m12E4)) {
+    if (!ikadaApi_calcTimer(&mHitTimer)) {
         u32 hit = ikadaApi_getTargetHitObject(&mSph);
         ikadaApi_getTargetHitObject(&mSph);
         if (hit && gabi::load<u32>(hit + 0x10) == 0x20) {
-            m12E4 = 60;
+            mHitTimer = 60;
             mLinkRideRockAmpl = 300;
             modeProc(PROC_INIT_e, MODE_STOP_BOMB_TERRY_e);
             return 1;
@@ -233,19 +233,19 @@ void daObj_Ikada_c::pathMove() {
 void daObj_Ikada_c::HandleRight() {
     f32 speed = (f32)l_HIO.m20;
     s16 end = mBckAnm.mFrameCtrl.mEnd;
-    s32 frame = (s32)((u32)(s32)m1154 + (u32)gabi::ftoi(speed));
-    m1154 = frame;
+    s32 frame = (s32)((u32)(s32)mFrame + (u32)gabi::ftoi(speed));
+    mFrame = frame;
     if (!((f32)frame < (f32)end))
-        m1154 = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mStart);
+        mFrame = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mStart);
 }
 /* 02364098 */
 void daObj_Ikada_c::HandleLeft() {
     f32 speed = (f32)l_HIO.m20;
     s16 start = mBckAnm.mFrameCtrl.mStart;
-    s32 frame = (s32)((u32)(s32)m1154 - (u32)gabi::ftoi(speed));
-    m1154 = frame;
+    s32 frame = (s32)((u32)(s32)mFrame - (u32)gabi::ftoi(speed));
+    mFrame = frame;
     if (!((f32)frame > (f32)start))
-        m1154 = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mEnd);
+        mFrame = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mEnd);
 }
 /* 02361268 */
 void daObj_Ikada_c::createWave() {
@@ -367,8 +367,8 @@ void daObj_Ikada_c::setWave() {
 }
 /* 02363D28 */
 void daObj_Ikada_c::incRopeCnt(s32 increment, s32 minimum) {
-    s32 old = m07D8, newCount = (s32)((u32)old + (u32)increment);
-    cXyz* velocity = m07DC + old;
+    s32 old = mRopeCnt, newCount = (s32)((u32)old + (u32)increment);
+    cXyz* velocity = mRopeVelocity + old;
     cXyz* positions = mRopeLine.getPos(0);
     if (newCount >= 200)
         newCount = 200;
@@ -380,21 +380,21 @@ void daObj_Ikada_c::incRopeCnt(s32 increment, s32 minimum) {
         gabi::Local<cXyz> shift;
         ikadaApi_multiplyVector(offset, shift.get(), (f32)delta);
         s32 i = 0;
-        old = m07D8;
+        old = mRopeCnt;
         while (i < old) {
             PSVECAdd(positions, shift.get(), positions);
-            old = m07D8;
+            old = mRopeCnt;
             ++i;
             ++positions;
         }
     } else
         positions += old;
-    old = m07D8;
+    old = mRopeCnt;
     if (old < newCount) {
         gabi::Local<cXyz> result;
         for (s32 remaining = (s32)((u32)newCount - (u32)old); remaining; --remaining) {
             velocity->copy(*offset);
-            if (m07D8 != 0) {
+            if (mRopeCnt != 0) {
                 ikadaApi_subtractVector(positions - 1, result.get(), offset);
                 positions->copy(*result.get());
             }
@@ -402,7 +402,7 @@ void daObj_Ikada_c::incRopeCnt(s32 increment, s32 minimum) {
             ++velocity;
         }
     }
-    m07D8 = (s16)newCount;
+    mRopeCnt = (s16)newCount;
 }
 /* 023620F0 */
 void daObj_Ikada_c::setRopePos() {
@@ -412,7 +412,7 @@ void daObj_Ikada_c::setRopePos() {
         ripple_scale_guard.mInitialized = 1;
         ripple_scale.y = 0.6f;
     }
-    s32 count = m07D8;
+    s32 count = mRopeCnt;
     cXyz* base = mRopeLine.getPos(0);
     s32 endIndex = count ? count - 1 : 0;
     cXyz* end = base + endIndex;
@@ -439,17 +439,17 @@ void daObj_Ikada_c::setRopePos() {
                        (f32)modelMatrix->m[2][3] - (f32)end->z);
         ikadaApi_cXyz_normalizeZP(direction.get(), normalized.get());
         PSVECScale(direction.get(), direction.get(), 10.0f);
-        count = m07D8;
+        count = mRopeCnt;
         for (s32 i = count - 2; i >= 0; --i) {
             ikadaApi_addVector(base + i + 1, tmp.get(), direction.get());
             (base + i)->copy(*tmp.get());
-            m07DC[i].copy(*&ikada_vector_zero);
+            mRopeVelocity[i].copy(*&ikada_vector_zero);
         }
     } else {
-        count = m07D8;
+        count = mRopeCnt;
         for (s32 i = count - 2; i >= 0; --i) {
             cXyz* point = base + i;
-            auto velocity = &m07DC[i];
+            auto velocity = &mRopeVelocity[i];
             saved->copy(*point);
             f32 water = ikadaApi_getWaterY(point, &mObjAcch);
             f32 drag = (f32)point->y < water ? 0.6f : 0.9f;
@@ -472,7 +472,7 @@ void daObj_Ikada_c::setRopePos() {
             PSVECAdd(velocity, delta.get(), velocity);
         }
     }
-    count = m07D8;
+    count = mRopeCnt;
     base = mRopeLine.getPos(0);
     f32 x, y, z, dx, dy, dz;
     if (count > 1) {
@@ -503,7 +503,7 @@ void daObj_Ikada_c::setRopePos() {
     s16 roll = ikadaApi_cM_atan2s(-rx, horizontal);
     ikadaApi_rotateZXY(matrix, pitch, yaw, roll);
     ikadaApi_rotateX(matrix, -0x4000);
-    m0474.set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
+    mCranePos.set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
                     (f32)matrix->m[2][3]);
     f32 values[12];
     for (u32 i = 0; i < 12; ++i)
@@ -514,7 +514,7 @@ void daObj_Ikada_c::setRopePos() {
     f32 firstY = (f32)base->y, water = ikadaApi_getWaterY(base, &mObjAcch);
     base->y = firstY;
     if (water > firstY) {
-        count = m07D8;
+        count = mRopeCnt;
         cXyz* crossing = base;
         for (s32 i = 0; i < count; ++i) {
             f32 pointY = i ? (f32)base[i].y : firstY;
@@ -522,26 +522,26 @@ void daObj_Ikada_c::setRopePos() {
                 crossing = base + i;
         }
         f32 pointX = (f32)crossing->x;
-        m0444.y = water;
-        m0444.x = pointX;
-        m0444.z = (f32)crossing->z;
+        mRopeWaterPos.y = water;
+        mRopeWaterPos.x = pointX;
+        mRopeWaterPos.z = (f32)crossing->z;
         if (!mRippleCallBack.mpEmitter) {
             auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
-            ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 5, 0x33, &m0444, nullptr, &ripple_scale, 255, &mRippleCallBack, -1, nullptr, nullptr, nullptr);
+            ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 5, 0x33, &mRopeWaterPos, nullptr, &ripple_scale, 255, &mRippleCallBack, -1, nullptr, nullptr, nullptr);
             if (mRippleCallBack.mpEmitter) {
-                u8 timer = m0440;
+                u8 timer = mWpillarTimer;
                 mRippleCallBack.mRate = 0.0f;
                 if (!timer) {
-                    ikadaApi_fopKyM_createWpillar(&m0444, 0, 1.0f, 0.7f);
-                    m0440 = 19;
+                    ikadaApi_fopKyM_createWpillar(&mRopeWaterPos, 0, 1.0f, 0.7f);
+                    mWpillarTimer = 19;
                     return;
                 }
             }
         }
     } else
         ikadaApi_dPa_rippleEcallBack_end(&mRippleCallBack);
-    if (m0440)
-        m0440 = (u8)((u8)m0440 - 1);
+    if (mWpillarTimer)
+        mWpillarTimer = (u8)((u8)mWpillarTimer - 1);
 }
 /* 02360420 */
 void daObj_Ikada_c::setMtx() {
@@ -732,9 +732,9 @@ void daObj_Ikada_c::modeWait() {
         return;
     s16 target = (s16)l_HIO.m1C;
     if (target) {
-        if (m07D8 > target)
+        if (mRopeCnt > target)
             incRopeCnt(-1, 0);
-        else if (m07D8 < target)
+        else if (mRopeCnt < target)
             incRopeCnt(1, 0);
     }
     if (REG_S(12, 4))
@@ -745,7 +745,7 @@ void daObj_Ikada_c::modeCraneUpInit() {
 }
 /* 02363FE0 */
 void daObj_Ikada_c::modeCraneUp() {
-    if (m07D8 > 15) {
+    if (mRopeCnt > 15) {
         HandleRight();
         incRopeCnt(-1, 0);
     } else
@@ -762,19 +762,19 @@ void daObj_Ikada_c::modeCraneUpWait() {
 }
 /* 0236408C */
 void daObj_Ikada_c::modeCraneDownInit() {
-    m115E = 150;
+    mCraneShakeAmpl = 150;
 }
 /* 02364148 */
 void daObj_Ikada_c::modeCraneDown() {
-    cLib_addCalcAngleS2(&m115E, 0, 10, 10);
-    if (m115E < 20) {
+    cLib_addCalcAngleS2(&mCraneShakeAmpl, 0, 10, 10);
+    if (mCraneShakeAmpl < 20) {
         HandleLeft();
-        if (m07D8 < (s16)l_HIO.m1E)
+        if (mRopeCnt < (s16)l_HIO.m1E)
             incRopeCnt(1, 0);
         else
             modeProc(PROC_INIT_e, MODE_CRANE_WAIT_e);
     } else
-        m115C = (s16)((s32)m115C + REG_S(12, 2) + 0x1830);
+        mCraneShakePhase = (s16)((s32)mCraneShakePhase + REG_S(12, 2) + 0x1830);
 }
 /* 02364204 */
 void daObj_Ikada_c::modeCraneDownWaitInit() {
@@ -787,38 +787,38 @@ void daObj_Ikada_c::modeCraneDownWait() {
 }
 /* 0236425C */
 void daObj_Ikada_c::modeCraneTurnInit() {
-    m115E = 150;
+    mCraneShakeAmpl = 150;
     speedF = 0.0f;
 }
 /* 02364274 */
 void daObj_Ikada_c::modeCraneTurn() {
-    cLib_addCalcAngleS2(&m115E, 0, 10, 10);
-    if (m115E < 20) {
+    cLib_addCalcAngleS2(&mCraneShakeAmpl, 0, 10, 10);
+    if (mCraneShakeAmpl < 20) {
         HandleRight();
-        s16 target = m1168 == 1 ? 0x4000 : -0x4000;
-        m1158 = target;
-        cLib_addCalcAngleS2(&m115A, target, 10, 0x100);
-        if (cLib_distanceAngleS((s16)m115A, (s16)m1158) <= 0x100)
+        s16 target = mSvDirection == 1 ? 0x4000 : -0x4000;
+        mCraneAngleTarget = target;
+        cLib_addCalcAngleS2(&mCraneAngle, target, 10, 0x100);
+        if (cLib_distanceAngleS((s16)mCraneAngle, (s16)mCraneAngleTarget) <= 0x100)
             modeProc(PROC_INIT_e, MODE_CRANE_DOWN_WAIT_e);
     } else
-        m115C = (s16)((s32)m115C + REG_S(12, 2) + 0x1830);
+        mCraneShakePhase = (s16)((s32)mCraneShakePhase + REG_S(12, 2) + 0x1830);
 }
 /* 0236433C */
 void daObj_Ikada_c::modeCraneResetInit() {
-    m115E = 150;
+    mCraneShakeAmpl = 150;
     speedF = 0.0f;
 }
 /* 02364354 */
 void daObj_Ikada_c::modeCraneReset() {
-    cLib_addCalcAngleS2(&m115E, 0, 10, 10);
-    if (m115E < 20) {
+    cLib_addCalcAngleS2(&mCraneShakeAmpl, 0, 10, 10);
+    if (mCraneShakeAmpl < 20) {
         HandleLeft();
-        m1158 = 0;
-        cLib_addCalcAngleS2(&m115A, 0, 10, 0x100);
-        if (cLib_distanceAngleS((s16)m115A, (s16)m1158) <= 0x100)
+        mCraneAngleTarget = 0;
+        cLib_addCalcAngleS2(&mCraneAngle, 0, 10, 0x100);
+        if (cLib_distanceAngleS((s16)mCraneAngle, (s16)mCraneAngleTarget) <= 0x100)
             modeProc(PROC_INIT_e, MODE_PATH_MOVE_e);
     } else
-        m115C = (s16)((s32)m115C + REG_S(12, 2) + 0x1830);
+        mCraneShakePhase = (s16)((s32)mCraneShakePhase + REG_S(12, 2) + 0x1830);
 }
 /* 0236440C */
 void daObj_Ikada_c::modeCraneWaitInit() {
@@ -831,7 +831,7 @@ void daObj_Ikada_c::modeCraneWait() {
 }
 /* 02364460 */
 void daObj_Ikada_c::modePathMoveInit() {
-    m1168 = cM_rndF(1.0f) < 0.5 ? 0 : 1;
+    mSvDirection = cM_rndF(1.0f) < 0.5 ? 0 : 1;
 }
 /* 02364578 */
 void daObj_Ikada_c::modePathMove() {
@@ -864,25 +864,25 @@ void daObj_Ikada_c::modeStop() {
         HandleRight();
     if ((u8)l_HIO.m05)
         HandleLeft();
-    if (m02F4 == 8) {
+    if (mPrevMode == 8) {
         mVelocityFwdTarget = 0.0f;
         if (mPathId != 255)
             pathMove();
     }
-    s32 count = m07D8;
-    if (!m1166) {
+    s32 count = mRopeCnt;
+    if (!mPlayerNearby) {
         if (count <= 15) {
             HandleLeft();
             incRopeCnt(1, 0);
             return;
         }
-        s32 previous = m02F4;
+        s32 previous = mPrevMode;
         modeProc(PROC_INIT_e, previous == 9 ? 8 : previous == 7 ? 3 : previous);
     } else if (count > 2) {
         HandleRight();
         incRopeCnt(-2, 0);
-        if (m07D8 < 2)
-            m07D8 = 2;
+        if (mRopeCnt < 2)
+            mRopeCnt = 2;
     }
 }
 /* 023647C4 */
@@ -1005,13 +1005,13 @@ void daObj_Ikada_c::epProc() {
         f32 value = cM_rndF(REG_F(0, 2) + 5.0f);
         mEpTimer0 = (s16)gabi::ftoi(value + REG_F(0, 3));
         value = cM_rndF(REG_F(0, 6) + 4.0f);
-        m050C = (value + 8.0f) + REG_F(0, 7);
+        mLightAlphaTarget = (value + 8.0f) + REG_F(0, 7);
     }
     if (!ikadaApi_calcTimer(&mEpTimer1)) {
         mEpTimer1 = (s16)gabi::ftoi(cM_rndF(6.0f) + 3.0f);
         mLightPowerTarget = cM_rndF(0.075f) + 0.75f;
     }
-    cLib_addCalc2(&m0508, (f32)m050C, 1.0f,
+    cLib_addCalc2(&mLightAlpha, (f32)mLightAlphaTarget, 1.0f,
                REG_F(0, 4) + 1.0f);
     cLib_addCalc2(&mLightPower, (f32)mLightPowerTarget, 0.4f, 0.04f);
     mPLight.mPower = 150.0f * (f32)mLightPower;
@@ -1038,11 +1038,11 @@ s32 daObj_Ikada_c::_execute() {
         emitter->mGlobalParticleScale[2] = 3.0f;
         mBombSmokePos.copy(current.pos);
         mBombSmokePos.y = (f32)l_HIO.m28;
-        if (!ikadaApi_calcTimer(&m04A8))
+        if (!ikadaApi_calcTimer(&mBombSmokeTimer))
             ikadaApi_dPa_followEcallBack_end(&mBombSmokeEasterEgg);
     }
-    if (m1166 && mCurMode != 9) {
-        m02F4 = mCurMode;
+    if (mPlayerNearby && mCurMode != 9) {
+        mPrevMode = mCurMode;
         modeProc(PROC_INIT_e, MODE_STOP_e);
     }
     if (mType == 3 || mType == 1)
@@ -1050,7 +1050,7 @@ s32 daObj_Ikada_c::_execute() {
     if (mType == 4) {
         setRopePos();
         if (mType == 4) {
-            mBckAnm.mFrameCtrl.mFrame = (f32)(s32)m1154;
+            mBckAnm.mFrameCtrl.mFrame = (f32)(s32)mFrame;
             s16 index = REG_S(12, 0);
             if (index) {
                 mJointRot[index].x = REG_S(12, 1);
@@ -1309,8 +1309,8 @@ s32 daObj_Ikada_c::_draw() {
     gabi::store<u32>(0x104B4638, (u32)reinterpret_cast<dDlstHD::dDlst_list_c*>(&play->drawlist)->mpXluList);
     drawSea();
     if (mType == 4) {
-        if (m07D8 >= 2) {
-            ikadaApi_mDoExt_3DlineMat1_c_update(gabi::ea(this) + 0x934, (u16)(s32)m07D8, 0x101CA4D8, 0,
+        if (mRopeCnt >= 2) {
+            ikadaApi_mDoExt_3DlineMat1_c_update(gabi::ea(this) + 0x934, (u16)(s32)mRopeCnt, 0x101CA4D8, 0,
                        gabi::ea(this) + 0x110, 5.0f);
             play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
             u32 vt = gabi::load<u32>(gabi::ea(this) + 0xA64);
@@ -1417,7 +1417,7 @@ void daObj_Ikada_c::createInit() {
     if (mType == 4) {
         mpModel->calc();
         cXyz* positions = mRopeLine.getPos(0);
-        m07D8 = 15;
+        mRopeCnt = 15;
         J3DMtxBuffer_hd* modelBlock = mpModel->mpMtxBuffer;
         u32 array = modelBlock->mpAnmMtx;
         modelBlock->mFlags = (u16)modelBlock->mFlags | 0x10;
@@ -1431,12 +1431,12 @@ void daObj_Ikada_c::createInit() {
         gabi::Local<cXyz> step, tmp, difference;
         step->set(0.0f, -1.0f, 0.0f);
         PSVECScale(step.get(), step.get(), 10.0f);
-        s32 count = m07D8;
+        s32 count = mRopeCnt;
         if (count >= 2)
             for (s32 i = count - 2; i >= 0; --i) {
                 ikadaApi_addVector(positions + i + 1, tmp.get(), step.get());
                 (positions + i)->copy(*tmp.get());
-                m07DC[i].copy(*&ikada_vector_zero);
+                mRopeVelocity[i].copy(*&ikada_vector_zero);
             }
         positions = mRopeLine.getPos(0);
         ikadaApi_subtractVector(positions, difference.get(), positions + 1);
@@ -1453,7 +1453,7 @@ void daObj_Ikada_c::createInit() {
         s16 roll = ikadaApi_cM_atan2s(-x, horizontal);
         ikadaApi_rotateZXY(matrix, pitch, yaw, roll);
         ikadaApi_rotateX(matrix, -0x4000);
-        m0474.set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
+        mCranePos.set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
                         (f32)matrix->m[2][3]);
         f32 values[12];
         for (u32 i = 0; i < 12; ++i)

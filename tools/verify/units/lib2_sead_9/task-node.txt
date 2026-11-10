@@ -1,0 +1,80 @@
+# verify: -only 02747168
+# SEAD#9 companion: CalcDrawTask::getMethodTreeNode with the task's method tree manager as the original class.
+src wwhd_src/sead/MethodTree.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+# Runtime identity comparisons and valid display-screen selectors.
+arg 027457B0 r4 0,0x101FD97C,0x101FD980
+arg 02746888 r4 0,0x101FD990,0x101FD9A8
+arg 02747478 r4 0,0x101FD9D8,0x101FD980
+arg 027464F8 r4 0,1,2,3,4,5,6,7,8,9,10,11,4294967295
+field 027464F8 r3+0x3DC u32 0,1,2
+field 027464F8 r3+0x3E0 u32 0,1,2
+arg 02747168 r4 0,1,2,3,4,5,6,7,8,9,10,11,4294967295
+# The base-task constructor mock stores the vtables the real one stores (02748A28/02748A2C).
+mockfield 02748980 r3+0x70 u32 0x10144BC8
+mockfield 02748980 r3+0x20 u32 0x10144C78
+# GHS deleting entries accept a null receiver; also keep nonnull and unsteered cases.
+arg 027456D0 r3 0,0x51000000
+arg 027467A8 r3 0,0x51000000
+arg 027472C4 r3 0,0x51000000
+arg 027456E4 r3 0,0x51000000
+arg 027467BC r3 0,0x51000000
+arg 027472D8 r3 0,0x51000000
+arg 027452C8 r3 0,0x51000000
+arg 0274734C r3 0,0x51000000
+
+# Pre-existing aligned stack bytes expose missing stores into stack objects.
+stackfill periodic
+
+# The task-manager factory reads its 0x18-byte initialization argument from the run's frame.
+callee 027496EC r3=24
+# Attach paths: a task with or without a parent task, flagged to attach below it or not.
+field 0274535C r3+0x0 u32 0,0x58000000
+field 02746F6C r3+0x0 u32 0,0x58000000
+field 02747024 r3+0x0 u32 0,0x58000000
+field 0274535C r3+0x64 u32 0,1
+field 02746F6C r3+0x64 u32 0,1
+field 02747024 r3+0x64 u32 0,1
+# attachToMethodTree forwards phase and node to the manager through a virtual call, which the
+# live-in analysis does not follow: compare both registers.
+callee 027487A4 r4=0 r5=0
+
+# Cross-build save states (2026-11-03): MethodTreeMgr::calc is on the main thread's parked chain. The
+# original has no frame and tail-branches to MethodTreeNode::call: the target runs at the entry sp
+# (footprint 0) with the entry LR (the harness's 0BADC0DE) and r14..r31 / f14..f31 untouched.
+footprint 02746790 0
+framexact 02746790 0BADC0DE
+# sead::Framework::run: the main loop runs below its run-loop call (one return address per branch).
+footprint 027476D8 0x40
+framexact 027476D8 027477D0
+framexact 027476D8 02747804
+# zero-page rule: a framework object with a vtable, run settings and a tree heap, so the run reaches
+# its run-loop call on most inputs (both stack-size / priority branches)
+arg! 027476D8 r3 0x5B000000
+field 027476D8 5B000024 u32 0x5B001000
+field 027476D8 5B001054 u32 0x5B002000
+field 027476D8 5B00105C u32 0x5B002010
+field 027476D8 5B001064 u32 0x5B002020
+arg! 027476D8 r6 0x5B003000
+field 027476D8 5B003000 u32 0,0x8000,0x10000
+field 027476D8 5B003004 s32 -1,16,0x7FFFFFFF
+ret! 02753004 0x5B004000
+field 027476D8 5B00400C u32 0x5B005000
+field 027476D8 5B00502C u32 0x5B002030
+stable 5B000000 0x5100
+
+# zero-page rule (2026-11-10, clean 837/1000, LOST block 23): for the screen phases,
+# CalcDrawTask::getMethodTreeNode 02747168 gets the manager from TaskBase::getMethodTreeMgr 02748794 (mocked: it walks
+# the task tree), checks it with the manager's isKindOf (vtable +0x3C, slot +0xC) and reads mSystemScreen (+0x3DC) /
+# mAppScreen (+0x3E0). Generated managers fail the check and the original then loads the screen word through NULL; block
+# 23 (top screen) was reached only that way. Here the lookup returns a manager fixture 0x5C100000 laid out as
+# MethodTreeMgr with the image's sMethodTreeMgrVtable 101446E0, whose isKindOf (MethodTreeMgr::isKindOf 02746888, the
+# image's slot) runs for real; the screens are top, bottom or invalid. Allocators
+# (2026-11-10): no NULL answer, the shipped game's tasks always have a manager (the original does not survive NULL).
+ret! 02748794 0x5C100000
+real 02746888
+field 02747168 5C10003C u32 0x101446E0
+field 02747168 5C1003DC u32 0,1,2
+field 02747168 5C1003E0 u32 0,1,2
+stable 5C10003C 4
+stable 5C1003DC 8

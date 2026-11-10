@@ -122,73 +122,73 @@ GuestByte *pathString(AudioSafeString *path) {
 void JAIZelBasic::monsSeInit() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     for (u32 k = 0; k < 30; k++) {
-        field_0x1f4c[k].field_0x00 = -1;
-        field_0x1f4c[k].field_0x04 = nullptr;
+        mMonsSe[k].mActorId = -1;
+        mMonsSe[k].mpSound = nullptr;
     }
 }
 
 /* 02025760 */
 void JAIZelBasic::initSe() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    cameraAt(0)->field_0x0 = nullptr;
-    cameraAt(0)->field_0x4 = nullptr;
-    cameraAt(0)->field_0x8 = nullptr;
-    field_0x01f4 = 0;
+    cameraAt(0)->position = nullptr;
+    cameraAt(0)->previousPosition = nullptr;
+    cameraAt(0)->matrix = nullptr;
+    mSeSlotIndex = 0;
     for (u32 i = 0; i < 32; i++) {
         mpSeSound[i] = nullptr;
         mSeNum[i] = 0;
-        field_0x0194[i] = 0;
+        mSePosAddr[i] = 0;
     }
     for (u32 i = 0; i < 4; i++) {
-        field_0x2040[i] = nullptr;
-        field_0x2050[i] = nullptr;
+        mpKuroboMotionSound[i] = nullptr;
+        mpKuroboVoiceSound[i] = nullptr;
     }
-    field_0x1dd0 = 0;
-    field_0x0201 = 0;
+    mRiverPosCount = 0;
+    mAllSeMuted = 0;
     mVoiceIndexHD = 0xFFFF;
-    field_0x1f48 = nullptr;
-    field_0x1ec4 = 0;
-    field_0x01fb = 0;
-    field_0x2074 = 0;
-    field_0x1f44 = nullptr;
-    field_0x0218 = 0;
-    field_0x01f9 = 0;
+    mpShipWaveSound = nullptr;
+    mpSeaEnvSoundL = 0;
+    mBrkWrailKSePlayed = 0;
+    mSystemSoundHD = 0;
+    mpShipCruiseSound = nullptr;
+    mCameraMapInfo = 0;
+    mAddGrassSePlayed = 0;
     field_0x020c = 0;
-    field_0x1ed0 = 0;
-    field_0x1ecc = 0;
-    field_0x203d = 0;
-    field_0x0214 = 0;
-    field_0x1e98 = 0;
-    field_0x01fc = 0;
-    field_0x203c = 0;
-    field_0x1f38 = nullptr;
-    field_0x1f34 = 0;
-    field_0x0020 = 0;
+    mpSeaShoreSound = 0;
+    mpSeaEnvSoundS = 0;
+    mKuroboVoiceCount = 0;
+    mpTelescopeSound = 0;
+    mWaterfallPosCount = 0;
+    mColBrkWrailingSePlayed = 0;
+    mKuroboMotionCount = 0;
+    mpWindSound = nullptr;
+    mFireblastPosCount = 0;
+    mIsMenuIn = 0;
     field_0x0210 = 0;
-    field_0x1ec8 = 0;
-    field_0x2060 = nullptr;
-    field_0x1b80 = 0;
+    mpSeaEnvSoundR = 0;
+    mpCharVoiceSound = nullptr;
+    mSeaEnvPosCount = 0;
     monsSeInit();
     initLevObjSE();
     setParamSoundOutputMode(2); /* JAudio global setting (2) */
-    field_0x00ba = 0;
+    mTetraFlyStreamStarted = 0;
 }
 
 /* 0202587C */
 void JAIZelBasic::kuroboVoicePlay(u32 id, cXyz *pos, u32 reverb) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 c = field_0x203d;
+    u32 c = mKuroboVoiceCount;
     if (c >= 4)
         return;
-    field_0x203d = c + 1;
+    mKuroboVoiceCount = c + 1;
     stopSoundCategory(4, pos); /* JAIBasic: stop the object's sounds of category 4 */
     u32 i;
     for (i = 0; i < 4; i++)
-        if (field_0x2050[i].get() == 0)
+        if (mpKuroboVoiceSound[i].get() == 0)
             break;
     if (i == 4)
         return;
-    gptr<Sound> *handle = &field_0x2050[i];
+    gptr<Sound> *handle = &mpKuroboVoiceSound[i];
     startSoundVec(id, handle, pos, 0, 0, 4);
     if (handle->get() != nullptr)
         handle->get()->setPortData(9, reverb & 0xFFFF);
@@ -200,17 +200,17 @@ void JAIZelBasic::mbossBgmNearByProcess(f32 dist) {
     if (mpSubBgmSound.get() == 0)
         return;
     if (!(dist > ENEMY_NEARBY_DIST)) { /* JAIZelParam::ENEMY_NEARBY_DIST */
-        s32 d1 = (s8)field_0x00c1;
-        field_0x00c4 = 0;
+        s32 d1 = (s8)mEnemyNearbyOn;
+        mEnemyNearbyFadeTimer = 0;
         if (d1 != 0)
             return;
         mpSubBgmSound.get()->setTrackVolume(MBOSS_ENEMY_NEARBY_TRACK, 1.0f,
                                             ENEMY_NEARBY_FADEIN_TIME);
-        field_0x00c1 = 1;
-    } else if ((s8)field_0x00c1 == 1) {
+        mEnemyNearbyOn = 1;
+    } else if ((s8)mEnemyNearbyOn == 1) {
         u32 t = ENEMY_NEARBY_FADEOUT_TIME;
-        field_0x00c1 = 0;
-        field_0x00c4 = t;
+        mEnemyNearbyOn = 0;
+        mEnemyNearbyFadeTimer = t;
     }
 }
 
@@ -221,20 +221,20 @@ void JAIZelBasic::enemyNearBy() {
         u32 n = mMainBgmNum;
         bool go = true;
         if (n == JA_BGM_DK_BATTLE) {
-            if ((s8)field_0x00cb != -1) {
+            if ((s8)mEnemyNearbyDelay != -1) {
                 go = false;
             } else {
-                bgmStart(field_0x00cc != 0 ? JA_BGM_UNK_112 : JA_BGM_UNK_111, 0, 0);
+                bgmStart(mDkMaskBroken != 0 ? JA_BGM_UNK_112 : JA_BGM_UNK_111, 0, 0);
                 if (mpMainBgmSound.get() == 0)
                     go = false;
                 else
                     n = mMainBgmNum;
             }
         }
-        if (go && n == JA_BGM_MJ_TOWER_BATTLE && (s8)field_0x00cb == -1)
+        if (go && n == JA_BGM_MJ_TOWER_BATTLE && (s8)mEnemyNearbyDelay == -1)
             bgmStart(JA_BGM_UNK_115, 0, 0);
     }
-    field_0x00cb = COMMON_BATTLE_FO_DELAY; /* JAIZelParam::COMMON_BATTLE_FO_DELAY */
+    mEnemyNearbyDelay = COMMON_BATTLE_FO_DELAY; /* JAIZelParam::COMMON_BATTLE_FO_DELAY */
 }
 
 /* 02025AB8 */
@@ -246,7 +246,7 @@ u32 JAIZelBasic::getMapInfoFxline(u32 n) {
 /* 02025AC0 */
 s32 JAIZelBasic::checkLinkOnSea() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if ((s32)field_0x0224 == 0x12 && (mIslandRoomNo == 0 || mLinkSeaFloorGroupInfo != 0))
+    if ((s32)mSceneNo == 0x12 && (mIslandRoomNo == 0 || mLinkSeaFloorGroupInfo != 0))
         return 1;
     return 0;
 }
@@ -254,7 +254,7 @@ s32 JAIZelBasic::checkLinkOnSea() {
 /* 02025AF4 */
 s32 JAIZelBasic::checkLinkOnBoardSea() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (checkLinkOnSea() == 1 && field_0x0047 != 0)
+    if (checkLinkOnSea() == 1 && mLinkOnBoard != 0)
         return 1;
     return 0;
 }
@@ -270,147 +270,147 @@ JAIZelBasic *createJAIZelBasic(JAIZelBasic *self) {
     }
     self->initializeAudioBase(); /* JAIBasic::JAIBasic */
     self->mHour = 0;
-    self->field_0x0046 = 0;
-    self->field_0x003c = 0.0f;
-    self->field_0x0047 = 0;
-    self->field_0x0040 = 0;
-    self->field_0x0020 = 0;
-    self->field_0x0043 = 0;
-    self->field_0x0042 = 0;
-    self->field_0x0021 = 0;
-    self->field_0x0045 = 0;
-    self->field_0x0032 = 0;
-    self->field_0x0028 = 0;
+    self->mLinkBootsType = 0;
+    self->mLinkHpRatio = 0.0f;
+    self->mLinkOnBoard = 0;
+    self->mHeartGaugeTimer = 0;
+    self->mIsMenuIn = 0;
+    self->mLinkShieldType = 0;
+    self->mLinkSwordPlace = 0;
+    self->mSceneBgmStartedOnce = 0;
+    self->mLinkSwordShieldOnBack = 0;
+    self->mMorningBgmPlaying = 0;
+    self->mSceneFrameCount = 0;
     self->mWeekday = 0;
-    self->field_0x0034 = 0;
-    self->field_0x0033 = 0;
-    self->field_0x0044 = 0;
+    self->mLinkHp = 0;
+    self->mDayNightSwitched = 0;
+    self->mLinkShieldPlace = 0;
     self->__vtbl = &l_basicVtable;
-    self->field_0x0024 = nullptr;
+    self->mpEventBits = nullptr;
     self->field_0x002f = 0;
     self->mMinute = 0;
-    self->field_0x0041 = 0;
-    self->field_0x0038 = 0;
-    self->field_0x0030 = 0;
-    zeroBasicVector(&self->field_0x0048, 0xC); /* Vec ctor (zero) */
-    zeroBasicVector(&self->field_0x0054, 0xC);
-    self->field_0x0080 = 0.0f;
+    self->mLinkSwordType = 0;
+    self->mLinkMaxHp = 0;
+    self->mPrevTime = 0;
+    zeroBasicVector(&self->mCameraOldPos, 0xC); /* Vec ctor (zero) */
+    zeroBasicVector(&self->mCameraPolygonPos, 0xC);
+    self->mMainBgmMuteVolume = 0.0f;
     self->mSubBgmNum = 0;
     self->field_0x00b4 = 0;
-    self->field_0x0066 = 0;
-    self->field_0x0088 = 0.0f;
-    self->field_0x0094 = 0.0f;
-    self->field_0x00bb = 0;
-    self->field_0x0084 = 0.0f;
-    self->field_0x0062 = 0;
-    self->field_0x00bc = 0;
-    self->field_0x0090 = 0.0f;
-    self->field_0x0061 = 0;
+    self->mSelectBgmOnly = 0;
+    self->mMainBgmMenuVolume = 0.0f;
+    self->mMainBgmSeaVolume = 0.0f;
+    self->mFanfareResumePending = 0;
+    self->mMainBgmTalkVolume = 0.0f;
+    self->mKamomeFlag = 0;
+    self->mPendingBgmStart = 0;
+    self->mMainBgmSceneVolume = 0.0f;
+    self->mEventTimer = 0;
     self->mLastMinibossSubBGMType = 0;
-    self->field_0x00a4 = 0.0f;
-    self->field_0x00bf = 0;
-    self->field_0x0065 = 0;
-    self->field_0x0098 = 0.0f;
+    self->mSubBgmTaktVolume = 0.0f;
+    self->mCameraGroupLocked = 0;
+    self->mMtDragonMuteRequest = 0;
+    self->mMainBgmTaktVolume = 0.0f;
     self->mpSubBgmSound = nullptr;
-    self->field_0x00a0 = 0.0f;
+    self->mSubBgmTalkMenuVolume = 0.0f;
     self->mSomeSpecialBGMFlag = 0;
-    self->field_0x00ba = 0;
-    self->field_0x00c0 = 0;
-    self->field_0x0064 = 0;
+    self->mTetraFlyStreamStarted = 0;
+    self->mBattleBgmFadeDelay = 0;
+    self->mTalkInBlocked = 0;
     self->mpStreamBgmSound = nullptr;
-    self->field_0x00b9 = 0;
-    self->field_0x00c1 = 0;
-    self->field_0x00a8 = 0.0f;
-    self->field_0x0063 = 0;
+    self->mDemoFanfareMuted = 0;
+    self->mEnemyNearbyOn = 0;
+    self->mSubBgmCbPracticeVolume = 0.0f;
+    self->mBgmDisabled = 0;
     self->mStreamBgmNum = 0;
-    self->field_0x00c4 = 0;
-    self->field_0x00be = 0;
-    self->field_0x00b7 = 0;
-    self->field_0x00bd = 0;
-    self->field_0x00c8 = 0;
-    self->field_0x009c = 0.0f;
+    self->mEnemyNearbyFadeTimer = 0;
+    self->mTalkSeBlocked = 0;
+    self->mSkyCloistersTimer = 0;
+    self->mSceneBgmLocked = 0;
+    self->mKaitengiriTimer = 0;
+    self->mMainBgmCbPracticeVolume = 0.0f;
     self->mMainBgmNum = 0;
-    self->field_0x008c = 0.0f;
-    self->field_0x00c9 = 0;
+    self->mMainBgmSubBgmVolume = 0.0f;
+    self->mSwordUsing = 0;
     self->mbLandingDemoStarted = 0;
-    self->field_0x00b0 = 0;
+    self->mSubBgmStopTimer = 0;
     self->mpMainBgmSound = nullptr;
-    self->field_0x00ca = 0;
-    self->field_0x00ac = 0.0f;
-    self->field_0x00b8 = 0;
-    self->field_0x00cb = 0;
-    self->field_0x00cc = 0;
-    self->field_0x00cd = 0;
-    self->field_0x00ce = 0;
-    self->field_0x00d0 = nullptr;
-    self->field_0x01f4 = 0;
-    self->field_0x01f8 = 0;
-    self->field_0x01f9 = 0;
-    self->field_0x01fa = 0;
-    self->field_0x0202[1] = 0;
-    self->field_0x022c = 0;
+    self->mBattleBgmDisabled = 0;
+    self->mMainBgmHeightVolume = 0.0f;
+    self->mStreamBgmStarted = 0;
+    self->mEnemyNearbyDelay = 0;
+    self->mDkMaskBroken = 0;
+    self->mSkipSceneStream = 0;
+    self->mBattleBgmHoldTimer = 0;
+    self->mpCbPracticePos = nullptr;
+    self->mSeSlotIndex = 0;
+    self->mNoCameraTimer = 0;
+    self->mAddGrassSePlayed = 0;
+    self->mCutGrassSeTimer = 0;
+    self->mSwingSeTimers[1] = 0;
+    self->mSceneSetPending = 0;
     self->mNextSceneBgmId = 0;
-    self->field_0x0202[0] = 0;
-    self->field_0x0204 = 0;
-    self->field_0x022d = 0;
+    self->mSwingSeTimers[0] = 0;
+    self->mSeaEnvSeOff = 0;
+    self->mSceneActive = 0;
     self->field_0x021e = 0;
-    self->field_0x0214 = 0;
-    self->field_0x0233 = 0;
-    self->field_0x022f = 0;
-    self->field_0x01ff = 0;
-    self->field_0x01fb = 0;
+    self->mpTelescopeSound = 0;
+    self->mPrevFirstDynamicSceneWaveIndex = 0;
+    self->mWaveToReload = 0;
+    self->mBgnHeadRippleSeTimer = 0;
+    self->mBrkWrailKSePlayed = 0;
     self->field_0x0210 = 0;
-    self->field_0x0206 = 0;
-    self->field_0x0207 = 0;
+    self->mFanfareActive = 0;
+    self->mTaktSeTimer = 0;
     self->mSetNum = 0;
-    self->field_0x01fc = 0;
-    self->field_0x0200 = 0;
-    self->field_0x0230 = 0;
+    self->mColBrkWrailingSePlayed = 0;
+    self->mBgnTailRippleSeTimer = 0;
+    self->mWaveBankToErase = 0;
     self->mSecondDynamicSceneWaveIndex = 0;
-    self->field_0x0218 = 0;
-    self->field_0x0220 = 0;
+    self->mCameraMapInfo = 0;
+    self->mNextSceneNo = 0;
     self->mLinkSeaFloorGroupInfo = 0;
-    self->field_0x0236 = 0;
+    self->mPrevSecondDynamicSceneWaveIndex = 0;
     self->mFirstDynamicSceneWaveIndex = 0;
-    self->field_0x022e = 0;
-    self->field_0x01fe = 0;
-    self->field_0x0237 = 0;
+    self->mSceneBgmChanged = 0;
+    self->mBgnBodyRippleSeTimer = 0;
+    self->mSecondDynamicWaveChanged = 0;
     self->field_0x020c = 0;
-    self->field_0x0205 = 0;
-    self->field_0x0208 = 0;
+    self->mForceBack = 0;
+    self->mPirateSailSePlayed = 0;
     self->mIslandRoomNo = 0;
-    self->field_0x01fd = 0;
-    self->field_0x0201 = 0;
-    self->field_0x0231 = 0;
-    self->field_0x0239 = 0;
+    self->mBgnStringRippleSeTimer = 0;
+    self->mAllSeMuted = 0;
+    self->mWaveBankReload = 0;
+    self->mLayerNo = 0;
     self->mCameraSeaFloorGroupInfo = 0;
-    self->field_0x0224 = 0;
-    self->field_0x023a = 0;
+    self->mSceneNo = 0;
+    self->mInitialized = 0;
     self->mBgmWaveCountHD = 0;
     self->mBgmWaveInfoHD = nullptr;
     self->mLevelObjectSoundCountHD = 0;
-    self->field_0x1b80 = 0;
+    self->mSeaEnvPosCount = 0;
     zeroBasicVector(&self->mSeaPositionHD, 0xC);
-    self->field_0x1f3c = 0;
-    self->field_0x1dd0 = 0;
-    self->field_0x1f38 = nullptr;
-    self->field_0x1f34 = 0;
-    self->field_0x1f44 = nullptr;
-    self->field_0x1ecc = 0;
-    self->field_0x203d = 0;
-    self->field_0x1e98 = 0;
+    self->mIslandLinkBgm = 0;
+    self->mRiverPosCount = 0;
+    self->mpWindSound = nullptr;
+    self->mFireblastPosCount = 0;
+    self->mpShipCruiseSound = nullptr;
+    self->mpSeaEnvSoundS = 0;
+    self->mKuroboVoiceCount = 0;
+    self->mWaterfallPosCount = 0;
     self->mVoiceIndexHD = 0;
-    self->field_0x2074 = 0;
-    self->field_0x1dd4 = 0;
-    self->field_0x1ec0 = 0;
-    self->field_0x1f48 = nullptr;
-    self->field_0x1ec4 = 0;
-    self->field_0x1ec8 = 0;
-    self->field_0x203c = 0;
-    self->field_0x1ed0 = 0;
-    self->field_0x1f40 = 0.0f;
+    self->mSystemSoundHD = 0;
+    self->mBstHoriSeOn = 0;
+    self->mWindowPosCount = 0;
+    self->mpShipWaveSound = nullptr;
+    self->mpSeaEnvSoundL = 0;
+    self->mpSeaEnvSoundR = 0;
+    self->mKuroboMotionCount = 0;
+    self->mpSeaShoreSound = 0;
+    self->mShipSpeed = 0.0f;
     self->mIsSailing = 0;
-    self->field_0x2060 = nullptr;
+    self->mpCharVoiceSound = nullptr;
     constructBasicRecords(self->mAllocationRecordsHD, 0x10, 8,
                           ALLOCATION_RECORD_CTOR); // HD:16 allocation records.
     self->mAllocationRecordIndexHD = 0;
@@ -423,123 +423,123 @@ JAIZelBasic *createJAIZelBasic(JAIZelBasic *self) {
             seedBasicRandom(random, 0); /* setSeed(0) */
     }
     zel_basic = self;
-    self->field_0x003c = 1.0f;
-    self->field_0x0048.z = 10000000.0f;
-    self->field_0x0054.y = 10000000.0f;
-    self->field_0x0048.y = 10000000.0f;
-    self->field_0x0048.x = 10000000.0f;
-    self->field_0x0054.z = 10000000.0f;
-    self->field_0x0054.x = 10000000.0f;
-    self->field_0x0098 = 1.0f;
-    self->field_0x0080 = 1.0f;
-    self->field_0x0094 = 1.0f;
-    self->field_0x00a8 = 1.0f;
-    self->field_0x0063 = 0;
+    self->mLinkHpRatio = 1.0f;
+    self->mCameraOldPos.z = 10000000.0f;
+    self->mCameraPolygonPos.y = 10000000.0f;
+    self->mCameraOldPos.y = 10000000.0f;
+    self->mCameraOldPos.x = 10000000.0f;
+    self->mCameraPolygonPos.z = 10000000.0f;
+    self->mCameraPolygonPos.x = 10000000.0f;
+    self->mMainBgmTaktVolume = 1.0f;
+    self->mMainBgmMuteVolume = 1.0f;
+    self->mMainBgmSeaVolume = 1.0f;
+    self->mSubBgmCbPracticeVolume = 1.0f;
+    self->mBgmDisabled = 0;
     self->mMainBgmNum = (u32)-1;
     self->mpStreamBgmSound = nullptr;
     self->mSubBgmNum = (u32)-1;
-    self->field_0x0047 = 0;
-    self->field_0x0021 = 0;
+    self->mLinkOnBoard = 0;
+    self->mSceneBgmStartedOnce = 0;
     self->mWeekday = 0;
-    self->field_0x0038 = 0;
-    self->field_0x0034 = 0;
+    self->mLinkMaxHp = 0;
+    self->mLinkHp = 0;
     self->mMinute = 0;
-    self->field_0x009c = 1.0f;
-    self->field_0x0020 = 0;
-    self->field_0x0084 = 1.0f;
+    self->mMainBgmCbPracticeVolume = 1.0f;
+    self->mIsMenuIn = 0;
+    self->mMainBgmTalkVolume = 1.0f;
     self->field_0x002f = 0;
-    self->field_0x0090 = 1.0f;
-    self->field_0x0044 = 0;
-    self->field_0x0030 = 0xC00;
-    self->field_0x0233 = 0;
-    self->field_0x00d0 = nullptr;
-    self->field_0x0206 = 0;
-    self->field_0x00a4 = 1.0f;
-    self->field_0x0065 = 0;
-    self->field_0x008c = 1.0f;
-    self->field_0x022f = 0;
-    self->field_0x0043 = 0;
+    self->mMainBgmSceneVolume = 1.0f;
+    self->mLinkShieldPlace = 0;
+    self->mPrevTime = 0xC00;
+    self->mPrevFirstDynamicSceneWaveIndex = 0;
+    self->mpCbPracticePos = nullptr;
+    self->mFanfareActive = 0;
+    self->mSubBgmTaktVolume = 1.0f;
+    self->mMtDragonMuteRequest = 0;
+    self->mMainBgmSubBgmVolume = 1.0f;
+    self->mWaveToReload = 0;
+    self->mLinkShieldType = 0;
     self->mFirstDynamicSceneWaveIndex = 0;
-    self->field_0x0046 = 0;
-    self->field_0x00bb = 0;
-    self->field_0x0024 = nullptr;
+    self->mLinkBootsType = 0;
+    self->mFanfareResumePending = 0;
+    self->mpEventBits = nullptr;
     self->mSomeSpecialBGMFlag = 0;
-    self->field_0x0201 = 0;
-    self->field_0x0224 = (u32)-1;
+    self->mAllSeMuted = 0;
+    self->mSceneNo = (u32)-1;
     self->mHour = 0;
-    self->field_0x00ac = 1.0f;
-    self->field_0x0202[0] = 0;
+    self->mMainBgmHeightVolume = 1.0f;
+    self->mSwingSeTimers[0] = 0;
     self->mSecondDynamicSceneWaveIndex = 0;
-    self->field_0x00ba = 0;
-    self->field_0x00b0 = (u32)-1;
-    self->field_0x0236 = 0;
-    self->field_0x01fa = 0;
-    self->field_0x00a0 = 1.0f;
-    self->field_0x0041 = 0;
-    self->field_0x0220 = (u32)-1;
-    self->field_0x0204 = 0;
-    self->field_0x0231 = 0;
-    self->field_0x0045 = 0;
-    self->field_0x01f8 = 0;
+    self->mTetraFlyStreamStarted = 0;
+    self->mSubBgmStopTimer = (u32)-1;
+    self->mPrevSecondDynamicSceneWaveIndex = 0;
+    self->mCutGrassSeTimer = 0;
+    self->mSubBgmTalkMenuVolume = 1.0f;
+    self->mLinkSwordType = 0;
+    self->mNextSceneNo = (u32)-1;
+    self->mSeaEnvSeOff = 0;
+    self->mWaveBankReload = 0;
+    self->mLinkSwordShieldOnBack = 0;
+    self->mNoCameraTimer = 0;
     self->mNextSceneBgmId = 0;
-    self->field_0x0042 = 0;
+    self->mLinkSwordPlace = 0;
     self->mStreamBgmNum = (u32)-1;
-    self->field_0x0202[1] = 0;
+    self->mSwingSeTimers[1] = 0;
     self->mSetNum = 0;
-    self->field_0x0230 = 0;
-    self->field_0x0032 = 0;
-    self->field_0x0237 = 0;
-    self->field_0x01f9 = 0;
-    self->field_0x0088 = 1.0f;
-    self->field_0x022e = 0;
-    self->field_0x023a = 0;
-    self->field_0x0064 = 0;
-    self->field_0x00b8 = 0;
-    self->field_0x1f3c = 0;
-    self->field_0x01fb = 0;
-    self->field_0x022c = 0;
-    self->field_0x01fc = 0;
+    self->mWaveBankToErase = 0;
+    self->mMorningBgmPlaying = 0;
+    self->mSecondDynamicWaveChanged = 0;
+    self->mAddGrassSePlayed = 0;
+    self->mMainBgmMenuVolume = 1.0f;
+    self->mSceneBgmChanged = 0;
+    self->mInitialized = 0;
+    self->mTalkInBlocked = 0;
+    self->mStreamBgmStarted = 0;
+    self->mIslandLinkBgm = 0;
+    self->mBrkWrailKSePlayed = 0;
+    self->mSceneSetPending = 0;
+    self->mColBrkWrailingSePlayed = 0;
     self->mLastMinibossSubBGMType = 0;
-    self->field_0x022d = 0;
+    self->mSceneActive = 0;
     self->field_0x00b4 = 0;
-    self->field_0x00bc = 0;
-    self->field_0x00c0 = 0;
-    self->field_0x00c1 = 0;
-    self->field_0x00c4 = 0;
-    self->field_0x00c8 = 0;
-    self->field_0x00c9 = 0;
-    self->field_0x00ca = 0;
+    self->mPendingBgmStart = 0;
+    self->mBattleBgmFadeDelay = 0;
+    self->mEnemyNearbyOn = 0;
+    self->mEnemyNearbyFadeTimer = 0;
+    self->mKaitengiriTimer = 0;
+    self->mSwordUsing = 0;
+    self->mBattleBgmDisabled = 0;
     self->mCameraSeaFloorGroupInfo = 0;
-    self->field_0x0028 = 0;
-    self->field_0x0040 = 0;
-    self->field_0x0200 = 0;
-    self->field_0x00be = 0;
-    self->field_0x0208 = 0;
-    self->field_0x1f40 = 0.0f;
-    self->field_0x01ff = 0;
-    self->field_0x00cd = 0;
-    self->field_0x00b9 = 0;
-    self->field_0x01fe = 0;
-    self->field_0x00b7 = 0;
-    self->field_0x0239 = 0;
-    self->field_0x00bd = 0;
-    self->field_0x0205 = 0;
-    self->field_0x00cc = 0;
-    self->field_0x00bf = 0;
-    self->field_0x0062 = 0;
-    self->field_0x0207 = 0;
-    self->field_0x00cb = 0xFF;
-    self->field_0x0061 = 0;
-    self->field_0x1ec0 = 0;
+    self->mSceneFrameCount = 0;
+    self->mHeartGaugeTimer = 0;
+    self->mBgnTailRippleSeTimer = 0;
+    self->mTalkSeBlocked = 0;
+    self->mPirateSailSePlayed = 0;
+    self->mShipSpeed = 0.0f;
+    self->mBgnHeadRippleSeTimer = 0;
+    self->mSkipSceneStream = 0;
+    self->mDemoFanfareMuted = 0;
+    self->mBgnBodyRippleSeTimer = 0;
+    self->mSkyCloistersTimer = 0;
+    self->mLayerNo = 0;
+    self->mSceneBgmLocked = 0;
+    self->mForceBack = 0;
+    self->mDkMaskBroken = 0;
+    self->mCameraGroupLocked = 0;
+    self->mKamomeFlag = 0;
+    self->mTaktSeTimer = 0;
+    self->mEnemyNearbyDelay = 0xFF;
+    self->mEventTimer = 0;
+    self->mWindowPosCount = 0;
     self->mIsSailing = 0;
     self->field_0x021e = 0;
-    self->field_0x0033 = 0;
-    self->field_0x1dd4 = 0;
-    self->field_0x01fd = 0;
+    self->mDayNightSwitched = 0;
+    self->mBstHoriSeOn = 0;
+    self->mBgnStringRippleSeTimer = 0;
     self->mLinkSeaFloorGroupInfo = 0;
     self->mbLandingDemoStarted = 0;
-    self->field_0x00ce = 0;
-    self->field_0x0066 = 0;
+    self->mBattleBgmHoldTimer = 0;
+    self->mSelectBgmOnly = 0;
     self->mIslandRoomNo = 0;
     return self;
 }
@@ -600,18 +600,18 @@ void JAIZelBasic::init(void *heap, u32 size) {
     initSe();
     for (u32 c = 0; c < 8; c++)
         setSeCategoryVolume(c, l_defaultCategoryVolumes.entries[c]);
-    field_0x00ac = 1.0f;
-    field_0x0080 = 1.0f;
-    field_0x009c = 1.0f;
-    field_0x023a = 1;
-    field_0x0098 = 1.0f;
-    field_0x008c = 1.0f;
+    mMainBgmHeightVolume = 1.0f;
+    mMainBgmMuteVolume = 1.0f;
+    mMainBgmCbPracticeVolume = 1.0f;
+    mInitialized = 1;
+    mMainBgmTaktVolume = 1.0f;
+    mMainBgmSubBgmVolume = 1.0f;
     mBgmWaveCountHD = 0x57;
     mBgmWaveInfoHD = &m_bgm_wave_info;
-    field_0x0084 = 1.0f;
-    field_0x0094 = 1.0f;
-    field_0x0088 = 1.0f;
-    field_0x0090 = 1.0f;
+    mMainBgmTalkVolume = 1.0f;
+    mMainBgmSeaVolume = 1.0f;
+    mMainBgmMenuVolume = 1.0f;
+    mMainBgmSceneVolume = 1.0f;
 }
 
 /* 0202636C */
@@ -634,7 +634,7 @@ void JAIZelBasic::resetProcess() {
             continue;
         s->stop(1);
         mpSeSound[i] = nullptr;
-        field_0x0194[i] = 0;
+        mSePosAddr[i] = 0;
         mSeNum[i] = 0;
     }
     menuOut();
@@ -651,14 +651,14 @@ void JAIZelBasic::resetProcess() {
         h->setSeqInterVolume(6, 0.0f, 1);
     hd_stopAllStreams(hd_streamPlayer(l_soundManager.get()), 0); /* HD stream player: stop */
     mNextSceneBgmId = 0;
-    field_0x022e = 0;
-    field_0x022d = 0;
+    mSceneBgmChanged = 0;
+    mSceneActive = 0;
 }
 
 /* 020264F8 */
 void JAIZelBasic::sceneChange(u32 bgm, u32 wave1, u32 wave2, s32 keep) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if ((s32)field_0x0224 == 0x12 && field_0x0033 != 0 && checkDayTime() == 1)
+    if ((s32)mSceneNo == 0x12 && mDayNightSwitched != 0 && checkDayTime() == 1)
         bgm = 0;
     u32 cur = mNextSceneBgmId;
     u32 n88 = mMainBgmNum;
@@ -681,13 +681,13 @@ void JAIZelBasic::sceneChange(u32 bgm, u32 wave1, u32 wave2, s32 keep) {
         same = checkSeqIDDemoPlaying(bgm) == 1 ? 1 : 0;
     Sound *strm = mpStreamBgmSound.get();
     mNextSceneBgmId = bgm;
-    field_0x022e = same ? 0 : 1;
+    mSceneBgmChanged = same ? 0 : 1;
     if (strm != 0)
         strm->stop(BGM_SCENE_CHANGE_FO_TIME);
     mpStreamBgmSound = nullptr;
     mStreamBgmNum = (u32)-1;
     hd_releaseSceneStreams();
-    if (field_0x022e != 0) {
+    if (mSceneBgmChanged != 0) {
         if (keep == 0) {
             u32 n84 = mSubBgmNum;
             if ((n84 == JA_BGM_TAKT_SHIPPU || n84 == JA_BGM_TAKT_CHUYA) && mpSubBgmSound.get() != 0)
@@ -695,11 +695,11 @@ void JAIZelBasic::sceneChange(u32 bgm, u32 wave1, u32 wave2, s32 keep) {
             else
                 bgmStop(BGM_SCENE_CHANGE_FO_TIME, 0);
         }
-        field_0x0231 = 0;
+        mWaveBankReload = 0;
     }
     bool w2same;
     if (wave1 != mFirstDynamicSceneWaveIndex && wave1 != 0) {
-        field_0x0233 = mFirstDynamicSceneWaveIndex;
+        mPrevFirstDynamicSceneWaveIndex = mFirstDynamicSceneWaveIndex;
         u32 w2 = mSecondDynamicSceneWaveIndex;
         mFirstDynamicSceneWaveIndex = wave1;
         mSetNum = 1;
@@ -711,13 +711,13 @@ void JAIZelBasic::sceneChange(u32 bgm, u32 wave1, u32 wave2, s32 keep) {
     }
     if (!w2same && wave2 != 0) {
     } else if (mSetNum == 0) {
-        field_0x0237 = 0;
+        mSecondDynamicWaveChanged = 0;
         return;
     }
     u32 old = mSecondDynamicSceneWaveIndex;
     mSecondDynamicSceneWaveIndex = wave2;
-    field_0x0236 = old;
-    field_0x0237 = 1;
+    mPrevSecondDynamicSceneWaveIndex = old;
+    mSecondDynamicWaveChanged = 1;
 }
 
 /* 0202677C */
@@ -726,10 +726,10 @@ void JAIZelBasic::setScene(s32 sc, s32 room, s32 keep, s32 layer) {
     enum BgmSelection { NoBgm, SpecialBgm, SceneTableBgm, ExpandedSpecialBgm, AlreadyChanged };
     if (sc >= 0x79)
         return;
-    if (field_0x022c != 0)
+    if (mSceneSetPending != 0)
         return;
-    field_0x00bd = 0;
-    field_0x00cd = 0;
+    mSceneBgmLocked = 0;
+    mSkipSceneStream = 0;
     if (sc == 0x12) {
         /* the sea: the island room's bgm (m_isle_info at 1018E60C) */
         u32 r = room > 0 ? (room & 0xFF) : 0;
@@ -776,12 +776,12 @@ void JAIZelBasic::setScene(s32 sc, s32 room, s32 keep, s32 layer) {
                     selection = NoBgm;
             } else if (r == dIsleRoom_FlightControlPlatform_e) {
                 if (layer == 2 || layer == 3) {
-                    field_0x00bd = 1;
+                    mSceneBgmLocked = 1;
                     sceneChange(0, 0, 0, keep);
-                    field_0x0220 = sc;
-                    field_0x022d = 0;
-                    field_0x022c = 1;
-                    field_0x0239 = layer;
+                    mNextSceneNo = sc;
+                    mSceneActive = 0;
+                    mSceneSetPending = 1;
+                    mLayerNo = layer;
                     return;
                 }
             }
@@ -833,11 +833,11 @@ void JAIZelBasic::setScene(s32 sc, s32 room, s32 keep, s32 layer) {
             break;
         case 0x18:
         case 0x2D:
-            if (field_0x0021 == 0)
+            if (mSceneBgmStartedOnce == 0)
                 break;
             memOff = sc == 0x18 ? 0x49C : 0x478;
             if (isStageItem(memOff, 5) != 0)
-                field_0x00cd = 1;
+                mSkipSceneStream = 1;
             if ((u32)(layer - 8) <= 3)
                 selection = NoBgm;
             else if (isStageItem(memOff, 3) != 0)
@@ -864,7 +864,7 @@ void JAIZelBasic::setScene(s32 sc, s32 room, s32 keep, s32 layer) {
                 selection = NoBgm;
             break;
         case 0xB:
-            if (field_0x0043 == 0) {
+            if (mLinkShieldType == 0) {
                 if (layer == 9)
                     selection = NoBgm;
             } else if (checkEventBit(0x2A20) == 0) {
@@ -879,63 +879,63 @@ void JAIZelBasic::setScene(s32 sc, s32 room, s32 keep, s32 layer) {
             }
             break;
         }
-        if (dungeon && field_0x0021 != 0) {
+        if (dungeon && mSceneBgmStartedOnce != 0) {
             if (isStageItem(memOff, 5) != 0)
-                field_0x00cd = 1;
+                mSkipSceneStream = 1;
             if (isStageItem(memOff, 3) != 0) {
                 u32 bgm = expandSceneBgmNum(altBgm->bgmNum);
                 if (set274)
-                    field_0x0204 = 1;
-                sceneChange(bgm, entry->field_0x2, entry->field_0x3, keep);
+                    mSeaEnvSeOff = 1;
+                sceneChange(bgm, entry->dyWave1st, entry->dyWave2nd, keep);
                 selection = AlreadyChanged;
             }
         }
         if (selection == NoBgm)
-            sceneChange(0, entry->field_0x2, entry->field_0x3, keep);
+            sceneChange(0, entry->dyWave1st, entry->dyWave2nd, keep);
         else if (selection == SpecialBgm)
-            sceneChange(special, entry->field_0x2, entry->field_0x3, keep);
+            sceneChange(special, entry->dyWave1st, entry->dyWave2nd, keep);
         else if (selection == SceneTableBgm) {
             u32 bgm = expandSceneBgmNum(entry->bgmNum);
-            sceneChange(bgm, entry->field_0x2, entry->field_0x3, keep);
+            sceneChange(bgm, entry->dyWave1st, entry->dyWave2nd, keep);
         }
     }
-    field_0x022d = 0;
-    field_0x0239 = layer;
-    field_0x022c = 1;
-    field_0x0220 = sc;
+    mSceneActive = 0;
+    mLayerNo = layer;
+    mSceneSetPending = 1;
+    mNextSceneNo = sc;
 }
 
 // HD: stop/reset scene streams while preserving each bank/flag reload after callbacks.
 /* 02026E04 */
 void JAIZelBasic::load1stDynamicWave() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0224 = field_0x0220;
-    if (field_0x0231 != 0 || mSetNum != 0 || field_0x0237 != 0) {
-        u32 w = field_0x0236;
+    mSceneNo = mNextSceneNo;
+    if (mWaveBankReload != 0 || mSetNum != 0 || mSecondDynamicWaveChanged != 0) {
+        u32 w = mPrevSecondDynamicSceneWaveIndex;
         u32 b = m_dy_wave_set_2nd.entries[w].banks[1], a = m_dy_wave_set_2nd.entries[w].banks[0];
         if (b != 0)
             unloadWave(b);
         if (a != 0)
             unloadWave(a);
-        if (field_0x0231 != 0 || mSetNum != 0) {
-            u32 w1 = field_0x0233;
+        if (mWaveBankReload != 0 || mSetNum != 0) {
+            u32 w1 = mPrevFirstDynamicSceneWaveIndex;
             u32 b1 = m_dy_wave_set_1st.entries[w1].banks[1],
                 a1 = m_dy_wave_set_1st.entries[w1].banks[0];
             if (b1 != 0)
                 unloadWave(b1);
             if (a1 != 0)
                 unloadWave(a1);
-            if (field_0x0231 != 0) {
+            if (mWaveBankReload != 0) {
                 bool load29F = true;
-                u32 x = field_0x0230;
+                u32 x = mWaveBankToErase;
                 if (x != 0) {
                     eraseWaveBank(x, 0);
-                    eraseWaveHeap((u32)field_0x0230, 0);
-                    resetWaveBank((u32)field_0x0230, (u32)-1);
-                    load29F = field_0x0231 != 0;
+                    eraseWaveHeap((u32)mWaveBankToErase, 0);
+                    resetWaveBank((u32)mWaveBankToErase, (u32)-1);
+                    load29F = mWaveBankReload != 0;
                 }
                 if (load29F) {
-                    u32 y = field_0x022f;
+                    u32 y = mWaveToReload;
                     if (y != 0)
                         loadWave(y);
                 }
@@ -951,42 +951,42 @@ void JAIZelBasic::load1stDynamicWave() {
             }
         }
     }
-    field_0x022c = 0;
-    field_0x1f3c = 0;
+    mSceneSetPending = 0;
+    mIslandLinkBgm = 0;
     u32 n84 = mSubBgmNum;
-    field_0x0088 = 1.0f;
-    field_0x0080 = 1.0f;
-    field_0x0084 = 1.0f;
+    mMainBgmMenuVolume = 1.0f;
+    mMainBgmMuteVolume = 1.0f;
+    mMainBgmTalkVolume = 1.0f;
     if (n84 != JA_BGM_TAKT_SHIPPU && n84 != JA_BGM_TAKT_CHUYA && n84 != JA_BGM_SEA_ENEMY)
-        field_0x008c = 1.0f;
+        mMainBgmSubBgmVolume = 1.0f;
     u32 n88 = mMainBgmNum;
     Sound *main = mpMainBgmSound.get();
     if (n88 != JA_BGM_ISLAND_WOOD)
-        field_0x0090 = 1.0f;
-    f32 f94 = field_0x0084, f9c = field_0x008c;
-    field_0x00ac = 1.0f;
-    field_0x00a4 = 1.0f;
-    field_0x009c = 1.0f;
-    field_0x0094 = 1.0f;
-    field_0x00a0 = 1.0f;
-    field_0x0098 = 1.0f;
-    field_0x00a8 = 1.0f;
+        mMainBgmSceneVolume = 1.0f;
+    f32 f94 = mMainBgmTalkVolume, f9c = mMainBgmSubBgmVolume;
+    mMainBgmHeightVolume = 1.0f;
+    mSubBgmTaktVolume = 1.0f;
+    mMainBgmCbPracticeVolume = 1.0f;
+    mMainBgmSeaVolume = 1.0f;
+    mSubBgmTalkMenuVolume = 1.0f;
+    mMainBgmTaktVolume = 1.0f;
+    mSubBgmCbPracticeVolume = 1.0f;
     if (main == 0 || mMainBgmNum != JA_BGM_MORNING)
-        field_0x0032 = 0;
+        mMorningBgmPlaying = 0;
     f32 v = gabi::fmuls_ppc(gabi::fmuls_ppc(f94, f9c), 1.0f);
-    field_0x00b9 = 0;
+    mDemoFanfareMuted = 0;
     hdStreamVolume(1, v);
-    u32 sc = field_0x0224;
-    field_0x0208 = 0;
-    field_0x0028 = 0;
+    u32 sc = mSceneNo;
+    mPirateSailSePlayed = 0;
+    mSceneFrameCount = 0;
     field_0x021e = 1;
-    field_0x0062 = 0;
-    field_0x00d0 = nullptr;
+    mKamomeFlag = 0;
+    mpCbPracticePos = nullptr;
     mbLandingDemoStarted = 0;
-    field_0x1dd4 = 0;
-    field_0x0204 = 0;
-    field_0x022d = 0;
-    field_0x00be = 0;
+    mBstHoriSeOn = 0;
+    mSeaEnvSeOff = 0;
+    mSceneActive = 0;
+    mTalkSeBlocked = 0;
     if (sc == 0x76) {
         hd_selectSceneStream(1);
         hd_loadSceneStream();
@@ -997,7 +997,7 @@ void JAIZelBasic::load1stDynamicWave() {
         hd_resetSceneStream();
     }
     for (u32 k = 0; k < 30; k++) {
-        Sound *s = field_0x1f4c[k].field_0x04.get();
+        Sound *s = mMonsSe[k].mpSound.get();
         if (s != 0)
             s->stop(0);
     }
@@ -1007,18 +1007,18 @@ void JAIZelBasic::load1stDynamicWave() {
 /* 02027168 */
 void JAIZelBasic::bgmStreamPrepare(u32 id) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (field_0x0063 != 0)
+    if (mBgmDisabled != 0)
         return;
     prepareStream(id, &mpStreamBgmSound, 0, 0, 0, 4); /* JAIBasic: prepare a stream */
     if (id == JA_STRM_BST_START)
-        field_0x00be = 1;
+        mTalkSeBlocked = 1;
     mStreamBgmNum = id;
 }
 
 /* 020271E4 */
 void JAIZelBasic::load2ndDynamicWave() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 sc = field_0x0224;
+    u32 sc = mSceneNo;
     u32 id = 0;
     u32 streamID = 0;
     switch (sc) {
@@ -1038,9 +1038,9 @@ void JAIZelBasic::load2ndDynamicWave() {
         streamID = JA_STRM_BPW_START;
         break;
     }
-    if (streamID != 0 && field_0x00cd == 0)
+    if (streamID != 0 && mSkipSceneStream == 0)
         id = streamID;
-    if (field_0x0237 != 0) {
+    if (mSecondDynamicWaveChanged != 0) {
         u32 w = mSecondDynamicSceneWaveIndex;
         u32 a = m_dy_wave_set_2nd.entries[w].banks[0], b = m_dy_wave_set_2nd.entries[w].banks[1];
         if (a != 0)
@@ -1074,23 +1074,23 @@ void JAIZelBasic::resetRecover() {
     load1stDynamicWave();
     sceneBgmStart();
     load2ndDynamicWave();
-    field_0x008c = 1.0f;
-    field_0x009c = 1.0f;
-    field_0x0088 = 1.0f;
-    field_0x0090 = 1.0f;
-    field_0x0084 = 1.0f;
-    field_0x00a0 = 1.0f;
-    field_0x00ac = 1.0f;
-    field_0x0094 = 1.0f;
-    field_0x0080 = 1.0f;
-    field_0x0098 = 1.0f;
-    field_0x00a4 = 1.0f;
+    mMainBgmSubBgmVolume = 1.0f;
+    mMainBgmCbPracticeVolume = 1.0f;
+    mMainBgmMenuVolume = 1.0f;
+    mMainBgmSceneVolume = 1.0f;
+    mMainBgmTalkVolume = 1.0f;
+    mSubBgmTalkMenuVolume = 1.0f;
+    mMainBgmHeightVolume = 1.0f;
+    mMainBgmSeaVolume = 1.0f;
+    mMainBgmMuteVolume = 1.0f;
+    mMainBgmTaktVolume = 1.0f;
+    mSubBgmTaktVolume = 1.0f;
     for (u32 c = 0; c < 8; c++)
         setSeCategoryVolume(c, l_defaultCategoryVolumes.entries[c]);
-    field_0x0206 = 0;
-    field_0x0201 = 0;
-    field_0x00bf = 0;
-    field_0x0207 = 0;
+    mFanfareActive = 0;
+    mAllSeMuted = 0;
+    mCameraGroupLocked = 0;
+    mTaktSeTimer = 0;
 }
 
 // HD: sentinel/no camera retains the previous position and resets the10-frame timer.
@@ -1103,37 +1103,37 @@ void JAIZelBasic::getCameraInfo(cXyz *pos, Mtx34 *mtx, u32 idx) {
         none = true;
     else if (pos->x == 1e7f && pos->y == 1e7f && pos->z == 1e7f)
         none = true;
-    cXyz *old = camera->field_0x0.get();
-    auto previousWords = reinterpret_cast<VectorWords *>(&field_0x0048);
+    cXyz *old = camera->position.get();
+    auto previousWords = reinterpret_cast<VectorWords *>(&mCameraOldPos);
     if (old != nullptr) {
         auto oldWords = reinterpret_cast<VectorWords *>(old);
         previousWords->w[0] = oldWords->w[0];
         previousWords->w[1] = oldWords->w[1];
         previousWords->w[2] = oldWords->w[2];
     } else {
-        field_0x0048.z = 1e7f;
-        field_0x0048.y = 1e7f;
-        field_0x0048.x = 1e7f;
+        mCameraOldPos.z = 1e7f;
+        mCameraOldPos.y = 1e7f;
+        mCameraOldPos.x = 1e7f;
     }
-    cameraAt(idx)->field_0x0 = none ? &field_0x0048 : pos;
-    cameraAt(idx)->field_0x4 = &field_0x0048;
-    cameraAt(idx)->field_0x8 = mtx;
+    cameraAt(idx)->position = none ? &mCameraOldPos : pos;
+    cameraAt(idx)->previousPosition = &mCameraOldPos;
+    cameraAt(idx)->matrix = mtx;
     if (none) {
-        field_0x01f8 = 10;
-        field_0x0048.x = 1e7f;
-        field_0x0048.y = 1e7f;
-        field_0x0048.z = 1e7f;
+        mNoCameraTimer = 10;
+        mCameraOldPos.x = 1e7f;
+        mCameraOldPos.y = 1e7f;
+        mCameraOldPos.z = 1e7f;
         return;
     }
-    u32 timer = field_0x01f8;
+    u32 timer = mNoCameraTimer;
     if (timer != 0)
-        field_0x01f8 = timer - 1;
+        mNoCameraTimer = timer - 1;
 }
 
 /* 02027668 */
 void JAIZelBasic::getCameraMapInfo(u32 v) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0218 = v;
+    mCameraMapInfo = v;
 }
 
 /* 02027670 */
@@ -1141,9 +1141,9 @@ void JAIZelBasic::setCameraGroupInfo(u32 g) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (isDemo() == 1)
         return;
-    if (field_0x00bd != 0)
+    if (mSceneBgmLocked != 0)
         return;
-    if (field_0x00bf != 0)
+    if (mCameraGroupLocked != 0)
         return;
     u32 cur = mCameraSeaFloorGroupInfo;
     if (g == cur)
@@ -1158,7 +1158,7 @@ void JAIZelBasic::setCameraGroupInfo(u32 g) {
             load2ndDynamicWave();
             mCameraSeaFloorGroupInfo = g;
             field_0x021e = 0;
-            field_0x022d = 1;
+            mSceneActive = 1;
             return;
         }
     } else if (g == 0 || (g & 0x40) != 0) {
@@ -1174,7 +1174,7 @@ void JAIZelBasic::setCameraPolygonPos(cXyz *pos) {
     if (pos == nullptr)
         return;
     auto words = reinterpret_cast<VectorWords *>(pos);
-    auto polygon = reinterpret_cast<VectorWords *>(&field_0x0054);
+    auto polygon = reinterpret_cast<VectorWords *>(&mCameraPolygonPos);
     polygon->w[0] = words->w[0];
     polygon->w[1] = words->w[1];
     polygon->w[2] = words->w[2];
@@ -1183,7 +1183,7 @@ void JAIZelBasic::setCameraPolygonPos(cXyz *pos) {
 /* 02027778 */
 void JAIZelBasic::setLinkGroupInfo(u32 g) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if ((s32)field_0x0224 != 0x12)
+    if ((s32)mSceneNo != 0x12)
         return;
     if (mIslandRoomNo == 0)
         return;
@@ -1195,7 +1195,7 @@ void JAIZelBasic::setLinkGroupInfo(u32 g) {
 /* 020277A4 */
 void JAIZelBasic::setEventBit(GuestByte *p) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0024 = p;
+    mpEventBits = p;
 }
 
 /* 020277AC */
@@ -1233,15 +1233,15 @@ void JAIZelBasic::setSceneName(GuestByte *name, s32 room, s32 layer) {
                 mpSeSound[i] = nullptr;
             }
             mSeNum[i] = 0;
-            field_0x0194[i] = 0;
-            field_0x01f4 = 0;
+            mSePosAddr[i] = 0;
+            mSeSlotIndex = 0;
         }
         menuOut();
-        field_0x0066 = 1;
-        field_0x00bf = 0;
+        mSelectBgmOnly = 1;
+        mCameraGroupLocked = 0;
         setScene(id, room, 0, layer);
     } else {
-        field_0x0066 = 0;
+        mSelectBgmOnly = 0;
         setScene(id, room, 0, layer);
     }
 }
@@ -1266,11 +1266,11 @@ u32 JAIZelBasic::check1stDynamicWave() {
     if (b != 0)
         sb = 2 - getWaveLoadStatus(b);
     u32 r = (sa << 8) + sb;
-    u32 sc = field_0x0224;
+    u32 sc = mSceneNo;
     if ((s32)sc != 0x75) {
         if (checkStaticWaves() == 0)
             return 1;
-        sc = field_0x0224;
+        sc = mSceneNo;
     }
     if (sc == 0x76) {
         if (hd_sceneStreamReady(1) == 0)
@@ -1301,8 +1301,8 @@ s32 JAIZelBasic::checkFirstWaves() {
 /* 02027B0C */
 void JAIZelBasic::setLinkHp(s32 hp, s32 max) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0034 = hp;
-    field_0x0038 = max;
+    mLinkHp = hp;
+    mLinkMaxHp = max;
     f32 r;
     if (max != 0) {
         r = (f32)hp / (f32)max;
@@ -1312,7 +1312,7 @@ void JAIZelBasic::setLinkHp(s32 hp, s32 max) {
         r = 1.0f;
     }
     Sound *sub = mpSubBgmSound.get();
-    field_0x003c = r;
+    mLinkHpRatio = r;
     if (sub == 0)
         return;
     u32 n = mSubBgmNum;
@@ -1329,32 +1329,32 @@ void JAIZelBasic::setLinkHp(s32 hp, s32 max) {
 /* 02027C50 */
 void JAIZelBasic::setLinkSwordType(u32 a, u32 b) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0041 = a;
-    field_0x0042 = b;
-    field_0x0045 =
-        ((a & 0xFF) != 0 && (b & 0xFF) == 2 && field_0x0043 != 0 && field_0x0044 == 2) ? 1 : 0;
+    mLinkSwordType = a;
+    mLinkSwordPlace = b;
+    mLinkSwordShieldOnBack =
+        ((a & 0xFF) != 0 && (b & 0xFF) == 2 && mLinkShieldType != 0 && mLinkShieldPlace == 2) ? 1 : 0;
 }
 
 /* 02027C9C */
 void JAIZelBasic::setLinkShieldType(u32 a, u32 b) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 sw = field_0x0041;
-    field_0x0043 = a;
-    field_0x0044 = b;
-    field_0x0045 = (sw != 0 && field_0x0042 == 2 && field_0x0043 != 0 && (b & 0xFF) == 2) ? 1 : 0;
+    u32 sw = mLinkSwordType;
+    mLinkShieldType = a;
+    mLinkShieldPlace = b;
+    mLinkSwordShieldOnBack = (sw != 0 && mLinkSwordPlace == 2 && mLinkShieldType != 0 && (b & 0xFF) == 2) ? 1 : 0;
 }
 
 /* 02027CEC */
 void JAIZelBasic::setLinkBootsType(u32 a) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0046 = a;
+    mLinkBootsType = a;
 }
 
 /* 02027CF4 */
 void JAIZelBasic::setLinkOnBoard(u32 a) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     Sound *sub = mpSubBgmSound.get();
-    field_0x0047 = a;
+    mLinkOnBoard = a;
     if (sub == 0)
         return;
     if (mSubBgmNum != JA_BGM_SEA_ENEMY)
@@ -1365,7 +1365,7 @@ void JAIZelBasic::setLinkOnBoard(u32 a) {
 /* 02027D40 */
 void JAIZelBasic::heartGaugeOn() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x0040 = 2;
+    mHeartGaugeTimer = 2;
 }
 
 // clang-format off

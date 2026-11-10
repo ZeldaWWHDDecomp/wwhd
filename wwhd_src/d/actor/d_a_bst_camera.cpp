@@ -90,27 +90,27 @@ static void demo_camera(bst_class* actor) {
     auto message = [&](u32 id) { bstCameraMessage(actor, id); };
     auto messageEnd = [] { bstCameraMessageEnd(); };
     auto initialHandCamera = [&](u32 n) {
-        i_this->m2EAC.copy(*&hand(n)->current.pos);
-        i_this->m2EAC.y = add(f32(i_this->m2EAC.y), add(f32(sTune.mFloat[4]), 200.0f));
-        i_this->m2EA0.copy(*&hand(n)->current.pos);
-        i_this->m2EA0.x = add(f32(i_this->m2EA0.x), sub(f32(sTune.mFloat[5]), 2000.0f));
-        i_this->m2EA0.y = add(f32(i_this->m2EA0.y), f32(sTune.mFloat[6]));
+        i_this->mCamCenter.copy(*&hand(n)->current.pos);
+        i_this->mCamCenter.y = add(f32(i_this->mCamCenter.y), add(f32(sTune.mFloat[4]), 200.0f));
+        i_this->mCamEye.copy(*&hand(n)->current.pos);
+        i_this->mCamEye.x = add(f32(i_this->mCamEye.x), sub(f32(sTune.mFloat[5]), 2000.0f));
+        i_this->mCamEye.y = add(f32(i_this->mCamEye.y), f32(sTune.mFloat[6]));
     };
     auto handCamera = [&](u32 n) {
-        cLib_addCalc2(&i_this->m2EA0.x, sub(f32(hand(n)->current.pos.x), 1200.0f), tenth,
-                      mul(40.0f, f32(i_this->m2EC4)));
-        cLib_addCalc2(&i_this->m2EC4, one, one, 0.0099999998f);
-        cLib_addCalc2(&i_this->m2EAC.x, f32(hand(n)->current.pos.x), 0.02f, 50.0f);
-        cLib_addCalc2(&i_this->m2EAC.z, f32(hand(n)->current.pos.z), 0.02f, 50.0f);
+        cLib_addCalc2(&i_this->mCamEye.x, sub(f32(hand(n)->current.pos.x), 1200.0f), tenth,
+                      mul(40.0f, f32(i_this->mCamWork)));
+        cLib_addCalc2(&i_this->mCamWork, one, one, 0.0099999998f);
+        cLib_addCalc2(&i_this->mCamCenter.x, f32(hand(n)->current.pos.x), 0.02f, 50.0f);
+        cLib_addCalc2(&i_this->mCamCenter.z, f32(hand(n)->current.pos.z), 0.02f, 50.0f);
         if (s32(i_this->msFrameCount) == 20) {
-            hand(n)->m02D4 = 1;
-            hand(n)->m02C4 = 1;
+            hand(n)->mPedestalAnmOn = 1;
+            hand(n)->mBodyAnmOn = 1;
             bst_class* h = hand(n);
             sound(h, &h->current.pos, 0x58D4);
         }
         if (s32(i_this->msFrameCount) == 59) {
             if (n)
-                i_this->m2ED0 = zero;
+                i_this->mRoomColorBlend = zero;
             i_this->mRoomState = 1;
         }
         if (s32(i_this->msFrameCount) == 60) {
@@ -127,22 +127,22 @@ static void demo_camera(bst_class* actor) {
             i_this->mRoomState = 0;
     };
     auto highCamera = [&] {
-        i_this->m2EAC.y = add(f32(sTune.mFloat[16]), 4800.0f);
-        i_this->m2EAC.x = zero;
-        i_this->m2EAC.z = zero;
-        i_this->m2EA0.x = add(f32(sTune.mFloat[13]), -700.0f);
-        i_this->m2EA0.y = add(f32(sTune.mFloat[14]), hundred);
-        i_this->m2EA0.z = add(f32(sTune.mFloat[15]), -300.0f);
+        i_this->mCamCenter.y = add(f32(sTune.mFloat[16]), 4800.0f);
+        i_this->mCamCenter.x = zero;
+        i_this->mCamCenter.z = zero;
+        i_this->mCamEye.x = add(f32(sTune.mFloat[13]), -700.0f);
+        i_this->mCamEye.y = add(f32(sTune.mFloat[14]), hundred);
+        i_this->mCamEye.z = add(f32(sTune.mFloat[15]), -300.0f);
     };
     auto defeatCamera = [&] {
         setVector(transformed.get(), f32(i_this->current.pos.x),
                   add(add(f32(i_this->current.pos.y), hundred), f32(sTune.mFloat[10])),
                   f32(i_this->current.pos.z));
-        bstCameraChaseVector(&i_this->m2EAC, transformed.get(), 0.2f,
+        bstCameraChaseVector(&i_this->mCamCenter, transformed.get(), 0.2f,
                              add(f32(sTune.mDefeatCenterStep), 10.0f));
         setVector(transformed.get(), sub(f32(i_this->current.pos.x), 1300.0f),
                   sub(f32(i_this->current.pos.y), 450.0f), sub(f32(i_this->current.pos.z), 500.0f));
-        bstCameraChaseVector(&i_this->m2EA0, transformed.get(), 0.02f,
+        bstCameraChaseVector(&i_this->mCamEye, transformed.get(), 0.02f,
                              add(f32(sTune.mDefeatEyeStep), one));
     };
     auto findItem = [&] {
@@ -155,54 +155,54 @@ static void demo_camera(bst_class* actor) {
         return bstCameraParticle(control, 2, id, pos, &i_this->shape_angle, 0, 0xB9,
                                  &i_this->mPa_smokeEcallBack, room, 0, 0, 0);
     };
-    s32 state = s32(i_this->m2E9A);
+    s32 state = s32(i_this->mDemoCamMode);
     if (state == CAMERA_NOSE_START || state == CAMERA_INTRO_START || state == CAMERA_DEFEAT_START) {
         if (i_this->eventInfo.mCommand != dEvtCmd_INDEMO_e) {
             bstCameraOrderEvent(actor, 2, 0xFFFF, 0);
             i_this->eventInfo.mCondition = i_this->eventInfo.mCondition | dEvtCnd_UNK2_e;
             return;
         }
-        i_this->m2E9A = state + 1;
+        i_this->mDemoCamMode = state + 1;
         bstCameraStop(camera);
         bstCameraTrim(camera, 2);
         i_this->msFrameCount = 0;
         if (state == CAMERA_NOSE_START)
-            i_this->m2E98 = 100;
-        i_this->m2EC8 = 55.0f;
-        i_this->m2EC4 = zero;
+            i_this->mBlurRate = 100;
+        i_this->mCamFovy = 55.0f;
+        i_this->mCamWork = zero;
         if (state == CAMERA_NOSE_START) {
             state = CAMERA_NOSE;
         } else {
             if (state == CAMERA_INTRO_START) {
-                i_this->m2EA0.x =
+                i_this->mCamEye.x =
                     sub(add(f32(boss()->current.pos.x), f32(sTune.mFloat[1])), 3200.0f);
-                i_this->m2EA0.y =
+                i_this->mCamEye.y =
                     sub(add(f32(boss()->current.pos.y), f32(sTune.mFloat[2])), 1100.0f);
-                i_this->m2EA0.z =
+                i_this->mCamEye.z =
                     sub(add(f32(boss()->current.pos.z), f32(sTune.mFloat[3])), 300.0f);
                 // HD: Centers this first shot to the left/below the head, with separate
                 // tuning fields.
-                i_this->m2EAC.x =
+                i_this->mCamCenter.x =
                     add(sub(f32(boss()->current.pos.x), 1000.0f), f32(sTune.mIntroCenterX));
-                i_this->m2EAC.y =
+                i_this->mCamCenter.y =
                     add(add(f32(boss()->current.pos.y), -400.0f), f32(sTune.mIntroCenterY));
-                i_this->m2EAC.z = f32(boss()->current.pos.z);
+                i_this->mCamCenter.z = f32(boss()->current.pos.z);
                 bstCameraStreamPlay();
-                i_this->m2FE0->setPlaySpeed(one);
-                i_this->m2E98 = 120;
+                i_this->mpHbyokoBrkAnm->setPlaySpeed(one);
+                i_this->mBlurRate = 120;
                 state = CAMERA_INTRO;
             } else {
-                i_this->m2EA0.x = add(f32(sTune.mFloat[2]), -1300.0f);
+                i_this->mCamEye.x = add(f32(sTune.mFloat[2]), -1300.0f);
                 player->mDemoParam = 0;
                 player->mDemoOriginal = 3;
                 bstCameraEndAnimations(actor);
-                if (BstEmitter* emitter = bstEmitter(i_this->m2EF8)) {
+                if (BstEmitter* emitter = bstEmitter(i_this->mpStageEffEmitter)) {
                     emitter->becomeInvalidEmitter();
-                    i_this->m2EF8 = 0;
+                    i_this->mpStageEffEmitter = 0;
                     sAudio->mBstHori = 0;
                 }
-                i_this->m2FE4 = 0;
-                i_this->m2E98 = 150;
+                i_this->mBattleCamOn = 0;
+                i_this->mBlurRate = 150;
                 state = CAMERA_DEFEAT_INTRO;
             }
         }
@@ -210,34 +210,34 @@ static void demo_camera(bst_class* actor) {
     switch (state) {
     case CAMERA_NOSE:
         if (s32(i_this->msFrameCount) > (s16)(s32(sTune.mShort[4]) + 33)) {
-            cLib_addCalc2(&i_this->m2EC4, -650.0f, 0.5f, add(f32(sTune.mFloat[3]), 50.0f));
+            cLib_addCalc2(&i_this->mCamWork, -650.0f, 0.5f, add(f32(sTune.mFloat[3]), 50.0f));
             if (s32(i_this->msFrameCount) > (s16)(s32(sTune.mShort[4]) + 45))
-                cLib_addCalc2(&i_this->m2EC8, 30.0f, 0.5f, add(f32(sTune.mFloat[3]), 10.0f));
+                cLib_addCalc2(&i_this->mCamFovy, 30.0f, 0.5f, add(f32(sTune.mFloat[3]), 10.0f));
         }
         bstCameraRotateY(sCalcMatrix,
                          (s16)(s32(i_this->shape_angle.y) + s32(sTune.mShort[1]) + 0xAF0));
         setVector(offset.get(),
-                  s32(i_this->m2E9E) ? add(f32(sTune.mFloat[9]), -100.0f) : f32(sTune.mFloat[10]),
-                  add(f32(sTune.mFloat[11]), f32(i_this->m2EC4)), f32(sTune.mFloat[12]));
+                  s32(i_this->mItemNoseSide) ? add(f32(sTune.mFloat[9]), -100.0f) : f32(sTune.mFloat[10]),
+                  add(f32(sTune.mFloat[11]), f32(i_this->mCamWork)), f32(sTune.mFloat[12]));
         MtxPosition(offset.get(), transformed.get());
         bstCameraPlus(&i_this->eyePos, result.get(), transformed.get());
-        i_this->m2EAC.copy(*result.get());
+        i_this->mCamCenter.copy(*result.get());
         bstCameraRotateX(sCalcMatrix, (s16)(s32(sTune.mShort[2]) + 4000));
         setVector(offset.get(), zero, f32(sTune.mFloat[7]), add(f32(sTune.mFloat[8]), 850.0f));
         MtxPosition(offset.get(), transformed.get());
         bstCameraPlus(&i_this->current.pos, result.get(), transformed.get());
-        i_this->m2EA0.copy(*result.get());
+        i_this->mCamEye.copy(*result.get());
         if (s32(i_this->msFrameCount) > 80) {
             i_this->mActionType = 1;
             i_this->mDamage = 0;
             finish();
-            i_this->m2E9A = CAMERA_IDLE;
-            i_this->m2E98 = 1;
+            i_this->mDemoCamMode = CAMERA_IDLE;
+            i_this->mBlurRate = 1;
         }
         break;
     case CAMERA_INTRO:
         playerPos(-635.0f);
-        cLib_addCalc2(&i_this->m2EA0.z,
+        cLib_addCalc2(&i_this->mCamEye.z,
                       add(add(f32(boss()->current.pos.z), f32(sTune.mFloat[3])), 300.0f), 0.02f,
                       1.4f);
         if (s32(i_this->msFrameCount) == 60) {
@@ -257,7 +257,7 @@ static void demo_camera(bst_class* actor) {
         if (s32(i_this->msFrameCount) != 2 * s32(sTune.mShort[4]) + 430)
             break;
         i_this->msFrameCount = 0;
-        i_this->m2E9A = CAMERA_LEFT_HAND;
+        i_this->mDemoCamMode = CAMERA_LEFT_HAND;
         initialHandCamera(0);
         [[fallthrough]];
     case CAMERA_LEFT_HAND:
@@ -265,8 +265,8 @@ static void demo_camera(bst_class* actor) {
         if (s32(i_this->msFrameCount) != 170)
             break;
         i_this->msFrameCount = 0;
-        i_this->m2EC4 = zero;
-        i_this->m2E9A = CAMERA_RIGHT_HAND;
+        i_this->mCamWork = zero;
+        i_this->mDemoCamMode = CAMERA_RIGHT_HAND;
         initialHandCamera(1);
         [[fallthrough]];
     case CAMERA_RIGHT_HAND:
@@ -274,29 +274,29 @@ static void demo_camera(bst_class* actor) {
         if (s32(i_this->msFrameCount) != 170)
             break;
         i_this->msFrameCount = 0;
-        i_this->m2EC4 = zero;
-        i_this->m2E9A = CAMERA_HEAD;
-        i_this->m2EAC.copy(*&boss()->current.pos);
-        i_this->m2EAC.y = add(f32(i_this->m2EAC.y), add(f32(sTune.mFloat[7]), 300.0f));
-        i_this->m2EA0.copy(*&boss()->current.pos);
-        i_this->m2EA0.x = add(f32(i_this->m2EA0.x), sub(f32(sTune.mFloat[8]), 2000.0f));
-        i_this->m2EA0.y = add(f32(i_this->m2EA0.y), add(f32(sTune.mFloat[7]), 300.0f));
+        i_this->mCamWork = zero;
+        i_this->mDemoCamMode = CAMERA_HEAD;
+        i_this->mCamCenter.copy(*&boss()->current.pos);
+        i_this->mCamCenter.y = add(f32(i_this->mCamCenter.y), add(f32(sTune.mFloat[7]), 300.0f));
+        i_this->mCamEye.copy(*&boss()->current.pos);
+        i_this->mCamEye.x = add(f32(i_this->mCamEye.x), sub(f32(sTune.mFloat[8]), 2000.0f));
+        i_this->mCamEye.y = add(f32(i_this->mCamEye.y), add(f32(sTune.mFloat[7]), 300.0f));
         [[fallthrough]];
     case CAMERA_HEAD:
         if (s32(i_this->msFrameCount) < 30)
             break;
         if (s32(i_this->msFrameCount) <= 90) {
-            cLib_addCalc2(&i_this->m2EA0.x, sub(f32(boss()->current.pos.x), 1000.0f), 0.2f,
-                          mul(hundred, f32(i_this->m2EC4)));
-            cLib_addCalc2(&i_this->m2EC4, one, one, 0.050000001f);
+            cLib_addCalc2(&i_this->mCamEye.x, sub(f32(boss()->current.pos.x), 1000.0f), 0.2f,
+                          mul(hundred, f32(i_this->mCamWork)));
+            cLib_addCalc2(&i_this->mCamWork, one, one, 0.050000001f);
             if (s32(i_this->msFrameCount) == 30) {
-                boss()->m02D4 = 1;
-                boss()->m02C4 = 1;
+                boss()->mPedestalAnmOn = 1;
+                boss()->mBodyAnmOn = 1;
                 bst_class* b = boss();
                 sound(b, &b->current.pos, 0x58D6);
             }
             if (s32(i_this->msFrameCount) == 59) {
-                i_this->m2ED0 = zero;
+                i_this->mRoomColorBlend = zero;
                 i_this->mRoomState = 1;
             }
             if (s32(i_this->msFrameCount) == 60) {
@@ -312,22 +312,22 @@ static void demo_camera(bst_class* actor) {
         }
         if (s32(i_this->msFrameCount) != 150)
             break;
-        i_this->m2E9A = CAMERA_BATTLE;
+        i_this->mDemoCamMode = CAMERA_BATTLE;
         boss()->mActionType = 1;
         hand(0)->mActionType = 1;
         hand(1)->mActionType = 1;
         boss()->mDamage = 0;
         hand(1)->mDamage = 0;
         hand(0)->mDamage = 0;
-        i_this->m2EAC.copy(*&boss()->eyePos);
-        i_this->m2EAC.y = add(f32(i_this->m2EAC.y), f32(sTune.mFloat[0]));
-        i_this->m2EA0.copy(*&player->current.pos);
-        i_this->m2EA0.x = sub(f32(i_this->m2EA0.x), add(f32(sTune.mFloat[1]), 500.0f));
-        i_this->m2EA0.y = add(f32(i_this->m2EA0.y), add(f32(sTune.mFloat[2]), hundred));
-        i_this->m2EC8 = add(f32(sTune.mFloat[4]), 75.0f);
+        i_this->mCamCenter.copy(*&boss()->eyePos);
+        i_this->mCamCenter.y = add(f32(i_this->mCamCenter.y), f32(sTune.mFloat[0]));
+        i_this->mCamEye.copy(*&player->current.pos);
+        i_this->mCamEye.x = sub(f32(i_this->mCamEye.x), add(f32(sTune.mFloat[1]), 500.0f));
+        i_this->mCamEye.y = add(f32(i_this->mCamEye.y), add(f32(sTune.mFloat[2]), hundred));
+        i_this->mCamFovy = add(f32(sTune.mFloat[4]), 75.0f);
         for (u32 n = 0; n != 6; ++n) {
             bst_class* b = n < 4 ? hand(n / 2) : boss();
-            J3DModel* model = b->m02C8;
+            J3DModel* model = b->mpPedestalModel;
             gabi::Local<BstCameraArchive> name;
             name->mpName = gabi::at<char>(gabi::guest_addr("Bst"));
             name->mVtable = BstCameraSafeStringVtable;
@@ -349,52 +349,52 @@ static void demo_camera(bst_class* actor) {
         player->mDemoOriginal = 3;
         break;
     case CAMERA_BATTLE:
-        cLib_addCalc2(&i_this->m2EAC.x, f32(boss()->current.pos.x), tenth, 50.0f);
-        cLib_addCalc2(&i_this->m2EAC.y, add(f32(boss()->eyePos.y), f32(sTune.mFloat[0])), tenth,
+        cLib_addCalc2(&i_this->mCamCenter.x, f32(boss()->current.pos.x), tenth, 50.0f);
+        cLib_addCalc2(&i_this->mCamCenter.y, add(f32(boss()->eyePos.y), f32(sTune.mFloat[0])), tenth,
                       50.0f);
-        cLib_addCalc2(&i_this->m2EAC.z, f32(boss()->current.pos.z), tenth, 50.0f);
-        i_this->m2EA0.copy(*&player->current.pos);
-        i_this->m2EA0.x = sub(f32(i_this->m2EA0.x), add(f32(sTune.mFloat[1]), 500.0f));
-        i_this->m2EA0.y = add(f32(i_this->m2EA0.y), add(f32(sTune.mFloat[2]), hundred));
-        cLib_addCalc2(&i_this->m2EC8, 55.0f, tenth, 0.40000001f);
+        cLib_addCalc2(&i_this->mCamCenter.z, f32(boss()->current.pos.z), tenth, 50.0f);
+        i_this->mCamEye.copy(*&player->current.pos);
+        i_this->mCamEye.x = sub(f32(i_this->mCamEye.x), add(f32(sTune.mFloat[1]), 500.0f));
+        i_this->mCamEye.y = add(f32(i_this->mCamEye.y), add(f32(sTune.mFloat[2]), hundred));
+        cLib_addCalc2(&i_this->mCamFovy, 55.0f, tenth, 0.40000001f);
         if (s32(i_this->msFrameCount) == 200) {
             setVector(shock.get(), zero, zero, zero);
             void* control = bstCameraPlay()->mpParticle;
             u32 emitter =
                 bstCameraParticle(control, 0, 0x81E9, shock.get(), 0, 0, 0xFF, 0, -1, 0, 0, 0);
-            i_this->m2EF8 = gabi::at<JPABaseEmitter>(emitter);
+            i_this->mpStageEffEmitter = gabi::at<JPABaseEmitter>(emitter);
             sAudio->mBstHori = 1;
         }
         if (s32(i_this->msFrameCount) == 300) {
             finish();
-            i_this->m2E9A = CAMERA_IDLE;
-            i_this->m2E7C = 10;
+            i_this->mDemoCamMode = CAMERA_IDLE;
+            i_this->mBattlePhase = 10;
             bstCameraStageFlag(sSave->mStage, 5);
             bstCameraBgmStart(0x80000023u);
-            i_this->m2E98 = 1;
-            i_this->m2FE4 = 1;
+            i_this->mBlurRate = 1;
+            i_this->mBattleCamOn = 1;
             sDemoMessageFlag = 0;
         }
         break;
     case CAMERA_DEFEAT_INTRO:
         playerPos(add(f32(sTune.mFloat[1]), -300.0f));
         i_this->current.pos.z = zero;
-        i_this->m2EAC.x = 300.0f;
-        i_this->m2EAC.y = f32(i_this->current.pos.y);
-        i_this->m2EAC.z = zero;
+        i_this->mCamCenter.x = 300.0f;
+        i_this->mCamCenter.y = f32(i_this->current.pos.y);
+        i_this->mCamCenter.z = zero;
         i_this->shape_angle.y = -0x4000;
         i_this->current.pos.x = 300.0f;
-        i_this->m2EAC.y = add(f32(i_this->m2EAC.y), add(f32(sTune.mFloat[0]), 300.0f));
-        i_this->m2EA0.y = add(f32(sTune.mFloat[3]), 200.0f);
-        i_this->m2EA0.z = zero;
-        cLib_addCalc2(&i_this->m2EA0.x, add(f32(sTune.mFloat[2]), -600.0f), 0.2f,
-                      mul(10.0f, f32(i_this->m2EC4)));
-        cLib_addCalc2(&i_this->m2EC4, one, one, 0.050000001f);
+        i_this->mCamCenter.y = add(f32(i_this->mCamCenter.y), add(f32(sTune.mFloat[0]), 300.0f));
+        i_this->mCamEye.y = add(f32(sTune.mFloat[3]), 200.0f);
+        i_this->mCamEye.z = zero;
+        cLib_addCalc2(&i_this->mCamEye.x, add(f32(sTune.mFloat[2]), -600.0f), 0.2f,
+                      mul(10.0f, f32(i_this->mCamWork)));
+        cLib_addCalc2(&i_this->mCamWork, one, one, 0.050000001f);
         if (s32(i_this->msFrameCount) < 80)
-            i_this->m2ECC = add(f32(sTune.mFloat[9]), 10.0f);
+            i_this->mCamShake = add(f32(sTune.mFloat[9]), 10.0f);
         if (s32(i_this->msFrameCount) == 90) {
             boss()->mDamage = 2;
-            i_this->m2ED0 = zero;
+            i_this->mRoomColorBlend = zero;
             i_this->mRoomState = 2;
         }
         if (s32(i_this->msFrameCount) == 100)
@@ -422,35 +422,35 @@ static void demo_camera(bst_class* actor) {
         if (s32(i_this->msFrameCount) != 3 * s32(sTune.mShort[4]) + 660)
             break;
         i_this->msFrameCount = 0;
-        i_this->m2EC4 = zero;
-        i_this->m2E9A = s32(i_this->m2E9A) + 1;
+        i_this->mCamWork = zero;
+        i_this->mDemoCamMode = s32(i_this->mDemoCamMode) + 1;
         highCamera();
         bstCameraStreamPlay();
-        i_this->m2E98 = 1;
+        i_this->mBlurRate = 1;
         [[fallthrough]];
     case CAMERA_LOOK_UP:
         if (s32(i_this->msFrameCount) <= 30)
             break;
-        i_this->m2EC4 = zero;
-        i_this->m2E9A = s32(i_this->m2E9A) + 1;
+        i_this->mCamWork = zero;
+        i_this->mDemoCamMode = s32(i_this->mDemoCamMode) + 1;
         i_this->msFrameCount = 0;
         player->mDemoMode = 26;
         [[fallthrough]];
     case CAMERA_PLAYER:
-        i_this->m2EAC.copy(*&player->current.pos);
-        i_this->m2EAC.y = add(f32(i_this->m2EAC.y), add(f32(sTune.mFloat[10]), hundred));
-        i_this->m2EA0.copy(*&player->current.pos);
-        i_this->m2EA0.x = add(f32(i_this->m2EA0.x), add(f32(sTune.mFloat[11]), 150.0f));
-        i_this->m2EA0.y = add(f32(i_this->m2EA0.y), add(f32(sTune.mFloat[12]), 50.0f));
+        i_this->mCamCenter.copy(*&player->current.pos);
+        i_this->mCamCenter.y = add(f32(i_this->mCamCenter.y), add(f32(sTune.mFloat[10]), hundred));
+        i_this->mCamEye.copy(*&player->current.pos);
+        i_this->mCamEye.x = add(f32(i_this->mCamEye.x), add(f32(sTune.mFloat[11]), 150.0f));
+        i_this->mCamEye.y = add(f32(i_this->mCamEye.y), add(f32(sTune.mFloat[12]), 50.0f));
         if (s32(i_this->msFrameCount) <= (s16)(s32(sTune.mShort[3]) + 65))
             break;
-        i_this->m2EC4 = zero;
-        i_this->m2E9A = s32(i_this->m2E9A) + 1;
+        i_this->mCamWork = zero;
+        i_this->mDemoCamMode = s32(i_this->mDemoCamMode) + 1;
         i_this->msFrameCount = 0;
         highCamera();
         i_this->mRoomState = 4;
         i_this->mDamage = 10;
-        i_this->m2ED0 = one;
+        i_this->mRoomColorBlend = one;
         bstCameraStageFlag(sSave->mStage, 3);
         setVector(offset.get(), zero, zero, zero);
         bstCameraCreateWarp(offset.get(), 0, i_this->current.roomNo, 0);
@@ -460,20 +460,20 @@ static void demo_camera(bst_class* actor) {
             player->mDemoMode = 24;
         if (s32(i_this->msFrameCount) == s32(sTune.mShort[5]) + 150)
             player->mDemoMode = 29;
-        cLib_addCalc2(&i_this->m2EAC.y, add(f32(sTune.mFloat[8]), 200.0f), 0.80000001f,
+        cLib_addCalc2(&i_this->mCamCenter.y, add(f32(sTune.mFloat[8]), 200.0f), 0.80000001f,
                       add(f32(sTune.mFloat[9]), 300.0f));
         if (s32(i_this->msFrameCount) != s32(sTune.mShort[6]) + 250)
             break;
-        i_this->m2EAC.copy(*&i_this->current.pos);
+        i_this->mCamCenter.copy(*&i_this->current.pos);
         i_this->msFrameCount = 0;
-        i_this->m2E9A = s32(i_this->m2E9A) + 1;
-        i_this->m2EC4 = zero;
-        i_this->m2EAC.y = add(f32(i_this->m2EAC.y), add(f32(sTune.mFloat[10]), hundred));
+        i_this->mDemoCamMode = s32(i_this->mDemoCamMode) + 1;
+        i_this->mCamWork = zero;
+        i_this->mCamCenter.y = add(f32(i_this->mCamCenter.y), add(f32(sTune.mFloat[10]), hundred));
         // HD: Adds these tuning values after subtracting the shot offsets.
-        i_this->m2EA0.x = add(sub(f32(i_this->current.pos.x), 1300.0f), f32(sTune.mFloat[11]));
-        i_this->m2EA0.y = add(sub(f32(i_this->current.pos.y), 450.0f), f32(sTune.mFloat[12]));
-        i_this->m2EA0.z = add(sub(f32(i_this->current.pos.z), 500.0f), f32(sTune.mFloat[13]));
-        i_this->m2E98 = 100;
+        i_this->mCamEye.x = add(sub(f32(i_this->current.pos.x), 1300.0f), f32(sTune.mFloat[11]));
+        i_this->mCamEye.y = add(sub(f32(i_this->current.pos.y), 450.0f), f32(sTune.mFloat[12]));
+        i_this->mCamEye.z = add(sub(f32(i_this->current.pos.z), 500.0f), f32(sTune.mFloat[13]));
+        i_this->mBlurRate = 100;
         [[fallthrough]];
     case CAMERA_RETURN_HOME:
         defeatCamera();
@@ -493,11 +493,11 @@ static void demo_camera(bst_class* actor) {
             bstCameraShock(play->mVibration, shockStrength, -0x21, shock.get());
         }
         sound(actor, &actor->eyePos, 0x6990);
-        i_this->m2ECC = add(f32(sTune.mFloat[9]), 10.0f);
-        i_this->m112A = s32(sTune.mShort[8]) + 3;
+        i_this->mCamShake = add(f32(sTune.mFloat[9]), 10.0f);
+        i_this->mImpactShakeTimer = s32(sTune.mShort[8]) + 3;
         i_this->current.pos.copy(*&i_this->home.pos);
         i_this->msFrameCount = 0;
-        i_this->m2E9A = CAMERA_DROP_ITEM;
+        i_this->mDemoCamMode = CAMERA_DROP_ITEM;
         bstCameraEndAnimations(actor);
         break;
     case CAMERA_DROP_ITEM:
@@ -505,11 +505,11 @@ static void demo_camera(bst_class* actor) {
         if (s32(i_this->msFrameCount) == s32(sTune.mShort[4]) + 50) {
             bstCameraAnimation(actor, 20, 5.0f, 0, one, -1);
             sound(actor, &actor->current.pos, 0x58E2);
-            i_this->m2E98 = 1;
+            i_this->mBlurRate = 1;
         }
-        if (gabi::ftoi(i_this->m02B8->getFrame()) == 26) {
+        if (gabi::ftoi(i_this->mpMorf->getFrame()) == 26) {
             auto jointMatrix = [&](u32 joint) {
-                bstCameraCopyMatrix(i_this->m02B8->getModel()->getAnmMtx(joint), sCalcMatrix);
+                bstCameraCopyMatrix(i_this->mpMorf->getModel()->getAnmMtx(joint), sCalcMatrix);
             };
             jointMatrix(BST_JNT_HANAR_e);
             setVector(offset.get(), add(f32(sTune.mFloat[2]), 60.0f), f32(sTune.mFloat[3]),
@@ -531,10 +531,10 @@ static void demo_camera(bst_class* actor) {
             u32 smoke = sItemSmoke;
             particle(smoke, transformed.get(), room);
         }
-        if (gabi::ftoi(i_this->m02B8->getFrame()) > 26) {
+        if (gabi::ftoi(i_this->mpMorf->getFrame()) > 26) {
             fopAc_ac_c* item = findItem();
             if (item) {
-                i_this->m2E9A = CAMERA_FOLLOW_ITEM;
+                i_this->mDemoCamMode = CAMERA_FOLLOW_ITEM;
                 item->speedF = add(f32(sTune.mFloat[6]), 65.0f);
             }
         }
@@ -542,42 +542,42 @@ static void demo_camera(bst_class* actor) {
     case CAMERA_FOLLOW_ITEM: {
         fopAc_ac_c* item = findItem();
         if (item) {
-            cLib_addCalc2(&i_this->m2EAC.x, f32(item->current.pos.x), tenth, hundred);
-            cLib_addCalc2(&i_this->m2EAC.y, f32(item->current.pos.y), tenth, hundred);
-            cLib_addCalc2(&i_this->m2EAC.z, f32(item->current.pos.z), tenth, hundred);
-            i_this->m2EC8 = add(f32(sTune.mFloat[4]), 55.0f);
+            cLib_addCalc2(&i_this->mCamCenter.x, f32(item->current.pos.x), tenth, hundred);
+            cLib_addCalc2(&i_this->mCamCenter.y, f32(item->current.pos.y), tenth, hundred);
+            cLib_addCalc2(&i_this->mCamCenter.z, f32(item->current.pos.z), tenth, hundred);
+            i_this->mCamFovy = add(f32(sTune.mFloat[4]), 55.0f);
         }
         if (s32(i_this->msFrameCount) == 170) {
             finish();
-            i_this->m2E9A = CAMERA_IDLE;
-            i_this->m2E7C = 100;
-            i_this->m2E98 = 1;
+            i_this->mDemoCamMode = CAMERA_IDLE;
+            i_this->mBattlePhase = 100;
+            i_this->mBlurRate = 1;
             sDemoMessageFlag = 0;
         }
         break;
     }
     }
-    if (s32(i_this->m2E9A) == CAMERA_IDLE)
+    if (s32(i_this->mDemoCamMode) == CAMERA_IDLE)
         return;
     auto trig = [](s32 angle, bool cosine) {
         const auto& v = sTrig.mEntries[(u16)angle >> 3];
         return f32(cosine ? v.mCos : v.mSin);
     };
     s32 frame = s32(i_this->msFrameCount);
-    f32 magnitude = f32(i_this->m2ECC);
+    f32 magnitude = f32(i_this->mCamShake);
     f32 x = mul(trig(frame * 0x3300, false), magnitude),
         y = mul(trig(frame * 0x3000, true), magnitude),
         z = mul(trig(frame * 0x3500, true), magnitude);
-    setVector(shakeEye.get(), sub(f32(i_this->m2EAC.x), x), sub(f32(i_this->m2EAC.y), y),
-              sub(f32(i_this->m2EAC.z), z));
-    setVector(shakeCenter.get(), add(f32(i_this->m2EA0.x), x), add(f32(i_this->m2EA0.y), y),
-              add(f32(i_this->m2EA0.z), z));
+    setVector(shakeEye.get(), sub(f32(i_this->mCamCenter.x), x), sub(f32(i_this->mCamCenter.y), y),
+              sub(f32(i_this->mCamCenter.z), z));
+    setVector(shakeCenter.get(), add(f32(i_this->mCamEye.x), x), add(f32(i_this->mCamEye.y), y),
+              add(f32(i_this->mCamEye.z), z));
     s16 bank = (s16)gabi::ftoi(
         mul(mul(trig(s32(i_this->mUpdateLastFacingDirIfMultipleOf32) * 0x1C00, true), magnitude),
             7.5f));
-    bstCameraSet(camera, shakeEye.get(), shakeCenter.get(), bank, f32(i_this->m2EC8));
-    cLib_addCalc0(&i_this->m2ECC, one, one);
-    bstCameraReport(30, 410, "K DEMO MODET  %d", s32(i_this->m2E9A));
+    bstCameraSet(camera, shakeEye.get(), shakeCenter.get(), bank, f32(i_this->mCamFovy));
+    cLib_addCalc0(&i_this->mCamShake, one, one);
+    bstCameraReport(30, 410, "K DEMO MODET  %d", s32(i_this->mDemoCamMode));
     bstCameraReport(30, 430, "K MAIN COUNT  %d", s32(i_this->msFrameCount));
     i_this->msFrameCount = s32(i_this->msFrameCount) + 1;
 }

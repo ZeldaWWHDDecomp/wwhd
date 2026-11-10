@@ -87,17 +87,17 @@ enum {
 
 /* point of an HD dPath: points at +8, 0x10 bytes each (arg3 at +3, position at +4) */
 static inline KiPathPoint* ki_path_point(ki_class* i_this) {
-    return kiPath(i_this->ppd)->m_points.get() + (s32)i_this->m2D6;
+    return kiPath(i_this->ppd)->m_points.get() + (s32)i_this->mPathPoint;
 }
 
 static inline void ki_eye_tex_anm(ki_class* i_this) {
-    if (i_this->m335 != 0) {
-        if (i_this->m334 < i_this->m336) {
-            i_this->m334 = i_this->m334 + 1;
-        } else if (i_this->m337 != 0) {
-            i_this->m334 = 0;
+    if (i_this->mEyeAnmOn != 0) {
+        if (i_this->mEyeFrame < i_this->mEyeMaxFrame) {
+            i_this->mEyeFrame = i_this->mEyeFrame + 1;
+        } else if (i_this->mEyeLoop != 0) {
+            i_this->mEyeFrame = 0;
         } else {
-            i_this->m335 = 0;
+            i_this->mEyeAnmOn = 0;
         }
     }
 }
@@ -141,7 +141,7 @@ static void ki_wait_move(ki_class* i_this) {
         break;
 
     case 3: {
-        i_this->m338 = 1;
+        i_this->mAnmPause = 1;
         if (i_this->mTimers[0] == 0) {
             cXyz tmp;
             cXyz_mi(&player->current.pos, &tmp, &player->old.pos);
@@ -157,18 +157,18 @@ static void ki_wait_move(ki_class* i_this) {
         cXyz tmp;
         cXyz_mi(&player->current.pos, &tmp, &a_this->current.pos);
         f32 x = tmp.x, y = tmp.y, z = tmp.z;
-        i_this->m322 = cM_atan2s(x, z) - a_this->current.angle.y;
-        i_this->m324 = -cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
-        if (i_this->m322 > 10000) {
-            i_this->m322 = 10000;
-        } else if (i_this->m322 < -10000) {
-            i_this->m322 = -10000;
+        i_this->mHeadTargetAngleY = cM_atan2s(x, z) - a_this->current.angle.y;
+        i_this->mHeadTargetAngleX = -cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
+        if (i_this->mHeadTargetAngleY > 10000) {
+            i_this->mHeadTargetAngleY = 10000;
+        } else if (i_this->mHeadTargetAngleY < -10000) {
+            i_this->mHeadTargetAngleY = -10000;
         }
 
-        if (i_this->m324 > 0x2000) {
-            i_this->m324 = 0x1FF6;
-        } else if (i_this->m324 < -0x38E) {
-            i_this->m324 = -0x38E;
+        if (i_this->mHeadTargetAngleX > 0x2000) {
+            i_this->mHeadTargetAngleX = 0x1FF6;
+        } else if (i_this->mHeadTargetAngleX < -0x38E) {
+            i_this->mHeadTargetAngleX = -0x38E;
         }
         break;
     }
@@ -177,7 +177,7 @@ static void ki_wait_move(ki_class* i_this) {
         i_this->mPosMove.copy(a_this->home.pos);
         i_this->mPosMoveTarget = 20.0f;
         i_this->mPosMoveMaxSpeed = 20.0f;
-        i_this->m304 = 10000.0f;
+        i_this->mTurnScale = 10000.0f;
         i_this->mPosMoveDist = 1.0f;
         ki_pos_move(i_this, 0);
 
@@ -213,7 +213,7 @@ static void ki_fly_move(ki_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     kiHIO_c& hio = l_kiHIO;
 
-    i_this->m540 = 1;
+    i_this->mBgCheckOn = 1;
 
     cXyz sp28;
     cXyz_mi(&i_this->mPosMove, &sp28, &a_this->current.pos);
@@ -227,7 +227,7 @@ static void ki_fly_move(ki_class* i_this) {
         tex_anm_set(i_this, 0);
         i_this->mPosMoveTarget = hio.m28;
         i_this->mPosMoveMaxSpeed = 2.0f;
-        i_this->m304 = 3000.0f;
+        i_this->mTurnScale = 3000.0f;
         [[fallthrough]];
 
     case 1:
@@ -271,7 +271,7 @@ static void ki_fire_set_move(ki_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     dComIfGp_get(); /* player (unused) */
 
-    i_this->m540 = 0;
+    i_this->mBgCheckOn = 0;
 
     switch (i_this->mBehaviorType) {
     case 0: {
@@ -281,8 +281,8 @@ static void ki_fire_set_move(ki_class* i_this) {
         a_this->speed.y = base2 + cM_rndF(30.0f);
         anm_init(i_this, dRes_INDEX_KI_BCK_WAIT1_e, 1.0f, 2, 1.0f, dRes_INDEX_KI_BAS_WAIT1_e);
         i_this->mBehaviorType = 1;
-        i_this->m91C = dComIfGp_particle_set(dPa_ID_IT_SN_FIREK_FIRE_A, &a_this->current.pos, nullptr, nullptr, 0xFF,
-                                             (dPa_levelEcallBack*)&i_this->m908);
+        i_this->mFireEmitter = dComIfGp_particle_set(dPa_ID_IT_SN_FIREK_FIRE_A, &a_this->current.pos, nullptr, nullptr, 0xFF,
+                                             (dPa_levelEcallBack*)&i_this->mFireCallBack);
     }
         [[fallthrough]];
 
@@ -293,10 +293,10 @@ static void ki_fire_set_move(ki_class* i_this) {
             i_this->mAction = ki_class::ACT_ATTACK_MOVE_INDEX_e;
             i_this->mBehaviorType = 0;
             a_this->shape_angle.x = 0;
-            if (i_this->m91C != nullptr) {
-                kiRemoveFollow(&i_this->m908); /* m908.remove() */
-                kiForceDeleteEmitter(gabi::ea(i_this->m91C.get()));
-                i_this->m91C = nullptr;
+            if (i_this->mFireEmitter != nullptr) {
+                kiRemoveFollow(&i_this->mFireCallBack); /* mFireCallBack.remove() */
+                kiForceDeleteEmitter(gabi::ea(i_this->mFireEmitter.get()));
+                i_this->mFireEmitter = nullptr;
             }
             dComIfGp_particle_set(dPa_ID_IT_SN_FIREK_FIRE_B, &a_this->current.pos);
             dComIfGp_particle_set(dPa_ID_IT_SN_FIREK_HAHEN, &a_this->current.pos);
@@ -310,10 +310,10 @@ static void ki_fire_set_move(ki_class* i_this) {
         [[fallthrough]];
 
     case 11:
-        i_this->m540 = 1;
+        i_this->mBgCheckOn = 1;
         a_this->speed.y = 20.0f;
         if (i_this->mTimers[1] == 0) {
-            i_this->m2DC = 1;
+            i_this->mVanish = 1;
         }
         break;
     }
@@ -332,7 +332,7 @@ static void ki_fire_set_move(ki_class* i_this) {
     a_this->speed.y -= REG8_F(10) + 8.0f;
 
     if (fopAcM_searchPlayerDistance(a_this) > 2000.0f && ki_player_bg_check(i_this)) {
-        i_this->m2DC = 1;
+        i_this->mVanish = 1;
     }
 }
 
@@ -387,8 +387,8 @@ static void ki_damage_move(ki_class* i_this) {
     dComIfGp_get(); /* player (unused) */
     bool bVar1 = false;
 
-    i_this->m540 = 1;
-    i_this->m314 = 3;
+    i_this->mBgCheckOn = 1;
+    i_this->mNoHitTimer = 3;
 
     switch (i_this->mBehaviorType) {
     case 0:
@@ -398,18 +398,18 @@ static void ki_damage_move(ki_class* i_this) {
         [[fallthrough]];
 
     case 1:
-        if (i_this->m31C > 0.1f) {
-            cLib_addCalcAngleS2(&a_this->shape_angle.y, i_this->m316, 1, 0x3000);
+        if (i_this->mKnockbackSpeed > 0.1f) {
+            cLib_addCalcAngleS2(&a_this->shape_angle.y, i_this->mKnockbackAngleY, 1, 0x3000);
             cXyz sp1C;
             sp1C.x = 0.0f;
             sp1C.y = 0.0f;
-            sp1C.z = -i_this->m31C;
-            cMtx_YrotS(calc_mtx(), i_this->m316);
+            sp1C.z = -i_this->mKnockbackSpeed;
+            cMtx_YrotS(calc_mtx(), i_this->mKnockbackAngleY);
             cMtx_XrotM(calc_mtx(), i_this->mRand2000);
 
             if (i_this->mAcch.ChkWallHit()) {
                 sp1C.z = 0.0f;
-                if (!(i_this->m31C < l_kiHIO.m3C)) { /* m31C >= m3C (blt: NaN enters) */
+                if (!(i_this->mKnockbackSpeed < l_kiHIO.m3C)) { /* mKnockbackSpeed >= m3C (blt: NaN enters) */
                     i_this->mBehaviorType = 2;
                     i_this->mTimers[0] = 0x32;
                     anm_init(i_this, dRes_INDEX_KI_BCK_BITA1_e, 1.0f, 0, 1.0f, dRes_INDEX_KI_BAS_BITA1_e);
@@ -420,7 +420,7 @@ static void ki_damage_move(ki_class* i_this) {
                     if (sVar2 != 1) {
                         a_this->current.angle.y = sVar2;
                     }
-                    i_this->m904 = (u8)gabi::ftoi(cM_rndF(1.9f));
+                    i_this->mFallSpinDir = (u8)gabi::ftoi(cM_rndF(1.9f));
                     bVar1 = true;
                 }
             }
@@ -430,7 +430,7 @@ static void ki_damage_move(ki_class* i_this) {
             a_this->current.pos.x += sp10.x;
             a_this->current.pos.y += sp10.y;
             a_this->current.pos.z += sp10.z;
-            cLib_addCalc0(&i_this->m31C, 1.0f, l_kiHIO.m40);
+            cLib_addCalc0(&i_this->mKnockbackSpeed, 1.0f, l_kiHIO.m40);
             a_this->speedF = 0.0f;
         } else {
             i_this->mAction = ki_class::ACT_ATTACK_MOVE_INDEX_e;
@@ -444,7 +444,7 @@ static void ki_damage_move(ki_class* i_this) {
         if (i_this->mTimers[0] < 30) {
             a_this->current.pos.y += a_this->speed.y;
             a_this->speed.y -= 0.1f;
-            if (i_this->m904 == 0) {
+            if (i_this->mFallSpinDir == 0) {
                 a_this->shape_angle.z += -0x250;
             } else {
                 a_this->shape_angle.z += 0x250;
@@ -504,15 +504,15 @@ static void ki_path_move(ki_class* i_this) {
 
     switch (i_this->mBehaviorType) {
     case 0:
-        i_this->m2D6 += i_this->m2D7;
+        i_this->mPathPoint += i_this->mPathDir;
         /* HD dPath: m_num u16 at +0 (compared as s8), m_nextID u16 at +2, closed flag at +5 bit 0 */
-        if (i_this->m2D6 >= kiPath(i_this->ppd)->mCountBytes[1]) {
+        if (i_this->mPathPoint >= kiPath(i_this->ppd)->mCountBytes[1]) {
             KiPath* ppd = kiPath(i_this->ppd);
             if ((u8)ppd->m_closed & 1) {
-                i_this->m2D6 = 0;
+                i_this->mPathPoint = 0;
             } else {
-                i_this->m2D7 = -1;
-                i_this->m2D6 = (u16)kiPath(i_this->ppd)->m_num - 2;
+                i_this->mPathDir = -1;
+                i_this->mPathPoint = (u16)kiPath(i_this->ppd)->m_num - 2;
             }
 
             if ((s32)(u16)ppd->m_nextID != 0xFFFF) {
@@ -520,9 +520,9 @@ static void ki_path_move(ki_class* i_this) {
                 if (i_this->ppd == nullptr) /* JUT_ASSERT(1779, i_this->ppd != NULL) */
                     JUT_ASSERT_fail("d_a_ki.cpp", 0x6F3, "i_this->ppd != (0)");
             }
-        } else if (i_this->m2D6 < 0) {
-            i_this->m2D7 = 1;
-            i_this->m2D6 = 1;
+        } else if (i_this->mPathPoint < 0) {
+            i_this->mPathDir = 1;
+            i_this->mPathPoint = 1;
         }
         [[fallthrough]];
 
@@ -560,7 +560,7 @@ static void ki_path_move(ki_class* i_this) {
 
     i_this->mPosMoveTarget = hio.m28;
     i_this->mPosMoveMaxSpeed = 2.0f;
-    i_this->m304 = 4000.0f;
+    i_this->mTurnScale = 4000.0f;
     i_this->mPosMoveDist = 1.0f;
 
     ki_pos_move(i_this, 0);
@@ -592,7 +592,7 @@ static BOOL daKi_Execute(ki_class* i_this) {
     }
 
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &a_this->current.pos, &a_this->tevStr);
-    if (i_this->m2DC != 0) {
+    if (i_this->mVanish != 0) {
         cLib_addCalc0(&a_this->scale.x, 1.0f, 0.05f);
         f32 s = a_this->scale.x;
         a_this->scale.z = s;
@@ -603,9 +603,9 @@ static BOOL daKi_Execute(ki_class* i_this) {
         }
     }
 
-    if (i_this->m2D4 != 0) {
-        if (dComIfGs_isSwitch(i_this->m2D4 - 1, fopAcM_GetRoomNo(a_this))) {
-            i_this->m2D4 = 0;
+    if (i_this->mAppearSwitch != 0) {
+        if (dComIfGs_isSwitch(i_this->mAppearSwitch - 1, fopAcM_GetRoomNo(a_this))) {
+            i_this->mAppearSwitch = 0;
             a_this->speedF = hio.m28;
             a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e; /* attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e */
         } else {
@@ -624,12 +624,12 @@ static BOOL daKi_Execute(ki_class* i_this) {
         JUTReport(0x104, 0x1AE, "FIGHT    %d", ki_fight_count);
     }
 
-    i_this->m580.SetR(0.0f);
+    i_this->mAtSph.SetR(0.0f);
     i_this->mDamageSphere.SetR(40.0f);
-    i_this->m6AC.SetR(hio.m58);
+    i_this->mCoSph.SetR(hio.m58);
 
     if (hio.m06 == 0) {
-        i_this->m540 = 0;
+        i_this->mBgCheckOn = 0;
 
         for (s32 i = 0; i < 4; i++) {
             if (i_this->mTimers[i] != 0) {
@@ -637,16 +637,16 @@ static BOOL daKi_Execute(ki_class* i_this) {
             }
         }
 
-        if (i_this->m314 != 0) {
-            i_this->m314 -= 1;
+        if (i_this->mNoHitTimer != 0) {
+            i_this->mNoHitTimer -= 1;
         }
 
-        i_this->m320 += 1;
+        i_this->mFrameCounter += 1;
 
-        if (i_this->m338 == 0) {
+        if (i_this->mAnmPause == 0) {
             i_this->mpMorf->play(&a_this->current.pos, 0, 0);
         } else {
-            i_this->m338 = 0;
+            i_this->mAnmPause = 0;
         }
 
         if (i_this->mAction == ki_class::ACT_ATTACK_MOVE_e) {
@@ -670,7 +670,7 @@ static BOOL daKi_Execute(ki_class* i_this) {
     }
 
     if (i_this->mDamageType != 0) {
-        mDoExt_baseAnm_play(i_this->m920);
+        mDoExt_baseAnm_play(i_this->mBtkAnm);
         if (i_this->mAction != ki_class::ACT_FAIL_MOVE_e) {
             dComIfGp_particle_setSimple(dPa_ID_IT_SN_O_FIREK_KASU, &a_this->current.pos);
             fopAcM_seStart(a_this, JA_SE_OBJ_TORCH_BURNING, 0);
@@ -704,15 +704,15 @@ static BOOL daKi_Execute(ki_class* i_this) {
     attnPos->z = a_this->eyePos.z;
     attnPos->y += 50.0f;
 
-    i_this->m580.mSph.SetC(&a_this->current.pos);
-    i_this->m6AC.mSph.SetC(&a_this->current.pos);
+    i_this->mAtSph.mSph.SetC(&a_this->current.pos);
+    i_this->mCoSph.mSph.SetC(&a_this->current.pos);
     i_this->mDamageSphere.mSph.SetC(&a_this->current.pos);
 
-    dComIfG_Ccsp_Set(&i_this->m580);
-    dComIfG_Ccsp_Set(&i_this->m6AC);
+    dComIfG_Ccsp_Set(&i_this->mAtSph);
+    dComIfG_Ccsp_Set(&i_this->mCoSph);
     dComIfG_Ccsp_Set(&i_this->mDamageSphere);
 
-    if (i_this->m540 != 0) {
+    if (i_this->mBgCheckOn != 0) {
         a_this->current.pos.y -= REG0_F(5) + 30.0f;
         a_this->old.pos.y -= REG0_F(5) + 30.0f;
         i_this->mAcch.CrrPos(dComIfG_Bgsp());
@@ -721,8 +721,8 @@ static BOOL daKi_Execute(ki_class* i_this) {
     }
 
     i_this->mStts.Move();
-    if (i_this->mDamageSphere.ChkTgHit() && i_this->m314 == 0) {
-        i_this->m314 = 10;
+    if (i_this->mDamageSphere.ChkTgHit() && i_this->mNoHitTimer == 0) {
+        i_this->mNoHitTimer = 10;
 
         KiAttackInfo atInfo;
         void* obj = i_this->mDamageSphere.GetTgHitObj();
@@ -743,12 +743,12 @@ static BOOL daKi_Execute(ki_class* i_this) {
 
         if (cCcD_Obj_ChkAtType(obj, KiAttackType::FIRE_ARROW | KiAttackType::FIRE)) {
             i_this->mEnemyFire.mFireDuration = REG0_S(2) + 100;
-            i_this->m314 = 0x32;
-            i_this->m580.OnAtSPrmBit(2 /* cCcD_AtSPrm_VsEnemy_e */);
+            i_this->mNoHitTimer = 0x32;
+            i_this->mAtSph.OnAtSPrmBit(2 /* cCcD_AtSPrm_VsEnemy_e */);
         }
 
         if (cCcD_Obj_ChkAtType(obj, KiAttackType::WIND)) {
-            i_this->m31C = 100.0f;
+            i_this->mKnockbackSpeed = 100.0f;
         } else {
             atInfo.mpActor = cc_at_check(a_this, &atInfo);
 
@@ -765,15 +765,15 @@ static BOOL daKi_Execute(ki_class* i_this) {
             }
 
             if (atInfo.mResultingAttackType == 9) {
-                i_this->m31C = 150.0f;
+                i_this->mKnockbackSpeed = 150.0f;
             } else if (i_this->mStts.mAtSpl == 1 /* dCcG_At_Spl_UNK1 */) {
-                i_this->m31C = hio.m38;
+                i_this->mKnockbackSpeed = hio.m38;
             } else {
-                i_this->m31C = hio.m34;
+                i_this->mKnockbackSpeed = hio.m34;
             }
         }
 
-        i_this->m316 = fopAcM_searchPlayerAngleY(a_this);
+        i_this->mKnockbackAngleY = fopAcM_searchPlayerAngleY(a_this);
         i_this->mRand2000 = (s16)gabi::ftoi(cM_rndF(2000.0f));
         i_this->mAction = ki_class::ACT_DAMAGE_MOVE_e;
         i_this->mBehaviorType = 0;
@@ -782,22 +782,22 @@ static BOOL daKi_Execute(ki_class* i_this) {
     }
 
     s16 tmp;
-    if (i_this->m322 != 0) {
+    if (i_this->mHeadTargetAngleY != 0) {
         tmp = 0x1000;
     } else {
         tmp = 0x200;
     }
-    cLib_addCalcAngleS2(&i_this->m326, i_this->m322, 5, tmp);
+    cLib_addCalcAngleS2(&i_this->mHeadAngleY, i_this->mHeadTargetAngleY, 5, tmp);
 
-    if (i_this->m324 != 0) {
+    if (i_this->mHeadTargetAngleX != 0) {
         tmp = 0x1000;
     } else {
         tmp = 0x200;
     }
-    cLib_addCalcAngleS2(&i_this->m328, i_this->m324, 5, tmp);
+    cLib_addCalcAngleS2(&i_this->mHeadAngleX, i_this->mHeadTargetAngleX, 5, tmp);
 
-    i_this->m324 = 0;
-    i_this->m322 = 0;
+    i_this->mHeadTargetAngleX = 0;
+    i_this->mHeadTargetAngleY = 0;
     cLib_addCalcAngleS2(&a_this->shape_angle.z, 0, 1, 0x200);
     return TRUE;
 }

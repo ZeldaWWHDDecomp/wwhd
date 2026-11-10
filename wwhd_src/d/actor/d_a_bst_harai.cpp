@@ -27,18 +27,18 @@ static void harai_attack(bst_class* actor) {
     cLib_addCalcAngleS2(&i_this->shape_angle.z, roll, 8, 0x400);
     f32 scale = 1.0f;
     f32 maxStep = 10.0f;
-    cLib_addCalc2(&i_this->m1110, tilt, scale, maxStep);
+    cLib_addCalc2(&i_this->mBodyOffsetX, tilt, scale, maxStep);
 
     s16 state = static_cast<s16>(i_this->mDamage);
     f32 speed = 60.0f;
     f32 zero = 0.0f;
     switch ((u32)(s32)state) {
     case 0: {
-        i_this->m10EC.y = zero;
+        i_this->mMoveParam.y = zero;
         i_this->speedF = zero;
         i_this->mDamage = (s16)(state + 1);
         s16 timer = REG0_S(5);
-        i_this->m10FC[0] = (s16)(timer + 20);
+        i_this->mTimers[0] = (s16)(timer + 20);
         auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
         fopAc_ac_c* player = play->play.mPlayerInfo[0].mpPlayer;
         s16 playerAngle = fopAcM_searchActorAngleY(actor, player);
@@ -53,14 +53,14 @@ static void harai_attack(bst_class* actor) {
         moveMode = 1;
         cLib_addCalc2(&i_this->speedF, speed, scale, acceleration);
         f32 radius = gabi::fadds_ppc(REG0_F(5), 2000.0f);
-        s16 timer = static_cast<s16>(i_this->m10FC[0]);
-        i_this->m10EC.x = radius;
+        s16 timer = static_cast<s16>(i_this->mTimers[0]);
+        i_this->mMoveParam.x = radius;
         if (timer == 0) {
             s16 currentState = static_cast<s16>(i_this->mDamage);
             i_this->mDamage = (s16)(currentState + 1);
             s16 duration = REG0_S(6);
             i_this->current.angle.x = 0;
-            i_this->m10FC[0] = (s16)(duration + 60);
+            i_this->mTimers[0] = (s16)(duration + 60);
         }
         break;
     }
@@ -76,7 +76,7 @@ static void harai_attack(bst_class* actor) {
         cXyz horizontal;
         bstAttackWords(&horizontal)->mWord[0] = x;
         u32 y = static_cast<u32>(bstAttackWords(&actor->current.pos)->mWord[1]);
-        s16 timer = static_cast<s16>(i_this->m10FC[0]);
+        s16 timer = static_cast<s16>(i_this->mTimers[0]);
         bstAttackWords(&horizontal)->mWord[1] = y;
         u32 z = static_cast<u32>(bstAttackWords(&actor->current.pos)->mWord[2]);
         horizontal.y = zero;
@@ -91,7 +91,7 @@ static void harai_attack(bst_class* actor) {
         if (finish) {
             s16 currentState = static_cast<s16>(i_this->mDamage);
             i_this->current.angle.x = 0;
-            i_this->m10FC[0] = 30;
+            i_this->mTimers[0] = 30;
             i_this->mDamage = (s16)(currentState + 1);
         }
         break;
@@ -100,7 +100,7 @@ static void harai_attack(bst_class* actor) {
         f32 deceleration = gabi::fadds_ppc(REG0_F(13), 3.0f);
         moveMode = 1;
         cLib_addCalc0(&i_this->speedF, scale, deceleration);
-        if (static_cast<s16>(i_this->m10FC[0]) == 0) {
+        if (static_cast<s16>(i_this->mTimers[0]) == 0) {
             i_this->mActionType = bst_class::ACTION_FLY_e;
             i_this->mDamage = 0;
             f32 random = cM_rndF(speed);

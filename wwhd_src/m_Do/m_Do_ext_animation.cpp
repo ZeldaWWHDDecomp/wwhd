@@ -73,14 +73,14 @@ void mDoExtAnimation::mDoExt_MtxCalcOldFrame::decOldFrameMorfCounter() {
     return;
   f32 one = l_one, zero = l_zero, next = gabi::fsubs_ppc(count, one);
   if (!(next > zero)) {
-    field_0x8 = zero;
+    mOldFrameMorfStep = zero;
     next = zero;
     mOldFrameRate = zero;
   }
   mOldFrameMorfCounter = next;
-  f32 inv = field_0x8, old = field_0x10, value = gabi::fmuls_ppc(next, inv);
-  field_0x10 = value;
-  field_0x14 = old;
+  f32 inv = mOldFrameMorfStep, old = mOldFrameMorfRemain, value = gabi::fmuls_ppc(next, inv);
+  mOldFrameMorfRemain = value;
+  mOldFrameMorfRemainOld = old;
   if (old > zero) {
     f32 ratio = gabi::fsubs_ppc(old, value) / old;
     mOldFrameRate = gabi::fsubs_ppc(one, ratio);
@@ -95,22 +95,22 @@ void mDoExtAnimation::mDoExt_MtxCalcOldFrame::initOldFrameMorf(f32 duration, u32
   f32 zero = l_zero;
   if (duration > zero) {
     f32 one = l_one, inv = one / duration;
-    field_0x10 = one;
-    field_0x14 = one;
+    mOldFrameMorfRemain = one;
+    mOldFrameMorfRemainOld = one;
     mOldFrameRate = one;
     mOldFrameMorfCounter = duration;
-    field_0x8 = inv;
+    mOldFrameMorfStep = inv;
     mDoExt_MtxCalcOldFrame_decOldFrameMorfCounterCall(this);
     mOldFrameEndJoint = end;
     mOldFrameStartJoint = start;
   } else {
     mOldFrameStartJoint = start;
-    field_0x10 = zero;
-    field_0x14 = zero;
+    mOldFrameMorfRemain = zero;
+    mOldFrameMorfRemainOld = zero;
     mOldFrameRate = zero;
     mOldFrameEndJoint = end;
     mOldFrameMorfCounter = zero;
-    field_0x8 = zero;
+    mOldFrameMorfStep = zero;
   }
 }
 

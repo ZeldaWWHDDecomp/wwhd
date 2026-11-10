@@ -66,7 +66,7 @@ u32 daObjFtree::Act_c::launch_heart_part() {
 
 /* 02347924 */
 u32 daObjFtree::Act_c::place_heart_part() {
-    if (static_cast<s16>(this->m356) != -1)
+    if (static_cast<s16>(this->mXyEventIdx) != -1)
         return 0;
     if (ftree_dSv_event_c__isEventBit_2(static_cast<void*>(dComIfGs_getEvent()), 0x102) != 1)
         return 0;
@@ -135,7 +135,7 @@ u32 daObjFtree::Act_c::estimate_water() {
     ftree_PSMTXCopy_2(static_cast<void*>(&ftree_workMatrix()), matrix.get());
     ftree_PSMTXMultVec(matrix.get(), source.get(), result.get());
     f32 distance = ftree_PSVECSquareDistance(result.get(), static_cast<void*>(&this->current.pos));
-    f32 radius = static_cast<f32>(this->m4C8) + 20.0f;
+    f32 radius = static_cast<f32>(this->mCylRadius) + 20.0f;
     return !(distance > f32(radius * radius));
 }
 
@@ -161,26 +161,26 @@ s32 daObjFtree::Act_c::XyEventCallBack(s32 index) {
 
 /* 023469BC */
 void daObjFtree::Act_c::XyEvent_init() {
-    this->m356 = -1;
-    this->m358 = 0;
+    this->mXyEventIdx = -1;
+    this->mXyEventState = 0;
 }
 
 /* 02346A10 */
 u32 daObjFtree::Act_c::XyEvent_set(s32 event) {
-    if (static_cast<s16>(this->m358) != 0 || event == -1)
+    if (static_cast<s16>(this->mXyEventState) != 0 || event == -1)
         return 0;
-    this->m356 = s16(event);
-    this->m358 = 1;
+    this->mXyEventIdx = s16(event);
+    this->mXyEventState = 1;
     return 1;
 }
 
 /* 023477AC */
 void daObjFtree::Act_c::XyEvent_exe() {
-    s16 state = static_cast<s16>(this->m358);
+    s16 state = static_cast<s16>(this->mXyEventState);
     if (state == 1) {
         if (static_cast<u16>(this->eventInfo.mCommand) != 1)
             return;
-        this->m358 = 2;
+        this->mXyEventState = 2;
         u32 play = ftree_getPlay(), player = static_cast<u32>(ftree_play(play).player);
 
         gabi::Local<cXyz> source, result;
@@ -202,7 +202,7 @@ void daObjFtree::Act_c::XyEvent_exe() {
         gabi::call_ptr<void>(target, static_cast<void*>(&ftree_baseActor(player)), result.get(),
                              s16(u16(angle) + 0x8000));
     } else if (state == 2) {
-        s16 event = static_cast<s16>(this->m356);
+        s16 event = static_cast<s16>(this->mXyEventIdx);
         u32 play = ftree_getPlay();
         if (ftree_dEvent_manager_c__endCheck(ftree_eventManager(play), event)) {
             play = ftree_getPlay();
@@ -279,20 +279,20 @@ void daObjFtree::Act_c::set_first_stat() {
 void daObjFtree::Act_c::set_collision() {
     if (u8(this->smallVisible) != 1 && u8(this->largeVisible) != 1)
         return;
-    s32 hit = ftree_dCcD_GObjInf__ChkTgHit(static_cast<void*>(&this->m508));
+    s32 hit = ftree_dCcD_GObjInf__ChkTgHit(static_cast<void*>(&this->mCyl));
     u8 joint = this->smallVisible;
     if (hit) {
         ftree_daObj__HitSeStart(static_cast<void*>(&this->current.pos), static_cast<s8>(this->current.roomNo),
-                                static_cast<void*>(&this->m508), joint == 1 ? 8 : 7);
+                                static_cast<void*>(&this->mCyl), joint == 1 ? 8 : 7);
         if (joint != 1)
-            ftree_daObj__HitEff_kikuzu(this, static_cast<void*>(&this->m508));
+            ftree_daObj__HitEff_kikuzu(this, static_cast<void*>(&this->mCyl));
         gabi::Local<cXyz> position;
         gabi::Local<be<u32>[8]> positionLinkage;
         position->y = static_cast<f32>(this->current.pos.y);
         position->z = static_cast<f32>(this->current.pos.z);
         position->x = static_cast<f32>(this->current.pos.x);
         ftree_dKy_Sound_set(position.get(), 4, static_cast<u32>(this->mBsPcId), 100);
-        ftree_dCcD_GObjInf__ClrTgHit(static_cast<void*>(&this->m508));
+        ftree_dCcD_GObjInf__ClrTgHit(static_cast<void*>(&this->mCyl));
         return;
     }
     if (joint == 1) {
@@ -301,26 +301,26 @@ void daObjFtree::Act_c::set_collision() {
         center->x = static_cast<f32>(this->current.pos.x);
         center->y = f32(static_cast<f32>(this->current.pos.y) - 50.0f);
         center->z = static_cast<f32>(this->current.pos.z);
-        ftree_cM3dGCyl__SetR(static_cast<void*>(&this->m398.mCyl), 61.0f);
-        ftree_cM3dGCyl__SetH(static_cast<void*>(&this->m398.mCyl), 96.0f);
-        ftree_cM3dGCyl__SetC(static_cast<void*>(&this->m398.mCyl), center.get());
+        ftree_cM3dGCyl__SetR(static_cast<void*>(&this->mWaterCyl.mCyl), 61.0f);
+        ftree_cM3dGCyl__SetH(static_cast<void*>(&this->mWaterCyl.mCyl), 96.0f);
+        ftree_cM3dGCyl__SetC(static_cast<void*>(&this->mWaterCyl.mCyl), center.get());
         u32 play = ftree_getPlay();
-        ftree_cCcS__Set(ftree_collisionServer(play), static_cast<void*>(&this->m398));
-        this->m4C8 = 61.0f;
-        ftree_cM3dGCyl__SetR(static_cast<void*>(&this->m508.mCyl), 61.0f);
-        ftree_cM3dGCyl__SetH(static_cast<void*>(&this->m508.mCyl), 96.0f);
-        ftree_cM3dGCyl__SetC_2(static_cast<void*>(&this->m508.mCyl), static_cast<void*>(&this->current.pos));
+        ftree_cCcS__Set(ftree_collisionServer(play), static_cast<void*>(&this->mWaterCyl));
+        this->mCylRadius = 61.0f;
+        ftree_cM3dGCyl__SetR(static_cast<void*>(&this->mCyl.mCyl), 61.0f);
+        ftree_cM3dGCyl__SetH(static_cast<void*>(&this->mCyl.mCyl), 96.0f);
+        ftree_cM3dGCyl__SetC_2(static_cast<void*>(&this->mCyl.mCyl), static_cast<void*>(&this->current.pos));
         play = ftree_getPlay();
-        ftree_cCcS__Set(ftree_collisionServer(play), static_cast<void*>(&this->m508));
+        ftree_cCcS__Set(ftree_collisionServer(play), static_cast<void*>(&this->mCyl));
     } else if (u8(this->largeVisible) == 1) {
         f32 radius = f32(132.0f * static_cast<f32>(this->largeScale));
-        this->m4C8 = radius;
-        ftree_cM3dGCyl__SetR(static_cast<void*>(&this->m508.mCyl), radius);
-        ftree_cM3dGCyl__SetH(static_cast<void*>(&this->m508.mCyl),
+        this->mCylRadius = radius;
+        ftree_cM3dGCyl__SetR(static_cast<void*>(&this->mCyl.mCyl), radius);
+        ftree_cM3dGCyl__SetH(static_cast<void*>(&this->mCyl.mCyl),
                              f32(950.0f * static_cast<f32>(this->largeScale)));
-        ftree_cM3dGCyl__SetC_2(static_cast<void*>(&this->m508.mCyl), static_cast<void*>(&this->current.pos));
+        ftree_cM3dGCyl__SetC_2(static_cast<void*>(&this->mCyl.mCyl), static_cast<void*>(&this->current.pos));
         u32 play = ftree_getPlay();
-        ftree_cCcS__Set(ftree_collisionServer(play), static_cast<void*>(&this->m508));
+        ftree_cCcS__Set(ftree_collisionServer(play), static_cast<void*>(&this->mCyl));
     }
 }
 
@@ -357,7 +357,7 @@ void daObjFtree::Act_c::talk_ct() {
 /* 023472BC */
 void daObjFtree::Act_c::talk_main() {
     u32 messageObject = static_cast<u32>(ftree_messageObject());
-    if (static_cast<s16>(this->m356) == -1 && static_cast<u16>(this->eventInfo.mCommand) == 1) {
+    if (static_cast<s16>(this->mXyEventIdx) == -1 && static_cast<u16>(this->eventInfo.mCommand) == 1) {
         if (static_cast<u32>(this->messageId) == 0xFFFFFFFF) {
             u32 mode = static_cast<u32>(this->mMode);
             u32 message = static_cast<u32>(ftree_message(mode));
@@ -382,7 +382,7 @@ void daObjFtree::Act_c::talk_main() {
     u32 play = ftree_getPlay(), player = static_cast<u32>(ftree_play(play).player);
     f32 distance = ftree_PSVECSquareDistance_2(static_cast<void*>(&this->current.pos),
                                                static_cast<void*>(&ftree_baseActor(player).current.pos));
-    f32 radius = f32(static_cast<f32>(this->m4C8) + 130.0f);
+    f32 radius = f32(static_cast<f32>(this->mCylRadius) + 130.0f);
     if (distance > f32(radius * radius))
         return;
     this->talk_ct();
@@ -621,13 +621,13 @@ u32 daObjFtree::Act_c::action_waitS_init(s32 parameter) {
 /* 02348718 */
 void daObjFtree::Act_c::action_waitS_main() {
     if (static_cast<s16>(this->eventTimer) == 1) {
-        s32 next = static_cast<s16>(this->m356) == static_cast<s16>(this->mEventCam2Idx) ? 4 : 8;
+        s32 next = static_cast<s16>(this->mXyEventIdx) == static_cast<s16>(this->mEventCam2Idx) ? 4 : 8;
         if (this->process_init(next, 0)) {
             this->eventTimer = 0;
             return;
         }
     }
-    u32 hit = ftree_dCcD_GObjInf__ChkCoHit(static_cast<void*>(&this->m508));
+    u32 hit = ftree_dCcD_GObjInf__ChkCoHit(static_cast<void*>(&this->mCyl));
     if (!static_cast<u32>(this->previousCollision) && hit == 1 && this->process_init(MODE_PIKUPIKU_S, 1)) {
         this->previousCollision = 0;
         return;
@@ -681,7 +681,7 @@ void daObjFtree::Act_c::action_waitM_main() {
     }
     if (static_cast<u32>(this->mMode) != MODE_WAIT_M)
         return;
-    u32 hit = ftree_dCcD_GObjInf__ChkCoHit(static_cast<void*>(&this->m508));
+    u32 hit = ftree_dCcD_GObjInf__ChkCoHit(static_cast<void*>(&this->mCyl));
     if (ftree_dKy_rain_check()) {
         this->process_init(MODE_PIKUPIKU_M, -1);
         this->previousCollision = hit;
@@ -721,11 +721,11 @@ void daObjFtree::Act_c::action_waitL_main() {
             this->process_init(MODE_PIKUPIKU_L, duration);
             return;
         }
-        if (static_cast<s16>(this->m356) != -1)
+        if (static_cast<s16>(this->mXyEventIdx) != -1)
             this->process_init(MODE_PIKUPIKU_L, -1);
     } else if (mode == MODE_PIKUPIKU_L) {
         if (!ftree_dKy_rain_check() && static_cast<s16>(this->largeDuration) == -1 &&
-            static_cast<s16>(this->m356) == -1)
+            static_cast<s16>(this->mXyEventIdx) == -1)
             this->process_init(MODE_WAIT_L, 0);
     }
 }
@@ -774,9 +774,9 @@ void daObjFtree::Act_c::action_pikupikuM_main() {
     if (elapsed < duration || duration == -1) {
         u16 angle = static_cast<u16>(this->mediumPhase);
         u32 table = ftree_tu::sinCosTable + (angle >> 3) * 8;
-        this->m696 =
+        this->mMediumJointAngleXTarget =
             s16(gabi::ftoi(f32(100.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
-        this->m698 =
+        this->mMediumJointAngleYTarget =
             s16(gabi::ftoi(f32(300.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
         this->mediumPhase = u16(angle + 4000);
         elapsed = static_cast<s16>(this->mediumElapsed);
@@ -805,8 +805,8 @@ void daObjFtree::Act_c::action_pikupikuL_main() {
     if (elapsed < duration || duration == -1) {
         u16 angle = static_cast<u16>(this->largePhase);
         u32 table = ftree_tu::sinCosTable + (angle >> 3) * 8;
-        this->m6A0 = s16(gabi::ftoi(f32(30.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
-        this->m6A2 = s16(gabi::ftoi(f32(36.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
+        this->mLargeJointAngleYTarget = s16(gabi::ftoi(f32(30.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
+        this->mLargeJointAngleZTarget = s16(gabi::ftoi(f32(36.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
         this->largePhase = u16(angle + 3000);
         elapsed = static_cast<s16>(this->largeElapsed);
     } else {
@@ -831,12 +831,12 @@ u32 daObjFtree::Act_c::action_changeSL_init(s32 parameter) {
         ftree_JUTAssertion__getSDevice("d_a_obj_ftree.cpp", 0x6B7, "anmSmodel != (0)");
     this->get_tev_material0_color(static_cast<void*>(&ftree_model(model)), 2, &this->cachedSmallColor[0],
                                   &this->cachedSmallColor[1], &this->cachedSmallColor[2]);
-    this->m66C[0] = static_cast<u16>(this->cachedSmallColor[0]);
-    this->m66C[1] = static_cast<u16>(this->cachedSmallColor[1]);
-    this->m66C[2] = static_cast<u16>(this->cachedSmallColor[2]);
+    this->mSmallColor[0] = static_cast<u16>(this->cachedSmallColor[0]);
+    this->mSmallColor[1] = static_cast<u16>(this->cachedSmallColor[1]);
+    this->mSmallColor[2] = static_cast<u16>(this->cachedSmallColor[2]);
     u16 alpha = static_cast<u16>(this->cachedSmallColor[3]);
     this->largePhase = 0;
-    this->m66C[3] = alpha;
+    this->mSmallColor[3] = alpha;
     return 1;
 }
 
@@ -883,7 +883,7 @@ void daObjFtree::Act_c::action_changeSL2_main() {
         f32 blend = static_cast<f32>(this->colorBlend);
         for (unsigned i = 0; i < 3; ++i) {
             f32 start = f32(static_cast<s16>(this->cachedSmallColor[i]));
-            this->m66C[i] = s16(gabi::ftoi(gabi::fmadds(f32(255.0f - start), blend, start)));
+            this->mSmallColor[i] = s16(gabi::ftoi(gabi::fmadds(f32(255.0f - start), blend, start)));
         }
         if (blend == 1.0f) {
             s16 timer = static_cast<s16>(this->colorDelay);
@@ -912,16 +912,16 @@ void daObjFtree::Act_c::action_changeSL2_main() {
                        static_cast<f32>(ftree_scaleApproachRate()), 1.0f,
                        static_cast<f32>(ftree_scaleMinimumStep()));
     for (unsigned i = 0; i < 3; ++i) {
-        f32 end = f32(static_cast<s16>(this->m664[i]));
-        this->m674[i] = s16(gabi::ftoi(gabi::fmadds(f32(end - 255.0f), blend, 255.0f)));
+        f32 end = f32(static_cast<s16>(this->mLargeBaseColor[i]));
+        this->mLargeColor[i] = s16(gabi::ftoi(gabi::fmadds(f32(end - 255.0f), blend, 255.0f)));
     }
     if (static_cast<f32>(this->largeScale) == 1.0f && this->process_init(MODE_WAIT_L, 0))
         this->heartLaunchTimer = 47;
     u16 phase = static_cast<u16>(this->largePhase);
     u32 table = ftree_tu::sinCosTable + (phase >> 3) * 8;
-    this->m6A0 = s16(gabi::ftoi(f32(30.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
+    this->mLargeJointAngleYTarget = s16(gabi::ftoi(f32(30.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
     s16 next = s16(u16(static_cast<s16>(this->largePhase)) + 3000);
-    this->m6A2 = s16(gabi::ftoi(f32(36.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
+    this->mLargeJointAngleZTarget = s16(gabi::ftoi(f32(36.0f * static_cast<f32>(gabi::object_at<FtreeSinCos>(table).sine))));
     this->largePhase = next;
 }
 
@@ -949,8 +949,8 @@ void daObjFtree::Act_c::action_changeLS_main() {
                            static_cast<f32>(ftree_scaleApproachRate()), 1.0f,
                            static_cast<f32>(ftree_scaleMinimumStep()));
         for (unsigned i = 0; i < 3; ++i) {
-            f32 end = f32(static_cast<s16>(this->m664[i]));
-            this->m674[i] = s16(gabi::ftoi(gabi::fmadds(f32(end - 255.0f), blend, 255.0f)));
+            f32 end = f32(static_cast<s16>(this->mLargeBaseColor[i]));
+            this->mLargeColor[i] = s16(gabi::ftoi(gabi::fmadds(f32(end - 255.0f), blend, 255.0f)));
         }
         if (static_cast<f32>(this->largeScale) == minimum) {
             this->smallVisible = 1;
@@ -964,7 +964,7 @@ void daObjFtree::Act_c::action_changeLS_main() {
     f32 blend = static_cast<f32>(this->colorBlend);
     for (unsigned i = 0; i < 3; ++i) {
         f32 start = f32(static_cast<s16>(this->cachedSmallColor[i]));
-        this->m66C[i] = s16(gabi::ftoi(gabi::fmadds(f32(255.0f - start), blend, start)));
+        this->mSmallColor[i] = s16(gabi::ftoi(gabi::fmadds(f32(255.0f - start), blend, start)));
     }
     if (blend == 0.0f)
         this->process_init(MODE_CHANGE_LS2, 0);
@@ -1034,10 +1034,10 @@ u32 daObjFtree::Act_c::process_init(u32 mode, s32 parameter) {
     if (!(this->*action)(parameter))
         return 0;
     this->mMode = mode;
-    this->m696 = 0;
-    this->m6A0 = 0;
-    this->m698 = 0;
-    this->m6A2 = 0;
+    this->mMediumJointAngleXTarget = 0;
+    this->mLargeJointAngleYTarget = 0;
+    this->mMediumJointAngleYTarget = 0;
+    this->mLargeJointAngleZTarget = 0;
     return 1;
 }
 
@@ -1155,18 +1155,18 @@ u32 daObjFtree::Act_c::create_heap() {
     u32 initialized = ftree_initBrkAnimation(
         static_cast<void*>(&this->mBrkAnm), static_cast<void*>(&ftree_modelData(data)),
         static_cast<void*>(&gabi::object_at<GXColorS10>(color)), 1, 0, 0, -1, 0, 1.0f, 0);
-    this->get_tev_material0_color(static_cast<void*>(&ftree_model(model)), 2, &this->m654[0], &this->m654[1],
-                                  &this->m654[2]);
-    this->m66C[0] = static_cast<u16>(this->m654[0]);
-    this->m66C[1] = static_cast<u16>(this->m654[1]);
-    this->m66C[2] = static_cast<u16>(this->m654[2]);
-    this->m66C[3] = static_cast<u16>(this->m654[3]);
+    this->get_tev_material0_color(static_cast<void*>(&ftree_model(model)), 2, &this->mSmallBaseColor[0], &this->mSmallBaseColor[1],
+                                  &this->mSmallBaseColor[2]);
+    this->mSmallColor[0] = static_cast<u16>(this->mSmallBaseColor[0]);
+    this->mSmallColor[1] = static_cast<u16>(this->mSmallBaseColor[1]);
+    this->mSmallColor[2] = static_cast<u16>(this->mSmallBaseColor[2]);
+    this->mSmallColor[3] = static_cast<u16>(this->mSmallBaseColor[3]);
     this->get_tev_material0_color(static_cast<void*>(&ftree_model(static_cast<u32>(this->mpModel))), 2,
-                                  &this->m664[0], &this->m664[1], &this->m664[2]);
-    this->m674[0] = static_cast<u16>(this->m664[0]);
-    this->m674[1] = static_cast<u16>(this->m664[1]);
-    this->m674[2] = static_cast<u16>(this->m664[2]);
-    this->m674[3] = static_cast<u16>(this->m664[3]);
+                                  &this->mLargeBaseColor[0], &this->mLargeBaseColor[1], &this->mLargeBaseColor[2]);
+    this->mLargeColor[0] = static_cast<u16>(this->mLargeBaseColor[0]);
+    this->mLargeColor[1] = static_cast<u16>(this->mLargeBaseColor[1]);
+    this->mLargeColor[2] = static_cast<u16>(this->mLargeBaseColor[2]);
+    this->mLargeColor[3] = static_cast<u16>(this->mLargeBaseColor[3]);
     return static_cast<u32>(this->mpMorf) && model && initialized;
 }
 
@@ -1193,34 +1193,34 @@ u32 daObjFtree::Act_c::_create() {
             this->mGndChk.mbBoomerangThrough = 0;
             this->mGndChk.cBgS_Chk::mPolyPassChk = gabi::ea(static_cast<dBgS_PolyPassChk*>(&this->mGndChk));
             this->mGndChk.dBgS_GrpPassChk::__vtbl = ftree_tu::groupPassCheck;
-            ftree_constructCollisionStatus(static_cast<void*>(&this->m35C));
-            ftree_dCcD_GStts__dCcD_GStts(static_cast<void*>(&this->m35C.__vtbl_gstts));
-            this->m35C.__vtbl = ftree_tu::collisionStatus;
-            this->m35C.__vtbl_gstts = ftree_tu::globalCollisionStatus;
-            ftree_dCcD_GObjInf__dCcD_GObjInf(static_cast<void*>(&this->m398));
-            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->m398.mShapeAttr)).cylinderVtable =
+            ftree_constructCollisionStatus(static_cast<void*>(&this->mWaterStts));
+            ftree_dCcD_GStts__dCcD_GStts(static_cast<void*>(&this->mWaterStts.__vtbl_gstts));
+            this->mWaterStts.__vtbl = ftree_tu::collisionStatus;
+            this->mWaterStts.__vtbl_gstts = ftree_tu::globalCollisionStatus;
+            ftree_dCcD_GObjInf__dCcD_GObjInf(static_cast<void*>(&this->mWaterCyl));
+            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->mWaterCyl.mShapeAttr)).cylinderVtable =
                 ftree_tu::baseCylinder;
-            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->m398.mShapeAttr)).shapeVtable =
+            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->mWaterCyl.mShapeAttr)).shapeVtable =
                 ftree_tu::shapeAttribute;
-            ftree_constructCylinder(static_cast<void*>(&this->m398.mCyl));
-            this->m398.__vtbl_hitinf = ftree_tu::collisionHitInfo;
-            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->m398.mShapeAttr)).cylinderVtable =
+            ftree_constructCylinder(static_cast<void*>(&this->mWaterCyl.mCyl));
+            this->mWaterCyl.__vtbl_hitinf = ftree_tu::collisionHitInfo;
+            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->mWaterCyl.mShapeAttr)).cylinderVtable =
                 ftree_tu::collisionCylinder;
-            this->m398.mCyl.__vtbl = ftree_tu::cylinder;
-            ftree_constructCollisionStatus(static_cast<void*>(&this->m4CC));
-            ftree_dCcD_GStts__dCcD_GStts(static_cast<void*>(&this->m4CC.__vtbl_gstts));
-            this->m4CC.__vtbl = ftree_tu::collisionStatus;
-            this->m4CC.__vtbl_gstts = ftree_tu::globalCollisionStatus;
-            ftree_dCcD_GObjInf__dCcD_GObjInf(static_cast<void*>(&this->m508));
-            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->m508.mShapeAttr)).cylinderVtable =
+            this->mWaterCyl.mCyl.__vtbl = ftree_tu::cylinder;
+            ftree_constructCollisionStatus(static_cast<void*>(&this->mStts));
+            ftree_dCcD_GStts__dCcD_GStts(static_cast<void*>(&this->mStts.__vtbl_gstts));
+            this->mStts.__vtbl = ftree_tu::collisionStatus;
+            this->mStts.__vtbl_gstts = ftree_tu::globalCollisionStatus;
+            ftree_dCcD_GObjInf__dCcD_GObjInf(static_cast<void*>(&this->mCyl));
+            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->mCyl.mShapeAttr)).cylinderVtable =
                 ftree_tu::baseCylinder;
-            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->m508.mShapeAttr)).shapeVtable =
+            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->mCyl.mShapeAttr)).shapeVtable =
                 ftree_tu::shapeAttribute;
-            ftree_constructCylinder(static_cast<void*>(&this->m508.mCyl));
-            this->m508.mCyl.__vtbl = ftree_tu::cylinder;
-            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->m508.mShapeAttr)).cylinderVtable =
+            ftree_constructCylinder(static_cast<void*>(&this->mCyl.mCyl));
+            this->mCyl.mCyl.__vtbl = ftree_tu::cylinder;
+            gabi::object_at<FtreeShapeAttr>(gabi::ea(&this->mCyl.mShapeAttr)).cylinderVtable =
                 ftree_tu::collisionCylinder;
-            this->m508.__vtbl_hitinf = ftree_tu::collisionHitInfo;
+            this->mCyl.__vtbl_hitinf = ftree_tu::collisionHitInfo;
             condition = static_cast<u32>(this->actor_condition);
         }
         this->actor_condition = condition | 8;
@@ -1245,7 +1245,7 @@ u32 daObjFtree::Act_c::_create() {
     this->mGndChk.m_pos.x = x;
     this->mGndChk.m_pos.y = y;
     u32 play = ftree_getPlay();
-    this->m34C = ftree_cBgS__GroundCross(ftree_backgroundServer(play), static_cast<void*>(&this->mGndChk));
+    this->mGroundY = ftree_cBgS__GroundCross(ftree_backgroundServer(play), static_cast<void*>(&this->mGndChk));
     this->set_mtx();
     u32 model = static_cast<u32>(ftree_morph(static_cast<u32>(this->mpMorf)).model), matrix = 0;
     if (!model)
@@ -1254,25 +1254,25 @@ u32 daObjFtree::Act_c::_create() {
         matrix = model + 0xC8;
     this->cullMtx = matrix;
     ftree_fopAcM_setCullSizeBox(this, -300.0f, 0.0f, -300.0f, 300.0f, 1000.0f, 300.0f);
-    ftree_dCcD_Stts__Init(static_cast<void*>(&this->m35C), 255, 255, this);
-    ftree_dCcD_Cyl__Set(static_cast<void*>(&this->m398), static_cast<void*>(ftree_M_cyl_srcW));
-    this->m398.mStts = &this->m35C;
-    u32 first = static_cast<u32>(ftree_targetVectorX()), flags = static_cast<u32>(this->m398.mGObjTg.mSPrm);
-    ftree_words(&this->m398.mGObjTg.mVec).x = first;
-    ftree_words(&this->m398.mGObjTg.mVec).y = static_cast<u32>(ftree_targetVectorY());
+    ftree_dCcD_Stts__Init(static_cast<void*>(&this->mWaterStts), 255, 255, this);
+    ftree_dCcD_Cyl__Set(static_cast<void*>(&this->mWaterCyl), static_cast<void*>(ftree_M_cyl_srcW));
+    this->mWaterCyl.mStts = &this->mWaterStts;
+    u32 first = static_cast<u32>(ftree_targetVectorX()), flags = static_cast<u32>(this->mWaterCyl.mGObjTg.mSPrm);
+    ftree_words(&this->mWaterCyl.mGObjTg.mVec).x = first;
+    ftree_words(&this->mWaterCyl.mGObjTg.mVec).y = static_cast<u32>(ftree_targetVectorY());
     u32 third = static_cast<u32>(ftree_targetVectorZ());
-    this->m398.mGObjTg.mSPrm = flags | 4;
-    ftree_words(&this->m398.mGObjTg.mVec).z = third;
-    ftree_dCcD_Stts__Init(static_cast<void*>(&this->m4CC), 255, 255, this);
-    ftree_dCcD_Cyl__Set(static_cast<void*>(&this->m508), static_cast<void*>(ftree_M_cyl_src));
-    this->m508.mStts = &this->m4CC;
+    this->mWaterCyl.mGObjTg.mSPrm = flags | 4;
+    ftree_words(&this->mWaterCyl.mGObjTg.mVec).z = third;
+    ftree_dCcD_Stts__Init(static_cast<void*>(&this->mStts), 255, 255, this);
+    ftree_dCcD_Cyl__Set(static_cast<void*>(&this->mCyl), static_cast<void*>(ftree_M_cyl_src));
+    this->mCyl.mStts = &this->mStts;
     first = static_cast<u32>(ftree_targetVectorX());
-    flags = static_cast<u32>(this->m508.mGObjTg.mSPrm);
-    ftree_words(&this->m508.mGObjTg.mVec).x = first;
-    ftree_words(&this->m508.mGObjTg.mVec).y = static_cast<u32>(ftree_targetVectorY());
+    flags = static_cast<u32>(this->mCyl.mGObjTg.mSPrm);
+    ftree_words(&this->mCyl.mGObjTg.mVec).x = first;
+    ftree_words(&this->mCyl.mGObjTg.mVec).y = static_cast<u32>(ftree_targetVectorY());
     third = static_cast<u32>(ftree_targetVectorZ());
-    this->m508.mGObjTg.mSPrm = flags | 4;
-    ftree_words(&this->m508.mGObjTg.mVec).z = third;
+    this->mCyl.mGObjTg.mSPrm = flags | 4;
+    ftree_words(&this->mCyl.mGObjTg.mVec).z = third;
     this->XyEvent_init();
     this->eventInfo.mpCheckCB = gabi::guest_fn(reinterpret_cast<const void*>(&ftree_checkEvent));
     this->eventInfo.mpEventCB = gabi::guest_fn(reinterpret_cast<const void*>(&ftree_eventCallback));
@@ -1316,7 +1316,7 @@ void daObjFtree::Act_c::set_mtx() {
     const unsigned firstOrder[] = {7, 2, 1, 6, 3, 0, 8, 4, 5, 10, 11, 9};
     for (unsigned i : firstOrder)
         ftree_model(model).baseTransform.m[i / 4][i % 4] = matrix[i];
-    ftree_PSMTXCopy(static_cast<void*>(&ftree_workMatrix()), static_cast<void*>(&this->m2A8));
+    ftree_PSMTXCopy(static_cast<void*>(&ftree_workMatrix()), static_cast<void*>(&this->mMtx));
     f32 size = static_cast<f32>(this->largeScale);
     x = static_cast<f32>(this->scale.x);
     y = static_cast<f32>(this->scale.y);
@@ -1336,7 +1336,7 @@ void daObjFtree::Act_c::set_mtx() {
     const unsigned secondOrder[] = {11, 5, 8, 1, 2, 4, 10, 7, 9, 6, 0, 3};
     for (unsigned i : secondOrder)
         ftree_model(model).baseTransform.m[i / 4][i % 4] = matrix[i];
-    ftree_PSMTXCopy(static_cast<void*>(&ftree_workMatrix()), static_cast<void*>(&this->m2A8));
+    ftree_PSMTXCopy(static_cast<void*>(&ftree_workMatrix()), static_cast<void*>(&this->mMtx));
     ftree_J3DModel__calc(static_cast<void*>(&ftree_model(static_cast<u32>(this->mpModel))));
 }
 
@@ -1348,17 +1348,17 @@ u32 daObjFtree::Act_c::_execute() {
     this->set_mtx();
     this->process_main();
     this->set_collision();
-    ftree_fopAcM_rollPlayerCrash(this, 7, static_cast<f32>(this->m4C8));
+    ftree_fopAcM_rollPlayerCrash(this, 7, static_cast<f32>(this->mCylRadius));
     s32 mediumStep = static_cast<u32>(this->mMode) == MODE_PIKUPIKU_M ? 1 : 30;
-    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->m294), static_cast<s16>(this->m696), mediumStep,
+    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->mMediumJointAngleX), static_cast<s16>(this->mMediumJointAngleXTarget), mediumStep,
                               0x1000);
-    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->m296), static_cast<s16>(this->m698), mediumStep,
+    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->mMediumJointAngleY), static_cast<s16>(this->mMediumJointAngleYTarget), mediumStep,
                               0x1000);
     u32 mode = static_cast<u32>(this->mMode);
     s32 largeStep = (mode == MODE_PIKUPIKU_L || mode == MODE_CHANGE_SL2) ? 1 : 10;
-    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->m298), static_cast<s16>(this->m6A0), largeStep,
+    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->mLargeJointAngleY), static_cast<s16>(this->mLargeJointAngleYTarget), largeStep,
                               0x1000);
-    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->m29A), static_cast<s16>(this->m6A2), largeStep,
+    ftree_cLib_addCalcAngleS2(static_cast<void*>(&this->mLargeJointAngleZ), static_cast<s16>(this->mLargeJointAngleZTarget), largeStep,
                               0x1000);
     this->XyEvent_exe();
     if (static_cast<s16>(this->heartPlaced) == 0)
@@ -1399,8 +1399,8 @@ u32 daObjFtree::Act_c::_draw() {
                 .materialFlags = 0;
             this->set_tev_color(
                 static_cast<void*>(&ftree_modelData(static_cast<u32>(ftree_model(model).modelData))), 2,
-                static_cast<s16>(this->m66C[0]), static_cast<s16>(this->m66C[1]),
-                static_cast<s16>(this->m66C[2]));
+                static_cast<s16>(this->mSmallColor[0]), static_cast<s16>(this->mSmallColor[1]),
+                static_cast<s16>(this->mSmallColor[2]));
         } else
             ftree_mDoExt_brkAnm__entry(
                 static_cast<void*>(&this->mBrkAnm),
@@ -1428,8 +1428,8 @@ u32 daObjFtree::Act_c::_draw() {
         u32 model = static_cast<u32>(this->mpModel);
         this->set_tev_color(
             static_cast<void*>(&ftree_modelData(static_cast<u32>(ftree_model(model).modelData))), 2,
-            static_cast<s16>(this->m674[0]), static_cast<s16>(this->m674[1]),
-            static_cast<s16>(this->m674[2]));
+            static_cast<s16>(this->mLargeColor[0]), static_cast<s16>(this->mLargeColor[1]),
+            static_cast<s16>(this->mLargeColor[2]));
         ftree_mDoExt_modelUpdateDL(static_cast<void*>(&ftree_model(static_cast<u32>(this->mpModel))), 0);
         play = ftree_getPlay();
         ftree_opaqueDrawBuffer() = static_cast<u32>(ftree_play(play).defaultOpaqueList);
@@ -1513,10 +1513,10 @@ void ftree_terminateBuffer(void* object) {
 void ftree_destroy(Act_c* actor, u32 flags) {
     if (!actor)
         return;
-    ftree_dBgS_Acch___dBgS_Acch(static_cast<void*>(&actor->m508), 2);
-    ftree_destroyCollisionStatus(static_cast<void*>(&actor->m4CC), 2);
-    ftree_dBgS_Acch___dBgS_Acch(static_cast<void*>(&actor->m398), 2);
-    ftree_destroyCollisionStatus(static_cast<void*>(&actor->m35C), 2);
+    ftree_dBgS_Acch___dBgS_Acch(static_cast<void*>(&actor->mCyl), 2);
+    ftree_destroyCollisionStatus(static_cast<void*>(&actor->mStts), 2);
+    ftree_dBgS_Acch___dBgS_Acch(static_cast<void*>(&actor->mWaterCyl), 2);
+    ftree_destroyCollisionStatus(static_cast<void*>(&actor->mWaterStts), 2);
     actor->mGndChk.cBgS_PolyInfo::__vtbl = ftree_tu::destroyPolyInfo;
     actor->mGndChk.dBgS_PolyPassChk::__vtbl = ftree_tu::destroyPolyPassCheck;
     actor->mGndChk.dBgS_GrpPassChk::__vtbl = ftree_tu::destroyGroupPassCheck;
@@ -1561,8 +1561,8 @@ u32 ftree_nodeMediumCallback(void* node, s32 phase) {
         return 1;
     gabi::Local<csXyz> angles;
     gabi::Local<be<u32>[8]> anglesLinkage;
-    ftree_csXyz__csXyz(angles.get(), static_cast<s16>(ftree_actor(actor).m294),
-                       static_cast<s16>(ftree_actor(actor).m296), 0);
+    ftree_csXyz__csXyz(angles.get(), static_cast<s16>(ftree_actor(actor).mMediumJointAngleX),
+                       static_cast<s16>(ftree_actor(actor).mMediumJointAngleY), 0);
     u32 model = static_cast<u32>(ftree_model(system).matrixBuffer),
         matrices = static_cast<u32>(ftree_matrixBuffer(model).mpAnmMtx);
     u16 flags = static_cast<u16>(ftree_matrixBuffer(model).mFlags);
@@ -1597,8 +1597,8 @@ u32 ftree_nodeLargeCallback(void* node, s32 phase) {
         return 1;
     gabi::Local<csXyz> angles;
     gabi::Local<be<u32>[8]> anglesLinkage;
-    ftree_csXyz__csXyz_2(angles.get(), 0, static_cast<s16>(ftree_actor(actor).m298),
-                         static_cast<s16>(ftree_actor(actor).m29A));
+    ftree_csXyz__csXyz_2(angles.get(), 0, static_cast<s16>(ftree_actor(actor).mLargeJointAngleY),
+                         static_cast<s16>(ftree_actor(actor).mLargeJointAngleZ));
     u32 model = static_cast<u32>(ftree_model(system).matrixBuffer),
         matrices = static_cast<u32>(ftree_matrixBuffer(model).mpAnmMtx);
     u16 flags = static_cast<u16>(ftree_matrixBuffer(model).mFlags);

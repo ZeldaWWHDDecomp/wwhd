@@ -165,15 +165,15 @@ BOOL daNpc_Jb1_c::createInit() {
     f32 zero = l_zero;
     gravity = zero;
     jbSetActorInfo(&mEventCut, "Jb1", this);
-    s8 character = field_0x921;
-    field_0x91C = 2;
+    s8 character = mType;
+    mAnmNum = 2;
     if (character != 0 || !init_JB1_0())
         return 0;
     u16 x = current.angle.x, z = current.angle.z, y = current.angle.y;
     shape_angle.z = z;
     shape_angle.y = y;
     shape_angle.x = x;
-    jbSetLight(&field_0x7F8);
+    jbSetLight(&mPointLight);
     void* morph = mpMorf.get();
     jbSetFrame(morph, zero);
     setMtx();
@@ -189,19 +189,19 @@ void daNpc_Jb1_c::setMtx() {
     offset->z = zero;
     offset->y = offsetY;
     offset->x = zero;
-    playBrkAnm(animation, &field_0x834);
+    playBrkAnm(animation, &mLmpBrkFrame);
     animation = m_lgt_brk.get();
-    playBrkAnm(animation, &field_0x858);
-    if (u8(field_0x917) == 0) {
+    playBrkAnm(animation, &mLgtBrkFrame);
+    if (u8(mInDemo) == 0) {
         void* morph = mpMorf.get();
         u8 wrapped = jbMorfPlay(morph, &eyePos, 0, 0);
         morph = mpMorf.get();
         f32 old = mFrame;
-        field_0x908 = wrapped;
+        mbMorfAnimStopped = wrapped;
         f32 frame = jb1::morphFrame(morph);
         if (frame < old) {
             morph = mpMorf.get();
-            field_0x908 = 1;
+            mbMorfAnimStopped = 1;
         }
         mFrame = jb1::morphFrame(morph);
         void* state = play();
@@ -225,7 +225,7 @@ void daNpc_Jb1_c::setMtx() {
     jbMorfCalc(morph);
     void* joint = jb1::jointMatrix(this);
     jbMatrixCopy(joint, matrix);
-    jbMatrixVector(matrix, offset.get(), &field_0x6D0);
+    jbMatrixVector(matrix, offset.get(), &mLightPos);
     joint = jb1::jointMatrix(this);
     jbMatrixCopy(joint, matrix);
     jbTranslateM(zero, offsetY, zero);
@@ -240,15 +240,15 @@ void daNpc_Jb1_c::setMtx() {
         jb1::modelMatrix(model)[i] = values[i];
     model = m_lgt_mdl.get();
     jbModelCalc(model);
-    u32 py = jb1::words(&field_0x6D0)->y, pz = jb1::words(&field_0x6D0)->z, px = jb1::words(&field_0x6D0)->x;
-    jb1::words(&field_0x7F8.mPos)->z = pz;
-    jb1::words(&field_0x7F8.mPos)->y = py;
-    jb1::words(&field_0x7F8.mPos)->x = px;
-    field_0x7F8.mColorR = s16(l_HIO.mPrmTbl.field_0x06);
-    field_0x7F8.mColorG = s16(l_HIO.mPrmTbl.field_0x08);
-    field_0x7F8.mColorB = s16(l_HIO.mPrmTbl.field_0x0A);
-    field_0x7F8.mPower = f32(l_HIO.mPrmTbl.field_0x0C);
-    field_0x7F8.mFluctuation = f32(l_HIO.mPrmTbl.field_0x10);
+    u32 py = jb1::words(&mLightPos)->y, pz = jb1::words(&mLightPos)->z, px = jb1::words(&mLightPos)->x;
+    jb1::words(&mPointLight.mPos)->z = pz;
+    jb1::words(&mPointLight.mPos)->y = py;
+    jb1::words(&mPointLight.mPos)->x = px;
+    mPointLight.mColorR = s16(l_HIO.mPrmTbl.mLightColorR);
+    mPointLight.mColorG = s16(l_HIO.mPrmTbl.mLightColorG);
+    mPointLight.mColorB = s16(l_HIO.mPrmTbl.mLightColorB);
+    mPointLight.mPower = f32(l_HIO.mPrmTbl.mLightPower);
+    mPointLight.mFluctuation = f32(l_HIO.mPrmTbl.mLightFluctuation);
     setAttention();
 }
 
@@ -273,10 +273,10 @@ s32 daNpc_Jb1_c::anmNum_toResID(s32 animation) {
 /* 02248780 */
 BOOL daNpc_Jb1_c::setAnm_anm(JbAnimationParameters* parameters) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    s8 animation = parameters->field_0x0;
-    if (s8(field_0x91C) == animation)
+    s8 animation = parameters->anmNum;
+    if (s8(mAnmNum) == animation)
         return 1;
-    field_0x91C = animation;
+    mAnmNum = animation;
     s32 resource = anmNum_toResID(animation);
     // The original keeps the parameter pointer across the resource lookup, then
     // reads the parameters and actor's current morph controller afterwards.
@@ -284,7 +284,7 @@ BOOL daNpc_Jb1_c::setAnm_anm(JbAnimationParameters* parameters) {
     void* morph = mpMorf.get();
     f32 speed = parameters->mPlaySpeed, blend = parameters->mMorf;
     jbSetNpcAnm(morph, loop, blend, speed, resource, -1, "Jb");
-    field_0x908 = 0;
+    mbMorfAnimStopped = 0;
     mFrame = l_zero;
     field_0x909 = 0;
     return 1;
@@ -293,8 +293,8 @@ BOOL daNpc_Jb1_c::setAnm_anm(JbAnimationParameters* parameters) {
 /* 02248814 */
 BOOL daNpc_Jb1_c::setAnm() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    auto parameters = jb1::atIndex(l_anmPrm, u32(s32(s8(field_0x91E))));
-    if (parameters->field_0x0 >= 0)
+    auto parameters = jb1::atIndex(l_anmPrm, u32(s32(s8(mStt))));
+    if (parameters->anmNum >= 0)
         setAnm_anm(parameters);
     return 1;
 }
@@ -302,49 +302,49 @@ BOOL daNpc_Jb1_c::setAnm() {
 /* 02248874 */
 void daNpc_Jb1_c::chg_anmAtr(u8 attribute) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (attribute != 0 || u8(field_0x91A) == 0)
+    if (attribute != 0 || u8(mAnmAtrNo) == 0)
         return;
-    field_0x91A = 0;
+    mAnmAtrNo = 0;
     setAnm_ATR();
 }
 
 /* 0224885C */
 BOOL daNpc_Jb1_c::setAnm_ATR() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    return setAnm_anm(jb1::atIndex(l_atrPrm, u8(field_0x91A)));
+    return setAnm_anm(jb1::atIndex(l_atrPrm, u8(mAnmAtrNo)));
 }
 
 /* 02248894 */
 void daNpc_Jb1_c::anmAtr(u16 status) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (status == 14) {
-        field_0x923 = 0;
+        mAnmAtrSetCnt = 0;
         return;
     }
     if (status != 6)
         return;
-    if (s8(field_0x923) == 0) {
-        field_0x91A = 255;
+    if (s8(mAnmAtrSetCnt) == 0) {
+        mAnmAtrNo = 255;
         void* state = play();
         u8 attribute = u8(jb1::gamePlay(state)->mMesgAnime);
         chg_anmAtr(attribute);
-        field_0x923 = u8(field_0x923) + 1;
+        mAnmAtrSetCnt = u8(mAnmAtrSetCnt) + 1;
     }
     void* state = play();
     u8 tag = u8(jb1::gamePlay(state)->mMesgAnimeTagInfo);
     state = play();
     jb1::gamePlay(state)->mMesgAnimeTagInfo = 255;
-    if (tag != 255 && u8(field_0x91B) != tag)
-        field_0x91B = tag;
+    if (tag != 255 && u8(mMesgAnimeTag) != tag)
+        mMesgAnimeTag = tag;
 }
 
 /* 0224840C */
 void daNpc_Jb1_c::eventOrder() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    s8 order = field_0x91D;
+    s8 order = mOrderEvent;
     if (order != 1 && order != 2)
         return;
-    order = field_0x91D;
+    order = mOrderEvent;
     eventInfo.mCondition = eventInfo.mCondition | dEvtCnd_CANTALK_e;
     if (order == 1)
         jbOrderSpeak(this);
@@ -355,10 +355,10 @@ void daNpc_Jb1_c::checkOrder() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (eventInfo.mCommand != dEvtCmd_INTALK_e)
         return;
-    s8 order = field_0x91D;
+    s8 order = mOrderEvent;
     if (order == 1 || order == 2) {
-        field_0x91D = 0;
-        field_0x915 = 1;
+        mOrderEvent = 0;
+        mTalking = 1;
     }
 }
 
@@ -399,13 +399,13 @@ void daNpc_Jb1_c::setAttention() {
     jbMatrixTranslate(matrix, x, y, z);
     s16 angle = current.angle.y;
     jbMatrixRotateY(matrix, angle);
-    jbMatrixVector(matrix, offset.get(), &field_0x8F4);
-    y = field_0x8F4.y;
-    height = f32(l_HIO.mPrmTbl.field_0x00);
+    jbMatrixVector(matrix, offset.get(), &mAttPos);
+    y = mAttPos.y;
+    height = f32(l_HIO.mPrmTbl.mAttPosOffsetY);
     eyePos.y = y;
     f32 raised = y + height;
-    x = field_0x8F4.x;
-    z = field_0x8F4.z;
+    x = mAttPos.x;
+    z = mAttPos.z;
     attention_info.position.y = raised;
     eyePos.x = x;
     attention_info.position.z = z;
@@ -416,8 +416,8 @@ void daNpc_Jb1_c::setAttention() {
 /* 022478D8 */
 BOOL daNpc_Jb1_c::charDecide(s32 character) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x921 = 0;
-    field_0x920 = 0;
+    mType = 0;
+    mHeapSizeIdx = 0;
     return 1;
 }
 
@@ -485,13 +485,13 @@ BOOL daNpc_Jb1_c::set_action(JbActionDescriptor* action, void* argument) {
     if (unchanged)
         return 1;
     if (oldSelector != 0) {
-        field_0x922 = 9;
+        mActionStatus = 9;
         jb1::dispatchAction(this, argument);
     }
     mCurrActionFunc.f = target;
     mCurrActionFunc.d = adjustment;
     mCurrActionFunc.i = selector;
-    field_0x922 = 0;
+    mActionStatus = 0;
     jb1::dispatchAction(this, argument);
     return 1;
 }
@@ -499,23 +499,23 @@ BOOL daNpc_Jb1_c::set_action(JbActionDescriptor* action, void* argument) {
 /* 02248A04 */
 BOOL daNpc_Jb1_c::setStt(s8 state) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    field_0x91E = state;
+    mStt = state;
     return setAnm();
 }
 
 /* 02248A0C */
 BOOL daNpc_Jb1_c::wait_action1(void* argument) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    s8 phase = field_0x922;
+    s8 phase = mActionStatus;
     if (phase == 0) {
         setStt(1);
-        field_0x922 = u8(field_0x922) + 1;
+        mActionStatus = u8(mActionStatus) + 1;
     } else if (u32(s32(phase)) <= 3) {
         BOOL attention = chkAttention();
-        s8 state = field_0x91E;
+        s8 state = mStt;
         mHasAttention = attention;
         if (state == 1)
-            field_0x910 = 1;
+            mbSetEyePos = 1;
     }
     return 1;
 }
@@ -524,15 +524,15 @@ BOOL daNpc_Jb1_c::wait_action1(void* argument) {
 u8 daNpc_Jb1_c::demo() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (demoActorID == 0) {
-        u8 active = field_0x917;
+        u8 active = mInDemo;
         if (active) {
-            field_0x917 = 0;
+            mInDemo = 0;
             active = 0;
         }
         return active;
     }
     u8 id = demoActorID;
-    field_0x917 = 1;
+    mInDemo = 1;
     if (id && id <= 32) {
         void* demo = jb1::demoObjects(l_demoObjects);
         if (!demo) {
@@ -543,7 +543,7 @@ u8 daNpc_Jb1_c::demo() {
     }
     void* morph = mpMorf.get();
     jbDemoUpdate(this, 0x6A, morph, "Jb", 0, 0, 0, 0);
-    return field_0x917;
+    return mInDemo;
 }
 
 /* 022485C4 */
@@ -561,11 +561,11 @@ BOOL daNpc_Jb1_c::_draw() {
     jbSetTev(environment, 0, &current.pos, &tevStr);
     environment = jbEnvironment();
     jbApplyTev(environment, model, &tevStr);
-    jbEntryBrk(&mBrkAnm, modelData, f32(field_0x834));
+    jbEntryBrk(&mBrkAnm, modelData, f32(mLmpBrkFrame));
     morph = mpMorf.get();
     jbEntryModel(morph);
     jb1::modelDataView(modelData)->animation = 0;
-    jbEntryBrk(&mBrkAnm2, lightData, f32(field_0x858));
+    jbEntryBrk(&mBrkAnm2, lightData, f32(mLgtBrkFrame));
     lightModel = m_lgt_mdl.get();
     jbModelEntry(lightModel);
     jb1::modelDataView(lightData)->animation = 0;
@@ -590,7 +590,7 @@ BOOL daNpc_Jb1_c::_draw() {
 /* 02248444 */
 BOOL daNpc_Jb1_c::_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (field_0x90F == 0) {
+    if (mbRanExecute == 0) {
         u16 y = current.angle.y;
         u32 z = jb1::words(&current.pos)->z;
         mCurrentRot.y = y;
@@ -602,7 +602,7 @@ BOOL daNpc_Jb1_c::_execute() {
         mCurrentRot.z = rz;
         jb1::words(&mCurrentPos)->x = px;
         jb1::words(&mCurrentPos)->y = py;
-        field_0x90F = 1;
+        mbRanExecute = 1;
         mCurrentRot.x = x;
     }
     if (field_0x90C && demoActorID == 0)
@@ -619,7 +619,7 @@ BOOL daNpc_Jb1_c::_execute() {
         else
             jb1::dispatchAction(this, nullptr);
         jbPositionMove(this, &mStts);
-        if (field_0x90D == 0) {
+        if (mbNoShapeAngle == 0) {
             u16 z = current.angle.z, y = current.angle.y;
             shape_angle.z = z;
             u16 x = current.angle.x;
@@ -636,16 +636,16 @@ BOOL daNpc_Jb1_c::_execute() {
 BOOL daNpc_Jb1_c::_delete() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     jbResDelete(&mPhs, "Jb");
-    jbCutLight(&field_0x7F8);
+    jbCutLight(&mPointLight);
     if (heap) {
         void* morph = mpMorf.get();
         if (morph)
             jbStopAnimation(morph);
     }
-    s32 users = s32(l_HIO.field_0x8);
+    s32 users = s32(l_HIO.mRefCount);
     if (users >= 0) {
         users = s32(u32(users) - 1);
-        l_HIO.field_0x8 = users;
+        l_HIO.mRefCount = users;
         if (users < 0)
             jbHioRemove(s8(l_HIO.mNo));
     }
@@ -674,14 +674,14 @@ s32 daNpc_Jb1_c::_create() {
         return phase;
     if (!charDecide((u8)(u32)mParameters))
         return cPhs_ERROR_e;
-    s32 users = s32(l_HIO.field_0x8);
+    s32 users = s32(l_HIO.mRefCount);
     if (users < 0) {
         s32 child = jbHioAdd("Jabun", &l_HIO);
-        users = s32(l_HIO.field_0x8);
+        users = s32(l_HIO.mRefCount);
         l_HIO.mNo = u8(child);
     }
     u32 size = u32(l_heapSize);
-    l_HIO.field_0x8 = u32(users) + 1;
+    l_HIO.mRefCount = u32(users) + 1;
     if (!jbEntryHeap(this, gabi::guest_fn((const void*)&CheckCreateHeap), size))
         return cPhs_ERROR_e;
     void* morph = mpMorf.get();
@@ -732,7 +732,7 @@ void* daNpc_Jb1_c::create_Anm() {
         return nullptr;
     }
     morph = mpMorf.get();
-    field_0x834 = 0;
+    mLmpBrkFrame = 0;
     model = jb1::morphModel(morph);
     modelData = jb1::modelData(model);
     void* names = jbJointNames(modelData);
@@ -769,7 +769,7 @@ BOOL daNpc_Jb1_c::create_lgt() {
     // HD: this call passes nine arguments; no GameCube trailing animation-index argument.
     BOOL initialized = jbInitBrk(&mBrkAnm2, data, animation, 1, 2, speed, 0, -1, 0) != 0;
     if (initialized)
-        field_0x858 = 0;
+        mLgtBrkFrame = 0;
     return initialized;
 }
 
@@ -961,7 +961,7 @@ daNpc_Jb1_c* daNpc_Jb1_Construct(daNpc_Jb1_c* actor) {
     jb1::bck(&actor->mBckAnm)->mAnmVtable = 0x1001AC68;
     jbBtkConstruct(&actor->mBtkAnm);
     jbBrkConstruct(&actor->mBrkAnm3);
-    actor->field_0x7F8.mHD20 = l_one;
+    actor->mPointLight.mHD20 = l_one;
     jbBrkConstruct(&actor->mBrkAnm);
     jbBrkConstruct(&actor->mBrkAnm2);
     jbEventConstruct(&actor->mEventCut);
@@ -979,7 +979,7 @@ void* daNpc_Jb1_HioConstruct(void* object) {
     static_cast<jb1::Hio*>(object)->__vtbl = 0x1001ACB0;
     jbMemcpy(&static_cast<jb1::Hio*>(object)->mPrmTbl, &a_prm_tbl, 0x14);
     static_cast<jb1::Hio*>(object)->mNo = -1;
-    static_cast<jb1::Hio*>(object)->field_0x8 = -1;
+    static_cast<jb1::Hio*>(object)->mRefCount = -1;
     return object;
 }
 

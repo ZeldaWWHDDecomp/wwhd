@@ -105,12 +105,12 @@ f32 sub(f32 a, f32 b) {
 void first_mode_change(pw_class* actor) {
     u32 a = ea(actor), flags = static_cast<u32>(actor->actor_status);
     s16 yaw = static_cast<s16>(actor->shape_angle.y);
-    (actor->m340 = 0);
-    (actor->m38C = yaw);
+    (actor->mNoTurn = 0);
+    (actor->mTargetAngleY = yaw);
     (actor->current.angle.y = yaw);
-    (actor->m39C = 100);
+    (actor->mAlphaBase = 100);
     (actor->attention_info.flags = 4);
-    (actor->m39A = 100);
+    (actor->mAlpha = 100);
     (actor->actor_status = flags | 0x20);
 }
 
@@ -140,12 +140,12 @@ s32 daPW_Delete(pw_class* actor) {
     Pw_dComIfG_resDelete(pwAddress(actor, offsetof(pw_class, mPhase)), gabi::guest_str("Pw"));
     if (static_cast<u32>(actor->heap.v))
         Pw_mDoExt_McaMorf_stopZelAnime(static_cast<u32>(actor->mpMorf));
-    if (static_cast<u8>(actor->m343)) {
-        (actor->m343 = 0);
+    if (static_cast<u8>(actor->mPossessing)) {
+        (actor->mPossessing = 0);
         (TORITUKI_ON = 0);
     }
-    u32 vtable = static_cast<u32>(actor->m5C4.__vtbl);
-    pwEndFollow(vtable, a + offsetof(pw_class, m5C4));
+    u32 vtable = static_cast<u32>(actor->mAttackEcallBack.__vtbl);
+    pwEndFollow(vtable, a + offsetof(pw_class, mAttackEcallBack));
     Pw_enemy_fire_remove(pwAddress(actor, offsetof(pw_class, mEnemyFire)));
     if (static_cast<s16>(actor->mMode) == 0x51) {
         u32 play = Pw_dComIfGp_get(), player = static_cast<u32>(pwViewPwPlayView(play)->mpControlPlayer);
@@ -167,14 +167,14 @@ void pw_empty_virtual(pw_class* actor) {}
 /* 0244A9E4 */
 void alpha_anime(pw_class* actor) {
     u32 a = ea(actor);
-    if (!static_cast<u8>(actor->m33E)) {
-        (actor->m38E = (s16)(static_cast<s16>(actor->m38E) + 0x400));
-        Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, m39C)), 100, 1, 10);
-        f32 base = (f32) static_cast<s16>(actor->m39C);
-        u16 angle = static_cast<u16>(actor->m38E);
+    if (!static_cast<u8>(actor->mMaterialized)) {
+        (actor->mAlphaPhase = (s16)(static_cast<s16>(actor->mAlphaPhase) + 0x400));
+        Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, mAlphaBase)), 100, 1, 10);
+        f32 base = (f32) static_cast<s16>(actor->mAlphaBase);
+        u16 angle = static_cast<u16>(actor->mAlphaPhase);
         f32 sine = cM_ssin(angle);
         f32 alpha = fmadds(sine, l_alphaAmplitude, base);
-        (actor->m39A = (s16)ftoi(alpha));
+        (actor->mAlpha = (s16)ftoi(alpha));
     }
 }
 
@@ -228,7 +228,7 @@ u32 pw_constructor(u32 a) {
     (actor->mAcch.dBgS_GrpPassChk::__vtbl = gc_tu.objAcch.v20);
     (actor->mAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcch.v14);
     (actor->mAcch.mbObjThrough = 1);
-    Pw_dPa_followEcallBack_dPa_followEcallBack(pwAddress(actor, offsetof(pw_class, m5C4)), 0u, 0u);
+    Pw_dPa_followEcallBack_dPa_followEcallBack(pwAddress(actor, offsetof(pw_class, mAttackEcallBack)), 0u, 0u);
     Pw_cCcD_Stts_ct(pwAddress(actor, offsetof(pw_class, mStts)));
     Pw_dCcD_GStts_dCcD_GStts(pwAddress(actor, offsetof(pw_class, mStts.__vtbl_gstts)));
     (actor->mStts.__vtbl = PW_STATUS_VTABLE);
@@ -319,16 +319,16 @@ s32 Big_pow_gattai_check(pw_class* actor) {
         return 0;
     u32 other = found->get();
     if (!other || static_cast<s16>(pwViewfopAc_ac_c(other)->mProcName) != 0xD3 ||
-        !static_cast<u8>(pwViewPwJalhallaView(other)->mMergeState))
+        !static_cast<u8>(pwViewPwJalhallaView(other)->mIsReformed))
         return 0;
     u32 flags = static_cast<u32>(actor->mCyl.mObjAt.mSPrm),
         target = static_cast<u32>(actor->mCyl.mObjTg.mSPrm);
-    (actor->m340 = 0);
+    (actor->mNoTurn = 0);
     (actor->mCyl.mObjAt.mSPrm = flags & ~1u);
     (actor->mCyl.mObjTg.mSPrm = target & ~1u);
     Pw_dCcD_GObjInf_ClrTgHit(pwAddress(actor, offsetof(pw_class, mCyl)));
     s16 angle = static_cast<s16>(Pw_fopAcM_searchActorAngleY(a, found->get()));
-    (actor->m38C = angle);
+    (actor->mTargetAngleY = angle);
     (actor->mAction = PW_ACTION_BIG_DEMO);
     (actor->mMode = 0xAA);
     return 1;
@@ -337,7 +337,7 @@ s32 Big_pow_gattai_check(pw_class* actor) {
 /* 0244A67C */
 s32 Big_pow_down_check(pw_class* actor) {
     u32 a = ea(actor);
-    if (static_cast<s8>(actor->health) > 0 || static_cast<u8>(actor->m345))
+    if (static_cast<s8>(actor->health) > 0 || static_cast<u8>(actor->mJalhallaHitDone))
         return 0;
     u32 id = static_cast<u32>(actor->mJalhallaID);
     if (id == 0xFFFFFFFF)
@@ -348,12 +348,12 @@ s32 Big_pow_down_check(pw_class* actor) {
     u32 other = found->get();
     if (!other || static_cast<s16>(pwViewfopAc_ac_c(other)->mProcName) != 0xD3)
         return 0;
-    if (static_cast<s16>(pwViewPwJalhallaView(other)->mKnockdown) == 0x6F &&
-        static_cast<s16>(pwViewPwJalhallaView(other)->mMergeAllowed) > 3) {
+    if (static_cast<s16>(pwViewPwJalhallaView(other)->mActionState) == 0x6F &&
+        static_cast<s16>(pwViewPwJalhallaView(other)->mSomeCountdownTimers0) > 3) {
         (pwViewfopAc_ac_c(other)->health = (u8)(static_cast<u8>(pwViewfopAc_ac_c(other)->health) - 1));
         if (static_cast<s8>(pwViewfopAc_ac_c(found->get())->health) <= 0)
-            (actor->m344 = 1);
-        (actor->m345 = 1);
+            (actor->mKilledJalhalla = 1);
+        (actor->mJalhallaHitDone = 1);
         return 0;
     }
     (actor->health = 4);
@@ -402,9 +402,9 @@ s32 hani_check(pw_class* actor) {
     if (static_cast<u32>(actor->mJalhallaID) != 0xFFFFFFFF)
         return 0;
     bool path = static_cast<u8>(actor->mPathIndex) != 0xFF && static_cast<u32>(actor->mpPath) != 0;
-    f32 z = static_cast<f32>(path ? actor->m2FC.z : actor->m2F0.z),
+    f32 z = static_cast<f32>(path ? actor->mPathAreaCenter.z : actor->mHomePos.z),
         actorZ = static_cast<f32>(actor->current.pos.z), actorX = static_cast<f32>(actor->current.pos.x);
-    f32 dz = sub(z, actorZ), x = static_cast<f32>(path ? actor->m2FC.x : actor->m2F0.x), dx = sub(x, actorX);
+    f32 dz = sub(z, actorZ), x = static_cast<f32>(path ? actor->mPathAreaCenter.x : actor->mHomePos.x), dx = sub(x, actorX);
     f32 squareZ = (f32)((double)dz * dz);
     f32 radius = path ? 500.f : 1000.f;
     f32 distance = Pw_sqrtf_HD(fmadds(dx, dx, squareZ));
@@ -413,7 +413,7 @@ s32 hani_check(pw_class* actor) {
         if (static_cast<s16>(actor->mMode) == 0x5B || !Pw_kougen_hani_check(a, 1))
             return 0;
     }
-    (actor->m38C = static_cast<s16>(Pw_cM_atan2s(dx, dz)));
+    (actor->mTargetAngleY = static_cast<s16>(Pw_cM_atan2s(dx, dz)));
     return 1;
 }
 
@@ -421,7 +421,7 @@ s32 hani_check(pw_class* actor) {
 void kantera_break(pw_class* actor) {
     u32 a = ea(actor), play = Pw_dComIfGp_get(), id = static_cast<u32>(actor->mKanteraID);
     u32 player = static_cast<u32>(pwViewPwPlayView(play)->mpPlayer);
-    (actor->m346 = 0);
+    (actor->mLanternState = 0);
     if (id == 0xFFFFFFFF)
         return;
     Local<be<u32>> found;
@@ -516,11 +516,11 @@ void next_dousa_check(pw_class* actor) {
     f32 random = Pw_cM_rndF(70.f);
     s32 timer = ftoi(add(random, 70.f));
     u8 path = static_cast<u8>(actor->mPathIndex);
-    (actor->m37C = (s16)timer);
+    (actor->mAttackWaitTimer = (s16)timer);
     if (path == 0xFF) {
         f32 x = static_cast<f32>(actor->current.pos.x), z = static_cast<f32>(actor->current.pos.z);
-        (actor->m2F0.x = x);
-        (actor->m2F0.z = z);
+        (actor->mHomePos.x = x);
+        (actor->mHomePos.z = z);
     }
     (actor->mAction = PW_ACTION_DOUSA);
     (actor->mMode = 0xD);
@@ -536,7 +536,7 @@ void draw_SUB(pw_class* actor) {
     (pwViewJ3DModel(model)->mBaseScale.z = sz);
     (pwViewJ3DModel(model)->mBaseScale.y = sy);
     constexpr u32 matrix = 0x1048D0CC;
-    f32 offset = static_cast<f32>(actor->m3A4), y = static_cast<f32>(actor->current.pos.y),
+    f32 offset = static_cast<f32>(actor->mDrawOffsetY), y = static_cast<f32>(actor->current.pos.y),
         x = static_cast<f32>(actor->current.pos.x), z = static_cast<f32>(actor->current.pos.z);
     Pw_PSMTXTrans(matrix, x, add(y, offset), z);
     Pw_mDoMtx_YrotM(matrix, (s32) static_cast<s16>(actor->shape_angle.y));
@@ -569,12 +569,12 @@ s32 nodeCallBack(u32 joint, s32 phase) {
     u32 matrices = static_cast<u32>(pwViewJ3DModelData(data)->mMaterials);
     (pwViewJ3DMtxBuffer_hd(data)->mFlags = flags | 0x10);
     Pw_PSMTXCopy(matrices + 0x450, l_calcMtx);
-    u32 x = static_cast<u32>(pwVectorWord(&pwViewpw_class(actor)->m2CC, 0)),
-        y = static_cast<u32>(pwVectorWord(&pwViewpw_class(actor)->m2CC, 1));
-    (pwVectorWord(&pwViewpw_class(actor)->m2E4, 0) = x);
-    u32 z = static_cast<u32>(pwVectorWord(&pwViewpw_class(actor)->m2CC, 2));
-    (pwVectorWord(&pwViewpw_class(actor)->m2E4, 1) = y);
-    (pwVectorWord(&pwViewpw_class(actor)->m2E4, 2) = z);
+    u32 x = static_cast<u32>(pwVectorWord(&pwViewpw_class(actor)->mLanternHandPos, 0)),
+        y = static_cast<u32>(pwVectorWord(&pwViewpw_class(actor)->mLanternHandPos, 1));
+    (pwVectorWord(&pwViewpw_class(actor)->mPrevLanternHandPos, 0) = x);
+    u32 z = static_cast<u32>(pwVectorWord(&pwViewpw_class(actor)->mLanternHandPos, 2));
+    (pwVectorWord(&pwViewpw_class(actor)->mPrevLanternHandPos, 1) = y);
+    (pwVectorWord(&pwViewpw_class(actor)->mPrevLanternHandPos, 2) = z);
 
     Local<cXyz> origin;
     origin->x = 0.f;
@@ -600,10 +600,10 @@ s32 nodeCallBack(u32 joint, s32 phase) {
 void fuwafuwa_calc(pw_class* actor) {
     u32 a = ea(actor), play = Pw_dComIfGp_get();
     f32 ground = static_cast<f32>(actor->mAcch.m_ground_h);
-    s16 angle = (s16)(static_cast<s16>(actor->m390) + 700);
-    f32 height = static_cast<f32>(actor->m2F0.y);
+    s16 angle = (s16)(static_cast<s16>(actor->mBobPhase) + 700);
+    f32 height = static_cast<f32>(actor->mHomePos.y);
     u32 player = static_cast<u32>(pwViewPwPlayView(play)->mpPlayer);
-    (actor->m390 = angle);
+    (actor->mBobPhase = angle);
     if (ground != -1000000000.f) {
         play = Pw_dComIfGp_get();
         if (Pw_cBgS_ChkPolySafe(play + 0x12A0,
@@ -617,7 +617,7 @@ void fuwafuwa_calc(pw_class* actor) {
                 return;
             }
         }
-        angle = static_cast<s16>(actor->m390);
+        angle = static_cast<s16>(actor->mBobPhase);
     }
     u8 airborne = static_cast<u8>(actor->mHoversAtInitialYPos);
     s16 mode = static_cast<s16>(actor->mMode);
@@ -629,9 +629,9 @@ void fuwafuwa_calc(pw_class* actor) {
     Pw_cLib_addCalc2(pwAddress(actor, offsetof(pw_class, current.pos.y)),
                      fmadds(sine, 30.f, add(height, 30.f)), 1.f, 3.f);
     if (static_cast<s16>(actor->mMode) == 0x26) {
-        u16 phase = (u16)(static_cast<s16>(actor->m392) + 1000);
-        f32 z = static_cast<f32>(actor->m320.z), x = static_cast<f32>(actor->m320.x);
-        (actor->m392 = phase);
+        u16 phase = (u16)(static_cast<s16>(actor->mCirclePhase) + 1000);
+        f32 z = static_cast<f32>(actor->mCircleCenter.z), x = static_cast<f32>(actor->mCircleCenter.x);
+        (actor->mCirclePhase = phase);
         f32 sx = cM_ssin(phase), sz = cM_ssin(phase);
         f32 targetX = fmadds(sx, 50.f, add(x, 50.f)), targetZ = fmadds(sz, 50.f, add(z, 50.f));
         Pw_cLib_addCalc2(pwAddress(actor, offsetof(pw_class, current.pos)), targetX, 1.f, 5.f);
@@ -693,13 +693,13 @@ s32 Line_check(pw_class* actor, u32 target, s32 mode) {
     (line->mbCamThrough = 0);
     f32 x = static_cast<f32>(pwViewcXyz(target)->x), y = static_cast<f32>(pwViewcXyz(target)->y),
         z = static_cast<f32>(pwViewcXyz(target)->z);
-    (actor->m314.x = x);
-    (actor->m314.y = y);
+    (actor->mLineEnd.x = x);
+    (actor->mLineEnd.y = y);
     (line->mGrpPassChk = l + 0x64);
     (line->mbArrowThrough = 0);
     (line->cBgS_PolyInfo::__vtbl = PW_LINE_POLYGON_VTABLE);
     (line->mbBombThrough = 0);
-    (actor->m314.z = z);
+    (actor->mLineEnd.z = z);
     (line->mbBoomerangThrough = 0);
     (line->mbObjThrough = 0);
     (line->mbRopeThrough = 0);
@@ -718,24 +718,24 @@ s32 Line_check(pw_class* actor, u32 target, s32 mode) {
         Pw_cXyz__pl(target, gabi::ea(sum.get()), pwAddress(actor, offsetof(pw_class, current.pos)));
         x = sum->x;
         y = sum->y;
-        (actor->m314.x = x);
+        (actor->mLineEnd.x = x);
         z = sum->z;
-        (actor->m314.y = y);
-        (actor->m314.z = z);
+        (actor->mLineEnd.y = y);
+        (actor->mLineEnd.z = z);
     }
     y = add(y, 80.f);
-    x = static_cast<f32>(actor->m314.x);
-    (actor->m314.y = y);
+    x = static_cast<f32>(actor->mLineEnd.x);
+    (actor->mLineEnd.y = y);
     (pwViewcXyz(target)->x = x);
     (pwViewcXyz(target)->y = y);
-    z = static_cast<f32>(actor->m314.z);
+    z = static_cast<f32>(actor->mLineEnd.z);
     (pwViewcXyz(target)->z = z);
-    (pwVectorWord(&actor->m308, 0) = static_cast<u32>(pwVectorWord(&actor->current.pos, 0)));
+    (pwVectorWord(&actor->mLineStart, 0) = static_cast<u32>(pwVectorWord(&actor->current.pos, 0)));
     y = static_cast<f32>(actor->current.pos.y);
     u32 zbits = static_cast<u32>(pwVectorWord(&actor->current.pos, 2));
-    (pwVectorWord(&actor->m308, 2) = zbits);
-    (actor->m308.y = add(y, 80.f));
-    Pw_dBgS_LinChk_Set(gabi::ea(line.get()), pwAddress(actor, offsetof(pw_class, m308)), target, a);
+    (pwVectorWord(&actor->mLineStart, 2) = zbits);
+    (actor->mLineStart.y = add(y, 80.f));
+    Pw_dBgS_LinChk_Set(gabi::ea(line.get()), pwAddress(actor, offsetof(pw_class, mLineStart)), target, a);
     u32 play = Pw_dComIfGp_get();
     bool hit = Pw_cBgS_LineCross(play + 0x12A0, gabi::ea(line.get())) != 0;
     if (hit) {
@@ -743,7 +743,7 @@ s32 Line_check(pw_class* actor, u32 target, s32 mode) {
         (line->cBgS_PolyInfo::__vtbl = PW_LINE_POLYGON_BASE_VTABLE);
         (line->dBgS_GrpPassChk::__vtbl = PW_LINE_GROUP_BASE_VTABLE);
         (line->dBgS_PolyPassChk::__vtbl = PW_LINE_PASS_VTABLE);
-        (actor->m38C = (u16)(yaw + 0x8000));
+        (actor->mTargetAngleY = (u16)(yaw + 0x8000));
     } else {
         (line->dBgS_PolyPassChk::__vtbl = PW_LINE_PASS_VTABLE);
         (line->cBgS_PolyInfo::__vtbl = PW_LINE_POLYGON_BASE_VTABLE);
@@ -756,7 +756,7 @@ s32 Line_check(pw_class* actor, u32 target, s32 mode) {
 /* 0244F730 */
 void kantera_calc(pw_class* actor) {
     u32 a = ea(actor);
-    if (static_cast<s16>(actor->m346) <= 0 || static_cast<s16>(actor->m382) != 0)
+    if (static_cast<s16>(actor->mLanternState) <= 0 || static_cast<s16>(actor->mLanternSettleTimer) != 0)
         return;
     u32 id = static_cast<u32>(actor->mKanteraID);
     if (id == 0xFFFFFFFF)
@@ -768,38 +768,38 @@ void kantera_calc(pw_class* actor) {
     if (!lantern || static_cast<s16>(pwViewfopAc_ac_c(lantern)->mProcName) != 0xC1)
         return;
     (pwVectorWord(&pwViewfopAc_ac_c(lantern)->current.pos, 0) =
-         static_cast<u32>(pwVectorWord(&actor->m2CC, 0)));
+         static_cast<u32>(pwVectorWord(&actor->mLanternHandPos, 0)));
     (pwVectorWord(&pwViewfopAc_ac_c(lantern)->current.pos, 1) =
-         static_cast<u32>(pwVectorWord(&actor->m2CC, 1)));
+         static_cast<u32>(pwVectorWord(&actor->mLanternHandPos, 1)));
     (pwVectorWord(&pwViewfopAc_ac_c(lantern)->current.pos, 2) =
-         static_cast<u32>(pwVectorWord(&actor->m2CC, 2)));
+         static_cast<u32>(pwVectorWord(&actor->mLanternHandPos, 2)));
     (pwViewfopAc_ac_c(found->get())->current.angle.y = static_cast<s16>(actor->shape_angle.y));
-    u8 mode = static_cast<u8>(actor->m341);
+    u8 mode = static_cast<u8>(actor->mLanternSwingMode);
     if (mode == 0 || mode == 1) {
-        Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, mFloatPhaseStep)), mode == 0 ? 3000 : 4000,
+        Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, mLanternSwingSpeed)), mode == 0 ? 3000 : 4000,
                                1, 100);
-        Pw_cLib_addCalc2(pwAddress(actor, offsetof(pw_class, m3B0)), mode == 0 ? 5000.f : 10000.f, 1.f,
+        Pw_cLib_addCalc2(pwAddress(actor, offsetof(pw_class, mLanternSwingAmpX)), mode == 0 ? 5000.f : 10000.f, 1.f,
                          1000.f);
-        Pw_cLib_addCalc2(pwAddress(actor, offsetof(pw_class, mLightRadius)), mode == 0 ? -1000.f : -10000.f,
+        Pw_cLib_addCalc2(pwAddress(actor, offsetof(pw_class, mLanternSwingAmpZ)), mode == 0 ? -1000.f : -10000.f,
                          1.f, 1000.f);
-        mode = static_cast<u8>(actor->m341);
+        mode = static_cast<u8>(actor->mLanternSwingMode);
     }
     if (mode != 2) {
-        u16 angle = (u16)(static_cast<s16>(actor->mFloatPhase) + static_cast<s16>(actor->mFloatPhaseStep));
-        f32 amplitude = static_cast<f32>(actor->m3B0);
-        (actor->mFloatPhase = angle);
+        u16 angle = (u16)(static_cast<s16>(actor->mLanternSwingPhase) + static_cast<s16>(actor->mLanternSwingSpeed));
+        f32 amplitude = static_cast<f32>(actor->mLanternSwingAmpX);
+        (actor->mLanternSwingPhase = angle);
         f32 sine = cM_ssin(angle);
         (pwViewPwLanternTail(lantern)->mJointRot[1].x = (s16)ftoi((f32)((double)sine * amplitude)));
-        angle = static_cast<u16>(actor->mFloatPhase);
-        f32 cosine = cM_scos(angle), depth = static_cast<f32>(actor->mLightRadius);
+        angle = static_cast<u16>(actor->mLanternSwingPhase);
+        f32 cosine = cM_scos(angle), depth = static_cast<f32>(actor->mLanternSwingAmpZ);
         (pwViewPwLanternTail(lantern)->mJointRot[1].z = (s16)ftoi((f32)((double)cosine * depth)));
         (pwViewfopAc_ac_c(found->get())->attention_info.flags = 0);
     }
-    (pwVectorWord(&actor->m2D8, 0) =
+    (pwVectorWord(&actor->mLanternSphPos, 0) =
          static_cast<u32>(pwVectorWord(&pwViewPwLanternTail(lantern)->mBonPos, 0)));
-    (pwVectorWord(&actor->m2D8, 1) =
+    (pwVectorWord(&actor->mLanternSphPos, 1) =
          static_cast<u32>(pwVectorWord(&pwViewPwLanternTail(lantern)->mBonPos, 1)));
-    (pwVectorWord(&actor->m2D8, 2) =
+    (pwVectorWord(&actor->mLanternSphPos, 2) =
          static_cast<u32>(pwVectorWord(&pwViewPwLanternTail(lantern)->mBonPos, 2)));
 }
 
@@ -843,12 +843,12 @@ s32 useHeapInit(pw_class* actor) {
     u32 model = static_cast<u32>(pwViewmDoExt_McaMorf(morf)->mpModel.v), btk = Pw_operator_new(0x74);
     if (btk)
         btk = Pw_mDoExt_btpAnm_ct(btk);
-    (actor->m2BC = btk);
+    (actor->mpColorBtp = btk);
     if (!btk)
         return 0;
     u32 currentModel = static_cast<u32>(pwViewmDoExt_McaMorf(actor->mpMorf)->mpModel.v),
         btkData = resource(2, dRes_INDEX_PW_BTP_IROGAE1_e);
-    if (!Pw_mDoExt_btpAnm_init(static_cast<u32>(actor->m2BC),
+    if (!Pw_mDoExt_btpAnm_init(static_cast<u32>(actor->mpColorBtp),
                                static_cast<u32>(pwViewJ3DModel(currentModel)->mModelData.v), btkData, 1, 1,
                                1.f, 0, -1, 0, 0))
         return 0;
@@ -882,7 +882,7 @@ void action_torituku(pw_class* actor) {
     u32 controlled = static_cast<u32>(pwViewPwPlayView(play)->mpControlPlayer);
     f32 playerX = static_cast<f32>(pwViewfopAc_ac_c(player)->current.pos.x);
     if (mode != 0x50 && mode != 0x51) {
-        Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, m39A)), 255, 1, 10);
+        Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, mAlpha)), 255, 1, 10);
         return;
     }
     auto sound = [&](u32 id) {
@@ -894,8 +894,8 @@ void action_torituku(pw_class* actor) {
             pwDamageTimer(actor, i) = 0;
         u32 flags = static_cast<u32>(actor->actor_status);
         mode = static_cast<s16>(actor->mMode);
-        (actor->m378 = 300);
-        (actor->m33E = 1);
+        (actor->mActionTimer = 300);
+        (actor->mMaterialized = 1);
         (actor->actor_status = flags | 0x4000);
         (actor->mMode = (s16)(mode + 1));
         if (pwAddress(actor, offsetof(pw_class, eyePos)))
@@ -905,7 +905,7 @@ void action_torituku(pw_class* actor) {
     (actor->m384 = (s16)(static_cast<s16>(actor->m384) + 700));
     (actor->shape_angle.y = (s16)(static_cast<s16>(actor->shape_angle.y) + 1000));
     bool leave = true;
-    if (player == controlled && static_cast<s16>(actor->m378) != 0) {
+    if (player == controlled && static_cast<s16>(actor->mActionTimer) != 0) {
         play = Pw_dComIfGp_get();
         if (!Pw_dDetect_c_chk_light(play + 0x5A20, pwAddress(actor, offsetof(pw_class, current.pos)))) {
             play = Pw_dComIfGp_get();
@@ -922,15 +922,15 @@ void action_torituku(pw_class* actor) {
             hit = true;
     }
     if (hit || leave) {
-        if (static_cast<u8>(actor->m343)) {
-            (actor->m343 = 0);
+        if (static_cast<u8>(actor->mPossessing)) {
+            (actor->mPossessing = 0);
             (TORITUKI_ON = 0);
             if (pwAddress(actor, offsetof(pw_class, eyePos)))
                 sound(0x5933);
         }
-        (actor->m38E = 0);
-        (actor->m39A = 255);
-        (actor->m38A = 1);
+        (actor->mAlphaPhase = 0);
+        (actor->mAlpha = 255);
+        (actor->mSilentVanish = 1);
         (pwViewdaPy_py_c(controlled)->mNoResetFlg1 =
              static_cast<u32>(pwViewdaPy_py_c(controlled)->mNoResetFlg1) & ~0x100u);
         (actor->mMode = 0x3C);
@@ -945,7 +945,7 @@ void action_torituku(pw_class* actor) {
         (actor->current.pos.x = playerX);
         (actor->current.pos.y = fmadds(sine, 10.f, add(y, 100.f)));
     }
-    Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, m39A)), 255, 1, 10);
+    Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, mAlpha)), 255, 1, 10);
 }
 
 /* 02449F80 */
@@ -969,7 +969,7 @@ s32 daPW_Draw(pw_class* actor) {
             material += index * 0x39C;
         u32 object = static_cast<u32>(pwViewPwMaterialView(material)->mpColorBlock);
         u32 color = pwGetKonstColor(object, 3);
-        (pwViewGXColor(color)->a = (u8) static_cast<s16>(actor->m39A));
+        (pwViewGXColor(color)->a = (u8) static_cast<s16>(actor->mAlpha));
         object = static_cast<u32>(pwViewPwMaterialView(material)->mpColorBlock);
         color = pwGetKonstColor(object, 3);
         object = static_cast<u32>(pwViewPwMaterialView(material)->mpColorBlock);
@@ -989,7 +989,7 @@ s32 daPW_Draw(pw_class* actor) {
         info = Pw_J3DMaterial_getShapePacketModelData_HD(data);
     }
     u32 play;
-    if (!static_cast<u8>(actor->m33E)) {
+    if (!static_cast<u8>(actor->mMaterialized)) {
         play = Pw_dComIfGp_get();
         (l_drawBuffers.opaque = static_cast<u32>(pwViewPwPlayView(play)->mpMaskOffOpa));
         play = Pw_dComIfGp_get();
@@ -1007,26 +1007,26 @@ s32 daPW_Draw(pw_class* actor) {
         return 1;
     }
     Pw_dComIfGp_get();
-    u8 visible = static_cast<u8>(actor->m33E);
+    u8 visible = static_cast<u8>(actor->mMaterialized);
     data = static_cast<u32>(pwViewJ3DModel(model)->mModelData.v);
     u32 brk =
-        static_cast<u32>(visible ? actor->m2C0 : (static_cast<u8>(actor->m33F) ? actor->m2C4 : actor->m2C8));
+        static_cast<u32>(visible ? actor->mpMaterializeBrk : (static_cast<u8>(actor->mHitBrkOn) ? actor->mpHitBrk : actor->mpDefaultBrk));
     Pw_mDoExt_brkAnm_entry(brk, data, static_cast<f32>(pwViewJ3DFrameCtrl(brk)->mFrame));
-    u32 btk = static_cast<u32>(actor->m2BC);
+    u32 btk = static_cast<u32>(actor->mpColorBtp);
     s16 frame = (s16)ftoi(static_cast<f32>(pwViewJ3DFrameCtrl(btk)->mFrame));
     Pw_mDoExt_btpAnm_entry(btk, static_cast<u32>(pwViewJ3DModel(model)->mModelData.v), (s32)frame);
     u8 texture = static_cast<u8>(actor->mColorIndex);
-    (pwViewJ3DFrameCtrl(actor->m2BC)->mFrame = (f32)texture);
+    (pwViewJ3DFrameCtrl(actor->mpColorBtp)->mFrame = (f32)texture);
     Pw_mDoExt_McaMorf_entryDL(static_cast<u32>(actor->mpMorf));
     // HD: retain the visibility reload before clearing material animation slots.
-    (void)static_cast<u8>(actor->m33E);
+    (void)static_cast<u8>(actor->mMaterialized);
     (pwViewPwMaterialAnimationSlots(pwViewJ3DModel(model)->mModelData.v)->mpBrk = 0);
     (pwViewPwMaterialAnimationSlots(pwViewJ3DModel(model)->mModelData.v)->mpBtp = 0);
     play = Pw_dComIfGp_get();
     (l_drawBuffers.opaque = static_cast<u32>(pwViewPwPlayView(play)->mpOpa));
     play = Pw_dComIfGp_get();
     (l_drawBuffers.translucent = static_cast<u32>(pwViewPwPlayView(play)->mpXlu));
-    if (static_cast<u8>(actor->m33E))
+    if (static_cast<u8>(actor->mMaterialized))
         Pw_invisibleEntry(a + offsetof(pw_class, mInvisibleModel));
     else
         Pw_invisibleEntryMaskOff(a + offsetof(pw_class, mInvisibleModel));
@@ -1061,7 +1061,7 @@ s32 daPW_Create(pw_class* actor) {
     if (!Pw_fopAcM_entrySolidHeap(a, gabi::guest_fn((const void*)useHeapInit), 0x2540))
         return 5;
     (actor->gbaName = 13);
-    (actor->m3AC = add(static_cast<f32>(actor->mNoticeRange), 5000.f));
+    (actor->mGiveUpRange = add(static_cast<f32>(actor->mNoticeRange), 5000.f));
     s16 overrideType = l_behaviorOverride;
     u8 path = static_cast<u8>(actor->mPathIndex);
     if (overrideType)
@@ -1073,23 +1073,23 @@ s32 daPW_Create(pw_class* actor) {
         y = static_cast<u32>(pwVectorWord(&actor->current.pos, 1));
     if (texture > 5)
         (actor->mColorIndex = 0);
-    (pwVectorWord(&actor->m2CC, 0) = x);
+    (pwVectorWord(&actor->mLanternHandPos, 0) = x);
     u32 z = static_cast<u32>(pwVectorWord(&actor->current.pos, 2));
-    (pwVectorWord(&actor->m2CC, 1) = y);
-    (pwVectorWord(&actor->m2CC, 2) = z);
+    (pwVectorWord(&actor->mLanternHandPos, 1) = y);
+    (pwVectorWord(&actor->mLanternHandPos, 2) = z);
     u32 play = Pw_dComIfGp_get();
     (actor->itemTableIdx = Pw_cDT_NamePTbl_GetIndex(play + 0x50AC, gabi::guest_str("pow"), 0));
     x = static_cast<u32>(pwVectorWord(&actor->current.pos, 0));
     (actor->max_health = 4);
     (actor->health = 4);
     y = static_cast<u32>(pwVectorWord(&actor->current.pos, 1));
-    (pwVectorWord(&actor->m2F0, 0) = x);
-    (pwVectorWord(&actor->m2F0, 1) = y);
-    (actor->m398 = 4);
+    (pwVectorWord(&actor->mHomePos, 0) = x);
+    (pwVectorWord(&actor->mHomePos, 1) = y);
+    (actor->mLanternHealth = 4);
     z = static_cast<u32>(pwVectorWord(&actor->current.pos, 2));
     u32 morf = static_cast<u32>(actor->mpMorf);
-    (pwVectorWord(&actor->m2F0, 2) = z);
-    (actor->m39E = 0x1000);
+    (pwVectorWord(&actor->mHomePos, 2) = z);
+    (actor->mBigDemoTurnStep = 0x1000);
     u32 model = static_cast<u32>(pwViewmDoExt_McaMorf(morf)->mpModel.v);
     if (model)
         model += 0xC8;
@@ -1118,21 +1118,21 @@ s32 daPW_Create(pw_class* actor) {
     (actor->mJalhallaID = 0xFFFFFFFF);
     (actor->mKanteraID = 0xFFFFFFFF);
     (actor->mSph.mStts.v = pwAddress(actor, offsetof(pw_class, mStts)));
-    (actor->m38C = yaw);
+    (actor->mTargetAngleY = yaw);
     u32 sphere = static_cast<u32>(actor->mSph.mObjAt.mSPrm);
     (actor->stealItemLeft = 1);
     (actor->mAction = PW_ACTION_DOUSA);
-    (pwVectorWord(&actor->m2D8, 0) = x);
+    (pwVectorWord(&actor->mLanternSphPos, 0) = x);
     u32 cylinder = static_cast<u32>(actor->mCyl.mGObjTg.mSPrm);
     u8 type = static_cast<u8>(actor->mBehaviorType);
     (actor->mMode = 10);
     y = static_cast<u32>(pwVectorWord(&actor->current.pos, 1));
-    (actor->m346 = -1);
-    (pwVectorWord(&actor->m2D8, 1) = y);
+    (actor->mLanternState = -1);
+    (pwVectorWord(&actor->mLanternSphPos, 1) = y);
     (actor->mSph.mObjAt.mSPrm = sphere & ~1u);
     z = static_cast<u32>(pwVectorWord(&actor->current.pos, 2));
     (actor->mCyl.mGObjTg.mSPrm = cylinder & ~2u);
-    (pwVectorWord(&actor->m2D8, 2) = z);
+    (pwVectorWord(&actor->mLanternSphPos, 2) = z);
     if (type == 1 || type == 2) {
         u32 status = static_cast<u32>(actor->actor_status);
         (actor->attention_info.flags = 0);
@@ -1145,20 +1145,20 @@ s32 daPW_Create(pw_class* actor) {
             return 5;
         cylinder = static_cast<u32>(actor->mCyl.mGObjTg.mSPrm);
         type = static_cast<u8>(actor->mBehaviorType);
-        (actor->m39A = 255);
-        (actor->m38E = 0);
+        (actor->mAlpha = 255);
+        (actor->mAlphaPhase = 0);
         (actor->max_health = 4);
         (actor->mCyl.mTgType = 0xFF3DFEFF);
         (actor->mCyl.mGObjTg.mSPrm = cylinder | 2);
-        (actor->m346 = 0);
+        (actor->mLanternState = 0);
         (actor->health = 4);
         if (type == 3) {
             (actor->mAction = PW_ACTION_DOUSA);
             (actor->mMode = 0x6E);
-            (actor->m33E = 1);
+            (actor->mMaterialized = 1);
         } else {
             (actor->actor_status = static_cast<u32>(actor->actor_status) | 0x4000);
-            (actor->m390 = (s16)ftoi(Pw_cM_rndFX(16384.f)));
+            (actor->mBobPhase = (s16)ftoi(Pw_cM_rndFX(16384.f)));
             f32 random = Pw_cM_rndFX(150.f);
             (actor->current.pos.x = add(static_cast<f32>(actor->current.pos.x), random));
             random = Pw_cM_rndFX(150.f);
@@ -1208,7 +1208,7 @@ void action_demo(pw_class* actor) {
         Pw_dCamera_c_Stop(camera + 0x248);
         Pw_dCamera_c_SetTrimSize(camera + 0x248, 2);
         play = Pw_dComIfGp_get();
-        (actor->m38C = static_cast<s16>(
+        (actor->mTargetAngleY = static_cast<s16>(
              Pw_fopAcM_searchActorAngleY(a, static_cast<u32>(pwViewPwPlayView(play)->mpPlayer))));
         if (pwAddress(actor, offsetof(pw_class, eyePos))) {
             u32 id = a ? static_cast<u32>(actor->mBsPcId) : 0xFFFFFFFF;
@@ -1233,7 +1233,7 @@ void action_demo(pw_class* actor) {
         (actor->shape_angle.y = 0);
         (actor->shape_angle.z = 0);
         (actor->current.pos.z = playerZ);
-        (actor->m340 = 1);
+        (actor->mNoTurn = 1);
         (actor->attention_info.flags = 0);
         (actor->current.pos.y = add(playerY, 100.f));
         (actor->current.pos.x = playerX);
@@ -1241,11 +1241,11 @@ void action_demo(pw_class* actor) {
         s16 yaw = static_cast<s16>(pwViewfopAc_ac_c(player)->shape_angle.y),
             current = static_cast<s16>(actor->mMode);
         (actor->shape_angle.y = yaw);
-        (actor->m378 = 30);
+        (actor->mActionTimer = 30);
         (actor->mMode = (s16)(current + 1));
         return;
     }
-    if (static_cast<s16>(actor->m378) != 0)
+    if (static_cast<s16>(actor->mActionTimer) != 0)
         return;
     Pw_dComIfGp_get();
     play = Pw_dComIfGp_get();
@@ -1265,7 +1265,7 @@ void action_demo(pw_class* actor) {
 /* 0244F28C */
 s32 kantera_atari_check(pw_class* actor) {
     u32 a = ea(actor), play = Pw_dComIfGp_get();
-    s16 held = static_cast<s16>(actor->m346);
+    s16 held = static_cast<s16>(actor->mLanternState);
     u32 player = static_cast<u32>(pwViewPwPlayView(play)->mpPlayer);
     if (held <= 0)
         return 0;
@@ -1278,7 +1278,7 @@ s32 kantera_atari_check(pw_class* actor) {
     u32 lantern = found->get();
     if (!lantern || static_cast<s16>(pwViewfopAc_ac_c(lantern)->mProcName) != 0xC1)
         return 0;
-    s16 before = static_cast<s16>(actor->m398);
+    s16 before = static_cast<s16>(actor->mLanternHealth);
     Pw_dCcD_GStts_Move(pwAddress(actor, offsetof(pw_class, mStts.__vtbl_gstts)));
     (actor->_459 = 0);
     auto sound = [&](u32 id) {
@@ -1289,57 +1289,57 @@ s32 kantera_atari_check(pw_class* actor) {
     };
     s16 health;
     if (!Pw_dCcD_GObjInf_ChkTgHit(pwAddress(actor, offsetof(pw_class, mSph)))) {
-        health = static_cast<s16>(actor->m398);
-        (actor->m342 = 0);
+        health = static_cast<s16>(actor->mLanternHealth);
+        (actor->mLanternHitLatch = 0);
     } else {
-        if (static_cast<u8>(actor->m342))
+        if (static_cast<u8>(actor->mLanternHitLatch))
             return 0;
         u32 object = Pw_dCcD_GObjInf_GetTgHitObj(pwAddress(actor, offsetof(pw_class, mSph)));
         if (!object)
             return 0;
-        (actor->m342 = 1);
+        (actor->mLanternHitLatch = 1);
         u32 type = static_cast<u32>(pwViewdCcD_GObjInf(object)->mAtType);
         if (type == 2) {
             sound(0x2803);
-            health = (s16)(static_cast<s16>(actor->m398) - 1);
-            (actor->m398 = health);
+            health = (s16)(static_cast<s16>(actor->mLanternHealth) - 1);
+            (actor->mLanternHealth = health);
             u8 attack = static_cast<u8>(pwViewPwPlayerActionView(player)->mCutType);
             bool strong = (attack >= 6 && attack <= 10) || attack == 12 || (attack >= 14 && attack <= 16) ||
                           attack == 21 || attack == 23;
             if (strong) {
-                health = (s16)(static_cast<s16>(actor->m398) - 1);
+                health = (s16)(static_cast<s16>(actor->mLanternHealth) - 1);
                 (actor->_459 = 1);
-                (actor->m398 = health);
+                (actor->mLanternHealth = health);
             }
         } else if (type == 0x200000) {
-            health = static_cast<s16>(actor->m398);
+            health = static_cast<s16>(actor->mLanternHealth);
             (actor->_459 = 3);
         } else if (type == 0x40 || type == 0x80) {
             if (type == 0x40)
                 (actor->_459 = 4);
-            health = (s16)(static_cast<s16>(actor->m398) - 1);
-            (actor->m398 = health);
+            health = (s16)(static_cast<s16>(actor->mLanternHealth) - 1);
+            (actor->mLanternHealth = health);
             sound(0x2833);
-            health = static_cast<s16>(actor->m398);
+            health = static_cast<s16>(actor->mLanternHealth);
         } else if (type == 0x10000) {
             sound(0x2855);
             (actor->_459 = 7);
             if (static_cast<u8>(pwViewPwPlayerActionView(player)->mCutType) == 17)
                 (actor->_459 = 8);
             health = 0;
-            (actor->m398 = 0);
+            (actor->mLanternHealth = 0);
         } else if (type == 0x20) {
-            health = (s16)(static_cast<s16>(actor->m398) - 2);
+            health = (s16)(static_cast<s16>(actor->mLanternHealth) - 2);
             (actor->_459 = 6);
-            (actor->m398 = health);
+            (actor->mLanternHealth = health);
         } else {
             if (type == 0x40000 || type == 0x80000 || type == 0x100000)
-                (actor->m398 = (s16)(static_cast<s16>(actor->m398) - 2));
-            health = (s16)(static_cast<s16>(actor->m398) - 1);
+                (actor->mLanternHealth = (s16)(static_cast<s16>(actor->mLanternHealth) - 2));
+            health = (s16)(static_cast<s16>(actor->mLanternHealth) - 1);
             (actor->_459 = 0);
-            (actor->m398 = health);
+            (actor->mLanternHealth = health);
             sound(0x2834);
-            health = static_cast<s16>(actor->m398);
+            health = static_cast<s16>(actor->mLanternHealth);
         }
     }
     if (before == health)
@@ -1347,7 +1347,7 @@ s32 kantera_atari_check(pw_class* actor) {
     if (health <= 0) {
         Local<cXyz> position, scale;
         f32 x = static_cast<f32>(actor->mSph.mGObjTg.mHitPos.x);
-        (actor->m398 = 0);
+        (actor->mLanternHealth = 0);
         position->x = x;
         position->y = static_cast<f32>(actor->mSph.mGObjTg.mHitPos.y);
         position->z = static_cast<f32>(actor->mSph.mGObjTg.mHitPos.z);
@@ -1378,8 +1378,8 @@ s32 body_atari_check(pw_class* actor) {
     play = Pw_dComIfGp_get();
     if (Pw_dDetect_c_chk_light(play + 0x5A20, pwAddress(actor, offsetof(pw_class, current.pos)))) {
         (actor->mHitByWhat = 9);
-        if (static_cast<s16>(actor->m39A) != 255 && !static_cast<s16>(actor->m382) &&
-            static_cast<s16>(actor->m346) != -1) {
+        if (static_cast<s16>(actor->mAlpha) != 255 && !static_cast<s16>(actor->mLanternSettleTimer) &&
+            static_cast<s16>(actor->mLanternState) != -1) {
             s16 mode = static_cast<s16>(actor->mMode);
             if (mode != 0x37 && mode != 0x3C && mode != 0x3D &&
                 static_cast<u32>(actor->mJalhallaID) == 0xFFFFFFFF) {
@@ -1405,7 +1405,7 @@ s32 body_atari_check(pw_class* actor) {
     u32 at = ea(attack.get());
     (attack->mSound = 0);
     (attack->mpCollider = Pw_dCcD_GObjInf_GetTgHitObj(pwAddress(actor, offsetof(pw_class, mCyl))));
-    u8 visible = static_cast<u8>(actor->m33E);
+    u8 visible = static_cast<u8>(actor->mMaterialized);
     u32 type = static_cast<u32>(pwViewdCcD_GObjInf(object)->mAtType);
     auto sound = [&](u32 id) {
         if (pwAddress(actor, offsetof(pw_class, eyePos))) {
@@ -1435,7 +1435,7 @@ s32 body_atari_check(pw_class* actor) {
             (actor->mHitByWhat = 10);
             (actor->attention_info.flags = 0);
             (actor->mEnemyIce.mState = 1);
-            (actor->m39A = 255);
+            (actor->mAlpha = 255);
             Pw_Big_pow_down_check(a);
             Pw_kantera_break(a);
         } else
@@ -1532,7 +1532,7 @@ s32 body_atari_check(pw_class* actor) {
             break;
         }
     }
-    if (!static_cast<u8>(actor->m33E)) {
+    if (!static_cast<u8>(actor->mMaterialized)) {
         if (static_cast<s16>(actor->mMode) != 0x35) {
             (actor->mAction = PW_ACTION_ITAI);
             (actor->mMode = 0x34);
@@ -1608,8 +1608,8 @@ void action_big_demo(pw_class* actor) {
     if (mode == 150) {
         for (u32 i = 0; i < 4; ++i)
             pwDamageTimer(actor, i) = 0;
-        (actor->m39A = 255);
-        (actor->m38E = 0);
+        (actor->mAlpha = 255);
+        (actor->mAlphaPhase = 0);
         (actor->speedF = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mApproachSpeed), 17.f));
         animation(dRes_INDEX_PW_BCK_NIGERU1_e, 7.f, 2, 8);
         advance();
@@ -1617,39 +1617,39 @@ void action_big_demo(pw_class* actor) {
     }
     if (mode == 151) {
         frameVoice();
-        if (!static_cast<s16>(actor->m37E)) {
+        if (!static_cast<s16>(actor->mWanderTurnTimer)) {
             f32 random = Pw_cM_rndFX(16384.f);
-            s16 yaw = static_cast<s16>(actor->m38C);
-            (actor->m38C = (s16)(yaw + (s16)ftoi(random)));
+            s16 yaw = static_cast<s16>(actor->mTargetAngleY);
+            (actor->mTargetAngleY = (s16)(yaw + (s16)ftoi(random)));
             random = Pw_cM_rndF(15.f);
-            (actor->m37E = (s16)ftoi(add(random, 15.f)));
+            (actor->mWanderTurnTimer = (s16)ftoi(add(random, 15.f)));
         }
-        if (!static_cast<s16>(actor->m37A)) {
+        if (!static_cast<s16>(actor->mObstacleCheckTimer)) {
             Local<cXyz> endpoint;
             endpoint->x = static_cast<f32>(actor->current.pos.x);
             endpoint->y = static_cast<f32>(actor->current.pos.y);
             endpoint->z = static_cast<f32>(actor->current.pos.z);
             bool turn = Pw_Line_check(a, gabi::ea(endpoint.get()), 0) != 0;
             if (!turn) {
-                f32 homeZ = static_cast<f32>(actor->m2F0.z),
+                f32 homeZ = static_cast<f32>(actor->mHomePos.z),
                     currentZ = static_cast<f32>(actor->current.pos.z),
                     currentX = static_cast<f32>(actor->current.pos.x);
-                f32 dz = sub(homeZ, currentZ), dx = sub(static_cast<f32>(actor->m2F0.x), currentX);
+                f32 dz = sub(homeZ, currentZ), dx = sub(static_cast<f32>(actor->mHomePos.x), currentX);
                 f32 length = Pw_sqrtf_HD(fmadds(dx, dx, (f32)((double)dz * dz)));
                 if (length >
                     add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoDistance), 1000.f)) {
-                    (actor->m38C = static_cast<s16>(Pw_cM_atan2s(dx, dz)));
+                    (actor->mTargetAngleY = static_cast<s16>(Pw_cM_atan2s(dx, dz)));
                     turn = true;
                 }
             }
             if (turn) {
                 f32 random = Pw_cM_rndF(20.f);
-                (actor->m37A = (s16)ftoi(add(random, 20.f)));
+                (actor->mObstacleCheckTimer = (s16)ftoi(add(random, 20.f)));
                 random = Pw_cM_rndF(20.f);
-                (actor->m37E = (s16)ftoi(add(random, 20.f)));
+                (actor->mWanderTurnTimer = (s16)ftoi(add(random, 20.f)));
             }
         }
-        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mAction)) {
+        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mStartDemoStep)) {
             f32 random = Pw_cM_rndF(7.f);
             animation(dRes_INDEX_PW_BCK_WAIT2_e, add(random, 2.f), 2, -1);
             advance();
@@ -1658,17 +1658,17 @@ void action_big_demo(pw_class* actor) {
     }
     if (mode == 152) {
         Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, speedF)), 1.f, 2.f);
-        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mAction) == 2) {
+        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mStartDemoStep) == 2) {
             u32 play = Pw_dComIfGp_get();
             s32 yaw = Pw_fopAcM_searchActorAngleY(a, static_cast<u32>(pwViewPwPlayView(play)->mpPlayer));
             s16 current = static_cast<s16>(actor->mMode);
-            (actor->m38C = (s16)yaw);
+            (actor->mTargetAngleY = (s16)yaw);
             (actor->mMode = (s16)(current + 1));
         }
         return;
     }
     if (mode == 153) {
-        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mAction) == 3) {
+        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mStartDemoStep) == 3) {
             f32 random = Pw_cM_rndF(7.f);
             animation(dRes_INDEX_PW_BCK_KIDUKU2_e, add(random, 2.f), 0, -1);
             advance();
@@ -1676,7 +1676,7 @@ void action_big_demo(pw_class* actor) {
         return;
     }
     if (mode == 154) {
-        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mAction) == 4) {
+        if (static_cast<u8>(pwViewPwJalhallaView(parent)->mStartDemoStep) == 4) {
             animation(dRes_INDEX_PW_BCK_NIGERU1_e, 7.f, 2, 8);
             advance();
         }
@@ -1684,26 +1684,26 @@ void action_big_demo(pw_class* actor) {
     }
     if (mode == 155) {
         frameVoice();
-        s16 alpha = (s16)(static_cast<s16>(actor->m39A) - 3);
+        s16 alpha = (s16)(static_cast<s16>(actor->mAlpha) - 3);
         (actor->speedF = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoApproachSpeed), 10.f));
-        (actor->m39A = alpha < 100 ? 100 : alpha);
-        u8 stage = static_cast<u8>(pwViewPwJalhallaView(parent)->mAction);
+        (actor->mAlpha = alpha < 100 ? 100 : alpha);
+        u8 stage = static_cast<u8>(pwViewPwJalhallaView(parent)->mStartDemoStep);
         if (stage == 4) {
             s16 target =
                 (s16)ftoi(add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoTurnLimit), 2000.f));
             s16 step =
                 (s16)ftoi(add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoTurnStep), 100.f));
-            Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, m39E)), (s32)target, 1, (s32)step);
+            Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, mBigDemoTurnStep)), (s32)target, 1, (s32)step);
             (actor->speedF = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoSpeed), 40.f));
-            (actor->m38C = (s16)angleToParent());
+            (actor->mTargetAngleY = (s16)angleToParent());
             return;
         }
         if (stage == 5) {
-            (actor->m39E = (s16)ftoi(
+            (actor->mBigDemoTurnStep = (s16)ftoi(
                  add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoTurnSpeed), 1000.f)));
             s32 yaw = angleToParent();
             s16 timer = static_cast<s16>(actor->m384);
-            (actor->m38C = (s16)(yaw - 0x8000));
+            (actor->mTargetAngleY = (s16)(yaw - 0x8000));
             if (!timer)
                 (actor->m384 = (s16)ftoi(Pw_cM_rndF(
                      add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoRandomTimer), 40.f))));
@@ -1717,9 +1717,9 @@ void action_big_demo(pw_class* actor) {
             }
             animation(dRes_INDEX_PW_BCK_TORITUKI2_e, 1.f, 2, -1);
             voice(0x48F4, true);
-            (actor->m39E = (s16)ftoi(
+            (actor->mBigDemoTurnStep = (s16)ftoi(
                  add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoFastTurnSpeed), 2000.f)));
-            (actor->m38C = (s16)angleToParent());
+            (actor->mTargetAngleY = (s16)angleToParent());
             (actor->mMode = 171);
         }
         return;
@@ -1728,7 +1728,7 @@ void action_big_demo(pw_class* actor) {
         animation(dRes_INDEX_PW_BCK_TORITUKI2_e, 4.f, 2, -1);
         if (a)
             voice(0x48F4, true);
-        (actor->m33E = 0);
+        (actor->mMaterialized = 0);
         f32 speed = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mMergeSpeed), 20.f);
         s16 current = static_cast<s16>(actor->mMode);
         (actor->speedF = speed);
@@ -1737,14 +1737,14 @@ void action_big_demo(pw_class* actor) {
         mode = 171;
     }
     if (mode == 171) {
-        s16 alpha = (s16)(static_cast<s16>(actor->m39A) - 3);
-        (actor->m39A = alpha < 100 ? 100 : alpha);
+        s16 alpha = (s16)(static_cast<s16>(actor->mAlpha) - 3);
+        (actor->mAlpha = alpha < 100 ? 100 : alpha);
         if (!parent)
             return;
         s32 yaw = Pw_fopAcM_searchActorAngleY(a, parent);
         parent = found->get();
         f32 az = static_cast<f32>(actor->current.pos.z);
-        (actor->m38C = (s16)yaw);
+        (actor->mTargetAngleY = (s16)yaw);
         f32 pz = static_cast<f32>(pwViewfopAc_ac_c(parent)->current.pos.z),
             px = static_cast<f32>(pwViewfopAc_ac_c(parent)->current.pos.x),
             ax = static_cast<f32>(actor->current.pos.x);
@@ -1830,7 +1830,7 @@ static void action_dousa(pw_class* actor) {
     switch (mode) {
     case 0:
         animation(dRes_INDEX_PW_BCK_WAIT1_e, 7.f, 2);
-        (actor->m346 = 0);
+        (actor->mLanternState = 0);
         advance();
         break;
     case 1:
@@ -1841,23 +1841,23 @@ static void action_dousa(pw_class* actor) {
             s32 yaw = angle(true);
             (actor->current.angle.y = (s16)yaw);
             advance();
-            (actor->m38C = (s16)yaw);
-            (actor->m3A4 = -80.f);
+            (actor->mTargetAngleY = (s16)yaw);
+            (actor->mDrawOffsetY = -80.f);
             (actor->shape_angle.y = (s16)yaw);
-            (actor->m340 = 1);
+            (actor->mNoTurn = 1);
         }
         break;
     case 2: {
         (actor->shape_angle.y = (s16)(static_cast<s16>(actor->shape_angle.y) + 0x1000));
-        Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, m3A4)), 1.f, 3.f);
-        s16 alpha = (s16)(static_cast<s16>(actor->m39A) + 7);
-        (actor->m39A = alpha > 100 ? 100 : alpha);
+        Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, mDrawOffsetY)), 1.f, 3.f);
+        s16 alpha = (s16)(static_cast<s16>(actor->mAlpha) + 7);
+        (actor->mAlpha = alpha > 100 ? 100 : alpha);
         if (!Pw_J3DFrameCtrl_checkPass(static_cast<u32>(actor->mpMorf) + 0x98, 25.f))
             break;
-        (actor->m3A4 = 0.f);
+        (actor->mDrawOffsetY = 0.f);
         Pw_first_mode_change(a);
-        (actor->m38C = (s16)angle(true));
-        u32 emitter = particle(0x82EE, pwAddress(actor, offsetof(pw_class, m2CC)),
+        (actor->mTargetAngleY = (s16)angle(true));
+        u32 emitter = particle(0x82EE, pwAddress(actor, offsetof(pw_class, mLanternHandPos)),
                                pwAddress(actor, offsetof(pw_class, shape_angle)), 0);
         if (emitter) {
             u32 data = static_cast<u32>(
@@ -1873,30 +1873,30 @@ static void action_dousa(pw_class* actor) {
         return;
     }
     case 9:
-        (actor->m39A = 0);
-        (actor->m39C = 0);
+        (actor->mAlpha = 0);
+        (actor->mAlphaBase = 0);
         advance();
         [[fallthrough]];
     case 10: {
         if (static_cast<u8>(actor->mBehaviorType) == 1)
-            (actor->m38C = (s16)angle(true));
-        u32 id = Pw_fopAcM_create(0xC1, 0xFF000001u, pwAddress(actor, offsetof(pw_class, m2CC)),
+            (actor->mTargetAngleY = (s16)angle(true));
+        u32 id = Pw_fopAcM_create(0xC1, 0xFF000001u, pwAddress(actor, offsetof(pw_class, mLanternHandPos)),
                                   (s32) static_cast<s8>(actor->current.roomNo), 0, 0, -1, 0);
         (actor->mKanteraID = id);
         if (id == 0xFFFFFFFF)
             break;
-        (actor->m382 = 5);
+        (actor->mLanternSettleTimer = 5);
         u8 type = static_cast<u8>(actor->mBehaviorType);
         if (type == 1) {
             (actor->mMode = 11);
             return;
         }
         if (type == 2) {
-            (actor->m341 = 2);
+            (actor->mLanternSwingMode = 2);
             (actor->mMode = 8);
             return;
         }
-        (actor->m346 = 1);
+        (actor->mLanternState = 1);
         (actor->mMode = 13);
         break;
     }
@@ -1904,8 +1904,8 @@ static void action_dousa(pw_class* actor) {
         Pw_dKyr_get_vectle_calc(pwAddress(actor, offsetof(pw_class, current.pos)), camera + 0xDC,
                                 gabi::ea(vector.get()));
         u32 id = static_cast<u32>(actor->mKanteraID);
-        f32 x = static_cast<f32>(actor->m2CC.x), vx = vector->x, z = static_cast<f32>(actor->m2CC.z),
-            vz = vector->z, y = static_cast<f32>(actor->m2CC.y);
+        f32 x = static_cast<f32>(actor->mLanternHandPos.x), vx = vector->x, z = static_cast<f32>(actor->mLanternHandPos.z),
+            vz = vector->z, y = static_cast<f32>(actor->mLanternHandPos.y);
         (actor->mActorPlace.pos.x = fmadds(vx, 150.f, x));
         (actor->mActorPlace.pos.y = y);
         (actor->mActorPlace.pos.z = fmadds(vz, 150.f, z));
@@ -1915,34 +1915,34 @@ static void action_dousa(pw_class* actor) {
         if (!lantern || static_cast<s16>(pwViewfopAc_ac_c(lantern)->mProcName) != 0xC1)
             break;
         (pwVectorWord(&pwViewfopAc_ac_c(lantern)->current.pos, 0) =
-             static_cast<u32>(pwVectorWord(&actor->m2CC, 0)));
+             static_cast<u32>(pwVectorWord(&actor->mLanternHandPos, 0)));
         (pwVectorWord(&pwViewfopAc_ac_c(lantern)->current.pos, 1) =
-             static_cast<u32>(pwVectorWord(&actor->m2CC, 1)));
+             static_cast<u32>(pwVectorWord(&actor->mLanternHandPos, 1)));
         (pwVectorWord(&pwViewfopAc_ac_c(lantern)->current.pos, 2) =
-             static_cast<u32>(pwVectorWord(&actor->m2CC, 2)));
+             static_cast<u32>(pwVectorWord(&actor->mLanternHandPos, 2)));
         (pwViewfopAc_ac_c(found->get())->current.angle.y = static_cast<s16>(actor->shape_angle.y));
         lantern = found->get();
         for (u32 i = 0; i < 3; ++i)
             pwMatrixElement(lantern + offsetof(fopAc_ac_c, scale), i) = 1.f;
         if (!finished())
             break;
-        (actor->m341 = 0);
+        (actor->mLanternSwingMode = 0);
         (actor->mBehaviorType = 0);
         Pw_first_mode_change(a);
-        (actor->m382 = 3);
-        (actor->m346 = 1);
+        (actor->mLanternSettleTimer = 3);
+        (actor->mLanternState = 1);
         (actor->mMode = 13);
         break;
     }
     case 6: {
-        s16 alpha = (s16)(static_cast<s16>(actor->m39A) + 10);
+        s16 alpha = (s16)(static_cast<s16>(actor->mAlpha) + 10);
         u32 morf = static_cast<u32>(actor->mpMorf);
-        (actor->m39A = alpha > 100 ? 100 : alpha);
+        (actor->mAlpha = alpha > 100 ? 100 : alpha);
         if (!(static_cast<u8>(pwViewmDoExt_McaMorf(morf)->mFrameCtrl.mState) & 1) &&
             static_cast<f32>(pwViewmDoExt_McaMorf(morf)->mFrameCtrl.mRate) != 0.f)
             break;
         (actor->mBehaviorType = 0);
-        (actor->m346 = 1);
+        (actor->mLanternState = 1);
         Pw_first_mode_change(a);
         (actor->mMode = 13);
         break;
@@ -1953,17 +1953,17 @@ static void action_dousa(pw_class* actor) {
             break;
         s32 yaw = angle(true);
         (actor->current.angle.y = (s16)yaw);
-        (actor->m38C = (s16)yaw);
-        (actor->shape_angle.y = static_cast<s16>(actor->m38C));
+        (actor->mTargetAngleY = (s16)yaw);
+        (actor->shape_angle.y = static_cast<s16>(actor->mTargetAngleY));
         animation(dRes_INDEX_PW_BCK_DERUB2_e, 3.f, 0);
         (actor->mMode = 6);
         return;
     }
     case 8: {
-        (actor->m380 = 2);
-        (actor->m346 = 1);
+        (actor->mAnmHoldTimer = 2);
+        (actor->mLanternState = 1);
         f32 d = distance();
-        if (!(d < static_cast<f32>(actor->m3AC)))
+        if (!(d < static_cast<f32>(actor->mGiveUpRange)))
             break;
         animation(dRes_INDEX_PW_BCK_DERUB1_e, 3.f, 2);
         (actor->mMode = 7);
@@ -1972,10 +1972,10 @@ static void action_dousa(pw_class* actor) {
     case 13: {
         for (u32 i = 0; i < 4; ++i)
             pwDamageTimer(actor, i) = 0;
-        (actor->m340 = 0);
-        (actor->m341 = 0);
-        randomTimer(actor->m378, 60.f);
-        s16 held = static_cast<s16>(actor->m346);
+        (actor->mNoTurn = 0);
+        (actor->mLanternSwingMode = 0);
+        randomTimer(actor->mActionTimer, 60.f);
+        s16 held = static_cast<s16>(actor->mLanternState);
         s32 current = static_cast<s32>(actor->mBckIdx), desired = held == 1 ? 35 : 36;
         if (current != desired)
             animation(desired, 7.f, 2);
@@ -1984,40 +1984,40 @@ static void action_dousa(pw_class* actor) {
     }
     case 14:
         Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, speedF)), 1.f, 1.f);
-        if (static_cast<s16>(actor->m378))
+        if (static_cast<s16>(actor->mActionTimer))
             break;
         advance();
         [[fallthrough]];
     case 15: {
-        randomTimer(actor->m378, 120.f);
+        randomTimer(actor->mActionTimer, 120.f);
         s32 current = static_cast<s32>(actor->mBckIdx),
-            desired = static_cast<s16>(actor->m346) == 1 ? 20 : 21;
+            desired = static_cast<s16>(actor->mLanternState) == 1 ? 20 : 21;
         if (current != desired)
             animation(desired, 7.f, 2);
         f32 r = Pw_cM_rndFX(16384.f);
-        s16 yaw = static_cast<s16>(actor->m38C);
+        s16 yaw = static_cast<s16>(actor->mTargetAngleY);
         u8 path = static_cast<u8>(actor->mPathIndex);
-        (actor->m38C = (s16)(yaw + (s16)ftoi(r)));
+        (actor->mTargetAngleY = (s16)(yaw + (s16)ftoi(r)));
         (actor->mMode = path != 255 && static_cast<u32>(actor->mpPath) ? 20 : 16);
         break;
     }
     case 16:
         (actor->speedF = 5.f);
         Pw_move_sound(a);
-        if (static_cast<s16>(actor->m37A))
+        if (static_cast<s16>(actor->mObstacleCheckTimer))
             break;
         endpoint();
         if (Pw_Line_check(a, gabi::ea(vector.get()), 0) || Pw_hani_check(a)) {
-            (actor->m37A = 10);
+            (actor->mObstacleCheckTimer = 10);
             break;
         }
-        if (!static_cast<s16>(actor->m378))
+        if (!static_cast<s16>(actor->mActionTimer))
             (actor->mMode = 15);
         break;
     case 20: {
-        (pwVectorWord(&actor->m2FC, 0) = static_cast<u32>(pwVectorWord(&actor->current.pos, 0)));
-        (pwVectorWord(&actor->m2FC, 1) = static_cast<u32>(pwVectorWord(&actor->current.pos, 1)));
-        (pwVectorWord(&actor->m2FC, 2) = static_cast<u32>(pwVectorWord(&actor->current.pos, 2)));
+        (pwVectorWord(&actor->mPathAreaCenter, 0) = static_cast<u32>(pwVectorWord(&actor->current.pos, 0)));
+        (pwVectorWord(&actor->mPathAreaCenter, 1) = static_cast<u32>(pwVectorWord(&actor->current.pos, 1)));
+        (pwVectorWord(&actor->mPathAreaCenter, 2) = static_cast<u32>(pwVectorWord(&actor->current.pos, 2)));
         if (static_cast<u8>(actor->mPathIndex) == 255 || !static_cast<u32>(actor->mpPath))
             break;
         (actor->speedF = 5.f);
@@ -2029,7 +2029,7 @@ static void action_dousa(pw_class* actor) {
         f32 dx = sub(static_cast<f32>(pwViewPwPathPoint(point)->x), x),
             dz = sub(static_cast<f32>(pwViewPwPathPoint(point)->z), z);
         s32 yaw = Pw_cM_atan2s(dx, dz);
-        (actor->m38C = (s16)yaw);
+        (actor->mTargetAngleY = (s16)yaw);
         if (Pw_sqrtf_HD(fmadds(dx, dx, (f32)((double)dz * dz))) < 80.f) {
             s32 next = (s8)(static_cast<u8>(actor->mPathPntIdx) + 1);
             path = static_cast<u32>(actor->mpPath);
@@ -2040,7 +2040,7 @@ static void action_dousa(pw_class* actor) {
         break;
     }
     case 25:
-        (actor->m38C = (s16)angle(false));
+        (actor->mTargetAngleY = (s16)angle(false));
         animation(dRes_INDEX_PW_BCK_DAMAGE_K1_e, 9.f, 0);
         advance();
         (actor->speedF = -20.f);
@@ -2077,7 +2077,7 @@ static void action_dousa(pw_class* actor) {
         [[fallthrough]];
     case 90: {
         (actor->speedF = 12.f);
-        (actor->m378 = 360);
+        (actor->mActionTimer = 360);
         u32 parent = static_cast<u32>(actor->mJalhallaID);
         s32 current = static_cast<s32>(actor->mBckIdx);
         if (parent != 0xFFFFFFFF)
@@ -2087,8 +2087,8 @@ static void action_dousa(pw_class* actor) {
         (actor->attention_info.flags = 4);
         s32 yaw = angle(false);
         s16 state = static_cast<s16>(actor->mMode);
-        (actor->m340 = 0);
-        (actor->m38C = (s16)(yaw + 0x8000));
+        (actor->mNoTurn = 0);
+        (actor->mTargetAngleY = (s16)(yaw + 0x8000));
         (actor->mMode = (s16)(state + 1));
         [[fallthrough]];
     }
@@ -2099,31 +2099,31 @@ static void action_dousa(pw_class* actor) {
             s32 reverb = Pw_dComIfGp_getReverb((s32) static_cast<s8>(actor->current.roomNo));
             Pw_fopAcM_monsSeStart_HD(0x48F1, pwAddress(actor, offsetof(pw_class, eyePos)), id, 0, reverb);
         }
-        if (!static_cast<s16>(actor->m37E)) {
+        if (!static_cast<s16>(actor->mWanderTurnTimer)) {
             f32 r = Pw_cM_rndFX(16384.f);
-            s16 yaw = static_cast<s16>(actor->m38C);
-            (actor->m38C = (s16)(yaw + (s16)ftoi(r)));
-            randomTimer(actor->m37E, 15.f);
+            s16 yaw = static_cast<s16>(actor->mTargetAngleY);
+            (actor->mTargetAngleY = (s16)(yaw + (s16)ftoi(r)));
+            randomTimer(actor->mWanderTurnTimer, 15.f);
         }
-        if (!static_cast<s16>(actor->m37A)) {
+        if (!static_cast<s16>(actor->mObstacleCheckTimer)) {
             endpoint();
             if (Pw_Line_check(a, gabi::ea(vector.get()), 0) || Pw_hani_check(a)) {
-                randomTimer(actor->m37A, 20.f);
-                randomTimer(actor->m37E, 20.f);
+                randomTimer(actor->mObstacleCheckTimer, 20.f);
+                randomTimer(actor->mWanderTurnTimer, 20.f);
             }
         }
-        if (!static_cast<s16>(actor->m378) && static_cast<u32>(actor->mJalhallaID) == 0xFFFFFFFF) {
+        if (!static_cast<s16>(actor->mActionTimer) && static_cast<u32>(actor->mJalhallaID) == 0xFFFFFFFF) {
             play = Pw_dComIfGp_get();
             if (!Pw_dDetect_c_chk_light(play + 0x5A20, pwAddress(actor, offsetof(pw_class, current.pos)))) {
                 (actor->mCyl.mGObjTg.mSPrm = static_cast<u32>(actor->mCyl.mGObjTg.mSPrm) & ~2u);
                 animation(dRes_INDEX_PW_BCK_ANSIN1_e, 3.f, 0);
                 s16 state = static_cast<s16>(actor->mMode);
-                u8 altered = static_cast<u8>(actor->m33F);
-                (actor->m33E = 0);
+                u8 altered = static_cast<u8>(actor->mHitBrkOn);
+                (actor->mMaterialized = 0);
                 (actor->mMode = (s16)(state + 1));
                 if (altered) {
                     u32 model = static_cast<u32>(pwViewmDoExt_McaMorf(actor->mpMorf)->mpModel.v);
-                    (actor->m33F = 0);
+                    (actor->mHitBrkOn = 0);
                     struct String {
                         be<u32> data, vtable;
                     };
@@ -2131,7 +2131,7 @@ static void action_dousa(pw_class* actor) {
                     archive->data = gabi::ea(l_idleArchive);
                     archive->vtable = gc_tu.safeString;
                     u32 data = Pw_dRes_control_c_getRes(l_resourceControl, gabi::ea(archive.get()), 42);
-                    Pw_mDoExt_brkAnm_init(static_cast<u32>(actor->m2C8),
+                    Pw_mDoExt_brkAnm_init(static_cast<u32>(actor->mpDefaultBrk),
                                           static_cast<u32>(pwViewJ3DModel(model)->mModelData.v), data, 1, 0,
                                           1.f, 0, -1, 1, 0);
                 }
@@ -2146,12 +2146,12 @@ static void action_dousa(pw_class* actor) {
             Pw_cc_seStart(0x5930, pwAddress(actor, offsetof(pw_class, eyePos)), 0, reverb);
         }
         Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, speedF)), 1.f, 1.f);
-        s16 alpha = (s16)(static_cast<s16>(actor->m39A) - 3);
-        (actor->m39A = alpha);
+        s16 alpha = (s16)(static_cast<s16>(actor->mAlpha) - 3);
+        (actor->mAlpha = alpha);
         if (alpha < 100 && finished()) {
-            (actor->m38E = 0);
-            (actor->m39A = 100);
-            (actor->m39C = 100);
+            (actor->mAlphaPhase = 0);
+            (actor->mAlpha = 100);
+            (actor->mAlphaBase = 100);
             Pw_next_dousa_check(a);
         }
         break;
@@ -2165,7 +2165,7 @@ static void action_dousa(pw_class* actor) {
                  static_cast<u16>(pwAngleWord(&actor->shape_angle, i)));
         particle(0x8445, pwAddress(actor, offsetof(pw_class, mActorPlace.pos)),
                  pwAddress(actor, offsetof(pw_class, mActorPlace.angle)),
-                 pwAddress(actor, offsetof(pw_class, m5C4)));
+                 pwAddress(actor, offsetof(pw_class, mAttackEcallBack)));
         animation(dRes_INDEX_PW_BCK_ATTACK1_e, 7.f, 2);
         f32 base = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mJumpSpeed), 45.f);
         (actor->speed.y = base);
@@ -2180,7 +2180,7 @@ static void action_dousa(pw_class* actor) {
         if (id != 0xFFFFFFFF && Pw_fopAcM_SearchByID(id, gabi::ea(found.get()))) {
             u32 parent = found->get();
             if (parent && static_cast<s16>(pwViewfopAc_ac_c(parent)->mProcName) == 0xD3 &&
-                static_cast<s16>(pwViewPwJalhallaView(parent)->mMode) == 2) {
+                static_cast<s16>(pwViewPwJalhallaView(parent)->mBattlePhase) == 2) {
                 (actor->gravity = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mGravity), -2.f));
                 base = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mRetreatSpeed), 8.f);
                 (actor->speedF = base);
@@ -2190,11 +2190,11 @@ static void action_dousa(pw_class* actor) {
             }
         }
         advance();
-        (actor->m340 = 1);
+        (actor->mNoTurn = 1);
         break;
     }
     case 111:
-        if (static_cast<u32>(actor->m5C4.mpEmitter)) {
+        if (static_cast<u32>(actor->mAttackEcallBack.mpEmitter)) {
             for (u32 i = 0; i < 3; ++i)
                 (pwVectorWord(&actor->mActorPlace.pos, i) =
                      static_cast<u32>(pwVectorWord(&actor->current.pos, i)));
@@ -2204,7 +2204,7 @@ static void action_dousa(pw_class* actor) {
         }
         if (!(static_cast<u32>(actor->mAcch.m_flags) & 0x20))
             break;
-        Pw_dPa_followEcallBack_end(pwAddress(actor, offsetof(pw_class, m5C4)));
+        Pw_dPa_followEcallBack_end(pwAddress(actor, offsetof(pw_class, mAttackEcallBack)));
         (actor->speedF = 0.f);
         (actor->speed.x = 0.f);
         (actor->speed.y = 0.f);
@@ -2223,7 +2223,7 @@ static void action_dousa(pw_class* actor) {
     mode = static_cast<s16>(actor->mMode);
     if (mode <= 11)
         return;
-    if (!static_cast<s16>(actor->m37C) && mode < 90 && (mode == 14 || mode == 16 || mode == 20)) {
+    if (!static_cast<s16>(actor->mAttackWaitTimer) && mode < 90 && (mode == 14 || mode == 16 || mode == 20)) {
         bool attack = false;
         if (!Pw_hani_check(a)) {
             play = Pw_dComIfGp_get();
@@ -2235,7 +2235,7 @@ static void action_dousa(pw_class* actor) {
                 vector->y = static_cast<f32>(pwViewfopAc_ac_c(player)->current.pos.y);
                 vector->z = static_cast<f32>(pwViewfopAc_ac_c(player)->current.pos.z);
                 if (!Pw_Line_check(a, gabi::ea(vector.get()), 1) &&
-                    (static_cast<s16>(actor->m346) == 1 || !TORITUKI_ON))
+                    (static_cast<s16>(actor->mLanternState) == 1 || !TORITUKI_ON))
                     attack = true;
             }
         }
@@ -2281,11 +2281,11 @@ static void action_kougeki(pw_class* actor) {
     };
     auto retreat = [&]() {
         f32 r = Pw_cM_rndF(70.f);
-        (actor->m37C = (s16)ftoi(add(r, 70.f)));
+        (actor->mAttackWaitTimer = (s16)ftoi(add(r, 70.f)));
         if (static_cast<u8>(actor->mPathIndex) == 255) {
             f32 x = static_cast<f32>(actor->current.pos.x), z = static_cast<f32>(actor->current.pos.z);
-            (actor->m2F0.x = x);
-            (actor->m2F0.z = z);
+            (actor->mHomePos.x = x);
+            (actor->mHomePos.z = z);
         }
         (actor->mAction = PW_ACTION_DOUSA);
         (actor->mMode = 13);
@@ -2293,13 +2293,13 @@ static void action_kougeki(pw_class* actor) {
     bool endAttack = false;
     switch (mode) {
     case 30:
-        animation(static_cast<s16>(actor->m346) == 1 ? 24 : 25, 6.f, 0);
+        animation(static_cast<s16>(actor->mLanternState) == 1 ? 24 : 25, 6.f, 0);
         advance();
-        (actor->m340 = 0);
+        (actor->mNoTurn = 0);
         break;
     case 31:
         Pw_kyori_sub(a);
-        (actor->m38C = (s16)angle());
+        (actor->mTargetAngleY = (s16)angle());
         Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, speedF)), 1.f, 0.3f);
         if (!finished())
             break;
@@ -2309,22 +2309,22 @@ static void action_kougeki(pw_class* actor) {
         Pw_kyori_sub(a);
         for (u32 i = 0; i < 4; ++i)
             pwDamageTimer(actor, i) = 0;
-        (actor->m340 = 0);
-        if (static_cast<s16>(actor->m346) == 1) {
+        (actor->mNoTurn = 0);
+        if (static_cast<s16>(actor->mLanternState) == 1) {
             animation(dRes_INDEX_PW_BCK_ATTACK1_e, 6.f, 0, 7);
             voice(0x48F3);
-            (actor->m341 = 1);
+            (actor->mLanternSwingMode = 1);
             (actor->mMode = 33);
         } else {
             animation(dRes_INDEX_PW_BCK_TORITUKI1_e, 3.f, 2);
-            (actor->m378 = 100);
+            (actor->mActionTimer = 100);
             (actor->mMode = 40);
         }
         break;
     case 33:
         Pw_kyori_sub(a);
         Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, speedF)), 1.f, 0.3f);
-        (actor->m38C = (s16)angle());
+        (actor->mTargetAngleY = (s16)angle());
         if (Pw_J3DFrameCtrl_checkPass(static_cast<u32>(actor->mpMorf) + 0x98, 23.f)) {
             advance();
             (actor->speedF = 24.f);
@@ -2365,23 +2365,23 @@ static void action_kougeki(pw_class* actor) {
         break;
     case 40:
         Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, speedF)), 1.f, 0.3f);
-        (actor->m38C = (s16)angle());
-        if (static_cast<s16>(actor->m378))
+        (actor->mTargetAngleY = (s16)angle());
+        if (static_cast<s16>(actor->mActionTimer))
             break;
-        (actor->m378 = 300);
+        (actor->mActionTimer = 300);
         animation(dRes_INDEX_PW_BCK_TORITUKI2_e, 4.f, 2);
         voice(0x48F4);
         advance();
         break;
     case 41: {
-        (actor->m38C = (s16)angle());
+        (actor->mTargetAngleY = (s16)angle());
         if (Pw_kougen_hani_check(a, 0) || Pw_kougen_hani_check(a, 1)) {
             endAttack = true;
             break;
         }
         Pw_cLib_addCalc2(pwAddress(actor, offsetof(pw_class, speedF)), 15.f, 1.f, 3.f);
         Pw_move_sound(a);
-        if (!static_cast<s16>(actor->m378)) {
+        if (!static_cast<s16>(actor->mActionTimer)) {
             animation(dRes_INDEX_PW_BCK_IKIGIRE1_e, 6.f, 0);
             (actor->mMode = 36);
             break;
@@ -2404,27 +2404,27 @@ static void action_kougeki(pw_class* actor) {
     case 37: {
         for (u32 i = 0; i < 4; ++i)
             pwDamageTimer(actor, i) = 0;
-        s16 held = static_cast<s16>(actor->m346);
+        s16 held = static_cast<s16>(actor->mLanternState);
         (actor->speedF = 0.f);
         s32 desired = held == 1 ? 35 : 36;
         if (static_cast<s32>(actor->mBckIdx) != desired)
             animation(desired, 7.f, 2);
         f32 r = Pw_cM_rndF(70.f);
-        (actor->m37C = (s16)ftoi(add(r, 70.f)));
-        (actor->m340 = 0);
-        (pwVectorWord(&actor->m320, 0) = static_cast<u32>(pwVectorWord(&actor->current.pos, 0)));
-        (pwVectorWord(&actor->m320, 1) = static_cast<u32>(pwVectorWord(&actor->current.pos, 1)));
-        (pwVectorWord(&actor->m320, 2) = static_cast<u32>(pwVectorWord(&actor->current.pos, 2)));
-        (actor->m341 = 0);
-        (actor->m392 = 0);
+        (actor->mAttackWaitTimer = (s16)ftoi(add(r, 70.f)));
+        (actor->mNoTurn = 0);
+        (pwVectorWord(&actor->mCircleCenter, 0) = static_cast<u32>(pwVectorWord(&actor->current.pos, 0)));
+        (pwVectorWord(&actor->mCircleCenter, 1) = static_cast<u32>(pwVectorWord(&actor->current.pos, 1)));
+        (pwVectorWord(&actor->mCircleCenter, 2) = static_cast<u32>(pwVectorWord(&actor->current.pos, 2)));
+        (actor->mLanternSwingMode = 0);
+        (actor->mCirclePhase = 0);
         advance();
         [[fallthrough]];
     }
     case 38:
         Pw_kyori_sub(a);
-        (actor->m38C = (s16)angle());
+        (actor->mTargetAngleY = (s16)angle());
         Pw_cLib_addCalc0(pwAddress(actor, offsetof(pw_class, speedF)), 1.f, 1.f);
-        if (!static_cast<s16>(actor->m37C)) {
+        if (!static_cast<s16>(actor->mAttackWaitTimer)) {
             (actor->speedF = 0.f);
             Pw_next_dousa_check(a);
         }
@@ -2434,7 +2434,7 @@ static void action_kougeki(pw_class* actor) {
     }
     if (endAttack)
         (actor->mMode = 37);
-    if (!static_cast<s16>(actor->m346)) {
+    if (!static_cast<s16>(actor->mLanternState)) {
         if (TORITUKI_ON == 1)
             retreat();
         else {
@@ -2450,7 +2450,7 @@ static void action_kougeki(pw_class* actor) {
                         (actor->mCyl.mObjAt.mSPrm = static_cast<u32>(actor->mCyl.mObjAt.mSPrm) & ~1u);
                         (actor->mCyl.mTgType = 0x800000);
                         (TORITUKI_ON = 1);
-                        (actor->m343 = 1);
+                        (actor->mPossessing = 1);
                         (actor->mAction = PW_ACTION_DEMO);
                         (actor->mMode = 70);
                     }
@@ -2508,20 +2508,20 @@ static void action_itai(pw_class* actor) {
     switch (mode) {
     case 50: {
         (actor->mBehaviorType = 0);
-        (actor->m340 = 1);
+        (actor->mNoTurn = 1);
         u32 flags = static_cast<u32>(actor->actor_status);
-        (actor->m341 = 1);
+        (actor->mLanternSwingMode = 1);
         (actor->attention_info.flags = 4);
         (actor->actor_status = flags | 0x20);
         s32 yaw = angle();
         (actor->current.angle.y = (s16)yaw);
-        (actor->m38C = (s16)yaw);
-        (actor->m38E = 0);
-        (actor->m39A = 200);
+        (actor->mTargetAngleY = (s16)yaw);
+        (actor->mAlphaPhase = 0);
+        (actor->mAlpha = 200);
         (actor->shape_angle.y = (s16)yaw);
-        (actor->m39C = 200);
-        (actor->m37E = 3);
-        if (!static_cast<s16>(actor->m398))
+        (actor->mAlphaBase = 200);
+        (actor->mWanderTurnTimer = 3);
+        if (!static_cast<s16>(actor->mLanternHealth))
             Pw_kantera_break(a);
         (actor->speedF = -20.f);
         animation(dRes_INDEX_PW_BCK_DAMAGE_K1_e, 3.f, 0);
@@ -2538,14 +2538,14 @@ static void action_itai(pw_class* actor) {
     case 52: {
         Pw_kantera_break(a);
         s16 yaw = static_cast<s16>(actor->current.angle.y);
-        (actor->m38C = yaw);
-        (actor->m340 = 1);
+        (actor->mTargetAngleY = yaw);
+        (actor->mNoTurn = 1);
         (actor->shape_angle.y = yaw);
         for (u32 i = 0; i < 4; ++i)
             pwDamageTimer(actor, i) = 0;
         if (static_cast<s32>(actor->mBckIdx) != 19)
             animation(dRes_INDEX_PW_BCK_DOKI1_e, 3.f, 2);
-        (actor->m378 = 30);
+        (actor->mActionTimer = 30);
         (actor->speedF = 0.f);
         advance();
         [[fallthrough]];
@@ -2553,23 +2553,23 @@ static void action_itai(pw_class* actor) {
     case 53: {
         u8 hit = static_cast<u8>(actor->mHitByWhat);
         if (hit == 9 || hit == 10) {
-            (actor->m378 = 10);
-            (actor->m39A = (s16)(static_cast<s16>(actor->m39A) + 5));
-            if (!static_cast<u8>(actor->m33F)) {
-                (actor->m33F = 1);
-                material(0, actor->m2C4, dRes_INDEX_PW_BRK_HIT_e, 2);
+            (actor->mActionTimer = 10);
+            (actor->mAlpha = (s16)(static_cast<s16>(actor->mAlpha) + 5));
+            if (!static_cast<u8>(actor->mHitBrkOn)) {
+                (actor->mHitBrkOn = 1);
+                material(0, actor->mpHitBrk, dRes_INDEX_PW_BRK_HIT_e, 2);
             }
-            if (static_cast<u8>(actor->mHitByWhat) == 10 || static_cast<s16>(actor->m39A) >= 255) {
-                (actor->m39A = 255);
-                (actor->m38E = 0);
+            if (static_cast<u8>(actor->mHitByWhat) == 10 || static_cast<s16>(actor->mAlpha) >= 255) {
+                (actor->mAlpha = 255);
+                (actor->mAlphaPhase = 0);
                 if (a) {
                     sound(0x5936);
                     voice(0x48F2);
                 }
                 u32 flags = static_cast<u32>(actor->mCyl.mGObjTg.mSPrm);
-                (actor->m33E = 1);
+                (actor->mMaterialized = 1);
                 (actor->mCyl.mGObjTg.mSPrm = flags | 2);
-                material(1, actor->m2C0, dRes_INDEX_PW_BRK_JITTAIKA1_e, 0);
+                material(1, actor->mpMaterializeBrk, dRes_INDEX_PW_BRK_JITTAIKA1_e, 0);
                 (actor->mAction = PW_ACTION_DOUSA);
                 (actor->mMode = 100);
                 (actor->mCyl.mTgType = 0xFF3DFEFF);
@@ -2578,25 +2578,25 @@ static void action_itai(pw_class* actor) {
             if (a)
                 sound(0x5135);
         } else {
-            if (static_cast<u8>(actor->m33F)) {
-                (actor->m33F = 0);
-                material(2, actor->m2C8, dRes_INDEX_PW_BRK_DEFAULT_e, 0);
+            if (static_cast<u8>(actor->mHitBrkOn)) {
+                (actor->mHitBrkOn = 0);
+                material(2, actor->mpDefaultBrk, dRes_INDEX_PW_BRK_DEFAULT_e, 0);
             }
-            (actor->m39C = 0);
-            (actor->m39A = 0);
-            (actor->m38E = 0);
+            (actor->mAlphaBase = 0);
+            (actor->mAlpha = 0);
+            (actor->mAlphaPhase = 0);
             Pw_next_dousa_check(a);
         }
         break;
     }
     case 54: {
-        (actor->m340 = 1);
-        (actor->m380 = 0);
-        Pw_dPa_followEcallBack_end(pwAddress(actor, offsetof(pw_class, m5C4)));
+        (actor->mNoTurn = 1);
+        (actor->mAnmHoldTimer = 0);
+        Pw_dPa_followEcallBack_end(pwAddress(actor, offsetof(pw_class, mAttackEcallBack)));
         s16 yaw = static_cast<s16>(actor->shape_angle.y);
-        (actor->m38C = yaw);
+        (actor->mTargetAngleY = yaw);
         (actor->current.angle.y = (s16)angle());
-        (actor->shape_angle.y = static_cast<s16>(actor->m38C));
+        (actor->shape_angle.y = static_cast<s16>(actor->mTargetAngleY));
         s8 health = static_cast<s8>(actor->health);
         (actor->speedF = -24.f);
         if (health <= 0) {
@@ -2628,7 +2628,7 @@ static void action_itai(pw_class* actor) {
         return;
     case 56:
         (actor->current.angle.y = static_cast<s16>(pwViewfopAc_ac_c(player)->shape_angle.y));
-        (actor->m340 = 1);
+        (actor->mNoTurn = 1);
         (actor->speedF = 24.f);
         (pwViewmDoExt_McaMorf(actor->mpMorf)->mFrameCtrl.mRate = 0.25f);
         advance();
@@ -2641,7 +2641,7 @@ static void action_itai(pw_class* actor) {
             s16 yaw = static_cast<s16>(actor->shape_angle.y);
             (actor->speedF = 0.f);
             (actor->current.angle.y = yaw);
-            (actor->m340 = 0);
+            (actor->mNoTurn = 0);
             (pwViewmDoExt_McaMorf(actor->mpMorf)->mFrameCtrl.mRate = 1.f);
             (actor->mAction = PW_ACTION_DOUSA);
             (actor->mMode = 90);
@@ -2650,19 +2650,19 @@ static void action_itai(pw_class* actor) {
         break;
     case 58: {
         u8 kind = static_cast<u8>(actor->mHitByWhat);
-        (actor->m340 = 1);
+        (actor->mNoTurn = 1);
         (actor->speedF = 0.f);
         if (kind == 4) {
             Pw_enemy_piyo_set(a);
             sound(0x50BC);
-            (actor->m378 = (s16)(static_cast<s16>(pwViewPwDebugRegisters(parameters)->mStunTime) + 75));
+            (actor->mActionTimer = (s16)(static_cast<s16>(pwViewPwDebugRegisters(parameters)->mStunTime) + 75));
         }
         animation(dRes_INDEX_PW_BCK_KIZETU1_e, 3.f, 0);
         advance();
         [[fallthrough]];
     }
     case 59:
-        if (!Pw_Big_pow_gattai_check(a) && !static_cast<s16>(actor->m378)) {
+        if (!Pw_Big_pow_gattai_check(a) && !static_cast<s16>(actor->mActionTimer)) {
             (actor->mAction = PW_ACTION_DOUSA);
             (actor->mMode = 90);
             return;
@@ -2670,28 +2670,28 @@ static void action_itai(pw_class* actor) {
         break;
     case 60:
         animation(dRes_INDEX_PW_BCK_SYOUTEN1_e, 2.f, 2);
-        (actor->m33E = 0);
+        (actor->mMaterialized = 0);
         (actor->attention_info.flags = 0);
-        Pw_dPa_followEcallBack_end(pwAddress(actor, offsetof(pw_class, m5C4)));
-        if (!static_cast<s16>(actor->m38A)) {
+        Pw_dPa_followEcallBack_end(pwAddress(actor, offsetof(pw_class, mAttackEcallBack)));
+        if (!static_cast<s16>(actor->mSilentVanish)) {
             sound(0x5934);
             voice(0x48F6);
         }
-        if (static_cast<u8>(actor->m33F)) {
-            (actor->m33F = 0);
-            material(3, actor->m2C8, dRes_INDEX_PW_BRK_DEFAULT_e, 0);
+        if (static_cast<u8>(actor->mHitBrkOn)) {
+            (actor->mHitBrkOn = 0);
+            material(3, actor->mpDefaultBrk, dRes_INDEX_PW_BRK_DEFAULT_e, 0);
         }
         (actor->gravity = 0.6f);
         advance();
         [[fallthrough]];
     case 61: {
-        s16 alpha = (s16)(static_cast<s16>(actor->m39A) - 8);
-        (actor->m39A = alpha);
+        s16 alpha = (s16)(static_cast<s16>(actor->mAlpha) - 8);
+        (actor->mAlpha = alpha);
         if (alpha >= 0)
             break;
-        s16 disappear = static_cast<s16>(actor->m38A);
-        (actor->m38E = 0);
-        (actor->m39A = 0);
+        s16 disappear = static_cast<s16>(actor->mSilentVanish);
+        (actor->mAlphaPhase = 0);
+        (actor->mAlpha = 0);
         if (!disappear) {
             Local<cXyz> position;
             position->x = static_cast<f32>(actor->current.pos.x);
@@ -2718,7 +2718,7 @@ static void action_itai(pw_class* actor) {
     }
     mode = static_cast<s16>(actor->mMode);
     if (mode <= 51) {
-        if (!static_cast<s16>(actor->m37E))
+        if (!static_cast<s16>(actor->mWanderTurnTimer))
             Pw_alpha_anime(a);
         Pw_fuwafuwa_calc(a);
     }
@@ -2769,22 +2769,22 @@ s32 daPW_Execute(pw_class* actor) {
     default:
         break;
     }
-    if (!static_cast<u8>(actor->m340)) {
+    if (!static_cast<u8>(actor->mNoTurn)) {
         s16 mode = static_cast<s16>(actor->mMode);
         s32 step = (mode == 15 || mode == 16 || mode == 20) ? 500 : 0x1000;
         if (static_cast<s16>(actor->mAction) == PW_ACTION_BIG_DEMO)
-            step = static_cast<s16>(actor->m39E);
+            step = static_cast<s16>(actor->mBigDemoTurnStep);
         Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, current.angle.y)),
-                               (s32) static_cast<s16>(actor->m38C), 1, step);
+                               (s32) static_cast<s16>(actor->mTargetAngleY), 1, step);
         Pw_cLib_addCalcAngleS2(pwAddress(actor, offsetof(pw_class, shape_angle.y)),
                                (s32) static_cast<s16>(actor->current.angle.y), 1, step);
     }
-    u8 visible = static_cast<u8>(actor->m33E);
+    u8 visible = static_cast<u8>(actor->mMaterialized);
     u32 animation;
     if (visible)
-        animation = static_cast<u32>(actor->m2C0);
+        animation = static_cast<u32>(actor->mpMaterializeBrk);
     else
-        animation = static_cast<u32>(static_cast<u8>(actor->m33F) ? actor->m2C4 : actor->m2C8);
+        animation = static_cast<u32>(static_cast<u8>(actor->mHitBrkOn) ? actor->mpHitBrk : actor->mpDefaultBrk);
     Pw_mDoExt_baseAnm_play(animation);
     Pw_mDoMtx_YrotS(l_calcMtx, (s32) static_cast<s16>(actor->current.angle.y));
     Pw_mDoMtx_XrotM(l_calcMtx, (s32) static_cast<s16>(actor->current.angle.x));
@@ -2799,21 +2799,21 @@ s32 daPW_Execute(pw_class* actor) {
     (actor->speed.z = z);
     (actor->speed.y = nextY < -100.f ? -100.f : nextY);
     Local<be<u32>> found;
-    if (static_cast<s16>(actor->m346) == 1) {
+    if (static_cast<s16>(actor->mLanternState) == 1) {
         u32 id = static_cast<u32>(actor->mKanteraID);
         if (id != 0xFFFFFFFF && Pw_fopAcM_SearchByID(id, gabi::ea(found.get()))) {
             u32 lantern = found->get();
             if (lantern && static_cast<s16>(pwViewfopAc_ac_c(lantern)->mProcName) == 0xC1) {
-                x = static_cast<f32>(actor->m2D8.x);
+                x = static_cast<f32>(actor->mLanternSphPos.x);
                 (actor->attention_info.position.x = x);
-                y = static_cast<f32>(actor->m2D8.y);
+                y = static_cast<f32>(actor->mLanternSphPos.y);
                 (actor->attention_info.position.y = y);
-                z = static_cast<f32>(actor->m2D8.z);
+                z = static_cast<f32>(actor->mLanternSphPos.z);
                 (actor->attention_info.position.z = z);
                 (actor->attention_info.position.y = add(y, 40.f));
-                (pwVectorWord(&actor->eyePos, 0) = static_cast<u32>(pwVectorWord(&actor->m2D8, 0)));
-                (pwVectorWord(&actor->eyePos, 1) = static_cast<u32>(pwVectorWord(&actor->m2D8, 1)));
-                (pwVectorWord(&actor->eyePos, 2) = static_cast<u32>(pwVectorWord(&actor->m2D8, 2)));
+                (pwVectorWord(&actor->eyePos, 0) = static_cast<u32>(pwVectorWord(&actor->mLanternSphPos, 0)));
+                (pwVectorWord(&actor->eyePos, 1) = static_cast<u32>(pwVectorWord(&actor->mLanternSphPos, 1)));
+                (pwVectorWord(&actor->eyePos, 2) = static_cast<u32>(pwVectorWord(&actor->mLanternSphPos, 2)));
             }
         }
     } else {
@@ -2849,7 +2849,7 @@ s32 daPW_Execute(pw_class* actor) {
             Pw_body_atari_check(a);
     }
     Pw_fopAcM_posMove(a,
-                      static_cast<s16>(actor->m346) == 1 ? pwAddress(actor, offsetof(pw_class, mStts)) : 0u);
+                      static_cast<s16>(actor->mLanternState) == 1 ? pwAddress(actor, offsetof(pw_class, mStts)) : 0u);
     s16 mode = static_cast<s16>(actor->mMode);
     bool advanceAnimation = true;
     if (mode != 81 && mode != 61 && mode != 8) {
@@ -2857,7 +2857,7 @@ s32 daPW_Execute(pw_class* actor) {
         if (static_cast<s16>(actor->mMode) < 2)
             advanceAnimation = false;
     }
-    if (advanceAnimation && !static_cast<s16>(actor->m380)) {
+    if (advanceAnimation && !static_cast<s16>(actor->mAnmHoldTimer)) {
         if (static_cast<f32>(actor->mAcch.m_ground_h) != -1000000000.f) {
             s32 material = 0;
             if (static_cast<u32>(actor->mAcch.m_flags) & 0x20) {
@@ -2872,16 +2872,16 @@ s32 daPW_Execute(pw_class* actor) {
             Pw_mDoExt_McaMorf_play(static_cast<u32>(actor->mpMorf), 0, 0, 0);
     }
     Pw_draw_SUB(a);
-    if (static_cast<s16>(actor->m346) == 1) {
+    if (static_cast<s16>(actor->mLanternState) == 1) {
         Pw_kantera_calc(a);
-        if (!static_cast<s16>(actor->m382)) {
+        if (!static_cast<s16>(actor->mLanternSettleTimer)) {
             Pw_kantera_atari_check(a);
             u32 id = static_cast<u32>(actor->mKanteraID);
             if (id != 0xFFFFFFFF && Pw_fopAcM_SearchByID(id, gabi::ea(found.get()))) {
                 u32 lantern = found->get();
                 if (lantern && static_cast<s16>(pwViewfopAc_ac_c(lantern)->mProcName) == 0xC1) {
                     Pw_cM3dGSph_SetC(pwAddress(actor, offsetof(pw_class, mSph.mSph)),
-                                     pwAddress(actor, offsetof(pw_class, m2D8)));
+                                     pwAddress(actor, offsetof(pw_class, mLanternSphPos)));
                     Pw_cM3dGSph_SetR(pwAddress(actor, offsetof(pw_class, mSph.mSph)), 40.f);
                     play = Pw_dComIfGp_get();
                     Pw_cCcS_Set(play + 0x26A4, pwAddress(actor, offsetof(pw_class, mSph)));

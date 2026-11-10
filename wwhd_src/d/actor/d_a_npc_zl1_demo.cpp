@@ -95,21 +95,21 @@ void daNpc_Zl1_c::lookBack() {
     gabi::Local<cXyz> temp3;
     gabi::Local<cXyz> temp; /* passed by value: a copy */
     s16 head_y = m_jnt.mAngles[0][1];
-    u8 temp5 = field_0x7D8;
+    u8 temp5 = mLookHeadOnly;
     temp3->x = 0.0f;
     s16 targetY = current.angle.y;
     s16 backbone_y = m_jnt.mAngles[1][1];
     temp3->z = 0.0f;
     temp3->y = 0.0f;
-    field_0x794.x = targetY;
-    s8 temp2 = field_0x84D;
+    mPartsAngle.x = targetY;
+    s8 temp2 = mLookMode;
     f32 srcZ = current.pos.z;
-    field_0x794.y = head_y;
+    mPartsAngle.y = head_y;
     f32 srcX = current.pos.x;
     f32 srcY = eyePos.y;
-    field_0x794.z = backbone_y;
+    mPartsAngle.z = backbone_y;
     cXyz* temp4 = nullptr;
-    if (field_0x849 == 0xD || field_0x849 == 0xE) {
+    if (mAnmNo == 0xD || mAnmNo == 0xE) {
         temp2 = 0;
     }
     switch ((u32)(s32)temp2) {
@@ -117,13 +117,13 @@ void daNpc_Zl1_c::lookBack() {
         gabi::Local<cXyz> eye;
         Zl1Demo_playerEyePos(eye, -20.0f);
         field_0x7D0 = true;
-        field_0x758.copy(*eye);
+        mLookPos.copy(*eye);
         temp3->copy(*eye);
         temp4 = temp3;
         break;
     }
     case 2:
-        temp3->copy(field_0x758);
+        temp3->copy(mLookPos);
         temp4 = temp3;
         break;
     case 3:
@@ -134,13 +134,13 @@ void daNpc_Zl1_c::lookBack() {
         gabi::Local<be<s32>> wasDeleted;
         fopAc_ac_c* actor = zl1_searchByID(this, mProcId2, wasDeleted);
         if (actor != nullptr && *wasDeleted == 0) {
-            field_0x758.copy(actor->current.pos);
-            f32 x = field_0x758.x;
-            f32 z = field_0x758.z;
+            mLookPos.copy(actor->current.pos);
+            f32 x = mLookPos.x;
+            f32 z = mLookPos.z;
             f32 y = actor->eyePos.y;
             temp3->z = z;
             temp3->y = y;
-            field_0x758.y = y;
+            mLookPos.y = y;
             temp3->x = x;
             field_0x7D0 = true;
             temp4 = temp3;
@@ -149,7 +149,7 @@ void daNpc_Zl1_c::lookBack() {
     }
     case 5:
         kyorokyoro();
-        temp3->copy(field_0x758);
+        temp3->copy(mLookPos);
         field_0x7D0 = true;
         temp4 = temp3;
         break;
@@ -163,11 +163,11 @@ void daNpc_Zl1_c::lookBack() {
     dNpc_JntCtrl_lookAtTarget_2(&m_jnt, &current.angle.y, temp4, temp, targetY,
                                 l_demoHIO.mPrmTbl.field_18, temp5);
     s16 hx = (s16)(m_jnt.mAngles[0][0] / 2);
-    field_0x83E = hx;
+    mHeadAngleZ = hx;
     s16 hy = (s16)(m_jnt.mAngles[0][1] / 2);
-    field_0x842 = hx;
-    field_0x840 = hy;
-    field_0x83C = hy;
+    mEyeAngleX = hx;
+    mEyeAngleY = hy;
+    mHeadAngleY = hy;
 }
 
 /* 02306A40 */
@@ -227,7 +227,7 @@ void daNpc_Zl1_c::darkProc() {
 
 /* 02306D48 */
 u32 daNpc_Zl1_c::cut_move_OKIRU_2() {
-    if (field_0x7C3) {
+    if (mbMorfAnimStopped) {
         setAnm_NUM(0x10, 1);
         mpMorf->setMorf(16.0f);
         return TRUE;
@@ -244,11 +244,11 @@ void daNpc_Zl1_c::cut_init_JMP_OFF(int i_staffIdx) {
     f32 speedY = get_prmFloat(pSpeedY, 0.0f);
     f32 grvty = get_prmFloat(pGrvty, 0.0f);
     setAnm_NUM(10, 1);
-    field_0x7C8 = false;
+    mbWaterIn = false;
     field_0x7CA = false;
     field_0x7CB = true;
     gravity = grvty;
-    field_0x7C7 = true;
+    mbGroundHit = true;
     speed.y = speedY;
     speedF = speedF1;
     current.angle.y = current.angle.y + 0x4000;
@@ -258,10 +258,10 @@ void daNpc_Zl1_c::cut_init_JMP_OFF(int i_staffIdx) {
     field_0x7D3 = false;
     m_jnt.mAngles[1][1] = 0;  /* setBackBone_y(0) */
     m_jnt.mbBackBoneLock = 0; /* offBackBoneLock() */
-    field_0x84D = 0;
+    mLookMode = 0;
     m_jnt.mAngles[0][1] = 0; /* setHead_y(0) */
     m_jnt.mAngles[0][0] = 0; /* setHead_x(0) */
-    field_0x7D8 = false;
+    mLookHeadOnly = false;
 }
 
 /* 02306ED4 */
@@ -393,29 +393,29 @@ void daNpc_Zl1_c::privateCut(int i_staffIdx) {
 
 /* 023071C4 */
 void daNpc_Zl1_c::event_proc(int i_staffIdx) {
-    if (dComIfGp_evmng_endCheck(mEventIdx[field_0x7A8])) {
-        switch ((u32)(s32)field_0x7A8) {
+    if (dComIfGp_evmng_endCheck(mEventIdx[mEventNo])) {
+        switch ((u32)(s32)mEventNo) {
         case 0:
             field_0x7D3 = false;
             dComIfGs_onEventBit(EVENT_0802);
-            field_0x738.z = current.angle.z;
-            field_0x738.x = current.angle.x;
-            field_0x72C.copy(current.pos);
-            field_0x738.y = current.angle.y;
+            mInitialAngle.z = current.angle.z;
+            mInitialAngle.x = current.angle.x;
+            mInitialPos.copy(current.pos);
+            mInitialAngle.y = current.angle.y;
             setStt(1);
             break;
         case 1:
             dComIfGs_onEventBit(EVENT_0804);
-            field_0x738.z = current.angle.z;
+            mInitialAngle.z = current.angle.z;
             current.pos.x = -37692.0f;
             current.angle.y = -0x5C72;
             current.pos.z = 8016.0f;
             current.pos.y = 2200.0f;
             field_0x764.y = 2200.0f;
-            field_0x738.y = current.angle.y;
-            field_0x738.x = current.angle.x;
-            field_0x84D = 0;
-            field_0x72C.copy(current.pos);
+            mInitialAngle.y = current.angle.y;
+            mInitialAngle.x = current.angle.x;
+            mLookMode = 0;
+            mInitialPos.copy(current.pos);
             setStt(8);
             break;
         case 2:
@@ -444,21 +444,21 @@ u8 daNpc_Zl1_c::move_jmp() {
         setAnm_NUM(8, 1);
         return false;
     }
-    if (!field_0x7C7 && mObjAcch.ChkGroundHit()) {
+    if (!mbGroundHit && mObjAcch.ChkGroundHit()) {
         morf->setPlaySpeed(1.0f);
         gravity = -4.5f;
         speedF = 0.0f;
         speed.y = 0.0f;
-        if (field_0x7C8) {
+        if (mbWaterIn) {
             return true;
         }
-    } else if (field_0x7C8 || !mObjAcch.ChkWaterIn()) {
+    } else if (mbWaterIn || !mObjAcch.ChkWaterIn()) {
         return true;
     }
-    field_0x744.x = current.angle.x;
-    field_0x744.y = current.angle.y;
-    field_0x744.z = current.angle.z;
-    field_0x77C.copy(current.pos);
+    mEffAngle.x = current.angle.x;
+    mEffAngle.y = current.angle.y;
+    mEffAngle.z = current.angle.z;
+    mEffPos.copy(current.pos);
     field_0x7C6 = true;
     return true;
 }
@@ -489,18 +489,18 @@ void daNpc_Zl1_c::kyoroPos(cXyz* o_pos, int param_1) {
 
 /* 023074E4 */
 BOOL daNpc_Zl1_c::kyorokyoro() {
-    if (cLib_calcTimer(&field_0x7B0) != 0) {
+    if (cLib_calcTimer(&mKyoroTimer) != 0) {
         gabi::Local<cXyz> pos;
-        kyoroPos(pos, field_0x7B2);
-        field_0x758.copy(*pos);
+        kyoroPos(pos, mKyoroPosNo);
+        mLookPos.copy(*pos);
         return TRUE;
     }
-    field_0x7B2 = (s16)cLib_getRndValue(1, 10);
-    if (field_0x849 == 0xB) {
-        field_0x7B0 = l_demoHIO.mPrmTbl.field_2E;
+    mKyoroPosNo = (s16)cLib_getRndValue(1, 10);
+    if (mAnmNo == 0xB) {
+        mKyoroTimer = l_demoHIO.mPrmTbl.field_2E;
         field_0x7AE = l_demoHIO.mPrmTbl.field_32;
     } else {
-        field_0x7B0 = l_demoHIO.mPrmTbl.field_2C;
+        mKyoroTimer = l_demoHIO.mPrmTbl.field_2C;
         field_0x7AE = l_demoHIO.mPrmTbl.field_30;
     }
     return FALSE;
@@ -510,21 +510,21 @@ BOOL daNpc_Zl1_c::kyorokyoro() {
 u8 daNpc_Zl1_c::demo() {
     u8 id = demoActorID;
     if (id == 0) {
-        if (field_0x7D9) {
-            field_0x7D9 = FALSE;
+        if (mInDemo) {
+            mInDemo = FALSE;
         }
-        return field_0x7D9;
+        return mInDemo;
     }
-    if (!field_0x7D9) {
+    if (!mInDemo) {
         for (int i = 0; i < 2; i++) {
-            if (field_0x6D4[i].get() != nullptr) {
-                field_0x6D4[i]->field_0x7C = 0; /* clrMoveFlag() */
+            if (mpEyeMatAnm[i].get() != nullptr) {
+                mpEyeMatAnm[i]->field_0x7C = 0; /* clrMoveFlag() */
             }
         }
         m_jnt.mAngles[0][1] = 0; /* setHead_y(0) */
         m_jnt.mAngles[0][0] = 0; /* setHead_x(0) */
         m_jnt.mAngles[1][1] = 0; /* setBackBone_y(0) */
-        field_0x7D9 = TRUE;
+        mInDemo = TRUE;
         field_0x7D3 = false;
         id = demoActorID;
         m_jnt.mAngles[1][0] = 0; /* setBackBone_x(0) */
@@ -608,7 +608,7 @@ u8 daNpc_Zl1_c::demo() {
                 }
             }
             mBtpAnmFrame = 0;
-            field_0x847 = 0x11;
+            mBtpNum = 0x11;
         }
     }
     void* btk = reinterpret_cast<TextureAnimation*>(mBtkAnm)->mpAnm.get(); /* mBtkAnm.getBtkAnm() */
@@ -623,7 +623,7 @@ u8 daNpc_Zl1_c::demo() {
             mDoExt_btkAnm_init(mBtkAnm, mpMorf->getModel()->getModelData(), demo_btk, 1, 0, 1.0f, 0,
                                -1, 1, 0);
             mBtkAnmFrame = 0;
-            field_0x848 = 10;
+            mBtkNum = 10;
         }
         if (field_0x7CE) {
             f32 x = demo_actor->mTrans.x; /* *demo_actor->getTrans() */
@@ -655,25 +655,25 @@ u8 daNpc_Zl1_c::demo() {
     dDemo_setDemoData(this, ENABLE_TRANS_e | ENABLE_ROTATE_e | ENABLE_ANM_e | ENABLE_ANM_FRAME_e,
                       mpMorf, mArcName, 0, nullptr, snd, (s8)reverb);
     /* HD: type 6 hides Tetra in parts of the demos "Demo05" and "Demo23" */
-    if (field_0x84F == 6) {
+    if (mType == 6) {
         if (SafeString_equal(gabi::guest_addr("Demo05"), gabi::ea(&sStartStage))) {
             u32 f = sDemoFrame;
-            field_0x7D4 = (u32)(f - 0x492) < 0x182;
+            mNoDraw = (u32)(f - 0x492) < 0x182;
         } else if (SafeString_equal(gabi::guest_addr("Demo23"), gabi::ea(&sStartStage))) {
             u32 f = sDemoFrame;
-            field_0x7D4 = (u32)(f - 0xD66) < 0xB;
+            mNoDraw = (u32)(f - 0xD66) < 0xB;
         }
     }
-    return field_0x7D9;
+    return mInDemo;
 }
 /* 02307D18 */
 BOOL daNpc_Zl1_c::_execute() {
-    if (!field_0x7D5) {
-        field_0x72C.copy(current.pos);
-        field_0x738.x = current.angle.x;
-        field_0x738.y = current.angle.y;
-        field_0x738.z = current.angle.z;
-        field_0x7D5 = true;
+    if (!mbRanExecute) {
+        mInitialPos.copy(current.pos);
+        mInitialAngle.x = current.angle.x;
+        mInitialAngle.y = current.angle.y;
+        mInitialAngle.z = current.angle.z;
+        mbRanExecute = true;
     }
     daNpc_Zl1_HIO_c::hio_prm_c& prm = l_demoHIO.mPrmTbl;
     s16 temp = field_0x7BC < 0 ? (s16)prm.mMaxTurnStep : (s16)prm.field_5C;
@@ -697,8 +697,8 @@ BOOL daNpc_Zl1_c::_execute() {
         lookBack();
         fopAcM_posMoveF(this, &mStts.m_cc_move); /* mStts.GetCCMoveP() */
         u32 flags = mObjAcch.m_flags;
-        field_0x7C7 = (flags >> 5) & 1;  /* ChkGroundHit() */
-        field_0x7C8 = (flags >> 12) & 1; /* ChkWaterIn() */
+        mbGroundHit = (flags >> 5) & 1;  /* ChkGroundHit() */
+        mbWaterIn = (flags >> 12) & 1; /* ChkWaterIn() */
         mObjAcch.CrrPos(dComIfG_Bgsp());
         play_animation();
     } else {
@@ -706,8 +706,8 @@ BOOL daNpc_Zl1_c::_execute() {
         mObjAcch.CrrPos(dComIfG_Bgsp());
         u32 flags = mObjAcch.m_flags;
         field_0x7D2 = false;
-        field_0x7C7 = (flags >> 5) & 1;
-        field_0x7C8 = (flags >> 12) & 1;
+        mbGroundHit = (flags >> 5) & 1;
+        mbWaterIn = (flags >> 12) & 1;
     }
     eventOrder();
     field_0x73E.x = current.angle.x;
@@ -722,7 +722,7 @@ BOOL daNpc_Zl1_c::_execute() {
     tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), daNpc_gndPoly(this));
     darkProc();
     setMtx(false);
-    if (!field_0x7D9 && !field_0x7CA && !field_0x7CB) {
+    if (!mInDemo && !field_0x7CA && !field_0x7CB) {
         setCollision(50.0f, 140.0f);
     }
     return TRUE;

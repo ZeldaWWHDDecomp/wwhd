@@ -750,3 +750,23 @@ src wwhd_src/agl/ShadowPlanes.cpp
 src wwhd_src/agl/DefineReplacement.cpp
 
 src wwhd_src/agl/IncludeExpansion.cpp
+
+# zero-page rule (2026-11-10, clean bar; n1000: clean 220/1000, 47 inputs FAIL with an indirect
+# call to page 0 by the original only): extractParameters 027C4C5C dispatches through the projection's vtable (+0x90);
+# generated projections gave generated vtables and slot targets. Here the projection is a fixture with one of the image's
+# three projection tables (as lib2_agl_17_projection_families). The tables' type predicates (slot mMatchesType:
+# 0274EBD4/0274EC54/0274ECD4, image leaves reached only through these tables, no bl callers; no other fixture of this
+# spec uses the tables) run for real, so the re-check after the first match agrees with it as in the shipped game.
+real 0274EBD4 0274EC54 0274ECD4
+arg! 027C4C5C r3 0,0x58B00000
+arg! 027C4C5C r4 0,0x58C00000
+arg! 027C4C5C r5 0,0x58C00010
+arg! 027C4C5C r6 0,0x58C00020
+arg! 027C4C5C r7 0,0x58C00030
+arg! 027C4C5C r8 0,0x58C00040
+fill 027C4C5C 58B00000 184 0
+field 027C4C5C 58B00090 u32 0x10145260,0x101452A0,0x101452E0
+field 027C4C5C 58B00094 f32 0.1,1,2
+field 027C4C5C 58B00098 f32 10,100,1000
+field 027C4C5C 58B0009C f32 0,0.25,0.5,1,2
+field 027C4C5C 58B000AC f32 0.5,1,2

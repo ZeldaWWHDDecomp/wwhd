@@ -29,4 +29,4 @@ field 0213D594 1047B61C f32 -3 3     # REG0_F(3)
 field 0213D594 1047B630 f32 -8000 0  # REG0_F(8)
 field 0213D594 1047B694 i16 -10 10
 field 0213D594 1047B68C i16 -3 3     # REG0_S(2): loop count
-field 0213D594 560008BC u32 0          # fganon m68B word: start from 0 so the store is visible
+field 0213D594 560008BC u32 0          # fganon mLaughRequest word: start from 0 so the store is visible

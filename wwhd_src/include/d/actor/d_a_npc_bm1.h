@@ -6,8 +6,8 @@
  * - mDoExt_btpAnm grew from 0x14 to 0x74 (constructor 025E7820 at 0x808): mBlinkFrame .. the
  *   action function +0x174;
  * - the pointer-to-member mCurrActionFunc is 8 bytes (GHS) instead of 12: mLeftArmMtx .. the
- *   emitters +0x170 (mEventCut 0x90C, constructor 0259F740; m87F 0x9EF);
- * - an HD-only byte at 0xA08 (after mbInDemo 0xA07; 4-byte slot): mWingLPos .. m905 +0x174
+ *   emitters +0x170 (mEventCut 0x90C, constructor 0259F740; mbResLoadIsComplete 0x9EF);
+ * - an HD-only byte at 0xA08 (after mbInDemo 0xA07; 4-byte slot): mWingLPos .. mAnmAtrSetCnt +0x174
  *   (mWingLPos 0xA0C, emitters 0xA48.., mType 0xA75, mSpecificType 0xA76).
  * Size 0xA7C (to be confirmed by the profile). The HD vtable at 0xB4 is 0x10017A18 (_create).
  * Layout entries marked [g] are derived, not yet read by a verified function. */
@@ -174,7 +174,7 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     void eInit_MOV_PTH_POINT_(be<s32>*, be<s32>*, be<s32>*, be<s32>*);
     void event_actionInit(int);
     u32 eMove_ATTENTION_(); /* bool; returns m_jnt.mbTrn ^ 1 as is */
-    u8 eMove_KMA_FLY_();    /* bool; returns m88A as is */
+    u8 eMove_KMA_FLY_();    /* bool; returns mFlyArrived as is */
     bool eMove_FLY_();
     bool eMove_WLK_();
     u32 event_action(); /* bool; returns the eMove_* result register as is */
@@ -267,35 +267,35 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     /* 0x90C */ dNpc_EventCut_c mEventCut; /* hides fopNpc_npc_c::mEventCut (as on GameCube) */
     /* 0x978 */ be<u32> mPartnerProcID;
     /* 0x97C */ cXyz mInitialPos;
-    /* 0x988 */ csXyz m818;
+    /* 0x988 */ csXyz mInitialAngle;  /* was m818: _execute 02200D58 copies current.angle on the first run, with mInitialPos (tww if (!mbRanExecute) { mInitialPos = current.pos; ..; }); wait_3 02203508 / wait_4 02203124 turn current.angle.y back to its y and h_wait 02203348 / wait_7 02203414 face it (tww); wait_action2 02203A9C turns it with the Kogoli start; after tww daNpc_Bm1_c mInitialPos (the position half) */
     /* 0x98E */ u8 _98E[2];
     /* 0x990 */ cXyz mEyePos;
-    /* 0x99C */ cXyz m82C;
+    /* 0x99C */ cXyz mLookPos;  /* was m82C: lookBack 021FFFFC looks at it (tww dstPos = it); createInit 021FDB44 current.pos, chg_anmAtr 0220134C the partner's eyePos, eInit_ATTENTION_ 021FF344 the cut's relative position (tww); same name as daNpc_Zl1_c / daNpc_Hi1_c::mLookPos (npcs.md) */
     /* 0x9A8 */ cXyz mTargetPos;
     /* 0x9B4 */ be<f32> mFrame;
     /* 0x9B8 */ be<f32> mTargetFlySpeed;
     /* 0x9BC */ be<f32> mFlySpeedY;
     /* 0x9C0 */ be<f32> mTargetFlyStep;
     /* 0x9C4 */ be<f32> mFlyAccelY;
-    /* 0x9C8 */ be<f32> m858;
-    /* 0x9CC */ be<s16> m85C;
-    /* 0x9CE */ be<s16> m85E;
-    /* 0x9D0 */ be<s16> m860;
+    /* 0x9C8 */ be<f32> mPassDist;  /* was m858: bm_movPass 0220057C: the path point counts as reached once the XZ distance is <= it (tww if (dist_xz <= it)); eInit_FLY_ 021FEECC / eInit_WLK_ 021FF5D0 / setStt 02202838 set the HIO fly / walk value (tww hio_prm.m30 / m44) */
+    /* 0x9CC */ be<s16> mJointHeadY;  /* was m85C: lookBack 021FFFFC stores the head Y angle (tww it = m_jnt.getHead_y()); chk_partsNotMove 022016BC compares it (tww); after tww daNpc_Ls1_c mJointHeadY (same code) */
+    /* 0x9CE */ be<s16> mJointBackboneY;  /* was m85E: lookBack 021FFFFC stores the backbone Y angle (tww it = m_jnt.getBackbone_y()); chk_partsNotMove 022016BC compares it (tww); after tww daNpc_Ls1_c mJointBackboneY (same code) */
+    /* 0x9D0 */ be<s16> mActorAngleY;  /* was m860: lookBack 021FFFFC stores current.angle.y (tww); chk_partsNotMove 022016BC compares it (tww); after tww daNpc_Ls1_c mActorAngleY (same code) */
     /* 0x9D2 */ be<s16> mEventIdTable[4];
     /* 0x9DA */ be<s16> mEventIdx;
-    /* 0x9DC */ be<s16> m86C;
-    /* 0x9DE */ be<s16> m86E;
-    /* 0x9E0 */ be<s16> m870;
+    /* 0x9DC */ be<s16> mEvTimer;  /* was m86C: eInit_setEvTimer 021FF328 sets the cut's timer (tww it = *i_param_1, else 0); eMove_ATTENTION_ 021FFCA8 / eMove_WLK_ 021FFCFC count it down (tww cLib_calcTimer(&it)); named after eInit_setEvTimer */
+    /* 0x9DE */ be<s16> mLookTimer;  /* was m86E: wait_1 02202C2C / wait_4 02203124 / h_wait 02203348 / wait_7 02203414 / wait_3 02203508 reset it to 0x28 while the player is in attention and look at the player (mLookBackState 1) while it counts down (tww); talk_1 02202CF0 0x28; setStt 02202838 0 */
+    /* 0x9E0 */ be<s16> mSttTimer;  /* was m870: setStt 02202838 sets it per state (0x50, 0x5A, 180 + rnd(180), 0x3C) (tww); flyawy 02203200 deletes the actor, wait_3 02203508 / CHKwai 02203830 change the state when it runs out (tww cLib_calcTimer(&it) == 0) */
     /* 0x9E2 */ be<s16> m872;
     /* 0x9E4 */ be<s16> mHeadLookAtMaxVel;
-    /* 0x9E6 */ be<s16> m876;
+    /* 0x9E6 */ be<s16> mDesiredYRot;  /* was m876: lookBack 021FFFFC: the look-at's default Y angle (tww desiredYrot = it); h_wait 02203348 / wait_7 02203414 set mInitialAngle.y (tww); after daNpcMt_c::mDesiredYRot (npcs.md) */
     /* 0x9E8 */ be<u16> mOldMsgStat;
     /* 0x9EA */ be<s8> mbMorfAnimStopped;
-    /* 0x9EB */ be<s8> m87B;
+    /* 0x9EB */ be<s8> mAnmLoopCount;  /* was m87B: setAnm_anm 021FEAB4 0 (tww); control_anmAtr 0220141C counts the morf stops in attribute 8 and switches to attribute 6 at 2 (tww if (++it >= 2)); after daNpc_Cb1_c::mAnmLoopCount */
     /* 0x9EC */ be<s8> m87C;
-    /* 0x9ED */ be<u8> m87D;
-    /* 0x9EE */ be<u8> m87E;
-    /* 0x9EF */ be<u8> m87F;
+    /* 0x9ED */ be<u8> mPreItemNo;  /* was m87D: chk_talk 0220163C: dComIfGp_event_getPreItemNo(), else 0xFF (tww); getMsg_BMB_2 022020EC picks the message by it (tww if (it == 0x47)); talk_1 02202CF0 0xFF */
+    /* 0x9EE */ be<u8> mPointArg;  /* was m87E: walk_1 02203734: mPathRun.pointArg of the current point (tww it = mPathRun.pointArg(mPathRun.getIdx())) and tests it (tww) */
+    /* 0x9EF */ be<u8> mbResLoadIsComplete;  /* was m87F: _create 021FDF08: the phase result == cPhs_COMPLEATE_e (tww it = state == cPhs_COMPLEATE_e); _delete tests it before deleting the resources (tww); after tww daNpc_Ls1_c mbResLoadIsComplete */
     /* 0x9F0 */ be<u8> m880;
     /* 0x9F1 */ be<u8> m881;
     /* 0x9F2 */ be<u8> m882;
@@ -303,19 +303,19 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     /* 0x9F4 */ be<u8> mbInitPostman0;
     /* 0x9F5 */ be<u8> mbHasArms;
     /* 0x9F6 */ be<u8> mbSetShapeAngle;
-    /* 0x9F7 */ be<u8> m887;
-    /* 0x9F8 */ be<u8> m888;
-    /* 0x9F9 */ be<u8> m889;
-    /* 0x9FA */ be<u8> m88A;
-    /* 0x9FB */ be<u8> m88B;
+    /* 0x9F7 */ be<u8> mSkipPosMove;  /* was m887: _execute 02200D58 clears it and runs fopAcM_posMoveF only while it stays 0 (tww if (!it) fopAcM_posMoveF(..)); bm_flyMove 02200714 / bm_nMove 02200AF8 set 1 once their move is done (tww) */
+    /* 0x9F8 */ be<u8> mNoDraw;  /* was m888: init_PST_4 021FCA68 1 (tww); eInit_INI_EVN_1_ 021FE768 0 (tww); _draw 02200F90 draws nothing while it is set (tww if (mbInitPostman0 || it) return TRUE); after daNpc_Zl1_c::mNoDraw (npcs.md) */
+    /* 0x9F9 */ be<u8> mFlyDescend;  /* was m889: bm_movPass 0220057C: 1 when the next point is not above the current one (tww it = cmpCoords.y <= idxCoords.y); bm_setFlyAnm 021FEEB0 / bm_clcFlySpd 02200420 pick the descending animation / speed by it; eInit_FLY_ 021FEECC / setStt 02202838 1 (tww) */
+    /* 0x9FA */ be<u8> mFlyArrived;  /* was m88A: bm_flyMove 02200714: set when the flight sequence ends (the landing states) and then makes bm_flyMove return done at once (tww if (it != 0) { m887 = 1; return true; }); eInit_FLY_ 021FEECC / eMove_FLY_ 021FFC84 / eMove_KMA_FLY_ 021FFCA0 / flyawy 02203200 clear or test it (tww) */
+    /* 0x9FB */ be<u8> mWalkArrived;  /* was m88B: bm_nMove 02200AF8: set when bm_movPass reports the last point, and then makes bm_nMove skip the move (tww if (it) { m887 = 1; return; } .. it = 1); walk_1 02203734 tests and clears it (tww) */
     /* 0x9FC */ be<u8> mbRanExecute;
     /* 0x9FD */ be<u8> m88D;
     /* 0x9FE */ be<u8> m88E;
     /* 0x9FF */ be<u8> m88F;
     /* 0xA00 */ be<s32> mbSetEyePos;
     /* 0xA04 */ be<u8> mbAttention;
-    /* 0xA05 */ be<u8> m895;
-    /* 0xA06 */ be<u8> m896;
+    /* 0xA05 */ be<u8> mTalking;  /* was m895: checkOrder 021FE408 sets 1 on the talk command (tww); the waits (wait_1 02202C2C ..) start the talk while it is set; talk_1 02202CF0 clears it (tww); after daNpcMt_c / daNpc_Hi1_c::mTalking (npcs.md) */
+    /* 0xA06 */ be<u8> mHeadOnlyFollow;  /* was m896: lookBack 021FFFFC passes it as the head-only flag of the joint look-at (tww bool headOnlyFollow = it); eInit_setLocFlag 021FF2B8 / the waits set 0 / 1 (tww); after daNpcMt_c::mHeadOnlyFollow (npcs.md) */
     /* 0xA07 */ be<u8> mbInDemo;
     /* 0xA08 */ union {
         be<u8> mbKeepOldPosition;
@@ -338,23 +338,23 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     /* 0xA5C */ gptr<JPABaseEmitter> mpFeatherEmitterR;
     /* 0xA60 */ gptr<JPABaseEmitter> mpFeather1EmitterL;
     /* 0xA64 */ gptr<JPABaseEmitter> mpFeather1EmitterR;
-    /* 0xA68 */ be<s8> m8F4;
+    /* 0xA68 */ be<s8> mFlyState;  /* was m8F4: bm_flyMove 02200714 / bm_clcFlySpd 02200420 switch on it (0 not flying, 1..5 the take-off, flight and landing steps) (tww); eInit_FLY_ 021FEECC / eMove_FLY_ 021FFC84 / setStt 02202838 set and test it (tww return it == 0) */
     /* 0xA69 */ be<s8> mActionIndex;
     /* 0xA6A */ be<s8> mActNo;
-    /* 0xA6B */ be<u8> m8F7;
-    /* 0xA6C */ be<u8> m8F8;
+    /* 0xA6B */ be<u8> mAnmAtrNo;  /* was m8F7: chg_anmAtr 0220134C stores the attribute and switches on it (tww it = i_param_1); control_anmAtr 0220141C / setAnm_ATR 022012DC / anmAtr 02201460 / endEvent 021FE6CC / setStt 02202838 use it; same name as daNpc_Zl1_c / daNpc_Hi1_c::mAnmAtrNo (npcs.md) */
+    /* 0xA6C */ be<u8> mMesgAnimeTag;  /* was m8F8: anmAtr 02201460: the message's animation tag when it changes (tww if (uVar1 != 0xFF && it != uVar1) { it = uVar1; .. }); after tww daNpc_Ls1_c mMesgAnimeTag (same code) */
     /* 0xA6D */ be<s8> mBtpNum;
     /* 0xA6E */ be<s8> mAnmNum;
     /* 0xA6F */ u8 m8FB[2];
-    /* 0xA71 */ be<s8> m8FD;
+    /* 0xA71 */ be<s8> mOrderEvent;  /* was m8FD: eventOrder 02200CD0 orders by it, checkOrder 021FE408 clears it once the talk / event starts, the waits set 2 (tww); event_proc 0220026C 1 (tww); after daNpc_Cb1_c / daNpc_Hi1_c::mOrderEvent */
     /* 0xA72 */ be<s8> mStatus;
-    /* 0xA73 */ be<s8> m8FF;
+    /* 0xA73 */ be<s8> mPrevStatus;  /* was m8FF: setStt 02202838 keeps the previous mStatus here (tww it = previous_status); talk_1 02202CF0 / talk_2 02202FF4 / manzai 02203084 return to it (tww setStt(it)); after tww daNpc_Bm1_c mStatus */
     /* 0xA74 */ be<s8> mLookBackState;
     /* 0xA75 */ be<s8> mType;
     /* 0xA76 */ be<s8> mSpecificType;
     /* 0xA77 */ be<s8> mSpawnCondition;
-    /* 0xA78 */ be<s8> m904;
-    /* 0xA79 */ be<s8> m905;
+    /* 0xA78 */ be<s8> mActionStatus;  /* was m904: set_action 021FC758 sets 9 for the leaving action and 0 for the new one (tww); the wait_action / demo_action functions switch on it and step it; partner_srch 021FE2F8 (tww); after tww daNpc_Bs1_c mActionStatus */
+    /* 0xA79 */ be<s8> mAnmAtrSetCnt;  /* was m905: anmAtr 02201460: while the message types, applies the message's animation attribute only when it is 0, then adds 1; MSG_DISPLAYED resets it (tww); same code as daNpc_Hi1_c::mAnmAtrSetCnt */
     /* 0xA7A */ u8 _A7A[2];
 };
 WWHD_OFFSET(daNpc_Bm1_c, mArcName, 0x7E4);
@@ -362,7 +362,7 @@ WWHD_OFFSET(daNpc_Bm1_c, mHeadBtpAnm, 0x808);
 WWHD_OFFSET(daNpc_Bm1_c, mBlinkFrame, 0x87C);
 WWHD_OFFSET(daNpc_Bm1_c, mCurrActionFunc, 0x89C);
 WWHD_OFFSET(daNpc_Bm1_c, mEventCut, 0x90C);
-WWHD_OFFSET(daNpc_Bm1_c, m87F, 0x9EF);
+WWHD_OFFSET(daNpc_Bm1_c, mbResLoadIsComplete, 0x9EF);
 WWHD_OFFSET(daNpc_Bm1_c, mWingLPos, 0xA0C);
 WWHD_OFFSET(daNpc_Bm1_c, mpFeather1EmitterR, 0xA64);
 WWHD_OFFSET(daNpc_Bm1_c, mType, 0xA75);

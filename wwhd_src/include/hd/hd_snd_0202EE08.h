@@ -21,10 +21,10 @@ struct hdSoundPlayer {
     be<u32> mSecondaryVtable; u8 _opaque124[0x70];
     hdPlayerFader mMasterFaders[2]; hdPlayerFader mBgmFaders[2];
     be<u8> mMenuFlag;
-    be<u8> field_0x1f5; // HD: independent mode flags; purpose unconfirmed.
-    be<u8> field_0x1f6;
-    be<u8> field_0x1f7;
-    be<u8> field_0x1f8;
+    be<u8> mPictographMode;  /* was field_0x1f5: setPlayerFlagF5 02030CD0 is called by hdIngameUi_c::toPictographBoxEnter 027106E0, clearPlayerFlagF5 02030CF8 by hdIngameUi_c::toPlayEnter 0270D208; filterBridgeSound 0202CCA0 treats it as a demo state (getPlayerFlagF5 02030D20) */
+    be<u8> mSaveDataMode;  /* was field_0x1f6: setPlayerFlagF6 02030D44 is called by hdSaveDataScene_c::initialize 02709D24, clearPlayerFlagF6 02030D6C by hdIngameUi_c::initializeScreens 02713368; the volume update (hd_snd_0202EE08) gives the menu player full TV/DRC volume while set */
+    be<u8> mGameOverMode;  /* was field_0x1f7: setPlayerFlagF7 02030D94 is called by ingameGameOverEnter 0271201C, clearPlayerFlagF7 02030DC0 by hdIngameUi_c::toPlayEnter 0270D208; the volume update keeps the DRC game channel and the menu player at full volume while set */
+    be<u8> mWarpMode;  /* was field_0x1f8: setPlayerFlagF8 02030DE8 is called by hdIngameUi_c::warpEnter 0270F9F8, clearPlayerFlagF8 02030E10 by hdIngameUi_c::warpExit 0270FB48; the volume update treats it like mGameOverMode */
     u8 _padding1F9[3]; be<u32> mMode; be<u32> mPaused;
     hdPlayerSoundHandle mStreamHandle; hdPlayerSoundHandle mStaffRollHandle;
     be<u32>* pauseForConstruction() {

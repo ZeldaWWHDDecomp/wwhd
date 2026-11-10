@@ -16,8 +16,9 @@ struct mDoExt_MtxCalcOldFrame {
   void initOldFrameMorf(f32 duration, u32 start, u32 end);
   be<u8> mOldFrameFlg, field_0x1;
   u8 padding2[2];
-  be<f32> mOldFrameMorfCounter, field_0x8, mOldFrameRate, field_0x10,
-      field_0x14;
+  /* was field_0x8: initOldFrameMorf 025E3F3C: 1 / duration; decOldFrameMorfCounter 025E3EC8: remain = counter * it; was field_0x10: decOldFrameMorfCounter 025E3EC8: counter * mOldFrameMorfStep (1 at initOldFrameMorf 025E3F3C) */
+  be<f32> mOldFrameMorfCounter, mOldFrameMorfStep, mOldFrameRate, mOldFrameMorfRemain,
+      mOldFrameMorfRemainOld;  /* was field_0x14: decOldFrameMorfCounter 025E3EC8: the previous mOldFrameMorfRemain; mOldFrameRate = 1 - (old - new) / old */
   be<u16> mOldFrameStartJoint, mOldFrameEndJoint;
   be<u32> mOldFrameTransInfo, mOldFrameQuaternion;
 };

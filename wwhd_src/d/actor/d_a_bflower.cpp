@@ -89,27 +89,27 @@ BOOL daBFlower_c::CreateHeap() {
     auto save = l_bflowerSave.get();
     if (save->mSwitchInfo.isSwitch(sw, room))
         mState = STATE_LIVE_E;
-    auto model = checkedResource(dRes_INDEX_VBAKH_BDL_VBAKH_e, 434, "modelData != NULL");
+    auto model = checkedResource(dRes_INDEX_VBAKH_BDL_VBAKH_e, 434, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(static_cast<J3DModelData *>(model), 0x80000, 0x11000022);
     if (!mpModel)
         return FALSE;
-    auto anim = checkedResource(dRes_INDEX_VBAKH_BCK_VBAHX_e, 451, "pbck != NULL");
+    auto anim = checkedResource(dRes_INDEX_VBAKH_BCK_VBAHX_e, 451, "pbck != (0)");
     if (!initBck(&mBck1, model, anim, 1, 0))
         return FALSE;
     mBck1.mFrameCtrl.mFrame = (f32)mBck1.mFrameCtrl.mEnd;
-    anim = checkedResource(dRes_INDEX_VBAKH_BRK_VBAHX_e, 473, "pbrk != NULL");
+    anim = checkedResource(dRes_INDEX_VBAKH_BRK_VBAHX_e, 473, "pbrk != (0)");
     if (!initBrk(&mBrk1, model, anim))
         return FALSE;
     mBrk1.mFrameCtrl.mRate = 0.0f;
-    model = checkedResource(dRes_INDEX_VBAKH_BDL_VBAKM_e, 487, "modelData != NULL");
+    model = checkedResource(dRes_INDEX_VBAKH_BDL_VBAKM_e, 487, "modelData != (0)");
     mpModel2 = mDoExt_J3DModel__create(static_cast<J3DModelData *>(model), 0x80000, 0x11000022);
     if (!mpModel2)
         return FALSE;
-    anim = checkedResource(dRes_INDEX_VBAKH_BCK_VBAMX_e, 503, "pbck != NULL");
+    anim = checkedResource(dRes_INDEX_VBAKH_BCK_VBAMX_e, 503, "pbck != (0)");
     if (!initBck(&mBck2, model, anim, 0, 0))
         return FALSE;
     mBck2.mFrameCtrl.mRate = 0.0f;
-    anim = checkedResource(dRes_INDEX_VBAKH_BRK_VBAMX_e, 520, "pbrk != NULL");
+    anim = checkedResource(dRes_INDEX_VBAKH_BRK_VBAMX_e, 520, "pbrk != (0)");
     if (!initBrk(&mBrk2, model, anim))
         return FALSE;
     mBrk2.mFrameCtrl.mRate = 0.0f;
@@ -509,9 +509,9 @@ data l_headerDtor2 10190DD8
 data l_headerDtor3 10190DE4
 str 10008848 "VbakH"
 str 100087D4 "d_a_bflower.cpp"
-str 100087FC "modelData != NULL"
-str 100087E4 "pbck != NULL"
-str 100087F0 "pbrk != NULL"
+str 100087FC "modelData != (0)"
+str 100087E4 "pbck != (0)"
+str 100087F0 "pbrk != (0)"
 ext 026066C4 void* BFlower_getResource(void*,void*,s32)
 ext 0273AA24 void BFlower_panic(const char*,s32,const char*)
 ext 0201ADE0 void BFlower_subtractPosition(cXyz*,cXyz*,cXyz*)

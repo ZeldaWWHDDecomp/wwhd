@@ -27,33 +27,33 @@ void fly_attack(bdk_class *i_this) {
     gabi::Local<cXyz> dest;
     gabi::Local<cXyz> sum;
     u8 bVar1 = 0;
-    i_this->mF10 = 1;
+    i_this->mLookAtPlayer = 1;
     switch (i_this->mState) {
     case 0:
         i_this->mState = 1;
-        i_this->m2EC[0] = 0x1E;
-        i_this->m2E0 = 0.0f;
-        i_this->m2EC[1] = 200;
-        i_this->mF18 = cM_rndFX(100.0f);
+        i_this->mTimers[0] = 0x1E;
+        i_this->mTurnSpeedRate = 0.0f;
+        i_this->mTimers[1] = 200;
+        i_this->mTargetOffset = cM_rndFX(100.0f);
         /* fall through */
     case 1: {
         bVar1 = 1;
         f32 px = player->current.pos.x;
-        i_this->m2CC.x = px;
-        BdkAct_copyFloat(i_this->m2CC.y, player->current.pos.y);
-        i_this->m2CC.x = fadds_ppc(px, i_this->mF18);
-        i_this->m2CC.z = fadds_ppc(player->current.pos.z, i_this->mF18);
-        if (i_this->m2EC[0] == 0) {
-            i_this->m2DC = 400.0f;
+        i_this->mTargetPos.x = px;
+        BdkAct_copyFloat(i_this->mTargetPos.y, player->current.pos.y);
+        i_this->mTargetPos.x = fadds_ppc(px, i_this->mTargetOffset);
+        i_this->mTargetPos.z = fadds_ppc(player->current.pos.z, i_this->mTargetOffset);
+        if (i_this->mTimers[0] == 0) {
+            i_this->mTurnSpeed = 400.0f;
         } else {
-            i_this->m2CC.x = 3273.0f;
-            i_this->m2CC.z = -3108.0f;
-            i_this->m2DC = 1000.0f;
+            i_this->mTargetPos.x = 3273.0f;
+            i_this->mTargetPos.z = -3108.0f;
+            i_this->mTurnSpeed = 1000.0f;
         }
-        BdkAct_copyFloat(i_this->m2E4, BdkAct_statics().mHIO.m024);
-        i_this->m2E8 = 1.0f;
-        cXyz_mi(&i_this->m2CC, offset, &actor->current.pos);
-        if (std_sqrtf(PSVECSquareMag(offset)) < fadds_ppc(REG8_F(11), 1000.0f) || i_this->m2EC[1] == 0) {
+        BdkAct_copyFloat(i_this->mTargetSpeed, BdkAct_statics().mHIO.m024);
+        i_this->mSpeedStep = 1.0f;
+        cXyz_mi(&i_this->mTargetPos, offset, &actor->current.pos);
+        if (std_sqrtf(PSVECSquareMag(offset)) < fadds_ppc(REG8_F(11), 1000.0f) || i_this->mTimers[1] == 0) {
             i_this->mState = 2;
             cMtx_YrotS(calc_mtx(), actor->current.angle.y);
             offset2->x = 0.0f;
@@ -61,11 +61,11 @@ void fly_attack(bdk_class *i_this) {
             offset2->z = 4000.0f;
             MtxPosition(offset2, dest);
             cXyz_pl(&actor->current.pos, sum, dest);
-            bdk_vcopy(&i_this->m2CC, sum);
-            i_this->m2E0 = 0.0f;
-            i_this->m2EC[0] = 0x28;
+            bdk_vcopy(&i_this->mTargetPos, sum);
+            i_this->mTurnSpeedRate = 0.0f;
+            i_this->mTimers[0] = 0x28;
             eff_hane_set(i_this, &i_this->m1168, 10, 0);
-        } else if (i_this->m2EC[0] == 1) {
+        } else if (i_this->mTimers[0] == 1) {
             anm_init(i_this, dRes_INDEX_BDK_BCK_KAKKU1_e, 30.0f, 2, 1.0f, -1, 0);
         }
         break;
@@ -79,9 +79,9 @@ void fly_attack(bdk_class *i_this) {
         MtxPosition(offset2, dest);
         PSVECAdd(dest, &actor->current.pos, dest);
         wind_set(i_this, dest);
-        if (i_this->m2EC[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             i_this->mAction = 0; /* ACTION_FLY */
-            i_this->m2CA = -1;
+            i_this->mFlyAnm = -1;
             i_this->mState = 0;
         }
         break;
@@ -89,17 +89,17 @@ void fly_attack(bdk_class *i_this) {
         anm_init(i_this, dRes_INDEX_BDK_BCK_DAMAGE4_e, 2.0f, 0, 1.0f, -1, 1);
         i_this->mState = 0xB;
         actor->speed.y = 0.0f;
-        i_this->m2EC[0] = (s16)(REG0_S(5) + 0x28);
-        i_this->m2EC[1] = (s16)(REG0_S(6) + 0x50);
+        i_this->mTimers[0] = (s16)(REG0_S(5) + 0x28);
+        i_this->mTimers[1] = (s16)(REG0_S(6) + 0x50);
         bdk_StartShock(5);
         bdk_seStart(actor, JA_SE_CM_DK_CRASH_WALL, 0);
         bdk_monsSeStart_e(actor, JA_SE_CV_DK_KABE_DAMAGE, 0);
         JPABaseEmitter *emitter;
-        if (i_this->m6078[3] == 0) {
-            i_this->m6078[3] = 100;
+        if (i_this->mSmokeWaitTimer[3] == 0) {
+            i_this->mSmokeWaitTimer[3] = 100;
             s32 room = fopAcM_GetRoomNo(actor);
             emitter = bdk_particle_setToon(ID_IT_ST_DK_BUTSUKARI_SMOKE00, &actor->current.pos,
-                                           &actor->shape_angle, nullptr, 0xB9, &i_this->m6080[3], (s8)room);
+                                           &actor->shape_angle, nullptr, 0xB9, &i_this->mSmokeCb[3], (s8)room);
             if (emitter != nullptr) {
                 bdk_setGlobalRTMatrix(emitter, bdk_morfAnmMtx(i_this, DK_JNT_J_DK_MABUTA_e));
             }
@@ -118,13 +118,13 @@ void fly_attack(bdk_class *i_this) {
         if (i_this->mpMorf->isStop()) {
             anm_init(i_this, dRes_INDEX_BDK_BCK_PIKUPIKU1_e, 5.0f, 2, 1.0f, -1, 0);
         }
-        if (i_this->m2EC[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             actor->speed.y = fsubs_ppc(actor->speed.y, fadds_ppc(REG0_F(7), 0.5f));
             actor->current.angle.z = (s16)(actor->current.angle.z + (REG0_S(7) + 0x50));
-            if (i_this->m2EC[1] == 0) {
+            if (i_this->mTimers[1] == 0) {
                 i_this->mState = 0xC;
-                i_this->m2D8 = (s16)(actor->current.angle.y + 0x8000);
-                i_this->m2EC[0] = (s16)(REG0_S(8) + 0x28);
+                i_this->mTargetAngleY = (s16)(actor->current.angle.y + 0x8000);
+                i_this->mTimers[0] = (s16)(REG0_S(8) + 0x28);
                 anm_init(i_this, dRes_INDEX_BDK_BCK_FLY2_e, 5.0f, 2, 2.0f, dRes_INDEX_BDK_BAS_FLY2_e, 0);
             }
         }
@@ -132,10 +132,10 @@ void fly_attack(bdk_class *i_this) {
     case 0xC:
         actor->speed.y = fadds_ppc(actor->speed.y, fadds_ppc(REG0_F(8), 2.0f));
         actor->current.pos.y = fadds_ppc(actor->current.pos.y, actor->speed.y);
-        cLib_addCalcAngleS2(&actor->current.angle.y, i_this->m2D8, 8, 0x400);
-        if (i_this->m2EC[0] == 0) {
+        cLib_addCalcAngleS2(&actor->current.angle.y, i_this->mTargetAngleY, 8, 0x400);
+        if (i_this->mTimers[0] == 0) {
             i_this->mAction = 0; /* ACTION_FLY */
-            i_this->m2CA = -1;
+            i_this->mFlyAnm = -1;
             i_this->mState = 0;
             actor->speedF = 0.0f;
         }
@@ -144,19 +144,19 @@ void fly_attack(bdk_class *i_this) {
         break;
     }
     if (i_this->mAction == ACTION_FLY_ATTACK && i_this->mState < 10) {
-        i_this->m2584 = 2;
+        i_this->mAttackPart = 2;
         pos_move(i_this);
         i_this->mAcchCir.SetWall(fadds_ppc(REG0_F(17), 500.0f), 500.0f);
         BdkAct_setGroundUpY(&i_this->mAcch, REG0_F(18));
-        if (i_this->mAcch.ChkGroundHit() && i_this->m2619 == 0) {
+        if (i_this->mAcch.ChkGroundHit() && i_this->mClawSparkOn == 0) {
             for (s32 i = 0; i <= 1; i++) {
-                bdk_vcopy(&BdkAct_statics().foot_eff_pos[i], &i_this->m1174[i]);
+                bdk_vcopy(&BdkAct_statics().foot_eff_pos[i], &i_this->mFootPos[i]);
                 i_this->mp6214[0 + i] = dComIfGp_particle_set(
                     ID_IT_SN_DK_TSUME_HIBANA_A00, &BdkAct_statics().foot_eff_pos[i], &actor->shape_angle);
                 i_this->mp6214[2 + i] = dComIfGp_particle_set(
                     ID_IT_SN_DK_TSUME_HIBANA_B00, &BdkAct_statics().foot_eff_pos[i], &actor->shape_angle);
             }
-            i_this->m2619 = i_this->m2619 + 1;
+            i_this->mClawSparkOn = i_this->mClawSparkOn + 1;
         }
         if (i_this->mAcch.ChkWallHit()) {
             i_this->mState = 10;
@@ -174,27 +174,27 @@ void wind_attack(bdk_class *i_this) {
     switch (i_this->mState) {
     case 0:
         anm_init(i_this, dRes_INDEX_BDK_BCK_TOBITATU1_e, 5.0f, 0, 1.0f, dRes_INDEX_BDK_BAS_TOBITATU1_e, 0);
-        i_this->m2618 = 0x19;
+        i_this->mTakeoffSmokeTimer = 0x19;
         i_this->mState = i_this->mState + 1;
-        i_this->m2CC.copy(actor->current.pos);
-        i_this->m2E0 = 0.0f;
+        i_this->mTargetPos.copy(actor->current.pos);
+        i_this->mTurnSpeedRate = 0.0f;
         /* fall through */
     case 1:
         if (i_this->mpMorf->getFrame() == 23.0f) {
             i_this->mState = 2;
-            i_this->m2CC.y = i_this->m2CC.y + 500.0f;
+            i_this->mTargetPos.y = i_this->mTargetPos.y + 500.0f;
         }
         break;
     case 2:
         if (i_this->mpMorf->isStop()) {
             anm_init(i_this, dRes_INDEX_BDK_BCK_FLY2_e, 5.0f, 2, 2.0f, dRes_INDEX_BDK_BAS_FLY2_e, 0);
             i_this->mState = 3;
-            i_this->m2EC[0] = 200;
+            i_this->mTimers[0] = 200;
         }
         break;
     case 3: {
         wind_set(i_this, &actor->current.pos);
-        if (!(i_this->m2C4 & 1)) {
+        if (!(i_this->mFrameCounter & 1)) {
             gabi::Local<cXyz> offset;
             f32 x = i_this->m1168.x;
             BdkAct_copyFloat(offset->x, i_this->m1168.x);
@@ -209,11 +209,11 @@ void wind_attack(bdk_class *i_this) {
             eff_hane_set(i_this, offset, 1, 1);
         }
         cLib_addCalc2(&i_this->m2608, 1.0f, 1.0f, 0.05f);
-        cLib_addCalc2(&i_this->m2E0, 1.0f, 1.0f, 0.05f);
-        if (i_this->m2EC[0] == 0 || i_this->m2F8 != 0) {
+        cLib_addCalc2(&i_this->mTurnSpeedRate, 1.0f, 1.0f, 0.05f);
+        if (i_this->mTimers[0] == 0 || i_this->m2F8 != 0) {
             i_this->mAction = 2; /* ACTION_LANDING */
             i_this->mState = 3;
-            i_this->m2CC.copy(player->current.pos);
+            i_this->mTargetPos.copy(player->current.pos);
             actor->speed.y = -20.0f;
             return;
         }
@@ -224,12 +224,12 @@ void wind_attack(bdk_class *i_this) {
     }
 
     cLib_addCalcAngleS2(&actor->current.angle.y, fopAcM_searchPlayerAngleY(actor), 4, 0x800);
-    f32 t = cM_ssin((s32)i_this->m2C4 * 1500) * i_this->m2E0;
-    cLib_addCalc2(&actor->current.pos.y, gabi::fmadds(t, 100.0f, i_this->m2CC.y), 0.1f, 60.0f);
-    t = cM_ssin((s32)i_this->m2C4 * 700) * i_this->m2E0;
-    cLib_addCalc2(&actor->current.pos.x, gabi::fmadds(t, 200.0f, i_this->m2CC.x), 0.1f, 40.0f);
-    t = cM_ssin((s32)i_this->m2C4 * 500) * i_this->m2E0;
-    cLib_addCalc2(&actor->current.pos.z, gabi::fmadds(t, 200.0f, i_this->m2CC.z), 0.1f, 40.0f);
+    f32 t = cM_ssin((s32)i_this->mFrameCounter * 1500) * i_this->mTurnSpeedRate;
+    cLib_addCalc2(&actor->current.pos.y, gabi::fmadds(t, 100.0f, i_this->mTargetPos.y), 0.1f, 60.0f);
+    t = cM_ssin((s32)i_this->mFrameCounter * 700) * i_this->mTurnSpeedRate;
+    cLib_addCalc2(&actor->current.pos.x, gabi::fmadds(t, 200.0f, i_this->mTargetPos.x), 0.1f, 40.0f);
+    t = cM_ssin((s32)i_this->mFrameCounter * 500) * i_this->mTurnSpeedRate;
+    cLib_addCalc2(&actor->current.pos.z, gabi::fmadds(t, 200.0f, i_this->mTargetPos.z), 0.1f, 40.0f);
 }
 
 /* 0206B22C */
@@ -241,58 +241,58 @@ void kamen_demo(bdk_class *i_this) {
     case 0:
         anm_init(i_this, dRes_INDEX_BDK_BCK_NUKENAI1_e, 0.0f, 0, 0.0f, -1, 0);
         i_this->mState = 1;
-        i_this->m25A0 = 1;
+        i_this->mDemoMode = 1;
         actor->actor_status |= 0x4000; /* fopAcStts_UNK4000_e */
         break;
     case 1: {
-        i_this->m25A4 = 0;
-        i_this->m25A6 = 0;
-        i_this->m25C8 = 45.0f;
+        i_this->mDemoMainCount = 0;
+        i_this->mDemoTimer = 0;
+        i_this->mDemoCamFovy = 45.0f;
         gabi::Local<cXyz> pos;
         gabi::Local<cXyz> dist;
         for (s32 i = 0; i < 4; i++) {
-            i_this->m90C[i] = 1;
+            i_this->mMaskPieceOn[i] = 1;
             pos->x = 0.0f;
             pos->y = 0.0f;
             pos->z = 0.0f;
             PSMTXCopy(bdk_getAnmMtx((J3DModel_bdk *)i_this->mpMorf->getModel(), DK_JNT_J_DK_ATAMA1_e),
                       calc_mtx());
-            MtxPosition(pos, &i_this->m910[i]);
-            i_this->m9A0[i].y = actor->shape_angle.y;
-            i_this->m9A0[i].x = (s16)(REG0_S(6) + 0x3625);
-            i_this->m9A0[i].z = 0;
+            MtxPosition(pos, &i_this->mMaskPiecePos[i]);
+            i_this->mMaskPieceAngle[i].y = actor->shape_angle.y;
+            i_this->mMaskPieceAngle[i].x = (s16)(REG0_S(6) + 0x3625);
+            i_this->mMaskPieceAngle[i].z = 0;
             f32 zb = 110.0f - BdkAct_maskBreak().kamen_break_off_z[i];
             f32 yb = 55.0f - BdkAct_maskBreak().kamen_break_off_y[i];
             pos->x = -BdkAct_maskBreak().kamen_break_off_x[i];
             pos->y = gabi::fmadds(REG0_F(15), 0.01f, yb);
             pos->z = gabi::fmadds(REG0_F(16), 0.01f, zb);
-            cMtx_YrotS(calc_mtx(), i_this->m9A0[i].y);
-            cMtx_XrotM(calc_mtx(), i_this->m9A0[i].x);
+            cMtx_YrotS(calc_mtx(), i_this->mMaskPieceAngle[i].y);
+            cMtx_XrotM(calc_mtx(), i_this->mMaskPieceAngle[i].x);
             MtxPosition(pos, dist);
-            PSVECAdd(&i_this->m910[i], dist, &i_this->m910[i]);
-            i_this->m940[i].copy(i_this->m910[i]);
-            cMtx_YrotS(calc_mtx(), i_this->m9A0[i].y);
+            PSVECAdd(&i_this->mMaskPiecePos[i], dist, &i_this->mMaskPiecePos[i]);
+            i_this->mMaskPiecePosOld[i].copy(i_this->mMaskPiecePos[i]);
+            cMtx_YrotS(calc_mtx(), i_this->mMaskPieceAngle[i].y);
             f32 t = fadds_ppc(REG0_F(7), 1.0f);
             pos->y = 0.0f;
             pos->x = gabi::fmuls_ppc(BdkAct_maskBreak().kamen_break_sd_x[i], t);
             pos->z = gabi::fmuls_ppc(BdkAct_maskBreak().kamen_break_sd_z[i], t);
             MtxPosition(pos, &i_this->m970[i]);
-            i_this->m9E8[i] = BdkAct_maskBreak().kamen_break_time[i];
+            i_this->mMaskPieceBreakTime[i] = BdkAct_maskBreak().kamen_break_time[i];
         }
         i_this->mState = 2;
         break;
     }
     case 2:
-        if (i_this->m25A6 > (s32)(REG0_S(8) + 0x2D)) {
+        if (i_this->mDemoTimer > (s32)(REG0_S(8) + 0x2D)) {
             i_this->m113A = 1;
             i_this->m1134 = 500;
         }
-        if (i_this->m25A6 >= 0x6E && REG_S(8, 8) == 0) {
-            i_this->m25A0 = 150;
+        if (i_this->mDemoTimer >= 0x6E && REG_S(8, 8) == 0) {
+            i_this->mDemoMode = 150;
             i_this->mAction = 5; /* ACTION_KUTI_ATTACK */
             anm_init(i_this, dRes_INDEX_BDK_BCK_NUKENAI1_e, 2.0f, 0, 1.0f, -1, 0);
             i_this->mState = 5;
-            i_this->m2EC[0] = (s16)gabi::ftoi(fadds_ppc(cM_rndF(120.0f), 30.0f));
+            i_this->mTimers[0] = (s16)gabi::ftoi(fadds_ppc(cM_rndF(120.0f), 30.0f));
             mDoAud_bgmStart(JA_BGM_UNK_110);
         }
         break;
@@ -312,11 +312,11 @@ void start(bdk_class *i_this) {
         if (!(player->current.pos.y < 9800.0f) &&
             !gabi::call_ptr<BOOL>(gabi::at<BdkActPlayerVtable>(player->__vtbl)->checkPlayerFly,
                                   player) /* checkPlayerFly */) {
-            if (i_this->m2EC[0] == 0 &&
+            if (i_this->mTimers[0] == 0 &&
                 reinterpret_cast<BdkActPlayView *>(dComIfGp_get())->mBossStartReady != 0) {
-                i_this->m25A4 = 0;
-                i_this->m25A6 = 0;
-                i_this->m25A0 = 10;
+                i_this->mDemoMainCount = 0;
+                i_this->mDemoTimer = 0;
+                i_this->mDemoMode = 10;
                 i_this->mState = 1;
                 fpcM_Search(BdkActSearch::kamome_delete_sub, i_this);
                 fpcM_Search(BdkActSearch::dk_delete_sub, i_this);
@@ -326,21 +326,21 @@ void start(bdk_class *i_this) {
                 actor->actor_status |= 0x4000; /* fopAcStts_UNK4000_e */
             }
         } else {
-            i_this->m2EC[0] = 0x14;
+            i_this->mTimers[0] = 0x14;
         }
         break;
     case 1:
         if (i_this->m25D8 != 0) {
             i_this->m25D8 = 0;
             i_this->mState = 2;
-            i_this->m2F6 = (s16)(REG0_S(6) + 0x19);
+            i_this->mTailDrawDelay = (s16)(REG0_S(6) + 0x19);
             actor->current.pos.y = fadds_ppc(REG0_F(10), 8500.0f);
             actor->speed.y = fadds_ppc(REG0_F(12), 80.0f);
             anm_init(i_this, dRes_INDEX_BDK_BCK_S_DEMO1_e, 0.0f, 2, 1.0f, -1, 0);
             bdk_seStart(actor, JA_SE_CM_DK_ROUND_UP, 0);
             s32 room = fopAcM_GetRoomNo(actor);
             dComIfGp_particle_set(ID_IT_SN_DK_DEMO_HANE00, &actor->current.pos, &actor->shape_angle, nullptr,
-                                  0xFF, (dPa_levelEcallBack *)&i_this->m61B0, (s8)room,
+                                  0xFF, (dPa_levelEcallBack *)&i_this->mDemoFeatherCb, (s8)room,
                                   &actor->tevStr.mColorK0, &actor->tevStr.mColorK0);
             actor->current.angle.y = 0x7242;
         }
@@ -354,19 +354,19 @@ void start(bdk_class *i_this) {
             i_this->mState = 3;
             i_this->m25D8 = 0;
             anm_init(i_this, dRes_INDEX_BDK_BCK_S_DEMO2_e, 5.0f, 0, 1.0f, dRes_INDEX_BDK_BAS_S_DEMO2_e, 0);
-            i_this->m2EC[0] = 0x2D;
+            i_this->mTimers[0] = 0x2D;
         }
         break;
     }
     case 3:
-        if (i_this->m2EC[0] != 0) {
+        if (i_this->mTimers[0] != 0) {
             f32 sy = actor->speed.y;
             actor->current.pos.y = fadds_ppc(actor->current.pos.y, sy);
             actor->speed.y = fsubs_ppc(sy, fadds_ppc(REG0_F(13), 1.0f));
         }
-        if (i_this->m2EC[0] == (s16)(REG_S(8, 8) + 5)) {
+        if (i_this->mTimers[0] == (s16)(REG_S(8, 8) + 5)) {
             bdk_monsSeStart(actor, JA_SE_CV_DK_ENTER, 0);
-            dPa_followEcallBack_end(&i_this->m61B0);
+            dPa_followEcallBack_end(&i_this->mDemoFeatherCb);
             for (s32 i = 0; i < 2; i++) {
                 s32 room = fopAcM_GetRoomNo(actor);
                 JPABaseEmitter *emitter = dComIfGp_particle_set(
@@ -393,11 +393,11 @@ void t_down(bdk_class *i_this) {
     switch (i_this->mState) {
     case 0:
         anm_init(i_this, dRes_INDEX_BDK_BCK_TO_DAMAGE_T1_e, 1.0f, 0, 0.0f, -1, 0);
-        i_this->m25D4 = 10.0f;
-        i_this->m2EC[0] = 0x5A;
+        i_this->mDemoShakeAmp = 10.0f;
+        i_this->mTimers[0] = 0x5A;
         i_this->mState = i_this->mState + 1;
-        i_this->m25A0 = 0x32;
-        i_this->m2EC[1] = 0x5A;
+        i_this->mDemoMode = 0x32;
+        i_this->mTimers[1] = 0x5A;
         actor->actor_status |= 0x4000; /* fopAcStts_UNK4000_e */
         eff_hane_set(i_this, &i_this->m1168, 5, 0);
         dComIfGs_offSwitch_bdk(0x80, fopAcM_GetRoomNo(actor));
@@ -406,8 +406,8 @@ void t_down(bdk_class *i_this) {
         actor->speedF = 0.0f;
         /* fall through */
     case 1:
-        if (i_this->m2EC[0] >= 0x50) {
-            s16 t = i_this->m2EC[0];
+        if (i_this->mTimers[0] >= 0x50) {
+            s16 t = i_this->mTimers[0];
             mDoExt_McaMorf *morf = i_this->mpMorf;
             if (t != 0x50) {
                 morf->mFrameCtrl.setFrame((t & 1) ? 0.0f : 1.0f);
@@ -423,16 +423,16 @@ void t_down(bdk_class *i_this) {
         }
         cLib_addCalc2(&actor->current.pos.x, BdkAct_statics().center_pos.x, 0.1f, actor->speedF);
         cLib_addCalc2(&actor->current.pos.z, BdkAct_statics().center_pos.z, 0.1f, actor->speedF);
-        if (i_this->m2EC[0] < 0x46) {
+        if (i_this->mTimers[0] < 0x46) {
             cLib_addCalc2(&actor->speedF, 10.0f, 1.0f, 0.5f);
         }
         cLib_addCalcAngleS2(&i_this->m259E, 1, 1, 2);
-        if (i_this->m2EC[1] == 1) {
+        if (i_this->mTimers[1] == 1) {
             anm_init(i_this, dRes_INDEX_BDK_BCK_RAKKA_T1_e, fadds_ppc(REG0_F(6), 20.0f), 2, 1.0f, -1, 0);
             i_this->m259E = 1;
             bdk_seStart(actor, JA_SE_CM_DK_FALL_WATER, 0);
         }
-        if (i_this->m2EC[0] != 0) {
+        if (i_this->mTimers[0] != 0) {
             return;
         }
         f32 sy = actor->speed.y;
@@ -472,13 +472,13 @@ void t_down(bdk_class *i_this) {
 void t_fly(bdk_class *i_this) {
     fopAc_ac_c *actor = i_this;
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
-    i_this->mF10 = 1;
+    i_this->mLookAtPlayer = 1;
     i_this->m2F8 = 5;
     fopAc_ac_c *bdkobj = (fopAc_ac_c *)fpcM_Search(BdkActSearch::obj_s_sub, actor);
     f32 dVar11 = -500.0f;
     f32 dVar12 = 0.0f;
     f32 dVar10 = 20.0f;
-    if (i_this->m2C4 == 100) {
+    if (i_this->mFrameCounter == 100) {
         dComIfGs_onSwitch_bdk(0x80, fopAcM_GetRoomNo(actor));
         fpcM_Search(BdkActSearch::kamome_delete_sub, actor);
     }
@@ -500,14 +500,14 @@ void t_fly(bdk_class *i_this) {
         /* fall through */
     case 1:
         if (bdkobj != nullptr) {
-            i_this->m2CC.copy(bdkobj->current.pos);
+            i_this->mTargetPos.copy(bdkobj->current.pos);
             anm_init(i_this, dRes_INDEX_BDK_BCK_ATTACK_T1_e, 5.0f, 0, 1.0f, -1, 0);
             i_this->mState = i_this->mState + 1;
             bdk_monsSeStart(actor, JA_SE_CV_DK_ATTACK, 0);
             i_this->mp2598 = bdkobj;
         } else {
-            i_this->m2CC.copy(player->current.pos);
-            if (i_this->m2EC[0] == 0) {
+            i_this->mTargetPos.copy(player->current.pos);
+            if (i_this->mTimers[0] == 0) {
                 anm_init(i_this, dRes_INDEX_BDK_BCK_ATTACK_T2_e, 5.0f, 0, 1.0f, -1, 0);
                 i_this->mState = 10;
                 if (actor != nullptr && gabi::ea(&actor->eyePos) != 0) {
@@ -515,7 +515,7 @@ void t_fly(bdk_class *i_this) {
                     mDoAud_seStart(JA_SE_CM_DK_FOOT_ATTACK, &actor->eyePos, 0,
                                    dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
                 }
-                i_this->m2EC[0] = BdkAct_statics().mHIO.m028;
+                i_this->mTimers[0] = BdkAct_statics().mHIO.m028;
             }
         }
         break;
@@ -523,7 +523,7 @@ void t_fly(bdk_class *i_this) {
         if (gabi::ftoi(i_this->mpMorf->getFrame()) >= REG0_S(3) + 0x2B &&
             gabi::ftoi(i_this->mpMorf->getFrame()) <= REG0_S(4) + 0x32) {
             wind_set(i_this, &actor->current.pos);
-            i_this->m2584 = 1;
+            i_this->mAttackPart = 1;
             dVar11 = fadds_ppc(REG8_F(8), 150.0f);
             dVar10 = 300.0f;
             fopAc_ac_c *obj = i_this->mp2598;
@@ -534,7 +534,7 @@ void t_fly(bdk_class *i_this) {
             }
         }
         if (i_this->mpMorf->isStop()) {
-            i_this->m2E0 = 0.0f;
+            i_this->mTurnSpeedRate = 0.0f;
             i_this->mState = 0;
         }
         break;
@@ -548,14 +548,14 @@ void t_fly(bdk_class *i_this) {
             dVar11 = fadds_ppc(REG8_F(10), 250.0f);
             dVar10 = 300.0f;
             if (frame <= lim) {
-                i_this->m2584 = 2;
+                i_this->mAttackPart = 2;
             }
         }
         if (i_this->mFootCCSph[0].ChkAtHit() || i_this->mFootCCSph[1].ChkAtHit()) {
             bdk_seStart_a(actor, JA_SE_CM_DK_FOOT_ATK_COL, 0);
         }
         if (i_this->mpMorf->isStop()) {
-            i_this->m2E0 = 0.0f;
+            i_this->mTurnSpeedRate = 0.0f;
             i_this->mState = 0;
         }
         break;
@@ -567,7 +567,7 @@ void t_fly(bdk_class *i_this) {
     gabi::Local<cXyz> dist;
     {
         gabi::Local<cXyz> tmp;
-        cXyz_mi(&i_this->m2CC, tmp, &BdkAct_statics().center_pos);
+        cXyz_mi(&i_this->mTargetPos, tmp, &BdkAct_statics().center_pos);
         BdkAct_copyFloat(pos->x, tmp->x);
         BdkAct_copyFloat(pos->y, tmp->y);
         BdkAct_copyFloat(pos->z, tmp->z);
@@ -580,19 +580,19 @@ void t_fly(bdk_class *i_this) {
     }
     cMtx_XrotM(calc_mtx(), REG_S(8, 4));
     MtxPosition(pos, dist);
-    cLib_addCalc2(&actor->current.pos.x, fadds_ppc(i_this->m2CC.x, dist->x), 0.2f,
-                  gabi::fmuls_ppc(dVar10, i_this->m2E0));
+    cLib_addCalc2(&actor->current.pos.x, fadds_ppc(i_this->mTargetPos.x, dist->x), 0.2f,
+                  gabi::fmuls_ppc(dVar10, i_this->mTurnSpeedRate));
     f32 sy = actor->speed.y;
     if (sy > 0.0f) {
         actor->current.pos.y = fadds_ppc(actor->current.pos.y, sy);
         actor->speed.y = fsubs_ppc(actor->speed.y, 5.0f);
     } else {
-        cLib_addCalc2(&actor->current.pos.y, fadds_ppc(i_this->m2CC.y, dist->y), 0.2f,
-                      gabi::fmuls_ppc(dVar10, i_this->m2E0));
+        cLib_addCalc2(&actor->current.pos.y, fadds_ppc(i_this->mTargetPos.y, dist->y), 0.2f,
+                      gabi::fmuls_ppc(dVar10, i_this->mTurnSpeedRate));
     }
-    cLib_addCalc2(&actor->current.pos.z, fadds_ppc(i_this->m2CC.z, dist->z), 0.2f,
-                  gabi::fmuls_ppc(dVar10, i_this->m2E0));
-    cLib_addCalc2(&i_this->m2E0, 1.0f, 1.0f, 0.02f);
+    cLib_addCalc2(&actor->current.pos.z, fadds_ppc(i_this->mTargetPos.z, dist->z), 0.2f,
+                  gabi::fmuls_ppc(dVar10, i_this->mTurnSpeedRate));
+    cLib_addCalc2(&i_this->mTurnSpeedRate, 1.0f, 1.0f, 0.02f);
 
     if (player->current.pos.y > fadds_ppc(REG0_F(3), 9250.0f)) {
         i_this->mAction = ACTION_T_LASTATTACK;
@@ -609,14 +609,14 @@ void t_lastattack(bdk_class *i_this) {
     f32 x = gabi::fmadds(REG0_F(7), 0.01f, 2785.0f);
     f32 fVar1 = gabi::fmadds(REG0_F(8), 0.01f, 9579.0f);
     f32 fVar2 = gabi::fmadds(REG0_F(9), 0.01f, -3872.0f);
-    i_this->m2CC.x = x;
-    i_this->m2CC.y = fVar1;
-    i_this->m2CC.z = fVar2;
+    i_this->mTargetPos.x = x;
+    i_this->mTargetPos.y = fVar1;
+    i_this->mTargetPos.z = fVar2;
     cLib_addCalc2(&actor->current.pos.x, x, 0.5f, 30.0f);
-    cLib_addCalc2(&actor->current.pos.z, i_this->m2CC.z, 0.5f, 30.0f);
+    cLib_addCalc2(&actor->current.pos.z, i_this->mTargetPos.z, 0.5f, 30.0f);
     f32 sy = actor->speed.y;
     f32 y = fadds_ppc(actor->current.pos.y, sy);
-    u32 cyb = BdkAct_word(i_this->m2CC.y);
+    u32 cyb = BdkAct_word(i_this->mTargetPos.y);
     f32 cy = gabi::f32_from_bits(cyb);
     actor->current.pos.y = y;
     actor->speed.y = fsubs_ppc(sy, 5.0f);
@@ -652,15 +652,15 @@ void t_lastattack(bdk_class *i_this) {
         bdk_StartShock(5);
         {
             s32 room = fopAcM_GetRoomNo(actor);
-            GXColor *k0 = &i_this->m6224.mColorK0;
+            GXColor *k0 = &i_this->mBgTevStr.mColorK0;
             dComIfGp_particle_set(ID_IT_SN_DK_TYAKUTI_ROCK00, &actor->current.pos, nullptr, nullptr, 0xFF,
                                   nullptr, (s8)room, k0, k0);
         }
-        if (i_this->m6078[0] == 0) {
+        if (i_this->mSmokeWaitTimer[0] == 0) {
             s32 room = fopAcM_GetRoomNo(actor);
-            i_this->m6078[0] = 100;
+            i_this->mSmokeWaitTimer[0] = 100;
             bdk_particle_setToon(ID_IT_ST_DK_TYAKUTI_SMOKE00, &actor->current.pos, nullptr, nullptr, 0xB9,
-                                 &i_this->m6080[0], (s8)room);
+                                 &i_this->mSmokeCb[0], (s8)room);
         }
         break;
     case 2:
@@ -670,7 +670,7 @@ void t_lastattack(bdk_class *i_this) {
         }
         break;
     case 3:
-        if (i_this->m2EC[0] == 0 && fopAcM_searchPlayerDistance(actor) < fadds_ppc(REG0_F(13), 700.0f)) {
+        if (i_this->mTimers[0] == 0 && fopAcM_searchPlayerDistance(actor) < fadds_ppc(REG0_F(13), 700.0f)) {
             anm_init(i_this, dRes_INDEX_BDK_BCK_ATTACK_T3_e, 5.0f, 0, 1.0f, -1, 0);
             bdk_monsSeStart_e(actor, JA_SE_CV_DK_ATTACK, 0);
             i_this->mState = 4;
@@ -679,7 +679,7 @@ void t_lastattack(bdk_class *i_this) {
     case 4: {
         mDoExt_McaMorf *morf = i_this->mpMorf;
         if (morf->getFrame() > 10.0f && morf->getFrame() < 15.0f) {
-            i_this->m2584 = 1;
+            i_this->mAttackPart = 1;
             morf = i_this->mpMorf;
         }
         if ((s16)gabi::ftoi(morf->getFrame()) == (s16)(REG0_S(5) + 0xD)) {
@@ -691,7 +691,7 @@ void t_lastattack(bdk_class *i_this) {
         if (morf->isStop()) {
             anm_init(i_this, dRes_INDEX_BDK_BCK_WAIT_T1_e, 5.0f, 2, 1.0f, -1, 0);
             i_this->mState = 3;
-            i_this->m2EC[0] = (s16)gabi::ftoi(fadds_ppc(cM_rndF(100.0f), 100.0f));
+            i_this->mTimers[0] = (s16)gabi::ftoi(fadds_ppc(cM_rndF(100.0f), 100.0f));
         }
         break;
     }
@@ -720,36 +720,36 @@ void end(bdk_class *i_this) {
         anm_init(i_this, dRes_INDEX_BDK_BCK_LAST_DAMAGE1_e, 2.0f, 0, 1.0f, dRes_INDEX_BDK_BAS_LAST_DAMAGE1_e,
                  0);
         i_this->mState = 5;
-        i_this->m2EC[0] = 0xB3;
+        i_this->mTimers[0] = 0xB3;
         particle_id = ID_IT_SN_DK_LASTDMG_HANE_W00;
         break;
     case 1:
         anm_init(i_this, dRes_INDEX_BDK_BCK_LAST_DAMAGE3_e, 2.0f, 0, 1.0f, dRes_INDEX_BDK_BAS_LAST_DAMAGE3_e,
                  0);
         i_this->mState = 5;
-        i_this->m2EC[0] = 0xB3;
+        i_this->mTimers[0] = 0xB3;
         particle_id = ID_IT_SN_DK_LASTDMG_HANE_W02;
         break;
     case 2:
         anm_init(i_this, dRes_INDEX_BDK_BCK_LAST_DAMAGE2_e, 2.0f, 0, 1.0f, dRes_INDEX_BDK_BAS_LAST_DAMAGE2_e,
                  0);
         i_this->mState = 5;
-        i_this->m2EC[0] = 0;
+        i_this->mTimers[0] = 0;
         particle_id = ID_IT_SN_DK_LASTDMG_HANE_W01;
         break;
     case 5:
         if (i_this->mpMorf->isStop()) {
             i_this->mState = 6;
             anm_init(i_this, dRes_INDEX_BDK_BCK_DEATH1_e, 2.0f, 2, 1.0f, dRes_INDEX_BDK_BAS_DEATH1_e, 0);
-            i_this->m2EC[0] = (s16)(REG0_S(3) + 300);
+            i_this->mTimers[0] = (s16)(REG0_S(3) + 300);
             for (s32 i = 0; i <= 1; i++) {
                 s32 room = fopAcM_GetRoomNo(actor);
-                i_this->m6100[i] = dComIfGp_particle_set(ID_IT_SN_DK_DEAD_HANE_A00, &actor->current.pos,
+                i_this->mpDeadHaneEmitter[i] = dComIfGp_particle_set(ID_IT_SN_DK_DEAD_HANE_A00, &actor->current.pos,
                                                          nullptr, nullptr, 0xFF, nullptr, (s8)room,
                                                          &actor->tevStr.mColorK0, &actor->tevStr.mColorK0);
             }
         } else {
-            if (i_this->m2EC[0] == 0) {
+            if (i_this->mTimers[0] == 0) {
                 cLib_addCalc2(&actor->current.pos.y, 10800.0f, 0.1f, 50.0f);
                 bVar1 = 1;
             }
@@ -759,45 +759,45 @@ void end(bdk_class *i_this) {
     case 6:
         bVar1 = 1;
         for (s32 i = 0; i <= 1; i++) {
-            JPABaseEmitter *emitter = i_this->m6100[i];
+            JPABaseEmitter *emitter = i_this->mpDeadHaneEmitter[i];
             if (emitter != nullptr) {
                 bdk_setGlobalRTMatrix(
                     emitter, bdk_morfAnmMtx(i_this, DK_JNT_J_DK_HANE_L2_e + i * DK_JNT_J_DK_YUBI_LC1_e));
             }
         }
-        if (i_this->m2EC[0] == 0xAA) {
-            i_this->m25A0 = 0x6E;
+        if (i_this->mTimers[0] == 0xAA) {
+            i_this->mDemoMode = 0x6E;
         }
         cLib_addCalc2(&actor->current.pos.x, 3600.0f, 0.05f, 50.0f);
         cLib_addCalc2(&actor->current.pos.y, fadds_ppc(REG8_F(18), 15800.0f), 0.1f,
                       fadds_ppc(REG8_F(19), 20.0f));
         cLib_addCalc2(&actor->current.pos.z, -3800.0f, 0.05f, 50.0f);
         cLib_addCalcAngleS2(&actor->current.angle.y, -8000, 0x10, 0x80);
-        if (i_this->m2EC[0] == 0x3C) {
+        if (i_this->mTimers[0] == 0x3C) {
             bdk_seStart_a(actor, JA_SE_CV_DK_DIE, 0);
             anm_init(i_this, dRes_INDEX_BDK_BCK_DEATH2_e, 5.0f, 0, 1.0f, -1, 0);
         }
-        if (i_this->m2EC[0] == 0 && REG0_S(4) == 0) {
+        if (i_this->mTimers[0] == 0 && REG0_S(4) == 0) {
             i_this->mState = 7;
             for (s32 i = 0; i < 4; i++) {
-                i_this->m90C[i] = 0;
+                i_this->mMaskPieceOn[i] = 0;
             }
             fpcM_Search(BdkActSearch::obj2_delete_sub, actor);
-            BdkAct_copyFloat(i_this->m2CC.x, actor->current.pos.x);
+            BdkAct_copyFloat(i_this->mTargetPos.x, actor->current.pos.x);
             f32 y = actor->current.pos.y;
             u32 zb = BdkAct_word(actor->current.pos.z);
             actor->current.angle.y = 0x4000;
-            i_this->m2CC.y = fadds_ppc(y, 200.0f);
-            BdkAct_word(i_this->m2CC.z) = zb;
-            fopAcM_createDisappear(actor, &i_this->m2CC, 0x5A, 2, 0xFF);
-            mDoAud_seStart(JA_SE_CM_DK_DIE_EXPLODE, &i_this->m2CC, 0,
+            i_this->mTargetPos.y = fadds_ppc(y, 200.0f);
+            BdkAct_word(i_this->mTargetPos.z) = zb;
+            fopAcM_createDisappear(actor, &i_this->mTargetPos, 0x5A, 2, 0xFF);
+            mDoAud_seStart(JA_SE_CM_DK_DIE_EXPLODE, &i_this->mTargetPos, 0,
                            dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
-            i_this->m2EC[0] = 0x1E;
+            i_this->mTimers[0] = 0x1E;
             for (s32 i = 0; i < 2; i++) {
-                JPABaseEmitter *e = i_this->m6100[i];
+                JPABaseEmitter *e = i_this->mpDeadHaneEmitter[i];
                 if (e != nullptr) {
                     bdk_becomeInvalidEmitter(e);
-                    i_this->m6100[i] = nullptr;
+                    i_this->mpDeadHaneEmitter[i] = nullptr;
                 }
             }
             s32 room = fopAcM_GetRoomNo(actor);
@@ -808,16 +808,16 @@ void end(bdk_class *i_this) {
     case 7:
         actor->current.pos.x = 100000.0f;
         actor->current.pos.y = 100000.0f;
-        if (i_this->m2EC[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             i_this->mState = 8;
-            i_this->m25A0 = i_this->m25A0 + 1;
+            i_this->mDemoMode = i_this->mDemoMode + 1;
         }
         break;
     default:
         break;
     }
-    if (bVar1 != 0 && i_this->m2EC[4] == 0) {
-        i_this->m2EC[4] = (s16)gabi::ftoi(fadds_ppc(cM_rndF(30.0f), 25.0f));
+    if (bVar1 != 0 && i_this->mTimers[4] == 0) {
+        i_this->mTimers[4] = (s16)gabi::ftoi(fadds_ppc(cM_rndF(30.0f), 25.0f));
         bdk_monsSeStart(actor, JA_SE_CV_DK_MODAE, 0);
     }
     cLib_addCalcAngleS2(&actor->current.angle.z, 0, 2, 0x800);

@@ -50,73 +50,73 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
     i_pt->speed.y = -5.0f;
 
     f32 fVar7;
-    f32 m3F4;
+    f32 mRideSag;
     if (i_pt != nullptr && bridge_getActorName(i_pt) == BridgeHD::fpcNm_PLAYER_e) {
         fVar7 = 100.0f;
-        pBr->m3F4 = -31.0f;
-        i_this->m033C = 5;
+        pBr->mRideSag = -31.0f;
+        i_this->mRideTimer = 5;
         /* HD: heavier (player flag 0x02000000 at +0x3B8), and a breaking hit (flag 0x20000 at +0x3C0) */
         if ((u32)(gabi::at<BridgeHD::PlayerFlags>(gabi::ea(i_pt))->mNoResetFlg0) & BridgeHD::HeavyRider) {
             fVar7 = 150.0f;
-            pBr->m3F4 = -40.0f;
+            pBr->mRideSag = -40.0f;
         }
         if ((u32)(gabi::at<BridgeHD::PlayerFlags>(gabi::ea(i_pt))->mResetFlg0) & BridgeHD::BreakPlank) {
-            pBr->m3F4 = -300.0f;
-            i_this->m02E0 = 20.0f;
+            pBr->mRideSag = -300.0f;
+            i_this->mWavePower = 20.0f;
             return;
         }
-        m3F4 = pBr->m3F4;
+        mRideSag = pBr->mRideSag;
     } else if (i_pt != nullptr && bridge_getActorName(i_pt) == BridgeHD::fpcNm_MO2_e) {
         fVar7 = 150.0f;
-        pBr->m3F4 = -40.0f;
+        pBr->mRideSag = -40.0f;
         i_pt->speed.y = -20.0f;
-        m3F4 = pBr->m3F4;
+        mRideSag = pBr->mRideSag;
     } else if (i_pt != nullptr && bridge_getActorName(i_pt) == BridgeHD::fpcNm_BK_e) {
         u32 bk = gabi::ea(i_pt);
         fVar7 = 100.0f;
         i_pt->speed.y = -20.0f;
-        pBr->m3F4 = -25.0f;
-        gabi::at<BridgeHD::BokoReaction>(bk)->m7B8 = fopAcM_GetID(i_ac);      /* dr.m7B8 */
-        gabi::at<BridgeHD::BokoReaction>(bk)->m7B2 = 8;                       /* dr.m7B2 */
-        gabi::at<BridgeHD::BokoReaction>(bk)->m7AC.x = (u16)pBr->mRotation.x; /* dr.m7AC = pBr->mRotation */
-        gabi::at<BridgeHD::BokoReaction>(bk)->m7AC.y = (u16)pBr->mRotation.y;
-        gabi::at<BridgeHD::BokoReaction>(bk)->m7AC.z = (u16)pBr->mRotation.z;
+        pBr->mRideSag = -25.0f;
+        gabi::at<BridgeHD::BokoReaction>(bk)->mHangBridgeId = fopAcM_GetID(i_ac);      /* dr.mHangBridgeId */
+        gabi::at<BridgeHD::BokoReaction>(bk)->mBridgeRideTimer = 8;                       /* dr.mBridgeRideTimer */
+        gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.x = (u16)pBr->mRotation.x; /* dr.mHangAngle = pBr->mRotation */
+        gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.y = (u16)pBr->mRotation.y;
+        gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.z = (u16)pBr->mRotation.z;
         if (sp4C->x > 0.0f) {
-            gabi::at<BridgeHD::BokoReaction>(bk)->m79C = gabi::ea(&pBr->m11C[1]); /* dr.m79C */
-            gabi::at<BridgeHD::BokoReaction>(bk)->m7AC.y =
-                (s16)((s16)(gabi::at<BridgeHD::BokoReaction>(bk)->m7AC.y) - 0x4000);
-            gabi::at<BridgeHD::BokoReaction>(bk)->m7B4 = -0x2000; /* dr.m7B4 */
+            gabi::at<BridgeHD::BokoReaction>(bk)->mpHangPos = &pBr->mSide0Pos[1]; /* dr.mpHangPos */
+            gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.y =
+                (s16)((s16)(gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.y) - 0x4000);
+            gabi::at<BridgeHD::BokoReaction>(bk)->mBridgeRideRoll = -0x2000; /* dr.mBridgeRideRoll */
         } else {
-            gabi::at<BridgeHD::BokoReaction>(bk)->m79C = gabi::ea(&pBr->m0F8[1]);
-            gabi::at<BridgeHD::BokoReaction>(bk)->m7AC.y =
-                (s16)((s16)(gabi::at<BridgeHD::BokoReaction>(bk)->m7AC.y) + 0x4000);
-            gabi::at<BridgeHD::BokoReaction>(bk)->m7B4 = 0x2000;
+            gabi::at<BridgeHD::BokoReaction>(bk)->mpHangPos = &pBr->mSide1Pos[1];
+            gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.y =
+                (s16)((s16)(gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.y) + 0x4000);
+            gabi::at<BridgeHD::BokoReaction>(bk)->mBridgeRideRoll = 0x2000;
         }
-        gabi::at<BridgeHD::BokoReaction>(bk)->m0B2C = gabi::ea(pBr); /* m0B2C */
-        m3F4 = pBr->m3F4;
+        gabi::at<BridgeHD::BokoReaction>(bk)->mpBridge = pBr; /* bk mpBridge */
+        mRideSag = pBr->mRideSag;
     } else {
         fVar7 = 50.0f;
         if (i_pt == nullptr) {
-            m3F4 = -10.0f;
+            mRideSag = -10.0f;
         } else {
-            pBr->m3F4 = -10.0f;
+            pBr->mRideSag = -10.0f;
             if (bridge_getActorName(i_pt) == BridgeHD::fpcNm_BOMB_e && daBomb_getBombRestTime(i_pt) <= 1) {
-                pBr->m3F4 = -300.0f;
-                i_this->m02E0 = 20.0f;
+                pBr->mRideSag = -300.0f;
+                i_this->mWavePower = 20.0f;
                 return;
             }
-            m3F4 = pBr->m3F4;
+            mRideSag = pBr->mRideSag;
         }
     }
 
     {
-        m3F4 = m3F4 * fVar2;
-        pBr->m3F4 = m3F4;
+        mRideSag = mRideSag * fVar2;
+        pBr->mRideSag = mRideSag;
         fVar7 = fVar7 * fVar2;
-        f32 wave = cM_ssin(i_this->m0300) * i_this->m02FC * 0.03f;
-        pBr->m3F4 = gabi::fmadds(wave, fVar7, m3F4);
-        pBr->m406 = 2;
-        pBr->m400 = (s16)gabi::ftoi(-(sp4C->x * fVar7));
+        f32 wave = cM_ssin(i_this->mAnmPhase) * i_this->mWaveAmpV * 0.03f;
+        pBr->mRideSag = gabi::fmadds(wave, fVar7, mRideSag);
+        pBr->mPlankRideTimer = 2;
+        pBr->mRideRollTarget = (s16)gabi::ftoi(-(sp4C->x * fVar7));
 
         cXyz_mi(sp4C, tmp, sp40);
         pos->copy(*tmp);
@@ -124,15 +124,15 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
         if (fVar3 > 20.0f) {
             fVar3 = 20.0f;
         }
-        if (!(i_this->m02E0 > fVar3)) {
-            i_this->m02E0 = fVar3;
+        if (!(i_this->mWavePower > fVar3)) {
+            i_this->mWavePower = fVar3;
         }
         f32 t = fabsf(pos->x) * fVar2;
         if (t > 50.0f) {
             t = 50.0f;
         }
-        if (!(i_this->m02E4 > t)) {
-            i_this->m02E4 = i_this->m02E4 + 0.5f;
+        if (!(i_this->mSwingPower > t)) {
+            i_this->mSwingPower = i_this->mSwingPower + 0.5f;
         }
         return;
     }
@@ -211,7 +211,7 @@ void *s_a_b_sub(void *ac1, void *ac2) {
 static BOOL daBridge_IsDelete(bridge_class *i_this) {
     br_s *pBr = &i_this->mBr[0];
     for (int i = 0; i < i_this->mBrCount; i++, pBr++) {
-        mDoAud_seDeleteObject(&pBr->m3CC);
+        mDoAud_seDeleteObject(&pBr->mCtrlPos);
     }
     return TRUE;
 }
@@ -241,13 +241,13 @@ static BOOL CallbackCreateHeap(fopAc_ac_c *a_this) {
     J3DModelData *modelData = (J3DModelData *)dComIfG_getObjectRes(
         ARC_BRIDGE, BridgeHD::getBridgeModel(modelNum), BRIDGE_SAFESTRING_VTBL);
     if (modelData == nullptr) /* JUT_ASSERT(2455, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_bridge.cpp", 0x997, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_bridge.cpp", 0x997, "modelData != (0)");
 
     if (modelNum != 0) {
         modelData2 = (J3DModelData *)dComIfG_getObjectRes(
             ARC_BRIDGE, BridgeHD::dRes_INDEX_BRIDGE_BDL_OBM_CHAIN1_e, BRIDGE_SAFESTRING_VTBL);
         if (modelData2 == nullptr) /* JUT_ASSERT(2461, modelData2 != NULL) */
-            JUT_ASSERT_fail("d_a_bridge.cpp", 0x99D, "modelData2 != NULL");
+            JUT_ASSERT_fail("d_a_bridge.cpp", 0x99D, "modelData2 != (0)");
     }
 
     br_s *pBr = i_this->mBr;
@@ -278,19 +278,19 @@ static BOOL CallbackCreateHeap(fopAc_ac_c *a_this) {
                     return FALSE;
                 }
             } else if (((i + iVar8) & 3) == 0) {
-                pBr->m408 = 7;
+                pBr->mRopeFlags = 7;
                 if ((i_this->mTypeBits & 1) == 1) {
-                    pBr->m418 = 0x32;
+                    pBr->mRopeTopTimer = 0x32;
                     /* HD: asserted again */
                     if (modelData2 == nullptr) /* JUT_ASSERT(2508, modelData2 != NULL) */
-                        JUT_ASSERT_fail("d_a_bridge.cpp", 0x9CC, "modelData2 != NULL");
+                        JUT_ASSERT_fail("d_a_bridge.cpp", 0x9CC, "modelData2 != (0)");
                     pBr->mpModelRope0 = mDoExt_J3DModel__create(modelData2, 0x80000, 0x11020002);
                     pBr->mpModelRope1 = mDoExt_J3DModel__create(modelData2, 0x80000, 0x11020002);
                     if (pBr->mpModelRope0 == nullptr || pBr->mpModelRope1 == nullptr) {
                         return FALSE;
                     }
                 } else {
-                    pBr->m418 = -1;
+                    pBr->mRopeTopTimer = -1;
                     void *tex;
                     if (i_this->mTypeBits & 8) {
                         tex = dComIfG_getObjectRes(ARC_ALWAYS, BridgeHD::dRes_INDEX_ALWAYS_BTI_TXM_ROPE1_e,
@@ -385,7 +385,7 @@ static cPhs_State daBridge_Create(fopAc_ac_c *a_this) {
         } else {
             i_this->mTypeBits = type;
         }
-        i_this->m02D9 = (fopAcM_GetParam(a_this) >> 8) & 0xFF;
+        i_this->mRopePhaseOfs = (fopAcM_GetParam(a_this) >> 8) & 0xFF;
         u8 pathId = (fopAcM_GetParam(a_this) >> 0x10) & 0xFF;
         i_this->mPathId = pathId;
         if (pathId == 0xFF) {
@@ -456,14 +456,14 @@ static cPhs_State daBridge_Create(fopAc_ac_c *a_this) {
 
         if ((i_this->mTypeBits & 2) != 0) {
             if (i_this->mBrCount >= 16) {
-                i_this->m02DD = 15;
+                i_this->mActiveBrCount = 15;
             } else if (i_this->mBrCount >= 12) {
-                i_this->m02DD = 11;
+                i_this->mActiveBrCount = 11;
             } else {
-                i_this->m02DD = 7;
+                i_this->mActiveBrCount = 7;
             }
         } else {
-            i_this->m02DD = i_this->mBrCount;
+            i_this->mActiveBrCount = i_this->mBrCount;
         }
     }
     return ret;
@@ -583,7 +583,7 @@ str 1000B664 "Bridge" in 020E3838
 str 1000B67C "Bridge" in 020E3890
 str 1000B684 "Always" in 020E3890
 str 1000B6A0 "d_a_bridge.cpp"
-str 1000B6B0 "modelData != NULL"
-str 1000B68C "modelData2 != NULL"
+str 1000B6B0 "modelData != (0)"
+str 1000B68C "modelData2 != (0)"
 str 1000B6E0 "Bridge" in 020E4098
 */

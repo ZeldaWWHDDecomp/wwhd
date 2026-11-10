@@ -174,16 +174,16 @@ struct Act_c : fopAc_ac_c {
     /* 0x3BC */ dBgS_ObjAcch mAcch;
     /* 0x580 */ dBgS_AcchCir mAcchCir;
     /* 0x5C0 */ dBgS_GndChk_l mGndChkYogan;
-    /* 0x614 */ be<f32> m4F8;
-    /* 0x618 */ be<f32> m4FC;
-    /* 0x61C */ be<f32> m500;
+    /* 0x614 */ be<f32> mLavaY;  /* was m4F8: crr_pos_lava 024CD70C: cBgS_GroundCross of the lava (Yogan) ground check, else -inf; damaged_lava 024CD108 tests it */
+    /* 0x618 */ be<f32> mWaterY;  /* was m4FC: crr_pos_water 024CD5E0: mAcch's water height, else -inf; chk_sink_water / eff_hit_water_splash use it */
+    /* 0x61C */ be<f32> mWaterYOld;  /* was m500: crr_pos_water 024CD5E0 keeps last frame's mWaterY here; water_tention 024CFA48 uses the difference */
     /* 0x620 */ be<u8> m504;
     /* 0x621 */ be<u8> m505;
     /* 0x622 */ u8 _622[2];
     /* 0x624 */ dCcD_Cyl mCyl;
     /* 0x754 */ dCcD_Stts mStts;
     /* 0x790 */ be<s32> mType;
-    /* 0x794 */ be<s32> m678;
+    /* 0x794 */ be<s32> mMode;  /* was m678: mode_hide_init 024CAAD0 sets 0, mode_appear_init 024CAB30 1, mode_carry_init 024CD4C8 4, ...; set_mtx 024CB280 tests == 4 */
     /* 0x798 */ be<u16> mPrmZ;
     /* 0x79A */ be<u8> m67E;
     /* 0x79B */ be<u8> m67F;
@@ -205,17 +205,17 @@ struct Act_c : fopAc_ac_c {
     /* 0x7C0 */ u8 m6A4[0xC];
     /* 0x7CC */ cXyz m6B0;
     /* 0x7D8 */ Mtx34 mPoseMtx;
-    /* 0x808 */ be<f32> m6EC;
+    /* 0x808 */ be<f32> mOffsetY;  /* was m6EC: set_mtx 024CB280 adds it to the model's y translation; _create 024CB5EC clears it; moment_proc_call 024CE204 sets it */
     /* 0x80C */ cXyz m6F0;
-    /* 0x818 */ be<f32> m6FC;
-    /* 0x81C */ cXyz m700;
+    /* 0x818 */ be<f32> mFallStartY;  /* was m6FC: _create 024CB5EC sets current.pos.y; damage_bg_proc_directly 024CDAB4 breaks the pot when it minus current.pos.y exceeds the attribute's fall height (m38) */
+    /* 0x81C */ cXyz mWaterDropPos;  /* was m700: set_mtx 024CB280: the model matrix times offsetPos; eff_drop_water 024CD95C sets dPa_ID_IT_SN_WPOT_PITYA there */
     /* 0x828 */ dPa_followEcallBack m70C[3];
     /* 0x864 */ dPa_followEcallBack m748[3];
-    /* 0x8A0 */ dPa_followEcallBack m784;
-    /* 0x8B4 */ be<u8> m798;
+    /* 0x8A0 */ dPa_followEcallBack mKutaniCb;  /* was m784: the constructor 024CA1DC constructs it (dPa_followEcallBack); eff_kutani_set 024CE3D0 uses it; _delete 024CBC98 removes it */
+    /* 0x8B4 */ be<u8> mKutaniTimer;  /* was m798: eff_kutani_init 024CACEC sets 1 + rnd(30); eff_kutani_set 024CE3D0 acts while it is not 0 */
     /* 0x8B5 */ u8 m799[7];
     /* 0x8BC */ M7A0 m7A0[3];
-    /* 0x910 */ cXyz m7F4;
+    /* 0x910 */ cXyz mWindVec;  /* was m7F4: _create 024CB5EC clears it; set_wind_vec 024CC244 sets the wind vector (PSVECSquareMag); mode_walk / mode_drop / mode_afl use it */
     /* 0x91C */ be<s16> m800;
     /* 0x91E */ be<s16> m802;
     /* 0x920 */ be<s16> m804;

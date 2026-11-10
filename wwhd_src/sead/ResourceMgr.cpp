@@ -361,6 +361,7 @@ DirectResource* sead::DirectResourceFactory::newResource(RegistryHeap* heap, s32
  data sResourceMgr 101F8B68
  data sResourceMgrDisposer 101F8B6C
  str 1015E0F8 ""
+ str 10000160 "" in 0275DD38
  ext 0273AD10 void* allocateObject(u32)
  ext 0273B050 void* allocateFromHeap(u32, sead::RegistryHeap*, s32)
  ext 0273B0D4 void* allocateArrayFromHeap(u32, sead::RegistryHeap*, s32)

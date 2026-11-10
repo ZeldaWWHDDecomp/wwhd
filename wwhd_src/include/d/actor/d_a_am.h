@@ -100,8 +100,8 @@ struct am_class : fopEn_enemy_c {
     /* 0x440 */ cXyz mSpawnPos;
     /* 0x44C */ csXyz mEyeRot;
     /* 0x452 */ csXyz mTargetEyeRot;
-    /* 0x458 */ gptr<JPABaseEmitter> m033C;
-    /* 0x45C */ gptr<JPABaseEmitter> m0340;
+    /* 0x458 */ gptr<JPABaseEmitter> mpBombEyeEmitter;  /* was m033C: action_itai_move (in daAM_Execute 0204938C) creates the particle ID_AK_SN_AMOTHBOMBEYE at mJawPos and attaches it to the jaw joint (AM_JNT_AGO_e); daAM_Execute stops it (max frame -1, status 1) at the explosion (JA_SE_CM_AM_BEF_EXPLODE), daAM_Delete 0204B430 invalidates it */
+    /* 0x45C */ gptr<JPABaseEmitter> mpBombMouthEmitter;  /* was m0340: action_itai_move (in daAM_Execute 0204938C) creates the particle ID_AK_SN_AMOTHBOMBMOUTH at mJawPos and attaches it to the jaw joint (AM_JNT_AGO_e); daAM_Execute stops it (max frame -1, status 1) at the explosion (JA_SE_CM_AM_BEF_EXPLODE), daAM_Delete 0204B430 invalidates it */
     /* 0x460 */ dPa_smokeEcallBack mSmokeCbs[4];
     /* 0x4E0 */ dBgS_AcchCir mAcchCir;
     /* 0x520 */ dBgS_ObjAcch mAcch;

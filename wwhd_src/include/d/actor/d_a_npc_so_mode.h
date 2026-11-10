@@ -1,5 +1,5 @@
 /* Fishman mode implementation views.
- * HD retains the circle-path layout; the actor embeds it at mB10 (+0xC88). */
+ * HD retains the circle-path layout; the actor embeds it at mCirclePath (+0xC88). */
 #pragma once
 #include "d/actor/d_a_npc_so.h"
 

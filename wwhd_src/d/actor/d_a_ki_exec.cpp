@@ -27,7 +27,7 @@ static void ki_atack_move(ki_class* i_this) {
     cXyz sp24;
     kiHIO_c& hio = l_kiHIO;
 
-    i_this->m540 = 1;
+    i_this->mBgCheckOn = 1;
     s8 cVar6 = 0;
 
     if (i_this->mTimers[3] == 0 && i_this->mBehaviorType <= 3) {
@@ -106,9 +106,9 @@ static void ki_atack_move(ki_class* i_this) {
         }
 
         {
-            f32 x = cM_ssin(i_this->m320 * 0x76C) * 50.0f;
-            f32 y = cM_ssin(i_this->m320 * 0x9C4) * 60.0f;
-            f32 z = cM_scos(i_this->m320 * 0x5DC) * 50.0f;
+            f32 x = cM_ssin(i_this->mFrameCounter * 0x76C) * 50.0f;
+            f32 y = cM_ssin(i_this->mFrameCounter * 0x9C4) * 60.0f;
+            f32 z = cM_scos(i_this->mFrameCounter * 0x5DC) * 50.0f;
 
             cLib_addCalc2(&a_this->current.pos.x, i_this->mPosMove.x + x, 0.1f, hio.m2C * i_this->mPosMoveDist);
             cLib_addCalc2(&a_this->current.pos.y, i_this->mPosMove.y + y, 0.1f, hio.m2C * i_this->mPosMoveDist);
@@ -119,13 +119,13 @@ static void ki_atack_move(ki_class* i_this) {
         break;
 
     case 3:
-        i_this->m580.SetR(30.0f);
+        i_this->mAtSph.SetR(30.0f);
         i_this->mDamageSphere.SetR(20.0f);
-        i_this->m6AC.SetR(0.0f);
+        i_this->mCoSph.SetR(0.0f);
         if (i_this->mDamageType == 0) {
-            i_this->m580.SetAtAtp(1);
+            i_this->mAtSph.SetAtAtp(1);
         } else {
-            i_this->m580.SetAtAtp(2);
+            i_this->mAtSph.SetAtAtp(2);
         }
 
         cVar6 = 1;
@@ -142,7 +142,7 @@ static void ki_atack_move(ki_class* i_this) {
 
         cLib_addCalcAngleS2(&a_this->shape_angle.y, a_this->current.angle.y, 2, 0x2000);
 
-        if (i_this->m580.ChkAtHit() || i_this->mDamageSphere.ChkCoHit()) {
+        if (i_this->mAtSph.ChkAtHit() || i_this->mDamageSphere.ChkCoHit()) {
             anm_init(i_this, dRes_INDEX_KI_BCK_FLY2_e, 2.0f, 2, hio.m14, dRes_INDEX_KI_BAS_FLY2_e);
             i_this->mBehaviorType = 4;
             i_this->mTimers[1] = 30;
@@ -183,9 +183,9 @@ static void ki_atack_move(ki_class* i_this) {
         }
 
         {
-            f32 x = cM_ssin(i_this->m320 * 0x76C) * 100.0f;
-            f32 y = cM_ssin(i_this->m320 * 0x9C4) * 60.0f;
-            f32 z = cM_scos(i_this->m320 * 0x5DC) * 100.0f;
+            f32 x = cM_ssin(i_this->mFrameCounter * 0x76C) * 100.0f;
+            f32 y = cM_ssin(i_this->mFrameCounter * 0x9C4) * 60.0f;
+            f32 z = cM_scos(i_this->mFrameCounter * 0x5DC) * 100.0f;
 
             cLib_addCalc2(&a_this->current.pos.x, i_this->mPosMove.x + x, 0.1f, hio.m30 * i_this->mPosMoveDist);
             cLib_addCalc2(&a_this->current.pos.y, i_this->mPosMove.y + y, 0.1f, hio.m30 * i_this->mPosMoveDist);
@@ -196,7 +196,7 @@ static void ki_atack_move(ki_class* i_this) {
         break;
     }
 
-    i_this->m304 = 10000.0f;
+    i_this->mTurnScale = 10000.0f;
     i_this->mPosMoveDist = 1.0f;
 
     if (cVar6 >= 0) {

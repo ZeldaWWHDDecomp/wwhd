@@ -26,7 +26,7 @@ bool daNpc_Ym1_c::createInit() {
     attention_info.flags = fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e; /* attention_info.flags */
     /* a_attn_dist (.data 0x101C6A30): {talk, speak} by mSubType */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = a_attn_dist[mSubType][0];     /* distances[TALK] */
-    ym1State(this).m8AB = 0xD;
+    ym1State(this).mAnmNum = 0xD;
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = a_attn_dist[mSubType][1]; /* distances[SPEAK] */
     /* HD: an actor placed at (-202066, *, 320123) is moved next to a global position offset
      * (0x1047BBB0/B4) */
@@ -71,9 +71,9 @@ bool daNpc_Ym1_c::createInit() {
     if (!init_result) {
         return false;
     }
-    ym1Angles(this).m846.x = current.angle.x;
-    ym1Angles(this).m846.y = current.angle.y;
-    ym1Angles(this).m846.z = current.angle.z;
+    ym1Angles(this).mModelAngle.x = current.angle.x;
+    ym1Angles(this).mModelAngle.y = current.angle.y;
+    ym1Angles(this).mModelAngle.z = current.angle.z;
     shape_angle.x = current.angle.x;
     shape_angle.y = current.angle.y;
     shape_angle.z = current.angle.z;
@@ -125,8 +125,8 @@ cPhs_State daNpc_Ym1_c::_create() {
         return cPhs_ERROR_e;
     }
     cPhs_State state = dComIfG_resLoad(&mPhs, mArcName);
-    ym1State(this).m89D = state == cPhs_COMPLEATE_e;
-    if (!ym1State(this).m89D) {
+    ym1State(this).mbResLoaded = state == cPhs_COMPLEATE_e;
+    if (!ym1State(this).mbResLoaded) {
         return state;
     }
     /* a_heap_size (.data 0x101C6A58), by mSubType */
@@ -166,9 +166,9 @@ void daNpc_Ym1_c::checkOrder() {
     if (cmd == dEvtCmd_INDEMO_e) {
         return;
     }
-    if (cmd == dEvtCmd_INTALK_e && (mA1C == 1 || mA1C == 2)) {
-        mA1C = 0;
-        mA13 = 1;
+    if (cmd == dEvtCmd_INTALK_e && (mActionSubstate == 1 || mActionSubstate == 2)) {
+        mActionSubstate = 0;
+        mTalkRequested = 1;
     }
 }
 
@@ -181,8 +181,8 @@ s32 daNpc_Ym1_c::isEventEntry() {
 /* 022F8544 */
 void daNpc_Ym1_c::endEvent() {
     dComIfGp_event_reset();
-    mA18 = -1;
-    mA19 = -1;
+    mAnimationAttribute = -1;
+    mAnimationTag = -1;
 }
 
 /* 022F8588 */
@@ -191,8 +191,8 @@ void daNpc_Ym1_c::privateCut(int i_staffIdx) {
     if (i_staffIdx == -1) {
         return;
     }
-    mA17 = dComIfGp_evmng_getMyActIdx(i_staffIdx, gabi::ea(a_cut_tbl), 1, TRUE, 0);
-    if (mA17 != -1) {
+    mActionIndex = dComIfGp_evmng_getMyActIdx(i_staffIdx, gabi::ea(a_cut_tbl), 1, TRUE, 0);
+    if (mActionIndex != -1) {
         dComIfGp_evmng_getIsAddvance(i_staffIdx);
     }
     dComIfGp_evmng_cutEnd(i_staffIdx);
@@ -207,9 +207,9 @@ void daNpc_Ym1_c::event_proc(int i_staffIdx) {
 
 /* 022F8890 */
 void daNpc_Ym1_c::eventOrder() {
-    if (mA1C == 1 || mA1C == 2) {
+    if (mActionSubstate == 1 || mActionSubstate == 2) {
         eventInfo.onCondition(dEvtCnd_CANTALK_e); /* eventInfo.onCondition(dEvtCnd_CANTALK_e) */
-        if (mA1C == 1) {
+        if (mActionSubstate == 1) {
             fopAcM_orderSpeakEvent(this);
         }
     }
@@ -219,16 +219,16 @@ void daNpc_Ym1_c::eventOrder() {
 u8 daNpc_Ym1_c::demo() {
     u8 id = demoActorID;
     if (id == 0) {
-        if (mA16) {
-            mA16 = 0;
+        if (mbDemo) {
+            mbDemo = 0;
         }
-        return mA16;
+        return mbDemo;
     }
-    if (!mA16) {
+    if (!mbDemo) {
         m_jnt.mAngles[0][1] = 0; /* setHead_y(0) */
         m_jnt.mAngles[1][0] = 0; /* setBackBone_x(0) */
-        mA16 = 1;
-        ym1State(this).m89F = 0;
+        mbDemo = 1;
+        ym1State(this).mbNoShapeAngle = 0;
         m_jnt.mAngles[0][0] = 0; /* setHead_x(0) */
         id = demoActorID;
         m_jnt.mAngles[1][1] = 0; /* setBackBone_y(0) */
@@ -256,43 +256,43 @@ u8 daNpc_Ym1_c::demo() {
         if (demo_btp_p) {
             mDoExt_btpAnm_init(mBtpAnm, J3DModel_getModelData_l(mpHeadModel), demo_btp_p, TRUE, 0, 1.0f, 0, -1, 1, 0);
             mBlinkFrame = 0;
-            mA1A = 1;
+            mBtpNum = 1;
         }
     }
     Ym1_setDemoData(this, Ym1_DEMO_ENABLE, mpMorf.get(), mArcName, 0, 0, 0, 0); /* dDemo_setDemoData */
-    return mA16;
+    return mbDemo;
 }
 
 /* 022F8670 */
 void daNpc_Ym1_c::lookBack() {
-    m9F0.y = m_jnt.mAngles[0][1];
+    mPreviousAngles.y = m_jnt.mAngles[0][1];
     cXyz player_eye_pos;
     player_eye_pos.set(0.0f, 0.0f, 0.0f);
     s16 target_y = current.angle.y;
     f32 srcX = current.pos.x;
-    m9F0.z = m_jnt.mAngles[1][1];
+    mPreviousAngles.z = m_jnt.mAngles[1][1];
     f32 srcY = eyePos.y;
-    u8 head_only = ym1State(this).m8A4;
-    m9F0.x = target_y;
+    u8 head_only = ym1State(this).mbHeadOnly;
+    mPreviousAngles.x = target_y;
     f32 srcZ = current.pos.z;
     cXyz* player_eye_pos_p = nullptr;
-    switch ((u32)(s32)ym1State(this).m8AF) {
+    switch ((u32)(s32)ym1State(this).mLookMode) {
     case 0:
         break;
     case 1: {
         cXyz eye;
         dNpc_playerEyePos_l(&eye, -20.0f);
-        m9C8.copy(eye);
+        mLookPos.copy(eye);
         player_eye_pos.copy(eye);
         player_eye_pos_p = &player_eye_pos;
         break;
     }
     case 2:
-        player_eye_pos.copy(m9C8);
+        player_eye_pos.copy(mLookPos);
         player_eye_pos_p = &player_eye_pos;
         break;
     case 3:
-        target_y = mA06;
+        target_y = mLookAngleY;
         break;
     default:
         break;
@@ -308,7 +308,7 @@ void daNpc_Ym1_c::lookBack() {
 
 /* 022F88C8 */
 void daNpc_Ym1_c::set_cutGrass() {
-    if (mA16 == 0 && ym1State(this).m8AB == 1 && mpMorf->checkFrame(34.0f)) {
+    if (mbDemo == 0 && ym1State(this).mAnmNum == 1 && mpMorf->checkFrame(34.0f)) {
         /* grass cut at the left hand */
         PSMTXCopy(getAnmMtx(mpMorf->getModel(), mHandLJointIndex), mDoMtx_stack_c::get());
         cXyz pos;
@@ -323,13 +323,13 @@ void daNpc_Ym1_c::set_cutGrass() {
 
 /* 022F89CC */
 void daNpc_Ym1_c::set_collision_sp() {
-    if (mA13) {
+    if (mTalkRequested) {
         return;
     }
     cXyz offset;
     cXyz center;
     f32 r, h;
-    switch ((u32)(s32)ym1State(this).m8AB) {
+    switch ((u32)(s32)ym1State(this).mAnmNum) {
     case 1:
         PSMTXTrans(mDoMtx_stack_c::get(), current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_YrotM(mDoMtx_stack_c::get(), current.angle.y);
@@ -368,10 +368,10 @@ void daNpc_Ym1_c::set_collision_sp() {
 
 /* 022F8C24 */
 BOOL daNpc_Ym1_c::_execute() {
-    if (!mA11) {
+    if (!mbHomeSet) {
         /* the initial pose (word copies) */
         m9A4 = ym1PositionWords(this).x;
-        mA11 = 1;
+        mbHomeSet = 1;
         m9AC = ym1PositionWords(this).z;
         m9A8 = ym1PositionWords(this).y;
         m9B0 = current.angle.x;
@@ -387,7 +387,7 @@ BOOL daNpc_Ym1_c::_execute() {
                        prm->mMaxHeadX, prm->mMaxHeadY, prm->mMinHeadX, prm->mMinHeadY,
                        prm->mTurnStep);
     }
-    if (ym1State(this).m89E && demoActorID == 0) {
+    if (ym1State(this).mbWaitForDemo && demoActorID == 0) {
         return TRUE;
     }
     checkOrder();
@@ -406,13 +406,13 @@ BOOL daNpc_Ym1_c::_execute() {
         }
         Ym1_play_animation(this); /* play_animation() */
     } else {
-        ym1State(this).m89E = 0;
+        ym1State(this).mbWaitForDemo = 0;
     }
     eventOrder();
-    ym1Angles(this).m846.x = current.angle.x;
-    ym1Angles(this).m846.y = current.angle.y;
-    ym1Angles(this).m846.z = current.angle.z;
-    if (!ym1State(this).m89F) {
+    ym1Angles(this).mModelAngle.x = current.angle.x;
+    ym1Angles(this).mModelAngle.y = current.angle.y;
+    ym1Angles(this).mModelAngle.z = current.angle.z;
+    if (!ym1State(this).mbNoShapeAngle) {
         shape_angle.z = current.angle.z;
         shape_angle.y = current.angle.y;
         shape_angle.x = current.angle.x;
@@ -425,7 +425,7 @@ BOOL daNpc_Ym1_c::_execute() {
         /* dCcMassS_Mng::SetAreaChk(&mCyl, 3, area_check) */
         Ym1_setMassArea(ym1MassManager(), &mCyl, 3, Ym1_area_check);
     }
-    if (!mA16) {
+    if (!mbDemo) {
         set_collision_sp();
     }
     return TRUE;

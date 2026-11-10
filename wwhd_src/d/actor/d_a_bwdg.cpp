@@ -151,8 +151,9 @@ void daBwdg_packet_c::draw(void* ctx) {
     }
     if (render->mIndices.mCount != 0) {
         BwdgIndexBuffer* indices = &render->mIndices;
-        bwdgDrawIndexed((u32)indices->mPrimitive, (u32)indices->mCount, indices->mpIndices.get(),
-                        (u32)indices->mIndexType, 0, 1);
+        bwdgDrawIndexed((u32)indices->mPrimitive, (u32)indices->mCount,
+                        gabi::at<void>((u32)indices->mIndexType),
+                        (u32)indices->mpIndices.v, 0, 1);
     }
     bwdgApplyDrawState(&bwdgSystem.mDrawState);
 }
@@ -185,13 +186,13 @@ static void wave_cont(bwdg_class* i_this, u8 r4) {
         f30 = 0.5f;
         f31 = 0.0f;
         bwd_class* waveBoss = boss;
-        i_this->m002B8 = (s16)(i_this->m002B8 + waveBoss->m17D8);
+        i_this->mWavePhase = (s16)(i_this->mWavePhase + waveBoss->mWaveSpeed);
         waveBoss = boss;
-        f27 = waveBoss->m17E0;
-        cx = waveBoss->m17C8.x;
-        f29 = waveBoss->m17DC;
-        cz = waveBoss->m17C8.z;
-        f28 = waveBoss->m17D4;
+        f27 = waveBoss->mSandBaseY;
+        cx = waveBoss->mSandDentCenter.x;
+        f29 = waveBoss->mWaveStepRate;
+        cz = waveBoss->mSandDentCenter.z;
+        f28 = waveBoss->mSandDentDepth;
     }
 
     for (int i = 0; i < 0x1081; posVtx++, i++) {
@@ -210,9 +211,9 @@ static void wave_cont(bwdg_class* i_this, u8 r4) {
         }
         s16 a = (s16)gabi::ftoi(f0 * 200.0f);
         f32 step = gabi::fmadds(f3, 0.3f, f31) * f29;
-        f32 f2 = cM_ssin(i_this->m002B8 + a);
-        cLib_addCalc2(&i_this->m002C0[i], gabi::fmadds(f4 * f4, f28, f2 * f3), f30, step);
-        posVtx->y = i_this->m002C0[i] + f27;
+        f32 f2 = cM_ssin(i_this->mWavePhase + a);
+        cLib_addCalc2(&i_this->mWaveHeight[i], gabi::fmadds(f4 * f4, f28, f2 * f3), f30, step);
+        posVtx->y = i_this->mWaveHeight[i] + f27;
     }
 
     /* HD: the rotated normal is a function-local static, (0, 1, 0) rotated by -0x4A38 about X */
@@ -258,7 +259,7 @@ static BOOL daBwdg_Execute(bwdg_class* i_this) {
             return TRUE;
         }
     }
-    i_this->m002B4 = (s16)(i_this->m002B4 + 1);
+    i_this->mFrameCounter = (s16)(i_this->mFrameCounter + 1);
     dBgWSv_CopyBackVtx(i_this->mpBgW);
     wave_cont(i_this, 0);
     dBgWSv_SetVtx(i_this->mpBgW, posVtx);

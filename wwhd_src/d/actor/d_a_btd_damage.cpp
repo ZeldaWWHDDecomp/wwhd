@@ -34,23 +34,23 @@ void damage_check(btd_class* self) {
     fopAc_ac_c* actor = &i_this->actor;
     // HD: retain the initial play accessor even though its result is unused.
     dComIfGp_get();
-    if (i_this->m02F6 == 1) {
-        i_this->m02F6 = 2;
+    if (i_this->mRockHitState == 1) {
+        i_this->mRockHitState = 2;
         i_this->mGohmaState = 20;
-        i_this->m02E4 = 2;
+        i_this->mAction = 2;
         if (actor != nullptr)
             monsSeStart(actor, JA_SE_CV_BTD_DMG_ROCK);
         eff_off(self);
         return;
     }
     s32 hit = i_this->mEyeSph.ChkTgHit();
-    if (hit && i_this->m02E0 == 0 && i_this->mActionState == 0) {
+    if (hit && i_this->mBattlePhase == 0 && i_this->mActionState == 0) {
         i_this->mActionState = 10;
         void* obj = i_this->mEyeSph.GetTgHitObj();
         def_se_set(actor, obj, 0x40);
     }
     hit = i_this->mEyeSph.ChkTgHit();
-    if (hit && i_this->m02E0 == 1) {
+    if (hit && i_this->mBattlePhase == 1) {
         u32 flags = i_this->mEyeSph.mGObjTg.mSPrm;
         s16 cooldown = i_this->mActionState;
         i_this->mEyeSph.mGObjTg.mSPrm = flags | 2; // OnTgNoConHit
@@ -73,7 +73,7 @@ void damage_check(btd_class* self) {
                 s16 pause = l_pauseRegister;
                 l_pauseTimer = (u8)(pause + 8);
                 dPa_control_c* control = dComIfGp_getParticle();
-                btdParticleSet(control, 0, ID_AK_JN_CRITICALHITFLASH, &i_this->m03E0, nullptr,
+                btdParticleSet(control, 0, ID_AK_JN_CRITICALHITFLASH, &i_this->mEyeJointPos, nullptr,
                                nullptr, 255, nullptr, -1, nullptr, nullptr, nullptr);
                 csXyz angle;
                 cXyz pos;
@@ -85,9 +85,9 @@ void damage_check(btd_class* self) {
                 fopAc_ac_c* player = dComIfGp_getPlayer(0);
                 angle.y = fopAcM_searchActorAngleY(actor, player);
                 control = dComIfGp_getParticle();
-                btdParticleSet(control, 0, ID_AK_JN_OK, &i_this->m03E0, &angle, &pos, 255, nullptr,
+                btdParticleSet(control, 0, ID_AK_JN_OK, &i_this->mEyeJointPos, &angle, &pos, 255, nullptr,
                                -1, nullptr, nullptr, nullptr);
-                i_this->m02E4 = 11;
+                i_this->mAction = 11;
                 i_this->mGohmaState = 50;
                 if (gabi::ea(&actor->eyePos) != 0) {
                     s32 room = actor->current.roomNo;
@@ -96,7 +96,7 @@ void damage_check(btd_class* self) {
                 }
                 return;
             }
-            if (i_this->m02E4 == 2) {
+            if (i_this->mAction == 2) {
                 s8 totalDamage = (s8)(u8)i_this->mTotalDamage;
                 s16 threshold = l_HIO.m0E;
                 if (totalDamage >= threshold) {
@@ -118,43 +118,43 @@ void damage_check(btd_class* self) {
                 }
             } else {
                 i_this->mGohmaState = 0;
-                i_this->m02E4 = 2;
+                i_this->mAction = 2;
             }
             monsSeStart(actor, JA_SE_CV_BTD_DAMAGE);
             eff_off(self);
         }
     }
     for (u32 i = 0; i < 19; ++i) {
-        s16 cooldown = i_this->m5FC4[i];
+        s16 cooldown = i_this->mSphHitTimer[i];
         if (cooldown) {
-            i_this->m5FC4[i] = (s16)(cooldown - 1);
+            i_this->mSphHitTimer[i] = (s16)(cooldown - 1);
             continue;
         }
         dCcD_Sph* sph = &i_this->mAtSphs[i];
         if (sph->ChkTgHit()) {
             u32 flags = sph->mGObjTg.mSPrm;
             sph->mGObjTg.mSPrm = flags | 2;
-            i_this->m5FC4[i] = 10;
+            i_this->mSphHitTimer[i] = 10;
             // HD: sequential word copies retain signaling NaNs and possible guest aliases.
-            i_this->m5E98[i] = i_this->m02FC[i];
+            i_this->mHitSePos[i] = i_this->mJointPos[i];
             void* obj = sph->GetTgHitObj();
-            def_se_set_p(actor, &i_this->m5E98[i], obj, 0x42);
+            def_se_set_p(actor, &i_this->mHitSePos[i], obj, 0x42);
             break;
         }
     }
     for (u32 i = 0; i < 6; ++i) {
-        s16 cooldown = i_this->m5FEA[i];
+        s16 cooldown = i_this->mCylHitTimer[i];
         if (cooldown) {
-            i_this->m5FEA[i] = (s16)(cooldown - 1);
+            i_this->mCylHitTimer[i] = (s16)(cooldown - 1);
             continue;
         }
         dCcD_Cyl* cyl = &i_this->mHandCyls[i];
         if (cyl->ChkTgHit()) {
             u32 flags = cyl->mGObjTg.mSPrm;
             cyl->mGObjTg.mSPrm = flags | 2;
-            i_this->m5FEA[i] = 10;
+            i_this->mCylHitTimer[i] = 10;
             void* obj = cyl->GetTgHitObj();
-            def_se_set_p(actor, &i_this->m5E98[i + 19], obj, 0x42);
+            def_se_set_p(actor, &i_this->mHitSePos[i + 19], obj, 0x42);
             return;
         }
     }

@@ -29,14 +29,14 @@ WWHD_OFFSET(KitaBgWView, mRideCallback, 0xB0);
 // The hanging vine keeps pointers into its platform's endpoint and release-state arrays.
 struct KitaShandView : fopAc_ac_c {
     u8 _3AC[0x424 - 0x3AC];
-    be<fpc_ProcID> field_308;
+    be<fpc_ProcID> mParentId;
     u8 _428[4];
-    gptr<cXyz> field_310;
-    gptr<be<u8>> field_314;
+    gptr<cXyz> mpRootPos;
+    gptr<be<u8>> mpParentState;
 };
-WWHD_OFFSET(KitaShandView, field_308, 0x424);
-WWHD_OFFSET(KitaShandView, field_310, 0x42C);
-WWHD_OFFSET(KitaShandView, field_314, 0x430);
+WWHD_OFFSET(KitaShandView, mParentId, 0x424);
+WWHD_OFFSET(KitaShandView, mpRootPos, 0x42C);
+WWHD_OFFSET(KitaShandView, mpParentState, 0x430);
 
 // HD: unit-private bindings preserve this translation unit's inline forms.
 /* HD: fopAcM_SetMin / fopAcM_SetMax are out of line (025D672C / 025D673C) */

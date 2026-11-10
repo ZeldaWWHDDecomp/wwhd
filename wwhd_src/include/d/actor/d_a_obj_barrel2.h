@@ -112,16 +112,16 @@ struct Act_c : fopAc_ac_c {
     s32 _create();
 
     /* 0x3AC */ request_of_phase_process_class mPhase;
-    /* 0x3B4 */ gptr<J3DModel> m298;
-    /* 0x3B8 */ gptr<mDoExt_brkAnm> m29C;
+    /* 0x3B4 */ gptr<J3DModel> mpModel;  /* was m298: create_heap 0231E670 creates the barrel's J3DModel; set_mtx 0231EEF4 / _draw 023210E0 use it */
+    /* 0x3B8 */ gptr<mDoExt_brkAnm> mpBrkAnm;  /* was m29C: create_heap 0231E670 stores the brk animation; execute_sub 02320AD4 plays it in MODE_AFL; _draw 023210E0 enters it */
     /* 0x3BC */ dCcD_Stts mStts;
     /* 0x3F8 */ dCcD_Cyl mCyl;
-    /* 0x528 */ be<s32> m40C;
-    /* 0x52C */ be<s32> m410;
+    /* 0x528 */ be<s32> mMode;  /* was m40C: mode_afl_init 0231F344 sets MODE_AFL, mode_exit_v_init 02320918 ...; demo_mode_chk 0231FD50 / execute_sub 02320AD4 test it */
+    /* 0x52C */ be<s32> mType;  /* was m410: the attribute index: attr() returns M_attr[it] (checked < 4); _create 0231F350 sets it; TWW attr() { return &M_attr[m410]; } */
     /* 0x530 */ be<f32> m414;
     /* 0x534 */ be<f32> m418;
-    /* 0x538 */ be<f32> m41C;
-    /* 0x53C */ cXyz m420;
+    /* 0x538 */ be<f32> mWaterY;  /* was m41C: set_water_pos 0231EA58: the mean of three water heights; set_pos_y 0231ED94 sets y = it + mPosYOffset */
+    /* 0x53C */ cXyz mWaterNormal;  /* was m420: set_water_pos 0231EA58: the normalized cross product of the water surface; afl_sway 0232115C tilts the barrel by it */
     /* 0x548 */ be<f32> m42C;
     /* 0x54C */ be<f32> m430;
     /* 0x550 */ be<f32> m434;
@@ -132,22 +132,22 @@ struct Act_c : fopAc_ac_c {
     /* 0x560 */ be<f32> m444;
     /* 0x564 */ be<f32> m448;
     /* 0x568 */ be<f32> m44C;
-    /* 0x56C */ be<f32> m450;
-    /* 0x570 */ be<f32> m454;
+    /* 0x56C */ be<f32> mPosYOffset;  /* was m450: set_pos_y 0231ED94 adds it to mWaterY; mode_afl 02321564 moves it with mPosYOffsetSpeed (bobbing); _create 0231F350 sets the sunk start */
+    /* 0x570 */ be<f32> mPosYOffsetSpeed;  /* was m454: mode_afl 02321564 integrates mPosYOffset with it; co_hitCB 0231E84C sets -60 (pushed under); the exit modes set it */
     /* 0x574 */ be<u32> mItemId;
-    /* 0x578 */ be<f32> m45C;
-    /* 0x57C */ be<u32> m460;
-    /* 0x580 */ be<s32> m464;
+    /* 0x578 */ be<f32> mItemDistance;  /* was m45C: _create 0231F350 / set_item_position 023213F8 set barrelItemDistanceMax; item_drop_init 02320294 / item_drop 02321CEC use it */
+    /* 0x57C */ be<u32> mChildPid;  /* was m460: _create 0231F350: process ID of the child actor 0x1D1 it creates, else fpcM_ERROR_PROCESS_ID_e; set_mtx 0231EEF4 / buoy_jump 023201B0 use it */
+    /* 0x580 */ be<s32> mModeTimer;  /* was m464: mode_exit_v_init 02320918 sets 4, mode_explode_init 023203B0 30; the modes count it down */
     /* 0x584 */ be<u8> m468;
     u8 _585;
-    /* 0x586 */ be<s16> m46A;
+    /* 0x586 */ be<s16> mStagePoint;  /* was m46A: _create 0231F350: the current stage's start point (mCurStage.mPoint); _execute 0232101C tests != 1 */
     /* 0x588 */ be<u8> m46C;
-    /* 0x589 */ be<u8> m46D;
+    /* 0x589 */ be<u8> mCoHitTimer;  /* was m46D: co_hitCB 0231E84C sets 20 when it is 0; execute_sub 02320AD4 counts it down */
     u8 _58e[2];
     /* 0x58C */ be<s32> m470;
-    /* 0x590 */ be<u8> m474;
+    /* 0x590 */ be<u8> mExitReq;  /* was m474: execute_sub 02320AD4 starts the exit in MODE_AFL when set; TWW exit_req() { m474 = 1; } */
     /* 0x591 */ be<u8> m475;
-    /* 0x592 */ be<u8> m476;
+    /* 0x592 */ be<u8> mItemGive;  /* was m476: item_give 023208BC sets 1; TWW chk_item_give() { return m476; } */
     u8 _593;
     /* 0x594 */ Mtx34 m478;
 };
@@ -156,8 +156,8 @@ WWHD_SIZE(daObjBarrel2::Attr_c, 0x74);
 WWHD_OFFSET(daObjBarrel2::Act_c, mPhase, 0x3AC);
 WWHD_OFFSET(daObjBarrel2::Act_c, mStts, 0x3BC);
 WWHD_OFFSET(daObjBarrel2::Act_c, mCyl, 0x3F8);
-WWHD_OFFSET(daObjBarrel2::Act_c, m40C, 0x528);
-WWHD_OFFSET(daObjBarrel2::Act_c, m474, 0x590);
+WWHD_OFFSET(daObjBarrel2::Act_c, mMode, 0x528);
+WWHD_OFFSET(daObjBarrel2::Act_c, mExitReq, 0x590);
 WWHD_OFFSET(daObjBarrel2::Act_c, m478, 0x594);
 WWHD_SIZE(daObjBarrel2::Act_c, 0x5C4);
 
@@ -334,20 +334,20 @@ struct CylinderSource {
 };
 } // namespace barrel2_hd
 
-WWHD_OFFSET(daObjBarrel2::Act_c, m298, 0x3B4);
-WWHD_OFFSET(daObjBarrel2::Act_c, m29C, 0x3B8);
-WWHD_OFFSET(daObjBarrel2::Act_c, m410, 0x52C);
+WWHD_OFFSET(daObjBarrel2::Act_c, mpModel, 0x3B4);
+WWHD_OFFSET(daObjBarrel2::Act_c, mpBrkAnm, 0x3B8);
+WWHD_OFFSET(daObjBarrel2::Act_c, mType, 0x52C);
 WWHD_OFFSET(daObjBarrel2::Act_c, m414, 0x530);
-WWHD_OFFSET(daObjBarrel2::Act_c, m41C, 0x538);
-WWHD_OFFSET(daObjBarrel2::Act_c, m420, 0x53C);
+WWHD_OFFSET(daObjBarrel2::Act_c, mWaterY, 0x538);
+WWHD_OFFSET(daObjBarrel2::Act_c, mWaterNormal, 0x53C);
 WWHD_OFFSET(daObjBarrel2::Act_c, m43C, 0x558);
 WWHD_OFFSET(daObjBarrel2::Act_c, m440, 0x55C);
-WWHD_OFFSET(daObjBarrel2::Act_c, m450, 0x56C);
-WWHD_OFFSET(daObjBarrel2::Act_c, m454, 0x570);
+WWHD_OFFSET(daObjBarrel2::Act_c, mPosYOffset, 0x56C);
+WWHD_OFFSET(daObjBarrel2::Act_c, mPosYOffsetSpeed, 0x570);
 WWHD_OFFSET(daObjBarrel2::Act_c, mItemId, 0x574);
-WWHD_OFFSET(daObjBarrel2::Act_c, m45C, 0x578);
-WWHD_OFFSET(daObjBarrel2::Act_c, m460, 0x57C);
-WWHD_OFFSET(daObjBarrel2::Act_c, m464, 0x580);
-WWHD_OFFSET(daObjBarrel2::Act_c, m46A, 0x586);
+WWHD_OFFSET(daObjBarrel2::Act_c, mItemDistance, 0x578);
+WWHD_OFFSET(daObjBarrel2::Act_c, mChildPid, 0x57C);
+WWHD_OFFSET(daObjBarrel2::Act_c, mModeTimer, 0x580);
+WWHD_OFFSET(daObjBarrel2::Act_c, mStagePoint, 0x586);
 WWHD_OFFSET(daObjBarrel2::Act_c, m46C, 0x588);
 WWHD_OFFSET(daObjBarrel2::Act_c, m470, 0x58C);

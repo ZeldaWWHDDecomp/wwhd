@@ -117,7 +117,7 @@ void Act_c::mode_wait_init() {
     gravity = a->m14;
     backgroundHD(w)->mCrrFunc = MOVEBOX_CRR_TRANSLATE;
     clr_moment_cnt();
-    m634 = -1;
+    mWalkDir = -1;
     mMode = MODE_WAIT;
 }
 /* 0237845C */
@@ -177,7 +177,7 @@ BOOL Act_c::Delete() {
 /* 023792E8 */
 void Act_c::mode_walk_init() {
     speedF = 0.0f;
-    m64F = 0;
+    mbPathSaved = 0;
     mMode = MODE_WALK;
 }
 /* 0237966C */
@@ -408,7 +408,7 @@ fopAc_ac_c* Act_c::PPCallBack(fopAc_ac_c* target, fopAc_ac_c* unused, s16 angle,
             direction = (u32)(facing + 0x6000) < 0xC000 ? 3 : 2;
         for (u32 j = 0; j < 4; j++)
             box->mMomentCnt[j] = j == direction ? (s16)(box->mMomentCnt[j] + 1) : 0;
-        box->m64A = 1;
+        box->mbPushPullHit = 1;
     }
     return target;
 }
@@ -453,17 +453,17 @@ void Act_c::eff_set_slip_smoke_pos() {
         l_statics.mSmokeBasePos[0].set(-0.5f, 0.0f, -0.5f);
         l_statics.mSmokeBasePos[1].set(0.5f, 0.0f, -0.5f);
     }
-    s16 angle = (s16)((s16)home.angle.y + M_dir_base[(s32)m634]);
+    s16 angle = (s16)((s16)home.angle.y + M_dir_base[(s32)mWalkDir]);
     f32 scale = attr(0x1002D540)->mScaleXZ;
     PSMTXTrans(mDoMtx_stack_c::get(), (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
     mDoMtx_YrotM(mDoMtx_stack_c::get(), angle);
     mDoMtx_stack_c::transM(0.0f, 0.0f, 10.0f);
     mDoMtx_stack_c::scaleM(scale, scale, scale);
     for (s32 i = 0; i < 2; i++) {
-        PSMTXMultVec(mDoMtx_stack_c::get(), &l_statics.mSmokeBasePos[i], &mSmokeCbs[i].field_0x20);
-        mSmokeCbs[i].field_0x2C.x = 0;
-        mSmokeCbs[i].field_0x2C.y = angle;
-        mSmokeCbs[i].field_0x2C.z = 0;
+        PSMTXMultVec(mDoMtx_stack_c::get(), &l_statics.mSmokeBasePos[i], &mSmokeCbs[i].mPos);
+        mSmokeCbs[i].mAngle.x = 0;
+        mSmokeCbs[i].mAngle.y = angle;
+        mSmokeCbs[i].mAngle.z = 0;
     }
 }
 /* 0237918C */
@@ -479,7 +479,7 @@ void Act_c::eff_smoke_slip_start() {
         s8 room = current.roomNo;
         dPa_control_c* particle = dComIfGp_getParticle();
         JPABaseEmitter* emitter =
-            particle->set(2, 0x2022, &cb->field_0x20, &cb->field_0x2C, &l_statics.mSmokeScale, 0xB9,
+            particle->set(2, 0x2022, &cb->mPos, &cb->mAngle, &l_statics.mSmokeScale, 0xB9,
                           reinterpret_cast<dPa_levelEcallBack*>(cb), room, 0, 0, 0);
         if (emitter) {
             reinterpret_cast<MoveboxEmitterHD*>(emitter)->mInitialVelDir = 15.0f;
@@ -520,13 +520,13 @@ void Act_c::RideCallBack(dBgW* bg, fopAc_ac_c* target, fopAc_ac_c* rider) {
     f32 ratio = gabi::fnmsubs(distance, reciprocal->m74, 1.0f);
     ratio = gabi::fmadds(ratio, 0.8999999761581421f, 0.10000000149011612f);
     ratio = ratio >= 0.0f ? ratio : 0.0f;
-    f32 down = gabi::fmadds(weight, ratio, box->m608);
-    f32 x = box->m60C, z = box->m610;
+    f32 down = gabi::fmadds(weight, ratio, box->mRideSinkAccel);
+    f32 x = box->mSwayTargetX, z = box->mSwayTargetZ;
     if (down < limit)
         down = limit;
-    box->m608 = down;
-    box->m60C = gabi::fmadds(moment, dx, x);
-    box->m610 = gabi::fmadds(moment, dz, z);
+    box->mRideSinkAccel = down;
+    box->mSwayTargetX = gabi::fmadds(moment, dx, x);
+    box->mSwayTargetZ = gabi::fmadds(moment, dz, z);
 }
 
 VERIFY(0x02377308, Act_c::RideCallBack);
@@ -617,7 +617,7 @@ bool Bgc_c::chk_wall_touch(const Act_c* actor, const BgcSrc_c* src, s16 angle) {
 s32 Act_c::check_to_walk() {
     s32 result = -1;
     bool clear = true;
-    if (m64A && (mBgc.mStateFlags & 1) && !(mType == 11 && mChildPID != 0xFFFFFFFF)) {
+    if (mbPushPullHit && (mBgc.mStateFlags & 1) && !(mType == 11 && mChildPID != 0xFFFFFFFF)) {
         u32 label = mPPLabel;
         const Attr_c* a = attr(0x1002D504);
         s16 threshold = (label & 2) ? ((label & 4) ? (s16)a->m06 : (s16)a->m08)
@@ -637,17 +637,17 @@ s32 Act_c::check_to_walk() {
     }
     if (clear)
         clr_moment_cnt();
-    m64A = 0;
+    mbPushPullHit = 0;
     return result;
 }
 
 /* 02379308 */
 void Act_c::mode_wait() {
-    if (m646 > 0)
-        m646 = m646 - 1;
+    if (mAflCooldown > 0)
+        mAflCooldown = mAflCooldown - 1;
     s32 direction = check_to_walk();
-    if (!m64F && (mBgc.mStateFlags & 1)) {
-        m64F = 1;
+    if (!mbPathSaved && (mBgc.mStateFlags & 1)) {
+        mbPathSaved = 1;
         path_save();
     }
     const Attr_c* a = attr(0x1002D5C0);
@@ -658,31 +658,31 @@ void Act_c::mode_wait() {
     mDoMtx_YrotM(matrix, (s16)home.angle.y);
     a = attr(0x1002D5C0);
     b = attr(0x1002D5C0);
-    f32 x = (f32)(s32)m628 * (f32)a->m0C, z = (f32)(s32)m62C * (f32)b->m0C;
+    f32 x = (f32)(s32)mGridX * (f32)a->m0C, z = (f32)(s32)mGridZ * (f32)b->m0C;
     mDoMtx_stack_c::transM(x, 0.0f, z);
     gabi::Local<cXyz> pos;
     PSMTXMultVec(matrix, &cXyz::Zero, pos.get());
     current.pos.x = pos->x;
     current.pos.z = pos->z;
     if (direction != -1) {
-        m634 = direction;
+        mWalkDir = direction;
         eff_smoke_slip_start();
         daPy_py_c* player = static_cast<daPy_py_c*>(dComIfGp_getPlayer(0));
         player->onNoResetFlg0(daPy_py_c::daPyFlg0_PUSH_PULL_KEEP);
         mode_walk_init();
         if (mPPLabel & 2) {
-            m644 = attr(0x1002D5C0)->m0A;
-            m630 = 32768.0f / (f32)(s16)attr(0x1002D5C0)->m0A;
+            mWalkTimer = attr(0x1002D5C0)->m0A;
+            mWalkAngleStep = 32768.0f / (f32)(s16)attr(0x1002D5C0)->m0A;
         } else {
-            m644 = attr(0x1002D5C0)->m04;
-            m630 = 32768.0f / (f32)(s16)attr(0x1002D5C0)->m04;
+            mWalkTimer = attr(0x1002D5C0)->m04;
+            mWalkAngleStep = 32768.0f / (f32)(s16)attr(0x1002D5C0)->m04;
         }
     }
 }
 
 /* 02379D00 */
 void Act_c::afl_sway() {
-    f32 z = m610, x = m60C, mag = gabi::fmadds(x, x, z * z);
+    f32 z = mSwayTargetZ, x = mSwayTargetX, mag = gabi::fmadds(x, x, z * z);
     const Attr_c* a = attr(0x1002D6A4);
     const Attr_c* b = attr(0x1002D6A4);
     f32 max = (f32)a->m4C * (f32)b->m4C;
@@ -699,45 +699,45 @@ void Act_c::afl_sway() {
         a = attr(0x1002D6A4);
         f32 distance = std_sqrtf(mag);
         f32 ratio = (f32)a->m4C / distance;
-        x = (f32)m60C * ratio;
-        z = (f32)m610 * ratio;
-        f32 oldX = m614;
-        m60C = x;
-        f32 oldZ = m618;
-        m610 = z;
+        x = (f32)mSwayTargetX * ratio;
+        z = (f32)mSwayTargetZ * ratio;
+        f32 oldX = mSwayX;
+        mSwayTargetX = x;
+        f32 oldZ = mSwayZ;
+        mSwayTargetZ = z;
         dx = oldX - x;
         dz = oldZ - z;
         a = attr(0x1002D6A4);
     } else {
-        dx = (f32)m614 - (f32)m60C;
-        dz = (f32)m618 - (f32)m610;
+        dx = (f32)mSwayX - (f32)mSwayTargetX;
+        dz = (f32)mSwayZ - (f32)mSwayTargetZ;
         a = attr(0x1002D6A4);
     }
     f32 forceX = -(dx * (f32)a->m50);
     f32 forceZ = -(dz * (f32)attr(0x1002D6A4)->m50);
     a = attr(0x1002D6A4);
-    f32 velocityX = m61C;
+    f32 velocityX = mSwaySpeedX;
     f32 dampX = -(velocityX * (f32)a->m54);
     bool reload = (u32)mType >= 13;
     a = attr(0x1002D6A4);
     if (reload)
-        velocityX = m61C;
-    f32 velocityZ = m620;
+        velocityX = mSwaySpeedX;
+    f32 velocityZ = mSwaySpeedZ;
     f32 sumX = forceX + dampX;
     f32 sumZ = gabi::fnmsubs(velocityZ, a->m54, forceZ);
     velocityX = velocityX + sumX;
     velocityZ = velocityZ + sumZ;
-    f32 oldX = m614, oldZ = m618;
-    m61C = velocityX;
-    m620 = velocityZ;
-    m614 = oldX + velocityX;
-    m618 = oldZ + velocityZ;
+    f32 oldX = mSwayX, oldZ = mSwayZ;
+    mSwaySpeedX = velocityX;
+    mSwaySpeedZ = velocityZ;
+    mSwayX = oldX + velocityX;
+    mSwayZ = oldZ + velocityZ;
     if (wallX)
-        m614 = 0.0f;
+        mSwayX = 0.0f;
     if (wallZ)
-        m618 = 0.0f;
-    m60C = 0.0f;
-    m610 = 0.0f;
+        mSwayZ = 0.0f;
+    mSwayTargetX = 0.0f;
+    mSwayTargetZ = 0.0f;
 }
 
 /* 0237A0A8 */
@@ -755,17 +755,17 @@ void Act_c::mode_afl() {
     a = attr(0x1002D6DC);
     f32 period = (f32)(s16)a->m38;
     f32 random = cM_rnd();
-    m604 = (s16)(m604 + (s16)gabi::ftoi(period * (random + 1.0f)));
+    mAflBobAngle = (s16)(mAflBobAngle + (s16)gabi::ftoi(period * (random + 1.0f)));
     const Attr_c* buoy = attr(0x1002D6DC);
     const Attr_c* grav = attr(0x1002D6DC);
     const Attr_c* wave = attr(0x1002D6DC);
-    u16 phase = m604;
+    u16 phase = mAflBobAngle;
     f32 g = grav->m14, b = buoy->m28, w = wave->m34;
     f32 sin = cM_ssin(phase);
     f32 base = gabi::fmadds(immersion, b, g);
     f32 force = gabi::fmadds(w, sin, base);
-    f32 down = m608;
-    m608 = 0.0f;
+    f32 down = mRideSinkAccel;
+    mRideSinkAccel = 0.0f;
     gravity = force + down;
     afl_sway();
     f32 air = 1.0f - immersion;
@@ -777,15 +777,15 @@ void Act_c::mode_afl() {
     f32 resistance = gabi::fmadds(a->m40, immersion, (f32)friction->m1C * air);
     f32 depth = (f32)mBgc.mWaterY - (f32)current.pos.y;
     if (depth < 0.0f)
-        m624 = 0.0f;
+        mSinkDepth = 0.0f;
     else {
-        m624 = depth;
+        mSinkDepth = depth;
         bool reload = (u32)mType >= 13;
         a = attr(0x1002D6DC);
         if (reload)
-            depth = m624;
+            depth = mSinkDepth;
         if (depth > a->m68)
-            m624 = attr(0x1002D6DC)->m68;
+            mSinkDepth = attr(0x1002D6DC)->m68;
     }
     daObj_posMoveF_stream(this, 0, &cXyz::Zero, drag, resistance);
 }
@@ -798,9 +798,9 @@ void Act_c::mode_walk() {
             l_statics.mWalkDirection[i].set(values[i * 3], values[i * 3 + 1], values[i * 3 + 2]);
         l_statics.mWalkDirectionGuard = 1;
     }
-    s16 counter = (s16)(m644 - 1);
-    u16 phase = (u16)gabi::ftoi((f32)counter * (f32)m630);
-    m644 = counter;
+    s16 counter = (s16)(mWalkTimer - 1);
+    u16 phase = (u16)gabi::ftoi((f32)counter * (f32)mWalkAngleStep);
+    mWalkTimer = counter;
     f32 blend = (cM_scos(phase) + 1.0f) * 0.5f;
     bool finished = counter <= 0;
     auto* matrix = mDoMtx_stack_c::get();
@@ -808,9 +808,9 @@ void Act_c::mode_walk() {
     mDoMtx_YrotM(matrix, (s16)home.angle.y);
     const Attr_c* a = attr(0x1002D66C);
     const Attr_c* b = attr(0x1002D66C);
-    cXyz* vec = &l_statics.mWalkDirection[(s32)m634];
-    f32 x = gabi::fmadds(vec->x, blend, (f32)(s32)m628);
-    f32 z = gabi::fmadds(vec->z, blend, (f32)(s32)m62C);
+    cXyz* vec = &l_statics.mWalkDirection[(s32)mWalkDir];
+    f32 x = gabi::fmadds(vec->x, blend, (f32)(s32)mGridX);
+    f32 z = gabi::fmadds(vec->z, blend, (f32)(s32)mGridZ);
     mDoMtx_stack_c::transM(x * (f32)a->m0C, 0.0f, z * (f32)b->m0C);
     gabi::Local<cXyz> pos;
     PSMTXMultVec(matrix, &cXyz::Zero, pos.get());
@@ -827,7 +827,7 @@ void Act_c::mode_walk() {
         const BgcSrc_c* src = attr(0x1002D66C)->m9A ? Bgc_c::M_lin20 : Bgc_c::M_lin5;
         bool extended = attr(0x1002D66C)->m9A != 0;
         s32 count = extended ? ((s32)mType == 10 ? 23 : 21) : 5;
-        s16 angle = M_dir_base[(s32)m634];
+        s16 angle = M_dir_base[(s32)mWalkDir];
         if (mBgc.chk_wall_pre(this, src, count, angle))
             sound_limit();
         eff_smoke_slip_end();
@@ -839,15 +839,15 @@ void Act_c::mode_walk() {
     current.pos.x = pos->x;
     current.pos.z = pos->z;
     if (finished) {
-        s32 direction = m634;
+        s32 direction = mWalkDir;
         if (direction == 0)
-            m62C = m62C + 1;
+            mGridZ = mGridZ + 1;
         else if (direction == 1)
-            m628 = m628 + 1;
+            mGridX = mGridX + 1;
         else if (direction == 2)
-            m62C = m62C - 1;
+            mGridZ = mGridZ - 1;
         else if (direction == 3)
-            m628 = m628 - 1;
+            mGridX = mGridX - 1;
         daPy_py_c* player = static_cast<daPy_py_c*>(dComIfGp_getPlayer(0));
         player->offNoResetFlg0(daPy_py_c::daPyFlg0_PUSH_PULL_KEEP);
         mode_wait_init();
@@ -872,7 +872,7 @@ BOOL Act_c::Execute(gptr<Mtx34>* output) {
     s32 mode = mMode;
     if (mode == 0) {
         u32 flags = mBgc.mStateFlags;
-        if ((flags & 16) && m646 == 0) {
+        if ((flags & 16) && mAflCooldown == 0) {
             bool floatUp = !(flags & 1);
             if (!floatUp) {
                 const Attr_c* a = attr(0x1002D490);
@@ -884,7 +884,7 @@ BOOL Act_c::Execute(gptr<Mtx34>* output) {
         }
     } else if (mode == 2 && (mBgc.mStateFlags & 1)) {
         mode_wait_init();
-        m646 = 20;
+        mAflCooldown = 20;
     }
     if (!l_modeGuard) {
         l_modeGuard = 1;
@@ -899,8 +899,8 @@ BOOL Act_c::Execute(gptr<Mtx34>* output) {
         u32 color = moveboxPolyColor(bg, check ? static_cast<cBgS_PolyInfo*>(check) : nullptr);
         tevStr.mEnvrIdxOverride = color;
     }
-    if (m648 > 0) {
-        m648 = m648 - 1;
+    if (mLandFxDelay > 0) {
+        mLandFxDelay = mLandFxDelay - 1;
         set_mtx();
     } else {
         if (mBgc.mStateFlags & 4) {
@@ -926,15 +926,15 @@ void Act_c::set_mtx() {
     PSMTXTrans(matrix, (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
     if (floating) {
         gabi::Local<cXyz> vec;
-        vec->set(m614, 1.0f, m618);
-        mDoMtx_stack_c::transM(0.0f, (f32)m624, 0.0f);
+        vec->set(mSwayX, 1.0f, mSwayZ);
+        mDoMtx_stack_c::transM(0.0f, (f32)mSinkDepth, 0.0f);
         gabi::Local<Quaternion> quat;
         moveboxQuaternion(quat.get(), vec.get());
         mDoMtx_stack_c::quatM(quat.get());
     }
     mDoMtx_ZXYrotM(matrix, (s16)shape_angle.x, (s16)shape_angle.y, (s16)shape_angle.z);
     if (floating)
-        mDoMtx_stack_c::transM(0.0f, -(f32)m624, 0.0f);
+        mDoMtx_stack_c::transM(0.0f, -(f32)mSinkDepth, 0.0f);
     if (mpModel != nullptr) {
         f32 values[12];
         for (s32 i = 0; i < 12; i++)
@@ -993,26 +993,26 @@ void Act_c::set_mtx() {
 
 /* 02377C1C */
 BOOL Act_c::Create() {
-    m608 = 0.0f;
-    m60C = 0.0f;
-    m610 = 0.0f;
-    m614 = 0.0f;
-    m618 = 0.0f;
-    m61C = 0.0f;
-    m604 = 0;
-    m620 = 0.0f;
+    mRideSinkAccel = 0.0f;
+    mSwayTargetX = 0.0f;
+    mSwayTargetZ = 0.0f;
+    mSwayX = 0.0f;
+    mSwayZ = 0.0f;
+    mSwaySpeedX = 0.0f;
+    mAflBobAngle = 0;
+    mSwaySpeedZ = 0.0f;
     f32 height = attr(0x1002D3D8)->m68;
-    m628 = 0;
-    m62C = 0;
-    m634 = -1;
+    mGridX = 0;
+    mGridZ = 0;
+    mWalkDir = -1;
     mPPLabel = 0;
-    m624 = height * 0.5f;
-    m630 = 0.0f;
+    mSinkDepth = height * 0.5f;
+    mWalkAngleStep = 0.0f;
     clr_moment_cnt();
-    m64A = 0;
-    m644 = 0;
-    m646 = 0;
-    m648 = 20;
+    mbPushPullHit = 0;
+    mWalkTimer = 0;
+    mAflCooldown = 0;
+    mLandFxDelay = 20;
     backgroundHD(mpBgW)->mRideCallback = MOVEBOX_RIDE_CALLBACK;
     backgroundHD(mpBgW)->mPushPullCallback = MOVEBOX_PUSH_PULL_CALLBACK;
     mStts.Init(255, 255, this);
@@ -1036,7 +1036,7 @@ BOOL Act_c::Create() {
     mBgc.proc_vertical(this);
     s8 room = home.roomNo;
     u32 flags = mBgc.mStateFlags;
-    m64F = 1;
+    mbPathSaved = 1;
     mBgc.mStateFlags = flags & ~0x26u;
     mReverb = dComIfGp_getReverb(room);
     mChildPID = 0xFFFFFFFF;

@@ -154,13 +154,15 @@ WWHD_OFFSET(BwdgUniformContainer, mFlags, 0x418);
 static_assert(sizeof(BwdgUniformContainer) == 0x41C);
 
 struct BwdgIndexBuffer {
-    /* 0x0000 */ gptr<void> mpIndices;
+    /* 0x0000 */ be<u32> mIndexType; /* was mpIndices (misnamed): daBwdg_packet_c::draw 0210508C passes this word as GX2DrawIndexedEx's indexType (r5) */
     /* 0x0004 */ be<u32> mPrimitive;
-    /* 0x0008 */ be<u32> mIndexType;
+    /* 0x0008 */ gptr<void> mpIndices; /* was mIndexType (misnamed): daBwdg_packet_c::draw 0210508C passes this word as GX2DrawIndexedEx's indices (r6) */
     /* 0x000C */ be<u32> mCount;
     /* 0x0010 */ u8 mReserved[8];
 };
 static_assert(sizeof(BwdgIndexBuffer) == 0x18);
+WWHD_OFFSET(BwdgIndexBuffer, mIndexType, 0x0);
+WWHD_OFFSET(BwdgIndexBuffer, mpIndices, 0x8);
 struct BwdgAttributeState {
     /* 0x0000 */ be<u32> mSignature[0x24];
 };
@@ -227,12 +229,12 @@ struct bwdg_class : fopAc_ac_c {
     // HD: constructor retains the actor address immediately before its phase.
     /* 0x03C8 */ gptr<bwdg_class> mSelf;
     /* 0x03CC */ request_of_phase_process_class mPhase;
-    /* 0x03D4 */ be<s16> m002B4;
+    /* 0x03D4 */ be<s16> mFrameCounter;  /* was m002B4: daBwdg_Execute 021043EC adds 1 per frame (its only use, in HD and zeldaret/tww) */
     /* 0x03D6 */ u8 m002B6[2];
-    /* 0x03D8 */ be<s16> m002B8;
+    /* 0x03D8 */ be<s16> mWavePhase;  /* was m002B8: wave_cont 02103FA4 advances it by the bwd_class wave speed (mWaveSpeed) each frame and uses it + the distance term as the cM_ssin phase of every vertex */
     /* 0x03DA */ u8 m002BA[2];
     /* 0x03DC */ gptr<dBgW> mpBgW;
-    /* 0x03E0 */ be<f32> m002C0[0x1081];
+    /* 0x03E0 */ be<f32> mWaveHeight[0x1081];  /* was m002C0: wave_cont 02103FA4 eases [i] toward the wave / dent height of vertex i (cLib_addCalc2) and sets the vertex y = it + base height */
     /* 0x45E4 */ daBwdg_packet_c mBwdgPacket;
 
     cXyz* getPos() { return mBwdgPacket.getPos(); }
@@ -241,10 +243,10 @@ struct bwdg_class : fopAc_ac_c {
 };
 WWHD_OFFSET(bwdg_class, mSelf, 0x3C8);
 WWHD_OFFSET(bwdg_class, mPhase, 0x3CC);
-WWHD_OFFSET(bwdg_class, m002B4, 0x3D4);
-WWHD_OFFSET(bwdg_class, m002B8, 0x3D8);
+WWHD_OFFSET(bwdg_class, mFrameCounter, 0x3D4);
+WWHD_OFFSET(bwdg_class, mWavePhase, 0x3D8);
 WWHD_OFFSET(bwdg_class, mpBgW, 0x3DC);
-WWHD_OFFSET(bwdg_class, m002C0, 0x3E0);
+WWHD_OFFSET(bwdg_class, mWaveHeight, 0x3E0);
 WWHD_OFFSET(bwdg_class, mBwdgPacket, 0x45E4);
 static_assert(sizeof(bwdg_class) == 0x1DDF0);
 

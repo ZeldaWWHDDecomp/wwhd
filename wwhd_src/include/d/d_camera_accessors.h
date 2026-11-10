@@ -35,9 +35,9 @@ WWHD_OFFSET(CameraWindowCoreHD, mViewport.mNearZ, 0x10);
 // HD: the five-byte patterns overlap the GC header's four-byte declarations differently.
 struct CameraShakePatternCoreHD {
     u8 _00[0x548];
-    be<u8> m544[5], m548[5];
+    be<u8> mShakePattern[5], mShakeCyclePattern[5];
 };
-WWHD_OFFSET(CameraShakePatternCoreHD, m548, 0x54D);
+WWHD_OFFSET(CameraShakePatternCoreHD, mShakeCyclePattern, 0x54D);
 struct CameraGlobeWordsHD {
     be<u32> mRadius, mAngles;
 };

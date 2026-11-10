@@ -47,7 +47,7 @@ BOOL daShip_c::bodyJointCallBack(int jno) {
     J3DModel* pModel = mpBodyAnm->getModel();
 
     if (jno == FN_BODY_JNT_J_FN_STEER1_e || jno == FN_BODY_JNT_J_FN_KAJI_e) {
-        mDoMtx_ZrotS(mDoMtx_now(), m0366);
+        mDoMtx_ZrotS(mDoMtx_now(), mTillerAngle);
         // HD: the tiller is shrunk away while Link looks down from the boat (GameCube: draw()
 // skipped the whole body model)
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
@@ -65,13 +65,13 @@ BOOL daShip_c::bodyJointCallBack(int jno) {
         J3DModel_setBaseTRMtx(mpCannonModel, mDoMtx_now());
         // HD: the cannon and crane models follow the mast animation's scale
         f32 scale = 1.0f;
-        if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
+        if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
             scale = (mpBodyAnm->getFrame() / mpBodyAnm->getEndFrame()) * 2.5f;
             if (scale > 1.0f)
                 scale = 1.0f;
             else
                 scale = scale >= 0.0f ? scale : 0.0f;
-        } else if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+        } else if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
             scale = gabi::fmsubs(1.0f - mpBodyAnm->getFrame() / mpBodyAnm->getEndFrame(), 3.0f, 1.0f);
             if (scale > 1.0f)
                 scale = 1.0f;
@@ -80,7 +80,7 @@ BOOL daShip_c::bodyJointCallBack(int jno) {
         }
         model_setBaseScale1(mpSalvageArmModel, scale);
         model_setBaseScale1(mpCannonModel, scale);
-        PSMTXScale(mDoMtx_now(), m03E8, m03E8, m03E8);
+        PSMTXScale(mDoMtx_now(), mSailScale, mSailScale, mSailScale);
     }
     stack_revConcat(model_getAnmMtx(pModel, jno));
     model_setAnmMtx(pModel, jno, mDoMtx_now());
@@ -109,9 +109,9 @@ static BOOL daShip_bodyJointCallBack(J3DNode* node, int calcTiming) {
 /* 024718C8 */
 BOOL daShip_c::cannonJointCallBack(int jno) {
     if (jno == VFNCN_JNT_CANON1_e) {
-        mDoMtx_XrotS_l(mDoMtx_now(), m0394);
+        mDoMtx_XrotS_l(mDoMtx_now(), mCannonAngleY);
     } else {
-        mDoMtx_YrotS(mDoMtx_now(), -m0396);
+        mDoMtx_YrotS(mDoMtx_now(), -mCannonAngleX);
     }
     stack_revConcat(model_getAnmMtx(mpCannonModel, jno));
     model_setAnmMtx(mpCannonModel, jno, mDoMtx_now());
@@ -137,7 +137,7 @@ static BOOL daShip_cannonJointCallBack(J3DNode* node, int calcTiming) {
 
 /* 02471AEC */
 BOOL daShip_c::craneJointCallBack() {
-    mDoMtx_ZrotS(mDoMtx_now(), -(m0398 + m039C));
+    mDoMtx_ZrotS(mDoMtx_now(), -(mCraneAngle + mCraneTurnAngle));
     stack_revConcat(model_getAnmMtx(mpSalvageArmModel, VFNCR_JNT_V_CRANE_ROTATION_e));
     model_setAnmMtx(mpSalvageArmModel, VFNCR_JNT_V_CRANE_ROTATION_e, mDoMtx_now());
     stack_toCurrentMtx();
@@ -189,9 +189,9 @@ BOOL daShip_c::headJointCallBack1(int jno) {
     f32 fVar2 = jointAnmMtx->m[1][3];
     f32 fVar3 = jointAnmMtx->m[2][3];
 
-    s16 sVar5 = shape_angle.y + m03A2 * (jno + -2);
+    s16 sVar5 = shape_angle.y + mHeadAngleY * (jno + -2);
     mDoMtx_YrotS(mDoMtx_now(), sVar5);
-    mDoMtx_ZXYrotM(mDoMtx_now(), m03A0, m03A2, 0);
+    mDoMtx_ZXYrotM(mDoMtx_now(), mHeadAngleX, mHeadAngleY, 0);
     mDoMtx_YrotM(mDoMtx_now(), -sVar5);
     stack_concat(model_getAnmMtx(mpHeadAnm->getModel(), jno));
 
@@ -236,7 +236,7 @@ BOOL daShip_c::draw() {
 
     dComIfGd_setListP1();
 
-    if (m02A0 != 0 && m02A4 != 0) {
+    if (mpEffectTexMtx.v != 0 && mpScrollTexMtx.v != 0) {
         // HD: no j3dSys skin CPU flags
         gabi::Local<cXyz> local_5c;
         f32 x = current.pos.x;
@@ -245,25 +245,25 @@ BOOL daShip_c::draw() {
         local_5c->x = x;
         local_5c->y = y;
         local_5c->z = z;
-        f32 k = 10000.0f * cM_scos(m037C);
+        f32 k = 10000.0f * cM_scos(mOldShapeAngleX);
         gabi::Local<cXyz> local_68;
         local_68->x = gabi::fmadds(k, cM_ssin(shape_angle.y), x);
-        local_68->y = gabi::fnmsubs(10000.0f, cM_ssin(m037C), y);
+        local_68->y = gabi::fnmsubs(10000.0f, cM_ssin(mOldShapeAngleX), y);
         local_68->z = gabi::fmadds(k, cM_scos(shape_angle.y), z);
         gabi::Local<Mtx34> MStack_50;
-        mDoMtx_lookAt(MStack_50.get(), local_5c.get(), local_68.get(), m037E);
+        mDoMtx_lookAt(MStack_50.get(), local_5c.get(), local_68.get(), mOldShapeAngleZ);
         mDoMtx_YrotS(mDoMtx_now(), -0x4000);
         mDoMtx_XrotM(mDoMtx_now(), -0x8000);
         mDoMtx_stack_c::scaleM(1.0f, 2.0f, 0.25f);
         stack_concat(MStack_50.get());
-        stack_revConcat(&m02A8);
+        stack_revConcat(&mOrthoMtx);
         // HD: relative to the view matrix (j3dSys.mViewMtx 0x104B45F8)
         gabi::Local<Mtx34> invView;
         PSMTXInverse(&ship_viewMtx, invView.get());
         stack_concat(invView.get());
-        /* m02A0->setEffectMtx(mDoMtx_stack_c::get()) (HD inline: a 4x4 effect matrix at +0x24, then
+        /* mpEffectTexMtx->setEffectMtx(mDoMtx_stack_c::get()) (HD inline: a 4x4 effect matrix at +0x24, then
          * the 3x4 matrix at +0x64) */
-        u32 tex = m02A0;
+        u32 tex = mpEffectTexMtx.v;
         for (int i = 0; i < 12; i++)
             gabi::at<ShipTexMtx>(tex)->mEffectMtx[i] = mDoMtx_now()->m[i / 4][i % 4];
         gabi::at<ShipTexMtx>(tex)->mEffectMtx[15] = 1.0f;
@@ -274,8 +274,8 @@ BOOL daShip_c::draw() {
         for (int i = 0; i < 12; i++)
             tmp->m[i / 4][i % 4] = mDoMtx_now()->m[i / 4][i % 4];
         PSMTXCopy_s(tmp.get(), &gabi::at<ShipTexMtx>(tex)->mMtx);
-        /* m02A4->mSRT.mTranslationX = m03D4 */
-        gabi::at<ShipTexMtx>(m02A4)->mTranslationX = m03D4;
+        /* mpScrollTexMtx->mSRT.mTranslationX = mTexScrollX */
+        mpScrollTexMtx->mTranslationX = mTexScrollX;
         // HD: the same scroll for the material "m_fn_main_hashi"
         u32 tabHdr = reinterpret_cast<ShipModelDraw*>(bodyModel)->mpResHeader;
         s32 off = gabi::at<ShipResourceHeader>(tabHdr)->mMaterialNameOffset;
@@ -289,10 +289,10 @@ BOOL daShip_c::draw() {
         u32 srt = hd_matGetTexSrt(mat, 1);
         if (srt == 0) /* JUT_ASSERT(0x4AE, srt != 0) */
             JUT_ASSERT_fail("d_a_ship.cpp", 0x4AE, "srt != (0)");
-        gabi::at<ShipTextureSRT>(srt)->mTranslationX = m03D4;
+        gabi::at<ShipTextureSRT>(srt)->mTranslationX = mTexScrollX;
         u32 slot = hd_matGetTexMtxSlot(mat, 1);
         if (slot != 0)
-            *gabi::at<be<u32>>(slot) = gabi::ea(&gabi::at<ShipTexMtx>(m02A0)->mMtx);
+            *gabi::at<be<u32>>(slot) = gabi::ea(&mpEffectTexMtx->mMtx);
     }
 
     // HD: the body is always drawn (the tiller is hidden in bodyJointCallBack)
@@ -537,14 +537,14 @@ void daShip_c::setInitMessage() {
 
 /* 02473080 */
 u32 daShip_c::seStart(u32 i_seNum, cXyz* i_sePos) {
-    return shipHD_startSound( i_seNum, i_sePos, 0u, (s32)m034A); /* mDoAud_seStart */
+    return shipHD_startSound( i_seNum, i_sePos, 0u, (s32)mReverb); /* mDoAud_seStart */
 }
 
 
 
 /* 024751E0 */
 void daShip_c::setControllAngle(s16 angle) {
-    s16 sVar1 = angle - m036C;
+    s16 sVar1 = angle - mControllAngle;
     s16 sVar2 = (s16)gabi::ftoi((f32)sVar1 * 0.05f);
     if (sVar2 == 0) {
         if (sVar1 > 0) {
@@ -553,9 +553,9 @@ void daShip_c::setControllAngle(s16 angle) {
             sVar2 = -1;
         }
     }
-    m036E += sVar2;
-    m036C += m036E;
-    cLib_addCalcAngleS(&m036E, 0, 0x14, 0x1000, 4);
+    mControllAngleSpeed += sVar2;
+    mControllAngle += mControllAngleSpeed;
+    cLib_addCalcAngleS(&mControllAngleSpeed, 0, 0x14, 0x1000, 4);
 }
 
 
@@ -564,14 +564,14 @@ void daShip_c::setControllAngle(s16 angle) {
 void daShip_c::getMaxWaterY(cXyz* shipPos) {
     if (daSea_ChkArea(shipPos->x, shipPos->z)) {
         shipPos->y = daSea_calcWave(shipPos->x, shipPos->z);
-        if (m03F8 > shipPos->y) {
-            shipPos->y = m03F8;
+        if (mWaterFlatY > shipPos->y) {
+            shipPos->y = mWaterFlatY;
         }
     } else {
-        if (m03F8 != -1000000000.0f) {
-            shipPos->y = m03F8;
+        if (mWaterFlatY != -1000000000.0f) {
+            shipPos->y = mWaterFlatY;
         } else {
-            shipPos->y = m03F4;
+            shipPos->y = mWaterY;
         }
     }
 }
@@ -620,15 +620,15 @@ void daShip_c::setWaveAngle(be<s16>* param1, be<s16>* param2) {
     s16 a1 = cM_atan2s(-fby, cXyz_abs(xz2.get()));
     *param1 = a1;
 
-    s16 iVar2 = *param2 - m0372;
-    s16 iVar3 = a1 - m0370;
+    s16 iVar2 = *param2 - mWaveAngleZ;
+    s16 iVar3 = a1 - mWaveAngleX;
 
-    m0376 = (s16)gabi::ftoi(gabi::fmadds((f32)iVar2, 0.045f, (f32)(s16)m0376));
-    m0372 += m0376;
-    cLib_addCalcAngleS(&m0376, 0, 0x14, 0x1000, 4);
-    m0374 = (s16)gabi::ftoi(gabi::fmadds((f32)iVar3, 0.045f, (f32)(s16)m0374));
-    m0370 += m0374;
-    cLib_addCalcAngleS(&m0374, 0, 0x14, 0x1000, 4);
+    mWaveAngleSpeedZ = (s16)gabi::ftoi(gabi::fmadds((f32)iVar2, 0.045f, (f32)(s16)mWaveAngleSpeedZ));
+    mWaveAngleZ += mWaveAngleSpeedZ;
+    cLib_addCalcAngleS(&mWaveAngleSpeedZ, 0, 0x14, 0x1000, 4);
+    mWaveAngleSpeedX = (s16)gabi::ftoi(gabi::fmadds((f32)iVar3, 0.045f, (f32)(s16)mWaveAngleSpeedX));
+    mWaveAngleX += mWaveAngleSpeedX;
+    cLib_addCalcAngleS(&mWaveAngleSpeedX, 0, 0x14, 0x1000, 4);
 }
 
 
@@ -638,25 +638,25 @@ f32 daShip_c::getWaterY() {
     f32 waterY;
     BOOL waterHit = mAcch.ChkWaterHit();
     if (waterHit) {
-        m03F8 = mAcch.m_wtr.m_height; /* mAcch.m_wtr.GetHeight() */
+        mWaterFlatY = mAcch.m_wtr.m_height; /* mAcch.m_wtr.GetHeight() */
     } else {
-        m03F8 = -1000000000.0f;
+        mWaterFlatY = -1000000000.0f;
     }
     if (daSea_ChkArea(current.pos.x, current.pos.z)) {
         waterY = daSea_calcWave(current.pos.x, current.pos.z);
-        if (!waterHit || waterY > m03F8) {
+        if (!waterHit || waterY > mWaterFlatY) {
             return waterY;
         }
     }
     if (waterHit) {
-        waterY = m03F8;
+        waterY = mWaterFlatY;
     } else {
         /* daPy_lk_c::checkBowMiniGame(): the current procedure (+0x430) */
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
         if (link && reinterpret_cast<ShipPlayer*>(dComIfGp_getLinkPlayer())->mProcID == 0x44) {
             waterY = 0.0f;
         } else {
-            waterY = m03F4;
+            waterY = mWaterY;
         }
     }
     return waterY;
@@ -666,11 +666,11 @@ f32 daShip_c::getWaterY() {
 
 /* 024754D8 */
 void daShip_c::setYPos() {
-    m03F4 = getWaterY();
+    mWaterY = getWaterY();
     if (!checkStateFlg(daSFLG_UNK10_e)) {
         onStateFlg(daSFLG_UNK10_e);
-        if (mCurMode != MODE_START_MODE_WARP_e && mCurMode != MODE_START_MODE_THROW_e && m0351 != 0xB /* DEMO_HWARP_DOWN_e */) {
-            current.pos.y = m03F4;
+        if (mCurMode != MODE_START_MODE_WARP_e && mCurMode != MODE_START_MODE_THROW_e && mDemoMode != 0xB /* DEMO_HWARP_DOWN_e */) {
+            current.pos.y = mWaterY;
         }
     }
 
@@ -679,7 +679,7 @@ void daShip_c::setYPos() {
     }
 
     f32 cy = current.pos.y;
-    f32 fVar2 = m03F4 - cy;
+    f32 fVar2 = mWaterY - cy;
 
     if (checkStateFlg(daSFLG_FLY_e)) {
         if (mCurMode == MODE_START_MODE_WARP_e || mCurMode == MODE_START_MODE_THROW_e) {
@@ -692,9 +692,9 @@ void daShip_c::setYPos() {
                 if (speed.y < -15.0f) {
                     speed.y = -15.0f;
                 }
-                m03D0 = speed.y * 0.5f;
+                mFloatSpeedY = speed.y * 0.5f;
                 speedF *= 0.85f;
-                m0388 = 30;
+                mLandTimer = 30;
             }
         }
     } else {
@@ -705,26 +705,26 @@ void daShip_c::setYPos() {
         }
 
         current.pos.y = gabi::fmadds(fVar2 * 0.1f, rate, cy);
-        f32 d = gabi::fmadds(m03F4 - current.pos.y, 0.05f, m03D0);
+        f32 d = gabi::fmadds(mWaterY - current.pos.y, 0.05f, mFloatSpeedY);
         if (d > 20.0f) {
             d = 20.0f;
         } else if (d < -20.0f) {
             d = -20.0f;
         }
-        m03D0 = d;
+        mFloatSpeedY = d;
         current.pos.y += d;
         f32 r = cM_rndF(1000.0f);
-        m03B0 = (s16)gabi::ftoi((f32)(s16)m03B0 + gabi::fmadds(rate, 500.0f, r + 1000.0f));
-        current.pos.y += gabi::fmadds(rate * 0.25f, cM_ssin(m03B0), 0.6f);
+        mSwayPhaseY = (s16)gabi::ftoi((f32)(s16)mSwayPhaseY + gabi::fmadds(rate, 500.0f, r + 1000.0f));
+        current.pos.y += gabi::fmadds(rate * 0.25f, cM_ssin(mSwayPhaseY), 0.6f);
 
-        cLib_addCalc(&m03D0, 0.0f, 0.05f, 1.0f, 0.05f);
+        cLib_addCalc(&mFloatSpeedY, 0.0f, 0.05f, 1.0f, 0.05f);
 
         f32 fVar4 = current.pos.y;
-        f32 fVar5 = m03F4 + 40.0f;
+        f32 fVar5 = mWaterY + 40.0f;
         if (fVar4 > fVar5) {
             current.pos.y = fVar5;
         } else {
-            fVar5 = m03F4 - 60.0f;
+            fVar5 = mWaterY - 60.0f;
             if (fVar4 < fVar5) {
                 current.pos.y = fVar5;
             }
@@ -732,13 +732,13 @@ void daShip_c::setYPos() {
 
         f32 k = gabi::fmadds(rate, 0.5f, 1.0f);
         f32 r2 = cM_rndF(800.0f);
-        m03AE = (s16)gabi::ftoi(gabi::fmadds(r2 + 800.0f, k, (f32)(s16)m03AE));
-        f32 old03AC = (s16)m03AC;
+        mSwayPhaseX = (s16)gabi::ftoi(gabi::fmadds(r2 + 800.0f, k, (f32)(s16)mSwayPhaseX));
+        f32 old03AC = (s16)mSwayPhaseZ;
         f32 r3 = cM_rndF(600.0f);
-        m03AC = (s16)gabi::ftoi(gabi::fmadds(r3 + 600.0f, k, old03AC));
+        mSwayPhaseZ = (s16)gabi::ftoi(gabi::fmadds(r3 + 600.0f, k, old03AC));
 
-        m0370 = (s16)gabi::ftoi((f32)(s16)m0370 + gabi::fmadds(rate * 100.0f, cM_ssin(m03AE), 30.0f));
-        m0372 = (s16)gabi::ftoi((f32)(s16)m0372 + gabi::fmadds(rate * 115.0f, cM_ssin(m03AC), 35.0f));
+        mWaveAngleX = (s16)gabi::ftoi((f32)(s16)mWaveAngleX + gabi::fmadds(rate * 100.0f, cM_ssin(mSwayPhaseX), 30.0f));
+        mWaveAngleZ = (s16)gabi::ftoi((f32)(s16)mWaveAngleZ + gabi::fmadds(rate * 115.0f, cM_ssin(mSwayPhaseZ), 35.0f));
     }
 }
 
@@ -746,7 +746,7 @@ void daShip_c::setYPos() {
 
 /* 02474A98 */
 BOOL daShip_c::checkOutRange() {
-    if (m034B == 0xFF) {
+    if (mPathId == 0xFF) {
         return FALSE;
     }
 
@@ -755,7 +755,7 @@ BOOL daShip_c::checkOutRange() {
     int closestIndex = 0;
     u32 closestPoint = gabi::ea(&ship_zeroPoint); // HD: a zero vector until a closest point is found
     BOOL bVar5 = ship_getStageType() == dStageType_SEA_e;
-    u32 path = gabi::ea(dPath_GetRoomPath(m034B, -1));
+    u32 path = gabi::ea(dPath_GetRoomPath(mPathId, -1));
     while (path) {
         u32 num = gabi::at<ShipPath>(path)->mNum;
         /* the point iterator is the m_points read before the save checks below (GHS keeps it in a
@@ -816,11 +816,11 @@ BOOL daShip_c::checkOutRange() {
 
         if ((s16)(angleNext - anglePrev) >= 0) {
             if (diffNext < 0) {
-                m038C = angleNext + 0x4000;
+                mTurnTargetAngle = angleNext + 0x4000;
                 bVar4 = TRUE;
             }
             if (diffPrev < 0) {
-                m038C = anglePrev + 0x4000;
+                mTurnTargetAngle = anglePrev + 0x4000;
                 bVar4 = TRUE;
             }
         } else if (diffNext < 0 && diffPrev < 0) {
@@ -831,9 +831,9 @@ BOOL daShip_c::checkOutRange() {
             f32 dxPrev = pp->x - current.pos.x;
             f32 distPrev = std_sqrtf(gabi::fmadds(dxPrev, dxPrev, dzPrev * dzPrev));
             if (distNext > distPrev) {
-                m038C = anglePrev + 0x4000;
+                mTurnTargetAngle = anglePrev + 0x4000;
             } else {
-                m038C = angleNext + 0x4000;
+                mTurnTargetAngle = angleNext + 0x4000;
             }
             bVar4 = TRUE;
         }
@@ -860,7 +860,7 @@ BOOL daShip_c::checkOutRange() {
 /* 02474F4C */
 void daShip_c::firstDecrementShipSpeed(f32 decrementSpeed) {
     if (cLib_addCalc(&speedF, decrementSpeed, 0.1f, 5.0f, 1.0f) < 3.0f) {
-        m03E0 = 10000.0f;
+        mTargetSpeed = 10000.0f;
     }
 }
 
@@ -886,13 +886,13 @@ BOOL daShip_c::procCraneUp_init() {
     }
     setProc(ShipProcedure::procCraneUp);
     if (mCraneBaseAngle > 0) {
-        m03A6 = 0x800;
+        mProcVar1 = 0x800;
     } else {
-        m03A6 = -0x800;
+        mProcVar1 = -0x800;
     }
     seStart(ShipSound::JA_SE_LK_SHIP_CRANE_SALVAGE, &current.pos);
     mCurMode = MODE_CRANE_UP_e;
-    reinterpret_cast<ShipRipple*>(mRipple)->mRate = 1.0f; /* mRipple.setRate(1.0f) */
+    mRipple.mRate = 1.0f; /* mRipple.setRate(1.0f) */
     offStateFlg(daSFLG_CRANE_UP_END_e);
     gabi::Local<cXyz> v;
     v->x = 0.0f;
@@ -924,7 +924,7 @@ BOOL daShip_c::procZevDemo_init() {
     setProc(ShipProcedure::procZevDemo);
     mCurMode = MODE_DEMO_e;
     offStateFlg(daSFLG_FLY_e);
-    m0350 = 4;
+    mDemoPart = 4;
     return TRUE;
 }
 
@@ -935,17 +935,17 @@ BOOL daShip_c::procTalkReady_init() {
     setProc(ShipProcedure::procTalkReady);
     mAnmTransform = nullptr;
     if (ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) {
-        if ((s16)(shape_angle.y - m038C) > 0) {
-            m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_R_e;
+        if ((s16)(shape_angle.y - mTurnTargetAngle) > 0) {
+            mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOOK_R_e;
         } else {
-            m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
+            mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
         }
     } else if ((s16)(fopAcM_searchPlayerAngleY(this) - shape_angle.y) > 0) {
-        m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
+        mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
     } else {
-        m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_R_e;
+        mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOOK_R_e;
     }
-    J3DAnmTransform* pAnimRes = ship_getRes(m03B4);
+    J3DAnmTransform* pAnimRes = ship_getRes(mHeadAnmFileIdx);
     mpHeadAnm->setAnm(pAnimRes, 0, 5.0f, 1.0f, 0.0f, -1.0f, nullptr);
     seStart(ShipSound::JA_SE_SHIP_LOOK_BACK, &eyePos);
     mCurMode = MODE_TALK_e;
@@ -957,10 +957,10 @@ BOOL daShip_c::procTalkReady_init() {
 /* 024749DC */
 BOOL daShip_c::procTalk_init() {
     setProc(ShipProcedure::procTalk);
-    m0430 = fpcM_ERROR_PROCESS_ID_e;
-    m038A = dRes_INDEX_SHIP_BCK_FN_TALK_A_e;
+    mCurrMsgBsPcId = fpcM_ERROR_PROCESS_ID_e;
+    mAnmTransformFileIdx = dRes_INDEX_SHIP_BCK_FN_TALK_A_e;
     mCurMode = MODE_TALK_e;
-    mAnmTransform = ship_getRes(m038A);
+    mAnmTransform = ship_getRes(mAnmTransformFileIdx);
     J3DFrameCtrl_init(&mFrameCtrl, anm_getFrameMax(mAnmTransform));
     setInitMessage();
     onStateFlg(daSFLG_UNK8000_e);
@@ -975,7 +975,7 @@ BOOL daShip_c::procTornadoUp_init() {
     onStateFlg(daSFLG_FLY_e | daSFLG_UNK1000_e);
     mCurMode = MODE_TORNADO_UP_e;
     setProc(ShipProcedure::procTornadoUp);
-    m037A = 1;
+    mProcVar0 = 1;
     camera_Stop(camera);
     speed.y = 0.0f;
     gravity = 0.0f;
@@ -987,7 +987,7 @@ BOOL daShip_c::procTornadoUp_init() {
     gabi::Local<cXyz> pos;
     pos->set(current.pos.x, current.pos.y, current.pos.z);
     camera_Set(camera, pos.get(), tornadoPos.get());
-    m03A6 = 0;
+    mProcVar1 = 0;
     /* fopAcM_seStartCurrent(mTornadoActor, 0x186C, 0) (HD inline, null checks) */
     fopAc_ac_c* ta = mTornadoActor;
     if (ta != nullptr && gabi::ea(&ta->current.pos) != 0) {
@@ -1016,7 +1016,7 @@ BOOL daShip_c::procWhirlDown_init() {
     local_38->y = w->current.pos.y + 2500.0f;
     local_38->z = w->current.pos.z + 4000.0f;
     camera_Set(camera, pos.get(), local_38.get());
-    m037A = 0;
+    mProcVar0 = 0;
     return TRUE;
 }
 
@@ -1144,13 +1144,13 @@ void daShip_c::setRoomInfo() {
         roomId = shipHD_getRoomId( dComIfG_Bgsp(), gnd);
         /* tevStr.mEnvrIdxOverride (+0xBA) */
         reinterpret_cast<ShipTevStr*>(&tevStr)->mEnvrIdxOverride = (u8)shipHD_getPolyColor(dComIfG_Bgsp(), gnd);
-        m03C4 = shipHD_getGroundCode( dComIfG_Bgsp(), gnd);
+        mGroundCode = shipHD_getGroundCode( dComIfG_Bgsp(), gnd);
     } else {
         roomId = ship_stayNo; /* dComIfGp_roomControl_getStayNo() */
-        m03C4 = 0;
+        mGroundCode = 0;
     }
     tevStr.mRoomNo = roomId;
-    m034A = dComIfGp_getReverb(roomId);
+    mReverb = dComIfGp_getReverb(roomId);
     mStts.mRoomId = roomId;
     current.roomNo = roomId;
 }
@@ -1190,9 +1190,9 @@ void daShip_c::incRopeCnt(int lengthChange, int minSegmentLimit) {
     }
     if (lengthChange != 0) {
         if (minSegmentLimit == 20 && targetRopeCnt == 20) {
-            seStart(ShipSound::JA_SE_LK_SHIP_CRANE_STOP, &m102C);
+            seStart(ShipSound::JA_SE_LK_SHIP_CRANE_STOP, &mCranePos);
         } else {
-            seStart(ShipSound::JA_SE_LK_SHIP_CRANE_WORK, &m102C);
+            seStart(ShipSound::JA_SE_LK_SHIP_CRANE_WORK, &mCranePos);
         }
     }
     mRopeCnt = targetRopeCnt;
@@ -1254,7 +1254,7 @@ void daShip_c::setRopePos() {
         gabi::Local<cXyz> t38;
         for (int i = mRopeCnt - 2; i >= 0; i--, cur -= 0xC, seg -= 0xC) {
             spF8->copy(*gabi::at<cXyz>(cur));
-            f32 k = gabi::at<cXyz>(cur)->y - m03F4 >= 0.0f ? 0.9f : 0.6f;
+            f32 k = gabi::at<cXyz>(cur)->y - mWaterY >= 0.0f ? 0.9f : 0.6f;
             PSVECScale(gabi::at<cXyz>(seg), gabi::at<cXyz>(seg), k);
             // HD: plus a debug register (REG18_F(9))
             gabi::at<cXyz>(seg)->y = gabi::at<cXyz>(seg)->y - (ship_ropeGravity + 3.0f);
@@ -1327,7 +1327,7 @@ void daShip_c::setRopePos() {
     } else {
         Mtx34* am = model_getAnmMtx(mpSalvageArmModel, VFNCR_JNT_V_CRANE_ROTATION_e);
         s16 craneBase = mCraneBaseAngle;
-        s16 a0398 = m0398;
+        s16 a0398 = mCraneAngle;
         by = curP->y;
         cy_ = by - am->m[1][3];
         bx = curP->x;
@@ -1351,7 +1351,7 @@ void daShip_c::setRopePos() {
     s16 az = cM_atan2s(-bcx, std_sqrtf(gabi::fmadds(bcy, bcy, bcz * bcz))) + sVar12;
     mDoMtx_ZXYrotM(mDoMtx_now(), ax, ay, az);
     mDoMtx_XrotM(mDoMtx_now(), -0x4000);
-    if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
+    if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
         /* mpBodyAnm->getAnm()->getTransform(6, &info) (HD inline: a flag at +0x54, the table at +0x30) */
         u32 morf = gabi::ea(mpBodyAnm.get());
         u32 tbl = gabi::at<ShipMorfTransform>(morf)->mTransforms;
@@ -1381,13 +1381,13 @@ void daShip_c::setRopePos() {
         mCraneRipplePos.x = gabi::at<cXyz>(r3)->x;
         mCraneRipplePos.y = fVar2;
         mCraneRipplePos.z = gabi::at<cXyz>(r3)->z;
-        if (reinterpret_cast<ShipRipple*>(mRipple)->mEmitter == 0) {
+        if (mRipple.mEmitter == 0) {
             /* dComIfGp_particle_setShipTail(ID_AK_JN_HAMON00, ...) (group 5) */
             dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &mCraneRipplePos, nullptr, ripple_scale, 0xFF,
-                            (dPa_levelEcallBack*)mRipple, -1, nullptr, nullptr, nullptr);
-            if (reinterpret_cast<ShipRipple*>(mRipple)->mEmitter != 0) {
-                reinterpret_cast<ShipRipple*>(mRipple)->mRate = 0.0f; /* mRipple.setRate(0.0f) */
-                if (m034F == 0) {
+                            (dPa_levelEcallBack*)&mRipple, -1, nullptr, nullptr, nullptr);
+            if (mRipple.mEmitter != 0) {
+                mRipple.mRate = 0.0f; /* mRipple.setRate(0.0f) */
+                if (mCraneLiftUpTimer == 0) {
                     fopKyM_createWpillar(&mCraneRipplePos, 0.7f, 0.7f, 0);
                     seStart(ShipSound::JA_SE_LK_SHIP_CRANE_DROP, &mCraneRipplePos);
                     gabi::Local<cXyz> v;
@@ -1399,15 +1399,15 @@ void daShip_c::setRopePos() {
             }
         }
     } else {
-        if (fVar17 < fVar2 && !m034F && mRopeCnt >= 20) {
-            m034F = 20;
+        if (fVar17 < fVar2 && !mCraneLiftUpTimer && mRopeCnt >= 20) {
+            mCraneLiftUpTimer = 20;
             seStart(ShipSound::JA_SE_LK_SHIP_CRANE_LIFTUP, &mCraneRipplePos);
             if (mCurMode != MODE_CRANE_UP_e) {
-                if (m19AC.getEmitter() == nullptr) {
+                if (mRopeDrip.getEmitter() == nullptr) {
                     u32 rs = gabi::ea(mRopeLine.getPos(0));
                     /* dComIfGp_particle_setP1(ID_IT_JN_LK_NURE_POTA00, ...) (group 1) */
                     u32 emitter = gabi::ea(dPa_control_set(dComIfGp_getParticle(), 1, 0x38, gabi::at<cXyz>(rs), nullptr, nullptr, 0xFF,
-                                                           (dPa_levelEcallBack*)&m19AC, -1, nullptr, nullptr, nullptr));
+                                                           (dPa_levelEcallBack*)&mRopeDrip, -1, nullptr, nullptr, nullptr));
                     if (emitter) {
                         /* setGlobalParticleScale(1.5f, 1.5f) (HD: three values), setEmitterScale, setLifeTime(30) */
                         gabi::at<ShipEmitter>(emitter)->mGlobalParticleScale.x = 1.5f;
@@ -1428,9 +1428,9 @@ void daShip_c::setRopePos() {
                 v->y = 1.0f;
                 v->z = 0.0f;
                 ship_StartShock(3, 1, v.get());
-                if (reinterpret_cast<ShipRipple*>(m19C0)->mEmitter == 0) {
-                    u32 e = gabi::ea(dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &m1074, nullptr, ripple_scale, 0xFF,
-                                                     (dPa_levelEcallBack*)m19C0, -1, nullptr, nullptr, nullptr));
+                if (mRopeRipple.mEmitter == 0) {
+                    u32 e = gabi::ea(dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &mRopeRipplePos, nullptr, ripple_scale, 0xFF,
+                                                     (dPa_levelEcallBack*)&mRopeRipple, -1, nullptr, nullptr, nullptr));
                     if (e) {
                         gabi::at<ShipEmitter>(e)->mVolumeSize = 30; /* setVolumeSize(30) */
                     }
@@ -1438,21 +1438,21 @@ void daShip_c::setRopePos() {
             }
         }
         // HD: mRipple.end() (GameCube remove())
-        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)mRipple);
+        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRipple);
     }
-    if (m034F) {
-        m034F--;
+    if (mCraneLiftUpTimer) {
+        mCraneLiftUpTimer--;
     }
-    if (m19AC.getEmitter() == nullptr) {
-        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)m19C0);
+    if (mRopeDrip.getEmitter() == nullptr) {
+        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRopeRipple);
     }
     u32 rb = gabi::ea(mRopeLine.getPos(0));
     f32 r1 = cM_rndFX(20.0f);
-    m1074.x = gabi::at<cXyz>(rb)->x + r1;
-    m1074.y = m03F4;
+    mRopeRipplePos.x = gabi::at<cXyz>(rb)->x + r1;
+    mRopeRipplePos.y = mWaterY;
     u32 rb2 = gabi::ea(mRopeLine.getPos(0));
     f32 r2 = cM_rndFX(20.0f);
-    m1074.z = gabi::at<cXyz>(rb2)->z + r2;
+    mRopeRipplePos.z = gabi::at<cXyz>(rb2)->z + r2;
 }
 
 
@@ -1460,7 +1460,7 @@ void daShip_c::setRopePos() {
 /* 02476188 */
 f32 daShip_c::getAnglePartRate() {
     f32 fVar1;
-    if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         fVar1 = (3.0f - mpBodyAnm->getFrame()) * 0.33333334f;
     } else {
         fVar1 = (mpBodyAnm->getFrame() - 5.0f) * 0.33333334f;
@@ -1489,15 +1489,15 @@ void daShip_c::setTornadoActor() {
     xz->y = 0.0f;
     xz->x = local_20->x;
     xz->z = local_20->z;
-    m0400 = cXyz_abs(xz.get());
-    m040C = cM_atan2f(local_20->x, local_20->z);
+    mForceMoveDist = cXyz_abs(xz.get());
+    mForceMoveAngle = cM_atan2f(local_20->x, local_20->z);
     dCamera_SetTypeForce(dCam_getBody(), gabi::guest_addr("Tornado"), mTornadoActor);
-    f32 d = (6000.0f /* l_HIO.tornado_distance */ - m0400) * 0.0004f;
+    f32 d = (6000.0f /* l_HIO.tornado_distance */ - mForceMoveDist) * 0.0004f;
     fopAc_ac_c* tornado = mTornadoActor;
     if (d < 0.0f) {
         d = 0.0f;
     }
-    m0404 = d;
+    mForceMoveRate = d;
     f32 dx = tornado_getJointPos(tornado, 0, 0) - current.pos.x;
     f32 dz = tornado_getJointPos(tornado, 0, 2) - current.pos.z;
     f32 distXZ = std_sqrtf(gabi::fmadds(dx, dx, dz * dz));
@@ -1524,15 +1524,15 @@ void daShip_c::setWhirlActor() {
     xz->y = 0.0f;
     xz->x = local_20->x;
     xz->z = local_20->z;
-    m0400 = cXyz_abs(xz.get());
-    m040C = cM_atan2f(local_20->x, local_20->z);
+    mForceMoveDist = cXyz_abs(xz.get());
+    mForceMoveAngle = cM_atan2f(local_20->x, local_20->z);
     dCamera_SetTypeForce(dCam_getBody(), gabi::guest_addr("Tornado"), mWhirlActor);
-    f32 d = (4000.0f /* l_HIO.whirl_distance */ - m0400) * (1.0f / 3500.0f);
+    f32 d = (4000.0f /* l_HIO.whirl_distance */ - mForceMoveDist) * (1.0f / 3500.0f);
     if (d < 0.0f) {
         d = 0.0f;
     }
-    m0404 = d;
-    if (m0400 < 500.0f && !checkStateFlg(daSFLG_UNK1000_e)) {
+    mForceMoveRate = d;
+    if (mForceMoveDist < 500.0f && !checkStateFlg(daSFLG_UNK1000_e)) {
         if (daPy_shipSpecialDemoStart(dComIfGp_getLinkPlayer())) {
             procWhirlDown_init();
         }
@@ -1550,7 +1550,7 @@ void daShip_c::setHeadAnm() {
              shipHD_startCheckOld( dComIfGp_ea() + 0x52C4, gabi::guest_addr("SV_TALK_P1_2ND")) ||
              shipHD_startCheckOld( dComIfGp_ea() + 0x52C4, gabi::guest_addr("SV_TALK_P4_1ST")))) {
             newFileIndex = dRes_INDEX_SHIP_BCK_KYAKKAN1_e;
-        } else if (m03B4 == dRes_INDEX_SHIP_BCK_KYAKKAN1_e || m03B4 == dRes_INDEX_SHIP_BCK_DAMAGE1_e) {
+        } else if (mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_KYAKKAN1_e || mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_DAMAGE1_e) {
             newFileIndex = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
         }
     } else if (ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) {
@@ -1559,31 +1559,31 @@ void daShip_c::setHeadAnm() {
             newFileIndex = dRes_INDEX_SHIP_BCK_KYAKKAN1_e;
         } else if ((!dComIfGs_isEventBit(ShipEvent::UNK_3910) || dComIfGs_isEventBit(ShipEvent::ZELDA_AWAKENED)) &&
                    (mSph.ChkTgHit() || mCyl[0].ChkTgHit() || mCyl[1].ChkTgHit() || mCyl[2].ChkTgHit())) {
-            m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
+            mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
             newFileIndex = dRes_INDEX_SHIP_BCK_DAMAGE1_e;
-        } else if (m03B4 != dRes_INDEX_SHIP_BCK_DAMAGE1_e || std::fabs((f32)mpHeadAnm->getPlaySpeed()) < 0.01f) {
+        } else if (mHeadAnmFileIdx != dRes_INDEX_SHIP_BCK_DAMAGE1_e || std::fabs((f32)mpHeadAnm->getPlaySpeed()) < 0.01f) {
             newFileIndex = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
         }
     } else {
         if ((!dComIfGs_isEventBit(ShipEvent::UNK_3910) || dComIfGs_isEventBit(ShipEvent::ZELDA_AWAKENED)) &&
             (mSph.ChkTgHit() || mCyl[0].ChkTgHit() || mCyl[1].ChkTgHit() || mCyl[2].ChkTgHit())) {
-            m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
+            mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
             newFileIndex = dRes_INDEX_SHIP_BCK_DAMAGE1_e;
-        } else if (m03B4 == dRes_INDEX_SHIP_BCK_DAMAGE1_e || m03B4 == dRes_INDEX_SHIP_BCK_AKIBI1_e) {
+        } else if (mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_DAMAGE1_e || mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_AKIBI1_e) {
             if (mpHeadAnm->getPlaySpeed() < 0.01f) {
                 newFileIndex = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
             }
-        } else if ((m03B4 == dRes_INDEX_SHIP_BCK_FN_LOOK_L_e || m03B4 == dRes_INDEX_SHIP_BCK_FN_LOOK_R_e) &&
+        } else if ((mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_LOOK_L_e || mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_LOOK_R_e) &&
                    std::fabs((f32)mpHeadAnm->getPlaySpeed()) < 0.01f && cM_rnd() < 0.4f &&
                    (ship_counter & 0x1FF) == 0x1FF /* g_Counter.mTimer */ &&
                    (!dComIfGs_isEventBit(ShipEvent::UNK_3910) || dComIfGs_isEventBit(ShipEvent::ZELDA_AWAKENED)) && !checkStateFlg(daSFLG_UNK40000000_e)) {
             newFileIndex = dRes_INDEX_SHIP_BCK_AKIBI1_e;
-        } else if (m03B4 != dRes_INDEX_SHIP_BCK_FN_LOOK_R_e) {
+        } else if (mHeadAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_LOOK_R_e) {
             newFileIndex = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
         }
     }
 
-    if (m03B4 != newFileIndex && newFileIndex != -1) {
+    if (mHeadAnmFileIdx != newFileIndex && newFileIndex != -1) {
         f32 speed, morph;
         if (newFileIndex == dRes_INDEX_SHIP_BCK_AKIBI1_e) {
             speed = 1.0f;
@@ -1595,8 +1595,8 @@ void daShip_c::setHeadAnm() {
             speed = 0.0f;
             morph = 5.0f;
         }
-        m03B4 = newFileIndex;
-        J3DAnmTransform* res = ship_getRes(m03B4);
+        mHeadAnmFileIdx = newFileIndex;
+        J3DAnmTransform* res = ship_getRes(mHeadAnmFileIdx);
         mpHeadAnm->setAnm(res, 0, morph, speed, 0.0f, -1.0f, nullptr);
     }
 }
@@ -1944,9 +1944,9 @@ BOOL daShip_c::procTalk() {
     u32 mng = ship_msgMng();
     firstDecrementShipSpeed(0.0f);
     setMoveAngle(0);
-    if (m0430 == fpcM_ERROR_PROCESS_ID_e) {
+    if (mCurrMsgBsPcId == fpcM_ERROR_PROCESS_ID_e) {
         if (dComIfGp_checkCameraAttentionStatus(dComIfGp_getPlayerCameraID0(), 4)) {
-            m0430 = fopMsgM_messageSet(mng, mNextMessageNo, &eyePos);
+            mCurrMsgBsPcId = fopMsgM_messageSet(mng, mNextMessageNo, &eyePos);
         }
     } else if (msgMng_getStatus(mng) == fopMsgStts_MSG_DISPLAYED_e) {
         /* HD: msg is not passed (r4 holds whatever the status query left there) */
@@ -1973,8 +1973,8 @@ BOOL daShip_c::procTalk() {
         } else {
             fileIndex = dRes_INDEX_SHIP_BCK_FN_TALK_B_e;
         }
-        if (fileIndex != m038A) {
-            m038A = fileIndex;
+        if (fileIndex != mAnmTransformFileIdx) {
+            mAnmTransformFileIdx = fileIndex;
             mAnmTransform = ship_getRes(fileIndex);
             J3DFrameCtrl_init(&mFrameCtrl, anm_getFrameMax(mAnmTransform));
         }
@@ -1986,11 +1986,11 @@ BOOL daShip_c::procTalk() {
 
 /* 024814F8 */
 BOOL daShip_c::procTurn_init() {
-    m0430 = fpcM_ERROR_PROCESS_ID_e;
+    mCurrMsgBsPcId = fpcM_ERROR_PROCESS_ID_e;
     mpHeadAnm->setPlaySpeed(-1.0f);
     seStart(shipTail::JA_SE_SHIP_LOOK_FORWARD, &eyePos);
     setProc(shipTail::procTurn);
-    m038E = 0;
+    mTurnAngleSpeed = 0;
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
     camera_Stop(camera);
     gabi::Local<cXyz> eye;
@@ -2007,8 +2007,8 @@ BOOL daShip_c::procTurn_init() {
     cXyz_ml(cameraPos.get(), ofs.get(), 1600.0f);
     gabi::Local<cXyz> res;
     cXyz_pl(center2.get(), res.get(), ofs.get());
-    m037A = 10;
-    m0450.copy(*res);
+    mProcVar0 = 10;
+    mTurnEyePos.copy(*res);
     offStateFlg(daSFLG_UNK8000_e);
     return TRUE;
 }
@@ -2026,10 +2026,10 @@ void daShip_c::setMoveAngle(s16 moveAngle) {
         } else if (turnRate < 0.1f) {
             turnRate = 0.1f;
         }
-        if (m0388 >= 0xF) {
+        if (mLandTimer >= 0xF) {
             turnRate = 3.6f;
         } else {
-            turnRate += ((3.6f - turnRate) * m0388) / 15.0f;
+            turnRate += ((3.6f - turnRate) * mLandTimer) / 15.0f;
         }
         s16 temp = (s16)gabi::ftoi(-(turnRate * (f32)(moveAngle >> 6)));
         shape_angle.y += temp;
@@ -2047,8 +2047,8 @@ void daShip_c::changeDemoEndProc() {
         mpHeadAnm->setPlaySpeed(-1.0f);
         offStateFlg(daSFLG_UNK80000_e);
     }
-    if (m0351 == shipTail::DEMO_OPEN_e || checkStateFlg(daSFLG_UNK4000000_e)) {
-        m0366 = 0;
+    if (mDemoMode == shipTail::DEMO_OPEN_e || checkStateFlg(daSFLG_UNK4000000_e)) {
+        mTillerAngle = 0;
         offStateFlg(daSFLG_UNK4000000_e);
     }
     gravity = -2.5f;
@@ -2081,14 +2081,14 @@ BOOL daShip_c::procTurn() {
     gabi::Local<cXyz> center2;
     camera_Center(camera, center2.get());
     gabi::Local<cXyz> d;
-    cXyz_mi(&current.pos, d.get(), &m045C);
+    cXyz_mi(&current.pos, d.get(), &mPrevPos);
     gabi::Local<cXyz> local_ac;
     cXyz_pl(center2.get(), local_ac.get(), d.get());
     f32 acx = local_ac->x, acy = local_ac->y, acz = local_ac->z;
     gabi::Local<cXyz> eye;
     camera_Eye(camera, eye.get());
     gabi::Local<cXyz> d2;
-    cXyz_mi(&m0450, d2.get(), eye.get());
+    cXyz_mi(&mTurnEyePos, d2.get(), eye.get());
     local_c4->copy(*d2);
     f32 eyeDistance = cXyz_abs(local_c4.get());
     gabi::Local<cXyz> setCenter;
@@ -2112,31 +2112,31 @@ BOOL daShip_c::procTurn() {
         setEye->set(local_b8->x, local_b8->y, local_b8->z);
     } else {
         setCenter->set(acx, acy, acz);
-        setEye->set(m0450.x, m0450.y, m0450.z);
+        setEye->set(mTurnEyePos.x, mTurnEyePos.y, mTurnEyePos.z);
     }
     camera_Set(camera, setCenter.get(), setEye.get());
     if (!(eyeDistance > 1.0f)) {
         s16 previousAngle = shape_angle.y;
-        cLib_addCalcAngleS2(&shape_angle.y, m038C, 8, m038E);
-        cLib_addCalcAngleS2(&m038E, 0x800, 8, 0x80);
+        cLib_addCalcAngleS2(&shape_angle.y, mTurnTargetAngle, 8, mTurnAngleSpeed);
+        cLib_addCalcAngleS2(&mTurnAngleSpeed, 0x800, 8, 0x80);
         current.angle.y = shape_angle.y;
         setControllAngle(getAimControllAngle(previousAngle));
-        s16 diff = shape_angle.y - m038C;
+        s16 diff = shape_angle.y - mTurnTargetAngle;
         if ((diff < 0 ? -diff : diff) < 0x200) {
             /* HD: towards speed 100 (GameCube 55) */
             cLib_addCalc(&speedF, 100.0f, 0.1f, 5.0f, 1.0f);
         }
-        s16 diff2 = m038C - shape_angle.y;
+        s16 diff2 = mTurnTargetAngle - shape_angle.y;
         if ((diff2 < 0 ? -diff2 : diff2) < 0x100 && !checkOutRange()) {
-            if (m037A <= 0) {
+            if (mProcVar0 <= 0) {
                 camera_Start(camera);
                 camera_Reset(camera);
                 dComIfGp_event_reset();
                 changeDemoEndProc();
-                m038E = 0;
+                mTurnAngleSpeed = 0;
                 onStateFlg(daSFLG_UNK100000_e);
             } else {
-                m037A--;
+                mProcVar0--;
             }
         }
     }
@@ -2155,21 +2155,21 @@ void daShip_c::setSailAngle() {
         sVar1 = cM_atan2s(windVec->x, windVec->z) - shape_angle.y;
     }
     if (sVar1 > 0x800) {
-        m0380 = -0x1555;
+        mTargetSailAngle = -0x1555;
     } else if (sVar1 < -0x800) {
-        m0380 = 0x1555;
-    } else if (m0380 == 0) {
+        mTargetSailAngle = 0x1555;
+    } else if (mTargetSailAngle == 0) {
         if (sVar1 >= 0) {
-            m0380 = -0x1555;
+            mTargetSailAngle = -0x1555;
         } else {
-            m0380 = 0x1555;
+            mTargetSailAngle = 0x1555;
         }
     }
-    cLib_addCalcAngleS(&mSailAngle, m0380, 0x10, 0x800, 0x20);
+    cLib_addCalcAngleS(&mSailAngle, mTargetSailAngle, 0x10, 0x800, 0x20);
     m0378 = mSailAngle >> 1;
-    if (mSailAngle * m0380 < 0) {
+    if (mSailAngle * mTargetSailAngle < 0) {
         if (!checkStateFlg(daSFLG_UNK2_e)) {
-            seStart(shipFirst::JA_SE_SHIP_SAIL_MOVE, &m0444);
+            seStart(shipFirst::JA_SE_SHIP_SAIL_MOVE, &mSailPos);
             onStateFlg(daSFLG_UNK2_e);
         }
     } else {
@@ -2183,7 +2183,7 @@ void daShip_c::setSailAngle() {
 BOOL daShip_c::setCrashData(s16 param1) {
     /* HD: no crash while the timer runs (GameCube: counted down here), and the result says whether
      * Link fell off the boat */
-    if (m03B6 != 0 || dComIfGp_event_runCheck() != 0 /* dComIfGp_event_runCheck() */) {
+    if (mCrashTimer != 0 || dComIfGp_event_runCheck() != 0 /* dComIfGp_event_runCheck() */) {
         return FALSE;
     }
     BOOL droppedLink = FALSE;
@@ -2216,11 +2216,11 @@ BOOL daShip_c::setCrashData(s16 param1) {
     s16 iVar5 = param1 - shape_angle.y;
     f32 fVar1 = cM_ssin(iVar5);
     f32 fVar2 = cM_scos(iVar5);
-    m0370 = (s16)gabi::ftoi(gabi::fmadds(3072.0f, fVar2, (f32)(s16)m0370));
-    m0374 = (s16)gabi::ftoi(gabi::fmadds(500.0f, fVar2, (f32)(s16)m0374));
-    m0372 = (s16)gabi::ftoi(gabi::fnmsubs(3072.0f, fVar1, (f32)(s16)m0372));
-    m0376 = (s16)gabi::ftoi(gabi::fnmsubs(500.0f, fVar1, (f32)(s16)m0376));
-    m03B6 = 30;
+    mWaveAngleX = (s16)gabi::ftoi(gabi::fmadds(3072.0f, fVar2, (f32)(s16)mWaveAngleX));
+    mWaveAngleSpeedX = (s16)gabi::ftoi(gabi::fmadds(500.0f, fVar2, (f32)(s16)mWaveAngleSpeedX));
+    mWaveAngleZ = (s16)gabi::ftoi(gabi::fnmsubs(3072.0f, fVar1, (f32)(s16)mWaveAngleZ));
+    mWaveAngleSpeedZ = (s16)gabi::ftoi(gabi::fnmsubs(500.0f, fVar1, (f32)(s16)mWaveAngleSpeedZ));
+    mCrashTimer = 30;
     return droppedLink;
 }
 
@@ -2320,13 +2320,13 @@ void daShip_c::setPartOffAnime() {
     J3DAnmTransform* pAnimRes = ship_getRes(dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e);
     mpBodyAnm->setAnm(pAnimRes, 0, 3.0f, 1.0f, 0.0f, -1.0f, nullptr);
     if (mPart == PART_CRANE_e) {
-        seStart(shipFirst::JA_SE_LK_SHIP_CRANE_IN, &m0444);
+        seStart(shipFirst::JA_SE_LK_SHIP_CRANE_IN, &mSailPos);
     } else if (mPart == PART_CANNON_e) {
-        seStart(shipFirst::JA_SE_LK_SHIP_CANNON_IN, &m0444);
+        seStart(shipFirst::JA_SE_LK_SHIP_CANNON_IN, &mSailPos);
     } else {
-        seStart(shipFirst::JA_SE_SHIP_SAIL_IN, &m0444);
+        seStart(shipFirst::JA_SE_SHIP_SAIL_IN, &mSailPos);
     }
-    m0392 = dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e;
+    mBodyAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e;
     offStateFlg(daSFLG_SAIL_ON_e);
 }
 
@@ -2336,17 +2336,17 @@ void daShip_c::setPartOffAnime() {
 void daShip_c::setPartOnAnime(u8 i_part) {
     J3DAnmTransform* pAnimRes = ship_getRes(dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e);
     mpBodyAnm->setAnm(pAnimRes, 0, 3.0f, 1.0f, 0.0f, -1.0f, nullptr);
-    m0392 = dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e;
+    mBodyAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e;
     mPart = i_part;
     if (mPart == PART_STEER_e) {
-        seStart(shipFirst::JA_SE_SHIP_SAIL_OUT, &m0444);
-        m03E8 = 1.0f;
+        seStart(shipFirst::JA_SE_SHIP_SAIL_OUT, &mSailPos);
+        mSailScale = 1.0f;
     } else if (mPart == PART_CANNON_e) {
-        seStart(shipFirst::JA_SE_LK_SHIP_CANNON_OUT, &m0444);
-        m03E8 = 0.001f;
+        seStart(shipFirst::JA_SE_LK_SHIP_CANNON_OUT, &mSailPos);
+        mSailScale = 0.001f;
     } else if (mPart == PART_CRANE_e) {
-        seStart(shipFirst::JA_SE_LK_SHIP_CRANE_OUT, &m0444);
-        m03E8 = 0.001f;
+        seStart(shipFirst::JA_SE_LK_SHIP_CRANE_OUT, &mSailPos);
+        mSailScale = 0.001f;
     }
 }
 
@@ -2356,18 +2356,18 @@ void daShip_c::setPartOnAnime(u8 i_part) {
 void daShip_c::setPartAnimeInit(u8 i_part) {
     f32 remainingFrameRatio = 1.0f - mpBodyAnm->getFrame() / mpBodyAnm->getEndFrame();
     if (i_part == PART_WAIT_e) {
-        if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
+        if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
             setPartOffAnime();
             mpBodyAnm->setFrame(remainingFrameRatio * mpBodyAnm->getEndFrame());
         }
     } else if (mPart != i_part) {
-        if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
+        if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
             setPartOffAnime();
             mpBodyAnm->setFrame(remainingFrameRatio * mpBodyAnm->getEndFrame());
         } else if (mpBodyAnm->getPlaySpeed() < 0.01f) {
             setPartOnAnime(i_part);
         }
-    } else if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    } else if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOnAnime(i_part);
         mpBodyAnm->setFrame(remainingFrameRatio * mpBodyAnm->getEndFrame());
     }
@@ -2414,8 +2414,8 @@ void daShip_c::setSelfMove(int param_1) {
     } else {
         tillerAngle = 0;
     }
-    cLib_addCalcAngleS(&m0366, tillerAngle, 4, 700 /* l_HIO.tiller_speed */, 0x100);
-    setMoveAngle(m0366);
+    cLib_addCalcAngleS(&mTillerAngle, tillerAngle, 4, 700 /* l_HIO.tiller_speed */, 0x100);
+    setMoveAngle(mTillerAngle);
     if (checkStateFlg(daSFLG_FLY_e)) {
         return;
     }
@@ -2425,8 +2425,8 @@ void daShip_c::setSelfMove(int param_1) {
         firstDecrementShipSpeed(0.0f);
         return;
     }
-    if (!(m03E0 > speedF)) {
-        firstDecrementShipSpeed(m03E0);
+    if (!(mTargetSpeed > speedF)) {
+        firstDecrementShipSpeed(mTargetSpeed);
         return;
     }
     /* HD: top speed 55, 30 with an obstacle ahead; slowing down above it */
@@ -2449,7 +2449,7 @@ void daShip_c::setSelfMove(int param_1) {
     f32 triggerSpeed = (f32)(20.0 * CPad_GET_ANALOG_R(0));
     BOOL wallAhead = FALSE;
     if (mAcch.ChkWallHit()) {
-        for (int i = 0; i < m03CC; i++) {
+        for (int i = 0; i < mAcchCirNum; i++) {
             if (mAcchCir[i].ChkWallHit() && cLib_distanceAngleS(mAcchCir[i].GetWallAngleY(), shape_angle.y) > 0x5000) {
                 wallAhead = TRUE;
             }
@@ -2468,8 +2468,8 @@ void daShip_c::setSelfMove(int param_1) {
 BOOL daShip_c::procWait_init() {
     mCurMode = MODE_WAIT_e;
     setProc(shipFirst::procWait);
-    m037A = 0;
-    if (m0392 != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    mProcVar0 = 0;
+    if (mBodyAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOffAnime();
     }
     return TRUE;
@@ -2483,7 +2483,7 @@ BOOL daShip_c::procWait() {
     /* HD: frame 9 (GameCube 7) */
     if (!(mpBodyAnm->getFrame() < 9.0f)) {
         mPart = PART_WAIT_e;
-        m03E8 = 1.0f;
+        mSailScale = 1.0f;
     }
     if (mNextMode == MODE_READY_FIRST_e) {
         procReady_init();
@@ -2495,7 +2495,7 @@ BOOL daShip_c::procWait() {
         procStartModeThrow_init();
     } else {
         setControllAngle(0);
-        cLib_addCalcAngleS(&m0366, 0, 2, 0x1000, 0x400);
+        cLib_addCalcAngleS(&mTillerAngle, 0, 2, 0x1000, 0x400);
     }
     return TRUE;
 }
@@ -2543,7 +2543,7 @@ BOOL daShip_c::procReady() {
 BOOL daShip_c::procGetOff_init() {
     mCurMode = MODE_GET_OFF_FIRST_e;
     setProc(shipFirst::procGetOff);
-    if (m0392 != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    if (mBodyAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOffAnime();
     }
     speedF = 0.0f;
@@ -2557,21 +2557,21 @@ BOOL daShip_c::procGetOff() {
     /* HD: frame 9 (GameCube 7) */
     if (!(mpBodyAnm->getFrame() < 9.0f)) {
         mPart = PART_WAIT_e;
-        m03E8 = 1.0f;
+        mSailScale = 1.0f;
     }
     if (mNextMode == MODE_GET_OFF_SECOND_e) {
         mCurMode = MODE_GET_OFF_SECOND_e;
     }
     if (mCurMode == MODE_GET_OFF_SECOND_e) {
-        if (m036C > 0x800) {
+        if (mControllAngle > 0x800) {
             procWait_init();
         } else {
             setControllAngle(0x1000);
-            cLib_addCalcAngleS(&m0366, 0, 2, 0x1000, 0x400);
+            cLib_addCalcAngleS(&mTillerAngle, 0, 2, 0x1000, 0x400);
         }
     } else {
         setControllAngle(0);
-        cLib_addCalcAngleS(&m0366, 0, 2, 0x1000, 0x400);
+        cLib_addCalcAngleS(&mTillerAngle, 0, 2, 0x1000, 0x400);
         /* daPy_getPlayerLinkActorClass()->checkShipGetOff(): the current procedure (+0x65F0) */
         if (shipTail::linkProcedure(gabi::ea(dComIfGp_getLinkPlayer())) != 0x90) {
             procWait_init();
@@ -2587,7 +2587,7 @@ BOOL daShip_c::procPaddleMove_init() {
     offStateFlg(daSFLG_UNK4_e);
     mCurMode = MODE_PADDLE_MOVE_e;
     setProc(shipFirst::procPaddleMove);
-    if (m0392 != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    if (mBodyAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOffAnime();
     }
     if (checkStateFlg(daSFLG_JUMP_RIDE_e) != 0) {
@@ -2617,13 +2617,13 @@ BOOL daShip_c::procPaddleMove() {
     /* HD: frame 9 (GameCube 7) */
     if (!(mpBodyAnm->getFrame() < 9.0f)) {
         mPart = PART_WAIT_e;
-        m03E8 = 1.0f;
+        mSailScale = 1.0f;
     }
     if ((ship_playerStatus0() & 0x685000 /* bow, hookshot, boomerang aim, telescope, boomerang wait */) ||
         (shipTail::playerStatus1(dComIfGp_ea()) & shipTail::daPyStts1_PICTO_BOX_AIM_e)) {
-        cLib_addCalcAngleS(&m0366, 0, 4, 700, 0x100);
+        cLib_addCalcAngleS(&mTillerAngle, 0, 4, 700, 0x100);
         if (shipTail::eventRun(dComIfGp_ea()) == 0) {
-            setMoveAngle(m0366);
+            setMoveAngle(mTillerAngle);
         }
         firstDecrementShipSpeed(0.0f);
     } else if (shipTail::eventRun(dComIfGp_ea()) == 0) {
@@ -2650,13 +2650,13 @@ BOOL daShip_c::procSteerMove() {
     if (checkNextMode(MODE_STEER_MOVE_e)) {
         return TRUE;
     }
-    cLib_addCalcAngleS(&m0366, (s16)gabi::ftoi(-((8192.0f * mStickMVal) * cM_ssin(mStickMAng))), 4, 700, 0x100);
+    cLib_addCalcAngleS(&mTillerAngle, (s16)gabi::ftoi(-((8192.0f * mStickMVal) * cM_ssin(mStickMAng))), 4, 700, 0x100);
     if (!checkStateFlg(daSFLG_FLY_e)) {
-        setMoveAngle(m0366);
+        setMoveAngle(mTillerAngle);
     }
     setSailAngle();
     /* HD: frame 9 (GameCube 7) */
-    if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(mpBodyAnm->getFrame() < 9.0f) && mPart == PART_STEER_e) {
+    if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(mpBodyAnm->getFrame() < 9.0f) && mPart == PART_STEER_e) {
         onStateFlg(daSFLG_SAIL_ON_e);
     }
     if (!checkStateFlg(daSFLG_FLY_e)) {
@@ -2669,7 +2669,7 @@ BOOL daShip_c::procSteerMove() {
             dKyw_tact_wind_set(0, (s16)((0x5000 - shape_angle.y) & ~0x1FFF));
             if (mSwiftSailActive == 0) {
                 mSwiftSailActive = 1;
-                seStart(shipTail::SAIL_POWER_UP, &m0444);
+                seStart(shipTail::SAIL_POWER_UP, &mSailPos);
                 hd_seStartByName(gabi::guest_addr("SE_SAIL_POWER_UP"));
                 if (mpGrid != 0) {
                     shipTail::setSailGridTimer(mpGrid, 0xF);
@@ -2685,7 +2685,7 @@ BOOL daShip_c::procSteerMove() {
             maxSpeed = 55.0f;
             if (mSwiftSailActive == 1) {
                 mSwiftSailActive = 0;
-                seStart(shipTail::SAIL_POWER_DOWN, &m0444);
+                seStart(shipTail::SAIL_POWER_DOWN, &mSailPos);
                 if (mpGrid != 0) {
                     shipTail::setSailGridTimer(mpGrid, 0xF);
                 }
@@ -2722,14 +2722,14 @@ BOOL daShip_c::procSteerMove() {
             if (speedF < targetSpeed) {
                 speedF = targetSpeed;
                 if (mTornadoActor || mWhirlActor) {
-                    m03E0 = 10000.0f;
+                    mTargetSpeed = 10000.0f;
                 } else {
-                    m03E0 = windPower;
+                    mTargetSpeed = windPower;
                 }
             }
         }
-        if (m03E0 < speedF) {
-            firstDecrementShipSpeed(m03E0);
+        if (mTargetSpeed < speedF) {
+            firstDecrementShipSpeed(mTargetSpeed);
         } else if (!checkStateFlg(daSFLG_SAIL_ON_e) || !(windPower > 0.0f)) {
             /* HD: 20 (GameCube 10) */
             decrementShipSpeed((stickRate * mStickMVal) * cM_scos(mStickMAng));
@@ -2739,7 +2739,7 @@ BOOL daShip_c::procSteerMove() {
         }
         if (shipTail::eventRun(dComIfGp_ea()) == 0 &&
             (windPower = PORT_SHIP(0x0247ED24, this, windPower), ship_isLinkPlayer0()) &&
-            m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(mpBodyAnm->getFrame() < 9.0f) &&
+            mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(mpBodyAnm->getFrame() < 9.0f) &&
             !checkStateFlg(daSFLG_FLY_e) && mFwdVel > 30.000002f) {
             /* HD: jumps need wind speed 20 and forward speed 30 (GameCube 11 / 16.5) */
             if (!mTornadoActor && !mWhirlActor && !(windPower < stickRate)) {
@@ -2755,14 +2755,14 @@ BOOL daShip_c::procSteerMove() {
                     current.angle.y = shape_angle.y;
                     speed.y = vy;
                     m0386 = 0;
-                    m036C = m036C >> 1;
+                    mControllAngle = mControllAngle >> 1;
                     mJumpRate = (vy - stickRate) * 0.008f;
                 }
             }
         }
     } else {
         setControllAngle(0);
-        m036E = 0;
+        mControllAngleSpeed = 0;
     }
     if (mPart != PART_STEER_e && mpBodyAnm->getPlaySpeed() < 0.01f) {
         setPartOnAnime(PART_STEER_e);
@@ -2777,7 +2777,7 @@ BOOL daShip_c::procCannonReady_init() {
     mCurMode = MODE_CANNON_e;
     setProc(shipFirst::procCannonReady);
     setPartAnimeInit(PART_CANNON_e);
-    m0394 = 0;
+    mCannonAngleY = 0;
     return TRUE;
 }
 
@@ -2788,8 +2788,8 @@ BOOL daShip_c::procCannonReady() {
     if (checkNextMode(MODE_CANNON_e)) {
         return TRUE;
     }
-    cLib_addCalcAngleS(&m0366, 0, 2, 0x1000, 0x400);
-    setMoveAngle(m0366);
+    cLib_addCalcAngleS(&mTillerAngle, 0, 2, 0x1000, 0x400);
+    setMoveAngle(mTillerAngle);
     firstDecrementShipSpeed(0.0f);
     if (mpBodyAnm->getPlaySpeed() < 0.01f) {
         if (mPart != PART_CANNON_e) {
@@ -2807,10 +2807,10 @@ BOOL daShip_c::procCannonReady() {
 BOOL daShip_c::procCannon_init() {
     setProc(ShipProcedure::procCannon);
     m03A8 = 0;
-    m0366 = 0;
+    mTillerAngle = 0;
     speedF = 0.0f;
-    m037A = 0;
-    m03A6 = 0;
+    mProcVar0 = 0;
+    mProcVar1 = 0;
     return TRUE;
 }
 
@@ -2834,8 +2834,8 @@ BOOL daShip_c::procCannon() {
             target = dAttList_getActor(list);
         }
     }
-    s16 prev0396 = m0396;
-    s16 prev0394 = m0394;
+    s16 prev0396 = mCannonAngleX;
+    s16 prev0394 = mCannonAngleY;
     if (target) {
         /* mDoMtx_multVecZero(mpCannonModel->getAnmMtx(VFNCN_JNT_CANON2_e), &cannonPos) */
         Mtx34* m = model_getAnmMtx(mpCannonModel, VFNCN_JNT_CANON2_e);
@@ -2853,47 +2853,47 @@ BOOL daShip_c::procCannon() {
         cannonPos->z = dz;
         xz->y = 0.0f;
         cannonPos->x = dx;
-        cLib_addCalcAngleS(&m0396, cM_atan2s(-cannonPos->y, cXyz_abs(xz.get())) + 0x4000, 5, 0x180, 0x40);
-        cLib_addCalcAngleS(&m0394, cM_atan2s(cannonPos->x, cannonPos->z) - shape_angle.y, 5, 0x180, 0x40);
+        cLib_addCalcAngleS(&mCannonAngleX, cM_atan2s(-cannonPos->y, cXyz_abs(xz.get())) + 0x4000, 5, 0x180, 0x40);
+        cLib_addCalcAngleS(&mCannonAngleY, cM_atan2s(cannonPos->x, cannonPos->z) - shape_angle.y, 5, 0x180, 0x40);
     } else {
         BOOL rlock = CPad_R_LOCK_BUTTON(0);
-        f32 adjust = mStickMVal * gabi::fmadds(m0404, 4.0f, 1.0f);
+        f32 adjust = mStickMVal * gabi::fmadds(mForceMoveRate, 4.0f, 1.0f);
         if (!rlock) {
             /* HD: the vertical aim follows the camera inversion option */
             f32 v = adjust;
             if (ship_isCameraInverted()) {
                 v = -v;
             }
-            m0396 = (s16)gabi::ftoi(gabi::fmadds(384.0f * v, cM_scos(mStickMAng), (f32)(s16)m0396));
-            m0394 += (s16)gabi::ftoi((384.0f * adjust) * cM_ssin(mStickMAng));
+            mCannonAngleX = (s16)gabi::ftoi(gabi::fmadds(384.0f * v, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX));
+            mCannonAngleY += (s16)gabi::ftoi((384.0f * adjust) * cM_ssin(mStickMAng));
         } else {
             /* HD: with R held the stick still aims up and down */
             if (ship_isCameraInverted()) {
                 adjust = -adjust;
             }
-            m0396 = (s16)gabi::ftoi(gabi::fmadds(384.0f * adjust, cM_scos(mStickMAng), (f32)(s16)m0396));
+            mCannonAngleX = (s16)gabi::ftoi(gabi::fmadds(384.0f * adjust, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX));
         }
     }
-    if (m0396 > 0x4000) {
-        m0396 = 0x4000;
-    } else if (m0396 < 0x1556) {
-        m0396 = 0x1556;
+    if (mCannonAngleX > 0x4000) {
+        mCannonAngleX = 0x4000;
+    } else if (mCannonAngleX < 0x1556) {
+        mCannonAngleX = 0x1556;
     }
-    if (cLib_distanceAngleS(prev0396, m0396) >= 0x80 || cLib_distanceAngleS(prev0394, m0394) >= 0x80) {
-        seStart(shipTail::JA_SE_LK_SHIP_CANNON_MOVE, &m1038);
+    if (cLib_distanceAngleS(prev0396, mCannonAngleX) >= 0x80 || cLib_distanceAngleS(prev0394, mCannonAngleY) >= 0x80) {
+        seStart(shipTail::JA_SE_LK_SHIP_CANNON_MOVE, &mCannonPos);
     }
-    if (m037A == 0 && dComIfGp_getDoStatus() == 0x3F /* HD */ &&
+    if (mProcVar0 == 0 && dComIfGp_getDoStatus() == 0x3F /* HD */ &&
         ((CPad_CHECK_TRIG_X(0) && dComIfGp_getSelectItem(0) == dItemNo_BOMB_BAG_e) ||
          (CPad_CHECK_TRIG_Y(0) && dComIfGp_getSelectItem(1) == dItemNo_BOMB_BAG_e) ||
          (CPad_CHECK_TRIG_Z(0) && dComIfGp_getSelectItem(2) == dItemNo_BOMB_BAG_e) ||
          CPad_CHECK_TRIG_HD1(0))) {
-        m037A = 30;
+        mProcVar0 = 30;
         if (dComIfGs_getBombNum() == 0 /* dComIfGs_getBombNum() */) {
             mDoAud_seStart_simple(shipTail::JA_SE_ITEM_TARGET_OUT);
-            m037A--;
+            mProcVar0--;
         }
-    } else if (m037A > 0) {
-        m037A--;
+    } else if (mProcVar0 > 0) {
+        mProcVar0--;
     }
     setSelfMove(CPad_R_LOCK_BUTTON(0) ? 1 : 0);
     return TRUE;
@@ -2906,7 +2906,7 @@ BOOL daShip_c::procCraneReady_init() {
     mCurMode = MODE_CRANE_e;
     setProc(shipFirst::procCraneReady);
     mCraneBaseAngle = 0x3000;
-    m039C = 0;
+    mCraneTurnAngle = 0;
     setPartAnimeInit(PART_CRANE_e);
     mRopeCnt = 0;
     return TRUE;
@@ -2919,8 +2919,8 @@ BOOL daShip_c::procCraneReady() {
     if (checkNextMode(MODE_CRANE_e)) {
         return TRUE;
     }
-    cLib_addCalcAngleS(&m0366, 0, 2, 0x1000, 0x400);
-    setMoveAngle(m0366);
+    cLib_addCalcAngleS(&mTillerAngle, 0, 2, 0x1000, 0x400);
+    setMoveAngle(mTillerAngle);
     firstDecrementShipSpeed(0.0f);
     if (mpBodyAnm->getPlaySpeed() < 0.01f) {
         if (mPart != PART_CRANE_e) {
@@ -2939,7 +2939,7 @@ BOOL daShip_c::procCraneReady() {
         } else {
             frameRate = frameRate >= 0.0f ? frameRate : 0.0f;
         }
-        m0398 = (s16)gabi::ftoi(frameRate * (f32)(s16)mCraneBaseAngle);
+        mCraneAngle = (s16)gabi::ftoi(frameRate * (f32)(s16)mCraneBaseAngle);
     }
     return TRUE;
 }
@@ -2949,12 +2949,12 @@ BOOL daShip_c::procCraneReady() {
 /* 0247F57C */
 BOOL daShip_c::procCrane_init() {
     setProc(shipTail::procCrane);
-    m0366 = 0;
+    mTillerAngle = 0;
     speedF = 0.0f;
-    shipTail::setRippleRate(gabi::ea(mRipple), 0.0f); /* mRipple.setRate(0.0f) */
+    shipTail::setRippleRate(gabi::ea(&mRipple), 0.0f); /* mRipple.setRate(0.0f) */
     mCurMode = MODE_CRANE_e;
     offStateFlg(daSFLG_UNK800_e);
-    m0353 = cM_rnd() < 0.5f;
+    mCraneShockFlg = cM_rnd() < 0.5f;
     return TRUE;
 }
 
@@ -2970,7 +2970,7 @@ BOOL daShip_c::procCrane() {
     if (shipTail::eventRun(dComIfGp_ea()) != 0 || !ship_isLinkPlayer0()) {
         return TRUE;
     }
-    if (m0398 == mCraneBaseAngle) {
+    if (mCraneAngle == mCraneBaseAngle) {
         s16 craneTurn;
         if (std::fabs((f32)speedF) < 3.0f &&
             ((CPad_CHECK_HOLD_X(0) && dComIfGp_getSelectItem(0) == dItemNo_GRAPPLING_HOOK_e) ||
@@ -2987,7 +2987,7 @@ BOOL daShip_c::procCrane() {
                 } else {
                     setControllAngle(-0xA00);
                 }
-                if (m0353 && previousRopeCount != mRopeCnt) {
+                if (mCraneShockFlg && previousRopeCount != mRopeCnt) {
                     gabi::Local<cXyz> v;
                     v->x = 0.0f;
                     v->y = 1.0f;
@@ -3010,34 +3010,34 @@ BOOL daShip_c::procCrane() {
                 craneTurn = 0x800;
             }
         }
-        cLib_chaseAngleS(&m039C, craneTurn, 0x100);
+        cLib_chaseAngleS(&mCraneTurnAngle, craneTurn, 0x100);
         if (mRopeCnt == 20 && !CPad_R_LOCK_BUTTON(0)) {
             if (mStickMVal > 0.1f) {
                 s16 previousBaseAngle = mCraneBaseAngle;
                 if (mStickMAng < -0x2000 && mStickMAng > -0x6000) {
                     mCraneBaseAngle = 0x3000;
-                    m03A6 = 0;
+                    mProcVar1 = 0;
                     onStateFlg(daSFLG_UNK10000000_e);
                 } else if (mStickMAng > 0x2000 && mStickMAng < 0x6000) {
                     mCraneBaseAngle = -0x3000;
-                    m03A6 = 0;
+                    mProcVar1 = 0;
                     onStateFlg(daSFLG_UNK10000000_e);
                 }
                 if (previousBaseAngle * mCraneBaseAngle < 0) {
-                    seStart(shipTail::JA_SE_LK_SHIP_CRANE_ARM, &m102C);
+                    seStart(shipTail::JA_SE_LK_SHIP_CRANE_ARM, &mCranePos);
                 }
             }
             /* HD: the stick also steers while the crane is idle */
-            cLib_addCalcAngleS(&m0366, (s16)gabi::ftoi(-((8192.0f * mStickMVal) * cM_ssin(mStickMAng))), 4, 700, 0x100);
-            setMoveAngle(m0366);
+            cLib_addCalcAngleS(&mTillerAngle, (s16)gabi::ftoi(-((8192.0f * mStickMVal) * cM_ssin(mStickMAng))), 4, 700, 0x100);
+            setMoveAngle(mTillerAngle);
         }
     } else {
-        cLib_chaseAngleS(&m03A6, 0x1800, 0x100);
-        cLib_addCalcAngleS(&m0398, mCraneBaseAngle, 5, m03A6, 0x100);
+        cLib_chaseAngleS(&mProcVar1, 0x1800, 0x100);
+        cLib_addCalcAngleS(&mCraneAngle, mCraneBaseAngle, 5, mProcVar1, 0x100);
     }
     if (CPad_R_LOCK_BUTTON(0) && mRopeCnt == 20) {
         setSelfMove(1);
-        m0353 = cM_rnd() < 0.5f;
+        mCraneShockFlg = cM_rnd() < 0.5f;
     } else {
         setSelfMove(0);
     }
@@ -3054,26 +3054,26 @@ BOOL daShip_c::procCraneUp() {
     } else {
         craneTurn = -0x800;
     }
-    cLib_addCalcAngleS(&m039C, craneTurn, 5, 0x1800, 0x100);
-    if (shipTail::rippleEmitter(gabi::ea(mRipple)) == 0) { /* mRipple.getEmitter() == NULL */
+    cLib_addCalcAngleS(&mCraneTurnAngle, craneTurn, 5, 0x1800, 0x100);
+    if (shipTail::rippleEmitter(gabi::ea(&mRipple)) == 0) { /* mRipple.getEmitter() == NULL */
         setControllAngle(0);
         onStateFlg(daSFLG_CRANE_UP_END_e);
         ship_StopQuake(-1);
     } else {
-        setControllAngle(m03A6);
-        if (cLib_distanceAngleS(m036C, m03A6) < 0x400) {
+        setControllAngle(mProcVar1);
+        if (cLib_distanceAngleS(mControllAngle, mProcVar1) < 0x400) {
             if (mCraneBaseAngle > 0) {
-                if (m03A6 > 0x400) {
-                    m03A6 = (s16)gabi::ftoi(256.0f * cM_rnd());
+                if (mProcVar1 > 0x400) {
+                    mProcVar1 = (s16)gabi::ftoi(256.0f * cM_rnd());
                 } else {
-                    m03A6 = (s16)gabi::ftoi(gabi::fmadds(1024.0f, cM_rnd(), 2048.0f));
+                    mProcVar1 = (s16)gabi::ftoi(gabi::fmadds(1024.0f, cM_rnd(), 2048.0f));
                     seStart(0x381E, &current.pos);
                 }
             } else {
-                if (m03A6 < -0x400) {
-                    m03A6 = (s16)gabi::ftoi(-256.0f * cM_rnd());
+                if (mProcVar1 < -0x400) {
+                    mProcVar1 = (s16)gabi::ftoi(-256.0f * cM_rnd());
                 } else {
-                    m03A6 = (s16)gabi::ftoi(gabi::fnmsubs(1024.0f, cM_rnd(), -2048.0f));
+                    mProcVar1 = (s16)gabi::ftoi(gabi::fnmsubs(1024.0f, cM_rnd(), -2048.0f));
                     seStart(0x381E, &current.pos);
                 }
             }
@@ -3116,7 +3116,7 @@ BOOL daShip_c::procToolDemo() {
             } else {
                 angleDiff = 0;
             }
-            cLib_addCalcAngleS(&m0366, angleDiff, 4, 700, 0x100);
+            cLib_addCalcAngleS(&mTillerAngle, angleDiff, 4, 700, 0x100);
             setControllAngle(getAimControllAngle(prevShapeAngleY));
         }
     } else {
@@ -3129,7 +3129,7 @@ BOOL daShip_c::procToolDemo() {
 
 /* 024800A8 */
 BOOL daShip_c::procZevDemo() {
-    if (!(ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) && m0392 != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    if (!(ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) && mBodyAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOffAnime();
     }
     if (mEvtStaffId == -1) {
@@ -3144,22 +3144,22 @@ BOOL daShip_c::procZevDemo() {
     u32 atn_actorP = ship_getSubst(mEvtStaffId, gabi::guest_addr("atn_actor"), 3);
 
     if (atn_actorP && dComIfGp_event_getPt1()) {
-        m0428 = shipTail::actorEyePosition(gabi::ea(dComIfGp_event_getPt1())); /* &pt1->eyePos */
+        mpEvtAtnPos = shipTail::actorEyePosition(gabi::ea(dComIfGp_event_getPt1())); /* &pt1->eyePos */
     } else {
-        m0428 = gabi::at<cXyz>(ship_getSubst(mEvtStaffId, gabi::guest_addr("atn_pos"), 1));
+        mpEvtAtnPos = gabi::at<cXyz>(ship_getSubst(mEvtStaffId, gabi::guest_addr("atn_pos"), 1));
     }
 
-    if (m0351 != shipTail::DEMO_INIT_e && partP) {
+    if (mDemoMode != shipTail::DEMO_INIT_e && partP) {
         u32 part = shipTail::word(partP);
-        if (m0350 == 4 || m0350 != part) {
-            m0350 = (u8)part;
+        if (mDemoPart == 4 || mDemoPart != part) {
+            mDemoPart = (u8)part;
             setPartAnimeInit(shipTail::part(partP));
         }
     }
 
     if (talkP && shipTail::integer(talkP) == 1) {
         if (!checkStateFlg(daSFLG_UNK8000_e)) {
-            m038A = dRes_INDEX_SHIP_BCK_FN_TALK_A_e;
+            mAnmTransformFileIdx = dRes_INDEX_SHIP_BCK_FN_TALK_A_e;
             mAnmTransform = ship_getRes(dRes_INDEX_SHIP_BCK_FN_TALK_A_e);
             J3DFrameCtrl_init(&mFrameCtrl, anm_getFrameMax(mAnmTransform));
             onStateFlg(daSFLG_UNK8000_e);
@@ -3177,7 +3177,7 @@ BOOL daShip_c::procZevDemo() {
         shipTail::setLinkNoResetFlags(link, shipTail::linkNoResetFlags(link) & ~shipTail::LINK_SHIP_TACT);
     }
 
-    if (m0351 == shipTail::DEMO_INIT_e || m0351 == shipTail::DEMO_OPEN_e) {
+    if (mDemoMode == shipTail::DEMO_INIT_e || mDemoMode == shipTail::DEMO_OPEN_e) {
         s16 targetAngle;
         if (angleP) {
             targetAngle = shipTail::angle(angleP);
@@ -3192,25 +3192,25 @@ BOOL daShip_c::procZevDemo() {
         if (speedP) {
             speedF = shipTail::scalar(speedP);
         }
-        if (partP || m0351 == 8) {
-            if (m0351 == 8) {
-                m0350 = 0;
+        if (partP || mDemoMode == 8) {
+            if (mDemoMode == 8) {
+                mDemoPart = 0;
             } else {
-                m0350 = shipTail::part(partP);
+                mDemoPart = shipTail::part(partP);
             }
             mRopeCnt = 0;
-            mPart = m0350;
+            mPart = mDemoPart;
             u16 fileIndex;
             if (mPart != PART_WAIT_e) {
                 fileIndex = dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e;
             } else {
                 fileIndex = dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e;
-                m03E8 = 0.001f;
+                mSailScale = 0.001f;
             }
-            if (m0392 != fileIndex) {
+            if (mBodyAnmFileIdx != fileIndex) {
                 J3DAnmTransform* res1 = ship_getRes(fileIndex);
                 mpBodyAnm->setAnm(res1, 0, 0.0f, 1.0f, 0.0f, -1.0f, nullptr);
-                m0392 = fileIndex;
+                mBodyAnmFileIdx = fileIndex;
                 mpBodyAnm->setFrame(mpBodyAnm->getEndFrame() - 0.001f);
                 /* HD: no mpBodyAnm->getAnm()->setFrame() */
                 mpBodyAnm->play(nullptr, 0, 0);
@@ -3218,14 +3218,14 @@ BOOL daShip_c::procZevDemo() {
         }
         setControllAngle(0);
         dComIfGp_evmng_cutEnd(mEvtStaffId);
-    } else if (m0351 == shipTail::DEMO_MOVE_e || m0351 == shipTail::DEMO_UNK03_e) {
+    } else if (mDemoMode == shipTail::DEMO_MOVE_e || mDemoMode == shipTail::DEMO_UNK03_e) {
         cXyz* pos = gabi::at<cXyz>(posP);
         if (pos == nullptr) {
             pos = dComIfGp_evmng_getGoal();
         }
         f32 lx, lz;
         f32 targetDistance;
-        if (m0351 == 1) {
+        if (mDemoMode == 1) {
             gabi::Local<cXyz> local_7c;
             cXyz_mi(pos, local_7c.get(), &current.pos);
             lx = local_7c->x;
@@ -3277,8 +3277,8 @@ BOOL daShip_c::procZevDemo() {
             dComIfGp_evmng_cutEnd(mEvtStaffId);
         } else if (speedP && !(shipTail::scalar(speedP) > -0.5f)) {
             f32 sp = shipTail::scalar(speedP);
-            if (!(m03E0 > speedF)) {
-                firstDecrementShipSpeed(m03E0);
+            if (!(mTargetSpeed > speedF)) {
+                firstDecrementShipSpeed(mTargetSpeed);
             } else if (sp < -1.5f || speedF > 55.0f /* HD */) {
                 cLib_addCalc(&speedF, 0.0f, 0.1f, 1.0f, 0.1f);
             } else {
@@ -3305,16 +3305,16 @@ BOOL daShip_c::procZevDemo() {
             } else {
                 sVar5 = 0;
             }
-            cLib_addCalcAngleS(&m0366, sVar5, 4, 700, 0x100);
+            cLib_addCalcAngleS(&mTillerAngle, sVar5, 4, 700, 0x100);
             setControllAngle(getAimControllAngle(targetAngle));
         } else {
             setControllAngle(0);
         }
-    } else if (m0351 == shipTail::DEMO_RACE_FAIL_e) {
+    } else if (mDemoMode == shipTail::DEMO_RACE_FAIL_e) {
         if (!checkStateFlg(daSFLG_UNK10000_e)) {
             J3DAnmTransform* res2 = ship_getRes(dRes_INDEX_SHIP_BCK_FN_LOSE1_e);
             mpHeadAnm->setAnm(res2, 0, 5.0f, 1.0f, 0.0f, -1.0f, nullptr);
-            m03B4 = dRes_INDEX_SHIP_BCK_FN_LOSE1_e;
+            mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOSE1_e;
             onStateFlg(daSFLG_UNK10000_e);
         }
         speedF = 0.0f;
@@ -3322,13 +3322,13 @@ BOOL daShip_c::procZevDemo() {
         if (mpHeadAnm->getPlaySpeed() < 0.01f) {
             dComIfGp_evmng_cutEnd(mEvtStaffId);
         }
-    } else if (m0351 == shipTail::DEMO_KEEP_e) {
+    } else if (mDemoMode == shipTail::DEMO_KEEP_e) {
         if (speedP) {
             firstDecrementShipSpeed(shipTail::scalar(speedP));
         }
         setControllAngle(0);
         dComIfGp_evmng_cutEnd(mEvtStaffId);
-    } else if (m0351 == shipTail::DEMO_NECK_e) {
+    } else if (mDemoMode == shipTail::DEMO_NECK_e) {
         u32 prm = ship_getSubst(mEvtStaffId, gabi::guest_addr("prm0"), 3);
         u16 fileIndex;
         if (prm == 0 || !(shipTail::word(prm) & 1)) {
@@ -3345,7 +3345,7 @@ BOOL daShip_c::procZevDemo() {
         if (!checkStateFlg(daSFLG_UNK80000_e) && rate > 0.0f) {
             J3DAnmTransform* res3 = ship_getRes(fileIndex);
             mpHeadAnm->setAnm(res3, 0, 5.0f, rate, 0.0f, -1.0f, nullptr);
-            m03B4 = fileIndex;
+            mHeadAnmFileIdx = fileIndex;
             onStateFlg(daSFLG_UNK80000_e);
         } else if (checkStateFlg(daSFLG_UNK80000_e) && rate < 0.0f) {
             offStateFlg(daSFLG_UNK80000_e);
@@ -3355,7 +3355,7 @@ BOOL daShip_c::procZevDemo() {
         if (!(std::fabs(mpHeadAnm->getPlaySpeed()) > 0.1f)) {
             dComIfGp_evmng_cutEnd(mEvtStaffId);
         }
-    } else if (m0351 == shipTail::DEMO_THROW_e) {
+    } else if (mDemoMode == shipTail::DEMO_THROW_e) {
         speedF = 150.0f; /* l_HIO.throw_start_speedF */
         u32 gravP = ship_getSubst(mEvtStaffId, gabi::guest_addr("gravity"), 0);
         if (gravP) {
@@ -3368,38 +3368,38 @@ BOOL daShip_c::procZevDemo() {
         }
         shape_angle.y += 4500; /* l_HIO.throw_start_angle_speed */
         dComIfGp_evmng_cutEnd(mEvtStaffId);
-    } else if (m0351 == shipTail::DEMO_HWARP_UP_e) {
-        cLib_addCalcAngleS(&m0370, 0, 10, 0x1000, 0x200);
-        cLib_addCalcAngleS(&m0372, 0, 10, 0x1000, 0x200);
+    } else if (mDemoMode == shipTail::DEMO_HWARP_UP_e) {
+        cLib_addCalcAngleS(&mWaveAngleX, 0, 10, 0x1000, 0x200);
+        cLib_addCalcAngleS(&mWaveAngleZ, 0, 10, 0x1000, 0x200);
         cLib_addCalcAngleS(&m0384, 0, 10, 0x1000, 0x200);
-        cLib_addCalcAngleS(&m036C, 0, 10, 0x1000, 0x200);
+        cLib_addCalcAngleS(&mControllAngle, 0, 10, 0x1000, 0x200);
         onStateFlg(daSFLG_FLY_e);
         if (speed.y < 15.0f) {
             speed.y += 1.0f;
         }
-        m0366 = 0;
-        m036E = 0;
-        m0374 = 0;
-        m0376 = 0;
+        mTillerAngle = 0;
+        mControllAngleSpeed = 0;
+        mWaveAngleSpeedX = 0;
+        mWaveAngleSpeedZ = 0;
         m0386 = 0;
         gravity = 0.0f;
         speedF = 0.0f;
         current.pos.y += speed.y;
         dComIfGp_evmng_cutEnd(mEvtStaffId);
-    } else if (m0351 == shipTail::DEMO_HWARP_DOWN_e) {
-        if (m03F4 > current.pos.y && !(gravity < 0.0f)) {
+    } else if (mDemoMode == shipTail::DEMO_HWARP_DOWN_e) {
+        if (mWaterY > current.pos.y && !(gravity < 0.0f)) {
             offStateFlg(daSFLG_FLY_e);
-            m03F4 = current.pos.y;
+            mWaterY = current.pos.y;
             dComIfGp_evmng_cutEnd(mEvtStaffId);
         } else {
-            m0370 = 0;
-            m0372 = 0;
+            mWaveAngleX = 0;
+            mWaveAngleZ = 0;
             m0384 = 0;
-            m036C = 0;
-            m0366 = 0;
-            m036E = 0;
-            m0374 = 0;
-            m0376 = 0;
+            mControllAngle = 0;
+            mTillerAngle = 0;
+            mControllAngleSpeed = 0;
+            mWaveAngleSpeedX = 0;
+            mWaveAngleSpeedZ = 0;
             m0386 = 0;
             onStateFlg(daSFLG_FLY_e);
             if (gravity < 0.0f) {
@@ -3418,8 +3418,8 @@ BOOL daShip_c::procZevDemo() {
         return TRUE;
     }
     if (mpBodyAnm->getPlaySpeed() < 0.01f) {
-        if (m0350 != 4 && m0350 != 0 && mPart != m0350) {
-            setPartOnAnime(m0350);
+        if (mDemoPart != 4 && mDemoPart != 0 && mPart != mDemoPart) {
+            setPartOnAnime(mDemoPart);
         }
     }
     return TRUE;
@@ -3430,8 +3430,8 @@ BOOL daShip_c::procZevDemo() {
 /* 02481C94 */
 BOOL daShip_c::procTornadoUp() {
     fopAc_ac_c* tornado = mTornadoActor;
-    cLib_addCalc(&current.pos.x, tornado_getJointPos(tornado, m037A, 0), 0.5f, 80.0f, 20.0f);
-    cLib_addCalc(&current.pos.z, tornado_getJointPos(tornado, m037A, 2), 0.5f, 80.0f, 20.0f);
+    cLib_addCalc(&current.pos.x, tornado_getJointPos(tornado, mProcVar0, 0), 0.5f, 80.0f, 20.0f);
+    cLib_addCalc(&current.pos.z, tornado_getJointPos(tornado, mProcVar0, 2), 0.5f, 80.0f, 20.0f);
     f32 vy = speed.y;
     current.pos.y += vy;
     vy = vy + 2.0f;
@@ -3439,8 +3439,8 @@ BOOL daShip_c::procTornadoUp() {
         vy = 50.0f;
     }
     speed.y = vy;
-    if (tornado_getJointPos(tornado, m037A, 1) < current.pos.y && m037A < 11) {
-        m037A++;
+    if (tornado_getJointPos(tornado, mProcVar0, 1) < current.pos.y && mProcVar0 < 11) {
+        mProcVar0++;
     }
     shape_angle.y += 0x1C25;
 
@@ -3453,8 +3453,8 @@ BOOL daShip_c::procTornadoUp() {
     camera_Eye(camera, eye.get());
     camera_Set(camera, local_3c.get(), eye.get());
 
-    if (m03A6 == 0 && current.pos.y > tornado->current.pos.y + 5000.0f) {
-        m03A6 = 1;
+    if (mProcVar1 == 0 && current.pos.y > tornado->current.pos.y + 5000.0f) {
+        mProcVar1 = 1;
         s32 exitId = gabi::ftoi(cM_rndF(8.0f)) + 0xC6;
         if (exitId >= 0xCE) {
             exitId = 0xCD;
@@ -3468,7 +3468,7 @@ BOOL daShip_c::procTornadoUp() {
 
 /* 024827D4 */
 BOOL daShip_c::procWhirlDown() {
-    shape_angle.y = (s16)gabi::ftoi(gabi::fmadds(m0408 / 6.2831855f, 65536.0f, (f32)(s16)shape_angle.y));
+    shape_angle.y = (s16)gabi::ftoi(gabi::fmadds(mForceMoveAngleSpeed / 6.2831855f, 65536.0f, (f32)(s16)shape_angle.y));
     if (mWhirlActor) {
         speedF = 40.0f;
         if (cLib_addCalcPosXZ(&current.pos, &mWhirlActor->current.pos, 1.0f, 40.0f, 10.0f) < 10.0f) {
@@ -3478,15 +3478,15 @@ BOOL daShip_c::procWhirlDown() {
             }
             speed.y = vy;
             current.pos.y += vy;
-            if (m037A == 0 && current.pos.y < m03F4 - 1000.0f) {
+            if (mProcVar0 == 0 && current.pos.y < mWaterY - 1000.0f) {
                 /* HD: the event flag is set only with the bomb bag */
                 if (dComIfGs_checkGetItem(dItemNo_BOMB_BAG_e)) {
                     dComIfGs_onEventBit(0x1940);
                 }
                 u32 play = dComIfGp_ea();
-                shipTailSetNextStage(shipTail::startStageName(play), (s16)m03B2, (s8)fopAcM_GetRoomNo(this), -1,
+                shipTailSetNextStage(shipTail::startStageName(play), (s16)mWhirlLinkID, (s8)fopAcM_GetRoomNo(this), -1,
                            0.0f, 0, 1, 0);
-                m037A = 1;
+                mProcVar0 = 1;
             }
         }
     }
@@ -3504,24 +3504,24 @@ static inline void ship_seStartCurrent(fopAc_ac_c* a, u32 se) {
 
 /* 0247C024 */
 BOOL daShip_c::procStartModeWarp_init() {
-    current.pos.y = m03F4 + 5000.0f;
+    current.pos.y = mWaterY + 5000.0f;
     onStateFlg(daSFLG_FLY_e);
     setProc(shipFirst::procStartModeWarp);
     mCurMode = MODE_START_MODE_WARP_e;
-    if (m0392 != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    if (mBodyAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOffAnime();
     }
-    m03A6 = 0x1C25;
+    mProcVar1 = 0x1C25;
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
     camera_Stop(camera);
     gabi::Local<cXyz> local_38;
-    local_38->y = m03F4 + 1500.0f;
+    local_38->y = mWaterY + 1500.0f;
     local_38->x = current.pos.x;
     local_38->z = current.pos.z + 2000.0f;
     gabi::Local<cXyz> pos;
     pos->set(current.pos.x, current.pos.y, current.pos.z);
     camera_Set(camera, pos.get(), local_38.get());
-    m037A = 0;
+    mProcVar0 = 0;
     ship_seStartCurrent(this, 0x186D);
     return TRUE;
 }
@@ -3532,7 +3532,7 @@ BOOL daShip_c::procStartModeWarp_init() {
 BOOL daShip_c::procStartModeWarp() {
     fopAc_ac_c* tornado = fopAcM_SearchByID(mTactWarpID);
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
-    shape_angle.y += m03A6;
+    shape_angle.y += mProcVar1;
     current.angle.y = shape_angle.y;
     gabi::Local<cXyz> local_30;
     if (tornado) {
@@ -3554,10 +3554,10 @@ BOOL daShip_c::procStartModeWarp() {
     gabi::Local<cXyz> eye;
     camera_Eye(camera, eye.get());
     camera_Set(camera, local_30.get(), eye.get());
-    if (m037A == 0) {
-        if (current.pos.y < m03F4) {
-            current.pos.y = m03F4 - 50.0f;
-            m037A = 1;
+    if (mProcVar0 == 0) {
+        if (current.pos.y < mWaterY) {
+            current.pos.y = mWaterY - 50.0f;
+            mProcVar0 = 1;
             offStateFlg(daSFLG_FLY_e);
             speed.y = 0.0f;
             if (tornado != nullptr) {
@@ -3566,12 +3566,12 @@ BOOL daShip_c::procStartModeWarp() {
             gabi::Local<GXColor> diff;
             gabi::Local<GXColor> amb;
             dKy_get_seacolor(diff.get(), amb.get());
-            m03BC.z = 0;
-            m03BC.x = 0;
-            m03BC.y = shape_angle.y + 0x8000;
+            mWarpSplashBackAngle.z = 0;
+            mWarpSplashBackAngle.x = 0;
+            mWarpSplashBackAngle.y = shape_angle.y + 0x8000;
             dComIfGp_particle_set(shipTail::ID_AK_JN_SHIPWARPSPLASH00, &current.pos, &shape_angle, nullptr, 0xFF,
-                                  (dPa_levelEcallBack*)&m1984, -1, diff.get(), nullptr, nullptr);
-            dComIfGp_particle_set(shipTail::ID_AK_JN_SHIPWARPSPLASH00, &current.pos, &m03BC, nullptr, 0xFF, (dPa_levelEcallBack*)&m1998, -1, diff.get(),
+                                  (dPa_levelEcallBack*)&mWarpSplash, -1, diff.get(), nullptr, nullptr);
+            dComIfGp_particle_set(shipTail::ID_AK_JN_SHIPWARPSPLASH00, &current.pos, &mWarpSplashBackAngle, nullptr, 0xFF, (dPa_levelEcallBack*)&mWarpSplashBack, -1, diff.get(),
                                   nullptr, nullptr);
         }
         if (tornado != nullptr) {
@@ -3581,15 +3581,15 @@ BOOL daShip_c::procStartModeWarp() {
         if (tornado != nullptr) {
             tornado->current.pos.y -= 12.0f;
         }
-        m03BC.y = shape_angle.y + 0x8000;
-        cLib_chaseS(&m03A6, 0, 0x40);
-        if (m03A6 < 0x400) {
+        mWarpSplashBackAngle.y = shape_angle.y + 0x8000;
+        cLib_chaseS(&mProcVar1, 0, 0x40);
+        if (mProcVar1 < 0x400) {
             camera_Start(camera);
             camera_Reset(camera);
             mTactWarpID = fpcM_ERROR_PROCESS_ID_e;
             /* HD: the effects are ended, not removed */
-            dPa_followEcallBack_end_l(&m1984);
-            dPa_followEcallBack_end_l(&m1998);
+            dPa_followEcallBack_end_l(&mWarpSplash);
+            dPa_followEcallBack_end_l(&mWarpSplashBack);
             dComIfGp_evmng_cutEnd(mEvtStaffId);
             procPaddleMove_init();
         }
@@ -3603,25 +3603,25 @@ BOOL daShip_c::procStartModeWarp() {
 BOOL daShip_c::procTactWarp_init() {
     mCurMode = MODE_TACT_WARP_e;
     setProc(shipFirst::procTactWarp);
-    if (m0392 != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    if (mBodyAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOffAnime();
     }
-    m03A6 = 0;
+    mProcVar1 = 0;
     gravity = 0.0f;
     speed.y = 0.0f;
     onStateFlg(daSFLG_FLY_e);
-    m037A = 0;
+    mProcVar0 = 0;
     ship_seStartCurrent(this, 0x186E);
     shipFirstStartEventCamera(dCam_getBody(), shipFirst::CAMERA_EVENT_TACT_WARP, fopAcM_GetID(this), 0);
     gabi::Local<GXColor> amb;
     gabi::Local<GXColor> diff;
     dKy_get_seacolor(amb.get(), diff.get());
-    m03BC.z = 0;
-    m03BC.x = 0;
-    m03BC.y = shape_angle.y + 0x8000;
+    mWarpSplashBackAngle.z = 0;
+    mWarpSplashBackAngle.x = 0;
+    mWarpSplashBackAngle.y = shape_angle.y + 0x8000;
     dComIfGp_particle_set(shipTail::ID_AK_JN_SHIPWARPSPLASH00, &current.pos, &shape_angle, nullptr, 0xFF,
-                          (dPa_levelEcallBack*)&m1984, -1, amb.get(), nullptr, nullptr);
-    dComIfGp_particle_set(shipTail::ID_AK_JN_SHIPWARPSPLASH00, &current.pos, &m03BC, nullptr, 0xFF, (dPa_levelEcallBack*)&m1998, -1, amb.get(), nullptr,
+                          (dPa_levelEcallBack*)&mWarpSplash, -1, amb.get(), nullptr, nullptr);
+    dComIfGp_particle_set(shipTail::ID_AK_JN_SHIPWARPSPLASH00, &current.pos, &mWarpSplashBackAngle, nullptr, 0xFF, (dPa_levelEcallBack*)&mWarpSplashBack, -1, amb.get(), nullptr,
                           nullptr);
     return TRUE;
 }
@@ -3630,20 +3630,20 @@ BOOL daShip_c::procTactWarp_init() {
 
 /* 02482438 */
 BOOL daShip_c::procTactWarp() {
-    shape_angle.y += m03A6;
+    shape_angle.y += mProcVar1;
     current.angle.y = shape_angle.y;
     fopAc_ac_c* tornado = fopAcM_SearchByID(mTactWarpID);
     if (tornado == nullptr || fpcM_IsCreating(mTactWarpID)) {
         if (mTactWarpID == fpcM_ERROR_PROCESS_ID_e) {
             dComIfGp_event_reset();
-            dPa_followEcallBack_end_l(&m1984);
-            dPa_followEcallBack_end_l(&m1998);
+            dPa_followEcallBack_end_l(&mWarpSplash);
+            dPa_followEcallBack_end_l(&mWarpSplashBack);
             procPaddleMove_init();
             shipTailEndEventCamera(dCam_getBody(), fopAcM_GetID(this));
         }
         return FALSE;
     }
-    if (cLib_chaseS(&m03A6, 0x1C25, 0x40) && shipTail::tornadoScale(gabi::ea(tornado)) > 0.8f /* getScaleEnd() */) {
+    if (cLib_chaseS(&mProcVar1, 0x1C25, 0x40) && shipTail::tornadoScale(gabi::ea(tornado)) > 0.8f /* getScaleEnd() */) {
         f32 vy = speed.y + 1.0f;
         if (vy > 50.0f) {
             vy = 50.0f;
@@ -3651,24 +3651,24 @@ BOOL daShip_c::procTactWarp() {
         speed.y = vy;
         current.pos.y += vy;
         tornado->current.pos.y = current.pos.y - 700.0f;
-        dPa_followEcallBack_end_l(&m1984);
-        dPa_followEcallBack_end_l(&m1998);
-    } else if (!m037A && m03A6 > 0x1000) {
-        m037A = 1;
+        dPa_followEcallBack_end_l(&mWarpSplash);
+        dPa_followEcallBack_end_l(&mWarpSplashBack);
+    } else if (!mProcVar0 && mProcVar1 > 0x1000) {
+        mProcVar0 = 1;
         shipTail::setTornadoScaleOn(gabi::ea(tornado), 1); /* setScaleOn() */
     }
-    if (m037A == 1) {
+    if (mProcVar0 == 1) {
         cLib_chaseF(&tornado->current.pos.y, current.pos.y - 700.0f, 20.0f);
         s32 jointIndex = tornado_findJoint(tornado, &current.pos.y);
         cLib_chaseF(&current.pos.x, tornado_getJointPos(tornado, jointIndex, 0), 50.0f);
         cLib_chaseF(&current.pos.z, tornado_getJointPos(tornado, jointIndex, 2), 50.0f);
     }
-    if (m037A != 2 && current.pos.y > m03F4 + 5000.0f) {
-        m037A = 2;
+    if (mProcVar0 != 2 && current.pos.y > mWaterY + 5000.0f) {
+        mProcVar0 = 2;
         dStage_changeScene(mTactWarpPosNum + 0xC5, 0.0f, 0, -1);
         shipTailTactMuteOff();
     }
-    m03BC.y = shape_angle.y + 0x8000;
+    mWarpSplashBackAngle.y = shape_angle.y + 0x8000;
     return TRUE;
 }
 
@@ -3676,27 +3676,27 @@ BOOL daShip_c::procTactWarp() {
 
 /* 0247C178 */
 BOOL daShip_c::procStartModeThrow_init() {
-    current.pos.y = m03F4 + 2500.0f;
+    current.pos.y = mWaterY + 2500.0f;
     speedF = 100.0f;
     onStateFlg(daSFLG_FLY_e);
     setProc(shipFirst::procStartModeThrow);
     mCurMode = MODE_START_MODE_THROW_e;
-    if (m0392 != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+    if (mBodyAnmFileIdx != dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
         setPartOffAnime();
     }
-    m03A6 = 3600; /* l_HIO.throw_return_angle_speed */
+    mProcVar1 = 3600; /* l_HIO.throw_return_angle_speed */
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
     camera_Stop(camera);
     gabi::Local<cXyz> pos;
     pos->set(current.pos.x, current.pos.y, current.pos.z);
     gabi::Local<cXyz> local_38;
     local_38->x = gabi::fmadds(300.0f, cM_scos(current.angle.y), current.pos.x);
-    local_38->y = m03F4 + 150.0f;
+    local_38->y = mWaterY + 150.0f;
     local_38->z = gabi::fnmsubs(300.0f, cM_ssin(current.angle.y), current.pos.z);
     camera_Set(camera, pos.get(), local_38.get());
     current.pos.x = gabi::fnmsubs(4500.0f, cM_ssin(current.angle.y), current.pos.x);
     current.pos.z = gabi::fnmsubs(4500.0f, cM_scos(current.angle.y), current.pos.z);
-    m037A = 0;
+    mProcVar0 = 0;
     return TRUE;
 }
 
@@ -3705,15 +3705,15 @@ BOOL daShip_c::procStartModeThrow_init() {
 /* 02482970 */
 BOOL daShip_c::procStartModeThrow() {
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
-    shape_angle.y += m03A6;
+    shape_angle.y += mProcVar1;
     gabi::Local<cXyz> pos;
     pos->set(current.pos.x, current.pos.y, current.pos.z);
     gabi::Local<cXyz> eye;
     camera_Eye(camera, eye.get());
     camera_Set(camera, pos.get(), eye.get());
-    if (m037A == 0) {
-        if (current.pos.y < m03F4) {
-            m037A++;
+    if (mProcVar0 == 0) {
+        if (current.pos.y < mWaterY) {
+            mProcVar0++;
             speed.y = 0.0f;
             speedF = 0.0f;
             offStateFlg(daSFLG_FLY_e);
@@ -3722,7 +3722,7 @@ BOOL daShip_c::procStartModeThrow() {
             dKy_get_seacolor(amb.get(), diff.get());
             u8 r = (u8)gabi::ftoi(gabi::fmadds(0.23529412f, (f32)(u8)amb->r, 195.0f));
             u8 g = (u8)gabi::ftoi(gabi::fmadds(0.23529412f, (f32)(u8)amb->g, 195.0f));
-            current.pos.y = m03F4;
+            current.pos.y = mWaterY;
             u8 b = (u8)gabi::ftoi(gabi::fmadds(0.23529412f, (f32)(u8)amb->b, 195.0f));
             amb->r = r;
             amb->g = g;
@@ -3731,11 +3731,11 @@ BOOL daShip_c::procStartModeThrow() {
                                   amb.get(), nullptr, nullptr);
             dComIfGp_particle_set(shipTail::ID_IT_SN_FN_SHIBUKI01, &current.pos, &shape_angle, nullptr, 0xFF, nullptr, -1,
                                   amb.get(), nullptr, nullptr);
-            current.pos.y = m03F4 - 50.0f;
+            current.pos.y = mWaterY - 50.0f;
         }
-    } else if (cLib_chaseS(&m03A6, 0, 0x100)) {
-        m037A++;
-        if (m037A == 45) {
+    } else if (cLib_chaseS(&mProcVar1, 0, 0x100)) {
+        mProcVar0++;
+        if (mProcVar0 == 45) {
             camera_Start(camera);
             camera_Reset(camera);
             current.angle.y = shape_angle.y;
@@ -3762,16 +3762,16 @@ BOOL daShip_c::shipDelete() {
     shipFirstSplashRemove((ShipSplash*)mSplash);
     shipFirstTrackRemove((ShipTrack*)mTrack);
     /* HD: the ripples are ended (GameCube remove()) */
-    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)mRipple);
-    m1984.remove();
-    m1998.remove();
-    m19AC.remove();
-    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)m19C0);
+    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRipple);
+    mWarpSplash.remove();
+    mWarpSplashBack.remove();
+    mRopeDrip.remove();
+    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRopeRipple);
     mDoAud_seDeleteObject(&mTillerTopPos);
-    mDoAud_seDeleteObject(&m0444);
-    mDoAud_seDeleteObject(&m102C);
+    mDoAud_seDeleteObject(&mSailPos);
+    mDoAud_seDeleteObject(&mCranePos);
     mDoAud_seDeleteObject(&mCraneRipplePos);
-    mDoAud_seDeleteObject(&m1038);
+    mDoAud_seDeleteObject(&mCannonPos);
     /* dComIfGp_clearPlayerStatus1(0, daPyStts1_SAIL_e) */
     u32 play = dComIfGp_ea();
     shipFirst::clearSailStatus(play);

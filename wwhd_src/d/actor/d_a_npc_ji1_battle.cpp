@@ -37,7 +37,7 @@ void daNpc_Ji1_c::battleGameSetTimer() {
   f32 temp1;
   f32 temp2;
   daNpc_Ji1_HIO_c &h = l_hio;
-  s32 n = field_0xD70;
+  s32 n = mTeachStep;
   if (n < h.field_0x60[0]) {
     f32 temp = (f32)n / (f32)(s16)h.field_0x60[0];
     f32 r = 1.0f - temp;
@@ -74,7 +74,7 @@ void daNpc_Ji1_c::battleGameSetTimer() {
     temp2 = (f32)(s16)h.field_0x94;
     temp1 = (f32)(s16)h.field_0xA0;
   }
-  field_0xC30 = gabi::ftoi(temp2 + cM_rndF(temp1));
+  mBattleTimer = gabi::ftoi(temp2 + cM_rndF(temp1));
 }
 
 /* 02259EC4 */
@@ -150,7 +150,7 @@ BOOL daNpc_Ji1_c::battleMove(f32 param_1) {
 /* 0225B344 */
 BOOL daNpc_Ji1_c::battleSubActionWait() {
 
-  if (--field_0xC30 < 0) {
+  if (--mBattleTimer < 0) {
     f32 dist = fopAcM_searchPlayerDistanceXZ(this);
     f32 rnd = cM_rndF(10.0f);
     if (rnd > 3.3f || dist > 100.0f) {
@@ -177,20 +177,20 @@ BOOL daNpc_Ji1_c::battleSubActionNockBack() {
       cLib_targetAngleY(&current.pos, &dComIfGp_getPlayer(0)->current.pos);
   if (mpOrcaMorf->checkFrame(1.0f)) {
     setAnm(Ji1Battle_BCK_KAMAE, 4.0f, 0);
-    field_0xC9C = 0.0f;
-    field_0xD38.copy(current.pos);
-    field_0xD6C = 0;
+    mBackSlideDist = 0.0f;
+    mBackSlideStartPos.copy(current.pos);
+    mSubActionPhase = 0;
     battleSubActionWaitInit();
     return FALSE;
   }
-  cLib_addCalc2(&field_0xC9C, 50.0f, 0.2f, 10.0f);
+  cLib_addCalc2(&mBackSlideDist, 50.0f, 0.2f, 10.0f);
   gabi::Local<cXyz> temp2;
-  f32 c9c = field_0xC9C;
-  f32 x = field_0xD38.x;
-  f32 y = field_0xD38.y;
+  f32 c9c = mBackSlideDist;
+  f32 x = mBackSlideStartPos.x;
+  f32 y = mBackSlideStartPos.y;
   f32 s = cM_ssin(temp);
   f32 c = cM_scos(temp);
-  f32 z = field_0xD38.z;
+  f32 z = mBackSlideStartPos.z;
   temp2->x = gabi::fnmsubs(c9c, s, x);
   temp2->y = y;
   temp2->z = gabi::fnmsubs(c9c, c, z);
@@ -220,7 +220,7 @@ static inline BOOL attack_begin(daNpc_Ji1_c *a, f32 frame, f32 start, f32 end,
   setBtAttackData(a, start, end, 500.0f, type);
   a->mBtNowFrame = frame;
   if (a->isAttackFrame() <= 0) {
-    OnTgShield(&a->field_0x7E0);
+    OnTgShield(&a->mGuardCyl);
   }
   if (morf_checkEnd(a->mpOrcaMorf, 1.0f)) {
     a->setAnm(Ji1Battle_BCK_KAMAE, 4.0f, 0);
@@ -232,19 +232,19 @@ static inline BOOL attack_begin(daNpc_Ji1_c *a, f32 frame, f32 start, f32 end,
 /* the play speed (guard knock-back timer, then fast/slow by frame) */
 static inline void attack_speed(daNpc_Ji1_c *a, f32 limit, be<f32> &fast,
                                 be<f32> &slow) {
-  if (ji1BattleCalcTimerHD(&a->field_0xC34) > 0) {
+  if (ji1BattleCalcTimerHD(&a->mNockBackTimer) > 0) {
     a->mpOrcaMorf->setPlaySpeed(l_hio.field_0x84);
-    s32 t = a->field_0xC34;
-    a->field_0xBA4 = (s16)(t * 0x2800);
-    a->field_0xBA2 = (s16)(t * 0x100);
+    s32 t = a->mNockBackTimer;
+    a->mArmShakePhase = (s16)(t * 0x2800);
+    a->mArmShakeAmp = (s16)(t * 0x100);
   } else {
     if (a->mpOrcaMorf->getFrame() > limit) {
       a->mpOrcaMorf->setPlaySpeed(fast);
     } else {
       a->mpOrcaMorf->setPlaySpeed(slow);
-      if (ChkTgShieldHit(&a->field_0x7E0)) {
+      if (ChkTgShieldHit(&a->mGuardCyl)) {
         a->setGuardParticle();
-        a->field_0xC34 = (s16)l_hio.field_0x88;
+        a->mNockBackTimer = (s16)l_hio.field_0x88;
         a->mpOrcaMorf->setPlaySpeed(l_hio.field_0x84);
       }
     }
@@ -266,15 +266,15 @@ BOOL daNpc_Ji1_c::battleSubActionAttack() {
       gabi::Local<cXyz> temp2;
       f32 s = cM_ssin(current.angle.y);
       f32 c = cM_scos(current.angle.y);
-      temp2->x = gabi::fmadds(100.0f, s, field_0xD38.x);
-      temp2->y = (f32)field_0xD38.y;
-      temp2->z = gabi::fmadds(100.0f, c, field_0xD38.z);
+      temp2->x = gabi::fmadds(100.0f, s, mBackSlideStartPos.x);
+      temp2->y = (f32)mBackSlideStartPos.y;
+      temp2->z = gabi::fmadds(100.0f, c, mBackSlideStartPos.z);
       battleAtSet();
       cLib_addCalcPos2(&current.pos, *temp2, 0.25f, 20.0f);
     }
   } else {
     cLib_addCalcAngleS2(&current.angle.y, temp, 4, 0x800);
-    field_0xD38.copy(current.pos);
+    mBackSlideStartPos.copy(current.pos);
   }
   return TRUE;
 }
@@ -291,11 +291,11 @@ BOOL daNpc_Ji1_c::battleSubActionTateAttack() {
   attack_speed(this, 26.0f, l_hio.field_0x74, l_hio.field_0x78);
   if (frame > 28.0f && frame < 35.0f) {
     battleAtSet();
-    field_0x320.copy(field_0xB78);
-    field_0x320.y = 0.0f;
+    mSmokePos.copy(mSpearTipPos);
+    mSmokePos.y = 0.0f;
   } else if (frame < 23.0f) {
     cLib_addCalcAngleS2(&current.angle.y, temp, 4, 0x400);
-    field_0xD38.copy(current.pos);
+    mBackSlideStartPos.copy(current.pos);
   }
   if (mpOrcaMorf->checkFrame(35.0f)) {
     setParticleAT(1, 10.0f, 0.5f);
@@ -321,21 +321,21 @@ BOOL daNpc_Ji1_c::battleSubActionYokoAttack() {
     f32 x = current.pos.x;
     f32 y = current.pos.y;
     f32 z = current.pos.z;
-    s16 ang = (s16)(field_0x32C - 0x1400);
-    field_0x320.x = x;
-    field_0x320.y = y;
-    field_0x320.z = z;
-    field_0x32C = ang;
-    field_0x320.x = gabi::fmadds(200.0f, cM_ssin(ang), x);
-    field_0x320.z = gabi::fmadds(200.0f, cM_scos(ang), z);
+    s16 ang = (s16)(mSmokeAngle - 0x1400);
+    mSmokePos.x = x;
+    mSmokePos.y = y;
+    mSmokePos.z = z;
+    mSmokeAngle = ang;
+    mSmokePos.x = gabi::fmadds(200.0f, cM_ssin(ang), x);
+    mSmokePos.z = gabi::fmadds(200.0f, cM_scos(ang), z);
   } else if (frame < 15.0f) {
     cLib_addCalcAngleS2(&current.angle.y, temp, 4, 0x600);
-    field_0xD38.copy(current.pos);
+    mBackSlideStartPos.copy(current.pos);
   }
   if (mpOrcaMorf->checkFrame(25.0f)) {
-    field_0x320.copy(field_0xB78);
-    field_0x320.y = 0.0f;
-    field_0x32C = cLib_targetAngleY(&current.pos, &field_0x320);
+    mSmokePos.copy(mSpearTipPos);
+    mSmokePos.y = 0.0f;
+    mSmokeAngle = cLib_targetAngleY(&current.pos, &mSmokePos);
     ji1_seStart(this, JA_SE_CM_JI_SWING, 0);
     setParticleAT(0xF, 10.0f, 0.5f);
   } else if (mpOrcaMorf->checkFrame(40.0f)) {
@@ -345,23 +345,23 @@ BOOL daNpc_Ji1_c::battleSubActionYokoAttack() {
 }
 
 /* ---- moves back along the facing direction ---- */
-/* temp = field_0xD38; temp.x -= field_0xC9C * sin(angle.y); temp.z -=
- * field_0xC9C * cos(angle.y) */
+/* temp = mBackSlideStartPos; temp.x -= mBackSlideDist * sin(angle.y); temp.z -=
+ * mBackSlideDist * cos(angle.y) */
 static inline void back_pos(daNpc_Ji1_c *a, cXyz *temp) {
   s16 ang = a->current.angle.y;
-  f32 c9c = a->field_0xC9C;
-  f32 x = a->field_0xD38.x;
-  f32 y = a->field_0xD38.y;
-  f32 z = a->field_0xD38.z;
+  f32 c9c = a->mBackSlideDist;
+  f32 x = a->mBackSlideStartPos.x;
+  f32 y = a->mBackSlideStartPos.y;
+  f32 z = a->mBackSlideStartPos.z;
   temp->x = gabi::fnmsubs(c9c, cM_ssin(ang), x);
   temp->y = y;
   temp->z = gabi::fnmsubs(c9c, cM_scos(ang), z);
 }
 /* end of a sub-action: back to waiting */
 static inline void back_to_wait(daNpc_Ji1_c *a) {
-  a->field_0xD6C = 0;
-  a->field_0xC9C = 0.0f;
-  a->field_0xD38.copy(a->current.pos);
+  a->mSubActionPhase = 0;
+  a->mBackSlideDist = 0.0f;
+  a->mBackSlideStartPos.copy(a->current.pos);
   a->setAnm(Ji1Battle_BCK_KAMAE, 4.0f, 0);
   a->battleSubActionWaitInit();
 }
@@ -374,7 +374,7 @@ BOOL daNpc_Ji1_c::battleSubActionJump() {
   cXyz_mi(&dComIfGp_getPlayer(0)->current.pos, temp, &current.pos);
   s16 temp2 = cM_atan2s(temp->x, temp->z);
   if (mAnimation == Ji1Battle_BCK_JPGUARD) {
-    cLib_addCalc2(&field_0xC9C, 50.0f, 0.25f, 50.0f);
+    cLib_addCalc2(&mBackSlideDist, 50.0f, 0.25f, 50.0f);
     cLib_addCalcAngleS2(&current.angle.y, temp2, 4, 0x1000);
     gabi::Local<cXyz> temp3;
     back_pos(this, temp3);
@@ -383,7 +383,7 @@ BOOL daNpc_Ji1_c::battleSubActionJump() {
       back_to_wait(this);
     }
   } else {
-    cLib_addCalc2(&field_0xC9C, 180.0f, 0.25f, 50.0f);
+    cLib_addCalc2(&mBackSlideDist, 180.0f, 0.25f, 50.0f);
     cLib_addCalcAngleS2(&current.angle.y, temp2, 4, 0x1000);
     gabi::Local<cXyz> temp3;
     back_pos(this, temp3);
@@ -393,8 +393,8 @@ BOOL daNpc_Ji1_c::battleSubActionJump() {
     }
     ji1BattleAddCalcPosXZHD(&current.pos, temp3, 0.8f, temp4, 1.0f);
     if (morf_checkEnd(mpOrcaMorf, 10.0f)) {
-      field_0xC9C = 0.0f;
-      field_0xD38.copy(current.pos);
+      mBackSlideDist = 0.0f;
+      mBackSlideStartPos.copy(current.pos);
       setAnm(Ji1Battle_BCK_JPGUARD, 0.0f, 0);
       // HD: restarting the jump animation also resets its current frame.
       mpOrcaMorf->mFrameCtrl.mStart = 0;
@@ -412,7 +412,7 @@ BOOL daNpc_Ji1_c::battleSubActionDamage() {
   gabi::Local<cXyz> temp;
   cXyz_mi(&dComIfGp_getPlayer(0)->current.pos, temp, &current.pos);
   s16 temp2 = cM_atan2s(temp->x, temp->z);
-  cLib_addCalc2(&field_0xC9C, 180.0f, 0.25f, 50.0f);
+  cLib_addCalc2(&mBackSlideDist, 180.0f, 0.25f, 50.0f);
   gabi::Local<cXyz> temp3;
   back_pos(this, temp3);
   f32 temp4 = 25.0f;
@@ -427,7 +427,7 @@ BOOL daNpc_Ji1_c::battleSubActionDamage() {
     cLib_addCalcAngleS2(&current.angle.y, temp2, 4, 0x1800);
   }
   if (!playerCutAtCheck()) {
-    field_0xD6C = 0;
+    mSubActionPhase = 0;
   }
   if (morf_checkEnd(mpOrcaMorf, 1.0f)) {
     back_to_wait(this);
@@ -438,7 +438,7 @@ BOOL daNpc_Ji1_c::battleSubActionDamage() {
 /* 0225C660 */
 BOOL daNpc_Ji1_c::battleSubActionJpGuard() {
 
-  cLib_addCalc2(&field_0xC9C, l_hio.field_0x34, 0.25f, l_hio.field_0x38);
+  cLib_addCalc2(&mBackSlideDist, l_hio.field_0x34, 0.25f, l_hio.field_0x38);
   gabi::Local<cXyz> temp;
   back_pos(this, temp);
   f32 temp2 = 25.0f;
@@ -448,7 +448,7 @@ BOOL daNpc_Ji1_c::battleSubActionJpGuard() {
   cLib_addCalcPos2(&current.pos, *temp, 0.8f, temp2);
   ji1_seStart(this, JA_SE_CM_JI_SLIP, 0);
   if (playerCutAtCheck() == FALSE) {
-    field_0xD6C = 0;
+    mSubActionPhase = 0;
   }
   if (morf_checkEnd(mpOrcaMorf, 1.0f)) {
     back_to_wait(this);
@@ -459,15 +459,15 @@ BOOL daNpc_Ji1_c::battleSubActionJpGuard() {
 /* 0225C7EC */
 BOOL daNpc_Ji1_c::battleSubActionGuard() {
 
-  cLib_addCalc2(&field_0xC9C, 70.0f, 0.35f, l_hio.field_0x40);
+  cLib_addCalc2(&mBackSlideDist, 70.0f, 0.35f, l_hio.field_0x40);
   gabi::Local<cXyz> temp;
   s16 ang = current.angle.y;
-  f32 c9c = field_0xC9C;
-  f32 x = field_0xD38.x;
-  f32 y = field_0xD38.y;
-  f32 z = field_0xD38.z;
+  f32 c9c = mBackSlideDist;
+  f32 x = mBackSlideStartPos.x;
+  f32 y = mBackSlideStartPos.y;
+  f32 z = mBackSlideStartPos.z;
   temp->y = y;
-  if (field_0xC24 != Ji1Battle_CUT_TYPE_BT_JUMPCUT) {
+  if (mHitCutType != Ji1Battle_CUT_TYPE_BT_JUMPCUT) {
     temp->x = gabi::fnmsubs(c9c, cM_ssin(ang), x);
     temp->z = gabi::fnmsubs(c9c, cM_scos(ang), z);
   } else {
@@ -480,13 +480,13 @@ BOOL daNpc_Ji1_c::battleSubActionGuard() {
   s16 target = cLib_targetAngleY(&current.pos, &player->current.pos);
   cLib_addCalcAngleS2(&current.angle.y, target, 8, 0x400);
   if (playerCutAtCheck() == FALSE) {
-    field_0xD6C = 0;
+    mSubActionPhase = 0;
   }
   if (morf_checkEnd(mpOrcaMorf, 1.0f)) {
     back_to_wait(this);
   }
-  if (field_0xC30 > 0) {
-    field_0xC30 = field_0xC30 - 1;
+  if (mBattleTimer > 0) {
+    mBattleTimer = mBattleTimer - 1;
   }
   return TRUE;
 }
@@ -512,12 +512,12 @@ BOOL daNpc_Ji1_c::battleAtSet() {
   f32 cos = cM_scos(current.angle.y);
   f32 vx, vy, vz;
   if (mAnimation == Ji1Battle_BCK_YOKOATTACK) {
-    cps_SetR(&field_0xA40, REG_F(10, 9) + 85.0f);
+    cps_SetR(&mAtCps, REG_F(10, 9) + 85.0f);
     f32 y = REG_F(10, 10) + 40.0f;
-    field_0xB78.y = y;
-    field_0xB90.y = y;
-    cps_SetStartEnd(&field_0xA40, &field_0xB90, &field_0xB78);
-    cps_CalcVec(&field_0xA40, temp);
+    mSpearTipPos.y = y;
+    mSpearTipOldPos.y = y;
+    cps_SetStartEnd(&mAtCps, &mSpearTipOldPos, &mSpearTipPos);
+    cps_CalcVec(&mAtCps, temp);
     if (!ji1BattleNormalizeHD(temp)) {
       temp->set(cos, 0.0f, sin);
     }
@@ -526,33 +526,33 @@ BOOL daNpc_Ji1_c::battleAtSet() {
     vz = temp->z;
   } else if (mAnimation == Ji1Battle_BCK_TATEATTACK) {
     gabi::Local<cXyz> temp2;
-    f32 x = field_0xB84.x, y = field_0xB84.y, z = field_0xB84.z;
+    f32 x = mSpearButtPos.x, y = mSpearButtPos.y, z = mSpearButtPos.z;
     temp2->x = x;
     temp2->y = y;
     temp2->z = z;
     gabi::Local<cXyz> temp3;
-    cXyz_mi(&field_0xB78, temp3, &field_0xB84);
+    cXyz_mi(&mSpearTipPos, temp3, &mSpearButtPos);
     PSVECScale(temp3, temp3, 0.3f);
     PSVECAdd(temp2, temp3, temp2);
     temp->set(sin, 0.0f, cos);
-    cps_SetR(&field_0xA40, 50.0f);
-    cps_SetStartEnd(&field_0xA40, temp2, &field_0xB78);
+    cps_SetR(&mAtCps, 50.0f);
+    cps_SetStartEnd(&mAtCps, temp2, &mSpearTipPos);
     vx = temp->x;
     vy = temp->y;
     vz = temp->z;
   } else {
     temp->set(sin, 0.0f, cos);
-    cps_SetR(&field_0xA40, 20.0f);
-    cps_SetStartEnd(&field_0xA40, &field_0xB84, &field_0xB78);
+    cps_SetR(&mAtCps, 20.0f);
+    cps_SetStartEnd(&mAtCps, &mSpearButtPos, &mSpearTipPos);
     vx = temp->x;
     vy = temp->y;
     vz = temp->z;
   }
   /* SetAtVec */
-  field_0xA40.mGObjAt.mVec.x = vx;
-  field_0xA40.mGObjAt.mVec.y = vy;
-  field_0xA40.mGObjAt.mVec.z = vz;
-  dComIfG_Ccsp_Set(&field_0xA40);
+  mAtCps.mGObjAt.mVec.x = vx;
+  mAtCps.mGObjAt.mVec.y = vy;
+  mAtCps.mGObjAt.mVec.z = vz;
+  dComIfG_Ccsp_Set(&mAtCps);
   return TRUE;
 }
 
@@ -560,7 +560,7 @@ BOOL daNpc_Ji1_c::battleAtSet() {
 BOOL daNpc_Ji1_c::battleAction(void *arg) {
 
   fopAc_ac_c *player = dComIfGp_getPlayer(0);
-  if (field_0xC78 == 0) {
+  if (mActionPhase == 0) {
     u8 icon;
     switch (dComIfGs_getSelectEquip(0)) {
     case 0x38 /* dItemNo_SWORD_e */:
@@ -573,18 +573,18 @@ BOOL daNpc_Ji1_c::battleAction(void *arg) {
     ji1BattleCreateTimerHD(Ji1Battle_TIMER_SWORD_TRAINING, 1000, 2, icon,
                            221.0f, 439.0f, 32.0f, 419.0f);
     dComIfGp_setMiniGameRupee(0);
-    field_0xC3C = 0;
+    mAtHitCount = 0;
     setAnm(Ji1Battle_BCK_KAMAE, 0.0f, 0);
     attention_info.flags |= fopAc_Attn_LOCKON_MISC_e;
     attention_info.flags |= fopAc_Attn_LOCKON_BATTLE_e;
     attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 3;
-    field_0xC30 = (s16)gabi::ftoi(cM_rndF(150.0f)) + 30;
-    field_0xD70 = 0;
-    field_0xD6C = 0;
+    mBattleTimer = (s16)gabi::ftoi(cM_rndF(150.0f)) + 30;
+    mTeachStep = 0;
+    mSubActionPhase = 0;
     battleSubActionWaitInit();
     field_0xC38 = 0;
-    field_0xC78 += 1;
-  } else if (field_0xC78 == -1) {
+    mActionPhase += 1;
+  } else if (mActionPhase == -1) {
     attention_info.flags &= ~u32(fopAc_Attn_LOCKON_BATTLE_e);
     attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 0xB5;
   } else {
@@ -592,16 +592,16 @@ BOOL daNpc_Ji1_c::battleAction(void *arg) {
     cXyz_mi(&player->current.pos, temp, &current.pos);
     cM_atan2s(temp->x, temp->z);
     vabsXZ(temp);
-    field_0x7E0.mGObjTg.mSPrm &= ~1u; /* OffTgShield */
+    mGuardCyl.mGObjTg.mSPrm &= ~1u; /* OffTgShield */
     battleGuardCheck();
     ptmf_invoke(mSubAction, this);
-    if (field_0xD6C != 1) {
+    if (mSubActionPhase != 1) {
       dtParticle();
     }
     if (!isAttackAnim() || ptmf_eq(mSubAction, SUB_battleSubActionNockBack)) {
       dtParticleAT();
     }
-    s32 lp = 3 - field_0xC3C;
+    s32 lp = 3 - mAtHitCount;
     if (lp < 0) {
       lp = 0;
     }

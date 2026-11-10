@@ -205,23 +205,23 @@ void daLStair_c::appear_stair() {
 /* 021B5A34 */
 BOOL daLStair_c::CreateHeap() {
     auto modelData = (J3DModelData*)lstair_getObjectRes(m_arcname, dRes_INDEX_GKAI00_BDL_GKAI00_e, gc_tu.safeString);
-    if (!modelData) JUT_ASSERT_fail(__FILE_NAME__, 216, "modelData != NULL");
+    if (!modelData) JUT_ASSERT_fail(__FILE_NAME__, 216, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000223);
     if (!mpModel) return 0;
     auto bck = (J3DAnmTransform*)lstair_getObjectRes(m_arcname, dRes_INDEX_GKAI00_BCK_GKAI00_e, gc_tu.safeString);
-    if (!bck) JUT_ASSERT_fail(__FILE_NAME__, 233, "pbck != NULL");
+    if (!bck) JUT_ASSERT_fail(__FILE_NAME__, 233, "pbck != (0)");
     if (!mBckAnm.init(modelData, bck, true, 0, 1.0f, 0, -1, false)) return 0;
     auto btk = (J3DAnmTextureSRTKey*)lstair_getObjectRes(m_arcname, dRes_INDEX_GKAI00_BTK_GKAI00_e, gc_tu.safeString);
-    if (!btk) JUT_ASSERT_fail(__FILE_NAME__, 244, "pbtk != NULL");
+    if (!btk) JUT_ASSERT_fail(__FILE_NAME__, 244, "pbtk != (0)");
     if (!mBtkAnm.init(modelData, btk, true, 2, 1.0f, 0, -1, false, 0)) return 0;
     auto color0 = lstair_getObjectRes(m_arcname, dRes_INDEX_GKAI00_BPK_GKAI00_01_e, gc_tu.safeString);
-    if (!color0) JUT_ASSERT_fail(__FILE_NAME__, 255, "pbpk != NULL");
+    if (!color0) JUT_ASSERT_fail(__FILE_NAME__, 255, "pbpk != (0)");
     if (!LStair_colorInit(&mBpkAnm0, modelData, color0, 1, 2, 1.0f, 0, -1, 0, 0)) return 0;
     auto color1 = lstair_getObjectRes(m_arcname, dRes_INDEX_GKAI00_BPK_GKAI00_02_e, gc_tu.safeString);
-    if (!color1) JUT_ASSERT_fail(__FILE_NAME__, 266, "pbpk != NULL");
+    if (!color1) JUT_ASSERT_fail(__FILE_NAME__, 266, "pbpk != (0)");
     if (!LStair_colorInit(&mBpkAnm1, modelData, color1, 1, 2, 1.0f, 0, -1, 0, 0)) return 0;
     auto tev = lstair_getObjectRes(m_arcname, dRes_INDEX_GKAI00_BRK_GKAI00_e, gc_tu.safeString);
-    if (!tev) JUT_ASSERT_fail(__FILE_NAME__, 278, "pbrk != NULL");
+    if (!tev) JUT_ASSERT_fail(__FILE_NAME__, 278, "pbrk != (0)");
     if (!LStair_tevInit(&mBrkAnm, modelData, tev, 1, 2, 1.0f, 0, -1, 0, 0)) return 0;
     mpBgW = new_dBgW();
     if (!mpBgW) return 0;
@@ -342,10 +342,10 @@ ext 025A847C JPABaseEmitter* LStair_particleSet(dPa_control_c*, s32, u16, cXyz*,
 ext 0200A030 BOOL LStair_bgSet(dBgW*, void*, u32, Mtx34*)
 str 10014180 "Gkai00"
 str 10014100 "d_a_lstair.cpp"
-str 10014110 "modelData != NULL"
-str 100140D0 "pbck != NULL"
-str 100140DC "pbtk != NULL"
-str 100140E8 "pbpk != NULL"
-str 100140F4 "pbrk != NULL"
+str 10014110 "modelData != (0)"
+str 100140D0 "pbck != (0)"
+str 100140DC "pbtk != (0)"
+str 100140E8 "pbpk != (0)"
+str 100140F4 "pbrk != (0)"
 str 10014148 "STAIRAPPEAR"
 */

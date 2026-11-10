@@ -196,7 +196,7 @@ struct daNpc_Tc_c : fopNpc_npc_c {
 
     /* ---- layout ---- */
     /* 0x7DC */ u8 field_0x6C4[4];
-    /* 0x7E0 */ be<s32> field_0x6C8; /* BOOL (anmAtr) */
+    /* 0x7E0 */ be<s32> mAtrSet;  /* was field_0x6C8: anmAtr 022EB970: 0 takes the message's animation attribute once (MSG_TYPING) and steps to 1, MSG_DISPLAYED resets it (tww the same); same role as our decomp's daNpc_Pf1_c mAtrSet; BOOL (anmAtr) */
     /* 0x7E4 */ be<u8> mJtbtTimer;
     /* 0x7E5 */ be<u8> mTalk01Wait01Timer;
     /* 0x7E6 */ be<u8> mTalk01Talk02Timer;
@@ -209,8 +209,8 @@ struct daNpc_Tc_c : fopNpc_npc_c {
     /* 0x804 */ csXyz mSmokeAngle;
     /* 0x80A */ u8 _80A[2];
     /* 0x80C */ dPa_smokeEcallBack_tc mSmokeCallBack;
-    /* 0x82C */ dPa_followEcallBack field_0x714;
-    /* 0x840 */ dPa_followEcallBack field_0x728;
+    /* 0x82C */ dPa_followEcallBack mBlurRCallBack;  /* was field_0x714: setAnm 022E7E70: follow callback of the ID_IT_SN_TG_KURURINP_BLUR_R00 emitter at mParticlePos, ended at frame 178; _create 022E8CAC constructs it, _delete 022E8DD4 removes it (tww the same) */
+    /* 0x840 */ dPa_followEcallBack mBlurGCallBack;  /* was field_0x728: setAnm 022E7E70: follow callback of the ID_IT_SN_TG_KURURINP_BLUR_G00 emitter at mParticlePos, ended at frame 178; _create 022E8CAC constructs it, _delete 022E8DD4 removes it (tww the same) */
     /* 0x854 */ request_of_phase_process_class mPhs;
     /* 0x85C */ gptr<J3DAnmTexPattern> m_head_tex_pattern; /* HD: no mShadowId before it */
     /* 0x860 */ u8 mBtpAnm[0x74];                          /* mDoExt_btpAnm (HD 0x74) */
@@ -224,7 +224,7 @@ struct daNpc_Tc_c : fopNpc_npc_c {
     /* 0x8F4 */ cXyz mStoolLookPos;
     /* 0x900 */ be<s16> mMaxHeadTurnVelocity;
     /* 0x902 */ u8 _902[2];
-    /* 0x904 */ csXyz field_0x790;
+    /* 0x904 */ csXyz mHomeAngle;  /* was field_0x790: createInit 022E87DC: current.angle at creation; statusSitToStool 022EC984 turns current.angle.y back to its y and goes on once within 16 (tww the same) */
     /* 0x90A */ u8 _90A[2];
     /* 0x90C */ be<s8> field_0x798;
     /* 0x90D */ u8 _90D[3];
@@ -251,19 +251,19 @@ struct daNpc_Tc_c : fopNpc_npc_c {
     /* 0x970 */ be<u8> mType;
     /* 0x971 */ u8 field_0x7FD[0x978 - 0x971];
     /* 0x978 */ gptr<fopAc_ac_c> m_tower_actor; /* daObjSmplbg::Act_c* */
-    /* 0x97C */ be<u8> field_0x808;
-    /* 0x97D */ be<u8> field_0x809;
+    /* 0x97C */ be<u8> mGreetingDone;  /* was field_0x808: getMsgNormal2 022EB24C: 0 gives the greeting 0xDB2 / 0xDB3 / 0xDFB (event bits 0x1A20 / 0x1708) once and sets 1 */
+    /* 0x97D */ be<u8> mMapSaleIntroDone;  /* was field_0x809: getMsgNormal2 022EB24C: with an unknown collect map left, 0 gives 0xDBB once (next_msgStatusNormal2 022EB35C: 0xDBB-0xDBD lead to the 0xDBE pay choice) and sets 1; after that 0xDBE directly */
     /* 0x97E */ u8 field_0x80A;
-    /* 0x97F */ be<u8> field_0x80B;
+    /* 0x97F */ be<u8> mShortOfRupeesOnReoffer;  /* was field_0x80B: next_msgStatusNormal2 022EB35C: set when the 0xDC3 offer is accepted with fewer than 398 rupees (-> 0xDC0); 0xDC0 then goes to 0xDC4 instead of 0xDC1; 0xDC4 clears it */
     /* 0x980 */ be<u8> field_0x80C;
-    /* 0x981 */ be<u8> field_0x80D;
-    /* 0x982 */ be<u8> field_0x80E;
-    /* 0x983 */ be<u8> field_0x80F;
-    /* 0x984 */ be<u8> field_0x810;
-    /* 0x985 */ be<u8> field_0x811;
-    /* 0x986 */ be<u8> field_0x812;
-    /* 0x987 */ be<u8> field_0x813;
-    /* 0x988 */ be<u8> field_0x814;
+    /* 0x981 */ be<u8> mMapBought;  /* was field_0x80D: next_msgStatusNormal2 022EB35C: set when 0xDBE / 0xDC3 is accepted with 398+ rupees (STATUS_PAY_RUPEE), cleared by 0xDC4; getMsgNormal2 022EB24C: while set, 0xDC3 (and clear) if an unknown collect map is left, else 0xDC4 */
+    /* 0x982 */ be<u8> mWhiteIntroAfterB80Done;  /* was field_0x80E: next_msgStatusWhite 022EAB1C: with event bit 0xB80, 0xDC8 goes on to 0xDD7 once and sets it; getMsgWhite 022EB7E8: with 0xB80, 0 starts at 0xDC8, 1 at 0xDD6 */
+    /* 0x983 */ be<u8> mWhiteIntroDone;  /* was field_0x80F: next_msgStatusWhite 022EAB1C: without event bit 0xB80, 0xDC8 goes on to 0xDC9 once and sets it; getMsgWhite 022EB7E8: without 0xB80, 0 starts at 0xDC8, 1 at 0xDC5 */
+    /* 0x984 */ be<u8> mRedIntroAfterB80Done;  /* was field_0x810: getMsgRed 022EB5F4: with event bit 0xB80, 0 gives 0xDEE (one of the five stages has treasure box 0xF open while its event bit is clear) or 0xDE6 once and sets 1; after that 0xDEB / 0xDEA */
+    /* 0x985 */ be<u8> mRedFirstMsgDone;  /* was field_0x811: getMsgRed 022EB5F4: the setFirstMsg 022EB5D0 flag for 0xDB7 / 0xDE1 (first time, sets it) or 0xDE5 (after) (tww setFirstMsg(bool*, first, then)) */
+    /* 0x986 */ be<u8> mGetRupeeDemoDone;  /* was field_0x812: statusDemoGetRupee 022ECD58 sets it when the TC_GET_RUPEE event ends (tww the same); getMsgRed 022EB5F4 clears it and answers 0xDF1 (all monument fees paid) or 0xDF0 */
+    /* 0x987 */ be<u8> mMonumentCompleteDemoDone;  /* was field_0x813: statusDemoMonumentComplete 022ECEDC sets it when the TC_GET_RUPEE event ends (tww the same); getMsgRed 022EB5F4 clears it and answers 0xDF3 */
+    /* 0x988 */ be<u8> mMsgDE6Shown;  /* was field_0x814: next_msgStatusRed 022EA7CC: 0xDE6 sets it; 0xDEB goes on to 0xDEC only while it is set (and event bit 0x1A20), else finishes; 0xDC7 clears it */
     /* 0x989 */ u8 field_0x815[0x990 - 0x989];
 };
 WWHD_OFFSET(daNpc_Tc_c, mCurrActionFunc, 0x7E8);
@@ -278,32 +278,32 @@ WWHD_SIZE(daNpc_Tc_c, 0x990);
 struct daNpc_Tc_HIO_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ dNpc_HIO_c mNpc;
-    /* 0x2C */ be<f32> field_0x2C;
-    /* 0x30 */ be<f32> field_0x30;
+    /* 0x2C */ be<f32> mSitJumpDist;  /* was field_0x2C: statusSit 022EC174: the jump down starts (STATUS_DEMO_JUMP the first time, else ANM_PRM_IDX_JAMP_A) once the player is within it; chkAttention 022EA648: the attention distance in STATUS_WALK_TO_JAIL / JUMP / SIT (tww the same); the constructor 022ED4A4 sets 900 */
+    /* 0x30 */ be<f32> mWalkToJailDist;  /* was field_0x30: statusWalkToStool 022EC7E8: STATUS_WALK_TO_JAIL while the player is within it; statusWalkToJail 022EC384: back to STATUS_WALK_TO_STOOL on a wall hit once the player is outside it (tww the same); the constructor 022ED4A4 sets 400 */
     /* 0x34 */ be<u8> field_0x34;
     /* 0x35 */ u8 _35[3];
-    /* 0x38 */ be<f32> field_0x38;
-    /* 0x3C */ be<f32> field_0x3C;
-    /* 0x40 */ be<f32> field_0x40;
-    /* 0x44 */ be<u8> field_0x44;
+    /* 0x38 */ be<f32> mJumpSpeedF;  /* was field_0x38: statusSit 022EC174: speedF of the jump (ANM_PRM_IDX_JAMP_B), with mJumpSpeedY / mJumpGravity (tww the same); cutSitToJumpProc 022E93D4 the same through the view daNpc_Tc_HIO_cut; the constructor 022ED4A4 sets 20 */
+    /* 0x3C */ be<f32> mJumpGravity;  /* was field_0x3C: statusSit 022EC174: gravity of the jump (ANM_PRM_IDX_JAMP_B) (tww the same); cutSitToJumpProc 022E93D4 the same through the view daNpc_Tc_HIO_cut; the constructor 022ED4A4 sets -2.5 */
+    /* 0x40 */ be<f32> mJumpSpeedY;  /* was field_0x40: statusSit 022EC174: speed.y of the jump (ANM_PRM_IDX_JAMP_B) (tww the same); cutSitToJumpProc 022E93D4 the same through the view daNpc_Tc_HIO_cut; the constructor 022ED4A4 sets 14 */
+    /* 0x44 */ be<u8> mAlwaysTalkNearJail;  /* was field_0x44: statusWalkToJail 022EC384 / statusWaitNearJail 022EC62C: nonzero starts the near-jail talk (STATUS_DEMO_TALK) on a wall hit even after mHasTalkedNearJail (tww the same); never written in WWHD or tww (HIO switch) */
     /* 0x45 */ u8 _45[3];
-    /* 0x48 */ be<f32> field_0x48;
-    /* 0x4C */ be<f32> field_0x4C;
-    /* 0x50 */ be<f32> field_0x50;
-    /* 0x54 */ be<f32> field_0x54;
-    /* 0x58 */ be<f32> field_0x58;
-    /* 0x5C */ be<f32> field_0x5C;
-    /* 0x60 */ cXyz field_0x60;
-    /* 0x6C */ cXyz field_0x6C;
-    /* 0x78 */ be<s16> field_0x78;
-    /* 0x7A */ be<s16> field_0x7A;
+    /* 0x48 */ be<f32> mBackJumpSpeedF;  /* was field_0x48: cutBackJumpStart 022E919C: speedF of the back jump, through the view daNpc_Tc_HIO_cut, with mBackJumpSpeedY / mBackJumpGravity; the constructor 022ED4A4 sets -25 (tww: the constructor only) */
+    /* 0x4C */ be<f32> mBackJumpGravity;  /* was field_0x4C: cutBackJumpStart 022E919C: gravity of the back jump, through the view daNpc_Tc_HIO_cut; the constructor 022ED4A4 sets -2.5 (tww: the constructor only) */
+    /* 0x50 */ be<f32> mBackJumpSpeedY;  /* was field_0x50: cutBackJumpStart 022E919C: speed.y of the back jump, through the view daNpc_Tc_HIO_cut; the constructor 022ED4A4 sets 8 (tww: the constructor only) */
+    /* 0x54 */ be<f32> mWalkAnmRate;  /* was field_0x54: calcMove 022EBB90: the walk animation speed is speedF (in cuts 2 / 4 the cut speed) times it, at least 0.5 (tww the same); the constructor 022ED4A4 sets 0.35 */
+    /* 0x58 */ be<f32> mWalkSpeed;  /* was field_0x58: statusWalkToJail 022EC384 / statusWaitNearJail 022EC62C / statusWalkToStool 022EC7E8: mTargetSpeed while walking (ANM_PRM_IDX_WALK01) (tww the same); the constructor 022ED4A4 sets 4 */
+    /* 0x5C */ be<f32> mWalkStartSpeed;  /* was field_0x5C: statusWalkToJail 022EC384 / statusWaitNearJail 022EC62C: speedF when the walk starts from standing (tww the same); the constructor 022ED4A4 sets 8 */
+    /* 0x60 */ cXyz mWhiteTowerPos;  /* was field_0x60: setTower 022E8E64: for TYPE_WHITE, current.pos = the tower's matrix times it (tww the same); the constructor 022ED4A4 sets (-100, 1700, -50) */
+    /* 0x6C */ cXyz mRedTowerPos;  /* was field_0x6C: setTower 022E8E64: for TYPE_RED, current.pos = the tower's matrix times it (tww the same); the constructor 022ED4A4 sets (100, 1700, 50) */
+    /* 0x78 */ be<s16> mRedTowerAngleY;  /* was field_0x78: setTower 022E8E64 / startTower 022EBFB8: for TYPE_RED, the facing is the tower's shape_angle.y plus it (tww the same); the constructor 022ED4A4 sets -0x8000 */
+    /* 0x7A */ be<s16> mWhiteTowerAngleY;  /* was field_0x7A: setTower 022E8E64 / startTower 022EBFB8: for TYPE_WHITE, the facing is the tower's shape_angle.y plus it (tww the same); the constructor 022ED4A4 sets 0 */
     /* 0x7C */ be<u8> field_0x7C;
     /* 0x7D */ be<u8> field_0x7D;
     /* 0x7E */ be<u8> field_0x7E;
     /* 0x7F */ u8 field_0x7F[8];
     /* 0x87 */ u8 field_0x87[8];
     /* 0x8F */ u8 field_0x8F[5];
-    /* 0x94 */ be<f32> field_0x94[24];
+    /* 0x94 */ be<f32> mAnmMorf[24];  /* was field_0x94: setAnm 022E7E70 copies it[i] into a_anm_prm_tbl[i].mMorf for the 24 animation entries (tww the same); the constructor 022ED4A4 sets the 24 morf frame counts */
 };
 WWHD_SIZE(daNpc_Tc_HIO_c, 0xF4);
 
@@ -473,7 +473,7 @@ WWHD_SIZE(TcVirtualAction, 8);
 WWHD_OFFSET(daNpc_Tc_HIO_c, mNpc, 4);
 
 WWHD_OFFSET(daNpc_Tc_c, field_0x6C4, 0x7DC);
-WWHD_OFFSET(daNpc_Tc_c, field_0x6C8, 0x7E0);
+WWHD_OFFSET(daNpc_Tc_c, mAtrSet, 0x7E0);
 WWHD_OFFSET(daNpc_Tc_c, mJtbtTimer, 0x7E4);
 WWHD_OFFSET(daNpc_Tc_c, mTalk01Wait01Timer, 0x7E5);
 WWHD_OFFSET(daNpc_Tc_c, mTalk01Talk02Timer, 0x7E6);
@@ -482,8 +482,8 @@ WWHD_OFFSET(daNpc_Tc_c, mActionStatus, 0x7F0);
 WWHD_OFFSET(daNpc_Tc_c, mRescueLightTimer, 0x7F4);
 WWHD_OFFSET(daNpc_Tc_c, mSmokePos, 0x7F8);
 WWHD_OFFSET(daNpc_Tc_c, mSmokeAngle, 0x804);
-WWHD_OFFSET(daNpc_Tc_c, field_0x714, 0x82C);
-WWHD_OFFSET(daNpc_Tc_c, field_0x728, 0x840);
+WWHD_OFFSET(daNpc_Tc_c, mBlurRCallBack, 0x82C);
+WWHD_OFFSET(daNpc_Tc_c, mBlurGCallBack, 0x840);
 WWHD_OFFSET(daNpc_Tc_c, m_head_tex_pattern, 0x85C);
 WWHD_OFFSET(daNpc_Tc_c, mBtpAnm, 0x860);
 WWHD_OFFSET(daNpc_Tc_c, mBlinkTimer, 0x8D6);
@@ -492,7 +492,7 @@ WWHD_OFFSET(daNpc_Tc_c, mAttPos, 0x8E4);
 WWHD_OFFSET(daNpc_Tc_c, mAttnSetCount, 0x8F0);
 WWHD_OFFSET(daNpc_Tc_c, mStoolLookPos, 0x8F4);
 WWHD_OFFSET(daNpc_Tc_c, mMaxHeadTurnVelocity, 0x900);
-WWHD_OFFSET(daNpc_Tc_c, field_0x790, 0x904);
+WWHD_OFFSET(daNpc_Tc_c, mHomeAngle, 0x904);
 WWHD_OFFSET(daNpc_Tc_c, field_0x798, 0x90C);
 WWHD_OFFSET(daNpc_Tc_c, mTargetSpeed, 0x910);
 WWHD_OFFSET(daNpc_Tc_c, mStoolPos, 0x914);
@@ -514,17 +514,17 @@ WWHD_OFFSET(daNpc_Tc_c, mAnmPrmIdx, 0x96D);
 WWHD_OFFSET(daNpc_Tc_c, mOldAnmPrmIdx, 0x96E);
 WWHD_OFFSET(daNpc_Tc_c, mEventIdx, 0x96F);
 WWHD_OFFSET(daNpc_Tc_c, field_0x7FD, 0x971);
-WWHD_OFFSET(daNpc_Tc_c, field_0x808, 0x97C);
-WWHD_OFFSET(daNpc_Tc_c, field_0x809, 0x97D);
+WWHD_OFFSET(daNpc_Tc_c, mGreetingDone, 0x97C);
+WWHD_OFFSET(daNpc_Tc_c, mMapSaleIntroDone, 0x97D);
 WWHD_OFFSET(daNpc_Tc_c, field_0x80A, 0x97E);
-WWHD_OFFSET(daNpc_Tc_c, field_0x80B, 0x97F);
+WWHD_OFFSET(daNpc_Tc_c, mShortOfRupeesOnReoffer, 0x97F);
 WWHD_OFFSET(daNpc_Tc_c, field_0x80C, 0x980);
-WWHD_OFFSET(daNpc_Tc_c, field_0x80D, 0x981);
-WWHD_OFFSET(daNpc_Tc_c, field_0x80E, 0x982);
-WWHD_OFFSET(daNpc_Tc_c, field_0x80F, 0x983);
-WWHD_OFFSET(daNpc_Tc_c, field_0x810, 0x984);
-WWHD_OFFSET(daNpc_Tc_c, field_0x811, 0x985);
-WWHD_OFFSET(daNpc_Tc_c, field_0x812, 0x986);
-WWHD_OFFSET(daNpc_Tc_c, field_0x813, 0x987);
-WWHD_OFFSET(daNpc_Tc_c, field_0x814, 0x988);
+WWHD_OFFSET(daNpc_Tc_c, mMapBought, 0x981);
+WWHD_OFFSET(daNpc_Tc_c, mWhiteIntroAfterB80Done, 0x982);
+WWHD_OFFSET(daNpc_Tc_c, mWhiteIntroDone, 0x983);
+WWHD_OFFSET(daNpc_Tc_c, mRedIntroAfterB80Done, 0x984);
+WWHD_OFFSET(daNpc_Tc_c, mRedFirstMsgDone, 0x985);
+WWHD_OFFSET(daNpc_Tc_c, mGetRupeeDemoDone, 0x986);
+WWHD_OFFSET(daNpc_Tc_c, mMonumentCompleteDemoDone, 0x987);
+WWHD_OFFSET(daNpc_Tc_c, mMsgDE6Shown, 0x988);
 WWHD_OFFSET(daNpc_Tc_c, field_0x815, 0x989);

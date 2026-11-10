@@ -28,7 +28,7 @@ field 023CAFB0 r3+0x8A8 u32 0 1
 arg 023CB4C0 r4 0 3
 ret 0246B6A4 0 1                    # daSea_ChkArea
 field 023CB4C0 r3+0x528 u32 0,0x1000
-field 023CB4C0 r3+0x45D u8 0 1      # m0341 in water
+field 023CB4C0 r3+0x45D u8 0 1      # mInWater in water
 field 023CB4C0 r3+0x45B u8 1 2
 field 023CB4C0 r3+0x462 i16 2 4
 field 023CB4C0 r3+0x374 f32 0 0

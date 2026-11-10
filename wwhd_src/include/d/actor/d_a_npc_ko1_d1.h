@@ -78,38 +78,38 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     /* 0x9A0 */ be<f32> mVerticalSpeed;
     /* 0x9A4 */ be<f32> mMoveAcceleration;
     u8 _9A8[0x4];
-    /* 0x9AC */ be<f32> mTurnRate;
+    /* 0x9AC */ be<f32> mPassDist;  /* was mTurnRate (misnamed): view of daNpc_Ko1_c mPassDist (d_a_npc_ko1.h); one name per field. ko_movPass 022761AC: the point counts as reached once the XZ distance is <= it (setStt sets the HIO value); same code as daNpc_Bm1_c::mPassDist (tww Bm1 m858); it is no turn rate */
     u8 _9B0[0xE];
     /* 0x9BE */ be<s16> mTalkWaitTimer;
     u8 _9C0[0x2];
-    /* 0x9C2 */ be<s16> mWaitTimer;
+    /* 0x9C2 */ be<s16> mSttTimer;  /* was mWaitTimer (misnamed): view of daNpc_Ko1_c mSttTimer (d_a_npc_ko1.h); one name per field. setStt 02278134 sets it per state (wait_1, walk_1) and wait_1 / walk_1 / neru_1 / neru_2 act when it runs out, so it is the state timer, neither only a wait nor only a sleep timer; same code as daNpc_Bm1_c::mSttTimer (tww Bm1 m870) */
     /* 0x9C4 */ be<s16> mBalloonTimer;
     u8 _9C6[0x2];
-    /* 0x9C8 */ be<s16> mTurnAngle;
+    /* 0x9C8 */ be<s16> mDesiredYRot;  /* was mTurnAngle (misnamed): view of daNpc_Ko1_c mDesiredYRot (d_a_npc_ko1.h); one name per field. lookBack 022758B8 uses it as the look-at's Y angle in look state 3 and setStt / the waits / manzai set mInitialAngle.y; same code as daNpc_Bm1_c::mDesiredYRot (tww Bm1 desiredYrot = m876) */
     u8 _9CA[0x6];
     /* 0x9D0 */ be<u8> mAnimationEnded;
     u8 _9D1[0x4];
     /* 0x9D5 */ be<u8> mSleepState;
     u8 _9D6[0x5];
     /* 0x9DB */ be<u8> mbMoveFinished;
-    /* 0x9DC */ be<u8> mbJumping;
+    /* 0x9DC */ be<u8> mPreviousGroundHit;  /* was mbJumping (misnamed): view of daNpc_Ko1_c mPreviousGroundHit (d_a_npc_ko1.h); one name per field. setMtx 02274A7C stores the ground-hit flag every frame and ko_nMove 022763A8 ends a jump on its 0 -> hit edge; setStt only presets 1 when a jump starts; the class / _b.h name stays */
     u8 _9DD[0x7];
     /* 0x9E4 */ be<u8> mAttention;
-    /* 0x9E5 */ be<u8> mTalkFlag;
-    /* 0x9E6 */ be<u8> mbMoving;
+    /* 0x9E5 */ be<u8> mTalking;  /* was mTalkFlag (misnamed): view of daNpc_Ko1_c mTalking (d_a_npc_ko1.h); one name per field. checkOrder 02275504 sets it on the talk command, the waits start the talk on it, talk_1 clears it; same code as daNpc_Bm1_c::mTalking (tww Bm1 m895) */
+    /* 0x9E6 */ be<u8> mHeadOnlyFollow;  /* was mbMoving (misnamed): view of daNpc_Ko1_c mHeadOnlyFollow (d_a_npc_ko1.h); one name per field. lookBack 022758B8 passes it as the joint look-at's head-only flag (setStt sets 1 in the moving states); same code as daNpc_Bm1_c::mHeadOnlyFollow (tww Bm1 headOnlyFollow = m896) */
     u8 _9E7[0x21];
     /* 0xA08 */ be<u8> mMoveMode;
     /* 0xA09 */ be<u8> mPreviousMoveMode;
     u8 _A0A[0x2];
-    /* 0xA0C */ be<u8> mAnimationSelector;
-    /* 0xA0D */ be<u8> mHeadAnimationSelector;
+    /* 0xA0C */ be<u8> mAnmAtrNo;  /* was mAnimationSelector (misnamed): view of daNpc_Ko1_c mAnmAtrNo (d_a_npc_ko1.h); one name per field. chg_anmAtr 02276EB8 stores the message animation attribute and setAnm_ATR picks the animation by it; same code as daNpc_Bm1_c::mAnmAtrNo (tww Bm1 m8F7) */
+    /* 0xA0D */ be<u8> mMesgAnimeTag;  /* was mHeadAnimationSelector (misnamed): view of daNpc_Ko1_c mMesgAnimeTag (d_a_npc_ko1.h); one name per field. anmAtr 02276F58 stores the message's animation tag and chg_anmTag / control_anmTag act on it; same code as daNpc_Bm1_c::mMesgAnimeTag (tww Bm1 m8F8) */
     u8 _A0E[0x1];
-    /* 0xA0F */ be<u8> mAnimationNum;
+    /* 0xA0F */ be<u8> mAnmNum;  /* was mAnimationNum (misnamed): view of daNpc_Ko1_c mAnmNum (d_a_npc_ko1.h); one name per field. setAnm_anm 02276B9C stores the animation number; same code as daNpc_Bm1_c::mAnmNum (tww Bm1 mAnmNum) */
     u8 _A10[0x2];
-    /* 0xA12 */ be<s8> mLookMode;
+    /* 0xA12 */ be<s8> mOrderEvent;  /* was mLookMode (misnamed): view of daNpc_Ko1_c mOrderEvent (d_a_npc_ko1.h); one name per field. eventOrder 02276578 orders the talk by it and checkOrder clears it, the waits set 2; same code as daNpc_Bm1_c::mOrderEvent (tww Bm1 m8FD); it is no look mode */
     /* 0xA13 */ be<s8> mStatus;
     /* 0xA14 */ be<s8> mResumeStatus;
-    /* 0xA15 */ be<s8> mLookTarget;
+    /* 0xA15 */ be<s8> mLookBackState;  /* was mLookTarget (misnamed): view of daNpc_Ko1_c mLookBackState (d_a_npc_ko1.h); one name per field. lookBack 022758B8 switches on it (1 player, 2 mLookPos, 3 mDesiredYRot) and chg_anmAtr sets 1 with m_jnt.mbTrn; same code as daNpc_Bm1_c::mLookBackState (tww Bm1) */
     /* 0xA16 */ be<s8> mType;
     u8 _A17[0x5];
 };
@@ -125,27 +125,27 @@ WWHD_OFFSET(daNpc_Ko1_c, mAreaCenter, 0x97C);
 WWHD_OFFSET(daNpc_Ko1_c, mMoveSpeed, 0x99C);
 WWHD_OFFSET(daNpc_Ko1_c, mVerticalSpeed, 0x9A0);
 WWHD_OFFSET(daNpc_Ko1_c, mMoveAcceleration, 0x9A4);
-WWHD_OFFSET(daNpc_Ko1_c, mTurnRate, 0x9AC);
+WWHD_OFFSET(daNpc_Ko1_c, mPassDist, 0x9AC);
 WWHD_OFFSET(daNpc_Ko1_c, mTalkWaitTimer, 0x9BE);
-WWHD_OFFSET(daNpc_Ko1_c, mWaitTimer, 0x9C2);
+WWHD_OFFSET(daNpc_Ko1_c, mSttTimer, 0x9C2);
 WWHD_OFFSET(daNpc_Ko1_c, mBalloonTimer, 0x9C4);
-WWHD_OFFSET(daNpc_Ko1_c, mTurnAngle, 0x9C8);
+WWHD_OFFSET(daNpc_Ko1_c, mDesiredYRot, 0x9C8);
 WWHD_OFFSET(daNpc_Ko1_c, mAnimationEnded, 0x9D0);
 WWHD_OFFSET(daNpc_Ko1_c, mSleepState, 0x9D5);
 WWHD_OFFSET(daNpc_Ko1_c, mbMoveFinished, 0x9DB);
-WWHD_OFFSET(daNpc_Ko1_c, mbJumping, 0x9DC);
+WWHD_OFFSET(daNpc_Ko1_c, mPreviousGroundHit, 0x9DC);
 WWHD_OFFSET(daNpc_Ko1_c, mAttention, 0x9E4);
-WWHD_OFFSET(daNpc_Ko1_c, mTalkFlag, 0x9E5);
-WWHD_OFFSET(daNpc_Ko1_c, mbMoving, 0x9E6);
+WWHD_OFFSET(daNpc_Ko1_c, mTalking, 0x9E5);
+WWHD_OFFSET(daNpc_Ko1_c, mHeadOnlyFollow, 0x9E6);
 WWHD_OFFSET(daNpc_Ko1_c, mMoveMode, 0xA08);
 WWHD_OFFSET(daNpc_Ko1_c, mPreviousMoveMode, 0xA09);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationSelector, 0xA0C);
-WWHD_OFFSET(daNpc_Ko1_c, mHeadAnimationSelector, 0xA0D);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationNum, 0xA0F);
-WWHD_OFFSET(daNpc_Ko1_c, mLookMode, 0xA12);
+WWHD_OFFSET(daNpc_Ko1_c, mAnmAtrNo, 0xA0C);
+WWHD_OFFSET(daNpc_Ko1_c, mMesgAnimeTag, 0xA0D);
+WWHD_OFFSET(daNpc_Ko1_c, mAnmNum, 0xA0F);
+WWHD_OFFSET(daNpc_Ko1_c, mOrderEvent, 0xA12);
 WWHD_OFFSET(daNpc_Ko1_c, mStatus, 0xA13);
 WWHD_OFFSET(daNpc_Ko1_c, mResumeStatus, 0xA14);
-WWHD_OFFSET(daNpc_Ko1_c, mLookTarget, 0xA15);
+WWHD_OFFSET(daNpc_Ko1_c, mLookBackState, 0xA15);
 WWHD_OFFSET(daNpc_Ko1_c, mType, 0xA16);
 WWHD_SIZE(daNpc_Ko1_c, 0xA1C);
 // HD: shared HIO storage is owned by the main Ko1 translation unit.
@@ -153,12 +153,12 @@ struct daNpc_Ko1_childHIO_c {
     u8 _00[0x28];
     /* 0x28 */ be<f32> mWalkSpeed;
     /* 0x2C */ be<f32> mWalkAcceleration;
-    /* 0x30 */ be<f32> mWalkTurnRate;
+    /* 0x30 */ be<f32> mWalkPassDist;  /* was mWalkTurnRate (misnamed): the walk states' value: setStt 02278134 copies it into daNpc_Ko1_c::mPassDist, which ko_movPass 022761AC compares with the XZ distance to the target point; no other use, so it is a pass distance, not a turn rate */
     u8 _34[0x4];
     /* 0x38 */ be<f32> mRunSpeed;
     /* 0x3C */ be<f32> mRunAcceleration;
-    /* 0x40 */ be<f32> mRunTurnRate;
-    /* 0x44 */ be<f32> mSwimTurnRate;
+    /* 0x40 */ be<f32> mRunPassDist;  /* was mRunTurnRate (misnamed): the run (attack) states' value: setStt 02278134 copies it into daNpc_Ko1_c::mPassDist, which ko_movPass 022761AC compares with the XZ distance to the target point; no other use, so it is a pass distance, not a turn rate */
+    /* 0x44 */ be<f32> mSwimPassDist;  /* was mSwimTurnRate (misnamed): the swim states' value: setStt 02278134 copies it into daNpc_Ko1_c::mPassDist, which ko_movPass 022761AC compares with the XZ distance to the target point; no other use, so it is a pass distance, not a turn rate */
     /* 0x48 */ be<f32> mNearAreaRadius;
     /* 0x4C */ be<f32> mOuterAreaRadius;
     /* 0x50 */ be<f32> mWaitAreaRadius;
@@ -169,11 +169,11 @@ struct daNpc_Ko1_childHIO_c {
 WWHD_SIZE(daNpc_Ko1_childHIO_c, 0x60);
 WWHD_OFFSET(daNpc_Ko1_childHIO_c, mWalkSpeed, 0x28);
 WWHD_OFFSET(daNpc_Ko1_childHIO_c, mWalkAcceleration, 0x2C);
-WWHD_OFFSET(daNpc_Ko1_childHIO_c, mWalkTurnRate, 0x30);
+WWHD_OFFSET(daNpc_Ko1_childHIO_c, mWalkPassDist, 0x30);
 WWHD_OFFSET(daNpc_Ko1_childHIO_c, mRunSpeed, 0x38);
 WWHD_OFFSET(daNpc_Ko1_childHIO_c, mRunAcceleration, 0x3C);
-WWHD_OFFSET(daNpc_Ko1_childHIO_c, mRunTurnRate, 0x40);
-WWHD_OFFSET(daNpc_Ko1_childHIO_c, mSwimTurnRate, 0x44);
+WWHD_OFFSET(daNpc_Ko1_childHIO_c, mRunPassDist, 0x40);
+WWHD_OFFSET(daNpc_Ko1_childHIO_c, mSwimPassDist, 0x44);
 WWHD_OFFSET(daNpc_Ko1_childHIO_c, mNearAreaRadius, 0x48);
 WWHD_OFFSET(daNpc_Ko1_childHIO_c, mOuterAreaRadius, 0x4C);
 WWHD_OFFSET(daNpc_Ko1_childHIO_c, mWaitAreaRadius, 0x50);

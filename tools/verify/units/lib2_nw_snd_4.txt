@@ -597,7 +597,15 @@ callee 028A3A44 r4=0
 arg 0288E754 r4 -1,0,15,16,17,0x7FFFFFFF
 # resolvePath: capacities at the root-directory lengths of the steered roots ("/" 1, "audio/" 6,
 # "content/" 8), so the copy limit capacity-1 meets the root's end.
-arg 0288F218 r5 0,1,2,3,7,8,9,10,640
+arg 0288F218 r6 0,1,2,3,7,8,9,10,640
+# zero-page rule (2026-11-10, LOW clean 349/1000, LOST block 13): the capacity is r6
+# (this r3, path r4, output r5, capacity r6); the capacity list above was on r5, so the output pointer was 0..640
+# and the copy stored on page 0 in the original (store 00000280 / 00000001). The output is a fixture 640-byte buffer.
+arg! 0288F218 r5 0x5EA00000
+# The archive (r3, rootDirectory text at +8) and the path (r4) are fixtures too, so the main spec's root and path
+# strings above land in them (generated pointers near 0 faulted the original at the first loads).
+arg! 0288F218 r3 0x5EA01000
+arg! 0288F218 r4 0x5EA02000
 # Version predicates: the version word at the 2.1 boundary.
 field 028902F4 r3+8 u32 0,0x200FF,0x20100,0x20101,0xFFFFFFFF
 field 02890310 r3+8 u32 0,0x200FF,0x20100,0x20101,0xFFFFFFFF

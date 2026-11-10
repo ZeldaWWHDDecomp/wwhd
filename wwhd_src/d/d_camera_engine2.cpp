@@ -82,7 +82,7 @@ static void checkCameraWall(dCamera_c* camera, cXyz* start, CameraLineCheckHD* c
     }
 }
 
-// HD: Link uses mBodyAngle; Medli uses the canonical m3114/m3116 pair.
+// HD: Link uses mBodyAngle; Medli uses her waist angles mWaistRotX/mWaistRotY.
 static ShieldAnglesHD* shieldAngles(fopAc_ac_c* actor) {
     if (actor == nullptr) {
         return nullptr;
@@ -93,7 +93,7 @@ static ShieldAnglesHD* shieldAngles(fopAc_ac_c* actor) {
     }
     if (name == fpcNm_NPC_MD_e) {
         return reinterpret_cast<ShieldAnglesHD*>(
-            &reinterpret_cast<MedliShieldViewHD*>(actor)->m3114);
+            &reinterpret_cast<MedliShieldViewHD*>(actor)->mWaistRotX);
     }
     return nullptr;
 }
@@ -148,7 +148,7 @@ bool dCamera_c::hungCamera(s32 style) {
     offset->z = centerOffsetZ;
     offset->x = centerOffsetX;
     gabi::Local<cSAngle_l> angleCopy;
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         gabi::Local<cXyz> pos, relativePosition, d;
         p->mTag = HUNG_WORK;
         p->mCenter.copy(mViewCache.mCenter);
@@ -190,12 +190,12 @@ bool dCamera_c::hungCamera(s32 style) {
         f32 y = p->mPlayerHeight;
         p->mPlayerHeight = gabi::fmadds(pos->y - y, 0.05f, y);
     }
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         gabi::Local<cXyz> t, d, s, x, e;
         gabi::Local<cSAngle_l> targetLatitude, playerDirection, targetLongitude, angleStep,
             angleResultA, scaledAngle;
         gabi::Local<cSGlobe_l> g;
-        f32 r = (f32)(s32)((s32)p->mTransitionFrames - (s32)m11C);
+        f32 r = (f32)(s32)((s32)p->mTransitionFrames - (s32)mCurStyleTimer);
         f32 k = r / p->mRemainingWeight;
         p->mFrameWeight = r;
         relationalPos(t, mpPlayerActor.get(), offset);
@@ -231,10 +231,10 @@ bool dCamera_c::hungCamera(s32 style) {
         f32 fv = mViewCache.mFovy;
         mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
         p->mRemainingWeight = p->mRemainingWeight - p->mFrameWeight;
-        if ((u32)m11C >= (u32)((s32)p->mTransitionFrames - 1)) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((u32)mCurStyleTimer >= (u32)((s32)p->mTransitionFrames - 1)) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
             p->mFrameWeight = 0.0f;
         }
         return true;
@@ -433,7 +433,7 @@ bool dCamera_c::vomitCamera(s32 style) {
     offset->x = centerOffsetX;
     offset->z = centerOffsetZ;
     gabi::Local<cSAngle_l> angleCopy;
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         gabi::Local<cXyz> pos, relativePosition, d;
         p->mTag = VOMIT_WORK;
         p->mCenter.copy(mViewCache.mCenter);
@@ -479,12 +479,12 @@ bool dCamera_c::vomitCamera(s32 style) {
         f32 y = p->mPlayerHeight;
         p->mPlayerHeight = gabi::fmadds(pos->y - y, 0.05f, y);
     }
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         gabi::Local<cXyz> t, d, s, x, e;
         gabi::Local<cSAngle_l> targetLatitude, playerDirection, targetLongitude, blendedAngle,
             scaledAngle, angleResult;
         gabi::Local<cSGlobe_l> g;
-        f32 r = (f32)(s32)((s32)p->mTransitionFrames - (s32)m11C);
+        f32 r = (f32)(s32)((s32)p->mTransitionFrames - (s32)mCurStyleTimer);
         f32 k = r / p->mRemainingWeight;
         p->mFrameWeight = r;
         relationalPos(t, mpPlayerActor.get(), offset);
@@ -518,10 +518,10 @@ bool dCamera_c::vomitCamera(s32 style) {
         f32 fv = mViewCache.mFovy;
         mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
         p->mRemainingWeight = p->mRemainingWeight - p->mFrameWeight;
-        if ((u32)m11C >= (u32)((s32)p->mTransitionFrames - 1)) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((u32)mCurStyleTimer >= (u32)((s32)p->mTransitionFrames - 1)) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
             p->mFrameWeight = 0.0f;
         }
         return true;
@@ -652,7 +652,7 @@ bool dCamera_c::shieldCamera(s32 style) {
         cameraEngineGlobeXyz(g.get(), x.get());
         cXyz_pl(a, target, x);
     }
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         gabi::Local<cXyz> d;
         gabi::Local<cSAngle_l> playerDirection, relativeDirection;
         work->mTag = SHIELD_WORK;
@@ -675,12 +675,12 @@ bool dCamera_c::shieldCamera(s32 style) {
         work->mRemainingWeight = (f32)((n * (k + 2)) >> 1);
     }
     gabi::Local<CameraLineCheckHD> lineCheck;
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         gabi::Local<cXyz> d, s, a, x, e;
         gabi::Local<cSAngle_l> playerDirection, targetLatitude, targetLongitude, angleDelta,
             angleStep, scaledAngle;
         gabi::Local<cSGlobe_l> g2;
-        f32 r = (f32)(s32)(work->mTransitionFrames - (s32)m11C);
+        f32 r = (f32)(s32)(work->mTransitionFrames - (s32)mCurStyleTimer);
         f32 k = r / work->mRemainingWeight;
         work->mFrameWeight = r;
         cXyz_mi(target, d, &mViewCache.mCenter);
@@ -722,10 +722,10 @@ bool dCamera_c::shieldCamera(s32 style) {
         f32 fv = mViewCache.mFovy;
         mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
         work->mRemainingWeight = work->mRemainingWeight - work->mFrameWeight;
-        if ((u32)m11C >= (u32)(work->mTransitionFrames - 1)) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((u32)mCurStyleTimer >= (u32)(work->mTransitionFrames - 1)) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
             work->mFrameWeight = 0.0f;
         }
         destroyCameraLine(lineCheck);
@@ -827,7 +827,7 @@ static void tornadoSideEye(dCamera_c *c, TornadoWorkHD *p, cSAngle_l *base, be<u
     gabi::Local<cSGlobe_l> g;
     gabi::Local<cSAngle_l> ta, rel, t, tmp;
     gabi::Local<cXyz> pos, x, e;
-    cameraEngineConstructVectorGlobe(g.get(), &offsets[(u32)c->m07C & 1]);
+    cameraEngineConstructVectorGlobe(g.get(), &offsets[(u32)c->mFrameCounter & 1]);
     cXyz *a = c->positionPntOf(p->mpTornado.get());
     cXyz *b = c->positionPntOf(c->mpPlayerActor.get());
     s16 ty = cLib_targetAngleY(b, a);
@@ -925,11 +925,11 @@ bool dCamera_c::tornadoCamera(s32 style) {
             cameraEngineCopyAngle(base.get(), dir.get());
         }
     }
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         p->mTag = TORNADO_WORK;                 /* 'TRND' */
         p->mStickCenterOffset.copy(cXyz::Zero); /* cXyz::Zero */
         p->mEntryMode = ENTRY_NORMAL;
-        p->mEntryViewIndex = (u32)m07C;
+        p->mEntryViewIndex = (u32)mFrameCounter;
         bool side = (ownerStatus0(mPadId) & 0x1000000) || (ownerStatus1(mPadId) & 2);
         if (side || (ownerStatus1(mPadId) & 0x80)) {
             gabi::Local<be<s16>> nm;
@@ -1025,14 +1025,14 @@ bool dCamera_c::tornadoCamera(s32 style) {
         relationalPos(r, mpPlayerActor.get(), ofs);
         p->mCenterTarget.copy(*r);
     }
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         gabi::Local<cXyz> d, s, x, e;
         gabi::Local<cSAngle_l> t10, t12, t14;
         u32 mode = (u32)p->mEntryMode;
         s32 end;
         f32 k;
         if (mode == ENTRY_SIDE_EYE) {
-            k = 1.0f / (f32)(s32)(40 - (s32)m11C);
+            k = 1.0f / (f32)(s32)(40 - (s32)mCurStyleTimer);
             cXyz_mi(&p->mCenterTarget, d, &mViewCache.mCenter);
             cXyz_ml(d, s, k);
             PSVECAdd(&mViewCache.mCenter, s, &mViewCache.mCenter);
@@ -1041,12 +1041,12 @@ bool dCamera_c::tornadoCamera(s32 style) {
             cSGlobe_Val(&mViewCache.mDirection, d);
             f32 fv = mViewCache.mFovy;
             mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
-            if (m11C != 39)
+            if (mCurStyleTimer != 39)
                 return true;
         } else {
             if (mode == ENTRY_EVENT) {
                 end = 8;
-                k = 1.0f / (f32)(s32)(8 - (s32)m11C);
+                k = 1.0f / (f32)(s32)(8 - (s32)mCurStyleTimer);
                 cXyz_mi(&p->mCenterTarget, d, &mViewCache.mCenter);
                 gabi::Local<cXyz> mul;
                 mul->x = centerFollowXZ;
@@ -1060,7 +1060,7 @@ bool dCamera_c::tornadoCamera(s32 style) {
                 mViewCache.mDirection.mU = copyCameraAngle(tmp, *t10);
             } else {
                 end = 20;
-                k = 1.0f / (f32)(s32)(20 - (s32)m11C);
+                k = 1.0f / (f32)(s32)(20 - (s32)mCurStyleTimer);
                 cXyz_mi(&p->mCenterTarget, d, &mViewCache.mCenter);
                 cXyz_ml(d, s, k);
                 PSVECAdd(&mViewCache.mCenter, s, &mViewCache.mCenter);
@@ -1080,12 +1080,12 @@ bool dCamera_c::tornadoCamera(s32 style) {
             mViewCache.mEye.copy(*e);
             f32 fv = mViewCache.mFovy;
             mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
-            if ((u32)m11C != (u32)(end - 1))
+            if ((u32)mCurStyleTimer != (u32)(end - 1))
                 return true;
         }
-        m102 = 1;
-        m101 = 1;
-        m100 = 1;
+        mStyleSettle2 = 1;
+        mStyleSettle1 = 1;
+        mStyleSettle0 = 1;
         return true;
     }
     {
@@ -1187,11 +1187,11 @@ bool dCamera_c::manualCamera(s32 style) {
     f32 maximumLatitude = camParamVal(style, 17);
     f32 centerFollowY = camParamVal(style, 4);
     f32 centerOffsetX = camParamVal(style, 1);
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
         gabi::Local<cXyz> a, d;
-        m100 = 1;
-        m101 = 1;
-        m102 = 1;
+        mStyleSettle0 = 1;
+        mStyleSettle1 = 1;
+        mStyleSettle2 = 1;
         if ((mEventFlags & CAMERA_MANUAL_LOCKON) && mpLockonTarget.get() != nullptr)
             p->mLockonBlend = 1.0f;
         else
@@ -1230,10 +1230,10 @@ bool dCamera_c::manualCamera(s32 style) {
         maximumLatitude = 10.0f;
     }
     if (p->mChargingAtStart == 0 && (ownerStatus1(mPadId) & 0x20000)) {
-        m144 = 1;
+        mManualInactive = 1;
         mEventFlags = mEventFlags | CAMERA_MANUAL_ROTATING;
     }
-    if ((ownerStatus0(mPadId) & 0x800000) && m784 != 0) {
+    if ((ownerStatus0(mPadId) & 0x800000) && mIsGanonKMap != 0) {
         centerHeightLower = 0.0f;
         fovyStep = 1.0f;
         followRate = 0.2f;
@@ -1306,7 +1306,7 @@ bool dCamera_c::manualCamera(s32 style) {
                       centerHeightLower))
             rH = blockedFollowRate;
         if ((mEventFlags & CAMERA_MANUAL_LOCKON) && mpLockonTarget.get() != nullptr &&
-            (m784 != 0 || m785 != 0)) {
+            (mIsGanonKMap != 0 || mIsGTowerMap != 0)) {
             *h = -50.0f;
             f32 mCenterHeight = p->mCenterHeight;
             p->mCenterHeight = gabi::fmadds(-50.0f - mCenterHeight, rH, mCenterHeight);
@@ -1386,7 +1386,7 @@ bool dCamera_c::manualCamera(s32 style) {
     {
         gabi::Local<cXyz> d, s, mul;
         f32 mx, my;
-        if (m11C == 0) {
+        if (mCurStyleTimer == 0) {
             cXyz_mi(&p->mCenterTarget, d, &mViewCache.mCenter);
             f32 l = std_sqrtf(PSVECSquareMag(d));
             f32 k = (l > 100.0f) ? 0.0f : 1.0f - l / 100.0f;
@@ -1406,7 +1406,7 @@ bool dCamera_c::manualCamera(s32 style) {
         cameraEngineVectorProduct(d.get(), s.get(), mul.get()); /* cXyz * cXyz */
         PSVECAdd(&mViewCache.mCenter, s, &mViewCache.mCenter);
     }
-    if (mpLockonTarget.get() == nullptr && m780 == 0) {
+    if (mpLockonTarget.get() == nullptr && mIsSeaMap == 0) {
         gabi::Local<cXyz> a;
         gabi::Local<CameraLineCheckHD> lc;
         attentionPos(a, mpPlayerActor.get());
@@ -1475,7 +1475,7 @@ bool dCamera_c::manualCamera(s32 style) {
         pos->y = pos->y + 10.0f;
         f32 foot = footHeightOf(mpPlayerActor.get());
         f32 h = foot - groundHeight(pos);
-        u32 c7c = m07C;
+        u32 c7c = mFrameCounter;
         f32 bank = mStickMainPosXLast;
         f32 ratio = 0.05f;
         if (h < 200.0f) {
@@ -1542,7 +1542,7 @@ bool dCamera_c::towerCamera(s32 style) {
     movementBlendLimit = 0.66f;
     if (latitude < 20.0f)
       latitude = 20.0f;
-    cameraRideScaleAngleAssign(&m148, 0.33f); /* m148 *= 0.33f */
+    cameraRideScaleAngleAssign(&mForwardTiltOffset, 0.33f); /* mForwardTiltOffset *= 0.33f */
   }
   if (ownerStatus0(mPadId) & 0x8100000) { /* CRAWL | SWIM */
     gabi::Local<cSAngle_l> a;
@@ -1554,11 +1554,11 @@ bool dCamera_c::towerCamera(s32 style) {
   }
   if (ownerStatus1(mPadId) & 0x40000) {
     latitude = 0.0f;
-    m148 = (s16)l_tornadoZeroAngle;
+    mForwardTiltOffset = (s16)l_tornadoZeroAngle;
   }
   if (ownerStatus0(mPadId) & 0x20)
     centerOffsetX = -centerOffsetX;
-  if (m108 == 0) {
+  if (mCurModeTimer == 0) {
     p->mLookLeft = 0;
     p->mCenterOffsetX = 0.0f;
   }
@@ -1594,7 +1594,7 @@ bool dCamera_c::towerCamera(s32 style) {
         gabi::fmadds(centerOffsetY - nearCenterHeight, t, nearCenterHeight);
   }
   f32 range = maximumRadius - minimumRadius;
-  if (m108 == 0) {
+  if (mCurModeTimer == 0) {
     gabi::Local<cXyz> d;
     p->mTag = TOWER_WORK; /* 'TOWR' */
     cXyz_mi(&mViewCache.mEye, d, &mViewCache.mCenter);
@@ -1632,9 +1632,9 @@ bool dCamera_c::towerCamera(s32 style) {
                            ? 0
                            : 1; /* mfcr: !CR0[GT] (<= _90) */
     if ((mEventFlags & CAMERA_FAST_TRANSITION) || mCurMode == 1) {
-      m102 = 1;
-      m101 = 1;
-      m100 = 1;
+      mStyleSettle2 = 1;
+      mStyleSettle1 = 1;
+      mStyleSettle0 = 1;
       p->mFrameWeight = 0.0f;
       p->mTransitionFrames = 1;
     } else {
@@ -1674,15 +1674,15 @@ bool dCamera_c::towerCamera(s32 style) {
     target->y = getWaterSurfaceHeight(target);
   }
   gabi::Local<CameraLineCheckHD> lineCheck;
-  if (m100 == 0) {
+  if (mStyleSettle0 == 0) {
     gabi::Local<cXyz> d, s, a, x, e;
     gabi::Local<cSAngle_l> vv, ay, t40, t2e, t28;
     gabi::Local<cSGlobe_l> g;
-    if (m31D != 0)
+    if (mFollowMoveBg != 0)
       cameraTowerMoveBackground(dComIfG_Bgsp(),
                                 static_cast<cBgS_PolyInfo *>(&mBG.m5C.m04), 1,
                                 &p->mCenter, 0, 0); /* MoveBgMatrixCrrPos */
-    f32 r = (f32)(s32)((s32)p->mTransitionFrames - (s32)m108);
+    f32 r = (f32)(s32)((s32)p->mTransitionFrames - (s32)mCurModeTimer);
     f32 k = r / p->mRemainingWeight;
     p->mFrameWeight = r;
     cXyz_mi(target, d, &p->mCenter);
@@ -1716,10 +1716,10 @@ bool dCamera_c::towerCamera(s32 style) {
     cameraEngineGlobeXyz(&mViewCache.mDirection, x.get());
     cXyz_pl(&mViewCache.mCenter, e, x);
     mViewCache.mEye.copy(*e);
-    if ((u32)m108 >= (u32)((s32)p->mTransitionFrames - 1)) {
-      m102 = 1;
-      m101 = 1;
-      m100 = 1;
+    if ((u32)mCurModeTimer >= (u32)((s32)p->mTransitionFrames - 1)) {
+      mStyleSettle2 = 1;
+      mStyleSettle1 = 1;
+      mStyleSettle0 = 1;
     }
     p->mLatitude = cameraAngleDegree(&mViewCache.mDirection.mV);
     copyCameraWord(&p->mMaximumRadius, &mViewCache.mDirection.mRadius);
@@ -1736,7 +1736,7 @@ bool dCamera_c::towerCamera(s32 style) {
     pos->y = pos->y + 10.0f;
     groundHeight(pos);
   }
-  if (m360 != 0 || (ownerStatus0(mPadId) & 0x100000)) {
+  if (mPlayerOnFloor != 0 || (ownerStatus0(mPadId) & 0x100000)) {
     p->mMovementBlend = 0.0f;
     p->mIdleFrames = 0;
   } else if (p->mIdleFrames < 0x50) {
@@ -1821,11 +1821,11 @@ bool dCamera_c::towerCamera(s32 style) {
     p->mLatitude = gabi::fmadds(latitude - a, radiusRate, a);
   }
   if (!(cameraRideStyle(style)->mFlags & 4))
-    m148 = zero;
+    mForwardTiltOffset = zero;
   gabi::Local<cSAngle_l> lat;
   cSAngle_ct(lat);
   if (p->mIdleFrames == 0) {
-    f32 deg = cameraAngleDegree(&m148);
+    f32 deg = cameraAngleDegree(&mForwardTiltOffset);
     cameraEngineSetDegrees(lat.get(), p->mLatitude + deg);
     f32 c = p->mLatitudeRate;
     p->mLatitudeRate = gabi::fmadds(latitudeRate - c, 0.01f, c);
@@ -1928,7 +1928,7 @@ static void rideSideEye(dCamera_c *c, RideWorkHD *p, bool sail) {
   gabi::Local<cSAngle_l> ta, rel, t, angleCopy;
   gabi::Local<cXyz> pos, pos2, x, e;
   cameraEngineConstructVectorGlobe(
-      g.get(), reinterpret_cast<cXyz *>(&table.mWords[((u32)c->m07C & 3) * 3]));
+      g.get(), reinterpret_cast<cXyz *>(&table.mWords[((u32)c->mFrameCounter & 3) * 3]));
   cXyz *a = c->positionPntOf(p->mpShip.get());
   cXyz *b = c->positionPntOf(c->mpPlayerActor.get());
   s16 ty = cLib_targetAngleY(b, a);
@@ -1987,7 +1987,7 @@ bool dCamera_c::rideCamera(s32 style) {
   centerOffset->z = centerOffsetZ;
   centerOffset->x = 0.0f;
   centerOffset->y = centerOffsetY;
-  if (m11C == 0)
+  if (mCurStyleTimer == 0)
     p->mSteeringLeft = 0;
   if (ownerStatus1(mPadId) & 4) {
     gabi::Local<be<s16>> nm;
@@ -2001,7 +2001,7 @@ bool dCamera_c::rideCamera(s32 style) {
     gabi::Local<cSAngle_l> hd, d1a, c, t48;
     cSAngle_ct(hd, (s16)(ship->shape_angle.y + ship->mHeadingOffset));
     cSAngle_ct(d1a);
-    if (m11C == 0) {
+    if (mCurStyleTimer == 0) {
       *d1a = (s16)l_tornadoZeroAngle;
     } else {
       subtractCameraAngles(&p->mShipHeading, t48, hd);
@@ -2029,12 +2029,12 @@ bool dCamera_c::rideCamera(s32 style) {
     cameraEngineCopyAngle(&p->mShipHeading, dir.get());
     p->mpShip = nullptr;
   }
-  if (m11C == 0) {
+  if (mCurStyleTimer == 0) {
     p->mTag = RIDE_WORK;                                 /* 'RIDE' */
     p->mStickCenterOffset.copy(*cameraRideZeroVector()); /* cXyz::Zero */
     p->mEntryMode = 0;
     p->mBoostBlurArmed = 1;
-    p->mEntryViewIndex = (u32)m07C;
+    p->mEntryViewIndex = (u32)mFrameCounter;
     p->mSideOffsetRatio = 0.0f;
     copyCameraWord(&p->mRadius, &mViewCache.mDirection.mRadius);
     p->mRadiusSpeedScale = 0.0f;
@@ -2080,9 +2080,9 @@ bool dCamera_c::rideCamera(s32 style) {
     if (mEventFlags & CAMERA_FAST_TRANSITION)
       p->mEntryMode = 2;
     if (mEventFlags & CAMERA_FORCE_FOLLOW) {
-      m102 = 1;
-      m101 = 1;
-      m100 = 1;
+      mStyleSettle2 = 1;
+      mStyleSettle1 = 1;
+      mStyleSettle0 = 1;
     }
   }
   f32 speedRatio;
@@ -2201,7 +2201,7 @@ bool dCamera_c::rideCamera(s32 style) {
       else if (alg == RIDE_STYLE_BE08)
         centerOffset->y = centerOffset->y + centerOffset->y; /* 'BE08' */
     }
-    if (m314 != 0 && m318 == m354 && (cameraRideStyle(style)->mFlags & 4)) {
+    if (mInSeaArea != 0 && mSeaWaveHeight == mGroundHeight && (cameraRideStyle(style)->mFlags & 4)) {
       gabi::Local<cSGlobe_l> g2;
       gabi::Local<cXyz> pos, x, sp;
       cameraEngineConstructGlobe(
@@ -2234,14 +2234,14 @@ bool dCamera_c::rideCamera(s32 style) {
     cXyz_ml(d, s, p->mCenterFollowRatio);
     PSVECAdd(&p->mCenterTarget, s, &p->mCenterTarget);
   }
-  if (m100 == 0) {
+  if (mStyleSettle0 == 0) {
     gabi::Local<cXyz> d, s, x, e;
     gabi::Local<cSAngle_l> t22, t20, t1e;
     u32 mode = (u32)p->mEntryMode;
     f32 k;
     s32 end;
     if (mode == 1) {
-      k = 1.0f / (f32)(s32)(40 - (s32)m11C);
+      k = 1.0f / (f32)(s32)(40 - (s32)mCurStyleTimer);
       cXyz_mi(&p->mCenterTarget, d, &mViewCache.mCenter);
       cXyz_ml(d, s, k);
       PSVECAdd(&mViewCache.mCenter, s, &mViewCache.mCenter);
@@ -2250,18 +2250,18 @@ bool dCamera_c::rideCamera(s32 style) {
       cSGlobe_Val(&mViewCache.mDirection, d);
       f32 fv = mViewCache.mFovy;
       mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
-      if (m11C != 39)
+      if (mCurStyleTimer != 39)
         return true;
     } else if (mode == 2) {
       end = 1;
       k = 0.0f;
       f32 fv = mViewCache.mFovy;
       mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
-      if ((u32)m11C != (u32)(end - 1))
+      if ((u32)mCurStyleTimer != (u32)(end - 1))
         return true;
     } else {
       end = 20;
-      k = 1.0f / (f32)(s32)(20 - (s32)m11C);
+      k = 1.0f / (f32)(s32)(20 - (s32)mCurStyleTimer);
       cXyz_mi(&p->mCenterTarget, d, &mViewCache.mCenter);
       cXyz_ml(d, s, k);
       PSVECAdd(&mViewCache.mCenter, s, &mViewCache.mCenter);
@@ -2280,12 +2280,12 @@ bool dCamera_c::rideCamera(s32 style) {
       f32 fv = mViewCache.mFovy;
       mViewCache.mEye.copy(*e);
       mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
-      if ((u32)m11C != (u32)(end - 1))
+      if ((u32)mCurStyleTimer != (u32)(end - 1))
         return true;
     }
-    m102 = 1;
-    m101 = 1;
-    m100 = 1;
+    mStyleSettle2 = 1;
+    mStyleSettle1 = 1;
+    mStyleSettle0 = 1;
     return true;
   }
   {
@@ -2317,7 +2317,7 @@ bool dCamera_c::rideCamera(s32 style) {
     cameraEngineConstructVectorGlobe(eyeDirection.get(), d.get());
   }
   f32 blend = 1.0f;
-  if (m314 != 0 && m318 == m354 && (cameraRideStyle(style)->mFlags & 4)) {
+  if (mInSeaArea != 0 && mSeaWaveHeight == mGroundHeight && (cameraRideStyle(style)->mFlags & 4)) {
     if (speedRatio > 0.5f)
       blend = 0.0f;
     else {

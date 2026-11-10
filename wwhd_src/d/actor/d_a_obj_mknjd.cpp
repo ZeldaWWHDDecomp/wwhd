@@ -260,7 +260,7 @@ cPhs_State Act_c::Mthd_Create() {
             Act_c_ct(this);
         fopAcM_OnCondition(this, fopAcCnd_INIT_e);
     }
-    m043E = prm_get_Type();
+    mType = prm_get_Type();
     if (fopAcM_isSwitch(this, prm_get_swSave())) {
         mEmitters[2] = nullptr;
         mEmitters[3] = nullptr;
@@ -301,7 +301,7 @@ static inline s32 Mknjd_compareJointName(u32 a, u32 b) {
 /* 023728DC */
 BOOL Act_c::CreateHeap() {
     J3DModelData *model_data_d;
-    if (m043E == TYPE_WIND) {
+    if (mType == TYPE_WIND) {
         model_data_d =
             (J3DModelData *)dComIfG_getObjectRes("MknjD", dRes_INDEX_MKNJD_BDL_MKNJK_e, gc_tu.safeString);
     } else {
@@ -397,12 +397,12 @@ BOOL Act_c::Create() {
         mShardPositions[i].z = 0.0f;
         mShardHeights[i] = 0.0f;
     }
-    m043D = false;
+    mBreakMdlVisible = false;
     mBreakTimer = 0;
     for (int i = 0; i < 4; i++)
         mEmitters[i] = nullptr;
 
-    if (m043E == TYPE_WIND) {
+    if (mType == TYPE_WIND) {
         mCheckEventIdx = dComIfGp_evmng_getEventIdx(EventName(3), 0xFF);
         mDemoEventIdx = dComIfGp_evmng_getEventIdx(EventName(1), 0xFF);
         mErrorEventIdx = dComIfGp_evmng_getEventIdx(EventName(5), 0xFF);
@@ -410,7 +410,7 @@ BOOL Act_c::Create() {
         mMelodyNum = 4;
         mGiveItemNo = ITEM_WIND_GODS_ARIA;
         eventInfo_setEventName(this, "MKNJD_K_TALK");
-        m0430 = 0x2910;
+        mDemoEventBit = 0x2910;
     } else {
         mCheckEventIdx = dComIfGp_evmng_getEventIdx(EventName(2), 0xFF);
         mDemoEventIdx = dComIfGp_evmng_getEventIdx(EventName(0), 0xFF);
@@ -419,23 +419,23 @@ BOOL Act_c::Create() {
         mMelodyNum = 3;
         mGiveItemNo = ITEM_EARTH_GODS_LYRIC;
         eventInfo_setEventName(this, "MKNJD_D_TALK");
-        m0430 = 0x2920;
+        mDemoEventBit = 0x2920;
     }
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0x3D;  /* attention_info.distances[TALK] */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0x3D; /* attention_info.distances[SPEAK] */
     attention_info.flags = attention_info.flags | 0x20000008;
 
     if (!checkItemGet(mGiveItemNo, TRUE)) {
-        m043F = STATE_WAIT_LESSON;
+        mState = STATE_WAIT_LESSON;
         eventInfo.mpEventCB =
             gabi::guest_fn((const void *)daObjMknjD_XyEventCB); /* HD eventInfo: event callback at +8 */
         eventInfo.mpCheckCB = gabi::guest_fn((const void *)daObjMknjD_XyCheckCB); /* check callback at +0xC */
     } else {
-        m043F = STATE_WAIT;
+        mState = STATE_WAIT;
     }
     mMsgFound = 0;
     mMsgPID = -1;
-    m0504 = false;
+    mMsgCanceled = false;
     return TRUE;
 }
 
@@ -499,7 +499,7 @@ u16 Act_c::talk(int i_param1) {
     if (mMsgPID == -1) {
         if (i_param1 == 1) {
             /* getMsg() */
-            if (m0500 == 0) {
+            if (mNormalTalk == 0) {
                 u8 melody = mMelodyNum;
                 dComIfGp_setMelodyNum(melody); /* dComIfGp_setMelodyNum */
                 mMsgNo = 0x5B3;
@@ -514,7 +514,7 @@ u16 Act_c::talk(int i_param1) {
         msgStatus = (u16)msgMng_getStatus(mgr);
         if (msgStatus == fopMsgStts_MSG_DISPLAYED_e) {
             if (dComIfGp_checkMesgCancelButton() != 0) { /* dComIfGp_checkMesgCancelButton */
-                m0504 = true;
+                mMsgCanceled = true;
                 Mknjd_view<MknjdMessage>(mgr)->mSend = 1; /* fopMsgM_messageSendOn */
             }
             msgMng_setStatus(mgr, fopMsgStts_MSG_ENDS_e);
@@ -563,7 +563,7 @@ bool Act_c::daObjMknjD_break() {
         mDoAud_seStart(0x69A9 /* JA_SE_OBJ_SAGE_GATE_LIGHT */, &current.pos, 0,
                        dComIfGp_getReverb(current.roomNo));
     } else if (mBreakTimer == 60) {
-        m043D = true;
+        mBreakMdlVisible = true;
         for (u32 i = 0; i < 20; i++) {
             mShardPositions[i].y = 0.0f;
             mShardPositions[i].x = 0.0f;
@@ -673,8 +673,8 @@ void Act_c::privateCut() {
             player_offNoDraw(player);
             break;
         case ACT_LESSON:
-            m0504 = false;
-            m0500 = 0;
+            mMsgCanceled = false;
+            mNormalTalk = 0;
             mMsgPID = -1;
             break;
         }
@@ -689,7 +689,7 @@ void Act_c::privateCut() {
             if (Mknjd_isStartStage(gabi::guest_addr("Ekaze")) ||
                 Mknjd_isStartStage(gabi::guest_addr("Edaichi"))) {
                 mDoAud_bgmStart(0x80000057 /* JA_BGM_JABOO_CAVE */);
-            } else if (m043E == TYPE_WIND) {
+            } else if (mType == TYPE_WIND) {
                 mDoAud_bgmStart(0x8000002F /* JA_BGM_D_WIND */);
             } else {
                 mDoAud_bgmStart(0x8000002D /* JA_BGM_D_EARTH */);
@@ -708,7 +708,7 @@ void Act_c::privateCut() {
         break;
     }
     case ACT_TACT:
-        if (m0504 == false)
+        if (mMsgCanceled == false)
             doCutEnd = true;
         else
             dComIfGp_event_reset();
@@ -726,12 +726,12 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     fopAc_ac_c *partner = dComIfGp_getCb1Player();
 
-    switch ((u8)m043F) {
+    switch ((u8)mState) {
     case STATE_WAIT:
         eventInfo.onCondition(dEvtCnd_CANTALK_e);
         if (eventInfo.checkCommandTalk()) {
-            m0500 = 1;
-            m043F = STATE_HIDE_PLAYER;
+            mNormalTalk = 1;
+            mState = STATE_HIDE_PLAYER;
         } else if (player != nullptr) {
             gabi::Local<cXyz> partnerDiff;
             cXyz_mi(&current.pos, partnerDiff, &player->current.pos);
@@ -743,7 +743,7 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
             f32 absXZ = std_sqrtf(PSVECSquareMag(xz));
             if (absXZ < 800.0f && (rotDiff < -0x4000 || rotDiff > 0x4000)) {
                 if (dComIfGp_checkPlayerStatus1(0, 1 /* daPyStts1_WIND_WAKER_CONDUCT_e */)) {
-                    m043F = STATE_START_TACT;
+                    mState = STATE_START_TACT;
                     manage_friend_draw(0);
                 }
             }
@@ -753,11 +753,11 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
         /* daPy_py_c::setTactZev(procId, melody, eventName) (virtual +0x84) */
         u32 fn = Mknjd_view<MknjdPlayerVtable>(player->__vtbl)->mSetTactZev;
         u32 id = mBsPcId;
-        if (m043E == TYPE_WIND)
+        if (mType == TYPE_WIND)
             gabi::call_ptr(fn, player, id, 4, EventName(3));
         else
             gabi::call_ptr(fn, player, id, 3, EventName(2));
-        m043F = STATE_CHECK_PARTNER;
+        mState = STATE_CHECK_PARTNER;
         break;
     }
     case STATE_CHECK_PARTNER:
@@ -775,44 +775,44 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
                 f32 absXZ = std_sqrtf(PSVECSquareMag(xz));
                 if (absXZ < 800.0f && (rotDiff < -0x4000 || rotDiff > 0x4000)) {
                     Mknjd_orderChangeEventId(this, mDemoEventIdx, 0, 0xFFFF);
-                    dComIfGs_onEventBit(m0430);
+                    dComIfGs_onEventBit(mDemoEventBit);
                     gabi::Local<be<s16>> name;
                     fopAc_ac_c *judgeResult = Mknjd_searchByName(name, fpcNm_NPC_MD_e);
                     if (judgeResult != nullptr)
                         dComIfGp_event_setTalkPartner(judgeResult);
-                    m043F = STATE_ORDER_DEMO;
+                    mState = STATE_ORDER_DEMO;
                 } else {
                     Mknjd_orderChangeEventId(this, mErrorEventIdx, 0, 0xFFFF);
-                    m043F = STATE_ORDER_ERROR;
+                    mState = STATE_ORDER_ERROR;
                     manage_friend_draw(1);
                 }
             } else {
                 Mknjd_orderChangeEventId(this, mErrorEventIdx, 0, 0xFFFF);
-                m043F = STATE_ORDER_ERROR;
+                mState = STATE_ORDER_ERROR;
                 manage_friend_draw(1);
             }
         } else if (!dComIfGp_checkPlayerStatus1(0, 1)) {
-            m043F = STATE_WAIT;
+            mState = STATE_WAIT;
             manage_friend_draw(1);
         }
         break;
     case STATE_ORDER_ERROR:
         if (eventInfo_checkCommandDemoAccrpt(this))
-            m043F = STATE_ERROR;
+            mState = STATE_ERROR;
         break;
     case STATE_ERROR:
         if (dComIfGp_evmng_endCheck(mErrorEventIdx)) {
             dComIfGp_event_reset();
-            m043F = STATE_WAIT_TACT_END;
+            mState = STATE_WAIT_TACT_END;
         }
         break;
     case STATE_WAIT_TACT_END:
         if (!dComIfGp_checkPlayerStatus1(0, 1))
-            m043F = STATE_WAIT;
+            mState = STATE_WAIT;
         break;
     case STATE_ORDER_DEMO:
         if (eventInfo_checkCommandDemoAccrpt(this)) {
-            m043F = STATE_DEMO;
+            mState = STATE_DEMO;
             /* HD: the Wind statue's demo in "kaze" room 12 sets an env-light flag */
             bool kaze = false;
             if (Mknjd_isStartStage(gabi::guest_addr("kaze")) && l_stayRoom == 0xC)
@@ -822,12 +822,12 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
             mDoAud_bgmStop(30);
             mDoAud_taktModeMuteOff();
             dComIfGp_att_offAleart();
-            if (m043E == TYPE_WIND) {
-                m0432 = 0x2B;
-                m0434 = 5;
+            if (mType == TYPE_WIND) {
+                mBgmTimer = 0x2B;
+                mFriendDrawTimer = 5;
             } else {
-                m0432 = 0x0E;
-                m0434 = 5;
+                mBgmTimer = 0x0E;
+                mFriendDrawTimer = 5;
             }
         }
         break;
@@ -844,40 +844,40 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
         eventInfo.onCondition(dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e);
         if (eventInfo.checkCommandTalk()) {
             if (dComIfGp_event_chkTalkXY()) {
-                m0500 = 0;
-                m043F = STATE_START_LESSON;
+                mNormalTalk = 0;
+                mState = STATE_START_LESSON;
                 mDoAud_seStart(0x8A7 /* JA_SE_PRE_TAKT */, &eyePos, 0,
                                dComIfGp_getReverb(current.roomNo)); /* fopAcM_seStart */
             } else {
-                m0500 = 1;
-                m043F = STATE_HIDE_PLAYER;
+                mNormalTalk = 1;
+                mState = STATE_HIDE_PLAYER;
             }
         }
         break;
     case STATE_START_LESSON:
-        m043F = STATE_LESSON;
+        mState = STATE_LESSON;
         break;
     case STATE_LESSON:
         privateCut();
         if (!dComIfGp_event_runCheck()) {
             if (checkItemGet(mGiveItemNo, TRUE))
-                m043F = STATE_WAIT;
+                mState = STATE_WAIT;
             else
-                m043F = STATE_WAIT_LESSON;
+                mState = STATE_WAIT_LESSON;
         }
         break;
     case STATE_HIDE_PLAYER:
         player_onNoDraw(player);
-        m043F = STATE_TALK;
+        mState = STATE_TALK;
         break;
     case STATE_TALK:
         if (talk(1) == fopMsgStts_BOX_CLOSED_e) {
             player_offNoDraw(player);
             dComIfGp_event_reset();
             if (checkItemGet(mGiveItemNo, TRUE))
-                m043F = STATE_WAIT;
+                mState = STATE_WAIT;
             else
-                m043F = STATE_WAIT_LESSON;
+                mState = STATE_WAIT_LESSON;
         }
         break;
     }
@@ -885,20 +885,20 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
     set_mtx();
     *Mknjd_view<be<u32>>(gabi::ea(i_mtx)) = gabi::ea(&M_tmp_mtx);
 
-    if (m0432 > 1)
-        m0432 = (u16)(m0432 - 1);
-    if (m0432 == 1) {
-        if (m043E == TYPE_WIND)
+    if (mBgmTimer > 1)
+        mBgmTimer = (u16)(mBgmTimer - 1);
+    if (mBgmTimer == 1) {
+        if (mType == TYPE_WIND)
             mDoAud_bgmStart(0x80000021 /* JA_BGM_TAKT_MAKORE */);
         else
             mDoAud_bgmStart(0x80000022 /* JA_BGM_TAKT_MEDRI */);
-        m0432 = 0;
+        mBgmTimer = 0;
     }
-    if (m0434 > 1)
-        m0434 = (u16)(m0434 - 1);
-    if (m0434 == 1) {
+    if (mFriendDrawTimer > 1)
+        mFriendDrawTimer = (u16)(mFriendDrawTimer - 1);
+    if (mFriendDrawTimer == 1) {
         manage_friend_draw(1);
-        m0434 = 0;
+        mFriendDrawTimer = 0;
     }
     return TRUE;
 }
@@ -924,7 +924,7 @@ BOOL Act_c::Draw() {
                 alpha != 0; /* getShape()->show()/hide() */
     }
     mDoExt_modelUpdateDL(mMainMdl);
-    if (m043D)
+    if (mBreakMdlVisible)
         mDoExt_modelUpdateDL(mBreakMdl);
     dComIfGd_setList();
     return TRUE;

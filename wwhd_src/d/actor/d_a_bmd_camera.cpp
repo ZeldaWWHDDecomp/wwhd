@@ -62,8 +62,8 @@ static inline bool order_event(bmd_class* i_this) {
     fopAc_ac_c* actor = i_this;
     if (!eventInfo_checkCommandDemoAccrpt(actor)) {
         fopAcMApi::orderPotentialEvent(actor, 2 /* dEvtFlag_STAFF_ALL_e */, 0xFFFF, 0);
-        i_this->mB76 = 0;
-        i_this->mB78 = 0;
+        i_this->mDemoMainCount = 0;
+        i_this->mDemoSubCount = 0;
         eventInfo_onCondition(actor, dEvtCnd_UNK2_e);
         return false;
     }
@@ -80,121 +80,121 @@ void demo_camera(bmd_class* i_this) {
     s32 camId = dComIfGp_getPlayerCameraID(0);
     u32 camera = bmd_cameraAddress(camId);
 
-    switch (i_this->mB74) {
+    switch (i_this->mDemoMode) {
     case 0:
         break;
     case 1: {
         if (!order_event(i_this))
             return;
-        i_this->mB74 = i_this->mB74 + 1;
+        i_this->mDemoMode = i_this->mDemoMode + 1;
         BmdCameraLookAtView* camera2 = gabi::at<BmdCameraLookAtView>(bmd_cameraAddress(0));
-        i_this->mB7C.copy(camera2->mEye);
-        i_this->mB88.copy(camera2->mCenter);
+        i_this->mDemoCamEye.copy(camera2->mEye);
+        i_this->mDemoCamCenter.copy(camera2->mCenter);
         {
             /* HD: the angle from the camera to the boss (GameCube: to the player) */
             gabi::Local<cXyz> tmp;
-            cXyz_mi(&actor->current.pos, tmp, &i_this->mB7C);
+            cXyz_mi(&actor->current.pos, tmp, &i_this->mDemoCamEye);
             local_44->x = tmp->x;
             local_44->y = tmp->y;
             local_44->z = tmp->z;
         }
-        i_this->mB96 = cM_atan2s(local_44->x, local_44->z);
+        i_this->mDemoCamAngleY = cM_atan2s(local_44->x, local_44->z);
         cam_Stop(camera);
         cam_SetTrimSize(camera, 2);
-        i_this->mB9C = 55.0f;
+        i_this->mDemoCamFovy = 55.0f;
         player_changeOriginalDemo(player);
         /* HD: Link is put at the boss */
-        player_setPlayerPosAndAngle(player, &actor->current.pos, i_this->mB96);
+        player_setPlayerPosAndAngle(player, &actor->current.pos, i_this->mDemoCamAngleY);
     }
         /* fallthrough */
     case 2:
-        cMtx_YrotS(calc_mtx(), i_this->mB96);
-        if ((s32)i_this->mB78 < REG0_S(0) + 0x55) {
-            cLib_addCalc2(&i_this->mB88.x, actor->current.pos.x, 0.1f, 200.0f);
-            cLib_addCalc2(&i_this->mB88.y, player->current.pos.y + 300.0f + REG0_F(5), 0.2f, 200.0f);
-            cLib_addCalc2(&i_this->mB88.z, actor->current.pos.z, 0.2f, 200.0f);
+        cMtx_YrotS(calc_mtx(), i_this->mDemoCamAngleY);
+        if ((s32)i_this->mDemoSubCount < REG0_S(0) + 0x55) {
+            cLib_addCalc2(&i_this->mDemoCamCenter.x, actor->current.pos.x, 0.1f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.y, player->current.pos.y + 300.0f + REG0_F(5), 0.2f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.z, actor->current.pos.z, 0.2f, 200.0f);
             local_44->x = 0.0f;
             local_44->y = REG0_F(7) + 100.0f;
             local_44->z = REG0_F(6) - 1100.0f;
             MtxPosition(local_44, local_50);
-            cLib_addCalc2(&i_this->mB7C.x, actor->current.pos.x + local_50->x, 0.1f, 200.0f);
-            cLib_addCalc2(&i_this->mB7C.y, player->current.pos.y + local_50->y, 0.1f, 200.0f);
-            cLib_addCalc2(&i_this->mB7C.z, actor->current.pos.z + local_50->z, 0.1f, 200.0f);
-        } else if ((s32)i_this->mB78 < REG0_S(1) + 100) {
-            cLib_addCalc2(&i_this->mB88.y, actor->current.pos.y + 1200.0f + REG0_F(5), 0.2f,
+            cLib_addCalc2(&i_this->mDemoCamEye.x, actor->current.pos.x + local_50->x, 0.1f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamEye.y, player->current.pos.y + local_50->y, 0.1f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamEye.z, actor->current.pos.z + local_50->z, 0.1f, 200.0f);
+        } else if ((s32)i_this->mDemoSubCount < REG0_S(1) + 100) {
+            cLib_addCalc2(&i_this->mDemoCamCenter.y, actor->current.pos.y + 1200.0f + REG0_F(5), 0.2f,
                           REG0_F(6) + 100.0f);
         } else {
-            cLib_addCalc2(&i_this->mB88.x, player->current.pos.x, 0.3f, 300.0f);
-            cLib_addCalc2(&i_this->mB88.y, player->current.pos.y + 70.0f + REG0_F(5), 0.3f, 300.0f);
-            cLib_addCalc2(&i_this->mB88.z, player->current.pos.z, 0.3f, 300.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.x, player->current.pos.x, 0.3f, 300.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.y, player->current.pos.y + 70.0f + REG0_F(5), 0.3f, 300.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.z, player->current.pos.z, 0.3f, 300.0f);
         }
         break;
     case 5:
         if (!order_event(i_this))
             break;
-        i_this->mB74 = i_this->mB74 + 1;
+        i_this->mDemoMode = i_this->mDemoMode + 1;
         dComIfGp_get(); /* HD: an unused dComIfGp_getCamera(0) */
         cam_Stop(camera);
         cam_SetTrimSize(camera, 2);
-        i_this->mB9C = 60.0f;
+        i_this->mDemoCamFovy = 60.0f;
         player_changeOriginalDemo(player);
         /* fallthrough */
     case 6:
         /* HD: positions changed, with REG10_F offsets */
-        i_this->mB7C.x = REG10_F(0) + 24.0f;
-        i_this->mB7C.y = REG10_F(1) + 133.0f;
-        i_this->mB7C.z = REG10_F(2) + 745.0f;
-        i_this->mB88.x = REG10_F(3) + -37.0f;
-        i_this->mB88.y = REG10_F(4) + 88.0f;
-        i_this->mB88.z = REG10_F(5) + 102.0f;
+        i_this->mDemoCamEye.x = REG10_F(0) + 24.0f;
+        i_this->mDemoCamEye.y = REG10_F(1) + 133.0f;
+        i_this->mDemoCamEye.z = REG10_F(2) + 745.0f;
+        i_this->mDemoCamCenter.x = REG10_F(3) + -37.0f;
+        i_this->mDemoCamCenter.y = REG10_F(4) + 88.0f;
+        i_this->mDemoCamCenter.z = REG10_F(5) + 102.0f;
         local_50->y = 0.0f;
         local_50->x = REG10_F(6) + 61.0f;
         local_50->z = REG10_F(7) + 492.0f;
         player_setPlayerPosAndAngle(player, local_50, -0x75FB);
-        if (i_this->mB78 == 0x1E) {
-            i_this->m2DC = 3;
-            i_this->mB78 = 0;
-            i_this->mB74 = i_this->mB74 + 1;
+        if (i_this->mDemoSubCount == 0x1E) {
+            i_this->mMakarMode = 3;
+            i_this->mDemoSubCount = 0;
+            i_this->mDemoMode = i_this->mDemoMode + 1;
         }
         break;
     case 7:
-        i_this->mB7C.x = -47.0f;
-        i_this->mB7C.y = 115.0f;
-        i_this->mB7C.z = 263.0f;
-        i_this->mB88.x = -199.0f;
-        i_this->mB88.y = -89.0f;
-        i_this->mB88.z = -349.0f;
-        if (i_this->mB78 == 0x1E) {
-            i_this->mB78 = 0;
-            i_this->mB74 = i_this->mB74 + 1;
+        i_this->mDemoCamEye.x = -47.0f;
+        i_this->mDemoCamEye.y = 115.0f;
+        i_this->mDemoCamEye.z = 263.0f;
+        i_this->mDemoCamCenter.x = -199.0f;
+        i_this->mDemoCamCenter.y = -89.0f;
+        i_this->mDemoCamCenter.z = -349.0f;
+        if (i_this->mDemoSubCount == 0x1E) {
+            i_this->mDemoSubCount = 0;
+            i_this->mDemoMode = i_this->mDemoMode + 1;
         }
         break;
     case 8:
-        i_this->mB7C.x = 2.0f;
-        i_this->mB7C.y = 75.0f;
-        i_this->mB7C.z = 403.0f;
-        i_this->mB88.x = 401.0f;
-        i_this->mB88.y = 228.0f;
-        i_this->mB88.z = 957.0f;
-        if (i_this->mB78 == 5) {
+        i_this->mDemoCamEye.x = 2.0f;
+        i_this->mDemoCamEye.y = 75.0f;
+        i_this->mDemoCamEye.z = 403.0f;
+        i_this->mDemoCamCenter.x = 401.0f;
+        i_this->mDemoCamCenter.y = 228.0f;
+        i_this->mDemoCamCenter.z = 957.0f;
+        if (i_this->mDemoSubCount == 5) {
             player_changeDemoMode(player, 0x32 /* DEMO_SMILE_e */);
             player_voiceStart(player, 0x2E);
         }
-        if (i_this->mB78 != 0x1E) {
+        if (i_this->mDemoSubCount != 0x1E) {
             break;
         }
-        i_this->mB78 = 0;
-        i_this->mB74 = i_this->mB74 + 1;
-        i_this->mB7C.x = -47.0f;
-        i_this->mB7C.y = 115.0f;
-        i_this->mB7C.z = 263.0f;
-        cXyz_fcopy(&i_this->mB88, &actor->eyePos);
-        i_this->mB88.y = i_this->mB88.y + (REG0_F(11) + 30.0f);
-        i_this->m2DC = 4;
+        i_this->mDemoSubCount = 0;
+        i_this->mDemoMode = i_this->mDemoMode + 1;
+        i_this->mDemoCamEye.x = -47.0f;
+        i_this->mDemoCamEye.y = 115.0f;
+        i_this->mDemoCamEye.z = 263.0f;
+        cXyz_fcopy(&i_this->mDemoCamCenter, &actor->eyePos);
+        i_this->mDemoCamCenter.y = i_this->mDemoCamCenter.y + (REG0_F(11) + 30.0f);
+        i_this->mMakarMode = 4;
         /* fallthrough */
     case 9:
-        cLib_addCalc2(&i_this->mB88.y, actor->eyePos.y + 30.0f, 0.2f, REG0_F(4) + 5.0f);
-        if (i_this->mB78 == 0x1E) {
+        cLib_addCalc2(&i_this->mDemoCamCenter.y, actor->eyePos.y + 30.0f, 0.2f, REG0_F(4) + 5.0f);
+        if (i_this->mDemoSubCount == 0x1E) {
             head_setAnm(i_this, dRes_INDEX_BMD_BCK_NEW_SDEMO1_e, J3DFrameCtrl::EMode_NONE, 1.0f);
             if (gabi::ea(&actor->eyePos) != 0) {
                 mDoAud_seStart(JA_SE_CM_BKM_CORE_ENTER, &actor->eyePos, 0,
@@ -202,179 +202,179 @@ void demo_camera(bmd_class* i_this) {
             }
             monsSeStart_e(actor, JA_SE_CV_BKM_ENTER);
         }
-        if (i_this->mB78 > 0x1E) {
+        if (i_this->mDemoSubCount > 0x1E) {
             if (i_this->mpHeadMorf->isStop()) {
-                i_this->mB78 = 0;
-                i_this->mB74 = i_this->mB74 + 1;
+                i_this->mDemoSubCount = 0;
+                i_this->mDemoMode = i_this->mDemoMode + 1;
                 head_setAnm(i_this, dRes_INDEX_BMD_BCK_NEW_SDEMO2_e, J3DFrameCtrl::EMode_LOOP, 1.0f);
             }
         }
         break;
     case 10:
-        i_this->mB7C.x = 2.0f;
-        i_this->mB7C.y = 75.0f;
-        i_this->mB7C.z = 403.0f;
-        i_this->mB88.x = 401.0f;
-        i_this->mB88.y = 228.0f;
-        i_this->mB88.z = 957.0f;
-        if (i_this->mB78 == 5) {
+        i_this->mDemoCamEye.x = 2.0f;
+        i_this->mDemoCamEye.y = 75.0f;
+        i_this->mDemoCamEye.z = 403.0f;
+        i_this->mDemoCamCenter.x = 401.0f;
+        i_this->mDemoCamCenter.y = 228.0f;
+        i_this->mDemoCamCenter.z = 957.0f;
+        if (i_this->mDemoSubCount == 5) {
             player_changeDemoMode(player, 0x31 /* DEMO_S_SURP_e */);
             player_voiceStart(player, 0x1D);
         }
-        if (i_this->mB78 != 0x19) {
+        if (i_this->mDemoSubCount != 0x19) {
             break;
         }
-        i_this->mB78 = 0;
-        i_this->mB74 = i_this->mB74 + 1;
+        i_this->mDemoSubCount = 0;
+        i_this->mDemoMode = i_this->mDemoMode + 1;
         /* HD: no height offset (overwritten below anyway) */
-        cXyz_fcopy(&i_this->mB88, &actor->eyePos);
+        cXyz_fcopy(&i_this->mDemoCamCenter, &actor->eyePos);
         /* fallthrough */
     case 11:
-        i_this->mB7C.x = -139.0f;
-        i_this->mB7C.y = 125.0f;
-        i_this->mB7C.z = 475.0f;
-        i_this->mB88.x = -93.0f;
-        i_this->mB88.y = 164.0f;
-        i_this->mB88.z = 104.0f;
-        if (i_this->mB78 == 0x1E) {
+        i_this->mDemoCamEye.x = -139.0f;
+        i_this->mDemoCamEye.y = 125.0f;
+        i_this->mDemoCamEye.z = 475.0f;
+        i_this->mDemoCamCenter.x = -93.0f;
+        i_this->mDemoCamCenter.y = 164.0f;
+        i_this->mDemoCamCenter.z = 104.0f;
+        if (i_this->mDemoSubCount == 0x1E) {
             /* the morf rate is read after the resource lookup */
             J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(
                 ARC_BMD, dRes_INDEX_BMD_BCK_NEW_SDEMO3_e, SAFESTRING_VTBL);
             i_this->mpHeadMorf->setAnm(anm, 0, REG0_F(16) + 4.0f, 1.0f, 0.0f, -1.0f, nullptr);
         }
-        if (i_this->mB78 > 0x1B) {
+        if (i_this->mDemoSubCount > 0x1B) {
             if (i_this->mpHeadMorf->isStop()) {
-                i_this->mB78 = 0;
-                i_this->m2DC = 0;
-                i_this->mB74 = i_this->mB74 + 1;
+                i_this->mDemoSubCount = 0;
+                i_this->mMakarMode = 0;
+                i_this->mDemoMode = i_this->mDemoMode + 1;
                 mk_voice_set(i_this, 0x48C6);
                 head_setAnm(i_this, dRes_INDEX_BMD_BCK_NEW_SDEMO4_e, J3DFrameCtrl::EMode_NONE, 1.0f);
-                cXyz_fcopy(&i_this->mB88, &actor->eyePos);
-                i_this->mB88.y = i_this->mB88.y + (REG0_F(15) + 60.0f);
+                cXyz_fcopy(&i_this->mDemoCamCenter, &actor->eyePos);
+                i_this->mDemoCamCenter.y = i_this->mDemoCamCenter.y + (REG0_F(15) + 60.0f);
             }
         }
         break;
     case 12:
-        if ((i_this->mB78 >= 0x14) && (i_this->mB78 <= 0x28)) {
-            i_this->mB7C.x = 2.0f;
-            i_this->mB7C.y = 75.0f;
-            i_this->mB7C.z = 403.0f;
-            i_this->mB88.x = 401.0f;
-            i_this->mB88.y = 228.0f;
-            i_this->mB88.z = 957.0f;
-            if (i_this->mB78 == 0x14) {
+        if ((i_this->mDemoSubCount >= 0x14) && (i_this->mDemoSubCount <= 0x28)) {
+            i_this->mDemoCamEye.x = 2.0f;
+            i_this->mDemoCamEye.y = 75.0f;
+            i_this->mDemoCamEye.z = 403.0f;
+            i_this->mDemoCamCenter.x = 401.0f;
+            i_this->mDemoCamCenter.y = 228.0f;
+            i_this->mDemoCamCenter.z = 957.0f;
+            if (i_this->mDemoSubCount == 0x14) {
                 player_changeDemoMode(player, 0x18 /* DEMO_SURPRISED_e */);
                 player_voiceStart(player, 0x31);
             }
             i_this->mpHeadMorf->setPlaySpeed(0.0f);
-            if (i_this->mB78 == 0x28) {
-                i_this->mB7C.x = -139.0f;
-                cXyz_fcopy(&i_this->mB88, &actor->eyePos);
-                i_this->mB7C.y = 125.0f;
-                i_this->mB7C.z = 475.0f;
-                i_this->mB88.y = i_this->mB88.y + (REG0_F(15) + 60.0f);
+            if (i_this->mDemoSubCount == 0x28) {
+                i_this->mDemoCamEye.x = -139.0f;
+                cXyz_fcopy(&i_this->mDemoCamCenter, &actor->eyePos);
+                i_this->mDemoCamEye.y = 125.0f;
+                i_this->mDemoCamEye.z = 475.0f;
+                i_this->mDemoCamCenter.y = i_this->mDemoCamCenter.y + (REG0_F(15) + 60.0f);
                 i_this->mpHeadMorf->setPlaySpeed(1.0f);
             }
         } else {
-            cLib_addCalc2(&i_this->mB9C, REG0_F(12) + 35.0f, 0.2f, REG0_F(13) + 1.0f);
-            cLib_addCalc2(&i_this->mB88.x, actor->eyePos.x, 0.2f, REG0_F(4) + 10.0f);
-            cLib_addCalc2(&i_this->mB88.y, actor->eyePos.y + 10.0f + REG0_F(14), 0.2f, REG0_F(4) + 10.0f);
-            cLib_addCalc2(&i_this->mB88.z, actor->eyePos.z, 0.2f, REG0_F(4) + 10.0f);
+            cLib_addCalc2(&i_this->mDemoCamFovy, REG0_F(12) + 35.0f, 0.2f, REG0_F(13) + 1.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.x, actor->eyePos.x, 0.2f, REG0_F(4) + 10.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.y, actor->eyePos.y + 10.0f + REG0_F(14), 0.2f, REG0_F(4) + 10.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.z, actor->eyePos.z, 0.2f, REG0_F(4) + 10.0f);
             if (i_this->mpHeadMorf->isStop()) {
-                i_this->m302 = 3;
-                i_this->mB78 = REG0_S(6);
+                i_this->mSubMode = 3;
+                i_this->mDemoSubCount = REG0_S(6);
                 head_setAnm(i_this, dRes_INDEX_BMD_BCK_COA_START3_e, J3DFrameCtrl::EMode_LOOP, 1.0f);
-                i_this->m308[0] = 10;
+                i_this->mTimers[0] = 10;
                 monsSeStart_e(actor, JA_SE_CV_BKM_LAUGH);
-                i_this->mB74 = 0xF;
-                i_this->mB9C = REG0_F(8) + 55.0f;
-                i_this->mB76 = REG0_S(7) + 0x6E;
+                i_this->mDemoMode = 0xF;
+                i_this->mDemoCamFovy = REG0_F(8) + 55.0f;
+                i_this->mDemoMainCount = REG0_S(7) + 0x6E;
                 /* HD: fixed positions (GameCube: around the boss) */
-                i_this->mB7C.x = REG10_F(0) + -50.0f;
-                i_this->mB7C.y = REG10_F(1) + 150.0f;
-                i_this->mB7C.z = REG10_F(2) + 1520.0f;
-                i_this->mB88.x = -106.0f;
-                i_this->mB88.y = 500.0f;
-                i_this->mB88.z = 63.0f;
-                i_this->mBA0 = 0.0f;
+                i_this->mDemoCamEye.x = REG10_F(0) + -50.0f;
+                i_this->mDemoCamEye.y = REG10_F(1) + 150.0f;
+                i_this->mDemoCamEye.z = REG10_F(2) + 1520.0f;
+                i_this->mDemoCamCenter.x = -106.0f;
+                i_this->mDemoCamCenter.y = 500.0f;
+                i_this->mDemoCamCenter.z = 63.0f;
+                i_this->mDemoCamSpeed = 0.0f;
             }
         }
         break;
     case 15:
-        if ((s32)i_this->mB78 == REG0_S(6) + 0x37) {
+        if ((s32)i_this->mDemoSubCount == REG0_S(6) + 0x37) {
             player_changeDemoMode(player, 0x18 /* DEMO_SURPRISED_e */);
         }
-        if (i_this->mB78 == 0x96) {
+        if (i_this->mDemoSubCount == 0x96) {
             player_changeDemoMode(player, 0x1A /* DEMO_LOOKUP_e */);
         }
-        if ((s32)i_this->mB78 >= REG0_S(5) + 0xD2) {
-            if ((s32)i_this->mB78 <= REG0_S(6) + 0x159) {
-                cLib_addCalc2(&i_this->mB9C, REG0_F(6) + 40.0f, 0.05f,
+        if ((s32)i_this->mDemoSubCount >= REG0_S(5) + 0xD2) {
+            if ((s32)i_this->mDemoSubCount <= REG0_S(6) + 0x159) {
+                cLib_addCalc2(&i_this->mDemoCamFovy, REG0_F(6) + 40.0f, 0.05f,
                               REG0_F(7) + 0.0249999985f /* 0x3CCCCCCC */);
             } else {
                 /* HD: a blur and a voice */
-                if ((s32)i_this->mB78 == REG0_S(6) + 0x15A) {
-                    i_this->mB72 = 0x96;
+                if ((s32)i_this->mDemoSubCount == REG0_S(6) + 0x15A) {
+                    i_this->mBlurRate = 0x96;
                 }
-                if ((s32)i_this->mB78 == (s16)(REG0_S(7) + 0x168)) {
+                if ((s32)i_this->mDemoSubCount == (s16)(REG0_S(7) + 0x168)) {
                     player_changeDemoMode(player, 0x18 /* DEMO_SURPRISED_e */);
                     player_voiceStart(player, 0x1D);
                 }
-                cLib_addCalcAngleS2(&i_this->mB72, 1, 1, 1);
-                cLib_addCalc2(&i_this->mB9C, REG0_F(8) + 70.0f, 0.2f, REG0_F(9) + 2.0f);
+                cLib_addCalcAngleS2(&i_this->mBlurRate, 1, 1, 1);
+                cLib_addCalc2(&i_this->mDemoCamFovy, REG0_F(8) + 70.0f, 0.2f, REG0_F(9) + 2.0f);
             }
         }
-        if ((s32)i_this->mB78 >= REG0_S(5) + 0x96) {
+        if ((s32)i_this->mDemoSubCount >= REG0_S(5) + 0x96) {
             /* HD: the eye moves in x and z (GameCube: y) */
-            cLib_addCalc2(&i_this->mB88.y, REG0_F(3) + 750.0f, 0.05f, 4.5f * i_this->mBA0);
-            cLib_addCalc2(&i_this->mB7C.x, REG10_F(0) + 950.0f, 0.05f, 5.0f * i_this->mBA0);
-            cLib_addCalc2(&i_this->mB7C.z, REG10_F(2) + 920.0f, 0.05f, 3.0f * i_this->mBA0);
-            cLib_addCalc2(&i_this->mBA0, 1.0f, 1.0f, REG0_F(10) + 0.01f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.y, REG0_F(3) + 750.0f, 0.05f, 4.5f * i_this->mDemoCamSpeed);
+            cLib_addCalc2(&i_this->mDemoCamEye.x, REG10_F(0) + 950.0f, 0.05f, 5.0f * i_this->mDemoCamSpeed);
+            cLib_addCalc2(&i_this->mDemoCamEye.z, REG10_F(2) + 920.0f, 0.05f, 3.0f * i_this->mDemoCamSpeed);
+            cLib_addCalc2(&i_this->mDemoCamSpeed, 1.0f, 1.0f, REG0_F(10) + 0.01f);
         }
-        if (i_this->mB76 == 0x24E) {
-            i_this->mB74 = 0x96;
+        if (i_this->mDemoMainCount == 0x24E) {
+            i_this->mDemoMode = 0x96;
             dComIfGp_event_reset();
-            i_this->m332 = 7;
+            i_this->mVineCommand = 7;
             i_this->mMode = 0;
-            i_this->m302 = -1;
-            i_this->mBE0 = 0;
-            i_this->m308[0] = 0x3C;
+            i_this->mSubMode = -1;
+            i_this->mKankyoMode = 0;
+            i_this->mTimers[0] = 0x3C;
             if (bmd_startStageName0() == 'X') {
                 mDoAudioApi::bgmStart(JA_BGM_PAST_BKM);
             } else {
                 mDoAudioApi::bgmStart(JA_BGM_KINDAN_BOSS);
             }
-            i_this->mB71 = 1;
-            i_this->mB72 = 1; /* HD */
+            i_this->mCamTypeMode = 1;
+            i_this->mBlurRate = 1; /* HD */
             bmd_onDungeonItem(dSv_memBit_c::STAGE_BOSS_DEMO);
         }
         break;
     case 100: {
         if (!order_event(i_this))
             break;
-        i_this->mB74 = i_this->mB74 + 1;
+        i_this->mDemoMode = i_this->mDemoMode + 1;
         BmdCameraLookAtView* camera2 = gabi::at<BmdCameraLookAtView>(bmd_cameraAddress(0));
-        i_this->mB7C.copy(camera2->mEye);
-        i_this->mB88.copy(camera2->mCenter);
+        i_this->mDemoCamEye.copy(camera2->mEye);
+        i_this->mDemoCamCenter.copy(camera2->mCenter);
         cam_Stop(camera);
         cam_SetTrimSize(camera, 2);
-        i_this->mB9C = 55.0f;
+        i_this->mDemoCamFovy = 55.0f;
         player_changeOriginalDemo(player);
     }
         /* fallthrough */
     case 101:
-        if ((i_this->mB78 >= 0x140) &&
-            (cLib_addCalc2(&i_this->mB9C, REG0_F(8) + 85.0f, 0.2f, 1.0f), i_this->mB78 == 0x140)) {
-            i_this->m2DC = 5;
+        if ((i_this->mDemoSubCount >= 0x140) &&
+            (cLib_addCalc2(&i_this->mDemoCamFovy, REG0_F(8) + 85.0f, 0.2f, 1.0f), i_this->mDemoSubCount == 0x140)) {
+            i_this->mMakarMode = 5;
         }
-        if (i_this->m924.y < i_this->m328 + 10.0f) {
-            cLib_addCalc2(&i_this->mB88.x, actor->eyePos.x, 0.2f, 200.0f);
-            cLib_addCalc2(&i_this->mB88.y, actor->eyePos.y + 20.0f + REG0_F(5), 0.5f, 200.0f);
-            cLib_addCalc2(&i_this->mB88.z, actor->eyePos.z, 0.2f, 200.0f);
+        if (i_this->mCoreDeadPos.y < i_this->mGroundY + 10.0f) {
+            cLib_addCalc2(&i_this->mDemoCamCenter.x, actor->eyePos.x, 0.2f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.y, actor->eyePos.y + 20.0f + REG0_F(5), 0.5f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.z, actor->eyePos.z, 0.2f, 200.0f);
         } else {
-            cLib_addCalc2(&i_this->mB88.x, i_this->m924.x, 0.2f, 200.0f);
-            cLib_addCalc2(&i_this->mB88.y, i_this->m924.y, 0.5f, 200.0f);
-            cLib_addCalc2(&i_this->mB88.z, i_this->m924.z, 0.2f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.x, i_this->mCoreDeadPos.x, 0.2f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.y, i_this->mCoreDeadPos.y, 0.5f, 200.0f);
+            cLib_addCalc2(&i_this->mDemoCamCenter.z, i_this->mCoreDeadPos.z, 0.2f, 200.0f);
         }
         cMtx_YrotS(calc_mtx(), (actor->shape_angle.y + REG0_S(4)) + 3000);
         local_44->x = 0.0f;
@@ -382,20 +382,20 @@ void demo_camera(bmd_class* i_this) {
         local_44->z = REG0_F(6) + 1000.0f;
         MtxPosition(local_44, local_50);
         PSVECAdd(local_50, &actor->current.pos, local_50); /* local_50 += current.pos */
-        if (local_50->y > i_this->m328 + 300.0f + REG0_F(8)) {
-            local_50->y = i_this->m328 + 300.0f + REG0_F(8);
+        if (local_50->y > i_this->mGroundY + 300.0f + REG0_F(8)) {
+            local_50->y = i_this->mGroundY + 300.0f + REG0_F(8);
         }
-        cLib_addCalc2(&i_this->mB7C.x, local_50->x, 0.5f, 200.0f);
-        cLib_addCalc2(&i_this->mB7C.y, local_50->y, 0.8f, 200.0f);
-        cLib_addCalc2(&i_this->mB7C.z, local_50->z, 0.5f, 200.0f);
+        cLib_addCalc2(&i_this->mDemoCamEye.x, local_50->x, 0.5f, 200.0f);
+        cLib_addCalc2(&i_this->mDemoCamEye.y, local_50->y, 0.8f, 200.0f);
+        cLib_addCalc2(&i_this->mDemoCamEye.z, local_50->z, 0.5f, 200.0f);
         /* HD: Makar's position first */
         local_44->x = 0.0f;
         local_44->y = 0.0f;
         local_44->z = REG0_F(6) + 850.0f;
-        MtxPosition(local_44, &i_this->m2E0);
-        PSVECAdd(&i_this->m2E0, &actor->current.pos, &i_this->m2E0); /* m2E0 += current.pos */
-        i_this->m2FA = (actor->shape_angle.y + REG0_S(4)) + 3000;
-        if (i_this->mB76 > 0x3C) {
+        MtxPosition(local_44, &i_this->mMakarPos);
+        PSVECAdd(&i_this->mMakarPos, &actor->current.pos, &i_this->mMakarPos); /* mMakarPos += current.pos */
+        i_this->mMakarAngleY = (actor->shape_angle.y + REG0_S(4)) + 3000;
+        if (i_this->mDemoMainCount > 0x3C) {
             /* HD: angles changed */
             cMtx_YrotS(calc_mtx(), (s16)((actor->shape_angle.y + REG0_S(7)) + 0x1A2C));
             local_44->y = 0.0f;
@@ -407,50 +407,50 @@ void demo_camera(bmd_class* i_this) {
         }
         break;
     case 102: {
-        i_this->mB9C = REG0_F(8) + 55.0f;
-        i_this->mBA4 = 1500.0f;
-        i_this->mB70 = 1;
-        i_this->mB96 = actor->shape_angle.y + REG0_S(2);
-        i_this->mBA0 = 0.0f;
-        i_this->mB94 = -8000;
-        i_this->mB74 = 0x67;
+        i_this->mDemoCamFovy = REG0_F(8) + 55.0f;
+        i_this->mDemoCamDist = 1500.0f;
+        i_this->mBodyTexAnmOn = 1;
+        i_this->mDemoCamAngleY = actor->shape_angle.y + REG0_S(2);
+        i_this->mDemoCamSpeed = 0.0f;
+        i_this->mDemoCamAngleX = -8000;
+        i_this->mDemoMode = 0x67;
         gabi::Local<csXyz> cStack_b8;
         csXyz_ct(cStack_b8, 0, 0, 0);
         cStack_b8->y = actor->shape_angle.y + 0x8BB8;
-        fopAcM_create(0x14E /* fpcNm_NPC_CB1_e */, 0, &i_this->m2E0, fopAcM_GetRoomNo(actor), cStack_b8,
+        fopAcM_create(0x14E /* fpcNm_NPC_CB1_e */, 0, &i_this->mMakarPos, fopAcM_GetRoomNo(actor), cStack_b8,
                       nullptr, -1, 0);
-        i_this->m2DC = 0;
+        i_this->mMakarMode = 0;
     }
         /* fallthrough */
     case 103: {
-        s16 r6 = (s16)gabi::ftoi(i_this->mBA0 * 22384.0f);
-        cLib_addCalcAngleS2(&i_this->mB96, (actor->shape_angle.y + REG0_S(2)) + 0x5770, 0x10, r6);
-        r6 = (s16)gabi::ftoi(i_this->mBA0 * 3000.0f);
-        cLib_addCalcAngleS2(&i_this->mB94, -5000, 0x10, r6);
-        cLib_addCalc2(&i_this->mBA4, 500.0f, 0.0625f, i_this->mBA0 * 1000.0f);
-        cLib_addCalc2(&i_this->mBA0, REG0_F(10) + 0.0048f, 0.1f, 4.8e-05f);
-        cMtx_YrotS(calc_mtx(), i_this->mB96);
-        cMtx_XrotM(calc_mtx(), i_this->mB94);
+        s16 r6 = (s16)gabi::ftoi(i_this->mDemoCamSpeed * 22384.0f);
+        cLib_addCalcAngleS2(&i_this->mDemoCamAngleY, (actor->shape_angle.y + REG0_S(2)) + 0x5770, 0x10, r6);
+        r6 = (s16)gabi::ftoi(i_this->mDemoCamSpeed * 3000.0f);
+        cLib_addCalcAngleS2(&i_this->mDemoCamAngleX, -5000, 0x10, r6);
+        cLib_addCalc2(&i_this->mDemoCamDist, 500.0f, 0.0625f, i_this->mDemoCamSpeed * 1000.0f);
+        cLib_addCalc2(&i_this->mDemoCamSpeed, REG0_F(10) + 0.0048f, 0.1f, 4.8e-05f);
+        cMtx_YrotS(calc_mtx(), i_this->mDemoCamAngleY);
+        cMtx_XrotM(calc_mtx(), i_this->mDemoCamAngleX);
         local_44->y = 0.0f;
         local_44->x = 0.0f;
-        local_44->z = i_this->mBA4;
+        local_44->z = i_this->mDemoCamDist;
         MtxPosition(local_44, local_50);
         {
             gabi::Local<cXyz> tmp;
             cXyz_pl(&actor->current.pos, tmp, local_50);
             f32 y = actor->current.pos.y;
-            i_this->mB88.y = y;
-            i_this->mB88.x = actor->current.pos.x;
-            i_this->mB88.z = actor->current.pos.z;
-            i_this->mB7C.copy(*tmp);
-            i_this->mB88.y = y + ((f32)REG0_S(3) + 100.0f);
+            i_this->mDemoCamCenter.y = y;
+            i_this->mDemoCamCenter.x = actor->current.pos.x;
+            i_this->mDemoCamCenter.z = actor->current.pos.z;
+            i_this->mDemoCamEye.copy(*tmp);
+            i_this->mDemoCamCenter.y = y + ((f32)REG0_S(3) + 100.0f);
         }
         /* HD: the field of view eases to 70 */
-        cLib_addCalc2(&i_this->mB9C, REG10_F(12) + 70.0f, 0.05f, REG10_F(13) + 0.25f);
-        if (i_this->mB76 == 800) {
-            i_this->mB74 = 0x96;
+        cLib_addCalc2(&i_this->mDemoCamFovy, REG10_F(12) + 70.0f, 0.05f, REG10_F(13) + 0.25f);
+        if (i_this->mDemoMainCount == 800) {
+            i_this->mDemoMode = 0x96;
             dComIfGp_event_reset();
-            i_this->m314 = 0;
+            i_this->mBgOffTimer = 0;
             player_cancelOriginalDemo(player);
         }
         break;
@@ -458,39 +458,39 @@ void demo_camera(bmd_class* i_this) {
     case 150: {
         gabi::Local<cXyz> center;
         gabi::Local<cXyz> eye;
-        center->x = i_this->mB88.x;
-        center->y = i_this->mB88.y;
-        eye->z = i_this->mB7C.z;
-        eye->x = i_this->mB7C.x;
-        center->z = i_this->mB88.z;
-        eye->y = i_this->mB7C.y;
-        i_this->mB74 = 0;
+        center->x = i_this->mDemoCamCenter.x;
+        center->y = i_this->mDemoCamCenter.y;
+        eye->z = i_this->mDemoCamEye.z;
+        eye->x = i_this->mDemoCamEye.x;
+        center->z = i_this->mDemoCamCenter.z;
+        eye->y = i_this->mDemoCamEye.y;
+        i_this->mDemoMode = 0;
         cam_Reset(camera, center, eye);
         cam_Start(camera);
         cam_SetTrimSize(camera, 0);
         break;
     }
     }
-    if (i_this->mB74 != 0) {
-        f32 f1 = i_this->mBA8 * cM_ssin(i_this->mB78 * 0x3300);
-        f32 f2 = i_this->mBA8 * cM_scos(i_this->mB78 * 0x3000);
+    if (i_this->mDemoMode != 0) {
+        f32 f1 = i_this->mDemoCamShake * cM_ssin(i_this->mDemoSubCount * 0x3300);
+        f32 f2 = i_this->mDemoCamShake * cM_scos(i_this->mDemoSubCount * 0x3000);
         gabi::Local<cXyz> local_b0;
         gabi::Local<cXyz> local_a4;
-        local_a4->x = i_this->mB7C.x + f1;
-        local_b0->x = i_this->mB88.x + f1;
-        local_b0->y = i_this->mB88.y + f2;
-        local_b0->z = i_this->mB88.z;
-        local_a4->y = i_this->mB7C.y + f2;
-        local_a4->z = i_this->mB7C.z;
-        s16 iVar6 = (s16)gabi::ftoi(i_this->mBA8 * cM_scos(i_this->m2FE * 0x1C00) * 7.5f);
-        cam_Set(camera, local_b0, local_a4, iVar6, i_this->mB9C);
-        cLib_addCalc0(&i_this->mBA8, 1.0f, REG0_F(16) + 2.0f);
+        local_a4->x = i_this->mDemoCamEye.x + f1;
+        local_b0->x = i_this->mDemoCamCenter.x + f1;
+        local_b0->y = i_this->mDemoCamCenter.y + f2;
+        local_b0->z = i_this->mDemoCamCenter.z;
+        local_a4->y = i_this->mDemoCamEye.y + f2;
+        local_a4->z = i_this->mDemoCamEye.z;
+        s16 iVar6 = (s16)gabi::ftoi(i_this->mDemoCamShake * cM_scos(i_this->mFrameCounter * 0x1C00) * 7.5f);
+        cam_Set(camera, local_b0, local_a4, iVar6, i_this->mDemoCamFovy);
+        cLib_addCalc0(&i_this->mDemoCamShake, 1.0f, REG0_F(16) + 2.0f);
         /* HD: JUTReport(x, y, fmt, ...) prints the three counters */
-        JUTReport(0x1E, 0x186, "K DEMO MODE   %d", (s32)i_this->mB74);
-        JUTReport(0x1E, 0x19A, "K MAIN COUNT  %d", (s32)i_this->mB76);
-        JUTReport(0x1E, 0x1AE, "K SUB  COUNT  %d", (s32)i_this->mB78);
-        i_this->mB78 = i_this->mB78 + 1;
-        i_this->mB76 = i_this->mB76 + 1;
+        JUTReport(0x1E, 0x186, "K DEMO MODE   %d", (s32)i_this->mDemoMode);
+        JUTReport(0x1E, 0x19A, "K MAIN COUNT  %d", (s32)i_this->mDemoMainCount);
+        JUTReport(0x1E, 0x1AE, "K SUB  COUNT  %d", (s32)i_this->mDemoSubCount);
+        i_this->mDemoSubCount = i_this->mDemoSubCount + 1;
+        i_this->mDemoMainCount = i_this->mDemoMainCount + 1;
     }
 }
 

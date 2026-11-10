@@ -28,7 +28,7 @@ BOOL daDai_c::CreateHeap() {
     name->mpText.v = gabi::guest_addr("Fdai");
     name->mVtable = 0x1000CBB4;
     J3DModelData* data = dai_getObjectResource(l_resourceControl.mpValue, name, 17);
-    if (!data) dai_assert("d_a_dai.cpp", 0x1A2, "modelData != NULL");
+    if (!data) dai_assert("d_a_dai.cpp", 0x1A2, "modelData != (0)");
     J3DModel* model = mDoExt_J3DModel__create(data, 0x80000, 0x11000022);
     mpModel = model;
     return model != nullptr;
@@ -251,7 +251,7 @@ data l_resourceControl 101F4F28 nocheck
 str 1000CC68 "Fdai"
 str 1000CC60 "Cloth"
 str 1000CBFC "d_a_dai.cpp" in 02115DDC
-str 1000CC08 "modelData != NULL" in 02115DDC
+str 1000CC08 "modelData != (0)" in 02115DDC
 str 1000CC34 "DAI_ITEM" in 02116054
 str 1000CC40 "DEFAULT_TALK" in 02116054
 ext 026066C4 J3DModelData* dai_getObjectResource(void* control, dai_resourceName_c* name, s32 index)

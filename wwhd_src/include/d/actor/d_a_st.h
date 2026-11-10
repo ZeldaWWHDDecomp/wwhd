@@ -350,65 +350,91 @@ WWHD_SIZE(StEnemyIce, 0x3B8);
 
 struct st_class : fopEn_enemy_c {
     /* 0x03C8 */ request_of_phase_process_class mPhase;
-    /* 0x03D0 */ be<u8> mBehaviorType, mAmbushSightRange, mUnusedParam, mAmbushSwitch, mDeathSwitch;
-    /* 0x03D5 */ be<s8> m02B9;
+    /* 0x03D0 */ be<u8> mBehaviorType;
+    /* 0x03D1 */ be<u8> mAmbushSightRange;
+    /* 0x03D2 */ be<u8> mUnusedParam;
+    /* 0x03D3 */ be<u8> mAmbushSwitch;
+    /* 0x03D4 */ be<u8> mDeathSwitch;
+    /* 0x03D5 */ be<s8> mAmbushTrigger;  /* was m02B9: daSt_Create 02495C70 sets mAmbushSwitch + 1 (0xFF: by sight range) for the ambush behaviours 1-3; ambush_trigger (in ground_wait / kan_wait, St_move 024972A4) checks that switch (value - 1) or mAmbushSightRange; cleared when the Stalfos appears; daSt_Draw 02491F34 draws nothing while it is set and part_move 024925B8 moves the held weapon away */
     /* 0x03D6 */ u8 pad3D6[2];
-    /* 0x03D8 */ gptr<void> mpMorf, mpMorf2;
-    /* 0x03E0 */ be<s16> m02C4, mActionState;
+    /* 0x03D8 */ gptr<void> mpMorf;
+    /* 0x03DC */ gptr<void> mpMorf2;
+    /* 0x03E0 */ be<s16> mMode;  /* was m02C4: step within mActionState: every action function of St_move 024972A4 (jyunkai, fight, fight2, ground_wait, kan_wait) and st_break_wait 024963A4, head_damage 02496718, ue_move 02496AA0, sita_move 02496F34 switch on it; damage_check (in daSt_Execute 02493FB0) sets 0 / 20 / 35 by bodyForm */
+    /* 0x03E2 */ be<s16> mActionState;
     /* 0x03E4 */ be<s8> mFightBehavior;
     /* 0x03E5 */ u8 pad3E5;
-    /* 0x03E6 */ be<s16> m02CA;
-    /* 0x03E8 */ be<s8> m02CC;
+    /* 0x03E6 */ be<s16> mSpinSeCounter;  /* was m02CA: fight (in St_move 024972A4): adds (5000 * abs(mSpinSpeed)) while spinning, plays SE 0x5895 each time it passes 100 (s16 wrap), 0 when not spinning */
+    /* 0x03E8 */ be<s8> mLeftStance;  /* was m02CC: fight (in St_move 024972A4) sets 1 / 0 after the right / left attack ends; wait_set 0249210C and jyunkai pick dRes_INDEX_ST_BCK_LWAIT_e / LWALK_e (0x21 / 0x22) instead of WAIT / WALK and the left attack chains (mFightBehavior 5 / 15) while it is set */
     /* 0x03E9 */ u8 pad3E9[3];
     /* 0x03EC */ cXyz mPlayerPos;
-    /* 0x03F8 */ be<f32> m02DC, m02E0;
-    /* 0x0400 */ be<s16> m02E4;
+    /* 0x03F8 */ be<f32> mTargetSpeed;  /* was m02DC: speed_pos_calc 024961B8 eases speedF to it (step mSpeedStep); the actions of St_move 024972A4, ue_move 02496AA0 and sita_move 02496F34 set it (0, l_HIO walk speed, 10, 20, -2) */
+    /* 0x03FC */ be<f32> mSpeedStep;  /* was m02E0: speed_pos_calc 024961B8: step of cLib_addCalc2(speedF, mTargetSpeed, 1, it), reset to 1 every frame; jyunkai (in St_move 024972A4) sets 5 */
+    /* 0x0400 */ be<s16> mTurnStep;  /* was m02E4: speed_pos_calc 024961B8: while on the ground (mAcch flag 0x20) and not 0, turns current.angle.y toward mPlayerPos by at most it, then clears it; jyunkai / fight (in St_move 024972A4), ue_move 02496AA0, sita_move 02496F34 set 0x200..0x2000 */
     /* 0x0402 */ u8 pad402[2];
-    /* 0x0404 */ be<u32> m02E8;
-    /* 0x0408 */ be<s16> mTimers[5], m02F6, m02F8;
-    /* 0x0416 */ be<s8> m02FA;
-    /* 0x0417 */ be<u8> m02FB;
-    /* 0x0418 */ csXyz m02FC;
-    /* 0x041E */ be<s16> m0302, m0304;
+    /* 0x0404 */ be<u32> mFrameCounter;  /* was m02E8: daSt_Execute 02493FB0 increments it every frame; phase of the shake / wobble sines (part_move 024925B8, fight in St_move 024972A4, nun_control 0249196C), cc_set's (in daSt_Execute) odd / even weapon sphere and nun_control's every-8th-frame check */
+    /* 0x0408 */ be<s16> mTimers[5];
+    /* 0x0412 */ be<s16> mNoHitTimer;  /* was m02F6: damage_check (in daSt_Execute 02493FB0) checks hits only while it is 0 and sets 5 / 2 after a hit; daSt_Execute counts it down; daSt_Create 02495C70 sets 15, the wait / unarmed actions keep it at 10 */
+    /* 0x0414 */ be<s16> mDisappearTimer;  /* was m02F8: st_break_wait 024963A4 sets 499 when the scattered parts start to reassemble, counts it down and at 0 removes the Stalfos (fopAcM_createDisappear, fopAcM_delete, death switch); part_move 024925B8 sets 500 when it picks the dropped weapon back up, damage_check (in daSt_Execute 02493FB0) / sita_move 02496F34 clear it */
+    /* 0x0416 */ be<s8> mDeleteRequest;  /* was m02FA: daSt_Execute 02493FB0 deletes the actor while it is set (with the 4000-unit fall check); daSt_Draw 02491F34 draws nothing; never set in d_a_st */
+    /* 0x0417 */ be<u8> mHioOwner;  /* was m02FB: daSt_Create 02495C70 sets 1 when this actor created the l_HIO child (hio_set); daSt_Delete 024957B4 deletes the HIO child only then */
+    /* 0x0418 */ csXyz mHeadAngleOffset;  /* was m02FC: part_move 024925B8: added to shape_angle (csXyz::operator+) for the attached head part 15's rotation; never written in d_a_st */
+    /* 0x041E */ be<s16> mMoveAngleOffset;  /* was m0302: speed_pos_calc 024961B8 moves along current.angle.y + it; daSt_Execute 02493FB0 turns shape_angle.y toward the same and clears it; fight (in St_move 024972A4) sets a sine wobble of mFrameCounter */
+    /* 0x0420 */ be<s16> mSpinAngleY;  /* was m0304: fight (in St_move 024972A4) adds 5000 * mSpinSpeed each frame; daSt_Execute 02493FB0 rotates the body model by shape_angle.y + it and eases it back to 0; the spin-end checks wait for it to be within +-0x400 */
     /* 0x0422 */ u8 pad422[2];
-    /* 0x0424 */ be<f32> m0308;
+    /* 0x0424 */ be<f32> mSpinSpeed;  /* was m0308: fight (in St_move 024972A4) eases it to +-1 during the spin attacks (KAITEN*), 0 otherwise; drives mSpinAngleY, mSpinSeCounter, the spin smoke (spin_smoke_move in daSt_Execute 02493FB0) and cc_set's weapon sphere size / spl 7 above 0.5 */
     /* 0x0428 */ dBgS_AcchCir mAcchCir;
     /* 0x0468 */ dBgS_ObjAcch mAcch;
     /* 0x062C */ dCcD_Stts mStts;
-    /* 0x0668 */ dCcD_Sph m054C[7], m0D80;
-    /* 0x0FC8 */ cXyz m0EAC, m0EB8, m0EC4;
-    /* 0x0FEC */ be<s8> m0ED0, m0ED1, m0ED2, m0ED3;
+    /* 0x0668 */ dCcD_Sph mBodySph[7];  /* was m054C: daSt_Create 02495C70 sets [0] from head_sph_src and [1..6] from body_sph_src; cc_set (in daSt_Execute 02493FB0) places them on the cc_j_no joints (radius 45 head / 25); damage_check checks their TG hits ([0] = head) */
+    /* 0x0E9C */ dCcD_Sph mWeaponSph;  /* was m0D80: daSt_Create 02495C70 sets it from wepon_sph_src; cc_set (in daSt_Execute 02493FB0) places it on the weapon (ST_JNT_BUKI_e), the nunchaku arm or the foot (ST_JNT_ASIR_e) by mAtMode */
+    /* 0x0FC8 */ cXyz mWeaponTipPos;  /* was m0EAC: St_move 024972A4: ST_JNT_BUKI_e joint + (160, 0, 0) every frame; the weapon drag smoke 0xA17D (mDragSmokeCallBack) is emitted there */
+    /* 0x0FD4 */ cXyz mWeaponLinePos;  /* was m0EB8: fight (in St_move 024972A4): ST_JNT_BUKI_e joint + (80, 0, 0); a wall line check from mWeaponLinePosOld to it ends the fast spin attack */
+    /* 0x0FE0 */ cXyz mWeaponLinePosOld;  /* was m0EC4: fight (in St_move 024972A4): the previous frame's mWeaponLinePos (copied before the update), start of the spin attack's wall line check */
+    /* 0x0FEC */ be<s8> mTgMode;  /* was m0ED0: cc_set (in daSt_Execute 02493FB0): 0 all body spheres (mBodySph), 1 the head sphere only, 2 none; also keeps mWeaponSph off while not 0; reset to 0 every frame; fight2 / ground_wait / kan_wait (in St_move 024972A4) and st_break_wait 024963A4 set it */
+    /* 0x0FED */ be<s8> mAtMode;  /* was m0ED1: cc_set (in daSt_Execute 02493FB0): 0 no weapon attack, 1 weapon, 2 spin (sphere scaled by mSpinSpeed), 3 kick (ST_JNT_ASIR_e); reset every frame; fight / fight2 (in St_move 024972A4) and sita_move 02496F34 set it */
+    /* 0x0FEE */ be<s8> mPartsAttached;  /* was m0ED2: part_move 024925B8 counts down for each part that falls off and up for each part that gets back in place (not the weapon part 11); daSt_Create 02495C70 sets 25; st_break_wait 024963A4 ends the break once it is >= 25 */
+    /* 0x0FEF */ be<s8> mPartCommand;  /* was m0ED3: part_move 024925B8: 1 scatters all parts, 10 drops the upper body parts (< 19), 20 the lower body parts, 2 / 11 sends the parts back; set by damage_check (in daSt_Execute 02493FB0), st_break_wait 024963A4, sita_move 02496F34, daSt_Create 02495C70; daSt_Execute clears it unless 2 */
     /* 0x0FF0 */ st_p mParts[26];
     /* 0x1AE8 */ st_ke_s mKe[3];
     /* 0x1E6C */ StLineMaterial mLineMat;
     /* 0x1FB4 */ st_nun_s mNun;
-    /* 0x2010 */ be<s8> m1DC8;
+    /* 0x2010 */ be<s8> mNunMode;  /* was m1DC8: the pulled-off arm used as a nunchaku (mNun): fight2 (in St_move 024972A4) sets 1 after NUKU (pull off), 3 for HONE_ATTACK, 0 after TUKERU (put back); wait_set 0249210C sets 2 (HYUNHYUN); daSt_Execute 02493FB0 runs nun_control 0249196C and skips parts 3 / 4 while it is set; daSt_Draw 02491F34 hides parts 5-7 */
     /* 0x2011 */ u8 pad2011[3];
     /* 0x2014 */ be<u32> mHeldWeaponEntityId;
-    /* 0x2018 */ be<s8> m1DD0;
+    /* 0x2018 */ be<s8> mWeaponState;  /* was m1DD0: part_move 024925B8: 1 (daSt_Create 02495C70) picks the weapon up (fopAcM_setCarryNow) and becomes 10 (held); 2 while the weapon part 11 is carried back with the reassembling parts, 0 when it lies on the ground (or the Stalfos is hit by light); jyunkai (in St_move 024972A4) fights armed at 10, unarmed (fight2) at 0 */
     /* 0x2019 */ u8 pad2019[3];
     /* 0x201C */ be<u32> mUpperBodyEntityId;
-    /* 0x2020 */ be<s8> m1DD8;
+    /* 0x2020 */ be<s8> mHeadState;  /* was m1DD8: part_move 024925B8: 1 when the head part 15 is knocked off, 2 while it is drawn / moved with mpMorf2, 0 when it is back; daSt_Draw 02491F34, ke_control 02491458, damage_check / cc_set (in daSt_Execute 02493FB0) treat the loose head separately */
     /* 0x2021 */ u8 pad2021;
-    /* 0x2022 */ be<s16> m1DDA, m1DDC, m1DDE;
-    /* 0x2028 */ be<f32> m1DE0;
-    /* 0x202C */ be<s8> m1DE4, m1DE5;
+    /* 0x2022 */ be<s16> mHeadTargetAngleY;  /* was m1DDA: part_move 024925B8: target of the loose head part's rotation y (cLib_addCalcAngleS2), set to its angle when it falls off and when it turns */
+    /* 0x2024 */ be<s16> mReassembleWait;  /* was m1DDC: st_break_wait 024963A4 sets l_HIO.m1A / 100; daSt_Execute 02493FB0 counts it down; part_move 024925B8 moves the loose parts back only when it is 0 */
+    /* 0x2026 */ be<s16> mKnockbackAngleY;  /* was m1DDE: speed_pos_calc 024961B8: direction of the extra speed mKnockbackSpeed added to speed; never written in WWHD's d_a_st (zeldaret/tww d_a_st.cpp: only the VERSION_DEMO damage_check sets it to the hit angle atInfo.m0C.y) */
+    /* 0x2028 */ be<f32> mKnockbackSpeed;  /* was m1DE0: speed_pos_calc 024961B8: while > 0.1 adds this speed in direction mKnockbackAngleY to speed, then eases it to 0 (cLib_addCalc0, step 2.5); never set in WWHD (zeldaret/tww d_a_st.cpp: the VERSION_DEMO damage_check sets 40 on a hit) */
+    /* 0x202C */ be<s8> mShakeTimer;  /* was m1DE4: damage_check (in daSt_Execute 02493FB0) sets 5 / 8 / 10 / 20 on a hit and counts it down; part_move 024925B8 shakes the attached parts by it * 2 */
+    /* 0x202D */ be<s8> m1DE5;
     /* 0x202E */ csXyz m1DE6[26];
-    /* 0x20CA */ be<s16> m1E82;
-    /* 0x20CC */ be<s8> m1E84, mCountdownToDeath, m1E86, m1E87;
-    /* 0x20D0 */ dPa_smokeEcallBack m1E88[3];
-    /* 0x2130 */ gptr<void> m1EE8[20];
-    /* 0x2180 */ be<s16> m1F38[20], m1F60;
+    /* 0x20CA */ be<s16> mHeadShakeTimer;  /* was m1E82: damage_check (in daSt_Execute 02493FB0) sets 20 when the loose head is hit; part_move 024925B8 counts it down and shakes the head part 15 by it */
+    /* 0x20CC */ be<s8> mBreakHealth;  /* was m1E84: daSt_Create 02495C70 sets 16 (5 for the upper body); damage_check (in daSt_Execute 02493FB0) subtracts the damage only for hammer (0xA8) / type-2 hits and breaks the Stalfos apart at <= 0; st_break_wait 024963A4 resets 16 after it reassembles */
+    /* 0x20CD */ be<s8> mCountdownToDeath;
+    /* 0x20CE */ be<s8> mUpperSeparate;  /* was m1E86: sita_move 02496F34 sets 1 while the separate upper-body actor (mUpperBodyEntityId) exists and 0 when it deletes it; part_move 024925B8 moves eyePos / attention to the head part only while it is 0 */
+    /* 0x20CF */ be<s8> mAtStarted;  /* was m1E87: cc_set (in daSt_Execute 02493FB0): 0 -> dCcD_Sph::StartCAt and counts up, then MoveCAt; cleared when the weapon attack is off */
+    /* 0x20D0 */ dPa_smokeEcallBack mSmokeCallBack[3];  /* was m1E88: smoke callbacks: [0] the appear smoke 0xA17C (ground_wait in St_move 024972A4), [1] the weapon ground smoke 0x2027 (buki_smoke_set in fight), [2] the spin smoke 0x2022 (smoke_set_s in daSt_Execute 02493FB0); actor_construct 02495AD0 / actor_destroy 0249A124 build / destroy the 3 */
+    /* 0x2130 */ gptr<void> mBreakEmitter[20];  /* was m1EE8: eff_move (in daSt_Execute 02493FB0): up to 20 emitters 0x817B made every 15 frames while the Stalfos lies broken (mBreakEffMode 1), each stopped after mBreakEmitterTimer; daSt_Delete 024957B4 stops the rest */
+    /* 0x2180 */ be<s16> mBreakEmitterTimer[20];  /* was m1F38: eff_move (in daSt_Execute 02493FB0): 200 per mBreakEmitter slot, counted down; at 0 the emitter is stopped and the slot freed */
+    /* 0x21A8 */ be<s16> mBreakEffWait;  /* was m1F60: eff_move (in daSt_Execute 02493FB0): counted down; a new mBreakEmitter is made when it is 0, then 15 again */
     /* 0x21AA */ u8 pad21AA[2];
-    /* 0x21AC */ be<f32> m1F64;
-    /* 0x21B0 */ be<s8> m1F68;
+    /* 0x21AC */ be<f32> mBreakEffScale;  /* was m1F64: eff_move (in daSt_Execute 02493FB0): global particle scale of every mBreakEmitter; 1 while mBreakEffMode is 1, eased to 0 at 2 */
+    /* 0x21B0 */ be<s8> mBreakEffMode;  /* was m1F68: st_break_wait 024963A4 sets 1 while the parts lie scattered and 2 when they are back; eff_move (in daSt_Execute 02493FB0) makes the 0x817B emitters at 1 and fades them at 2 */
     /* 0x21B1 */ u8 pad21B1[3];
-    /* 0x21B4 */ cXyz m1F6C;
-    /* 0x21C0 */ csXyz m1F78;
-    /* 0x21C6 */ be<s16> m1F7E, m1F80;
-    /* 0x21CA */ be<s8> m1F82, m1F83, m1F84;
+    /* 0x21B4 */ cXyz mSpinSmokePos;  /* was m1F6C: spin_smoke_move (in daSt_Execute 02493FB0): body position + 175 along mSpinSmokeAngleY; smoke_set_s puts it on the ground (line check) and emits the smoke 0x2022 / 0x24 there */
+    /* 0x21C0 */ csXyz mSpinSmokeAngle;  /* was m1F78: spin_smoke_move (in daSt_Execute 02493FB0): (0, mSpinSmokeAngleY, 0); angle of the spin smoke (smoke_set_s) */
+    /* 0x21C6 */ be<s16> mSpinSmokeAngleY;  /* was m1F7E: fight (in St_move 024972A4) sets it from current.angle.y when a swing / spin starts; spin_smoke_move (in daSt_Execute 02493FB0) turns it by +-2000 or 5000 * mSpinSpeed each frame */
+    /* 0x21C8 */ be<s16> mSpinSmokeTimer;  /* was m1F80: fight (in St_move 024972A4) sets 23 / 15; spin_smoke_move (in daSt_Execute 02493FB0) counts it down, makes smoke while it is >= 10 and ends mSmokeCallBack[2] at 0 */
+    /* 0x21CA */ be<s8> mSpinSmokeDir;  /* was m1F82: fight (in St_move 024972A4): 0 right swing, 1 left swing, 2 spin; spin_smoke_move (in daSt_Execute 02493FB0) turns mSpinSmokeAngleY by +2000 / -2000 / 5000 * mSpinSpeed */
+    /* 0x21CB */ be<s8> mSpinSmokeCount;  /* was m1F83: smoke_set_s (in daSt_Execute 02493FB0) emits the ground smoke only while it is 0 (or on attribute 4) and counts it up; spin_smoke_move clears it when the smoke ends */
+    /* 0x21CC */ be<s8> mDragSmokeMode;  /* was m1F84: jyunkai (in St_move 024972A4) sets 1 when the walk starts and 2 while walking; St_move clears it every frame and, while the weapon is held (mWeaponState 10), emits the drag smoke 0xA17D at mWeaponTipPos at 1 / keeps it, else ends it */
     /* 0x21CD */ u8 pad21CD[3];
-    /* 0x21D0 */ dPa_smokeEcallBack m1F88;
+    /* 0x21D0 */ dPa_smokeEcallBack mDragSmokeCallBack;  /* was m1F88: St_move 024972A4: callback of the weapon drag smoke 0xA17D (emitted at mWeaponTipPos, ended when mDragSmokeMode is 0); actor_construct 02495AD0 builds it */
     /* 0x21F0 */ StEnemyIce mEnemyIce;
     /* 0x25A8 */ be<u32> mShadowId;
     /* 0x25AC */ be<s8> m2364;
@@ -419,7 +445,7 @@ WWHD_OFFSET(st_class, mPhase, 0x3C8);
 WWHD_OFFSET(st_class, mpMorf, 0x3D8);
 WWHD_OFFSET(st_class, mAcchCir, 0x428);
 WWHD_OFFSET(st_class, mParts, 0xFF0);
-WWHD_OFFSET(st_class, m1E88, 0x20D0);
+WWHD_OFFSET(st_class, mSmokeCallBack, 0x20D0);
 WWHD_OFFSET(st_class, mShadowId, 0x25A8);
 WWHD_SIZE(st_class, 0x25B0);
 

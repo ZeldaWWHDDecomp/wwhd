@@ -976,8 +976,8 @@ void daPy_lk_c::freeGrabItem() {
         fopAcM_cancelCarryNow(gabi::at<fopAc_ac_c>(barrel));
         gabi::at<fopAc_ac_c>(barrel)->shape_angle.z = 0; /* shape_angle.z */
         if (checkGrabBarrelSearch(0)) {
-            reinterpret_cast<Player01BarrelState *>(gabi::at<void>(barrel))->m61C =
-                0; /* daObjBarrel::Act_c::m61C */
+            reinterpret_cast<Player01BarrelState *>(gabi::at<void>(barrel))->mSlantAngle =
+                0; /* daObjBarrel::Act_c::mSlantAngle (tww set_slant_angle) */
         }
     }
     Player01_clearActorKeep(&mActorKeepGrab);
@@ -3514,9 +3514,9 @@ BOOL daPy_lk_c::createHeap() {
         oldFrame->mOldFrameFlg = 0;
         oldFrame->mOldFrameRate = 0.0f;
         oldFrame->mOldFrameMorfCounter = 0.0f;
-        oldFrame->field_0x8 = 0.0f;
-        oldFrame->field_0x10 = 0.0f;
-        oldFrame->field_0x14 = 0.0f;
+        oldFrame->mOldFrameMorfStep = 0.0f;
+        oldFrame->mOldFrameMorfRemain = 0.0f;
+        oldFrame->mOldFrameMorfRemainOld = 0.0f;
         oldFrame->mOldFrameTransInfo = ti;
         oldFrame->mOldFrameQuaternion = q;
     }

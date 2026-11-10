@@ -223,7 +223,7 @@ static BOOL nodeCallBack_Rsh(J3DNode* i_node, int i_calcTiming) {
 /* 022D6BB0 */
 BOOL daNpc_Rsh1_c::initTexPatternAnm(u32 i_modify) {
     J3DModelData* morf_model_data_p = J3DModel_getModelData(mpMorf->getModel());
-    s32 idx = l_btp_ix_tbl[(s32)m958]; /* l_btp_ix_tbl */
+    s32 idx = l_btp_ix_tbl[(s32)mTexAnmIdx]; /* l_btp_ix_tbl */
     m_head_tex_pattern = (J3DAnmTexPattern*)rsh1_getRes(idx);
     if (!m_head_tex_pattern) {
         JUT_ASSERT_fail("d_a_npc_rsh1.cpp", 0x24C, "m_head_tex_pattern != (0)");
@@ -252,8 +252,8 @@ void daNpc_Rsh1_c::playTexPatternAnm() {
 
 /* 022D8B20 */
 void daNpc_Rsh1_c::setAnm(s8 i_index) {
-    if (i_index != m959 || m959 == -1) {
-        m959 = i_index;
+    if (i_index != mAnmIdx || mAnmIdx == -1) {
+        mAnmIdx = i_index;
         s32 i = i_index;
         rsh1_dNpc_setAnm_2(mpMorf, play_mode_tbl[i] /* play_mode_tbl */,
                            morf_frame_tbl[i] /* morf_frame_tbl */,
@@ -265,8 +265,8 @@ void daNpc_Rsh1_c::setAnm(s8 i_index) {
 
 /* 022D8380 */
 u32 daNpc_Rsh1_c::setTexAnm(s8 param_1) {
-    if (m958 != param_1 || m958 == -1) {
-        m958 = param_1;
+    if (mTexAnmIdx != param_1 || mTexAnmIdx == -1) {
+        mTexAnmIdx = param_1;
         return initTexPatternAnm(true);
     }
     return (u32)gabi::ea(this); /* original: r3 still this */
@@ -281,20 +281,20 @@ void daNpc_Rsh1_c::setAnmFromMsgTag() {
     case 3: setAnm(3); break;
     case 4:
         setAnm(4);
-        m95A = 2;
+        mAnmLoopCnt = 2;
         break;
     case 5: setAnm(5); break;
     case 6: setAnm(6); break;
     }
-    if (m959 == 4) {
+    if (mAnmIdx == 4) {
         mDoExt_McaMorf* m = mpMorf;
         f32 end = (f32)(s32)m->mFrameCtrl.mEnd;
         if (m->mFrameCtrl.checkPass(end - 1.0f)) {
-            s8 c = (s8)(m95A - 1);
-            m95A = c;
+            s8 c = (s8)(mAnmLoopCnt - 1);
+            mAnmLoopCnt = c;
             if (c <= 0) {
                 setAnm(0);
-                m95A = 0;
+                mAnmLoopCnt = 0;
             }
         }
     }
@@ -328,7 +328,7 @@ bool daNpc_Rsh1_c::chkAttention(cXyz* i_pos, s16 i_angleAdjustment) {
 
 /* 022D808C */
 void daNpc_Rsh1_c::eventOrder() {
-    s8 m = m95B;
+    s8 m = mOrderState;
     if (m == 5) {
         rsh1_orderOtherEventId(this, (s32)mShopOutEventIdx, 0xFF, 0xFFFF, 0, 1); /* fopAcM_orderOtherEventId */
         return;
@@ -346,7 +346,7 @@ void daNpc_Rsh1_c::eventOrder() {
     } else {
         return;
     }
-    if (m95B == 1 || m95B == 2) {
+    if (mOrderState == 1 || mOrderState == 2) {
         fopAcM_orderSpeakEvent(this);
     }
 }
@@ -355,31 +355,31 @@ void daNpc_Rsh1_c::eventOrder() {
 void daNpc_Rsh1_c::checkOrder() {
     u16 cmd = eventInfo.mCommand; /* eventInfo command */
     if (cmd == 2 /* checkCommandDemoAccrpt */) {
-        if (m95B == 5) {
-            m95B = 0;
+        if (mOrderState == 5) {
+            mOrderState = 0;
             rsh1_setAction(this, RSH1_event_action);
-        } else if (m95B == 4) {
-            m95B = 0;
+        } else if (mOrderState == 4) {
+            mOrderState = 0;
             mShopCamAct.Reset();
             rsh1_setAction(this, RSH1_getdemo_action);
         }
     } else if (cmd == 1 /* checkCommandTalk */) {
-        s8 m = m95B;
+        s8 m = mOrderState;
         if (m == 1 || m == 2 || m == 3) {
             fopAc_ac_c* link_p = dComIfGp_getLinkPlayer();
             s16 temp = (s16)(cLib_targetAngleY(&current.pos, &link_p->current.pos) - home.angle.y);
             if (temp > 0x1800 || temp < -0x2800) {
-                m95B = 0;
-                m780 = 0x2883;
-                m771 = 1;
+                mOrderState = 0;
+                mNextMsgNo = 0x2883;
+                mTalking = 1;
                 talkInit();
                 return;
             }
-            if (m95B != 2) {
+            if (mOrderState != 2) {
                 mShopCamAct.shop_cam_action_init();
             }
-            m95B = 0;
-            m771 = 1;
+            mOrderState = 0;
+            mTalking = 1;
             talkInit();
         }
     } else {
@@ -395,7 +395,7 @@ void daNpc_Rsh1_c::setCollision() {
     if (mCurrProc.i == -1 && mCurrProc.d == 0 && mCurrProc.f == RSH1_pl_shop_out_action) {
         r = hio.mCylR2;
         h = hio.mCylH;
-        mCyl.SetC(&m794);
+        mCyl.SetC(&mCollisionPos);
     } else {
         r = hio.mCylR1;
         h = hio.mCylH;
@@ -408,7 +408,7 @@ void daNpc_Rsh1_c::setCollision() {
 
 /* 022D7D40 */
 void daNpc_Rsh1_c::talkInit() {
-    m961 = 0;
+    mTalkStep = 0;
 }
 
 /* 022D75E8 */
@@ -420,7 +420,7 @@ BOOL daNpc_Rsh1_c::CreateInit() {
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 173; /* attention_info.distances[TYPE_BATTLE] = 173 */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 173; // HD: the GameCube out-of-range distances[8] write lands here
     gravity = -30.0f;
-    if (m95E == 0) {
+    if (mType == 0) {
         rsh1_setAction(this, RSH1_wait_action);
     }
     rsh1_copy12(gabi::ea(&mAttnBasePos), gabi::ea(&current.pos));
@@ -428,8 +428,8 @@ BOOL daNpc_Rsh1_c::CreateInit() {
     mCyl.Set(rsh1_cylinderSource());         /* mCyl.Set(l_cyl_src) */
     mCyl.SetStts(&mStts); /* SetStts */
     m962 = 0;
-    m749 = 0;
-    m780 = 0;
+    mbItemMsgSet = 0;
+    mNextMsgNo = 0;
     mShopSelectItemNo = 0xFF;
     mShopCamAct.mCamDataIdx = 8;                 /* setCamDataIdx(8) */
     mShopCamAct.mCurrActionFunc.mThisDelta = 0; /* setCamAction(NULL) */
@@ -450,22 +450,22 @@ BOOL daNpc_Rsh1_c::CreateInit() {
     set_mtx();
     mpMorf->setMorf(0.0f);
     u32 zx = rsh1_words(cXyz::Zero).x, zy = rsh1_words(cXyz::Zero).y, zz = rsh1_words(cXyz::Zero).z; /* cXyz::Zero */
-    rsh1_words(m794).x = zx;
-    rsh1_words(m794).y = zy;
-    rsh1_words(m794).z = zz;
-    m793 = 0;
-    rsh1_words(m7A0).y = zy;
-    rsh1_words(m7A0).z = zz;
-    rsh1_words(m7A0).x = zx;
+    rsh1_words(mCollisionPos).x = zx;
+    rsh1_words(mCollisionPos).y = zy;
+    rsh1_words(mCollisionPos).z = zz;
+    mbShopOut = 0;
+    rsh1_words(mModelOffset).y = zy;
+    rsh1_words(mModelOffset).z = zz;
+    rsh1_words(mModelOffset).x = zx;
     rsh1_setActorInfo(&mEventCut, "Rsh1" /* "Rsh1" */, this); /* setActorInfo */
     mEventCut.setJntCtrlPtr(&mJntCtrl);     /* setJntCtrlPtr */
     if (checkCreateInShopPlayer()) {
-        m95B = 5;
+        mOrderState = 5;
         actor_status = actor_status | 0x4000;
         mShopOutEventIdx = rsh1_getEventIdx("RSH_SHOP_OUT" /* "RSH_SHOP_OUT" */);
         rsh1_setAction(this, RSH1_dummy_action);
     } else {
-        m95B = 0;
+        mOrderState = 0;
     }
     return TRUE;
 }
@@ -513,13 +513,13 @@ void daNpc_Rsh1_c::createShopList() {
         }
     }
     if (0 < n) {
-        m78C = n;
-        for (i = 0; i < m78C; i++) {
+        mShopNum = n;
+        for (i = 0; i < mShopNum; i++) {
             rsh1_setItemDataList(&mShopItemsArr[i], &mShopItemDataPtrs[i * 3]); /* setItemSetDataList */
         }
-        n = m78C;
+        n = mShopNum;
     }
-    m78C = n > 1 ? n : 1;
+    mShopNum = n > 1 ? n : 1;
 }
 
 /* 022D86EC */
@@ -546,7 +546,7 @@ void daNpc_Rsh1_c::lookBack() {
     s16 temp2 = current.angle.y;
     u8 temp = 1;
     daNpc_Rsh1_HIO_c& hio = rsh1_HIO();
-    switch (m95C) {
+    switch (mLookMode) {
     case 1:
         if (mbAttention) {
             cXyz eye;
@@ -646,9 +646,9 @@ bool daNpc_Rsh1_c::pathGet() {
                 mPathPointPos[arg3].x = x;
                 mPathPointPos[arg3].y = y;
                 mPathPointPos[arg3].z = z;
-                m744[pnt->mArg3] = (s8)i;
+                mShopPathPntIdx[pnt->mArg3] = (s8)i;
                 if (pnt->mArg3 == 1) {
-                    m704 = (s8)i;
+                    mPathPntIdx = (s8)i;
                 }
             }
         }
@@ -789,7 +789,7 @@ cPhs_State daNpc_Rsh1_c::_create() {
     }
     cPhs_State state = dComIfG_resLoad(&mPhs, STR(RSH1_ARC));
     if (state == cPhs_COMPLEATE_e) {
-        m95E = 0; /* (param >> 20) & 0xF: every value maps to 0 */
+        mType = 0; /* (param >> 20) & 0xF: every value maps to 0 */
         if (!fopAcM_entrySolidHeap(this, 0x022D6FD8 /* CheckCreateHeap */, 0x6100)) {
             return cPhs_ERROR_e;
         }
@@ -825,8 +825,8 @@ BOOL daNpc_Rsh1_c::CreateHeap() {
     if (m_backbone_jnt_num < 0) {
         JUT_ASSERT_fail("d_a_npc_rsh1.cpp", 0x9DE, "m_backbone_jnt_num >= 0");
     }
-    if (m95E == 0) {
-        m958 = 0;
+    if (mType == 0) {
+        mTexAnmIdx = 0;
     }
     if (!initTexPatternAnm(false)) {
         return FALSE;
@@ -849,7 +849,7 @@ BOOL daNpc_Rsh1_c::CreateHeap() {
 /* 022D729C */
 void daNpc_Rsh1_c::set_mtx() {
     J3DModel* morf_model_p = mpMorf->getModel();
-    mDoMtx_stack_c::transS(current.pos.x + m7A0.x, current.pos.y + m7A0.y, current.pos.z + m7A0.z);
+    mDoMtx_stack_c::transS(current.pos.x + mModelOffset.x, current.pos.y + mModelOffset.y, current.pos.z + mModelOffset.z);
     mDoMtx_stack_c::YrotM(current.angle.y);
     J3DModel::mtx_assign(&morf_model_p->mBaseTransformMtx, mDoMtx_stack_c::get());
 }

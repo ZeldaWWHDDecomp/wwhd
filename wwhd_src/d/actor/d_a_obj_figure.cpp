@@ -203,25 +203,25 @@ u32 daObjFigure_constructHD(u32 a) {
     if (no != 0xFF && no < 0x86) {
         s16 angle = (s16)actor->current.angle.y;
         actor->mFigureNo = no;
-        actor->m734 = angle;
+        actor->mCamAngleY = angle;
         u8 display = actor->isFigureGet((u8)no);
-        actor->m734 = 0;
+        actor->mCamAngleY = 0;
         actor->mbDisplay = display;
         actor->m732 = 0;
         angle = (s16)actor->current.angle.y;
-        actor->m73C = 0;
-        actor->m736 = angle;
+        actor->mMoveProcIdx = 0;
+        actor->mFigureAngleY = angle;
     } else {
         s16 angle = (s16)actor->current.angle.y;
         actor->mFigureNo = 0;
-        actor->m734 = angle;
+        actor->mCamAngleY = angle;
         u8 display = actor->isFigureGet(0);
         angle = (s16)actor->current.angle.y;
         actor->mbDisplay = display;
-        actor->m736 = angle;
-        actor->m734 = 0;
+        actor->mFigureAngleY = angle;
+        actor->mCamAngleY = 0;
         actor->m732 = 0;
-        actor->m73C = 0;
+        actor->mMoveProcIdx = 0;
     }
     return a;
 }
@@ -648,14 +648,14 @@ void daObjFigure_c::privateCut() {
     if (staff == -1)
         return;
     s8 action = (s8)dComIfGp_evmng_getMyActIdx(staff, cut_name_tbl.mNames, 3, TRUE, 0);
-    m741 = action;
+    mActIdx = action;
     dEvent_manager_c* manager = dComIfGp_getPEvtManager();
     if (action == -1) {
         Figure_cutEndHD(manager, staff);
         return;
     }
     if (Figure_getIsAdvanceHD(manager, staff)) {
-        action = (s8)m741;
+        action = (s8)mActIdx;
         if (action == 0)
             eventMesSetInit(staff);
         else if (action == 1)
@@ -663,7 +663,7 @@ void daObjFigure_c::privateCut() {
         else if (action == 2)
             eventOffPlrInit();
     }
-    action = (s8)m741;
+    action = (s8)mActIdx;
     if (action == 0 && !eventMesSet())
         return;
     dComIfGp_evmng_cutEnd(staff);
@@ -672,32 +672,32 @@ void daObjFigure_c::privateCut() {
 void daObjFigure_c::eventMesSetInit(s32 staff) {
     auto* message = reinterpret_cast<be<u32>*>(dComIfGp_evmng_getMySubstanceP(staff, "MsgNo", 3));
     if (message) {
-        m72C.v = 0;
+        mpMsgList.v = 0;
         u32 value = *message;
         if (value != 1) {
             if (value == 0)
                 value = getMsg();
             setMessage(value);
-            be<u32>* list = m72C;
+            be<u32>* list = mpMsgList;
             if (list)
                 setMessage((u32)*list);
         }
     } else {
-        be<u32>* list = Figure_nextMessageHD(m72C);
-        m72C = list;
+        be<u32>* list = Figure_nextMessageHD(mpMsgList);
+        mpMsgList = list;
         setMessage((u32)*list);
     }
-    m73A = 10;
-    m724 = 50.0f;
-    m738 = 0;
-    m73F = 0;
-    m728 = 118.0f;
+    mInputDelay = 10;
+    mCamFovy = 50.0f;
+    mSpinWait = 0;
+    mMesState = 0;
+    mCamHeight = 118.0f;
 }
 /* 0234025C */
 bool daObjFigure_c::eventMesSet() {
-    s16 timer = (s16)m73A;
+    s16 timer = (s16)mInputDelay;
     if (timer)
-        m73A = (u16)(timer - 1);
+        mInputDelay = (u16)(timer - 1);
     else {
         bool input = Figure_stickXHD(0) != 0.0f;
         if (!input)
@@ -705,74 +705,74 @@ bool daObjFigure_c::eventMesSet() {
         if (!input)
             input = Figure_substickYHD(0) != 0.0f;
         if (input) {
-            m738 = 0;
+            mSpinWait = 0;
             f32 stick = Figure_stickXHD(0);
             s16 delta = (s16)truncWord((f32)(stick * 512.0f));
-            m734 = (u16)((s16)m734 + delta);
+            mCamAngleY = (u16)((s16)mCamAngleY + delta);
             stick = Figure_stickYHD(0);
             delta = (s16)truncWord((f32)(stick * 5.0f));
-            f32 height = (f32)((f32)m728 + (f32)delta);
+            f32 height = (f32)((f32)mCamHeight + (f32)delta);
             if (height < 80.0f)
                 height = 80.0f;
             else if (height > 150.0f)
                 height = 150.0f;
-            m728 = height;
+            mCamHeight = height;
             stick = Figure_substickYHD(0);
             f32 twice = (f32)(stick + stick);
-            f32 zoom = (f32)((f32)m724 - twice);
+            f32 zoom = (f32)((f32)mCamFovy - twice);
             if (zoom < 20.0f)
                 zoom = 20.0f;
             else if (zoom > 60.0f)
                 zoom = 60.0f;
-            m724 = zoom;
+            mCamFovy = zoom;
         } else {
-            s16 wait = (s16)m738;
+            s16 wait = (s16)mSpinWait;
             if (wait)
-                m738 = (u16)(wait - 1);
+                mSpinWait = (u16)(wait - 1);
         }
     }
-    u8 state = (u8)m73F;
+    u8 state = (u8)mMesState;
     if (state == 0) {
         dComIfGp_setDoStatusForce(0x21);
         dComIfGp_setAStatusForce(0x27);
-        if ((s16)m73A == 0) {
+        if ((s16)mInputDelay == 0) {
             dComIfGp_setDoStatusForce(0x21);
             dComIfGp_setAStatusForce(0x27);
             if (Figure_triggerBHD(0)) {
                 s16 angle = (s16)current.angle.y;
                 m732 = 0;
-                m734 = 0;
-                m736 = angle;
+                mCamAngleY = 0;
+                mFigureAngleY = angle;
                 return true;
             }
             if (Figure_triggerAHD(0))
-                m73F = 1;
+                mMesState = 1;
         }
     } else if (state == 1) {
         talk(0);
-        if ((u32)m694 != 0xFFFFFFFF)
-            m73F = 2;
+        if ((u32)mCurrMsgBsPcId != 0xFFFFFFFF)
+            mMesState = 2;
     } else if (state == 2) {
         if (talk(0) == 0x12)
-            m73F = 0;
+            mMesState = 0;
     }
-    f32 height = (f32)m728;
+    f32 height = (f32)mCamHeight;
     s16 angle = (s16)current.angle.y;
     f32 cameraHeight = (f32)(height + 30.0f);
-    m70C.x = 0.0f;
-    s16 rotation = (s16)m734;
-    m70C.y = cameraHeight;
-    m70C.z = 0.0f;
-    m718.x = 0.0f;
-    m718.y = cameraHeight;
-    m718.z = 200.0f;
+    mCamCenter.x = 0.0f;
+    s16 rotation = (s16)mCamAngleY;
+    mCamCenter.y = cameraHeight;
+    mCamCenter.z = 0.0f;
+    mCamEye.x = 0.0f;
+    mCamEye.y = cameraHeight;
+    mCamEye.z = 200.0f;
     mDoMtx_stack_c::YrotS((s16)(angle + rotation));
-    PSMTXMultVec(&l_mtxStack, &m718, &m718);
-    PSVECAdd(&m70C, &current.pos, &m70C);
-    PSVECAdd(&m718, &current.pos, &m718);
-    f32 tx = (f32)m70C.x, ex = (f32)m718.x;
-    f32 tz = (f32)m70C.z, ez = (f32)m718.z;
-    f32 ty = (f32)m70C.y, ey = (f32)m718.y;
+    PSMTXMultVec(&l_mtxStack, &mCamEye, &mCamEye);
+    PSVECAdd(&mCamCenter, &current.pos, &mCamCenter);
+    PSVECAdd(&mCamEye, &current.pos, &mCamEye);
+    f32 tx = (f32)mCamCenter.x, ex = (f32)mCamEye.x;
+    f32 tz = (f32)mCamCenter.z, ez = (f32)mCamEye.z;
+    f32 ty = (f32)mCamCenter.y, ey = (f32)mCamEye.y;
     gabi::Local<cXyz> target, eye;
     target->x = tx;
     target->y = ty;
@@ -781,7 +781,7 @@ bool daObjFigure_c::eventMesSet() {
     eye->y = ey;
     eye->z = ez;
     FigureCameraHD* camera = Figure_getCameraHD();
-    Figure_cameraSetHD(camera, target.get(), eye.get(), (f32)m724, 0);
+    Figure_cameraSetHD(camera, target.get(), eye.get(), (f32)mCamFovy, 0);
     return false;
 }
 /* 02340040 */
@@ -801,30 +801,30 @@ void daObjFigure_c::eventOffPlrInit() {
 }
 /* 02340128 */
 u16 daObjFigure_c::talk(s32 param) {
-    u32 id = m694;
+    u32 id = mCurrMsgBsPcId;
     FigureMessageManagerHD* message = l_messageManager.mpManager;
     u16 status = 0xFF;
     if (id == 0xFFFFFFFF) {
         u32 text;
         if (param == 1) {
             text = getMsg();
-            m69C = text;
+            mCurrMsgNo = text;
         } else
-            text = (u32)m69C;
+            text = (u32)mCurrMsgNo;
         u32 newId = Figure_messageSetHD(message, text, &eyePos);
-        m694 = newId;
+        mCurrMsgBsPcId = newId;
         if (newId != 0xFFFFFFFF)
             mHasMessageHD = 0;
     } else if ((u8)mHasMessageHD) {
         status = (u16)Figure_messageGetStatusHD(message);
         if (status == 0xE) {
-            u16 next = next_msgStatus(&m69C);
+            u16 next = next_msgStatus(&mCurrMsgNo);
             Figure_messageSetStatusHD(message, next);
             if (Figure_messageGetStatusHD(message) == 0xF)
-                Figure_messageSetHD(message, (u32)m69C, nullptr);
+                Figure_messageSetHD(message, (u32)mCurrMsgNo, nullptr);
         } else if (status == 0x12) {
             Figure_messageSetStatusHD(message, 0x13);
-            m694 = 0xFFFFFFFF;
+            mCurrMsgBsPcId = 0xFFFFFFFF;
         }
     } else
         mHasMessageHD = 1;
@@ -832,14 +832,14 @@ u16 daObjFigure_c::talk(s32 param) {
 }
 /* 023400E0 */
 u16 daObjFigure_c::next_msgStatus(be<u32>* message) {
-    be<u32>* list = m72C;
+    be<u32>* list = mpMsgList;
     if (!list)
         return 0x10;
     list = Figure_nextMessageHD(list);
-    m72C = list;
+    mpMsgList = list;
     u32 value = (u32)*list;
     if (!value) {
-        m72C.v = 0;
+        mpMsgList.v = 0;
         return 0x10;
     }
     *message = value;
@@ -848,13 +848,13 @@ u16 daObjFigure_c::next_msgStatus(be<u32>* message) {
 /* 0233FF54 */
 u32 daObjFigure_c::getMsg() {
     u8 no = (u8)mFigureNo;
-    m72C.v = 0;
+    mpMsgList.v = 0;
     return 0x37DD + no;
 }
 /* 0233FF44 */
 void daObjFigure_c::setMessage(u32 message) {
-    m69C = message;
-    m694 = 0xFFFFFFFF;
+    mCurrMsgNo = message;
+    mCurrMsgBsPcId = 0xFFFFFFFF;
 }
 /* 0233F634 */
 u8 daObjFigure_c::getPrmFigureNo() {
@@ -883,7 +883,7 @@ void daObjFigure_c::setMtx() {
     x = current.pos.x;
     z = current.pos.z;
     PSMTXTrans(&l_mtxStack, x, (f32)(y + 100.0f), z);
-    mDoMtx_YrotM(&l_mtxStack, (s16)m736);
+    mDoMtx_YrotM(&l_mtxStack, (s16)mFigureAngleY);
     copyMatrix(&l_mtxStack, &mpModel->mBaseTransformMtx);
     mDoExt_McaMorf* morf = mpMorf;
     if (morf) {

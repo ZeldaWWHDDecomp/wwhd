@@ -3,15 +3,15 @@
  * GameCube -> WWHD, measured from the allocating constructor and the functions of d_a_npc_roten:
  * - fopNpc_npc_c is 0x7DC (d/d_npc.h), so members are +0x118 up to mBtpAnm;
  * - mDoExt_btpAnm grew from 0x14 to 0x74 (+0x60) and mShadowId (GameCube 0x6F4) is gone (HD
- *   shadows, -4): everything from field_0x6F8 on is +0x174.
+ *   shadows, -4): everything from mItemPid on is +0x174.
  * Size 0xB40 (GameCube 0x9CC). */
 #pragma once
 #include "gc_api/gc_api.h"
 
 struct sRotenAnmDat {
-    /* 0x00 */ be<u8> field_0x00;
-    /* 0x01 */ be<u8> field_0x01;
-    /* 0x02 */ be<u8> field_0x02;
+    /* 0x00 */ be<u8> mAnmIdx;  /* was field_0x00: setAnmTbl 022D44D0: the entry's animation index for setAnm (0xFF ends the table); playAnm 022D5174 replays it (tww the same) */
+    /* 0x01 */ be<u8> mMorf;  /* was field_0x01: setAnmTbl 022D44D0: the entry's morf frames, passed to setAnm (tww the same) */
+    /* 0x02 */ be<u8> mLoopCount;  /* was field_0x02: setAnmTbl 022D44D0: the entry's count, copied into mAnmLoopCount; 0 or less loops (tww the same) */
 };
 WWHD_SIZE(sRotenAnmDat, 3);
 
@@ -30,37 +30,37 @@ WWHD_SIZE(dNpc_PathRun_r, 8);
 
 // Merchant tuning data, three entries.
 struct NpcDatStruct {
-    /* 0x00 */ be<f32> field_0x00;
-    /* 0x04 */ be<s16> field_0x04;
-    /* 0x06 */ be<s16> field_0x06;
-    /* 0x08 */ be<s16> field_0x08;
-    /* 0x0A */ be<s16> field_0x0A;
-    /* 0x0C */ be<s16> field_0x0C;
-    /* 0x0E */ be<s16> field_0x0E;
-    /* 0x10 */ be<s16> field_0x10;
-    /* 0x12 */ be<s16> field_0x12;
-    /* 0x14 */ be<s16> field_0x14;
-    /* 0x16 */ be<s16> field_0x16;
-    /* 0x18 */ be<s16> field_0x18;
+    /* 0x00 */ be<f32> mPlayerEyeOffsetY;  /* was field_0x00: chkAttention 022D3B9C: passed to dNpc_playerEyePos, whose look target is the player's head top + (0, it, 0) (tww dNpc_playerEyePos(f32 offsetY)) */
+    /* 0x04 */ be<s16> mMaxHeadX;  /* was field_0x04: _execute 022D5580: m_jnt.setParam's maxHeadX (d_npc.h setParam order; the same layout as dNpc_HIO_c mMaxHeadX) */
+    /* 0x06 */ be<s16> mMaxBackboneX;  /* was field_0x06: _execute 022D5580: m_jnt.setParam's maxBackboneX (0 while mNoBackboneTurn) */
+    /* 0x08 */ be<s16> mMaxHeadY;  /* was field_0x08: _execute 022D5580: m_jnt.setParam's maxHeadY */
+    /* 0x0A */ be<s16> mMaxBackboneY;  /* was field_0x0A: _execute 022D5580: m_jnt.setParam's maxBackboneY (0 while mNoBackboneTurn) */
+    /* 0x0C */ be<s16> mMinHeadX;  /* was field_0x0C: _execute 022D5580: m_jnt.setParam's minHeadX */
+    /* 0x0E */ be<s16> mMinBackboneX;  /* was field_0x0E: _execute 022D5580: m_jnt.setParam's minBackboneX (0 while mNoBackboneTurn) */
+    /* 0x10 */ be<s16> mMinHeadY;  /* was field_0x10: _execute 022D5580: m_jnt.setParam's minHeadY */
+    /* 0x12 */ be<s16> mMinBackboneY;  /* was field_0x12: _execute 022D5580: m_jnt.setParam's minBackboneY (0 while mNoBackboneTurn) */
+    /* 0x14 */ be<s16> mMaxTurnStep;  /* was field_0x14: _execute 022D5580: m_jnt.setParam's maxTurnStep */
+    /* 0x16 */ be<s16> mMaxHeadTurnVel;  /* was field_0x16: chkAttention 022D3B9C: mLookMaxVelTarget, the speed lookBack eases the look toward (dNpc_HIO_c mMaxHeadTurnVel at the same offset) */
+    /* 0x18 */ be<s16> mWalkHeadTurnVel;  /* was field_0x18: executeWalk 022D5C54: mLookMaxVelTarget while walking the path */
     /* 0x1A */ be<s16> field_0x1A;
-    /* 0x1C */ be<f32> field_0x1C;
-    /* 0x20 */ be<s16> field_0x20;
+    /* 0x1C */ be<f32> mAttnYOffset;  /* was field_0x1C: _execute 022D5580: attention_info.position = current.pos + (0, it, 0) (tww the same) */
+    /* 0x20 */ be<s16> mMaxAttnAngleY;  /* was field_0x20: chkAttention 022D3B9C: the player is in attention while the angle to them is below it (+0x71C while mInAttention) */
     /* 0x22 */ u8 _22[2];
-    /* 0x24 */ be<f32> field_0x24;
-    /* 0x28 */ be<f32> field_0x28;
-    /* 0x2C */ be<f32> field_0x2C;
-    /* 0x30 */ be<f32> field_0x30;
-    /* 0x34 */ be<f32> field_0x34;
-    /* 0x38 */ be<f32> field_0x38;
-    /* 0x3C */ be<f32> field_0x3C;
+    /* 0x24 */ be<f32> mMaxAttnDistXZ;  /* was field_0x24: chkAttention 022D3B9C: the player is in attention while closer than it (+40 while mInAttention) */
+    /* 0x28 */ be<f32> mEyeYOffset;  /* was field_0x28: _execute 022D5580: eyePos = current.pos + (0, it, 0) (tww the same) */
+    /* 0x2C */ be<f32> mCylRadius;  /* was field_0x2C: createInit 022D3710 / _execute 022D5580: setCollision(it, 200), the body cylinder's radius (tww the same) */
+    /* 0x30 */ be<f32> mCyl2Radius;  /* was field_0x30: setCollisionB 022D35C0: radius of mCyl2 */
+    /* 0x34 */ be<f32> mCyl2Dist;  /* was field_0x34: setCollisionB 022D35C0: mCyl2 sits at the joint position pushed it along the angle from the actor */
+    /* 0x38 */ be<f32> mSphRadius;  /* was field_0x38: setCollisionH 022D5238: radius of the head sphere mSph */
+    /* 0x3C */ be<f32> mSphOffsetX;  /* was field_0x3C: setCollisionH 022D5238: mSph sits at the head joint matrix times (it, 0, 0) */
     /* 0x40 */ be<f32> field_0x40;
-    /* 0x44 */ be<f32> field_0x44;
+    /* 0x44 */ be<f32> mWalkSpeed;  /* was field_0x44: executeWalk 022D5C54: mSpeedF while walking the path */
     /* 0x48 */ be<s16> field_0x48;
     /* 0x4A */ be<s16> field_0x4A;
-    /* 0x4C */ be<s16> field_0x4C;
-    /* 0x4E */ be<s16> field_0x4E;
-    /* 0x50 */ be<s16> field_0x50;
-    /* 0x52 */ be<s16> field_0x52;
+    /* 0x4C */ be<s16> mWaitTimeMin;  /* was field_0x4C: executeWaitInit 022D5970: mWaitTimer = it + rnd(mWaitTimeMax - it) */
+    /* 0x4E */ be<s16> mWaitTimeMax;  /* was field_0x4E: executeWaitInit 022D5970: mWaitTimer = mWaitTimeMin + rnd(it - mWaitTimeMin) */
+    /* 0x50 */ be<s16> mWalkTimeMin;  /* was field_0x50: executeWalkInit 022D5B7C / executeTurnInit 022D5DC0: mWaitTimer = it + rnd(mWalkTimeMax - it) */
+    /* 0x52 */ be<s16> mWalkTimeMax;  /* was field_0x52: executeWalkInit 022D5B7C / executeTurnInit 022D5DC0: mWaitTimer = mWalkTimeMin + rnd(it - mWalkTimeMin) */
 };
 WWHD_SIZE(NpcDatStruct, 0x54);
 
@@ -108,7 +108,7 @@ struct daNpcRoten_c : fopNpc_npc_c {
     bool _delete();
     bool _draw();
     bool _execute();
-    u8 executeCommon(); /* returns field_0x9B4 as stored */
+    u8 executeCommon(); /* returns mTalking as stored */
     void executeSetMode(u8);
     s32 executeWaitInit();
     void executeWait();
@@ -156,67 +156,67 @@ struct daNpcRoten_c : fopNpc_npc_c {
 
     /* 0x7DC */ request_of_phase_process_class mPhs;
     /* 0x7E4 */ request_of_phase_process_class mPhs2;
-    /* 0x7EC */ gptr<J3DModel> field_0x6D4;
-    /* 0x7F0 */ gptr<mDoExt_McaMorf> field_0x6D8;
+    /* 0x7EC */ gptr<J3DModel> mpHeadModel;  /* was field_0x6D4: createHeap 022D2CCC: the head morf's model; _draw 022D5790 sets its light / TEV colors */
+    /* 0x7F0 */ gptr<mDoExt_McaMorf> mpHeadMorf;  /* was field_0x6D8: createHeap 022D2CCC creates it (mDoExt_McaMorf) from the head model data and head animation; executeWindInit 022D5FC8 / execute play it */
     /* 0x7F4 */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
     /* 0x7F8 */ mDoExt_btpAnm mBtpAnm; // HD: the texture animator grows; mShadowId is absent.
-    /* 0x86C */ be<u32> field_0x6F8;
+    /* 0x86C */ be<u32> mItemPid;  /* was field_0x6F8: eventSetItemInit 022D4330 stores the created item's process ID; privateCut 022D4828 / eventClrItem 022D45B4 find the item with it (SearchByID) */
     /* 0x870 */ be<u32> field_0x6FC;
     /* 0x874 */ dNpc_PathRun_r mPathRun;
-    /* 0x87C */ cXyz field_0x708;
-    /* 0x888 */ cXyz field_0x714;
-    /* 0x894 */ cXyz field_0x720;
+    /* 0x87C */ cXyz mLookPos;  /* was field_0x708: chkAttention 022D3B9C copies the event cut's attention position; lookBack 022D5374 passes it to lookAtTarget as the target */
+    /* 0x888 */ cXyz mHandItemPos;  /* was field_0x714: privateCut 022D4828: during ANM_WATASU (frame 60+) the left-hand joint position + (20, -30, -30), where the present item is shown; during ANM_ITEMWAIT copied into mLookPos */
+    /* 0x894 */ cXyz mWindVec;  /* was field_0x720: no use in this decomp; TWW getWindVec() { return field_0x720; } (CC0 zeldaret/tww d217e2b) */
     /* 0x8A0 */ dCcD_Cyl mCyl2;
     /* 0x9D0 */ dCcD_Sph mSph;
-    /* 0xAFC */ gptr<sRotenAnmDat> field_0x988;
-    /* 0xB00 */ gptr<be<u32>> field_0x98C;
-    /* 0xB04 */ be<f32> field_0x990;
-    /* 0xB08 */ be<f32> field_0x994;
-    /* 0xB0C */ be<s32> field_0x998;
-    /* 0xB10 */ be<u8> field_0x99C;
+    /* 0xAFC */ gptr<sRotenAnmDat> mpAnmTbl;  /* was field_0x988: setAnmTbl 022D44D0 stores the table; playAnm 022D5174 steps to the next entry */
+    /* 0xB00 */ gptr<be<u32>> mpMsgList;  /* was field_0x98C: eventMesSetInit 022D40A4 points it at a message number list; next_msgStatus 022D60DC / getMsg 022D6304 step through it */
+    /* 0xB04 */ be<f32> mSpeedF;  /* was field_0x990: _execute 022D5580 sets speedF to it; executeWalk 022D5C54 sets the walk speed, executeSetMode 022D3FDC clears it */
+    /* 0xB08 */ be<f32> mMorf;  /* was field_0x994: setAnm 022D43B0 uses it as the morf frames when not negative; the constructor 022D30F4 sets -1 */
+    /* 0xB0C */ be<s32> mAnmPlayMode;  /* was field_0x998: setAnm 022D43B0 stores the play mode it passes to mpMorf->setAnm (setAnmTbl 022D44D0: 0 for counted entries, 2 for looping ones); setAnmTbl restarts an unchanged animation only while it is 0 (tww the same) */
+    /* 0xB10 */ be<u8> mLookHeadOnly;  /* was field_0x99C: lookBack 022D5374 passes it to lookAtTarget as the head-only flag (d_npc.h lookAtTarget headOnly) unless talking with mBodyTurn; chkAttention 022D3B9C sets 1 / 0 (0 = turn the body), executeWalk 022D5C54 / executeTurn 022D5F10 clear it; the constructor 022D30F4 sets 1 (tww the same) */
     /* 0xB11 */ u8 _B11;
-    /* 0xB12 */ be<s16> field_0x99E;
-    /* 0xB14 */ be<s16> field_0x9A0;
-    /* 0xB16 */ be<s16> field_0x9A2;
-    /* 0xB18 */ be<s16> field_0x9A4;
-    /* 0xB1A */ be<s16> field_0x9A6;
-    /* 0xB1C */ be<s16> field_0x9A8;
-    /* 0xB1E */ be<s16> field_0x9AA;
-    /* 0xB20 */ be<s16> field_0x9AC;
-    /* 0xB22 */ be<s16> field_0x9AE;
-    /* 0xB24 */ be<s16> field_0x9B0;
-    /* 0xB26 */ be<u16> field_0x9B2;
-    /* 0xB28 */ be<u8> field_0x9B4;
-    /* 0xB29 */ be<u8> field_0x9B5;
-    /* 0xB2A */ be<u8> field_0x9B6;
-    /* 0xB2B */ be<u8> field_0x9B7;
-    /* 0xB2C */ be<u8> field_0x9B8;
+    /* 0xB12 */ be<s16> mExchange1stEventIdx;  /* was field_0x99E: createInit 022D3710: dComIfGp_evmng_getEventIdx("ROTEN_EXCHANGE_1ST"); XyEventCB 022D3388 returns it */
+    /* 0xB14 */ be<s16> mExchange2ndEventIdx;  /* was field_0x9A0: createInit 022D3710: dComIfGp_evmng_getEventIdx("ROTEN_EXCHANGE_2ND"); checkOrder 022D3EA0 / eventMove 022D4C40 test it */
+    /* 0xB16 */ be<s16> mChangeItemEventIdx;  /* was field_0x9A2: createInit 022D3710: dComIfGp_evmng_getEventIdx("ROTEN_CHANGE_ITEM"); checkOrder 022D3EA0 / eventMove 022D4C40 test it */
+    /* 0xB18 */ be<s16> mGetMapEventIdx;  /* was field_0x9A4: createInit 022D3710: dComIfGp_evmng_getEventIdx("ROTEN_GET_MAP"); XyEventCB 022D3388 returns it */
+    /* 0xB1A */ be<s16> mWaitTimer;  /* was field_0x9A6: executeWaitInit 022D5970 sets npc dat 0x4C + random; executeWait 022D5A48 counts it down before walking the path */
+    /* 0xB1C */ be<s16> mHomeTurnDelay;  /* was field_0x9A8: chkAttention 022D3B9C sets 30 when the player leaves the attention range and, without a path, counts it down before turning back to home.angle.y (tww the same) */
+    /* 0xB1E */ be<s16> mBlinkTimer;  /* was field_0x9AA: initTexPatternAnm 022D2BB8 clears it; playTexPatternAnm 022D50D4 counts it down and restarts the head texture pattern */
+    /* 0xB20 */ be<s16> mLookMaxVelTarget;  /* was field_0x9AC: lookBack 022D5374 sets npc dat 0x16 (executeWalk 022D5C54: 0x18) and eases mLookMaxVel toward it */
+    /* 0xB22 */ be<s16> mLookMaxVel;  /* was field_0x9AE: lookBack 022D5374 eases it toward mLookMaxVelTarget (cLib_addCalcAngleS2 4, 0x800), else clears it, and passes it to lookAtTarget as maxVel */
+    /* 0xB24 */ be<s16> mLookAngleY;  /* was field_0x9B0: lookBack 022D5374: the target angle in look mode 2; executeWalk 022D5C54 / executeTurn 022D5F10 set the path angle, chkAttention 022D3B9C home.angle.y (tww the same) */
+    /* 0xB26 */ be<u16> mEventFlags;  /* was field_0x9B2: bit field: eventOrder 022D4EF0 sets 0x4000 when it orders an event and eventMove 022D4C40 waits for its end while set; XyEventCB 022D3388 sets 0xC000 (during a talk, _execute 022D5580 runs eventMove instead of the mode while 0x8000 is set); next_msgStatus 022D60DC sets 8 / 0x10 / 0x20 / 0x40, which getMsg 022D6304 and eventMove turn into the follow-up messages and events (tww the same) */
+    /* 0xB28 */ be<u8> mTalking;  /* was field_0x9B4: checkOrder 022D3EA0 sets 1 when the talk starts; executeCommon 022D58F4 switches to MODE_TALK while 1 and returns it; executeTalk 022D5ABC / eventMove 022D4C40 clear it; chkAttention 022D3B9C widens the angle while set (tww the same) */
+    /* 0xB29 */ be<u8> mInAttention;  /* was field_0x9B5: chkAttention 022D3B9C: 1 once the player is in the look range (distance +40 and angle +0x71C while set), 0 when they leave; executeWalk 022D5C54 stops and executeWait 022D5A48 does not start walking while set (tww the same); same pattern as daNpcMt_c::mInAttention */
+    /* 0xB2A */ be<u8> mCanTalk;  /* was field_0x9B6: chkAttention 022D3B9C: 1 while the player is in the talk range (or the event attention is on), else 0; executeCommon 022D58F4 sets mOrderEvent 1 (can talk) while it is set outside MODE_WIND (tww the same) */
+    /* 0xB2B */ be<u8> mOrderEvent;  /* was field_0x9B7: eventOrder 022D4EF0 orders by it: 1 / 2 the talk (2 orders the speak event), 3-6 the ROTEN_EXCHANGE_1ST / _2ND / CHANGE_ITEM / GET_MAP events; checkOrder 022D3EA0 clears 3-6 once the event starts; executeCommon 022D58F4 / eventMove 022D4C40 set it (tww the same); after daNpc_Cb1_c::mOrderEvent */
+    /* 0xB2C */ be<u8> mBtpFrame;  /* was field_0x9B8: initTexPatternAnm 022D2BB8 clears it; playTexPatternAnm 022D50D4 advances it; _draw 022D5790 enters the btp animation at it */
     /* 0xB2D */ be<s8> m_hand_L_jnt_num;
     /* 0xB2E */ be<s8> m_bag_jnt_num;
-    /* 0xB2F */ be<u8> field_0x9BB;
-    /* 0xB30 */ be<u8> field_0x9BC;
+    /* 0xB2F */ be<u8> mExecuteMode;  /* was field_0x9BB: _execute 022D5580 calls moveProc[it]; executeSetMode 022D3FDC sets it; executeCommon 022D58F4 tests MODE_WIND */
+    /* 0xB30 */ be<u8> mResFlag;  /* was field_0x9BC: phase_1 022D3234 sets 1 once the resources are loaded (GameCube setResFlag(1)) */
     /* 0xB31 */ be<u8> mNpcNo;
-    /* 0xB32 */ be<u8> field_0x9BE;
+    /* 0xB32 */ be<u8> mTradeItemIdx;  /* was field_0x9BE: getMsg 022D6304 / XyEventCB 022D3388: the shown item's number minus dItemNo_TOWN_FLOWER; eventMesSetInit 022D40A4 / eventSetItemInit 022D4330 / eventGetItemInit 022D4620 / next_msgStatus 022D60DC index the exchange messages and items by it (tww the same) */
     /* 0xB33 */ be<u8> field_0x9BF;
-    /* 0xB34 */ be<u8> field_0x9C0;
-    /* 0xB35 */ be<u8> field_0x9C1;
-    /* 0xB36 */ be<s8> field_0x9C2;
-    /* 0xB37 */ be<s8> field_0x9C3;
-    /* 0xB38 */ be<s8> field_0x9C4;
+    /* 0xB34 */ be<u8> mAnmIdx;  /* was field_0x9C0: setAnm 022D43B0 stores the animation index (l_bck_ix_tbl); createHeap 022D2CCC loads the bck by it; setAnmTbl 022D44D0 / privateCut 022D4828 (ANM_WATASU, ANM_ITEMWAIT) test it (tww the same) */
+    /* 0xB35 */ be<u8> mAnmTblFlags;  /* was field_0x9C1: bit 1: playAnm 022D5174 sets it when the animation table reaches its end; setAnmTbl 022D44D0 clears it; executeWind 022D6074 goes back to MODE_WAIT once it is set (tww the same) */
+    /* 0xB36 */ be<s8> mAnmLoopCount;  /* was field_0x9C2: setAnmTbl 022D44D0 sets the table entry's count; playAnm 022D5174 counts it down before the next entry */
+    /* 0xB37 */ be<s8> mCutNo;  /* was field_0x9C3: privateCut 022D4828 stores the event cut index and switches on it */
+    /* 0xB38 */ be<s8> mLookMode;  /* was field_0x9C4: lookBack 022D5374 switches on it: 1 looks at mLookPos, 2 turns to mLookAngleY, 0 neither; chkAttention 022D3B9C, executeWalk 022D5C54, executeTurn 022D5F10, privateCut 022D4828 set it (tww the same) */
     /* 0xB39 */ be<u8> mShownItemBtn;
-    /* 0xB3A */ be<u8> field_0x9C6;
-    /* 0xB3B */ be<u8> field_0x9C7;
-    /* 0xB3C */ be<u8> field_0x9C8;
+    /* 0xB3A */ be<u8> mBodyTurn;  /* was field_0x9C6: checkOrder 022D3EA0 (talk start) and eventClrItemInit 022D45B4 set 1; executeTalk 022D5ABC / eventMove 022D4C40 / privateCut 022D4828 clear it; while set, chkAttention 022D3B9C and lookBack 022D5374 (when talking) turn the body (mLookHeadOnly 0, setTrn) (tww the same) */
+    /* 0xB3B */ be<u8> mNoBackboneTurn;  /* was field_0x9C7: _execute 022D5580 passes 0 for the four backbone limits of m_jnt.setParam while set; privateCut 022D4828 sets 1 (ANM_ITEMWAIT), eventClrItemInit 022D45B4 clears it (tww the same) */
+    /* 0xB3C */ be<u8> mDrawHead;  /* was field_0x9C8: _draw 022D5790 puts the head model on the head joint and draws it only while set; the constructor 022D30F4 sets 1, nothing clears it (tww the same) */
     /* 0xB3D */ be<u8> field_0x9C9;
-    /* 0xB3E */ be<u8> field_0x9CA;
+    /* 0xB3E */ be<u8> mWindHit;  /* was field_0x9CA: setCollisionH 022D5238 sets it (and MODE_WIND) on the first TG hit of the head sphere; chkAttention 022D3B9C ignores the player while set; executeWind 022D6074 clears it when the wind animation table ends (tww the same) */
     /* 0xB3F */ u8 _B3F;
 };
 WWHD_OFFSET(daNpcRoten_c, mBtpAnm, 0x7F8);
-WWHD_OFFSET(daNpcRoten_c, field_0x6F8, 0x86C);
+WWHD_OFFSET(daNpcRoten_c, mItemPid, 0x86C);
 WWHD_OFFSET(daNpcRoten_c, mCyl2, 0x8A0);
 WWHD_OFFSET(daNpcRoten_c, mSph, 0x9D0);
-WWHD_OFFSET(daNpcRoten_c, field_0x988, 0xAFC);
-WWHD_OFFSET(daNpcRoten_c, field_0x9B2, 0xB26);
+WWHD_OFFSET(daNpcRoten_c, mpAnmTbl, 0xAFC);
+WWHD_OFFSET(daNpcRoten_c, mEventFlags, 0xB26);
 WWHD_OFFSET(daNpcRoten_c, mNpcNo, 0xB31);
 WWHD_SIZE(daNpcRoten_c, 0xB40);
 
@@ -288,7 +288,7 @@ static constexpr u32 l_actorVtable = 0x10021614;
 
 // HD: both source parts refer to these single mapped table definitions in the main source.
 struct SaveDatStruct {
-    be<u16> field_0x00, field_0x02, field_0x04, field_0x06;
+    be<u16> mFirstTalkBit, mExchangeCountReg, field_0x04, mItemShownBit;  /* mFirstTalkBit was field_0x00: getMsg 022D6304: the event bit set with the first talk (l_msg_1st_talk); eventOrder 022D4EF0 allows the item talk (CANTALKITEM) once it is set (tww the same); mExchangeCountReg was field_0x02: the event register counting exchanges: next_msgStatus 022D60DC adds 1; getMsg 022D6304 / XyEventCB 022D3388 switch to the exchange-done messages at 3 (tww the same); mItemShownBit was field_0x06: getMsg 022D6304 / eventMesSetInit 022D40A4 set this event bit when a trade item is shown; getMsg then gives l_msg_exchange (tww the same) */
 };
 WWHD_SIZE(SaveDatStruct, 8);
 struct RotenStringTable {
@@ -340,13 +340,13 @@ static inline u16 save_dat(u32 no, u32 field) {
     const auto& dat = l_save_dat.entries[no];
     switch (field) {
     case 0:
-        return dat.field_0x00;
+        return dat.mFirstTalkBit;
     case 2:
-        return dat.field_0x02;
+        return dat.mExchangeCountReg;
     case 4:
         return dat.field_0x04;
     default:
-        return dat.field_0x06;
+        return dat.mItemShownBit;
     }
 }
 static inline u8 item_dat(u32 no, u32 idx) { return l_item_dat.entries[no][idx]; }

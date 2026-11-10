@@ -83,10 +83,10 @@ void daNpc_Bs1_c::setAnmFromMsgTag() {
         setTexAnm(2);
         break;
     default:
-        if ((m829 == 2 && bs1m_checkEnd(this)) || (m829 == 4 && bs1m_checkEnd(this)) ||
-            (m829 == 6 && bs1m_checkEnd(this)) || (m829 == 8 && bs1m_checkEnd(this))) {
+        if ((mAnmIdx == 2 && bs1m_checkEnd(this)) || (mAnmIdx == 4 && bs1m_checkEnd(this)) ||
+            (mAnmIdx == 6 && bs1m_checkEnd(this)) || (mAnmIdx == 8 && bs1m_checkEnd(this))) {
             setAnm(0);
-        } else if (m829 == 9 && bs1m_checkEnd(this)) {
+        } else if (mAnmIdx == 9 && bs1m_checkEnd(this)) {
             setAnm(3);
         }
         break;
@@ -144,8 +144,8 @@ u16 daNpc_Bs1_c::next_msgStatus(be<u32>* pMsgNo, be<u32>* pMsgNo2) {
     case 0xF9E:
     case 0xFD4: {
         s32 rupee = dComIfGp_getMessageRupee(); /* dComIfGp_getMessageRupee() */
-        m83C = rupee;
-        s32 buyMax = bs1m_getBuyItemMax(rupee, m840);
+        mMessageRupee = rupee;
+        s32 buyMax = bs1m_getBuyItemMax(rupee, mSellItemNo);
         l_tag_buy_item_max = (u8)buyMax; /* setBuyItemMax */
         l_tag_buy_item = (u8)buyMax;     /* setBuyItem */
         if (buyMax == 0) {
@@ -184,11 +184,11 @@ u16 daNpc_Bs1_c::next_msgStatus(be<u32>* pMsgNo, be<u32>* pMsgNo2) {
     case 0xF97:
     case 0xF9C:
     case 0xFD2: {
-        /* daNpc_Bs1_setPayRupee(m83C, getBuyItem()) (inline): limited by the wallet */
+        /* daNpc_Bs1_setPayRupee(mMessageRupee, getBuyItem()) (inline): limited by the wallet */
         dSv_player_c* playerSave = bs1_savePlayer();
         u8 n = (u8)l_tag_buy_item;
         u8 wallet = (u8)playerSave->mPlayerStatusA.mWalletSize;
-        s32 price = m83C;
+        s32 price = mMessageRupee;
         u16 rupees = (u16)playerSave->mPlayerStatusA.mRupee;
         s32 max;
         if (wallet < 1) {
@@ -417,10 +417,10 @@ u16 daNpc_Bs1_c::next_msgStatus(be<u32>* pMsgNo, be<u32>* pMsgNo2) {
             bs1m_bought(this, rupee);
             if (mShopItems.getSelectItemNo() == 0x2C /* dItemNo_BAIT_BAG_e */) {
                 bs1m_SoldOutItem(&mShopItems, mShopItems.mSelectedItemIdx);
-                m76C[mShopItems.mSelectedItemIdx] = 1;
+                mItemSoldOut[mShopItems.mSelectedItemIdx] = 1;
             }
             if (!bs1m_checkItemGet(mShopItems.getSelectItemNo(), 0)) {
-                m82A = 3;
+                mOrderState = 3;
                 msgStatus = 0x10; /* fopMsgStts_MSG_ENDS_e */
                 break;
             }
@@ -461,7 +461,7 @@ u16 daNpc_Bs1_c::next_msgStatus(be<u32>* pMsgNo, be<u32>* pMsgNo2) {
             if (itemNo == 0x50 /* dItemNo_EMPTY_BOTTLE_e */ || itemNo == 7 /* dItemNo_HEART_PIECE_e */ ||
                 itemNo == 0xE1 /* dItemNo_COLLECT_MAP_30_e */) {
                 bs1m_SoldOutItem(&mShopItems, mShopItems.mSelectedItemIdx);
-                m76C[mShopItems.mSelectedItemIdx] = 1;
+                mItemSoldOut[mShopItems.mSelectedItemIdx] = 1;
                 switch (itemNo) {
                 case 0x50:
                     dComIfGs_onEventBit(0x2020);
@@ -475,7 +475,7 @@ u16 daNpc_Bs1_c::next_msgStatus(be<u32>* pMsgNo, be<u32>* pMsgNo2) {
                 }
             }
             if (!bs1m_checkItemGet(mShopItems.getSelectItemNo(), 0)) {
-                m82A = 3;
+                mOrderState = 3;
                 msgStatus = 0x10;
                 break;
             }
@@ -520,9 +520,9 @@ u16 daNpc_Bs1_c::next_msgStatus(be<u32>* pMsgNo, be<u32>* pMsgNo2) {
 /* 022157C8 */
 u32 daNpc_Bs1_c::getMsg() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 msgNo = m740;
+    u32 msgNo = mNextMsgNo;
     if (msgNo != 0) {
-        m740 = 0;
+        mNextMsgNo = 0;
         return msgNo;
     }
     if (bs1m_chkTalkXY(bs1_play()->mEvtCtrl.mTalkButton)) {
@@ -531,7 +531,7 @@ u32 daNpc_Bs1_c::getMsg() {
         u8 itemNo = (u8)play->mEvtCtrl.mItemNo; /* dComIfGp_event_getPreItemNo() */
         if (type == 0) {
             if (bs1m_isEmono(itemNo)) {
-                m840 = itemNo;
+                mSellItemNo = itemNo;
                 if (itemNo == 0x1F) {
                     msgNo = 0xF94; /* dItemNo_JOY_PENDANT_e */
                 } else if ((itemNo >= 0x45 && itemNo <= 0x47) || (itemNo >= 0x49 && itemNo <= 0x4B)) {
@@ -564,41 +564,41 @@ u32 daNpc_Bs1_c::getMsg() {
         } else if (bs1m_checkGetItem(0x31 /* dItemNo_BOMB_BAG_e */) && !dComIfGs_isEventBit(0x1F20) &&
                    isSellBomb()) {
             dComIfGs_onEventBit(0x1F20);
-            m837 = 1;
+            mbBombMsgDone = 1;
             msgNo = 0xF55;
-        } else if (m837 != 0) {
+        } else if (mbBombMsgDone != 0) {
             msgNo = 0xF58;
         } else if (points >= 60) {
-            if (m836 != 0) {
+            if (mbTalkedBefore != 0) {
                 msgNo = 0xF5D;
             } else {
                 msgNo = 0xF5C;
-                m836 = 1;
+                mbTalkedBefore = 1;
             }
         } else if (points != 0) {
-            if (m836 != 0) {
+            if (mbTalkedBefore != 0) {
                 msgNo = 0xF5B;
             } else {
                 msgNo = 0xF5A;
-                m836 = 1;
+                mbTalkedBefore = 1;
             }
-        } else if (m836 != 0) {
+        } else if (mbTalkedBefore != 0) {
             msgNo = 0xF41;
         } else {
-            m836 = 1;
+            mbTalkedBefore = 1;
             msgNo = 0xF3D;
         }
     } else if (bs1m_isSoldOutItemAll(&mShopItems)) {
         msgNo = 0x2F62;
     } else if (bs1m_checkGetItem(0x31) && !dComIfGs_isEventBit(0x1F20) && isSellBomb()) {
         dComIfGs_onEventBit(0x1F20);
-        m837 = 1;
+        mbBombMsgDone = 1;
         msgNo = 0x2F64;
-    } else if (m837 != 0) {
+    } else if (mbBombMsgDone != 0) {
         msgNo = 0x2F67;
     } else if (dComIfGs_isEventBit(0x1F08)) {
         if (dComIfGs_isEventBit(0x2040)) {
-            if (m838 == 1) {
+            if (mbMsg2F5FDone == 1) {
                 msgNo = 0x2F60;
             } else {
                 msgNo = 0x2F61;
@@ -606,12 +606,12 @@ u32 daNpc_Bs1_c::getMsg() {
         } else {
             dComIfGs_onEventBit(0x2040);
             msgNo = 0x2F5F;
-            m838 = 1;
+            mbMsg2F5FDone = 1;
         }
     } else {
         switch (dComIfGs_getEventReg(0xBB07)) {
         case 0:
-            if (m836 != 0 || dComIfGs_isEventBit(0x1F10)) {
+            if (mbTalkedBefore != 0 || dComIfGs_isEventBit(0x1F10)) {
                 msgNo = 0x2F46;
                 break;
             }
@@ -619,25 +619,25 @@ u32 daNpc_Bs1_c::getMsg() {
             msgNo = 0x2F45;
             break;
         case 1:
-            msgNo = m836 != 0 ? 0x2F46 : 0x2F58;
+            msgNo = mbTalkedBefore != 0 ? 0x2F46 : 0x2F58;
             break;
         case 2:
-            msgNo = m836 != 0 ? 0x2F46 : 0x2F59;
+            msgNo = mbTalkedBefore != 0 ? 0x2F46 : 0x2F59;
             break;
         case 3:
-            msgNo = m836 != 0 ? 0x2F46 : 0x2F5A;
+            msgNo = mbTalkedBefore != 0 ? 0x2F46 : 0x2F5A;
             break;
         case 4:
-            msgNo = m836 != 0 ? 0x2F46 : 0x2F5B;
+            msgNo = mbTalkedBefore != 0 ? 0x2F46 : 0x2F5B;
             break;
         case 5:
-            msgNo = m836 != 0 ? 0x2F46 : 0x2F5C;
+            msgNo = mbTalkedBefore != 0 ? 0x2F46 : 0x2F5C;
             break;
         case 6:
-            msgNo = m836 != 0 ? 0x2F69 : 0x2F5D;
+            msgNo = mbTalkedBefore != 0 ? 0x2F69 : 0x2F5D;
             break;
         case 7:
-            msgNo = m836 != 0 ? 0x2F6A : 0x2F5E;
+            msgNo = mbTalkedBefore != 0 ? 0x2F6A : 0x2F5E;
             break;
         default:
             /* HD: an assertion (line 0x5D5) instead of an uninitialised message number */
@@ -648,7 +648,7 @@ u32 daNpc_Bs1_c::getMsg() {
         if (dComIfGs_isEventBit(0x1F10)) {
             dComIfGs_onEventBit(0x1F10);
         }
-        m836 = 1;
+        mbTalkedBefore = 1;
     }
     return msgNo;
 }
@@ -664,9 +664,9 @@ u16 daNpc_Bs1_c::normal_talk() {
     u32 mgr = bs1m_mgr();
     u16 status = (u16)bs1m_getStatus(mgr);
     if (status == 0xE /* fopMsgStts_MSG_DISPLAYED_e */) {
-        bs1m_setStatus(mgr, bs1m_nextMsgStatus(this, &m738, nullptr));
+        bs1m_setStatus(mgr, bs1m_nextMsgStatus(this, &mCurrMsgNo, nullptr));
         if (bs1m_getStatus(mgr) == 0xF) {
-            bs1m_messageSet(mgr, m738, nullptr);
+            bs1m_messageSet(mgr, mCurrMsgNo, nullptr);
         }
     } else if (status == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
         bs1m_setStatus(mgr, 0x13);
@@ -685,22 +685,22 @@ u16 daNpc_Bs1_c::shop_talk() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 mgr = bs1m_mgr();
     mpShopCursor->m54 = 1; /* show() */
-    if (bs1m_nowTriggercheck(&mStickControl, &mShopItems, &m738, BS1M_getDefaultMsgCB, this)) {
-        m708 = 1;
-        m73C = 0;
-        if (m738 == 0xF3F) {
-            m835 = 2;
+    if (bs1m_nowTriggercheck(&mStickControl, &mShopItems, &mCurrMsgNo, BS1M_getDefaultMsgCB, this)) {
+        mbItemMsgSet = 1;
+        mShopMsgNo = 0;
+        if (mCurrMsgNo == 0xF3F) {
+            mTalkStep = 2;
         }
     }
     u16 status = (u16)bs1m_getStatus(mgr);
     if (status == 0xE || status == 0xF) {
-        if (m708 != 0 || bs1_message(mgr)->mCancel != 0) { /* HD: also after a cancel */
-            m708 = 0;
+        if (mbItemMsgSet != 0 || bs1_message(mgr)->mCancel != 0) { /* HD: also after a cancel */
+            mbItemMsgSet = 0;
         } else {
-            m73C = m738;
-            bs1m_setStatus(mgr, bs1m_nextMsgStatus(this, &m73C, &m738));
+            mShopMsgNo = mCurrMsgNo;
+            bs1m_setStatus(mgr, bs1m_nextMsgStatus(this, &mShopMsgNo, &mCurrMsgNo));
             if (bs1m_getStatus(mgr) == 0xF) {
-                bs1m_messageSet(mgr, m73C, nullptr);
+                bs1m_messageSet(mgr, mShopMsgNo, nullptr);
             }
         }
     } else if (status == 0x12) {
@@ -714,22 +714,22 @@ u16 daNpc_Bs1_c::talk() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 mgr = bs1m_mgr();
     u16 status = 0xFF;
-    if (m835 == 0) {
+    if (mTalkStep == 0) {
         bs1m_msgId() = 0xFFFFFFFF;
-        m738 = getMsg();
-        m73C = 0;
-        m835 = 1;
-    } else if (m835 != -1) {
+        mCurrMsgNo = getMsg();
+        mShopMsgNo = 0;
+        mTalkStep = 1;
+    } else if (mTalkStep != -1) {
         if (bs1m_msgId() == 0xFFFFFFFF) {
             if (bs1m_chkTalkXY(bs1_play()->mEvtCtrl.mTalkButton) && !bs1m_chkPresentEnd()) {
                 return 0xFF;
             }
-            bs1m_msgId() = bs1m_messageSet(mgr, m738, &eyePos); /* HD: the message is anchored at the eyes */
+            bs1m_msgId() = bs1m_messageSet(mgr, mCurrMsgNo, &eyePos); /* HD: the message is anchored at the eyes */
         } else {
             setAnmFromMsgTag();
-            s8 step = m835;
+            s8 step = mTalkStep;
             if (step == 1) {
-                m835 = 2; /* HD: no message process search */
+                mTalkStep = 2; /* HD: no message process search */
             } else if (step == 2) {
                 status = normal_talk();
             } else if (step == 3) {
@@ -737,7 +737,7 @@ u16 daNpc_Bs1_c::talk() {
             }
             if (bs1_play()->mMesgSendButton /* dComIfGp_checkMesgSendButton() */ != 0) {
                 u32 msgNo = bs1_message(mgr)->mMsgNo;
-                m738 = msgNo;
+                mCurrMsgNo = msgNo;
                 if (shopStickMoveMsgCheck(msgNo)) {
                     if (msgNo == 0xF3E || msgNo == 0x2F47) {
                         s16 hide = mShopItems.mbIsHide;
@@ -746,7 +746,7 @@ u16 daNpc_Bs1_c::talk() {
                             mShopItems.showItem();
                         }
                     }
-                    m835 = 3;
+                    mTalkStep = 3;
                 } else {
                     if (!shopMsgCheck(msgNo)) {
                         s16 hide = mShopItems.mbIsHide;
@@ -755,7 +755,7 @@ u16 daNpc_Bs1_c::talk() {
                             mShopItems.showItem();
                         }
                     }
-                    m835 = 2;
+                    mTalkStep = 2;
                 }
             }
         }

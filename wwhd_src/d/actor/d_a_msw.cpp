@@ -43,23 +43,23 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
     cLib_addCalcAngleS2(&i_ac->current.angle.z, x, 10, 0x800);
 
     f32 dist = (REG0_F(4) + 50.0f) * __builtin_fabsf(pos1.z - pos2.z);
-    if (pActor->m2BC.x < dist) {
-        pActor->m2BC.x = dist;
+    if (pActor->mTiltAmp.x < dist) {
+        pActor->mTiltAmp.x = dist;
     }
 
     dist = (REG0_F(4) + 50.0f) * __builtin_fabsf(pos1.x - pos2.x);
-    if (pActor->m2BC.z < dist) {
-        pActor->m2BC.z = dist;
+    if (pActor->mTiltAmp.z < dist) {
+        pActor->mTiltAmp.z = dist;
     }
 
     dist = (REG0_F(8) + 5.0f) * __builtin_fabsf(pos1.x - pos2.x);
-    if (dist > 10.0f && pActor->m2B0.x < dist) {
-        cLib_addCalc2(&pActor->m2B0.x, dist, 1.0f, REG0_F(7) + 1.2f);
+    if (dist > 10.0f && pActor->mSwayAmp.x < dist) {
+        cLib_addCalc2(&pActor->mSwayAmp.x, dist, 1.0f, REG0_F(7) + 1.2f);
     }
 
     dist = (REG0_F(8) + 5.0f) * __builtin_fabsf(pos1.z - pos2.z);
-    if (dist > 10.0f && pActor->m2B0.z < dist) {
-        cLib_addCalc2(&pActor->m2B0.z, dist, 1.0f, REG0_F(7) + 1.2f);
+    if (dist > 10.0f && pActor->mSwayAmp.z < dist) {
+        cLib_addCalc2(&pActor->mSwayAmp.z, dist, 1.0f, REG0_F(7) + 1.2f);
     }
 }
 
@@ -67,19 +67,19 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
 static inline void chain_Draw(msw_class *i_this) {
     for (int i = 0; i < 4; i++) {
         cXyz tmp;
-        cXyz_mi(&i_this->m310[i], &tmp, &i_this->m2E0[i]);
+        cXyz_mi(&i_this->mChainUpperPos[i], &tmp, &i_this->mChainLowerPos[i]);
         f32 ty = tmp.y, tz = tmp.z, tx = tmp.x;
         s16 angle1 = -cM_atan2s(ty, tz);
         s16 angle2 = cM_atan2s(tx, std_sqrtf(gabi::fmadds(ty, ty, tz * tz)));
 
-        MtxTrans(i_this->m2E0[i].x, i_this->m2E0[i].y, i_this->m2E0[i].z, false);
+        MtxTrans(i_this->mChainLowerPos[i].x, i_this->mChainLowerPos[i].y, i_this->mChainLowerPos[i].z, false);
 
         s16 var_r4;
         s16 var_r20;
-        if (i_this->m83C[i] != 0) {
-            s16 t = i_this->m298;
+        if (i_this->mChainHitTimer[i] != 0) {
+            s16 t = i_this->mSwayTimer;
             var_r20 =
-                (s16)gabi::ftoi(cM_ssin(t * 18000) * (f32)i_this->m83C[i] * (REG6_F(6) + 100.0f));
+                (s16)gabi::ftoi(cM_ssin(t * 18000) * (f32)i_this->mChainHitTimer[i] * (REG6_F(6) + 100.0f));
             var_r4 = (s16)(t * 3000);
         } else {
             var_r4 = 0;
@@ -114,29 +114,29 @@ static BOOL daMsw_Draw(msw_class *i_this) {
 
 /* inlined into daMsw_Execute */
 static inline void msw_move(msw_class *i_this) {
-    i_this->m298 = (s16)(i_this->m298 + 1);
+    i_this->mSwayTimer = (s16)(i_this->mSwayTimer + 1);
 
     cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 10, 0x200);
     cLib_addCalcAngleS2(&i_this->current.angle.z, 0, 10, 0x200);
 
-    s16 t = i_this->m298;
-    i_this->m2C8.x = (s16)gabi::ftoi(cM_ssin(t * 1500) * i_this->m2BC.x);
-    i_this->m2C8.z = (s16)gabi::ftoi(cM_ssin(t * 1300) * i_this->m2BC.z);
+    s16 t = i_this->mSwayTimer;
+    i_this->mTiltAngle.x = (s16)gabi::ftoi(cM_ssin(t * 1500) * i_this->mTiltAmp.x);
+    i_this->mTiltAngle.z = (s16)gabi::ftoi(cM_ssin(t * 1300) * i_this->mTiltAmp.z);
 
-    cLib_addCalc2(&i_this->m2BC.x, REG0_F(9), 1.0f, REG0_F(3) + 20.0f);
-    cLib_addCalc2(&i_this->m2BC.z, REG0_F(9), 1.0f, REG0_F(3) + 20.0f);
+    cLib_addCalc2(&i_this->mTiltAmp.x, REG0_F(9), 1.0f, REG0_F(3) + 20.0f);
+    cLib_addCalc2(&i_this->mTiltAmp.z, REG0_F(9), 1.0f, REG0_F(3) + 20.0f);
 
-    t = i_this->m298;
-    i_this->m2A4.x = cM_ssin(t * 750) * i_this->m2B0.x;
-    i_this->m2A4.z = cM_ssin(t * 900) * i_this->m2B0.z;
+    t = i_this->mSwayTimer;
+    i_this->mSwayOffset.x = cM_ssin(t * 750) * i_this->mSwayAmp.x;
+    i_this->mSwayOffset.z = cM_ssin(t * 900) * i_this->mSwayAmp.z;
 
-    cLib_addCalc0(&i_this->m2B0.x, 1.0f, REG0_F(6) + 0.25f);
-    cLib_addCalc0(&i_this->m2B0.z, 1.0f, REG0_F(6) + 0.25f);
+    cLib_addCalc0(&i_this->mSwayAmp.x, 1.0f, REG0_F(6) + 0.25f);
+    cLib_addCalc0(&i_this->mSwayAmp.z, 1.0f, REG0_F(6) + 0.25f);
 
     mswAddAngles(&i_this->shape_angle, &i_this->current.angle,
-                 &i_this->m2C8); /* shape_angle = current.angle + m2C8 */
+                 &i_this->mTiltAngle); /* shape_angle = current.angle + mTiltAngle */
     cXyz res;
-    cXyz_pl(&i_this->home.pos, &res, &i_this->m2A4); /* current.pos = home.pos + m2A4 */
+    cXyz_pl(&i_this->home.pos, &res, &i_this->mSwayOffset); /* current.pos = home.pos + mSwayOffset */
     i_this->current.pos.copy(res);
 }
 
@@ -162,23 +162,23 @@ static BOOL daMsw_Execute(msw_class *i_this) {
         src.y = 0.0f;
         src.z = zd[chainIdx] * k;
         src.x = xd[chainIdx] * k;
-        MtxPosition(&src, &i_this->m2E0[chainIdx]);
+        MtxPosition(&src, &i_this->mChainLowerPos[chainIdx]);
 
-        if (i_this->m844 != 0) {
-            i_this->m844 = (s16)(i_this->m844 - 1);
-            i_this->m310[chainIdx].copy(i_this->m2E0[chainIdx]);
-            i_this->m310[chainIdx].y = i_this->m2E0[chainIdx].y + 1000.0f;
+        if (i_this->mChainInitTimer != 0) {
+            i_this->mChainInitTimer = (s16)(i_this->mChainInitTimer - 1);
+            i_this->mChainUpperPos[chainIdx].copy(i_this->mChainLowerPos[chainIdx]);
+            i_this->mChainUpperPos[chainIdx].y = i_this->mChainLowerPos[chainIdx].y + 1000.0f;
         }
 
-        if (i_this->m83C[chainIdx] != 0) {
-            i_this->m83C[chainIdx] = (s16)(i_this->m83C[chainIdx] - 1);
+        if (i_this->mChainHitTimer[chainIdx] != 0) {
+            i_this->mChainHitTimer[chainIdx] = (s16)(i_this->mChainHitTimer[chainIdx] - 1);
         }
 
-        if (i_this->mChainCyls[chainIdx].ChkTgHit() && i_this->m83C[chainIdx] < 10) {
-            i_this->m83C[chainIdx] = (s16)(REG6_S(3) + 15);
+        if (i_this->mChainCyls[chainIdx].ChkTgHit() && i_this->mChainHitTimer[chainIdx] < 10) {
+            i_this->mChainHitTimer[chainIdx] = (s16)(REG6_S(3) + 15);
 
             s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(actor));
-            JAIZelBasic_seStart(JA_SE_LK_HIT_SBRIDGE_CHAIN, &i_this->m2E0[chainIdx], 0, reverb);
+            JAIZelBasic_seStart(JA_SE_LK_HIT_SBRIDGE_CHAIN, &i_this->mChainLowerPos[chainIdx], 0, reverb);
 
             cXyz scale;
             scale.z = 2.0f;
@@ -187,7 +187,7 @@ static BOOL daMsw_Execute(msw_class *i_this) {
             dComIfGp_particle_set(ID_AK_JN_NG, i_this->mChainCyls[chainIdx].GetTgHitPosP(),
                                   &player->shape_angle, &scale);
         }
-        i_this->mChainCyls[chainIdx].SetC(&i_this->m2E0[chainIdx]);
+        i_this->mChainCyls[chainIdx].SetC(&i_this->mChainLowerPos[chainIdx]);
 
         dComIfG_Ccsp_Set(&i_this->mChainCyls[chainIdx]);
     }
@@ -202,7 +202,7 @@ static BOOL daMsw_Execute(msw_class *i_this) {
 /* 021D6D50 */
 static BOOL daMsw_IsDelete(msw_class *i_this) {
     for (int i = 0; i < 4; i++) {
-        mDoAud_seDeleteObject(&i_this->m2E0[i]);
+        mDoAud_seDeleteObject(&i_this->mChainLowerPos[i]);
     }
 
     return TRUE;
@@ -232,7 +232,7 @@ static BOOL daMsw_CreateInit(fopAc_ac_c *i_this) {
     modelData = (J3DModelData *)dComIfG_getObjectRes("Msw", dRes_INDEX_MSW_BDL_OBM_CHAIN1_e,
                                                      mswSafeStringVtable);
     if (modelData == nullptr) /* JUT_ASSERT(523, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_msw.cpp", 0x20B, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_msw.cpp", 0x20B, "modelData != (0)");
 
     for (int chainIdx = 0; chainIdx < 4; chainIdx++) {
         model = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
@@ -284,7 +284,7 @@ static cPhs_State daMsw_Create(fopAc_ac_c *i_this) {
 
     if (phase_state == cPhs_COMPLEATE_e) {
         u8 prm = (u8)(fopAcM_GetParam(a_this) >> 0);
-        a_this->m2A0 = prm == 0xFF ? 0 : prm;
+        a_this->mScaleType = prm == 0xFF ? 0 : prm;
 
         if (!fopAcM_entrySolidHeap(a_this, gabi::guest_fn((const void *)daMsw_CreateInit),
                                    0x10040)) {
@@ -299,7 +299,7 @@ static cPhs_State daMsw_Create(fopAc_ac_c *i_this) {
             return cPhs_ERROR_e;
         }
 
-        switch (a_this->m2A0) {
+        switch (a_this->mScaleType) {
         case 1:
             a_this->scale.x = 1.5f;
             a_this->scale.z = 1.5f;
@@ -332,7 +332,7 @@ static cPhs_State daMsw_Create(fopAc_ac_c *i_this) {
             a_this->mChainCyls[chainIdx].SetStts(&a_this->mStts);
         }
 
-        a_this->m844 = 10;
+        a_this->mChainInitTimer = 10;
         daMsw_Execute(a_this);
     }
 
@@ -384,7 +384,7 @@ str 10015480 "Msw" in 021D6F48
 str 10015444 "Msw" in 021D6D9C
 str 10015448 "Msw" in 021D6DE8
 str 1001544C "d_a_msw.cpp"
-str 10015458 "modelData != NULL"
+str 10015458 "modelData != (0)"
 data xd 101BAD08
 data zd 101BAD18
 data himo_cyl_src 101BAD28

@@ -48,9 +48,9 @@ void __sinit_JAIConst_cpp() {
     nullCamera.position = &camTrans;
     nullCamera.previousPosition = &camPreTrans;
     nullCamera.matrix = &camMtx;
-    nullActor.field_0x4 = nullptr;
+    nullActor.mPosition = nullptr;
     nullActor.field_0x8 = nullptr;
-    nullActor.field_0xc = 0;
+    nullActor.mMapInfo = 0;
     nullActor.field_0x0 = nullptr;
     constructAudioRandom((be<u32>*)&audioRandomSeed, 0);
 }

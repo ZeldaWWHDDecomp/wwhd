@@ -38,10 +38,10 @@ static inline u32 f2u(f32 f) {
 /* 021DD634 */
 void body_control2(mt_class* actor) {
     mtBodyActorView* i_this = reinterpret_cast<mtBodyActorView*>(actor);
-    i_this->mSegmentPositions[0].copy(i_this->current.pos);
-    i_this->mSegmentAngles[0].x = i_this->shape_angle.x;
-    i_this->mSegmentAngles[0].y = i_this->shape_angle.y;
-    i_this->mSegmentAngles[0].z = i_this->shape_angle.z;
+    i_this->mSegmentPos[0].copy(i_this->current.pos);
+    i_this->mSegmentAngle[0].x = i_this->shape_angle.x;
+    i_this->mSegmentAngle[0].y = i_this->shape_angle.y;
+    i_this->mSegmentAngle[0].z = i_this->shape_angle.z;
     f32 spdScale = i_this->mSegmentSpeedScale;
     gabi::Local<dBgS_LinChk_l> linChk;
     dBgS_LinChk_ct(linChk, MT_LINCHK_VTBLS);
@@ -56,8 +56,8 @@ void body_control2(mt_class* actor) {
     gabi::Local<cXyz> diff;
     gabi::Local<cXyz> out;
     for (int i = 0; i < MT_PART_NUM; i++) {
-        cXyz* pos = &i_this->mSegmentPositions[i];
-        csXyz* ang = &i_this->mSegmentAngles[i];
+        cXyz* pos = &i_this->mSegmentPos[i];
+        csXyz* ang = &i_this->mSegmentAngle[i];
         cXyz* spd = &i_this->mSegmentSpeeds[i];
         if (i > 0) {
             start->x = pos->x;
@@ -98,10 +98,10 @@ void body_control2(mt_class* actor) {
                 }
             }
             cLib_addCalcAngleS2(&ang->z, roll, 2, 0x400);
-            cXyz* prev = &i_this->mSegmentPositions[i - 1];
+            cXyz* prev = &i_this->mSegmentPos[i - 1];
             f32 dy = y - prev->y + spd->y;
-            if (i_this->mSuppressBodyWave == 0) {
-                s32 a = i_this->mBodyWavePhase * (REG0_S(5) + 0x5DC) + i * (REG0_S(6) + 0x1D4C);
+            if (i_this->mWavePauseTimer == 0) {
+                s32 a = i_this->mFrameCounter * (REG0_S(5) + 0x5DC) + i * (REG0_S(6) + 0x1D4C);
                 vec->y = 0.0f;
                 vec->z = REG0_F(3) + -5.0f;
                 vec->x = cM_ssin(a) * 3.0f;
@@ -121,7 +121,7 @@ void body_control2(mt_class* actor) {
             MtxPosition(vec, out);
             ang->x = -pitch;
             ang->y = yaw + 0x8000;
-            cXyz* old = &i_this->mPreviousSegmentPositions[i];
+            cXyz* old = &i_this->mOldSegmentPos[i];
             old->copy(*pos);
             f32 nx = prev->x + out->x;
             pos->x = nx;
@@ -145,7 +145,7 @@ void body_control2(mt_class* actor) {
             mDoMtx_stack_c::scaleM(bodyHIO().mHeadScale, bodyHIO().mHeadScale,
                                    bodyHIO().mHeadScale);
         } else {
-            f32 s = i_this->mSegmentScales[i];
+            f32 s = i_this->mSegmentScale[i];
             mDoMtx_stack_c::scaleM(s, s * i_this->mSegmentScaleY[i], 1.0f);
             if (i == 7) {
                 mDoMtx_stack_c::scaleM(i_this->mHeadScale, i_this->mHeadScale, i_this->mHeadScale);
@@ -187,44 +187,44 @@ void body_control2(mt_class* actor) {
             dComIfG_Ccsp_Set(sph);
         } else {
             sph->SetC(pos);
-            if (i_this->mShrinkColliderTimer != 0) {
+            if (i_this->mInvulnerableTimer != 0) {
                 sph->SetR(-200.0f);
             } else {
                 sph->SetR(bodyHIO().mSegmentColliderRadius);
             }
             dComIfG_Ccsp_Set(sph);
         }
-        if (i_this->mWriteTrail != 0 && i > 0) {
-            u32 k = mt_trail_idx(i_this->mTrailTableSelect, i);
-            cXyz* prev = &i_this->mSegmentPositions[i - 1];
+        if (i_this->mStoreTrail != 0 && i > 0) {
+            u32 k = mt_trail_idx(i_this->mFastTrail, i);
+            cXyz* prev = &i_this->mSegmentPos[i - 1];
             for (int j = 0; j < 6; j++, k++) {
                 f32 fj = (f32)j;
                 u32 idx = k & 0x3F;
                 f32 px = pos->x;
                 f32 stepX = (prev->x - px) / 5.0f;
                 f32 stepY = (prev->y - pos->y) / 5.0f;
-                i_this->mTrailPositions[idx].x = gabi::fmadds(stepX, fj, px);
-                i_this->mTrailPositions[idx].y = gabi::fmadds(stepY, fj, pos->y);
+                i_this->mTrailPos[idx].x = gabi::fmadds(stepX, fj, px);
+                i_this->mTrailPos[idx].y = gabi::fmadds(stepY, fj, pos->y);
                 f32 stepZ = (prev->z - pos->z) / 5.0f;
-                i_this->mTrailPositions[idx].z = gabi::fmadds(stepZ, fj, pos->z);
-                i_this->mTrailAngles[idx].x = ang->x;
-                i_this->mTrailAngles[idx].y = ang->y;
-                i_this->mTrailAngles[idx].z = ang->z;
+                i_this->mTrailPos[idx].z = gabi::fmadds(stepZ, fj, pos->z);
+                i_this->mTrailAngle[idx].x = ang->x;
+                i_this->mTrailAngle[idx].y = ang->y;
+                i_this->mTrailAngle[idx].z = ang->z;
             }
         }
     }
-    if (i_this->mWriteTrail != 0) {
+    if (i_this->mStoreTrail != 0) {
         i_this->mAction = 0;
-        i_this->mWriteTrail = 0;
-        i_this->mActionTimer = 100;
-        i_this->mSuppressBodyWave = 0;
-        i_this->mRollMode = 0;
-        i_this->mTrailState = 0;
+        i_this->mStoreTrail = 0;
+        i_this->mPauseTimer = 100;
+        i_this->mWavePauseTimer = 0;
+        i_this->mMode = 0;
+        i_this->mTrailIndex = 0;
         anm_init(actor, 10, 20.0f, 2, 1.0f, 0);
     }
     cLib_addCalc0(&i_this->mSegmentSpeedScale, 1.0f, 0.01f);
     cLib_addCalc2(&i_this->mModelOffsetZ, 20.0f, 1.0f, 1.0f);
-    s32 a = i_this->mBodyWavePhase * (REG0_S(8) + 0x258);
+    s32 a = i_this->mFrameCounter * (REG0_S(8) + 0x258);
     cLib_addCalcAngleS2(&i_this->current.angle.z,
                         (s16)gabi::ftoi(cM_ssin(a) * (REG0_F(5) + 2000.0f)), 2, 0x400);
     dBgS_LinChk_dt(linChk, MT_LINCHK_VTBLS);
@@ -233,10 +233,10 @@ void body_control2(mt_class* actor) {
 /* 021DE1E0 */
 void body_control3(mt_class* actor) {
     mtBodyActorView* i_this = reinterpret_cast<mtBodyActorView*>(actor);
-    i_this->mSegmentPositions[0].copy(i_this->current.pos);
-    i_this->mSegmentAngles[0].z = i_this->shape_angle.z;
-    i_this->mSegmentAngles[0].x = i_this->shape_angle.x;
-    i_this->mSegmentAngles[0].y = i_this->shape_angle.y;
+    i_this->mSegmentPos[0].copy(i_this->current.pos);
+    i_this->mSegmentAngle[0].z = i_this->shape_angle.z;
+    i_this->mSegmentAngle[0].x = i_this->shape_angle.x;
+    i_this->mSegmentAngle[0].y = i_this->shape_angle.y;
     mDoMtx_YrotS(calc_mtx(), i_this->shape_angle.y);
     mDoMtx_XrotM(calc_mtx(), i_this->shape_angle.x);
     mDoMtx_XrotM(calc_mtx(), i_this->shape_angle.z); // HD: the original applies X rotation twice.
@@ -250,24 +250,24 @@ void body_control3(mt_class* actor) {
     vec->z = -17.0f * amp;
     MtxPosition(vec, offset);
     s16 pitchAdd = 0;
-    if (i_this->mCrawlPitchFlags != 0) {
-        pitchAdd = (s16)((i_this->mCrawlPitchFlags & 2) * 500);
+    if (i_this->mHitEffectTimer != 0) {
+        pitchAdd = (s16)((i_this->mHitEffectTimer & 2) * 500);
     }
     s16 pitchAcc = 0;
     for (int i = 0; i < MT_PART_NUM; i++) {
-        cXyz* pos = &i_this->mSegmentPositions[i];
-        csXyz* ang = &i_this->mSegmentAngles[i];
+        cXyz* pos = &i_this->mSegmentPos[i];
+        csXyz* ang = &i_this->mSegmentAngle[i];
         if (i > 0) {
-            s32 a = i_this->mCrawlPhase * (REG0_S(5) + 0x1388) + i * (REG0_S(6) + 0x1B58);
-            pitchAcc = (s16)(pitchAcc - (i_this->mSegmentPitchStep + pitchAdd));
+            s32 a = i_this->mRollTimer * (REG0_S(5) + 0x1388) + i * (REG0_S(6) + 0x1B58);
+            pitchAcc = (s16)(pitchAcc - (i_this->mRollPitchStep + pitchAdd));
             vec->y = 0.0f;
-            vec->z = -i_this->mCrawlSegmentOffset;
+            vec->z = -i_this->mRollBodyOffset;
             vec->x = cM_ssin(a) * i_this->mBodyWaveAmplitude;
             mDoMtx_YrotS(calc_mtx(), i_this->shape_angle.y);
             mDoMtx_XrotM(calc_mtx(), (s16)(i_this->shape_angle.x + pitchAcc));
             mDoMtx_ZrotM(calc_mtx(), i_this->shape_angle.z);
             MtxPosition(vec, out);
-            cXyz* prev = &i_this->mSegmentPositions[i - 1];
+            cXyz* prev = &i_this->mSegmentPos[i - 1];
             f32 ddy = pos->y - prev->y;
             f32 ddx = pos->x - prev->x;
             f32 ddz = pos->z - prev->z;
@@ -293,7 +293,7 @@ void body_control3(mt_class* actor) {
                 ang->y = (s16)(yaw + 0x8000);
                 ang->x = -pitch;
             }
-            i_this->mPreviousSegmentPositions[i].copy(*pos);
+            i_this->mOldSegmentPos[i].copy(*pos);
             pos->x = prev->x + out2->x;
             pos->y = prev->y + out2->y;
             pos->z = prev->z + out2->z;
@@ -311,7 +311,7 @@ void body_control3(mt_class* actor) {
             mDoMtx_stack_c::scaleM(bodyHIO().mCrawlHeadScale, bodyHIO().mCrawlHeadScale,
                                    bodyHIO().mCrawlHeadScale);
         } else {
-            f32 s = i_this->mSegmentScales[i];
+            f32 s = i_this->mSegmentScale[i];
             mDoMtx_stack_c::scaleM(s, s * i_this->mSegmentScaleY[i], 1.0f);
             if (i == 7) {
                 mDoMtx_stack_c::scaleM(i_this->mHeadScale, i_this->mHeadScale, i_this->mHeadScale);
@@ -330,7 +330,7 @@ void body_control3(mt_class* actor) {
             } else {
                 sph->OffAtSPrmBit(0xA);
             }
-            if (i_this->mCrawlPhase >= 0x5A) {
+            if (i_this->mRollTimer >= 0x5A) {
                 sph->OffAtSPrmBit(4);
                 sph->SetR(40.0f);
             } else {
@@ -352,8 +352,8 @@ void body_control4(mt_class* actor) {
     mtBodyScaleMatrix(mtx_now(), 0.0f, 0.0f, 0.0f);
     J3DModel_setBaseTRMtx(model, mtx_now());
     for (int i = 1; i < MT_PART_NUM; i++) {
-        cXyz* pos = &i_this->mSegmentPositions[i];
-        csXyz* ang = &i_this->mSegmentAngles[i];
+        cXyz* pos = &i_this->mSegmentPos[i];
+        csXyz* ang = &i_this->mSegmentAngle[i];
         cXyz* spd = &i_this->mSegmentSpeeds[i];
         if (i_this->mScatterDelay[i] != 0) {
             i_this->mScatterDelay[i] = i_this->mScatterDelay[i] - 1;
@@ -366,7 +366,7 @@ void body_control4(mt_class* actor) {
             ang->x = ang->x + 0x1800;
             ang->y = ang->y + 0x1000;
             if (spd->y < 0.0f) {
-                cLib_addCalc0(&i_this->mSegmentScales[i], 1.0f, 0.025f);
+                cLib_addCalc0(&i_this->mSegmentScale[i], 1.0f, 0.025f);
             }
         }
         model = i_this->mpMorf[i]->getModel();
@@ -374,8 +374,8 @@ void body_control4(mt_class* actor) {
         mDoMtx_stack_c::YrotM(ang->y);
         mDoMtx_XrotM(mtx_now(), ang->x);
         mDoMtx_ZrotM(mtx_now(), ang->z);
-        mDoMtx_stack_c::scaleM(i_this->mSegmentScales[i], i_this->mSegmentScales[i],
-                               i_this->mSegmentScales[i]);
+        mDoMtx_stack_c::scaleM(i_this->mSegmentScale[i], i_this->mSegmentScale[i],
+                               i_this->mSegmentScale[i]);
         if (i == 7) {
             mDoMtx_stack_c::scaleM(0.0f, 0.0f, 0.0f);
         }
@@ -387,21 +387,21 @@ void body_control4(mt_class* actor) {
 void body_control5(mt_class* actor) {
     mtBodyActorView* i_this = reinterpret_cast<mtBodyActorView*>(actor);
     f32 groundY = i_this->mAcch.m_ground_h + bodyHIO().mGroundClearance;
-    i_this->mSegmentPositions[0].copy(i_this->current.pos);
-    i_this->mSegmentAngles[0].x = i_this->shape_angle.x;
-    i_this->mSegmentAngles[0].y = i_this->shape_angle.y;
-    i_this->mSegmentAngles[0].z = i_this->shape_angle.z;
+    i_this->mSegmentPos[0].copy(i_this->current.pos);
+    i_this->mSegmentAngle[0].x = i_this->shape_angle.x;
+    i_this->mSegmentAngle[0].y = i_this->shape_angle.y;
+    i_this->mSegmentAngle[0].z = i_this->shape_angle.z;
     f32 rate = 0.2f;
     gabi::Local<cXyz> vec;
     gabi::Local<cXyz> out2;
     gabi::Local<cXyz> out;
     for (int i = 0; i < MT_PART_NUM; i++) {
-        cXyz* pos = &i_this->mSegmentPositions[i];
-        csXyz* ang = &i_this->mSegmentAngles[i];
+        cXyz* pos = &i_this->mSegmentPos[i];
+        csXyz* ang = &i_this->mSegmentAngle[i];
         if (i > 0) {
-            s32 a1 = i_this->mBodyWavePhase * (REG0_S(5) + 0x1194) - i * (REG0_S(6) + 0x1B58);
+            s32 a1 = i_this->mFrameCounter * (REG0_S(5) + 0x1194) - i * (REG0_S(6) + 0x1B58);
             f32 r1 = REG0_F(4) + 50.0f;
-            s32 a2 = i_this->mBodyWavePhase * (REG0_S(7) + 0xDAC) - i * (REG0_S(8) + 0x1770);
+            s32 a2 = i_this->mFrameCounter * (REG0_S(7) + 0xDAC) - i * (REG0_S(8) + 0x1770);
             f32 r2 = REG0_F(5) + 80.0f;
             f32 amp = i_this->mBodyWaveScale;
             vec->x = cM_ssin(a1) * r1 * amp * rate;
@@ -410,7 +410,7 @@ void body_control5(mt_class* actor) {
             rate += 0.2f;
             mDoMtx_YrotS(calc_mtx(), i_this->shape_angle.y);
             MtxPosition(vec, out);
-            cXyz* prev = &i_this->mSegmentPositions[i - 1];
+            cXyz* prev = &i_this->mSegmentPos[i - 1];
             f32 y = pos->y - 10.0f + out->y;
             if (y < groundY) {
                 y = groundY;
@@ -447,7 +447,7 @@ void body_control5(mt_class* actor) {
             mDoMtx_stack_c::scaleM(bodyHIO().mHeadScale, bodyHIO().mHeadScale,
                                    bodyHIO().mHeadScale);
         } else {
-            f32 s = i_this->mSegmentScales[i];
+            f32 s = i_this->mSegmentScale[i];
             mDoMtx_stack_c::scaleM(s, s * i_this->mSegmentScaleY[i], 1.0f);
             if (i == 7) {
                 mDoMtx_stack_c::scaleM(i_this->mHeadScale, i_this->mHeadScale, i_this->mHeadScale);
@@ -476,7 +476,7 @@ void body_control5(mt_class* actor) {
         }
     }
     cLib_addCalc2(&i_this->mModelOffsetZ, 20.0f, 1.0f, 1.0f);
-    s32 a = i_this->mBodyWavePhase * (REG0_S(0) + 0xBB8);
+    s32 a = i_this->mFrameCounter * (REG0_S(0) + 0xBB8);
     i_this->mHeadWobbleAngle =
         (s16)gabi::ftoi(cM_ssin(a) * (REG0_F(7) + 3000.0f) * i_this->mBodyWaveScale);
 }
@@ -485,11 +485,11 @@ void body_control5(mt_class* actor) {
 void mt_move_maru(mt_class* actor) {
     mtBodyActorView* i_this = reinterpret_cast<mtBodyActorView*>(actor);
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    u8 mode = i_this->mRollMode;
+    u8 mode = i_this->mMode;
     u32 se = 0;
-    i_this->mRollingStateTimer = 3;
+    i_this->mBlinkTimer = 3;
     if (mode == 0) {
-        if (i_this->mRollCollisionTimer == 0) {
+        if (i_this->mActionTimer == 0) {
             i_this->mSph[0].OnCoSPrmBit(1);
         }
         i_this->shape_angle.x = i_this->shape_angle.x + (s16)gabi::ftoi(i_this->speedF * 200.0f);
@@ -519,7 +519,7 @@ void mt_move_maru(mt_class* actor) {
         mt_bg_check(actor);
         if (i_this->mAcch.m_flags & dBgS_Acch::GROUND_HIT) {
             if (fall < REG0_F(12) + -50.0f) {
-                i_this->mImpactState = 2;
+                i_this->mDamageMode = 2;
             }
             f32 target = 0.0f;
             f32 step = 1.0f;
@@ -571,7 +571,7 @@ void mt_move_maru(mt_class* actor) {
         i_this->attention_info.flags |= 0x10;
         i_this->attention_info.distances[4] = 9;
         if (i_this->actor_status & fopAcStts_CARRY_e) {
-            i_this->mRollMode = 1;
+            i_this->mMode = 1;
             i_this->attention_info.flags &= ~0x10u;
         }
         cLib_addCalcAngleS2(&i_this->mHeadWobbleAngle, 0, 1, 0x100);
@@ -613,56 +613,56 @@ void mt_move_maru(mt_class* actor) {
                 i_this->old.pos.z = pz;
             }
             f32 spd = i_this->speedF;
-            i_this->mRollMode = 0;
+            i_this->mMode = 0;
             if (spd > 0.0f) {
                 i_this->speedF = 20.0f * bodyHIO().mThrowSpeedScale;
-                i_this->mRollCollisionTimer = 20;
+                i_this->mActionTimer = 20;
                 i_this->speed.y = 20.0f * bodyHIO().mThrowSpeedScale;
             } else {
                 i_this->speedF = 0.0f;
-                i_this->mRollCollisionTimer = 20;
+                i_this->mActionTimer = 20;
                 i_this->speed.y = REG0_F(11) + -15.0f;
             }
             dBgS_LinChk_dt(linChk, MT_LINCHK_VTBLS);
         } else if (bodyPauseState() != 0) {
-            i_this->mCrawlPhase = i_this->mCrawlPhase + 1;
+            i_this->mRollTimer = i_this->mRollTimer + 1;
         }
         cLib_addCalcAngleS2(&i_this->mHeadWobbleAngle, 0, 1, 0x100);
     } else {
         cLib_addCalcAngleS2(&i_this->mHeadWobbleAngle, 0, 1, 0x100);
     }
 
-    s16 t = i_this->mCrawlPhase;
+    s16 t = i_this->mRollTimer;
     if (t > 0x46) {
         cLib_addCalc2(&i_this->mBodyWaveScale, 1.0f, 1.0f, 0.05f);
         s16 step = bodyHIO().mUnrollPitchStep;
-        if (i_this->mCrawlPhase < 0x6E) {
-            if ((u32)(i_this->mCrawlPhase - 0x50) >= 0x15) {
+        if (i_this->mRollTimer < 0x6E) {
+            if ((u32)(i_this->mRollTimer - 0x50) >= 0x15) {
                 step = (s16)(step - 0x5DC);
             }
             cLib_addCalcAngleS2(&i_this->shape_angle.x, 0x7800, 4, 0x300);
         }
-        cLib_addCalcAngleS2(&i_this->mSegmentPitchStep, step, 4, 0x1000);
-        cLib_addCalc2(&i_this->mCrawlSegmentOffset, 1000.0f, 1.0f, 5.0f);
+        cLib_addCalcAngleS2(&i_this->mRollPitchStep, step, 4, 0x1000);
+        cLib_addCalc2(&i_this->mRollBodyOffset, 1000.0f, 1.0f, 5.0f);
         cLib_addCalc2(&i_this->m454, 0.3f, 1.0f, 0.01f);
     } else {
         if (t == 0x46) {
             i_this->mBodyWaveAmplitude = REG0_F(3) + 2500.0f;
             i_this->m454 = 0.5f;
-            if (i_this->mSuppressUnrollHop == 0) {
+            if (i_this->mInLava == 0) {
                 i_this->speed.y = REG0_F(11) + 30.0f;
             }
         }
         cLib_addCalc0(&i_this->mBodyWaveAmplitude, 1.0f, 125.0f);
-        s32 a = i_this->mCrawlPhase * (REG0_S(5) + 0x1388);
+        s32 a = i_this->mRollTimer * (REG0_S(5) + 0x1388);
         cLib_addCalcAngleS2(&i_this->mHeadWobbleAngle,
                             (s16)gabi::ftoi(cM_ssin(a) * i_this->mBodyWaveAmplitude * 5.0f), 2,
                             0x1000);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 4, 0x1000);
         cLib_addCalc2(&i_this->mBodyWaveScale, -0.4f, 1.0f, 0.2f);
-        a = i_this->mCrawlPhase * (REG0_S(5) + 0x1388);
+        a = i_this->mRollTimer * (REG0_S(5) + 0x1388);
         cLib_addCalcAngleS2(
-            &i_this->mSegmentPitchStep,
+            &i_this->mRollPitchStep,
             (s16)gabi::ftoi(cM_ssin(a) * i_this->mBodyWaveAmplitude * (REG0_F(14) + 4.0f)), 1,
             0x1000);
         s16 headWobbleAngle = i_this->mHeadWobbleAngle;
@@ -671,8 +671,8 @@ void mt_move_maru(mt_class* actor) {
         i_this->shape_angle.y = ay + headWobbleAngle;
         cLib_addCalc0(&i_this->speedF, 1.0f, 0.5f);
     }
-    if (i_this->mCrawlPhase == 100) {
-        i_this->mTextureFrameMode = 2;
+    if (i_this->mRollTimer == 100) {
+        i_this->mMaterialMode = 2;
     }
 
     /* steam from the water (water_damage_se_set) */

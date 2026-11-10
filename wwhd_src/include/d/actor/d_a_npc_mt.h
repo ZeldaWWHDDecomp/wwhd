@@ -102,37 +102,37 @@ struct daNpcMt_c : fopNpc_npc_c {
     /* 0x884 */ gptr<sMtAnmDat> mpAnmDat;
     /* 0x888 */ gptr<be<u32>> mpMsgTbl;
     /* 0x88C */ be<f32> m718;
-    /* 0x890 */ be<f32> m71C;
+    /* 0x890 */ be<f32> mNextMorf;  /* was m71C: setAnm 022A01A4: when it is >= 0 it replaces the blend (morf) of the next animation and is reset to -1 (tww if (it >= 0.0f) { morf = it; it = -1.0f; }); daNpcMt_construct 0229FD7C -1 */
     /* 0x894 */ be<f32> m720;
     /* 0x898 */ be<u32> mItemNo;
-    /* 0x89C */ be<u8> m728;
+    /* 0x89C */ be<u8> mHeadOnlyFollow;  /* was m728: lookBack 022A1708 passes it as the head-only flag of the joint look-at (tww bool headOnlyFollow = it; m_jnt.lookAtTarget(.., headOnlyFollow)); chkAttention 022A0B20 / faceHome set 0 or 1 (tww); daNpcMt_construct 0229FD7C 1 */
     /* 0x89D */ be<u8> m729;
     /* 0x89E */ be<s16> mMtGetItemEventIdx;
     /* 0x8A0 */ be<s16> m72C;
     /* 0x8A2 */ be<s16> m72E;
     /* 0x8A4 */ be<s16> m730;
-    /* 0x8A6 */ be<s16> m732;
-    /* 0x8A8 */ be<u16> m734;
+    /* 0x8A6 */ be<s16> mHomeAngleY;  /* was m732: daNpcMt_construct 0229FD7C: home.angle.y (tww it = home.angle.y); faceHome / chkAttention 022A0B20 turn back to it (tww m740 = it) */
+    /* 0x8A8 */ be<u16> mMsgStatus;  /* was m734: talk2 022A10BC: the message status, 0xFFFF on a new message, then the status that next_msgStatus returned (tww it = -1; if (it == fopMsgStts_MSG_CONTINUES_e) ..; it = status); after daNpcPeople_c::mMsgStatus (npcs.md) */
     /* 0x8AA */ be<s16> m736;
     /* 0x8AC */ u8 m738[2];
     /* 0x8AE */ be<s16> mTimer;
-    /* 0x8B0 */ be<s16> m73C;
-    /* 0x8B2 */ be<s16> m73E;
-    /* 0x8B4 */ be<s16> m740;
-    /* 0x8B6 */ be<u8> m742;
-    /* 0x8B7 */ be<u8> m743;
-    /* 0x8B8 */ be<u8> m744;
+    /* 0x8B0 */ be<s16> mTurnSpeedTarget;  /* was m73C: chkAttention 022A0B20: l_npc_dat field_0x2A (tww); lookBack 022A1708 eases mTurnSpeed to it unless the event cut gives a turn speed (tww short target = it; cLib_addCalcAngleS2(&m73E, target, 4, 0x800)) */
+    /* 0x8B2 */ be<s16> mTurnSpeed;  /* was m73E: lookBack 022A1708: eased to mTurnSpeedTarget while turning, else 0, and passed as the look-at's maxVel (tww m_jnt.lookAtTarget(.., desiredYRot, it, ..); dNpc_JntCtrl_c::lookAtTarget(.., s16 defaultY, s16 maxVel, ..)); createInit 022A0618 0 */
+    /* 0x8B4 */ be<s16> mDesiredYRot;  /* was m740: lookBack 022A1708: the look-at's default Y angle in look mode 2 (tww desiredYRot = it); faceHome / chkAttention 022A0B20 set it to mHomeAngleY (tww it = m732) */
+    /* 0x8B6 */ be<u8> mTalking;  /* was m742: checkOrder 022A0E84 sets 1 on the talk command and enters the talk mode; executeTalk 022A1D7C clears it when the box closes; executeCommon 022A1C4C returns it and enters the talk mode while it is 1 (tww); lookBack 022A1708 turns the whole body while it and m750 are set (tww); createInit 022A0618 0 */
+    /* 0x8B7 */ be<u8> mInAttention;  /* was m743: chkAttention 022A0B20: 1 once the player comes close, 0 when they leave (tww); executeCommon 022A1C4C sets mOrderState 1 while it is set, else 0 (tww); createInit 022A0618 0 */
+    /* 0x8B8 */ be<u8> mOrderState;  /* was m744: executeCommon 022A1C4C 1 / 0 from mInAttention; eventMesSet 022A1270 3 when a message flag asks for the item event; checkOrder 022A0E84 starts the talk for 1 / 2 and clears 3 once the get-item event (mMtGetItemEventIdx) starts; eventOrder 022A1500 orders by it (tww) */
     /* 0x8B9 */ be<u8> mFrame;
-    /* 0x8BA */ be<u8> m746;
+    /* 0x8BA */ be<u8> mMoveProcIdx;  /* was m746: executeSetMode 022A0DFC: the value of l_execute_init[mode] (tww it = (this->*l_execute_init[param_1])()); _execute 022A1914 calls (this->*moveProc[it])() (tww); executeCommon 022A1C4C tests it; daNpcMt_construct 0229FD7C 0; same name as daObjFigure_c::mMoveProcIdx */
     /* 0x8BB */ be<u8> m747;
     /* 0x8BC */ be<u8> mNpcNo;
     /* 0x8BD */ be<u8> m749;
-    /* 0x8BE */ be<u8> m74A;
+    /* 0x8BE */ be<u8> mAnmIdx;  /* was m74A: setAnm 022A01A4 stores the animation number; createHeap 0229FABC loads l_bck_ix_tbl[it] (tww); executeWait 022A1D2C goes back to the wait animation while it is not 0; setAnmTbl 022A02B0 compares with it (tww it != mpAnmDat->field_0x00) */
     /* 0x8BF */ be<u8> mAnmFlag;
-    /* 0x8C0 */ be<s8> m74C;
-    /* 0x8C1 */ be<s8> m74D;
+    /* 0x8C0 */ be<s8> mAnmTimer;  /* was m74C: setAnmTbl 022A02B0: mpAnmDat->field_0x02 (tww it = mpAnmDat->field_0x02); playAnm 022A1638 counts it down and acts at 0 (tww if (it > 0) { it--; if (it == 0) .. }) */
+    /* 0x8C1 */ be<s8> mActIdx;  /* was m74D: privateCut 022A12FC: the event action index (tww it = dComIfGp_evmng_getMyActIdx(..), -1 ends, switch (it)); same name as the other actors' cut indices */
     /* 0x8C2 */ be<u8> m74E;
-    /* 0x8C3 */ be<s8> m74F;
+    /* 0x8C3 */ be<s8> mLookMode;  /* was m74F: lookBack 022A1708: 1 looks at mLookAtPos, 2 faces mDesiredYRot, 0 neither (tww switch (it)); chkAttention 022A0B20 / faceHome set it; daNpcMt_construct 0229FD7C 0 */
     /* 0x8C4 */ be<u8> m750;
     /* 0x8C5 */ be<u8> m751;
     /* 0x8C6 */ be<u8> m752;
@@ -149,37 +149,37 @@ WWHD_OFFSET(daNpcMt_c, mLookAtPos, 0x878);
 WWHD_OFFSET(daNpcMt_c, mpAnmDat, 0x884);
 WWHD_OFFSET(daNpcMt_c, mpMsgTbl, 0x888);
 WWHD_OFFSET(daNpcMt_c, m718, 0x88C);
-WWHD_OFFSET(daNpcMt_c, m71C, 0x890);
+WWHD_OFFSET(daNpcMt_c, mNextMorf, 0x890);
 WWHD_OFFSET(daNpcMt_c, m720, 0x894);
 WWHD_OFFSET(daNpcMt_c, mItemNo, 0x898);
-WWHD_OFFSET(daNpcMt_c, m728, 0x89C);
+WWHD_OFFSET(daNpcMt_c, mHeadOnlyFollow, 0x89C);
 WWHD_OFFSET(daNpcMt_c, m729, 0x89D);
 WWHD_OFFSET(daNpcMt_c, mMtGetItemEventIdx, 0x89E);
 WWHD_OFFSET(daNpcMt_c, m72C, 0x8A0);
 WWHD_OFFSET(daNpcMt_c, m72E, 0x8A2);
 WWHD_OFFSET(daNpcMt_c, m730, 0x8A4);
-WWHD_OFFSET(daNpcMt_c, m732, 0x8A6);
-WWHD_OFFSET(daNpcMt_c, m734, 0x8A8);
+WWHD_OFFSET(daNpcMt_c, mHomeAngleY, 0x8A6);
+WWHD_OFFSET(daNpcMt_c, mMsgStatus, 0x8A8);
 WWHD_OFFSET(daNpcMt_c, m736, 0x8AA);
 WWHD_OFFSET(daNpcMt_c, m738, 0x8AC);
 WWHD_OFFSET(daNpcMt_c, mTimer, 0x8AE);
-WWHD_OFFSET(daNpcMt_c, m73C, 0x8B0);
-WWHD_OFFSET(daNpcMt_c, m73E, 0x8B2);
-WWHD_OFFSET(daNpcMt_c, m740, 0x8B4);
-WWHD_OFFSET(daNpcMt_c, m742, 0x8B6);
-WWHD_OFFSET(daNpcMt_c, m743, 0x8B7);
-WWHD_OFFSET(daNpcMt_c, m744, 0x8B8);
+WWHD_OFFSET(daNpcMt_c, mTurnSpeedTarget, 0x8B0);
+WWHD_OFFSET(daNpcMt_c, mTurnSpeed, 0x8B2);
+WWHD_OFFSET(daNpcMt_c, mDesiredYRot, 0x8B4);
+WWHD_OFFSET(daNpcMt_c, mTalking, 0x8B6);
+WWHD_OFFSET(daNpcMt_c, mInAttention, 0x8B7);
+WWHD_OFFSET(daNpcMt_c, mOrderState, 0x8B8);
 WWHD_OFFSET(daNpcMt_c, mFrame, 0x8B9);
-WWHD_OFFSET(daNpcMt_c, m746, 0x8BA);
+WWHD_OFFSET(daNpcMt_c, mMoveProcIdx, 0x8BA);
 WWHD_OFFSET(daNpcMt_c, m747, 0x8BB);
 WWHD_OFFSET(daNpcMt_c, mNpcNo, 0x8BC);
 WWHD_OFFSET(daNpcMt_c, m749, 0x8BD);
-WWHD_OFFSET(daNpcMt_c, m74A, 0x8BE);
+WWHD_OFFSET(daNpcMt_c, mAnmIdx, 0x8BE);
 WWHD_OFFSET(daNpcMt_c, mAnmFlag, 0x8BF);
-WWHD_OFFSET(daNpcMt_c, m74C, 0x8C0);
-WWHD_OFFSET(daNpcMt_c, m74D, 0x8C1);
+WWHD_OFFSET(daNpcMt_c, mAnmTimer, 0x8C0);
+WWHD_OFFSET(daNpcMt_c, mActIdx, 0x8C1);
 WWHD_OFFSET(daNpcMt_c, m74E, 0x8C2);
-WWHD_OFFSET(daNpcMt_c, m74F, 0x8C3);
+WWHD_OFFSET(daNpcMt_c, mLookMode, 0x8C3);
 WWHD_OFFSET(daNpcMt_c, m750, 0x8C4);
 WWHD_OFFSET(daNpcMt_c, m751, 0x8C5);
 WWHD_OFFSET(daNpcMt_c, m752, 0x8C6);

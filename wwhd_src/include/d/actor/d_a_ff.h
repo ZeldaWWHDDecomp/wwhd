@@ -53,7 +53,7 @@ struct ff_class : fopAc_ac_c {
     /* 0x3C8 */ be<f32> mRotVel;
     /* 0x3CC */ be<f32> mVelocityFwdTarget;
     /* 0x3D0 */ cXyz mVelImpulse;
-    /* 0x3DC */ cXyz m2C0;
+    /* 0x3DC */ cXyz mVelAccel;  /* was m2C0: daFf_Execute 02133070 (mMode 4, until mTimers[4] runs out): added to mVelImpulse each frame (y capped at 10); x / z get a random cM_rndFX(1) one frame in ten, y is 2 */
     /* 0x3E8 */ be<f32> mScale;
     /* 0x3EC */ be<f32> mScaleTarget;
     /* 0x3F0 */ be<f32> mGlowScale;
@@ -86,7 +86,7 @@ WWHD_OFFSET(ff_class, m2AA, 0x3C6);
 WWHD_OFFSET(ff_class, mRotVel, 0x3C8);
 WWHD_OFFSET(ff_class, mVelocityFwdTarget, 0x3CC);
 WWHD_OFFSET(ff_class, mVelImpulse, 0x3D0);
-WWHD_OFFSET(ff_class, m2C0, 0x3DC);
+WWHD_OFFSET(ff_class, mVelAccel, 0x3DC);
 WWHD_OFFSET(ff_class, mScale, 0x3E8);
 WWHD_OFFSET(ff_class, mScaleTarget, 0x3EC);
 WWHD_OFFSET(ff_class, mGlowScale, 0x3F0);

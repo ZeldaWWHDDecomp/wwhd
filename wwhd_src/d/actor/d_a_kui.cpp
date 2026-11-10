@@ -138,7 +138,7 @@ static inline void demo_camera(kui_class* i_this) {
     KuiCameraControl* dcam = &camera->mCamera;
     s8 bVar2 = true;
 
-    s8 st = i_this->field_0x2E8;
+    s8 st = i_this->mDemoMode;
     switch (st) {
     case 0:
         break;
@@ -149,31 +149,31 @@ static inline void demo_camera(kui_class* i_this) {
             bVar2 = false;
             break;
         }
-        i_this->field_0x2E8 = (s8)(st + 1);
+        i_this->mDemoMode = (s8)(st + 1);
         dcam->Stop();
         dcam->SetTrimSize(2);
-        i_this->field_0x2EA = 0;
+        i_this->mDemoTimer = 0;
         /* fallthrough */
     case 2: {
-        i_this->current.pos.y = i_this->home.pos.y + i_this->field_0x30C;
+        i_this->current.pos.y = i_this->home.pos.y + i_this->mDemoOffsetY;
 
-        s32 uVar3 = i_this->field_0x2EA;
+        s32 uVar3 = i_this->mDemoTimer;
         if (uVar3 < 20) {
             f32 sin_result = cM_ssin((uVar3 & 0x1F) * 0x800);
-            i_this->field_0x30C = sin_result * 5.0f;
+            i_this->mDemoOffsetY = sin_result * 5.0f;
         } else if (uVar3 <= 27) {
             if (uVar3 == 27) {
                 fopAcM_seStartCurrent_nn(i_this, JA_SE_OBJ_ROPE_SW_ON, 0);
                 StartShock_up(false);
             }
-            cLib_addCalc2(&i_this->field_0x30C, -70.0f, 1.0f, 10.0f);
+            cLib_addCalc2(&i_this->mDemoOffsetY, -70.0f, 1.0f, 10.0f);
         } else if (uVar3 < 42) {
             f32 sin_result = cM_ssin(uVar3 * 0x3A00);
-            i_this->field_0x30C = gabi::fmadds(sin_result, 5.0f, -70.0f);
+            i_this->mDemoOffsetY = gabi::fmadds(sin_result, 5.0f, -70.0f);
         }
 
-        cXyz_fcopy(&i_this->field_0x2F8, &i_this->home.pos);
-        i_this->field_0x2F8.y = i_this->field_0x2F8.y + (REG_F(8, 0) + 200.0f);
+        cXyz_fcopy(&i_this->mDemoCamCenter, &i_this->home.pos);
+        i_this->mDemoCamCenter.y = i_this->mDemoCamCenter.y + (REG_F(8, 0) + 200.0f);
         cMtx_YrotS(calc_mtx(), i_this->current.angle.y);
 
         gabi::Local<cXyz> vec, posVec, sum;
@@ -183,13 +183,13 @@ static inline void demo_camera(kui_class* i_this) {
         MtxPosition(vec, posVec);
 
         cXyz_pl(&i_this->home.pos, sum, posVec);
-        i_this->field_0x2EC.copy(*sum);
+        i_this->mDemoCamEye.copy(*sum);
 
-        if (i_this->field_0x2EA == 70) {
+        if (i_this->mDemoTimer == 70) {
             gabi::Local<cXyz> c, e;
-            cXyz_fcopy(c, &i_this->field_0x2F8);
-            cXyz_fcopy(e, &i_this->field_0x2EC);
-            i_this->field_0x2E8 = 0;
+            cXyz_fcopy(c, &i_this->mDemoCamCenter);
+            cXyz_fcopy(e, &i_this->mDemoCamEye);
+            i_this->mDemoMode = 0;
             dcam->Reset(c, e);
             dcam->Start();
             dcam->SetTrimSize(0);
@@ -203,13 +203,13 @@ static inline void demo_camera(kui_class* i_this) {
     }
     }
 
-    if ((i_this->field_0x2E8 != 0) && bVar2) {
+    if ((i_this->mDemoMode != 0) && bVar2) {
         gabi::Local<cXyz> c, e;
-        cXyz_fcopy(e, &i_this->field_0x2EC);
-        cXyz_fcopy(c, &i_this->field_0x2F8);
+        cXyz_fcopy(e, &i_this->mDemoCamEye);
+        cXyz_fcopy(c, &i_this->mDemoCamCenter);
         dcam->Set(c, e);
-        JUTReport(0x19a, 0x1ae, "K SUB  COUNT  %d", i_this->field_0x2EA);
-        i_this->field_0x2EA = i_this->field_0x2EA + 1;
+        JUTReport(0x19a, 0x1ae, "K SUB  COUNT  %d", i_this->mDemoTimer);
+        i_this->mDemoTimer = i_this->mDemoTimer + 1;
     }
 }
 
@@ -248,18 +248,18 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
 
         /* HD: no `unk > 2000` condition */
         if (unk_flag != 0) {
-            if (i_this->field_0x2DC[unk_flag] == 0) {
-                i_this->field_0x2DC[unk_flag] = 0x50;
-                i_this->field_0x2DC[0] =
+            if (i_this->mBellTimers[unk_flag] == 0) {
+                i_this->mBellTimers[unk_flag] = 0x50;
+                i_this->mBellTimers[0] =
                     (s16)(REG_S_(10, 3) + 40); /* HD: REG10_S(3) (GameCube REG0_S(3)) */
 
                 StartShock_up(true);
                 fopAcM_seStartCurrent_nn(actor, JA_SE_OBJ_ST_CHIME, 0);
 
                 s16 v = bure_xa_d[unk_flag - 1];
-                i_this->field_0x2E4 = v;
-                i_this->field_0x2E4 = (s16)(v * (REG_S_(17, 4) + 1));
-                i_this->field_0x2E6 = (s16)(REG_S_(17, 5) + 0x400);
+                i_this->mSwingTarget = v;
+                i_this->mSwingTarget = (s16)(v * (REG_S_(17, 4) + 1));
+                i_this->mSwingStep = (s16)(REG_S_(17, 5) + 0x400);
             }
         }
 
@@ -274,14 +274,14 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
     }
 
     cLib_addCalcAngleS2(&actor->current.angle.x, target_x_angle, 4, (s16)(REG0_S(1) + 0x200));
-    s16 c1 = i_this->field_0x2DC[1];
-    s16 c2 = i_this->field_0x2DC[2];
+    s16 c1 = i_this->mBellTimers[1];
+    s16 c2 = i_this->mBellTimers[2];
     if (c1 != 0) {
-        i_this->field_0x2DC[1] = (s16)(c1 - 1);
+        i_this->mBellTimers[1] = (s16)(c1 - 1);
     }
-    s16 c0 = i_this->field_0x2DC[0];
+    s16 c0 = i_this->mBellTimers[0];
     if (c2 != 0) {
-        i_this->field_0x2DC[2] = (s16)(c2 - 1);
+        i_this->mBellTimers[2] = (s16)(c2 - 1);
     }
 
     s16 x = 0;
@@ -290,7 +290,7 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
 
     if (c0 != 0) {
         s16 iVar10 = (s16)(c0 - 1);
-        i_this->field_0x2DC[0] = iVar10;
+        i_this->mBellTimers[0] = iVar10;
 
         f32 fv = (f32)iVar10;
         f32 fVar1 = fv * (REG0_F(16) + 40.0f);
@@ -307,9 +307,9 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
         }
     }
 
-    cLib_addCalcAngleS2(&i_this->field_0x2E2, i_this->field_0x2E4, 4, i_this->field_0x2E6);
-    cLib_addCalcAngleS2(&i_this->field_0x2E4, 0, 1, (s16)(REG_S_(17, 6) + 0x80));
-    cLib_addCalcAngleS2(&i_this->field_0x2E6, (s16)(REG_S_(17, 7) + 0x100), 1,
+    cLib_addCalcAngleS2(&i_this->mSwingAngle, i_this->mSwingTarget, 4, i_this->mSwingStep);
+    cLib_addCalcAngleS2(&i_this->mSwingTarget, 0, 1, (s16)(REG_S_(17, 6) + 0x80));
+    cLib_addCalcAngleS2(&i_this->mSwingStep, (s16)(REG_S_(17, 7) + 0x100), 1,
                         (s16)(REG_S_(17, 8) + 0x40));
 
     MtxTrans(actor->home.pos.x, actor->home.pos.y, actor->home.pos.z, FALSE);
@@ -317,7 +317,7 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
 
     MtxPush();
     cMtx_YrotM(calc_mtx(), actor->shape_angle.y);
-    cMtx_XrotM(calc_mtx(), (s16)(x + i_this->field_0x2E2));
+    cMtx_XrotM(calc_mtx(), (s16)(x + i_this->mSwingAngle));
     cMtx_ZrotM(calc_mtx(), z);
     cMtx_YrotM(calc_mtx(), (s16)-actor->shape_angle.y);
     MtxScale(unk_f, unk_f, unk_f, TRUE);
@@ -342,8 +342,8 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
     MtxTrans(actor->current.pos.x, actor->current.pos.y, actor->current.pos.z, FALSE);
     cMtx_YrotM(calc_mtx(), actor->current.angle.y);
     MtxScale(actor->scale.x, actor->scale.y, actor->scale.z, TRUE);
-    PSMTXCopy(calc_mtx(), &i_this->field_0x2A8);
-    dBgW_Move(i_this->field_0x2D8);
+    PSMTXCopy(calc_mtx(), &i_this->mBgMtx);
+    dBgW_Move(i_this->mpBgW);
 }
 
 /* 021ACB0C */
@@ -352,15 +352,15 @@ static BOOL daKui_Execute(kui_class* i_this) {
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
-    if (i_this->field_0x2A2 != 0) {
+    if (i_this->mOnDragonTail != 0) {
         KuiDragonTailView* dragon_tail =
             (KuiDragonTailView*)fpcM_Search(gabi::guest_fn((const void*)s_a_i_sub), i_this);
         KuiBtdView* btd = (KuiBtdView*)fpcM_Search(gabi::guest_fn((const void*)b_a_i_sub), i_this);
 
         if (dragon_tail != nullptr && btd != nullptr) {
-            s16 u4BA = dragon_tail->unk_4BA;                    /* dr2_class::unk_4BA */
-            if ((u4BA == 0 || u4BA >= 10) && btd->m02E4 < 10) { /* btd_class::m02E4 */
-                actor->current.pos.copy(dragon_tail->unk_3B0);  /* dr2_class::unk_3B0 */
+            s16 u4BA = dragon_tail->mRockState;                 /* dr2_class::mRockState */
+            if ((u4BA == 0 || u4BA >= 10) && btd->mAction < 10) { /* btd_class::mAction */
+                actor->current.pos.copy(dragon_tail->mHookTargetPos);  /* dr2_class::mHookTargetPos */
                 actor->current.angle.x = dragon_tail->current.angle.x;
                 actor->current.angle.y = dragon_tail->current.angle.y;
                 actor->current.angle.z = dragon_tail->current.angle.z;
@@ -384,33 +384,33 @@ static BOOL daKui_Execute(kui_class* i_this) {
         J3DModel_setBaseScale(i_this->mpModel2, &actor->scale);
         J3DModel_setBaseTRMtx(i_this->mpModel2, calc_mtx());
         gabi::Local<Mtx34> local_mtx;
-        if (i_this->field_0x2A2) {
+        if (i_this->mOnDragonTail) {
             PSMTXScale(local_mtx, 4.0f, 4.0f, 4.0f);
         } else {
             PSMTXScale(local_mtx, actor->scale.x, actor->scale.y, actor->scale.z);
         }
 
-        PSMTXConcat(calc_mtx(), local_mtx, &i_this->field_0x2A8);
-        dBgW_Move(i_this->field_0x2D8);
+        PSMTXConcat(calc_mtx(), local_mtx, &i_this->mBgMtx);
+        dBgW_Move(i_this->mpBgW);
     }
 
     if (i_this->type == 2 || i_this->type == 4) {
         BOOL is_switch = dComIfGs_isSwitch(i_this->mSwitchNo, dComIfGp_roomControl_getStayNo());
 
         if (!is_switch) {
-            if (actor->health == 3 && i_this->field_0x308 == 0) {
-                i_this->field_0x308 = 1000; /* HD: folded with the decrement below (stores 999) */
+            if (actor->health == 3 && i_this->mSwitchTimer == 0) {
+                i_this->mSwitchTimer = 1000; /* HD: folded with the decrement below (stores 999) */
             }
         } else {
             actor->current.pos.y = actor->home.pos.y - 70.0f;
         }
 
-        if (i_this->field_0x308 != 0) {
-            i_this->field_0x308 = (s16)(i_this->field_0x308 - 1);
+        if (i_this->mSwitchTimer != 0) {
+            i_this->mSwitchTimer = (s16)(i_this->mSwitchTimer - 1);
             s16 finished = (s16)(REG_S_(8, 3) + 970);
-            if (i_this->field_0x308 == finished) {
+            if (i_this->mSwitchTimer == finished) {
                 if (i_this->type == 2) {
-                    i_this->field_0x2E8 = 1;
+                    i_this->mDemoMode = 1;
                 } else {
                     fopAcM_seStartCurrent_nn(actor, JA_SE_OBJ_ROPE_SW_ON, 0);
                     dComIfGs_onSwitch(i_this->mSwitchNo, fopAcM_GetRoomNo(actor));
@@ -431,7 +431,7 @@ static BOOL daKui_IsDelete(kui_class*) { return TRUE; }
 /* 021ADAFC */
 static BOOL daKui_Delete(kui_class* i_this) {
     dComIfG_resDelete(&i_this->mPhs, "Kui"); /* dComIfG_resDeleteDemo */
-    cBgS_Release(dComIfG_Bgsp(), i_this->field_0x2D8);
+    cBgS_Release(dComIfG_Bgsp(), i_this->mpBgW);
     return TRUE;
 }
 
@@ -482,17 +482,17 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
     }
 
     dBgW* bgw = new_dBgW();
-    i_this->field_0x2D8 = bgw;
-    if (!i_this->field_0x2D8) {
+    i_this->mpBgW = bgw;
+    if (!i_this->mpBgW) {
         return FALSE;
     }
 
     cBgD_t* pData = (cBgD_t*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_DZB_OBI_ROPETAG_e);
-    if (cBgW_Set(i_this->field_0x2D8, pData, cBgW_MOVE_BG_e, &i_this->field_0x2A8) == true) {
+    if (cBgW_Set(i_this->mpBgW, pData, cBgW_MOVE_BG_e, &i_this->mBgMtx) == true) {
         return FALSE;
     }
 
-    dBgW_SetCrrFunc(i_this->field_0x2D8, 0x024EE658 /* dBgS_MoveBGProc_Typical */);
+    dBgW_SetCrrFunc(i_this->mpBgW, 0x024EE658 /* dBgS_MoveBGProc_Typical */);
 
     return TRUE;
 }
@@ -520,8 +520,8 @@ static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
         }
 
         i_this->type = fopAcM_GetParam(a_this) & 0xF;
-        i_this->field_0x2A2 = fopAcM_GetParam(a_this) & 0xF0;
-        i_this->field_0x2A1 = (u8)(fopAcM_GetParam(a_this) >> 8);
+        i_this->mOnDragonTail = fopAcM_GetParam(a_this) & 0xF0;
+        i_this->mScaleType = (u8)(fopAcM_GetParam(a_this) >> 8);
         u8 sw = (u8)(fopAcM_GetParam(a_this) >> 0x18);
 
         if (sw == 0xFF) {
@@ -530,10 +530,10 @@ static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
             i_this->mSwitchNo = sw;
         }
         if (i_this->type == 3) {
-            i_this->field_0x2A1 = 4;
+            i_this->mScaleType = 4;
         }
 
-        switch (i_this->field_0x2A1) {
+        switch (i_this->mScaleType) {
         case 0:
             i_this->scale.x = 0.5f;
             i_this->scale.y = 0.5f;
@@ -567,7 +567,7 @@ static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
             return cPhs_ERROR_e;
         }
 
-        if (dBgS_Regist(dComIfG_Bgsp(), i_this->field_0x2D8, i_this)) {
+        if (dBgS_Regist(dComIfG_Bgsp(), i_this->mpBgW, i_this)) {
             return cPhs_ERROR_e;
         }
 

@@ -262,9 +262,9 @@ WWHD_OFFSET(Link05MoveboxHD, mbRollCrash, 0x7D4);
 WWHD_SIZE(Link05MoveboxHD, 0x7D8);
 struct Link05RopeHD : fopAc_ac_c {
     u8 _3AC[0x1914 - 0x3AC];
-    be<f32> m15FC;
+    be<f32> mPlayerMoveLength; /* was m15FC: view of himo3_class::mPlayerMoveLength (d_a_himo3.h, tww getPlayerMoveLength()) */
 };
-WWHD_OFFSET(Link05RopeHD, m15FC, 0x1914);
+WWHD_OFFSET(Link05RopeHD, mPlayerMoveLength, 0x1914);
 WWHD_SIZE(Link05RopeHD, 0x1918);
 // HD: copying float storage as words retains signaling-NaN payloads.
 inline void lk05CopyFloatBits(be<f32>* dst, const be<f32>* src) {

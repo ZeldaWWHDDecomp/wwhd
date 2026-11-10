@@ -1,7 +1,7 @@
 /** Mothula and its larva, measured WWHD actor layout.
  * HD: fopEn_enemy_c is 0x3C8. The GameCube source has incomplete, nonmatching
- * behavior stubs; retain its confirmed m2CD and m31E names and name the measured
- * wing, action, collision and camera fields by their use in the verified code.
+ * behavior stubs; its offset names (m2CD, m31E) are named from their WWHD use, like the measured
+ * wing, action, collision and camera fields.
  */
 #pragma once
 #include "SSystem/SComponent/c_cc_d.h"
@@ -77,7 +77,7 @@ struct gm_class : fopEn_enemy_c {
     /* 0x03D4 */ u8 reserved03D4[0x4];
     /* 0x03D8 */ gptr<mDoExt_brkAnm> mpBrkAnms[4];
     /* 0x03E8 */ be<u8> mWingFlags;
-    /* 0x03E9 */ be<u8> m2CD;
+    /* 0x03E9 */ be<u8> mLarvaType;  /* was m2CD: daGM_Create 021507C4: param byte 1 (0xFF -> 0); 0 is Mothula itself, not 0 a larva: nodeCallBack 0214BB1C, draw_SUB 0214BDFC, daGM_Draw 0214BF60, body_atari_check 0214C2F4, daGM_Execute 0214D128 and useHeapInit 02150124 branch on it; action_hane_rakka (in daGM_Execute) treats type 2 apart */
     /* 0x03EA */ be<u8> mType;
     /* 0x03EB */ be<u8> mSwitchNo;
     /* 0x03EC */ be<u8> mAction;
@@ -98,7 +98,7 @@ struct gm_class : fopEn_enemy_c {
     /* 0x042C */ csXyz mWingPhaseStep;
     /* 0x0432 */ csXyz mBodyPhaseStep;
     /* 0x0438 */ be<s16> mBobPhase;
-    /* 0x043A */ be<s16> m31E;
+    /* 0x043A */ be<s16> mKsCount;  /* was m31E: ks_set_rtn 0214CFA4: number of Morths (process 0xCD, fpcNm_KS_e) this Mothula has created; no more once it reaches 10 (mType 1) / 20 */
     /* 0x043C */ be<s16> mPitchOffset;
     /* 0x043E */ be<s16> mDiveCount;
     /* 0x0440 */ be<s16> mBrkIndex;
@@ -121,13 +121,13 @@ struct gm_class : fopEn_enemy_c {
     /* 0x04E8 */ union {
         cXyz mLineStart;
         struct {
-            be<f32> mLineStartX, z, mLineStartZ;
+            be<f32> mLineStartX, mLineStartY, mLineStartZ;  /* was z (misnamed): the y member of mLineStart (0x4EC), between mLineStartX and mLineStartZ */
         };
     };
     /* 0x04F4 */ union {
         cXyz mLineEnd;
         struct {
-            be<f32> mLineEndX, m3DC, m3E0;
+            be<f32> mLineEndX, mLineEndY, mLineEndZ;  /* was m3DC / m3E0: y of mLineEnd (the union's struct view, after mLineEndX); no use by this name / z of mLineEnd (the union's struct view, after mLineEndX); no use by this name */
         };
     };
     /* 0x0500 */ cXyz mJointPositions[3];
@@ -141,7 +141,7 @@ struct gm_class : fopEn_enemy_c {
     /* 0x055A */ union {
         csXyz mGroundAngle;
         struct {
-            be<s16> m43E, mGroundYaw, m442;
+            be<s16> mGroundPitch, mGroundYaw, mGroundRoll;  /* was m43E / m442: x of mGroundAngle (the union's struct view, next to mGroundYaw): draw_SUB 0214BDFC, Line_check 0214CDB4 and gm_groundProbe (in action_ground_attack 02151B98) rotate by it in X; action_ground_attack clears it / z of mGroundAngle (the union's struct view, next to mGroundYaw): draw_SUB 0214BDFC, Line_check 0214CDB4 and gm_groundProbe (in action_ground_attack 02151B98) rotate by it in Z; action_ground_attack clears it */
         };
     };
     /* 0x0560 */ be<s16> mDemoMode;
@@ -168,7 +168,7 @@ WWHD_OFFSET(gm_class, mPhase, 0x3C8);
 WWHD_OFFSET(gm_class, mpMorf, 0x3D0);
 WWHD_OFFSET(gm_class, mpBrkAnms, 0x3D8);
 WWHD_OFFSET(gm_class, mWingFlags, 0x3E8);
-WWHD_OFFSET(gm_class, m2CD, 0x3E9);
+WWHD_OFFSET(gm_class, mLarvaType, 0x3E9);
 WWHD_OFFSET(gm_class, mType, 0x3EA);
 WWHD_OFFSET(gm_class, mSwitchNo, 0x3EB);
 WWHD_OFFSET(gm_class, mAction, 0x3EC);
@@ -188,7 +188,7 @@ WWHD_OFFSET(gm_class, mWingPhases, 0x414);
 WWHD_OFFSET(gm_class, mWingPhaseStep, 0x42C);
 WWHD_OFFSET(gm_class, mBodyPhaseStep, 0x432);
 WWHD_OFFSET(gm_class, mBobPhase, 0x438);
-WWHD_OFFSET(gm_class, m31E, 0x43A);
+WWHD_OFFSET(gm_class, mKsCount, 0x43A);
 WWHD_OFFSET(gm_class, mPitchOffset, 0x43C);
 WWHD_OFFSET(gm_class, mDiveCount, 0x43E);
 WWHD_OFFSET(gm_class, mBrkIndex, 0x440);
@@ -505,11 +505,11 @@ struct GmNameTableHD {
 WWHD_OFFSET(GmNameTableHD, mNameTable, 0x3E0C);
 WWHD_SIZE(GmNameTableHD, 0x3E0D);
 
-WWHD_OFFSET(gm_class, z, 0x4EC);
-WWHD_OFFSET(gm_class, m3DC, 0x4F8);
-WWHD_OFFSET(gm_class, m3E0, 0x4FC);
-WWHD_OFFSET(gm_class, m43E, 0x55A);
-WWHD_OFFSET(gm_class, m442, 0x55E);
+WWHD_OFFSET(gm_class, mLineStartY, 0x4EC);
+WWHD_OFFSET(gm_class, mLineEndY, 0x4F8);
+WWHD_OFFSET(gm_class, mLineEndZ, 0x4FC);
+WWHD_OFFSET(gm_class, mGroundPitch, 0x55A);
+WWHD_OFFSET(gm_class, mGroundRoll, 0x55E);
 
 // GameCube Gm archive indices and joint names are unchanged in the verified HD paths.
 enum dRes_INDEX_GM {

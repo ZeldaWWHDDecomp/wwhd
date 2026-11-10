@@ -296,7 +296,7 @@ cPhs_State daNpc_Md_c::create() {
         if (this != nullptr) {
             mdHeap_constructNpc(this);
             __vtbl = MD_VTBL;
-            mdHeap_constructBtp(m0520);
+            mdHeap_constructBtp(mBtpAnm);
             mDoExt_btkAnm::ct(&mLightBtkAnm);
             mdHeap_constructArray(mAcchCir, 2, sizeof(dBgS_AcchCir), MdHeap::ACCH_CIRCLE_CONSTRUCTOR);
             auto* line = reinterpret_cast<MdHeap::LinCheck*>(mLinChk);
@@ -329,10 +329,10 @@ cPhs_State daNpc_Md_c::create() {
             capsule->mGeometry.__vtbl = MdHeap::CAPSULE_GEOMETRY_VTABLE;
             capsule->mShapeVtable = MdHeap::CAPSULE_SHAPE_VTABLE;
             mdHeap_constructJointControl(&mJntCtrl); /* dNpc_JntCtrl_c::dNpc_JntCtrl_c */
-            mdHeap_constructMirror(m0B70);    /* dDlst_mirrorPacket::dDlst_mirrorPacket */
-            m304C.__vtbl = MTX_FOLLOW_CALLBACK_VTABLE;         /* daPy_mtxFollowEcallBack_c */
+            mdHeap_constructMirror(mMirrorPacket);    /* dDlst_mirrorPacket::dDlst_mirrorPacket */
+            mMirrorShieldCb.__vtbl = MTX_FOLLOW_CALLBACK_VTABLE;         /* daPy_mtxFollowEcallBack_c */
             m3058.__vtbl = FOLLOW_CALLBACK_VTABLE;         /* daNpc_Md_followEcallBack_c */
-            mdHeap_constructRipple(&m3074);    /* dPa_rippleEcallBack::dPa_rippleEcallBack */
+            mdHeap_constructRipple(&mRippleCb);    /* dPa_rippleEcallBack::dPa_rippleEcallBack */
             /* cBgS_PolyInfo mPolyInfo */
             mPolyInfo.mpBgW = 0;
             mPolyInfo.__vtbl = POLY_INFO_VTABLE;
@@ -451,12 +451,12 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
             u32 jntNo = md_jntNo(node);
             Mtx34* stk = mDoMtx_stack_c::get();
             PSMTXCopy(md_getAnmMtx(model, jntNo), stk);
-            PSMTXMultVec(stk, l_offsetAttPos, &i_this->m3094);
+            PSMTXMultVec(stk, l_offsetAttPos, &i_this->mAttentionBasePos);
             mDoMtx_XrotM(stk, i_this->mJntCtrl.mAngles[0][1]);
             mDoMtx_ZrotM(stk, -i_this->mJntCtrl.mAngles[0][0]);
-            PSMTXMultVec(stk, l_offsetEyePos, &i_this->m3088);
-            if (i_this->m312B != 0xFF) {
-                i_this->m312B = i_this->m312B + 1;
+            PSMTXMultVec(stk, l_offsetEyePos, &i_this->mEyePos);
+            if (i_this->mAttnSetCount != 0xFF) {
+                i_this->mAttnSetCount = i_this->mAttnSetCount + 1;
             }
             PSMTXCopy(stk, md_mCurrentMtx());
             mtx_copy(md_getAnmMtx(model, jntNo), stk);
@@ -474,12 +474,12 @@ static BOOL waistNodeCallBack(J3DNode* node, int calcTiming) {
             u32 jntNo = md_jntNo(node);
             md_getAnmMtx(model, jntNo); /* HD: the dirty flag is set twice */
             Mtx34* r3 = md_getAnmMtx(model, jntNo);
-            PSMTXMultVecArray(r3, waistVecDat.values /* waistVecDat */, i_this->m3234, 4);
+            PSMTXMultVecArray(r3, waistVecDat.values /* waistVecDat */, i_this->mHairWall, 4);
             Mtx34* stk = mDoMtx_stack_c::get();
             PSMTXCopy(md_getAnmMtx(model, jntNo), stk);
             if (i_this->checkStatus(daNpc_Md_c::daMdStts_UNK4000)) {
-                mDoMtx_XrotM(stk, i_this->m3116);
-                mDoMtx_ZrotM(stk, i_this->m3114);
+                mDoMtx_XrotM(stk, i_this->mWaistRotY);
+                mDoMtx_ZrotM(stk, i_this->mWaistRotX);
             } else {
                 mDoMtx_XrotM(stk, i_this->mJntCtrl.mAngles[1][1]);
                 mDoMtx_ZrotM(stk, -i_this->mJntCtrl.mAngles[1][0]);
@@ -522,7 +522,7 @@ static BOOL hairTopNodeCallBack(J3DNode* node, int calcTiming) {
         if (i_this != nullptr) {
             u32 jntNo = md_jntNo(node);
             Mtx34* mtx = md_getAnmMtx(model, jntNo);
-            cXyz* hairTopPos = &i_this->m3174[0];
+            cXyz* hairTopPos = &i_this->mHairPos[0];
             f32 x = mtx->m[0][3];
             f32 y = mtx->m[1][3];
             f32 z = mtx->m[2][3];
@@ -548,9 +548,9 @@ static BOOL hairNodeCallBack(J3DNode* node, int calcTiming) {
 
                 Mtx34* mtx = md_getAnmMtx(model, jntNo);
                 u8 mask = HairModeMaskData.values[i]; /* HairModeMaskData[i] */
-                if (!(u8)(i_this->m3134 & mask)) {
-                    i_this->m3134 = i_this->m3134 | mask;
-                    cXyz* hairPos = &i_this->m3174[i];
+                if (!(u8)(i_this->mHairMode & mask)) {
+                    i_this->mHairMode = i_this->mHairMode | mask;
+                    cXyz* hairPos = &i_this->mHairPos[i];
                     f32 y = mtx->m[1][3];
                     f32 x = mtx->m[0][3];
                     f32 z = mtx->m[2][3];
@@ -558,16 +558,16 @@ static BOOL hairNodeCallBack(J3DNode* node, int calcTiming) {
                     hairPos->x = x;
                     hairPos->z = z;
                     cXyz tmp;
-                    cXyz_mi(hairPos, &tmp, &i_this->m3174[i - 1]);
-                    cXyz* r29 = &i_this->m31D4[i];
+                    cXyz_mi(hairPos, &tmp, &i_this->mHairPos[i - 1]);
+                    cXyz* r29 = &i_this->mHairVec[i];
                     r29->copy(tmp);
-                    i_this->m3264[i] = md_abs(r29);
+                    i_this->mHairDist[i] = md_abs(r29);
                     break;
                 }
 
-                cXyz* r25 = &i_this->m3174[i - 1];
-                cXyz* r28 = &i_this->m3174[i];
-                cXyz* r24 = &i_this->m31D4[i];
+                cXyz* r25 = &i_this->mHairPos[i - 1];
+                cXyz* r28 = &i_this->mHairPos[i];
+                cXyz* r24 = &i_this->mHairVec[i];
                 if (i <= 1) {
                     r28->x = mtx->m[0][3];
                     r28->y = mtx->m[1][3];
@@ -578,8 +578,8 @@ static BOOL hairNodeCallBack(J3DNode* node, int calcTiming) {
                     break;
                 }
 
-                be<f32>* hairDist = &i_this->m3264[i];
-                cXyz* r22 = &i_this->m31D4[i - 1];
+                be<f32>* hairDist = &i_this->mHairDist[i];
+                cXyz* r22 = &i_this->mHairVec[i - 1];
                 cXyz r1_d0;
                 r1_d0.x = r28->x;
                 r1_d0.y = r28->y;
@@ -608,7 +608,7 @@ static BOOL hairNodeCallBack(J3DNode* node, int calcTiming) {
                 r24->copy(t20);
                 cXyz_pl(r24, &t20, r25);
                 r28->copy(t20);
-                if (hairCross(i_this->m3234, &i_this->m3174[1], r28)) {
+                if (hairCross(i_this->mHairWall, &i_this->mHairPos[1], r28)) {
                     cXyz t78;
                     cXyz_mi(r28, &t78, r25);
                     r24->copy(t78);
@@ -833,11 +833,11 @@ BOOL daNpc_Md_c::initTexPatternAnm(u8 btpAnmTblIdx, u32 param_2) {
     if (eyeTexPtrn == nullptr) {
         JUT_ASSERT_fail(STR(EYE_PATTERN_ASSERT_FILE), 0x1E70, STR(EYE_PATTERN_ASSERT));
     }
-    if (md_btpAnm_init(m0520, modelData, eyeTexPtrn, 1, 1 /* EMode_RESET */, 1.0f, 0, -1, param_2, 0)) {
-        m3112 = (s16)J3DAnm_getFrameMax(eyeTexPtrn);
-        m3133 = 0;
+    if (md_btpAnm_init(mBtpAnm, modelData, eyeTexPtrn, 1, 1 /* EMode_RESET */, 1.0f, 0, -1, param_2, 0)) {
+        mBtpFrameMax = (s16)J3DAnm_getFrameMax(eyeTexPtrn);
+        mBlinkTimer = 0;
         m3136 = tbl->m20;
-        m3137 = btpAnmTblIdx;
+        mBtpAnmTblIdx = btpAnmTblIdx;
         ret = true;
     }
     return ret;
@@ -859,12 +859,12 @@ BOOL daNpc_Md_c::initLightBtkAnm(u32 param_1) {
 
 /* 02285984 */
 void daNpc_Md_c::setAttention(bool param_1) {
-    if (!param_1 && m312B >= 2) {
+    if (!param_1 && mAttnSetCount >= 2) {
         return;
     }
-    eyePos.y = m3088.y;
-    eyePos.z = m3088.z;
-    eyePos.x = m3088.x;
+    eyePos.y = mEyePos.y;
+    eyePos.z = mEyePos.z;
+    eyePos.x = mEyePos.x;
     cXyz* attPos = &attention_info.position;
     f32 fVar1;
     if (m_flying != 0) { /* isFlying() */
@@ -886,7 +886,7 @@ void daNpc_Md_c::setAttention(bool param_1) {
 void daNpc_Md_c::setBaseMtx() {
     J3DModel* model = md_morfModel(mpMorf.get());
     Mtx34* now = mDoMtx_stack_c::get();
-    u32 status = m30F0; /* HD: read before the matrix calls */
+    u32 status = mStatus; /* HD: read before the matrix calls */
     if (actor_status & fopAcStts_CARRY_e) { /* fopAcM_checkCarryNow(this) */
         PSMTXTrans(now, current.pos.x, current.pos.y, current.pos.z); /* transS */
         if (status & daMdStts_CARRY_ACTION) { /* isNoCarryAction() */
@@ -951,7 +951,7 @@ void daNpc_Md_c::setBaseMtx() {
 /* 02285580 */
 BOOL daNpc_Md_c::init() {
     u8 uVar1 = fopAcM_GetParam(this) & 0xFF;
-    m3100 = (fopAcM_GetParam(this) >> 0x10) & 0xFF;
+    mSwitchNo = (fopAcM_GetParam(this) >> 0x10) & 0xFF;
     m313E = 0;
     m30F4 = JA_SE_CM_MD_HARP_CN4; /* HD: JA_SE_CM_MD_HARP_CN4 */
     attention_info.flags = fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e;  /* attention_info.flags = LOCKON_TALK | ACTION_SPEAK */
@@ -961,13 +961,13 @@ BOOL daNpc_Md_c::init() {
     mCurEventMode = 0;
     mCurEvent = 0;
     for (int i = 0; i < 6; i++) {
-        m0508[i] = 0;
+        mEmitters[i] = 0;
     }
     m30AC.x = 0.0f;
     m30AC.y = 0.0f;
     m30AC.z = 50.0f;
-    m313C = 0;
-    m30F0 = 0;
+    mPiyo2TalkCnt = 0;
+    mStatus = 0;
     gravity = l_HIO().m0F4;
     gabi::Local<ProcFunc_l> fn;
     if (mType == TYPE_M_DAIB) {
@@ -976,15 +976,15 @@ BOOL daNpc_Md_c::init() {
         mdHeap_loadAction(fn, action_waitNpc);
     }
     setNpcAction(fn, nullptr);
-    m3094.copy(current.pos);
-    m3088.copy(current.pos);
+    mAttentionBasePos.copy(current.pos);
+    mEyePos.copy(current.pos);
     for (s32 i = 0; i < 4; i++) {
-        m3234[i].set(0.0f, 0.0f, 0.0f);
+        mHairWall[i].set(0.0f, 0.0f, 0.0f);
     }
     if ((uVar1 & 1) != 0) {
-        m30F0 = daMdStts_UNK8;
+        mStatus = daMdStts_UNK8;
     }
-    m3135 = 0;
+    mEffectStatus = 0;
     mCurEvent = -1;
     m_flying = 0;
     m_mirror = 0;
@@ -1014,7 +1014,7 @@ BOOL daNpc_Md_c::init() {
     mCps.SetStts(&mStts);
     reinterpret_cast<Capsule*>(&mCps)->mGeometry.mRadius = 20.0f;
     void* pBti = md_getObjectRes(mModelArcName, "md_spot.bti" /* "md_spot.bti" */);
-    mdHeap_initMirror(m0B70, pBti); /* dDlst_mirrorPacket::init */
+    mdHeap_initMirror(mMirrorPacket, pBti); /* dDlst_mirrorPacket::init */
     if (mType == TYPE_EDAICHI) {
         mNoResetFlg1 = mNoResetFlg1 | 2; /* onNpcCallCommand() */
     }

@@ -17,15 +17,15 @@ struct daObjIce_c : fopAc_ac_c {
     /* 0x3B8 */ dCcD_Stts mStts;
     /* 0x3F4 */ dCcD_Cyl mCyl;
     /* 0x524 */ gptr<dBgW> mBgw;
-    /* 0x528 */ Mtx34 m40C;
-    /* 0x558 */ IceAction m43C;
-    /* 0x560 */ be<u8> m448;
+    /* 0x528 */ Mtx34 mMtx;  /* was m40C: set_mtx 0235D664: copy of mDoMtx_stack_c (tww cMtx_copy); create_heap 0235D588 gives it to the background (tww dBgW_NewSet(.., &it)) */
+    /* 0x558 */ IceAction mActProc;  /* was m43C: _execute 0235DFF8 calls it (pointer to member); tww sets &daObjIce_c::wait_act_proc / &daObjIce_c::fade_out_retire_act_proc */
+    /* 0x560 */ be<u8> mAppear;  /* was m448: _create 0235DB5C: chk_appear() (tww); _delete 0235DF70 tests it */
     /* 0x561 */ u8 _561[3];
-    /* 0x564 */ be<f32> m44C;
-    /* 0x568 */ be<f32> m450;
-    /* 0x56C */ be<f32> m454;
-    /* 0x570 */ be<s32> m458;
-    /* 0x574 */ be<s32> m45C;
+    /* 0x564 */ be<f32> mScaleXZ;  /* was m44C: set_mtx 0235D664: scaleM(it, mScaleY, it); tg_hitCallback 0235D774 shrinks it on non-fire hits (tww -= 0.0009) and scales the hit ellipse; fade_out_retire_act_proc 0235E820 shrinks it; _create 0235DB5C 1 */
+    /* 0x568 */ be<f32> mScaleY;  /* was m450: set_mtx 0235D664: the Y scale; tg_hitCallback 0235D774 / fade_out_retire_act_proc 0235E820 set it to 1 - cos(mScaleXZ * 0x4000); _execute 0235DFF8 cylinder height; _create 0235DB5C 1 */
+    /* 0x56C */ be<f32> mAlpha;  /* was m454: _create 0235DB5C 255; fade_out_retire_act_proc 0235E820 fades it (tww -= 2.8333); _draw 0235E0D0 alpha */
+    /* 0x570 */ be<s32> mRetireTimer;  /* was m458: wait_act_proc 0235E6C4 sets 90 (tww 0x5A) when the melt starts; fade_out_retire_act_proc 0235E820 counts it down and retires at 0 */
+    /* 0x574 */ be<s32> mMeltReq;  /* was m45C: tg_hitCallback 0235D774: 0, 2 on a fire hit (AT_TYPE_FIRE / FIRE_ARROW / UNK20000), 1 once mScaleXZ drops below 0.1 (tww); wait_act_proc 0235E6C4 starts the melt (sound for 2) when it is not 0 */
     /* 0x578 */ Mtx34 mEffectSmall;
     /* 0x5A8 */ Mtx34 mEffectLarge;
     u8 chk_appear();
@@ -44,14 +44,14 @@ WWHD_OFFSET(daObjIce_c, mModel, 0x3B4);
 WWHD_OFFSET(daObjIce_c, mStts, 0x3B8);
 WWHD_OFFSET(daObjIce_c, mCyl, 0x3F4);
 WWHD_OFFSET(daObjIce_c, mBgw, 0x524);
-WWHD_OFFSET(daObjIce_c, m40C, 0x528);
-WWHD_OFFSET(daObjIce_c, m43C, 0x558);
-WWHD_OFFSET(daObjIce_c, m448, 0x560);
-WWHD_OFFSET(daObjIce_c, m44C, 0x564);
-WWHD_OFFSET(daObjIce_c, m450, 0x568);
-WWHD_OFFSET(daObjIce_c, m454, 0x56C);
-WWHD_OFFSET(daObjIce_c, m458, 0x570);
-WWHD_OFFSET(daObjIce_c, m45C, 0x574);
+WWHD_OFFSET(daObjIce_c, mMtx, 0x528);
+WWHD_OFFSET(daObjIce_c, mActProc, 0x558);
+WWHD_OFFSET(daObjIce_c, mAppear, 0x560);
+WWHD_OFFSET(daObjIce_c, mScaleXZ, 0x564);
+WWHD_OFFSET(daObjIce_c, mScaleY, 0x568);
+WWHD_OFFSET(daObjIce_c, mAlpha, 0x56C);
+WWHD_OFFSET(daObjIce_c, mRetireTimer, 0x570);
+WWHD_OFFSET(daObjIce_c, mMeltReq, 0x574);
 WWHD_OFFSET(daObjIce_c, mEffectSmall, 0x578);
 WWHD_OFFSET(daObjIce_c, mEffectLarge, 0x5A8);
 WWHD_SIZE(daObjIce_c, 0x5D8);

@@ -105,17 +105,17 @@ BOOL Act_c::_create() {
         if (gabi::ea(this)) {
             ferrisConstructActor(this);
             __vtbl = FerrisActorVtable;
-            ferrisConstructArray(field_0x02d4, 5, sizeof(dCcD_Stts),
+            ferrisConstructArray(mGondolaStts, 5, sizeof(dCcD_Stts),
                                  gabi::guest_fn((const void *)statusConstructor));
-            ferrisConstructArray(field_0x0400, 5, sizeof(dCcD_Cyl),
+            ferrisConstructArray(mGondolaCyl, 5, sizeof(dCcD_Cyl),
                                  gabi::guest_fn((const void *)cylinderConstructor));
-            ferrisConstructArray(field_0x09f0, 5, sizeof(dCcD_Stts),
+            ferrisConstructArray(mGondolaStts2, 5, sizeof(dCcD_Stts),
                                  gabi::guest_fn((const void *)statusConstructor));
-            ferrisConstructArray(field_0x0b1c, 5, sizeof(dCcD_Cyl),
+            ferrisConstructArray(mGondolaCyl2, 5, sizeof(dCcD_Cyl),
                                  gabi::guest_fn((const void *)cylinderConstructor));
-            ferrisConstructArray(field_0x110c, 5, sizeof(dCcD_Stts),
+            ferrisConstructArray(mHangStts, 5, sizeof(dCcD_Stts),
                                  gabi::guest_fn((const void *)statusConstructor));
-            ferrisConstructArray(field_0x1238, 5, sizeof(dCcD_Sph), FerrisSphereConstructor);
+            ferrisConstructArray(mHangSph, 5, sizeof(dCcD_Sph), FerrisSphereConstructor);
             flags = actor_condition;
         }
         actor_condition = flags | FerrisInitialized;
@@ -151,8 +151,8 @@ BOOL Act_c::_create() {
     mEventIdx_kanban_vive = ferrisEventIndex(dComIfGp_getPEvtManager(), "kanran_vive", 255);
     mEventIdx_kanban_start = ferrisEventIndex(dComIfGp_getPEvtManager(), "kanran_start", 255);
     for (s32 i = 0; i < 5; i++) {
-        dCcD_Stts *status[3] = {&field_0x02d4[i], &field_0x09f0[i], &field_0x110c[i]};
-        dCcD_GObjInf *coll[3] = {&field_0x0400[i], &field_0x0b1c[i], &field_0x1238[i]};
+        dCcD_Stts *status[3] = {&mGondolaStts[i], &mGondolaStts2[i], &mHangStts[i]};
+        dCcD_GObjInf *coll[3] = {&mGondolaCyl[i], &mGondolaCyl2[i], &mHangSph[i]};
         for (u32 j = 0; j < 3; j++) {
             status[j]->Init(255, 255, this);
             if (j == 2)
@@ -399,7 +399,7 @@ void Act_c::set_collision() {
         }
         PSMTXMultVec(&mMtx[i], &collisionOrigin, point.get());
         if (!(point->y > 1820.0f)) {
-            dCcD_Cyl *cyl = &field_0x0400[i];
+            dCcD_Cyl *cyl = &mGondolaCyl[i];
             cyl->SetR(50.0f);
             cyl->SetH(195.0f);
             offset->set(0, -100, -135);
@@ -407,7 +407,7 @@ void Act_c::set_collision() {
             cyl->SetC(point.get());
             cCcS *ccsp = dComIfG_Ccsp();
             ferrisRegisterCollision(ccsp, cyl);
-            cyl = &field_0x0b1c[i];
+            cyl = &mGondolaCyl2[i];
             cyl->SetR(50.0f);
             cyl->SetH(148.0f);
             offset->set(0, -56, 127);
@@ -439,7 +439,7 @@ void Act_c::set_collision() {
         MTXCopy(mDoMtx_stack_c::get(), matrix.get());
         PSMTXMultVec(matrix.get(), &sphereOrigin, point.get());
         if (!(point->y > 1820.0f)) {
-            dCcD_Sph *sph = &field_0x1238[i];
+            dCcD_Sph *sph = &mHangSph[i];
             sph->SetC(point.get());
             sph->SetR(30.0f);
             ferrisRegisterCollision(dComIfG_Ccsp(), sph);
@@ -585,12 +585,12 @@ void emptyVirtual(u8 *self) {}
 void actorDestructor(Act_c *self, s32 flags) {
     if (!self)
         return;
-    ferrisDestroyArray(self->field_0x1238, 5, sizeof(dCcD_Sph), FerrisSphereDestructor, 0, 0);
-    ferrisDestroyArray(self->field_0x110c, 5, sizeof(dCcD_Stts), FerrisStatusDestructor, 0, 0);
-    ferrisDestroyArray(self->field_0x0b1c, 5, sizeof(dCcD_Cyl), FerrisCylinderDestructor, 0, 0);
-    ferrisDestroyArray(self->field_0x09f0, 5, sizeof(dCcD_Stts), FerrisStatusDestructor, 0, 0);
-    ferrisDestroyArray(self->field_0x0400, 5, sizeof(dCcD_Cyl), FerrisCylinderDestructor, 0, 0);
-    ferrisDestroyArray(self->field_0x02d4, 5, sizeof(dCcD_Stts), FerrisStatusDestructor, 0, 0);
+    ferrisDestroyArray(self->mHangSph, 5, sizeof(dCcD_Sph), FerrisSphereDestructor, 0, 0);
+    ferrisDestroyArray(self->mHangStts, 5, sizeof(dCcD_Stts), FerrisStatusDestructor, 0, 0);
+    ferrisDestroyArray(self->mGondolaCyl2, 5, sizeof(dCcD_Cyl), FerrisCylinderDestructor, 0, 0);
+    ferrisDestroyArray(self->mGondolaStts2, 5, sizeof(dCcD_Stts), FerrisStatusDestructor, 0, 0);
+    ferrisDestroyArray(self->mGondolaCyl, 5, sizeof(dCcD_Cyl), FerrisCylinderDestructor, 0, 0);
+    ferrisDestroyArray(self->mGondolaStts, 5, sizeof(dCcD_Stts), FerrisStatusDestructor, 0, 0);
     ferrisDestroyActor(self, 0);
     if (flags & 1)
         ferrisDelete(self);

@@ -54,9 +54,9 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         if (i_this != nullptr && jntNo < 5) {
             PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
 
-            cMtx_YrotM(calc_mtx(), i_this->m2F4[jntNo].y);
-            cMtx_XrotM(calc_mtx(), i_this->m2F4[jntNo].x);
-            cMtx_ZrotM(calc_mtx(), i_this->m2F4[jntNo].z);
+            cMtx_YrotM(calc_mtx(), i_this->mJointAngle[jntNo].y);
+            cMtx_XrotM(calc_mtx(), i_this->mJointAngle[jntNo].x);
+            cMtx_ZrotM(calc_mtx(), i_this->mJointAngle[jntNo].z);
 
             Mtx34* dst = model->getAnmMtx(jntNo); /* model->setAnmMtx(jntNo, *calc_mtx) */
             mtx_copy(dst, calc_mtx());
@@ -77,8 +77,8 @@ static void draw_sub(ssk_class* i_this) {
     mDoMtx_stack_c::transS(i_this->current.pos.x, i_this->current.pos.y, i_this->current.pos.z);
     mDoMtx_stack_c::YrotM(i_this->current.angle.y);
 
-    if (i_this->m350.x > 0.01f) {
-        pJVar3->setBaseScale(i_this->m350);
+    if (i_this->mKtanaScale.x > 0.01f) {
+        pJVar3->setBaseScale(i_this->mKtanaScale);
         pJVar3->setBaseTRMtx(mDoMtx_stack_c::get());
     }
     f32 sy = i_this->scale.y;
@@ -101,7 +101,7 @@ static BOOL daSsk_Draw(ssk_class* i_this) {
         setLightTevColorType(env, pJVar2, &i_this->tevStr);
         i_this->mpMorf1->entryDL();
     }
-    if (i_this->m350.x > 0.01f) {
+    if (i_this->mKtanaScale.x > 0.01f) {
         J3DModel* pJVar1 = i_this->mpMorf2->getModel();
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
         dScnKy_env_light_c* env = dKy_getEnvlight();
@@ -135,37 +135,37 @@ static cXyz* smoke_scale() {
 
 /* nomal_move (inlined into daSsk_Execute) */
 static inline void nomal_move(ssk_class* i_this) {
-    switch ((u16)i_this->m2BA) {
+    switch ((u16)i_this->mMoveState) {
     case SSK_WAIT:
-        if (fopAcM_searchPlayerDistance(i_this) < i_this->m2C0) {
+        if (fopAcM_searchPlayerDistance(i_this) < i_this->mAppearDist) {
             /* HD: the collider is switched on through mColliderActive; random start angles */
             i_this->mColliderActive = 1;
             i_this->current.angle.y = (s16)gabi::ftoi(cM_rndFX(32768.0f));
-            i_this->m2F0 = (s16)gabi::ftoi(cM_rndFX(32768.0f));
-            i_this->m2BA = SSK_ROCK_APPEAR;
+            i_this->mWobbleTimer = (s16)gabi::ftoi(cM_rndFX(32768.0f));
+            i_this->mMoveState = SSK_ROCK_APPEAR;
         }
         break;
 
     case SSK_ROCK_APPEAR:
-        cLib_addCalc2(&i_this->m350.x, 1.0f, 1.0f, 0.3f);
+        cLib_addCalc2(&i_this->mKtanaScale.x, 1.0f, 1.0f, 0.3f);
         {
-            f32 x = i_this->m350.x;
-            i_this->m350.y = x;
-            i_this->m350.z = x;
+            f32 x = i_this->mKtanaScale.x;
+            i_this->mKtanaScale.y = x;
+            i_this->mKtanaScale.z = x;
             if (x > 0.99f) {
-                i_this->m350.x = 1.0f;
-                i_this->m350.y = 1.0f;
+                i_this->mKtanaScale.x = 1.0f;
+                i_this->mKtanaScale.y = 1.0f;
                 i_this->mWobbleAmplitude = 0.0f;
-                i_this->m350.z = 1.0f;
+                i_this->mKtanaScale.z = 1.0f;
                 fopAcM_seStart(i_this, JA_SE_OBJ_JAMA_SHOKU_OUT, 0);
-                i_this->m2BA = SSK_RISE;
+                i_this->mMoveState = SSK_RISE;
 
                 dComIfGp_particle_set(ID_IT_SN_TGSYOKU_ROCK00, &i_this->current.pos, nullptr,
                                       nullptr, 0xff, nullptr, -1, &i_this->tevStr.mColorK0,
                                       &i_this->tevStr.mColorK0);
                 s8 room = fopAcM_GetRoomNo(i_this);
                 particle_setToon(ID_IT_ST_TGSYOKU_SMOKE00, &i_this->current.pos,
-                                 &i_this->shape_angle, nullptr, 0xb9, &i_this->m2D0, room);
+                                 &i_this->shape_angle, nullptr, 0xb9, &i_this->mSmokeCb, room);
             }
         }
         break;
@@ -174,26 +174,26 @@ static inline void nomal_move(ssk_class* i_this) {
         cLib_addCalc2(&i_this->scale.y, 1.0f, 1.0f, 0.2f);
         if (i_this->scale.y > 0.99f) {
             i_this->scale.y = 1.0f;
-            i_this->m2BA = SSK_ACTIVE; /* HD: no m2F2 */
+            i_this->mMoveState = SSK_ACTIVE; /* HD: no m2F2 */
         }
         break;
 
     case SSK_RETRACT:
         cLib_addCalc0(&i_this->scale.y, 1.0f, 0.05f);
         cLib_addCalc2(&i_this->mWobbleAmplitude, 0.2f, 1.0f, 0.05f);
-        cLib_addCalc0(&i_this->m350.x, 1.0f, 0.04f);
+        cLib_addCalc0(&i_this->mKtanaScale.x, 1.0f, 0.04f);
         {
-            f32 x = i_this->m350.x;
-            i_this->m350.y = x;
-            i_this->m350.z = x;
+            f32 x = i_this->mKtanaScale.x;
+            i_this->mKtanaScale.y = x;
+            i_this->mKtanaScale.z = x;
             if (x < 0.01f) {
-                i_this->m350.x = 0.0f;
-                i_this->m350.y = 0.0f;
-                i_this->m350.z = 0.0f;
+                i_this->mKtanaScale.x = 0.0f;
+                i_this->mKtanaScale.y = 0.0f;
+                i_this->mKtanaScale.z = 0.0f;
                 i_this->scale.y = 0.0f;
-                i_this->m2BA = SSK_WAIT;
-                if (i_this->m2B6 != 0xff &&
-                    dComIfGs_isSwitch(i_this->m2B6, dComIfGp_roomControl_getStayNo())) {
+                i_this->mMoveState = SSK_WAIT;
+                if (i_this->mSwitchNo != 0xff &&
+                    dComIfGs_isSwitch(i_this->mSwitchNo, dComIfGp_roomControl_getStayNo())) {
                     fopAcM_delete(i_this);
                 }
             }
@@ -202,48 +202,48 @@ static inline void nomal_move(ssk_class* i_this) {
 
     case SSK_ACTIVE:
         cLib_addCalc2(&i_this->mWobbleAmplitude, 1.0f, 1.0f, 0.1f);
-        if ((i_this->m2B4 == 1 && fopAcM_searchPlayerDistance(i_this) > i_this->m2C4) ||
-            (i_this->m2B6 != 0xff &&
-             dComIfGs_isSwitch(i_this->m2B6, dComIfGp_roomControl_getStayNo()))) {
+        if ((i_this->mType == 1 && fopAcM_searchPlayerDistance(i_this) > i_this->mRetractDist) ||
+            (i_this->mSwitchNo != 0xff &&
+             dComIfGs_isSwitch(i_this->mSwitchNo, dComIfGp_roomControl_getStayNo()))) {
             /* HD: both ways retract with sound and smoke */
             i_this->mColliderActive = 0;
-            i_this->m2BA = SSK_RETRACT;
+            i_this->mMoveState = SSK_RETRACT;
             fopAcM_seStart(i_this, JA_SE_OBJ_JAMA_SHOKU_IN, 0);
             cXyz* scl = smoke_scale();
             s8 room = fopAcM_GetRoomNo(i_this);
             particle_setToon(ID_IT_ST_TGSYOKU_SMOKE00, &i_this->current.pos, &i_this->shape_angle,
-                             scl, 0xb9, &i_this->m2D0, room);
+                             scl, 0xb9, &i_this->mSmokeCb, room);
         }
         break;
     }
 
     /* HD: every state from 2 on wobbles; the amplitude grows with the joint index and
      * mWobbleAmplitude */
-    if (i_this->m2BA >= SSK_RISE) {
-        i_this->m2F0 = (s16)(i_this->m2F0 + 1);
+    if (i_this->mMoveState >= SSK_RISE) {
+        i_this->mWobbleTimer = (s16)(i_this->mWobbleTimer + 1);
 
         for (s32 i = 1; i < 5; i++) {
             f32 amp = gabi::fmadds((f32)i * 1000.0f, i_this->mWobbleAmplitude, 500.0f);
-            i_this->m2F4[i].y = (s16)gabi::ftoi(cM_ssin(i_this->m2F0 * 2000 - i * 14000) * amp);
-            i_this->m2F4[i].z = (s16)gabi::ftoi(cM_ssin(i_this->m2F0 * 1500 - i * 14000) * amp);
+            i_this->mJointAngle[i].y = (s16)gabi::ftoi(cM_ssin(i_this->mWobbleTimer * 2000 - i * 14000) * amp);
+            i_this->mJointAngle[i].z = (s16)gabi::ftoi(cM_ssin(i_this->mWobbleTimer * 1500 - i * 14000) * amp);
         }
 
-        s16 angle = (s16)cLib_distanceAngleS(i_this->m2F4[1].z, 0x1000);
+        s16 angle = (s16)cLib_distanceAngleS(i_this->mJointAngle[1].z, 0x1000);
         if (angle < 0x1000) {
-            if (!i_this->m2B7) {
+            if (!i_this->mMoveSePlayed) {
                 fopAcM_seStart(i_this, JA_SE_OBJ_SHOKU_LIFT_MOVE, 0);
-                i_this->m2B7 = true;
+                i_this->mMoveSePlayed = true;
             }
         } else {
-            i_this->m2B7 = false;
+            i_this->mMoveSePlayed = false;
         }
     }
 }
 
 /* body_atari_check (inlined into daSsk_Execute) */
 static inline void body_atari_check(ssk_class* i_this) {
-    if (i_this->m2BC > 0) {
-        i_this->m2BC = (s16)(i_this->m2BC - 1);
+    if (i_this->mHitTimer > 0) {
+        i_this->mHitTimer = (s16)(i_this->mHitTimer - 1);
         return;
     }
 
@@ -256,7 +256,7 @@ static inline void body_atari_check(ssk_class* i_this) {
         return;
     }
 
-    i_this->m2BC = 8;
+    i_this->mHitTimer = 8;
 
     switch ((u32)hitObj->mAtType) {
     case AT_TYPE_SWORD:
@@ -292,7 +292,7 @@ static inline void body_atari_check(ssk_class* i_this) {
 /* 0248DC20 */
 static BOOL daSsk_Execute(ssk_class* i_this) {
     gabi::AutoFrame frame{gabi::current_function()};
-    switch (i_this->m2B8) {
+    switch (i_this->mAction) {
     case 0:
         nomal_move(i_this);
         break;
@@ -304,7 +304,7 @@ static BOOL daSsk_Execute(ssk_class* i_this) {
         dComIfG_Ccsp_Set(&i_this->mCyl);
     }
     body_atari_check(i_this);
-    i_this->m2C4 = i_this->m2C0 + 100.0f;
+    i_this->mRetractDist = i_this->mAppearDist + 100.0f;
     draw_sub(i_this);
     return TRUE;
 }
@@ -319,7 +319,7 @@ static BOOL daSsk_IsDelete(ssk_class*) {
 static BOOL daSsk_Delete(ssk_class* i_this) {
     gabi::AutoFrame frame{gabi::current_function()};
     dComIfG_resDelete(&i_this->mPhase, "Ssk"); /* dComIfG_resDeleteDemo */
-    i_this->m2D0.remove();
+    i_this->mSmokeCb.remove();
     return TRUE;
 }
 
@@ -357,7 +357,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     i_this->mpMorf1->getModel()->setUserArea((uintptr_t)i_this);
 
     JntHit_c* jntHit = sskCreateJntHit(i_this->mpMorf1->getModel(), search_data, 3);
-    i_this->m708 = jntHit;
+    i_this->mpJntHit = jntHit;
     if (jntHit != nullptr) {
         i_this->jntHit = gabi::ea(jntHit);
     } else {
@@ -377,7 +377,7 @@ static cPhs_State daSsk_Create(fopAc_ac_c* a_this) {
         if (a_this != nullptr) {
             fopAc_ac_c_ct(a_this);
             a_this->__vtbl = ssk_class::__vt;
-            sskConstructSmoke(&i_this->m2D0, 1);
+            sskConstructSmoke(&i_this->mSmokeCb, 1);
             dBgS_AcchCir_ct(&i_this->mAcchCir);
             dBgS_ObjAcch_ct(&i_this->mAcch, gc_tu.objAcch);
             dCcD_Stts_ct(&i_this->mStts);
@@ -387,26 +387,26 @@ static cPhs_State daSsk_Create(fopAc_ac_c* a_this) {
     }
     cPhs_State PVar2 = dComIfG_resLoad(&i_this->mPhase, "Ssk");
     if (PVar2 == cPhs_COMPLEATE_e) {
-        i_this->m2D0.m11 = 0;
+        i_this->mSmokeCb.m11 = 0;
         u32 prm = fopAcM_GetParam(a_this);
-        i_this->m2B4 = (u8)prm;
-        i_this->m2B5 = (u8)(prm >> 8);
-        i_this->m2B6 = (u8)(prm >> 0x18);
+        i_this->mType = (u8)prm;
+        i_this->mRadiusPrm = (u8)(prm >> 8);
+        i_this->mSwitchNo = (u8)(prm >> 0x18);
 
-        if (i_this->m2B5 == 0xff) {
-            i_this->m2B5 = 0;
+        if (i_this->mRadiusPrm == 0xff) {
+            i_this->mRadiusPrm = 0;
         }
 
-        if (i_this->m2B6 != 0xff &&
-            dComIfGs_isSwitch(i_this->m2B6, dComIfGp_roomControl_getStayNo())) {
+        if (i_this->mSwitchNo != 0xff &&
+            dComIfGs_isSwitch(i_this->mSwitchNo, dComIfGp_roomControl_getStayNo())) {
             return cPhs_ERROR_e;
         }
 
-        f32 r = (f32)i_this->m2B5 * 10.0f;
+        f32 r = (f32)i_this->mRadiusPrm * 10.0f;
         if (r == 0.0f) {
             r = 400.0f;
         }
-        i_this->m2C0 = r;
+        i_this->mAppearDist = r;
 
         if (!fopAcM_entrySolidHeap(a_this, useHeapInit, 0x1300)) {
             return cPhs_ERROR_e;
@@ -420,19 +420,19 @@ static cPhs_State daSsk_Create(fopAc_ac_c* a_this) {
         i_this->mCyl.Set(reinterpret_cast<dCcD_SrcCyl*>(&body_co_cyl));
         i_this->mCyl.SetStts(&i_this->mStts);
         i_this->mStts.Init(0xfe, 200, a_this);
-        i_this->m2B8 = 0;
+        i_this->mAction = 0;
 
-        if (i_this->m2B4 == 0xff) {
+        if (i_this->mType == 0xff) {
             /* HD: mColliderActive instead of the At bits; random start angles instead of m2F2 */
             i_this->mColliderActive = 1;
             a_this->scale.set(1.0f, 1.0f, 1.0f);
-            i_this->m350.set(1.0f, 1.0f, 1.0f);
+            i_this->mKtanaScale.set(1.0f, 1.0f, 1.0f);
             a_this->current.angle.y = (s16)gabi::ftoi(cM_rndFX(32768.0f));
-            i_this->m2F0 = (s16)gabi::ftoi(cM_rndFX(32768.0f));
-            i_this->m2BA = SSK_ACTIVE;
+            i_this->mWobbleTimer = (s16)gabi::ftoi(cM_rndFX(32768.0f));
+            i_this->mMoveState = SSK_ACTIVE;
         } else {
             a_this->scale.set(0.0f, 0.0f, 0.0f);
-            i_this->m350.set(0.0f, 0.0f, 0.0f);
+            i_this->mKtanaScale.set(0.0f, 0.0f, 0.0f);
         }
 
         draw_sub(i_this);

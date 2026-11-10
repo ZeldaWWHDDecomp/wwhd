@@ -30,10 +30,10 @@ static void hana_demo(bst_class* actor) {
         f32 transition = 5.0f;
         i_this->mDamage = (s16)(state + 1);
         i_this->speed.y = zero;
-        i_this->m10FC[0] = 40;
+        i_this->mTimers[0] = 40;
         BstAttack_anm_init(actor, dRes_INDEX_BST_BCK_HANA_DEMO_e, transition,
                            J3DFrameCtrl::EMode_NONE, animationSpeed, -1);
-        i_this->m2E9A = 1;
+        i_this->mDemoCamMode = 1;
         if (gabi::ea(position)) {
             s8 room = static_cast<s8>(i_this->current.roomNo);
             s8 reverb = dComIfGp_getReverb(room);
@@ -65,7 +65,7 @@ static void hana_demo(bst_class* actor) {
         f32 targetZ = gabi::fmuls_ppc((f32)horizontal.z, ratio);
         cLib_addCalc2(&i_this->current.pos.z, targetZ, scale, maxStep);
     }
-    mDoExt_McaMorf* morph = i_this->m02B8;
+    mDoExt_McaMorf* morph = i_this->mpMorf;
     s32 frame = gabi::ftoi(morph->getFrame());
     if (frame > 26) {
         u32 id = static_cast<u32>(i_this->mCreatedItemId);
@@ -79,7 +79,7 @@ static void hana_demo(bst_class* actor) {
             u32 flags = static_cast<u32>(item->actor_status);
             item->actor_status = flags | fopAcStts_UNK4000_e;
         }
-        morph = i_this->m02B8;
+        morph = i_this->mpMorf;
     }
     frame = gabi::ftoi(morph->getFrame());
     if (frame != 26)
@@ -98,14 +98,14 @@ static void hana_demo(bst_class* actor) {
         Mtx34* matrix = calc_mtx();
         itemNumber = dItemNo_ARROW_10_e;
         PSMTXCopy(&matrices[BST_JNT_HANAL_e], matrix);
-        i_this->m2E9E = 0;
+        i_this->mItemNoseSide = 0;
     } else {
         Mtx34* matrices = jointBlock->mpAnmMtx;
         jointBlock->mFlags = flags | J3DCalcAnmMtx;
         Mtx34* matrix = calc_mtx();
         itemNumber = dItemNo_BOMB_5_e;
         PSMTXCopy(&matrices[BST_JNT_HANAR_e], matrix);
-        i_this->m2E9E = 1;
+        i_this->mItemNoseSide = 1;
     }
     f32 offsetX = REG0_F(2);
     f32 sixty = 60.0f;
@@ -129,7 +129,7 @@ static void hana_demo(bst_class* actor) {
         s8 reverb = dComIfGp_getReverb(currentRoom);
         mDoAud_seStart(JA_SE_CM_BST_ITEM_OUT_NOSE, eye, 0, reverb);
     }
-    morph = i_this->m02B8;
+    morph = i_this->mpMorf;
     model = reinterpret_cast<BstAttackModel*>(morph->mpModel.get());
     jointBlock = model->mpJointBlock;
     flags = static_cast<u16>(jointBlock->mFlags);
@@ -141,7 +141,7 @@ static void hana_demo(bst_class* actor) {
     horizontal.y = zero;
     horizontal.z = zero;
     MtxPosition(&horizontal, &itemPosition);
-    s8 side = static_cast<s8>(i_this->m2E9E);
+    s8 side = static_cast<s8>(i_this->mItemNoseSide);
     s8 smokeRoom = static_cast<s8>(i_this->current.roomNo);
     u16 effect = bstItemSmoke()->mEffect[side];
     auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());

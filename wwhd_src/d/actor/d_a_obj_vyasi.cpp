@@ -48,7 +48,7 @@ BOOL Act_c::SetStopJointAnimation(void* animation, f32 speed, f32 morph) {
     if (!animation)
         return 0;
     mpMorf->setAnm(static_cast<J3DAnmTransform*>(animation), 0, morph, speed, 0.0f, -1.0f, nullptr);
-    m19C4 = 1;
+    mAnmPlaying = 1;
     return 1;
 }
 
@@ -63,7 +63,7 @@ void Act_c::set_first_process() {
     s32 yaw = s16(shape_angle.y) - 0x8000;
     mNormalCounter = 0;
     shape_angle.y = (s16)yaw;
-    m19D4 = 1;
+    mWindScale = 1;
 }
 
 /* 023B7FDC */
@@ -88,16 +88,16 @@ void Act_c::set_collision() {
             collision->ClrTgHit();
         } else {
             CapsuleEnds* shape = &mCapsuleEnds[i];
-            shape->mStart.copy(m0400[i]);
-            shape->mEnd.copy(m0400[i + 1]);
+            shape->mStart.copy(mJointPos[i]);
+            shape->mEnd.copy(mJointPos[i + 1]);
             shape->mRadius = radius;
             vyasiSetCapsuleGeometry(&collision->mCps, shape);
             cCcS_Set(dComIfG_Ccsp(), collision);
         }
     }
     for (u32 i = 0; i < 4; ++i) {
-        cXyz* start = &m0400[i + 1];
-        cXyz* end = &m0400[i + 2];
+        cXyz* start = &mJointPos[i + 1];
+        cXyz* end = &mJointPos[i + 2];
         f32 x = start->x, y = start->y, z = start->z;
         f32 dx = (f32(end->x) - x) * 0.3333300054073334f;
         f32 dy = (f32(end->y) - y) * 0.3333300054073334f;
@@ -148,11 +148,11 @@ BOOL JointNodeCallBack(void* node, s32 stage) {
     rotation->x = (*angles)[index].x;
     rotation->y = (*angles)[index].y;
     rotation->z = (*angles)[index].z;
-    vyasiAddAngles(rotation.get(), &actor->m03AC[index]);
+    vyasiAddAngles(rotation.get(), &actor->mJointAngle[index]);
     PSMTXCopy(model->getAnmMtx(index), stack);
     mDoMtx_ZXYrotM(stack, rotation->x, rotation->y, rotation->z);
     if (M_joint_type.entries[index] == 0)
-        mDoMtx_stack_c::scaleM(actor->m04A8, actor->m04AC, actor->m04B0);
+        mDoMtx_stack_c::scaleM(actor->mLeafScaleX, actor->mLeafScaleY, actor->mLeafScaleZ);
     J3DMtxBuffer_hd* data = model->mpMtxBuffer;
     u16 flags = data->mFlags;
     u32 base = data->mpAnmMtx;
@@ -161,7 +161,7 @@ BOOL JointNodeCallBack(void* node, s32 stage) {
     PSMTXCopy(stack, J3DSys::mCurrentMtx);
     gabi::Local<cXyz> origin;
     origin->set(0, 0, 0);
-    PSMTXMultVec(stack, origin.get(), &actor->m0400[index]);
+    PSMTXMultVec(stack, origin.get(), &actor->mJointPos[index]);
     return 1;
 }
 
@@ -207,7 +207,7 @@ BOOL Act_c::process_sagWind_init() {
         distance = 1000.f;
     f32 amplitude = (distance - 2800.f) / -1800.f;
     f32 velocity = gabi::fmadds(7000.f, amplitude, 5000.f);
-    m0504 = amplitude;
+    mSagRatio = amplitude;
     s16 half = angle_float(velocity * 0.5f);
     for (u32 i = 0; i < 14; ++i) {
         s16 value = half;
@@ -216,7 +216,7 @@ BOOL Act_c::process_sagWind_init() {
             f32 speed = velocity + random;
             value = angle_float((i & 1) ? -speed : speed);
         }
-        m0524[i] = value;
+        mWaveSpeed[i] = value;
     }
     mpMorf->mFrameCtrl.mRate = 0.0f;
     return 1;
@@ -235,23 +235,23 @@ BOOL Act_c::process_toNormal_init() {
 
 /* 023B940C */
 void Act_c::process_toNormal_main() {
-    if ((u32)m19C4 == 0) {
-        f32 amplitude = (f32)m19CC;
+    if ((u32)mAnmPlaying == 0) {
+        f32 amplitude = (f32)mToNormalAmp;
         if (!(std::fabs(amplitude) > 0.10000000149011612f)) {
             if (process_init(STATE_NORMAL)) {
                 mNormalCounter = 2;
-                m19D4 = 0.f;
-                m19CC = 0.f;
+                mWindScale = 0.f;
+                mToNormalAmp = 0.f;
             }
-            amplitude = (f32)m19CC;
+            amplitude = (f32)mToNormalAmp;
         }
-        s32 phase = (s16)m19D0 + 0x3000;
-        m19D0 = phase;
-        m19CC = amplitude * 0.8500000238418579f;
+        s32 phase = (s16)mToNormalPhase + 0x3000;
+        mToNormalPhase = phase;
+        mToNormalAmp = amplitude * 0.8500000238418579f;
     } else {
-        f32 amplitude = -1792.f * (f32)m0504;
-        m19D0 = 0;
-        m19CC = amplitude;
+        f32 amplitude = -1792.f * (f32)mSagRatio;
+        mToNormalPhase = 0;
+        mToNormalAmp = amplitude;
     }
 }
 
@@ -268,7 +268,7 @@ f32 Act_c::process_normal_main() {
     s16 counter = (s16)mNormalCounter;
     if (counter == 0 || counter == 1)
         mNormalCounter = counter + 1;
-    return vyasiAddCalc(&m19D4, 1.f, 0.009999999776482582f, 1.f, 0.007000000216066837f);
+    return vyasiAddCalc(&mWindScale, 1.f, 0.009999999776482582f, 1.f, 0.007000000216066837f);
 }
 
 /* 023B7528 */
@@ -405,9 +405,9 @@ s32 Act_c::_create() {
     }
     for (u32 i = 0; i < 14; ++i)
         mJointQuat[i] = M_identity_quat;
-    m04A8 = 1;
-    m04AC = 1;
-    m04B0 = 1;
+    mLeafScaleX = 1;
+    mLeafScaleY = 1;
+    mLeafScaleZ = 1;
     return phase;
 }
 
@@ -428,7 +428,7 @@ void Act_c::set_mtx() {
     mDoMtx_stack_c::ZXYrotM(shape_angle);
     model = mpMorf->getModel();
     model->setBaseTRMtx(mDoMtx_stack_c::get());
-    PSMTXCopy(mDoMtx_stack_c::get(), &m04BC);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
 }
 
 /* 023B86B8 */
@@ -440,13 +440,13 @@ void Act_c::calc_dif_angle() {
         if (state == STATE_SAG_WIND) {
             u8 kind = M_joint_type.entries[i];
             if (kind == 2) {
-                f32 wave = f32(m0504) * cM_ssin(u16(mAnglePhase[i]));
+                f32 wave = f32(mSagRatio) * cM_ssin(u16(mAnglePhase[i]));
                 desired->x = angle_float(20.0f * wave);
                 s16 yz = angle_float(40.0f * wave);
                 desired->y = yz;
                 desired->z = yz;
             } else if (kind == 1) {
-                f32 amplitude = m0504;
+                f32 amplitude = mSagRatio;
                 f32 wave = amplitude * cM_ssin(u16(mAnglePhase[i]));
                 desired->x = angle_float(120.0f * wave);
                 desired->y = angle_float(180.0f * wave);
@@ -462,7 +462,7 @@ void Act_c::calc_dif_angle() {
                     for (u32 j = 0; j < 14; ++j)
                         csXyz_ct(&M_base_angle.entries[j], 0, 0, z[j]);
                 }
-                f32 wave = f32(m0504) * cM_ssin(u16(mAnglePhase[i]));
+                f32 wave = f32(mSagRatio) * cM_ssin(u16(mAnglePhase[i]));
                 const csXyz& base = M_base_angle.entries[i];
                 s32 x = angle_float(700.0f * wave) + s16(base.x);
                 s16 yz = angle_float(1700.0f * wave);
@@ -471,15 +471,15 @@ void Act_c::calc_dif_angle() {
                 desired->z = (s16)(s32(yz) + s16(base.z));
                 rate = 1;
             }
-        } else if (state == STATE_TO_NORMAL && m19C4 == 0 && (i == 0 || i == 1 || i == 6)) {
-            desired->z = angle_float(f32(m19CC) * cM_ssin(u16(m19D0)));
+        } else if (state == STATE_TO_NORMAL && mAnmPlaying == 0 && (i == 0 || i == 1 || i == 6)) {
+            desired->z = angle_float(f32(mToNormalAmp) * cM_ssin(u16(mToNormalPhase)));
         }
-        csXyz* rotation = &m03AC[i];
+        csXyz* rotation = &mJointAngle[i];
         cLib_addCalcAngleS2(&rotation->x, desired->x, rate, 0x4000);
         cLib_addCalcAngleS2(&rotation->y, desired->y, rate, 0x4000);
         cLib_addCalcAngleS2(&rotation->z, desired->z, rate, 0x4000);
         u8 kind = M_joint_type.entries[i];
-        s32 increment = m0524[i];
+        s32 increment = mWaveSpeed[i];
         if (kind == 0)
             increment = angle_float(f32(increment) * 1.5f);
         mAnglePhase[i] = (s16)(s32(mAnglePhase[i]) + increment);
@@ -503,7 +503,7 @@ void Act_c::quaternion_main() {
             gabi::Local<cXyz> cross;
             // HD: keep the hidden result in the original caller-owned slot.
             cXyz_outprod(axis.get(), cross.get(), localWind.get());
-            f32 scale = m19D4;
+            f32 scale = mWindScale;
             u16 angle = (u16)gabi::ftoi((1400.0f * power) * scale);
             f32 sine = cM_ssin(angle);
             gabi::Local<Quaternion> rotation;
@@ -512,13 +512,13 @@ void Act_c::quaternion_main() {
             rotation->z = sine * f32(cross->z);
             rotation->w = cM_scos(angle);
             s16 desired = angle_float((power * 360.0f) * scale);
-            cLib_addCalcAngleS2(&m02B0[i], desired > 220 ? 220 : desired, 4, 0x20);
+            cLib_addCalcAngleS2(&mAnimDir[i], desired > 220 ? 220 : desired, 4, 0x20);
             f32 random = cM_rndFX(256.0f);
-            f32 bend = m19D4;
+            f32 bend = mWindScale;
             s16 delta = angle_float(gabi::fmadds(power * 2048.0f, bend, random));
-            s32 phase = s16(m0294[i]) + delta;
-            m0294[i] = (s16)phase;
-            u16 windAngle = m02B0[i];
+            s32 phase = s16(mAnimWave[i]) + delta;
+            mAnimWave[i] = (s16)phase;
+            u16 windAngle = mAnimDir[i];
             f32 wave = cM_ssin(windAngle) * cM_ssin((u16)phase);
             gabi::Local<Quaternion> oscillation;
             oscillation->x = wave;
@@ -538,20 +538,20 @@ void Act_c::quaternion_main() {
 void Act_c::leaf_scale_main() {
     f32 x = 1, y = 1, z = 1;
     if (mState == STATE_SAG_WIND) {
-        f32 amplitude = m0504;
+        f32 amplitude = mSagRatio;
         y = gabi::fmadds(-0.5f, amplitude, 1.0f);
         z = y;
         x = gabi::fmadds(0.3500000238418579f, amplitude, 1.0f);
     }
-    cLib_addCalc2(&m04A8, x, 0.5f, 0.5f);
-    cLib_addCalc2(&m04AC, y, 0.5f, 0.5f);
-    cLib_addCalc2(&m04B0, z, 0.5f, 0.5f);
+    cLib_addCalc2(&mLeafScaleX, x, 0.5f, 0.5f);
+    cLib_addCalc2(&mLeafScaleY, y, 0.5f, 0.5f);
+    cLib_addCalc2(&mLeafScaleZ, z, 0.5f, 0.5f);
 }
 
 /* 023B8EB0 */
 BOOL Act_c::_execute() {
     if (mState != STATE_NONE) {
-        m19C4 = PlayStopJointAnimation();
+        mAnmPlaying = PlayStopJointAnimation();
         process_main();
         set_collision();
         quaternion_main();

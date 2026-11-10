@@ -92,13 +92,13 @@ void JAIZelBasic::setLevObjSE(u32 id, cXyz *pos, u32 reverb) {
 
 // The sub-BGM fade factor was just set to1; preserve the remaining multiply order.
 static inline f32 calcMainBgmVolumeWithoutSubFade(JAIZelBasic *basic) {
-    f32 v = mul(basic->field_0x0080.get(), basic->field_0x0084.get());
-    v = mul(v, basic->field_0x0088.get());
-    v = mul(v, basic->field_0x0090.get());
-    v = mul(v, basic->field_0x0094.get());
-    v = mul(v, basic->field_0x0098.get());
-    v = mul(v, basic->field_0x009c.get());
-    return mul(v, basic->field_0x00ac.get());
+    f32 v = mul(basic->mMainBgmMuteVolume.get(), basic->mMainBgmTalkVolume.get());
+    v = mul(v, basic->mMainBgmMenuVolume.get());
+    v = mul(v, basic->mMainBgmSceneVolume.get());
+    v = mul(v, basic->mMainBgmSeaVolume.get());
+    v = mul(v, basic->mMainBgmTaktVolume.get());
+    v = mul(v, basic->mMainBgmCbPracticeVolume.get());
+    return mul(v, basic->mMainBgmHeightVolume.get());
 }
 
 static inline f32 soundPositionDistance(VectorWords *v) {
@@ -113,10 +113,10 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (pos != 0)
         checkSoundPointer(pos);
-    if (field_0x0201.get() == 1)
+    if (mAllSeMuted.get() == 1)
         return 0;
     bool kurobo = id - JA_SE_CM_KS_MOVE < 3 || id - JA_SE_CM_PT_JUMP < 3;
-    if (!kurobo && (s32)field_0x0224.get() == 0x2D) {
+    if (!kurobo && (s32)mSceneNo.get() == 0x2D) {
         if ((s32)id == JA_SE_CHR_PW_MOVE)
             return 0;
         kurobo = id == JA_SE_FT_PW_RUN_AWAY || id == JA_SE_CM_PW_BECOME_SOLID ||
@@ -132,13 +132,13 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
     if (mMainBgmNum.get() == JA_BGM_TETRA_MEET &&
         ((s32)id == JA_SE_CM_INOCHIDAMA_BLINK || (s32)id == JA_SE_CM_INOCHIDAMA_BREAK))
         return 0;
-    if (field_0x0206.get() != 0) {
+    if (mFanfareActive.get() != 0) {
         if (!(id - JA_SE_OBJ_TBOX_UNLOCK < 9 || (id & 0xFFFFF000) == 0 ||
               (s32)id == JA_SE_CM_SO_DIVE || (s32)id == JA_SE_CV_G_SHIP_SCREAM ||
               (s32)id == JA_SE_CV_G_SHIP_LAUGH))
             return 0;
     }
-    if (field_0x0207.get() != 0 && (id & 0xFFFFF000) != 0) {
+    if (mTaktSeTimer.get() != 0 && (id & 0xFFFFF000) != 0) {
         bool ok;
         if (id >= JA_SE_WTAKT_AUFTAKT_4)
             ok = id <= JA_SE_WTAKT_AUFTAKT_6 || id == JA_SE_CV_TT_DANCE_FIN ||
@@ -151,60 +151,60 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
     /* one-shot sounds per scene and sounds that must not overlap */
     switch ((s32)id) {
     case JA_SE_FT_ADD_GRASS: {
-        if (field_0x01f9.get() == 1)
+        if (mAddGrassSePlayed.get() == 1)
             return 0;
-        s32 scene = field_0x0224.get();
-        field_0x01f9 = 1;
-        if (scene == 0x12 && mIslandRoomNo.get() == 0x2C && field_0x0239.get() == 9 &&
-            field_0x0028.get() < 30)
+        s32 scene = mSceneNo.get();
+        mAddGrassSePlayed = 1;
+        if (scene == 0x12 && mIslandRoomNo.get() == 0x2C && mLayerNo.get() == 9 &&
+            mSceneFrameCount.get() < 30)
             return 0;
         break;
     }
     case JA_SE_OBJ_COL_BRK_WRAILING:
-        if (field_0x01fc.get() == 1)
+        if (mColBrkWrailingSePlayed.get() == 1)
             return 0;
-        field_0x01fc = 1;
+        mColBrkWrailingSePlayed = 1;
         break;
     case JA_SE_OBJ_BRK_WRAIL_K:
-        if (field_0x01fb.get() == 1)
+        if (mBrkWrailKSePlayed.get() == 1)
             return 0;
-        field_0x01fb = 1;
+        mBrkWrailKSePlayed = 1;
         break;
     case JA_SE_LK_CUT_GRASS:
-        if (field_0x01fa.get() != 0)
+        if (mCutGrassSeTimer.get() != 0)
             return 0;
-        field_0x01fa = 4;
+        mCutGrassSeTimer = 4;
         break;
     case JA_SE_OBJ_TREE_SWING:
     case JA_SE_OBJ_TREE_SWING_S:
-        if (field_0x0202[0].get() != 0)
+        if (mSwingSeTimers[0].get() != 0)
             return 0;
-        field_0x0202[0] = 2;
+        mSwingSeTimers[0] = 2;
         break;
     case JA_SE_OBJ_COL_SWC_CHNS:
-        if (field_0x0202[1].get() != 0)
+        if (mSwingSeTimers[1].get() != 0)
             return 0;
-        field_0x0202[1] = 2;
+        mSwingSeTimers[1] = 2;
         break;
     case JA_SE_CM_BGN_STRING_RIPPLE:
-        if (field_0x01fd.get() != 0)
+        if (mBgnStringRippleSeTimer.get() != 0)
             return 0;
-        field_0x01fd = 0x14;
+        mBgnStringRippleSeTimer = 0x14;
         break;
     case JA_SE_CM_BGN_BODY_RIPPLE:
-        if (field_0x01fe.get() != 0)
+        if (mBgnBodyRippleSeTimer.get() != 0)
             return 0;
-        field_0x01fe = 0x14;
+        mBgnBodyRippleSeTimer = 0x14;
         break;
     case JA_SE_CM_BGN_M_HEAD_RIPPLE:
-        if (field_0x01ff.get() != 0)
+        if (mBgnHeadRippleSeTimer.get() != 0)
             return 0;
-        field_0x01ff = 0x14;
+        mBgnHeadRippleSeTimer = 0x14;
         break;
     case JA_SE_CM_BGN_M_TAIL_RIPPL:
-        if (field_0x0200.get() != 0)
+        if (mBgnTailRippleSeTimer.get() != 0)
             return 0;
-        field_0x0200 = 0x14;
+        mBgnTailRippleSeTimer = 0x14;
         break;
     case JA_SE_OBJ_OTOSHIANA_OPEN:
         if (checkSePlaying(0x6934) != 0)
@@ -215,7 +215,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
             return 0;
         break;
     case JA_SE_OBJ_PIRATE_CRUISE:
-        if ((s32)field_0x0224.get() == 0x11)
+        if ((s32)mSceneNo.get() == 0x11)
             id = JA_SE_OBJ_PIRATE_CRUISE_LPF;
         break;
     }
@@ -349,11 +349,11 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         f32 d = (f32)info / 32767.0f * 20.0f;
         if (d > 1.0f)
             d = 1.0f;
-        startSoundVec(id, &field_0x0214, 0, 0, 0, 4);
-        if (field_0x0214.get() == 0)
+        startSoundVec(id, &mpTelescopeSound, 0, 0, 0, 4);
+        if (mpTelescopeSound.get() == 0)
             return 0;
-        field_0x0214.get()->setPitch(gabi::fmadds(0.2f, d, 0.8f), 0, 0);
-        field_0x0214.get()->setVolume(d, 2, 0);
+        mpTelescopeSound.get()->setPitch(gabi::fmadds(0.2f, d, 0.8f), 0, 0);
+        mpTelescopeSound.get()->setVolume(d, 2, 0);
         return 0;
     }
     case JA_SE_CAMERA_C_MOVE:
@@ -379,21 +379,21 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
             return 0;
         if (isDemo() == 1)
             return 0;
-        if (field_0x0207.get() != 0)
+        if (mTaktSeTimer.get() != 0)
             return 0;
-        if (field_0x00be.get() != 0)
+        if (mTalkSeBlocked.get() != 0)
             return 0;
         break;
     case JA_SE_TALK_NEXT:
         if (checkStreamPlaying(STREAM5) == 1)
             return 0;
-        if (isDemo() != 1 && field_0x0207.get() == 0) {
-            if (field_0x00be.get() != 0)
+        if (isDemo() != 1 && mTaktSeTimer.get() == 0) {
+            if (mTalkSeBlocked.get() != 0)
                 return 0;
             break;
         }
         id = JA_SE_DEMO_MSG_NEXT;
-        if (field_0x00be.get() != 0)
+        if (mTalkSeBlocked.get() != 0)
             return 0;
         break;
     case JA_SE_TALK_WIN_CLOSE:
@@ -403,7 +403,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
             id = JA_SE_DEMO_MSG_END;
         if (checkSePlaying(0x871) == 1)
             return 0;
-        if (field_0x00be.get() != 0)
+        if (mTalkSeBlocked.get() != 0)
             return 0;
         break;
     case JA_SE_ITM_MENU_IN:
@@ -417,7 +417,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         seStop(JA_SE_TITLE_WIND, 0x3C);
         break;
     case JA_SE_ITM_OMAMORI_TETLA: {
-        u32 scene = field_0x0224.get();
+        u32 scene = mSceneNo.get();
         if (scene == 8 || scene == 0xC || scene == 0x13)
             break;
         id = JA_SE_ITM_OMAMORI_SHIP;
@@ -441,23 +441,23 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         seStop(JA_SE_PLAYSPOT_DESTROY, 0);
         break;
     case JA_SE_FORCE_BACK:
-        field_0x0205 = 1;
+        mForceBack = 1;
         stopBattleBgm();
         {
             Sound *main = mpMainBgmSound.get();
-            field_0x008c = 1.0f;
+            mMainBgmSubBgmVolume = 1.0f;
             if (main != 0)
                 main->setVolume(calcMainBgmVolumeWithoutSubFade(this), 0x2D, 0);
         }
         stopBattleBgm();
-        field_0x00c1 = 0;
-        field_0x00c0 = 0;
-        field_0x00c4 = 0;
+        mEnemyNearbyOn = 0;
+        mBattleBgmFadeDelay = 0;
+        mEnemyNearbyFadeTimer = 0;
         subBgmStop();
         break;
     case JA_SE_CHUYA_SWITCH:
         subBgmStart(JA_BGM_TAKT_CHUYA);
-        field_0x0033 = 1;
+        mDayNightSwitched = 1;
         return 0;
     case JA_SE_AUC_BID_GAUGE:
         if (info >= 100)
@@ -468,19 +468,19 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         break;
     case JA_SE_ME_ITEM_GET_S: {
         u32 c6 = mLastMinibossSubBGMType.get();
-        field_0x0206 = 0;
-        field_0x00bb = 0;
+        mFanfareActive = 0;
+        mFanfareResumePending = 0;
         if (c6 != 0)
             break;
         u32 n = mSubBgmNum.get();
         if (n == JA_BGM_CB_NEXTYEAR || n == JA_BGM_CB_NEXTYEAR_W)
             break;
-        field_0x00b0 = (u32)-2;
+        mSubBgmStopTimer = (u32)-2;
         subBgmStopInner();
         break;
     }
     case JA_SE_ATM_RAIN_1:
-        if ((s32)field_0x0224.get() == 0x5C && field_0x0239.get() < 8)
+        if ((s32)mSceneNo.get() == 0x5C && mLayerNo.get() < 8)
             id = JA_SE_ATM_VS_GANON_RAIN;
         break;
     case JA_SE_ATM_SWIRL:
@@ -560,8 +560,8 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         pitch = f / 200.0f + 0.5f;
         break;
     case JA_SE_OBJ_HL_WAPR_EFF:
-        if ((s32)field_0x0224.get() == 0x55) {
-            u32 r = field_0x0239.get();
+        if ((s32)mSceneNo.get() == 0x55) {
+            u32 r = mLayerNo.get();
             if (r == 9 || r == 0xA)
                 return 0;
         }
@@ -578,7 +578,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         volume = (f32)info / hundred;
         break;
     case JA_SE_ATM_MAGMA_CHILL:
-        field_0x0204 = 1;
+        mSeaEnvSeOff = 1;
         break;
     case JA_SE_OBJ_TORNADE_WARP:
         subBgmStart(JA_BGM_TAKT_SHIPPU);
@@ -594,7 +594,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
             id = JA_SE_LK_SLIP_SUS_STONE;
         break;
     case JA_SE_WTAKT_AMBIENT:
-        field_0x0207 = 2;
+        mTaktSeTimer = 2;
         break;
     case JA_SE_LK_DAMAGE_NORMAL:
     case JA_SE_LK_DAMAGE_LARGE:
@@ -607,17 +607,17 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
             break;
         Sound *sub = mpSubBgmSound.get();
         f32 d = VOL_BGM_DEFAULT.get();
-        field_0x0090 = d;
+        mMainBgmSceneVolume = d;
         if (sub != 0)
             break;
-        f32 vol = mul(field_0x0080.get(), field_0x0084.get());
-        vol = mul(vol, field_0x0088.get());
-        vol = mul(vol, field_0x008c.get());
+        f32 vol = mul(mMainBgmMuteVolume.get(), mMainBgmTalkVolume.get());
+        vol = mul(vol, mMainBgmMenuVolume.get());
+        vol = mul(vol, mMainBgmSubBgmVolume.get());
         vol = mul(vol, d);
-        vol = mul(vol, field_0x0094.get());
-        vol = mul(vol, field_0x0098.get());
-        vol = mul(vol, field_0x009c.get());
-        vol = mul(vol, field_0x00ac.get());
+        vol = mul(vol, mMainBgmSeaVolume.get());
+        vol = mul(vol, mMainBgmTaktVolume.get());
+        vol = mul(vol, mMainBgmCbPracticeVolume.get());
+        vol = mul(vol, mMainBgmHeightVolume.get());
         mpMainBgmSound.get()->setVolume(vol, 2, 0);
         break;
     }
@@ -642,40 +642,40 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
     case JA_SE_FIREBLAST_BLOW: {
         if (pos == 0)
             break;
-        VectorWords *tab = field_0x1ed4;
-        VectorWords *e = indexed(tab, field_0x1f34);
+        VectorWords *tab = mFireblastPos;
+        VectorWords *e = indexed(tab, mFireblastPosCount);
         e->w[0] = reinterpret_cast<VectorWords *>(pos)->w[0].get();
         e->w[1] = reinterpret_cast<VectorWords *>(pos)->w[1].get();
         e->w[2] = reinterpret_cast<VectorWords *>(pos)->w[2].get();
-        u32 n = field_0x1f34.get();
+        u32 n = mFireblastPosCount.get();
         f32 cy = cameraHeight(camera());
         e = indexed(tab, n);
         if (reinterpret_cast<cXyz *>(e)->y.get() > cy) {
             reinterpret_cast<cXyz *>(e)->y = cy;
-            n = field_0x1f34.get();
+            n = mFireblastPosCount.get();
             e = indexed(tab, n);
         }
-        field_0x1f34 = n + 1;
+        mFireblastPosCount = n + 1;
         pos = reinterpret_cast<cXyz *>(e); // HD: follow the stored height-clamped copy.
         break;
     }
     case JA_SE_FT_LADDER_CLIMB:
     case JA_SE_FT_LADDER_CLIMB_D:
-        if (field_0x0046.get() == 1) {
+        if (mLinkBootsType.get() == 1) {
             id = JA_SE_LK_WALK_HEAVY;
             if ((s32)info != 0xD)
                 info = 9;
         }
-        if (field_0x0045.get() != 1)
+        if (mLinkSwordShieldOnBack.get() != 1)
             break;
         seStart(JA_SE_LK_FT_SW_SHIELD, pos, 0, reverb, 1.0f, 1.0f, -1.0f, -1.0f, 0);
         break;
     case JA_SE_OBJ_PIRATE_SAIL:
-        if ((s32)field_0x0224.get() == 0x12 && mIslandRoomNo.get() == 0x2C &&
-            field_0x0239.get() == 0xA) {
-            if (checkStreamPlaying(STREAM5 + 0x17) == 0 && field_0x0208.get() == 0)
+        if ((s32)mSceneNo.get() == 0x12 && mIslandRoomNo.get() == 0x2C &&
+            mLayerNo.get() == 0xA) {
+            if (checkStreamPlaying(STREAM5 + 0x17) == 0 && mPirateSailSePlayed.get() == 0)
                 return 0;
-            field_0x0208 = 1;
+            mPirateSailSePlayed = 1;
         }
         break;
     case JA_SE_CM_PRAPELLO_ROLLING:
@@ -714,7 +714,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         seStart(JA_SE_CM_BKM_ATKVINE_BOOM, 0, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f, 0);
         break;
     case JA_SE_CM_DK_BREAK_MASK:
-        field_0x00cc = 1;
+        mDkMaskBroken = 1;
         break;
     case JA_SE_OBJ_KM_WINDMILL:
         if (info >= 100) {
@@ -735,7 +735,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         volume = f / 30.0f;
         break;
     case JA_SE_OBJ_SPRING:
-        if ((s32)field_0x0224.get() == 0x35 && checkEventBit(0x2D04) == 0)
+        if ((s32)mSceneNo.get() == 0x35 && checkEventBit(0x2D04) == 0)
             return 0;
         break;
     case JA_SE_OBJ_STN_DOOR_STL_BAR:
@@ -749,17 +749,17 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         seStop(JA_SE_OBJ_STN_DOOR_MOVE_D, 0);
         break;
     case JA_SE_OBJ_OTOSHIANA_OPEN: {
-        field_0x00ca = 1;
+        mBattleBgmDisabled = 1;
         stopBattleBgm();
         Sound *main = mpMainBgmSound.get();
-        field_0x008c = 1.0f;
+        mMainBgmSubBgmVolume = 1.0f;
         if (main != 0)
             main->setVolume(calcMainBgmVolumeWithoutSubFade(this), 0x2D, 0);
         stopBattleBgm();
-        field_0x00c1 = 0;
+        mEnemyNearbyOn = 0;
         pos = 0;
-        field_0x00c0 = 0;
-        field_0x00c4 = 0;
+        mBattleBgmFadeDelay = 0;
+        mEnemyNearbyFadeTimer = 0;
         break;
     }
     case JA_SE_OBJ_BTD_FIRE_DROP: {
@@ -823,7 +823,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         }
         break;
     case JA_SE_CM_BST_GOKOU:
-        field_0x00be = 1;
+        mTalkSeBlocked = 1;
         break;
     case JA_SE_CM_BGN_T_ROUND:
         if (info >= 100)
@@ -866,7 +866,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
                 continue;
             if (indexed(snd, i)->get() == 0)
                 continue;
-            if (field_0x0194[i].get() != gabi::ea(pos))
+            if (mSePosAddr[i].get() != gabi::ea(pos))
                 continue;
             gptr<Sound> *h = indexed(snd, i);
             startSoundVec(id, h, pos, 0, info, 4);
@@ -885,7 +885,7 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
         }
     }
     // HD: search32 SE handles from the rotating index; reload after sound calls.
-    s32 idx = field_0x01f4.get();
+    s32 idx = mSeSlotIndex.get();
     gptr<Sound> *h = indexed(snd, u32(idx));
     if (h->get() != 0) {
         s32 start = idx;
@@ -899,40 +899,40 @@ gptr<Sound> *JAIZelBasic::seStart(u32 id, cXyz *pos, u32 info, u32 reverb, f32 p
             }
         }
         h = indexed(snd, idx);
-        field_0x01f4 = idx;
+        mSeSlotIndex = idx;
     }
     *h = nullptr;
-    startSoundVec(id, indexed(snd, field_0x01f4.get()), pos, 0, info, 4);
+    startSoundVec(id, indexed(snd, mSeSlotIndex.get()), pos, 0, info, 4);
     if ((s32)id == JA_SE_PLAYSPOT_END_S) {
         if (pos != 0)
             deleteObject(pos);
         pos = 0;
     }
-    u32 i2 = field_0x01f4.get();
+    u32 i2 = mSeSlotIndex.get();
     h = indexed(snd, i2);
     if (h->get() != 0) {
         h->get()->setPortData(9, reverb & 0xFFFF);
         if (pitch != 1.0f)
-            indexed(snd, field_0x01f4.get())->get()->setPitch(pitch, 0, 0);
+            indexed(snd, mSeSlotIndex.get())->get()->setPitch(pitch, 0, 0);
         if (volume != 1.0f)
-            indexed(snd, field_0x01f4.get())->get()->setVolume(volume, 0, 0);
+            indexed(snd, mSeSlotIndex.get())->get()->setVolume(volume, 0, 0);
         if (pan != -1.0f)
-            indexed(snd, field_0x01f4.get())->get()->setPan(pan, 0, 0);
+            indexed(snd, mSeSlotIndex.get())->get()->setPan(pan, 0, 0);
         if (dolby != -1.0f)
-            indexed(snd, field_0x01f4.get())->get()->setDolby(dolby, 0, 0);
+            indexed(snd, mSeSlotIndex.get())->get()->setDolby(dolby, 0, 0);
         if (id == JA_SE_WTAKT_METRONOME || (id >= JA_SE_WTAKT_PULSE_3 && id <= JA_SE_WTAKT_PULSE_6))
-            indexed(snd, field_0x01f4.get())->get()->setPortData(8, info & 0xFFFF);
+            indexed(snd, mSeSlotIndex.get())->get()->setPortData(8, info & 0xFFFF);
         if ((s32)id == JA_SE_WTAKT_ARM_SWING || (s32)id == JA_SE_LK_WTAKT_SWING) {
-            indexed(snd, field_0x01f4.get())->get()->setPortData(7, info >> 16);
-            indexed(snd, field_0x01f4.get())->get()->setPortData(8, info & 0xFFFF);
+            indexed(snd, mSeSlotIndex.get())->get()->setPortData(7, info >> 16);
+            indexed(snd, mSeSlotIndex.get())->get()->setPortData(8, info & 0xFFFF);
         }
-        i2 = field_0x01f4.get();
+        i2 = mSeSlotIndex.get();
         h = indexed(snd, i2);
     }
     *indexed(mSeNum, i2) = id;
-    *indexed(field_0x0194, field_0x01f4) = gabi::ea(pos);
-    s32 nx = field_0x01f4.get() + 1;
-    field_0x01f4 = nx % 32;
+    *indexed(mSePosAddr, mSeSlotIndex) = gabi::ea(pos);
+    s32 nx = mSeSlotIndex.get() + 1;
+    mSeSlotIndex = nx % 32;
     return h;
 }
 

@@ -97,7 +97,7 @@ field 0228C50C r3+0xD1E u8 0 1
 field 0228C898 r3+0xD1E u8 0 1
 # initialSetAnmEvent: play speed sign
 field 0228D564 58000000 f32 -2 2
-# lookBackWaist: HD option byte, m310C around 0.9
+# lookBackWaist: HD option byte, mStickValue around 0.9
 field 0228DFF8 r3+0x4228 f32 0.8 1.2
 ret 027200D0 0x57000000 0x57000000
 field 0228DFF8 57000002 u8 0 1

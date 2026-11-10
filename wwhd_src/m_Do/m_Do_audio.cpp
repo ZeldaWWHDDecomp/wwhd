@@ -683,7 +683,7 @@ static u32 mDoAud_rainPlay(u32 a0, f64 f1, f64 f2, f64 f3, f64 f4, f64 f5, f64 f
 
 /* 025E201C */
 static u32 mDoAud_setSpecialBgmFlag(u32 a0) {
-    zel_basic->field_0x00bf = a0;
+    zel_basic->mCameraGroupLocked = a0;
     return a0;
 }
 

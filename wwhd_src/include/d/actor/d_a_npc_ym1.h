@@ -104,7 +104,7 @@ struct daNpc_Ym1_c : fopNpc_npc_c {
     /* 0x7E5 */ be<s8> mBboneJointIdx;
     /* 0x7E6 */ be<s8> mHandLJointIndex;
     /* 0x7E7 */ be<s8> mHandRJointIndex;
-    /* 0x7E8 */ gptr<J3DModel> m7E8;              /* GameCube m6D0 */
+    /* 0x7E8 */ gptr<J3DModel> mItemModel;  /* was m7E8: itemCreateHeap 022F7114: mDoExt_J3DModel__create(a_mdl_dat, ..) (nullptr without one); setMtx 022F7B28 places it on the hand; _draw 022F8F30 draws it while set; view Ym1PartAState mItemModel (d_a_npc_ym1_readable.h); GameCube m6D0; GameCube m6D0 */
     /* 0x7EC */ char mArcName[4];
     /* 0x7F0 */ gptr<J3DModel> mpHeadModel;
     /* 0x7F4 */ u8 mBtpAnm[0x74];                 /* mDoExt_btpAnm (HD 0x74) */
@@ -119,57 +119,56 @@ struct daNpc_Ym1_c : fopNpc_npc_c {
     /* 0x9B0 */ be<s16> m9B0;
     /* 0x9B2 */ be<s16> mRotYTarget;              /* GameCube 0x842 */
     /* 0x9B4 */ be<s16> m9B4;
-    /* 0x9B6 */ csXyz m9B6;                       /* GameCube m846 */
-    /* 0x9BC */ cXyz m9BC;
-    /* 0x9C8 */ cXyz m9C8;
-    /* 0x9D4 */ cXyz m9D4;
-    /* 0x9E0 */ be<f32> m9E0;
-    /* 0x9E4 */ be<f32> m9E4;
-    /* 0x9E8 */ be<f32> m9E8;
-    /* 0x9EC */ be<f32> m9EC;
-    /* 0x9F0 */ csXyz m9F0;
+    /* 0x9B6 */ csXyz mModelAngle;  /* was m9B6: _execute 022F8C24 / createInit 022F7D68: current.angle every frame; setMtx 022F7B28: mDoMtx_ZXYrotM by it; view Ym1PartAState mModelAngle; GameCube m846; GameCube m846 */
+    /* 0x9BC */ cXyz mEyePosition;  /* was m9BC: _nodeCB_Head 022F68C4: the head matrix times a_eye_pos_off; setAttention 022F7A60 copies it to eyePos; view Ym1PartAState mEyePosition */
+    /* 0x9C8 */ cXyz mLookPos;  /* was m9C8: lookBack 022F8670: the player's eye position in look mode 1, the look-at target in mode 2 (after our decomp's daNpc_Pf1_c mLookPos, same code) */
+    /* 0x9D4 */ cXyz mNbtAttentionPosition;  /* was m9D4: setAttention 022F7A60: the attention position for animations 5-7 (chk_nbt_attn); views ym1_b::State and Ym1PartAState mNbtAttentionPosition */
+    /* 0x9E0 */ cXyz mHeadPosition;  /* was m9E0, m9E4, m9E8 (three f32, named mHeadPositionX..Z before this type fix): _nodeCB_Head 022F68C4: the head joint's position; setAttention 022F7A60: y - 210 for animation 6; view Ym1PartAState mHeadPosition (d_a_npc_ym1_readable.h) */
+    /* 0x9EC */ be<f32> mPreviousMorfFrame;  /* was m9EC: play_animation 022F79D0: the morf frame of the last frame (a smaller one means the animation looped); setAnm_anm 022F9170 0; views State / Ym1PartAState mPreviousMorfFrame */
+    /* 0x9F0 */ csXyz mPreviousAngles;  /* was m9F0: lookBack 022F8670: x = the target angle, y / z = the head / backbone angle; chk_parts_notMov 022F9B64 compares them with the current ones; view State mPreviousAngles */
     /* 0x9F6 */ u8 _9F6[2];
-    /* 0x9F8 */ be<u32> m9F8;
+    /* 0x9F8 */ be<u32> mEyePositionEnabled;  /* was m9F8: setAttention 022F7A60 copies mEyePosition to eyePos while set; the wait/talk actions store their result; views State / Ym1PartAState mEyePositionEnabled */
     /* 0x9FC */ be<s16> m9FC;
-    /* 0x9FE */ be<s16> m9FE;
+    /* 0x9FE */ be<s16> mAttentionTimer;  /* was m9FE: wait_1 022F9EF4 / wait_2 022FA0A0: cLib_getRndValue(15, 30) and counted down before turning; talk_1 022FA288 resets it; view State mAttentionTimer */
     /* 0xA00 */ be<s16> mKariTimer;               /* GameCube 0x890 */
     /* 0xA02 */ be<s16> mA02;
     /* 0xA04 */ be<s16> mA04;
-    /* 0xA06 */ be<s16> mA06;
-    /* 0xA08 */ be<u8> mA08;
-    /* 0xA09 */ be<u8> mA09;
-    /* 0xA0A */ be<u8> mA0A;
+    /* 0xA06 */ be<s16> mLookAngleY;  /* was mA06: lookBack 022F8670: the target angle in look mode 3 (after our decomp's daNpc_Pf1_c mLookAngleY, same code) */
+    /* 0xA08 */ be<u8> mAnimationStopped;  /* was mA08: play_animation 022F79D0: mpMorf->play()'s result, or 1 when the frame went back; setAnm_anm 022F9170 0; NBTwai 022FA5B8 tests it; view State mAnimationStopped (Ym1PartAState: mMorfAnimationStopped) */
+    /* 0xA09 */ be<u8> mAnimationWrapped;  /* was mA09: setAnm_anm 022F9170: 0 with a new animation; view State mAnimationWrapped */
+    /* 0xA0A */ be<u8> mPresentItem;  /* was mA0A: chk_talk 022F9ACC: dComIfGp_event_getPreItemNo() on a talk with an item, else 0xFF; talk_1 022FA288 0xFF; view State mPresentItem */
     /* 0xA0B */ be<u8> mKariFlag;                 /* GameCube 0x89B */
-    /* 0xA0C */ be<u8> mA0C;
-    /* 0xA0D */ be<u8> mA0D;
-    /* 0xA0E */ be<u8> mA0E;
-    /* 0xA0F */ be<u8> mA0F;
+    /* 0xA0C */ be<u8> mPrevKariFlag;  /* was mA0C: _draw 022F8F30: mKariFlag of this frame (mKariFlag is then cleared); kari_1 022F9E00 goes back to waiting at 0, turn_1 022FA4E4 starts kari again while set (GameCube m89C) */
+    /* 0xA0D */ be<u8> mbResLoaded;  /* was mA0D: _create 022F8108: dComIfG_resLoad(..) == cPhs_COMPLEATE_e, create waits while 0 (after our decomp's daNpc_Pf1_c mbResLoaded, same code; GameCube m89D) */
+    /* 0xA0E */ be<u8> mbWaitForDemo;  /* was mA0E: _execute 022F8C24: no execution while set and no demo actor, cleared while a demo runs; _draw 022F8F30 draws nothing while set (after our decomp's daNpc_Pf1_c mbWaitForDemo, same code; GameCube m89E) */
+    /* 0xA0F */ be<u8> mbNoShapeAngle;  /* was mA0F: _execute 022F8C24: shape_angle follows current.angle only while 0; demo 022F8344 clears it (after our decomp's daNpc_Pf1_c mbNoShapeAngle, same code; GameCube m89F) */
     /* 0xA10 */ be<u8> mA10;
-    /* 0xA11 */ be<u8> mA11;
-    /* 0xA12 */ be<s8> mA12;
-    /* 0xA13 */ be<s8> mA13;
-    /* 0xA14 */ be<s8> mA14;
-    /* 0xA15 */ be<s8> mA15;
-    /* 0xA16 */ be<s8> mA16;
-    /* 0xA17 */ be<s8> mA17;
-    /* 0xA18 */ be<s8> mA18;
-    /* 0xA19 */ be<s8> mA19;
-    /* 0xA1A */ be<s8> mA1A;
-    /* 0xA1B */ be<s8> mA1B;
-    /* 0xA1C */ be<s8> mA1C;
-    /* 0xA1D */ be<s8> mA1D;
-    /* 0xA1E */ be<s8> mA1E;
-    /* 0xA1F */ be<s8> mA1F;
+    /* 0xA11 */ be<u8> mbHomeSet;  /* was mA11: _execute 022F8C24: 0 stores the home position words, angles and mRotYTarget once, then 1 (after our decomp's daNpc_Pf1_c mbHomeSet, same code) */
+    /* 0xA12 */ be<s8> mPlayerAttending;  /* was mA12: wait_1 022F9EF4 / wait_2 022FA0A0 / SITwai 022FA70C: the attention result, resets mAttentionTimer while set; view State mPlayerAttending */
+    /* 0xA13 */ be<s8> mTalkRequested;  /* was mA13: checkOrder 022F8304: 1 on the talk command while mActionSubstate is 1/2; the wait actions start the talk while set, talk_1 022FA288 clears it; set_collision_sp 022F89CC skips while set; view State mTalkRequested */
+    /* 0xA14 */ be<s8> mbHeadOnly;  /* was mA14: lookBack 022F8670: the head-only flag of the look-at; kari_1 022F9E00, wait_1 and the other actions set 1 / 0 with the look mode (after our decomp's daNpc_Pf1_c mbHeadOnly, same code; GameCube m8A4) */
+    /* 0xA15 */ be<s8> mTurnToPlayer;  /* was mA15: wait_1 022F9EF4 / wait_2 022FA0A0: turn current.angle.y to mRotYTarget while set; NBTwai 022FA5B8 sets it; view State mTurnToPlayer */
+    /* 0xA16 */ be<s8> mbDemo;  /* was mA16: demo 022F8344: 1 while demoActorID is set (returned), else 0; _execute 022F8C24 / set_cutGrass 022F88C8 skip while set (after our decomp's daNpc_Pf1_c mbDemo, same code) */
+    /* 0xA17 */ be<s8> mActionIndex;  /* was mA17: privateCut 022F8588: dComIfGp_evmng_getMyActIdx(staff, a_cut_tbl, ..), -1 ends (after our decomp's daNpc_Pf1_c mActionIndex, same code) */
+    /* 0xA18 */ be<s8> mAnimationAttribute;  /* was mA18: chngAnmAtr 022F9378: the message animation attribute (< 0xD); setAnm_ATR 022F9310 plays its table entry; endEvent 022F8544 / setStt 022F9C2C -1; view State mAnimationAttribute */
+    /* 0xA19 */ be<s8> mAnimationTag;  /* was mA19: anmAtr 022F9394: the last message animation tag taken; endEvent 022F8544 / setStt 022F9C2C -1; view State mAnimationTag */
+    /* 0xA1A */ be<s8> mBtpNum;  /* was mA1A: init_texPttrnAnm 022F6F38: the btp number; play_texPttrnAnm 022F7918 blinks only at 0; demo 022F8344 1 with the demo's btp; view Ym1PartAState mBtpNum */
+    /* 0xA1B */ be<s8> mAnmNum;  /* was mA1B: setAnm_anm 022F9170: anm_prm_c::mAnmNum of the animation set (no change when equal); createInit 022F7D68 0xD; set_cutGrass 022F88C8 / set_collision_sp 022F89CC switch on it; chk_nbt_attn 022F7A3C tests 5-7 (GameCube m8AB) */
+    /* 0xA1C */ be<s8> mActionSubstate;  /* was mA1C: the wait actions set 2; checkOrder 022F8304 starts the talk at 1/2 and clears it; eventOrder 022F8890 orders the speak event at 1, can-talk at 1/2; view State mActionSubstate */
+    /* 0xA1D */ be<s8> mStatus;  /* was mA1D: setStt 022F9C2C: the state; wait_action1 022FA828 .. run by it; setAnm 022F92A0 plays its table entry; view State mStatus */
+    /* 0xA1E */ be<s8> mReturnStatus;  /* was mA1E: setStt 022F9C2C: the state before a talk; talk_1 022FA288 goes back to it; view State mReturnStatus */
+    /* 0xA1F */ be<s8> mLookMode;  /* was mA1F: lookBack 022F8670: 1 player's eyes, 2 mLookPos, 3 mLookAngleY; the actions set it (after our decomp's daNpc_Pf1_c mLookMode, same code; GameCube m8AF) */
     /* 0xA20 */ be<s8> mSubType;                  /* GameCube 0x8B0 */
     /* 0xA21 */ be<s8> mStaff;                    /* GameCube 0x8B1 */
-    /* 0xA22 */ be<s8> mA22;
-    /* 0xA23 */ be<s8> mA23;
+    /* 0xA22 */ be<s8> mActionPhase;  /* was mA22: set_action 022F7388: 9 when the old action ends, 0 for the new; wait_action1 022FA828 .. set up at 0 and step to 1; view State mActionPhase (Ym1PartAState: mActionState) */
+    /* 0xA23 */ be<s8> mMessageAnimationState;  /* was mA23: anmAtr 022F9394: 0 takes the message's animation attribute once and steps to 1, reset when the message is displayed; view State mMessageAnimationState */
 };
 WWHD_OFFSET(daNpc_Ym1_c, mPhs, 0x7DC);
 WWHD_OFFSET(daNpc_Ym1_c, mArcName, 0x7EC);
 WWHD_OFFSET(daNpc_Ym1_c, mBtpAnm, 0x7F4);
 WWHD_OFFSET(daNpc_Ym1_c, mCurrProcFunc, 0x86C);
 WWHD_OFFSET(daNpc_Ym1_c, mCyl, 0x874);
+WWHD_OFFSET(daNpc_Ym1_c, mHeadPosition, 0x9E0);
 WWHD_OFFSET(daNpc_Ym1_c, mKariTimer, 0xA00);
 WWHD_OFFSET(daNpc_Ym1_c, mSubType, 0xA20);
 WWHD_SIZE(daNpc_Ym1_c, 0xA24);

@@ -168,10 +168,10 @@ static inline void esa_setRipple(esa_class* i_this) {
     }
     /* dComIfGp_particle_setShipTail: dPa_control_c::set with group 5 */
     dPa_control_set(dComIfGp_getParticle(), 5, dPa_name_ID_AK_JN_HAMON00, &i_this->current.pos,
-                    nullptr, &ripple_scale, 0xFF, (dPa_levelEcallBack*)(void*)&i_this->field_0x2A4,
+                    nullptr, &ripple_scale, 0xFF, (dPa_levelEcallBack*)(void*)&i_this->mRippleCb,
                     -1, nullptr, nullptr, nullptr);
-    if (i_this->field_0x2A4.getEmitter()) {
-        i_this->field_0x2A4.setRate(REG18_F(2) + 0.3f);
+    if (i_this->mRippleCb.getEmitter()) {
+        i_this->mRippleCb.setRate(REG18_F(2) + 0.3f);
     }
 }
 
@@ -204,7 +204,7 @@ static BOOL daEsa_Execute(esa_class* i_this) {
         if (st != 0) {
             if (st >= 2) { /* HD: also water (state 3) */
                 i_this->mTimer[0] = (s16)gabi::ftoi(cM_rndF(50.0f) + 200.0f);
-                bool noEmitter = i_this->field_0x2A4.getEmitter() == nullptr;
+                bool noEmitter = i_this->mRippleCb.getEmitter() == nullptr;
                 i_this->mActionState = 3;
                 if (noEmitter)
                     esa_setRipple(i_this);
@@ -240,7 +240,7 @@ static BOOL daEsa_Execute(esa_class* i_this) {
         i_this->speed.y = sy - 3.0f;
         bg_check(i_this);
     } else if (act == 3) {
-        /* HD: no field_0x2A4.remove(); bobs on the water or at the water height */
+        /* HD: no mRippleCb.remove(); bobs on the water or at the water height */
         if (esaEventStartCheck(dComIfGp_getPEvtManager(), "SO_ESA_XY")) {
             i_this->mTimer[0] = (s16)(i_this->mTimer[0] | 0x20);
         }
@@ -256,7 +256,7 @@ static BOOL daEsa_Execute(esa_class* i_this) {
         if (i_this->mTimer[0] == 0) {
             i_this->mActionState = 4;
         }
-        if (i_this->field_0x298 == 0x23) { /* HD */
+        if (i_this->mTaken == 0x23) { /* HD */
             if (cM_rndF(1.0f) < 0.5f) {
                 cXyz pos;
                 pos.x = i_this->current.pos.x;
@@ -293,7 +293,7 @@ static BOOL daEsa_IsDelete(esa_class* i_this) {
 
 /* 02130D6C */
 static BOOL daEsa_Delete(esa_class* i_this) {
-    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)(void*)&i_this->field_0x2A4); /* remove() */
+    dPa_rippleEcallBack_end((dPa_rippleEcallBack*)(void*)&i_this->mRippleCb); /* remove() */
     return true;
 }
 
@@ -303,7 +303,7 @@ static BOOL daEsa_CreateHeap(fopAc_ac_c* i_actor) {
     J3DModelData* modelData =
         (J3DModelData*)dComIfG_getObjectRes("Link", dRes_INDEX_LINK_BDL_ESA_e, SAFESTRING_VTBL);
     if (modelData == nullptr) /* JUT_ASSERT(0x250, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_esa.cpp", 0x250, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_esa.cpp", 0x250, "modelData != (0)");
     i_this->mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     return i_this->mpModel != nullptr;
 }
@@ -315,19 +315,19 @@ static cPhs_State daEsa_Create(fopAc_ac_c* i_actor) {
         if (i_actor != nullptr) {
             fopAc_ac_c_ct(i_actor);
             i_actor->__vtbl = ESA_VTBL;
-            esaRippleConstruct(&static_cast<esa_class*>(i_actor)->field_0x2A4);
+            esaRippleConstruct(&static_cast<esa_class*>(i_actor)->mRippleCb);
         }
         fopAcM_OnCondition(i_actor, fopAcCnd_INIT_e);
     }
     esa_class* i_this = static_cast<esa_class*>(i_actor);
-    i_this->field_0x2B9 = fopAcM_GetParam(i_this) & 0xFF;
+    i_this->mAppendNum = fopAcM_GetParam(i_this) & 0xFF;
     i_this->field_0x2BA = fopAcM_GetParam(i_this) >> 8 & 0xFF;
     /* HD: no REG0_S(0) override */
     if (!fopAcM_entrySolidHeap(i_this, daEsa_CreateHeap, 0x4C0)) {
         return cPhs_ERROR_e;
     }
     if (i_this->field_0x2BA == 0) {
-        s8 num = i_this->field_0x2B9;
+        s8 num = i_this->mAppendNum;
         if (num > 0) {
             for (int i = 0; i < num; i++) {
                 fopAcM_prm_class* params = esaCreateAppend();
@@ -408,7 +408,7 @@ data ripple_scale 10463CB4
 str 1000E614
 str 1000E674
 str 1000E67C
-str 1000E688 "modelData != NULL"
+str 1000E688 "modelData != (0)"
 ext 025445B8 BOOL esaEventStartCheck(void*,const char*)
 ext 025D5600 fopAcM_prm_class* esaCreateAppend()
 ext 025E14A8 u32 esaRequestCreate(layer_class*,s16,u32,u32,fopAcM_prm_class*)

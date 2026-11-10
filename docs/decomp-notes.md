@@ -720,3 +720,7 @@ What blocks 80%:
 Tried without gain: raising the file-window cap from 400 to 1,000 candidates (+0 names, 3× the
 runtime).
 
+
+## Field names (offset-named fields)
+
+Field names: see docs/field-names/ (one file per area).

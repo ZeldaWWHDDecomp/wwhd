@@ -139,15 +139,15 @@ cPhs_State daNpc_P1_c::_create() {
             p1c_JntCtrl_ct(&m_jnt);
             p1c_EventCut_ct(&mEventCut6B0);
             /* dNpc_HeadAnm_c inline constructor */
-            mHeadAnm.field_0x1C = 0;
-            mHeadAnm.field_0x14 = 0.0f;
-            mHeadAnm.field_0x00.y = 0;
-            mHeadAnm.field_0x20 = 0;
-            mHeadAnm.field_0x00.z = 0;
-            mHeadAnm.field_0x18 = 0.0f;
-            mHeadAnm.field_0x00.x = 0;
+            mHeadAnm.mSwingPhase = 0;
+            mHeadAnm.mVerticalAmplitude = 0.0f;
+            mHeadAnm.mSwingAngle.y = 0;
+            mHeadAnm.mSwingCount = 0;
+            mHeadAnm.mSwingAngle.z = 0;
+            mHeadAnm.mHorizontalAmplitude = 0.0f;
+            mHeadAnm.mSwingAngle.x = 0;
             cond = actor_condition;
-            mHeadAnm.field_0x1E = 0;
+            mHeadAnm.mSwingPhaseStep = 0;
         }
         actor_condition = cond | 8;
     }
@@ -160,18 +160,18 @@ cPhs_State daNpc_P1_c::_create() {
             mType = TYPE_P1A_e;
             if (mParam == 2) {
                 m_jnt.mbBackBoneLock = 1; /* onBackBoneLock */
-                m671 = 1;
+                mbAtKaji = 1;
                 mKajiId = getKajiID();
             } else {
-                m671 = 0;
+                mbAtKaji = 0;
             }
             p1c_setActorInfo(&mEventCut6B0, "P1a", this);
         } else if (param_bit == 1) {
-            m671 = 0;
+            mbAtKaji = 0;
             mType = TYPE_P1B_e;
             p1c_setActorInfo(&mEventCut6B0, "P1b", this);
         } else {
-            m671 = 0;
+            mbAtKaji = 0;
             mType = TYPE_P1C_e;
             p1c_setActorInfo(&mEventCut6B0, "P1c", this);
         }
@@ -216,8 +216,8 @@ cPhs_State daNpc_P1_c::_create() {
         hio->m8 = n + 1;
         mStts.Init(0xFF, 0xFF, this);
         mCyl.Set(reinterpret_cast<dCcD_SrcCyl*>(&l_cyl_src)); /* l_cyl_src */
-        m670 = 0;
-        m66C = 0;
+        mbDemoActive = 0;
+        mAnmLoopCnt = 0;
         mKajiTimer = 300;
         mAnmNum = -1;
         mCyl.SetStts(&mStts);
@@ -258,7 +258,7 @@ cPhs_State daNpc_P1_c::_create() {
         } else {
             attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAB;
             attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xAB;
-            if (m671 != 0) {
+            if (mbAtKaji != 0) {
                 setAnm(9, 0.0f);
                 mCyl.SetR(REG_F(10, 5) /* REG10_F(5) */ + 90.0f);
             }

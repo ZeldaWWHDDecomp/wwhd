@@ -26,15 +26,15 @@ bool daNpc_Rsh1_c::evn_talk_init(int i_staffIdx) {
     be<u32>* msg_no_p = (be<u32>*)dComIfGp_evmng_getMySubstanceP(i_staffIdx, "MsgNo" /* "MsgNo" */, 3);
     be<u32>* end_msg_no_p = (be<u32>*)dComIfGp_evmng_getMySubstanceP(i_staffIdx, "EndMsgNo" /* "EndMsgNo" */, 3);
     rsh1_messageId() = 0xFFFFFFFF;
-    m778 = msg_no_p ? (u32)*msg_no_p : 0;
-    m784 = end_msg_no_p ? (u32)*end_msg_no_p : 0;
+    mCurrMsgNo = msg_no_p ? (u32)*msg_no_p : 0;
+    mEndMsgNo = end_msg_no_p ? (u32)*end_msg_no_p : 0;
     return true;
 }
 
 /* 022DAFD8 */
 bool daNpc_Rsh1_c::evn_continue_talk_init(int i_staffIdx) {
     be<u32>* end_msg_no_p = (be<u32>*)dComIfGp_evmng_getMySubstanceP(i_staffIdx, "EndMsgNo" /* "EndMsgNo" */, 3);
-    m784 = end_msg_no_p ? (u32)*end_msg_no_p : 0;
+    mEndMsgNo = end_msg_no_p ? (u32)*end_msg_no_p : 0;
     return true;
 }
 
@@ -42,7 +42,7 @@ bool daNpc_Rsh1_c::evn_continue_talk_init(int i_staffIdx) {
 BOOL daNpc_Rsh1_c::evn_talk() {
     RshMessageManager* mng = rsh1_messageManager(); /* HD message manager */
     if (rsh1_messageId() == 0xFFFFFFFF) {
-        u32 id = rsh1m_msgSet(mng, m778, &eyePos); /* fopMsgM_messageSet */
+        u32 id = rsh1m_msgSet(mng, mCurrMsgNo, &eyePos); /* fopMsgM_messageSet */
         rsh1_messageId() = id;
         if (id != 0xFFFFFFFF) {
             rsh1m_demoMsgFlagOn(); /* fopMsgM_demoMsgFlagOn */
@@ -51,10 +51,10 @@ BOOL daNpc_Rsh1_c::evn_talk() {
     }
     setAnmFromMsgTag();
     if (rsh1m_msgGetStatus(mng) == 0xE /* MSG_DISPLAYED */) {
-        u32 st = next_msgStatus(&m778, nullptr);
+        u32 st = next_msgStatus(&mCurrMsgNo, nullptr);
         rsh1m_msgSetStatus(mng, st);
         if (rsh1m_msgGetStatus(mng) == 0xF /* MSG_CONTINUES */) {
-            rsh1m_msgSet(mng, m778, nullptr);
+            rsh1m_msgSet(mng, mCurrMsgNo, nullptr);
         }
         return FALSE;
     }
@@ -63,8 +63,8 @@ BOOL daNpc_Rsh1_c::evn_talk() {
         rsh1_messageId() = 0xFFFFFFFF;
         return TRUE;
     }
-    if ((rsh1m_msgGetStatus(mng) == 2 || rsh1m_msgGetStatus(mng) == 6) && m778 == m784) {
-        m784 = 0;
+    if ((rsh1m_msgGetStatus(mng) == 2 || rsh1m_msgGetStatus(mng) == 6) && mCurrMsgNo == mEndMsgNo) {
+        mEndMsgNo = 0;
         return TRUE;
     }
     return FALSE;
@@ -131,8 +131,8 @@ BOOL daNpc_Rsh1_c::event_action(void*) {
     if (mActionStatus == 0) {
         dComIfGp_evmng_getMyStaffId("Rsh1" /* "Rsh1" */, nullptr, 0);
         (void)dComIfGp_get(); // HD: a dead dComIfGp_getPlayer-style fetch remains (025200D4)
-        m95C = (s8)m95D;
-        m95B = 0;
+        mLookMode = (s8)mPrevLookMode;
+        mOrderState = 0;
         mActionStatus = (s8)(mActionStatus + 1);
     } else if (mActionStatus != -1) {
         privateCut();

@@ -1,0 +1,160 @@
+# verify: -only 0275766C -strictnan -calleesp
+# SEAD#14 companion: MessageStyles::open with a heap that returns blocks and the previous tables as fixtures.
+src wwhd_src/sead/PoolHeap.cpp
+src wwhd_src/sead/PoolHeapStatics.cpp
+src wwhd_src/sead/HeapRegistryStatics.cpp
+stackfill
+# A pool's initialized block geometry: nonzero fixed-size blocks and bounded capacity.
+field 02756360 r3+0x94 u32 4,8,16,32,64
+field 02756360 r3+0x9C u32 64,128,256
+arg! 027563BC r4 4,8,16,32
+field 027563BC r3+0x94 u32 4,8,16,32,64
+field 027568EC r3+0x94 u32 4,8,16,32,64
+field 027568EC r3+0x9C u32 64,128,256
+
+# The console's initialized core map is immutable while dispatch runs.
+field * 101F8B5C u32 0,1,2,3
+stable 101F8B5C 4
+ret! C0009BB0 0,1,2
+# Nonzero fixed pool geometry, including a single block.
+arg! 02756360 r3 0x57000000
+field 02756360 57000094 u32 4,8,16,32,64
+field 02756360 5700009C u32 64,128,256
+arg! 027568EC r3 0x57000000
+field 027568EC 57000094 u32 4,8,16,32,64
+field 027568EC 5700009C u32 64,128,256
+stable 57000094 4
+stable 5700009C 4
+# Bounded initialized per-core work lists; their capacity does not change in a walk.
+arg! 02757C10 r3 0x57100000
+arg! 02757DCC r3 0x57100000
+field 02757C10 57100000 s32 0,1,2,3
+field 02757C10 57100008 s32 0,1,2,3
+field 02757DCC 57100008 s32 0,1,2,3
+stable 57100000 4
+stable 57100008 4
+# Fixed-size core arrays and initialized queue spin lock.
+arg! 02758414 r3 0x57200000
+arg! 027587B4 r3 0x57200000
+arg! 027587B4 r4 0,1,2,4,-1
+arg! 027588DC r3 0x57200000
+field 027587B4 57200010 u32 0
+field 027588DC 57200010 u32 0
+field 027588DC 57200064 u32 0,1,2,3,4
+field 027588DC 57200068 u32 0,1,2,3,4
+arg! 027588DC r4 0,1,2,3,4
+stable 57200010 4
+# Virtual queue slots have their real job-queue ABI; callees remain mocked.
+arg! 0275850C r3 0x57300000
+arg! 027585A8 r3 0x57300000
+field 0275850C 57300000 u32 0x57301000
+field 027585A8 57300000 u32 0x57301000
+field * 5730101C u32 0x027588DC
+field * 57301024 u32 0x02758B80
+stable 57300000 4
+stable 57301000 0x30
+field 027585A8 57300030 u32 0,1,2,3
+field 027585A8 57300034 u32 0,1,2,3
+field 027585A8 57300038 u32 0,1,2,3
+ret! 02758B80 0,1,2,3
+ret! 027588DC 0,1
+callee 027588DC r5=out4
+# Bounded library metadata counts returned by the LMS interface.
+arg! 0275766C r3 0x57400000
+ret! 0273A768 0,1,2,3
+ret! 0273A8C0 0,1,2,3
+ret! 0273A898 0,1,2,3
+field 0275766C 57400004 u32 0,1,2,3
+field 0275766C 5740000C u32 0,1,2,3
+field 0275766C 57400014 u32 0,1,2,3
+stable 57400004 4
+stable 5740000C 4
+stable 57400014 4
+callee 0273A790 r5=out4
+# Scheduler collections are bounded by their initialized capacities.
+arg! 02758CA8 r3 0x57500000
+field 02758CA8 57500040 u32 0,1,2,3
+field 02758CA8 57500048 u32 0,1,2,3,4
+field 02758CA8 57500050 u32 0,1,2,3
+arg! 02759148 r3 0x57500000
+field 02759148 57500040 u32 0,1,2,3
+field 02759148 57500048 u32 0,1,2,3,4
+field 02759148 57500050 u32 0,1,2,3
+arg! 027591F4 r3 0x57500000
+field 027591F4 57500040 u32 0,1,2,3
+field 027591F4 57500048 u32 0,1,2,3,4
+field 027591F4 57500050 u32 0,1,2,3
+arg! 02759324 r3 0x57500000
+field 02759324 57500040 u32 0,1,2,3
+field 02759324 57500048 u32 0,1,2,3,4
+field 02759324 57500050 u32 0,1,2,3
+stable 57500040 4
+stable 57500048 4
+stable 57500050 4
+field 02759148 101F8B5C u32 0,1,2,3
+# The scheduler's worker list is an initialized pointer array. Busy-delay values
+# are bounded scheduler tuning counts, rather than arbitrary multi-billion spins.
+field 02759148 57500044 u32 0x57600000
+field 027591F4 57500044 u32 0x57600000
+field 02759324 57500044 u32 0x57600000
+field * 57600000 u32 0x57601000
+field * 57600004 u32 0x57602000
+field * 57600008 u32 0x57603000
+stable 57500044 4
+stable 57600000 12
+field 02759148 576010AC s32 0,1,3,32
+field 02759148 576020AC s32 0,1,3,32
+field 02759148 576030AC s32 0,1,3,32
+field 02759148 576010B4 u32 0,1
+field 02759148 576020B4 u32 0,1
+field 02759148 576030B4 u32 0,1
+# Retain the original's cached pool pointer when the block list aliases fields.
+field 02756360 57000098 u32 0x57000098,0x57000094,0x570000A0,0x57700000
+
+# Exercise the allocation-failure observer's object/event ABI. This callback
+# label is a local model operation; it records the 20-byte failure event.
+field 027566D8 101F8B4C u32 0,0x57800000
+field 027566D8 57800004 u32 0,0x57801000
+field 027566D8 57801000 u32 0x57802000
+field 027566D8 5780200C u32 0x0F000100
+callee 0F000100 fixture r3=0 r4=20
+arg 02756AD4 r4 0,0x101FDFA4,0x101FDF9C,0x57803000
+# Registration ownership and already-registered state are initialized objects.
+field 02758CA8 101F8BD4 u32 0,0x57900000
+field 02758CA8 5750003C u8 0,1
+field 02758CA8 57500020 u32 0,0x57901000
+# The formatter writes bounded ASCII text into its provided 128-byte buffer
+# at original frame+0x24; the harness entry stack pointer is fixed.
+mockglobal 02759C28 7EFFEF34 u32 0,0x41000000,0x41420000
+# Wrapped embedded-object addresses reach GHS's null subobject constructors.
+arg 027581F4 r3 0,0x57B00000,0xFFFFFFFC,0xFFFFFFF0,0xFFFFFFE8,0xFFFFFFDC,0xFFFFFFD0,0xFFFFFFBC,0xFFFFFFB4,0xFFFFFFAC
+arg 02758724 r3 0,0x57B01000,0xFFFFFFA4
+arg 02758B88 r3 0,0x57B02000,0xFFFFFFFC,0xFFFFFFC0,0xFFFFFFB8
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5
+
+# zero-page rule (2026-11-10, LOW clean 75/1000): MessageStyles::open 0275766C allocates
+# the color, style and pair tables through heap->dispatch()->mAllocate (heap = r5, or the current heap
+# registryCurrentHeap 02756140 when NULL); a generated heap dispatched to a generated target whose answer put the color
+# stores on page 0 (trace steerS/tr-0275766C.txt: store 00000005).
+# Allocators (2026-11-10): the heap (r5 or the current heap) is the fixture
+# 0x57C00000 (vtable word +0xC -> 0x57C00100, allocate slot +0x34 -> a fixture allocator returning blocks, size r4,
+# alignment r5); K = 1..3 (color / style / pair table) may fail: the original then keeps the previous table.
+arg! 0275766C r5 0,0x57C00000
+ret! 02756140 0x57C00000
+field * 0x57C0000C u32 0x57C00100
+field * 0x57C00134 u32 0x7C140000
+stable 0x57C0000C 4
+stable 0x57C00134 4
+callee 7C140000 fixture r3=0
+alloc 7C140000 r4 0x57D00000 align=r5
+allocfail 7C140000 0,1,2,3
+# The previous tables (kept when an allocation fails) are fixture arrays for the main spec's counts 0..3.
+field 0275766C 0x57400008 u32 0x57400100
+field 0275766C 0x57400010 u32 0x57400200
+field 0275766C 0x57400018 u32 0x57400300
+stable 0x57400008 4
+stable 0x57400010 4
+stable 0x57400018 4

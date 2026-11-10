@@ -73,14 +73,14 @@ static inline bool SafeString_eq(SafeString* a, SafeString* b) {
 static void* s_a_d_sub(void* param_1, void* param_2) {
     if (fopAc_IsActor(param_1) && param_1 != nullptr && fpcM_GetName(param_1) == fpcNm_KUI_e) {
         himo2_class* rope = (himo2_class*)param_2;
-        /* HD: bounded (JUT_ASSERT(0x34D, m24AC < 100)) */
-        if (rope->m24AC >= 100) {
-            JUT_ASSERT_fail("d_a_himo2.cpp", 0x34D, "i_this->m24AC < 100");
-            if (rope->m24AC >= 100)
+        /* HD: bounded (JUT_ASSERT(0x34D, mCandidateNum < 100)) */
+        if (rope->mCandidateNum >= 100) {
+            JUT_ASSERT_fail("d_a_himo2.cpp", 0x34D, "i_this->target_info_count < 100");
+            if (rope->mCandidateNum >= 100)
                 return nullptr;
         }
-        rope->m218C[rope->m24AC] = (fopAc_ac_c*)param_1;
-        rope->m24AC = rope->m24AC + 1;
+        rope->mCandidates[rope->mCandidateNum] = (fopAc_ac_c*)param_1;
+        rope->mCandidateNum = rope->mCandidateNum + 1;
     }
     return nullptr;
 }
@@ -101,19 +101,19 @@ static void* b_a_sub(void* param_1, void* param_2) {
 
 /* 0216DE7C */
 static BOOL himo2_bg_check(himo2_class* i_this) {
-    if (i_this->m02A2 != 0)
+    if (i_this->mHitWait != 0)
         return FALSE;
 
-    i_this->m2574.CrrPos(dComIfG_Bgsp());
-    if (!(i_this->m2574.m_flags & 0x230)) /* ChkWallHit() || ChkRoofHit() || ChkGroundHit() */
+    i_this->mAcch.CrrPos(dComIfG_Bgsp());
+    if (!(i_this->mAcch.m_flags & 0x230)) /* ChkWallHit() || ChkRoofHit() || ChkGroundHit() */
         return FALSE;
 
-    i_this->m02DC = HIMO2_REBOUND;
-    i_this->m0308 = 30;
+    i_this->mState = HIMO2_REBOUND;
+    i_this->mStateTimer = 30;
     i_this->speedF = -i_this->speedF;
     gabi::Local<cBgS_PolyInfo> local_24;
     himo2_initPolyInfo(local_24.get());
-    if (himo2_GetOnePolyInfo(&i_this->m2574, local_24) != 0) /* JUT_ASSERT(0x446, flag == NULL) */
+    if (himo2_GetOnePolyInfo(&i_this->mAcch, local_24) != 0) /* JUT_ASSERT(0x446, flag == NULL) */
         JUT_ASSERT_fail("d_a_himo2.cpp", 0x446, "flag == 0");
     u32 uVar3 = dBgS_GetMtrlSndId(dComIfG_Bgsp(), (cBgS_PolyInfo*)local_24.get());
     s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(i_this));
@@ -188,7 +188,7 @@ static BOOL CallbackCreateHeap(fopAc_ac_c* i_this) {
     himo2_class* a_this = (himo2_class*)i_this;
     const char* always = "Always"; /* "Always" */
     void* img = dComIfG_getObjectRes(always, dRes_INDEX_ALWAYS_BTI_ROPE_e, HIMO2_SAFESTRING_VTBL);
-    if (!((mDoExt_3DlineMat1_c*)&a_this->m1F30)->init(1, 200, (ResTIMG*)img, 0))
+    if (!((mDoExt_3DlineMat1_c*)&a_this->mRopeLine)->init(1, 200, (ResTIMG*)img, 0))
         return FALSE;
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(
         "Link" /* "Link" */, dRes_INDEX_LINK_BDL_ROPEEND_e, HIMO2_SAFESTRING_VTBL);
@@ -198,10 +198,10 @@ static BOOL CallbackCreateHeap(fopAc_ac_c* i_this) {
     if (!a_this->mpHookModel)
         return FALSE;
     img = dComIfG_getObjectRes(always, dRes_INDEX_ALWAYS_BTI_ROPE_e, HIMO2_SAFESTRING_VTBL);
-    if (!((mDoExt_3DlineMat1_c*)&a_this->m1F98)->init(5, 0x20, (ResTIMG*)img, 0))
+    if (!((mDoExt_3DlineMat1_c*)&a_this->mCoilLine)->init(5, 0x20, (ResTIMG*)img, 0))
         return FALSE;
     img = dComIfG_getObjectRes(always, dRes_INDEX_ALWAYS_BTI_ROPE_e, HIMO2_SAFESTRING_VTBL);
-    if (!((mDoExt_3DlineMat1_c*)&a_this->m1FD8)->init(1, 0x10, (ResTIMG*)img, 0))
+    if (!((mDoExt_3DlineMat1_c*)&a_this->mHandLine)->init(1, 0x10, (ResTIMG*)img, 0))
         return FALSE;
     /* HD: in one stage (0x10011014) the hook's packets get an extra setup */
     gabi::Local<SafeString> a;
@@ -228,15 +228,15 @@ static cPhs_State daHimo2_Create(fopAc_ac_c* i_this) {
         if (a_this != nullptr) {
             fopAc_ac_c_ct(a_this);
             a_this->__vtbl = HIMO2_VTBL;
-            __ct((mDoExt_3DlineMat1_c*)&a_this->m1F30);
-            __ct((mDoExt_3DlineMat1_c*)&a_this->m1F98);
-            __ct((mDoExt_3DlineMat1_c*)&a_this->m1FD8);
-            dCcD_Stts_ct(&a_this->m2014);
-            himo2_constructSphere(&a_this->m2050); /* dCcD_Sph::dCcD_Sph */
+            __ct((mDoExt_3DlineMat1_c*)&a_this->mRopeLine);
+            __ct((mDoExt_3DlineMat1_c*)&a_this->mCoilLine);
+            __ct((mDoExt_3DlineMat1_c*)&a_this->mHandLine);
+            dCcD_Stts_ct(&a_this->mStts);
+            himo2_constructSphere(&a_this->mSph); /* dCcD_Sph::dCcD_Sph */
             for (int i = 0; i < 4; i++)
                 himo2_constructPacket(&a_this->mPackets[i]);
-            dBgS_AcchCir_ct(&a_this->m2534);
-            __ct(&a_this->m2574);
+            dBgS_AcchCir_ct(&a_this->mAcchCir);
+            __ct(&a_this->mAcch);
         }
         fopAcM_OnCondition(a_this, fopAcCnd_INIT_e);
     }
@@ -250,7 +250,7 @@ static cPhs_State daHimo2_Create(fopAc_ac_c* i_this) {
     model->mBaseScale.x = 1.0f;
     model->mBaseScale.y = 1.0f;
     model->mBaseScale.z = 1.0f;
-    a_this->m02CC = (s16)l_himo2Regs.mChild[0].mShortRegs[1] + 96;
+    a_this->mRootSegment = (s16)l_himo2Regs.mChild[0].mShortRegs[1] + 96;
     /* player->getLeftHandPos() (HD +0x3F0) */
     f32 y = (f32)player->mLeftHandPos.y;
     f32 x = (f32)player->mLeftHandPos.x;
@@ -258,18 +258,18 @@ static cPhs_State daHimo2_Create(fopAc_ac_c* i_this) {
     a_this->current.pos.x = x;
     a_this->current.pos.y = y;
     a_this->current.pos.z = z;
-    a_this->m2574.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &a_this->m2534,
+    a_this->mAcch.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &a_this->mAcchCir,
                       &a_this->speed, nullptr, nullptr);
-    a_this->m2534.SetWall(30.0f, 30.0f);
-    a_this->m2574.m_flags &= ~(u32)dBgS_Acch::ROOF_NONE;
+    a_this->mAcchCir.SetWall(30.0f, 30.0f);
+    a_this->mAcch.m_flags &= ~(u32)dBgS_Acch::ROOF_NONE;
     f32 h = (f32)l_himo2Regs.mChild[0].mFloatRegs[7] + 60.0f;
-    a_this->m2500 = 1.0f;
-    a_this->m2574.m_roof_crr_height = h;
-    l_himo2HIO.mNo = mDoHIO_createChild("Rope" /* "Rope" */, &l_himo2HIO);
+    a_this->mReturnSpeedRate = 1.0f;
+    a_this->mAcch.m_roof_crr_height = h;
+    l_himo2HIO.mNo = mDoHIO_createChild("ロープ" /* "Rope" */, &l_himo2HIO);
     rope_scale = 2.0f;
-    a_this->m2014.Init(0xFF, 0xFF, a_this);
-    a_this->m2050.Set((dCcD_SrcSph*)cc_sph_src);
-    a_this->m2050.SetStts(&a_this->m2014);
+    a_this->mStts.Init(0xFF, 0xFF, a_this);
+    a_this->mSph.Set((dCcD_SrcSph*)cc_sph_src);
+    a_this->mSph.SetStts(&a_this->mStts);
     himo2_dr = 0;
     himo2_btd = 0;
     return cPhs_COMPLEATE_e;
@@ -290,9 +290,9 @@ static inline bool himo2_isStartStage(const char* stage) {
 
 static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32 pz) {
     daPy_py_c* player = (daPy_py_c*)dComIfGp_getPlayer(0);
-    i_this->m24AC = 0;
+    i_this->mCandidateNum = 0;
     for (int i = 0; i < 100; i++)
-        i_this->m218C[i] = nullptr;
+        i_this->mCandidates[i] = nullptr;
     fpcM_Search(0x0216DD3C /* s_a_d_sub */, i_this);
     mDoMtx_YrotS(calc_mtx(), (s16)-player->shape_angle.y);
     f32 f24 = 100.0f;
@@ -308,7 +308,7 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
         r27 = (s16)(r27 + 10000);
         yTol = (f32)l_himo2Regs.mChild[10].mFloatRegs[0] + -600.0f;
     }
-    n = i_this->m24AC;
+    n = i_this->mCandidateNum;
     if (n == 0)
         return nullptr;
     s32 r25 = 0;
@@ -317,7 +317,7 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
     for (;;) {
         bool r24 = false;
         if (r25 < 100) {
-            fopAc_ac_c* r28 = i_this->m218C[r25];
+            fopAc_ac_c* r28 = i_this->mCandidates[r25];
             if ((fopAcM_GetParam(r28) & 0xF0) != 0)
                 r24 = true;
             gabi::Local<cXyz> sp3C;
@@ -328,10 +328,10 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
             bool cand;
             if (r3 < 0 && !r24) {
                 r3 = (s16)-r3;
-                i_this->m251C = 1;
+                i_this->mWrapMirror = 1;
                 cand = r3 > r27 && r3 < r26;
             } else {
-                i_this->m251C = 0;
+                i_this->mWrapMirror = 0;
                 cand = r24 || (r3 > r27 && r3 < r26);
             }
             if (cand) {
@@ -381,7 +381,7 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
             }
         }
         r25++;
-        n = i_this->m24AC;
+        n = i_this->mCandidateNum;
         if (r25 > (s32)n)
             return nullptr;
         if (r25 == (s32)n) {
@@ -405,17 +405,17 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
 BOOL himo2_class::setTargetPos(cXyz* param_1, be<f32>* param_2, be<f32>* param_3) {
     *param_2 = -1.0f;
     *param_3 = -1.0f;
-    /* m2524 = *param_1 (word copy), then read back as the by-value argument of search_target */
-    himo2_xyzWords_c* destination = (himo2_xyzWords_c*)&this->m2524;
+    /* mTargetPos = *param_1 (word copy), then read back as the by-value argument of search_target */
+    himo2_xyzWords_c* destination = (himo2_xyzWords_c*)&this->mTargetPos;
     himo2_xyzWords_c* source = (himo2_xyzWords_c*)param_1;
     destination->x = source->x;
     destination->y = source->y;
-    f32 px = this->m2524.x;
+    f32 px = this->mTargetPos.x;
     destination->z = source->z;
-    f32 py = this->m2524.y;
-    f32 pz = this->m2524.z;
+    f32 py = this->mTargetPos.y;
+    f32 pz = this->mTargetPos.z;
     fopAc_ac_c* t = search_target(this, px, py, pz);
-    this->m217C = t;
+    this->mpTarget = t;
     if (t == nullptr)
         return FALSE;
     if ((fopAcM_GetParam(t) & 0xF0) != 0) {
@@ -423,7 +423,7 @@ BOOL himo2_class::setTargetPos(cXyz* param_1, be<f32>* param_2, be<f32>* param_3
         *param_3 = 100.0f;
     } else {
         *param_2 = (f32)((fopAcM_GetParam(t) >> 0x10) & 0x0F) * 100.0f;
-        *param_3 = (f32)((fopAcM_GetParam(this->m217C) >> 0x14) & 0x0F) * 100.0f;
+        *param_3 = (f32)((fopAcM_GetParam(this->mpTarget) >> 0x14) & 0x0F) * 100.0f;
         if (!(*param_2 < 1500.0f))
             *param_2 = -1.0f;
         if (!(*param_3 < 1500.0f))
@@ -447,19 +447,19 @@ static inline void himo2_control(himo2_class* i_this, himo2_s* param_2) {
     gabi::Local<cXyz> local_74;
     local_68->x = 0.0f;
     local_68->y = 0.0f;
-    if (i_this->m02DC == HIMO2_WAIT) {
-        local_68->z = (15.625f * i_this->m2188) *
+    if (i_this->mState == HIMO2_WAIT) {
+        local_68->z = (15.625f * i_this->mHandDist) *
                       ((f32)l_himo2Regs.mChild[8].mFloatRegs[18] + 0.002f); /* REG8_F(18) */
     } else {
-        local_68->z = (15.625f * i_this->m2188) *
+        local_68->z = (15.625f * i_this->mHandDist) *
                       ((f32)l_himo2Regs.mChild[0].mFloatRegs[1] + 0.0007f); /* REG0_F(1) */
     }
-    s32 i2 = i_this->m02CC + 1;
+    s32 i2 = i_this->mRootSegment + 1;
     param_2 += i2;
     for (s32 i = i2; i < 100; i++, param_2++) {
         f32 fVar2 = param_2->m10.z - param_2[-1].m10.z;
         f32 fVar1 = param_2->m10.x - param_2[-1].m10.x;
-        f32 dVar8 = (param_2->m10.y + i_this->m02E4) - param_2[-1].m10.y;
+        f32 dVar8 = (param_2->m10.y + i_this->mSagY) - param_2[-1].m10.y;
         s16 r29 = cM_atan2s(fVar1, fVar2);
         f32 d = std_sqrtf(gabi::fmadds(fVar1, fVar1, fVar2 * fVar2));
         s16 r30 = (s16)-cM_atan2s(dVar8, d);
@@ -478,14 +478,14 @@ static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
     gabi::Local<cXyz> local_b4;
     param_2 += 98;
     local_a8->y = 0.0f;
-    s32 dc = i_this->m02DC;
-    s32 cc = i_this->m02CC;
+    s32 dc = i_this->mState;
+    s32 cc = i_this->mRootSegment;
     local_a8->x = 0.0f;
-    f32 m2188 = i_this->m2188;
+    f32 mHandDist = i_this->mHandDist;
     if (dc == 0) {
-        local_a8->z = (15.625f * m2188) * ((f32)l_himo2Regs.mChild[8].mFloatRegs[18] + 0.002f);
+        local_a8->z = (15.625f * mHandDist) * ((f32)l_himo2Regs.mChild[8].mFloatRegs[18] + 0.002f);
     } else {
-        local_a8->z = (15.625f * m2188) * ((f32)l_himo2Regs.mChild[0].mFloatRegs[1] + 0.0007f);
+        local_a8->z = (15.625f * mHandDist) * ((f32)l_himo2Regs.mChild[0].mFloatRegs[1] + 0.0007f);
     }
     f32 sinT = 0.0f;                                            /* GameCube f29 */
     f32 cosT = 0.0f;                                            /* GameCube f28 */
@@ -493,12 +493,12 @@ static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
     s32 iVar4 = cc + 1;
     for (; iVar4 < 100; iVar4++, param_2--) {
         f32 f30 = param_2->m10.y - param_2[1].m10.y;
-        if ((u32)dc < 4) { /* m02DC >= 0 && m02DC <= 3 */
+        if ((u32)dc < 4) { /* mState >= 0 && mState <= 3 */
             if (dc != 0)
-                f1 = (i_this->m2530 * (f32)(s32)(99 - iVar4)) * 0.01f;
-            s32 a1 = (s32)i_this->m02D8 * (l_himo2Regs.mChild[18].mShortRegs[5] + 700) +
+                f1 = (i_this->mSwayAmp * (f32)(s32)(99 - iVar4)) * 0.01f;
+            s32 a1 = (s32)i_this->mFrameCounter * (l_himo2Regs.mChild[18].mShortRegs[5] + 700) +
                      iVar4 * (l_himo2Regs.mChild[18].mShortRegs[6] + 2000);
-            s32 a2 = (s32)i_this->m02D8 * (l_himo2Regs.mChild[18].mShortRegs[7] + 500) +
+            s32 a2 = (s32)i_this->mFrameCounter * (l_himo2Regs.mChild[18].mShortRegs[7] + 500) +
                      iVar4 * (l_himo2Regs.mChild[18].mShortRegs[8] + 2000);
             sinT = cM_ssin(a1) * f1;
             cosT = cM_scos(a2) * f1;
@@ -516,7 +516,7 @@ static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
         param_2->m10.x = param_2[1].m10.x + local_b4->x;
         param_2->m10.y = param_2[1].m10.y + local_b4->y;
         param_2->m10.z = param_2[1].m10.z + local_b4->z;
-        dc = i_this->m02DC;
+        dc = i_this->mState;
     }
 }
 
@@ -527,7 +527,7 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
         himo2_btd = (himo2_btd_c*)fpcM_Search(0x0216DE2C /* b_a_sub */, i_this);
     if (himo2_dr == 0)
         himo2_dr = (himo2_dr_c*)fpcM_Search(0x0216DDDC /* dr_a_sub */, i_this);
-    i_this->m02D8 = i_this->m02D8 + 1;
+    i_this->mFrameCounter = i_this->mFrameCounter + 1;
     rope_scale = l_himo2HIO.m1C;
     gabi::Local<cXyz> local_c8;
     local_c8->y = 0.0f;
@@ -536,17 +536,17 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
     if ((u32)player->mResetFlg0 &
         daPy_py_c::daPyRFlg0_ROPE_GRAB_RIGHT_HAND) { /* player->getRopeGrabRightHand() */
         PSMTXCopy(player_getHandMatrix(player, false), calc_mtx());
-        MtxPosition(local_c8, &i_this->m02EC[1]);
+        MtxPosition(local_c8, &i_this->mHandPos[1]);
         PSMTXCopy(player_getHandMatrix(player, true), calc_mtx());
-        MtxPosition(local_c8, &i_this->m02EC[0]);
+        MtxPosition(local_c8, &i_this->mHandPos[0]);
     } else {
         PSMTXCopy(player_getHandMatrix(player, false), calc_mtx());
-        MtxPosition(local_c8, &i_this->m02EC[0]);
+        MtxPosition(local_c8, &i_this->mHandPos[0]);
         PSMTXCopy(player_getHandMatrix(player, true), calc_mtx());
-        MtxPosition(local_c8, &i_this->m02EC[1]);
+        MtxPosition(local_c8, &i_this->mHandPos[1]);
     }
-    i_this->m02B4 = i_this->m02EC[0];
-    s32 iVar5 = i_this->m02CC + -50;
+    i_this->mRootPos = i_this->mHandPos[0];
+    s32 iVar5 = i_this->mRootSegment + -50;
     if (iVar5 < 3)
         iVar5 = 3;
 
@@ -556,7 +556,7 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
         iVar5 = 1;
     himo2_s* phVar3 = &i_this->m1120[0];
     do {
-        if (i_this->m02DC != HIMO2_LAUNCH_FREE) {
+        if (i_this->mState != HIMO2_LAUNCH_FREE) {
             f32 z = phVar3->m10.z;
             f32 y = phVar3->m10.y;
             f32 x = phVar3->m10.x;
@@ -572,20 +572,20 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
     } while (--iVar5);
 
     himo2_moveExternal(i_this); /* new_himo2_move */
-    phVar3 = &i_this->m0310[0];
-    for (s32 i = 0; i < i_this->m02CC + 1; i++, phVar3++)
-        phVar3->m10 = i_this->m02B4;
-    phVar3 = &i_this->m0310[0];
+    phVar3 = &i_this->mSegments[0];
+    for (s32 i = 0; i < i_this->mRootSegment + 1; i++, phVar3++)
+        phVar3->m10 = i_this->mRootPos;
+    phVar3 = &i_this->mSegments[0];
     himo2_control(i_this, phVar3);
-    i_this->m0310[99].m10 = i_this->current.pos;
+    i_this->mSegments[99].m10 = i_this->current.pos;
     himo2_control2(i_this, phVar3);
-    if (i_this->m02DC == HIMO2_LAUNCH_FREE || i_this->m02DC == HIMO2_LAUNCH_TARGET) {
-        i_this->m2050.SetR(20.0f);
+    if (i_this->mState == HIMO2_LAUNCH_FREE || i_this->mState == HIMO2_LAUNCH_TARGET) {
+        i_this->mSph.SetR(20.0f);
     } else {
-        i_this->m2050.SetR(-100.0f);
+        i_this->mSph.SetR(-100.0f);
     }
-    i_this->m2050.SetC(&i_this->current.pos);
-    dComIfG_Ccsp_Set(&i_this->m2050);
+    i_this->mSph.SetC(&i_this->current.pos);
+    dComIfG_Ccsp_Set(&i_this->mSph);
     i_this->eyePos = i_this->current.pos;
     /* ~dBgS_GndChk */
     gndChk->dBgS_GrpPassChk::__vtbl = gc_tu.gndChkDt[2];
@@ -630,8 +630,8 @@ static inline void hook_model_draw(himo2_class* i_this, J3DModel* hookModel) {
 static inline void spin_draw(himo2_class* i_this) {
     dComIfGp_ea(); /* HD: an unused dComIfGp_get() */
     s16 r21 = 0;   /* GameCube r26 */
-    fopAc_ac_c* t = i_this->m217C;
-    s16 r20 = i_this->m2510; /* GameCube r23 */
+    fopAc_ac_c* t = i_this->mpTarget;
+    s16 r20 = i_this->mCamAngleY; /* GameCube r23 */
     if (t == nullptr)        /* HD */
         return;
     f32 sy = t->scale.y;
@@ -646,16 +646,16 @@ static inline void spin_draw(himo2_class* i_this) {
     }
     if (sy < 0.7f)
         f4 = f4 + 3.0f;
-    /* HD: always the m251C == 0 side (GameCube: 700 and -15 when m251C != 0) */
+    /* HD: always the mWrapMirror == 0 side (GameCube: 700 and -15 when mWrapMirror != 0) */
     gabi::Local<cXyz> local_504;
     gabi::Local<cXyz> local_510;
     local_504->x =
-        gabi::fmadds((f32)l_himo2Regs.mChild[0].mFloatRegs[0], 10.0f, 15.0f) + i_this->m24B8;
+        gabi::fmadds((f32)l_himo2Regs.mChild[0].mFloatRegs[0], 10.0f, 15.0f) + i_this->mWrapOffsetX;
     local_504->y = f4 + -152.5f;
-    local_504->z = (i_this->m24B4 + 26.0f) + f5;
+    local_504->z = (i_this->mWrapOffsetZ + 26.0f) + f5;
     mDoMtx_YrotS(calc_mtx(), r20);
     MtxPosition(local_504, local_510);
-    t = i_this->m217C;
+    t = i_this->mpTarget;
     f32 px = t->current.pos.x + local_510->x;
     f32 py = t->current.pos.y + local_510->y;
     f32 pz = t->current.pos.z + local_510->z;
@@ -663,7 +663,7 @@ static inline void spin_draw(himo2_class* i_this) {
     local_504->y = 0.0f;
     local_504->z = 3.90625f;
     s16 r22 = -0x30D4; /* GameCube r30 */
-    cXyz* r29 = lineMat_getPos(&i_this->m1F30, 0) + i_this->m1F6C;
+    cXyz* r29 = lineMat_getPos(&i_this->mRopeLine, 0) + i_this->mRopePointNum;
     gabi::Local<cXyz[100]> local_4f8;
     cXyz* positions = (cXyz*)local_4f8.get();
     for (s32 i = 0; i < 100; i++) {
@@ -671,16 +671,16 @@ static inline void spin_draw(himo2_class* i_this) {
         s16 r18 = r22; /* GameCube r22 */
         if (i < 50) {
             r22 = (s16)(r22 + ((s16)l_himo2Regs.mChild[18].mShortRegs[1] + 100));
-        } else if (i <= i_this->m24BC + 49) {
+        } else if (i <= i_this->mWrapCount + 49) {
             s16 rs4 = (s16)l_himo2Regs.mChild[0].mShortRegs[4];
-            r22 = (s16)(r22 + i_this->m24C8);
-            fopAc_ac_c* tt = i_this->m217C;
+            r22 = (s16)(r22 + i_this->mWrapAngleStep);
+            fopAc_ac_c* tt = i_this->mpTarget;
             if (i >= 95 - rs4)
                 r22 = (s16)(r22 + ((s16)l_himo2Regs.mChild[0].mShortRegs[5] + -1000));
             if (tt != nullptr && (fopAcM_GetParam(tt) & 0xF0) != 0)
                 r21 = (s16)(r21 + (rs4 + -400));
         } else {
-            if (i_this->m24BC == 0)
+            if (i_this->mWrapCount == 0)
                 r22 = (s16)(r22 + ((s16)l_himo2Regs.mChild[18].mShortRegs[2] + 70));
             else
                 r22 = (s16)(r22 + 50);
@@ -694,11 +694,11 @@ static inline void spin_draw(himo2_class* i_this) {
         py = py + local_510->y;
         pz = pz + local_510->z;
         if ((u32)i == (u32)((s16)l_himo2Regs.mChild[0].mShortRegs[6] + 48)) {
-            i_this->m2504.y = py;
-            i_this->m2504.z = pz;
-            i_this->m2504.x = px;
+            i_this->mHangPos.y = py;
+            i_this->mHangPos.z = pz;
+            i_this->mHangPos.x = px;
         }
-        if (i_this->m24D8 < 2 || i >= 50) {
+        if (i_this->mWrapDrawMode < 2 || i >= 50) {
             if (i == 99) {
                 MtxTrans(px, py, pz, 0);
                 mDoMtx_YrotM(calc_mtx(), r20);
@@ -706,12 +706,12 @@ static inline void spin_draw(himo2_class* i_this) {
                 mDoMtx_XrotM(calc_mtx(), r18);
                 mDoMtx_YrotM(calc_mtx(), -700);
                 MtxTrans(0.0f, 0.0f, -3.0f, 1);
-                mDoMtx_XrotM(calc_mtx(), i_this->m24CA);
+                mDoMtx_XrotM(calc_mtx(), i_this->mHookAngleX);
                 gabi::Local<cXyz> local_528;
                 local_528->x = 0.0f;
                 local_528->y = 0.0f;
                 local_528->z = 15.0f;
-                MtxPosition(local_528, &i_this->m24CC);
+                MtxPosition(local_528, &i_this->mHookTipPos);
                 MtxScale(0.2f, 0.2f, 0.2f, 1);
                 hook_model_draw(i_this, i_this->mpHookModel);
             } else {
@@ -727,7 +727,7 @@ static inline void spin_draw(himo2_class* i_this) {
             r29->y = y;
             r29->x = (f32)positions[i].x;
             r29->z = (f32)positions[i].z;
-            i_this->m1F6C = i_this->m1F6C + 1;
+            i_this->mRopePointNum = i_this->mRopePointNum + 1;
             ++r29;
         }
     }
@@ -736,16 +736,16 @@ static inline void spin_draw(himo2_class* i_this) {
 /* himo2_draw (inline) */
 static inline void himo2_draw(himo2_class* i_this, himo2_s* param_2) {
     daPy_py_c* player = (daPy_py_c*)dComIfGp_getPlayer(0);
-    cXyz* pcVar6 = lineMat_getPos(&i_this->m1F30, 0) + i_this->m1F6C;
-    *pcVar6 = i_this->m02B4;
-    s32 r30 = i_this->m02CC;
-    i_this->m1F6C = i_this->m1F6C + 1;
+    cXyz* pcVar6 = lineMat_getPos(&i_this->mRopeLine, 0) + i_this->mRopePointNum;
+    *pcVar6 = i_this->mRootPos;
+    s32 r30 = i_this->mRootSegment;
+    i_this->mRopePointNum = i_this->mRopePointNum + 1;
     ++pcVar6;
     himo2_s* phVar4 = &param_2[r30 + 1];
     for (; r30 < 98; r30++, phVar4++) {
         if (r30 == 97) {
-            if (i_this->m02DC == HIMO2_WAIT &&
-                i_this->m2188 < (f32)l_himo2Regs.mChild[0].mFloatRegs[3] + 50.0f) {
+            if (i_this->mState == HIMO2_WAIT &&
+                i_this->mHandDist < (f32)l_himo2Regs.mChild[0].mFloatRegs[3] + 50.0f) {
                 PSMTXCopy(player_getHandMatrix(player, false) /* getLeftHandMatrix */, calc_mtx());
                 MtxTrans(10.0f, 0.0f, 0.0f, 1);
                 mDoMtx_YrotM(calc_mtx(), 0x4000);
@@ -762,7 +762,7 @@ static inline void himo2_draw(himo2_class* i_this, himo2_s* param_2) {
             local_38->x = 0.0f;
             local_38->y = 0.0f;
             local_38->z = 15.0f;
-            MtxPosition(local_38, &i_this->m24CC);
+            MtxPosition(local_38, &i_this->mHookTipPos);
             J3DModel* hookModel = i_this->mpHookModel;
             hook_model_draw(i_this, hookModel);
             /* HD: the hook's packet */
@@ -770,7 +770,7 @@ static inline void himo2_draw(himo2_class* i_this, himo2_s* param_2) {
             himo2_setHookPacket(player, &i_this->mPackets[0], hookModel);
         } else {
             *pcVar6 = phVar4->m10;
-            i_this->m1F6C = i_this->m1F6C + 1;
+            i_this->mRopePointNum = i_this->mRopePointNum + 1;
             ++pcVar6;
         }
     }
@@ -778,27 +778,27 @@ static inline void himo2_draw(himo2_class* i_this, himo2_s* param_2) {
 
 /* himo_hang_draw (inline) */
 static inline void himo_hang_draw(himo2_class* i_this) {
-    cXyz* pcVar3 = lineMat_getPos(&i_this->m1F30, 0) + i_this->m1F6C;
+    cXyz* pcVar3 = lineMat_getPos(&i_this->mRopeLine, 0) + i_this->mRopePointNum;
     gabi::Local<cXyz> local_38;
-    *local_38.get() = i_this->m02EC[0] - i_this->m2504; /* cXyz::operator- */
+    *local_38.get() = i_this->mHandPos[0] - i_this->mHangPos; /* cXyz::operator- */
     local_38->x = local_38->x * 0.25f;
     local_38->y = local_38->y * 0.25f;
     local_38->z = local_38->z * 0.25f;
     for (int uVar2 = 0; uVar2 < 5; uVar2++, ++pcVar3) {
         f32 u = (f32)uVar2;
-        pcVar3->x = gabi::fmadds(local_38->x, u, i_this->m2504.x);
-        pcVar3->y = gabi::fmadds(local_38->y, u, i_this->m2504.y);
-        pcVar3->z = gabi::fmadds(local_38->z, u, i_this->m2504.z);
-        i_this->m1F6C = i_this->m1F6C + 1;
+        pcVar3->x = gabi::fmadds(local_38->x, u, i_this->mHangPos.x);
+        pcVar3->y = gabi::fmadds(local_38->y, u, i_this->mHangPos.y);
+        pcVar3->z = gabi::fmadds(local_38->z, u, i_this->mHangPos.z);
+        i_this->mRopePointNum = i_this->mRopePointNum + 1;
     }
 }
 
 // daHimo2_Draw (inlines spin_draw, himo2_disp, himo2_draw, himo_hang_draw)
 /* 0216CA5C */
 static BOOL daHimo2_Draw(himo2_class* i_this) {
-    if (i_this->m24D9 < HIMO2_DEMO_INACTIVE || i_this->m029E != 0)
+    if (i_this->mDemoState < HIMO2_DEMO_INACTIVE || i_this->mHideTimer != 0)
         return TRUE;
-    if (i_this->m02DC == HIMO2_WAIT) {
+    if (i_this->mState == HIMO2_WAIT) {
         daPy_py_c* pl = (daPy_py_c*)dComIfGp_getPlayer(0);
         if (gabi::call_ptr<u32>(himo2_playerVtable(pl)->checkPlayerNoDraw, pl) !=
             0) /* checkPlayerNoDraw */
@@ -809,38 +809,38 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
             return TRUE;
     }
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
-    i_this->m1F6C = 0;
+    i_this->mRopePointNum = 0;
     /* dComIfGd_setListP1() */
     dComIfGd_setListP1();
-    if (i_this->m24D8 != 0)
+    if (i_this->mWrapDrawMode != 0)
         spin_draw(i_this);
-    if (i_this->m24D9 == HIMO2_DEMO_INACTIVE || i_this->m24D9 >= HIMO2_DEMO_SET_ROCK) {
+    if (i_this->mDemoState == HIMO2_DEMO_INACTIVE || i_this->mDemoState >= HIMO2_DEMO_SET_ROCK) {
         /* himo2_disp */
-        if (i_this->m02DC < 10)
-            himo2_draw(i_this, &i_this->m0310[0]);
+        if (i_this->mState < 10)
+            himo2_draw(i_this, &i_this->mSegments[0]);
         else
             himo_hang_draw(i_this);
     }
-    if (i_this->m1F6C > 200) {
+    if (i_this->mRopePointNum > 200) {
         dComIfGd_setList();
         return TRUE;
     }
 
-    cXyz* r19 = lineMat_getPos(&i_this->m1F30, 0);
+    cXyz* r19 = lineMat_getPos(&i_this->mRopeLine, 0);
     gabi::Local<cXyz[200]> local_a10;
     cXyz* positions = (cXyz*)local_a10.get();
-    s32 n = i_this->m1F6C;
+    s32 n = i_this->mRopePointNum;
     for (int i = 0; i < n; i++) {
         positions[i] = *r19;
         ++r19;
     }
-    for (int i = 0; i < i_this->m1F6C; i++) {
+    for (int i = 0; i < i_this->mRopePointNum; i++) {
         --r19;
         *r19 = positions[i];
     }
-    lineMat_update(&i_this->m1F30, (u16)i_this->m1F6C, rope_scale, &i_this->tevStr);
-    himo2_sortLineMaterial(&i_this->m1F30);
-    himo2_hd_line_packet(i_this, 1, 1, &i_this->m1F30);
+    lineMat_update(&i_this->mRopeLine, (u16)i_this->mRopePointNum, rope_scale, &i_this->tevStr);
+    himo2_sortLineMaterial(&i_this->mRopeLine);
+    himo2_hd_line_packet(i_this, 1, 1, &i_this->mRopeLine);
 
     daPy_py_c* player = (daPy_py_c*)dComIfGp_getPlayer(0);
     mDoMtx_YrotS(calc_mtx(), (s16)-player->shape_angle.y);
@@ -848,7 +848,7 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
     gabi::Local<cXyz> sp38;
     {
         gabi::Local<cXyz> tmp;
-        *tmp.get() = i_this->m02EC[1] - i_this->m1F84; /* cXyz::operator- */
+        *tmp.get() = i_this->mHandPos[1] - i_this->mOldCoilHandPos; /* cXyz::operator- */
         *sp44.get() = *tmp.get();
     }
     MtxPosition(sp44, sp38);
@@ -858,7 +858,7 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
     } else if (sp38->z < -16384.0f) {
         sp38->z = -16384.0f;
     }
-    cLib_addCalcAngleS2(&i_this->m1F90, (s16)gabi::ftoi(sp38->z), 2,
+    cLib_addCalcAngleS2(&i_this->mCoilAngleX, (s16)gabi::ftoi(sp38->z), 2,
                         (s16)((s16)l_himo2Regs.mChild[0].mShortRegs[2] + 0x800));
     sp38->x = sp38->x * ((f32)l_himo2Regs.mChild[0].mFloatRegs[6] + -200.0f);
     f32 f1 = (f32)l_himo2Regs.mChild[0].mFloatRegs[7] + 4000.0f;
@@ -866,66 +866,66 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
         sp38->x = f1;
     if (sp38->x < -f1)
         sp38->x = -f1;
-    cLib_addCalcAngleS2(&i_this->m1F94, (s16)gabi::ftoi(sp38->x), 2,
+    cLib_addCalcAngleS2(&i_this->mCoilAngleZ, (s16)gabi::ftoi(sp38->x), 2,
                         (s16)((s16)l_himo2Regs.mChild[0].mShortRegs[2] + 0x800));
     if (sp38->y < (f32)l_himo2Regs.mChild[0].mFloatRegs[8] + -20.0f) {
-        cLib_addCalcAngleS2(&i_this->m1F92, -0x8000, 2, 0x1000);
+        cLib_addCalcAngleS2(&i_this->mCoilFlipAngleZ, -0x8000, 2, 0x1000);
     } else {
-        cLib_addCalcAngleS2(&i_this->m1F92, 0, 2, 0x1000);
+        cLib_addCalcAngleS2(&i_this->mCoilFlipAngleZ, 0, 2, 0x1000);
     }
-    i_this->m1F84 = i_this->m02EC[1];
-    f32 f29 = gabi::fmadds(i_this->m2188, (f32)l_himo2Regs.mChild[0].mFloatRegs[9] + 3.0f,
+    i_this->mOldCoilHandPos = i_this->mHandPos[1];
+    f32 f29 = gabi::fmadds(i_this->mHandDist, (f32)l_himo2Regs.mChild[0].mFloatRegs[9] + 3.0f,
                            (f32)l_himo2Regs.mChild[0].mFloatRegs[10]) -
               120.0f;
     sp44->z = 0.0f;
     sp44->x = 0.0f;
     for (int i = 0; i < 5; i++) {
         f32 lim = (f32)(4 - i) * 300.0f;
-        cXyz* r16 = lineMat_getPos(&i_this->m1F98, i);
+        cXyz* r16 = lineMat_getPos(&i_this->mCoilLine, i);
         if (f29 > lim) {
-            cLib_addCalc0(&i_this->m1F70[i], 1.0f,
+            cLib_addCalc0(&i_this->mCoilRadiusRate[i], 1.0f,
                           (f32)l_himo2Regs.mChild[0].mFloatRegs[11] + 0.2f);
         } else {
-            cLib_addCalc2(&i_this->m1F70[i], 1.0f, 1.0f,
+            cLib_addCalc2(&i_this->mCoilRadiusRate[i], 1.0f, 1.0f,
                           (f32)l_himo2Regs.mChild[0].mFloatRegs[12] + 0.1f);
         }
-        sp44->y = i_this->m1F70[i] * 15.0f;
+        sp44->y = i_this->mCoilRadiusRate[i] * 15.0f;
         mDoMtx_YrotS(calc_mtx(), player->shape_angle.y);
-        f32 k = 1.0f - i_this->m1F70[i];
-        s16 m1F94 = i_this->m1F94;
+        f32 k = 1.0f - i_this->mCoilRadiusRate[i];
+        s16 mCoilAngleZ = i_this->mCoilAngleZ;
         s16 r6 = (s16)gabi::ftoi(k * ((f32)l_himo2Regs.mChild[0].mFloatRegs[13] + -20000.0f));
-        s16 m1F92 = i_this->m1F92;
-        mDoMtx_ZrotM(calc_mtx(), (s16)((m1F94 + -2000) * i + m1F92 + r6)); /* HD: no REG0_S(0) */
-        mDoMtx_XrotM(calc_mtx(), i_this->m1F90);
+        s16 mCoilFlipAngleZ = i_this->mCoilFlipAngleZ;
+        mDoMtx_ZrotM(calc_mtx(), (s16)((mCoilAngleZ + -2000) * i + mCoilFlipAngleZ + r6)); /* HD: no REG0_S(0) */
+        mDoMtx_XrotM(calc_mtx(), i_this->mCoilAngleX);
         MtxTrans(0.0f, -sp44->y, 0.0f, 1);
         for (int j = 0; j < 32; j++, ++r16) {
             mDoMtx_XrotM(calc_mtx(), 0x800);
             MtxPosition(sp44, r16);
-            PSVECAdd(r16, &i_this->m02EC[1], r16); /* PSVECAdd (operator+=) */
+            PSVECAdd(r16, &i_this->mHandPos[1], r16); /* PSVECAdd (operator+=) */
         }
     }
-    lineMat_update(&i_this->m1F98, 0x20, rope_scale, &i_this->tevStr);
-    himo2_sortLineMaterial(&i_this->m1F98);
+    lineMat_update(&i_this->mCoilLine, 0x20, rope_scale, &i_this->tevStr);
+    himo2_sortLineMaterial(&i_this->mCoilLine);
     himo2_hd_line_packet(i_this, 0, 2,
-                         &i_this->m1F98); /* HD stores the tev struct into packet 0's field */
+                         &i_this->mCoilLine); /* HD stores the tev struct into packet 0's field */
 
-    cXyz* r19b = lineMat_getPos(&i_this->m1FD8, 0);
+    cXyz* r19b = lineMat_getPos(&i_this->mHandLine, 0);
     f32 step = (f32)l_himo2Regs.mChild[0].mFloatRegs[15];
     f32 f1_2;
-    if ((gabi::ftoi(i_this->m2188) & ((s16)l_himo2Regs.mChild[0].mShortRegs[4] + 64)) != 0)
+    if ((gabi::ftoi(i_this->mHandDist) & ((s16)l_himo2Regs.mChild[0].mShortRegs[4] + 64)) != 0)
         f1_2 = (f32)l_himo2Regs.mChild[0].mFloatRegs[14] + 15.0f;
     else
         f1_2 = 0.0f;
-    cLib_addCalc2(&i_this->m1FD4, f1_2, 1.0f, step + 4.0f);
+    cLib_addCalc2(&i_this->mHandLineSag, f1_2, 1.0f, step + 4.0f);
     gabi::Local<cXyz> sp2C;
-    *sp2C.get() = i_this->m02EC[0] - i_this->m02EC[1]; /* cXyz::operator- */
+    *sp2C.get() = i_this->mHandPos[0] - i_this->mHandPos[1]; /* cXyz::operator- */
     Mtx34* cm = calc_mtx();
     s16 a = cM_atan2s(sp2C->x, sp2C->z);
     mDoMtx_YrotS(cm, (s16)(a - 0x4000)); /* HD: no REG0_S(0) */
-    f32 m1FD4 = i_this->m1FD4;
-    f32 y = ((f32)l_himo2Regs.mChild[0].mFloatRegs[7] + -10.0f) - m1FD4;
-    f32 z = ((f32)l_himo2Regs.mChild[0].mFloatRegs[8] + 10.0f) + m1FD4;
-    f32 s0 = i_this->m1F70[0];
+    f32 mHandLineSag = i_this->mHandLineSag;
+    f32 y = ((f32)l_himo2Regs.mChild[0].mFloatRegs[7] + -10.0f) - mHandLineSag;
+    f32 z = ((f32)l_himo2Regs.mChild[0].mFloatRegs[8] + 10.0f) + mHandLineSag;
+    f32 s0 = i_this->mCoilRadiusRate[0];
     sp44->x = 0.0f;
     sp44->y = y * s0;
     sp44->z = z * s0;
@@ -937,14 +937,14 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
     for (int i = 0; i < 16; i++, r3_2 += 0x888) {
         f32 fi = (f32)i;
         f32 fVar1 = cM_ssin(r3_2);
-        r19b->x = gabi::fmadds(sp38->x, fVar1, gabi::fmadds(sp2C->x, fi, i_this->m02EC[1].x));
-        r19b->y = gabi::fmadds(sp38->y, fVar1, gabi::fmadds(sp2C->y, fi, i_this->m02EC[1].y));
-        r19b->z = gabi::fmadds(sp38->z, fVar1, gabi::fmadds(sp2C->z, fi, i_this->m02EC[1].z));
+        r19b->x = gabi::fmadds(sp38->x, fVar1, gabi::fmadds(sp2C->x, fi, i_this->mHandPos[1].x));
+        r19b->y = gabi::fmadds(sp38->y, fVar1, gabi::fmadds(sp2C->y, fi, i_this->mHandPos[1].y));
+        r19b->z = gabi::fmadds(sp38->z, fVar1, gabi::fmadds(sp2C->z, fi, i_this->mHandPos[1].z));
         ++r19b;
     }
-    lineMat_update(&i_this->m1FD8, 16, rope_scale, &i_this->tevStr);
-    himo2_sortLineMaterial(&i_this->m1FD8);
-    himo2_hd_line_packet(i_this, 0, 3, &i_this->m1FD8);
+    lineMat_update(&i_this->mHandLine, 16, rope_scale, &i_this->tevStr);
+    himo2_sortLineMaterial(&i_this->mHandLine);
+    himo2_hd_line_packet(i_this, 0, 3, &i_this->mHandLine);
     dComIfGd_setList();
     return TRUE;
 }
@@ -977,7 +977,7 @@ static void __sinit_d_a_himo2_cpp() {
 }
 
 /* WWHD glue
-str 10010F94 "i_this->m24AC < 100" renamed
+str 10010F94 "i_this->target_info_count < 100"
 str 10010FB4 in 0216DD3C
 str 10010FC8 in 0216DE7C
 str 10010FD8
@@ -985,7 +985,7 @@ str 10011004
 str 1001100C
 str 1001101C in 0216E9E0
 str 1001102C
-str 10011048 "Rope" renamed
+str 10011048 "ロープ"
 str 10010DE4
 str 10011014
 data cc_sph_src 101B6E18

@@ -110,7 +110,7 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
         if (i_this != nullptr) {
             if (jntNo == CC_JNT_CENTER_e) {
                 PSMTXCopy(cc_getAnmMtx(model, jntNo), calc_mtx());
-                cMtx_ZrotM(calc_mtx(), i_this->m3BA);
+                cMtx_ZrotM(calc_mtx(), i_this->mCenterRotZ);
                 Mtx34 *dst = cc_getAnmMtx(model, jntNo);
                 mtx_copy(dst, calc_mtx());
                 PSMTXCopy(calc_mtx(), &l_currentMatrix);
@@ -119,14 +119,14 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
             if (jntNo <= CC_JNT_BODY03_e) {
                 PSMTXCopy(cc_getAnmMtx(model, jntNo), calc_mtx());
                 f32 fVar1 = (f32)jntNo * 0.5f;
-                cMtx_YrotM(calc_mtx(), (s16)gabi::ftoi((f32)i_this->m310.y * fVar1));
-                cMtx_XrotM(calc_mtx(), (s16)gabi::ftoi((f32)i_this->m310.x * fVar1));
-                cMtx_ZrotM(calc_mtx(), (s16)gabi::ftoi((f32)i_this->m310.z * fVar1));
+                cMtx_YrotM(calc_mtx(), (s16)gabi::ftoi((f32)i_this->mSwingAngle.y * fVar1));
+                cMtx_XrotM(calc_mtx(), (s16)gabi::ftoi((f32)i_this->mSwingAngle.x * fVar1));
+                cMtx_ZrotM(calc_mtx(), (s16)gabi::ftoi((f32)i_this->mSwingAngle.z * fVar1));
 
                 if (jntNo == CC_JNT_BODY03_e) {
                     gabi::Local<cXyz> sp08;
                     sp08->set(0.0f, 0.0f, 0.0f);
-                    MtxPosition(sp08, &i_this->m470);
+                    MtxPosition(sp08, &i_this->mBody03Pos);
                 }
                 Mtx34 *dst = cc_getAnmMtx(model, jntNo);
                 mtx_copy(dst, calc_mtx());
@@ -139,8 +139,8 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
 
 /* 0210BB58 */
 static void draw_SUB(cc_class *i_this) {
-    if (i_this->mBehaviorType == CC_BEHAVIOR_DEKU_TREE && i_this->m2FB != 3) {
-        i_this->m2B4->calc();
+    if (i_this->mBehaviorType == CC_BEHAVIOR_DEKU_TREE && i_this->mDekuState != 3) {
+        i_this->mpMorf->calc();
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->actor.current.pos,
                          &i_this->actor.tevStr);
         Cc_enemyFire(&i_this->mEnemyFire);
@@ -148,49 +148,49 @@ static void draw_SUB(cc_class *i_this) {
     }
 
     J3DModel *pJVar1;
-    if (i_this->m2F5 != CC_MODE_FLATTENED) {
-        if (i_this->m301 == 0) {
-            pJVar1 = i_this->m2B4->getModel();
+    if (i_this->mMode != CC_MODE_FLATTENED) {
+        if (i_this->mIsSplit == 0) {
+            pJVar1 = i_this->mpMorf->getModel();
         } else {
-            pJVar1 = i_this->m2D8->getModel();
+            pJVar1 = i_this->mpSplitMorf->getModel();
         }
     } else {
-        pJVar1 = i_this->m2BC->getModel();
+        pJVar1 = i_this->mpFlatMorf->getModel();
     }
 
     Mtx34 *now = mDoMtx_stack_c::get();
-    PSMTXTrans(now, i_this->actor.current.pos.x, i_this->actor.current.pos.y - i_this->m328,
+    PSMTXTrans(now, i_this->actor.current.pos.x, i_this->actor.current.pos.y - i_this->mSwimBobY,
                i_this->actor.current.pos.z);
-    mDoMtx_XrotM(now, i_this->m316.x);
-    mDoMtx_ZrotM(now, i_this->m316.z);
+    mDoMtx_XrotM(now, i_this->mGroundAngle.x);
+    mDoMtx_ZrotM(now, i_this->mGroundAngle.z);
     mDoMtx_YrotM(now, i_this->actor.shape_angle.y);
     mDoMtx_XrotM(now, i_this->actor.shape_angle.x);
     mDoMtx_ZrotM(now, i_this->actor.shape_angle.z);
 
     f32 sx, sy, sz;
-    if (i_this->mCurrAction != CC_ACTION_CLIMB && i_this->m2F5 != CC_MODE_FLATTENED && i_this->m301 == 0 &&
-        i_this->mCurrAction != CC_ACTION_STONE && i_this->m34E[4] == 0) {
+    if (i_this->mCurrAction != CC_ACTION_CLIMB && i_this->mMode != CC_MODE_FLATTENED && i_this->mIsSplit == 0 &&
+        i_this->mCurrAction != CC_ACTION_STONE && i_this->mTimers[4] == 0) {
         sx = 1.1f;
         sy = 1.0f;
         sz = 0.9f;
-        i_this->m31C += 1000;
+        i_this->mWobbleAngle += 1000;
     } else {
-        sx = sy = sz = i_this->m334;
-        i_this->m31C = 0;
+        sx = sy = sz = i_this->mScale;
+        i_this->mWobbleAngle = 0;
     }
 
-    mDoMtx_YrotM(now, i_this->m31C);
+    mDoMtx_YrotM(now, i_this->mWobbleAngle);
     mDoMtx_stack_scaleM(sx, sy, sz);
-    mDoMtx_YrotM(now, -i_this->m31C);
+    mDoMtx_YrotM(now, -i_this->mWobbleAngle);
     J3DModel_setBaseTRMtx(pJVar1, now);
 
-    if (i_this->m301 == 0) {
-        i_this->m2B4->calc();
+    if (i_this->mIsSplit == 0) {
+        i_this->mpMorf->calc();
         Cc_enemyFire(&i_this->mEnemyFire);
     }
 
-    if (i_this->m2FE != 0) {
-        J3DModel *model = i_this->m2C4->getModel();
+    if (i_this->mStoneState != 0) {
+        J3DModel *model = i_this->mpStoneMorf->getModel();
         J3DModel_setBaseTRMtx(model, now);
     }
 
@@ -200,7 +200,7 @@ static void draw_SUB(cc_class *i_this) {
 /* 0210BFEC */
 static BOOL daCC_Draw(cc_class *i_this) {
     fopAc_ac_c *a_this = &i_this->actor;
-    J3DModel *pJVar3 = i_this->m2B4->getModel();
+    J3DModel *pJVar3 = i_this->mpMorf->getModel();
 
     if (i_this->mBehaviorType == CC_BEHAVIOR_POT) {
         return TRUE;
@@ -208,68 +208,68 @@ static BOOL daCC_Draw(cc_class *i_this) {
 
     dSnap_RegistFig(DSNAP_TYPE_CC, a_this, 1.0f, 1.0f, 1.0f);
 
-    if (i_this->m2F5 != CC_MODE_FLATTENED) {
-        mDoExt_brkAnm_entry(i_this->m2B8, modelData(pJVar3), anm_frame(i_this->m2B8));
-        anm_setFrame(i_this->m2B8, (f32)(u8)i_this->mColorType);
+    if (i_this->mMode != CC_MODE_FLATTENED) {
+        mDoExt_brkAnm_entry(i_this->mpColorBrk, modelData(pJVar3), anm_frame(i_this->mpColorBrk));
+        anm_setFrame(i_this->mpColorBrk, (f32)(u8)i_this->mColorType);
 
-        if (i_this->m2FE != 0) {
-            pJVar3 = i_this->m2C4->getModel();
+        if (i_this->mStoneState != 0) {
+            pJVar3 = i_this->mpStoneMorf->getModel();
 
-            switch (i_this->m2FE) {
+            switch (i_this->mStoneState) {
             case 1:
-                mDoExt_brkAnm_entry(i_this->m2C8, modelData(pJVar3), anm_frame(i_this->m2C8));
-                anm_setFrame(i_this->m2C8, (f32)(u8)i_this->m2FF);
-                mDoExt_btkAnm_entry(i_this->m2D0, modelData(pJVar3), anm_frame(i_this->m2D0));
-                anm_setFrame(i_this->m2D0, (f32)(u8)i_this->m2FF);
+                mDoExt_brkAnm_entry(i_this->mpStoneBrk, modelData(pJVar3), anm_frame(i_this->mpStoneBrk));
+                anm_setFrame(i_this->mpStoneBrk, (f32)(u8)i_this->mStoneAnmFrame);
+                mDoExt_btkAnm_entry(i_this->mpStoneBtk, modelData(pJVar3), anm_frame(i_this->mpStoneBtk));
+                anm_setFrame(i_this->mpStoneBtk, (f32)(u8)i_this->mStoneAnmFrame);
                 break;
             case 2:
-                mDoExt_brkAnm_entry(i_this->m2CC, modelData(pJVar3), anm_frame(i_this->m2CC));
-                anm_setFrame(i_this->m2CC, (f32)(u8)i_this->m2FF);
-                mDoExt_btkAnm_entry(i_this->m2D4, modelData(pJVar3), anm_frame(i_this->m2D4));
-                anm_setFrame(i_this->m2D4, (f32)(u8)i_this->m2FF);
+                mDoExt_brkAnm_entry(i_this->mpStoneRecoverBrk, modelData(pJVar3), anm_frame(i_this->mpStoneRecoverBrk));
+                anm_setFrame(i_this->mpStoneRecoverBrk, (f32)(u8)i_this->mStoneAnmFrame);
+                mDoExt_btkAnm_entry(i_this->mpStoneRecoverBtk, modelData(pJVar3), anm_frame(i_this->mpStoneRecoverBtk));
+                anm_setFrame(i_this->mpStoneRecoverBtk, (f32)(u8)i_this->mStoneAnmFrame);
                 break;
             }
         }
 
-        if (i_this->m301 != 0) {
-            pJVar3 = i_this->m2D8->getModel();
+        if (i_this->mIsSplit != 0) {
+            pJVar3 = i_this->mpSplitMorf->getModel();
         }
     } else {
-        pJVar3 = i_this->m2BC->getModel();
-        mDoExt_brkAnm_entry(i_this->m2C0, modelData(pJVar3), anm_frame(i_this->m2C0));
-        anm_setFrame(i_this->m2C0, (f32)(u8)i_this->mColorType);
+        pJVar3 = i_this->mpFlatMorf->getModel();
+        mDoExt_brkAnm_entry(i_this->mpFlatColorBrk, modelData(pJVar3), anm_frame(i_this->mpFlatColorBrk));
+        anm_setFrame(i_this->mpFlatColorBrk, (f32)(u8)i_this->mColorType);
     }
 
     setLightTevColorType(dKy_getEnvlight(), pJVar3, &a_this->tevStr);
 
     if (i_this->mEnemyIce.mFreezeTimer > 0x14) {
-        Cc_iceUpdateDL(i_this->m2B4, -1, i_this->mDFC);
+        Cc_iceUpdateDL(i_this->mpMorf, -1, i_this->mInvisModel);
         return TRUE;
     }
 
     dComIfGp_get(); // HD: the play object is fetched, its result unused (GameCube: shadow)
-    if (i_this->m2F5 != CC_MODE_FLATTENED) {
-        if (i_this->m301 == 0) {
-            i_this->m2B4->entryDL();
-            a_this->model = gabi::ea(i_this->m2B4->getModel());
+    if (i_this->mMode != CC_MODE_FLATTENED) {
+        if (i_this->mIsSplit == 0) {
+            i_this->mpMorf->entryDL();
+            a_this->model = gabi::ea(i_this->mpMorf->getModel());
         } else {
-            i_this->m2D8->updateDL();
+            i_this->mpSplitMorf->updateDL();
         }
 
-        if (i_this->m2FE != 0) {
-            i_this->m2C4->updateDL();
+        if (i_this->mStoneState != 0) {
+            i_this->mpStoneMorf->updateDL();
         }
     } else {
-        i_this->m2BC->updateDL();
+        i_this->mpFlatMorf->updateDL();
     }
 
     // HD: no simple shadow
 
-    if (i_this->m2F5 != CC_MODE_FLATTENED) {
-        brk_remove(i_this->m2B4->getModel());
-        if (i_this->m2FE != 0) {
-            pJVar3 = i_this->m2C4->getModel();
-            switch (i_this->m2FE) {
+    if (i_this->mMode != CC_MODE_FLATTENED) {
+        brk_remove(i_this->mpMorf->getModel());
+        if (i_this->mStoneState != 0) {
+            pJVar3 = i_this->mpStoneMorf->getModel();
+            switch (i_this->mStoneState) {
             case 1:
             case 2:
                 brk_remove(pJVar3);
@@ -300,9 +300,9 @@ static void cc_eff_set(cc_class *i_this, unsigned char arg1) {
     for (int i = 0; i < 4; i++)
         fr->saved[i] = gabi::cpu->r[28 + i];
     gabi::Local<cXyz> sp1C;
-    sp1C->x = i_this->m470.x;
-    sp1C->y = i_this->m470.y;
-    sp1C->z = i_this->m470.z;
+    sp1C->x = i_this->mBody03Pos.x;
+    sp1C->y = i_this->mBody03Pos.y;
+    sp1C->z = i_this->mBody03Pos.z;
 
     // HD: the colour table is a local, its 4th entry taken from the particle manager
     u32 pa = gabi::ea(dComIfGp_getParticle());
@@ -355,28 +355,28 @@ static void cc_eff_set(cc_class *i_this, unsigned char arg1) {
 /* 0210C5C8 */
 static void anm_init(cc_class *i_this, int transformResIdx, float morf, unsigned char loopMode, float speed,
                      int soundResIdx) {
-    i_this->m320 = transformResIdx;
+    i_this->mAnmResIdx = transformResIdx;
     if (soundResIdx >= 0) {
         J3DAnmTransform *anm =
             (J3DAnmTransform *)dComIfG_getObjectRes("Cc", transformResIdx, gc_tu.safeString);
         void *bas = dComIfG_getObjectRes("Cc", soundResIdx, gc_tu.safeString);
-        i_this->m2B4->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, bas);
+        i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, bas);
     } else {
         J3DAnmTransform *anm =
             (J3DAnmTransform *)dComIfG_getObjectRes("Cc", transformResIdx, gc_tu.safeString);
-        i_this->m2B4->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
+        i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
     }
 }
 
 /* 0210C6F4 */
 static void damage_mode_move(cc_class *i_this) {
     dComIfGp_get(); // HD: unused player fetch
-    i_this->m2F6 = 2;
-    if (i_this->m2F5 != CC_MODE_SPLIT_START && i_this->m2F5 != CC_MODE_SPLIT_WAIT) {
+    i_this->mDamageType = 2;
+    if (i_this->mMode != CC_MODE_SPLIT_START && i_this->mMode != CC_MODE_SPLIT_WAIT) {
         dComIfGp_particle_set(0x27B /* ID_IT_JN_PIYOHIT00 */,
                               &i_this->actor.attention_info.position /* attention_info.position */);
         i_this->mCurrAction = CC_ACTION_DAMAGE;
-        i_this->m2F5 = CC_MODE_DAMAGE_START;
+        i_this->mMode = CC_MODE_DAMAGE_START;
     }
 }
 
@@ -409,8 +409,8 @@ static void naraku_check(cc_class *i_this) {
     void *gnd = static_cast<cBgS_PolyInfo *>(&i_this->mAcch.m_gnd); /* m_gnd (its cBgS_PolyInfo) */
     if (i_this->mAcch.GetGroundH() != -1000000000.0f && Cc_checkPolySafe(dComIfG_Bgsp(), gnd) &&
         Cc_getGroundCode(dComIfG_Bgsp(), gnd) == 4) {
-        i_this->m2FA += 1;
-        if (a_this->current.pos.y < -500.0f || i_this->m2FA > 0x32) {
+        i_this->mAbyssFrames += 1;
+        if (a_this->current.pos.y < -500.0f || i_this->mAbyssFrames > 0x32) {
             a_this->speedF = 0.0f;
             a_this->speed.x = 0.0f;
             a_this->speed.y = 0.0f;
@@ -422,7 +422,7 @@ static void naraku_check(cc_class *i_this) {
         }
     }
 
-    if (a_this->current.pos.y < i_this->m3BC.y - 20000.0f) {
+    if (a_this->current.pos.y < i_this->mHomePos.y - 20000.0f) {
         fopAcM_delete(a_this);
         dComIfGs_onActor(a_this->setID, a_this->home.roomNo);
     } else if (i_this->mAcch.ChkWaterIn()) {
@@ -432,26 +432,26 @@ static void naraku_check(cc_class *i_this) {
             sp24->y = a_this->current.pos.y;
             sp24->z = a_this->current.pos.z;
             sp24->y = i_this->mAcch.m_wtr.GetHeight(); /* m_wtr.GetHeight() */
-            if (!i_this->m300) {
+            if (!i_this->mInWater) {
                 fopKyM_createWpillar(sp24, 1.0f, 0.4f, 0);
                 fopAcM_seStart_nn(a_this, JA_SE_OBJ_FALL_WATER_M, 0);
-                i_this->m300 = 1;
+                i_this->mInWater = 1;
                 gabi::Local<cXyz> sp18;
                 sp18->set(0.5f, 0.5f, 0.5f);
-                Cc_rippleRemove(i_this->m390);
-                /* dComIfGp_particle_setShipTail(ID_AK_JN_HAMON00, &pos, NULL, &sp18, 0xFF, &m390) */
+                Cc_rippleRemove(i_this->mRippleEcallBack);
+                /* dComIfGp_particle_setShipTail(ID_AK_JN_HAMON00, &pos, NULL, &sp18, 0xFF, &mRippleEcallBack) */
                 dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &a_this->current.pos, nullptr, sp18, 0xFF,
-                                (dPa_levelEcallBack *)i_this->m390, -1, nullptr, nullptr, nullptr);
-                Cc_view<CcRipple>(gabi::ea(i_this->m390))->mRate = 0.0f; /* m390.setRate(0.0f) */
+                                (dPa_levelEcallBack *)i_this->mRippleEcallBack, -1, nullptr, nullptr, nullptr);
+                Cc_view<CcRipple>(gabi::ea(i_this->mRippleEcallBack))->mRate = 0.0f; /* mRippleEcallBack.setRate(0.0f) */
             }
 
             f32 fVar1 = REG_F(12, 0) + 40.0f;
-            if (i_this->m2FE != 0) {
+            if (i_this->mStoneState != 0) {
                 fVar1 = REG_F(12, 0) + 100.0f;
             }
 
             if (a_this->current.pos.y < sp24->y - fVar1) {
-                if (i_this->m2FE != 0) {
+                if (i_this->mStoneState != 0) {
                     a_this->speedF = 0.0f;
                     a_this->speed.x = 0.0f;
                     a_this->speed.y = 0.0f;
@@ -462,18 +462,18 @@ static void naraku_check(cc_class *i_this) {
                 }
 
                 i_this->mCurrAction = CC_ACTION_SWIM;
-                i_this->m2F5 = CC_MODE_SWIM_START;
+                i_this->mMode = CC_MODE_SWIM_START;
 
                 if (a_this->health <= 0 && i_this->mCurrAction != CC_ACTION_DEAD) {
                     i_this->mCurrAction = CC_ACTION_DEAD;
-                    i_this->m2F5 = CC_MODE_DEAD_START;
+                    i_this->mMode = CC_MODE_DEAD_START;
                 }
             }
         }
-    } else if (i_this->m300) {
-        i_this->m2F8 = 0;
-        i_this->m300 = 0;
-        Cc_rippleRemove(i_this->m390);
+    } else if (i_this->mInWater) {
+        i_this->mOnWaterSurface = 0;
+        i_this->mInWater = 0;
+        Cc_rippleRemove(i_this->mRippleEcallBack);
     }
 }
 
@@ -482,12 +482,12 @@ static void denki_start(cc_class *i_this) {
     if (i_this->mColorType != CC_BLUE && i_this->mColorType != CC_YELLOW) {
         return;
     }
-    if (i_this->m2F7 != 0) {
+    if (i_this->mElectricState != 0) {
         return;
     }
     i_this->mCyl.OnAtSPrmBit(1 /* cCcD_AtSPrm_Set_e */);
     i_this->mCyl.mObjAt.mRPrm = 1; /* OnAtHitBit (HD: stores the bit) */
-    i_this->m2F7 = 1;
+    i_this->mElectricState = 1;
     i_this->mCyl.SetTgSpl(1);
 }
 
@@ -495,10 +495,10 @@ static void denki_start(cc_class *i_this) {
 static void denki_end(cc_class *i_this) {
     if (i_this->mColorType == CC_BLUE || i_this->mColorType == CC_YELLOW) {
         // HD: dPa_followEcallBack::end (GameCube: remove())
-        dPa_followEcallBack_end(&i_this->m368);
-        dPa_followEcallBack_end(&i_this->m37C);
+        dPa_followEcallBack_end(&i_this->mThunderEcallBack0);
+        dPa_followEcallBack_end(&i_this->mThunderEcallBack1);
         i_this->mCyl.SetTgSpl(0);
-        i_this->m2F7 = 0;
+        i_this->mElectricState = 0;
     }
 }
 
@@ -518,17 +518,17 @@ static BOOL shock_damage_check(cc_class *i_this) {
             f32 x = t->current.pos.x - i_this->actor.current.pos.x;
             f32 z = t->current.pos.z - i_this->actor.current.pos.z;
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) < 1000.0f) {
-                if (i_this->m302 == 0) {
+                if (i_this->mBombShockDone == 0) {
                     damage_mode_move(i_this);
-                    i_this->m302 = 1;
+                    i_this->mBombShockDone = 1;
                     return TRUE;
                 }
             } else {
-                i_this->m302 = 0;
+                i_this->mBombShockDone = 0;
             }
         }
     } else {
-        i_this->m302 = 0;
+        i_this->mBombShockDone = 0;
     }
 
     /* player->checkHammerQuake(): status bit 0x20000 at +0x3C0; getSwordTopPos(): +0x3E4 */
@@ -549,7 +549,7 @@ static void black_light_check(cc_class *i_this) {
         if (i_this->mCurrAction != CC_ACTION_STONE && Cc_checkLight(&i_this->actor.current.pos)) {
             i_this->mStts.SetWeight(0xFE);
             i_this->mCurrAction = CC_ACTION_STONE;
-            i_this->m2F5 = CC_MODE_STONE_START;
+            i_this->mMode = CC_MODE_STONE_START;
         }
     }
 }
@@ -559,14 +559,14 @@ static BOOL search_angle_set(cc_class *i_this) {
     if (i_this->mBehaviorType != CC_BEHAVIOR_FIXED) {
         if (fopAcM_searchPlayerDistance(&i_this->actor) > 40.0f) {
             s16 a = fopAcM_searchPlayerAngleY(&i_this->actor);
-            i_this->actor.current.angle.y = a + i_this->m34C;
+            i_this->actor.current.angle.y = a + i_this->mChaseAngleOffset;
             return TRUE;
         }
     } else {
-        f32 fVar7 = i_this->m3BC.x - i_this->actor.current.pos.x;
-        f32 fVar1 = i_this->m3BC.z - i_this->actor.current.pos.z;
+        f32 fVar7 = i_this->mHomePos.x - i_this->actor.current.pos.x;
+        f32 fVar1 = i_this->mHomePos.z - i_this->actor.current.pos.z;
         f32 d2 = gabi::fmadds(fVar7, fVar7, fVar1 * fVar1);
-        if (std_sqrtf(d2) > i_this->m340) {
+        if (std_sqrtf(d2) > i_this->mHomeRange) {
             i_this->actor.current.angle.y = cM_atan2s(fVar7, fVar1);
         } else if (std_sqrtf(d2) < 100.0f && cM_rnd() < 0.1f &&
                    (s16)cLib_distanceAngleS(i_this->actor.shape_angle.y, i_this->actor.current.angle.y) <
@@ -586,20 +586,20 @@ static void *tsubo_search(void *arg1, void *arg2) {
         actor1->current.pos.x == i_this->actor.current.pos.x &&
         std::fabs((f32)(actor1->current.pos.y - i_this->actor.current.pos.y)) < 10.0f &&
         actor1->current.pos.z == i_this->actor.current.pos.z) {
-        i_this->m30C = fopAcM_GetID(actor1);
+        i_this->mPotId = fopAcM_GetID(actor1);
     }
     return nullptr;
 }
 
 /* 0210DC8C */
 static void BG_check(cc_class *i_this) {
-    if (i_this->m2F9 == 0) {
+    if (i_this->mNoBgCheck == 0) {
         i_this->mAcchCir.SetWall(20.0f, 30.0f);
         i_this->mAcch.CrrPos(dComIfG_Bgsp());
-        if (i_this->m2F8 != 0 && i_this->mAcch.ChkWaterIn()) {
+        if (i_this->mOnWaterSurface != 0 && i_this->mAcch.ChkWaterIn()) {
             i_this->actor.current.pos.y = i_this->mAcch.m_wtr.GetHeight() - 20.0f;
         }
-        fopAcM_getGroundAngle(&i_this->actor, &i_this->m316);
+        fopAcM_getGroundAngle(&i_this->actor, &i_this->mGroundAngle);
         naraku_check(i_this);
     }
 }
@@ -611,9 +611,9 @@ static BOOL daCC_IsDelete(cc_class *) {
 
 /* 021104B4 */
 static BOOL daCC_Delete(cc_class *i_this) {
-    i_this->m368.remove();
-    i_this->m37C.remove();
-    Cc_rippleRemove(i_this->m390);
+    i_this->mThunderEcallBack0.remove();
+    i_this->mThunderEcallBack1.remove();
+    Cc_rippleRemove(i_this->mRippleEcallBack);
     dComIfG_resDelete(&i_this->mPhase, "Cc");
     Cc_enemyFireRemove(&i_this->mEnemyFire);
     return TRUE;
@@ -637,18 +637,18 @@ static BOOL useHeapInit(fopAc_ac_c *a_this) {
 
     J3DModelData *data = (J3DModelData *)dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BMD_CC_e, gc_tu.safeString);
     J3DAnmTransform *anm = (J3DAnmTransform *)dComIfG_getObjectRes("Cc", fileIndex, gc_tu.safeString);
-    i_this->m2B4 = cc_new_morf(data, anm, 0.0f, 0);
-    if (i_this->m2B4 == nullptr || i_this->m2B4->getModel() == nullptr) {
+    i_this->mpMorf = cc_new_morf(data, anm, 0.0f, 0);
+    if (i_this->mpMorf == nullptr || i_this->mpMorf->getModel() == nullptr) {
         return FALSE;
     }
 
-    Cc_view<CcModel>(gabi::ea(i_this->m2B4->getModel()))->mUserArea = gabi::ea(i_this); /* setUserArea */
+    Cc_view<CcModel>(gabi::ea(i_this->mpMorf->getModel()))->mUserArea = gabi::ea(i_this); /* setUserArea */
 
     for (u16 i = 0;
-         i < Cc_view<CcJointTree>(gabi::ea(Cc_jointTree(modelData(i_this->m2B4->getModel()))))->mJointCount;
+         i < Cc_view<CcJointTree>(gabi::ea(Cc_jointTree(modelData(i_this->mpMorf->getModel()))))->mJointCount;
          i++) {
         /* getJointNodePointer(i)->setCallBack(nodeCallBack) (HD: 0x1C-byte joints, element 0 past the end) */
-        u32 md = gabi::ea(modelData(i_this->m2B4->getModel()));
+        u32 md = gabi::ea(modelData(i_this->mpMorf->getModel()));
         u32 n = Cc_view<CcModelData>(md)->mJointCount;
         u32 p = Cc_view<CcModelData>(md)->mJoints;
         if (i < n)
@@ -656,90 +656,90 @@ static BOOL useHeapInit(fopAc_ac_c *a_this) {
         Cc_view<CcJoint>(p)->mCallback = gabi::guest_fn((const void *)nodeCallBack);
     }
 
-    J3DModel *model = i_this->m2B4->getModel();
+    J3DModel *model = i_this->mpMorf->getModel();
 
-    i_this->m2B8 = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 1);
-    if (i_this->m2B8 == nullptr) {
+    i_this->mpColorBrk = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 1);
+    if (i_this->mpColorBrk == nullptr) {
         return FALSE;
     }
     void *key = dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BRK_CC_e, gc_tu.safeString);
-    if (!Cc_brkInit(i_this->m2B8, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
+    if (!Cc_brkInit(i_this->mpColorBrk, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
                     1.0f)) {
         return FALSE;
     }
 
     data = (J3DModelData *)dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BDL_CC_IWA_e, gc_tu.safeString);
-    i_this->m2C4 = cc_new_morf(data, nullptr, 0.0f, 0);
-    if (i_this->m2C4 == nullptr || i_this->m2C4->getModel() == nullptr) {
+    i_this->mpStoneMorf = cc_new_morf(data, nullptr, 0.0f, 0);
+    if (i_this->mpStoneMorf == nullptr || i_this->mpStoneMorf->getModel() == nullptr) {
         return FALSE;
     }
 
-    model = i_this->m2C4->getModel();
-    i_this->m2C8 = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 1);
-    if (i_this->m2C8 == nullptr) {
+    model = i_this->mpStoneMorf->getModel();
+    i_this->mpStoneBrk = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 1);
+    if (i_this->mpStoneBrk == nullptr) {
         return FALSE;
     }
     key = dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BRK_CC_IWA01_e, gc_tu.safeString);
-    if (!Cc_brkInit(i_this->m2C8, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
+    if (!Cc_brkInit(i_this->mpStoneBrk, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
                     1.0f)) {
         return FALSE;
     }
 
-    i_this->m2CC = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 0);
-    if (i_this->m2CC == nullptr) {
+    i_this->mpStoneRecoverBrk = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 0);
+    if (i_this->mpStoneRecoverBrk == nullptr) {
         return FALSE;
     }
     key = dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BRK_CC_IWA02_e, gc_tu.safeString);
-    if (!Cc_brkInit(i_this->m2CC, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
+    if (!Cc_brkInit(i_this->mpStoneRecoverBrk, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
                     1.0f)) {
         return FALSE;
     }
 
-    i_this->m2D0 = (mDoExt_btkAnm *)new_anm(0x74, CC_ANM_BTK, 0);
-    if (i_this->m2D0 == nullptr) {
+    i_this->mpStoneBtk = (mDoExt_btkAnm *)new_anm(0x74, CC_ANM_BTK, 0);
+    if (i_this->mpStoneBtk == nullptr) {
         return FALSE;
     }
     key = dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BTK_CC_IWA01_e, gc_tu.safeString);
-    if (!Cc_btkInit(i_this->m2D0, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
+    if (!Cc_btkInit(i_this->mpStoneBtk, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
                     1.0f)) {
         return FALSE;
     }
 
-    i_this->m2D4 = (mDoExt_btkAnm *)new_anm(0x74, CC_ANM_BTK, 0);
-    if (i_this->m2D4 == nullptr) {
+    i_this->mpStoneRecoverBtk = (mDoExt_btkAnm *)new_anm(0x74, CC_ANM_BTK, 0);
+    if (i_this->mpStoneRecoverBtk == nullptr) {
         return FALSE;
     }
     key = dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BTK_CC_IWA02_e, gc_tu.safeString);
-    if (!Cc_btkInit(i_this->m2D4, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
+    if (!Cc_btkInit(i_this->mpStoneRecoverBtk, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
                     1.0f)) {
         return FALSE;
     }
 
     data = (J3DModelData *)dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BDL_CC_BETA_e, gc_tu.safeString);
-    i_this->m2BC = cc_new_morf(data, nullptr, 0.0f, 0);
-    if (i_this->m2BC == nullptr || i_this->m2BC->getModel() == nullptr) {
+    i_this->mpFlatMorf = cc_new_morf(data, nullptr, 0.0f, 0);
+    if (i_this->mpFlatMorf == nullptr || i_this->mpFlatMorf->getModel() == nullptr) {
         return FALSE;
     }
 
-    model = i_this->m2BC->getModel();
-    i_this->m2C0 = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 1);
-    if (i_this->m2C0 == nullptr) {
+    model = i_this->mpFlatMorf->getModel();
+    i_this->mpFlatColorBrk = (mDoExt_brkAnm *)new_anm(0x78, CC_ANM_BRK, 1);
+    if (i_this->mpFlatColorBrk == nullptr) {
         return FALSE;
     }
     key = dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BRK_CC_BETA_e, gc_tu.safeString);
-    if (!Cc_brkInit(i_this->m2C0, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
+    if (!Cc_brkInit(i_this->mpFlatColorBrk, modelData(model), key, 1, J3DFrameCtrl::EMode_NONE, 0, -1, false, 0,
                     1.0f)) {
         return FALSE;
     }
 
     data = (J3DModelData *)dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BDL_CC_PTCL_e, gc_tu.safeString);
     anm = (J3DAnmTransform *)dComIfG_getObjectRes("Cc", dRes_INDEX_CC_BCK_CC_PTCL_e, gc_tu.safeString);
-    i_this->m2D8 = cc_new_morf(data, anm, 1.0f, 1);
-    if (i_this->m2D8 == nullptr || i_this->m2D8->getModel() == nullptr) {
+    i_this->mpSplitMorf = cc_new_morf(data, anm, 1.0f, 1);
+    if (i_this->mpSplitMorf == nullptr || i_this->mpSplitMorf->getModel() == nullptr) {
         return FALSE;
     }
 
-    if (!Cc_invisibleCreate(i_this->mDFC, i_this->m2B4->getModel())) { /* mDFC.create(model) */
+    if (!Cc_invisibleCreate(i_this->mInvisModel, i_this->mpMorf->getModel())) { /* mInvisModel.create(model) */
         return FALSE;
     }
     return TRUE;
@@ -777,9 +777,9 @@ static cc_class *cc_class_ct(cc_class *p) {
     }
     fopAc_ac_c_ct(&p->actor);
     p->actor.__vtbl = l_actorVtable;
-    dPa_followEcallBack_ct(&p->m368, 0, 0);
-    dPa_followEcallBack_ct(&p->m37C, 0, 0);
-    Cc_rippleCtor(p->m390); /* dPa_rippleEcallBack::dPa_rippleEcallBack */
+    dPa_followEcallBack_ct(&p->mThunderEcallBack0, 0, 0);
+    dPa_followEcallBack_ct(&p->mThunderEcallBack1, 0, 0);
+    Cc_rippleCtor(p->mRippleEcallBack); /* dPa_rippleEcallBack::dPa_rippleEcallBack */
     Cc_acchCirCtor(&p->mAcchCir);
     cc_ObjAcch_ct(&p->mAcch);
     dCcD_Stts_ct(&p->mStts);
@@ -789,7 +789,7 @@ static cc_class *cc_class_ct(cc_class *p) {
     Cc_acchCirCtor(&p->mEnemyIce.mBgAcchCir);
     cc_ObjAcch_ct(&p->mEnemyIce.mBgAcch);
     enemyfire_ct(&p->mEnemyFire);
-    Cc_invisibleCtor(p->mDFC); /* mDoExt_invisibleModel::mDoExt_invisibleModel */
+    Cc_invisibleCtor(p->mInvisModel); /* mDoExt_invisibleModel::mDoExt_invisibleModel */
     return p;
 }
 
@@ -846,7 +846,7 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
                 i_this->mColorType -= 10;
                 i_this->mNoticeRange = 60000.0f;
                 if (i_this->mColorType == 5) {
-                    i_this->m304 = 1;
+                    i_this->mOtherHitState = 1;
                     i_this->mColorType = CC_RED;
                 }
             }
@@ -854,7 +854,7 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
             i_this->mNoticeRange = (f32)(u8)i_this->mNoticeRangeByte * 10.0f;
         }
 
-        i_this->m3BC.copy(a_this->current.pos);
+        i_this->mHomePos.copy(a_this->current.pos);
         a_this->actor_status &= ~u32(fopAcStts_SHOWMAP_e); /* fopAcM_OffStatus(SHOWMAP) */
         a_this->stealItemLeft = 1;
 
@@ -883,7 +883,7 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
             break;
         }
 
-        a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->m2B4->getModel()));
+        a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->mpMorf->getModel()));
         a_this->attention_info.flags = 0; /* attention_info.flags */
 
         i_this->mAcch.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &i_this->mAcchCir,
@@ -895,7 +895,7 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
 
         i_this->mStts.Init(0x32, 4, a_this);
 
-        if (i_this->m304) {
+        if (i_this->mOtherHitState) {
             /* SetTgGrp(IsOther | IsPlayer | IsEnemy | Set) */
             i_this->mCyl.mObjTg.mSPrm = (i_this->mCyl.mObjTg.mSPrm & ~0xEu) | 0xF;
         }
@@ -913,14 +913,14 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
         a_this->max_health = cc_HP_kind[kind];          /* cc_HP_kind */
         a_this->health = cc_HP_kind[kind];
 
-        i_this->m34C = (s16)gabi::ftoi(cM_rndFX((f32)(s32)((fopAcM_GetID(a_this) & 7) * 0x500)));
-        i_this->m334 = 1.0f;
+        i_this->mChaseAngleOffset = (s16)gabi::ftoi(cM_rndFX((f32)(s32)((fopAcM_GetID(a_this) & 7) * 0x500)));
+        i_this->mScale = 1.0f;
         i_this->mCyl.OffAtSPrmBit(1); /* OffAtSPrmBit(Set), ClrAtSet */
-        i_this->m2F9 = 1;
+        i_this->mNoBgCheck = 1;
         i_this->mEnemyIce.mpActor = a_this;
         i_this->mEnemyIce.mWallRadius = 35.0f;
         i_this->mEnemyIce.mCylHeight = 100.0f;
-        i_this->mEnemyFire.mpMcaMorf = i_this->m2B4;
+        i_this->mEnemyFire.mpMcaMorf = i_this->mpMorf;
         i_this->mEnemyFire.mpActor = a_this;
 
         for (int i = 0; i < 10; i++) {
@@ -937,8 +937,8 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
             i_this->mCyl.OnCoSPrmBit(1); /* OnCoSetBit */
             i_this->mDisableSpawnSwitchNo = 0xFF;
             i_this->mCurrAction = CC_ACTION_CLIMB;
-            i_this->m2F5 = CC_MODE_CLIMB_START;
-            J3DModel_setBaseTRMtx(i_this->m2B4->getModel(), &i_this->m7EC);
+            i_this->mMode = CC_MODE_CLIMB_START;
+            J3DModel_setBaseTRMtx(i_this->mpMorf->getModel(), &i_this->mDekuMtx);
             draw_SUB(i_this);
             return res;
         }
@@ -948,20 +948,20 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
             r = 100.0f;
         }
         a_this->current.angle.z = 0;
-        i_this->m340 = r;
+        i_this->mHomeRange = r;
         a_this->shape_angle.z = 0;
 
         if (i_this->mBehaviorType != CC_BEHAVIOR_FIXED) {
             if (i_this->mDisableSpawnSwitchNo != 0xFF) {
                 if (i_this->mBehaviorType != CC_BEHAVIOR_CEILING) {
-                    i_this->m2F9 = 0;
+                    i_this->mNoBgCheck = 0;
                     a_this->gravity = -3.0f;
                 }
                 i_this->mCyl.OffTgSPrmBit(1); /* OffTgSetBit */
                 i_this->mCyl.OffCoSPrmBit(1); /* OffCoSetBit */
                 i_this->mCyl.ClrTgHit();
                 i_this->mCurrAction = CC_ACTION_WAIT_SWITCH;
-                i_this->m2F5 = CC_MODE_WAIT_SWITCH;
+                i_this->mMode = CC_MODE_WAIT_SWITCH;
             }
         } else {
             a_this->stealItemBitNo = i_this->mDisableSpawnSwitchNo;
@@ -971,7 +971,7 @@ static cPhs_State daCC_Create(fopAc_ac_c *a_this) {
 
         if (i_this->mBehaviorType == CC_BEHAVIOR_POT) {
             i_this->mCurrAction = CC_ACTION_POT;
-            i_this->m2F5 = CC_MODE_POT_SEARCH;
+            i_this->mMode = CC_MODE_POT_SEARCH;
         }
 
         BG_check(i_this);
@@ -1010,19 +1010,19 @@ static void SafeString_dt(void *p, s32 flags) {
 /* 02112DA0 */
 static void action_tomaru(cc_class *i_this) {
     dComIfGp_get(); // HD: unused player fetch
-    switch (i_this->m2F5) {
+    switch (i_this->mMode) {
     case CC_MODE_WAIT_SWITCH:
         if (dComIfGs_isSwitch(i_this->mDisableSpawnSwitchNo, dComIfGp_roomControl_getStayNo())) {
-            i_this->m34E[6] = 0x28;
-            i_this->m2F5 += 1;
+            i_this->mTimers[6] = 0x28;
+            i_this->mMode += 1;
         }
         break;
     case CC_MODE_WAIT_SWITCH_DELAY:
-        if (i_this->m34E[6] == 0) {
+        if (i_this->mTimers[6] == 0) {
             i_this->actor.actor_status |= fopAcStts_SHOWMAP_e; /* fopAcStts_SHOWMAP_e */
             i_this->mCyl.OnTgSPrmBit(1);                       /* OnTgSetBit */
             i_this->mCurrAction = CC_ACTION_NORMAL;
-            i_this->m2F5 = CC_MODE_WAIT;
+            i_this->mMode = CC_MODE_WAIT;
         }
         break;
     }
@@ -1031,19 +1031,19 @@ static void action_tomaru(cc_class *i_this) {
 /* 02112E74 */
 static void action_tubo_search(cc_class *i_this) {
     fopAc_ac_c *a_this = &i_this->actor;
-    switch (i_this->m2F5) {
+    switch (i_this->mMode) {
     case CC_MODE_POT_SEARCH:
-        i_this->m30C = fpcM_ERROR_PROCESS_ID_e;
+        i_this->mPotId = fpcM_ERROR_PROCESS_ID_e;
         fpcM_Search(gabi::guest_fn((const void *)tsubo_search), a_this);
-        if (i_this->m30C == fpcM_ERROR_PROCESS_ID_e) {
+        if (i_this->mPotId == fpcM_ERROR_PROCESS_ID_e) {
             fopAcM_delete(a_this);
         } else {
-            i_this->m2F5 += 1;
+            i_this->mMode += 1;
         }
         break;
 
     case CC_MODE_POT_WAIT: {
-        fopAc_ac_c *pfVar2 = fopAcM_SearchByID(i_this->m30C);
+        fopAc_ac_c *pfVar2 = fopAcM_SearchByID(i_this->mPotId);
 
         if (REG_F(8, 0) != 0.0f) {
             i_this->mNoticeRange = 400.0f;
@@ -1060,7 +1060,7 @@ static void action_tubo_search(cc_class *i_this) {
         }
 
         a_this->actor_status |= fopAcStts_SHOWMAP_e;
-        i_this->m2F9 = 0;
+        i_this->mNoBgCheck = 0;
         s16 ang = fopAcM_searchPlayerAngleY(a_this);
         a_this->current.angle.y = ang;
         a_this->shape_angle.y = ang;
@@ -1074,7 +1074,7 @@ static void action_tubo_search(cc_class *i_this) {
         denki_start(i_this);
         a_this->gravity = -3.0f;
         i_this->mBehaviorType = CC_BEHAVIOR_GROUND;
-        i_this->m2F5 += 1;
+        i_this->mMode += 1;
         break;
     }
 
@@ -1084,7 +1084,7 @@ static void action_tubo_search(cc_class *i_this) {
         a_this->attention_info.flags =
             fopAc_Attn_LOCKON_BATTLE_e; /* attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e */
         i_this->mCurrAction = CC_ACTION_NORMAL;
-        i_this->m2F5 = CC_MODE_STAND_END;
+        i_this->mMode = CC_MODE_STAND_END;
         break;
     }
 }
@@ -1101,7 +1101,7 @@ static void cc_ObjAcch_dt(dBgS_ObjAcch *a) {
 /* 02113110 */
 static void cc_class_dt(cc_class *p, s32 flags) {
     if (p != nullptr) {
-        Cc_invisibleDtor(p->mDFC, 2); /* mDoExt_invisibleModel::~ */
+        Cc_invisibleDtor(p->mInvisModel, 2); /* mDoExt_invisibleModel::~ */
         Cc_sphereDtor(&p->mEnemyFire.mSph, 2);
         dCcD_Stts_dt(&p->mEnemyFire.mStts, 2);
         cc_ObjAcch_dt(&p->mEnemyIce.mBgAcch);

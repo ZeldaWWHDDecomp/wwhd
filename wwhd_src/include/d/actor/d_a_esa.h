@@ -50,31 +50,31 @@ WWHD_SIZE(EsaRippleCallback, 0x14);
 
 struct esa_class : fopAc_ac_c {
     /* 0x3AC */ request_of_phase_process_class mPhase; /* unused */
-    /* 0x3B4 */ be<u8> field_0x298;
+    /* 0x3B4 */ be<u8> mTaken;  /* was field_0x298: s_a_d_sub 0218566C (kamome) / s_a_d_sub 0205DB74 (bb) pick only baits at 0, search_esa 02185808 (kamome) / search_esa 0205DCFC (bb) set 1 on the chosen bait, bb_auto_move 020625E8 sets 0 again; daNpc_Nz_c::_searchEsa 022A2EEC chases only baits at 0; daNpc_So_c::cutEatesaProc 022E2754 / cutEatesaFirstProc 022E2830 set 0x23 (HD; GameCube 1), and daEsa_Execute 021300C4 then deletes the bait (a splash half of the time) */
     /* 0x3B5 */ u8 _3B5[3];
     /* 0x3B8 */ be<f32> mGroundHeight; /* HD: the water height of the last bg_check */
     /* 0x3BC */ be<s8> mActionState;
     /* 0x3BD */ be<s8> mState;
     /* 0x3BE */ u8 _3BE[2];
-    /* 0x3C0 */ EsaRippleCallback field_0x2A4;
-    /* 0x3D4 */ be<u8> field_0x2B9;
+    /* 0x3C0 */ EsaRippleCallback mRippleCb;  /* was field_0x2A4: esa_setRipple (in daEsa_Execute 021300C4): the callback of the ripple particle (rate 0.3), its emitter checked; daEsa_Delete 02130D6C ends it (dPa_rippleEcallBack_end); daEsa_Create 02130E30 constructs it; after TWW mRippleCallBack / mRipple (dPa_rippleEcallBack members of other actors) */
+    /* 0x3D4 */ be<u8> mAppendNum;  /* was field_0x2B9: daEsa_Create 02130E30: parameter bits 0-7; while field_0x2BA (bits 8-15) is 0 that many more baits are created at Link's left hand (esaCreateAppend / esaCreate) */
     /* 0x3D5 */ be<u8> field_0x2BA;
     /* 0x3D6 */ u8 _3D6[2];
     /* 0x3D8 */ gptr<J3DModel> mpModel;
     /* 0x3DC */ be<s16> mTimer[2];
     /* 0x3E0 */ be<s16> mBobAngle; /* HD: bobbing phase on the water */
 };
-WWHD_OFFSET(esa_class, field_0x2A4, 0x3C0);
+WWHD_OFFSET(esa_class, mRippleCb, 0x3C0);
 WWHD_OFFSET(esa_class, mpModel, 0x3D8);
 WWHD_OFFSET(esa_class, mBobAngle, 0x3E0);
 
 WWHD_SIZE(esa_class, 0x3E2);
 WWHD_OFFSET(esa_class, mPhase, 0x3AC);
-WWHD_OFFSET(esa_class, field_0x298, 0x3B4);
+WWHD_OFFSET(esa_class, mTaken, 0x3B4);
 WWHD_OFFSET(esa_class, mGroundHeight, 0x3B8);
 WWHD_OFFSET(esa_class, mActionState, 0x3BC);
 WWHD_OFFSET(esa_class, mState, 0x3BD);
-WWHD_OFFSET(esa_class, field_0x2B9, 0x3D4);
+WWHD_OFFSET(esa_class, mAppendNum, 0x3D4);
 WWHD_OFFSET(esa_class, field_0x2BA, 0x3D5);
 WWHD_OFFSET(esa_class, mTimer, 0x3DC);
 

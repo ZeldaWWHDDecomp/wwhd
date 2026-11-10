@@ -10,9 +10,9 @@ struct Kk1CreationFields {
     u8 _894[0x44];
     /* 0x8D8 */ be<f32> mPreviousFrame;
     u8 _8DC[0xC];
-    /* 0x8E8 */ be<u32> mActionResult;
+    /* 0x8E8 */ be<u32> mbSetEyePos;  /* was mActionResult (misnamed): view of daNpc_Kk1_c mbSetEyePos (d_a_npc_kk1.h); one name per field. the state function's result (wait_action1 02271084) decides whether setAttention 0226BD78 copies the eye position to eyePos; same code as daNpc_Bm1_c / daNpc_Ko1_c::mbSetEyePos (tww Bm1 mbSetEyePos = wait_1()) */
     u8 _8EC[0x10];
-    /* 0x8FC */ be<s16> mEventAction;
+    /* 0x8FC */ be<s16> mEventIdx;  /* was mEventAction (misnamed): view of daNpc_Kk1_c mEventIdx (d_a_npc_kk1.h); one name per field. eventOrder 0226E92C stores the ordered event's index and checkOrder / event_proc pick mEventIds by it; same code as daNpc_Bm1_c::mEventIdx (tww Bm1 mEventIdx) */
     u8 _8FE[0x14];
     /* 0x912 */ be<s16> mTalkLookTimer;
     /* 0x914 */ be<s16> mActionTimer;
@@ -26,7 +26,7 @@ struct Kk1CreationFields {
     /* 0x92C */ be<u8> mResourceLoaded;
     u8 _92D[0x1];
     /* 0x92E */ be<u8> mEffectHidden;
-    /* 0x92F */ be<u8> mDemoAnimation;
+    /* 0x92F */ be<u8> mPreserveShapeAngle;  /* was mDemoAnimation (misnamed): view of daNpc_Kk1_c mPreserveShapeAngle (d_a_npc_kk1.h); one name per field. cut_init_RUNAWAY_START 0226D454 sets it and _execute 0226E99C keeps the shape angle while it is set; demo only clears it; the Kk1EventState name stays */
     u8 _930[0x3];
     /* 0x933 */ be<u8> mTalkRequested;
     u8 _934[0x2];
@@ -38,13 +38,13 @@ struct Kk1CreationFields {
     u8 _AB8[0x4];
     /* 0xABC */ be<u32> mSweatEmitter;
     u8 _AC0[0x1];
-    /* 0xAC1 */ be<u8> mLookState;
+    /* 0xAC1 */ be<u8> mMoveMode;  /* was mLookState (misnamed): view of daNpc_Kk1_c mMoveMode (d_a_npc_kk1.h); one name per field. event_move 0226D83C walks at 2 and runs otherwise (the path point's argument 2 / 3), setStt 0226CB44 sets 2 for the comment state; it selects the move speed, not a look state or an animation */
     /* 0xAC2 */ be<u8> mCommentAction;
     /* 0xAC3 */ be<u8> mTalkAnimation;
     /* 0xAC4 */ be<u8> mMessageTag;
     /* 0xAC5 */ be<u8> mTextureAnimation;
-    /* 0xAC6 */ be<u8> mAnimationNo;
-    /* 0xAC7 */ be<u8> mEventState;
+    /* 0xAC6 */ be<u8> mAnmNum;  /* was mAnimationNo (misnamed): view of daNpc_Kk1_c mAnmNum (d_a_npc_kk1.h); one name per field. setAnm_anm 0226C660 stores the animation number and play_animation switches on it; same code as daNpc_Bm1_c::mAnmNum (tww Bm1 mAnmNum) */
+    /* 0xAC7 */ be<u8> mOrderEvent;  /* was mEventState (misnamed): view of daNpc_Kk1_c mOrderEvent (d_a_npc_kk1.h); one name per field. eventOrder 0226E92C orders by it and checkOrder 0226C7DC clears it, the waits set 2; same code as daNpc_Bm1_c / daNpc_Ko1_c::mOrderEvent (tww Bm1 m8FD) */
     /* 0xAC8 */ be<u8> mActionState;
     /* 0xAC9 */ be<u8> mPreviousState;
     u8 _ACA[0x2];
@@ -57,8 +57,8 @@ WWHD_SIZE(Kk1CreationFields, 0xAD0);
 WWHD_OFFSET(Kk1CreationFields, mPartnerId, 0x86C);
 WWHD_OFFSET(Kk1CreationFields, mModelAngle, 0x88E);
 WWHD_OFFSET(Kk1CreationFields, mPreviousFrame, 0x8D8);
-WWHD_OFFSET(Kk1CreationFields, mActionResult, 0x8E8);
-WWHD_OFFSET(Kk1CreationFields, mEventAction, 0x8FC);
+WWHD_OFFSET(Kk1CreationFields, mbSetEyePos, 0x8E8);
+WWHD_OFFSET(Kk1CreationFields, mEventIdx, 0x8FC);
 WWHD_OFFSET(Kk1CreationFields, mTalkLookTimer, 0x912);
 WWHD_OFFSET(Kk1CreationFields, mActionTimer, 0x914);
 WWHD_OFFSET(Kk1CreationFields, mAnimationEnded, 0x922);
@@ -67,19 +67,19 @@ WWHD_OFFSET(Kk1CreationFields, mSwitchNo, 0x925);
 WWHD_OFFSET(Kk1CreationFields, mOnPath, 0x926);
 WWHD_OFFSET(Kk1CreationFields, mResourceLoaded, 0x92C);
 WWHD_OFFSET(Kk1CreationFields, mEffectHidden, 0x92E);
-WWHD_OFFSET(Kk1CreationFields, mDemoAnimation, 0x92F);
+WWHD_OFFSET(Kk1CreationFields, mPreserveShapeAngle, 0x92F);
 WWHD_OFFSET(Kk1CreationFields, mTalkRequested, 0x933);
 WWHD_OFFSET(Kk1CreationFields, mInDemo, 0x936);
 WWHD_OFFSET(Kk1CreationFields, mEffectFrame, 0xAAC);
 WWHD_OFFSET(Kk1CreationFields, mEffectModel, 0xAB4);
 WWHD_OFFSET(Kk1CreationFields, mSweatEmitter, 0xABC);
-WWHD_OFFSET(Kk1CreationFields, mLookState, 0xAC1);
+WWHD_OFFSET(Kk1CreationFields, mMoveMode, 0xAC1);
 WWHD_OFFSET(Kk1CreationFields, mCommentAction, 0xAC2);
 WWHD_OFFSET(Kk1CreationFields, mTalkAnimation, 0xAC3);
 WWHD_OFFSET(Kk1CreationFields, mMessageTag, 0xAC4);
 WWHD_OFFSET(Kk1CreationFields, mTextureAnimation, 0xAC5);
-WWHD_OFFSET(Kk1CreationFields, mAnimationNo, 0xAC6);
-WWHD_OFFSET(Kk1CreationFields, mEventState, 0xAC7);
+WWHD_OFFSET(Kk1CreationFields, mAnmNum, 0xAC6);
+WWHD_OFFSET(Kk1CreationFields, mOrderEvent, 0xAC7);
 WWHD_OFFSET(Kk1CreationFields, mActionState, 0xAC8);
 WWHD_OFFSET(Kk1CreationFields, mPreviousState, 0xAC9);
 WWHD_OFFSET(Kk1CreationFields, mMessageType, 0xACC);
@@ -110,7 +110,7 @@ inline void Kk1A_deleteMorf(mDoExt_McaMorf* p) { Kk1A_MorfVirtual* v=Kk1A_view<K
 inline Kk1A_Emitter* Kk1A_emitter(u32 a) { return gabi::at<Kk1A_Emitter>(a); }
 inline Kk1A_JointTree* Kk1A_jointTree(u32 a) { return gabi::at<Kk1A_JointTree>(a); }
 inline fopAc_ac_c* Kk1A_actor(u32 a) { return gabi::at<fopAc_ac_c>(a); }
-inline be<s16>* Kk1A_eventIds(daNpc_Kk1_c* p) { return &p->m8EC; }
+inline be<s16>* Kk1A_eventIds(daNpc_Kk1_c* p) { return &p->mEventIds; }
 inline Kk1A_Bck* Kk1A_bck(daNpc_Kk1_c* p) { return Kk1A_view<Kk1A_Bck>(&p->mBckAnm); }
 inline be<u32>* Kk1A_checkList(u32 a) { return gabi::at<be<u32>>(a); }
 

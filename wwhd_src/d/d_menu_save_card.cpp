@@ -33,9 +33,9 @@ void SaveMgr::begin(u32 mode) {
 /* 02721A68 */
 void saveMgrSessionCounter() {
     u32 state = dComIfGs_ea();
-    u16 n = (u16)gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mInfo.field_0x10;
+    u16 n = (u16)gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mInfo.mSaveCount;
     if (n < MaxSaveCount)
-        gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mInfo.field_0x10 = (u16)(n + 1);
+        gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mInfo.mSaveCount = (u16)(n + 1);
 }
 /* 02721A8C */
 void saveMgrStampTime() {

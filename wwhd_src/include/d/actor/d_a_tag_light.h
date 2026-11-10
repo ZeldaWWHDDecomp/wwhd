@@ -104,7 +104,7 @@ struct Act_c : fopAc_ac_c {
         PRM_SCH_S = 24
     };
     enum TypeHD { Type_Box, Type_Cone, Type_Detector };
-    // HD: unknown member names follow TWW; their offsets move with the expanded actor base.
+    // HD: offsets move with the expanded actor base; the former TWW offset names are kept in the was-comments.
 
     void get_base_model_light_start_offset(cXyz *out);
     u8 chk_sw();
@@ -121,22 +121,24 @@ struct Act_c : fopAc_ac_c {
     s32 _create();
     void make_projection_mtx(const cXyz *point, const cXyz *normal, const cXyz *center, const cXyz *start);
     void get_projection_info(cXyz *point, cXyz *normal, cXyz *center, const cXyz *start, const cXyz *end);
-    request_of_phase_process_class mPhase;
-    gptr<J3DModel> mpModel;
-    gptr<mDoExt_btkAnm> mpBtk;
-    be<s32> m2A0;
-    be<f32> m2A4[12], m2D4[12];
-    be<u8> m304, m305;
-    be<s16> m306;
-    be<f32> m308;
-    dCcD_Stts mStts;
-    dCcD_Sph mSph;
-    be<f32> m474[12];
-    cXyz m4A4;
+    /* 0x3AC */ request_of_phase_process_class mPhase;
+    /* 0x3B4 */ gptr<J3DModel> mpModel;
+    /* 0x3B8 */ gptr<mDoExt_btkAnm> mpBtk;
+    /* 0x3BC */ be<s32> mType;  /* was m2A0: _create 024ADB04: prm type (tww prm_get_type(); Type_Box / Type_Cone / Type_Detector); _execute 024AE0E8 / _draw 024AE430 / _delete 024AE044 branch on it */
+    /* 0x3C0 */ be<f32> mMtx[12];  /* was m2A4: _create 024ADB04: copy of mDoMtx_stack_c (tww cMtx_copy), given to fopAcM_SetMtx in tww; set_spot_mtx 024AD894 / get_projection_info 024AD198 transform local points with it */
+    /* 0x3F0 */ be<f32> mInvMtx[12];  /* was m2D4: _create 024ADB04: MTXInverse(mMtx, it) */
+    /* 0x420 */ be<u8> mLightOn;  /* was m304: _create 024ADB04 / _execute 024AE0E8: chk_sw() && chk_sch() (tww), false for Type_Detector; picks the fade target of mAlpha */
+    /* 0x421 */ be<u8> mProjMtxValid;  /* was m305: make_projection_mtx 024AD594: 0 when the cone angle's cosine is about 0 (no projection), else 1; tww _draw draws the light model only when set */
+    /* 0x422 */ be<s16> mLitCount;  /* was m306: _execute 024AE0E8 (Type_Detector): +1 while chk_light(), else -1, limited to [0, 20]; above 10 it turns the switch on (tww); _create 024ADB04 0 */
+    /* 0x424 */ be<f32> mAlpha;  /* was m308: _execute 024AE0E8: cLib_chaseF toward mLightOn ? 1 : 0 at M_alpha_spd[fadeType]; _draw 024AE430 draws the cone only above 0, alpha it * 255.5; _create 024ADB04 1 / 0 */
+    /* 0x428 */ dCcD_Stts mStts;
+    /* 0x464 */ dCcD_Sph mSph;
+    /* 0x590 */ be<f32> mProjMtx[12];  /* was m474: make_projection_mtx 024AD594: copy of mDoMtx_stack_c (the light's projection matrix); tww _draw passes it to dComIfGd_setLightModel */
+    /* 0x5C0 */ cXyz mSize;  /* was m4A4: _create 024ADB04: the scale-derived size (tww: scale with x/y/z doubled per type); make_projection_mtx 024AD594 / get_projection_info 024AD198 use its x and z as the light's width and depth */
 };
 WWHD_OFFSET(Act_c, mpModel, 0x3B4);
-WWHD_OFFSET(Act_c, m2A0, 0x3BC);
-WWHD_OFFSET(Act_c, m308, 0x424);
-WWHD_OFFSET(Act_c, m474, 0x590);
-WWHD_OFFSET(Act_c, m4A4, 0x5C0);
+WWHD_OFFSET(Act_c, mType, 0x3BC);
+WWHD_OFFSET(Act_c, mAlpha, 0x424);
+WWHD_OFFSET(Act_c, mProjMtx, 0x590);
+WWHD_OFFSET(Act_c, mSize, 0x5C0);
 } // namespace daTagLight

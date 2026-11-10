@@ -39,15 +39,15 @@ WWHD_OFFSET(KanteraJoint, mJntNo, 4);
 struct mo_ga_s {
     /* 0x00 */ gptr<J3DModel> mpModel;
     /* 0x04 */ cXyz mPos;
-    /* 0x10 */ cXyz m10;
+    /* 0x10 */ cXyz mTargetPos;  /* was m10: ga_move (in daKantera_Execute 0218D3F8): random point within 150 / 30 / 150 of mBonPos, renewed when mTargetTimer runs out; the moth turns toward it (as ep_ga_s mTargetPos) */
     /* 0x1C */ be<s16> mRotX;
     /* 0x1E */ be<s16> mRotY;
     /* 0x20 */ u8 m20[0x24 - 0x20];
     /* 0x24 */ be<f32> mScale;
     /* 0x28 */ be<f32> mScaleY;
-    /* 0x2C */ be<s16> m2C;
-    /* 0x2E */ be<u8> m2E;
-    /* 0x2F */ be<u8> m2F;
+    /* 0x2C */ be<s16> mFlapAngle;  /* was m2C: ga_move (in daKantera_Execute 0218D3F8): + 0x3E00 per frame, mScaleY = cM_ssin of it; daKantera_CreateHeap 0218E39C: random start (as ep_ga_s mFlapAngle) */
+    /* 0x2E */ be<u8> mbEnabled;  /* was m2E: daKantera_CreateHeap 0218E39C: 1 for each moth with chance 0.5; ga_move (in daKantera_Execute 0218D3F8) skips a moth at 0; after TWW ep_ga_s mbEnabled (the same moth struct of the torch) */
+    /* 0x2F */ be<u8> mTargetTimer;  /* was m2F: ga_move (in daKantera_Execute 0218D3F8): counted down; at 0 set to cM_rndF(5) with a new mTargetPos (as ep_ga_s mTargetTimer) */
 };
 WWHD_SIZE(mo_ga_s, 0x30);
 
@@ -72,7 +72,7 @@ struct kantera_class : fopAc_ac_c {
     /* 0x3EC */ csXyz mJointBaseRotTarget;
     /* 0x3F2 */ u8 m2D6[2];
     /* 0x3F4 */ cXyz mBonPos;
-    /* 0x400 */ cXyz m2E4;
+    /* 0x400 */ cXyz mBonPosOld;  /* was m2E4: daKantera_Execute 0218D3F8: mBonPos copied in before mBonPos is moved; the step mBonPos - it tilts the lantern (x / z, capped at 0x4000) and ga_move (in daKantera_Execute) carries the moths along by 0.3 of it */
     /* 0x40C */ LIGHT_INFLUENCE mPlight;
     /* 0x430 */ Mtx34 mAlphaModelMtx;
     /* 0x460 */ be<f32> mBonAlpha;
@@ -83,7 +83,7 @@ struct kantera_class : fopAc_ac_c {
     /* 0x472 */ be<s16> mAnimCounters[2];
     /* 0x476 */ u8 m356[2];
     /* 0x478 */ be<s32> mAnimCounter;
-    /* 0x47C */ be<s16> m35C;
+    /* 0x47C */ be<s16> mBreakTimer;  /* was m35C: daKantera_Execute 0218D3F8: 0x82 when the lantern hits the ground (state 10), counted down: the flame sphere grows while above 40 and attacks while above 110, the particles end at 30, the light fades below 30, the actor is deleted at 0 */
     /* 0x47E */ u8 m35E[2];
     /* 0x480 */ be<f32> mModel2Scale;
     /* 0x484 */ be<s8> mState;

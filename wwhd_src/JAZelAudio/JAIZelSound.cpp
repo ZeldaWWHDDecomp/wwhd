@@ -40,15 +40,15 @@ JAIZelSound* JAIZelSound__ct(JAIZelSound* self) {
 
 /* 0202AD20 */
 f32 JAIZelSound::setDistanceVolumeCommon(f32 dist, u32 mode) {
-    u32 c = field_0x8;
+    u32 c = cameraIndex;
     PositionInfo_t* pi = mPositionInfo;
     f32 d;
     if (c != 4) {
-        d = pi[c].field_0x18;
+        d = pi[c].distance;
     } else {
-        d = pi[0].field_0x18;
+        d = pi[0].distance;
         for (u32 i = 1; i < JAIGlobalParameter_getParamAudioCameraMax(); i = (i + 1) & 0xFF) {
-            f32 v = mPositionInfo.get()[i].field_0x18;
+            f32 v = mPositionInfo.get()[i].distance;
             if (v < d) d = v;
         }
     }
@@ -75,7 +75,7 @@ f32 JAIZelSound::setDistanceVolumeCommon(f32 dist, u32 mode) {
 // HD: inverse-distance attenuation for selected sound IDs.
 f32 JAIZelSound::distanceVolumeHD(f32 nearScale, f32 k, f32 floor) {
     if (k == 0.0f) return 1.0f;
-    f32 d = mPositionInfo.get()[(u32)field_0x8].field_0x18;
+    f32 d = mPositionInfo.get()[(u32)cameraIndex].distance;
     f32 mv = JAIGlobalParameter_getParamMaxVolumeDistance() * nearScale;
     if (d < mv) return 1.0f;
     f32 v = mv / gabi::fmadds(k, d - mv, mv);
@@ -84,7 +84,7 @@ f32 JAIZelSound::distanceVolumeHD(f32 nearScale, f32 k, f32 floor) {
 
 /* 0202B08C */
 void JAIZelSound::setSeDistanceVolume(u32 fade) {
-    if ((getSwBit() & 0x00400000) && field_0x18 > 1) return;
+    if ((getSwBit() & 0x00400000) && frameCounter > 1) return;
     if (getSwBit() & 2) {
         setSeInterVolume(SOUNDPARAM_Distance, 1.0f, fade, 0);
         return;
@@ -129,7 +129,7 @@ void JAIZelSound::setSeDistanceVolume(u32 fade) {
 
 /* 0202B354 */
 void JAIZelSound::setSeDistancePan(u32 fade) {
-    if ((getSwBit() & 0x00800000) && field_0x18 > 1) return;
+    if ((getSwBit() & 0x00800000) && frameCounter > 1) return;
     f32 p = gabi::call_ptr<f32>(__vtbl->setDistancePanCommon, this); /* setDistancePanCommon */
     setSeInterPan(SOUNDPARAM_Distance, p, fade, 0);
 }
@@ -142,23 +142,23 @@ static inline void setDolby(JAIZelSound* self, f32 v, u32 fade) {
 
 /* 0202B3C8 */
 void JAIZelSound::setSeDistanceDolby(u32 fade) {
-    if ((getSwBit() & 0x00800000) && field_0x18 > 1) return;
-    cXyz* x24 = field_0x28;
+    if ((getSwBit() & 0x00800000) && frameCounter > 1) return;
+    cXyz* x24 = position;
     PositionInfo_t* pi = mPositionInfo;
     if (x24 == 0) {
         setDolby(this, 0.0f, fade);
         return;
     }
     f32 fm0 = JAIGlobalParameter_getParamSeDolbyFrontDistanceMax();
-    if ((f32)pi->field_0x8 < fm0) {
+    if ((f32)pi->currentZ < fm0) {
         setDolby(this, 0.0f, fade);
         return;
     }
-    f32 z = (f32)pi->field_0x8;
+    f32 z = (f32)pi->currentZ;
     if (z < 0.0f) {
         f32 c = JAIGlobalParameter_getParamSeDolbyCenterValue();
         f32 fm = JAIGlobalParameter_getParamSeDolbyFrontDistanceMax();
-        f32 t = c * (fm - (f32)pi->field_0x8);
+        f32 t = c * (fm - (f32)pi->currentZ);
         setDolby(this, t / JAIGlobalParameter_getParamSeDolbyFrontDistanceMax(), fade);
         return;
     }
@@ -170,7 +170,7 @@ void JAIZelSound::setSeDistanceDolby(u32 fade) {
     f32 c2 = JAIGlobalParameter_getParamSeDolbyCenterValue();
     f32 rest = 127.0f - c2;
     f32 bm = JAIGlobalParameter_getParamSeDolbyBehindDistanceMax();
-    f32 q = (f32)pi->field_0x8 / bm;
+    f32 q = (f32)pi->currentZ / bm;
     setDolby(this, gabi::fmadds(rest, q, c), fade);
 }
 

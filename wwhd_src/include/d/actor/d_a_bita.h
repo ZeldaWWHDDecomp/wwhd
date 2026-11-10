@@ -12,7 +12,7 @@ void fopAcM_SetMin(fopAc_ac_c *, f32, f32, f32);
 void fopAcM_SetMax(fopAc_ac_c *, f32, f32, f32);
 struct BitaBossHD : fopAc_ac_c {
     u8 _3AC[0x705A - 0x3AC];
-    be<s16> m6E16;
+    be<s16> mDemoCamMode;
 };
 struct BitaCameraHD {
     u8 _0[0xDC];

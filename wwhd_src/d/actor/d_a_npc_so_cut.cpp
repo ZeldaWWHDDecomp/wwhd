@@ -63,13 +63,13 @@ static inline int so_strcmp(u32 a, const char* literal) {
 /* dLib_circle_path_c (0x24), as used by the cuts (GameCube names) */
 
 static inline SoCutCirclePath* so_path(daNpc_So_c* t) {
-    return reinterpret_cast<SoCutCirclePath*>(t->mB10);
+    return reinterpret_cast<SoCutCirclePath*>(t->mCirclePath);
 }
 /* the ship / Link actors (play + 0x5B3C / 0x5B34) */
 static inline fopAc_ac_c* so_getShip() { return dComIfGp_getShipActor(); }
 static inline fopAc_ac_c* so_getLink() { return dComIfGp_getLinkPlayer(); }
-/* esa_class field_0x298 (HD +0x3B4) */
-/* mA78 (equip flag): HD +0xBF1 (the header names that byte mA79) */
+/* esa_class mTaken (HD +0x3B4) */
+/* mEquip (equip flag): HD +0xBF1 (the header names that byte mTagRndNum) */
 /* dComIfGp_getCamera(dComIfGp_getPlayerCameraID(0)): two calls to the play getter */
 static inline u32 so_getCamera() {
     s32 id = dComIfGp_getPlayerCameraID(0);
@@ -104,22 +104,22 @@ void daNpc_So_c::cutSwimProc() {
     pos.x = mEventCut.mPos.x; /* mEventCut.getAttnPos() */
     pos.y = mEventCut.mPos.y;
     pos.z = mEventCut.mPos.z;
-    mAFC = gabi::fadds_ppc(soCutRegisters().REG12_F10, 7.0f); /* REG12_F(10) + 7.0f */
+    mTargetSpeedF = gabi::fadds_ppc(soCutRegisters().REG12_F10, 7.0f); /* REG12_F(10) + 7.0f */
     f64 abs = so_absXZ(&current.pos, &pos);
     s16 target = cLib_targetAngleY(&current.pos, &pos);
     cLib_addCalcAngleS2(&shape_angle.y, target, 8, 0x400);
     if (abs < gabi::fadds_ppc(soCutRegisters().REG12_F7, 150.0f)) { /* REG12_F(7) + 150.0f */
-        mAFC = 0.0f;
-        dComIfGp_evmng_cutEnd(mB6C);
+        mTargetSpeedF = 0.0f;
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
 /* 022E1F90 */
 void daNpc_So_c::cutJumpStart() {
-    mA9C = 0xF;
+    mCutTimer = 0xF;
     current.pos.y = so_getWaterY(&current.pos, &mAcch);
-    be<f32>* pSpeedY = (be<f32>*)so_getMyP(mB6C, "Speed_y", 0);
-    be<f32>* pSpeedF = (be<f32>*)so_getMyP(mB6C, "SpeedF", 0);
+    be<f32>* pSpeedY = (be<f32>*)so_getMyP(mStaffId, "Speed_y", 0);
+    be<f32>* pSpeedF = (be<f32>*)so_getMyP(mStaffId, "SpeedF", 0);
     shape_angle.x = (s16)soCutHIO().m68;
     if (pSpeedY != nullptr) {
         speed.y = *pSpeedY;
@@ -127,12 +127,12 @@ void daNpc_So_c::cutJumpStart() {
         speed.y = 40.0f;
     }
     if (pSpeedF != nullptr) {
-        mAFC = *pSpeedF;
+        mTargetSpeedF = *pSpeedF;
     } else {
-        mAFC = 5.0f;
+        mTargetSpeedF = 5.0f;
     }
     so_offsetSwim(this);
-    speedF = mAFC;
+    speedF = mTargetSpeedF;
     so_setAnm(this, 4, false);
     so_seStart(this, SoCutConstants::JA_SE_CM_SO_JUMP_L);
 }
@@ -140,12 +140,12 @@ void daNpc_So_c::cutJumpStart() {
 /* 022E20EC */
 void daNpc_So_c::cutJumpProc() {
     f32 waterHeight = so_getWaterY(&current.pos, &mAcch);
-    if (so_calcTimerI(&mA9C) == 0 && !(current.pos.y > waterHeight)) {
+    if (so_calcTimerI(&mCutTimer) == 0 && !(current.pos.y > waterHeight)) {
         so_seStart(this, SoCutConstants::JA_SE_CM_SO_LANDING_L);
         fopKyM_createWpillar(&current.pos, gabi::fmuls_ppc(scale.x, 1.4f), 1.4f, 0);
-        mAFC = 0.0f;
+        mTargetSpeedF = 0.0f;
         speedF = 0.0f;
-        dComIfGp_evmng_cutEnd(mB6C);
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -157,8 +157,8 @@ void daNpc_So_c::cutAppearStart() {
 
 /* 022E2210 */
 void daNpc_So_c::cutAppearProc() {
-    if (std::fabs(gabi::fsubs_ppc(mB34, mB38.x)) < 10.0f) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (std::fabs(gabi::fsubs_ppc(mOffsetY, mOffsetYCalc.x)) < 10.0f) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -167,8 +167,8 @@ void daNpc_So_c::cutDiveStart() { so_offsetDive(this); }
 
 /* 022E226C */
 void daNpc_So_c::cutDiveProc() {
-    if (std::fabs(gabi::fsubs_ppc(mB34, mB38.x)) < 10.0f) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (std::fabs(gabi::fsubs_ppc(mOffsetY, mOffsetYCalc.x)) < 10.0f) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -181,14 +181,14 @@ void daNpc_So_c::cutDisappearStart() {
 
 /* 022E2334 */
 void daNpc_So_c::cutDisappearProc() {
-    if (std::fabs(gabi::fsubs_ppc(mB34, mB38.x)) < 10.0f) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (std::fabs(gabi::fsubs_ppc(mOffsetY, mOffsetYCalc.x)) < 10.0f) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
 /* 022E238C */
 void daNpc_So_c::cutSetAnmStart() {
-    u32 name = gabi::ea(so_getMyP(mB6C, "Name", 4));
+    u32 name = gabi::ea(so_getMyP(mStaffId, "Name", 4));
     if (name != 0) {
         if (so_strcmp(name, "WAIT") == 0) {
             mAnmPrmIdx = 1;
@@ -206,13 +206,13 @@ void daNpc_So_c::cutSetAnmStart() {
 
 /* 022E24C0 */
 void daNpc_So_c::cutSetAnmProc() {
-    so_getMyP(mB6C, "Name", 4); /* unused */
+    so_getMyP(mStaffId, "Name", 4); /* unused */
     if (isAnm(1) || isAnm(4) || isAnm(3) || isAnm(2)) {
-        dComIfGp_evmng_cutEnd(mB6C);
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
     /* mpMorf->isStop(): the frame control's stop flag, or a zero play speed */
     if (((u8)mpMorf->mFrameCtrl.mState & 1) || (f32)mpMorf->mFrameCtrl.mRate == 0.0f) {
-        dComIfGp_evmng_cutEnd(mB6C);
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -237,19 +237,19 @@ void daNpc_So_c::cutEffectStart() {
 }
 
 /* 022E266C */
-void daNpc_So_c::cutEffectProc() { dComIfGp_evmng_cutEnd(mB6C); }
+void daNpc_So_c::cutEffectProc() { dComIfGp_evmng_cutEnd(mStaffId); }
 
 /* 022E26A4 */
 void daNpc_So_c::cutEquipProc() {
-    s32 id = mB6C;
-    mA78 = 1;
+    s32 id = mStaffId;
+    mEquip = 1;
     dComIfGp_evmng_cutEnd(id);
 }
 
 /* 022E26E4 */
 void daNpc_So_c::cutUnequipProc() {
-    s32 id = mB6C;
-    mA78 = 0;
+    s32 id = mStaffId;
+    mEquip = 0;
     dComIfGp_evmng_cutEnd(id);
 }
 
@@ -258,7 +258,7 @@ void daNpc_So_c::cutEatesaStart() {
     /* GHS keeps `this` in r3 across offsetZero, which leaves it unchanged */
     soCut_offsetZero(this);
     daNpc_So_c* t = this;
-    t->mAFC = 0.0f;
+    t->mTargetSpeedF = 0.0f;
     t->speedF = 0.0f;
 }
 
@@ -266,10 +266,10 @@ void daNpc_So_c::cutEatesaStart() {
 void daNpc_So_c::cutEatesaProc() {
     fopAc_ac_c* esa = so_searchEsa(this);
     if (esa != nullptr) {
-        static_cast<esa_class*>(esa)->field_0x298 =
-            0x23; // HD: 0x23 (GameCube esa->field_0x298 = 1)
+        static_cast<esa_class*>(esa)->mTaken =
+            0x23; // HD: 0x23 (GameCube esa->mTaken = 1)
     } else {
-        dComIfGp_evmng_cutEnd(mB6C);
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -280,8 +280,8 @@ void daNpc_So_c::cutEatesaFirstStart() {
     SoCutCirclePath* path = so_path(this);
     path->mRadius = gabi::fadds_ppc(soCutRegisters().REG8_F11, 650.0f); /* REG8_F(11) + 650.0f */
     path->mAngle = ship->shape_angle.y;
-    mBDA = 1;
-    mAFC = 0.0f;
+    mLookHeadOnly = 1;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
 }
 
@@ -322,9 +322,9 @@ void daNpc_So_c::cutEatesaFirstProc() {
     mEventCut.mPos.x = goal.x; /* setAttnPos(local_34) */
     mEventCut.mPos.y = goal.y;
     mEventCut.mPos.z = goal.z;
-    mB44.x = goal.x;
-    mB44.y = goal.y;
-    mB44.z = goal.z;
+    mLookPos.x = goal.x;
+    mLookPos.y = goal.y;
+    mLookPos.z = goal.z;
     f32 spd;
     bool turn;
     if (abs2 < gabi::fadds_ppc(soCutRegisters().REG12_F7, 100.0f)) { /* REG12_F(7) + 100.0f */
@@ -334,11 +334,11 @@ void daNpc_So_c::cutEatesaFirstProc() {
             spd = 0.0f;
             fopAc_ac_c* esa = so_searchEsa(this);
             if (esa != nullptr) {
-                static_cast<esa_class*>(esa)->field_0x298 = 0x23; // HD: 0x23 (GameCube 1)
+                static_cast<esa_class*>(esa)->mTaken = 0x23; // HD: 0x23 (GameCube 1)
             } else {
-                dComIfGp_evmng_cutEnd(mB6C);
-                mBDA = 0;
-                mB04 = 0.0f;
+                dComIfGp_evmng_cutEnd(mStaffId);
+                mLookHeadOnly = 0;
+                mPathBlend = 0.0f;
             }
             turn = false;
         }
@@ -350,7 +350,7 @@ void daNpc_So_c::cutEatesaFirstProc() {
         turn = spd != 0.0f;
     }
     if (turn) {
-        s16 ang = cLib_targetAngleY(&mB54, &goal);
+        s16 ang = cLib_targetAngleY(&mHeadEyePos, &goal);
         cLib_addCalcAngleS2(&shape_angle.y, ang, 3, 0x1200);
     }
     soCut_addCalcPos(&current.pos, &goal, 0.1f, spd); /* cLib_addCalcPos2 */
@@ -359,94 +359,94 @@ void daNpc_So_c::cutEatesaFirstProc() {
 
 /* 022E2C18 */
 void daNpc_So_c::cutJumpMapopenStart() {
-    mBBC = 0;
+    mMapopenStep = 0;
     /* GHS keeps `this` in r3 across offsetZero, which leaves it unchanged */
     soCut_offsetZero(this);
     daNpc_So_c* t = this;
     so_setAnm(t, 2, false);
-    mBDA = 1;
+    mLookHeadOnly = 1;
 }
 
 /* 022E2C5C */
 void daNpc_So_c::cutJumpMapopenProc() {
     fopAc_ac_c* ship = so_getShip();
     if (ship == nullptr) {
-        dComIfGp_evmng_cutEnd(mB6C);
+        dComIfGp_evmng_cutEnd(mStaffId);
         return;
     }
-    if (mBBC == 0) {
-        mB34 = mB38.x;
+    if (mMapopenStep == 0) {
+        mOffsetY = mOffsetYCalc.x;
         gravity = soCutHIO().m80;
         speedF = 0.0f;
         f32 vy = soCutHIO().m84;
-        mB00 = vy;
-        mAFC = 0.0f;
+        mJumpSpeedY = vy;
+        mTargetSpeedF = 0.0f;
         speed.y = vy;
         shape_angle.x = (s16)soCutHIO().m68;
         so_seStart(this, SoCutConstants::JA_SE_CM_SO_JUMP_DRAW);
-        mBBC = mBBC + 1;
-    } else if (mBBC == 1) {
-        mBB0.x = ship->current.pos.x;
-        mBB0.y = ship->current.pos.y;
-        mBB0.z = ship->current.pos.z;
+        mMapopenStep = mMapopenStep + 1;
+    } else if (mMapopenStep == 1) {
+        mMapopenGoalPos.x = ship->current.pos.x;
+        mMapopenGoalPos.y = ship->current.pos.y;
+        mMapopenGoalPos.z = ship->current.pos.z;
         u16 idx = (u16)(ship->shape_angle.y + 0x4000);
-        so_offsetXZ(&mBB0, &mBB0, idx, -soCutHIO().m88);
+        so_offsetXZ(&mMapopenGoalPos, &mMapopenGoalPos, idx, -soCutHIO().m88);
         f32 y = current.pos.y;
         if (speed.y < 1.0) {
             speed.y = 1.0f;
         }
-        if (soCut_chasePosXZ(&current.pos, &mBB0, soCutHIO().m90) != 0) { /* cLib_chasePosXZ */
+        if (soCut_chasePosXZ(&current.pos, &mMapopenGoalPos, soCutHIO().m90) != 0) { /* cLib_chasePosXZ */
             current.pos.y = y;
             if ((u8)soCutHIO().m94 == 0) {
                 soCutPlay(dComIfGp_ea()).mFmapFishFlag = 2; /* dComIfGp_fmapOpenFishOn() */
             }
             shape_angle.y = shape_angle.y + 0x8000;
-            mBBC = mBBC + 1;
+            mMapopenStep = mMapopenStep + 1;
         }
-    } else if (mBBC == 2) {
-        mBB0.x = ship->current.pos.x;
-        mBB0.y = ship->current.pos.y;
-        mBB0.z = ship->current.pos.z;
+    } else if (mMapopenStep == 2) {
+        mMapopenGoalPos.x = ship->current.pos.x;
+        mMapopenGoalPos.y = ship->current.pos.y;
+        mMapopenGoalPos.z = ship->current.pos.z;
         u16 idx = (u16)(ship->shape_angle.y + 0x4000);
-        so_offsetXZ(&mBB0, &mBB0, idx, -soCutHIO().m8C);
+        so_offsetXZ(&mMapopenGoalPos, &mMapopenGoalPos, idx, -soCutHIO().m8C);
         f32 y = current.pos.y;
-        if (soCut_chasePosXZ(&current.pos, &mBB0, soCutHIO().m90) != 0) {
+        if (soCut_chasePosXZ(&current.pos, &mMapopenGoalPos, soCutHIO().m90) != 0) {
             current.pos.y = y;
             so_seStart(this, SoCutConstants::JA_SE_CM_SO_DIVE);
             fopKyM_createWpillar(&current.pos, gabi::fmuls_ppc(scale.x, 1.4f), 1.4f, 0);
-            mB00 = 0.0f;
+            mJumpSpeedY = 0.0f;
             speedF = 0.0f;
-            mAFC = 0.0f;
+            mTargetSpeedF = 0.0f;
             speed.y = 0.0f;
-            dComIfGp_evmng_cutEnd(mB6C);
+            dComIfGp_evmng_cutEnd(mStaffId);
             so_offsetDive(this);
-            mBDA = 0;
+            mLookHeadOnly = 0;
         }
     }
 }
 
 /* the camera centre/eye in front of / behind Link (cutMiniGameStart, initCam) */
 static inline void so_camAroundLink(daNpc_So_c* t, fopAc_ac_c* link) {
-    t->mBCC.x = link->current.pos.x;
-    t->mBCC.y = link->current.pos.y;
-    t->mBCC.z = link->current.pos.z;
-    t->mBCC.x = gabi::fmadds(100.0f, cM_ssin((u16)link->shape_angle.y), t->mBCC.x);
-    t->mBCC.y = gabi::fadds_ppc(t->mBCC.y, 50.0f);
-    t->mBCC.z = gabi::fmadds(100.0f, cM_scos((u16)link->shape_angle.y), t->mBCC.z);
-    t->mBC0.x = link->current.pos.x;
-    t->mBC0.y = link->current.pos.y;
-    t->mBC0.z = link->current.pos.z;
-    t->mBC0.x = gabi::fmadds(-200.0f, cM_ssin((u16)link->shape_angle.y), t->mBC0.x);
-    t->mBC0.y = gabi::fadds_ppc(t->mBC0.y, 100.0f);
-    t->mBC0.z = gabi::fmadds(-200.0f, cM_scos((u16)link->shape_angle.y), t->mBC0.z);
+    t->mCamCenter.x = link->current.pos.x;
+    t->mCamCenter.y = link->current.pos.y;
+    t->mCamCenter.z = link->current.pos.z;
+    t->mCamCenter.x = gabi::fmadds(100.0f, cM_ssin((u16)link->shape_angle.y), t->mCamCenter.x);
+    t->mCamCenter.y = gabi::fadds_ppc(t->mCamCenter.y, 50.0f);
+    t->mCamCenter.z = gabi::fmadds(100.0f, cM_scos((u16)link->shape_angle.y), t->mCamCenter.z);
+    t->mCamEye.x = link->current.pos.x;
+    t->mCamEye.y = link->current.pos.y;
+    t->mCamEye.z = link->current.pos.z;
+    t->mCamEye.x = gabi::fmadds(-200.0f, cM_ssin((u16)link->shape_angle.y), t->mCamEye.x);
+    t->mCamEye.y = gabi::fadds_ppc(t->mCamEye.y, 100.0f);
+    t->mCamEye.z = gabi::fmadds(-200.0f, cM_scos((u16)link->shape_angle.y), t->mCamEye.z);
 }
 
 /* 022E2F8C */
 void daNpc_So_c::cutMiniGameStart() {
-    mB74 = 0;
-    mB78 = 0;
-    mB80 = 0;
-    mB7C = 0;
+    mMiniGameStep = 0;
+    mMiniGameShotCount = 0;
+    mMiniGameJumpCount = 0;
+    mMiniGameHitCount = 0;
     so_offsetDive(this);
     /* dComIfGp_startMiniGame(8) */
     dComIfGp_startMiniGame(8, 0x80);
@@ -457,25 +457,25 @@ void daNpc_So_c::cutMiniGameStart() {
         so_camAroundLink(this, link);
         cXyz center;
         cXyz eye;
-        center.x = mBCC.x;
-        center.y = mBCC.y;
-        center.z = mBCC.z;
-        eye.x = mBC0.x;
-        eye.y = mBC0.y;
-        eye.z = mBC0.z;
+        center.x = mCamCenter.x;
+        center.y = mCamCenter.y;
+        center.z = mCamCenter.z;
+        eye.x = mCamEye.x;
+        eye.y = mCamEye.y;
+        eye.z = mCamEye.z;
         so_camReset(cam, &center, &eye);
         so_camStart(cam);
     }
     so_changeOriginalDemo(link);
     so_changeDemoMode(link, SoCutConstants::DEMO_BOW_MINIGAME_e);
-    mBDB = 0;
-    mBDE = 0;
+    mNoPosMove = 0;
+    mCamInitDone = 0;
 }
 
 /* 022E3158 */
 void daNpc_So_c::initCam() {
-    if (mBDE == 0) { /* GameCube: mBDE != 1 */
-        mBDE = 1;
+    if (mCamInitDone == 0) { /* GameCube: mCamInitDone != 1 */
+        mCamInitDone = 1;
         u32 cam = so_getCamera();
         if (soCutRegisters().REG8_S1 == 0) { /* REG8_S(1) */
             so_camStop(cam);
@@ -498,16 +498,16 @@ void daNpc_So_c::moveCam() {
         eye.x = gabi::fmadds(-400.0f, cM_ssin((u16)link->shape_angle.y), link->current.pos.x);
         eye.y = gabi::fadds_ppc(link->current.pos.y, 300.0f);
         eye.z = gabi::fmadds(-400.0f, cM_scos((u16)link->shape_angle.y), link->current.pos.z);
-        soCut_addCalcPos(&mBC0, &eye, 0.05f, 5.0f); /* cLib_addCalcPos2 */
-        soCut_addCalcPos(&mBCC, &center, 0.05f, 5.0f);
+        soCut_addCalcPos(&mCamEye, &eye, 0.05f, 5.0f); /* cLib_addCalcPos2 */
+        soCut_addCalcPos(&mCamCenter, &center, 0.05f, 5.0f);
         cXyz c;
         cXyz e;
-        c.x = mBCC.x;
-        c.y = mBCC.y;
-        e.x = mBC0.x;
-        e.z = mBC0.z;
-        c.z = mBCC.z;
-        e.y = mBC0.y;
+        c.x = mCamCenter.x;
+        c.y = mCamCenter.y;
+        e.x = mCamEye.x;
+        e.z = mCamEye.z;
+        c.z = mCamCenter.z;
+        e.y = mCamEye.y;
         so_camSet(cam, &c, &e);
     }
 }
@@ -523,12 +523,12 @@ static inline void so_miniGameFinish(daNpc_So_c* t, fopAc_ac_c* player) {
     t->moveCam();
     mDoAud_seStart(SoCutConstants::JA_SE_END_WHISTLE, nullptr, 0, 0);
     so_endMiniGame();
-    s32 id = t->mB6C;
-    t->mAFC = 0.0f;
+    s32 id = t->mStaffId;
+    t->mTargetSpeedF = 0.0f;
     t->speedF = 0.0f;
     dComIfGp_evmng_cutEnd(id);
 }
-/* the next attention point: (mB88, 0, mB8C) turned by angY, plus base */
+/* the next attention point: (mMiniGameAttnOfsX, 0, mMiniGameAttnOfsZ) turned by angY, plus base */
 /* inlined into Fishman cuts */
 static inline void so_miniGameAttnPos(daNpc_So_c* t, s16 angY, cXyz* base, f32 x, f32 z) {
     cXyz ofs;
@@ -555,8 +555,8 @@ static inline f64 so_miniGameTurn(daNpc_So_c* t, cXyz* p) {
 /* inlined into Fishman cuts */
 static inline void so_miniGameJump(daNpc_So_c* t, fopAc_ac_c* player, bool done) {
     f32 water = so_getWaterY(&t->current.pos, &t->mAcch);
-    if (t->mB84 == 0 && t->mB7C < 10) {
-        if (t->m6D8 == 0) {
+    if (t->mB84 == 0 && t->mMiniGameHitCount < 10) {
+        if (t->mTgHitTimer == 0) {
             cM3dGSph* sph = &t->mSph.mSph; /* mSph's cM3dGSph */
             if (!(t->current.pos.y < gabi::fadds_ppc(water, 50.0f))) {
                 soCut_sphereRadius(sph, soCutHIO().m3C);  /* SetR(l_HIO.m3C) */
@@ -573,21 +573,21 @@ static inline void so_miniGameJump(daNpc_So_c* t, fopAc_ac_c* player, bool done)
             }
         }
         if (soCut_checkTargetHit(t)) { /* checkTgHit */
-            s32 n = t->mB7C + 1;
-            t->mB7C = n < 10 ? n : 10;
+            s32 n = t->mMiniGameHitCount + 1;
+            t->mMiniGameHitCount = n < 10 ? n : 10;
         }
     }
     if (!(t->current.pos.y > water)) {
         so_seStart(t, SoCutConstants::JA_SE_CM_SO_LANDING_L);
         fopKyM_createWpillar(&t->current.pos, gabi::fmuls_ppc(t->scale.x, 1.4f), 1.4f, 0);
-        s32 n = t->mB80;
-        t->mAFC = 0.0f;
+        s32 n = t->mMiniGameJumpCount;
+        t->mTargetSpeedF = 0.0f;
         t->speedF = 0.0f;
-        t->mB80 = n + 1;
+        t->mMiniGameJumpCount = n + 1;
         if (n + 1 >= 10 || done) {
             so_miniGameFinish(t, player);
         } else {
-            t->mB74 = 0;
+            t->mMiniGameStep = 0;
         }
     }
 }
@@ -609,37 +609,37 @@ void daNpc_So_c::cutMiniGameProc() {
         base.copy(ship->current.pos);
     }
     if ((u32)soCutPlayer(player).mStatus & 0x20000000) { /* player->checkArrowShoot() */
-        mB78 = mB78 + 1;
+        mMiniGameShotCount = mMiniGameShotCount + 1;
     }
-    if (mB78 >= 10) {
+    if (mMiniGameShotCount >= 10) {
         done = true;
-        if (mB74 <= 6) {
+        if (mMiniGameStep <= 6) {
             so_miniGameFinish(this, player);
             return;
         }
     }
-    switch ((u32)(s32)mB74) {
+    switch ((u32)(s32)mMiniGameStep) {
     case 0:
         so_setAnm(this, 2, false);
-        mAFC = 0.0f;
+        mTargetSpeedF = 0.0f;
         speedF = 0.0f;
-        mB74 = mB74 + 1;
-        mA9C = 30;
+        mMiniGameStep = mMiniGameStep + 1;
+        mCutTimer = 30;
         mB84 = 0;
         so_offsetSwim(this);
         break;
     case 1:
-        if (so_calcTimerI(&mA9C) == 0) {
-            mB74 = mB74 + 1;
+        if (so_calcTimerI(&mCutTimer) == 0) {
+            mMiniGameStep = mMiniGameStep + 1;
         }
         break;
     case 2: {
         so_setAnm(this, 2, false);
-        mB8C = gabi::fadds_ppc(cM_rndF(400.0f), 1000.0f);
+        mMiniGameAttnOfsZ = gabi::fadds_ppc(cM_rndF(400.0f), 1000.0f);
         f32 x = gabi::fadds_ppc(-500.0f, cM_rndF(1000.0f));
-        mB88 = x;
-        so_miniGameAttnPos(this, angY, &base, x, mB8C);
-        mB74 = mB74 + 1;
+        mMiniGameAttnOfsX = x;
+        so_miniGameAttnPos(this, angY, &base, x, mMiniGameAttnOfsZ);
+        mMiniGameStep = mMiniGameStep + 1;
         so_offsetSwim(this);
         break;
     }
@@ -648,24 +648,24 @@ void daNpc_So_c::cutMiniGameProc() {
         p.x = mEventCut.mPos.x;
         p.y = mEventCut.mPos.y;
         p.z = mEventCut.mPos.z;
-        mAFC = gabi::fadds_ppc(soCutRegisters().REG12_F10, 12.0f); /* REG12_F(10) + 12.0f */
+        mTargetSpeedF = gabi::fadds_ppc(soCutRegisters().REG12_F10, 12.0f); /* REG12_F(10) + 12.0f */
         f64 abs = so_miniGameTurn(this, &p);
         if (abs < gabi::fadds_ppc(soCutRegisters().REG12_F7, 150.0f)) { /* REG12_F(7) + 150.0f */
-            mAFC = 0.0f;
-            mB74 = mB74 + 1;
+            mTargetSpeedF = 0.0f;
+            mMiniGameStep = mMiniGameStep + 1;
         }
         break;
     }
     case 4: {
         f32 r = cM_rndF(300.0f);
-        f32 z = mB8C;
-        f32 x = gabi::fadds_ppc(mB88, gabi::fadds_ppc(-150.0f, r));
-        mB88 = x;
+        f32 z = mMiniGameAttnOfsZ;
+        f32 x = gabi::fadds_ppc(mMiniGameAttnOfsX, gabi::fadds_ppc(-150.0f, r));
+        mMiniGameAttnOfsX = x;
         so_miniGameAttnPos(this, angY, &base, x, z);
-        mAFC = 0.0f;
-        mB74 = mB74 + 1;
+        mTargetSpeedF = 0.0f;
+        mMiniGameStep = mMiniGameStep + 1;
         speedF = 0.0f;
-        mA9C = 30;
+        mCutTimer = 30;
         so_offsetSwim(this);
         break;
     }
@@ -674,19 +674,19 @@ void daNpc_So_c::cutMiniGameProc() {
         p.y = mEventCut.mPos.y;
         p.z = mEventCut.mPos.z;
         p.x = mEventCut.mPos.x;
-        mAFC = 0.0f;
+        mTargetSpeedF = 0.0f;
         so_miniGameTurn(this, &p);
-        if (so_calcTimerI(&mA9C) == 0) {
-            mB74 = mB74 + 1;
+        if (so_calcTimerI(&mCutTimer) == 0) {
+            mMiniGameStep = mMiniGameStep + 1;
         }
         break;
     }
     case 6: {
         current.pos.y = so_getWaterY(&current.pos, &mAcch);
-        f32 spd = gabi::fmuls_ppc(gabi::fadds_ppc(cM_rndF(5.0f), 5.0f), mB08);
-        mAFC = spd;
+        f32 spd = gabi::fmuls_ppc(gabi::fadds_ppc(cM_rndF(5.0f), 5.0f), mTargetScale);
+        mTargetSpeedF = spd;
         speedF = spd;
-        f32 vy = gabi::fmadds(18.0f, mB08, gabi::fmuls_ppc(spd, 4.0f));
+        f32 vy = gabi::fmadds(18.0f, mTargetScale, gabi::fmuls_ppc(spd, 4.0f));
         speed.y = vy;
         f32 mx = soCutHIO().m50;
         if (vy > mx) { /* ble: a NaN keeps vy */
@@ -696,7 +696,7 @@ void daNpc_So_c::cutMiniGameProc() {
         so_setAnm(this, 4, false);
         shape_angle.x = (s16)soCutHIO().m68;
         so_offsetZero(this);
-        mB74 = mB74 + 1;
+        mMiniGameStep = mMiniGameStep + 1;
         so_seStart(this, SoCutConstants::JA_SE_CM_SO_JUMP_L);
         break;
     }
@@ -707,13 +707,13 @@ void daNpc_So_c::cutMiniGameProc() {
 }
 
 /* 022E3CF0 */
-void daNpc_So_c::cutTurnStart() { mA9C = 30; }
+void daNpc_So_c::cutTurnStart() { mCutTimer = 30; }
 
 /* 022E3CFC */
 void daNpc_So_c::cutTurnProc() {
     fopAc_ac_c* ship = so_getShip();
     if (ship == nullptr) {
-        dComIfGp_evmng_cutEnd(mB6C);
+        dComIfGp_evmng_cutEnd(mStaffId);
         return;
     }
     u16 idx = (u16)(ship->shape_angle.y + 0x4000);
@@ -727,8 +727,8 @@ void daNpc_So_c::cutTurnProc() {
     cLib_addCalcAngleS2(&shape_angle.y, target, 8, 0x400);
     s32 dist = soCut_distanceAngle((s16)shape_angle.y,
                                    target); /* cLib_distanceAngleS (the whole r3 is compared) */
-    if (so_calcTimerI(&mA9C) == 0 || dist <= 0x400) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (so_calcTimerI(&mCutTimer) == 0 || dist <= 0x400) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -757,12 +757,12 @@ static inline void so_camResetStart(daNpc_So_c* t) {
     u32 cam = so_getCamera();
     cXyz center;
     cXyz eye;
-    center.x = t->mBCC.x;
-    center.y = t->mBCC.y;
-    center.z = t->mBCC.z;
-    eye.x = t->mBC0.x;
-    eye.y = t->mBC0.y;
-    eye.z = t->mBC0.z;
+    center.x = t->mCamCenter.x;
+    center.y = t->mCamCenter.y;
+    center.z = t->mCamCenter.z;
+    eye.x = t->mCamEye.x;
+    eye.y = t->mCamEye.y;
+    eye.z = t->mCamEye.z;
     so_camReset(cam, &center, &eye);
     so_camStart(cam);
 }
@@ -773,23 +773,23 @@ void daNpc_So_c::cutMiniGameWarpStart() {
     fopAc_ac_c* link = so_getLink();
     so_changeOriginalDemo(link);
     fopAc_ac_c* ship = so_getShip();
-    mB90.y = so_getWaterY(&mB90, &mAcch);
-    mBA0.copy(ship->current.pos);
-    mBAC = ship->shape_angle.y;
-    so_shipInitStartPos(ship, &mB90, (s16)(mB9C + 0x4000));
-    so_setPlayerPosAndAngle(link, &mB90, (s16)(mB9C + soCutRegisters().REG8_S6)); /* REG8_S(6) */
+    mMiniGameTagPos.y = so_getWaterY(&mMiniGameTagPos, &mAcch);
+    mShipReturnPos.copy(ship->current.pos);
+    mShipReturnAngle = ship->shape_angle.y;
+    so_shipInitStartPos(ship, &mMiniGameTagPos, (s16)(mMiniGameTagAngle + 0x4000));
+    so_setPlayerPosAndAngle(link, &mMiniGameTagPos, (s16)(mMiniGameTagAngle + soCutRegisters().REG8_S6)); /* REG8_S(6) */
     speedF = 0.0f;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     u16 idx = (u16)(ship->shape_angle.y - 0x4000 + soCutRegisters().REG12_S6); /* REG12_S(6) */
-    f32 x = mB90.x;
+    f32 x = mMiniGameTagPos.x;
     current.pos.x = x;
-    current.pos.y = mB90.y;
-    f32 z = mB90.z;
+    current.pos.y = mMiniGameTagPos.y;
+    f32 z = mMiniGameTagPos.z;
     current.pos.z = z;
     current.pos.x = gabi::fmadds(300.0f, cM_ssin(idx), x);
-    mBDB = 1;
+    mNoPosMove = 1;
     current.pos.z = gabi::fmadds(300.0f, cM_scos(idx), z);
-    mA9C = soCutRegisters().REG12_S1 + 10; /* REG12_S(1) + 10 */
+    mCutTimer = soCutRegisters().REG12_S1 + 10; /* REG12_S(1) + 10 */
     so_camResetStart(this);
 }
 
@@ -801,8 +801,8 @@ void daNpc_So_c::cutMiniGameWarpProc() {
     so_changeDemoParam0(link, 1);
     so_changeDemoMode(link, SoCutConstants::DEMO_N_TALK_e);
     so_besideShip(this, ship);
-    if (so_calcTimerI(&mA9C) == 0) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (so_calcTimerI(&mCutTimer) == 0) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -818,12 +818,12 @@ void daNpc_So_c::cutMiniGameReturnStart() {
     if (ship == nullptr) {
         soCut_assertion("d_a_npc_so_dproc.inc", 0x3BA, "ship != (0)"); // HD: JUT_ASSERT(ship)
     }
-    so_setPlayerPosAndAngle(link, &mBA0, (s16)(mB9C + soCutRegisters().REG8_S6)); /* REG8_S(6) */
+    so_setPlayerPosAndAngle(link, &mShipReturnPos, (s16)(mMiniGameTagAngle + soCutRegisters().REG8_S6)); /* REG8_S(6) */
     if (ship != nullptr) {
-        so_shipInitStartPos(ship, &mBA0, mBAC);
+        so_shipInitStartPos(ship, &mShipReturnPos, mShipReturnAngle);
     }
-    mBDB = 1;
-    mAFC = 0.0f;
+    mNoPosMove = 1;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
     so_setAnm(this, 2, false);
     so_offsetDive(this);
@@ -847,12 +847,12 @@ static inline void so_camBehindLink(daNpc_So_c* t, fopAc_ac_c* link) {
     soCut_matrixPosition(&ofs, &out);                                          /* MtxPosition */
     cXyz eye;
     soCut_add(&link->current.pos, &eye, &out); /* cXyz::operator+ */
-    t->mBC0.copy(eye);
-    t->mBCC.x = link->current.pos.x;
+    t->mCamEye.copy(eye);
+    t->mCamCenter.x = link->current.pos.x;
     f32 y = link->current.pos.y;
-    t->mBCC.y = y;
-    t->mBCC.z = link->current.pos.z;
-    t->mBCC.y = gabi::fadds_ppc(
+    t->mCamCenter.y = y;
+    t->mCamCenter.z = link->current.pos.z;
+    t->mCamCenter.y = gabi::fadds_ppc(
         y, gabi::fadds_ppc(soCutRegisters().REG0_F7, 90.0f)); /* REG0_F(7) + 90.0f */
 }
 
@@ -861,14 +861,14 @@ void daNpc_So_c::cutMiniGameReturnProc() {
     fopAc_ac_c* ship = so_getShip();
     so_besideShip(this, ship);
     shape_angle.x = 0;
-    if (so_absXZ(&mBA0, &current.pos) < 400.0f) {
+    if (so_absXZ(&mShipReturnPos, &current.pos) < 400.0f) {
         fopAc_ac_c* link = so_getLink();
         so_changeDemoMode(link, SoCutConstants::DEMO_N_TALK_e);
         so_changeOriginalDemo(link);
         so_changeDemoParam0(link, 1);
         so_camBehindLink(this, link);
         so_camResetStart(this);
-        dComIfGp_evmng_cutEnd(mB6C);
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
@@ -877,7 +877,7 @@ void daNpc_So_c::cutPartnerShipProc() {
     fopAc_ac_c* ship = so_getShip();
     /* dComIfGp_event_setTalkPartner(ship): mPtTalk = getPId(ship) */
     dComIfGp_event_setTalkPartner(ship);
-    dComIfGp_evmng_cutEnd(mB6C);
+    dComIfGp_evmng_cutEnd(mStaffId);
 }
 
 /* 022E4498 */
@@ -893,28 +893,28 @@ void daNpc_So_c::cutMiniGameWaitStart() {
 void daNpc_So_c::cutMiniGameWaitProc() {
     dComIfGp_ea(); // HD: a dead camera lookup (two play getter calls)
     dComIfGp_ea();
-    dComIfGp_evmng_cutEnd(mB6C);
+    dComIfGp_evmng_cutEnd(mStaffId);
 }
 
 /* 022E4540 */
 void daNpc_So_c::cutMiniGameEndStart() {
-    mBDE = 0;
-    mA9C = soCutRegisters().REG12_S0 + 0x2D; /* REG12_S(0) + 45 */
+    mCamInitDone = 0;
+    mCutTimer = soCutRegisters().REG12_S0 + 0x2D; /* REG12_S(0) + 45 */
 }
 
 /* 022E455C */
 void daNpc_So_c::cutMiniGameEndProc() {
     initCam();
     moveCam();
-    if (so_calcTimerI(&mA9C) == 0) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (so_calcTimerI(&mCutTimer) == 0) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
 /* 022E45B4 */
 void daNpc_So_c::cutMiniGamePlTurnStart() {
-    mBDE = 0;
-    mA9C = soCutRegisters().REG12_S2 + 10; /* REG12_S(2) + 10 */
+    mCamInitDone = 0;
+    mCutTimer = soCutRegisters().REG12_S2 + 10; /* REG12_S(2) + 10 */
 }
 
 /* 022E45D0 */
@@ -925,14 +925,14 @@ void daNpc_So_c::cutMiniGamePlTurnProc() {
     so_changeDemoParam0(link, 1);
     so_changeDemoMode(link, SoCutConstants::DEMO_N_TALK_e);
     so_besideShip(this, ship);
-    if (so_calcTimerI(&mA9C) == 0) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (so_calcTimerI(&mCutTimer) == 0) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 
 /* 022E46B8 */
 void daNpc_So_c::cutMiniGamePlUpStart() {
-    mA9C = 30;
+    mCutTimer = 30;
     u32 cam = so_getCamera();
     so_camStop(cam);
     so_camSetTrimSize(cam, 1);
@@ -946,15 +946,15 @@ void daNpc_So_c::cutMiniGamePlUpProc() {
     u32 cam = so_getCamera();
     cXyz center;
     cXyz eye;
-    center.x = mBCC.x;
-    center.y = mBCC.y;
-    center.z = mBCC.z;
-    eye.x = mBC0.x;
-    eye.y = mBC0.y;
-    eye.z = mBC0.z;
+    center.x = mCamCenter.x;
+    center.y = mCamCenter.y;
+    center.z = mCamCenter.z;
+    eye.x = mCamEye.x;
+    eye.y = mCamEye.y;
+    eye.z = mCamEye.z;
     so_camSet(cam, &center, &eye);
-    if (so_calcTimerI(&mA9C) == 0) {
-        dComIfGp_evmng_cutEnd(mB6C);
+    if (so_calcTimerI(&mCutTimer) == 0) {
+        dComIfGp_evmng_cutEnd(mStaffId);
     }
 }
 

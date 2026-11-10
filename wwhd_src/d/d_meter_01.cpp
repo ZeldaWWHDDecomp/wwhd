@@ -48,8 +48,8 @@ static u32 dMeter_HIO_c__ct(u32 self) {
             return 0;
     }
     dMeter_HIO_c* i_this = gabi::at<dMeter_HIO_c>(self);
-    i_this->field_0x6 = 0x0;
-    i_this->field_0xc = l_zero;
+    i_this->mCompassFadeFrames = 0x0;
+    i_this->mBossLifeRatioDefault = l_zero;
     i_this->mVtable = 0x100510b4;
     i_this->mReserved6 = 0x0;
     i_this->field_0x10 = l_zero;
@@ -81,9 +81,9 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->field_0x34 = 0x0;
     i_this->field_0x61 = 0x0;
     i_this->field_0x24 = l_zero;
-    i_this->field_0x62 = 0x0;
+    i_this->mIgnoreArrowNumCount = 0x0;
     i_this->field_0x32 = 0x0;
-    i_this->field_0x63 = 0x0;
+    i_this->mIgnoreBombNumCount = 0x0;
     i_this->field_0x20 = l_zero;
     i_this->field_0x68 = 0x0;
     i_this->field_0x66 = 0x0;
@@ -93,22 +93,22 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     meter01_clear(&i_this->field_0x72[0], 0x6);
     meter01_clear(&i_this->field_0x78[0], 0x6);
     i_this->mReserved86 = 0x0;
-    i_this->field_0x8c = 0x0;
-    i_this->field_0x88 = 0x0;
+    i_this->mKeyLightStep2 = 0x0;
+    i_this->mKeyLightStep0 = 0x0;
     i_this->mReserved82 = 0x0;
     i_this->field_0x7e = 0x0;
     i_this->field_0x9c = 0x0;
-    i_this->field_0x92 = 0x0;
-    i_this->field_0x90 = 0x0;
-    i_this->field_0x9a = 0x0;
-    i_this->field_0x94 = 0x0;
-    i_this->field_0x98 = 0x0;
-    i_this->field_0x96 = 0x0;
+    i_this->mKeyLightStepRange0 = 0x0;
+    i_this->mKeyLightStart = 0x0;
+    i_this->mKeyLightStartRange = 0x0;
+    i_this->mKeyLightStepRange1 = 0x0;
+    i_this->mKeyLightEndRange = 0x0;
+    i_this->mKeyLightStepRange2 = 0x0;
     i_this->mReserved80 = 0x0;
-    i_this->field_0x8a = 0x0;
+    i_this->mKeyLightStep1 = 0x0;
     i_this->field_0x9e = 0x0;
     i_this->mReserved84 = 0x0;
-    i_this->field_0x8e = 0x0;
+    i_this->mKeyLightEndStep = 0x0;
     meter01_clear(&i_this->field_0xa0, 0x8);
     meter01_clear(&i_this->field_0xa8, 0x8);
     meter01_clear(&i_this->field_0xb0, 0x8);
@@ -148,12 +148,12 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     meter01_clear(&i_this->field_0x146, 0x4);
     meter01_clear(&i_this->field_0x14a, 0x4);
     i_this->field_0x30 = 0x0;
-    i_this->field_0x63 = 0x0;
+    i_this->mIgnoreBombNumCount = 0x0;
     i_this->field_0x14 = l_zero;
     i_this->field_0x38 = 0x0;
     i_this->field_0x36 = 0x16;
     i_this->field_0x5c = l_hioValues.mValues[6];
-    i_this->field_0xc = l_one;
+    i_this->mBossLifeRatioDefault = l_one;
     i_this->field_0x1c = l_one;
     i_this->field_0x32 = 0x0;
     i_this->field_0x40 = 0x5a;
@@ -161,9 +161,9 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->mScopeWipeAlpha = 0xff;
     i_this->field_0x3c = l_hioValues.mValues[2];
     i_this->field_0x20 = l_hioValues.mValues[3];
-    i_this->field_0x62 = 0x0;
+    i_this->mIgnoreArrowNumCount = 0x0;
     i_this->field_0x64 = 0x0;
-    i_this->field_0x6 = 0xa;
+    i_this->mCompassFadeFrames = 0xa;
     i_this->field_0x48 = l_hioValues.mValues[5];
     i_this->field_0x68 = 0x0;
     i_this->field_0x44 = 0x64;
@@ -183,20 +183,20 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->field_0x66 = 0x0;
     i_this->field_0x60 = 0x96;
     i_this->field_0x54 = 0x0;
-    i_this->field_0x88 = 0xf;
+    i_this->mKeyLightStep0 = 0xf;
     i_this->field_0x46 = 0x5a;
-    i_this->field_0x96 = 0x3;
+    i_this->mKeyLightStepRange2 = 0x3;
     i_this->field_0x132 = 0x27;
     i_this->field_0x13c = 0xa;
     i_this->field_0x12e = 0x2;
     i_this->field_0x13e = 0x0;
-    i_this->field_0x8e = 0x5;
-    i_this->field_0x92 = 0xc;
+    i_this->mKeyLightEndStep = 0x5;
+    i_this->mKeyLightStepRange0 = 0xc;
     i_this->field_0x147 = 0x0;
     i_this->field_0x14c = 0x32;
     i_this->field_0x123 = 0x1;
     i_this->field_0x143 = 0x0;
-    i_this->field_0x9a = 0x0;
+    i_this->mKeyLightStartRange = 0x0;
     i_this->field_0x14a = 0xff;
     i_this->field_0x121 = 0xc8;
     i_this->field_0x14e = 0xa;
@@ -208,8 +208,8 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->field_0xac = 0x0;
     i_this->field_0x136 = 0x4;
     i_this->mScopeWipeMaxScale = l_hioValues.mValues[8];
-    i_this->field_0x8a = 0x5;
-    i_this->field_0x90 = 0x14;
+    i_this->mKeyLightStep1 = 0x5;
+    i_this->mKeyLightStart = 0x14;
     i_this->field_0x145 = 0xff;
     i_this->field_0x148 = 0x0;
     i_this->field_0x134 = 0x3;
@@ -219,9 +219,9 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->field_0x120 = 0x8c;
     i_this->field_0x138 = 0xa;
     i_this->field_0x140 = 0x0;
-    i_this->field_0x98 = 0x3;
+    i_this->mKeyLightEndRange = 0x3;
     i_this->field_0xa0 = 0x0;
-    i_this->field_0x8c = 0x5;
+    i_this->mKeyLightStep2 = 0x5;
     i_this->field_0x12a = 0x3;
     i_this->field_0x124 = 0x5;
     i_this->field_0x142 = 0xb4;
@@ -247,7 +247,7 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->field_0xfe = 0x0;
     i_this->field_0xbe = 0x0;
     i_this->field_0xc4 = 0x0;
-    i_this->field_0x94 = 0x3;
+    i_this->mKeyLightStepRange1 = 0x3;
     i_this->field_0xbc = 0xfffb;
     i_this->field_0xb6 = 0xfffa;
     i_this->field_0xe0 = 0x19;
@@ -558,11 +558,11 @@ static s32 dMeter_Draw(sub_meter_class* i_Meter) {
         &i_Meter->mHeartShadow[14], &i_Meter->mHeart[15],       &i_Meter->mHeartShadow[15],
         &i_Meter->mHeart[16],       &i_Meter->mHeartShadow[16], &i_Meter->mHeart[17],
         &i_Meter->mHeartShadow[17], &i_Meter->mHeart[18],       &i_Meter->mHeartShadow[18],
-        &i_Meter->mHeart[19],       &i_Meter->mHeartShadow[19], &i_Meter->field_0x0f38[0],
-        &i_Meter->field_0x0f38[1],  &i_Meter->field_0x0f38[2],  &i_Meter->field_0x0f38[3],
-        &i_Meter->field_0x0f38[4],  &i_Meter->field_0x0f38[5],  &i_Meter->field_0x0f38[6],
-        &i_Meter->field_0x0f38[7],  &i_Meter->field_0x10f8,     &i_Meter->field_0x11a0,
-        &i_Meter->field_0x11d8,     &i_Meter->field_0x1210,     &i_Meter->field_0x12f0,
+        &i_Meter->mHeart[19],       &i_Meter->mHeartShadow[19], &i_Meter->mMagicBar[0],
+        &i_Meter->mMagicBar[1],  &i_Meter->mMagicBar[2],  &i_Meter->mMagicBar[3],
+        &i_Meter->mMagicBar[4],  &i_Meter->mMagicBar[5],  &i_Meter->mMagicBar[6],
+        &i_Meter->mMagicBar[7],  &i_Meter->mMagicGauge3,     &i_Meter->mMagicGauge1,
+        &i_Meter->mMagicGaugeShadow1,     &i_Meter->field_0x1210,     &i_Meter->field_0x12f0,
         &i_Meter->field_0x1398,     &i_Meter->field_0x13d0,     &i_Meter->field_0x1408,
         &i_Meter->field_0x1440,     &i_Meter->field_0x1478[0],  &i_Meter->field_0x1868[0],
         &i_Meter->field_0x1478[1],  &i_Meter->field_0x1868[0],  &i_Meter->field_0x1478[2],
@@ -572,9 +572,9 @@ static s32 dMeter_Draw(sub_meter_class* i_Meter) {
         &i_Meter->field_0x1590[3],  &i_Meter->field_0x1718[0],  &i_Meter->field_0x1670,
         &i_Meter->field_0x16a8,     &i_Meter->field_0x16e0,     &i_Meter->field_0x17f8,
         &i_Meter->field_0x1830,     &i_Meter->field_0x1910,     &i_Meter->field_0x1948,
-        &i_Meter->field_0x1980,     &i_Meter->field_0x19b8,     &i_Meter->field_0x1ad0[0],
-        &i_Meter->field_0x1c20[0],  &i_Meter->field_0x1ad0[1],  &i_Meter->field_0x1c20[1],
-        &i_Meter->field_0x1c90,     &i_Meter->field_0x1d00,     &i_Meter->field_0x2828,
+        &i_Meter->mKeyLight1,     &i_Meter->mKeyLight2,     &i_Meter->mKeyDigitA[0],
+        &i_Meter->mKeyDigitB[0],  &i_Meter->mKeyDigitA[1],  &i_Meter->mKeyDigitB[1],
+        &i_Meter->mKeyIcon,     &i_Meter->field_0x1d00,     &i_Meter->field_0x2828,
         &i_Meter->field_0x2860,     &i_Meter->field_0x2898,     &i_Meter->field_0x28d0,
         &i_Meter->field_0x1d38,     &i_Meter->field_0x1e18[0],  &i_Meter->field_0x1da8[0],
         &i_Meter->field_0x1e18[1],  &i_Meter->field_0x1da8[1],  &i_Meter->field_0x2748,
@@ -589,10 +589,10 @@ static s32 dMeter_Draw(sub_meter_class* i_Meter) {
         &i_Meter->field_0x2470[2],  &i_Meter->field_0x2518,     &i_Meter->field_0x2550[0],
         &i_Meter->field_0x25c0[0],  &i_Meter->field_0x2630[0],  &i_Meter->field_0x2550[1],
         &i_Meter->field_0x25c0[1],  &i_Meter->field_0x2630[1],  &i_Meter->field_0x1cc8,
-        &i_Meter->field_0x26a0,     &i_Meter->field_0x26d8,     &i_Meter->field_0x19f0[0],
-        &i_Meter->field_0x1b40[0],  &i_Meter->field_0x19f0[1],  &i_Meter->field_0x1b40[1],
-        &i_Meter->field_0x19f0[2],  &i_Meter->field_0x1b40[2],  &i_Meter->field_0x19f0[3],
-        &i_Meter->field_0x1b40[3],  &i_Meter->field_0x2a20,     &i_Meter->field_0x2a58};
+        &i_Meter->field_0x26a0,     &i_Meter->field_0x26d8,     &i_Meter->mRupyDigitA[0],
+        &i_Meter->mRupyDigitB[0],  &i_Meter->mRupyDigitA[1],  &i_Meter->mRupyDigitB[1],
+        &i_Meter->mRupyDigitA[2],  &i_Meter->mRupyDigitB[2],  &i_Meter->mRupyDigitA[3],
+        &i_Meter->mRupyDigitB[3],  &i_Meter->mRupyIcon,     &i_Meter->mRupyIconB};
     for (auto* pane : panes)
         meter01_setAlpha(pane);
     if (sScrTimer2) {
@@ -1116,16 +1116,16 @@ static f32 meterUpdateAlphaControl(sub_meter_class *i_Meter) {
   u8 show = meterUpdate2DState()->mShow;
   f32 zero = l_zero;
   if (!show) {
-    if (i_Meter->field_0x2f6c > zero) {
-      s16 timer = i_Meter->field_0x2fd8;
-      s16 max = meterUpdateHIO()->field_0x6;
+    if (i_Meter->mCompassAlpha > zero) {
+      s16 timer = i_Meter->mCompassFadeTimer;
+      s16 max = meterUpdateHIO()->mCompassFadeFrames;
       f32 alpha = meterUpdateValueIncrease(max, timer, 0);
-      timer = i_Meter->field_0x2fd8;
-      i_Meter->field_0x2f6c = alpha;
-      i_Meter->field_0x2fd8 = timer - 1;
+      timer = i_Meter->mCompassFadeTimer;
+      i_Meter->mCompassAlpha = alpha;
+      i_Meter->mCompassFadeTimer = timer - 1;
     } else {
-      i_Meter->field_0x2f6c = zero;
-      i_Meter->field_0x2fd8 = 0;
+      i_Meter->mCompassAlpha = zero;
+      i_Meter->mCompassFadeTimer = 0;
     }
   } else {
     u8 menu = meterUpdateMenu()->mWindowFlag;
@@ -1136,28 +1136,28 @@ static f32 meterUpdateAlphaControl(sub_meter_class *i_Meter) {
       if (timer <= 5) {
         f32 alpha = meterUpdateValueIncrease(5, timer, 0);
         u8 status = meterUpdateMenu()->mMenuStatus;
-        f32 current = i_Meter->field_0x2f6c;
+        f32 current = i_Meter->mCompassAlpha;
         if (status != 3) {
           f32 inverse = one - alpha;
           alpha = gabi::fmadds(inverse, half, half);
         }
         if (current > alpha)
-          i_Meter->field_0x2f6c = alpha;
+          i_Meter->mCompassAlpha = alpha;
       } else {
         u8 status = meterUpdateMenu()->mMenuStatus;
-        i_Meter->field_0x2f6c = status == 3 ? zero : half;
+        i_Meter->mCompassAlpha = status == 3 ? zero : half;
       }
-    } else if (i_Meter->field_0x2f6c < one) {
-      s16 timer = i_Meter->field_0x2fd8;
-      s16 max = meterUpdateHIO()->field_0x6;
+    } else if (i_Meter->mCompassAlpha < one) {
+      s16 timer = i_Meter->mCompassFadeTimer;
+      s16 max = meterUpdateHIO()->mCompassFadeFrames;
       f32 alpha = meterUpdateValueIncrease(max, timer, 0);
-      timer = i_Meter->field_0x2fd8;
-      i_Meter->field_0x2f6c = alpha;
-      i_Meter->field_0x2fd8 = timer + 1;
+      timer = i_Meter->mCompassFadeTimer;
+      i_Meter->mCompassAlpha = alpha;
+      i_Meter->mCompassFadeTimer = timer + 1;
     } else {
-      i_Meter->field_0x2f6c = one;
-      s16 max = meterUpdateHIO()->field_0x6;
-      i_Meter->field_0x2fd8 = max;
+      i_Meter->mCompassAlpha = one;
+      s16 max = meterUpdateHIO()->mCompassFadeFrames;
+      i_Meter->mCompassFadeTimer = max;
     }
   }
   return zero;
@@ -1210,7 +1210,7 @@ static void meterUpdateHeartMove(sub_meter_class *i_Meter,
           meterUpdatePlayerStatus()->mMaxLife = static_cast<u8>(maxHP);
         }
         meterUpdatePlay()->mItemMaxLifeCount = 0;
-        i_Meter->field_0x0f38[5].mUserArea = 1;
+        i_Meter->mMagicBar[5].mUserArea = 1;
       }
       s32 fullHearts = (maxHP / 4) * 4;
       u8 oldLife = i_Meter->mCurrHP;
@@ -1262,7 +1262,7 @@ static void meterUpdateHeartMove(sub_meter_class *i_Meter,
         i_Meter->mCurrHP = life - 1;
         i_Meter->mAdjustHp = lifeAdjust + 1;
       }
-      i_Meter->field_0x0f00.mUserArea = 0;
+      i_Meter->mHeartLight.mUserArea = 0;
       u8 life = i_Meter->mCurrHP;
       meterUpdatePlay()->mItemNowLife = life;
     }
@@ -1322,12 +1322,12 @@ static void meterUpdateActionFade(sub_meter_class *meter) {
   s16 frame;
   if (hide) {
     meterUpdateHeartScaleCountdown(0);
-    frame = meter->field_0x3014;
+    frame = meter->mHeartAlphaStep;
     frame = frame > 0 ? s16(frame - 1) : 0;
   } else if ((flags & (meter_detail::dMtrStts_UNK8_e |
                        meter_detail::dMtrStts_UNK10_e)) != 0) {
     meterUpdateHeartScaleCountdown(0);
-    frame = meter->field_0x3014;
+    frame = meter->mHeartAlphaStep;
     if (frame > 3)
       frame = s16(frame - 1);
     else if (frame < 3)
@@ -1336,19 +1336,19 @@ static void meterUpdateActionFade(sub_meter_class *meter) {
       frame = 3;
   } else {
     meterUpdateMaxLifeCountdown(0);
-    frame = meter->field_0x3014;
+    frame = meter->mHeartAlphaStep;
     if (frame < 5)
       frame = s16(frame + 1);
     else
       frame = 5;
-    meter->field_0x3014 = frame;
+    meter->mHeartAlphaStep = frame;
     if (meterUpdatePlay()->mMiniGameType != 6)
       meterUpdateActionAudio();
     // Reload: the audio callback can change the HUD interpolation frame.
-    frame = meter->field_0x3014;
+    frame = meter->mHeartAlphaStep;
   }
-  meter->field_0x3014 = frame;
-  meter->field_0x2fbc = meterUpdateValueIncrease(5, frame, 0);
+  meter->mHeartAlphaStep = frame;
+  meter->mHeartAlpha = meterUpdateValueIncrease(5, frame, 0);
 }
 
 /* inlined into dMeter_Execute */
@@ -1737,8 +1737,8 @@ static void dMeter_Execute(sub_meter_class *meter) {
   auto *state = meterUpdateSharedState();
   state->mStatusFlags = meter->mStatusFlags;
   state->mButtonShowFlags = meter->mButtonShowFlags;
-  state->mActionAlpha = meter->field_0x2fbc;
-  state->mSecondaryAlpha = meter->field_0x2fc0;
+  state->mHeartAlpha = meter->mHeartAlpha;
+  state->mMagicAlpha = meter->mMagicAlpha;
   state->mRupyAlpha = meter->mRupyAlpha;
   state->mKeyAlpha = meter->mKeyAlpha;
   u8 minigame = meterUpdatePlay()->mMiniGameType;
@@ -1812,46 +1812,46 @@ static void dMeter_enemyInit(sub_meter_class *i_Meter, MeterCreateScratch *scrat
     f32 blinkFrame = meterCreateRndF(l_mapRange) + l_createBlinkBase;
     magicScale = l_createMagicScale;
     scratch->mInteger = static_cast<u32>(ppc_fctiwz(blinkFrame));
-    i_Meter->field_0x0f38[0].mSizeOrig.x = magicScale;
+    i_Meter->mMagicBar[0].mSizeOrig.x = magicScale;
     prefix->field_0x03a0.mUserArea = static_cast<u32>(scratch->mInteger) << 1;
 }
 
 /* inlined into dMeter_Create */
 static void dMeter_magicInit(sub_meter_class *i_Meter, MeterCreateScratch *scratch, f32 zero, f32 magicScale) {
     if (meterCreateMagicFlags() & 2) {
-        i_Meter->field_0x3018 = meterCreateSave()->mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
+        i_Meter->mDispMaxMagic = meterCreateSave()->mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
         f32 magic = meterCreateSave()->mSavedata.mPlayer.mPlayerStatusA.mMagic;
-        f32 width = i_Meter->field_0x0f38[0].mSizeOrig.x;
+        f32 width = i_Meter->mMagicBar[0].mSizeOrig.x;
         f32 length = magic * round25(width);
         length = length * round25(magicScale);
         scratch->mInteger = static_cast<u32>(ppc_fctiwz(length));
-        i_Meter->field_0x3016 = scratch->mIntegerLow;
+        i_Meter->mDispMagic = scratch->mIntegerLow;
     } else {
-        i_Meter->field_0x3018 = 0;
-        i_Meter->field_0x3016 = 0;
+        i_Meter->mDispMaxMagic = 0;
+        i_Meter->mDispMagic = 0;
         be<u8> &flags = meterCreateMagicFlags();
         flags = (u8)flags | 2;
     }
-    i_Meter->field_0x0f38[0].mUserArea = 0;
-    u8 maxMagic = i_Meter->field_0x3018;
-    i_Meter->field_0x0f38[1].mUserArea = 0;
-    i_Meter->field_0x0f38[2].mUserArea = 0;
-    i_Meter->field_0x0f38[3].mUserArea = 0;
-    i_Meter->field_0x0f38[4].mUserArea = 0;
-    i_Meter->field_0x0f38[5].mUserArea = 1;
-    i_Meter->field_0x11a0.mUserArea = 0;
-    i_Meter->field_0x10f8.mUserArea = 0;
-    i_Meter->field_0x2fc0 = zero;
-    i_Meter->field_0x1130.mUserArea = 0;
-    i_Meter->field_0x11d8.mUserArea = 0;
+    i_Meter->mMagicBar[0].mUserArea = 0;
+    u8 maxMagic = i_Meter->mDispMaxMagic;
+    i_Meter->mMagicBar[1].mUserArea = 0;
+    i_Meter->mMagicBar[2].mUserArea = 0;
+    i_Meter->mMagicBar[3].mUserArea = 0;
+    i_Meter->mMagicBar[4].mUserArea = 0;
+    i_Meter->mMagicBar[5].mUserArea = 1;
+    i_Meter->mMagicGauge1.mUserArea = 0;
+    i_Meter->mMagicGauge3.mUserArea = 0;
+    i_Meter->mMagicAlpha = zero;
+    i_Meter->mMagicGauge2.mUserArea = 0;
+    i_Meter->mMagicGaugeShadow1.mUserArea = 0;
     i_Meter->field_0x3019 = 0;
     meterCreateMagicLength(i_Meter, maxMagic * round25(l_createMagicUnit));
-    u16 magicLength = i_Meter->field_0x3016;
+    u16 magicLength = i_Meter->mDispMagic;
     meterCreateMagicChange(i_Meter, magicLength / l_createMagicMaximum);
     meterCreateMagicTransNowInit(i_Meter);
-    meterCreateSetNowAlphaZero(&i_Meter->field_0x10f8);
-    meterCreateSetNowAlphaZero(&i_Meter->field_0x11a0);
-    meterCreateSetNowAlphaZero(&i_Meter->field_0x11d8);
+    meterCreateSetNowAlphaZero(&i_Meter->mMagicGauge3);
+    meterCreateSetNowAlphaZero(&i_Meter->mMagicGauge1);
+    meterCreateSetNowAlphaZero(&i_Meter->mMagicGaugeShadow1);
 }
 
 /* inlined into dMeter_Create */
@@ -1872,8 +1872,8 @@ static void dMeter_windInit(sub_meter_class *i_Meter) {
 
 /* inlined into dMeter_Create */
 static void dMeter_rupyInit(sub_meter_class *i_Meter, f32 zero) {
-    i_Meter->field_0x2a20.mUserArea = 0;
-    i_Meter->field_0x19f0[0].mUserArea = 1;
+    i_Meter->mRupyIcon.mUserArea = 0;
+    i_Meter->mRupyDigitA[0].mUserArea = 1;
     u16 rupees = meterCreateSave()->mSavedata.mPlayer.mPlayerStatusA.mRupee;
     i_Meter->mRupyCount = rupees;
     meterUpdatePlay()->mItemNowRupee = rupees;
@@ -1882,12 +1882,12 @@ static void dMeter_rupyInit(sub_meter_class *i_Meter, f32 zero) {
 
 /* inlined into dMeter_Create */
 static void dMeter_keyInit(sub_meter_class *i_Meter, f32 zero) {
-    i_Meter->field_0x1c90.mUserArea = 0;
-    i_Meter->field_0x1ad0[0].mUserArea = 0;
-    i_Meter->field_0x19b8.mUserArea = 1;
-    i_Meter->field_0x1980.mUserArea = 1;
+    i_Meter->mKeyIcon.mUserArea = 0;
+    i_Meter->mKeyDigitA[0].mUserArea = 0;
+    i_Meter->mKeyLight2.mUserArea = 1;
+    i_Meter->mKeyLight1.mUserArea = 1;
     i_Meter->mKeyAlpha = zero;
-    i_Meter->field_0x301d = meterCreateKeyNum();
+    i_Meter->mDispKeyNum = meterCreateKeyNum();
 }
 
 /* inlined into dMeter_Create */
@@ -1942,20 +1942,20 @@ static void dMeter_screenDataSet(sub_meter_class* i_Meter, MeterCreateScratch *s
         meterCreateSetPaneData(&i_Meter->mHeart[i], sMainParts1, scratch->mHeartTags[i]);
         meterCreateSetPaneData(&i_Meter->mHeartShadow[i], sMainParts1, scratch->mHeartShadowTags[i]);
     }
-    meterCreateSetPaneData(&i_Meter->field_0x0f00, sMainParts1, 'htfl');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[0], sMainParts1, 'mbr1');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[1], sMainParts1, 'mbr2');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[2], sMainParts1, 'mbr3');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[3], sMainParts1, 'mbr4');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[4], sMainParts1, 'mbr5');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[5], sMainParts1, 'mbr6');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[6], sMainParts1, 'mbr7');
-    meterCreateSetPaneData(&i_Meter->field_0x0f38[7], sMainParts1, 'mbr8');
-    meterCreateSetPaneData(&i_Meter->field_0x10f8, sMainParts1, 'mbb3');
-    meterCreateSetPaneData(&i_Meter->field_0x1130, sMainParts1, 'mbb2');
-    meterCreateSetPaneData(&i_Meter->field_0x11a0, sMainParts1, 'mbb1');
-    meterCreateSetPaneData(&i_Meter->field_0x1168, sMainParts1, 'mbk2');
-    meterCreateSetPaneData(&i_Meter->field_0x11d8, sMainParts1, 'mbk1');
+    meterCreateSetPaneData(&i_Meter->mHeartLight, sMainParts1, 'htfl');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[0], sMainParts1, 'mbr1');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[1], sMainParts1, 'mbr2');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[2], sMainParts1, 'mbr3');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[3], sMainParts1, 'mbr4');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[4], sMainParts1, 'mbr5');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[5], sMainParts1, 'mbr6');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[6], sMainParts1, 'mbr7');
+    meterCreateSetPaneData(&i_Meter->mMagicBar[7], sMainParts1, 'mbr8');
+    meterCreateSetPaneData(&i_Meter->mMagicGauge3, sMainParts1, 'mbb3');
+    meterCreateSetPaneData(&i_Meter->mMagicGauge2, sMainParts1, 'mbb2');
+    meterCreateSetPaneData(&i_Meter->mMagicGauge1, sMainParts1, 'mbb1');
+    meterCreateSetPaneData(&i_Meter->mMagicGaugeShadow2, sMainParts1, 'mbk2');
+    meterCreateSetPaneData(&i_Meter->mMagicGaugeShadow1, sMainParts1, 'mbk1');
     meterCreateSetPaneData(&i_Meter->field_0x1210, sMainParts1, 'cmcv');
     meterCreateSetPaneData(&i_Meter->field_0x1248, sMainParts1, 'cmmg');
     meterCreateSetPaneData(&i_Meter->field_0x1280, sMainParts1, 'cmmk');
@@ -1988,13 +1988,13 @@ static void dMeter_screenDataSet(sub_meter_class* i_Meter, MeterCreateScratch *s
     meterCreateSetPaneData(&i_Meter->field_0x1868[2], sMainParts3, 'cld3');
     meterCreateSetPaneData(&i_Meter->field_0x1910, sMainParts3, 'sun1');
     meterCreateSetPaneData(&i_Meter->field_0x1948, sMainParts3, 'cmtm');
-    meterCreateSetPaneData(&i_Meter->field_0x1980, sMainParts1, 'kyl1');
-    meterCreateSetPaneData(&i_Meter->field_0x19b8, sMainParts1, 'kyl2');
-    meterCreateSetPaneData(&i_Meter->field_0x1ad0[0], sMainParts1, 'nm03');
-    meterCreateSetPaneData(&i_Meter->field_0x1ad0[1], sMainParts1, 'nm04');
-    meterCreateSetPaneData(&i_Meter->field_0x1c20[0], sMainParts1, 'nm08');
-    meterCreateSetPaneData(&i_Meter->field_0x1c20[1], sMainParts1, 'nm09');
-    meterCreateSetPaneData(&i_Meter->field_0x1c90, sMainParts1, 'key0');
+    meterCreateSetPaneData(&i_Meter->mKeyLight1, sMainParts1, 'kyl1');
+    meterCreateSetPaneData(&i_Meter->mKeyLight2, sMainParts1, 'kyl2');
+    meterCreateSetPaneData(&i_Meter->mKeyDigitA[0], sMainParts1, 'nm03');
+    meterCreateSetPaneData(&i_Meter->mKeyDigitA[1], sMainParts1, 'nm04');
+    meterCreateSetPaneData(&i_Meter->mKeyDigitB[0], sMainParts1, 'nm08');
+    meterCreateSetPaneData(&i_Meter->mKeyDigitB[1], sMainParts1, 'nm09');
+    meterCreateSetPaneData(&i_Meter->mKeyIcon, sMainParts1, 'key0');
     meterCreateSetPaneData(&i_Meter->field_0x1cc8, sMainParts1, 'basv');
     meterCreateSetPaneData(&i_Meter->field_0x1d00, sMainParts1, 'bawd');
     meterCreateSetPaneData(&i_Meter->field_0x1d38, sMainParts1, 'bawp');
@@ -2045,17 +2045,17 @@ static void dMeter_screenDataSet(sub_meter_class* i_Meter, MeterCreateScratch *s
     meterCreateSetPaneData(&i_Meter->field_0x29b0[0], sMainParts1, 'ip00');
     meterCreateSetPaneData(&i_Meter->field_0x2940[1], sMainParts1, 'arw2');
     meterCreateSetPaneData(&i_Meter->field_0x29b0[1], sMainParts1, 'ip02');
-    meterCreateSetPaneData(&i_Meter->field_0x2a20, sMainParts2, 'rup1');
-    meterCreateSetPaneData(&i_Meter->field_0x2a58, sMainParts2, 'rup2');
-    meterCreateSetPaneData(&i_Meter->field_0x19f0[0], sMainParts2, 'nm00');
-    meterCreateSetPaneData(&i_Meter->field_0x19f0[1], sMainParts2, 'nm01');
-    meterCreateSetPaneData(&i_Meter->field_0x19f0[2], sMainParts2, 'nm02');
-    meterCreateSetPaneData(&i_Meter->field_0x19f0[3], sMainParts2, 'nm03');
-    meterCreateSetPaneData(&i_Meter->field_0x1b40[0], sMainParts2, 'nm04');
-    meterCreateSetPaneData(&i_Meter->field_0x1b40[1], sMainParts2, 'nm05');
-    meterCreateSetPaneData(&i_Meter->field_0x1b40[2], sMainParts2, 'nm06');
-    meterCreateSetPaneData(&i_Meter->field_0x1b40[3], sMainParts2, 'nm07');
-    i_Meter->field_0x19f0[1].mUserArea = meterCreateSave()->mSavedata.mPlayer.mPlayerStatusA.mWalletSize;
+    meterCreateSetPaneData(&i_Meter->mRupyIcon, sMainParts2, 'rup1');
+    meterCreateSetPaneData(&i_Meter->mRupyIconB, sMainParts2, 'rup2');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitA[0], sMainParts2, 'nm00');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitA[1], sMainParts2, 'nm01');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitA[2], sMainParts2, 'nm02');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitA[3], sMainParts2, 'nm03');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitB[0], sMainParts2, 'nm04');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitB[1], sMainParts2, 'nm05');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitB[2], sMainParts2, 'nm06');
+    meterCreateSetPaneData(&i_Meter->mRupyDigitB[3], sMainParts2, 'nm07');
+    i_Meter->mRupyDigitA[1].mUserArea = meterCreateSave()->mSavedata.mPlayer.mPlayerStatusA.mWalletSize;
     meterCreateWalletChange(i_Meter);
 }
 /* inlined into dMeter_Create */
@@ -2192,9 +2192,9 @@ static s32 dMeter_Create(sub_meter_class *i_Meter) {
     dMeter_screenDataSet(i_Meter, scratch);
     dMeter_screenDataArrowSet(i_Meter);
     meterUpdate2DState()->mShow = 1;
-    i_Meter->field_0x2f6c = l_one;
+    i_Meter->mCompassAlpha = l_one;
     i_Meter->field_0x3027 = 0xFF;
-    i_Meter->field_0x2fd8 = meterUpdateHIO()->field_0x6;
+    i_Meter->mCompassFadeTimer = meterUpdateHIO()->mCompassFadeFrames;
     u32 compass = meterCreateIsDungeonItemCompass(meterCreateDungeonMemory(), 1);
     prefix->field_0x0100[0].mUserArea = compass;
     s16 mapStart = g_meter_mapHIO.field_0x8;

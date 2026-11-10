@@ -169,15 +169,15 @@ WWHD_OFFSET(TreeCollisionManager, mpAttributes, 0x1754);
 WWHD_OFFSET(TreeCollisionManager, mCount, 0x1758);
 WWHD_OFFSET(TreeCollisionManager, mDirty, 0x175C);
 struct TreeIndexBuffer {
-    /* 0x000 */ be<u32> mPrimitive;
-    /* 0x004 */ be<u32> mIndexType;
+    /* 0x000 */ be<u32> mIndexType;  /* was mPrimitive: GX2DrawIndexedEx indexType (r5) at 025C7934 (lwz 0x0(r27)); agl::IndexBufferLayout::mFormat */
+    /* 0x004 */ be<u32> mPrimitive;  /* was mIndexType: GX2DrawIndexedEx mode (r3) at 025C7934 (lwz 0x4(r27)); agl::IndexBufferLayout::mPrimitiveMode */
     /* 0x008 */ gptr<void> mpIndices;
     /* 0x00C */ be<u32> mCount;
     u8 padding10[0x8];
 };
 WWHD_SIZE(TreeIndexBuffer, 0x18);
-WWHD_OFFSET(TreeIndexBuffer, mPrimitive, 0x0);
-WWHD_OFFSET(TreeIndexBuffer, mIndexType, 0x4);
+WWHD_OFFSET(TreeIndexBuffer, mIndexType, 0x0);
+WWHD_OFFSET(TreeIndexBuffer, mPrimitive, 0x4);
 WWHD_OFFSET(TreeIndexBuffer, mpIndices, 0x8);
 WWHD_OFFSET(TreeIndexBuffer, mCount, 0xC);
 struct TreeUniformContainer {
@@ -739,10 +739,10 @@ void registerGlobalObject(void*);
 f64 squareRoot(f32);
 void zeroMemory(void*, u32);
 void GX2CallDisplayList(void*, u32);
-void GX2DrawIndexed(u32, u32, u32, void*, u32, u32);
-void GX2SetGeometryUniformReg(u32, u32, void*);
-void GX2SetPixelUniformReg(u32, u32, void*);
-void GX2SetVertexUniformReg(u32, u32, void*);
+void GX2DrawIndexedEx(u32, u32, u32, void*, u32, u32);
+void GX2SetGeometryUniformBlock(u32, u32, void*);
+void GX2SetPixelUniformBlock(u32, u32, void*);
+void GX2SetVertexUniformBlock(u32, u32, void*);
 
 struct TreeHeaderStatics {
     be<f32> mPiMin, mPiMax;

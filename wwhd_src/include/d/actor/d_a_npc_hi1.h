@@ -17,12 +17,12 @@ WWHD_SIZE(Hi1ActionFunc, 8);
 
 struct daNpc_Hi1_c : fopNpc_npc_c {
     struct anm_prm_c {
-        /* 0x00 */ be<s8> field_0x0;
-        /* 0x01 */ be<s8> field_0x1;
+        /* 0x00 */ be<s8> bckNum;  /* was field_0x0: setAnm_anm 0223DB2C: the entry's bck animation number, compared with and stored to mBckNum (tww); after tww daNpc_Ls1_c::anm_prm_c bckNum */
+        /* 0x01 */ be<s8> btpNum;  /* was field_0x1: setAnm_NUM 0223DBC4 / setAnm 0223DC34 / setAnm_ATR 0223DCA4 pass it to init_texPttrnAnm (tww); after tww daNpc_Ls1_c::anm_prm_c btpNum */
         /* 0x02 */ u8 _02[2];
-        /* 0x04 */ be<f32> field_0x4;
-        /* 0x08 */ be<f32> field_0x8;
-        /* 0x0C */ be<s32> field_0xC;
+        /* 0x04 */ be<f32> morf;  /* was field_0x4: setAnm_anm 0223DB2C: the morf frames passed to dNpc_setAnm (tww); after tww daNpc_Ls1_c::anm_prm_c morf */
+        /* 0x08 */ be<f32> speed;  /* was field_0x8: setAnm_anm 0223DB2C: the play speed passed to dNpc_setAnm (tww); after tww daNpc_Ls1_c::anm_prm_c speed */
+        /* 0x0C */ be<s32> loopMode;  /* was field_0xC: setAnm_anm 0223DB2C: the loop mode passed to dNpc_setAnm (tww); after tww daNpc_Ls1_c::anm_prm_c loopMode */
     };
 
     void _nodeCB_Head(J3DNode*, J3DModel*);
@@ -89,27 +89,27 @@ struct daNpc_Hi1_c : fopNpc_npc_c {
     /* 0x8E4 */ u8 _8E4[4];
     /* 0x8E8 */ be<u32> mPId; /* lookBack state 4 */
     /* 0x8EC */ u8 _8EC[8];
-    /* 0x8F4 */ cXyz field_0x724;  /* GameCube field_0x724 */
-    /* 0x900 */ csXyz field_0x730; /* field_0x730 */
-    /* 0x906 */ csXyz field_0x736; /* field_0x736: model rotation (setMtx) */
+    /* 0x8F4 */ cXyz mInitialPos;  /* was field_0x724: _execute 0223D6EC copies current.pos on the first run (tww if (!field_0x7B5) { it = current.pos; ..}); written only, but the same code as tww daNpc_Bm1_c's _execute, which names this field mInitialPos (after tww daNpc_Bm1_c mInitialPos) */
+    /* 0x900 */ csXyz mInitialAngle;  /* was field_0x730: _execute 0223D6EC copies current.angle on the first run, with mInitialPos = current.pos, then mbRanExecute = 1 (tww); wait_1 0223DFB4 turns current.angle.y back to its y (tww cLib_addCalcAngleS(&current.angle.y, it.y, ..)); same code as daNpc_Bm1_c::mInitialAngle (after tww daNpc_Bm1_c mInitialPos) */
+    /* 0x906 */ csXyz mAngle;  /* was field_0x736: createInit 0223CB30 sets current.angle and copies it to shape_angle; setMtx 0223CA28 rotates the model by it (tww mDoMtx_stack_c::ZXYrotM(it)); _execute 0223D6EC current.angle each frame (tww); after tww daNpc_Ls1_c mAngle (same layout slot) */
     /* 0x90C */ u8 _90C[8];
-    /* 0x914 */ cXyz field_0x744; /* field_0x744: head joint * a_eye_pos_off */
-    /* 0x920 */ cXyz field_0x750; /* field_0x750 */
+    /* 0x914 */ cXyz mEyePos;  /* was field_0x744: _nodeCB_Head 0223BD84: the head matrix times a_eye_pos_off (tww multVec(&a_eye_pos_off, &it)); setAttention 0223C9D4 copies it to eyePos (tww); same name as daNpc_Zl1_c::mEyePos (npcs.md) */
+    /* 0x920 */ cXyz mLookPos;  /* was field_0x750: lookBack 0223D3E8: the look-at target, the player's eye position in look mode 1, the partner's position at eye height in mode 4 (tww); same name as daNpc_Zl1_c::mLookPos (npcs.md) */
     /* 0x92C */ u8 _92C[0xC];
-    /* 0x938 */ cXyz field_0x768; /* field_0x768: head joint translation */
+    /* 0x938 */ cXyz mHeadPos;  /* was field_0x768: _nodeCB_Head 0223BD84: the head joint matrix's translation (tww multVecZero(&it)); same name as daNpc_Zl1_c::mHeadPos (npcs.md) */
     /* 0x944 */ u8 _944[0xC];
     /* 0x950 */ be<f32> mFrame;
     /* 0x954 */ u8 _954[4];
-    /* 0x958 */ csXyz field_0x788;
+    /* 0x958 */ csXyz mPartsAngle;  /* was field_0x788: lookBack 0223D3E8 stores x = current.angle.y, y = the head Y angle, z = the backbone Y angle (tww); chk_parts_notMov 0223DEA0 compares them with the current ones (tww); after tww daNpc_Ls1_c mActorAngleY / mJointHeadY / mJointBackboneY (three fields there) */
     /* 0x95E */ u8 _95E[2];
-    /* 0x960 */ be<s32> field_0x790; /* wait_1 / talk_1 result: set eyePos */
+    /* 0x960 */ be<s32> mbSetEyePos;  /* was field_0x790: wait_action1 0223E204 stores wait_1() / talk_1() (tww); setAttention 0223C9D4 tests it with its param (tww if (it == 0 && !param_1)); after tww daNpc_Ls1_c mbSetEyePos (same code) */
     /* 0x964 */ be<s16> mEventIdx[1];
-    /* 0x966 */ be<s16> field_0x796; /* current event index */
+    /* 0x966 */ be<s16> mEventIndex;  /* was field_0x796: eventOrder 0223D67C sets mOrderEvent - 3 and orders mEventIdx[it] (tww); checkOrder 0223CE7C / event_proc 0223D2F0 check mEventIdx[it] (tww); after tww daNpc_Ls1_c mEventIndex (same code) */
     /* 0x968 */ u8 _968[8];
     /* 0x970 */ be<s16> mTimer2;
     /* 0x972 */ u8 _972[8];
     /* 0x97A */ be<s16> field_0x7AA; /* lookBack state 3 target */
-    /* 0x97C */ be<s8> field_0x7AC;  /* animation ended */
+    /* 0x97C */ be<s8> mbMorfAnimStopped;  /* was field_0x7AC: play_animation 0223C928: the morf's play() result, or 1 (tww); setAnm_anm 0223DB2C 0; after tww daNpc_Ls1_c mbMorfAnimStopped (same code) */
     /* 0x97D */ be<u8> field_0x7AD;
     /* 0x97E */ be<u8> mItemNo;
     /* 0x97F */ u8 _97F;
@@ -118,39 +118,39 @@ struct daNpc_Hi1_c : fopNpc_npc_c {
     /* 0x982 */ be<u8> field_0x7B2; /* no execute/draw (unless in a demo) */
     /* 0x983 */ be<u8> field_0x7B3; /* keep shape_angle */
     /* 0x984 */ be<u8> field_0x7B4; /* no draw */
-    /* 0x985 */ be<u8> field_0x7B5; /* initial position saved */
+    /* 0x985 */ be<u8> mbRanExecute;  /* was field_0x7B5: _execute 0223D6EC: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1 (tww if (!it) { ..; it = 1; }); after tww daNpc_Bm1_c mbRanExecute (same code) */
     /* 0x986 */ be<u8> mHasAttention;
-    /* 0x987 */ be<u8> field_0x7B7; /* talk ordered */
-    /* 0x988 */ be<u8> field_0x7B8; /* lookAtTarget_2 head only */
-    /* 0x989 */ be<u8> field_0x7B9; /* turn back to field_0x730 */
-    /* 0x98A */ be<u8> field_0x7BA; /* in a demo */
+    /* 0x987 */ be<u8> mTalking;  /* was field_0x7B7: checkOrder 0223CE7C sets 1 on the talk command (tww); wait_1 0223DFB4 starts the talk (setStt(2)) while it is set (tww); talk_1 0223E12C clears it (tww); after daNpcMt_c::mTalking (npcs.md) */
+    /* 0x988 */ be<u8> mLookHeadOnly;  /* was field_0x7B8: lookBack 0223D3E8 passes it to lookAtTarget_2 as the head-only flag (d_npc.h lookAtTarget headOnly; tww bool temp4 = it); wait_1 0223DFB4 sets 1 while waiting and 0 when the talk starts (tww the same); same name as daNpc_So_c::mLookHeadOnly and daNpc_Zl1_c::mLookHeadOnly (same evidence) */
+    /* 0x989 */ be<u8> mTurnToInitialAngle;  /* was field_0x7B9: wait_1 0223DFB4 turns back to mInitialAngle.y while it is set; cleared when the talk starts, set when the attention check fails (tww); wait_action1 0223E204 1 (tww) */
+    /* 0x98A */ be<u8> mInDemo;  /* was field_0x7BA: demo 0223CF54: 1 while demoActorID is set (resets the joint angles when it turns on), 0 otherwise, and returns it (tww); _execute 0223D6EC skips the collision while set (tww) */
     /* 0x98B */ be<s8> mActIdx;
-    /* 0x98C */ be<u8> field_0x7BC; /* animation attribute */
-    /* 0x98D */ be<u8> field_0x7BD; /* message animation tag */
-    /* 0x98E */ be<s8> field_0x7BE; /* btp number */
-    /* 0x98F */ be<s8> field_0x7BF; /* btk number */
-    /* 0x990 */ be<s8> field_0x7C0; /* animation number */
-    /* 0x991 */ be<s8> field_0x7C1; /* 1/2 talk, >= 3 event mEventIdx[n - 3] */
-    /* 0x992 */ be<s8> field_0x7C2; /* status */
-    /* 0x993 */ be<s8> field_0x7C3; /* previous status */
-    /* 0x994 */ be<s8> field_0x7C4; /* lookBack state */
-    /* 0x995 */ be<s8> field_0x7C5; /* type */
-    /* 0x996 */ be<s8> field_0x7C6; /* specific type */
-    /* 0x997 */ be<s8> field_0x7C7; /* set_action: 0 init, 9 leaving */
-    /* 0x998 */ be<s8> field_0x7C8;
+    /* 0x98C */ be<u8> mAnmAtrNo;  /* was field_0x7BC: chngAnmAtr 0223DD0C stores the attribute (tww it = param_1); setAnm_ATR 0223DCA4 plays a_anm_prm_tbl[it] (tww); checkOrder 0223CE7C / endEvent 0223D214 / setStt 0223DF68 0xFF; same name as daNpc_Zl1_c::mAnmAtrNo (npcs.md) */
+    /* 0x98D */ be<u8> mMesgAnimeTag;  /* was field_0x7BD: anmAtr 0223DD28: the message's animation tag (dComIfGp_getMesgAnimeTagInfo) when it changes (tww it = tagInfo; chngAnmTag()); checkOrder / endEvent / setStt 0xFF (tww); after tww daNpc_Ls1_c mMesgAnimeTag (same code) */
+    /* 0x98E */ be<s8> mBtpNum;  /* was field_0x7BE: setBtp 0223C0BC stores the btp number (tww it = param_1); play_btp_anm 0223C82C blinks only while it is 0 (tww); demo 0223CF54 1; after tww daNpc_Ls1_c mBtpNum (same code) */
+    /* 0x98F */ be<s8> mBtkNum;  /* was field_0x7BF: setBtk 0223C1B4 stores the btk number (tww it = param_1); demo 0223CF54 1; after tww daNpc_Ls1_c mBtkNum (same code) */
+    /* 0x990 */ be<s8> mBckNum;  /* was field_0x7C0: setAnm_anm 0223DB2C: skips an entry whose bckNum is < 0 or equal to it, else stores it (tww); createInit 0223CB30 2; after tww daNpc_Ls1_c mBckNum (same code) */
+    /* 0x991 */ be<s8> mOrderEvent;  /* was field_0x7C1: eventOrder 0223D67C: 1 / 2 the talk (1 orders the speak event), 3+ orders mEventIdx[it - 3] (tww); checkOrder 0223CE7C clears it once that event starts (tww); setStt 0223DF68 / wait_1 0223DFB4 set it; after daNpc_Cb1_c::mOrderEvent */
+    /* 0x992 */ be<s8> mStt;  /* was field_0x7C2: setStt 0223DF68 stores the new state and switches on it (tww); setAnm 0223DC34 plays a_anm_prm_tbl[it] (tww); wait_action1 0223E204 switches on it; same name as daNpc_Zl1_c::mStt (npcs.md) */
+    /* 0x993 */ be<s8> mPrevStt;  /* was field_0x7C3: setStt 0223DF68 keeps the previous mStt here (tww); talk_1 0223E12C returns to it (tww setStt(it)); same name as daNpc_Zl1_c::mPrevStt (npcs.md) */
+    /* 0x994 */ be<s8> mLookMode;  /* was field_0x7C4: lookBack 0223D3E8 switches on it: 1 the player's eyes, 2 mLookPos, 3 field_0x7AA, 4 the partner (tww); wait_1 0223DFB4 sets 0 / 1 (tww); after daNpcMt_c::mLookMode (npcs.md) */
+    /* 0x995 */ be<s8> mHeapSizeIdx;  /* was field_0x7C5: decideType 0223C65C sets it (tww); _create 0223CCC4 creates the solid heap with a_heap_size_tbl[it] (tww a_siz_tbl[it]); the slot of tww daNpc_Ls1_c m854 (unnamed there) */
+    /* 0x996 */ be<s8> mType;  /* was field_0x7C6: decideType 0223C65C sets it (tww); createInit 0223CB30 / getMsg_HI1_0 switch on it (tww); after tww daNpc_Ls1_c mType (same code) */
+    /* 0x997 */ be<s8> mActionStatus;  /* was field_0x7C7: set_action 0223C6C0 sets 9 for the leaving action and 0 for the new one (tww); wait_action1 0223E204 switches on it and steps it (tww it++); after tww daNpc_Bs1_c mActionStatus */
+    /* 0x998 */ be<s8> mAnmAtrSetCnt;  /* was field_0x7C8: anmAtr 0223DD28: while the message types, applies the message's animation attribute only when it is 0, then adds 1; MSG_DISPLAYED and setStt 0223DF68 reset it (tww) */
     /* 0x999 */ u8 _999[3];
 };
 WWHD_OFFSET(daNpc_Hi1_c, mPhs, 0x7DC);
 WWHD_OFFSET(daNpc_Hi1_c, mBtkAnm, 0x7EC);
 WWHD_OFFSET(daNpc_Hi1_c, mBtpAnm, 0x864);
 WWHD_OFFSET(daNpc_Hi1_c, mCurrActionFunc, 0x8DC);
-WWHD_OFFSET(daNpc_Hi1_c, field_0x724, 0x8F4);
-WWHD_OFFSET(daNpc_Hi1_c, field_0x744, 0x914);
+WWHD_OFFSET(daNpc_Hi1_c, mInitialPos, 0x8F4);
+WWHD_OFFSET(daNpc_Hi1_c, mEyePos, 0x914);
 WWHD_OFFSET(daNpc_Hi1_c, mFrame, 0x950);
-WWHD_OFFSET(daNpc_Hi1_c, field_0x790, 0x960);
+WWHD_OFFSET(daNpc_Hi1_c, mbSetEyePos, 0x960);
 WWHD_OFFSET(daNpc_Hi1_c, mTimer2, 0x970);
 WWHD_OFFSET(daNpc_Hi1_c, field_0x7B0, 0x980);
-WWHD_OFFSET(daNpc_Hi1_c, field_0x7C8, 0x998);
+WWHD_OFFSET(daNpc_Hi1_c, mAnmAtrSetCnt, 0x998);
 WWHD_SIZE(daNpc_Hi1_c, 0x99C);
 
 // HD: HIO vtable remains first.
@@ -287,9 +287,9 @@ WWHD_SIZE(daNpc_Hi1_HIO_c::hio_prm_c, 0x1C);
 WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, mAttentionYOffset, 0x14);
 WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, mDebug, 0x18);
 WWHD_SIZE(daNpc_Hi1_c::anm_prm_c, 0x10);
-WWHD_OFFSET(daNpc_Hi1_c::anm_prm_c, field_0x4, 4);
-WWHD_OFFSET(daNpc_Hi1_c::anm_prm_c, field_0x8, 8);
-WWHD_OFFSET(daNpc_Hi1_c::anm_prm_c, field_0xC, 0xC);
+WWHD_OFFSET(daNpc_Hi1_c::anm_prm_c, morf, 4);
+WWHD_OFFSET(daNpc_Hi1_c::anm_prm_c, speed, 8);
+WWHD_OFFSET(daNpc_Hi1_c::anm_prm_c, loopMode, 0xC);
 
 struct Hi1BtkAnm {
     u8 _0[0x68];
@@ -297,7 +297,7 @@ struct Hi1BtkAnm {
 };
 WWHD_OFFSET(Hi1BtkAnm, mpAnimation, 0x68);
 WWHD_SIZE(Hi1BtkAnm, 0x6C);
-WWHD_OFFSET(daNpc_Hi1_c, field_0x788, 0x958);
+WWHD_OFFSET(daNpc_Hi1_c, mPartsAngle, 0x958);
 s8 Hi1_roomId(dBgS*, cBgS_PolyInfo*);
 u8 Hi1_polyColour(dBgS*, cBgS_PolyInfo*);
 s16 Hi1_calcTimer(be<s16>* t);

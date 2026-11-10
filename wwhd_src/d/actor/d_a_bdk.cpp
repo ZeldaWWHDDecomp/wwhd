@@ -85,20 +85,20 @@ static void *obj_hahen_sub(void *param_1, void *param_2) {
         gabi::Local<cXyz> local_2;
         BdkBaseFragment *eff = reinterpret_cast<BdkBaseObject *>(actor)->mEffs;
         for (int i = 0; i < 3; i++, eff++) {
-            if (eff->m000 == 2) {
-                eff->m036.y = (s16)gabi::ftoi(cM_rndF(500.0f) + 500.0f);
+            if (eff->mState == 2) {
+                eff->mAngleSpeed.y = (s16)gabi::ftoi(cM_rndF(500.0f) + 500.0f);
                 f32 r = cM_rndF(1.0f);
-                f32 x = eff->m008.x;
+                f32 x = eff->mPos.x;
                 if (r < 0.5f) {
-                    eff->m036.y = -eff->m036.y;
+                    eff->mAngleSpeed.y = -eff->mAngleSpeed.y;
                 }
-                cMtx_YrotS(calc_mtx(), cM_atan2s(x - bdk->current.pos.x, eff->m008.z - bdk->current.pos.z));
+                cMtx_YrotS(calc_mtx(), cM_atan2s(x - bdk->current.pos.x, eff->mPos.z - bdk->current.pos.z));
                 local_1->x = 0.0f;
                 local_1->y = 0.0f;
                 local_1->z = 10.0f;
                 MtxPosition(local_1, local_2);
-                BdkBase_copyFloat(eff->m024x, local_2->x);
-                BdkBase_copyFloat(eff->m024z, local_2->z);
+                BdkBase_copyFloat(eff->mHorizontalSpeedX, local_2->x);
+                BdkBase_copyFloat(eff->mHorizontalSpeedZ, local_2->z);
             }
         }
     }
@@ -191,17 +191,17 @@ static BOOL daBdk_Delete(bdk_class *i_this) {
         i_this->mpMorf->stopZelAnime();
     }
     for (s32 i = 0; i < 4; i++) {
-        mDoAud_seDeleteObject(&i_this->m910[i]);
+        mDoAud_seDeleteObject(&i_this->mMaskPiecePos[i]);
     }
     mDoAud_seDeleteObject(&center_pos);
     mDoAud_seDeleteObject(&wind_se_pos);
-    mDoAud_seDeleteObject(&i_this->m2CC);
+    mDoAud_seDeleteObject(&i_this->mTargetPos);
     for (s32 i = 0; i < 4; i++) {
-        BdkBase_remove(&i_this->m6080[i]);
-        BdkBase_remove(&i_this->m6130[i]);
+        BdkBase_remove(&i_this->mSmokeCb[i]);
+        BdkBase_remove(&i_this->mLidSmokeCb[i]);
     }
-    BdkBase_remove(&i_this->m6110);
-    BdkBase_remove(&i_this->m61B0);
+    BdkBase_remove(&i_this->mTakeoffSmokeCb);
+    BdkBase_remove(&i_this->mDemoFeatherCb);
     return TRUE;
 }
 
@@ -240,8 +240,8 @@ static BOOL useHeapInit(fopAc_ac_c *i_actor) {
 
     for (s32 i = 0; i < 4; i++) {
         u16 idx = kamen_break_bdl.mModels[i];
-        i_this->m8FC[i] = mDoExt_J3DModel__create((J3DModelData *)bdk_res(idx), 0x80000, 0x11000022);
-        if (i_this->m8FC[i].get() == nullptr) {
+        i_this->mpMaskPieceModel[i] = mDoExt_J3DModel__create((J3DModelData *)bdk_res(idx), 0x80000, 0x11000022);
+        if (i_this->mpMaskPieceModel[i].get() == nullptr) {
             return FALSE;
         }
     }
@@ -252,8 +252,8 @@ static BOOL useHeapInit(fopAc_ac_c *i_actor) {
     }
     for (int i = 0; i < 4; i++) {
         for (s32 j = 0; j < 9; j++) {
-            i_this->m300[i].m000[j] = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
-            if (i_this->m300[i].m000[j].get() == nullptr) {
+            i_this->mTails[i].mpModel[j] = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
+            if (i_this->mTails[i].mpModel[j].get() == nullptr) {
                 return FALSE;
             }
         }
@@ -268,8 +268,8 @@ static BOOL useHeapInit(fopAc_ac_c *i_actor) {
         if (modelData == nullptr) {
             JUT_ASSERT_fail(STR_FILE, 0x1B2E, STR_MODELDATA);
         }
-        i_this->m261C[i].m044 = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
-        if (i_this->m261C[i].m044.get() == nullptr) {
+        i_this->mEff[i].mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
+        if (i_this->mEff[i].mpModel.get() == nullptr) {
             return FALSE;
         }
     }
@@ -288,7 +288,7 @@ static BOOL useHeapInit(fopAc_ac_c *i_actor) {
             return FALSE;
         }
         cBgD_t *dzb = (cBgD_t *)bdk_res(dRes_INDEX_BDK_DZB_S_TSHUTTER_e);
-        if (cBgW_Set(i_this->mp63BC[i], dzb, cBgW_MOVE_BG_e, &i_this->m632C[i])) {
+        if (cBgW_Set(i_this->mp63BC[i], dzb, cBgW_MOVE_BG_e, &i_this->mObjBgwMtx[i])) {
             return FALSE;
         }
         BdkBase_setCrrFunc(i_this->mp63BC[i], BdkBaseEntries::moveBgTypical);
@@ -308,7 +308,7 @@ static BOOL useHeapInit(fopAc_ac_c *i_actor) {
         JUT_ASSERT_fail(STR_FILE, 0x1B60, STR_PM_BGW);
     }
     cBgD_t *dzb = (cBgD_t *)bdk_res(dRes_INDEX_BDK_DZB_S_TTOGE_e);
-    cBgW_Set(i_this->pm_bgw, dzb, cBgW_MOVE_BG_e, &i_this->m62DC);
+    cBgW_Set(i_this->pm_bgw, dzb, cBgW_MOVE_BG_e, &i_this->mBgwMtx);
     BdkBase_setCrrFunc(i_this->pm_bgw, BdkBaseEntries::moveBgTypical);
 
     i_this->mp63C8 =
@@ -333,13 +333,13 @@ static cPhs_State daBdk_Create(fopAc_ac_c *a_this) {
     cPhs_State phase_state = dComIfG_resLoad(&i_this->mPhase, "Bdk");
     if (phase_state == cPhs_COMPLEATE_e) {
         for (s32 i = 0; i < 4; i++) {
-            BdkBase_setFollowOff(&i_this->m6080[i]);
+            BdkBase_setFollowOff(&i_this->mSmokeCb[i]);
         }
         for (s32 i = 0; i < 3; i++) {
-            BdkBase_setFollowOff(&i_this->m6130[i]);
+            BdkBase_setFollowOff(&i_this->mLidSmokeCb[i]);
         }
         i_this->m2B4 = 1;
-        BdkBase_setFollowOff(&i_this->m6110);
+        BdkBase_setFollowOff(&i_this->mTakeoffSmokeCb);
 
         if (!fopAcM_entrySolidHeap(actor, gabi::guest_fn(reinterpret_cast<const void *>(useHeapInit)),
                                    0x96000)) {
@@ -387,15 +387,15 @@ static cPhs_State daBdk_Create(fopAc_ac_c *a_this) {
             i_this->mWindAtSph[i].Set(&wind_at_sph_src);
             i_this->mWindAtSph[i].SetStts(&i_this->mStts);
         }
-        i_this->mA14.Init(0xFF, 0xFF, nullptr);
+        i_this->mMaskPieceStts.Init(0xFF, 0xFF, nullptr);
         for (s32 i = 0; i < 4; i++) {
-            i_this->mA50[i].Set(&kamen_sph_src);
-            i_this->mA50[i].SetStts(&i_this->mA14);
+            i_this->mMaskPieceSph[i].Set(&kamen_sph_src);
+            i_this->mMaskPieceSph[i].SetStts(&i_this->mMaskPieceStts);
         }
-        i_this->m603C.Init(0xFF, 0xFF, nullptr);
+        i_this->mEffStts.Init(0xFF, 0xFF, nullptr);
         for (s32 i = 0; i < 0x28; i++) {
-            i_this->m261C[i].m048.Set(&eff_sph_src);
-            i_this->m261C[i].m048.SetStts(&i_this->m603C);
+            i_this->mEff[i].mSph.Set(&eff_sph_src);
+            i_this->mEff[i].mSph.SetStts(&i_this->mEffStts);
         }
         center_pos.x = 3600.0f;
         center_pos.y = 9800.0f;
@@ -410,31 +410,31 @@ static cPhs_State daBdk_Create(fopAc_ac_c *a_this) {
             actor->current.pos.x = 300000.0f;
             actor->current.pos.y = 300000.0f;
             actor->current.pos.z = 300000.0f;
-            i_this->m6320 = -630.0f;
-            i_this->m6324 = -70.0f;
-            i_this->m62D4 = -500.0f;
+            i_this->mShutterSlide = -630.0f;
+            i_this->mShutterOffsetY = -70.0f;
+            i_this->mTogeOffsetY = -500.0f;
         } else if (i_this->m2B4 == 1) {
             i_this->mAction = ACTION_T_FLY;
             actor->current.pos.copy(center_pos);
             actor->current.pos.y = 5000.0f;
-            i_this->m6320 = -630.0f;
-            i_this->m6324 = -70.0f;
+            i_this->mShutterSlide = -630.0f;
+            i_this->mShutterOffsetY = -70.0f;
             mDoAud_bgmStart(JA_BGM_MJ_TOWER_BATTLE);
             for (s32 i = 0; i < 10; i++) {
                 i_this->mWindAtSph[i].SetAtType(AT_TYPE_UNK400000);
             }
-            i_this->m2EC[0] = 0x168;
+            i_this->mTimers[0] = 0x168;
         } else {
             actor->gravity = REG0_F(4) + -5.0f;
             actor->speedF = (f32)l_HIO.m020;
-            i_this->m2CA = -1;
+            i_this->mFlyAnm = -1;
             i_this->m1120 = -2000;
             actor->health = 20;
             actor->max_health = 20;
             actor->current.pos.y = 11000.0f;
         }
     }
-    BdkBase_copyTev(&i_this->m6224, &actor->tevStr);
+    BdkBase_copyTev(&i_this->mBgTevStr, &actor->tevStr);
     return phase_state;
 }
 
@@ -530,7 +530,7 @@ static bdk_eff_s *bdk_eff_s_ct(bdk_eff_s *self) {
         if (self == nullptr)
             return self;
     }
-    BdkBase_sphereCtor(&self->m048); /* dCcD_Sph::dCcD_Sph */
+    BdkBase_sphereCtor(&self->mSph); /* dCcD_Sph::dCcD_Sph */
     return self;
 }
 
@@ -553,7 +553,7 @@ static void smokeEcallBack_dt(void *p, s32 flags) {
 static void bdk_eff_s_dt(bdk_eff_s *self, s32 flags) {
     if (self == nullptr)
         return;
-    BdkBase_sphereDtor(&self->m048, 2); /* dCcD_Sph::~dCcD_Sph */
+    BdkBase_sphereDtor(&self->mSph, 2); /* dCcD_Sph::~dCcD_Sph */
     if (flags & 1)
         operator_delete(self);
 }
@@ -564,10 +564,10 @@ static void bdk_class_dt(bdk_class *self, s32 flags) {
     if (self == nullptr)
         return;
     BdkBase_destroyArray(self->m61C4, 4, 0x14, BdkBaseEntries::followDtor, 0, 0);
-    BdkBase_destroyArray(self->m6130, 4, 0x20, BdkBaseEntries::smokeDtor, 0, 0);
-    BdkBase_destroyArray(self->m6080, 4, 0x20, BdkBaseEntries::smokeDtor, 0, 0);
-    BdkBase_statusDtor(&self->m603C, 2); /* dCcD_Stts::~dCcD_Stts */
-    BdkBase_destroyArray(self->m261C, 40, 0x174, BdkBaseEntries::effectDtor, 0, 0);
+    BdkBase_destroyArray(self->mLidSmokeCb, 4, 0x20, BdkBaseEntries::smokeDtor, 0, 0);
+    BdkBase_destroyArray(self->mSmokeCb, 4, 0x20, BdkBaseEntries::smokeDtor, 0, 0);
+    BdkBase_statusDtor(&self->mEffStts, 2); /* dCcD_Stts::~dCcD_Stts */
+    BdkBase_destroyArray(self->mEff, 40, 0x174, BdkBaseEntries::effectDtor, 0, 0);
     BdkBase_destroyArray(self->mWindAtSph, 10, 0x12C, BdkBaseEntries::sphereDtor, 0, 0);
     BdkBase_destroyArray(self->mFootCCSph, 2, 0x12C, BdkBaseEntries::sphereDtor, 0, 0);
     BdkBase_sphereDtor(&self->mBodyCCSph, 2);
@@ -580,8 +580,8 @@ static void bdk_class_dt(bdk_class *self, s32 flags) {
     self->mAcch.dBgS_PolyPassChk::__vtbl = BdkBaseVtables::acch;
     BdkBase_acchDtor(&self->mAcch, 0);            /* dBgS_Acch::~dBgS_Acch */
     BdkBase_circleDtor(&self->mAcchCir.m_cir, 2); /* cM3dGCir::~cM3dGCir */
-    BdkBase_destroyArray(self->mA50, 4, 0x12C, BdkBaseEntries::sphereDtor, 0, 0);
-    BdkBase_statusDtor(&self->mA14, 2);
+    BdkBase_destroyArray(self->mMaskPieceSph, 4, 0x12C, BdkBaseEntries::sphereDtor, 0, 0);
+    BdkBase_statusDtor(&self->mMaskPieceStts, 2);
     BdkBase_actorDtor(self, 0); /* fopAc_ac_c::~fopAc_ac_c */
     if (flags & 1)
         operator_delete(self);
@@ -606,8 +606,8 @@ static bdk_class *bdk_class_ct(bdk_class *self) {
     }
     fopAc_ac_c_ct(self);
     self->__vtbl = BDK_VTBL;
-    dCcD_Stts_ct(&self->mA14);
-    BdkBase_constructArray(self->mA50, 4, 0x12C, BdkBaseEntries::sphereCtor);
+    dCcD_Stts_ct(&self->mMaskPieceStts);
+    BdkBase_constructArray(self->mMaskPieceSph, 4, 0x12C, BdkBaseEntries::sphereCtor);
     dBgS_AcchCir_ct(&self->mAcchCir);
     dBgS_ObjAcch_ct(&self->mAcch, BDK_OBJACCH_VT);
     dCcD_Stts_ct(&self->mStts);
@@ -617,14 +617,14 @@ static bdk_class *bdk_class_ct(bdk_class *self) {
     BdkBase_sphereCtor(&self->mBodyCCSph);
     BdkBase_constructArray(self->mFootCCSph, 2, 0x12C, BdkBaseEntries::sphereCtor);
     BdkBase_constructArray(self->mWindAtSph, 10, 0x12C, BdkBaseEntries::sphereCtor);
-    BdkBase_constructArray(self->m261C, 40, 0x174, BdkBaseEntries::effectCtor);
-    dCcD_Stts_ct(&self->m603C);
-    BdkBase_constructArray(self->m6080, 4, 0x20, BdkBaseEntries::smokeCtorA);
-    BdkBase_smokeCtor(&self->m6110, (u8)1); /* dPa_smokeEcallBack::dPa_smokeEcallBack */
-    BdkBase_constructArray(self->m6130, 4, 0x20, BdkBaseEntries::smokeCtorB);
-    dPa_followEcallBack_ct(&self->m61B0, 0, 0);
+    BdkBase_constructArray(self->mEff, 40, 0x174, BdkBaseEntries::effectCtor);
+    dCcD_Stts_ct(&self->mEffStts);
+    BdkBase_constructArray(self->mSmokeCb, 4, 0x20, BdkBaseEntries::smokeCtorA);
+    BdkBase_smokeCtor(&self->mTakeoffSmokeCb, (u8)1); /* dPa_smokeEcallBack::dPa_smokeEcallBack */
+    BdkBase_constructArray(self->mLidSmokeCb, 4, 0x20, BdkBaseEntries::smokeCtorB);
+    dPa_followEcallBack_ct(&self->mDemoFeatherCb, 0, 0);
     BdkBase_constructArray(self->m61C4, 4, 0x14, BdkBaseEntries::followCtor);
-    bdk_tevstr_ct(&self->m6224);
+    bdk_tevstr_ct(&self->mBgTevStr);
     return self;
 }
 

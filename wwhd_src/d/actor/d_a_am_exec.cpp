@@ -515,8 +515,8 @@ static inline void action_itai_move(am_class* i_this) {
             i_this->mSmokeCbs[1].end();
             needle_onAt(&i_this->mNeedleCyl);
             am_smoke(i_this, ID_AK_ST_AMOTHSMOKE01, &i_this->mJawPos, 1);
-            i_this->m033C = dComIfGp_particle_set(ID_AK_SN_AMOTHBOMBEYE, &i_this->mJawPos);
-            i_this->m0340 = dComIfGp_particle_set(ID_AK_SN_AMOTHBOMBMOUTH, &i_this->mJawPos);
+            i_this->mpBombEyeEmitter = dComIfGp_particle_set(ID_AK_SN_AMOTHBOMBEYE, &i_this->mJawPos);
+            i_this->mpBombMouthEmitter = dComIfGp_particle_set(ID_AK_SN_AMOTHBOMBMOUTH, &i_this->mJawPos);
         }
 
         if (!am_isStop(i_this)) {
@@ -551,13 +551,13 @@ static inline void action_itai_move(am_class* i_this) {
         fopAcM_seStart(i_this, JA_SE_CM_AM_BEF_EXPLODE, 0);
         i_this->mTargetAngleY = i_this->current.angle.y;
 
-        if (i_this->m033C) {
-            JPA_becomeInvalidEmitter(i_this->m033C);
-            i_this->m033C = nullptr;
+        if (i_this->mpBombEyeEmitter) {
+            JPA_becomeInvalidEmitter(i_this->mpBombEyeEmitter);
+            i_this->mpBombEyeEmitter = nullptr;
         }
-        if (i_this->m0340) {
-            JPA_becomeInvalidEmitter(i_this->m0340);
-            i_this->m0340 = nullptr;
+        if (i_this->mpBombMouthEmitter) {
+            JPA_becomeInvalidEmitter(i_this->mpBombMouthEmitter);
+            i_this->mpBombMouthEmitter = nullptr;
         }
         i_this->speedF = 0.0f;
         i_this->mMode = i_this->mMode + 1;
@@ -588,11 +588,11 @@ static inline void action_itai_move(am_class* i_this) {
     }
     }
 
-    if (i_this->m033C) {
-        JPA_setGlobalRTMatrix(i_this->m033C, i_this->mpMorf->getModel()->getAnmMtx(AM_JNT_AGO_e));
+    if (i_this->mpBombEyeEmitter) {
+        JPA_setGlobalRTMatrix(i_this->mpBombEyeEmitter, i_this->mpMorf->getModel()->getAnmMtx(AM_JNT_AGO_e));
     }
-    if (i_this->m0340) {
-        JPA_setGlobalRTMatrix(i_this->m0340, i_this->mpMorf->getModel()->getAnmMtx(AM_JNT_AGO_e));
+    if (i_this->mpBombMouthEmitter) {
+        JPA_setGlobalRTMatrix(i_this->mpBombMouthEmitter, i_this->mpMorf->getModel()->getAnmMtx(AM_JNT_AGO_e));
     }
 
     if (i_this->mMode == 41 || i_this->mMode == 42) {
@@ -645,15 +645,15 @@ static BOOL daAM_Execute(am_class* i_this) {
         i_this->mTargetAngleY = i_this->current.angle.y;
 
         /* becomeInvalidEmitter: here through the out-of-line status setter */
-        if (i_this->m033C) {
-            i_this->m033C->setMaxFrame(-1);
-            JPABaseEmitter_onStatus(i_this->m033C, 1);
-            i_this->m033C = nullptr;
+        if (i_this->mpBombEyeEmitter) {
+            i_this->mpBombEyeEmitter->setMaxFrame(-1);
+            JPABaseEmitter_onStatus(i_this->mpBombEyeEmitter, 1);
+            i_this->mpBombEyeEmitter = nullptr;
         }
-        if (i_this->m0340) {
-            i_this->m0340->setMaxFrame(-1);
-            JPABaseEmitter_onStatus(i_this->m0340, 1);
-            i_this->m0340 = nullptr;
+        if (i_this->mpBombMouthEmitter) {
+            i_this->mpBombMouthEmitter->setMaxFrame(-1);
+            JPABaseEmitter_onStatus(i_this->mpBombMouthEmitter, 1);
+            i_this->mpBombMouthEmitter = nullptr;
         }
 
         i_this->speedF = 0.0f;

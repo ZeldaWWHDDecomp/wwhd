@@ -1,6 +1,5 @@
 /* JAudio sound handle layout from CC0 tww, checked against WWHD.
- * HD moves the GC fields four bytes earlier and appends a dispatch object at 0x40.
- * Legacy game-code aliases retain their established names at offsets 0x14/0x18. */
+ * HD moves the GC fields four bytes earlier and appends a dispatch object at 0x40. */
 #pragma once
 #include "bindings.h"
 struct JAISoundInfoView;
@@ -40,8 +39,8 @@ struct JAISound {
     be<u32> mSoundID;
     be<u32> elapsed;
     be<u32> fadeCounter;
-    union { be<u32> frameCounter; be<u32> field_0x18; };
-    union { be<u32> mapInfo; be<u32> field_0x1c; };
+    be<u32> frameCounter;
+    be<u32> mapInfo;
     gptr<JAInter::SePositionInfo> positionInfo;
     gptr<void> actor;
     gptr<cXyz> position;
@@ -116,9 +115,7 @@ struct JAISound {
 };
 WWHD_OFFSET(JAISound, mSoundID, 8);
 WWHD_OFFSET(JAISound, frameCounter, 0x14);
-WWHD_OFFSET(JAISound, field_0x18, 0x14);
 WWHD_OFFSET(JAISound, mapInfo, 0x18);
-WWHD_OFFSET(JAISound, field_0x1c, 0x18);
 WWHD_OFFSET(JAISound, positionInfo, 0x1C);
 WWHD_OFFSET(JAISound, actor, 0x20);
 WWHD_OFFSET(JAISound, next, 0x30);

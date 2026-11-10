@@ -149,9 +149,9 @@ void Act_c::create_init_bgc() {
     Acch_ClrWaterNone(&mAcch);
     Acch_ClrRoofNone(&mAcch);
     mAcch.SetRoofCrrHeight((f32)data(this)->mAcchRoofHeight);
-    m4F8 = -1000000000.0f; /* -G_CM3D_F_INF */
-    m4FC = -1000000000.0f;
-    m500 = -1000000000.0f;
+    mLavaY = -1000000000.0f; /* -G_CM3D_F_INF */
+    mWaterY = -1000000000.0f;
+    mWaterYOld = -1000000000.0f;
     m504 = 0;
     m505 = 0;
 }
@@ -222,9 +222,9 @@ cPhs_State Act_c::_create() {
         m681 = 0x14;
     }
 
-    m6FC = current.pos.y;
-    m6EC = 0.0f;
-    /* cXyz::Zero is loaded once here and reused for m7F4 / m814 below */
+    mFallStartY = current.pos.y;
+    mOffsetY = 0.0f;
+    /* cXyz::Zero is loaded once here and reused for mWindVec / m814 below */
     f32 zx = cXyz_Zero->x, zy = cXyz_Zero->y, zz = cXyz_Zero->z;
     m6F0.x = zx;
     m6F0.y = zy;
@@ -252,7 +252,7 @@ cPhs_State Act_c::_create() {
         mode_wait_init();
     }
 
-    m4F8 = -1000000000.0f;
+    mLavaY = -1000000000.0f;
     m67F = 0;
     m682 = 1;
     m683 = 0;
@@ -272,7 +272,7 @@ cPhs_State Act_c::_create() {
     }
     spec_init();
 
-    m7F4.set(zx, zy, zz);
+    mWindVec.set(zx, zy, zz);
     m814.set(zx, zy, zz);
     init_mtx();
     m810 = 0;
@@ -295,7 +295,7 @@ bool Act_c::_delete() {
         m70C[i].remove();
         m748[i].remove();
     }
-    m784.remove();
+    mKutaniCb.remove();
     if (!(data(this)->mFlag & Act_c::DATA_FLAG_1_e)) {
         dComIfG_resDelete(&mPhase, M_arcname(mType)); /* dComIfG_resDeleteDemo */
     }
@@ -341,7 +341,7 @@ void Act_c::spec_init() {
         } else if (iVar2 == 3) {
             spec_make_boko(3);
         }
-        /* (GameCube bug kept: ptr is one past the array, i.e. m7F4.x) */
+        /* (GameCube bug kept: ptr is one past the array, i.e. mWindVec.x) */
         if (ptr->m00 != fpcM_ERROR_PROCESS_ID_e) {
             prm_set_cull_non(this);
         }
@@ -457,7 +457,7 @@ void Act_c::mode_hide_init() {
     m67F = 1;
     fopAcM_SetSpeedF(this, 0.0f);
     attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
-    m678 = 0;
+    mMode = 0;
 }
 
 
@@ -485,7 +485,7 @@ void Act_c::mode_appear_init() {
         gravity = data(this)->mGravity;
         m802 = 0xb;
     }
-    m678 = 1;
+    mMode = 1;
 }
 
 
@@ -503,7 +503,7 @@ void Act_c::mode_wait_init() {
     fopAcM_SetSpeedF(this, 0.0f);
     mStts.Init(data(this)->m10, 0xff, this);
     m802 = 0;
-    m678 = 2;
+    mMode = 2;
 }
 
 
@@ -552,11 +552,11 @@ void Act_c::set_mtx() {
     }
 
     Mtx34* now = mDoMtx_stack_c::get();
-    if (m678 == 4 && m685) {
-        PSMTXTrans(now, current.pos.x, current.pos.y + m6EC + fVar1, current.pos.z);
+    if (mMode == 4 && m685) {
+        PSMTXTrans(now, current.pos.x, current.pos.y + mOffsetY + fVar1, current.pos.z);
         tsuboMtxConcat(now, &mPoseMtx, now);
     } else {
-        PSMTXTrans(now, current.pos.x, current.pos.y + data(this)->m04 + m6EC + fVar1, current.pos.z);
+        PSMTXTrans(now, current.pos.x, current.pos.y + data(this)->m04 + mOffsetY + fVar1, current.pos.z);
         tsuboMtxConcat(now, &mPoseMtx, now);
         mDoMtx_stack_c::transM(0.0f, -data(this)->m04, 0.0f);
     }
@@ -569,7 +569,7 @@ void Act_c::set_mtx() {
             offsetPos.y = 85.0f;
             offsetPos.z = 0.0f;
         }
-        PSMTXMultVec(now, &offsetPos, &m700);
+        PSMTXMultVec(now, &offsetPos, &mWaterDropPos);
     }
     spec_mtx();
 }
@@ -596,7 +596,7 @@ void Act_c::init_rot_clean() {
 
 /* 024CACEC */
 void Act_c::eff_kutani_init() {
-    m798 = (u8)(gabi::ftoi(cM_rndF(30.0f)) + 1);
+    mKutaniTimer = (u8)(gabi::ftoi(cM_rndF(30.0f)) + 1);
 }
 
 
@@ -694,7 +694,7 @@ static Act_c* Act_c_ct(Act_c* i_this) {
     cSAngle_ct(&i_this->m692);
     tsuboConstructArray(i_this->m70C, 3, sizeof(dPa_followEcallBack), gabi::guest_fn((const void*)&followEcallBack_ct_a)); /* __construct_array */
     tsuboConstructArray(i_this->m748, 3, sizeof(dPa_followEcallBack), gabi::guest_fn((const void*)&followEcallBack_ct_b));
-    dPa_followEcallBack_ct(&i_this->m784, 0, 0);
+    dPa_followEcallBack_ct(&i_this->mKutaniCb, 0, 0);
     return i_this;
 }
 

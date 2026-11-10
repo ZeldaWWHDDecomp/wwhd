@@ -26,23 +26,23 @@ inline mDoExt_btpAnm* ym1Btp(daNpc_Ym1_c* a) { return reinterpret_cast<mDoExt_bt
 struct Ym1PositionWords { be<u32> x; be<u32> y; be<u32> z; };
 // HD: the initial pose uses word copies, preserving float payloads.
 inline Ym1PositionWords& ym1PositionWords(daNpc_Ym1_c* a) { return *reinterpret_cast<Ym1PositionWords*>(&a->current.pos); }
-struct Ym1AngleView { u8 padding[0x9B6]; csXyz m846; };
+struct Ym1AngleView { u8 padding[0x9B6]; csXyz mModelAngle; /* was m846: view of daNpc_Ym1_c mModelAngle (d_a_npc_ym1.h) */ };
 inline Ym1AngleView& ym1Angles(daNpc_Ym1_c* a) { return *reinterpret_cast<Ym1AngleView*>(a); }
 // HD: preserve the signed reads of state bytes whose GC names are known.
 struct Ym1StateView {
     u8 padding[0xA0D];
-    be<u8> m89D;
-    be<u8> m89E;
-    be<u8> m89F;
+    be<u8> mbResLoaded;  /* was m89D: view of daNpc_Ym1_c mbResLoaded (d_a_npc_ym1.h) */
+    be<u8> mbWaitForDemo;  /* was m89E: view of daNpc_Ym1_c mbWaitForDemo (d_a_npc_ym1.h) */
+    be<u8> mbNoShapeAngle;  /* was m89F: view of daNpc_Ym1_c mbNoShapeAngle (d_a_npc_ym1.h) */
     be<u8> m8A0;
     u8 paddingA11[3];
-    be<s8> m8A4;
+    be<s8> mbHeadOnly;  /* was m8A4: view of daNpc_Ym1_c mbHeadOnly (d_a_npc_ym1.h) */
     u8 paddingA15[6];
-    be<s8> m8AB;
+    be<s8> mAnmNum;  /* was m8AB: view of daNpc_Ym1_c mAnmNum (d_a_npc_ym1.h) */
     u8 paddingA1C[3];
-    be<s8> m8AF;
+    be<s8> mLookMode;  /* was m8AF: view of daNpc_Ym1_c mLookMode (d_a_npc_ym1.h) */
 };
-WWHD_OFFSET(Ym1StateView, m8AF, 0xA1F);
+WWHD_OFFSET(Ym1StateView, mLookMode, 0xA1F);
 inline Ym1StateView& ym1State(daNpc_Ym1_c* a) { return *reinterpret_cast<Ym1StateView*>(a); }
 inline gabi::ptmf<BOOL (daNpc_Ym1_c::*)(void*)>& ym1Action(daNpc_Ym1_c* a) {
     return *reinterpret_cast<gabi::ptmf<BOOL (daNpc_Ym1_c::*)(void*)>*>(&a->mCurrProcFunc);

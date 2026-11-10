@@ -141,58 +141,58 @@ static u32 getMenuFlag() {
 
 /* 02030CD0 */
 static void setPlayerFlagF5() {
-    player()->field_0x1f5 = 1;
+    player()->mPictographMode = 1;
 }
 
 /* 02030CF8 */
 static void clearPlayerFlagF5() {
-    player()->field_0x1f5 = 0;
+    player()->mPictographMode = 0;
 }
 
 /* 02030D20 */
 static u32 getPlayerFlagF5() {
-    return player()->field_0x1f5;
+    return player()->mPictographMode;
 }
 
 /* 02030D44 */
 static void setPlayerFlagF6() {
-    player()->field_0x1f6 = 1;
+    player()->mSaveDataMode = 1;
 }
 
 /* 02030D6C */
 static void clearPlayerFlagF6() {
-    player()->field_0x1f6 = 0;
+    player()->mSaveDataMode = 0;
 }
 
 /* 02030D94 */
 static void setPlayerFlagF7() {
-    player()->field_0x1f7 = 1;
+    player()->mGameOverMode = 1;
     bgmUpdate();
 }
 
 /* 02030DC0 */
 static void clearPlayerFlagF7() {
-    player()->field_0x1f7 = 0;
+    player()->mGameOverMode = 0;
 }
 
 /* 02030DE8 */
 static void setPlayerFlagF8() {
-    player()->field_0x1f8 = 1;
+    player()->mWarpMode = 1;
 }
 
 /* 02030E10 */
 static void clearPlayerFlagF8() {
-    player()->field_0x1f8 = 0;
+    player()->mWarpMode = 0;
 }
 
 /* 02030E38 */
 static void setBridgeFlag() {
-    bgm()->mBridge->field_0x38 = 1;
+    bgm()->mBridge->mNoSceneStream = 1;
 }
 
 /* 02030E64 */
 static void clearBridgeFlag() {
-    bgm()->mBridge->field_0x38 = 0;
+    bgm()->mBridge->mNoSceneStream = 0;
 }
 
 /* 02030E90 */

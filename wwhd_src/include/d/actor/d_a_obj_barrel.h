@@ -55,18 +55,18 @@ struct Act_c : fopAc_ac_c {
     /* 0x5BC */ dCcD_Stts mStts;
     /* 0x5F8 */ dCcD_Cyl mCyl;
     /* 0x728 */ be<s32> mMode;
-    /* 0x72C */ be<s16> m610;
-    /* 0x72E */ be<s16> m612;
+    /* 0x72C */ be<s16> mTiltAngle;  /* was m610: set_mtx 0231C380: XrotM(it) between YrotM(mTiltDir) and YrotM(-mTiltDir) (tww set_mtx); mode_vib0_init 0231D344 3500 (tww attr().m2A), mode_vib2 0231E154 chases it to 0, set_walk_rot 0231DB3C sets it from the walk speed (tww vibFactor * l_max_vib_angl) */
+    /* 0x72E */ be<s16> mTiltDir;  /* was m612: set_mtx 0231C380: the Y angle about which mTiltAngle is applied (YrotM(it) ... YrotM(-it)); set_walk_rot 0231DB3C / vib_pos_ang 0231DED0 advance it, mode_jump_init 0231CC9C / mode_vib0_init 0231D344 / mode_carry 0231DE48 clear it */
     /* 0x730 */ be<s32> mTimer;
     /* 0x734 */ be<f32> mLastGroundY;
-    /* 0x738 */ be<s16> m61C;
+    /* 0x738 */ be<s16> mSlantAngle;  /* was m61C: tww accessors get_slant_angle() { return m61C; } / set_slant_angle(s16); mode_carry 0231DE48 chases shape_angle.z toward it (tww cLib_chaseAngleS(&shape_angle.z, m61C, 0x1000)); daPy_lk_c::freeGrabItem 023DCF8C clears it through the view Player01BarrelState */
     u8 _73A[2];
     /* 0x73C */ be<u8> mOnGround;
     /* 0x73D */ be<s8> mInitTimer;
     /* 0x73E */ be<u8> mForceExec;
     /* 0x73F */ be<u8> mSunk;
     /* 0x740 */ cXyz mMove;
-    /* 0x74C */ be<s16> m630;
+    /* 0x74C */ be<s16> mRollAngle;  /* was m630: set_mtx 0231C380: a further YrotM(it) after the tilt; set_walk_rot 0231DB3C advances it by the distance rolled over the barrel's circumference (tww mag / ((cos * 5 + l_s_radius) * 6.28) * 0xFFFF); mode_jump_init 0231CC9C / mode_vib0_init 0231D344 clear it */
     u8 _74E[2];
 };
 } // namespace daObjBarrel
@@ -197,16 +197,16 @@ WWHD_OFFSET(daObjBarrel::Act_c, mAcch, 0x3B8);
 WWHD_OFFSET(daObjBarrel::Act_c, mAcchCir, 0x57C);
 WWHD_OFFSET(daObjBarrel::Act_c, mStts, 0x5BC);
 WWHD_OFFSET(daObjBarrel::Act_c, mCyl, 0x5F8);
-WWHD_OFFSET(daObjBarrel::Act_c, m610, 0x72C);
-WWHD_OFFSET(daObjBarrel::Act_c, m612, 0x72E);
+WWHD_OFFSET(daObjBarrel::Act_c, mTiltAngle, 0x72C);
+WWHD_OFFSET(daObjBarrel::Act_c, mTiltDir, 0x72E);
 WWHD_OFFSET(daObjBarrel::Act_c, mTimer, 0x730);
 WWHD_OFFSET(daObjBarrel::Act_c, mLastGroundY, 0x734);
-WWHD_OFFSET(daObjBarrel::Act_c, m61C, 0x738);
+WWHD_OFFSET(daObjBarrel::Act_c, mSlantAngle, 0x738);
 WWHD_OFFSET(daObjBarrel::Act_c, mOnGround, 0x73C);
 WWHD_OFFSET(daObjBarrel::Act_c, mInitTimer, 0x73D);
 WWHD_OFFSET(daObjBarrel::Act_c, mForceExec, 0x73E);
 WWHD_OFFSET(daObjBarrel::Act_c, mSunk, 0x73F);
-WWHD_OFFSET(daObjBarrel::Act_c, m630, 0x74C);
+WWHD_OFFSET(daObjBarrel::Act_c, mRollAngle, 0x74C);
 
 enum { BARREL_ACTOR_VTABLE = 0x100255B0 };
 void Barrel_AcchCirShape_dt(void*, s32);

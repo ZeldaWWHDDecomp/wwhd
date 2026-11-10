@@ -36,7 +36,7 @@ field 022EF464 r3+0x1108 i8 -1,0,1,2,3   # mTalkState
 field 022EF464 10468900 u32 0xFFFFFFFF,0   # l_msgId
 ret 025F795C 0xE,0xF,0x12,0x10   # message manager status
 ret 022EF190 0xF,0x10            # next_msgStatus
-field 022EFF38 r3+0x1116 u8 0,1,2   # field_0xE7A
+field 022EFF38 r3+0x1116 u8 0,1,2   # mDanceCount
 field 022EFF38 r3+0x1112 i16 0,1,2   # mSoundTimer
 field 022EFF38 r3+0x1101 i8 7,8,9,10,11   # mCurrAnmIdx
 ret 022EFE70 0,1                 # danceProc

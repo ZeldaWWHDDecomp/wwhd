@@ -11,49 +11,49 @@
 struct bmdfoot_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpBodyVineMorf;
-    /* 0x3D4 */ be<s16> m2B8;
-    /* 0x3D6 */ be<s16> m2BA;
-    /* 0x3D8 */ be<s16> m2BC;
-    /* 0x3DA */ be<s16> m2BE;
-    /* 0x3DC */ be<s16> m2C0[4];
+    /* 0x3D4 */ be<s16> mFrameCounter;  /* was m2B8: daBmdfoot_Execute 020B5DC4 adds 1 per frame (daBmdfoot_Create 020B7FC8 starts it random); ug_move 020B5904 starts it random and wobbles the crawl direction by sin(it); attack_1 (in daBmdfoot_Execute) picks the attack sphere joints by it & 7 */
+    /* 0x3D6 */ be<s16> mAction;  /* was m2BA: move (in daBmdfoot_Execute 020B5DC4) switch on the Bmdfoot_* actions (Wait, Attack1, Attack2, Damage, Start, End); daBmdfoot_Create 020B7FC8 sets Start; daBmdfoot_Execute tilts the vine by l_HIO.m08 below 3 */
+    /* 0x3D8 */ be<s16> mMode;  /* was m2BC: the step inside mAction: wait / attack_1 / attack_2 / damage / start (in daBmdfoot_Execute 020B5DC4) switch on it */
+    /* 0x3DA */ be<s16> mAimAngle;  /* was m2BE: attack_1 (in daBmdfoot_Execute 020B5DC4) turns it toward the player (within l_HIO.m06) at mAimSpeed + 128; daBmdfoot_Execute 020B5DC4 adds it to the model's y and twice to its z rotation and eases it to 0 */
+    /* 0x3DC */ be<s16> mTimers[4];  /* was m2C0: daBmdfoot_Execute 020B5DC4 counts all 4 down; wait / attack_1 / attack_2 / damage / start load [0] and [2] and wait on them */
     /* 0x3E4 */ be<s16> m2C8[2];
-    /* 0x3E8 */ cXyz m2CC[18];
-    /* 0x4C0 */ be<f32> m3A4[17]; /* GameCube m3A4[16]; the loops write [2..16] */
+    /* 0x3E8 */ cXyz mJointRot[18];  /* was m2CC: nodeCallBack 020B5580 rotates joint i about x by [i].x and about z by [i].z; daBmdfoot_Execute 020B5DC4 eases [i].z to the sway and [i].x to 0; wait / damage bend [i].x */
+    /* 0x4C0 */ be<f32> mJointSwayAmp[17];  /* was m3A4: daBmdfoot_Execute 020B5DC4 eases mJointRot[i].z to sin(mSwayPhase + i * 9000) * [i]; wait / damage (in daBmdfoot_Execute) set random amplitudes, attack_1 / start 0; GameCube mJointSwayAmp[16]; the loops write [2..16] */
     /* 0x504 */ u8 _504[0x508 - 0x504];
-    /* 0x508 */ be<s16> m3EC;
+    /* 0x508 */ be<s16> mSwayPhase;  /* was m3EC: wait / damage (in daBmdfoot_Execute 020B5DC4) set it random; wait adds 0x200 per frame; the phase of the joint sway in daBmdfoot_Execute */
     /* 0x50A */ u8 _50A[0x510 - 0x50A];
-    /* 0x510 */ be<u8> m3F4;
+    /* 0x510 */ be<u8> mWaitEffSet;  /* was m3F4: wait (in daBmdfoot_Execute 020B5DC4) creates the three ID_AK_SN_BKMASIWAIT00 emitters only while it is 0, then sets 1 */
     /* 0x511 */ u8 _511[3];
-    /* 0x514 */ cXyz m3F8[3];
+    /* 0x514 */ cXyz mWaitEffPos[3];  /* was m3F8: wait (in daBmdfoot_Execute 020B5DC4) sets [i] to the eff_id joint i each frame; the position of mAsiWaitFollowCB[i]'s emitter */
     /* 0x538 */ dPa_followEcallBack mAsiWaitFollowCB[3];
     /* 0x574 */ dPa_smokeEcallBack mLAttackSmoke00CB[2];
-    /* 0x5B4 */ cXyz m498[2];
+    /* 0x5B4 */ cXyz mLAttackSmokePos[2];  /* was m498: attack_2 (in daBmdfoot_Execute 020B5DC4) sets [0] / [1] and creates the ID_AK_ST_BKMLATTACKSMOKE00 emitters of mLAttackSmoke00CB there */
     /* 0x5CC */ dPa_smokeEcallBack mLAttackSmoke01CB;
     /* 0x5EC */ dCcD_Stts mStts;
     /* 0x628 */ dCcD_Sph mSph[5];
-    /* 0xC04 */ cXyz mAE8;
+    /* 0xC04 */ cXyz mTipPos;  /* was mAE8: daBmdfoot_Execute 020B5DC4: position of joint 16 (ASI17), kept above the boss mGroundY; the attack / move sounds play there; daBmdfoot_Delete 020B79C4 deletes its sound object */
     /* 0xC10 */ gptr<mDoExt_McaMorf> mpFloorVineMorf;
     /* 0xC14 */ dKy_tevstr_c mTevstr;
-    /* 0xDDC */ be<u8> mBA8;
+    /* 0xDDC */ be<u8> mUgMode;  /* was mBA8: ug_move 020B5904 switch: 1 start crawling under the floor, 2 crawl toward the player, 10 surfaced; attack_2 (in daBmdfoot_Execute 020B5DC4) sets 1 / 0; daBmdfoot_Draw 020B56CC draws mpFloorVineMorf from 10 */
     /* 0xDDD */ u8 _DDD[3];
-    /* 0xDE0 */ cXyz mBAC;
-    /* 0xDEC */ csXyz mBB8;
+    /* 0xDE0 */ cXyz mUgPos;  /* was mBAC: ug_move 020B5904 starts it at current.pos on the boss mGroundY, moves it 20 per frame along mUgAngle and places mpFloorVineMorf there; daBmdfoot_Draw 020B56CC lights mTevstr there; attack_2 sounds play there */
+    /* 0xDEC */ csXyz mUgAngle;  /* was mBB8: ug_move 020B5904 sets .y to current.angle.y, turns it toward the player (with a wobble) and moves / turns the floor vine by it */
     /* 0xDF2 */ u8 _DF2[2];
-    /* 0xDF4 */ be<f32> mBC0;
-    /* 0xDF8 */ be<f32> mBC4;
-    /* 0xDFC */ be<u8> mBC8;
+    /* 0xDF4 */ be<f32> mUgDistance;  /* was mBC0: ug_move 020B5904 sets 0 and adds the 20 per frame; the crawl ends past 3000 (or within 300 of the player) */
+    /* 0xDF8 */ be<f32> mAimSpeed;  /* was mBC4: attack_1 (in daBmdfoot_Execute 020B5DC4) sets 0, eases it to 10000; mAimAngle turns at it + 128 */
+    /* 0xDFC */ be<u8> mDrawOn;  /* was mBC8: daBmdfoot_Draw 020B56CC draws only while it is set; start (in daBmdfoot_Execute 020B5DC4) and daBmdfoot_Create 020B7FC8 set 1 (the create one when the start demo is skipped) */
     /* 0xDFD */ u8 _DFD[3];
     /* 0xE00 */ gptr<mDoExt_btkAnm> btk;
-    /* 0xE04 */ be<s16> mBD0;
-    /* 0xE06 */ be<u8> mBD2;
+    /* 0xE04 */ be<s16> mBtkTimer;  /* was mBD0: attack_1 (in daBmdfoot_Execute 020B5DC4) sets 30; daBmdfoot_Execute 020B5DC4 plays ATKVINE_MOVE_2 at 30, counts it down and sets the btk frame to 29 - it */
+    /* 0xE06 */ be<u8> mHioOwner;  /* was mBD2: daBmdfoot_Create 020B7FC8 sets 1 when it created the l_HIO child; daBmdfoot_Delete 020B79C4 deletes the HIO child only then (same use as bgn_class mHioOwner) */
     /* 0xE07 */ u8 _E07;
 };
-WWHD_OFFSET(bmdfoot_class, m3F8, 0x514);
+WWHD_OFFSET(bmdfoot_class, mWaitEffPos, 0x514);
 WWHD_OFFSET(bmdfoot_class, mStts, 0x5EC);
 WWHD_OFFSET(bmdfoot_class, mSph, 0x628);
-WWHD_OFFSET(bmdfoot_class, mAE8, 0xC04);
+WWHD_OFFSET(bmdfoot_class, mTipPos, 0xC04);
 WWHD_OFFSET(bmdfoot_class, mTevstr, 0xC14);
-WWHD_OFFSET(bmdfoot_class, mBA8, 0xDDC);
+WWHD_OFFSET(bmdfoot_class, mUgMode, 0xDDC);
 WWHD_OFFSET(bmdfoot_class, btk, 0xE00);
 WWHD_SIZE(bmdfoot_class, 0xE08);
 
@@ -71,18 +71,18 @@ WWHD_SIZE(daBmdfoot_HIO_c, 0xC);
 // HD: boss fields used by this unit. Unnamed members retain their tww names.
 struct BmdfootBoss : fopAc_ac_c {
     u8 _3AC[0x448 - 0x3AC];
-    be<f32> m328;
+    be<f32> mGroundY;
     u8 _44C[5];
-    be<s8> m331;
-    be<s8> m332;
+    be<s8> mVineCount;
+    be<s8> mVineCommand;
     u8 _453;
-    be<s16> m334;
+    be<s16> mAttackTimer;
     u8 _456[0xC96 - 0x456];
-    be<s16> mB76;
+    be<s16> mDemoMainCount;
 };
-WWHD_OFFSET(BmdfootBoss, m328, 0x448);
-WWHD_OFFSET(BmdfootBoss, m334, 0x454);
-WWHD_OFFSET(BmdfootBoss, mB76, 0xC96);
+WWHD_OFFSET(BmdfootBoss, mGroundY, 0x448);
+WWHD_OFFSET(BmdfootBoss, mAttackTimer, 0x454);
+WWHD_OFFSET(BmdfootBoss, mDemoMainCount, 0xC96);
 struct BmdfootThreeJoints {
     be<s32> values[3];
 };

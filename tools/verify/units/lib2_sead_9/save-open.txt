@@ -1,0 +1,92 @@
+# verify: -only 02744908
+# SEAD#9 companion: SaveFileDevice::doOpen with the handle's backend from the original getSaveHandle.
+src wwhd_src/sead/CafeFileDevices.cpp
+src wwhd_src/sead/FileDeviceStatics.cpp
+# Bounded output capacities model ordinary caller-owned path and directory arrays.
+arg! 02743E34 r5 0,1,2,3,16,32,256
+arg! 02745068 r7 0,1,2,3,4
+# Save stat may report a missing entry; directory reads produce the SDK-sized record.
+ret C0007430 -6,-1,0,1
+ret C0008EB8 -2,-1,0,1
+callee C0008EB8 r6=out356
+mockfield C0008EB8 r6+0x163 u8 0
+
+# Pre-existing aligned stack bytes expose stores of explicit zero terminators.
+stackfill periodic
+
+# GHS deleting entries accept a null receiver; also retain nonnull and unsteered cases.
+arg 027444C8 r3 0,0x51000000
+arg 02744528 r3 0,0x51000000
+arg 02744588 r3 0,0x51000000
+arg 027451EC r3 0,0x51000000
+arg 027445E8 r3 0,0x51000000
+arg 02744618 r3 0,0x51000000
+arg 0274462C r3 0,0x51000000
+arg 02744640 r3 0,0x51000000
+arg 02744654 r3 0,0x51000000
+arg 02744668 r3 0,0x51000000
+arg 0274524C r3 0,0x51000000
+arg 02745264 r3 0,0x51000000
+arg 02745290 r3 0,0x51000000
+arg 027452A4 r3 0,0x51000000
+
+# resolvePath requires SafeText polymorphism, not arbitrary game-function vtables.
+# Source choices include distinct storage, descriptor aliasing, and buffer aliasing.
+arg! 02743EAC r3 0x52000000
+arg! 02743EAC r4 0x53000100
+arg! 02743EAC r5 0x53000000,0x53000100,0x53000200
+field 02743EAC 52000054 u32 0x57000000
+field 02743EAC 53000000 u32 0x54000000
+field 02743EAC 53000004 u32 0x10143EA0,0x10143EE8
+field 02743EAC 53000008 s32 256
+field 02743EAC 53000100 u32 0x54001000
+field 02743EAC 53000104 u32 0x10143EE8
+field 02743EAC 53000108 s32 64
+field 02743EAC 53000200 u32 0x54001000
+field 02743EAC 53000204 u32 0x10143EA0,0x10143EE8
+field 02743EAC 53000208 s32 64
+fill 02743EAC 54000000 256 0
+fill 02743EAC 54001000 256 0
+fieldstr 02743EAC 54000000 256 "ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp%ENV%/tail","x","","%ENV%/sub","p%ENV%/tail","pp%ENV%/tail","pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp%ENV%/tail","prefix/%ENV%/tail","%ENV%","%ENV","%%","prefix%ENV%%","a\\b:c","%ENV%/a%second%/b"
+fieldstr 02743EAC 54001000 256 "x","","%ENV%/sub","p%ENV%/tail","pp%ENV%/tail","prefix/%ENV%/tail","%ENV%","%ENV","%%","prefix%ENV%%","a\\b:c","%ENV%/a%second%/b"
+fill 02743EAC 57000000 16 0
+field 02743EAC 57000000 u32 0x726F6F74
+stable 52000054 4
+stable 53000000 12
+stable 53000100 12
+stable 53000200 12
+stable 54000000 256
+stable 54001000 256
+stable 57000000 16
+# The formatter writes root/ and terminates; descriptor words remain unchanged. A negative or
+# over-capacity formatter result takes the empty-segment branch of the prefix copy; 0 and 64 (the
+# output capacity) are its edges.
+ret! 02759C28 5,5,5,5,5,5,-1,0,64,4096
+mockglobal 02759C28 54001000 u32 0x726F6F74
+mockglobal 02759C28 54001004 u16 0x2F00
+callee C0008980 r4=out256
+mockfield C0008980 r4+255 u8 0
+ret C0008980 0,-1
+# Seek from the end asks the device's own size query (save vtable slot 0x94), which reports a size.
+field 02744C38 r3+0x50 u32 0x10144300
+callee 02744D54 r4=out4
+
+# Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
+# fixture keeps no bytes the original clears or overwrites: OSBlockMove C0009988.
+mockmove C0009988 r3 r4 r5
+
+# zero-page rule (2026-11-10, LOW clean 60/1000): doOpen 02744908 gets the save handle
+# from getSaveHandle 027448E8 (-> FileDevice::getHandleBackend 02741428: the address of the handle's inline mBackend
+# storage) and passes &saveHandle->mFSHandle to SAVEOpenFile, then stores mPosition unchecked. As a generic mock the
+# getter answered generated values near 0 (trace steerS/tr-02744908.txt: store 00000004). Both getters are the image's
+# own one-line accessors and run for real on a fixture handle 0x5EE00000 (its fields stay generated).
+real 027448E8 02741428
+arg! 02744908 r4 0x5EE00000
+# The device (r3: mClient, mAccountSlot, mOpenErrorMask, mLastStatus) and the path SafeText (r5: {mText, vtable}; the
+# vtables the main spec gives 02743EAC's texts) are fixtures too: generated pointers near 0 faulted the original at
+# their loads.
+arg! 02744908 r3 0x5EE10000
+arg! 02744908 r5 0x5EE20000
+field 02744908 0x5EE20000 u32 0x5EE20100
+field 02744908 0x5EE20004 u32 0x10143EA0,0x10143EE8
+stable 0x5EE20000 8

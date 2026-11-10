@@ -191,10 +191,11 @@ struct TextureTransform {
     u8 mUniformState[0x64];
     TextureUniformData mData;
 };
+// Layout of agl::IndexBufferLayout (include/agl/IndexBufferLayout.h); names follow it.
 struct IndexBuffer {
-    be<u32> mPrimitive;
-    gptr<void> mpIndices;
-    be<u32> mIndexType;
+    be<u32> mFormat;  /* was mPrimitive: GX2DrawIndexedEx indexType (r5, +0x0) at 025CF1D8 / 025D1CA8 / 025D1D38; agl::IndexBufferLayout::mFormat */
+    be<u32> mPrimitiveMode;  /* was mpIndices: GX2DrawIndexedEx mode (r3, +0x4) at the same calls; 025CF20C sets 4 (triangles) in mLeafIndices and mTrunkIndices; agl::IndexBufferLayout::mPrimitiveMode */
+    gptr<void> mStorage;  /* was mIndexType: GX2DrawIndexedEx indices (r6, +0x8) at the same calls; agl::IndexBufferLayout::mStorage */
     be<u32> mCount;
     be<u32> mOffset;
     u8 mPadding[4];
@@ -361,6 +362,8 @@ s32 woodTargetAngleY(const cXyz *from, const cXyz *to);
 WWHD_SIZE(dWood::Transform, 0xA8);
 WWHD_SIZE(dWood::TextureTransform, 0x364);
 WWHD_SIZE(dWood::IndexBuffer, 0x18);
+WWHD_OFFSET(dWood::IndexBuffer, mPrimitiveMode, 0x4);
+WWHD_OFFSET(dWood::IndexBuffer, mStorage, 0x8);
 WWHD_SIZE(dWood::Shape, 0xF4);
 WWHD_SIZE(dWood::ShapeGroup, 20);
 WWHD_SIZE(dWood::ShapeGroups, 12);
@@ -451,7 +454,7 @@ void woodArrayDestroy(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
 void woodRegisterStatic(u32 a0);
 void woodClearUniformData(u32 a0, u32 a1);
 void woodGX2BindProgram(u32 a0, u32 a1);
-void woodGX2DrawIndexed(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
+void GX2DrawIndexedEx(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
 void woodGX2GeometryUniform(u32 a0, u32 a1, u32 a2);
 void woodGX2PixelUniform(u32 a0, u32 a1, u32 a2);
 void woodGX2VertexUniform(u32 a0, u32 a1, u32 a2);

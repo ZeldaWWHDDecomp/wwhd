@@ -216,16 +216,16 @@ void btdActionWait(btd_class *i_this) {
         i_this->mGohmaState = (s16)(s16((s16)i_this->mGohmaState + 1));
         [[fallthrough]];
     case 1:
-        if (view < 0x1800 && (s16)i_this->m02EC[0] == 0) {
-            i_this->m02E4 = ACT_ATTACK;
+        if (view < 0x1800 && (s16)i_this->mTimers[0] == 0) {
+            i_this->mAction = ACT_ATTACK;
             i_this->mGohmaState = (s16)(0);
             f32 choice = cM_rndF(1.0f);
             if (choice < 0.5f) {
-                i_this->m02E9 = (s8)(0);
-                i_this->m02EA = (s8)(1);
+                i_this->mAttackAnmIdx = (s8)(0);
+                i_this->mAttackHand = (s8)(1);
             } else {
-                i_this->m02E9 = (s8)(5);
-                i_this->m02EA = (s8)(0);
+                i_this->mAttackAnmIdx = (s8)(5);
+                i_this->mAttackHand = (s8)(0);
             }
             u8 forced = (u8)l_HIO.m10;
             if (forced == 0) {
@@ -236,7 +236,7 @@ void btdActionWait(btd_class *i_this) {
                         break;
                     }
                 }
-                bool phase = (u8)i_this->m02E0 != 0;
+                bool phase = (u8)i_this->mBattlePhase != 0;
                 f32 first = cM_rndF(1.0f);
                 if (first < (phase ? (f32)l_HIO.m20 : (f32)l_HIO.m18))
                     i_this->mAttackType = (s8)(0);
@@ -249,51 +249,51 @@ void btdActionWait(btd_class *i_this) {
                 i_this->mAttackType = (s8)(forced - 1);
             else if (forced == 4) {
                 i_this->mAttackType = (s8)(5);
-                i_this->m02E9 = (s8)(5);
-                i_this->m02EA = (s8)(0);
+                i_this->mAttackAnmIdx = (s8)(5);
+                i_this->mAttackHand = (s8)(0);
             }
         } else {
-            i_this->m5E94 = (s16)(0x100);
-            if (view >= 0x6000 && (s16)i_this->m02EC[1] == 0) {
+            i_this->mTurnMaxStep = (s16)(0x100);
+            if (view >= 0x6000 && (s16)i_this->mTimers[1] == 0) {
                 i_this->mGohmaState = (s16)(2);
                 btdActionAnimation(btdActor(p), 0x15, 10.0f);
-                i_this->m02EC[0] = (s16)(150);
-                i_this->m5E86 = (u8)(1);
+                i_this->mTimers[0] = (s16)(150);
+                i_this->mLookMode = (u8)(1);
             } else {
                 if (high) {
                     u32 peg = (u32)kui.v;
                     i_this->mGohmaState =
                         (s16)(peg != 0 && (s8)btdBaseActor(peg)->health == 3 ? 10 : 20);
                 }
-                i_this->m5E86 = (u8)(1);
+                i_this->mLookMode = (u8)(1);
             }
         }
         break;
     case 2:
-        if (view < 0x6000 || (s16)i_this->m02EC[0] == 0) {
+        if (view < 0x6000 || (s16)i_this->mTimers[0] == 0) {
             i_this->mGohmaState = (s16)(0);
-            i_this->m02EC[1] = (s16)(40);
+            i_this->mTimers[1] = (s16)(40);
         }
         break;
     case 10:
         btdActionAnimation(btdActor(p), 0x2F, 20.0f);
         i_this->mGohmaState = (s16)(s16((s16)i_this->mGohmaState + 1));
-        i_this->m02EC[0] = (s16)(300);
+        i_this->mTimers[0] = (s16)(300);
         {
             s16 timer = s16(gabi::ftoi(cM_rndF(80.0f) + 90.0f));
-            i_this->m02EC[1] = (s16)(timer);
+            i_this->mTimers[1] = (s16)(timer);
         }
         [[fallthrough]];
     case 11:
-        if ((s16)i_this->m02EC[1] == 0 && (s16)i_this->m02EC[0] > 150) {
+        if ((s16)i_this->mTimers[1] == 0 && (s16)i_this->mTimers[0] > 150) {
             actorSoundNN(p, 0x483E);
-            i_this->m02EC[1] = (s16)(s16(gabi::ftoi(cM_rndF(80.0f) + 90.0f)));
+            i_this->mTimers[1] = (s16)(s16(gabi::ftoi(cM_rndF(80.0f) + 90.0f)));
         }
-        i_this->m5E86 = (u8)(3);
-        i_this->m5E94 = (s16)(0x100);
+        i_this->mLookMode = (u8)(3);
+        i_this->mTurnMaxStep = (s16)(0x100);
         {
-            s16 facing = (s16)btdPlayer(player)->shape_angle.y, timer = (s16)i_this->m02EC[0];
-            i_this->m5E90 = (s16)(s16(facing + 0x4000));
+            s16 facing = (s16)btdPlayer(player)->shape_angle.y, timer = (s16)i_this->mTimers[0];
+            i_this->mTurnTargetAngleY = (s16)(s16(facing + 0x4000));
             if (!high)
                 i_this->mGohmaState = (s16)(0);
             else {
@@ -303,7 +303,7 @@ void btdActionWait(btd_class *i_this) {
             }
             if (timer == 0) {
                 i_this->mAttackType = (s8)(3);
-                i_this->m02E4 = ACT_ATTACK;
+                i_this->mAction = ACT_ATTACK;
                 i_this->mGohmaState = (s16)(0);
             }
         }
@@ -311,12 +311,12 @@ void btdActionWait(btd_class *i_this) {
     case 20:
         btdActionAnimation(btdActor(p), 0x39, 20.0f);
         i_this->mGohmaState = (s16)(s16((s16)i_this->mGohmaState + 1));
-        i_this->m02EC[0] = (s16)(150);
+        i_this->mTimers[0] = (s16)(150);
         [[fallthrough]];
     case 21: {
-        s16 timer = (s16)i_this->m02EC[0];
-        i_this->m5E94 = (s16)(0x100);
-        i_this->m5E86 = (u8)(1);
+        s16 timer = (s16)i_this->mTimers[0];
+        i_this->mTurnMaxStep = (s16)(0x100);
+        i_this->mLookMode = (u8)(1);
         if (!high)
             i_this->mGohmaState = (s16)(0);
         else {
@@ -326,7 +326,7 @@ void btdActionWait(btd_class *i_this) {
         }
         if (timer == 0) {
             i_this->mAttackType = (s8)(4);
-            i_this->m02E4 = ACT_ATTACK;
+            i_this->mAction = ACT_ATTACK;
             i_this->mGohmaState = (s16)(0);
         }
     } break;
@@ -340,10 +340,10 @@ bool btdActionStopped(u32 morf) {
            (f32)btdMorph(morf)->mFrameCtrl.mRate == 0.0f;
 }
 void btdActionReset(btd_class *i_this) {
-    i_this->m02E4 = ACT_WAIT;
+    i_this->mAction = ACT_WAIT;
     i_this->mGohmaState = (s16)(0);
     f32 delay = cM_rndF(50.0f);
-    i_this->m02EC[0] = (s16)(s16(gabi::ftoi(delay + (f32)l_HIO.m14)));
+    i_this->mTimers[0] = (s16)(s16(gabi::ftoi(delay + (f32)l_HIO.m14)));
 }
 void btdActionLevelSound(btd_class *i_this, u32 id, u32 position) {
     s32 reverb = btdGuest_dComIfGp_getReverb(s32((s8)i_this->current.roomNo));
@@ -356,8 +356,8 @@ void btdActionBodyLevelSound(btd_class *i_this, u32 id) {
 }
 void btdActionNextAnimation(btd_class *i_this, const be<s32> *table, f32 blend, u8 loop = 0) {
     const u32 p = gabi::ea(i_this);
-    s8 index = s8((u8)i_this->m02E9 + 1);
-    i_this->m02E9 = (s8)(u8(index));
+    s8 index = s8((u8)i_this->mAttackAnmIdx + 1);
+    i_this->mAttackAnmIdx = (s8)(u8(index));
     s32 animation = (s32)table[index];
     btdActionAnimation(btdActor(p), animation, blend, loop);
 }
@@ -369,7 +369,7 @@ void btdActionJab(btd_class *i_this) {
     u32 morf = btdGuest_get_anm(p);
     switch (u16((s16)i_this->mGohmaState)) {
     case 0:
-        btdActionAnimation(btdActor(p), (s32)jab_bck[(u32(s32((s8)i_this->m02E9) * 4)) / 4], 5.0f,
+        btdActionAnimation(btdActor(p), (s32)jab_bck[(u32(s32((s8)i_this->mAttackAnmIdx) * 4)) / 4], 5.0f,
                            0);
         actorSoundNN(p, 0x4834);
         btdActionIncrement(btdActor(p));
@@ -378,13 +378,13 @@ void btdActionJab(btd_class *i_this) {
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), jab_bck, 0.0f);
             btdActionIncrement(btdActor(p));
-            s32 joint = (s8)i_this->m02EA != 0 ? 10 : 8;
+            s32 joint = (s8)i_this->mAttackHand != 0 ? 10 : 8;
             btdActionLevelSound(btdActor(p), 0x5818,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
         }
         break;
     case 2:
-        i_this->m5E84 = (u8)(1);
+        i_this->mAtMode = (u8)(1);
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), jab_bck, 0.0f);
             btdActionIncrement(btdActor(p));
@@ -403,7 +403,7 @@ void btdActionPunch(btd_class *i_this) {
     s16 state = (s16)i_this->mGohmaState;
     switch (u16(state)) {
     case 0:
-        btdActionAnimation(btdActor(p), (s32)punch_bck[(u32(s32((s8)i_this->m02E9) * 4)) / 4], 5.0f,
+        btdActionAnimation(btdActor(p), (s32)punch_bck[(u32(s32((s8)i_this->mAttackAnmIdx) * 4)) / 4], 5.0f,
                            0);
         btdActionIncrement(btdActor(p));
         actorSoundNN(p, 0x4835);
@@ -413,21 +413,21 @@ void btdActionPunch(btd_class *i_this) {
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), punch_bck, 0.0f);
             btdActionIncrement(btdActor(p));
-            s32 joint = (s8)i_this->m02EA != 0 ? 10 : 8;
+            s32 joint = (s8)i_this->mAttackHand != 0 ? 10 : 8;
             btdActionLevelSound(btdActor(p), 0x5819,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
             state = (s16)i_this->mGohmaState;
         }
         break;
     case 2:
-        i_this->m5E84 = (u8)(2);
+        i_this->mAtMode = (u8)(2);
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), punch_bck, 0.0f);
             btdActionIncrement(btdActor(p));
-            s32 joint = (s8)i_this->m02EA != 0 ? 10 : 8;
+            s32 joint = (s8)i_this->mAttackHand != 0 ? 10 : 8;
             btdActionLevelSound(btdActor(p), 0x581B,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
-            btdGuest_hahen_set(p, s32((s8)i_this->m02EA));
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
+            btdGuest_hahen_set(p, s32((s8)i_this->mAttackHand));
             u32 game = play();
             s32 magnitude = (s16)l_debugRegisters.shorts[0] + 5;
 
@@ -446,44 +446,44 @@ void btdActionPunch(btd_class *i_this) {
             f32 random = cM_rndF(100.0f);
             f32 timer = random + (f32)l_HIO.m28;
             state = s16((s16)i_this->mGohmaState + 1);
-            i_this->m02EC[0] = (s16)(s16(gabi::ftoi(timer)));
+            i_this->mTimers[0] = (s16)(s16(gabi::ftoi(timer)));
             i_this->mGohmaState = (s16)(state);
         }
         break;
     case 4: {
-        s32 joint = (s8)i_this->m02EA != 0 ? 10 : 8;
+        s32 joint = (s8)i_this->mAttackHand != 0 ? 10 : 8;
         if (gabi::ftoi((f32)btdMorph(morf)->mFrameCtrl.mFrame) == 2) {
             btdActionLevelSound(btdActor(p), 0x581C,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
             if (p + 0x37C != 0)
                 actorSound(p, 0x4838);
         }
-        if ((s16)i_this->m02EC[0] == 0) {
+        if ((s16)i_this->mTimers[0] == 0) {
             btdActionNextAnimation(btdActor(p), punch_bck, 5.0f);
             btdActionIncrement(btdActor(p));
             actorSoundNN(p, 0x4839);
             btdActionLevelSound(btdActor(p), 0x581D,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
-            i_this->m6028[5] = (s16)(23);
-            i_this->m6028[4] = (s16)(23);
-            i_this->m6028[6] = (s16)(3);
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
+            i_this->mAttackEmitterTimer[5] = (s16)(23);
+            i_this->mAttackEmitterTimer[4] = (s16)(23);
+            i_this->mAttackEmitterTimer[6] = (s16)(3);
         }
         state = (s16)i_this->mGohmaState;
         break;
     }
     case 5:
         if (btdActionStopped(morf)) {
-            i_this->m02E4 = ACT_WAIT;
+            i_this->mAction = ACT_WAIT;
             i_this->mGohmaState = (s16)(0);
             f32 delay = cM_rndF(50.0f);
             f32 total = delay + (f32)l_HIO.m14;
             state = (s16)i_this->mGohmaState;
-            i_this->m02EC[0] = (s16)(s16(gabi::ftoi(total)));
+            i_this->mTimers[0] = (s16)(s16(gabi::ftoi(total)));
         }
         break;
     }
     if (state == 3 || state == 4)
-        i_this->m5E7C = (u8)(u8((u8)i_this->m02EA + 2));
+        i_this->mHandCylMode = (u8)(u8((u8)i_this->mAttackHand + 2));
 }
 } // namespace
 
@@ -499,7 +499,7 @@ void btdActionFireMatrix(u32 morf) {
 void btdActionFireCollision(btd_class *i_this, u32 morf, bool swept) {
     const u32 p = gabi::ea(i_this);
     btdActionFireMatrix(morf);
-    f32 extent = (f32)i_this->m5E80;
+    f32 extent = (f32)i_this->mFireSize;
 
     cXyz local;
     cXyz position;
@@ -508,9 +508,9 @@ void btdActionFireCollision(btd_class *i_this, u32 morf, bool swept) {
     local.y = -200.0f * extent;
     local.z = 1000.0f * extent;
     MtxPosition(&local, &position);
-    btdGuest_cM3dGSph_SetR(gabi::ea(&i_this->mFireSph.mSph), 200.0f * (f32)i_this->m5E80);
+    btdGuest_cM3dGSph_SetR(gabi::ea(&i_this->mFireSph.mSph), 200.0f * (f32)i_this->mFireSize);
     if (swept) {
-        bool first = (s16)i_this->m02EC[0] == 1;
+        bool first = (s16)i_this->mTimers[0] == 1;
         if (first)
             btdGuest_startFireAttack(gabi::ea(&i_this->mFireSph), &position);
         else
@@ -523,21 +523,21 @@ void btdActionFire(btd_class *i_this) {
     const u32 p = gabi::ea(i_this);
     u32 morf = btdGuest_get_anm(p);
     s16 state = (s16)i_this->mGohmaState;
-    i_this->m5E86 = (u8)(2);
+    i_this->mLookMode = (u8)(2);
     switch (u16(state)) {
     case 0:
         btdActionAnimation(btdActor(p), 0xD, 5.0f, 0);
         btdActionIncrement(btdActor(p));
         state = (s16)i_this->mGohmaState;
-        i_this->m6E7C = (f32)(0.0f);
-        i_this->m02EC[0] = (s16)(40);
+        i_this->mWaveRadius = (f32)(0.0f);
+        i_this->mTimers[0] = (s16)(40);
         break;
     case 1: {
         s16 target = s16((s16)l_debugRegisters.shorts[4] + 16);
-        s16 timer = (s16)i_this->m02EC[0];
+        s16 timer = (s16)i_this->mTimers[0];
         if (timer == target) {
             btdGuest_hahen_set2(p);
-            timer = (s16)i_this->m02EC[0];
+            timer = (s16)i_this->mTimers[0];
         }
         if (timer == 31)
             actorSoundNN(p, 0x483A);
@@ -550,13 +550,13 @@ void btdActionFire(btd_class *i_this) {
     }
     case 2:
         if (btdActionStopped(morf)) {
-            if ((u8)i_this->m02E0 != 0) {
+            if ((u8)i_this->mBattlePhase != 0) {
                 i_this->mGohmaState = (s16)(6);
                 btdActionAnimation(btdActor(p), 0x11, 0.0f, 0);
                 actorSoundNN(p, 0x5810);
             } else {
                 btdActionAnimation(btdActor(p), 0xF, 0.0f, 2);
-                i_this->m02EC[0] = (s16)(s16((s16)l_HIO.m2C * 9));
+                i_this->mTimers[0] = (s16)(s16((s16)l_HIO.m2C * 9));
                 i_this->mGohmaState = (s16)(3);
             }
         }
@@ -565,68 +565,68 @@ void btdActionFire(btd_class *i_this) {
     case 3: {
         i_this->mKankyoState = (u8)(1);
         btdActionBodyLevelSound(btdActor(p), 0x501E);
-        if ((s16)i_this->m02EC[0] > 9)
-            i_this->m6028[1] = (s16)(1);
-        s16 spawnTimer = s16((s16)l_debugRegisters.shorts[4] + 20), timer = (s16)i_this->m02EC[0];
-        i_this->m6028[0] = (s16)(spawnTimer);
+        if ((s16)i_this->mTimers[0] > 9)
+            i_this->mAttackEmitterTimer[1] = (s16)(1);
+        s16 spawnTimer = s16((s16)l_debugRegisters.shorts[4] + 20), timer = (s16)i_this->mTimers[0];
+        i_this->mAttackEmitterTimer[0] = (s16)(spawnTimer);
         if (timer == 0) {
-            if ((u8)i_this->m02E0 != 0) {
+            if ((u8)i_this->mBattlePhase != 0) {
                 btdActionAnimation(btdActor(p), 0x11, 0.0f, 0);
                 i_this->mGohmaState = (s16)(5);
                 actorSoundNN(p, 0x5810);
             } else {
                 btdActionAnimation(btdActor(p), 0x10, 0.0f, 0);
                 btdActionIncrement(btdActor(p));
-                i_this->m02EC[0] = (s16)(s16((s16)l_debugRegisters.shorts[1] + 25));
+                i_this->mTimers[0] = (s16)(s16((s16)l_debugRegisters.shorts[1] + 25));
                 btdActionBodyLevelSound(btdActor(p), 0x581A);
             }
-            i_this->m600C[3].v = 0;
+            i_this->mAttackEmitter[3].v = 0;
         }
         state = (s16)i_this->mGohmaState;
         break;
     }
     case 4: {
-        i_this->m6028[2] = (s16)(12);
-        i_this->m6028[3] = (s16)(3);
+        i_this->mAttackEmitterTimer[2] = (s16)(12);
+        i_this->mAttackEmitterTimer[3] = (s16)(3);
         if (btdActionStopped(morf))
             btdActionReset(btdActor(p));
-        if ((s16)i_this->m02EC[0] > 1)
-            i_this->m5E80 = (f32)(0.0f);
+        if ((s16)i_this->mTimers[0] > 1)
+            i_this->mFireSize = (f32)(0.0f);
         else {
             i_this->mKankyoState = (u8)(2);
             btdActionBodyLevelSound(btdActor(p), 0x501F);
             btdActionFireCollision(btdActor(p), morf, true);
-            f32 next = (f32)i_this->m5E80 + 0.1f;
+            f32 next = (f32)i_this->mFireSize + 0.1f;
             if (next > 1.0f)
-                i_this->m5E80 = (f32)(0.0f);
+                i_this->mFireSize = (f32)(0.0f);
             else
-                i_this->m5E80 = (f32)(next);
+                i_this->mFireSize = (f32)(next);
         }
         state = (s16)i_this->mGohmaState;
         break;
     }
     case 5:
-        i_this->m5E84 = (u8)(3);
+        i_this->mAtMode = (u8)(3);
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), 0x10, 0.0f, 0);
             i_this->mGohmaState = (s16)(4);
-            i_this->m02EC[0] = (s16)(s16((s16)l_debugRegisters.shorts[1] + 25));
+            i_this->mTimers[0] = (s16)(s16((s16)l_debugRegisters.shorts[1] + 25));
             btdActionBodyLevelSound(btdActor(p), 0x581A);
         }
         state = (s16)i_this->mGohmaState;
         break;
     case 6:
-        i_this->m5E84 = (u8)(3);
+        i_this->mAtMode = (u8)(3);
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), 0xF, 15.0f, 2);
-            i_this->m02EC[0] = (s16)(s16((s16)l_HIO.m2C * 4));
+            i_this->mTimers[0] = (s16)(s16((s16)l_HIO.m2C * 4));
             i_this->mGohmaState = (s16)(3);
         }
         state = (s16)i_this->mGohmaState;
         break;
     }
-    if (state >= 2 || (s16)i_this->m02EC[0] < 16)
-        i_this->m5E7C = (u8)(1);
+    if (state >= 2 || (s16)i_this->mTimers[0] < 16)
+        i_this->mHandCylMode = (u8)(1);
 }
 } // namespace
 
@@ -637,34 +637,34 @@ void btdActionHighFire(btd_class *i_this, bool sideFire) {
     u32 player = (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v;
     u32 morf = btdGuest_get_anm(p);
     u16 state = u16((s16)i_this->mGohmaState);
-    i_this->m5E86 = (u8)(sideFire ? 1 : 3);
+    i_this->mLookMode = (u8)(sideFire ? 1 : 3);
     switch (state) {
     case 0:
         btdActionAnimation(btdActor(p), sideFire ? 0x36 : 0x30, 5.0f, 0);
         btdActionIncrement(btdActor(p));
-        i_this->m02EC[0] = (s16)(40);
+        i_this->mTimers[0] = (s16)(40);
         break;
     case 1:
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), sideFire ? 0x37 : 0x31, 1.0f, 2);
             s16 duration = (s16)l_HIO.m2C, next = s16((s16)i_this->mGohmaState + 1);
-            i_this->m02EC[0] = (s16)(s16(duration * (sideFire ? 7 : 9)));
+            i_this->mTimers[0] = (s16)(s16(duration * (sideFire ? 7 : 9)));
             i_this->mGohmaState = (s16)(next);
         }
         break;
     case 2: {
         i_this->mKankyoState = (u8)(1);
         btdActionBodyLevelSound(btdActor(p), 0x501E);
-        s16 timer = (s16)i_this->m02EC[0];
-        i_this->m6028[1] = (s16)(1);
+        s16 timer = (s16)i_this->mTimers[0];
+        i_this->mAttackEmitterTimer[1] = (s16)(1);
         s16 sprayTimer = s16((s16)l_debugRegisters.shorts[4] + 20);
-        i_this->m6028[0] = (s16)(sprayTimer);
+        i_this->mAttackEmitterTimer[0] = (s16)(sprayTimer);
         if (timer == 0) {
             btdActionAnimation(btdActor(p), sideFire ? 0x38 : 0x32, 5.0f, 0);
             btdActionIncrement(btdActor(p));
-            i_this->m02EC[0] = (s16)(s16((s16)l_debugRegisters.shorts[1] + 25));
+            i_this->mTimers[0] = (s16)(s16((s16)l_debugRegisters.shorts[1] + 25));
             btdActionBodyLevelSound(btdActor(p), 0x581A);
-            i_this->m600C[3].v = 0;
+            i_this->mAttackEmitter[3].v = 0;
         }
         break;
     }
@@ -678,35 +678,35 @@ void btdActionHighFire(btd_class *i_this, bool sideFire) {
             f32 z = difference.z, x = difference.x, y = difference.y;
             f32 length = btdGuest_sqrtf(gabi::fmadds(x, x, z * z));
             s32 pitch = btdGuest_cM_atan2sFullResult(y, length);
-            i_this->m6028[2] = (s16)(12);
-            i_this->m6028[3] = (s16)(3);
-            s16 timer = (s16)i_this->m02EC[0];
-            i_this->m5E8C = (s16)(s16(-pitch - 2500));
+            i_this->mAttackEmitterTimer[2] = (s16)(12);
+            i_this->mAttackEmitterTimer[3] = (s16)(3);
+            s16 timer = (s16)i_this->mTimers[0];
+            i_this->mNeckTargetAngleX = (s16)(s16(-pitch - 2500));
             if (timer != 0)
-                i_this->m5E80 = (f32)(0.0f);
+                i_this->mFireSize = (f32)(0.0f);
             else {
                 i_this->mKankyoState = (u8)(2);
                 btdActionBodyLevelSound(btdActor(p), 0x501F);
                 btdActionFireCollision(btdActor(p), morf, false);
-                f32 next = (f32)i_this->m5E80 + 0.1f;
-                i_this->m5E80 = (f32)(next);
+                f32 next = (f32)i_this->mFireSize + 0.1f;
+                i_this->mFireSize = (f32)(next);
                 f32 limit = (f32)l_debugRegisters.floats[9] + 1.0f;
                 if (next > limit)
-                    i_this->m5E80 = (f32)(0.0f);
+                    i_this->mFireSize = (f32)(0.0f);
             }
         } else {
-            s16 timer = (s16)i_this->m02EC[0];
-            i_this->m6028[2] = (s16)(12);
-            i_this->m6028[3] = (s16)(3);
+            s16 timer = (s16)i_this->mTimers[0];
+            i_this->mAttackEmitterTimer[2] = (s16)(12);
+            i_this->mAttackEmitterTimer[3] = (s16)(3);
             if (timer != 0)
-                i_this->m5E80 = (f32)(0.0f);
+                i_this->mFireSize = (f32)(0.0f);
             else {
                 i_this->mKankyoState = (u8)(2);
                 btdActionBodyLevelSound(btdActor(p), 0x501F);
                 btdActionFireCollision(btdActor(p), morf, false);
-                f32 next = (f32)i_this->m5E80 + 0.1f;
+                f32 next = (f32)i_this->mFireSize + 0.1f;
                 // Native ble keeps unordered values; only an ordered greater result resets.
-                i_this->m5E80 = (f32)(next > 1.0f ? 0.0f : next);
+                i_this->mFireSize = (f32)(next > 1.0f ? 0.0f : next);
             }
         }
         if (btdActionStopped(morf))
@@ -725,7 +725,7 @@ void btdActionHighFire(btd_class *i_this, bool sideFire) {
     if (reset)
         btdActionReset(btdActor(p));
     if (sideFire)
-        i_this->m5E94 = (s16)(0x200);
+        i_this->mTurnMaxStep = (s16)(0x200);
 }
 /* inlined into move, end, daBtd_Execute */
 void btdActionTurningPunch(btd_class *i_this) {
@@ -733,7 +733,7 @@ void btdActionTurningPunch(btd_class *i_this) {
     u32 morf = btdGuest_get_anm(p);
     switch (u16((s16)i_this->mGohmaState)) {
     case 0:
-        btdActionAnimation(btdActor(p), (s32)punch_bck[(u32(s32((s8)i_this->m02E9) * 4)) / 4], 5.0f,
+        btdActionAnimation(btdActor(p), (s32)punch_bck[(u32(s32((s8)i_this->mAttackAnmIdx) * 4)) / 4], 5.0f,
                            0);
         btdActionIncrement(btdActor(p));
         actorSoundNN(p, 0x4835);
@@ -742,22 +742,22 @@ void btdActionTurningPunch(btd_class *i_this) {
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), punch_bck, 0.0f);
             btdActionIncrement(btdActor(p));
-            s32 joint = (s8)i_this->m02EA != 0 ? 10 : 8;
+            s32 joint = (s8)i_this->mAttackHand != 0 ? 10 : 8;
             btdActionLevelSound(btdActor(p), 0x5819,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
         }
-        i_this->m5E92 = (s16)(s16((s16)l_debugRegisters.shorts[0] + 15));
-        i_this->m5E94 = (s16)(s16((s16)l_debugRegisters.shorts[1] + 0xC00));
+        i_this->mTurnScale = (s16)(s16((s16)l_debugRegisters.shorts[0] + 15));
+        i_this->mTurnMaxStep = (s16)(s16((s16)l_debugRegisters.shorts[1] + 0xC00));
         break;
     case 2:
-        i_this->m5E84 = (u8)(2);
+        i_this->mAtMode = (u8)(2);
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), punch_bck, 0.0f);
             btdActionIncrement(btdActor(p));
-            s32 joint = (s8)i_this->m02EA != 0 ? 10 : 8;
+            s32 joint = (s8)i_this->mAttackHand != 0 ? 10 : 8;
             btdActionLevelSound(btdActor(p), 0x581B,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
-            btdGuest_hahen_set(p, s32((s8)i_this->m02EA));
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
+            btdGuest_hahen_set(p, s32((s8)i_this->mAttackHand));
             u32 game = play();
             s32 magnitude = (s16)l_debugRegisters.shorts[0] + 5;
 
@@ -773,21 +773,21 @@ void btdActionTurningPunch(btd_class *i_this) {
             btdActionNextAnimation(btdActor(p), punch_bck, 0.0f);
             f32 timer = cM_rndF(80.0f) + 80.0f;
             s16 next = s16((s16)i_this->mGohmaState + 1);
-            i_this->m02EC[0] = (s16)(s16(gabi::ftoi(timer)));
+            i_this->mTimers[0] = (s16)(s16(gabi::ftoi(timer)));
             i_this->mGohmaState = (s16)(next);
         }
         break;
     case 4: {
-        s32 joint = (s8)i_this->m02EA != 0 ? 10 : 8;
+        s32 joint = (s8)i_this->mAttackHand != 0 ? 10 : 8;
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), punch_bck, 5.0f);
             btdActionIncrement(btdActor(p));
             actorSoundNN(p, 0x4839);
             btdActionLevelSound(btdActor(p), 0x581D,
-                                gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12));
-            i_this->m6028[5] = (s16)(23);
-            i_this->m6028[4] = (s16)(23);
-            i_this->m6028[6] = (s16)(3);
+                                gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12));
+            i_this->mAttackEmitterTimer[5] = (s16)(23);
+            i_this->mAttackEmitterTimer[4] = (s16)(23);
+            i_this->mAttackEmitterTimer[6] = (s16)(3);
         }
         break;
     }
@@ -796,10 +796,10 @@ void btdActionTurningPunch(btd_class *i_this) {
             u8 forced = (u8)l_HIO.m10;
             i_this->mGohmaState = (s16)(0);
             if (forced == 4)
-                i_this->m02E9 = (s8)(5);
+                i_this->mAttackAnmIdx = (s8)(5);
             else {
-                i_this->m02E4 = ACT_WAIT;
-                i_this->m02EC[0] = (s16)(0);
+                i_this->mAction = ACT_WAIT;
+                i_this->mTimers[0] = (s16)(0);
             }
         }
         break;
@@ -822,12 +822,12 @@ void btdActionParticleMatrix(u32 morf, u32 emitter, u32 offset) {
 }
 void btdActionBreakShell(btd_class *i_this, u32 morf) {
     const u32 p = gabi::ea(i_this);
-    u8 count = (u8)i_this->m6190;
+    u8 count = (u8)i_this->mCrackStage;
     u32 model = (u32)btdMorph(morf)->mpModel.v;
     u32 animation = resource(gabi::guest_addr("Btd"), (s32)hibi_brk[(4 * u32(count)) / 4]);
     u32 data = (u32)btdModel(model)->mModelData.v, brk = (u32)i_this->brk.v;
     btdGuest_brkInitNative(brk, data, animation, 1, 2, 1.0f, 0, -1, 1, 0);
-    i_this->m6190 = (u8)(u8((u8)i_this->m6190 + 1));
+    i_this->mCrackStage = (u8)(u8((u8)i_this->mCrackStage + 1));
     btdActionBodyLevelSound(btdActor(p), 0x582C);
     for (u32 i = 0; i < 3; ++i) {
         u16 id = (u16)hibi_eff[(2 * i) / 2];
@@ -836,10 +836,10 @@ void btdActionBreakShell(btd_class *i_this, u32 morf) {
             btdActionParticleMatrix(morf, emitter, 0xA50);
     }
     if ((u8)l_HIO.m06)
-        i_this->m6190 = (u8)(3);
+        i_this->mCrackStage = (u8)(3);
     u8 debug = (u8)l_HIO.m07;
-    if (debug && (u8)i_this->m6190 >= 3)
-        i_this->m6190 = (u8)(2);
+    if (debug && (u8)i_this->mCrackStage >= 3)
+        i_this->mCrackStage = (u8)(2);
 }
 /* inlined into move, end, daBtd_Execute */
 void btdActionBurst(btd_class *i_this, u32 morf) {
@@ -855,7 +855,7 @@ void btdActionBurst(btd_class *i_this, u32 morf) {
             s32 joint = 2;
             if (i >= 5)
                 joint = gabi::ftoi(cM_rndF(18.999000549316406f));
-            u32 position = gabi::ea(&i_this->m02FC[0].x) + u32(joint * 12);
+            u32 position = gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12);
             (btdDebris(piece)->m04 = (u8)(1));
             f32 x = (f32)btdVector(position)->x;
             (btdDebris(piece)->m08.x = (f32)(x));
@@ -895,7 +895,7 @@ void btdActionDamage(btd_class *i_this) {
     play();
     u32 morf = btdGuest_get_anm(p);
     s16 state = (s16)i_this->mGohmaState;
-    i_this->m02F0 = (s16)(5);
+    i_this->mBlinkTimer = (s16)(5);
     bool hideAttention = false;
     if (state >= 10) {
         state = (s16)i_this->mGohmaState;
@@ -917,9 +917,9 @@ void btdActionDamage(btd_class *i_this) {
         break;
     case 2:
         if ((s16)i_this->mStunTimer == 0) {
-            i_this->m02E4 = ACT_WAIT;
+            i_this->mAction = ACT_WAIT;
             i_this->mGohmaState = (s16)(0);
-            i_this->m02EC[0] = (s16)(s16(gabi::ftoi(cM_rndF(50.0f) + 50.0f)));
+            i_this->mTimers[0] = (s16)(s16(gabi::ftoi(cM_rndF(50.0f) + 50.0f)));
         }
         break;
     case 3:
@@ -936,14 +936,14 @@ void btdActionDamage(btd_class *i_this) {
     case 11:
     case 42:
         if (btdActionStopped(morf)) {
-            i_this->m02E4 = ACT_WAIT;
+            i_this->mAction = ACT_WAIT;
             i_this->mGohmaState = (s16)(0);
-            i_this->m02EC[0] = (s16)(s16(gabi::ftoi(cM_rndF(50.0f) + 50.0f)));
+            i_this->mTimers[0] = (s16)(s16(gabi::ftoi(cM_rndF(50.0f) + 50.0f)));
         }
         break;
     case 20:
         btdActionAnimation(btdActor(p), 0x2A, 3.0f, 0);
-        i_this->m6E7C = (f32)(0.0f);
+        i_this->mWaveRadius = (f32)(0.0f);
         btdActionIncrement(btdActor(p));
         break;
     case 21:
@@ -955,18 +955,18 @@ void btdActionDamage(btd_class *i_this) {
             btdActionAnimation(btdActor(p), 0x2B, 1.0f, 2);
             s32 duration = (s16)l_debugRegisters.shorts[5] * 5 + 100;
             s16 next = s16((s16)i_this->mGohmaState + 1);
-            i_this->m02EC[0] = (s16)(s16(duration));
+            i_this->mTimers[0] = (s16)(s16(duration));
             i_this->mGohmaState = (s16)(next);
             timer = s16(duration);
         } else
-            timer = (s16)i_this->m02EC[0];
+            timer = (s16)i_this->mTimers[0];
         s32 target = (s16)l_debugRegisters.shorts[3] + 40;
         if (timer == target) {
             btdActionBreakShell(btdActor(p), morf);
-            timer = (s16)i_this->m02EC[0];
+            timer = (s16)i_this->mTimers[0];
         }
         if (timer == 0) {
-            if ((u8)i_this->m6190 >= 3)
+            if ((u8)i_this->mCrackStage >= 3)
                 i_this->mGohmaState = (s16)(40);
             else {
                 btdActionAnimation(btdActor(p), 0x2C, 15.0f, 0);
@@ -977,54 +977,54 @@ void btdActionDamage(btd_class *i_this) {
                 btdActionLevelSound(btdActor(p), 0x582D, gabi::ea(&static_center_pos));
                 if (p + 0x37C != 0)
                     actorSound(p, 0x483E);
-                i_this->m6E7C = (f32)(0.0f);
-                i_this->m02EC[0] = (s16)(150);
+                i_this->mWaveRadius = (f32)(0.0f);
+                i_this->mTimers[0] = (s16)(150);
             }
         }
         break;
     }
     case 23: {
-        s16 timer = (s16)i_this->m02EC[0];
+        s16 timer = (s16)i_this->mTimers[0];
         if (timer == 1 || timer == 70)
-            i_this->m6E7C = (f32)(0.0f);
+            i_this->mWaveRadius = (f32)(0.0f);
     }
         if (btdActionStopped(morf)) {
             i_this->mGohmaState = (s16)(30);
-            i_this->m02EC[0] = (s16)(0);
+            i_this->mTimers[0] = (s16)(0);
         }
         break;
     case 30: {
-        s16 timer = (s16)i_this->m02EC[0];
-        i_this->m6E88 = (u8)(0);
+        s16 timer = (s16)i_this->mTimers[0];
+        i_this->mMagmaRiseCenter = (u8)(0);
         if (timer == 0) {
             btdActionAnimation(btdActor(p), 0x1E, 1.0f, 0);
             btdActionIncrement(btdActor(p));
-            i_this->m02F6 = (u8)(0);
+            i_this->mRockHitState = (u8)(0);
             btdActionLevelSound(btdActor(p), 0x5826, gabi::ea(&static_center_pos));
             if (p + 0x37C != 0)
                 actorSound(p, 0x483D);
-            i_this->m6E7C = (f32)(0.0f);
+            i_this->mWaveRadius = (f32)(0.0f);
             i_this->mKankyoTimer = (s16)(20);
-            i_this->m02EC[0] = (s16)(60);
+            i_this->mTimers[0] = (s16)(60);
         }
     } break;
     case 31: {
-        s16 timer = (s16)i_this->m02EC[0];
+        s16 timer = (s16)i_this->mTimers[0];
         if (timer == 55) {
             btdGuest_sibuki_set(p);
-            timer = (s16)i_this->m02EC[0];
+            timer = (s16)i_this->mTimers[0];
         }
         if (timer == 1)
-            i_this->m6E7C = (f32)(0.0f);
+            i_this->mWaveRadius = (f32)(0.0f);
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), 0x1F, 1.0f, 0);
             btdActionIncrement(btdActor(p));
             btdActionLevelSound(btdActor(p), 0x582E, gabi::ea(&static_center_pos));
-            i_this->m6E7C = (f32)(0.0f);
+            i_this->mWaveRadius = (f32)(0.0f);
         }
     } break;
     case 32:
-        i_this->m6E88 = (u8)(0);
+        i_this->mMagmaRiseCenter = (u8)(0);
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), 0x20, 3.0f, 0);
             s32 room = (s8)i_this->current.roomNo;
@@ -1033,19 +1033,19 @@ void btdActionDamage(btd_class *i_this) {
             mDoAud_seStart(0x5830, btdVector(dragon + 0x5C4), 0, reverb);
             btdActionParticle(btdActor(p), 0x80BC, gabi::ea(&i_this->current.angle));
             btdActionIncrement(btdActor(p));
-            i_this->m02EC[0] = (s16)(30);
+            i_this->mTimers[0] = (s16)(30);
         }
         break;
     case 33:
-        if ((s16)i_this->m02EC[0] == 20) {
+        if ((s16)i_this->mTimers[0] == 20) {
             btdActionLevelSound(btdActor(p), 0x5831, gabi::ea(&static_center_pos));
-            i_this->m6E7C = (f32)(0.0f);
+            i_this->mWaveRadius = (f32)(0.0f);
             btdGuest_sibuki_set(p);
         }
         if (btdActionStopped(morf)) {
-            i_this->m02E4 = ACT_WAIT;
+            i_this->mAction = ACT_WAIT;
             i_this->mGohmaState = (s16)(0);
-            i_this->m02EC[0] = (s16)(s16(gabi::ftoi(cM_rndF(50.0f) + 50.0f)));
+            i_this->mTimers[0] = (s16)(s16(gabi::ftoi(cM_rndF(50.0f) + 50.0f)));
         }
         break;
     case 40:
@@ -1053,14 +1053,14 @@ void btdActionDamage(btd_class *i_this) {
         btdActionIncrement(btdActor(p));
         btdActionBodyLevelSound(btdActor(p), 0x5832);
         btdGuest_bgmStop(30);
-        i_this->m6E7C = (f32)(0.0f);
-        i_this->m02EC[0] = (s16)(150);
+        i_this->mWaveRadius = (f32)(0.0f);
+        i_this->mTimers[0] = (s16)(150);
         [[fallthrough]];
     case 41: {
-        s16 target = s16((s16)l_debugRegisters.shorts[3] + 38), timer = (s16)i_this->m02EC[0];
+        s16 target = s16((s16)l_debugRegisters.shorts[3] + 38), timer = (s16)i_this->mTimers[0];
         if (timer == target) {
             btdActionBurst(btdActor(p), morf);
-            timer = (s16)i_this->m02EC[0];
+            timer = (s16)i_this->mTimers[0];
         }
         if (timer == 101) {
             btdActionBodyLevelSound(btdActor(p), 0x5833);
@@ -1071,7 +1071,7 @@ void btdActionDamage(btd_class *i_this) {
             btdActionBodyLevelSound(btdActor(p), 0x5834);
             if (p != 0 && p + 0x37C != 0)
                 actorSound(p, 0x4837);
-            i_this->m02E0 = (u8)(1);
+            i_this->mBattlePhase = (u8)(1);
             btdActionAnimation(btdActor(p), 0x35, 0.0f, 0);
             btdActionIncrement(btdActor(p));
         }
@@ -1087,11 +1087,11 @@ namespace {
 /* inlined into move, end, daBtd_Execute */
 void btdActionTrack(btd_class *i_this, u32 player) {
     const u32 p = gabi::ea(i_this);
-    if ((s16)i_this->m5E94 != 0) {
-        s16 rate = (s16)i_this->m5E92;
+    if ((s16)i_this->mTurnMaxStep != 0) {
+        s16 rate = (s16)i_this->mTurnScale;
         if (rate == 0) {
             rate = 10;
-            i_this->m5E92 = (s16)(rate);
+            i_this->mTurnScale = (s16)(rate);
         }
         u32 dragon = (u32)dr2.v;
         if (dragon != 0) {
@@ -1099,24 +1099,24 @@ void btdActionTrack(btd_class *i_this, u32 player) {
             if (action == 0 || action >= 10) {
                 s16 mode = (s16)btdDragon(dragon)->m4CA;
                 if (mode == 0 || mode >= 98) {
-                    s16 target = (s16)i_this->m5E90;
+                    s16 target = (s16)i_this->mTurnTargetAngleY;
                     if (target == 0) {
                         target = s16(btdGuest_fopAcM_searchActorAngleYFullResult(
                             p, (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v));
-                        rate = (s16)i_this->m5E92;
+                        rate = (s16)i_this->mTurnScale;
                     }
-                    s16 limit = (s16)i_this->m5E94;
+                    s16 limit = (s16)i_this->mTurnMaxStep;
                     btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->current.angle.y), s32(target),
                                                  s32(rate), s32(limit));
                 }
             }
         }
-        i_this->m5E90 = (s16)(0);
-        i_this->m5E92 = (s16)(10);
-        i_this->m5E94 = (s16)(0);
+        i_this->mTurnTargetAngleY = (s16)(0);
+        i_this->mTurnScale = (s16)(10);
+        i_this->mTurnMaxStep = (s16)(0);
     }
     s16 turn = 0, half = 0;
-    if ((u8)i_this->m5E86 != 0) {
+    if ((u8)i_this->mLookMode != 0) {
         f32 z = (f32)btdPlayer(player)->current.pos.z, x = (f32)btdPlayer(player)->current.pos.x;
         if (!(gabi::fmadds(x, x, z * z) < 40000.0f)) {
             s32 angle = btdGuest_fopAcM_searchActorAngleYFullResult(
@@ -1140,12 +1140,12 @@ void btdActionTrack(btd_class *i_this, u32 player) {
                 half = -0x2000;
         }
     }
-    btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m5E88), s32(turn), 4, 0x200);
-    btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m5E8E), s32(half), 4, 0x200);
-    s16 pitch = (s16)i_this->m5E8C;
-    btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m5E8A), s32(pitch), 4, 0x100);
-    i_this->m5E8C = (s16)(0);
-    i_this->m5E86 = (u8)(0);
+    btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mNeckAngleY), s32(turn), 4, 0x200);
+    btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mHeadAngleY), s32(half), 4, 0x200);
+    s16 pitch = (s16)i_this->mNeckTargetAngleX;
+    btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mNeckAngleX), s32(pitch), 4, 0x100);
+    i_this->mNeckTargetAngleX = (s16)(0);
+    i_this->mLookMode = (u8)(0);
 }
 } // namespace
 // HD's matcher name "damage" covers the complete action dispatcher, with its
@@ -1258,7 +1258,7 @@ void btdExecQuake(s32 extra, cXyz &axis) {
 }
 void btdExecCameraStep(btd_class *i_this, be<f32> &value, f32 target, f32 multiplier,
                        f32 rate = 0.1f) {
-    f32 blend = (f32)i_this->m6E40;
+    f32 blend = (f32)i_this->mDemoCamSpeed;
     btdExecCalc(gabi::ea(&value), target, rate, gabi::fmuls_ppc(multiplier, blend));
 }
 void btdExecDebrisMove(btd_class *i_this) {
@@ -1352,9 +1352,9 @@ void btdExecSplashMove(btd_class *i_this) {
         // Native blt and fallthrough of bge both require strict LT.
         bool close = distance < 1500.0f;
         if (close) {
-            s8 count = (s8)i_this->m6E14;
+            s8 count = (s8)i_this->mSplashPopCount;
             if (count < 20) {
-                i_this->m6E14 = (s8)((u8)(count + 1));
+                i_this->mSplashPopCount = (s8)((u8)(count + 1));
                 btdExecSimple(splash + 4, 0x8064);
                 btdExecSound(btdActor(actor), splash + 4, 0x6942);
                 (btdSplash(splash)->m00 = (s8)(0));
@@ -1375,12 +1375,12 @@ void btdExecCameraTarget(u32 p, cXyz &local, cXyz &transformed) {
     local.x = gabi::fmadds(x, 0.1f, -500.0f);
     local.z = gabi::fmadds(z, 0.1f, 2000.0f);
     MtxPosition(&local, &transformed);
-    btdExecCalc(gabi::ea(&btdActor(p)->m6E1C.x), (f32)transformed.x, 0.1f, 50.0f);
-    btdExecCalc(gabi::ea(&btdActor(p)->m6E1C.y), (f32)transformed.y, 0.1f, 50.0f);
-    btdExecCalc(gabi::ea(&btdActor(p)->m6E1C.z), (f32)transformed.z, 0.1f, 50.0f);
+    btdExecCalc(gabi::ea(&btdActor(p)->mDemoCamEye.x), (f32)transformed.x, 0.1f, 50.0f);
+    btdExecCalc(gabi::ea(&btdActor(p)->mDemoCamEye.y), (f32)transformed.y, 0.1f, 50.0f);
+    btdExecCalc(gabi::ea(&btdActor(p)->mDemoCamEye.z), (f32)transformed.z, 0.1f, 50.0f);
 }
 void btdExecCameraResume(btd_class *i_this, u32 body) {
-    i_this->m6E16 = (s16)(0);
+    i_this->mDemoCamMode = (s16)(0);
     btdGuest_dCamera_c_Start(body);
     btdGuest_dCamera_c_SetTrimSize(body, 0);
     u32 g = btdExecPlay();
@@ -1394,14 +1394,14 @@ void btdExecCamera(btd_class *i_this) {
     u32 player = (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v;
     s8 cameraID = (s8)btdPlay()->mPlayerInfo[0].mCameraID;
     u32 game = btdExecPlay();
-    s16 mainCount = (s16)i_this->m6E18, sub = (s16)i_this->m6E1A, mode = (s16)i_this->m6E16;
+    s16 mainCount = (s16)i_this->mDemoMainCount, sub = (s16)i_this->mDemoSubCount, mode = (s16)i_this->mDemoCamMode;
     u32 camera = (u32)gabi::at<dComIfG_camera_info_class>(
                      game + PLAY_OFF(mCameraInfo) +
                      (u32)((s32)cameraID * sizeof(dComIfG_camera_info_class)))
                      ->mpCamera,
         body = camera + 0x248;
-    i_this->m6E1A = (s16)((s16)(sub + 1));
-    i_this->m6E18 = (s16)((s16)(mainCount + 1));
+    i_this->mDemoSubCount = (s16)((s16)(sub + 1));
+    i_this->mDemoMainCount = (s16)((s16)(mainCount + 1));
 
     cXyz local;
     cXyz transformed;
@@ -1413,76 +1413,76 @@ void btdExecCamera(btd_class *i_this) {
     switch (mode) {
     case 1: {
         i_this->mKankyoState = (u8)(6);
-        s16 next = (s16)i_this->m6E16;
-        i_this->m6E16 = (s16)((s16)(next + 1));
-        i_this->m6E3C = (f32)(gabi::fadds_ppc((f32)l_debugRegisters.floats[12], 50.0f));
+        s16 next = (s16)i_this->mDemoCamMode;
+        i_this->mDemoCamMode = (s16)((s16)(next + 1));
+        i_this->mDemoCamFovy = (f32)(gabi::fadds_ppc((f32)l_debugRegisters.floats[12], 50.0f));
         btdGuest_dCamera_c_Stop(body);
         btdGuest_dCamera_c_SetTrimSize(body, 2);
-        i_this->m6E1A = (s16)(0);
-        i_this->m6E1C.x = (f32)(282.0f);
-        i_this->m6E18 = (s16)(0);
-        i_this->m6E1C.y = (f32)(2775.0f);
-        i_this->m6E1C.z = (f32)(-582.0f);
-        i_this->m6E28.x = (f32)(-1200.0f);
-        i_this->m6E28.y = (f32)(0.0f);
-        i_this->m6E28.z = (f32)(660.0f);
-        i_this->m6E40 = (f32)(0.0f);
+        i_this->mDemoSubCount = (s16)(0);
+        i_this->mDemoCamEye.x = (f32)(282.0f);
+        i_this->mDemoMainCount = (s16)(0);
+        i_this->mDemoCamEye.y = (f32)(2775.0f);
+        i_this->mDemoCamEye.z = (f32)(-582.0f);
+        i_this->mDemoCamCenter.x = (f32)(-1200.0f);
+        i_this->mDemoCamCenter.y = (f32)(0.0f);
+        i_this->mDemoCamCenter.z = (f32)(660.0f);
+        i_this->mDemoCamSpeed = (f32)(0.0f);
         (btdVector(center)->y = (f32)(0.0f));
         (btdVector(center)->z = (f32)(0.0f));
         (btdVector(center)->x = (f32)(0.0f));
         [[fallthrough]];
     }
     case 2: {
-        sub = (s16)i_this->m6E1A;
+        sub = (s16)i_this->mDemoSubCount;
         i_this->mKankyoState = (u8)(6);
         if (sub > 50) {
             f32 step = gabi::fadds_ppc((f32)l_debugRegisters.floats[6], 5.0f);
-            f32 y = (f32)i_this->m6E1C.y;
-            i_this->m6E1C.y = (f32)(gabi::fsubs_ppc(y, step));
+            f32 y = (f32)i_this->mDemoCamEye.y;
+            i_this->mDemoCamEye.y = (f32)(gabi::fsubs_ppc(y, step));
         }
         local.x = -1373.0f;
         local.z = 790.0f;
         local.y = (f32)btdPlayer(player)->current.pos.y;
         btdExecPlayerPosition(player, gabi::ea(&local), p, 0x8000);
-        if ((s16)i_this->m6E1A != 111)
+        if ((s16)i_this->mDemoSubCount != 111)
             break;
-        i_this->m6E1A = (s16)(0);
-        i_this->m6E1C.x = (f32)(-1728.0f);
-        i_this->m6E1C.y = (f32)(111.0f);
-        i_this->m6E1C.z = (f32)(844.0f);
-        i_this->m6E28.x = (f32)(-1397.0f);
-        i_this->m6E28.y = (f32)(110.0f);
-        i_this->m6E28.z = (f32)(685.0f);
-        i_this->m6E16 = (s16)(3);
+        i_this->mDemoSubCount = (s16)(0);
+        i_this->mDemoCamEye.x = (f32)(-1728.0f);
+        i_this->mDemoCamEye.y = (f32)(111.0f);
+        i_this->mDemoCamEye.z = (f32)(844.0f);
+        i_this->mDemoCamCenter.x = (f32)(-1397.0f);
+        i_this->mDemoCamCenter.y = (f32)(110.0f);
+        i_this->mDemoCamCenter.z = (f32)(685.0f);
+        i_this->mDemoCamMode = (s16)(3);
         [[fallthrough]];
     }
     case 3: {
-        sub = (s16)i_this->m6E1A;
+        sub = (s16)i_this->mDemoSubCount;
         i_this->mKankyoState = (u8)(6);
         if (sub <= 50)
             break;
-        btdExecCameraStep(btdActor(p), i_this->m6E28.x, -1536.0f, 139.0f);
-        btdExecCameraStep(btdActor(p), i_this->m6E28.y, 411.0f, 301.0f);
-        btdExecCameraStep(btdActor(p), i_this->m6E28.z, 752.0f, 67.0f);
-        btdExecCalc(gabi::ea(&i_this->m6E40), 1.0f, 0.1f, 0.005f);
-        sub = (s16)i_this->m6E1A;
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.x, -1536.0f, 139.0f);
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.y, 411.0f, 301.0f);
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.z, 752.0f, 67.0f);
+        btdExecCalc(gabi::ea(&i_this->mDemoCamSpeed), 1.0f, 0.1f, 0.005f);
+        sub = (s16)i_this->mDemoSubCount;
         if (sub >= 180 && !(s16)l_debugRegisters.shorts[4]) {
-            i_this->m6E1A = (s16)(0);
-            i_this->m6E40 = (f32)(0.0f);
-            i_this->m6E1C.x = (f32)(-2501.0f);
-            i_this->m6E1C.y = (f32)(418.0f);
-            i_this->m6E1C.z = (f32)(-32.0f);
-            i_this->m6E28.x = (f32)(-2139.0f);
-            i_this->m6E16 = (s16)(4);
-            i_this->m6E28.y = (f32)(373.0f);
-            i_this->m6E28.z = (f32)(17.0f);
-            i_this->m6E3C = (f32)(60.0f);
+            i_this->mDemoSubCount = (s16)(0);
+            i_this->mDemoCamSpeed = (f32)(0.0f);
+            i_this->mDemoCamEye.x = (f32)(-2501.0f);
+            i_this->mDemoCamEye.y = (f32)(418.0f);
+            i_this->mDemoCamEye.z = (f32)(-32.0f);
+            i_this->mDemoCamCenter.x = (f32)(-2139.0f);
+            i_this->mDemoCamMode = (s16)(4);
+            i_this->mDemoCamCenter.y = (f32)(373.0f);
+            i_this->mDemoCamCenter.z = (f32)(17.0f);
+            i_this->mDemoCamFovy = (f32)(60.0f);
         } else {
             if (sub >= 140) {
                 i_this->mKankyoState = (u8)(7);
-                i_this->m6E48 = (f32)(20.0f);
+                i_this->mDemoCamShake = (f32)(20.0f);
                 btdGuest_changeBgmStatus(0x105E);
-                if ((s16)i_this->m6E1A == 140)
+                if ((s16)i_this->mDemoSubCount == 140)
                     btdExecQuake(3, axis);
             }
             break;
@@ -1491,41 +1491,41 @@ void btdExecCamera(btd_class *i_this) {
     }
     case 4: {
         i_this->mKankyoState = (u8)(7);
-        i_this->m6E48 = (f32)(15.0f);
+        i_this->mDemoCamShake = (f32)(15.0f);
         btdGuest_changeBgmStatus(0x105E);
-        btdExecCameraStep(btdActor(p), i_this->m6E1C.x, -1763.0f, 738.0f);
-        btdExecCameraStep(btdActor(p), i_this->m6E1C.y, 167.0f, 251.0f);
-        btdExecCameraStep(btdActor(p), i_this->m6E1C.z, 812.0f, 844.0f);
-        btdExecCameraStep(btdActor(p), i_this->m6E28.x, -1430.0f, 709.0f);
-        btdExecCameraStep(btdActor(p), i_this->m6E28.y, 123.0f, 250.0f);
-        btdExecCameraStep(btdActor(p), i_this->m6E28.z, 663.0f, 646.0f);
-        btdExecCalc(gabi::ea(&i_this->m6E40),
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamEye.x, -1763.0f, 738.0f);
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamEye.y, 167.0f, 251.0f);
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamEye.z, 812.0f, 844.0f);
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.x, -1430.0f, 709.0f);
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.y, 123.0f, 250.0f);
+        btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.z, 663.0f, 646.0f);
+        btdExecCalc(gabi::ea(&i_this->mDemoCamSpeed),
                     gabi::fadds_ppc((f32)l_debugRegisters.floats[10], 0.01f), 0.1f, 0.001f);
-        sub = (s16)i_this->m6E1A;
+        sub = (s16)i_this->mDemoSubCount;
         if (sub > 40) {
-            btdExecCalc(gabi::ea(&i_this->m6E84), 0.0f, 0.1f, 1.0f);
-            sub = (s16)i_this->m6E1A;
+            btdExecCalc(gabi::ea(&i_this->mMagmaBallOffsetY), 0.0f, 0.1f, 1.0f);
+            sub = (s16)i_this->mDemoSubCount;
         }
         if (sub == 30) {
             btdExecSound(btdActor(p), center, 0x5825);
-            sub = (s16)i_this->m6E1A;
+            sub = (s16)i_this->mDemoSubCount;
         }
         if (sub == 80) {
             btdGuest_wave_set(p);
-            sub = (s16)i_this->m6E1A;
+            sub = (s16)i_this->mDemoSubCount;
         }
         if (sub == 145) {
             btdGuest_wave_set(p);
-            sub = (s16)i_this->m6E1A;
+            sub = (s16)i_this->mDemoSubCount;
         }
         if (sub == 150) {
             btdExecQuake(4, axis);
             s32 room = (s8)i_this->current.roomNo;
             i_this->mGohmaState = (s16)(1);
-            i_this->m6E40 = (f32)(0.0f);
-            i_this->m6E84 = (f32)(0.0f);
-            i_this->m6E1A = (s16)(0);
-            i_this->m6E16 = (s16)(5);
+            i_this->mDemoCamSpeed = (f32)(0.0f);
+            i_this->mMagmaBallOffsetY = (f32)(0.0f);
+            i_this->mDemoSubCount = (s16)(0);
+            i_this->mDemoCamMode = (s16)(5);
             s32 reverb = btdGuest_dComIfGp_getReverb(room);
             mDoAud_seStart(0x5826, btdVector(center), 0, reverb);
             i_this->mKankyoState = (u8)(8);
@@ -1533,49 +1533,49 @@ void btdExecCamera(btd_class *i_this) {
         break;
     }
     case 5: {
-        sub = (s16)i_this->m6E1A;
+        sub = (s16)i_this->mDemoSubCount;
         if (sub == 10) {
             u32 g = btdExecPlay();
             btdGuest_dVibration_c_StopQuake(g + 0x599C, -1);
-            sub = (s16)i_this->m6E1A;
+            sub = (s16)i_this->mDemoSubCount;
         }
         if (sub == 50) {
             btdGuest_wave_set(p);
-            sub = (s16)i_this->m6E1A;
+            sub = (s16)i_this->mDemoSubCount;
         }
         if (sub < 10)
             break;
         if (sub < 205) {
-            btdExecCalc(gabi::ea(&i_this->m6E28.x), gabi::fmuls_ppc((f32)i_this->eyePos.x, 0.3f),
-                        0.2f, gabi::fmuls_ppc(200.0f, (f32)i_this->m6E40));
+            btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.x), gabi::fmuls_ppc((f32)i_this->eyePos.x, 0.3f),
+                        0.2f, gabi::fmuls_ppc(200.0f, (f32)i_this->mDemoCamSpeed));
             f32 eyeY = (f32)i_this->eyePos.y, bias = (f32)l_debugRegisters.floats[5],
                 floor = (f32)l_debugRegisters.floats[6];
             f32 target = gabi::fsubs_ppc(gabi::fmadds(bias, 0.1f, eyeY), 100.0f),
                 minimum = gabi::fadds_ppc(floor, 300.0f);
             if (target < minimum)
                 target = minimum;
-            btdExecCalc(gabi::ea(&i_this->m6E28.y), target, 0.2f,
-                        gabi::fmuls_ppc(200.0f, (f32)i_this->m6E40));
-            btdExecCalc(gabi::ea(&i_this->m6E28.z), gabi::fmuls_ppc((f32)i_this->eyePos.z, 0.3f),
-                        0.2f, gabi::fmuls_ppc(200.0f, (f32)i_this->m6E40));
+            btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.y), target, 0.2f,
+                        gabi::fmuls_ppc(200.0f, (f32)i_this->mDemoCamSpeed));
+            btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.z), gabi::fmuls_ppc((f32)i_this->eyePos.z, 0.3f),
+                        0.2f, gabi::fmuls_ppc(200.0f, (f32)i_this->mDemoCamSpeed));
         } else {
             // Native dedicated205 arm zeroes blend before its first calculation.
             f32 firstStep;
             if (sub == 205) {
                 firstStep = gabi::fmuls_ppc(2000.0f, 0.0f);
-                i_this->m6E40 = (f32)(0.0f);
+                i_this->mDemoCamSpeed = (f32)(0.0f);
             } else
-                firstStep = gabi::fmuls_ppc(2000.0f, (f32)i_this->m6E40);
-            btdExecCalc(gabi::ea(&i_this->m6E1C.x), -1750.0f, 0.2f, firstStep);
-            btdExecCameraStep(btdActor(p), i_this->m6E1C.y, 50.0f, 2000.0f, 0.2f);
-            btdExecCameraStep(btdActor(p), i_this->m6E1C.z, 851.0f, 2000.0f, 0.2f);
-            btdExecCameraStep(btdActor(p), i_this->m6E28.x, -299.0f, 2000.0f, 0.2f);
-            btdExecCameraStep(btdActor(p), i_this->m6E28.y, 319.0f, 2000.0f, 0.2f);
-            btdExecCameraStep(btdActor(p), i_this->m6E28.z, 248.0f, 2000.0f, 0.2f);
-            if ((s16)i_this->m6E1A >= 255)
-                btdExecCalc(gabi::ea(&i_this->m6E3C), 45.0f, 0.2f, 1.5f);
+                firstStep = gabi::fmuls_ppc(2000.0f, (f32)i_this->mDemoCamSpeed);
+            btdExecCalc(gabi::ea(&i_this->mDemoCamEye.x), -1750.0f, 0.2f, firstStep);
+            btdExecCameraStep(btdActor(p), i_this->mDemoCamEye.y, 50.0f, 2000.0f, 0.2f);
+            btdExecCameraStep(btdActor(p), i_this->mDemoCamEye.z, 851.0f, 2000.0f, 0.2f);
+            btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.x, -299.0f, 2000.0f, 0.2f);
+            btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.y, 319.0f, 2000.0f, 0.2f);
+            btdExecCameraStep(btdActor(p), i_this->mDemoCamCenter.z, 248.0f, 2000.0f, 0.2f);
+            if ((s16)i_this->mDemoSubCount >= 255)
+                btdExecCalc(gabi::ea(&i_this->mDemoCamFovy), 45.0f, 0.2f, 1.5f);
         }
-        btdExecCalc(gabi::ea(&i_this->m6E40), 1.0f, 0.1f, 0.01f);
+        btdExecCalc(gabi::ea(&i_this->mDemoCamSpeed), 1.0f, 0.1f, 0.01f);
         break;
     }
     case 100: {
@@ -1583,16 +1583,16 @@ void btdExecCamera(btd_class *i_this) {
             btdGuest_fopAcM_orderPotentialEvent(p, 2, 0xFFFF, 0);
             i_this->eventInfo.mCondition = (u16)((u16)i_this->eventInfo.mCondition | 2);
         } else
-            i_this->m6E16 = (s16)(101);
-        i_this->m6E3C = (f32)(gabi::fadds_ppc((f32)l_debugRegisters.floats[12], 50.0f));
+            i_this->mDemoCamMode = (s16)(101);
+        i_this->mDemoCamFovy = (f32)(gabi::fadds_ppc((f32)l_debugRegisters.floats[12], 50.0f));
         u32 view = (u32)btdPlay()->mCameraInfo[0].mpCamera;
         // Native camera copies interleave each read and write, preserving aliases.
-        btdSetWord(i_this->m6E1C.x, btdWord(btdCameraView(view)->lookat.eye.x));
-        btdSetWord(i_this->m6E1C.y, btdWord(btdCameraView(view)->lookat.eye.y));
-        btdSetWord(i_this->m6E1C.z, btdWord(btdCameraView(view)->lookat.eye.z));
-        btdSetWord(i_this->m6E28.x, btdWord(btdCameraView(view)->lookat.center.x));
-        btdSetWord(i_this->m6E28.y, btdWord(btdCameraView(view)->lookat.center.y));
-        btdSetWord(i_this->m6E28.z, btdWord(btdCameraView(view)->lookat.center.z));
+        btdSetWord(i_this->mDemoCamEye.x, btdWord(btdCameraView(view)->lookat.eye.x));
+        btdSetWord(i_this->mDemoCamEye.y, btdWord(btdCameraView(view)->lookat.eye.y));
+        btdSetWord(i_this->mDemoCamEye.z, btdWord(btdCameraView(view)->lookat.eye.z));
+        btdSetWord(i_this->mDemoCamCenter.x, btdWord(btdCameraView(view)->lookat.center.x));
+        btdSetWord(i_this->mDemoCamCenter.y, btdWord(btdCameraView(view)->lookat.center.y));
+        btdSetWord(i_this->mDemoCamCenter.z, btdWord(btdCameraView(view)->lookat.center.z));
         btdGuest_dCamera_c_Stop(body);
         btdGuest_dCamera_c_SetTrimSize(body, 2);
         break;
@@ -1609,47 +1609,47 @@ void btdExecCamera(btd_class *i_this) {
         }
         local.y = (f32)btdPlayer(player)->current.pos.y;
         btdExecPlayerPosition(player, gabi::ea(&local), p, 0x8000);
-        btdExecCalc(gabi::ea(&i_this->m6E3C),
+        btdExecCalc(gabi::ea(&i_this->mDemoCamFovy),
                     gabi::fadds_ppc((f32)l_debugRegisters.floats[4], 50.0f), 0.5f, 3.0f);
-        btdExecCalc(gabi::ea(&i_this->m6E28.x), gabi::fmuls_ppc((f32)i_this->eyePos.x, 0.3f), 0.2f,
+        btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.x), gabi::fmuls_ppc((f32)i_this->eyePos.x, 0.3f), 0.2f,
                     200.0f);
         f32 eyeY = (f32)i_this->eyePos.y, bias = (f32)l_debugRegisters.floats[5],
             minimum = gabi::fadds_ppc((f32)l_debugRegisters.floats[6], 500.0f);
         f32 target = gabi::fsubs_ppc(gabi::fmadds(bias, 0.1f, eyeY), 500.0f);
         if (target < minimum)
             target = minimum;
-        btdExecCalc(gabi::ea(&i_this->m6E28.y), target, 0.2f, 200.0f);
-        btdExecCalc(gabi::ea(&i_this->m6E28.z), gabi::fmuls_ppc((f32)i_this->eyePos.z, 0.3f), 0.2f,
+        btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.y), target, 0.2f, 200.0f);
+        btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.z), gabi::fmuls_ppc((f32)i_this->eyePos.z, 0.3f), 0.2f,
                     200.0f);
         btdExecCameraTarget(p, local, transformed);
-        if ((s16)i_this->m6E1A >= 320)
+        if ((s16)i_this->mDemoSubCount >= 320)
             i_this->mKankyoState = (u8)(3);
         break;
     }
     case 102: {
-        sub = (s16)i_this->m6E1A;
+        sub = (s16)i_this->mDemoSubCount;
         if (sub < 60) {
-            sub = (s16)i_this->m6E1A;
+            sub = (s16)i_this->mDemoSubCount;
             i_this->mKankyoState = (u8)(4);
         }
         if (sub == 90) {
-            sub = (s16)i_this->m6E1A;
-            i_this->m6E15 = (u8)(1);
+            sub = (s16)i_this->mDemoSubCount;
+            i_this->mBlurRate = (u8)(1);
         }
         s16 delay = (s16)((s16)l_debugRegisters.shorts[0] + 90);
         if (sub > delay) {
-            f32 blend = (f32)i_this->m6E40, eyeX = (f32)i_this->eyePos.x;
-            btdExecCalc(gabi::ea(&i_this->m6E28.x), eyeX, gabi::fmuls_ppc(0.2f, blend),
+            f32 blend = (f32)i_this->mDemoCamSpeed, eyeX = (f32)i_this->eyePos.x;
+            btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.x), eyeX, gabi::fmuls_ppc(0.2f, blend),
                         gabi::fmuls_ppc(200.0f, blend));
             f32 eyeY = (f32)i_this->eyePos.y, bias = (f32)l_debugRegisters.floats[5];
-            blend = (f32)i_this->m6E40;
-            btdExecCalc(gabi::ea(&i_this->m6E28.y), gabi::fmadds(bias, 0.1f, eyeY),
+            blend = (f32)i_this->mDemoCamSpeed;
+            btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.y), gabi::fmadds(bias, 0.1f, eyeY),
                         gabi::fmuls_ppc(0.5f, blend), gabi::fmuls_ppc(500.0f, blend));
-            blend = (f32)i_this->m6E40;
+            blend = (f32)i_this->mDemoCamSpeed;
             f32 eyeZ = (f32)i_this->eyePos.z;
-            btdExecCalc(gabi::ea(&i_this->m6E28.z), eyeZ, gabi::fmuls_ppc(0.2f, blend),
+            btdExecCalc(gabi::ea(&i_this->mDemoCamCenter.z), eyeZ, gabi::fmuls_ppc(0.2f, blend),
                         gabi::fmuls_ppc(200.0f, blend));
-            btdExecCalc(gabi::ea(&i_this->m6E40), 1.0f, 1.0f, 0.1f);
+            btdExecCalc(gabi::ea(&i_this->mDemoCamSpeed), 1.0f, 1.0f, 0.1f);
         }
         btdExecCameraTarget(p, local, transformed);
         f32 x = (f32)l_debugRegisters.floats[10], y = (f32)l_debugRegisters.floats[11],
@@ -1657,8 +1657,8 @@ void btdExecCamera(btd_class *i_this) {
         local.x = gabi::fmadds(x, 0.1f, -250.0f);
         local.y = gabi::fmadds(y, 0.1f, 100.0f);
         local.z = gabi::fmadds(z, 0.1f, 1600.0f);
-        MtxPosition(&local, &i_this->m6E5C);
-        if ((s16)i_this->m6E1A > 110) {
+        MtxPosition(&local, &i_this->mDeadHeadTargetPos);
+        if ((s16)i_this->mDemoSubCount > 110) {
             x = (f32)l_debugRegisters.floats[10];
             z = (f32)l_debugRegisters.floats[12];
             local.y = 0.0f;
@@ -1670,38 +1670,38 @@ void btdExecCamera(btd_class *i_this) {
         break;
     }
     case 103:
-        i_this->m6E40 = (f32)(0.0f);
-        i_this->m6E28.x = (f32)(0.0f);
-        i_this->m6E16 = (s16)((s16)(mode + 1));
-        i_this->m6E1A = (s16)(0);
-        i_this->m6E28.y = (f32)(0.0f);
-        i_this->m6E28.z = (f32)(0.0f);
-        i_this->m6E36 = (s16)(-6000);
-        i_this->m6E34 = (s16)(-11000);
-        i_this->m6E3C = (f32)(55.0f);
-        i_this->m6E44 = (f32)(2800.0f);
+        i_this->mDemoCamSpeed = (f32)(0.0f);
+        i_this->mDemoCamCenter.x = (f32)(0.0f);
+        i_this->mDemoCamMode = (s16)((s16)(mode + 1));
+        i_this->mDemoSubCount = (s16)(0);
+        i_this->mDemoCamCenter.y = (f32)(0.0f);
+        i_this->mDemoCamCenter.z = (f32)(0.0f);
+        i_this->mDemoCamOrbitAngleY = (s16)(-6000);
+        i_this->mDemoCamOrbitAngleX = (s16)(-11000);
+        i_this->mDemoCamFovy = (f32)(55.0f);
+        i_this->mDemoCamOrbitDist = (f32)(2800.0f);
         [[fallthrough]];
     case 104: {
-        f32 blend = (f32)i_this->m6E40;
+        f32 blend = (f32)i_this->mDemoCamSpeed;
         s16 limit = (s16)gabi::ftoi(gabi::fmuls_ppc(22384.0f, blend));
-        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m6E36), 0x4000, 16, limit);
-        blend = (f32)i_this->m6E40;
+        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mDemoCamOrbitAngleY), 0x4000, 16, limit);
+        blend = (f32)i_this->mDemoCamSpeed;
         s16 target = (s16)((s16)l_debugRegisters.shorts[0] - 6000);
         limit = (s16)gabi::ftoi(gabi::fmuls_ppc(5000.0f, blend));
-        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m6E34), target, 16, limit);
-        btdExecCalc(gabi::ea(&i_this->m6E44), 500.0f, 0.0625f,
-                    gabi::fmuls_ppc(2300.0f, (f32)i_this->m6E40));
-        s16 angle = (s16)i_this->m6E36;
+        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mDemoCamOrbitAngleX), target, 16, limit);
+        btdExecCalc(gabi::ea(&i_this->mDemoCamOrbitDist), 500.0f, 0.0625f,
+                    gabi::fmuls_ppc(2300.0f, (f32)i_this->mDemoCamSpeed));
+        s16 angle = (s16)i_this->mDemoCamOrbitAngleY;
         btdGuest_mDoMtx_YrotS(btdExecMatrix(), angle);
-        angle = (s16)i_this->m6E34;
+        angle = (s16)i_this->mDemoCamOrbitAngleX;
         btdGuest_mDoMtx_XrotM(btdExecMatrix(), angle);
         local.x = 0.0f;
-        local.z = (f32)i_this->m6E44;
+        local.z = (f32)i_this->mDemoCamOrbitDist;
         local.y = 0.0f;
-        MtxPosition(&local, &i_this->m6E1C);
-        btdExecCalc(gabi::ea(&i_this->m6E40),
+        MtxPosition(&local, &i_this->mDemoCamEye);
+        btdExecCalc(gabi::ea(&i_this->mDemoCamSpeed),
                     gabi::fadds_ppc((f32)l_debugRegisters.floats[10], 0.0048f), 0.1f, 0.000048f);
-        sub = (s16)i_this->m6E1A;
+        sub = (s16)i_this->mDemoSubCount;
         if (sub < 3)
             break;
         if (sub == 3) {
@@ -1709,10 +1709,10 @@ void btdExecCamera(btd_class *i_this) {
                 btdExecSound(btdActor(p), gabi::ea(&i_this->eyePos), 0x1863);
             if ((u32)l_ykgrEmitter.v)
                 l_ykgrAlphaFlag = 0;
-            if ((s16)i_this->m6E1A < 3)
+            if ((s16)i_this->mDemoSubCount < 3)
                 break;
         }
-        sub = (s16)i_this->m6E1A;
+        sub = (s16)i_this->mDemoSubCount;
         i_this->mKankyoState = (u8)(5);
         if (sub == 280) {
             u32 save = dComIfGs_ea();
@@ -1722,18 +1722,18 @@ void btdExecCamera(btd_class *i_this) {
             btdGuest_dSv_memBit_c_onDungeonItem(save + 0x798, 3);
             s32 room = (s8)i_this->current.roomNo;
             btdGuest_fopAcM_createWarpFlower(center, 0, room, 0);
-            sub = (s16)i_this->m6E1A;
-            i_this->m6E90 = (s8)(0);
+            sub = (s16)i_this->mDemoSubCount;
+            i_this->mForceBossCamera = (s8)(0);
         }
         if (sub == 450) {
-            i_this->m6E16 = (s16)(151);
+            i_this->mDemoCamMode = (s16)(151);
             i_this->mGohmaState = (s16)(57);
         }
         break;
     }
     case 150:
-        btdExecCopy(gabi::ea(&resetEye), gabi::ea(&i_this->m6E1C.x));
-        btdExecCopy(gabi::ea(&resetCenter), gabi::ea(&i_this->m6E28.x));
+        btdExecCopy(gabi::ea(&resetEye), gabi::ea(&i_this->mDemoCamEye.x));
+        btdExecCopy(gabi::ea(&resetCenter), gabi::ea(&i_this->mDemoCamCenter.x));
         btdGuest_dCamera_c_Reset_2(body, &resetCenter, &resetEye);
         btdExecCameraResume(btdActor(p), body);
         break;
@@ -1753,23 +1753,23 @@ void btdExecCamera(btd_class *i_this) {
     default:
         break;
     }
-    if (!(s16)i_this->m6E16)
+    if (!(s16)i_this->mDemoCamMode)
         return;
-    sub = (s16)i_this->m6E1A;
+    sub = (s16)i_this->mDemoSubCount;
     // Native table indexes truncate16 then round down to an8-byte sin/cos pair.
     u32 sinIndex = (u32)(u16)((s32)sub * 0x3300) & ~7u,
         cosIndex = (u32)(u16)((s32)sub * 0x3000) & ~7u;
-    f32 eyeY = (f32)i_this->m6E1C.y;
-    s16 count = (s16)i_this->m02E2;
-    f32 amplitude = (f32)i_this->m6E48, centerX = (f32)i_this->m6E28.x;
-    f32 sin = cM_ssin((s32)sinIndex), eyeX = (f32)i_this->m6E1C.x;
+    f32 eyeY = (f32)i_this->mDemoCamEye.y;
+    s16 count = (s16)i_this->mFrameCounter;
+    f32 amplitude = (f32)i_this->mDemoCamShake, centerX = (f32)i_this->mDemoCamCenter.x;
+    f32 sin = cM_ssin((s32)sinIndex), eyeX = (f32)i_this->mDemoCamEye.x;
     f32 fx = gabi::fmuls_ppc(sin, amplitude), cos = cM_scos((s32)cosIndex),
         fy = gabi::fmuls_ppc(cos, amplitude);
     u32 rollIndex = (u32)(u16)((s32)count * 0x1C00) & ~7u;
-    f32 centerY = (f32)i_this->m6E28.y;
+    f32 centerY = (f32)i_this->mDemoCamCenter.y;
     f32 rollCos = cM_scos((s32)rollIndex),
         rollFloat = gabi::fmuls_ppc(gabi::fmuls_ppc(rollCos, amplitude), 7.5f);
-    f32 eyeZ = (f32)i_this->m6E1C.z, centerZ = (f32)i_this->m6E28.z;
+    f32 eyeZ = (f32)i_this->mDemoCamEye.z, centerZ = (f32)i_this->mDemoCamCenter.z;
     s16 roll = (s16)gabi::ftoi(rollFloat);
     resetEye.y = gabi::fadds_ppc(eyeY, fy);
     resetCenter.x = gabi::fadds_ppc(centerX, fx);
@@ -1777,42 +1777,42 @@ void btdExecCamera(btd_class *i_this) {
     resetEye.z = eyeZ;
     resetEye.x = gabi::fadds_ppc(eyeX, fx);
     resetCenter.y = gabi::fadds_ppc(centerY, fy);
-    f32 fov = (f32)i_this->m6E3C;
+    f32 fov = (f32)i_this->mDemoCamFovy;
     btdGuest_dCamera_c_Set_3(body, &resetCenter, &resetEye, roll, fov);
     f32 decay = gabi::fadds_ppc((f32)l_debugRegisters.floats[16], 2.0f);
-    btdGuest_cLib_addCalc0(gabi::ea(&i_this->m6E48), 1.0f, decay);
-    s32 main = (s16)i_this->m6E18;
+    btdGuest_cLib_addCalc0(gabi::ea(&i_this->mDemoCamShake), 1.0f, decay);
+    s32 main = (s16)i_this->mDemoMainCount;
     btdGuest_screenReport(30, 430, gabi::guest_addr("K MAIN COUNT  %d"), main);
-    s32 subReport = (s16)i_this->m6E1A;
+    s32 subReport = (s16)i_this->mDemoSubCount;
     btdGuest_screenReport(30, 430, gabi::guest_addr("K SUB  COUNT  %d"), subReport);
-    mode = (s16)i_this->m6E16;
-    main = (s16)i_this->m6E18;
+    mode = (s16)i_this->mDemoCamMode;
+    main = (s16)i_this->mDemoMainCount;
     if (mode < 100) {
         if (main == 2) {
             (btdPlayer(player)->mDemo.mParam0 = (s32)(0));
             btdPlayer(player)->mDemo.mDemoType = (s16)(3);
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if (main == 115) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(26));
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if (main == 310) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(28));
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if (main == 452) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(24));
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if (main == 465) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(23));
             (btdPlayer(player)->mDemo.mParam0 = (s32)(2));
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if (main == 660) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(27));
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if ((u32)main == (u32)((s32)(s16)l_debugRegisters.shorts[1] + 733)) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(23));
@@ -1822,18 +1822,18 @@ void btdExecCamera(btd_class *i_this) {
         if (main == 2) {
             (btdPlayer(player)->mDemo.mParam0 = (s32)(0));
             btdPlayer(player)->mDemo.mDemoType = (s16)(3);
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if (main == 10) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(23));
             (btdPlayer(player)->mDemo.mParam0 = (s32)(2));
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         s32 bias = (s16)l_debugRegisters.shorts[0];
         if ((u32)main == (u32)(bias + 693)) {
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(50));
             bias = (s16)l_debugRegisters.shorts[0];
-            main = (s16)i_this->m6E18;
+            main = (s16)i_this->mDemoMainCount;
         }
         if ((u32)main == (u32)(bias + 705))
             (btdPlayer(player)->mDemo.mDemoMode = (u32)(29));
@@ -1846,27 +1846,27 @@ void wave_set(btd_class *i_this) {
     s32 room = (s8)i_this->current.roomNo;
     s32 reverb = btdGuest_dComIfGp_getReverb(room);
     mDoAud_seStart(0x583Eu, &static_center_pos, 0, reverb);
-    i_this->m6E7C = 0.0f;
+    i_this->mWaveRadius = 0.0f;
 }
 
 /* 020F032C */
 void *get_anm(btd_class *i_this) {
-    if (i_this->m02E0 != 0)
-        return i_this->m02E4 == 11 ? i_this->mpDeadBodyMorf.get() : i_this->mpPhase2Morf.get();
+    if (i_this->mBattlePhase != 0)
+        return i_this->mAction == 11 ? i_this->mpDeadBodyMorf.get() : i_this->mpPhase2Morf.get();
     return i_this->mpPhase1Morf.get();
 }
 
 /* 020F035C */
 void *get_btk(btd_class *i_this) {
-    if (i_this->m02E0 != 0)
-        return i_this->m02E4 == 11 ? i_this->mpDeadBodyBtkAnm.get() : i_this->btkS.get();
+    if (i_this->mBattlePhase != 0)
+        return i_this->mAction == 11 ? i_this->mpDeadBodyBtkAnm.get() : i_this->btkS.get();
     return i_this->btk.get();
 }
 
 /* 020F038C */
 void *get_brk(btd_class *i_this) {
-    if (i_this->m02E0 != 0)
-        return i_this->m02E4 == 11 ? i_this->mpDeadBodyBrkAnm.get() : i_this->brkS.get();
+    if (i_this->mBattlePhase != 0)
+        return i_this->mAction == 11 ? i_this->mpDeadBodyBrkAnm.get() : i_this->brkS.get();
     return i_this->brk.get();
 }
 
@@ -1912,13 +1912,13 @@ BOOL nodeCallBack(void *node, s32 timing) {
         local.z = z;
         local.y = y;
         local.x = x;
-        MtxPosition(&local, &btdActor(actor)->m03E0);
-        if ((u8)btdActor(actor)->m6E4C == 0) {
-            u32 bx = btdWord(btdActor(actor)->m03E0.x), by = btdWord(btdActor(actor)->m03E0.y);
+        MtxPosition(&local, &btdActor(actor)->mEyeJointPos);
+        if ((u8)btdActor(actor)->mDeadHeadOn == 0) {
+            u32 bx = btdWord(btdActor(actor)->mEyeJointPos.x), by = btdWord(btdActor(actor)->mEyeJointPos.y);
             btdSetWord(btdActor(actor)->eyePos.x, bx);
             btdSetWord(btdActor(actor)->eyePos.y, by);
             f32 eyeY = (f32)btdActor(actor)->eyePos.y, eyeX = (f32)btdActor(actor)->eyePos.x;
-            u32 bz = btdWord(btdActor(actor)->m03E0.z);
+            u32 bz = btdWord(btdActor(actor)->mEyeJointPos.z);
             btdActor(actor)->attention_info.position.x = (f32)(eyeX);
             btdSetWord(btdActor(actor)->eyePos.z, bz);
             f32 eyeZ = (f32)btdActor(actor)->eyePos.z;
@@ -1932,14 +1932,14 @@ BOOL nodeCallBack(void *node, s32 timing) {
         local.y = gabi::fadds_ppc(y, -50.0f);
         local.z = gabi::fadds_ppc(z, 200.0f);
         MtxPosition(&local, &btdActor(actor)->mLightInfluence.mPos);
-        s16 angle = (s16)btdActor(actor)->m5E8E;
+        s16 angle = (s16)btdActor(actor)->mHeadAngleY;
         m = matrix();
         btdGuest_mDoMtx_YrotM(m, angle);
         writeJointMatrix(model, index);
         return TRUE;
     }
     if (role == 101 || role == 102) {
-        s16 angle = (s16)btdActor(actor)->m02FA;
+        s16 angle = (s16)btdActor(actor)->mEyelidAngle;
         if (role == 102)
             angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)angle, -0.6818f));
         m = matrix();
@@ -1974,15 +1974,15 @@ BOOL nodeCallBack(void *node, s32 timing) {
         local.z = z;
         local.y = y;
     }
-    MtxPosition(&local, btdVector(gabi::ea(&btdActor(actor)->m02FC[0].x) + (u32)role * 12));
+    MtxPosition(&local, btdVector(gabi::ea(&btdActor(actor)->mJointPos[0].x) + (u32)role * 12));
     if (role == 2) {
-        s16 angle = (s16)btdActor(actor)->m5E88;
+        s16 angle = (s16)btdActor(actor)->mNeckAngleY;
         m = matrix();
         btdGuest_mDoMtx_YrotM(m, angle);
-        angle = (s16)btdActor(actor)->m5E8A;
+        angle = (s16)btdActor(actor)->mNeckAngleX;
         m = matrix();
         btdGuest_mDoMtx_XrotM(m, angle);
-        angle = (s16)btdActor(actor)->m5E88;
+        angle = (s16)btdActor(actor)->mNeckAngleY;
         m = matrix();
         btdGuest_mDoMtx_ZrotM(m, angle);
         writeJointMatrix(model, index, true);
@@ -1993,19 +1993,19 @@ BOOL nodeCallBack(void *node, s32 timing) {
 /* 020F0A74 */
 BOOL daBtd_Draw(btd_class *i_this) {
     u32 p = gabi::ea(i_this);
-    u8 blur = (u8)i_this->m6E15;
+    u8 blur = (u8)i_this->mBlurRate;
     if (blur > 1) {
         (l_blurAlpha = (u8)(blur));
         btdGuest_mDoGph_gInf_c_onBlure();
     } else if (blur == 1) {
-        i_this->m6E15 = (u8)(0);
+        i_this->mBlurRate = (u8)(0);
         (l_blurEnabled = (u8)(0));
     }
     s16 angle = (s16)i_this->current.angle.y;
     btdGuest_dSnap_RegistFig(0xC7, p, gabi::ea(&i_this->eyePos), angle, 1.0f, 1.0f, 1.0f);
-    if ((u8)i_this->m6E4C) {
+    if ((u8)i_this->mDeadHeadOn) {
         u32 env = btdGuest_getEnvironmentLight();
-        btdGuest_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&i_this->m6E50.x),
+        btdGuest_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&i_this->mDeadHeadPos.x),
                                                      gabi::ea(&i_this->mTevstr));
         u32 model = (u32)btdMorph((u32)i_this->mpDeadHeadMorf.v)->mpModel.v;
         env = btdGuest_getEnvironmentLight();
@@ -2054,8 +2054,8 @@ BOOL daBtd_Draw(btd_class *i_this) {
 /* 020F0C38 */
 void eff_off(btd_class *i_this) {
     for (u32 i = 0; i < 7; ++i)
-        if ((s16)i_this->m6028[i] > 2)
-            (i_this->m6028[i] = (s16)(2));
+        if ((s16)i_this->mAttackEmitterTimer[i] > 2)
+            (i_this->mAttackEmitterTimer[i] = (s16)(2));
 }
 
 /* 020F0C68 */
@@ -2063,7 +2063,7 @@ void hahen_set2(btd_class *i_this) {
     cXyz position;
 
     f32 debug = (f32)l_debugRegisters.floats[14];
-    f32 x = (f32)i_this->m02FC[8].x, y = (f32)i_this->m02FC[8].y, z = (f32)i_this->m02FC[8].z;
+    f32 x = (f32)i_this->mJointPos[8].x, y = (f32)i_this->mJointPos[8].y, z = (f32)i_this->mJointPos[8].z;
     f32 height = gabi::fadds_ppc(debug, 100.0f);
     position.z = z;
     position.x = x;
@@ -2072,10 +2072,10 @@ void hahen_set2(btd_class *i_this) {
     btdGuest_dPa_control_c_setDiscardResult(control, 0, 0x80AA, &position, 0, 0, 255, 0, -1, 0, 0,
                                             0);
     debug = (f32)l_debugRegisters.floats[14];
-    x = (f32)i_this->m02FC[10].x;
+    x = (f32)i_this->mJointPos[10].x;
     height = gabi::fadds_ppc(debug, 100.0f);
-    y = (f32)i_this->m02FC[10].y;
-    z = (f32)i_this->m02FC[10].z;
+    y = (f32)i_this->mJointPos[10].y;
+    z = (f32)i_this->mJointPos[10].z;
     position.x = x;
     position.z = z;
     position.y = gabi::fsubs_ppc(y, height);
@@ -2083,10 +2083,10 @@ void hahen_set2(btd_class *i_this) {
     btdGuest_dPa_control_c_setDiscardResult(control, 0, 0x80AA, &position, 0, 0, 255, 0, -1, 0, 0,
                                             0);
     s32 room = (s8)i_this->current.roomNo, reverb = btdGuest_dComIfGp_getReverb(room);
-    mDoAud_seStart(0x581B, &i_this->m02FC[8], 0, reverb);
+    mDoAud_seStart(0x581B, &i_this->mJointPos[8], 0, reverb);
     room = (s8)i_this->current.roomNo;
     reverb = btdGuest_dComIfGp_getReverb(room);
-    mDoAud_seStart(0x581B, &i_this->m02FC[10], 0, reverb);
+    mDoAud_seStart(0x581B, &i_this->mJointPos[10], 0, reverb);
     u32 game = play();
     s16 strength = (s16)l_debugRegisters.shorts[0];
     position.x = 0.0f;
@@ -2100,25 +2100,25 @@ void hahen_set(btd_class *i_this, s32 side) {
     u32 p = gabi::ea(i_this);
     s16 x = (s16)i_this->current.angle.x, y = (s16)i_this->current.angle.y,
         z = (s16)i_this->current.angle.z;
-    i_this->m6048.y = (s16)(y);
-    i_this->m6048.z = (s16)(z);
-    i_this->m6048.x = (s16)(x);
-    i_this->m6048.y = (s16)((s16)(y + (side ? 0x4000 : -0x4000)));
+    i_this->mHahenAngle.y = (s16)(y);
+    i_this->mHahenAngle.z = (s16)(z);
+    i_this->mHahenAngle.x = (s16)(x);
+    i_this->mHahenAngle.y = (s16)((s16)(y + (side ? 0x4000 : -0x4000)));
     u32 source = p + (side ? 0x49C : 0x484);
     // cXyz assignment: copied as words (lwz/stw), so a signalling-NaN bit pattern is kept
     u32 px = btdWord(btdVector(source)->x), pyBits = btdWord(btdVector(source)->y),
         pz = btdWord(btdVector(source)->z);
-    btdSetWord(i_this->m603C.x, px);
-    btdSetWord(i_this->m603C.y, pyBits);
-    btdSetWord(i_this->m603C.z, pz);
+    btdSetWord(i_this->mHahenPos.x, px);
+    btdSetWord(i_this->mHahenPos.y, pyBits);
+    btdSetWord(i_this->mHahenPos.z, pz);
     f32 py = (f32)btdVector(source)->y;
     f32 debug = (f32)l_debugRegisters.floats[14];
-    i_this->m603C.y = (f32)(gabi::fsubs_ppc(py, gabi::fadds_ppc(debug, 100.0f)));
+    i_this->mHahenPos.y = (f32)(gabi::fsubs_ppc(py, gabi::fadds_ppc(debug, 100.0f)));
     u32 modelData = resource(gabi::guest_addr("Always"), 0x30),
         animation = resource(gabi::guest_addr("Always"), 0x66);
     u32 control = (u32)btdPlay()->mParticle.v;
-    u32 emitter = btdGuest_dPa_control_c_set(control, 0, 0x80A8, gabi::ea(&i_this->m603C.x),
-                                             gabi::ea(&i_this->m6048.x), 0, 255, 0, -1, 0, 0, 0);
+    u32 emitter = btdGuest_dPa_control_c_set(control, 0, 0x80A8, gabi::ea(&i_this->mHahenPos.x),
+                                             gabi::ea(&i_this->mHahenAngle.x), 0, 255, 0, -1, 0, 0, 0);
     if (emitter) {
         (btdEmitter(emitter)->globalTranslation.y = (f32)(4.0f));
         (btdEmitter(emitter)->globalTranslation.z = (f32)(4.0f));
@@ -2132,10 +2132,10 @@ void hahen_set(btd_class *i_this, s32 side) {
         }
     }
     control = (u32)btdPlay()->mParticle.v;
-    btdGuest_dPa_control_c_setDiscardResult(control, 0, 0x80A9, gabi::ea(&i_this->m603C.x), 0, 0,
+    btdGuest_dPa_control_c_setDiscardResult(control, 0, 0x80A9, gabi::ea(&i_this->mHahenPos.x), 0, 0,
                                             255, 0, -1, 0, 0, 0);
-    smoke_set_s(i_this, &i_this->m603C,
-                &i_this->m6048);
+    smoke_set_s(i_this, &i_this->mHahenPos,
+                &i_this->mHahenAngle);
 }
 
 /* 020F0DFC */
@@ -2155,7 +2155,7 @@ void smoke_set_s(btd_class *i_this, cXyz *position, csXyz *angles) {
 /* 020F4924 */
 void startdemo(btd_class *i_this) {
     u32 p = gabi::ea(i_this), player = (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v;
-    i_this->m02F0 = (s16)(30);
+    i_this->mBlinkTimer = (s16)(30);
     u32 target = (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v;
     s16 angle = btdGuest_fopAcM_searchActorAngleY(p, target);
     i_this->current.angle.y = (s16)(angle);
@@ -2169,13 +2169,13 @@ void startdemo(btd_class *i_this) {
     btdGuest_cXyz_op_sub(gabi::ea(&btdPlayer(player)->current.pos), &difference, &center);
     u16 mode = (u16)(s16)i_this->mGohmaState;
     if (mode == 0) {
-        if ((s16)i_this->m6E16 != 0)
+        if ((s16)i_this->mDemoCamMode != 0)
             return;
-        i_this->m6E88 = (u8)(0);
+        i_this->mMagmaRiseCenter = (u8)(0);
         i_this->mKankyoState = (u8)(6);
         i_this->current.pos.y = (f32)(-10000.0f);
         if ((u16)i_this->eventInfo.mCommand == 2) {
-            i_this->m6E16 = (s16)(1);
+            i_this->mDemoCamMode = (s16)(1);
             btdGuest_subBgmStop();
             return;
         }
@@ -2206,46 +2206,46 @@ void startdemo(btd_class *i_this) {
     }
     if (mode != 2)
         return;
-    s16 timer = (s16)i_this->m6E1A;
+    s16 timer = (s16)i_this->mDemoSubCount;
     if (timer <= 70) {
-        timer = (s16)i_this->m6E1A;
+        timer = (s16)i_this->mDemoSubCount;
         i_this->mKankyoState = (u8)(8);
     }
     if (timer == 40 || timer == 220) {
         actorSound(p, 0x4837);
-        timer = (s16)i_this->m6E1A;
+        timer = (s16)i_this->mDemoSubCount;
     }
     if (timer == 215) {
         wave_set(i_this);
-        i_this->m6E48 = (f32)(40.0f);
+        i_this->mDemoCamShake = (f32)(40.0f);
         hahen_set2(i_this);
-        timer = (s16)i_this->m6E1A;
+        timer = (s16)i_this->mDemoSubCount;
     }
     if ((u32)((s32)timer - 70) < 126) {
-        timer = (s16)i_this->m6E1A;
-        i_this->m6028[3] = (s16)(3);
+        timer = (s16)i_this->mDemoSubCount;
+        i_this->mAttackEmitterTimer[3] = (s16)(3);
         if (timer >= 90) {
             if (p + 0x37C) {
                 s32 room = (s8)i_this->current.roomNo, reverb = btdGuest_dComIfGp_getReverb(room);
                 mDoAud_seStart(0x501F, &i_this->eyePos, 0, reverb);
             }
-            timer = (s16)i_this->m6E1A;
+            timer = (s16)i_this->mDemoSubCount;
             i_this->mKankyoState = (u8)(2);
         }
     }
     u32 morf = (u32)i_this->mpPhase1Morf.v;
     if (timer >= 70)
-        i_this->m6028[2] = (s16)(3);
+        i_this->mAttackEmitterTimer[2] = (s16)(3);
     if (!((u8)btdMorph(morf)->mFrameCtrl.mState & 1) &&
         (f32)btdMorph(morf)->mFrameCtrl.mRate != 0.0f)
         return;
     if ((f32)l_debugRegisters.floats[7] != 0.0f)
         return;
-    i_this->m02E4 = ACT_WAIT;
-    i_this->m6E16 = (s16)(150);
+    i_this->mAction = ACT_WAIT;
+    i_this->mDemoCamMode = (s16)(150);
     i_this->mGohmaState = (s16)(0);
     f32 random = cM_rndF(50.0f);
-    i_this->m02EC[0] = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, 70.0f)));
+    i_this->mTimers[0] = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, 70.0f)));
     u8 stage = gabi::load<u8>(gabi::ea(&btdPlay()->mCurStage.mName[0]));
     btdGuest_bgmStart(stage == 0x58 ? 0x8000004Bu : 0x80000003u);
     u32 save = dComIfGs_ea();
@@ -2257,7 +2257,7 @@ void sibuki_set(btd_class *i_this) {
     cXyz local;
 
     local.x = 0.0f;
-    i_this->m6E14 = (s8)(0);
+    i_this->mSplashPopCount = (s8)(0);
     for (u32 i = 0; i < 50; ++i) {
         u32 spray = gabi::ea(&i_this->mBtdSibukiS[i]);
         if ((s8)btdSplash(spray)->m00 != 0)
@@ -2288,16 +2288,16 @@ void sibuki_set(btd_class *i_this) {
 
 /* 020F1288 */
 void kubi_calc(btd_class *i_this) {
-    f32 x = (f32)i_this->m6E50.x, y = (f32)i_this->m6E50.y, z = (f32)i_this->m6E50.z;
+    f32 x = (f32)i_this->mDeadHeadPos.x, y = (f32)i_this->mDeadHeadPos.y, z = (f32)i_this->mDeadHeadPos.z;
     MtxTrans(x, y, z, 0);
-    s16 angle = (s16)i_this->m6E74.y;
+    s16 angle = (s16)i_this->mDeadHeadAngle.y;
     u32 m = matrix();
     btdGuest_mDoMtx_YrotM(m, angle);
-    angle = (s16)i_this->m6E74.x;
+    angle = (s16)i_this->mDeadHeadAngle.x;
     m = matrix();
     btdGuest_mDoMtx_XrotM(m, angle);
     m = matrix();
-    angle = (s16)i_this->m6E74.z;
+    angle = (s16)i_this->mDeadHeadAngle.z;
     btdGuest_mDoMtx_ZrotM(m, angle);
     u32 morf = (u32)i_this->mpDeadHeadMorf.v;
     m = matrix();
@@ -2338,36 +2338,36 @@ void end(btd_class *i_this) {
         } else {
             i_this->mGohmaState = (s16)(0x33);
             btdGuest_anm_init(p, 12, 0.0f, 0, 1.0f, -1);
-            i_this->m6E18 = (s16)(0);
-            i_this->m6E1A = (s16)(0);
-            i_this->m6E16 = (s16)(100);
+            i_this->mDemoMainCount = (s16)(0);
+            i_this->mDemoSubCount = (s16)(0);
+            i_this->mDemoCamMode = (s16)(100);
             s32 delay = (s16)l_debugRegisters.shorts[1];
-            i_this->m02EC[0] = (s16)((s16)(delay + 540));
+            i_this->mTimers[0] = (s16)((s16)(delay + 540));
             btdGuest_bgmStop(20);
             btdGuest_subBgmStart(0xC0000003u);
             btdGuest_wave_set(p);
         }
         return;
     case 0x33: {
-        s16 frame = (s16)i_this->m6E1A;
+        s16 frame = (s16)i_this->mDemoSubCount;
         if (frame == 3) {
             btdEndMonsterSound(i_this, 0x4837);
-            frame = (s16)i_this->m6E1A;
+            frame = (s16)i_this->mDemoSubCount;
         }
         if (frame == 64) {
             btdEndMonsterSound(i_this, 0x483B);
             btdGuest_wave_set(p);
-            frame = (s16)i_this->m6E1A;
+            frame = (s16)i_this->mDemoSubCount;
         }
         if (frame == 120) {
             if (p && p + 0x37C)
                 btdEndSound(i_this, gabi::ea(&i_this->eyePos), 0x5837);
             btdGuest_wave_set(p);
-            frame = (s16)i_this->m6E1A;
+            frame = (s16)i_this->mDemoSubCount;
         }
         if (frame == 160) {
             btdEndMonsterSound(i_this, 0x4839);
-            frame = (s16)i_this->m6E1A;
+            frame = (s16)i_this->mDemoSubCount;
         }
         if (frame == 200) {
             (btdVector(center)->x = (f32)(0.0f));
@@ -2375,48 +2375,48 @@ void end(btd_class *i_this) {
             (btdVector(center)->z = (f32)(0.0f));
             btdEndSound(i_this, center, 0x5838);
             btdEndMonsterSound(i_this, 0x483C, true);
-            frame = (s16)i_this->m6E1A;
+            frame = (s16)i_this->mDemoSubCount;
         }
         if (frame == 310)
             btdEndSound(i_this, center, 0x5839);
-        s16 timer = (s16)i_this->m02EC[0];
+        s16 timer = (s16)i_this->mTimers[0];
         if (timer == 101) {
             btdGuest_subBgmStop();
             u32 z = btdWord(i_this->eyePos.z), y = btdWord(i_this->eyePos.y);
-            btdSetWord(i_this->m6E50.z, z);
+            btdSetWord(i_this->mDeadHeadPos.z, z);
             u16 ax = (u16)i_this->current.angle.x;
-            btdSetWord(i_this->m6E50.y, y);
-            i_this->m6E74.x = (s16)(ax);
+            btdSetWord(i_this->mDeadHeadPos.y, y);
+            i_this->mDeadHeadAngle.x = (s16)(ax);
             u16 ay = (u16)i_this->current.angle.y;
-            i_this->m6E4C = (u8)(1);
-            s16 next = (s16)i_this->mGohmaState, count = (s16)i_this->m6E16;
-            i_this->m6E40 = (f32)(0.0f);
-            i_this->m6E74.y = (s16)(ay);
+            i_this->mDeadHeadOn = (u8)(1);
+            s16 next = (s16)i_this->mGohmaState, count = (s16)i_this->mDemoCamMode;
+            i_this->mDemoCamSpeed = (f32)(0.0f);
+            i_this->mDeadHeadAngle.y = (s16)(ay);
             u32 x = btdWord(i_this->eyePos.x);
             i_this->mGohmaState = (s16)((s16)(next + 1));
-            btdSetWord(i_this->m6E50.x, x);
+            btdSetWord(i_this->mDeadHeadPos.x, x);
             u16 az = (u16)i_this->current.angle.z;
             i_this->current.pos.y = (f32)(-10000.0f);
-            i_this->m6E74.z = (s16)(az);
-            i_this->m02EC[0] = (s16)(70);
-            i_this->m6E1A = (s16)(0);
-            i_this->m6E16 = (s16)((s16)(count + 1));
+            i_this->mDeadHeadAngle.z = (s16)(az);
+            i_this->mTimers[0] = (s16)(70);
+            i_this->mDemoSubCount = (s16)(0);
+            i_this->mDemoCamMode = (s16)((s16)(count + 1));
             i_this->speedF = (f32)(30.0f);
             btdEndSound(i_this, center, 0x583A);
             u32 control = (u32)btdPlay()->mParticle.v;
-            u32 emitter = btdGuest_dPa_control_c_set(control, 0, 0x80DE, gabi::ea(&i_this->m6E50.x),
+            u32 emitter = btdGuest_dPa_control_c_set(control, 0, 0x80DE, gabi::ea(&i_this->mDeadHeadPos.x),
                                                      0, 0, 255, 0, -1, 0, 0, 0);
-            i_this->m6038.v = (u32)(emitter);
-            i_this->m6E48 = (f32)(30.0f);
+            i_this->mpDeadHeadEmitter.v = (u32)(emitter);
+            i_this->mDemoCamShake = (f32)(30.0f);
 
             cXyz axis;
             btdEndShock(axis);
-            i_this->m6E15 = (u8)(180);
+            i_this->mBlurRate = (u8)(180);
             return;
         }
         if (timer == 460) {
-            timer = (s16)i_this->m02EC[0];
-            i_this->m02E0 = (u8)(2);
+            timer = (s16)i_this->mTimers[0];
+            i_this->mBattlePhase = (u8)(2);
         }
         if (timer == 241) {
             u32 model = (u32)btdMorph(morf)->mpModel.v;
@@ -2427,7 +2427,7 @@ void end(btd_class *i_this) {
             u32 btk = (u32)i_this->mpDeadBodyBtkAnm.v;
             data = (u32)btdModel(model)->mModelData.v;
             btdGuest_btkInitNative(btk, data, animation, 1, 1.0f, 0, 0, -1, 1, 0);
-            timer = (s16)i_this->m02EC[0];
+            timer = (s16)i_this->mTimers[0];
         }
         if (timer == 191)
             for (u32 i = 0; i < 19; ++i) {
@@ -2453,8 +2453,8 @@ void end(btd_class *i_this) {
         cXyz difference;
         cXyz vector;
 
-        i_this->m6E88 = (u8)(0);
-        btdGuest_cXyz_op_sub(gabi::ea(&i_this->m6E5C.x), &difference, gabi::ea(&i_this->m6E50.x));
+        i_this->mMagmaRiseCenter = (u8)(0);
+        btdGuest_cXyz_op_sub(gabi::ea(&i_this->mDeadHeadTargetPos.x), &difference, gabi::ea(&i_this->mDeadHeadPos.x));
         f32 z = difference.z, x = difference.x, y = difference.y;
         vector.x = x;
         vector.y = y;
@@ -2465,23 +2465,23 @@ void end(btd_class *i_this) {
         s16 yaw = cM_atan2s((f32)vector.x, (f32)vector.z);
         z = vector.z;
         x = vector.x;
-        i_this->m6E74.y = (s16)(yaw);
+        i_this->mDeadHeadAngle.y = (s16)(yaw);
         distance = btdGuest_sqrtf(gabi::fmadds(x, x, gabi::fmuls_ppc(z, z)));
         s32 pitch = btdGuest_cM_atan2sFullResult((f32)vector.y, distance);
         s16 negativePitch = (s16)(0u - (u32)pitch);
-        yaw = (s16)i_this->m6E74.y;
+        yaw = (s16)i_this->mDeadHeadAngle.y;
         btdGuest_mDoMtx_YrotS(btdEndMatrix(), yaw);
         btdGuest_mDoMtx_XrotM(btdEndMatrix(), negativePitch);
         vector.x = 0.0f;
         vector.y = 0.0f;
         vector.z = (f32)i_this->speedF;
-        MtxPosition(&vector, &i_this->m6E68);
-        PSVECAdd(&i_this->m6E50, &i_this->m6E68, &i_this->m6E50);
+        MtxPosition(&vector, &i_this->mDeadHeadSpeed);
+        PSVECAdd(&i_this->mDeadHeadPos, &i_this->mDeadHeadSpeed, &i_this->mDeadHeadPos);
         // Native bge is !LT; only strict LT takes the update.
-        if ((f32)i_this->m6E68.y < 0.0f)
+        if ((f32)i_this->mDeadHeadSpeed.y < 0.0f)
             btdGuest_cLib_addCalc2(gabi::ea(&i_this->speedF), 300.0f, 1.0f, 2.0f);
-        btdEndCopy3(gabi::ea(&i_this->eyePos), gabi::ea(&i_this->m6E50.x));
-        btdGuest_cXyz_op_sub(gabi::ea(&i_this->m6E5C.x), &difference, gabi::ea(&i_this->m6E50.x));
+        btdEndCopy3(gabi::ea(&i_this->eyePos), gabi::ea(&i_this->mDeadHeadPos.x));
+        btdGuest_cXyz_op_sub(gabi::ea(&i_this->mDeadHeadTargetPos.x), &difference, gabi::ea(&i_this->mDeadHeadPos.x));
         btdEndCopy3(gabi::ea(&vector), gabi::ea(&difference));
         f32 square = PSVECSquareMag(&vector);
         distance = btdGuest_sqrtf(square);
@@ -2491,99 +2491,99 @@ void end(btd_class *i_this) {
         break;
     }
     case 0x35: {
-        f32 vx = (f32)i_this->m6E68.x, targetX = (f32)i_this->m6E5C.x;
-        i_this->m6E88 = (u8)(0);
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m6E50.x), targetX, 1.0f, std::fabs(vx));
-        f32 vy = (f32)i_this->m6E68.y, y = (f32)i_this->m6E50.y;
+        f32 vx = (f32)i_this->mDeadHeadSpeed.x, targetX = (f32)i_this->mDeadHeadTargetPos.x;
+        i_this->mMagmaRiseCenter = (u8)(0);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mDeadHeadPos.x), targetX, 1.0f, std::fabs(vx));
+        f32 vy = (f32)i_this->mDeadHeadSpeed.y, y = (f32)i_this->mDeadHeadPos.y;
         y = gabi::fadds_ppc(y, vy);
-        i_this->m6E50.y = (f32)(y);
+        i_this->mDeadHeadPos.y = (f32)(y);
         f32 gravity = gabi::fadds_ppc((f32)l_debugRegisters.floats[3], 5.0f),
-            targetY = (f32)i_this->m6E5C.y;
-        i_this->m6E68.y = (f32)(gabi::fsubs_ppc(vy, gravity));
+            targetY = (f32)i_this->mDeadHeadTargetPos.y;
+        i_this->mDeadHeadSpeed.y = (f32)(gabi::fsubs_ppc(vy, gravity));
         if (!(y > targetY)) {
-            vy = (f32)i_this->m6E68.y;
-            i_this->m6E50.y = (f32)(targetY);
+            vy = (f32)i_this->mDeadHeadSpeed.y;
+            i_this->mDeadHeadPos.y = (f32)(targetY);
             if (vy < -50.0f) {
                 f32 bounce = gabi::fadds_ppc((f32)l_debugRegisters.floats[4], -0.3f);
-                i_this->m6E48 = (f32)(40.0f);
-                i_this->m6E68.y = (f32)(gabi::fmuls_ppc(vy, bounce));
+                i_this->mDemoCamShake = (f32)(40.0f);
+                i_this->mDeadHeadSpeed.y = (f32)(gabi::fmuls_ppc(vy, bounce));
 
                 cXyz axis;
                 btdEndShock(axis);
                 if (p && p + 0x37C)
                     btdEndSound(i_this, gabi::ea(&i_this->eyePos), 0x583B);
                 i_this->mGohmaState = (s16)(0x36);
-                i_this->m02EC[0] = (s16)(50);
+                i_this->mTimers[0] = (s16)(50);
                 const u32 staticPosition = gabi::ea(&l_endPosition);
                 if (!(u32)l_endPositionInitialized) {
                     l_endPositionInitialized = 1;
-                    (btdVector(staticPosition)->x = (f32)((f32)i_this->m6E50.x));
-                    (btdVector(staticPosition)->y = (f32)((f32)i_this->m6E50.y));
-                    (btdVector(staticPosition)->z = (f32)((f32)i_this->m6E50.z));
+                    (btdVector(staticPosition)->x = (f32)((f32)i_this->mDeadHeadPos.x));
+                    (btdVector(staticPosition)->y = (f32)((f32)i_this->mDeadHeadPos.y));
+                    (btdVector(staticPosition)->z = (f32)((f32)i_this->mDeadHeadPos.z));
                 }
                 btdVector(staticPosition)->y =
                     gabi::fsubs_ppc((f32)btdVector(staticPosition)->y, 100.0f);
-                btdGuest_smoke_set_s(p, staticPosition, gabi::ea(&i_this->m6E74.x));
-                u32 emitter = (u32)i_this->m6038.v;
+                btdGuest_smoke_set_s(p, staticPosition, gabi::ea(&i_this->mDeadHeadAngle.x));
+                u32 emitter = (u32)i_this->mpDeadHeadEmitter.v;
                 if (emitter) {
                     u32 flags = (u32)btdEmitter(emitter)->status;
                     (btdEmitter(emitter)->maxFrame = (s32)(-1));
                     (btdEmitter(emitter)->status = (u32)(flags | 1));
-                    i_this->m6038.v = (u32)(0);
+                    i_this->mpDeadHeadEmitter.v = (u32)(0);
                 }
             }
         }
-        f32 vz = (f32)i_this->m6E68.z, targetZ = (f32)i_this->m6E5C.z;
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m6E50.z), targetZ, 1.0f, std::fabs(vz));
-        btdEndCopy3(gabi::ea(&i_this->eyePos), gabi::ea(&i_this->m6E50.x));
+        f32 vz = (f32)i_this->mDeadHeadSpeed.z, targetZ = (f32)i_this->mDeadHeadTargetPos.z;
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mDeadHeadPos.z), targetZ, 1.0f, std::fabs(vz));
+        btdEndCopy3(gabi::ea(&i_this->eyePos), gabi::ea(&i_this->mDeadHeadPos.x));
         break;
     }
     case 0x36: {
-        i_this->m6E88 = (u8)(0);
-        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m6E74.x), 0x2000, 2, 0x200);
-        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m6E74.z), 0x2000, 2, 0x200);
-        f32 vy = (f32)i_this->m6E68.y, y = (f32)i_this->m6E50.y;
+        i_this->mMagmaRiseCenter = (u8)(0);
+        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mDeadHeadAngle.x), 0x2000, 2, 0x200);
+        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mDeadHeadAngle.z), 0x2000, 2, 0x200);
+        f32 vy = (f32)i_this->mDeadHeadSpeed.y, y = (f32)i_this->mDeadHeadPos.y;
         y = gabi::fadds_ppc(y, vy);
-        i_this->m6E50.y = (f32)(y);
+        i_this->mDeadHeadPos.y = (f32)(y);
         f32 gravity = gabi::fadds_ppc((f32)l_debugRegisters.floats[3], 5.0f),
-            targetY = (f32)i_this->m6E5C.y;
-        f32 x = (f32)i_this->m6E50.x;
-        i_this->m6E68.y = (f32)(gabi::fsubs_ppc(vy, gravity));
+            targetY = (f32)i_this->mDeadHeadTargetPos.y;
+        f32 x = (f32)i_this->mDeadHeadPos.x;
+        i_this->mDeadHeadSpeed.y = (f32)(gabi::fsubs_ppc(vy, gravity));
         if (!(y > targetY)) {
             y = targetY;
-            i_this->m6E50.y = (f32)(y);
-            i_this->m6E68.y = (f32)(0.0f);
+            i_this->mDeadHeadPos.y = (f32)(y);
+            i_this->mDeadHeadSpeed.y = (f32)(0.0f);
         }
-        s16 timer = (s16)i_this->m02EC[0];
-        f32 z = (f32)i_this->m6E50.z;
+        s16 timer = (s16)i_this->mTimers[0];
+        f32 z = (f32)i_this->mDeadHeadPos.z;
         i_this->eyePos.x = (f32)(x);
         i_this->eyePos.y = (f32)(y);
         i_this->eyePos.z = (f32)(z);
         if (timer == 1) {
-            i_this->m6E50.y = (f32)(gabi::fsubs_ppc((f32)i_this->m6E50.y, 100.0f));
+            i_this->mDeadHeadPos.y = (f32)(gabi::fsubs_ppc((f32)i_this->mDeadHeadPos.y, 100.0f));
             if (p + 0x37C)
                 btdEndSound(i_this, gabi::ea(&i_this->eyePos), 0x583C);
-            btdGuest_fopAcM_createDisappear(p, gabi::ea(&i_this->m6E50.x), 15, 2, 255);
-            i_this->m6E50.y = (f32)(-10000.0f);
-            i_this->m02EC[0] = (s16)(150);
+            btdGuest_fopAcM_createDisappear(p, gabi::ea(&i_this->mDeadHeadPos.x), 15, 2, 255);
+            i_this->mDeadHeadPos.y = (f32)(-10000.0f);
+            i_this->mTimers[0] = (s16)(150);
             i_this->mGohmaState = (s16)(0x37);
         }
         btdGuest_kubi_calc(p);
         return;
     }
     case 0x37: {
-        s16 timer = (s16)i_this->m02EC[0];
-        i_this->m6E88 = (u8)(0);
+        s16 timer = (s16)i_this->mTimers[0];
+        i_this->mMagmaRiseCenter = (u8)(0);
         if (timer == 2) {
             u32 dragon = (u32)dr2.v;
             btdDragon(dragon)->m43C = 1;
-            timer = (s16)i_this->m02EC[0];
-            i_this->m6E84 = (f32)(-200.0f);
+            timer = (s16)i_this->mTimers[0];
+            i_this->mMagmaBallOffsetY = (f32)(-200.0f);
         }
         if (timer == 1) {
-            s16 count = (s16)i_this->m6E16;
+            s16 count = (s16)i_this->mDemoCamMode;
             i_this->mGohmaState = (s16)(0x38);
-            i_this->m6E16 = (s16)((s16)(count + 1));
+            i_this->mDemoCamMode = (s16)((s16)(count + 1));
         }
         return;
     }
@@ -2594,13 +2594,13 @@ void end(btd_class *i_this) {
         return;
     }
     // Shared native tail for states34/35: tumble, calculate head, follow emitter.
-    s32 ax = (s16)l_debugRegisters.shorts[1], angle = (s16)i_this->m6E74.x;
-    i_this->m6E74.x = (s16)((s16)(angle + ax + 1000));
+    s32 ax = (s16)l_debugRegisters.shorts[1], angle = (s16)i_this->mDeadHeadAngle.x;
+    i_this->mDeadHeadAngle.x = (s16)((s16)(angle + ax + 1000));
     s32 az = (s16)l_debugRegisters.shorts[2];
-    angle = (s16)i_this->m6E74.z;
-    i_this->m6E74.z = (s16)((s16)(angle + az + 1500));
+    angle = (s16)i_this->mDeadHeadAngle.z;
+    i_this->mDeadHeadAngle.z = (s16)((s16)(angle + az + 1500));
     btdGuest_kubi_calc(p);
-    u32 emitter = (u32)i_this->m6038.v;
+    u32 emitter = (u32)i_this->mpDeadHeadEmitter.v;
     if (emitter)
         btdEndFollowEmitter(i_this, emitter);
 }
@@ -2608,15 +2608,15 @@ void end(btd_class *i_this) {
 /* 020F6004 */
 void move(btd_class *i_this) {
     u32 p = gabi::ea(i_this), player = (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v;
-    i_this->m5E84 = (u8)(0);
+    i_this->mAtMode = (u8)(0);
     i_this->attention_info.flags = (u32)(4);
-    switch (u16((s16)i_this->m02E4)) {
+    switch (u16((s16)i_this->mAction)) {
     case ACT_WAIT:
         btdActionWait(i_this);
         break;
     case ACT_ATTACK: {
         s32 attack = (s8)i_this->mAttackType;
-        i_this->m02F0 = (s16)(5);
+        i_this->mBlinkTimer = (s16)(5);
         switch (attack) {
         case ATTACK_JAB:
             btdActionJab(i_this);
@@ -2687,7 +2687,7 @@ void *wepon_s_sub(void *actor, void *context) {
 void btd_effect(btd_class *i_this) {
     u32 morf = gabi::ea(get_anm(i_this));
     for (u32 i = 0; i < 5; ++i) {
-        u32 emitter = (u32)i_this->m5FF8[i].v;
+        u32 emitter = (u32)i_this->mFireChipEmitter[i].v;
         if (emitter) {
             u32 joint = (u32)eff_index[(4 * i) / 4], model = (u32)btdMorph(morf)->mpModel.v;
             u32 block = (u32)btdModel(model)->mpMtxBuffer.v;
@@ -2696,9 +2696,9 @@ void btd_effect(btd_class *i_this) {
             (btdMatrixBuffer(block)->mFlags = (u16)(flags | 0x10));
             u32 m = matrix();
             PSMTXCopy(btdMatrix(matrices + joint * 48), btdMatrix(m));
-            if ((u8)i_this->m02E0 >= 2)
+            if ((u8)i_this->mBattlePhase >= 2)
                 MtxTrans(0.0f, -10000.0f, 0.0f, 0);
-            emitter = (u32)i_this->m5FF8[i].v;
+            emitter = (u32)i_this->mFireChipEmitter[i].v;
             m = matrix();
             btdGuest_JPASetRMtxTVecfromMtx(m, emitter + 0x1F0, emitter + 0x22C);
         } else {
@@ -2706,60 +2706,60 @@ void btd_effect(btd_class *i_this) {
             u32 control = (u32)btdPlay()->mParticle.v;
             emitter = btdGuest_dPa_control_c_set(control, 0, id, gabi::ea(&i_this->current.pos), 0,
                                                  0, 255, 0, -1, 0, 0, 0);
-            (i_this->m5FF8[i].v = (u32)(emitter));
+            (i_this->mFireChipEmitter[i].v = (u32)(emitter));
         }
     }
     for (u32 i = 0; i < 7; ++i) {
-        s16 duration = (s16)i_this->m6028[i];
+        s16 duration = (s16)i_this->mAttackEmitterTimer[i];
         if (duration) {
-            (i_this->m6028[i] = (s16)((s16)(duration - 1)));
-            u32 emitter = (u32)i_this->m600C[i].v;
+            (i_this->mAttackEmitterTimer[i] = (s16)((s16)(duration - 1)));
+            u32 emitter = (u32)i_this->mAttackEmitter[i].v;
             if (emitter) {
                 u32 model = (u32)btdMorph(morf)->mpModel.v,
                     block = (u32)btdModel(model)->mpMtxBuffer.v;
                 u32 jointOffset = 0xAE0;
                 if (i >= 4)
-                    jointOffset = (s8)i_this->m02EA ? 0xD80 : 0xCC0;
+                    jointOffset = (s8)i_this->mAttackHand ? 0xD80 : 0xCC0;
                 u16 flags = (u16)btdMatrixBuffer(block)->mFlags;
                 u32 matrices = (u32)btdMatrixBuffer(block)->mpAnmMtx;
                 (btdMatrixBuffer(block)->mFlags = (u16)(flags | 0x10));
                 btdGuest_JPASetRMtxTVecfromMtx(matrices + jointOffset, emitter + 0x1F0,
                                                emitter + 0x22C);
             } else if (i == 6) {
-                s8 side = (s8)i_this->m02EA, room = (s8)i_this->current.roomNo;
+                s8 side = (s8)i_this->mAttackHand, room = (s8)i_this->current.roomNo;
                 u32 id = side ? 0xA0B4 : 0xA0B5, control = (u32)btdPlay()->mParticle.v;
                 emitter = btdGuest_dPa_control_c_set(
                     control, 2, id, gabi::ea(&i_this->current.pos), 0, 0, 185,
                     gabi::ea(&i_this->mPa_SmokeEcallBack[2]), (s32)room, 0, 0, 0);
-                i_this->m600C[6].v = emitter;
+                i_this->mAttackEmitter[6].v = emitter;
             } else {
-                auto *table = (s8)i_this->m02EA ? effR_name : effF_name;
+                auto *table = (s8)i_this->mAttackHand ? effR_name : effF_name;
                 u16 id = (u16)table[i];
                 u32 control = (u32)btdPlay()->mParticle.v;
                 emitter = btdGuest_dPa_control_c_set(control, 0, id, gabi::ea(&i_this->current.pos),
                                                      0, 0, 255, 0, -1, 0, 0, 0);
-                (i_this->m600C[i].v = (u32)(emitter));
+                (i_this->mAttackEmitter[i].v = (u32)(emitter));
                 if (i == 5) {
-                    emitter = (u32)i_this->m600C[5].v;
+                    emitter = (u32)i_this->mAttackEmitter[5].v;
                     u32 flags = (u32)btdEmitter(emitter)->status;
                     (btdEmitter(emitter)->status = (u32)(flags | 0x40));
                 }
             }
         } else {
-            u32 emitter = (u32)i_this->m600C[i].v;
+            u32 emitter = (u32)i_this->mAttackEmitter[i].v;
             if (emitter) {
                 if (i != 3 && i != 6) {
                     if (i == 5) {
-                        u32 last = (u32)i_this->m600C[5].v;
+                        u32 last = (u32)i_this->mAttackEmitter[5].v;
                         u32 flags = (u32)btdEmitter(last)->status;
                         (btdEmitter(last)->status = (u32)(flags & ~0x40u));
-                        emitter = (u32)i_this->m600C[i].v;
+                        emitter = (u32)i_this->mAttackEmitter[i].v;
                     }
                     u32 flags = (u32)btdEmitter(emitter)->status;
                     (btdEmitter(emitter)->maxFrame = (s32)(-1));
                     (btdEmitter(emitter)->status = (u32)(flags | 1));
                 }
-                (i_this->m600C[i].v = (u32)(0));
+                (i_this->mAttackEmitter[i].v = (u32)(0));
             }
         }
     }
@@ -2778,52 +2778,52 @@ void btd_kankyo(btd_class *i_this) {
     u32 palette = 0;
     switch (state) {
     case 0:
-        btdGuest_cLib_addCalc0(gabi::ea(&i_this->m60D0), 1.0f, 0.04f);
+        btdGuest_cLib_addCalc0(gabi::ea(&i_this->mKankyoBlend), 1.0f, 0.04f);
         break;
     case 1:
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m60D4), 1.0f, 1.0f, 0.065f);
-        i_this->m60D8 = (u8)((u8)(s16)l_HIO.m3C);
-        i_this->m60D9 = (u8)((u8)(s16)l_HIO.m3E);
-        i_this->m60DA = (u8)((u8)(s16)l_HIO.m40);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mLightRate), 1.0f, 1.0f, 0.065f);
+        i_this->mLightColorR = (u8)((u8)(s16)l_HIO.m3C);
+        i_this->mLightColorG = (u8)((u8)(s16)l_HIO.m3E);
+        i_this->mLightColorB = (u8)((u8)(s16)l_HIO.m40);
         break;
     case 2:
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m60D0), 1.0f, 1.0f, 0.2f);
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m60D4), 1.0f, 1.0f, 0.22500001f);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 1.0f, 1.0f, 0.2f);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mLightRate), 1.0f, 1.0f, 0.22500001f);
         time = (f32)l_HIO.m34;
         btdGuest_dKy_custom_timeset(time);
-        i_this->m60D8 = (u8)((u8)(s16)l_HIO.m42);
-        i_this->m60D9 = (u8)((u8)(s16)l_HIO.m44);
-        i_this->m60DA = (u8)((u8)(s16)l_HIO.m46);
+        i_this->mLightColorR = (u8)((u8)(s16)l_HIO.m42);
+        i_this->mLightColorG = (u8)((u8)(s16)l_HIO.m44);
+        i_this->mLightColorB = (u8)((u8)(s16)l_HIO.m46);
         break;
     case 3:
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m60D0), 0.6f, 1.0f, 0.01f);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 0.6f, 1.0f, 0.01f);
         break;
     case 4:
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m60D0), 1.0f, 1.0f, 0.2f);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 1.0f, 1.0f, 0.2f);
         break;
     case 5:
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m60D0), 1.0f, 1.0f, 0.005f);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 1.0f, 1.0f, 0.005f);
         palette = 1;
         break;
     case 6:
-        i_this->m60D0 = (f32)(0.0f);
+        i_this->mKankyoBlend = (f32)(0.0f);
         palette = 2;
         break;
     case 7:
-        btdGuest_cLib_addCalc2(gabi::ea(&i_this->m60D0), 1.0f, 1.0f, 0.03333f);
+        btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 1.0f, 1.0f, 0.03333f);
         time = (f32)l_HIO.m38;
         palette = 2;
         btdGuest_dKy_custom_timeset(time);
         break;
     case 8:
-        btdGuest_cLib_addCalc0(gabi::ea(&i_this->m60D0), 1.0f, 0.06666f);
+        btdGuest_cLib_addCalc0(gabi::ea(&i_this->mKankyoBlend), 1.0f, 0.06666f);
         palette = 3;
         break;
     }
-    u8 red = (u8)i_this->m60D8;
-    f32 brightness = (f32)i_this->m60D4;
+    u8 red = (u8)i_this->mLightColorR;
+    f32 brightness = (f32)i_this->mLightRate;
     u8 r = (u8)gabi::ftoi(gabi::fmuls_ppc((f32)red, brightness));
-    u8 green = (u8)i_this->m60D9, blue = (u8)i_this->m60DA;
+    u8 green = (u8)i_this->mLightColorG, blue = (u8)i_this->mLightColorB;
     u8 g = (u8)gabi::ftoi(gabi::fmuls_ppc((f32)green, brightness));
     (i_this->mLightInfluence.mColorR = (s16)(r));
     (i_this->mLightInfluence.mColorG = (s16)(g));
@@ -2833,11 +2833,11 @@ void btd_kankyo(btd_class *i_this) {
     i_this->mLightInfluence.mPower = gabi::fmuls_ppc(gabi::fadds_ppc(radius, 5000.0f), brightness);
     f32 fluctuation = (f32)l_debugRegisters.floats[9];
     i_this->mLightInfluence.mFluctuation = fluctuation;
-    f32 blend = (f32)i_this->m60D0;
+    f32 blend = (f32)i_this->mKankyoBlend;
     const u8 from[] = {0, 0, 6, 0}, to[] = {3, 5, 7, 7};
     btdGuest_dKy_custom_colset(from[palette], to[palette], blend);
     i_this->mKankyoState = (u8)(0);
-    btdGuest_cLib_addCalc0(gabi::ea(&i_this->m60D4), 1.0f, 0.025f);
+    btdGuest_cLib_addCalc0(gabi::ea(&i_this->mLightRate), 1.0f, 0.025f);
 }
 
 /* 020F1494 */
@@ -2845,33 +2845,33 @@ BOOL daBtd_Execute(btd_class *i_this) {
     const u32 p = gabi::ea(i_this);
     u32 player = (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v;
     u8 stage = gabi::load<u8>(gabi::ea(&btdPlay()->mCurStage.mName[0]));
-    s8 force = (s8)i_this->m6E90;
+    s8 force = (s8)i_this->mForceBossCamera;
     if (stage == 0x58)
-        i_this->m6E15 = (u8)(50);
+        i_this->mBlurRate = (u8)(50);
     if (force) {
         u32 camera = btdGuest_dCam_getBody();
         btdGuest_dCamera_c_SetTypeForce_2(camera, gabi::guest_addr("Boss01"), 0);
     }
     u32 floor = (u32)i_this->floor.v;
-    f32 floorY = (f32)i_this->m6E80;
-    i_this->m6E88 = (u8)(1);
+    f32 floorY = (f32)i_this->mMagmaFloorY;
+    i_this->mMagmaRiseCenter = (u8)(1);
     btdMagmaFloor(floor)->position.y = floorY;
     f32 rise = gabi::fadds_ppc((f32)l_debugRegisters.floats[15], 30.0f),
-        height = (f32)i_this->m6E7C;
+        height = (f32)i_this->mWaveRadius;
     height = gabi::fadds_ppc(height, rise);
-    i_this->m6E7C = (f32)(height);
+    i_this->mWaveRadius = (f32)(height);
     f32 ceiling = gabi::fadds_ppc((f32)l_debugRegisters.floats[18], 2300.0f);
     if (height > ceiling)
-        i_this->m6E7C = (f32)(ceiling);
+        i_this->mWaveRadius = (f32)(ceiling);
     u32 btk = btdGuest_getBtkNative(p), brk = btdGuest_getBrkNative(p);
     if (!(u32)kui.v)
         (kui.v = (u32)(btdGuest_fpcEx_Search(gabi::guest_fn((const void *)&k_a_d_sub), p)));
     if (!(u32)dr2.v)
         (dr2.v = (u32)(btdGuest_fpcEx_Search(gabi::guest_fn((const void *)&dr2_a_d_sub), p)));
-    s16 count = (s16)i_this->m02E2;
+    s16 count = (s16)i_this->mFrameCounter;
     i_this->attention_info.distances[2] = (u8)(4);
-    i_this->m02E2 = (s16)((s16)(count + 1));
-    be<s16> *timers[] = {&i_this->m02EC[0], &i_this->m02EC[1], &i_this->m02F0, &i_this->mStunTimer};
+    i_this->mFrameCounter = (s16)((s16)(count + 1));
+    be<s16> *timers[] = {&i_this->mTimers[0], &i_this->mTimers[1], &i_this->mBlinkTimer, &i_this->mStunTimer};
     for (be<s16> *timer : timers) {
         s16 remaining = *timer;
         if (remaining)
@@ -2904,7 +2904,7 @@ BOOL daBtd_Execute(btd_class *i_this) {
     if (!(u8)l_HIO.m05)
         btdMorph(morf)->play(&i_this->eyePos, 0, 0);
     btdMorph(morf)->calc();
-    u8 phase = (u8)i_this->m02E0;
+    u8 phase = (u8)i_this->mBattlePhase;
     f32 radiusScale = phase ? 0.6f : 1.0f;
 
     cXyz hidden;
@@ -2918,18 +2918,18 @@ BOOL daBtd_Execute(btd_class *i_this) {
             (btdSphere(sphere)->mGObjTg.mSPrm = (u32)((u32)btdSphere(sphere)->mGObjTg.mSPrm & ~1u));
         f32 radius = (f32)at_size[(4 * i) / 4];
         btdGuest_cM3dGSph_SetR(sphere + 0x118, gabi::fmuls_ppc(radius, radiusScale));
-        if ((u8)i_this->m6E4C) {
+        if ((u8)i_this->mDeadHeadOn) {
             hidden.x = 0.0f;
             hidden.y = -20000.0f;
             hidden.z = 0.0f;
             btdGuest_cM3dGSph_SetC(sphere + 0x118, &hidden);
         } else
-            btdGuest_cM3dGSph_SetC(sphere + 0x118, gabi::ea(&i_this->m02FC[i]));
+            btdGuest_cM3dGSph_SetC(sphere + 0x118, gabi::ea(&i_this->mJointPos[i]));
         if (i == 8 || i == 10) {
-            u8 attack = (u8)i_this->m5E84;
+            u8 attack = (u8)i_this->mAtMode;
             if (attack == 1 || attack == 2) {
                 (btdSphere(sphere)->mObjAt.mSPrm = (u32)((u32)btdSphere(sphere)->mObjAt.mSPrm | 1));
-                attack = (u8)i_this->m5E84;
+                attack = (u8)i_this->mAtMode;
                 (btdSphere(sphere)->mAtp = (u8)(attack == 2 ? 2 : 1));
             } else
                 (btdSphere(sphere)->mObjAt.mSPrm =
@@ -2939,10 +2939,10 @@ BOOL daBtd_Execute(btd_class *i_this) {
             (btdSphere(sphere)->mObjCo.mSPrm = (u32)(co & ~1u));
             (btdSphere(sphere)->mObjTg.mSPrm = (u32)(target & ~1u));
         } else {
-            bool attack = i < 2 && (u8)i_this->m5E84 == 3;
+            bool attack = i < 2 && (u8)i_this->mAtMode == 3;
             u32 bits = (u32)btdSphere(sphere)->mObjAt.mSPrm;
             (btdSphere(sphere)->mObjAt.mSPrm = (u32)(attack ? bits | 1 : bits & ~1u));
-            if (i < 2 && !(u8)i_this->m02E0) {
+            if (i < 2 && !(u8)i_this->mBattlePhase) {
                 u32 co = (u32)btdSphere(sphere)->mObjCo.mSPrm,
                     target = (u32)btdSphere(sphere)->mObjTg.mSPrm;
                 (btdSphere(sphere)->mObjCo.mSPrm = (u32)(co & ~1u));
@@ -2951,9 +2951,9 @@ BOOL daBtd_Execute(btd_class *i_this) {
         }
         btdExecSetCollision(sphere);
         if (i != 18)
-            phase = (u8)i_this->m02E0;
+            phase = (u8)i_this->mBattlePhase;
     }
-    u8 hand = (u8)i_this->m5E7C;
+    u8 hand = (u8)i_this->mHandCylMode;
     s16 adjustment = 0;
     f32 reach = 1.0f;
     if (hand == 2 || hand == 3) {
@@ -2970,14 +2970,14 @@ BOOL daBtd_Execute(btd_class *i_this) {
     btdGuest_mDoMtx_YrotS(btdExecMatrix(), angle);
     for (u32 i = 0; i < 6; ++i) {
         u32 cylinder = gabi::ea(&i_this->mHandCyls[i]);
-        hand = (u8)i_this->m5E7C;
+        hand = (u8)i_this->mHandCylMode;
         if (hand == 1 || (hand == 2 && i <= 2) || (hand == 3 && i >= 3)) {
             f32 lx = (f32)handposX[(4 * i) / 4], ly = (f32)handposY[(4 * i) / 4],
                 lz = (f32)handposZ[(4 * i) / 4];
             cylinderLocal.x = lx;
             cylinderLocal.y = ly;
             cylinderLocal.z = gabi::fmuls_ppc(lz, reach);
-            u32 position = gabi::ea(&i_this->m5E98[19 + i]);
+            u32 position = gabi::ea(&i_this->mHitSePos[19 + i]);
             MtxPosition(&cylinderLocal, btdVector(position));
             PSVECAdd(btdVector(position), &i_this->current.pos, btdVector(position));
             btdGuest_cM3dGCyl_SetC(cylinder + 0x118, position);
@@ -2986,7 +2986,7 @@ BOOL daBtd_Execute(btd_class *i_this) {
         }
         btdExecSetCollision(cylinder);
     }
-    i_this->m5E7C = (u8)(0);
+    i_this->mHandCylMode = (u8)(0);
     u32 item = btdGuest_fpcEx_Search(gabi::guest_fn((const void *)&wepon_s_sub), p);
     if (item && (f32)btdBaseActor(item)->speedF > 10.0f) {
         btdGuest_cXyz_op_sub(gabi::ea(&btdActor(item)->current.pos), &difference,
@@ -2994,7 +2994,7 @@ BOOL daBtd_Execute(btd_class *i_this) {
         btdExecCopy(gabi::ea(&vector), gabi::ea(&difference));
         f32 square = PSVECSquareMag(&vector), distance = btdGuest_sqrtf(square);
         if (distance < 400.0f)
-            i_this->m02F8 = (s16)(20);
+            i_this->mEyeCloseTimer = (s16)(20);
     }
     btdGuest_cXyz_op_sub(gabi::ea(&btdPlayer(player)->eyePos), &difference,
                          gabi::ea(&i_this->eyePos));
@@ -3002,24 +3002,24 @@ BOOL daBtd_Execute(btd_class *i_this) {
     if (gabi::load<u8>(gabi::ea(&btdPlayer(player)->mCutType))) {
         f32 square = PSVECSquareMag(&vector), distance = btdGuest_sqrtf(square);
         if (distance < 400.0f)
-            i_this->m02F8 = (s16)(20);
+            i_this->mEyeCloseTimer = (s16)(20);
     }
-    s16 eyeTimer = (s16)i_this->m02F8;
-    if (eyeTimer && !(u8)i_this->m02E0) {
-        i_this->m02F8 = (s16)((s16)(eyeTimer - 1));
-        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m02FA), 13000, 1, 0x1000);
+    s16 eyeTimer = (s16)i_this->mEyeCloseTimer;
+    if (eyeTimer && !(u8)i_this->mBattlePhase) {
+        i_this->mEyeCloseTimer = (s16)((s16)(eyeTimer - 1));
+        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mEyelidAngle), 13000, 1, 0x1000);
     } else
-        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->m02FA), 0, 4, 0x400);
-    if (!(s16)i_this->m02F0) {
+        btdGuest_cLib_addCalcAngleS2(gabi::ea(&i_this->mEyelidAngle), 0, 4, 0x400);
+    if (!(s16)i_this->mBlinkTimer) {
         f32 random = cM_rndF(150.0f);
-        i_this->m02F0 = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, 100.0f)));
-        i_this->m02F8 = (s16)(20);
+        i_this->mBlinkTimer = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, 100.0f)));
+        i_this->mEyeCloseTimer = (s16)(20);
     }
-    if ((u8)i_this->m02E0)
+    if ((u8)i_this->mBattlePhase)
         i_this->mEyeSph.mGObjTg.mSPrm = (u32)i_this->mEyeSph.mGObjTg.mSPrm & ~1u;
     f32 radius = gabi::fadds_ppc((f32)l_debugRegisters.floats[5], 80.0f);
     btdGuest_cM3dGSph_SetR(gabi::ea(&i_this->mEyeSph.mSph), radius);
-    btdGuest_cM3dGSph_SetC(gabi::ea(&i_this->mEyeSph.mSph), gabi::ea(&i_this->m03E0.x));
+    btdGuest_cM3dGSph_SetC(gabi::ea(&i_this->mEyeSph.mSph), gabi::ea(&i_this->mEyeJointPos.x));
     btdExecSetCollision(gabi::ea(&i_this->mEyeSph));
     btdBaseAnimation(btk)->play();
     btdBaseAnimation(brk)->play();
@@ -3047,11 +3047,11 @@ BOOL daBtd_Delete(btd_class *i_this) {
     s32 child = (s8)l_HIO.mNo;
     btdGuest_mDoHIO_subRoot_c_deleteChild(child);
     for (u32 i = 0; i < 19; ++i)
-        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->m5E98[i]));
+        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->mHitSePos[i]));
     for (u32 i = 0; i < 50; ++i)
         btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->mBtdSibukiS[i].m04));
     for (u32 i = 0; i < 19; ++i)
-        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->m02FC[i]));
+        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->mJointPos[i]));
     u32 peg = (u32)dr2.v;
     if (peg)
         btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&btdDragon(peg)->m4A8));
@@ -3218,7 +3218,7 @@ s32 daBtd_Create(btd_class *i_this) {
     }
     f32 random = cM_rndF(50.0f);
     f32 duration = (f32)l_HIO.m14;
-    i_this->m02EC[0] = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, duration)));
+    i_this->mTimers[0] = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, duration)));
     btdGuest_dKy_efplight_set(gabi::ea(&i_this->mLightInfluence));
     i_this->health = (s8)(10);
     i_this->max_health = (s8)(10);
@@ -3230,26 +3230,26 @@ s32 daBtd_Create(btd_class *i_this) {
     if (active) {
         save = dComIfGs_ea();
         btdGuest_dSv_event_c_offEventBit(save + 0x1178, 0x480);
-        i_this->m6E80 = (f32)(-50.0f);
-        i_this->m6E84 = (f32)(0.0f);
+        i_this->mMagmaFloorY = (f32)(-50.0f);
+        i_this->mMagmaBallOffsetY = (f32)(0.0f);
         u8 stage = gabi::load<u8>(gabi::ea(&btdPlay()->mCurStage.mName[0]));
         btdGuest_bgmStart(stage == 0x58 ? 0x8000004Bu : 0x80000003u);
         random = cM_rndF(50.0f);
         flags = (u32)i_this->actor_status;
-        i_this->m02EC[0] = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, 170.0f)));
+        i_this->mTimers[0] = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, 170.0f)));
         i_this->actor_status = (u32)(flags | 0x4020);
-        i_this->m6E90 = (s8)(1);
+        i_this->mForceBossCamera = (s8)(1);
     } else {
-        i_this->m02E4 = ACT_START_DEMO;
-        i_this->m6E80 = (f32)(-50.0f);
-        i_this->m6E84 = (f32)(-30.0f);
+        i_this->mAction = ACT_START_DEMO;
+        i_this->mMagmaFloorY = (f32)(-50.0f);
+        i_this->mMagmaBallOffsetY = (f32)(-30.0f);
         s16 delay = (s16)l_debugRegisters.shorts[2];
-        i_this->m02EC[0] = (s16)((s16)(delay + 150));
+        i_this->mTimers[0] = (s16)((s16)(delay + 150));
         f32 height = (f32)l_debugRegisters.floats[18];
         flags = (u32)i_this->actor_status;
-        i_this->m6E90 = (s8)(1);
+        i_this->mForceBossCamera = (s8)(1);
         i_this->actor_status = (u32)(flags | 0x4020);
-        i_this->m6E7C = (f32)(gabi::fadds_ppc(height, 2300.0f));
+        i_this->mWaveRadius = (f32)(gabi::fadds_ppc(height, 2300.0f));
     }
     u32 game = play();
     s32 magma = btdGuest_dComIfG_play_c_createMagma(game + 0x12A0);

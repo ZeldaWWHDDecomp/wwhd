@@ -30,9 +30,9 @@ static GuestWord* paramValue(dCamera_c* camera, s32 index) {
     return parameters(camera)[index].mValue.get();
 }
 static void SkipSmoother(dCamera_c* camera) {
-    camera->m102 = 1;
-    camera->m101 = 1;
-    camera->m100 = 1;
+    camera->mStyleSettle2 = 1;
+    camera->mStyleSettle1 = 1;
+    camera->mStyleSettle0 = 1;
 }
 static void copyPoint(cXyz* destination, const cXyz* source) {
     // HD: preserve integer payloads and the interleaved word-copy order.
@@ -259,7 +259,7 @@ u32 getEvActorDefault(dCamera_c* camera, const GuestByte* name, const char* fall
 /* 02530DDC */
 u32 pauseEvCamera(dCamera_c* camera) {
     auto* work = reinterpret_cast<PauseWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         SkipSmoother(camera);
         work->mTimerSet = static_cast<u8>(getEvIntDataDefault(
             camera, &work->mTimer, reinterpret_cast<const GuestByte*>(timerName.text), -1));
@@ -289,7 +289,7 @@ u32 pauseEvCamera(dCamera_c* camera) {
     }
     if (work->mStay != 0)
         camera->mEventFlags |= 1;
-    if (work->mTimerSet != 0 && camera->m11C < work->mTimer)
+    if (work->mTimerSet != 0 && camera->mCurStyleTimer < work->mTimer)
         return 0;
     return 1;
 }
@@ -298,7 +298,7 @@ u32 pauseEvCamera(dCamera_c* camera) {
 u8 talktoEvCamera(dCamera_c* camera) {
     dComIfGp_event_getPt1();
     s32 type = camera->mEventData.field_0x0c;
-    u32 frame = camera->m108;
+    u32 frame = camera->mCurModeTimer;
     s32 style = camTypeStyle(type, 3);
     if (frame == 0)
         camera->mEventFlags &= ~CLEAR_EVENT_FLAG;
@@ -306,7 +306,7 @@ u8 talktoEvCamera(dCamera_c* camera) {
         style = eventCameraSearchStyle(camera->mCamParam, 0x54543031); // TT01
     eventCameraTalktoCamera(camera, style);
     u8 done = 0;
-    if (camera->m100 != 0 && camera->m101 != 0 && camera->m102 != 0)
+    if (camera->mStyleSettle0 != 0 && camera->mStyleSettle1 != 0 && camera->mStyleSettle2 != 0)
         done = 1;
     return done;
 }
@@ -338,7 +338,7 @@ u32 StartEventCamera(dCamera_c* camera, u32 id2, u32 id1, u32 a3, u32 a4, u32 a5
         parameter->mValue = gabi::at<GuestWord>(value);
     }
     u32 flags = camera->mEventFlags;
-    camera->m11C = 0;
+    camera->mCurStyleTimer = 0;
     camera->mEventFlags = flags | DEBUG_EVENT_PARAMS;
     return 1;
 }

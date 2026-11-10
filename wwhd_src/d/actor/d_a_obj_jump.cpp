@@ -98,8 +98,8 @@ s32 Act_c::CreateHeap() {
 /* 023662E4 */
 s32 Act_c::Create() {
   J3DModel *model = mModel.get();
-  field_0x338 = 1.0f;
-  field_0x33C = 1.0f;
+  mScaleTarget = 1.0f;
+  mScale = 1.0f;
   cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
   init_mtx();
   const Attr_c &table = attr();
@@ -164,13 +164,13 @@ void Act_c::set_mtx() {
   jumpRotateZXYHD(matrix, rx, ry, rz);
   mtx_copy(&mModel->mBaseTransformMtx, matrix);
   const Attr_c &table = attr();
-  f32 scale = field_0x33C, offset = f32(table.field_0x024);
+  f32 scale = mScale, offset = f32(table.mScalePivotY);
   f32 low = f32(table.field_0x018), high = f32(table.field_0x01C),
       span = f32(table.field_0x020) - offset;
   f32 ratio = gabi::fmadds(high - low, scale - 1.0f, span) / span;
   jumpTransMHD(0.0f, offset, 0.0f);
   jumpScaleMHD(1.0f, ratio, 1.0f);
-  offset = f32(attr().field_0x024);
+  offset = f32(attr().mScalePivotY);
   jumpTransMHD(0.0f, -offset, 0.0f);
   jumpMtxCopyHD(matrix, &M_tmp_mtx);
 }
@@ -187,64 +187,64 @@ void Act_c::init_mtx() {
 
 /* 0236642C */
 void Act_c::set_push_flag() {
-  field_0x345 = 0;
+  mbRidePulse = 0;
   if (mIsRide) {
-    u8 count = field_0x347;
+    u8 count = mRideCount;
     if (count < 255)
-      field_0x347 = ++count;
-    if (count == u8(attr().field_0x043))
-      field_0x345 = 1;
+      mRideCount = ++count;
+    if (count == u8(attr().mRidePulseFrames))
+      mbRidePulse = 1;
   } else
-    field_0x347 = 0;
-  field_0x346 = 0;
+    mRideCount = 0;
+  mbUnridePulse = 0;
   if (mIsRide)
-    field_0x348 = 0;
+    mUnrideCount = 0;
   else {
-    u8 count = field_0x348;
+    u8 count = mUnrideCount;
     if (count < 255)
-      field_0x348 = ++count;
-    if (count == u8(attr().field_0x044))
-      field_0x346 = 1;
+      mUnrideCount = ++count;
+    if (count == u8(attr().mUnridePulseFrames))
+      mbUnridePulse = 1;
   }
-  field_0x34a = 0;
+  mbHangPulse = 0;
   bool player = mIsPlayerRide != 0;
   if (player) {
     JumpPlayHD *play = jumpGetPlayHD();
     player = (u32(play->mPlayerStatus0) & PlayerHangHD) != 0;
   }
   if (player) {
-    u8 count = field_0x34b;
+    u8 count = mHangCount;
     if (count < 255)
-      field_0x34b = ++count;
-    if (count == u8(attr().field_0x045))
-      field_0x34a = 1;
+      mHangCount = ++count;
+    if (count == u8(attr().mHangPulseFrames))
+      mbHangPulse = 1;
   } else
-    field_0x34b = 0;
-  field_0x34d = 0;
+    mHangCount = 0;
+  mbHeavyRidePulse = 0;
   if (mIsHeavyRide) {
-    u8 count = field_0x34f;
+    u8 count = mHeavyRideCount;
     if (count < 255)
-      field_0x34f = ++count;
-    if (count == u8(attr().field_0x046))
-      field_0x34d = 1;
+      mHeavyRideCount = ++count;
+    if (count == u8(attr().mHeavyRidePulseFrames))
+      mbHeavyRidePulse = 1;
   } else
-    field_0x34f = 0;
-  field_0x34e = 0;
+    mHeavyRideCount = 0;
+  mbHeavyUnridePulse = 0;
   if (mIsHeavyRide)
-    field_0x350 = 0;
+    mHeavyUnrideCount = 0;
   else {
-    u8 count = field_0x350;
+    u8 count = mHeavyUnrideCount;
     if (count < 255)
-      field_0x350 = ++count;
-    if (count == u8(attr().field_0x047))
-      field_0x34e = 1;
+      mHeavyUnrideCount = ++count;
+    if (count == u8(attr().mHeavyUnridePulseFrames))
+      mbHeavyUnridePulse = 1;
   }
 }
 
 /* 023666B0 */
 void Act_c::clear_push_flag() {
   mIsRide = 0;
-  field_0x354 = 0;
+  mbFastRide = 0;
   mIsHeavyRide = 0;
   mIsPlayerRide = 0;
 }
@@ -252,12 +252,12 @@ void Act_c::clear_push_flag() {
 /* 02366668 */
 void Act_c::calc_vib_pos() {
   const Attr_c &table = attr();
-  f32 target = field_0x338, scale = field_0x33C, velocity = field_0x340;
-  velocity = gabi::fnmsubs(scale - target, f32(table.field_0x02C), velocity);
-  field_0x340 = velocity;
-  velocity = gabi::fnmsubs(velocity, f32(table.field_0x028), velocity);
-  field_0x340 = velocity;
-  field_0x33C = scale + velocity;
+  f32 target = mScaleTarget, scale = mScale, velocity = mScaleSpeed;
+  velocity = gabi::fnmsubs(scale - target, f32(table.mSpringStiffness), velocity);
+  mScaleSpeed = velocity;
+  velocity = gabi::fnmsubs(velocity, f32(table.mSpringDamping), velocity);
+  mScaleSpeed = velocity;
+  mScale = scale + velocity;
 }
 
 /* 02366268 */
@@ -269,10 +269,10 @@ static void rideCB(void *bg, Act_c *actor, fopAc_ac_c *rider) {
   u32 flags = static_cast<JumpPlayerHD *>(rider)->mNoResetFlg0;
   if (flags & HeavyBootsHD)
     actor->mIsHeavyRide = 1;
-  f32 speed = rider->speedF, threshold = f32(actor->attr().field_0x04C);
+  f32 speed = rider->speedF, threshold = f32(actor->attr().mFastRideSpeed);
   // HD: this unordered compare also starts wobbling for a NaN speed.
   if (!(speed <= threshold))
-    actor->field_0x354 = 1;
+    actor->mbFastRide = 1;
 }
 
 /* 02365DD8 */
@@ -285,13 +285,13 @@ static s32 jnodeCB_lower(J3DNode *node, s32 timing) {
     jumpMtxCopyHD(matrix, &l_matrixStack);
     // HD: both spring joints have callbacks; the second cancels the X stretch.
     if (index == 1)
-      jumpScaleMHD(i_this->field_0x33C, 1.0f, 1.0f);
+      jumpScaleMHD(i_this->mScale, 1.0f, 1.0f);
     else if (index == 2)
-      jumpScaleMHD(1.0f / f32(i_this->field_0x33C), 1.0f, 1.0f);
+      jumpScaleMHD(1.0f / f32(i_this->mScale), 1.0f, 1.0f);
     matrix = model->getAnmMtx(index);
     mtx_copy(matrix, &l_matrixStack);
     const Attr_c &table = i_this->attr();
-    f32 scale = i_this->field_0x33C, low = table.field_0x018,
+    f32 scale = i_this->mScale, low = table.field_0x018,
         high = table.field_0x01C;
     J3DSys::mCurrentMtx->m[1][3] =
         gabi::fmadds(high - low, scale - 1.0f, J3DSys::mCurrentMtx->m[1][3]);
@@ -302,20 +302,20 @@ static s32 jnodeCB_lower(J3DNode *node, s32 timing) {
 /* 023662C8 */
 void Act_c::mode_wait_init() {
   mMode = Mode_WAIT_e;
-  field_0x338 = 1.0f;
-  field_0x352 = 0;
+  mScaleTarget = 1.0f;
+  mPushTimer = 0;
 }
 
 /* 0236687C */
 void Act_c::mode_wait() {
-  s16 timer = field_0x352;
+  s16 timer = mPushTimer;
   if (timer <= 0 &&
-      (field_0x345 || field_0x346 || field_0x34a || field_0x34d)) {
-    field_0x340 = f32(field_0x340) + f32(attr().field_0x030);
-    field_0x352 = u8(attr().field_0x048);
+      (mbRidePulse || mbUnridePulse || mbHangPulse || mbHeavyRidePulse)) {
+    mScaleSpeed = f32(mScaleSpeed) + f32(attr().mPushImpulse);
+    mPushTimer = u8(attr().mPushInterval);
   } else if (timer > 0)
-    field_0x352 = s16(timer - 1);
-  if (u8(field_0x34f) > u8(attr().field_0x040)) {
+    mPushTimer = s16(timer - 1);
+  if (u8(mHeavyRideCount) > u8(attr().mHeavyRideFrames)) {
     seStart(this, JA_SE_OBJ_JUMP_SPR_CLOSE);
     mode_w_l_init();
   }
@@ -324,30 +324,30 @@ void Act_c::mode_wait() {
 /* 0236685C */
 void Act_c::mode_w_l_init() {
   mMode = Mode_WAIT_LOWER_e;
-  field_0x338 = f32(attr().field_0x038);
+  mScaleTarget = f32(attr().mLowerScale);
 }
 
 /* 023669AC */
 void Act_c::mode_w_l() {
-  if (!(f32(field_0x33C) > f32(field_0x338)))
+  if (!(f32(mScale) > f32(mScaleTarget)))
     mode_lower_init();
 }
 
 /* 02366998 */
 void Act_c::mode_lower_init() {
   mMode = Mode_LOWER_e;
-  field_0x352 = 0;
+  mPushTimer = 0;
 }
 
 /* 023669E0 */
 void Act_c::mode_lower() {
-  s16 timer = field_0x352;
-  if (timer <= 0 && field_0x34e) {
-    field_0x340 = f32(field_0x340) + f32(attr().field_0x030);
-    field_0x352 = u8(attr().field_0x048);
+  s16 timer = mPushTimer;
+  if (timer <= 0 && mbHeavyUnridePulse) {
+    mScaleSpeed = f32(mScaleSpeed) + f32(attr().mPushImpulse);
+    mPushTimer = u8(attr().mPushInterval);
   } else if (timer > 0)
-    field_0x352 = s16(timer - 1);
-  if (u8(field_0x350) > u8(attr().field_0x041)) {
+    mPushTimer = s16(timer - 1);
+  if (u8(mHeavyUnrideCount) > u8(attr().mHeavyUnrideFrames)) {
     seStart(this, JA_SE_OBJ_JUMP_SPR_OPEN);
     mode_l_u_init();
   }
@@ -356,16 +356,16 @@ void Act_c::mode_lower() {
 /* 023669C0 */
 void Act_c::mode_l_u_init() {
   mMode = Mode_LOWER_UPPER_e;
-  field_0x338 = f32(attr().field_0x03C);
+  mScaleTarget = f32(attr().mUpperScale);
 }
 
 /* 02366AF4 */
 void Act_c::mode_l_u() {
-  f32 scale = field_0x33C, target = field_0x338;
+  f32 scale = mScale, target = mScaleTarget;
   if (!(scale < target)) {
     bool player = mIsPlayerRide != 0;
-    field_0x33C = target;
-    field_0x340 = 0.0f;
+    mScale = target;
+    mScaleSpeed = 0.0f;
     if (player) {
       JumpPlayHD *play = jumpGetPlayHD();
       JumpPlayerHD *actor = play->mPlayer;
@@ -378,7 +378,7 @@ void Act_c::mode_l_u() {
 /* 02366AD4 */
 void Act_c::mode_upper_init() {
   mMode = Mode_UPPER_e;
-  mTimer = u8(attr().field_0x042);
+  mTimer = u8(attr().mUpperTime);
 }
 
 /* 02366B7C */
@@ -392,12 +392,12 @@ void Act_c::mode_upper() {
 /* 02366B64 */
 void Act_c::mode_u_w_init() {
   mMode = Mode_UPPER_WAIT_e;
-  field_0x338 = 1.0f;
+  mScaleTarget = 1.0f;
 }
 
 /* 02366B94 */
 void Act_c::mode_u_w() {
-  if (!(f32(field_0x33C) > f32(field_0x338)))
+  if (!(f32(mScale) > f32(mScaleTarget)))
     mode_wait_init();
 }
 
@@ -406,8 +406,8 @@ s32 Act_c::Execute(gptr<Mtx34> *out) {
   set_push_flag();
   (this->*l_modeProc.mModes[s32(mMode)])();
   s32 mode = mMode;
-  if ((mode == Mode_WAIT_e || mode == Mode_LOWER_e) && field_0x354)
-    field_0x340 = f32(field_0x340) + f32(attr().field_0x034);
+  if ((mode == Mode_WAIT_e || mode == Mode_LOWER_e) && mbFastRide)
+    mScaleSpeed = f32(mScaleSpeed) + f32(attr().mFastRideImpulse);
   calc_vib_pos();
   set_mtx();
   // HD: the matrix output slot contains a 32-bit guest pointer.

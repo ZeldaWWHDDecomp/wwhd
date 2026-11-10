@@ -109,10 +109,10 @@ static daNpc_Tc_HIO_c* daNpc_Tc_HIO_c_ct(daNpc_Tc_HIO_c* i_this) {
     }
     i_this->__vtbl = 0x1002272C;
     Tc_npcHioCtor(&i_this->mNpc); /* dNpc_HIO_c::dNpc_HIO_c */
-    i_this->field_0x60.set(-100.0f, 1700.0f, -50.0f);
-    i_this->field_0x6C.set(100.0f, 1700.0f, 50.0f);
-    i_this->field_0x7A = 0;
-    i_this->field_0x78 = -0x8000;
+    i_this->mWhiteTowerPos.set(-100.0f, 1700.0f, -50.0f);
+    i_this->mRedTowerPos.set(100.0f, 1700.0f, 50.0f);
+    i_this->mWhiteTowerAngleY = 0;
+    i_this->mRedTowerAngleY = -0x8000;
     i_this->mNpc.m04 = -20.0f;
     i_this->mNpc.mMaxHeadX = 0x1FFE;
     i_this->mNpc.mMaxHeadY = 10000;
@@ -128,42 +128,42 @@ static daNpc_Tc_HIO_c* daNpc_Tc_HIO_c_ct(daNpc_Tc_HIO_c* i_this) {
     i_this->mNpc.mMaxAttnAngleY = 0x4000;
     i_this->mNpc.m22 = 0;
     i_this->mNpc.mMaxAttnDistXZ = 400.0f;
-    i_this->field_0x2C = 900.0f;
-    i_this->field_0x30 = 400.0f;
+    i_this->mSitJumpDist = 900.0f;
+    i_this->mWalkToJailDist = 400.0f;
     i_this->field_0x34 = 0;
-    i_this->field_0x38 = 20.0f;
-    i_this->field_0x40 = 14.0f;
-    i_this->field_0x3C = -2.5f;
-    i_this->field_0x48 = -25.0f;
-    i_this->field_0x50 = 8.0f;
-    i_this->field_0x4C = -2.5f;
-    i_this->field_0x54 = 0.35f;
-    i_this->field_0x58 = 4.0f;
-    i_this->field_0x5C = 8.0f;
-    i_this->field_0x94[0] = 0.0f;
-    i_this->field_0x94[1] = 8.0f;
-    i_this->field_0x94[2] = 8.0f;
-    i_this->field_0x94[3] = 5.0f;
-    i_this->field_0x94[4] = 8.0f;
-    i_this->field_0x94[5] = 4.0f;
-    i_this->field_0x94[6] = 0.0f;
-    i_this->field_0x94[7] = 6.0f;
-    i_this->field_0x94[8] = 6.0f;
-    i_this->field_0x94[9] = 0.0f;
-    i_this->field_0x94[10] = 8.0f;
-    i_this->field_0x94[11] = 8.0f;
-    i_this->field_0x94[12] = 8.0f;
-    i_this->field_0x94[13] = 8.0f;
-    i_this->field_0x94[14] = 8.0f;
-    i_this->field_0x94[15] = 8.0f;
-    i_this->field_0x94[16] = 8.0f;
-    i_this->field_0x94[17] = 8.0f;
-    i_this->field_0x94[18] = 8.0f;
-    i_this->field_0x94[19] = 8.0f;
-    i_this->field_0x94[20] = 8.0f;
-    i_this->field_0x94[21] = 8.0f;
-    i_this->field_0x94[22] = 8.0f;
-    i_this->field_0x94[23] = 8.0f;
+    i_this->mJumpSpeedF = 20.0f;
+    i_this->mJumpSpeedY = 14.0f;
+    i_this->mJumpGravity = -2.5f;
+    i_this->mBackJumpSpeedF = -25.0f;
+    i_this->mBackJumpSpeedY = 8.0f;
+    i_this->mBackJumpGravity = -2.5f;
+    i_this->mWalkAnmRate = 0.35f;
+    i_this->mWalkSpeed = 4.0f;
+    i_this->mWalkStartSpeed = 8.0f;
+    i_this->mAnmMorf[0] = 0.0f;
+    i_this->mAnmMorf[1] = 8.0f;
+    i_this->mAnmMorf[2] = 8.0f;
+    i_this->mAnmMorf[3] = 5.0f;
+    i_this->mAnmMorf[4] = 8.0f;
+    i_this->mAnmMorf[5] = 4.0f;
+    i_this->mAnmMorf[6] = 0.0f;
+    i_this->mAnmMorf[7] = 6.0f;
+    i_this->mAnmMorf[8] = 6.0f;
+    i_this->mAnmMorf[9] = 0.0f;
+    i_this->mAnmMorf[10] = 8.0f;
+    i_this->mAnmMorf[11] = 8.0f;
+    i_this->mAnmMorf[12] = 8.0f;
+    i_this->mAnmMorf[13] = 8.0f;
+    i_this->mAnmMorf[14] = 8.0f;
+    i_this->mAnmMorf[15] = 8.0f;
+    i_this->mAnmMorf[16] = 8.0f;
+    i_this->mAnmMorf[17] = 8.0f;
+    i_this->mAnmMorf[18] = 8.0f;
+    i_this->mAnmMorf[19] = 8.0f;
+    i_this->mAnmMorf[20] = 8.0f;
+    i_this->mAnmMorf[21] = 8.0f;
+    i_this->mAnmMorf[22] = 8.0f;
+    i_this->mAnmMorf[23] = 8.0f;
 
     return i_this;
 }
@@ -345,7 +345,7 @@ void daNpc_Tc_c::setAnm() {
         mJtbtTimer = 0;
     }
     for (int i = 0; i < 24; i++) {
-        a_anm_prm_tbl[i].mMorf = l_HIO.field_0x94[i];
+        a_anm_prm_tbl[i].mMorf = l_HIO.mAnmMorf[i];
     }
 
     if (mBckIdx == BCK_IDX_MAWASU && gabi::ftoi(mpMorf->getFrame()) == 1) {
@@ -394,11 +394,11 @@ void daNpc_Tc_c::setAnm() {
             s8 roomNo = fopAcM_GetRoomNo(this);
             dPa_control_set(dComIfGp_getParticle(), 0, 0x818C /* ID_IT_SN_TG_KURURINP_BLUR_R00 */,
                             &mParticlePos, nullptr, nullptr, 0xFF,
-                            (dPa_levelEcallBack*)&field_0x714, roomNo, nullptr, nullptr, nullptr);
+                            (dPa_levelEcallBack*)&mBlurRCallBack, roomNo, nullptr, nullptr, nullptr);
             roomNo = fopAcM_GetRoomNo(this);
             dPa_control_set(dComIfGp_getParticle(), 0, 0x818D /* ID_IT_SN_TG_KURURINP_BLUR_G00 */,
                             &mParticlePos, nullptr, nullptr, 0xFF,
-                            (dPa_levelEcallBack*)&field_0x728, roomNo, nullptr, nullptr, nullptr);
+                            (dPa_levelEcallBack*)&mBlurGCallBack, roomNo, nullptr, nullptr, nullptr);
         }
         if (mpMorf->getFrame() == 88.0f) {
             s16 ay = current.angle.y;
@@ -420,8 +420,8 @@ void daNpc_Tc_c::setAnm() {
             dPa_smokeEcallBack_end((dPa_smokeEcallBack*)&mSmokeCallBack);
         }
         if (mpMorf->getFrame() == 178.0f) {
-            dPa_followEcallBack_end(&field_0x714);
-            dPa_followEcallBack_end(&field_0x728);
+            dPa_followEcallBack_end(&mBlurRCallBack);
+            dPa_followEcallBack_end(&mBlurGCallBack);
         }
     }
 
@@ -492,7 +492,7 @@ u8 daNpc_Tc_c::chkAttention(cXyz* param_1, s16 param_2) {
         break;
     }
     if (mStatus == STATUS_WALK_TO_JAIL || mStatus == STATUS_JUMP || mStatus == STATUS_SIT) {
-        maxAttnDist = l_HIO.field_0x2C;
+        maxAttnDist = l_HIO.mSitJumpDist;
     }
     f32 dz = player->current.pos.z - param_1->z;
     f32 dx = player->current.pos.x - param_1->x;
@@ -543,11 +543,11 @@ void daNpc_Tc_c::checkOrder() {
 void daNpc_Tc_c::anmAtr(u16 i_msgStatus) {
     switch (i_msgStatus) {
     case 6: { /* fopMsgStts_MSG_TYPING_e */
-        if (field_0x6C8) {
+        if (mAtrSet) {
             return;
         }
         u8 msgAnmAtr = dComIfGp_getMesgAnimeAttrInfo();
-        field_0x6C8 = TRUE;
+        mAtrSet = TRUE;
         if (msgAnmAtr >= 0x10) // HD: JUT_ASSERT(0x3E5, msgAnmAtr < ARRAY_SIZE(anm_atr))
             JUT_ASSERT_fail("d_a_npc_tc.cpp", 0x3E5,
                             "atr < (sizeof(anm_atr) / sizeof(anm_atr[0]))");
@@ -559,7 +559,7 @@ void daNpc_Tc_c::anmAtr(u16 i_msgStatus) {
         break;
     }
     case 14: /* fopMsgStts_MSG_DISPLAYED_e */
-        field_0x6C8 = FALSE;
+        mAtrSet = FALSE;
         break;
     }
 }
@@ -575,10 +575,10 @@ void daNpc_Tc_c::startTower() {
     u8 type = mType;
     switch (type) {
     case TYPE_WHITE:
-        temp2 = l_HIO.field_0x7A; /* the position (field_0x60) is not used */
+        temp2 = l_HIO.mWhiteTowerAngleY; /* the position (mWhiteTowerPos) is not used */
         break;
     case TYPE_RED:
-        temp2 = l_HIO.field_0x78;
+        temp2 = l_HIO.mRedTowerAngleY;
         break;
     }
     switch (type) {
@@ -618,9 +618,9 @@ void daNpc_Tc_c::createInit() {
     if (mType == TYPE_NORMAL) {
         actor_status |= fopAcStts_UNK4000_e; /* fopAcM_OnStatus(this, fopAcStts_UNK4000_e) */
     }
-    field_0x790.x = current.angle.x;
-    field_0x790.y = current.angle.y;
-    field_0x790.z = current.angle.z;
+    mHomeAngle.x = current.angle.x;
+    mHomeAngle.y = current.angle.y;
+    mHomeAngle.z = current.angle.z;
     attention_info.flags =
         fopAc_Attn_LOCKON_TALK_e |
         fopAc_Attn_ACTION_SPEAK_e; /* attention_info.flags = LOCKON_TALK | ACTION_SPEAK */
@@ -713,14 +713,14 @@ void daNpc_Tc_c::calcMove() {
         switch ((u32)mEventCut.mCurActIdx) { /* getNowCut() */
         case 2:
         case 4:
-            speed = moveSpeed * l_HIO.field_0x54;
+            speed = moveSpeed * l_HIO.mWalkAnmRate;
             break;
         default:
             speed = 0.5f; // HD: the uninitialised speed is the clamp value
             break;
         }
     } else {
-        speed = speedF * l_HIO.field_0x54;
+        speed = speedF * l_HIO.mWalkAnmRate;
     }
     if (speed < 0.5f) {
         speed = 0.5f;
@@ -827,7 +827,7 @@ void daNpc_Tc_c::statusSit() {
         pos.x = current.pos.x;
         pos.y = current.pos.y;
         pos.z = current.pos.z;
-        if (Tc_playerInCircle(&pos, l_HIO.field_0x2C, 100.0f)) {
+        if (Tc_playerInCircle(&pos, l_HIO.mSitJumpDist, 100.0f)) {
             if (!mHasEnteredSitRadius) {
                 mHasEnteredSitRadius = true;
                 mEventIdx = 3;
@@ -838,9 +838,9 @@ void daNpc_Tc_c::statusSit() {
         }
     }
     if (mpMorf->isStop() && mAnmPrmIdx == ANM_PRM_IDX_JAMP_A) {
-        speedF = l_HIO.field_0x38;
-        speed.y = l_HIO.field_0x40;
-        gravity = l_HIO.field_0x3C;
+        speedF = l_HIO.mJumpSpeedF;
+        speed.y = l_HIO.mJumpSpeedY;
+        gravity = l_HIO.mJumpGravity;
         mAnmPrmIdx = ANM_PRM_IDX_JAMP_B; /* ANM_PRM_IDX_JAMP_B */
         mStatus = STATUS_JUMP;
     }
@@ -871,7 +871,7 @@ void daNpc_Tc_c::statusWalkToJail() {
         if (mTalkingNearJail) {
             mTargetSpeed = 0.0f;
             speedF = 0.0f;
-            if (!mHasTalkedNearJail || l_HIO.field_0x44 != 0) {
+            if (!mHasTalkedNearJail || l_HIO.mAlwaysTalkNearJail != 0) {
                 mAnmPrmIdx = ANM_PRM_IDX_WAIT03; /* ANM_PRM_IDX_WAIT03 */
                 dComIfGp_event_reset();
                 mStatus = STATUS_DEMO_TALK;
@@ -900,9 +900,9 @@ void daNpc_Tc_c::statusWalkToJail() {
         }
     } else {
         mAnmPrmIdx = ANM_PRM_IDX_WALK01; /* ANM_PRM_IDX_WALK01 */
-        mTargetSpeed = l_HIO.field_0x58;
+        mTargetSpeed = l_HIO.mWalkSpeed;
         if (speedF == 0.0f) {
-            speedF = l_HIO.field_0x5C;
+            speedF = l_HIO.mWalkStartSpeed;
         }
     }
     if (mObjAcch.ChkWallHit()) {
@@ -910,7 +910,7 @@ void daNpc_Tc_c::statusWalkToJail() {
         pos.y = current.pos.y;
         pos.z = current.pos.z;
         pos.x = current.pos.x;
-        if (!Tc_playerInCircle(&pos, l_HIO.field_0x30, 100.0f)) {
+        if (!Tc_playerInCircle(&pos, l_HIO.mWalkToJailDist, 100.0f)) {
             mStatus = STATUS_WALK_TO_STOOL;
         }
     }
@@ -935,7 +935,7 @@ void daNpc_Tc_c::statusWaitNearJail() {
         if (mTalkingNearJail) {
             mTargetSpeed = 0.0f;
             speedF = 0.0f;
-            if (!mHasTalkedNearJail || l_HIO.field_0x44 != 0) {
+            if (!mHasTalkedNearJail || l_HIO.mAlwaysTalkNearJail != 0) {
                 mAnmPrmIdx = ANM_PRM_IDX_WAIT03; /* ANM_PRM_IDX_WAIT03 */
                 dComIfGp_event_reset();
                 mStatus = STATUS_DEMO_TALK;
@@ -960,9 +960,9 @@ void daNpc_Tc_c::statusWaitNearJail() {
         }
     } else {
         mAnmPrmIdx = ANM_PRM_IDX_WALK01; /* ANM_PRM_IDX_WALK01 */
-        mTargetSpeed = l_HIO.field_0x58;
+        mTargetSpeed = l_HIO.mWalkSpeed;
         if (speedF == 0.0f) {
-            speedF = l_HIO.field_0x5C;
+            speedF = l_HIO.mWalkStartSpeed;
         }
     }
 }
@@ -974,7 +974,7 @@ void daNpc_Tc_c::statusWalkToStool() {
     pos.z = current.pos.z;
     pos.y = current.pos.y;
     pos.x = current.pos.x;
-    if (Tc_playerInCircle(&pos, l_HIO.field_0x30, 100.0f)) {
+    if (Tc_playerInCircle(&pos, l_HIO.mWalkToJailDist, 100.0f)) {
         mTargetSpeed = 0.0f;
         if (speedF == 0.0f) {
             mStatus = STATUS_WALK_TO_JAIL;
@@ -992,7 +992,7 @@ void daNpc_Tc_c::statusWalkToStool() {
             }
         } else {
             mAnmPrmIdx = ANM_PRM_IDX_WALK01; /* ANM_PRM_IDX_WALK01 */
-            mTargetSpeed = l_HIO.field_0x58;
+            mTargetSpeed = l_HIO.mWalkSpeed;
         }
     }
 }
@@ -1000,8 +1000,8 @@ void daNpc_Tc_c::statusWalkToStool() {
 /* 022EC984 */
 void daNpc_Tc_c::statusSitToStool() {
     calc_sitpos();
-    cLib_addCalcAngleS2(&current.angle.y, field_0x790.y, 4, 0x800);
-    if (std::fabs((f32)(s32)(field_0x790.y - current.angle.y)) < 16.0f) {
+    cLib_addCalcAngleS2(&current.angle.y, mHomeAngle.y, 4, 0x800);
+    if (std::fabs((f32)(s32)(mHomeAngle.y - current.angle.y)) < 16.0f) {
         f32 sy = speed.y;
         if (sy == 0.0f && mObjAcch.ChkGroundHit()) {
             sy = 22.0f;
@@ -1085,7 +1085,7 @@ void daNpc_Tc_c::statusGetRupee() {
 /* 022ECD58 */
 void daNpc_Tc_c::statusDemoGetRupee() {
     if (Tc_endCheck(dComIfGp_getPEvtManager(), "TC_GET_RUPEE" /* "TC_GET_RUPEE" */)) {
-        field_0x812 = true;
+        mGetRupeeDemoDone = true;
         dComIfGp_event_reset();
         mEventIdx = 1;
         mStatus = STATUS_TALK;
@@ -1104,7 +1104,7 @@ void daNpc_Tc_c::statusMonumentComplete() {
 /* 022ECEDC */
 void daNpc_Tc_c::statusDemoMonumentComplete() {
     if (Tc_endCheck(dComIfGp_getPEvtManager(), "TC_GET_RUPEE" /* "TC_GET_RUPEE" */)) {
-        field_0x813 = true;
+        mMonumentCompleteDemoDone = true;
         dComIfGp_event_reset();
         mEventIdx = 1;
         mStatus = STATUS_TALK;
@@ -1330,12 +1330,12 @@ void daNpc_Tc_c::setTower() {
     u8 type = mType;
     switch (type) {
     case TYPE_WHITE:
-        temp.copy(l_HIO.field_0x60);
-        temp2 = l_HIO.field_0x7A;
+        temp.copy(l_HIO.mWhiteTowerPos);
+        temp2 = l_HIO.mWhiteTowerAngleY;
         break;
     case TYPE_RED:
-        temp.copy(l_HIO.field_0x6C);
-        temp2 = l_HIO.field_0x78;
+        temp.copy(l_HIO.mRedTowerPos);
+        temp2 = l_HIO.mRedTowerAngleY;
         break;
     }
     switch (type) {
@@ -1444,8 +1444,8 @@ BOOL daNpc_Tc_c::_execute() {
 BOOL daNpc_Tc_c::_delete() {
     dComIfG_resDelete(&mPhs, "Tc" /* "Tc" */);
     Tc_removeSmoke(&mSmokeCallBack); /* mSmokeCallBack.remove() */
-    field_0x714.remove();
-    field_0x728.remove();
+    mBlurRCallBack.remove();
+    mBlurGCallBack.remove();
     if (heap.get() != nullptr) {
         mpMorf->stopZelAnime();
     }
@@ -1485,8 +1485,8 @@ cPhs_State daNpc_Tc_c::_create() {
             Tc_npcCtor(this); /* fopNpc_npc_c::fopNpc_npc_c */
             __vtbl = 0x10022D20;
             Tc_smokeCtor(&mSmokeCallBack, 1); /* dPa_smokeEcallBack::dPa_smokeEcallBack(1) */
-            dPa_followEcallBack_ct(&field_0x714, 0, 0);
-            dPa_followEcallBack_ct(&field_0x728, 0, 0);
+            dPa_followEcallBack_ct(&mBlurRCallBack, 0, 0);
+            dPa_followEcallBack_ct(&mBlurGCallBack, 0, 0);
             Tc_btpCtor(mBtpAnm); /* mDoExt_btpAnm::mDoExt_btpAnm */
         }
         fopAcM_OnCondition(this, 8);

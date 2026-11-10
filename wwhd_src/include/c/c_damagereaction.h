@@ -131,117 +131,122 @@ struct DamageGround : dBgS_GndChk {
 static_assert(sizeof(DamageLine) == 0x6C && sizeof(DamageGround) == 0x54);
 struct damagereaction {
     enum { TYPE_MOBLIN = 1, TYPE_BOKOBLIN = 2, TYPE_DARKNUT = 3 };
-    gptr<fopAc_ac_c> mpEnemy;
-    be<s16> mMode, mAction, mEnemyType;
-    u8 padA[2];
-    be<s32> mTimer;
-    DamageAngles m010[21], m088[21];
-    cXyz m100[21], m1F0[21], m2E0[21];
-    /*400*/ be<s32> m3D0[14];
-    /*438*/ be<s32> m408;
-    /*43C*/ be<s32> m40C;
-    /*440*/ be<s32> m410;
-    /*444*/ be<s32> m414;
-    /*448*/ be<s32> m418;
-    u8 pad44C[0x8];
-    /*454*/ be<s32> m420;
-    /*458*/ be<s32> m424;
-    /*45C*/ be<f32> m428;
-    /*460*/ cXyz m42C;
-    /*46C*/ be<s32> m438;
-    u8 pad470[0x4];
-    /*474*/ be<s16> m440;
-    /*476*/ be<s16> m442;
-    /*478*/ be<s16> m444;
-    /*47A*/ be<s16> m446;
-    /*47C*/ be<s16> m448;
-    u8 pad47E[0x2];
-    /*480*/ cXyz m44C;
-    /*48C*/ cXyz m458;
-    u8 pad498[0x4];
-    /*49C*/ be<f32> m468;
-    /*4A0*/ be<f32> m46C;
-    /*4A4*/ be<f32> m470;
-    /*4A8*/ be<f32> m474;
-    /*4AC*/ be<f32> m478;
-    /*4B0*/ be<s32> m47C;
-    /*4B4*/ be<s16> m480;
-    /*4B6*/ be<s16> m482;
-    /*4B8*/ be<s16> m484;
-    /*4BA*/ be<s16> m486;
-    /*4BC*/ be<s16> m488;
-    /*4BE*/ be<s16> m48A;
-    /*4C0*/ csXyz m48C;
-    /*4C6*/ be<s16> m492;
-    /*4C8*/ be<s16> m494;
-    /*4CA*/ be<s16> m496;
-    /*4CC*/ be<s16> m498;
-    /*4CE*/ be<s16> m49A;
-    /*4D0*/ be<s16> m49C;
-    /*4D2*/ be<s16> m49E;
-    /*4D4*/ DamageAngle m4A0;
-    /*4D6*/ DamageAngle m4A2;
-    /*4D8*/ DamageAngle m4A4;
-    /*4DA*/ DamageAngle m4A6;
-    /*4DC*/ DamageAngle m4A8;
-    /*4DE*/ DamageAngle m4AA;
-    /*4E0*/ DamageAngle m4AC;
-    /*4E2*/ DamageAngle m4AE;
-    /*4E4*/ DamageAngle m4B0;
-    /*4E6*/ DamageAngle m4B2;
-    /*4E8*/ DamageAngle m4B4;
-    /*4EA*/ DamageAngle m4B6;
-    /*4EC*/ DamageAngle m4B8;
-    /*4EE*/ DamageAngle m4BA;
-    /*4F0*/ DamageAngle m4BC;
-    /*4F2*/ DamageAngle m4BE;
-    /*4F4*/ be<s16> m4C0;
-    u8 pad4F6[0x6];
-    /*4FC*/ be<s16> m4C8[3];
-    /*502*/ be<s16> mInvincibleTimer;
-    /*504*/ be<s16> m4D0;
-    u8 pad506[0x2];
-    /*508*/ be<f32> m4D4;
-    u8 pad50C[4];
-    dBgS_AcchCir mAcchCir;
-    dBgS_ObjAcch mAcch;
-    /*714*/ be<s32> m6E0;
-    /*718*/ be<f32> mSpawnY;
-    /*71C*/ cXyz m6E8;
-    /*728*/ cXyz m6F4[2];
-    /*740*/ be<u8> m70C;
-    /*741*/ be<u8> m70D;
-    /*742*/ be<u8> m70E;
-    u8 pad743[0x1];
-    /*744*/ be<u8> m710;
-    /*745*/ be<u8> m711;
-    /*746*/ be<u8> m712;
-    /*747*/ be<u8> m713;
-    /*748*/ gptr<fopAc_ac_c> m714;
-    /*74C*/ be<s16> m718;
-    /*74E*/ be<s16> m71A;
-    u8 pad750[0x2];
-    /*752*/ be<s16> m71E;
-    /*754*/ be<f32> mMaxFallDistance;
-    DamageStts mStts;
-    /*794*/ cXyz mParticlePos;
-    /*7A0*/ csXyz mParticleAngle;
-    u8 pad7A6[2];
-    DamageSmoke mParticleCallBack;
-    /*7C8*/ be<s16> m794;
-    u8 pad7CA[0x2];
-    /*7CC*/ be<f32> m798;
-    /*7D0*/ gptr<cXyz> m79C;
-    /*7D4*/ cXyz m7A0;
-    /*7E0*/ csXyz m7AC;
-    /*7E6*/ be<s16> m7B2;
-    /*7E8*/ be<s16> m7B4;
-    /*7EA*/ be<u8> m7B6;
-    u8 pad7EB[0x1];
-    /*7EC*/ be<u32> m7B8;
+    /* 0x000 */ gptr<fopAc_ac_c> mpEnemy;
+    /* 0x004 */ be<s16> mMode;
+    /* 0x006 */ be<s16> mAction;
+    /* 0x008 */ be<s16> mEnemyType;
+    /* 0x00A */ u8 padA[2];
+    /* 0x00C */ be<s32> mTimer;
+    /* 0x010 */ DamageAngles mJntTargetAngle[21];  /* was m010: dr_damage_anime (in damage_reaction 02041F94) clears it each frame and builds the per-joint pose angles in it (knock-down pose, limb offsets, head look, shake); mJntAngle eases toward it */
+    /* 0x08E */ DamageAngles mJntAngle[21];  /* was m088: dr_damage_anime (in damage_reaction 02041F94) eases it toward mJntTargetAngle (cLib_addCalcAngleS2); nodeCallBack (bk 020991CC, mo2 021C6854) applies it as the joint's Y/X/Z rotation */
+    /* 0x10C */ cXyz mJntPos[21];  /* was m100: nodeCallBack / nodeCallBack_P (bk 020991CC / 02099584, mo2 021C6854 / 021C6BE0) store each joint's world position (MtxPosition); dr_joint_bg_check (in dr_damage_set 02043F34) line-checks between them */
+    /* 0x208 */ cXyz mJntGroundPos[21];  /* was m1F0: dr_joint_bg_check (in dr_damage_set 02043F34): mJntPos raised by 200, then y = cBgS_GroundCross (1e9 when no ground); compared with mJntPos.y */
+    /* 0x304 */ cXyz m2E0[21];
+    /* 0x400 */ be<s32> mJntGroundState[14];  /* was m3D0: dr_joint_bg_check (in dr_damage_set 02043F34) sets it for joints 0..3: 2 no ground below, 0 more than 200 above the ground, 1 near the ground; dr_damage_anime (in damage_reaction 02041F94) bends joints 0..3 only while it is 0 */
+    /* 0x438 */ be<s32> mJnt10LineBlocked;  /* was m408: dr_joint_bg_check (in dr_damage_set 02043F34): 2 when the line from joint 10 toward joint 14 hits background at pitch 0 (mJnt10Pitch then from the free pitch), else 0; dr_damage_anime (in damage_reaction 02041F94) applies mJnt10Pitch only while it and mJntGroundState[2] are 0 */
+    /* 0x43C */ be<s32> mJnt11LineBlocked;  /* was m40C: as mJnt10LineBlocked for the line joint 11 -> joint 15 (dr_joint_bg_check, in dr_damage_set 02043F34); dr_damage_anime (in damage_reaction 02041F94) checks it with mJntGroundState[3] */
+    /* 0x440 */ be<s32> mJnt8LineBlocked;  /* was m410: as mJnt10LineBlocked for the line joint 8 -> joint 16 (dr_joint_bg_check, in dr_damage_set 02043F34): 2 blocked, 0 free */
+    /* 0x444 */ be<s32> mJnt9LineBlocked;  /* was m414: as mJnt10LineBlocked for the line joint 9 -> joint 17 (dr_joint_bg_check, in dr_damage_set 02043F34): 2 blocked, 0 free */
+    /* 0x448 */ be<s32> mJnt12LineBlocked;  /* was m418: as mJnt10LineBlocked for the line joint 12 -> joint 18 (dr_joint_bg_check, in dr_damage_set 02043F34); dr_damage_anime (in damage_reaction 02041F94) tests it == 2 */
+    /* 0x44C */ u8 pad44C[0x8];
+    /* 0x454 */ be<s32> mJntBgCheckTimer;  /* was m420: dr_damage_set 02043F34 sets it on landing (REG0_S(3) + 1) and to 1 when the slide stops; dr_joint_bg_check (inlined there) runs the joint ground / line checks only while it is non-zero and counts it down */
+    /* 0x458 */ be<s32> mHitFlags;  /* was m424: damage_check (in daBk_Execute 0209BD1C / daMo2_Execute 021C9B1C) ORs hit bits 0x10 / 0x20 / 0x40 into it; dr_damage_set 02043F34: 0x40 launches backward and up, 0x10 a flinch, non-zero with mKnockbackPower > 25 a knock-down; then cleared */
+    /* 0x45C */ be<f32> mKnockbackPower;  /* was m428: damage_check (in daBk_Execute 0209BD1C / daMo2_Execute 021C9B1C) sets 23 / 26 or a random 90+ / 70+; dr_damage_set 02043F34 knocks the enemy down when it is > 25 and copies it into mKnockbackSpeed */
+    /* 0x460 */ cXyz mHitVec;  /* was m42C: damage_check (in daBk_Execute / daMo2_Execute) stores the hit direction (MtxPosition); dr_damage_set 02043F34 takes atan2(-x, -z) as the push-back direction, the knock-back yaw and the wall-smoke yaw */
+    /* 0x46C */ be<s32> m438;
+    /* 0x470 */ u8 pad470[0x4];
+    /* 0x474 */ be<s16> mJnt10Pitch;  /* was m440: dr_joint_bg_check (in dr_damage_set 02043F34): pitch of joint 10 toward joint 14 (free line pitch + 0x400, or the ground slope), clamped to -10000..7000; dr_damage_anime (in damage_reaction 02041F94) bends mJntTargetAngle[6].z by it */
+    /* 0x476 */ be<s16> mJnt11Pitch;  /* was m442: as mJnt10Pitch for joint 11 -> joint 15 (dr_joint_bg_check, in dr_damage_set 02043F34); bends mJntTargetAngle[7].z (dr_damage_anime, in damage_reaction 02041F94) */
+    /* 0x478 */ be<s16> mJnt8Pitch;  /* was m444: as mJnt10Pitch for joint 8 -> joint 16 (dr_joint_bg_check, in dr_damage_set 02043F34); bends mJntTargetAngle[4].z (dr_damage_anime, in damage_reaction 02041F94) */
+    /* 0x47A */ be<s16> mJnt9Pitch;  /* was m446: as mJnt10Pitch for joint 9 -> joint 17 (dr_joint_bg_check, in dr_damage_set 02043F34); bends mJntTargetAngle[5].z (dr_damage_anime, in damage_reaction 02041F94) */
+    /* 0x47C */ be<s16> mJnt12Pitch;  /* was m448: as mJnt10Pitch for joint 12 -> joint 18, clamped to +-13000 (dr_joint_bg_check, in dr_damage_set 02043F34); half of it bends joints 12, 13, 18, 19 (dr_damage_anime, in damage_reaction 02041F94) */
+    /* 0x47E */ u8 pad47E[0x2];
+    /* 0x480 */ cXyz mPivot;  /* was m44C: dr_matrix_set (in damage_reaction 02041F94) rotates the body about it (MtxTrans -it .. +it); dr_damage_set 02043F34 sets y = -125 on knock-down; dr_body_bg_check lowers the position by y for the ground check; hukki (bk 020A3048, mo2 021CE6E8) moves the actor by y and clears it */
+    /* 0x48C */ cXyz mBodyOffset;  /* was m458: dr_matrix_set (in damage_reaction 02041F94) adds it to current.pos for the model translation; hukki (mo2 021CE6E8) fills it and eases x / z to 0, yogan_fail (mo2 021CEEB0) clears y */
+    /* 0x498 */ u8 pad498[0x4];
+    /* 0x49C */ be<f32> mCarryOffsetY;  /* was m468: dr_matrix_set (in damage_reaction 02041F94): last translation MtxTrans(0, it, mCarryOffsetZ); daBb_Execute 0205EA58 sets it while a Kargaroc carries the enemy, carry_drop (bk 020A47B4, mo2 021D0294) eases it to 0 */
+    /* 0x4A0 */ be<f32> mCarryOffsetZ;  /* was m46C: dr_matrix_set (in damage_reaction 02041F94): z of the same MtxTrans(0, mCarryOffsetY, it); daBb_Execute 0205EA58 sets it while carrying, carry_drop (bk 020A47B4, mo2 021D0294) eases it to 0 */
+    /* 0x4A4 */ be<f32> mFlinchBend;  /* was m470: dr_damage_set 02043F34 sets 4000 for a flinch (hit bit 0x10); while > 200 dr_damage_anime (in damage_reaction 02041F94) bends the upper joints away from the hit direction by it and eases it to 0; p_lost (mo2 021CDE6C) waits for < 200 */
+    /* 0x4A8 */ be<f32> mShakeAmplitude;  /* was m474: dr_damage_anime (in damage_reaction 02041F94): amplitude of the sin/cos joint shake (mTimer * 5000 / 4000) on the joints selected by mShakeJntMask; dr_damage_set 02043F34 sets 2000..9000 on hits and landings and eases it to 0 */
+    /* 0x4AC */ be<f32> mKnockbackSpeed;  /* was m478: dr_damage_set 02043F34: the knock-back speed along mKnockbackAngleY (from mKnockbackPower, -7 / -20 for hit bit 0x40); speed.y is derived from it; a wall hit while it is non-zero bounces; cleared on wall or ground contact */
+    /* 0x4B0 */ be<s32> mLaunched;  /* was m47C: dr_damage_set 02043F34 sets 1 at the knock-down launch, 0 on wall / ground contact (and in dr_body_bg_check); dr_damage_anime (in damage_reaction 02041F94) poses the flying body while it is set */
+    /* 0x4B4 */ be<s16> mFallPitch;  /* was m480: dr_damage_set 02043F34 eases it toward mFallPitchTarget; dr_matrix_set (in damage_reaction 02041F94) and kado_check 02041D10 rotate the body by it about X (after mKnockbackAngleY); hukki (bk 020A3048, mo2 021CE6E8) clears it */
+    /* 0x4B6 */ be<s16> mKnockbackAngleY;  /* was m482: dr_damage_set 02043F34: yaw of the knock-back (atan2 of mHitVec, +0x8000 for hit bit 0x40, or shape_angle.y); the speed is rotated by it and dr_matrix_set (in damage_reaction 02041F94) pitches the body about it */
+    /* 0x4B8 */ be<s16> mSpinAngleY;  /* was m484: dr_damage_set 02043F34 steps it by +-0x1000 while mSpinLeft runs and adds it to current / shape angle.y at recovery; dr_matrix_set (in damage_reaction 02041F94) turns the body by it */
+    /* 0x4BA */ be<s16> mFallPitchTarget;  /* was m486: dr_damage_set 02043F34 sets 0x4000 (falls over) / -0x4000 / 0; mFallPitch eases toward it */
+    /* 0x4BC */ be<s16> mKnockedDown;  /* was m488: dr_damage_set 02043F34: 0 upright, set to 1 by a knock-down, cleared at recovery; hukki (bk 020A3048, mo2 021CE6E8) clears it; dr_damage_anime / dr_body_bg_check test == 1 */
+    /* 0x4BE */ be<s16> mHitStunTimer;  /* was m48A: damage_check (in daBk_Execute / daMo2_Execute) sets 10 on a hit; daBk_Execute 0209BD1C / daMo2_Execute 021C9B1C count it down; Bk_move 020A5EF4 / Mo2_move 021D0A14 stagger while it runs and the enemy is not knocked down */
+    /* 0x4C0 */ csXyz mSlopeTilt;  /* was m48C: daBk_Execute 0209BD1C / daMo2_Execute 021C9B1C ease x / z toward the ground slope angles; dr_matrix_set (in damage_reaction 02041F94) tilts the body by x / z */
+    /* 0x4C6 */ be<s16> mJnt12SlopeY;  /* was m492: dr_damage_anime (in damage_reaction 02041F94): eased toward mSlopeTilt rotated into the enemy's frame (0 while knocked down) and subtracted from mJntTargetAngle[12].y */
+    /* 0x4C8 */ be<s16> mJnt12SlopeZ;  /* was m494: dr_damage_anime (in damage_reaction 02041F94): z partner of mJnt12SlopeY, subtracted from mJntTargetAngle[12].z */
+    /* 0x4CA */ be<s16> mJnt18AddY;  /* was m496: dr_damage_anime (in damage_reaction 02041F94) eases it toward mJnt18AddYTarget and adds it to mJntTargetAngle[18].y */
+    /* 0x4CC */ be<s16> mJnt13AddY;  /* was m498: dr_damage_anime (in damage_reaction 02041F94) eases it toward mJnt13AddYTarget and adds it to mJntTargetAngle[13].y */
+    /* 0x4CE */ be<s16> mJnt18AddYTarget;  /* was m49A: dr_damage_set 02043F34 sets a random +-18000 on landing, 0 at recovery; mJnt18AddY eases toward it */
+    /* 0x4D0 */ be<s16> mJnt13AddYTarget;  /* was m49C: dr_damage_set 02043F34 sets a random +-10000 on landing, 0 at recovery; mJnt13AddY eases toward it */
+    /* 0x4D2 */ be<s16> mParalysisTimer;  /* was m49E: d_mahi (bk 020A4B44, mo2 021CFBBC) sets 15; dr_damage_anime (in damage_reaction 02041F94) counts it down and shakes the head by a sine of it */
+    /* 0x4D4 */ DamageAngle mJnt0AddZ;  /* was m4A0: dr_damage_anime (in damage_reaction 02041F94) eases it toward mJnt0AddZTarget and adds it to mJntTargetAngle[0].z */
+    /* 0x4D6 */ DamageAngle mJnt1AddZ;  /* was m4A2: dr_damage_anime (in damage_reaction 02041F94) eases it toward mJnt1AddZTarget and adds it to mJntTargetAngle[1].z */
+    /* 0x4D8 */ DamageAngle mJnt2AddZ;  /* was m4A4: dr_damage_anime (in damage_reaction 02041F94) eases it toward mJnt2AddZTarget, adds it to mJntTargetAngle[2].z and half of it subtracts from [6].z */
+    /* 0x4DA */ DamageAngle mJnt3AddZ;  /* was m4A6: dr_damage_anime (in damage_reaction 02041F94) eases it toward mJnt3AddZTarget, adds it to mJntTargetAngle[3].z and half of it subtracts from [7].z */
+    /* 0x4DC */ DamageAngle mJnt0AddZTarget;  /* was m4A8: dr_damage_set 02043F34 sets a random -20000..0 at the launch / bounce, 0 on contact; mJnt0AddZ eases toward it */
+    /* 0x4DE */ DamageAngle mJnt1AddZTarget;  /* was m4AA: dr_damage_set 02043F34 sets a random -20000..0 at the launch / bounce, 0 on contact; mJnt1AddZ eases toward it */
+    /* 0x4E0 */ DamageAngle mJnt2AddZTarget;  /* was m4AC: dr_damage_set 02043F34 sets a random 0..20000 at the launch / bounce, 0 on contact; mJnt2AddZ eases toward it */
+    /* 0x4E2 */ DamageAngle mJnt3AddZTarget;  /* was m4AE: dr_damage_set 02043F34 sets a random 0..20000 at the launch / bounce, 0 on contact; mJnt3AddZ eases toward it */
+    /* 0x4E4 */ DamageAngle mJnt2LandZ;  /* was m4B0: dr_damage_set 02043F34 sets a random 0..20000 on landing (0 at recovery, in dr_joint_bg_check when face down); dr_damage_anime (in damage_reaction 02041F94) adds it to mJntTargetAngle[2].z */
+    /* 0x4E6 */ DamageAngle mJnt3LandZ;  /* was m4B2: dr_damage_set 02043F34 sets a random 0..20000 on landing (0 at recovery, in dr_joint_bg_check when face down); dr_damage_anime (in damage_reaction 02041F94) adds it to mJntTargetAngle[3].z */
+    /* 0x4E8 */ DamageAngle mJnt6LandZ;  /* was m4B4: dr_damage_set 02043F34 sets mJnt2LandZ / 2 on landing (0 at recovery / face down); dr_damage_anime (in damage_reaction 02041F94) subtracts it from mJntTargetAngle[6].z */
+    /* 0x4EA */ DamageAngle mJnt7LandZ;  /* was m4B6: dr_damage_set 02043F34 sets mJnt3LandZ / 2 on landing (0 at recovery / face down); dr_damage_anime (in damage_reaction 02041F94) subtracts it from mJntTargetAngle[7].z */
+    /* 0x4EC */ DamageAngle mJnt6AddY;  /* was m4B8: dr_damage_set 02043F34 sets a random 1000..7000 at the knock-down (not Darknut), 0 at recovery; dr_damage_anime (in damage_reaction 02041F94) adds it to mJntTargetAngle[6].y */
+    /* 0x4EE */ DamageAngle mJnt7AddY;  /* was m4BA: dr_damage_set 02043F34 sets a random 1000..7000 at the knock-down (not Darknut), 0 at recovery; dr_damage_anime (in damage_reaction 02041F94) subtracts it from mJntTargetAngle[7].y */
+    /* 0x4F0 */ DamageAngle mJnt4AddY;  /* was m4BC: dr_damage_set 02043F34 sets a random value at the knock-down, 0 at recovery; dr_damage_anime (in damage_reaction 02041F94) adds it to mJntTargetAngle[4].y (and uses it as [8].z) */
+    /* 0x4F2 */ DamageAngle mJnt5AddY;  /* was m4BE: dr_damage_set 02043F34 sets a random value at the knock-down, 0 at recovery; dr_damage_anime (in damage_reaction 02041F94) subtracts it from mJntTargetAngle[5].y (and uses it as [9].z) */
+    /* 0x4F4 */ be<s16> mLandAngleY;  /* was m4C0: dr_damage_set 02043F34 sets it on landing to mKnockbackAngleY or its reverse (whichever is nearer current.angle.y); while knocked down current.angle.y eases toward it */
+    /* 0x4F6 */ u8 pad4F6[0x6];
+    /* 0x4FC */ be<s16> mDownTimers[3];  /* was m4C8: damage_reaction 02041F94 counts all three down; dr_damage_set 02043F34: [0] = 10 holds the body after a high wall hit, [2] delays the recovery (set from the enemies' HIO by daBk_Execute 0209BD1C / daMo2_Execute 021C9B1C, 10000 at death) */
+    /* 0x502 */ be<s16> mInvincibleTimer;
+    /* 0x504 */ be<s16> mTurnTargetY;  /* was m4D0: bk / mo2 action code (fight_run 020A0A98, b_nige 020A2A54, wepon_search 020A3CC8, hukki 021CE6E8, ...) sets the yaw the enemy should face (from mTargetAngleY or atan2) and eases current.angle.y toward it */
+    /* 0x506 */ u8 pad506[0x2];
+    /* 0x508 */ be<f32> mPushback;  /* was m4D4: damage_check (in daBk_Execute / daMo2_Execute) sets -20 / -HIO value; dr_damage_set 02043F34 moves the enemy by it along the hit direction (atan2 of -mHitVec) each frame and eases it to 0 */
+    /* 0x50C */ u8 pad50C[4];
+    /* 0x510 */ dBgS_AcchCir mAcchCir;
+    /* 0x550 */ dBgS_ObjAcch mAcch;
+    /* 0x714 */ be<s32> mSpinLeft;  /* was m6E0: dr_damage_set 02043F34 adds +-0x8000 / +-0x10000 after a corner (kado_check 02041D10) hit, then steps it to 0 by 0x1000 while adding the same steps to mSpinAngleY */
+    /* 0x718 */ be<f32> mSpawnY;
+    /* 0x71C */ cXyz mPrevGroundPos;  /* was m6E8: dr_body_bg_check (in dr_damage_set 02043F34): old.pos with y = the ground height before this check; dr_damage_set 02043F34 uses it as the ledge position (mHangPos) when the fall height exceeds 300 */
+    /* 0x728 */ cXyz m6F4[2];
+    /* 0x740 */ be<u8> mBounceCount;  /* was m70C: dr_damage_set 02043F34 increments it at each ground landing while knocked down and clears it at the launch; daBk_Create 0209F918 / daMo2_Create 021CCB00 set 1; damage_check (in daBk_Execute) clears it */
+    /* 0x741 */ be<u8> mFaceDown;  /* was m70D: dr_matrix_set (in damage_reaction 02041F94): 1 when a point 10000 ahead in the body frame lies below current.pos; dr_damage_set 02043F34 picks recovery mode 10 / 12 by it */
+    /* 0x742 */ be<u8> mShakeJntMask;  /* was m70E: dr_damage_set 02043F34 sets 0xFF / 7; dr_damage_anime (in damage_reaction 02041F94) shakes joints 2, 3, 6, 7 (bit 8), 0, 1, 4, 5 (bit 4), 19 (bit 2), 13 (bit 1) */
+    /* 0x743 */ u8 pad743[0x1];
+    /* 0x744 */ be<u8> mLookMode;  /* was m710: set by the bk / mo2 action code (hukki 020A3048, fight_run 020A0A98, p_lost 020A27F8, Bk_move 020A5EF4, ...: 0, 1, 3, 4, 6); dr_damage_anime (in damage_reaction 02041F94): 1 turns the head toward mpLookTarget's eyePos, 5 uses mLookPitch / mLookYaw, 3 / 4 / 6 fixed poses */
+    /* 0x745 */ be<u8> mDefencePose;  /* was m711: defence (mo2 021CE46C) sets 1, Bk_move 020A5EF4 / Mo2_move 021D0A14 clear it; dr_damage_anime (in damage_reaction 02041F94) sets mJntTargetAngle[8].x = 8000 while it is set */
+    /* 0x746 */ be<u8> m712;
+    /* 0x747 */ be<u8> mPlayerInView;  /* was m713: daBk_player_view_check 0209B05C / daMo2_player_view_check 021C8C14 set 1 / 2 when the player is in the view box, 0 otherwise; daBk_player_bg_check 0209AE7C / daMo2_player_bg_check 021C8A38 test and clear it; dr_damage_set 02043F34 clears it at the knock-down */
+    /* 0x748 */ gptr<fopAc_ac_c> mpLookTarget;  /* was m714: Bk_move 020A5EF4 / Mo2_move 021D0A14 set the player, aite_miru (bk 020A3624, mo2 021CEC44) another actor; the view / bg checks use its current.pos; dr_damage_anime (in damage_reaction 02041F94) turns the head toward its eyePos */
+    /* 0x74C */ be<s16> mLookPitch;  /* was m718: set by bk_move code (-10000 / random); dr_damage_anime (in damage_reaction 02041F94) uses it as the head pitch for mLookMode 5 and adds it to mJntTargetAngle[18].z */
+    /* 0x74E */ be<s16> mLookYaw;  /* was m71A: set by bk_move code (10000 / random); dr_damage_anime (in damage_reaction 02041F94) uses it as the head yaw for mLookMode 5 and adds it to mJntTargetAngle[18].y */
+    /* 0x750 */ u8 pad750[0x2];
+    /* 0x752 */ be<s16> mBodyBgCheckDelay;  /* was m71E: dr_body_bg_check (in dr_damage_set 02043F34) skips the body ground check and counts it down while it is non-zero; dr_damage_set sets 2 / 10, water_fail 020A3B18 / b_hang 020A5674 5, damage_check (in daBk_Execute) 10 */
+    /* 0x754 */ be<f32> mMaxFallDistance;
+    /* 0x758 */ DamageStts mStts;
+    /* 0x794 */ cXyz mParticlePos;
+    /* 0x7A0 */ csXyz mParticleAngle;
+    /* 0x7A6 */ u8 pad7A6[2];
+    /* 0x7A8 */ DamageSmoke mParticleCallBack;
+    /* 0x7C8 */ be<s16> mWallSmokeTimer;  /* was m794: dr_damage_set 02043F34 sets 6 when it starts the wall-hit smoke; damage_reaction 02041F94 counts it down and ends mParticleCallBack at 0 */
+    /* 0x7CA */ u8 pad7CA[0x2];
+    /* 0x7CC */ be<f32> mHangMoveSpeed;  /* was m798: b_hang 020A5674 clears it and eases it to 100; the step with which current.pos follows the hang position */
+    /* 0x7D0 */ gptr<cXyz> mpHangPos;  /* was m79C: ride_call_back (d_a_bridge 020DF908) points it at the bridge's side position; b_hang 020A5674 makes current.pos follow it while mHangBridgeId is set */
+    /* 0x7D4 */ cXyz mHangPos;  /* was m7A0: dr_damage_set 02043F34 copies mPrevGroundPos into it before the hang; hang_ang_get (inlined there) measures from it; b_hang 020A5674 makes current.pos follow it (ledge hang) */
+    /* 0x7E0 */ csXyz mHangAngle;  /* was m7AC: dr_damage_set 02043F34 sets y from hang_ang_get (0xDCF = no hang: dies); ride_call_back (d_a_bridge 020DF908) sets the bridge rotation; b_hang 020A5674 turns current.angle.y toward y */
+    /* 0x7E6 */ be<s16> mBridgeRideTimer;  /* was m7B2: ride_call_back (d_a_bridge 020DF908) sets 8 each frame a Bokoblin rides the bridge; damage_reaction 02041F94 counts it down; dr_damage_set 02043F34 starts the hang action 0x13 while it is non-zero */
+    /* 0x7E8 */ be<s16> mBridgeRideRoll;  /* was m7B4: ride_call_back (d_a_bridge 020DF908) sets -0x2000; b_hang 020A5674 passes it to the bridge as mRideRollTarget */
+    /* 0x7EA */ be<u8> mSkipMoveOnce;  /* was m7B6: dr_damage_set 02043F34 sets 1 at recovery and skips one frame of its movement / ground checks while it is set (clearing it); hukki (bk 020A3048) sets 1 */
+    /* 0x7EB */ u8 pad7EB[0x1];
+    /* 0x7EC */ be<u32> mHangBridgeId;  /* was m7B8: ride_call_back (d_a_bridge 020DF908) stores the bridge's process ID; dr_damage_set 02043F34 sets -1 for a ledge hang; b_hang 020A5674 searches the bridge by it */
 };
-static_assert(offsetof(damagereaction, m47C) == 0x4B0);
-static_assert(offsetof(damagereaction, m3D0) == 0x400);
+static_assert(offsetof(damagereaction, mLaunched) == 0x4B0);
+static_assert(offsetof(damagereaction, mJntGroundState) == 0x400);
 static_assert(offsetof(damagereaction, mAcch) == 0x550);
 static_assert(offsetof(damagereaction, mSpawnY) == 0x718);
 
@@ -250,101 +255,101 @@ WWHD_OFFSET(damagereaction, mMode, 0x4);
 WWHD_OFFSET(damagereaction, mAction, 0x6);
 WWHD_OFFSET(damagereaction, mEnemyType, 0x8);
 WWHD_OFFSET(damagereaction, mTimer, 0xC);
-WWHD_OFFSET(damagereaction, m010, 0x10);
-WWHD_OFFSET(damagereaction, m088, 0x8E);
-WWHD_OFFSET(damagereaction, m100, 0x10C);
-WWHD_OFFSET(damagereaction, m1F0, 0x208);
+WWHD_OFFSET(damagereaction, mJntTargetAngle, 0x10);
+WWHD_OFFSET(damagereaction, mJntAngle, 0x8E);
+WWHD_OFFSET(damagereaction, mJntPos, 0x10C);
+WWHD_OFFSET(damagereaction, mJntGroundPos, 0x208);
 WWHD_OFFSET(damagereaction, m2E0, 0x304);
 WWHD_OFFSET(damagereaction, mAcchCir, 0x510);
 WWHD_OFFSET(damagereaction, mAcch, 0x550);
 WWHD_OFFSET(damagereaction, mStts, 0x758);
 WWHD_OFFSET(damagereaction, mParticleCallBack, 0x7A8);
-WWHD_OFFSET(damagereaction, m3D0, 0x400);
-WWHD_OFFSET(damagereaction, m408, 0x438);
-WWHD_OFFSET(damagereaction, m40C, 0x43C);
-WWHD_OFFSET(damagereaction, m410, 0x440);
-WWHD_OFFSET(damagereaction, m414, 0x444);
-WWHD_OFFSET(damagereaction, m418, 0x448);
-WWHD_OFFSET(damagereaction, m420, 0x454);
-WWHD_OFFSET(damagereaction, m424, 0x458);
-WWHD_OFFSET(damagereaction, m428, 0x45C);
-WWHD_OFFSET(damagereaction, m42C, 0x460);
+WWHD_OFFSET(damagereaction, mJntGroundState, 0x400);
+WWHD_OFFSET(damagereaction, mJnt10LineBlocked, 0x438);
+WWHD_OFFSET(damagereaction, mJnt11LineBlocked, 0x43C);
+WWHD_OFFSET(damagereaction, mJnt8LineBlocked, 0x440);
+WWHD_OFFSET(damagereaction, mJnt9LineBlocked, 0x444);
+WWHD_OFFSET(damagereaction, mJnt12LineBlocked, 0x448);
+WWHD_OFFSET(damagereaction, mJntBgCheckTimer, 0x454);
+WWHD_OFFSET(damagereaction, mHitFlags, 0x458);
+WWHD_OFFSET(damagereaction, mKnockbackPower, 0x45C);
+WWHD_OFFSET(damagereaction, mHitVec, 0x460);
 WWHD_OFFSET(damagereaction, m438, 0x46C);
-WWHD_OFFSET(damagereaction, m440, 0x474);
-WWHD_OFFSET(damagereaction, m442, 0x476);
-WWHD_OFFSET(damagereaction, m444, 0x478);
-WWHD_OFFSET(damagereaction, m446, 0x47A);
-WWHD_OFFSET(damagereaction, m448, 0x47C);
-WWHD_OFFSET(damagereaction, m44C, 0x480);
-WWHD_OFFSET(damagereaction, m458, 0x48C);
-WWHD_OFFSET(damagereaction, m468, 0x49C);
-WWHD_OFFSET(damagereaction, m46C, 0x4A0);
-WWHD_OFFSET(damagereaction, m470, 0x4A4);
-WWHD_OFFSET(damagereaction, m474, 0x4A8);
-WWHD_OFFSET(damagereaction, m478, 0x4AC);
-WWHD_OFFSET(damagereaction, m47C, 0x4B0);
-WWHD_OFFSET(damagereaction, m480, 0x4B4);
-WWHD_OFFSET(damagereaction, m482, 0x4B6);
-WWHD_OFFSET(damagereaction, m484, 0x4B8);
-WWHD_OFFSET(damagereaction, m486, 0x4BA);
-WWHD_OFFSET(damagereaction, m488, 0x4BC);
-WWHD_OFFSET(damagereaction, m48A, 0x4BE);
-WWHD_OFFSET(damagereaction, m48C, 0x4C0);
-WWHD_OFFSET(damagereaction, m492, 0x4C6);
-WWHD_OFFSET(damagereaction, m494, 0x4C8);
-WWHD_OFFSET(damagereaction, m496, 0x4CA);
-WWHD_OFFSET(damagereaction, m498, 0x4CC);
-WWHD_OFFSET(damagereaction, m49A, 0x4CE);
-WWHD_OFFSET(damagereaction, m49C, 0x4D0);
-WWHD_OFFSET(damagereaction, m49E, 0x4D2);
-WWHD_OFFSET(damagereaction, m4A0, 0x4D4);
-WWHD_OFFSET(damagereaction, m4A2, 0x4D6);
-WWHD_OFFSET(damagereaction, m4A4, 0x4D8);
-WWHD_OFFSET(damagereaction, m4A6, 0x4DA);
-WWHD_OFFSET(damagereaction, m4A8, 0x4DC);
-WWHD_OFFSET(damagereaction, m4AA, 0x4DE);
-WWHD_OFFSET(damagereaction, m4AC, 0x4E0);
-WWHD_OFFSET(damagereaction, m4AE, 0x4E2);
-WWHD_OFFSET(damagereaction, m4B0, 0x4E4);
-WWHD_OFFSET(damagereaction, m4B2, 0x4E6);
-WWHD_OFFSET(damagereaction, m4B4, 0x4E8);
-WWHD_OFFSET(damagereaction, m4B6, 0x4EA);
-WWHD_OFFSET(damagereaction, m4B8, 0x4EC);
-WWHD_OFFSET(damagereaction, m4BA, 0x4EE);
-WWHD_OFFSET(damagereaction, m4BC, 0x4F0);
-WWHD_OFFSET(damagereaction, m4BE, 0x4F2);
-WWHD_OFFSET(damagereaction, m4C0, 0x4F4);
-WWHD_OFFSET(damagereaction, m4C8, 0x4FC);
+WWHD_OFFSET(damagereaction, mJnt10Pitch, 0x474);
+WWHD_OFFSET(damagereaction, mJnt11Pitch, 0x476);
+WWHD_OFFSET(damagereaction, mJnt8Pitch, 0x478);
+WWHD_OFFSET(damagereaction, mJnt9Pitch, 0x47A);
+WWHD_OFFSET(damagereaction, mJnt12Pitch, 0x47C);
+WWHD_OFFSET(damagereaction, mPivot, 0x480);
+WWHD_OFFSET(damagereaction, mBodyOffset, 0x48C);
+WWHD_OFFSET(damagereaction, mCarryOffsetY, 0x49C);
+WWHD_OFFSET(damagereaction, mCarryOffsetZ, 0x4A0);
+WWHD_OFFSET(damagereaction, mFlinchBend, 0x4A4);
+WWHD_OFFSET(damagereaction, mShakeAmplitude, 0x4A8);
+WWHD_OFFSET(damagereaction, mKnockbackSpeed, 0x4AC);
+WWHD_OFFSET(damagereaction, mLaunched, 0x4B0);
+WWHD_OFFSET(damagereaction, mFallPitch, 0x4B4);
+WWHD_OFFSET(damagereaction, mKnockbackAngleY, 0x4B6);
+WWHD_OFFSET(damagereaction, mSpinAngleY, 0x4B8);
+WWHD_OFFSET(damagereaction, mFallPitchTarget, 0x4BA);
+WWHD_OFFSET(damagereaction, mKnockedDown, 0x4BC);
+WWHD_OFFSET(damagereaction, mHitStunTimer, 0x4BE);
+WWHD_OFFSET(damagereaction, mSlopeTilt, 0x4C0);
+WWHD_OFFSET(damagereaction, mJnt12SlopeY, 0x4C6);
+WWHD_OFFSET(damagereaction, mJnt12SlopeZ, 0x4C8);
+WWHD_OFFSET(damagereaction, mJnt18AddY, 0x4CA);
+WWHD_OFFSET(damagereaction, mJnt13AddY, 0x4CC);
+WWHD_OFFSET(damagereaction, mJnt18AddYTarget, 0x4CE);
+WWHD_OFFSET(damagereaction, mJnt13AddYTarget, 0x4D0);
+WWHD_OFFSET(damagereaction, mParalysisTimer, 0x4D2);
+WWHD_OFFSET(damagereaction, mJnt0AddZ, 0x4D4);
+WWHD_OFFSET(damagereaction, mJnt1AddZ, 0x4D6);
+WWHD_OFFSET(damagereaction, mJnt2AddZ, 0x4D8);
+WWHD_OFFSET(damagereaction, mJnt3AddZ, 0x4DA);
+WWHD_OFFSET(damagereaction, mJnt0AddZTarget, 0x4DC);
+WWHD_OFFSET(damagereaction, mJnt1AddZTarget, 0x4DE);
+WWHD_OFFSET(damagereaction, mJnt2AddZTarget, 0x4E0);
+WWHD_OFFSET(damagereaction, mJnt3AddZTarget, 0x4E2);
+WWHD_OFFSET(damagereaction, mJnt2LandZ, 0x4E4);
+WWHD_OFFSET(damagereaction, mJnt3LandZ, 0x4E6);
+WWHD_OFFSET(damagereaction, mJnt6LandZ, 0x4E8);
+WWHD_OFFSET(damagereaction, mJnt7LandZ, 0x4EA);
+WWHD_OFFSET(damagereaction, mJnt6AddY, 0x4EC);
+WWHD_OFFSET(damagereaction, mJnt7AddY, 0x4EE);
+WWHD_OFFSET(damagereaction, mJnt4AddY, 0x4F0);
+WWHD_OFFSET(damagereaction, mJnt5AddY, 0x4F2);
+WWHD_OFFSET(damagereaction, mLandAngleY, 0x4F4);
+WWHD_OFFSET(damagereaction, mDownTimers, 0x4FC);
 WWHD_OFFSET(damagereaction, mInvincibleTimer, 0x502);
-WWHD_OFFSET(damagereaction, m4D0, 0x504);
-WWHD_OFFSET(damagereaction, m4D4, 0x508);
-WWHD_OFFSET(damagereaction, m6E0, 0x714);
+WWHD_OFFSET(damagereaction, mTurnTargetY, 0x504);
+WWHD_OFFSET(damagereaction, mPushback, 0x508);
+WWHD_OFFSET(damagereaction, mSpinLeft, 0x714);
 WWHD_OFFSET(damagereaction, mSpawnY, 0x718);
-WWHD_OFFSET(damagereaction, m6E8, 0x71C);
+WWHD_OFFSET(damagereaction, mPrevGroundPos, 0x71C);
 WWHD_OFFSET(damagereaction, m6F4, 0x728);
-WWHD_OFFSET(damagereaction, m70C, 0x740);
-WWHD_OFFSET(damagereaction, m70D, 0x741);
-WWHD_OFFSET(damagereaction, m70E, 0x742);
-WWHD_OFFSET(damagereaction, m710, 0x744);
-WWHD_OFFSET(damagereaction, m711, 0x745);
+WWHD_OFFSET(damagereaction, mBounceCount, 0x740);
+WWHD_OFFSET(damagereaction, mFaceDown, 0x741);
+WWHD_OFFSET(damagereaction, mShakeJntMask, 0x742);
+WWHD_OFFSET(damagereaction, mLookMode, 0x744);
+WWHD_OFFSET(damagereaction, mDefencePose, 0x745);
 WWHD_OFFSET(damagereaction, m712, 0x746);
-WWHD_OFFSET(damagereaction, m713, 0x747);
-WWHD_OFFSET(damagereaction, m714, 0x748);
-WWHD_OFFSET(damagereaction, m718, 0x74C);
-WWHD_OFFSET(damagereaction, m71A, 0x74E);
-WWHD_OFFSET(damagereaction, m71E, 0x752);
+WWHD_OFFSET(damagereaction, mPlayerInView, 0x747);
+WWHD_OFFSET(damagereaction, mpLookTarget, 0x748);
+WWHD_OFFSET(damagereaction, mLookPitch, 0x74C);
+WWHD_OFFSET(damagereaction, mLookYaw, 0x74E);
+WWHD_OFFSET(damagereaction, mBodyBgCheckDelay, 0x752);
 WWHD_OFFSET(damagereaction, mMaxFallDistance, 0x754);
 WWHD_OFFSET(damagereaction, mParticlePos, 0x794);
 WWHD_OFFSET(damagereaction, mParticleAngle, 0x7A0);
-WWHD_OFFSET(damagereaction, m794, 0x7C8);
-WWHD_OFFSET(damagereaction, m798, 0x7CC);
-WWHD_OFFSET(damagereaction, m79C, 0x7D0);
-WWHD_OFFSET(damagereaction, m7A0, 0x7D4);
-WWHD_OFFSET(damagereaction, m7AC, 0x7E0);
-WWHD_OFFSET(damagereaction, m7B2, 0x7E6);
-WWHD_OFFSET(damagereaction, m7B4, 0x7E8);
-WWHD_OFFSET(damagereaction, m7B6, 0x7EA);
-WWHD_OFFSET(damagereaction, m7B8, 0x7EC);
+WWHD_OFFSET(damagereaction, mWallSmokeTimer, 0x7C8);
+WWHD_OFFSET(damagereaction, mHangMoveSpeed, 0x7CC);
+WWHD_OFFSET(damagereaction, mpHangPos, 0x7D0);
+WWHD_OFFSET(damagereaction, mHangPos, 0x7D4);
+WWHD_OFFSET(damagereaction, mHangAngle, 0x7E0);
+WWHD_OFFSET(damagereaction, mBridgeRideTimer, 0x7E6);
+WWHD_OFFSET(damagereaction, mBridgeRideRoll, 0x7E8);
+WWHD_OFFSET(damagereaction, mSkipMoveOnce, 0x7EA);
+WWHD_OFFSET(damagereaction, mHangBridgeId, 0x7EC);
 WWHD_SIZE(damagereaction, 0x7F0);
 
 // HD: word-copy views preserve the original lfs/stfs bit transport.

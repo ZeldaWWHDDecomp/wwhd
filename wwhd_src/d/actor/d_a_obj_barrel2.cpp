@@ -22,10 +22,10 @@ static f32 barrelItemDistanceMax;
 
 static gptr<fopAc_ac_c> &tmp_item() { return barrelTmpItem.mpActor; }
 static Attr_c *attr(Act_c *a, const char *file, const char *expr) {
-    if ((u32)a->m410 >= 4) {
+    if ((u32)a->mType >= 4) {
         Barrel_assertion(file, 0x1EA, expr);
     }
-    return gabi::at<Attr_c>(gabi::ea(&barrelAttributes) + (u32)a->m410 * sizeof(Attr_c));
+    return gabi::at<Attr_c>(gabi::ea(&barrelAttributes) + (u32)a->mType * sizeof(Attr_c));
 }
 
 // HD: item deletion retains the complete tail-call result register.
@@ -90,7 +90,7 @@ bool daObjBarrel2::Act_c::create_heap() {
     if (!mdl) {
         Barrel_assertion("d_a_obj_barrel2.cpp", 0x217, "mdl_data != 0");
     }
-    m298 = mDoExt_J3DModel__create(mdl, 0x80000, 0x11000022);
+    mpModel = mDoExt_J3DModel__create(mdl, 0x80000, 0x11000022);
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     index = t->m02;
     void *brk = dComIfG_getObjectRes("Ktaru_00", index, barrel2_hd::ResourceStringVtable);
@@ -101,12 +101,12 @@ bool daObjBarrel2::Act_c::create_heap() {
     if (anm) {
         anm = Barrel_brkConstruct(anm);
     }
-    m29C = (mDoExt_brkAnm *)anm;
+    mpBrkAnm = (mDoExt_brkAnm *)anm;
     s32 result = 0;
     if (anm) {
         result = Barrel_brkInit(anm, mdl, brk, 1, 0, 1.f, 0, -1, 0, 0);
     }
-    return m298 != nullptr && result != 0;
+    return mpModel != nullptr && result != 0;
 }
 
 /* 0231F350 */
@@ -133,7 +133,7 @@ s32 daObjBarrel2::Act_c::_create() {
         }
         actor_condition = condition | 8;
     }
-    m410 = PrmAbstract(this, PRM_TYPE_W, PRM_TYPE_S);
+    mType = PrmAbstract(this, PRM_TYPE_W, PRM_TYPE_S);
     s32 phase = dComIfG_resLoad(&mPhase, "Ktaru_00");
     if (phase != 4) {
         return phase;
@@ -146,7 +146,7 @@ s32 daObjBarrel2::Act_c::_create() {
                                (u32)t->m04)) {
         return 5;
     }
-    J3DModel *mdl = m298;
+    J3DModel *mdl = mpModel;
     cullMtx = mdl ? gabi::ea(mdl) + 0xC8 : 0;
     mStts.Init(200, 255, this);
     Barrel_setCylinder(&mCyl, &barrelCylinderSource.mData);
@@ -158,7 +158,7 @@ s32 daObjBarrel2::Act_c::_create() {
     gbaName = 0x3D;
     mCyl.mGObjTg.mHitCallback = gabi::guest_fn((const void *)tg_hitCB);
     mCyl.mGObjCo.mHitCallback = gabi::guest_fn((const void *)co_hitCB);
-    if (m410 == 3) {
+    if (mType == 3) {
         actor_status = actor_status & ~0x180u;
     }
     BOOL coming = PrmAbstract(this, PRM_COMING_W, PRM_COMING_S);
@@ -166,8 +166,8 @@ s32 daObjBarrel2::Act_c::_create() {
         Attr_c *t0 = attribute();
         Attr_c *t1 = attribute();
         Attr_c *t2 = attribute();
-        m450 = -(((f32)t0->m18 * (f32)t1->m20) * (f32)t2->m24) - 50.f;
-        if (m410 == 2) {
+        mPosYOffset = -(((f32)t0->m18 * (f32)t1->m20) * (f32)t2->m24) - 50.f;
+        if (mType == 2) {
             m440 = cM_rndFX(1.f);
             m444 = cM_rndFX(1.f);
         } else {
@@ -175,7 +175,7 @@ s32 daObjBarrel2::Act_c::_create() {
             m444 = 0.f;
         }
     } else {
-        m450 = 0.f;
+        mPosYOffset = 0.f;
         m440 = 0.f;
         m444 = 0.f;
     }
@@ -219,9 +219,9 @@ s32 daObjBarrel2::Act_c::_create() {
     mItemId =
         Barrel_createRaceItem(pos.get(), item, save, room, angle.get(), scale.get(), spawn != 0);
     m468 = 0;
-    m460 = fpcM_ERROR_PROCESS_ID_e;
+    mChildPid = fpcM_ERROR_PROCESS_ID_e;
     m470 = 0;
-    m45C = barrelItemDistanceMax;
+    mItemDistance = barrelItemDistanceMax;
     if (!PrmAbstract(this, PRM_BUOY_W, PRM_BUOY_S)) {
         f32 x = current.pos.x;
         t0 = attribute();
@@ -230,7 +230,7 @@ s32 daObjBarrel2::Act_c::_create() {
         f32 mag = (f32)t1->m24 * (f32)t2->m20;
         gabi::Local<cXyz> flagpos;
         flagpos->set(x, gabi::fmadds((f32)t0->m14 - 5.f, mag, current.pos.y), current.pos.z);
-        s32 type = m410;
+        s32 type = mType;
         u32 param = (type == 2 || type == 3) ? 2 : 1;
         if (type == 3) {
             param |= 0x80000000;
@@ -239,12 +239,12 @@ s32 daObjBarrel2::Act_c::_create() {
         s8 room = current.roomNo;
         s32 texture = PrmAbstract(this, PRM_TEXTURE_W, PRM_TEXTURE_S);
         param |= (u32)texture << 8;
-        m460 = Barrel_createChild(0x1D1, parent, param, flagpos.get(), room, &shape_angle, nullptr,
+        mChildPid = Barrel_createChild(0x1D1, parent, param, flagpos.get(), room, &shape_angle, nullptr,
                                   -1, nullptr);
     }
     init_mtx();
     u32 play = dComIfGp_ea();
-    m46A = (s16)gabi::at<dComIfG_inf_c>(play)->play.mCurStage.mPoint;
+    mStagePoint = (s16)gabi::at<dComIfG_inf_c>(play)->play.mCurStage.mPoint;
     mode_afl_init();
     return phase;
 }
@@ -268,7 +268,7 @@ static void co_hitCB(Act_c *a, dCcD_GObjInf *obj, fopAc_ac_c *other, dCcD_GObjIn
     if (!other || (s16)other->mProfName != 0xA5) {
         return;
     }
-    if (a->m410 != 0) {
+    if (a->mType != 0) {
         a->m470 = 2;
         return;
     }
@@ -290,13 +290,13 @@ static void co_hitCB(Act_c *a, dCcD_GObjInf *obj, fopAc_ac_c *other, dCcD_GObjIn
         shipFlags->mFlags = shipFlags->mFlags | 4;
         return;
     }
-    if (a->m46D != 0) {
+    if (a->mCoHitTimer != 0) {
         return;
     }
     auto *shipFlags = gabi::at<barrel2_hd::Ship>(gabi::ea(other));
     shipFlags->mFlags = shipFlags->mFlags | 0x20;
-    a->m454 = -60.f;
-    a->m46D = 20;
+    a->mPosYOffsetSpeed = -60.f;
+    a->mCoHitTimer = 20;
     if (a && gabi::ea(&a->eyePos)) {
         s32 reverb = Barrel_reverb((s8)a->current.roomNo);
         Barrel_sound(0x6944, &a->eyePos, 0, reverb);
@@ -325,17 +325,17 @@ void daObjBarrel2::Act_c::cull_set_move() {
 
 /* 0231FD50 */
 bool daObjBarrel2::Act_c::demo_mode_chk() {
-    u32 mode = m40C;
+    u32 mode = mMode;
     return !(mode < 1 || (mode > 3 && (mode < 5 || mode > 8)));
 }
 
 /* 0231F344 */
-void daObjBarrel2::Act_c::mode_afl_init() { m40C = MODE_AFL; }
+void daObjBarrel2::Act_c::mode_afl_init() { mMode = MODE_AFL; }
 
 /* 02321564 */
 bool daObjBarrel2::Act_c::mode_afl() {
     BOOL coming = PrmAbstract(this, PRM_COMING_W, PRM_COMING_S);
-    f32 pos = m450, vel = m454;
+    f32 pos = mPosYOffset, vel = mPosYOffsetSpeed;
     f32 limit;
     if (coming) {
         f32 force = (-pos >= 0.f) ? -0.01f : -0.02f;
@@ -346,12 +346,12 @@ bool daObjBarrel2::Act_c::mode_afl() {
         limit = 0.2f;
     }
     pos += vel;
-    m454 = vel;
-    m450 = pos;
+    mPosYOffsetSpeed = vel;
+    mPosYOffset = pos;
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    if (m450 > (f32)t->m14 * limit) {
+    if (mPosYOffset > (f32)t->m14 * limit) {
         t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-        m450 = (f32)t->m14 * limit;
+        mPosYOffset = (f32)t->m14 * limit;
     }
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     f32 step = (f32)(s16)t->m58;
@@ -374,17 +374,17 @@ bool daObjBarrel2::Act_c::mode_afl() {
 
 /* 02320918 */
 void daObjBarrel2::Act_c::mode_exit_v_init() {
-    m40C = MODE_EXIT_V;
-    m464 = 4;
-    m454 = barrelExitSpeed;
+    mMode = MODE_EXIT_V;
+    mModeTimer = 4;
+    mPosYOffsetSpeed = barrelExitSpeed;
 }
 
 /* 0232183C */
 bool daObjBarrel2::Act_c::mode_exit_v() {
-    f32 velocity = ((f32)m454 - 5.f) * 0.96f;
-    f32 pos = (f32)m450 + velocity;
-    m454 = velocity;
-    m450 = pos;
+    f32 velocity = ((f32)mPosYOffsetSpeed - 5.f) * 0.96f;
+    f32 pos = (f32)mPosYOffset + velocity;
+    mPosYOffsetSpeed = velocity;
+    mPosYOffset = pos;
     set_pos_y();
     set_item_position();
     Attr_c *t[4];
@@ -392,7 +392,7 @@ bool daObjBarrel2::Act_c::mode_exit_v() {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
     f32 lower = -(((f32)t[0]->m18 * (f32)t[1]->m20) * (f32)t[2]->m24) - (f32)t[3]->m30;
-    if ((f32)m450 > lower) {
+    if ((f32)mPosYOffset > lower) {
         return true;
     }
     item_drop_init(0.f);
@@ -402,16 +402,16 @@ bool daObjBarrel2::Act_c::mode_exit_v() {
 
 /* 02320938 */
 void daObjBarrel2::Act_c::mode_exit_h_init() {
-    m40C = MODE_EXIT_H;
-    m454 = barrelExitSpeed;
+    mMode = MODE_EXIT_H;
+    mPosYOffsetSpeed = barrelExitSpeed;
 }
 
 /* 023219D8 */
 bool daObjBarrel2::Act_c::mode_exit_h() {
-    f32 velocity = ((f32)m454 - 5.f) * 0.94f;
-    f32 pos = (f32)m450 + velocity;
-    m454 = velocity;
-    m450 = pos;
+    f32 velocity = ((f32)mPosYOffsetSpeed - 5.f) * 0.94f;
+    f32 pos = (f32)mPosYOffset + velocity;
+    mPosYOffsetSpeed = velocity;
+    mPosYOffset = pos;
     set_pos_y();
     set_item_position();
     Attr_c *t[4];
@@ -419,7 +419,7 @@ bool daObjBarrel2::Act_c::mode_exit_h() {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
     f32 lower = -(((f32)t[0]->m18 * (f32)t[1]->m20) * (f32)t[2]->m24) - (f32)t[3]->m30;
-    if ((f32)m450 > lower) {
+    if ((f32)mPosYOffset > lower) {
         return true;
     }
     item_drop_init(0.f);
@@ -429,16 +429,16 @@ bool daObjBarrel2::Act_c::mode_exit_h() {
 
 /* 02320950 */
 void daObjBarrel2::Act_c::mode_exit_mine_init() {
-    m40C = MODE_EXIT_MINE;
-    m454 = barrelMineExitSpeed;
+    mMode = MODE_EXIT_MINE;
+    mPosYOffsetSpeed = barrelMineExitSpeed;
 }
 
 /* 02321B74 */
 bool daObjBarrel2::Act_c::mode_exit_mine() {
-    f32 velocity = ((f32)m454 - 5.f) * 0.94f;
-    f32 pos = (f32)m450 + velocity;
-    m454 = velocity;
-    m450 = pos;
+    f32 velocity = ((f32)mPosYOffsetSpeed - 5.f) * 0.94f;
+    f32 pos = (f32)mPosYOffset + velocity;
+    mPosYOffsetSpeed = velocity;
+    mPosYOffset = pos;
     set_pos_y();
     set_item_position();
     Attr_c *t[3];
@@ -446,7 +446,7 @@ bool daObjBarrel2::Act_c::mode_exit_mine() {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
     f32 lower = -(((f32)t[0]->m18 * (f32)t[1]->m20) * (f32)t[2]->m24) - 50.f;
-    if ((f32)m450 > lower) {
+    if ((f32)mPosYOffset > lower) {
         return true;
     }
     item_drop_init(0.f);
@@ -456,31 +456,31 @@ bool daObjBarrel2::Act_c::mode_exit_mine() {
 
 /* 023203B0 */
 void daObjBarrel2::Act_c::mode_explode_init() {
-    m464 = 30;
+    mModeTimer = 30;
     eff_explode();
     buoy_jump(300.f);
     item_drop_init(130.f);
     u32 co = mCyl.mObjCo.mSPrm;
-    m40C = MODE_EXPLODE;
+    mMode = MODE_EXPLODE;
     mCyl.mObjCo.mSPrm = co & ~1u;
 }
 
 /* 02321D54 */
 bool daObjBarrel2::Act_c::mode_explode() {
-    m464 = (u32)m464 - 1;
-    if (m464 < 0) {
+    mModeTimer = (u32)mModeTimer - 1;
+    if (mModeTimer < 0) {
         item_drop();
         return false;
     }
-    f32 pos = m450;
-    f32 velocity = gabi::fmadds(pos, -0.01f, m454) * 0.94f;
+    f32 pos = mPosYOffset;
+    f32 velocity = gabi::fmadds(pos, -0.01f, mPosYOffsetSpeed) * 0.94f;
     pos += velocity;
-    m454 = velocity;
-    m450 = pos;
+    mPosYOffsetSpeed = velocity;
+    mPosYOffset = pos;
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    if (m450 > (f32)t->m14 * 0.2f) {
+    if (mPosYOffset > (f32)t->m14 * 0.2f) {
         t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-        m450 = (f32)t->m14 * 0.2f;
+        mPosYOffset = (f32)t->m14 * 0.2f;
     }
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     f32 step = (f32)(s16)t->m58;
@@ -495,9 +495,9 @@ bool daObjBarrel2::Act_c::mode_explode() {
 void daObjBarrel2::Act_c::mode_demo_break0_init() {
     u32 tg = mCyl.mObjTg.mSPrm;
     u32 co = mCyl.mObjCo.mSPrm;
-    m40C = MODE_DEMO_BREAK0;
+    mMode = MODE_DEMO_BREAK0;
     mCyl.mObjTg.mSPrm = tg & ~1u;
-    m464 = 1;
+    mModeTimer = 1;
     mCyl.mObjCo.mSPrm = co & ~1u;
     eff_break();
 }
@@ -510,8 +510,8 @@ bool daObjBarrel2::Act_c::mode_demo_break0() {
             mode_demo_break1_init();
             return true;
         }
-        m464 = (u32)m464 - 1;
-        if (m464 >= 0) {
+        mModeTimer = (u32)mModeTimer - 1;
+        if (mModeTimer >= 0) {
             Barrel_orderOtherEvent(this, "barrel2_brk", (u16)1, (u16)0xFFFF);
             eventInfo_onCondition(this, 2);
             return true;
@@ -522,7 +522,7 @@ bool daObjBarrel2::Act_c::mode_demo_break0() {
 }
 
 /* 02321F38 */
-void daObjBarrel2::Act_c::mode_demo_break1_init() { m40C = MODE_DEMO_BREAK1; }
+void daObjBarrel2::Act_c::mode_demo_break1_init() { mMode = MODE_DEMO_BREAK1; }
 
 /* 02322024 */
 bool daObjBarrel2::Act_c::mode_demo_break1() { return end_demo(); }
@@ -531,9 +531,9 @@ bool daObjBarrel2::Act_c::mode_demo_break1() { return end_demo(); }
 void daObjBarrel2::Act_c::mode_demo_explode0_init() {
     u32 co = mCyl.mObjCo.mSPrm;
     u32 tg = mCyl.mObjTg.mSPrm;
-    m40C = MODE_DEMO_EXPLODE0;
+    mMode = MODE_DEMO_EXPLODE0;
     mCyl.mObjCo.mSPrm = co & ~1u;
-    m464 = 2;
+    mModeTimer = 2;
     mCyl.mObjTg.mSPrm = tg & ~1u;
 }
 
@@ -547,11 +547,11 @@ bool daObjBarrel2::Act_c::mode_demo_explode0() {
         mode_demo_explode1_init();
         return true;
     }
-    m464 = (u32)m464 - 1;
-    if (m464 < 0) {
+    mModeTimer = (u32)mModeTimer - 1;
+    if (mModeTimer < 0) {
         return false;
     }
-    if (m464 == 0) {
+    if (mModeTimer == 0) {
         Barrel_orderOtherEvent(this, "barrel2_brk", (u16)1, (u16)0xFFFF);
         eventInfo_onCondition(this, 2);
     }
@@ -559,7 +559,7 @@ bool daObjBarrel2::Act_c::mode_demo_explode0() {
 }
 
 /* 02322084 */
-void daObjBarrel2::Act_c::mode_demo_explode1_init() { m40C = MODE_DEMO_EXPLODE1; }
+void daObjBarrel2::Act_c::mode_demo_explode1_init() { mMode = MODE_DEMO_EXPLODE1; }
 
 /* 02322168 */
 bool daObjBarrel2::Act_c::mode_demo_explode1() {
@@ -572,7 +572,7 @@ BOOL daObjBarrel2::Act_c::mode_proc_call() {
     set_water_pos();
     // HD: the descriptor dispatch retains a full BOOL result register.
     auto *mode = gabi::at<barrel2_hd::ModePtmf>(gabi::ea(&barrelModes) +
-                                                (u32)m40C * sizeof(barrel2_hd::ModePtmf));
+                                                (u32)mMode * sizeof(barrel2_hd::ModePtmf));
     return (this->*(*mode))();
 }
 
@@ -586,13 +586,13 @@ void daObjBarrel2::Act_c::set_pos_y() {
     Attr_c *t4 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     f32 x = (f32)t0->m50 * (f32)t1->m14;
     f32 sway = gabi::fmsubs(t2->m54, sin, x);
-    f32 y = (f32)m41C + (f32)m450;
+    f32 y = (f32)mWaterY + (f32)mPosYOffset;
     current.pos.y = gabi::fmadds(sway * (f32)t3->m20, t4->m24, y);
 }
 
 /* 0231EEF4 */
 void daObjBarrel2::Act_c::set_mtx() {
-    s32 type = m410;
+    s32 type = mType;
     bool upright = type == 0 || type == 2 || type == 3;
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
@@ -600,12 +600,12 @@ void daObjBarrel2::Act_c::set_mtx() {
     gabi::Local<cXyz> scaled;
     Barrel_scaleVector(&scale, scaled.get(), mag);
     void *buoy = nullptr;
-    if (m460 != fpcM_ERROR_PROCESS_ID_e) {
+    if (mChildPid != fpcM_ERROR_PROCESS_ID_e) {
         gabi::Local<be<u32>> id;
-        *id = (u32)m460;
+        *id = (u32)mChildPid;
         buoy = Barrel_searchActor(gabi::at<void>(barrel2_hd::SearchByIdJudge), id.get());
     }
-    J3DModel_setBaseScale(m298, scaled.get());
+    J3DModel_setBaseScale(mpModel, scaled.get());
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     gabi::Local<cXyz> axis;
     axis->set(m440, 1.f, m444);
@@ -621,7 +621,7 @@ void daObjBarrel2::Act_c::set_mtx() {
     Barrel_zxyRotation(mDoMtx_stack_c::get(), (s16)shape_angle.x, (s16)shape_angle.y, z);
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     mDoMtx_stack_c::transM(0.f, -((f32)t->m18 * mag), 0.f);
-    J3DModel_setBaseTRMtx(m298, mDoMtx_stack_c::get());
+    J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
     Barrel_copyMatrix(mDoMtx_stack_c::get(), &m478);
     if (buoy) {
         gabi::Local<cXyz> offset, out;
@@ -705,7 +705,7 @@ void daObjBarrel2::Act_c::eff_explode() {
 void daObjBarrel2::Act_c::set_item_position() {
     fopAc_ac_c *item = tmp_item();
     if (!item) {
-        m45C = barrelItemDistanceMax;
+        mItemDistance = barrelItemDistanceMax;
         return;
     }
     u8 event = m46C;
@@ -729,14 +729,14 @@ void daObjBarrel2::Act_c::set_item_position() {
     u32 play = dComIfGp_ea();
     void *player =
         reinterpret_cast<dComIfG_inf_c *>(gabi::at<void>(play))->play.mPlayerInfo[0].mpPlayer.get();
-    m45C = Barrel_playerDistance2(item, player);
+    mItemDistance = Barrel_playerDistance2(item, player);
 }
 
 /* 02320294 */
 void daObjBarrel2::Act_c::item_drop_init(f32 speed) {
     fopAc_ac_c *item = tmp_item();
     if (!item) {
-        m45C = barrelItemDistanceMax;
+        mItemDistance = barrelItemDistanceMax;
         return;
     }
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
@@ -748,7 +748,7 @@ void daObjBarrel2::Act_c::item_drop_init(f32 speed) {
     u32 play = dComIfGp_ea();
     void *player =
         reinterpret_cast<dComIfG_inf_c *>(gabi::at<void>(play))->play.mPlayerInfo[0].mpPlayer.get();
-    m45C = Barrel_playerDistance2(item, player);
+    mItemDistance = Barrel_playerDistance2(item, player);
 }
 
 /* 02321CEC */
@@ -759,9 +759,9 @@ void daObjBarrel2::Act_c::item_drop() {
         fopAc_ac_c *player = reinterpret_cast<dComIfG_inf_c *>(gabi::at<void>(play))
                                  ->play.mPlayerInfo[0]
                                  .mpPlayer.get();
-        m45C = Barrel_playerDistance2(item, player);
+        mItemDistance = Barrel_playerDistance2(item, player);
     } else {
-        m45C = barrelItemDistanceMax;
+        mItemDistance = barrelItemDistanceMax;
     }
 }
 
@@ -780,7 +780,7 @@ void daObjBarrel2::Act_c::item_give() {
     if (item) {
         Barrel_raceItemForceGet(item);
         mItemId = fpcM_ERROR_PROCESS_ID_e;
-        m476 = 1;
+        mItemGive = 1;
         tmp_item() = nullptr;
     }
 }
@@ -807,11 +807,11 @@ void daObjBarrel2::Act_c::item_connect_check() {
 
 /* 023201B0 */
 void daObjBarrel2::Act_c::buoy_jump(f32 speed) {
-    if (m460 == fpcM_ERROR_PROCESS_ID_e) {
+    if (mChildPid == fpcM_ERROR_PROCESS_ID_e) {
         return;
     }
     gabi::Local<be<u32>> id;
-    *id = (u32)m460;
+    *id = (u32)mChildPid;
     void *buoy = Barrel_searchActor(gabi::at<void>(barrel2_hd::SearchByIdJudge), id.get());
     if (buoy) {
         s16 angle = (s16)gabi::ftoi(cM_rndFX(32768.f));
@@ -828,7 +828,7 @@ void daObjBarrel2::Act_c::buoy_jump(f32 speed) {
         flag->mJumpMtx.m[2][3] = 0.f;
         flag->actor_status = status & ~0x80u;
     }
-    m460 = fpcM_ERROR_PROCESS_ID_e;
+    mChildPid = fpcM_ERROR_PROCESS_ID_e;
 }
 
 /* 0231EA58 */
@@ -847,10 +847,10 @@ void daObjBarrel2::Act_c::set_water_pos() {
         gabi::Local<cXyz> u, v, cross;
         u->set(0.f, w1 - w0, 32.f);
         v->set(32.f, w2 - w0, 0.f);
-        m41C = ((w0 + w1) + w2) * 0.3333333432674408f;
+        mWaterY = ((w0 + w1) + w2) * 0.3333333432674408f;
         Barrel_outProduct(u.get(), cross.get(), v.get());
-        m420.copy(*cross);
-        Barrel_normalizeZP(&m420, cross.get());
+        mWaterNormal.copy(*cross);
+        Barrel_normalizeZP(&mWaterNormal, cross.get());
         return;
     }
     auto *check = &barrelWater;
@@ -868,7 +868,7 @@ void daObjBarrel2::Act_c::set_water_pos() {
     check->mUpperY = y + 1000.f;
     u32 play = dComIfGp_ea();
     BOOL found = Barrel_specialGroupCheck(&gabi::at<dComIfG_inf_c>(play)->play.mBgS, check);
-    m41C = found ? (f32)check->mHeight : 0.f;
+    mWaterY = found ? (f32)check->mHeight : 0.f;
     f32 oldx = m42C;
     f32 random = cM_rndFX(0.001f);
     f32 ax = gabi::fmadds(oldx, -0.2f, random);
@@ -881,13 +881,13 @@ void daObjBarrel2::Act_c::set_water_pos() {
     f32 pz = (f32)m430 + vz;
     m434 = vx;
     m42C = px;
-    m420.y = 1.f;
-    m420.x = px;
+    mWaterNormal.y = 1.f;
+    mWaterNormal.x = px;
     m438 = vz;
     m430 = pz;
-    m420.z = pz;
+    mWaterNormal.z = pz;
     gabi::Local<cXyz> out;
-    Barrel_normalize(&m420, out.get());
+    Barrel_normalize(&mWaterNormal, out.get());
 }
 
 /* 0232115C */
@@ -896,9 +896,9 @@ void daObjBarrel2::Act_c::afl_sway() {
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     f32 maxsq = (f32)t0->m5C * (f32)t1->m5C;
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 x = (f32)m420.x * (f32)t->m68;
+    f32 x = (f32)mWaterNormal.x * (f32)t->m68;
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 z = (f32)m420.z * (f32)t->m68;
+    f32 z = (f32)mWaterNormal.z * (f32)t->m68;
     f32 sq = gabi::fmadds(x, x, z * z);
     if (sq > maxsq) {
         t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
@@ -987,14 +987,14 @@ bool daObjBarrel2::Act_c::mine_chk_range_damage() {
 void daObjBarrel2::Act_c::execute_sub() {
     s32 hit = m470;
     m470 = 0;
-    if (m410 == 2) {
-        s32 mode = m40C;
+    if (mType == 2) {
+        s32 mode = mMode;
         if (mode != 4) {
             BOOL demo = demo_mode_chk();
             if (!demo) {
                 if (mine_chk_range_explode()) {
                     mode_explode_init();
-                } else if (m40C == MODE_EXPLODE && mine_chk_range_damage()) {
+                } else if (mMode == MODE_EXPLODE && mine_chk_range_damage()) {
                     mode_demo_explode0_init();
                 }
             } else if (mode == 4 && mine_chk_range_damage()) {
@@ -1007,7 +1007,7 @@ void daObjBarrel2::Act_c::execute_sub() {
     if (hit == 1 && !demo_mode_chk()) {
         mode_demo_break0_init();
     } else if (hit == 2) {
-        f32 v = m454;
+        f32 v = mPosYOffsetSpeed;
         if (v > 0.f) {
             v = 0.f;
         }
@@ -1015,23 +1015,23 @@ void daObjBarrel2::Act_c::execute_sub() {
         if (v < -30.f) {
             v = -30.f;
         }
-        m454 = v;
+        mPosYOffsetSpeed = v;
     }
-    if (m46D) {
-        m46D = (u8)m46D - 1;
+    if (mCoHitTimer) {
+        mCoHitTimer = (u8)mCoHitTimer - 1;
     }
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     f32 sq = (f32)t0->m34 * (f32)t1->m34;
-    if (m45C < sq) {
+    if (mItemDistance < sq) {
         item_give();
     }
-    if (m474 && m40C == MODE_AFL) {
-        if (m410 == 0) {
+    if (mExitReq && mMode == MODE_AFL) {
+        if (mType == 0) {
             mode_exit_v_init();
-        } else if (m410 == 1) {
+        } else if (mType == 1) {
             mode_exit_h_init();
-        } else if (m410 == 2 && m468 == 0) {
+        } else if (mType == 2 && m468 == 0) {
             mode_exit_mine_init();
         }
     }
@@ -1059,10 +1059,10 @@ void daObjBarrel2::Act_c::execute_sub() {
         eyePos.x = x;
         attention_info.position.y = y;
         eyePos.y = y;
-        if (m410 == 2 && mine_chk_range_flash()) {
+        if (mType == 2 && mine_chk_range_flash()) {
             m468 = 1;
         }
-        if (m40C == MODE_AFL && m468 && Barrel_brkPlay((mDoExt_brkAnm *)m29C)) {
+        if (mMode == MODE_AFL && m468 && Barrel_brkPlay((mDoExt_brkAnm *)mpBrkAnm)) {
             mode_explode_init();
         }
     } else {
@@ -1082,15 +1082,15 @@ bool daObjBarrel2::Act_c::_execute() {
     cull_set_move();
     item_connect_check();
     u8 event = 0;
-    if (m46A != 1) {
+    if (mStagePoint != 1) {
         u32 play = dComIfGp_ea();
         if ((u8)gabi::at<dComIfG_inf_c>(play)->play.mEvtCtrl.mMode) {
             event = 1;
         }
     }
     m46C = event;
-    if (m40C != MODE_AFL || !(actor_condition & 4) || !Barrel_cullingCheck(this) || m46C != 0 ||
-        m474 != 0 || m475 != 0) {
+    if (mMode != MODE_AFL || !(actor_condition & 4) || !Barrel_cullingCheck(this) || m46C != 0 ||
+        mExitReq != 0 || m475 != 0) {
         execute_sub();
     }
     cull_set_draw();
@@ -1099,15 +1099,15 @@ bool daObjBarrel2::Act_c::_execute() {
 
 /* 023210E0 */
 bool daObjBarrel2::Act_c::_draw() {
-    if ((u32)m40C <= MODE_EXIT_MINE) {
+    if ((u32)mMode <= MODE_EXIT_MINE) {
         settingTevStruct(dKy_getEnvlight(), 0, &current.pos, &tevStr);
-        setLightTevColorType(dKy_getEnvlight(), m298, &tevStr);
-        J3DModel *mdl = m298;
-        mDoExt_brkAnm *anm = m29C;
+        setLightTevColorType(dKy_getEnvlight(), mpModel, &tevStr);
+        J3DModel *mdl = mpModel;
+        mDoExt_brkAnm *anm = mpBrkAnm;
         J3DModelData *data = mdl->mModelData.get();
         f32 frame = (f32)anm->mFrameCtrl.mFrame;
         mDoExt_brkAnm_entry(anm, data, frame);
-        mDoExt_modelUpdateDL(m298);
+        mDoExt_modelUpdateDL(mpModel);
     }
     return true;
 }

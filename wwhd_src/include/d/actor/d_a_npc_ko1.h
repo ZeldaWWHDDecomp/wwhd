@@ -152,7 +152,7 @@ WWHD_SIZE(dPa_rippleEcallBack_l, 0x14);
 
 struct daNpc_Ko1_c : fopNpc_npc_c {
     struct anm_prm_c {
-        /* 0x00 */ be<s8> mAnmNum;
+        /* 0x00 */ be<s8> mAnmNum;  /* was mA0F: setAnm_anm 02276B9C: the body animation number (returns at once when it is unchanged; also picks the head animation); setMtx 02274A7C plays a sound in animation 4; createInit 02274E28 0xE; same code as daNpc_Bm1_c::mAnmNum (tww Bm1 setAnm_anm mAnmNum = anmNum) */
         /* 0x01 */ be<s8> mBtpNum;
         /* 0x02 */ u8 _02[2];
         /* 0x04 */ be<f32> mMorf;
@@ -300,17 +300,17 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     /* ---- end of part D2 ---- */
 
     /* 0x7DC */ request_of_phase_process_class mPhs;
-    /* 0x7E4 */ be<s8> m7E4;                 /* body joint (nodeKo1Control) */
-    /* 0x7E5 */ be<s8> m7E5;                 /* body joint (nodeKo1Control) */
-    /* 0x7E6 */ be<s8> m7E6;
-    /* 0x7E7 */ be<s8> m7E7;                 /* joint of the 0x824 model (nodeBlnControl) */
-    /* 0x7E8 */ be<s8> m7E8;                 /* joint of the 0x81C model (nodeHedControl) */
-    /* 0x7E9 */ be<s8> m7E9;
+    /* 0x7E4 */ be<s8> m_hed_jnt_num;  /* was m7E4: create_Anm 022736FC: the "head" joint's index, asserted with the original text "m_hed_jnt_num >= 0" (line 4317); nodeKo1Control 0227351C turns it by the joint control's head angles and takes the eye position there; setMtx 02274A7C puts the head model on it; tww Bm1 / Ls1 m_hed_jnt_num (same code) */
+    /* 0x7E5 */ be<s8> m_bbone_jnt_num;  /* was m7E5: create_Anm 022736FC: the "backbone" joint's index, asserted with the original text "m_bbone_jnt_num >= 0"; nodeKo1Control 0227351C turns it by the joint control's backbone angles; tww Bm1 / Ls1 m_bbone_jnt_num (same code) */
+    /* 0x7E6 */ be<s8> m_armR2_jnt_num;  /* was m7E6: create_Anm 022736FC: the "armR2" joint's index, asserted with the original text "m_armR2_jnt_num >= 0"; setMtx 02274A7C puts the item model (mpItemModel) on it */
+    /* 0x7E7 */ be<s8> m_hed_2_jnt_num;  /* was m7E7: create_hed_Anm 02273944: the head model's "head2" joint index, asserted with the original text "m_hed_2_jnt_num >= 0"; nodeHedControl 022732F0 keeps that joint's matrix in mHed2Mtx */
+    /* 0x7E8 */ be<s8> m_bln_loc_jnt_num;  /* was m7E8: create_bln_Anm 02273C94: the balloon model's "balloon_loc" joint index, asserted with the original text "m_bln_loc_jnt_num >= 0"; nodeBlnControl 022733C4 gives that joint mHed2Mtx */
+    /* 0x7E9 */ be<s8> m_bln_jnt_num;  /* was m7E9: create_bln_Anm 02273C94: the balloon model's "ko_balloon" joint index, asserted with the original text "m_bln_jnt_num >= 0" */
     /* 0x7EA */ u8 _7EA[2];
-    /* 0x7EC */ Mtx34 m7EC;
-    /* 0x81C */ gptr<mDoExt_McaMorf> mpMorf81C;
-    /* 0x820 */ gptr<J3DModel> mpModel820;
-    /* 0x824 */ gptr<mDoExt_McaMorf> mpMorf824;
+    /* 0x7EC */ Mtx34 mHed2Mtx;  /* was m7EC: nodeHedControl 022732F0 copies the head model's head2 joint matrix (m_hed_2_jnt_num) here; nodeBlnControl 022733C4 makes it the balloon_loc joint's matrix (the balloon follows the head) */
+    /* 0x81C */ gptr<mDoExt_McaMorf> mpBalloonMorf;  /* was mpMorf81C: create_bln_Anm 02273C94 creates the balloon morf from the balloon model; set_balloonAnm_anm 02276C70 sets its animation, setMtx 02274A7C syncs its frame and calcs it; same name as the views in d_a_npc_ko1_c.h / _b.h */
+    /* 0x820 */ gptr<J3DModel> mpItemModel;  /* was mpModel820: create_itm_Mdl 02273E7C creates the hand item's model; setMtx 02274A7C puts it on the armR2 joint and calcs it; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x824 */ gptr<mDoExt_McaMorf> mpHeadMorf;  /* was mpMorf824: create_hed_Anm 02273944 creates the head morf; setAnm_anm 02276B9C sets its animation (headAnmNum_toResID), setMtx 02274A7C puts it on the head joint; same name as the views in d_a_npc_ko1_c.h / _b.h */
     /* 0x828 */ gptr<J3DAnmTexPattern> m_hed_tex_pttrn;
     /* 0x82C */ u8 mBtpAnm[0x74];               /* mDoExt_btpAnm (HD 0x74) */
     /* 0x8A0 */ be<u8> mBlinkFrame;
@@ -318,88 +318,88 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     /* 0x8A2 */ be<s16> mBlinkTimer;
     /* 0x8A4 */ ProcFunc_l mCurrProcFunc;
     /* 0x8AC */ dNpc_PathRun_l mPathRun;
-    /* 0x8B4 */ be<u32> m8B4;
+    /* 0x8B4 */ be<u32> mSavedPath;  /* was m8B4: setStt 02278134 keeps the current path here before the attack / swim states and restores it (setInfDrct) when walk_3 starts; same name as the view in d_a_npc_ko1_d1.h */
     /* 0x8B8 */ dNpc_EventCut_c mEventCut;       /* hides fopNpc_npc_c::mEventCut */
-    /* 0x924 */ be<u32> m924;
-    /* 0x928 */ be<u32> m928;
-    /* 0x92C */ be<u8> m92C;
+    /* 0x924 */ be<u32> mPartnerId;  /* was m924: partner_srch 022753EC: the first partner's process id (partner_srch_sub); setStt 02278134 / wait_7 02278EC0 / attk_3 02279A58 search it; same name as the views in d_a_npc_ko1_d1.h / _b.h */
+    /* 0x928 */ be<u32> mOtherPartnerId;  /* was m928: partner_srch 022753EC: the second partner's process id (searchActor_Ob) for the types with two partners; chk_manzai_1 02277124 / talk_2 02279EF8 read it as element 1 of the partner list; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x92C */ be<u8> mPartnerCount;  /* was m92C: partner_srch 022753EC sets 1 or 2 with the partner ids; talk_2 02279EF8 loops over that many partners; same name as the view in d_a_npc_ko1_b.h */
     /* 0x92D */ u8 _92D[3];
-    /* 0x930 */ be<u32> m930;
+    /* 0x930 */ be<u32> mAttackActorId;  /* was m930: attk_1 022797FC / attk_2 0227992C / attk_3 02279A58 store the actor id they act on; same name as the view in d_a_npc_ko1_d1.h */
     /* 0x934 */ cXyz mInitialPos;
     /* 0x940 */ csXyz mInitialAngle;
-    /* 0x946 */ csXyz m946;
-    /* 0x94C */ cXyz m94C;
-    /* 0x958 */ cXyz m958;
-    /* 0x964 */ cXyz m964;
+    /* 0x946 */ csXyz mModelAngle;  /* was m946: createInit 02274E28 copies current.angle; setMtx 02274A7C turns the model by its y; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x94C */ cXyz mEyePos;  /* was m94C: nodeKo1Control 0227351C: the eye position from the head joint's matrix (a_eye_pos_off); setAttention 02274A1C copies it to eyePos while mbSetEyePos or the argument is set; same code as daNpc_Bm1_c::mEyePos (tww Bm1 eyePos.set(mEyePos.x, ..)) */
+    /* 0x958 */ cXyz mLookPos;  /* was m958: setStt 02278134 / wait_7 02278EC0 set the partner's position at its eye height; createInit 02274E28 current.pos; lookBack 022758B8 looks at it in look state 2; same code as daNpc_Bm1_c::mLookPos (tww Bm1 dstPos = m82C); same name as the view in d_a_npc_ko1_d1.h */
+    /* 0x964 */ cXyz mTargetPos;  /* was m964: setStt 02278134 sets the path point or the player's position; ko_movPass 022761AC / ko_clcMovSpd 02276028 / ko_clcSwmSpd 022762AC move towards it; same name as daNpc_Bm1_c::mTargetPos and the view in d_a_npc_ko1_d1.h */
     /* 0x970 */ cXyz m970;
-    /* 0x97C */ cXyz m97C;
-    /* 0x988 */ cXyz m988;                       /* ground plane normal (_execute) */
-    /* 0x994 */ be<f32> m994;
-    /* 0x998 */ be<f32> m998;
-    /* 0x99C */ be<f32> m99C;
-    /* 0x9A0 */ be<f32> m9A0;
-    /* 0x9A4 */ be<f32> m9A4;
+    /* 0x97C */ cXyz mAreaCenter;  /* was m97C: createInit 02274E28 current.pos; wait_4 02278B84 / wait_5 02278CB4 / wait_6 02278D7C / wait_9 022790E4 / walk_1 02279300 check the player against an area around it (chk_areaIn); _execute 022765B0 deletes the actor once it is more than 3000 away (XZ); same name as the view in d_a_npc_ko1_d1.h */
+    /* 0x988 */ cXyz mGroundNormal;  /* was m988: _execute 022765B0 stores the ground polygon's plane normal; chk_routeAngle 02275D90 turns the route along it; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x994 */ be<f32> mPrevMorfFrame;  /* was m994: setMtx 02274A7C: a morf frame below it means the animation wrapped (mAnimationEnded = 1), then it takes the frame; setAnm_anm 02276B9C 0; same code as daNpc_Km1_c / daNpc_Ls1_c::mPrevMorfFrame (after tww Ls1) */
+    /* 0x998 */ be<f32> mBalloonAnimationFrame;  /* was m998: set_balloonAnm_anm 02276C70 0 when the balloon animation changes; written only; same name as the view in d_a_npc_ko1_c.h */
+    /* 0x99C */ be<f32> mMoveSpeed;  /* was m99C: setStt 02278134 sets the HIO walk / run speed (0 for the waits), clrSpd 0227810C 0; ko_clcMovSpd 02276028 chases speedF to it; same name as the views in d_a_npc_ko1_c.h / _d1.h */
+    /* 0x9A0 */ be<f32> mVerticalSpeed;  /* was m9A0: setStt 02278134 / swim_1 02279578 / swim_2 022796B4 set -4 or 4; ko_clcSwmSpd 022762AC chases speed.y to it; same name as the view in d_a_npc_ko1_d1.h */
+    /* 0x9A4 */ be<f32> mMoveAcceleration;  /* was m9A4: setStt 02278134 sets the HIO walk / run acceleration, clrSpd 0227810C 0; ko_clcMovSpd 02276028 / ko_nMove 022763A8 chase speedF with it as the step; same name as the views in d_a_npc_ko1_c.h / _d1.h */
     /* 0x9A8 */ be<f32> m9A8;
-    /* 0x9AC */ be<f32> m9AC;
-    /* 0x9B0 */ be<s16> m9B0;
-    /* 0x9B2 */ be<s16> m9B2;
-    /* 0x9B4 */ be<s16> m9B4;
+    /* 0x9AC */ be<f32> mPassDist;  /* was m9AC: ko_movPass 022761AC: the point counts as reached once the XZ distance is <= it; setStt 02278134 sets the HIO walk / run / swim value; same code as daNpc_Bm1_c::mPassDist (tww Bm1 bm_movPass if (dist_xz <= m858)) */
+    /* 0x9B0 */ be<s16> mJointHeadY;  /* was m9B0: lookBack 022758B8 stores the joint control's head Y angle; chk_partsNotMove 0227732C compares it; same code as daNpc_Bm1_c::mJointHeadY (after tww Ls1) */
+    /* 0x9B2 */ be<s16> mJointBackboneY;  /* was m9B2: lookBack 022758B8 stores the joint control's backbone Y angle; chk_partsNotMove 0227732C compares it; same code as daNpc_Bm1_c::mJointBackboneY (after tww Ls1) */
+    /* 0x9B4 */ be<s16> mActorAngleY;  /* was m9B4: lookBack 022758B8 stores current.angle.y; chk_partsNotMove 0227732C compares it; same code as daNpc_Bm1_c::mActorAngleY (after tww Ls1); same name as the view in d_a_npc_ko1_c.h */
     /* 0x9B6 */ u8 _9B6[2];
-    /* 0x9B8 */ be<u32> m9B8;
+    /* 0x9B8 */ be<u32> mPartnerMsgNo;  /* was m9B8: manzai 02279FC0 copies the partner's current message number, talk_1 02279BC0 0xFFFFFFFF; chg_anmAtr 02276EB8 turns to the player on some of them; same name as the views in d_a_npc_ko1_c.h / _d2.h */
     /* 0x9BC */ be<s16> m9BC;
-    /* 0x9BE */ be<s16> m9BE;
-    /* 0x9C0 */ be<s16> m9C0;
-    /* 0x9C2 */ be<s16> m9C2;
-    /* 0x9C4 */ be<s16> m9C4;
-    /* 0x9C6 */ be<s16> m9C6;
-    /* 0x9C8 */ be<s16> m9C8;
-    /* 0x9CA */ be<u16> m9CA;
+    /* 0x9BE */ be<s16> mTalkWaitTimer;  /* was m9BE: wait_1 0227896C / wait_a 022791F4 / talk_1 02279BC0 set 60 and count it down; setStt 02278134 0; same name as the views in d_a_npc_ko1_d1.h / _d2.h */
+    /* 0x9C0 */ be<s16> mZigzagTimer;  /* was m9C0: ko_clcMovSpd 02276028: in the chase states the run direction flips when it runs out, then it restarts with 8 + rnd(20); same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9C2 */ be<s16> mSttTimer;  /* was m9C2: setStt 02278134 sets it per state (90 + rnd(90) for wait_1, 180 + rnd(180) for walk_1); wait_1 0227896C / walk_1 02279300 / neru_1 0227A110 / neru_2 0227A1C8 change the state or the sleep step when it runs out; same code as daNpc_Bm1_c::mSttTimer (tww Bm1 setStt m870 = ..) */
+    /* 0x9C4 */ be<s16> mBalloonTimer;  /* was m9C4: setStt 02278134 / neru_2 0227A1C8 set it (counter & 3 + 1, 3 + rnd(10)); wait_1 0227896C / wait_2 02278AE0 / neru_2 count it down; same name as the views in d_a_npc_ko1_d1.h / _d2.h */
+    /* 0x9C6 */ be<s16> mTurnVelocity;  /* was m9C6: lookBack 022758B8 eases it towards the HIO maximum and passes it as the look-at's turn velocity (0 while m_jnt.mbTrn is clear); same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9C8 */ be<s16> mDesiredYRot;  /* was m9C8: lookBack 022758B8: the look-at's Y angle in look state 3; setStt 02278134 / wait_1 0227896C / wait_a 022791F4 / manzai 02279FC0 set mInitialAngle.y; same code as daNpc_Bm1_c::mDesiredYRot (tww Bm1 desiredYrot = m876) */
+    /* 0x9CA */ be<u16> mTargetOffsetAngle;  /* was m9CA: set_tgtPos 02277C44 offsets the target around the player by it and steps it by 0x400; same name as the view in d_a_npc_ko1_c.h */
     /* 0x9CC */ u8 _9CC[2];
-    /* 0x9CE */ be<u8> m9CE;
-    /* 0x9CF */ be<u8> m9CF;
-    /* 0x9D0 */ be<u8> m9D0;
-    /* 0x9D1 */ be<u8> m9D1;
+    /* 0x9CE */ be<u8> mBalloonAnimationState;  /* was m9CE: set_balloonAnm_anm 02276C70 0 when the balloon animation changes; written only; same name as the view in d_a_npc_ko1_c.h */
+    /* 0x9CF */ be<u8> mbBalloonAnimationStopped;  /* was m9CF: set_balloonAnm_anm 02276C70 0 when the balloon animation changes; written only; same name as the view in d_a_npc_ko1_c.h */
+    /* 0x9D0 */ be<u8> mAnimationEnded;  /* was m9D0: setMtx 02274A7C: the morf's play() result, also set when the frame wraps; setAnm_anm 02276B9C 0; control_anmTag 02276E90 / control_anmAtr 02276F30 and the states test it; same name as the views in d_a_npc_ko1_c.h / _d1.h / _d2.h / _b.h */
+    /* 0x9D1 */ be<u8> mAnimationState;  /* was m9D1: setAnm_anm 02276B9C 0 when the animation changes; written only; same name as the view in d_a_npc_ko1_c.h */
     /* 0x9D2 */ be<u8> m9D2;
-    /* 0x9D3 */ be<u8> m9D3;
-    /* 0x9D4 */ be<u8> m9D4;
-    /* 0x9D5 */ be<u8> m9D5;
+    /* 0x9D3 */ be<u8> mMessageSelector;  /* was m9D3: chk_talk 02277070 stores the item shown (dComIfGp_event_getPreItemNo) or 0xFF; getMsg picks the message by it; talk_1 02279BC0 0xFF; same name as the views in d_a_npc_ko1_c.h / _d2.h */
+    /* 0x9D4 */ be<u8> mZigzagDirection;  /* was m9D4: ko_clcMovSpd 02276028 flips it when mZigzagTimer runs out and turns the run angle by -/+0x2000 by it; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9D5 */ be<u8> mSleepState;  /* was m9D5: neru_1 0227A110 toggles it, neru_2 0227A1C8 switches on it and steps it; setStt 02278134 0; setMtx 02274A7C syncs the balloon frame while it is below 2; same name as the views in d_a_npc_ko1_d1.h / _d2.h */
     /* 0x9D6 */ be<u8> m9D6;
-    /* 0x9D7 */ be<u8> m9D7;
-    /* 0x9D8 */ be<u8> m9D8;
-    /* 0x9D9 */ be<u8> m9D9;
-    /* 0x9DA */ be<u8> m9DA;
-    /* 0x9DB */ be<u8> m9DB;
-    /* 0x9DC */ be<u8> m9DC;
-    /* 0x9DD */ be<u8> m9DD;
+    /* 0x9D7 */ be<u8> mHidden;  /* was m9D7: _draw 0227684C draws nothing while it is set; _execute 022765B0 clears it outside a demo; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9D8 */ be<u8> mKeepShape;  /* was m9D8: _execute 022765B0 copies current.angle to shape_angle and mModelAngle only while it is clear; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9D9 */ be<u8> mSkipMovement;  /* was m9D9: ko_nMove 022763A8 sets it when the move step is done; _execute 022765B0 skips ko_nMove and the position move while it is set; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9DA */ be<u8> mDrawHidden;  /* was m9DA: _draw 0227684C draws nothing while it is set; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9DB */ be<u8> mbMoveFinished;  /* was m9DB: ko_nMove 022763A8 sets it when a point or the path end is reached or a jump lands; setStt 02278134 clears it; walk_2 022793C8 / walk_3 0227949C / down_1 02279B90 change the state on it; same name as the view in d_a_npc_ko1_d1.h */
+    /* 0x9DC */ be<u8> mPreviousGroundHit;  /* was m9DC: setMtx 02274A7C stores the ground-hit flag before the position correction; ko_nMove 022763A8 ends a jump when it was clear and the ground is hit now; setStt 02278134 sets 1 when the down / jump states start; same name as the view in d_a_npc_ko1_b.h */
+    /* 0x9DD */ be<u8> mbTalkTriggered;  /* was m9DD: talk_1 02279BC0 sets 1; getMsg_HNA_3 02277784 picks the second message once it is set; same name as the views in d_a_npc_ko1_c.h / _d2.h */
     /* 0x9DE */ be<u8> mbRanExecute;             /* _execute: initial pose stored */
     /* 0x9DF */ u8 _9DF;
-    /* 0x9E0 */ be<u32> m9E0;
-    /* 0x9E4 */ be<u8> m9E4;
-    /* 0x9E5 */ be<u8> m9E5;
-    /* 0x9E6 */ be<u8> m9E6;
-    /* 0x9E7 */ be<u8> m9E7;
+    /* 0x9E0 */ be<u32> mbSetEyePos;  /* was m9E0: hana_action1 0227A374 .. store the state function's result; setAttention 02274A1C copies mEyePos to eyePos only while it or the argument is set; same code as daNpc_Bm1_c::mbSetEyePos (tww Bm1 mbSetEyePos = wait_1(); if (!mbSetEyePos && !i_setEyePos) return;) */
+    /* 0x9E4 */ be<u8> mAttention;  /* was m9E4: hana_action1 0227A374 .. store chkAttention(); wait_1 0227896C / wait_2 02278AE0 / wait_a 022791F4 react while it is set; same name as the views in d_a_npc_ko1_d1.h / _d2.h */
+    /* 0x9E5 */ be<u8> mTalking;  /* was m9E5: checkOrder 02275504 sets 1 on the talk command; the waits (wait_1 0227896C ..) start the talk while it is set; talk_1 02279BC0 clears it; same code as daNpc_Bm1_c::mTalking (tww Bm1 checkOrder m895 = true) */
+    /* 0x9E6 */ be<u8> mHeadOnlyFollow;  /* was m9E6: lookBack 022758B8 passes it as the head-only flag of the joint look-at; setStt 02278134 sets 1 for the moving states and 0 for the others, chg_anmAtr 02276EB8 0; same code as daNpc_Bm1_c::mHeadOnlyFollow (tww Bm1 bool headOnlyFollow = m896) */
+    /* 0x9E7 */ be<u8> mInDemo;  /* was m9E7: demo 02275544 sets and returns it; setMtx 02274A7C skips the animation and ground work while it is set; same name as the view in d_a_npc_ko1_b.h */
     /* 0x9E8 */ dPa_rippleEcallBack_l mRipple;
-    /* 0x9FC */ be<u32> m9FC;
-    /* 0xA00 */ be<u32> mA00;
-    /* 0xA04 */ be<u32> mA04;
-    /* 0xA08 */ be<u8> mA08;
-    /* 0xA09 */ be<u8> mA09;
-    /* 0xA0A */ be<u8> mA0A;
-    /* 0xA0B */ be<u8> mA0B;
-    /* 0xA0C */ be<u8> mA0C;
-    /* 0xA0D */ be<u8> mA0D;
+    /* 0x9FC */ be<u32> mRippleEmitter;  /* was m9FC: setPrtcl_Hamon 02277D48 keeps the ripple emitter, chk_start_swim 02277DEC clears it; same name as the view in d_a_npc_ko1_c.h */
+    /* 0xA00 */ be<u32> mBalloonEmitter;  /* was mA00: setPrtcl_HanaPachi 02277FE8 keeps the balloon-pop emitter; same name as the view in d_a_npc_ko1_c.h */
+    /* 0xA04 */ be<u32> mBalloonLightEmitter;  /* was mA04: setPrtcl_HanaPachi 02277FE8 keeps the second balloon-pop emitter; same name as the view in d_a_npc_ko1_c.h */
+    /* 0xA08 */ be<u8> mMoveMode;  /* was mA08: setStt 02278134 sets 0 wait, 1 walk, 2 run, 3 swim, 4 jump; ko_nMove 022763A8 switches on it; same name as the views in d_a_npc_ko1_d1.h / _b.h */
+    /* 0xA09 */ be<u8> mPreviousMoveMode;  /* was mA09: setStt 02278134 keeps mMoveMode here when a jump starts; ko_nMove 022763A8 returns to it on landing; same name as the views in d_a_npc_ko1_d1.h / _b.h */
+    /* 0xA0A */ be<u8> mCutIndex;  /* was mA0A: privateCut 022757E4: the cut index from dComIfGp_evmng_getMyActIdx; same name as the view in d_a_npc_ko1_b.h */
+    /* 0xA0B */ be<u8> mCutAction;  /* was mA0B: event_actionInit 0227577C: the cut's "ActNo" integer; same name as the view in d_a_npc_ko1_b.h */
+    /* 0xA0C */ be<u8> mAnmAtrNo;  /* was mA0C: chg_anmAtr 02276EB8 stores the message animation attribute (below 0xD, when it changes); setAnm_ATR 02276E20 picks the attribute animation by it, control_anmAtr 02276F30 returns from 0xB; setStt 02278134 / endEvent 02275738 / anmAtr 02276F58 0xFF; same code as daNpc_Bm1_c::mAnmAtrNo (tww Bm1 m8F7) */
+    /* 0xA0D */ be<u8> mMesgAnimeTag;  /* was mA0D: anmAtr 02276F58: the message's animation tag when it changes (if (tag != 0xFF && it != tag) { it = tag; chg_anmTag(); }); chg_anmTag 02276E08 / control_anmTag 02276E90 act on tag 10; setStt 02278134 / endEvent 02275738 0xFF; same code as daNpc_Bm1_c::mMesgAnimeTag (tww Bm1 m8F8) */
     /* 0xA0E */ be<s8> mBtpNum;                  /* iniTexPttrnAnm */
-    /* 0xA0F */ be<u8> mA0F;
+    /* 0xA0F */ be<u8> mAnmNum;
     /* 0xA10 */ be<u8> mA10;
-    /* 0xA11 */ be<u8> mA11;
-    /* 0xA12 */ be<s8> mA12;
-    /* 0xA13 */ be<s8> mA13;
-    /* 0xA14 */ be<s8> mA14;
-    /* 0xA15 */ be<s8> mA15;
+    /* 0xA11 */ be<u8> mBalloonAnimationNum;  /* was mA11: set_balloonAnm_anm 02276C70: the balloon animation number (returns at once when it is unchanged); same name as the view in d_a_npc_ko1_c.h */
+    /* 0xA12 */ be<s8> mOrderEvent;  /* was mA12: eventOrder 02276578 orders the talk while it is 1 or 2 (speak event at 1); checkOrder 02275504 clears it on the talk command; the waits set 2, setStt 02278134 0; same code as daNpc_Bm1_c::mOrderEvent (tww Bm1 m8FD) */
+    /* 0xA13 */ be<s8> mStatus;  /* was mA13: setStt 02278134 stores the state; setAnm 02276D84 picks the state animation by it; hana_action1 0227A374 .. switch on it; same name as daNpc_Bm1_c::mStatus (tww) and the views in d_a_npc_ko1_c.h / _d1.h / _d2.h */
+    /* 0xA14 */ be<s8> mResumeStatus;  /* was mA14: setStt 02278134 keeps the previous mStatus when the talk starts; talk_1 02279BC0 / talk_2 02279EF8 / manzai 02279FC0 return to it; same name as the views in d_a_npc_ko1_d1.h / _d2.h */
+    /* 0xA15 */ be<s8> mLookBackState;  /* was mA15: lookBack 022758B8 switches on it (1 the player, 2 mLookPos, 3 mDesiredYRot); chg_anmAtr 02276EB8 sets 1 with m_jnt.mbTrn; setStt 02278134 / manzai 02279FC0 set it per state; same code as daNpc_Bm1_c::mLookBackState (tww Bm1 switch (mLookBackState)) */
     /* 0xA16 */ be<s8> mType;                    /* 0..: resource/heap/HIO index (Joel, Zill, ...) */
     /* 0xA17 */ be<s8> mSpecificType;            /* init_* switch (0..8) and event staff name */
-    /* 0xA18 */ be<s8> mA18;
-    /* 0xA19 */ be<s8> mA19;
+    /* 0xA18 */ be<s8> mActionStatus;  /* was mA18: set_action 022742C0 sets 9 for the leaving action and 0 for the new one; hana_action1 0227A374 .. step it from 0; partner_srch 022753EC runs at 1; same code as daNpc_Bm1_c::mActionStatus (after tww daNpc_Bs1_c mActionStatus) */
+    /* 0xA19 */ be<s8> mbMessageTagsStarted;  /* was mA19: anmAtr 02276F58: while the message types, applies the message's animation attribute only when it is 0, then adds 1; MSG_DISPLAYED (0xE) resets it; same name as the view in d_a_npc_ko1_c.h */
     /* 0xA1A */ u8 _A1A[2];
 };
 WWHD_OFFSET(daNpc_Ko1_c, mPhs, 0x7DC);
@@ -407,7 +407,7 @@ WWHD_OFFSET(daNpc_Ko1_c, mBtpAnm, 0x82C);
 WWHD_OFFSET(daNpc_Ko1_c, mCurrProcFunc, 0x8A4);
 WWHD_OFFSET(daNpc_Ko1_c, mEventCut, 0x8B8);
 WWHD_OFFSET(daNpc_Ko1_c, mInitialPos, 0x934);
-WWHD_OFFSET(daNpc_Ko1_c, m988, 0x988);
+WWHD_OFFSET(daNpc_Ko1_c, mGroundNormal, 0x988);
 WWHD_OFFSET(daNpc_Ko1_c, mRipple, 0x9E8);
 WWHD_OFFSET(daNpc_Ko1_c, mType, 0xA16);
 WWHD_SIZE(daNpc_Ko1_c, 0xA1C);

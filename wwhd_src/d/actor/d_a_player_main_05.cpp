@@ -1038,7 +1038,7 @@ BOOL daPy_lk_c::procRopeSwing_init(fopAc_ac_c* rope_actor, s16 param_1) {
             v10.copy(v1c);
             f64 len = lk05RopeLength(&v10);
             f32 d = (f32)(len - (f64)(f32)link05::l_rope_hanging_offset);
-            f32 maxLen = static_cast<Link05RopeHD*>(rope_actor)->m15FC.get(); /* rope->getPlayerMoveLength() */
+            f32 maxLen = static_cast<Link05RopeHD*>(rope_actor)->mPlayerMoveLength.get(); /* rope->getPlayerMoveLength() */
             if (d > maxLen) {
                 d = maxLen;
             }

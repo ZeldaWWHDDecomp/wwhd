@@ -331,10 +331,11 @@ struct TransformSet {
     be<u32> mState;
     gptr<void> mpDescriptor, mpUniform;
 };
+// Layout of agl::IndexBufferLayout (include/agl/IndexBufferLayout.h); names follow it.
 struct IndexBuffer {
-    be<u32> mPrimitive;
-    be<u32> mIndexFormat;
-    be<u32> mIndexType;
+    be<u32> mFormat;  /* was mPrimitive: GX2DrawIndexedEx indexType (r5, +0x0) at 02548164 / 025481EC / 025482AC / 02548338; agl::IndexBufferLayout::mFormat */
+    be<u32> mPrimitiveMode;  /* was mIndexFormat: GX2DrawIndexedEx mode (r3, +0x4) at the same calls; 02545A2C sets 4 (triangles) after flowerIndexBufferSet; agl::IndexBufferLayout::mPrimitiveMode */
+    gptr<void> mStorage;  /* was mIndexType: GX2DrawIndexedEx indices (r6, +0x8) at the same calls; agl::IndexBufferLayout::mStorage */
     be<u32> mCount;
     be<u32> mOffset;
     u8 mPadding[4];
@@ -528,7 +529,7 @@ void flowerRegisterStatic(u32 a0);
 void flowerRegisterStatic(void* a0);
 void flowerCsXyz_csXyz(void* a0, u32 a1, u32 a2, u32 a3);
 void* flowerCsXyz_csXyz(void* a0, s16 a1, s16 a2, s16 a3);
-void flowerGX2DrawIndexed(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
+void GX2DrawIndexedEx(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
 void flowerBindMaterialGroups(void* a0, void* a1, u32 a2);
 s32 flowerDComIfGp_getReverb(s32 a0);
 void flowerCLib_calcTimer(void* a0);
@@ -604,6 +605,7 @@ void flower_assert(void* a0, s32 a1, void* a2);
 void flower_assert(void* a0, u32 a1, void* a2);
 
 WWHD_SIZE(flower::IndexBuffer, 0x18);
+WWHD_OFFSET(flower::IndexBuffer, mStorage, 0x8);
 WWHD_SIZE(flower::ShapeVtable, 0x10);
 WWHD_SIZE(flower::Shape, 0xF4);
 WWHD_SIZE(flower::ShapeArray, 8);

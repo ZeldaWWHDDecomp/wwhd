@@ -61,7 +61,7 @@ BOOL Act_c::Create() {
     mGndChk.SetPos(&pos);
     mGndChk.SetActorPid(mBsPcId);
     mGndY = dComIfG_Bgsp()->GroundCross(&mGndChk);
-    unk346 = 0;
+    mDemoAccepted = 0;
     mEventIdx = dComIfGp_evmng_getEventIdx(nullptr, prm_get_evId());
     s32 swSave = prm_get_swSave();
     if (swSave == 0xFF || fopAcM_isSwitch(this, swSave)) {
@@ -109,9 +109,9 @@ BOOL Act_c::Mthd_Delete() {
 
 /* 023695C8 */
 void Act_c::demo_end_reset() {
-    if (unk346 && dComIfGp_evmng_endCheck(mEventIdx)) {
+    if (mDemoAccepted && dComIfGp_evmng_endCheck(mEventIdx)) {
         dComIfGp_event_reset();
-        unk346 = 0;
+        mDemoAccepted = 0;
     }
 }
 
@@ -130,7 +130,7 @@ void Act_c::mode_wait() {
 /* 0236979C */
 void Act_c::mode_demoreq_init() {
     mMode = Mode_DEMOREQ_e;
-    unk346 = 0;
+    mDemoAccepted = 0;
 }
 
 /* 02369830 */
@@ -139,7 +139,7 @@ void Act_c::mode_demoreq() {
     if (dComIfGp_evmng_existence(mEventIdx)) {
         if (eventInfo_checkCommandDemoAccrpt(this)) {
             ret = true;
-            unk346 = 1;
+            mDemoAccepted = 1;
         } else {
             u8 evId = prm_get_evId();
             fopAcM_orderOtherEventId(this, mEventIdx, evId, 0xFFFF, 0, 1);
@@ -156,17 +156,17 @@ void Act_c::mode_demoreq() {
 /* 02369810 */
 void Act_c::mode_vib_init() {
     mVibTimer = 15; /* attr().mVibDuration */
-    unk338 = 0;
-    unk33A = 0;
+    mVibXAngle = 0;
+    mVibYAngle = 0;
     mMode = Mode_VIB_e;
 }
 
 /* 02369934 */
 void Act_c::mode_vib() {
-    unk338 += 20000;  /* attr().field_0x16 */
-    unk33A += 0x3CC3; /* attr().field_0x18 */
-    mVibXOffset = cM_scos(unk338) * 2.0f; /* attr().field_0x1C */
-    mVibYOffset = cM_scos(unk33A);        /* * attr().field_0x20 (1.0) */
+    mVibXAngle += 20000;  /* attr().field_0x16 */
+    mVibYAngle += 0x3CC3; /* attr().field_0x18 */
+    mVibXOffset = cM_scos(mVibXAngle) * 2.0f; /* attr().field_0x1C */
+    mVibYOffset = cM_scos(mVibYAngle);        /* * attr().field_0x20 (1.0) */
     if (--mVibTimer <= 0) {
         mode_drop_init();
     }
@@ -177,20 +177,20 @@ void Act_c::mode_drop_init() {
     gravity = -5.0f;
     speed.set(cXyz_Zero->x, cXyz_Zero->y, cXyz_Zero->z);
     mMode = Mode_DROP_e;
-    unk2DE = 3; /* attr().field_0x10 */
+    mBounceCount = 3; /* attr().field_0x10 */
 }
 
 /* 023699A0 */
 void Act_c::mode_drop() {
     daObj_posMoveF_stream(this, nullptr, cXyz_Zero, 0.005f, 0.0005f);
     if (current.pos.y < mGndY) {
-        if (unk2DE == 3) {
+        if (mBounceCount == 3) {
             fopAcM_seStart(this, JA_SE_OBJ_LADDER_FALL_1, dBgS_GetMtrlSndId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mGndChk)));
             cXyz dir;
             dir.set(0.0f, 1.0f, 0.0f);
             dComIfGp_getVibration_StartShock(4, -0x21, &dir);
         } else {
-            s32 tmp = 3 - unk2DE;
+            s32 tmp = 3 - mBounceCount;
             s32 param_2;
             if (tmp == 1) {
                 param_2 = 75;
@@ -203,8 +203,8 @@ void Act_c::mode_drop() {
             }
             fopAcM_seStart(this, JA_SE_OBJ_LADDER_FALL_2, param_2);
         }
-        if (unk2DE >= 0) {
-            unk2DE--;
+        if (mBounceCount >= 0) {
+            mBounceCount--;
             f32 temp = current.pos.y - mGndY;
             current.pos.y = gabi::fnmsubs(temp, 0.5f, mGndY); /* mGndY - temp * 0.5f */
             speed.y *= -0.5f;

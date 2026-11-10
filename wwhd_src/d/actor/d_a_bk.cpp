@@ -74,27 +74,27 @@ void smoke_set_s(bk_class* i_this, f32 rate) {
     dBgS_LinChk_ct(linChk);
     s32 attribCode = 0;
     gabi::Local<cXyz> startPos;
-    *startPos = i_this->m0338.get();
+    *startPos = i_this->mSmokePos.get();
     startPos->y += 100.0f;
     gabi::Local<cXyz> endPos;
-    *endPos = i_this->m0338.get();
+    *endPos = i_this->mSmokePos.get();
     endPos->y -= 100.0f;
     dBgS_LinChk_Set_l(linChk, startPos, endPos, i_actor);
 
     if (LineCross(linChk)) {
         *endPos = bkMain_lineCross(linChk)->get(); /* GetCross() */
-        i_this->m0338.y = endPos->y;
+        i_this->mSmokePos.y = endPos->y;
         attribCode = dBgS_GetAttributeCode(bkMain_polyInfo(linChk));
     } else {
-        i_this->m0338.y -= 20000.0f;
+        i_this->mSmokePos.y -= 20000.0f;
     }
 
-    if (i_this->m034F != 0 && attribCode != dBgS_Attr_GRASS_e) {
+    if (i_this->mSmokeCount != 0 && attribCode != dBgS_Attr_GRASS_e) {
         dBgS_LinChk_dt(linChk);
         return;
     }
 
-    i_this->m034F++;
+    i_this->mSmokeCount++;
 
     switch (attribCode) {
     case 0: /* NORMAL, DIRT, WOOD, STONE, SAND */
@@ -102,12 +102,12 @@ void smoke_set_s(bk_class* i_this, f32 rate) {
     case 2:
     case 3:
     case dBgS_Attr_SAND_e: {
-        dPa_smokeEcallBack_end((dPa_smokeEcallBack*)&i_this->m0350);
+        dPa_smokeEcallBack_end((dPa_smokeEcallBack*)&i_this->mSmokeCallBack);
         s8 roomNo = fopAcM_GetRoomNo(i_this);
         /* dComIfGp_particle_setToon: group 2 */
         JPABaseEmitter* emitter1 = dPa_control_set(
-            dComIfGp_getParticle(), 2, dPa_ID_AK_JT_ELEMENTSMOKE00, &i_this->m0338, &i_this->m0344,
-            nullptr, 0xB9, (dPa_levelEcallBack*)&i_this->m0350, roomNo, nullptr, nullptr, nullptr);
+            dComIfGp_getParticle(), 2, dPa_ID_AK_JT_ELEMENTSMOKE00, &i_this->mSmokePos, &i_this->mEffectAngle,
+            nullptr, 0xB9, (dPa_levelEcallBack*)&i_this->mSmokeCallBack, roomNo, nullptr, nullptr, nullptr);
         if (emitter1) {
             JPA_setRate(emitter1, rate);
             JPA_setSpread(emitter1, 1.0f);
@@ -119,7 +119,7 @@ void smoke_set_s(bk_class* i_this, f32 rate) {
     }
     case dBgS_Attr_GRASS_e: {
         JPABaseEmitter* emitter2 =
-            dComIfGp_particle_set(dPa_ID_AK_JN_ELEMENTKUSA00, &i_this->m0338, &i_this->m0344);
+            dComIfGp_particle_set(dPa_ID_AK_JN_ELEMENTKUSA00, &i_this->mSmokePos, &i_this->mEffectAngle);
         if (emitter2) {
             JPA_setRate(emitter2, rate * 0.5f);
             JPA_setMaxFrame(emitter2, 3);
@@ -132,77 +132,77 @@ void smoke_set_s(bk_class* i_this, f32 rate) {
 
 /* 020A070C */
 void ground_smoke_set(bk_class* i_this) {
-    if (i_this->m034C == 0) {
+    if (i_this->mSmokeTimer == 0) {
         return;
     }
 
-    i_this->m034C--;
+    i_this->mSmokeTimer--;
 
-    if (i_this->m034C >= l_bkHIO().m00C) {
-        i_this->m0344.x = 0;
-        i_this->m0344.z = 0;
+    if (i_this->mSmokeTimer >= l_bkHIO().m00C) {
+        i_this->mEffectAngle.x = 0;
+        i_this->mEffectAngle.z = 0;
         gabi::Local<cXyz> sp8;
         sp8->x = 0.0f;
         sp8->y = 0.0f;
         MtxTrans(i_this->current.pos.x, i_this->current.pos.y + 7.5f, i_this->current.pos.z, 0);
-        if (i_this->m034E == 0) {
+        if (i_this->mSmokeType == 0) {
             sp8->z = -350.0f;
-            cMtx_YrotM(calc_mtx(), i_this->m034A);
-            MtxPosition(sp8, &i_this->m0338);
-            i_this->m0344.y = i_this->m034A;
+            cMtx_YrotM(calc_mtx(), i_this->mSmokeAngleY);
+            MtxPosition(sp8, &i_this->mSmokePos);
+            i_this->mEffectAngle.y = i_this->mSmokeAngleY;
             smoke_set_s(i_this, 6.0f);
-            i_this->m034A = i_this->m034A + 2000 + REG0_S(7);
-        } else if (i_this->m034E == 1) {
+            i_this->mSmokeAngleY = i_this->mSmokeAngleY + 2000 + REG0_S(7);
+        } else if (i_this->mSmokeType == 1) {
             cMtx_YrotM(calc_mtx(), i_this->current.angle.y);
-            cMtx_YrotM(calc_mtx(), i_this->m034A);
+            cMtx_YrotM(calc_mtx(), i_this->mSmokeAngleY);
             sp8->z = -55.0f;
-            MtxPosition(sp8, &i_this->m0338);
-            i_this->m0344.y = i_this->m034A;
+            MtxPosition(sp8, &i_this->mSmokePos);
+            i_this->mEffectAngle.y = i_this->mSmokeAngleY;
             smoke_set_s(i_this, 5.0f);
-            i_this->m034A += 0x1FA0;
-        } else if (i_this->m034E == 2) {
-            MtxTrans(i_this->m11A8.x, i_this->m11A8.y + 7.5f, i_this->m11A8.z, 0);
-            cMtx_YrotM(calc_mtx(), i_this->m034A);
+            i_this->mSmokeAngleY += 0x1FA0;
+        } else if (i_this->mSmokeType == 2) {
+            MtxTrans(i_this->mAtPos.x, i_this->mAtPos.y + 7.5f, i_this->mAtPos.z, 0);
+            cMtx_YrotM(calc_mtx(), i_this->mSmokeAngleY);
             sp8->z = -12.5f;
-            MtxPosition(sp8, &i_this->m0338);
-            i_this->m0344.y = i_this->m034A;
+            MtxPosition(sp8, &i_this->mSmokePos);
+            i_this->mEffectAngle.y = i_this->mSmokeAngleY;
             smoke_set_s(i_this, 6.0f);
-            i_this->m034A += 0x2000;
-        } else if (i_this->m034E == 3) {
+            i_this->mSmokeAngleY += 0x2000;
+        } else if (i_this->mSmokeType == 3) {
             cMtx_YrotM(calc_mtx(), i_this->current.angle.y);
-            cMtx_YrotM(calc_mtx(), i_this->m034A);
+            cMtx_YrotM(calc_mtx(), i_this->mSmokeAngleY);
             sp8->z = -37.5f;
-            MtxPosition(sp8, &i_this->m0338);
-            i_this->m0344.y = i_this->m034A;
+            MtxPosition(sp8, &i_this->mSmokePos);
+            i_this->mEffectAngle.y = i_this->mSmokeAngleY;
             smoke_set_s(i_this, 2.0f);
-            i_this->m034A += 0x1FA0;
-        } else if (i_this->m034E == 4) {
+            i_this->mSmokeAngleY += 0x1FA0;
+        } else if (i_this->mSmokeType == 4) {
             /* lfs/stfs copy (an SNaN is quieted, as in the recompiled code) */
             auto p = Vec3f{};
-            if (i_this->m02F8 & 1) {
-                p = i_this->dr.m100[14].get();
+            if (i_this->mFrameCounter & 1) {
+                p = i_this->dr.mJntPos[14].get();
             } else {
-                p = i_this->dr.m100[15].get();
+                p = i_this->dr.mJntPos[15].get();
             }
-            i_this->m0338.x = p.x;
-            i_this->m0338.y = p.y;
-            i_this->m0338.z = p.z;
+            i_this->mSmokePos.x = p.x;
+            i_this->mSmokePos.y = p.y;
+            i_this->mSmokePos.z = p.z;
             f32 y = p.y;
             if (i_this->dr.m712 != 0) {
-                i_this->m0338.y = 512.5f;
+                i_this->mSmokePos.y = 512.5f;
             } else {
-                i_this->m0338.y = y - 12.5f;
+                i_this->mSmokePos.y = y - 12.5f;
             }
-            i_this->m0344.y = cM_atan2s(i_this->speed.x, i_this->speed.z);
+            i_this->mEffectAngle.y = cM_atan2s(i_this->speed.x, i_this->speed.z);
             smoke_set_s(i_this, 1.0f);
         }
     } else {
-        i_this->m0338.y = i_this->dr.mSpawnY + 25000.0f;
+        i_this->mSmokePos.y = i_this->dr.mSpawnY + 25000.0f;
     }
 
-    if (i_this->m034C == 0) {
-        dPa_smokeEcallBack_end((dPa_smokeEcallBack*)&i_this->m0350);
-        i_this->m034F = 0;
+    if (i_this->mSmokeTimer == 0) {
+        dPa_smokeEcallBack_end((dPa_smokeEcallBack*)&i_this->mSmokeCallBack);
+        i_this->mSmokeCount = 0;
     }
 }
 
@@ -226,7 +226,7 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         if (i_this) {
             PSMTXCopy(bk_getAnmMtx(model, jntNo), calc_mtx());
             if (jntNo == BK_JNT_AGO_e) {
-                cMtx_ZrotM(calc_mtx(), i_this->m11F4);
+                cMtx_ZrotM(calc_mtx(), i_this->mHeadAngleZ);
                 bk_setAnmMtx(model, jntNo, calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
             } else {
@@ -234,9 +234,9 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
                     JUT_ASSERT_fail("d_a_bk.cpp", 0x5BD, "no < 20+1"); /* "no < 20+1" */
                     return TRUE;
                 }
-                cMtx_YrotM(calc_mtx(), i_this->dr.m088[r28].y);
-                cMtx_XrotM(calc_mtx(), i_this->dr.m088[r28].x);
-                cMtx_ZrotM(calc_mtx(), i_this->dr.m088[r28].z);
+                cMtx_YrotM(calc_mtx(), i_this->dr.mJntAngle[r28].y);
+                cMtx_XrotM(calc_mtx(), i_this->dr.mJntAngle[r28].x);
+                cMtx_ZrotM(calc_mtx(), i_this->dr.mJntAngle[r28].z);
 
                 bk_setAnmMtx(model, jntNo, calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
@@ -259,18 +259,18 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
                     *attnPos = i_this->eyePos.get();
                     attnPos->y += l_bkHIO().m024;
                     if (l_bkHIO().m009 == 0) {
-                        i_this->m0330 =
+                        i_this->mHeadAngleY =
                             cM_atan2s(sp08->x - i_this->eyePos.x, sp08->z - i_this->eyePos.z);
                     } else {
-                        i_this->m0330 = i_this->current.angle.y;
+                        i_this->mHeadAngleY = i_this->current.angle.y;
                     }
                     offset->x = 20.75f;
                     offset->y = 18.5f;
                     offset->z = 0.0f;
-                    MtxPosition(offset, &i_this->m116C);
+                    MtxPosition(offset, &i_this->mSpitPos);
                     offset->y = -45.0f;
                 }
-                MtxPosition(offset, &i_this->dr.m100[r28]);
+                MtxPosition(offset, &i_this->dr.mJntPos[r28]);
             }
         }
     }
@@ -302,15 +302,15 @@ BOOL nodeCallBack_P(J3DNode* node, int calcTiming) {
                 offset->x = 17.5f;
                 offset->y = -8.75f;
                 offset->z = 0.0f;
-                MtxPosition(offset, &i_this->m1190);
+                MtxPosition(offset, &i_this->mNeckPos);
             } else if (r30 == BK_JNT_MUNE_e) {
-                MtxPosition(offset, &i_this->m119C);
+                MtxPosition(offset, &i_this->mChestPos);
             } else if (r30 == BK_JNT_SIPPO3_e || r30 == BK_JNT_SIPPO4_e) {
                 offset->y = 25.0f;
             } else {
                 offset->y = 0.0f;
             }
-            MtxPosition(offset, &i_this->dr.m100[r30]);
+            MtxPosition(offset, &i_this->dr.mJntPos[r30]);
         }
     }
     return TRUE;
@@ -349,25 +349,25 @@ static inline void search_check_draw(bk_class* i_this) {
     MtxTrans(i_this->eyePos.x, i_this->eyePos.y, i_this->eyePos.z, 0);
 
     MtxPush();
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->m0330 - l_bkHIO().m034));
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY - l_bkHIO().m034));
     sp08->y = l_bkHIO().m038;
     MtxPosition(sp08, sp14[1]);
     MtxPull();
 
     MtxPush();
     sp08->y = l_bkHIO().m038;
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->m0330 + l_bkHIO().m034));
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY + l_bkHIO().m034));
     MtxPosition(sp08, sp14[2]);
     MtxPull();
 
     MtxPush();
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->m0330 - l_bkHIO().m034));
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY - l_bkHIO().m034));
     sp08->y = -l_bkHIO().m038;
     MtxPosition(sp08, sp14[4]);
     MtxPull();
 
     sp08->y = -l_bkHIO().m038;
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->m0330 + l_bkHIO().m034));
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY + l_bkHIO().m034));
     MtxPosition(sp08, sp14[5]);
 
     *sp14[0] = i_this->eyePos.get();
@@ -405,21 +405,21 @@ static inline void search_check_draw(bk_class* i_this) {
 
 /* inlined into daBk_Draw */
 static inline void br_draw(bk_class* i_this) {
-    if (i_this->m02F0 == 0) {
+    if (i_this->mBlurOn == 0) {
         return;
     }
     if (REG6_S(3) != 0) {
         return;
     }
 
-    J3DModel* model = i_this->m02E8;
+    J3DModel* model = i_this->mpBlurModel;
     for (u16 i = 0; i < bkMain_jointCount(model); i++) {
         u32 md = J3DModel_modelData(model);
         u32 joint = bkMain_joint(md, i);
         u32 mat = bkMain_mesh(joint); /* getMesh() */
         while (mat) {
             u32 shape = bkMain_shape(mat);
-            if (i_this->m02F4 == 0) {
+            if (i_this->mBlurUseB == 0) {
                 if (i == BK_KB_JNT_BLURA_e) {
                     J3DShape_show(shape);
                 } else {
@@ -440,7 +440,7 @@ static inline void br_draw(bk_class* i_this) {
     MtxTrans(150.0f + l_bkHIO().m100, REG8_F(1), REG8_F(2), 1);
     cMtx_XrotM(calc_mtx(), (s16)(REG8_S(6) + 0x4000));
     cMtx_ZrotM(calc_mtx(), (s16)(REG8_S(7) + 0x4000));
-    MtxScale(l_bkHIO().m018 * i_this->m02EC, l_bkHIO().m018, l_bkHIO().m018, 1);
+    MtxScale(l_bkHIO().m018 * i_this->mBlurScaleX, l_bkHIO().m018, l_bkHIO().m018, 1);
     J3DModel_setBaseTRMtx(model, calc_mtx());
 
     setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
@@ -450,11 +450,11 @@ static inline void br_draw(bk_class* i_this) {
 /* 0209971C */
 BOOL daBk_Draw(bk_class* i_this) {
     J3DModel* model = i_this->mpMorf->getModel();
-    if (i_this->m02B7 != 0xFF && i_this->mType == 6 &&
-        dComIfGs_isSwitch(i_this->m02B7, dComIfGp_roomControl_getStayNo())) {
+    if (i_this->mSwitchNo != 0xFF && i_this->mType == 6 &&
+        dComIfGs_isSwitch(i_this->mSwitchNo, dComIfGp_roomControl_getStayNo())) {
         return TRUE;
     }
-    if (i_this->m02BA != 0 || i_this->mType == 8 || i_this->m121C != 0 || i_this->m02DE != 0) {
+    if (i_this->mAppearWait != 0 || i_this->mType == 8 || i_this->mPathEnd != 0 || i_this->mDefeated != 0) {
         return TRUE;
     }
 
@@ -475,7 +475,7 @@ BOOL daBk_Draw(bk_class* i_this) {
     u32 hatShape = bk_getMaterialShape(md, "boushi");    /* "boushi" */
     u32 bodyShape = bk_getMaterialShape(md, "fuku");     /* "fuku" */
     J3DShape_hide(eyeShape);
-    mDoExt_btpAnm* btp = i_this->m02C4;
+    mDoExt_btpAnm* btp = i_this->mpEyeBtp;
     s16 frame = (s16)gabi::ftoi(bkMain_eyeFrame(btp));
     mDoExt_btpAnm_entry(btp, bkMain_modelData(model), frame);
     i_this->mpMorf->entryDL(); // HD: no material-table variant (m1230)
@@ -491,14 +491,14 @@ BOOL daBk_Draw(bk_class* i_this) {
 
     // HD: no daBk_shadowDraw
 
-    if (i_this->m02D4 != 0) {
-        setLightTevColorType(dKy_getEnvlight(), i_this->m02D0, &i_this->tevStr);
-        mDoExt_modelUpdateDL(i_this->m02D0);
+    if (i_this->mHasShield != 0) {
+        setLightTevColorType(dKy_getEnvlight(), i_this->mpShieldModel, &i_this->tevStr);
+        mDoExt_modelUpdateDL(i_this->mpShieldModel);
     }
 
-    if (i_this->m02DC != 0) {
-        setLightTevColorType(dKy_getEnvlight(), i_this->m02D8, &i_this->tevStr);
-        mDoExt_modelUpdateDL(i_this->m02D8);
+    if (i_this->mHasTelescope != 0) {
+        setLightTevColorType(dKy_getEnvlight(), i_this->mpTelescopeModel, &i_this->tevStr);
+        mDoExt_modelUpdateDL(i_this->mpTelescopeModel);
     }
 
     dSnap_RegistFig(DSNAP_TYPE_BK, i_this, 1.0f, 1.0f, 1.0f);
@@ -635,7 +635,7 @@ static u32 search_wepon_inline(bk_class* i_this) {
                 /* GHS: `bgt` skips, so NaN passes */
                 if (!(std::fabs(r25->current.pos.y + 50.0f - i_this->eyePos.y) > l_bkHIO().m038)) {
                     s16 ang = cM_atan2s(sp18->x, sp18->z);
-                    s16 angleDiff = i_this->m0330 - ang;
+                    s16 angleDiff = i_this->mHeadAngleY - ang;
                     if (angleDiff < 0) {
                         angleDiff = -angleDiff;
                     }
@@ -685,7 +685,7 @@ void* s_b_sub(void* param_1, void*) {
 
 /* 0209A728 */
 fopAc_ac_c* search_bomb(bk_class* i_this, BOOL r26) {
-    if (!(i_this->m1208 & 0x0200)) {
+    if (!(i_this->mCutBits & 0x0200)) {
         return nullptr;
     }
 
@@ -717,7 +717,7 @@ fopAc_ac_c* search_bomb(bk_class* i_this, BOOL r26) {
                     if (!(std::fabs(r24->current.pos.y + 50.0f - i_this->eyePos.y) >
                           l_bkHIO().m038)) {
                         s16 ang = cM_atan2s(sp28->x, sp28->z);
-                        s16 angleDiff = i_this->m0330 - ang;
+                        s16 angleDiff = i_this->mHeadAngleY - ang;
                         if (angleDiff < 0) {
                             angleDiff = -angleDiff;
                         }
@@ -755,12 +755,12 @@ fopAc_ac_c* search_bomb(bk_class* i_this, BOOL r26) {
 
 /* 0209AB64 */
 BOOL daBk_wepon_view_check(bk_class* i_this) {
-    if (i_this->m02DC != 0 || i_this->m02CC != 0) { // HD: m02DC
+    if (i_this->mHasTelescope != 0 || i_this->mWeaponViewWait != 0) { // HD: mHasTelescope
         return FALSE;
     }
-    i_this->m1200 = search_wepon_inline(i_this);
-    if (i_this->m1200 != fpcM_ERROR_PROCESS_ID_e) {
-        if (fopAcM_SearchByID(i_this->m1200)) {
+    i_this->mWeaponId = search_wepon_inline(i_this);
+    if (i_this->mWeaponId != fpcM_ERROR_PROCESS_ID_e) {
+        if (fopAcM_SearchByID(i_this->mWeaponId)) {
             return TRUE;
         }
     }
@@ -770,7 +770,7 @@ BOOL daBk_wepon_view_check(bk_class* i_this) {
 /* 0209AE40 */
 BOOL daBk_bomb_view_check(bk_class* i_this) {
     fopAc_ac_c* bomb = search_bomb(i_this, 1);
-    i_this->m11F8 = bomb;
+    i_this->mpBomb = bomb;
     return bomb != nullptr ? TRUE : FALSE;
 }
 
@@ -780,7 +780,7 @@ BOOL daBk_player_bg_check(bk_class* i_this, cXyz* r22) {
     if (search_sp() != 0 || i_this->mType == 0xA) {
         return FALSE;
     }
-    if (i_this->dr.m713 == 0 && std::fabs((f32)player->speedF) < 0.1f &&
+    if (i_this->dr.mPlayerInView == 0 && std::fabs((f32)player->speedF) < 0.1f &&
         daPy_getGrabWearTimer(player) < 0.0f) {
         return TRUE;
     }
@@ -794,7 +794,7 @@ BOOL daBk_player_bg_check(bk_class* i_this, cXyz* r22) {
     sp14->copy(i_this->eyePos);
     dBgS_LinChk_Set_l(linChk, sp14, sp08, i_this);
     if (LineCross(linChk)) {
-        i_this->dr.m713 = 0;
+        i_this->dr.mPlayerInView = 0;
         dBgS_LinChk_dt(linChk);
         return TRUE;
     }
@@ -814,12 +814,12 @@ BOOL daBk_player_view_check(bk_class* i_this, cXyz* r30, s16 r27, s16 r31) {
     if (std::fabs(player->current.pos.y + 50.0f - i_this->eyePos.y) > l_bkHIO().m038) {
         return FALSE;
     }
-    s16 angleDiff = i_this->m0330 - r27;
+    s16 angleDiff = i_this->mHeadAngleY - r27;
     if (angleDiff < 0) {
         angleDiff = -angleDiff;
     }
     if ((u16)angleDiff < r31) {
-        i_this->dr.m713 = 1;
+        i_this->dr.mPlayerInView = 1;
         return TRUE;
     }
     cMtx_YrotS(calc_mtx(), -i_this->current.angle.y);
@@ -831,10 +831,10 @@ BOOL daBk_player_view_check(bk_class* i_this, cXyz* r30, s16 r27, s16 r31) {
     MtxPosition(sp14, sp08);
     if (std::fabs((f32)sp08->x) < l_bkHIO().m03C && std::fabs((f32)sp08->y) < l_bkHIO().m040 &&
         sp08->z > l_bkHIO().m048 && sp08->z < l_bkHIO().m044) {
-        i_this->dr.m713 = 1;
+        i_this->dr.mPlayerInView = 1;
         return TRUE;
     } else {
-        i_this->dr.m713 = 0;
+        i_this->dr.mPlayerInView = 0;
         return FALSE;
     }
 }
@@ -854,7 +854,7 @@ BOOL daBk_player_way_check(bk_class* i_this) {
 
 /* 0209B264 */
 void wait_set(bk_class* i_this) {
-    if (i_this->m0B30 != 0 || i_this->m11F3 != 0) {
+    if (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0) {
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_KYORO1_e, 10.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                  dRes_INDEX_BK_BAS_BK_KYORO1_e);
     } else if (i_this->dr.mAction >= 4) {
@@ -864,7 +864,7 @@ void wait_set(bk_class* i_this) {
         anm_init(i_this, dRes_INDEX_BK_BCK_BK_KYORO2_e, 10.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                  dRes_INDEX_BK_BAS_BK_KYORO2_e);
     }
-    i_this->m0300[1] = (s16)gabi::ftoi(40.0f + cM_rndF(60.0f));
+    i_this->mTimers[1] = (s16)gabi::ftoi(40.0f + cM_rndF(60.0f));
 }
 
 /* 0209B354 */
@@ -874,7 +874,7 @@ void path_check(bk_class* i_this, u8 r19) {
     if (i_this->ppd == nullptr) {
         return;
     }
-    if (i_this->m0B30 == 0 && i_this->m11F3 == 0 && i_this->mType != 4 && i_this->mType != 10 &&
+    if (i_this->mHoldWeapon == 0 && i_this->mBareHanded == 0 && i_this->mType != 4 && i_this->mType != 10 &&
         i_this->mType != 6) {
         return;
     }
@@ -911,13 +911,13 @@ void path_check(bk_class* i_this, u8 r19) {
             if (std_sqrtf(gabi::fmadds(distZ, distZ, gabi::fmadds(distX, distX, distY * distY))) <
                 f0) {
                 if (r19) {
-                    i_this->m1216 = j;
+                    i_this->mPathPoint = j;
                 } else {
-                    i_this->m1216 = j - i_this->m1217;
-                    if (i_this->m1216 >= (s8)((bkMainPath*)(dPath*)i_this->ppd)->m_num) {
-                        i_this->m1216 = ((bkMainPath*)(dPath*)i_this->ppd)->m_num;
-                    } else if (i_this->m1216 < 0) {
-                        i_this->m1216 = 0;
+                    i_this->mPathPoint = j - i_this->mPathDir;
+                    if (i_this->mPathPoint >= (s8)((bkMainPath*)(dPath*)i_this->ppd)->m_num) {
+                        i_this->mPathPoint = ((bkMainPath*)(dPath*)i_this->ppd)->m_num;
+                    } else if (i_this->mPathPoint < 0) {
+                        i_this->mPathPoint = 0;
                     }
                 }
                 r6 = true;
@@ -930,9 +930,9 @@ void path_check(bk_class* i_this, u8 r19) {
     }
 
     if (!r6) {
-        i_this->m1215 = 0;
+        i_this->mPathOn = 0;
     } else {
-        i_this->m1215 = i_this->m02B6 + 1;
+        i_this->mPathOn = i_this->mPathNo + 1;
     }
     dBgS_LinChk_dt(linChk);
 }
@@ -974,27 +974,27 @@ void* s_s2_sub(void* param_1, void*) {
 
 /* 0209BAD8 */
 void tate_mtx_set(bk_class* i_this) {
-    if (i_this->m02D4 != 0) {
+    if (i_this->mHasShield != 0) {
         PSMTXCopy(bk_getAnmMtx(i_this->mpMorf->getModel(), BK_JNT_TATE_e), calc_mtx());
-        J3DModel_setBaseTRMtx(i_this->m02D0, calc_mtx());
+        J3DModel_setBaseTRMtx(i_this->mpShieldModel, calc_mtx());
         gabi::Local<cXyz> sp08;
         sp08->x = REG8_F(12);
         sp08->y = REG8_F(13);
         sp08->z = REG8_F(14);
-        MtxPosition(sp08, &i_this->m11CC);
+        MtxPosition(sp08, &i_this->mShieldPos);
     }
 }
 
 /* 0209BBD4 */
 void bou_mtx_set(bk_class* i_this) {
-    if (i_this->m02DC != 0) {
+    if (i_this->mHasTelescope != 0) {
         int jointIdx = BK_JNT_BUKI_e + REG7_S(4);
         PSMTXCopy(bk_getAnmMtx(i_this->mpMorf->getModel(), jointIdx), calc_mtx());
         cMtx_YrotM(calc_mtx(), (s16)(0x4000 + REG7_S(0)));
         cMtx_XrotM(calc_mtx(), REG7_S(1));
         cMtx_ZrotM(calc_mtx(), REG7_S(2));
         MtxTrans(0.01f * REG7_F(9), 0.01f * REG7_F(10), gabi::fmadds(REG7_F(11), 0.01f, 50.0f), 1);
-        J3DModel_setBaseTRMtx(i_this->m02D8, calc_mtx());
+        J3DModel_setBaseTRMtx(i_this->mpTelescopeModel, calc_mtx());
     }
 }
 
@@ -1009,11 +1009,11 @@ BOOL daBk_Delete(bk_class* i_this) {
     if (i_this->heap) {
         i_this->mpMorf->stopZelAnime();
     }
-    if (i_this->m121D) {
+    if (i_this->mHioOwner) {
         hio_set() = 0;
         mDoHIO_deleteChild(l_bkHIO().mNo);
     }
-    dPa_EcallBack_remove(&i_this->m0350);
+    dPa_EcallBack_remove(&i_this->mSmokeCallBack);
     dPa_EcallBack_remove(&i_this->dr.mParticleCallBack);
     enemy_fire_remove(&i_this->mEnemyFire);
     return TRUE;
@@ -1025,9 +1025,9 @@ BOOL useHeapInit(fopAc_ac_c* i_actor) {
 
     // HD: separate body models replace the GameCube color material tables.
     J3DModelData* bodyData;
-    if (i_this->m02DC != 0) {
+    if (i_this->mHasTelescope != 0) {
         bodyData = (J3DModelData*)bk_getRes(dRes_HD_BK_BDL_BK_PINK);
-    } else if (i_this->m02D4 != 0) {
+    } else if (i_this->mHasShield != 0) {
         bodyData = (J3DModelData*)bk_getRes(dRes_HD_BK_BDL_BK_GREEN);
     } else {
         bodyData = (J3DModelData*)bk_getRes(dRes_INDEX_BK_BDL_BK_e);
@@ -1065,19 +1065,19 @@ BOOL useHeapInit(fopAc_ac_c* i_actor) {
     // HD: no m1230 material tables
 
     void* p = operator_new(0x74);
-    i_this->m02C4 = p ? mDoExt_btpAnm_ct(p) : nullptr;
-    if (i_this->m02C4 == nullptr) {
+    i_this->mpEyeBtp = p ? mDoExt_btpAnm_ct(p) : nullptr;
+    if (i_this->mpEyeBtp == nullptr) {
         return cPhs_ERROR_e; /* GameCube bug kept: a phase state from a BOOL function */
     }
     void* btp = bk_getRes(dRes_INDEX_BK_BTP_TMABATAKI_e);
-    if (!mDoExt_btpAnm_init(i_this->m02C4, bkMain_modelData(model), btp, TRUE,
+    if (!mDoExt_btpAnm_init(i_this->mpEyeBtp, bkMain_modelData(model), btp, TRUE,
                             J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, FALSE)) {
         return cPhs_ERROR_e;
     }
 
     // HD: separate sword and club blur models replace material-table selection.
     J3DModelData* modelData;
-    if (i_this->m02D5 & 0x40) {
+    if (i_this->mHasMachete & 0x40) {
         modelData = (J3DModelData*)bk_getRes(dRes_HD_BK_BMD_KB_KEN);
     } else {
         modelData = (J3DModelData*)bk_getRes(dRes_HD_BK_BMD_KB_BOKO);
@@ -1085,25 +1085,25 @@ BOOL useHeapInit(fopAc_ac_c* i_actor) {
     if (modelData == nullptr) {
         JUT_ASSERT_fail("d_a_bk.cpp", 0x25FC, "modelData != (0)");
     }
-    i_this->m02E8 = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
-    if (i_this->m02E8 == nullptr) {
+    i_this->mpBlurModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
+    if (i_this->mpBlurModel == nullptr) {
         return cPhs_ERROR_e;
     }
     /* setBaseScale(scale) */
-    cXyz* baseScale = bkMain_baseScale(i_this->m02E8);
+    cXyz* baseScale = bkMain_baseScale(i_this->mpBlurModel);
     *baseScale = i_this->scale.get();
 
-    if (i_this->m02D4 != 0) {
+    if (i_this->mHasShield != 0) {
         modelData = (J3DModelData*)bk_getRes(dRes_INDEX_BK_BMD_BK_TATE_e);
-        i_this->m02D0 = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
+        i_this->mpShieldModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (modelData == nullptr) {
             JUT_ASSERT_fail("d_a_bk.cpp", 0x261D, "modelData != (0)");
         }
     }
 
-    if (i_this->m02DC != 0) {
+    if (i_this->mHasTelescope != 0) {
         modelData = (J3DModelData*)bk_getRes(dRes_INDEX_BK_BDL_BOUEN_e);
-        i_this->m02D8 = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
+        i_this->mpTelescopeModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (modelData == nullptr) {
             JUT_ASSERT_fail("d_a_bk.cpp", 0x2626, "modelData != (0)");
         }
@@ -1142,33 +1142,33 @@ cPhs_State daBk_Create(fopAc_ac_c* i_actor) {
         }
 
         i_this->mType = fopAcM_GetParam(i_actor) & 0xF;
-        i_this->m02B9 = fopAcM_GetParam(i_actor) & 0x10;
-        i_this->m02D4 = fopAcM_GetParam(i_actor) & 0x20;
+        i_this->mDeleteOnSwitch = fopAcM_GetParam(i_actor) & 0x10;
+        i_this->mHasShield = fopAcM_GetParam(i_actor) & 0x20;
         if (i_this->mType == 0xB) {
-            i_this->m02D4 = 0;
-            i_this->m02DC = 1;
+            i_this->mHasShield = 0;
+            i_this->mHasTelescope = 1;
             i_this->mType = 4;
         }
-        i_this->m02D5 = fopAcM_GetParam(i_actor) & 0xC0;
-        i_this->m02B5 = fopAcM_GetParam(i_actor) >> 8 & 0xFF;
-        i_this->m02B6 = fopAcM_GetParam(i_actor) >> 16 & 0xFF;
-        i_this->m02B7 = fopAcM_GetParam(i_actor) >> 24 & 0xFF;
-        i_this->m02B8 = i_actor->current.angle.z;
+        i_this->mHasMachete = fopAcM_GetParam(i_actor) & 0xC0;
+        i_this->mSightRangePrm = fopAcM_GetParam(i_actor) >> 8 & 0xFF;
+        i_this->mPathNo = fopAcM_GetParam(i_actor) >> 16 & 0xFF;
+        i_this->mSwitchNo = fopAcM_GetParam(i_actor) >> 24 & 0xFF;
+        i_this->mDeathSwitch = i_actor->current.angle.z;
         i_actor->current.angle.x = i_actor->current.angle.z = 0;
-        if (i_this->m02B8 == 0xFF) {
-            i_this->m02B8 = 0;
+        if (i_this->mDeathSwitch == 0xFF) {
+            i_this->mDeathSwitch = 0;
         }
 
-        if (i_this->m02B8 != 0) {
-            if (dComIfGs_isSwitch(i_this->m02B8, fopAcM_GetRoomNo(i_actor))) {
+        if (i_this->mDeathSwitch != 0) {
+            if (dComIfGs_isSwitch(i_this->mDeathSwitch, fopAcM_GetRoomNo(i_actor))) {
                 return cPhs_ERROR_e;
             }
         }
-        if (i_this->m02B9 != 0) {
-            if (dComIfGs_isSwitch(i_this->m02B7, fopAcM_GetRoomNo(i_actor))) {
+        if (i_this->mDeleteOnSwitch != 0) {
+            if (dComIfGs_isSwitch(i_this->mSwitchNo, fopAcM_GetRoomNo(i_actor))) {
                 return cPhs_ERROR_e;
             }
-            i_this->m02B7 = 0xFF;
+            i_this->mSwitchNo = 0xFF;
         }
 
         i_actor->itemTableIdx = dComIfGp_CharTbl_GetNameIndex("Bk", 0);
@@ -1180,7 +1180,7 @@ cPhs_State daBk_Create(fopAc_ac_c* i_actor) {
         if (!hio_set()) {
             l_bkHIO().mNo = mDoHIO_createChild(
                 "\u0083{\u0083R\u0082\u00bf\u0082\u00e1\u0082\u00f1" /* "Boko-chan" */, &l_bkHIO());
-            i_this->m121D = 1;
+            i_this->mHioOwner = 1;
             hio_set() = 1;
         }
 
@@ -1197,34 +1197,34 @@ cPhs_State daBk_Create(fopAc_ac_c* i_actor) {
         i_this->mBtHeight = 162.5f;                             /* initBt */
         i_this->mBtBodyR = 125.0f;
 
-        i_this->dr.m70C = 1;
+        i_this->dr.mBounceCount = 1;
         i_this->dr.mSpawnY = i_actor->current.pos.y;
         i_this->dr.mMaxFallDistance = 1000.0f;
 
-        if (i_this->m02B6 != 0xFF) {
-            i_this->ppd = dPath_GetRoomPath(i_this->m02B6, fopAcM_GetRoomNo(i_actor));
+        if (i_this->mPathNo != 0xFF) {
+            i_this->ppd = dPath_GetRoomPath(i_this->mPathNo, fopAcM_GetRoomNo(i_actor));
             if (i_this->ppd == nullptr) {
                 return cPhs_ERROR_e;
             }
-            i_this->m1215 = i_this->m02B6 + 1;
-            i_this->m1217 = 1;
+            i_this->mPathOn = i_this->mPathNo + 1;
+            i_this->mPathDir = 1;
         }
 
         // HD: the spawn timer temporarily sets the status bit.
         i_actor->actor_status |= fopAcStts_HD_4000;
-        i_this->m02DF = 5;
+        i_this->mSpawnTimer = 5;
 
         if (i_this->mType == 4 || i_this->mType == 0xA) {
             i_this->dr.mAction = 1;
             if (i_this->mType == 0xA) {
-                i_this->m02DF = 0; // HD: this type starts without the spawn timer.
+                i_this->mSpawnTimer = 0; // HD: this type starts without the spawn timer.
                 i_this->dr.mMode = -20;
                 i_actor->actor_status |= fopAcStts_BOSS_e;
                 // HD: follows the USA version without setting search_sp here.
             } else {
                 i_this->dr.mMode = -1;
             }
-            i_this->m0300[1] = (s16)gabi::ftoi(1000.0f + cM_rndF(1000.0f));
+            i_this->mTimers[1] = (s16)gabi::ftoi(1000.0f + cM_rndF(1000.0f));
         } else if (i_this->mType == 6) {
             i_this->dr.mAction = 2;
             i_this->dr.mMaxFallDistance = 300.0f;
@@ -1237,43 +1237,43 @@ cPhs_State daBk_Create(fopAc_ac_c* i_actor) {
             i_this->dr.mAction = 30;
             i_this->dr.mMaxFallDistance = 100000.0f;
         } else if (i_this->mType == 2 || i_this->mType == 3) {
-            i_this->m02BA = 0xFF;
+            i_this->mAppearWait = 0xFF;
             i_this->dr.mAction = 15;
-            i_this->m030E = 0xA;
+            i_this->mNoHitTimer = 0xA;
         } else if (i_this->mType == 9) {
             i_this->dr.mAction = 3;
-            i_this->m1216 = i_actor->current.angle.z;
-            i_this->m1217 = i_actor->current.angle.y;
+            i_this->mPathPoint = i_actor->current.angle.z;
+            i_this->mPathDir = i_actor->current.angle.y;
             i_actor->current.angle.z = 0;
             i_actor->current.angle.y = 0;
         }
 
-        if (i_this->m02B7 != 0xFF) {
+        if (i_this->mSwitchNo != 0xFF) {
             if (i_this->mType != 6) {
-                i_this->m02BA = i_this->m02B7 + 1;
+                i_this->mAppearWait = i_this->mSwitchNo + 1;
             }
         }
 
         if (i_this->mType == 0xF) {
             i_this->dr.mAction = 23;
-            i_this->m02BA = 0;
+            i_this->mAppearWait = 0;
         }
 
-        if (i_this->mType != 8 && i_this->m02DC == 0 && !bk_isStartStage("A_mori" /* "A_mori" */)) {
+        if (i_this->mType != 8 && i_this->mHasTelescope == 0 && !bk_isStartStage("A_mori" /* "A_mori" */)) {
             u32 weaponType;
-            if (i_this->m02D5 & 0x40) {
+            if (i_this->mHasMachete & 0x40) {
                 weaponType = 1;
-            } else if (i_this->m02D5 & 0x80) {
+            } else if (i_this->mHasMachete & 0x80) {
                 weaponType = 7;
             } else {
                 weaponType = 0;
             }
-            i_this->m1200 = fopAcM_create(fpcNm_BOKO_e, weaponType, &i_actor->current.pos,
+            i_this->mWeaponId = fopAcM_create(fpcNm_BOKO_e, weaponType, &i_actor->current.pos,
                                           fopAcM_GetRoomNo(i_actor), nullptr, nullptr, -1, 0);
-            i_this->m1214 = 1;
-            i_this->m02D5 &= 0x40;
+            i_this->mWeaponPending = 1;
+            i_this->mHasMachete &= 0x40;
         } else {
-            i_this->m11F3 = 1;
+            i_this->mBareHanded = 1;
         }
 
         i_this->dr.mAcch.Set(&i_actor->current.pos, &i_actor->old.pos, i_this, 1,
@@ -1284,31 +1284,31 @@ cPhs_State daBk_Create(fopAc_ac_c* i_actor) {
         i_this->dr.mAcch.OnLineCheck();
         i_this->dr.mInvincibleTimer = 5;
 
-        if (i_this->m02D4 != 0) {
+        if (i_this->mHasShield != 0) {
             i_actor->max_health = i_actor->health = 7;
         } else {
             i_actor->max_health = i_actor->health = 5;
         }
 
         i_this->dr.mStts.Init(200, 0xFF, i_this);
-        i_this->m0B88.Set((const dCcD_SrcCyl*)&co_cyl_src);
-        i_this->m0B88.SetStts(&i_this->dr.mStts);
-        i_this->m0CB8.Set((const dCcD_SrcCyl*)&tg_cyl_src);
-        i_this->m0CB8.SetStts(&i_this->dr.mStts);
-        i_this->m0DE8.Set((const dCcD_SrcSph*)&head_sph_src);
-        i_this->m0DE8.SetStts(&i_this->dr.mStts);
-        i_this->m1040.Set((const dCcD_SrcSph*)&wepon_sph_src);
-        i_this->m1040.SetStts(&i_this->dr.mStts);
-        i_this->m0F14.Set((const dCcD_SrcSph*)&defence_sph_src);
-        i_this->m0F14.SetStts(&i_this->dr.mStts);
+        i_this->mCoCyl.Set((const dCcD_SrcCyl*)&co_cyl_src);
+        i_this->mCoCyl.SetStts(&i_this->dr.mStts);
+        i_this->mTgCyl.Set((const dCcD_SrcCyl*)&tg_cyl_src);
+        i_this->mTgCyl.SetStts(&i_this->dr.mStts);
+        i_this->mHeadSph.Set((const dCcD_SrcSph*)&head_sph_src);
+        i_this->mHeadSph.SetStts(&i_this->dr.mStts);
+        i_this->mWeaponSph.Set((const dCcD_SrcSph*)&wepon_sph_src);
+        i_this->mWeaponSph.SetStts(&i_this->dr.mStts);
+        i_this->mDefenceSph.Set((const dCcD_SrcSph*)&defence_sph_src);
+        i_this->mDefenceSph.SetStts(&i_this->dr.mStts);
 
-        i_this->m02CC = 5;
+        i_this->mWeaponViewWait = 5;
         i_this->model = gabi::ea(i_this->mpMorf->getModel());
 
         i_this->mEnemyIce.mpActor = i_this;
         i_this->mEnemyIce.mWallRadius = 50.0f + REG0_F(4);
         i_this->mEnemyIce.mCylHeight = 180.0f + REG0_F(5);
-        i_this->mEnemyIce.mDeathSwitch = i_this->m02B8;
+        i_this->mEnemyIce.mDeathSwitch = i_this->mDeathSwitch;
 
         i_this->mEnemyFire.mpMcaMorf = i_this->mpMorf;
         i_this->mEnemyFire.mpActor = i_this;
@@ -1454,17 +1454,17 @@ bk_class* bk_class_ct(bk_class* i_this) {
     }
     fopAc_ac_c_ct(i_this);
     i_this->__vtbl = bkMain_actorVtable();
-    dPa_smokeEcallBack_ct(&i_this->m0350, 1);
+    dPa_smokeEcallBack_ct(&i_this->mSmokeCallBack, 1);
     dPa_followEcallBack_ct((dPa_followEcallBack*)&i_this->mHdFollowCb, 0, 0);
     dBgS_AcchCir_ct(&i_this->dr.mAcchCir);
     dBgS_ObjAcch_ct(&i_this->dr.mAcch);
     dCcD_Stts_ct(&i_this->dr.mStts);
     dPa_smokeEcallBack_ct(&i_this->dr.mParticleCallBack, 1);
-    dCcD_Cyl_ct(&i_this->m0B88, BK_AAB_VTBL);
-    dCcD_Cyl_ct(&i_this->m0CB8, BK_AAB_VTBL);
-    dCcD_Sph_ct(&i_this->m0DE8);
-    dCcD_Sph_ct(&i_this->m0F14);
-    dCcD_Sph_ct(&i_this->m1040);
+    dCcD_Cyl_ct(&i_this->mCoCyl, BK_AAB_VTBL);
+    dCcD_Cyl_ct(&i_this->mTgCyl, BK_AAB_VTBL);
+    dCcD_Sph_ct(&i_this->mHeadSph);
+    dCcD_Sph_ct(&i_this->mDefenceSph);
+    dCcD_Sph_ct(&i_this->mWeaponSph);
     dCcD_Stts_ct(&i_this->mEnemyIce.mStts);
     dCcD_Cyl_ct(&i_this->mEnemyIce.mCyl, BK_AAB_VTBL);
     dBgS_AcchCir_ct(&i_this->mEnemyIce.mBgAcchCir);
@@ -1482,11 +1482,11 @@ void bk_class_dt(bk_class* i_this, s32 flags) {
         dBgS_AcchCir_dt(&i_this->mEnemyIce.mBgAcchCir);
         dCcD_Cyl_dt(&i_this->mEnemyIce.mCyl, 2);
         dCcD_Stts_dt(&i_this->mEnemyIce.mStts, 2);
-        dCcD_Sph_dt(&i_this->m1040, 2);
-        dCcD_Sph_dt(&i_this->m0F14, 2);
-        dCcD_Sph_dt(&i_this->m0DE8, 2);
-        dCcD_Cyl_dt(&i_this->m0CB8, 2);
-        dCcD_Cyl_dt(&i_this->m0B88, 2);
+        dCcD_Sph_dt(&i_this->mWeaponSph, 2);
+        dCcD_Sph_dt(&i_this->mDefenceSph, 2);
+        dCcD_Sph_dt(&i_this->mHeadSph, 2);
+        dCcD_Cyl_dt(&i_this->mTgCyl, 2);
+        dCcD_Cyl_dt(&i_this->mCoCyl, 2);
         dCcD_Stts_dt(&i_this->dr.mStts, 2);
         dBgS_ObjAcch_dt(&i_this->dr.mAcch);
         dBgS_AcchCir_dt(&i_this->dr.mAcchCir);

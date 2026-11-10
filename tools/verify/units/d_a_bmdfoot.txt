@@ -22,9 +22,9 @@ ret 025200D4 0x54000000 0x54000000    # play object at a fixed address
 field * 54005134 u8 0x58,0x41         # start stage name[0]
 field * 10191B1C u8 0 1               # hio_set
 field * r3+0x2E4 u32 0,8              # actor_condition INIT
-field * r3+0xE06 u8 0 1               # mBD2
-field * r3+0xDFC u8 0 1               # mBC8
-field * r3+0xDDC u8 0,1,2,9,10,11     # mBA8
+field * r3+0xE06 u8 0 1               # mHioOwner
+field * r3+0xDFC u8 0 1               # mDrawOn
+field * r3+0xDDC u8 0,1,2,9,10,11     # mUgMode
 
 # s_a_d_sub: process name fpcNm_BMD_e (0xEB)
 field 020B5D74 r3+8 i16 0xEA,0xEB,0xEB

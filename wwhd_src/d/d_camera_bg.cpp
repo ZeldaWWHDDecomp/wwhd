@@ -527,20 +527,20 @@ void dCamera_c::checkSpecialArea() {
     }
     gabi::Local<cXyz> pos;
     positionOf(pos, mpPlayerActor.get());
-    u8 kaze = m788;
-    m787 = 0;
+    u8 kaze = mIsKazeMap;
+    mInKazeCenter = 0;
     if (kaze != 0) {
         f32 d = horizontalDistance(cameraArgument(&sKazeCenter),
                                    cameraArgument(pos.get())); /* dCamMath::xyzHorizontalDistance */
         if (d < sKazeRadius.get())
-            m787 = 1;
+            mInKazeCenter = 1;
     }
-    u8 sea = m780;
-    m786 = 0;
+    u8 sea = mIsSeaMap;
+    mInSeaCenter = 0;
     if (sea != 0) {
         f32 d = horizontalDistance(cameraArgument(&sSeaCenter), cameraArgument(pos.get()));
         if (d < sSeaRadius.get())
-            m786 = 1;
+            mInSeaCenter = 1;
     }
 }
 
@@ -1050,40 +1050,40 @@ void dCamera_c::checkGroundInfo() {
     f32 m00 = backgroundGroundCross(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                     cameraArgument(ea() + 0x264));
     mBG.m00.m58 = m00;
-    m354 = m00;
+    mGroundHeight = m00;
     mBG.m00.m00 = m00 != -1000000000.0f;
     f32 foot = footHeightOf(mpPlayerActor.get());
-    m360 =
+    mPlayerOnFloor =
         !(foot - mBG.m5C.m58 > fieldRead<f32>(cameraSetup(this)->mFloorMargin) /* FloorMargin */);
 
-    m31D = 0;
-    m33C = nullptr;
+    mFollowMoveBg = 0;
+    mpMoveBgActor = nullptr;
     if (backgroundIsMoving(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                            cameraArgument(ea() + 0x2D4))) { /* ChkMoveBG */
         fopAc_ac_c* a = gabi::at<fopAc_ac_c>(backgroundActor(
             cameraArgument(dComIfGp_ea() + PLAY_BGS),
             cameraArgument((u32)fieldRead<u16>(mBG.m5C.m04.mBgIndex)))); /* GetActorPointer */
-        m33C = a;
+        mpMoveBgActor = a;
         if (a != nullptr) {
             positionOf(pos, a);
-            directionOf(dir, m33C.get());
-            if (m31C != 0) {
-                cXyz_mi(&m32C, t, pos);
-                m320.copy(*t);
-                angleSubtract(cameraArgument(&m33A), cameraArgument(ang.get()),
-                              cameraArgument(dir.get())); /* m33A - angle */
-                fopAc_ac_c* mv = m33C.get();
-                m338 = (s16)*ang;
+            directionOf(dir, mpMoveBgActor.get());
+            if (mOnMoveBg != 0) {
+                cXyz_mi(&mMoveBgLastPos, t, pos);
+                mMoveBgPosDelta.copy(*t);
+                angleSubtract(cameraArgument(&mMoveBgLastAngle), cameraArgument(ang.get()),
+                              cameraArgument(dir.get())); /* mMoveBgLastAngle - angle */
+                fopAc_ac_c* mv = mpMoveBgActor.get();
+                mMoveBgAngleDelta = (s16)*ang;
                 if (mv != nullptr && fpcM_GetName(mv) == 0x39 /* Obj_Pirateship */) {
                     mViewCache.mCenter.y = gabi::fmadds(
-                        m320.y, fieldRead<f32>(cameraSetup(this)->mMovingShipScale) /* m0B8 */,
+                        mMoveBgPosDelta.y, fieldRead<f32>(cameraSetup(this)->mMovingShipScale) /* m0B8 */,
                         mViewCache.mCenter.y);
                 }
             }
-            m31C = 1;
-            if (eventCameraPlaying() == 0 && !chkFlag(0x20000000) && m360 != 0)
-                m31D = 1;
-            if (m31D != 0) {
+            mOnMoveBg = 1;
+            if (eventCameraPlaying() == 0 && !chkFlag(0x20000000) && mPlayerOnFloor != 0)
+                mFollowMoveBg = 1;
+            if (mFollowMoveBg != 0) {
                 backgroundCorrectPosition(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                           cameraArgument(ea() + 0x2D4), cameraArgument(1),
                                           cameraArgument(&mViewCache.mCenter), cameraArgument(0),
@@ -1095,13 +1095,13 @@ void dCamera_c::checkGroundInfo() {
                 cXyz_mi(&mViewCache.mEye, t, &mViewCache.mCenter);
                 cSGlobe_Val(&mViewCache.mDirection, t);
             }
-            m33A = (s16)*dir;
-            m32C.copy(*pos);
+            mMoveBgLastAngle = (s16)*dir;
+            mMoveBgLastPos.copy(*pos);
         }
     } else {
-        m31C = 0;
+        mOnMoveBg = 0;
     }
-    m350 = mBG.m5C.m00 != 0 ? backgroundMoveCamera(cameraArgument(dComIfGp_ea() + PLAY_BGS),
+    mCamMoveBg = mBG.m5C.m00 != 0 ? backgroundMoveCamera(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                                    cameraArgument(ea() + 0x2D4)) /* GetCamMoveBG */
                             : 0;
     mRoomNo = -1;
@@ -1115,7 +1115,7 @@ void dCamera_c::checkGroundInfo() {
             cameraArgument(dComIfGp_ea() + PLAY_BGS),
             cameraArgument((u32)fieldRead<u16>(mBG.m00.m04.mBgIndex)),
             cameraArgument((u32)fieldRead<u16>(mBG.m00.m04.mPolyIndex))); /* GetPolyCamId */
-    } else if (m360 == 0) {
+    } else if (mPlayerOnFloor == 0) {
         mRoomMapToolCameraIdx = 0x1FF;
     } else if (mBG.m5C.m00 != 0) {
         s32 idx = backgroundRoomCamera(cameraArgument(dComIfGp_ea() + PLAY_BGS),
@@ -1135,14 +1135,14 @@ void dCamera_c::checkGroundInfo() {
     }
     if (daSea_ChkArea(pp->x, pp->z)) {
         f32 w = daSea_calcWave(pp->x, pp->z);
-        m314 = 1;
-        m318 = w;
+        mInSeaArea = 1;
+        mSeaWaveHeight = w;
     } else {
-        m314 = 0;
-        m318 = -1000000000.0f;
+        mInSeaArea = 0;
+        mSeaWaveHeight = -1000000000.0f;
     }
-    if (m354 < m318)
-        m354 = (f32)m318;
+    if (mGroundHeight < mSeaWaveHeight)
+        mGroundHeight = (f32)mSeaWaveHeight;
 
     u32 o2 = gabi::ea(g2.get());
     gndChk_ct(o2, &mEye); /* dBgS_GndChk gnd_chk_2; SetPos(&mEye) */
@@ -1163,25 +1163,25 @@ void dCamera_c::checkGroundInfo() {
         cXyz_ml(d, t, 0.5f);
         PSVECAdd(A, t, A);
     }
-    if (m360 != 0) {
+    if (mPlayerOnFloor != 0) {
         u32 res = lineCollisionCheckBush(A, B) & 5;
-        m364 = res;
+        mBushHit = res;
         if (res & 4) {
             fieldWrite<u32>(
-                m368, fieldRead<u32>(cameraSetup(this)->mBushHigh)); /* m368 = mCamSetup.m0C0 */
-            res = m364;
+                mBushHeight, fieldRead<u32>(cameraSetup(this)->mBushHigh)); /* mBushHeight = mCamSetup.m0C0 */
+            res = mBushHit;
         }
         if (res & 1) {
             fieldWrite<u32>(
-                m368, fieldRead<u32>(cameraSetup(this)->mBushLow)); /* m368 = mCamSetup.m0C4 */
-            res = m364;
+                mBushHeight, fieldRead<u32>(cameraSetup(this)->mBushLow)); /* mBushHeight = mCamSetup.m0C4 */
+            res = mBushHit;
         }
         if (res != 0)
             massCameraTop(cameraArgument(cameraMassManager()),
-                          cameraArgument(&m36C)); /* GetMassCamTopPos */
+                          cameraArgument(&mBushTopPos)); /* GetMassCamTopPos */
     } else {
-        m364 = 0;
-        m368 = 0.0f;
+        mBushHit = 0;
+        mBushHeight = 0.0f;
     }
     gndChk_dt(o2);
     fieldWrite<u32>(gabi::at<dBgS_GndChk>(o)->cBgS_PolyInfo::__vtbl, kGroundPolyInfoVtable);
@@ -1253,17 +1253,17 @@ bool dCamera_c::bumpCheck(u32 flags) {
         f32 r = radiusActorInSight(mpPlayerActor.get(), mpLockonTarget.get());
         f32 m;
         if (r > 0.0f) {
-            f32 cur = m14C;
+            f32 cur = mSightFitRadius;
             if (!(r < 3500.0f))
                 r = 3500.0f;
             m = gabi::fmadds(r - cur, 0.33f, cur);
             res = 0x40;
         } else {
-            f32 cur = m14C;
+            f32 cur = mSightFitRadius;
             m = gabi::fnmsubs(cur, 0.08f, cur);
         }
-        u32 t108 = m108;
-        m14C = m;
+        u32 t108 = mCurModeTimer;
+        mSightFitRadius = m;
         f32 k = 1.0f;
         if (t108 < 10)
             k = (f32)t108 / 10.0f;
@@ -1272,11 +1272,11 @@ bool dCamera_c::bumpCheck(u32 flags) {
         cXyz_pl(&mViewCache.mCenter, e, x);
         eye->copy(*e);
     }
-    if ((flags & CheckBush) && m364 != 0) {
+    if ((flags & CheckBush) && mBushHit != 0) {
         gabi::Local<cXyz> d, x, e;
         gabi::Local<CameraGlobe> g;
         gabi::Local<CameraAngle> a, t, u, tmp;
-        cXyz_mi(&m36C, d, &mViewCache.mCenter);
+        cXyz_mi(&mBushTopPos, d, &mViewCache.mCenter);
         globeFromVectorDiscard(cameraArgument(g.get()), cameraArgument(d.get()));
         if ((s16)dir->mV < (s16)g->mV) {
             angleCopyDiscard(cameraArgument(a.get()), cameraArgument(&mDirection.mV));
@@ -1554,7 +1554,7 @@ bool dCamera_c::bumpCheck(u32 flags) {
         }
     }
     sPreviousHitType = type;
-    if (m78B != 0) {
+    if (mIsKazeBMap != 0) {
         if (camStyleAlg(mCurStyle) != 4 || !(mEventFlags & 0x10000800))
             mEye.y = mEye.y + 25.0f;
     }

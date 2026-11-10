@@ -40,7 +40,7 @@ BOOL daMdoor_c::CreateHeap() {
     void* data =
         objectResource(second ? dRes_INDEX_MDOOR_BDL_MORI2_e : dRes_INDEX_MDOOR_BDL_MORI1_e);
     if (!data)
-        JUT_ASSERT_fail("d_a_mdoor.cpp", 0x90, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_mdoor.cpp", 0x90, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create((J3DModelData*)data, 0, 0x11020203);
     if (!gabi::ea(mpModel))
         return FALSE;
@@ -446,7 +446,7 @@ data actionInitialized 101FDAF8
 data l_action 101FDAFC
 data initial_actions 101BA39C
 str 1001491C "d_a_mdoor.cpp" in 021C0F70
-str 1001492C "modelData != NULL"
+str 1001492C "modelData != (0)"
 str 10014980 "Mori1"
 str 10014988 "SHUTTER_DOOR"
 str 100149AC "d_a_mdoor.cpp" in 021C1AFC

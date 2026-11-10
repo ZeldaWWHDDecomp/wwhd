@@ -76,8 +76,8 @@ void daBomb2::Env_c::set(const cXyz *pos) {
   mPntWind.mDir.x = 0;
   mPntWind.mStrength = 0.5f;
   bomb2_dKyw_pntwind_set( s + 0x24);
-  field_0x50 = 0;
-  field_0x4C = 0;
+  mIntensity = 0;
+  mStep = 0;
 }
 
 /* 020C82A4 */
@@ -89,13 +89,13 @@ void daBomb2::Env_c::clean() {
 
 /* 020C82F4 */
 bool daBomb2::Env_c::is_end() {
-  return field_0x4C > 1;
+  return mStep > 1;
 }
 
 /* 020C8308 */
 void daBomb2::Env_c::proc(const cXyz *pos) {
   u32 p = play2();
-  f32 intensity = field_0x50;
+  f32 intensity = mIntensity;
   u32 camera = (u32)gabi::at<dComIfG_inf_c>(p)->play.mCameraInfo[0].mpCamera;
   mPntWind.mStrength = intensity;
   mPntLight.mPower = 1500 * intensity;
@@ -104,29 +104,29 @@ void daBomb2::Env_c::proc(const cXyz *pos) {
   f32 factor = 0;
   if (distance < 1500)
     factor = gabi::fnmsubs(distance, 0.0006666666595265269f, 1);
-  factor = field_0x50 * factor;
+  factor = mIntensity * factor;
   bomb2_dKy_actor_addcol_amb_set( 200, 180, 100, factor);
   bomb2_dKy_bg_addcol_amb_set( 180, 160, 60, factor);
   bomb2_dKy_bg_addcol_dif_set( 255, 225, 120, factor);
-  switch (field_0x4C) {
+  switch (mStep) {
   case 0:
-    bomb2_cLib_addCalc_f32(&field_0x50, 1.0f, 0.5f, 0.4f, 0.01f);
-    if (!(field_0x50 < 0.99f))
-      field_0x4C = field_0x4C + 1;
+    bomb2_cLib_addCalc_f32(&mIntensity, 1.0f, 0.5f, 0.4f, 0.01f);
+    if (!(mIntensity < 0.99f))
+      mStep = mStep + 1;
     break;
   case 1:
-    bomb2_cLib_addCalc_f32(&field_0x50, 0.0f, 0.05f, 0.04f, 0.001f);
-    if (!(field_0x50 > 0.01f))
-      field_0x4C = field_0x4C + 1;
+    bomb2_cLib_addCalc_f32(&mIntensity, 0.0f, 0.05f, 0.04f, 0.001f);
+    if (!(mIntensity > 0.01f))
+      mStep = mStep + 1;
     break;
   }
 }
 
 /* 020C8518 */
 void daBomb2::FuseSmokeCB_c::setOldPosP(const cXyz *a, const cXyz *b) {
-  field_0x0C = a;
-  field_0x10 = b;
-  field_0x04 = 20;
+  mpOldPos = a;
+  mpOldOldPos = b;
+  mPrevLife = 20;
 }
 
 /* 020C852C */
@@ -146,7 +146,7 @@ void daBomb2::FuseSmokeCB_c::deleteCallBack() {
 void daBomb2::FuseSmokeCB_c::executeAfter(void *emitter) {
   u32 e = gabi::ea(emitter);
   f32 z = mpPos->z, x = mpPos->x, y = mpPos->y;
-  f32 px = field_0x0C->x, py = field_0x0C->y, pz = field_0x0C->z;
+  f32 px = mpOldPos->x, py = mpOldPos->y, pz = mpOldPos->z;
   // HD: volume types at and above seven mirror the emitter Y translation.
   u8 type = (u8)gabi::at<Bomb2Emitter>(e)->mVolumeType;
   gabi::at<Bomb2Emitter>(e)->mGlobalTranslation.x = x;
@@ -154,7 +154,7 @@ void daBomb2::FuseSmokeCB_c::executeAfter(void *emitter) {
   gabi::at<Bomb2Emitter>(e)->mGlobalTranslation.z = z;
   if (type >= 7)
     gabi::at<Bomb2Emitter>(e)->mGlobalTranslation.y = -(f32)gabi::at<Bomb2Emitter>(e)->mGlobalTranslation.y;
-  f32 distance = bomb2_PSVECSquareDistance_f32( mpPos.get(), field_0x0C.get());
+  f32 distance = bomb2_PSVECSquareDistance_f32( mpPos.get(), mpOldPos.get());
   distance = bomb2_sqrtf_f32(distance);
   s16 life = gabi::ftoi(bombSmokeFma(20 - distance, 0.5f, 10));
   if (life < 10)
@@ -162,14 +162,14 @@ void daBomb2::FuseSmokeCB_c::executeAfter(void *emitter) {
   gabi::at<Bomb2Emitter>(e)->mLifeTime = life;
   f32 dx = bombSmokeSub(x, px) * 0.5f, dy = bombSmokeSub(y, py) * 0.5f,
       dz = bombSmokeSub(z, pz) * 0.5f;
-  f32 tx = (px - field_0x10->x) * 0.5f, ty = (py - field_0x10->y) * 0.5f,
-      tz = (pz - field_0x10->z) * 0.5f;
-  distance = bomb2_PSVECSquareDistance_f32( mpPos.get(), field_0x0C.get());
+  f32 tx = (px - mpOldOldPos->x) * 0.5f, ty = (py - mpOldOldPos->y) * 0.5f,
+      tz = (pz - mpOldOldPos->z) * 0.5f;
+  distance = bomb2_PSVECSquareDistance_f32( mpPos.get(), mpOldPos.get());
   distance = bomb2_sqrtf_f32(distance);
   f32 count = distance * 0.1f;
   if (!(count <= 1)) {
     f32 step = 1 / count;
-    s16 delta = gabi::ftoi((f32)((s32)field_0x04 - (s32)life) * step);
+    s16 delta = gabi::ftoi((f32)((s32)mPrevLife - (s32)life) * step);
     s16 lifetime = life + delta;
     for (f32 t = step; t < 1; t = t + step, lifetime = lifetime + delta) {
       f32 square = t * t, cube = square * t, three = 3 * square;
@@ -192,7 +192,7 @@ void daBomb2::FuseSmokeCB_c::executeAfter(void *emitter) {
       }
     }
   }
-  field_0x04 = life;
+  mPrevLife = life;
 }
 
 /* 020C890C */
@@ -279,14 +279,14 @@ void daBomb2::Act_c::crr_init() {
   mAcch.Set(&current.pos, &old.pos, this, 1, &mCir, &speed, &current.angle,
             &shape_angle);
   u32 flags = mAcch.m_flags;
-  field_0x526 = 0;
+  mWaterIsSea = 0;
   field_0x524 = 0;
   mAcch.m_flags = (flags & ~0x408) | 0x2000;
-  field_0x528 = -1000000000.0f;
-  field_0x51C = -1000000000.0f;
+  mSinkWaterY = -1000000000.0f;
+  mLavaY = -1000000000.0f;
   mbWaterIn = 0;
   mAcch.m_roof_crr_height = 50;
-  field_0x520 = -1000000000.0f;
+  mWaterY = -1000000000.0f;
 }
 
 /* 020C8C04 */
@@ -347,11 +347,11 @@ void daBomb2::Act_c::create_init() {
   current.pos.y = y;
   current.pos.z = z;
   init_mtx();
-  field_0x743 = 0;
+  mWaterExplodeEffDone = 0;
   mBombTimer = 150;
-  field_0x740 = 0;
-  field_0x742 = 0;
-  field_0x741 = 0;
+  mDeleteReq = 0;
+  mExplodeEffDone = 0;
+  mThrown = 0;
   mWindVec.x = (f32)l_zero.x;
   mWindVec.y = (f32)l_zero.y;
   mWindVec.z = (f32)l_zero.z;
@@ -428,7 +428,7 @@ void daBomb2::Act_c::set_mtx() {
   gabi::at<Bomb2ModelView>(mdl)->mBaseScale.z = scale.z;
   bomb2_PSMTXTrans(gabi::ea(&l_currentMtx), (f32)current.pos.x, (f32)current.pos.y,
              (f32)current.pos.z);
-  bomb2_PSMTXConcat(gabi::ea(&l_currentMtx), gabi::ea(&field_0x754), gabi::ea(&l_currentMtx));
+  bomb2_PSMTXConcat(gabi::ea(&l_currentMtx), gabi::ea(&mTensorMtx), gabi::ea(&l_currentMtx));
   bomb2_mDoMtx_ZXYrotM(gabi::ea(&l_currentMtx), (s16)shape_angle.x, (s16)shape_angle.y,
              (s16)shape_angle.z);
   f32 m[12];
@@ -456,10 +456,10 @@ void daBomb2::Act_c::cc_set() {
   s32 state = mState;
   f32 radius = 200;
   if (state == Mode_EXPLODE_e) {
-    if (field_0x73C <= 0)
+    if (mExplodeCcTimer <= 0)
       return;
-    field_0x73C = field_0x73C - 1;
-    if (field_0x73C <= 0)
+    mExplodeCcTimer = mExplodeCcTimer - 1;
+    if (mExplodeCcTimer <= 0)
       return;
   } else {
     if (state == Mode_SINK_e)
@@ -522,7 +522,7 @@ void daBomb2::Act_c::bgCrrPos_lava() {
   mGndChk.m_pos.x = x;
   mGndChk.m_pos.y = y;
   u32 p = play2();
-  field_0x51C = bomb2_cBgS__GroundCross_f32( p + 0x12A0, self + 0x6C0);
+  mLavaY = bomb2_cBgS__GroundCross_f32( p + 0x12A0, self + 0x6C0);
 }
 
 /* 020C8CE4 */
@@ -535,17 +535,17 @@ void daBomb2::Act_c::bgCrrPos_water() {
   // GHS branches invert the GT/LT bit; keep the unordered cases explicit.
   bool in = (mAcch.m_flags & dBgS_Acch::WATER_IN) != 0, sea = area && current.pos.y < wave;
   if (in && (!sea || water > wave)) {
-    field_0x520 = water;
-    field_0x526 = 0;
+    mWaterY = water;
+    mWaterIsSea = 0;
     mbWaterIn = 1;
   } else if (sea) {
-    field_0x520 = wave;
+    mWaterY = wave;
     mbWaterIn = 1;
-    field_0x526 = 1;
+    mWaterIsSea = 1;
   } else {
     mbWaterIn = 0;
-    field_0x526 = 0;
-    field_0x520 = -1000000000.0f;
+    mWaterIsSea = 0;
+    mWaterY = -1000000000.0f;
   }
 }
 
@@ -556,7 +556,7 @@ u8 daBomb2::Act_c::chk_water_in() {
 
 /* 020CA790 */
 bool daBomb2::Act_c::chk_lava_in() {
-  return field_0x51C != -1000000000.0f && current.pos.y < field_0x51C;
+  return mLavaY != -1000000000.0f && current.pos.y < mLavaY;
 }
 
 /* 020C8DDC */
@@ -595,7 +595,7 @@ void daBomb2::Act_c::bound(f32 value) {
     bomb2_daObj__make_land_effect(this, gabi::ea(&mAcch.m_gnd), 0.6f);
     f32 bounce = value * -0.6f;
     if (bounce < 19.5f) {
-      field_0x741 = 0;
+      mThrown = 0;
       return;
     }
     speedF = (f32)speedF * 0.9f;
@@ -686,14 +686,14 @@ void daBomb2::Act_c::set_wind_vec() {
     launch = gabi::fmadds(140, pushScale, launch);
     mWindVec.y = y + launch;
   }
-  field_0x7A8 = 2;
+  mVibImpulseTimer = 2;
 }
 
 /* 020CA2A4 */
 void daBomb2::Act_c::eff_explode() {
-  if (field_0x742)
+  if (mExplodeEffDone)
     return;
-  field_0x742 = 1;
+  mExplodeEffDone = 1;
   u32 p = play2();
   s32 id = (s8)gabi::at<dComIfG_inf_c>(p)->play.mPlayerInfo[0].mCameraID;
   u32 cam = (u32)gabi::at<dComIfG_inf_c>(play2())->play.mCameraInfo[id].mpCamera;
@@ -722,10 +722,10 @@ void daBomb2::Act_c::eff_explode_normal(const csXyz *angle) {
 
 /* 020CA0F8 */
 void daBomb2::Act_c::eff_explode_water() {
-  if (field_0x743)
+  if (mWaterExplodeEffDone)
     return;
   bomb2_fopKyM_createWpillar(&current.pos, 1, 1.0f, 1.0f);
-  field_0x743 = 1;
+  mWaterExplodeEffDone = 1;
   se_explode_water();
   set_sound_env(255, 10);
 }
@@ -734,42 +734,42 @@ void daBomb2::Act_c::eff_explode_water() {
 void daBomb2::Act_c::eff_fuse_init() {
   f32 x = (f32)l_zero.x, y = (f32)l_zero.y,
       z = (f32)l_zero.z;
-  field_0x6C0.x = x;
-  field_0x6C0.y = y;
-  field_0x6D8.y = y;
-  field_0x6C0.z = z;
-  field_0x6CC.y = y;
-  field_0x6CC.z = z;
-  field_0x6D8.x = x;
-  field_0x6D8.z = z;
-  field_0x744 = 0;
-  field_0x6CC.x = x;
+  mFusePos.x = x;
+  mFusePos.y = y;
+  mFuseOldOldPos.y = y;
+  mFusePos.z = z;
+  mFuseOldPos.y = y;
+  mFuseOldPos.z = z;
+  mFuseOldOldPos.x = x;
+  mFuseOldOldPos.z = z;
+  mFuseLit = 0;
+  mFuseOldPos.x = x;
 }
 
 /* 020CA4F0 */
 void daBomb2::Act_c::eff_fuse_start() {
-  if (field_0x744)
+  if (mFuseLit)
     return;
   f32 x = current.pos.x, y = current.pos.y;
-  field_0x744 = 1;
-  field_0x6C0.x = x;
-  field_0x6C0.y = (y + 60.0f);
-  field_0x6C0.z = current.pos.z;
-  field_0x6CC.x = field_0x6C0.x;
-  field_0x6CC.y = field_0x6C0.y;
-  field_0x6CC.z = field_0x6C0.z;
+  mFuseLit = 1;
+  mFusePos.x = x;
+  mFusePos.y = (y + 60.0f);
+  mFusePos.z = current.pos.z;
+  mFuseOldPos.x = mFusePos.x;
+  mFuseOldPos.y = mFusePos.y;
+  mFuseOldPos.z = mFusePos.z;
   u32 s = gabi::ea(this);
   for (int i = 0; i < 3; i++)
-    reinterpret_cast<Bomb2VectorWords*>(&field_0x6D8)->mWords[i] =
-        (u32)reinterpret_cast<Bomb2VectorWords*>(&field_0x6C0)->mWords[i];
+    reinterpret_cast<Bomb2VectorWords*>(&mFuseOldOldPos)->mWords[i] =
+        (u32)reinterpret_cast<Bomb2VectorWords*>(&mFusePos)->mWords[i];
   u32 c = gabi::ea(dComIfGp_getParticle());
-  bomb2_dPa_control_c__set(c, 1, 0x11, &field_0x6C0, 0, &scale, 255, &mSparks, -1,
+  bomb2_dPa_control_c__set(c, 1, 0x11, &mFusePos, 0, &scale, 255, &mSparks, -1,
              0, 0, 0);
   s32 room = current.roomNo;
   c = gabi::ea(dComIfGp_getParticle());
-  bomb2_dPa_control_c__set(c, 3, 0x2012, &field_0x6C0, 0, &scale, 220, &mSmoke,
+  bomb2_dPa_control_c__set(c, 3, 0x2012, &mFusePos, 0, &scale, 220, &mSmoke,
              room, s + 0x1A8, s + 0x1A8, 0);
-  mSmoke.setOldPosP(&field_0x6CC, &field_0x6D8);
+  mSmoke.setOldPosP(&mFuseOldPos, &mFuseOldOldPos);
 }
 
 /* 020C8FB4 */
@@ -782,13 +782,13 @@ void daBomb2::Act_c::eff_fuse_move() {
   }
   u32 s = gabi::ea(this);
   for (int i = 0; i < 3; i++) {
-    u32 old = (u32)reinterpret_cast<Bomb2VectorWords*>(&field_0x6CC)->mWords[i],
-        cur = (u32)reinterpret_cast<Bomb2VectorWords*>(&field_0x6C0)->mWords[i];
-    reinterpret_cast<Bomb2VectorWords*>(&field_0x6D8)->mWords[i] = old;
-    reinterpret_cast<Bomb2VectorWords*>(&field_0x6CC)->mWords[i] = cur;
+    u32 old = (u32)reinterpret_cast<Bomb2VectorWords*>(&mFuseOldPos)->mWords[i],
+        cur = (u32)reinterpret_cast<Bomb2VectorWords*>(&mFusePos)->mWords[i];
+    reinterpret_cast<Bomb2VectorWords*>(&mFuseOldOldPos)->mWords[i] = old;
+    reinterpret_cast<Bomb2VectorWords*>(&mFuseOldPos)->mWords[i] = cur;
   }
-  bomb2_PSMTXMultVec(gabi::ea(&l_currentMtx), gabi::ea(&l_fuseOffset.mOffset), &field_0x6C0);
-  if (field_0x744)
+  bomb2_PSMTXMultVec(gabi::ea(&l_currentMtx), gabi::ea(&l_fuseOffset.mOffset), &mFusePos);
+  if (mFuseLit)
     se_ignition();
 }
 
@@ -796,14 +796,14 @@ void daBomb2::Act_c::eff_fuse_move() {
 void daBomb2::Act_c::eff_fuse_end() {
   mSmoke.deleteCallBack();
   mSparks.deleteCallBack();
-  field_0x744 = 0;
+  mFuseLit = 0;
 }
 
 /* 020CA9F8 */
 void daBomb2::Act_c::eff_water_splash() {
   gabi::Local<cXyz> p;
   p->x = current.pos.x;
-  p->y = field_0x520;
+  p->y = mWaterY;
   p->z = current.pos.z;
   bomb2_fopKyM_createWpillar(p.get(), 0, 0.5f, 0.75f);
   se_fall_water();
@@ -812,7 +812,7 @@ void daBomb2::Act_c::eff_water_splash() {
 
 /* 020CA91C */
 void daBomb2::Act_c::se_fall_water() {
-  u32 s = gabi::ea(this), polys[2] = {field_0x526 ? 0 : gabi::ea(&mAcch.m_wtr), gabi::ea(&mAcch.m_gnd.mPolyIndex)};
+  u32 s = gabi::ea(this), polys[2] = {mWaterIsSea ? 0 : gabi::ea(&mAcch.m_wtr), gabi::ea(&mAcch.m_gnd.mPolyIndex)};
   u32 material = 19;
   for (u32 poly : polys) {
     if (poly && (u16)gabi::at<cBgS_PolyInfo>(poly)->mBgIndex < 256) {
@@ -866,7 +866,7 @@ bool daBomb2::Act_c::chk_exp_cc_nut() {
     bomb2_dCcD_GObjInf__ClrTgHit(&mSph);
   }
   if (bomb2_dCcD_GObjInf__ChkCoHit_u32(&mSph)) {
-    if (field_0x741)
+    if (mThrown)
       fuse = true;
     else {
       f32 mag = bomb2_PSVECSquareMag_f32(&speed);
@@ -910,7 +910,7 @@ bool daBomb2::Act_c::chk_exp_bg_nut() {
     }
   }
   if (hit) {
-    bool fuse = field_0x741;
+    bool fuse = mThrown;
     if (!fuse) {
       f32 mag = bomb2_PSVECSquareMag_f32(&speed);
       mag = bomb2_sqrtf_f32( mag);
@@ -994,7 +994,7 @@ void daBomb2::Act_c::set_real_shadow_flag() {
 
 /* 020CAD9C */
 void daBomb2::Act_c::carry_fuse_start() {
-  if (field_0x744)
+  if (mFuseLit)
     return;
   u32 link = gabi::ea(dComIfGp_getPlayer(0)),
       vt = (u32)gabi::at<Bomb2PlayerView>(link)->__vtbl, fn = gabi::at<Bomb2PlayerVtable>(vt)->getGrabActorID.get();
@@ -1036,7 +1036,7 @@ void daBomb2::Act_c::mode_wait() {
   u32 fixed = bomb2_PrmAbstract_u32(this, PRM_1_W, PRM_1_S);
   f32 oldY = 0;
   if (!fixed) {
-    if (!field_0x745)
+    if (!mEaten)
       posMoveF();
     oldY = speed.y;
     bgCrrPos();
@@ -1049,7 +1049,7 @@ void daBomb2::Act_c::mode_wait() {
     mode_sink_init();
     return;
   }
-  if (!field_0x740) {
+  if (!mDeleteReq) {
     if (!fixed) {
       bound(oldY);
       if (mAcch.m_flags & dBgS_Acch::GROUND_HIT) {
@@ -1082,8 +1082,8 @@ void daBomb2::Act_c::mode_carry() {
   }
   if (!((u32)actor_status & fopAcStts_CARRY_e)) {
     if (speedF > 0) {
-      field_0x741 = 1;
-      field_0x7A8 = 2;
+      mThrown = 1;
+      mVibImpulseTimer = 2;
     }
     mode_wait_init();
     mode_wait();
@@ -1117,7 +1117,7 @@ void daBomb2::Act_c::mode_explode_init() {
   mSph.mObjTg.mSPrm = tg & ~1;
   bomb2_fopAcM_cancelCarryNow(this);
   mBombTimer = 0;
-  field_0x73C = 4;
+  mExplodeCcTimer = 4;
   u32 p = play2();
   gabi::Local<cXyz> d;
   d->x = 0;
@@ -1129,8 +1129,8 @@ void daBomb2::Act_c::mode_explode_init() {
 /* 020CAE14 */
 void daBomb2::Act_c::mode_explode() {
   mEnv.proc(&current.pos);
-  if (field_0x73C == 0 && mEnv.is_end())
-    field_0x740 = 1;
+  if (mExplodeCcTimer == 0 && mEnv.is_end())
+    mDeleteReq = 1;
 }
 
 /* 020CAFB4 */
@@ -1145,25 +1145,25 @@ void daBomb2::Act_c::mode_sink_init() {
   mSph.mObjCo.mSPrm = co & ~1;
   off_carry();
   bomb2_fopAcM_cancelCarryNow(this);
-  field_0x698 = 4;
-  bomb2_fopAcM_getWaterY(&current.pos, &field_0x528);
+  mSinkTimer = 4;
+  bomb2_fopAcM_getWaterY(&current.pos, &mSinkWaterY);
 }
 
 /* 020CB218 */
 void daBomb2::Act_c::mode_sink() {
   gabi::Local<be<f32>> y;
   if (bomb2_fopAcM_getWaterY_u32(&current.pos, y.get()) &&
-      field_0x528 != -1000000000.0f) {
-    field_0x698 = (s32)((u32)field_0x698 - 1);
-    if (field_0x698 > 0) {
-      f32 dy = y->get() - (f32)field_0x528;
+      mSinkWaterY != -1000000000.0f) {
+    mSinkTimer = (s32)((u32)mSinkTimer - 1);
+    if (mSinkTimer > 0) {
+      f32 dy = y->get() - (f32)mSinkWaterY;
       current.pos.y = (f32)current.pos.y + dy;
-      field_0x528 = y->get();
+      mSinkWaterY = y->get();
       posMoveF();
       return;
     }
   }
-  field_0x740 = 1;
+  mDeleteReq = 1;
 }
 
 /* 020C9A6C */
@@ -1182,41 +1182,41 @@ void daBomb2::Act_c::mode_proc_call() {
 
 /* 020C8EF4 */
 void daBomb2::Act_c::tensor_init() {
-  bomb2_PSMTXIdentity(gabi::ea(&field_0x754));
+  bomb2_PSMTXIdentity(gabi::ea(&mTensorMtx));
   vib_init();
 }
 
 /* 020C8EBC */
 void daBomb2::Act_c::vib_init() {
-  field_0x7A8 = 0;
-  field_0x79C = 0;
-  field_0x784 = 0;
-  field_0x788 = 0;
-  field_0x790 = 0;
-  field_0x798 = 0;
-  field_0x78C = 0;
-  field_0x7A0 = 0;
-  field_0x794 = 0;
-  field_0x7A4 = 0;
+  mVibImpulseTimer = 0;
+  mVibImpulseZ = 0;
+  mVibTargetZ = 0;
+  mVibTargetX = 0;
+  mVibX = 0;
+  mVibVelX = 0;
+  mVibZ = 0;
+  mVibImpulseX = 0;
+  mVibVelZ = 0;
+  mVibDamping = 0;
 }
 
 /* 020C9B18 */
 void daBomb2::Act_c::vib_proc() {
-  f32 dx = (f32)field_0x78C - (f32)field_0x784,
-      dz = (f32)field_0x790 - (f32)field_0x788;
-  f32 vx = gabi::fnmsubs(dx, 0.03f, field_0x79C),
-      vz = gabi::fnmsubs(dz, 0.03f, field_0x7A0);
-  f32 ax = (f32)field_0x794 + (vx + vx), az = (f32)field_0x798 + (vz + vz),
-      keep = 1 - (f32)field_0x7A4;
+  f32 dx = (f32)mVibZ - (f32)mVibTargetZ,
+      dz = (f32)mVibX - (f32)mVibTargetX;
+  f32 vx = gabi::fnmsubs(dx, 0.03f, mVibImpulseZ),
+      vz = gabi::fnmsubs(dz, 0.03f, mVibImpulseX);
+  f32 ax = (f32)mVibVelZ + (vx + vx), az = (f32)mVibVelX + (vz + vz),
+      keep = 1 - (f32)mVibDamping;
   f32 nx = ax * keep, nz = az * keep;
-  field_0x79C = 0;
-  field_0x7A0 = 0;
-  field_0x78C = (f32)field_0x78C + nx;
-  field_0x794 = nx;
-  field_0x798 = nz;
-  field_0x790 = (f32)field_0x790 + nz;
-  if (field_0x7A8 > 0)
-    field_0x7A8 = field_0x7A8 - 1;
+  mVibImpulseZ = 0;
+  mVibImpulseX = 0;
+  mVibZ = (f32)mVibZ + nx;
+  mVibVelZ = nx;
+  mVibVelX = nz;
+  mVibX = (f32)mVibX + nz;
+  if (mVibImpulseTimer > 0)
+    mVibImpulseTimer = mVibImpulseTimer - 1;
 }
 
 /* 020C9BB8 */
@@ -1224,11 +1224,11 @@ void daBomb2::Act_c::set_vib_tensor() {
   gabi::Local<cXyz> d;
 
   gabi::Local<Bomb2Quaternion> q;
-  d->x = field_0x790;
+  d->x = mVibX;
   d->y = 1;
-  d->z = field_0x78C;
+  d->z = mVibZ;
   bomb2_daObj__quat_rotBaseY2(q.get(), d.get());
-  bomb2_PSMTXQuat(gabi::ea(&field_0x754), q.get());
+  bomb2_PSMTXQuat(gabi::ea(&mTensorMtx), q.get());
 }
 
 /* 020CB398 */
@@ -1241,13 +1241,13 @@ void daBomb2::Act_c::tensor_wait() {
 
 /* 020CB34C */
 void daBomb2::Act_c::tensor_wait_drop() {
-  if (field_0x7A8 > 0) {
-    field_0x79C = (f32)speed.z * -0.005f;
-    field_0x7A0 = (f32)speed.x * -0.005f;
+  if (mVibImpulseTimer > 0) {
+    mVibImpulseZ = (f32)speed.z * -0.005f;
+    mVibImpulseX = (f32)speed.x * -0.005f;
   }
-  field_0x788 = 0;
-  field_0x7A4 = 0.1f;
-  field_0x784 = 0;
+  mVibTargetX = 0;
+  mVibDamping = 0.1f;
+  mVibTargetZ = 0;
 }
 
 /* 020CB2BC */
@@ -1257,36 +1257,36 @@ void daBomb2::Act_c::tensor_wait_ground() {
       bomb2_cBgS__GetTriPla_u32( p + 0x12A0, (u16)mAcch.m_gnd.mBgIndex,
                       (u16)mAcch.m_gnd.mPolyIndex);
   if (plane) {
-    field_0x784 = (f32)gabi::at<Bomb2Plane>(plane)->mNormal.z * 1.5f;
+    mVibTargetZ = (f32)gabi::at<Bomb2Plane>(plane)->mNormal.z * 1.5f;
     f32 x = (f32)gabi::at<Bomb2Plane>(plane)->mNormal.x * 1.5f;
-    field_0x7A4 = 0.4f;
-    field_0x788 = x;
+    mVibDamping = 0.4f;
+    mVibTargetX = x;
   } else {
-    field_0x784 = 0;
-    field_0x7A4 = 0.4f;
-    field_0x788 = 0;
+    mVibTargetZ = 0;
+    mVibDamping = 0.4f;
+    mVibTargetX = 0;
   }
 }
 
 /* 020CB3AC */
 void daBomb2::Act_c::tensor_carry() {
-  field_0x788 = 0;
-  field_0x7A4 = 0.4f;
-  field_0x784 = 0;
+  mVibTargetX = 0;
+  mVibDamping = 0.4f;
+  mVibTargetZ = 0;
 }
 
 /* 020CB3CC */
 void daBomb2::Act_c::tensor_explode() {
-  field_0x788 = 0;
-  field_0x7A4 = 0.4f;
-  field_0x784 = 0;
+  mVibTargetX = 0;
+  mVibDamping = 0.4f;
+  mVibTargetZ = 0;
 }
 
 /* 020CB3EC */
 void daBomb2::Act_c::tensor_sink() {
-  field_0x788 = 0;
-  field_0x7A4 = 0.4f;
-  field_0x784 = 0;
+  mVibTargetX = 0;
+  mVibDamping = 0.4f;
+  mVibTargetZ = 0;
 }
 
 /* 020C9C14 */
@@ -1302,7 +1302,7 @@ void daBomb2::Act_c::tensor_proc_call() {
 bool daBomb2::Act_c::_execute() {
   set_wind_vec();
   mode_proc_call();
-  if (field_0x740) {
+  if (mDeleteReq) {
     bomb2_fopAcM_delete(this);
     return true;
   }
@@ -1323,7 +1323,7 @@ bool daBomb2::Act_c::_execute() {
 
 /* 020C9F18 */
 bool daBomb2::Act_c::is_draw() {
-  return mState != Mode_EXPLODE_e && !field_0x743 && !field_0x742;
+  return mState != Mode_EXPLODE_e && !mWaterExplodeEffDone && !mExplodeEffDone;
 }
 
 /* 020C9F50 */

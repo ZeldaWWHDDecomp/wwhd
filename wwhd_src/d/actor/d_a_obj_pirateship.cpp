@@ -117,14 +117,14 @@ BOOL executeShip(Ship* ship) {
     }
     bool demo = ship->demo_move() != 0;
     if (!demo) {
-        if (!(u8)l_HIO.m05 && ship->m4A8) {
-            dLib_pathMove(&ship->current.pos, &ship->m4A4, ship->m4A8.get(), 3.f,
+        if (!(u8)l_HIO.m05 && ship->mpPath) {
+            dLib_pathMove(&ship->current.pos, &ship->mPathPntNo, ship->mpPath.get(), 3.f,
                           gabi::guest_fn(reinterpret_cast<const void*>(path_move_call_back)), ship);
-            s16 bob = ship->m32E;
+            s16 bob = ship->mSwayAngle;
             s16 target = ((u32)((s32)bob + 0x4000) >= 0x8001) ? (s16)l_HIO.m12 : (s16)l_HIO.m10;
-            cLib_addCalcAngleS2(&ship->m330, target, 0x10, 0x300);
-            u16 angle = (s16)ship->m32E + (s16)ship->m330;
-            ship->m32E = (s16)angle;
+            cLib_addCalcAngleS2(&ship->mSwaySpeed, target, 0x10, 0x300);
+            u16 angle = (s16)ship->mSwayAngle + (s16)ship->mSwaySpeed;
+            ship->mSwayAngle = (s16)angle;
             f32 amplitude = (f32)l_HIO.m0C + 10.f;
             ship->current.pos.y =
                 gabi::fmadds(amplitude, cM_ssin((s16)angle), (f32)ship->home.pos.y);
@@ -132,24 +132,24 @@ BOOL executeShip(Ship* ship) {
         ship->m2CA = (s16)l_HIO.m06;
     }
     // HD: re-register collision only when the demo and arrival event both allow appearance.
-    if (!ship->m2CC) {
+    if (!ship->mAppeared) {
         if (!demo || !eventBit(dSv_event_flag_c::UNK_0310)) {
             groundDestroy(chk.get());
             return 0;
         }
         if (!eventBit(dSv_event_flag_c::UNK_0001))
             ship->CreateWave();
-        ship->m2CC = 1;
+        ship->mAppeared = 1;
         bg = dComIfG_Bgsp();
         bg->Regist(reinterpret_cast<dBgW*>(ship->mpBgW.get()), ship);
-    } else if (!ship->m2CD && eventBit(dSv_event_flag_c::UNK_0001)) {
-        ship->m2CD = 1;
+    } else if (!ship->mPiratesCreated && eventBit(dSv_event_flag_c::UNK_0001)) {
+        ship->mPiratesCreated = 1;
         ship->pirateCreate(create_idx_tbl_1stIsland_demo.values);
         ship->DeleteWave();
     }
-    searchPart(ship->m_sail_id, ship->m2E4);
-    searchPart(ship->m2F0, ship->m2EC);
-    searchPart(ship->m300, ship->m2FC);
+    searchPart(ship->m_sail_id, ship->mpSail);
+    searchPart(ship->mFlagId, ship->mpFlag);
+    searchPart(ship->mKajiId, ship->mpKaji);
     ship->set_mtx();
     ship->sound_proc();
     ship->SetWave();
@@ -192,25 +192,25 @@ void daObjPirateship::Act_c::set_mtx() {
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), (s16)shape_angle.x, (s16)shape_angle.y,
                    (s16)shape_angle.z);
     mModel->setBaseTRMtx(mDoMtx_stack_c::get());
-    fopAc_ac_c* door = m304;
+    fopAc_ac_c* door = mpDoor;
     if (door) {
         if (!(u32)l_doorOffset.initialized) {
             l_doorOffset.pos.set(0.f, 400.f, 475.f);
             l_doorOffset.initialized = 1;
-            door = m304;
+            door = mpDoor;
         }
         PSMTXCopy(mModel->getBaseTRMtx(), mDoMtx_stack_c::get());
         gabi::Local<cXyz> pos;
         PSMTXMultVec(mDoMtx_stack_c::get(), &l_doorOffset.pos, pos.get());
         pirateshipDoorSetPos(door, pos.get(), (s16)((s16)shape_angle.y + 0x8000));
     } else {
-        u32 id = m308;
+        u32 id = mDoorId;
         fopAc_ac_c* found = nullptr;
         gabi::Local<be<u32>> searchID;
         *searchID = id;
         if (id != 0xFFFFFFFF)
             found = fopAcIt_Judge(FN_SEARCH_BY_ID, searchID.get());
-        m304 = found;
+        mpDoor = found;
     }
     PSMTXTrans(mDoMtx_stack_c::get(), (f32)current.pos.x, (f32)current.pos.y + 3.f,
                (f32)current.pos.z);
@@ -221,7 +221,7 @@ void daObjPirateship::Act_c::set_mtx() {
 
 /* 023844DC */
 void daObjPirateship::Act_c::pirateCreate(be<s32>* indices) {
-    m2CD = 1;
+    mPiratesCreated = 1;
     while ((s32)*indices != -1) {
         PirateshipOffset* entry = &p_offset.entries[(s32)*indices];
         s8 room = tevStr.mRoomNo;
@@ -240,7 +240,7 @@ void daObjPirateship::Act_c::partsCreate() {
     m_sail_id = id;
     if (id == 0xFFFFFFFF)
         pirateshipAssert("d_a_obj_pirateship.cpp", 0x123, "(m_sail_id != fpcM_ERROR_PROCESS_ID_e)");
-    m2F0 = fopAcM_createChild(fpcNm_PIRATE_FLAG_e, fopAcM_GetID(this), 0, &current.pos,
+    mFlagId = fopAcM_createChild(fpcNm_PIRATE_FLAG_e, fopAcM_GetID(this), 0, &current.pos,
                               (s8)tevStr.mRoomNo, &current.angle, 0, -1, 0);
     if (variant != PIRATESHIP_ONLY) {
         gabi::Local<cXyz> pos;
@@ -259,9 +259,9 @@ void daObjPirateship::Act_c::partsCreate() {
         z = gabi::fmadds(-788.f, cosine, (f32)current.pos.z);
         sine = cM_ssin((s16)trig);
         x = gabi::fmadds(-788.f, sine, x);
-        m2F8 = catapult;
+        mTousekikiId = catapult;
         pos->set(x, y, z);
-        m300 = fopAcM_createChild(fpcNm_Kaji_e, fopAcM_GetID(this), 0, pos.get(),
+        mKajiId = fopAcM_createChild(fpcNm_Kaji_e, fopAcM_GetID(this), 0, pos.get(),
                                   (s8)tevStr.mRoomNo, &current.angle, 0, -1, 0);
     }
     gabi::Local<cXyz> doorPos;
@@ -280,26 +280,26 @@ void daObjPirateship::Act_c::partsCreate() {
     doorPos->set(x, y, z);
     id = fopAcM_createChild(fpcNm_KNOB00_e, fopAcM_GetID(this), (u32)dr_prm.params[doorType],
                             doorPos.get(), (s8)tevStr.mRoomNo, angle.get(), 0, -1, 0);
-    m304 = 0;
-    m308 = id;
+    mpDoor = 0;
+    mDoorId = id;
 }
 
 /* 02384A78 */
 void daObjPirateship::Act_c::sound_proc() {
-    if (m2CC != 1)
+    if (mAppeared != 1)
         return;
     PSMTXCopy(mModel->getBaseTRMtx(), mDoMtx_stack_c::get());
     if (stageEqual("A_umikz")) {
         gabi::Local<cXyz> p;
         p->set(0, 800, 2000);
-        PSMTXMultVec(mDoMtx_stack_c::get(), p.get(), &m30C);
-        mDoAud_seStart(JA_SE_OBJ_PIRATE_CRUISE, &m30C);
+        PSMTXMultVec(mDoMtx_stack_c::get(), p.get(), &mCruiseSePos);
+        mDoAud_seStart(JA_SE_OBJ_PIRATE_CRUISE, &mCruiseSePos);
     }
-    if (m2CE) {
+    if (mSailSeOn) {
         gabi::Local<cXyz> p;
         p->set(0, 1500, 300);
-        PSMTXMultVec(mDoMtx_stack_c::get(), p.get(), &m318);
-        mDoAud_seStart(JA_SE_OBJ_PIRATE_SAIL, &m318);
+        PSMTXMultVec(mDoMtx_stack_c::get(), p.get(), &mSailSePos);
+        mDoAud_seStart(JA_SE_OBJ_PIRATE_SAIL, &mSailSePos);
     }
 }
 
@@ -354,12 +354,12 @@ BOOL daObjPirateship::Act_c::CreateHeap() {
 
 /* 02384570 */
 void daObjPirateship::Act_c::CreateWave() {
-    m6C8.copy(current.pos);
-    if (!m4AC.mpEmitter) {
-        dComIfGp_getParticle()->set(5, PIRATESHIP_TAIL, &m6C8, &current.angle, nullptr, 0,
-                                    reinterpret_cast<dPa_levelEcallBack*>(&m4AC), -1, nullptr,
+    mWakePos.copy(current.pos);
+    if (!mWakeCb.mpEmitter) {
+        dComIfGp_getParticle()->set(5, PIRATESHIP_TAIL, &mWakePos, &current.angle, nullptr, 0,
+                                    reinterpret_cast<dPa_levelEcallBack*>(&mWakeCb), -1, nullptr,
                                     nullptr, nullptr);
-        PirateshipEmitter* emitter = m4AC.mpEmitter;
+        PirateshipEmitter* emitter = mWakeCb.mpEmitter;
         if (emitter) {
             emitter->mGlobalDynamicsScale.y = 20.0f;
             emitter->mGlobalParticleScale.z = 20.0f;
@@ -369,18 +369,18 @@ void daObjPirateship::Act_c::CreateWave() {
             emitter->mGlobalDynamicsScale.z = 20.0f;
         }
     }
-    if (!m4FC) {
+    if (!mpSplashEmitter) {
         gabi::Local<GXColor> secondary;
-        dKy_get_seacolor(&m500, secondary.get());
-        m4FC = reinterpret_cast<PirateshipEmitter*>(
+        dKy_get_seacolor(&mSplashColor, secondary.get());
+        mpSplashEmitter = reinterpret_cast<PirateshipEmitter*>(
             dComIfGp_getParticle()->set(0, PIRATESHIP_SPLASH, &current.pos, &current.angle, nullptr,
-                                        255, nullptr, -1, &m500, nullptr, nullptr));
+                                        255, nullptr, -1, &mSplashColor, nullptr, nullptr));
     }
 }
 
 /* 02384C2C */
 void daObjPirateship::Act_c::SetWave() {
-    PirateshipEmitter* emitter = m4AC.mpEmitter;
+    PirateshipEmitter* emitter = mWakeCb.mpEmitter;
     if (emitter) {
         f32 scale = (f32)l_HIO.m24;
         emitter->mGlobalDynamicsScale.y = scale;
@@ -390,28 +390,28 @@ void daObjPirateship::Act_c::SetWave() {
         emitter->mGlobalDynamicsScale.z = scale;
         emitter->mGlobalDynamicsScale.x = scale;
         PSMTXCopy(mModel->getBaseTRMtx(), mDoMtx_stack_c::get());
-        PSMTXMultVec(mDoMtx_stack_c::get(), &l_HIO.m18, &m6C8);
-        f32 waterY = m6C8.y;
-        u32 flags = (u32)m504.m_flags;
-        m4AC.mWaterY = waterY;
+        PSMTXMultVec(mDoMtx_stack_c::get(), &l_HIO.m18, &mWakePos);
+        f32 waterY = mWakePos.y;
+        u32 flags = (u32)mAcch.m_flags;
+        mWakeCb.mWaterY = waterY;
         f32 indirect = (f32)l_HIO.m28, size = (f32)l_HIO.m2C;
-        m4AC.mIndirectOffset = indirect;
-        m4AC.mIndirectScale = size;
-        m4AC.mSpeed = (f32)l_HIO.m30;
-        m4AC.mWaterFlatY = (flags & 0x800) ? (f32)m504.m_wtr.m_height : (f32)m6C8.y;
-        m4AC.mLimitSpeed = (f32)l_HIO.m34;
-        emitter = m4AC.mpEmitter;
+        mWakeCb.mIndirectOffset = indirect;
+        mWakeCb.mIndirectScale = size;
+        mWakeCb.mSpeed = (f32)l_HIO.m30;
+        mWakeCb.mWaterFlatY = (flags & 0x800) ? (f32)mAcch.m_wtr.m_height : (f32)mWakePos.y;
+        mWakeCb.mLimitSpeed = (f32)l_HIO.m34;
+        emitter = mWakeCb.mpEmitter;
         emitter->mInitialVelDir = (f32)l_HIO.m38;
     }
-    if (m4FC) {
+    if (mpSplashEmitter) {
         gabi::Local<GXColor> secondary;
-        dKy_get_seacolor(&m500, secondary.get());
-        emitter = m4FC.get();
-        u8 b = (u8)m500.b, r = (u8)m500.r, g = (u8)m500.g;
+        dKy_get_seacolor(&mSplashColor, secondary.get());
+        emitter = mpSplashEmitter.get();
+        u8 b = (u8)mSplashColor.b, r = (u8)mSplashColor.r, g = (u8)mSplashColor.g;
         emitter->mGlobalPrmColor.r = r;
         emitter->mGlobalPrmColor.b = b;
         emitter->mGlobalPrmColor.g = g;
-        emitter = m4FC.get();
+        emitter = mpSplashEmitter.get();
         f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
         // HD: reflected draw modes invert the splash translation vertically.
         if ((u8)emitter->mDrawMode >= 7)
@@ -419,7 +419,7 @@ void daObjPirateship::Act_c::SetWave() {
         emitter->mGlobalTranslation.y = y;
         emitter->mGlobalTranslation.x = x;
         emitter->mGlobalTranslation.z = z;
-        emitter = m4FC.get();
+        emitter = mpSplashEmitter.get();
         s16 az = current.angle.z, ay = current.angle.y, ax = current.angle.x;
         JPAGetXYZRotateMtx(ax, ay, az, &emitter->mGlobalRotation);
     }
@@ -427,14 +427,14 @@ void daObjPirateship::Act_c::SetWave() {
 
 /* 02384A48 */
 void daObjPirateship::Act_c::DeleteWave() {
-    PirateshipEmitter* emitter = m4FC.get();
+    PirateshipEmitter* emitter = mpSplashEmitter.get();
     if (emitter) {
         u32 flags = (u32)emitter->mFlags;
         emitter->mMaxFrame = -1;
         emitter->mFlags = flags | 1;
-        m4FC = 0;
+        mpSplashEmitter = 0;
     }
-    dPa_trackEcallBack_remove(&m4AC);
+    dPa_trackEcallBack_remove(&mWakeCb);
 }
 
 /* 02384F20 */
@@ -453,7 +453,7 @@ BOOL daObjPirateship::Act_c::Execute(be<u32>* matrix) {
 
 /* 02384FB4 */
 BOOL daObjPirateship::Act_c::Draw() {
-    if (!m2CC)
+    if (!mAppeared)
         return 0;
     auto env = dKy_getEnvlight();
     settingTevStruct(env, 0, &current.pos, &tevStr);
@@ -543,10 +543,10 @@ BOOL daObjPirateship::Act_c::_create() {
             dBgS_MoveBgActor__ct(this);
             __vtbl = VT_ACTOR;
             mDoExt_btkAnm::ct(&mSeaBtk);
-            cCcD_Stts__ct(&m338);
-            dCcD_GStts__ct(&m338.__vtbl_gstts);
-            m338.__vtbl = VT_STATUS;
-            m338.__vtbl_gstts = VT_GLOBAL_STATUS;
+            cCcD_Stts__ct(&mStts);
+            dCcD_GStts__ct(&mStts.__vtbl_gstts);
+            mStts.__vtbl = VT_STATUS;
+            mStts.__vtbl_gstts = VT_GLOBAL_STATUS;
             dCcD_GObjInf__ct(&mCyl);
             mCyl.mShape.__vtbl = VT_SHAPE_BASE;
             mCyl.mShape.boundsVtable = VT_CYLINDER_BOUNDS;
@@ -554,14 +554,14 @@ BOOL daObjPirateship::Act_c::_create() {
             mCyl.mCyl.__vtbl = VT_CYLINDER_GEOMETRY;
             mCyl.__vtbl_hitinf = VT_CYLINDER_HIT;
             mCyl.mShape.__vtbl = VT_CYLINDER_SHAPE;
-            m4AC.__vtbl = VT_TRACK;
-            __construct_array(m4AC.mPos, 3, 12,
+            mWakeCb.__vtbl = VT_TRACK;
+            __construct_array(mWakeCb.mPos, 3, 12,
                               gabi::guest_fn(reinterpret_cast<const void*>(pirateship_vectorCtor)));
-            pirateshipAcchConstruct(&m504);
-            m504.dBgS_GrpPassChk::__vtbl = VT_ACCH_GROUP_PASS;
-            m504.cBgS_Chk::__vtbl = VT_ACCH_CHECK;
-            m504.dBgS_PolyPassChk::__vtbl = VT_ACCH_POLY_PASS;
-            m504.mbObjThrough = 1;
+            pirateshipAcchConstruct(&mAcch);
+            mAcch.dBgS_GrpPassChk::__vtbl = VT_ACCH_GROUP_PASS;
+            mAcch.cBgS_Chk::__vtbl = VT_ACCH_CHECK;
+            mAcch.dBgS_PolyPassChk::__vtbl = VT_ACCH_POLY_PASS;
+            mAcch.mbObjThrough = 1;
         }
         actor_condition = actor_condition | 8;
     }
@@ -571,28 +571,28 @@ BOOL daObjPirateship::Act_c::_create() {
     s32 collision = stageEqual("sea") ? KAIZOKUSEN_DZB_ROOM1B : KAIZOKUSEN_DZB_ROOM1A;
     phase = pirateshipMoveBGCreate(this, "Kaizokusen", collision, FN_MOVE_BG_TYPICAL_ROT_Y, 0x7500);
     mpBgW->rideCallback = gabi::guest_fn(reinterpret_cast<const void*>(ride_call_back));
-    m2CE = (mParameters & 15) != 0;
+    mSailSeOn = (mParameters & 15) != 0;
     partsCreate();
     u8 variant = mParameters >> 24;
-    m4FC = 0;
+    mpSplashEmitter = 0;
     switch (variant) {
     case PIRATESHIP_FIRST_ISLAND:
         if (!eventBit(dSv_event_flag_c::UNK_0310)) {
-            m2CC = 0;
-            m2CD = 0;
+            mAppeared = 0;
+            mPiratesCreated = 0;
             dBgS* bg = dComIfG_Bgsp();
             bg->Release(reinterpret_cast<dBgW*>(mpBgW.get()));
         } else {
             // HD: an arrived ship appears immediately, unlike the GameCube branch.
-            m2CC = 1;
+            mAppeared = 1;
             if (eventBit(dSv_event_flag_c::UNK_0001)) {
                 pirateCreate(create_idx_tbl_1stIsland.values);
-                m2CD = 1;
+                mPiratesCreated = 1;
             } else {
-                m2CD = 0;
+                mPiratesCreated = 0;
                 CreateWave();
             }
-            if (!m2CC) {
+            if (!mAppeared) {
                 dBgS* bg = dComIfG_Bgsp();
                 bg->Release(reinterpret_cast<dBgW*>(mpBgW.get()));
             }
@@ -600,10 +600,10 @@ BOOL daObjPirateship::Act_c::_create() {
         break;
     case PIRATESHIP_UMIKZ:
         pirateCreate(create_idx_tbl_umikz.values);
-        m2CD = 1;
-        m2CC = 1;
+        mPiratesCreated = 1;
+        mAppeared = 1;
         CreateWave();
-        if (!m2CC) {
+        if (!mAppeared) {
             dBgS* bg = dComIfG_Bgsp();
             bg->Release(reinterpret_cast<dBgW*>(mpBgW.get()));
         }
@@ -611,27 +611,27 @@ BOOL daObjPirateship::Act_c::_create() {
     case PIRATESHIP_ARRIVE_MJ: {
         if (dComIfGp_getStartStagePoint() == 0x12)
             pirateCreate(create_idx_tbl_arriveMj.values);
-        m2CD = 1;
-        m2CC = 1;
+        mPiratesCreated = 1;
+        mAppeared = 1;
         break;
     }
     case PIRATESHIP_YUUKAIGO:
         pirateCreate(create_idx_tbl_Yuukaigo.values);
-        m2CD = 1;
-        m2CC = 1;
+        mPiratesCreated = 1;
+        mAppeared = 1;
         break;
     default:
-        m2CD = 1;
-        m2CC = 1;
+        mPiratesCreated = 1;
+        mAppeared = 1;
         break;
     }
     u8 pathIndex = (mParameters >> 16) & 255;
-    m4A8 = 0;
-    m4A4 = 0;
+    mpPath = 0;
+    mPathPntNo = 0;
     if (pathIndex != 255)
-        m4A8 = dPath_GetRoomPath(pathIndex, (s8)current.roomNo);
-    m32E = 0;
-    m330 = 0x180;
+        mpPath = dPath_GetRoomPath(pathIndex, (s8)current.roomNo);
+    mSwayAngle = 0;
+    mSwaySpeed = 0x180;
     set_mtx();
     executeShip(this);
     return phase;
@@ -645,8 +645,8 @@ BOOL daObjPirateship::Act_c::_delete() {
         l_HIO.mNo = -1;
     }
     DeleteWave();
-    mDoAud_seDeleteObject(&m30C);
-    mDoAud_seDeleteObject(&m318);
+    mDoAud_seDeleteObject(&mCruiseSePos);
+    mDoAud_seDeleteObject(&mSailSePos);
     s32 result = pirateshipMoveBGDelete(this);
     dComIfG_deleteObjectRes("Kaizokusen");
     return result != 0;
@@ -721,11 +721,11 @@ void* pirateship_vectorCtor(void* str) {
 static void pirateship_Act_c_dt(void* p, s32 flags) {
     if (p != nullptr) {
         Ship* actor = static_cast<Ship*>(p);
-        actor->m504.dBgS_GrpPassChk::__vtbl = VT_ACCH_GROUP_PASS;
-        actor->m504.dBgS_PolyPassChk::__vtbl = VT_ACCH_POLY_PASS;
-        pirateshipLineDestruct(&actor->m504, 0);   /* line check */
+        actor->mAcch.dBgS_GrpPassChk::__vtbl = VT_ACCH_GROUP_PASS;
+        actor->mAcch.dBgS_PolyPassChk::__vtbl = VT_ACCH_POLY_PASS;
+        pirateshipLineDestruct(&actor->mAcch, 0);   /* line check */
         pirateshipAcchDestruct(&actor->mCyl, 2);   /* dBgS_Acch::~dBgS_Acch */
-        pirateshipStatusDestruct(&actor->m338, 2); /* dCcD_Stts */
+        pirateshipStatusDestruct(&actor->mStts, 2); /* dCcD_Stts */
         pirateshipActorDestruct(p, 0);             /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(p);

@@ -204,21 +204,21 @@ static void hajimarinomori_check(andsw0_class* i_this) {
             fopAcM_delete((fopAc_ac_c*)ac[5].get());
             fopAcM_delete((fopAc_ac_c*)ac[6].get());
 
-            ((bk_class*)ac[3].get())->m121C = 1;
-            ((bk_class*)ac[4].get())->m121C = 1;
+            ((bk_class*)ac[3].get())->mPathEnd = 1;
+            ((bk_class*)ac[4].get())->mPathEnd = 1;
 
             if (dComIfGs_isEventBit(dSv_event_flag_c::UNK_0301)) {
-                ((bk_class*)ac[0].get())->m121C = 1;
+                ((bk_class*)ac[0].get())->mPathEnd = 1;
             }
             if (dComIfGs_isEventBit(dSv_event_flag_c::UNK_0480)) {
-                ((bk_class*)ac[1].get())->m121C = 1;
+                ((bk_class*)ac[1].get())->mPathEnd = 1;
             }
             if (dComIfGs_isEventBit(dSv_event_flag_c::UNK_0301) && dComIfGs_isEventBit(dSv_event_flag_c::UNK_0480)) {
-                ((bk_class*)ac[2].get())->m121C = 1;
+                ((bk_class*)ac[2].get())->mPathEnd = 1;
             }
         } else {
-            ((bk_class*)ac[0].get())->m121C = 1;
-            ((bk_class*)ac[1].get())->m121C = 1;
+            ((bk_class*)ac[0].get())->mPathEnd = 1;
+            ((bk_class*)ac[1].get())->mPathEnd = 1;
         }
 
         fopAcM_delete(actor);

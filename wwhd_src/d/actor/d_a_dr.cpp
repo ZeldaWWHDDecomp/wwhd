@@ -105,15 +105,15 @@ static inline void move(dr_class *i_this) {
         i_this->mMode = i_this->mMode + 1;
         i_this->mCountDownTimers[0] = l_HIO.m0E;
         i_this->mpBreathEmitter = dComIfGp_particle_set(dPa_name_ID_AK_SN_DRPAINBIKU00, &i_this->current.pos);
-        i_this->m2C9 = 0;
+        i_this->mBikuDone = 0;
         // Fall-through
     case 11:
-        if (i_this->m2C9 == 0 && gabi::ftoi(i_this->mpMorf->getFrame()) == 15) {
+        if (i_this->mBikuDone == 0 && gabi::ftoi(i_this->mpMorf->getFrame()) == 15) {
             i_this->mCountDownTimers[1] = 5;
         }
 
         if (i_this->mpMorf->isStop()) {
-            i_this->m2C9 = 1;
+            i_this->mBikuDone = 1;
             breath_invalidate(i_this);
 
             if (i_this->mCountDownTimers[0] != 0) {
@@ -171,9 +171,9 @@ static inline void move(dr_class *i_this) {
     }
 
     if (!dComIfGs_isStageBossEnemy(STAGE_DRC)) {
-        if ((isIdle && (l_HIO.m0C || dComIfGp_getVibration_CheckQuake())) || i_this->m2C8 != 0) {
+        if ((isIdle && (l_HIO.m0C || dComIfGp_getVibration_CheckQuake())) || i_this->mBikuRequest != 0) {
             l_HIO.m0C = false;
-            i_this->m2C8 = 0;
+            i_this->mBikuRequest = 0;
             i_this->mMode = 10;
         }
     }

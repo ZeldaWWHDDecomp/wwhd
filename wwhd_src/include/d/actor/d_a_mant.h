@@ -212,8 +212,8 @@ struct MaterialBlock {
     u8 padding3[0x364 - 0xE4];
 };
 struct IndexBuffer {
-    be<u32> mPrimitive;
-    be<u32> mFormat;
+    be<u32> mIndexFormat; /* was mPrimitive (misnamed): GX2DrawIndexedEx indexType (r5) in daMant_packet_c::setupUniforms 021BE340; view of agl::IndexBufferLayout (027B5430 construct, 027B54E0 setStorage format 4), agl::IndexBufferLayout::mFormat */
+    be<u32> mPrimitiveMode; /* was mFormat (misnamed): GX2DrawIndexedEx mode (r3) in daMant_packet_c::setupUniforms 021BE340, set to 4 (triangles) by daMant_packet_c_ct 021BD4A0; agl::IndexBufferLayout::mPrimitiveMode */
     gptr<void> mpIndices;
     be<u32> mCount;
     u8 padding[8];
@@ -376,33 +376,33 @@ struct mant_class : fopAc_ac_c {
     /* 0x2C94 */ be<u32> mTick;
     /* 0x2C98 */ u8 paddingTick[4];
     /* 0x2C9C */ mant_j_s mJoint[9];
-    /* 0x362C */ cXyz m1BE0;
-    /* 0x3638 */ cXyz m1BEC;
-    /* 0x3644 */ be<f32> m1BF8;
-    /* 0x3648 */ be<f32> m1BFC;
+    /* 0x362C */ cXyz mShoulderPosR;  /* was m1BE0: the cape's right shoulder point: part_move 024BC3EC (Darknut) writes it from armor joint 6 (zeldaret/tww d_a_tn.cpp: TN_YOROI1_JNT_J_YOROI_KATA_R1_e) + (2, y, -43), execute_collision (inlined in daFganon_Execute 02134B28) from joint 0x14 (zeldaret/tww d_a_fganon.cpp: BPG_JNT_J_BPG_KATA_R1_e) + (35, 0, -30); daMant_Execute 021BC3C4 spreads the top cape row from mShoulderPosL (row 0) to it (row 8) */
+    /* 0x3638 */ cXyz mShoulderPosL;  /* was m1BEC: the cape's left shoulder point: part_move 024BC3EC writes it from armor joint 4 (zeldaret/tww d_a_tn.cpp: TN_YOROI1_JNT_J_YOROI_KATA_L1_e) + (2, y, 43), execute_collision (inlined in daFganon_Execute 02134B28) from joint 0xB (zeldaret/tww d_a_fganon.cpp: BPG_JNT_J_BPG_KATA_L1_e) + (35, 0, 30); daMant_Execute 021BC3C4 starts the top cape row (row 0) here; daTn_Execute 024BD170 parks both points at (-10000, 20000, -21000) */
+    /* 0x3644 */ be<f32> mSegmentLen;  /* was m1BF8: daMant_Create 021BE134 sets 30 (Darknut) / 40 (Phantom Ganon); daMant_Execute 021BC3C4 uses it (+ a sine per row, * scale.y) as the distance between the cape nodes and eases it back to 30 */
+    /* 0x3648 */ be<f32> mSpeedRate;  /* was m1BFC: daMant_Create 021BE134 sets 0.7 / 0.8; daMant_Execute 021BC3C4 keeps (new - old position) * it as each node's speed and eases it back to 0.7 */
     /* 0x364C */ be<f32> mWindAmplitude;
     /* 0x3650 */ be<f32> mWindGust;
     /* 0x3654 */ be<f32> mGravity;
     /* 0x3658 */ be<s16> mWindHeading;
-    /* 0x365A */ be<s16> m1C0E;
+    /* 0x365A */ be<s16> mWindTimer;  /* was m1C0E: daMant_Execute 021BC3C4: 2 / 6 at a mesh hit, the wind duration + 5 at a mWindSph hit; counted down, mWindAmplitude rises while it runs and mWindGust only while it is > 4 */
     /* 0x365C */ dCcD_Stts mStts;
     /* 0x3698 */ dCcD_Sph mWindSph;
     /* 0x37C4 */ dCcD_Sph mMeshSph[9];
     /* 0x4250 */ Mtx34 mMtx;
-    /* 0x4280 */ be<s8> m2834;
+    /* 0x4280 */ be<s8> mMeshHitOn;  /* was m2834: daMant_Create 021BE134 sets 10 for the Darknut cape; daMant_Execute 021BC3C4 gives the mMeshSph spheres radius 30 only while it is not 0 (else -200, hidden) and clears it when a sword hit tears the cape (mTexNo 2 / 4) */
     /* 0x4281 */ u8 paddingState;
-    /* 0x4282 */ be<s16> m2836;
+    /* 0x4282 */ be<s16> mHitWait;  /* was m2836: daMant_Execute 021BC3C4 counts it down, checks the mesh spheres for hits only while it is 0 and sets 10 after a hit */
     /* 0x4284 */ be<s16> mBurnTimer;
     /* 0x4286 */ u8 paddingEnd[2];
 };
 WWHD_OFFSET(mant_class, mPacket, 0x3B4);
 WWHD_OFFSET(mant_class, mType, 0x2C90);
 WWHD_OFFSET(mant_class, mJoint, 0x2C9C);
-WWHD_OFFSET(mant_class, m1BE0, 0x362C);
-WWHD_OFFSET(mant_class, m1BF8, 0x3644);
+WWHD_OFFSET(mant_class, mShoulderPosR, 0x362C);
+WWHD_OFFSET(mant_class, mSegmentLen, 0x3644);
 WWHD_OFFSET(mant_class, mStts, 0x365C);
 WWHD_OFFSET(mant_class, mMeshSph, 0x37C4);
 WWHD_OFFSET(mant_class, mMtx, 0x4250);
-WWHD_OFFSET(mant_class, m2834, 0x4280);
+WWHD_OFFSET(mant_class, mMeshHitOn, 0x4280);
 WWHD_OFFSET(mant_class, mBurnTimer, 0x4284);
 WWHD_SIZE(mant_class, 0x4288);

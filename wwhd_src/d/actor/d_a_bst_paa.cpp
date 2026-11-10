@@ -16,7 +16,7 @@ static void paa_attack(bst_class *actor) {
     cLib_addCalcAngleS2(&actor->shape_angle.z, 0, 10, 0x400);
     f32 scale = 1.0f;
     f32 ten = 10.0f;
-    cLib_addCalc2(&i_this->m1118, -40.0f, scale, ten);
+    cLib_addCalc2(&i_this->mBodyOffsetZ, -40.0f, scale, ten);
     s16 state = static_cast<s16>(i_this->mDamage);
     f32 forty = 40.0f;
     gabi::Local<cXyz> vector, intermediate, transformed;
@@ -29,7 +29,7 @@ static void paa_attack(bst_class *actor) {
         return std_sqrtf(square);
     };
     auto rotation = [&]() {
-        s16 angle = static_cast<s16>(i_this->m111C);
+        s16 angle = static_cast<s16>(i_this->mAttackBaseYaw);
         Mtx34 *matrix = calc_mtx();
         cMtx_YrotS(matrix, angle);
     };
@@ -37,14 +37,14 @@ static void paa_attack(bst_class *actor) {
     case 0: {
         f32 zero = 0.0f;
         i_this->mDamage = (s16)(state + 1);
-        i_this->m10EC.y = zero;
+        i_this->mMoveParam.y = zero;
         s16 playerFacing = static_cast<s16>(player->shape_angle.y);
         u8 part = i_this->mBstPartType;
-        i_this->m111C = playerFacing;
+        i_this->mAttackBaseYaw = playerFacing;
         u16 animation = paa_bck_d.mAnimation[part];
         BstPaa_anm_init(actor, animation, ten, 2, scale, -1);
         s16 duration = REG0_S(1);
-        i_this->m10FC[0] = (s16)(duration + 80);
+        i_this->mTimers[0] = (s16)(duration + 80);
         [[fallthrough]];
     }
     case 1: {
@@ -57,7 +57,7 @@ static void paa_attack(bst_class *actor) {
         else
             cLib_addCalc0(&actor->speedF, scale, increment);
         f32 radius = gabi::fadds_ppc(REG0_F(5), 8000.0f);
-        i_this->m10EC.x = radius;
+        i_this->mMoveParam.x = radius;
         rotation();
         bool left = (u8)i_this->mBstPartType == bst_class::Type_LEFT_HAND_e;
         f32 offsetX = REG0_F(2);
@@ -73,10 +73,10 @@ static void paa_attack(bst_class *actor) {
         }
         MtxPosition(vector.get(), transformed.get());
         cXyz_pl(&player->current.pos, intermediate.get(), transformed.get());
-        s16 savedFacing = static_cast<s16>(i_this->m111C);
+        s16 savedFacing = static_cast<s16>(i_this->mAttackBaseYaw);
         target->copy(*intermediate);
         cLib_addCalcAngleS2(&actor->shape_angle.y, (s16)(savedFacing + (left ? 0x4000 : -0x4000)), 10, 0x800);
-        if (static_cast<s16>(i_this->m10FC[0]) == 0) {
+        if (static_cast<s16>(i_this->mTimers[0]) == 0) {
             s16 current = static_cast<s16>(i_this->mDamage);
             i_this->mDamage = (s16)(current + 1);
             // HD: word copies preserve the player's floating-point payloads.
@@ -96,20 +96,20 @@ static void paa_attack(bst_class *actor) {
         f32 step = gabi::fadds_ppc(REG0_F(15), ten);
         cLib_addCalc2(&actor->speedF, speed, scale, step);
         f32 radius = gabi::fadds_ppc(REG0_F(5), 10000.0f);
-        i_this->m10EC.x = radius;
+        i_this->mMoveParam.x = radius;
         f32 distance = distanceToTarget();
         f32 range = gabi::fadds_ppc(REG0_F(16), 200.0f);
         if (distance < range) {
             s16 current = static_cast<s16>(i_this->mDamage);
             i_this->mDamage = (s16)(current + 1);
             s16 duration = REG0_S(7);
-            i_this->m10FC[0] = (s16)(duration + 30);
+            i_this->mTimers[0] = (s16)(duration + 30);
         }
         break;
     }
     case 3: {
         move = false;
-        s16 timer = static_cast<s16>(i_this->m10FC[0]);
+        s16 timer = static_cast<s16>(i_this->mTimers[0]);
         if (timer >= 28) {
             if (timer == 28) {
                 if ((u8)i_this->mBstPartType == bst_class::Type_LEFT_HAND_e) {
@@ -136,12 +136,12 @@ static void paa_attack(bst_class *actor) {
                                     nullptr, nullptr);
                 }
                 s16 duration = REG0_S(8);
-                i_this->m112A = (s16)(duration + 5);
+                i_this->mImpactShakeTimer = (s16)(duration + 5);
             }
             BstPaa_set_hand_AT(actor, 1);
         }
         bool left = (u8)i_this->mBstPartType == bst_class::Type_LEFT_HAND_e;
-        s16 savedFacing = static_cast<s16>(i_this->m111C);
+        s16 savedFacing = static_cast<s16>(i_this->mAttackBaseYaw);
         cLib_addCalcAngleS2(&actor->shape_angle.y, (s16)(savedFacing + (left ? 0x4000 : -0x4000)), 1, 0x1000);
         f32 maxX = std::fabs(static_cast<f32>(actor->speed.x));
         f32 targetX = target->x;
@@ -149,15 +149,15 @@ static void paa_attack(bst_class *actor) {
         f32 maxZ = std::fabs(static_cast<f32>(actor->speed.z));
         f32 targetZ = target->z;
         cLib_addCalc2(&actor->current.pos.z, targetZ, scale, maxZ);
-        if (static_cast<s16>(i_this->m10FC[0]) == 0) {
+        if (static_cast<s16>(i_this->mTimers[0]) == 0) {
             s16 current = static_cast<s16>(i_this->mDamage);
             f32 zero = 0.0f;
             i_this->mDamage = (s16)(current + 1);
             actor->speedF = zero;
             s16 duration = REG0_S(3);
             s16 facing = static_cast<s16>(actor->current.angle.y);
-            s16 saved = static_cast<s16>(i_this->m111C);
-            i_this->m10FC[0] = (s16)(duration + 30);
+            s16 saved = static_cast<s16>(i_this->mAttackBaseYaw);
+            i_this->mTimers[0] = (s16)(duration + 30);
             actor->current.angle.y = (s16)(facing - 0x8000);
             Mtx34 *matrix = calc_mtx();
             cMtx_YrotS(matrix, saved);
@@ -182,8 +182,8 @@ static void paa_attack(bst_class *actor) {
         f32 acceleration = gabi::fadds_ppc(REG0_F(13), scale);
         cLib_addCalc2(&actor->speedF, forty, scale, acceleration);
         f32 radius = gabi::fadds_ppc(REG0_F(5), 2000.0f);
-        s16 timer = static_cast<s16>(i_this->m10FC[0]);
-        i_this->m10EC.x = radius;
+        s16 timer = static_cast<s16>(i_this->mTimers[0]);
+        i_this->mMoveParam.x = radius;
         finish = timer == 0;
         break;
     }

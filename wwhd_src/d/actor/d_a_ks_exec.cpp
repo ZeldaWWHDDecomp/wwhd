@@ -67,7 +67,7 @@ static inline void action_dousa_move(ks_class* i_this) {
 
     switch (i_this->mMode) {
     case 0:
-        i_this->m30C = 0.0f;
+        i_this->mSwayAmp = 0.0f;
         actor->gravity = -3.0f;
         clear_m2F0(i_this);
         i_this->mMode = i_this->mMode + 1;
@@ -95,7 +95,7 @@ static inline void action_dousa_move(ks_class* i_this) {
         }
 
         s16 ang = fopAcM_searchPlayerAngleY(actor);
-        actor->current.angle.y = ang + i_this->m2FC;
+        actor->current.angle.y = ang + i_this->mMoveAngleOffset;
 
         i_this->mMode = i_this->mMode + 1;
         // Fall-through
@@ -103,7 +103,7 @@ static inline void action_dousa_move(ks_class* i_this) {
     case 2: {
         if (i_this->mAcch.ChkGroundHit()) {
             s16 ang = fopAcM_searchPlayerAngleY(actor);
-            actor->current.angle.y = ang + i_this->m2FC;
+            actor->current.angle.y = ang + i_this->mMoveAngleOffset;
         }
 
         if ((u32)(s32)KUTTUKU_ALL_COUNT < 0x14 && (link->speedF > 12.0f || HEAVY_IN) &&
@@ -118,20 +118,20 @@ static inline void action_dousa_move(ks_class* i_this) {
         if (!(link->speedF > 12.0f) || dComIfGp_checkPlayerStatus0(0, daPyStts0_SWIM_e)) {
             cLib_addCalc0(&actor->speedF, 0.3f, cM_rndF(1.0f) + 0.3f);
             cLib_addCalcAngleS2(&actor->shape_angle.z, 0, 1, 0x1000);
-            i_this->m2FC = 0;
+            i_this->mMoveAngleOffset = 0;
             break;
         }
 
-        if (i_this->m2FC == 0) {
+        if (i_this->mMoveAngleOffset == 0) {
             f32 id = (f32)(fopAcM_GetID(actor) & 0xf);
-            i_this->m2FC = (s16)gabi::ftoi(id * cM_rndFX(512.0f));
+            i_this->mMoveAngleOffset = (s16)gabi::ftoi(id * cM_rndFX(512.0f));
         }
 
         actor->shape_angle.z = (s16)gabi::ftoi(cM_rndFX(2000.0f));
 
         speed_keisan(i_this, actor->current.angle.y);
 
-        i_this->m30C = 10.0f;
+        i_this->mSwayAmp = 10.0f;
         actor->speedF = 12.0f;
         i_this->m2F0[0] += 1000;
 
@@ -165,10 +165,10 @@ static inline void action_kougeki_move(ks_class* i_this) {
     fopAc_ac_c* actor = i_this;
     f32 head_top_y = (f32)ksPlayer(dComIfGp_getPlayer(0))->mHeadTopPos.y; /* getHeadTopPos().y */
 
-    i_this->m31C = 20.0f;
+    i_this->mSphRadius = 20.0f;
 
     if (head_top_y > actor->current.pos.y) {
-        i_this->m31C = 60.0f;
+        i_this->mSphRadius = 60.0f;
     }
 
     switch (i_this->mMode) {
@@ -181,7 +181,7 @@ static inline void action_kougeki_move(ks_class* i_this) {
 
         clear_m2F0(i_this);
 
-        i_this->m30C = 0.0f;
+        i_this->mSwayAmp = 0.0f;
 
         actor->current.angle.y = fopAcM_searchPlayerAngleY(actor);
 
@@ -209,7 +209,7 @@ static inline void action_kougeki_move(ks_class* i_this) {
 
         i_this->mSph.mObjCo.mSPrm |= 1u; /* OnCoSetBit */
 
-        i_this->m2E8[2] = (s16)gabi::ftoi(cM_rndF(20.0f) + 20.0f);
+        i_this->mTimers[2] = (s16)gabi::ftoi(cM_rndF(20.0f) + 20.0f);
 
         i_this->mMode = i_this->mMode + 1;
         // Fall-through
@@ -224,8 +224,8 @@ static inline void action_kougeki_move(ks_class* i_this) {
             actor->speedF = 16.0f;
         }
 
-        if (i_this->m2E8[2] == 0) {
-            i_this->m31C = 20.0f;
+        if (i_this->mTimers[2] == 0) {
+            i_this->mSphRadius = 20.0f;
             i_this->mAction = KS_MOVE;
             i_this->mMode = 0;
             actor->speedF = 0.0f;
@@ -249,26 +249,26 @@ static inline void action_kaze_move(ks_class* i_this) {
     case 20: {
         clear_m2F0(i_this);
 
-        i_this->m2E8[1] = 0x32;
+        i_this->mTimers[1] = 0x32;
 
         fopAcM_monsSeStart(actor, JA_SE_CV_KS_BLOW, 0);
 
-        i_this->m310 = actor->current.pos.y;
-        i_this->m30C = 0.0f;
+        i_this->mWindStartY = actor->current.pos.y;
+        i_this->mSwayAmp = 0.0f;
 
         actor->speedF = cM_rndF(15.0f) + 10.0f;
-        i_this->m314 = cM_rndF(15.0f) + 10.0f;
+        i_this->mWindRiseSpeed = cM_rndF(15.0f) + 10.0f;
 
-        i_this->m308 = 0.0f;
+        i_this->mWindRiseStep = 0.0f;
 
         i_this->mMode = i_this->mMode + 1;
         // Fall-through
     }
     case 21: {
-        cLib_addCalc2(&actor->speed.y, i_this->m314, 0.8f, i_this->m308);
-        cLib_addCalc2(&i_this->m308, 5.0f, 1.0f, 0.5f);
+        cLib_addCalc2(&actor->speed.y, i_this->mWindRiseSpeed, 0.8f, i_this->mWindRiseStep);
+        cLib_addCalc2(&i_this->mWindRiseStep, 5.0f, 1.0f, 0.5f);
 
-        if (i_this->m310 + 200.0f < actor->current.pos.y || i_this->m2E8[1] == 0) {
+        if (i_this->mWindStartY + 200.0f < actor->current.pos.y || i_this->mTimers[1] == 0) {
             i_this->mMode = i_this->mMode + 1;
         }
         break;
@@ -285,7 +285,7 @@ static inline void action_kaze_move(ks_class* i_this) {
         speed_keisan(i_this, actor->shape_angle.y);
 
         i_this->m2F0[0] += 3000;
-        i_this->m30C = 2.0f;
+        i_this->mSwayAmp = 2.0f;
 
         if (tyaku_check(i_this)) {
             i_this->mAction = KS_MOVE;
@@ -376,14 +376,14 @@ static inline void action_omoi(ks_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     fopAc_ac_c* link = dComIfGp_getLinkPlayer();
 
-    // HD: instead of `if (m2CE == 1 && HEAVY_IN) link->onHeavyState()`, a counter in the link
+    // HD: instead of `if (mFirstStuck == 1 && HEAVY_IN) link->onHeavyState()`, a counter in the link
 // player is bumped every frame
     be<s16>& heavy = ksPlayer(link)->mHeavyCount;
     heavy = heavy + 1;
 
     switch (i_this->mMode) {
     case 40: {
-        ripple_remove(i_this->m52C);
+        ripple_remove(i_this->mRipple);
 
         actor->speedF = 0.0f;
         actor->gravity = 0.0f;
@@ -392,7 +392,7 @@ static inline void action_omoi(ks_class* i_this) {
         actor->speed.z = 0.0f;
 
         if (GORON_COUNT != 0 || KUTTUKU_ALL_COUNT >= 0x14) {
-            i_this->m528 = 0;
+            i_this->mpStickJointMtx = 0;
             actor->actor_status &= ~0x4000u; /* fopAcM_OffStatus(actor, fopAcStts_UNK4000_e) */
             i_this->mMode = 42;
             break;
@@ -401,7 +401,7 @@ static inline void action_omoi(ks_class* i_this) {
         clear_m2F0(i_this);
 
         if (KUTTUKU_ALL_COUNT >= 0x14) {
-            i_this->m300 = 0x13;
+            i_this->mStickJointNo = 0x13;
         }
         s16 idx;
         if (KUTTUKU_ALL_COUNT < 0) {
@@ -409,23 +409,23 @@ static inline void action_omoi(ks_class* i_this) {
         } else {
             idx = (s16)KUTTUKU_ALL_COUNT;
         }
-        i_this->m300 = idx;
+        i_this->mStickJointNo = idx;
 
-        i_this->m528 = daPy_getModelJointMtx(link, (u16)pl_harituki_joint_dt[idx]);
+        i_this->mpStickJointMtx = daPy_getModelJointMtx(link, (u16)pl_harituki_joint_dt[idx]);
 
         if (KUTTUKU_ALL_COUNT == 0) {
             GORON_COUNT = 0;
-            i_this->m2CE = 1;
+            i_this->mFirstStuck = 1;
         }
 
         KUTTUKU_ALL_COUNT = KUTTUKU_ALL_COUNT + 1;
 
         // HD: no `if (!HEAVY_IN && KUTTUKU_ALL_COUNT >= 5) { onHeavyState(); HEAVY_IN = TRUE; }`
 
-        i_this->m2D2 = 0;
+        i_this->mStickJointDir = 0;
 
-        i_this->m2E8[1] = 0;
-        i_this->m2E8[2] = 0;
+        i_this->mTimers[1] = 0;
+        i_this->mTimers[2] = 0;
 
         actor->actor_status |= 0x4000u; /* fopAcM_OnStatus(actor, fopAcStts_UNK4000_e) */
 
@@ -438,9 +438,9 @@ static inline void action_omoi(ks_class* i_this) {
         actor->current.roomNo = player->current.roomNo; /* fopAcM_SetRoomNo */
 
         if (!(fopAcM_GetID(actor) & 1)) {
-            actor->shape_angle.y = (s16)gabi::ftoi(gabi::fmadds((f32)(s16)i_this->m2FE, 0.25f, (f32)(s16)actor->shape_angle.y));
+            actor->shape_angle.y = (s16)gabi::ftoi(gabi::fmadds((f32)(s16)i_this->mSpinSpeed, 0.25f, (f32)(s16)actor->shape_angle.y));
         } else {
-            actor->shape_angle.y = (s16)gabi::ftoi(gabi::fnmsubs((f32)(s16)i_this->m2FE, 0.25f, (f32)(s16)actor->shape_angle.y));
+            actor->shape_angle.y = (s16)gabi::ftoi(gabi::fnmsubs((f32)(s16)i_this->mSpinSpeed, 0.25f, (f32)(s16)actor->shape_angle.y));
         }
 
         f32 x, y, z;
@@ -488,35 +488,35 @@ static inline void action_omoi(ks_class* i_this) {
             f32 dx = actor->current.pos.x - x;
             f32 dz = actor->current.pos.z - z;
 
-            if (std_sqrtf(gabi::fmadds(dz, dz, gabi::fmadds(dx, dx, dy * dy))) < 2.0f && i_this->m2E8[1] == 0) {
-                i_this->m2E8[1] = (s16)gabi::ftoi(cM_rndF(10.0f) + 10.0f);
+            if (std_sqrtf(gabi::fmadds(dz, dz, gabi::fmadds(dx, dx, dy * dy))) < 2.0f && i_this->mTimers[1] == 0) {
+                i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(10.0f) + 10.0f);
 
-                switch (i_this->m2D2) {
+                switch (i_this->mStickJointDir) {
                 case 0:
-                    if (i_this->m300 < 0x13) {
-                        i_this->m300 += 1;
+                    if (i_this->mStickJointNo < 0x13) {
+                        i_this->mStickJointNo += 1;
                     } else {
-                        i_this->m2D2 = 1;
-                        i_this->m300 -= 1;
+                        i_this->mStickJointDir = 1;
+                        i_this->mStickJointNo -= 1;
                     }
                     break;
                 case 1:
-                    if (i_this->m300 > 0) {
-                        i_this->m300 -= 1;
+                    if (i_this->mStickJointNo > 0) {
+                        i_this->mStickJointNo -= 1;
                     } else {
-                        i_this->m2D2 = 0;
-                        i_this->m300 += 1;
+                        i_this->mStickJointDir = 0;
+                        i_this->mStickJointNo += 1;
                     }
                     break;
                 }
 
-                if (i_this->m300 >= 0x14) {
-                    i_this->m300 = 0x13;
-                } else if (i_this->m300 < 0) {
-                    i_this->m300 = 1;
+                if (i_this->mStickJointNo >= 0x14) {
+                    i_this->mStickJointNo = 0x13;
+                } else if (i_this->mStickJointNo < 0) {
+                    i_this->mStickJointNo = 1;
                 }
 
-                i_this->m528 = daPy_getModelJointMtx(link, (u16)pl_harituki_joint_dt[i_this->m300]);
+                i_this->mpStickJointMtx = daPy_getModelJointMtx(link, (u16)pl_harituki_joint_dt[i_this->mStickJointNo]);
             }
         }
 
@@ -536,7 +536,7 @@ static inline void action_omoi(ks_class* i_this) {
             i_this->mSph.mObjCo.mSPrm |= 1u; /* OnCoSetBit */
             i_this->mSph.mObjTg.mSPrm |= 1u; /* OnTgSetBit */
 
-            if (i_this->m2CE) {
+            if (i_this->mFirstStuck) {
                 // HD: no link->offHeavyState()
                 HEAVY_IN = FALSE;
                 KUTTUKU_ALL_COUNT = 0;
@@ -550,17 +550,17 @@ static inline void action_omoi(ks_class* i_this) {
         }
 
         if (!daPy_checkFrontRoll(link)) {
-            if (i_this->m2CE == 0) {
+            if (i_this->mFirstStuck == 0) {
                 return;
             }
 
             if (i_this->m2F0[1]) {
                 i_this->m2F0[1] = 0;
-                i_this->m2E8[2] = 0x32;
+                i_this->mTimers[2] = 0x32;
                 return;
             }
 
-            if (i_this->m2E8[2] != 1) {
+            if (i_this->mTimers[2] != 1) {
                 return;
             }
 
@@ -572,7 +572,7 @@ static inline void action_omoi(ks_class* i_this) {
             return;
         }
 
-        if (i_this->m2CE) {
+        if (i_this->mFirstStuck) {
             if (i_this->m2F0[1]) {
                 return;
             }
@@ -599,7 +599,7 @@ static inline void action_omoi(ks_class* i_this) {
                 return;
             }
 
-            i_this->m2CE = 0;
+            i_this->mFirstStuck = 0;
 
             // HD: no link->offHeavyState()
             HEAVY_IN = FALSE;
@@ -633,10 +633,10 @@ static inline void action_omoi(ks_class* i_this) {
         break;
     }
     case 42: {
-        if (i_this->m528) {
+        if (i_this->mpStickJointMtx) {
             actor->actor_status &= ~0x4000u;
             fopAcM_setRoomLayer(actor, actor->current.roomNo);
-            i_this->m528 = 0;
+            i_this->mpStickJointMtx = 0;
         }
 
         actor->current.angle.y = fopAcM_searchPlayerAngleY(actor) + 0x8000;
@@ -651,7 +651,7 @@ static inline void action_omoi(ks_class* i_this) {
     }
     case 43: {
         if (i_this->mAcch.ChkGroundHit() || i_this->mAcch.ChkWaterIn()) {
-            i_this->m2E8[2] = (s16)gabi::ftoi(cM_rndF(40.0f) + 40.0f);
+            i_this->mTimers[2] = (s16)gabi::ftoi(cM_rndF(40.0f) + 40.0f);
 
             i_this->mAction = KS_ATTACK;
             i_this->mSph.mObjCo.mSPrm |= 1u; /* OnCoSetBit */
@@ -662,9 +662,9 @@ static inline void action_omoi(ks_class* i_this) {
     }
     }
 
-    if (i_this->mMode == 43 && body_atari_check(i_this) && i_this->m2CE) {
+    if (i_this->mMode == 43 && body_atari_check(i_this) && i_this->mFirstStuck) {
         fopAcM_seStart(actor, JA_SE_LK_LAST_HIT, 0);
-        i_this->m2CE = 0;
+        i_this->mFirstStuck = 0;
     }
 }
 
@@ -690,16 +690,16 @@ static inline void action_tubo_search(ks_class* i_this) {
         if (ksActor) {
             actor->current.pos.copy(ksActor->current.pos);
 
-            if (i_this->m318 == 0.0f) {
+            if (i_this->mSearchRange == 0.0f) {
                 return;
             }
 
-            if (fopAcM_searchPlayerDistance(actor) > i_this->m318) {
+            if (fopAcM_searchPlayerDistance(actor) > i_this->mSearchRange) {
                 return;
             }
         }
 
-        i_this->m31C = 100.0f;
+        i_this->mSphRadius = 100.0f;
 
         u32 sprm = i_this->mSph.mObjAt.mSPrm;
         sprm &= ~0x10u; /* OffAtNoTgHitInfSet */
@@ -710,7 +710,7 @@ static inline void action_tubo_search(ks_class* i_this) {
         i_this->mSph.mObjAt.mRPrm = 1; /* OnAtHitBit (HD: the word is set) */
 
         i_this->mSph.SetC(&actor->current.pos);
-        i_this->mSph.SetR(i_this->m31C);
+        i_this->mSph.SetR(i_this->mSphRadius);
         dComIfG_Ccsp_Set(&i_this->mSph);
 
         i_this->mMode = i_this->mMode + 1;
@@ -718,14 +718,14 @@ static inline void action_tubo_search(ks_class* i_this) {
     }
     case 52: {
         i_this->mSph.SetC(&actor->current.pos);
-        i_this->mSph.SetR(i_this->m31C);
+        i_this->mSph.SetR(i_this->mSphRadius);
         dComIfG_Ccsp_Set(&i_this->mSph);
 
-        if (i_this->m2C9 > 0x15 || i_this->m2C9 == 0) {
-            i_this->m2C9 = 1;
+        if (i_this->mBirthNum > 0x15 || i_this->mBirthNum == 0) {
+            i_this->mBirthNum = 1;
         }
 
-        for (int i = 0; i < i_this->m2C9; i++) {
+        for (int i = 0; i < i_this->mBirthNum; i++) {
             cXyz local_24;
             local_24.copy(actor->current.pos);
             local_24.y += cM_rndF(40.0f);
@@ -792,18 +792,18 @@ static BOOL daKS_Execute(ks_class* i_this) {
     if (enemy_ice(&i_this->mEnemyIce)) {
         J3DModel_setBaseTRMtx(i_this->mpBodyMorf->getModel(), mDoMtx_stack_c::get());
         J3DModel_setBaseTRMtx(i_this->mpEyeMorf->getModel(), mDoMtx_stack_c::get());
-        if (i_this->m2D0) {
-            i_this->m320 = i_this->m320 + 1.0f;
-            if (i_this->m320 > 7.0f) {
-                i_this->m320 = 7.0f;
+        if (i_this->mFrozen) {
+            i_this->mBrkFrame = i_this->mBrkFrame + 1.0f;
+            if (i_this->mBrkFrame > 7.0f) {
+                i_this->mBrkFrame = 7.0f;
             }
         }
         return TRUE;
     }
 
     for (int i = 0; i < 4; i++) {
-        if (i_this->m2E8[i]) {
-            i_this->m2E8[i] -= 1;
+        if (i_this->mTimers[i]) {
+            i_this->mTimers[i] -= 1;
         }
     }
 
@@ -862,22 +862,22 @@ static BOOL daKS_Execute(ks_class* i_this) {
         break;
     }
 
-    if (i_this->m2C8 == 6) {
+    if (i_this->mType == 6) {
         return TRUE;
     }
 
-    if (i_this->m302) {
-        s16 f = (s16)(i_this->m302 + 1);
+    if (i_this->mEyeBtkFrame) {
+        s16 f = (s16)(i_this->mEyeBtkFrame + 1);
         if (f > 7) {
-            i_this->m302 = 0;
+            i_this->mEyeBtkFrame = 0;
         } else {
-            i_this->m302 = f;
+            i_this->mEyeBtkFrame = f;
         }
     }
 
-    if (i_this->m2E8[0] == 0) {
-        i_this->m2E8[0] = (s16)gabi::ftoi(cM_rndFX(25.0f) + 50.0f);
-        i_this->m302 = 1;
+    if (i_this->mTimers[0] == 0) {
+        i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndFX(25.0f) + 50.0f);
+        i_this->mEyeBtkFrame = 1;
     }
 
     cMtx_YrotS(calc_mtx(), actor->current.angle.y);
@@ -905,7 +905,7 @@ static BOOL daKS_Execute(ks_class* i_this) {
     actor->attention_info.position.copy(actor->current.pos); /* attention_info.position = eyePos */
 
     i_this->mSph.SetC(&actor->current.pos);
-    i_this->mSph.SetR(i_this->m31C);
+    i_this->mSph.SetR(i_this->mSphRadius);
     dComIfG_Ccsp_Set(&i_this->mSph);
 
     if ((i_this->mSph.mObjCo.mSPrm & 1) /* ChkCoSet */ && (i_this->mAction == KS_MOVE || i_this->mAction == KS_WIND)) {
@@ -920,47 +920,47 @@ static BOOL daKS_Execute(ks_class* i_this) {
         /* naraku_check (inlined). HD: falling out of the map is detected by a missing ground
          * (GetGroundH() == -G_CM3D_F_INF) for 50 frames; no ground-code / y < -500 test */
         if (i_this->mAcch.GetGroundH() == -1000000000.0f) {
-            i_this->m2D3 = i_this->m2D3 + 1;
-            if (i_this->m2D3 > 0x32) {
+            i_this->mNoGroundCount = i_this->mNoGroundCount + 1;
+            if (i_this->mNoGroundCount > 0x32) {
                 fopAcM_delete(actor);
                 draw_SUB(i_this);
-                i_this->m2CD = 1;
+                i_this->mDrawSubDone = 1;
                 return TRUE;
             }
         } else {
-            i_this->m2D3 = 0;
+            i_this->mNoGroundCount = 0;
         }
 
         f32 wtrH = i_this->mAcch.m_wtr.GetHeight(); /* m_wtr.GetHeight() */
         if (i_this->mAcch.ChkWaterIn() && actor->current.pos.y < wtrH + 20.0f) {
-            if (!i_this->m2CF) {
-                i_this->m2CF = 1;
+            if (!i_this->mRippleOn) {
+                i_this->mRippleOn = 1;
 
                 cXyz local_18b;
                 local_18b.x = 0.5f;
                 local_18b.z = 0.5f;
                 local_18b.y = 0.5f;
 
-                ripple_remove(i_this->m52C);
-                /* dComIfGp_particle_setShipTail(ID_AK_JN_HAMON00, &current.pos, NULL, &scale, 0xFF, &m52C) */
+                ripple_remove(i_this->mRipple);
+                /* dComIfGp_particle_setShipTail(ID_AK_JN_HAMON00, &current.pos, NULL, &scale, 0xFF, &mRipple) */
                 dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &actor->current.pos, nullptr, &local_18b, 0xFF,
-                                reinterpret_cast<dPa_levelEcallBack*>(i_this->m52C), -1, nullptr, nullptr, nullptr);
-                ksRipple(i_this->m52C)->mRate = 0.0f; /* m52C.setRate(0.0f) */
+                                reinterpret_cast<dPa_levelEcallBack*>(i_this->mRipple), -1, nullptr, nullptr, nullptr);
+                ksRipple(i_this->mRipple)->mRate = 0.0f; /* mRipple.setRate(0.0f) */
             }
 
             cLib_addCalc2(&actor->current.pos.y, i_this->mAcch.m_wtr.GetHeight() + 20.0f, 1.0f, 10.0f);
 
             actor->gravity = 0.0f;
             actor->speed.y = 0.0f;
-        } else if (i_this->m2CF && (i_this->mAcch.ChkGroundHit() || actor->current.pos.y > wtrH + 100.0f)) {
-            i_this->m2CF = 0;
-            ripple_remove(i_this->m52C);
+        } else if (i_this->mRippleOn && (i_this->mAcch.ChkGroundHit() || actor->current.pos.y > wtrH + 100.0f)) {
+            i_this->mRippleOn = 0;
+            ripple_remove(i_this->mRipple);
         }
     }
 
     draw_SUB(i_this);
 
-    i_this->m2CD = 1;
+    i_this->mDrawSubDone = 1;
 
     return TRUE;
 }

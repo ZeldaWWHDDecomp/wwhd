@@ -136,9 +136,9 @@ void JStudio_JStage::TAdaptor_actor::adaptor_do_begin(const jst_adaptors::TObjec
     JStudioActor_setVector(this, &sScalingIndices, &frame->scaling);
     auto initializeValue = [this](s32 index, f32 value) {
         auto& variable = values(this)[index];
-        variable.field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(&JStudioActor_updateImmediate));
-        variable.field_0xc.val = value;
-        variable.field_0x4 = 0;
+        variable.mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(&JStudioActor_updateImmediate));
+        variable.mParam.val = value;
+        variable.mAge = 0;
     };
     for (auto* output = sValueOutputs.values; s32(output->mValueIndex) != -1; ++output) {
         s32 index = output->mValueIndex;
@@ -271,9 +271,9 @@ static void initializeActorAdaptor() {
 static jst_timeline::TVariableValue* constructActorVariableValue(jst_timeline::TVariableValue* value) {
     if (!value) value = static_cast<jst_timeline::TVariableValue*>(JStudioActor_allocate(sizeof(jst_timeline::TVariableValue)));
     if (value) {
-        value->field_0x4 = 0;
-        value->field_0x8.v = 0;
-        JStudioActor_clear(&value->field_0xc, 4);
+        value->mAge = 0;
+        value->mUpdate.v = 0;
+        JStudioActor_clear(&value->mParam, 4);
         value->pOutput_ = &sJStudioOutputNone;
     }
     return value;

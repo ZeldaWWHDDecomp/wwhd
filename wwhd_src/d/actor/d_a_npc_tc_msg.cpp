@@ -97,10 +97,10 @@ u16 daNpc_Tc_c::next_msgStatusRed(be<u32> *pMsgNo) {
             } else {
                 *pMsgNo = 0xDE7;
             }
-            field_0x814 = 1;
+            mMsgDE6Shown = 1;
             break;
         case 0xDEB:
-            if (field_0x814 && dComIfGs_isEventBit(UNK_1A20)) {
+            if (mMsgDE6Shown && dComIfGs_isEventBit(UNK_1A20)) {
                 *pMsgNo = 0xDEC;
             } else {
                 *pMsgNo = setFinishMsg();
@@ -151,7 +151,7 @@ u16 daNpc_Tc_c::next_msgStatusRed(be<u32> *pMsgNo) {
         case 0xDC7:
             m_jnt.onHeadLock();
             msgStatus = fopMsgStts_MSG_ENDS_e;
-            field_0x814 = 0;
+            mMsgDE6Shown = 0;
             break;
         default:
             msgStatus = fopMsgStts_MSG_ENDS_e;
@@ -189,12 +189,12 @@ u16 daNpc_Tc_c::next_msgStatusWhite(be<u32> *pMsgNo) {
             break;
         case 0xDC8:
             if (dComIfGs_isEventBit(UNK_0B80)) {
-                if (!field_0x80E) {
-                    field_0x80E = 1;
+                if (!mWhiteIntroAfterB80Done) {
+                    mWhiteIntroAfterB80Done = 1;
                     *pMsgNo = 0xDD7;
                 }
-            } else if (!field_0x80F) {
-                field_0x80F = 1;
+            } else if (!mWhiteIntroDone) {
+                mWhiteIntroDone = 1;
                 *pMsgNo = 0xDC9;
             }
             break;
@@ -423,15 +423,15 @@ u32 daNpc_Tc_c::getMsgNormal2() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 msg;
     stopTower();
-    if (field_0x80D) {
+    if (mMapBought) {
         if (existUnknownCollectMap()) {
             msg = 0xDC3;
-            field_0x80D = 0;
+            mMapBought = 0;
         } else {
             msg = 0xDC4;
         }
-    } else if (!field_0x808) {
-        field_0x808 = 1;
+    } else if (!mGreetingDone) {
+        mGreetingDone = 1;
         if (dComIfGs_isEventBit(UNK_1A20)) {
             if (dComIfGs_isEventBit(UNK_1708)) {
                 msg = 0xDB3;
@@ -442,8 +442,8 @@ u32 daNpc_Tc_c::getMsgNormal2() {
             msg = 0xDB2;
         }
     } else if (existUnknownCollectMap()) {
-        if (!field_0x809) {
-            field_0x809 = 1;
+        if (!mMapSaleIntroDone) {
+            mMapSaleIntroDone = 1;
             msg = 0xDBB;
         } else {
             msg = 0xDBE;
@@ -492,7 +492,7 @@ u16 daNpc_Tc_c::next_msgStatusNormal2(be<u32> *pMsgNo) {
             if (l_messageManager->mSelectNum == 0) {
                 if (dComIfGs_getRupee() >= 398) {
                     mStatus = STATUS_PAY_RUPEE;
-                    field_0x80D = 1;
+                    mMapBought = 1;
                     field_0x80C = 1;
                     msgStatus = fopMsgStts_MSG_ENDS_e;
                 } else {
@@ -503,7 +503,7 @@ u16 daNpc_Tc_c::next_msgStatusNormal2(be<u32> *pMsgNo) {
             }
             break;
         case 0xDC0:
-            if (field_0x80B) {
+            if (mShortOfRupeesOnReoffer) {
                 *pMsgNo = 0xDC4;
             } else {
                 *pMsgNo = 0xDC1;
@@ -516,11 +516,11 @@ u16 daNpc_Tc_c::next_msgStatusNormal2(be<u32> *pMsgNo) {
             if (l_messageManager->mSelectNum == 0) {
                 if (dComIfGs_getRupee() >= 398) {
                     mStatus = STATUS_PAY_RUPEE;
-                    field_0x80D = 1;
+                    mMapBought = 1;
                     field_0x80C = 1;
                     msgStatus = fopMsgStts_MSG_ENDS_e;
                 } else {
-                    field_0x80B = 1;
+                    mShortOfRupeesOnReoffer = 1;
                     *pMsgNo = 0xDC0;
                 }
             } else {
@@ -528,8 +528,8 @@ u16 daNpc_Tc_c::next_msgStatusNormal2(be<u32> *pMsgNo) {
             }
             break;
         case 0xDC4:
-            field_0x80D = 0;
-            field_0x80B = 0;
+            mMapBought = 0;
+            mShortOfRupeesOnReoffer = 0;
             /* fallthrough */
         default:
             msgStatus = fopMsgStts_MSG_ENDS_e;
@@ -581,20 +581,20 @@ u32 daNpc_Tc_c::setFirstMsg(be<u8> *param_1, u32 param_2, u32 param_3) {
 u32 daNpc_Tc_c::getMsgRed() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     stopTower();
-    if (field_0x813) {
-        field_0x813 = 0;
+    if (mMonumentCompleteDemoDone) {
+        mMonumentCompleteDemoDone = 0;
         return 0xDF3;
     }
-    if (field_0x812) {
-        field_0x812 = 0;
+    if (mGetRupeeDemoDone) {
+        mGetRupeeDemoDone = 0;
         if (checkAllMonumentFee()) {
             return 0xDF1;
         }
         return 0xDF0;
     }
     if (dComIfGs_isEventBit(UNK_0B80)) {
-        if (!field_0x810) {
-            field_0x810 = 1;
+        if (!mRedIntroAfterB80Done) {
+            mRedIntroAfterB80Done = 1;
             if (tc_msgIsStageTbox(STAGE_DRC, 0xF) && !dComIfGs_isEventBit(UNK_1240)) {
                 return 0xDEE;
             }
@@ -618,9 +618,9 @@ u32 daNpc_Tc_c::getMsgRed() {
         return 0xDEA;
     }
     if (dComIfGs_getClearCount() != 0) {
-        return setFirstMsg(&field_0x811, 0xDB7, 0xDE5);
+        return setFirstMsg(&mRedFirstMsgDone, 0xDB7, 0xDE5);
     }
-    return setFirstMsg(&field_0x811, 0xDE1, 0xDE5);
+    return setFirstMsg(&mRedFirstMsgDone, 0xDE1, 0xDE5);
 }
 
 /* 022EB7E8 */
@@ -632,13 +632,13 @@ u32 daNpc_Tc_c::getMsgWhite() {
         msg = 0xDD9;
         m_jnt.onHeadLock();
     } else if (dComIfGs_isEventBit(UNK_0B80)) {
-        if (!field_0x80E) {
+        if (!mWhiteIntroAfterB80Done) {
             msg = 0xDC8;
             m_jnt.onHeadLock();
         } else {
             msg = 0xDD6;
         }
-    } else if (!field_0x80F) {
+    } else if (!mWhiteIntroDone) {
         msg = 0xDC8;
         m_jnt.onHeadLock();
     } else {

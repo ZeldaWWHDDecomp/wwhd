@@ -35,19 +35,19 @@ WWHD_SIZE(Bgn3LineMat1, 0x188);
 
 struct part_s3 {
     /* 0x00000 */ gptr<J3DModel> mpPart3Model;
-    /* 0x00004 */ u8 m0004[0xB0];
+    /* 0x00004 */ u8 mPart3Packet[0xB0];  /* was m0004: partCtor 02090D4C / partDtor 0209445C construct and destroy the mDoExt_J3DModelPacketS at +4; daBgn_Draw 0207B2CC (inlined daBgn3_Draw, view bgn_draw::part_s3) gives it the part model and updates it while l_HIO.m00C is set (as bgn part_s mPartPacket) */
     /* 0x000B4 */ dKy_tevstr_c mPart3TevStr;
-    /* 0x0027C */ be<s16> m00C8;
+    /* 0x0027C */ be<s16> mPart3FogColorAdd;  /* was m00C8: daBgn_Draw 0207B2CC (inlined daBgn3_Draw, view bgn_draw::part_s3) passes it to bgn_fog_flash while mPart3ArrowHitFlashTimer runs: eased and added to the fog colour of mPart3TevStr (same use as bgn part_s mPartFogColorAdd) */
     /* 0x0027E */ u8 _0027E[0x2];
-    /* 0x00280 */ be<f32> m00CC;
+    /* 0x00280 */ be<f32> mPart3FogStartAdd;  /* was m00CC: daBgn_Draw 0207B2CC (inlined daBgn3_Draw, view bgn_draw::part_s3) passes it to bgn_fog_flash while mPart3ArrowHitFlashTimer runs: eased and added to the fog start of mPart3TevStr (same use as bgn part_s mPartFogStartAdd) */
     /* 0x00284 */ be<s16> mPart3ArrowHitFlashTimer;
     /* 0x00286 */ u8 _00286[0x2];
-    /* 0x00288 */ cXyz m00D4;
-    /* 0x00294 */ be<s16> m00E0;
-    /* 0x00296 */ be<s16> m00E2;
+    /* 0x00288 */ cXyz mPart3Pos;  /* was m00D4: part_control (in move 02091730) sets [0] to mPartRootPos and chains [1..9] behind it (not below the ground floor); setModels (in move) translates the part matrix to it; splash (in move) tests the ground there; daBgn_Draw 0207B2CC (inlined daBgn3_Draw) lights the part at it (as bgn part_s mPartPos) */
+    /* 0x00294 */ be<s16> mPart3AngleX;  /* was m00E0: part_control (in move 02091730) sets it to minus the chain pitch toward the next part; setModels (in move) rotates the part matrix by it (X) */
+    /* 0x00296 */ be<s16> mPart3AngleY;  /* was m00E2: part_control (in move 02091730) sets it to the chain heading (cM_atan2s) toward the next part; setModels (in move) rotates the part matrix by it (Y) */
     /* 0x00298 */ u8 _00298[0x4];
-    /* 0x0029C */ cXyz m00E8;
-    /* 0x002A8 */ be<f32> m00F4;
+    /* 0x0029C */ cXyz mPart3Speed;  /* was m00E8: part_control (in move 02091730) adds it (and gravity) to the part position, then stores (new - old position) * mPartStiffness in it */
+    /* 0x002A8 */ be<f32> mPart3Scale;  /* was m00F4: part_control (in move 02091730) sets it to size_d[i] * 1.7 and spaces the chain and the ground floor by it; setModels (in move) scales the part matrix, mPart3Sph, the hair lengths and the arrow-hit emitters by it (as bgn part_s mPartScale) */
     /* 0x002AC */ dCcD_Sph mPart3Sph;
     /* 0x003D8 */ u8 _003D8[0xC];
     /* 0x003E4 */ gptr<JPABaseEmitter> mpPart3ArrowHitEmitter1;
@@ -58,16 +58,16 @@ struct part_s3 {
     /* 0x01890 */ Bgn3LineMat0 mPart3LineMat;
 };
 WWHD_OFFSET(part_s3, mpPart3Model, 0x0);
-WWHD_OFFSET(part_s3, m0004, 0x4);
+WWHD_OFFSET(part_s3, mPart3Packet, 0x4);
 WWHD_OFFSET(part_s3, mPart3TevStr, 0xB4);
-WWHD_OFFSET(part_s3, m00C8, 0x27C);
-WWHD_OFFSET(part_s3, m00CC, 0x280);
+WWHD_OFFSET(part_s3, mPart3FogColorAdd, 0x27C);
+WWHD_OFFSET(part_s3, mPart3FogStartAdd, 0x280);
 WWHD_OFFSET(part_s3, mPart3ArrowHitFlashTimer, 0x284);
-WWHD_OFFSET(part_s3, m00D4, 0x288);
-WWHD_OFFSET(part_s3, m00E0, 0x294);
-WWHD_OFFSET(part_s3, m00E2, 0x296);
-WWHD_OFFSET(part_s3, m00E8, 0x29C);
-WWHD_OFFSET(part_s3, m00F4, 0x2A8);
+WWHD_OFFSET(part_s3, mPart3Pos, 0x288);
+WWHD_OFFSET(part_s3, mPart3AngleX, 0x294);
+WWHD_OFFSET(part_s3, mPart3AngleY, 0x296);
+WWHD_OFFSET(part_s3, mPart3Speed, 0x29C);
+WWHD_OFFSET(part_s3, mPart3Scale, 0x2A8);
 WWHD_OFFSET(part_s3, mPart3Sph, 0x2AC);
 WWHD_OFFSET(part_s3, mpPart3ArrowHitEmitter1, 0x3E4);
 WWHD_OFFSET(part_s3, mpPart3ArrowHitEmitter2, 0x3E8);
@@ -79,9 +79,9 @@ WWHD_SIZE(part_s3, 0x19D8);
 struct bgn3_class : fopEn_enemy_c {
     /* 0x003C8 */ request_of_phase_process_class mPhase;
     /* 0x003D0 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x003D4 */ u8 m002B8[0xB0];
-    /* 0x00484 */ gptr<J3DModel> m002CC;
-    /* 0x00488 */ u8 m002D0[0xB0];
+    /* 0x003D4 */ u8 mHeadPacket[0xB0];  /* was m002B8: useHeapInit 02090984 sets the mDoExt_J3DModelPacketS up after mpMorf (BCK_BGN_HEAD1); daBgn_Draw 0207B2CC (inlined daBgn3_Draw) gives it the mpMorf model and updates it */
+    /* 0x00484 */ gptr<J3DModel> mpDekuModel;  /* was m002CC: useHeapInit 02090984 creates it from dRes_INDEX_BGN_BDL_BGN_DEKU1_e; setModels (in move 02091730) places it (scale 2) and centres mDekuSph on it; daBgn_Draw 0207B2CC draws it */
+    /* 0x00488 */ u8 mDekuPacket[0xB0];  /* was m002D0: useHeapInit 02090984 sets the mDoExt_J3DModelPacketS up after mpDekuModel; daBgn_Draw 0207B2CC (inlined daBgn3_Draw) gives it the mpDekuModel model and updates it */
     /* 0x00538 */ bgn3_ke_s mHairs[40];
     /* 0x019D8 */ Bgn3LineMat0 mLineMat;
     /* 0x01B20 */ u8 m017A0[0xB0];
@@ -92,49 +92,49 @@ struct bgn3_class : fopEn_enemy_c {
     /* 0x01BE0 */ gptr<mDoExt_brkAnm> mJyakutenBBrkAnm;
     /* 0x01BE4 */ u8 _01BE4[0x4];
     /* 0x01BE8 */ part_s3 mParts[10];
-    /* 0x11E58 */ cXyz m0FD7C;
-    /* 0x11E64 */ be<s16> m0FD88;
-    /* 0x11E66 */ be<s16> m0FD8A;
-    /* 0x11E68 */ be<s16> m0FD8C;
-    /* 0x11E6A */ be<s16> m0FD8E;
-    /* 0x11E6C */ be<s16> m0FD90;
-    /* 0x11E6E */ be<s16> m0FD92;
-    /* 0x11E70 */ be<s16> m0FD94;
-    /* 0x11E72 */ be<s16> m0FD96;
-    /* 0x11E74 */ be<f32> m0FD98;
+    /* 0x11E58 */ cXyz mPartRootPos;  /* was m0FD7C: part_control (in move 02091730): current.pos + (0, 0, REG - 300) turned by shape_angle; copied to mParts[0] as the start of the part chain */
+    /* 0x11E64 */ be<s16> mFrameCounter;  /* was m0FD88: daBgn3_Execute 02090680 adds 1 per frame; move0 / splash / setModels (in move 02091730) use it as the phase of the turn wobble, the ripples and the head / rope shake */
+    /* 0x11E66 */ be<s16> mAction;  /* was m0FD8A: move 02091730 switch: 0 move0, 1 mahi, 2 damage, 3 end; damage_check (in move) sets 1 / 2 / 3, daBgn3_Execute 02090680 resets 10 to 0 */
+    /* 0x11E68 */ be<s16> mMode;  /* was m0FD8C: the step inside mAction: mahi / damage / end (in move 02091730) switch on it; damage_check sets 0 */
+    /* 0x11E6A */ be<s16> mTurnSpeed;  /* was m0FD8E: move0 (in move 02091730) loads it from l_HIO by health (random sign), adds it to current.angle.y or uses it as the turn step; end eases it to 5000 and adds it to shape_angle.y */
+    /* 0x11E6C */ be<s16> mChaseTimer;  /* was m0FD90: move0 (in move 02091730): while it runs bgn3 turns toward the bait, the centre or the player instead of circling; set 1 with bait, from l_HIO after mWallHitCount wall hits, 0 on a wall hit; daBgn3_Execute 02090680 sets 180 */
+    /* 0x11E6E */ be<s16> mWallHitCount;  /* was m0FD92: move0 (in move 02091730) counts the wall hits and starts mChaseTimer when it reaches the l_HIO threshold for the health, then clears it */
+    /* 0x11E70 */ be<s16> mRippleSeTimer;  /* was m0FD94: splash (in move 02091730) plays the ripple sound (0x6A44 / 0x6A45) only at 0 and reloads it with cM_rndF(20) + 20; daBgn3_Execute 02090680 counts it down (same use as bgn_class mRippleSeTimer) */
+    /* 0x11E72 */ be<s16> mFogColorAdd;  /* was m0FD96: daBgn_Draw 0207B2CC (inlined daBgn3_Draw) raises it while mArrowHitFlashTimer runs and adds it to the fog colour (same use as bgn_class mFogColorAdd) */
+    /* 0x11E74 */ be<f32> mFogStartAdd;  /* was m0FD98: daBgn_Draw 0207B2CC (inlined daBgn3_Draw) moves the fog start by it while mArrowHitFlashTimer runs (same use as bgn_class mFogStartAdd) */
     /* 0x11E78 */ be<s16> mArrowHitFlashTimer;
-    /* 0x11E7A */ be<s16> m0FD9E;
+    /* 0x11E7A */ be<s16> mCoreHitFrame;  /* was m0FD9E: damage_check (in move 02091730) sets 1 on a core hit; setModels counts it up to 100 and starts the arrow-hit effect of part i when it equals fl_check_d[i] (same use as bgn_class mCoreHitFrame) */
     /* 0x11E7C */ gptr<JPABaseEmitter> mpArrowHitEmitter1;
     /* 0x11E80 */ gptr<JPABaseEmitter> mpArrowHitEmitter2;
     /* 0x11E84 */ be<s16> mArrowHitEffectTimer;
-    /* 0x11E86 */ be<s16> m0FDAA[2];
-    /* 0x11E8A */ be<s16> m0FDAE;
-    /* 0x11E8C */ be<s16> m0FDB0;
+    /* 0x11E86 */ be<s16> mTimers[2];  /* was m0FDAA: daBgn3_Execute 02090680 counts it down (through Bgn3TimerView, five halfwords from here); [0] mahi duration (damage_check), [1] wall-hit lockout 20 (move0) */
+    /* 0x11E8A */ be<s16> mTurnTimer;  /* was m0FDAE: move0 (in move 02091730) picks a new mTurnSpeed at 0 and reloads it with cM_rndF(50) + 30; counted down as timer [2] of the Bgn3TimerView sweep in daBgn3_Execute 02090680 */
+    /* 0x11E8C */ be<s16> mCenterTimer;  /* was m0FDB0: daBgn3_Execute 02090680 sets 180; while it runs move0 (in move 02091730) turns toward the arena centre (centerAngle); counted down as timer [3] of the Bgn3TimerView sweep */
     /* 0x11E8E */ u8 _11E8E[0x2];
-    /* 0x11E90 */ be<s16> m0FDB4;
-    /* 0x11E92 */ be<s16> m0FDB6;
-    /* 0x11E94 */ be<f32> m0FDB8;
-    /* 0x11E98 */ be<f32> m0FDBC;
+    /* 0x11E90 */ be<s16> mDamageTimer;  /* was m0FDB4: damage_check (in move 02091730) returns while it runs and sets 20 (10000 on the last hit); daBgn3_Execute 02090680 counts it down */
+    /* 0x11E92 */ be<s16> mHitSeTimer;  /* was m0FDB6: damage_check (in move 02091730) plays the hit sound only at 0 and sets 10; daBgn3_Execute 02090680 counts it down */
+    /* 0x11E94 */ be<f32> mPartStiffness;  /* was m0FDB8: part_control (in move 02091730) multiplies the part velocities by it ("stiffness") and eases it to l_HIO.m38; move0 sets REG + 0.9 on a wall hit, mahi / damage / end 1.0 */
+    /* 0x11E98 */ be<f32> mPartDistance;  /* was m0FDBC: part_control (in move 02091730) places the part chain at (0, 0, -it) behind the head and eases it to l_HIO.m34; move0 sets REG + 30 while chasing the bait, end eases it to its target */
     /* 0x11E9C */ dCcD_Stts mStts;
-    /* 0x11ED8 */ dCcD_Sph m0FDFC;
-    /* 0x12004 */ dCcD_Sph m0FF28;
-    /* 0x12130 */ cXyz m10054;
-    /* 0x1213C */ be<f32> m10060;
+    /* 0x11ED8 */ dCcD_Sph mHeadSph;  /* was m0FDFC: setModels (in move 02091730) centres it on the mpMorf model (r REG + 150) and turns its At on while moving; daBgn3_Create 02091008 sets it up; damage_check reads its hit position */
+    /* 0x12004 */ dCcD_Sph mDekuSph;  /* was m0FF28: setModels (in move 02091730) centres it on mpDekuModel (r REG + 200) and turns its At on while moving; daBgn3_Create 02091008 sets it up */
+    /* 0x12130 */ cXyz mCorePos;  /* was m10054: setModels (in move 02091730): world position of the part that carries the jyakuten (weak point) model; daBgn3_Delete 02090910 deletes its sound object */
+    /* 0x1213C */ be<f32> mFogFade;  /* was m10060: bgn hensin 02084D6C sets 1, end (in move 02091730) eases it to 1, daBgn3_Execute 02090680 to 0; daBgn_Draw 0207B2CC (inlined daBgn3_Draw) blacks the fog by it (same use as bgn_class mFogFade) */
     /* 0x12140 */ Bgn3LineMat1 mRedRopeMat;
-    /* 0x122C8 */ be<f32> m100A0;
+    /* 0x122C8 */ be<f32> mRopeSway;  /* was m100A0: damage / end (in move 02091730) ease it up / set the height, setModels eases it to 0 and swings the 60 points of mRedRopeMat by sin * it (same use as bgn2_class mRopeSway) */
     /* 0x122CC */ u8 mHDModelPacket[0xB0];
     /* 0x1237C */ u8 m100A4[4];
-    /* 0x12380 */ be<s16> m100A8;
+    /* 0x12380 */ be<s16> mShakeTimer;  /* was m100A8: damage_check (in move 02091730) sets 30 / 25 / 20 / 15 / 10 / 7 by the hit; setModels counts it down and shakes the head by it * (REG + 500) */
     /* 0x12382 */ u8 _12382[2];
-    /* 0x12384 */ be<s32> m100AC;
-    /* 0x12388 */ be<u8> m100B0;
+    /* 0x12384 */ be<s32> mKiSetCount;  /* was m100AC: move0 (in move 02091730) sets l_HIO.m3C on a wall hit; daBgn3_Execute 02090680 counts it down and spawns one fpcNm_KI_e per count while fewer than 20 exist (same use as bgn2_class mKiSetCount) */
+    /* 0x12388 */ be<u8> mHioOwner;  /* was m100B0: daBgn3_Create 02091008 sets 1 when it created the l_HIO child; daBgn3_Delete 02090910 deletes the HIO child only then (same as bgn_class mHioOwner) */
     /* 0x12389 */ u8 _12389[0x3];
 };
 WWHD_OFFSET(bgn3_class, mPhase, 0x3C8);
 WWHD_OFFSET(bgn3_class, mpMorf, 0x3D0);
-WWHD_OFFSET(bgn3_class, m002B8, 0x3D4);
-WWHD_OFFSET(bgn3_class, m002CC, 0x484);
-WWHD_OFFSET(bgn3_class, m002D0, 0x488);
+WWHD_OFFSET(bgn3_class, mHeadPacket, 0x3D4);
+WWHD_OFFSET(bgn3_class, mpDekuModel, 0x484);
+WWHD_OFFSET(bgn3_class, mDekuPacket, 0x488);
 WWHD_OFFSET(bgn3_class, mHairs, 0x538);
 WWHD_OFFSET(bgn3_class, mLineMat, 0x19D8);
 WWHD_OFFSET(bgn3_class, m017A0, 0x1B20);
@@ -144,39 +144,39 @@ WWHD_OFFSET(bgn3_class, mpJyakutenAModel, 0x1BD8);
 WWHD_OFFSET(bgn3_class, mJyakutenCBrkAnm, 0x1BDC);
 WWHD_OFFSET(bgn3_class, mJyakutenBBrkAnm, 0x1BE0);
 WWHD_OFFSET(bgn3_class, mParts, 0x1BE8);
-WWHD_OFFSET(bgn3_class, m0FD7C, 0x11E58);
-WWHD_OFFSET(bgn3_class, m0FD88, 0x11E64);
-WWHD_OFFSET(bgn3_class, m0FD8A, 0x11E66);
-WWHD_OFFSET(bgn3_class, m0FD8C, 0x11E68);
-WWHD_OFFSET(bgn3_class, m0FD8E, 0x11E6A);
-WWHD_OFFSET(bgn3_class, m0FD90, 0x11E6C);
-WWHD_OFFSET(bgn3_class, m0FD92, 0x11E6E);
-WWHD_OFFSET(bgn3_class, m0FD94, 0x11E70);
-WWHD_OFFSET(bgn3_class, m0FD96, 0x11E72);
-WWHD_OFFSET(bgn3_class, m0FD98, 0x11E74);
+WWHD_OFFSET(bgn3_class, mPartRootPos, 0x11E58);
+WWHD_OFFSET(bgn3_class, mFrameCounter, 0x11E64);
+WWHD_OFFSET(bgn3_class, mAction, 0x11E66);
+WWHD_OFFSET(bgn3_class, mMode, 0x11E68);
+WWHD_OFFSET(bgn3_class, mTurnSpeed, 0x11E6A);
+WWHD_OFFSET(bgn3_class, mChaseTimer, 0x11E6C);
+WWHD_OFFSET(bgn3_class, mWallHitCount, 0x11E6E);
+WWHD_OFFSET(bgn3_class, mRippleSeTimer, 0x11E70);
+WWHD_OFFSET(bgn3_class, mFogColorAdd, 0x11E72);
+WWHD_OFFSET(bgn3_class, mFogStartAdd, 0x11E74);
 WWHD_OFFSET(bgn3_class, mArrowHitFlashTimer, 0x11E78);
-WWHD_OFFSET(bgn3_class, m0FD9E, 0x11E7A);
+WWHD_OFFSET(bgn3_class, mCoreHitFrame, 0x11E7A);
 WWHD_OFFSET(bgn3_class, mpArrowHitEmitter1, 0x11E7C);
 WWHD_OFFSET(bgn3_class, mpArrowHitEmitter2, 0x11E80);
 WWHD_OFFSET(bgn3_class, mArrowHitEffectTimer, 0x11E84);
-WWHD_OFFSET(bgn3_class, m0FDAA, 0x11E86);
-WWHD_OFFSET(bgn3_class, m0FDAE, 0x11E8A);
-WWHD_OFFSET(bgn3_class, m0FDB0, 0x11E8C);
-WWHD_OFFSET(bgn3_class, m0FDB4, 0x11E90);
-WWHD_OFFSET(bgn3_class, m0FDB6, 0x11E92);
-WWHD_OFFSET(bgn3_class, m0FDB8, 0x11E94);
-WWHD_OFFSET(bgn3_class, m0FDBC, 0x11E98);
+WWHD_OFFSET(bgn3_class, mTimers, 0x11E86);
+WWHD_OFFSET(bgn3_class, mTurnTimer, 0x11E8A);
+WWHD_OFFSET(bgn3_class, mCenterTimer, 0x11E8C);
+WWHD_OFFSET(bgn3_class, mDamageTimer, 0x11E90);
+WWHD_OFFSET(bgn3_class, mHitSeTimer, 0x11E92);
+WWHD_OFFSET(bgn3_class, mPartStiffness, 0x11E94);
+WWHD_OFFSET(bgn3_class, mPartDistance, 0x11E98);
 WWHD_OFFSET(bgn3_class, mStts, 0x11E9C);
-WWHD_OFFSET(bgn3_class, m0FDFC, 0x11ED8);
-WWHD_OFFSET(bgn3_class, m0FF28, 0x12004);
-WWHD_OFFSET(bgn3_class, m10054, 0x12130);
-WWHD_OFFSET(bgn3_class, m10060, 0x1213C);
+WWHD_OFFSET(bgn3_class, mHeadSph, 0x11ED8);
+WWHD_OFFSET(bgn3_class, mDekuSph, 0x12004);
+WWHD_OFFSET(bgn3_class, mCorePos, 0x12130);
+WWHD_OFFSET(bgn3_class, mFogFade, 0x1213C);
 WWHD_OFFSET(bgn3_class, mRedRopeMat, 0x12140);
-WWHD_OFFSET(bgn3_class, m100A0, 0x122C8);
+WWHD_OFFSET(bgn3_class, mRopeSway, 0x122C8);
 WWHD_OFFSET(bgn3_class, mHDModelPacket, 0x122CC);
-WWHD_OFFSET(bgn3_class, m100A8, 0x12380);
-WWHD_OFFSET(bgn3_class, m100AC, 0x12384);
-WWHD_OFFSET(bgn3_class, m100B0, 0x12388);
+WWHD_OFFSET(bgn3_class, mShakeTimer, 0x12380);
+WWHD_OFFSET(bgn3_class, mKiSetCount, 0x12384);
+WWHD_OFFSET(bgn3_class, mHioOwner, 0x12388);
 WWHD_SIZE(bgn3_class, 0x1238C);
 
 struct daBgn3_HIO_c {
@@ -490,13 +490,13 @@ WWHD_OFFSET(Bgn3TevCopyView, mLightCopy2, 0x144);
 
 struct Bgn3BossView {
     u8 _000[0x3D5];
-    be<s8> m02B5;
+    be<s8> mForm;
     u8 _3D6[0x151CE - 0x3D6];
     be<u8> mCSMode;
     u8 _151CF;
 };
 WWHD_SIZE(Bgn3BossView, 0x151D0);
-WWHD_OFFSET(Bgn3BossView, m02B5, 0x3D5);
+WWHD_OFFSET(Bgn3BossView, mForm, 0x3D5);
 WWHD_OFFSET(Bgn3BossView, mCSMode, 0x151CE);
 struct Bgn3HeaderStatics {
     be<f32> mNegativePi, mPi;

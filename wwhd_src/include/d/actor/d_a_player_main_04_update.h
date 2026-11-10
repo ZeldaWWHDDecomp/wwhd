@@ -122,7 +122,7 @@ inline LinkUpdateModelLayout& LinkUpdateModels(daPy_lk_c* player) {
     return gabi::object_at<LinkUpdateModelLayout>(gabi::ea(player));
 }
 
-// HD: animation sound names use an offset from their resource's name entry.
+// HD: animation sound names use an offset from their animation resource's name entry.
 struct LinkUpdateSoundNameEntry {
     be<u32> mFlags;
     be<u32> mNameOffset;
@@ -179,16 +179,17 @@ enum : u32 {
 };
 }
 
-// HD: the animation sound resource is referenced by this measured storage slot.
-// The shared collider declaration overlaps it; the sound-name path uses pointer semantics.
-struct LinkUpdateSoundLayout {
-    u8 _0000[0x77FC];
-    gptr<LinkUpdateSoundResource> mpAnimationSoundResource;
+// HD: the animation sound name is the name of the lower body's first animation, the resource of
+// mAnmRatioUnder[0] (mDoExt_AnmRatioPack, HD 0x10 bytes: ratio, animation, joint count, joint weights).
+struct LinkUpdateAnmRatio {
+    be<f32> mRatio;
+    gptr<LinkUpdateSoundResource> mpAnmTransform;
+    u8 _08[8];
 };
-WWHD_OFFSET(LinkUpdateSoundLayout, mpAnimationSoundResource, 0x77FC);
-WWHD_SIZE(LinkUpdateSoundLayout, 0x7800);
-inline LinkUpdateSoundLayout& LinkUpdateSound(daPy_lk_c* player) {
-    return gabi::object_at<LinkUpdateSoundLayout>(gabi::ea(player));
+WWHD_OFFSET(LinkUpdateAnmRatio, mpAnmTransform, 4);
+WWHD_SIZE(LinkUpdateAnmRatio, 0x10);
+inline LinkUpdateSoundResource* LinkUpdateUnderAnimation(daPy_lk_c* player) {
+    return reinterpret_cast<LinkUpdateAnmRatio*>(player->mAnmRatioUnder)[0].mpAnmTransform.get();
 }
 // GHS angle assignment loads and stores each halfword in x/y/z order.
 inline void LinkUpdate_copyAngles(csXyz& dst, const csXyz& src) {

@@ -82,14 +82,15 @@ struct ShieldWorkHD {
 };
 WWHD_SIZE(ShieldWorkHD, 0x1C);
 WWHD_OFFSET(ShieldWorkHD, mLatitude, 0x18);
-// HD: Medli's shield direction uses these canonical GameCube members.
+// HD: Medli's shield direction: the two waist angles of daNpc_Md_c (d_a_npc_md.h 0x4230/0x4232).
 struct MedliShieldViewHD {
     u8 mPadding0[0x4230];
-    be<s16> m3114, m3116;
+    be<s16> mWaistRotX;  /* was m3114: daNpc_Md_c::mWaistRotX (d_a_npc_md.h 0x4230; TWW getWaistRotX()) */
+    be<s16> mWaistRotY;  /* was m3116: daNpc_Md_c::mWaistRotY (d_a_npc_md.h 0x4232; TWW getWaistRotY()) */
     u8 mPadding4234[0x43DC - 0x4234];
 };
 WWHD_SIZE(MedliShieldViewHD, 0x43DC);
-WWHD_OFFSET(MedliShieldViewHD, m3114, 0x4230);
+WWHD_OFFSET(MedliShieldViewHD, mWaistRotX, 0x4230);
 struct ShieldAnglesHD {
     be<s16> x, y;
 };
@@ -152,7 +153,7 @@ struct TornadoWorkHD {
     /* 0x00 */ be<u32> mTag;           /* 'TRND' */
     /* 0x04 */ gptr<fopAc_ac_c> mpTornado;  /* tornado actor (0xA5) */
     /* 0x08 */ gptr<fopAc_ac_c> mpShip;  /* ship actor (0x1BB or 0x11B) */
-    /* 0x0C */ be<u32> mEntryViewIndex;           /* m07C at start */
+    /* 0x0C */ be<u32> mEntryViewIndex;           /* mFrameCounter at start */
     /* 0x10 */ be<s32> mEntryMode;           /* entry: 0 normal, 1 side eye, 2 event */
     /* 0x14 */ cXyz mSideEye;              /* side eye */
     /* 0x20 */ cXyz mStickCenterOffset;              /* C-stick centre offset */
@@ -281,7 +282,7 @@ WWHD_SIZE(TowerWorkHD, 0x78);
 struct RideWorkHD {
   /* 0x00 */ be<u32> mTag;            /* 'RIDE' */
   /* 0x04 */ gptr<fopAc_ac_c> mpShip; /* ship (actor 0xA5) */
-  /* 0x08 */ be<u32> mEntryViewIndex; /* m07C at start */
+  /* 0x08 */ be<u32> mEntryViewIndex; /* mFrameCounter at start */
   /* 0x0C */ be<u8> mSteeringLeft;    /* steering left */
   /* 0x0D */ be<u8> mBoostBlurArmed;  /* boost blur armed */
   /* 0x0E */ u8 _0E[2];

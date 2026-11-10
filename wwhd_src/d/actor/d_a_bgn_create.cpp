@@ -54,22 +54,22 @@ cPhs_State daBgn_Create(fopAc_ac_c* a_this) {
         actors.bgn = i_this;
         actors.bgn3 = nullptr;
         actors.bgn2 = nullptr;
-        i_this->m02B4 = (u8)fopAcM_GetParam(a_this);
+        i_this->mParam = (u8)fopAcM_GetParam(a_this);
         if (!fopAcM_entrySolidHeap(a_this, useHeapInit, 0x96000))
             return cPhs_ERROR_e;
-        if (i_this->m02B4 != 0xFF) {
+        if (i_this->mParam != 0xFF) {
             if (hio_set() == 0) {
-                i_this->mCC91 = 1;
+                i_this->mHioOwner = 1;
                 hio_set() = 1;
-                s8 no = mDoHIO_createChild("G (Puppet)" /* HD: translated HIO label; original guest string retained. */, &l_HIO());
+                s8 no = mDoHIO_createChild("Ｇ（クグツ）" /* HD: translated HIO label; original guest string retained. */, &l_HIO());
                 BGN_HAND_MAX() = l_HIO().m0F0;
                 BGN_TAIL_MAX() = l_HIO().m0F2;
                 l_HIO().mNo = no;
             }
             i_this->mStts.Init(0xFF, 0xFF, a_this);
-            i_this->mC7FC.Set(&cc_sph_src);
-            i_this->mC7FC.SetStts(&i_this->mStts);
-            OffAtSetBit(&i_this->mC7FC);
+            i_this->mBodyAtSph.Set(&cc_sph_src);
+            i_this->mBodyAtSph.SetStts(&i_this->mStts);
+            OffAtSetBit(&i_this->mBodyAtSph);
             i_this->mCoreSph.Set(&core_sph_src);
             i_this->mCoreSph.SetStts(&i_this->mStts);
             const BgnCreateTev* tev = reinterpret_cast<const BgnCreateTev*>(&a_this->tevStr);
@@ -94,12 +94,12 @@ cPhs_State daBgn_Create(fopAc_ac_c* a_this) {
                 bgn_tevstr_assign(reinterpret_cast<BgnCreateTev*>(&i_this->mTailParts[i].mPartTevStr), tev);
             }
             for (s32 i = 0; i < 8; i++) {
-                i_this->mAAA8[i].m2FA = (s16)gabi::ftoi(cM_rndF(32768.0f));
-                i_this->mAAA8[i].m2FC = (s16)gabi::ftoi(cM_rndF(32768.0f));
+                i_this->mMove[i].mPhaseSin = (s16)gabi::ftoi(cM_rndF(32768.0f));
+                i_this->mMove[i].mPhaseCos = (s16)gabi::ftoi(cM_rndF(32768.0f));
             }
             gabi::Local<cXyz> local_50;
             if (save.info->mSave.mSavedata.mEvent.isEventBit(0x3F10)) {
-                i_this->m02B4 = 0xFF;
+                i_this->mParam = 0xFF;
                 local_50->y = gabi::fadds_ppc(REG8_F(4), 4441.46f);
                 local_50->x = 375.17f;
                 local_50->z = gabi::fadds_ppc(REG8_F(3), -15.0f);
@@ -114,7 +114,7 @@ cPhs_State daBgn_Create(fopAc_ac_c* a_this) {
             } else {
                 for (s32 i = 0; i < 8; i++) {
                     fopAcM_create(fpcNm_ATT_e, i, &a_this->current.pos, fopAcM_GetRoomNo(a_this), nullptr, nullptr, -1, 0);
-                    i_this->mAAA8[i].m308 = 3;
+                    i_this->mMove[i].mHitPoints = 3;
                 }
                 fopAcM_create(fpcNm_BGN2_e, 0, &a_this->current.pos, fopAcM_GetRoomNo(a_this), nullptr, nullptr, -1, 0);
                 fopAcM_create(fpcNm_BGN3_e, 0, &a_this->current.pos, fopAcM_GetRoomNo(a_this), nullptr, nullptr, -1, 0);
@@ -122,9 +122,9 @@ cPhs_State daBgn_Create(fopAc_ac_c* a_this) {
                 a_this->health = 3;
                 a_this->max_health = 3;
             }
-            i_this->mCC80 = 1.0f;
-            i_this->mC748 = 7;
-            i_this->mC7AC[0] = 60;
+            i_this->mPartLengthScale = 1.0f;
+            i_this->mAction = 7;
+            i_this->mTimers[0] = 60;
             bgn_tevstr_assign(&bgTevStr, tev);
             bgn_tevstr_assign(reinterpret_cast<BgnCreateTev*>(&i_this->mWaterTevStr), tev);
             bgn_tevstr_assign(reinterpret_cast<BgnCreateTev*>(&i_this->mRoomTevStr), tev);
@@ -142,5 +142,5 @@ cPhs_State daBgn_Create(fopAc_ac_c* a_this) {
  data core_sph_src 10190FA8
  ext 0208064C bgn_class* BgnCreate_construct(bgn_class*)
  str 10008C90 "Bgn" in 02080BA4
- str 10008C94 "G (Puppet)" renamed in 02080BA4
+ str 10008C94 "Ｇ（クグツ）" in 02080BA4
 */

@@ -216,10 +216,10 @@ BOOL daObjTide::Act_c::Create() {
     daObjTide::Attr_c* data = attr(this);
     tideSetCullBox(this, (f32)data->min_x, (f32)data->min_y, (f32)data->min_z, (f32)data->max_x,
                    (f32)data->max_y, (f32)data->max_z);
-    m2F4 = 0;
-    m2F6 = 0;
-    m30A = 0;
-    m2F0 = 0.f;
+    mTimer = 0;
+    mDemoStep = 0;
+    mDeleteReq = 0;
+    mMoveSpeed = 0.f;
     if (M_type == TYPE_3_e)
         mode_gmtw_pre_init();
     else
@@ -241,10 +241,10 @@ s32 daObjTide::Act_c::Mthd_Create() {
     }
     M_type = tidePrmAbstract(this, PRM_TYPE_W, PRM_TYPE_S);
     se_init_gmtw();
-    m309 = 1;
+    mUseRes = 1;
     if (M_type == TYPE_3_e) {
         tideClearTmpBit(&tideSave->mSaveInfo.mTmp, tideHD::RESCUE_COMPLETE);
-        if (!m309)
+        if (!mUseRes)
             return cPhs_ERROR_e;
     }
     const char* archive = attr(this)->arcName;
@@ -259,7 +259,7 @@ s32 daObjTide::Act_c::Mthd_Create() {
         }
         phase = tideCreateMoveBg(this, data->arcName.get(), (s32)data->dzb_res_index,
                                  dBgS_MoveBGProc_Trans, data->res_size);
-        m2F7 = 1;
+        mBgRegistered = 1;
         if (phase != cPhs_COMPLEATE_e && phase != cPhs_ERROR_e)
             tideAssert("d_a_obj_tide.cpp", 0x283,
                        "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)");
@@ -279,7 +279,7 @@ BOOL daObjTide::Act_c::Delete() {
 /* 023A0658 */
 s32 daObjTide::Act_c::Mthd_Delete() {
     s32 result = 1;
-    if (m309) {
+    if (mUseRes) {
         result = tideDeleteMoveBg(this);
         tideDeleteResource(&mPhase, attr(this)->arcName.get());
     }
@@ -314,23 +314,23 @@ void daObjTide::Act_c::init_mtx() {
 void daObjTide::Act_c::move_to_aim(BOOL sound, f32 aim) {
     f32 difference = aim - (f32)current.pos.y;
     if (std::fabs((f64)difference) < .1f) {
-        m2F0 = 0.f;
+        mMoveSpeed = 0.f;
         current.pos.y = aim;
         return;
     }
     daObjTide::Attr_c* data = attr(this);
-    f32 step = (f32)m2F0 + data->m24;
-    m2F0 = step;
+    f32 step = (f32)mMoveSpeed + data->m24;
+    mMoveSpeed = step;
     f32 maximum = data->m28;
     if (step > maximum) {
         step = maximum;
-        m2F0 = step;
+        mMoveSpeed = step;
         data = attr(this);
     }
     f32 minimum = data->m2C;
     if (!(step > minimum)) {
         step = minimum + .001f;
-        m2F0 = step;
+        mMoveSpeed = step;
         data = attr(this);
         minimum = data->m2C;
     }
@@ -366,7 +366,7 @@ BOOL daObjTide::Act_c::gmtw_demo_up_start() {
 
 /* 023A0DC0 */
 void daObjTide::Act_c::mode_norm_init() {
-    m2EC = MODE_NORM;
+    mMode = MODE_NORM;
 }
 
 /* 023A14A8 */
@@ -375,10 +375,10 @@ void daObjTide::Act_c::mode_norm() {
     f32 level = tideWaterLevel, homeHeight = home.pos.y;
     u32 flags = tideWaterState, low = flags & tideHD::STATE_1;
     current.pos.y = gabi::fmadds(1.f - level, (f32)data->m20, homeHeight);
-    s16 timer = m2F4;
+    s16 timer = mTimer;
     if (timer > 0) {
         timer = (s16)(timer - 1);
-        m2F4 = timer;
+        mTimer = timer;
         if (!timer) {
             mBrk2->mFrameCtrl.mFrame = 0.f;
             mBrk2->mFrameCtrl.mRate = attr(this)->m44;
@@ -386,7 +386,7 @@ void daObjTide::Act_c::mode_norm() {
     }
     mDoExt_baseAnm* animation = mBrk2;
     if (!low && (flags & tideHD::STATE_2))
-        m2F4 = data->m42;
+        mTimer = data->m42;
     if (animation)
         tidePlayAnimation(animation);
     animation = mBtk;
@@ -405,8 +405,8 @@ void daObjTide::Act_c::mode_norm() {
 void daObjTide::Act_c::mode_gmtw_pre_init() {
     if (attr(this)->sch_flag)
         tideAssert("d_a_obj_tide.cpp", 0x351, "attr(M_type).sch_flag == false");
-    m2EC = MODE_GMTW_PRE;
-    m2F6 = 0;
+    mMode = MODE_GMTW_PRE;
+    mDemoStep = 0;
 }
 
 /* 023A1798 */
@@ -415,9 +415,9 @@ void daObjTide::Act_c::mode_gmtw_pre() {
     f32 homeHeight = home.pos.y;
     if (demo) {
         current.pos.y = homeHeight;
-        if (m2F7) {
+        if (mBgRegistered) {
             tideReleaseBackground(&tideGetGameInfo()->play.mBgS, mpBgW.get());
-            m2F7 = 0;
+            mBgRegistered = 0;
         }
         mode_gmtw_demo_init();
     } else {
@@ -443,10 +443,10 @@ void daObjTide::Act_c::mode_gmtw_init() {
         animation->mFrameCtrl.mLoop = 400;
         mBtk->mFrameCtrl.mFrame = 401.f;
     }
-    m2F6 = 2;
-    m308 = 0;
-    m30C = 300;
-    m2EC = MODE_GMTW;
+    mDemoStep = 2;
+    mSwLatched = 0;
+    mRescueTimer = 300;
+    mMode = MODE_GMTW;
 }
 
 // HD: the completed-water height is 2923.5, followed by the rescue deletion countdown.
@@ -454,13 +454,13 @@ void daObjTide::Act_c::mode_gmtw_init() {
 void daObjTide::Act_c::mode_gmtw() {
     f32 aim = 2923.5f;
     bool stopped = false;
-    bool latched = m308 != 0;
+    bool latched = mSwLatched != 0;
     if (!latched) {
         u32 sw = tidePrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
         bool on = tideIsSwitch(&tideSave->mSaveInfo, sw, (s32)(s8)home.roomNo) != 0;
         if (on) {
             aim = (f32)home.pos.y + aim;
-            m308 = 1;
+            mSwLatched = 1;
         } else
             aim = (f32)home.pos.y + 100.f;
     } else {
@@ -482,41 +482,41 @@ void daObjTide::Act_c::mode_gmtw() {
         move_to_aim(0, aim);
     se_set_gmtw();
     if (tideIsTmpBit(&tideSave->mSaveInfo.mTmp, tideHD::RESCUE_COMPLETE)) {
-        s32 count = m30C;
+        s32 count = mRescueTimer;
         if (count > 0)
-            m30C = count - 1;
+            mRescueTimer = count - 1;
         else
-            m30A = 1;
+            mDeleteReq = 1;
     } else
-        m30C = 300;
+        mRescueTimer = 300;
 }
 
 /* 023A1644 */
 void daObjTide::Act_c::mode_gmtw_demo_init() {
     if (attr(this)->sch_flag)
         tideAssert("d_a_obj_tide.cpp", 0x3BF, "attr(M_type).sch_flag == false");
-    m2EC = MODE_GMTW_DEMO;
-    m2F6 = 0;
+    mMode = MODE_GMTW_DEMO;
+    mDemoStep = 0;
 }
 
 // HD: the two transition branches finish with sound updates before returning.
 /* 023A1D68 */
 void daObjTide::Act_c::mode_gmtw_demo() {
-    u8 stage = m2F6;
+    u8 stage = mDemoStep;
     if (!stage) {
         if (gmtw_demo_up_start()) {
-            m2F6 = 1;
-            m2F4 = 90;
+            mDemoStep = 1;
+            mTimer = 90;
         }
-        stage = m2F6;
+        stage = mDemoStep;
     }
     f32 aim = (stage == 0 || stage == 1) ? (f32)home.pos.y : (f32)home.pos.y + 100.f;
     bool stopped = false;
     if (stage == 1) {
-        s16 timer = (s16)((s32)(s16)m2F4 - 1);
-        m2F4 = timer;
+        s16 timer = (s16)((s32)(s16)mTimer - 1);
+        mTimer = timer;
         if (timer <= 0) {
-            m2F6 = 2;
+            mDemoStep = 2;
             se_set_gmtw();
             return;
         }
@@ -525,7 +525,7 @@ void daObjTide::Act_c::mode_gmtw_demo() {
             tideSetParticle(particle, 0, tideHD::ID_IT_SN_MT_WATER00, &current.pos, 0, 0, 255, 0,
                             -1, 0, 0, 0);
             tideRegisterBackground(&tideGetGameInfo()->play.mBgS, mpBgW.get(), this);
-            m2F7 = 1;
+            mBgRegistered = 1;
             se_set_gmtw();
             return;
         }
@@ -556,61 +556,61 @@ void daObjTide::Act_c::mode_gmtw_demo() {
 // HD: the stage-boss dungeon-item query uses its verified full-width result.
 /* 023A0418 */
 void daObjTide::Act_c::se_init_gmtw() {
-    m2F9 = 0;
+    mSeOutOn = 0;
     M_id_gopo = -1;
     M_id_out = -1;
-    m2FB = 0;
-    m2FA = 0;
-    m2F8 = 0;
+    mSePachaOn = 0;
+    mSeUpOn = 0;
+    mSeGopoOn = 0;
     M_id_up = -1;
-    m30B = (u8)(tideIsDungeonItem(&tideSave->mSaveInfo.mMemory.mMembit,
+    mBossDead = (u8)(tideIsDungeonItem(&tideSave->mSaveInfo.mMemory.mMembit,
                                   dSv_memBit_c::STAGE_BOSS_ENEMY) != 0);
 }
 
 // HD: the completed-water height is 2923.5, with a double-precision threshold test.
 /* 023A19AC */
 void daObjTide::Act_c::se_set_gmtw() {
-    m2FB = 0;
-    u8 item = m30B;
-    u8 oldGurgle = m2F8;
-    m2F8 = 0;
-    u8 oldOut = m2F9;
-    m2F9 = 0;
-    u8 oldUp = m2FA;
-    m2FA = 0;
+    mSePachaOn = 0;
+    u8 item = mBossDead;
+    u8 oldGurgle = mSeGopoOn;
+    mSeGopoOn = 0;
+    u8 oldOut = mSeOutOn;
+    mSeOutOn = 0;
+    u8 oldUp = mSeUpOn;
+    mSeUpOn = 0;
     bool finished = item != 0;
     if (!finished) {
         f32 distance = ((f32)home.pos.y + 2923.5f) - (f32)current.pos.y;
         finished = std::fabs((f64)distance) < .01f;
     }
     if (finished)
-        m2FB = 1;
+        mSePachaOn = 1;
     else {
-        m2F8 = 1;
-        u8 stage = m2F6;
-        if ((stage == 1 && m2F7) || stage == 2) {
-            m2F9 = 1;
-            m2FA = 1;
+        mSeGopoOn = 1;
+        u8 stage = mDemoStep;
+        if ((stage == 1 && mBgRegistered) || stage == 2) {
+            mSeOutOn = 1;
+            mSeUpOn = 1;
         }
     }
-    if (m2F8) {
+    if (mSeGopoOn) {
         if (!oldGurgle)
             se_start_gopo();
     } else if (oldGurgle)
         se_stop_gopo();
-    if (m2F9) {
+    if (mSeOutOn) {
         if (!oldOut)
             se_start_out();
     } else if (oldOut)
         se_stop_out();
-    if (m2FA) {
+    if (mSeUpOn) {
         if (!oldUp)
             se_start_up();
         else
             se_pos_up();
     } else if (oldUp)
         se_stop_up();
-    if (m2FB) {
+    if (mSePachaOn) {
         s32 reverb = tideGetReverb((s32)(s8)current.roomNo);
         tideStartPositionSound(tideHD::JA_SE_ATM_MJ_WATER_PACHA, &eyePos, 0, reverb);
     }
@@ -686,11 +686,11 @@ void daObjTide::Act_c::se_pos_up() {
 // HD: deleting the actor after the mode and matrix updates is part of Execute.
 /* 023A0F08 */
 BOOL daObjTide::Act_c::Execute(be<u32>* matrixOut) {
-    (this->*tideModeProc[u32(m2EC)].run)();
+    (this->*tideModeProc[u32(mMode)].run)();
     eyePos.y = current.pos.y;
     set_mtx();
     *matrixOut = gabi::ea(&tideTemporaryMatrix);
-    if (m30A)
+    if (mDeleteReq)
         tideDeleteActor(this);
     return 1;
 }

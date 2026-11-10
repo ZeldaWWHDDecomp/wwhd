@@ -229,8 +229,8 @@ void daObjSwpush::Act_c::set_btp_frame() {
 }
 /* 0239833C */
 void daObjSwpush::Act_c::top_bg_aim_req(f32 h, s16 timer) {
-    m328 = h;
-    m324 = timer;
+    mTopAimReqHFrac = h;
+    mTopAimTimer = timer;
 }
 /* 02397564 */
 void daObjSwpush::Act_c::mode_upper_init() {
@@ -452,19 +452,19 @@ void daObjSwpush::Act_c::calc_top_pos() {
         y = -36.5f;
     else
         y = (y - 1.0f) >= 0 ? 1.0f : y;
-    m31C = y;
-    if (m324 > 0) {
-        s16 timer = (s16)((s16)m324 - 1);
-        m324 = timer;
+    mBottomPos = y;
+    if (mTopAimTimer > 0) {
+        s16 timer = (s16)((s16)mTopAimTimer - 1);
+        mTopAimTimer = timer;
         if (timer == 0)
-            m320 = (f32)m328;
+            mTopAimHFrac = (f32)mTopAimReqHFrac;
     }
-    f32 top = mMode == MODE_UPPER ? (f32)mCurHFrac : (f32)m320;
-    m32C = top;
+    f32 top = mMode == MODE_UPPER ? (f32)mCurHFrac : (f32)mTopAimHFrac;
+    mTopHFrac = top;
     f32 ty = (1.0f - top) * -35.5f;
     mTopPos = ty;
-    if (ty < (f32)m31C)
-        mTopPos = (f32)m31C;
+    if (ty < (f32)mBottomPos)
+        mTopPos = (f32)mBottomPos;
 }
 /* 02397BFC */
 void daObjSwpush::Act_c::set_push_flag() {
@@ -627,11 +627,11 @@ s32 daObjSwpush::Act_c::Mthd_Execute() {
         u32 vertex = swpushOpVertices[i];
         if ((s32)vertex >= count)
             JUT_ASSERT_fail("d_a_obj_swpush.cpp", 0x57B, "M_op_vtx[i] < i_max");
-        f32 y = (f32)m2D4 + (f32)mTopPos;
+        f32 y = (f32)mOpVtxBaseY + (f32)mTopPos;
         vertices[vertex].y = y;
     }
     swpushMoveBackground(mpBgW.get());
-    f32 y = (f32)current.pos.y + (f32)m31C - -35.5f;
+    f32 y = (f32)current.pos.y + (f32)mBottomPos - -35.5f;
     f32 x = current.pos.x, z = current.pos.z;
     eyePos.x = x;
     eyePos.z = z;
@@ -740,7 +740,7 @@ s32 daObjSwpush::Act_c::Mthd_Create() {
     bg->m_flag = u8(bg->m_flag) | 2;
     bg = mpBgW;
     cXyz* vertices = bg->pm_vtx_tbl;
-    m2D4 = vertices[6].y;
+    mOpVtxBaseY = vertices[6].y;
     bg->mRideCallback = gabi::guest_fn(reinterpret_cast<const void*>(rideCB));
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpModel));
     init_mtx();
@@ -757,12 +757,12 @@ s32 daObjSwpush::Act_c::Mthd_Create() {
     mSpeed = 0;
     mMiniPushTimer = 0;
     mPrevHeavyRiding = 0;
-    m324 = 0;
+    mTopAimTimer = 0;
     mPushFlg = 0;
     mMiniPushFlg = 0;
     mVibTimer = 0;
     mRidingMode = 0;
-    m328 = 0;
+    mTopAimReqHFrac = 0;
     set_btp_frame();
     bool toggle = (u32)attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)").mFlags &
                   FLAG_IS_TOGGLE;
@@ -774,17 +774,17 @@ s32 daObjSwpush::Act_c::Mthd_Create() {
     bool on2 = is_switch2();
     if ((toggle || (on == onUp)) && !(second && on2)) {
         mTopPos = 0;
-        m31C = 0;
+        mBottomPos = 0;
         mCurHFrac = 1;
-        m320 = 1;
-        m32C = 1;
+        mTopAimHFrac = 1;
+        mTopHFrac = 1;
         mTargetHFrac = 1;
         mode_upper_init();
     } else {
         mCurHFrac = 0;
-        m32C = 0;
-        m320 = 0;
-        m31C = -35.5f;
+        mTopHFrac = 0;
+        mTopAimHFrac = 0;
+        mBottomPos = -35.5f;
         mTargetHFrac = 0;
         mTopPos = -35.5f;
         mode_lower_init();
@@ -808,7 +808,7 @@ static BOOL jnodeCB(void* node, s32 timing) {
         u16 index = joint->mJntNo;
         Mtx34* matrix = swpushAnimationMatrix(model, index);
         PSMTXCopy(matrix, mDoMtx_stack_c::get());
-        swpushTranslate(actor->m31C, 0.f, 0.f);
+        swpushTranslate(actor->mBottomPos, 0.f, 0.f);
         matrix = swpushAnimationMatrix(model, index);
         mtx_copy(matrix, mDoMtx_stack_c::get());
         PSMTXCopy(mDoMtx_stack_c::get(), &swpushCurrentMatrix);

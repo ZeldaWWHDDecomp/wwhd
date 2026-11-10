@@ -132,9 +132,9 @@ bool daNpc_Kp1_c::createInit() {
     }
     mEventCut.setActorInfo2("Kp1", (fopNpc_npc_c*)(void*)this);
     gravity = -4.0f;
-    field_0x798.copy(current.pos);
+    mLookPos.copy(current.pos);
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAB; /* attention_info.distances[TALK] */
-    field_0x7B6 = 0xFF;
+    mPreItemNo = 0xFF;
     attention_info.flags =
         fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e; /* attention_info.flags */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xAB; /* attention_info.distances[SPEAK] */
@@ -156,13 +156,13 @@ bool daNpc_Kp1_c::createInit() {
 /* 0227B9AC */
 void daNpc_Kp1_c::setMtx() {
 
-    if (field_0x7C7 == 0) {
+    if (mInDemo == 0) {
         playTexPatternAnm();
-        field_0x7B4 = (s8)mpMorf->play(&eyePos, 0, 0);
-        if (mpMorf->getFrame() < field_0x7A4) {
-            field_0x7B4 = 1;
+        mbMorfAnimStopped = (s8)mpMorf->play(&eyePos, 0, 0);
+        if (mpMorf->getFrame() < mPrevMorfFrame) {
+            mbMorfAnimStopped = 1;
         }
-        field_0x7A4 = mpMorf->getFrame();
+        mPrevMorfFrame = mpMorf->getFrame();
         mObjAcch.CrrPos(dComIfG_Bgsp());
     }
     tevStr.mRoomNo = Kp1_roomId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
@@ -205,8 +205,8 @@ void daNpc_Kp1_c::BtpNum2ResID(int i_num, be<s32>* o_btp_num) {
 /* 0227CB64 */
 u32 daNpc_Kp1_c::setAnm_tex(s8 i_param_1) {
 
-    if (i_param_1 >= 0 && i_param_1 != field_0x7CD) {
-        field_0x7CD = i_param_1;
+    if (i_param_1 >= 0 && i_param_1 != mBtpNum) {
+        mBtpNum = i_param_1;
         return initTexPatternAnm(true);
     }
     return (u32)gabi::ea(this); // HD: unchanged-animation path returns the original this register.
@@ -227,8 +227,8 @@ bool daNpc_Kp1_c::init_btp(u32 param_1, int param_2) {
             return false;
         }
         mBtpFrame = 0;
-        field_0x6F2 = 0;
-        if (field_0x7CD == 1) { // HD: compared with Km1, pattern 1 starts at frame 1
+        mBlinkTimer = 0;
+        if (mBtpNum == 1) { // HD: compared with Km1, pattern 1 starts at frame 1
             mBtpFrame = 1;
         }
     }
@@ -239,7 +239,7 @@ bool daNpc_Kp1_c::init_btp(u32 param_1, int param_2) {
 bool daNpc_Kp1_c::initTexPatternAnm(u32 param_1) {
 
     bool initialized = false;
-    if (init_btp(param_1, field_0x7CD)) {
+    if (init_btp(param_1, mBtpNum)) {
         initialized = true;
     }
     return initialized;
@@ -248,11 +248,11 @@ bool daNpc_Kp1_c::initTexPatternAnm(u32 param_1) {
 /* 0227B854 */
 void daNpc_Kp1_c::playTexPatternAnm() {
 
-    s8 tex = field_0x7CD;
+    s8 tex = mBtpNum;
     if (tex == 1) { // HD: compared with Km1, pattern 1 is not animated
         return;
     }
-    if (tex == 0 && Kp1_calcTimer(&field_0x6F2) != 0) {
+    if (tex == 0 && Kp1_calcTimer(&mBlinkTimer) != 0) {
         return;
     }
     u8 frame = (u8)(mBtpFrame + 1);
@@ -260,11 +260,11 @@ void daNpc_Kp1_c::playTexPatternAnm() {
     if (frame < Kp1_frameMax(m_head_tex_pattern)) {
         return;
     }
-    if (field_0x7CD) {
+    if (mBtpNum) {
         mBtpFrame = (u8)Kp1_frameMax(m_head_tex_pattern);
     } else {
         mBtpFrame = 0;
-        field_0x6F2 = (s16)gabi::ftoi(cM_rndF(60.0f) + 30.0f);
+        mBlinkTimer = (s16)gabi::ftoi(cM_rndF(60.0f) + 30.0f);
     }
 }
 
@@ -273,8 +273,8 @@ s32 daNpc_Kp1_c::setAnm_anm(anm_prm_c* i_anm_ptr) {
 
     s32 changed = 0;
     s8 num = i_anm_ptr->bckNum;
-    if (num >= 0 && field_0x7CE != num) {
-        field_0x7CE = num;
+    if (num >= 0 && mBckNum != num) {
+        mBckNum = num;
         if (mpMorf.get() != nullptr) {
             gabi::Local<be<s32>> bckId;
             gabi::Local<be<s32>> basId;
@@ -285,9 +285,9 @@ s32 daNpc_Kp1_c::setAnm_anm(anm_prm_c* i_anm_ptr) {
             }
             changed = 1;
         }
-        field_0x7B5 = 0;
-        field_0x7A4 = 0.0f;
-        field_0x7B4 = 0;
+        mAnmLoopCount = 0;
+        mPrevMorfFrame = 0.0f;
+        mbMorfAnimStopped = 0;
     }
     return changed;
 }
@@ -306,14 +306,14 @@ void daNpc_Kp1_c::setAnm_NUM(int i_idx, int i_tex) {
 void daNpc_Kp1_c::setAnm() {
 
     anm_prm_c* a_anm_prm_tbl = a_anm_state_tbl;
-    setAnm_tex(a_anm_prm_tbl[field_0x7D0].btpNum);
-    setAnm_anm(&a_anm_prm_tbl[field_0x7D0]);
+    setAnm_tex(a_anm_prm_tbl[mStt].btpNum);
+    setAnm_anm(&a_anm_prm_tbl[mStt]);
 }
 
 /* 0227CD8C */
 void daNpc_Kp1_c::chngAnmAtr(u32 param_1) {
 
-    if (param_1 >= 7 || param_1 == field_0x7CB) {
+    if (param_1 >= 7 || param_1 == mAnmAtrNo) {
         return;
     }
     /* which hand-held model _draw shows */
@@ -324,7 +324,7 @@ void daNpc_Kp1_c::chngAnmAtr(u32 param_1) {
     } else {
         mItemModelIndex = 0;
     }
-    field_0x7CB = param_1;
+    mAnmAtrNo = param_1;
     setAnm_ATR(1);
 }
 
@@ -333,33 +333,33 @@ void daNpc_Kp1_c::setAnm_ATR(int param_1) {
 
     anm_prm_c* a_anm_prm_tbl = a_anm_attr_tbl; /* [7] */
     if (param_1 != 0) {
-        setAnm_tex(a_anm_prm_tbl[field_0x7CB].btpNum);
+        setAnm_tex(a_anm_prm_tbl[mAnmAtrNo].btpNum);
     }
-    setAnm_anm(&a_anm_prm_tbl[field_0x7CB]);
+    setAnm_anm(&a_anm_prm_tbl[mAnmAtrNo]);
 }
 
 /* 0227CDE4 */
 void daNpc_Kp1_c::ctrlAnmAtr() {
 
-    switch (field_0x7CB) {
+    switch (mAnmAtrNo) {
     case 1:
-        if (field_0x7B4 == 0)
+        if (mbMorfAnimStopped == 0)
             return;
-        field_0x7B5 = field_0x7B5 + 1;
-        if (field_0x7B5 < 2)
+        mAnmLoopCount = mAnmLoopCount + 1;
+        if (mAnmLoopCount < 2)
             return;
         break;
     case 6:
-        if (field_0x7B4 == 0)
+        if (mbMorfAnimStopped == 0)
             return;
-        field_0x7B5 = field_0x7B5 + 1;
-        if (field_0x7B5 <= 0)
+        mAnmLoopCount = mAnmLoopCount + 1;
+        if (mAnmLoopCount <= 0)
             return;
         break;
     default:
         return;
     }
-    field_0x7CB = 0;
+    mAnmAtrNo = 0;
     setAnm_NUM(0, 1);
 }
 
@@ -367,19 +367,19 @@ void daNpc_Kp1_c::ctrlAnmAtr() {
 void daNpc_Kp1_c::anmAtr(u16 i_msgStatus) {
 
     if (i_msgStatus == KP1_MSG_TYPING) {
-        if (field_0x7D6 == 0) {
-            field_0x7CC = 0xFF;
+        if (mAnmAtrSetCnt == 0) {
+            mMesgAnimeTag = 0xFF;
             chngAnmAtr(dComIfGp_getMesgAnimeAttrInfo());
-            field_0x7D6 = field_0x7D6 + 1;
+            mAnmAtrSetCnt = mAnmAtrSetCnt + 1;
         }
         u8 uVar1 = dComIfGp_getMesgAnimeTagInfo(); /* dComIfGp_getMesgAnimeTagInfo() */
-        if (uVar1 != 0xFF && uVar1 != field_0x7CC) {
+        if (uVar1 != 0xFF && uVar1 != mMesgAnimeTag) {
             dComIfGp_clearMesgAnimeTagInfo();
-            field_0x7CC = uVar1;
+            mMesgAnimeTag = uVar1;
             /* chngAnmTag(): empty */
         }
     } else if (i_msgStatus == KP1_MSG_DISPLAYED) {
-        field_0x7D6 = 0;
+        mAnmAtrSetCnt = 0;
     }
     ctrlAnmAtr();
     /* ctrlAnmTag(): empty */
@@ -388,14 +388,14 @@ void daNpc_Kp1_c::anmAtr(u16 i_msgStatus) {
 /* 0227CF10 */
 void daNpc_Kp1_c::setStt(s8 param_1) {
 
-    s8 uVar1 = field_0x7D0;
-    field_0x7D0 = param_1;
+    s8 uVar1 = mStt;
+    mStt = param_1;
     mItemModelIndex = 0;
     if (param_1 == 2) {
-        field_0x7D1 = uVar1;
+        mPrevStt = uVar1;
         mCancelPresent = 0;
-        field_0x7D2 = 1;
-        field_0x7CB = 0xFF;
+        mLookMode = 1;
+        mAnmAtrNo = 0xFF;
         m_jnt.mbTrn = 1; /* setTrn() */
         return;
     }
@@ -446,7 +446,7 @@ u16 daNpc_Kp1_c::next_msgStatus(be<u32>* pMsgNo) {
         msgStatus = fopMsgStts_MSG_ENDS_e; /* fopMsgStts_MSG_ENDS_e */
         break;
     case 0x1E91:
-        field_0x7CF = 3;
+        mOrderEvent = 3;
         msgStatus = fopMsgStts_MSG_ENDS_e;
         break;
     case 0x1E96:
@@ -472,7 +472,7 @@ u16 daNpc_Kp1_c::next_msgStatus(be<u32>* pMsgNo) {
         *pMsgNo = 0x1E9D;
         break;
     case 0x1E9D:
-        field_0x7CF = 4;
+        mOrderEvent = 4;
         msgStatus = fopMsgStts_MSG_ENDS_e;
         break;
     default:
@@ -485,7 +485,7 @@ u16 daNpc_Kp1_c::next_msgStatus(be<u32>* pMsgNo) {
 /* 0227D104 */
 u32 daNpc_Kp1_c::getMsg() {
 
-    u8 item = field_0x7B6;
+    u8 item = mPreItemNo;
     if (item != 0xFF) { /* an item was shown */
         if (item == KP1_ITEM_MOBLINS_LETTER) {
             return 0x1E96;
@@ -524,12 +524,12 @@ u32 daNpc_Kp1_c::getMsg() {
 /* 0227C714 */
 void daNpc_Kp1_c::eventOrder() {
 
-    s8 order = field_0x7CF;
+    s8 order = mOrderEvent;
     if (order == 1 || order == 2) {
         eventInfo.onCondition(
             dEvtCnd_CANTALK_e |
             dEvtCnd_CANTALKITEM_e); /* eventInfo.onCondition(dEvtCnd_CANTALK_e | CANTALKITEM) */
-        if (field_0x7CF == 1) {
+        if (mOrderEvent == 1) {
             fopAcM_orderSpeakEvent(this);
         }
     } else if (order >= 3) {
@@ -544,15 +544,15 @@ void daNpc_Kp1_c::checkOrder() {
     u16 command = (u16)eventInfo.mCommand; /* eventInfo.mCommand */
     if (command == dEvtCmd_INDEMO_e) {
         if ((Kp1_startEvent(dComIfGp_getPEvtManager(), "GET_MAGYS_LTTR" /* "GET_MAGYS_LTTR" */) &&
-             field_0x7CF == 3) ||
+             mOrderEvent == 3) ||
             (Kp1_startEvent(dComIfGp_getPEvtManager(), "GET_KAKERA_HRT" /* "GET_KAKERA_HRT" */) &&
-             field_0x7CF == 4)) {
-            field_0x7CF = 0;
+             mOrderEvent == 4)) {
+            mOrderEvent = 0;
         }
     } else if (command == dEvtCmd_INTALK_e) {
-        if (field_0x7CF == 1 || field_0x7CF == 2) {
-            field_0x7CF = 0;
-            field_0x7C5 = 1;
+        if (mOrderEvent == 1 || mOrderEvent == 2) {
+            mOrderEvent = 0;
+            mTalking = 1;
         }
     }
 }
@@ -570,7 +570,7 @@ void daNpc_Kp1_c::lookBack() {
     vec1->y = 0.0f;
     s16 targetY = current.angle.y;
     cXyz* dstPos = nullptr;
-    switch ((u32)(s32)field_0x7D2) {
+    switch ((u32)(s32)mLookMode) {
     case 1: {
         gabi::Local<cXyz> eye;
         dNpc_playerEyePos(eye, -20.0f);
@@ -582,25 +582,25 @@ void daNpc_Kp1_c::lookBack() {
         break;
     }
     case 2:
-        vec1->copy(field_0x798);
+        vec1->copy(mLookPos);
         srcZ = current.pos.z;
         srcX = current.pos.x;
         dstPos = vec1;
         break;
     case 3:
-        targetY = field_0x7B2;
+        targetY = mDesiredYRot;
         break;
     }
     if (m_jnt.mbTrn != 0) { /* m_jnt.trnChk() */
-        cLib_addCalcAngleS2(&field_0x7B0, l_HIO.mPrmTbl.field_12, 4, 0x800);
+        cLib_addCalcAngleS2(&mLookAtMaxVel, l_HIO.mPrmTbl.field_12, 4, 0x800);
     } else {
-        field_0x7B0 = 0;
+        mLookAtMaxVel = 0;
     }
     gabi::Local<cXyz> vec2; /* passed by value: a copy */
     vec2->x = srcX;
     vec2->y = srcY;
     vec2->z = srcZ;
-    Kp1_lookAtTarget(&m_jnt, &current.angle.y, dstPos, vec2, targetY, field_0x7B0, headOnlyFollow);
+    Kp1_lookAtTarget(&m_jnt, &current.angle.y, dstPos, vec2, targetY, mLookAtMaxVel, headOnlyFollow);
 }
 
 /* 0227D2C0 */
@@ -622,7 +622,7 @@ void daNpc_Kp1_c::setAttention() {
     attPos->x = x;
     attPos->y = y;
     attPos->z = current.pos.z;
-    if (!field_0x7BC && !field_0x7C0) {
+    if (!field_0x7BC && !mbSetEyePos) {
         return;
     }
     f32 z = mEyePos.z;
@@ -651,7 +651,7 @@ void daNpc_Kp1_c::event_actionInit(int param_1) {
     be<s32>* actionNumber = (be<s32>*)dComIfGp_evmng_getMyIntegerP(param_1, "ActNo" /* "ActNo" */);
     dComIfGp_evmng_getMyIntegerP(param_1, "Timer" /* "Timer" */);
     if (actionNumber != nullptr) {
-        field_0x7CA = (s8)(s32)*actionNumber;
+        mEventActionNo = (s8)(s32)*actionNumber;
     }
 }
 
@@ -659,7 +659,7 @@ void daNpc_Kp1_c::event_actionInit(int param_1) {
 bool daNpc_Kp1_c::event_action() {
 
     bool ret = false;
-    switch ((u32)(s32)field_0x7CA) {
+    switch ((u32)(s32)mEventActionNo) {
     case 0: { /* hand over the item 0x9A */
         u32 id =
             Kp1_createPresent(&current.pos, KP1_ITEM_MAGGIES_LETTER, 0, -1, -1, nullptr, nullptr);
@@ -692,18 +692,18 @@ void daNpc_Kp1_c::privateCut() {
     if (staffIdx == -1) {
         return;
     }
-    field_0x7C9 = (s8)dComIfGp_evmng_getMyActIdx(staffIdx, &cut_name_tbl, 1, TRUE, 0);
-    if (field_0x7C9 == -1) {
+    mActIdx = (s8)dComIfGp_evmng_getMyActIdx(staffIdx, &cut_name_tbl, 1, TRUE, 0);
+    if (mActIdx == -1) {
         dComIfGp_evmng_cutEnd(staffIdx);
         return;
     }
     if (dComIfGp_evmng_getIsAddvance(staffIdx)) {
-        if (field_0x7C9 == 0) {
+        if (mActIdx == 0) {
             event_actionInit(staffIdx);
         }
     }
     bool complete = true;
-    if (field_0x7C9 == 0) {
+    if (mActIdx == 0) {
         complete = event_action();
     }
     if (complete) {
@@ -715,7 +715,7 @@ void daNpc_Kp1_c::privateCut() {
 void daNpc_Kp1_c::endEvent() {
 
     dComIfGp_event_reset();
-    field_0x7CB = 0xFF;
+    mAnmAtrNo = 0xFF;
 }
 
 /* 0227C600 */
@@ -726,7 +726,7 @@ void daNpc_Kp1_c::event_proc() {
         endEvent();
         shape_angle.x = current.angle.x;
         shape_angle.z = current.angle.z;
-        field_0x7CF = 1;
+        mOrderEvent = 1;
         mLetterEventEnded = 1;
         shape_angle.y = current.angle.y;
     } else if (Kp1_endEvent(dComIfGp_getPEvtManager(), "GET_KAKERA_HRT" /* "GET_KAKERA_HRT" */)) {
@@ -735,7 +735,7 @@ void daNpc_Kp1_c::event_proc() {
         shape_angle.x = current.angle.x;
         shape_angle.z = current.angle.z;
         mHeartPieceEventEnded = 1;
-        field_0x7CF = 1;
+        mOrderEvent = 1;
         shape_angle.y = current.angle.y;
     } else {
         if (!mEventCut.cutProc()) {
@@ -767,13 +767,13 @@ bool daNpc_Kp1_c::set_action(Kp1ActionFunc* i_action, void* param_2) {
         newD = i_action->d;
     }
     if (cur->i != 0) {
-        field_0x7D5 = -1;
+        mActionStatus = -1;
         Kp1_callAction(this, cur, param_2);
     }
     cur->f = newF;
     cur->d = newD;
     cur->i = newI;
-    field_0x7D5 = 0;
+    mActionStatus = 0;
     Kp1_callAction(this, cur, param_2);
     return true;
 }
@@ -782,12 +782,12 @@ bool daNpc_Kp1_c::set_action(Kp1ActionFunc* i_action, void* param_2) {
 BOOL daNpc_Kp1_c::chk_talk() {
 
     BOOL ret = TRUE;
-    field_0x7B6 = 0xFF;
+    mPreItemNo = 0xFF;
     if (dComIfGp_event_chkTalkXY()) {
         if (dComIfGp_evmng_ChkPresentEnd() == 0) {
             return FALSE;
         }
-        field_0x7B6 = dComIfGp_event_getPreItemNo();
+        mPreItemNo = dComIfGp_event_getPreItemNo();
     }
     return ret;
 }
@@ -795,23 +795,23 @@ BOOL daNpc_Kp1_c::chk_talk() {
 /* 0227D3C8 */
 BOOL daNpc_Kp1_c::wait01() {
 
-    s8 order = field_0x7CF;
+    s8 order = mOrderEvent;
     if (order == 3 || order == 4 || order == 1) {
         return TRUE;
     }
-    if (field_0x7C5 != 0) {
+    if (mTalking != 0) {
         if (chk_talk()) {
             setStt(KP1_TALK);
         }
     } else {
-        field_0x7CF = 2;
-        if (field_0x7C4) {
-            field_0x7D2 = 1;
+        mOrderEvent = 2;
+        if (mHasAttention) {
+            mLookMode = 1;
             m_jnt.mbTrn = 1; /* setTrn() */
         } else {
-            s16 y = field_0x76C.y;
-            field_0x7D2 = 3;
-            field_0x7B2 = y;
+            s16 y = mInitialAngle.y;
+            mLookMode = 3;
+            mDesiredYRot = y;
             m_jnt.mbTrn = 1;
         }
     }
@@ -834,10 +834,10 @@ BOOL daNpc_Kp1_c::talk01() {
             if (mCurrMsgNo == 0x1E9D) {
                 dComIfGs_setReserveItemEmpty();
             }
-            field_0x7B6 = 0xFF;
-            setStt(field_0x7D1);
+            mPreItemNo = 0xFF;
+            setStt(mPrevStt);
             field_0x7C8 = 0;
-            field_0x7C5 = 0;
+            mTalking = 0;
             endEvent();
         }
     }
@@ -847,20 +847,20 @@ BOOL daNpc_Kp1_c::talk01() {
 /* 0227D558 */
 BOOL daNpc_Kp1_c::wait_action1(void*) {
 
-    if (field_0x7D5 == 0) {
+    if (mActionStatus == 0) {
         setStt(KP1_WAIT);
-        field_0x7D5 = field_0x7D5 + 1;
-    } else if (field_0x7D5 != -1) {
-        field_0x7C4 = chkAttention();
-        switch ((u32)(s32)field_0x7D0) {
+        mActionStatus = mActionStatus + 1;
+    } else if (mActionStatus != -1) {
+        mHasAttention = chkAttention();
+        switch ((u32)(s32)mStt) {
         case 2:
-            field_0x7C0 = talk01();
+            mbSetEyePos = talk01();
             break;
         case 1:
-            field_0x7C0 = wait01();
+            mbSetEyePos = wait01();
             break;
         default:
-            field_0x7C0 = 0;
+            mbSetEyePos = 0;
             break;
         }
         lookBack();
@@ -872,12 +872,12 @@ BOOL daNpc_Kp1_c::wait_action1(void*) {
 u8 daNpc_Kp1_c::demo() {
 
     if (demoActorID == 0) {
-        if (field_0x7C7 != 0) {
-            field_0x7C7 = 0;
+        if (mInDemo != 0) {
+            mInDemo = 0;
         }
     } else {
         u8 id = demoActorID;
-        field_0x7C7 = 1;
+        mInDemo = 1;
         void* demoAc = nullptr;
         /* dComIfGp_demo_getActor(demoActorID) (HD inline with a range check) */
         if (id != 0 && id <= 0x20) {
@@ -906,7 +906,7 @@ u8 daNpc_Kp1_c::demo() {
         }
         Kp1_demoData(this, 0x6A, mpMorf, "Kp", 0, nullptr, 0, 0);
     }
-    return field_0x7C7;
+    return mInDemo;
 }
 
 /* 0227C930 */
@@ -946,12 +946,12 @@ BOOL daNpc_Kp1_c::_draw() {
 /* 0227C774 */
 BOOL daNpc_Kp1_c::_execute() {
 
-    if (field_0x7B8 == 0) {
-        field_0x774.copy(current.pos);
-        field_0x76C.x = current.angle.x;
-        field_0x76C.y = current.angle.y;
-        field_0x76C.z = current.angle.z;
-        field_0x7B8 = 1;
+    if (mbRanExecute == 0) {
+        mInitialPos.copy(current.pos);
+        mInitialAngle.x = current.angle.x;
+        mInitialAngle.y = current.angle.y;
+        mInitialAngle.z = current.angle.z;
+        mbRanExecute = 1;
     }
     daNpc_Kp1_HIO_c::hio_prm_c& prm = l_HIO.mPrmTbl;
     m_jnt.setParam(prm.field_8, prm.field_A, prm.field_C, prm.field_E, prm.field_0, prm.field_2,
@@ -969,7 +969,7 @@ BOOL daNpc_Kp1_c::_execute() {
         }
     }
     eventOrder();
-    if (field_0x7C7 == 0) {
+    if (mInDemo == 0) {
         fopAcM_posMoveF(this, &mStts.m_cc_move); /* &mStts.m_cc_move */
     }
     setMtx();
@@ -1045,7 +1045,7 @@ BOOL daNpc_Kp1_c::CreateHeap() {
         m_hand_jnt_num = (s8)a_mdl_data->getJointName()->getIndex("handL" /* "handL" */);
         if (m_hand_jnt_num < 0)
             JUT_ASSERT_fail("d_a_npc_kp1.cpp", 0x651, "m_handL_jnt_num >= 0");
-        field_0x7CD = (s8)a_tex_pattern_num; /* a_tex_pattern_num_tbl[0] */
+        mBtpNum = (s8)a_tex_pattern_num; /* a_tex_pattern_num_tbl[0] */
         if (initTexPatternAnm(false) != 0) {
             // HD: compared with Km1, two hand-held models (ids 6 and 7)
             J3DModelData* itemData = (J3DModelData*)dComIfG_getObjectIDRes("Kp", KP1_BDL_LETTER);

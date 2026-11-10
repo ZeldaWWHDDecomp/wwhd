@@ -104,34 +104,34 @@ bool Act_c::create_heap() {
         (J3DModelData *)dComIfG_getObjectRes(M_arcname, dRes_INDEX_MMIRROR_BDL_MSUSW_e);
     if (!mdl)
         JUTAssertion::showAssert("d_a_obj_swlight.cpp", 0x13D, "modelData != 0");
-    m298 = mDoExt_J3DModel__create(mdl, 0x80000, 0x31000202);
-    if (m298) {
+    mpModel = mDoExt_J3DModel__create(mdl, 0x80000, 0x31000202);
+    if (mpModel) {
         for (u32 i = 1; i <= 5; i++) {
             mdl->getJointNodePointer(i)->setCallBack(jnodeCB_moon);
         }
-        m298->setUserArea(gabi::ea(this));
+        mpModel->setUserArea(gabi::ea(this));
     }
     J3DAnmTextureSRTKey *btk = static_cast<J3DAnmTextureSRTKey *>(
         dComIfG_getObjectRes(M_arcname, dRes_INDEX_MMIRROR_BTK_MSUSW_e));
     if (!btk)
         JUTAssertion::showAssert("d_a_obj_swlight.cpp", 0x158, "btk != 0");
-    s32 okbtk = m29C.init(mdl, btk, true, 2, 1.f, 0, -1, false, 0);
+    s32 okbtk = mBtkAnm.init(mdl, btk, true, 2, 1.f, 0, -1, false, 0);
     J3DAnmTransform *bck = static_cast<J3DAnmTransform *>(
         dComIfG_getObjectRes(M_arcname, dRes_INDEX_MMIRROR_BCK_MSUSW_e));
     if (!bck)
         JUTAssertion::showAssert("d_a_obj_swlight.cpp", 0x15F, "bck != 0");
-    s32 okbck = m2B0.init(mdl, bck, true, 2, 1.f, 0, -1, false);
+    s32 okbck = mBckAnm.init(mdl, bck, true, 2, 1.f, 0, -1, false);
     bool okbg = false;
-    m2C0 = swlightNewBackground(nullptr);
-    if (m2C0) {
+    mpBgW = swlightNewBackground(nullptr);
+    if (mpBgW) {
         void *bgdata = dComIfG_getObjectRes(M_arcname, dRes_INDEX_MMIRROR_DZB_MSUSW_e);
         if (!bgdata)
             JUTAssertion::showAssert("d_a_obj_swlight.cpp", 0x169, "bgw_data != 0");
-        okbg = swlightSetBackground(m2C0, static_cast<cBgD_t *>(bgdata), 1, &mF38) == 0;
+        okbg = swlightSetBackground(mpBgW, static_cast<cBgD_t *>(bgdata), 1, &mBgMtx) == 0;
     }
-    bool ok = m298 != nullptr && okbtk && okbck && okbg;
+    bool ok = mpModel != nullptr && okbtk && okbck && okbg;
     if (!ok)
-        m2C0 = nullptr;
+        mpBgW = nullptr;
     return ok;
 }
 /* 023958E8 */
@@ -141,9 +141,9 @@ s32 Act_c::_create() {
         if (gabi::ea(this) != 0) {
             fopAc_ac_c_ct(this);
             __vtbl = SWLIGHT_ACTOR_VTABLE;
-            mDoExt_btkAnm::ct(&m29C);
-            swlightConstructFrame(&m2B0, 0);
-            auto *cache = reinterpret_cast<SwlightBckCache *>(&m2B0);
+            mDoExt_btkAnm::ct(&mBtkAnm);
+            swlightConstructFrame(&mBckAnm, 0);
+            auto *cache = reinterpret_cast<SwlightBckCache *>(&mBckAnm);
             cache->mVtable = SWLIGHT_ANM_BASE_VTABLE;
             swlightConstructCache(cache->mTransformCache);
             cache->mCacheData = 0;
@@ -153,34 +153,34 @@ s32 Act_c::_create() {
             cache->mCacheVtable = SWLIGHT_CACHE_VTABLE;
             cache->mCacheCount = 0;
             cache->mVtable = SWLIGHT_BCK_VTABLE;
-            swlightConstructArray(m2C4, 8, sizeof(dCcD_Tri), tri_ct);
-            swlightConstructArray(mD44, 8, sizeof(dCcD_Stts), stts_ct);
+            swlightConstructArray(mTri, 8, sizeof(dCcD_Tri), tri_ct);
+            swlightConstructArray(mStts, 8, sizeof(dCcD_Stts), stts_ct);
             condition = actor_condition;
         }
         actor_condition = condition | fopAcCnd_INIT_e;
     }
-    mF24 = prm(this, Act_c::PRM_TYPE_W, Act_c::PRM_TYPE_S);
+    mType = prm(this, Act_c::PRM_TYPE_W, Act_c::PRM_TYPE_S);
     s32 phase = dComIfG_resLoad(&mPhase, M_arcname);
     if (phase == 4) {
         mDoMtx_stack_c::transS((f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
         mDoMtx_stack_c::ZXYrotM(shape_angle);
         mDoMtx_stack_c::scaleM((f32)scale.x, (f32)scale.y, (f32)scale.z);
-        MTXCopy(mDoMtx_stack_c::get(), &mF38);
+        MTXCopy(mDoMtx_stack_c::get(), &mBgMtx);
         if (!fopAcM_entrySolidHeap(this, solidHeapCB, 0x1F40))
             return 5;
-        dComIfG_Bgsp()->Regist(m2C0, this);
-        reinterpret_cast<SwlightBackground *>(m2C0.get())->mCorrect.v = 0;
-        fopAcM_SetMtx(this, J3DModel_getBaseTRMtx(m298));
+        dComIfG_Bgsp()->Regist(mpBgW, this);
+        reinterpret_cast<SwlightBackground *>(mpBgW.get())->mCorrect.v = 0;
+        fopAcM_SetMtx(this, J3DModel_getBaseTRMtx(mpModel));
         init_mtx();
         swlightSetCullSphere(this, 0.f, 0.f, 0.f, 240.f);
         init_cc();
         init_eye_pos();
-        if (mF24 == 0) {
+        if (mType == 0) {
             if (sw(this)) {
-                mF30 = 1.f;
+                mPower = 1.f;
                 mode_norm_sun_init();
             } else {
-                mF30 = 0.f;
+                mPower = 0.f;
                 mode_norm_moon_init();
             }
         } else {
@@ -189,12 +189,12 @@ s32 Act_c::_create() {
             if (is_switch2())
                 active = sw(this);
             if (active) {
-                mF30 = 1.f;
+                mPower = 1.f;
                 mode_active_sun_init();
             } else {
                 if (sw(this))
                     switch_write(this, false);
-                mF30 = 0.f;
+                mPower = 0.f;
                 mode_active_moon_init();
             }
         }
@@ -204,9 +204,9 @@ s32 Act_c::_create() {
 
 /* 02395C40 */
 bool Act_c::_delete() {
-    dBgW *bg = m2C0;
+    dBgW *bg = mpBgW;
     if (bg && bg->ChkUsed())
-        dComIfG_Bgsp()->Release(m2C0);
+        dComIfG_Bgsp()->Release(mpBgW);
     dComIfG_resDeleteDemo(&mPhase, M_arcname);
     return true;
 }
@@ -216,12 +216,12 @@ static BOOL jnodeCB_moon(J3DNode *node, s32 stage) { return TRUE; }
 void Act_c::set_mtx() {
     mDoMtx_stack_c::transS((f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
     mDoMtx_stack_c::ZXYrotM(shape_angle);
-    Mtx34 *m = &m298->mBaseTransformMtx;
+    Mtx34 *m = &mpModel->mBaseTransformMtx;
     mtx_copy(m, mDoMtx_stack_c::get());
 }
 /* 02395628 */
 void Act_c::init_mtx() {
-    J3DModel *m = m298;
+    J3DModel *m = mpModel;
     f32 y = scale.y, x = scale.x, z = scale.z;
     m->mBaseScale.x = x;
     m->mBaseScale.y = y;
@@ -231,11 +231,11 @@ void Act_c::init_mtx() {
 /* 02395758 */
 void Act_c::init_cc() {
     for (int i = 0; i < 8; i++) {
-        mD44[i].Init(0xFF, 0xFF, this);
-        swlightSetTriangle(&m2C4[i], &M_tri_src);
-        u32 flag = m2C4[i].mGObjTg.mSPrm;
-        m2C4[i].SetStts(&mD44[i]);
-        m2C4[i].mGObjTg.mSPrm = flag | 4;
+        mStts[i].Init(0xFF, 0xFF, this);
+        swlightSetTriangle(&mTri[i], &M_tri_src);
+        u32 flag = mTri[i].mGObjTg.mSPrm;
+        mTri[i].SetStts(&mStts[i]);
+        mTri[i].mGObjTg.mSPrm = flag | 4;
     }
     set_cc_pos();
 }
@@ -250,19 +250,19 @@ void Act_c::set_cc_pos() {
     p1->set(zero, size, zero);
     p2->set(x, y, zero);
     for (int i = 0; i < 8; i++) {
-        MTXCopy(J3DModel_getBaseTRMtx(m298), mDoMtx_stack_c::get());
+        MTXCopy(J3DModel_getBaseTRMtx(mpModel), mDoMtx_stack_c::get());
         mDoMtx_stack_c::ZrotM((s16)(i * 8192));
         PSMTXMultVec(mDoMtx_stack_c::get(), p0.get(), o0.get());
         PSMTXMultVec(mDoMtx_stack_c::get(), p1.get(), o1.get());
         PSMTXMultVec(mDoMtx_stack_c::get(), p2.get(), o2.get());
-        swlightSetTrianglePos(&reinterpret_cast<SwlightTriShape *>(&m2C4[i])->mTriangle, o0.get(),
+        swlightSetTrianglePos(&reinterpret_cast<SwlightTriShape *>(&mTri[i])->mTriangle, o0.get(),
                               o1.get(), o2.get());
     }
 }
 /* 0239620C */
 void Act_c::set_cc() {
     for (int i = 0; i < 8; i++) {
-        swlightRegisterTriangle(dComIfG_Ccsp(), &m2C4[i]);
+        swlightRegisterTriangle(dComIfG_Ccsp(), &mTri[i]);
     }
 }
 /* 023957D8 */
@@ -273,7 +273,7 @@ void Act_c::init_eye_pos() {
         local_eye.y = 0.f;
         eyeInitialized = 1;
     }
-    PSMTXMultVec(J3DModel_getBaseTRMtx(m298), &local_eye, &eyePos);
+    PSMTXMultVec(J3DModel_getBaseTRMtx(mpModel), &local_eye, &eyePos);
 }
 /* 0239625C */
 bool Act_c::chk_light() {
@@ -282,31 +282,31 @@ bool Act_c::chk_light() {
         return true;
     bool hit = false;
     for (int i = 0; i < 8; i++) {
-        if (m2C4[i].ChkTgHit()) {
-            m2C4[i].ClrTgHit();
+        if (mTri[i].ChkTgHit()) {
+            mTri[i].ClrTgHit();
             hit = true;
         }
     }
     return hit;
 }
 /* 023962F8 */
-bool Act_c::power_up() { return swlightChaseF(&mF30, 1.f, 0.033333335f) != 0; }
+bool Act_c::power_up() { return swlightChaseF(&mPower, 1.f, 0.033333335f) != 0; }
 /* 02396334 */
-bool Act_c::power_down() { return swlightChaseF(&mF30, 0.f, 0.033333335f) != 0; }
+bool Act_c::power_down() { return swlightChaseF(&mPower, 0.f, 0.033333335f) != 0; }
 /* 0239583C */
 void Act_c::mode_norm_moon_init() {
-    mF28 = MODE_NORM_MOON;
-    mF2C = 20;
+    mMode = MODE_NORM_MOON;
+    mLightTimer = 20;
 }
 /* 02396370 */
 void Act_c::mode_norm_moon() {
     bool lit = chk_light();
     if (lit) {
-        if (mF2C > 0)
-            mF2C = (s16)mF2C - 1;
+        if (mLightTimer > 0)
+            mLightTimer = (s16)mLightTimer - 1;
     } else
-        mF2C = 20;
-    if (sw(this) || mF2C == 0) {
+        mLightTimer = 20;
+    if (sw(this) || mLightTimer == 0) {
         if (power_up()) {
             sound(this, JA_SE_OBJ_LIGHT_SW_ON);
             switch_write(this, true);
@@ -318,7 +318,7 @@ void Act_c::mode_norm_moon() {
     set_cc();
 }
 /* 02395830 */
-void Act_c::mode_norm_sun_init() { mF28 = MODE_NORM_SUN; }
+void Act_c::mode_norm_sun_init() { mMode = MODE_NORM_SUN; }
 /* 023964D4 */
 void Act_c::mode_norm_sun() {
     if (sw(this)) {
@@ -329,21 +329,21 @@ void Act_c::mode_norm_sun() {
 }
 /* 023958D4 */
 void Act_c::mode_active_moon_init() {
-    mF28 = MODE_ACTIVE_MOON;
-    mF2C = 20;
+    mMode = MODE_ACTIVE_MOON;
+    mLightTimer = 20;
 }
 /* 0239657C */
 void Act_c::mode_active_moon() {
     bool light = chk_light();
     s16 timer;
     if (light) {
-        timer = mF2C;
+        timer = mLightTimer;
         if (timer > 0) {
             timer--;
-            mF2C = timer;
+            mLightTimer = timer;
         }
     } else {
-        mF2C = 20;
+        mLightTimer = 20;
         timer = 20;
     }
     if (timer == 0 && power_up()) {
@@ -355,10 +355,10 @@ void Act_c::mode_active_moon() {
     set_cc();
 }
 /* 023958C8 */
-void Act_c::mode_active_sun_init() { mF28 = MODE_ACTIVE_SUN; }
+void Act_c::mode_active_sun_init() { mMode = MODE_ACTIVE_SUN; }
 /* 0239666C */
 void Act_c::mode_active_sun() {
-    if ((f32)mF30 > 0.5f)
+    if ((f32)mPower > 0.5f)
         sound(this, JA_SE_OBJ_LIGHT_SW_SUNSHINE);
     if (is_switch2() || chk_light())
         power_up();
@@ -370,9 +370,9 @@ void Act_c::mode_active_sun() {
 }
 /* 02395CA4 */
 bool Act_c::_execute() {
-    (this->*mode_proc[(u32)mF28])();
-    m29C.play();
-    m2B0.play();
+    (this->*mode_proc[(u32)mMode])();
+    mBtkAnm.play();
+    mBckAnm.play();
     set_mtx();
     return true;
 }
@@ -394,25 +394,25 @@ bool Act_c::_draw() {
     dScnKy_env_light_c *env = dKy_getEnvlight();
     settingTevStruct(env, 0, &current.pos, &tevStr);
     env = dKy_getEnvlight();
-    setLightTevColorType(env, (J3DModel *)m298, &tevStr);
-    J3DModel *model = m298;
-    f32 frame = m29C.getFrame();
-    m29C.entry(model->getModelData(), frame);
-    model = m298;
-    frame = m2B0.getFrame();
-    m2B0.entry(model->getModelData(), frame);
+    setLightTevColorType(env, (J3DModel *)mpModel, &tevStr);
+    J3DModel *model = mpModel;
+    f32 frame = mBtkAnm.getFrame();
+    mBtkAnm.entry(model->getModelData(), frame);
+    model = mpModel;
+    frame = mBckAnm.getFrame();
+    mBckAnm.entry(model->getModelData(), frame);
     dComIfGd_setListBG();
-    u8 alpha = (u8)gabi::ftoi(255.f * (f32)mF30);
-    J3DModelData *data = m298->getModelData();
+    u8 alpha = (u8)gabi::ftoi(255.f * (f32)mPower);
+    J3DModelData *data = mpModel->getModelData();
     for (u32 i = 1; i <= 3; i++) {
         SwlightMaterial *material = joint_mesh(data, i);
         setMaterial(material, (u32)alpha);
-        swlightMaterialEntry(m298, material, alpha < 255 ? 1 : 0);
+        swlightMaterialEntry(mpModel, material, alpha < 255 ? 1 : 0);
     }
     alpha = (u8)(255 - alpha);
     SwlightMaterial *material = joint_mesh(data, 4);
     setMaterial(material, (u32)alpha);
-    swlightMaterialEntry(m298, material, alpha < 255 ? 1 : 0);
+    swlightMaterialEntry(mpModel, material, alpha < 255 ? 1 : 0);
     material = joint_mesh(data, 5);
     SwlightMaterial *mat = material;
     if (alpha) {
@@ -426,8 +426,8 @@ bool Act_c::_draw() {
             mat = mat->mNext;
         }
     }
-    swlightMaterialEntry(m298, material, 1);
-    mDoExt_modelUpdateDL(m298);
+    swlightMaterialEntry(mpModel, material, 1);
+    mDoExt_modelUpdateDL(mpModel);
     dComIfGd_setList();
     return true;
 }
@@ -501,9 +501,9 @@ static void empty_virtual(void *self) {}
 /* 023968F8 */
 static void actor_dt(Act_c *a, s32 flags) {
     if (a) {
-        swlightDestroyArray(a->mD44, 8, sizeof(dCcD_Stts), SWLIGHT_STTS_DESTRUCTOR, 0, 0);
-        swlightDestroyArray(a->m2C4, 8, sizeof(dCcD_Tri), SWLIGHT_TRI_DESTRUCTOR, 0, 0);
-        swlightDestroyBckCache(&reinterpret_cast<SwlightBckCache *>(&a->m2B0)->mVtable, 0);
+        swlightDestroyArray(a->mStts, 8, sizeof(dCcD_Stts), SWLIGHT_STTS_DESTRUCTOR, 0, 0);
+        swlightDestroyArray(a->mTri, 8, sizeof(dCcD_Tri), SWLIGHT_TRI_DESTRUCTOR, 0, 0);
+        swlightDestroyBckCache(&reinterpret_cast<SwlightBckCache *>(&a->mBckAnm)->mVtable, 0);
         swlightDestroyActor(a, 0);
         if (flags & 1)
             swlightFree(a);

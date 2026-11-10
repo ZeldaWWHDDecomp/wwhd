@@ -31,7 +31,7 @@ BOOL daFan_c::CreateHeap() {
     J3DModelData *modelData =
         (J3DModelData *)dComIfG_getObjectRes(m_arcname.entries[u8(mType)].get(), m_bdlidx.entries[u8(mType)]);
     if (modelData == nullptr) /* JUT_ASSERT(0x15e, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_fan.cpp", 0x15E, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_fan.cpp", 0x15E, "modelData != (0)");
 
     mModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     if (!mModel)
@@ -40,7 +40,7 @@ BOOL daFan_c::CreateHeap() {
 
     modelData = (J3DModelData *)dComIfG_getObjectRes("Yaflw00", dRes_INDEX_YAFLW00_BDL_YAFLW00_e);
     if (modelData == nullptr) /* JUT_ASSERT(0x17f, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_fan.cpp", 0x17F, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_fan.cpp", 0x17F, "modelData != (0)");
     mWindModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000222);
     if (!mWindModel)
         return FALSE;
@@ -48,20 +48,20 @@ BOOL daFan_c::CreateHeap() {
     J3DAnmTextureSRTKey *pbtk =
         (J3DAnmTextureSRTKey *)dComIfG_getObjectRes("Yaflw00", dRes_INDEX_YAFLW00_BTK_YAFLW00_01_e);
     if (pbtk == nullptr) /* JUT_ASSERT(400, pbtk != NULL) */
-        JUT_ASSERT_fail("d_a_fan.cpp", 400, "pbtk != NULL");
+        JUT_ASSERT_fail("d_a_fan.cpp", 400, "pbtk != (0)");
     if (!mWindBtkAnm0.init(modelData, pbtk, TRUE, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0))
         return FALSE;
 
     pbtk = (J3DAnmTextureSRTKey *)dComIfG_getObjectRes("Yaflw00", dRes_INDEX_YAFLW00_BTK_YAFLW00_02_e);
     if (pbtk == nullptr) /* JUT_ASSERT(0x19c, pbtk != NULL) */
-        JUT_ASSERT_fail("d_a_fan.cpp", 0x19C, "pbtk != NULL");
+        JUT_ASSERT_fail("d_a_fan.cpp", 0x19C, "pbtk != (0)");
     if (!mWindBtkAnm1.init(modelData, pbtk, TRUE, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0))
         return FALSE;
 
     J3DAnmTransform *pbck =
         (J3DAnmTransform *)dComIfG_getObjectRes("Yaflw00", dRes_INDEX_YAFLW00_BCK_YAFLW00_e);
     if (pbck == nullptr) /* JUT_ASSERT(0x1a9, pbck != NULL) */
-        JUT_ASSERT_fail("d_a_fan.cpp", 0x1A9, "pbck != NULL");
+        JUT_ASSERT_fail("d_a_fan.cpp", 0x1A9, "pbck != (0)");
     if (!mWindBckAnm.init(modelData, pbck, TRUE, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false))
         return FALSE;
 
@@ -323,9 +323,9 @@ data m_wind_model_scale 1000EA4C
 data l_cps_src 101B4B24
 str 1000E9C0 "Yaflw00"
 str 1000E958 "d_a_fan.cpp"
-str 1000E97C "modelData != NULL"
-str 1000E964 "pbtk != NULL"
-str 1000E970 "pbck != NULL"
+str 1000E97C "modelData != (0)"
+str 1000E964 "pbtk != (0)"
+str 1000E970 "pbck != (0)"
 str 1000E9B0 "puro"
 ext 025DAC50 FanLevelSe* fopKyM_SearchByID(u32)
 ext 025DAD48 BOOL fopKyM_Delete(void*)

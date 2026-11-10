@@ -6,7 +6,7 @@ const gc_tu_data gc_tu = {.safeString = 0x1000B714};
 /* inlined into daBst_Execute */
 static void bstResumePedestal(be<u32>* global, u32 resourceId, bool brk, f32 one) {
     bst_class* owner = bstExecuteActor(*global);
-    J3DModel* model = owner->m02C8;
+    J3DModel* model = owner->mpPedestalModel;
     void* resources = bstExecuteResources(bstExecuteResourceTable());
     SafeString name;
     name.mTextPtr = gabi::guest_addr("Bst");
@@ -22,7 +22,7 @@ static void bstResumePedestal(be<u32>* global, u32 resourceId, bool brk, f32 one
 static void main_cont(bst_class* actor, f32 half, f32 one) {
     bst_class* a = actor;
     dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
-    s8 demo = static_cast<s8>(a->m2E9A);
+    s8 demo = static_cast<s8>(a->mDemoCamMode);
     fopAc_ac_c* player = reinterpret_cast<fopAc_ac_c*>(play->play.mPlayerInfo[0].mpPlayer.get());
     if (demo)
         return;
@@ -30,13 +30,13 @@ static void main_cont(bst_class* actor, f32 half, f32 one) {
     if (timer)
         a->mBombArrowDropTimer = (s16)(timer - 1);
     for (u32 i = 0; i < 3; ++i) {
-        s16 value = static_cast<s16>(a->m2E7E[i]);
+        s16 value = static_cast<s16>(a->mBattleTimers[i]);
         if (value)
-            a->m2E7E[i] = (s16)(value - 1);
+            a->mBattleTimers[i] = (s16)(value - 1);
     }
-    s8 phase = static_cast<s8>(a->m2E7C);
+    s8 phase = static_cast<s8>(a->mBattlePhase);
     if (phase == 0) {
-        a->m2E7C = 1;
+        a->mBattlePhase = 1;
         return;
     }
     if (phase == 1) {
@@ -49,7 +49,7 @@ static void main_cont(bst_class* actor, f32 half, f32 one) {
         a->actor_status = static_cast<u32>(a->actor_status) | fopAcStts_SHOWMAP_e;
         save = static_cast<u32>(bstExecuteSaveTable());
         if (BstExecute_isDungeonItem(bstExecuteStageBits(save), dSv_memBit_c::STAGE_BOSS_DEMO)) {
-            a->m2FE4 = 1;
+            a->mBattleCamOn = 1;
             BstExecute_bgmStart(JA_BGM_BST_BATTLE);
             bstExecuteActor(bstExecuteGlobals().boss)->mActionType = ACTION_FLY_e;
             bstExecuteActor(bstExecuteGlobals().hand[0])->mActionType = ACTION_FLY_e;
@@ -57,14 +57,14 @@ static void main_cont(bst_class* actor, f32 half, f32 one) {
             bstExecuteActor(bstExecuteGlobals().boss)->mDamage = 0;
             bstExecuteActor(bstExecuteGlobals().hand[1])->mDamage = 0;
             bstExecuteActor(bstExecuteGlobals().hand[0])->mDamage = 0;
-            a->m2E7C = 10;
+            a->mBattlePhase = 10;
             bstResumePedestal(&bstExecuteGlobals().hand[0], 0x4A, true, one);
             bstResumePedestal(&bstExecuteGlobals().hand[0], 0x64, false, one);
             bstResumePedestal(&bstExecuteGlobals().hand[1], 0x4D, true, one);
             bstResumePedestal(&bstExecuteGlobals().hand[1], 0x67, false, one);
             bstResumePedestal(&bstExecuteGlobals().boss, 0x42, true, one);
             bstResumePedestal(&bstExecuteGlobals().boss, 0x5C, false, one);
-            J3DFrameCtrl* controller = &a->m2FE0->mFrameCtrl;
+            J3DFrameCtrl* controller = &a->mpHbyokoBrkAnm->mFrameCtrl;
             a->mBombArrowDropTimer = 400;
             controller->mRate = one;
         } else {
@@ -74,21 +74,21 @@ static void main_cont(bst_class* actor, f32 half, f32 one) {
             f32 square = BstExecute_magnitudeSquared(&player->current.pos);
             f32 distance = BstExecute_sqrt(square);
             if (distance < static_cast<f32>(bstExecuteConstants().mApproachDistance)) {
-                a->m2E9A = 10;
-                a->m2E7C = 2;
+                a->mDemoCamMode = 10;
+                a->mBattlePhase = 2;
             }
         }
         return;
     }
     if (phase == 10) {
         u32 status = static_cast<u32>(a->actor_status);
-        a->m2E7C = (s8)(phase + 1);
+        a->mBattlePhase = (s8)(phase + 1);
         a->actor_status = status & ~fopAcStts_UNK4000_e;
-        a->m2E7E[0] = 100;
+        a->mBattleTimers[0] = 100;
         return;
     }
     if (phase == 11) {
-        s16 timer = static_cast<s16>(a->m2E7E[0]);
+        s16 timer = static_cast<s16>(a->mBattleTimers[0]);
         bst_class* head = bstExecuteActor(bstExecuteGlobals().boss);
         if (timer == 0 && static_cast<s16>(head->mActionType) != ACTION_BEAM_ATTACK_e) {
             f32 twoHundred = static_cast<f32>(bstExecuteConstants().mWallRadius),
@@ -161,20 +161,20 @@ static void main_cont(bst_class* actor, f32 half, f32 one) {
             f32 base = static_cast<f32>(health == 0   ? bstExecuteConstants().mThirty
                                         : health == 1 ? bstExecuteConstants().mFifty
                                                       : bstExecuteConstants().mSeventy);
-            a->m2E7E[0] = (s16)gabi::ftoi(gabi::fadds_ppc(randomWait, base));
+            a->mBattleTimers[0] = (s16)gabi::ftoi(gabi::fadds_ppc(randomWait, base));
             head = bstExecuteActor(bstExecuteGlobals().boss);
         }
-        head->m2E74[1] = 10;
+        head->mEyeCloseTimer[1] = 10;
         head = bstExecuteActor(bstExecuteGlobals().boss);
-        head->m2E74[0] = 10;
-        if (static_cast<s16>(a->m2E7E[2]) == 0) {
+        head->mEyeCloseTimer[0] = 10;
+        if (static_cast<s16>(a->mBattleTimers[2]) == 0) {
             bst_class* hand = bstExecuteActor(bstExecuteGlobals().hand[0]);
             if (static_cast<s16>(hand->mActionType) == ACTION_SLEEP_e) {
                 hand = bstExecuteActor(bstExecuteGlobals().hand[1]);
                 if (static_cast<s16>(hand->mActionType) == ACTION_SLEEP_e) {
-                    a->m2E7C = 12;
-                    bstExecuteActor(bstExecuteGlobals().hand[0])->m10FC[1] = 100;
-                    bstExecuteActor(bstExecuteGlobals().hand[1])->m10FC[1] = 100;
+                    a->mBattlePhase = 12;
+                    bstExecuteActor(bstExecuteGlobals().hand[0])->mTimers[1] = 100;
+                    bstExecuteActor(bstExecuteGlobals().hand[1])->mTimers[1] = 100;
                     head = bstExecuteActor(bstExecuteGlobals().boss);
                     if (head && gabi::ea(&head->eyePos)) {
                         s8 room = static_cast<s8>(head->current.roomNo),
@@ -183,14 +183,14 @@ static void main_cont(bst_class* actor, f32 half, f32 one) {
                     }
                     BstExecute_bgmStart(JA_BGM_UNK_122);
                     f32 randomWait = cM_rndF(static_cast<f32>(bstExecuteConstants().mFifty));
-                    (a->m2E7E[1] = (s16)gabi::ftoi(gabi::fadds_ppc(
+                    (a->mBattleTimers[1] = (s16)gabi::ftoi(gabi::fadds_ppc(
                          randomWait, static_cast<f32>(bstExecuteConstants().mOneFifty))));
                 }
             }
         }
     } else if (phase == 12) {
         bst_class* head;
-        if (static_cast<s16>(a->m2E7E[1]) == 0) {
+        if (static_cast<s16>(a->mBattleTimers[1]) == 0) {
             head = bstExecuteActor(bstExecuteGlobals().boss);
             if (static_cast<s16>(head->mActionType) == ACTION_FLY_e) {
                 head->mActionType = ACTION_BEAM_ATTACK_e;
@@ -200,18 +200,18 @@ static void main_cont(bst_class* actor, f32 half, f32 one) {
                 f32 target = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[7]),
                                              minusFiveHundred);
                 head = bstExecuteActor(bstExecuteGlobals().boss);
-                head->m10D0 = target;
+                head->mBeamAimOffsetY = target;
             }
         }
         // HD: only the left hand action is reset here; both sleep timers are refreshed.
         bstExecuteActor(bstExecuteGlobals().hand[0])->mActionType = ACTION_SLEEP_e;
-        bstExecuteActor(bstExecuteGlobals().hand[0])->m10FC[1] = 3;
-        bstExecuteActor(bstExecuteGlobals().hand[1])->m10FC[1] = 3;
+        bstExecuteActor(bstExecuteGlobals().hand[0])->mTimers[1] = 3;
+        bstExecuteActor(bstExecuteGlobals().hand[1])->mTimers[1] = 3;
         head = bstExecuteActor(bstExecuteGlobals().boss);
         if (static_cast<s16>(head->mActionType) == ACTION_HEAD_DAMAGE_e &&
             static_cast<s16>(head->mDamage) >= 7) {
-            a->m2E7C = 11;
-            a->m2E7E[2] = 50;
+            a->mBattlePhase = 11;
+            a->mBattleTimers[2] = 50;
         }
     }
 }
@@ -225,10 +225,10 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
     s16 frequency = static_cast<s16>(bstExecuteTuning().mRegS[6]),
         frame = static_cast<s16>(a->mUpdateLastFacingDirIfMultipleOf32);
     f32 sx = bstSin(frame * (frequency + 700));
-    f32 magnitude = static_cast<f32>(a->m10EC.z);
+    f32 magnitude = static_cast<f32>(a->mMoveParam.z);
     f32 sy = bstSin(frame * (frequency + 750)), cz = bstCos(frame * (frequency + 720));
-    cLib_addCalc0(&a->m10EC.z, one, one);
-    mDoExt_McaMorf* morph = a->m02B8;
+    cLib_addCalc0(&a->mMoveParam.z, one, one);
+    mDoExt_McaMorf* morph = a->mpMorf;
     f32 scaleZ = static_cast<f32>(a->scale.z);
     J3DModel* model = morph->mpModel.get();
     f32 scaleX = static_cast<f32>(a->scale.x), scaleY = static_cast<f32>(a->scale.y);
@@ -245,7 +245,7 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
         tuning = static_cast<f32>(bstExecuteTuning().mRegF[14]);
     f32 firstStrength = gabi::fmuls_ppc((f32)first, gabi::fadds_ppc(tuning, fiveHundred));
     f32 sine = bstSin(frame * 0x2100), cosine = bstCos(frame * 0x2300);
-    s16 second = static_cast<s16>(a->m112A);
+    s16 second = static_cast<s16>(a->mImpactShakeTimer);
     bst_class* head = bstExecuteActor(bstExecuteGlobals().boss);
     s16 yaw = (s16)gabi::ftoi(gabi::fmuls_ppc(sine, firstStrength));
     s16 pitch = (s16)gabi::ftoi(gabi::fmuls_ppc(cosine, firstStrength));
@@ -254,7 +254,7 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
     f32 secondStrength = gabi::fmuls_ppc((f32)second, gabi::fadds_ppc(tuning, oneFifty));
     sine = bstSin(headFrame * 0x3600);
     cosine = bstCos(headFrame * 0x4300);
-    s16 third = static_cast<s16>(a->m112C);
+    s16 third = static_cast<s16>(a->mPitchShakeTimer);
     s16 extraYaw = (s16)gabi::ftoi(gabi::fmuls_ppc(sine, secondStrength));
     s16 extraPitch = (s16)gabi::ftoi(gabi::fmuls_ppc(cosine, secondStrength));
     f32 hundred = static_cast<f32>(bstExecuteConstants().mHundred);
@@ -265,24 +265,24 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
         decay = static_cast<f32>(bstExecuteTuning().mRegF[3]);
     yaw = (s16)(yaw + extraYaw);
     pitch = (s16)(pitch + extraPitch + lastPitch);
-    cLib_addCalc0(&a->m10F8, one, gabi::fadds_ppc(decay, thirty));
+    cLib_addCalc0(&a->mSwayAngle, one, gabi::fadds_ppc(decay, thirty));
     s16 shape = static_cast<s16>(a->shape_angle.y);
     cMtx_YrotM(matrix, (s16)(shape + yaw));
     shape = static_cast<s16>(a->shape_angle.x);
     cMtx_XrotM(matrix, (s16)(shape + pitch));
     shape = static_cast<s16>(a->shape_angle.z);
     cMtx_ZrotM(matrix, shape);
-    x = static_cast<f32>(a->m1110);
+    x = static_cast<f32>(a->mBodyOffsetX);
     f32 ty = static_cast<f32>(bstExecuteTuning().mRegF[6]),
         tx = static_cast<f32>(bstExecuteTuning().mRegF[5]);
-    y = static_cast<f32>(a->m1114);
+    y = static_cast<f32>(a->mBodyOffsetY);
     f32 tz = static_cast<f32>(bstExecuteTuning().mRegF[7]);
-    z = static_cast<f32>(a->m1118);
+    z = static_cast<f32>(a->mBodyOffsetZ);
     BstExecute_translateMultiply(gabi::fadds_ppc(tx, x), gabi::fadds_ppc(ty, y),
                                  gabi::fadds_ppc(tz, z));
-    cLib_addCalc0(&a->m1110, one, static_cast<f32>(bstExecuteConstants().mFive));
-    cLib_addCalc0(&a->m1114, one, static_cast<f32>(bstExecuteConstants().mTen));
-    cLib_addCalc0(&a->m1118, one, static_cast<f32>(bstExecuteConstants().mFive));
+    cLib_addCalc0(&a->mBodyOffsetX, one, static_cast<f32>(bstExecuteConstants().mFive));
+    cLib_addCalc0(&a->mBodyOffsetY, one, static_cast<f32>(bstExecuteConstants().mTen));
+    cLib_addCalc0(&a->mBodyOffsetZ, one, static_cast<f32>(bstExecuteConstants().mFive));
     // GHS loads all twelve floats before writing a matrix copy.
     f32 values[12];
     for (u32 i = 0; i < 12; ++i)
@@ -291,10 +291,10 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
         model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
     for (u32 i = 0; i < 12; ++i)
         values[i] = static_cast<f32>(matrix->m[i / 4][i % 4]);
-    J3DModel* decoration = a->m0388;
+    J3DModel* decoration = a->mpShadowModel;
     for (u32 i = 0; i < 12; ++i)
         decoration->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
-    morph = a->m02B8;
+    morph = a->mpMorf;
     BstExecute_morphCalc(morph);
     x = static_cast<f32>(a->home.pos.x);
     z = static_cast<f32>(a->home.pos.z);
@@ -311,13 +311,13 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
     matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
     cMtx_ZrotM(matrix, shape);
     matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
-    J3DModel* pedestal = a->m02C8;
+    J3DModel* pedestal = a->mpPedestalModel;
     for (u32 i = 0; i < 12; ++i)
         values[i] = static_cast<f32>(matrix->m[i / 4][i % 4]);
     for (u32 i = 0; i < 12; ++i)
         pedestal->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
     if (static_cast<u8>(a->mBstPartType) == Type_HEAD_e) {
-        morph = a->m02B8;
+        morph = a->mpMorf;
         model = morph->mpModel.get();
         J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
         u16 flags = static_cast<u16>(block->mFlags);
@@ -375,7 +375,7 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
         f32 hiddenHeight = static_cast<f32>(bstExecuteConstants().mHiddenHeight),
             sixty = static_cast<f32>(bstExecuteConstants().mSixty);
         for (u32 i = 0; i < 2; ++i) {
-            morph = a->m02B8;
+            morph = a->mpMorf;
             model = morph->mpModel.get();
             block = model->mpMtxBuffer.get();
             flags = static_cast<u16>(block->mFlags);
@@ -384,18 +384,18 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
             matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
             BstExecute_matrixCopy(&matrices[i + 4], matrix);
             MtxPosition(&local, &transformed);
-            s16 timer = static_cast<s16>(a->m2E74[i]);
+            s16 timer = static_cast<s16>(a->mEyeCloseTimer[i]);
             bool open = false;
             if (!timer)
                 open = static_cast<s8>(a->mEyeHealth[i]) > 0;
             else
-                a->m2E74[i] = (s16)(timer - 1);
+                a->mEyeCloseTimer[i] = (s16)(timer - 1);
             if (open)
-                cLib_addCalcAngleS2(&a->m2E78[i], 0, 8, 0x200);
+                cLib_addCalcAngleS2(&a->mEyelidAngle[i], 0, 8, 0x200);
             else {
                 s16 target = (s16)(static_cast<s16>(bstExecuteTuning().mRegS[8]) + 11000);
                 transformed.y = gabi::fadds_ppc((f32)transformed.y, hiddenHeight);
-                cLib_addCalcAngleS2(&a->m2E78[i], target, 1, 0x400);
+                cLib_addCalcAngleS2(&a->mEyelidAngle[i], target, 1, 0x400);
             }
             dCcD_Sph* sphere = &a->mEyeSphs[i];
             BstExecute_setSphereCenter(&sphere->mSph, &transformed);
@@ -417,7 +417,7 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
                                           static_cast<f32>(bstExecuteConstants().mFifty));
         f32 fifty = static_cast<f32>(bstExecuteConstants().mFifty);
         for (u32 i = 0; i < 15; ++i) {
-            morph = a->m02B8;
+            morph = a->mpMorf;
             model = morph->mpModel.get();
             J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
             u16 flags = static_cast<u16>(block->mFlags);
@@ -433,7 +433,7 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
             dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
             BstExecute_setCollision(&play->play.mCcS, sphere);
         }
-        morph = a->m02B8;
+        morph = a->mpMorf;
         model = morph->mpModel.get();
         J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
         u16 flags = static_cast<u16>(block->mFlags);
@@ -520,16 +520,16 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
                 second = 2;
                 break;
             }
-            f32 color = static_cast<f32>(a->m2ED0);
+            f32 color = static_cast<f32>(a->mRoomColorBlend);
             BstExecute_customColor(first, second, color);
             if (roomState == 1 || roomState == 2 || roomState == 6 || roomState == 8) {
                 f32 step = half;
                 if (roomState != 6)
                     step = static_cast<f32>(roomState == 2 ? bstExecuteConstants().mColorRise
                                                            : bstExecuteConstants().mColorStep);
-                cLib_addCalc2(&a->m2ED0, one, one, step);
+                cLib_addCalc2(&a->mRoomColorBlend, one, one, step);
                 if (roomState == 6 || roomState == 8) {
-                    color = static_cast<f32>(a->m2ED0);
+                    color = static_cast<f32>(a->mRoomColorBlend);
                     if (!(color < one))
                         a->mRoomState = roomState == 6 ? 7 : 1;
                 }
@@ -539,7 +539,7 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
                     step = static_cast<f32>(roomState == 3   ? bstExecuteConstants().mColorFall
                                             : roomState == 4 ? bstExecuteConstants().mDecay
                                                              : bstExecuteConstants().mColorStep);
-                cLib_addCalc0(&a->m2ED0, one, step);
+                cLib_addCalc0(&a->mRoomColorBlend, one, step);
             }
         }
         u32 messageState = static_cast<u32>(bstExecuteGlobals().msg);
@@ -559,13 +559,13 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
         bool soundStarted = false;
         for (u32 i = 0; i < 2; ++i) {
             BstExecuteID id;
-            id = static_cast<u32>(a->m2E90[i]);
+            id = static_cast<u32>(a->mEyeAttIds[i]);
             bst_class* attached = nullptr;
             if ((u32)id != 0xFFFFFFFF)
                 attached = bstExecuteActor(BstExecute_searchActor(bstExecuteSearchCallback(), &id));
             if (!attached)
                 continue;
-            morph = a->m02B8;
+            morph = a->mpMorf;
             model = morph->mpModel.get();
             J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
             u16 flags = static_cast<u16>(block->mFlags);
@@ -582,7 +582,7 @@ static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half
             u8 health = static_cast<u8>(a->mEyeHealth[i]);
             attached->health = health;
             bool active = false;
-            if (static_cast<s16>(a->m2E74[i]) == 0 && static_cast<s8>(a->mEyeHealth[i]) > 0) {
+            if (static_cast<s16>(a->mEyeCloseTimer[i]) == 0 && static_cast<s8>(a->mEyeHealth[i]) > 0) {
                 s16 action = static_cast<s16>(a->mActionType);
                 active = action != ACTION_HEAD_DAMAGE_e && action != ACTION_END_DEMO_e &&
                          action != ACTION_STAY_e;
@@ -623,9 +623,9 @@ static BOOL daBst_Execute(bst_class* actor) {
     origin.z = zero;
     a->mUpdateLastFacingDirIfMultipleOf32 = (s16)(frame + 1);
     for (u32 i = 0; i < 5; ++i) {
-        s16 value = static_cast<s16>(a->m10FC[i]);
+        s16 value = static_cast<s16>(a->mTimers[i]);
         if (value)
-            a->m10FC[i] = (s16)(value - 1);
+            a->mTimers[i] = (s16)(value - 1);
     }
     s16 invulnerability = static_cast<s16>(a->mState);
     s16 damage = static_cast<s16>(a->mDamageTimer);
@@ -634,15 +634,15 @@ static BOOL daBst_Execute(bst_class* actor) {
     s16 firstHurt = static_cast<s16>(a->mHeadHurtAngle);
     if (damage)
         a->mDamageTimer = (s16)(damage - 1);
-    s16 secondHurt = static_cast<s16>(a->m112A);
+    s16 secondHurt = static_cast<s16>(a->mImpactShakeTimer);
     if (firstHurt)
         a->mHeadHurtAngle = (s16)(firstHurt - 1);
-    s16 thirdHurt = static_cast<s16>(a->m112C);
+    s16 thirdHurt = static_cast<s16>(a->mPitchShakeTimer);
     if (secondHurt)
-        a->m112A = (s16)(secondHurt - 1);
+        a->mImpactShakeTimer = (s16)(secondHurt - 1);
     s16 stateTimer = static_cast<s16>(a->mStateTimer);
     if (thirdHurt)
-        a->m112C = (s16)(thirdHurt - 1);
+        a->mPitchShakeTimer = (s16)(thirdHurt - 1);
     if (stateTimer)
         a->mStateTimer = (s16)(stateTimer - 1);
     u8 paused = static_cast<u8>(bstExecuteGlobals().mPause);
@@ -651,7 +651,7 @@ static BOOL daBst_Execute(bst_class* actor) {
     if (!paused) {
         a->attention_info.flags = 4;
         if (static_cast<u8>(a->mBstPartType) == Type_HEAD_e) {
-            if (static_cast<s8>(a->m2FE4)) {
+            if (static_cast<s8>(a->mBattleCamOn)) {
                 void* camera = BstExecute_cameraBody();
                 BstExecute_cameraType(camera, "Test01", nullptr);
             }
@@ -662,10 +662,10 @@ static BOOL daBst_Execute(bst_class* actor) {
             }
             if (static_cast<s16>(a->mActionType) != ACTION_BEAM_ATTACK_e) {
                 for (u32 i = 0; i < 2; ++i) {
-                    BstEmitter* emitter = bstEmitter(a->m2ED8[i]);
+                    BstEmitter* emitter = bstEmitter(a->mpChargeEmitter[i]);
                     if (emitter) {
                         emitter->becomeInvalidEmitter();
-                        a->m2ED8[i] = 0;
+                        a->mpChargeEmitter[i] = 0;
                     }
                 }
                 if (static_cast<s8>(a->mRoomState) == 7)
@@ -673,19 +673,19 @@ static BOOL daBst_Execute(bst_class* actor) {
             }
             f32 playerHeight = static_cast<f32>(player->current.pos.y),
                 limit = static_cast<f32>(bstExecuteConstants().mPlayerHeightLimit);
-            J3DFrameCtrl* controller = &a->m2FD8->mFrameCtrl;
+            J3DFrameCtrl* controller = &a->mpHbsitaBrkAnm->mFrameCtrl;
             if (!(playerHeight > limit)) {
                 controller->mRate = one;
-                controller = &a->m2FD8->mFrameCtrl;
+                controller = &a->mpHbsitaBrkAnm->mFrameCtrl;
                 controller->mAttribute = J3DFrameCtrl::EMode_LOOP;
             } else
                 controller->mAttribute = J3DFrameCtrl::EMode_NONE;
-            BstExecute_animatorPlay(a->m2FE0);
-            BstExecute_animatorPlay(a->m2FD8);
-            BstExecute_animatorPlay(a->m2FD4);
+            BstExecute_animatorPlay(a->mpHbyokoBrkAnm);
+            BstExecute_animatorPlay(a->mpHbsitaBrkAnm);
+            BstExecute_animatorPlay(a->mpHbsitaBtkAnm);
             BstExecute_matrixTranslate(bstExecuteFixedMatrix(), zero, zero, zero);
             // Matrix copies retain all twelve loaded values before their writes.
-            for (gptr<J3DModel>* modelField : {&a->m2FD0, &a->m2FDC}) {
+            for (gptr<J3DModel>* modelField : {&a->mpHbsitaModel, &a->mpHbyokoModel}) {
                 f32 matrix[12];
                 for (u32 i = 0; i < 12; ++i)
                     matrix[i] = static_cast<f32>(bstExecuteFixedMatrix()->m[i / 4][i % 4]);
@@ -701,13 +701,13 @@ static BOOL daBst_Execute(bst_class* actor) {
             BstExecute_correctPosition(&a->mAcch, &play->play.mBgS);
             BstExecute_setGroundUpY(&a->mAcch, zero);
         }
-        mDoExt_McaMorf* morph = a->m02B8;
+        mDoExt_McaMorf* morph = a->mpMorf;
         BstExecute_morphPlay(morph, &a->eyePos, 0, 0);
-        if (static_cast<s8>(a->m02C4)) {
+        if (static_cast<s8>(a->mBodyAnmOn)) {
             BstExecute_animatorPlay(a->mpTevRegAnimator);
             BstExecute_animatorPlay(a->mpTexMtxAnimator);
         }
-        if (static_cast<s8>(a->m02D4)) {
+        if (static_cast<s8>(a->mPedestalAnmOn)) {
             BstExecute_animatorPlay(a->mpBrkAnm);
             BstExecute_animatorPlay(a->mpBtkAnm);
         }

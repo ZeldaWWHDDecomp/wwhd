@@ -8,7 +8,7 @@
  * - dPa_smokeEcallBack is 0x20 in both; mDoExt_btpAnm grew to 0x74, mDoExt_brkAnm to 0x78,
  *   mDoExt_btkAnm to 0x74; mShadowId is gone (HD: no blob shadow).
  * - From the colliders on everything is +0x228 (mAcch 0x65C, the dCcD_Cps at 0xC68), except
- *   pad_0xC20 (gone), so field_0xC24..field_0xC3C are +0x224, and a new HD byte at 0xE64.
+ *   pad_0xC20 (gone), so mHitCutType..mAtHitCount are +0x224, and a new HD byte at 0xE64.
  * Size 0xFB0 (GameCube 0xD88). */
 #pragma once
 #include "bindings.h"
@@ -153,13 +153,13 @@ struct daNpc_Ji1_c : fopEn_enemy_c {
 
     /* 0x3C8 */ be<u32> mMsgNo;
     /* 0x3CC */ ProcFunc_l mAction;
-    /* 0x3D4 */ ProcFunc_l field_0x2BC;
-    /* 0x3DC */ ProcFunc_l field_0x2C8;
+    /* 0x3D4 */ ProcFunc_l mPrevAction;  /* was field_0x2BC: setAction (inline, e.g. in normalAction 02250A1C) copies mAction here before switching; talkAction 0225268C / speakAction 02252FD0 / speakBadAction 02254A64 switch back to it */
+    /* 0x3DC */ ProcFunc_l mEventReturnAction;  /* was field_0x2C8: normalSubActionGuard 022504E4 (guard event) copies mAction here before eventAction; eventAction 022596CC switches back to it; evn_talk_init 022583A4 tests it */
     /* 0x3E4 */ ProcFunc_l mSubAction;
     /* 0x3EC */ dPa_smokeEcallBack_l mSmokeCb;
     /* 0x40C */ dPa_smokeEcallBack_l mSmokeCbAT;
-    /* 0x42C */ cXyz field_0x320;
-    /* 0x438 */ be<s16> field_0x32C;
+    /* 0x42C */ cXyz mSmokePos;  /* was field_0x320: battleSubActionTateAttack 0225B85C copies the spear tip (y 0) / YokoAttack 0225BBA4 sets it 200 around the body; position of the ID_AK_JT_ELEMENTSMOKE00 emitter (0225B720) */
+    /* 0x438 */ be<s16> mSmokeAngle;  /* was field_0x32C: battleSubActionYokoAttack 0225BBA4: steps -0x1400 per frame, mSmokePos = pos + 200 * (sin, cos) of it */
     /* 0x43A */ u8 _43A[2];
     /* 0x43C */ gptr<mDoExt_McaMorf> mpOrcaMorf;
     /* 0x440 */ dNpc_EventCut_c mEventCut;
@@ -175,95 +175,95 @@ struct daNpc_Ji1_c : fopEn_enemy_c {
     /* 0x5DC */ be<f32> mCryBrkFrame;
     /* 0x5E0 */ mDoExt_btkAnm mCryBtk;
     /* 0x654 */ be<f32> mCryBtkFrame;
-    /* 0x658 */ gptr<JPABaseEmitter> field_0x430;
+    /* 0x658 */ gptr<JPABaseEmitter> mpTearEmitter;  /* was field_0x430: setAnm 0224DFF0 sets dPa_ID_AK_SN_JITEAR00 at current.pos when NULL; setAnimFromMsgNo 02251A8C ends it (becomeInvalidEmitter) */
     /* 0x65C */ dBgS_ObjAcch mAcch;
     /* 0x820 */ dBgS_AcchCir mAcchCir;
-    /* 0x860 */ dCcD_Stts field_0x638;
-    /* 0x89C */ dCcD_Stts field_0x674;
-    /* 0x8D8 */ dCcD_Cyl field_0x6B0;
-    /* 0xA08 */ dCcD_Cyl field_0x7E0;
-    /* 0xB38 */ dCcD_Cyl field_0x910;
-    /* 0xC68 */ dCcD_Cps field_0xA40;
-    /* 0xDA0 */ cXyz field_0xB78;
-    /* 0xDAC */ cXyz field_0xB84;
-    /* 0xDB8 */ cXyz field_0xB90;
+    /* 0x860 */ dCcD_Stts mStts;  /* was field_0x638: CreateInit 0224C650: Init(0xFF, 0xFF, this), status of mCyl, mAtCyl and mAtCps; _execute 0224B268 moves by its m_cc_move (fopAcM_posMoveF) */
+    /* 0x89C */ dCcD_Stts mGuardStts;  /* was field_0x674: CreateInit 0224C650: Init(0xFF, 0xFF, this), status of mGuardCyl */
+    /* 0x8D8 */ dCcD_Cyl mCyl;  /* was field_0x6B0: CreateInit 0224C650: Set(l_cyl_src), mStts; _execute 0224B268 SetC(current.pos) every frame */
+    /* 0xA08 */ dCcD_Cyl mGuardCyl;  /* was field_0x7E0: CreateInit 0224C650: Set(l_cyl2_src); battleSubActionNockBack 0225C208 OnTgShield/ChkTgShieldHit; setGuardParticle 02248D3C spark at its TG hit position */
+    /* 0xB38 */ dCcD_Cyl mAtCyl;  /* was field_0x910: CreateInit 0224C650: Set(l_cylAt_src); MoveToPlayer 0224F628 SetC(current.pos) and sets it at the attack's last frames */
+    /* 0xC68 */ dCcD_Cps mAtCps;  /* was field_0xA40: CreateInit 0224C650: Set(l_cpsAt_src) from mSpearButtPos to mSpearTipPos; battleAtSet 0225B4AC sets radius and start/end (mSpearTipOldPos -> mSpearTipPos) */
+    /* 0xDA0 */ cXyz mSpearTipPos;  /* was field_0xB78: set_mtx 0224AEF0: the spear joint matrix times (0, 0, 100) (70 for the side attack) */
+    /* 0xDAC */ cXyz mSpearButtPos;  /* was field_0xB84: set_mtx 0224AEF0: the spear joint matrix times (0, 0, -100); _delete 0224C550 deletes its sound object */
+    /* 0xDB8 */ cXyz mSpearTipOldPos;  /* was field_0xB90: set_mtx 0224AEF0 copies mSpearTipPos here before updating it; battleAtSet 0225B4AC uses it as the capsule start */
     /* 0xDC4 */ be<s8> handRJointNo;
     /* 0xDC5 */ be<s8> hair1JointNo;
     /* 0xDC6 */ be<s8> hair2JointNo;
     /* 0xDC7 */ be<s8> hair3JointNo;
     /* 0xDC8 */ be<s8> armLJointNo;
     /* 0xDC9 */ be<s8> armRJointNo;
-    /* 0xDCA */ be<s16> field_0xBA2;
-    /* 0xDCC */ be<s16> field_0xBA4;
-    /* 0xDCE */ be<s16> field_0xBA6;
-    /* 0xDD0 */ be<s16> field_0xBA8;
-    /* 0xDD2 */ be<s16> field_0xBAA;
-    /* 0xDD4 */ be<s16> field_0xBAC;
-    /* 0xDD6 */ be<s16> field_0xBAE;
-    /* 0xDD8 */ be<s16> field_0xBB0;
-    /* 0xDDA */ be<s16> field_0xBB2;
-    /* 0xDDC */ be<s16> field_0xBB4;
-    /* 0xDDE */ be<s16> field_0xBB6;
-    /* 0xDE0 */ be<s16> field_0xBB8;
-    /* 0xDE2 */ be<s16> field_0xBBA;
-    /* 0xDE4 */ be<s16> field_0xBBC;
-    /* 0xDE6 */ be<s16> field_0xBBE;
-    /* 0xDE8 */ be<s16> field_0xBC0;
+    /* 0xDCA */ be<s16> mArmShakeAmp;  /* was field_0xBA2: battleSubActionNockBack 0225C208 sets t * 0x100; nodeCallBack3 022494C8 X-rotates both arm joints by it * sin(mArmShakePhase) */
+    /* 0xDCC */ be<s16> mArmShakePhase;  /* was field_0xBA4: battleSubActionNockBack 0225C208 sets t * 0x2800; nodeCallBack3 022494C8: sin phase of the arm shake */
+    /* 0xDCE */ be<s16> mHeadPitch;  /* was field_0xBA6: setHairAngle (inlined in _execute 0224B268): atan2 of the head front vector's y against its xz length */
+    /* 0xDD0 */ be<s16> mHeadYaw;  /* was field_0xBA8: setHairAngle (inlined in _execute 0224B268): atan2(x, z) of the head front vector */
+    /* 0xDD2 */ be<s16> mHair1AngleZ;  /* was field_0xBAA: setHairAngle (in _execute 0224B268) eases and clamps it (HIO limits); nodeCallBack2 02249224 Z-rotates the hair1 joint by it */
+    /* 0xDD4 */ be<s16> mHair1AngleY;  /* was field_0xBAC: setHairAngle (in _execute 0224B268) eases and clamps it; nodeCallBack2 02249224 Y-rotates the hair1 joint by it */
+    /* 0xDD6 */ be<s16> mHair2AngleZ;  /* was field_0xBAE: setHairAngle (in _execute 0224B268); nodeCallBack2 02249224 Z-rotates the hair2 joint by it */
+    /* 0xDD8 */ be<s16> mHair2AngleY;  /* was field_0xBB0: setHairAngle (in _execute 0224B268); nodeCallBack2 02249224 Y-rotates the hair2 joint by it */
+    /* 0xDDA */ be<s16> mHair3AngleZ;  /* was field_0xBB2: setHairAngle (in _execute 0224B268); nodeCallBack2 02249224 Z-rotates the hair3 joint by it */
+    /* 0xDDC */ be<s16> mHair3AngleY;  /* was field_0xBB4: setHairAngle (in _execute 0224B268); nodeCallBack2 02249224 Y-rotates the hair3 joint by it */
+    /* 0xDDE */ be<s16> mHair1SpeedZ;  /* was field_0xBB6: setHairAngle (in _execute 0224B268): a tenth of this frame's change of mHair1AngleZ, added next frame */
+    /* 0xDE0 */ be<s16> mHair1SpeedY;  /* was field_0xBB8: setHairAngle (in _execute 0224B268): a tenth of this frame's change of mHair1AngleY, added next frame */
+    /* 0xDE2 */ be<s16> mHair2SpeedZ;  /* was field_0xBBA: setHairAngle (in _execute 0224B268): a tenth of this frame's change of mHair2AngleZ, added next frame */
+    /* 0xDE4 */ be<s16> mHair2SpeedY;  /* was field_0xBBC: setHairAngle (in _execute 0224B268): a tenth of this frame's change of mHair2AngleY, added next frame */
+    /* 0xDE6 */ be<s16> mHair3SpeedZ;  /* was field_0xBBE: setHairAngle (in _execute 0224B268): a tenth of this frame's change of mHair3AngleZ, added next frame */
+    /* 0xDE8 */ be<s16> mHair3SpeedY;  /* was field_0xBC0: setHairAngle (in _execute 0224B268): a tenth of this frame's change of mHair3AngleY, added next frame */
     /* 0xDEA */ be<s16> field_0xBC2;
-    /* 0xDEC */ cXyz field_0xBC4;
-    /* 0xDF8 */ be<s16> field_0xBD0;
-    /* 0xDFA */ be<s16> field_0xBD2;
-    /* 0xDFC */ be<s16> field_0xBD4;
-    /* 0xDFE */ be<s16> field_0xBD6;
-    /* 0xE00 */ cXyz field_0xBD8[3];
+    /* 0xDEC */ cXyz mHair1LastPos;  /* was field_0xBC4: setHairAngle (in _execute 0224B268): the hair1 joint position, kept for the next frame (its motion drives the hair) */
+    /* 0xDF8 */ be<s16> mHairWindPhase;  /* was field_0xBD0: setHairAngle (in _execute 0224B268): advanced by 1500 + 4600 * wind each frame; cos phase of the wind sway */
+    /* 0xDFA */ be<s16> mHair1WindAngle;  /* was field_0xBD2: setHairAngle (in _execute 0224B268): wind * 2280 * cos(mHairWindPhase); nodeCallBack2 02249224 adds it to the hair1 Z angle */
+    /* 0xDFC */ be<s16> mHair2WindAngle;  /* was field_0xBD4: setHairAngle (in _execute 0224B268): wind * 3908 * cos(...); nodeCallBack2 02249224 adds it to the hair2 Z angle */
+    /* 0xDFE */ be<s16> mHair3WindAngle;  /* was field_0xBD6: setHairAngle (in _execute 0224B268): wind * 7568 * cos(...); nodeCallBack2 02249224 adds it to the hair3 Z angle */
+    /* 0xE00 */ cXyz mBackbonePos[3];  /* was field_0xBD8: nodeCallBack1 02249084: the backbone joint matrix times l_hio's three offsets (HIO 0x0C0) */
     /* 0xE24 */ u8 mHeadAnm[0x24];             /* dNpc_HeadAnm_c */
-    /* 0xE48 */ be<s32> field_0xC24;           /* HD: pad_0xC20 gone */
-    /* 0xE4C */ be<u32> field_0xC28;
-    /* 0xE50 */ be<s32> field_0xC2C;
-    /* 0xE54 */ be<s32> field_0xC30;
-    /* 0xE58 */ be<s32> field_0xC34;
+    /* 0xE48 */ be<s32> mHitCutType;  /* was field_0xC24: daJi1_TgHitCallback 02248CF0 stores the player's cut type; teachAction 02255908 / teachSPRollCutAction 02256F1C / battleSubActionGuard 0225C7EC switch on it; HD: pad_0xC20 gone */
+    /* 0xE4C */ be<u32> mCoHit;  /* was field_0xC28: daJi1_CoHitCallback 02248CA4 sets 1; _execute 0224B268 clears it every frame */
+    /* 0xE50 */ be<s32> mAttackEndWait;  /* was field_0xC2C: MoveToPlayer 0224F628 sets 0x14 at the attack animation's end, then counts it down returning TRUE while > 0 */
+    /* 0xE54 */ be<s32> mBattleTimer;  /* was field_0xC30: battleGameSetTimer 02259A6C sets a random time; battleSubActionWait 0225B344 counts it down and acts at < 0; battleAction 0225AEC8 sets 30 + rnd(150) */
+    /* 0xE58 */ be<s32> mNockBackTimer;  /* was field_0xC34: the attack inits (0225B2B8, 0225B22C, 0225B1A0) clear it; battleSubActionNockBack 0225C208 counts it and scales the arm shake by it */
     /* 0xE5C */ be<s32> field_0xC38;
-    /* 0xE60 */ be<s32> field_0xC3C;
+    /* 0xE60 */ be<s32> mAtHitCount;  /* was field_0xC3C: daJi1_AtHitCallback 02248EA0 adds 1; battleAction 0225AEC8 clears it and shows 3 - it as life; battleGuardCheck 0225A534 ends the game when > 2 */
     /* 0xE64 */ union { be<u8> mHitCooldownHD; be<u8> mHD_E64; };                /* HD only */
     /* 0xE65 */ u8 _E65[3];
-    /* 0xE68 */ cXyz field_0xC40;
-    /* 0xE74 */ be<f32> field_0xC4C;
-    /* 0xE78 */ be<f32> field_0xC50;
+    /* 0xE68 */ cXyz mBgCorrectVec;  /* was field_0xC40: _execute 0224B268 copies the BG correction difference; calcBgCorrectValue 0224F59C dots it with the facing direction */
+    /* 0xE74 */ be<f32> mCoCorrectSum;  /* was field_0xC4C: calcCoCorrectValue 0224F528 adds mStts' m_cc_move along the facing direction each call; cleared by CreateInit 0224C650 / MoveToPlayer 0224F628 */
+    /* 0xE78 */ be<f32> mBgCorrectSum;  /* was field_0xC50: calcBgCorrectValue 0224F59C adds mBgCorrectVec along the facing direction each call; cleared by CreateInit 0224C650 / MoveToPlayer 0224F628 */
     /* 0xE7C */ be<s16> mEventIdx[0x12];
-    /* 0xEA0 */ be<s8> field_0xC78;
+    /* 0xEA0 */ be<s8> mActionPhase;  /* was field_0xC78: setAction (inline) sets -1 before calling the old action, 0 for the new one; every action (e.g. battleAction 0225AEC8, eventAction 022596CC) inits at 0 and adds 1 */
     /* 0xEA1 */ u8 _EA1[3];
     /* 0xEA4 */ request_of_phase_process_class mPhs;
-    /* 0xEAC */ be<u32> field_0xC84;
-    /* 0xEB0 */ be<s16> field_0xC88;
+    /* 0xEAC */ be<u32> mEventNo;  /* was field_0xC84: eventAction 022596CC orders mEventIdx[it], then sets 0x12 (none); _create 0224D280 sets 0x12; the guard event (022504E4) / kaitenwaitAction 02250D54 set the event to play */
+    /* 0xEB0 */ be<s16> mLookMaxVel;  /* was field_0xC88: lookBack 0224ABA4 eases it to HIO 0x18 while m_jnt turns, else clears it; passed as lookAtTarget's maxVel (TWW d_npc.h parameter name) */
     /* 0xEB2 */ u8 _EB2[2];
-    /* 0xEB4 */ be<s32> field_0xC8C;
+    /* 0xEB4 */ be<s32> mTeachCutType;  /* was field_0xC8C: teachAction 02255908 / teachSPRollCutAction 02256F1C copy mHitCutType here and test it (CUT_TYPE_CUT_ROLL) */
     /* 0xEB8 */ be<s32> field_0xC90;
     /* 0xEBC */ be<s32> field_0xC94;
-    /* 0xEC0 */ be<s32> field_0xC98;
-    /* 0xEC4 */ be<f32> field_0xC9C;
-    /* 0xEC8 */ Mtx34 field_0xCA0;
-    /* 0xEF8 */ cXyz field_0xCD0;
-    /* 0xF04 */ cXyz field_0xCDC;
+    /* 0xEC0 */ be<s32> mTeachHitsLeft;  /* was field_0xC98: CreateInit 0224C650 sets HIO 0x54[mTeachStep]; teachAction 02255908 counts it down per good cut, the lesson ends at 0 */
+    /* 0xEC4 */ be<f32> mBackSlideDist;  /* was field_0xC9C: BackSlideInit 0224DE14 and every battle subaction init clear it; BackSlide 022525B4 eases it to the slide distance behind mBackSlideStartPos */
+    /* 0xEC8 */ Mtx34 mHarpoonMtx;  /* was field_0xCA0: harpoonRelease 0224DE3C takes the held harpoon's matrix; harpoonMove 0224A2B8 concatenates it */
+    /* 0xEF8 */ cXyz mHarpoonPos;  /* was field_0xCD0: harpoonRelease 0224DE3C: translation of mHarpoonMtx; harpoonMove 0224A2B8 adds mHarpoonSpeed each frame */
+    /* 0xF04 */ cXyz mHarpoonSpeed;  /* was field_0xCDC: harpoonRelease 0224DE3C copies the release velocity; harpoonMove 0224A2B8 adds it to mHarpoonPos and gravity (HIO) to y */
     /* 0xF10 */ u8 pad_0xCE8[0xC];
-    /* 0xF1C */ Quaternion_l field_0xCF4;
-    /* 0xF2C */ Quaternion_l field_0xD04;
-    /* 0xF3C */ be<s16> field_0xD14;
-    /* 0xF3E */ be<s16> field_0xD16;
-    /* 0xF40 */ be<f32> field_0xD18;
-    /* 0xF44 */ cXyz field_0xD1C;
-    /* 0xF50 */ cXyz field_0xD28;
+    /* 0xF1C */ Quaternion_l mHarpoonRot;  /* was field_0xCF4: harpoonRelease 0224DE3C sets the identity quaternion; harpoonMove 0224A2B8 multiplies it by mHarpoonRotStep and normalizes */
+    /* 0xF2C */ Quaternion_l mHarpoonRotStep;  /* was field_0xD04: harpoonRelease 0224DE3C builds it from mHarpoonSwing and the facing; harpoonMove 0224A2B8 multiplies mHarpoonRot by it */
+    /* 0xF3C */ be<s16> mHarpoonSwing;  /* was field_0xD14: harpoonRelease 0224DE3C sets 0x400 and builds mHarpoonRotStep from sin of it */
+    /* 0xF3E */ be<s16> mRollAtAngle;  /* was field_0xD16: evn_RollAtControl_init 02258A14 sets the start angle + 0x2000; evn_RollAtControl 02258E6C adds 0x540 per frame, mRollAtPos = pos + mRollAtRadius * (sin, cos) */
+    /* 0xF40 */ be<f32> mRollAtRadius;  /* was field_0xD18: evn_RollAtControl_init 02258A14 sets 400; evn_RollAtControl 02258E6C chases it to 0 */
+    /* 0xF44 */ cXyz mRollAtPos;  /* was field_0xD1C: evn_RollAtControl 02258E6C: position on the circle of mRollAtAngle / mRollAtRadius */
+    /* 0xF50 */ cXyz mInitPos;  /* was field_0xD28: CreateInit 0224C650 / kaitenAction 02251ED0 copy home.pos; initPos 02254390 puts current.pos and old.pos there */
     /* 0xF5C */ be<s32> field_0xD34;
-    /* 0xF60 */ cXyz field_0xD38;
+    /* 0xF60 */ cXyz mBackSlideStartPos;  /* was field_0xD38: BackSlideInit 0224DE14 and the subaction inits copy current.pos; BackSlide 022525B4 slides back from it */
     /* 0xF6C */ u8 pad_0xD44[0xC];
-    /* 0xF78 */ cXyz field_0xD50;
-    /* 0xF84 */ csXyz field_0xD5C;
+    /* 0xF78 */ cXyz mHeldItemOffset;  /* was field_0xD50: CreateInit 0224C650 sets (-13, -4, 10); _execute 0224B268 eases it to the item/normal aim offset; set_mtx 0224AEF0 translates by it */
+    /* 0xF84 */ csXyz mHeldItemAngle;  /* was field_0xD5C: CreateInit 0224C650 sets x 0x4000; _execute 0224B268 sets it to the aim angle; set_mtx 0224AEF0 rotates by it (XYZ) */
     /* 0xF8A */ u8 _F8A[2];
     /* 0xF8C */ be<s32> mAnimation;
     /* 0xF90 */ be<s32> field_0xD68;
-    /* 0xF94 */ be<s32> field_0xD6C;
-    /* 0xF98 */ be<s32> field_0xD70;
-    /* 0xF9C */ be<s32> field_0xD74;
-    /* 0xFA0 */ be<u8> field_0xD78;
+    /* 0xF94 */ be<s32> mSubActionPhase;  /* was field_0xD6C: every battle subaction (0225C208, 0225CA04, 0225C660, 0225C7EC, ...) starts at 0 and steps it; normalSubActionGuard 022504E4 sets 1 on a guard hit */
+    /* 0xF98 */ be<s32> mTeachStep;  /* was field_0xD70: CreateInit 0224C650 clears it and picks HIO 0x54[it]; teachAction 02255908 tests == 4; teachSPRollCutAction sets the message count number to it */
+    /* 0xF9C */ be<s32> mGuardCount;  /* was field_0xD74: normalSubActionHarpoonGuard 0224FCC4 adds 1 per guarded hit; normalSubActionGuard 022504E4 plays the guard event at 3, 5 and > 5 (then 0) */
+    /* 0xFA0 */ be<u8> mFirstMsgDone;  /* was field_0xD78: getMsg1stType 0224D8E0: returns 0x978 once and sets it, 0x97B after */
     /* 0xFA1 */ be<u8> field_0xD79;
     /* 0xFA2 */ be<u8> field_0xD7A;
     /* 0xFA3 */ be<u8> field_0xD7B;
@@ -272,7 +272,7 @@ struct daNpc_Ji1_c : fopEn_enemy_c {
     /* 0xFA6 */ be<u8> field_0xD7E;
     /* 0xFA7 */ u8 _FA7;
     /* 0xFA8 */ be<u32> mEndMsgNo;
-    /* 0xFAC */ be<u8> field_0xD84;
+    /* 0xFAC */ be<u8> mHarpoonState;  /* was field_0xD84: _draw 02249638 / set_mtx 0224AEF0: Ji1Draw_HARPOON_HELD (1) / _RELEASED; harpoonRelease 0224DE3C and evn_harpoon_proc_init 0225896C set it */
     /* 0xFAD */ be<u8> mHide;
     /* 0xFAE */ u8 _FAE[2];
 };
@@ -284,17 +284,17 @@ WWHD_OFFSET(daNpc_Ji1_c, mCryBrk, 0x564);
 WWHD_OFFSET(daNpc_Ji1_c, mCryBtk, 0x5E0);
 WWHD_OFFSET(daNpc_Ji1_c, mAcch, 0x65C);
 WWHD_OFFSET(daNpc_Ji1_c, mAcchCir, 0x820);
-WWHD_OFFSET(daNpc_Ji1_c, field_0x638, 0x860);
-WWHD_OFFSET(daNpc_Ji1_c, field_0xA40, 0xC68);
-WWHD_OFFSET(daNpc_Ji1_c, field_0xB78, 0xDA0);
+WWHD_OFFSET(daNpc_Ji1_c, mStts, 0x860);
+WWHD_OFFSET(daNpc_Ji1_c, mAtCps, 0xC68);
+WWHD_OFFSET(daNpc_Ji1_c, mSpearTipPos, 0xDA0);
 WWHD_OFFSET(daNpc_Ji1_c, mHeadAnm, 0xE24);
-WWHD_OFFSET(daNpc_Ji1_c, field_0xC24, 0xE48);
-WWHD_OFFSET(daNpc_Ji1_c, field_0xC40, 0xE68);
+WWHD_OFFSET(daNpc_Ji1_c, mHitCutType, 0xE48);
+WWHD_OFFSET(daNpc_Ji1_c, mBgCorrectVec, 0xE68);
 WWHD_OFFSET(daNpc_Ji1_c, mEventIdx, 0xE7C);
-WWHD_OFFSET(daNpc_Ji1_c, field_0xC78, 0xEA0);
+WWHD_OFFSET(daNpc_Ji1_c, mActionPhase, 0xEA0);
 WWHD_OFFSET(daNpc_Ji1_c, mPhs, 0xEA4);
-WWHD_OFFSET(daNpc_Ji1_c, field_0xCA0, 0xEC8);
-WWHD_OFFSET(daNpc_Ji1_c, field_0xD5C, 0xF84);
+WWHD_OFFSET(daNpc_Ji1_c, mHarpoonMtx, 0xEC8);
+WWHD_OFFSET(daNpc_Ji1_c, mHeldItemAngle, 0xF84);
 WWHD_OFFSET(daNpc_Ji1_c, mAnimation, 0xF8C);
 WWHD_OFFSET(daNpc_Ji1_c, mEndMsgNo, 0xFA8);
 WWHD_SIZE(daNpc_Ji1_c, 0xFB0);
@@ -454,12 +454,12 @@ static inline void eventInfo_setXyCheckCB(fopAc_ac_c* a, u32 cb) { gabi::store<u
 static inline void ji1_setAction(daNpc_Ji1_c* i_this, u32 action, void* arg) {
     if (!ptmf_eq(i_this->mAction, action)) {
         if (ptmf_nonnull(i_this->mAction)) {
-            i_this->field_0xC78 = -1;
+            i_this->mActionPhase = -1;
             ptmf_invoke(i_this->mAction, i_this, arg);
         }
-        ptmf_copy(i_this->field_0x2BC, i_this->mAction);
+        ptmf_copy(i_this->mPrevAction, i_this->mAction);
         ptmf_set(i_this->mAction, action);
-        i_this->field_0xC78 = 0;
+        i_this->mActionPhase = 0;
         gabi::call_ptr<BOOL>(i_this->mAction.f, i_this, arg);
     }
 }

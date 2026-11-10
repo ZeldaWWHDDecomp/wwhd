@@ -201,15 +201,15 @@ struct daNpc_Ls1_c : fopNpc_npc_c {
     /* 0x8FC */ Mtx34 mHand_L_Mtx;
     /* 0x92C */ Mtx34 mHand_R_Mtx;
     /* 0x95C */ be<u32> mBm1ProcID;
-    /* 0x960 */ be<u32> m790;
-    /* 0x964 */ cXyz m794;
-    /* 0x970 */ csXyz m7A0;
+    /* 0x960 */ be<u32> mPId;  /* was m790: lookBack 02280C40: the partner looked at in look mode 4 (tww searchByID(it, &param)); read only, never written in WWHD or tww; after tww daNpc_Hi1_c mPId (same lookBack code) */
+    /* 0x964 */ cXyz mInitialPos;  /* was m794: _execute 02281074 copies current.pos on the first run (tww if (!m83D) { it = current.pos; ..}); written only; after tww daNpc_Bm1_c mInitialPos (same code) */
+    /* 0x970 */ csXyz mInitialAngle;  /* was m7A0: _execute 02281074 copies current.angle on the first run (tww); wait_2 02282B54 turns current.angle.y back to its y, wait_3 02282D94 rotates by it (tww); wait_action1 02283038 sets its y (tww); same code as daNpc_Bm1_c / daNpc_Hi1_c::mInitialAngle */
     /* 0x976 */ csXyz mAngle;
     /* 0x97C */ u8 m7AC[8];
     /* 0x984 */ cXyz mTransformedEyePos;
     /* 0x990 */ cXyz mPlayerEyePos;
-    /* 0x99C */ cXyz m7CC[2];
-    /* 0x9B4 */ cXyz m7E4;
+    /* 0x99C */ cXyz mPlayerEvnPos[2];  /* was m7CC: wait_action1 02283038: get_playerEvnPos(0) / (1) (tww it[0] = get_playerEvnPos(0)); checkOrder 0227FFEC turns to [0], cut_init_PLYER_MOV 022807DC sets the goal [1], telescope_proc 022825A0 puts the player at [1] (tww) */
+    /* 0x9B4 */ cXyz mHeadPos;  /* was m7E4: _nodeCB_Head 0227D7DC: the head joint matrix's translation (tww it.x = mDoMtx_stack_c::get()[0][3] ..); same name as daNpc_Zl1_c / daNpc_Hi1_c::mHeadPos (npcs.md) */
     /* 0x9C0 */ u8 m7F0[0x10];
     /* 0x9D0 */ be<f32> mPrevMorfFrame;
     /* 0x9D4 */ be<s16> mActorAngleY;
@@ -217,7 +217,7 @@ struct daNpc_Ls1_c : fopNpc_npc_c {
     /* 0x9D8 */ be<s16> mJointBackboneY;
     /* 0x9DA */ u8 m80A[2];
     /* 0x9DC */ be<s32> mbSetEyePos;
-    /* 0x9E0 */ be<u32> m810;
+    /* 0x9E0 */ be<u32> mTelescopeMsgNo;  /* was m810: telescope_proc 022825A0: the message number of the telescope talk (tww it = 0xBC1; temp_msg_no = it; it = -1 / temp) */
     /* 0x9E4 */ be<s16> mEventIDTbl[4];
     /* 0x9EC */ be<s16> mEventIndex;
     /* 0x9EE */ be<s16> mTimer2;
@@ -231,8 +231,8 @@ struct daNpc_Ls1_c : fopNpc_npc_c {
     /* 0xA00 */ be<s8> mbMorfAnimStopped;
     /* 0xA01 */ be<u8> m831;
     /* 0xA02 */ be<u8> mItemNo;
-    /* 0xA03 */ be<u8> m833;
-    /* 0xA04 */ be<u8> m834;
+    /* 0xA03 */ be<u8> mTelescopeStep;  /* was m833: telescope_proc 022825A0 switches on it and steps it (0 .. 4) (tww switch (it)); setStt 022805B8 0 (tww) */
+    /* 0xA04 */ be<u8> mRunEventProc;  /* was m834: checkOrder 0227FFEC sets 1 when the telescope event starts (tww); _execute 02281074 runs event_proc while it is set (tww if (staff_id >= 0 || it) event_proc(..)); event_proc 02280A1C clears it at the end (tww) */
     /* 0xA05 */ be<u8> m835;
     /* 0xA06 */ be<u8> m836;
     /* 0xA07 */ be<u8> mbResLoadIsComplete;
@@ -241,29 +241,29 @@ struct daNpc_Ls1_c : fopNpc_npc_c {
     /* 0xA0A */ be<u8> m83A;
     /* 0xA0B */ be<u8> m83B;
     /* 0xA0C */ be<u8> m83C;
-    /* 0xA0D */ be<u8> m83D;
+    /* 0xA0D */ be<u8> mbRanExecute;  /* was m83D: _execute 02281074: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1 (tww); after tww daNpc_Bm1_c mbRanExecute (same code) */
     /* 0xA0E */ be<u8> mbAttention;
-    /* 0xA0F */ be<u8> m83F;
+    /* 0xA0F */ be<u8> mTalking;  /* was m83F: checkOrder 0227FFEC sets 1 on the talk command (tww); wait_2 02282B54 / wait_3 02282D94 / wait_4 02282EB0 start the talk while it is set; talk_1 02282F6C clears it (tww); after daNpc_Hi1_c / daNpcMt_c::mTalking */
     /* 0xA10 */ be<u8> m840;
-    /* 0xA11 */ be<u8> m841;
+    /* 0xA11 */ be<u8> mInDemo;  /* was m841: demo 022801BC: 1 while demoActorID is set, 0 otherwise (tww); setMtx 0227F6F0 / _execute 02281074 test it (tww); same code as daNpc_Hi1_c::mInDemo */
     /* 0xA12 */ be<s16> mHalfHeadAngleY;
     /* 0xA14 */ be<s16> mHalfHeadAngleX;
-    /* 0xA16 */ be<s16> m846;
-    /* 0xA18 */ be<s16> m848;
+    /* 0xA16 */ be<s16> mEyeAngleY;  /* was m846: lookBack 02280C40: -mHalfHeadAngleY (tww it = -mHalfHeadAngleY); eye_ctrl 0227F2DC moves the eye texture by it / HIO m30 (tww); after daNpc_Zl1_c::mEyeAngleY (npcs.md) */
+    /* 0xA18 */ be<s16> mEyeAngleX;  /* was m848: lookBack 02280C40: mHalfHeadAngleX (tww it = mHalfHeadAngleX); eye_ctrl 0227F2DC moves the eye texture by it / HIO m30 (tww); after daNpc_Zl1_c::mEyeAngleX (npcs.md) */
     /* 0xA1A */ be<s8> mActionIndex;
-    /* 0xA1B */ be<u8> m84B;
+    /* 0xA1B */ be<u8> mAnmAtrNo;  /* was m84B: chngAnmAtr 02281758 stores the attribute (tww it = param_1); setAnm_ATR 022816E4 / ctrlAnmAtr 022818EC use it; setStt 022805B8 / endEvent 022806DC / checkOrder 0227FFEC 0xFF; same code as daNpc_Hi1_c::mAnmAtrNo */
     /* 0xA1C */ be<u8> mMesgAnimeTag;
     /* 0xA1D */ be<s8> mBtpNum;
     /* 0xA1E */ be<s8> mBtkNum;
     /* 0xA1F */ be<s8> mBckNum;
-    /* 0xA20 */ be<s8> m850;
-    /* 0xA21 */ be<s8> m851;
-    /* 0xA22 */ be<s8> m852;
-    /* 0xA23 */ be<s8> m853;
-    /* 0xA24 */ be<s8> m854;
+    /* 0xA20 */ be<s8> mOrderEvent;  /* was m850: eventOrder 02281004: 1 / 2 the talk, 3+ orders mEventIDTbl[it - 3] (tww mEventIndex = it - 3); checkOrder 0227FFEC clears it; the waits set it (tww); same code as daNpc_Hi1_c::mOrderEvent */
+    /* 0xA21 */ be<s8> mStt;  /* was m851: setStt 022805B8 stores the new state (tww u8 prev_m851 = it; it = param_1); setAnm 02280548 plays a_anm_prm_tbl[it] (tww); same code as daNpc_Hi1_c::mStt */
+    /* 0xA22 */ be<s8> mPrevStt;  /* was m852: setStt 022805B8 keeps the previous mStt (tww it = prev_m851); talk_1 02282F6C returns to it (tww setStt(it)); same code as daNpc_Hi1_c::mPrevStt */
+    /* 0xA23 */ be<s8> mLookMode;  /* was m853: lookBack 02280C40 switches on it (tww switch (it)); wait_1 02282A60 .. wait_4 / cut_init_LOK_PLYER 02280720 set it (tww); same code as daNpc_Hi1_c::mLookMode */
+    /* 0xA24 */ be<s8> mHeapSizeIdx;  /* was m854: decideType 0227EE98 sets it (tww); _create 0227FBF0 creates the solid heap with a_siz_tbl[it] (tww); same code as daNpc_Hi1_c::mHeapSizeIdx */
     /* 0xA25 */ be<s8> mType;
-    /* 0xA26 */ be<s8> m856;
-    /* 0xA27 */ be<s8> m857;
+    /* 0xA26 */ be<s8> mActionStatus;  /* was m856: set_action 0227EFF4 sets 9 for the leaving action and 0 for the new one (tww); wait_action1 02283038 / demo_action1 02283228 / partner_search 0227FE48 switch on it and step it (tww); after tww daNpc_Bs1_c mActionStatus */
+    /* 0xA27 */ be<s8> mAnmAtrSetCnt;  /* was m857: anmAtr 02281C14: while the message types, applies the message's animation attribute only when it is 0, then adds 1; case 14 and setStt 022805B8 reset it (tww); same code as daNpc_Hi1_c::mAnmAtrSetCnt */
 };
 WWHD_OFFSET(daNpc_Ls1_c, mpLsHandModel, 0x7FC);
 WWHD_OFFSET(daNpc_Ls1_c, mBtkAnm, 0x804);
@@ -273,7 +273,7 @@ WWHD_OFFSET(daNpc_Ls1_c, mHand_L_Mtx, 0x8FC);
 WWHD_OFFSET(daNpc_Ls1_c, mTransformedEyePos, 0x984);
 WWHD_OFFSET(daNpc_Ls1_c, mPrevMorfFrame, 0x9D0);
 WWHD_OFFSET(daNpc_Ls1_c, mbEyeCtrlSet, 0xA09);
-WWHD_OFFSET(daNpc_Ls1_c, m857, 0xA27);
+WWHD_OFFSET(daNpc_Ls1_c, mAnmAtrSetCnt, 0xA27);
 WWHD_SIZE(daNpc_Ls1_c, 0xA28);
 
 s16 ls1Guest_cLib_calcTimer(be<s16>*);

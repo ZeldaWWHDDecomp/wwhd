@@ -6,7 +6,7 @@
 
 struct wz_class : fopEn_enemy_c {
     /* 0x3C8 */ u8 mPhase[0x8];                 /* request_of_phase_process_class */
-    /* 0x3D0 */ gptr<mDoExt_McaMorf> m2B4;      // HD: GameCube m2B4, shifted by the enemy base.
+    /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf;  /* was m2B4: useHeapInit 024E6420 creates the body mDoExt_McaMorf (user area = the actor); anm_init 024E2A90 sets its animations, draw_SUB 024E2148 calcs it and copies its joints to mpMorf2 / mpRodMorf, daWZ_Draw 024E2468 draws it; HD: GameCube mpMorf, shifted by the enemy base. */
     /* 0x3D4 */ gptr<mDoExt_McaMorf> mpRodMorf; /* the rod */
     /* 0x3D8 */ gptr<mDoExt_McaMorf> mpMorf2;   /* mini-boss second body */
     /* 0x3DC */ gptr<mDoExt_brkAnm> mpBrkAnm;
@@ -17,7 +17,7 @@ struct wz_class : fopEn_enemy_c {
     /* 0x424 */ be<f32> mRodScaleX;
     /* 0x428 */ be<f32> mRodScaleY;
     /* 0x42C */ be<f32> mRodScaleZ;
-    /* 0x430 */ cXyz m314; // HD: GameCube target position m314.
+    /* 0x430 */ cXyz mBallHitPos;  /* was m314: next_tama_move 024E3950 (from wz_tamaNext with mBallSph's AT / TG hit position, in action_tama_dousa in daWZ_Execute 024E398C) stores the hit position and sets mode 0x68; action_tama_dousa then emits the burst 0x823A / 0x8282 there; HD: GameCube target position mBallHitPos. */
     /* 0x43C */ cXyz mRodTipPos;
     /* 0x448 */ u8 _448[0x44C - 0x448];
     /* 0x44C */ be<f32> mBaseY;
@@ -33,17 +33,16 @@ struct wz_class : fopEn_enemy_c {
     /* 0x46A */ be<u8> mHitKind;
     /* 0x46B */ be<u8> mHitLock;
     /* 0x46C */ be<u8> mIsMiniBoss; /* GameCube 0x350 */
-    /* 0x46D */ be<u8> m351;
+    /* 0x46D */ be<u8> mType3;  /* was m351: daWZ_Create 024E6BEC sets 1 for param type 3 (which then runs as behaviour 0); daWZ_Draw 024E2468 shows brk frame 3 instead of mBehaviorType + mIsMiniBoss */
     /* 0x46E */ u8 _46E[0x46F - 0x46E];
     /* 0x46F */ be<u8> mStealCount;
-    /* 0x470 */ be<u8> m470;
+    /* 0x470 */ be<u8> mHasActiveSummon;  /* was m470: weapon_shoot 024E3624 sets 1 when its summon child is created; the child's daWZ_Delete 024E61E0 / Create / action paths clear it on the parent; wz::ActionFields (d_a_wz.h, our decomp's view) already names it mHasActiveSummon */
     /* 0x471 */ u8 _471[0x478 - 0x471];
     /* 0x478 */ be<u32> mChildId[20]; /* summoner: the summoned enemies */
     /* 0x4C8 */ be<u8> mChildFlag[20];
     /* 0x4DC */ u8 _4DC[0x4F0 - 0x4DC];
-    /* 0x4F0 */ be<s16> m4F0;
-    /* 0x4F2 */ u8 _4F2[0x4FA - 0x4F2];
-    /* 0x4FA */ be<s16> m4FA[4];
+    /* 0x4F0 */ be<s16> mTimers[5];  /* was m4F0 + _4F2[8] (extent fix): daWZ_Execute 024E398C counts all 5 down; the actions set / test them through wz::ActionFields::mTimers (e.g. daWZ_Create 024E6BEC sets [2] = 300) */
+    /* 0x4FA */ be<s16> mDemoSteps[4];  /* was m4FA: demo steps: action_demo 024E7904 switches on and counts up [0]; action_summon_dousa 024E9384 clears all 4 when it opens the door (mode 200); wz::ActionFields (our decomp's view) already names it mDemoSteps */
     /* 0x502 */ u8 _502[0x504 - 0x502];
     /* 0x504 */ be<s16> mFuwaAngle;
     /* 0x506 */ be<s16> mAlpha;
@@ -57,7 +56,7 @@ struct wz_class : fopEn_enemy_c {
     /* 0x520 */ be<f32> mAcchWallH;
     /* 0x524 */ be<f32> mAcchWallR;
     /* 0x528 */ u8 _528[0x540 - 0x528];
-    /* 0x540 */ be<u32> m540;
+    /* 0x540 */ be<u32> mpNextRoomPath;  /* was m540: the next-room path that daWZ_Create 024E6BEC looks up from mpPath (wz_getNextRoomPath); weapon_shoot 024E3624 summons nothing while it is 0; wz::ActionFields (our decomp's view) already names it mpNextRoomPath */
     /* 0x544 */ u8 _544[0x551 - 0x544];
     /* 0x551 */ be<u8> mSummonSw;
     /* 0x552 */ u8 _552[0x580 - 0x552];
@@ -65,7 +64,7 @@ struct wz_class : fopEn_enemy_c {
     /* 0x5C0 */ dBgS_Acch mAcch;
     /* 0x784 */ dCcD_Stts mStts;
     /* 0x7C0 */ dCcD_Cyl mBodyCyl;
-    /* 0x8F0 */ dCcD_Sph m7D8;          // HD: GameCube collision sphere m7D8.
+    /* 0x8F0 */ dCcD_Sph mBallSph;  /* was m7D8: daWZ_Create 024E6BEC sets it up as the magic ball's sphere (AT type 0x400); action_tama_dousa (in daWZ_Execute 024E398C) checks its AT / TG hits and takes the hit position (mBallHitPos); HD: GameCube collision sphere mBallSph. */
     /* 0xA1C */ LIGHT_INFLUENCE mLight; /* LIGHT_INFLUENCE */
     /* 0xA40 */ u8 _A40[0xA44 - 0xA40];
     /* 0xA44 */ be<s16> mFreezeDuration;
@@ -92,7 +91,7 @@ struct wz_class : fopEn_enemy_c {
 };
 WWHD_SIZE(wz_class, 0x10B0);
 WWHD_OFFSET(wz_class, mPhase, 0x3C8);
-WWHD_OFFSET(wz_class, m2B4, 0x3D0);
+WWHD_OFFSET(wz_class, mpMorf, 0x3D0);
 WWHD_OFFSET(wz_class, mpRodMorf, 0x3D4);
 WWHD_OFFSET(wz_class, mpMorf2, 0x3D8);
 WWHD_OFFSET(wz_class, mpBrkAnm, 0x3DC);
@@ -102,7 +101,7 @@ WWHD_OFFSET(wz_class, mHandPos, 0x418);
 WWHD_OFFSET(wz_class, mRodScaleX, 0x424);
 WWHD_OFFSET(wz_class, mRodScaleY, 0x428);
 WWHD_OFFSET(wz_class, mRodScaleZ, 0x42C);
-WWHD_OFFSET(wz_class, m314, 0x430);
+WWHD_OFFSET(wz_class, mBallHitPos, 0x430);
 WWHD_OFFSET(wz_class, mRodTipPos, 0x43C);
 WWHD_OFFSET(wz_class, mBaseY, 0x44C);
 WWHD_OFFSET(wz_class, mSummonPos, 0x454);
@@ -116,13 +115,13 @@ WWHD_OFFSET(wz_class, mMode, 0x469);
 WWHD_OFFSET(wz_class, mHitKind, 0x46A);
 WWHD_OFFSET(wz_class, mHitLock, 0x46B);
 WWHD_OFFSET(wz_class, mIsMiniBoss, 0x46C);
-WWHD_OFFSET(wz_class, m351, 0x46D);
+WWHD_OFFSET(wz_class, mType3, 0x46D);
 WWHD_OFFSET(wz_class, mStealCount, 0x46F);
-WWHD_OFFSET(wz_class, m470, 0x470);
+WWHD_OFFSET(wz_class, mHasActiveSummon, 0x470);
 WWHD_OFFSET(wz_class, mChildId, 0x478);
 WWHD_OFFSET(wz_class, mChildFlag, 0x4C8);
-WWHD_OFFSET(wz_class, m4F0, 0x4F0);
-WWHD_OFFSET(wz_class, m4FA, 0x4FA);
+WWHD_OFFSET(wz_class, mTimers, 0x4F0);
+WWHD_OFFSET(wz_class, mDemoSteps, 0x4FA);
 WWHD_OFFSET(wz_class, mSummonWave, 0x508);
 WWHD_OFFSET(wz_class, mSummonSlot, 0x50C);
 WWHD_OFFSET(wz_class, mSummonCount, 0x512);
@@ -133,13 +132,13 @@ WWHD_OFFSET(wz_class, mCurrBckIdx, 0x518);
 WWHD_OFFSET(wz_class, mCorrectionOffsetY, 0x51C);
 WWHD_OFFSET(wz_class, mAcchWallH, 0x520);
 WWHD_OFFSET(wz_class, mAcchWallR, 0x524);
-WWHD_OFFSET(wz_class, m540, 0x540);
+WWHD_OFFSET(wz_class, mpNextRoomPath, 0x540);
 WWHD_OFFSET(wz_class, mSummonSw, 0x551);
 WWHD_OFFSET(wz_class, mAcchCir, 0x580);
 WWHD_OFFSET(wz_class, mAcch, 0x5C0);
 WWHD_OFFSET(wz_class, mStts, 0x784);
 WWHD_OFFSET(wz_class, mBodyCyl, 0x7C0);
-WWHD_OFFSET(wz_class, m7D8, 0x8F0);
+WWHD_OFFSET(wz_class, mBallSph, 0x8F0);
 WWHD_OFFSET(wz_class, mLight, 0xA1C);
 WWHD_OFFSET(wz_class, mFreezeDuration, 0xA44);
 WWHD_OFFSET(wz_class, mLightShrinkTimer, 0xA46);

@@ -33,13 +33,13 @@ void daNpc_Kk1_c::chngAnmAtr(u8 i_attr) {
         gabi::Local<be<s32>> notFound;
         fopAc_ac_c* partner = searchByID(fields.mPartnerId, notFound);
         if (partner != nullptr && *notFound == 0) {
-            fields.mLookTarget.x = partner->current.pos.x;
+            fields.mLookPos.x = partner->current.pos.x;
             f32 y = partner->current.pos.y;
-            fields.mLookTarget.y = y;
-            fields.mLookTarget.z = partner->current.pos.z;
-            fields.mUseLookTarget = 1;
+            fields.mLookPos.y = y;
+            fields.mLookPos.z = partner->current.pos.z;
+            fields.mHeadOnlyFollow = 1;
             fields.mLookMode = 2;
-            fields.mLookTarget.y = y + (l_action_parameters.mAttentionYOffset + 200.0f);
+            fields.mLookPos.y = y + (l_action_parameters.mAttentionYOffset + 200.0f);
             fields.mTalkLookTimer = l_action_parameters.mTalkLookTimer;
         }
     }
@@ -371,7 +371,7 @@ BOOL daNpc_Kk1_c::wait_1() {
         if (chk_talk()) {
             setStt(KK1_ACTION_TALK);
             setAnm_NUM(0, 1);
-            fields.mUseLookTarget = 0;
+            fields.mHeadOnlyFollow = 0;
             m_jnt.mbTrn = 1;
             fields.mLookMode = 1;
         }
@@ -379,8 +379,8 @@ BOOL daNpc_Kk1_c::wait_1() {
     }
     u8 onPath = fields.mOnPath;
     fields.mLookMode = 0;
-    fields.mUseLookTarget = 1;
-    fields.mEventState = 2;
+    fields.mHeadOnlyFollow = 1;
+    fields.mOrderEvent = 2;
     if (onPath != 0) {
         gabi::Local<cXyz> pnt;
         Kk1_pathPoint(pnt, &mPathRun);
@@ -392,7 +392,7 @@ BOOL daNpc_Kk1_c::wait_1() {
         }
         return TRUE;
     }
-    if ((s8)fields.mAnimationNo == 0xB) {
+    if ((s8)fields.mAnmNum == 0xB) {
         if ((s8)fields.mAnimationEnded != 0) {
             setAnm_NUM(0, 1);
             fields.mActionTimer = cLib_getRndValue(60, 30);
@@ -498,7 +498,7 @@ BOOL daNpc_Kk1_c::walk_1() {
                 if (chk_talk()) {
                     setStt(KK1_ACTION_WAIT);
                     setAnm_NUM(0, 1);
-                    fields.mUseLookTarget = 0;
+                    fields.mHeadOnlyFollow = 0;
                     m_jnt.mbTrn = 1;
                     fields.mLookMode = 1;
                 }
@@ -514,8 +514,8 @@ BOOL daNpc_Kk1_c::walk_1() {
             return TRUE;
         }
     }
-    fields.mUseLookTarget = 1;
-    fields.mEventState = 2;
+    fields.mHeadOnlyFollow = 1;
+    fields.mOrderEvent = 2;
     fields.mLookMode = 0;
     return TRUE;
 }
@@ -527,16 +527,16 @@ BOOL daNpc_Kk1_c::wait_2() {
     if (fields.mTalkRequested != 0) {
         if (chk_talk()) {
             setStt(KK1_ACTION_TALK);
-            fields.mUseLookTarget = 0;
+            fields.mHeadOnlyFollow = 0;
             fields.mPlayerFar = 0;
             fields.mLookMode = 1;
             m_jnt.mbTrn = 1;
         }
         return TRUE;
     }
-    s8 state = (s8)fields.mEventState;
+    s8 state = (s8)fields.mOrderEvent;
     fields.mLookMode = 0;
-    fields.mUseLookTarget = 1;
+    fields.mHeadOnlyFollow = 1;
     if (state == 3 || state == 4) {
         return TRUE;
     }
@@ -545,12 +545,12 @@ BOOL daNpc_Kk1_c::wait_2() {
         fopAc_ac_c* partner = searchByID(fields.mPartnerId, notFound);
         if (partner != nullptr && *notFound == 0) {
             s16 angle = (s16)(cLib_targetAngleY(&partner->current.pos, &linkPlayer()->current.pos) - partner->current.angle.y);
-            fields.mEventState = abs_s16(angle) >= 0x4000 ? 3 : 4;
+            fields.mOrderEvent = abs_s16(angle) >= 0x4000 ? 3 : 4;
             mStts.m_weight = 0xD9; /* mStts weight */
             return TRUE;
         }
     }
-    fields.mEventState = 2;
+    fields.mOrderEvent = 2;
     return TRUE;
 }
 
@@ -559,7 +559,7 @@ void daNpc_Kk1_c::init_CMT_WAI() {
     Kk1ActionFields& fields = Kk1_fields(this);
     fields.mActionTimer = cLib_getRndValue(0x5A, 0xB4);
     fields.mLookMode = 5;
-    fields.mUseLookTarget = 1;
+    fields.mHeadOnlyFollow = 1;
     setAnm_NUM(0, 1);
 }
 
@@ -575,13 +575,13 @@ static inline bool not_talking(s8 state) { return state != 1 && state < 3; }
 void daNpc_Kk1_c::move_CMT_WAI() {
     Kk1ActionFields& fields = Kk1_fields(this);
     s16 timer = cLib_calcTimer(&fields.mActionTimer);
-    s8 state = (s8)fields.mEventState;
+    s8 state = (s8)fields.mOrderEvent;
     if (timer == 0) {
         if (not_talking(state)) {
             gabi::Local<cXyz> pos;
             copy_pos(pos, &current.pos);
             if (chk_areaIN(l_action_parameters.mDetectionRadius, pos)) {
-                fields.mEventState = 8;
+                fields.mOrderEvent = 8;
                 return;
             }
         }
@@ -591,7 +591,7 @@ void daNpc_Kk1_c::move_CMT_WAI() {
         return;
     }
     if (not_talking(state) && startEvent_check()) {
-        fields.mEventState = 9;
+        fields.mOrderEvent = 9;
     }
 }
 
@@ -600,11 +600,11 @@ void daNpc_Kk1_c::init_CMT_TRN() {
     Kk1ActionFields& fields = Kk1_fields(this);
     fields.mTurnStartAngle = current.angle.y;
     fields.mActionTimer = cLib_getRndValue(0x5A, 0xB4);
-    fields.mTurnTimer = l_action_parameters.mTurnTimer;
+    fields.mCutTimer = l_action_parameters.mTurnTimer;
     fields.mTurnMaxStep = l_action_parameters.mTurnMaxStep;
     fields.mLookMode = 0;
     fields.mTurnRatio = l_action_parameters.mTurnRatio;
-    fields.mUseLookTarget = 1;
+    fields.mHeadOnlyFollow = 1;
     setAnm_NUM(0, 1);
 }
 
@@ -613,17 +613,17 @@ void daNpc_Kk1_c::move_CMT_TRN() {
     Kk1ActionFields& fields = Kk1_fields(this);
     s16 backAngle = (s16)(fields.mTurnStartAngle + 0x8000);
     s16 oldAngle = current.angle.y;
-    if (cLib_calcTimer(&fields.mTurnTimer) == 0) {
+    if (cLib_calcTimer(&fields.mCutTimer) == 0) {
         if (fields.mActionTimer == 0) {
             gabi::Local<cXyz> pnt;
             Kk1_pathPoint(pnt, &mPathRun);
             s16 target = cLib_targetAngleY(&current.pos, pnt);
             cLib_addCalcAngleS(&current.angle.y, target, l_action_parameters.mAngleScale, l_action_parameters.mAngleMaxStep, 0x80);
-            if (!not_talking((s8)fields.mEventState)) {
+            if (!not_talking((s8)fields.mOrderEvent)) {
                 return;
             }
             if (startEvent_check()) {
-                fields.mEventState = 9;
+                fields.mOrderEvent = 9;
                 return;
             }
             if (current.angle.y != target) {
@@ -639,23 +639,23 @@ void daNpc_Kk1_c::move_CMT_TRN() {
         if (angle == backAngle) {
             if (angle != oldAngle) {
                 fields.mLookMode = 5;
-                fields.mUseLookTarget = 1;
+                fields.mHeadOnlyFollow = 1;
             }
             if (cLib_calcTimer(&fields.mActionTimer) == 0) {
-                if (not_talking((s8)fields.mEventState)) {
+                if (not_talking((s8)fields.mOrderEvent)) {
                     gabi::Local<cXyz> pos;
                     copy_pos(pos, &current.pos);
                     if (chk_areaIN(l_action_parameters.mDetectionRadius, pos)) {
-                        fields.mEventState = 8;
+                        fields.mOrderEvent = 8;
                     }
                 }
                 fields.mLookMode = 0;
-                fields.mUseLookTarget = 1;
+                fields.mHeadOnlyFollow = 1;
             }
         }
     }
-    if (not_talking((s8)fields.mEventState) && startEvent_check()) {
-        fields.mEventState = 9;
+    if (not_talking((s8)fields.mOrderEvent) && startEvent_check()) {
+        fields.mOrderEvent = 9;
     }
 }
 
@@ -664,10 +664,10 @@ void daNpc_Kk1_c::init_CMT_PCK() {
     Kk1ActionFields& fields = Kk1_fields(this);
     setAnm_NUM(1, 1);
     s16 evId = fields.mPickEventId;
-    fields.mEventAction = 2;
+    fields.mEventIdx = 2;
     fields.mActionTimer = l_action_parameters.mPickTimer;
     fields.mLookMode = 0;
-    fields.mUseLookTarget = 1;
+    fields.mHeadOnlyFollow = 1;
     eventInfo.mEventId = evId; /* eventInfo.setEventId() */
 }
 
@@ -679,11 +679,11 @@ void daNpc_Kk1_c::move_CMT_PCK() {
         Kk1_pathPoint(pnt, &mPathRun);
         s16 target = cLib_targetAngleY(&current.pos, pnt);
         cLib_addCalcAngleS(&current.angle.y, target, l_action_parameters.mAngleScale, l_action_parameters.mAngleMaxStep, 0x80);
-        if (!not_talking((s8)fields.mEventState)) {
+        if (!not_talking((s8)fields.mOrderEvent)) {
             return;
         }
         if (startEvent_check()) {
-            fields.mEventState = 9;
+            fields.mOrderEvent = 9;
             return;
         }
         if (current.angle.y != target) {
@@ -697,18 +697,18 @@ void daNpc_Kk1_c::move_CMT_PCK() {
     if (fields.mTalkRequested != 0) {
         return;
     }
-    if (not_talking((s8)fields.mEventState) && chkHitPlayer()) {
-        fields.mEventState = 1;
+    if (not_talking((s8)fields.mOrderEvent) && chkHitPlayer()) {
+        fields.mOrderEvent = 1;
         return;
     }
     if (cLib_calcTimer(&fields.mActionTimer) == 0) {
         setAnm_NUM(0, 1);
-        fields.mEventState = 0;
+        fields.mOrderEvent = 0;
         eventInfo.mEventId = -1; /* eventInfo.setEventId(-1) */
         return;
     }
     Kk1_soundStart(0x509B, &current.pos);
-    fields.mEventState = 2;
+    fields.mOrderEvent = 2;
 }
 
 /* 02270AE0 */
@@ -725,13 +725,13 @@ BOOL daNpc_Kk1_c::cmmt_1() {
         move_CMT_PCK();
         return TRUE;
     }
-    if (not_talking((s8)fields.mEventState) && (s8)fields.mAnimationNo != 1 && startEvent_check()) {
-        fields.mEventState = 9;
+    if (not_talking((s8)fields.mOrderEvent) && (s8)fields.mAnmNum != 1 && startEvent_check()) {
+        fields.mOrderEvent = 9;
     }
     fields.mLookMode = 0;
-    fields.mUseLookTarget = 1;
+    fields.mHeadOnlyFollow = 1;
     if (event_move(true)) {
-        if (!not_talking((s8)fields.mEventState)) {
+        if (!not_talking((s8)fields.mOrderEvent)) {
             return TRUE;
         }
         switch ((s8)fields.mCommentAction) {
@@ -751,8 +751,8 @@ BOOL daNpc_Kk1_c::cmmt_1() {
             break;
         }
     }
-    if (not_talking((s8)fields.mEventState)) {
-        fields.mEventState = 0;
+    if (not_talking((s8)fields.mOrderEvent)) {
+        fields.mOrderEvent = 0;
     }
     return TRUE;
 }
@@ -774,7 +774,7 @@ BOOL daNpc_Kk1_c::wait_3() {
     if (fields.mTalkRequested != 0) {
         if (chk_talk()) {
             setStt(KK1_ACTION_TALK);
-            fields.mUseLookTarget = 0;
+            fields.mHeadOnlyFollow = 0;
             fields.mPlayerFar = 0;
             fields.mLookMode = 1;
             m_jnt.mbTrn = 1;
@@ -782,14 +782,14 @@ BOOL daNpc_Kk1_c::wait_3() {
         return TRUE;
     }
     fields.mLookMode = 0;
-    fields.mUseLookTarget = 1;
+    fields.mHeadOnlyFollow = 1;
     u8 attn = chk_attn();
-    s8 state = (s8)fields.mEventState;
+    s8 state = (s8)fields.mOrderEvent;
     if (attn) {
         fields.mLookMode = 1;
     }
     if (not_talking(state)) {
-        fields.mEventState = 2;
+        fields.mOrderEvent = 2;
     }
     return TRUE;
 }
@@ -808,14 +808,14 @@ BOOL daNpc_Kk1_c::wait_4() {
         if (chk_talk()) {
             setStt(KK1_ACTION_TALK);
             setAnm_NUM(0, 1);
-            fields.mUseLookTarget = 0;
+            fields.mHeadOnlyFollow = 0;
             m_jnt.mbTrn = 1;
             fields.mLookMode = 1;
         }
         return TRUE;
     }
-    fields.mEventState = 2;
-    fields.mUseLookTarget = 0;
+    fields.mOrderEvent = 2;
+    fields.mHeadOnlyFollow = 0;
     fields.mLookMode = 1;
     bool far = dist > 300.0f;
     fields.mOnPath = far;
@@ -829,7 +829,7 @@ BOOL daNpc_Kk1_c::wait_4() {
             fields.mWaitingAtPathEnd = 0;
         }
         fields.mLookMode = 0;
-        fields.mUseLookTarget = 1;
+        fields.mHeadOnlyFollow = 1;
     }
     return TRUE;
 }
@@ -855,12 +855,12 @@ BOOL daNpc_Kk1_c::talk_1() {
             endEvent();
             break;
         case 0x1CAB:
-            fields.mEventState = 7;
+            fields.mOrderEvent = 7;
             endEvent();
             break;
         case 0x1CAC:
             fields.mTalkLookTimer = 0;
-            fields.mUseLookTarget = 0;
+            fields.mHeadOnlyFollow = 0;
             fields.mLookMode = 1;
             endEvent();
             break;
@@ -870,7 +870,7 @@ BOOL daNpc_Kk1_c::talk_1() {
         }
     }
     if (cLib_calcTimer(&fields.mTalkLookTimer) != 0 && fields.mTalkLookTimer == 1) {
-        fields.mUseLookTarget = 0;
+        fields.mHeadOnlyFollow = 0;
         fields.mLookMode = 1;
     }
     return moving;
@@ -895,13 +895,13 @@ BOOL daNpc_Kk1_c::wait_action1(void*) {
     }
     fields.mAttentionSelected = chkAttention();
     switch ((u32)(s32)(s8)fields.mActionState) {
-    case KK1_ACTION_WAIT: fields.mActionResult = wait_1(); break;
-    case KK1_ACTION_TALK: fields.mActionResult = talk_1(); break;
-    case KK1_ACTION_WALK: fields.mActionResult = walk_1(); break;
-    case KK1_ACTION_WAIT_PARTNER: fields.mActionResult = wait_2(); break;
-    case KK1_ACTION_COMMENT: fields.mActionResult = cmmt_1(); break;
-    case KK1_ACTION_WAIT_NEAR: fields.mActionResult = wait_3(); break;
-    case KK1_ACTION_WAIT_FAR: fields.mActionResult = wait_4(); break;
+    case KK1_ACTION_WAIT: fields.mbSetEyePos = wait_1(); break;
+    case KK1_ACTION_TALK: fields.mbSetEyePos = talk_1(); break;
+    case KK1_ACTION_WALK: fields.mbSetEyePos = walk_1(); break;
+    case KK1_ACTION_WAIT_PARTNER: fields.mbSetEyePos = wait_2(); break;
+    case KK1_ACTION_COMMENT: fields.mbSetEyePos = cmmt_1(); break;
+    case KK1_ACTION_WAIT_NEAR: fields.mbSetEyePos = wait_3(); break;
+    case KK1_ACTION_WAIT_FAR: fields.mbSetEyePos = wait_4(); break;
     }
     return TRUE;
 }

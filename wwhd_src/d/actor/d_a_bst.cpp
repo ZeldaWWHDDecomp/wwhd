@@ -83,7 +83,7 @@ static void anm_init(bst_class *i_this, s32 index, f32 morph, u8 loop, f32 speed
     u32 address = gabi::ea(i_this);
     void *animation = bstResource(index);
     void *audio = sound >= 0 ? bstResource(sound) : nullptr;
-    u32 controller = (u32)(bstBaseActor(address)->m02B8.v);
+    u32 controller = (u32)(bstBaseActor(address)->mpMorf.v);
     f32 first = (f32)(bstMoveConstants().mZero), last = (f32)(bstBaseMinusOne());
     BstBase_setAnimation(bstMoveFrame(controller), animation, loop, morph, speed, first, last,
                          audio);
@@ -105,7 +105,7 @@ static BOOL nodeCallBackHead(void *node, s32 timing) {
             BstBase_PSMTXCopy(&bstBaseAddress<Mtx34>(matrices)[number],
                               bstBaseAddress<Mtx34>(current));
             if (number == 9 || number == 12 || number == 10 || number == 11) {
-                s16 angle = (s16)bstBaseActor(i_this)->m2E78[number == 9 || number == 12 ? 1 : 0];
+                s16 angle = (s16)bstBaseActor(i_this)->mEyelidAngle[number == 9 || number == 12 ? 1 : 0];
                 if (number == 9 || number == 10)
                     angle = (s16)-angle;
                 current = (u32)(bstMoveCalcMatrix());
@@ -142,20 +142,20 @@ static void pos_move(bst_class *i_this, u8 straight) {
         f32 distance = BstBase_cM_sqrt(gabi::fmadds(x, x, z * z));
         y = vector.y;
         s16 pitch = (s16)-BstBase_cM_atan2s(y, distance);
-        f32 scale = (f32)(bstBaseActor(address)->m10EC.y);
-        f32 limit = (f32)(bstBaseActor(address)->m10EC.x);
+        f32 scale = (f32)(bstBaseActor(address)->mMoveParam.y);
+        f32 limit = (f32)(bstBaseActor(address)->mMoveParam.x);
         s16 divisor = (s16)((s16)(bstMoveTuning().mRegS[3]) + 5);
         BstBase_cLib_addCalcAngleS2(&bstBaseActor(address)->current.angle.y, yaw, divisor,
                                     (s16)gabi::ftoi(limit * scale));
-        limit = (f32)(bstBaseActor(address)->m10EC.x);
-        scale = (f32)(bstBaseActor(address)->m10EC.y);
+        limit = (f32)(bstBaseActor(address)->mMoveParam.x);
+        scale = (f32)(bstBaseActor(address)->mMoveParam.y);
         divisor = (s16)((s16)(bstMoveTuning().mRegS[3]) + 5);
         BstBase_cLib_addCalcAngleS2(&bstBaseActor(address)->current.angle.x, pitch, divisor,
                                     (s16)gabi::ftoi(limit * scale));
     }
     f32 one = (f32)(bstMoveConstants().mOne);
     f32 step = (f32)(bstMoveConstants().mPositionChaseRatio);
-    BstBase_cLib_addCalc(&bstBaseActor(address)->m10EC.y, one, one, step);
+    BstBase_cLib_addCalc(&bstBaseActor(address)->mMoveParam.y, one, one, step);
     f32 zero = (f32)(bstMoveConstants().mZero);
     vector.y = zero;
     vector.x = zero;
@@ -198,7 +198,7 @@ static BOOL daBst_Delete(bst_class *i_this) {
     if ((u8)(bstBaseActor(address)->mBstPartType) == Type_HEAD_e) {
         BstBaseID id;
         for (u32 i = 0; i < 2; ++i) {
-            u32 value = (u32)(bstBaseActor(address)->m2E90[i]);
+            u32 value = (u32)(bstBaseActor(address)->mEyeAttIds[i]);
             id = value;
             void *attachment = nullptr;
             if (value != 0xFFFFFFFF)
@@ -211,7 +211,7 @@ static BOOL daBst_Delete(bst_class *i_this) {
     u32 target = (u32)(bstBaseAddress<BstBaseSmokeVtable>(callback)->mRemove);
     gabi::call(target, &bstBaseActor(address)->mPa_smokeEcallBack);
     for (u32 i = 0; i < 10; ++i)
-        BstBase_stopSound(&bstBaseActor(address)->m03B8[i]);
+        BstBase_stopSound(&bstBaseActor(address)->mBeamPos[i]);
     return TRUE;
 }
 
@@ -248,9 +248,9 @@ static void end_brkbtk_set(bst_class *i_this) {
                 u32 boss = (u32)bstBasePart(part);
                 u32 model;
                 if (pedestal)
-                    model = (u32)(bstBaseActor(boss)->m02C8.v);
+                    model = (u32)(bstBaseActor(boss)->mpPedestalModel.v);
                 else {
-                    u32 morph = (u32)(bstBaseActor(boss)->m02B8.v);
+                    u32 morph = (u32)(bstBaseActor(boss)->mpMorf.v);
                     model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
                 }
                 s32 index = pedestal ? (texture ? btkPedestal[part] : brkPedestal[part])
@@ -290,7 +290,7 @@ static void bstCopyTevDefaults(BstBaseLight *light, const BstBaseDefaults &defau
 }
 
 static void bstEmitterMatrix(u32 address, u32 emitter) {
-    u32 morph = (u32)(bstBaseActor(address)->m02B8.v);
+    u32 morph = (u32)(bstBaseActor(address)->mpMorf.v);
     u32 model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
     u32 block = (u32)(bstBasePointerWord(bstMoveModel(model)->mpMtxBuffer));
     u16 flags = (u16)(bstMoveMatrixBuffer(block)->mFlags);
@@ -313,7 +313,7 @@ static void end_demo(bst_class *i_this) {
         bstBaseActor(address)->mDamage = (s16)(mode + 1);
         [[fallthrough]];
     case 1: {
-        u32 morph = (u32)(bstBaseActor(address)->m02B8.v);
+        u32 morph = (u32)(bstBaseActor(address)->mpMorf.v);
         f32 frame = (f32)(bstMoveMorf(morph)->mFrameCtrl.mFrame);
         if (gabi::ftoi(frame) == 20 && gabi::ea(&bstBaseActor(address)->eyePos)) {
             s8 room = (s8)(bstBaseActor(address)->current.roomNo);
@@ -332,7 +332,7 @@ static void end_demo(bst_class *i_this) {
         u32 emitter = BstBase_dPa_control_set(bstBaseAddress<void>(particles), 0, 0x81E8,
                                               &bstBaseActor(address)->current.pos, nullptr, nullptr,
                                               255, nullptr, -1, 0, nullptr, nullptr);
-        bstBaseActor(address)->m2EF4.v = emitter;
+        bstBaseActor(address)->mpHaloEmitter.v = emitter;
         if (emitter)
             bstEmitterMatrix(address, emitter);
         break;
@@ -366,12 +366,12 @@ static void end_demo(bst_class *i_this) {
     }
     if ((u8)(bstBaseActor(address)->mBstPartType) == Type_HEAD_e) {
         for (u32 i = 0; i < 4; ++i) {
-            u32 emitter = (u32)(bstBaseActor(address)->m2EE0[i + 1].v);
+            u32 emitter = (u32)(bstBaseActor(address)->mpBombEmitter[i + 1].v);
             if (!emitter)
                 continue;
-            if ((s16)(bstBaseActor(address)->m10FC[3]) == 1) {
+            if ((s16)(bstBaseActor(address)->mTimers[3]) == 1) {
                 bstEmitter(bstBaseAddress<JPABaseEmitter>(emitter))->becomeInvalidEmitter();
-                bstBaseActor(address)->m2EE0[i + 1].v = 0;
+                bstBaseActor(address)->mpBombEmitter[i + 1].v = 0;
             } else
                 bstEmitterMatrix(address, emitter);
         }
@@ -392,27 +392,27 @@ static void beam_move(bst_class *i_this) {
     f32 fifty = (f32)(bstMoveConstants().mFifty);
     f32 ceiling = (f32)(bstMoveConstants().mTwoThousand);
     for (u32 i = 0; i < 10; ++i) {
-        if ((s8)(bstBaseActor(address)->m04E4[i]) == 0)
+        if ((s8)(bstBaseActor(address)->mBeamState[i]) == 0)
             continue;
-        u32 position = gabi::ea(&bstBaseActor(address)->m03B8[i]);
-        u32 velocity = gabi::ea(&bstBaseActor(address)->m0430[i]);
+        u32 position = gabi::ea(&bstBaseActor(address)->mBeamPos[i]);
+        u32 velocity = gabi::ea(&bstBaseActor(address)->mBeamSpeed[i]);
         BstBase_PSVECAdd(bstBaseAddress<cXyz>(position), bstBaseAddress<cXyz>(velocity),
                          bstBaseAddress<cXyz>(position));
         f32 z = (f32)(bstBaseAddress<cXyz>(position)->z),
             y = (f32)(bstBaseAddress<cXyz>(position)->y),
             x = (f32)(bstBaseAddress<cXyz>(position)->x);
-        u32 model = (u32)(bstBaseActor(address)->m0390[i].v);
+        u32 model = (u32)(bstBaseActor(address)->mpBeamModel[i].v);
         BstBase_matrixTranslate(&bstBaseModelMatrix(), x, y, z);
-        s16 yaw = (s16)(bstBaseActor(address)->m04A8[i].y);
+        s16 yaw = (s16)(bstBaseActor(address)->mBeamAngle[i].y);
         BstBase_mDoMtx_YrotM(&bstBaseModelMatrix(), yaw);
-        s16 pitch = (s16)(bstBaseActor(address)->m04A8[i].x);
+        s16 pitch = (s16)(bstBaseActor(address)->mBeamAngle[i].x);
         BstBase_mDoMtx_XrotM(&bstBaseModelMatrix(), pitch);
-        f32 length = (f32)(bstBaseActor(address)->m10A8[i]);
+        f32 length = (f32)(bstBaseActor(address)->mBeamLength[i]);
         BstBase_mDoMtx_stack_scaleM(one, one, length);
         mtx_copy(&bstMoveModel(model)->mBaseTransformMtx, &bstBaseModelMatrix());
         f32 target = (f32)(bstMoveTuning().mRegF[4]) + five;
         f32 step = (f32)(bstMoveTuning().mRegF[5]) + half;
-        BstBase_cLib_addCalc(&bstBaseActor(address)->m10A8[i], target, one, step);
+        BstBase_cLib_addCalc(&bstBaseActor(address)->mBeamLength[i], target, one, step);
         y = (f32)(bstBaseAddress<cXyz>(position)->y);
         z = (f32)(bstBaseAddress<cXyz>(position)->z);
         x = (f32)(bstBaseAddress<cXyz>(position)->x);
@@ -455,16 +455,16 @@ static void beam_move(bst_class *i_this) {
             line.cBgS_PolyInfo::__vtbl = BstBaseVtable::LineInfo;
             BstBase_lineDtor(&line, 0);
             if (crosses) {
-                yaw = (s16)(bstBaseActor(address)->m04A8[i].y);
+                yaw = (s16)(bstBaseActor(address)->mBeamAngle[i].y);
                 beam_eff_set(bstBaseAddress<cXyz>(position), yaw, 1);
                 hit = true;
             }
         }
         y = (f32)(bstBaseAddress<cXyz>(position)->y);
         if (y > ceiling)
-            bstBaseActor(address)->m04E4[i] = 0;
+            bstBaseActor(address)->mBeamState[i] = 0;
         if (hit) {
-            bstBaseActor(address)->m04E4[i] = 0;
+            bstBaseActor(address)->mBeamState[i] = 0;
             play = BstBase_dComIfGp_get();
             s32 strength = (s16)(bstMoveTuning().mRegS[2]) + 3;
             cXyz impulse;
@@ -479,10 +479,10 @@ static void beam_move(bst_class *i_this) {
                                    reverb);
         }
         u32 sphere = gabi::ea(&bstBaseActor(address)->mCcD_beams[i]);
-        if ((s8)(bstBaseActor(address)->m04E4[i]) == 1) {
+        if ((s8)(bstBaseActor(address)->mBeamState[i]) == 1) {
             BstBase_sphereStart(bstBaseAddress<dCcD_Sph>(sphere), bstBaseAddress<cXyz>(position));
-            u8 state = (u8)(bstBaseActor(address)->m04E4[i]);
-            bstBaseActor(address)->m04E4[i] = (u8)(state + 1);
+            u8 state = (u8)(bstBaseActor(address)->mBeamState[i]);
+            bstBaseActor(address)->mBeamState[i] = (u8)(state + 1);
         } else
             BstBase_sphereMove(bstBaseAddress<dCcD_Sph>(sphere), bstBaseAddress<cXyz>(position));
         play = BstBase_dComIfGp_get();
@@ -500,11 +500,11 @@ static BOOL daBst_Draw(bst_class *i_this) {
     u32 address = gabi::ea(i_this);
     if ((u8)(bstBaseActor(address)->mBstPartType)) {
         u32 boss = (u32)(bstBaseGlobals().boss);
-        s8 state = (s8)(bstBaseActor(boss)->m2E9A);
+        s8 state = (s8)(bstBaseActor(boss)->mDemoCamMode);
         if ((u32)((s32)state - 1) < 9)
             return TRUE;
     }
-    u32 morph = (u32)(bstBaseActor(address)->m02B8.v);
+    u32 morph = (u32)(bstBaseActor(address)->mpMorf.v);
     u32 model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
     void *env = BstBase_dKy_getEnvlight();
     BstBase_tevSetup(env, 0, &bstBaseActor(address)->current.pos, &bstBaseActor(address)->tevStr);
@@ -518,13 +518,13 @@ static BOOL daBst_Draw(bst_class *i_this) {
     data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
     frame = (f32)(bstMoveFrame(animator)->mFrame);
     BstBase_brkEntry(bstMoveFrame(animator), bstBaseAddress<J3DModelData>(data), frame);
-    morph = (u32)(bstBaseActor(address)->m02B8.v);
+    morph = (u32)(bstBaseActor(address)->mpMorf.v);
     BstBase_modelEntry(bstMoveMorf(morph));
     data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
     bstBaseAddress<BstBaseModelData>(data)->mpTextureMatrixAnimator = 0;
     data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
     bstBaseAddress<BstBaseModelData>(data)->mpTevAnimator = 0;
-    model = (u32)(bstBaseActor(address)->m02C8.v);
+    model = (u32)(bstBaseActor(address)->mpPedestalModel.v);
     animator = (u32)(bstBaseActor(address)->mpBtkAnm.v);
     data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
     frame = (f32)(bstMoveFrame(animator)->mFrame);
@@ -539,17 +539,17 @@ static BOOL daBst_Draw(bst_class *i_this) {
     BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->mEnvLight);
     BstBase_updateModel(bstMoveModel(model), 0);
     if ((u8)(bstBaseActor(address)->mBstPartType) == Type_HEAD_e) {
-        s16 blur = (s16)(bstBaseActor(address)->m2E98);
+        s16 blur = (s16)(bstBaseActor(address)->mBlurRate);
         if (blur > 1) {
             bstBaseBlur().mRate = (u8)blur;
             BstBase_blurOn();
         } else if (blur == 1) {
-            bstBaseActor(address)->m2E98 = 0;
+            bstBaseActor(address)->mBlurRate = 0;
             bstBaseBlur().mEnabled = 0;
         }
         for (u32 i = 0; i < 10; ++i)
-            if ((s8)(bstBaseActor(address)->m04E4[i])) {
-                u32 beam = (u32)(bstBaseActor(address)->m0390[i].v);
+            if ((s8)(bstBaseActor(address)->mBeamState[i])) {
+                u32 beam = (u32)(bstBaseActor(address)->mpBeamModel[i].v);
                 BstBase_updateModel(bstMoveModel(beam), 0);
             }
         if ((u32)(bstBaseGlobals().mCenterGuard) == 0) {
@@ -560,31 +560,31 @@ static BOOL daBst_Draw(bst_class *i_this) {
             bstBaseGlobals().center_pos.y = zero;
         }
         env = BstBase_dKy_getEnvlight();
-        BstBase_tevSetup(env, 1, &bstBaseGlobals().center_pos, &bstBaseActor(address)->m2F20);
+        BstBase_tevSetup(env, 1, &bstBaseGlobals().center_pos, &bstBaseActor(address)->mBgTevStr);
         env = BstBase_dKy_getEnvlight();
-        model = (u32)(bstBaseActor(address)->m2FDC.v);
-        BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->m2F20);
-        model = (u32)(bstBaseActor(address)->m2FDC.v);
-        animator = (u32)(bstBaseActor(address)->m2FE0.v);
+        model = (u32)(bstBaseActor(address)->mpHbyokoModel.v);
+        BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->mBgTevStr);
+        model = (u32)(bstBaseActor(address)->mpHbyokoModel.v);
+        animator = (u32)(bstBaseActor(address)->mpHbyokoBrkAnm.v);
         data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
         frame = (f32)(bstMoveFrame(animator)->mFrame);
         BstBase_brkEntry(bstMoveFrame(animator), bstBaseAddress<J3DModelData>(data), frame);
-        model = (u32)(bstBaseActor(address)->m2FDC.v);
+        model = (u32)(bstBaseActor(address)->mpHbyokoModel.v);
         BstBase_updateModel(bstMoveModel(model), 0);
         env = BstBase_dKy_getEnvlight();
-        model = (u32)(bstBaseActor(address)->m2FD0.v);
-        BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->m2F20);
-        model = (u32)(bstBaseActor(address)->m2FD0.v);
-        animator = (u32)(bstBaseActor(address)->m2FD8.v);
+        model = (u32)(bstBaseActor(address)->mpHbsitaModel.v);
+        BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->mBgTevStr);
+        model = (u32)(bstBaseActor(address)->mpHbsitaModel.v);
+        animator = (u32)(bstBaseActor(address)->mpHbsitaBrkAnm.v);
         data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
         frame = (f32)(bstMoveFrame(animator)->mFrame);
         BstBase_brkEntry(bstMoveFrame(animator), bstBaseAddress<J3DModelData>(data), frame);
-        model = (u32)(bstBaseActor(address)->m2FD0.v);
-        animator = (u32)(bstBaseActor(address)->m2FD4.v);
+        model = (u32)(bstBaseActor(address)->mpHbsitaModel.v);
+        animator = (u32)(bstBaseActor(address)->mpHbsitaBtkAnm.v);
         data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
         frame = (f32)(bstMoveFrame(animator)->mFrame);
         BstBase_btkEntry(bstMoveFrame(animator), bstBaseAddress<J3DModelData>(data), frame);
-        model = (u32)(bstBaseActor(address)->m2FD0.v);
+        model = (u32)(bstBaseActor(address)->mpHbsitaModel.v);
         BstBase_updateModel(bstMoveModel(model), 0);
     }
     f32 one = (f32)(bstMoveConstants().mOne);
@@ -618,7 +618,7 @@ static BOOL useHeapInit(bst_class *i_this) {
     f32 speed = (f32)(bstMoveConstants().mOne);
     u32 morph = BstBase_morphCtor(nullptr, modelData, nullptr, nullptr, animation, 2, 0, -1, 1,
                                   nullptr, 0, 0x11020203, speed);
-    bstBaseActor(address)->m02B8.v = morph;
+    bstBaseActor(address)->mpMorf.v = morph;
     if (!morph)
         return FALSE;
     if (!(u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel)))
@@ -631,7 +631,7 @@ static BOOL useHeapInit(bst_class *i_this) {
         u16 count = (u16)(reinterpret_cast<BstBaseJoint *>(joints)->mCount);
         for (u16 i = 0; i < count; ++i) {
             if ((u32)(i - 9u) < 4) {
-                morph = (u32)(bstBaseActor(address)->m02B8.v);
+                morph = (u32)(bstBaseActor(address)->mpMorf.v);
                 model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
                 data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
                 u32 limit = (u32)(bstBaseAddress<BstBaseModelData>(data)->mJointCount);
@@ -641,21 +641,21 @@ static BOOL useHeapInit(bst_class *i_this) {
                 bstBaseAddress<BstBaseJointNode>(joint)->mCallback =
                     gabi::guest_fn(reinterpret_cast<const void *>(nodeCallBackHead));
             }
-            morph = (u32)(bstBaseActor(address)->m02B8.v);
+            morph = (u32)(bstBaseActor(address)->mpMorf.v);
             model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
             data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
             joints = BstBase_getJoints(bstBaseAddress<J3DModelData>(data));
             count = (u16)(reinterpret_cast<BstBaseJoint *>(joints)->mCount);
         }
-        morph = (u32)(bstBaseActor(address)->m02B8.v);
+        morph = (u32)(bstBaseActor(address)->mpMorf.v);
         model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
         bstMoveModel(model)->mUserArea = address;
-        morph = (u32)(bstBaseActor(address)->m02B8.v);
+        morph = (u32)(bstBaseActor(address)->mpMorf.v);
     }
     u32 model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
     u32 data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
     u32 created = BstBase_createModel(bstBaseAddress<J3DModelData>(data), 0, 0x11020203);
-    bstBaseActor(address)->m0388.v = created;
+    bstBaseActor(address)->mpShadowModel.v = created;
     if (!created)
         return FALSE;
     u32 controller = bstNewAnimator(true);
@@ -663,7 +663,7 @@ static BOOL useHeapInit(bst_class *i_this) {
     if (!controller)
         return FALSE;
     part = (u8)(bstBaseActor(address)->mBstPartType);
-    morph = (u32)(bstBaseActor(address)->m02B8.v);
+    morph = (u32)(bstBaseActor(address)->mpMorf.v);
     index = (u16)set_btk_d[part];
     model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
     animation = bstResource(index);
@@ -677,7 +677,7 @@ static BOOL useHeapInit(bst_class *i_this) {
     if (!controller)
         return FALSE;
     part = (u8)(bstBaseActor(address)->mBstPartType);
-    morph = (u32)(bstBaseActor(address)->m02B8.v);
+    morph = (u32)(bstBaseActor(address)->mpMorf.v);
     index = (u16)set_brk_d[part];
     model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
     animation = bstResource(index);
@@ -690,43 +690,43 @@ static BOOL useHeapInit(bst_class *i_this) {
         modelData = bstResource(dRes_INDEX_BST_BDL_TAMA_e);
         for (u32 i = 0; i < 10; ++i) {
             created = BstBase_createModel(modelData, 0, 0x11020203);
-            bstBaseActor(address)->m0390[i].v = created;
+            bstBaseActor(address)->mpBeamModel[i].v = created;
             if (!created)
                 return FALSE;
         }
         modelData = bstResource(dRes_INDEX_BST_BDL_HBSITA1_e);
         created = BstBase_createModel(modelData, 0, 0x11020203);
-        bstBaseActor(address)->m2FD0.v = created;
+        bstBaseActor(address)->mpHbsitaModel.v = created;
         if (!created)
             return FALSE;
         controller = bstNewAnimator(true);
-        bstBaseActor(address)->m2FD4.v = controller;
+        bstBaseActor(address)->mpHbsitaBtkAnm.v = controller;
         if (!controller)
             return FALSE;
         animation = bstResource(dRes_INDEX_BST_BTK_HBSITA1_e);
-        if (!bstInitAnimator(&bstBaseActor(address)->m2FD4.v, gabi::ea(modelData), animation, true,
+        if (!bstInitAnimator(&bstBaseActor(address)->mpHbsitaBtkAnm.v, gabi::ea(modelData), animation, true,
                              speed, 2))
             return FALSE;
         controller = bstNewAnimator(false);
-        bstBaseActor(address)->m2FD8.v = controller;
+        bstBaseActor(address)->mpHbsitaBrkAnm.v = controller;
         if (!controller)
             return FALSE;
         animation = bstResource(dRes_INDEX_BST_BRK_HBSITA1_e);
         f32 zero = (f32)(bstMoveConstants().mZero);
-        if (!bstInitAnimator(&bstBaseActor(address)->m2FD8.v, gabi::ea(modelData), animation, false,
+        if (!bstInitAnimator(&bstBaseActor(address)->mpHbsitaBrkAnm.v, gabi::ea(modelData), animation, false,
                              zero))
             return FALSE;
         modelData = bstResource(dRes_INDEX_BST_BDL_HBYOKO1_e);
         created = BstBase_createModel(modelData, 0, 0x11020203);
-        bstBaseActor(address)->m2FDC.v = created;
+        bstBaseActor(address)->mpHbyokoModel.v = created;
         if (!created)
             return FALSE;
         controller = bstNewAnimator(false);
-        bstBaseActor(address)->m2FE0.v = controller;
+        bstBaseActor(address)->mpHbyokoBrkAnm.v = controller;
         if (!controller)
             return FALSE;
         animation = bstResource(dRes_INDEX_BST_BRK_HBYOKO1_e);
-        if (!bstInitAnimator(&bstBaseActor(address)->m2FE0.v, gabi::ea(modelData), animation, false,
+        if (!bstInitAnimator(&bstBaseActor(address)->mpHbyokoBrkAnm.v, gabi::ea(modelData), animation, false,
                              zero, 2))
             return FALSE;
     }
@@ -734,7 +734,7 @@ static BOOL useHeapInit(bst_class *i_this) {
     index = (u16)set_za_bdl[part];
     modelData = bstResource(index);
     created = BstBase_createModel(modelData, 0, 0x11020203);
-    bstBaseActor(address)->m02C8.v = created;
+    bstBaseActor(address)->mpPedestalModel.v = created;
     if (!created)
         return FALSE;
     controller = bstNewAnimator(true);
@@ -995,7 +995,7 @@ static s32 daBst_Create(bst_class *i_this) {
             bstBaseActor(address)->mHioSet = 1;
             bstBaseHioSet() = 1;
             // HD: localized HIO label is bound to the original guest string.
-            u8 child = BstBase_hioCreate("Gohdan", &bstBaseGlobals().m4);
+            u8 child = BstBase_hioCreate("デグアモス", &bstBaseGlobals().m4);
             bstBaseGlobals().m4 = child;
         }
         BstBase_acchSet(&bstBaseActor(address)->mAcch, &bstBaseActor(address)->current.pos,
@@ -1043,7 +1043,7 @@ static s32 daBst_Create(bst_class *i_this) {
                 u32 attachment =
                     BstBase_createActor(fpcNm_ATT_e, 100, &bstBaseActor(address)->current.pos, room,
                                         nullptr, nullptr, -1, nullptr);
-                bstBaseActor(address)->m2E90[i] = attachment;
+                bstBaseActor(address)->mEyeAttIds[i] = attachment;
             }
             for (u32 i = 0; i < 10; ++i) {
                 u32 sphere = gabi::ea(&bstBaseActor(address)->mCcD_beams[i]);
@@ -1057,7 +1057,7 @@ static s32 daBst_Create(bst_class *i_this) {
                 if (BstBase_dungeonItem(bstBaseStageBits(save), 5)) {
                     f32 one = (f32)(bstMoveConstants().mOne),
                         zero = (f32)(bstMoveConstants().mZero);
-                    bstBaseActor(address)->m2ED0 = one;
+                    bstBaseActor(address)->mRoomColorBlend = one;
                     cXyz center;
                     center.x = zero;
                     center.y = zero;
@@ -1069,7 +1069,7 @@ static s32 daBst_Create(bst_class *i_this) {
                     u32 emitter = BstBase_dPa_control_set(bstBaseAddress<void>(particles), 0,
                                                           0x81E9, &center, nullptr, nullptr, 255,
                                                           nullptr, -1, 0, nullptr, nullptr);
-                    bstBaseActor(address)->m2EF8.v = emitter;
+                    bstBaseActor(address)->mpStageEffEmitter.v = emitter;
                     u32 room = (u32)(bstBaseRoomPointer());
                     bstBaseAddress<BstBaseRoom>(room)->mBossClear = 1;
                 }
@@ -1091,7 +1091,7 @@ static s32 daBst_Create(bst_class *i_this) {
                          &bstBaseLighting(bstBaseActor(address)->mEnvLight));
     bstBaseActor(address)->mUpdateLastFacingDirIfMultipleOf32 = counter;
     bstCopyActorLighting(reinterpret_cast<BstBaseLighting *>(&bstBaseActor(address)->tevStr),
-                         &bstBaseLighting(bstBaseActor(address)->m2F20));
+                         &bstBaseLighting(bstBaseActor(address)->mBgTevStr));
     return phase;
 }
 
@@ -1238,9 +1238,9 @@ static bst_class *bstConstructor(bst_class *i_this) {
     BstBase_constructArray(&bstBaseActor(address)->mEyeSphs[0], 2, 0x12C,
                            BstBaseFunction::SphereConstructor);
     BstBase_smokeCtor(&bstBaseActor(address)->mPa_smokeEcallBack, 1);
-    bstCopyTevDefaults(&bstBaseLighting(bstBaseActor(address)->m2F20).mLight, defaults);
-    bstCopyTevDefaults(&bstBaseLighting(bstBaseActor(address)->m2F20).mHdLight1, defaults);
-    bstCopyTevDefaults(&bstBaseLighting(bstBaseActor(address)->m2F20).mHdLight2, defaults);
+    bstCopyTevDefaults(&bstBaseLighting(bstBaseActor(address)->mBgTevStr).mLight, defaults);
+    bstCopyTevDefaults(&bstBaseLighting(bstBaseActor(address)->mBgTevStr).mHdLight1, defaults);
+    bstCopyTevDefaults(&bstBaseLighting(bstBaseActor(address)->mBgTevStr).mHdLight2, defaults);
     return i_this;
 }
 
@@ -1258,7 +1258,7 @@ str 1000B868 in 020E5068
 str 1000B8FC in 020E7278
 str 1000B8F8 in 020E7190
 str 1000B904 in 020E7DC0
-str 1000B908 "Gohdan" renamed
+str 1000B908 "デグアモス"
 ext 025F7DB0 u32 BstBase_messageSet(void*,u32,void*)
 ext 0273AD10 void* BstBase_alloc(s32)
 ext 028F026C void BstBase_registerGlobalObject(void*)

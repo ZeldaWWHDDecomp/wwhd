@@ -111,18 +111,18 @@ void TAdaptor_light::adaptor_do_begin(const jst_adaptors::TObject* object) {
     f32 degrees=sDegreesPerRadian;
     auto* values=reinterpret_cast<jst_timeline::TVariableValue*>(mVariableValues.get());
     f32 yawDegrees=f32(yaw*degrees);
-    values[10].field_0x4=0;
-    values[10].field_0x8.v=gabi::guest_fn(reinterpret_cast<const void*>(&JStudioLight_immediate));
-    values[10].field_0xc.val=yawDegrees;
+    values[10].mAge=0;
+    values[10].mUpdate.v=gabi::guest_fn(reinterpret_cast<const void*>(&JStudioLight_immediate));
+    values[10].mParam.val=yawDegrees;
     values=reinterpret_cast<jst_timeline::TVariableValue*>(mVariableValues.get());
     f32 pitchDegrees=f32(pitch*degrees);
     if (transformed) {
-        values[11].field_0xc.val=pitchDegrees;
-        values[11].field_0x4=0;
-        values[11].field_0x8.v=gabi::guest_fn(reinterpret_cast<const void*>(&JStudioLight_immediate));
+        values[11].mParam.val=pitchDegrees;
+        values[11].mAge=0;
+        values[11].mUpdate.v=gabi::guest_fn(reinterpret_cast<const void*>(&JStudioLight_immediate));
     } else {
-        values[11].field_0x8.v=gabi::guest_fn(reinterpret_cast<const void*>(&JStudioLight_immediate));
-        values[11].field_0x4=0; values[11].field_0xc.val=pitchDegrees;
+        values[11].mUpdate.v=gabi::guest_fn(reinterpret_cast<const void*>(&JStudioLight_immediate));
+        values[11].mAge=0; values[11].mParam.val=pitchDegrees;
     }
     JStudioLight_addVec(vectors,vectors+1,&frame->target);
     JStudioLight_setVec(this,&sJStudioLightTargetIndices,&frame->target);
@@ -174,7 +174,7 @@ static void destroyLightDirections() {
 /* 028420E4 */
 jst_timeline::TVariableValue* JStudioLight_constructVariableValue(jst_timeline::TVariableValue* value) {
     if (!value) value=static_cast<jst_timeline::TVariableValue*>(JStudioLight_allocate(sizeof(*value)));
-    if (value) { value->field_0x4=0; value->field_0x8.v=0; JStudioLight_clear(&value->field_0xc,4); value->pOutput_=&sJStudioOutputNone; }
+    if (value) { value->mAge=0; value->mUpdate.v=0; JStudioLight_clear(&value->mParam,4); value->pOutput_=&sJStudioOutputNone; }
     return value;
 }
 

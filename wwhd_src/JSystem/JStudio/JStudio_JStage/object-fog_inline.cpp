@@ -17,7 +17,7 @@ static void destroyFogOutputs() {
 /* 02841814 */
 jst_timeline::TVariableValue* JStudioFogInline_constructVariableValue(jst_timeline::TVariableValue* value) {
     if (!value) value=static_cast<jst_timeline::TVariableValue*>(JStudioFogInline_allocate(sizeof(*value)));
-    if (value) { value->field_0x4=0; value->field_0x8.v=0; JStudioFogInline_clear(&value->field_0xc,4); value->pOutput_=&sJStudioOutputNone; }
+    if (value) { value->mAge=0; value->mUpdate.v=0; JStudioFogInline_clear(&value->mParam,4); value->pOutput_=&sJStudioOutputNone; }
     return value;
 }
 /* 02841878 */

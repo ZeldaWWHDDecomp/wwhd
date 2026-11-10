@@ -230,7 +230,7 @@ BOOL daNpcSv_c::_execute() {
         playAnm();
     }
     if (*ship != 0) {
-        mFrame = Sv_ship(*ship)->mAnimationFrame;
+        mFrame = Sv_ship(*ship)->mFrame;
     }
     mObjAcch.CrrPos(dComIfG_Bgsp());
     sSvNpcDat* dat = (&l_npc_dat[mNpcNo]);
@@ -312,7 +312,7 @@ void daNpcSv_c::executeWait() {
     }
 
     mTurnToTarget = 1;
-    s32 shipMode = Sv_view<SvShip>(ship)->mMode;
+    s32 shipMode = Sv_view<SvShip>(ship)->mCurMode;
     if (shipMode == 8 || shipMode == 9 || shipMode == 5) {
         mHeadOnly = 0;
         mLookAngleY = ship->shape_angle.y;
@@ -320,7 +320,7 @@ void daNpcSv_c::executeWait() {
         mLookMode = 2;
     } else if (shipMode == 4 || shipMode == 6) {
         s16 y = ship->shape_angle.y;
-        if (Sv_view<SvShip>(ship)->mCraneSide == 0) {
+        if (Sv_view<SvShip>(ship)->mSvDirection == 0) {
             mHeadOnly = 0;
             mLookAngleY = y + 0x4000;
         } else {
@@ -331,13 +331,13 @@ void daNpcSv_c::executeWait() {
         mLookMode = 2;
     } else {
         s16 target;
-        if (Sv_view<SvShip>(ship)->mCraneSide == 0) {
+        if (Sv_view<SvShip>(ship)->mSvDirection == 0) {
             target = (s16)(ship->shape_angle.y + 0x4000);
         } else {
             target = (s16)(ship->shape_angle.y - 0x4000);
         }
         if (current.angle.y == target) {
-            cXyz* p = &Sv_view<SvShip>(ship)->mRopeEndPos;
+            cXyz* p = &Sv_view<SvShip>(ship)->mCranePos;
             f32 x = p->x;
             f32 y = p->y;
             f32 z = p->z;
@@ -354,7 +354,7 @@ void daNpcSv_c::executeWait() {
             mLookMode = 2;
         }
     }
-    if (Sv_view<SvShip>(ship)->mMode == 7) {
+    if (Sv_view<SvShip>(ship)->mCurMode == 7) {
         if (mAttentionAnimationStarted == 0) {
             mAttentionAnimationStarted = 1;
             setAnmTbl(Sv_animation(l_npc_anm_sv1_tbl[1]));

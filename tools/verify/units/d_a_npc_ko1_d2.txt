@@ -19,7 +19,7 @@ field 02279FC0 r3+0xA0C u8 254 255
 field 02279FC0 r3+0xA17 i8 0 7
 # talk_2: partner count
 field 02279EF8 r3+0x92C u8 0 3
-# action functions: phase mA18, status mA13
+# action functions: phase mActionStatus, status mStatus
 field 0227A374 r3+0xA18 i8 -1 4
 field 0227A4DC r3+0xA18 i8 -1 4
 field 0227A60C r3+0xA18 i8 -1 4

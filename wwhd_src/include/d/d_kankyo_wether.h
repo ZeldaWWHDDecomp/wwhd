@@ -287,10 +287,10 @@ void weatherDestroyArray(u32, u32, u32, u32, u32, u32);
 f32 weatherSqrt(f32);
 void weatherClear(u32, u32);
 void weatherBindShader(u32, u32);
-void weatherDrawIndexed(u32, u32, u32, u32, u32, u32);
-void weatherSetGeometryUniforms(u32, u32, u32);
-void weatherSetPixelUniforms(u32, u32, u32);
-void weatherSetVertexUniforms(u32, u32, u32);
+void GX2DrawIndexedEx(u32, u32, u32, u32, u32, u32);
+void GX2SetGeometryUniformBlock(u32, u32, u32);
+void GX2SetPixelUniformBlock(u32, u32, u32);
+void GX2SetVertexUniformBlock(u32, u32, u32);
 
 // HD: packets add renderer, material and double-buffered geometry storage.
 namespace d_kankyo_wether_cpp {

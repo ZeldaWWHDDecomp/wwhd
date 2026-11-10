@@ -98,16 +98,16 @@ struct daNpc_P1_c : fopAc_ac_c {
     /* 0x69C */ dCcD_Cyl mCyl;
     /* 0x7CC */ u8 pad7CC;
     /* 0x7CD */ be<s8> mActionStatus;
-    /* 0x7CE */ be<s8> m65A;
+    /* 0x7CE */ be<s8> mExplainStep;  /* was m65A: minigameExplainCut 022B1C84: 0 starts message 0xFAD and steps to 1, 1 steps to 2, -1 holds; _execute 022B32B0 resets it to 0 outside events */
     /* 0x7CF */ be<u8> mType;
     /* 0x7D0 */ be<u8> mParam;
     /* 0x7D1 */ u8 _7D1[3];
     /* 0x7D4 */ be<u32> mCurrMesg;
     /* 0x7D8 */ be<u32> mPrevMesg;
     /* 0x7DC */ be<s32> mAnmNum;
-    /* 0x7E0 */ be<s32> m66C;
-    /* 0x7E4 */ be<u8> m670;
-    /* 0x7E5 */ be<u8> m671;
+    /* 0x7E0 */ be<s32> mAnmLoopCnt;  /* was m66C: setAnimFromMsg 022B22B8: 4/6 with anims 0xC/8, minus 1 per anim end, the follow-up anim starts at 0; kaji_anm 022B2830: 1-2 or 4 loops of anims 0xF/0xE; confuseAction 022B4764: counts loops to 3 before switching anim */
+    /* 0x7E4 */ be<u8> mbDemoActive;  /* was m670: demo_move 022B12FC: 1 while the demo actor exists (head/backbone locked), demo_end_init 022B1128 when it is gone resets it to 0; _execute 022B32B0 moves the actor itself only at 0 */
+    /* 0x7E5 */ be<u8> mbAtKaji;  /* was m671: _create 022B36A8: 1 only for type P1a with param 2 (backbone locked, mKajiId = getKajiID()); kaji_anm 022B2830, lookBack 022B2E70, normalAction 022B43EC: the helm (kaji) anims and look */
     /* 0x7E6 */ u8 _7E6[2];
     /* 0x7E8 */ be<u32> mKajiId;
     /* 0x7EC */ be<s16> mKajiTimer;

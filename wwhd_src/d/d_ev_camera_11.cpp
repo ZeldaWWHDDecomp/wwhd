@@ -64,9 +64,9 @@ static inline void copy3f(u32 destination, u32 source) {
 /* inlined into watchActorEvCamera */
 static inline void setDone(u32 c) {
     auto& camera = *at<dCamera_c>(c);
-    camera.m102 = 1;
-    camera.m101 = 1;
-    camera.m100 = 1;
+    camera.mStyleSettle2 = 1;
+    camera.mStyleSettle1 = 1;
+    camera.mStyleSettle0 = 1;
 }
 /* *dst = cSAngle(*a + *b) through temporaries */
 /* inlined into watchActorEvCamera */
@@ -157,7 +157,7 @@ static inline void searchStep(u32 st_, u32 diff, const s16* zero) {
 static inline u32 blend(u32 c, u32 w, u32 n) {
     auto& camera = *at<dCamera_c>(c);
     auto& work = *at<WatchActorWork>(w);
-    u32 t = camera.m11C;
+    u32 t = camera.mCurStyleTimer;
     if (t >= n) {
         setDone(c);
         return 1;
@@ -233,7 +233,7 @@ u32 WatchActorCamera_c::watchActorEvCamera() {
     }
     u32 w = gabi::ea(mWork);
     auto& work = *at<WatchActorWork>(w);
-    if (this->m11C == 0) {
+    if (this->mCurStyleTimer == 0) {
         gabi::Local<cXyz> def;
         u32 d = gabi::ea(def.get());
         f32 z = watchZero.z.get(), y = watchZero.y.get(), x = watchZero.x.get();
@@ -315,7 +315,7 @@ u32 WatchActorCamera_c::watchActorEvCamera() {
         directionAddress = gabi::ea(globe.get()), tp = gabi::ea(an.get());
     u32 searchDirectionAddress = gabi::ea(gl.get()), stepAddress = gabi::ea(step.get());
     if (mode == WATCH_NEAR) {
-        if (this->m11C == 0) {
+        if (this->mCurStyleTimer == 0) {
             ::attentionPos(cameraAddress, attentionAddress, this->mpPlayerActor.v.get());
             attentionPoint.get()->y = attentionPoint.get()->y + 10.0f;
             cXyz_mi(attentionAddress, deltaAddress, gabi::ea(&work.mCenter));
@@ -347,7 +347,7 @@ u32 WatchActorCamera_c::watchActorEvCamera() {
         return blend(cameraAddress, w, work.mNearTimer);
     }
     if (mode == WATCH_MIDDLE) {
-        if (this->m11C == 0) {
+        if (this->mCurStyleTimer == 0) {
             ::attentionPos(cameraAddress, attentionAddress, this->mpPlayerActor.v.get());
             cXyz_mi(attentionAddress, deltaAddress, gabi::ea(&work.mCenter));
             cSGlobe_ct(directionAddress, deltaAddress);
@@ -377,7 +377,7 @@ u32 WatchActorCamera_c::watchActorEvCamera() {
         return blend(cameraAddress, w, work.mFarTimer);
     }
     /* mode 3: jump */
-    if (this->m11C == 0) {
+    if (this->mCurStyleTimer == 0) {
         copy3(gabi::ea(&this->mViewCache.mCenter), gabi::ea(&work.mCenter));
         ::attentionPos(cameraAddress, attentionAddress, this->mpPlayerActor.v.get());
         cXyz_mi(attentionAddress, deltaAddress, gabi::ea(&work.mCenter));

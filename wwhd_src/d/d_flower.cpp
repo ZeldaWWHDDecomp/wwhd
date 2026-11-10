@@ -579,7 +579,7 @@ void* dFlower_packet_c__ct(void* self) {
     for (u32 i = 0; i < 6; ++i) {
         flowerIndexBufferSet(at<void>(geometry[i]), indexData[i], u32(4),
                              u32(flowerMeshCounts.mMeshes[i].mIndices));
-        at<flower::IndexBuffer>(geometry[i])->mIndexFormat = 4;
+        at<flower::IndexBuffer>(geometry[i])->mPrimitiveMode = 4;
     }
     u32 buffer = flowerInlineClear(groups[0], 0, 0x10E0);
     flowerVertices(at<flower::MaterialPart>(buffer)->mpVertices.get(),
@@ -1185,8 +1185,7 @@ static flower::ShapeGroup* flowerShaderRow(flower::ShapeGroups* descriptor, u32 
 static void flowerIndexedDraw(flower::IndexBuffer* geometry) {
     u32 count = geometry->mCount;
     if (count)
-        flowerGX2DrawIndexed(geometry->mIndexFormat, count, geometry->mPrimitive,
-                             geometry->mIndexType, u32(0), u32(1));
+        GX2DrawIndexedEx(geometry->mPrimitiveMode, count, geometry->mFormat, geometry->mStorage.v, u32(0), u32(1));
 }
 
 /* inlined into dFlower_packet_c::drawGraphics */
@@ -1861,7 +1860,7 @@ ext 028F4384 f32 flowerSquareRoot(f32 a0)
 ext 028F4384 f64 flowerSquareRoot(f64 a0)
 ext 028F521C void flowerClearUniformData(void* a0, u32 a1)
 ext C00060E0 void flowerGX2BindProgram(u32 a0, u32 a1)
-ext C0006178 void flowerGX2DrawIndexed(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5)
+ext C0006178 void GX2DrawIndexedEx(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5) # was flowerGX2DrawIndexed: build/gen/imports.json slot C0006178 = gx2 GX2DrawIndexedEx
 ext C00068A8 void flowerGX2GeometryUniform(s32 a0, u32 a1, u32 a2)
 ext C0006900 void flowerGX2PixelUniform(s32 a0, u32 a1, u32 a2)
 ext C0006A38 void flowerGX2VertexUniform(s32 a0, u32 a1, u32 a2)

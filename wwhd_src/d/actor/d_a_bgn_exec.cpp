@@ -22,47 +22,47 @@ static inline void bgn_demo_end(bgn_class *i_this, bgn_exec::Camera *cam) {
     bgn_camera_Start(cam);
     bgn_dMeter_mtrShow();
     dComIfGp_event_reset();
-    i_this->mCA60 = 1;
+    i_this->mBlurRate = 1;
     i_this->mCSMode = 0;
 }
 
 // Defeat cutscene rope; keep the explicit guest word copies and scratch-vector order.
 /* inlined into daBgn_Execute */
 static inline void last_himo_control(bgn_class *i_this) {
-    i_this->mC450[0].x = -15.0f;
-    i_this->mC450[0].y = gabi::fadds_ppc(REG_F(8, 4), 4441.46f);
-    i_this->mC450[0].z = gabi::fadds_ppc(REG_F(8, 3), 375.17f);
+    i_this->mLastHimoPos[0].x = -15.0f;
+    i_this->mLastHimoPos[0].y = gabi::fadds_ppc(REG_F(8, 4), 4441.46f);
+    i_this->mLastHimoPos[0].z = gabi::fadds_ppc(REG_F(8, 3), 375.17f);
     auto *lines = gabi::at<bgn_exec::Line>(i_this->mDefeatCSRopeMat.mpLines);
     u32 pcVar8 = lines->mpPos; // HD: guest word view retains bit-exact vector copies.
     u32 puVar8 = lines->mpSize;
     *gabi::at<be<u8>>(puVar8) = 10;
-    auto *c0 = bgn_exec::words(&i_this->mC450[0]);
+    auto *c0 = bgn_exec::words(&i_this->mLastHimoPos[0]);
     gabi::at<bgn_exec::Words>(pcVar8)->x = (u32)c0->x;
     gabi::at<bgn_exec::Words>(pcVar8)->y = (u32)c0->y;
     gabi::at<bgn_exec::Words>(pcVar8)->z = (u32)c0->z;
     gabi::Local<cXyz> local_a8;
     gabi::Local<cXyz> local_b4;
     f32 c724;
-    if (i_this->mC720 == 1) {
-        i_this->mC720 = 2;
+    if (i_this->mLastHimoState == 1) {
+        i_this->mLastHimoState = 2;
         for (s32 i = 0; i < 59; i++) {
-            auto *d = bgn_exec::words(&i_this->mC450[1 + i]);
+            auto *d = bgn_exec::words(&i_this->mLastHimoPos[1 + i]);
             d->x = (u32)c0->x;
             d->y = (u32)c0->y;
             d->z = (u32)c0->z;
         }
         c724 = gabi::fadds_ppc(REG0_F(19), 5000.0f);
-        i_this->mC724 = c724;
+        i_this->mLastHimoSway = c724;
     } else {
-        cLib_addCalc0(&i_this->mC724, 1.0f, REG0_F(18) + 50.0f);
-        c724 = i_this->mC724;
+        cLib_addCalc0(&i_this->mLastHimoSway, 1.0f, REG0_F(18) + 50.0f);
+        c724 = i_this->mLastHimoSway;
     }
     local_a8->x = 0.0f;
     local_a8->y = 0.0f;
     local_a8->z = gabi::fadds_ppc(REG0_F(12), 45.0f);
     s16 k = 0;
     s16 j = 0;
-    cXyz *pcVar5 = &i_this->mC450[1];
+    cXyz *pcVar5 = &i_this->mLastHimoPos[1];
     cXyz *out = gabi::at<cXyz>(pcVar8 + sizeof(cXyz));
     be<u8> *size = gabi::at<be<u8>>(puVar8 + 1);
     for (s32 i = 1; i < 60; i++, pcVar5++, out++, size++) {
@@ -71,7 +71,7 @@ static inline void last_himo_control(bgn_class *i_this) {
         f32 z = gabi::fsubs_ppc(pcVar5->z, pcVar5[-1].z);
         f32 x = gabi::fsubs_ppc(pcVar5->x, pcVar5[-1].x);
         if (c724 > 0.01f) {
-            s16 c746 = i_this->mC746;
+            s16 c746 = i_this->mFrameCounter;
             k = (s16)gabi::ftoi(
                 gabi::fmuls_ppc(cM_ssin(c746 * 2000 + i * (REG0_S(3) + 2000)), c724));
             j = (s16)gabi::ftoi(
@@ -95,20 +95,20 @@ static inline void last_himo_control(bgn_class *i_this) {
         out->y = pcVar5->y;
         out->z = nz;
         *size = 10;
-        c724 = i_this->mC724;
+        c724 = i_this->mLastHimoSway;
     }
 }
 
 /* 0207E7B4 */
 // HD: demo_camera and bomb_splash_check are inlined; move is an out-of-line call.
 // The transformation and defeat no longer go through
-// l_HIO.m024 (m02B5 is set directly; the final event bit is set when the explosion starts); the
+// l_HIO.m024 (mForm is set directly; the final event bit is set when the explosion starts); the
 // first cut scene shows thunder particles around Link at five fixed frames and zooms in from frame
-// REG18_S(6) + 450, Link looks up at frame 313 (GameCube 320); the cut scenes count mCA60 down; two
+// REG18_S(6) + 450, Link looks up at frame 313 (GameCube 320); the cut scenes count mBlurRate down; two
 // debug reports.
 BOOL daBgn_Execute(bgn_class *i_this) {
     fopAc_ac_c *actor = i_this;
-    if (i_this->m02B4 == 0xFF)
+    if (i_this->mParam == 0xFF)
         return TRUE;
     dComIfGp_get();
     settingTevStruct(dKy_getEnvlight(), bgn_exec::TEV_TYPE_BG2, bgn_exec::center_pos(),
@@ -118,29 +118,29 @@ BOOL daBgn_Execute(bgn_class *i_this) {
     bgn3_g() = gabi::ea(fpcM_Search(bgn_exec::bgn3_s_sub, i_this));
     if (l_HIO().m027 != 0)
         actor->health = l_HIO().m027;
-    if (i_this->mCC90 == 1) {
-        i_this->mCC90 = 0;
-        i_this->m02B5 = 2;
+    if (i_this->mFormRequest == 1) {
+        i_this->mFormRequest = 0;
+        i_this->mForm = 2;
     }
-    i_this->mC746 = (s16)(i_this->mC746 + 1);
+    i_this->mFrameCounter = (s16)(i_this->mFrameCounter + 1);
     for (s32 i = 0; i < 5; i++) {
-        if (i_this->mC7AC[i] != 0)
-            i_this->mC7AC[i] = (s16)(i_this->mC7AC[i] - 1);
+        if (i_this->mTimers[i] != 0)
+            i_this->mTimers[i] = (s16)(i_this->mTimers[i] - 1);
     }
-    if (i_this->mC7B6 != 0)
-        i_this->mC7B6 = (s16)(i_this->mC7B6 - 1);
-    if (i_this->mC7B8 != 0)
-        i_this->mC7B8 = (s16)(i_this->mC7B8 - 1);
+    if (i_this->mDamageTimer != 0)
+        i_this->mDamageTimer = (s16)(i_this->mDamageTimer - 1);
+    if (i_this->mPartHitSeTimer != 0)
+        i_this->mPartHitSeTimer = (s16)(i_this->mPartHitSeTimer - 1);
     if (i_this->mArrowHitFlashTimer != 0)
         i_this->mArrowHitFlashTimer = (s16)(i_this->mArrowHitFlashTimer - 1);
-    if (i_this->m0304 != 0)
-        i_this->m0304 = (s16)(i_this->m0304 - 1);
-    if (i_this->m0302 != 0) {
-        s16 t = (s16)(i_this->m0302 + 1);
+    if (i_this->mRippleSeTimer != 0)
+        i_this->mRippleSeTimer = (s16)(i_this->mRippleSeTimer - 1);
+    if (i_this->mCoreHitFrame != 0) {
+        s16 t = (s16)(i_this->mCoreHitFrame + 1);
         if (t > 100)
-            i_this->m0302 = 0;
+            i_this->mCoreHitFrame = 0;
         else
-            i_this->m0302 = t;
+            i_this->mCoreHitFrame = t;
     }
     bgn_exec_move(i_this);
 
@@ -167,7 +167,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             bgn_camera_Stop(cam);
             bgn_camera_SetTrimSize(cam, 2);
             i_this->mKSubCount = 0;
-            auto *src = bgn_exec::words(&i_this->mC308);
+            auto *src = bgn_exec::words(&i_this->mBodyPos);
             auto *dst = bgn_exec::words(&i_this->mCSCamCenter);
             u32 cy = (u32)src->y;
             u32 cx = (u32)src->x;
@@ -176,17 +176,17 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             u32 cz = (u32)src->z;
             dst->y = cy;
             dst->z = cz;
-            i_this->mCA98 = 0.0f;
+            i_this->mCalcSpeed = 0.0f;
             gabi::at<bgn_exec::Player>(player)->mDemo.mParam0 = 0; /* changeOriginalDemo */
             gabi::at<bgn_exec::Player>(player)->mDemo.mDemoType = bgn_exec::TYPE_ORIGINAL_e;
             fpcM_Search(bgn_exec::ki_del_sub, i_this);
             i_this->mKeeseSpawnNum = 0;
-            i_this->mCA60 = 0xB3;
-        } else if (i_this->mCA60 > 1) {
-            i_this->mCA60 = (s16)(i_this->mCA60 - 1);
+            i_this->mBlurRate = 0xB3;
+        } else if (i_this->mBlurRate > 1) {
+            i_this->mBlurRate = (s16)(i_this->mBlurRate - 1);
         }
         {
-            cMtx_YrotS(calc_mtx(), i_this->mC314.y);
+            cMtx_YrotS(calc_mtx(), i_this->mBodyAngle.y);
             local_44->y = gabi::fadds_ppc(REG0_F(1), 100.0f);
             local_44->x = gabi::fadds_ppc(REG0_F(0), 200.0f);
             local_44->z = gabi::fadds_ppc(REG0_F(2), 2000.0f);
@@ -196,16 +196,16 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             e->y = (u32)bgn_exec::words(local_50.get())->y;
             e->z = (u32)bgn_exec::words(local_50.get())->z;
             f32 step = i_this->mKSubCount > 300 ? 0.1f : 0.5f;
-            cLib_addCalc2(&i_this->mCSCamCenter.x, i_this->mC308.x, 0.1f, 300.0f);
+            cLib_addCalc2(&i_this->mCSCamCenter.x, i_this->mBodyPos.x, 0.1f, 300.0f);
             cLib_addCalc2(&i_this->mCSCamCenter.y,
-                          gabi::fadds_ppc(gabi::fadds_ppc(i_this->mC308.y, 100.0f), REG0_F(3)),
+                          gabi::fadds_ppc(gabi::fadds_ppc(i_this->mBodyPos.y, 100.0f), REG0_F(3)),
                           step, 400.0f);
-            cLib_addCalc2(&i_this->mCSCamCenter.z, i_this->mC308.z, 0.1f, 300.0f);
+            cLib_addCalc2(&i_this->mCSCamCenter.z, i_this->mBodyPos.z, 0.1f, 300.0f);
             local_44->x = REG0_F(4);
             local_44->y = pl->current.pos.y;
             local_44->z = gabi::fadds_ppc(REG0_F(5), 1500.0f);
             MtxPosition(local_44, local_50);
-            bgn_setPlayerPosAndAngle(player, local_50, (s16)(i_this->mC314.y + 0x8000));
+            bgn_setPlayerPosAndAngle(player, local_50, (s16)(i_this->mBodyAngle.y + 0x8000));
             if (i_this->mKSubCount == (s16)(REG0_S(5) + 220))
                 gabi::at<bgn_exec::Player>(player)->mDemo.mDemoMode = bgn_exec::DEMO_UNK_029_e;
             if (i_this->mKSubCount == (s16)(REG0_S(6) + 313))
@@ -233,7 +233,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
                       gabi::fadds_ppc(bgn_exec::bgn2()->current.pos.y, REG0_F(13)), 0.1f, 200.0f);
         cLib_addCalc2(&i_this->mCSCamCenter.z, bgn_exec::bgn2()->current.pos.z, 0.1f, 100.0f);
         if (i_this->mKSubCount == (s16)(REG0_S(7) + 90))
-            i_this->mCA9C = gabi::fadds_ppc(REG0_F(18), 30.0f);
+            i_this->mCSCamShake = gabi::fadds_ppc(REG0_F(18), 30.0f);
         if (i_this->mKSubCount == (s16)(REG0_S(7) + 100)) {
             auto *vt = gabi::at<bgn_exec::PlayerVtable>(gabi::at<bgn_exec::Player>(player)->__vtbl);
             gabi::at<bgn_exec::Player>(player)->mDemo.mDemoMode =
@@ -250,7 +250,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
                 mDoAud_seStart(bgn_exec::JA_SE_CM_BGN_T_MOUSE_CLOSE, nullptr, 0,
                                dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
         }
-        cLib_addCalcAngleS2(&i_this->mCA60, 1, 1, 1);
+        cLib_addCalcAngleS2(&i_this->mBlurRate, 1, 1, 1);
         if (i_this->mKSubCount > (s16)(REG0_S(8) + 200)) {
             mDoAud_bgmStart(bgn_exec::JA_BGM_BGN_TARABA);
             bgn_demo_end(i_this, cam);
@@ -270,7 +270,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             bgn_camera_SetTrimSize(cam, 2);
             i_this->mKSubCount = 0;
             i_this->mCSFovY = 55.0f;
-            i_this->mCA98 = 0.0f;
+            i_this->mCalcSpeed = 0.0f;
             auto *src = bgn_exec::words(&bgn_exec::bgn2()->current.pos);
             auto *dst = bgn_exec::words(&i_this->mCSCamCenter);
             dst->x = (u32)src->x;
@@ -280,20 +280,20 @@ BOOL daBgn_Execute(bgn_class *i_this) {
                 bgn_exec::TYPE_ORIGINAL_e; /* changeOriginalDemo */
             gabi::at<bgn_exec::Player>(player)->mDemo.mParam0 = 0;
             fpcM_Search(bgn_exec::ki_del_sub, i_this);
-            gabi::at<bgn_exec::Phase2>(bgn2_g())->m2ED0 = 0;
-            i_this->mCA74.x = 200.0f;
-            i_this->mCA74.y = 2100.0f;
-            i_this->mCA60 = 0xB3;
-            i_this->mCA74.z = 2500.0f;
-        } else if (i_this->mCA60 > 1) {
-            i_this->mCA60 = (s16)(i_this->mCA60 - 1);
+            gabi::at<bgn_exec::Phase2>(bgn2_g())->mKiSetCount = 0;
+            i_this->mCSCamEyeOffset.x = 200.0f;
+            i_this->mCSCamEyeOffset.y = 2100.0f;
+            i_this->mBlurRate = 0xB3;
+            i_this->mCSCamEyeOffset.z = 2500.0f;
+        } else if (i_this->mBlurRate > 1) {
+            i_this->mBlurRate = (s16)(i_this->mBlurRate - 1);
         }
-        cLib_addCalc2(&i_this->mCA74.x, -1800.0f, 0.05f, gabi::fmuls_ppc(2000.0f, i_this->mCA98));
-        cLib_addCalc2(&i_this->mCA74.y, 1100.0f, 0.05f, gabi::fmuls_ppc(1000.0f, i_this->mCA98));
-        cLib_addCalc2(&i_this->mCA74.z, 1000.0f, 0.05f, gabi::fmuls_ppc(1500.0f, i_this->mCA98));
-        cLib_addCalc2(&i_this->mCA98, 0.01f, 1.0f, 0.0001f);
+        cLib_addCalc2(&i_this->mCSCamEyeOffset.x, -1800.0f, 0.05f, gabi::fmuls_ppc(2000.0f, i_this->mCalcSpeed));
+        cLib_addCalc2(&i_this->mCSCamEyeOffset.y, 1100.0f, 0.05f, gabi::fmuls_ppc(1000.0f, i_this->mCalcSpeed));
+        cLib_addCalc2(&i_this->mCSCamEyeOffset.z, 1000.0f, 0.05f, gabi::fmuls_ppc(1500.0f, i_this->mCalcSpeed));
+        cLib_addCalc2(&i_this->mCalcSpeed, 0.01f, 1.0f, 0.0001f);
         cMtx_YrotS(calc_mtx(), bgn_exec::bgn2()->shape_angle.y);
-        MtxPosition(&i_this->mCA74, local_50);
+        MtxPosition(&i_this->mCSCamEyeOffset, local_50);
         auto *e = bgn_exec::words(&i_this->mCSCamEye);
         e->x = (u32)bgn_exec::words(local_50.get())->x;
         e->y = (u32)bgn_exec::words(local_50.get())->y;
@@ -320,7 +320,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             cLib_addCalc2(&i_this->mCSCamCenter.z, bgn_exec::bgn3()->current.pos.z, 0.1f, 300.0f);
             cLib_addCalc2(&i_this->mCSFovY, gabi::fadds_ppc(REG0_F(17), 30.0f),
                           gabi::fadds_ppc(REG0_F(18), 0.05f), gabi::fadds_ppc(REG0_F(19), 0.2f));
-            cLib_addCalcAngleS2(&i_this->mCA60, 1, 1, 2);
+            cLib_addCalcAngleS2(&i_this->mBlurRate, 1, 1, 2);
         }
         if (i_this->mKSubCount > (s16)(REG0_S(9) + 370))
             bgn_demo_end(i_this, cam);
@@ -338,7 +338,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             bgn_camera_SetTrimSize(cam, 2);
             i_this->mKSubCount = 0;
             i_this->mCSFovY = 55.0f;
-            i_this->mCA98 = 0.0f;
+            i_this->mCalcSpeed = 0.0f;
             auto *src = bgn_exec::words(&bgn_exec::bgn3()->current.pos);
             auto *dst = bgn_exec::words(&i_this->mCSCamCenter);
             dst->x = (u32)src->x;
@@ -347,11 +347,11 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             gabi::at<bgn_exec::Player>(player)->mDemo.mDemoType =
                 bgn_exec::TYPE_ORIGINAL_e; /* changeOriginalDemo */
             gabi::at<bgn_exec::Player>(player)->mDemo.mParam0 = 0;
-            i_this->mCA60 = 0xB4;
+            i_this->mBlurRate = 0xB4;
             fpcM_Search(bgn_exec::ki_del_sub, i_this);
             fpcM_Search(bgn_exec::ks_del_sub, i_this);
         }
-        cLib_addCalcAngleS2(&i_this->mCA60, 1, 1, 1);
+        cLib_addCalcAngleS2(&i_this->mBlurRate, 1, 1, 1);
         i_this->mCSCamEye.x = 500.0f;
         i_this->mCSCamEye.y = gabi::fadds_ppc(REG0_F(3), 500.0f);
         i_this->mCSCamEye.z = gabi::fadds_ppc(REG0_F(4), 2000.0f);
@@ -387,11 +387,11 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             up->y = 1.0f;
             up->z = 0.0f;
             StartShock(vib, REG0_S(2) + 8, -0x21, up);
-            i_this->m02B5 = 3;
+            i_this->mForm = 3;
             dComIfGs_onEventBit(bgn_exec::UNK_3F10);
             s8 mode = (s8)(i_this->mCSMode + 1);
-            i_this->mC720 = 1;
-            i_this->mCA60 = 0xB4;
+            i_this->mLastHimoState = 1;
+            i_this->mBlurRate = 0xB4;
             i_this->mCSMode = mode;
         }
         break;
@@ -400,7 +400,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
         if (i_this->mKSubCount >= 390)
             last_himo_control(i_this);
         if (i_this->mKSubCount >= (s16)(REG_S(8, 7) + 500))
-            i_this->mCC90 = 2;
+            i_this->mFormRequest = 2;
         break;
     case 150:
         bgn_demo_end(i_this, cam);
@@ -411,7 +411,7 @@ BOOL daBgn_Execute(bgn_class *i_this) {
     if (accepted) {
         if (i_this->mCSMode != 0) {
             s16 n = i_this->mKSubCount;
-            f32 ca9c = i_this->mCA9C;
+            f32 ca9c = i_this->mCSCamShake;
             f32 fx = gabi::fmuls_ppc(cM_ssin(n * 0x3300), ca9c);
             f32 fy = gabi::fmuls_ppc(cM_scos(n * 0x3000), ca9c);
             gabi::Local<cXyz> camera_center;
@@ -421,12 +421,12 @@ BOOL daBgn_Execute(bgn_class *i_this) {
             camera_eye->y = gabi::fadds_ppc(i_this->mCSCamEye.y, fy);
             camera_center->y = gabi::fadds_ppc(i_this->mCSCamCenter.y, fy);
             s16 bank = (s16)gabi::ftoi(
-                gabi::fmuls_ppc(gabi::fmuls_ppc(cM_scos(i_this->mC746 * 0x1C00), ca9c), 7.5f));
+                gabi::fmuls_ppc(gabi::fmuls_ppc(cM_scos(i_this->mFrameCounter * 0x1C00), ca9c), 7.5f));
             f32 fovy = i_this->mCSFovY;
             camera_eye->z = i_this->mCSCamEye.z;
             camera_center->z = i_this->mCSCamCenter.z;
             bgn_camera_Set(cam, camera_center, camera_eye, bank, fovy);
-            cLib_addCalc0(&i_this->mCA9C, 1.0f, gabi::fadds_ppc(REG0_F(16), 1.0f));
+            cLib_addCalc0(&i_this->mCSCamShake, 1.0f, gabi::fadds_ppc(REG0_F(16), 1.0f));
             bgn_JUTReport(30, 420, "K SUB  COUNT  %d", i_this->mKSubCount);
             bgn_JUTReport(30, 440, "K DEMO MODE   %d", i_this->mCSMode);
             i_this->mKSubCount = (s16)(i_this->mKSubCount + 1);
@@ -448,8 +448,8 @@ BOOL daBgn_Execute(bgn_class *i_this) {
                           nullptr, nullptr, -1, 0);
         }
     }
-    if (i_this->mCC90 == 2) {
-        i_this->mCC90 = 0;
+    if (i_this->mFormRequest == 2) {
+        i_this->mFormRequest = 0;
         bgn_setNextStage("GanonK", 4, 0, 9, 0.0f, 0, 1, 0);
     }
     return TRUE;

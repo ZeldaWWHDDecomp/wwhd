@@ -58,23 +58,23 @@ void dCamera_c::initPad() {
     mStickCPosYLast = PORT_CAMERA_F(0x0250074C, this, CPad_GET_SUBSTICK_POS_Y(mPadId)); /* the port's camera controls (port_hooks.h) */
     f32 cv = CPad_GET_SUBSTICK_VALUE(mPadId);
     mStickCPosYDelta = 0.0f;
-    m18C = 0;
-    m188 = 0;
+    mCStickUpLatch = 0;
+    mCStickYHoldCount = 0;
     mStickCPosXDelta = 0.0f;
     mStickCValueDelta = 0.0f;
     mStickCValueLast = cv;
-    m184 = 0;
+    mCStickYState = 0;
     f32 l = CPad_GET_ANALOG_L(mPadId);
     mTriggerLeftDelta = 0.0f;
-    m19A = 0;
+    mLockLActive = 0;
     mTrigLockL = 0;
-    m19B = 0;
+    mLockLJustActivated = 0;
     mHoldLockL = 0;
     mTriggerLeftLast = l;
     f32 r = CPad_GET_ANALOG_R(mPadId);
-    m1A6 = 0;
+    mLockRActive = 0;
     mTriggerRightDelta = 0.0f;
-    m1A7 = 0;
+    mLockRJustActivated = 0;
     mHoldLockR = 0;
     mTrigLockR = 0;
     mTriggerRightLast = r;
@@ -91,7 +91,7 @@ void dCamera_c::initPad() {
 }
 
 /* 024F9BF4 */
-/* HD: the C stick X is negated; the trigger-edge bytes are m19B = m19A ^ 1 */
+/* HD: the C stick X is negated; the trigger-edge bytes are mLockLJustActivated = mLockLActive ^ 1 */
 void dCamera_c::updatePad() {
     f32 x, y, v;
     gabi::Local<cSAngle_l> unused;
@@ -147,11 +147,11 @@ void dCamera_c::updatePad() {
     mHoldLockL = mDoCPd_L_LOCK_BUTTON(mPadId);
     mTrigLockL = mDoCPd_L_LOCK_TRIGGER(mPadId);
     if (mTriggerLeftLast > cameraUtilSetup(this)->ManualEndVal() /* mCamSetup.ManualEndVal() */) {
-        m19B = m19A ^ 1;
-        m19A = 1;
+        mLockLJustActivated = mLockLActive ^ 1;
+        mLockLActive = 1;
     } else {
-        m19B = 0;
-        m19A = 0;
+        mLockLJustActivated = 0;
+        mLockLActive = 0;
     }
     f32 r = CPad_GET_ANALOG_R(mPadId);
     f32 lastR = mTriggerRightLast;
@@ -160,11 +160,11 @@ void dCamera_c::updatePad() {
     mHoldLockR = mDoCPd_R_LOCK_BUTTON(mPadId);
     mTrigLockR = mDoCPd_R_LOCK_TRIGGER(mPadId);
     if (mTriggerRightLast > cameraUtilSetup(this)->ManualEndVal()) {
-        m1A7 = m1A6 ^ 1;
-        m1A6 = 1;
+        mLockRJustActivated = mLockRActive ^ 1;
+        mLockRActive = 1;
     } else {
-        m1A7 = 0;
-        m1A6 = 0;
+        mLockRJustActivated = 0;
+        mLockRActive = 0;
     }
     mHoldX = CPad_CHECK_HOLD_X(mPadId);
     mTrigX = CPad_CHECK_TRIG_X(mPadId);
@@ -196,7 +196,7 @@ void dCamera_c::updateMonitor() {
     if (mpPlayerActor.get() == nullptr) return;
     gabi::Local<cXyz> playerPos;
     positionOf(playerPos, mpPlayerActor.get());
-    if (m31D != 0) {
+    if (mFollowMoveBg != 0) {
         /* dComIfG_Bgsp()->MoveBgMatrixCrrPos(mBG.m5C.m04 (poly info), TRUE, &mMonitor.mPos, NULL, NULL) */
         cameraUtilMoveBgMatrixCrrPos(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), TRUE, &mMonitor.mPos, nullptr, nullptr);
     }
@@ -207,7 +207,7 @@ void dCamera_c::updateMonitor() {
     mMonitor.field_0x0C.y = gabi::fmadds(dist - avg, 0.075f, avg);
     mMonitor.field_0x0C.x = dist;
     mMonitor.mPos.copy(*playerPos);
-    if (m144 == 0 && cameraUtilButtonHold(0) == 0 /* no button held on pad 0 */ &&
+    if (mManualInactive == 0 && cameraUtilButtonHold(0) == 0 /* no button held on pad 0 */ &&
         mStickMainValueLast < 0.05f && mStickCValueLast < 0.05f) {
         mMonitor.field_0x18 = mMonitor.field_0x18 + 1;
     } else {
@@ -247,15 +247,15 @@ bool dCamera_c::Draw() {
 
 /* 024FC108 */
 /* HD: the blur fades in over the first 5 frames (rate 255 * alpha - (5 - timer) * 25),
- * the blur position is the player's projected eye in 1280x720; m544/m548 patterns are 5 bytes */
+ * the blur position is the player's projected eye in 1280x720; mShakePattern/mShakeCyclePattern patterns are 5 bytes */
 f32 dCamera_c::shakeCamera() {
     f32 res = 0.0f;
-    s32 pos = m554;
-    if (pos < m550) {
+    s32 pos = mShakeFrame;
+    if (pos < mShakeLength) {
         s32 idx = pos >> 3;
-        auto* pattern = reinterpret_cast<CameraUtilShakePatternHD*>(&m548[1]);
-        u32 hi = pattern->m548[idx]; /* m548[idx] */
-        u32 lo = pattern->m548[idx + 1];
+        auto* pattern = reinterpret_cast<CameraUtilShakePatternHD*>(&mShakeCyclePattern[1]);
+        u32 hi = pattern->mShakeCyclePattern[idx]; /* mShakeCyclePattern[idx] */
+        u32 lo = pattern->mShakeCyclePattern[idx + 1];
         u32 bits = (hi << 8) | lo;
         s32 mask = 1 << (15 - (pos & 7));
         f32 amp = 1.0f;
@@ -267,35 +267,35 @@ f32 dCamera_c::shakeCamera() {
             }
             mask >>= 1;
         }
-        m554 = pos + 1;
+        mShakeFrame = pos + 1;
         f32 r = cM_rndFX(0.05f);
         res = gabi::fmuls_ppc(res, r + 0.95f);
-        if (m554 & 1) res = -res;
+        if (mShakeFrame & 1) res = -res;
         gabi::Local<cXyz> v, out;
-        f32 x = m55C.x;
-        reinterpret_cast<CameraUtilPointWordsHD*>(v.get())->z = reinterpret_cast<CameraUtilPointWordsHD*>(&m55C)->z;
-        reinterpret_cast<CameraUtilPointWordsHD*>(v.get())->y = reinterpret_cast<CameraUtilPointWordsHD*>(&m55C)->y;
+        f32 x = mShakeDirection.x;
+        reinterpret_cast<CameraUtilPointWordsHD*>(v.get())->z = reinterpret_cast<CameraUtilPointWordsHD*>(&mShakeDirection)->z;
+        reinterpret_cast<CameraUtilPointWordsHD*>(v.get())->y = reinterpret_cast<CameraUtilPointWordsHD*>(&mShakeDirection)->y;
         v->x = x + cM_rndFX(0.045f);
         f32 rz = cM_rndFX(0.045f);
         v->z = v->z + rz;
         cXyz_ml(v, out, res);
         v->copy(*out);
-        u32 flags = m588;
+        u32 flags = mShakeFlags;
         if (flags & SHAKE_POSITION) {
             mEyeShake.copy(*v);
             mCenterShake.copy(*v);
-            flags = m588;
+            flags = mShakeFlags;
         }
         if (flags & SHAKE_FOVY) {
             f32 rr = cM_rndFX(0.12f);
             mFovYShake = res * rr;
-            flags = m588;
+            flags = mShakeFlags;
         }
         if (flags & SHAKE_BANK) {
             gabi::Local<cSAngle_l> a;
             f32 rr = cM_rndFX(0.15f);
             cSAngle_l* b = cameraUtilAngleDegrees(a.get(), res * rr);
-            flags = m588;
+            flags = mShakeFlags;
             mBankShake = (s16)*b;
         }
         if (flags & SHAKE_BLURE_RATE) {
@@ -316,7 +316,7 @@ f32 dCamera_c::shakeCamera() {
             s32 timer = mBlureTimer;
             if (timer > 0) {
                 mBlureTimer = timer - 1;
-            } else if (m58C == 1) {
+            } else if (mBlureType == 1) {
                 return res;
             }
             blureMtx(this);
@@ -342,17 +342,17 @@ f32 dCamera_c::shakeCamera() {
         s32 timer = mBlureTimer;
         if (timer <= 0) {
             gabi::at<CameraUtilGraphicsHD>(0x101F4825)->mBlure = 0; /* mDoGph_gInf_c::offBlure() */
-            m588 = m588 & ~SHAKE_BLURE_MATRIX;
+            mShakeFlags = mShakeFlags & ~SHAKE_BLURE_MATRIX;
             mBlureTimer = 0;
         } else {
-            if (m58C == 1) {
+            if (mBlureType == 1) {
                 blureMtx(this);
                 s32 rate = gabi::ftoi(230.0f * mBlureAlpha);
                 mDoMtx_stack_scaleM(mBlureScale.x, mBlureScale.y, mBlureScale.z);
                 setBlureRate(rate);
                 timer = mBlureTimer;
             }
-            if (gabi::ftoi(230.0f * mBlureAlpha) > timer && m58C == 0) {
+            if (gabi::ftoi(230.0f * mBlureAlpha) > timer && mBlureType == 0) {
                 setBlureRate(timer);
                 timer = mBlureTimer;
             }

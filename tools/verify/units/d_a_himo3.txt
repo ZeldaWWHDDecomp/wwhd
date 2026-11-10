@@ -53,7 +53,7 @@ field * 54005138 u32 0x6f6f6d00,0x75450000,0x6e4b0000,0x6f000000
 stable 54005134 8
 field 021727D4 r3+0x3B4 u8 0,1,0xF
 field 021727D4 r3+0x245A u8 0,1
-stable 40001828 4                   # m15C0: callees never resize the rope (keeps the loops bounded under clobbering)
+stable 40001828 4                   # mSegmentNum: callees never resize the rope (keeps the loops bounded under clobbering)
 
 # Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
 # @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to

@@ -28,10 +28,10 @@ stable 15000000 0x100
 stable 10000000 0x100
 arg 020B17EC r3 0,0x40000000
 arg 020B1CB4 r3 0,0x40000000
-field 020AEA94 r4+0x426 i16 0,3,3,1     # m304
+field 020AEA94 r4+0x426 i16 0,3,3,1     # mFlowerState
 field 020AEA94 r5+8 i16 0xA8,0xA8,1     # rider's process name (player 0xA8)
-field 020AE30C r3+0xC92 i16 -1,0,1,2,150   # mB72 blur
-field 020AE30C r3+0x428 i16 0,99,100,109,110 # m306
+field 020AE30C r3+0xC92 i16 -1,0,1,2,150   # mBlurRate blur
+field 020AE30C r3+0x428 i16 0,99,100,109,110 # mCoreMode
 callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
 callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
 callee 028E8D88 r3=12 r4=12          # PSVECAdd

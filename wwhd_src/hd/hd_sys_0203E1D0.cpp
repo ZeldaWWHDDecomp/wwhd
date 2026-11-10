@@ -137,7 +137,7 @@ static hdProfileTask* constructProfileTask(hdProfileTask* i_this, hdTaskConstruc
         }
     }
     hdProfileConstructTaskBase(task, argument, STR(0x1000621C));
-    task->field_0x70 = 0x10006230;
+    task->mSecondaryVtable = 0x10006230;
     task->mTaskVtable = 0x100062E8;
     task->mInstanceGuard.mOwnsInstance = 0;
     return task;

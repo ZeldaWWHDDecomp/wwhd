@@ -33,26 +33,26 @@ static void kumi_attack(bst_class* actor) {
     cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 10, 0x200);
     f32 one = 1.0f, ten = 10.0f;
     f32 thirty = 30.0f;
-    cLib_addCalc2(&i_this->m1110, thirty, one, ten);
+    cLib_addCalc2(&i_this->mBodyOffsetX, thirty, one, ten);
     f32 target = -80.0f;
-    cLib_addCalc2(&i_this->m1118, target, one, ten);
+    cLib_addCalc2(&i_this->mBodyOffsetZ, target, one, ten);
     thirty = 30.0f;
     target = -200.0f;
-    cLib_addCalc2(&i_this->m1114, target, one, thirty);
+    cLib_addCalc2(&i_this->mBodyOffsetY, target, one, thirty);
     s16 state = static_cast<s16>(i_this->mDamage);
     f32 zero = 0.0f, hundred = 100.0f;
     bool move = true, success = false;
     switch (state) {
     case 0: {
         u8 part = static_cast<u8>(i_this->mBstPartType);
-        i_this->m10EC.y = zero;
+        i_this->mMoveParam.y = zero;
         i_this->mDamage = (s16)(state + 1);
         s16 yaw = static_cast<s16>(player->shape_angle.y);
-        i_this->m111C = yaw;
+        i_this->mAttackBaseYaw = yaw;
         u16 animation = bstKumiAnimations()->mAnimation[part];
         BstAttack_anm_init(actor, animation, ten, J3DFrameCtrl::EMode_LOOP, one, -1);
         s16 duration = REG0_S(1);
-        i_this->m10FC[0] = (s16)(duration + 70);
+        i_this->mTimers[0] = (s16)(duration + 70);
         [[fallthrough]];
     }
     case 1: {
@@ -67,8 +67,8 @@ static void kumi_attack(bst_class* actor) {
             cLib_addCalc0(&i_this->speedF, one, acceleration + two);
         }
         f32 turn = REG0_F(5) + 8000.0f;
-        s16 yaw = static_cast<s16>(i_this->m111C);
-        i_this->m10EC.x = turn;
+        s16 yaw = static_cast<s16>(i_this->mAttackBaseYaw);
+        i_this->mMoveParam.x = turn;
         Mtx34* matrix = calc_mtx();
         cMtx_YrotS(matrix, yaw);
         u8 part = static_cast<u8>(i_this->mBstPartType);
@@ -84,12 +84,12 @@ static void kumi_attack(bst_class* actor) {
         local.y = y;
         MtxPosition(&local, &transformed);
         cXyz_pl(&player->current.pos, &result, &transformed);
-        yaw = static_cast<s16>(i_this->m111C);
+        yaw = static_cast<s16>(i_this->mAttackBaseYaw);
         i_this->mTargetPos.copy(result);
         cLib_addCalcAngleS2(
             &i_this->shape_angle.y,
             (s16)(yaw + (part == bst_class::Type_LEFT_HAND_e ? 0x4000 : -0x4000)), 10, 0x800);
-        if (static_cast<s16>(i_this->m10FC[0]) == 0) {
+        if (static_cast<s16>(i_this->mTimers[0]) == 0) {
             s16 current = static_cast<s16>(i_this->mDamage);
             f32 fiveHundred = 500.0f;
             i_this->mDamage = (s16)(current + 1);
@@ -113,7 +113,7 @@ static void kumi_attack(bst_class* actor) {
         f32 eight = 8.0f;
         cLib_addCalc2(&i_this->speedF, speed + hundred, one, acceleration + eight);
         f32 turn = REG0_F(5) + 10000.0f;
-        i_this->m10EC.x = turn;
+        i_this->mMoveParam.x = turn;
         f32 distance = kumiDistance(&i_this->mTargetPos, &actor->current.pos);
         f32 boundary = REG0_F(16) + hundred;
         if (distance < boundary) {
@@ -124,7 +124,7 @@ static void kumi_attack(bst_class* actor) {
     }
     case 3: {
         u8 part = static_cast<u8>(i_this->mBstPartType);
-        s16 yaw = static_cast<s16>(i_this->m111C);
+        s16 yaw = static_cast<s16>(i_this->mAttackBaseYaw);
         cLib_addCalcAngleS2(
             &i_this->shape_angle.y,
             (s16)(yaw + (part == bst_class::Type_LEFT_HAND_e ? 0x4000 : -0x4000)), 1, 0x1000);
@@ -144,7 +144,7 @@ static void kumi_attack(bst_class* actor) {
             s16 current = static_cast<s16>(i_this->mDamage);
             i_this->mDamage = (s16)(current + 1);
             s16 duration = REG0_S(3);
-            i_this->m10FC[0] = (s16)(duration + 10);
+            i_this->mTimers[0] = (s16)(duration + 10);
             kumiSound(actor, JA_SE_CM_BST_HAND_SHAKE);
             i_this->speed.y = zero;
         }
@@ -154,7 +154,7 @@ static void kumi_attack(bst_class* actor) {
     case 4: {
         f32 velocity = static_cast<f32>(i_this->speed.y),
             y = static_cast<f32>(i_this->current.pos.y);
-        s16 timer = static_cast<s16>(i_this->m10FC[0]);
+        s16 timer = static_cast<s16>(i_this->mTimers[0]);
         i_this->current.pos.y = y + velocity;
         if (timer > 1) {
             f32 acceleration = REG0_F(14), current = static_cast<f32>(i_this->speed.y);
@@ -206,15 +206,15 @@ static void kumi_attack(bst_class* actor) {
                 }
                 s16 current = static_cast<s16>(i_this->mDamage), duration = REG0_S(7);
                 i_this->mDamage = (s16)(current + 1);
-                i_this->m112A = (s16)(duration + 10);
-                i_this->m10FC[0] = 40;
+                i_this->mImpactShakeTimer = (s16)(duration + 10);
+                i_this->mTimers[0] = 40;
             }
         }
         move = false;
         break;
     }
     case 5:
-        if (static_cast<s16>(i_this->m10FC[0]) == 0)
+        if (static_cast<s16>(i_this->mTimers[0]) == 0)
             success = true;
         move = false;
         break;

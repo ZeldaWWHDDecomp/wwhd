@@ -50,15 +50,15 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
 
         if (i_this != nullptr && jntNo <= KSYLF_00_JNT_B1_e) {
             PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
-            cMtx_YrotM(calc_mtx(), i_this->m2CE[jntNo].y);
-            cMtx_XrotM(calc_mtx(), i_this->m2CE[jntNo].x);
-            cMtx_ZrotM(calc_mtx(), i_this->m2CE[jntNo].z);
+            cMtx_YrotM(calc_mtx(), i_this->mJointAngle[jntNo].y);
+            cMtx_XrotM(calc_mtx(), i_this->mJointAngle[jntNo].x);
+            cMtx_ZrotM(calc_mtx(), i_this->mJointAngle[jntNo].z);
 
             gabi::Local<cXyz> offset;
             offset->x = 0.0f;
             offset->y = 0.0f;
             offset->z = 0.0f;
-            MtxPosition(offset.get(), &i_this->m2E8[jntNo]);
+            MtxPosition(offset.get(), &i_this->mJointPos[jntNo]);
             /* model->setAnmMtx(jntNo, *calc_mtx) */
             Mtx34* dst = model->getAnmMtx(jntNo);
             mtx_copy(dst, calc_mtx());
@@ -82,51 +82,51 @@ static BOOL daSk2_Draw(sk2_class* i_this) {
 
 /* 02489290 */
 void dousa_move(sk2_class* i_this) {
-    switch ((u16)i_this->m2BA) {
+    switch ((u16)i_this->mMoveState) {
     case 0:
-        i_this->mpMorf->setFrame(i_this->m2C4);
-        i_this->m2C0 = 0.5f;
-        i_this->m2BA = i_this->m2BA + 1;
+        i_this->mpMorf->setFrame(i_this->mStartFrame);
+        i_this->mPlaySpeed = 0.5f;
+        i_this->mMoveState = i_this->mMoveState + 1;
         /* fallthrough */
     case 1:
         if (!i_this->mpMorf->checkFrame(0.0f) && !i_this->mpMorf->checkFrame(18.0f)) {
             break;
         }
-        i_this->m2BA = i_this->m2BA + 1;
+        i_this->mMoveState = i_this->mMoveState + 1;
         /* fallthrough */
     case 2:
-        cLib_addCalc0(&i_this->m2C0, 0.3f, 0.3f);
-        if (i_this->m2C0 < 0.1f) {
-            i_this->m2C0 = 0.0f;
-            i_this->m2BC = (s16)(REG_S(8, 1) + 100);
-            i_this->m2BA = i_this->m2BA + 1;
+        cLib_addCalc0(&i_this->mPlaySpeed, 0.3f, 0.3f);
+        if (i_this->mPlaySpeed < 0.1f) {
+            i_this->mPlaySpeed = 0.0f;
+            i_this->mWaitTimer = (s16)(REG_S(8, 1) + 100);
+            i_this->mMoveState = i_this->mMoveState + 1;
         }
         break;
     case 3:
-        i_this->m2BC = i_this->m2BC - 1;
-        if (i_this->m2BC == 0) {
-            i_this->m2C0 = 0.5f;
+        i_this->mWaitTimer = i_this->mWaitTimer - 1;
+        if (i_this->mWaitTimer == 0) {
+            i_this->mPlaySpeed = 0.5f;
             fopAcM_seStart(i_this, JA_SE_OBJ_SHOKU_LIFT_MOVE, 0);
-            i_this->m2BA = 1;
+            i_this->mMoveState = 1;
         }
         break;
     }
 
     for (s32 i = 1; i < 4; i++) {
-        if (i_this->m2B4 == 0) {
-            i_this->m2CE[i].x =
-                (s16)gabi::ftoi((REG_F(8, 1) + 500.0f) * cM_ssin(i_this->m2CC * 1000 + (i * 5000)));
-            i_this->m2CE[i].z =
-                (s16)gabi::ftoi((REG_F(8, 1) + 500.0f) * cM_ssin(i_this->m2CC * 1000 + (i * 5000)));
+        if (i_this->mType == 0) {
+            i_this->mJointAngle[i].x =
+                (s16)gabi::ftoi((REG_F(8, 1) + 500.0f) * cM_ssin(i_this->mSwayTimer * 1000 + (i * 5000)));
+            i_this->mJointAngle[i].z =
+                (s16)gabi::ftoi((REG_F(8, 1) + 500.0f) * cM_ssin(i_this->mSwayTimer * 1000 + (i * 5000)));
         } else {
-            i_this->m2CE[i].y =
-                (s16)gabi::ftoi((REG_F(8, 1) + 500.0f) * cM_ssin((i_this->m2CC + i) * 1000));
+            i_this->mJointAngle[i].y =
+                (s16)gabi::ftoi((REG_F(8, 1) + 500.0f) * cM_ssin((i_this->mSwayTimer + i) * 1000));
         }
     }
 
-    i_this->mpMorf->setPlaySpeed(i_this->m2C0);
+    i_this->mpMorf->setPlaySpeed(i_this->mPlaySpeed);
     i_this->mpMorf->play(nullptr, 0, 0);
-    i_this->m2CC = i_this->m2CC + 1;
+    i_this->mSwayTimer = i_this->mSwayTimer + 1;
 }
 
 /* 024895C8 */
@@ -170,7 +170,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
 
     J3DModelData* pModelData;
     void* cvtx; /* HD */
-    if (i_this->m2B4 == 0) {
+    if (i_this->mType == 0) {
         pModelData = (J3DModelData*)dComIfG_getObjectRes(arc, dRes_INDEX_SK2_BDL_KSYLF_00_e);
         cvtx = getNamedResource(arc, "ksylf_00.cvtx");
     } else {
@@ -178,7 +178,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
         cvtx = getNamedResource(arc, "ksylf_01.cvtx");
     }
 
-    s32 bck = sk2_bck.indices[i_this->m2B4];
+    s32 bck = sk2_bck.indices[i_this->mType];
     J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(arc, bck);
     i_this->mpMorf =
         mDoExt_McaMorf::create(nullptr, pModelData, nullptr, nullptr, anm, J3DFrameCtrl::EMode_LOOP,
@@ -207,7 +207,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
         return FALSE;
     }
 
-    s32 dzb = sk2_dzb.indices[i_this->m2B4];
+    s32 dzb = sk2_dzb.indices[i_this->mType];
     cBgD_t* dzbData = (cBgD_t*)dComIfG_getObjectRes(arc, dzb);
     if (sk2BgWSet(i_this->mpBgW, dzbData, 0)) {
         return FALSE;
@@ -235,22 +235,22 @@ static cPhs_State daSk2_Create(fopAc_ac_c* a_this) {
     }
     cPhs_State PVar1 = dComIfG_resLoad(&i_this->mPhase, "Sk2");
     if (PVar1 == cPhs_COMPLEATE_e) {
-        i_this->m2B4 = fopAcM_GetParam(a_this);
-        i_this->m2B5 = fopAcM_GetParam(a_this) >> 8;
+        i_this->mType = fopAcM_GetParam(a_this);
+        i_this->mStartFramePrm = fopAcM_GetParam(a_this) >> 8;
 
-        if (i_this->m2B4 == 0xff) {
-            i_this->m2B4 = 0;
+        if (i_this->mType == 0xff) {
+            i_this->mType = 0;
         }
 
-        if (i_this->m2B5 != 0xff) {
-            i_this->m2C4 = (f32)(u8)i_this->m2B5;
-            if (i_this->m2C4 > 35.0f) {
-                i_this->m2C4 = 0.0f;
+        if (i_this->mStartFramePrm != 0xff) {
+            i_this->mStartFrame = (f32)(u8)i_this->mStartFramePrm;
+            if (i_this->mStartFrame > 35.0f) {
+                i_this->mStartFrame = 0.0f;
             }
         }
 
-        i_this->m2B6 = fopAcM_GetParam(a_this) >> 0x18;
-        if (i_this->m2B6 != 0xff && fopAcM_isSwitch(a_this, i_this->m2B6)) {
+        i_this->mSwitchNo = fopAcM_GetParam(a_this) >> 0x18;
+        if (i_this->mSwitchNo != 0xff && fopAcM_isSwitch(a_this, i_this->mSwitchNo)) {
             return cPhs_ERROR_e;
         }
 

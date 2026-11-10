@@ -122,7 +122,7 @@ WWHD_SIZE(dSv_player_map_c, 0x84);
 
 struct dSv_player_info_c {
     /* 0x00 */ u8 field_0x0[0x10];
-    /* 0x10 */ be<u16> field_0x10;
+    /* 0x10 */ be<u16> mSaveCount;  /* was field_0x10: saveMgrSessionCounter 02721A68 adds 1 while it is below MaxSaveCount; called by SaveMgr::saveCard 02721C44 on each save; init 025B8630 clears it */
     /* 0x12 */ be<u16> mDeathCount;
     /* 0x14 */ char mPlayerName[17];
     /* 0x25 */ char field_0x25[17];

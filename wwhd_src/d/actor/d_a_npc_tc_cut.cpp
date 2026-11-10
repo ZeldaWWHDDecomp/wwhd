@@ -162,9 +162,9 @@ void daNpc_Tc_c::cutSitToJumpStart(int i_staffIdx) {
 void daNpc_Tc_c::cutSitToJumpProc(int i_staffIdx) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (mpMorf->isStop() && mAnmPrmIdx == ANM_PRM_IDX_JAMP_A) {
-        speedF = l_cutHIO.field_0x38;
-        speed.y = l_cutHIO.field_0x40;
-        gravity = l_cutHIO.field_0x3C;
+        speedF = l_cutHIO.mJumpSpeedF;
+        speed.y = l_cutHIO.mJumpSpeedY;
+        gravity = l_cutHIO.mJumpGravity;
         mAnmPrmIdx = ANM_PRM_IDX_JAMP_B;
     }
     if (!(speed.y > 0.0f) &&
@@ -259,9 +259,9 @@ void daNpc_Tc_c::cutSetAnmProc(int i_staffIdx) {
 void daNpc_Tc_c::cutBackJumpStart(int i_staffIdx) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     mTargetSpeed = 0.0f;
-    speedF = l_cutHIO.field_0x48;
-    speed.y = l_cutHIO.field_0x50;
-    gravity = l_cutHIO.field_0x4C;
+    speedF = l_cutHIO.mBackJumpSpeedF;
+    speed.y = l_cutHIO.mBackJumpSpeedY;
+    gravity = l_cutHIO.mBackJumpGravity;
     mAnmPrmIdx = ANM_PRM_IDX_GUARD;
 }
 

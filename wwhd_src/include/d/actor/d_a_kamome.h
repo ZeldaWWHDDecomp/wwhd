@@ -21,14 +21,14 @@ struct kamome_class {
     /* 0x3C0 */ be<s8> mAnimState;
     /* 0x3C1 */ be<s8> mMoveState;
     /* 0x3C2 */ be<u8> mSwitchNo;
-    /* 0x3C3 */ be<s8> m2AB;
+    /* 0x3C3 */ be<s8> mLookAround;  /* was m2AB: kamome_auto_move 02189270 and the move states of daKamome_Execute 021861D4 (path wait, ko wait, kamome_imouto2_move) set 1 for the frame; daKamome_Execute: while set the head targets (mJointRotYTarget / ZTarget) get random values every 10-30 frames (mTimers[5]), else 0; cleared each frame */
     /* 0x3C4 */ be<s16> mJointRotY;
     /* 0x3C6 */ be<s16> mJointRotZ;
     /* 0x3C8 */ be<s16> mJointRotYTarget;
     /* 0x3CA */ be<s16> mJointRotZTarget;
-    /* 0x3CC */ be<s16> m2B4;
+    /* 0x3CC */ be<s16> mHeisouTimer;  /* was m2B4: daKamome_Create 02188D84: cM_rndF(10000) for mType 7; kamome_heisou_move (in daKamome_Execute 021861D4): +1 per frame; sine phase of the flying-beside-the-boat offset */
     /* 0x3CE */ u8 _3CE[2];
-    /* 0x3D0 */ be<f32> m2B8;
+    /* 0x3D0 */ be<f32> mHeisouHeight;  /* was m2B8: kamome_heisou_move (in daKamome_Execute 021861D4): eased to home.pos.y (or 0 when the boat is fast and a master gull leads); the escort target's height above the player (+ 600) */
     /* 0x3D4 */ be<s8> mbNoDraw;
     /* 0x3D5 */ u8 _3D5[3];
     /* 0x3D8 */ cXyz mTargetPos;
@@ -43,19 +43,19 @@ struct kamome_class {
     /* 0x408 */ be<f32> mScale;
     /* 0x40C */ be<u32> mEsaProcID;
     /* 0x410 */ gptr<fopAc_ac_c> mpTargetActor;
-    /* 0x414 */ be<s16> m2FC;
+    /* 0x414 */ be<s16> mLandAngleY;  /* was m2FC: kamome_auto_move 02189270 and the landing in daKamome_Execute 021861D4: current.angle.y + cM_rndFX(15000) on touchdown; current.angle.y is eased to it while landing */
     /* 0x416 */ be<s8> mbUsePathMovement;
     /* 0x417 */ be<s8> mCurPointIdx;
     /* 0x418 */ be<s8> mPathIdxIncr;
     /* 0x419 */ u8 _419[3];
     /* 0x41C */ gptr<dPath> mpPath;
-    /* 0x420 */ be<u8> m308;
+    /* 0x420 */ be<u8> mPathStart;  /* was m308: kamome_auto_move 02189270: 1 when the gull takes off onto its path (mPathIdx set); kamome_path_move (in daKamome_Execute 021861D4): the first point then uses speed 25 / 2, then 0 */
     /* 0x421 */ u8 _421[0x430 - 0x421];
     /* 0x430 */ dBgS_AcchCir mAcchCir;
     /* 0x470 */ dBgS_ObjAcch mAcch;
     /* 0x634 */ dCcD_Stts mStts;
     /* 0x670 */ dCcD_Sph mSph;
-    /* 0x79C */ be<u8> m688;
+    /* 0x79C */ be<u8> mHioSet;  /* was m688: daKamome_Create 02188D84: 1 when this gull created the l_kamomeHIO child (hio_set); daKamome_Delete 02188C0C deletes the HIO child only if set */
     /* 0x79D */ u8 _79D[3];
 };
 WWHD_OFFSET(kamome_class, mTargetPos, 0x3D8);
@@ -63,7 +63,7 @@ WWHD_OFFSET(kamome_class, mScale, 0x408);
 WWHD_OFFSET(kamome_class, mpPath, 0x41C);
 WWHD_OFFSET(kamome_class, mAcch, 0x470);
 WWHD_OFFSET(kamome_class, mSph, 0x670);
-WWHD_OFFSET(kamome_class, m688, 0x79C);
+WWHD_OFFSET(kamome_class, mHioSet, 0x79C);
 
 
 // HD: actor-private layouts and exact virtual metadata.
@@ -81,7 +81,7 @@ struct kamomeHIO_c {
 struct esa_class {
     fopAc_ac_c actor;
     /* 0x3AC */ u8 _3AC[8];
-    /* 0x3B4 */ be<u8> field_0x298;
+    /* 0x3B4 */ be<u8> mTaken;  /* was field_0x298: esa_class mTaken (d_a_esa.h) */
     /* 0x3B5 */ u8 _3B5[0x3BD - 0x3B5];
     /* 0x3BD */ be<s8> mState;
 };
@@ -195,14 +195,14 @@ WWHD_OFFSET(kamome_class, mGlobalTimer, 0x3BC);
 WWHD_OFFSET(kamome_class, mAnimState, 0x3C0);
 WWHD_OFFSET(kamome_class, mMoveState, 0x3C1);
 WWHD_OFFSET(kamome_class, mSwitchNo, 0x3C2);
-WWHD_OFFSET(kamome_class, m2AB, 0x3C3);
+WWHD_OFFSET(kamome_class, mLookAround, 0x3C3);
 WWHD_OFFSET(kamome_class, mJointRotY, 0x3C4);
 WWHD_OFFSET(kamome_class, mJointRotZ, 0x3C6);
 WWHD_OFFSET(kamome_class, mJointRotYTarget, 0x3C8);
 WWHD_OFFSET(kamome_class, mJointRotZTarget, 0x3CA);
-WWHD_OFFSET(kamome_class, m2B4, 0x3CC);
+WWHD_OFFSET(kamome_class, mHeisouTimer, 0x3CC);
 WWHD_OFFSET(kamome_class, _3CE, 0x3CE);
-WWHD_OFFSET(kamome_class, m2B8, 0x3D0);
+WWHD_OFFSET(kamome_class, mHeisouHeight, 0x3D0);
 WWHD_OFFSET(kamome_class, mbNoDraw, 0x3D4);
 WWHD_OFFSET(kamome_class, _3D5, 0x3D5);
 WWHD_OFFSET(kamome_class, mVelocityFwdTarget, 0x3E4);
@@ -215,12 +215,12 @@ WWHD_OFFSET(kamome_class, mGroundKeepTimer, 0x404);
 WWHD_OFFSET(kamome_class, mRiseTimer, 0x406);
 WWHD_OFFSET(kamome_class, mEsaProcID, 0x40C);
 WWHD_OFFSET(kamome_class, mpTargetActor, 0x410);
-WWHD_OFFSET(kamome_class, m2FC, 0x414);
+WWHD_OFFSET(kamome_class, mLandAngleY, 0x414);
 WWHD_OFFSET(kamome_class, mbUsePathMovement, 0x416);
 WWHD_OFFSET(kamome_class, mCurPointIdx, 0x417);
 WWHD_OFFSET(kamome_class, mPathIdxIncr, 0x418);
 WWHD_OFFSET(kamome_class, _419, 0x419);
-WWHD_OFFSET(kamome_class, m308, 0x420);
+WWHD_OFFSET(kamome_class, mPathStart, 0x420);
 WWHD_OFFSET(kamome_class, _421, 0x421);
 WWHD_OFFSET(kamome_class, mAcchCir, 0x430);
 WWHD_OFFSET(kamome_class, mStts, 0x634);
@@ -275,7 +275,7 @@ enum { dRes_INDEX_KAMOME_BAS_KA_FLY1_e=5,dRes_INDEX_KAMOME_BAS_KA_LAND1_e=6,dRes
 
 WWHD_SIZE(kamomeHIO_c, 0x14);
 WWHD_OFFSET(kamomeHIO_c, __vtbl, 0x10);
-WWHD_OFFSET(esa_class, field_0x298, 0x3B4);
+WWHD_OFFSET(esa_class, mTaken, 0x3B4);
 WWHD_SIZE(esa_class, 0x3BE);
 WWHD_SIZE(dPnt_l, 0x10);
 WWHD_OFFSET(dPnt_l, m_position, 4);

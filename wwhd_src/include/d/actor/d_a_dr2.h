@@ -87,7 +87,7 @@ struct Dr2Emitter {
     u8 mPad1C4[0x254-0x1C4]; be<u32> mFlags;
 };
 struct Dr2Btd {
-    u8 mPadding[0x41E]; be<u8> m02F6; u8 mPad41F[5]; cXyz m02FC[9];
+    u8 mPadding[0x41E]; be<u8> mRockHitState; u8 mPad41F[5]; cXyz mJointPos[9];
 };
 struct Dr2Player { u8 mPadding[0x3F0]; cXyz mLeftHandPosition; };
 struct Dr2SmokeCallback {
@@ -121,7 +121,7 @@ WWHD_OFFSET(Dr2Emitter, mParticleCount, 0x1B4);
 WWHD_OFFSET(Dr2Emitter, mChildCount, 0x1C0);
 WWHD_OFFSET(Dr2Emitter, mFlags, 0x254);
 WWHD_OFFSET(Dr2SmokeCallback, mFollowOff, 0x12);
-WWHD_OFFSET(Dr2Btd, m02FC, 0x424);
+WWHD_OFFSET(Dr2Btd, mJointPos, 0x424);
 /* daDr2_HIO_c (HD: vtable after the members) */
 struct daDr2_HIO_c {
     /* 0x00 */ be<s8> mNo;
@@ -134,11 +134,11 @@ WWHD_SIZE(daDr2_HIO_c, 0xC);
 
 struct iwa_hahen_s {
     /* 0x00 */ gptr<J3DModel> mpModel;
-    /* 0x04 */ be<u8> unk_04;
+    /* 0x04 */ be<u8> mActive;  /* was unk_04: iwa_move (in daDr2_Execute 0212B3D0) sets it for the 6 fragments when the rock breaks; hahen_move (same) clears it below y -100; hahen_draw (in daDr2_Draw 0212AEEC) draws only active fragments */
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ cXyz unk_08;
-    /* 0x14 */ cXyz unk_14;
-    /* 0x20 */ csXyz unk_20;
+    /* 0x08 */ cXyz mPos;  /* was unk_08: iwa_move (in daDr2_Execute 0212B3D0): starts at mRockPos; hahen_move (same) adds mSpeed and places the fragment model there */
+    /* 0x14 */ cXyz mSpeed;  /* was unk_14: iwa_move (in daDr2_Execute 0212B3D0): MtxPosition of (hsx[i], 0, hsz[i]) * 3 along mRockAngle; hahen_move (same) adds it to mPos and -0.5 to its y per frame */
+    /* 0x20 */ csXyz mAngle;  /* was unk_20: iwa_move (in daDr2_Execute 0212B3D0): starts at mRockAngle; hahen_move (same) spins x / z each frame and rotates the fragment model by it */
     /* 0x26 */ u8 _26[2];
 };
 WWHD_SIZE(iwa_hahen_s, 0x28);
@@ -148,68 +148,68 @@ struct dr2_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf1;
     /* 0x3D4 */ gptr<mDoExt_McaMorf> mpMorf2;
-    /* 0x3D8 */ be<s16> unk_2BC;
+    /* 0x3D8 */ be<s16> mFrameCounter;  /* was unk_2BC: daDr2_Execute 0212B3D0 adds 1 per frame; move (in daDr2_Execute 0212B3D0) uses it as the phase of the rock-shake sines of the tail joints */
     /* 0x3DA */ u8 _3DA[2];
     /* 0x3DC */ iwa_hahen_s mRockFragments[6];
-    /* 0x4CC */ cXyz unk_3B0;
-    /* 0x4D8 */ be<s16> unk_3BC[12];
-    /* 0x4F0 */ be<s16> unk_3D4[12];
-    /* 0x508 */ be<f32> unk_3EC;
-    /* 0x50C */ be<f32> unk_3F0;
-    /* 0x510 */ be<f32> unk_3F4;
-    /* 0x514 */ be<f32> unk_3F8;
-    /* 0x518 */ be<u32> unk_3FC;
-    /* 0x51C */ be<s16> unk_400[5];
-    /* 0x526 */ be<u8> unk_40A;
+    /* 0x4CC */ cXyz mHookTargetPos;  /* was unk_3B0: nodeCallBack 0212AACC: world position of joint HANE_L2 (+ 215, 0, -5); daKui_Execute 021ACB0C (d_a_kui, view KuiDragonTailView) puts the hookshot target there */
+    /* 0x4D8 */ be<s16> mJointRotY[12];  /* was unk_3BC: move (in daDr2_Execute 0212B3D0): [2..11] sin(mFrameCounter) * mShakeAmplitude per joint while the rock shakes, [0] the grabbed tail's angle; nodeCallBack 0212AACC YrotM of the joint by it */
+    /* 0x4F0 */ be<s16> mJointRotZ[12];  /* was unk_3D4: move (in daDr2_Execute 0212B3D0): [2..11] cos(mFrameCounter) * mShakeAmplitude per joint while the rock shakes, [0] eased to 0 while grabbed; nodeCallBack 0212AACC ZrotM of the joint by it */
+    /* 0x508 */ be<f32> mSwayRotY;  /* was unk_3EC: move (in daDr2_Execute 0212B3D0): sin(mSwayPhaseY) * mSwayAmplitude, eased to -0.175 while pulled; nodeCallBack 0212AACC rotates the tail joints about Y by it (radians) */
+    /* 0x50C */ be<f32> mSwayRotZ;  /* was unk_3F0: move (in daDr2_Execute 0212B3D0): sin(mSwayPhaseZ) * mSwayAmplitude, eased to 0 while pulled; nodeCallBack 0212AACC rotates the tail joints about Z by it (radians) */
+    /* 0x510 */ be<f32> mSwayPhaseY;  /* was unk_3F4: move (in daDr2_Execute 0212B3D0): + 0.04 per frame; the phase of mSwayRotY */
+    /* 0x514 */ be<f32> mSwayPhaseZ;  /* was unk_3F8: move (in daDr2_Execute 0212B3D0): + 0.05 per frame; the phase of mSwayRotZ */
+    /* 0x518 */ be<u32> mKuiId;  /* was unk_3FC: daDr2_Create 0212D394: the process id of the KUI actor (hookshot target, parameter 0x511) it requests; move (in daDr2_Execute 0212B3D0) looks it up and reads its health (1..3) for the tail state */
+    /* 0x51C */ be<s16> mTimers[5];  /* was unk_400: daDr2_Execute 0212B3D0 counts all 5 down each frame; iwa_move (in daDr2_Execute 0212B3D0) sets [0] = 0x32 when the rock lands on Gohma */
+    /* 0x526 */ be<u8> mTailState;  /* was unk_40A: move (in daDr2_Execute 0212B3D0) / iwa_move set it (Dr2TailState: idle, pulled, grabbed, rock shake); nodeCallBack 0212AACC bends the tail joints by it; new_himo2_move 0216F7FC (d_a_himo2, view himo2_dr_c) sets 3 / 0 in the boss-fall demo */
     /* 0x527 */ u8 _527;
-    /* 0x528 */ be<f32> unk_40C;
-    /* 0x52C */ be<f32> unk_410;
-    /* 0x530 */ be<f32> unk_414;
-    /* 0x534 */ gptr<J3DModel> unk_418;
-    /* 0x538 */ gptr<J3DModel> unk_41C;
-    /* 0x53C */ gptr<void> unk_420; /* mDoExt_btkAnm* */
-    /* 0x540 */ be<s16> unk_424;
+    /* 0x528 */ be<f32> mPullScaleX;  /* was unk_40C: move (in daDr2_Execute 0212B3D0): 0.98 at rest, eased to 1.04 while pulled; nodeCallBack 0212AACC scales the tail joints' x by it while pulled */
+    /* 0x52C */ be<f32> mSwayAmplitude;  /* was unk_410: move (in daDr2_Execute 0212B3D0): eased to 0.048 (0 once the KUI's health is 1); scales mSwayRotY / mSwayRotZ; iwa_move clears it when the tail is far from home */
+    /* 0x530 */ be<f32> mShakeAmplitude;  /* was unk_414: iwa_move (in daDr2_Execute 0212B3D0) eases it to 2000 while the rock rides Gohma; new_himo2_move 0216F7FC (view himo2_dr_c) eases it to 2000 / 100; move scales the joint shake mJointRotY / Z by it */
+    /* 0x534 */ gptr<J3DModel> mpRockModel;  /* was unk_418: useHeapInit 0212CDAC: model IWA00; daDr2_Execute 0212B3D0 places it at mRockPos / mRockAngle; iwa_draw (in daDr2_Draw 0212AEEC) draws it while mRockState is below 10 */
+    /* 0x538 */ gptr<J3DModel> mpMagmaModel;  /* was unk_41C: useHeapInit 0212CDAC: model GAN_MAGMA (lava on the rock); daDr2_Execute 0212B3D0 places it with the rock; iwa_draw (in daDr2_Draw 0212AEEC) draws it while mMagmaFrame runs */
+    /* 0x53C */ gptr<void> mpMagmaBtk;  /* was unk_420: useHeapInit 0212CDAC: btk GAN_MAGMA of mpMagmaModel; iwa_move (in daDr2_Execute 0212B3D0) sets its frame from mMagmaFrame, iwa_draw (in daDr2_Draw 0212AEEC) enters it; mDoExt_btkAnm* */
+    /* 0x540 */ be<s16> mMagmaFrame;  /* was unk_424: iwa_move (in daDr2_Execute 0212B3D0) sets 1 when the rock leaves Gohma dripping lava, + 1 per frame up to 180, then 0; the frame of mpMagmaBtk; iwa_draw (in daDr2_Draw 0212AEEC) draws the lava while it is not 0 */
     /* 0x542 */ u8 _542[2];
-    /* 0x544 */ gptr<J3DModel> unk_428;
-    /* 0x548 */ gptr<J3DModel> unk_42C;
-    /* 0x54C */ gptr<void> unk_430; /* mDoExt_btkAnm* */
-    /* 0x550 */ gptr<void> unk_434; /* mDoExt_btkAnm* */
-    /* 0x554 */ gptr<void> unk_438; /* mDoExt_brkAnm* */
-    /* 0x558 */ be<u8> unk_43C;
+    /* 0x544 */ gptr<J3DModel> mpFloorModel;  /* was unk_428: useHeapInit 0212CDAC: model MBYO1 (the floor before the boss is beaten); yuka_move (in daDr2_Execute 0212B3D0) places it, yuka_draw (in daDr2_Draw 0212AEEC) draws it unless mFloorBroken */
+    /* 0x548 */ gptr<J3DModel> mpBrokenFloorModel;  /* was unk_42C: useHeapInit 0212CDAC: model MBYO2; yuka_move (in daDr2_Execute 0212B3D0) places it, yuka_draw (in daDr2_Draw 0212AEEC) draws it (with the view-projected lava texture) when mFloorBroken */
+    /* 0x54C */ gptr<void> mpFloorBtk;  /* was unk_430: useHeapInit 0212CDAC: btk MBYO1 (loop) of mpFloorModel; yuka_move (in daDr2_Execute 0212B3D0) plays it, yuka_draw (in daDr2_Draw 0212AEEC) enters it; mDoExt_btkAnm* */
+    /* 0x550 */ gptr<void> mpBrokenFloorBtk;  /* was unk_434: useHeapInit 0212CDAC: btk MBYO2 of mpBrokenFloorModel; yuka_move (in daDr2_Execute 0212B3D0) plays it or sets frame 299, yuka_draw (in daDr2_Draw 0212AEEC) enters it; mDoExt_btkAnm* */
+    /* 0x554 */ gptr<void> mpBrokenFloorBrk;  /* was unk_438: useHeapInit 0212CDAC: brk MBYO2 of mpBrokenFloorModel; yuka_move (in daDr2_Execute 0212B3D0) plays it or sets frame 299, yuka_draw (in daDr2_Draw 0212AEEC) enters it; mDoExt_brkAnm* */
+    /* 0x558 */ be<u8> mFloorBroken;  /* was unk_43C: yuka_move (in daDr2_Execute 0212B3D0) sets 1 when the stage boss is beaten (and the start stage is not an X stage); then mpBrokenFloorModel / mpBgW2 are used and the other floor is moved to y -10000 */
     /* 0x559 */ u8 _559[3];
-    /* 0x55C */ Mtx34 unk_440;
-    /* 0x58C */ Mtx34 unk_470;
+    /* 0x55C */ Mtx34 mFloorMtx;  /* was unk_440: yuka_move (in daDr2_Execute 0212B3D0): the matrix of mpFloorModel (scaled), given to mpBgW1 by cBgW_Set in useHeapInit 0212CDAC */
+    /* 0x58C */ Mtx34 mBrokenFloorMtx;  /* was unk_470: yuka_move (in daDr2_Execute 0212B3D0): the matrix of mpBrokenFloorModel (scaled), given to mpBgW2 by cBgW_Set in useHeapInit 0212CDAC */
     /* 0x5BC */ gptr<dBgW> mpBgW1;
     /* 0x5C0 */ gptr<dBgW> mpBgW2;
-    /* 0x5C4 */ cXyz unk_4A8;
-    /* 0x5D0 */ csXyz unk_4B4;
-    /* 0x5D6 */ be<s16> unk_4BA;
+    /* 0x5C4 */ cXyz mRockPos;  /* was unk_4A8: daDr2_Create 0212D394: home + (0, -50, 0); iwa_move (in daDr2_Execute 0212B3D0) moves the rock (shake, fall onto Gohma, rise back); daDr2_Execute 0212B3D0 places mpRockModel there; the rock particles and sounds start there */
+    /* 0x5D0 */ csXyz mRockAngle;  /* was unk_4B4: iwa_move (in daDr2_Execute 0212B3D0): x / y follow Gohma while riding, z the shake; daDr2_Execute 0212B3D0 rotates mpRockModel by it; hahen fragments start with it */
+    /* 0x5D6 */ be<s16> mRockState;  /* was unk_4BA: iwa_move (in daDr2_Execute 0212B3D0) steps through it (Dr2RockState: return, attached, fall, ride Gohma, rise, break, gone); iwa_draw (in daDr2_Draw 0212AEEC) draws the rock below 10; new_himo2_move 0216F7FC (view himo2_dr_c) and daKui_Execute 021ACB0C (view KuiDragonTailView) read it */
     /* 0x5D8 */ u8 _5D8[4];
-    /* 0x5DC */ be<f32> unk_4C0;
-    /* 0x5E0 */ be<u8> unk_4C4;
+    /* 0x5DC */ be<f32> mRockRideOffsetY;  /* was unk_4C0: iwa_move (in daDr2_Execute 0212B3D0): while riding Gohma, (100 - Gohma's joint 3 height) * 0.3 when that joint is low; raises the rock's tilt target; cleared on return */
+    /* 0x5E0 */ be<u8> mDragonAnmState;  /* was unk_4C4: dr_move (in daDr2_Execute 0212B3D0): 0, then 1 after starting DR_BOSS_DEMO1 on mpMorf2 once mShowDragon is set; back to 0 when it is cleared */
     /* 0x5E1 */ u8 _5E1;
     /* 0x5E2 */ be<s16> unk_4C6;
-    /* 0x5E4 */ be<s16> unk_4C8;
-    /* 0x5E6 */ be<s16> unk_4CA;
-    /* 0x5E8 */ be<s16> unk_4CC;
-    /* 0x5EA */ be<s16> unk_4CE;
-    /* 0x5EC */ be<f32> unk_4D0;
-    /* 0x5F0 */ gptr<JPABaseEmitter> unk_4D4;
-    /* 0x5F4 */ dPa_followEcallBack unk_4D8;
-    /* 0x608 */ Dr2SmokeCallback unk_4EC; /* dPa_smokeEcallBack (HD 0x20, vtable at +0) */
-    /* 0x628 */ be<u8> unk_50C;
-    /* 0x629 */ be<u8> unk_50D;
-    /* 0x62A */ be<u8> unk_50E;
+    /* 0x5E4 */ be<s16> mRockReturnWait;  /* was unk_4C8: iwa_move (in daDr2_Execute 0212B3D0) sets 0x82 when the rock is back at the top and counts it down before easing the actor back to home */
+    /* 0x5E6 */ be<s16> mRockFallTimer;  /* was unk_4CA: new_himo2_move 0216F7FC (d_a_himo2, view himo2_dr_c) sets 0x5A in the rope jump demo; iwa_move (in daDr2_Execute 0212B3D0) shakes the rock while it runs, counts it down and drops the rock at 1 */
+    /* 0x5E8 */ be<s16> mShakeStepTimer;  /* was unk_4CC: iwa_move (in daDr2_Execute 0212B3D0): every 3 (+ reg) frames a new shake target (mRockShakeAngleZ / mRockShakeOffsetY); move sets 20 once the KUI's health is 1 */
+    /* 0x5EA */ be<s16> mRockShakeAngleZ;  /* was unk_4CE: iwa_move (in daDr2_Execute 0212B3D0): random +-300 per shake step; mRockAngle.z is eased to it; 0 when not shaking */
+    /* 0x5EC */ be<f32> mRockShakeOffsetY;  /* was unk_4D0: iwa_move (in daDr2_Execute 0212B3D0): random +-20 per shake step; mRockPos.y is eased to home - 50 + it; 0 when not shaking */
+    /* 0x5F0 */ gptr<JPABaseEmitter> mpBrokenRockEmitter;  /* was unk_4D4: iwa_move (in daDr2_Execute 0212B3D0): the BTDBROKENROCK00 emitter (rate mBrokenRockRate); its particles spawn BTDBROKENROCKTAIL00; invalidated when mBrokenRockTimer runs out */
+    /* 0x5F4 */ dPa_followEcallBack mDripCb;  /* was unk_4D8: iwa_move (in daDr2_Execute 0212B3D0) passes it to the BTDDRIPMAGMA00 (dripping lava) particle and ends it when the rock is back; daDr2_Delete 0212CD10 removes it */
+    /* 0x608 */ Dr2SmokeCallback mSmokeCb;  /* was unk_4EC: iwa_move (in daDr2_Execute 0212B3D0) passes it to the BTDSMOKE02 particle (toon); daDr2_Create 0212D394 sets follow off; daDr2_Delete 0212CD10 removes it; dPa_smokeEcallBack (HD 0x20, vtable at +0) */
+    /* 0x628 */ be<u8> mShowDragon;  /* was unk_50C: new_himo2_move 0216F7FC (d_a_himo2, view himo2_dr_c) sets 1 / 0 in the rope demo; dr_draw (in daDr2_Draw 0212AEEC) draws and dr_move (in daDr2_Execute 0212B3D0) animates the dragon (mpMorf2) while it is set */
+    /* 0x629 */ be<u8> mBrokenRockRate;  /* was unk_50D: iwa_move (in daDr2_Execute 0212B3D0): 1 / 30 / 10 (+ reg); the rate given to mpBrokenRockEmitter */
+    /* 0x62A */ be<u8> mBrokenRockState;  /* was unk_50E: iwa_move (in daDr2_Execute 0212B3D0): 1 = create mpBrokenRockEmitter, 2 = running (spawning tail particles), 0 = none */
     /* 0x62B */ u8 _62B;
-    /* 0x62C */ be<s16> unk_510;
+    /* 0x62C */ be<s16> mBrokenRockTimer;  /* was unk_510: iwa_move (in daDr2_Execute 0212B3D0): 20 / 1 / 2 with a new mpBrokenRockEmitter, counted down while it runs; at 0 the emitter is invalidated */
     /* 0x62E */ u8 _62E[2];
-    /* 0x630 */ gptr<fopAc_ac_c> unk_514; /* btd_class* */
+    /* 0x630 */ gptr<fopAc_ac_c> mpBtd;  /* was unk_514: iwa_move (in daDr2_Execute 0212B3D0): Gohma (btd_class), found by s_a_d_sub 0212B380 and kept; the rock rides its joints; btd_class* */
 };
 WWHD_OFFSET(dr2_class, mRockFragments, 0x3DC);
-WWHD_OFFSET(dr2_class, unk_40A, 0x526);
+WWHD_OFFSET(dr2_class, mTailState, 0x526);
 WWHD_OFFSET(dr2_class, mpBgW1, 0x5BC);
-WWHD_OFFSET(dr2_class, unk_4D8, 0x5F4);
-WWHD_OFFSET(dr2_class, unk_50C, 0x628);
+WWHD_OFFSET(dr2_class, mDripCb, 0x5F4);
+WWHD_OFFSET(dr2_class, mShowDragon, 0x628);
 WWHD_SIZE(dr2_class, 0x634);
 
 

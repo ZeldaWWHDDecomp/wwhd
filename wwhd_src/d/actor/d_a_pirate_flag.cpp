@@ -217,10 +217,10 @@ void call_material_apply(u32 material, u32 program) {
 /* 023D1804 */
 void daPirate_Flag_packet_c::setCorrectNrmAngle(s16 windAngle, f32 windStrength) {
     f32 random = cM_rndF(200.0f);
-    s16 wave = s16(u32(s32(m87C)) + u32(gabi::ftoi(random)) + 900u);
-    m87C = wave;
+    s16 wave = s16(u32(s32(mNrmWobblePhase)) + u32(gabi::ftoi(random)) + 900u);
+    mNrmWobblePhase = wave;
     f32 sine = cM_ssin(wave);
-    m878 = s16(gabi::ftoi(300.0f * sine));
+    mNrmAngle = s16(gabi::ftoi(300.0f * sine));
     f32 attenuation = gabi::fnmsubs(0.5f, windStrength, 1.0f);
     s16 escape = s16(gabi::ftoi((f32)l_HIO.m1C * attenuation));
     s16 opposite = s16(u16(windAngle) + 0x8000u);
@@ -233,14 +233,14 @@ void daPirate_Flag_packet_c::setCorrectNrmAngle(s16 windAngle, f32 windStrength)
         s32 degree = windAngle > 0 ? -s32(escape) : s32(escape);
         target = s16(gabi::ftoi(f32(degree) * 182.04444885253906f));
     }
-    pirateAddCalcAngle(&m87A, target, 5, 0xC0);
-    s16 normal = m878;
-    m878 = s16(u16(normal) + u16(s16(m87A)));
+    pirateAddCalcAngle(&mNrmCorrectAngle, target, 5, 0xC0);
+    s16 normal = mNrmAngle;
+    mNrmAngle = s16(u16(normal) + u16(s16(mNrmCorrectAngle)));
 }
 
 /* 023D1E08 */
 void daPirate_Flag_packet_c::setBackNrm() {
-    u32 buffer = m87E;
+    u32 buffer = mCurArr;
     cXyz *nrmBack = mBackNrm[buffer];
     cXyz *nrm = mNrm[buffer];
     for (u32 i = 0; i < 25; ++i) {
@@ -255,7 +255,7 @@ void daPirate_Flag_packet_c::setBackNrm() {
 
 /* 023D1A2C */
 void daPirate_Flag_packet_c::setNrmVtx(cXyz *normal, s32 column, s32 row) {
-    cXyz *vec_arr = mPos[u32(m87E)];
+    cXyz *vec_arr = mPos[u32(mCurArr)];
     s32 index = column + row * 5;
     gabi::Local<NormalTemporary> local;
     local->center.x = (f32)vec_arr[u32(index)].x;
@@ -320,14 +320,14 @@ void daPirate_Flag_packet_c::draw() {
         u32 frame = buffers->mCurrent;
         u32 vertex = buffers->mBuffers[channel][frame].mpVertices;
         for (u32 i = 0; i < 25; ++i) {
-            u32 index = packet->m87E;
+            u32 index = packet->mCurArr;
             cXyz *source = &packet->mPos[index][i];
             f32 z = source->z, x = source->x, y = source->y;
             PirateVertex *dest = gabi::at<PirateVertex>(vertex + i * 0x20);
             dest->position.x = x;
             dest->position.y = y;
             dest->position.z = z;
-            index = packet->m87E;
+            index = packet->mCurArr;
             source = channel ? &packet->mBackNrm[index][i] : &packet->mNrm[index][i];
             x = source->x;
             y = source->y;
@@ -450,7 +450,7 @@ BOOL daPirate_Flag_Draw(void *actor) {
         x = local->light.x;
         z = local->light.z;
         u16 light = u16(cM_atan2s(x, z));
-        u16 corrected = u16(facing + u16((s16)i_this->mPacket.m87A));
+        u16 corrected = u16(facing + u16((s16)i_this->mPacket.mNrmCorrectAngle));
         u32 angles[4] = {light, light, facing, corrected};
         for (u32 i = 0; i < 4; ++i) {
             f32 length = i == 1 ? -400.0f : 400.0f;
@@ -504,8 +504,8 @@ void pirate_flag_move(void *actor) {
     local->probe.z = 0.0f;
     local->probe.x = 1.0f;
     pirateMtxPosition(&local->probe, &local->result);
-    s16 phase = s16(u32((s16)i_this->m2A8) + (u32)l_HIO.m08);
-    i_this->m2A8 = phase;
+    s16 phase = s16(u32((s16)i_this->mWindPhase) + (u32)l_HIO.m08);
+    i_this->mWindPhase = phase;
     f32 wave = cM_ssin(phase);
     f32 factor = gabi::fmadds(0.5f, wave, 0.5f);
     f32 strength = gabi::fmadds((f32)l_HIO.m0C, factor, (f32)l_HIO.m10 * (1.0f - factor));
@@ -549,15 +549,15 @@ void pirate_flag_move(void *actor) {
         }
     }
     for (s32 step = 0; step < iterations; ++step) {
-        u32 previous = (u8)i_this->mPacket.m87E, current = previous ^ 1;
+        u32 previous = (u8)i_this->mPacket.mCurArr, current = previous ^ 1;
         u32 normals = gabi::ea(i_this->mPacket.mNrm[previous]);
         u32 positions = gabi::ea(i_this->mPacket.mPos[previous]);
         u32 next = gabi::ea(i_this->mPacket.mPos[current]);
-        i_this->mPacket.m87E = u8(current);
+        i_this->mPacket.mCurArr = u8(current);
         for (s32 column = 0; column < 5; ++column)
             for (s32 row = 0; row < 5; ++row) {
                 u32 index = u32(column + row * 5), source = positions + index * 12,
-                    dest = next + index * 12, velocity = gabi::ea(&i_this->mPacket.m74C[index]);
+                    dest = next + index * 12, velocity = gabi::ea(&i_this->mPacket.mVtxVel[index]);
                 auto *srcWords = gabi::at<PirateVectorWords>(source);
                 auto *dstWords = gabi::at<PirateVectorWords>(dest);
                 dstWords->x = (u32)srcWords->x;
@@ -615,14 +615,14 @@ void pirate_flag_move(void *actor) {
                 pirateVectorScale(ptr(velocity), ptr(velocity), 0.875f);
                 pirateVectorAdd(ptr(dest), ptr(velocity), ptr(dest));
             }
-        u32 buffer = (u8)i_this->mPacket.m87E, normal = gabi::ea(i_this->mPacket.mNrm[buffer]);
+        u32 buffer = (u8)i_this->mPacket.mCurArr, normal = gabi::ea(i_this->mPacket.mNrm[buffer]);
         s16 facing = (s16)i_this->current.angle.y;
         pirateFirstLightVector(&local->result, &local->light);
         x = local->light.x;
         z = local->light.z;
         s16 light = cM_atan2s(x, z);
         i_this->mPacket.setCorrectNrmAngle(s16(u16(light) - u16(facing)), normalStrength);
-        pirateMtxYrotS(ptr((u32)l_calcMtx), (s16)i_this->mPacket.m878);
+        pirateMtxYrotS(ptr((u32)l_calcMtx), (s16)i_this->mPacket.mNrmAngle);
         for (s32 row = 0; row < 5; ++row)
             for (s32 column = 0; column < 5; ++column) {
                 i_this->mPacket.setNrmVtx(gabi::at<cXyz>(normal), column, row);
@@ -630,11 +630,11 @@ void pirate_flag_move(void *actor) {
             }
     }
     i_this->mPacket.setBackNrm();
-    u32 buffer = (u8)i_this->mPacket.m87E;
+    u32 buffer = (u8)i_this->mPacket.mCurArr;
     pirateDCStoreRangeNoSync(i_this->mPacket.mPos[buffer], 0x12C);
-    buffer = (u8)i_this->mPacket.m87E;
+    buffer = (u8)i_this->mPacket.mCurArr;
     pirateDCStoreRangeNoSync(i_this->mPacket.mNrm[buffer], 0x12C);
-    buffer = (u8)i_this->mPacket.m87E;
+    buffer = (u8)i_this->mPacket.mCurArr;
     pirateDCStoreRangeNoSync(i_this->mPacket.mBackNrm[buffer], 0x12C);
 }
 
@@ -700,7 +700,7 @@ s32 daPirate_Flag_Create(void *actor) {
     phase = pirateResLoad(&i_this->mPhs2, "Kaizokusen");
     if (phase != cPhs_COMPLEATE_e)
         return phase;
-    cXyz *dest = i_this->mPacket.mPos[u8(i_this->mPacket.m87E)];
+    cXyz *dest = i_this->mPacket.mPos[u8(i_this->mPacket.mCurArr)];
     for (u32 row = 0; row < 5; ++row) {
         for (u32 col = 0; col < 5; ++col) {
             cXyz *source = &l_pos.points[row * 5 + col];
@@ -845,13 +845,13 @@ void *pirate_packet_construct(void *object) {
     auto *packet = static_cast<daPirate_Flag_packet_c *>(object);
     u32 a = gabi::ea(object);
     piratePacketBaseConstruct(object);
-    packet->m87C = 0;
+    packet->mNrmWobblePhase = 0;
     packet->mShaderCount = 0;
     packet->__vtbl = 0x10034794;
-    packet->m87A = 0;
-    packet->m878 = 0;
+    packet->mNrmCorrectAngle = 0;
+    packet->mNrmAngle = 0;
     packet->m87F = 1;
-    packet->m87E = 0;
+    packet->mCurArr = 0;
     u32 link = a + 0x90C;
     if (!link)
         link = gabi::ea(operator_new(8));
@@ -901,7 +901,7 @@ void *pirate_packet_construct(void *object) {
         if (!(a + 0x1634 + i * 0x10))
             operator_new(0x10);
     packet->mMaterialInitialized = 0;
-    pirateIndexBufferConstruct(&packet->mPrimitiveType);
+    pirateIndexBufferConstruct(&packet->mIndexFormat);
     pirateTextureResourceConstruct(&packet->mClothTexture);
     pirateTextureResourceConstruct(&packet->mShipTexture);
     pirateTextureSamplerConstruct(&packet->mClothTextureSampler);
@@ -1012,8 +1012,8 @@ void pirate_initialize_graphics(void *object) {
             }
     }
     pirateDrawMaterialAllocate(&packet->mDrawMaterialCount, 1, 0);
-    pirateIndexBufferSet(&packet->mPrimitiveType, ptr(0x10034668), 4, 0x28);
-    packet->mIndexType = 6;
+    pirateIndexBufferSet(&packet->mIndexFormat, ptr(0x10034668), 4, 0x28);
+    packet->mPrimitiveMode = 6;
     for (u32 channel = 0; channel < 2; ++channel) {
         u32 frame = (u32)gabi::at<PirateClothBuffers>(buffers)->mCurrent,
             vertex = u32(packet->mClothBuffers.mBuffers[channel][frame].mpVertices),
@@ -1162,9 +1162,9 @@ void pirate_render_material(void *object, void *context) {
     pirateTextureBind(
         ptr(u32(gabi::at<PirateMaterialRecord>(record)->mTextures[frame / 2].mpTextures)));
     for (u32 face = 0; face < 4; ++face) {
-        u32 topology = (u32)packet->mPrimitiveType, stride = (u32)packet->mIndexStride,
-            indices = (u32)packet->mpIndices, type = (u32)packet->mIndexType;
-        pirateGX2DrawIndexed(type, 0xA, topology, ptr(indices + stride * (face * 10)), 0, 1);
+        u32 format = (u32)packet->mIndexFormat, stride = (u32)packet->mIndexStride,
+            indices = (u32)packet->mpIndices, mode = (u32)packet->mPrimitiveMode;
+        pirateGX2DrawIndexed(mode, 0xA, format, ptr(indices + stride * (face * 10)), 0, 1);
     }
     gabi::at<PirateRasterView>(descriptor)->mCullMode = (u32)(1);
     pirateRasterSetCull(ptr(descriptor));
@@ -1180,9 +1180,9 @@ void pirate_render_material(void *object, void *context) {
         vertices += 0xF4;
     pirateTextureBind(ptr(vertices));
     for (u32 face = 0; face < 4; ++face) {
-        u32 topology = (u32)packet->mPrimitiveType, stride = (u32)packet->mIndexStride,
-            indices = (u32)packet->mpIndices, type = (u32)packet->mIndexType;
-        pirateGX2DrawIndexed(type, 0xA, topology, ptr(indices + stride * (face * 10)), 0, 1);
+        u32 format = (u32)packet->mIndexFormat, stride = (u32)packet->mIndexStride,
+            indices = (u32)packet->mpIndices, mode = (u32)packet->mPrimitiveMode;
+        pirateGX2DrawIndexed(mode, 0xA, format, ptr(indices + stride * (face * 10)), 0, 1);
     }
     pirateRasterApply(ptr(0x104B474C));
 }

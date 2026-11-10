@@ -47,9 +47,9 @@ fret 020198D8 0 1                              # cM_rndF (vs m48 * 0.5 / 1)
 callee 025192A8 r4=0x1C       # cc_at_check: CcAtInfo
 callee 028E8D88 r3=12         # PSVECAdd
 ret 020402C8 0 0               # enemy_ice
-field 0219AAE8 r3+0x494 u8 0,0,1             # m2DC
+field 0219AAE8 r3+0x494 u8 0,0,1             # mVanish
 field 0219AAE8 r3+0x330 f32 0 0.1            # scale.x vs 0.04 after cLib_addCalc0
-field 0219AAE8 r3+0x48C u8 0,0,0,1,5         # m2D4
+field 0219AAE8 r3+0x48C u8 0,0,0,1,5         # mAppearSwitch
 field 0219AAE8 10464B4D u8 0,0,0,1           # l_kiHIO.m05
 field 0219AAE8 10464B4E u8 0,0,0,0,0,1       # l_kiHIO.m06
 field 0219AAE8 10464B4F u8 0,0,0,0,0,1       # l_kiHIO.m07
@@ -60,25 +60,25 @@ field 0219AAE8 r3+0x4C0 i16 0,1,2,30,40,11        # mTimers
 field 0219AAE8 r3+0x4C2 i16 0,1,2
 field 0219AAE8 r3+0x4C4 i16 0,1,2
 field 0219AAE8 r3+0x4C6 i16 0,1,2
-field 0219AAE8 r3+0x4C8 i16 0,0,1,2,5            # m314
-field 0219AAE8 r3+0x4EC i8 0,1               # m338
-field 0219AAE8 r3+0x4E9 u8 0,1               # m335
-field 0219AAE8 r3+0x4E8 u8 0,1,2             # m334
-field 0219AAE8 r3+0x4EA u8 0,1,2             # m336
-field 0219AAE8 r3+0x4EB u8 0,1               # m337
+field 0219AAE8 r3+0x4C8 i16 0,0,1,2,5            # mNoHitTimer
+field 0219AAE8 r3+0x4EC i8 0,1               # mAnmPause
+field 0219AAE8 r3+0x4E9 u8 0,1               # mEyeAnmOn
+field 0219AAE8 r3+0x4E8 u8 0,1,2             # mEyeFrame
+field 0219AAE8 r3+0x4EA u8 0,1,2             # mEyeMaxFrame
+field 0219AAE8 r3+0x4EB u8 0,1               # mEyeLoop
 field 0219AAE8 r3+0xAB9 u8 0,0x80            # mDamageType
-field 0219AAE8 r3+0xAB8 u8 0,1               # m904
-field 0219AAE8 r3+0x6F4 u8 0,1               # m540
-field 0219AAE8 r3+0x4D6 i16 0,1,-20000,20000 # m322
-field 0219AAE8 r3+0x4D8 i16 0,1              # m324
+field 0219AAE8 r3+0xAB8 u8 0,1               # mFallSpinDir
+field 0219AAE8 r3+0x6F4 u8 0,1               # mBgCheckOn
+field 0219AAE8 r3+0x4D6 i16 0,1,-20000,20000 # mHeadTargetAngleY
+field 0219AAE8 r3+0x4D8 i16 0,1              # mHeadTargetAngleX
 field 0219AAE8 r3+0x558 u32 0,0x10           # mAcch wall hit
-field 0219AAE8 r3+0x4D0 f32 0 120            # m31C
+field 0219AAE8 r3+0x4D0 f32 0 120            # mKnockbackSpeed
 field 0219AAE8 r3+0x3A1 i8 -10,-1,0,1        # health
-field 0219AAE8 r3+0xAD0 u32 0,0x58000000     # m91C
+field 0219AAE8 r3+0xAD0 u32 0,0x58000000     # mFireEmitter
 field 0219AAE8 r3+0x340 f32 -100 30          # speed.y
 field 0219AAE8 r3+0x498 f32 0 3000           # mMaxAttackMoveDist300
-field 0219AAE8 r3+0x48E i8 -1,0,1,2,3        # m2D6
-field 0219AAE8 r3+0x48F i8 -1,1              # m2D7
+field 0219AAE8 r3+0x48E i8 -1,0,1,2,3        # mPathPoint
+field 0219AAE8 r3+0x48F i8 -1,1              # mPathDir
 field 0219AAE8 r3+0x490 u32 0x59000000,0x59000000,0   # ppd
 field 0219AAE8 59000000 u16 0 4              # m_num
 field 0219AAE8 59000002 u16 0,0xFFFF         # m_nextID

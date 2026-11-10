@@ -129,11 +129,11 @@ s32 dCamera_c::GetCameraTypeFromMapToolID(s32 id, s32 roomNo) {
 }
 /* 024FA3CC */
 void dCamera_c::pushPos() {
-    m084.copy(mViewCache.mCenter);
-    m090.copy(mViewCache.mEye);
-    *reinterpret_cast<GuestWord*>(&m09C) =
-        (u32) * reinterpret_cast<GuestWord*>(&mViewCache.mFovy); /* m09C = mViewCache.mFovy */
-    m0A0 = (s16)mViewCache.mBank;
+    mSavedCenter.copy(mViewCache.mCenter);
+    mSavedEye.copy(mViewCache.mEye);
+    *reinterpret_cast<GuestWord*>(&mSavedFovy) =
+        (u32) * reinterpret_cast<GuestWord*>(&mViewCache.mFovy); /* mSavedFovy = mViewCache.mFovy */
+    mSavedBank = (s16)mViewCache.mBank;
 }
 
 /* 024FA79C */
@@ -142,14 +142,14 @@ bool dCamera_c::onModeChange(s32 curMode, s32 nextMode) {
     if (curMode == 0xE && (camStyleFlags() & 0x10)) {
         setView(0.0f, 0.0f, 1280.0f, 720.0f);
     }
-    m14C = 0.0f;
-    m100 = 0;
-    m108 = 0;
-    m110 = 1;
-    m101 = 0;
+    mSightFitRadius = 0.0f;
+    mStyleSettle0 = 0;
+    mCurModeTimer = 0;
+    mModeChangeTransition = 1;
+    mStyleSettle1 = 0;
     mEventFlags = mEventFlags & ~0x211Eu;
     m10C = 0;
-    m102 = 0;
+    mStyleSettle2 = 0;
     if (curMode == 3)
         clrComStat(dCamAttnStts_00000004_e);
     switch ((u32)nextMode) {
@@ -158,15 +158,15 @@ bool dCamera_c::onModeChange(s32 curMode, s32 nextMode) {
         break;
     case 0:
         if (curMode == 1 && camTypeStyle(mCurType, 0) == camTypeStyle(mCurType, 1))
-            m110 = 0;
+            mModeChangeTransition = 0;
         break;
     case 1:
         if (curMode == 0 && camTypeStyle(mCurType, 0) == camTypeStyle(mCurType, 1))
-            m110 = 0;
+            mModeChangeTransition = 0;
         break;
     case 12:
         if (curMode != 12)
-            m254 = m254 | 2;
+            mSeRequest = mSeRequest | 2;
         break;
     }
     return true;
@@ -176,8 +176,8 @@ bool dCamera_c::onModeChange(s32 curMode, s32 nextMode) {
 bool dCamera_c::onTypeChange(s32 curType, s32 nextType) {
     m114 = 0;
     s32 mode = mCurMode;
-    m118 = 0;
-    if (m144 == 0) {
+    mCurTypeTimer = 0;
+    if (mManualInactive == 0) {
         s32 style = camTypeStyle(nextType, 0);
         if (style >= 0) {
             u32 alg = camStyleAlg(style);
@@ -185,12 +185,12 @@ bool dCamera_c::onTypeChange(s32 curType, s32 nextType) {
                 (alg >= dCamAlg_EVENT_CAMERA_e && alg <= dCamAlg_HOOKSHOT_CAMERA_e)) {
                 /* FIXED_POSITION, FIXED_FRAME, EVENT, CRAWL, HOOKSHOT */
                 mode = 0;
-                m144 = 1;
+                mManualInactive = 1;
             }
         }
     }
     if (onModeChange(mCurMode, mode))
-        m11C = 0;
+        mCurStyleTimer = 0;
     return true;
 }
 
@@ -210,7 +210,7 @@ void dCamera_c::setDMCAngle() {
 // HD: mHD610 is set when a subject camera style changes to an event camera style
 // whose parameter flags have 0x180
 bool dCamera_c::onStyleChange(s32 style1, s32 style2) {
-    m11C = 0;
+    mCurStyleTimer = 0;
     u32 alg1 = camStyleAlg(style1);
     bool fixed = false;
     if (alg1 == dCamAlg_SUBJECT_CAMERA_e) {
@@ -241,8 +241,8 @@ bool dCamera_c::onStyleChange(s32 style1, s32 style2) {
     case dCamAlg_SUBJECT_CAMERA_e:
     case dCamAlg_CRAWL_CAMERA_e:
     case dCamAlg_HOOKSHOT_CAMERA_e: /* SUBJECT, CRAWL, HOOKSHOT */
-        if (m144 == 0)
-            m144 = 1;
+        if (mManualInactive == 0)
+            mManualInactive = 1;
         break;
     }
     if (!resetDone)
@@ -296,7 +296,7 @@ s32 dCamera_c::nextType(s32 cur) {
                          (daPyStts0_UNK1000000_e | daPyStts0_SHIP_RIDE_e)) != 0 ||
                         (dComIfGp_getPlayerStatus1(mPadId) & daPyStts1_UNK80_e) != 0;
             s32 idx = mStageMapToolCameraIdx;
-            s32 forced = m524;
+            s32 forced = mForceType;
             if (boat && forced == 0xFF) {
                 next = mCamTypeBoat;
                 return next;
@@ -309,14 +309,14 @@ s32 dCamera_c::nextType(s32 cur) {
                     roomNo = room;
             }
             if (forced != 0xFF) {
-                fopAc_ac_c* target = m528.get();
+                fopAc_ac_c* target = mpForceTypeActor.get();
                 next = forced;
                 if (target != nullptr)
                     mpLockonTarget = target;
                 return next;
             }
             if (idx == 0xFF) {
-                s32 bg = m350;
+                s32 bg = mCamMoveBg;
                 if (bg > 0) {
                     if (bg >= (s32)mvBGType_num /* mvBGType_num */)
                         return next;
@@ -368,8 +368,8 @@ s32 dCamera_c::nextType(s32 cur) {
         }
     };
     next = chooseType();
-    m524 = 0xFF;
-    m528 = nullptr;
+    mForceType = 0xFF;
+    mpForceTypeActor = nullptr;
     return next;
 }
 
@@ -400,40 +400,40 @@ s32 dCamera_c::nextMode(s32 cur) {
                 else if (c == 12)
                     path = 2;
                 else
-                    path = m19B != 0 ? 0 : 1;
+                    path = mLockLJustActivated != 0 ? 0 : 1;
             } else if (c == 4) {
                 path = 0;
             } else {
                 if (c == 5 || c == 6) {
-                    m184 = 0;
-                    m144 = 1;
+                    mCStickYState = 0;
+                    mManualInactive = 1;
                 }
                 if (c == 1 || c == 5 || c == 6)
                     mpLockonTarget = nullptr;
-                path = m19B != 0 ? 0 : 1;
+                path = mLockLJustActivated != 0 ? 0 : 1;
             }
             if (path == 0) {
-                m184 = 0;
-                m144 = 1;
+                mCStickYState = 0;
+                mManualInactive = 1;
             } else if (path == 1) {
                 if (mStickCValueLast > (f32)cameraModeSetup(this)
                                            ->mManualStartCThreshold /* mManualStartCThreshold */) {
-                    m144 = 0;
+                    mManualInactive = 0;
                 } else if (cur == 0 || cur == 0x13) {
                     positionOf(&temporary, mpPlayerActor.get());
                     if (mStickMainValueLast < 0.5f &&
                         !cameraModeLockonTruth(dComIfGp_getAttention()) &&
                         !(S0() & daPyStts0_SWIM_e /* SWIM */)) {
-                        if (m184 == 1) {
+                        if (mCStickYState == 1) {
                             if (mStickCPosYLast <
                                 (f32)cameraModeSetup(this)->mCstick.m00 /* mCstick.m00 */)
-                                m184 = 0;
+                                mCStickYState = 0;
                         } else if (cameraModeOptionC()) {
                             s32 id = mCameraID;
                             auto& status =
                                 cameraModeGameInfo()->play.mCameraInfo[id].mCameraAttentionStatus;
                             status = (u32)status | dCamAttnStts_00001000_e;
-                            m184 = 1;
+                            mCStickYState = 1;
                             setComStat(dCamAttnStts_00000400_e);
                         } else {
                             s32 id = mCameraID;
@@ -448,41 +448,41 @@ s32 dCamera_c::nextMode(s32 cur) {
                 if (mStickCValueLast < 0.01f) {
                     stop = mDirection.mRadius < (f32)cameraModeSetup(this)->m098 /* m098 */;
                     if (!stop)
-                        stop = chkFlag(0x80000000) || m19B != 0;
+                        stop = chkFlag(0x80000000) || mLockLJustActivated != 0;
                 } else {
-                    stop = chkFlag(0x80000000) || m19B != 0;
+                    stop = chkFlag(0x80000000) || mLockLJustActivated != 0;
                 }
                 if (stop) {
-                    m184 = 0;
-                    m144 = 1;
+                    mCStickYState = 0;
+                    mManualInactive = 1;
                 }
                 if (!cameraModeLockonTruth(dComIfGp_getAttention()) && cameraModeOptionC()) {
                     setComStat(dCamAttnStts_00001000_e);
-                    m184 = 1;
+                    mCStickYState = 1;
                     setComStat(dCamAttnStts_00000400_e);
                 }
             }
         }
         if (chkFlag(0x4000000)) {
-            s32 m144v = m144;
+            s32 m144v = mManualInactive;
             s32 pad = mPadId;
             if (m144v == 0)
-                m254 = m254 | 1;
+                mSeRequest = mSeRequest | 1;
             if (dComIfGp_getPlayerStatus0(pad) & daPyStts0_UNK80000000_e)
                 mEventFlags = mEventFlags | 0x8000;
             u32 f = mEventFlags;
-            m144 = 1;
+            mManualInactive = 1;
             mEventFlags = f & ~0x4000000u;
         }
         {
             fopAc_ac_c* lock = mpLockonActor.get();
             if (mLockOnActorId != fpcM_ERROR_PROCESS_ID_e && lock != nullptr &&
                 fpcM_GetName(lock) == fpcNm_NPC_MD_e /* NPC_MD */) {
-                m144 = 1;
+                mManualInactive = 1;
                 cur = 0;
                 dComIfGp_ea();
             } else {
-                if (cur == 12 && m144 != 0) {
+                if (cur == 12 && mManualInactive != 0) {
                     next = 0;
                     return CLEAR_LOCK_ID;
                 }
@@ -522,7 +522,7 @@ s32 dCamera_c::nextMode(s32 cur) {
             next = 6;
             return CLEAR_LOCK_ID;
         }
-        if (m144 == 0) {
+        if (mManualInactive == 0) {
             next = 12;
             return CLEAR_LOCK_ID;
         }
@@ -582,7 +582,7 @@ s32 dCamera_c::nextMode(s32 cur) {
             next = 2;
             return STYLE_ONLY;
         }
-        if (cur == 12 && m144 == 0)
+        if (cur == 12 && mManualInactive == 0)
             return NORMAL_TAIL;
         next = 0;
         return CLEAR_LOCK_ID;
@@ -597,9 +597,9 @@ s32 dCamera_c::nextMode(s32 cur) {
             if ((u32)type != (u32)(s32)mCamTypeEvent && (u32)type != (u32)(s32)mCamTypeBoat &&
                 (u32)type != (u32)(s32)mCamTypeBoatBattle &&
                 (u32)type != (u32)(s32)mCamTypeRestrict) {
-                m254 = m254 | 1;
+                mSeRequest = mSeRequest | 1;
             }
-            m144 = 1;
+            mManualInactive = 1;
         }
     }
     if (camTypeStyle(mCurType, next) >= 0) {

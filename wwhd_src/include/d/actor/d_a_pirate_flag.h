@@ -49,11 +49,11 @@ struct daPirate_Flag_packet_c {
     /* 0x0CC */ cXyz mPos[2][25];
     /* 0x324 */ cXyz mNrm[2][25];
     /* 0x57C */ cXyz mBackNrm[2][25];
-    /* 0x7D4 */ cXyz m74C[25];
-    /* 0x900 */ be<s16> m878;
-    /* 0x902 */ be<s16> m87A;
-    /* 0x904 */ be<s16> m87C;
-    /* 0x906 */ be<u8> m87E;
+    /* 0x7D4 */ cXyz mVtxVel[25];  /* was m74C: pirate_flag_move 023D1EA4: [index] = the velocity of cloth vertex index: the spring / wind force is added, it is damped by 0.875 and added to the vertex position */
+    /* 0x900 */ be<s16> mNrmAngle;  /* was m878: daPirate_Flag_packet_c::setCorrectNrmAngle 023D1804: 300 * sin(mNrmWobblePhase) + mNrmCorrectAngle; pirate_flag_move 023D1EA4: Y rotation of the normals; pirate_packet_construct 023D3008: 0 (as daSail_packet_c mNrmAngle) */
+    /* 0x902 */ be<s16> mNrmCorrectAngle;  /* was m87A: daPirate_Flag_packet_c::setCorrectNrmAngle 023D1804: eased toward the wind-facing correction (step 0xC0), added to mNrmAngle; daPirate_Flag_Draw 023D116C adds it to the facing; pirate_packet_construct 023D3008: 0 (as daSail_packet_c mNrmCorrectAngle) */
+    /* 0x904 */ be<s16> mNrmWobblePhase;  /* was m87C: daPirate_Flag_packet_c::setCorrectNrmAngle 023D1804: + 900 + a random step per call; sine phase of mNrmAngle; pirate_packet_construct 023D3008: 0 (as daSail_packet_c mNrmWobblePhase) */
+    /* 0x906 */ be<u8> mCurArr;  /* was m87E: pirate_flag_move 023D1EA4: flipped (^ 1) each frame; index of the mPos / mNrm / mBackNrm array set in use (setNrmVtx 023D1A2C, setBackNrm 023D1E08, draw 023D0E68, daPirate_Flag_Create 023D33D4); pirate_packet_construct 023D3008: 0 (as daSail_packet_c mCurArr) */
     /* 0x907 */ be<u8> m87F;
     /* 0x908 */ be<u32> mShaderCount;
     /* 0x90C */ be<s32> mMaterialCount;
@@ -70,8 +70,8 @@ struct daPirate_Flag_packet_c {
     /* 0x1634 */ u8 mColorBlocks[6][0x10];
     /* 0x1694 */ be<u8> mMaterialInitialized;
     /* 0x1695 */ u8 _1695[0x3];
-    /* 0x1698 */ be<u32> mPrimitiveType;
-    /* 0x169C */ be<u32> mIndexType;
+    /* 0x1698 */ be<u32> mIndexFormat; /* was mPrimitiveType (misnamed): GX2DrawIndexedEx indexType (r5) at 023D39D4 / 023D3A64 (lwz 0x1698(r28)); start of an agl::IndexBufferLayout (027B5430 construct, 027B54E0 setStorage format 4), agl::IndexBufferLayout::mFormat */
+    /* 0x169C */ be<u32> mPrimitiveMode; /* was mIndexType (misnamed): GX2DrawIndexedEx mode (r3) at 023D39D4 / 023D3A64 (lwz 0x169C(r28)), set to 6 (triangle strip) at 023D2BC0; agl::IndexBufferLayout::mPrimitiveMode */
     /* 0x16A0 */ be<u32> mpIndices;
     /* 0x16A4 */ u8 _16A4[0x4];
     /* 0x16A8 */ be<u32> mIndexStride;
@@ -88,11 +88,11 @@ WWHD_OFFSET(daPirate_Flag_packet_c, mTevStr, 0xC8);
 WWHD_OFFSET(daPirate_Flag_packet_c, mPos, 0xCC);
 WWHD_OFFSET(daPirate_Flag_packet_c, mNrm, 0x324);
 WWHD_OFFSET(daPirate_Flag_packet_c, mBackNrm, 0x57C);
-WWHD_OFFSET(daPirate_Flag_packet_c, m74C, 0x7D4);
-WWHD_OFFSET(daPirate_Flag_packet_c, m878, 0x900);
-WWHD_OFFSET(daPirate_Flag_packet_c, m87A, 0x902);
-WWHD_OFFSET(daPirate_Flag_packet_c, m87C, 0x904);
-WWHD_OFFSET(daPirate_Flag_packet_c, m87E, 0x906);
+WWHD_OFFSET(daPirate_Flag_packet_c, mVtxVel, 0x7D4);
+WWHD_OFFSET(daPirate_Flag_packet_c, mNrmAngle, 0x900);
+WWHD_OFFSET(daPirate_Flag_packet_c, mNrmCorrectAngle, 0x902);
+WWHD_OFFSET(daPirate_Flag_packet_c, mNrmWobblePhase, 0x904);
+WWHD_OFFSET(daPirate_Flag_packet_c, mCurArr, 0x906);
 WWHD_OFFSET(daPirate_Flag_packet_c, m87F, 0x907);
 WWHD_OFFSET(daPirate_Flag_packet_c, mShaderCount, 0x908);
 WWHD_OFFSET(daPirate_Flag_packet_c, mMaterialCount, 0x90C);
@@ -107,8 +107,8 @@ WWHD_OFFSET(daPirate_Flag_packet_c, mMaterialBlocks, 0x1454);
 WWHD_OFFSET(daPirate_Flag_packet_c, mMatrixBlocks, 0x14B4);
 WWHD_OFFSET(daPirate_Flag_packet_c, mColorBlocks, 0x1634);
 WWHD_OFFSET(daPirate_Flag_packet_c, mMaterialInitialized, 0x1694);
-WWHD_OFFSET(daPirate_Flag_packet_c, mPrimitiveType, 0x1698);
-WWHD_OFFSET(daPirate_Flag_packet_c, mIndexType, 0x169C);
+WWHD_OFFSET(daPirate_Flag_packet_c, mIndexFormat, 0x1698);
+WWHD_OFFSET(daPirate_Flag_packet_c, mPrimitiveMode, 0x169C);
 WWHD_OFFSET(daPirate_Flag_packet_c, mpIndices, 0x16A0);
 WWHD_OFFSET(daPirate_Flag_packet_c, mIndexStride, 0x16A8);
 WWHD_OFFSET(daPirate_Flag_packet_c, mClothTexture, 0x16B0);
@@ -119,14 +119,14 @@ struct pirate_flag_class : fopAc_ac_c {
     /* 0x3AC */ request_of_phase_process_class mPhs1;
     /* 0x3B4 */ request_of_phase_process_class mPhs2;
     /* 0x3BC */ u8 _3BC[0x8];
-    /* 0x3C4 */ be<s16> m2A8;
+    /* 0x3C4 */ be<s16> mWindPhase;  /* was m2A8: pirate_flag_move 023D1EA4: + l_HIO m08 per frame; the wind strength along the flag is l_HIO m10 .. m0C by 0.5 + 0.5 * sin of it */
     /* 0x3C6 */ u8 _3C6[0xE];
     /* 0x3D4 */ daPirate_Flag_packet_c mPacket;
 };
 WWHD_SIZE(pirate_flag_class, 0x1ED4);
 WWHD_OFFSET(pirate_flag_class, mPhs1, 0x3AC);
 WWHD_OFFSET(pirate_flag_class, mPhs2, 0x3B4);
-WWHD_OFFSET(pirate_flag_class, m2A8, 0x3C4);
+WWHD_OFFSET(pirate_flag_class, mWindPhase, 0x3C4);
 WWHD_OFFSET(pirate_flag_class, mPacket, 0x3D4);
 struct daPirate_Flag_HIO_c {
     /* 0x000 */ be<s8> mNo;

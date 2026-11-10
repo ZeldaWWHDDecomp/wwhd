@@ -56,7 +56,7 @@ static BOOL kantera_nodeCallBack(J3DNode* node, int calcTiming) {
 static inline void ga_draw(kantera_class* i_this) {
     mo_ga_s* pGa = &i_this->mGa[0];
     for (s32 i = 0; i < 2; i++, pGa++) {
-        if (pGa->m2E != 0) {
+        if (pGa->mbEnabled != 0) {
             MtxTrans(pGa->mPos.x, pGa->mPos.y, pGa->mPos.z, 0);
             cMtx_YrotM(calc_mtx(), pGa->mRotY);
             cMtx_XrotM(calc_mtx(), pGa->mRotX);
@@ -150,30 +150,30 @@ static inline void swing_target(be<s16>* t, s16 a) {
 
 /* ga_move (inlined) */
 static inline void ga_move(kantera_class* i_this) {
-    f32 dx = (i_this->mBonPos.x - i_this->m2E4.x) * 0.3f;
-    f32 dy = (i_this->mBonPos.y - i_this->m2E4.y) * 0.3f;
-    f32 dz = (i_this->mBonPos.z - i_this->m2E4.z) * 0.3f;
+    f32 dx = (i_this->mBonPos.x - i_this->mBonPosOld.x) * 0.3f;
+    f32 dy = (i_this->mBonPos.y - i_this->mBonPosOld.y) * 0.3f;
+    f32 dz = (i_this->mBonPos.z - i_this->mBonPosOld.z) * 0.3f;
     gabi::Local<cXyz> sp3C;
     sp3C->x = 0.0f;
     sp3C->y = 0.0f;
     sp3C->z = 10.0f;
     mo_ga_s* ga = &i_this->mGa[0];
     for (s32 i = 0; i < 2; i++, ga++) {
-        if (ga->m2E == 0)
+        if (ga->mbEnabled == 0)
             continue;
-        if (ga->m2F != 0) {
-            ga->m2F = (u8)(ga->m2F - 1);
+        if (ga->mTargetTimer != 0) {
+            ga->mTargetTimer = (u8)(ga->mTargetTimer - 1);
         } else {
-            ga->m2F = (u8)gabi::ftoi(cM_rndF(5.0f));
+            ga->mTargetTimer = (u8)gabi::ftoi(cM_rndF(5.0f));
             f32 r = cM_rndFX(150.0f);
-            ga->m10.x = i_this->mBonPos.x + r;
+            ga->mTargetPos.x = i_this->mBonPos.x + r;
             r = cM_rndFX(30.0f);
-            ga->m10.y = i_this->mBonPos.y + r;
+            ga->mTargetPos.y = i_this->mBonPos.y + r;
             r = cM_rndFX(150.0f);
-            ga->m10.z = i_this->mBonPos.z + r;
+            ga->mTargetPos.z = i_this->mBonPos.z + r;
         }
         gabi::Local<cXyz> sp18;
-        cXyz_mi(&ga->m10, sp18, &ga->mPos);
+        cXyz_mi(&ga->mTargetPos, sp18, &ga->mPos);
         f32 x = sp18->x, z = sp18->z, y = sp18->y;
         cLib_addCalcAngleS2(&ga->mRotY, cM_atan2s(x, z), 2, 0x1000);
         s16 ax = cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
@@ -185,8 +185,8 @@ static inline void ga_move(kantera_class* i_this) {
         ga->mPos.x = ga->mPos.x + (sp30->x + dx);
         ga->mPos.y = ga->mPos.y + (sp30->y + dy);
         ga->mPos.z = ga->mPos.z + (sp30->z + dz);
-        u16 c = ga->m2C;
-        ga->m2C = (s16)(c + 0x3E00);
+        u16 c = ga->mFlapAngle;
+        ga->mFlapAngle = (s16)(c + 0x3E00);
         ga->mScaleY = cM_ssin(c);
     }
 }
@@ -221,13 +221,13 @@ static BOOL daKantera_Execute(kantera_class* i_this) {
         i_this->mSwitchNo = 0;
     }
 
-    if (i_this->m35C != 0) {
-        s16 c = (s16)(i_this->m35C - 1);
-        i_this->m35C = c;
+    if (i_this->mBreakTimer != 0) {
+        s16 c = (s16)(i_this->mBreakTimer - 1);
+        i_this->mBreakTimer = c;
         if (c == 30) {
             dPa_followEcallBack_end(&i_this->mPtclCallBack0);
             dPa_followEcallBack_end(&i_this->mPtclCallBack1);
-            c = i_this->m35C;
+            c = i_this->mBreakTimer;
         }
         if (c == 0) {
             fopAcM_delete(i_this);
@@ -269,9 +269,9 @@ static BOOL daKantera_Execute(kantera_class* i_this) {
         {
             gabi::Local<cXyz> sp38;
             gabi::Local<cXyz> sp6c;
-            f32 z = i_this->mBonPos.z - i_this->m2E4.z;
+            f32 z = i_this->mBonPos.z - i_this->mBonPosOld.z;
             sp38->y = 0.0f;
-            sp38->x = i_this->mBonPos.x - i_this->m2E4.x;
+            sp38->x = i_this->mBonPos.x - i_this->mBonPosOld.x;
             sp38->z = z;
             MtxPosition(sp38, sp6c);
             s16 ax = (s16)gabi::ftoi(sp6c->z * 1.2f * 100.0f);
@@ -367,14 +367,14 @@ static BOOL daKantera_Execute(kantera_class* i_this) {
         gndChk->dBgS_GrpPassChk::__vtbl = 0x1001265C;
         gndChk->dBgS_PolyPassChk::__vtbl = 0x1001269C;
         i_this->mState = 10;
-        i_this->m35C = 0x82;
+        i_this->mBreakTimer = 0x82;
         kanteraGroundDestroy(gndChk);
     }
         /* fallthrough */
     case 10: {
         if (i_this->mPtclCallBack0.mpEmitter != nullptr &&
             i_this->mPtclCallBack1.mpEmitter != nullptr) {
-            s16 c = i_this->m35C;
+            s16 c = i_this->mBreakTimer;
             if (c > 0x28) {
                 i_this->mSph.SetR(30.0f * i_this->mParticleScale.x);
                 i_this->mSph.SetC(&i_this->current.pos);
@@ -400,13 +400,13 @@ static BOOL daKantera_Execute(kantera_class* i_this) {
                 cLib_addCalc0(&i_this->mBonScale, 1.0f, 0.1f);
             }
         } else {
-            s16 c = i_this->m35C;
+            s16 c = i_this->mBreakTimer;
             if (c < 0x1E) {
                 i_this->mPlight.mPower = 262.5f * ((f32)c / 30.0f);
             }
         }
         if (target != nullptr && holder_state(target) == 2) {
-            if (i_this->m35C > 0x6E) {
+            if (i_this->mBreakTimer > 0x6E) {
                 i_this->mSph.OnAtSPrmBit(2);
             } else {
                 i_this->mSph.OffAtSPrmBit(2);
@@ -443,7 +443,7 @@ static BOOL daKantera_Execute(kantera_class* i_this) {
         i_this->eyePos.copy(i_this->current.pos);
         PSMTXCopy(kanteraAnmMtx(model, MK_KANTERA_JNT_KANTERA_e), calc_mtx());
     }
-    i_this->m2E4.copy(i_this->mBonPos);
+    i_this->mBonPosOld.copy(i_this->mBonPos);
     {
         gabi::Local<cXyz> sp08;
         sp08->x = 0.0f;
@@ -522,10 +522,10 @@ static BOOL daKantera_CreateHeap(fopAc_ac_c* a_this) {
             return FALSE;
         }
         if (cM_rndF(1.0f) < 0.5f) {
-            i_this->mGa[i].m2E = 1;
+            i_this->mGa[i].mbEnabled = 1;
             i_this->mGa[i].mPos.copy(i_this->current.pos);
             i_this->mGa[i].mScale = cM_rndF(0.3f) + 0.3f;
-            i_this->mGa[i].m2C = (s16)gabi::ftoi(cM_rndF(30000.0f));
+            i_this->mGa[i].mFlapAngle = (s16)gabi::ftoi(cM_rndF(30000.0f));
         }
     }
     return TRUE;

@@ -1,6 +1,6 @@
 /* Warp pot. GC names and HD layouts.
  * HD: larger actor lighting/animation shifts the actor tail; GHS PTMFs use eight bytes.
- * Numbered members below intentionally retain their zeldaret/tww names. */
+ * Numbered members still left follow zeldaret/tww; the `was mXXX` comments keep tww's names of the renamed ones. */
 #pragma once
 
 #include "m_Do/m_Do_ext.h"
@@ -100,30 +100,47 @@ struct WarptFollow_HD {
   u8 _8[12];
 };
 struct daObj_Warpt_c : fopAc_ac_c {
-  be<s32> m290;
-  u8 _3B0[4];
-  be<s32> m298, m29C, m2A0, m2A4, m2A8, m2AC, m2B0, m2B4, m2B8, m2BC, m2C0;
-  be<u8> m2C4, m2C5, m2C6;
-  u8 _3E3;
-  request_of_phase_process_class mPhase;
-  gptr<u8> mpBodyModel, mpLidModel1, mpBodyBgW1;
-  be<f32> m2DC[12];
-  gptr<u8> mpBodyBgW2;
-  be<f32> m310[12];
-  gptr<u8> mpLidBgW;
-  be<f32> m344[12];
-  gptr<u8> mpLidModel2;
-  mDoExt_brkAnm mLidBrk;
-  dCcD_Stts mStts;
-  dCcD_Cyl mCyl1, mCyl2;
-  WarptAcch mAcch;
-  WarptAcchCir mAcchCir;
-  cXyz m830;
-  be<s32> m83C;
-  be<s8> m840;
-  u8 _9BD[3];
-  WarptFollow_HD m844, m858;
-  be<u32> m86C, m870;
+  /* 0x3AC */ be<s32> mCurMode;  /* was m290: modeProc 023B9CB0: stores the new mode and calls its init / run from mode_tbl (tww mode_tbl[it].init / .run); _ride 023B9D5C / _draw 023BB074 test it (MODE_EVENT_WARP, the open mode 2); after tww daObj_Canon_c / daObj_Ikada_c mCurMode */
+  /* 0x3B0 */ u8 _3B0[4];
+  /* 0x3B4 */ be<s32> m298;
+  /* 0x3B8 */ be<s32> mWarpSclsNo;  /* was m29C: getArg 023B9F74: parameter bits 12-19 (tww); normalWarp 023BB7AC warps to it once mWarpSwNo is on (tww warp(it), warp sets the next stage by scls number) */
+  /* 0x3BC */ be<s32> mSpSclsNo1;  /* was m2A0: getArg 023B9F74: parameter bits 8-15 for the special pots (tww); spWarp 023BB6A4 warps to it when warp bit 1 is set (tww isWarpBit(1) -> warp(it)) */
+  /* 0x3C0 */ be<s32> mSpSclsNo2;  /* was m2A4: getArg 023B9F74: parameter bits 16-23 for the special pots (tww); spWarp 023BB6A4 warps to it when warp bit 2 is set (tww isWarpBit(2) -> warp(it)) */
+  /* 0x3C4 */ be<s32> mSpSclsNo4;  /* was m2A8: getArg 023B9F74: parameter bits 24-31 for the special pots (tww); spWarp 023BB6A4 warps to it when warp bit 4 is set (tww isWarpBit(4) -> warp(it)) */
+  /* 0x3C8 */ be<s32> mLidSwNo;  /* was m2AC: getArg 023B9F74: switch number (tww uVar6 bits 0-7); openHuta 023BB400 turns it on, mLidClosed is set while it is off (tww dComIfGs_onSwitch / isSwitch(it, ..)); isOtherHuta 023B9884 / modeClose 023BB488 test it */
+  /* 0x3CC */ be<s32> mWarpSwNo;  /* was m2B0: getArg 023B9F74: switch number (tww uVar6 bits 8-15); normalWarp 023BB7AC only warps while it is on (tww dComIfGs_isSwitch(it, ..)) */
+  /* 0x3D0 */ be<s32> mPotType;  /* was m2B4: getArg 023B9F74: parameter bits 0-3 (tww); isSp 023B9864: 2 .. 4 are the special pots (tww it == 2 || 3 || 4); spWarp 023BB6A4 switches on it; createInit 023BA4E0 picks the smoke colours by it (tww m_def_smoke_prm_color[it]) */
+  /* 0x3D4 */ be<s32> mEventRegNo;  /* was m2B8: getArg 023B9F74: parameter bits 4-7 for the special pots (tww); onWarpBit 023B9E94 / isWarpBit 023B9F1C use the event register m_event_reg[it] (tww) */
+  /* 0x3D8 */ be<s32> m2BC;
+  /* 0x3DC */ be<s32> m2C0;
+  /* 0x3E0 */ be<u8> mWarpBit;  /* was m2C4: getArg 023B9F74: 1, 2 or 4 by mPotType (tww); openHuta 023BB400 sets it in the event register (tww onWarpBit(it)); getArg sets mLidClosed from isWarpBit(it) (tww) */
+  /* 0x3E1 */ be<u8> m2C5;
+  /* 0x3E2 */ be<u8> mLidClosed;  /* was m2C6: tww accessor isHuta() { return it; } (our isHuta 023B985C); getArg 023B9F74: set while the lid switch / warp bit is off (tww); openHuta 023BB400 clears it */
+  /* 0x3E3 */ u8 _3E3;
+  /* 0x3E4 */ request_of_phase_process_class mPhase;
+  /* 0x3EC */ gptr<u8> mpBodyModel;
+  /* 0x3F0 */ gptr<u8> mpLidModel1;
+  /* 0x3F4 */ gptr<u8> mpBodyBgW1;
+  /* 0x3F8 */ be<f32> mBodyBgW1Mtx[12];  /* was m2DC: createBodyHeap 023B9AE8: the matrix mpBodyBgW1 is set up with (tww mpBodyBgW1->Set(.., &it)); setMtx 023BA250 copies the pot matrix into it (tww cMtx_copy(.., it)) */
+  /* 0x428 */ gptr<u8> mpBodyBgW2;
+  /* 0x42C */ be<f32> mBodyBgW2Mtx[12];  /* was m310: createBodyHeap 023B9AE8: the matrix mpBodyBgW2 is set up with (tww mpBodyBgW2->Set(.., &it)); setMtx 023BA250 copies the pot matrix into it (tww) */
+  /* 0x45C */ gptr<u8> mpLidBgW;
+  /* 0x460 */ be<f32> mLidBgWMtx[12];  /* was m344: createHutaHeap 023B9944: the matrix mpLidBgW is set up with (tww mpLidBgW->Set(.., &it)); setMtx 023BA250 copies the lid matrix into it (tww) */
+  /* 0x490 */ gptr<u8> mpLidModel2;
+  /* 0x494 */ mDoExt_brkAnm mLidBrk;
+  /* 0x50C */ dCcD_Stts mStts;
+  /* 0x548 */ dCcD_Cyl mCyl1;
+  /* 0x678 */ dCcD_Cyl mCyl2;
+  /* 0x7A8 */ WarptAcch mAcch;
+  /* 0x96C */ WarptAcchCir mAcchCir;
+  /* 0x9AC */ cXyz mLidPos;  /* was m830: setMtx 023BA250: current.pos raised by l_HIO.m08 (tww it = current.pos; it.y += l_HIO.m08), where the lid models are put; setCollision 023BA1BC mCyl2 centre; breakHuta 023BAA28 particles; _draw 023BB074 tev position (tww) */
+  /* 0x9B8 */ be<s32> mBreakFireTimer;  /* was m83C: modeBreakFireInit 023BB57C 60; modeBreakFire 023BB5CC acts when cLib_calcTimer(&it) reaches 0 (tww) */
+  /* 0x9BC */ be<s8> mBgW2RegistTimer;  /* was m840: createInit 023BA4E0 30 or 5, modeEventWarp 023BB820 30 (tww); _execute 023BAD74 counts it down (tww cLib_calcTimer(&it)); setMtx 023BA250 registers mpBodyBgW2 when it is 1 (tww if (it == 1) .. Regist(mpBodyBgW2, this)) */
+  /* 0x9BD */ u8 _9BD[3];
+  /* 0x9C0 */ WarptFollow_HD mOpenSmokeCallBack;  /* was m844: modeOpenInit 023BB2A4: the follow callback of the open smoke particle 0x8161 (tww ID_AK_SN_WARPPOTOPEN00, &it); _execute 023BAD74 recolours its emitter; _delete 023BA8C8 removes it */
+  /* 0x9D4 */ WarptFollow_HD mCloseSmokeCallBack;  /* was m858: modeCloseInit 023BB380: the follow callback of the close smoke particle 0x8162 (tww ID_AK_SN_WARPPOTCLOSE00, &it); modeOpenInit 023BB2A4 removes it; _delete 023BA8C8 removes it */
+  /* 0x9E8 */ be<u32> mSmokePrmColor;  /* was m86C: createInit 023BA4E0: m_def_smoke_prm_color[mPotType] (tww); modeOpenInit 023BB2A4 / modeCloseInit 023BB380 pass it as the smoke particle's prim colour (tww particle_set(.., &it, &m870)) */
+  /* 0x9EC */ be<u32> mSmokeEnvColor;  /* was m870: createInit 023BA4E0: m_def_smoke_env_color[mPotType] (tww); modeOpenInit 023BB2A4 / modeCloseInit 023BB380 pass it as the smoke particle's env colour (tww particle_set(.., &m86C, &it)) */
   u8 isHuta();
   bool isSp();
   bool isOtherHuta();
@@ -162,8 +179,8 @@ struct daObj_Warpt_c : fopAc_ac_c {
 WWHD_OFFSET(daObj_Warpt_c, mLidBrk, 0x494);
 WWHD_OFFSET(daObj_Warpt_c, mStts, 0x50C);
 WWHD_OFFSET(daObj_Warpt_c, mAcch, 0x7A8);
-WWHD_OFFSET(daObj_Warpt_c, m830, 0x9AC);
-WWHD_OFFSET(daObj_Warpt_c, m844, 0x9C0);
+WWHD_OFFSET(daObj_Warpt_c, mLidPos, 0x9AC);
+WWHD_OFFSET(daObj_Warpt_c, mOpenSmokeCallBack, 0x9C0);
 WWHD_SIZE(daObj_Warpt_c, 0x9F0);
 
 struct WarptAttack { u8 mPadding0[0x10]; be<u32> mType; };
@@ -322,38 +339,38 @@ enum WarptResource {
 };
 enum WarptProc { PROC_INIT_e, PROC_EXEC_e };
 enum WarptMode { MODE_OPEN, MODE_CLOSE, MODE_BREAK_FIRE, MODE_EVENT_WARP, MODE_EVENT_OPEN };
-WWHD_OFFSET(daObj_Warpt_c, m290, 0x3AC);
+WWHD_OFFSET(daObj_Warpt_c, mCurMode, 0x3AC);
 WWHD_OFFSET(daObj_Warpt_c, m298, 0x3B4);
-WWHD_OFFSET(daObj_Warpt_c, m29C, 0x3B8);
-WWHD_OFFSET(daObj_Warpt_c, m2A0, 0x3BC);
-WWHD_OFFSET(daObj_Warpt_c, m2A4, 0x3C0);
-WWHD_OFFSET(daObj_Warpt_c, m2A8, 0x3C4);
-WWHD_OFFSET(daObj_Warpt_c, m2AC, 0x3C8);
-WWHD_OFFSET(daObj_Warpt_c, m2B0, 0x3CC);
-WWHD_OFFSET(daObj_Warpt_c, m2B4, 0x3D0);
-WWHD_OFFSET(daObj_Warpt_c, m2B8, 0x3D4);
+WWHD_OFFSET(daObj_Warpt_c, mWarpSclsNo, 0x3B8);
+WWHD_OFFSET(daObj_Warpt_c, mSpSclsNo1, 0x3BC);
+WWHD_OFFSET(daObj_Warpt_c, mSpSclsNo2, 0x3C0);
+WWHD_OFFSET(daObj_Warpt_c, mSpSclsNo4, 0x3C4);
+WWHD_OFFSET(daObj_Warpt_c, mLidSwNo, 0x3C8);
+WWHD_OFFSET(daObj_Warpt_c, mWarpSwNo, 0x3CC);
+WWHD_OFFSET(daObj_Warpt_c, mPotType, 0x3D0);
+WWHD_OFFSET(daObj_Warpt_c, mEventRegNo, 0x3D4);
 WWHD_OFFSET(daObj_Warpt_c, m2BC, 0x3D8);
 WWHD_OFFSET(daObj_Warpt_c, m2C0, 0x3DC);
-WWHD_OFFSET(daObj_Warpt_c, m2C4, 0x3E0);
+WWHD_OFFSET(daObj_Warpt_c, mWarpBit, 0x3E0);
 WWHD_OFFSET(daObj_Warpt_c, m2C5, 0x3E1);
-WWHD_OFFSET(daObj_Warpt_c, m2C6, 0x3E2);
+WWHD_OFFSET(daObj_Warpt_c, mLidClosed, 0x3E2);
 WWHD_OFFSET(daObj_Warpt_c, mPhase, 0x3E4);
 WWHD_OFFSET(daObj_Warpt_c, mpBodyModel, 0x3EC);
 WWHD_OFFSET(daObj_Warpt_c, mpLidModel1, 0x3F0);
 WWHD_OFFSET(daObj_Warpt_c, mpBodyBgW1, 0x3F4);
-WWHD_OFFSET(daObj_Warpt_c, m2DC, 0x3F8);
+WWHD_OFFSET(daObj_Warpt_c, mBodyBgW1Mtx, 0x3F8);
 WWHD_OFFSET(daObj_Warpt_c, mpBodyBgW2, 0x428);
-WWHD_OFFSET(daObj_Warpt_c, m310, 0x42C);
+WWHD_OFFSET(daObj_Warpt_c, mBodyBgW2Mtx, 0x42C);
 WWHD_OFFSET(daObj_Warpt_c, mpLidBgW, 0x45C);
-WWHD_OFFSET(daObj_Warpt_c, m344, 0x460);
+WWHD_OFFSET(daObj_Warpt_c, mLidBgWMtx, 0x460);
 WWHD_OFFSET(daObj_Warpt_c, mpLidModel2, 0x490);
 WWHD_OFFSET(daObj_Warpt_c, mCyl1, 0x548);
 WWHD_OFFSET(daObj_Warpt_c, mCyl2, 0x678);
 WWHD_OFFSET(daObj_Warpt_c, mAcchCir, 0x96C);
-WWHD_OFFSET(daObj_Warpt_c, m83C, 0x9B8);
-WWHD_OFFSET(daObj_Warpt_c, m840, 0x9BC);
-WWHD_OFFSET(daObj_Warpt_c, m858, 0x9D4);
-WWHD_OFFSET(daObj_Warpt_c, m86C, 0x9E8);
-WWHD_OFFSET(daObj_Warpt_c, m870, 0x9EC);
+WWHD_OFFSET(daObj_Warpt_c, mBreakFireTimer, 0x9B8);
+WWHD_OFFSET(daObj_Warpt_c, mBgW2RegistTimer, 0x9BC);
+WWHD_OFFSET(daObj_Warpt_c, mCloseSmokeCallBack, 0x9D4);
+WWHD_OFFSET(daObj_Warpt_c, mSmokePrmColor, 0x9E8);
+WWHD_OFFSET(daObj_Warpt_c, mSmokeEnvColor, 0x9EC);
 WWHD_SIZE(WarptFollow_HD, 0x14);
 WWHD_OFFSET(WarptFollow_HD, mEmitter, 4);

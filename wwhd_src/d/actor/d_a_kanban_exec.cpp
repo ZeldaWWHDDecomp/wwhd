@@ -35,24 +35,24 @@ static inline void mother_move(kanban_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
-    switch (i_this->m2C0) {
+    switch (i_this->mAction) {
     case 10:
-        if (i_this->m5B0.ChkTgHit()) {
-            void* hitObj = i_this->m5B0.GetTgHitObj();
+        if (i_this->mCyl.ChkTgHit()) {
+            void* hitObj = i_this->mCyl.GetTgHitObj();
             if (hitObj != nullptr) {
                 kanban_clearStatusMap(a_this);
                 u32 atType = reinterpret_cast<dCcD_GObjInf*>(hitObj)->mAtType;
                 bool swordCut = atType == AT_TYPE_SWORD;
                 if (atType == AT_TYPE_SKULL_HAMMER) {
-                    i_this->m29A = 2;
+                    i_this->mHammerHit = 2;
                     if (kanban_player(player)->mCutType != CUT_TYPE_HAMMER_SIDESWING) {
                         gabi::Local<cXyz> sp18;
-                        sp18->copy(*i_this->m5B0.GetTgHitPosP());
-                        i_this->m2C0 = 20;
-                        i_this->m29B = 0;
-                        i_this->m29A = 1;
-                        i_this->m2A4 = 0.0f;
-                        i_this->m2A8 = 0.0f;
+                        sp18->copy(*i_this->mCyl.GetTgHitPosP());
+                        i_this->mAction = 20;
+                        i_this->mRestored = 0;
+                        i_this->mHammerHit = 1;
+                        i_this->mCylHeight = 0.0f;
+                        i_this->mCylRadius = 0.0f;
                         dComIfGp_particle_set(dPa_name_ID_AK_JN_OK, sp18, &player->shape_angle);
                         kanban_setPauseTimer(1);
                         return;
@@ -66,11 +66,11 @@ static inline void mother_move(kanban_class* i_this) {
                         if ((u32)(s32)pl_cut_real_no_dt[i] == cut) break;
                     }
                     if (i < 32 && pl_cut_no_dt[i] != 0xFF) {
-                        i_this->m2C4 = pl_cut_no_dt[i];
+                        i_this->mCutDir = pl_cut_no_dt[i];
                         kanban_cutPointCheck(i_this);
                     }
                 } else {
-                    i_this->m2C4 = 4;
+                    i_this->mCutDir = 4;
                     kanban_cutPointCheck(i_this);
                 }
             }
@@ -80,8 +80,8 @@ static inline void mother_move(kanban_class* i_this) {
     case 11:
         a_this->current.angle.y = (s16)(player->shape_angle.y + -0x4000);
         a_this->shape_angle.y = a_this->current.angle.y;
-        i_this->m298 = 0;
-        if (i_this->m294 & 0x100) {
+        i_this->mWobbleStep = 0;
+        if (i_this->mPartsMask & 0x100) {
             a_this->speedF = 20.0f;
             a_this->speed.y = 10.0f;
             a_this->gravity = -3.0f;
@@ -90,76 +90,76 @@ static inline void mother_move(kanban_class* i_this) {
             a_this->speed.y = 7.0f;
             a_this->gravity = -3.0f;
         }
-        i_this->m2C0 = i_this->m2C0 + 1;
+        i_this->mAction = i_this->mAction + 1;
         break;
 
     case 12:
         if (kanban_seaWaterCheck(i_this)) {
-            i_this->m2BE = KANBAN_MOTHER_SWIM;
-            i_this->m2C0 = 0x28;
+            i_this->mMode = KANBAN_MOTHER_SWIM;
+            i_this->mAction = 0x28;
         } else {
             f32 spy = a_this->speed.y;
-            if (i_this->m350.ChkWallHit()) {
+            if (i_this->mAcch.ChkWallHit()) {
                 a_this->speedF = -a_this->speedF;
             }
             if (spy < 0.0f) {
                 cLib_addCalcAngleS2(&a_this->shape_angle.x, 0x4000, 1, 0x1000);
             }
-            if (i_this->m350.ChkGroundHit()) {
-                i_this->m2C6 = 0x800;
-                fopAcM_getGroundAngle(a_this, &i_this->m2AC);
+            if (i_this->mAcch.ChkGroundHit()) {
+                i_this->mWobbleAngle = 0x800;
+                fopAcM_getGroundAngle(a_this, &i_this->mGroundAngle);
                 a_this->speedF = 0.0f;
                 a_this->gravity = 0.0f;
-                i_this->m2C0 = 13;
+                i_this->mAction = 13;
             }
         }
         break;
 
     case 13:
         if (kanban_seaWaterCheck(i_this)) {
-            i_this->m2BE = KANBAN_MOTHER_SWIM;
-            i_this->m2C0 = 0x28;
+            i_this->mMode = KANBAN_MOTHER_SWIM;
+            i_this->mAction = 0x28;
             break;
         }
-        cLib_addCalcAngleS2(&a_this->shape_angle.x, (s16)(i_this->m2C6 + 0x4000), 1, 0x1000);
-        i_this->m2C6 = (s16)(i_this->m2C6 ^ 0xFF00);
-        i_this->m298 = (i_this->m298 + 1) & 3;
-        if (!(i_this->m298 & 1)) {
-            i_this->m2C6 = 0x400;
+        cLib_addCalcAngleS2(&a_this->shape_angle.x, (s16)(i_this->mWobbleAngle + 0x4000), 1, 0x1000);
+        i_this->mWobbleAngle = (s16)(i_this->mWobbleAngle ^ 0xFF00);
+        i_this->mWobbleStep = (i_this->mWobbleStep + 1) & 3;
+        if (!(i_this->mWobbleStep & 1)) {
+            i_this->mWobbleAngle = 0x400;
         }
-        if (!(i_this->m298 & 3)) {
+        if (!(i_this->mWobbleStep & 3)) {
             a_this->shape_angle.x = 0x4000;
-            i_this->m2C6 = 0;
-            OffCoSetBit(&i_this->m5B0);
-            OffTgSetBit(&i_this->m5B0);
-            i_this->m5B0.ClrTgHit();
-            i_this->m2C0 = i_this->m2C0 + 1;
+            i_this->mWobbleAngle = 0;
+            OffCoSetBit(&i_this->mCyl);
+            OffTgSetBit(&i_this->mCyl);
+            i_this->mCyl.ClrTgHit();
+            i_this->mAction = i_this->mAction + 1;
         }
         /* fallthrough */
     case 14:
         if (kanban_seaWaterCheck(i_this)) {
-            i_this->m2BE = KANBAN_MOTHER_SWIM;
-            i_this->m2C0 = 0x28;
-        } else if (i_this->m2B2[4] == 0 && kanban_shockDamageCheck(i_this)) {
+            i_this->mMode = KANBAN_MOTHER_SWIM;
+            i_this->mAction = 0x28;
+        } else if (i_this->mTimers[4] == 0 && kanban_shockDamageCheck(i_this)) {
             a_this->speed.y = cM_rndF(10.0f) + 20.0f;
             a_this->gravity = -3.0f;
-            i_this->m2C0 = 12;
+            i_this->mAction = 12;
         }
         break;
 
     case 0x14:
-        i_this->m2C0 = i_this->m2C0 + 1;
+        i_this->mAction = i_this->mAction + 1;
         /* fallthrough */
     case 0x15: {
-        i_this->m2B2[1] = 2;
+        i_this->mTimers[1] = 2;
         f32 fVar4 = 90.0f;
-        if (i_this->m2C2 & 8) {
+        if (i_this->mCutFlags & 8) {
             fVar4 = 65.0f;
         }
-        if (i_this->m2C2 & 0x10) {
+        if (i_this->mCutFlags & 0x10) {
             fVar4 = 20.0f;
         }
-        cLib_addCalc2(&a_this->current.pos.y, i_this->m2F8.y - fVar4, 1.0f, 30.0f);
+        cLib_addCalc2(&a_this->current.pos.y, i_this->mHomePos.y - fVar4, 1.0f, 30.0f);
         break;
     }
     }
@@ -168,38 +168,38 @@ static inline void mother_move(kanban_class* i_this) {
 /* mother_water_swim / chield_water_swim (inlined) */
 static inline void water_swim(kanban_class* i_this, s16 base) {
     dComIfGp_get(); /* HD: unused fetch */
-    if (i_this->m2C0 == base) {
-        i_this->m2C6 = 0;
+    if (i_this->mAction == base) {
+        i_this->mWobbleAngle = 0;
         i_this->actor.shape_angle.x = 0x4000;
-        OffCoSetBit(&i_this->m5B0);
-        OffTgSetBit(&i_this->m5B0);
-        i_this->m5B0.ClrTgHit();
-        i_this->m2C0 = i_this->m2C0 + 1;
+        OffCoSetBit(&i_this->mCyl);
+        OffTgSetBit(&i_this->mCyl);
+        i_this->mCyl.ClrTgHit();
+        i_this->mAction = i_this->mAction + 1;
         kanban_seaWaterCheck(i_this);
-    } else if (i_this->m2C0 == base + 1) {
+    } else if (i_this->mAction == base + 1) {
         kanban_seaWaterCheck(i_this);
     }
 }
 
 /* the common return-home step of mother_return_move / chield_parts_move */
 static inline void return_move(kanban_class* i_this) {
-    if (i_this->m2B2[0] == 0) {
-        i_this->m2CC.x = 0.0f;
-        i_this->m2CC.y = 0.0f;
-        i_this->m2CC.z = 0.0f;
-        i_this->m2E4 = 0.0f;
-        i_this->m2E8 = 0.0f;
-        i_this->m2EC = 0.0f;
-        i_this->m2C6 = 0;
+    if (i_this->mTimers[0] == 0) {
+        i_this->mModelOffset.x = 0.0f;
+        i_this->mModelOffset.y = 0.0f;
+        i_this->mModelOffset.z = 0.0f;
+        i_this->mPivotX = 0.0f;
+        i_this->mPivotY = 0.0f;
+        i_this->mPivotZ = 0.0f;
+        i_this->mWobbleAngle = 0;
         if (kanban_returnPosition(i_this)) {
-            i_this->m2C0 = i_this->m2C0 + 1;
+            i_this->mAction = i_this->mAction + 1;
         }
     }
 }
 static inline void return_angle(kanban_class* i_this, s16 first) {
-    if (i_this->m2B2[0] == 0 && i_this->m2C0 >= first) {
-        cLib_addCalcAngleS2(&i_this->actor.current.angle.x, i_this->m2F0.x, 1, 0x1000);
-        cLib_addCalcAngleS2(&i_this->actor.current.angle.z, i_this->m2F0.z, 1, 0x1000);
+    if (i_this->mTimers[0] == 0 && i_this->mAction >= first) {
+        cLib_addCalcAngleS2(&i_this->actor.current.angle.x, i_this->mHomeAngle.x, 1, 0x1000);
+        cLib_addCalcAngleS2(&i_this->actor.current.angle.z, i_this->mHomeAngle.z, 1, 0x1000);
         i_this->actor.shape_angle.x = i_this->actor.current.angle.x;
         i_this->actor.shape_angle.y = i_this->actor.current.angle.y;
         i_this->actor.shape_angle.z = i_this->actor.current.angle.z;
@@ -211,38 +211,38 @@ static inline void mother_return_move(kanban_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     dComIfGp_get(); /* HD: unused fetch */
 
-    switch (i_this->m2C0) {
+    switch (i_this->mAction) {
     case 30:
         if (dComIfGp_checkPlayerStatus1(0, daPyStts1_WIND_WAKER_CONDUCT_e)) {
             break;
         }
-        i_this->m2B2[0] = (s16)gabi::ftoi(cM_rndF(30.0f));
-        i_this->m2C0 = i_this->m2C0 + 1;
+        i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(30.0f));
+        i_this->mAction = i_this->mAction + 1;
         /* fallthrough */
     case 31:
         return_move(i_this);
         break;
 
     case 32: {
-        cLib_addCalcAngleS2(&a_this->current.angle.y, i_this->m2F0.y, 1, 0x1000);
-        s16 sVar2 = cLib_distanceAngleS(a_this->current.angle.y, i_this->m2F0.y);
+        cLib_addCalcAngleS2(&a_this->current.angle.y, i_this->mHomeAngle.y, 1, 0x1000);
+        s16 sVar2 = cLib_distanceAngleS(a_this->current.angle.y, i_this->mHomeAngle.y);
         if (sVar2 < 0x100) {
-            i_this->m2C0 = i_this->m2C0 + 1;
-            a_this->current.angle.y = i_this->m2F0.y;
+            i_this->mAction = i_this->mAction + 1;
+            a_this->current.angle.y = i_this->mHomeAngle.y;
         }
         break;
     }
     case 33:
-        if (i_this->m294 == 0x7FE) {
-            i_this->m2C2 = 0;
-            i_this->m2C4 = 0;
-            OnTgSetBit(&i_this->m5B0);
-            OnCoSetBit(&i_this->m5B0);
-            i_this->m2BE = KANBAN_MOTHER;
-            i_this->m2C0 = 10;
-            i_this->m29B = 1;
-            i_this->m2A4 = 105.0f;
-            i_this->m2A8 = 50.0f;
+        if (i_this->mPartsMask == 0x7FE) {
+            i_this->mCutFlags = 0;
+            i_this->mCutDir = 0;
+            OnTgSetBit(&i_this->mCyl);
+            OnCoSetBit(&i_this->mCyl);
+            i_this->mMode = KANBAN_MOTHER;
+            i_this->mAction = 10;
+            i_this->mRestored = 1;
+            i_this->mCylHeight = 105.0f;
+            i_this->mCylRadius = 50.0f;
             kanban_setStatusMap(a_this, 0x38);
             return;
         }
@@ -256,20 +256,20 @@ static inline void parts_move(kanban_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
-    switch (i_this->m2C0) {
+    switch (i_this->mAction) {
     case 0x6e: {
-        i_this->m298 = 0;
+        i_this->mWobbleStep = 0;
         s16 ay = fopAcM_searchActorAngleY(player, a_this);
         a_this->current.angle.y = ay;
-        if (i_this->m2C4 != 1) {
+        if (i_this->mCutDir != 1) {
             f32 fy = (f32)ay;
             a_this->current.angle.y = (s16)gabi::ftoi(fy + cM_rndFX(8000.0f));
-            kanban_class* kanban = (kanban_class*)fopAcM_SearchByID(i_this->m2C8);
+            kanban_class* kanban = (kanban_class*)fopAcM_SearchByID(i_this->mMotherId);
             if (kanban != nullptr) {
                 a_this->speedF = cM_rndFX(2.0f) + 10.0f;
                 a_this->speed.y = cM_rndFX(5.0f) + 20.0f;
                 a_this->gravity = -5.0f;
-                if (kanban->m29A == 2) {
+                if (kanban->mHammerHit == 2) {
                     a_this->current.angle.y = (s16)(player->shape_angle.y + -0x4000);
                     a_this->speedF = cM_rndFX(5.0f) + 15.0f;
                     a_this->speed.y = cM_rndFX(5.0f) + 30.0f;
@@ -277,11 +277,11 @@ static inline void parts_move(kanban_class* i_this) {
                 }
             }
             a_this->shape_angle.y = a_this->current.angle.y;
-            i_this->m2C0 = 0x6f;
+            i_this->mAction = 0x6f;
         } else {
             a_this->shape_angle.y = ay;
-            i_this->m298 = 0;
-            if (i_this->m294 & 0x100) {
+            i_this->mWobbleStep = 0;
+            if (i_this->mPartsMask & 0x100) {
                 a_this->speedF = 20.0f;
                 a_this->speed.y = 10.0f;
                 a_this->gravity = -3.0f;
@@ -290,76 +290,76 @@ static inline void parts_move(kanban_class* i_this) {
                 a_this->speed.y = 7.0f;
                 a_this->gravity = -3.0f;
             }
-            i_this->m2C0 = 0x78;
+            i_this->mAction = 0x78;
         }
         break;
     }
 
     case 0x6f: {
         s16 ax = a_this->shape_angle.x;
-        if (i_this->m350.ChkWallHit()) {
+        if (i_this->mAcch.ChkWallHit()) {
             a_this->speedF = -a_this->speedF;
         }
         a_this->shape_angle.x = (s16)(ax + 0x1000);
-        if (i_this->m350.ChkGroundHit()) {
+        if (i_this->mAcch.ChkGroundHit()) {
             a_this->speedF = 5.0f;
             a_this->speed.y = 10.0f;
-            i_this->m2C0 = i_this->m2C0 + 1;
+            i_this->mAction = i_this->mAction + 1;
         }
         break;
     }
 
     case 0x70:
         cLib_addCalcAngleS2(&a_this->shape_angle.x, 0x4000, 1, 0x1000);
-        if (i_this->m350.ChkGroundHit()) {
-            i_this->m2C6 = 0x800;
-            fopAcM_getGroundAngle(a_this, &i_this->m2AC);
+        if (i_this->mAcch.ChkGroundHit()) {
+            i_this->mWobbleAngle = 0x800;
+            fopAcM_getGroundAngle(a_this, &i_this->mGroundAngle);
             a_this->speedF = 0.0f;
             a_this->gravity = 0.0f;
-            i_this->m2C0 = i_this->m2C0 + 1;
+            i_this->mAction = i_this->mAction + 1;
         }
         break;
 
     case 0x71:
-        cLib_addCalcAngleS2(&a_this->shape_angle.x, (s16)(i_this->m2C6 + 0x4000), 1, 0x1000);
-        i_this->m2C6 = (s16)(i_this->m2C6 ^ 0xFF00);
-        i_this->m298 = (i_this->m298 + 1) & 3;
-        if ((i_this->m298 & 1) == 0) {
-            i_this->m2C6 = 0x400;
+        cLib_addCalcAngleS2(&a_this->shape_angle.x, (s16)(i_this->mWobbleAngle + 0x4000), 1, 0x1000);
+        i_this->mWobbleAngle = (s16)(i_this->mWobbleAngle ^ 0xFF00);
+        i_this->mWobbleStep = (i_this->mWobbleStep + 1) & 3;
+        if ((i_this->mWobbleStep & 1) == 0) {
+            i_this->mWobbleAngle = 0x400;
         }
-        if ((i_this->m298 & 3) == 0) {
+        if ((i_this->mWobbleStep & 3) == 0) {
             a_this->shape_angle.x = 0x4000;
-            i_this->m2C6 = 0;
-            OffCoSetBit(&i_this->m5B0);
-            OffTgSetBit(&i_this->m5B0);
-            i_this->m5B0.ClrTgHit();
-            i_this->m2C0 = i_this->m2C0 + 1;
+            i_this->mWobbleAngle = 0;
+            OffCoSetBit(&i_this->mCyl);
+            OffTgSetBit(&i_this->mCyl);
+            i_this->mCyl.ClrTgHit();
+            i_this->mAction = i_this->mAction + 1;
         }
         break;
 
     case 0x72:
-        if (i_this->m2B2[4] == 0 && kanban_shockDamageCheck(i_this)) {
+        if (i_this->mTimers[4] == 0 && kanban_shockDamageCheck(i_this)) {
             a_this->speed.y = cM_rndF(10.0f) + 20.0f;
             a_this->gravity = -3.0f;
-            i_this->m2C0 = 0x70;
+            i_this->mAction = 0x70;
         }
         break;
 
     case 0x78: {
         f32 spy = a_this->speed.y;
-        if (i_this->m350.ChkWallHit()) {
+        if (i_this->mAcch.ChkWallHit()) {
             a_this->speedF = -a_this->speedF;
         }
         if (spy < 0.0f) {
             cLib_addCalcAngleS2(&a_this->shape_angle.x, 0x4000, 1, 0x1000);
         }
-        if (i_this->m350.ChkGroundHit()) {
+        if (i_this->mAcch.ChkGroundHit()) {
             a_this->shape_angle.x = 0x4000;
-            i_this->m2C6 = 0x800;
-            fopAcM_getGroundAngle(a_this, &i_this->m2AC);
+            i_this->mWobbleAngle = 0x800;
+            fopAcM_getGroundAngle(a_this, &i_this->mGroundAngle);
             a_this->speedF = 0.0f;
             a_this->gravity = 0.0f;
-            i_this->m2C0 = 0x71;
+            i_this->mAction = 0x71;
         }
         break;
     }
@@ -369,40 +369,40 @@ static inline void parts_move(kanban_class* i_this) {
 /* chield_parts_move (inlined) */
 static inline void chield_parts_move(kanban_class* i_this) {
     dComIfGp_get(); /* HD: unused fetch */
-    switch (i_this->m2C0) {
+    switch (i_this->mAction) {
     case 0x82:
         if (dComIfGp_checkPlayerStatus1(0, daPyStts1_WIND_WAKER_CONDUCT_e)) {
             break;
         }
-        i_this->m2B2[0] = (s16)gabi::ftoi(cM_rndF(30.0f));
-        i_this->m2C0 = i_this->m2C0 + 1;
+        i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(30.0f));
+        i_this->mAction = i_this->mAction + 1;
         /* fallthrough */
     case 0x83:
         return_move(i_this);
         break;
 
     case 0x84: {
-        cLib_addCalcAngleS2(&i_this->actor.current.angle.y, i_this->m2F0.y, 1, 0x1000);
-        s16 sVar3 = cLib_distanceAngleS(i_this->actor.current.angle.y, i_this->m2F0.y);
+        cLib_addCalcAngleS2(&i_this->actor.current.angle.y, i_this->mHomeAngle.y, 1, 0x1000);
+        s16 sVar3 = cLib_distanceAngleS(i_this->actor.current.angle.y, i_this->mHomeAngle.y);
         if (sVar3 < 0x100) {
-            i_this->actor.current.angle.y = i_this->m2F0.y;
-            i_this->m2C0 = i_this->m2C0 + 1;
-            kanban_class* kanban = (kanban_class*)fopAcM_SearchByID(i_this->m2C8);
+            i_this->actor.current.angle.y = i_this->mHomeAngle.y;
+            i_this->mAction = i_this->mAction + 1;
+            kanban_class* kanban = (kanban_class*)fopAcM_SearchByID(i_this->mMotherId);
             if (kanban != nullptr) {
-                kanban->m294 = kanban->m294 ^ i_this->m294;
+                kanban->mPartsMask = kanban->mPartsMask ^ i_this->mPartsMask;
             }
         }
         break;
     }
     case 0x85: {
-        kanban_class* kanban = (kanban_class*)fopAcM_SearchByID(i_this->m2C8);
+        kanban_class* kanban = (kanban_class*)fopAcM_SearchByID(i_this->mMotherId);
         if (kanban != nullptr) {
-            if (kanban->m29B == 1) {
+            if (kanban->mRestored == 1) {
                 fopAcM_delete(&i_this->actor);
             }
-            if (kanban->m29B == 2) {
-                i_this->m2BE = KANBAN_PARTS;
-                i_this->m2C0 = 0x6e;
+            if (kanban->mRestored == 2) {
+                i_this->mMode = KANBAN_PARTS;
+                i_this->mAction = 0x6e;
             }
         }
         break;
@@ -413,8 +413,8 @@ static inline void chield_parts_move(kanban_class* i_this) {
 
 static inline void tact_return(kanban_class* i_this, s16 mode, s16 proc) {
     speed_zero(i_this);
-    i_this->m2BE = mode;
-    i_this->m2C0 = proc;
+    i_this->mMode = mode;
+    i_this->mAction = proc;
 }
 
 /* 0218B234 */
@@ -422,12 +422,12 @@ static BOOL daKanban_Execute(kanban_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
     for (s32 i = 0; i < 5; i++) {
-        if (i_this->m2B2[i] != 0) {
-            i_this->m2B2[i] = i_this->m2B2[i] - 1;
+        if (i_this->mTimers[i] != 0) {
+            i_this->mTimers[i] = i_this->mTimers[i] - 1;
         }
     }
 
-    switch (i_this->m2BE) {
+    switch (i_this->mMode) {
     case KANBAN_MOTHER:
         if (i_this->actor.eventInfo.checkCommandTalk()) { /* eventInfo.checkCommandTalk() */
             u32 mng = kanban_msgManager();
@@ -444,22 +444,22 @@ static BOOL daKanban_Execute(kanban_class* i_this) {
                 }
             }
         } else {
-            if (i_this->m2C2 == 0 && i_this->m2C0 != 0x14 && i_this->m2C0 != 0x15) {
+            if (i_this->mCutFlags == 0 && i_this->mAction != 0x14 && i_this->mAction != 0x15) {
                 eventInfo_onCondition(&i_this->actor, dEvtCnd_CANTALK_e);
             }
             mother_move(i_this);
         }
 
-        if (i_this->m2C0 != 14) {
+        if (i_this->mAction != 14) {
             kanban_rollPlayerCrash(&i_this->actor, 35.0f, 0);
         }
 
-        i_this->m5B0.SetC(&i_this->actor.current.pos);
-        i_this->m5B0.SetH(i_this->m2A4);
-        i_this->m5B0.SetR(i_this->m2A8);
-        dComIfG_Ccsp_Set(&i_this->m5B0);
+        i_this->mCyl.SetC(&i_this->actor.current.pos);
+        i_this->mCyl.SetH(i_this->mCylHeight);
+        i_this->mCyl.SetR(i_this->mCylRadius);
+        dComIfG_Ccsp_Set(&i_this->mCyl);
 
-        if (i_this->m294 != 1 && i_this->m294 != 0x7FE && kanban_getTactMusic(player) == 4) {
+        if (i_this->mPartsMask != 1 && i_this->mPartsMask != 0x7FE && kanban_getTactMusic(player) == 4) {
             tact_return(i_this, KANBAN_MOTHER_RETURN, 30);
         }
         break;
@@ -471,7 +471,7 @@ static BOOL daKanban_Execute(kanban_class* i_this) {
     case KANBAN_MOTHER_SWIM:
         water_swim(i_this, 40);
         if (kanban_getTactMusic(player) == 4) {
-            dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->m514);
+            dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->mRippleCb);
             tact_return(i_this, KANBAN_MOTHER_RETURN, 30);
         }
         break;
@@ -481,8 +481,8 @@ static BOOL daKanban_Execute(kanban_class* i_this) {
         if (kanban_getTactMusic(player) == 4) {
             tact_return(i_this, KANBAN_PARTS_RETURN, 0x82);
         } else if (kanban_seaWaterCheck(i_this)) {
-            i_this->m2BE = KANBAN_PARTS_SWIM;
-            i_this->m2C0 = 0x8c;
+            i_this->mMode = KANBAN_PARTS_SWIM;
+            i_this->mAction = 0x8c;
         }
         break;
 
@@ -493,7 +493,7 @@ static BOOL daKanban_Execute(kanban_class* i_this) {
     case KANBAN_PARTS_SWIM:
         water_swim(i_this, 140);
         if (kanban_getTactMusic(player) == 4) {
-            dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->m514);
+            dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&i_this->mRippleCb);
             tact_return(i_this, KANBAN_PARTS_RETURN, 0x82);
         }
         break;
@@ -510,24 +510,24 @@ static BOOL daKanban_Execute(kanban_class* i_this) {
     i_this->actor.speed.y = i_this->actor.speed.y + i_this->actor.gravity;
     i_this->actor.speed.z = sp08->z;
 
-    if (i_this->m2A4 != 0.0f) {
-        fopAcM_posMove(&i_this->actor, &i_this->m574.m_cc_move);
+    if (i_this->mCylHeight != 0.0f) {
+        fopAcM_posMove(&i_this->actor, &i_this->mStts.m_cc_move);
     } else {
         fopAcM_posMove(&i_this->actor, nullptr);
     }
 
-    i_this->m310.SetWall(0.0f, 40.0f);
+    i_this->mAcchCir.SetWall(0.0f, 40.0f);
 
-    if (i_this->m2BE != KANBAN_MOTHER_RETURN && i_this->m2BE != KANBAN_PARTS_RETURN && i_this->m2B2[1] == 0) {
-        i_this->actor.current.pos.y = i_this->actor.current.pos.y + i_this->m2E8;
-        i_this->actor.old.pos.y = i_this->actor.old.pos.y + i_this->m2E8;
-        i_this->actor.current.pos.y = i_this->actor.current.pos.y - i_this->m2A0;
-        i_this->actor.old.pos.y = i_this->actor.old.pos.y - i_this->m2A0;
-        i_this->m350.CrrPos(dComIfG_Bgsp());
-        i_this->actor.current.pos.y = i_this->actor.current.pos.y + i_this->m2A0;
-        i_this->actor.old.pos.y = i_this->actor.old.pos.y + i_this->m2A0;
-        i_this->actor.current.pos.y = i_this->actor.current.pos.y - i_this->m2E8;
-        i_this->actor.old.pos.y = i_this->actor.old.pos.y - i_this->m2E8;
+    if (i_this->mMode != KANBAN_MOTHER_RETURN && i_this->mMode != KANBAN_PARTS_RETURN && i_this->mTimers[1] == 0) {
+        i_this->actor.current.pos.y = i_this->actor.current.pos.y + i_this->mPivotY;
+        i_this->actor.old.pos.y = i_this->actor.old.pos.y + i_this->mPivotY;
+        i_this->actor.current.pos.y = i_this->actor.current.pos.y - i_this->mWaterSinkY;
+        i_this->actor.old.pos.y = i_this->actor.old.pos.y - i_this->mWaterSinkY;
+        i_this->mAcch.CrrPos(dComIfG_Bgsp());
+        i_this->actor.current.pos.y = i_this->actor.current.pos.y + i_this->mWaterSinkY;
+        i_this->actor.old.pos.y = i_this->actor.old.pos.y + i_this->mWaterSinkY;
+        i_this->actor.current.pos.y = i_this->actor.current.pos.y - i_this->mPivotY;
+        i_this->actor.old.pos.y = i_this->actor.old.pos.y - i_this->mPivotY;
     }
     return TRUE;
 }

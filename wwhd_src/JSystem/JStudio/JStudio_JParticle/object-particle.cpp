@@ -56,16 +56,16 @@ JStudio_JParticle::TAdaptor_particle* TAdaptor_particle_construct(JStudio_JParti
     JStudioParticleObject_constructArray(state->mValues, 20, 20, gabi::guest_fn(reinterpret_cast<const void*>(&constructParticleVariableValue)));
     parent(adaptor)->mSystem = system;
     parent(adaptor)->mObject = nullptr;
-    adaptor->field_0x1B8 = 0;
-    adaptor->field_0x1BC = 0;
+    adaptor->mFadeDuration = 0;
+    adaptor->mFadeElapsed = 0;
     adaptor->mEmitterManager = manager;
     state->__vtbl = &sParticleVTable;
     adaptor->mCallback.mVtable = gabi::ea(&sCallbackVTable);
     adaptor->mCallback.mObject = nullptr;
     parent(adaptor)->mNodeID = 0xFFFFFFFF;
     parent(adaptor)->mEnabled = 0;
-    adaptor->field_0x1B0 = 0xFFFFFFFF;
-    adaptor->field_0x1B4 = 0;
+    adaptor->mParticleID = 0xFFFFFFFF;
+    adaptor->mFadeState = 0;
     adaptor->mCallback.mAdaptor = adaptor;
     adaptor->mEmitter = nullptr;
     return adaptor;
@@ -99,7 +99,7 @@ void JStudio_JParticle::TAdaptor_particle::adaptor_do_prepare(const jst_adaptors
 void JStudio_JParticle::TAdaptor_particle::adaptor_do_end(const jst_adaptors::TObject* object) {}
 /* 0283EA94 */
 void JStudio_JParticle::TAdaptor_particle::adaptor_do_PARTICLE(u32 operation, const void* data, u32 size) {
-    if (operation == 0x19) field_0x1B0 = *static_cast<const be<u32>*>(data);
+    if (operation == 0x19) mParticleID = *static_cast<const be<u32>*>(data);
 }
 /* 0283EAA8 */
 void JStudio_JParticle::TAdaptor_particle::adaptor_do_PARENT(u32 operation, const void* data, u32 size) {
@@ -146,9 +146,9 @@ void JStudio_JParticle::TAdaptor_particle::TJPACallback_::drawAfter(jst_adaptors
 static jst_timeline::TVariableValue* constructParticleVariableValue(jst_timeline::TVariableValue* value) {
     if (!value) value = static_cast<jst_timeline::TVariableValue*>(JStudioParticleObject_allocate(sizeof(jst_timeline::TVariableValue)));
     if (value) {
-        value->field_0x4 = 0;
-        value->field_0x8.v = 0;
-        JStudioParticleObject_clear(&value->field_0xc, 4);
+        value->mAge = 0;
+        value->mUpdate.v = 0;
+        JStudioParticleObject_clear(&value->mParam, 4);
         value->pOutput_ = &sJStudioOutputNone;
     }
     return value;

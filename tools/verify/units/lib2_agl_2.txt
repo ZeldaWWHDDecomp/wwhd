@@ -642,3 +642,15 @@ field 02774778 57D60014 s16 -1,0,1
 field 02774778 57D61018 u32 0,1,2
 # 02770250 (light-kind registration) reads both SafeTexts: the name (r3) and the description (r4).
 callee 02770250 r3=8 r4=8
+
+# zero-page rule (2026-11-10, clean bar: 0/10000 clean s1/s7): drawBloomTexture 02775BDC loads the
+# owner's sampler (+0x3C) and the draw context through sBloomDrawContext 101F8DE4 (+0x328 count, +0x31C..+0x324 draw
+# words); generated owners and a generated/NULL context word faulted the original on every input. Owner and context are
+# fixtures here (the producer-backed context is exercised by the bloom_draw_* companions with the shared AGL world).
+arg! 02775BDC r4 0x57B00000
+field 02775BDC 57B0003C u32 0x57B01000
+field 02775BDC 101F8DE4 u32 0x57B02000
+field 02775BDC 57B02328 u32 0,1,3,6
+field 02775BDC 57B0231C u32 0,4,5
+field 02775BDC 57B02320 u32 0,1
+field 02775BDC 57B02324 u32 0x57B03000

@@ -90,7 +90,7 @@ static daNpc_Ob1_HIO_c* daNpc_Ob1_HIO_ct(daNpc_Ob1_HIO_c* p) {
 static void* searchActor_Kb(void* p, void*) {
     if (l_pig_cnt < 20 && fopAc_IsActor(p) && p != nullptr &&
         fpcM_GetName(p) == Ob1PigProcess /* PROC_KB */) {
-        u8 bit = Ob1_view<Ob1Pig>(gabi::ea(p))->mPigBit; /* kb_class::m405: the pig's bit */
+        u8 bit = Ob1_view<Ob1Pig>(gabi::ea(p))->mPigBit; /* kb_class::mPigBit: the pig's bit */
         if (bit != 0) {
             l_pig_bits |= bit;
         }

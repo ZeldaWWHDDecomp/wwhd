@@ -65,17 +65,17 @@ u32 dCamera_c::Run() {
     mEventFlags = mEventFlags & ~0x10149C01u;
     checkSpecialArea();
     checkGroundInfo();
-    s32 ship = m530;
+    s32 ship = mShipRockType;
     if (ship != 0 && !chkFlag(0x200000) && !cameraRunIsPlaying() && !chkFlag(0x20000000)) {
-        f32 ofs = cameraRunShipOffsetY(&m534, &m536, 130.0f); /* daObjPirateship::getShipOffsetY */
-        f32 y = ofs * m540;
-        f32 dy = y - m538;
-        if (m530 == 1 && m53C < 0.0f && dy > 0.0f)
-            m254 = m254 | 4;
+        f32 ofs = cameraRunShipOffsetY(&mShipRockAngle, &mShipRockSpeed, 130.0f); /* daObjPirateship::getShipOffsetY */
+        f32 y = ofs * mShipOffsetScale;
+        f32 dy = y - mShipOffsetY;
+        if (mShipRockType == 1 && mShipOffsetYDelta < 0.0f && dy > 0.0f)
+            mSeRequest = mSeRequest | 4;
         f32 cy = mViewCache.mCenter.y;
         f32 k = (f32)cameraRunSetup(this)->m0B8; /* mCamSetup.m0B8 */
-        m53C = dy;
-        m538 = y;
+        mShipOffsetYDelta = dy;
+        mShipOffsetY = y;
         mViewCache.mCenter.y = gabi::fnmsubs(dy, k, cy);
     }
     updateMonitor();
@@ -166,20 +166,20 @@ u32 dCamera_c::Run() {
         cSAngle_l d;
         cSAngle_l s;
         forwardCheckAngle(&a);                                          /* forwardCheckAngle() */
-        cameraRunAngleSubtract(&a, &d, &m148);                          /* - m148 */
+        cameraRunAngleSubtract(&a, &d, &mForwardTiltOffset);                          /* - mForwardTiltOffset */
         cameraRunAngleScale(&d, &s, cameraRunSetup(this)->mFwdCushion); /* * FwdCushion */
-        cameraRunAngleAddAssign(&m148, &s);                             /* m148 += */
+        cameraRunAngleAddAssign(&mForwardTiltOffset, &s);                             /* mForwardTiltOffset += */
     } else {
-        m148 = (s16)zeroAngle(); /* cSAngle::_0 */
+        mForwardTiltOffset = (s16)zeroAngle(); /* cSAngle::_0 */
     }
     defaultTriming();
     mTrimTypeForce = -1;
-    m068 = 9;
+    mBumpCheckFlags = 9;
 
     if (chkFlag(0x200000) && camStyleAlg(mCurStyle) != dCamAlg_EVENT_CAMERA_e /* EVENT */) {
         s32 pad = mPadId;
         if (cameraRunStickValue(pad) > 0.001f || cameraRunSubstickValue(pad) > 0.001f ||
-            cameraRunTrigger(pad) != 0 || mMonitor.field_0x0C.x > 10.0f || m360 == 0 || m31C != 0) {
+            cameraRunTrigger(pad) != 0 || mMonitor.field_0x0C.x > 10.0f || mPlayerOnFloor == 0 || mOnMoveBg != 0) {
             *reinterpret_cast<GuestByte*>(&m514) = 0; /* m514 */
             mEventFlags = mEventFlags & ~0x200000u;
         } else {
@@ -197,11 +197,11 @@ u32 dCamera_c::Run() {
             res = cameraRunDemoCamera(this, 0); /* demoCamera(0) */
         } else {
             res = callEngine(this, camStyleAlg(mCurStyle), mCurStyle);
-            m07C = m07C + 1;
-            m11C = m11C + 1;
-            m118 = m118 + 1;
-            m080 = m080 + 1;
-            m108 = m108 + 1;
+            mFrameCounter = mFrameCounter + 1;
+            mCurStyleTimer = mCurStyleTimer + 1;
+            mCurTypeTimer = mCurTypeTimer + 1;
+            mTicks = mTicks + 1;
+            mCurModeTimer = mCurModeTimer + 1;
         }
         if (!res)
             *reinterpret_cast<GuestByte*>(&m514) = 0;
@@ -216,18 +216,18 @@ u32 dCamera_c::Run() {
     mEventFlags = mEventFlags & ~0x90080u;
     u16 pf = camStyleFlags();
     if (pf & 1) {
-        m068 = 0x3F;
+        mBumpCheckFlags = 0x3F;
         pf = camStyleFlags();
     } else if (pf & 2) {
-        m068 = 0xF;
+        mBumpCheckFlags = 0xF;
         pf = camStyleFlags();
     }
-    f32 floorY = m354;
+    f32 floorY = mGroundHeight;
     u32 cyBits = readFloatBits(&mViewCache.mCenter.y); /* mViewCache.mCenter.y (copied bit-exact) */
     f32 cy = std::bit_cast<f32>(cyBits);
     f32 margin = (f32)cameraRunSetup(this)->mFloorMargin; /* mCamSetup.mBGChk.FloorMargin() */
     if (pf & 0x400)
-        m068 = m068 | 0x40;
+        mBumpCheckFlags = mBumpCheckFlags | 0x40;
     floorY = floorY + margin;
     writeFloatBits(&mCenter.x,
                    readFloatBits(&mViewCache.mCenter.x)); /* mCenter.x = mViewCache.mCenter.x */
@@ -235,7 +235,7 @@ u32 dCamera_c::Run() {
         writeFloatBits(&mCenter.z, readFloatBits(&mViewCache.mCenter.z)); /* mCenter.z */
         if (camStyleAlg(mCurStyle) == dCamAlg_SUBJECT_CAMERA_e && (mEventFlags & 0x10000800) &&
             GetCameraTypeFromCameraName(tornadoName.text /* "Tornado" */) != (s32)mCurType) {
-            m068 = m068 & ~8u;
+            mBumpCheckFlags = mBumpCheckFlags & ~8u;
             writeFloatBits(&mCenter.y, readFloatBits(&mViewCache.mCenter.y));
         } else {
             mCenter.y = floorY;
@@ -266,7 +266,7 @@ u32 dCamera_c::Run() {
     s16 bank = mViewCache.mBank;
     mBank = bank;
     mFovy = gabi::fmuls_ppc(mViewCache.mFovy, zoom);
-    cameraRunBumpCheck(this, m068); /* bumpCheck(m068) */
+    cameraRunBumpCheck(this, mBumpCheckFlags); /* bumpCheck(mBumpCheckFlags) */
 
     cSAngle_l stick;
     cSAngle_l diff;
@@ -330,18 +330,18 @@ u32 dCamera_c::Run() {
         }
     }
 
-    u32 cur = (u32)m254;
+    u32 cur = (u32)mSeRequest;
     for (u32 i = 0; i < 3; i++) {
         u32 bit = 1u << i;
-        if ((cur & bit) && !((u32)m258 & bit)) {
-            cameraRunSoundStart(m248[i]); /* mDoAud_seStart(m248[i]) */
-            cur = (u32)m254;
+        if ((cur & bit) && !((u32)mSeRequestLast & bit)) {
+            cameraRunSoundStart(mSeIds[i]); /* mDoAud_seStart(mSeIds[i]) */
+            cur = (u32)mSeRequest;
         }
     }
-    m258 = cur;
-    m254 = 0;
+    mSeRequestLast = cur;
+    mSeRequest = 0;
 
-    if (m100 != 0 && m101 != 0 && m102 != 0) {
+    if (mStyleSettle0 != 0 && mStyleSettle1 != 0 && mStyleSettle2 != 0) {
         setComStat(dCamAttnStts_00000010_e);
     } else {
         clrComStat(dCamAttnStts_00000010_e);
@@ -365,9 +365,9 @@ u32 dCamera_c::Run() {
 // HD: the "AutoForcus" event data no longer switches auto focus off; leaving a
 // subject->event style (mHD610) is cancelled by any action other than PAUSE/WAIT
 bool dCamera_c::eventCamera(s32) {
-    if (m118 == 0) {
-        PosSet* p0 = &m0A4[0];
-        PosSet* p1 = &m0A4[1];
+    if (mCurTypeTimer == 0) {
+        PosSet* p0 = &mSavedViewStack[0];
+        PosSet* p1 = &mSavedViewStack[1];
         u32 fovy = readFloatBits(&mFovy);
         writeFloatBits(&p1->mFovY, fovy);
         p0->mEye.copy(mEye);
@@ -389,25 +389,25 @@ bool dCamera_c::eventCamera(s32) {
         if (staff < 0)
             return false;
         if ((u32)mEventData.mStaffIdx != (u32)staff) {
-            m108 = 0;
-            m11C = 0;
+            mCurModeTimer = 0;
+            mCurStyleTimer = 0;
             mEventFlags = mEventFlags & ~0x200000u;
-            m118 = 0;
+            mCurTypeTimer = 0;
         }
         mEventData.mStaffIdx = staff;
         if (dComIfGp_evmng_getIsAddvance(staff)) { /* getIsAddvance */
-            m101 = 0;
-            m100 = 0;
-            m102 = 0;
-            m11C = 0;
+            mStyleSettle1 = 0;
+            mStyleSettle0 = 0;
+            mStyleSettle2 = 0;
+            mCurStyleTimer = 0;
         }
         s32 idx = mEventData.mStaffIdx;
         act = dComIfGp_evmng_getMyActIdx(idx, ActionNames.mNames, EVENT_ACTION_COUNT, 0,
                                          0); /* getMyActIdx */
     } else {
         mEventData.mStaffIdx = -1;
-        if (m118 == 0)
-            m11C = 0;
+        if (mCurTypeTimer == 0)
+            mCurStyleTimer = 0;
         act = mEventData.field_0x18;
     }
     if ((u32)act >= EVENT_ACTION_COUNT) {
@@ -415,8 +415,8 @@ bool dCamera_c::eventCamera(s32) {
         dComIfGp_evmng_cutEnd(idx); /* cutEnd */
         return false;
     }
-    if (m11C == 0) {
-        if (m118 == 0) {
+    if (mCurStyleTimer == 0) {
+        if (mCurTypeTimer == 0) {
             mEventData.field_0x1c = 2;
             mEventFlags = mEventFlags & ~0x200000u;
         }
@@ -446,9 +446,9 @@ bool dCamera_c::eventCamera(s32) {
     }
     u32 bg = (u32)(s32)mEventData.field_0x20;
     s32 trimSize = mEventData.field_0x1c;
-    m068 = (bg >= 1 && bg <= 4) ? (u8)backgroundMasks.mValues[bg] : 9;
+    mBumpCheckFlags = (bg >= 1 && bg <= 4) ? (u8)backgroundMasks.mValues[bg] : 9;
     mTrimSize = PORT_CAMERA_W(0x024FF4C0, this, trimSize); /* the port's targeting letterbox (port_hooks.h); compiled twice (@024FF4C0, @024FF4E4) */
-    if (m100 != 0 && m101 != 0 && m102 != 0) {
+    if (mStyleSettle0 != 0 && mStyleSettle1 != 0 && mStyleSettle2 != 0) {
         setComStat(dCamAttnStts_00000004_e);
     } else {
         clrComStat(dCamAttnStts_00000004_e);

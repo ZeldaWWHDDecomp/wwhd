@@ -102,12 +102,12 @@ static BOOL nodeCallBack_Hed(J3DNode* i_node, int i_timing) {
 }
 
 /* 022732F0 */
-/* head model (mpMorf824): keeps the head joint's matrix for the balloon (nodeBlnControl) */
+/* head model (mpHeadMorf): keeps the head joint's matrix for the balloon (nodeBlnControl) */
 void daNpc_Ko1_c::nodeHedControl(J3DNode* i_node, J3DModel* i_model) {
     u32 jntNo = jntNo_of(i_node);
     PSMTXCopy(i_model->getAnmMtx(jntNo), mDoMtx_stack_c::get());
-    if (jntNo == (u32)(s32)m7E7) {
-        PSMTXCopy(mDoMtx_stack_c::get(), &m7EC);
+    if (jntNo == (u32)(s32)m_hed_2_jnt_num) {
+        PSMTXCopy(mDoMtx_stack_c::get(), &mHed2Mtx);
     }
 }
 
@@ -123,13 +123,13 @@ static BOOL nodeCallBack_Bln(J3DNode* i_node, int i_timing) {
 }
 
 /* 022733C4 */
-/* balloon model (mpMorf81C): its joint m7E8 takes the head joint's matrix */
+/* balloon model (mpBalloonMorf): its joint m_bln_loc_jnt_num takes the head joint's matrix */
 void daNpc_Ko1_c::nodeBlnControl(J3DNode* i_node, J3DModel* i_model) {
     u32 jntNo = jntNo_of(i_node);
     PSMTXCopy(i_model->getAnmMtx(jntNo), mDoMtx_stack_c::get());
-    if (jntNo == (u32)(s32)m7E8) {
-        PSMTXCopy(&m7EC, &l_currentMatrix);
-        mtx_copy(i_model->getAnmMtx(jntNo), &m7EC);
+    if (jntNo == (u32)(s32)m_bln_loc_jnt_num) {
+        PSMTXCopy(&mHed2Mtx, &l_currentMatrix);
+        mtx_copy(i_model->getAnmMtx(jntNo), &mHed2Mtx);
     }
 }
 
@@ -156,12 +156,12 @@ void daNpc_Ko1_c::nodeKo1Control(J3DNode* i_node, J3DModel* i_model) {
     u32 jntNo = jntNo_of(i_node);
     Mtx34* stk = mDoMtx_stack_c::get();
     PSMTXCopy(i_model->getAnmMtx(jntNo), stk);
-    if (jntNo == (u32)(s32)m7E4) {
+    if (jntNo == (u32)(s32)m_hed_jnt_num) {
         mDoMtx_XrotM(stk, m_jnt.mAngles[0][1]);
         mDoMtx_ZrotM(stk, -m_jnt.mAngles[0][0]);
-        PSMTXMultVec(stk, &a_eye_pos_off, &m94C);
+        PSMTXMultVec(stk, &a_eye_pos_off, &mEyePos);
     }
-    if (jntNo == (u32)(s32)m7E5) {
+    if (jntNo == (u32)(s32)m_bbone_jnt_num) {
         mDoMtx_XrotM(stk, m_jnt.mAngles[1][1]);
         mDoMtx_YrotM(stk, m_jnt.mAngles[1][0]);
     }
@@ -172,7 +172,7 @@ void daNpc_Ko1_c::nodeKo1Control(J3DNode* i_node, J3DModel* i_model) {
 /* 022743EC */
 bool daNpc_Ko1_c::init_HNA_0() {
     if (dComIfGs_isEventBit(dSv_event_flag_UNK_2A80) && !dComIfGs_isEventBit(dSv_event_flag_UNK_0E20)) {
-        mpMorf81C = nullptr;
+        mpBalloonMorf = nullptr;
         set_action_pmf(this, &pmf_hana_action1);
         return true;
     }
@@ -182,7 +182,7 @@ bool daNpc_Ko1_c::init_HNA_0() {
 /* 02274498 */
 bool daNpc_Ko1_c::init_HNA_1() {
     if (dComIfGs_isEventBit(dSv_event_flag_UNK_0E20)) {
-        mpMorf81C = nullptr;
+        mpBalloonMorf = nullptr;
         actor_status &= ~fopAcStts_NOCULLEXEC_e; /* fopAcM_OffStatus(this, fopAcStts_NOCULLEXEC_e) */
         set_action_pmf(this, &pmf_hana_action2);
         return true;
@@ -193,7 +193,7 @@ bool daNpc_Ko1_c::init_HNA_1() {
 /* 0227452C */
 bool daNpc_Ko1_c::init_HNA_2() {
     if (!dComIfGs_isEventBit(dSv_event_flag_UNK_2A80)) {
-        mpMorf81C = nullptr;
+        mpBalloonMorf = nullptr;
         set_action_pmf(this, &pmf_hana_action3);
         return true;
     }
@@ -203,7 +203,7 @@ bool daNpc_Ko1_c::init_HNA_2() {
 /* 022745B4 */
 bool daNpc_Ko1_c::init_HNA_3() {
     if (dComIfGs_isEventBit(dSv_event_flag_UNK_0520) && !dKy_daynight_check()) {
-        mpMorf81C = nullptr;
+        mpBalloonMorf = nullptr;
         actor_status = (actor_status & ~fopAcStts_NOCULLEXEC_e) | fopAcStts_UNK4000_e; /* OffStatus(NOCULLEXEC), OnStatus(0x4000) */
         set_action_pmf(this, &pmf_hana_action4);
         return true;
@@ -245,7 +245,7 @@ bool daNpc_Ko1_c::init_BOU_2() {
     if (dComIfGs_isEventBit(dSv_event_flag_UNK_0520) && !dKy_daynight_check()) {
         actor_status = (actor_status & ~fopAcStts_NOCULLEXEC_e) | fopAcStts_UNK4000_e;
         set_action_pmf(this, &pmf_wait_action3);
-        mpModel820 = nullptr;
+        mpItemModel = nullptr;
         return true;
     }
     return false;
@@ -255,7 +255,7 @@ bool daNpc_Ko1_c::init_BOU_2() {
 bool daNpc_Ko1_c::init_BOU_3() {
     if (dComIfGs_isEventBit(dSv_event_flag_UNK_0520) && dKy_daynight_check() == 1) {
         set_action_pmf(this, &pmf_wait_action4);
-        mpModel820 = nullptr;
+        mpItemModel = nullptr;
         return true;
     }
     return false;
@@ -286,7 +286,7 @@ s32 daNpc_Ko1_c::btpNum_toResID(s32 i_btpNum) {
 /* 02273B80 */
 // HD: retain the unnormalized modify argument in its full register.
 bool daNpc_Ko1_c::setBtp(u32 i_modify, s32 i_btpNum) {
-    mDoExt_McaMorf* morf = mpMorf824;
+    mDoExt_McaMorf* morf = mpHeadMorf;
     J3DModelData* modelData = morf->getModel()->getModelData();
     s32 resID = btpNum_toResID(i_btpNum);
     m_hed_tex_pttrn = (J3DAnmTexPattern*)ko1ObjectRes("Ko", resID);
@@ -330,12 +330,12 @@ void daNpc_Ko1_c::setAttention(u32 i_setEyePos) {
     attPos->z = current.pos.z;
     attPos->x = current.pos.x;
     attPos->y = current.pos.y + offset;
-    if (m9E0 == 0 && i_setEyePos == 0) {
+    if (mbSetEyePos == 0 && i_setEyePos == 0) {
         return;
     }
-    eyePos.z = m94C.z;
-    eyePos.y = m94C.y;
-    eyePos.x = m94C.x;
+    eyePos.z = mEyePos.z;
+    eyePos.y = mEyePos.y;
+    eyePos.x = mEyePos.x;
 }
 
 /* 02274250 */
@@ -379,13 +379,13 @@ BOOL daNpc_Ko1_c::set_action(ProcFunc_l* i_newProcFunc, void* i_argsP) {
         newD = i_newProcFunc->d;
     }
     if (cur->i != 0) {
-        mA18 = 9; /* leaving the current action */
+        mActionStatus = 9; /* leaving the current action */
         pmf_call(this, cur, i_argsP);
     }
     cur->f = newF;
     cur->d = newD;
     cur->i = newI;
-    mA18 = 0;
+    mActionStatus = 0;
     pmf_call(this, cur, i_argsP);
     return TRUE;
 }
@@ -414,14 +414,14 @@ J3DModelData* daNpc_Ko1_c::create_Anm() {
         mpMorf = nullptr;
         return nullptr;
     }
-    m7E4 = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "head");
-    if (m7E4 < 0) /* JUT_ASSERT(4317, m_hed_jnt_num >= 0) */
+    m_hed_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "head");
+    if (m_hed_jnt_num < 0) /* JUT_ASSERT(4317, m_hed_jnt_num >= 0) */
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x10DD, "m_hed_jnt_num >= 0");
-    m7E5 = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "backbone");
-    if (m7E5 < 0)
+    m_bbone_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "backbone");
+    if (m_bbone_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x10E0, "m_bbone_jnt_num >= 0");
-    m7E6 = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "armR2");
-    if (m7E6 < 0)
+    m_armR2_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "armR2");
+    if (m_armR2_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x10E3, "m_armR2_jnt_num >= 0");
     return a_mdl_dat;
 }
@@ -433,20 +433,20 @@ J3DModelData* daNpc_Ko1_c::create_hed_Anm() {
     if (a_mdl_dat == nullptr) /* JUT_ASSERT(4358, a_mdl_dat != NULL) */
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x1106, "a_mdl_dat != (0)");
     J3DAnmTransform* bck = (J3DAnmTransform*)ko1ObjectRes("Ko", s32(a_hed_bck_resID_tbl[mType]));
-    mpMorf824 = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, bck, 2, 1.0f, 0, -1, 1, nullptr, 0x80000, 0x11020022);
-    mDoExt_McaMorf* morf = mpMorf824;
+    mpHeadMorf = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, bck, 2, 1.0f, 0, -1, 1, nullptr, 0x80000, 0x11020022);
+    mDoExt_McaMorf* morf = mpHeadMorf;
     if (morf == nullptr) {
         return nullptr;
     }
     if (morf->getModel() == nullptr) {
         if (morf != nullptr)
             morf_delete(morf);
-        mpMorf824 = nullptr;
+        mpHeadMorf = nullptr;
         return nullptr;
     }
     if (mType == 0) {
-        m7E7 = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "head2");
-        if (m7E7 < 0)
+        m_hed_2_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "head2");
+        if (m_hed_2_jnt_num < 0)
             JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x1120, "m_hed_2_jnt_num >= 0");
     }
     return a_mdl_dat;
@@ -458,22 +458,22 @@ J3DModelData* daNpc_Ko1_c::create_bln_Anm() {
     if (a_mdl_dat == nullptr) /* JUT_ASSERT(4400, a_mdl_dat != NULL) */
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x1130, "a_mdl_dat != (0)");
     J3DAnmTransform* bck = (J3DAnmTransform*)ko1ObjectRes("Ko", 1);
-    mpMorf81C = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, bck, 2, 1.0f, 0, -1, 1, nullptr, 0x80000, 0x11000022);
-    mDoExt_McaMorf* morf = mpMorf81C;
+    mpBalloonMorf = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, bck, 2, 1.0f, 0, -1, 1, nullptr, 0x80000, 0x11000022);
+    mDoExt_McaMorf* morf = mpBalloonMorf;
     if (morf == nullptr) {
         return nullptr;
     }
     if (morf->getModel() == nullptr) {
         if (morf != nullptr)
             morf_delete(morf);
-        mpMorf81C = nullptr;
+        mpBalloonMorf = nullptr;
         return nullptr;
     }
-    m7E8 = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "balloon_loc");
-    if (m7E8 < 0)
+    m_bln_loc_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "balloon_loc");
+    if (m_bln_loc_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x1146, "m_bln_loc_jnt_num >= 0");
-    m7E9 = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "ko_balloon");
-    if (m7E9 < 0)
+    m_bln_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), "ko_balloon");
+    if (m_bln_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x1149, "m_bln_jnt_num >= 0");
     return a_mdl_dat;
 }
@@ -484,8 +484,8 @@ bool daNpc_Ko1_c::create_itm_Mdl() {
         J3DModelData* a_mdl_dat = (J3DModelData*)ko1ObjectRes("Ko", 0x19);
         if (a_mdl_dat == nullptr) /* JUT_ASSERT(4451, a_mdl_dat != NULL) */
             JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0x1163, "a_mdl_dat != (0)");
-        mpModel820 = mDoExt_J3DModel__create(a_mdl_dat, 0x80000, 0x11000022);
-        if (mpModel820.get() == nullptr) {
+        mpItemModel = mDoExt_J3DModel__create(a_mdl_dat, 0x80000, 0x11000022);
+        if (mpItemModel.get() == nullptr) {
             return false;
         }
     }
@@ -511,31 +511,31 @@ bool daNpc_Ko1_c::CreateHeap() {
     a_btp_num[1] = 0;
     mBtpNum = a_btp_num[mType];
     if (!iniTexPttrnAnm(false) || (mType == 0 && !create_bln_Anm())) {
-        mpMorf824 = nullptr;
+        mpHeadMorf = nullptr;
         mpMorf = nullptr;
         return false;
     }
     if (!create_itm_Mdl()) {
         mpMorf = nullptr;
-        mpMorf81C = nullptr;
-        mpMorf824 = nullptr;
+        mpBalloonMorf = nullptr;
+        mpHeadMorf = nullptr;
         return false;
     }
     if (mType == 0) {
         /* the balloon joint follows the head (nodeBlnControl / nodeHedControl) */
         for (u16 i = 0; i < J3DModelData_getJointNum(hed_model); i++) {
-            if (i == (u32)(s32)m7E8)
-                setJointCallBack(mpMorf81C->getModel(), i, nodeCallBack_Bln);
+            if (i == (u32)(s32)m_bln_loc_jnt_num)
+                setJointCallBack(mpBalloonMorf->getModel(), i, nodeCallBack_Bln);
         }
-        mpMorf81C->getModel()->setUserArea((uintptr_t)this); /* setUserArea(this) */
+        mpBalloonMorf->getModel()->setUserArea((uintptr_t)this); /* setUserArea(this) */
         for (u16 i = 0; i < J3DModelData_getJointNum(hed_model); i++) {
-            if (i == (u32)(s32)m7E7)
-                setJointCallBack(mpMorf824->getModel(), i, nodeCallBack_Hed);
+            if (i == (u32)(s32)m_hed_2_jnt_num)
+                setJointCallBack(mpHeadMorf->getModel(), i, nodeCallBack_Hed);
         }
-        mpMorf824->getModel()->setUserArea((uintptr_t)this);
+        mpHeadMorf->getModel()->setUserArea((uintptr_t)this);
     }
     for (u16 i = 0; i < J3DModelData_getJointNum(anm_model); i++) {
-        if (i == (u32)(s32)m7E4 || i == (u32)(s32)m7E5)
+        if (i == (u32)(s32)m_hed_jnt_num || i == (u32)(s32)m_bbone_jnt_num)
             setJointCallBack(mpMorf->getModel(), i, nodeCallBack_Ko1);
     }
     mpMorf->getModel()->setUserArea((uintptr_t)this);

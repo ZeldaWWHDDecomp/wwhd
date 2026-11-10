@@ -94,9 +94,9 @@ struct Brk_c : mDoExt_baseAnm {
 struct Env_c {
   LIGHT_INFLUENCE mPntLight;
   Bomb2WindInfluence mPntWind;
-  be<u8> field_0x4C;
+  be<u8> mStep; /* was field_0x4C: Env_c::proc 020C8308: 0 raises mIntensity to 1, 1 lowers it to 0, each step advances when done; Env_c::is_end 020C82F4 returns it > 1; Env_c::set 020C81A4 clears it */
   u8 pad[3];
-  be<f32> field_0x50;
+  be<f32> mIntensity; /* was field_0x50: Env_c::proc 020C8308: point wind strength, point light power (1500 * it) and the ambient/bg colour add factor; eased 0 -> 1 -> 0 by mStep; Env_c::set 020C81A4 clears it */
   void set(const cXyz *);
   void clean();
   bool is_end();
@@ -104,9 +104,9 @@ struct Env_c {
 };
 struct FuseSmokeCB_c {
   be<u32> vt;
-  be<s16> field_0x04;
+  be<s16> mPrevLife; /* was field_0x04: FuseSmokeCB_c::executeAfter 020C8564: last frame's particle life time (stored at the end), interpolated towards the new one over the in-between particles; setOldPosP 020C8518 sets 20 */
   u8 pad[2];
-  gptr<const cXyz> mpPos, field_0x0C, field_0x10;
+  gptr<const cXyz> mpPos, mpOldPos, mpOldOldPos; /* mpOldPos was field_0x0C: FuseSmokeCB_c::setOldPosP 020C8518 first argument (mFuseOldPos); executeAfter 020C8564 interpolates the smoke from it to mpPos; mpOldOldPos was field_0x10: FuseSmokeCB_c::setOldPosP 020C8518 second argument (mFuseOldOldPos); executeAfter 020C8564 uses mpOldPos - it as the start tangent of the curve */
   gptr<void> mpEmitter;
   void setOldPosP(const cXyz *, const cXyz *);
   void setup(void*, const cXyz*, const csXyz*, s8);
@@ -138,44 +138,44 @@ struct Act_c : fopAc_ac_c {
   /* 0x4BC */ dBgS_Acch mAcch;
   /* 0x680 */ dBgS_AcchCir mCir;
   /* 0x6C0 */ dBgS_GndChk mGndChk; // HD: lava-only filter.
-  /* 0x714 */ be<f32> field_0x51C;
-  /* 0x718 */ be<f32> field_0x520;
+  /* 0x714 */ be<f32> mLavaY;  /* was field_0x51C: crr_init 020C8B58 sets -inf; bgCrrPos_lava 020C8C78: cBgS_GroundCross of the lava (Yogan) ground check mGndChk; chk_lava_in 020CA790 tests it */
+  /* 0x718 */ be<f32> mWaterY;  /* was field_0x520: crr_init 020C8B58 sets -inf; bgCrrPos_water 020C8CE4 stores mAcch's water height or the daSea wave height (-inf when out of water); eff_water_splash 020CA9F8 puts the splash there */
   /* 0x71C */ be<u8> field_0x524;
   /* 0x71D */ be<u8> mbWaterIn;
-  /* 0x71E */ be<u8> field_0x526;
+  /* 0x71E */ be<u8> mWaterIsSea;  /* was field_0x526: bgCrrPos_water 020C8CE4 sets 1 when mWaterY comes from the sea wave (daSea_calcWave), 0 when from mAcch's water polygon or no water; se_fall_water 020CA91C then passes no water polygon */
   /* 0x71F */ u8 pad71F;
-  /* 0x720 */ be<f32> field_0x528;
+  /* 0x720 */ be<f32> mSinkWaterY;  /* was field_0x528: crr_init 020C8B58 sets -inf; mode_sink_init 020CAFB4: fopAcM_getWaterY at the bomb; mode_sink 020CB218 moves the bomb by the water height change and keeps the new height */
   /* 0x724 */ dCcD_Stts mStts;
   /* 0x760 */ dCcD_Sph mSph;
   /* 0x88C */ be<s32> mState;
-  /* 0x890 */ be<s32> field_0x698;
+  /* 0x890 */ be<s32> mSinkTimer;  /* was field_0x698: mode_sink_init 020CAFB4 sets 4; mode_sink 020CB218 counts it down and sets mDeleteReq when it runs out */
   /* 0x894 */ FuseSmokeCB_c mSmoke;
   /* 0x8AC */ FuseSparksCB_c mSparks;
-  /* 0x8B8 */ cXyz field_0x6C0;
-  /* 0x8C4 */ cXyz field_0x6CC;
-  /* 0x8D0 */ cXyz field_0x6D8;
+  /* 0x8B8 */ cXyz mFusePos;  /* was field_0x6C0: eff_fuse_start 020CA4F0: current.pos + 60 in y, the position of the sparks and smoke emitters (dPa_control_c::set); eff_fuse_move 020C8FB4: l_currentMtx times the fuse offset (0, 60, 5) */
+  /* 0x8C4 */ cXyz mFuseOldPos;  /* was field_0x6CC: eff_fuse_move 020C8FB4 copies last frame's mFusePos here; eff_fuse_start 020CA4F0 passes it as the first FuseSmokeCB_c::setOldPosP argument */
+  /* 0x8D0 */ cXyz mFuseOldOldPos;  /* was field_0x6D8: eff_fuse_move 020C8FB4 copies last frame's mFuseOldPos here; second FuseSmokeCB_c::setOldPosP argument in eff_fuse_start 020CA4F0 */
   /* 0x8DC */ Env_c mEnv;
   /* 0x934 */ be<s32> mBombTimer;
-  /* 0x938 */ be<s32> field_0x73C;
-  /* 0x93C */ be<u8> field_0x740;
-  /* 0x93D */ be<u8> field_0x741;
-  /* 0x93E */ be<u8> field_0x742;
-  /* 0x93F */ be<u8> field_0x743;
-  /* 0x940 */ be<u8> field_0x744;
-  /* 0x941 */ be<u8> field_0x745;
+  /* 0x938 */ be<s32> mExplodeCcTimer;  /* was field_0x73C: mode_explode_init 020CA3A4 sets 4; cc_set 020C9D04 counts it down while exploding and sets the attack sphere only while it stays above 0; mode_explode 020CAE14 waits for 0 (and mEnv.is_end) before mDeleteReq */
+  /* 0x93C */ be<u8> mDeleteReq;  /* was field_0x740: create_init 020C9218 clears it; set by mode_explode 020CAE14 and mode_sink 020CB218; _execute 020C9E78 deletes the actor (fopAcM_delete) when set; mode_wait 020CB044 bounces only while clear */
+  /* 0x93D */ be<u8> mThrown;  /* was field_0x741: mode_carry 020CAE6C sets 1 when released with speedF > 0; bound 020CA7C0 clears it once the bounce is below 19.5; chk_exp_cc_nut 020CAA6C / chk_exp_bg_nut 020CAB88 light the fuse on any contact while it is set */
+  /* 0x93E */ be<u8> mExplodeEffDone;  /* was field_0x742: eff_explode 020CA2A4 returns if set, else sets it and starts the explosion effects/sound once; is_draw 020C9F18 hides the bomb when set */
+  /* 0x93F */ be<u8> mWaterExplodeEffDone;  /* was field_0x743: eff_explode_water 020CA0F8 returns if set, else creates the water pillar and sets it; is_draw 020C9F18 hides the bomb when set */
+  /* 0x940 */ be<u8> mFuseLit;  /* was field_0x744: eff_fuse_start 020CA4F0 sets it (returns early if set), eff_fuse_init 020C8F2C / eff_fuse_end 020C95F4 clear it; eff_fuse_move 020C8FB4 plays the ignition sound while set; carry_fuse_start 020CAD9C returns if set */
+  /* 0x941 */ be<u8> mEaten;  /* was field_0x745: our decomp's accessors daBomb2::Act_c::chk_eat 020CBA70 (returns it) and set_eat 020CBA78 (sets 1) in d_a_bomb_static.cpp; mode_wait 020CB044 skips posMoveF while set */
   /* 0x942 */ u8 pad942[2];
   /* 0x944 */ cXyz mWindVec;
-  /* 0x950 */ be<f32> field_0x754[12];
-  /* 0x980 */ be<f32> field_0x784;
-  /* 0x984 */ be<f32> field_0x788;
-  /* 0x988 */ be<f32> field_0x78C;
-  /* 0x98C */ be<f32> field_0x790;
-  /* 0x990 */ be<f32> field_0x794;
-  /* 0x994 */ be<f32> field_0x798;
-  /* 0x998 */ be<f32> field_0x79C;
-  /* 0x99C */ be<f32> field_0x7A0;
-  /* 0x9A0 */ be<f32> field_0x7A4;
-  /* 0x9A4 */ be<s32> field_0x7A8;
+  /* 0x950 */ be<f32> mTensorMtx[12];  /* was field_0x754: tensor_init 020C8EF4 sets the identity; set_vib_tensor 020C9BB8 builds it (PSMTXQuat); set_mtx 020C9074 concatenates it into the model matrix */
+  /* 0x980 */ be<f32> mVibTargetZ;  /* was field_0x784: vib_proc 020C9B18: the spring pulls mVibZ towards it; tensor_wait_ground 020CB2BC sets the ground normal's z * 1.5, the other tensor_* modes 0 */
+  /* 0x984 */ be<f32> mVibTargetX;  /* was field_0x788: vib_proc 020C9B18: the spring pulls mVibX towards it; tensor_wait_ground 020CB2BC sets the ground normal's x * 1.5, the other tensor_* modes 0 */
+  /* 0x988 */ be<f32> mVibZ;  /* was field_0x78C: vib_proc 020C9B18 adds mVibVelZ; set_vib_tensor 020C9BB8 uses it as the z of the tilt direction (quat_rotBaseY2) */
+  /* 0x98C */ be<f32> mVibX;  /* was field_0x790: vib_proc 020C9B18 adds mVibVelX; set_vib_tensor 020C9BB8 uses it as the x of the tilt direction (quat_rotBaseY2) */
+  /* 0x990 */ be<f32> mVibVelZ;  /* was field_0x794: vib_proc 020C9B18: velocity of mVibZ (old + 2 * (impulse - 0.03 * (mVibZ - target)), times 1 - mVibDamping) */
+  /* 0x994 */ be<f32> mVibVelX;  /* was field_0x798: vib_proc 020C9B18: velocity of mVibX, same update as mVibVelZ */
+  /* 0x998 */ be<f32> mVibImpulseZ;  /* was field_0x79C: tensor_wait_drop 020CB34C sets speed.z * -0.005 while mVibImpulseTimer > 0; vib_proc 020C9B18 adds it to the velocity once and clears it */
+  /* 0x99C */ be<f32> mVibImpulseX;  /* was field_0x7A0: tensor_wait_drop 020CB34C sets speed.x * -0.005 while mVibImpulseTimer > 0; vib_proc 020C9B18 adds it once and clears it */
+  /* 0x9A0 */ be<f32> mVibDamping;  /* was field_0x7A4: vib_proc 020C9B18 scales the velocity by 1 - it; tensor_wait_drop 020CB34C sets 0.1, tensor_wait_ground 020CB2BC / tensor_carry 020CB3AC 0.4 */
+  /* 0x9A4 */ be<s32> mVibImpulseTimer;  /* was field_0x7A8: set_wind_vec 020C9674 (wind push) and mode_carry 020CAE6C (throw) set 2; vib_proc 020C9B18 counts it down; tensor_wait_drop 020CB34C sets the impulse only while it is above 0 */
   bool create_heap_nut();
   u32 create_heap();
   void crr_init();
@@ -255,8 +255,8 @@ struct Act_c : fopAc_ac_c {
   bool _draw();
 };
 WWHD_OFFSET(Env_c, mPntWind, 0x24);
-WWHD_OFFSET(Env_c, field_0x4C, 0x50);
-WWHD_OFFSET(Env_c, field_0x50, 0x54);
+WWHD_OFFSET(Env_c, mStep, 0x50);
+WWHD_OFFSET(Env_c, mIntensity, 0x54);
 WWHD_SIZE(Env_c, 0x58);
 WWHD_OFFSET(Act_c, mAcch, 0x4BC);
 WWHD_OFFSET(Act_c, mSph, 0x760);
@@ -271,41 +271,41 @@ WWHD_OFFSET(Act_c, mBck0, 0x3B8);
 WWHD_OFFSET(Act_c, mBrk0, 0x444);
 WWHD_OFFSET(Act_c, mCir, 0x680);
 WWHD_OFFSET(Act_c, mGndChk, 0x6C0);
-WWHD_OFFSET(Act_c, field_0x51C, 0x714);
-WWHD_OFFSET(Act_c, field_0x520, 0x718);
+WWHD_OFFSET(Act_c, mLavaY, 0x714);
+WWHD_OFFSET(Act_c, mWaterY, 0x718);
 WWHD_OFFSET(Act_c, field_0x524, 0x71C);
 WWHD_OFFSET(Act_c, mbWaterIn, 0x71D);
-WWHD_OFFSET(Act_c, field_0x526, 0x71E);
+WWHD_OFFSET(Act_c, mWaterIsSea, 0x71E);
 WWHD_OFFSET(Act_c, pad71F, 0x71F);
-WWHD_OFFSET(Act_c, field_0x528, 0x720);
+WWHD_OFFSET(Act_c, mSinkWaterY, 0x720);
 WWHD_OFFSET(Act_c, mStts, 0x724);
 WWHD_OFFSET(Act_c, mState, 0x88C);
-WWHD_OFFSET(Act_c, field_0x698, 0x890);
+WWHD_OFFSET(Act_c, mSinkTimer, 0x890);
 WWHD_OFFSET(Act_c, mSmoke, 0x894);
 WWHD_OFFSET(Act_c, mSparks, 0x8AC);
-WWHD_OFFSET(Act_c, field_0x6C0, 0x8B8);
-WWHD_OFFSET(Act_c, field_0x6CC, 0x8C4);
-WWHD_OFFSET(Act_c, field_0x6D8, 0x8D0);
-WWHD_OFFSET(Act_c, field_0x73C, 0x938);
-WWHD_OFFSET(Act_c, field_0x740, 0x93C);
-WWHD_OFFSET(Act_c, field_0x741, 0x93D);
-WWHD_OFFSET(Act_c, field_0x742, 0x93E);
-WWHD_OFFSET(Act_c, field_0x743, 0x93F);
-WWHD_OFFSET(Act_c, field_0x744, 0x940);
-WWHD_OFFSET(Act_c, field_0x745, 0x941);
+WWHD_OFFSET(Act_c, mFusePos, 0x8B8);
+WWHD_OFFSET(Act_c, mFuseOldPos, 0x8C4);
+WWHD_OFFSET(Act_c, mFuseOldOldPos, 0x8D0);
+WWHD_OFFSET(Act_c, mExplodeCcTimer, 0x938);
+WWHD_OFFSET(Act_c, mDeleteReq, 0x93C);
+WWHD_OFFSET(Act_c, mThrown, 0x93D);
+WWHD_OFFSET(Act_c, mExplodeEffDone, 0x93E);
+WWHD_OFFSET(Act_c, mWaterExplodeEffDone, 0x93F);
+WWHD_OFFSET(Act_c, mFuseLit, 0x940);
+WWHD_OFFSET(Act_c, mEaten, 0x941);
 WWHD_OFFSET(Act_c, pad942, 0x942);
 WWHD_OFFSET(Act_c, mWindVec, 0x944);
-WWHD_OFFSET(Act_c, field_0x754, 0x950);
-WWHD_OFFSET(Act_c, field_0x784, 0x980);
-WWHD_OFFSET(Act_c, field_0x788, 0x984);
-WWHD_OFFSET(Act_c, field_0x78C, 0x988);
-WWHD_OFFSET(Act_c, field_0x790, 0x98C);
-WWHD_OFFSET(Act_c, field_0x794, 0x990);
-WWHD_OFFSET(Act_c, field_0x798, 0x994);
-WWHD_OFFSET(Act_c, field_0x79C, 0x998);
-WWHD_OFFSET(Act_c, field_0x7A0, 0x99C);
-WWHD_OFFSET(Act_c, field_0x7A4, 0x9A0);
-WWHD_OFFSET(Act_c, field_0x7A8, 0x9A4);
+WWHD_OFFSET(Act_c, mTensorMtx, 0x950);
+WWHD_OFFSET(Act_c, mVibTargetZ, 0x980);
+WWHD_OFFSET(Act_c, mVibTargetX, 0x984);
+WWHD_OFFSET(Act_c, mVibZ, 0x988);
+WWHD_OFFSET(Act_c, mVibX, 0x98C);
+WWHD_OFFSET(Act_c, mVibVelZ, 0x990);
+WWHD_OFFSET(Act_c, mVibVelX, 0x994);
+WWHD_OFFSET(Act_c, mVibImpulseZ, 0x998);
+WWHD_OFFSET(Act_c, mVibImpulseX, 0x99C);
+WWHD_OFFSET(Act_c, mVibDamping, 0x9A0);
+WWHD_OFFSET(Act_c, mVibImpulseTimer, 0x9A4);
 WWHD_SIZE(Brk_c, 0x78);
 WWHD_SIZE(FuseSmokeCB_c, 0x18);
 WWHD_SIZE(FuseSparksCB_c, 0xC);

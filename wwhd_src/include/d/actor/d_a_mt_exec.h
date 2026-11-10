@@ -119,9 +119,9 @@ struct Actor : fopEn_enemy_c {
     /* 0x461 */ be<u8> mBtpOn;
     /* 0x462 */ be<u8> mBtpMaxFrame;
     /* 0x463 */ u8 _463;
-    /* 0x464 */ be<u8> mWaterSoundPlayed;
+    /* 0x464 */ be<u8> mWaterSteamState;  /* was mWaterSoundPlayed (misnamed): mt_class (d_a_mt.h) has the evidence for mWaterSteamState */
     /* 0x465 */ u8 _465;
-    /* 0x466 */ be<s16> mSteamTimer;
+    /* 0x466 */ be<s16> mWaterSteamTimer;  /* was mSteamTimer: the spelling mt_class (d_a_mt.h) uses */
     /* 0x468 */ be<u8> mFollowParticlesStarted;
     /* 0x469 */ u8 _469[3];
     /* 0x46C */ cXyz mParticlePos[MT_PART_NUM];
@@ -142,8 +142,8 @@ struct Actor : fopEn_enemy_c {
     /* 0x586 */ be<s16> mFrameCounter;
     /* 0x588 */ be<s16> mWallLostTimer;
     /* 0x58A */ be<s16> mJointWavePhase;
-    /* 0x58C */ be<f32> mBodyOffset;
-    /* 0x590 */ be<f32> mWobbleAmplitude;
+    /* 0x58C */ be<f32> mModelOffsetZ;  /* was mBodyOffset (misnamed): mt_class (d_a_mt.h) has the evidence for mModelOffsetZ */
+    /* 0x590 */ be<f32> mBodyWaveScale;  /* was mWobbleAmplitude (misnamed): mt_class (d_a_mt.h) has the evidence for mBodyWaveScale */
     /* 0x594 */ be<f32> mRollBodyOffset;
     /* 0x598 */ cXyz mTargetPos;
     /* 0x5A4 */ be<s16> mTurnSpeed;
@@ -159,8 +159,8 @@ struct Actor : fopEn_enemy_c {
     /* 0x5BC */ cXyz mSegmentPos[MT_PART_NUM];
     /* 0x61C */ cXyz mOldSegmentPos[MT_PART_NUM];
     /* 0x67C */ csXyz mSegmentAngle[MT_PART_NUM];
-    /* 0x6AC */ cXyz mScatterSpeed[MT_PART_NUM];
-    /* 0x70C */ be<s16> mSegmentPhase[MT_PART_NUM];
+    /* 0x6AC */ cXyz mSegmentSpeeds[MT_PART_NUM];  /* was mScatterSpeed (misnamed): mt_class (d_a_mt.h) has the evidence for mSegmentSpeeds */
+    /* 0x70C */ be<s16> mScatterDelay[MT_PART_NUM];  /* was mSegmentPhase (misnamed): mt_class (d_a_mt.h) has the evidence for mScatterDelay */
     /* 0x71C */ be<f32> mSegmentScale[MT_PART_NUM];
     /* 0x73C */ be<f32> mSegmentScaleY[MT_PART_NUM];
     /* 0x75C */ csXyz mJointAnglesLeft[15];
@@ -185,7 +185,7 @@ struct Actor : fopEn_enemy_c {
     /* 0x19F4 */ gptr<J3DModel> mpBrModelA[3];
     /* 0x1A00 */ gptr<J3DModel> mpBrModelB[3];
     /* 0x1A0C */ be<f32> mHeadScale;
-    /* 0x1A10 */ be<f32> mKnockbackRate;
+    /* 0x1A10 */ be<f32> mSegmentSpeedScale;  /* was mKnockbackRate (misnamed): mt_class (d_a_mt.h) has the evidence for mSegmentSpeedScale */
     /* 0x1A14 */ be<s8> mDamageMode;
     /* 0x1A15 */ be<u8> mPlayerOccluded;
     /* 0x1A16 */ be<u8> mInLava;
@@ -227,9 +227,9 @@ WWHD_OFFSET(Actor,mBtpFrame,0x460);
 WWHD_OFFSET(Actor,mBtpOn,0x461);
 WWHD_OFFSET(Actor,mBtpMaxFrame,0x462);
 WWHD_OFFSET(Actor,_463,0x463);
-WWHD_OFFSET(Actor,mWaterSoundPlayed,0x464);
+WWHD_OFFSET(Actor,mWaterSteamState,0x464);
 WWHD_OFFSET(Actor,_465,0x465);
-WWHD_OFFSET(Actor,mSteamTimer,0x466);
+WWHD_OFFSET(Actor,mWaterSteamTimer,0x466);
 WWHD_OFFSET(Actor,mFollowParticlesStarted,0x468);
 WWHD_OFFSET(Actor,_469,0x469);
 WWHD_OFFSET(Actor,mParticlePos,0x46C);
@@ -250,8 +250,8 @@ WWHD_OFFSET(Actor,mHeadWobbleAngle,0x584);
 WWHD_OFFSET(Actor,mFrameCounter,0x586);
 WWHD_OFFSET(Actor,mWallLostTimer,0x588);
 WWHD_OFFSET(Actor,mJointWavePhase,0x58A);
-WWHD_OFFSET(Actor,mBodyOffset,0x58C);
-WWHD_OFFSET(Actor,mWobbleAmplitude,0x590);
+WWHD_OFFSET(Actor,mModelOffsetZ,0x58C);
+WWHD_OFFSET(Actor,mBodyWaveScale,0x590);
 WWHD_OFFSET(Actor,mRollBodyOffset,0x594);
 WWHD_OFFSET(Actor,mTargetPos,0x598);
 WWHD_OFFSET(Actor,mTurnSpeed,0x5A4);
@@ -267,8 +267,8 @@ WWHD_OFFSET(Actor,mShakeAngle,0x5B6);
 WWHD_OFFSET(Actor,mSegmentPos,0x5BC);
 WWHD_OFFSET(Actor,mOldSegmentPos,0x61C);
 WWHD_OFFSET(Actor,mSegmentAngle,0x67C);
-WWHD_OFFSET(Actor,mScatterSpeed,0x6AC);
-WWHD_OFFSET(Actor,mSegmentPhase,0x70C);
+WWHD_OFFSET(Actor,mSegmentSpeeds,0x6AC);
+WWHD_OFFSET(Actor,mScatterDelay,0x70C);
 WWHD_OFFSET(Actor,mSegmentScale,0x71C);
 WWHD_OFFSET(Actor,mSegmentScaleY,0x73C);
 WWHD_OFFSET(Actor,mJointAnglesLeft,0x75C);
@@ -293,7 +293,7 @@ WWHD_OFFSET(Actor,_19F1,0x19F1);
 WWHD_OFFSET(Actor,mpBrModelA,0x19F4);
 WWHD_OFFSET(Actor,mpBrModelB,0x1A00);
 WWHD_OFFSET(Actor,mHeadScale,0x1A0C);
-WWHD_OFFSET(Actor,mKnockbackRate,0x1A10);
+WWHD_OFFSET(Actor,mSegmentSpeedScale,0x1A10);
 WWHD_OFFSET(Actor,mDamageMode,0x1A14);
 WWHD_OFFSET(Actor,mPlayerOccluded,0x1A15);
 WWHD_OFFSET(Actor,mInLava,0x1A16);

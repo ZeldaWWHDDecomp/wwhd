@@ -159,12 +159,12 @@ s32 BombStatic::daBomb2::Act_c::get_time() {
 
 /* 020CBA70 */
 u8 BombStatic::daBomb2::Act_c::chk_eat() {
-    return field_0x745;
+    return mEaten;
 }
 
 /* 020CBA78 */
 void BombStatic::daBomb2::Act_c::set_eat() {
-    field_0x745 = 1;
+    mEaten = 1;
 }
 
 /* 020CBA84 */

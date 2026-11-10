@@ -5,8 +5,8 @@
  * 02501B8C allocates 0x8E0; GameCube 0x78C). GameCube names are kept; "GC" gives the GameCube
  * offset where it differs.
  *  - 0x000..0x14B: unchanged.
- *  - 0x14C..0x157: HD has three floats where GameCube has m14C + 4 unknown bytes; from 0x158
- *    (GC 0x154) everything is shifted by +4 up to mWindowAspectRatio/m608 (HD 0x608/0x60C).
+ *  - 0x14C..0x157: HD has three floats where GameCube has mSightFitRadius + 4 unknown bytes; from 0x158
+ *    (GC 0x154) everything is shifted by +4 up to mWindowAspectRatio/mWallUpDist (HD 0x608/0x60C).
  *  - 0x610..0x73B: HD-only (a byte, a sead::LookAtCamera at 0x614 with its vtable at 0x644,
  *    a sead projection at 0x66C, 8 bytes at 0x730 and a byte at 0x738).
  *  - 0x73C: dCamSetup_c (HD 0x168, GC 0x144); 0x8A4: dCamParam_c; 0x8B0: camera type ids.
@@ -130,35 +130,35 @@ struct dCamera_c {
     /* 0x038 */ be<f32> mFovy;
     /* 0x03C */ ViewCache mViewCache;
     /* 0x064 */ be<f32> m064;
-    /* 0x068 */ be<s32> m068;
+    /* 0x068 */ be<s32> mBumpCheckFlags;  /* was m068: Run 024FE3E8 sets 9/0x3F/0xF, ORs 0x40, passes it to bumpCheck; TP name */
     /* 0x06C */ cSAngle_l mAngleY;
     /* 0x06E */ u8 _06E[2];
     /* 0x070 */ cXyz m070;
-    /* 0x07C */ be<u32> m07C;
-    /* 0x080 */ be<u32> m080;
-    /* 0x084 */ cXyz m084;
-    /* 0x090 */ cXyz m090;
-    /* 0x09C */ be<f32> m09C;
-    /* 0x0A0 */ cSAngle_l m0A0;
+    /* 0x07C */ be<u32> mFrameCounter;  /* was m07C: cleared by initialize 02500984, +1 per frame in Run 024FE3E8 and NotRun 024FF6C0; TP name */
+    /* 0x080 */ be<u32> mTicks;  /* was m080: initialize 02500984 seeds it with cM_rndFX(32767), Run 024FE3E8 adds 1, event cameras test bit 0 (025314BC); TP name */
+    /* 0x084 */ cXyz mSavedCenter;  /* was m084: pushPos 024FA3CC copies mViewCache.mCenter */
+    /* 0x090 */ cXyz mSavedEye;  /* was m090: pushPos 024FA3CC copies mViewCache.mEye */
+    /* 0x09C */ be<f32> mSavedFovy;  /* was m09C: pushPos 024FA3CC copies mViewCache.mFovy */
+    /* 0x0A0 */ cSAngle_l mSavedBank;  /* was m0A0: pushPos 024FA3CC copies mViewCache.mBank */
     /* 0x0A2 */ u8 _0A2[2];
-    /* 0x0A4 */ PosSet m0A4[2];
+    /* 0x0A4 */ PosSet mSavedViewStack[2];  /* was m0A4: saveEvCamera 02538B54 / loadEvCamera 02538C7C store and load slot [index]; TP name */
     /* 0x0E4 */ be<s32> mStageMapToolCameraIdx;
     /* 0x0E8 */ be<s32> m0E8;
     /* 0x0EC */ cXyz mExtendedPos;
     /* 0x0F8 */ u8 _0F8[8];
-    /* 0x100 */ be<u8> m100;
-    /* 0x101 */ be<u8> m101;
-    /* 0x102 */ be<u8> m102;
+    /* 0x100 */ be<u8> mStyleSettle0;  /* was m100: engines set m100..m102 together when the view reached its target (0250C77C); onModeChange 024FA79C clears them; Run 024FE3E8 sets ComStat 0x10 only when all three are set (TP: one flag, mStyleSettle.mFinished) */
+    /* 0x101 */ be<u8> mStyleSettle1;  /* was m101: set and cleared together with mStyleSettle0 (0250C77C, 024FA79C); Run 024FE3E8 needs all three */
+    /* 0x102 */ be<u8> mStyleSettle2;  /* was m102: set and cleared together with mStyleSettle0 (0250C77C, 024FA79C); Run 024FE3E8 needs all three */
     /* 0x103 */ u8 _103;
     /* 0x104 */ cSAngle_l m104;
     /* 0x106 */ cSAngle_l m106;
-    /* 0x108 */ be<u32> m108;
+    /* 0x108 */ be<u32> mCurModeTimer;  /* was m108: onModeChange 024FA79C clears it, Run/NotRun (024FE3E8/024FF6C0) add 1; engines compare it with their transition length (02511200) */
     /* 0x10C */ be<s32> m10C;
-    /* 0x110 */ be<u8> m110;
+    /* 0x110 */ be<u8> mModeChangeTransition;  /* was m110: onModeChange 024FA79C sets 1, clears it when mode 0<->1 keeps the same style; followCamera 025028B8 settles the view at once when it is 0 */
     /* 0x111 */ u8 _111[3];
     /* 0x114 */ be<s32> m114;
-    /* 0x118 */ be<u32> m118;
-    /* 0x11C */ be<u32> m11C;
+    /* 0x118 */ be<u32> mCurTypeTimer;  /* was m118: onTypeChange 024FA90C clears it, Run/NotRun add 1; eventCamera tests == 0 (024FF164) */
+    /* 0x11C */ be<u32> mCurStyleTimer;  /* was m11C: onStyleChange 024FB334 clears it, Run/NotRun add 1; engines compare it with their transition frames (0250C77C); TP mCurCamStyleTimer */
     /* 0x120 */ be<s32> mCameraID;
     /* 0x124 */ be<s32> mPadId;
     /* 0x128 */ gptr<fopAc_ac_c> mpPlayerActor;
@@ -168,10 +168,10 @@ struct dCamera_c {
     /* 0x138 */ be<s32> mForceLockTimer;
     /* 0x13C */ be<s32> mCurMode;
     /* 0x140 */ be<s32> mNextMode;
-    /* 0x144 */ be<s32> m144;
-    /* 0x148 */ cSAngle_l m148;
+    /* 0x144 */ be<s32> mManualInactive;  /* was m144: initialize 02500984 sets 1; nextMode 024FA9C8 clears it when the C stick passes the manual-start threshold and sets 1 to leave; onTypeChange 024FA90C sets 1 for fixed/event styles */
+    /* 0x148 */ cSAngle_l mForwardTiltOffset;  /* was m148: initialize 02500984 sets cSAngle 0; followCamera 025028B8 / towerCamera 0250B30C ease it by 0.33; TP name at the same place (before mSightFitRadius) */
     /* 0x14A */ u8 _14A[2];
-    /* 0x14C */ be<f32> m14C;
+    /* 0x14C */ be<f32> mSightFitRadius;  /* was m14C: bumpCheck 024FD11C eases it toward the sight radius and adds it to the radius; onModeChange 024FA79C clears it; TP name */
     /* 0x150 */ be<f32> m150;
     /* 0x154 */ be<f32> m154;
     /* 0x158 */ be<f32> mStickMainPosXLast;   /* GC 0x154: +4 from here */
@@ -186,21 +186,21 @@ struct dCamera_c {
     /* 0x17C */ be<f32> mStickCPosXDelta;
     /* 0x180 */ be<f32> mStickCPosYDelta;
     /* 0x184 */ be<f32> mStickCValueDelta;
-    /* 0x188 */ be<s32> m184;
-    /* 0x18C */ be<u32> m188;
-    /* 0x190 */ be<u32> m18C;
+    /* 0x188 */ be<s32> mCStickYState;  /* was m184: initPad 025006D8 clears it with m188/m18C (TP initPad clears the same three); nextMode 024FA9C8 sets 0/1 for the C stick Y direction; TP name */
+    /* 0x18C */ be<u32> mCStickYHoldCount;  /* was m188: cleared by initPad 025006D8 with mCStickYState (TP initPad: the same three in this order); TP name */
+    /* 0x190 */ be<u32> mCStickUpLatch;  /* was m18C: cleared by initPad 025006D8 with mCStickYState (TP initPad: the same three in this order); TP name */
     /* 0x194 */ be<f32> mTriggerLeftLast;
     /* 0x198 */ be<f32> mTriggerLeftDelta;
     /* 0x19C */ be<u8> mHoldLockL;
     /* 0x19D */ be<u8> mTrigLockL;
-    /* 0x19E */ be<u8> m19A;
-    /* 0x19F */ be<u8> m19B;
+    /* 0x19E */ be<u8> mLockLActive;  /* was m19A: updatePad 024F9BF4: 1 while the L analog value is above ManualEndVal; TP name */
+    /* 0x19F */ be<u8> mLockLJustActivated;  /* was m19B: updatePad 024F9BF4: m19A ^ 1 before m19A is set (first frame only); TP name */
     /* 0x1A0 */ be<f32> mTriggerRightLast;
     /* 0x1A4 */ be<f32> mTriggerRightDelta;
     /* 0x1A8 */ be<u8> mHoldLockR;
     /* 0x1A9 */ be<u8> mTrigLockR;
-    /* 0x1AA */ be<u8> m1A6;
-    /* 0x1AB */ be<u8> m1A7;
+    /* 0x1AA */ be<u8> mLockRActive;  /* was m1A6: updatePad 024F9BF4: 1 while the R analog value is above ManualEndVal; TP name */
+    /* 0x1AB */ be<u8> mLockRJustActivated;  /* was m1A7: updatePad 024F9BF4: m1A6 ^ 1 before m1A6 is set (first frame only); TP name */
     /* 0x1AC */ be<u8> mHoldX;
     /* 0x1AD */ be<u8> mTrigX;
     /* 0x1AE */ be<u8> mHoldY;
@@ -213,31 +213,31 @@ struct dCamera_c {
     /* 0x224 */ DMC mDMCSystem;
     /* 0x22A */ u8 _22A[2];
     /* 0x22C */ Monitor mMonitor;
-    /* 0x24C */ be<s32> m248[3];
-    /* 0x258 */ be<s32> m254;
-    /* 0x25C */ be<s32> m258;
+    /* 0x24C */ be<s32> mSeIds[3];  /* was m248: initialize 02500984 stores JA_SE_MAN_CAMERA_NG / JA_SE_CAMERA_TO_MANUAL / JA_SE_ATM_PRT_SHIP_CREAK; Run 024FE3E8 starts [i] when bit i of m254 is new */
+    /* 0x258 */ be<s32> mSeRequest;  /* was m254: nextMode 024FA9C8 / onModeChange 024FA79C / Run (ship rock) set bits 1/2/4; Run 024FE3E8 starts mSeIds[i] for new bits, then clears it */
+    /* 0x25C */ be<s32> mSeRequestLast;  /* was m258: Run 024FE3E8 keeps last frame's m254 here and plays only bits not set in it */
     /* 0x260 */ BG mBG;                     /* GameCube 0x25C */
-    /* 0x318 */ be<u8> m314;
+    /* 0x318 */ be<u8> mInSeaArea;  /* was m314: checkGroundInfo 024F9044: 1 when daSea_ChkArea(player x, z), else 0 */
     /* 0x319 */ u8 _319[3];
-    /* 0x31C */ be<f32> m318;
-    /* 0x320 */ be<u8> m31C;
-    /* 0x321 */ be<u8> m31D;
+    /* 0x31C */ be<f32> mSeaWaveHeight;  /* was m318: checkGroundInfo 024F9044: daSea_calcWave(player x, z), else -1e9; rideCamera 0250D4E8 compares it with m354 */
+    /* 0x320 */ be<u8> mOnMoveBg;  /* was m31C: checkGroundInfo 024F9044: 1 while the ground under the player is a moving BG, 0 otherwise; Run 024FE3E8 tests it */
+    /* 0x321 */ be<u8> mFollowMoveBg;  /* was m31D: checkGroundInfo 024F9044: 1 when the view is carried with the moving BG (no event camera, player on the floor) */
     /* 0x322 */ u8 _322[2];
-    /* 0x324 */ cXyz m320;
-    /* 0x330 */ cXyz m32C;
-    /* 0x33C */ cSAngle_l m338;
-    /* 0x33E */ cSAngle_l m33A;
-    /* 0x340 */ gptr<fopAc_ac_c> m33C;
+    /* 0x324 */ cXyz mMoveBgPosDelta;  /* was m320: checkGroundInfo 024F9044: m32C - the moving BG actor's position (last minus current) */
+    /* 0x330 */ cXyz mMoveBgLastPos;  /* was m32C: checkGroundInfo 024F9044: the moving BG actor's position, kept for the next frame */
+    /* 0x33C */ cSAngle_l mMoveBgAngleDelta;  /* was m338: checkGroundInfo 024F9044: m33A - the moving BG actor's direction */
+    /* 0x33E */ cSAngle_l mMoveBgLastAngle;  /* was m33A: checkGroundInfo 024F9044: the moving BG actor's direction, kept for the next frame */
+    /* 0x340 */ gptr<fopAc_ac_c> mpMoveBgActor;  /* was m33C: checkGroundInfo 024F9044: GetActorPointer of the moving BG under the player, else NULL */
     /* 0x344 */ u8 m340[0x10];
-    /* 0x354 */ be<s32> m350;
-    /* 0x358 */ be<f32> m354;
+    /* 0x354 */ be<s32> mCamMoveBg;  /* was m350: checkGroundInfo 024F9044: dBgS::GetCamMoveBG of the player's ground, else 0; nextType 024FA410 reads it */
+    /* 0x358 */ be<f32> mGroundHeight;  /* was m354: checkGroundInfo 024F9044: ground cross height under the camera check point, raised to mSeaWaveHeight */
     /* 0x35C */ be<s32> mRoomNo;
     /* 0x360 */ be<s32> mRoomMapToolCameraIdx;
-    /* 0x364 */ be<u8> m360;
+    /* 0x364 */ be<u8> mPlayerOnFloor;  /* was m360: checkGroundInfo 024F9044: 0 when the player's feet are more than FloorMargin above the ground, else 1 */
     /* 0x365 */ u8 _365[3];
-    /* 0x368 */ be<s32> m364;
-    /* 0x36C */ be<f32> m368;
-    /* 0x370 */ cXyz m36C;
+    /* 0x368 */ be<s32> mBushHit;  /* was m364: checkGroundInfo 024F9044: lineCollisionCheckBush(...) & 5; bumpCheck 024FD11C tests it for CheckBush */
+    /* 0x36C */ be<f32> mBushHeight;  /* was m368: checkGroundInfo 024F9044: mCamSetup mBushHigh / mBushLow by the bush hit bits, else 0; talk camera 02508A60 adds it to the eye limit */
+    /* 0x370 */ cXyz mBushTopPos;  /* was m36C: checkGroundInfo 024F9044: GetMassCamTopPos output; bumpCheck 024FD11C uses it */
     /* 0x37C */ u8 mWork[0x80];          /* per-engine work union (GC 0x378); see the *_work_l overlays */
     /* 0x3FC */ EventData mEventData;
     /* 0x510 */ be<u32> mEventFlags;
@@ -246,30 +246,30 @@ struct dCamera_c {
     /* 0x51C */ be<s32> mCurType;
     /* 0x520 */ be<s32> mNextType;
     /* 0x524 */ be<s32> mMapToolType;
-    /* 0x528 */ be<s32> m524;
-    /* 0x52C */ gptr<fopAc_ac_c> m528;
+    /* 0x528 */ be<s32> mForceType;  /* was m524: SetType 02514EB8 stores the type when it is 0xFF; nextType 024FA410 uses and resets it to 0xFF */
+    /* 0x52C */ gptr<fopAc_ac_c> mpForceTypeActor;  /* was m528: SetType 02514EB8 stores the actor with mForceType; nextType 024FA410 reads and clears it */
     /* 0x530 */ be<u8> m52C;
     /* 0x531 */ u8 _531[3];
-    /* 0x534 */ be<s32> m530;
-    /* 0x538 */ be<s16> m534;
-    /* 0x53A */ be<s16> m536;
-    /* 0x53C */ be<f32> m538;
-    /* 0x540 */ be<f32> m53C;
-    /* 0x544 */ be<f32> m540;
-    /* 0x548 */ u8 m544[4];
-    /* 0x54C */ u8 m548[4];
+    /* 0x534 */ be<s32> mShipRockType;  /* was m530: initialize 02500984: 1 Asoko/Abship/PShip, 2 Obshop, 3 A_umikz, else 0; Run 024FE3E8 rocks the view while it is not 0 */
+    /* 0x538 */ be<s16> mShipRockAngle;  /* was m534: initialize 02500984 clears it; daObjPirateship::getShipOffsetY 025269A8 (d_com_static.cpp, parameter `angle`) adds mShipRockSpeed to it and returns scale * sin of it */
+    /* 0x53A */ be<s16> mShipRockSpeed;  /* was m536: initialize 02500984 sets 0x180; daObjPirateship::getShipOffsetY 025269A8 (parameter `speed`) eases it toward 0x180 while |angle| <= 0x4000, else 0x280, and adds it to mShipRockAngle */
+    /* 0x53C */ be<f32> mShipOffsetY;  /* was m538: initialize 02500984 / Run 024FE3E8: getShipOffsetY(...) * mShipOffsetScale, kept for the next frame */
+    /* 0x540 */ be<f32> mShipOffsetYDelta;  /* was m53C: Run 024FE3E8: this frame's ship offset minus mShipOffsetY; ship creak sound when it turns upward */
+    /* 0x544 */ be<f32> mShipOffsetScale;  /* was m540: initialize 02500984: 1.0 / 0.12 / 1.0 by mShipRockType, else 0; Run 024FE3E8 scales the ship offset by it */
+    /* 0x548 */ u8 mShakePattern[4];  /* was m544: StartShake 02515298 copies the i_pattern bits (length mShakeLength) */
+    /* 0x54C */ u8 mShakeCyclePattern[4];  /* was m548: StartShake 02515298 copies the pattern, the last byte wrapped with the first for length 0x20; shakeCamera 024FC108 reads it */
     /* 0x550 */ u8 m54C[4];
-    /* 0x554 */ be<s32> m550;
-    /* 0x558 */ be<s32> m554;
+    /* 0x554 */ be<s32> mShakeLength;  /* was m550: StartShake 02515298 stores i_length (max 0x20); StopShake 025153D4 clears it; shakeCamera 024FC108 shakes while the frame is below it */
+    /* 0x558 */ be<s32> mShakeFrame;  /* was m554: StartShake 02515298 / StopShake clear it; shakeCamera 024FC108 reads it as the pattern position and adds 1 */
     /* 0x55C */ u8 m558[4];
-    /* 0x560 */ cXyz m55C;
+    /* 0x560 */ cXyz mShakeDirection;  /* was m55C: StartShake 02515298 stores the normalised i_pos; shakeCamera 024FC108 scales it */
     /* 0x56C */ cXyz mCenterShake;
     /* 0x578 */ cXyz mEyeShake;
     /* 0x584 */ be<f32> mFovYShake;
     /* 0x588 */ cSAngle_l mBankShake;
     /* 0x58A */ u8 _58A[2];
-    /* 0x58C */ be<s32> m588;
-    /* 0x590 */ be<s32> m58C;
+    /* 0x58C */ be<s32> mShakeFlags;  /* was m588: StartShake 02515298 stores i_flags, StopShake clears it; shakeCamera 024FC108 tests its bits */
+    /* 0x590 */ be<s32> mBlureType;  /* was m58C: ResetBlure 0250D464 stores its argument; the blur part of shakeCamera 024FC108 branches on 0/1 */
     /* 0x594 */ be<s32> mBlureTimer;
     /* 0x598 */ csXyz mBlureRotation;
     /* 0x59E */ be<s16> m59A;
@@ -288,7 +288,7 @@ struct dCamera_c {
     /* 0x600 */ be<s32> mTrimSize;
     /* 0x604 */ be<s32> mTrimTypeForce;
     /* 0x608 */ be<f32> mWindowAspectRatio;
-    /* 0x60C */ be<f32> m608;
+    /* 0x60C */ be<f32> mWallUpDist;  /* was m608: initialize 02500984: mCamSetup.mBGChk.WallUpDistance(); TP name */
     /* 0x610 */ be<u8> mHD610;                /* HD-only */
     /* 0x611 */ u8 _611[3];
     /* 0x614 */ u8 mHDLookAtCamera[0x58];     /* HD-only sead::LookAtCamera (vtable at +0x30) */
@@ -307,7 +307,18 @@ struct dCamera_c {
     /* 0x8C8 */ be<s32> mCamTypeSubject;
     /* 0x8CC */ be<s32> mCamTypeKeep;
     /* 0x8D0 */ be<s32> mCamTypeRestrict;
-    /* 0x8D4 */ be<u8> m780, m781, m782, m783, m784, m785, m786, m787, m788, m789, m78A, m78B;
+    /* 0x8D4 */ be<u8> mIsSeaMap;  /* was m780: initialize 02500984: is_current_map("sea"); followCamera 025028B8 reads it */
+    /* 0x8D5 */ be<u8> mIsShipRoomMap;  /* was m781: initialize 02500984: is_current_map("Asoko"/"Abship"/"PShip"); selects mShipRockType 1 */
+    /* 0x8D6 */ be<u8> mIsObshopMap;  /* was m782: initialize 02500984: is_current_map("Obshop"); selects mShipRockType 2 */
+    /* 0x8D7 */ be<u8> mIsUmikzMap;  /* was m783: initialize 02500984: is_current_map("A_umikz"); selects mShipRockType 3 */
+    /* 0x8D8 */ be<u8> mIsGanonKMap;  /* was m784: initialize 02500984: is_current_map("GanonK"); freeCamera 0250FDC8 tests it */
+    /* 0x8D9 */ be<u8> mIsGTowerMap;  /* was m785: initialize 02500984: is_current_map("GTower") */
+    /* 0x8DA */ be<u8> mInSeaCenter;  /* was m786: checkSpecialArea 024F8DB4: 1 when the player is within sSeaRadius of sSeaCenter on the sea map */
+    /* 0x8DB */ be<u8> mInKazeCenter;  /* was m787: checkSpecialArea 024F8DB4: 1 when the player is within sKazeRadius of sKazeCenter on the kaze map; followCamera 025028B8 tests it */
+    /* 0x8DC */ be<u8> mIsKazeMap;  /* was m788: initialize 02500984: is_current_map("kaze") */
+    /* 0x8DD */ be<u8> mIsMDaiMap;  /* was m789: initialize 02500984: is_current_map("M_Dai") */
+    /* 0x8DE */ be<u8> m78A;
+    /* 0x8DF */ be<u8> mIsKazeBMap;  /* was m78B: initialize 02500984: is_current_map("kazeB"); bumpCheck 024FD11C tests it */
 
     u32 ea() const { return gabi::ea(this); }
     bool chkFlag(u32 flag) { return (mEventFlags & flag) ? true : false; }
@@ -428,25 +439,25 @@ struct dCamera_c {
 };
 WWHD_SIZE(dCamera_c, 0x8E0);
 WWHD_OFFSET(dCamera_c, mViewCache, 0x3C);
-WWHD_OFFSET(dCamera_c, m0A4, 0xA4);
+WWHD_OFFSET(dCamera_c, mSavedViewStack, 0xA4);
 WWHD_OFFSET(dCamera_c, mCameraID, 0x120);
 WWHD_OFFSET(dCamera_c, mStickMainPosXLast, 0x158);
 WWHD_OFFSET(dCamera_c, mForcusLine, 0x1B4);
 WWHD_OFFSET(dCamera_c, mMonitor, 0x22C);
 WWHD_OFFSET(dCamera_c, mBG, 0x260);
-WWHD_OFFSET(dCamera_c, m318, 0x31C);
+WWHD_OFFSET(dCamera_c, mSeaWaveHeight, 0x31C);
 WWHD_OFFSET(dCamera_c, mWork, 0x37C);
 WWHD_OFFSET(dCamera_c, mEventData, 0x3FC);
 WWHD_OFFSET(dCamera_c, mEventData.mSpline2DPath, 0x4CC);
 WWHD_OFFSET(dCamera_c, mEventFlags, 0x510);
-WWHD_OFFSET(dCamera_c, m528, 0x52C);
+WWHD_OFFSET(dCamera_c, mpForceTypeActor, 0x52C);
 WWHD_OFFSET(dCamera_c, mCenterShake, 0x56C);
 WWHD_OFFSET(dCamera_c, mBlureScale, 0x5B0);
 WWHD_OFFSET(dCamera_c, mTrimSize, 0x600);
 WWHD_OFFSET(dCamera_c, mCamSetup, 0x73C);
 WWHD_OFFSET(dCamera_c, mCamParam, 0x8A4);
 WWHD_OFFSET(dCamera_c, mCamTypeField, 0x8B0);
-WWHD_OFFSET(dCamera_c, m780, 0x8D4);
+WWHD_OFFSET(dCamera_c, mIsSeaMap, 0x8D4);
 
 /* dCamera_c::types[] (0x40 each: name[24], mStyles[20]) and type_num */
 enum : u32 { CAM_TYPES = 0x10049350, CAM_TYPE_NUM = 0x10049348, CAM_STYLES = 0x1004487C };

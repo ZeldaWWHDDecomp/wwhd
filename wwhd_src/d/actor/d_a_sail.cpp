@@ -200,7 +200,7 @@ void daSail_packet_c::update() {
                   0x20;
         for (u32 n = 0; n < 0x54; n++) {
             u32 p = gabi::ea(&sail_pointer<daSail_packet_c>(P)->mPos[0][0]) +
-                    ((u8)sail_view<daSail_packet_c>(P)->m1C3A * 0x54 + n) * 0xC;
+                    ((u8)sail_view<daSail_packet_c>(P)->mCurArr * 0x54 + n) * 0xC;
             f32 z = (f32)sail_view<cXyz>(p)->z, x = (f32)sail_view<cXyz>(p)->x,
                 y = (f32)sail_view<cXyz>(p)->y;
             dst += 0x20;
@@ -209,7 +209,7 @@ void daSail_packet_c::update() {
             sail_view<SailVertex>(dst)->position.z = z;
             u32 q = gabi::ea(k == 0 ? &sail_pointer<daSail_packet_c>(P)->mNrm[0][0]
                                     : &sail_pointer<daSail_packet_c>(P)->mBackNrm[0][0]) +
-                    ((u8)sail_view<daSail_packet_c>(P)->m1C3A * 0x54 + n) * 0xC;
+                    ((u8)sail_view<daSail_packet_c>(P)->mCurArr * 0x54 + n) * 0xC;
             f32 nx = (f32)sail_view<cXyz>(q)->x, ny = (f32)sail_view<cXyz>(q)->y,
                 nz = (f32)sail_view<cXyz>(q)->z;
             sail_view<SailVertex>(dst)->normal.z = nz;
@@ -273,7 +273,7 @@ void daSail_packet_c::update() {
 /* 0245FAAC */
 static BOOL daSail_Draw(sail_class* i_this) {
     u32 sh = ship();
-    if ((u8)sail_view<SailShipView>(sh)->m2CC == 0) { /* l_p_ship->m2CC */
+    if ((u8)sail_view<SailShipView>(sh)->mAppeared == 0) { /* l_p_ship->mAppeared (tww m2CC) */
         return FALSE;
     }
     tevstr_copy(gabi::ea(&i_this->tevStr),
@@ -333,9 +333,9 @@ static BOOL daSail_Draw(sail_class* i_this) {
 /* 0245FFC8 */
 void daSail_packet_c::setCorrectNrmAngle(s16 param_0, f32 param_1) {
     s32 rnd = gabi::ftoi(cM_rndF(200.0f));
-    m1C38 = (s16)(m1C38 + (rnd + 900));
+    mNrmWobblePhase = (s16)(mNrmWobblePhase + (rnd + 900));
 
-    m1C34 = (s16)gabi::ftoi(300.0f * cM_ssin(m1C38));
+    mNrmAngle = (s16)gabi::ftoi(300.0f * cM_ssin(mNrmWobblePhase));
 
     s16 r28 = (s16)(param_0 + 0x8000);
     s32 r27 = param_0;
@@ -347,24 +347,24 @@ void daSail_packet_c::setCorrectNrmAngle(s16 param_0, f32 param_1) {
     if (abs(r28) < lim) {
         s16 targetAngle =
             r28 > 0 ? (s16)gabi::ftoi((f32)(-r26) * 182.04445f) : (s16)gabi::ftoi(f9 * 182.04445f);
-        cLib_addCalcAngleS2(&m1C36, targetAngle, 5, 192);
+        cLib_addCalcAngleS2(&mNrmCorrectAngle, targetAngle, 5, 192);
     } else if (abs(r27) < lim) {
         s16 targetAngle =
             (s16)r27 > 0 ? (s16)gabi::ftoi((f32)(-r26) * 182.04445f) : (s16)gabi::ftoi(f9 * 182.04445f);
-        cLib_addCalcAngleS2(&m1C36, targetAngle, 5, 192);
+        cLib_addCalcAngleS2(&mNrmCorrectAngle, targetAngle, 5, 192);
     } else {
-        cLib_addCalcAngleS2(&m1C36, 0, 5, 192);
+        cLib_addCalcAngleS2(&mNrmCorrectAngle, 0, 5, 192);
     }
-    m1C34 = (s16)(m1C34 + m1C36);
+    mNrmAngle = (s16)(mNrmAngle + mNrmCorrectAngle);
 }
 
 /* 024601F0 */
-void daSail_packet_c::setNrmMtx() { cMtx_YrotS(calc_mtx(), m1C34); }
+void daSail_packet_c::setNrmMtx() { cMtx_YrotS(calc_mtx(), mNrmAngle); }
 
 /* 024605DC */
 void daSail_packet_c::setBackNrm() {
-    cXyz* nrm = mNrm[(u8)m1C3A];
-    cXyz* backNrm = mBackNrm[(u8)m1C3A];
+    cXyz* nrm = mNrm[(u8)mCurArr];
+    cXyz* backNrm = mBackNrm[(u8)mCurArr];
     for (int i = 0; i < 0x54; i++) {
         backNrm->x = 0.0f;
         backNrm->y = 0.0f;
@@ -467,27 +467,27 @@ void daSail_packet_c::setNrmVtx(cXyz* param_0, int param_1, int param_2) {
 static void sail_move(sail_class* i_this) {
     cXyz* windVec = sail_dKyw_get_wind_vec();
     if (l_HIO().m06 == 0) {
-        if (i_this->m1C44 < 0.6f) {
-            if (!(i_this->m1C48 > 0.0f)) {
-                i_this->m1C48 = 0.015f;
+        if (i_this->mFurl < 0.6f) {
+            if (!(i_this->mFurlSpeed > 0.0f)) {
+                i_this->mFurlSpeed = 0.015f;
             } else {
-                i_this->m1C48 = i_this->m1C48 - 0.001f;
+                i_this->mFurlSpeed = i_this->mFurlSpeed - 0.001f;
             }
-            cLib_addCalc(&i_this->m1C44, 0.6f, 0.1f, i_this->m1C48, 0.01f);
+            cLib_addCalc(&i_this->mFurl, 0.6f, 0.1f, i_this->mFurlSpeed, 0.01f);
         } else {
-            i_this->m1C48 = 0.0f;
+            i_this->mFurlSpeed = 0.0f;
         }
-    } else if (l_HIO().m06 == 1 && i_this->m1C44 > 0.0f) {
-        i_this->m1C48 = i_this->m1C48 + 0.0075f;
-        cLib_addCalc(&i_this->m1C44, 0.0f, 0.3f, i_this->m1C48, 0.01f);
+    } else if (l_HIO().m06 == 1 && i_this->mFurl > 0.0f) {
+        i_this->mFurlSpeed = i_this->mFurlSpeed + 0.0075f;
+        cLib_addCalc(&i_this->mFurl, 0.0f, 0.3f, i_this->mFurlSpeed, 0.01f);
     } else {
-        i_this->m1C48 = 0.0f;
+        i_this->mFurlSpeed = 0.0f;
     }
 
-    if (i_this->m1C44 > 1.0f) {
-        i_this->m1C44 = 1.0f;
-    } else if (i_this->m1C44 < 0.0f) {
-        i_this->m1C44 = 0.0f;
+    if (i_this->mFurl > 1.0f) {
+        i_this->mFurl = 1.0f;
+    } else if (i_this->mFurl < 0.0f) {
+        i_this->mFurl = 0.0f;
     }
 
     /* demo_move (inline) */
@@ -508,18 +508,18 @@ static void sail_move(sail_class* i_this) {
                                           0.006f, 0.6f);
                 /* cLib_minMaxLimit<f32>(frame, 0.0f, 0.6f) */
                 if (frame < 0.0f) {
-                    i_this->m1C44 = 0.0f;
+                    i_this->mFurl = 0.0f;
                 } else {
-                    i_this->m1C44 = fsel(frame - 0.6f, 0.6f, frame);
+                    i_this->mFurl = fsel(frame - 0.6f, 0.6f, frame);
                 }
             }
             demo = TRUE;
         }
     }
     if (!demo && l_HIO().m08 != 0) {
-        i_this->m1C44 = l_HIO().m0C;
+        i_this->mFurl = l_HIO().m0C;
     }
-    i_this->m1C4C = 15.0f * (i_this->m1C44 - 0.6f);
+    i_this->m1C4C = 15.0f * (i_this->mFurl - 0.6f);
 
     s16 windAngle = cM_atan2s(windVec->x, windVec->z);
     cMtx_YrotS(calc_mtx(), (s16) - (i_this->current.angle.y - windAngle));
@@ -553,7 +553,7 @@ static void sail_move(sail_class* i_this) {
         MtxPosition(sp28, sp1C);
         f32 f25 = fabsf(sp1C->z);
         f32 f0 = fabsf(sp1C->x);
-        s32 tmp = gabi::ftoi(4000.0f * gabi::fnmsubs(0.95f, i_this->m1C44, 1.0f));
+        s32 tmp = gabi::ftoi(4000.0f * gabi::fnmsubs(0.95f, i_this->mFurl, 1.0f));
         f25 = gabi::fmadds(0.9f, f25, 0.1f);
         /* HD: in "Demo46" the wind power scales the flutter */
         if ((u8)sail_view<SailPlayView>(dComIfGp_ea())->demoRunning != 0) {
@@ -590,16 +590,16 @@ static void sail_move(sail_class* i_this) {
             }
         }
 
-        i_this->m1C40 =
-            gabi::ftoi(gabi::fmadds((f32)tmp, gabi::fmadds(0.85f, f25, 0.15f), (f32)(s32)i_this->m1C40));
-        i_this->m1C50 = (s16)gabi::ftoi(7500.0f * gabi::fmadds(1.5f, f0, 1.0f));
-        i_this->m1C52 = (s16)gabi::ftoi(7200.0f * gabi::fmadds(0.95f, f25, 0.05f));
+        i_this->mWavePhase =
+            gabi::ftoi(gabi::fmadds((f32)tmp, gabi::fmadds(0.85f, f25, 0.15f), (f32)(s32)i_this->mWavePhase));
+        i_this->mWaveColStep = (s16)gabi::ftoi(7500.0f * gabi::fmadds(1.5f, f0, 1.0f));
+        i_this->mWaveRowStep = (s16)gabi::ftoi(7200.0f * gabi::fmadds(0.95f, f25, 0.05f));
 
-        u8 cur = (u8)i_this->mSailPacket.m1C3A;
+        u8 cur = (u8)i_this->mSailPacket.mCurArr;
         f32 sp6C[7] = {};
         f32 sp34[7] = {};
 
-        f32 a44 = i_this->m1C44;
+        f32 a44 = i_this->mFurl;
         f0 = f0 * gabi::fnmsubs(0.75f, a44, 1.0f);
         f25 = f25 * gabi::fnmsubs(0.5f * a44, i_this->m1C4C, 1.0f);
         f32 f0sq = f0 * f0;
@@ -620,10 +620,10 @@ static void sail_move(sail_class* i_this) {
             f32 i125 = fi * 1.25f;
             for (int j = 0; j < 7; j++, vtx += 0xC) {
                 f32 f23 = (f32)(j - 3);
-                s32 m50 = i_this->m1C50;
-                s32 m52 = i_this->m1C52;
+                s32 m50 = i_this->mWaveColStep;
+                s32 m52 = i_this->mWaveRowStep;
                 u32 r22 = (u32)(m50 * gabi::ftoi(f23) + m52 * i12);
-                s32 m40 = i_this->m1C40;
+                s32 m40 = i_this->mWavePhase;
                 f32 f20 = sinAmp * cM_ssin((s32)(r22 - m40)) * f31;
                 f32 f22 = cosAmp * cM_scos((s32)(m40 + r22)) * f31;
                 f32 f21 = std_sqrtf(gabi::fmadds(f22, f22, f20 * f20));
@@ -675,39 +675,39 @@ static void sail_move(sail_class* i_this) {
                 z = z + (f32)sail_view<cXyz>(lp)->z;
                 sail_view<cXyz>(vtx)->z = z;
 
-                y = y * (1.0f - (i_this->m1C44 * f13sq) / 30.25f);
+                y = y * (1.0f - (i_this->mFurl * f13sq) / 30.25f);
                 sail_view<cXyz>(vtx)->y = y;
-                y = y * (gabi::fnmsubs(i_this->m1C44, fi, 11.0f) / 11.0f);
+                y = y * (gabi::fnmsubs(i_this->mFurl, fi, 11.0f) / 11.0f);
                 sail_view<cXyz>(vtx)->y = y;
-                z = z * (1.0f - (i_this->m1C44 * f13sq) / 30.25f);
+                z = z * (1.0f - (i_this->mFurl * f13sq) / 30.25f);
                 sail_view<cXyz>(vtx)->z = z;
-                z = z * (gabi::fnmsubs(i_this->m1C44, fi, 11.0f) / 11.0f);
+                z = z * (gabi::fnmsubs(i_this->mFurl, fi, 11.0f) / 11.0f);
                 sail_view<cXyz>(vtx)->z = z;
 
-                f32 a = i_this->m1C44;
+                f32 a = i_this->mFurl;
                 if (a > 0.0f && i < 6) {
                     f32 f20b = gabi::fnmsubs(f15_2, f15_2, 9.0f) / 9.0f;
                     z = gabi::fmadds(700.0f * f20b, a, z);
                     y = (f32)sail_view<cXyz>(vtx)->y;
                     sail_view<cXyz>(vtx)->z = z;
-                    y = gabi::fnmsubs(150.0f * f20b, i_this->m1C44, y);
+                    y = gabi::fnmsubs(150.0f * f20b, i_this->mFurl, y);
                     sail_view<cXyz>(vtx)->y = y;
-                    a = i_this->m1C44;
+                    a = i_this->mFurl;
                 } else {
                     y = (f32)sail_view<cXyz>(vtx)->y;
                 }
                 f32 odd = (f32)(j & 1);
                 y = y * gabi::fmadds(0.3f * odd, a, 1.0f - a);
                 sail_view<cXyz>(vtx)->y = y;
-                a = i_this->m1C44;
+                a = i_this->mFurl;
                 z = (f32)sail_view<cXyz>(vtx)->z * gabi::fmadds(0.15f * odd, a, 1.0f - a);
                 sail_view<cXyz>(vtx)->z = z;
             }
         }
     }
 
-    f32 f31_2 = f31_1 * gabi::fnmsubs(0.5f * i_this->m1C44, i_this->m1C4C, 1.0f);
-    u32 nrm = gabi::ea(&i_this->mSailPacket.mNrm[0][0]) + (u8)i_this->mSailPacket.m1C3A * sizeof(cXyz[84]);
+    f32 f31_2 = f31_1 * gabi::fnmsubs(0.5f * i_this->mFurl, i_this->m1C4C, 1.0f);
+    u32 nrm = gabi::ea(&i_this->mSailPacket.mNrm[0][0]) + (u8)i_this->mSailPacket.mCurArr * sizeof(cXyz[84]);
     s16 angleY = i_this->current.angle.y;
     gabi::Local<cXyz> light;
     gabi::Local<cXyz> light_res;
@@ -724,13 +724,13 @@ static void sail_move(sail_class* i_this) {
     i_this->mSailPacket.setBackNrm();
     /* HD: the three current buffers (GameCube USA/PAL) */
     DCStoreRangeNoSync(sail_pointer<u8>(gabi::ea(&i_this->mSailPacket.mPos[0][0]) +
-                                        (u8)i_this->mSailPacket.m1C3A * sizeof(cXyz[84])),
+                                        (u8)i_this->mSailPacket.mCurArr * sizeof(cXyz[84])),
                        sizeof(cXyz[84]));
     DCStoreRangeNoSync(sail_pointer<u8>(gabi::ea(&i_this->mSailPacket.mNrm[0][0]) +
-                                        (u8)i_this->mSailPacket.m1C3A * sizeof(cXyz[84])),
+                                        (u8)i_this->mSailPacket.mCurArr * sizeof(cXyz[84])),
                        sizeof(cXyz[84]));
     DCStoreRangeNoSync(sail_pointer<u8>(gabi::ea(&i_this->mSailPacket.mBackNrm[0][0]) +
-                                        (u8)i_this->mSailPacket.m1C3A * sizeof(cXyz[84])),
+                                        (u8)i_this->mSailPacket.mCurArr * sizeof(cXyz[84])),
                        sizeof(cXyz[84]));
 }
 
@@ -942,12 +942,12 @@ static daSail_packet_c* daSail_packet_ct(daSail_packet_c* pk) {
     sail_constructTexture(gabi::ea(&sail_pointer<daSail_packet_c>(P)->sailTexture));
     sail_constructTexture(gabi::ea(&sail_pointer<daSail_packet_c>(P)->toonTexture));
     sail_view<daSail_packet_c>(P)->textureLoaded = 0;
-    /* GameCube: m1C3A = 0; m1C34 = 0; m1C38 = 0; m1C36 = 0; m1C3B = 1 */
-    pk->m1C34 = 0;
+    /* GameCube: mCurArr = 0; mNrmAngle = 0; mNrmWobblePhase = 0; mNrmCorrectAngle = 0; m1C3B = 1 */
+    pk->mNrmAngle = 0;
     pk->m1C3B = 1;
-    pk->m1C36 = 0;
-    pk->m1C3A = 0;
-    pk->m1C38 = 0;
+    pk->mNrmCorrectAngle = 0;
+    pk->mCurArr = 0;
+    pk->mNrmWobblePhase = 0;
 
     /* the shader program "flag_default" into the program list */
     {
@@ -1380,9 +1380,9 @@ static cPhs_State daSail_Create(fopAc_ac_c* i_actor) {
                                    ,
                                    &l_HIO());
         }
-        u8 cur = (u8)i_this->mSailPacket.m1C3A;
-        i_this->m1C44 = 0.0f;
-        i_this->m1C48 = 0.0f;
+        u8 cur = (u8)i_this->mSailPacket.mCurArr;
+        i_this->mFurl = 0.0f;
+        i_this->mFurlSpeed = 0.0f;
         u32 spd = gabi::ea(&i_this->mSailPacket.mPosSpd[0]);
         u32 pos = gabi::ea(&i_this->mSailPacket.mPos[0][0]) + cur * sizeof(cXyz[84]);
         for (int i = 0; i < 0x54; i++, spd += 0xC, pos += 0xC) {
@@ -1397,9 +1397,9 @@ static cPhs_State daSail_Create(fopAc_ac_c* i_actor) {
         fopAc_ac_c* p = fopAcM_SearchByID(i_this->parentActorID);
         sail_shipAddress() = gabi::ea(p);
         /* HD: null check */
-        if (p != nullptr && (u8)sail_view<SailShipView>(gabi::ea(p))->m2CE == 0) { /* l_p_ship->m2CE */
+        if (p != nullptr && (u8)sail_view<SailShipView>(gabi::ea(p))->mSailSeOn == 0) { /* l_p_ship->mSailSeOn (tww m2CE) */
             l_HIO().m06 = 0;
-            i_this->m1C44 = 0.6f;
+            i_this->mFurl = 0.6f;
         } else {
             l_HIO().m06 = 1;
         }

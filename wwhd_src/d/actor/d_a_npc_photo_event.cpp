@@ -21,21 +21,21 @@ static inline u32 photo_v_getMsg(daNpcPhoto_c* self) { return gabi::call_ptr<u32
 void daNpcPhoto_c::checkOrder() {
     u16 command = eventInfo_getCommand(this);
     if (command == dEvtCmd_INDEMO_e) {
-        if (dComIfGp_evmng_startCheck(mPhotoLinkBackEventIdx) && field_0x9BE == 3) {
-            field_0x9BE = 0;
-        } else if (dComIfGp_evmng_startCheck(mPhotoGetItemEventIdx) && field_0x9BE == 4) {
-            field_0x9BE = 0;
-        } else if (dComIfGp_evmng_startCheck(mPhotoGetItem2EventIdx) && field_0x9BE == 5) {
-            field_0x9BE = 0;
-        } else if (dComIfGp_evmng_startCheck(mPhotoGetPhotoEventIdx) && field_0x9BE == 6) {
-            field_0x9BE = 0;
-        } else if (dComIfGp_evmng_startCheck(mPhotoGalleryEventIdx) && field_0x9BE == 7) {
-            field_0x9BE = 0;
-        } else if (dComIfGp_evmng_startCheck(mPhotoDateUB4EventIdx) && field_0x9BE == 10) {
-            field_0x9BE = 0;
+        if (dComIfGp_evmng_startCheck(mPhotoLinkBackEventIdx) && mOrderEvent == 3) {
+            mOrderEvent = 0;
+        } else if (dComIfGp_evmng_startCheck(mPhotoGetItemEventIdx) && mOrderEvent == 4) {
+            mOrderEvent = 0;
+        } else if (dComIfGp_evmng_startCheck(mPhotoGetItem2EventIdx) && mOrderEvent == 5) {
+            mOrderEvent = 0;
+        } else if (dComIfGp_evmng_startCheck(mPhotoGetPhotoEventIdx) && mOrderEvent == 6) {
+            mOrderEvent = 0;
+        } else if (dComIfGp_evmng_startCheck(mPhotoGalleryEventIdx) && mOrderEvent == 7) {
+            mOrderEvent = 0;
+        } else if (dComIfGp_evmng_startCheck(mPhotoDateUB4EventIdx) && mOrderEvent == 10) {
+            mOrderEvent = 0;
         }
-    } else if (command == dEvtCmd_INTALK_e && (field_0x9BE == 2 || field_0x9BE == 1)) {
-        field_0x9BC = true;
+    } else if (command == dEvtCmd_INTALK_e && (mOrderEvent == 2 || mOrderEvent == 1)) {
+        mTalking = true;
         executeSetMode(1);
     }
 }
@@ -49,14 +49,14 @@ void daNpcPhoto_c::setMessage(u32 msg) {
 void daNpcPhoto_c::eventMesSetInit(int i_staffId) {
     be<u32>* pData = (be<u32>*)dComIfGp_evmng_getMyIntegerP(i_staffId, "MsgNo" /* "MsgNo" */);
     if (pData != nullptr) {
-        field_0x980 = nullptr;
-        field_0x9D0 = 0;
+        mpMsgList = nullptr;
+        mpMsgCameraList = 0;
         u32 msgNo = *pData;
         switch (msgNo) {
         case 0:
             if (!dComIfGs_isEventBit(0x1601 /* l_save_dat.field_0x04 */)) {
-                field_0x9D0 = 0;
-                field_0x980 = l_msg_1st_talk_photo;
+                mpMsgCameraList = 0;
+                mpMsgList = l_msg_1st_talk_photo;
                 dComIfGs_onEventBit(0x1601);
             } else {
                 u32 temp = 0;
@@ -65,14 +65,14 @@ void daNpcPhoto_c::eventMesSetInit(int i_staffId) {
                     temp = static_cast<daTagPhoto_c*>(ac)->mTagNo; /* getTagNo() */
                     if (temp >= 7) { // HD: l_msg_talk_photo bound check
                         JUT_ASSERT_fail("d_a_npc_photo.cpp", 0x896, "tagNo < sizeof(l_msg_talk_photo) / sizeof(l_msg_talk_photo[0])");
-                        setMessage(*field_0x980);
+                        setMessage(*mpMsgList);
                         return;
                     }
                 }
-                field_0x9D0 = 0;
-                field_0x980 = &gabi::object_at<be<u32>>(l_msg_talk_photo[temp]);
+                mpMsgCameraList = 0;
+                mpMsgList = &gabi::object_at<be<u32>>(l_msg_talk_photo[temp]);
             }
-            setMessage(*field_0x980);
+            setMessage(*mpMsgList);
             return;
         case 1:
             setMessage(photo_v_getMsg(this));
@@ -85,11 +85,11 @@ void daNpcPhoto_c::eventMesSetInit(int i_staffId) {
             return;
         }
     }
-    field_0x980 = field_0x980.get() + 1;
-    if (field_0x9D0 != 0) {
-        field_0x9D0 = field_0x9D0 + 1;
+    mpMsgList = mpMsgList.get() + 1;
+    if (mpMsgCameraList != 0) {
+        mpMsgCameraList = mpMsgCameraList + 1;
     }
-    setMessage(*field_0x980);
+    setMessage(*mpMsgList);
 }
 /* 022CD718 */
 void daNpcPhoto_c::eventSeSetInit(int i_staffId) {
@@ -221,7 +221,7 @@ void daNpcPhoto_c::eventPosSetInit() {
     s16 ang = *angle;
     current.angle.y = ang;
     shape_angle.y = ang;
-    field_0x9AE = ang;
+    mTargetAngleY = ang;
     dComIfGp_event_setTalkPartner(this);
     mPathRun.mIdx = (u8)(gabi::object_at<path_layout::dPath>(gabi::ea(mPathRun.mPath.get())).m_num /* m_num */ - 2);
     mPathRun.mbDir = 0;
@@ -264,7 +264,7 @@ void daNpcPhoto_c::eventTurnToPlayerInit() {
     b->x = link->current.pos.x;
     b->y = link->current.pos.y;
     b->z = link->current.pos.z;
-    dNpc_calc_DisXZ_AngY(a.get(), b.get(), nullptr, &field_0x9AE);
+    dNpc_calc_DisXZ_AngY(a.get(), b.get(), nullptr, &mTargetAngleY);
 }
 /* 022CDD50 */
 void daNpcPhoto_c::eventClrHanmeInit() {
@@ -292,13 +292,13 @@ void daNpcPhoto_c::eventMesSetUbInit(int i_staffId) {
 }
 /* 022CDE3C */
 void daNpcPhoto_c::setMsgCamera() {
-    if (field_0x9D0 == 0) {
+    if (mpMsgCameraList == 0) {
         return;
     }
     u32 pCam = dCam_getBody();
-    if (*field_0x9D0 >= 0) {
+    if (*mpMsgCameraList >= 0) {
         dCamera_Stop(pCam);
-        be<s8>* p = field_0x9D0;
+        be<s8>* p = mpMsgCameraList;
         gabi::Local<cXyz> temp;
         cxyz_cpf(temp.get(), l_msg_camera[*p * 2]);
         gabi::Local<cXyz> temp2;
@@ -404,7 +404,7 @@ bool daNpcPhoto_c::eventSetEye() {
 }
 /* 022CE434 */
 bool daNpcPhoto_c::eventTurnToPlayer() {
-    return current.angle.y == field_0x9AE;
+    return current.angle.y == mTargetAngleY;
 }
 /* 022CE44C */
 bool daNpcPhoto_c::eventGetPhoto() {
@@ -416,8 +416,8 @@ bool daNpcPhoto_c::eventLookUb() {
     fopAc_ac_c* pActor = fopAcM_searchFromName("Ub4" /* "Ub4" */, 0, 0);
     if (pActor != nullptr) {
         mLookAtPos.copy(pActor->eyePos);
-        field_0x9D6 = 1;
-        field_0x994 = false;
+        mLookMode = 1;
+        mLookHeadOnly = false;
     }
     return true;
 }
@@ -514,10 +514,10 @@ void daNpcPhoto_c::setAnmFromMsgTag() {
 void daNpcPhoto_c::eventMove() {
     if (dComIfGp_evmng_endCheck(mPhotoLinkBackEventIdx)) {
         field_0x9C6 = field_0x9C6 | 0x40;
-    } else if (dComIfGp_evmng_endCheck(field_0x9A6)) {
-        field_0x9C7 = true;
-        field_0x9BE = 0;
-        field_0x9BC = false;
+    } else if (dComIfGp_evmng_endCheck(mCounterTalkEventIdx)) {
+        mModeInTalk = true;
+        mOrderEvent = 0;
+        mTalking = false;
         eventInfo_setEventId(this, -1);
         field_0x9C6 = field_0x9C6 | 0x40;
         executeSetMode(0);
@@ -525,8 +525,8 @@ void daNpcPhoto_c::eventMove() {
                dComIfGp_evmng_endCheck(mPhotoGetPhotoEventIdx) || dComIfGp_evmng_endCheck(mPhotoGalleryEventIdx)) {
         field_0x9C6 = field_0x9C6 | 0x40;
     } else if (dComIfGp_evmng_endCheck(mPhotoDateUB4EventIdx)) {
-        field_0x9D8 = true;
-        field_0x9D7 = true;
+        mLookAtPlayer = true;
+        mBodyTurn = true;
         field_0x9C6 = field_0x9C6 | 0x50;
     } else {
         u8 temp = mEventCut.mbAttention; /* getAttnFlag() */
@@ -546,15 +546,15 @@ void daNpcPhoto_c::eventOrder() {
         field_0x9C6 = field_0x9C6 & ~0x40;
         dComIfGp_event_reset();
         initTexPatternAnm(true, -1);
-        field_0x9C7 = true;
-        field_0x9BC = false;
+        mModeInTalk = true;
+        mTalking = false;
         field_0x9C9 = field_0x9C9 & 0x7F;
         executeSetMode(0);
     }
-    u8 temp = field_0x9BE;
+    u8 temp = mOrderEvent;
     if (temp == 2 || temp == 1) {
         eventInfo_onCondition(this, 0x21); /* dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e */
-        if (field_0x9BE == 2) {
+        if (mOrderEvent == 2) {
             fopAcM_orderSpeakEvent(this);
         }
     } else if (temp == 3) {

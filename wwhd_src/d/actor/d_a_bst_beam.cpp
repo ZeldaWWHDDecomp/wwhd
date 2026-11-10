@@ -17,13 +17,13 @@ static void beam_attack(bst_class* actor) {
     BstBeamPlay* play = BstBeam_getPlay();
     s16 timer = i_this->mBombArrowDropTimer;
     fopAc_ac_c* player = play->mpPlayer;
-    i_this->m2E74[0] = 10;
-    i_this->m2E74[1] = 10;
+    i_this->mEyeCloseTimer[0] = 10;
+    i_this->mEyeCloseTimer[1] = 10;
     if (timer < 120) i_this->mBombArrowDropTimer = 120;
     gabi::Local<cXyz> actor_vec;
     cXyz_mi(&player->current.pos, actor_vec.get(), &actor->current.pos);
     f32 dx = actor_vec->x, dz = actor_vec->z;
-    f32 dy = gabi::fadds_ppc(static_cast<f32>(actor_vec->y), i_this->m10D0);
+    f32 dy = gabi::fadds_ppc(static_cast<f32>(actor_vec->y), i_this->mBeamAimOffsetY);
     s16 yaw = cM_atan2s(dx, dz);
     cLib_addCalcAngleS2(&actor->shape_angle.y, yaw, 4, 0x800);
     // HD: fmadds forms the sum in double precision before rounding single.
@@ -42,75 +42,75 @@ static void beam_attack(bst_class* actor) {
         beamSound(actor, JA_SE_CM_BST_MOUTH_OPEN);
         break;
     case 1: {
-        if (i_this->m02B8->isStop()) {
+        if (i_this->mpMorf->isStop()) {
             i_this->mDamage = static_cast<s16>(state + 1);
             BstBeam_anm_init(actor, dRes_INDEX_BST_BCK_BEAM_TAME_e, 1.0f, J3DFrameCtrl::EMode_LOOP, 1.0f, -1);
-            i_this->m10FC[0] = 45;
+            i_this->mTimers[0] = 45;
             for (u32 i = 0; i < 2; ++i) {
                 u16 effect = charge_e_name.mName[i];
                 play = BstBeam_getPlay();
                 dPa_control_c* control = play->mpParticle;
                 JPABaseEmitter* emitter = dPa_control_set(control, 0, effect, &actor->current.pos, nullptr, nullptr, 255, nullptr, -1, nullptr, nullptr, nullptr);
-                i_this->m2ED8[i] = emitter;
+                i_this->mpChargeEmitter[i] = emitter;
             }
         }
         break;
     }
     case 2: {
         beamSound(actor, JA_SE_CM_BST_BEAM_PREPARE);
-        timer = i_this->m10FC[0];
+        timer = i_this->mTimers[0];
         i_this->mRoomState = 5;
         if (timer == 0) {
             for (u32 i = 0; i < 2; ++i) {
-                BstEmitter* emitter = bstEmitter(i_this->m2ED8[i]);
+                BstEmitter* emitter = bstEmitter(i_this->mpChargeEmitter[i]);
                 if (emitter) {
                     emitter->becomeInvalidEmitter();
-                    i_this->m2ED8[i] = nullptr;
+                    i_this->mpChargeEmitter[i] = nullptr;
                 }
             }
             s16 current = i_this->mDamage;
             i_this->mDamage = static_cast<s16>(current + 1);
             BstBeam_anm_init(actor, dRes_INDEX_BST_BCK_BEAM_e, 1.0f, J3DFrameCtrl::EMode_LOOP, 1.0f, -1);
-            i_this->m10FC[0] = static_cast<s16>(REG0_S(4) + 50);
+            i_this->mTimers[0] = static_cast<s16>(REG0_S(4) + 50);
         }
         break;
     }
     case 3: {
         f32 acceleration = REG0_F(5);
         f32 target = REG0_F(6);
-        cLib_addCalc2(&i_this->m10D0, target, 0.1f, gabi::fadds_ppc(acceleration, 20.0f));
-        timer = i_this->m10FC[0];
+        cLib_addCalc2(&i_this->mBeamAimOffsetY, target, 0.1f, gabi::fadds_ppc(acceleration, 20.0f));
+        timer = i_this->mTimers[0];
         if ((timer & 3) == 0) {
             i_this->mRoomState = 6;
             // HD: beam_set is inlined and marks the HD animation matrix buffer dirty.
             for (u32 i = 0; i < 10; ++i) {
-                if (i_this->m04E4[i] != 0) continue;
-                i_this->m04E4[i] = 1;
+                if (i_this->mBeamState[i] != 0) continue;
+                i_this->mBeamState[i] = 1;
                 s32 joint = REG0_S(5) + BST_JNT_BUKI2_e;
-                Mtx34* anmMtx = i_this->m02B8->getModel()->getAnmMtx(joint);
+                Mtx34* anmMtx = i_this->mpMorf->getModel()->getAnmMtx(joint);
                 Mtx34* matrix = calc_mtx();
                 PSMTXCopy(anmMtx, matrix);
                 gabi::Local<cXyz> vec;
                 vec->x = 0.0f; vec->y = 0.0f; vec->z = 0.0f;
-                MtxPosition(vec.get(), &i_this->m03B8[i]);
+                MtxPosition(vec.get(), &i_this->mBeamPos[i]);
                 pitch = actor->shape_angle.x;
-                i_this->m04A8[i].x = pitch;
+                i_this->mBeamAngle[i].x = pitch;
                 yaw = actor->shape_angle.y;
-                i_this->m04A8[i].y = yaw;
-                i_this->m04A8[i].z = actor->shape_angle.z;
+                i_this->mBeamAngle[i].y = yaw;
+                i_this->mBeamAngle[i].z = actor->shape_angle.z;
                 matrix = calc_mtx();
                 cMtx_YrotS(matrix, yaw);
                 matrix = calc_mtx();
-                pitch = i_this->m04A8[i].x;
+                pitch = i_this->mBeamAngle[i].x;
                 cMtx_XrotM(matrix, pitch);
                 f32 speed = REG0_F(12);
                 vec->x = 0.0f; vec->y = 0.0f; vec->z = gabi::fadds_ppc(speed, 160.0f);
-                MtxPosition(vec.get(), &i_this->m0430[i]);
-                i_this->m10A8[i] = 1.0f;
+                MtxPosition(vec.get(), &i_this->mBeamSpeed[i]);
+                i_this->mBeamLength[i] = 1.0f;
                 break;
             }
             beamSound(actor, JA_SE_CM_BST_BEAM_FIRE);
-            timer = i_this->m10FC[0];
+            timer = i_this->mTimers[0];
         }
         finished = timer == 0;
         break;
@@ -139,12 +139,12 @@ static void beam_attack(bst_class* actor) {
             f32 maximum = health == 3 ? 90.0f : 100.0f;
             wait = gabi::fadds_ppc(cM_rndF(maximum), 150.0f);
         }
-        i_this->m2E7E[1] = static_cast<s16>(gabi::ftoi(wait));
+        i_this->mBattleTimers[1] = static_cast<s16>(gabi::ftoi(wait));
     }
     for (u32 i = 0; i < 2; ++i) {
-        BstEmitter* emitter = bstEmitter(i_this->m2ED8[i]);
+        BstEmitter* emitter = bstEmitter(i_this->mpChargeEmitter[i]);
         if (!emitter) continue;
-        Mtx34* anmMtx = i_this->m02B8->getModel()->getAnmMtx(0);
+        Mtx34* anmMtx = i_this->mpMorf->getModel()->getAnmMtx(0);
         JPASetRMtxTVecfromMtx(anmMtx, &emitter->mGlobalRotation, &emitter->mGlobalTranslation);
     }
 }

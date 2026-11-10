@@ -42,14 +42,14 @@ struct KmonActionHD {
 struct KmonOrcaHD : fopAc_ac_c {
     /* 0x3AC */ u8 _3AC[0x3CC - 0x3AC];
     /* 0x3CC */ KmonActionHD mAction;
-    /* 0x3D4 */ KmonActionHD field_0x2BC;
-    /* 0x3DC */ KmonActionHD field_0x2C8;
+    /* 0x3D4 */ KmonActionHD mPrevAction;  /* was field_0x2BC: daNpc_Ji1_c::mPrevAction (d_a_npc_ji1.h) */
+    /* 0x3DC */ KmonActionHD mEventReturnAction;  /* was field_0x2C8: daNpc_Ji1_c::mEventReturnAction (d_a_npc_ji1.h) */
     /* 0x3E4 */ u8 _3E4[0xEA0 - 0x3E4];
-    /* 0xEA0 */ be<s8> field_0xC78;
+    /* 0xEA0 */ be<s8> mActionPhase;  /* was field_0xC78: daNpc_Ji1_c::mActionPhase (d_a_npc_ji1.h) */
     /* 0xEA1 */ u8 _EA1[0xEAC - 0xEA1];
-    /* 0xEAC */ be<u32> field_0xC84;
+    /* 0xEAC */ be<u32> mEventNo;  /* was field_0xC84: daNpc_Ji1_c::mEventNo (d_a_npc_ji1.h) */
 };
-WWHD_OFFSET(KmonOrcaHD, field_0xC84, 0xEAC);
+WWHD_OFFSET(KmonOrcaHD, mEventNo, 0xEAC);
 #define ACT_eventAction 0x022596CC /* daNpc_Ji1_c::eventAction */
 
 /* pointers to member functions (GHS, 8 bytes): as d_a_npc_ji1.h */
@@ -82,12 +82,12 @@ template <class... A> static inline BOOL ptmf_invoke(KmonActionHD &p, void *self
 static inline void ji1_setAction(KmonOrcaHD *i_this, u32 action, void *arg) {
     if (!ptmf_eq(i_this->mAction, action)) {
         if (ptmf_nonnull(i_this->mAction)) {
-            i_this->field_0xC78 = -1;
+            i_this->mActionPhase = -1;
             ptmf_invoke(i_this->mAction, i_this, arg);
         }
-        ptmf_copy(i_this->field_0x2BC, i_this->mAction);
+        ptmf_copy(i_this->mPrevAction, i_this->mAction);
         ptmf_set(i_this->mAction, action);
-        i_this->field_0xC78 = 0;
+        i_this->mActionPhase = 0;
         gabi::call_ptr<BOOL>(i_this->mAction.f, i_this, arg);
     }
 }

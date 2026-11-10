@@ -88,9 +88,9 @@ void JStudio_JStage::TAdaptor_fog::adaptor_do_begin(const jst_adaptors::TObject*
         s32 index = output->mValueIndex;
         f32 value = (mObject.get()->*output->mGetter)();
         auto* values = reinterpret_cast<jst_timeline::TVariableValue*>(mVariableValues.get());
-        values[index].field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(&JStudioFog_updateImmediate));
-        values[index].field_0xc.val = value;
-        values[index].field_0x4 = 0;
+        values[index].mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(&JStudioFog_updateImmediate));
+        values[index].mParam.val = value;
+        values[index].mAge = 0;
     }
 }
 /* 028416D0 */

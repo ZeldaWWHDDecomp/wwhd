@@ -12,11 +12,11 @@ enum {
 namespace daObjPirateship {
 struct Act_c : fopAc_ac_c {
     /* 0x3AC */ u8 _3AC[0x3E4 - 0x3AC];
-    /* 0x3E4 */ be<u8> m2CC; /* GameCube name: ship visible */
+    /* 0x3E4 */ be<u8> mAppeared; /* was m2CC: view of daObjPirateship::Act_c::mAppeared (d_a_obj_pirateship.h); daKaji_c::_draw (inlined into daKajiDraw 021853D8) draws nothing while it is 0 */
     /* 0x3E5 */ u8 _3E5[3];
     /* 0x3E8 */ gptr<J3DModel> mModel;
 };
-WWHD_OFFSET(Act_c, m2CC, 0x3E4);
+WWHD_OFFSET(Act_c, mAppeared, 0x3E4);
 WWHD_OFFSET(Act_c, mModel, 0x3E8);
 WWHD_SIZE(Act_c, 0x3EC);
 }

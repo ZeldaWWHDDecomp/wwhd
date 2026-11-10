@@ -22,9 +22,9 @@ static BOOL nodeCallBack_Bms(J3DNode* i_node, int i_calcTiming) {
                 offset->y = 0.0f;
                 offset->z = 0.0f;
                 cMtx_YrotM(calc_mtx(),
-                           (s16) - (i_this->mJntCtrl.mAngles[0][1] + i_this->mHeadAnm.field_0x00.y));
+                           (s16) - (i_this->mJntCtrl.mAngles[0][1] + i_this->mHeadAnm.mSwingAngle.y));
                 cMtx_ZrotM(calc_mtx(),
-                           (s16) - (i_this->mHeadAnm.field_0x00.x + i_this->mJntCtrl.mAngles[0][0]));
+                           (s16) - (i_this->mHeadAnm.mSwingAngle.x + i_this->mJntCtrl.mAngles[0][0]));
                 gabi::Local<cXyz> pos;
                 MtxPosition(offset.get(), pos.get());
                 i_this->mAttnBasePos.set(pos->x, pos->y, pos->z); /* setAttentionBasePos */
@@ -326,15 +326,15 @@ cPhs_State daNpc_Bms1_c::_create() {
     if (!fopAcM_CheckCondition(this, fopAcCnd_INIT_e)) {
         if (this != nullptr) {
             fopAc_ac_c_ct(this);
-            mHeadAnm.field_0x00.x = 0;
-            mHeadAnm.field_0x1C = 0;
-            mHeadAnm.field_0x18 = 0.0f;
-            mHeadAnm.field_0x1E = 0;
-            mHeadAnm.field_0x20 = 0;
+            mHeadAnm.mSwingAngle.x = 0;
+            mHeadAnm.mSwingPhase = 0;
+            mHeadAnm.mHorizontalAmplitude = 0.0f;
+            mHeadAnm.mSwingPhaseStep = 0;
+            mHeadAnm.mSwingCount = 0;
             __vtbl = BMS1_VTBL;
-            mHeadAnm.field_0x00.y = 0;
-            mHeadAnm.field_0x00.z = 0;
-            mHeadAnm.field_0x14 = 0.0f;
+            mHeadAnm.mSwingAngle.y = 0;
+            mHeadAnm.mSwingAngle.z = 0;
+            mHeadAnm.mVerticalAmplitude = 0.0f;
             mDoExt_btpAnm::ct(&mBtpAnm); /* mDoExt_btpAnm::mDoExt_btpAnm */
             dBgS_ObjAcch_ct(&mAcch, {0x10017D24, 0x10017D44, 0x10017D34});
             dBgS_AcchCir_ct(&mAcchCir);

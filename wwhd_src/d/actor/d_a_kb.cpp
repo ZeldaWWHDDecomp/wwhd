@@ -31,7 +31,7 @@ static u32 l_staticConstructors;
 
 /* 0218EB64 */
 void anm_init(kb_class *i_this, int bck, f32 morf, u8 loop, f32 speed, int basIndex) {
-    i_this->m50C = bck;
+    i_this->mBckNo = bck;
     if (basIndex >= 0) {
         J3DAnmTransform *anm = (J3DAnmTransform *)dComIfG_getObjectRes("Kb", bck, SAFESTRING_VTBL);
         void *bas = dComIfG_getObjectRes("Kb", basIndex, SAFESTRING_VTBL);
@@ -55,7 +55,7 @@ void *esa_search_sub(void *param_1, void *param_2) {
     if (fopAc_IsActor(param_1) && param_1 != nullptr && fpcM_GetName(param_1) == PROC_ESA) {
         fopAc_ac_c *pEsa = (fopAc_ac_c *)param_1;
         fopAc_ac_c *pActor = (fopAc_ac_c *)param_2;
-        if (esa_field_0x298(pEsa) == 0 && esa_mState(pEsa) == 1 &&
+        if (esa_mTaken(pEsa) == 0 && esa_mState(pEsa) == 1 &&
             std::fabs(pActor->current.pos.y - pEsa->current.pos.y) < 40.0f) {
             if (fopAcM_searchActorDistanceXZ(pActor, pEsa) < 400.0f && [&] {
                     s16 ang = fopAcM_searchActorAngleY(pActor, pEsa);
@@ -101,28 +101,28 @@ BOOL carry_check(kb_class *i_this) {
         attn_flags(i_this) &= ~(u32)fopAc_Attn_ACTION_CARRY_e;
         attn_flags(i_this) &= ~(u32)fopAc_Attn_LOCKON_MISC_e;
         i_this->mSph.OnTgSPrmBit(1); /* OnTgSetBit */
-        i_this->m41E = 1;
-        i_this->m420 = 10;
-        i_this->m4CC = 0.0f;
-        i_this->m440 = 0;
-        dPa_rippleEcallBack_end((dPa_rippleEcallBack *)&i_this->m540);
-        i_this->m404 = 0;
+        i_this->mMode = 1;
+        i_this->mAction = 10;
+        i_this->mMoveRange = 0.0f;
+        i_this->mInWater = 0;
+        dPa_rippleEcallBack_end((dPa_rippleEcallBack *)&i_this->mRippleCb);
+        i_this->mOnWaterGround = 0;
         i_this->gravity = 0.0f;
         i_this->speed.y = 0.0f;
 
-        fopAc_ac_c *pActor = fopAcM_SearchByID(i_this->m4D8);
-        if (i_this->m4D8 != fpcM_ERROR_PROCESS_ID_e && pActor != nullptr) {
-            esa_field_0x298(pActor) = 0;
+        fopAc_ac_c *pActor = fopAcM_SearchByID(i_this->mEsaId);
+        if (i_this->mEsaId != fpcM_ERROR_PROCESS_ID_e && pActor != nullptr) {
+            esa_mTaken(pActor) = 0;
         }
-        i_this->m4D8 = fpcM_ERROR_PROCESS_ID_e;
+        i_this->mEsaId = fpcM_ERROR_PROCESS_ID_e;
 
         i_this->shape_angle.z = 0;
         i_this->speedF = 0.0f;
         i_this->speed.set(0.0f, 0.0f, 0.0f);
-        i_this->m4BC = (f32)i_this->current.pos.y;
-        i_this->m436 = 0;
-        i_this->m438 = 0;
-        i_this->m44A = 0;
+        i_this->mCarryStartY = (f32)i_this->current.pos.y;
+        i_this->mFlipState = 0;
+        i_this->mFallFrame = 0;
+        i_this->mRepeatCount = 0;
 
         anm_init(i_this, dRes_INDEX_KB_BCK_JITA2_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.0f,
                  dRes_INDEX_KB_BAS_JITA2_e);
@@ -136,16 +136,16 @@ BOOL carry_check(kb_class *i_this) {
 void speed_pos_set(kb_class *i_this) {
     fopAc_ac_c *pPlayer = dComIfGp_getPlayer(0);
     if (daPy_getGrabMissActor(pPlayer) == i_this) {
-        i_this->m40B = 1;
+        i_this->mGrabMissed = 1;
         i_this->mpMorf->setPlaySpeed(0.0f);
         i_this->shape_angle.z = 0;
         i_this->shape_angle.x = 0;
         i_this->current.angle.x = 0;
         i_this->current.angle.z = 0;
     } else {
-        if (i_this->m40B) {
+        if (i_this->mGrabMissed) {
             i_this->mpMorf->setPlaySpeed(1.0f);
-            i_this->m40B = 0;
+            i_this->mGrabMissed = 0;
         }
         cMtx_YrotS(calc_mtx(), i_this->current.angle.y);
         cXyz temp1;
@@ -171,69 +171,69 @@ void speed_pos_set(kb_class *i_this) {
 /* 0218F150 */
 void hamon_set(kb_class *i_this, f32 param_2) {
     cXyz scale;
-    f32 s = i_this->m5D0;
+    f32 s = i_this->mRippleScale;
     scale.x = s;
     scale.y = s;
     scale.z = s;
-    if (i_this->m540.mpEmitter.get() == nullptr) {
-        /* dComIfGp_particle_setShipTail(ID_AK_JN_HAMON00, &current.pos, NULL, &&scale, 0xFF, &m540)
+    if (i_this->mRippleCb.mpEmitter.get() == nullptr) {
+        /* dComIfGp_particle_setShipTail(ID_AK_JN_HAMON00, &current.pos, NULL, &&scale, 0xFF, &mRippleCb)
          */
         dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->current.pos, nullptr, &scale,
-                        0xFF, (dPa_levelEcallBack *)&i_this->m540, -1, nullptr, nullptr, nullptr);
-        if (i_this->m540.mpEmitter.get() == nullptr) {
+                        0xFF, (dPa_levelEcallBack *)&i_this->mRippleCb, -1, nullptr, nullptr, nullptr);
+        if (i_this->mRippleCb.mpEmitter.get() == nullptr) {
             return;
         }
     }
-    i_this->m540.mRate = param_2;
+    i_this->mRippleCb.mRate = param_2;
 }
 
 /* 0218F1FC */
 void sibuki_set(kb_class *i_this) {
     f32 scaleXZ = 0.4f;
     f32 scaleY = 0.75f;
-    i_this->m440 = 1;
+    i_this->mInWater = 1;
     cXyz pos;
     pos.copy(i_this->current.pos);
     pos.y = kb_wtr_height(i_this);
-    i_this->m4C4 = 30.0f;
-    if (i_this->m4D4 != 0.0f) {
+    i_this->mDrawOffsetYTarget = 30.0f;
+    if (i_this->mSizeRate != 0.0f) {
         scaleXZ = REG_F(8, 4) + 0.8f;
     }
     fopKyM_createWpillar(&pos, scaleXZ, scaleY, 0);
     kb_se_start(i_this, JA_SE_OBJ_FALL_WATER_S);
     kb_catch_se(i_this);
-    i_this->m5D0 = gabi::fmadds(i_this->m4D4, 0.5f, 1.0f);
+    i_this->mRippleScale = gabi::fmadds(i_this->mSizeRate, 0.5f, 1.0f);
     hamon_set(i_this, 1.0f);
 }
 
 /* 0218F380 */
 BOOL swim_mode_change_check(kb_class *i_this) {
-    f32 temp = gabi::fmadds(i_this->m4D4, 20.0f, 20.0f);
+    f32 temp = gabi::fmadds(i_this->mSizeRate, 20.0f, 20.0f);
     if (i_this->mAcch.ChkWaterHit() && kb_wtr_height(i_this) > i_this->current.pos.y &&
         std::fabs(kb_wtr_height(i_this) - i_this->mAcch.GetGroundH()) > temp) {
-        if (i_this->m440 == 0) {
+        if (i_this->mInWater == 0) {
             sibuki_set(i_this);
         } else {
-            i_this->m5D0 = 1.0f;
-            if (i_this->m540.mpEmitter.get() != nullptr) {
-                i_this->m540.mRate = 1.0f;
+            i_this->mRippleScale = 1.0f;
+            if (i_this->mRippleCb.mpEmitter.get() != nullptr) {
+                i_this->mRippleCb.mRate = 1.0f;
             }
         }
-        dPa_smokeEcallBack_end((dPa_smokeEcallBack *)&i_this->m554);
-        i_this->m41E = 2;
-        i_this->m420 = 0x14;
+        dPa_smokeEcallBack_end((dPa_smokeEcallBack *)&i_this->mSmokeCb);
+        i_this->mMode = 2;
+        i_this->mAction = 0x14;
         return TRUE;
     }
-    if (i_this->m404) {
-        if (i_this->m440 == 0) {
-            i_this->m440 = 1;
-            i_this->m4C4 = 30.0f;
-            i_this->m5D0 = gabi::fmadds(i_this->m4D4, 0.5f, 0.5f);
+    if (i_this->mOnWaterGround) {
+        if (i_this->mInWater == 0) {
+            i_this->mInWater = 1;
+            i_this->mDrawOffsetYTarget = 30.0f;
+            i_this->mRippleScale = gabi::fmadds(i_this->mSizeRate, 0.5f, 0.5f);
             hamon_set(i_this, 0.0f);
         }
-    } else if (i_this->m440) {
-        i_this->m440 = 0;
-        dPa_rippleEcallBack_end((dPa_rippleEcallBack *)&i_this->m540);
+    } else if (i_this->mInWater) {
+        i_this->mInWater = 0;
+        dPa_rippleEcallBack_end((dPa_rippleEcallBack *)&i_this->mRippleCb);
     }
     return FALSE;
 }
@@ -241,18 +241,18 @@ BOOL swim_mode_change_check(kb_class *i_this) {
 /* 0218F4EC */
 void he_set(kb_class *i_this) {
     fopAc_ac_c *pPlayer = dComIfGp_getPlayer(0);
-    i_this->m5D4[0].copy(i_this->m4A4);
-    i_this->m5EC[0].x = (s16)pPlayer->shape_angle.x;
-    i_this->m5EC[0].y = (s16)pPlayer->shape_angle.y;
-    i_this->m5EC[0].z = (s16)pPlayer->shape_angle.z;
-    if (i_this->m594.mpEmitter.get() == nullptr) {
-        i_this->m5D4[0].copy(i_this->m4A4);
+    i_this->mParticlePos[0].copy(i_this->mTailPos);
+    i_this->mParticleAngle[0].x = (s16)pPlayer->shape_angle.x;
+    i_this->mParticleAngle[0].y = (s16)pPlayer->shape_angle.y;
+    i_this->mParticleAngle[0].z = (s16)pPlayer->shape_angle.z;
+    if (i_this->mGasCb.mpEmitter.get() == nullptr) {
+        i_this->mParticlePos[0].copy(i_this->mTailPos);
         s8 roomNo = fopAcM_GetRoomNo(i_this);
-        dPa_control_set(dComIfGp_getParticle(), 0, 0x8286 /* ID_AK_SN_PIGGAS00 */, &i_this->m5D4[0],
-                        nullptr, nullptr, 0xFF, (dPa_levelEcallBack *)&i_this->m594, roomNo,
+        dPa_control_set(dComIfGp_getParticle(), 0, 0x8286 /* ID_AK_SN_PIGGAS00 */, &i_this->mParticlePos[0],
+                        nullptr, nullptr, 0xFF, (dPa_levelEcallBack *)&i_this->mGasCb, roomNo,
                         nullptr, nullptr, nullptr);
     }
-    JPABaseEmitter *emitter = i_this->m594.mpEmitter;
+    JPABaseEmitter *emitter = i_this->mGasCb.mpEmitter;
     if (emitter != nullptr) {
         /* setGlobalRTMatrix(getAnmMtx(PG_JNT_J_PG_TAIL_e)) */
         Mtx34 *mtx = getAnmMtx(i_this->mpMorf->getModel(), PG_JNT_J_PG_TAIL_e);
@@ -264,44 +264,44 @@ void he_set(kb_class *i_this) {
 
 /* 0218F600 */
 void smoke_set(kb_class *i_this) {
-    f32 scale = i_this->m4D4 + 1.0f;
-    if (i_this->m554.mpEmitter.get() == nullptr) {
+    f32 scale = i_this->mSizeRate + 1.0f;
+    if (i_this->mSmokeCb.mpEmitter.get() == nullptr) {
         s8 roomNo = fopAcM_GetRoomNo(i_this);
-        /* dComIfGp_particle_setToon(ID_AK_JT_ELEMENTSMOKE00, &m5D4[0], &m5EC[0], NULL, 0xB9, &m554,
+        /* dComIfGp_particle_setToon(ID_AK_JT_ELEMENTSMOKE00, &mParticlePos[0], &mParticleAngle[0], NULL, 0xB9, &mSmokeCb,
          * roomNo) */
-        dPa_control_set(dComIfGp_getParticle(), 2, 0x2022, &i_this->m5D4[0], &i_this->m5EC[0],
-                        nullptr, 0xB9, (dPa_levelEcallBack *)&i_this->m554, roomNo, nullptr,
+        dPa_control_set(dComIfGp_getParticle(), 2, 0x2022, &i_this->mParticlePos[0], &i_this->mParticleAngle[0],
+                        nullptr, 0xB9, (dPa_levelEcallBack *)&i_this->mSmokeCb, roomNo, nullptr,
                         nullptr, nullptr);
-        if (i_this->m554.mpEmitter.get() == nullptr) {
+        if (i_this->mSmokeCb.mpEmitter.get() == nullptr) {
             return;
         }
     }
-    kbEmitter(emitter_ea(i_this->m554))->mRate = 1.0f;   /* setRate */
-    kbEmitter(emitter_ea(i_this->m554))->mSpread = 1.0f; /* setSpread */
-    u32 e = emitter_ea(i_this->m554);
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mRate = 1.0f;   /* setRate */
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mSpread = 1.0f; /* setSpread */
+    u32 e = emitter_ea(i_this->mSmokeCb);
     set_global_scale(e, scale, scale, scale);
 }
 
 /* 0218F71C */
 void smoke_set2(kb_class *i_this) {
-    f32 scale = i_this->m4D4 + 1.0f;
-    if (i_this->m554.mpEmitter.get() == nullptr) {
+    f32 scale = i_this->mSizeRate + 1.0f;
+    if (i_this->mSmokeCb.mpEmitter.get() == nullptr) {
         s8 roomNo = fopAcM_GetRoomNo(i_this);
-        dPa_control_set(dComIfGp_getParticle(), 2, 0x2027, &i_this->m5D4[0], &i_this->shape_angle,
-                        nullptr, 0xB9, (dPa_levelEcallBack *)&i_this->m554, roomNo, nullptr,
+        dPa_control_set(dComIfGp_getParticle(), 2, 0x2027, &i_this->mParticlePos[0], &i_this->shape_angle,
+                        nullptr, 0xB9, (dPa_levelEcallBack *)&i_this->mSmokeCb, roomNo, nullptr,
                         nullptr, nullptr);
-        if (i_this->m554.mpEmitter.get() == nullptr) {
+        if (i_this->mSmokeCb.mpEmitter.get() == nullptr) {
             return;
         }
     }
-    kbEmitter(emitter_ea(i_this->m554))->mMaxFrame = 25;         /* setMaxFrame */
-    kbEmitter(emitter_ea(i_this->m554))->mInitialVelOmni = 0.0f; /* setAwayFromCenterSpeed */
-    kbEmitter(emitter_ea(i_this->m554))->mInitialVelAxis = 5.0f; /* setAwayFromAxisSpeed */
-    kbEmitter(emitter_ea(i_this->m554))->mRate = 3.0f;           /* setRate */
-    kbEmitter(emitter_ea(i_this->m554))->mInitialVelDir = 2.0f;  /* setDirectionalSpeed */
-    u32 e = emitter_ea(i_this->m554);
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mMaxFrame = 25;         /* setMaxFrame */
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mInitialVelOmni = 0.0f; /* setAwayFromCenterSpeed */
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mInitialVelAxis = 5.0f; /* setAwayFromAxisSpeed */
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mRate = 3.0f;           /* setRate */
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mInitialVelDir = 2.0f;  /* setDirectionalSpeed */
+    u32 e = emitter_ea(i_this->mSmokeCb);
     set_global_scale(e, scale, scale, scale);
-    kbEmitter(emitter_ea(i_this->m554))->mLifeTime = 25; /* setLifeTime */
+    kbEmitter(emitter_ea(i_this->mSmokeCb))->mLifeTime = 25; /* setLifeTime */
 }
 
 /* 0218F868 */
@@ -312,15 +312,15 @@ void smoke_set3(kb_class *i_this) {
     } else {
         s = 1.0f;
     }
-    if (i_this->m574.mpEmitter.get() == nullptr) {
+    if (i_this->mDigSmokeCb.mpEmitter.get() == nullptr) {
         s8 roomNo = fopAcM_GetRoomNo(i_this);
         dPa_control_set(dComIfGp_getParticle(), 2, 0xA307 /* ID_AK_ST_PIGDIGSMOKE00 */,
-                        &i_this->m5D4[1], &i_this->shape_angle, nullptr, 0xA0,
-                        (dPa_levelEcallBack *)&i_this->m574, roomNo, nullptr, nullptr, nullptr);
+                        &i_this->mParticlePos[1], &i_this->shape_angle, nullptr, 0xA0,
+                        (dPa_levelEcallBack *)&i_this->mDigSmokeCb, roomNo, nullptr, nullptr, nullptr);
     }
-    i_this->m574.mWindOff = 1; /* onWindOff */
-    if (i_this->m574.mpEmitter.get() != nullptr) {
-        set_global_scale(emitter_ea(i_this->m574), s, s, s);
+    i_this->mDigSmokeCb.mWindOff = 1; /* onWindOff */
+    if (i_this->mDigSmokeCb.mpEmitter.get() != nullptr) {
+        set_global_scale(emitter_ea(i_this->mDigSmokeCb), s, s, s);
     }
 }
 
@@ -337,7 +337,7 @@ static BOOL nodeCallBack(J3DNode *i_node, int calcTiming) {
             temp.x = 0.0f;
             temp.y = 0.0f;
             temp.z = 0.0f;
-            MtxPosition(&temp, &i_kb->m4A4);
+            MtxPosition(&temp, &i_kb->mTailPos);
             mtx_copy(getAnmMtx((J3DModel *)pModel, jntNo), calc_mtx()); /* setAnmMtx */
             PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
         }
@@ -349,13 +349,13 @@ static BOOL nodeCallBack(J3DNode *i_node, int calcTiming) {
 void draw_SUB(kb_class *i_this) {
     J3DModel *pModel = i_this->mpMorf->getModel();
     MtxTrans(i_this->current.pos.x, i_this->current.pos.y, i_this->current.pos.z, false);
-    cMtx_XrotM(calc_mtx(), i_this->m4F4.x);
-    cMtx_ZrotM(calc_mtx(), i_this->m4F4.z);
-    MtxScale(i_this->m4E8.x, i_this->m4E8.y, i_this->m4E8.x, true);
-    if (i_this->m41E != 4) {
-        cLib_addCalc2(&i_this->m4C0, i_this->m4C4, 1.0f, 5.0f);
+    cMtx_XrotM(calc_mtx(), i_this->mGroundAngle.x);
+    cMtx_ZrotM(calc_mtx(), i_this->mGroundAngle.z);
+    MtxScale(i_this->mScale.x, i_this->mScale.y, i_this->mScale.x, true);
+    if (i_this->mMode != 4) {
+        cLib_addCalc2(&i_this->mDrawOffsetY, i_this->mDrawOffsetYTarget, 1.0f, 5.0f);
     }
-    MtxTrans(0.0f, i_this->m4C0, 0.0f, true);
+    MtxTrans(0.0f, i_this->mDrawOffsetY, 0.0f, true);
     cMtx_YrotM(calc_mtx(), i_this->shape_angle.y);
     cMtx_XrotM(calc_mtx(), i_this->shape_angle.x);
     cMtx_ZrotM(calc_mtx(), i_this->shape_angle.z);
@@ -407,7 +407,7 @@ static BOOL daKb_Draw(kb_class *i_this) {
                         (s16)gabi::ftoi(i_this->mBtp.mFrameCtrl.mFrame));
     tevstr_copy(&i_this->mTevStr, &i_this->tevStr);
 
-    f32 t = i_this->m4B0;
+    f32 t = i_this->mAngerColorRate;
     // HD: the two material colours use signed-short and byte components respectively.
     s16 r = (s16)i_this->tevStr.mColorC0.r;
     i_this->mTevStr.mColorC0.r = (s16)gabi::ftoi(gabi::fmadds((f32)(0x78 - r), t, (f32)r));
@@ -426,8 +426,8 @@ static BOOL daKb_Draw(kb_class *i_this) {
 
     // HD: no blob shadow (the play object is still fetched)
     dComIfGp_get();
-    if (i_this->m4D4 == 2.0f) {
-        dSnap_RegistFig(DSNAP_TYPE_KB, i_this, i_this->m4D4 + 0.6f, i_this->m4D4 + -0.1f, 1.0f);
+    if (i_this->mSizeRate == 2.0f) {
+        dSnap_RegistFig(DSNAP_TYPE_KB, i_this, i_this->mSizeRate + 0.6f, i_this->mSizeRate + -0.1f, 1.0f);
     } else {
         dSnap_RegistFig(DSNAP_TYPE_KB, i_this, 1.0f, 1.0f, 1.0f);
     }
@@ -482,7 +482,7 @@ void target_set(kb_class *i_this, u8 param_1) {
     switch (param_1) {
     case 0:
         temp = (u32)(s32)i_this->shape_angle.y;
-        if (i_this->m426[3] == 0) {
+        if (i_this->mTimers[3] == 0) {
             temp = kbGuest_way_check_raw(i_this, (s16)gabi::ftoi(cM_rndFX(32768.0f)), 0);
         }
         break;
@@ -492,15 +492,15 @@ void target_set(kb_class *i_this, u8 param_1) {
         break;
     }
     case 2: {
-        f32 dx = i_this->m450.x - i_this->current.pos.x;
-        f32 dz = i_this->m450.z - i_this->current.pos.z;
+        f32 dx = i_this->mTauraPos.x - i_this->current.pos.x;
+        f32 dz = i_this->mTauraPos.z - i_this->current.pos.z;
         temp = kbGuest_way_check_raw(i_this, cM_atan2s(dx, dz), 1);
-        i_this->m422 = (s16)temp;
+        i_this->mTargetAngleY = (s16)temp;
         break;
     }
     case 3:
-        if (i_this->m4D8 != fpcM_ERROR_PROCESS_ID_e) {
-            fopAc_ac_c *pActor = fopAcM_SearchByID(i_this->m4D8);
+        if (i_this->mEsaId != fpcM_ERROR_PROCESS_ID_e) {
+            fopAc_ac_c *pActor = fopAcM_SearchByID(i_this->mEsaId);
             if (pActor != nullptr) {
                 dBgS_LinChk linChk;
                 dBgS_LinChk_ct(&linChk, LINCHK_VT, false);
@@ -514,9 +514,9 @@ void target_set(kb_class *i_this, u8 param_1) {
                 temp4.z = (f32)i_this->current.pos.z;
                 dBgS_LinChk_Set(&linChk, &temp4, &temp3, i_this);
                 if (!cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
-                    i_this->m45C.copy(pActor->current.pos);
+                    i_this->mTargetPos.copy(pActor->current.pos);
                 } else {
-                    i_this->m4D8 = fpcM_ERROR_PROCESS_ID_e;
+                    i_this->mEsaId = fpcM_ERROR_PROCESS_ID_e;
                 }
                 dBgS_LinChk_dt(&linChk);
             }
@@ -527,14 +527,14 @@ void target_set(kb_class *i_this, u8 param_1) {
         kbGuest_cMtx_YrotS(calc_mtx(), temp); /* cMtx_YrotS */
         cXyz temp2;
         temp2.set(0.0f, 0.0f, 1000.0f);
-        MtxPosition(&temp2, &i_this->m45C);
-        PSVECAdd(&i_this->m45C, &i_this->current.pos, &i_this->m45C);
+        MtxPosition(&temp2, &i_this->mTargetPos);
+        PSVECAdd(&i_this->mTargetPos, &i_this->current.pos, &i_this->mTargetPos);
     }
 }
 
 /* 02190708 */
 BOOL esa_demo_check(kb_class *i_this) {
-    if (i_this->m426[4] != 0) {
+    if (i_this->mTimers[4] != 0) {
         return FALSE;
     }
     if (fopAcM_searchPlayerDistanceXZ(i_this) > 2000.0f) {
@@ -547,13 +547,13 @@ BOOL esa_demo_check(kb_class *i_this) {
     fopAc_ac_c *pEsa =
         (fopAc_ac_c *)fpcM_Search(gabi::guest_fn((const void *)&esa_search_sub), i_this);
     if (pEsa != nullptr) {
-        i_this->m4D8 = fopAcM_GetID(pEsa);
+        i_this->mEsaId = fopAcM_GetID(pEsa);
         i_this->field_0x498.copy(pEsa->current.pos);
         if (!l_kbStatics.DEMO_START) {
             l_kbStatics.DEMO_START = 1;
-            i_this->m406 = 1;
-            i_this->m41E = 4;
-            i_this->m420 = 0x28;
+            i_this->mDemoOwner = 1;
+            i_this->mMode = 4;
+            i_this->mAction = 0x28;
             return TRUE;
         }
     }
@@ -571,7 +571,7 @@ void money_drop(kb_class *i_this) {
     cXyz temp3;
     cXyz temp4;
     u8 count = 0;
-    i_this->m407 = 0;
+    i_this->mItemDropped = 0;
 
     u32 temp2;
     for (i = 0; i < 2; i++) {
@@ -580,7 +580,7 @@ void money_drop(kb_class *i_this) {
             if (rnd < 0.9f) {
                 rnd *= 10.0f;
                 temp2 = (u32)gold_rate_dt[gabi::ftoi(rnd * 0.3f)];
-                i_this->m407 = 1;
+                i_this->mItemDropped = 1;
                 Mtx34 *m = calc_mtx();
                 cMtx_YrotS(m, (s16)gabi::ftoi(cM_rndFX(32768.0f)));
                 temp3.set(0.0f, 0.0f, 20.0f);
@@ -604,7 +604,7 @@ void money_drop(kb_class *i_this) {
         if (rnd < 0.9f) {
             rnd *= 10.0f;
             temp2 = (u32)item_rate_dt[gabi::ftoi(rnd * 0.3f)];
-            i_this->m407 = 1;
+            i_this->mItemDropped = 1;
             Mtx34 *m = calc_mtx();
             cMtx_YrotS(m, (s16)gabi::ftoi(cM_rndFX(32768.0f)));
             temp3.set(0.0f, 0.0f, 20.0f);
@@ -628,8 +628,8 @@ void money_drop(kb_class *i_this) {
 void BG_check(kb_class *i_this) {
     // HD: the wall height also depends on REG10_F(0) and the low bit of the debug switch word
     f32 hd = (f32)((u32)l_debugSwitch & 1);
-    f32 h = gabi::fmadds(i_this->m4D4, REG_F(12, 0x11) + 10.0f, 22.0f) + REG_F(10, 0);
-    i_this->mAcchCir.SetWall(gabi::fmadds(hd, 6.0f, h), gabi::fmadds(i_this->m4D4, 30.0f, 35.0f));
+    f32 h = gabi::fmadds(i_this->mSizeRate, REG_F(12, 0x11) + 10.0f, 22.0f) + REG_F(10, 0);
+    i_this->mAcchCir.SetWall(gabi::fmadds(hd, 6.0f, h), gabi::fmadds(i_this->mSizeRate, 30.0f, 35.0f));
     i_this->mAcch.CrrPos(dComIfG_Bgsp());
     i_this->tevStr.mRoomNo = (s8)kbGuest_dBgS_GetRoomId(dComIfG_Bgsp(), kb_gnd_poly(i_this));
     i_this->tevStr.mEnvrIdxOverride =
@@ -647,16 +647,16 @@ static BOOL daKb_Delete(kb_class *i_this) {
     if (i_this->heap.get() != nullptr) {
         i_this->mpMorf->stopZelAnime();
     }
-    dPa_rippleEcallBack_end((dPa_rippleEcallBack *)&i_this->m540);
-    vremove(&i_this->m554);
-    vremove(&i_this->m574);
-    vremove(&i_this->m594);
+    dPa_rippleEcallBack_end((dPa_rippleEcallBack *)&i_this->mRippleCb);
+    vremove(&i_this->mSmokeCb);
+    vremove(&i_this->mDigSmokeCb);
+    vremove(&i_this->mGasCb);
     for (int i = 0; i < 2; i++) {
-        vremove(&i_this->m5A8[i]);
+        vremove(&i_this->mShakeWaterCb[i]);
     }
-    if (i_this->m406) {
+    if (i_this->mDemoOwner) {
         l_kbStatics.DEMO_START = 0;
-        i_this->m406 = 0;
+        i_this->mDemoOwner = 0;
     }
     return TRUE;
 }
@@ -720,18 +720,18 @@ static cPhs_State daKb_Create(fopAc_ac_c *i_actor) {
     }
     u32 prm = fopAcM_GetParam(i_actor);
     u8 shape = prm & 0xF;
-    u8 m401 = (prm >> 4) & 0xF;
+    u8 mMoveRangePrm = (prm >> 4) & 0xF;
     i_this->mShapeType = shape;
-    i_this->m401 = m401;
+    i_this->mMoveRangePrm = mMoveRangePrm;
     i_this->mbCanBeBigPig = prm >> 8;
-    i_this->m41D = prm >> 0x10;
+    i_this->mPathNo = prm >> 0x10;
     if (shape == 0xFF) {
         i_this->mShapeType = 0;
     }
-    if (m401 == 0xFF) {
-        i_this->m401 = 0;
+    if (mMoveRangePrm == 0xFF) {
+        i_this->mMoveRangePrm = 0;
     }
-    u8 pathNo = i_this->m41D;
+    u8 pathNo = i_this->mPathNo;
     i_actor->health = 10;
     if (pathNo != 0xFF) {
         i_this->mpPath = dPath_GetRoomPath(pathNo, fopAcM_GetRoomNo(i_actor));
@@ -764,7 +764,7 @@ static cPhs_State daKb_Create(fopAc_ac_c *i_actor) {
                 } else if ((reg & temp) == 0) {
                     return cPhs_ERROR_e;
                 }
-                i_this->m4D4 = 2.0f;
+                i_this->mSizeRate = 2.0f;
                 i_actor->mParameters = fopAcM_GetParam(i_actor) + 8;
                 i_this->mShapeType += 8;
                 i_actor->attention_info.distances[fopAc_Attn_TYPE_CARRY_e] =
@@ -782,7 +782,7 @@ static cPhs_State daKb_Create(fopAc_ac_c *i_actor) {
         }
 
         if (kbIsStartStage("sea") && fopAcM_GetRoomNo(i_actor) == dIsleRoom_WindfallIsland_e &&
-            i_this->m41D != 0xFF && i_this->mpPath.get() != nullptr) {
+            i_this->mPathNo != 0xFF && i_this->mpPath.get() != nullptr) {
             s32 point = gabi::ftoi(cM_rndF(
                 (f32)gabi::at<KbPathHD>(gabi::ea(i_this->mpPath.get()))->m_num /* m_num */));
             KbPathHD *path = gabi::at<KbPathHD>(gabi::ea(i_this->mpPath.get()));
@@ -809,7 +809,7 @@ static cPhs_State daKb_Create(fopAc_ac_c *i_actor) {
                 i_actor->old.pos.z = (f32)i_actor->current.pos.z;
                 i_actor->current.pos.y = h;
             }
-            i_this->m401 = 3;
+            i_this->mMoveRangePrm = 3;
             if (i_this->mbCanBeBigPig == 2) {
                 i_actor->health = 5;
             }
@@ -817,15 +817,15 @@ static cPhs_State daKb_Create(fopAc_ac_c *i_actor) {
         }
     }
 
-    f32 r = (f32)i_this->m401 * 100.0f;
+    f32 r = (f32)i_this->mMoveRangePrm * 100.0f;
     if (r == 0.0f) {
         r = 300.0f;
     }
-    i_this->m4CC = r;
-    f32 s = i_this->m4D4 + 1.0f;
-    i_this->m4E8.x = s;
-    i_this->m4E8.y = s;
-    i_this->m4E8.z = s;
+    i_this->mMoveRange = r;
+    f32 s = i_this->mSizeRate + 1.0f;
+    i_this->mScale.x = s;
+    i_this->mScale.y = s;
+    i_this->mScale.z = s;
 
     if (!fopAcM_entrySolidHeap(i_actor, gabi::guest_fn((const void *)&useHeapInit), 0x3AB4)) {
         return cPhs_ERROR_e;
@@ -852,9 +852,9 @@ static cPhs_State daKb_Create(fopAc_ac_c *i_actor) {
         i_this->mStts.SetWeight(0x32);
     }
     // HD: no mSph.ClrAtSet()
-    i_this->m4C4 = 30.0f;
-    i_this->m4C0 = 30.0f;
-    i_this->m426[7] = 5;
+    i_this->mDrawOffsetYTarget = 30.0f;
+    i_this->mDrawOffsetY = 30.0f;
+    i_this->mTimers[7] = 5;
     BG_check(i_this);
     draw_SUB(i_this);
     return status;
@@ -903,11 +903,11 @@ static kb_class *kb_class_ct(kb_class *self) {
     tevstr_ct(&self->mTevStr);
     tevstr_ct(&self->m340);
     kbGuest_mDoExt_btpAnm_ct(&self->mBtp);
-    kbGuest_dPa_rippleEcallBack_ct(&self->m540);
-    kbGuest_dPa_smokeEcallBack_ct(&self->m554, 1);
-    kbGuest_dPa_smokeEcallBack_ct(&self->m574, 1);
-    dPa_followEcallBack_ct(&self->m594, 0, 0);
-    kbGuest___construct_array(self->m5A8, 2, sizeof(dPa_followEcallBack),
+    kbGuest_dPa_rippleEcallBack_ct(&self->mRippleCb);
+    kbGuest_dPa_smokeEcallBack_ct(&self->mSmokeCb, 1);
+    kbGuest_dPa_smokeEcallBack_ct(&self->mDigSmokeCb, 1);
+    dPa_followEcallBack_ct(&self->mGasCb, 0, 0);
+    kbGuest___construct_array(self->mShakeWaterCb, 2, sizeof(dPa_followEcallBack),
                               gabi::guest_fn((const void *)&followEcallBack_ct));
     dBgS_AcchCir_ct(&self->mAcchCir);
     dBgS_ObjAcch_ct(&self->mAcch, OBJACCH_VT);
@@ -957,7 +957,7 @@ static void kb_class_dt(kb_class *self, s32 flags) {
     self->mAcch.dBgS_PolyPassChk::__vtbl = OBJACCH_VT.v14;
     kbGuest_dBgS_Acch_dt(acch, 0);                           /* dBgS_Acch::~dBgS_Acch */
     kbGuest_cM3dGCir_dt(gabi::ea(&self->mAcchCir.m_cir), 2); /* cM3dGCir::~cM3dGCir */
-    kbGuest___destroy_arr(self->m5A8, 2, sizeof(dPa_followEcallBack),
+    kbGuest___destroy_arr(self->mShakeWaterCb, 2, sizeof(dPa_followEcallBack),
                           gabi::guest_fn((const void *)&followEcallBack_dt), 0);
     kbGuest_fopAc_ac_c_dt(self, 0); /* fopAc_ac_c::~fopAc_ac_c */
     if (flags & 1)

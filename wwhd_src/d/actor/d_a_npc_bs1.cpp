@@ -53,11 +53,11 @@ s16 daNpc_Bs1_c::XyEventCB(int i_itemBtn) {
     if (mType == 0) {
         if (selectedItem == 0x9D /* dItemNo_COMPLIMENTARY_ID_e */) {
             eventIdx = mEventIdxs[0];
-            m82B = 0;
+            mXyEventIdx = 0;
             bs1_setAction(this, BS1_event_action);
         } else if (selectedItem == 0x9E /* dItemNo_FILL_UP_COUPON_e */) {
             eventIdx = mEventIdxs[1];
-            m82B = 1;
+            mXyEventIdx = 1;
             bs1_setAction(this, BS1_event_action);
         }
     }
@@ -83,9 +83,9 @@ static BOOL nodeCallBack_Bs(J3DNode* node, int calcTiming) {
                 cMtx_ZrotM(calc_mtx(), (s16)-i_this->mJntCtrl.mAngles[0][0]);
                 MtxPosition(offset.get(), pos.get());
                 f32 x = pos->x, y = pos->y, z = pos->z;
-                i_this->m718.y = y; /* setAttentionBasePos(pos) */
-                i_this->m718.z = z;
-                i_this->m718.x = x;
+                i_this->mAttnBasePos.y = y; /* setAttentionBasePos(pos) */
+                i_this->mAttnBasePos.z = z;
+                i_this->mAttnBasePos.x = x;
                 offset->x = 28.0f;
                 offset->z = 0.0f;
                 offset->y = 20.0f;
@@ -96,9 +96,9 @@ static BOOL nodeCallBack_Bs(J3DNode* node, int calcTiming) {
                 i_this->eyePos.x = x; /* setEyePos(pos) */
                 i_this->eyePos.y = y;
                 i_this->eyePos.z = z;
-                u8 cnt = i_this->m72F; /* incAttnSetCount() */
+                u8 cnt = i_this->mAttnSetCount; /* incAttnSetCount() */
                 if (cnt != 0xFF) {
-                    i_this->m72F = (u8)(cnt + 1);
+                    i_this->mAttnSetCount = (u8)(cnt + 1);
                 }
             } else if (jntNo == (u32)(s32)i_this->m_backbone_jnt_num) {
                 cMtx_XrotM(calc_mtx(), i_this->mJntCtrl.mAngles[1][1]);
@@ -117,7 +117,7 @@ BOOL daNpc_Bs1_c::initTexPatternAnm(u32 i_modify) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     J3DModelData* modelData = J3DModel_getModelData(mpMorf->getModel());
     /* l_btp_ix_tbl (0x1001846C) */
-    m_head_tex_pattern = (J3DAnmTexPattern*)bs1_getRes((s32)l_btp_ix_tbl.mEntries[(s32)m828]);
+    m_head_tex_pattern = (J3DAnmTexPattern*)bs1_getRes((s32)l_btp_ix_tbl.mEntries[(s32)mTexAnmIdx]);
     if (!m_head_tex_pattern) {
         JUT_ASSERT_fail("d_a_npc_bs1.cpp", 0x1CD, "m_head_tex_pattern != (0)");
     }
@@ -125,20 +125,20 @@ BOOL daNpc_Bs1_c::initTexPatternAnm(u32 i_modify) {
         return FALSE;
     }
     mFrame = 0;
-    m2C6 = 0;
+    mBlinkTimer = 0;
     return TRUE;
 }
 
 /* 0221391C */
 void daNpc_Bs1_c::playTexPatternAnm() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (bs1_calcTimer(&m2C6) == 0) { /* cLib_calcTimer */
+    if (bs1_calcTimer(&mBlinkTimer) == 0) { /* cLib_calcTimer */
         s32 max = bs1_getFrameMax(m_head_tex_pattern);
         if ((s32)mFrame >= max) {
             max = bs1_getFrameMax(m_head_tex_pattern);
             mFrame = (u8)(mFrame - max);
             f32 r = cM_rndF(100.0f);
-            m2C6 = (s16)gabi::ftoi(r + 30.0f);
+            mBlinkTimer = (s16)gabi::ftoi(r + 30.0f);
         } else {
             mFrame = (u8)(mFrame + 1);
         }
@@ -150,8 +150,8 @@ void daNpc_Bs1_c::setAnm(s8 index) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     /* play_mode_tbl (0x101BD584), morf_frame_tbl (0x101BD5AC), play_speed_tbl (0x101BD5D4), l_bck_ix_tbl
      * (0x10018444) */
-    if (index != m829 || m829 == -1) {
-        m829 = index;
+    if (index != mAnmIdx || mAnmIdx == -1) {
+        mAnmIdx = index;
         s32 i = index;
         bs1_dNpc_setAnm_2(mpMorf, (u32)play_mode_tbl.mEntries[i], (f32)morf_frame_tbl.mEntries[i],
                           (f32)play_speed_tbl.mEntries[i], (s32)l_bck_ix_tbl.mEntries[i], -1, "Bs");
@@ -161,8 +161,8 @@ void daNpc_Bs1_c::setAnm(s8 index) {
 /* 02214360 */
 u32 daNpc_Bs1_c::setTexAnm(s8 value) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m828 != value || m828 == -1) {
-        m828 = value;
+    if (mTexAnmIdx != value || mTexAnmIdx == -1) {
+        mTexAnmIdx = value;
         return initTexPatternAnm(1);
     }
     return (u32)gabi::ea(this); /* original: r3 still this */
@@ -185,12 +185,12 @@ BOOL daNpc_Bs1_c::chkAttention(cXyz* param, s16 angle) {
 /* 02213D00 */
 void daNpc_Bs1_c::eventOrder() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m82A == 3) {
-        fopAcM_orderOtherEventId(this, m83A, 0xFF, 0xFFFF, 0, 1);
-    } else if (m82A == 1 || m82A == 2) {
+    if (mOrderState == 3) {
+        fopAcM_orderOtherEventId(this, mGetDemoEventIdx, 0xFF, 0xFFFF, 0, 1);
+    } else if (mOrderState == 1 || mOrderState == 2) {
         eventInfo.mCondition =
             (u16)eventInfo.mCondition | dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e; /* CANTALK | CANTALKITEM */
-        if (m82A == 1) {
+        if (mOrderState == 1) {
             fopAcM_orderSpeakEvent(this);
         }
     }
@@ -201,17 +201,17 @@ void daNpc_Bs1_c::checkOrder() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u16 cmd = (u16)eventInfo.mCommand; /* eventInfo command */
     if (cmd == 2 /* checkCommandDemoAccrpt */) {
-        if (m82A == 3) {
-            m82A = 0;
+        if (mOrderState == 3) {
+            mOrderState = 0;
             bs1_setAction(this, BS1_getdemo_action);
-        } else if (m82A == 4) {
-            m82A = 0;
+        } else if (mOrderState == 4) {
+            mOrderState = 0;
             bs1_setAction(this, BS1_event_action);
         }
     } else if (cmd == 1 /* checkCommandTalk */) {
-        if (m82A == 1 || m82A == 2) {
-            m82A = 0;
-            m731 = 1;
+        if (mOrderState == 1 || mOrderState == 2) {
+            mOrderState = 0;
+            mTalking = 1;
             talkInit();
             u8 talkXY = (u8)bs1_play()->mEvtCtrl.mTalkButton; /* dComIfGp_event_chkTalkXY */
             if ((u32)(talkXY - 1) > 3) {
@@ -273,7 +273,7 @@ void daNpc_Bs1_c::setCollision() {
     offset->y = 0.0f;
     offset->z = -16.0f;
     MtxTrans(current.pos.x, current.pos.y, current.pos.z, 0);
-    mDoMtx_YrotM(calc_mtx(), m726.y);
+    mDoMtx_YrotM(calc_mtx(), mActorAngle.y);
     MtxPosition(offset.get(), out.get());
     mCyl.SetC(out.get());
     mCyl.SetR(46.0f);
@@ -284,7 +284,7 @@ void daNpc_Bs1_c::setCollision() {
 /* 022139E0 */
 void daNpc_Bs1_c::talkInit() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    m835 = 0;
+    mTalkStep = 0;
 }
 
 /* 022160EC */
@@ -440,9 +440,9 @@ void daNpc_Bs1_c::createShopList() {
             ((u8)bs1_savePlayer()->mPlayerItem.mItems[12] == 0xFF &&
              bs1_isArrow(mShopItems.getSelectItemNo()))) {
             bs1_ShopItems_SoldOutItem(&mShopItems, i);
-            m76C[i] = 1;
+            mItemSoldOut[i] = 1;
         } else {
-            m76C[i] = 0;
+            mItemSoldOut[i] = 0;
         }
         cXyz* src = gabi::at<cXyz>(bs1_posTbl(this) + 12 * i);
         f32 x = (f32)src->x;
@@ -470,9 +470,9 @@ BOOL daNpc_Bs1_c::isSellBomb() {
 /* 02213060 */
 BOOL daNpc_Bs1_c::CreateInit() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    m726.x = current.angle.x;
-    m726.y = current.angle.y;
-    m726.z = current.angle.z;
+    mActorAngle.x = current.angle.x;
+    mActorAngle.y = current.angle.y;
+    mActorAngle.z = current.angle.z;
     attention_info.flags = fopAc_Attn_LOCKON_TALK_e |
                            fopAc_Attn_ACTION_SPEAK_e; /* attention_info.flags = LOCKON_TALK | ACTION_SPEAK */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAA;  /* attention_info.distances[TALK] */
@@ -481,13 +481,13 @@ BOOL daNpc_Bs1_c::CreateInit() {
     switch ((u32)(s32)mType) {
     case 0:
         bs1_setAction(this, BS1_wait_action);
-        m83A = dComIfGp_evmng_getEventIdx("BS1_GETDEMO" /* "BS1_GETDEMO" */, 0xFF);
+        mGetDemoEventIdx = dComIfGp_evmng_getEventIdx("BS1_GETDEMO" /* "BS1_GETDEMO" */, 0xFF);
         bs1_setActorInfo(&mEventCut, "Bs1" /* "Bs1" */, this); /* setActorInfo */
         mEventCut.mpJntCtrl = &mJntCtrl;                       /* setJntCtrlPtr */
         break;
     case 1:
         bs1_setAction(this, BS1_wait_action);
-        m83A = dComIfGp_evmng_getEventIdx("BS2_GETDEMO" /* "BS2_GETDEMO" */, 0xFF);
+        mGetDemoEventIdx = dComIfGp_evmng_getEventIdx("BS2_GETDEMO" /* "BS2_GETDEMO" */, 0xFF);
         bs1_setActorInfo(&mEventCut, "Bs2" /* "Bs2" */, this);
         mEventCut.mpJntCtrl = &mJntCtrl;
         break;
@@ -523,7 +523,7 @@ BOOL daNpc_Bs1_c::CreateInit() {
     mShopCamAction.mCurrActionFunc.mVtableIndex = 0;
     mShopItems.mItemSetListGlobalIdx = (s16)idx;
     createShopList();
-    m82B = 2;
+    mXyEventIdx = 2;
     mEventIdxs[0] = dComIfGp_evmng_getEventIdx("PUT_PRAICE_TICKET" /* "PUT_PRAICE_TICKET" */, 0xFF);
     mEventIdxs[1] = dComIfGp_evmng_getEventIdx("PUT_FULL_TICKET" /* "PUT_FULL_TICKET" */, 0xFF);
     return TRUE;
@@ -532,12 +532,12 @@ BOOL daNpc_Bs1_c::CreateInit() {
 /* 02216368 */
 void daNpc_Bs1_c::setAttention(bool shouldSet) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (!shouldSet && m72F >= 2) {
+    if (!shouldSet && mAttnSetCount >= 2) {
         return;
     }
-    f32 y = m718.y;
-    f32 z = m718.z;
-    f32 x = m718.x;
+    f32 y = mAttnBasePos.y;
+    f32 z = mAttnBasePos.z;
+    f32 x = mAttnBasePos.x;
     f32 off = bs1_child(mType)->mNpc.mAttnYOffset;
     attention_info.position.z = z; /* attention_info.position */
     attention_info.position.x = x;
@@ -554,9 +554,9 @@ void daNpc_Bs1_c::lookBack() {
     f32 x = 0.0f, y = 0.0f, z = 0.0f; /* sp68 */
     cXyz* target = nullptr;
     s16 desiredYRot = current.angle.y;
-    switch ((u32)(s32)m830) {
+    switch ((u32)(s32)mLookMode) {
     case 1:
-        if (m730 != 0) {
+        if (mbAttention != 0) {
             gabi::Local<cXyz> eye;
             bs1_playerEyePos(eye.get(), (f32)bs1_child(mType)->mNpc.m04); /* dNpc_playerEyePos */
             z = current.pos.z;
@@ -643,10 +643,10 @@ void daNpc_Bs1_c::lookBack() {
     }
     s16 vel;
     if (mJntCtrl.mbTrn != 0) { /* trnChk() */
-        cLib_addCalcAngleS2(&m724, bs1_child(mType)->mNpc.mMaxHeadTurnVel, 4, 0x800);
-        vel = m724;
+        cLib_addCalcAngleS2(&mLookAtMaxVel, bs1_child(mType)->mNpc.mMaxHeadTurnVel, 4, 0x800);
+        vel = mLookAtMaxVel;
     } else {
-        m724 = 0;
+        mLookAtMaxVel = 0;
         vel = 0;
     }
     gabi::Local<cXyz> sp68;
@@ -660,14 +660,14 @@ void daNpc_Bs1_c::lookBack() {
 /* 02216748 */
 bool daNpc_Bs1_c::wait01() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m731 != 0) {
-        s8 old = m830;
-        m830 = 2;
-        m831 = (u8)old;
-    } else if (m730 != 0) {
-        m82A = 2;
-    } else if (m82A == 2) {
-        m82A = 0;
+    if (mTalking != 0) {
+        s8 old = mLookMode;
+        mLookMode = 2;
+        mPrevLookMode = (u8)old;
+    } else if (mbAttention != 0) {
+        mOrderState = 2;
+    } else if (mOrderState == 2) {
+        mOrderState = 0;
     }
     return bs1_isMorf(mpMorf);
 }
@@ -678,13 +678,13 @@ bool daNpc_Bs1_c::talk01() {
     u16 status = talk();
     if (status == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
         fopAc_ac_c* player = dComIfGp_getPlayer(0);
-        m830 = (s8)m831;
+        mLookMode = (s8)mPrevLookMode;
         dComIfGp_event_reset();
-        m731 = 0;
+        mTalking = 0;
         setAnm(0);
         bs1_offPlayerNoDraw(player);
         mShopCamAction.Reset();
-    } else if (status == 8 && shopMsgCheck(m738)) {
+    } else if (status == 8 && shopMsgCheck(mCurrMsgNo)) {
         /* HD: the result is not used; the GameCube checkBeastItemSellMsg branch is gone */
         mShopItems.getSelectItemBuyMsg();
     }
@@ -700,8 +700,8 @@ bool daNpc_Bs1_c::talk01() {
 BOOL daNpc_Bs1_c::wait_action(void*) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (mActionStatus == ACTION_STARTING) {
-        m830 = 1;
-        m731 = 0;
+        mLookMode = 1;
+        mTalking = 0;
         mActionStatus = (s8)(mActionStatus + 1);
     } else if (mActionStatus != ACTION_ENDING) {
         s16 val = (s16)(current.angle.y + mJntCtrl.mAngles[0][1] + mJntCtrl.mAngles[1][1]);
@@ -710,9 +710,9 @@ BOOL daNpc_Bs1_c::wait_action(void*) {
         pos->x = px;
         pos->y = py;
         pos->z = pz;
-        m730 = (u8)chkAttention(pos.get(), val);
+        mbAttention = (u8)chkAttention(pos.get(), val);
         bool setAttn;
-        switch ((u32)(s32)m830) {
+        switch ((u32)(s32)mLookMode) {
         case 1:
             setAttn = wait01();
             break;
@@ -739,7 +739,7 @@ BOOL daNpc_Bs1_c::getdemo_action(void*) {
                     0); /* getMyActIdx (unused) */
     if (mActionStatus == ACTION_STARTING) {
         bs1_offPlayerNoDraw(dComIfGp_getPlayer(0));
-        m830 = (s8)m831;
+        mLookMode = (s8)mPrevLookMode;
         mShopCamAction.Reset();
         u8 itemNo = mShopItems.getSelectItemNo();
         u32 itemPID = bs1_createPresent(&current.pos, (u32)itemNo, 0, -1, (s32)(s8)current.roomNo, 0,
@@ -753,16 +753,16 @@ BOOL daNpc_Bs1_c::getdemo_action(void*) {
     } else if (mActionStatus != ACTION_ENDING) {
         bs1_demoMsgFlagOn();
         dComIfGp_evmng_cutEnd(staffIdx);
-        if (dComIfGp_evmng_endCheck(m83A)) {
-            m82A = 1;
+        if (dComIfGp_evmng_endCheck(mGetDemoEventIdx)) {
+            mOrderState = 1;
             if (mType == 0) {
                 if (dComIfGs_getEventReg(0x86FF) != 0) {
-                    m740 = 0xF4C;
+                    mNextMsgNo = 0xF4C;
                 } else {
-                    m740 = 0xF4E;
+                    mNextMsgNo = 0xF4E;
                 }
             } else {
-                m740 = 0x2F53;
+                mNextMsgNo = 0x2F53;
             }
             dComIfGp_event_reset();
             bs1_setAction(this, BS1_wait_action);
@@ -780,8 +780,8 @@ BOOL daNpc_Bs1_c::evn_talk_init(int actorId) {
     be<u32>* pMsgNo = (be<u32>*)dComIfGp_evmng_getMySubstanceP(actorId, "MsgNo" /* "MsgNo" */, 3);
     be<u32>* pEndMsgNo = (be<u32>*)dComIfGp_evmng_getMySubstanceP(actorId, "EndMsgNo" /* "EndMsgNo" */, 3);
     l_msgId = 0xFFFFFFFF; /* HD: no l_msg */
-    m738 = pMsgNo != nullptr ? (u32)*pMsgNo : 0;
-    m744 = pEndMsgNo != nullptr ? (u32)*pEndMsgNo : 0;
+    mCurrMsgNo = pMsgNo != nullptr ? (u32)*pMsgNo : 0;
+    mEndMsgNo = pEndMsgNo != nullptr ? (u32)*pEndMsgNo : 0;
     return TRUE;
 }
 
@@ -789,7 +789,7 @@ BOOL daNpc_Bs1_c::evn_talk_init(int actorId) {
 BOOL daNpc_Bs1_c::evn_continue_talk_init(int actorId) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     be<u32>* pEndMsgNo = (be<u32>*)dComIfGp_evmng_getMySubstanceP(actorId, "EndMsgNo" /* "EndMsgNo" */, 3);
-    m744 = pEndMsgNo != nullptr ? (u32)*pEndMsgNo : 0;
+    mEndMsgNo = pEndMsgNo != nullptr ? (u32)*pEndMsgNo : 0;
     return TRUE;
 }
 
@@ -798,7 +798,7 @@ BOOL daNpc_Bs1_c::evn_talk() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 mgr = bs1_msgMgr(); /* HD: the message manager replaces l_msg */
     if (l_msgId == 0xFFFFFFFF) {
-        u32 id = bs1_msgSet(mgr, m738, &eyePos);
+        u32 id = bs1_msgSet(mgr, mCurrMsgNo, &eyePos);
         l_msgId = id;
         if (id != 0xFFFFFFFF) {
             bs1_demoMsgFlagOn();
@@ -807,16 +807,16 @@ BOOL daNpc_Bs1_c::evn_talk() {
         setAnmFromMsgTag();
         if (bs1_msgGetStatus(mgr) == 0xE /* fopMsgStts_MSG_DISPLAYED_e */) {
             /* next_msgStatus's result is passed on in the full register */
-            bs1_msgSetStatus(mgr, bs1_nextMessageStatus(this, &m738, (u32)0));
+            bs1_msgSetStatus(mgr, bs1_nextMessageStatus(this, &mCurrMsgNo, (u32)0));
             if (bs1_msgGetStatus(mgr) == 0xF /* fopMsgStts_MSG_CONTINUES_e */) {
-                bs1_msgSet(mgr, m738, nullptr);
+                bs1_msgSet(mgr, mCurrMsgNo, nullptr);
             }
         } else if (bs1_msgGetStatus(mgr) == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
             bs1_msgSetStatus(mgr, 0x13 /* fopMsgStts_MSG_DESTROYED_e */);
             l_msgId = 0xFFFFFFFF;
             return TRUE;
-        } else if ((bs1_msgGetStatus(mgr) == 2 || bs1_msgGetStatus(mgr) == 6) && m738 == m744) {
-            m744 = 0;
+        } else if ((bs1_msgGetStatus(mgr) == 2 || bs1_msgGetStatus(mgr) == 6) && mCurrMsgNo == mEndMsgNo) {
+            mEndMsgNo = 0;
             return TRUE;
         }
     }
@@ -853,14 +853,14 @@ BOOL daNpc_Bs1_c::evn_jnt_lock_init(int actorIdx) {
 BOOL daNpc_Bs1_c::evn_wait_init(int actorIdx) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     void* pTimer = dComIfGp_evmng_getMySubstanceP(actorIdx, "Timer" /* "Timer" */, 3);
-    m63E = pTimer != nullptr ? bs1_TimerSubstance(pTimer) : (s16)0;
+    mEvnWaitTimer = pTimer != nullptr ? bs1_TimerSubstance(pTimer) : (s16)0;
     return TRUE;
 }
 
 /* 02216C80 */
 BOOL daNpc_Bs1_c::evn_wait() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    return bs1_calcTimer(&m63E) == 0 ? TRUE : FALSE; /* cLib_calcTimer */
+    return bs1_calcTimer(&mEvnWaitTimer) == 0 ? TRUE : FALSE; /* cLib_calcTimer */
 }
 
 /* 02216CAC */
@@ -971,9 +971,9 @@ BOOL daNpc_Bs1_c::event_action(void*) {
         mActionStatus = (s8)(mActionStatus + 1);
     } else if (mActionStatus != ACTION_ENDING) {
         privateCut();
-        if (dComIfGp_evmng_endCheck(mEventIdxs[m82B])) {
-            m82A = 0;
-            m82B = 2;
+        if (dComIfGp_evmng_endCheck(mEventIdxs[mXyEventIdx])) {
+            mOrderState = 0;
+            mXyEventIdx = 2;
             dComIfGp_event_reset();
             bs1_setAction(this, BS1_wait_action);
         }
@@ -1006,7 +1006,7 @@ BOOL daNpc_Bs1_c::_draw() {
         mpShopCursor->draw();
     }
     for (int i = 0; i < 3; i++) {
-        if (m76C[i] != 0) {
+        if (mItemSoldOut[i] != 0) {
             setLightTevColorType(dKy_getEnvlight(), mpSoldSignModels[i], &tevStr);
             mDoExt_modelUpdateDL(mpSoldSignModels[i], 0);
         }
@@ -1031,12 +1031,12 @@ BOOL daNpc_Bs1_c::_execute() {
                       c->mNpc.mMinBackboneY, c->mNpc.mMaxHeadX, c->mNpc.mMaxHeadY, c->mNpc.mMinHeadX,
                       c->mNpc.mMinHeadY, c->mNpc.mMaxTurnStep);
     playTexPatternAnm();
-    m72E = (u8)mpMorf->play(&eyePos, 0, 0);
-    f32 prev = m734;
+    mMorfIsStop = (u8)mpMorf->play(&eyePos, 0, 0);
+    f32 prev = mMorfPrevFrame;
     if (mpMorf->getFrame() < prev) {
-        m72E = 1;
+        mMorfIsStop = 1;
     }
-    m734 = mpMorf->getFrame();
+    mMorfPrevFrame = mpMorf->getFrame();
     checkOrder();
     bs1_pmf_call(this, &mCurrActionFunc, 0); /* (this->*mCurrActionFunc)(NULL) */
     mShopCamAction.move();
@@ -1052,7 +1052,7 @@ BOOL daNpc_Bs1_c::_execute() {
     mDoMtx_stack_c::YrotM(current.angle.y);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
     for (int i = 0; i < 3; i++) {
-        if (m76C[i] != 0) {
+        if (mItemSoldOut[i] != 0) {
             mDoMtx_stack_c::transS(mItemPosOffsets[i].x, mItemPosOffsets[i].y, mItemPosOffsets[i].z);
             J3DModel_setBaseTRMtx(mpSoldSignModels[i], mDoMtx_stack_c::get());
         }
@@ -1155,7 +1155,7 @@ BOOL daNpc_Bs1_c::CreateHeap() {
     if (m_backbone_jnt_num < 0)
         JUT_ASSERT_fail("d_a_npc_bs1.cpp", 0xAD2, "m_backbone_jnt_num >= 0");
     if ((u32)(s32)mType <= 1) {
-        m828 = 1;
+        mTexAnmIdx = 1;
     }
     if (!initTexPatternAnm(0)) {
         return FALSE;

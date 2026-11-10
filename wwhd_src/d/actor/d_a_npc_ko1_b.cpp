@@ -58,8 +58,8 @@ bool daNpc_Ko1_c::createInit() {
     u8 pathIdx = (fopAcM_GetParam(this) >> 16) & 0xFF;
     mInitialAngle.y = current.angle.y;
     mInitialPos.copy(current.pos);
-    fields.mLookTarget.copy(current.pos);
-    fields.mSpawnPos.copy(current.pos);
+    fields.mLookPos.copy(current.pos);
+    fields.mAreaCenter.copy(current.pos);
     mInitialAngle.x = current.angle.x;
     mInitialAngle.z = current.angle.z;
     s32 weight = 0xFF;
@@ -72,7 +72,7 @@ bool daNpc_Ko1_c::createInit() {
         weight = 0xF0;
     }
     mEventCut.setActorInfo2(l_staff_name[mSpecificType].get(), this);
-    fields.mAnimationNo = 0xE;
+    fields.mAnmNum = 0xE;
     bool ok;
     switch ((u32)(s32)mSpecificType) {
     case KO1_HNA_0:
@@ -139,18 +139,18 @@ void daNpc_Ko1_c::setMtx(u32 i_setEyePos) {
         s32 reverb = dComIfGp_getReverb(current.roomNo);
         fields.mAnimationEnded = (u8)Ko1B_play(mpMorf, &eyePos, sndId, reverb);
         mDoExt_McaMorf* morf = mpMorf;
-        s8 animationNo = fields.mAnimationNo;
-        if (morf->getFrame() < fields.mPreviousFrame) {
+        s8 animationNo = fields.mAnmNum;
+        if (morf->getFrame() < fields.mPrevMorfFrame) {
             morf = mpMorf;
             fields.mAnimationEnded = 1;
         }
-        fields.mPreviousFrame = morf->getFrame();
+        fields.mPrevMorfFrame = morf->getFrame();
         if (animationNo == 4 && mpMorf->checkFrame(10.0f)) {
             mDoAud_seStart(0x5817, &eyePos, 0, dComIfGp_getReverb(current.roomNo));
         }
         Ko1B_play(fields.mpHeadMorf, &eyePos, 0, 0);
         mDoExt_McaMorf* balloonMorf = fields.mpBalloonMorf;
-        if (balloonMorf != nullptr && fields.mBalloonState < 2) {
+        if (balloonMorf != nullptr && fields.mSleepState < 2) {
             balloonMorf->mFrameCtrl.mFrame = (f32)(s16)gabi::ftoi(mpMorf->getFrame());
         }
         fields.mPreviousGroundHit = (mObjAcch.m_flags >> 5) & 1;
@@ -166,7 +166,7 @@ void daNpc_Ko1_c::setMtx(u32 i_setEyePos) {
     mpMorf->calc();
     {
         J3DModel* model = mpMorf->getModel();
-        s8 jnt = fields.mBodyJoint;
+        s8 jnt = fields.m_hed_jnt_num;
         J3DModel* dst = fields.mpHeadMorf->getModel(); /* read before getAnmMtx's flag store */
         J3DModel_setBaseTRMtx(dst, getAnmMtx(model, jnt));
     }
@@ -176,7 +176,7 @@ void daNpc_Ko1_c::setMtx(u32 i_setEyePos) {
     }
     J3DModel* itemModel = fields.mpItemModel;
     if (itemModel != nullptr) {
-        J3DModel_setBaseTRMtx(itemModel, getAnmMtx(mpMorf->getModel(), fields.mItemJoint));
+        J3DModel_setBaseTRMtx(itemModel, getAnmMtx(mpMorf->getModel(), fields.m_armR2_jnt_num));
         J3DModel_calc(fields.mpItemModel);
     }
     setAttention(i_setEyePos);
@@ -192,9 +192,9 @@ void daNpc_Ko1_c::setPlaySpd(f32 i_speed) {
 /* 02276578 */
 void daNpc_Ko1_c::eventOrder() {
     Ko1MovementFields& fields = Ko1B_fields(this);
-    if (fields.mEventState == KO1_EVENT_SPEAK || fields.mEventState == KO1_EVENT_TALK) {
+    if (fields.mOrderEvent == KO1_EVENT_SPEAK || fields.mOrderEvent == KO1_EVENT_TALK) {
         eventInfo.onCondition(dEvtCnd_CANTALK_e);
-        if (fields.mEventState == KO1_EVENT_SPEAK) {
+        if (fields.mOrderEvent == KO1_EVENT_SPEAK) {
             fopAcM_orderSpeakEvent(this);
         }
     }
@@ -207,9 +207,9 @@ void daNpc_Ko1_c::checkOrder() {
     if (cmd == dEvtCmd_INDEMO_e) {
         return;
     }
-    if (cmd == dEvtCmd_INTALK_e && (fields.mEventState == KO1_EVENT_SPEAK || fields.mEventState == KO1_EVENT_TALK)) {
-        fields.mEventState = KO1_EVENT_NONE;
-        fields.mTalkRequested = 1;
+    if (cmd == dEvtCmd_INTALK_e && (fields.mOrderEvent == KO1_EVENT_SPEAK || fields.mOrderEvent == KO1_EVENT_TALK)) {
+        fields.mOrderEvent = KO1_EVENT_NONE;
+        fields.mTalking = 1;
     }
 }
 
@@ -217,17 +217,17 @@ void daNpc_Ko1_c::checkOrder() {
 void daNpc_Ko1_c::lookBack() {
     Ko1MovementFields& fields = Ko1B_fields(this);
     s16 desiredYRot = current.angle.y;
-    fields.mPreviousBodyY = desiredYRot;
-    fields.mPreviousBackboneY = m_jnt.mAngles[1][1];
-    fields.mPreviousHeadY = m_jnt.mAngles[0][1];
+    fields.mActorAngleY = desiredYRot;
+    fields.mJointBackboneY = m_jnt.mAngles[1][1];
+    fields.mJointHeadY = m_jnt.mAngles[0][1];
     gabi::Local<cXyz> dstPos;
     dstPos->set(0.0f, 0.0f, 0.0f);
     f32 eyeY = eyePos.y;
     f32 posX = current.pos.x;
-    u8 headOnly = fields.mHeadOnly;
+    u8 headOnly = fields.mHeadOnlyFollow;
     cXyz* dstPosP = nullptr;
     f32 posZ = current.pos.z;
-    switch ((u32)(s32)fields.mLookMode) {
+    switch ((u32)(s32)fields.mLookBackState) {
     case KO1_LOOK_PLAYER: {
         gabi::Local<cXyz> eye;
         dNpc_playerEyePos_l(eye, -20.0f);
@@ -239,13 +239,13 @@ void daNpc_Ko1_c::lookBack() {
         break;
     }
     case KO1_LOOK_TARGET:
-        dstPos->copy(fields.mLookTarget);
+        dstPos->copy(fields.mLookPos);
         posX = current.pos.x;
         posZ = current.pos.z;
         dstPosP = dstPos;
         break;
     case KO1_LOOK_ANGLE:
-        desiredYRot = fields.mLookAngle;
+        desiredYRot = fields.mDesiredYRot;
         break;
     }
     cLib_addCalcAngleS2(&fields.mTurnVelocity, l_movement_parameters[mType].mTurnMaxVelocity, 4, 0x800);
@@ -278,7 +278,7 @@ u32 daNpc_Ko1_c::partner_srch_sub(u32 i_judgeFunc) {
 /* 022753EC */
 void daNpc_Ko1_c::partner_srch() {
     Ko1MovementFields& fields = Ko1B_fields(this);
-    if (fields.mActionStep != 1)
+    if (fields.mActionStatus != 1)
         return;
     switch ((u32)(s32)mSpecificType) {
     case KO1_HNA_1:
@@ -317,12 +317,12 @@ s32 daNpc_Ko1_c::ko_movPass() {
         return KO1_MOVING;
     }
     gabi::Local<cXyz> diff;
-    cXyz_mi(&fields.mMoveTarget, diff, &current.pos);
+    cXyz_mi(&fields.mTargetPos, diff, &current.pos);
     gabi::Local<cXyz> diffXZ;
     diffXZ->set(diff->x, 0.0f, diff->z);
     f32 dist = std_sqrtf(PSVECSquareMag(diffXZ));
     s32 ret = KO1_MOVING;
-    if (!(dist > fields.mArrivalRadius)) {
+    if (!(dist > fields.mPassDist)) {
         ret = KO1_POINT_REACHED;
         if (mPathRun.mPath.get() != nullptr && !Ko1B_nextPoint(&mPathRun)) {
             ret = KO1_PATH_END;
@@ -335,16 +335,16 @@ s32 daNpc_Ko1_c::ko_movPass() {
 void daNpc_Ko1_c::ko_clcMovSpd() {
     Ko1MovementFields& fields = Ko1B_fields(this);
     gabi::Local<cXyz> diff;
-    cXyz_mi(&fields.mMoveTarget, diff, &current.pos);
+    cXyz_mi(&fields.mTargetPos, diff, &current.pos);
     gabi::Local<cXyz> diffXZ;
     diffXZ->set(diff->x, 0.0f, diff->z);
     f32 distSq = PSVECSquareMag(diffXZ);
     gabi::Local<be<s16>> angle;
-    *angle = cLib_targetAngleY(&current.pos, &fields.mMoveTarget);
+    *angle = cLib_targetAngleY(&current.pos, &fields.mTargetPos);
     if (!routeCheck(distSq, angle)) {
         return;
     }
-    switch (fields.mActionState) {
+    switch (fields.mStatus) {
     case 4:
     case 0xB:
     case 0x18:
@@ -357,24 +357,24 @@ void daNpc_Ko1_c::ko_clcMovSpd() {
         break;
     }
     cLib_chaseAngleS(&current.angle.y, *angle, l_movement_parameters[mType].mAngleStep);
-    cLib_chaseF(&speedF, fields.mTargetSpeed, fields.mAcceleration);
+    cLib_chaseF(&speedF, fields.mMoveSpeed, fields.mMoveAcceleration);
 }
 
 /* 022762AC */
 void daNpc_Ko1_c::ko_clcSwmSpd() {
     Ko1MovementFields& fields = Ko1B_fields(this);
     gabi::Local<cXyz> diff;
-    cXyz_mi(&fields.mMoveTarget, diff, &current.pos);
+    cXyz_mi(&fields.mTargetPos, diff, &current.pos);
     gabi::Local<cXyz> diffXZ;
     diffXZ->set(diff->x, 0.0f, diff->z);
     f32 distSq = PSVECSquareMag(diffXZ);
     gabi::Local<be<s16>> angle;
-    *angle = cLib_targetAngleY(&current.pos, &fields.mMoveTarget);
+    *angle = cLib_targetAngleY(&current.pos, &fields.mTargetPos);
     if (!routeCheck(distSq, angle)) {
         return;
     }
     cLib_chaseAngleS(&current.angle.y, *angle, l_movement_parameters[mType].mAngleStep);
-    cLib_chaseF(&speed.y, fields.mSwimSpeed, 1.6f);
+    cLib_chaseF(&speed.y, fields.mVerticalSpeed, 1.6f);
     cLib_chaseF(&speedF, 0.0f, 0.4f);
 }
 
@@ -406,12 +406,12 @@ void daNpc_Ko1_c::ko_nMove() {
         setPlaySpd(play);
         pass = ko_movPass();
         if (pass == KO1_POINT_REACHED) {
-            fields.mPointReached = 1;
+            fields.mbMoveFinished = 1;
             fields.mSkipMovement = 1;
             return;
         }
         if (pass == KO1_PATH_END) {
-            fields.mPointReached = 1;
+            fields.mbMoveFinished = 1;
             fields.mMoveMode = KO1_MOVE_WAIT;
             fields.mSkipMovement = 1;
             return;
@@ -422,23 +422,23 @@ void daNpc_Ko1_c::ko_nMove() {
         ko_clcSwmSpd();
         pass = ko_movPass();
         if (pass == KO1_POINT_REACHED) {
-            fields.mPointReached = 1;
+            fields.mbMoveFinished = 1;
             fields.mSkipMovement = 1;
             return;
         }
         if (pass == KO1_PATH_END) {
-            fields.mPointReached = 1;
+            fields.mbMoveFinished = 1;
             fields.mMoveMode = KO1_MOVE_WAIT;
             fields.mSkipMovement = 1;
             return;
         }
         break;
     case KO1_MOVE_JUMP:
-        cLib_chaseF(&speedF, 0.1f, fields.mAcceleration);
+        cLib_chaseF(&speedF, 0.1f, fields.mMoveAcceleration);
         if (fields.mPreviousGroundHit == 0 && mObjAcch.ChkGroundHit()) {
             fields.mMoveMode = fields.mPreviousMoveMode;
             speedF = 0.0f;
-            fields.mPointReached = 1;
+            fields.mbMoveFinished = 1;
             speed.y = 0.0f;
             fields.mSkipMovement = 1;
             gravity = -4.5f;
@@ -446,7 +446,7 @@ void daNpc_Ko1_c::ko_nMove() {
         }
         break;
     }
-    if (fields.mPointReached != 0) {
+    if (fields.mbMoveFinished != 0) {
         fields.mSkipMovement = 1;
     }
 }
@@ -459,7 +459,7 @@ void daNpc_Ko1_c::chk_routeAngle(cXyz* i_wallNrm, be<s16>* io_angle) {
     s16 angle = cM_atan2s(side->x, side->z);
     if (!(fields.mGroundNormal.y < 0.999f) && cLib_distanceAngleS(angle, *io_angle) > 0x4000) {
         angle = (s16)(angle - 0x8000);
-    } else if (side->y * (fields.mMoveTarget.y - current.pos.y) < 0.0f) {
+    } else if (side->y * (fields.mTargetPos.y - current.pos.y) < 0.0f) {
         angle = (s16)(angle - 0x8000);
     }
     *io_angle = angle;
@@ -571,8 +571,8 @@ void daNpc_Ko1_c::privateCut(s32 i_staffIdx) {
 void daNpc_Ko1_c::endEvent() {
     Ko1MovementFields& fields = Ko1B_fields(this);
     dComIfGp_event_reset();
-    fields.mAnimationAttribute = 0xFF;
-    fields.mAnimationTag = 0xFF;
+    fields.mAnmAtrNo = 0xFF;
+    fields.mMesgAnimeTag = 0xFF;
 }
 
 /* 022756F8 */
@@ -728,7 +728,7 @@ BOOL daNpc_Ko1_c::_execute() {
             fields.mModelAngle.x = current.angle.x;
         }
         gabi::Local<cXyz> diff;
-        cXyz_mi(&current.pos, diff, &fields.mSpawnPos);
+        cXyz_mi(&current.pos, diff, &fields.mAreaCenter);
         gabi::Local<cXyz> diffXZ;
         diffXZ->set(diff->x, 0.0f, diff->z);
         if (std_sqrtf(PSVECSquareMag(diffXZ)) > 3000.0f) {

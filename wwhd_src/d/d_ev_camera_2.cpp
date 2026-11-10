@@ -44,9 +44,9 @@ static void copyPoint(cXyz* destination, const cXyz* source) {
     out->z = in->z;
 }
 static void SkipSmoother(dCamera_c* camera) {
-    camera->m102 = 1;
-    camera->m101 = 1;
-    camera->m100 = 1;
+    camera->mStyleSettle2 = 1;
+    camera->mStyleSettle1 = 1;
+    camera->mStyleSettle0 = 1;
 }
 static cXyz* localZero() {
     if (fixedPositionZeroGuard == 0) {
@@ -144,7 +144,7 @@ u32 fixedPositionEvCamera(dCamera_c* camera) {
     auto* zero = localZero();
     auto* work = reinterpret_cast<FixedPositionWork*>(camera->mWork);
     u32 done = 1;
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         cXyz fallback;
         cXyz eye;
         cXyz relative;
@@ -207,10 +207,10 @@ u32 fixedPositionEvCamera(dCamera_c* camera) {
     cameraFixedSubtract(&camera->mViewCache.mEye, &difference, &camera->mViewCache.mCenter);
     cSGlobe_Val(&camera->mViewCache.mDirection, &difference);
     f32 radius = work->mRadius;
-    if (work->mTimerSet != 0 && camera->m11C < work->mTimer) {
+    if (work->mTimerSet != 0 && camera->mCurStyleTimer < work->mTimer) {
         f32 start = work->mStartRadius;
         // HD: unsigned timer and signed duration are converted through double.
-        f32 ratio = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->m11C))) /
+        f32 ratio = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->mCurStyleTimer))) /
                     static_cast<f32>(static_cast<f64>(static_cast<s32>(work->mTimer)));
         radius = gabi::fmadds(radius - start, ratio, start);
         done = 0;
@@ -234,7 +234,7 @@ u32 fixedPositionEvCamera(dCamera_c* camera) {
 /* 025314BC */
 u32 fixedFrameEvCamera(dCamera_c* camera) {
     auto* work = reinterpret_cast<FixedFrameWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         cXyz eye;
         cXyz fallback;
         cXyz center;
@@ -295,7 +295,7 @@ u32 fixedFrameEvCamera(dCamera_c* camera) {
             if (eyeMode == 'o') {
                 relativeOffset(camera, actor, &eye, &work->mEye);
             } else if (actor && eyeMode == 'r') {
-                if (camera->m080 & 1)
+                if (camera->mTicks & 1)
                     mirrorX(&eye);
                 relativeOffset(camera, work->mpRelActor.get(), &eye, &work->mEye);
                 if (cameraFixedLineBGCheck(camera, &work->mCenter, &work->mEye, LINE_CHECK_FLAGS))
@@ -319,7 +319,7 @@ u32 fixedFrameEvCamera(dCamera_c* camera) {
     camera->mViewCache.mFovy = work->mFovy;
     if (work->mBankSet != 0)
         setBank(camera, work->mBank);
-    if (work->mTimerSet != 0 && camera->m11C < work->mTimer)
+    if (work->mTimerSet != 0 && camera->mCurStyleTimer < work->mTimer)
         return 0;
     return 1;
 }
@@ -349,7 +349,7 @@ static void stokerPosition(dCamera_c* camera, cSGlobe_l* globe, cXyz* gap, gptr<
 /* 0253B7E4 */
 u32 stokerEvCamera(dCamera_c* camera) {
     auto* work = reinterpret_cast<StokerWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         cXyz fallback;
         f32 zeroX = cXyz::Zero.x;
         f32 zeroY = cXyz::Zero.y;
@@ -410,7 +410,7 @@ u32 stokerEvCamera(dCamera_c* camera) {
     camera->mViewCache.mFovy = work->mFovy;
     if (work->mBankSet != 0)
         setBank(camera, work->mBank);
-    if (work->mTimerSet != 0 && camera->m11C < work->mTimer)
+    if (work->mTimerSet != 0 && camera->mCurStyleTimer < work->mTimer)
         return 0;
     return 1;
 }

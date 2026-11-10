@@ -103,9 +103,9 @@ void daKmon_c::checkTalk() {
         KmonOrcaHD *ji1 = mpJi1;
         if (!ptmf_eq(ji1->mAction, ACT_eventAction) /* !mpJi1->checkAction(&daNpc_Ji1_c::eventAction) */) {
             dComIfGp_event_setTalkPartner(ji1);
-            mpJi1->field_0xC84 = 0x10;
+            mpJi1->mEventNo = 0x10;
             ji1 = mpJi1;
-            ptmf_copy(ji1->field_0x2C8, ji1->mAction); /* field_0x2C8 = mAction */
+            ptmf_copy(ji1->mEventReturnAction, ji1->mAction); /* mEventReturnAction = mAction */
             ji1_setAction(mpJi1, ACT_eventAction, nullptr);
             return;
         }

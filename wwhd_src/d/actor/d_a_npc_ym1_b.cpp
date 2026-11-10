@@ -73,7 +73,7 @@ s32 daNpc_Ym1_c::bckResID(int i_bckNum) {
 void daNpc_Ym1_c::setAnm_anm(anm_prm_c* i_anmPrmP) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     s8 bck = i_anmPrmP->mAnmNum;
-    if (bck < 0 || (u32)(s32)state(this)->m8AB == (u32)(s32)bck) {
+    if (bck < 0 || (u32)(s32)state(this)->mAnmNum == (u32)(s32)bck) {
         return;
     }
     s32 resID = bckResID(bck);
@@ -85,7 +85,7 @@ void daNpc_Ym1_c::setAnm_anm(anm_prm_c* i_anmPrmP) {
     state(this)->mAnimationWrapped = 0;
     state(this)->mPreviousMorfFrame = 0.0f;
     state(this)->mAnimationStopped = 0;
-    state(this)->m8AB = num;
+    state(this)->mAnmNum = num;
     if (num == 8) {
 
         mpMorf->setMorf(f32(settings(&l_settings, mSubType)->mMorf));
@@ -401,10 +401,10 @@ BOOL daNpc_Ym1_c::kari_1() {
         pos->x = current.pos.x;
         pos->y = current.pos.y;
         pos->z = current.pos.z;
-        if (chk_areaIN(f32(settings(&l_settings, mSubType)->mAreaDistance), pos) || state(this)->m89C == 0) {
+        if (chk_areaIN(f32(settings(&l_settings, mSubType)->mAreaDistance), pos) || state(this)->mPrevKariFlag == 0) {
             setStt(STT_WAIT_1);
-            state(this)->m8AF = 0;
-            state(this)->m8A4 = 1;
+            state(this)->mLookMode = 0;
+            state(this)->mbHeadOnly = 1;
             setAnm_NUM(2, 1);
         }
     }
@@ -414,13 +414,13 @@ BOOL daNpc_Ym1_c::kari_1() {
 /* 022F9EF4 */
 BOOL daNpc_Ym1_c::wait_1() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (state(this)->m8AB == 2) {
+    if (state(this)->mAnmNum == 2) {
         if (state(this)->mAnimationStopped == 0) {
             return TRUE;
         }
         setAnm_NUM(3, 1);
-        state(this)->m8AF = 0;
-        state(this)->m8A4 = 1;
+        state(this)->mLookMode = 0;
+        state(this)->mbHeadOnly = 1;
         state(this)->mAttentionTimer = (s16)cLib_getRndValue(15, 30);
         return TRUE;
     }
@@ -431,16 +431,16 @@ BOOL daNpc_Ym1_c::wait_1() {
     if (state(this)->mTalkRequested) {
         if (chk_talk()) {
             setStt(STT_TALK);
-            state(this)->m8A4 = 0;
+            state(this)->mbHeadOnly = 0;
             state(this)->mTurnToPlayer = 0;
-            state(this)->m8AF = 1;
+            state(this)->mLookMode = 1;
             m_jnt.mbTrn = 1;
         }
         return TRUE;
     }
-    state(this)->m8AF = 1;
+    state(this)->mLookMode = 1;
     state(this)->mActionSubstate = 2;
-    state(this)->m8A4 = 1;
+    state(this)->mbHeadOnly = 1;
     if (state(this)->mPlayerAttending) {
         state(this)->mAttentionTimer = (s16)cLib_getRndValue(15, 30);
     }
@@ -451,8 +451,8 @@ BOOL daNpc_Ym1_c::wait_1() {
     if (!chk_areaIN(f32(settings(&l_settings, mSubType)->mAreaDistance) + 50.0f, pos) &&
         cLib_calcTimer(&state(this)->mAttentionTimer) == 0) {
         setStt(STT_TURN);
-        state(this)->m8AF = 0;
-        state(this)->m8A4 = 1;
+        state(this)->mLookMode = 0;
+        state(this)->mbHeadOnly = 1;
     }
     return TRUE;
 }
@@ -470,16 +470,16 @@ BOOL daNpc_Ym1_c::wait_2() {
     if (state(this)->mTalkRequested) {
         if (chk_talk()) {
             setStt(STT_TALK);
-            state(this)->m8A4 = 0;
-            state(this)->m8AF = 1;
+            state(this)->mbHeadOnly = 0;
+            state(this)->mLookMode = 1;
             state(this)->mTurnToPlayer = 0;
             m_jnt.mbTrn = 1;
         }
         return TRUE;
     }
-    state(this)->m8AF = 0;
+    state(this)->mLookMode = 0;
     state(this)->mActionSubstate = 2;
-    state(this)->m8A4 = 1;
+    state(this)->mbHeadOnly = 1;
     if (diff != 0) {
         return TRUE;
     }
@@ -495,16 +495,16 @@ BOOL daNpc_Ym1_c::wait_2() {
         state(this)->mAttentionTimer = (s16)cLib_getRndValue(15, 30);
     }
     if (cLib_calcTimer(&state(this)->mAttentionTimer)) {
-        state(this)->m8AF = 1;
+        state(this)->mLookMode = 1;
     }
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-    u32 flag = state(this)->m8AF == 1;
+    u32 flag = state(this)->mLookMode == 1;
     gabi::Local<cXyz> pos;
     pos->x = player->current.pos.x;
     pos->y = player->current.pos.y;
     pos->z = player->current.pos.z;
     if (!ym1CheckAttention(this, pos, flag, attnRange, 50.0f, attnDist)) {
-        state(this)->m8AF = 0;
+        state(this)->mLookMode = 0;
         state(this)->mTurnToPlayer = 1;
     }
     return TRUE;
@@ -568,17 +568,17 @@ BOOL daNpc_Ym1_c::turn_1() {
     if ((s16)(mRotYTarget - current.angle.y) != 0) {
         return TRUE;
     }
-    if (state(this)->m89C) {
+    if (state(this)->mPrevKariFlag) {
         setStt(STT_KARI);
         mpMorf->setMorf(10.0f);
-        state(this)->m8AF = 0;
-        state(this)->m8A4 = 1;
+        state(this)->mLookMode = 0;
+        state(this)->mbHeadOnly = 1;
         mKariTimer = (s16)cLib_getRndValue(30, 60);
         return TRUE;
     }
     setStt(STT_WAIT_2);
-    state(this)->m8AF = 0;
-    state(this)->m8A4 = 1;
+    state(this)->mLookMode = 0;
+    state(this)->mbHeadOnly = 1;
     return TRUE;
 }
 
@@ -588,22 +588,22 @@ BOOL daNpc_Ym1_c::NBTwai() {
     if (state(this)->mTalkRequested) {
         if (chk_talk()) {
             setStt(STT_NBT_TALK);
-            state(this)->m8AF = 0;
-            state(this)->m8A4 = 1;
+            state(this)->mLookMode = 0;
+            state(this)->mbHeadOnly = 1;
         }
         return TRUE;
     }
-    state(this)->m8AF = 0;
-    state(this)->m8A4 = 1;
+    state(this)->mLookMode = 0;
+    state(this)->mbHeadOnly = 1;
     state(this)->mActionSubstate = 2;
     if (chk_BlackPig()) {
         setStt(STT_MESA_WAIT);
-        state(this)->m8AF = 0;
-        state(this)->m8A4 = 1;
+        state(this)->mLookMode = 0;
+        state(this)->mbHeadOnly = 1;
         state(this)->mTurnToPlayer = 1;
         return TRUE;
     }
-    if (state(this)->m8AB == 6) {
+    if (state(this)->mAnmNum == 6) {
         if (state(this)->mAnimationStopped != 0 || state(this)->mPlayerAttending != 0) {
             setAnm_NUM(5, 1);
             mKariTimer = (s16)cLib_getRndValue(90, 180);
@@ -614,7 +614,7 @@ BOOL daNpc_Ym1_c::NBTwai() {
         state(this)->mAttentionTimer = (s16)cLib_getRndValue(15, 30);
     }
     if (cLib_calcTimer(&state(this)->mAttentionTimer)) {
-        state(this)->m8AF = 1;
+        state(this)->mLookMode = 1;
         return TRUE;
     }
     if (cLib_calcTimer(&mKariTimer) == 0) {
@@ -629,28 +629,28 @@ BOOL daNpc_Ym1_c::SITwai() {
     if (state(this)->mTalkRequested) {
         if (chk_talk()) {
             setStt(STT_TALK);
-            state(this)->m8AF = 1;
-            state(this)->m8A4 = 1;
+            state(this)->mLookMode = 1;
+            state(this)->mbHeadOnly = 1;
         }
         return TRUE;
     }
     state(this)->mActionSubstate = 2;
-    state(this)->m8AF = 0;
-    state(this)->m8A4 = 1;
+    state(this)->mLookMode = 0;
+    state(this)->mbHeadOnly = 1;
     if (state(this)->mPlayerAttending) {
         state(this)->mAttentionTimer = (s16)cLib_getRndValue(15, 30);
     }
     if (cLib_calcTimer(&state(this)->mAttentionTimer)) {
-        state(this)->m8AF = 1;
+        state(this)->mLookMode = 1;
     }
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-    u32 flag = state(this)->m8AF == 1;
+    u32 flag = state(this)->mLookMode == 1;
     gabi::Local<cXyz> pos;
     pos->x = player->current.pos.x;
     pos->y = player->current.pos.y;
     pos->z = player->current.pos.z;
     if (!ym1CheckAttention(this, pos, flag, 250.0f, 50.0f, 120.0f)) {
-        state(this)->m8AF = 0;
+        state(this)->mLookMode = 0;
     }
     return TRUE;
 }
@@ -731,7 +731,7 @@ BOOL daNpc_Ym1_c::wait_action3(void*) {
         } else {
             setStt(STT_NBT_WAIT);
             PSMTXTrans(mDoMtx_stack_c::get(), current.pos.x, current.pos.y, current.pos.z);
-            mDoMtx_YrotM(mDoMtx_stack_c::get(), state(this)->m846.y);
+            mDoMtx_YrotM(mDoMtx_stack_c::get(), state(this)->mModelAngle.y);
             PSMTXMultVec(mDoMtx_stack_c::get(), offset, &state(this)->mNbtAttentionPosition);
             state(this)->mActionPhase = state(this)->mActionPhase + 1;
         }
@@ -794,7 +794,7 @@ BOOL daNpc_Ym1_c::_draw() {
     J3DModel* head_p = mpHeadModel;
     J3DModelData* head_info_p = J3DModel_getModelData_l(head_p);
     J3DModel* morf_model_p = mpMorf->getModel();
-    if (state(this)->m89E || state(this)->m8A0) {
+    if (state(this)->mbWaitForDemo || state(this)->m8A0) {
         return TRUE;
     }
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
@@ -807,9 +807,9 @@ BOOL daNpc_Ym1_c::_draw() {
     mDoExt_btpAnm_entry((mDoExt_btpAnm*)(void*)mBtpAnm, head_info_p, mBlinkFrame);
     mDoExt_modelEntryDL(head_p);
     removeTexPattern(head_info_p); /* mBtpAnm.remove() */
-    if (state(this)->m6D0.get() != nullptr) {
-        setLightTevColorType(dKy_getEnvlight(), state(this)->m6D0, &tevStr);
-        mDoExt_modelEntryDL(state(this)->m6D0);
+    if (state(this)->mItemModel.get() != nullptr) {
+        setLightTevColorType(dKy_getEnvlight(), state(this)->mItemModel, &tevStr);
+        mDoExt_modelEntryDL(state(this)->mItemModel);
     }
     // HD: the GameCube shadow pass is absent.
     switch (mSubType) {
@@ -828,7 +828,7 @@ BOOL daNpc_Ym1_c::_draw() {
     }
     u8 v = mKariFlag;
     mKariFlag = 0;
-    state(this)->m89C = v;
+    state(this)->mPrevKariFlag = v;
     return TRUE;
 }
 

@@ -2783,7 +2783,7 @@ BOOL daPy_lk_c::checkNextActionRopeReady() {
             return TRUE;
         }
     } else {
-        s32 st = (s32)gabi::at<player02::ropeMode_c>(rope)->m02DC; /* rope->m02DC */
+        s32 st = (s32)gabi::at<player02::ropeMode_c>(rope)->mState; /* rope->mState */
         if (st == 5 || st == 8 || st == 9) {
             return procRopeThrowCatch_init();
         }

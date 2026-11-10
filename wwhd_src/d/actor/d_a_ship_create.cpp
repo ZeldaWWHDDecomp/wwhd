@@ -163,16 +163,16 @@ static void daShip_sightPacket_create(ShipCreateSightPacket* pkt, u32 heap) {
 BOOL daShip_c::createHeap() {
     ShipCreateEffectModels* hd = reinterpret_cast<ShipCreateEffectModels*>(this);
     if (checkStateFlg(daSFLG_SAIL_ON_e)) {
-        m0392 = dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e;
+        mBodyAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e;
     } else {
-        m0392 = dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e;
+        mBodyAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e;
     }
     J3DModelData* modelData = (J3DModelData*)ship_getResIdx("Ship", dRes_INDEX_SHIP_BDL_FN_BODY_e);
     if (modelData == nullptr) {
         JUT_ASSERT_fail("d_a_ship.cpp", 0x216A, "modelData != (0)");
     }
     daShip_replaceSeaETextures(modelData);
-    J3DAnmTransform* anm = (J3DAnmTransform*)ship_getResIdx("Ship", (u16)m0392);
+    J3DAnmTransform* anm = (J3DAnmTransform*)ship_getResIdx("Ship", (u16)mBodyAnmFileIdx);
     mpBodyAnm = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, 0, 1.0f, 0, -1, 0,
                                        nullptr, 0x80000, 0x11200202);
     if (mpBodyAnm == nullptr || mpBodyAnm->getModel() == nullptr) {
@@ -212,7 +212,7 @@ BOOL daShip_c::createHeap() {
         JUT_ASSERT_fail("d_a_ship.cpp", 0x21BC, "modelData != (0)");
     }
     daShip_replaceSeaETextures(modelData);
-    m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
+    mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
     anm = (J3DAnmTransform*)ship_getResIdx("Ship", dRes_INDEX_SHIP_BCK_FN_LOOK_L_e);
     mpHeadAnm = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, 0, 0.0f, 0, -1, 0,
                                        nullptr, 0x80000, 0x11000002);
@@ -316,11 +316,11 @@ static void daShip_construct(daShip_c* p) {
     reinterpret_cast<ShipCreateTrack*>(p->mTrack)->__vtbl = ShipCreateTU::trackVtable;
     ShipCreate_constructArray(reinterpret_cast<ShipCreateTrack*>(p->mTrack)->mPosition, 3, 0xC,
                               ShipCreateTU::positionConstructor);
-    ShipCreate_rippleConstruct(p->mRipple);
-    ShipCreate_followConstruct(&p->m1984, 0, 0);
-    ShipCreate_followConstruct(&p->m1998, 0, 0);
-    ShipCreate_followConstruct(&p->m19AC, 0, 0);
-    ShipCreate_rippleConstruct(p->m19C0);
+    ShipCreate_rippleConstruct(&p->mRipple);
+    ShipCreate_followConstruct(&p->mWarpSplash, 0, 0);
+    ShipCreate_followConstruct(&p->mWarpSplashBack, 0, 0);
+    ShipCreate_followConstruct(&p->mRopeDrip, 0, 0);
+    ShipCreate_rippleConstruct(&p->mRopeRipple);
 }
 
 /* a model's joint callback (joint i: i < count ? &joints[i] : joints) */
@@ -345,9 +345,9 @@ cPhs_State daShip_c::create() {
     cPhs_State phase = dComIfG_resLoad(&mPhs, "Ship");
     if (((mParameters >> 8) & 0xFF) == 1) {
         onStateFlg(daSFLG_SAIL_ON_e);
-        m03E8 = 1.0f;
+        mSailScale = 1.0f;
     } else {
-        m03E8 = 0.001f;
+        mSailScale = 0.001f;
         offStateFlg(daSFLG_SAIL_ON_e);
     }
     if (phase != cPhs_COMPLEATE_e) {
@@ -397,12 +397,12 @@ cPhs_State daShip_c::create() {
             if (m != 0) {
                 ShipCreateTexGenBlock* texGen = gabi::at<ShipCreateMaterial>(m)->mTexGenBlock;
                 u32 r = texGen->getTexMtx(1);
-                m02A0 = r;
-                m02A4 = r;
+                mpEffectTexMtx.v = r;
+                mpScrollTexMtx.v = r;
             }
         }
     }
-    ShipCreate_ortho(&m02A8, 50.0f, -50.0f, -50.0f, 50.0f, 0.1f, 100000.0f);
+    ShipCreate_ortho(&mOrthoMtx, 50.0f, -50.0f, -50.0f, 50.0f, 0.1f, 100000.0f);
 
     pModel = gabi::at<J3DModel>(gabi::ea(mpHeadAnm->getModel()));
     pModelData = gabi::at<J3DModelData>(gabi::ea(pModel->getModelData()));
@@ -426,7 +426,7 @@ cPhs_State daShip_c::create() {
     mTornadoID = fpcM_ERROR_PROCESS_ID_e;
     mTornadoActor = nullptr;
     mWhirlID = fpcM_ERROR_PROCESS_ID_e;
-    m034B = (u8)mParameters;
+    mPathId = (u8)mParameters;
     mWhirlActor = nullptr;
     mPart = PART_WAIT_e;
     if (mNextMode != MODE_START_MODE_WARP_e) {
@@ -454,8 +454,8 @@ cPhs_State daShip_c::create() {
     } else {
         wide = FALSE;
     }
-    m03CC = wide ? 4 : 3;
-    mAcch.Set(&current.pos, &old.pos, this, m03CC, mAcchCir, &speed, &current.angle, &shape_angle);
+    mAcchCirNum = wide ? 4 : 3;
+    mAcch.Set(&current.pos, &old.pos, this, mAcchCirNum, mAcchCir, &speed, &current.angle, &shape_angle);
     mAcchCir[0].SetWall(0.0f, 250.0f);
     mAcchCir[1].SetWall(75.0f, 250.0f);
     mAcchCir[2].SetWall(150.0f, 250.0f);
@@ -474,7 +474,7 @@ cPhs_State daShip_c::create() {
         return cPhs_ERROR_e;
     }
     mTactWarpPosNum = -1;
-    m03E0 = 10000.0f;
+    mTargetSpeed = 10000.0f;
     mStts.Init(0xF0, 0, this);
     for (int i = 0; i < 3; i++) {
         mCyl[i].Set(&cyl_src);
@@ -489,13 +489,13 @@ cPhs_State daShip_c::create() {
     offStateFlg(daSFLG_UNK2_e);
     mAcch.CrrPos(dComIfG_Bgsp());
     setRoomInfo();
-    m03F4 = getWaterY();
+    mWaterY = getWaterY();
     f32 y;
     if (mCurMode == MODE_START_MODE_WARP_e) {
-        y = m03F4 + 5000.0f;
+        y = mWaterY + 5000.0f;
         current.pos.y = y;
     } else if (mCurMode == MODE_START_MODE_THROW_e) {
-        y = m03F4 + 2500.0f;
+        y = mWaterY + 2500.0f;
         current.pos.y = y;
     } else {
         y = current.pos.y;
@@ -514,7 +514,7 @@ cPhs_State daShip_c::create() {
     gabi::at<ShipCreatePlay>(dComIfGp_ea())->mShipActor = this;
     reinterpret_cast<ShipCreateTrack*>(mTrack)->mLimitSpeed = 3.0f;
     reinterpret_cast<ShipCreateWave*>(mWaveL)->mMaxSpeed = 40.0f; /* mWaveL max speed */
-    reinterpret_cast<ShipCreateFollow*>(m19C0)->mRate = 0.0f;
+    mRopeRipple.mRate = 0.0f;
     reinterpret_cast<ShipCreateWave*>(mWaveR)->mMaxSpeed = 40.0f; /* mWaveR max speed */
     if (ship_getStageType() == ShipCreateStageSea) {
         ShipCreate_createChild(ShipCreateProcess::fpcNm_Coming2_e, mBsPcId, 0, &current.pos, -1, 0,

@@ -57,17 +57,24 @@ struct Act_c : stone2::MoveBgView {
     /* 0x5B0 */ dBgS_AcchCir mAcchCir;
     /* 0x5F0 */ dCcD_Stts mStts;
     /* 0x62C */ dCcD_Cyl mCyl;
-    /* 0x75C */ be<s32> m644, m648, m64C;
-    /* 0x768 */ be<s16> m650;
+    /* 0x75C */ be<s32> mType;  /* was m644: Create 0249E8BC: prm type (tww Create: m644 = prm_get_type()); the original assertion at d_a_stone2.cpp line 0x247 reads "M_type >= 0 && M_type < Type_Max" (CreateHeap 0249E5B8, Create 0249E8BC); attr() indexes M_attr by it */
+    /* 0x760 */ be<s32> mMode;  /* was m648: mode_wait_init 0249E6A0 / mode_carry_init 0249F9B0 / mode_drop_init 0249FD5C / mode_fine_init 0249F19C store Mode_*; mode_proc_call 0249F3D0 calls mode_proc[it] */
+    /* 0x764 */ be<s32> mDemo;  /* was m64C: demo_non_init 0249E6D0 / demo_req_init 0249F238 / demo_run_init 024A0054 store Demo_*; demo_proc_call 0249F2A4 calls demo_proc[it] */
+    /* 0x768 */ be<s16> mEventIdx;  /* was m650: Create 0249E8BC: dComIfGp_evmng_getEventIdx(prmZ_get_evId()); demo_req_init 0249F238 / demo_req 024A0060 order it (fopAcM_orderOtherEventId), demo_run 024A0128 */
     /* 0x76A */ be<u16> mPrmZ;
-    /* 0x76C */ be<s16> m654;
-    /* 0x76E */ be<u8> m656, m657, m658, m659, m65A;
-    u8 pad773;
-    /* 0x774 */ dPa_smokeEcallBack m65C;
-    /* 0x794 */ cXyz m67C;
-    /* 0x7A0 */ dPa_smokeEcallBack m688;
-    /* 0x7C0 */ be<u8> m6A8, m6A9;
-    u8 pad7C2[2];
+    /* 0x76C */ be<s16> mFineTimer;  /* was m654: mode_fine_init 0249F19C sets 1; mode_fine 0249FFE0 counts it down and at 0 (type 3, no event) starts the demo */
+    /* 0x76E */ be<u8> mPrmZInit;  /* was m656: prmZ_init 0249E2D0: once-guard, set after mPrmZ is taken from home.angle.z (after TWW daObjSwpush::Act_c::mPrmZInit) */
+    /* 0x76F */ be<u8> mForceExecute;  /* was m657: Create 0249E8BC and cull_set_move 0249EC74 (no cull sphere) set 1; Execute 0249F6CC runs the move step when it is set or the mode is not Mode_Wait, then clears it */
+    /* 0x770 */ be<u8> mGrabbedUp;  /* was m658: Create 0249E8BC 0; mode_carry 0249FF48 sets 1 on daPy getGrabUpStart(); tww draw_shadow then uses the ground shadow */
+    /* 0x771 */ be<u8> mAppear;  /* was m659: Mthd_Create 0249E3A0: chk_appear(); Mthd_Delete 0249E528 tests it */
+    /* 0x772 */ be<u8> mBgLockTimer;  /* was m65A: Create 0249E8BC 2; mode_wait 0249FA28 counts it down and at 0 calls mpBgW->SetLock() (tww mode_wait) */
+    /* 0x773 */ u8 pad773;
+    /* 0x774 */ dPa_smokeEcallBack mBreakSmokeCb;  /* was m65C: eff_m_break 024A018C: smoke callback of the break particle 0x2027 (ID_AK_JT_ELEMENTSMOKE01); Delete 0249F968 remove(); mode_proc_call 0249F3D0 waits for its end */
+    /* 0x794 */ cXyz mBreakSmokePos;  /* was m67C: eff_m_break 024A018C: mDoMtx_stack_c::multVec(offset) into it, the position of the break particle 0x2027 */
+    /* 0x7A0 */ dPa_smokeEcallBack mLiftSmokeCb;  /* was m688: eff_lift_smoke_start 0249FA68: smoke callback of particle 0x23F2 (ID_AK_JT_LIFTROCKSMOKE00); eff_lift_smoke_end 0249F17C end(); eff_lift_smoke_remove 0249F958 remove() */
+    /* 0x7C0 */ be<u8> mLiftSmokeUsed;  /* was m6A8: Create 0249E8BC 0; eff_lift_smoke_start 0249FA68 1, never cleared; mode_proc_call 0249F3D0 waits for mLiftSmokeCb's end only when set */
+    /* 0x7C1 */ be<u8> mLiftSmokeActive;  /* was m6A9: eff_lift_smoke_start 0249FA68 starts only when 0 and sets 1; eff_lift_smoke_end 0249F17C clears it and ends mLiftSmokeCb */
+    /* 0x7C2 */ u8 pad7C2[2];
     void prmZ_init();
     BOOL is_switch();
     u8 chk_appear();
@@ -116,9 +123,9 @@ struct Act_c : stone2::MoveBgView {
     void demo_non();
 };
 WWHD_OFFSET(Act_c, mpModel, 0x3E8);
-WWHD_OFFSET(Act_c, m644, 0x75C);
-WWHD_OFFSET(Act_c, m65C, 0x774);
-WWHD_OFFSET(Act_c, m6A9, 0x7C1);
+WWHD_OFFSET(Act_c, mType, 0x75C);
+WWHD_OFFSET(Act_c, mBreakSmokeCb, 0x774);
+WWHD_OFFSET(Act_c, mLiftSmokeActive, 0x7C1);
 WWHD_SIZE(Act_c, 0x7C4);
 } // namespace daStone2
 template <class T> struct ProtectedLocal {

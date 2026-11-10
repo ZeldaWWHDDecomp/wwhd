@@ -6,7 +6,7 @@ using namespace jst_timeline;
 
 /* 02839D38 */
 void jst_timeline::TVariableValue::update(f64 seconds, TAdaptor* adaptor) {
-    u32 updateFunction = field_0x8.get();
+    u32 updateFunction = mUpdate.get();
     if (updateFunction) {
         invoke<void>(updateFunction, this, seconds);
         u32 output = gabi::ea(pOutput_.get());
@@ -19,23 +19,23 @@ void jst_timeline::TVariableValue::update(f64 seconds, TAdaptor* adaptor) {
 /* 02839DA0 */
 void TVariableValue_update_immediate_(TVariableValue* self, f64 seconds) {
     // HD: immediate assignment copies the word, preserving signalling NaN bits.
-    u32 value = u32(self->field_0xc.bits);
-    self->field_0x8.v = 0;
+    u32 value = u32(self->mParam.bits);
+    self->mUpdate.v = 0;
     self->mValueBits = value;
 }
 
 /* 02839DB4 */
 void TVariableValue_update_time_(TVariableValue* self, f64 seconds) {
     // HD: retain double multiplication and its operand order until the final store.
-    f64 time = static_cast<f64>(u32(self->field_0x4)) * seconds;
-    f64 value = time * static_cast<f64>(f32(self->field_0xc.val));
+    f64 time = static_cast<f64>(u32(self->mAge)) * seconds;
+    f64 value = time * static_cast<f64>(f32(self->mParam.val));
     self->mValue = static_cast<f32>(value);
 }
 
 /* 02839DF4 */
 void TVariableValue_update_functionValue_(TVariableValue* self, f64 seconds) {
-    u32 age = u32(self->field_0x4);
-    u32 fv = u32(self->field_0xc.bits);
+    u32 age = u32(self->mAge);
+    u32 fv = u32(self->mParam.bits);
     u32 fn = at<TFunctionValue>(fv)->__vtbl.get()->getValue.get();
     f64 value = invoke<f64>(fn, fv, static_cast<f64>(age) * seconds);
     self->mValue = static_cast<f32>(value);
@@ -51,9 +51,9 @@ void jst_timeline::TAdaptor::adaptor_updateVariableValue(TObject* object, u32 fr
     f64 seconds = f64(at<TControl>(control)->mSecondPerFrame);
     while (value != end) {
         u32 current = value;
-        u32 age = u32(at<TVariableValue>(current)->field_0x4);
+        u32 age = u32(at<TVariableValue>(current)->mAge);
         value += sizeof(TVariableValue);
-        at<TVariableValue>(current)->field_0x4 = ~age <= frames ? 0xFFFFFFFFu : age + frames;
+        at<TVariableValue>(current)->mAge = ~age <= frames ? 0xFFFFFFFFu : age + frames;
         at<TVariableValue>(current)->update(seconds, this);
     }
 }

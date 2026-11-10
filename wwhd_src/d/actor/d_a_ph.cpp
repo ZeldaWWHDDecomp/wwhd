@@ -90,16 +90,16 @@ static inline u32 ftou(f32 f) {
 }
 
 static inline void ph_crr_pos(ph_class *i_this) {
-    PSVECAdd(&i_this->current.pos, &i_this->m02E4, &i_this->current.pos);
-    PSVECAdd(&i_this->old.pos, &i_this->m02E4, &i_this->old.pos);
-    f32 o = i_this->m0380;
+    PSVECAdd(&i_this->current.pos, &i_this->mFloatOffset, &i_this->current.pos);
+    PSVECAdd(&i_this->old.pos, &i_this->mFloatOffset, &i_this->old.pos);
+    f32 o = i_this->mBgCheckOffsetY;
     i_this->current.pos.y = i_this->current.pos.y - o;
     i_this->old.pos.y = i_this->old.pos.y - o;
     i_this->mAcch.CrrPos(dComIfG_Bgsp());
-    i_this->current.pos.y = i_this->current.pos.y + i_this->m0380;
-    i_this->old.pos.y = i_this->old.pos.y + i_this->m0380;
-    phNative_PSVECSubtract(&i_this->current.pos, &i_this->m02E4, &i_this->current.pos);
-    phNative_PSVECSubtract(&i_this->old.pos, &i_this->m02E4, &i_this->old.pos);
+    i_this->current.pos.y = i_this->current.pos.y + i_this->mBgCheckOffsetY;
+    i_this->old.pos.y = i_this->old.pos.y + i_this->mBgCheckOffsetY;
+    phNative_PSVECSubtract(&i_this->current.pos, &i_this->mFloatOffset, &i_this->current.pos);
+    phNative_PSVECSubtract(&i_this->old.pos, &i_this->mFloatOffset, &i_this->old.pos);
 }
 
 // HD: the sound helper retains the native null checks.
@@ -113,12 +113,12 @@ static inline bool ph_seStart(ph_class *i_this, u32 id, u32 param) {
 /* bounce off the player after a hit */
 static inline BOOL ph_hajiki_set(ph_class *i_this, fopAc_ac_c *player) {
     i_this->current.angle.y =
-        cM_atan2s(i_this->current.pos.x + i_this->m02E4.x - player->current.pos.x,
-                  i_this->current.pos.z + i_this->m02E4.z - player->current.pos.z);
-    i_this->m033F = PH_ACTION_BOUNCE;
+        cM_atan2s(i_this->current.pos.x + i_this->mFloatOffset.x - player->current.pos.x,
+                  i_this->current.pos.z + i_this->mFloatOffset.z - player->current.pos.z);
+    i_this->mAction = PH_ACTION_BOUNCE;
     i_this->mAtCyl.OffAtSPrmBit(1);
     i_this->speedF = i_this->mType != PH_TYPE_PEAHAT ? 48.0f : 28.0f;
-    i_this->m0346 = 10;
+    i_this->mMode = 10;
     return TRUE;
 }
 
@@ -127,10 +127,10 @@ static inline void ph_ripple_end(ph_class *i_this) {
 }
 
 static inline int ph_leave_water(ph_class *i_this) {
-    if (i_this->m0341 != 0) {
+    if (i_this->mInWater != 0) {
         ph_ripple_end(i_this);
-        i_this->m0398 = 0.0f;
-        i_this->m0341 = 0;
+        i_this->mWaterFollowSpeed = 0.0f;
+        i_this->mInWater = 0;
     }
     return 0;
 }
@@ -213,8 +213,8 @@ static inline void ph_water_start(ph_class *i_this) {
 }
 
 static inline void ph_water_anm(ph_class *i_this) {
-    f32 r = i_this->m02FC.x == 0.0f ? 200.0f : 100.0f;
-    i_this->m0366 = (s16)gabi::ftoi(cM_rndF(r) + r);
+    f32 r = i_this->mPropellerScale.x == 0.0f ? 200.0f : 100.0f;
+    i_this->mWaitTimer = (s16)gabi::ftoi(cM_rndF(r) + r);
     anm_init(i_this, 0x1F, 1.0f, 0, 1.0f, -1, 0);
     anm_init(i_this, 0x1A, 1.0f, 0, 1.0f, -1, 1);
 }
@@ -248,45 +248,45 @@ static inline void ph_at_on(ph_class *i_this) {
 
 /* ph_fujyou_move growth step: returns true when the body animation has ended */
 static inline bool ph_fujyou_grow(ph_class *i_this) {
-    cLib_addCalc2(&i_this->m02FC.x, i_this->m03A0 + 1.0f, 1.0f, i_this->m03A0 + 0.6f);
-    f32 lim = i_this->m03A0 + 0.8f;
-    f32 s = i_this->m02FC.x;
+    cLib_addCalc2(&i_this->mPropellerScale.x, i_this->mPropellerExtraScale + 1.0f, 1.0f, i_this->mPropellerExtraScale + 0.6f);
+    f32 lim = i_this->mPropellerExtraScale + 0.8f;
+    f32 s = i_this->mPropellerScale.x;
     mDoExt_McaMorf *morf = i_this->mpBodyMorf;
-    i_this->m02FC.z = s;
-    i_this->m02FC.y = s;
+    i_this->mPropellerScale.z = s;
+    i_this->mPropellerScale.y = s;
     if (s > lim) {
-        f32 t = i_this->m03A0 + 1.0f;
-        i_this->m02FC.x = t;
-        i_this->m02FC.y = t;
-        i_this->m02FC.z = t;
+        f32 t = i_this->mPropellerExtraScale + 1.0f;
+        i_this->mPropellerScale.x = t;
+        i_this->mPropellerScale.y = t;
+        i_this->mPropellerScale.z = t;
     }
     if (!morf->isStop())
         return false;
-    i_this->m0384 = 0.0f;
-    i_this->m034A = 0x1000;
-    i_this->m034C = 0;
+    i_this->mRiseSpeed = 0.0f;
+    i_this->mPropellerTargetSpeed = 0x1000;
+    i_this->mPropellerAccel = 0;
     ph_zero_wobble(i_this);
-    i_this->m0346++;
+    i_this->mMode++;
     i_this->gravity = -3.0f;
     return true;
 }
 
 /* ph_fujyou_move rising step (propeller turning) */
 static inline void ph_fujyou_rise(ph_class *i_this, f32 target, f32 scale, f32 step) {
-    i_this->m033A += (s16)gabi::ftoi(i_this->m0384 * 1000.0f);
+    i_this->mPropellerAngle += (s16)gabi::ftoi(i_this->mRiseSpeed * 1000.0f);
     puropera_sound(i_this);
-    cLib_addCalc2(&i_this->m0384, target, scale, step);
-    i_this->m035E += (s16)gabi::ftoi(i_this->m0384 * 200.0f);
-    cLib_addCalcAngleS2(&i_this->current.angle.z, (s16)gabi::ftoi(cM_ssin(i_this->m035E) * 4000.0f),
+    cLib_addCalc2(&i_this->mRiseSpeed, target, scale, step);
+    i_this->mRollWobblePhase += (s16)gabi::ftoi(i_this->mRiseSpeed * 200.0f);
+    cLib_addCalcAngleS2(&i_this->current.angle.z, (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 4000.0f),
                         1, 0x1000);
-    i_this->m0356 += 2000;
-    i_this->m0358 += 0x4B0;
-    i_this->speed.y = i_this->m0384;
-    i_this->m035A += 0x4B0;
+    i_this->mFloatPhaseY += 2000;
+    i_this->mFloatPhaseX += 0x4B0;
+    i_this->speed.y = i_this->mRiseSpeed;
+    i_this->mFloatPhaseZ += 0x4B0;
     i_this->shape_angle.z = i_this->current.angle.z;
-    i_this->m02F0.y = cM_ssin(i_this->m0356) * 10.0f;
-    i_this->m02F0.x = cM_scos(i_this->m0358) * 20.0f;
-    i_this->m02F0.z = cM_scos(i_this->m035A) * 20.0f;
+    i_this->mFloatTarget.y = cM_ssin(i_this->mFloatPhaseY) * 10.0f;
+    i_this->mFloatTarget.x = cM_scos(i_this->mFloatPhaseX) * 20.0f;
+    i_this->mFloatTarget.z = cM_scos(i_this->mFloatPhaseZ) * 20.0f;
 }
 
 static inline void ph_dead_se(ph_class *i_this) {
@@ -294,8 +294,8 @@ static inline void ph_dead_se(ph_class *i_this) {
 }
 
 static inline void ph_to_water(ph_class *i_this, int water) {
-    i_this->m033F = PH_ACTION_WATER;
-    i_this->m0346 = water == 2 ? 0x3C : 0x46;
+    i_this->mAction = PH_ACTION_WATER;
+    i_this->mMode = water == 2 ? 0x3C : 0x46;
 }
 
 /* 023C9678 */
@@ -313,7 +313,7 @@ static BOOL nodeCallBack_UP(J3DNode *node, int calcTiming) {
                 offset.x = 0.0f;
                 offset.y = -80.0f;
                 offset.z = 0.0f;
-                MtxPosition(&offset, &i_this->m02D8);
+                MtxPosition(&offset, &i_this->mPropellerCylPos);
                 mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
             }
@@ -337,14 +337,14 @@ static BOOL nodeCallBack_DW(J3DNode *node, int calcTiming) {
                 offset.z = 0.0f;
                 offset.x = 0.0f;
                 offset.y = 0.0f;
-                MtxPosition(&offset, &i_this->m02C0);
+                MtxPosition(&offset, &i_this->mBodyTopPos);
                 mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
             } else if (jntNo == 0) {
                 offset.z = 0.0f;
                 offset.x = 0.0f;
                 offset.y = 0.0f;
-                MtxPosition(&offset, &i_this->m02CC);
+                MtxPosition(&offset, &i_this->mBodyCenterPos);
                 mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
                 PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
             }
@@ -370,7 +370,7 @@ static BOOL daPH_Draw(ph_class *i_this) {
         /* frozen: draw the ice */
         phNative_mDoExt_invisibleModel_entryDL(i_this->mpBodyMorf, -1,
                                                &i_this->mBodyInvisibleModel);
-        if (i_this->m02FC.x != 0.0f && i_this->m037C == 0.0f) {
+        if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
             phNative_mDoExt_invisibleModel_entryDL(i_this->mpPropellerMorf, -1,
                                                    &i_this->mPropellerInvisibleModel);
         }
@@ -384,7 +384,7 @@ static BOOL daPH_Draw(ph_class *i_this) {
     shadowPos.x = i_this->current.pos.x;
     shadowPos.y = i_this->current.pos.y;
     shadowPos.z = i_this->current.pos.z;
-    PSVECAdd(&shadowPos, &i_this->m02E4, &shadowPos);
+    PSVECAdd(&shadowPos, &i_this->mFloatOffset, &shadowPos);
     return TRUE;
 }
 
@@ -397,7 +397,7 @@ void anm_init(ph_class *i_this, int bckFileIdx, float morf, unsigned char loopMo
     if (i_this->mType == PH_TYPE_PEAHAT) {
         arc = "Ph"; /* "Ph" */
         if (part == 0) {
-            i_this->m0374 = bckFileIdx;
+            i_this->mPropellerAnmIdx = bckFileIdx;
         }
     } else {
         arc = "Sh"; /* "Sh" */
@@ -422,29 +422,29 @@ void puropera_sound(ph_class *i_this) {
     if (i_this->mType == PH_TYPE_PEAHAT) {
         /* one sound per blade passing three angles */
         bool play = false;
-        s16 flags = i_this->m0354;
+        s16 flags = i_this->mPropellerSeFlags;
         if (!(flags & 1)) {
-            s16 a = i_this->m033A;
+            s16 a = i_this->mPropellerAngle;
             if ((a < 0 ? -a : a) < 0x1000) {
                 flags |= 1;
                 play = true;
-                i_this->m0354 = flags;
+                i_this->mPropellerSeFlags = flags;
             }
         }
         if (!(flags & 2)) {
-            s16 d = (s16)cLib_distanceAngleS(i_this->m033A, 0x6000);
-            flags = i_this->m0354;
+            s16 d = (s16)cLib_distanceAngleS(i_this->mPropellerAngle, 0x6000);
+            flags = i_this->mPropellerSeFlags;
             if (d < 0x1000) {
                 flags |= 2;
                 play = true;
-                i_this->m0354 = flags;
+                i_this->mPropellerSeFlags = flags;
             }
         }
         bool sound = play;
         if (!(flags & 4)) {
-            s16 d = (s16)cLib_distanceAngleS(i_this->m033A, -0x4000);
+            s16 d = (s16)cLib_distanceAngleS(i_this->mPropellerAngle, -0x4000);
             if (d < 0x1000) {
-                i_this->m0354 = i_this->m0354 | 4;
+                i_this->mPropellerSeFlags = i_this->mPropellerSeFlags | 4;
                 sound = true;
             }
         }
@@ -452,11 +452,11 @@ void puropera_sound(ph_class *i_this) {
             return;
         }
         fopAcM_seStart(i_this, JA_SE_CM_PH_PROPELLER, 0);
-        if ((i_this->m0354 & 7) == 7) {
-            i_this->m0354 = 0;
+        if ((i_this->mPropellerSeFlags & 7) == 7) {
+            i_this->mPropellerSeFlags = 0;
         }
     } else {
-        u32 vol = ftou((f32)i_this->m0348 / 81.0f);
+        u32 vol = ftou((f32)i_this->mPropellerSpeed / 81.0f);
         if (vol > 100)
             vol = 100;
         fopAcM_seStart(i_this, JA_SE_CM_SH_PROPELLER, vol);
@@ -466,9 +466,9 @@ void puropera_sound(ph_class *i_this) {
 /* 023CA054 */
 void puropera_kaiten(ph_class *i_this) {
 
-    i_this->m033A = i_this->m033A + i_this->m0348;
-    cLib_addCalcAngleS2(&i_this->m0348, i_this->m034A, 1, i_this->m034C);
-    cLib_addCalcAngleS2(&i_this->m034C, 0x100, 1, 0x10);
+    i_this->mPropellerAngle = i_this->mPropellerAngle + i_this->mPropellerSpeed;
+    cLib_addCalcAngleS2(&i_this->mPropellerSpeed, i_this->mPropellerTargetSpeed, 1, i_this->mPropellerAccel);
+    cLib_addCalcAngleS2(&i_this->mPropellerAccel, 0x100, 1, 0x10);
     puropera_sound(i_this);
 }
 
@@ -476,19 +476,19 @@ void puropera_kaiten(ph_class *i_this) {
 void fuwafuwa_set(ph_class *i_this) {
 
     if (i_this->mType == PH_TYPE_PEAHAT) {
-        i_this->m0356 += 700;
-        i_this->m0358 += 200;
-        i_this->m035A += 200;
-        i_this->m02F0.y = cM_ssin(i_this->m0356) * 30.0f;
-        i_this->m02F0.x = cM_scos(i_this->m0358) * 200.0f;
-        i_this->m02F0.z = cM_scos(i_this->m035A) * 200.0f;
+        i_this->mFloatPhaseY += 700;
+        i_this->mFloatPhaseX += 200;
+        i_this->mFloatPhaseZ += 200;
+        i_this->mFloatTarget.y = cM_ssin(i_this->mFloatPhaseY) * 30.0f;
+        i_this->mFloatTarget.x = cM_scos(i_this->mFloatPhaseX) * 200.0f;
+        i_this->mFloatTarget.z = cM_scos(i_this->mFloatPhaseZ) * 200.0f;
     } else {
-        i_this->m0356 += (s16)gabi::ftoi(REG_F(12, 0) + 350.0f);
-        i_this->m0358 += (s16)gabi::ftoi(REG_F(12, 1) + 100.0f);
-        i_this->m035A += (s16)gabi::ftoi(REG_F(12, 1) + 100.0f);
-        i_this->m02F0.y = cM_ssin(i_this->m0356) * (REG_F(12, 2) + 30.0f);
-        i_this->m02F0.x = cM_scos(i_this->m0358) * (REG_F(12, 3) + 1000.0f);
-        i_this->m02F0.z = cM_scos(i_this->m035A) * (REG_F(12, 3) + 1000.0f);
+        i_this->mFloatPhaseY += (s16)gabi::ftoi(REG_F(12, 0) + 350.0f);
+        i_this->mFloatPhaseX += (s16)gabi::ftoi(REG_F(12, 1) + 100.0f);
+        i_this->mFloatPhaseZ += (s16)gabi::ftoi(REG_F(12, 1) + 100.0f);
+        i_this->mFloatTarget.y = cM_ssin(i_this->mFloatPhaseY) * (REG_F(12, 2) + 30.0f);
+        i_this->mFloatTarget.x = cM_scos(i_this->mFloatPhaseX) * (REG_F(12, 3) + 1000.0f);
+        i_this->mFloatTarget.z = cM_scos(i_this->mFloatPhaseZ) * (REG_F(12, 3) + 1000.0f);
     }
 }
 
@@ -509,7 +509,7 @@ void fly_angle_set(ph_class *i_this, unsigned char mode) {
         if (mode == 1) {
             f32 dz = i_this->current.pos.z - player->current.pos.z;
             f32 dx = i_this->current.pos.x - player->current.pos.x;
-            f32 dy = i_this->current.pos.y - (player->current.pos.y + i_this->m0378);
+            f32 dy = i_this->current.pos.y - (player->current.pos.y + i_this->mHeightAbovePlayer);
             cLib_addCalcAngleS2(&i_this->current.angle.x,
                                 cM_atan2s(dy, std_sqrtf(gabi::fmadds(dx, dx, dz * dz))), 1, 0x200);
         }
@@ -521,7 +521,7 @@ void fly_angle_set(ph_class *i_this, unsigned char mode) {
         f32 dz = i_this->current.pos.z - player->current.pos.z;
         f32 dx = i_this->current.pos.x - player->current.pos.x;
         f32 dist2 = gabi::fmadds(dx, dx, dz * dz);
-        f32 dy = i_this->current.pos.y - (player->current.pos.y + i_this->m0378);
+        f32 dy = i_this->current.pos.y - (player->current.pos.y + i_this->mHeightAbovePlayer);
         cLib_addCalcAngleS2(&i_this->current.angle.x, cM_atan2s(dy, std_sqrtf(dist2)), 1, 0x200);
         dy = i_this->current.pos.y - player->current.pos.y;
         cLib_addCalcAngleS2(&i_this->shape_angle.x, cM_atan2s(dy, std_sqrtf(dist2)), 1, 0x200);
@@ -532,12 +532,12 @@ void fly_angle_set(ph_class *i_this, unsigned char mode) {
     case 4: {
         f32 dz = i_this->current.pos.z - player->current.pos.z;
         f32 dx = i_this->current.pos.x - player->current.pos.x;
-        f32 dy = i_this->current.pos.y - (player->current.pos.y + i_this->m0378);
+        f32 dy = i_this->current.pos.y - (player->current.pos.y + i_this->mHeightAbovePlayer);
         cLib_addCalcAngleS2(&i_this->current.angle.x,
                             cM_atan2s(dy, std_sqrtf(gabi::fmadds(dx, dx, dz * dz))), 1, 0x200);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, i_this->current.angle.x, 1, 0x200);
-        i_this->m035E += 3000;
-        targetZ = (s16)gabi::ftoi(cM_ssin(i_this->m035E) * 7000.0f);
+        i_this->mRollWobblePhase += 3000;
+        targetZ = (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 7000.0f);
         wobble = false;
         break;
     }
@@ -547,12 +547,12 @@ void fly_angle_set(ph_class *i_this, unsigned char mode) {
     }
     if (wobble) {
         if (i_this->mType == PH_TYPE_PEAHAT) {
-            i_this->m035C += 800;
+            i_this->mPitchWobblePhase += 800;
         } else {
-            i_this->m035C += 900;
+            i_this->mPitchWobblePhase += 900;
         }
         cLib_addCalcAngleS2(&i_this->shape_angle.x,
-                            (s16)gabi::ftoi(cM_ssin(i_this->m035C) * 4000.0f), 1, 0x200);
+                            (s16)gabi::ftoi(cM_ssin(i_this->mPitchWobblePhase) * 4000.0f), 1, 0x200);
     }
     if (mode != 4) {
         cLib_addCalcAngleS2(&i_this->shape_angle.y, targetY, 1, stepY);
@@ -572,15 +572,15 @@ BOOL body_atari_check(ph_class *i_this) {
     atInfo.pParticlePos = 0;
 
     i_this->mStts.Move();
-    if (i_this->m036C != 0 || !i_this->mBodySph.ChkTgHit()) {
+    if (i_this->mHitCooldown != 0 || !i_this->mBodySph.ChkTgHit()) {
         return FALSE;
     }
-    i_this->m0340 = 0;
+    i_this->mDamageType = 0;
     void *hitObj = i_this->mBodySph.GetTgHitObj();
     if (hitObj == nullptr) {
         return FALSE;
     }
-    i_this->m036C = 8;
+    i_this->mHitCooldown = 8;
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     u32 atType = ((dCcD_GObjInf *)hitObj)->mAtType;
     fopAc_ac_c *pl;
@@ -590,99 +590,99 @@ BOOL body_atari_check(ph_class *i_this) {
         u8 cut = daPy_getCutType(player);
         if ((cut >= 5 && cut <= 10) || cut == 0xC || (cut >= 0xE && cut <= 0x10) || cut == 0x15 ||
             cut == 0x17 || (cut >= 0x19 && cut <= 0x1B) || cut == 0x1E || cut == 0x1F) {
-            i_this->m0340 = 3;
+            i_this->mDamageType = 3;
         }
-        i_this->m033F = PH_ACTION_DAMAGE;
-        i_this->m0346 = 0x28;
+        i_this->mAction = PH_ACTION_DAMAGE;
+        i_this->mMode = 0x28;
         break;
     }
     case 0x20: /* bomb */
-        i_this->m0340 = 8;
-        i_this->m0346 = 0x2B;
-        i_this->m033F = PH_ACTION_DAMAGE;
+        i_this->mDamageType = 8;
+        i_this->mMode = 0x2B;
+        i_this->mAction = PH_ACTION_DAMAGE;
         break;
     case 0x40: /* boomerang */
-        if (i_this->m033F != PH_ACTION_SEPARATED && i_this->m02FC.x != 0.0f &&
-            i_this->m037C == 0.0f) {
-            i_this->m0340 = 4;
+        if (i_this->mAction != PH_ACTION_SEPARATED && i_this->mPropellerScale.x != 0.0f &&
+            i_this->mPropellerFlyDist == 0.0f) {
+            i_this->mDamageType = 4;
             phCancelBoomerangLock();
             l_boomerangReaction = 2;
-            i_this->m0346 = 0x14;
-            i_this->m033F = PH_ACTION_SEPARATED;
+            i_this->mMode = 0x14;
+            i_this->mAction = PH_ACTION_SEPARATED;
             return TRUE;
         }
-        i_this->m0340 = 5;
-        i_this->m033F = PH_ACTION_DAMAGE;
-        i_this->m0346 = 0x28;
+        i_this->mDamageType = 5;
+        i_this->mAction = PH_ACTION_DAMAGE;
+        i_this->mMode = 0x28;
         break;
     case 0x200:
     case 0x40000: /* fire */
         i_this->mBodyEnemyFire.mFireDuration = 100;
-        if (i_this->m02FC.x != 0.0f) {
+        if (i_this->mPropellerScale.x != 0.0f) {
             i_this->mPropellerEnemyFire.mFireDuration = 100;
         }
-        i_this->m033F = PH_ACTION_DAMAGE;
-        i_this->m0340 = 1;
-        i_this->m0346 = 0x2B;
+        i_this->mAction = PH_ACTION_DAMAGE;
+        i_this->mDamageType = 1;
+        i_this->mMode = 0x2B;
         break;
     case 0x4000:
-        i_this->m0340 = 1;
-        i_this->m0346 = 0x2B;
-        i_this->m033F = PH_ACTION_DAMAGE;
+        i_this->mDamageType = 1;
+        i_this->mMode = 0x2B;
+        i_this->mAction = PH_ACTION_DAMAGE;
         break;
-    case 0x8000: /* grappling hook */
+    case 0x8000: /* AT_TYPE_HOOKSHOT */
         if (i_this->mType != PH_TYPE_PEAHAT) {
-            i_this->m0340 = 1;
-            i_this->m0346 = 0x2B;
-            i_this->m033F = PH_ACTION_DAMAGE;
+            i_this->mDamageType = 1;
+            i_this->mMode = 0x2B;
+            i_this->mAction = PH_ACTION_DAMAGE;
             break;
         }
-        i_this->m0340 = 9;
-        if (i_this->m02FC.x != 0.0f && i_this->m037C == 0.0f) {
+        i_this->mDamageType = 9;
+        if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
             l_boomerangReaction = 2;
-            i_this->m033F = PH_ACTION_SEPARATED;
-            i_this->m0346 = 0x14;
+            i_this->mAction = PH_ACTION_SEPARATED;
+            i_this->mMode = 0x14;
         }
         return FALSE;
-    case 0x10000: /* skull hammer? */
-        i_this->m033F = PH_ACTION_DAMAGE;
-        i_this->m0346 = 0x2F;
-        i_this->m0340 = 6;
+    case 0x10000: /* AT_TYPE_SKULL_HAMMER */
+        i_this->mAction = PH_ACTION_DAMAGE;
+        i_this->mMode = 0x2F;
+        i_this->mDamageType = 6;
         if (daPy_getCutType(player) == 0x11) {
-            i_this->m0340 = 7;
-            i_this->m0346 = 0x2B;
+            i_this->mDamageType = 7;
+            i_this->mMode = 0x2B;
         }
         break;
-    case 0x80000: { /* light arrow */
-        PSVECAdd(&i_this->current.pos, &i_this->m02E4, &i_this->current.pos);
-        i_this->m02E4.y = 0.0f;
-        i_this->m02E4.x = 0.0f;
-        i_this->m02F0.x = 0.0f;
-        i_this->m02F0.z = 0.0f;
-        i_this->m02E4.z = 0.0f;
-        i_this->m02F0.y = 0.0f;
+    case 0x80000: { /* AT_TYPE_ICE_ARROW */
+        PSVECAdd(&i_this->current.pos, &i_this->mFloatOffset, &i_this->current.pos);
+        i_this->mFloatOffset.y = 0.0f;
+        i_this->mFloatOffset.x = 0.0f;
+        i_this->mFloatTarget.x = 0.0f;
+        i_this->mFloatTarget.z = 0.0f;
+        i_this->mFloatOffset.z = 0.0f;
+        i_this->mFloatTarget.y = 0.0f;
         phNative_enemy_fire_remove(&i_this->mBodyEnemyFire);
         phNative_enemy_fire_remove(&i_this->mPropellerEnemyFire);
-        f32 s = i_this->m039C + 1.0f;
-        i_this->m0340 = 1;
+        f32 s = i_this->mExtraScale + 1.0f;
+        i_this->mDamageType = 1;
         i_this->mEnemyIce.mFreezeDuration = 200;
-        i_this->m0346 = 0x2B;
-        i_this->m0342 = 1;
+        i_this->mMode = 0x2B;
+        i_this->mIceHit = 1;
         i_this->mEnemyIce.mParticleScale = s;
-        i_this->m033F = PH_ACTION_DAMAGE;
+        i_this->mAction = PH_ACTION_DAMAGE;
         return FALSE;
     }
-    case 0x100000: { /* ice arrow */
-        PSVECAdd(&i_this->current.pos, &i_this->m02E4, &i_this->current.pos);
+    case 0x100000: { /* AT_TYPE_LIGHT_ARROW */
+        PSVECAdd(&i_this->current.pos, &i_this->mFloatOffset, &i_this->current.pos);
         u8 type = i_this->mType;
-        i_this->m02F0.x = 0.0f;
+        i_this->mFloatTarget.x = 0.0f;
         i_this->mEnemyIce.mParticleScale = 1.0f;
         i_this->mEnemyIce.mLightShrinkTimer = 1;
-        i_this->m02F0.y = 0.0f;
-        i_this->m02E4.z = 0.0f;
-        i_this->m02F0.z = 0.0f;
-        i_this->m02E4.y = 0.0f;
-        i_this->m02E4.x = 0.0f;
+        i_this->mFloatTarget.y = 0.0f;
+        i_this->mFloatOffset.z = 0.0f;
+        i_this->mFloatTarget.z = 0.0f;
+        i_this->mFloatOffset.y = 0.0f;
+        i_this->mFloatOffset.x = 0.0f;
         if (type == 1)
             i_this->mEnemyIce.mParticleScale = 4.0f;
         i_this->mEnemyIce.mYOffset = 0.0f;
@@ -695,51 +695,51 @@ BOOL body_atari_check(ph_class *i_this) {
             u32 pid = fopAcM_GetID(i_this);
             phNative_mDoAud_monsSeStart(se, &i_this->eyePos, pid, 0, dComIfGp_getReverb(roomNo));
         }
-        i_this->m0340 = 1;
-        i_this->m0346 = 0x2B;
-        i_this->m033F = PH_ACTION_DAMAGE;
+        i_this->mDamageType = 1;
+        i_this->mMode = 0x2B;
+        i_this->mAction = PH_ACTION_DAMAGE;
         break;
     }
-    case 0x200000: /* hammer: knocked down */
-        i_this->m0340 = 2;
-        i_this->m033F = PH_ACTION_WIND;
-        i_this->m0346 = 0x32;
+    case 0x200000: /* AT_TYPE_WIND: blown away */
+        i_this->mDamageType = 2;
+        i_this->mAction = PH_ACTION_WIND;
+        i_this->mMode = 0x32;
         i_this->mAtCyl.OffAtSPrmBit(1);
         return FALSE;
-    case 0x8000000: /* hookshot? */
+    case 0x8000000: /* AT_TYPE_GRAPPLING_HOOK */
         if (i_this->mType != PH_TYPE_PEAHAT) {
             return FALSE;
         }
-        if (i_this->m02FC.x != 0.0f && i_this->m037C == 0.0f) {
+        if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
             /* knock off a propeller blade */
-            i_this->stealItemLeft = (s8)i_this->m0344;
-            if (i_this->m0374 != 0x1C) {
+            i_this->stealItemLeft = (s8)i_this->mStealItemsLeft;
+            if (i_this->mPropellerAnmIdx != 0x1C) {
                 anm_init(i_this, 0x1C, 5.0f, 2, 1.0f, -1, 0);
             }
             if (i_this->stealItemLeft > 0) {
                 s8 health = i_this->health;
                 i_this->health = 10;
                 ph_cc_at_check(i_this, &atInfo);
-                i_this->m0343 = i_this->m0343 + 1;
-                s8 n = (s8)i_this->m0344;
+                i_this->mStealHitCount = i_this->mStealHitCount + 1;
+                s8 n = (s8)i_this->mStealItemsLeft;
                 i_this->health = health;
                 if (n > 0)
-                    i_this->m0344 = n - 1;
+                    i_this->mStealItemsLeft = n - 1;
             }
             dPa_control_set(dComIfGp_getParticle(), 0, 0x27B, &i_this->attention_info.position,
                             nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
-            i_this->m033F = PH_ACTION_BOUNCE;
-            i_this->m0346 = 10;
+            i_this->mAction = PH_ACTION_BOUNCE;
+            i_this->mMode = 10;
             i_this->mAtCyl.OffAtSPrmBit(1);
             return FALSE;
         }
         i_this->stealItemLeft = 0;
-        i_this->m033F = PH_ACTION_DAMAGE;
-        i_this->m0346 = 0x28;
+        i_this->mAction = PH_ACTION_DAMAGE;
+        i_this->mMode = 0x28;
         break;
     default:
-        i_this->m033F = PH_ACTION_DAMAGE;
-        i_this->m0346 = 0x28;
+        i_this->mAction = PH_ACTION_DAMAGE;
+        i_this->mMode = 0x28;
         break;
     }
 
@@ -747,7 +747,7 @@ BOOL body_atari_check(ph_class *i_this) {
     ph_set_hitpos(i_this, &hitPos);
     ph_cc_at_check(i_this, &atInfo);
     {
-        u8 r = i_this->m0340;
+        u8 r = i_this->mDamageType;
         if (r != 3 && r != 6 && r != 7 && i_this->health > 0) {
             ph_hit_particle(0xD, &hitPos, pl, nullptr);
             return TRUE;
@@ -791,10 +791,10 @@ BOOL hajiki_check(ph_class *i_this) {
             } else if (!(type & 0x00200000)) {
                 se = 0x2834;
             } else {
-                /* skull hammer: knocked down */
-                i_this->m033F = PH_ACTION_WIND;
+                /* AT_TYPE_WIND: blown away */
+                i_this->mAction = PH_ACTION_WIND;
                 i_this->mAtCyl.OffAtSPrmBit(1);
-                i_this->m0346 = 0x32;
+                i_this->mMode = 0x32;
                 return TRUE;
             }
             if (ph_seStart(i_this, se, 0x42)) {
@@ -829,9 +829,9 @@ BOOL ph_wall_hit_check(ph_class *i_this) {
         return FALSE;
     }
     i_this->current.angle.y += 0x4000;
-    i_this->m033F = PH_ACTION_BOUNCE;
+    i_this->mAction = PH_ACTION_BOUNCE;
     i_this->mAtCyl.OffAtSPrmBit(1);
-    i_this->m0346 = 10;
+    i_this->mMode = 10;
     i_this->speedF = i_this->mType == PH_TYPE_PEAHAT ? 28.0f : 48.0f;
     return TRUE;
 }
@@ -844,18 +844,18 @@ BOOL ph_hani_check(ph_class *i_this, float range, float height, unsigned char us
     f32 px = player->current.pos.x;
     f32 dy;
     if (useHome == 0) {
-        f32 y = i_this->current.pos.y + i_this->m02E4.y;
-        f32 z = i_this->current.pos.z + i_this->m02E4.z;
-        f32 x = i_this->current.pos.x + i_this->m02E4.x;
+        f32 y = i_this->current.pos.y + i_this->mFloatOffset.y;
+        f32 z = i_this->current.pos.z + i_this->mFloatOffset.z;
+        f32 x = i_this->current.pos.x + i_this->mFloatOffset.x;
         f32 dz = z - player->current.pos.z;
         f32 dx = x - px;
         dy = y - py;
         if (!(std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) < range))
             return FALSE;
     } else {
-        f32 dz = i_this->m032C.z - player->current.pos.z;
-        f32 dx = i_this->m032C.x - px;
-        dy = i_this->m032C.y - py;
+        f32 dz = i_this->mHomePos.z - player->current.pos.z;
+        f32 dx = i_this->mHomePos.x - px;
+        dy = i_this->mHomePos.y - py;
         if (!(std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) < range))
             return FALSE;
     }
@@ -868,10 +868,10 @@ BOOL ph_hani_check(ph_class *i_this, float range, float height, unsigned char us
 /* 023CB4C0 */
 int sea_water_check(ph_class *i_this, unsigned char mode) {
 
-    phVectorWords(&i_this->m05BC)->x = (u32)phVectorWords(&i_this->current.pos)->x;
-    i_this->m05BC.y = i_this->m032C.y;
-    phVectorWords(&i_this->m05BC)->z = (u32)phVectorWords(&i_this->current.pos)->z;
-    PSVECAdd(&i_this->m05BC, &i_this->m02E4, &i_this->m05BC);
+    phVectorWords(&i_this->mWaterSurfacePos)->x = (u32)phVectorWords(&i_this->current.pos)->x;
+    i_this->mWaterSurfacePos.y = i_this->mHomePos.y;
+    phVectorWords(&i_this->mWaterSurfacePos)->z = (u32)phVectorWords(&i_this->current.pos)->z;
+    PSVECAdd(&i_this->mWaterSurfacePos, &i_this->mFloatOffset, &i_this->mWaterSurfacePos);
     f32 px = i_this->current.pos.x;
     f32 pz = i_this->current.pos.z;
     if ((mode == 0 || mode == 2) && i_this->gravity == 0.0f) {
@@ -886,24 +886,24 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
         if (fopAcM_searchPlayerDistance(i_this) > 50000.0f) {
             waterY = dComIfGp_getPlayer(0)->current.pos.y + 200.0f;
         }
-        i_this->m05BC.y = waterY;
-        f32 margin = i_this->m0346 == 3 ? 300.0f : 100.0f;
-        if (!(i_this->current.pos.y + i_this->m02E4.y < waterY + margin)) {
+        i_this->mWaterSurfacePos.y = waterY;
+        f32 margin = i_this->mMode == 3 ? 300.0f : 100.0f;
+        if (!(i_this->current.pos.y + i_this->mFloatOffset.y < waterY + margin)) {
             return ph_leave_water(i_this);
         }
         if (mode == 0 || mode == 2) {
-            s16 t = i_this->m0370;
+            s16 t = i_this->mBobPhase;
             i_this->gravity = 0.0f;
-            i_this->m02F0.y = 0.0f;
+            i_this->mFloatTarget.y = 0.0f;
             if (mode == 0) {
                 i_this->speed.y = 0.0f;
                 i_this->speed.x = 0.0f;
                 i_this->speed.z = 0.0f;
             }
-            i_this->m0370 = t + 1000;
-            f32 s = cM_ssin(i_this->m0370);
-            cLib_addCalc2(&i_this->current.pos.y, waterY - (s + s + 2.0f), 1.0f, i_this->m0398);
-            cLib_addCalc2(&i_this->m0398, 100.0f, 1.0f, 30.0f);
+            i_this->mBobPhase = t + 1000;
+            f32 s = cM_ssin(i_this->mBobPhase);
+            cLib_addCalc2(&i_this->current.pos.y, waterY - (s + s + 2.0f), 1.0f, i_this->mWaterFollowSpeed);
+            cLib_addCalc2(&i_this->mWaterFollowSpeed, 100.0f, 1.0f, 30.0f);
         }
         state = 1;
         inSea = true;
@@ -912,12 +912,12 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
             return ph_leave_water(i_this);
         }
         waterY = i_this->mAcch.m_wtr.GetHeight(); /* water height */
-        i_this->m05BC.y = waterY;
-        if (!(i_this->current.pos.y + i_this->m02E4.y < waterY + 100.0f)) {
+        i_this->mWaterSurfacePos.y = waterY;
+        if (!(i_this->current.pos.y + i_this->mFloatOffset.y < waterY + 100.0f)) {
             state = 2;
         } else {
             if (mode == 0 || mode == 2) {
-                s16 t = i_this->m0370;
+                s16 t = i_this->mBobPhase;
                 u8 type = i_this->mType;
                 i_this->gravity = 0.0f;
                 if (mode == 0) {
@@ -925,27 +925,27 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
                     i_this->speed.x = 0.0f;
                     i_this->speed.z = 0.0f;
                 }
-                i_this->m0370 = t + 1000;
-                f32 speed = i_this->m0398;
-                f32 s = cM_ssin(i_this->m0370);
+                i_this->mBobPhase = t + 1000;
+                f32 speed = i_this->mWaterFollowSpeed;
+                f32 s = cM_ssin(i_this->mBobPhase);
                 if (type == 0) {
                     cLib_addCalc2(&i_this->current.pos.y, waterY - (s + s + 2.0f), 1.0f, speed);
                 } else {
                     cLib_addCalc2(&i_this->current.pos.y, waterY - gabi::fmadds(s, 40.0f, 20.0f),
                                   1.0f, speed);
                 }
-                cLib_addCalc2(&i_this->m0398, 30.0f, 1.0f, 3.0f);
+                cLib_addCalc2(&i_this->mWaterFollowSpeed, 30.0f, 1.0f, 3.0f);
             }
             state = 1;
         }
     }
     {
-        s16 m = i_this->m0346;
+        s16 m = i_this->mMode;
         if (m != 3 && m != 0x3D) {
             i_this->speedF = 0.0f;
         }
     }
-    if (state == 1 && i_this->m0341 == 0) {
+    if (state == 1 && i_this->mInWater == 0) {
         /* entering the water: ripples and a splash */
         cXyz scale;
         cXyz splashPos;
@@ -955,7 +955,7 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
             scale.x = 1.0f;
             scale.z = 1.0f;
             ph_ripple_end(i_this);
-            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->m05BC, nullptr, &scale, 0xFF,
+            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->mWaterSurfacePos, nullptr, &scale, 0xFF,
                             (dPa_levelEcallBack *)&i_this->mParticleCallBack, -1, nullptr, nullptr,
                             nullptr);
         } else {
@@ -967,42 +967,42 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
                 PSVECScale(&scale, &scale, phParticleScale(pa)->mSplashScale);
             }
             ph_ripple_end(i_this);
-            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->m05BC, nullptr, &scale, 0xFF,
+            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->mWaterSurfacePos, nullptr, &scale, 0xFF,
                             (dPa_levelEcallBack *)&i_this->mParticleCallBack, -1, nullptr, nullptr,
                             nullptr);
         }
-        splashPos.z = i_this->m05BC.z;
-        splashPos.y = i_this->m05BC.y;
-        splashPos.x = i_this->m05BC.x;
-        splashScale = 0.5f + i_this->m039C;
-        i_this->m0370 = 0;
-        i_this->m0341 = 1;
+        splashPos.z = i_this->mWaterSurfacePos.z;
+        splashPos.y = i_this->mWaterSurfacePos.y;
+        splashPos.x = i_this->mWaterSurfacePos.x;
+        splashScale = 0.5f + i_this->mExtraScale;
+        i_this->mBobPhase = 0;
+        i_this->mInWater = 1;
         i_this->mParticleCallBack.mRate = 0.0f; /* ripple callback rate */
         dPa_control_c *pa = dComIfGp_getParticle();
         if (pa != nullptr) {
             splashScale *= phParticleScale(pa)->mSplashScale;
         }
         fopKyM_createWpillar(&splashPos, splashScale, 0.5f, 0);
-        if (i_this->m033F == PH_ACTION_SEPARATED) {
+        if (i_this->mAction == PH_ACTION_SEPARATED) {
             fopAcM_seStart(i_this, 0x69FB, 0);
-        } else if (i_this->m02FC.x != 0.0f && i_this->m037C == 0.0f) {
+        } else if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
             fopAcM_seStart(i_this, 0x69F9, 0);
         }
     }
     return inSea ? 2 : 1;
 }
 
-/* ph_fly_move (Peahat, m033F == 0) */
+/* ph_fly_move (Peahat, mAction == 0) */
 /* inlined into daPH_Execute */
 static inline int ph_fly_move(ph_class *i_this) {
-    switch (i_this->m0346) {
+    switch (i_this->mMode) {
     case 0:
         anm_init(i_this, 0x1C, 5.0f, 2, 1.0f, -1, 0);
         anm_init(i_this, 0x15, 5.0f, 2, 1.0f, -1, 1);
         i_this->mBodySph.mTgType = 0x081DC060;
-        i_this->m034A = 0x1000;
-        i_this->m034C = 0;
-        i_this->m0346++;
+        i_this->mPropellerTargetSpeed = 0x1000;
+        i_this->mPropellerAccel = 0;
+        i_this->mMode++;
         /* fallthrough */
     case 1:
         cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 1, 0x200);
@@ -1010,9 +1010,9 @@ static inline int ph_fly_move(ph_class *i_this) {
         i_this->speed.y = 0.0f;
         fly_angle_set(i_this, 0);
         fuwafuwa_set(i_this);
-        if (i_this->m0364 == 0 && ph_hani_check(i_this, i_this->m0390, i_this->m0394, 0)) {
-            i_this->m0346++;
-            i_this->m0378 = 150.0f;
+        if (i_this->mActionTimer == 0 && ph_hani_check(i_this, i_this->mNoticeRange, i_this->mNoticeHeight, 0)) {
+            i_this->mMode++;
+            i_this->mHeightAbovePlayer = 150.0f;
         }
         break;
     case 2:
@@ -1020,46 +1020,46 @@ static inline int ph_fly_move(ph_class *i_this) {
         fly_angle_set(i_this, 1);
         fuwafuwa_set(i_this);
         if (ph_hani_check(i_this, 250.0f, 25400.0f, 0)) {
-            i_this->m034A = 0x2000;
-            i_this->m034C = 0;
-            i_this->m0364 = 20;
-            i_this->m0346++;
+            i_this->mPropellerTargetSpeed = 0x2000;
+            i_this->mPropellerAccel = 0;
+            i_this->mActionTimer = 20;
+            i_this->mMode++;
         }
         break;
     case 3:
-        i_this->m0352 = fopAcM_searchPlayerAngleY(i_this);
-        i_this->m02F0.x = 0.0f;
-        i_this->m02F0.y = 0.0f;
-        i_this->m0346++;
-        i_this->m02F0.z = 0.0f;
-        i_this->m0378 = 80.0f;
+        i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
+        i_this->mFloatTarget.x = 0.0f;
+        i_this->mFloatTarget.y = 0.0f;
+        i_this->mMode++;
+        i_this->mFloatTarget.z = 0.0f;
+        i_this->mHeightAbovePlayer = 80.0f;
         /* fallthrough */
     case 4:
         cLib_addCalc2(&i_this->speedF, 16.0f, 1.0f, 2.0f);
         fly_angle_set(i_this, 2);
-        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->m0352, 1, 0x500);
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mTargetAngleY, 1, 0x500);
         cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 1, 0x500);
-        if (i_this->m0364 == 0) {
-            i_this->m034A = 0x1000;
-            i_this->m0378 = 150.0f;
-            i_this->m034C = 0;
-            i_this->m0364 = (s16)gabi::ftoi(60.0f + cM_rndF(60.0f));
+        if (i_this->mActionTimer == 0) {
+            i_this->mPropellerTargetSpeed = 0x1000;
+            i_this->mHeightAbovePlayer = 150.0f;
+            i_this->mPropellerAccel = 0;
+            i_this->mActionTimer = (s16)gabi::ftoi(60.0f + cM_rndF(60.0f));
             ph_at_on(i_this);
             ph_zero_wobble(i_this);
-            i_this->m0346 = 1;
+            i_this->mMode = 1;
         }
         break;
     }
     puropera_kaiten(i_this);
     if (sea_water_check(i_this, 1) == 0)
         return PH_CHK_ALL;
-    if (!(i_this->current.pos.y + i_this->m02E4.y < i_this->m05BC.y + 200.0f))
+    if (!(i_this->current.pos.y + i_this->mFloatOffset.y < i_this->mWaterSurfacePos.y + 200.0f))
         return PH_CHK_ALL;
     i_this->current.angle.x = 0;
     return body_atari_check(i_this) ? PH_CHK_NONE : PH_CHK_WALL;
 }
 
-/* ph_fly_sea_move (Seahat, m033F == 0) */
+/* ph_fly_sea_move (Seahat, mAction == 0) */
 /* inlined into daPH_Execute */
 static inline int ph_fly_sea_move(ph_class *i_this) {
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
@@ -1068,180 +1068,180 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
         return PH_CHK_NONE;
 
     bool attackCheck;
-    switch (i_this->m0346) {
+    switch (i_this->mMode) {
     case 0:
         ph_zero_wobble(i_this);
         i_this->current.angle.z = 0;
-        if (i_this->m0374 != 0x1C) {
+        if (i_this->mPropellerAnmIdx != 0x1C) {
             anm_init(i_this, 0x1C, 5.0f, 2, 1.0f, -1, 0);
             anm_init(i_this, 0x15, 5.0f, 2, 1.0f, -1, 1);
         }
-        i_this->m034A = 0x1000;
-        i_this->m034C = 0;
-        i_this->m0346++;
-        i_this->m0378 = 150.0f;
+        i_this->mPropellerTargetSpeed = 0x1000;
+        i_this->mPropellerAccel = 0;
+        i_this->mMode++;
+        i_this->mHeightAbovePlayer = 150.0f;
         i_this->mBodySph.mTgType = 0x081DC060;
         ph_at_on(i_this);
         /* fallthrough */
     case 1:
         if (dComIfGp_getPlayerStatus0(0) & 0x10000) {
-            s16 t = i_this->m0372;
+            s16 t = i_this->mAttackDelay;
             bool check = false;
             if (t == 0) {
                 check = true;
             } else if (t > 0) {
                 t--;
-                i_this->m0372 = t;
+                i_this->mAttackDelay = t;
                 check = t == 0;
             }
-            if (check && ph_hani_check(i_this, i_this->m0390, i_this->m0394, 1)) {
-                i_this->m034A = 0x2000;
-                i_this->m0378 = 150.0f;
-                i_this->m034C = 0;
-                i_this->m0346++;
+            if (check && ph_hani_check(i_this, i_this->mNoticeRange, i_this->mNoticeHeight, 1)) {
+                i_this->mPropellerTargetSpeed = 0x2000;
+                i_this->mHeightAbovePlayer = 150.0f;
+                i_this->mPropellerAccel = 0;
+                i_this->mMode++;
             }
         }
         cLib_addCalc0(&i_this->speedF, 1.0f, REG_F(12, 6) + 5.0f);
         cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x200);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 1, 0x200);
         fuwafuwa_set(i_this);
-        i_this->m0352 = fopAcM_searchPlayerAngleY(i_this);
-        attackCheck = (u32)(i_this->m0346 - 4) < 3;
+        i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
+        attackCheck = (u32)(i_this->mMode - 4) < 3;
         break;
     case 2:
-        i_this->m0364 = 0x39;
-        i_this->m0352 = fopAcM_searchPlayerAngleY(i_this);
+        i_this->mActionTimer = 0x39;
+        i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
         i_this->shape_angle.z = 0;
-        i_this->m02F0.x = 0.0f;
-        i_this->m0346++;
-        i_this->m0378 = 80.0f;
-        i_this->m02F0.y = 0.0f;
-        i_this->m02F0.z = 0.0f;
+        i_this->mFloatTarget.x = 0.0f;
+        i_this->mMode++;
+        i_this->mHeightAbovePlayer = 80.0f;
+        i_this->mFloatTarget.y = 0.0f;
+        i_this->mFloatTarget.z = 0.0f;
         /* fallthrough */
     case 3:
-        if (!ph_hani_check(i_this, i_this->m038C, 25400.0f, 1)) {
-            i_this->m0346 = 4;
+        if (!ph_hani_check(i_this, i_this->mHomeRange, 25400.0f, 1)) {
+            i_this->mMode = 4;
             attackCheck = true;
             break;
         }
-        if (i_this->m0368 == 0) {
-            f32 dz = i_this->m032C.z - i_this->current.pos.z;
-            f32 dx = i_this->m032C.x - i_this->current.pos.x;
-            if (std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) > i_this->m038C) {
-                i_this->m0368 = 0x1E;
-                i_this->m0346 = 4;
+        if (i_this->mHomeCheckTimer == 0) {
+            f32 dz = i_this->mHomePos.z - i_this->current.pos.z;
+            f32 dx = i_this->mHomePos.x - i_this->current.pos.x;
+            if (std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) > i_this->mHomeRange) {
+                i_this->mHomeCheckTimer = 0x1E;
+                i_this->mMode = 4;
                 attackCheck = true;
                 break;
             }
         }
         if (!(dComIfGp_getPlayerStatus0(0) & 0x10000)) {
-            i_this->m0372 = 0x3C;
-            i_this->m0346 = 0;
+            i_this->mAttackDelay = 0x3C;
+            i_this->mMode = 0;
             if (fopAcM_searchActorDistance(i_this, ship) < REG_F(12, 7) + 200.0f) {
-                i_this->m0346 = 7;
+                i_this->mMode = 7;
                 attackCheck = false;
                 break;
             }
-            attackCheck = (u32)(i_this->m0346 - 4) < 3;
+            attackCheck = (u32)(i_this->mMode - 4) < 3;
             break;
         }
-        if (i_this->m0364 == 0) {
-            i_this->m0372 = 0x3C;
-            i_this->m0346 = 0;
+        if (i_this->mActionTimer == 0) {
+            i_this->mAttackDelay = 0x3C;
+            i_this->mMode = 0;
             attackCheck = false;
             break;
         }
         cLib_addCalc2(&i_this->speedF, 98.0f, 1.0f, 10.0f);
-        if (i_this->m0366 != 0) {
-            attackCheck = (u32)(i_this->m0346 - 4) < 3;
+        if (i_this->mWaitTimer != 0) {
+            attackCheck = (u32)(i_this->mMode - 4) < 3;
             break;
         }
-        i_this->m0366 = 15;
-        i_this->m0341 = 0;
-        attackCheck = (u32)(i_this->m0346 - 4) < 3;
+        i_this->mWaitTimer = 15;
+        i_this->mInWater = 0;
+        attackCheck = (u32)(i_this->mMode - 4) < 3;
         break;
     case 4:
-        i_this->m0364 = 0x1E;
+        i_this->mActionTimer = 0x1E;
         i_this->current.angle.z = 0;
-        i_this->m034A = 0x1000;
-        i_this->m0378 = 150.0f;
-        i_this->m034C = 0;
-        i_this->m0346++;
+        i_this->mPropellerTargetSpeed = 0x1000;
+        i_this->mHeightAbovePlayer = 150.0f;
+        i_this->mPropellerAccel = 0;
+        i_this->mMode++;
         /* fallthrough */
     case 5:
         cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x200);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 1, 0x200);
         cLib_addCalc0(&i_this->speedF, 1.0f, REG_F(12, 6) + 5.0f);
-        i_this->m0352 = fopAcM_searchPlayerAngleY(i_this);
-        if (i_this->m0364 != 0) {
-            attackCheck = (u32)(i_this->m0346 - 4) < 3;
+        i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
+        if (i_this->mActionTimer != 0) {
+            attackCheck = (u32)(i_this->mMode - 4) < 3;
             break;
         }
-        i_this->m0346++;
-        attackCheck = (u32)(i_this->m0346 - 4) < 3;
+        i_this->mMode++;
+        attackCheck = (u32)(i_this->mMode - 4) < 3;
         break;
     case 6: {
         cLib_addCalc2(&i_this->speedF, 150.0f, 0.5f, 1.0f);
-        f32 dx = i_this->m032C.x - i_this->current.pos.x;
-        f32 dz = i_this->m032C.z - i_this->current.pos.z;
-        i_this->m0352 = cM_atan2s(dx, dz);
+        f32 dx = i_this->mHomePos.x - i_this->current.pos.x;
+        f32 dz = i_this->mHomePos.z - i_this->current.pos.z;
+        i_this->mTargetAngleY = cM_atan2s(dx, dz);
         if (!(std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) < 50.0f)) {
-            attackCheck = (u32)(i_this->m0346 - 4) < 3;
+            attackCheck = (u32)(i_this->mMode - 4) < 3;
             break;
         }
-        i_this->m0372 = 0x3C;
-        i_this->m0346 = 0;
+        i_this->mAttackDelay = 0x3C;
+        i_this->mMode = 0;
         attackCheck = false;
         break;
     }
     case 7:
         ph_zero_wobble(i_this);
         i_this->current.angle.z = 0;
-        if (i_this->m0374 != 0x1C) {
+        if (i_this->mPropellerAnmIdx != 0x1C) {
             anm_init(i_this, 0x1C, 5.0f, 2, 1.0f, -1, 0);
             anm_init(i_this, 0x15, 5.0f, 2, 1.0f, -1, 1);
         }
         i_this->speedF = 98.0f;
-        i_this->m0352 =
-            cM_atan2s(i_this->m032C.x - ship->current.pos.x, i_this->m032C.z - ship->current.pos.z);
-        i_this->m0346++;
+        i_this->mTargetAngleY =
+            cM_atan2s(i_this->mHomePos.x - ship->current.pos.x, i_this->mHomePos.z - ship->current.pos.z);
+        i_this->mMode++;
         /* fallthrough */
     case 8:
         cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x200);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 1, 0x200);
         cLib_addCalc0(&i_this->speedF, 1.0f, REG_F(12, 6) + 5.0f);
         if (!(i_this->speedF < 1.0f)) {
-            attackCheck = (u32)(i_this->m0346 - 4) < 3;
+            attackCheck = (u32)(i_this->mMode - 4) < 3;
             break;
         }
-        if (ph_hani_check(i_this, i_this->m038C, 25400.0f, 1)) {
-            i_this->m0346 = 0;
+        if (ph_hani_check(i_this, i_this->mHomeRange, 25400.0f, 1)) {
+            i_this->mMode = 0;
             i_this->speedF = 0.0f;
             attackCheck = false;
         } else {
-            i_this->m0346 = 4;
+            i_this->mMode = 4;
             attackCheck = true;
         }
         break;
     default:
-        attackCheck = (u32)(i_this->m0346 - 4) < 3;
+        attackCheck = (u32)(i_this->mMode - 4) < 3;
         break;
     }
 
     if (attackCheck && (dComIfGp_getPlayerStatus0(0) & 0x10000) &&
-        ph_hani_check(i_this, i_this->m0390, i_this->m0394, 1)) {
-        i_this->m034A = 0x2000;
-        i_this->m0378 = 150.0f;
-        i_this->m034C = 0;
-        i_this->m0346 = 2;
+        ph_hani_check(i_this, i_this->mNoticeRange, i_this->mNoticeHeight, 1)) {
+        i_this->mPropellerTargetSpeed = 0x2000;
+        i_this->mHeightAbovePlayer = 150.0f;
+        i_this->mPropellerAccel = 0;
+        i_this->mMode = 2;
     }
 
     puropera_kaiten(i_this);
-    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->m0352, 1, 0x500);
+    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mTargetAngleY, 1, 0x500);
     cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 1, 0x500);
     sea_water_check(i_this, 1);
-    f32 targetY = i_this->m05BC.y + 500.0f + REG_F(12, 8);
-    if (i_this->m0346 == 3) {
+    f32 targetY = i_this->mWaterSurfacePos.y + 500.0f + REG_F(12, 8);
+    if (i_this->mMode == 3) {
         cLib_addCalcAngleS2(&i_this->shape_angle.x, (s16)gabi::ftoi(REG_F(12, 11) + 4096.0f), 1,
                             0x800);
         targetY = player->current.pos.y;
@@ -1250,32 +1250,32 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
     return PH_CHK_ALL;
 }
 
-/* ph_hane_move (m033F == 1): knocked back, spinning */
+/* ph_hane_move (mAction == 1): knocked back, spinning */
 /* inlined into daPH_Execute */
 static inline void ph_hane_move(ph_class *i_this) {
-    switch (i_this->m0346) {
+    switch (i_this->mMode) {
     case 0xA:
-        i_this->m034A = 0x1000;
-        i_this->m0378 = 100.0f;
-        i_this->m034C = 0;
+        i_this->mPropellerTargetSpeed = 0x1000;
+        i_this->mHeightAbovePlayer = 100.0f;
+        i_this->mPropellerAccel = 0;
         i_this->m036E = 0;
-        i_this->m0364 = 15;
-        i_this->m035E = 0;
-        i_this->m0346++;
+        i_this->mActionTimer = 15;
+        i_this->mRollWobblePhase = 0;
+        i_this->mMode++;
         /* fallthrough */
     case 0xB:
         i_this->shape_angle.y += 0x500;
         cLib_addCalc0(&i_this->speedF, 0.5f, 1.0f);
         fly_angle_set(i_this, 4);
-        if (i_this->m0364 == 0 && i_this->speedF < 0.1f) {
-            i_this->m033F = PH_ACTION_FLY;
+        if (i_this->mActionTimer == 0 && i_this->speedF < 0.1f) {
+            i_this->mAction = PH_ACTION_FLY;
             if (i_this->mType == PH_TYPE_PEAHAT) {
-                i_this->m0364 = 0x3C;
+                i_this->mActionTimer = 0x3C;
                 ph_at_on(i_this);
                 ph_zero_wobble(i_this);
-                i_this->m0346 = 1;
+                i_this->mMode = 1;
             } else {
-                i_this->m0346 = 0;
+                i_this->mMode = 0;
             }
         }
         break;
@@ -1287,31 +1287,31 @@ static inline void ph_hane_move(ph_class *i_this) {
     }
 }
 
-/* ph_bunri_move (m033F == 2): the propeller has come off, the body hops on the ground */
+/* ph_bunri_move (mAction == 2): the propeller has come off, the body hops on the ground */
 /* inlined into daPH_Execute */
 static inline void ph_bunri_move(ph_class *i_this) {
     dComIfGp_get(); /* HD: unused */
-    s16 mode = i_this->m0346;
+    s16 mode = i_this->mMode;
     bool forceDecrement = false;
     switch (mode) {
     case 0x14:
         i_this->mAtCyl.OffAtSPrmBit(1);
-        i_this->m037C = 1.0f;
+        i_this->mPropellerFlyDist = 1.0f;
         i_this->mBodySph.OnCoSPrmBit(1);
         i_this->mBodySph.mTgType = 0xFF3DFEFF;
-        phVectorWords(&i_this->m02F0)->x = (u32)phVectorWords(&i_this->m02E4)->x;
-        phVectorWords(&i_this->m02F0)->z = (u32)phVectorWords(&i_this->m02E4)->z;
-        i_this->m02F0.y = 0.0f;
+        phVectorWords(&i_this->mFloatTarget)->x = (u32)phVectorWords(&i_this->mFloatOffset)->x;
+        phVectorWords(&i_this->mFloatTarget)->z = (u32)phVectorWords(&i_this->mFloatOffset)->z;
+        i_this->mFloatTarget.y = 0.0f;
         i_this->mTgCyl.OffTgSPrmBit(1);
         if (i_this->mType == PH_TYPE_PEAHAT) {
-            i_this->m0350 = 900;
+            i_this->mSeparatedTimer = 900;
             if (i_this != nullptr && gabi::ea(&i_this->eyePos) != 0) {
                 mDoAud_seStart(0x585A, &i_this->eyePos, 0,
                                dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
                 ph_mons_se(i_this, 0x485C);
             }
         } else {
-            i_this->m0350 = 150;
+            i_this->mSeparatedTimer = 150;
             if (i_this != nullptr && gabi::ea(&i_this->eyePos) != 0) {
                 mDoAud_seStart(0x69FA, &i_this->eyePos, 0,
                                dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
@@ -1321,16 +1321,16 @@ static inline void ph_bunri_move(ph_class *i_this) {
         i_this->speedF = 0.0f;
         anm_init(i_this, 0x1B, 1.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x14, 1.0f, 0, 2.0f, -1, 1);
-        mode = i_this->m0346 + 1;
-        i_this->m0346 = mode;
+        mode = i_this->mMode + 1;
+        i_this->mMode = mode;
         /* fallthrough */
     case 0x15:
         if (!i_this->mpBodyMorf->isStop())
             break;
-        copy_bits(&i_this->m0308, &i_this->current.pos);
+        copy_bits(&i_this->mHopCenterPos, &i_this->current.pos);
         i_this->speed.y = 10.0f;
-        mode = i_this->m0346 + 1;
-        i_this->m0346 = mode;
+        mode = i_this->mMode + 1;
+        i_this->mMode = mode;
         i_this->gravity = i_this->mType == PH_TYPE_SEAHAT ? -10.0f : -3.0f;
         /* fallthrough */
     case 0x16:
@@ -1342,24 +1342,24 @@ static inline void ph_bunri_move(ph_class *i_this) {
                 phNative_dBgS_GetMtrlSndId(dComIfG_Bgsp(), (cBgS_PolyInfo *)&i_this->mAcch.m_gnd);
             ph_se(i_this, 0x5859, snd, true);
         }
-        mode = i_this->m0346 + 1;
-        i_this->m0346 = mode;
+        mode = i_this->mMode + 1;
+        i_this->mMode = mode;
         break;
     case 0x17:
         if (!i_this->mpBodyMorf->isStop())
             break;
-        i_this->m0346 = mode + 1;
+        i_this->mMode = mode + 1;
         /* fallthrough */
     case 0x18:
-        if (i_this->m0350 == 0) {
-            i_this->m033F = PH_ACTION_RISE;
-            i_this->m0346 = 0x1E;
+        if (i_this->mSeparatedTimer == 0) {
+            i_this->mAction = PH_ACTION_RISE;
+            i_this->mMode = 0x1E;
             forceDecrement = true;
             break;
         }
         {
-            f32 dz = i_this->m0308.z - i_this->current.pos.z;
-            f32 dx = i_this->m0308.x - i_this->current.pos.x;
+            f32 dz = i_this->mHopCenterPos.z - i_this->current.pos.z;
+            f32 dx = i_this->mHopCenterPos.x - i_this->current.pos.x;
             f32 angle = (f32)(s16)i_this->current.angle.y;
             i_this->mBodySph.mTgType = 0xFF3DFEFF;
             i_this->current.angle.y = (s16)gabi::ftoi(angle + cM_rndFX(16384.0f));
@@ -1381,22 +1381,22 @@ static inline void ph_bunri_move(ph_class *i_this) {
             }
         }
         anm_init(i_this, 0x18, 2.0f, 0, 1.0f, -1, 1);
-        i_this->m0346 = 0x19;
+        i_this->mMode = 0x19;
         /* fallthrough */
     case 0x19:
         if (i_this->mpBodyMorf->getFrame() < 7.0f) {
             cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 1, 0x1000);
         }
         if (!i_this->mpBodyMorf->checkFrame(7.0f)) {
-            mode = i_this->m0346;
+            mode = i_this->mMode;
             break;
         }
         i_this->speedF = 5.0f;
         i_this->gravity = -3.0f;
         i_this->speed.y = 20.0f;
         ph_mons_se(i_this, 0x485F);
-        mode = i_this->m0346 + 1;
-        i_this->m0346 = mode;
+        mode = i_this->mMode + 1;
+        i_this->mMode = mode;
         break;
     case 0x1A:
         if (!i_this->mAcch.ChkGroundHit())
@@ -1407,38 +1407,38 @@ static inline void ph_bunri_move(ph_class *i_this) {
             ph_se(i_this, 0x585B, snd, true);
         }
         i_this->speedF = 0.0f;
-        i_this->m0346 = 0x18;
+        i_this->mMode = 0x18;
         forceDecrement = true;
         break;
     default:
         break;
     }
     if (forceDecrement || mode >= 0x18) {
-        if (i_this->m0350 > 0)
-            i_this->m0350--;
+        if (i_this->mSeparatedTimer > 0)
+            i_this->mSeparatedTimer--;
     }
     cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 1, 0x500);
     cLib_addCalcAngleS2(&i_this->shape_angle.x, i_this->current.angle.x, 1, 0x500);
     cLib_addCalcAngleS2(&i_this->current.angle.z, 0, 1, 0x500);
     cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x500);
     if (body_atari_check(i_this)) {
-        s16 save = i_this->m0346;
-        if (i_this->m0340 == 2) {
+        s16 save = i_this->mMode;
+        if (i_this->mDamageType == 2) {
             ph_blade_se(i_this, false);
             s16 a = fopAcM_searchPlayerAngleY(i_this);
-            i_this->m0346 = save;
+            i_this->mMode = save;
             i_this->current.angle.y = a + 0x8000;
             i_this->speedF = 30.0f;
-            i_this->m033F = PH_ACTION_SEPARATED;
+            i_this->mAction = PH_ACTION_SEPARATED;
         }
     }
 }
 
-/* ph_fujyou_move (m033F == 3): the propeller regrows and the Peahat takes off again */
+/* ph_fujyou_move (mAction == 3): the propeller regrows and the Peahat takes off again */
 /* inlined into daPH_Execute */
 static inline void ph_fujyou_move(ph_class *i_this) {
     dComIfGp_get(); /* HD: unused */
-    switch (i_this->m0346) {
+    switch (i_this->mMode) {
     case 0x1E:
         ph_se(i_this, 0x585C, 0, true);
         {
@@ -1447,24 +1447,24 @@ static inline void ph_fujyou_move(ph_class *i_this) {
             i_this->mBodySph.OffCoSPrmBit(1);
             i_this->mAtCyl.mObjAt.mRPrm = 1;
             i_this->mTgCyl.OnTgSPrmBit(1);
-            i_this->m0388 = y + 200.0f;
+            i_this->mRiseTargetY = y + 200.0f;
         }
         anm_init(i_this, 0x1D, 5.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x16, 5.0f, 0, 1.0f, -1, 1);
-        i_this->m0346++;
+        i_this->mMode++;
         /* fallthrough */
     case 0x1F:
         ph_fujyou_grow(i_this);
         break;
     case 0x20:
         ph_fujyou_rise(i_this, 4.0f, 0.03f, 0.05f);
-        if (i_this->current.pos.y > i_this->m0388) {
+        if (i_this->current.pos.y > i_this->mRiseTargetY) {
             ph_at_on(i_this);
             ph_zero_wobble(i_this);
             i_this->mBodySph.mTgType = 0x081DC060;
             i_this->current.angle.z = 0;
-            i_this->m0346 = 1;
-            i_this->m033F = PH_ACTION_FLY;
+            i_this->mMode = 1;
+            i_this->mAction = PH_ACTION_FLY;
             i_this->gravity = -3.0f;
         }
         break;
@@ -1473,48 +1473,48 @@ static inline void ph_fujyou_move(ph_class *i_this) {
         i_this->mBodySph.OffCoSPrmBit(1);
         anm_init(i_this, 0x1D, 5.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x16, 5.0f, 0, 1.0f, -1, 1);
-        i_this->m0346++;
+        i_this->mMode++;
         /* fallthrough */
     case 0x22:
         ph_fujyou_grow(i_this);
         break;
     case 0x23:
         ph_fujyou_rise(i_this, 6.0f, 0.3f, 0.5f);
-        if (std::fabs(i_this->current.pos.y - (i_this->m05BC.y + 500.0f)) < 10.0f) {
-            i_this->m033F = PH_ACTION_FLY;
-            i_this->m0346 = 4;
+        if (std::fabs(i_this->current.pos.y - (i_this->mWaterSurfacePos.y + 500.0f)) < 10.0f) {
+            i_this->mAction = PH_ACTION_FLY;
+            i_this->mMode = 4;
         }
         break;
     case 0x24:
-        i_this->m033A += (s16)gabi::ftoi(i_this->m0384 * 1000.0f);
+        i_this->mPropellerAngle += (s16)gabi::ftoi(i_this->mRiseSpeed * 1000.0f);
         puropera_sound(i_this);
         i_this->speed.y = 70.0f;
-        if (i_this->current.pos.y > i_this->m05BC.y + 500.0f) {
-            i_this->m0346 = 0;
-            i_this->m033F = PH_ACTION_FLY;
+        if (i_this->current.pos.y > i_this->mWaterSurfacePos.y + 500.0f) {
+            i_this->mMode = 0;
+            i_this->mAction = PH_ACTION_FLY;
         }
         break;
     }
 
     if (i_this->mType != PH_TYPE_SEAHAT) {
         if (sea_water_check(i_this, 1) != 0 &&
-            i_this->current.pos.y + i_this->m02E4.y < i_this->m05BC.y + 100.0f) {
+            i_this->current.pos.y + i_this->mFloatOffset.y < i_this->mWaterSurfacePos.y + 100.0f) {
             i_this->gravity = 0.0f;
         }
     }
     if (!body_atari_check(i_this) && hajiki_check(i_this)) {
         anm_init(i_this, 0x1C, 5.0f, 2, 1.0f, -1, 0);
-        f32 s = i_this->m03A0 + 1.0f;
-        i_this->m02FC.x = s;
-        i_this->m02FC.y = s;
-        i_this->m02FC.z = s;
+        f32 s = i_this->mPropellerExtraScale + 1.0f;
+        i_this->mPropellerScale.x = s;
+        i_this->mPropellerScale.y = s;
+        i_this->mPropellerScale.z = s;
     }
     if (i_this->mType != PH_TYPE_SEAHAT) {
         sea_water_check(i_this, 1);
         return;
     }
-    if (sea_water_check(i_this, 1) != 0 && i_this->m0341 != 0) {
-        f32 y = gabi::fnmsubs(i_this->m039C, 10.0f, i_this->m05BC.y);
+    if (sea_water_check(i_this, 1) != 0 && i_this->mInWater != 0) {
+        f32 y = gabi::fnmsubs(i_this->mExtraScale, 10.0f, i_this->mWaterSurfacePos.y);
         if (i_this->current.pos.y < y) {
             i_this->current.pos.y = y;
         }
@@ -1528,8 +1528,8 @@ void dead_item(ph_class *i_this) {
     pos.x = i_this->current.pos.x;
     pos.y = i_this->current.pos.y;
     pos.z = i_this->current.pos.z;
-    PSVECAdd(&pos, &i_this->m02E4, &pos);
-    u8 scale = (u8)gabi::ftoi(i_this->m039C + i_this->m039C + 5.0f);
+    PSVECAdd(&pos, &i_this->mFloatOffset, &pos);
+    u8 scale = (u8)gabi::ftoi(i_this->mExtraScale + i_this->mExtraScale + 5.0f);
     if (i_this->mType == PH_TYPE_PEAHAT) {
         fopAcM_createDisappear(i_this, &pos, scale, 0, i_this->stealItemBitNo);
     } else {
@@ -1543,23 +1543,23 @@ void dead_item(ph_class *i_this) {
     fopAcM_delete(i_this);
 }
 
-/* ph_damage_dead_move (m033F == 4). Returns true when the live Peahat goes on to the water check */
+/* ph_damage_dead_move (mAction == 4). Returns true when the live Peahat goes on to the water check */
 /* inlined into daPH_Execute */
 static inline bool ph_damage_dead_move(ph_class *i_this) {
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     bool die = false;
-    switch (i_this->m0346) {
+    switch (i_this->mMode) {
     case 0x28:
         i_this->current.angle.y = fopAcM_searchPlayerAngleY(i_this) + 0x8000;
-        if (i_this->health <= 0 || i_this->m0340 == 3) {
-            i_this->m034E = 0x2000;
+        if (i_this->health <= 0 || i_this->mDamageType == 3) {
+            i_this->mDamageSpinSpeed = 0x2000;
             i_this->speedF = 25.0f;
         } else {
-            i_this->m034E = 0x1000;
+            i_this->mDamageSpinSpeed = 0x1000;
             i_this->speedF = 15.0f;
         }
-        if (i_this->m0341 != 0) {
-            i_this->m034E = -0x8000;
+        if (i_this->mInWater != 0) {
+            i_this->mDamageSpinSpeed = -0x8000;
         }
         if (gabi::ea(&i_this->eyePos) != 0) {
             if (i_this->health > 0) {
@@ -1568,23 +1568,23 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
                 ph_dead_se(i_this);
             }
         }
-        i_this->m0364 = 0;
-        if (i_this->m02FC.x != 0.0f) {
+        i_this->mActionTimer = 0;
+        if (i_this->mPropellerScale.x != 0.0f) {
             anm_init(i_this, 0x1E, 1.0f, 0, 1.0f, -1, 0);
         }
         anm_init(i_this, 0x14, 1.0f, 0, 1.0f, -1, 1);
-        i_this->m0346++;
+        i_this->mMode++;
         /* fallthrough */
     case 0x29:
         cLib_addCalc0(&i_this->speedF, 0.5f, 1.0f);
         if (i_this->health <= 0 && i_this->speedF < 5.0f) {
-            cLib_addCalc0(&i_this->m02FC.x, 0.3f, i_this->m03A0 + 1.0f);
-            f32 s = i_this->m02FC.x;
-            i_this->m02FC.z = s;
-            i_this->m02FC.y = s;
+            cLib_addCalc0(&i_this->mPropellerScale.x, 0.3f, i_this->mPropellerExtraScale + 1.0f);
+            f32 s = i_this->mPropellerScale.x;
+            i_this->mPropellerScale.z = s;
+            i_this->mPropellerScale.y = s;
         }
-        i_this->shape_angle.y += i_this->m034E;
-        cLib_addCalcAngleS2(&i_this->m034E, 0, 1, 0x200);
+        i_this->shape_angle.y += i_this->mDamageSpinSpeed;
+        cLib_addCalcAngleS2(&i_this->mDamageSpinSpeed, 0, 1, 0x200);
         if (!i_this->mpBodyMorf->isStop())
             break;
         if (i_this->health <= 0) {
@@ -1592,54 +1592,54 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
             break;
         }
         i_this->speedF = 0.0f;
-        i_this->m0346 = 0x18;
-        i_this->m033F = PH_ACTION_SEPARATED;
+        i_this->mMode = 0x18;
+        i_this->mAction = PH_ACTION_SEPARATED;
         break;
     case 0x2A:
-        if (i_this->m0364 != 0)
+        if (i_this->mActionTimer != 0)
             break;
-        i_this->m033F = PH_ACTION_SEPARATED;
-        i_this->m0346 = 0x18;
+        i_this->mAction = PH_ACTION_SEPARATED;
+        i_this->mMode = 0x18;
         break;
     case 0x2B: {
-        s16 a = cM_atan2s(i_this->current.pos.x + i_this->m02E4.x - player->current.pos.x,
-                          i_this->current.pos.z + i_this->m02E4.z - player->current.pos.z);
-        i_this->m035E = 0;
+        s16 a = cM_atan2s(i_this->current.pos.x + i_this->mFloatOffset.x - player->current.pos.x,
+                          i_this->current.pos.z + i_this->mFloatOffset.z - player->current.pos.z);
+        i_this->mRollWobblePhase = 0;
         i_this->mAtCyl.OffAtSPrmBit(1);
         i_this->speedF = 25.0f;
         i_this->health = 0;
         i_this->current.angle.y = a;
         ph_dead_se(i_this);
         anm_init(i_this, 0x14, 1.0f, 0, 1.0f, -1, 1);
-        f32 s = i_this->m039C + 1.0f;
-        i_this->m0320.x = s;
-        i_this->m0320.y = s;
-        i_this->m0320.z = s;
-        if (i_this->m0342 != 0) {
-            /* frozen by a light arrow */
+        f32 s = i_this->mExtraScale + 1.0f;
+        i_this->mSquashScale.x = s;
+        i_this->mSquashScale.y = s;
+        i_this->mSquashScale.z = s;
+        if (i_this->mIceHit != 0) {
+            /* frozen by an ice arrow */
             i_this->speed.x = 0.0f;
             i_this->speed.y = 0.0f;
             i_this->speed.z = 0.0f;
             i_this->speedF = 0.0f;
-            i_this->m0364 = 0;
-            i_this->m0346 = 0x2E;
+            i_this->mActionTimer = 0;
+            i_this->mMode = 0x2E;
         } else if (!i_this->mAcch.ChkGroundHit()) {
             i_this->speed.y = 0.0f;
             i_this->gravity = 0.0f;
-            i_this->m0346 = 0x2C;
-            i_this->m0364 = 0x3C;
-            if (i_this->m0340 == 7)
-                i_this->m0364 = 0;
+            i_this->mMode = 0x2C;
+            i_this->mActionTimer = 0x3C;
+            if (i_this->mDamageType == 7)
+                i_this->mActionTimer = 0;
             anm_init(i_this, 0x1E, 1.0f, 0, 1.0f, -1, 0);
-            if (i_this->m0340 == 6) {
-                i_this->m0364 = 0;
+            if (i_this->mDamageType == 6) {
+                i_this->mActionTimer = 0;
                 i_this->speedF = 15.0f;
                 i_this->speed.y = 20.0f;
-                i_this->m0346 = 0x2D;
+                i_this->mMode = 0x2D;
                 i_this->gravity = -5.0f;
             }
         } else {
-            i_this->m0346 = 0x2E;
+            i_this->mMode = 0x2E;
         }
         break;
     }
@@ -1647,40 +1647,40 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
         cLib_addCalc0(&i_this->speedF, 0.5f, 0.5f);
         i_this->shape_angle.y += 0x500;
         fly_angle_set(i_this, 4);
-        if (i_this->m0364 == 0 || i_this->mpPropellerMorf->isStop()) {
+        if (i_this->mActionTimer == 0 || i_this->mpPropellerMorf->isStop()) {
             die = true;
             break;
         }
         break;
     case 0x2D:
-        if (i_this->m0364 == 1) {
+        if (i_this->mActionTimer == 1) {
             i_this->gravity = -5.0f;
             i_this->speed.y = 23.0f;
-            if (i_this->m035E > 1)
+            if (i_this->mRollWobblePhase > 1)
                 i_this->speed.y = 15.0f;
-            f32 b = i_this->m039C;
+            f32 b = i_this->mExtraScale;
             i_this->speedF = 5.0f;
-            i_this->m0320.x = b + 0.8f;
-            i_this->m0320.y = b + 1.2f;
+            i_this->mSquashScale.x = b + 0.8f;
+            i_this->mSquashScale.y = b + 1.2f;
         }
-        if (i_this->m0364 == 0 && i_this->mAcch.ChkGroundHit()) {
-            f32 b = i_this->m039C;
+        if (i_this->mActionTimer == 0 && i_this->mAcch.ChkGroundHit()) {
+            f32 b = i_this->mExtraScale;
             i_this->speedF = 0.0f;
-            i_this->m0320.x = b + 1.2f;
-            i_this->m0320.y = b + 0.8f;
-            i_this->m0364 = 3;
-            s16 n = i_this->m035E + 1;
-            i_this->m035E = n;
+            i_this->mSquashScale.x = b + 1.2f;
+            i_this->mSquashScale.y = b + 0.8f;
+            i_this->mActionTimer = 3;
+            s16 n = i_this->mRollWobblePhase + 1;
+            i_this->mRollWobblePhase = n;
             if (n > 2)
                 dead_item(i_this);
         }
-        cLib_addCalc2(&i_this->scale.x, i_this->m0320.x, 0.5f, 0.5f);
-        cLib_addCalc2(&i_this->scale.y, i_this->m0320.y, 0.5f, 0.5f);
+        cLib_addCalc2(&i_this->scale.x, i_this->mSquashScale.x, 0.5f, 0.5f);
+        cLib_addCalc2(&i_this->scale.y, i_this->mSquashScale.y, 0.5f, 0.5f);
         break;
     case 0x2E:
         cLib_addCalc0(&i_this->speedF, 0.5f, 0.5f);
         i_this->shape_angle.y += 0x500;
-        if (i_this->m0364 == 0) {
+        if (i_this->mActionTimer == 0) {
             die = true;
             break;
         }
@@ -1696,31 +1696,31 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
         i_this->mBodySph.OffTgSPrmBit(1);
         i_this->current.angle.x = 0;
         i_this->current.angle.z = 0;
-        i_this->m035E = 0;
+        i_this->mRollWobblePhase = 0;
         i_this->attention_info.flags = 0; /* attention_info.flags */
-        if (i_this->m02FC.x != 0.0f) {
+        if (i_this->mPropellerScale.x != 0.0f) {
             anm_init(i_this, 0x1E, 1.0f, 0, 1.0f, -1, 0);
         }
         anm_init(i_this, 0x14, 1.0f, 0, 1.0f, -1, 1);
-        i_this->m0380 = 10.0f;
+        i_this->mBgCheckOffsetY = 10.0f;
         ph_dead_se(i_this);
-        i_this->m0346++;
+        i_this->mMode++;
         /* fallthrough */
     case 0x30:
         cLib_addCalc2(&i_this->scale.y, 0.1f, 1.0f, 0.5f);
         cLib_addCalc2(&i_this->scale.x, 1.7f, 1.0f, 0.7f);
-        if (i_this->m02FC.x != 0.0f) {
-            copy_bits(&i_this->m02FC, &i_this->scale);
+        if (i_this->mPropellerScale.x != 0.0f) {
+            copy_bits(&i_this->mPropellerScale, &i_this->scale);
         }
         if (!(i_this->scale.y < 0.1f))
             break;
         i_this->scale.y = 0.1f;
         i_this->scale.x = 1.7f;
-        i_this->m0364 = 0x14;
-        i_this->m0346++;
+        i_this->mActionTimer = 0x14;
+        i_this->mMode++;
         break;
     case 0x31:
-        if (i_this->m0364 != 0)
+        if (i_this->mActionTimer != 0)
             break;
         die = true;
         break;
@@ -1743,7 +1743,7 @@ void ph_wind_move(ph_class *i_this) {
 
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     int water = sea_water_check(i_this, 1);
-    switch (i_this->m0346) {
+    switch (i_this->mMode) {
     case 0x32: {
         ph_blade_se(i_this, true);
         i_this->mAtCyl.OffAtSPrmBit(1);
@@ -1751,56 +1751,56 @@ void ph_wind_move(ph_class *i_this) {
         i_this->mBodySph.OnCoSPrmBit(1);
         i_this->mBodySph.mTgType = 0xFF3DFEFF;
         i_this->current.angle.y = fopAcM_searchPlayerAngleY(i_this) + 0x8000;
-        f32 dy = i_this->current.pos.y + i_this->m02E4.y - player->current.pos.y;
+        f32 dy = i_this->current.pos.y + i_this->mFloatOffset.y - player->current.pos.y;
         f32 v = gabi::fnmsubs(std_sqrtf(dy * dy), 0.1f, 10.0f);
         if (v < 0.0f)
             v = 3.0f;
         i_this->speed.y = v;
-        i_this->m0350 = 0;
+        i_this->mSeparatedTimer = 0;
         i_this->speedF = 30.0f;
         i_this->gravity = 0.0f;
         for (int i = 0; i < 7; i++)
             i_this->mWobbleAngles[i] = 0;
-        i_this->m02F0.x = 0.0f;
-        i_this->m02F0.y = 0.0f;
+        i_this->mFloatTarget.x = 0.0f;
+        i_this->mFloatTarget.y = 0.0f;
         i_this->current.angle.x = 0;
         i_this->current.angle.z = 0;
-        i_this->m0362 = -0x1000;
-        i_this->m0360 = -10000;
-        i_this->m02F0.z = 0.0f;
+        i_this->mWindTurnSpeed = -0x1000;
+        i_this->mSpinSpeed = -10000;
+        i_this->mFloatTarget.z = 0.0f;
         if (cM_rnd() < 0.5f) {
-            i_this->m0360 = 10000;
-            i_this->m0362 = 0x1000;
+            i_this->mSpinSpeed = 10000;
+            i_this->mWindTurnSpeed = 0x1000;
         }
         anm_init(i_this, 0x1E, 1.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x19, 1.0f, 0, 1.0f, -1, 1);
-        i_this->m0346++;
+        i_this->mMode++;
     }
         /* fallthrough */
     case 0x33:
-        i_this->m035E += i_this->m0360;
+        i_this->mRollWobblePhase += i_this->mSpinSpeed;
         cLib_addCalcAngleS2(&i_this->shape_angle.z,
-                            (s16)gabi::ftoi(cM_ssin(i_this->m035E) * 20000.0f), 1, 0x500);
+                            (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 20000.0f), 1, 0x500);
         cLib_addCalcAngleS2(&i_this->shape_angle.x,
-                            (s16)gabi::ftoi(cM_ssin(i_this->m035E) * 20000.0f), 1, 0x500);
-        i_this->shape_angle.y += i_this->m0362;
+                            (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 20000.0f), 1, 0x500);
+        i_this->shape_angle.y += i_this->mWindTurnSpeed;
         cLib_addCalc0(&i_this->speedF, 0.3f, 1.0f);
         cLib_addCalc0(&i_this->speed.y, 0.3f, 1.0f);
         if (i_this->speedF > 0.2f)
             break;
         i_this->speedF = 0.0f;
-        i_this->m0360 = 0;
-        i_this->m0346++;
+        i_this->mSpinSpeed = 0;
+        i_this->mMode++;
         /* fallthrough */
     case 0x34:
         if (water) {
-            i_this->m033F = PH_ACTION_WATER;
-            i_this->m0346 = water == 2 ? 0x3C : 0x46;
+            i_this->mAction = PH_ACTION_WATER;
+            i_this->mMode = water == 2 ? 0x3C : 0x46;
             return;
         }
         i_this->gravity = -0.3f;
-        i_this->shape_angle.y += i_this->m0362;
-        cLib_addCalcAngleS2(&i_this->m0362, 0, 1, 0x100);
+        i_this->shape_angle.y += i_this->mWindTurnSpeed;
+        cLib_addCalcAngleS2(&i_this->mWindTurnSpeed, 0, 1, 0x100);
         fly_angle_set(i_this, 0);
         if (!i_this->mAcch.ChkGroundHit())
             break;
@@ -1815,50 +1815,50 @@ void ph_wind_move(ph_class *i_this) {
         i_this->gravity = -3.0f;
         anm_init(i_this, 0x1F, 1.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x1A, 1.0f, 0, 1.0f, -1, 1);
-        i_this->m0346++;
+        i_this->mMode++;
         break;
     case 0x35:
         if (water) {
-            i_this->m033F = PH_ACTION_WATER;
-            i_this->m0346 = water == 2 ? 0x3C : 0x46;
+            i_this->mAction = PH_ACTION_WATER;
+            i_this->mMode = water == 2 ? 0x3C : 0x46;
             return;
         }
         cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x500);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, i_this->current.angle.x, 1, 0x500);
-        i_this->shape_angle.y += i_this->m0360;
+        i_this->shape_angle.y += i_this->mSpinSpeed;
         if (!i_this->mpBodyMorf->isStop())
             break;
-        if (i_this->m02FC.x == 0.0f) {
+        if (i_this->mPropellerScale.x == 0.0f) {
             i_this->speedF = 0.0f;
-            i_this->m033F = PH_ACTION_SEPARATED;
-            i_this->m0346 = 0x18;
+            i_this->mAction = PH_ACTION_SEPARATED;
+            i_this->mMode = 0x18;
             return;
         }
-        i_this->m0366 = (s16)gabi::ftoi(cM_rndF(50.0f) + 50.0f);
+        i_this->mWaitTimer = (s16)gabi::ftoi(cM_rndF(50.0f) + 50.0f);
         i_this->shape_angle.x = 0;
-        i_this->m0346++;
+        i_this->mMode++;
         i_this->shape_angle.z = 0;
         break;
     case 0x36: {
         if (water) {
-            i_this->m033F = PH_ACTION_WATER;
-            i_this->m0346 = water == 2 ? 0x3C : 0x46;
+            i_this->mAction = PH_ACTION_WATER;
+            i_this->mMode = water == 2 ? 0x3C : 0x46;
             return;
         }
         cLib_addCalc0(&i_this->speedF, 0.3f, 1.0f);
-        s16 t = i_this->m0366;
+        s16 t = i_this->mWaitTimer;
         if (i_this->speedF > 0.1f) {
-            i_this->shape_angle.y += i_this->m0360;
+            i_this->shape_angle.y += i_this->mSpinSpeed;
         }
         if (t != 0)
             break;
         i_this->speedF = 0.0f;
-        if (i_this->m02FC.x == 0.0f) {
-            i_this->m033F = PH_ACTION_SEPARATED;
-            i_this->m0346 = 0x18;
+        if (i_this->mPropellerScale.x == 0.0f) {
+            i_this->mAction = PH_ACTION_SEPARATED;
+            i_this->mMode = 0x18;
         } else {
-            i_this->m033F = PH_ACTION_RISE;
-            i_this->m0346 = 0x1E;
+            i_this->mAction = PH_ACTION_RISE;
+            i_this->mMode = 0x1E;
         }
         break;
     }
@@ -1870,21 +1870,21 @@ void ph_wind_move(ph_class *i_this) {
         return;
     i_this->shape_angle.x = 0;
     i_this->shape_angle.z = 0;
-    if (i_this->m0340 != 2)
+    if (i_this->mDamageType != 2)
         return;
     if (i_this->mAcch.ChkGroundHit()) {
-        i_this->m0360 = -1000;
+        i_this->mSpinSpeed = -1000;
         if (cM_rnd() < 0.5f)
-            i_this->m0360 = 1000;
+            i_this->mSpinSpeed = 1000;
         i_this->speedF = 20.0f;
-        if (i_this->m0374 != 0x1E) {
+        if (i_this->mPropellerAnmIdx != 0x1E) {
             anm_init(i_this, 0x1E, 1.0f, 0, 1.0f, -1, 0);
         }
         ph_blade_se(i_this, false);
-        i_this->m0346 = 0x36;
+        i_this->mMode = 0x36;
     } else {
-        i_this->m033F = PH_ACTION_WIND;
-        i_this->m0346 = 0x32;
+        i_this->mAction = PH_ACTION_WIND;
+        i_this->mMode = 0x32;
     }
     return;
 }
@@ -1894,28 +1894,28 @@ void ph_wind_move(ph_class *i_this) {
 void ph_water_move(ph_class *i_this) {
 
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
-    switch (i_this->m0346) {
+    switch (i_this->mMode) {
     case 0x3C:
         ph_water_start(i_this);
         if (i_this->mType == PH_TYPE_SEAHAT) {
-            i_this->m0366 = 150;
+            i_this->mWaitTimer = 150;
             i_this->mAtCyl.OnAtSPrmBit(1);
             i_this->mAtCyl.mObjAt.mRPrm = 1;
             anm_init(i_this, 0x17, 1.0f, 2, 1.0f, -1, 1);
         } else {
             ph_water_anm(i_this);
         }
-        i_this->m0368 = 20;
+        i_this->mHomeCheckTimer = 20;
         i_this->current.angle.y =
-            cM_atan2s(i_this->current.pos.x + i_this->m02E4.x - player->current.pos.x,
-                      i_this->current.pos.z + i_this->m02E4.z - player->current.pos.z) +
+            cM_atan2s(i_this->current.pos.x + i_this->mFloatOffset.x - player->current.pos.x,
+                      i_this->current.pos.z + i_this->mFloatOffset.z - player->current.pos.z) +
             0x8000;
-        i_this->m0346++;
+        i_this->mMode++;
         /* fallthrough */
     case 0x3D: {
-        if (i_this->m0364 == 0) {
-            i_this->m0341 = 0;
-            i_this->m0364 = 15;
+        if (i_this->mActionTimer == 0) {
+            i_this->mInWater = 0;
+            i_this->mActionTimer = 15;
         }
         cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 1, 0x700);
         cLib_addCalc2(&i_this->speedF, 30.0f, 1.0f, 10.0f);
@@ -1926,29 +1926,29 @@ void ph_water_move(ph_class *i_this) {
             mDoAud_seStart(0x5128, &i_this->eyePos, vol,
                            dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
         }
-        if (ph_hani_check(i_this, i_this->m038C, 25400.0f, 1)) {
+        if (ph_hani_check(i_this, i_this->mHomeRange, 25400.0f, 1)) {
             bool far = false;
-            if (i_this->m0368 == 0) {
-                f32 dz = i_this->m032C.z - i_this->current.pos.z;
-                f32 dx = i_this->m032C.x - i_this->current.pos.x;
-                far = std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) > i_this->m038C;
+            if (i_this->mHomeCheckTimer == 0) {
+                f32 dz = i_this->mHomePos.z - i_this->current.pos.z;
+                f32 dx = i_this->mHomePos.x - i_this->current.pos.x;
+                far = std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) > i_this->mHomeRange;
             }
-            if (!far && i_this->m0366 != 0)
+            if (!far && i_this->mWaitTimer != 0)
                 break;
         }
-        i_this->m033F = PH_ACTION_RISE;
-        i_this->m0346 = 0x21;
+        i_this->mAction = PH_ACTION_RISE;
+        i_this->mMode = 0x21;
         break;
     }
     case 0x46:
         ph_water_start(i_this);
         ph_water_anm(i_this);
-        i_this->m0346++;
+        i_this->mMode++;
         /* fallthrough */
     case 0x47:
-        if (i_this->m0366 == 0) {
-            i_this->m033F = PH_ACTION_RISE;
-            i_this->m0346 = i_this->mType == PH_TYPE_SEAHAT ? 0x21 : 0x1E;
+        if (i_this->mWaitTimer == 0) {
+            i_this->mAction = PH_ACTION_RISE;
+            i_this->mMode = i_this->mType == PH_TYPE_SEAHAT ? 0x21 : 0x1E;
         }
         break;
     default:
@@ -1963,7 +1963,7 @@ void BG_check(ph_class *i_this) {
 
     if (i_this->mType == PH_TYPE_PEAHAT) {
         f32 r = 40.0f;
-        if (i_this->m02FC.x != 0.0f && i_this->m037C == 0.0f) {
+        if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
             r = 100.0f;
         }
         i_this->mAcchCir.SetWall(40.0f, r);
@@ -1977,8 +1977,8 @@ void BG_check(ph_class *i_this) {
 void UP_draw_SUB(ph_class *i_this) {
 
     J3DModel *model = i_this->mpPropellerMorf->getModel();
-    PSMTXTrans(mDoMtx_stack_c::get(), i_this->m0314.x, i_this->m0314.y, i_this->m0314.z);
-    s16 mode = i_this->m0346;
+    PSMTXTrans(mDoMtx_stack_c::get(), i_this->mPropellerPos.x, i_this->mPropellerPos.y, i_this->mPropellerPos.z);
+    s16 mode = i_this->mMode;
     if (mode == 4 || mode == 0x33 || mode == 3) {
         mDoMtx_stack_c::YrotM(i_this->shape_angle.y);
         mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->shape_angle.x);
@@ -1986,8 +1986,8 @@ void UP_draw_SUB(ph_class *i_this) {
     } else {
         mDoMtx_stack_c::YrotM(i_this->shape_angle.y);
     }
-    mDoMtx_stack_c::YrotM(i_this->m033A);
-    mDoMtx_stack_scaleM(i_this->m02FC.x, i_this->m02FC.y, i_this->m02FC.z);
+    mDoMtx_stack_c::YrotM(i_this->mPropellerAngle);
+    mDoMtx_stack_scaleM(i_this->mPropellerScale.x, i_this->mPropellerScale.y, i_this->mPropellerScale.z);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
     i_this->mpPropellerMorf->calc();
     phNative_enemy_fire(&i_this->mPropellerEnemyFire);
@@ -1997,8 +1997,8 @@ void UP_draw_SUB(ph_class *i_this) {
 void DW_draw_SUB(ph_class *i_this) {
 
     J3DModel *model = i_this->mpBodyMorf->getModel();
-    PSMTXTrans(mDoMtx_stack_c::get(), i_this->current.pos.x + i_this->m02E4.x,
-               i_this->current.pos.y + i_this->m02E4.y, i_this->current.pos.z + i_this->m02E4.z);
+    PSMTXTrans(mDoMtx_stack_c::get(), i_this->current.pos.x + i_this->mFloatOffset.x,
+               i_this->current.pos.y + i_this->mFloatOffset.y, i_this->current.pos.z + i_this->mFloatOffset.z);
     mDoMtx_stack_c::YrotM(i_this->shape_angle.y);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->shape_angle.x);
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), i_this->shape_angle.z);
@@ -2022,27 +2022,27 @@ static BOOL daPH_Execute(ph_class *i_this) {
     if (phNative_enemy_ice(&i_this->mEnemyIce)) {
         J3DModel_setBaseTRMtx(i_this->mpBodyMorf->getModel(), mDoMtx_stack_c::get());
         i_this->mpBodyMorf->calc();
-        if (i_this->m02FC.x != 0.0f && i_this->m037C == 0.0f) {
+        if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
             f32 sxz = i_this->mEnemyIce.mScaleXZ;
             if (i_this->mType == PH_TYPE_SEAHAT) {
-                f32 k = i_this->m03A0;
+                f32 k = i_this->mPropellerExtraScale;
                 f32 sy = i_this->mEnemyIce.mScaleY;
-                copy_bits(&i_this->m0314, &i_this->m02C0);
+                copy_bits(&i_this->mPropellerPos, &i_this->mBodyTopPos);
                 f32 x = k * sxz;
-                i_this->m02FC.x = x;
-                i_this->m02FC.y = k * sy;
-                i_this->m02FC.z = x;
+                i_this->mPropellerScale.x = x;
+                i_this->mPropellerScale.y = k * sy;
+                i_this->mPropellerScale.z = x;
             } else {
                 f32 sy = i_this->mEnemyIce.mScaleY;
                 f32 x = a_this->scale.x;
-                i_this->m02FC.x = x;
+                i_this->mPropellerScale.x = x;
                 f32 y = a_this->scale.y;
-                i_this->m02FC.y = y;
+                i_this->mPropellerScale.y = y;
                 f32 z = a_this->scale.z;
-                i_this->m02FC.x = x * sxz;
-                i_this->m02FC.y = y * sy;
-                i_this->m02FC.z = z * sxz;
-                copy_bits(&i_this->m0314, &i_this->m02C0);
+                i_this->mPropellerScale.x = x * sxz;
+                i_this->mPropellerScale.y = y * sy;
+                i_this->mPropellerScale.z = z * sxz;
+                copy_bits(&i_this->mPropellerPos, &i_this->mBodyTopPos);
             }
             UP_draw_SUB(i_this);
         }
@@ -2050,13 +2050,13 @@ static BOOL daPH_Execute(ph_class *i_this) {
     }
 
     /* eyePos: the body joint, lowered */
-    a_this->eyePos.x = i_this->m02C0.x;
-    f32 ey = i_this->m02C0.y;
+    a_this->eyePos.x = i_this->mBodyTopPos.x;
+    f32 ey = i_this->mBodyTopPos.y;
     a_this->eyePos.y = ey;
-    a_this->eyePos.z = i_this->m02C0.z;
+    a_this->eyePos.z = i_this->mBodyTopPos.z;
     ey = ey - 30.0f;
     a_this->eyePos.y = ey;
-    a_this->eyePos.y = gabi::fnmsubs(50.0f, i_this->m039C, ey);
+    a_this->eyePos.y = gabi::fnmsubs(50.0f, i_this->mExtraScale, ey);
 
     for (int i = 0; i < 5; i++) {
         be<s16> *t = &i_this->mTimers[i];
@@ -2067,18 +2067,18 @@ static BOOL daPH_Execute(ph_class *i_this) {
     f32 r = REG_F(8, 0);
     if (r != 0.0f) {
         f32 s = r + 8.0f;
-        i_this->m039C = s;
+        i_this->mExtraScale = s;
         a_this->scale.x = s + 1.0f;
         a_this->scale.y = s + 1.0f;
         a_this->scale.z = s + 1.0f;
     }
     r = REG_F(8, 1);
     if (r != 0.0f) {
-        i_this->m03A0 = r + 5.0f;
+        i_this->mPropellerExtraScale = r + 5.0f;
     }
 
     int chk;
-    switch (i_this->m033F) {
+    switch (i_this->mAction) {
     case PH_ACTION_FLY:
         if (i_this->mType == PH_TYPE_PEAHAT) {
             chk = ph_fly_move(i_this);
@@ -2108,10 +2108,10 @@ static BOOL daPH_Execute(ph_class *i_this) {
         break;
     case 4: {
         if (ph_damage_dead_move(i_this)) {
-            u8 inWater = i_this->m0341;
+            u8 inWater = i_this->mInWater;
             body_atari_check(i_this);
             int water = sea_water_check(i_this, 0);
-            if (water != 0 && inWater == 0 && i_this->m0341 != 0) {
+            if (water != 0 && inWater == 0 && i_this->mInWater != 0) {
                 ph_to_water(i_this, water);
             }
         }
@@ -2131,32 +2131,32 @@ static BOOL daPH_Execute(ph_class *i_this) {
     cXyz local;
     cXyz world;
     bool propFlying = false;
-    if (i_this->m037C == 0.0f) {
-        copy_bits(&i_this->m0314, &i_this->m02C0);
-    } else if (i_this->m02FC.x != 0.0f) {
+    if (i_this->mPropellerFlyDist == 0.0f) {
+        copy_bits(&i_this->mPropellerPos, &i_this->mBodyTopPos);
+    } else if (i_this->mPropellerScale.x != 0.0f) {
         /* the propeller flies off */
         f32 height = 1000.0f;
         puropera_kaiten(i_this);
-        cLib_addCalc2(&i_this->m037C, 10.0f, 0.5f, 1.0f);
+        cLib_addCalc2(&i_this->mPropellerFlyDist, 10.0f, 0.5f, 1.0f);
         if (i_this->mType == PH_TYPE_SEAHAT) {
-            cLib_addCalc2(&i_this->m037C, 30.0f, 1.0f, 5.0f);
+            cLib_addCalc2(&i_this->mPropellerFlyDist, 30.0f, 1.0f, 5.0f);
             height = 2000.0f;
-            i_this->m034A = 0x2000;
+            i_this->mPropellerTargetSpeed = 0x2000;
         }
         local.x = 0.0f;
         local.y = 0.0f;
-        local.z = -i_this->m037C;
+        local.z = -i_this->mPropellerFlyDist;
         MtxPosition(&local, &world);
-        PSVECAdd(&i_this->m0314, &world, &i_this->m0314);
-        f32 y = i_this->m0314.y + i_this->m037C;
-        i_this->m0314.y = y;
+        PSVECAdd(&i_this->mPropellerPos, &world, &i_this->mPropellerPos);
+        f32 y = i_this->mPropellerPos.y + i_this->mPropellerFlyDist;
+        i_this->mPropellerPos.y = y;
         if (y > a_this->current.pos.y + height) {
-            i_this->m02FC.x = 0.0f;
-            i_this->m02FC.y = 0.0f;
-            i_this->m02FC.z = 0.0f;
+            i_this->mPropellerScale.x = 0.0f;
+            i_this->mPropellerScale.y = 0.0f;
+            i_this->mPropellerScale.z = 0.0f;
             local.x = 0.0f;
             local.y = 0.0f;
-            i_this->m037C = 0.0f;
+            i_this->mPropellerFlyDist = 0.0f;
             propFlying = true;
         }
     }
@@ -2169,7 +2169,7 @@ static BOOL daPH_Execute(ph_class *i_this) {
     a_this->speed.x = world.x;
     a_this->speed.z = world.z;
 
-    u8 st = i_this->m033F;
+    u8 st = i_this->mAction;
     f32 vy;
     if (st == 2 || st == 3 || st == 5 || st == 4) {
         vy = a_this->speed.y + a_this->gravity;
@@ -2180,74 +2180,74 @@ static BOOL daPH_Execute(ph_class *i_this) {
     }
     a_this->speed.y = vy;
     fopAcM_posMove(a_this, &i_this->mStts.m_cc_move);
-    if (i_this->m033F == PH_ACTION_BOUNCE && i_this->m0341 != 0) {
-        f32 y = i_this->m05BC.y + 40.0f;
+    if (i_this->mAction == PH_ACTION_BOUNCE && i_this->mInWater != 0) {
+        f32 y = i_this->mWaterSurfacePos.y + 40.0f;
         if (a_this->current.pos.y < y)
             a_this->current.pos.y = y;
     }
 
     if (i_this->mType == PH_TYPE_PEAHAT) {
-        cLib_addCalc2(&i_this->m02E4.x, i_this->m02F0.x, 0.3f, 3.0f);
-        cLib_addCalc2(&i_this->m02E4.y, i_this->m02F0.y, 0.3f, 3.0f);
-        cLib_addCalc2(&i_this->m02E4.z, i_this->m02F0.z, 0.3f, 3.0f);
+        cLib_addCalc2(&i_this->mFloatOffset.x, i_this->mFloatTarget.x, 0.3f, 3.0f);
+        cLib_addCalc2(&i_this->mFloatOffset.y, i_this->mFloatTarget.y, 0.3f, 3.0f);
+        cLib_addCalc2(&i_this->mFloatOffset.z, i_this->mFloatTarget.z, 0.3f, 3.0f);
     } else {
-        cLib_addCalc2(&i_this->m02E4.x, i_this->m02F0.x, 1.0f, 30.0f);
-        cLib_addCalc2(&i_this->m02E4.y, i_this->m02F0.y, 1.0f, 30.0f);
-        cLib_addCalc2(&i_this->m02E4.z, i_this->m02F0.z, 1.0f, 30.0f);
-        cLib_addCalc2(&a_this->current.pos.x, a_this->current.pos.x + i_this->m02E4.x, 1.0f, 30.0f);
-        cLib_addCalc2(&a_this->current.pos.y, a_this->current.pos.y + i_this->m02E4.y, 1.0f, 30.0f);
-        cLib_addCalc2(&a_this->current.pos.z, a_this->current.pos.z + i_this->m02E4.z, 1.0f, 30.0f);
-        cLib_addCalc0(&i_this->m02E4.x, 1.0f, 30.0f);
-        cLib_addCalc0(&i_this->m02E4.y, 1.0f, 30.0f);
-        cLib_addCalc0(&i_this->m02E4.z, 1.0f, 30.0f);
+        cLib_addCalc2(&i_this->mFloatOffset.x, i_this->mFloatTarget.x, 1.0f, 30.0f);
+        cLib_addCalc2(&i_this->mFloatOffset.y, i_this->mFloatTarget.y, 1.0f, 30.0f);
+        cLib_addCalc2(&i_this->mFloatOffset.z, i_this->mFloatTarget.z, 1.0f, 30.0f);
+        cLib_addCalc2(&a_this->current.pos.x, a_this->current.pos.x + i_this->mFloatOffset.x, 1.0f, 30.0f);
+        cLib_addCalc2(&a_this->current.pos.y, a_this->current.pos.y + i_this->mFloatOffset.y, 1.0f, 30.0f);
+        cLib_addCalc2(&a_this->current.pos.z, a_this->current.pos.z + i_this->mFloatOffset.z, 1.0f, 30.0f);
+        cLib_addCalc0(&i_this->mFloatOffset.x, 1.0f, 30.0f);
+        cLib_addCalc0(&i_this->mFloatOffset.y, 1.0f, 30.0f);
+        cLib_addCalc0(&i_this->mFloatOffset.z, 1.0f, 30.0f);
     }
     i_this->mpBodyMorf->play(nullptr, 0, 0);
     i_this->mpPropellerMorf->play(nullptr, 0, 0);
     DW_draw_SUB(i_this);
     UP_draw_SUB(i_this);
 
-    if (i_this->m033F != PH_ACTION_DAMAGE) {
+    if (i_this->mAction != PH_ACTION_DAMAGE) {
         if (i_this->mType == PH_TYPE_PEAHAT) {
-            i_this->mAtCyl.mCyl.SetC(&i_this->m02D8);
+            i_this->mAtCyl.mCyl.SetC(&i_this->mPropellerCylPos);
             i_this->mAtCyl.mCyl.SetH(60.0f);
             i_this->mAtCyl.mCyl.SetR(35.0f);
             dComIfG_Ccsp_Set(&i_this->mAtCyl);
-            i_this->mTgCyl.mCyl.SetC(&i_this->m02D8);
+            i_this->mTgCyl.mCyl.SetC(&i_this->mPropellerCylPos);
             i_this->mTgCyl.mCyl.SetH(60.0f);
             i_this->mTgCyl.mCyl.SetR(100.0f);
             dComIfG_Ccsp_Set(&i_this->mTgCyl);
-            i_this->mBodySph.mSph.SetC(&i_this->m02CC);
+            i_this->mBodySph.mSph.SetC(&i_this->mBodyCenterPos);
             i_this->mBodySph.mSph.SetR(40.0f);
             dComIfG_Ccsp_Set(&i_this->mBodySph);
         } else {
             cXyz c;
-            c.x = i_this->m02CC.x;
-            c.z = i_this->m02CC.z;
-            c.y = i_this->m02CC.y - (REG_F(8, 10) + 150.0f);
+            c.x = i_this->mBodyCenterPos.x;
+            c.z = i_this->mBodyCenterPos.z;
+            c.y = i_this->mBodyCenterPos.y - (REG_F(8, 10) + 150.0f);
             i_this->mTgCyl.mCyl.SetC(&c);
             i_this->mTgCyl.mCyl.SetH(REG_F(8, 12) + 500.0f);
             i_this->mTgCyl.mCyl.SetR(REG_F(8, 13) + 500.0f);
             dComIfG_Ccsp_Set(&i_this->mTgCyl);
             f32 d = REG_F(8, 10) + 150.0f;
-            c.x = i_this->m02CC.x;
-            c.z = i_this->m02CC.z;
-            c.y = i_this->m02CC.y - d;
+            c.x = i_this->mBodyCenterPos.x;
+            c.z = i_this->mBodyCenterPos.z;
+            c.y = i_this->mBodyCenterPos.y - d;
             i_this->mAtCyl.mCyl.SetC(&c);
             i_this->mAtCyl.mCyl.SetH(REG_F(8, 14) + 350.0f);
             i_this->mAtCyl.mCyl.SetR(REG_F(8, 15) + 250.0f);
             dComIfG_Ccsp_Set(&i_this->mAtCyl);
-            i_this->mBodySph.mSph.SetC(&i_this->m02CC);
+            i_this->mBodySph.mSph.SetC(&i_this->mBodyCenterPos);
             i_this->mBodySph.mSph.SetR(
-                gabi::fmadds(i_this->m039C, REG_F(8, 17) + 40.0f, REG_F(8, 16) + 70.0f));
+                gabi::fmadds(i_this->mExtraScale, REG_F(8, 17) + 40.0f, REG_F(8, 16) + 70.0f));
             dComIfG_Ccsp_Set(&i_this->mBodySph);
         }
     }
 
     cXyz *attnPos = &i_this->attention_info.position; /* attention_info.position */
-    attnPos->x = i_this->m02C0.x;
-    f32 ay = i_this->m02C0.y;
+    attnPos->x = i_this->mBodyTopPos.x;
+    f32 ay = i_this->mBodyTopPos.y;
     attnPos->y = ay;
-    attnPos->z = i_this->m02C0.z;
+    attnPos->z = i_this->mBodyTopPos.z;
     if (i_this->mType == PH_TYPE_SEAHAT) {
         attnPos->y = ay - 100.0f;
     }
@@ -2375,30 +2375,30 @@ static cPhs_State daPH_Create(fopAc_ac_c *a_this) {
     u8 range2 = prm >> 16;
     u8 range1 = prm >> 8;
     if (i_this->mType == PH_TYPE_PEAHAT) {
-        i_this->m0390 = 1000.0f;
-        i_this->m0394 = 500.0f;
+        i_this->mNoticeRange = 1000.0f;
+        i_this->mNoticeHeight = 500.0f;
     } else {
-        i_this->m0390 = 12000.0f;
-        i_this->m0394 = 6000.0f;
-        i_this->m039C = 8.0f;
+        i_this->mNoticeRange = 12000.0f;
+        i_this->mNoticeHeight = 6000.0f;
+        i_this->mExtraScale = 8.0f;
         a_this->scale.x = 9.0f;
         a_this->scale.y = 9.0f;
-        i_this->m03A0 = 5.0f;
+        i_this->mPropellerExtraScale = 5.0f;
         a_this->scale.z = 9.0f;
     }
     if (range1 != 0xFF)
-        i_this->m0390 = (f32)range1 * 100.0f;
+        i_this->mNoticeRange = (f32)range1 * 100.0f;
     if (range2 != 0xFF)
-        i_this->m0394 = (f32)range2 * 100.0f;
+        i_this->mNoticeHeight = (f32)range2 * 100.0f;
     a_this->attention_info.flags =
         fopAc_Attn_LOCKON_BATTLE_e; /* attention_info.flags = LOCKON_BATTLE */
-    i_this->m038C = i_this->m0390 + 800.0f;
+    i_this->mHomeRange = i_this->mNoticeRange + 800.0f;
     u8 type2 = i_this->mType;
     if (type2 == 0) {
         a_this->itemTableIdx = dComIfGp_CharTbl_GetIndex("p_hat", 0);
         a_this->attention_info.distances[2] = 3; /* attention_info.distances[2] */
         a_this->stealItemLeft = 1;
-        i_this->m0344 = 1;
+        i_this->mStealItemsLeft = 1;
     } else {
         a_this->itemTableIdx = dComIfGp_CharTbl_GetIndex("sea_hat", 0);
         a_this->attention_info.distances[2] = 0x2A;
@@ -2410,7 +2410,7 @@ static cPhs_State daPH_Create(fopAc_ac_c *a_this) {
     i_this->mStts.Init(0x50, 4, a_this);
     a_this->max_health = 1;
     a_this->health = 1;
-    copy_bits(&i_this->m02FC, &a_this->scale);
+    copy_bits(&i_this->mPropellerScale, &a_this->scale);
     i_this->mBodySph.Set(&body_sph_src);
     i_this->mBodySph.SetStts(&i_this->mStts);
     i_this->mBodySph.OffCoSPrmBit(1);
@@ -2418,10 +2418,10 @@ static cPhs_State daPH_Create(fopAc_ac_c *a_this) {
     i_this->mAtCyl.SetStts(&i_this->mStts);
     i_this->mTgCyl.Set(&tg_cyl_src);
     i_this->mTgCyl.SetStts(&i_this->mStts);
-    i_this->m0356 = ph_id_angle(i_this);
-    i_this->m0358 = ph_id_angle(i_this);
-    i_this->m035A = ph_id_angle(i_this);
-    i_this->m035C = ph_id_angle(i_this);
+    i_this->mFloatPhaseY = ph_id_angle(i_this);
+    i_this->mFloatPhaseX = ph_id_angle(i_this);
+    i_this->mFloatPhaseZ = ph_id_angle(i_this);
+    i_this->mPitchWobblePhase = ph_id_angle(i_this);
 
     i_this->mEnemyIce.mpActor = a_this;
     i_this->mEnemyIce.m1B0 = 1;
@@ -2434,7 +2434,7 @@ static cPhs_State daPH_Create(fopAc_ac_c *a_this) {
         i_this->mBodyEnemyFire.mFlameJntIdxs[i] = jntTbl[i];
         f32 s = l_bodyFlameScale[i];
         i_this->mBodyEnemyFire.mParticleScale[i] = s;
-        i_this->mBodyEnemyFire.mParticleScale[i] = s + i_this->m039C;
+        i_this->mBodyEnemyFire.mParticleScale[i] = s + i_this->mExtraScale;
     }
     i_this->mPropellerEnemyFire.mpMcaMorf = i_this->mpPropellerMorf;
     i_this->mPropellerEnemyFire.mpActor = a_this;
@@ -2442,13 +2442,13 @@ static cPhs_State daPH_Create(fopAc_ac_c *a_this) {
         i_this->mPropellerEnemyFire.mFlameJntIdxs[i] = l_propellerFlameJoints[i];
         f32 s = l_propellerFlameScale[i];
         i_this->mPropellerEnemyFire.mParticleScale[i] = s;
-        i_this->mPropellerEnemyFire.mParticleScale[i] = s + i_this->m039C;
+        i_this->mPropellerEnemyFire.mParticleScale[i] = s + i_this->mExtraScale;
     }
 
-    i_this->m0380 = 30.0f;
+    i_this->mBgCheckOffsetY = 30.0f;
     a_this->gravity = -3.0f;
     BG_check(i_this);
-    copy_bits(&i_this->m032C, &a_this->current.pos);
+    copy_bits(&i_this->mHomePos, &a_this->current.pos);
     a_this->gravity = 0.0f;
     anm_init(i_this, 0x1C, 5.0f, 2, 1.0f, -1, 0);
     anm_init(i_this, 0x15, 5.0f, 2, 1.0f, -1, 1);
@@ -2457,31 +2457,31 @@ static cPhs_State daPH_Create(fopAc_ac_c *a_this) {
         i_this->mAtCyl.mGObjAt.mSpl = 9;
         fopAcM_setCullSizeBox(a_this, -200.0f, -200.0f, -200.0f, 200.0f, 200.0f, 200.0f);
         f32 far = REG_F(8, 8) / (f32)l_farPlaneScale + 10000.0f;
-        f32 s = i_this->m03A0;
-        i_this->m02FC.x = s;
-        i_this->m02FC.y = s;
-        i_this->m02FC.z = s;
-        i_this->m0380 = 100.0f;
-        i_this->m033F = PH_ACTION_FLY;
-        i_this->m0341 = 1;
+        f32 s = i_this->mPropellerExtraScale;
+        i_this->mPropellerScale.x = s;
+        i_this->mPropellerScale.y = s;
+        i_this->mPropellerScale.z = s;
+        i_this->mBgCheckOffsetY = 100.0f;
+        i_this->mAction = PH_ACTION_FLY;
+        i_this->mInWater = 1;
         a_this->actor_status &= ~0x80000;
-        i_this->m0346 = 0;
+        i_this->mMode = 0;
         a_this->cullSizeFar = far;
     } else {
         fopAcM_setCullSizeBox(a_this, -80.0f, -80.0f, -80.0f, 80.0f, 80.0f, 80.0f);
         i_this->mBodySph.mTgType = 0x081DC060;
         if (i_this->mAcch.ChkGroundHit()) {
-            i_this->m02FC.x = 0.0f;
-            i_this->m02FC.y = 0.0f;
-            i_this->m033F = PH_ACTION_RISE;
-            i_this->m0346 = 0x1E;
-            i_this->m02FC.z = 0.0f;
+            i_this->mPropellerScale.x = 0.0f;
+            i_this->mPropellerScale.y = 0.0f;
+            i_this->mAction = PH_ACTION_RISE;
+            i_this->mMode = 0x1E;
+            i_this->mPropellerScale.z = 0.0f;
         }
     }
     i_this->mpBodyMorf->play(nullptr, 0, 0);
     i_this->mpPropellerMorf->play(nullptr, 0, 0);
     DW_draw_SUB(i_this);
-    copy_bits(&i_this->m0314, &i_this->m02C0);
+    copy_bits(&i_this->mPropellerPos, &i_this->mBodyTopPos);
     UP_draw_SUB(i_this);
     return ret;
 }

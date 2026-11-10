@@ -266,13 +266,13 @@ BOOL daNpc_Ym1_c::set_action(ProcFunc_l *i_newProcFunc, void *i_argsP) {
         newD = i_newProcFunc->d;
     }
     if (cur->i != 0) {
-        ym1State(this)->mActionState = 9;
+        ym1State(this)->mActionPhase = 9;
         pmf_call(this, cur, i_argsP);
     }
     cur->f = newF;
     cur->d = newD;
     cur->i = newI;
-    ym1State(this)->mActionState = 0;
+    ym1State(this)->mActionPhase = 0;
     pmf_call(this, cur, i_argsP);
     return TRUE;
 }
@@ -393,17 +393,17 @@ void daNpc_Ym1_c::play_texPttrnAnm() {
 /* 022F79D0 */
 void daNpc_Ym1_c::play_animation() {
     play_texPttrnAnm();
-    ym1State(this)->mMorfAnimationStopped = (u8)mpMorf->play(&eyePos, 0, 0); /* mbMorfAnimStopped */
+    ym1State(this)->mAnimationStopped = (u8)mpMorf->play(&eyePos, 0, 0); /* mbMorfAnimStopped */
     mDoExt_McaMorf *morf = mpMorf;
     if (morf->getFrame() < ym1State(this)->mPreviousMorfFrame) {
         morf = mpMorf;
-        ym1State(this)->mMorfAnimationStopped = 1;
+        ym1State(this)->mAnimationStopped = 1;
     }
     ym1State(this)->mPreviousMorfFrame = morf->getFrame(); /* mPrevMorfFrame */
 }
 
 /* 022F7A3C */
-u8 daNpc_Ym1_c::chk_nbt_attn() { return (u32)(ym1State(this)->mAnimationAttribute - 5) <= 2; }
+u8 daNpc_Ym1_c::chk_nbt_attn() { return (u32)(ym1State(this)->mAnmNum - 5) <= 2; }
 
 /* 022F7A60 */
 void daNpc_Ym1_c::setAttention(u32 i_setEyePos) {
@@ -414,7 +414,7 @@ void daNpc_Ym1_c::setAttention(u32 i_setEyePos) {
     f32 offs = attentionHIO[mSubType].mAttentionOffset;
     if (chk_nbt_attn()) {
         z = ym1State(this)->mNbtAttentionPosition.z;
-        if (ym1State(this)->mAnimationAttribute == 6) {
+        if (ym1State(this)->mAnmNum == 6) {
             offs = ym1State(this)->mHeadPosition.y - 210.0f;
             y = ym1State(this)->mNbtAttentionPosition.y;
             x = ym1State(this)->mNbtAttentionPosition.x;

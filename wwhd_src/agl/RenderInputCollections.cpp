@@ -1,6 +1,7 @@
 // Shader variation input layouts: construction (from the archive layout constructor 027B9470), the archive
 // loader's reservation (027B7D78), the variant selection (027BB710) and release (027B94B8 / virtual delete).
 #include "agl/RenderInputCollections.h"
+#include "sead/ElementAt.h"
 #include "agl/ShaderStageState.h"
 using namespace agl::render;
 
@@ -78,12 +79,12 @@ void agl::render::ShaderInputLayout::resetSelection() {
 void agl::render::ShaderInputLayout::select(const char* name,const char* value) {
     s32 count = mSelectedNames.mCount;
     if (count < (s32)mSelectedNames.mCapacity) {
-        mSelectedNames.entries()[count] = gabi::ea(name);
+        sead::elementAt<be<u32>>(gabi::ea(mSelectedNames.entries()),(u32)count) = gabi::ea(name); /* guest EA arithmetic: wraps at 32 bits as on the console */
         mSelectedNames.mCount = (s32)mSelectedNames.mCount + 1;
     }
     count = mSelectedValues.mCount;
     if (count < (s32)mSelectedValues.mCapacity) {
-        mSelectedValues.entries()[count] = gabi::ea(value);
+        sead::elementAt<be<u32>>(gabi::ea(mSelectedValues.entries()),(u32)count) = gabi::ea(value);
         mSelectedValues.mCount = (s32)mSelectedValues.mCount + 1;
     }
 }

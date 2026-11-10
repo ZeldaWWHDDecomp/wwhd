@@ -23,7 +23,7 @@ static constexpr u32 KN_VTBL = 0x10013244;
 /* 021A1FA0 */
 static BOOL daKN_Draw(kn_class* i_this) {
     fopAc_ac_c* a_this = i_this;
-    if (i_this->m2CC < 0.0f) {
+    if (i_this->mBurrowY < 0.0f) {
         return TRUE;
     }
     J3DModel* pJVar1 = i_this->mpMorf->getModel();
@@ -52,21 +52,21 @@ void smoke_set(kn_class* i_this) {
     gabi::AutoFrame frame{gabi::current_function()};
     f32 fVar1 = REG_F(8, 10) + 1.0f;
     // HD: smoke removal calls end directly; actor deletion uses virtual remove.
-    i_this->m314.end();
+    i_this->mSmokeEcallBack.end();
     s8 roomNo = fopAcM_GetRoomNo(i_this);
     /* dComIfGp_particle_setToon: group 2 */
     dPa_control_c* pa = dComIfGp_getParticle();
-    i_this->m334 =
-        pa->set(2, ID_AK_JT_ELEMENTSMOKE01, &i_this->m300, &i_this->shape_angle, nullptr, 0xB9,
-                (dPa_levelEcallBack*)&i_this->m314, roomNo, nullptr, nullptr, nullptr);
-    if (i_this->m334 != nullptr) {
-        reinterpret_cast<Kn::Emitter*>(i_this->m334.get())->mMaxFrame = 0x19;
-        reinterpret_cast<Kn::Emitter*>(i_this->m334.get())->mInitialVelOmni = 0.0f;
-        reinterpret_cast<Kn::Emitter*>(i_this->m334.get())->mInitialVelAxis = 5.0f;
-        reinterpret_cast<Kn::Emitter*>(i_this->m334.get())->mRate = 3.0f;
-        reinterpret_cast<Kn::Emitter*>(i_this->m334.get())->mInitialVelDir = 2.0f;
-        reinterpret_cast<Kn::Emitter*>(i_this->m334.get())->setGlobalScale(fVar1, fVar1, fVar1);
-        reinterpret_cast<Kn::Emitter*>(i_this->m334.get())->mLifeTime = 25;
+    i_this->mpSmokeEmitter =
+        pa->set(2, ID_AK_JT_ELEMENTSMOKE01, &i_this->mSmokePos, &i_this->shape_angle, nullptr, 0xB9,
+                (dPa_levelEcallBack*)&i_this->mSmokeEcallBack, roomNo, nullptr, nullptr, nullptr);
+    if (i_this->mpSmokeEmitter != nullptr) {
+        reinterpret_cast<Kn::Emitter*>(i_this->mpSmokeEmitter.get())->mMaxFrame = 0x19;
+        reinterpret_cast<Kn::Emitter*>(i_this->mpSmokeEmitter.get())->mInitialVelOmni = 0.0f;
+        reinterpret_cast<Kn::Emitter*>(i_this->mpSmokeEmitter.get())->mInitialVelAxis = 5.0f;
+        reinterpret_cast<Kn::Emitter*>(i_this->mpSmokeEmitter.get())->mRate = 3.0f;
+        reinterpret_cast<Kn::Emitter*>(i_this->mpSmokeEmitter.get())->mInitialVelDir = 2.0f;
+        reinterpret_cast<Kn::Emitter*>(i_this->mpSmokeEmitter.get())->setGlobalScale(fVar1, fVar1, fVar1);
+        reinterpret_cast<Kn::Emitter*>(i_this->mpSmokeEmitter.get())->mLifeTime = 25;
     }
 }
 
@@ -93,199 +93,199 @@ static void kn_move(kn_class* i_this) {
     f32 f29 = 200.0f;
     f32 f28 = 300.0f;
     f32 f27 = 500.0f;
-    f32 fVar8 = i_this->m2EC.x - i_this->current.pos.x;
-    f32 fVar1 = i_this->m2EC.z - i_this->current.pos.z;
+    f32 fVar8 = i_this->mHomePos.x - i_this->current.pos.x;
+    f32 fVar1 = i_this->mHomePos.z - i_this->current.pos.z;
     s16 sVar5;
 
-    switch (i_this->m2BD) {
+    switch (i_this->mMode) {
     case Mode_10_e: {
         int idx = dRes_INDEX_KN_BCK_WAIT01_e;
         if (!(cM_rnd() < 0.5f))
             idx = dRes_INDEX_KN_BCK_WAIT02_e;
         anm_init(i_this, idx, 5.0f, 2, 1.0f, -1);
-        i_this->m2D2 = 0x800;
-        i_this->m2CA = (s16)gabi::ftoi(cM_rndF(2.0f) + 1.0f);
-        i_this->m2BD = i_this->m2BD + 1;
+        i_this->mTurnStep = 0x800;
+        i_this->mWaitLoops = (s16)gabi::ftoi(cM_rndF(2.0f) + 1.0f);
+        i_this->mMode = i_this->mMode + 1;
     }
         [[fallthrough]];
     case Mode_11_e:
         cLib_addCalc0(&i_this->speedF, 1.0f, 2.0f);
         if (i_this->mpMorf->checkFrame(43.0f)) {
-            i_this->m2CA = i_this->m2CA - 1;
-            if (i_this->m2CA <= 0) {
-                i_this->m2BD = Mode_12_e;
+            i_this->mWaitLoops = i_this->mWaitLoops - 1;
+            if (i_this->mWaitLoops <= 0) {
+                i_this->mMode = Mode_12_e;
             }
         }
-        if ((i_this->m2C2[2] == 0) && fopAcM_searchPlayerDistance(i_this) < f28) {
-            i_this->m2BD = Mode_18_e;
+        if ((i_this->mTimers[2] == 0) && fopAcM_searchPlayerDistance(i_this) < f28) {
+            i_this->mMode = Mode_18_e;
         }
         break;
     case Mode_12_e: {
         anm_init(i_this, dRes_INDEX_KN_BCK_WALK_e, 5.0f, 2, 1.0f, -1);
         f32 ang = (f32)(s16)i_this->current.angle.y;
         f32 rnd = cM_rndFX(10752.0f);
-        i_this->m2D0 = (s16)gabi::ftoi(ang + rnd);
-        i_this->m2E8 = f26;
+        i_this->mTargetAngleY = (s16)gabi::ftoi(ang + rnd);
+        i_this->mWalkSpeed = f26;
         if (cM_rnd() < 0.5f) {
-            i_this->m2E8 = -f26;
+            i_this->mWalkSpeed = -f26;
         }
-        if (i_this->m2C2[2] != 0) {
-            i_this->m2D0 = cM_atan2s(fVar8, fVar1);
-            i_this->m2E8 = f26;
+        if (i_this->mTimers[2] != 0) {
+            i_this->mTargetAngleY = cM_atan2s(fVar8, fVar1);
+            i_this->mWalkSpeed = f26;
         }
-        i_this->m2C2[0] = (s16)gabi::ftoi(20.0f + cM_rndF(40.0f));
-        i_this->m2E4 = i_this->m2E8;
-        i_this->m2D2 = 0x800;
-        i_this->m2BE = 0;
-        i_this->m2BD = i_this->m2BD + 1;
+        i_this->mTimers[0] = (s16)gabi::ftoi(20.0f + cM_rndF(40.0f));
+        i_this->mTargetSpeed = i_this->mWalkSpeed;
+        i_this->mTurnStep = 0x800;
+        i_this->mOnWater = 0;
+        i_this->mMode = i_this->mMode + 1;
     }
         [[fallthrough]];
     case Mode_13_e:
         if (fopAcM_searchPlayerDistance(i_this) < f28) {
-            i_this->m2BD = Mode_18_e;
-        } else if (i_this->m2C2[2] == 0) {
-            if (i_this->m2BE != 0) {
+            i_this->mMode = Mode_18_e;
+        } else if (i_this->mTimers[2] == 0) {
+            if (i_this->mOnWater != 0) {
                 shibuki_set(i_this);
-                i_this->m2BF = 0;
-                i_this->m2BD = Mode_15_e;
+                i_this->mSandBurrow = 0;
+                i_this->mMode = Mode_15_e;
             } else if (kn_dist(fVar8, fVar1) > f29) {
-                i_this->m2C2[1] = 0x14;
-                i_this->m2E4 = -(f32)i_this->m2E8; /* m2E8 * -1.0f */
-                i_this->m2BD = Mode_14_e;
-            } else if (i_this->m2C2[0] == 0) {
-                i_this->m2BD = Mode_10_e;
+                i_this->mTimers[1] = 0x14;
+                i_this->mTargetSpeed = -(f32)i_this->mWalkSpeed; /* mWalkSpeed * -1.0f */
+                i_this->mMode = Mode_14_e;
+            } else if (i_this->mTimers[0] == 0) {
+                i_this->mMode = Mode_10_e;
             }
         }
         break;
     case Mode_14_e:
-        if (i_this->m2C2[1] == 0) {
+        if (i_this->mTimers[1] == 0) {
             if (kn_dist(fVar8, fVar1) > f29) {
-                i_this->m2D0 = cM_atan2s(fVar8, fVar1);
-                i_this->m2E4 = std::fabs((f32)i_this->m2E8);
-                i_this->m2C2[1] = 8;
+                i_this->mTargetAngleY = cM_atan2s(fVar8, fVar1);
+                i_this->mTargetSpeed = std::fabs((f32)i_this->mWalkSpeed);
+                i_this->mTimers[1] = 8;
             } else {
-                i_this->m2BD = Mode_10_e;
+                i_this->mMode = Mode_10_e;
             }
         }
         break;
     case Mode_15_e:
         i_this->speedF = 0.0f;
-        i_this->m2E4 = 0.0f;
-        i_this->m2C0 = 0;
-        i_this->m2C2[0] = 0x14;
+        i_this->mTargetSpeed = 0.0f;
+        i_this->mBurrowed = 0;
+        i_this->mTimers[0] = 0x14;
         anm_init(i_this, dRes_INDEX_KN_BCK_PATA_e, 5.0f, 2, 1.0f, -1);
-        i_this->m2BD = i_this->m2BD + 1;
+        i_this->mMode = i_this->mMode + 1;
         [[fallthrough]];
     case Mode_16_e:
-        if (i_this->m2C2[0] == 0) {
+        if (i_this->mTimers[0] == 0) {
             f32 fVar9 = -7.0f;
             if (i_this->scale.x > 1.5f) {
                 fVar9 = -11.0f;
             }
-            if (i_this->m2C0 == 0) {
-                if (!(std::fabs(i_this->m2CC - fVar9) > 1.0f)) {
-                    if (i_this->m2BF != 0) {
-                        i_this->m314.end();
+            if (i_this->mBurrowed == 0) {
+                if (!(std::fabs(i_this->mBurrowY - fVar9) > 1.0f)) {
+                    if (i_this->mSandBurrow != 0) {
+                        i_this->mSmokeEcallBack.end();
                     }
-                    i_this->m2CC = fVar9;
-                    i_this->m2C0 = 1;
-                    i_this->m2C2[3] = (s16)gabi::ftoi(cM_rndF(30.0f) + 30.0f);
+                    i_this->mBurrowY = fVar9;
+                    i_this->mBurrowed = 1;
+                    i_this->mTimers[3] = (s16)gabi::ftoi(cM_rndF(30.0f) + 30.0f);
                 } else {
-                    cLib_addCalc2(&i_this->m2CC, fVar9, 0.1f, 1.0f);
+                    cLib_addCalc2(&i_this->mBurrowY, fVar9, 0.1f, 1.0f);
                 }
             }
-            if ((i_this->m2C0 != 0) && (i_this->m2C2[3] == 0) &&
+            if ((i_this->mBurrowed != 0) && (i_this->mTimers[3] == 0) &&
                 fopAcM_searchPlayerDistance(i_this) > f27) {
-                if (i_this->m2BF != 0) {
+                if (i_this->mSandBurrow != 0) {
                     // HD: copy X/Z individually and add the height directly to Y.
-                    i_this->m300.x = i_this->current.pos.x;
-                    i_this->m300.z = i_this->current.pos.z;
-                    i_this->m300.y = i_this->current.pos.y + 20.0f;
+                    i_this->mSmokePos.x = i_this->current.pos.x;
+                    i_this->mSmokePos.z = i_this->current.pos.z;
+                    i_this->mSmokePos.y = i_this->current.pos.y + 20.0f;
                     smoke_set(i_this);
                 } else {
                     shibuki_set(i_this);
                 }
                 anm_init(i_this, dRes_INDEX_KN_BCK_PATA_e, 5.0f, 2, 1.0f, -1);
-                i_this->m2BD = Mode_17_e;
+                i_this->mMode = Mode_17_e;
             }
         }
         break;
     case Mode_17_e:
-        cLib_addCalc0(&i_this->m2CC, 0.1f, 1.0f);
-        if (i_this->m2CC < 0.2f) {
-            if (i_this->m2BF != 0) {
-                i_this->m314.end();
+        cLib_addCalc0(&i_this->mBurrowY, 0.1f, 1.0f);
+        if (i_this->mBurrowY < 0.2f) {
+            if (i_this->mSandBurrow != 0) {
+                i_this->mSmokeEcallBack.end();
             }
-            i_this->m2CC = 0.0f;
-            i_this->m2C2[2] = 0x28;
-            i_this->m2BD = Mode_12_e;
+            i_this->mBurrowY = 0.0f;
+            i_this->mTimers[2] = 0x28;
+            i_this->mMode = Mode_12_e;
         }
         break;
     case Mode_18_e:
         anm_init(i_this, dRes_INDEX_KN_BCK_WALK_e, 5.0f, 2, 2.0f, -1);
-        i_this->m2E8 = 40.0f;
-        i_this->m2C2[0] = 0;
-        i_this->m2C2[1] = 0;
-        i_this->m2C2[2] = 0;
-        i_this->m2D2 = 0x100;
-        i_this->m2E4 = i_this->m2E8;
-        i_this->m2BE = 0;
+        i_this->mWalkSpeed = 40.0f;
+        i_this->mTimers[0] = 0;
+        i_this->mTimers[1] = 0;
+        i_this->mTimers[2] = 0;
+        i_this->mTurnStep = 0x100;
+        i_this->mTargetSpeed = i_this->mWalkSpeed;
+        i_this->mOnWater = 0;
         sVar5 = fopAcM_searchPlayerAngleY(i_this) - -0x8000;
         if ((s16)cLib_distanceAngleS(sVar5, i_this->current.angle.y) < 0x4000) {
-            i_this->m2D0 = sVar5;
+            i_this->mTargetAngleY = sVar5;
         } else {
-            i_this->m2D0 = i_this->current.angle.y;
+            i_this->mTargetAngleY = i_this->current.angle.y;
             s16 d1 = (s16)cLib_distanceAngleS(sVar5, i_this->current.angle.y);
             s16 d2 = (s16)(cLib_distanceAngleS(sVar5, i_this->current.angle.y) - -0x8000);
             if (d1 > d2) {
-                i_this->m2E4 = -(f32)i_this->m2E8; /* m2E8 * -1.0f */
+                i_this->mTargetSpeed = -(f32)i_this->mWalkSpeed; /* mWalkSpeed * -1.0f */
             }
         }
-        i_this->m2BD = i_this->m2BD + 1;
+        i_this->mMode = i_this->mMode + 1;
         [[fallthrough]];
     case Mode_19_e:
         if (i_this->mAcchCir.ChkWallHit() || kn_dist(fVar8, fVar1) > f29) {
             // HD: the USA version stops all motion before burrowing.
             i_this->speedF = 0.0f;
-            i_this->m2E4 = 0.0f;
+            i_this->mTargetSpeed = 0.0f;
             i_this->speed.x = 0.0f;
             i_this->speed.y = 0.0f;
             i_this->speed.z = 0.0f;
-            i_this->m300.copy(i_this->current.pos);
-            i_this->m2BF = 1;
+            i_this->mSmokePos.copy(i_this->current.pos);
+            i_this->mSandBurrow = 1;
             smoke_set(i_this);
-            i_this->m2BD = Mode_15_e;
-        } else if (i_this->m2BE != 0) {
-            i_this->m2BF = 0;
+            i_this->mMode = Mode_15_e;
+        } else if (i_this->mOnWater != 0) {
+            i_this->mSandBurrow = 0;
             shibuki_set(i_this);
-            i_this->m2BD = Mode_15_e;
+            i_this->mMode = Mode_15_e;
         }
         break;
     }
 
-    u8 mode = i_this->m2BD;
+    u8 mode = i_this->mMode;
     if (mode >= Mode_13_e) {
         if (mode < Mode_18_e) {
-            i_this->m2E0 = 1.0f;
-            if ((s16)cLib_distanceAngleS(i_this->current.angle.y, i_this->m2D0) > 0x100) {
-                i_this->m2E0 = 2.0f;
+            i_this->mAnmSpeedTarget = 1.0f;
+            if ((s16)cLib_distanceAngleS(i_this->current.angle.y, i_this->mTargetAngleY) > 0x100) {
+                i_this->mAnmSpeedTarget = 2.0f;
             }
-            cLib_addCalc2(&i_this->m2DC, i_this->m2E0, 0.5f, 1.0f);
-            i_this->mpMorf->setPlaySpeed(i_this->m2DC);
+            cLib_addCalc2(&i_this->mAnmSpeed, i_this->mAnmSpeedTarget, 0.5f, 1.0f);
+            i_this->mpMorf->setPlaySpeed(i_this->mAnmSpeed);
         }
-        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->m2D0, 1, i_this->m2D2);
-        cLib_addCalc2(&i_this->speedF, i_this->m2E4, 0.3f, 1.0f);
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mTargetAngleY, 1, i_this->mTurnStep);
+        cLib_addCalc2(&i_this->speedF, i_this->mTargetSpeed, 0.3f, 1.0f);
     }
     i_this->shape_angle.y = i_this->current.angle.y + 0x4000;
 }
 
 /* inlined into daKN_Execute */
 static void BG_check(kn_class* i_this) {
-    f32 h = i_this->m2CC;
+    f32 h = i_this->mBurrowY;
     i_this->current.pos.y = i_this->current.pos.y - h;
     i_this->old.pos.y = i_this->old.pos.y - h;
     i_this->mAcch.CrrPos(dComIfG_Bgsp());
-    h = i_this->m2CC;
+    h = i_this->mBurrowY;
     i_this->current.pos.y = i_this->current.pos.y + h;
     i_this->old.pos.y = i_this->old.pos.y + h;
 }
@@ -295,8 +295,8 @@ static BOOL daKN_Execute(kn_class* i_this) {
     gabi::AutoFrame frame{gabi::current_function()};
     fopAc_ac_c* a_this = i_this;
     for (s32 i = 0; i < 4; i++) {
-        if (i_this->m2C2[i] != 0) {
-            i_this->m2C2[i] = i_this->m2C2[i] - 1;
+        if (i_this->mTimers[i] != 0) {
+            i_this->mTimers[i] = i_this->mTimers[i] - 1;
         }
     }
     kn_move(i_this);
@@ -319,24 +319,24 @@ static BOOL daKN_Execute(kn_class* i_this) {
     fopAcM_posMove(a_this, nullptr);
     BG_check(i_this);
     if (i_this->mAcch.ChkGroundHit()) {
-        fopAcM_getGroundAngle(a_this, &i_this->m2F8);
-        if (((i_this->m2BD == Mode_13_e) || (i_this->m2BD == Mode_19_e)) &&
+        fopAcM_getGroundAngle(a_this, &i_this->mGroundAngle);
+        if (((i_this->mMode == Mode_13_e) || (i_this->mMode == Mode_19_e)) &&
             i_this->mAcch.GetGroundH() != -1000000000.0f &&
             knGetAttributeCode(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&i_this->mAcch.m_gnd)) ==
                 dBgS_Attr_WATER_e) {
-            i_this->m2BE = 1;
+            i_this->mOnWater = 1;
         }
     }
     i_this->mpMorf->play(nullptr, 0, 0);
     J3DModel* pJVar3 = i_this->mpMorf->getModel();
     mDoMtx_stack_c::transS(a_this->current.pos.x, a_this->current.pos.y, a_this->current.pos.z);
-    mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->m2F8.x);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), i_this->m2F8.z);
+    mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->mGroundAngle.x);
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), i_this->mGroundAngle.z);
     mDoMtx_YrotM(mDoMtx_stack_c::get(), a_this->shape_angle.y);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), a_this->shape_angle.x);
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), a_this->shape_angle.z);
     J3DModel_setBaseScale(pJVar3, &a_this->scale);
-    mDoMtx_stack_transM(0.0f, i_this->m2CC, 0.0f);
+    mDoMtx_stack_transM(0.0f, i_this->mBurrowY, 0.0f);
     J3DModel_setBaseTRMtx(pJVar3, mDoMtx_stack_c::get());
     return TRUE;
 }
@@ -346,8 +346,8 @@ static BOOL daKN_IsDelete(kn_class*) { return TRUE; }
 
 /* 021A2F80 */
 static BOOL daKN_Delete(kn_class* i_this) {
-    /* m314.remove(): virtual (vtable +0x44) */
-    i_this->m314.remove();
+    /* mSmokeEcallBack.remove(): virtual (vtable +0x44) */
+    i_this->mSmokeEcallBack.remove();
     dComIfG_resDelete(&i_this->mPhase, "Kn"); /* resource deletion */
     return TRUE;
 }
@@ -377,7 +377,7 @@ static cPhs_State daKN_Create(fopAc_ac_c* a_this) {
         if (a_this != nullptr) {
             fopAc_ac_c_ct(a_this);
             a_this->__vtbl = KN_VTBL;
-            __ct(&i_this->m314, 1);
+            __ct(&i_this->mSmokeEcallBack, 1);
             __ct(&i_this->mAcchCir);
             __ct(&i_this->mAcch);
         }
@@ -387,7 +387,7 @@ static cPhs_State daKN_Create(fopAc_ac_c* a_this) {
     if (PVar1 == cPhs_COMPLEATE_e) {
         i_this->m2B4 = fopAcM_GetParam(a_this);
         i_this->m2B5 = fopAcM_GetParam(a_this) >> 8;
-        i_this->m2EC.copy(a_this->current.pos);
+        i_this->mHomePos.copy(a_this->current.pos);
         if (!fopAcM_entrySolidHeap(a_this, useHeapInit, 0x2860)) {
             return cPhs_ERROR_e;
         }
@@ -407,7 +407,7 @@ static cPhs_State daKN_Create(fopAc_ac_c* a_this) {
             a_this->scale.y = 2.5f;
             a_this->scale.z = 2.5f;
         }
-        i_this->m2BD = Mode_10_e;
+        i_this->mMode = Mode_10_e;
         daKN_Execute(i_this);
     }
     return PVar1;

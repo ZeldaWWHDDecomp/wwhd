@@ -28,8 +28,8 @@ struct mDoExt_3DlineMat0_tt {
 WWHD_SIZE(mDoExt_3DlineMat0_tt, 0x148);
 
 struct tt_ke_s {
-    /* 0x00 */ cXyz field_0x00[10];
-    /* 0x78 */ cXyz field_0x78[10];
+    /* 0x00 */ cXyz mPos[10];  /* was field_0x00: ke_control 022EE0D8: the strand's 10 joint positions, each pulled to 7.875 from the previous one; ke_pos_set 022EE2FC copies them into the line; set_ke_root 022EDF64 sets the root (after our decomp's gnd_ke_s mPos) */
+    /* 0x78 */ cXyz mVelocity[10];  /* was field_0x78: ke_control 022EE0D8: holds the old position, then (new - old) * damping, added to the next step's position (after our decomp's gnd_ke_s mVelocity) */
     void ke_control(f32);
     void ke_pos_set(cXyz*);
 };
@@ -146,7 +146,7 @@ struct daNpc_Tt_c : fopAc_ac_c {
     /* 0x1111 */ be<u8> mEvFlags;
     /* 0x1112 */ be<s16> mSoundTimer;
     /* 0x1114 */ be<s16> mTimer;
-    /* 0x1116 */ be<u8> field_0xE7A;
+    /* 0x1116 */ be<u8> mDanceCount;  /* was field_0xE7A: demoInitPatten 022EFAD8: the event's "Cnt" integer (default 2); demoProcPatten 022EFF38: minus 1 per finished danceProc, the cut ends at 0 */
     /* 0x1117 */ u8 _1117;
     /* 0x1118 */ be<u32> mMsgNo;
     /* 0x111C */ be<s32> mStaffIdx;
@@ -383,10 +383,10 @@ WWHD_OFFSET(daNpc_Tt_c, mReverb, 0x1110);
 WWHD_OFFSET(daNpc_Tt_c, mEvFlags, 0x1111);
 WWHD_OFFSET(daNpc_Tt_c, mSoundTimer, 0x1112);
 WWHD_OFFSET(daNpc_Tt_c, mTimer, 0x1114);
-WWHD_OFFSET(daNpc_Tt_c, field_0xE7A, 0x1116);
+WWHD_OFFSET(daNpc_Tt_c, mDanceCount, 0x1116);
 WWHD_OFFSET(daNpc_Tt_c, mMsgNo, 0x1118);
 WWHD_OFFSET(daNpc_Tt_c, mStaffIdx, 0x111C);
 WWHD_OFFSET(mDoExt_3DlineMat0_tt, __vtbl, 0x130);
 WWHD_OFFSET(mDoExt_3DlineMat0_tt, mpLines, 0x144);
-WWHD_OFFSET(tt_ke_s, field_0x00, 0);
-WWHD_OFFSET(tt_ke_s, field_0x78, 0x78);
+WWHD_OFFSET(tt_ke_s, mPos, 0);
+WWHD_OFFSET(tt_ke_s, mVelocity, 0x78);

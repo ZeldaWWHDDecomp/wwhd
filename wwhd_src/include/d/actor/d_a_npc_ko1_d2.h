@@ -66,10 +66,10 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     u8 _9BC[0x2];
     /* 0x9BE */ be<s16> mTalkWaitTimer;
     u8 _9C0[0x2];
-    /* 0x9C2 */ be<s16> mSleepTimer;
+    /* 0x9C2 */ be<s16> mSttTimer;  /* was mSleepTimer (misnamed): view of daNpc_Ko1_c mSttTimer (d_a_npc_ko1.h); one name per field. setStt 02278134 sets it per state (wait_1, walk_1) and wait_1 / walk_1 / neru_1 / neru_2 act when it runs out, so it is the state timer, neither only a wait nor only a sleep timer; same code as daNpc_Bm1_c::mSttTimer (tww Bm1 m870) */
     /* 0x9C4 */ be<s16> mBalloonTimer;
     u8 _9C6[0x2];
-    /* 0x9C8 */ be<s16> mTurnAngle;
+    /* 0x9C8 */ be<s16> mDesiredYRot;  /* was mTurnAngle (misnamed): view of daNpc_Ko1_c mDesiredYRot (d_a_npc_ko1.h); one name per field. lookBack 022758B8 uses it as the look-at's Y angle in look state 3 and setStt / the waits / manzai set mInitialAngle.y; same code as daNpc_Bm1_c::mDesiredYRot (tww Bm1 desiredYrot = m876) */
     u8 _9CA[0x6];
     /* 0x9D0 */ be<u8> mAnimationEnded;
     u8 _9D1[0x2];
@@ -79,40 +79,40 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     u8 _9D6[0x7];
     /* 0x9DD */ be<u8> mbTalkTriggered;
     u8 _9DE[0x2];
-    /* 0x9E0 */ be<u32> mStatusResult;
+    /* 0x9E0 */ be<u32> mbSetEyePos;  /* was mStatusResult (misnamed): view of daNpc_Ko1_c mbSetEyePos (d_a_npc_ko1.h); one name per field. the state functions' result decides whether setAttention 02274A1C copies mEyePos to eyePos; same code as daNpc_Bm1_c::mbSetEyePos (tww Bm1 mbSetEyePos = wait_1()) */
     /* 0x9E4 */ be<u8> mAttention;
-    /* 0x9E5 */ be<u8> mTalkFlag;
+    /* 0x9E5 */ be<u8> mTalking;  /* was mTalkFlag (misnamed): view of daNpc_Ko1_c mTalking (d_a_npc_ko1.h); one name per field. checkOrder 02275504 sets it on the talk command, the waits start the talk on it, talk_1 clears it; same code as daNpc_Bm1_c::mTalking (tww Bm1 m895) */
     u8 _9E6[0x26];
-    /* 0xA0C */ be<u8> mAnimationSelector;
+    /* 0xA0C */ be<u8> mAnmAtrNo;  /* was mAnimationSelector (misnamed): view of daNpc_Ko1_c mAnmAtrNo (d_a_npc_ko1.h); one name per field. chg_anmAtr 02276EB8 stores the message animation attribute and setAnm_ATR picks the animation by it; same code as daNpc_Bm1_c::mAnmAtrNo (tww Bm1 m8F7) */
     u8 _A0D[0x6];
     /* 0xA13 */ be<s8> mStatus;
     /* 0xA14 */ be<s8> mResumeStatus;
-    /* 0xA15 */ be<s8> mAnimationMode;
+    /* 0xA15 */ be<s8> mLookBackState;  /* was mAnimationMode (misnamed): view of daNpc_Ko1_c mLookBackState (d_a_npc_ko1.h); one name per field. lookBack 022758B8 switches on it (1 player, 2 mLookPos, 3 mDesiredYRot) and chg_anmAtr sets 1 with m_jnt.mbTrn; same code as daNpc_Bm1_c::mLookBackState (tww Bm1) */
     u8 _A16[0x1];
     /* 0xA17 */ be<s8> mSpecificType;
-    /* 0xA18 */ be<s8> mActionPhase;
+    /* 0xA18 */ be<s8> mActionStatus;  /* was mActionPhase (misnamed): view of daNpc_Ko1_c mActionStatus (d_a_npc_ko1.h); one name per field. set_action 022742C0 sets 9 / 0 and the action functions step it; same code as daNpc_Bm1_c::mActionStatus (after tww daNpc_Bs1_c mActionStatus) */
     u8 _A19[0x3];
 };
 WWHD_OFFSET(daNpc_Ko1_c, mPartners, 0x924);
 WWHD_OFFSET(daNpc_Ko1_c, mInitialAngle, 0x940);
 WWHD_OFFSET(daNpc_Ko1_c, mPartnerMsgNo, 0x9B8);
 WWHD_OFFSET(daNpc_Ko1_c, mTalkWaitTimer, 0x9BE);
-WWHD_OFFSET(daNpc_Ko1_c, mSleepTimer, 0x9C2);
+WWHD_OFFSET(daNpc_Ko1_c, mSttTimer, 0x9C2);
 WWHD_OFFSET(daNpc_Ko1_c, mBalloonTimer, 0x9C4);
-WWHD_OFFSET(daNpc_Ko1_c, mTurnAngle, 0x9C8);
+WWHD_OFFSET(daNpc_Ko1_c, mDesiredYRot, 0x9C8);
 WWHD_OFFSET(daNpc_Ko1_c, mAnimationEnded, 0x9D0);
 WWHD_OFFSET(daNpc_Ko1_c, mMessageSelector, 0x9D3);
 WWHD_OFFSET(daNpc_Ko1_c, mSleepState, 0x9D5);
 WWHD_OFFSET(daNpc_Ko1_c, mbTalkTriggered, 0x9DD);
-WWHD_OFFSET(daNpc_Ko1_c, mStatusResult, 0x9E0);
+WWHD_OFFSET(daNpc_Ko1_c, mbSetEyePos, 0x9E0);
 WWHD_OFFSET(daNpc_Ko1_c, mAttention, 0x9E4);
-WWHD_OFFSET(daNpc_Ko1_c, mTalkFlag, 0x9E5);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationSelector, 0xA0C);
+WWHD_OFFSET(daNpc_Ko1_c, mTalking, 0x9E5);
+WWHD_OFFSET(daNpc_Ko1_c, mAnmAtrNo, 0xA0C);
 WWHD_OFFSET(daNpc_Ko1_c, mStatus, 0xA13);
 WWHD_OFFSET(daNpc_Ko1_c, mResumeStatus, 0xA14);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationMode, 0xA15);
+WWHD_OFFSET(daNpc_Ko1_c, mLookBackState, 0xA15);
 WWHD_OFFSET(daNpc_Ko1_c, mSpecificType, 0xA17);
-WWHD_OFFSET(daNpc_Ko1_c, mActionPhase, 0xA18);
+WWHD_OFFSET(daNpc_Ko1_c, mActionStatus, 0xA18);
 WWHD_SIZE(daNpc_Ko1_c, 0xA1C);
 
 /* daNpc_Ko1_childHIO_c (HD 0x60: vtable, parameter block copied from .data, index at +0x5C) */

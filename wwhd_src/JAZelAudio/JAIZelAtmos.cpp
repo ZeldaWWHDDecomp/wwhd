@@ -68,36 +68,36 @@ f32 JAIZelBasic::calcPosVolume(cXyz* pos, f32 scale) {
 
 /* 0201C4B8 */
 void JAIZelBasic::initSeaEnvPos() {
-    field_0x1b80 = 0;
+    mSeaEnvPosCount = 0;
 }
 
 /* 0201C4C4 */
 s32 JAIZelBasic::registSeaEnvPos(cXyz* pos) {
     if (pos == nullptr)
         return -1;
-    *wrappedPosition(mSeaEnvPos, (u32)field_0x1b80) = *pos;
-    s32 n = (u32)field_0x1b80 + 1;
+    *wrappedPosition(mSeaEnvPos, (u32)mSeaEnvPosCount) = *pos;
+    s32 n = (u32)mSeaEnvPosCount + 1;
     if (n >= 0x40) {
-        field_0x1b80 = 0x3F;
+        mSeaEnvPosCount = 0x3F;
         return -1;
     }
-    field_0x1b80 = n;
+    mSeaEnvPosCount = n;
     return n;
 }
 
 /* 0201C524 */
 void JAIZelBasic::seaEnvSePlay(u32 type, u32 reverb) {
-    if (field_0x01f8 != 0)
+    if (mNoCameraTimer != 0)
         return;
-    if (field_0x0204 == 1)
+    if (mSeaEnvSeOff == 1)
         return;
-    if (field_0x0201 == 1)
+    if (mAllSeMuted == 1)
         return;
-    if (field_0x0206 == 1)
+    if (mFanfareActive == 1)
         return;
     if (mGroupBytes.mSeaEnvGroupHD == 0x14) {
         /* four points 5 units around the camera, at height 0 */
-        cXyz* cpos = mAudioCamera->field_0x0;
+        cXyz* cpos = mAudioCamera->position;
         f32 x = cpos->x, z = cpos->z;
         gabi::Local<cXyz> v0, v1, v2, v3;
         cXyz* a = v0.get();
@@ -122,10 +122,10 @@ void JAIZelBasic::seaEnvSePlay(u32 type, u32 reverb) {
         registSeaEnvPos(d);
     }
     f32 left = 0.0f, right = 0.0f, surround = 0.0f;
-    if (field_0x1b80 == 0)
+    if (mSeaEnvPosCount == 0)
         return;
-    void* mtx = mAudioCamera->field_0x8;
-    for (s32 i = 0; i < (s32)field_0x1b80; i++) {
+    void* mtx = mAudioCamera->matrix;
+    for (s32 i = 0; i < (s32)mSeaEnvPosCount; i++) {
         cXyz* out = wrappedPosition(mSeaEnvCameraPos, (u32)i);
         JAIZel_multVec(mtx, wrappedPosition(mSeaEnvPos, (u32)i), out);
         f32 vol = calcPosVolume(out, type < 8 ? 3.0f : 1.0f);
@@ -147,7 +147,7 @@ void JAIZelBasic::seaEnvSePlay(u32 type, u32 reverb) {
         right = 1.0f;
     if (surround > 1.0f)
         surround = 1.0f;
-    if (field_0x0020 != 0) {
+    if (mIsMenuIn != 0) {
         left = left * 0.33f;
         surround = surround * 0.33f;
         right = right * 0.33f;
@@ -168,30 +168,30 @@ void JAIZelBasic::seaEnvSePlay(u32 type, u32 reverb) {
         id2 = JA_SE_SEA_ALL_NORM_SR;
     }
     if (left != 0.0f) {
-        JAIBasic_startSoundVec(this, id0, &field_0x1ec4, 0, 0, 0, 4);
-        if (field_0x1ec4 != 0) {
-            JAISound_setPortData(field_0x1ec4, 9, reverb & 0xFFFF);
-            JAISound_setPan(field_0x1ec4, 0, 0, 1.0f);
-            JAISound_setDolby(field_0x1ec4, 0, 0, 0.0f);
-            JAISound_setVolume(field_0x1ec4, 0, 0, left);
+        JAIBasic_startSoundVec(this, id0, &mpSeaEnvSoundL, 0, 0, 0, 4);
+        if (mpSeaEnvSoundL != 0) {
+            JAISound_setPortData(mpSeaEnvSoundL, 9, reverb & 0xFFFF);
+            JAISound_setPan(mpSeaEnvSoundL, 0, 0, 1.0f);
+            JAISound_setDolby(mpSeaEnvSoundL, 0, 0, 0.0f);
+            JAISound_setVolume(mpSeaEnvSoundL, 0, 0, left);
         }
     }
     if (right != 0.0f) {
-        JAIBasic_startSoundVec(this, id1, &field_0x1ec8, 0, 0, 0, 4);
-        if (field_0x1ec8 != 0) {
-            JAISound_setPortData(field_0x1ec8, 9, reverb & 0xFFFF);
-            JAISound_setPan(field_0x1ec8, 0, 0, 0.0f);
-            JAISound_setDolby(field_0x1ec8, 0, 0, 0.0f);
-            JAISound_setVolume(field_0x1ec8, 0, 0, right);
+        JAIBasic_startSoundVec(this, id1, &mpSeaEnvSoundR, 0, 0, 0, 4);
+        if (mpSeaEnvSoundR != 0) {
+            JAISound_setPortData(mpSeaEnvSoundR, 9, reverb & 0xFFFF);
+            JAISound_setPan(mpSeaEnvSoundR, 0, 0, 0.0f);
+            JAISound_setDolby(mpSeaEnvSoundR, 0, 0, 0.0f);
+            JAISound_setVolume(mpSeaEnvSoundR, 0, 0, right);
         }
     }
     if (surround != 0.0f) {
-        JAIBasic_startSoundVec(this, id2, &field_0x1ecc, 0, 0, 0, 4);
-        if (field_0x1ecc != 0) {
-            JAISound_setPortData(field_0x1ecc, 9, reverb & 0xFFFF);
-            JAISound_setPan(field_0x1ecc, 0, 0, 0.5f);
-            JAISound_setDolby(field_0x1ecc, 0, 0, 1.0f);
-            JAISound_setVolume(field_0x1ecc, 0, 0, surround);
+        JAIBasic_startSoundVec(this, id2, &mpSeaEnvSoundS, 0, 0, 0, 4);
+        if (mpSeaEnvSoundS != 0) {
+            JAISound_setPortData(mpSeaEnvSoundS, 9, reverb & 0xFFFF);
+            JAISound_setPan(mpSeaEnvSoundS, 0, 0, 0.5f);
+            JAISound_setDolby(mpSeaEnvSoundS, 0, 0, 1.0f);
+            JAISound_setVolume(mpSeaEnvSoundS, 0, 0, surround);
         }
     }
 }
@@ -233,9 +233,9 @@ static bool safestring_eq(u32 lit, u32 other, u32 vtbl) {
 
 /* 0201CA10 */
 void JAIZelBasic::seaShoreSE(u32 type, cXyz* pos, u32 keep, u32 reverb) {
-    if (field_0x0201 == 1)
+    if (mAllSeMuted == 1)
         return;
-    if (field_0x0206 == 1)
+    if (mFanfareActive == 1)
         return;
     u32 id;
     if (type == 1)
@@ -244,38 +244,38 @@ void JAIZelBasic::seaShoreSE(u32 type, cXyz* pos, u32 keep, u32 reverb) {
         id = JA_SE_SEASHORE_CLIFF;
     else
         id = JA_SE_SEASHORE_NORM;
-    if (field_0x022d == 0)
+    if (mSceneActive == 0)
         return;
     mSeaShorePos = *pos;
-    if (keep == 0 && field_0x1ed0 != 0)
-        JAISound_stop(field_0x1ed0, 1);
-    JAIBasic_startSoundVec(this, id, &field_0x1ed0, &mSeaShorePos, 0, 0, 4);
-    if (field_0x1ed0 == 0)
+    if (keep == 0 && mpSeaShoreSound != 0)
+        JAISound_stop(mpSeaShoreSound, 1);
+    JAIBasic_startSoundVec(this, id, &mpSeaShoreSound, &mSeaShorePos, 0, 0, 4);
+    if (mpSeaShoreSound == 0)
         return;
-    JAISound_setPortData(field_0x1ed0, 9, reverb & 0xFFFF);
-    if (field_0x0020 != 0) {
-        JAISound_setVolume(field_0x1ed0, 0, 0, 0.33f);
+    JAISound_setPortData(mpSeaShoreSound, 9, reverb & 0xFFFF);
+    if (mIsMenuIn != 0) {
+        JAISound_setVolume(mpSeaShoreSound, 0, 0, 0.33f);
         return;
     }
     /* the current stage name (1047E6B8) against the literal at 10003814 */
     if (safestring_eq(0x10003814, 0x1047E6B8, 0x100037F8) && (u32)l_seaShoreState == 1) {
-        JAISound_setVolume(field_0x1ed0, 0, 0, 0.5f);
+        JAISound_setVolume(mpSeaShoreSound, 0, 0, 0.5f);
         return;
     }
-    if (field_0x0098 == 0.0f)
-        JAISound_setVolume(field_0x1ed0, 0, 0, 0.667f);
+    if (mMainBgmTaktVolume == 0.0f)
+        JAISound_setVolume(mpSeaShoreSound, 0, 0, 0.667f);
 }
 
 /* 0201CC44 */
 void JAIZelBasic::initRiverPos() {
-    field_0x1dd0 = 0;
+    mRiverPosCount = 0;
 }
 
 /* 0201CC50 */
 s32 JAIZelBasic::registRiverPos(cXyz* pos) {
     if (pos == nullptr)
         return -1;
-    void* mtx = mAudioCamera->field_0x8;
+    void* mtx = mAudioCamera->matrix;
     gabi::Local<cXyz> v;
     cXyz* sp = v.get();
     f32 y = pos->y;
@@ -291,31 +291,31 @@ s32 JAIZelBasic::registRiverPos(cXyz* pos) {
     }
     f32 dist = JAIZel_sqrt(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y)));
     f32 max = JAIGlobalParameter_getParamDistanceMax();
-    s32 n = field_0x1dd0;
+    s32 n = mRiverPosCount;
     if (dist > max * 3.0f)
         return n;
     *wrappedPosition(mRiverPos, (u32)n) = *pos;
-    n = (u32)field_0x1dd0 + 1;
+    n = (u32)mRiverPosCount + 1;
     if (n >= 0x40) {
-        field_0x1dd0 = 0x2F;
+        mRiverPosCount = 0x2F;
         return -1;
     }
-    field_0x1dd0 = n;
+    mRiverPosCount = n;
     return n;
 }
 
 /* 0201CDA0 */
 void JAIZelBasic::riverSePlay(u32 type, u32 reverb) {
-    if (field_0x1dd0 == 0)
+    if (mRiverPosCount == 0)
         return;
-    if (field_0x01f8 != 0)
+    if (mNoCameraTimer != 0)
         return;
-    if (field_0x0201 == 1)
+    if (mAllSeMuted == 1)
         return;
-    if (field_0x0206 == 1)
+    if (mFanfareActive == 1)
         return;
-    if ((s32)field_0x0218 == 0x18)
-        registRiverPos(&field_0x0054);
+    if ((s32)mCameraMapInfo == 0x18)
+        registRiverPos(&mCameraPolygonPos);
     u32 id;
     switch (type) {
     case 0:
@@ -325,7 +325,7 @@ void JAIZelBasic::riverSePlay(u32 type, u32 reverb) {
         id = JA_SE_ATM_RIVER_S;
         break;
     case 2:
-        if (field_0x1dd4 == 0)
+        if (mBstHoriSeOn == 0)
             return;
         id = JA_SE_CM_BST_HORI;
         break;
@@ -336,7 +336,7 @@ void JAIZelBasic::riverSePlay(u32 type, u32 reverb) {
     default:
         return;
     }
-    for (s32 i = 0; i < (s32)field_0x1dd0; i++)
+    for (s32 i = 0; i < (s32)mRiverPosCount; i++)
         JAIZel_seStart(this, id, wrappedPosition(mRiverPos, (u32)i), 0, reverb, 0, 1.0f, 1.0f,
                        -1.0f, -1.0f);
 }
@@ -349,8 +349,8 @@ void JAIZelBasic::waterfallSePlay(u32 type, cXyz* pos, u32 reverb) {
     else if (type == 2 || type == 4)
         id = JA_SE_ATM_WATERFALL_M_RIV;
     else
-        id = (s32)field_0x0224 == 0x39 ? JA_SE_ATM_WATERFALL_M_LPF : JA_SE_ATM_WATERFALL_M;
-    void* mtx = mAudioCamera->field_0x8;
+        id = (s32)mSceneNo == 0x39 ? JA_SE_ATM_WATERFALL_M_LPF : JA_SE_ATM_WATERFALL_M;
+    void* mtx = mAudioCamera->matrix;
     gabi::Local<cXyz> v;
     cXyz* sp = v.get();
     f32 y = pos->y;
@@ -367,40 +367,40 @@ void JAIZelBasic::waterfallSePlay(u32 type, cXyz* pos, u32 reverb) {
     f32 dist = JAIZel_sqrt(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y)));
     if (dist > JAIGlobalParameter_getParamDistanceMax() * 4.0f)
         return;
-    *wrappedPosition(mWaterfallPos, (u32)field_0x1e98) = *pos;
-    if (field_0x0207 == 0 && !JAIZel_checkPlayingStreamBgmFlag(this, JA_STRM_DEMO_31_01) &&
-        field_0x0207 == 0)
-        JAIZel_seStart(this, id, wrappedPosition(mWaterfallPos, (u32)field_0x1e98), 0, reverb, 0,
+    *wrappedPosition(mWaterfallPos, (u32)mWaterfallPosCount) = *pos;
+    if (mTaktSeTimer == 0 && !JAIZel_checkPlayingStreamBgmFlag(this, JA_STRM_DEMO_31_01) &&
+        mTaktSeTimer == 0)
+        JAIZel_seStart(this, id, wrappedPosition(mWaterfallPos, (u32)mWaterfallPosCount), 0, reverb, 0,
                        1.0f, 1.0f, -1.0f, -1.0f);
-    s32 n = field_0x1e98;
+    s32 n = mWaterfallPosCount;
     if (n < 0xF)
-        field_0x1e98 = n + 1;
+        mWaterfallPosCount = n + 1;
 }
 
 /* 0201D140 */
 void JAIZelBasic::initWindowPos() {
-    field_0x1ec0 = 0;
+    mWindowPosCount = 0;
 }
 
 /* 0201D14C */
 s32 JAIZelBasic::registWindowPos(cXyz* pos) {
     if (pos == nullptr)
         return -1;
-    *wrappedPosition(mWindowPos, (u32)field_0x1ec0) = *pos;
-    s32 n = (u32)field_0x1ec0 + 1;
+    *wrappedPosition(mWindowPos, (u32)mWindowPosCount) = *pos;
+    s32 n = (u32)mWindowPosCount + 1;
     if (n >= 3) {
-        field_0x1ec0 = 2;
+        mWindowPosCount = 2;
         return -1;
     }
-    field_0x1ec0 = n;
+    mWindowPosCount = n;
     return n;
 }
 
 /* 0201D1AC */
 void JAIZelBasic::rainPlay(s32 type) {
-    if (field_0x1ec0 == 0) {
+    if (mWindowPosCount == 0) {
         if (type == 1) {
-            if ((s32)field_0x0224 == 0x5C)
+            if ((s32)mSceneNo == 0x5C)
                 JAIZel_seStart(this, JA_SE_ATM_RAIN_LPF, 0, 0, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f);
             else
                 JAIZel_seStart(this, JA_SE_ATM_RAIN_HARD, 0, 0, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f);
@@ -409,7 +409,7 @@ void JAIZelBasic::rainPlay(s32 type) {
         }
         return;
     }
-    for (s32 i = 0; i < (s32)field_0x1ec0; i++)
+    for (s32 i = 0; i < (s32)mWindowPosCount; i++)
         JAIZel_seStart(this, type == 1 ? JA_SE_ATM_RAIN_ROOM_HARD : JA_SE_ATM_RAIN_ROOM,
                        wrappedPosition(mWindowPos, (u32)i), 0, 0, 0, 1.0f, 1.0f, -1.0f, -1.0f);
 }

@@ -85,7 +85,7 @@ static void updateTexMatrices(J3DModel* model) {
 
 /* 0233516C */
 void daObjDoguu_c::setPointLight() {
-    s32 variant = field_0x894;
+    s32 variant = mVariant;
     const be<u32>* source = reinterpret_cast<const be<u32>*>(&mPos);
     u32 px = source[0], py = source[1], pz = source[2];
     be<u32>* destination = reinterpret_cast<be<u32>*>(&mLightInfluence.mPos);
@@ -93,7 +93,7 @@ void daObjDoguu_c::setPointLight() {
     destination[1] = py;
     destination[2] = pz;
     s16 red = light_color.colors[3u * (u32)variant + 0];
-    f32 power = field_0x8FC;
+    f32 power = mLightPower;
     mLightInfluence.mColorR = (s16)gabi::ftoi((f32)red * power);
     s16 green = light_color.colors[3u * (u32)variant + 1];
     mLightInfluence.mColorG = (s16)gabi::ftoi((f32)green * power);
@@ -110,31 +110,31 @@ BOOL CheckCreateHeap(daObjDoguu_c* actor) { return actor->CreateHeap(); }
 /* 02334BE8 */
 BOOL daObjDoguu_c::CreateHeap() {
     // HD: each variant directly supplies model data; material-table copies and skin deformers are absent.
-    void* data = doguuResource(daObjDoguu_idx_table.bmt_vgsm[(u32)field_0x894]);
+    void* data = doguuResource(daObjDoguu_idx_table.bmt_vgsm[(u32)mVariant]);
     assertResource(data, 0x162, "modelData != (0)");
     auto* main = doguuModelCreate(data, 0x80000, 0x15220202);
-    field_0x6CC = main;
+    mMainModel = main;
     if (!main)
         return FALSE;
-    void* animation = doguuResource(daObjDoguu_idx_table.brk[(u32)field_0x894]);
+    void* animation = doguuResource(daObjDoguu_idx_table.brk[(u32)mVariant]);
     assertResource(animation, 0x178, "brk_doguu != 0");
     f32 rate = 1.0f;
     if (!doguuBrkInit(&mBrk, data, animation, 1, 2, 0, -1, 0, rate, 0))
         return FALSE;
-    data = doguuResource(daObjDoguu_idx_table.bdl_vgsh[(u32)field_0x894]);
+    data = doguuResource(daObjDoguu_idx_table.bdl_vgsh[(u32)mVariant]);
     assertResource(data, 0x17F, "modelData != (0)");
     auto* head = doguuModelCreate(data, 0, 0x11020203);
-    field_0x6D0 = head;
+    mHeadModel = head;
     if (!head)
         return FALSE;
-    animation = doguuResource(daObjDoguu_idx_table.bck[(u32)field_0x894]);
+    animation = doguuResource(daObjDoguu_idx_table.bck[(u32)mVariant]);
     assertResource(animation, 0x185, "bck_head != 0");
     if (!doguuBckInit(&mBckHead, data, animation, 1, 0, 0, -1, 0, rate))
         return FALSE;
-    data = doguuResource(daObjDoguu_idx_table.bmt_vgsb[(u32)field_0x894]);
+    data = doguuResource(daObjDoguu_idx_table.bmt_vgsb[(u32)mVariant]);
     assertResource(data, 0x19A, "modelData != (0)");
     auto* body = doguuModelCreate(data, 0x80000, 0x15220202);
-    field_0x6D4 = body;
+    mBodyModel = body;
     if (!body)
         return FALSE;
     J3DModelData* modelData = body->mModelData;
@@ -149,23 +149,23 @@ BOOL daObjDoguu_c::CreateHeap() {
     assertResource(animation, 0x1C5, "bck_body != 0");
     if (!doguuBckInit(&mBckBody, data, animation, 1, 0, 0, -1, 0, rate))
         return FALSE;
-    data = doguuResource(daObjDoguu_idx_table.bdl_vgsp[(u32)field_0x894]);
+    data = doguuResource(daObjDoguu_idx_table.bdl_vgsp[(u32)mVariant]);
     assertResource(data, 0x1D9, "modelData != (0)");
     auto* crystal = doguuModelCreate(data, 0, 0x11020203);
-    field_0x6D8 = crystal;
+    mCrystalModel = crystal;
     if (!crystal)
         return FALSE;
     animation = doguuResource(dRes_INDEX_DOGUU_BCK_VGSPA_e);
     assertResource(animation, 0x1DF, "bck_crystal != 0");
     if (!doguuBckInit(&mBckCrystal, data, animation, 1, 0, 0, -1, 0, rate))
         return FALSE;
-    field_0x89C = 1;
+    mCrystalJntNo = 1;
     return TRUE;
 }
 
 /* 0233528C */
 void daObjDoguu_c::set_mtx() {
-    gptr<J3DModel>* const models[] = {&field_0x6CC, &field_0x6D4, &field_0x6D8, &field_0x6D0};
+    gptr<J3DModel>* const models[] = {&mMainModel, &mBodyModel, &mCrystalModel, &mHeadModel};
     for (auto* member : models) {
         f32 x = scale.x, y = scale.y, z = scale.z;
         J3DModel* model = *member;
@@ -185,12 +185,12 @@ void daObjDoguu_c::set_mtx() {
         for (u32 j = 0; j < 12; ++j)
             model->mBaseTransformMtx.m[j / 4][j % 4] = values[j];
     }
-    J3DModel* body = field_0x6D4;
+    J3DModel* body = mBodyModel;
     u32 joint = mHead1JntNo;
     J3DMtxBuffer_hd* block = body->mpMtxBuffer;
     u16 flags = block->mFlags;
     u32 matrices = block->mpAnmMtx;
-    J3DModel* head = field_0x6D0;
+    J3DModel* head = mHeadModel;
     block->mFlags = flags | 0x10;
     Mtx34* matrix = reinterpret_cast<Mtx34*>((uintptr_t)(matrices + joint * sizeof(Mtx34)));
     f32 values[12];
@@ -202,10 +202,10 @@ void daObjDoguu_c::set_mtx() {
 
 /* 02335548 */
 void daObjDoguu_c::CreateInit() {
-    u32 model = gabi::ea((J3DModel*)field_0x6CC);
+    u32 model = gabi::ea((J3DModel*)mMainModel);
     cullMtx = model ? gabi::ea(&reinterpret_cast<J3DModel*>((uintptr_t)model)->mBaseTransformMtx) : 0;
     fopAcM_setCullSizeBox(this, -600.0f, -0.0f, -600.0f, 600.0f, 400.0f, 600.0f);
-    s32 variant = field_0x894;
+    s32 variant = mVariant;
     cullSizeFar = 1.0f;
     mItemNo = variant == 0   ? DoguuHD::ITEM_DIN_PEARL
               : variant == 1 ? DoguuHD::ITEM_FARORE_PEARL
@@ -215,64 +215,64 @@ void daObjDoguu_c::CreateInit() {
     if (!doguuCheckItem((u8)mItemNo, 1))
         doguuCylinderSetR(&mCyl.mCyl, 50.0f);
     mCyl.mStts = &mStts;
-    field_0x8FC = 0;
+    mLightPower = 0;
     setPointLight();
     dKy_plight_set(&mLightInfluence);
     if (argument > 0) {
         f32 head = (f32)mBckHead.mFrameCtrl.mStart, body = (f32)mBckBody.mFrameCtrl.mStart,
             crystal = (f32)mBckCrystal.mFrameCtrl.mStart;
-        field_0x8A0 = 1;
+        mDrawCrystal = 1;
         mBckHead.mFrameCtrl.mFrame = head;
         mBckBody.mFrameCtrl.mFrame = body;
-        field_0x8A1 = 0;
-        field_0x8A2 = 1;
+        mDrawHeadBody = 0;
+        mEyeFlash = 1;
         mBckCrystal.mFrameCtrl.mFrame = crystal;
-        field_0x8AC = STATE_DONE_e;
+        mState = STATE_DONE_e;
     } else if (doguuIsEvent(saveEvents(), DoguuHD::FINISH_DIN_EVENT) &&
                doguuIsEvent(saveEvents(), DoguuHD::FINISH_FARORE_EVENT) &&
                doguuIsEvent(saveEvents(), DoguuHD::FINISH_NAYRU_EVENT)) {
         f32 head = (f32)mBckHead.mFrameCtrl.mEnd, body = (f32)mBckBody.mFrameCtrl.mEnd,
             crystal = (f32)mBckCrystal.mFrameCtrl.mEnd;
-        field_0x8A0 = 1;
-        field_0x8A1 = 1;
+        mDrawCrystal = 1;
+        mDrawHeadBody = 1;
         mBckHead.mFrameCtrl.mFrame = head;
-        field_0x8AC = STATE_DONE_e;
-        field_0x8A2 = 0;
+        mState = STATE_DONE_e;
+        mEyeFlash = 0;
         mBckBody.mFrameCtrl.mFrame = body;
         mBckCrystal.mFrameCtrl.mFrame = crystal;
     } else {
-        variant = field_0x894;
-        field_0x8A1 = 0;
+        variant = mVariant;
+        mDrawHeadBody = 0;
         bool placed = false;
         if (variant == 0) {
             placed = doguuIsEvent(saveEvents(), DoguuHD::FINISH_DIN_EVENT) != 0;
             if (!placed)
-                variant = field_0x894;
+                variant = mVariant;
         }
         if (!placed && variant == 1) {
             placed = doguuIsEvent(saveEvents(), DoguuHD::FINISH_FARORE_EVENT) != 0;
             if (!placed)
-                variant = field_0x894;
+                variant = mVariant;
         }
         if (!placed && variant == 2)
             placed = doguuIsEvent(saveEvents(), DoguuHD::FINISH_NAYRU_EVENT) != 0;
-        field_0x8A2 = placed;
-        field_0x8A0 = placed;
-        field_0x8AC = placed ? STATE_WAIT_e : STATE_WAIT_PEARL_e;
+        mEyeFlash = placed;
+        mDrawCrystal = placed;
+        mState = placed ? STATE_WAIT_e : STATE_WAIT_PEARL_e;
     }
     eyePos.y = (f32)eyePos.y + 125.0f;
     set_mtx();
     // HD: calculate the body skeleton and refresh the head attachment during initialization.
-    ((J3DModel*)field_0x6D4)->calc();
+    ((J3DModel*)mBodyModel)->calc();
     set_mtx();
     auto event = []() { return dComIfGp_getPEvtManager(); };
     mDoguuDemo1EventIdx = doguuGetEventIndex(event(), "DOGUU_DEMO1", 255);
     mDoguuDemo2EventIdx = doguuGetEventIndex(event(), "DOGUU_DEMO2", 255);
     mDoguuDemo3EventIdx = doguuGetEventIndex(event(), "DOGUU_DEMO3", 255);
     s16 megami = doguuGetEventIndex(event(), "MEGAMI_DEMO", 255);
-    bool pearl = field_0x8A0 != 0;
+    bool pearl = mDrawCrystal != 0;
     mMegamiDemoEventIdx = megami;
-    field_0x8A3 = pearl ? 2 : 0; // HD: this light selector has three states instead of a bool.
+    mLightState = pearl ? 2 : 0; // HD: this light selector has three states instead of a bool.
     mAllColRatio = 1;
 }
 
@@ -287,7 +287,7 @@ s32 daObjDoguu_c::_create() {
         actor_condition = status | 8;
     }
     s8 argument = this->argument;
-    field_0x894 = argument > 0 ? argument - 1 : reinterpret_cast<const be<u8>*>(&mParameters)[3];
+    mVariant = argument > 0 ? argument - 1 : reinterpret_cast<const be<u8>*>(&mParameters)[3];
     s32 phase = doguuResourceLoad(&mPhs, "Doguu");
     if (phase == cPhs_COMPLEATE_e) {
         if (!doguuEntryHeap(this, CheckCreateHeap, 0))
@@ -308,7 +308,7 @@ BOOL daObjDoguu_c::_delete() {
 BOOL daObjDoguu_c::_draw() {
     u32 light = doguuEnvironment();
     doguuSettingTev(reinterpret_cast<void*>((uintptr_t)light), 0, &current.pos, &tevStr);
-    gptr<J3DModel>* const models[] = {&field_0x6CC, &field_0x6D0, &field_0x6D4, &field_0x6D8};
+    gptr<J3DModel>* const models[] = {&mMainModel, &mHeadModel, &mBodyModel, &mCrystalModel};
     for (auto* member : models) {
         light = doguuEnvironment();
         J3DModel* model = *member;
@@ -332,12 +332,12 @@ BOOL daObjDoguu_c::_draw() {
     mDoMtx_stack_c::get()->m[0][3] = 0;
     mDoMtx_stack_c::get()->m[1][3] = 0;
     mDoMtx_stack_c::get()->m[2][3] = 0;
-    J3DModel* head = field_0x6D0;
+    J3DModel* head = mHeadModel;
     doguuMatrixCopy(matrix, &reinterpret_cast<DoguuHD::Model*>(head)->mEffectMtx);
-    J3DModel* body = field_0x6D4;
+    J3DModel* body = mBodyModel;
     doguuMatrixCopy(matrix, &reinterpret_cast<DoguuHD::Model*>(body)->mEffectMtx);
-    updateTexMatrices(field_0x6D0);
-    updateTexMatrices(field_0x6D4);
+    updateTexMatrices(mHeadModel);
+    updateTexMatrices(mBodyModel);
     auto entryBck = [&](gptr<J3DModel>* member, mDoExt_bckAnm* animation) {
         J3DModel* model = *member;
         f32 value = animation->mFrameCtrl.mFrame;
@@ -349,21 +349,21 @@ BOOL daObjDoguu_c::_draw() {
         auto* joint = reinterpret_cast<DoguuHD::JointTree*>((uintptr_t)(u32)data->mJointNodes);
         joint->mBck = 0;
     };
-    if (field_0x8A1) {
-        entryBck(&field_0x6D0, &mBckHead);
-        entryBck(&field_0x6D4, &mBckBody);
+    if (mDrawHeadBody) {
+        entryBck(&mHeadModel, &mBckHead);
+        entryBck(&mBodyModel, &mBckBody);
     } else {
-        J3DModel* model = field_0x6CC;
+        J3DModel* model = mMainModel;
         f32 frame = mBrk.mFrameCtrl.mFrame;
         J3DModelData* data = model->mModelData;
         doguuBrkEntry(&mBrk, data, frame);
-        doguuModelUpdate((J3DModel*)field_0x6CC, 0);
-        model = field_0x6CC;
+        doguuModelUpdate((J3DModel*)mMainModel, 0);
+        model = mMainModel;
         data = model->mModelData;
         reinterpret_cast<DoguuHD::MaterialAnimation*>(data)->mBrk = 0;
     }
-    if (field_0x8A0)
-        entryBck(&field_0x6D8, &mBckCrystal);
+    if (mDrawCrystal)
+        entryBck(&mCrystalModel, &mBckCrystal);
     return TRUE;
 }
 
@@ -380,11 +380,11 @@ void daObjDoguu_c::setGoal(s32 staff) {
     mDoMtx_stack_c::transM(localX, localY, localZ);
     f32 gx = mDoMtx_stack_c::get()->m[0][3], gy = mDoMtx_stack_c::get()->m[1][3],
         gz = mDoMtx_stack_c::get()->m[2][3];
-    field_0x8B4.y = gy;
-    field_0x8B4.x = gx;
-    field_0x8B4.z = gz;
+    mGoalPos.y = gy;
+    mGoalPos.x = gx;
+    mGoalPos.z = gz;
     play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
-    doguuSetGoal(&play->play.mEvtManager, &field_0x8B4);
+    doguuSetGoal(&play->play.mEvtManager, &mGoalPos);
 }
 
 /* 02336294 */
@@ -422,7 +422,7 @@ void daObjDoguu_c::setQuake(s32 staff) {
 /* 023363DC */
 void daObjDoguu_c::setJDemo(s32 staff) {
     // HD: the stage helper adds wipe and transition flags.
-    s16 room = reinterpret_cast<const be<s16>*>(&field_0x894)[1];
+    s16 room = reinterpret_cast<const be<s16>*>(&mVariant)[1];
     doguuSetNextStage("ADMumi", room, 0, 8, 0, 1, 0, 0.0f);
 }
 
@@ -447,17 +447,17 @@ void daObjDoguu_c::privateCut() {
             break;
         case ACT_SETBALL_e: {
             s8 room = current.roomNo;
-            field_0x8A0 = 1;
+            mDrawCrystal = 1;
             s32 reverb = doguuReverb(room);
             mDoAud_seStart(0x288C, &current.pos, 0, reverb);
-            field_0x8A3 = 1;
+            mLightState = 1;
             break;
         }
         case ACT_SETANGLE_e:
             setPlayerAngle(staff);
             break;
         case ACT_EYEFLASH_e:
-            field_0x8A2 = 1;
+            mEyeFlash = 1;
             break;
         case ACT_MESSAGE_OITA_e:
             doguuSubBgm(0x8000004Fu);
@@ -469,7 +469,7 @@ void daObjDoguu_c::privateCut() {
             setJDemo(staff);
             break;
         case ACT_SETLIGHT_e:
-            field_0x8C4 = 0;
+            mLightTimer = 0;
             break;
         }
     }
@@ -496,23 +496,23 @@ void daObjDoguu_c::privateCut() {
         break;
     }
     case ACT_SETLIGHT_e: {
-        s32 timer = field_0x8C4;
+        s32 timer = mLightTimer;
         if (timer >= 200) {
             mAllColRatio = 1.0f;
             end = true;
         } else {
             timer = (u32)timer + 1;
-            field_0x8C4 = timer;
+            mLightTimer = timer;
         }
-        timer = field_0x8C4;
+        timer = mLightTimer;
         cLib_addCalc2(&mAllColRatio, timer < 160 ? 0.1f : 1.0f, 0.1f, 0.025f);
-        timer = field_0x8C4;
+        timer = mLightTimer;
         if (timer == 40) {
             mPos.y = 0;
             mPos.x = 0;
             mPos.z = 0;
-            J3DModel* crystal = field_0x6D8;
-            u32 joint = field_0x89C;
+            J3DModel* crystal = mCrystalModel;
+            u32 joint = mCrystalJntNo;
             J3DMtxBuffer_hd* block = crystal->mpMtxBuffer;
             u32 matrices = block->mpAnmMtx;
             block->mFlags |= 0x10;
@@ -520,7 +520,7 @@ void daObjDoguu_c::privateCut() {
                             mDoMtx_stack_c::get());
             mPos.x = mDoMtx_stack_c::get()->m[0][3];
             mPos.y = mDoMtx_stack_c::get()->m[1][3];
-            s32 variant = field_0x894;
+            s32 variant = mVariant;
             mPos.z = mDoMtx_stack_c::get()->m[2][3];
             auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
             dPa_control_c* particles = play->play.mParticle;
@@ -528,7 +528,7 @@ void daObjDoguu_c::privateCut() {
             doguuParticle(particles, 0, id, &mPos, &current.angle, 0, 255, 0, -1, 0, 0, 0);
         } else if (timer == 80) // HD: the completed light begins earlier than the GameCube frame 125.
 
-            field_0x8A3 = 2;
+            mLightState = 2;
         break;
     }
     default:
@@ -553,7 +553,7 @@ s32 daObjDoguu_c::getFinishEventCount() {
 
 /* 023368B0 */
 void daObjDoguu_c::setFinishMyEvent() {
-    s32 variant = field_0x894;
+    s32 variant = mVariant;
     s32 event = variant == 0   ? DoguuHD::FINISH_DIN_EVENT
                 : variant == 1 ? DoguuHD::FINISH_FARORE_EVENT
                                : DoguuHD::FINISH_NAYRU_EVENT;
@@ -562,12 +562,12 @@ void daObjDoguu_c::setFinishMyEvent() {
 
 /* 023368F0 */
 BOOL daObjDoguu_c::_execute() {
-    if (field_0x8A3) {
+    if (mLightState) {
         mPos.y = 0;
         mPos.x = 0;
         mPos.z = 0;
-        J3DModel* crystal = field_0x6D8;
-        u32 joint = field_0x89C;
+        J3DModel* crystal = mCrystalModel;
+        u32 joint = mCrystalJntNo;
         J3DMtxBuffer_hd* block = crystal->mpMtxBuffer;
         u32 matrices = block->mpAnmMtx;
         block->mFlags |= 0x10;
@@ -575,12 +575,12 @@ BOOL daObjDoguu_c::_execute() {
                         mDoMtx_stack_c::get());
         mPos.x = mDoMtx_stack_c::get()->m[0][3];
         f32 y = mDoMtx_stack_c::get()->m[1][3];
-        u8 active = field_0x8A3;
+        u8 active = mLightState;
         mPos.y = y;
         mPos.z = mDoMtx_stack_c::get()->m[2][3];
         // HD: light jitter and smoothing are updated here instead of in setPointLight.
     f32 random = cM_rndFX(active == 1 ? 0.08f : 0.2f);
-        cLib_addCalc2(&field_0x8FC, random + (active == 1 ? 0.15f : 0.8f), 0.25f, active == 1 ? 0.1f : 0.25f);
+        cLib_addCalc2(&mLightPower, random + (active == 1 ? 0.15f : 0.8f), 0.25f, active == 1 ? 0.1f : 0.25f);
         setPointLight();
     }
     doguuCylinderSetC(&mCyl.mCyl, &current.pos);
@@ -592,7 +592,7 @@ BOOL daObjDoguu_c::_execute() {
     auto orderOther = [&](s16 id) { doguuOrderOther(this, id, 255, 65535, 0, 1); };
     auto orderChange = [&](s16 id) { doguuOrderChange(this, id, 0, 65535); };
     auto accepted = [&]() { return eventInfo.mCommand == dEvtCmd_INDEMO_e; };
-    switch ((s32)field_0x8AC) {
+    switch ((s32)mState) {
     case STATE_WAIT_PEARL_e:
         if (doguuCheckItem((u8)mItemNo, 1) && doguuCheckCoHit(&mCyl)) {
             auto* object = reinterpret_cast<dCcD_GObjInf*>((uintptr_t)doguuCoHitObject(&mCyl));
@@ -603,7 +603,7 @@ BOOL daObjDoguu_c::_execute() {
                     if (other && other->mProcName == DoguuHD::fpcNm_PLAYER_e) {
                         doguuCylinderSetR(&mCyl.mCyl, 50.0f);
                         orderOther(mDoguuDemo1EventIdx);
-                        field_0x8AC = STATE_ORDER_DEMO1_e;
+                        mState = STATE_ORDER_DEMO1_e;
                     }
                 }
             }
@@ -611,7 +611,7 @@ BOOL daObjDoguu_c::_execute() {
         break;
     case STATE_ORDER_DEMO1_e:
         if (accepted())
-            field_0x8AC = STATE_DEMO1_e;
+            mState = STATE_DEMO1_e;
         else
             orderOther(mDoguuDemo1EventIdx);
         break;
@@ -619,42 +619,42 @@ BOOL daObjDoguu_c::_execute() {
         privateCut();
         s16 id = mDoguuDemo1EventIdx;
         if (doguuCheckEventEnd(event(), id))
-            field_0x8AC = STATE_SELECT_DEMO2_e;
+            mState = STATE_SELECT_DEMO2_e;
         break;
     }
     case STATE_SELECT_DEMO2_e:
         if (getFinishEventCount() == 0) {
             orderChange(mDoguuDemo2EventIdx);
-            field_0x8AC = STATE_ORDER_DEMO2_e;
+            mState = STATE_ORDER_DEMO2_e;
         } else {
             orderChange(mDoguuDemo3EventIdx);
-            field_0x8AC = STATE_ORDER_DEMO3_e;
+            mState = STATE_ORDER_DEMO3_e;
         }
         break;
     case STATE_ORDER_DEMO2_e:
         if (accepted())
-            field_0x8AC = STATE_DEMO2_e;
+            mState = STATE_DEMO2_e;
         break;
     case STATE_DEMO2_e: {
         privateCut();
         s16 id = mDoguuDemo2EventIdx;
         if (doguuCheckEventEnd(event(), id))
-            field_0x8AC = STATE_START_DEMO3_e;
+            mState = STATE_START_DEMO3_e;
         break;
     }
     case STATE_START_DEMO3_e:
         orderChange(mDoguuDemo3EventIdx);
-        field_0x8AC = STATE_ORDER_DEMO3_e;
+        mState = STATE_ORDER_DEMO3_e;
         break;
     case STATE_ORDER_DEMO3_e:
         if (accepted())
-            field_0x8AC = STATE_DEMO3_e;
+            mState = STATE_DEMO3_e;
         break;
     case STATE_DEMO3_e: {
         privateCut();
         s16 id = mDoguuDemo3EventIdx;
         if (doguuCheckEventEnd(event(), id))
-            field_0x8AC = STATE_FINISH_DEMO3_e;
+            mState = STATE_FINISH_DEMO3_e;
         break;
     }
     case STATE_FINISH_DEMO3_e:
@@ -662,9 +662,9 @@ BOOL daObjDoguu_c::_execute() {
         if (getFinishEventCount() >= 3) {
             doguuOnEvent(saveEvents(), DoguuHD::TOWER_OPEN_EVENT);
             orderChange(mMegamiDemoEventIdx);
-            field_0x8AC = STATE_ORDER_MEGAMI_e;
+            mState = STATE_ORDER_MEGAMI_e;
         } else {
-            field_0x8AC = STATE_WAIT_e;
+            mState = STATE_WAIT_e;
             auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
             play->play.mEvtCtrl.mEventFlag |= 8;
         }
@@ -675,17 +675,17 @@ BOOL daObjDoguu_c::_execute() {
         break;
     case STATE_ORDER_MEGAMI_e:
         if (accepted())
-            field_0x8AC = STATE_MEGAMI_e;
+            mState = STATE_MEGAMI_e;
         break;
     case STATE_MEGAMI_e: {
         privateCut();
         s16 id = mMegamiDemoEventIdx;
         if (doguuCheckEventEnd(event(), id))
-            field_0x8AC = STATE_MEGAMI_DONE_e;
+            mState = STATE_MEGAMI_DONE_e;
         break;
     }
     }
-    if (!field_0x8A1 && field_0x8A2) {
+    if (!mDrawHeadBody && mEyeFlash) {
         f32 frame = mBrk.mFrameCtrl.mFrame;
         if (frame < 1.0f) {
             s32 reverb = doguuReverb((s8)current.roomNo);
@@ -724,7 +724,7 @@ BOOL daObjDoguu_c::_execute() {
                 }
             }
         }
-        field_0x8A1 = mShape != 0;
+        mDrawHeadBody = mShape != 0;
     }
     set_mtx();
     return TRUE;
@@ -734,7 +734,7 @@ BOOL daObjDoguu_c::_execute() {
 u32 daObjDoguu_c::getMsg() {
     if (mActIdx == ACT_MESSAGE_KOKOE_e)
         return 3821;
-    s32 variant = field_0x894;
+    s32 variant = mVariant;
     return variant == 0 ? 3822 : variant == 1 ? 3823 : 3824;
 }
 

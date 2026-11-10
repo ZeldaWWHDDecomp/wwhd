@@ -388,7 +388,7 @@ static BOOL ppNodeCallBack(J3DNode *node, int calcTiming) {
         daNpc_Cb1_c *a_this = static_cast<daNpc_Cb1_c *>(model->getUserArea()); /* getUserArea() */
         if (a_this != nullptr) {
             J3DJoint *joint = J3DNode_toJoint(node);
-            s16 work3 = a_this->m8FA; /* getWork3() */
+            s16 work3 = a_this->mPropellerAngle; /* getWork3() */
             s32 jnt_no = (u16) reinterpret_cast<CbCreateJointData *>(joint)->mJointNo;
             mDoMtx_YrotS(mDoMtx_stack_c::get(), work3);
             PSMTXConcat(cb1_getAnmMtx(model, jnt_no), mDoMtx_stack_c::get(),
@@ -530,25 +530,25 @@ BOOL daNpc_Cb1_c::setAction(ProcFunc_l *cur, ProcFunc_l *newFunc, void *arg) {
         callPrevious = cur->i != 0;
     }
     if (callPrevious) {
-        m8F0 = -1;
+        mActionStatus = -1;
         md_pmf_call<BOOL>(this, cur, arg);
     }
     cur->f = newF;
     cur->d = newD;
     cur->i = newI;
-    m8F0 = 0;
-    m8F4 = 0;
-    m8F6 = 0;
-    m8F8 = 0;
-    m8FA = 0;
-    m8FC = 0.0f;
-    m8F1 = 0;
+    mActionStatus = 0;
+    mCarryAngle = 0;
+    mLandIdleCount = 0;
+    mPropellerSpeed = 0;
+    mPropellerAngle = 0;
+    mFlyHeight = 0.0f;
+    mFlyLiftCycle = 0;
     m8F2 = 0;
     shape_angle.x = 0;
     shape_angle.z = 0;
     attention_info.flags = 0; /* attention_info.flags */
     md_pmf_call<BOOL>(this, cur, arg);
-    m8F0 = m8F0 + 1;
+    mActionStatus = mActionStatus + 1;
     return TRUE;
 }
 
@@ -610,7 +610,7 @@ void daNpc_Cb1_c::setBaseMtx() {
         J3DModel_setBaseScale(pModel, &scale);
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y + 25.0f, current.pos.z);
         mDoMtx_stack_c::YrotM(shape_angle.y);
-        mDoMtx_stack_c::transM(m904.x, m904.y, m904.z);
+        mDoMtx_stack_c::transM(mCarryOffset.x, mCarryOffset.y, mCarryOffset.z);
         mDoMtx_XrotM(mDoMtx_stack_c::get(), shape_angle.x);
         mDoMtx_stack_c::transM(0.0f, -25.0f, 0.0f);
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), shape_angle.z);
@@ -659,8 +659,8 @@ BOOL daNpc_Cb1_c::init() {
         mEventIdx[i] =
             dComIfGp_evmng_getEventIdx(gabi::at<const char>((u32)l_eventNameTbl.entries[i]), 0xFF);
     }
-    m8E3 = -1;
-    m8DD = -1;
+    mOrderedEvent = -1;
+    mOrderEvent = -1;
     eventInfo.mpCheckCB = gabi::guest_fn(
         (const void *)daNpc_Cb1_XyCheckCB); /* eventInfo.setXyCheckCB(daNpc_Cb1_XyCheckCB) */
     eventInfo.mpEventCB = gabi::guest_fn(
@@ -754,9 +754,9 @@ BOOL daNpc_Cb1_c::draw() {
         J3DModel_setBaseTRMtx(mpCelloModel, cb1_getAnmMtx(pModel, m_armL2_jnt_num));
         mDoExt_modelUpdateDL(mpCelloModel, 0);
     } else if (u32 prop = gabi::ea(mpPropellerModel.get());
-               prop != 0 && CbCreate_isFlyAction(this) /* isFlyAction() */ && m8DC != 2) {
+               prop != 0 && CbCreate_isFlyAction(this) /* isFlyAction() */ && mAnmTblIdx != 2) {
         f32 frame = 11.0f;
-        if (m8DC == 4) {
+        if (mAnmTblIdx == 4) {
             frame = mpMorf->getFrame(); /* mpMorf->getFrame() */
         }
         mPropellerBckAnim.entry(gabi::at<J3DModel>(prop)->getModelData(), frame);
@@ -796,7 +796,7 @@ cPhs_State daNpc_Cb1_c::create() {
             mPolyInfo.__vtbl = cb1_create::PolyInfoVtable;
             mPolyInfo.mPolyIndex = 0xFFFF;
             mPolyInfo.mBgIndex = 0x100;
-            m8DB = 0xFF;
+            mAnmPrmIdx = 0xFF;
             mPolyInfo.mProcId = -1;
         }
         actor_condition = actor_condition | 8;

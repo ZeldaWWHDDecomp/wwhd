@@ -118,7 +118,7 @@ s32 daLlift_c::CreateHeap() {
     name->__vtbl = 0x10013E78;
     auto* data = static_cast<J3DModelData*>(getObjectRes(dComIfG_resControl(), name.get(), 4));
     if (!data)
-        JUT_ASSERT_fail("d_a_leaflift.cpp", 0x14E, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_leaflift.cpp", 0x14E, "modelData != (0)");
     J3DModel* model = mDoExt_J3DModel__create(data, 0x80000, 0x11000022);
     mpModel = model;
     if (!model)
@@ -571,7 +571,7 @@ data record1StaticTU 101B9034
 data record2StaticTU 101B9040
 str 10013F20 "Olift"
 str 10013EC0 "d_a_leaflift.cpp"
-str 10013ED4 "modelData != NULL"
+str 10013ED4 "modelData != (0)"
 str 10013F00 "j_happa"
 ext 0273AF40 void operatorDelete(void*)
 ext 0201B47C s32 normalizeRS(cXyz*)

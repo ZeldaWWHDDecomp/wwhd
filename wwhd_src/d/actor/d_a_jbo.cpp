@@ -151,7 +151,7 @@ static BOOL daJBO_Execute(jbo_class *i_this) {
     if (i_this->mFramesUntilJump != 0) {
         i_this->mFramesUntilJump = (s16)(i_this->mFramesUntilJump - 1);
     }
-    switch (i_this->m2BB) {
+    switch (i_this->mAction) {
     case 0:
         jbo_move(i_this);
         break;

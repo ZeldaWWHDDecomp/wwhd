@@ -61,14 +61,14 @@ static inline void control1(bridge_class *i_this, br_s *pBr) {
     gabi::Local<cXyz> sp0C;
 
     pBr++;
-    s16 ec = i_this->m02EC, ee = i_this->m02EE, f0 = i_this->m02F0, f2 = i_this->m02F2;
-    i_this->m02EC = (s16)(ec + f0);
-    i_this->m02EE = (s16)(ee + f2);
+    s16 ec = i_this->mWavePhaseH, ee = i_this->mWavePhaseV, f0 = i_this->mWaveStepH, f2 = i_this->mWaveStepV;
+    i_this->mWavePhaseH = (s16)(ec + f0);
+    i_this->mWavePhaseV = (s16)(ee + f2);
     s16 sVar13 = i_this->mBrCount > 10 ? 4000 : 8000;
 
     sp3C->y = 0.0f;
     sp3C->z = 0.0f;
-    sp3C->x = bridge_getCos(i_this->m02EC) * i_this->m02F8;
+    sp3C->x = bridge_getCos(i_this->mWavePhaseH) * i_this->mSwingAmp;
     cMtx_YrotS(calc_mtx(), i_this->home.angle.y);
     MtxPosition(sp3C, sp24);
     sp3C->x = 1.0f;
@@ -82,25 +82,25 @@ static inline void control1(bridge_class *i_this, br_s *pBr) {
 
     for (int i = 1; i < i_this->mBrCount; i++, pBr++) {
         br_s *prev = pBr - 1;
-        f32 m3F0 = pBr->m3F0;
-        f32 tmp = gabi::fmadds(pBr->m3F8, 0.5f, gabi::fmadds(pBr->m3FC * m3F0, 0.5f, pBr->m3CC.y));
-        f32 sinA = cM_ssin(i_this->m02EC + i * sVar13);
-        f32 sinB = cM_ssin(i_this->m02EE + i * (sVar13 + 1000));
-        f32 fVar8 = sinA * i_this->m02F4 * m3F0;
+        f32 mSwayRate = pBr->mSwayRate;
+        f32 tmp = gabi::fmadds(pBr->mSagY, 0.5f, gabi::fmadds(pBr->mDroopY * mSwayRate, 0.5f, pBr->mCtrlPos.y));
+        f32 sinA = cM_ssin(i_this->mWavePhaseH + i * sVar13);
+        f32 sinB = cM_ssin(i_this->mWavePhaseV + i * (sVar13 + 1000));
+        f32 fVar8 = sinA * i_this->mWaveAmpH * mSwayRate;
         f32 x =
-            gabi::fmadds(sp24->x, m3F0, gabi::fmadds(fVar8, sp18->x, pBr->m3CC.x - prev->m3CC.x)) + sp0C->x;
-        f32 y = gabi::fmadds(sinB * i_this->m02FC, m3F0, tmp - prev->m3CC.y);
+            gabi::fmadds(sp24->x, mSwayRate, gabi::fmadds(fVar8, sp18->x, pBr->mCtrlPos.x - prev->mCtrlPos.x)) + sp0C->x;
+        f32 y = gabi::fmadds(sinB * i_this->mWaveAmpV, mSwayRate, tmp - prev->mCtrlPos.y);
         f32 z =
-            gabi::fmadds(sp24->z, m3F0, gabi::fmadds(fVar8, sp18->z, pBr->m3CC.z - prev->m3CC.z)) + sp0C->z;
+            gabi::fmadds(sp24->z, mSwayRate, gabi::fmadds(fVar8, sp18->z, pBr->mCtrlPos.z - prev->mCtrlPos.z)) + sp0C->z;
 
         s16 atan = cM_atan2s(x, z);
         s16 atan2 = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
         cMtx_YrotS(calc_mtx(), atan);
         cMtx_XrotM(calc_mtx(), atan2);
         MtxPosition(sp3C, sp30);
-        pBr->m3CC.x = prev->m3CC.x + sp30->x;
-        pBr->m3CC.y = prev->m3CC.y + sp30->y;
-        pBr->m3CC.z = prev->m3CC.z + sp30->z;
+        pBr->mCtrlPos.x = prev->mCtrlPos.x + sp30->x;
+        pBr->mCtrlPos.y = prev->mCtrlPos.y + sp30->y;
+        pBr->mCtrlPos.z = prev->mCtrlPos.z + sp30->z;
     }
 }
 
@@ -114,10 +114,10 @@ static inline void control2(bridge_class *i_this, br_s *pBr) {
     sp18->z = 75.0f;
     for (int i = 0; i < i_this->mBrCount - 1; i++, pBr--) {
         br_s *next = pBr + 1;
-        f32 z = pBr->m3CC.z - next->m3CC.z;
-        f32 tmp = gabi::fmadds(pBr->m3F8, 0.5f, gabi::fmadds(pBr->m3FC * pBr->m3F0, 0.5f, pBr->m3CC.y));
-        f32 x = pBr->m3CC.x - next->m3CC.x;
-        f32 y = tmp - next->m3CC.y;
+        f32 z = pBr->mCtrlPos.z - next->mCtrlPos.z;
+        f32 tmp = gabi::fmadds(pBr->mSagY, 0.5f, gabi::fmadds(pBr->mDroopY * pBr->mSwayRate, 0.5f, pBr->mCtrlPos.y));
+        f32 x = pBr->mCtrlPos.x - next->mCtrlPos.x;
+        f32 y = tmp - next->mCtrlPos.y;
         s16 atan = cM_atan2s(x, z);
         s16 atan2 = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
         next->mRotation.y = atan;
@@ -125,17 +125,17 @@ static inline void control2(bridge_class *i_this, br_s *pBr) {
         cMtx_YrotS(calc_mtx(), atan);
         cMtx_XrotM(calc_mtx(), atan2);
         MtxPosition(sp18, sp0C);
-        pBr->m3CC.x = next->m3CC.x + sp0C->x;
-        pBr->m3CC.y = next->m3CC.y + sp0C->y;
-        pBr->m3CC.z = next->m3CC.z + sp0C->z;
+        pBr->mCtrlPos.x = next->mCtrlPos.x + sp0C->x;
+        pBr->mCtrlPos.y = next->mCtrlPos.y + sp0C->y;
+        pBr->mCtrlPos.z = next->mCtrlPos.z + sp0C->z;
     }
 }
 
 /* control3 (inline): the first plank's angle */
 static inline void control3(bridge_class *i_this, br_s *pBr) {
-    f32 x = pBr->m3CC.x - pBr[1].m3CC.x;
-    f32 z = pBr->m3CC.z - pBr[1].m3CC.z;
-    f32 y = pBr->m3CC.y - pBr[1].m3CC.y;
+    f32 x = pBr->mCtrlPos.x - pBr[1].mCtrlPos.x;
+    f32 z = pBr->mCtrlPos.z - pBr[1].mCtrlPos.z;
+    f32 y = pBr->mCtrlPos.y - pBr[1].mCtrlPos.y;
     pBr->mRotation.y = cM_atan2s(x, z);
     pBr->mRotation.x = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
 }
@@ -153,33 +153,33 @@ static inline void cut_control1(bridge_class *i_this, br_s *pBr) {
     MtxPosition(sp24, spC);
     sp24->z = 75.0f;
 
-    for (int i = 1; i < i_this->m0304; i++, pBr++) {
+    for (int i = 1; i < i_this->mBreakBrNo; i++, pBr++) {
         br_s *prev = pBr - 1;
-        f32 fVar1 = pBr->m3EC + 30.0f;
-        f32 fVar2 = pBr->m3CC.y + pBr->m3FC;
+        f32 fVar1 = pBr->mGroundY + 30.0f;
+        f32 fVar2 = pBr->mCtrlPos.y + pBr->mDroopY;
         if (fVar2 < fVar1) {
-            pBr->m407 = pBr->m407 + 1;
+            pBr->mGroundHitCount = pBr->mGroundHitCount + 1;
             fVar2 = fVar1;
         }
-        f32 x = (pBr->m3CC.x - prev->m3CC.x) + spC->x;
-        f32 z = (pBr->m3CC.z - prev->m3CC.z) + spC->z;
-        f32 y = fVar2 - prev->m3CC.y;
+        f32 x = (pBr->mCtrlPos.x - prev->mCtrlPos.x) + spC->x;
+        f32 z = (pBr->mCtrlPos.z - prev->mCtrlPos.z) + spC->z;
+        f32 y = fVar2 - prev->mCtrlPos.y;
         s16 atan = cM_atan2s(x, z);
         s16 atan2 = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
         s16 ry = (s16)(atan + 0x8000);
         s16 rx = (s16)-atan2;
         prev->mRotation.y = ry;
         prev->mRotation.x = rx;
-        if ((u32)i == (u32)(i_this->m0304 - 1)) {
+        if ((u32)i == (u32)(i_this->mBreakBrNo - 1)) {
             pBr->mRotation.y = ry;
             pBr->mRotation.x = rx;
         }
         cMtx_YrotS(calc_mtx(), atan);
         cMtx_XrotM(calc_mtx(), atan2);
         MtxPosition(sp24, sp18);
-        pBr->m3CC.x = prev->m3CC.x + sp18->x;
-        pBr->m3CC.y = prev->m3CC.y + sp18->y;
-        pBr->m3CC.z = prev->m3CC.z + sp18->z;
+        pBr->mCtrlPos.x = prev->mCtrlPos.x + sp18->x;
+        pBr->mCtrlPos.y = prev->mCtrlPos.y + sp18->y;
+        pBr->mCtrlPos.z = prev->mCtrlPos.z + sp18->z;
     }
 }
 
@@ -196,31 +196,31 @@ static inline void cut_control2(bridge_class *i_this, br_s *pBr) {
     MtxPosition(sp24, spC);
     sp24->z = 75.0f;
 
-    for (int i = 0; i < (i_this->mBrCount - 1) - i_this->m0304; i++, pBr--) {
+    for (int i = 0; i < (i_this->mBrCount - 1) - i_this->mBreakBrNo; i++, pBr--) {
         br_s *next = pBr + 1;
-        f32 fVar2 = pBr->m3CC.y + pBr->m3FC;
-        f32 fVar1 = pBr->m3EC + 30.0f;
+        f32 fVar2 = pBr->mCtrlPos.y + pBr->mDroopY;
+        f32 fVar1 = pBr->mGroundY + 30.0f;
         if (fVar2 < fVar1) {
-            pBr->m407 = pBr->m407 + 1;
+            pBr->mGroundHitCount = pBr->mGroundHitCount + 1;
             fVar2 = fVar1;
         }
-        f32 x = (pBr->m3CC.x - next->m3CC.x) + spC->x;
-        f32 z = (pBr->m3CC.z - next->m3CC.z) + spC->z;
-        f32 y = fVar2 - next->m3CC.y;
+        f32 x = (pBr->mCtrlPos.x - next->mCtrlPos.x) + spC->x;
+        f32 z = (pBr->mCtrlPos.z - next->mCtrlPos.z) + spC->z;
+        f32 y = fVar2 - next->mCtrlPos.y;
         s16 atan = cM_atan2s(x, z);
         s16 atan2 = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
         next->mRotation.y = atan;
         next->mRotation.x = atan2;
-        if ((u32)i == (u32)(((i_this->mBrCount - 1) - i_this->m0304) - 1)) {
+        if ((u32)i == (u32)(((i_this->mBrCount - 1) - i_this->mBreakBrNo) - 1)) {
             pBr->mRotation.y = atan;
             pBr->mRotation.x = atan2;
         }
         cMtx_YrotS(calc_mtx(), atan);
         cMtx_XrotM(calc_mtx(), atan2);
         MtxPosition(sp24, sp18);
-        pBr->m3CC.x = next->m3CC.x + sp18->x;
-        pBr->m3CC.y = next->m3CC.y + sp18->y;
-        pBr->m3CC.z = next->m3CC.z + sp18->z;
+        pBr->mCtrlPos.x = next->mCtrlPos.x + sp18->x;
+        pBr->mCtrlPos.y = next->mCtrlPos.y + sp18->y;
+        pBr->mCtrlPos.z = next->mCtrlPos.z + sp18->z;
     }
 }
 
@@ -228,24 +228,24 @@ static inline void cut_control2(bridge_class *i_this, br_s *pBr) {
 static inline void bridge_move_normal(bridge_class *i_this, fopAc_ac_c *player) {
     br_s *pBr = &i_this->mBr[0];
     gabi::Local<cXyz> sp2C;
-    i_this->m0300 = (s16)(i_this->m0300 + 3000);
-    copy_words(gabi::ea(&pBr->m3CC), gabi::ea(&i_this->home.pos));
+    i_this->mAnmPhase = (s16)(i_this->mAnmPhase + 3000);
+    copy_words(gabi::ea(&pBr->mCtrlPos), gabi::ea(&i_this->home.pos));
 
     if ((i_this->mTypeBits & 1) == 1) {
         gabi::Local<cXyz> sp38;
         cMtx_YrotS(calc_mtx(), i_this->home.angle.y);
         sp38->z = 0.0f;
-        sp38->x = bridge_getCos(i_this->m02EC) * i_this->m02F8 * -2.0f;
+        sp38->x = bridge_getCos(i_this->mWavePhaseH) * i_this->mSwingAmp * -2.0f;
         sp38->y = 0.0f;
         MtxPosition(sp38, sp2C);
-        PSVECAdd(&pBr->m3CC, sp2C, &pBr->m3CC);
+        PSVECAdd(&pBr->mCtrlPos, sp2C, &pBr->mCtrlPos);
     }
 
     control1(i_this, pBr);
 
-    copy_words(gabi::ea(&br_at(i_this, i_this->mBrCount - 1)->m3CC), gabi::ea(&i_this->mEndPos));
+    copy_words(gabi::ea(&br_at(i_this, i_this->mBrCount - 1)->mCtrlPos), gabi::ea(&i_this->mEndPos));
     if ((i_this->mTypeBits & 1) == 1) {
-        cXyz *last = &br_at(i_this, i_this->mBrCount - 1)->m3CC;
+        cXyz *last = &br_at(i_this, i_this->mBrCount - 1)->mCtrlPos;
         BridgeHD::SDK::subtractVector(last, sp2C.get(), last); /* PSVECSubtract */
     }
 
@@ -253,18 +253,18 @@ static inline void bridge_move_normal(bridge_class *i_this, fopAc_ac_c *player) 
     control3(i_this, pBr);
 
     gabi::Local<cXyz> sp14;
-    cXyz_mi(&i_this->home.pos, sp14, &pBr->m3CC);
+    cXyz_mi(&i_this->home.pos, sp14, &pBr->mCtrlPos);
     f32 dz = sp14->z, dy = sp14->y, dx = sp14->x;
-    copy_words(gabi::ea(&i_this->current.pos), gabi::ea(&pBr->m3CC));
+    copy_words(gabi::ea(&i_this->current.pos), gabi::ea(&pBr->mCtrlPos));
     i_this->current.angle.x = pBr->mRotation.x;
     i_this->current.angle.y = pBr->mRotation.y;
     i_this->current.angle.z = pBr->mRotation.z;
 
     for (int i = 0; i < i_this->mBrCount; i++, pBr++) {
-        f32 py = pBr->m3CC.y;
-        f32 pz = pBr->m3CC.z;
+        f32 py = pBr->mCtrlPos.y;
+        f32 pz = pBr->mCtrlPos.z;
         pBr->mPosition.y = py;
-        f32 px = pBr->m3CC.x;
+        f32 px = pBr->mCtrlPos.x;
         pBr->mPosition.z = pz;
         pBr->mPosition.x = px;
         s32 cnt = i_this->mBrCount;
@@ -273,25 +273,25 @@ static inline void bridge_move_normal(bridge_class *i_this, fopAc_ac_c *player) 
         pBr->mPosition.y = gabi::fmadds(dy, tmpf, py);
         pBr->mPosition.z = gabi::fmadds(dz, tmpf, pz);
 
-        if (pBr->m406 != 0) {
+        if (pBr->mPlankRideTimer != 0) {
             for (int j = -5; j <= 5; j++) {
                 if ((i + j) < 0 || (i + j) >= i_this->mBrCount) {
                     continue;
                 }
-                s16 my_tgt = (s16)gabi::ftoi((f32)pBr->m400 * bridge_getPlankInfluence(j) * pBr[j].m3F0);
-                cLib_addCalcAngleS2(&pBr[j].m402, my_tgt, 4, 0x800);
-                cLib_addCalc2(&pBr[j].m3F8, pBr->m3F4 * bridge_getPlankInfluence(j), 1.0f, 10.0f);
+                s16 my_tgt = (s16)gabi::ftoi((f32)pBr->mRideRollTarget * bridge_getPlankInfluence(j) * pBr[j].mSwayRate);
+                cLib_addCalcAngleS2(&pBr[j].mRideRoll, my_tgt, 4, 0x800);
+                cLib_addCalc2(&pBr[j].mSagY, pBr->mRideSag * bridge_getPlankInfluence(j), 1.0f, 10.0f);
             }
         }
 
-        if ((pBr->m408 & 4) != 0) {
-            if ((pBr->m408 & 3) != 3) {
+        if ((pBr->mRopeFlags & 4) != 0) {
+            if ((pBr->mRopeFlags & 3) != 3) {
                 f32 fVar14 = 0.0f;
                 f32 fVar2 = -80.0f;
-                if ((pBr->m408 & 3) == 1) {
+                if ((pBr->mRopeFlags & 3) == 1) {
                     fVar14 = 7000.0f;
                     fVar2 = -30.0f;
-                } else if ((pBr->m408 & 3) == 2) {
+                } else if ((pBr->mRopeFlags & 3) == 2) {
                     fVar14 = -7000.0f;
                     fVar2 = -30.0f;
                 }
@@ -299,27 +299,27 @@ static inline void bridge_move_normal(bridge_class *i_this, fopAc_ac_c *player) 
                     if ((i + j) < 0 || (i + j) >= i_this->mBrCount) {
                         continue;
                     }
-                    s16 my_tgt = (s16)gabi::ftoi(fVar14 * bridge_getPlankInfluence(j) * pBr[j].m3F0);
-                    cLib_addCalcAngleS2(&pBr[j].m404, my_tgt, 4, 0x800);
-                    cLib_addCalc2(&pBr[j].m3F8, fVar2 * bridge_getPlankInfluence(j), 1.0f, 15.0f);
+                    s16 my_tgt = (s16)gabi::ftoi(fVar14 * bridge_getPlankInfluence(j) * pBr[j].mSwayRate);
+                    cLib_addCalcAngleS2(&pBr[j].mCutRoll, my_tgt, 4, 0x800);
+                    cLib_addCalc2(&pBr[j].mSagY, fVar2 * bridge_getPlankInfluence(j), 1.0f, 15.0f);
 
-                    if ((pBr->m408 & 3) == 0 && (i_this->mTypeBits & 4) == 0 && (u32)(j + 2) < 5 &&
-                        pBr[j].m406 != 0) {
+                    if ((pBr->mRopeFlags & 3) == 0 && (i_this->mTypeBits & 4) == 0 && (u32)(j + 2) < 5 &&
+                        pBr[j].mPlankRideTimer != 0) {
                         if (dComIfGp_event_runCheck()) {
-                            i_this->m0308 = 0;
+                            i_this->mBreakCount = 0;
                         } else {
-                            s32 v = i_this->m0308 + 2;
-                            i_this->m0308 = v;
+                            s32 v = i_this->mBreakCount + 2;
+                            i_this->mBreakCount = v;
                             /* HD: faster with the player flag 0x02000000 (+0x3B8) */
                             if ((u32)(gabi::at<BridgeHD::PlayerFlags>(gabi::ea(player))->mNoResetFlg0) &
                                 BridgeHD::HeavyRider) {
                                 v += 8;
-                                i_this->m0308 = v;
+                                i_this->mBreakCount = v;
                             }
                             if (v > 100) {
                                 i_this->mMoveProcMode = 4;
-                                i_this->m0304 = i + j;
-                                if (i_this->m033C != 0) {
+                                i_this->mBreakBrNo = i + j;
+                                if (i_this->mRideTimer != 0) {
                                     gabi::Local<cXyz> dir;
                                     dVibration_c *vib = dComIfGp_getVibration();
                                     dir->x = 0.0f;
@@ -333,60 +333,60 @@ static inline void bridge_move_normal(bridge_class *i_this, fopAc_ac_c *player) 
                             }
                         }
                     }
-                    if (pBr[j].m3F4 < -200.0f) {
-                        i_this->m0304 = i + j;
+                    if (pBr[j].mRideSag < -200.0f) {
+                        i_this->mBreakBrNo = i + j;
                         i_this->mMoveProcMode = 4;
                         break;
                     }
                 }
             }
-            if ((pBr->m408 & 4) != 0) {
-                s16 a0 = pBr->m3A0[0];
-                s16 a1 = pBr->m3A0[1];
+            if ((pBr->mRopeFlags & 4) != 0) {
+                s16 a0 = pBr->mRopeHitTimer[0];
+                s16 a1 = pBr->mRopeHitTimer[1];
                 if (a0 != 0 || a1 != 0) {
                     f32 f = (f32)(a0 | a1) * 150.0f;
-                    f32 fVar14 = cM_ssin(i_this->m0300 * 4) * f;
+                    f32 fVar14 = cM_ssin(i_this->mAnmPhase * 4) * f;
                     for (int j = -5; j <= 5; j++) {
                         if ((i + j) < 0 || (i + j) >= i_this->mBrCount) {
                             continue;
                         }
-                        s16 my_tgt = (s16)gabi::ftoi(fVar14 * bridge_getPlankInfluence(j) * pBr[j].m3F0);
-                        pBr[j].m404 = (s16)(pBr[j].m404 + my_tgt);
+                        s16 my_tgt = (s16)gabi::ftoi(fVar14 * bridge_getPlankInfluence(j) * pBr[j].mSwayRate);
+                        pBr[j].mCutRoll = (s16)(pBr[j].mCutRoll + my_tgt);
                     }
                 }
             }
         }
 
-        u8 m406 = pBr->m406;
-        s16 m404 = pBr->m404;
-        s16 m402 = pBr->m402;
-        if (m406 != 0) {
-            pBr->m406 = m406 - 1;
+        u8 mPlankRideTimer = pBr->mPlankRideTimer;
+        s16 mCutRoll = pBr->mCutRoll;
+        s16 mRideRoll = pBr->mRideRoll;
+        if (mPlankRideTimer != 0) {
+            pBr->mPlankRideTimer = mPlankRideTimer - 1;
         }
-        pBr->m400 = 0;
-        pBr->mRotation.z = (s16)(m402 + m404);
-        cLib_addCalcAngleS2(&pBr->m402, 0, 4, 0x400);
-        cLib_addCalcAngleS2(&pBr->m404, 0, 4, 0x400);
-        cLib_addCalc2(&pBr->m3FC, -15.0f, 1.0f, 5.0f);
-        cLib_addCalc0(&pBr->m3F8, 1.0f, 5.0f);
+        pBr->mRideRollTarget = 0;
+        pBr->mRotation.z = (s16)(mRideRoll + mCutRoll);
+        cLib_addCalcAngleS2(&pBr->mRideRoll, 0, 4, 0x400);
+        cLib_addCalcAngleS2(&pBr->mCutRoll, 0, 4, 0x400);
+        cLib_addCalc2(&pBr->mDroopY, -15.0f, 1.0f, 5.0f);
+        cLib_addCalc0(&pBr->mSagY, 1.0f, 5.0f);
     }
 
-    s32 m0308 = i_this->m0308;
-    f32 e0 = i_this->m02E0;
-    f32 e4 = i_this->m02E4;
-    if (m0308 != 0) {
-        i_this->m0308 = m0308 - 1;
+    s32 mBreakCount = i_this->mBreakCount;
+    f32 e0 = i_this->mWavePower;
+    f32 e4 = i_this->mSwingPower;
+    if (mBreakCount != 0) {
+        i_this->mBreakCount = mBreakCount - 1;
     }
-    i_this->m02FC = e0;
-    i_this->m02F4 = e0;
-    i_this->m02F8 = e4;
-    i_this->m02F2 = 3000;
-    i_this->m02F0 = 0x578;
+    i_this->mWaveAmpV = e0;
+    i_this->mWaveAmpH = e0;
+    i_this->mSwingAmp = e4;
+    i_this->mWaveStepV = 3000;
+    i_this->mWaveStepH = 0x578;
 
     /* GameCube: *wp > 0.1f ? 2.0f : 0.0f (HD: fsel on 0.1f - *wp) */
     f32 tmpf2 = (0.1f - wind_power()) >= 0.0f ? 0.0f : 2.0f;
-    cLib_addCalc2(&i_this->m02E0, tmpf2, 0.1f, 0.1f);
-    cLib_addCalc2(&i_this->m02E4, tmpf2 * 0.3f, 0.1f, 0.05f);
+    cLib_addCalc2(&i_this->mWavePower, tmpf2, 0.1f, 0.1f);
+    cLib_addCalc2(&i_this->mSwingPower, tmpf2 * 0.3f, 0.1f, 0.05f);
 }
 
 /* bridge_move (inline) */
@@ -396,7 +396,7 @@ static inline void bridge_move(bridge_class *i_this) {
 
     switch (i_this->mMoveProcMode) {
     case 0:
-        i_this->m02D9 = 0;
+        i_this->mRopePhaseOfs = 0;
         i_this->mMoveProcMode = 2;
         /* HD: no fopAcM_OffStatus(CULL) */
         /* fallthrough */
@@ -404,15 +404,15 @@ static inline void bridge_move(bridge_class *i_this) {
         for (int i = 0; i < i_this->mBrCount; i++) {
             br_s *b = br_at(i_this, i);
             if ((i_this->mTypeBits & 1) == 1) {
-                b->m3F0 = 1.0f;
-                b->m3A5 = 3;
-                b->m3A4 = 3;
+                b->mSwayRate = 1.0f;
+                b->mRope1Hp = 3;
+                b->mRope0Hp = 3;
             } else {
                 f32 tmpf = 3.1415927f * ((f32)i / (f32)(i_this->mBrCount - 1));
                 f32 s = (f32)(BridgeHD::SDK::sin_d(tmpf) * 1.0);
-                b->m3A5 = 3;
-                b->m3A4 = 3;
-                b->m3F0 = fabsf(s);
+                b->mRope1Hp = 3;
+                b->mRope0Hp = 3;
+                b->mSwayRate = fabsf(s);
             }
         }
         i_this->mMoveProcMode = 3;
@@ -424,9 +424,9 @@ static inline void bridge_move(bridge_class *i_this) {
     case 4: {
         gabi::Local<cXyz> sp38;
         for (int i = 0; i < i_this->mBrCount; i++, pBr++) {
-            pBr->m3FC = 0.0f;
-            u32 m0304 = i_this->m0304;
-            if ((u32)i == m0304 || (u32)i == m0304 - 1 || (u32)i == m0304 + 1) {
+            pBr->mDroopY = 0.0f;
+            u32 mBreakBrNo = i_this->mBreakBrNo;
+            if ((u32)i == mBreakBrNo || (u32)i == mBreakBrNo - 1 || (u32)i == mBreakBrNo + 1) {
                 for (int k = 0; k < 2; k++) {
                     f32 x = pBr->mPosition.x;
                     sp38->x = x;
@@ -439,26 +439,26 @@ static inline void bridge_move(bridge_class *i_this) {
             }
         }
         i_this->mMoveProcMode = 5;
-        i_this->m0312 = 50;
+        i_this->mBreakTimer = 50;
         fopAcM_seStart(player, 0x6933 /* JA_SE_OBJ_SBRIDGE_BREAK */, 0);
     }
         /* fallthrough */
     case 5: {
         pBr = &i_this->mBr[0];
-        s16 m0312 = i_this->m0312;
-        s16 m0300 = i_this->m0300;
-        if (m0312 != 0) {
-            i_this->m0312 = m0312 - 1;
+        s16 mBreakTimer = i_this->mBreakTimer;
+        s16 mAnmPhase = i_this->mAnmPhase;
+        if (mBreakTimer != 0) {
+            i_this->mBreakTimer = mBreakTimer - 1;
         }
-        i_this->m0300 = (s16)(m0300 + 4000);
-        copy_words(gabi::ea(&pBr->m3CC), gabi::ea(&i_this->home.pos));
+        i_this->mAnmPhase = (s16)(mAnmPhase + 4000);
+        copy_words(gabi::ea(&pBr->mCtrlPos), gabi::ea(&i_this->home.pos));
         cut_control1(i_this, pBr);
-        copy_words(gabi::ea(&br_at(i_this, i_this->mBrCount - 1)->m3CC), gabi::ea(&i_this->mEndPos));
+        copy_words(gabi::ea(&br_at(i_this, i_this->mBrCount - 1)->mCtrlPos), gabi::ea(&i_this->mEndPos));
         cut_control2(i_this, pBr);
         for (int i = 0; i < i_this->mBrCount; i++, pBr++) {
-            copy_words(gabi::ea(&pBr->mPosition), gabi::ea(&pBr->m3CC));
-            cLib_addCalc2(&pBr->m3FC, -50.0f, 1.0f, 5.0f);
-            pBr->m3EC = -10000.0f;
+            copy_words(gabi::ea(&pBr->mPosition), gabi::ea(&pBr->mCtrlPos));
+            cLib_addCalc2(&pBr->mDroopY, -50.0f, 1.0f, 5.0f);
+            pBr->mGroundY = -10000.0f;
         }
         break;
     }
@@ -471,10 +471,10 @@ static inline void bridge_move(bridge_class *i_this) {
 static inline void rope_hit(bridge_class *i_this, br_s *pBr, fopAc_ac_c *a_player, int side, u32 *soundId,
                             bool *bVar1) {
     dCcD_Cyl *cyl = &pBr->mCyl[side];
-    if (pBr->m3A0[side] < 10) {
+    if (pBr->mRopeHitTimer[side] < 10) {
         be<u32> &flags = cyl->mGObjTg.mSPrm; /* OnTgNoConHit */
         flags = (u32)flags | 2;
-        pBr->m3A0[side] = 20;
+        pBr->mRopeHitTimer[side] = 20;
         *soundId = 0x2838; /* JA_SE_LK_CUT_SBRIDGE_ROPE */
         gabi::Local<BridgeHD::SDK::CcAtInfo> atInfo;
         atInfo->mpObj = gabi::ea(cyl->GetTgHitObj());
@@ -484,26 +484,26 @@ static inline void rope_hit(bridge_class *i_this, br_s *pBr, fopAc_ac_c *a_playe
             dmg = 4;
             atInfo->mDamage = dmg;
         }
-        be<s8> &hp = side == 0 ? pBr->m3A4 : pBr->m3A5;
+        be<s8> &hp = side == 0 ? pBr->mRope0Hp : pBr->mRope1Hp;
         s8 left = (s8)(hp - dmg);
         hp = left;
         if (left <= 0) {
-            pBr->m408 = pBr->m408 & (side == 0 ? 0xE : 0xD);
+            pBr->mRopeFlags = pBr->mRopeFlags & (side == 0 ? 0xE : 0xD);
         } else {
             *bVar1 = true;
         }
-        dComIfGp_particle_set(0xD /* dPa_name::ID_AK_JN_OK */, &pBr->m3A8[side], &a_player->shape_angle);
-        BridgeHD::SDK::kikuzu_set(i_this, &pBr->m3A8[side]);
+        dComIfGp_particle_set(0xD /* dPa_name::ID_AK_JN_OK */, &pBr->mRopeMidPos[side], &a_player->shape_angle);
+        BridgeHD::SDK::kikuzu_set(i_this, &pBr->mRopeMidPos[side]);
     }
 }
 
 /* the chain hit checks (type 1/8 bridges) */
 static inline void chain_hit(br_s *pBr, fopAc_ac_c *a_player, int side, u32 *soundId) {
     dCcD_Cyl *cyl = &pBr->mCyl[side];
-    if (pBr->m3A0[side] < 10) {
+    if (pBr->mRopeHitTimer[side] < 10) {
         be<u32> &flags = cyl->mGObjTg.mSPrm; /* OnTgNoConHit */
         flags = (u32)flags | 2;
-        pBr->m3A0[side] = 15;
+        pBr->mRopeHitTimer[side] = 15;
         *soundId = 0x2839; /* JA_SE_LK_HIT_SBRIDGE_CHAIN */
         dComIfGp_particle_set(0xC /* dPa_name::ID_AK_JN_NG */, cyl->GetTgHitPosP(), &a_player->shape_angle,
                               &BridgeHD::getHeaderState()->mChainParticleScale /* spB4 */);
@@ -513,11 +513,11 @@ static inline void chain_hit(br_s *pBr, fopAc_ac_c *a_player, int side, u32 *sou
 /* the rope fire of one side */
 static inline void rope_fire(bridge_class *i_this, br_s *pBr, int side, bool bGotFlamePos, cXyz *spC0,
                              cXyz *spA8) {
-    cXyz *top = side == 0 ? &pBr->m11C[1] : &pBr->m0F8[1];
-    be<s16> &timer = side == 0 ? pBr->m3C0 : pBr->m3C2;
-    gptr<JPABaseEmitter> &emitter = side == 0 ? pBr->m3C4 : pBr->m3C8;
+    cXyz *top = side == 0 ? &pBr->mSide0Pos[1] : &pBr->mSide1Pos[1];
+    be<s16> &timer = side == 0 ? pBr->mRope0FireTimer : pBr->mRope1FireTimer;
+    gptr<JPABaseEmitter> &emitter = side == 0 ? pBr->mpRope0FireEmitter : pBr->mpRope1FireEmitter;
     copy_floats(spA8, top);
-    if ((pBr->m408 & (side == 0 ? 1 : 2)) == 0) {
+    if ((pBr->mRopeFlags & (side == 0 ? 1 : 2)) == 0) {
         spA8->y = spA8->y - 10000.0f;
     }
     pBr->mCyl[side].SetC(spA8);
@@ -533,7 +533,7 @@ static inline void rope_fire(bridge_class *i_this, br_s *pBr, int side, bool bGo
             }
         }
         if (timer == 0) {
-            pBr->m408 = pBr->m408 & (side == 0 ? 0xE : 0xD);
+            pBr->mRopeFlags = pBr->mRopeFlags & (side == 0 ? 0xE : 0xD);
         }
     } else if (bGotFlamePos && (i_this->mTypeBits & 9) == 0) {
         spA8->y = spA8->y + 100.0f;
@@ -560,8 +560,8 @@ static inline void side_rope_segment(bridge_class *i_this, br_s *pBr, int line, 
     sp30->z = d->z;
     sp30->y = d->y;
     sp30->x = d->x;
-    f32 sn = cM_ssin(i_this->m0300 * 6);
-    f32 a0 = (f32)pBr->m3A0[line];
+    f32 sn = cM_ssin(i_this->mAnmPhase * 6);
+    f32 a0 = (f32)pBr->mRopeHitTimer[line];
     f32 x = gabi::fmadds(sp30->x, 0.5f, (f32)gabi::at<cXyz>(s)[1].x) + sp84->x;
     gabi::at<cXyz>(s)->x = x;
     f32 y = gabi::fmadds(sn, a0, gabi::fmadds(sp30->y, 0.5f, (f32)gabi::at<cXyz>(s)[1].y)) - 10.0f;
@@ -577,7 +577,7 @@ static inline void side_rope_segment(bridge_class *i_this, br_s *pBr, int line, 
     gabi::at<cXyz>(segment00)->y = (f32)gabi::at<cXyz>(seg)[idx].y;
     gabi::at<cXyz>(segment00)->z = z;
     BridgeHD::SDK::himo_cut_control1(gabi::at<cXyz>(segment00));
-    copy_words(segment01, gabi::ea(line == 0 ? &pBr->m11C[1] : &pBr->m0F8[1]));
+    copy_words(segment01, gabi::ea(line == 0 ? &pBr->mSide0Pos[1] : &pBr->mSide1Pos[1]));
     BridgeHD::SDK::himo_cut_control1(gabi::at<cXyz>(segment01));
 }
 
@@ -585,19 +585,19 @@ static inline void side_rope_segment(bridge_class *i_this, br_s *pBr, int line, 
 BOOL daBridge_Execute(bridge_class *i_this) {
     /* HD: no distance culling (GameCube: mbStopDraw); nothing happens during an event while the
      * rumble timer runs */
-    if (dComIfGp_event_runCheck() && i_this->m033C != 0) {
+    if (dComIfGp_event_runCheck() && i_this->mRideTimer != 0) {
         return TRUE;
     }
     fopAc_ac_c *a_player = dComIfGp_getPlayer(0);
-    if (i_this->m033C != 0) {
-        i_this->m033C = i_this->m033C - 1;
+    if (i_this->mRideTimer != 0) {
+        i_this->mRideTimer = i_this->mRideTimer - 1;
     }
 
     cXyz *windDirection = BridgeHD::SDK::dKyw_get_wind_vec();
     *reinterpret_cast<be<u32> *>(&wind_vec) = gabi::ea(windDirection);
     wy = cM_atan2s(windDirection->x, windDirection->z);
     *reinterpret_cast<be<u32> *>(&wp) = BridgeHD::SDK::dKyw_get_wind_power();
-    i_this->m0302 = i_this->m0302 + 1;
+    i_this->mFrameCounter = i_this->mFrameCounter + 1;
 
     if ((i_this->mTypeBits & 2) != 0 && i_this->mpAite == nullptr) {
         i_this->mpAite =
@@ -606,7 +606,7 @@ BOOL daBridge_Execute(bridge_class *i_this) {
 
     bridge_move(i_this);
 
-    i_this->m030C = 0;
+    i_this->mSideRopeNum = 0;
     gabi::Local<cXyz> spC0;
     br_s *pBr = &i_this->mBr[0];
     bool bGotFlamePos = false;
@@ -637,28 +637,28 @@ BOOL daBridge_Execute(bridge_class *i_this) {
         cMtx_XrotM(calc_mtx(), pBr->mRotation.x);
         mDoMtx_ZrotM(calc_mtx(), pBr->mRotation.z);
 
-        s32 m0304 = i_this->m0304;
-        if (m0304 != 0) {
-            MtxTrans(0.0f, 0.0f, i > m0304 ? 30.0f : -30.0f, 1);
+        s32 mBreakBrNo = i_this->mBreakBrNo;
+        if (mBreakBrNo != 0) {
+            MtxTrans(0.0f, 0.0f, i > mBreakBrNo ? 30.0f : -30.0f, 1);
         }
 
         f32 sx = pBr->mScale.x;
         eyeDir->y = 0.0f;
         eyeDir->z = 0.0f;
         eyeDir->x = 99.0f * sx;
-        MtxPosition(eyeDir, &pBr->m11C[1]);
+        MtxPosition(eyeDir, &pBr->mSide0Pos[1]);
         eyeDir->x = -eyeDir->x; /* GameCube: *= -1.0f (fneg) */
-        MtxPosition(eyeDir, &pBr->m0F8[1]);
+        MtxPosition(eyeDir, &pBr->mSide1Pos[1]);
         eyeDir->y = -30.0f; /* REG0_F(4) + -30.0f */
-        MtxPosition(eyeDir, &pBr->m0F8[2]);
+        MtxPosition(eyeDir, &pBr->mSide1Pos[2]);
         eyeDir->x = -eyeDir->x;
-        MtxPosition(eyeDir, &pBr->m11C[2]);
+        MtxPosition(eyeDir, &pBr->mSide0Pos[2]);
 
-        if ((pBr->m408 & 4) != 0) {
-            s16 m418 = pBr->m418;
-            if (m418 != 0) {
-                if (m418 > 0) {
-                    pBr->m418 = m418 - 1;
+        if ((pBr->mRopeFlags & 4) != 0) {
+            s16 mRopeTopTimer = pBr->mRopeTopTimer;
+            if (mRopeTopTimer != 0) {
+                if (mRopeTopTimer > 0) {
+                    pBr->mRopeTopTimer = mRopeTopTimer - 1;
                 }
                 f32 ratio = (f32)i / (f32)(i_this->mBrCount - 1);
                 f64 s;
@@ -668,17 +668,17 @@ BOOL daBridge_Execute(bridge_class *i_this) {
                     s = BridgeHD::SDK::sin_d(3.1415927f * ratio);
                 }
                 f32 add = (f32)(s * (f64)(-topSwing) + (f64)topBase); /* fmadds with the double sine */
-                f32 x1 = pBr->m11C[1].x, y1 = pBr->m11C[1].y, z1 = pBr->m11C[1].z;
-                f32 x0 = pBr->m0F8[1].x, y0 = pBr->m0F8[1].y, z0 = pBr->m0F8[1].z;
-                pBr->m11C[0].z = z1;
-                pBr->m11C[0].x = x1;
-                pBr->m0F8[0].x = x0;
-                pBr->m11C[0].y = y1 + add;
-                pBr->m0F8[0].y = y0 + add;
-                pBr->m0F8[0].z = z0;
-                if ((i_this->mTypeBits & 2) != 0 && (u32)i == (u32)(i_this->m02DD - 1)) {
-                    copy_words(gabi::ea(&i_this->m0320), gabi::ea(&pBr->m11C[0]));
-                    copy_words(gabi::ea(&i_this->m032C), gabi::ea(&pBr->m0F8[0]));
+                f32 x1 = pBr->mSide0Pos[1].x, y1 = pBr->mSide0Pos[1].y, z1 = pBr->mSide0Pos[1].z;
+                f32 x0 = pBr->mSide1Pos[1].x, y0 = pBr->mSide1Pos[1].y, z0 = pBr->mSide1Pos[1].z;
+                pBr->mSide0Pos[0].z = z1;
+                pBr->mSide0Pos[0].x = x1;
+                pBr->mSide1Pos[0].x = x0;
+                pBr->mSide0Pos[0].y = y1 + add;
+                pBr->mSide1Pos[0].y = y0 + add;
+                pBr->mSide1Pos[0].z = z0;
+                if ((i_this->mTypeBits & 2) != 0 && (u32)i == (u32)(i_this->mActiveBrCount - 1)) {
+                    copy_words(gabi::ea(&i_this->mEndRopePos1), gabi::ea(&pBr->mSide0Pos[0]));
+                    copy_words(gabi::ea(&i_this->mEndRopePos0), gabi::ea(&pBr->mSide1Pos[0]));
                 }
             }
 
@@ -686,10 +686,10 @@ BOOL daBridge_Execute(bridge_class *i_this) {
             bool bVar1 = false;
             if ((i_this->mTypeBits & 9) == 0) {
                 if (i_this->mBrCount - i < 3) {
-                    pBr->m408 = 0;
+                    pBr->mRopeFlags = 0;
                 }
-                if (i_this->m0304 != 0) {
-                    pBr->m408 = pBr->m408 & 0xC;
+                if (i_this->mBreakBrNo != 0) {
+                    pBr->mRopeFlags = pBr->mRopeFlags & 0xC;
                 }
                 if (pBr->mCyl[0].ChkTgHit()) {
                     rope_hit(i_this, pBr, a_player, 0, &soundId, &bVar1);
@@ -718,7 +718,7 @@ BOOL daBridge_Execute(bridge_class *i_this) {
                 if ((i_this->mTypeBits & 8) != 0 || bVar1) {
                     soundId = 0x2837; /* JA_SE_LK_HIT_SBRIDGE_ROPE */
                 }
-                mDoAud_seStart(soundId, &pBr->m3CC, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
+                mDoAud_seStart(soundId, &pBr->mCtrlPos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
             }
 
             rope_fire(i_this, pBr, 0, bGotFlamePos, spC0, spA8);
@@ -729,13 +729,13 @@ BOOL daBridge_Execute(bridge_class *i_this) {
         }
 
         for (int k = 0; k < 2; k++) {
-            if (pBr->m3A0[k] != 0) {
-                pBr->m3A0[k] = pBr->m3A0[k] - 1;
+            if (pBr->mRopeHitTimer[k] != 0) {
+                pBr->mRopeHitTimer[k] = pBr->mRopeHitTimer[k] - 1;
             }
         }
 
         cMtx_YrotM(calc_mtx(), pBr->mRotationYExtra);
-        if (i >= i_this->m02DD) {
+        if (i >= i_this->mActiveBrCount) {
             pBr->mScale.z = 0.0f;
             pBr->mScale.y = 0.0f;
             pBr->mScale.x = 0.0f;
@@ -743,37 +743,37 @@ BOOL daBridge_Execute(bridge_class *i_this) {
             m->mBaseScale.x = 0.0f;
             m->mBaseScale.y = 0.0f;
             m->mBaseScale.z = 0.0f;
-            pBr->m408 = 0;
+            pBr->mRopeFlags = 0;
         }
         J3DModel_setBaseTRMtx(pBr->mpModel, calc_mtx());
 
-        if ((i_this->mTypeBits & 1) == 0 && (pBr->m408 & 4) != 0) {
+        if ((i_this->mTypeBits & 1) == 0 && (pBr->mRopeFlags & 4) != 0) {
             u32 lines = (u32)(*reinterpret_cast<be<u32> *>(
                 &gabi::at<BridgeLineMaterial>(gabi::ea(&i_this->mLineMat))->mpLines));
             u32 segment0 = gabi::ea(gabi::at<BridgeLine>(lines)[0].mpSegments.get());
             u32 segment1 = gabi::ea(gabi::at<BridgeLine>(lines)[1].mpSegments.get());
-            u32 idx = i_this->m030C + 1;
+            u32 idx = i_this->mSideRopeNum + 1;
 
             eyeDir->x = 0.0f;
-            s16 tmpS = (s16)(i_this->m02D9 * 0x5DC);
+            s16 tmpS = (s16)(i_this->mRopePhaseOfs * 0x5DC);
             /* HD: the angle is summed in float, then converted */
-            s32 ang = gabi::ftoi((f32)(i_this->m0302 * 0x578) + (f32)tmpS);
+            s32 ang = gabi::ftoi((f32)(i_this->mFrameCounter * 0x578) + (f32)tmpS);
             f32 sn = cM_ssin(ang);
             eyeDir->z = (wind_power() + 0.3f) * ((sn + sn) + 5.0f);
             cMtx_YrotS(calc_mtx(), wind_y());
             MtxPosition(eyeDir, sp84);
 
-            if (pBr->m408 & 1) {
-                copy_words(segment0 + idx * 0xC, gabi::ea(&pBr->m11C[0]));
+            if (pBr->mRopeFlags & 1) {
+                copy_words(segment0 + idx * 0xC, gabi::ea(&pBr->mSide0Pos[0]));
             } else {
                 side_rope_segment(i_this, pBr, 0, segment0, idx, sp84);
             }
-            if (pBr->m408 & 2) {
-                copy_words(segment1 + idx * 0xC, gabi::ea(&pBr->m0F8[0]));
+            if (pBr->mRopeFlags & 2) {
+                copy_words(segment1 + idx * 0xC, gabi::ea(&pBr->mSide1Pos[0]));
             } else {
                 side_rope_segment(i_this, pBr, 1, segment1, idx, sp84);
             }
-            i_this->m030C = i_this->m030C + 1;
+            i_this->mSideRopeNum = i_this->mSideRopeNum + 1;
         }
     }
 
@@ -787,30 +787,30 @@ BOOL daBridge_Execute(bridge_class *i_this) {
         int sw = i & 3;
         int idx = i >> 2;
         u32 v = vtxTbl + i * 0xC;
-        if (idx < i_this->m02DD) {
+        if (idx < i_this->mActiveBrCount) {
             pBr = br_at(i_this, idx);
             switch (sw) {
             case 0:
-                copy_words(v, gabi::ea(&pBr->m11C[2]));
+                copy_words(v, gabi::ea(&pBr->mSide0Pos[2]));
                 break;
             case 1:
-                copy_words(v, gabi::ea(&pBr->m0F8[2]));
+                copy_words(v, gabi::ea(&pBr->mSide1Pos[2]));
                 break;
             case 2:
-                copy_words(v, gabi::ea(&pBr->m11C[1]));
+                copy_words(v, gabi::ea(&pBr->mSide0Pos[1]));
                 break;
             case 3:
-                copy_words(v, gabi::ea(&pBr->m0F8[1]));
+                copy_words(v, gabi::ea(&pBr->mSide1Pos[1]));
                 break;
             }
-            if (idx == 0 || (u32)idx == (u32)(i_this->m02DD - 1)) {
+            if (idx == 0 || (u32)idx == (u32)(i_this->mActiveBrCount - 1)) {
                 cMtx_YrotS(calc_mtx(), pBr->mRotation.y);
                 cMtx_XrotM(calc_mtx(), pBr->mRotation.x);
                 eyeDir->y = 0.0f;
                 eyeDir->x = 0.0f;
                 if (idx == 0) {
                     eyeDir->z = 50.0f;
-                } else if ((u32)i_this->m02DD == (u32)i_this->mBrCount) {
+                } else if ((u32)i_this->mActiveBrCount == (u32)i_this->mBrCount) {
                     eyeDir->z = -50.0f;
                 } else {
                     eyeDir->z = -40.0f;

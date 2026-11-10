@@ -106,9 +106,9 @@ void JStudio_JStage::TAdaptor_camera::adaptor_do_begin(const jst_adaptors::TObje
         s32 index = output->mValueIndex;
         f32 value = (mObject.get()->*output->mGetter)();
         auto& variable = reinterpret_cast<jst_timeline::TVariableValue*>(mVariableValues.get())[index];
-        variable.field_0x4 = 0;
-        variable.field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(&JStudioCamera_updateImmediate));
-        variable.field_0xc.val = value;
+        variable.mAge = 0;
+        variable.mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(&JStudioCamera_updateImmediate));
+        variable.mParam.val = value;
     }
 }
 /* 02841014 */
@@ -161,7 +161,7 @@ static void destroyCameraOutputs() {
 /* 028412B4 */
 static jst_timeline::TVariableValue* constructCameraVariableValue(jst_timeline::TVariableValue* value) {
     if (!value) value = static_cast<jst_timeline::TVariableValue*>(JStudioCamera_allocate(sizeof(jst_timeline::TVariableValue)));
-    if (value) { value->field_0x4 = 0; value->field_0x8.v = 0; JStudioCamera_clear(&value->field_0xc, 4); value->pOutput_ = &sJStudioOutputNone; }
+    if (value) { value->mAge = 0; value->mUpdate.v = 0; JStudioCamera_clear(&value->mParam, 4); value->pOutput_ = &sJStudioOutputNone; }
     return value;
 }
 /* 02841318 */

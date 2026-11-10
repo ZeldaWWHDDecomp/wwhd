@@ -6,11 +6,11 @@
 using meter_detail::sub_meter_class;
 struct dMeter_HIO_c {
     /* 0x00 */ be<u32> mVtable;
-    /* 0x004 */ be<s16> field_0x6;
+    /* 0x004 */ be<s16> mCompassFadeFrames;  /* was field_0x6; was mHudFadeFrames (misnamed): WWHD offset 0x4 (GameCube 0x6): the fade length in frames of the compass alpha (sub_meter_class mCompassAlpha, which TWW dMeter_compassAlpha applies to the compass and map panes); the alpha step inlined into dMeter_Execute 02593B10 (meterUpdateAlphaControl) fades mCompassAlpha by valueIncrease(mCompassFadeFrames, mCompassFadeTimer) and sets the timer to it when fully shown; dMeter_Create 02595C6C starts the timer at it; constructor 025974DC default 10; same code TWW d_meter.cpp (dMeter_alphaControl, dMeter_Create) */
     /* 0x006 */ be<s16> mReserved6;
     /* 0x008 */ be<s16> mReserved8;
     u8 mPaddingA[0x2];
-    /* 0x00C */ be<f32> field_0xc;
+    /* 0x00C */ be<f32> mBossLifeRatioDefault;  /* was field_0xc: dMeter_enemyMove 0259ACD4: the boss life ratio shown when the boss actor's max_health is 0 (else health / max_health); only the constructor 025974DC writes it (1.0); same use TWW dMeter_bossEnemyMove */
     /* 0x010 */ be<f32> field_0x10;
     /* 0x014 */ be<f32> field_0x14;
     /* 0x018 */ be<f32> field_0x18;
@@ -42,8 +42,8 @@ struct dMeter_HIO_c {
     /* 0x05C */ be<f32> field_0x5c;
     /* 0x060 */ be<u8> field_0x60;
     /* 0x061 */ be<u8> field_0x61;
-    /* 0x062 */ be<u8> field_0x62;
-    /* 0x063 */ be<u8> field_0x63;
+    /* 0x062 */ be<u8> mIgnoreArrowNumCount;  /* was field_0x62: dMeter_xyMove 02599584: when set, the pending play mItemArrowNumCount is cleared before it is added to the saved arrow count (the change is dropped); only the constructor 025974DC writes it (0); same use TWW dMeter_xyItemCountUp */
+    /* 0x063 */ be<u8> mIgnoreBombNumCount;  /* was field_0x63: dMeter_xyMove 02599584: when set, the pending play mItemBombNumCount is cleared before it is added to the saved bomb count (the change is dropped); only the constructor 025974DC writes it (0); same use TWW dMeter_xyItemCountUp */
     /* 0x064 */ be<s16> field_0x64;
     /* 0x066 */ be<s16> field_0x66;
     /* 0x068 */ be<s16> field_0x68;
@@ -56,16 +56,16 @@ struct dMeter_HIO_c {
     /* 0x082 */ be<s16> mReserved82;
     /* 0x084 */ be<s16> mReserved84;
     /* 0x086 */ be<s16> mReserved86;
-    /* 0x088 */ be<s16> field_0x88;
-    /* 0x08A */ be<s16> field_0x8a;
-    /* 0x08C */ be<s16> field_0x8c;
-    /* 0x08E */ be<s16> field_0x8e;
-    /* 0x090 */ be<s16> field_0x90;
-    /* 0x092 */ be<s16> field_0x92;
-    /* 0x094 */ be<s16> field_0x94;
-    /* 0x096 */ be<s16> field_0x96;
-    /* 0x098 */ be<s16> field_0x98;
-    /* 0x09A */ be<s16> field_0x9a;
+    /* 0x088 */ be<s16> mKeyLightStep0;  /* was field_0x88: dMeter_keyMove 0259C7FC: mKeyLight2Frames[i+1] = previous frame + mKeyLightStep[i] + cM_rndFX(mKeyLightStepRange[i]), i = 0..2 (0x88/0x8A/0x8C) */
+    /* 0x08A */ be<s16> mKeyLightStep1;  /* was field_0x8a: second mKeyLightStep (the d_meter_02.h view reads 0x88..0x8C as mKeyLightStep[3], dMeter_keyMove 0259C7FC) */
+    /* 0x08C */ be<s16> mKeyLightStep2;  /* was field_0x8c: third mKeyLightStep (view mKeyLightStep[2], dMeter_keyMove 0259C7FC) */
+    /* 0x08E */ be<s16> mKeyLightEndStep;  /* was field_0x8e: dMeter_keyMove 0259C7FC: mKeyLight2Frames[4] = mKeyLight2Frames[3] + mKeyLightEndStep + cM_rndFX(mKeyLightEndRange) */
+    /* 0x090 */ be<s16> mKeyLightStart;  /* was field_0x90: dMeter_keyMove 0259C7FC: base of mKeyLight2Frames[0] (plus cM_rndFX(mKeyLightStartRange)) */
+    /* 0x092 */ be<s16> mKeyLightStepRange0;  /* was field_0x92: dMeter_keyMove 0259C7FC: cM_rndFX ranges for the mKeyLightStep steps (0x92/0x94/0x96) */
+    /* 0x094 */ be<s16> mKeyLightStepRange1;  /* was field_0x94: second mKeyLightStepRange (view mKeyLightStepRange[1], dMeter_keyMove 0259C7FC) */
+    /* 0x096 */ be<s16> mKeyLightStepRange2;  /* was field_0x96: third mKeyLightStepRange (view mKeyLightStepRange[2], dMeter_keyMove 0259C7FC) */
+    /* 0x098 */ be<s16> mKeyLightEndRange;  /* was field_0x98: dMeter_keyMove 0259C7FC: cM_rndFX range of the last mKeyLight2Frames step */
+    /* 0x09A */ be<s16> mKeyLightStartRange;  /* was field_0x9a: dMeter_keyMove 0259C7FC: cM_rndFX range added to mKeyLightStart for mKeyLight2Frames[0] */
     /* 0x09C */ be<s16> field_0x9c;
     /* 0x09E */ be<s16> field_0x9e;
     /* 0x0A0 */ be<s16> field_0xa0;
@@ -170,10 +170,10 @@ struct dMeter_HIO_c {
     u8 mTail[2];
 };
 WWHD_SIZE(dMeter_HIO_c, 0x158);
-WWHD_OFFSET(dMeter_HIO_c, field_0x6, 0x4);
+WWHD_OFFSET(dMeter_HIO_c, mCompassFadeFrames, 0x4);
 WWHD_OFFSET(dMeter_HIO_c, mReserved6, 0x6);
 WWHD_OFFSET(dMeter_HIO_c, mReserved8, 0x8);
-WWHD_OFFSET(dMeter_HIO_c, field_0xc, 0xC);
+WWHD_OFFSET(dMeter_HIO_c, mBossLifeRatioDefault, 0xC);
 WWHD_OFFSET(dMeter_HIO_c, field_0x10, 0x10);
 WWHD_OFFSET(dMeter_HIO_c, field_0x14, 0x14);
 WWHD_OFFSET(dMeter_HIO_c, field_0x18, 0x18);
@@ -204,8 +204,8 @@ WWHD_OFFSET(dMeter_HIO_c, field_0x58, 0x58);
 WWHD_OFFSET(dMeter_HIO_c, field_0x5c, 0x5C);
 WWHD_OFFSET(dMeter_HIO_c, field_0x60, 0x60);
 WWHD_OFFSET(dMeter_HIO_c, field_0x61, 0x61);
-WWHD_OFFSET(dMeter_HIO_c, field_0x62, 0x62);
-WWHD_OFFSET(dMeter_HIO_c, field_0x63, 0x63);
+WWHD_OFFSET(dMeter_HIO_c, mIgnoreArrowNumCount, 0x62);
+WWHD_OFFSET(dMeter_HIO_c, mIgnoreBombNumCount, 0x63);
 WWHD_OFFSET(dMeter_HIO_c, field_0x64, 0x64);
 WWHD_OFFSET(dMeter_HIO_c, field_0x66, 0x66);
 WWHD_OFFSET(dMeter_HIO_c, field_0x68, 0x68);
@@ -218,16 +218,16 @@ WWHD_OFFSET(dMeter_HIO_c, mReserved80, 0x80);
 WWHD_OFFSET(dMeter_HIO_c, mReserved82, 0x82);
 WWHD_OFFSET(dMeter_HIO_c, mReserved84, 0x84);
 WWHD_OFFSET(dMeter_HIO_c, mReserved86, 0x86);
-WWHD_OFFSET(dMeter_HIO_c, field_0x88, 0x88);
-WWHD_OFFSET(dMeter_HIO_c, field_0x8a, 0x8A);
-WWHD_OFFSET(dMeter_HIO_c, field_0x8c, 0x8C);
-WWHD_OFFSET(dMeter_HIO_c, field_0x8e, 0x8E);
-WWHD_OFFSET(dMeter_HIO_c, field_0x90, 0x90);
-WWHD_OFFSET(dMeter_HIO_c, field_0x92, 0x92);
-WWHD_OFFSET(dMeter_HIO_c, field_0x94, 0x94);
-WWHD_OFFSET(dMeter_HIO_c, field_0x96, 0x96);
-WWHD_OFFSET(dMeter_HIO_c, field_0x98, 0x98);
-WWHD_OFFSET(dMeter_HIO_c, field_0x9a, 0x9A);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStep0, 0x88);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStep1, 0x8A);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStep2, 0x8C);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightEndStep, 0x8E);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStart, 0x90);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStepRange0, 0x92);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStepRange1, 0x94);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStepRange2, 0x96);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightEndRange, 0x98);
+WWHD_OFFSET(dMeter_HIO_c, mKeyLightStartRange, 0x9A);
 WWHD_OFFSET(dMeter_HIO_c, field_0x9c, 0x9C);
 WWHD_OFFSET(dMeter_HIO_c, field_0x9e, 0x9E);
 WWHD_OFFSET(dMeter_HIO_c, field_0xa0, 0xA0);
@@ -996,7 +996,7 @@ WWHD_OFFSET(MeterUpdateScratch, mLifeHalfword, 0x12);
 WWHD_SIZE(MeterUpdateScratch, 0x1C);
 struct MeterUpdateSharedState {
   u8 mPadding0[0x18];
-  be<f32> mActionAlpha, mSecondaryAlpha, mRupyAlpha, mKeyAlpha;
+  be<f32> mHeartAlpha, mMagicAlpha, mRupyAlpha, mKeyAlpha;  /* mHeartAlpha was mActionAlpha (misnamed), mMagicAlpha was mSecondaryAlpha (misnamed): dMeter_Execute 02593B10 copies sub_meter_class mHeartAlpha / mMagicAlpha (the heart and magic gauge alpha ratios, dMeter_gaugeAlpha 0259C2BC) into them, as it copies mRupyAlpha / mKeyAlpha */
   u8 mPadding28[0x10];
   be<u32> mStatusFlags;
   be<u16> mMiniGameType;
@@ -1006,7 +1006,7 @@ struct MeterUpdateSharedState {
   u8 mPadding42;
   be<u8> mBattleState, mBattleMode;
 };
-WWHD_OFFSET(MeterUpdateSharedState, mActionAlpha, 0x18);
+WWHD_OFFSET(MeterUpdateSharedState, mHeartAlpha, 0x18);
 WWHD_OFFSET(MeterUpdateSharedState, mStatusFlags, 0x38);
 WWHD_OFFSET(MeterUpdateSharedState, mButtonShowFlags, 0x41);
 WWHD_OFFSET(MeterUpdateSharedState, mBattleState, 0x43);

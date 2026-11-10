@@ -237,9 +237,9 @@ bool daNpc_Zl1_c::init_ZL1_5() {
         actor_status &= ~u32(fopAcStts_CULL_e | fopAcStts_NOCULLEXEC_e); /* fopAcM_OffStatus(this, fopAcStts_CULL_e | fopAcStts_NOCULLEXEC_e) */
         if (!dComIfGs_isEventBit(dSv_event_flag_HYRULE_COURTYARD_CUTSCENE)) {
             actor_status |= fopAcStts_UNK4000_e; /* fopAcM_OnStatus(this, fopAcStts_UNK4000_e) */
-            field_0x84A = 6;
-            field_0x7A8 = field_0x84A + -3;
-            fopAcM_orderOtherEventId(this, mEventIdx[field_0x7A8], 0xFF, 0xFFFF, 0, 1);
+            mOrderEvent = 6;
+            mEventNo = mOrderEvent + -3;
+            fopAcM_orderOtherEventId(this, mEventIdx[mEventNo], 0xFF, 0xFFFF, 0, 1);
             Zl1main_cancelStartDemo(zl1_main::eventException()); /* dComIfGp_evmng_cancelStartDemo(): dEvent_exception_c::init */
         } else {
             if (zl1_isStartStage("Hyrule" /* "Hyrule" */)) {
@@ -285,11 +285,11 @@ bool daNpc_Zl1_c::createInit() {
     mEventCut.setActorInfo2("Zl1" /* "Zl1" */, this);
     attention_info.flags = fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e;  /* attention_info.flags = LOCKON_TALK | ACTION_SPEAK */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAB;  /* attention_info.distances[TALK] */
-    field_0x849 = 0x11;
+    mAnmNo = 0x11;
     gravity = 0.0f;
     field_0x7BC = -1;
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xAB;  /* attention_info.distances[SPEAK] */
-    switch ((u32)(s32)field_0x84F) {
+    switch ((u32)(s32)mType) {
     case 0:
         ret = init_ZL1_0();
         break;
@@ -343,14 +343,14 @@ bool daNpc_Zl1_c::createInit() {
 /* 0230607C */
 void daNpc_Zl1_c::setAnm_anm(anm_prm_c* param_1) {
     s8 temp = param_1->field_0x0;
-    if (temp < 0 || field_0x849 == temp) {
+    if (temp < 0 || mAnmNo == temp) {
         return;
     }
     u32 name = bckResID(temp);
     dNpc_setAnmFNDirect(mpMorf, param_1->mLoopMode, param_1->mMorf, param_1->mPlaySpeed, name, 0, mArcName);
-    field_0x849 = param_1->field_0x0;
+    mAnmNo = param_1->field_0x0;
     mFrame = 0.0f;
-    field_0x7C3 = 0;
+    mbMorfAnimStopped = 0;
     field_0x7C4 = 0;
 }
 
@@ -366,27 +366,27 @@ void daNpc_Zl1_c::setAnm_NUM(int param_1, int param_2) {
 /* 02306114 */
 void daNpc_Zl1_c::setAnm() {
     anm_prm_c* a_anm_prm_tbl = a_anm_prm_tbl_setAnm; /* [10] */
-    init_texPttrnAnm(a_anm_prm_tbl[field_0x84B].field_0x1, true);
-    setAnm_anm(&a_anm_prm_tbl[field_0x84B]);
+    init_texPttrnAnm(a_anm_prm_tbl[mStt].field_0x1, true);
+    setAnm_anm(&a_anm_prm_tbl[mStt]);
 }
 
 /* 02306458 */
 void daNpc_Zl1_c::setAnm_ATR() {
     anm_prm_c* a_anm_prm_tbl = a_anm_prm_tbl_setAnm_ATR; /* [19] */
-    init_texPttrnAnm(a_anm_prm_tbl[field_0x845].field_0x1, true);
-    setAnm_anm(&a_anm_prm_tbl[field_0x845]);
+    init_texPttrnAnm(a_anm_prm_tbl[mAnmAtrNo].field_0x1, true);
+    setAnm_anm(&a_anm_prm_tbl[mAnmAtrNo]);
 }
 
 /* 02307988 */
 void daNpc_Zl1_c::eventOrder() {
-    if (field_0x84A == 1 || field_0x84A == 2) {
+    if (mOrderEvent == 1 || mOrderEvent == 2) {
         eventInfo_onCondition(this, dEvtCnd_CANTALK_e); /* dEvtCnd_CANTALK_e */
-        if (field_0x84A == 1) {
+        if (mOrderEvent == 1) {
             fopAcM_orderSpeakEvent(this);
         }
-    } else if (field_0x84A >= 3) {
-        field_0x7A8 = field_0x84A - 3;
-        fopAcM_orderOtherEventId(this, mEventIdx[field_0x7A8], 0xFF, 0xFFFF, 0, 1);
+    } else if (mOrderEvent >= 3) {
+        mEventNo = mOrderEvent - 3;
+        fopAcM_orderOtherEventId(this, mEventIdx[mEventNo], 0xFF, 0xFFFF, 0, 1);
     }
 }
 
@@ -395,8 +395,8 @@ void daNpc_Zl1_c::checkOrder() {
 
     u16 command = eventInfo.mCommand; /* eventInfo.mCommand */
     if (command == 2 /* checkCommandDemoAccrpt() */) {
-        if (dComIfGp_evmng_startCheck(mEventIdx[field_0x7A8]) && field_0x84A >= 3) {
-            switch ((u32)(s32)field_0x7A8) {
+        if (dComIfGp_evmng_startCheck(mEventIdx[mEventNo]) && mOrderEvent >= 3) {
+            switch ((u32)(s32)mEventNo) {
             case 0:
                 field_0x7D3 = true;
                 break;
@@ -408,17 +408,17 @@ void daNpc_Zl1_c::checkOrder() {
             case 3:
                 zl1_main::player(dComIfGp_getPlayer(0))->mNoResetFlg0 |= 0x08000000;
                 actor_status &= ~u32(fopAcStts_UNK4000_e); /* fopAcM_OffStatus(this, fopAcStts_UNK4000_e) */
-                field_0x7D8 = true;
-                field_0x79C = 1;
+                mLookHeadOnly = true;
+                mbSetEyePos = 1;
                 break;
             }
-            field_0x84A = 0;
-            field_0x846 = 0xFF;
-            field_0x845 = 0xFF;
+            mOrderEvent = 0;
+            mMesgAnimeTag = 0xFF;
+            mAnmAtrNo = 0xFF;
         }
-    } else if (command == 1 /* dEvtCmd_INTALK_e */ && (field_0x84A == 1 || field_0x84A == 2)) {
-        field_0x84A = 0;
-        field_0x7D7 = true;
+    } else if (command == 1 /* dEvtCmd_INTALK_e */ && (mOrderEvent == 1 || mOrderEvent == 2)) {
+        mOrderEvent = 0;
+        mTalking = true;
     }
 }
 
@@ -452,8 +452,8 @@ u8 daNpc_Zl1_c::partner_search_sub(u32 i_judgeFunc) {
 /* 02305508 */
 void daNpc_Zl1_c::partner_search() {
     bool temp;
-    if (field_0x850 == 1) {
-        switch ((u32)(s32)field_0x84F) {
+    if (mActionStatus == 1) {
+        switch ((u32)(s32)mType) {
         case 1:
             temp = partner_search_sub(zl1_main::searchActor_Branch);
             break;
@@ -465,7 +465,7 @@ void daNpc_Zl1_c::partner_search() {
             break;
         }
         if (temp) {
-            field_0x850 = field_0x850 + 1;
+            mActionStatus = mActionStatus + 1;
         }
     }
 }
@@ -473,23 +473,23 @@ void daNpc_Zl1_c::partner_search() {
 /* 023041F8 */
 void daNpc_Zl1_c::setEyeCtrl() {
     for (int i = 0; i < 2; i++) {
-        daNpc_Zl1_matAnm_c* p = field_0x6D4[i];
+        daNpc_Zl1_matAnm_c* p = mpEyeMatAnm[i];
         if (p) {
             p->field_0x7C = 1;
         }
     }
-    field_0x7D1 = true;
+    mEyeCtrl = true;
 }
 
 /* 02304230 */
 void daNpc_Zl1_c::clrEyeCtrl() {
     for (int i = 0; i < 2; i++) {
-        daNpc_Zl1_matAnm_c* p = field_0x6D4[i];
+        daNpc_Zl1_matAnm_c* p = mpEyeMatAnm[i];
         if (p) {
             p->field_0x7C = 0;
         }
     }
-    field_0x7D1 = false;
+    mEyeCtrl = false;
 }
 
 /* 02304C44 */
@@ -500,27 +500,27 @@ void daNpc_Zl1_c::setAttention(u32 param_1) {
     attPos->x = x;
     attPos->y = y;
     attPos->z = current.pos.z;
-    if (field_0x79C == 0 && !param_1) {
+    if (mbSetEyePos == 0 && !param_1) {
         return;
     }
-    eyePos.z = field_0x74C.z;
-    eyePos.y = field_0x74C.y;
-    eyePos.x = field_0x74C.x;
+    eyePos.z = mEyePos.z;
+    eyePos.y = mEyePos.y;
+    eyePos.x = mEyePos.x;
 }
 
 /* 023037F4 */
 u8 daNpc_Zl1_c::decideType(int param_1) {
-    if (field_0x84E > 0) {
+    if (mHeapSizeIdx > 0) {
         return true;
     }
-    field_0x84E = 1;
+    mHeapSizeIdx = 1;
     // HD: the switch is folded into a range check
     if ((u32)param_1 > 7) {
-        field_0x84F = -1;
+        mType = -1;
         return false;
     }
-    field_0x84F = (s8)param_1;
-    switch ((u32)(s32)field_0x84F) {
+    mType = (s8)param_1;
+    switch ((u32)(s32)mType) {
     case 0:
     case 6:
     case 7:
@@ -533,7 +533,7 @@ u8 daNpc_Zl1_c::decideType(int param_1) {
         break;
     }
     bool ret = false;
-    if (field_0x84E != -1 && field_0x84F != -1) {
+    if (mHeapSizeIdx != -1 && mType != -1) {
         ret = true;
     }
     return ret;
@@ -581,11 +581,11 @@ void daNpc_Zl1_c::decEnvironment() {
 /* 023062C4 */
 void daNpc_Zl1_c::cut_init_LOK_PLYER(int i_staffIdx) {
     be<s32>* pPrm0 = (be<s32>*)dComIfGp_evmng_getMyIntegerP(i_staffIdx, "prm_0" /* "prm_0" */);
-    field_0x84D = 1;
+    mLookMode = 1;
     if (pPrm0 != nullptr && *pPrm0 == 1) {
-        field_0x7D8 = true;
+        mLookHeadOnly = true;
     } else {
-        field_0x7D8 = false;
+        mLookHeadOnly = false;
         m_jnt.mbTrn = 1; /* setTrn() */
     }
 }
@@ -595,12 +595,12 @@ void daNpc_Zl1_c::cut_init_LOK_PARTNER(int i_staffIdx) {
     be<s32>* pPrm0 = (be<s32>*)dComIfGp_evmng_getMyIntegerP(i_staffIdx, "prm_0" /* "prm_0" */);
     gabi::Local<be<s32>> wasDeleted;
     if (Zl1main_searchByID(this, mProcId1, wasDeleted) != nullptr || !*wasDeleted) {
-        field_0x84D = 4;
+        mLookMode = 4;
         mProcId2 = mProcId1;
         if (pPrm0 != nullptr && *pPrm0 == 1) {
-            field_0x7D8 = true;
+            mLookHeadOnly = true;
         } else {
-            field_0x7D8 = false;
+            mLookHeadOnly = false;
             m_jnt.mbTrn = 1; /* setTrn() */
         }
     }
@@ -610,7 +610,7 @@ void daNpc_Zl1_c::cut_init_LOK_PARTNER(int i_staffIdx) {
 void daNpc_Zl1_c::cut_init_CHG_ANM_ATR(int i_staffIdx) {
     be<s32>* pAtrNo = (be<s32>*)dComIfGp_evmng_getMyIntegerP(i_staffIdx, "AtrNo" /* "AtrNo" */);
     if (pAtrNo != nullptr) {
-        field_0x845 = (u8)(s32)*pAtrNo;
+        mAnmAtrNo = (u8)(s32)*pAtrNo;
         setAnm_ATR();
     }
 }
@@ -636,25 +636,25 @@ void daNpc_Zl1_c::cut_init_PLYER_TRN_TETRA(int) {
 /* 02306624 */
 void daNpc_Zl1_c::cut_init_MAJYU_START(int) {
     current.pos.y = 2200.0f;
-    field_0x758.y = 400.0f;
-    field_0x758.z = 7766.0f;
-    field_0x758.x = -37978.0f;
+    mLookPos.y = 400.0f;
+    mLookPos.z = 7766.0f;
+    mLookPos.x = -37978.0f;
     current.pos.z = 7852.0f;
     current.pos.x = -37927.0f;
-    current.angle.y = cLib_targetAngleY(&current.pos, &field_0x758);
-    field_0x84D = 2;
+    current.angle.y = cLib_targetAngleY(&current.pos, &mLookPos);
+    mLookMode = 2;
     field_0x7D0 = true;
 }
 
 /* 023066B4 */
 void daNpc_Zl1_c::cut_init_OKIRU(int) {
     mpMorf->setPlaySpeed(1.0f); /* mpMorf->setPlaySpeed(1.0f) */
-    field_0x7C3 = 0;
+    mbMorfAnimStopped = 0;
 }
 
 /* 02306D34 */
 u32 daNpc_Zl1_c::cut_move_OKIRU() {
-    return field_0x7C3 != 0 ? TRUE : FALSE;
+    return mbMorfAnimStopped != 0 ? TRUE : FALSE;
 }
 
 /* 02306740 */
@@ -666,7 +666,7 @@ void daNpc_Zl1_c::cut_init_OKIRU_2(int) {
 void daNpc_Zl1_c::cut_init_DRW_ONOFF(int i_staffIdx) {
     be<s32>* pOnOff = (be<s32>*)dComIfGp_evmng_getMyIntegerP(i_staffIdx, "OnOff" /* "OnOff" */);
     if (pOnOff != nullptr) {
-        field_0x7D4 = *pOnOff == 0;
+        mNoDraw = *pOnOff == 0;
     }
 }
 
@@ -687,8 +687,8 @@ void daNpc_Zl1_c::cut_init_PLYER_DRW_ONOFF(int i_staffIdx) {
 /* 02306280 */
 void daNpc_Zl1_c::endEvent() {
     dComIfGp_event_reset();
-    field_0x845 = 0xFF;
-    field_0x846 = 0xFF;
+    mAnmAtrNo = 0xFF;
+    mMesgAnimeTag = 0xFF;
 }
 
 /* 02305FCC */
@@ -718,21 +718,21 @@ BOOL daNpc_Zl1_c::set_action(ProcFunc_l* i_action, void* param_2) {
             skipOldAction = true;
     }
     if (!skipOldAction) {
-        field_0x850 = 9;
+        mActionStatus = 9;
         zl1_main::callAction(this, cur, param_2);
     }
     cur->f = newF;
     cur->d = newD;
     cur->i = newI;
-    field_0x850 = 0;
+    mActionStatus = 0;
     zl1_main::callAction(this, cur, param_2);
     return TRUE;
 }
 
 /* 02306184 */
 void daNpc_Zl1_c::setStt(s8 param_1) {
-    s8 temp = field_0x84B;
-    field_0x84B = param_1;
+    s8 temp = mStt;
+    mStt = param_1;
     switch ((u32)(s32)param_1) {
     case 0:
     case 4:
@@ -742,14 +742,14 @@ void daNpc_Zl1_c::setStt(s8 param_1) {
     case 7:
     case 8:
     case 9:
-        field_0x84A = 0;
+        mOrderEvent = 0;
         break;
     case 2:
-        field_0x84A = 0;
-        field_0x845 = 0xFF;
-        field_0x84C = temp;
-        field_0x846 = 0xFF;
-        field_0x851 = 0;
+        mOrderEvent = 0;
+        mAnmAtrNo = 0xFF;
+        mPrevStt = temp;
+        mMesgAnimeTag = 0xFF;
+        mAnmAtrSetCnt = 0;
         break;
     case 3:
         speedF = 0.0f;

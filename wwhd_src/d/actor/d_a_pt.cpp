@@ -57,23 +57,23 @@ void anm_init(pt_class* i_this, int bckFileIdx, float morf, unsigned char loopMo
     if (soundFileIdx >= 0) {
         J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Pt", bckFileIdx, SAFESTRING_VTBL);
         void* sound = dComIfG_getObjectRes("Pt", soundFileIdx, SAFESTRING_VTBL);
-        i_this->m2C0->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, sound);
+        i_this->mpMorf->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, sound);
     } else {
         J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Pt", bckFileIdx, SAFESTRING_VTBL);
-        i_this->m2C0->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, nullptr);
+        i_this->mpMorf->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, nullptr);
     }
 }
 
 /* 02445EE4 */
 static BOOL daPt_Draw(pt_class* i_this) {
     if (i_this->mInitialSpawnWaitsUntilOffScreen == 0) {
-        J3DModel* model = i_this->m2C0->getModel();
+        J3DModel* model = i_this->mpMorf->getModel();
         dScnKy_env_light_c* env = dKy_getEnvlight();
         setLightTevColorType(env, model, &i_this->tevStr);
-        mDoExt_btpAnm_entry((mDoExt_btpAnm*)i_this->m2C4.get(), getModelData(model),
-                            (s16)gabi::ftoi(i_this->m2C4->getFrame()));
-        mDoExt_brkAnm_entry((mDoExt_brkAnm*)i_this->m2C8.get(), getModelData(model), i_this->m2C8->getFrame());
-        i_this->m2C0->entryDL();
+        mDoExt_btpAnm_entry((mDoExt_btpAnm*)i_this->mpBtpAnm.get(), getModelData(model),
+                            (s16)gabi::ftoi(i_this->mpBtpAnm->getFrame()));
+        mDoExt_brkAnm_entry((mDoExt_brkAnm*)i_this->mpBrkAnm.get(), getModelData(model), i_this->mpBrkAnm->getFrame());
+        i_this->mpMorf->entryDL();
         i_this->mbBgCheck = 0;
     }
     dSnap_RegistFig(DSNAP_TYPE_PT, i_this, 1.0f, 1.0f, 1.0f);
@@ -167,24 +167,24 @@ static BOOL daPt_Execute(pt_class* i_this) {
     zero->z = 0.0f;
 
     if (pt_enemyIce(&i_this->mEnemyIce)) {
-        i_this->m2C0->setPlayMode(J3DFrameCtrl::EMode_NONE);
-        i_this->m2C0->setPlaySpeed(3.0f);
-        i_this->m2C0->play(&i_this->eyePos, 0, 0);
-        J3DModel_setBaseTRMtx(i_this->m2C0->getModel(), mDoMtx_stack_c::get());
-        i_this->m2C0->calc();
+        i_this->mpMorf->setPlayMode(J3DFrameCtrl::EMode_NONE);
+        i_this->mpMorf->setPlaySpeed(3.0f);
+        i_this->mpMorf->play(&i_this->eyePos, 0, 0);
+        J3DModel_setBaseTRMtx(i_this->mpMorf->getModel(), mDoMtx_stack_c::get());
+        i_this->mpMorf->calc();
         return TRUE;
     }
 
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
 
-    s16 counter = i_this->m2D0 + 1;
-    i_this->m2D0 = counter;
+    s16 counter = i_this->mFrameCounter + 1;
+    i_this->mFrameCounter = counter;
     if ((counter & 0x1F) == 0 && i_this->current.pos.y - i_this->home.pos.y < -3000.0f) {
         /* fell out of the world */
         fopAcM_delete(i_this);
         dComIfGs_onActor(i_this->setID, i_this->home.roomNo);
         if (i_this->mBehaviorType == 0) {
-            i_this->m2BA = 1;
+            i_this->mRespawn = 1;
             return TRUE;
         }
         if (i_this->mDisableRespawnSwitch != 0xFF) {
@@ -198,8 +198,8 @@ static BOOL daPt_Execute(pt_class* i_this) {
             i_this->mTimers[i]--;
         }
     }
-    if (i_this->m30E != 0) {
-        i_this->m30E--;
+    if (i_this->mNoHitTimer != 0) {
+        i_this->mNoHitTimer--;
     }
 
     if (l_HIO.mbStop != 0) {
@@ -217,8 +217,8 @@ static BOOL daPt_Execute(pt_class* i_this) {
             i_this->current.pos.y = i_this->current.pos.y + ccMove->y;
             i_this->current.pos.z = i_this->current.pos.z + ccMove->z;
         }
-        i_this->m314 = i_this->speed.y;
-        i_this->m368.CrrPos(dComIfG_Bgsp());
+        i_this->mFallSpeedY = i_this->speed.y;
+        i_this->mAcch.CrrPos(dComIfG_Bgsp());
     }
 
     mDoMtx_stack_transS(i_this->current.pos);
@@ -228,23 +228,23 @@ static BOOL daPt_Execute(pt_class* i_this) {
     mDoMtx_stack_c::YrotM(i_this->shape_angle.y);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->shape_angle.x);
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), i_this->shape_angle.z);
-    mDoMtx_stack_transM(0.0f, i_this->m318, 0.0f);
-    J3DModel* model = i_this->m2C0->getModel();
+    mDoMtx_stack_transM(0.0f, i_this->mHopY, 0.0f);
+    J3DModel* model = i_this->mpMorf->getModel();
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
 
     /* blinking */
-    if (i_this->m2D6 != 0) {
-        s16 t = i_this->m2D6 - 1;
-        i_this->m2D6 = t;
+    if (i_this->mBlinkTimer != 0) {
+        s16 t = i_this->mBlinkTimer - 1;
+        i_this->mBlinkTimer = t;
         if (t <= 7) {
-            i_this->m2C4->setFrame((f32)t);
+            i_this->mpBtpAnm->setFrame((f32)t);
         }
     } else {
-        i_this->m2D6 = (s16)gabi::ftoi(cM_rndF(30.0f) + 20.0f);
+        i_this->mBlinkTimer = (s16)gabi::ftoi(cM_rndF(30.0f) + 20.0f);
     }
-    i_this->m2C0->play(&i_this->eyePos, 0, 0);
-    i_this->m2C8->setFrame((f32)i_this->m2CC);
-    i_this->m2C0->calc();
+    i_this->mpMorf->play(&i_this->eyePos, 0, 0);
+    i_this->mpBrkAnm->setFrame((f32)i_this->mColorNo);
+    i_this->mpMorf->calc();
     pt_enemyFire(&i_this->mEnemyFire);
 
     PSMTXCopy(getAnmMtx(model, 8), calc_mtx());
@@ -285,7 +285,7 @@ static BOOL daPt_IsDelete(pt_class*) {
 /* 024468E4 */
 static BOOL daPt_Delete(pt_class* i_this) {
     dComIfG_resDelete(&i_this->mPhase, "Pt");
-    if (i_this->mDC4) {
+    if (i_this->mHioOwner) {
         s8 no = l_HIO.mNo;
         hio_set = 0;
         mDoHIO_deleteChild(no);
@@ -294,7 +294,7 @@ static BOOL daPt_Delete(pt_class* i_this) {
     pt_removeSmoke(&i_this->mSmokeCb);
     pt_enemyFireRemove(&i_this->mEnemyFire);
 
-    if (i_this->m2BA) {
+    if (i_this->mRespawn) {
         /* respawn: a new Miniblin at the home position */
         if (i_this->mEnableSpawnSwitch == 0xFF || dComIfGs_isSwitch(i_this->mEnableSpawnSwitch, fopAcM_GetRoomNo(i_this))) {
             if (i_this->mDisableRespawnSwitch == 0xFF ||
@@ -321,37 +321,37 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     pt_class* i_this = (pt_class*)a_this;
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Pt", dRes_INDEX_PT_BDL_PT_e, SAFESTRING_VTBL);
     J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Pt", dRes_INDEX_PT_BCK_WAIT_e, SAFESTRING_VTBL);
-    i_this->m2C0 = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1,
+    i_this->mpMorf = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1,
                                             1, nullptr, 0, 0x11020203);
-    if (i_this->m2C0 == nullptr || i_this->m2C0->getModel() == nullptr) {
+    if (i_this->mpMorf == nullptr || i_this->mpMorf->getModel() == nullptr) {
         return FALSE;
     }
 
     void* p = operator_new(0x74);
     if (p != nullptr) p = pt_btpCtor(p);
-    i_this->m2C4 = (PtMaterialAnimation*)p;
+    i_this->mpBtpAnm = (PtMaterialAnimation*)p;
     if (p == nullptr) {
         return FALSE;
     }
-    J3DModel* model = i_this->m2C0->getModel();
+    J3DModel* model = i_this->mpMorf->getModel();
     void* btp = dComIfG_getObjectRes("Pt", dRes_INDEX_PT_BTP_e, SAFESTRING_VTBL);
-    if (!pt_btpInit(i_this->m2C4, getModelData(model), btp, 1, 0, 1.0f, 0, -1, false, 0)) {
+    if (!pt_btpInit(i_this->mpBtpAnm, getModelData(model), btp, 1, 0, 1.0f, 0, -1, false, 0)) {
         return FALSE;
     }
 
     p = operator_new(0x78);
     if (p != nullptr) p = mDoExt_brkAnm_ct(p);
-    i_this->m2C8 = (PtMaterialAnimation*)p;
+    i_this->mpBrkAnm = (PtMaterialAnimation*)p;
     if (p == nullptr) {
         return FALSE;
     }
-    model = i_this->m2C0->getModel();
+    model = i_this->mpMorf->getModel();
     void* brk = dComIfG_getObjectRes("Pt", dRes_INDEX_PT_BRK_e, SAFESTRING_VTBL);
-    if (!pt_brkInit(i_this->m2C8, getModelData(model), brk, 1, 0, 1.0f, 0, -1, false, 0)) {
+    if (!pt_brkInit(i_this->mpBrkAnm, getModelData(model), brk, 1, 0, 1.0f, 0, -1, false, 0)) {
         return FALSE;
     }
 
-    i_this->m2CC = gabi::ftoi(cM_rndF(3.999f));
+    i_this->mColorNo = gabi::ftoi(cM_rndF(3.999f));
     return TRUE;
 }
 
@@ -379,9 +379,9 @@ static pt_class* pt_class_ct(pt_class* self) {
     }
     fopAc_ac_c_ct(self);
     self->__vtbl = PT_VTBL;
-    pt_circleCtor(&self->m328); /* dBgS_AcchCir::dBgS_AcchCir */
-    pt_acchCtor(&self->m368);    /* dBgS_Acch::dBgS_Acch */
-    dBgS_ObjAcch* acch = &self->m368;       /* dBgS_ObjAcch */
+    pt_circleCtor(&self->mAcchCir); /* dBgS_AcchCir::dBgS_AcchCir */
+    pt_acchCtor(&self->mAcch);    /* dBgS_Acch::dBgS_Acch */
+    dBgS_ObjAcch* acch = &self->mAcch;       /* dBgS_ObjAcch */
     static_cast<cBgS_Chk*>(acch)->__vtbl = gc_tu.objAcch.v10;
     static_cast<dBgS_PolyPassChk*>(acch)->mbObjThrough = 1;
     static_cast<dBgS_GrpPassChk*>(acch)->__vtbl = gc_tu.objAcch.v20;
@@ -442,18 +442,18 @@ static cPhs_State daPt_Create(fopAc_ac_c* a_this) {
     }
 
     if (!hio_set) {
-        i_this->mDC4 = 1;
+        i_this->mHioOwner = 1;
         hio_set = 1;
         // HD: original HIO label is Shift-JIS 837683608375838A8393; glue retains those guest bytes.
         l_HIO.mNo = mDoHIO_createChild("Miniblin", &l_HIO);
     }
 
-    i_this->m2D2 = PT_WAIT;
+    i_this->mAction = PT_WAIT;
     a_this->actor_status |= fopAcStts_CULL_e;
     a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e; /* attention_info.flags */
-    a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->m2C0->getModel()));
-    i_this->m368.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &i_this->m328, &a_this->speed);
-    i_this->m328.SetWall(50.0f, 50.0f);
+    a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->mpMorf->getModel()));
+    i_this->mAcch.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &i_this->mAcchCir, &a_this->speed);
+    i_this->mAcchCir.SetWall(50.0f, 50.0f);
     a_this->health = 2;
     a_this->max_health = 2;
     i_this->mStts.Init(100, 0, a_this);
@@ -467,7 +467,7 @@ static cPhs_State daPt_Create(fopAc_ac_c* a_this) {
     i_this->mEnemyIce.mWallRadius = REG0_F(4) + 30.0f;
     i_this->mEnemyIce.mCylHeight = REG0_F(5) + 30.0f;
     i_this->mEnemyIce.mParticleScale = REG0_F(8) + 0.6f;
-    i_this->mEnemyFire.mpMcaMorf = i_this->m2C0;
+    i_this->mEnemyFire.mpMcaMorf = i_this->mpMorf;
     i_this->mEnemyFire.mpActor = a_this;
     i_this->mEnemyIce.mYOffset = REG0_F(9) + 40.0f;
     for (int i = 0; i < 10; i++) {
@@ -521,11 +521,11 @@ static void pt_class_dt(pt_class* self, s32 flags) {
     pt_sphereDtor(&self->mAtSph, 2);
     pt_sphereDtor(&self->mSph, 2);
     dCcD_Stts_dt(&self->mStts, 2);
-    acch = &self->m368;
+    acch = &self->mAcch;
     static_cast<dBgS_GrpPassChk*>(acch)->__vtbl = gc_tu.objAcch.v20;
     static_cast<dBgS_PolyPassChk*>(acch)->__vtbl = gc_tu.objAcch.v14;
     pt_acchDtor(acch, 0);
-    pt_circleDtor(&self->m328.m_cir, 2);
+    pt_circleDtor(&self->mAcchCir.m_cir, 2);
     pt_actorDtor(self, 0); /* fopAc_ac_c::~fopAc_ac_c */
     if (flags & 1) operator_delete(self);
 }

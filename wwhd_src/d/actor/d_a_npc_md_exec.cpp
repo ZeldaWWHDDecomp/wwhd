@@ -333,14 +333,14 @@ void daNpc_Md_c::setPlayerAction(ProcFunc_l* actionFunc, void* arg) {
 
 /* 0228A1FC */
 void daNpc_Md_c::deleteHane02Emitter() {
-    emitterDelete(&m0508[2]);
-    emitterDelete(&m0508[3]);
+    emitterDelete(&mEmitters[2]);
+    emitterDelete(&mEmitters[3]);
 }
 
 /* 0228A228 */
 void daNpc_Md_c::deleteHane03Emitter() {
-    emitterDelete(&m0508[4]);
-    emitterDelete(&m0508[5]);
+    emitterDelete(&mEmitters[4]);
+    emitterDelete(&mEmitters[5]);
 }
 
 /* 02287EAC */
@@ -442,9 +442,9 @@ BOOL daNpc_Md_c::lightHitCheck() {
         s32 reverb = dComIfGp_getReverb(current.roomNo);
         mDoAud_seStart(se, &current.pos, 0, reverb);
 
-        if (m304C.mpEmitter.get() == nullptr) {
-            mtxFollow_makeEmitter(&m304C, 0x8226 /* ID_AK_SN_MIRRORSHIELD00 */, J3DModel_getBaseTRMtx(mpHarpLightModel), &current.pos, nullptr);
-            u32 emitter = gabi::ea(m304C.mpEmitter.get());
+        if (mMirrorShieldCb.mpEmitter.get() == nullptr) {
+            mtxFollow_makeEmitter(&mMirrorShieldCb, 0x8226 /* ID_AK_SN_MIRRORSHIELD00 */, J3DModel_getBaseTRMtx(mpHarpLightModel), &current.pos, nullptr);
+            u32 emitter = gabi::ea(mMirrorShieldCb.mpEmitter.get());
             MdExec::emitter(emitter)->mEmitterScale.x = 1.0f; /* setEmitterScale(1, 1, 1) */
             MdExec::emitter(emitter)->mEmitterScale.y = 1.0f;
             MdExec::emitter(emitter)->mEmitterScale.z = 1.0f;
@@ -455,9 +455,9 @@ BOOL daNpc_Md_c::lightHitCheck() {
     } else {
         clearStatus(daMdStts_LIGHT_HIT);
         m3058.end();
-        if (m304C.mpEmitter.get() != nullptr) {
-            MdExec::emitter(m304C.mpEmitter.get())->mGlobalAlpha = 0; /* setGlobalAlpha(0) */
-            mtxFollow_end(&m304C);
+        if (mMirrorShieldCb.mpEmitter.get() != nullptr) {
+            MdExec::emitter(mMirrorShieldCb.mpEmitter.get())->mGlobalAlpha = 0; /* setGlobalAlpha(0) */
+            mtxFollow_end(&mMirrorShieldCb);
         }
     }
     return lightHit;
@@ -580,16 +580,16 @@ void daNpc_Md_c::initialWaitEvent(int staffIdx) {
     }
     be<s32>* pTimer = (be<s32>*)dComIfGp_evmng_getMySubstanceP(staffIdx, "Timer", 3);
     if (pTimer) {
-        m3118 = (s16)*pTimer;
+        mEventTimer = (s16)*pTimer;
     } else {
-        m3118 = 0;
+        mEventTimer = 0;
     }
     speedF = 0.0f;
 }
 
 /* 0228A7D4 */
 BOOL daNpc_Md_c::actionWaitEvent(int) {
-    return cLib_calcTimer_s16(&m3118) == 0 ? TRUE : FALSE;
+    return cLib_calcTimer_s16(&mEventTimer) == 0 ? TRUE : FALSE;
 }
 
 /* 0228A800 */
@@ -672,14 +672,14 @@ int daNpc_Md_c::getAnmType(u8 r4) {
 /* 0228729C */
 void daNpc_Md_c::playTexPatternAnm() {
     if (m3136 == 1) {
-        /* m0520.setFrame(m30D0): an lfs/stfs copy (bit exact) */
-        word(reinterpret_cast<TexturePatternAnm*>(m0520)->mFrame) = word(m30D0);
+        /* mBtpAnm.setFrame(mBtpFrame): an lfs/stfs copy (bit exact) */
+        word(reinterpret_cast<TexturePatternAnm*>(mBtpAnm)->mFrame) = word(mBtpFrame);
         return;
     }
-    if (mDoExt_baseAnm_play(m0520)) {
-        if (cLib_calcTimer_u8(&m3133) == 0) {
-            m3133 = (u8)gabi::ftoi(cM_rndF(60.0f) + 30.0f);
-            mDoExt_baseAnm_initPlay(m0520, m3112, 1, 1.0f, 0, -1, true);
+    if (mDoExt_baseAnm_play(mBtpAnm)) {
+        if (cLib_calcTimer_u8(&mBlinkTimer) == 0) {
+            mBlinkTimer = (u8)gabi::ftoi(cM_rndF(60.0f) + 30.0f);
+            mDoExt_baseAnm_initPlay(mBtpAnm, mBtpFrameMax, 1, 1.0f, 0, -1, true);
         }
     }
 }
@@ -725,14 +725,14 @@ BOOL daNpc_Md_c::setAnm(int anmIdx) {
     }
 
     s8 anmTblIdx = prm->anmTblIdx;
-    if (anmTblIdx != m312D || MdExec::morf(mpMorf)->mPlaySpeed != prm->speed) {
+    if (anmTblIdx != mAnmTblIdx || MdExec::morf(mpMorf)->mPlaySpeed != prm->speed) {
         /* mpMorf->getPlaySpeed() != prm->speed */
         m312A = 0;
-        m312D = anmTblIdx;
+        mAnmTblIdx = anmTblIdx;
         AnmTbl* bodyAnm = &l_anmTbl.values[anmTblIdx];
         dNpc_Md_setAnm(mpMorf, mRunRate, prm->loopMode, morf, speed, bodyAnm->m00, bodyAnm->m20, mModelArcName);
-        /* m30D0 = mpMorf->getFrame() (lfs/stfs copy) */
-        word(m30D0) = word(MdExec::morf(mpMorf)->mFrame);
+        /* mBtpFrame = mpMorf->getFrame() (lfs/stfs copy) */
+        word(mBtpFrame) = word(MdExec::morf(mpMorf)->mFrame);
         u8 armIdx = prm->armAnmTblIdx;
         if (armIdx < 0x80) {
             AnmTbl* armAnm = &armAnmTbl.values[armIdx];
@@ -756,25 +756,25 @@ BOOL daNpc_Md_c::setAnm(int anmIdx) {
     }
 
     u8 btpIdx = prm->btpAnmTblIdx;
-    if (btpIdx != m3137) {
+    if (btpIdx != mBtpAnmTblIdx) {
         initTexPatternAnm(btpIdx, true);
     }
-    if (m312D == 0x0E || m312D == 0x12 || m312D == 0x13 || m312D == 0x1A || m312D == 0x1C || m312D == 0x25) {
+    if (mAnmTblIdx == 0x0E || mAnmTblIdx == 0x12 || mAnmTblIdx == 0x13 || mAnmTblIdx == 0x1A || mAnmTblIdx == 0x1C || mAnmTblIdx == 0x25) {
         setBitStatus(daMdStts_UNK80);
-    } else if (m312D != 0x0F && m312D != 0x1B) {
+    } else if (mAnmTblIdx != 0x0F && mAnmTblIdx != 0x1B) {
         clearStatus(daMdStts_UNK80);
     }
-    if (m312D == 0x1B || m312D == 0x1C) {
+    if (mAnmTblIdx == 0x1B || mAnmTblIdx == 0x1C) {
         setBitStatus(daMdStts_UNK4000);
     } else {
         clearStatus(daMdStts_UNK4000);
     }
-    if (m312D == 0x10) {
-        if (m0508[1] == 0) {
+    if (mAnmTblIdx == 0x10) {
+        if (mEmitters[1] == 0) {
             s8 roomNo = current.roomNo;
             JPABaseEmitter* e = dComIfGp_particle_set(0x819D /* ID_IT_SN_MD_PIYOPIYO00 */, &current.pos, nullptr, nullptr, 0xFF, nullptr,
                                                       roomNo, &tevStr.mColorK0, &tevStr.mColorK0);
-            m0508[1] = gabi::ea(e);
+            mEmitters[1] = gabi::ea(e);
             if (e) {
                 MdExec::emitter(e)->mFlags = MdExec::emitter(e)->mFlags | 0x40; /* becomeImmortalEmitter */
             }
@@ -958,9 +958,9 @@ void MdLookBackActor::lookBack(int param_1, int param_2, int param_3) {
         } else {
             target = l_HIO().mNpc.mMaxHeadTurnVel;
         }
-        cLib_addCalcAngleS2(&m3110, target, 4, 0x800);
+        cLib_addCalcAngleS2(&mLookMaxVel, target, 4, 0x800);
     } else {
-        m3110 = 0;
+        mLookMaxVel = 0;
     }
     if (param_1 != 0) {
         dNpc_playerEyePos(&eye, l_HIO().mNpc.m04);
@@ -977,23 +977,23 @@ void MdLookBackActor::lookBack(int param_1, int param_2, int param_3) {
     word(local_3c.x) = lx;
     word(local_3c.y) = ly;
     word(local_3c.z) = lz;
-    md_lookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, &local_3c, desiredYRot, m3110, param_3 != 0);
+    md_lookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, &local_3c, desiredYRot, mLookMaxVel, param_3 != 0);
 }
 
 /* 02286D18 */
 void daNpc_Md_c::deletePiyoPiyo() {
-    u32 emitter = m0508[1];
+    u32 emitter = mEmitters[1];
     if (emitter == 0) {
         return;
     }
     MdExec::emitter(emitter)->mFlags = MdExec::emitter(emitter)->mFlags & ~0x40u; /* quitImmortalEmitter */
-    JPA_becomeInvalidEmitter(m0508[1]);
+    JPA_becomeInvalidEmitter(mEmitters[1]);
     /* every particle of the emitter's list (first link at +0x1AC, next at +0xC): setDeleteParticleFlag */
     for (u32 link = MdExec::emitter(emitter)->mpFirstParticle; link != 0; link = particleLink(link)->mpNext) {
         u32 obj = particleLink(link)->mpObject;
         particle(obj)->mFlags = particle(obj)->mFlags | 2;
     }
-    m0508[1] = 0;
+    mEmitters[1] = 0;
 }
 
 /* 02289E2C */
@@ -1019,9 +1019,9 @@ BOOL daNpc_Md_c::draw() {
     settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &current.pos, &tevStr);
     daPy_npc_drawDamageFog(this);
     setLightTevColorType(dKy_getEnvlight(), model, &tevStr);
-    btpAnm_entry(m0520, modelData, (s16)gabi::ftoi(reinterpret_cast<TexturePatternAnm*>(m0520)->mFrame));
+    btpAnm_entry(mBtpAnm, modelData, (s16)gabi::ftoi(reinterpret_cast<TexturePatternAnm*>(mBtpAnm)->mFrame));
     McaMorf2_entryDL(mpMorf);
-    reinterpret_cast<ModelAnmState*>(modelData)->mpBtp = 0; /* m0520.remove(modelData) */
+    reinterpret_cast<ModelAnmState*>(modelData)->mpBtp = 0; /* mBtpAnm.remove(modelData) */
 
     if (!isTypeShipRide() && checkStatus(daMdStts_UNK1)) {
         J3DModel* limbModel = modelAt(gabi::ea(mpWingMorf->mpModel.get()));
@@ -1051,8 +1051,8 @@ BOOL daNpc_Md_c::draw() {
         // HD: scale (1, 1, len / 960) (GameCube 0.1, 0.1, len / 9600)
         mDoMtx_stack_c::scaleM(1.0f, 1.0f, len * (1.0f / 960.0f));
         PSMTXConcat(&mtx, mDoMtx_stack_c::get(), mDoMtx_stack_c::get()); /* revConcat */
-        mirrorPacket_update(gabi::ea(m0B70), mDoMtx_stack_c::get(), 0xFF, 90.0f);
-        md_xluList_entryImm(gabi::ea(m0B70), 0x1F);
+        mirrorPacket_update(gabi::ea(mMirrorPacket), mDoMtx_stack_c::get(), 0xFF, 90.0f);
+        md_xluList_entryImm(gabi::ea(mMirrorPacket), 0x1F);
     }
     // HD: no real shadow (GameCube dComIfGd_setShadow + addRealShadow)
     dSnap_RegistFig(0x8A /* DSNAP_TYPE_NPC_MD */, this, 1.0f, 1.0f, 1.0f);
@@ -1109,16 +1109,16 @@ void daNpc_Md_c::animationPlay() {
     u32 morf = gabi::ea(mpMorf.get());
     f32 playSpeed = morfState(morf)->mPlaySpeed;
     if (playSpeed < 0.0f) {
-        if (m30D0 < morfState(morf)->mFrame) {
+        if (mBtpFrame < morfState(morf)->mFrame) {
             m312A = 1;
         }
-    } else if (m30D0 > morfState(morf)->mFrame) {
+    } else if (mBtpFrame > morfState(morf)->mFrame) {
         m312A = 1;
     }
-    /* m30D0 = mpMorf->getFrame() (lfs/stfs copy) */
-    word(m30D0) = word(morfState(morf)->mFrame);
-    if (m312D == 0x1B || m312D == 0xF) {
-        if (m30D0 < 10.0f) {
+    /* mBtpFrame = mpMorf->getFrame() (lfs/stfs copy) */
+    word(mBtpFrame) = word(morfState(morf)->mFrame);
+    if (mAnmTblIdx == 0x1B || mAnmTblIdx == 0xF) {
+        if (mBtpFrame < 10.0f) {
             clearStatus(daMdStts_UNK80);
         } else {
             setBitStatus(daMdStts_UNK80);
@@ -1170,7 +1170,7 @@ BOOL daNpc_Md_c::execute() {
                 animationPlay();
                 setBaseMtx();
             }
-            m312B = 0;
+            mAttnSetCount = 0;
             return TRUE;
         }
         u32 poly = gabi::ea(&mPolyInfo);
@@ -1214,16 +1214,16 @@ BOOL daNpc_Md_c::execute() {
         bool bVar10 = false;
         /* mAcch.m_wtr.GetHeight() (+0x1BC) */
         if (mAcch.ChkWaterIn() && mAcch.m_wtr.m_height > current.pos.y + 5.0f) {
-            if (m3074.mpEmitter.get() == nullptr) {
+            if (mRippleCb.mpEmitter.get() == nullptr) {
                 /* dComIfGp_particle_setShipTail (HD: group 5) */
                 dPa_control_set(dComIfGp_getParticle(), 5, 0x33 /* ID_AK_JN_HAMON00 */, &current.pos, nullptr, nullptr, 0xFF,
-                                (dPa_levelEcallBack*)(void*)&m3074, -1, nullptr, nullptr, nullptr);
+                                (dPa_levelEcallBack*)(void*)&mRippleCb, -1, nullptr, nullptr, nullptr);
             }
-            m3074.mRate = 0.0f;
+            mRippleCb.mRate = 0.0f;
             bVar10 = true;
         }
-        if (!bVar10 && m3074.mpEmitter.get() != nullptr) {
-            mdExec_endRipple(&m3074); // HD: dPa_rippleEcallBack::end (GameCube remove())
+        if (!bVar10 && mRippleCb.mpEmitter.get() != nullptr) {
+            mdExec_endRipple(&mRippleCb); // HD: dPa_rippleEcallBack::end (GameCube remove())
         }
         if (!mAcch.ChkGroundHit()) {
             if (md_pmf_is(&mCurrPlayerActionFunc, WALK_PLAYER_ACTION /* walkPlayerAction */) ||
@@ -1347,15 +1347,15 @@ BOOL daNpc_Md_c::execute() {
     eventOrder();
     setBaseMtx();
     u32 model = gabi::ea(MdExec::morf(mpMorf)->mpModel.get()); /* getModel() */
-    emitterTrace(nativeEmitter(m0508[0]), md_getAnmMtx(model, m_neck_jnt_num), &current.angle);
-    emitterTrace(nativeEmitter(m0508[1]), md_getAnmMtx(model, m_neck_jnt_num), nullptr);
+    emitterTrace(nativeEmitter(mEmitters[0]), md_getAnmMtx(model, m_neck_jnt_num), &current.angle);
+    emitterTrace(nativeEmitter(mEmitters[1]), md_getAnmMtx(model, m_neck_jnt_num), nullptr);
     if (!isTypeShipRide()) {
         model = gabi::ea(mpWingMorf->mpModel.get());
-        emitterTrace(nativeEmitter(m0508[2]), md_getAnmMtx(model, m_wingR3_jnt_num), nullptr);
-        emitterTrace(nativeEmitter(m0508[3]), md_getAnmMtx(model, m_wingL3_jnt_num), nullptr);
-        emitterTrace(nativeEmitter(m0508[4]), md_getAnmMtx(model, m_wingR3_jnt_num), nullptr);
-        emitterTrace(nativeEmitter(m0508[5]), md_getAnmMtx(model, m_wingL3_jnt_num), nullptr);
-        if (m3135 & 1) { /* checkBitEffectStatus(1) */
+        emitterTrace(nativeEmitter(mEmitters[2]), md_getAnmMtx(model, m_wingR3_jnt_num), nullptr);
+        emitterTrace(nativeEmitter(mEmitters[3]), md_getAnmMtx(model, m_wingL3_jnt_num), nullptr);
+        emitterTrace(nativeEmitter(mEmitters[4]), md_getAnmMtx(model, m_wingR3_jnt_num), nullptr);
+        emitterTrace(nativeEmitter(mEmitters[5]), md_getAnmMtx(model, m_wingL3_jnt_num), nullptr);
+        if (mEffectStatus & 1) { /* checkBitEffectStatus(1) */
             model = gabi::ea(mpWingMorf->mpModel.get());
             cXyz local_3c;
 
@@ -1372,7 +1372,7 @@ BOOL daNpc_Md_c::execute() {
             }
         }
     }
-    m3135 = 0; /* setEffectStatus(0) */
+    mEffectStatus = 0; /* setEffectStatus(0) */
     return TRUE;
 }
 
@@ -1471,12 +1471,12 @@ static void daNpc_Md_dt(daNpc_Md_c* i_this, s32 flags) {
         mdExec_stopZelAnime(i_this->mpMorf.get()); /* mDoExt_McaMorf2::stopZelAnime */
     }
     i_this->deletePiyoPiyo();
-    i_this->emitterDelete(&i_this->m0508[0]);
+    i_this->emitterDelete(&i_this->mEmitters[0]);
     i_this->deleteHane02Emitter();
     i_this->deleteHane03Emitter();
     i_this->m3058.end();
-    mtxFollow_end(&i_this->m304C);
-    mdExec_endRipple(&i_this->m3074); /* dPa_rippleEcallBack::end (GameCube remove()) */
+    mtxFollow_end(&i_this->mMirrorShieldCb);
+    mdExec_endRipple(&i_this->mRippleCb); /* dPa_rippleEcallBack::end (GameCube remove()) */
     // HD: no l_HIO child to delete; a static instance pointer is cleared instead
     m_flying = 0;     /* offFlying() */
     m_mirror = 0;     /* offMirror() */
@@ -1485,9 +1485,9 @@ static void daNpc_Md_dt(daNpc_Md_c* i_this, s32 flags) {
         instance.mpActor = nullptr;
     }
 
-    auto* packet = reinterpret_cast<MirrorPacket*>(i_this->m0B70);
+    auto* packet = reinterpret_cast<MirrorPacket*>(i_this->mMirrorPacket);
     /* member destructors (inlined), last member first */
-    /* m0B70 (dDlst_mirrorPacket, HD 0x3428): its dBgS_LinChk at +0x33BC (0x4104) */
+    /* mMirrorPacket (dDlst_mirrorPacket, HD 0x3428): its dBgS_LinChk at +0x33BC (0x4104) */
     packet->mLinChk.dBgS_PolyPassChk::__vtbl = LINE_POLY_PASS_VTABLE;
     packet->mLinChk.dBgS_GrpPassChk::__vtbl = GROUP_PASS_VTABLE;
     packet->mLinChk.cBgS_PolyInfo::__vtbl = LINE_POLY_INFO_VTABLE;

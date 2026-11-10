@@ -548,10 +548,10 @@ bool dCamera_c::NotRun() {
         mCurType = ev;
         cameraEvent(cameraArgument(this),
                     cameraArgument((s32)camTypeStyle(ev, 3))); /* eventCamera */
-        m07C = m07C + 1;
-        m118 = m118 + 1;
-        m11C = m11C + 1;
-        m108 = m108 + 1;
+        mFrameCounter = mFrameCounter + 1;
+        mCurTypeTimer = mCurTypeTimer + 1;
+        mCurStyleTimer = mCurStyleTimer + 1;
+        mCurModeTimer = mCurModeTimer + 1;
     }
     if (playEventRunning()->get() != 0 /* dComIfGp_event_runCheck() */)
         clrComStat(0x48);
@@ -595,35 +595,35 @@ static dCamera_c* dCamera_ct(dCamera_c* i_this, camera_class* cam) {
     cSGlobe_ct_at(gabi::ea(&i_this->mViewCache));
     cSAngle_ct_at(gabi::ea(&i_this->mViewCache.mBank));
     fieldWrite<f32>(i_this->m064, 0.0f);
-    fieldWrite<u32>(i_this->m068, 0);
+    fieldWrite<u32>(i_this->mBumpCheckFlags, 0);
     cSAngle_ct_at(gabi::ea(&i_this->mAngleY));
-    fieldWrite<u32>(i_this->m080, 0);
-    fieldWrite<u32>(i_this->m07C, 0);
-    memzero(gabi::ea(&i_this->m084), 0x20);
-    cSAngle_ct_at(gabi::ea(&i_this->m0A0));
+    fieldWrite<u32>(i_this->mTicks, 0);
+    fieldWrite<u32>(i_this->mFrameCounter, 0);
+    memzero(gabi::ea(&i_this->mSavedCenter), 0x20);
+    cSAngle_ct_at(gabi::ea(&i_this->mSavedBank));
     cameraConstructArray(
-        cameraArgument(gabi::ea(&i_this->m0A4)), cameraArgument(2), cameraArgument(0x20),
+        cameraArgument(gabi::ea(&i_this->mSavedViewStack)), cameraArgument(2), cameraArgument(0x20),
         cameraArgument(kPosSetConstructor),
-        cameraArgument(0)); /* __construct_array(m0A4, 2, 0x20, PosSet ctor, NULL) */
+        cameraArgument(0)); /* __construct_array(mSavedViewStack, 2, 0x20, PosSet ctor, NULL) */
     memzero(gabi::ea(&i_this->mStageMapToolCameraIdx), 8);
     memzero(gabi::ea(&i_this->mExtendedPos), 0x14);
-    memzero(gabi::ea(&i_this->m100), 0x14);
+    memzero(gabi::ea(&i_this->mStyleSettle0), 0x14);
     cSAngle_ct_at(gabi::ea(&i_this->m104));
     cSAngle_ct_at(gabi::ea(&i_this->m106));
     memzero(gabi::ea(&i_this->m114), 8);
-    memzero(gabi::ea(&i_this->m11C), 4);
+    memzero(gabi::ea(&i_this->mCurStyleTimer), 4);
     fieldWrite<u32>(i_this->mpPlayerActor, 0);
     fieldWrite<u32>(i_this->mPadId, 0);
     fieldWrite<u32>(i_this->mpLockonTarget, 0);
     fieldWrite<u32>(i_this->mCameraID, 0);
     memzero(gabi::ea(&i_this->mLockOnActorId), 0xC);
-    fieldWrite<u32>(i_this->m144, 0);
+    fieldWrite<u32>(i_this->mManualInactive, 0);
     fieldWrite<u32>(i_this->mCurMode, 0);
     fieldWrite<u32>(i_this->mNextMode, 0);
-    cSAngle_ct_at(gabi::ea(&i_this->m148));
+    cSAngle_ct_at(gabi::ea(&i_this->mForwardTiltOffset));
     fieldWrite<f32>(i_this->m150, 0.0f);
     fieldWrite<f32>(i_this->m154, 0.0f);
-    fieldWrite<f32>(i_this->m14C, 0.0f);
+    fieldWrite<f32>(i_this->mSightFitRadius, 0.0f);
     memzero(gabi::ea(&i_this->mStickMainPosXLast), 0x5C);
     memzero(gabi::ea(&i_this->mForcusLine), 0x70);
     focusLineConstruct(cameraArgument(gabi::ea(&i_this->mForcusLine))); /* dCamForcusLine() */
@@ -631,14 +631,14 @@ static dCamera_c* dCamera_ct(dCamera_c* i_this, camera_class* cam) {
     cSAngle_ct_at(gabi::ea(&i_this->mDMCSystem.field_0x2));
     cSAngle_ct_at(gabi::ea(&i_this->mDMCSystem.field_0x4));
     memzero(gabi::ea(&i_this->mMonitor), 0x20);
-    memzero(gabi::ea(&i_this->m248), 0x14);
+    memzero(gabi::ea(&i_this->mSeIds), 0x14);
     memzero(gabi::ea(&i_this->mBG), 0x11C);
     backgroundConstruct(cameraArgument(gabi::ea(&i_this->mBG))); /* BG block */
     memzero(gabi::ea(&i_this->mWork), 0x80);
     memzero(gabi::ea(&i_this->mEventData), 0x114);
     splineConstruct(
         cameraArgument(gabi::ea(&i_this->mEventData.mSpline2DPath))); /* d2DBSplinePath() */
-    fieldWrite<u32>(i_this->m528, 0);
+    fieldWrite<u32>(i_this->mpForceTypeActor, 0);
     fieldWrite<u8>(i_this->m52C, 0);
     fieldWrite<u32>(i_this->mEventFlags, 0);
     fieldWrite<u32>(i_this->mMapToolType, 0);
@@ -646,15 +646,15 @@ static dCamera_c* dCamera_ct(dCamera_c* i_this, camera_class* cam) {
     fieldWrite<u8>(i_this->m514, 0);
     fieldWrite<u32>(i_this->mCurType, 0);
     fieldWrite<u32>(i_this->mNextType, 0);
-    fieldWrite<u32>(i_this->m524, 0);
-    memzero(gabi::ea(&i_this->m530), 0x14);
-    memzero(gabi::ea(&i_this->m544), 0x7C);
+    fieldWrite<u32>(i_this->mForceType, 0);
+    memzero(gabi::ea(&i_this->mShipRockType), 0x14);
+    memzero(gabi::ea(&i_this->mShakePattern), 0x7C);
     cSAngle_ct_at(gabi::ea(&i_this->mBankShake));
     memzero(gabi::ea(&i_this->mCurRoomCamEntry), 0x2C);
     memzero(gabi::ea(&i_this->mWindowWidth), 8);
     memzero(gabi::ea(&i_this->m5F4), 8);
     fieldWrite<u32>(i_this->mTrimTypeForce, 0);
-    fieldWrite<f32>(i_this->m608, 0.0f);
+    fieldWrite<f32>(i_this->mWallUpDist, 0.0f);
     fieldWrite<f32>(i_this->mWindowAspectRatio, 0.0f);
     fieldWrite<u32>(hdCamera(i_this)->mVtable, kSeadCameraVtable); /* sead::Camera vtable */
     fieldWrite<u8>(i_this->mHD610, 0);
@@ -695,7 +695,7 @@ static dCamera_c* dCamera_ct(dCamera_c* i_this, camera_class* cam) {
     paramConstruct(cameraArgument(gabi::ea(&i_this->mCamParam)),
                    cameraArgument(0)); /* dCamParam_c(0) */
     memzero(gabi::ea(&i_this->mCamTypeField), 0x24);
-    memzero(gabi::ea(&i_this->m780), 0xC);
+    memzero(gabi::ea(&i_this->mIsSeaMap), 0xC);
     /* initialize(cam, get_player_actor(cam), get_camera_id(cam), get_controller_id(cam)) */
     s32 camId = fopCamM_GetParam(cam);
     s32 playerId = fieldRead<s8>(cameraInfo(camId)->mCamP1Id);
@@ -748,7 +748,7 @@ static u32 ftou(f32 f) {
 
 /* 02500984 */
 /* HD: the 0x730/0x734 floats (HD-only) are initialised from 104A0920; the ship offset
- * is computed into m538 as on GameCube  */
+ * is computed into mShipOffsetY as on GameCube  */
 void dCamera_c::initialize(camera_class* camera, fopAc_ac_c* player, u32 infoIdx, u32 padId) {
     mpPlayerActor = player;
     mCameraID = (s32)infoIdx;
@@ -770,23 +770,23 @@ void dCamera_c::initialize(camera_class* camera, fopAc_ac_c* player, u32 infoIdx
     mCurMode = 0;
     s32 field = mCamTypeField;
     mMapToolType = field;
-    m258 = 0;
-    m254 = 0;
+    mSeRequestLast = 0;
+    mSeRequest = 0;
     mCurType = field;
-    m248[0] = 0x85E; /* JA_SE_MAN_CAMERA_NG */
-    m14C = 0.0f;
-    m144 = 1;
-    m524 = 0xFF;
-    m528 = nullptr;
+    mSeIds[0] = 0x85E; /* JA_SE_MAN_CAMERA_NG */
+    mSightFitRadius = 0.0f;
+    mManualInactive = 1;
+    mForceType = 0xFF;
+    mpForceTypeActor = nullptr;
     mEventFlags = 0;
     fieldWrite<u8>(this->m514, 0); /* m514 */
-    m248[1] = 0x828;               /* JA_SE_CAMERA_TO_MANUAL */
-    m248[2] = 0x381B;              /* JA_SE_ATM_PRT_SHIP_CREAK */
+    mSeIds[1] = 0x828;               /* JA_SE_CAMERA_TO_MANUAL */
+    mSeIds[2] = 0x381B;              /* JA_SE_ATM_PRT_SHIP_CREAK */
     mCamTypeKeep = keep;
-    m148 = sZeroAngle.get(); /* cSAngle::_0 */
-    m07C = 0;
+    mForwardTiltOffset = sZeroAngle.get(); /* cSAngle::_0 */
+    mFrameCounter = 0;
     f32 rnd = cM_rndFX(32767.0f);
-    m080 = ftou(rnd);
+    mTicks = ftou(rnd);
     m064 = 1.0f;
     m5F4 = 0.0f;
     mTrimSize = 0;
@@ -807,10 +807,10 @@ void dCamera_c::initialize(camera_class* camera, fopAc_ac_c* player, u32 infoIdx
     }
     s16 style = camTypeStyle(mCurType, mCurMode);
     u32 grp = fieldRead<u32>(this->mBG.m00.m04.mGrp);
-    m318 = -1000000000.0f;
+    mSeaWaveHeight = -1000000000.0f;
     mBG.m5C.m58 = -1000000000.0f;
-    m31D = 0;
-    m31C = 0;
+    mFollowMoveBg = 0;
+    mOnMoveBg = 0;
     mRoomNo = -1;
     mStageMapToolCameraIdx = 0xFF;
     mEventData.field_0x14 = -1;
@@ -823,56 +823,58 @@ void dCamera_c::initialize(camera_class* camera, fopAc_ac_c* player, u32 infoIdx
     mEventData.field_0x0c = -1;
     m0E8 = -1;
     mCurStyle = style;
-    m32C.copy(*&sZeroVector); /* cXyz::Zero */
-    m33C = nullptr;
-    m320.copy(m32C);
+    mMoveBgLastPos.copy(*&sZeroVector); /* cXyz::Zero */
+    mpMoveBgActor = nullptr;
+    mMoveBgPosDelta.copy(mMoveBgLastPos);
     s16 zero = sZeroAngle.get();
-    m350 = 0;
-    m364 = 0;
+    mCamMoveBg = 0;
+    mBushHit = 0;
     mRoomMapToolCameraIdx = 0xFF;
-    m33A = zero;
-    m338 = zero;
-    m368 = 0.0f;
-    m354 = -1000000000.0f;
+    mMoveBgLastAngle = zero;
+    mMoveBgAngleDelta = zero;
+    mBushHeight = 0.0f;
+    mGroundHeight = -1000000000.0f;
     fieldWrite<u32>(
-        this->m608,
+        this->mWallUpDist,
         fieldRead<u32>(
-            cameraSetup(this)->mWallUpDistance)); /* m608 = mCamSetup.mBGChk.WallUpDistance() */
+            cameraSetup(this)->mWallUpDistance)); /* mWallUpDist = mCamSetup.mBGChk.WallUpDistance() */
 
-    m780 = is_current_map(0x1004AB54) /* "sea" */;
-    m788 = is_current_map(0x1004ABA0) /* "kaze" */;
-    m789 = is_current_map(0x1004AB70) /* "M_Dai" */;
-    m78B = is_current_map(0x1004AB78) /* "kazeB" */;
-    m784 = is_current_map(0x1004ABA8) /* "GanonK" */;
-    m785 = is_current_map(0x1004ABB0) /* "GTower" */;
-    m781 = is_current_map(0x1004AB80) /* "Asoko" */ || is_current_map(0x1004ABB8) /* "Abship" */ ||
+    mIsSeaMap = is_current_map(0x1004AB54) /* "sea" */;
+    mIsKazeMap = is_current_map(0x1004ABA0) /* "kaze" */;
+    mIsMDaiMap = is_current_map(0x1004AB70) /* "M_Dai" */;
+    mIsKazeBMap = is_current_map(0x1004AB78) /* "kazeB" */;
+    mIsGanonKMap = is_current_map(0x1004ABA8) /* "GanonK" */;
+    mIsGTowerMap = is_current_map(0x1004ABB0) /* "GTower" */;
+    mIsShipRoomMap = is_current_map(0x1004AB80) /* "Asoko" */ || is_current_map(0x1004ABB8) /* "Abship" */ ||
            is_current_map(0x1004AB88) /* "PShip" */;
-    m782 = is_current_map(0x1004ABC0) /* "Obshop" */;
+    mIsObshopMap = is_current_map(0x1004ABC0) /* "Obshop" */;
     bool umikz = is_current_map(0x1004AB4C) /* "A_umikz" */;
-    m534 = 0;
-    m536 = 0x180;
-    m783 = umikz;
+    mShipRockAngle = 0;
+    mShipRockSpeed = 0x180;
+    mIsUmikzMap = umikz;
     f32 ofs;
-    if (m781 != 0) {
-        m540 = 1.0f;
-        m530 = 1;
-        ofs = pirateShipOffsetY(cameraArgument(&m534), cameraArgument(&m536), 130.0f) *
-              m540; /* daObjPirateship::getShipOffsetY */
-    } else if (m782 != 0) {
-        m530 = 2;
-        m540 = 0.12f;
-        ofs = pirateShipOffsetY(cameraArgument(&m534), cameraArgument(&m536), 130.0f) * m540;
-    } else if (m783 != 0) {
-        m540 = 1.0f;
-        m530 = 3;
-        ofs = pirateShipOffsetY(cameraArgument(&m534), cameraArgument(&m536), 130.0f) * m540;
+    if (mIsShipRoomMap != 0) {
+        mShipOffsetScale = 1.0f;
+        mShipRockType = 1;
+        ofs = pirateShipOffsetY(cameraArgument(&mShipRockAngle), cameraArgument(&mShipRockSpeed), 130.0f) *
+              mShipOffsetScale; /* daObjPirateship::getShipOffsetY */
+    } else if (mIsObshopMap != 0) {
+        mShipRockType = 2;
+        mShipOffsetScale = 0.12f;
+        ofs = pirateShipOffsetY(cameraArgument(&mShipRockAngle), cameraArgument(&mShipRockSpeed), 130.0f) *
+              mShipOffsetScale;
+    } else if (mIsUmikzMap != 0) {
+        mShipOffsetScale = 1.0f;
+        mShipRockType = 3;
+        ofs = pirateShipOffsetY(cameraArgument(&mShipRockAngle), cameraArgument(&mShipRockSpeed), 130.0f) *
+              mShipOffsetScale;
     } else {
-        m530 = 0;
+        mShipRockType = 0;
         ofs = 0.0f;
-        m540 = 0.0f;
+        mShipOffsetScale = 0.0f;
     }
     s32 curStyle = mCurStyle;
-    m538 = ofs;
+    mShipOffsetY = ofs;
     paramChange(cameraArgument(gabi::ea(&this->mCamParam)),
                 cameraArgument(curStyle)); /* mCamParam.Change(mCurStyle) */
 

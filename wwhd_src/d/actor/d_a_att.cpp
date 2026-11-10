@@ -47,7 +47,7 @@ static void* boss_s_sub(void* search, void* param) {
 
 /* 020587B4 */
 static BOOL daAtt_Execute(att_class* i_this) {
-    if (i_this->m2B5 == 101) {
+    if (i_this->mStringNo == 101) {
         i_this->eyePos.copy(i_this->current.pos);
         i_this->attention_info.position.copy(i_this->current.pos);
         /* fopAcM_OffStatus(i_this, 0): no effect */
@@ -56,7 +56,7 @@ static BOOL daAtt_Execute(att_class* i_this) {
         dComIfG_Ccsp_Set(&i_this->mSph);
     }
 
-    if (i_this->m2B5 == 100) {
+    if (i_this->mStringNo == 100) {
         i_this->eyePos.copy(i_this->current.pos);
         i_this->attention_info.position.copy(i_this->current.pos);
         return TRUE;
@@ -66,46 +66,46 @@ static BOOL daAtt_Execute(att_class* i_this) {
     if (boss == nullptr) {
         return TRUE;
     }
-    int r30 = i_this->m2B5;
+    int r30 = i_this->mStringNo;
 
     bool hitCheck = true;
-    if (i_this->m550 != 0) {
-        i_this->m550 = (s8)(i_this->m550 - 1);
-        if (i_this->m550 != 0)
+    if (i_this->mHitWaitTimer != 0) {
+        i_this->mHitWaitTimer = (s8)(i_this->mHitWaitTimer - 1);
+        if (i_this->mHitWaitTimer != 0)
             hitCheck = false;
     }
 
     if (hitCheck && (i_this->mCyl.ChkTgHit() || i_this->mSph.ChkTgHit())) {
-        i_this->m550 = 10;
-        bgn_att_move_s* p = &boss->mAAA8[r30];
-        p->m308 = (s8)(p->m308 - 1);
-        p = &boss->mAAA8[r30];
-        if (p->m308 <= 0) {
-            p->m2D0 = 1;
-            boss->mAAA8[r30].m304 = 6000.0f;
+        i_this->mHitWaitTimer = 10;
+        bgn_att_move_s* p = &boss->mMove[r30];
+        p->mHitPoints = (s8)(p->mHitPoints - 1);
+        p = &boss->mMove[r30];
+        if (p->mHitPoints <= 0) {
+            p->mCut = 1;
+            boss->mMove[r30].mCutSwayAmplitude = 6000.0f;
             mDoAud_seStart(JA_SE_LK_W_WEP_HIT, nullptr, 0x21, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
             if (r30 <= 1) {
-                if (boss->mAAA8[1 - r30].m2D0 != 0) {
-                    boss->mC7AC[2] = 600;
+                if (boss->mMove[1 - r30].mCut != 0) {
+                    boss->mTimers[2] = 600;
                 }
             }
         } else {
-            p->m300 = 15;
+            p->mPluckTimer = 15;
             mDoAud_seStart(JA_SE_CM_BGN_D_STRING_PLINK, nullptr, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
         }
     }
 
-    i_this->current.pos.copy(boss->mC33C[r30]);
+    i_this->current.pos.copy(boss->mHimoTopPos[r30]);
     gabi::Local<cXyz> sp08;
     sp08->x = i_this->current.pos.x;
     sp08->y = i_this->current.pos.y;
     sp08->z = i_this->current.pos.z;
 
     bgn_att_view_c* b = boss;
-    if (b->m02B5 == 0 &&
-        (b->mC748 != 0 || b->mC74C != 0 || r30 != 7) &&
-        b->mAAA8[r30].m2D0 == 0 &&
-        b->mAAA8[r30].m2EC < 1.0f) {
+    if (b->mForm == 0 &&
+        (b->mAction != 0 || b->mDanceType != 0 || r30 != 7) &&
+        b->mMove[r30].mCut == 0 &&
+        b->mMove[r30].mSwayAmplitude < 1.0f) {
         i_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         i_this->mCyl.SetR(200.0f);
         i_this->mCyl.SetC(sp08);
@@ -141,17 +141,17 @@ static cPhs_State daAtt_Create(fopAc_ac_c* i_this) {
     fopAcM_ct(i_this, att_class);
     dComIfGp_get(); /* HD: a leftover accessor call (result unused) */
 
-    a_this->m2B5 = fopAcM_GetParam(a_this) & 0xFF;
+    a_this->mStringNo = fopAcM_GetParam(a_this) & 0xFF;
     a_this->attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 4;
 
-    if (a_this->m2B5 == 101) {
+    if (a_this->mStringNo == 101) {
         a_this->actor_status |= fopAcStts_UNK10000000_e;
         a_this->mStts.Init(0xFF, 0xFF, a_this);
         a_this->mSph.Set((const dCcD_SrcSph*)sita_sph_src);
         a_this->mSph.SetStts(&a_this->mStts);
     }
 
-    if (a_this->m2B5 < 10) {
+    if (a_this->mStringNo < 10) {
         boss = nullptr;
         a_this->mStts.Init(0xFF, 0xFF, a_this);
         a_this->mCyl.Set((const dCcD_SrcCyl*)cc_cyl_src);

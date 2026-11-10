@@ -13,11 +13,13 @@ struct Act_c : dBgS_MoveBgActor {
         PRM_SOUND_S = 16
     };
     enum Mode { CLOSE_STOP, OPEN_DEMO_WAIT, OPEN_DEMO, OPEN_STOP, CLOSE_DEMO_WAIT, CLOSE_DEMO };
-    /* 0x3E0 */ be<s16> field_0x2C8, field_0x2CA;
-    /* 0x3E4 */ request_of_phase_process_class field_0x2CC;
-    /* 0x3EC */ gptr<J3DModel> field_0x2D4;
-    /* 0x3F0 */ be<s32> field_0x2D8;
-    /* 0x3F4 */ be<s16> field_0x2DC, field_0x2DE;
+    /* 0x3E0 */ be<s16> mOpenAngle;  /* was field_0x2C8: Create 0234F0C8: OPEN_ANGLE (0x4000) when the switch is on, else 0; daObjHami3_open_demo 0234F318 / daObjHami3_close_demo 0234F4AC step it by ROTATION_STEP (0x100); nodeCallBack 0234EC78 rotates the gate joints by it (tww cMtx_YrotM); Execute 0234F564 adds it to home.angle.x */
+    /* 0x3E2 */ be<s16> field_0x2CA;
+    /* 0x3E4 */ request_of_phase_process_class mPhs;  /* was field_0x2CC: Mthd_Create 0234ED9C / Mthd_Delete 0234EE70: the request_of_phase_process_class of dComIfG_resLoad / dComIfG_resDeleteDemo (the usual mPhs of the other Act_c classes) */
+    /* 0x3EC */ gptr<J3DModel> mpModel;  /* was field_0x2D4: CreateHeap 0234EEBC: the J3DModel (tww mDoExt_J3DModel__create); set_mtx 0234EFD4 / init_mtx 0234F0A8 / Draw 0234F724 use it */
+    /* 0x3F0 */ be<s32> mMode;  /* was field_0x2D8: Create 0234F0C8 OPEN_STOP / CLOSE_STOP; the mode functions 0234F210..0234F4AC store Act_c::Mode values; Execute 0234F564 switches on it */
+    /* 0x3F4 */ be<s16> mEventIdx;  /* was field_0x2DC: Create 0234F0C8: dComIfGp_evmng_getEventIdx("AMI3") (tww); the open / close waits pass it to fopAcM_orderOtherEventId */
+    /* 0x3F6 */ be<s16> field_0x2DE;
     s32 Mthd_Create();
     BOOL Mthd_Delete();
     BOOL CreateHeap();
@@ -34,12 +36,12 @@ struct Act_c : dBgS_MoveBgActor {
     void daObjHami3_close_demo_wait();
     void daObjHami3_close_demo();
 };
-WWHD_OFFSET(Act_c, field_0x2C8, 0x3E0);
+WWHD_OFFSET(Act_c, mOpenAngle, 0x3E0);
 WWHD_OFFSET(Act_c, field_0x2CA, 0x3E2);
-WWHD_OFFSET(Act_c, field_0x2CC, 0x3E4);
-WWHD_OFFSET(Act_c, field_0x2D4, 0x3EC);
-WWHD_OFFSET(Act_c, field_0x2D8, 0x3F0);
-WWHD_OFFSET(Act_c, field_0x2DC, 0x3F4);
+WWHD_OFFSET(Act_c, mPhs, 0x3E4);
+WWHD_OFFSET(Act_c, mpModel, 0x3EC);
+WWHD_OFFSET(Act_c, mMode, 0x3F0);
+WWHD_OFFSET(Act_c, mEventIdx, 0x3F4);
 WWHD_OFFSET(Act_c, field_0x2DE, 0x3F6);
 WWHD_SIZE(Act_c, 0x3F8);
 struct DrawLists {

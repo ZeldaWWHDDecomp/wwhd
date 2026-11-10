@@ -117,15 +117,15 @@ struct daSail_packet_c {
     /* 0x1B08 */ cXyz mPosSpd[0x54];
     /* 0x1EF8 */ cXyz mNrm[2][0x54];
     /* 0x26D8 */ cXyz mBackNrm[2][0x54];
-    /* 0x2EB8 */ be<s16> m1C34;
-    /* 0x2EBA */ be<s16> m1C36;
-    /* 0x2EBC */ be<s16> m1C38;
-    /* 0x2EBE */ be<u8> m1C3A;
+    /* 0x2EB8 */ be<s16> mNrmAngle;  /* was m1C34: daSail_packet_c::setCorrectNrmAngle 0245FFC8: 300 * sin(mNrmWobblePhase) + mNrmCorrectAngle; daSail_packet_c::setNrmMtx 024601F0: the Y rotation of the normal matrix; daSail_packet_ct 024616AC: 0 */
+    /* 0x2EBA */ be<s16> mNrmCorrectAngle;  /* was m1C36: daSail_packet_c::setCorrectNrmAngle 0245FFC8: eased to +-l_HIO m10 degrees when the wind comes from near the front or back, else to 0; added to mNrmAngle; daSail_packet_ct 024616AC: 0 */
+    /* 0x2EBC */ be<s16> mNrmWobblePhase;  /* was m1C38: daSail_packet_c::setCorrectNrmAngle 0245FFC8: + 900 + cM_rndF(200) per call; sine phase of mNrmAngle; daSail_packet_ct 024616AC: 0 */
+    /* 0x2EBE */ be<u8> mCurArr;  /* was m1C3A: daSail_packet_c::update 0245F638, setBackNrm 024605DC, sail_move 02460678: index of the mPos / mNrm / mBackNrm vertex array set in use (getPos / getNrm / getBackNrm); daSail_packet_ct 024616AC: 0 */
     /* 0x2EBF */ be<u8> m1C3B;
 
-    cXyz* getPos() { return mPos[(u8)m1C3A]; }
-    cXyz* getNrm() { return mNrm[(u8)m1C3A]; }
-    cXyz* getBackNrm() { return mBackNrm[(u8)m1C3A]; }
+    cXyz* getPos() { return mPos[(u8)mCurArr]; }
+    cXyz* getNrm() { return mNrm[(u8)mCurArr]; }
+    cXyz* getBackNrm() { return mBackNrm[(u8)mCurArr]; }
     void setCorrectNrmAngle(s16, f32);
     void setNrmMtx();
     void setBackNrm();
@@ -140,7 +140,7 @@ WWHD_OFFSET(daSail_packet_c, mPos, 0x1328);
 WWHD_OFFSET(daSail_packet_c, mPosSpd, 0x1B08);
 WWHD_OFFSET(daSail_packet_c, mNrm, 0x1EF8);
 WWHD_OFFSET(daSail_packet_c, mBackNrm, 0x26D8);
-WWHD_OFFSET(daSail_packet_c, m1C34, 0x2EB8);
+WWHD_OFFSET(daSail_packet_c, mNrmAngle, 0x2EB8);
 WWHD_SIZE(daSail_packet_c, 0x2EC0);
 
 struct sail_class : fopAc_ac_c {
@@ -148,17 +148,17 @@ struct sail_class : fopAc_ac_c {
     /* 0x3B4 */ request_of_phase_process_class mKaizokusenPhase;
     /* 0x3BC */ daSail_packet_c mSailPacket;
     /* 0x327C */ gptr<J3DModel> mStickModel; /* GameCube: packet m1C3C */
-    /* 0x3280 */ be<s32> m1C40;
-    /* 0x3284 */ be<f32> m1C44;
-    /* 0x3288 */ be<f32> m1C48;
+    /* 0x3280 */ be<s32> mWavePhase;  /* was m1C40: sail_move 02460678: + 4000 * (1 - 0.95 * mFurl) * the wind's z share each frame; subtracted from / added to the per-vertex phase of the flutter sine / cosine (tww sail_move: mSailPacket.mWavePhase +=) */
+    /* 0x3284 */ be<f32> mFurl;  /* was m1C44: sail_move 02460678: eased to 0.6 (l_HIO m06 0) or to 0 (m06 1) at mFurlSpeed, kept in 0..1; a demo actor's animation frame sets it (0.6 - 0.006 * frame); it shortens the sail rows (the 'furl bulge' comment: 700 / 150) and lowers the flutter */
+    /* 0x3288 */ be<f32> mFurlSpeed;  /* was m1C48: sail_move 02460678: step of cLib_addCalc on mFurl: 0.015 then -0.001 per frame toward 0.6, +0.0075 per frame toward 0, 0 when settled */
     /* 0x328C */ be<f32> m1C4C;
-    /* 0x3290 */ be<s16> m1C50;
-    /* 0x3292 */ be<s16> m1C52;
+    /* 0x3290 */ be<s16> mWaveColStep;  /* was m1C50: sail_move 02460678: 7500 * (1 + 1.5 * the wind's x share); flutter phase step per sail column (times j - 3) */
+    /* 0x3292 */ be<s16> mWaveRowStep;  /* was m1C52: sail_move 02460678: 7200 * (0.05 + 0.95 * the wind's z share); flutter phase step per sail row (times i - 6) */
 };
 WWHD_OFFSET(sail_class, mSailPacket, 0x3BC);
 WWHD_OFFSET(sail_class, mStickModel, 0x327C);
-WWHD_OFFSET(sail_class, m1C44, 0x3284);
-WWHD_OFFSET(sail_class, m1C52, 0x3292);
+WWHD_OFFSET(sail_class, mFurl, 0x3284);
+WWHD_OFFSET(sail_class, mWaveRowStep, 0x3292);
 WWHD_SIZE(sail_class, 0x3294);
 
 WWHD_OFFSET(daSail_packet_c, programCount, 0x98);
@@ -389,7 +389,7 @@ struct SailPlayView {
 };
 struct SailShipView : fopAc_ac_c {
     u8 prefix3AC[0x3E4 - 0x3AC];
-    be<u8> m2CC, padding3E5, m2CE, padding3E7;
+    be<u8> mAppeared, padding3E5, mSailSeOn, padding3E7;  /* mAppeared was m2CC, mSailSeOn was m2CE: daObjPirateship::Act_c name (this is a view of l_p_ship, daObjPirateship::Act_c; the fields are named in d_a_obj_pirateship.h) */
     gptr<J3DModel> mModel;
 };
 struct SailDemoActorView {
@@ -520,6 +520,6 @@ WWHD_OFFSET(SailDrawState, compare, 0xE4);
 WWHD_OFFSET(SailDrawState, reference, 0xE8);
 WWHD_OFFSET(SailDrawState, flags, 0xEC);
 WWHD_OFFSET(SailDrawState, vtable, 0x118);
-WWHD_OFFSET(SailShipView, m2CC, 0x3E4);
-WWHD_OFFSET(SailShipView, m2CE, 0x3E6);
+WWHD_OFFSET(SailShipView, mAppeared, 0x3E4);
+WWHD_OFFSET(SailShipView, mSailSeOn, 0x3E6);
 WWHD_OFFSET(SailShipView, mModel, 0x3E8);

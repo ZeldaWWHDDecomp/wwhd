@@ -64,12 +64,12 @@ struct Act_c : fopAc_ac_c {
     /* 0x438 */ be<f32> mTargetHFrac;
     /* 0x43C */ be<f32> mCurHFrac;
     /* 0x440 */ be<f32> mVSpeed;
-    /* 0x444 */ be<f32> m328;
-    /* 0x448 */ be<f32> m32C;
-    /* 0x44C */ be<s16> m330;
+    /* 0x444 */ be<f32> mBottomPos;  /* was m328: calc_top_pos 02394730: (1 - mCurHFrac) * -35.5 limited to [-36.5, 1] (tww calc_top_pos), the lower bound of mTopPos; set_mtx 02393F08 adds it to the model's Y; _execute 023948D4 eyePos; _create 02394114 0 / -35.5 (after mTopPos) */
+    /* 0x448 */ be<f32> mTopAimHFrac;  /* was m32C: calc_top_pos 02394730: takes mTopAimReqHFrac when mTopAimTimer runs out and is the top's height fraction outside mode 0; _create 02394114 1 / 0 */
+    /* 0x44C */ be<s16> mTopAimTimer;  /* was m330: top_bg_aim_req 02394ADC sets it (tww param_2); calc_top_pos 02394730 counts it down and copies mTopAimReqHFrac into mTopAimHFrac at 0; _create 02394114 0 */
     /* 0x44E */ u8 mPadding2[2];
-    /* 0x450 */ be<f32> m334;
-    /* 0x454 */ be<f32> m338;
+    /* 0x450 */ be<f32> mTopAimReqHFrac;  /* was m334: top_bg_aim_req 02394ADC stores the requested height fraction (tww param_1); calc_top_pos 02394730 copies it into mTopAimHFrac when mTopAimTimer reaches 0; _create 02394114 0 */
+    /* 0x454 */ be<f32> mTopHFrac;  /* was m338: calc_top_pos 02394730: mCurHFrac in mode 0, else mTopAimHFrac; mTopPos = (1 - it) * -35.5 (tww calc_top_pos); _create 02394114 1 / 0 */
     /* 0x458 */ be<f32> mTopPos;
 };
 WWHD_OFFSET(Act_c, mMtx1, 0x3C4);

@@ -167,10 +167,10 @@ static inline void ship_sightLaunch(daShip_c* s) {
     ShipExecSight& sight = ship_exec_sight(s);
     gabi::Local<cXyz> top;
     PSMTXMultVec(model_getAnmMtx(s->mpCannonModel, VFNCN_JNT_CANON2_e), &cannon_top, top.get());
-    s16 ax = s->shape_angle.x + s->m0396 - 0x4000;
+    s16 ax = s->shape_angle.x + s->mCannonAngleX - 0x4000;
     sight.mPosition.copy(*top);
     sight.mDelay = 8;
-    sight.mAngle.y = s->shape_angle.y + s->m0394;
+    sight.mAngle.y = s->shape_angle.y + s->mCannonAngleY;
     sight.mAngle.z = s->shape_angle.z;
     sight.mAngle.x = ax;
 }
@@ -193,10 +193,10 @@ BOOL daShip_c::execute() {
     ship_exec_staticVec(sail_offset_guard, sail_offset_storage, 0.5f, 155.0f, 50.0f);
     cXyz* sph_offset = ship_exec_staticVec(sph_offset_guard, sph_offset_storage, -5.0f, 0.0f, 0.0f);
 
-    m0404 = 0.0f;
+    mForceMoveRate = 0.0f;
     f32 prev_speedF = speedF;
-    m0351 = 0xFF;
-    m0428 = nullptr;
+    mDemoMode = 0xFF;
+    mpEvtAtnPos = nullptr;
     f32 prev_fwdvel = mFwdVel;
 
     if (mTornadoID != fpcM_ERROR_PROCESS_ID_e) {
@@ -220,7 +220,7 @@ BOOL daShip_c::execute() {
                 ShipExec_getMyNowCutName(ship_exec_play()->mEventManager, (s32)mEvtStaffId);
             if (cutName) {
                 const be<u8>* name = gabi::at<be<u8>>(cutName);
-                m0351 = (u8)(name[0] * 10 + name[1] - 0x210);
+                mDemoMode = (u8)(name[0] * 10 + name[1] - 0x210);
             }
         }
         offStateFlg(daSFLG_UNK2000000_e);
@@ -236,16 +236,16 @@ BOOL daShip_c::execute() {
         }
         mEvtStaffId = -1;
         // HD: the crash timer counts down here (GameCube: setCrashData)
-        if (m03B6 != 0) {
-            m03B6--;
+        if (mCrashTimer != 0) {
+            mCrashTimer--;
         }
     }
     // HD: also clears the Swift Sail flag (0x80000000)
     offStateFlg(daSFLG_JUMP_e | daSFLG_LAND_e | daSFLG_UNK100_e | daSFLG_JUMP_OK_e |
                 daSFLG_SHOOT_CANNON_e | daSFLG_UNK100000_e | daSFLG_UNK8000000_e |
                 daSFLG_UNK80000000_e);
-    if (m0388 > 0) {
-        m0388--;
+    if (mLandTimer > 0) {
+        mLandTimer--;
     }
     if (checkStateFlg(daSFLG_UNK20_e)) {
         offStateFlg(daSFLG_UNK20_e);
@@ -268,8 +268,8 @@ BOOL daShip_c::execute() {
             }
         } else if ((ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) && checkOutRange()) {
             if (checkStateFlg(daSFLG_FLY_e)) {
-                cLib_addCalcAngleS2(&shape_angle.y, m038C, 8, m038E);
-                cLib_addCalcAngleS2(&m038E, 0x1800, 8, 0x200);
+                cLib_addCalcAngleS2(&shape_angle.y, mTurnTargetAngle, 8, mTurnAngleSpeed);
+                cLib_addCalcAngleS2(&mTurnAngleSpeed, 0x1800, 8, 0x200);
                 // HD: the boat also stops
                 speedF = 0.0f;
                 current.angle.y = shape_angle.y;
@@ -290,13 +290,13 @@ BOOL daShip_c::execute() {
 
     if (ship_demo_getActor(demoActorID)) {
         procToolDemo_init();
-    } else if (m0351 == 2 /* DEMO_SALVAGE_e */) {
+    } else if (mDemoMode == 2 /* DEMO_SALVAGE_e */) {
         procCraneUp_init();
-    } else if (mEvtStaffId != -1 && m0351 != 9 /* DEMO_TORNADO_S_e */) {
+    } else if (mEvtStaffId != -1 && mDemoMode != 9 /* DEMO_TORNADO_S_e */) {
         procZevDemo_init();
     }
 
-    s16 sVar26 = m0366;
+    s16 sVar26 = mTillerAngle;
     if (mAnmTransform) {
         ShipExec_updateFrame(&mFrameCtrl);
         gabi::at<ShipExecAnimation>(gabi::ea(mAnmTransform.get()))->mFrame =
@@ -305,7 +305,7 @@ BOOL daShip_c::execute() {
             mAnmTransform = nullptr;
         }
     }
-    BOOL r24 = m0351 == 8 /* DEMO_OPEN_e */ || checkStateFlg(daSFLG_UNK4000000_e);
+    BOOL r24 = mDemoMode == 8 /* DEMO_OPEN_e */ || checkStateFlg(daSFLG_UNK4000000_e);
 
     /* (this->*mProc)() */
     ShipExecProcedure* procedure = gabi::at<ShipExecProcedure>(gabi::ea(this));
@@ -313,11 +313,11 @@ BOOL daShip_c::execute() {
         (this->*procedure->mProc)();
     }
 
-    if (m0351 == 8 || checkStateFlg(daSFLG_UNK4000000_e)) {
-        m0366 = -0x2000;
+    if (mDemoMode == 8 || checkStateFlg(daSFLG_UNK4000000_e)) {
+        mTillerAngle = -0x2000;
         sVar26 = -0x2000;
     } else if (r24) {
-        m0366 = 0;
+        mTillerAngle = 0;
         sVar26 = 0;
     }
 
@@ -326,16 +326,16 @@ BOOL daShip_c::execute() {
             mCurMode != MODE_START_MODE_WARP_e && mCurMode != MODE_START_MODE_THROW_e &&
             (u8)ship_exec_play()->mEventRun == 0) {
             if (mTornadoActor) {
-                s16 target = (s16)gabi::ftoi(gabi::fmadds(m040C, 10430.378f, 20480.0f));
+                s16 target = (s16)gabi::ftoi(gabi::fmadds(mForceMoveAngle, 10430.378f, 20480.0f));
                 s16 sVar16 = shape_angle.y;
                 cLib_addCalcAngleS(&shape_angle.y, target, 5, 0x2000, 0x200);
                 setControllAngle(getAimControllAngle(sVar16));
                 current.angle.y = shape_angle.y;
             } else if (mWhirlActor) {
                 s16 sVar16 = shape_angle.y;
-                f32 a = m040C;
+                f32 a = mForceMoveAngle;
                 s16 sVar5;
-                if (m0352) {
+                if (mWhirlCircleFlg) {
                     sVar5 = (s16)gabi::ftoi(gabi::fmadds(a, 10430.378f, 20480.0f));
                 } else {
                     sVar5 = (s16)gabi::ftoi(gabi::fmadds(a, 10430.378f, 32768.0f));
@@ -361,7 +361,7 @@ BOOL daShip_c::execute() {
         cLib_addCalcAngleS(&m0384, -0x800, 3, 0x500, 0x300);
     }
 
-    m045C.copy(current.pos);
+    mPrevPos.copy(current.pos);
     if (!checkStateFlg(daSFLG_UNK2000000_e)) {
         cLib_chaseS(&m03B8, 0, 0x80);
     } else {
@@ -387,14 +387,14 @@ BOOL daShip_c::execute() {
                 speedF = prev_speedF;
                 f32 fVar4;
                 if (mTornadoActor) {
-                    fVar4 = gabi::fmadds(40.0f, m0404, 30.0f);
+                    fVar4 = gabi::fmadds(40.0f, mForceMoveRate, 30.0f);
                     if (!(ship_playerStatus0() & 0x1000 /* daPyStts0_BOW_AIM_e */) ||
                         !((u32)ship_exec_play()->mCameraAttentionStatus &
                           0x20 /* camera attention status */)) {
                         fVar4 *= 1.2f;
                     }
                 } else {
-                    fVar4 = gabi::fmadds(30.0f, m0404, 10.0f);
+                    fVar4 = gabi::fmadds(30.0f, mForceMoveRate, 10.0f);
                     if ((u8)gabi::at<ShipExecSave>(dSv_base())->mBombNum ==
                             0 /* dComIfGs_getBombNum() */
                         && fopAcM_GetRoomNo(this) == 44) {
@@ -419,7 +419,7 @@ BOOL daShip_c::execute() {
                     onStateFlg(daSFLG_UNK100_e);
                 }
                 fopAcM_posMoveF(this, &mStts.m_cc_move);
-                m1044.copy(*cXyz_Zero);
+                mBeltSpeed.copy(*cXyz_Zero);
             } else if ((mTornadoActor || mWhirlActor) && (u8)ship_exec_play()->mEventRun == 0) {
                 f32 step;
                 if (mTornadoActor) {
@@ -435,24 +435,24 @@ BOOL daShip_c::execute() {
                 } else {
                     step = 0.6f;
                 }
-                cLib_chaseF(&m0400, 0.0f, step);
-                f32 r = std::fabs((f32)speedF) / m0400;
-                f32 a = m040C + r;
-                m0408 = r;
-                m040C = a;
+                cLib_chaseF(&mForceMoveDist, 0.0f, step);
+                f32 r = std::fabs((f32)speedF) / mForceMoveDist;
+                f32 a = mForceMoveAngle + r;
+                mForceMoveAngleSpeed = r;
+                mForceMoveAngle = a;
                 bool r23 = false;
                 if (mTornadoActor) {
                     s16 ang = ShipExec_radToAngle(a);
-                    current.pos.x = gabi::fmadds(m0400, cM_ssin(ang), mTornadoActor->current.pos.x);
-                    s16 ang2 = ShipExec_radToAngle((f32)m040C);
+                    current.pos.x = gabi::fmadds(mForceMoveDist, cM_ssin(ang), mTornadoActor->current.pos.x);
+                    s16 ang2 = ShipExec_radToAngle((f32)mForceMoveAngle);
                     current.pos.z =
-                        gabi::fmadds(m0400, cM_scos(ang2), mTornadoActor->current.pos.z);
+                        gabi::fmadds(mForceMoveDist, cM_scos(ang2), mTornadoActor->current.pos.z);
                     r23 = true;
-                } else if (m0352) {
+                } else if (mWhirlCircleFlg) {
                     s16 ang = ShipExec_radToAngle(a);
-                    current.pos.x = gabi::fmadds(m0400, cM_ssin(ang), mWhirlActor->current.pos.x);
-                    s16 ang2 = ShipExec_radToAngle((f32)m040C);
-                    current.pos.z = gabi::fmadds(m0400, cM_scos(ang2), mWhirlActor->current.pos.z);
+                    current.pos.x = gabi::fmadds(mForceMoveDist, cM_ssin(ang), mWhirlActor->current.pos.x);
+                    s16 ang2 = ShipExec_radToAngle((f32)mForceMoveAngle);
+                    current.pos.z = gabi::fmadds(mForceMoveDist, cM_scos(ang2), mWhirlActor->current.pos.z);
                     r23 = true;
                 } else {
                     f32 y = current.pos.y;
@@ -477,12 +477,12 @@ BOOL daShip_c::execute() {
                     }
                 }
             } else {
-                speed.x = (speedF * cM_ssin(current.angle.y)) * cM_scos(m0370);
-                speed.y = -(speedF * cM_ssin(m0370));
-                speed.z = (speedF * cM_scos(current.angle.y)) * cM_scos(m0370);
+                speed.x = (speedF * cM_ssin(current.angle.y)) * cM_scos(mWaveAngleX);
+                speed.y = -(speedF * cM_ssin(mWaveAngleX));
+                speed.z = (speedF * cM_scos(current.angle.y)) * cM_scos(mWaveAngleX);
                 fopAcM_posMove(this, &mStts.m_cc_move);
                 if ((u8)ship_exec_play()->mEventRun != 0) {
-                    m1044.copy(*cXyz_Zero);
+                    mBeltSpeed.copy(*cXyz_Zero);
                 } else {
                     gabi::Local<cXyz> sp108;
                     gabi::Local<be<s32>> sp18;
@@ -493,15 +493,15 @@ BOOL daShip_c::execute() {
                             sp18.get())) {
                         ShipExec_normalizeZP(sp108.get(), nrm.get());
                         PSVECScale(sp108.get(), sp108.get(), (f32)((s32)*sp18 >> 1));
-                        cLib_addCalcPosXZ(&m1044, sp108.get(), 0.5f, 5.0f, 1.0f);
+                        cLib_addCalcPosXZ(&mBeltSpeed, sp108.get(), 0.5f, 5.0f, 1.0f);
                     } else {
-                        cLib_addCalcPosXZ(&m1044, cXyz_Zero, 0.05f, 0.1f, 0.02f);
+                        cLib_addCalcPosXZ(&mBeltSpeed, cXyz_Zero, 0.05f, 0.1f, 0.02f);
                     }
-                    PSVECAdd(&current.pos, &m1044, &current.pos);
+                    PSVECAdd(&current.pos, &mBeltSpeed, &current.pos);
                 }
             }
         } else {
-            m1044.copy(*cXyz_Zero);
+            mBeltSpeed.copy(*cXyz_Zero);
             if (mEvtStaffId == -1) {
                 gabi::Local<cXyz> spFC;
                 cXyz_mi(&current.pos, spFC.get(), &old.pos);
@@ -515,11 +515,11 @@ BOOL daShip_c::execute() {
                     speedF = cXyz_abs(spFC.get());
                 }
             } else {
-                speed.x = (speedF * cM_ssin(current.angle.y)) * cM_scos(m0370);
-                if (m0351 != 7 && m0351 != 10 && m0351 != 11) {
-                    speed.y = -(speedF * cM_ssin(m0370));
+                speed.x = (speedF * cM_ssin(current.angle.y)) * cM_scos(mWaveAngleX);
+                if (mDemoMode != 7 && mDemoMode != 10 && mDemoMode != 11) {
+                    speed.y = -(speedF * cM_ssin(mWaveAngleX));
                 }
-                speed.z = (speedF * cM_scos(current.angle.y)) * cM_scos(m0370);
+                speed.z = (speedF * cM_scos(current.angle.y)) * cM_scos(mWaveAngleX);
                 fopAcM_posMove(this, &mStts.m_cc_move);
             }
         }
@@ -544,33 +544,33 @@ BOOL daShip_c::execute() {
     }
     setYPos();
 
-    f32 diff = m03F4 - current.pos.y;
-    gabi::at<ShipExecTrack>(gabi::ea(mTrack))->mBaseY = m03F4; /* mTrack.setWaterY */
-    gabi::at<ShipExecTrack>(gabi::ea(mTrack))->mMinY = m03F8;  /* mTrack.setWaterFlatY */
+    f32 diff = mWaterY - current.pos.y;
+    gabi::at<ShipExecTrack>(gabi::ea(mTrack))->mBaseY = mWaterY; /* mTrack.setWaterY */
+    gabi::at<ShipExecTrack>(gabi::ea(mTrack))->mMinY = mWaterFlatY;  /* mTrack.setWaterFlatY */
     gabi::Local<be<s16>> sp12;
     gabi::Local<be<s16>> sp10;
     if (!checkStateFlg(daSFLG_FLY_e)) {
         setWaveAngle(sp12.get(), sp10.get());
     } else {
-        *sp10 = m037E;
-        *sp12 = m037C;
+        *sp10 = mOldShapeAngleZ;
+        *sp12 = mOldShapeAngleX;
     }
     diff += 5.0f;
     if (diff > m03D8) {
-        m037C = shape_angle.x;
+        mOldShapeAngleX = shape_angle.x;
         m03D8 = diff;
-        m037E = shape_angle.z;
+        mOldShapeAngleZ = shape_angle.z;
     } else {
         cLib_chaseF(&m03D8, diff, 3.0f);
-        m037C = shape_angle.x;
-        m037E = shape_angle.z;
+        mOldShapeAngleX = shape_angle.x;
+        mOldShapeAngleZ = shape_angle.z;
     }
     if (mCurMode == MODE_TACT_WARP_e) {
         shape_angle.x = 0;
         shape_angle.z = 0;
     } else {
-        shape_angle.x = m0370 + m0384;
-        shape_angle.z = (s16)(m036C + m0372);
+        shape_angle.x = mWaveAngleX + m0384;
+        shape_angle.z = (s16)(mControllAngle + mWaveAngleZ);
     }
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_now(), shape_angle.x, shape_angle.y, shape_angle.z);
@@ -583,19 +583,19 @@ BOOL daShip_c::execute() {
     mpHeadAnm->calc();
 
     if (mPart == PART_CRANE_e) {
-        if (m0392 == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+        if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
             f32 rate = getAnglePartRate();
-            m0398 = (s16)gabi::ftoi(rate * (f32)(s16)mCraneBaseAngle);
-            f32 old039C = (s16)m039C;
-            m039C = (s16)gabi::ftoi(old039C * getAnglePartRate());
+            mCraneAngle = (s16)gabi::ftoi(rate * (f32)(s16)mCraneBaseAngle);
+            f32 old039C = (s16)mCraneTurnAngle;
+            mCraneTurnAngle = (s16)gabi::ftoi(old039C * getAnglePartRate());
             incRopeCnt(-20, 0);
         }
         J3DModel_calc(mpSalvageArmModel);
         setRopePos();
         Mtx34* am = model_getAnmMtx(mpSalvageArmModel, VFNCR_JNT_V_CRANE_ROTATION_e);
-        ship_cpf(m102C.x, am->m[0][3]);
-        ship_cpf(m102C.y, am->m[1][3]);
-        ship_cpf(m102C.z, am->m[2][3]);
+        ship_cpf(mCranePos.x, am->m[0][3]);
+        ship_cpf(mCranePos.y, am->m[1][3]);
+        ship_cpf(mCranePos.z, am->m[2][3]);
         if (isProc(ShipExecTarget::procCrane) || isProc(ShipExecTarget::procCraneUp)) {
             ShipExecRopeActor* rope = gabi::at<ShipExecRopeActor>(gabi::ea(this));
             mCraneTop =
@@ -605,30 +605,30 @@ BOOL daShip_c::execute() {
         }
     } else {
         // HD: ended (GameCube remove())
-        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)m19C0);
-        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)mRipple);
-        dPa_followEcallBack_end_l(&m19AC);
+        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRopeRipple);
+        dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRipple);
+        dPa_followEcallBack_end_l(&mRopeDrip);
         mRopeCnt = 0;
         mCraneTop = nullptr;
         if (mPart == PART_CANNON_e) {
             Mtx34* cm = model_getAnmMtx(mpCannonModel, VFNCN_JNT_CANON2_e);
-            ship_cpf(m1038.x, cm->m[0][3]);
-            ship_cpf(m1038.y, cm->m[1][3]);
-            ship_cpf(m1038.z, cm->m[2][3]);
+            ship_cpf(mCannonPos.x, cm->m[0][3]);
+            ship_cpf(mCannonPos.y, cm->m[1][3]);
+            ship_cpf(mCannonPos.z, cm->m[2][3]);
             if (!isProc(ShipExecTarget::procCannon)) {
-                m0396 = (s16)gabi::ftoi(getAnglePartRate() * 16384.0f);
-                f32 old0394 = (s16)m0394;
-                m0394 = (s16)gabi::ftoi(old0394 * getAnglePartRate());
+                mCannonAngleX = (s16)gabi::ftoi(getAnglePartRate() * 16384.0f);
+                f32 old0394 = (s16)mCannonAngleY;
+                mCannonAngleY = (s16)gabi::ftoi(old0394 * getAnglePartRate());
             }
             J3DModel_calc(mpCannonModel);
-            if (m037A == 30) {
+            if (mProcVar0 == 30) {
                 gabi::Local<cXyz> spE4;
                 PSMTXMultVec(model_getAnmMtx(mpCannonModel, VFNCN_JNT_CANON2_e), &cannon_top,
                              spE4.get());
                 gabi::Local<csXyz> sp1C;
                 sp1C->z = shape_angle.z;
-                sp1C->x = shape_angle.x + m0396 - 0x4000; /* getCannonAngleX() */
-                sp1C->y = shape_angle.y + m0394;          /* getCannonAngleY() */
+                sp1C->x = shape_angle.x + mCannonAngleX - 0x4000; /* getCannonAngleX() */
+                sp1C->y = shape_angle.y + mCannonAngleY;          /* getCannonAngleY() */
                 u32 prm = ShipExec_makeBombParameter(4, 0, 1);
                 fopAc_ac_c* bomb =
                     ShipExec_fastCreate(ShipExecProcess::fpcNm_BOMB_e, prm, spE4.get(),
@@ -640,14 +640,14 @@ BOOL daShip_c::execute() {
                     bomb->speedF = cM_scos(sp1C->x) * 110.0f;
                     bomb->speed.y = -(cM_ssin(sp1C->x) * 110.0f);
                     bomb->gravity = -2.5f;
-                    seStart(ShipExecSound::JA_SE_LK_SHIP_CANNON_FIRE, &m1038);
+                    seStart(ShipExecSound::JA_SE_LK_SHIP_CANNON_FIRE, &mCannonPos);
                     onStateFlg(daSFLG_SHOOT_CANNON_e);
                     ShipExecPlay* play = ship_exec_play();
                     play->mItemBombNumCount = play->mItemBombNumCount - 1;
                     mpHeadAnm->mFrameCtrl.mRate = 1.0f;
                     mpHeadAnm->mFrameCtrl.mFrame = 0.0f;
                 }
-                m037A--;
+                mProcVar0--;
             }
             // HD: the cannon sight
             ship_sightLaunch(this);
@@ -663,10 +663,10 @@ BOOL daShip_c::execute() {
     PSMTXMultVec(model_getAnmMtx(model1, FN_BODY_JNT_J_FN_STEER1_e), &tiller_top_offset,
                  &mTillerTopPos);
     Mtx34* mtx = model_getAnmMtx(model1, FN_BODY_JNT_J_FN_SAIL1_e);
-    ship_cpf(m0444.x, mtx->m[0][3]);
-    ship_cpf(m0444.y, mtx->m[1][3]);
+    ship_cpf(mSailPos.x, mtx->m[0][3]);
+    ship_cpf(mSailPos.y, mtx->m[1][3]);
     u32 grid = mpGrid;
-    ship_cpf(m0444.z, mtx->m[2][3]);
+    ship_cpf(mSailPos.z, mtx->m[2][3]);
     if (grid) {
         /* static cXyz top_offset(0.0f, 0.0f, -365.0f); XZ_top_offset(265.0f, 0.0f, 0.0f) */
         cXyz* top_offset =
@@ -674,7 +674,7 @@ BOOL daShip_c::execute() {
         cXyz* XZ_top_offset =
             ship_exec_staticVec(XZ_top_offset_guard, XZ_top_offset_storage, 265.0f, 0.0f, 0.0f);
         fopAc_ac_c* g = gabi::at<fopAc_ac_c>(mpGrid);
-        g->current.pos.copy(m0444);
+        g->current.pos.copy(mSailPos);
         g = gabi::at<fopAc_ac_c>(mpGrid);
         g->current.angle.x = shape_angle.x;
         g->current.angle.y = shape_angle.y;
@@ -691,9 +691,9 @@ BOOL daShip_c::execute() {
         }
     }
 
-    s16 dv = m0366 - sVar26;
+    s16 dv = mTillerAngle - sVar26;
     s32 angleDifferenceMagnitude = dv < 0 ? -dv : dv;
-    s32 angleProduct = dv * m0366;
+    s32 angleProduct = dv * mTillerAngle;
     if (angleProduct > 0 && (f32)angleDifferenceMagnitude > 420.00003f) {
         seStart(ShipExecSound::JA_SE_LK_SHIP_RUDDER_OUT, &mTillerTopPos);
     } else if (angleProduct < 0 && (f32)angleDifferenceMagnitude > 525.0f) {
@@ -728,11 +728,11 @@ BOOL daShip_c::execute() {
     bool r23_2 = false;
     gabi::Local<cXyz> spC0;
     if (checkStateFlg(daSFLG_UNK1000000_e)) {
-        cXyz_mi(&m1068, spC0.get(), &eyePos);
+        cXyz_mi(&mAtnPos, spC0.get(), &eyePos);
         offStateFlg(daSFLG_UNK1000000_e);
         r23_2 = true;
-    } else if (m0428) {
-        cXyz_mi(m0428, spC0.get(), &eyePos);
+    } else if (mpEvtAtnPos) {
+        cXyz_mi(mpEvtAtnPos, spC0.get(), &eyePos);
         r23_2 = true;
     } else if ((mCurMode == MODE_CRANE_e || mCurMode == MODE_CRANE_UP_e) && mCraneTop &&
                mRopeCnt > 0) {
@@ -789,11 +789,11 @@ BOOL daShip_c::execute() {
         sVar16 = 0;
         sVar5 = 0;
     }
-    if (sVar16 == 0 || cLib_distanceAngleS(sVar16, m03A0) > 0x100) {
-        cLib_addCalcAngleS(&m03A0, sVar16, 10, 0x400, 4);
+    if (sVar16 == 0 || cLib_distanceAngleS(sVar16, mHeadAngleX) > 0x100) {
+        cLib_addCalcAngleS(&mHeadAngleX, sVar16, 10, 0x400, 4);
     }
-    if (sVar5 == 0 || cLib_distanceAngleS(sVar5, m03A2) > 0x100) {
-        cLib_addCalcAngleS(&m03A2, sVar5, 10, 0x400, 4);
+    if (sVar5 == 0 || cLib_distanceAngleS(sVar5, mHeadAngleY) > 0x100) {
+        cLib_addCalcAngleS(&mHeadAngleY, sVar5, 10, 0x400, 4);
     }
 
     if (mCurMode != MODE_TALK_e && checkForceMessage()) {
@@ -857,8 +857,8 @@ BOOL daShip_c::execute() {
 
     // HD: the sail texture scroll follows speed / 100 (GameCube 55)
     f32 p = (0.1f * speedF) / 100.0f;
-    mTillerAngleRate = (f32)(s16)m0366 * (1.0f / 0x2000);
-    f32 t = m03D4;
+    mTillerAngleRate = (f32)(s16)mTillerAngle * (1.0f / 0x2000);
+    f32 t = mTexScrollX;
     if (p > 0.05f) {
         t = t + 0.05f;
     } else {
@@ -872,7 +872,7 @@ BOOL daShip_c::execute() {
     } else if (t < 0.0f) {
         t = t + 1.0f;
     }
-    m03D4 = t;
+    mTexScrollX = t;
 
     gabi::Local<cXyz> spA8;
     cXyz_mi(&current.pos, spA8.get(), &old.pos);
@@ -886,13 +886,13 @@ BOOL daShip_c::execute() {
         mFwdVel = -cXyz_abs(xz3.get());
     }
     f32 v = mFwdVel +
-            gabi::fmadds(m1044.x, cM_ssin(current.angle.y), m1044.z * cM_scos(current.angle.y));
+            gabi::fmadds(mBeltSpeed.x, cM_ssin(current.angle.y), mBeltSpeed.z * cM_scos(current.angle.y));
     mFwdVel = v;
     if (!(std::fabs(v) > 0.01f) || prev_fwdvel * v < 0.0f || v * speedF < 0.0f) {
         ship_stopWaves(this);
     }
 
-    setEffectData(m03F4, *sp10);
+    setEffectData(mWaterY, *sp10);
 
     f32 sn = cM_ssin(shape_angle.y);
     f32 cs = cM_scos(shape_angle.y);

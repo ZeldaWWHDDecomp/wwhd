@@ -24,7 +24,7 @@ static BOOL daNZG_Draw(nzg_class* i_this) {
 static inline void nzg_00_move(nzg_class* i_this) {
     fopAc_ac_c* actor = i_this;
 
-    if (i_this->m2C2[0] != 0 || i_this->m2BE >= i_this->m2C0) {
+    if (i_this->mTimers[0] != 0 || i_this->mRatCount >= i_this->mMaxRats) {
         return;
     }
 
@@ -40,8 +40,8 @@ static inline void nzg_00_move(nzg_class* i_this) {
             if (fpcM_GetName(hit_actor) != fpcNm_NZ_e && fpcM_GetName(hit_actor) != fpcNm_BOMB_e &&
                 fpcM_GetName(hit_actor) != fpcNm_Bomb2_e && fpcM_GetName(hit_actor) != fpcNm_ITEM_e &&
                 fpcM_GetName(hit_actor) != fpcNm_ESA_e) {
-                i_this->m2D4 = fopAcM_GetID(hit_actor);
-                i_this->m2BB = 1;
+                i_this->mBlockerId = fopAcM_GetID(hit_actor);
+                i_this->mBlocked = 1;
                 return;
             }
         }
@@ -49,19 +49,19 @@ static inline void nzg_00_move(nzg_class* i_this) {
 
     u32 parameters = fopAcM_GetParam(actor) & 0xFF000000;
 
-    if (i_this->m2BA == 1) {
+    if (i_this->mSpawnMode == 1) {
         parameters |= 0x100;
-    } else if (i_this->m2BA == 2 && cM_rnd() < 0.5f) {
+    } else if (i_this->mSpawnMode == 2 && cM_rnd() < 0.5f) {
         parameters |= 0x100;
     }
 
     if (!(parameters & 0x100)) {
         f32 dist = fopAcM_searchPlayerDistance(actor);
-        if (!(dist < i_this->m2CC * 0.5f))
+        if (!(dist < i_this->mSpawnRange * 0.5f))
             return;
     }
     f32 dist = fopAcM_searchPlayerDistance(actor);
-    if (dist > i_this->m2D0 * 0.5f) {
+    if (dist > i_this->mNoSpawnRange * 0.5f) {
         parameters |= 1;
         csXyz child_angle;
         s16 angleY = actor->current.angle.y;
@@ -75,16 +75,16 @@ static inline void nzg_00_move(nzg_class* i_this) {
                                              fopAcM_GetRoomNo(actor), &child_angle, &actor->scale, 0, 0);
 
         if (childProcID != fpcM_ERROR_PROCESS_ID_e) {
-            i_this->m2C2[0] = (childProcID & 3) * 10 + 20;
-            i_this->m2BE += 1;
+            i_this->mTimers[0] = (childProcID & 3) * 10 + 20;
+            i_this->mRatCount += 1;
         }
     }
 }
 
 /* inlined into daNZG_Execute */
 static inline void nzg_01_move(nzg_class* i_this) {
-    if (i_this->m2D4 != fpcM_ERROR_PROCESS_ID_e) {
-        fopAc_ac_c* ac_id = fopAcM_SearchByID(i_this->m2D4);
+    if (i_this->mBlockerId != fpcM_ERROR_PROCESS_ID_e) {
+        fopAc_ac_c* ac_id = fopAcM_SearchByID(i_this->mBlockerId);
         if (ac_id != nullptr) {
             f32 pos_z_diff = i_this->current.pos.z - ac_id->current.pos.z;
             f32 pos_x_diff = i_this->current.pos.x - ac_id->current.pos.x;
@@ -94,19 +94,19 @@ static inline void nzg_01_move(nzg_class* i_this) {
             }
         }
     }
-    i_this->m2D4 = fpcM_ERROR_PROCESS_ID_e;
-    i_this->m2BB = 0;
+    i_this->mBlockerId = fpcM_ERROR_PROCESS_ID_e;
+    i_this->mBlocked = 0;
 }
 
 /* 02311240 */
 static BOOL daNZG_Execute(nzg_class* i_this) {
-    i_this->m2D0 = 400.0f;
+    i_this->mNoSpawnRange = 400.0f;
     for (s32 j = 0; j < 4; j++) {
-        if (i_this->m2C2[j] != 0) {
-            i_this->m2C2[j] = i_this->m2C2[j] - 1;
+        if (i_this->mTimers[j] != 0) {
+            i_this->mTimers[j] = i_this->mTimers[j] - 1;
         }
     }
-    switch (i_this->m2BB) {
+    switch (i_this->mBlocked) {
     case 0:
         nzg_00_move(i_this);
         break;
@@ -171,27 +171,27 @@ static cPhs_State daNZG_Create(fopAc_ac_c* i_ac) {
             return cPhs_ERROR_e;
         }
         u32 prm = fopAcM_GetParam(nzg_this);
-        nzg_this->m2B8 = prm;
-        nzg_this->m2B9 = prm >> 8;
-        nzg_this->m2BA = prm >> 16;
-        nzg_this->m2E9 = prm >> 24;
+        nzg_this->mSpawnRangePrm = prm;
+        nzg_this->mMaxRatsPrm = prm >> 8;
+        nzg_this->mSpawnMode = prm >> 16;
+        nzg_this->mPathNo = prm >> 24;
         if ((u8)(prm >> 24) != 0xFF) {
             nzg_this->mpPath = dPath_GetRoomPath(prm >> 24, fopAcM_GetRoomNo(i_ac));
         }
         nzg_this->shape_angle.y = nzg_this->current.angle.y;
-        nzg_this->m2CC = (f32)nzg_this->m2B8 * 10.0f;
-        nzg_this->m2C0 = 1;
-        if (nzg_this->m2B9 != 0) {
-            nzg_this->m2C0 = nzg_this->m2B9;
+        nzg_this->mSpawnRange = (f32)nzg_this->mSpawnRangePrm * 10.0f;
+        nzg_this->mMaxRats = 1;
+        if (nzg_this->mMaxRatsPrm != 0) {
+            nzg_this->mMaxRats = nzg_this->mMaxRatsPrm;
         }
 
-        if (nzg_this->m2BA > 2) {
-            nzg_this->m2BA = 0;
+        if (nzg_this->mSpawnMode > 2) {
+            nzg_this->mSpawnMode = 0;
         }
 
         nzg_this->mCyl.Set(&body_cyl_src);
         nzg_this->mCyl.SetStts(&nzg_this->mStts);
-        if (nzg_this->m2BA == 0) {
+        if (nzg_this->mSpawnMode == 0) {
             csXyz child_angle;
             child_angle.y = nzg_this->current.angle.y;
             child_angle.z = nzg_this->current.angle.z;

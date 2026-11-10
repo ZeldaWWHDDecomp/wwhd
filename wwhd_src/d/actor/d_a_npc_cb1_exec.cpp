@@ -141,7 +141,7 @@ BOOL daNpc_Cb1_c::isFlyAction() {
 void daNpc_Cb1_c::checkLanding() {
 
     gabi::Local<s32> temp;
-    if (m900 > 200.0f) {
+    if (mFallDist > 200.0f) {
         if (cb1_GetSpecialCode(cb1_gnd(this)) != 1) {
             cb1_monsSeStart(this, cb1_execute::JA_SE_CV_CB_LANDING, 0);
         }
@@ -188,10 +188,10 @@ void daNpc_Cb1_c::musicPlay() {
 void daNpc_Cb1_c::initAnm(s8 param_1, BOOL param_2) {
 
     if (param_1 >= 0) {
-        m8DC = param_1;
+        mAnmTblIdx = param_1;
         cb1_execute::AnmData &data =
             *gabi::at<cb1_execute::AnmData>(gabi::ea(&cbExec_anmTable) + param_1 * 6);
-        m8B0 = 0.0f;
+        mPrevAnmFrame = 0.0f;
         f32 morf = 0.0f;
         if (param_2) {
             morf = (f32)(s8)data.field_0x02;
@@ -199,8 +199,8 @@ void daNpc_Cb1_c::initAnm(s8 param_1, BOOL param_2) {
         s8 file = data.mAnmFileIdx;
         cb1_dNpc_setAnm(mpMorf.get(), data.mLoopMode, morf, (f32)(s8)data.mSpeed,
                         file < 0 ? -file : file, -1, gabi::guest_str("Cb"));
-        m8D7 = 0;
-        m8D8 = 0;
+        mAnmLooped = 0;
+        mAnmLoopCount = 0;
         if (data.mAnmFileIdx < 0) {
             cb1_m_status() = cb1_m_status() | daCbStts_MUSIC;
         } else {
@@ -221,16 +221,16 @@ void daNpc_Cb1_c::playAnm() {
         s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(this));
         r3 = mpMorf->play(&eyePos, 0, reverb);
     }
-    if (r3 || mpMorf->getFrame() < m8B0) {
-        m8D7 = 1;
-        m8D8 = (s8)(m8D8 + 1);
+    if (r3 || mpMorf->getFrame() < mPrevAnmFrame) {
+        mAnmLooped = 1;
+        mAnmLoopCount = (s8)(mAnmLoopCount + 1);
         cb1_execute::AnmData &data =
-            *gabi::at<cb1_execute::AnmData>(gabi::ea(&cbExec_anmTable) + (s8)m8DC * 6);
+            *gabi::at<cb1_execute::AnmData>(gabi::ea(&cbExec_anmTable) + (s8)mAnmTblIdx * 6);
         s8 temp = data.field_0x04;
         if (fopAcM_GetParam(this) == 5 && temp == 0x18) { /* isTypeKazeBoss() */
             temp = 0xD;
         }
-        if (m8D8 >= temp) {
+        if (mAnmLoopCount >= temp) {
             if (data.field_0x05 == 0x13) {
                 musicStop();
             } else if (data.field_0x05 == 0x11) {
@@ -239,7 +239,7 @@ void daNpc_Cb1_c::playAnm() {
             initAnm(data.field_0x05, 1);
         }
     }
-    m8B0 = mpMorf->getFrame();
+    mPrevAnmFrame = mpMorf->getFrame();
 }
 
 /* 02220194 */
@@ -249,8 +249,8 @@ BOOL daNpc_Cb1_c::checkCommandTalk() {
         if ((u32)((u8) reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get())
                       ->play.mEvtCtrl.mTalkButton -
                   1) <= 3) { /* dComIfGp_event_chkTalkXY() */
-            if (m8DD == 7) {
-                m8DD = -1;
+            if (mOrderEvent == 7) {
+                mOrderEvent = -1;
             }
             cb1_m_status() = cb1_m_status() | daCbStts_TACT; /* onTact() */
             return FALSE;
@@ -281,13 +281,13 @@ u8 daNpc_Cb1_c::getAnmType(int param_1) {
 /* 02221978 */
 BOOL daNpc_Cb1_c::setAnm(u8 param_1) {
 
-    if (m8DB == param_1) {
+    if (mAnmPrmIdx == param_1) {
         return FALSE;
     }
-    if (m8DB == 9) {
+    if (mAnmPrmIdx == 9) {
         musicStop();
     }
-    m8DB = param_1;
+    mAnmPrmIdx = param_1;
     if (param_1 == 9) {
         actor_status = actor_status | 0x20000; /* fopAcM_OnStatus(fopAcStts_NOPAUSE_e) */
     } else {
@@ -425,8 +425,8 @@ void daNpc_Cb1_c::carryCheck() {
 void daNpc_Cb1_c::checkOrder() {
 
     if (eventInfo.checkCommandTalk()) { /* eventInfo.checkCommandTalk() */
-        if (m8DD == 5 || m8DD == 6 || m8DD == 7) {
-            m8DD = -1;
+        if (mOrderEvent == 5 || mOrderEvent == 6 || mOrderEvent == 7) {
+            mOrderEvent = -1;
             if ((u32)((u8) reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get())
                           ->play.mEvtCtrl.mTalkButton -
                       1) <= 3) { /* dComIfGp_event_chkTalkXY() */
@@ -454,17 +454,17 @@ void daNpc_Cb1_c::npcAction(void *param_1) {
 /* 02220884 */
 void daNpc_Cb1_c::eventOrder() {
 
-    if (m8DD == 5 || m8DD == 6) {
+    if (mOrderEvent == 5 || mOrderEvent == 6) {
         eventInfo_onCondition(this, 1); /* dEvtCnd_CANTALK_e */
-        if (m8DD == 5) {
+        if (mOrderEvent == 5) {
             fopAcM_orderSpeakEvent(this);
         }
-    } else if (m8DD == 7) {
+    } else if (mOrderEvent == 7) {
         eventInfo_onCondition(this, 0x21); /* dEvtCnd_CANTALKITEM_e | dEvtCnd_CANTALK_e */
-    } else if (m8DD != -1 && m8DD < 5) {
-        m8E3 = m8DD;
-        if (m8E3 != -1 && mEventIdx[(s8)m8E3] != -1) {
-            fopAcM_orderOtherEventId(this, mEventIdx[(s8)m8E3], 0xFF, 0xFFFF, 0, 1);
+    } else if (mOrderEvent != -1 && mOrderEvent < 5) {
+        mOrderedEvent = mOrderEvent;
+        if (mOrderedEvent != -1 && mEventIdx[(s8)mOrderedEvent] != -1) {
+            fopAcM_orderOtherEventId(this, mEventIdx[(s8)mOrderedEvent], 0xFF, 0xFFFF, 0, 1);
         }
     }
 }
@@ -547,9 +547,9 @@ void daNpc_Cb1_c::lookBack(BOOL param_1) {
     vec.z = 0.0f;
     s16 desiredY = shape_angle.y;
     if (mJntCtrl.mbTrn) { /* trnChk() */
-        cLib_addCalcAngleS2(&m8D0, cb1_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
+        cLib_addCalcAngleS2(&mLookAtMaxVel, cb1_HIO().mNpc.mMaxHeadTurnVel, 4, 0x800);
     } else {
-        m8D0 = 0;
+        mLookAtMaxVel = 0;
     }
     if (param_1) {
         cXyz eye;
@@ -562,7 +562,7 @@ void daNpc_Cb1_c::lookBack(BOOL param_1) {
     }
     cXyz eyeCopy;
     eyeCopy = vec;
-    cb1_lookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, &eyeCopy, desiredY, m8D0, 0);
+    cb1_lookAtTarget(&mJntCtrl, &shape_angle.y, dstPos, &eyeCopy, desiredY, mLookAtMaxVel, 0);
 }
 
 /* 022220FC */
@@ -620,7 +620,7 @@ BOOL daNpc_Cb1_c::sowCheck() {
         if (list && (actor = cb1_AttList_getActor(list)) != nullptr) {
             u32 type = (u32)gabi::at<cb1_execute::AttentionList>(list)->mType;
             if ((type == 3 || type == 1) && ((u32)actor->attention_info.flags & 0x10000000)) {
-                if (m8E2 != 0x2D) {
+                if (mDoStatus != 0x2D) {
                     cXyz pos;
                     pos.x = 0.0f;
                     pos.y = 1.0f;
@@ -701,20 +701,20 @@ BOOL daNpc_Cb1_c::execTalk(BOOL param_1) {
 /* 02223500 */
 BOOL daNpc_Cb1_c::talkNpcAction(void *) {
 
-    if (m8F0 == 0) {
+    if (mActionStatus == 0) {
         cbExec_msgId = -1;
         mMsgNo = getMsg();
         attention_info.flags = attention_info.flags & ~0x10u; /* attention_info.flags */
         if (!(cb1_m_status() & daCbStts_MUSIC)) {
             setAnm((cb1_m_status() & daCbStts_SHIP_RIDE) ? 0xD : 0);
         }
-    } else if (m8F0 != -1) {
+    } else if (mActionStatus != -1) {
         mHasAttention = 1;
-        if (m8F0 == 1) {
+        if (mActionStatus == 1) {
             if (initTalk()) {
-                m8F0 = 2;
+                mActionStatus = 2;
             }
-        } else if (m8F0 == 2) {
+        } else if (mActionStatus == 2) {
             if (execTalk(0)) {
                 setWaitNpcAction(nullptr);
                 dComIfGp_event_reset();
@@ -746,7 +746,7 @@ BOOL daNpc_Cb1_c::talkNpcAction(void *) {
 /* 02223048 */
 BOOL daNpc_Cb1_c::waitNpcAction(void *param_1) {
 
-    if (m8F0 == 0) {
+    if (mActionStatus == 0) {
         if (cb1_isEventBit(0x1610)) {
             attention_info.flags = attention_info.flags | 0x10; /* fopAc_Attn_ACTION_CARRY_e */
         }
@@ -763,17 +763,17 @@ BOOL daNpc_Cb1_c::waitNpcAction(void *param_1) {
         setAnm(anm);
         cb1_m_status() = cb1_m_status() & ~daCbStts_PLAYER_FIND;
         speedF = 0.0f;
-    } else if (m8F0 != -1) {
-        if (m8E1) {
+    } else if (mActionStatus != -1) {
+        if (mMoveBlockSide) {
             ProcFunc_l fn;
             md_pmf_load(&fn, gabi::ea(&cbExec_searchNpcAction)); /* &daNpc_Cb1_c::searchNpcAction */
             cb1_setNpcAction(this, &fn, nullptr);
         } else {
             mHasAttention =
-                chkAttention(m8DC == 0x14 ? 4000.0f : (f32)cb1_HIO().mNpc.mMaxAttnDistXZ, 0x10000);
+                chkAttention(mAnmTblIdx == 0x14 ? 4000.0f : (f32)cb1_HIO().mNpc.mMaxAttnDistXZ, 0x10000);
             BOOL temp = mHasAttention;
             if (temp && getMsg()) {
-                m8DD = 6;
+                mOrderEvent = 6;
                 attention_info.flags = attention_info.flags | 0xA; /* ACTION_SPEAK | LOCKON_TALK */
             } else {
                 attention_info.flags = attention_info.flags & ~0xAu;
@@ -806,13 +806,13 @@ BOOL daNpc_Cb1_c::waitNpcAction(void *param_1) {
 /* 02223694 */
 BOOL daNpc_Cb1_c::carryNpcAction(void *) {
 
-    if (m8F0 == 0) {
+    if (mActionStatus == 0) {
         attention_info.flags = attention_info.flags & ~0x10u;
         mNoResetFlg1 = mNoResetFlg1 & ~2u; /* offNpcCallCommand() */
         fopAc_ac_c *pPlayer =
             dComIfGp_getPlayer(0); /* fopAcM_toPlayerShapeAngleY: the player first */
         s16 myAngle = shape_angle.y;
-        m8F4 = (s16)(myAngle - pPlayer->shape_angle.y);
+        mCarryAngle = (s16)(myAngle - pPlayer->shape_angle.y);
         if (cb1_m_status() & daCbStts_NO_CARRY_ACTION) {
             cb1_monsSeStart(this, cb1_execute::JA_SE_CV_CB_DAMAGE, 0);
             setAnm(0xB);
@@ -821,9 +821,9 @@ BOOL daNpc_Cb1_c::carryNpcAction(void *) {
             setAnm(3);
         }
         mNoResetFlg1 = mNoResetFlg1 | 0x40; /* onNpcNotChange() */
-    } else if (m8F0 == -1) {
-        m904.y = 0.0f;
-        m904.z = 0.0f;
+    } else if (mActionStatus == -1) {
+        mCarryOffset.y = 0.0f;
+        mCarryOffset.z = 0.0f;
         cb1_m_status() = cb1_m_status() & ~daCbStts_NO_CARRY_ACTION;
         mNoResetFlg1 = mNoResetFlg1 & ~0x40u; /* offNpcNotChange() */
     } else {
@@ -858,11 +858,11 @@ BOOL daNpc_Cb1_c::carryNpcAction(void *) {
             if (oldPlaySpeed != mpMorf->getPlaySpeed()) {
                 mpMorf->setMorf(4.0f);
             }
-            cLib_chaseF(&m904.x, cb1_HIO().field_0x74, 1.0f);
-            cLib_chaseF(&m904.y, cb1_HIO().field_0x78, 1.0f);
-            cLib_chaseF(&m904.z, cb1_HIO().field_0x7C, 1.0f);
-            cLib_chaseAngleS(&m8F4, 0, 0x800);
-            shape_angle.y = pPlayer->shape_angle.y + m8F4;
+            cLib_chaseF(&mCarryOffset.x, cb1_HIO().field_0x74, 1.0f);
+            cLib_chaseF(&mCarryOffset.y, cb1_HIO().field_0x78, 1.0f);
+            cLib_chaseF(&mCarryOffset.z, cb1_HIO().field_0x7C, 1.0f);
+            cLib_chaseAngleS(&mCarryAngle, 0, 0x800);
+            shape_angle.y = pPlayer->shape_angle.y + mCarryAngle;
         }
         if (!(actor_status & 0x2000)) { /* !fopAcM_checkCarryNow(this) */
             ProcFunc_l fn;
@@ -884,18 +884,18 @@ BOOL daNpc_Cb1_c::carryNpcAction(void *) {
 /* 02223A88 */
 BOOL daNpc_Cb1_c::flyNpcAction(void *) {
 
-    s8 temp = m8F0;
+    s8 temp = mActionStatus;
     if (temp == 0) {
         speedF = cb1_HIO().mNpcFlyLaunchSpeedF;
         speed.y = cb1_HIO().mNpcFlyLaunchSpeedY;
         setAnm(4);
         cb1_m_flyingTimer() = cb1_HIO().mNpcFlyTimer;
-        m8FC = (f32)(cb1_HIO().field_0xD8 + 1);
+        mFlyHeight = (f32)(cb1_HIO().field_0xD8 + 1);
         cb1_monsSeStart(this, cb1_execute::JA_SE_CV_CB_THROW, 0);
     } else if (temp != -1) {
-        flyAction(m8F1 ? FALSE : TRUE, 0.0f, 0, FALSE);
+        flyAction(mFlyLiftCycle ? FALSE : TRUE, 0.0f, 0, FALSE);
         if (temp != 1) {
-            m8F1 = (s8)((m8F1 + 1) % cb1_HIO().field_0xDE);
+            mFlyLiftCycle = (s8)((mFlyLiftCycle + 1) % cb1_HIO().field_0xDE);
         }
     }
     return TRUE;
@@ -914,7 +914,7 @@ static inline u32 cb1_ftou(f32 v) {
     return (u32)gabi::ftoi(v);
 }
 
-/* flyAction, airborne part (m8F0 < 3): wind, tilt, speed */
+/* flyAction, airborne part (mActionStatus < 3): wind, tilt, speed */
 // HD: inlined into the original actor method.
 /* inlined into 022222D0 */
 static inline void cb1_flyAir(daNpc_Cb1_c *i_this, bool isMakarPlayer, f32 param_2, s16 param_3,
@@ -927,7 +927,7 @@ static inline void cb1_flyAir(daNpc_Cb1_c *i_this, bool isMakarPlayer, f32 param
         }
         cb1_onFlying();
     }
-    i_this->m900 = 0.0f;
+    i_this->mFallDist = 0.0f;
     cXyz temp;
     temp.x = 0.0f;
     temp.y = gabi::fadds_ppc(temp3, hio.field_0xA0);
@@ -947,7 +947,7 @@ static inline void cb1_flyAir(daNpc_Cb1_c *i_this, bool isMakarPlayer, f32 param
             temp5 = 30.0f;
             ySpeedLimit = 30.0f;
         }
-        i_this->m8F8 = 20000;
+        i_this->mPropellerSpeed = 20000;
         temp4 = TRUE;
     } else {
         cXyz wind;
@@ -960,8 +960,8 @@ static inline void cb1_flyAir(daNpc_Cb1_c *i_this, bool isMakarPlayer, f32 param
         temp5 = temp5 + *power;
         ySpeedLimit = ySpeedLimit + *power;
         s16 temp8 = (s16)gabi::ftoi(*power * 400.0f);
-        if (i_this->m8F8 < temp8) {
-            i_this->m8F8 = temp8;
+        if (i_this->mPropellerSpeed < temp8) {
+            i_this->mPropellerSpeed = temp8;
         }
     }
     s16 angle = cM_atan2s(temp.x, temp.z);
@@ -1002,7 +1002,7 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
     cb1_execute::daNpc_Cb1_HIO_c &hio = cb1_HIO();
     bool isMakarPlayer = dComIfGp_getPlayer(0) == this;
     f32 ySpeedLimit = hio.field_0x98;
-    f32 temp3 = gabi::fmuls_ppc((f32)(s16)m8F8, hio.field_0x8C);
+    f32 temp3 = gabi::fmuls_ppc((f32)(s16)mPropellerSpeed, hio.field_0x8C);
     BOOL temp4 = FALSE;
 
     if (mAcch.ChkGroundHit()) {
@@ -1010,21 +1010,21 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
         cLib_chaseAngleS(&shape_angle.x, 0, hio.field_0xE0);
         cLib_chaseAngleS(&shape_angle.z, 0, hio.field_0xE0);
         gravity = gabi::fadds_ppc(hio.field_0xA0, temp3);
-    } else if (m8F0 < 3) {
+    } else if (mActionStatus < 3) {
         cb1_flyAir(this, isMakarPlayer, param_2, param_3, temp3, ySpeedLimit, temp4);
         gravity = 0.0f;
     }
 
-    if (m8F0 == 1) {
-        if (m8D7) {
+    if (mActionStatus == 1) {
+        if (mAnmLooped) {
             if (!mAcch.ChkGroundHit()) {
-                m8F8 = hio.field_0xDA;
+                mPropellerSpeed = hio.field_0xDA;
                 speed.y = gabi::fadds_ppc(speed.y, hio.field_0xB0);
                 setAnm(7);
             } else {
                 setAnm(5);
             }
-            m8F0 = (s8)(m8F0 + 1);
+            mActionStatus = (s8)(mActionStatus + 1);
         } else if (mpMorf->checkFrame(6.0f)) {
             cb1_seStart(this, cb1_execute::JA_SE_CM_PRAPELLO_OPEN, 0);
             JPABaseEmitter *emitter =
@@ -1042,55 +1042,55 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
                                   ->mGlobalTranslation)); /* JPASetRMtxTVecfromMtx */
             }
         }
-    } else if (m8F0 == 2) {
+    } else if (mActionStatus == 2) {
         if (isMakarPlayer && (temp4 || cb1_m_flyingTimer() < hio.field_0xCE)) {
             if (setAnm(0x15) && temp4) {
                 cb1_monsSeStart(this, cb1_execute::JA_SE_CV_CB_FLY_END, 0);
             }
-        } else if (m8DC != 6 && m8FC > (f32)(s16)hio.field_0xD8) {
+        } else if (mAnmTblIdx != 6 && mFlyHeight > (f32)(s16)hio.field_0xD8) {
             setAnm(7);
         }
         if (cb1_m_flyingTimer() != 0 && param_1) {
-            CbExec_chaseS(&m8F8, (s16)hio.field_0xD0, (s16)hio.field_0xD4); /* cLib_chaseS */
-            m8F6 = 0;
+            CbExec_chaseS(&mPropellerSpeed, (s16)hio.field_0xD0, (s16)hio.field_0xD4); /* cLib_chaseS */
+            mLandIdleCount = 0;
         } else {
-            CbExec_chaseS(&m8F8, mAcch.ChkGroundHit() ? (s16)hio.field_0xD2 : (s16)0,
+            CbExec_chaseS(&mPropellerSpeed, mAcch.ChkGroundHit() ? (s16)hio.field_0xD2 : (s16)0,
                           (s16)hio.field_0xD6);
         }
-        m8FA = (s16)(m8FA + m8F8);
-        m8FC = gabi::fadds_ppc(m8FC, gabi::fsubs_ppc(current.pos.y, old.pos.y));
-        if (m8FC > hio.field_0xA4) {
+        mPropellerAngle = (s16)(mPropellerAngle + mPropellerSpeed);
+        mFlyHeight = gabi::fadds_ppc(mFlyHeight, gabi::fsubs_ppc(current.pos.y, old.pos.y));
+        if (mFlyHeight > hio.field_0xA4) {
             m8F2 = 1;
         }
         cb1_seStart(this, cb1_execute::JA_SE_CM_PRAPELLO_ROLLING,
-                    cb1_ftou((f32)(s16)m8F8 * (100.0f / (f32)(s16)hio.field_0xD0)));
+                    cb1_ftou((f32)(s16)mPropellerSpeed * (100.0f / (f32)(s16)hio.field_0xD0)));
         if (param_4 || (!isMakarPlayer && mAcch.ChkWallHit()) ||
-            (!mAcch.ChkGroundHit() && m8F8 == 0) ||
-            (mAcch.ChkGroundHit() && m8F8 <= hio.field_0xD2 &&
+            (!mAcch.ChkGroundHit() && mPropellerSpeed == 0) ||
+            (mAcch.ChkGroundHit() && mPropellerSpeed <= hio.field_0xD2 &&
              (!(CbExec_stickValue(0) /* CPad_GET_STICK_VALUE(0), f1 unrounded */ <
                 (f64)hio.field_0x80) ||
-              /* bge: unordered taken */ (m8F6 = (s16)(m8F6 + 1)) > hio.field_0xCC))) {
+              /* bge: unordered taken */ (mLandIdleCount = (s16)(mLandIdleCount + 1)) > hio.field_0xCC))) {
             setAnm(6);
             mpMorf->mFrameCtrl.mFrame = 8.0f; /* setFrame(8.0f) */
-            m8F0 = (s8)(m8F0 + 1);
+            mActionStatus = (s8)(mActionStatus + 1);
             cb1_offFlying();
-        } else if (mAcch.ChkGroundHit() && m8DC == 6) {
+        } else if (mAcch.ChkGroundHit() && mAnmTblIdx == 6) {
             setAnm(5);
         }
         maxFallSpeed = hio.field_0x90;
     } else {
-        if (m8DC == 4 && m8D7) {
+        if (mAnmTblIdx == 4 && mAnmLooped) {
             setAnm(2);
             cb1_seStart(this, cb1_execute::JA_SE_CM_PRAPELLO_OPEN, 0);
         }
         if (mAcch.ChkGroundHit()) {
-            if (m8E0 == 0 && m8F0 == 3) {
+            if (mGroundHit == 0 && mActionStatus == 3) {
                 if (cb1_GetSpecialCode(cb1_gnd(this)) != 1) {
                     speed.y = hio.field_0x64;
                     checkLanding();
                 }
-                m8F0 = (s8)(m8F0 + 1);
-            } else if (m8DC != 4) {
+                mActionStatus = (s8)(mActionStatus + 1);
+            } else if (mAnmTblIdx != 4) {
                 ProcFunc_l fn;
                 if (isMakarPlayer) {
                     md_pmf_load(
@@ -1119,12 +1119,12 @@ static cb1_execute::EventProcTable cbExec_eventProcs;
 BOOL daNpc_Cb1_c::eventProc() {
 
     mAcch.m_flags = mAcch.m_flags & ~(u32)dBgS_Acch::WALL_NONE; /* ClrWallNone() */
-    if (eventInfo.checkCommandDemoAccrpt() /* eventInfo.checkCommandDemoAccrpt() */ && m8DD != -1) {
-        if (m8DD == 0) {
+    if (eventInfo.checkCommandDemoAccrpt() /* eventInfo.checkCommandDemoAccrpt() */ && mOrderEvent != -1) {
+        if (mOrderEvent == 0) {
             /* fopAcM_onDraw(this) (HD) */
             u32 r = CbExec_drawPriority(this);
             CbExec_enqueueDraw(gabi::ea(&draw_tag), r);
-        } else if (m8DD == 1) {
+        } else if (mOrderEvent == 1) {
             u32 link = gabi::ea(dComIfGp_getLinkPlayer()); /* dComIfGp_getLinkPlayer() */
             u32 evt = gabi::ea(&reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get())
                                     ->play.mEvtCtrl); /* dComIfGp_event_setTalkPartner */
@@ -1132,7 +1132,7 @@ BOOL daNpc_Cb1_c::eventProc() {
             CbExec_controlSound(0x886); /* mDoAud_seStart(JA_SE_CTRL_NPC_TO_LINK) */
         }
         m4E4 = m4E4 | 2; /* onEventAccept() */
-        m8DD = -1;
+        mOrderEvent = -1;
     }
 
     s32 staffIdx = dComIfGp_evmng_getMyStaffId("Cb1", nullptr, 0);
@@ -1163,14 +1163,14 @@ BOOL daNpc_Cb1_c::eventProc() {
             mNpcAction.f = 0;
         }
         if (m4E4 & 2) { /* isEventAccept() */
-            if (dComIfGp_evmng_endCheck(mEventIdx[(s8)m8E3])) {
+            if (dComIfGp_evmng_endCheck(mEventIdx[(s8)mOrderedEvent])) {
                 dComIfGp_event_reset();
                 m4E4 = m4E4 & ~2u; /* offEventAccept() */
-                if (m8E3 == 1) {
+                if (mOrderedEvent == 1) {
                     returnLinkPlayer();
                     m4E4 = m4E4 & ~1u; /* offReturnLink() */
                 }
-                m8E3 = -1;
+                mOrderedEvent = -1;
             }
             return TRUE;
         }
@@ -1217,7 +1217,7 @@ static inline BOOL cb1_execRoom(daNpc_Cb1_c *i_this) {
         i_this->setWaitNpcAction(nullptr);
         return TRUE;
     }
-    if (i_this->m8E0 &&
+    if (i_this->mGroundHit &&
         CbExec_checkPolySafe(dComIfG_Bgsp(), &i_this->mPolyInfo) /* ChkPolySafe */ &&
         CbExec_checkMoveBg(dComIfG_Bgsp(), &i_this->mPolyInfo) /* ChkMoveBG */) {
         CbExec_moveBgCrrPos(dComIfG_Bgsp(), &i_this->mPolyInfo, 1, &i_this->old.pos, 0,
@@ -1233,7 +1233,7 @@ static inline BOOL cb1_execRoom(daNpc_Cb1_c *i_this) {
 // HD: inlined into the original actor method.
 /* inlined into 0222091C */
 static inline void cb1_execFallCheck(daNpc_Cb1_c *i_this) {
-    if (i_this->isFlyAction() && i_this->m8FC > -400.0f) {
+    if (i_this->isFlyAction() && i_this->mFlyHeight > -400.0f) {
         i_this->m4E8 = 0;
     } else if (i_this->m4E8 < 0x1E) {
         i_this->m4E8 = (u8)(i_this->m4E8 + 1);
@@ -1284,20 +1284,20 @@ static inline void cb1_execGround(daNpc_Cb1_c *i_this, cXyz *temp2, f32 &temp3) 
     u8 *gnd = cb1_gnd(i_this);
     u32 pla = gabi::ea(dBgS_GetTriPla(dComIfG_Bgsp(), gnd));
     if (pla) {
-        i_this->m910.x = gabi::at<cXyz>(pla)->x;
-        i_this->m910.y = gabi::at<cXyz>(pla)->y;
-        i_this->m910.z = gabi::at<cXyz>(pla)->z;
-        if (i_this->m8E0) {
+        i_this->mGroundNormal.x = gabi::at<cXyz>(pla)->x;
+        i_this->mGroundNormal.y = gabi::at<cXyz>(pla)->y;
+        i_this->mGroundNormal.z = gabi::at<cXyz>(pla)->z;
+        if (i_this->mGroundHit) {
             i_this->maxFallSpeed =
-                gabi::fnmsubs(100.0f, gabi::fsubs_ppc(1.0f, i_this->m910.y), -4.0f);
+                gabi::fnmsubs(100.0f, gabi::fsubs_ppc(1.0f, i_this->mGroundNormal.y), -4.0f);
             if (cb1_GetSpecialCode(gnd) == 1) {
                 cXyz xz;
-                xz.x = i_this->m910.x;
+                xz.x = i_this->mGroundNormal.x;
                 xz.y = 0.0f;
-                xz.z = i_this->m910.z;
-                f32 temp = PSVECSquareMag(&xz); /* m910.abs2XZ() */
-                temp2->x = gabi::fmuls_ppc(i_this->m910.x, 40.0f);
-                temp2->z = gabi::fmuls_ppc(i_this->m910.z, 40.0f);
+                xz.z = i_this->mGroundNormal.z;
+                f32 temp = PSVECSquareMag(&xz); /* mGroundNormal.abs2XZ() */
+                temp2->x = gabi::fmuls_ppc(i_this->mGroundNormal.x, 40.0f);
+                temp2->z = gabi::fmuls_ppc(i_this->mGroundNormal.z, 40.0f);
                 f32 sy = gabi::fmuls_ppc(std_sqrtf(1.0f - temp), -40.0f);
                 i_this->speed.y = sy;
                 temp3 = temp + temp;
@@ -1367,13 +1367,13 @@ BOOL daNpc_Cb1_c::execute() {
             !(m4E4 & 1)) {
             f32 temp4 = current.pos.y;
             fopAcM_posMoveF(this, &mStts.m_cc_move /* mStts.GetCCMoveP() */);
-            m900 = gabi::fadds_ppc(m900, gabi::fsubs_ppc(temp4, current.pos.y));
-            current.pos.x = gabi::fadds_ppc(current.pos.x, m88C.x);
-            current.pos.z = gabi::fadds_ppc(current.pos.z, m88C.z);
+            mFallDist = gabi::fadds_ppc(mFallDist, gabi::fsubs_ppc(temp4, current.pos.y));
+            current.pos.x = gabi::fadds_ppc(current.pos.x, mSlideSpeed.x);
+            current.pos.z = gabi::fadds_ppc(current.pos.z, mSlideSpeed.z);
             maxFallSpeed = -100.0f;
             gravity = hio.field_0x70;
         }
-        m8E0 = mAcch.ChkGroundHit();
+        mGroundHit = mAcch.ChkGroundHit();
         mAcch.CrrPos(dComIfG_Bgsp());
         cb1_m_status() = cb1_m_status() | daCbStts_UNK_0100;
         if (mAcch.m_ground_h == -1000000000.0f ||
@@ -1423,7 +1423,7 @@ BOOL daNpc_Cb1_c::execute() {
             }
             temp3 = 1.0f;
         }
-        CbExec_addCalcPosXZ(&m88C, (&temp2), 0.5f, temp3, 0.5f); /* cLib_addCalcPosXZ */
+        CbExec_addCalcPosXZ(&mSlideSpeed, (&temp2), 0.5f, temp3, 0.5f); /* cLib_addCalcPosXZ */
         if (dComIfGp_getPlayer(0) == this) {
             if (mAcch.ChkGroundHit()) {
                 dComIfGp_setRStatusForce(7); /* dComIfGp_setRStatusForce(dActStts_RETURN_e) */
@@ -1431,7 +1431,7 @@ BOOL daNpc_Cb1_c::execute() {
             actor_status =
                 (actor_status & ~0x3Fu) | 0x32; /* fopAcM_SetStatusMap(this, 0x12) (HD 0x32) */
             if (m4E4 & 1) {                     /* isReturnLink() */
-                m8DD = 1;
+                mOrderEvent = 1;
             } else {
                 if (cb1_m_status() & daCbStts_NO_CARRY_ACTION) {
                     ProcFunc_l fn;
@@ -1451,9 +1451,9 @@ BOOL daNpc_Cb1_c::execute() {
                 playerAction(nullptr);
                 cb1_execDamage(this, gabi::ea(&cbExec_hitPlayerAction), true);
             }
-            m8E2 = dComIfGp_getDoStatus(); /* dComIfGp_getDoStatus() */
+            mDoStatus = dComIfGp_getDoStatus(); /* dComIfGp_getDoStatus() */
         } else {
-            m8E1 = (s8)CbExec_checkMoveBlock(this, &m91C); /* chkMoveBlock */
+            mMoveBlockSide = (s8)CbExec_checkMoveBlock(this, &mMoveBlockSpeed); /* chkMoveBlock */
             u32 map = cb1_isEventBit(0x1610)
                           ? 0x2D
                           : 0x27; /* fopAcM_SetStatusMap 0xD / 0x7 (HD 0x2D / 0x27) */
@@ -1465,7 +1465,7 @@ BOOL daNpc_Cb1_c::execute() {
                 current.angle.y = shape_angle.y;
             }
             cb1_execDamage(this, gabi::ea(&cbExec_hitNpcAction), false);
-            m8E2 = 0;
+            mDoStatus = 0;
         }
     }
     eventOrder();

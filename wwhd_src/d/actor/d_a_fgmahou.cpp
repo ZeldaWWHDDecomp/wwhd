@@ -131,8 +131,8 @@ static inline void move(fgmahou_class *i_this) {
     switch (i_this->mState) {
     case 0: {
         i_this->mState = 1;
-        i_this->field_0x2D4 = (s16)(i_this->mOrbNumber * REG6_S(2) - REG6_S(3));
-        i_this->field_0x2D6 = (s16)gabi::ftoi(cM_rndF(65536.0f));
+        i_this->mWeaveAngleY = (s16)(i_this->mOrbNumber * REG6_S(2) - REG6_S(3));
+        i_this->mWeaveAngleX = (s16)gabi::ftoi(cM_rndF(65536.0f));
 
         f32 spd = REG0_F(0xD) + 50.0f;
         i_this->speedF = spd;
@@ -189,7 +189,7 @@ static inline void move(fgmahou_class *i_this) {
                     if (ac != 0 && (s16)ac->mProcName == fpcNm_HD_A8) {
                         void *fganon = fpcM_Search(FGMAHOU_BOSS_SEARCH, i_this);
                         if (fganon != nullptr) {
-                            reinterpret_cast<FgmahouBossHD *>(fganon)->m68B = 1; /* fganon->m68B */
+                            reinterpret_cast<FgmahouBossHD *>(fganon)->mLaughRequest = 1; /* fganon->mLaughRequest */
                             break;
                         }
                     }
@@ -209,7 +209,7 @@ static inline void move(fgmahou_class *i_this) {
     case 5: {
         fopAc_ac_c *fganon2 = (fopAc_ac_c *)fpcM_Search(FGMAHOU_BOSS_SEARCH, i_this);
         if (fganon2 == nullptr) {
-            i_this->field_0x780 = 0x32;
+            i_this->mDeleteTimer = 0x32;
             break;
         }
         // HD: the target's y is kept in a register across cM_rndFX
@@ -226,7 +226,7 @@ static inline void move(fgmahou_class *i_this) {
         i_this->home.angle.x = (s16)-hx;
         i_this->mTargetPos.y = ey - r;
         i_this->mTimers[0] = (s16)(REG8_S(9) + 5);
-        i_this->field_0x2E0 = 1;
+        i_this->mReflectFrame = 1;
         i_this->shape_angle.x = (s16)i_this->home.angle.x;
         i_this->shape_angle.y = (s16)i_this->home.angle.y;
         i_this->shape_angle.z = (s16)i_this->home.angle.z;
@@ -262,10 +262,10 @@ static inline void move(fgmahou_class *i_this) {
         temp4 = lim;
     }
 
-    s16 a1 = (s16)(i_this->field_0x2D4 + (s16)(REG0_S(6) + 0xDAC));
-    i_this->field_0x2D4 = a1;
-    s16 a2 = (s16)(i_this->field_0x2D6 + (s16)(REG0_S(7) + 0xCE4));
-    i_this->field_0x2D6 = a2;
+    s16 a1 = (s16)(i_this->mWeaveAngleY + (s16)(REG0_S(6) + 0xDAC));
+    i_this->mWeaveAngleY = a1;
+    s16 a2 = (s16)(i_this->mWeaveAngleX + (s16)(REG0_S(7) + 0xCE4));
+    i_this->mWeaveAngleX = a2;
 
     s16 temp5 = (s16)gabi::ftoi(cM_ssin(a1) * temp4);
     s16 temp7 = (s16)gabi::ftoi(cM_ssin(a2) * temp4 * 0.75f);
@@ -307,7 +307,7 @@ static inline void move(fgmahou_class *i_this) {
         if (fopAcM_searchPlayerDistance(i_this) > 5000.0f || i_this->mAtSph.ChkAtHit() ||
             (i_this->mAcch.m_flags &
              (dBgS_Acch::GROUND_HIT | dBgS_Acch::WALL_HIT | dBgS_Acch::ROOF_HIT)) != 0) {
-            i_this->field_0x780 = 0x32;
+            i_this->mDeleteTimer = 0x32;
             i_this->health = 1;
 
             JPABaseEmitter *pEmtr =
@@ -323,12 +323,12 @@ static inline void move(fgmahou_class *i_this) {
         }
     }
 
-    if (i_this->field_0x2E0 != 0) {
-        s16 v = (s16)(i_this->field_0x2E0 + 1);
+    if (i_this->mReflectFrame != 0) {
+        s16 v = (s16)(i_this->mReflectFrame + 1);
         if (v > 8) {
-            i_this->field_0x2E0 = 0;
+            i_this->mReflectFrame = 0;
         } else {
-            i_this->field_0x2E0 = v;
+            i_this->mReflectFrame = v;
         }
     }
 }
@@ -347,12 +347,12 @@ BOOL daFgmahou_Execute(fgmahou_class *i_this) {
         i_this->field_0x2DE -= 1;
     }
 
-    s8 cnt = i_this->field_0x780;
+    s8 cnt = i_this->mDeleteTimer;
     if (cnt == 0) {
         move(i_this);
     } else {
         cnt = (s8)(cnt - 1);
-        i_this->field_0x780 = cnt;
+        i_this->mDeleteTimer = cnt;
         if (cnt == 0) {
             fopAcM_delete(i_this);
             return TRUE;
@@ -372,7 +372,7 @@ BOOL daFgmahou_Execute(fgmahou_class *i_this) {
     if (em != nullptr) {
         JPABaseEmitter_setGlobalRTMatrix(
             em, fgmahouAnmMtx(i_this->mpMorf->getModel(), YDKSP00_JNT_HEAD_e));
-        s8 v = i_this->field_0x780;
+        s8 v = i_this->mDeleteTimer;
         if (v != 0 && v == 0x32) {
             JPABaseEmitter_becomeInvalidEmitter(i_this->mpEmitter);
             mDoExt_brkAnm *brk = i_this->mpBrk;

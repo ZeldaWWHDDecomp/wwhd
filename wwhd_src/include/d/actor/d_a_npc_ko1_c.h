@@ -28,7 +28,7 @@ WWHD_SIZE(Ko1ProcRecord, 8);
 struct daNpc_Ko1_c : fopNpc_npc_c {
     enum Status_e { STATUS_SWIM_1 = 7 };
     struct anm_prm_c {
-        /* 0x00 */ be<s8> mAnmNum;
+        /* 0x00 */ be<s8> mAnmNum;  /* was mAnimationNum (misnamed): view of daNpc_Ko1_c mAnmNum (d_a_npc_ko1.h); one name per field. setAnm_anm 02276B9C stores the animation number; same code as daNpc_Bm1_c::mAnmNum (tww Bm1 mAnmNum) */
         /* 0x01 */ be<s8> mBtpNum;
         /* 0x02 */ u8 mPad02[2];
         /* 0x04 */ be<f32> mMorf;
@@ -78,7 +78,7 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     void setPrtcl_HanaPachi(); 
     void clrSpd(); 
     u8 _7DC[0xD];
-    /* 0x7E9 */ be<s8> mBalloonJoint;
+    /* 0x7E9 */ be<s8> m_bln_jnt_num;  /* was mBalloonJoint (misnamed): view of daNpc_Ko1_c m_bln_jnt_num (d_a_npc_ko1.h); one name per field. create_bln_Anm 02273C94 asserts it with the original text "m_bln_jnt_num >= 0" */
     u8 _7EA[0x32];
     /* 0x81C */ gptr<mDoExt_McaMorf> mpBalloonMorf;
     u8 _820[0x4];
@@ -88,14 +88,14 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     u8 _8B4[0x70];
     /* 0x924 */ union { be<u32> mPartnerIds[3]; struct { u8 _00[8]; be<u8> mCount; u8 _09[3]; } mPartnerMetadata; };
     u8 _930[0x64];
-    /* 0x994 */ be<f32> mAnimationFrame;
+    /* 0x994 */ be<f32> mPrevMorfFrame;  /* was mAnimationFrame (misnamed): view of daNpc_Ko1_c mPrevMorfFrame (d_a_npc_ko1.h); one name per field. setMtx 02274A7C keeps the last morf frame to see the animation wrap; same code as daNpc_Km1_c / daNpc_Ls1_c::mPrevMorfFrame (after tww Ls1) */
     /* 0x998 */ be<f32> mBalloonAnimationFrame;
     /* 0x99C */ be<f32> mMoveSpeed;
     u8 _9A0[0x4];
     /* 0x9A4 */ be<f32> mMoveAcceleration;
     u8 _9A8[0x8];
-    /* 0x9B0 */ be<s16> mHeadAngleY;
-    /* 0x9B2 */ be<s16> mBodyAngleY;
+    /* 0x9B0 */ be<s16> mJointHeadY;  /* was mHeadAngleY (misnamed): view of daNpc_Ko1_c mJointHeadY (d_a_npc_ko1.h); one name per field. lookBack 022758B8 stores the joint control's head Y angle and chk_partsNotMove 0227732C compares it; same code as daNpc_Bm1_c::mJointHeadY (after tww Ls1) */
+    /* 0x9B2 */ be<s16> mJointBackboneY;  /* was mBodyAngleY (misnamed): view of daNpc_Ko1_c mJointBackboneY (d_a_npc_ko1.h); one name per field. lookBack 022758B8 stores the joint control's backbone Y angle and chk_partsNotMove 0227732C compares it; same code as daNpc_Bm1_c::mJointBackboneY (after tww Ls1) */
     /* 0x9B4 */ be<s16> mActorAngleY;
     u8 _9B6[0x2];
     /* 0x9B8 */ be<u32> mPartnerMsgNo;
@@ -111,40 +111,40 @@ struct daNpc_Ko1_c : fopNpc_npc_c {
     u8 _9D4[0x9];
     /* 0x9DD */ be<u8> mbTalkTriggered;
     u8 _9DE[0x8];
-    /* 0x9E6 */ be<u8> mbMoving;
+    /* 0x9E6 */ be<u8> mHeadOnlyFollow;  /* was mbMoving (misnamed): view of daNpc_Ko1_c mHeadOnlyFollow (d_a_npc_ko1.h); one name per field. lookBack 022758B8 passes it as the joint look-at's head-only flag (setStt sets 1 in the moving states); same code as daNpc_Bm1_c::mHeadOnlyFollow (tww Bm1 headOnlyFollow = m896) */
     u8 _9E7[0x1];
     /* 0x9E8 */ Ko1RippleCallback mRipple;
     /* 0x9FC */ be<u32> mRippleEmitter;
     /* 0xA00 */ be<u32> mBalloonEmitter;
     /* 0xA04 */ be<u32> mBalloonLightEmitter;
     u8 _A08[0x4];
-    /* 0xA0C */ be<u8> mAnimationSelector;
-    /* 0xA0D */ be<u8> mAnimationTag;
+    /* 0xA0C */ be<u8> mAnmAtrNo;  /* was mAnimationSelector (misnamed): view of daNpc_Ko1_c mAnmAtrNo (d_a_npc_ko1.h); one name per field. chg_anmAtr 02276EB8 stores the message animation attribute and setAnm_ATR picks the animation by it; same code as daNpc_Bm1_c::mAnmAtrNo (tww Bm1 m8F7) */
+    /* 0xA0D */ be<u8> mMesgAnimeTag;  /* was mAnimationTag (misnamed): view of daNpc_Ko1_c mMesgAnimeTag (d_a_npc_ko1.h); one name per field. anmAtr 02276F58 stores the message's animation tag and chg_anmTag / control_anmTag act on it; same code as daNpc_Bm1_c::mMesgAnimeTag (tww Bm1 m8F8) */
     /* 0xA0E */ be<s8> mBtpNum;
-    /* 0xA0F */ be<s8> mAnimationNum;
+    /* 0xA0F */ be<s8> mAnmNum;
     u8 _A10[0x1];
     /* 0xA11 */ be<s8> mBalloonAnimationNum;
     u8 _A12[0x1];
     /* 0xA13 */ be<s8> mStatus;
     u8 _A14[0x1];
-    /* 0xA15 */ be<s8> mLookTarget;
+    /* 0xA15 */ be<s8> mLookBackState;  /* was mLookTarget (misnamed): view of daNpc_Ko1_c mLookBackState (d_a_npc_ko1.h); one name per field. lookBack 022758B8 switches on it (1 player, 2 mLookPos, 3 mDesiredYRot) and chg_anmAtr sets 1 with m_jnt.mbTrn; same code as daNpc_Bm1_c::mLookBackState (tww Bm1) */
     /* 0xA16 */ be<s8> mType;
     /* 0xA17 */ be<s8> mSpecificType;
     u8 _A18[0x1];
     /* 0xA19 */ be<s8> mbMessageTagsStarted;
     u8 _A1A[0x2];
 };
-WWHD_OFFSET(daNpc_Ko1_c, mBalloonJoint, 0x7E9);
+WWHD_OFFSET(daNpc_Ko1_c, m_bln_jnt_num, 0x7E9);
 WWHD_OFFSET(daNpc_Ko1_c, mpBalloonMorf, 0x81C);
 WWHD_OFFSET(daNpc_Ko1_c, mpHeadMorf, 0x824);
 WWHD_OFFSET(daNpc_Ko1_c, mPathRun, 0x8AC);
 WWHD_OFFSET(daNpc_Ko1_c, mPartnerIds, 0x924);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationFrame, 0x994);
+WWHD_OFFSET(daNpc_Ko1_c, mPrevMorfFrame, 0x994);
 WWHD_OFFSET(daNpc_Ko1_c, mBalloonAnimationFrame, 0x998);
 WWHD_OFFSET(daNpc_Ko1_c, mMoveSpeed, 0x99C);
 WWHD_OFFSET(daNpc_Ko1_c, mMoveAcceleration, 0x9A4);
-WWHD_OFFSET(daNpc_Ko1_c, mHeadAngleY, 0x9B0);
-WWHD_OFFSET(daNpc_Ko1_c, mBodyAngleY, 0x9B2);
+WWHD_OFFSET(daNpc_Ko1_c, mJointHeadY, 0x9B0);
+WWHD_OFFSET(daNpc_Ko1_c, mJointBackboneY, 0x9B2);
 WWHD_OFFSET(daNpc_Ko1_c, mActorAngleY, 0x9B4);
 WWHD_OFFSET(daNpc_Ko1_c, mPartnerMsgNo, 0x9B8);
 WWHD_OFFSET(daNpc_Ko1_c, mTargetOffsetAngle, 0x9CA);
@@ -154,18 +154,18 @@ WWHD_OFFSET(daNpc_Ko1_c, mAnimationEnded, 0x9D0);
 WWHD_OFFSET(daNpc_Ko1_c, mAnimationState, 0x9D1);
 WWHD_OFFSET(daNpc_Ko1_c, mMessageSelector, 0x9D3);
 WWHD_OFFSET(daNpc_Ko1_c, mbTalkTriggered, 0x9DD);
-WWHD_OFFSET(daNpc_Ko1_c, mbMoving, 0x9E6);
+WWHD_OFFSET(daNpc_Ko1_c, mHeadOnlyFollow, 0x9E6);
 WWHD_OFFSET(daNpc_Ko1_c, mRipple, 0x9E8);
 WWHD_OFFSET(daNpc_Ko1_c, mRippleEmitter, 0x9FC);
 WWHD_OFFSET(daNpc_Ko1_c, mBalloonEmitter, 0xA00);
 WWHD_OFFSET(daNpc_Ko1_c, mBalloonLightEmitter, 0xA04);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationSelector, 0xA0C);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationTag, 0xA0D);
+WWHD_OFFSET(daNpc_Ko1_c, mAnmAtrNo, 0xA0C);
+WWHD_OFFSET(daNpc_Ko1_c, mMesgAnimeTag, 0xA0D);
 WWHD_OFFSET(daNpc_Ko1_c, mBtpNum, 0xA0E);
-WWHD_OFFSET(daNpc_Ko1_c, mAnimationNum, 0xA0F);
+WWHD_OFFSET(daNpc_Ko1_c, mAnmNum, 0xA0F);
 WWHD_OFFSET(daNpc_Ko1_c, mBalloonAnimationNum, 0xA11);
 WWHD_OFFSET(daNpc_Ko1_c, mStatus, 0xA13);
-WWHD_OFFSET(daNpc_Ko1_c, mLookTarget, 0xA15);
+WWHD_OFFSET(daNpc_Ko1_c, mLookBackState, 0xA15);
 WWHD_OFFSET(daNpc_Ko1_c, mType, 0xA16);
 WWHD_OFFSET(daNpc_Ko1_c, mSpecificType, 0xA17);
 WWHD_OFFSET(daNpc_Ko1_c, mbMessageTagsStarted, 0xA19);

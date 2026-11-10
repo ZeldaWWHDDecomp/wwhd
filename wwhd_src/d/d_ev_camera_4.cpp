@@ -40,9 +40,9 @@ static void copyPoint(cXyz* destination, const cXyz* source) {
     out->z = in->z;
 }
 static void SkipSmoother(dCamera_c* camera) {
-    camera->m102 = 1;
-    camera->m101 = 1;
-    camera->m100 = 1;
+    camera->mStyleSettle2 = 1;
+    camera->mStyleSettle1 = 1;
+    camera->mStyleSettle0 = 1;
 }
 /* inlined into fixedFramesEvCamera */
 static void setViewFromWork(dCamera_c* camera, FixedFramesWork* work) {
@@ -58,7 +58,7 @@ static void setViewFromWork(dCamera_c* camera, FixedFramesWork* work) {
 u32 fixedFramesEvCamera(u32 i_this) {
     auto* camera = gabi::at<dCamera_c>(i_this);
     auto* work = reinterpret_cast<FixedFramesWork*>(camera->mWork);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         work->mFrameCount = 9999;
         s32 count = substanceNum(camera, fixedCenters.text);
         if (count == 0)
@@ -138,7 +138,7 @@ u32 fixedFramesEvCamera(u32 i_this) {
         SkipSmoother(camera);
     }
     setViewFromWork(camera, work);
-    if (work->mTimerSet && camera->m11C < work->mTimer)
+    if (work->mTimerSet && camera->mCurStyleTimer < work->mTimer)
         return 0;
     return 1;
 }
@@ -148,7 +148,7 @@ u32 bSplineEvCamera(u32 i_this) {
     auto* camera = gabi::at<dCamera_c>(i_this);
     auto* work = reinterpret_cast<BSplineWork*>(camera->mWork);
     auto* spline = reinterpret_cast<BSplinePathView*>(camera->mEventData.mSpline2DPath);
-    if (camera->m11C == 0) {
+    if (camera->mCurStyleTimer == 0) {
         work->mKeyNum = 9999;
         s32 count = substanceNum(camera, splineCenters.text);
         if (count == 0)

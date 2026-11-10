@@ -78,37 +78,62 @@ struct Act_c : fopAc_ac_c {
     u32 create_heap();
     u32 _create();
 
-    be<s16> m294, m296, m298, m29A;
-    request_of_phase_process_class mPhs;
-    be<s16> effectPending;
-    be<u8> smallVisible, largeVisible;
-    Mtx34 m2A8;                                                      // 0x3C0
-    be<u32> mpMorf, mpModel;                                         // 0x3F0, 0x3F4
-    u8 mBrkAnm[0x78];                                                // 0x3F8
-    dBgS_GndChk mGndChk;                                             // 0x470
-    be<f32> m34C;                                                    // 0x4C4
-    be<s16> mEventCam0Idx, mEventCam1Idx, mEventCam2Idx, m356, m358; // 0x4C8
-    u8 _4D2[2];
-    dCcD_Stts m35C;                                    // 0x4D4
-    dCcD_Cyl m398;                                     // 0x510
-    be<f32> m4C8;                                      // 0x640
-    dCcD_Stts m4CC;                                    // 0x644
-    dCcD_Cyl m508;                                     // 0x680
-    be<u32> brought;                                   // 0x7B0
-    be<f32> largeScale, colorBlend;                    // 0x7B4, 0x7B8
-    be<u32> treeId;                                    // 0x7BC
-    be<s16> heartPlaced, heartLaunchTimer, eventTimer; // 0x7C0
-    be<s16> m654[4], cachedSmallColor[4], m664[4];
-    be<s16> m66C[4], m674[4]; // 0x7DE, 0x7E6
-    u8 _7EE[2];
-    be<u32> previousCollision, mMode; // 0x7F0, 0x7F4
-    be<s16> colorDelay;
-    u8 _7FA[2];
-    be<s32> repetitions, completedRepetitions; // 0x7FC, 0x800
-    be<s16> mediumDuration, mediumElapsed, mediumPhase, m696, m698;
-    be<s16> largeDuration, largeElapsed, largePhase, m6A0, m6A2;
-    be<u32> messageId; // 0x818
-    u8 _81C[4];
+    /* 0x3AC */ be<s16> mMediumJointAngleX;  /* was m294: ftree_nodeMediumCallback 02345C68: csXyz(it, mMediumJointAngleY, 0) -> mDoMtx_ZXYrotM on the medium tree's joints; _execute 02347CF0 cLib_addCalcAngleS2 toward mMediumJointAngleXTarget */
+    /* 0x3AE */ be<s16> mMediumJointAngleY;  /* was m296: ftree_nodeMediumCallback 02345C68: the csXyz y angle of the medium tree's joint rotation; _execute 02347CF0 cLib_addCalcAngleS2 toward mMediumJointAngleYTarget */
+    /* 0x3B0 */ be<s16> mLargeJointAngleY;  /* was m298: ftree_nodeLargeCallback 02345DA0: csXyz(0, it, mLargeJointAngleZ) -> the large tree's joint rotation; _execute 02347CF0 cLib_addCalcAngleS2 toward mLargeJointAngleYTarget */
+    /* 0x3B2 */ be<s16> mLargeJointAngleZ;  /* was m29A: ftree_nodeLargeCallback 02345DA0: the csXyz z angle of the large tree's joint rotation; _execute 02347CF0 cLib_addCalcAngleS2 toward mLargeJointAngleZTarget */
+    /* 0x3B4 */ request_of_phase_process_class mPhs;
+    /* 0x3BC */ be<s16> effectPending;
+    /* 0x3BE */ be<u8> smallVisible;
+    /* 0x3BF */ be<u8> largeVisible;
+    /* 0x3C0 */ Mtx34 mMtx;  /* was m2A8: set_mtx 023467DC: PSMTXCopy of the work matrix (PSMTXTrans current.pos, mDoMtx_ZXYrotM shape_angle) after each model's base transform is set */
+    /* 0x3F0 */ be<u32> mpMorf;
+    /* 0x3F4 */ be<u32> mpModel;
+    /* 0x3F8 */ u8 mBrkAnm[0x78];
+    /* 0x470 */ dBgS_GndChk mGndChk;
+    /* 0x4C4 */ be<f32> mGroundY;  /* was m34C: _create 02346D34: cBgS::GroundCross(mGndChk), the ground height under the tree */
+    /* 0x4C8 */ be<s16> mEventCam0Idx;
+    /* 0x4CA */ be<s16> mEventCam1Idx;
+    /* 0x4CC */ be<s16> mEventCam2Idx;
+    /* 0x4CE */ be<s16> mXyEventIdx;  /* was m356: XyEvent_set 02346A10 stores the event index (XyEvent_init 023469BC: -1 = none); XyEvent_exe 023477AC passes it to dEvent_manager_c::endCheck */
+    /* 0x4D0 */ be<s16> mXyEventState;  /* was m358: XyEvent_init 023469BC 0; XyEvent_set 02346A10 1 (refused unless 0); XyEvent_exe 023477AC 1 -> 2 once eventInfo.mCommand is 1, then waits for endCheck */
+    /* 0x4D2 */ u8 _4D2[2];
+    /* 0x4D4 */ dCcD_Stts mWaterStts;  /* was m35C: _create 02346D34: dCcD_Stts::Init, the status of mWaterCyl (mWaterCyl.mStts = &it) */
+    /* 0x510 */ dCcD_Cyl mWaterCyl;  /* was m398: _create 02346D34: dCcD_Cyl::Set(M_cyl_srcW), tww's source with Tg type AT_TYPE_WATER; set_collision 023474F4 registers it only while the small tree is shown */
+    /* 0x640 */ be<f32> mCylRadius;  /* was m4C8: set_collision 023474F4: the radius given to mCyl (61, or 132 * largeScale); estimate_water 02346A40 / talk_main 023472BC / _execute 02347CF0 (fopAcM_rollPlayerCrash) read it */
+    /* 0x644 */ dCcD_Stts mStts;  /* was m4CC: _create 02346D34: dCcD_Stts::Init, the status of mCyl (mCyl.mStts = &it) */
+    /* 0x680 */ dCcD_Cyl mCyl;  /* was m508: _create 02346D34: dCcD_Cyl::Set(M_cyl_src); set_collision 023474F4 ChkTgHit / SetR / cCcS::Set; action_waitS_main 02348718 / action_waitM_main 02348A38 ChkCoHit */
+    /* 0x7B0 */ be<u32> brought;
+    /* 0x7B4 */ be<f32> largeScale;
+    /* 0x7B8 */ be<f32> colorBlend;
+    /* 0x7BC */ be<u32> treeId;
+    /* 0x7C0 */ be<s16> heartPlaced;
+    /* 0x7C2 */ be<s16> heartLaunchTimer;
+    /* 0x7C4 */ be<s16> eventTimer;
+    /* 0x7C6 */ be<s16> mSmallBaseColor[4];  /* was m654: create_heap 02346064: get_tev_material0_color of the small model (material color 2); copied into mSmallColor */
+    /* 0x7CE */ be<s16> cachedSmallColor[4];
+    /* 0x7D6 */ be<s16> mLargeBaseColor[4];  /* was m664: create_heap 02346064: get_tev_material0_color of the large model mpModel (material color 2); copied into mLargeColor; action_changeSL2_main 02349238 / action_changeLS_main 023495C0 blend end value */
+    /* 0x7DE */ be<s16> mSmallColor[4];  /* was m66C: _draw 023480C4: set_tev_color of the small model in MODE_CHANGE_SL2 / MODE_CHANGE_LS; action_changeSL2_main 02349238 / action_changeLS_main 023495C0 blend it */
+    /* 0x7E6 */ be<s16> mLargeColor[4];  /* was m674: _draw 023480C4: set_tev_color of the large model mpModel; action_changeSL2_main 02349238 / action_changeLS_main 023495C0 blend it */
+    /* 0x7EE */ u8 _7EE[2];
+    /* 0x7F0 */ be<u32> previousCollision;
+    /* 0x7F4 */ be<u32> mMode;
+    /* 0x7F8 */ be<s16> colorDelay;
+    /* 0x7FA */ u8 _7FA[2];
+    /* 0x7FC */ be<s32> repetitions;
+    /* 0x800 */ be<s32> completedRepetitions;
+    /* 0x804 */ be<s16> mediumDuration;
+    /* 0x806 */ be<s16> mediumElapsed;
+    /* 0x808 */ be<s16> mediumPhase;
+    /* 0x80A */ be<s16> mMediumJointAngleXTarget;  /* was m696: _execute 02347CF0: cLib_addCalcAngleS2 target of mMediumJointAngleX; action_pikupikuM_main 02349A20 sets it, process_init 023463E4 clears it */
+    /* 0x80C */ be<s16> mMediumJointAngleYTarget;  /* was m698: _execute 02347CF0: cLib_addCalcAngleS2 target of mMediumJointAngleY; action_pikupikuM_main 02349A20 sets it, process_init 023463E4 clears it */
+    /* 0x80E */ be<s16> largeDuration;
+    /* 0x810 */ be<s16> largeElapsed;
+    /* 0x812 */ be<s16> largePhase;
+    /* 0x814 */ be<s16> mLargeJointAngleYTarget;  /* was m6A0: _execute 02347CF0: cLib_addCalcAngleS2 target of mLargeJointAngleY; action_pikupikuL_main 02349B50 / action_changeSL2_main 02349238 set it (30 * sin), process_init 023463E4 clears it */
+    /* 0x816 */ be<s16> mLargeJointAngleZTarget;  /* was m6A2: _execute 02347CF0: cLib_addCalcAngleS2 target of mLargeJointAngleZ; action_pikupikuL_main 02349B50 / action_changeSL2_main 02349238 set it (36 * sin), process_init 023463E4 clears it */
+    /* 0x818 */ be<u32> messageId;
+    /* 0x81C */ u8 _81C[4];
 };
 struct _ftree_seach_info_ {
     be<u32> total, brought;
@@ -117,10 +142,10 @@ struct _ftree_seach_info_ {
 WWHD_SIZE(daObjFtree::Act_c, 0x820);
 static_assert(offsetof(daObjFtree::Act_c, mPhs) == 0x3B4);
 static_assert(offsetof(daObjFtree::Act_c, effectPending) == 0x3BC);
-static_assert(offsetof(daObjFtree::Act_c, m2A8) == 0x3C0);
+static_assert(offsetof(daObjFtree::Act_c, mMtx) == 0x3C0);
 static_assert(offsetof(daObjFtree::Act_c, mpMorf) == 0x3F0);
-static_assert(offsetof(daObjFtree::Act_c, m398) == 0x510);
-static_assert(offsetof(daObjFtree::Act_c, m674) == 0x7E6);
+static_assert(offsetof(daObjFtree::Act_c, mWaterCyl) == 0x510);
+static_assert(offsetof(daObjFtree::Act_c, mLargeColor) == 0x7E6);
 static_assert(offsetof(daObjFtree::Act_c, mMode) == 0x7F4);
 static_assert(offsetof(daObjFtree::Act_c, messageId) == 0x818);
 

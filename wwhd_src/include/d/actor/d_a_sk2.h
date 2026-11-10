@@ -31,20 +31,20 @@ WWHD_OFFSET(dBgWDeform, mpVtx, 0x90);
 } // namespace Sk2
 struct sk2_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
-    /* 0x3D0 */ be<u8> m2B4;
-    /* 0x3D1 */ be<u8> m2B5;
-    /* 0x3D2 */ be<u8> m2B6;
+    /* 0x3D0 */ be<u8> mType;  /* was m2B4: daSk2_Create 02489A00: parameter bits 0-7 (0xFF read as 0); useHeapInit 02489770 picks the bck and dzb by it (sk2_bck / sk2_dzb); dousa_move 02489290: type 0 sways joints 1-3 in x / z, others in y */
+    /* 0x3D1 */ be<u8> mStartFramePrm;  /* was m2B5: daSk2_Create 02489A00: parameter bits 8-15; unless 0xFF it becomes mStartFrame */
+    /* 0x3D2 */ be<u8> mSwitchNo;  /* was m2B6: daSk2_Create 02489A00: parameter bits 24-31; when not 0xFF and the switch is on the actor is not created (cPhs_ERROR_e) */
     /* 0x3D3 */ u8 _3D3[3];
-    /* 0x3D6 */ be<s16> m2BA;
-    /* 0x3D8 */ be<s16> m2BC;
+    /* 0x3D6 */ be<s16> mMoveState;  /* was m2BA: dousa_move 02489290: its switch (0 start at mStartFrame, 1 play to frame 0 or 18, 2 slow down, 3 rest mWaitTimer, then 1 with JA_SE_OBJ_SHOKU_LIFT_MOVE) */
+    /* 0x3D8 */ be<s16> mWaitTimer;  /* was m2BC: dousa_move 02489290: 100 when the animation stops (state 2), counted down in state 3; at 0 the animation restarts */
     /* 0x3DA */ u8 _3DA[2];
-    /* 0x3DC */ be<f32> m2C0;
-    /* 0x3E0 */ be<f32> m2C4;
+    /* 0x3DC */ be<f32> mPlaySpeed;  /* was m2C0: dousa_move 02489290: 0.5 on (re)start, eased to 0 in state 2; passed to mpMorf->setPlaySpeed */
+    /* 0x3E0 */ be<f32> mStartFrame;  /* was m2C4: daSk2_Create 02489A00: mStartFramePrm (0 above 35); dousa_move 02489290: mpMorf->setFrame(it) in state 0 */
     /* 0x3E4 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3E8 */ be<s16> m2CC;
-    /* 0x3EA */ csXyz m2CE[4];
+    /* 0x3E8 */ be<s16> mSwayTimer;  /* was m2CC: dousa_move 02489290: +1 per frame; phase of the joints' sine sway (mJointAngle) */
+    /* 0x3EA */ csXyz mJointAngle[4];  /* was m2CE: nodeCallBack 02489098: [jntNo] rotates joint jntNo (Y, X, Z, up to KSYLF_00_JNT_B1_e); dousa_move 02489290 sets [1..3] to the sway (x / z for type 0, y otherwise) */
     /* 0x402 */ u8 _402[2];
-    /* 0x404 */ cXyz m2E8[4];
+    /* 0x404 */ cXyz mJointPos[4];  /* was m2E8: nodeCallBack 02489098: [jntNo] = the origin of joint jntNo after its rotation (MtxPosition of 0, 0, 0) */
     /* 0x434 */ u8 m318[4];
     /* 0x438 */ gptr<Sk2::dBgWDeform> mpBgW; /* dBgWDeform */
     /* 0x43C */ Sk2::CpuVertices mCvtx;      /* HD */
@@ -52,8 +52,8 @@ struct sk2_class : fopEn_enemy_c {
     /* 0x484 */ dBgS_ObjAcch mAcch; /* dBgS_ObjAcch */
 };
 WWHD_OFFSET(sk2_class, mpMorf, 0x3E4);
-WWHD_OFFSET(sk2_class, m2CE, 0x3EA);
-WWHD_OFFSET(sk2_class, m2E8, 0x404);
+WWHD_OFFSET(sk2_class, mJointAngle, 0x3EA);
+WWHD_OFFSET(sk2_class, mJointPos, 0x404);
 WWHD_OFFSET(sk2_class, mpBgW, 0x438);
 WWHD_OFFSET(sk2_class, mAcch, 0x484);
 WWHD_SIZE(sk2_class, 0x648);

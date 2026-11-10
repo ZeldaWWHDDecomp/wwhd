@@ -39,27 +39,27 @@ struct Act_c : fopAc_ac_c {
     bool _draw();
     static const char M_arcname[];
     /* 0x3AC */ request_of_phase_process_class mPhase;
-    /* 0x3B4 */ gptr<J3DModel> m298;
-    /* 0x3B8 */ mDoExt_btkAnm m29C;
-    /* 0x42C */ mDoExt_bckAnm m2B0;
-    /* 0x4B8 */ gptr<dBgW> m2C0;
-    /* 0x4BC */ dCcD_Tri m2C4[8];
-    /* 0xF3C */ dCcD_Stts mD44[8];
-    /* 0x111C */ be<s32> mF24;
-    /* 0x1120 */ be<s32> mF28;
-    /* 0x1124 */ be<s16> mF2C;
+    /* 0x3B4 */ gptr<J3DModel> mpModel;  /* was m298: create_heap 02395298 creates the J3DModel; _create 023958E8 takes its base matrix as the actor matrix; set_mtx 02395564 / _draw 02395ED4 use it */
+    /* 0x3B8 */ mDoExt_btkAnm mBtkAnm;  /* was m29C: create_heap 02395298 inits the btk animation; _execute 02395CA4 plays it; _draw 02395ED4 enters it */
+    /* 0x42C */ mDoExt_bckAnm mBckAnm;  /* was m2B0: create_heap 02395298 inits the bck animation; _execute 02395CA4 plays it; _draw 02395ED4 enters it */
+    /* 0x4B8 */ gptr<dBgW> mpBgW;  /* was m2C0: create_heap 02395298 creates the dBgW; _create 023958E8 registers it (dComIfG_Bgsp()->Regist); _delete 02395C40 releases it */
+    /* 0x4BC */ dCcD_Tri mTri[8];  /* was m2C4: init_cc 02395758 sets the 8 dCcD_Tri from M_tri_src; set_cc_pos 02395648 places them; set_cc 0239620C registers them; chk_light 0239625C tests ChkTgHit */
+    /* 0xF3C */ dCcD_Stts mStts[8];  /* was mD44: init_cc 02395758: Init(0xFF, 0xFF, this) and m2C4[i].SetStts(&mD44[i]) */
+    /* 0x111C */ be<s32> mType;  /* was mF24: _create 023958E8: prm PRM_TYPE; 0 starts the norm (sun/moon) modes, else the active modes that also need switch 2 */
+    /* 0x1120 */ be<s32> mMode;  /* was mF28: mode_norm_sun_init 02395830 / mode_norm_moon_init 0239583C / mode_active_sun_init 023958C8 / mode_active_moon_init 023958D4 set MODE_*; _execute 02395CA4 calls mode_proc[mF28] */
+    /* 0x1124 */ be<s16> mLightTimer;  /* was mF2C: mode_norm_moon_init 0239583C / mode_active_moon_init 023958D4 set 20; mode_norm_moon 02396370 / mode_active_moon 0239657C count it down while chk_light, reset 20 otherwise; 0 turns the switch on */
     u8 _1126[2];
-    /* 0x1128 */ be<f32> mF30;
+    /* 0x1128 */ be<f32> mPower;  /* was mF30: power_up 023962F8 / power_down 02396334 chase it to 1 / 0 by 1/30; _create 023958E8 sets 1 or 0 by the switch; _draw 02395ED4 alpha = 255 * it; mode_active_sun 0239666C sound while > 0.5 */
     u8 _112c[4];
-    /* 0x1130 */ Mtx34 mF38;
+    /* 0x1130 */ Mtx34 mBgMtx;  /* was mF38: _create 023958E8 copies the position/angle/scale matrix here; create_heap 02395298 passes it to the dBgW set (swlightSetBackground) */
 };
 using ModeFunc = gabi::ptmf<void (Act_c::*)()>;
 } // namespace daObjSwlight
-WWHD_OFFSET(daObjSwlight::Act_c, m298, 0x3B4);
-WWHD_OFFSET(daObjSwlight::Act_c, m2C0, 0x4B8);
-WWHD_OFFSET(daObjSwlight::Act_c, m2C4, 0x4BC);
-WWHD_OFFSET(daObjSwlight::Act_c, mF28, 0x1120);
-WWHD_OFFSET(daObjSwlight::Act_c, mF38, 0x1130);
+WWHD_OFFSET(daObjSwlight::Act_c, mpModel, 0x3B4);
+WWHD_OFFSET(daObjSwlight::Act_c, mpBgW, 0x4B8);
+WWHD_OFFSET(daObjSwlight::Act_c, mTri, 0x4BC);
+WWHD_OFFSET(daObjSwlight::Act_c, mMode, 0x1120);
+WWHD_OFFSET(daObjSwlight::Act_c, mBgMtx, 0x1130);
 WWHD_SIZE(daObjSwlight::Act_c, 0x1160);
 
 struct SwlightBckCache {
@@ -210,17 +210,17 @@ void swlightSetCullSphere(fopAc_ac_c *, f32, f32, f32, f32);
 enum : u32 { SWLIGHT_STTS_DESTRUCTOR = 0x02515860, SWLIGHT_TRI_DESTRUCTOR = 0x025159F8 };
 
 WWHD_OFFSET(daObjSwlight::Act_c, mPhase, 0x3AC);
-WWHD_OFFSET(daObjSwlight::Act_c, m298, 0x3B4);
-WWHD_OFFSET(daObjSwlight::Act_c, m29C, 0x3B8);
-WWHD_OFFSET(daObjSwlight::Act_c, m2B0, 0x42C);
-WWHD_OFFSET(daObjSwlight::Act_c, m2C0, 0x4B8);
-WWHD_OFFSET(daObjSwlight::Act_c, m2C4, 0x4BC);
-WWHD_OFFSET(daObjSwlight::Act_c, mD44, 0xF3C);
-WWHD_OFFSET(daObjSwlight::Act_c, mF24, 0x111C);
-WWHD_OFFSET(daObjSwlight::Act_c, mF28, 0x1120);
-WWHD_OFFSET(daObjSwlight::Act_c, mF2C, 0x1124);
-WWHD_OFFSET(daObjSwlight::Act_c, mF30, 0x1128);
-WWHD_OFFSET(daObjSwlight::Act_c, mF38, 0x1130);
+WWHD_OFFSET(daObjSwlight::Act_c, mpModel, 0x3B4);
+WWHD_OFFSET(daObjSwlight::Act_c, mBtkAnm, 0x3B8);
+WWHD_OFFSET(daObjSwlight::Act_c, mBckAnm, 0x42C);
+WWHD_OFFSET(daObjSwlight::Act_c, mpBgW, 0x4B8);
+WWHD_OFFSET(daObjSwlight::Act_c, mTri, 0x4BC);
+WWHD_OFFSET(daObjSwlight::Act_c, mStts, 0xF3C);
+WWHD_OFFSET(daObjSwlight::Act_c, mType, 0x111C);
+WWHD_OFFSET(daObjSwlight::Act_c, mMode, 0x1120);
+WWHD_OFFSET(daObjSwlight::Act_c, mLightTimer, 0x1124);
+WWHD_OFFSET(daObjSwlight::Act_c, mPower, 0x1128);
+WWHD_OFFSET(daObjSwlight::Act_c, mBgMtx, 0x1130);
 enum SwlightMode { MODE_NORM_MOON, MODE_NORM_SUN, MODE_ACTIVE_MOON, MODE_ACTIVE_SUN };
 enum { JA_SE_OBJ_LIGHT_SW_ON = 0x6962, JA_SE_OBJ_LIGHT_SW_SUNSHINE = 0x7029 };
 enum {

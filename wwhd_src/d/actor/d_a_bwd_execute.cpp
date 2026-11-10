@@ -37,36 +37,36 @@ static void addCalcPos2(cXyz* a, cXyz* b, f32 rate, f32 step) {
 static void damage_check(bwd_class* i_this) {
     fopAc_ac_c* actor = i_this;
     dComIfGp_get();
-    bool scanBody = i_this->m18D6 == 0;
-    if (i_this->m18D6 == 0) {
+    bool scanBody = i_this->mTongueNoHitTimer == 0;
+    if (i_this->mTongueNoHitTimer == 0) {
         gabi::Local<CcAtInfo_bd> atInfo;
         atInfo->pParticlePos = 0;
-        if (auto* tracked = fopAcM_SearchByID(i_this->m1BC0))
+        if (auto* tracked = fopAcM_SearchByID(i_this->mAttId))
             tracked->current.pos.copy(actor->eyePos);
-        i_this->mTongueSph.SetTgType(i_this->m1BB1 != 0 ? 0xFF1DFEFFu : 0x8000u);
+        i_this->mTongueSph.SetTgType(i_this->mTonguePulledTimer != 0 ? 0xFF1DFEFFu : 0x8000u);
         if (i_this->mTongueSph.ChkTgHit()) {
-            i_this->m18D6 = 6;
+            i_this->mTongueNoHitTimer = 6;
             atInfo->mpObj = gabi::ea(i_this->mTongueSph.GetTgHitObj());
             if (atInfo->mpObj != 0) {
                 atInfo->pParticlePos = gabi::ea(i_this->mTongueSph.GetTgHitPosP());
                 if (gabi::at<dCcD_GObjInf>(atInfo->mpObj)->mAtType & 0x8000) {
-                    i_this->m1BB0 = 1;
+                    i_this->mTongueHooked = 1;
                     u32 stts = gabi::ea(gabi::at<dCcD_GObjInf>(atInfo->mpObj)->mStts.get());
                     u32 owner = stts ? gabi::ea(gabi::at<dCcD_Stts>(stts)->GetActor()) : 0;
                     atInfo->mpActor = owner;
-                    i_this->m1BBC = owner ? fopAcM_GetID(gabi::at<fopAc_ac_c>(owner)) : 0xFFFFFFFFu;
-                    i_this->m18AE = 3;
-                    i_this->m18B0 = 0;
+                    i_this->mHitOwnerId = owner ? fopAcM_GetID(gabi::at<fopAc_ac_c>(owner)) : 0xFFFFFFFFu;
+                    i_this->mAction = 3;
+                    i_this->mMode = 0;
                     if (actor != nullptr)
                         bd_seStart(actor, 0x286F, 0x20);
-                } else if (i_this->m1BB1 != 0) {
+                } else if (i_this->mTonguePulledTimer != 0) {
                     s8 saved = actor->health;
                     actor->health = 20;
                     cc_at_check(actor, atInfo.get());
                     actor->health = saved - 1;
                     monsterSoundStart(actor, 0x48DE, 0);
-                    i_this->m1BB4++;
-                    i_this->m1BB3 = 20;
+                    i_this->mTongueHitCount++;
+                    i_this->mTongueHitShakeTimer = 20;
                 }
             }
         }
@@ -101,31 +101,31 @@ static void control1(bwd_class* i_this, dBgS_GndChk* sharedGround) {
     local_104->y = 0.0f;
     local_104->z = i_this->m1BA4;
     MtxPosition(local_104.get(), local_11c.get());
-    local_104->z = i_this->m1BA0;
-    f32 dVar9 = i_this->m1BA8;
+    local_104->z = i_this->mTongueSegLength;
+    f32 dVar9 = i_this->mTongueWaveAmplitude;
     local_128->set(0, 0, 0);
     dBgS_GndChk_ct(sharedGround, BD_GNDCHK_VT, false);
     for (i = 1; i < 0x1d; i++, ++sita_i) {
-        if (i_this->m1BB0 == 0) {
+        if (i_this->mTongueHooked == 0) {
             // HD: the segment phase subtracts its index in each tongue wave.
-            if (i_this->m1BB3 != 0) {
-                dVar9 = i_this->m1BB3 * (REG0_F(3) + 4.5f);
+            if (i_this->mTongueHitShakeTimer != 0) {
+                dVar9 = i_this->mTongueHitShakeTimer * (REG0_F(3) + 4.5f);
                 local_110->x =
-                    dVar9 * cM_ssin(i_this->m18AC * (REG0_S(5) + 0x1fa4) - i * (REG0_S(6) + 0xa28));
-                local_110->y = (dVar9 * cM_scos(i_this->m18AC * (REG0_S(5) + 0x2198) -
+                    dVar9 * cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 0x1fa4) - i * (REG0_S(6) + 0xa28));
+                local_110->y = (dVar9 * cM_scos(i_this->mFrameCounter * (REG0_S(5) + 0x2198) -
                                                 i * (REG0_S(6) + 0x898)));
                 local_110->z =
-                    dVar9 * cM_scos(i_this->m18AC * (REG0_S(5) + 0x206c) - i * (REG0_S(6) + 0x960));
+                    dVar9 * cM_scos(i_this->mFrameCounter * (REG0_S(5) + 0x206c) - i * (REG0_S(6) + 0x960));
             } else {
                 local_110->x =
-                    dVar9 * cM_ssin(i_this->m18AC * (REG0_S(5) + 0x44c) - i * (REG0_S(6) + 2000));
-                if (i_this->m1BB1 != 0) {
+                    dVar9 * cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 0x44c) - i * (REG0_S(6) + 2000));
+                if (i_this->mTonguePulledTimer != 0) {
                     local_110->y = -5.0f;
                 } else {
                     local_110->y = REG0_F(5) + 5.0f;
                 }
                 local_110->z =
-                    dVar9 * cM_scos(i_this->m18AC * (REG0_S(7) + 900) - i * (REG0_S(8) + 2000));
+                    dVar9 * cM_scos(i_this->mFrameCounter * (REG0_S(7) + 900) - i * (REG0_S(8) + 2000));
             }
             MtxPosition(local_110.get(), local_128.get());
         }
@@ -168,8 +168,8 @@ static void control2(bwd_class* i_this) {
     gabi::Local<cXyz> abs_offset;
     rel_offset->x = 0;
     rel_offset->y = 0;
-    rel_offset->z = i_this->m1BA0;
-    i_this->mTongueSegments[29].m04.copy(i_this->m1B88);
+    rel_offset->z = i_this->mTongueSegLength;
+    i_this->mTongueSegments[29].m04.copy(i_this->mTongueTipPos);
 
     int i = 28;
     s16 Yangle;
@@ -206,113 +206,113 @@ static void sita_move(bwd_class* i_this, fopAc_ac_c* player) {
     gabi::Local<cXyz> local_f8;
     gabi::Local<dBgS_GndChk> sharedGround;
 
-    if (i_this->m1BB3 != 0) {
-        i_this->m1BB3--;
+    if (i_this->mTongueHitShakeTimer != 0) {
+        i_this->mTongueHitShakeTimer--;
     }
-    local_c8->x = (REG0_F(13) + 100.0f) * cM_ssin(i_this->m18AC * (REG0_S(5) + 0x44c));
-    local_c8->y = gabi::fmadds(cM_ssin(i_this->m18AC * (REG0_S(4) + 700)), REG0_F(14) + 50.0f,
+    local_c8->x = (REG0_F(13) + 100.0f) * cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 0x44c));
+    local_c8->y = gabi::fmadds(cM_ssin(i_this->mFrameCounter * (REG0_S(4) + 700)), REG0_F(14) + 50.0f,
                                REG0_F(0) + 600.0f);
-    local_c8->z = (REG0_F(13) + 100.0f) * cM_ssin(i_this->m18AC * (REG0_S(7) + 900));
+    local_c8->z = (REG0_F(13) + 100.0f) * cM_ssin(i_this->mFrameCounter * (REG0_S(7) + 900));
     bwdExecVectorAdd(&i_this->mTongueSegments[0].m04, local_f8.get(), local_c8.get());
-    if (i_this->m1B88.y < i_this->m3954.y) {
+    if (i_this->mTongueTipPos.y < i_this->mSandSurfacePos.y) {
         actor->attention_info.flags = 0;
     }
     dVar8 = 0.1f;
-    dVar9 = ((REG0_F(7) + 100.0f) * i_this->m1BAC);
-    if (i_this->m1BB0 != 0) {
-        pfVar2 = fopAcM_SearchByID(i_this->m1BBC);
+    dVar9 = ((REG0_F(7) + 100.0f) * i_this->mTongueTipStepScale);
+    if (i_this->mTongueHooked != 0) {
+        pfVar2 = fopAcM_SearchByID(i_this->mHitOwnerId);
         if ((pfVar2 == NULL) || (!hookshotReturnCheck(player))) {
-            i_this->m1BB0 = 0;
+            i_this->mTongueHooked = 0;
         } else {
-            i_this->m18D6 = 5;
+            i_this->mTongueNoHitTimer = 5;
             local_f8->copy(pfVar2->current.pos);
             dVar8 = 1.0f;
             dVar9 = 200.0f;
-            if (i_this->m1BA0 > REG0_F(2) + 50.0f) {
-                i_this->m1BB0 = 0;
+            if (i_this->mTongueSegLength > REG0_F(2) + 50.0f) {
+                i_this->mTongueHooked = 0;
             }
         }
-        i_this->m1BAC = 0.0f;
-        i_this->m1BB1 = (s8)l_HIO.m14;
-        i_this->m1B94.copy(i_this->m1B88);
+        i_this->mTongueTipStepScale = 0.0f;
+        i_this->mTonguePulledTimer = (s8)l_HIO.m14;
+        i_this->mTonguePulledPos.copy(i_this->mTongueTipPos);
     } else {
-        if (i_this->m1BB1 != 0) {
-            i_this->m1BB1--;
-            f32 dx = actor->current.pos.x - i_this->m1B94.x;
-            f32 dz = actor->current.pos.z - i_this->m1B94.z;
+        if (i_this->mTonguePulledTimer != 0) {
+            i_this->mTonguePulledTimer--;
+            f32 dx = actor->current.pos.x - i_this->mTonguePulledPos.x;
+            f32 dz = actor->current.pos.z - i_this->mTonguePulledPos.z;
             f32 reach = std_sqrtf(gabi::fmadds(dx, dx, dz * dz));
             // HD: constrain the tether reach, retaining the fused distance calculation.
             f32 maxReach = REG10_F(10) + 1200.0f;
             if (reach > maxReach) {
                 gabi::Local<cXyz> tether;
                 tether->copy(actor->current.pos);
-                tether->y = i_this->m1B94.y;
-                addCalcPos2(&i_this->m1B94, tether.get(), 1.0f, (reach - maxReach) * 0.05f);
-                i_this->m1B88.copy(i_this->m1B94);
+                tether->y = i_this->mTonguePulledPos.y;
+                addCalcPos2(&i_this->mTonguePulledPos, tether.get(), 1.0f, (reach - maxReach) * 0.05f);
+                i_this->mTongueTipPos.copy(i_this->mTonguePulledPos);
             }
             dBgS_GndChk_ct(sharedGround.get(), BD_GNDCHK_VT, false);
             gabi::Local<cXyz> pos;
-            pos->copy(i_this->m1B88);
+            pos->copy(i_this->mTongueTipPos);
             pos->y += 200.0f;
             sharedGround->SetPos(pos.get());
             f32 tongueGround = cBgS_GroundCross(dComIfG_Bgsp(), sharedGround.get());
             fVar10 = (tongueGround + REG0_F(16)) + 30.0f;
             if (fVar10 != -1.0e9f) {
-                cLib_addCalc2(&i_this->m1B88.y, fVar10, 0.1f, REG0_F(11) + 2.0f);
+                cLib_addCalc2(&i_this->mTongueTipPos.y, fVar10, 0.1f, REG0_F(11) + 2.0f);
             }
-            if (i_this->m1BB3 != 0) {
-                f32 f1 = i_this->m1BB3 * (REG0_F(3) + 3.0f);
-                local_d4->x = (f1 * cM_ssin(i_this->m18AC * (REG0_S(5) + 0x1fa4)));
-                local_d4->y = (f1 * cM_ssin(i_this->m18AC * (REG0_S(5) + 0x2260)));
-                local_d4->z = (f1 * cM_ssin(i_this->m18AC * (REG0_S(5) + 0x206c)));
+            if (i_this->mTongueHitShakeTimer != 0) {
+                f32 f1 = i_this->mTongueHitShakeTimer * (REG0_F(3) + 3.0f);
+                local_d4->x = (f1 * cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 0x1fa4)));
+                local_d4->y = (f1 * cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 0x2260)));
+                local_d4->z = (f1 * cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 0x206c)));
                 dVar8 = 1.0f;
                 dVar9 = f1;
-                bwdExecVectorAdd(&i_this->m1B94, local_f8.get(), local_d4.get());
+                bwdExecVectorAdd(&i_this->mTonguePulledPos, local_f8.get(), local_d4.get());
             } else {
-                local_f8->copy(i_this->m1B94);
+                local_f8->copy(i_this->mTonguePulledPos);
             }
             bd_GndChk_dt(sharedGround.get());
         } else {
-            cLib_addCalc2(&i_this->m1BAC, 1.0f, 1.0f, 0.01f);
+            cLib_addCalc2(&i_this->mTongueTipStepScale, 1.0f, 1.0f, 0.01f);
         }
-        if (i_this->m1BB2 != 0) {
-            i_this->m1BB2--;
-            local_c8->x = (REG0_F(17) + 400.0f) * cM_ssin((int)i_this->m18AC * (REG0_S(5) + 0xc1c));
+        if (i_this->mTongueThrashTimer != 0) {
+            i_this->mTongueThrashTimer--;
+            local_c8->x = (REG0_F(17) + 400.0f) * cM_ssin((int)i_this->mFrameCounter * (REG0_S(5) + 0xc1c));
             local_c8->y = 400.0f;
             local_c8->z =
-                (REG0_F(17) + 400.0f) * cM_ssin((int)i_this->m18AC * (REG0_S(7) + 0x1324));
+                (REG0_F(17) + 400.0f) * cM_ssin((int)i_this->mFrameCounter * (REG0_S(7) + 0x1324));
             bwdExecVectorAdd(&i_this->mTongueSegments[0].m04, local_f8.get(), local_c8.get());
             dVar8 = 1.0f;
             dVar9 = 200.0f;
         }
     }
-    bwdExecVectorSubtract(&i_this->m1B88, local_c8.get(), &i_this->mTongueSegments[0].m04);
+    bwdExecVectorSubtract(&i_this->mTongueTipPos, local_c8.get(), &i_this->mTongueSegments[0].m04);
     fVar10 = std_sqrtf(PSVECSquareMag(local_c8.get()));
     dVar7 = gabi::fmuls_ppc(
         fVar10, REG0_F(2) + 0.035f); /* fmuls f22,f1,f8: the length is frA (NaN payload order) */
-    if (i_this->m1BB6 != 0) {
+    if (i_this->mTongueRetract != 0) {
         local_f8->copy(i_this->mTongueSegments[0].m04);
         dVar8 = 1.0f;
         dVar9 = 50.0f;
-        if (i_this->m1BB6 != 2) {
+        if (i_this->mTongueRetract != 2) {
             actor->attention_info.flags = 0;
         }
         if (dVar7 < (REG0_F(1) + 20.0f)) {
             dVar7 = (REG0_F(1) + 20.0f);
         }
     }
-    cLib_addCalc2(&i_this->m1B88.x, local_f8->x, dVar8, dVar9);
-    cLib_addCalc2(&i_this->m1B88.y, local_f8->y, dVar8, dVar9);
-    cLib_addCalc2(&i_this->m1B88.z, local_f8->z, dVar8, dVar9);
-    cLib_addCalc2(&i_this->m1BA0, dVar7, 1.0f, 2.0f);
-    i_this->m1BA8 = REG0_F(3) + 10.0f;
+    cLib_addCalc2(&i_this->mTongueTipPos.x, local_f8->x, dVar8, dVar9);
+    cLib_addCalc2(&i_this->mTongueTipPos.y, local_f8->y, dVar8, dVar9);
+    cLib_addCalc2(&i_this->mTongueTipPos.z, local_f8->z, dVar8, dVar9);
+    cLib_addCalc2(&i_this->mTongueSegLength, dVar7, 1.0f, 2.0f);
+    i_this->mTongueWaveAmplitude = REG0_F(3) + 10.0f;
     control1(i_this, sharedGround.get());
     control2(i_this);
     sita_s* sita_i = i_this->mTongueSegments;
     for (int i = 0; i < 30; i++, ++sita_i) {
         MtxTrans(sita_i->m04.x, sita_i->m04.y, sita_i->m04.z, false);
         fVar10 =
-            gabi::fmadds(cM_scos((int)i_this->m18AC * (REG0_S(7) + 1000) + i * (REG0_S(8) + 2000)),
+            gabi::fmadds(cM_scos((int)i_this->mFrameCounter * (REG0_S(7) + 1000) + i * (REG0_S(8) + 2000)),
                          (0.2f + REG0_F(9)), (1.0f + REG0_F(9)));
         MtxScale(fVar10, fVar10, fVar10, true);
         J3DModel_setBaseTRMtx(sita_i->m00, calc_mtx());
@@ -332,39 +332,39 @@ static void sita_move(bwd_class* i_this, fopAc_ac_c* player) {
 }
 
 static void bwd_kankyo(bwd_class* i_this) {
-    if (i_this->m3C14 != 0) {
-        i_this->m3C14--;
+    if (i_this->mKankyoTimer != 0) {
+        i_this->mKankyoTimer--;
     }
-    switch (i_this->m3C15) {
+    switch (i_this->mKankyoState) {
     case 0:
         setEnvironmentColor(0, 1, 0.0f);
         break;
     case 1:
-        setEnvironmentColor(0, 1, i_this->m3C18);
-        cLib_addCalc2(&i_this->m3C18, 1.0f, 1.0f, 0.01f);
+        setEnvironmentColor(0, 1, i_this->mEnvColorRate);
+        cLib_addCalc2(&i_this->mEnvColorRate, 1.0f, 1.0f, 0.01f);
         break;
     case 2:
-        setEnvironmentColor(1, 2, i_this->m3C18);
-        cLib_addCalc2(&i_this->m3C18, 1.0f, 1.0f, 0.05f);
-        if (i_this->m3C14 == 0) {
-            if (i_this->m18AE == 0xc) {
-                i_this->m3C15 = 4;
+        setEnvironmentColor(1, 2, i_this->mEnvColorRate);
+        cLib_addCalc2(&i_this->mEnvColorRate, 1.0f, 1.0f, 0.05f);
+        if (i_this->mKankyoTimer == 0) {
+            if (i_this->mAction == 0xc) {
+                i_this->mKankyoState = 4;
             } else {
-                i_this->m3C15 = 3;
+                i_this->mKankyoState = 3;
             }
         }
         break;
     case 3:
-        setEnvironmentColor(1, 2, i_this->m3C18);
-        cLib_addCalc0(&i_this->m3C18, 1.0f, 0.02f);
+        setEnvironmentColor(1, 2, i_this->mEnvColorRate);
+        cLib_addCalc0(&i_this->mEnvColorRate, 1.0f, 0.02f);
         break;
     case 4:
-        setEnvironmentColor(3, 2, i_this->m3C18);
-        cLib_addCalc0(&i_this->m3C18, 1.0f, 0.02f);
+        setEnvironmentColor(3, 2, i_this->mEnvColorRate);
+        cLib_addCalc0(&i_this->mEnvColorRate, 1.0f, 0.02f);
         break;
     case 5:
-        setEnvironmentColor(3, 4, i_this->m3C18);
-        cLib_addCalc2(&i_this->m3C18, 1.0f, 1.0f, 0.02f);
+        setEnvironmentColor(3, 4, i_this->mEnvColorRate);
+        cLib_addCalc2(&i_this->mEnvColorRate, 1.0f, 1.0f, 0.02f);
         break;
     }
 }
@@ -385,16 +385,16 @@ static BOOL bwd_execute(bwd_class* i_this) {
     gabi::Local<cXyz> local_128;
 
     fopAc_ac_c* player = (fopAc_ac_c*)dComIfGp_getPlayer(0);
-    if (auto* tracked = fopAcM_SearchByID(i_this->m1BC0))
+    if (auto* tracked = fopAcM_SearchByID(i_this->mAttId))
         tracked->current.pos.y = 10000.0f;
     if (dComIfGp_getStartStageName0() == 'X') {
-        i_this->m3C1C = 0x32;
+        i_this->mBlurRate = 0x32;
     }
     executeMatrixPointer = &executeMatrix;
-    if (i_this->m3C50 != 0) {
-        if (i_this->m3C50 == 2) {
+    if (i_this->mCamTypeState != 0) {
+        if (i_this->mCamTypeState == 2) {
             setCameraType("Boss03", nullptr);
-            i_this->m3C50 = 1;
+            i_this->mCamTypeState = 1;
         } else {
             setCameraType("WindBoss", nullptr);
         }
@@ -407,41 +407,41 @@ static BOOL bwd_execute(bwd_class* i_this) {
     gndChk->SetPos(pos.get());
     fVar26 = cBgS_GroundCross(dComIfG_Bgsp(), gndChk.get());
     if ((fVar26 < 850.0f) && (fVar26 != -1.0e9f)) {
-        i_this->m3954.y = fVar26;
+        i_this->mSandSurfacePos.y = fVar26;
     }
-    i_this->m1BB6 = 0;
+    i_this->mTongueRetract = 0;
     ko_count = 0;
     for (int i = 0; i < l_HIO.m26; i++) {
         ko_ac()[i] = 0;
     }
     bwdExecSearch(0x020F9A28, i_this);
-    if (i_this->m1710 > 1) {
-        i_this->m1710--;
+    if (i_this->mBgmStartTimer > 1) {
+        i_this->mBgmStartTimer--;
     }
-    if ((ko_count == 0) && (i_this->m1710 == 1)) {
+    if ((ko_count == 0) && (i_this->mBgmStartTimer == 1)) {
         if (dComIfGp_getStartStageName0() == 'X') {
             bgmStart(0x8000004C);
         } else {
             bgmStart(0x80000029);
         }
-        i_this->m1710 = 0;
+        i_this->mBgmStartTimer = 0;
     }
     bwdExecVectorSubtract(&player->current.pos, local_110.get(), &actor->current.pos);
     local_110->y = 0.0f;
-    i_this->m1BB8 = std_sqrtf(PSVECSquareMag(local_110.get()));
-    i_this->m170C = 0;
-    i_this->m18AC++;
+    i_this->mPlayerDistXZ = std_sqrtf(PSVECSquareMag(local_110.get()));
+    i_this->mDrawBody = 0;
+    i_this->mFrameCounter++;
     for (int i = 0; i < 5; i++) {
-        auto* timer = &reinterpret_cast<bwd_execute_detail::Timers*>(i_this)->mAction[i];
+        auto* timer = &reinterpret_cast<bwd_execute_detail::Timers*>(i_this)->mTimers[i];
         if (*timer != 0) {
             *timer = (s16)*timer - 1;
         }
     }
-    if (i_this->m18D6 != 0) {
-        i_this->m18D6--;
+    if (i_this->mTongueNoHitTimer != 0) {
+        i_this->mTongueNoHitTimer--;
     }
-    if (i_this->m18FC != 0) {
-        i_this->m18FC--;
+    if (i_this->mSandCrossWait != 0) {
+        i_this->mSandCrossWait--;
     }
     if (l_HIO.m05 == 0) {
         bwdExecMove(i_this);
@@ -452,23 +452,23 @@ static BOOL bwd_execute(bwd_class* i_this) {
         cMtx_YrotS(calc_mtx(), actor->current.angle.y);
         cMtx_XrotM(calc_mtx(), actor->current.angle.x);
         MtxPosition(local_110.get(), cStack_11c.get());
-        bwd_execute_detail::historyAngles(i_this, (u32)i_this->m1708)->y = actor->current.angle.y;
-        bwd_execute_detail::historyAngles(i_this, (u32)i_this->m1708)->x = actor->current.angle.x;
+        bwd_execute_detail::historyAngles(i_this, (u32)i_this->mHistoryIndex)->y = actor->current.angle.y;
+        bwd_execute_detail::historyAngles(i_this, (u32)i_this->mHistoryIndex)->x = actor->current.angle.x;
         // HD: no m18F0 angle offset; the roll amplitude is 4000 rather than 5000.
         f32 rollAmount = REG10_F(15) + 4000.0f;
-        s16 phase = i_this->m1902;
+        s16 phase = i_this->mRollPhase;
         s16 rollOffset = (s16)gabi::ftoi(cM_ssin(phase) * rollAmount);
-        i_this->m1902 = phase + REG0_S(7) + 1000;
-        bwd_execute_detail::historyAngles(i_this, (u32)i_this->m1708)->z =
+        i_this->mRollPhase = phase + REG0_S(7) + 1000;
+        bwd_execute_detail::historyAngles(i_this, (u32)i_this->mHistoryIndex)->z =
             actor->current.angle.z + rollOffset;
         bwdExecVectorAdd(&actor->current.pos, local_110.get(), cStack_11c.get());
-        bwd_execute_detail::historyPosition(i_this, (u32)i_this->m1708)->copy(*local_110.get());
+        bwd_execute_detail::historyPosition(i_this, (u32)i_this->mHistoryIndex)->copy(*local_110.get());
 
-        if (i_this->m170C != 0) {
+        if (i_this->mDrawBody != 0) {
             s32 angleLag = REG10_S(7) + 10;
             for (int i = 0; i < 20; i++) {
                 if (i_this->mpBodyModel[i] != 0) {
-                    u32 uVar18 = (u32)i_this->m1708 - (u32)(i + 1) * (u32)i_this->m1904;
+                    u32 uVar18 = (u32)i_this->mHistoryIndex - (u32)(i + 1) * (u32)i_this->mHistoryStep;
                     uVar18 = uVar18 & 0xFF;
                     int angleIndex = (uVar18 + angleLag + REG10_S(6) - 8) & 0xFF;
                     if (angleLag != 0)
@@ -486,19 +486,19 @@ static BOOL bwd_execute(bwd_class* i_this) {
                     J3DModel_setBaseTRMtx(i_this->mpBodyModel[i], mDoMtx_stack_c::get());
                     PSMTXCopy(mDoMtx_stack_c::get(), calc_mtx());
                     local_110->set(REG0_F(13), REG0_F(14), REG0_F(15));
-                    MtxPosition(local_110.get(), &i_this->m0418[i]);
-                    if (((i & 1) == 0) && REG10_S(1) == 0 && (i_this->m03C4[i] < 0.1f)) {
-                        dComIfGp_particle_setSimple(0x8241, &i_this->m0418[i], 0xff, &particleWhite,
+                    MtxPosition(local_110.get(), &i_this->mBodyPos[i]);
+                    if (((i & 1) == 0) && REG10_S(1) == 0 && (i_this->mBodyAnmSpeed[i] < 0.1f)) {
+                        dComIfGp_particle_setSimple(0x8241, &i_this->mBodyPos[i], 0xff, &particleWhite,
                                                     &particleWhite, 0);
                     }
-                    i_this->mpBodyMorf[i]->setPlaySpeed(i_this->m03C4[i]);
+                    i_this->mpBodyMorf[i]->setPlaySpeed(i_this->mBodyAnmSpeed[i]);
                     mDoExt_baseAnm_play(i_this->mpBodyMorf[i]);
                 }
             }
         }
         if (actor->speedF > 1.0f) {
-            i_this->m1708 = (u32)i_this->m1708 + 1u;
-            i_this->m1708 = i_this->m1708 & 0xFF;
+            i_this->mHistoryIndex = (u32)i_this->mHistoryIndex + 1u;
+            i_this->mHistoryIndex = i_this->mHistoryIndex & 0xFF;
         }
     }
     actor->shape_angle.x = actor->current.angle.x;
@@ -509,8 +509,8 @@ static BOOL bwd_execute(bwd_class* i_this) {
     mDoMtx_stack_c::YrotM(actor->shape_angle.y);
     stackXrotM(actor->shape_angle.x);
     stackZrotM(actor->shape_angle.z);
-    if (((i_this->m18AE == 10) || (i_this->m18AE == 0xb)) ||
-        ((i_this->m18AE == 0xc) && (i_this->m18B0 >= 2))) {
+    if (((i_this->mAction == 10) || (i_this->mAction == 0xb)) ||
+        ((i_this->mAction == 0xc) && (i_this->mMode >= 2))) {
         fVar26 = 1.0f;
     } else {
         fVar26 = l_HIO.m20;
@@ -533,7 +533,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
         MtxPosition(local_128.get(), cStack_11c.get());
         i_this->mBodySph[i].SetC(cStack_11c.get());
         f32 radius = jsize[i];
-        if (i_this->m18AE == 10) {
+        if (i_this->mAction == 10) {
             i_this->mBodySph[i].SetR(radius);
         } else {
             i_this->mBodySph[i].SetR(l_HIO.m20 * radius);
@@ -541,8 +541,8 @@ static BOOL bwd_execute(bwd_class* i_this) {
         bwdExecRegisterCollider(dComIfG_Ccsp(), &i_this->mBodySph[i]);
     }
     bwdExecDemoCamera(i_this);
-    if ((i_this->m394C != 0) && (player->current.pos.y < 900.0f)) {
-        bwdExecVectorSubtract(&i_this->m17C8, local_110.get(), &player->current.pos);
+    if ((i_this->mPushPlayer != 0) && (player->current.pos.y < 900.0f)) {
+        bwdExecVectorSubtract(&i_this->mSandDentCenter, local_110.get(), &player->current.pos);
         local_110->y = 0.0f;
         f32 powerLength = std_sqrtf(PSVECSquareMag(local_110.get()));
         dVar24 = gabi::fmadds(-powerLength, REG0_F(4) + 0.00025f, 1.0f);
@@ -552,41 +552,41 @@ static BOOL bwd_execute(bwd_class* i_this) {
         auto* powerVtable = reinterpret_cast<bwd_execute_detail::Player*>(player)->mVtable.get();
         s16 powerAngle = cM_atan2s(local_110->x, local_110->z);
         bwd_execute_detail::setOutPower(powerVtable, player, l_HIO.m10 * dVar24, powerAngle);
-        i_this->m394C = 0;
+        i_this->mPushPlayer = 0;
     }
-    i_this->mpHeadBrkAnm->setPlaySpeed(i_this->m02C8);
+    i_this->mpHeadBrkAnm->setPlaySpeed(i_this->mHeadBrkSpeed);
     mDoExt_baseAnm_play(i_this->mpHeadBrkAnm);
     model = i_this->mpTriforcePlatformModel;
-    if (i_this->m1864 != 0) {
-        i_this->m1864--;
-        i_this->m18A0.x = cM_rndFX(REG0_F(18) + 4.0f);
-        i_this->m18A0.x = cM_rndFX(REG0_F(18) + 4.0f);
+    if (i_this->mPlatformShakeTimer != 0) {
+        i_this->mPlatformShakeTimer--;
+        i_this->mPlatformShakeOffset.x = cM_rndFX(REG0_F(18) + 4.0f);
+        i_this->mPlatformShakeOffset.x = cM_rndFX(REG0_F(18) + 4.0f);
     }
-    mDoMtx_stack_c::transS(i_this->m18A0.x, l_HIO.m28 + (i_this->m18A0.y + l_HIO.m2C),
-                           i_this->m18A0.z);
-    if (i_this->m1865 != 0) {
+    mDoMtx_stack_c::transS(i_this->mPlatformShakeOffset.x, l_HIO.m28 + (i_this->mPlatformShakeOffset.y + l_HIO.m2C),
+                           i_this->mPlatformShakeOffset.z);
+    if (i_this->mPlatformHidden != 0) {
         mDoMtx_stack_c::transM(0.0f, -20000.0f, 0.0f);
     }
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
     PSMTXCopy(mDoMtx_stack_c::get(), &i_this->mBgwMtx2);
     dBgW_Move(i_this->mpBgW2);
     for (int i = 0; i < 2; i++) {
-        if (i_this->m17E4[i] != 0) {
+        if (i_this->mSandfallState[i] != 0) {
             dBgW_Move(i_this->mpBgW1[i]);
-            fVar26 = i_this->m17E0 + 50.0f + REG0_F(8);
+            fVar26 = i_this->mSandBaseY + 50.0f + REG0_F(8);
             i_this->m3B3C = 0.0f;
             i_this->m3B40 = fVar26;
             i_this->m3B44 = 0.0f;
-            i_this->m3B48[i].y = REG0_S(i + 0x6) + demo_ang[i];
-            switch (i_this->m17E4[i]) {
+            i_this->mSandfallAngle[i].y = REG0_S(i + 0x6) + demo_ang[i];
+            switch (i_this->mSandfallState[i]) {
             case 3:
                 break;
             case 1:
-                i_this->m17E6[i] = 0;
-                i_this->m17E4[i] = 2;
+                i_this->mSandfallTimer[i] = 0;
+                i_this->mSandfallState[i] = 2;
                 // fallthrough
             case 2:
-                if (i_this->m17E6[i] == 0x32) {
+                if (i_this->mSandfallTimer[i] == 0x32) {
                     for (int j = 0; j < 3; j++) {
                         int idx = j + (i * 3);
                         suna_gr_ang()[idx].x = suna_gr_ang()[idx].z = 0;
@@ -595,47 +595,47 @@ static BOOL bwd_execute(bwd_class* i_this) {
                         dComIfGp_particle_setToon(
                             0xA260, &suna_gr_pos()[idx], &suna_gr_ang()[idx], NULL,
                             reinterpret_cast<GXColor*>(gabi::at<void>(eff_col))->a,
-                            &i_this->m3B54[idx], (s8)actor->current.roomNo);
-                        smoke_setColor(&i_this->m3B54[idx], eff_col);
+                            &i_this->mSandfallSmokeCb[idx], (s8)actor->current.roomNo);
+                        smoke_setColor(&i_this->mSandfallSmokeCb[idx], eff_col);
                     }
                 }
-                if (i_this->m17E6[i] == 0xb4) {
-                    model = i_this->m17EC[i];
+                if (i_this->mSandfallTimer[i] == 0xb4) {
+                    model = i_this->mpSandfallModel[i];
                     pBtk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(
                         "Bwd", bwd_execute_detail::dRes_INDEX_BWD_BTK_TAKI_WAIT_e, SAFESTRING_VTBL);
-                    i_this->m17F4[i]->init(J3DModel_getModelData(model), pBtk, true,
+                    i_this->mpSandfallBtk[i]->init(J3DModel_getModelData(model), pBtk, true,
                                            J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, true, 0);
-                    i_this->m17E4[i] = 3;
+                    i_this->mSandfallState[i] = 3;
                 }
                 break;
             case 4:
-                model = i_this->m17EC[i];
+                model = i_this->mpSandfallModel[i];
                 pBtk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(
                     "Bwd", bwd_execute_detail::dRes_INDEX_BWD_BTK_TAKI_END_e, SAFESTRING_VTBL);
-                if (i_this->m17F4[i]->init(J3DModel_getModelData(model), pBtk, true,
+                if (i_this->mpSandfallBtk[i]->init(J3DModel_getModelData(model), pBtk, true,
                                            J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, true, 0) == 1) {
-                    i_this->m17E4[i] = 5;
-                    i_this->m17E6[i] = 0;
+                    i_this->mSandfallState[i] = 5;
+                    i_this->mSandfallTimer[i] = 0;
                 }
                 break;
             case 5:
-                if (i_this->m17E6[i] >= 0x3C) {
-                    i_this->m17E4[i] = 0;
+                if (i_this->mSandfallTimer[i] >= 0x3C) {
+                    i_this->mSandfallState[i] = 0;
                     for (int j = 0; j < 3; j++) {
-                        bwdExecRemoveSmoke(&i_this->m3B54[j + (i * 3)]);
+                        bwdExecRemoveSmoke(&i_this->mSandfallSmokeCb[j + (i * 3)]);
                     }
                 }
                 break;
             }
-            i_this->m17E6[i]++;
-            i_this->m17F4[i]->play();
-            model = i_this->m17EC[i];
+            i_this->mSandfallTimer[i]++;
+            i_this->mpSandfallBtk[i]->play();
+            model = i_this->mpSandfallModel[i];
             mDoMtx_stack_c::transS(0.0f, REG0_F(3) + -500.0f + l_HIO.m28, 0.0f);
-            mDoMtx_stack_c::YrotM(i_this->m3B48[i].y);
+            mDoMtx_stack_c::YrotM(i_this->mSandfallAngle[i].y);
             J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
             PSMTXCopy(mDoMtx_stack_c::get(), &i_this->mBgwMtx1[i]);
-            if (((i_this->m17E4[i] == 2) && (i_this->m17E6[i] >= 0x32)) ||
-                (i_this->m17E4[i] == 3)) {
+            if (((i_this->mSandfallState[i] == 2) && (i_this->mSandfallTimer[i] >= 0x32)) ||
+                (i_this->mSandfallState[i] == 3)) {
                 model = NULL;
                 for (j = 0; j < 3; j++) {
                     mDoAud_seStart(0x7049, &suna_gr_pos()[j + (i * 3)], 0,
@@ -653,74 +653,74 @@ static BOOL bwd_execute(bwd_class* i_this) {
             suna_gr_pos()[i].y = fVar26;
         }
     }
-    if (i_this->m3960 != 0) {
-        if (i_this->m3960 == 1) {
-            i_this->m3960++;
-            bwdExecRemoveFollow(&i_this->m3AF4);
-            dComIfGp_particle_set(0x824D, &i_this->m3954, &actor->shape_angle, NULL, 0xff,
-                                  (dPa_levelEcallBack*)&i_this->m3AF4, (s8)actor->current.roomNo);
-        } else if (i_this->m3960 < 0) {
-            i_this->m3960 = 0;
-            bwdExecRemoveFollow(&i_this->m3AF4);
+    if (i_this->mFaceSandState != 0) {
+        if (i_this->mFaceSandState == 1) {
+            i_this->mFaceSandState++;
+            bwdExecRemoveFollow(&i_this->mFaceSandCb);
+            dComIfGp_particle_set(0x824D, &i_this->mSandSurfacePos, &actor->shape_angle, NULL, 0xff,
+                                  (dPa_levelEcallBack*)&i_this->mFaceSandCb, (s8)actor->current.roomNo);
+        } else if (i_this->mFaceSandState < 0) {
+            i_this->mFaceSandState = 0;
+            bwdExecRemoveFollow(&i_this->mFaceSandCb);
         } else {
-            mDoAud_seStart(0x510E, &i_this->m3954, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
+            mDoAud_seStart(0x510E, &i_this->mSandSurfacePos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
         }
     }
     for (i = 0; i < 10; i++) {
-        // HD: walks ten contiguous timer words, including named fields and padding after m3AE0[2].
+        // HD: walks ten contiguous timer words, including named fields and padding after mSmokeTimer[2].
         auto& effectTimer = reinterpret_cast<bwd_execute_detail::EffectTimers*>(i_this)->mEffect[i];
         if (effectTimer != 0) {
             effectTimer--;
             if (effectTimer == 0) {
-                bwdExecRemoveSmoke(&i_this->m3978[i]);
+                bwdExecRemoveSmoke(&i_this->mSmokeCb[i]);
                 if (i < 2) {
-                    bwdExecRemoveFollow(&i_this->m3AB8[i]);
+                    bwdExecRemoveFollow(&i_this->mSandFollowCb[i]);
                 }
             }
         }
     }
     for (i = 0; i < 2; i++) {
-        if (i_this->m3B08[i] != 0) {
-            fVar26 = i_this->m3B08[i] - 1.0f;
+        if (i_this->mSplashFrame[i] != 0) {
+            fVar26 = i_this->mSplashFrame[i] - 1.0f;
             i_this->mpGspMorf[i]->setFrame(fVar26);
             i_this->mpGspBtkAnm[i]->setFrame(fVar26);
             i_this->mpGspBrkAnm[i]->setFrame(fVar26);
-            mDoMtx_stack_c::transS(i_this->m3B0C[i].x, i_this->m3B0C[i].y, i_this->m3B0C[i].z);
+            mDoMtx_stack_c::transS(i_this->mSplashPos[i].x, i_this->mSplashPos[i].y, i_this->mSplashPos[i].z);
             mDoMtx_stack_c::scaleM(l_HIO.m30, l_HIO.m34, l_HIO.m30);
             J3DModel_setBaseTRMtx(i_this->mpGspMorf[i]->getModel(), mDoMtx_stack_c::get());
-            i_this->m3B08[i]++;
-            if (i_this->m3B08[i] > 0x3c) {
-                i_this->m3B08[i] = 0;
+            i_this->mSplashFrame[i]++;
+            if (i_this->mSplashFrame[i] > 0x3c) {
+                i_this->mSplashFrame[i] = 0;
             }
         }
     }
-    if (i_this->m18D8 == 0) {
-        i_this->m18D8 = 1;
+    if (i_this->mBwdgCreated == 0) {
+        i_this->mBwdgCreated = 1;
         fopAcM_create(0xDB, 0, &actor->home.pos, fopAcM_GetRoomNo(actor), NULL, NULL, 0xff, 0);
     }
-    if (i_this->m17C4 != 0) {
-        if (i_this->m17C4 == 0xFF) {
-            cLib_addCalc2(&i_this->m17D4, REG0_F(5) + 0.35f, 0.2f, REG0_F(6) + 0.1f);
-            cLib_addCalcAngleS2(&i_this->m17D8, REG0_S(9) + -0x5dc, 1, 0x1e);
-            cLib_addCalc2(&i_this->m17DC, 1.0f, 1.0f, 0.1f);
-        } else if (i_this->m17C4 == 200) {
-            cLib_addCalcAngleS2(&i_this->m17D8, 0, 1, 0x1e);
-        } else if (i_this->m17C4 == 0xC9) {
-            i_this->m17D4 = REG0_F(9) + -0.3f;
-        } else if (i_this->m17C4 == 0xCA) {
-            cLib_addCalc2(&i_this->m17D4, REG0_F(4) + -0.7f, 0.1f, 0.005f);
-            cLib_addCalcAngleS2(&i_this->m17D8, REG0_S(9) + -500, 1, 0x1e);
-            cLib_addCalc2(&i_this->m17DC, 1.0f, 1.0f, 0.005f);
+    if (i_this->mSandWaveMode != 0) {
+        if (i_this->mSandWaveMode == 0xFF) {
+            cLib_addCalc2(&i_this->mSandDentDepth, REG0_F(5) + 0.35f, 0.2f, REG0_F(6) + 0.1f);
+            cLib_addCalcAngleS2(&i_this->mWaveSpeed, REG0_S(9) + -0x5dc, 1, 0x1e);
+            cLib_addCalc2(&i_this->mWaveStepRate, 1.0f, 1.0f, 0.1f);
+        } else if (i_this->mSandWaveMode == 200) {
+            cLib_addCalcAngleS2(&i_this->mWaveSpeed, 0, 1, 0x1e);
+        } else if (i_this->mSandWaveMode == 0xC9) {
+            i_this->mSandDentDepth = REG0_F(9) + -0.3f;
+        } else if (i_this->mSandWaveMode == 0xCA) {
+            cLib_addCalc2(&i_this->mSandDentDepth, REG0_F(4) + -0.7f, 0.1f, 0.005f);
+            cLib_addCalcAngleS2(&i_this->mWaveSpeed, REG0_S(9) + -500, 1, 0x1e);
+            cLib_addCalc2(&i_this->mWaveStepRate, 1.0f, 1.0f, 0.005f);
         } else {
-            cLib_addCalc2(&i_this->m17D4, -0.75f, 0.1f, 0.01f);
-            cLib_addCalcAngleS2(&i_this->m17D8, REG0_S(7) + 1000, 1, 0x1e);
-            cLib_addCalc2(&i_this->m17DC, 1.0f, 1.0f, 0.01f);
-            i_this->m17C4--;
+            cLib_addCalc2(&i_this->mSandDentDepth, -0.75f, 0.1f, 0.01f);
+            cLib_addCalcAngleS2(&i_this->mWaveSpeed, REG0_S(7) + 1000, 1, 0x1e);
+            cLib_addCalc2(&i_this->mWaveStepRate, 1.0f, 1.0f, 0.01f);
+            i_this->mSandWaveMode--;
         }
     } else {
-        cLib_addCalc0(&i_this->m17D4, 0.1f, 0.01f);
-        cLib_addCalcAngleS2(&i_this->m17D8, 0, 1, 0x14);
-        cLib_addCalc0(&i_this->m17DC, 1.0f, 0.01f);
+        cLib_addCalc0(&i_this->mSandDentDepth, 0.1f, 0.01f);
+        cLib_addCalcAngleS2(&i_this->mWaveSpeed, 0, 1, 0x14);
+        cLib_addCalc0(&i_this->mWaveStepRate, 1.0f, 0.01f);
     }
     bwd_kankyo(i_this);
     bd_GndChk_dt(gndChk.get());

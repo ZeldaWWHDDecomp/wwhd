@@ -245,14 +245,14 @@ static daNpc_Ds1_c* daNpc_Ds1_c_ct(daNpc_Ds1_c* i_this) {
     dCcD_Cyl_ct(&i_this->mCyl, ds1_tu.mAabVtable);
     ds1Guest_EventCut_construct(&i_this->mEventCut); /* dNpc_EventCut_c::dNpc_EventCut_c */
     ds1Guest_JntCtrl_construct(&i_this->mJntCtrl);  /* dNpc_JntCtrl_c::dNpc_JntCtrl_c */
-    i_this->mHeadAnm.field_0x00.y = 0;
-    i_this->mHeadAnm.field_0x1E = 0;
-    i_this->mHeadAnm.field_0x18 = 0.0f;
-    i_this->mHeadAnm.field_0x00.x = 0;
-    i_this->mHeadAnm.field_0x1C = 0;
-    i_this->mHeadAnm.field_0x14 = 0.0f;
-    i_this->mHeadAnm.field_0x00.z = 0;
-    i_this->mHeadAnm.field_0x20 = 0;
+    i_this->mHeadAnm.mSwingAngle.y = 0;
+    i_this->mHeadAnm.mSwingPhaseStep = 0;
+    i_this->mHeadAnm.mHorizontalAmplitude = 0.0f;
+    i_this->mHeadAnm.mSwingAngle.x = 0;
+    i_this->mHeadAnm.mSwingPhase = 0;
+    i_this->mHeadAnm.mVerticalAmplitude = 0.0f;
+    i_this->mHeadAnm.mSwingAngle.z = 0;
+    i_this->mHeadAnm.mSwingCount = 0;
     i_this->mStick.mpVtable = gabi::at<STControlVtable>(ds1_tu.mStickVtable);
     ds1Guest_STControl_setWaitParm(&i_this->mStick, 15, 15, 0, 0, 0.9f, 0.5f, 0, 0x2000);
     ds1Guest_STControl_init(&i_this->mStick);

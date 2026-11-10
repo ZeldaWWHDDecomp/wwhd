@@ -61,14 +61,14 @@ enum : u32 {
 };
 /* the main-bgm volume with all factors read */
 f32 JAIZelBasic::calcMainBgmVol() {
-    f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-    v = gabi::fmuls_ppc(v, field_0x0088);
-    v = gabi::fmuls_ppc(v, field_0x008c);
-    v = gabi::fmuls_ppc(v, field_0x0090);
-    v = gabi::fmuls_ppc(v, field_0x0094);
-    v = gabi::fmuls_ppc(v, field_0x0098);
-    v = gabi::fmuls_ppc(v, field_0x009c);
-    return gabi::fmuls_ppc(v, field_0x00ac);
+    f32 v = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmMenuVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmSubBgmVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmSceneVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmSeaVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmTaktVolume);
+    v = gabi::fmuls_ppc(v, mMainBgmCbPracticeVolume);
+    return gabi::fmuls_ppc(v, mMainBgmHeightVolume);
 }
 
 // HD: GameCube has no matching body; retain the HD timer and call sequence.
@@ -76,35 +76,35 @@ f32 JAIZelBasic::calcMainBgmVol() {
 void JAIZelBasic::zeldaGFrameWork() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     /* frame counter, timers */
-    if (field_0x022d != 0) {
-        u32 c = field_0x0028;
-        field_0x0028 = c < 0xFFFFFFFF ? c + 1 : 0xFFFFFFFF;
+    if (mSceneActive != 0) {
+        u32 c = mSceneFrameCount;
+        mSceneFrameCount = c < 0xFFFFFFFF ? c + 1 : 0xFFFFFFFF;
     } else {
-        field_0x0028 = 0;
+        mSceneFrameCount = 0;
     }
     processLevObjSE();
     cbPracticeProcess();
-    u8 timerNext = decrementTimer(&field_0x01fa);
-    field_0x1f34 = 0;
-    field_0x01f9 = 0;
-    field_0x01fc = 0;
-    field_0x01fb = 0;
-    field_0x01fa = timerNext;
-    field_0x0202[0] = decrementTimer(&field_0x0202[0]);
-    field_0x0202[1] = decrementTimer(&field_0x0202[1]);
-    field_0x0207 = decrementTimer(&field_0x0207);
-    field_0x01fd = decrementTimer(&field_0x01fd);
-    field_0x01fe = decrementTimer(&field_0x01fe);
-    field_0x01ff = decrementTimer(&field_0x01ff);
-    field_0x0200 = decrementTimer(&field_0x0200);
-    field_0x1e98 = 0;
-    field_0x203d = 0;
-    field_0x203c = 0;
+    u8 timerNext = decrementTimer(&mCutGrassSeTimer);
+    mFireblastPosCount = 0;
+    mAddGrassSePlayed = 0;
+    mColBrkWrailingSePlayed = 0;
+    mBrkWrailKSePlayed = 0;
+    mCutGrassSeTimer = timerNext;
+    mSwingSeTimers[0] = decrementTimer(&mSwingSeTimers[0]);
+    mSwingSeTimers[1] = decrementTimer(&mSwingSeTimers[1]);
+    mTaktSeTimer = decrementTimer(&mTaktSeTimer);
+    mBgnStringRippleSeTimer = decrementTimer(&mBgnStringRippleSeTimer);
+    mBgnBodyRippleSeTimer = decrementTimer(&mBgnBodyRippleSeTimer);
+    mBgnHeadRippleSeTimer = decrementTimer(&mBgnHeadRippleSeTimer);
+    mBgnTailRippleSeTimer = decrementTimer(&mBgnTailRippleSeTimer);
+    mWaterfallPosCount = 0;
+    mKuroboVoiceCount = 0;
+    mKuroboMotionCount = 0;
     if (dComIfGp_event_runCheck())
-        field_0x0061 = 5;
+        mEventTimer = 5;
     else
-        field_0x0061 = decrementTimer(&field_0x0061);
-    field_0x00ce = decrementTimer(&field_0x00ce);
+        mEventTimer = decrementTimer(&mEventTimer);
+    mBattleBgmHoldTimer = decrementTimer(&mBattleBgmHoldTimer);
     processDemoFanfareMute();
     if (mMainBgmNum == JA_BGM_I_MAJU_JAIL && checkBgmPlaying() == 0) {
         bgmStop(0, 0);
@@ -121,9 +121,9 @@ void JAIZelBasic::zeldaGFrameWork() {
                   (subBgm <= JA_BGM_ITEM_GET_S &&
                    (subBgm >= JA_BGM_GET_HEART || subBgm == JA_BGM_ITEM_GET));
     if (restore && checkSubBgmPlaying() == 0) {
-        f32 b4 = field_0x00a4;
-        field_0x0206 = 0;
-        if (b4 != 0.0f && field_0x00bb != 0) {
+        f32 b4 = mSubBgmTaktVolume;
+        mFanfareActive = 0;
+        if (b4 != 0.0f && mFanfareResumePending != 0) {
             u32 c6 = mLastMinibossSubBGMType;
             if (c6 == 1)
                 subBgmStart(JA_BGM_MBOSS_S);
@@ -132,10 +132,10 @@ void JAIZelBasic::zeldaGFrameWork() {
             else if (c6 == 3)
                 subBgmStart(JA_BGM_P_GANON_2);
             else {
-                field_0x00b0 = (u32)-2;
+                mSubBgmStopTimer = (u32)-2;
                 subBgmStopInner();
             }
-            field_0x00bb = 0;
+            mFanfareResumePending = 0;
         }
     }
     u32 mainBgm = mMainBgmNum;
@@ -147,42 +147,42 @@ void JAIZelBasic::zeldaGFrameWork() {
             bgmStart(JA_BGM_I_LINK_FOREST, 0, 1);
     }
     // Sub-BGM fade-out countdown.
-    s32 c0 = field_0x00b0;
+    s32 c0 = mSubBgmStopTimer;
     if (c0 != -1) {
         if (c0 > 0) {
-            field_0x00b0 = c0 - 1;
+            mSubBgmStopTimer = c0 - 1;
         } else {
             subBgmStopInner();
-            field_0x00b0 = (u32)-1;
+            mSubBgmStopTimer = (u32)-1;
         }
     }
     if (mMainBgmNum == JA_BGM_D_RYU_MT) {
-        if (field_0x0065 == 1) {
+        if (mMtDragonMuteRequest == 1) {
             auto *m = mpMainBgmSound.get();
-            field_0x0090 = 0.0f;
+            mMainBgmSceneVolume = 0.0f;
             if (m != 0) {
-                f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-                v = gabi::fmuls_ppc(v, field_0x0088);
-                v = gabi::fmuls_ppc(v, field_0x008c);
+                f32 v = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmMenuVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmSubBgmVolume);
                 v = gabi::fmuls_ppc(v, 0.0f);
-                v = gabi::fmuls_ppc(v, field_0x0094);
-                v = gabi::fmuls_ppc(v, field_0x0098);
-                v = gabi::fmuls_ppc(v, field_0x009c);
-                v = gabi::fmuls_ppc(v, field_0x00ac);
+                v = gabi::fmuls_ppc(v, mMainBgmSeaVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmTaktVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmCbPracticeVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmHeightVolume);
                 (m)->setVolume(v, 0x1E, 0);
             }
-            field_0x0065 = 0;
-        } else if (field_0x0090 == 0.0f) {
+            mMtDragonMuteRequest = 0;
+        } else if (mMainBgmSceneVolume == 0.0f) {
             auto *m = mpMainBgmSound.get();
-            field_0x0090 = 1.0f;
+            mMainBgmSceneVolume = 1.0f;
             if (m != 0) {
-                f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-                v = gabi::fmuls_ppc(v, field_0x0088);
-                v = gabi::fmuls_ppc(v, field_0x008c);
-                v = gabi::fmuls_ppc(v, field_0x0094);
-                v = gabi::fmuls_ppc(v, field_0x0098);
-                v = gabi::fmuls_ppc(v, field_0x009c);
-                v = gabi::fmuls_ppc(v, field_0x00ac);
+                f32 v = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmMenuVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmSubBgmVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmSeaVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmTaktVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmCbPracticeVolume);
+                v = gabi::fmuls_ppc(v, mMainBgmHeightVolume);
                 (m)->setVolume(v, 0x1E, 0);
             }
         }
@@ -191,11 +191,11 @@ void JAIZelBasic::zeldaGFrameWork() {
         bgmStart(JA_BGM_BAACHAN, 0, 0);
 
     /* scene ambience and the volume of the main bgm by the camera position */
-    s32 scene = field_0x0224;
+    s32 scene = mSceneNo;
     bool skipSceneVolume = false;
     if (scene == 0x21) {
         skipSceneVolume = true;
-        if (field_0x022d == 1) {
+        if (mSceneActive == 1) {
             u32 cp = cameraPositionEA();
             if (cp != 0) {
                 f32 y = cameraY(cp);
@@ -210,10 +210,10 @@ void JAIZelBasic::zeldaGFrameWork() {
                         v = 1.0f;
                     }
                     if (go) {
-                        startSoundVec(JA_SE_ATM_WIND_I_LINK, &field_0x1f38, 0, 0, 0, 4);
-                        if (field_0x1f38.get() != 0)
-                            (field_0x1f38.get())->setVolume(v, 0, 0);
-                        scene = field_0x0224;
+                        startSoundVec(JA_SE_ATM_WIND_I_LINK, &mpWindSound, 0, 0, 0, 4);
+                        if (mpWindSound.get() != 0)
+                            (mpWindSound.get())->setVolume(v, 0, 0);
+                        scene = mSceneNo;
                         skipSceneVolume = false;
                     }
                 }
@@ -227,7 +227,7 @@ void JAIZelBasic::zeldaGFrameWork() {
             u32 room;
             bool skipIslandVolume = false;
             bool roomLoaded = false;
-            if (field_0x022d == 1) {
+            if (mSceneActive == 1) {
                 u32 cp = cameraPositionEA();
                 if (cp != 0)
                     y = cameraY(cp);
@@ -249,9 +249,9 @@ void JAIZelBasic::zeldaGFrameWork() {
                     if (windVolume == 0.0f) {
                         roomLoaded = true;
                     } else if (checkPlayingStreamBgmFlag(0xC0000036) == 0) {
-                        startSoundVec(JA_SE_ATM_WIND_I_LINK, &field_0x1f38, 0, 0, 0, 4);
-                        if (field_0x1f38.get() != 0)
-                            (field_0x1f38.get())->setVolume(windVolume, 0, 0);
+                        startSoundVec(JA_SE_ATM_WIND_I_LINK, &mpWindSound, 0, 0, 0, 4);
+                        if (mpWindSound.get() != 0)
+                            (mpWindSound.get())->setVolume(windVolume, 0, 0);
                     }
                 }
             }
@@ -269,7 +269,7 @@ void JAIZelBasic::zeldaGFrameWork() {
                         else
                             v = 1.0f - (y - 1800.0f) / 1200.0f;
                         auto *m = mpMainBgmSound.get();
-                        field_0x00ac = v;
+                        mMainBgmHeightVolume = v;
                         setVol = m != 0;
                     }
                 } else if (room == dIsleRoom_DragonRoostIsland_e) {
@@ -281,7 +281,7 @@ void JAIZelBasic::zeldaGFrameWork() {
                     else
                         v = gabi::fmadds(1.0f - (y - 1800.0f) / 1200.0f, 0.7f, 0.3f);
                     auto *m = mpMainBgmSound.get();
-                    field_0x00ac = v;
+                    mMainBgmHeightVolume = v;
                     setVol = m != 0;
                 } else if (room == dIsleRoom_ForestHaven_e) {
                     if (mbLandingDemoStarted != 3) {
@@ -298,18 +298,18 @@ void JAIZelBasic::zeldaGFrameWork() {
                                 v = 0.0f;
                             }
                             u32 n = mMainBgmNum;
-                            u32 b275 = field_0x0205;
+                            u32 b275 = mForceBack;
                             if (n == JA_BGM_DIE_LINK)
                                 v = 1.0f;
                             if (b275 == 0)
-                                field_0x0090 = v;
+                                mMainBgmSceneVolume = v;
                             setVol = mpMainBgmSound.get() != 0;
                         }
                     }
                 }
                 if (setVol)
                     (mpMainBgmSound.get())->setVolume(calcMainBgmVol(), 0, 0);
-                scene = field_0x0224;
+                scene = mSceneNo;
             }
         }
         if (scene == 0x19) {
@@ -324,19 +324,19 @@ void JAIZelBasic::zeldaGFrameWork() {
             else
                 v = 0.0f;
             auto *m = mpMainBgmSound.get();
-            field_0x00ac = v;
+            mMainBgmHeightVolume = v;
             if (m != 0) {
-                f32 t = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-                t = gabi::fmuls_ppc(t, field_0x0088);
-                t = gabi::fmuls_ppc(t, field_0x008c);
-                t = gabi::fmuls_ppc(t, field_0x0090);
-                t = gabi::fmuls_ppc(t, field_0x0094);
-                t = gabi::fmuls_ppc(t, field_0x0098);
-                t = gabi::fmuls_ppc(t, field_0x009c);
+                f32 t = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmMenuVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmSubBgmVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmSceneVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmSeaVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmTaktVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmCbPracticeVolume);
                 t = gabi::fmuls_ppc(t, v);
                 (m)->setVolume(t, 0, 0);
             }
-            scene = field_0x0224;
+            scene = mSceneNo;
         }
         if (scene == 0x35) {
             u32 cp = cameraPositionEA();
@@ -353,38 +353,38 @@ void JAIZelBasic::zeldaGFrameWork() {
             auto *m = mpMainBgmSound.get();
             if (n == JA_BGM_DIE_LINK)
                 v = 1.0f;
-            field_0x0090 = v;
+            mMainBgmSceneVolume = v;
             if (m != 0) {
-                f32 t = gabi::fmuls_ppc(field_0x0080, field_0x0084);
-                t = gabi::fmuls_ppc(t, field_0x0088);
-                t = gabi::fmuls_ppc(t, field_0x008c);
+                f32 t = gabi::fmuls_ppc(mMainBgmMuteVolume, mMainBgmTalkVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmMenuVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmSubBgmVolume);
                 t = gabi::fmuls_ppc(t, v);
-                t = gabi::fmuls_ppc(t, field_0x0094);
-                t = gabi::fmuls_ppc(t, field_0x0098);
-                t = gabi::fmuls_ppc(t, field_0x009c);
-                t = gabi::fmuls_ppc(t, field_0x00ac);
+                t = gabi::fmuls_ppc(t, mMainBgmSeaVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmTaktVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmCbPracticeVolume);
+                t = gabi::fmuls_ppc(t, mMainBgmHeightVolume);
                 (m)->setVolume(t, 0, 0);
             }
         }
     }
     if (mMainBgmNum == JA_BGM_SELECT) {
-        u32 s = field_0x0224;
+        u32 s = mSceneNo;
         if (s < 0x4E || (s > 0x52 && s != 0x5D))
             sceneSE(JA_SE_ATM_FILE_SEL_SEA, 1.0f);
     }
     // Start queued BGM once nothing plays.
-    u32 cc = field_0x00bc;
+    u32 cc = mPendingBgmStart;
     if (cc != 0 && checkBgmPlaying() == 0) {
         if (cc == 1) {
             if (mpMainBgmSound.get() == 0 ||
                 (mMainBgmNum != JA_BGM_SEA && mMainBgmNum != JA_BGM_SEA_STORM))
                 bgmStart(checkSeaBgmID(), 0x5A, 0);
             field_0x021e = 0;
-            field_0x00bc = 0;
+            mPendingBgmStart = 0;
         } else if (cc == 2) {
             sceneBgmStart();
             field_0x021e = 0;
-            field_0x00bc = 0;
+            mPendingBgmStart = 0;
         } else {
             if (cc == 3) {
                 u32 room = mIslandRoomNo;
@@ -393,7 +393,7 @@ void JAIZelBasic::zeldaGFrameWork() {
                 else
                     bgmStart(expandSceneBgmNum(u16(l_isleInfo.entries[room].bgmNum)), 0, 0);
             }
-            field_0x00bc = 0;
+            mPendingBgmStart = 0;
         }
     }
     processTime();
@@ -403,8 +403,8 @@ void JAIZelBasic::zeldaGFrameWork() {
     enemyNearByGFrame();
     stSkyCloistersProcess();
     /* scene ambience loops */
-    if (field_0x022d == 1) {
-        u32 s = field_0x0224;
+    if (mSceneActive == 1) {
+        u32 s = mSceneNo;
         switch (s) {
         case 7:
             sceneSE(JA_SE_ATM_WIND_KINDAN, 1.0f);
@@ -436,7 +436,7 @@ void JAIZelBasic::zeldaGFrameWork() {
             sceneSE(JA_SE_ATM_D24_WIND, 1.0f);
             break;
         case 0x5C: {
-            u32 r = field_0x0239;
+            u32 r = mLayerNo;
             if (r != 8 && r != 9 && r != 0xA && r != 0xB)
                 sceneSE(JA_SE_ATM_VS_GANON_WFALL, 1.0f);
             break;
@@ -457,15 +457,15 @@ void JAIZelBasic::zeldaGFrameWork() {
             } else {
                 v = 1.0f;
             }
-            startSoundVec(JA_SE_ATM_WIND_MJT, &field_0x1f38, 0, 0, 0, 4);
-            if (field_0x1f38.get() != 0)
-                (field_0x1f38.get())->setVolume(v, 0, 0);
+            startSoundVec(JA_SE_ATM_WIND_MJT, &mpWindSound, 0, 0, 0, 4);
+            if (mpWindSound.get() != 0)
+                (mpWindSound.get())->setVolume(v, 0, 0);
             break;
         }
         }
     }
     processHeartGaugeSound();
-    if (field_0x2060.get() == 0)
+    if (mpCharVoiceSound.get() == 0)
         mResetIndexHD = 0xFFFF; // HD: only the first halfword is reset.
 }
 

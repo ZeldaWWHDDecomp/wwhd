@@ -54,16 +54,16 @@ WWHD_SIZE(EpLightInfo, 0x44);
 struct ep_ga_s {
     /* 0x00 */ gptr<J3DModel> mpModel;
     /* 0x04 */ cXyz mPos;
-    /* 0x10 */ cXyz m10;
-    /* 0x1C */ cXyz m1C;
+    /* 0x10 */ cXyz mOldPos;  /* was m10: ga_move (in daEp_Execute 0212DBFC): mPos before the frame's move; start of the line check that stops the moth at walls */
+    /* 0x1C */ cXyz mTargetPos;  /* was m1C: ga_move (in daEp_Execute 0212DBFC): random point within 150/100/150 of mPosTop (near the Bokoblin torch flame for moth 0), 1000 higher while the torch is out; the moth turns toward it */
     /* 0x28 */ be<s16> rotX;
     /* 0x2A */ be<s16> rotY;
     /* 0x2C */ u8 m2C[4];
     /* 0x30 */ be<f32> scaleXZ;
     /* 0x34 */ be<f32> scaleY;
-    /* 0x38 */ be<s16> m38;
+    /* 0x38 */ be<s16> mFlapAngle;  /* was m38: ga_move (in daEp_Execute 0212DBFC): + 0x3E00 per frame, scaleY = cM_ssin of it; random start (daEp_CreateHeap 0212F5CC) */
     /* 0x3A */ be<u8> mbEnabled;
-    /* 0x3B */ be<u8> m3B;
+    /* 0x3B */ be<u8> mTargetTimer;  /* was m3B: ga_move (in daEp_Execute 0212DBFC): counted down; at 0 a new mTargetPos is picked and it is set to cM_rndF(10) */
 };
 WWHD_SIZE(ep_ga_s, 0x3C);
 
@@ -73,10 +73,10 @@ struct ep_class : fopAc_ac_c {
     /* 0x3E4 */ gptr<J3DModel> mpModel;
     /* 0x3E8 */ dBgS_AcchCir mAcchCir;
     /* 0x428 */ dBgS_ObjAcch mAcch;
-    /* 0x5EC */ be<s32> m4D0;
+    /* 0x5EC */ be<s32> mState;  /* was m4D0: ep_move (in daEp_Execute 0212DBFC): the EpState switch (EP_OFF, EP_IGNITE, EP_BURN, EP_EXTINGUISH); daEp_Execute sets EP_EXTINGUISH when water stands above the flame; daEp_CreateInit (in daEp_Create 0212FAF4): EP_OFF; ga_move (in daEp_Execute) sends the moths up while EP_OFF */
     /* 0x5F0 */ u8 m4D4[8];
     /* 0x5F8 */ be<f32> mLightPower;
-    /* 0x5FC */ be<f32> m4E0;
+    /* 0x5FC */ be<f32> mLightPowerTarget;  /* was m4E0: ep_move (in daEp_Execute 0212DBFC): scale.x on ignition; EP_BURN eases mLightPower to it */
     /* 0x600 */ be<f32> mFlicker; /* HD */
     /* 0x604 */ be<f32> mAlphaModelScale;
     /* 0x608 */ be<f32> mAlphaModelScaleTarget;
@@ -90,10 +90,10 @@ struct ep_class : fopAc_ac_c {
     /* 0x620 */ be<s16> mAlphaModelRotX;
     /* 0x622 */ be<s16> mAlphaModelRotY;
     /* 0x624 */ be<u8> mType;
-    /* 0x625 */ be<u8> m505;
+    /* 0x625 */ be<u8> mBurnTime;  /* was m505: daEp_Create 0212FAF4: parameter bits 8-15; ep_move (in daEp_Execute 0212DBFC): a hit that lights the torch sets mTimers[EP_EXTINGUISH_TIMER] to it * 10 + 1 (not 0xFF); at 1 the torch's switch goes off */
     /* 0x626 */ be<u8> mOnSwitchNo;
-    /* 0x627 */ be<u8> m507;
-    /* 0x628 */ be<u8> m508;
+    /* 0x627 */ be<u8> mKeepSwitchNo;  /* was m507: daEp_Create 0212FAF4: parameter bits 16-23; ep_move (in daEp_Execute 0212DBFC): while this switch is on (not 0xFF) the burn time running out does not turn mOnSwitchNo off */
+    /* 0x628 */ be<u8> mIgniteSwitchNo;  /* was m508: ep_move (in daEp_Execute 0212DBFC): mOnSwitchNo + 1 when the torch goes out (0 = none); while set, EP_OFF waits: a hit turns switch mIgniteSwitchNo - 1 on, and that switch being on lights the torch (then 0); daEp_CreateInit (in daEp_Create 0212FAF4): 0 */
     /* 0x629 */ u8 m509[3];
     /* 0x62C */ gptr<JPABaseEmitter> mpEmitter;
     /* 0x630 */ LIGHT_INFLUENCE mLight;
@@ -101,17 +101,17 @@ struct ep_class : fopAc_ac_c {
     /* 0x660 */ dCcD_Stts mStts;
     /* 0x69C */ dCcD_Cyl mCyl;
     /* 0x7CC */ dCcD_Sph mSph1;
-    /* 0x8F8 */ be<s16> m7D4;
+    /* 0x8F8 */ be<s16> mWindTimer;  /* was m7D4: ep_move (in daEp_Execute 0212DBFC): 40 when the burning flame's sphere is hit by a 0x600000 attack (tww AT_TYPE_WIND | AT_TYPE_UNK400000), counted down; starts the ID_AK_JN_TORCH emitter and bends it while running, no fire particle while above 6; ga_move (in daEp_Execute) blows the moths meanwhile */
     /* 0x8FA */ u8 m7D6[2];
-    /* 0x8FC */ be<f32> m7D8;
-    /* 0x900 */ be<s16> m7DC;
+    /* 0x8FC */ be<f32> mWindPower;  /* was m7D8: ep_move (in daEp_Execute 0212DBFC): eased to 4 while mWindTimer is above 10, else to 0; z of the torch emitter's direction; ga_move (in daEp_Execute) pushes the moths by it * 5 */
+    /* 0x900 */ be<s16> mWindAngle;  /* was m7DC: ep_move (in daEp_Execute 0212DBFC): shape_angle.y of the attacker (fpcNm_BDK_e) or else the player on the wind hit; Y rotation of the emitter direction and the moths' push (ga_move, in daEp_Execute) */
     /* 0x902 */ be<s8> mbHasObm;
     /* 0x903 */ u8 m7DF;
-    /* 0x904 */ be<s32> m7E0;
+    /* 0x904 */ be<s32> mStaffId;  /* was m7E0: ep_move (in daEp_Execute 0212DBFC): dComIfGp_evmng_getMyStaffId(l_staffName) of the SHOKUDAI_SWITCH event (-1 when done); ep_switch_event_move 0212DB44 passes it to dComIfGp_evmng_getIsAddvance / getMyActIdx / cutEnd; after TWW mStaffId (other actors' staff ids) */
     /* 0x908 */ be<u8> mbHasGa;
     /* 0x909 */ u8 m7E5[3];
     /* 0x90C */ ep_ga_s mEpGa[2];
-    /* 0x984 */ EpLightInfo m860; /* J3DLightInfo */
+    /* 0x984 */ EpLightInfo mLightInfo;  /* was m860: ep_class_ct 0212F878: the first of the three J3DLightInfo blocks (with mHdLightInfo1 / mHdLightInfo2) filled from j3dDefaultLightInfo; J3DLightInfo */
     /* 0x9C8 */ u8 mLightPadding1[0xA44 - 0x9C8];
     /* 0xA44 */ EpLightInfo mHdLightInfo1; /* HD: J3DLightInfo copy */
     /* 0xA88 */ u8 mLightPadding2[0xAC8 - 0xA88];
@@ -120,7 +120,7 @@ struct ep_class : fopAc_ac_c {
     /* 0xB4C */ be<u8> mGroundCheckTimer;
     /* 0xB4D */ u8 mGroundCheckPadding[3];
 };
-WWHD_OFFSET(ep_class, m4D0, 0x5EC);
+WWHD_OFFSET(ep_class, mState, 0x5EC);
 WWHD_OFFSET(ep_class, mTimers, 0x614);
 WWHD_OFFSET(ep_class, mLight, 0x630);
 WWHD_OFFSET(ep_class, mSph1, 0x7CC);

@@ -16,44 +16,44 @@ ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
 
 # ---- daBb_Execute steering (F = 0205EA58) ----
 ret 020402C8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1             # enemy_ice
-field 0205EA58 r3+0x466 u8 0,0,0,0,0,0,0,0,0,0,0,1,2 # unk_2F2 (switch wait)
+field 0205EA58 r3+0x466 u8 0,0,0,0,0,0,0,0,0,0,0,1,2 # mAppearWait (switch wait)
 ret 025BA0C0 0 1                         # isSwitch
 field 0205EA58 104615B1 u8 0,0,0,0,0,1   # l_bbHIO.unk_05 (pause)
-field 0205EA58 r3+0x4BC f32 0,0,0,0,0,0.01,5   # unk_348 (knockback)
-field 0205EA58 r3+0xDF2 u8 0,0,0,0,0,0,0,0,0,1  # unk_C7E (fail)
-field 0205EA58 r3+0x4D1 i8 0,0,1       # unk_35D (path)
-field 0205EA58 r3+0x453 u8 3,3,3,3,3,0,4,7       # unk_2DD (mode)
-field 0205EA58 r3+0x464 i8 0,1,10,2      # unk_2F0
-field 0205EA58 r3+0x465 i8 -1,0,1,2,3,4,5,6,6,6,10,11,20,22,23,25,7,8,9,12  # unk_2F1
-field 0205EA58 r3+0x48C i16 0,1,2,6,0x21    # unk_318[0]
-field 0205EA58 r3+0x48E i16 0 3          # unk_318[1]
-field 0205EA58 r3+0x490 i16 0 3          # unk_318[2]
-field 0205EA58 r3+0x492 i16 0 3          # unk_318[3]
-field 0205EA58 r3+0x496 i16 0 3          # unk_318[5]
-field 0205EA58 r3+0x4D8 u8 0 1           # unk_364
-field 0205EA58 r3+0x455 u8 0,0,0,0,1,2,3,3,3 # unk_2DF
-field 0205EA58 r3+0x456 u8 0 1           # unk_2E0
-field 0205EA58 r3+0x460 u32 0xBC,0xBD,0xBC,0xBD,0     # unk_2EC
-field 0205EA58 r3+0x458 u32 0x5E000000 0x5E000000      # unk_2E4
+field 0205EA58 r3+0x4BC f32 0,0,0,0,0,0.01,5   # mKnockbackDist (knockback)
+field 0205EA58 r3+0xDF2 u8 0,0,0,0,0,0,0,0,0,1  # mDying (fail)
+field 0205EA58 r3+0x4D1 i8 0,0,1       # mPathOn (path)
+field 0205EA58 r3+0x453 u8 3,3,3,3,3,0,4,7       # mBehavior (mode)
+field 0205EA58 r3+0x464 i8 0,1,10,2      # mFlyAnmState
+field 0205EA58 r3+0x465 i8 -1,0,1,2,3,4,5,6,6,6,10,11,20,22,23,25,7,8,9,12  # mMode
+field 0205EA58 r3+0x48C i16 0,1,2,6,0x21    # mTimers[0]
+field 0205EA58 r3+0x48E i16 0 3          # mTimers[1]
+field 0205EA58 r3+0x490 i16 0 3          # mTimers[2]
+field 0205EA58 r3+0x492 i16 0 3          # mTimers[3]
+field 0205EA58 r3+0x496 i16 0 3          # mTimers[5]
+field 0205EA58 r3+0x4D8 u8 0 1           # mPathReentry
+field 0205EA58 r3+0x455 u8 0,0,0,0,1,2,3,3,3 # mCarryState
+field 0205EA58 r3+0x456 u8 0 1           # mDropCarried
+field 0205EA58 r3+0x460 u32 0xBC,0xBD,0xBC,0xBD,0     # mCarriedProcName
+field 0205EA58 r3+0x458 u32 0x5E000000 0x5E000000      # mpCarriedActor
 field 0205EA58 104615B2 u8 0,0,1         # l_bbHIO.unk_06
-field 0205EA58 r3+0x44E u8 3,4,7,7,0,0     # unk_2D8
-field 0205EA58 r3+0x450 u8 0,0xFF        # unk_2DA (path)
-field 0205EA58 r3+0xDF0 i8 0,0,0,1       # unk_C7C
-field 0205EA58 r3+0x6F0 u8 0 1           # unk_57C
-field 0205EA58 r3+0x4C0 f32 0,0.1,1,5000,4000,4000.5 # unk_34C
-field 0205EA58 r3+0xDCC f32 0,1,2        # unk_C58
-field 0205EA58 r3+0xDD4 u8 0 4           # unk_C60
-field 0205EA58 r3+0xDC4 i16 0,0,1,2,3    # unk_C50
-field 0205EA58 r3+0xDC6 i16 0 2          # unk_C52
-field 0205EA58 r3+0xDC8 u32 0,0x4813     # unk_C54
-field 0205EA58 r3+0x44C i16 0,0,1,2      # unk_2D0
-field 0205EA58 r3+0x449 u8 0 1           # unk_2CD
-field 0205EA58 r3+0x448 u8 0 3           # unk_2CC
-field 0205EA58 r3+0x44A u8 0 3           # unk_2CE
-field 0205EA58 r3+0x4C6 i16 -1,0xF,0x3F,0x7F,-1,0,5    # unk_352 (incremented first)
-field 0205EA58 r3+0x4C8 i16 -2 40        # unk_354
+field 0205EA58 r3+0x44E u8 3,4,7,7,0,0     # mPrmMode
+field 0205EA58 r3+0x450 u8 0,0xFF        # mPathNo (path)
+field 0205EA58 r3+0xDF0 i8 0,0,0,1       # mWasHit
+field 0205EA58 r3+0x6F0 u8 0 1           # mNoBgCheck
+field 0205EA58 r3+0x4C0 f32 0,0.1,1,5000,4000,4000.5 # mBodyShakeAmp
+field 0205EA58 r3+0xDCC f32 0,1,2        # mHeadShakeAmp
+field 0205EA58 r3+0xDD4 u8 0 4           # mHeadLookMode
+field 0205EA58 r3+0xDC4 i16 0,0,1,2,3    # mBeakOpenTimer
+field 0205EA58 r3+0xDC6 i16 0 2          # mBeakSeFrame
+field 0205EA58 r3+0xDC8 u32 0,0x4813     # mBeakSeId
+field 0205EA58 r3+0x44C i16 0,0,1,2      # mBlinkWait
+field 0205EA58 r3+0x449 u8 0 1           # mEyeAnmOn
+field 0205EA58 r3+0x448 u8 0 3           # mEyeFrame
+field 0205EA58 r3+0x44A u8 0 3           # mEyeMaxFrame
+field 0205EA58 r3+0x4C6 i16 -1,0xF,0x3F,0x7F,-1,0,5    # mFrameCounter (incremented first)
+field 0205EA58 r3+0x4C8 i16 -2 40        # mMoveCounter
 field 0205EA58 r3+0x370 f32 0,0.1,1      # speedF
-field 0205EA58 r3+0x4B0 f32 0 500        # unk_33C (overwritten by sqrtf)
+field 0205EA58 r3+0x4B0 f32 0 500        # mPlayerDistXZ (overwritten by sqrtf)
 # path data
 field 0205EA58 r3+0x4D4 u32 0x56000000 0x56000000   # ppd
 field 0205EA58 56000000 u16 0 4                # m_num
@@ -61,8 +61,8 @@ field 0205EA58 56000002 u16 0,0xFFFF,0xFFFF    # m_nextID
 field 0205EA58 56000005 u8 0 1                 # m_closed
 field 0205EA58 56000008 u32 0x57000000 0x57000000  # m_points
 stable 56000000 0x10
-field 0205EA58 r3+0x4D2 i8 -1,0,1,2,3,4,0,1                # unk_35E
-field 0205EA58 r3+0x4D3 i8 -1,1                # unk_35F
+field 0205EA58 r3+0x4D2 i8 -1,0,1,2,3,4,0,1                # mPathPoint
+field 0205EA58 r3+0x4D3 i8 -1,1                # mPathDir
 ret 025AAF88 0,0x56000000,0x56000000           # dPath_GetRoomPath
 field 0205EA58 57000003 u8 0,1,2,3,5,6
 field 0205EA58 57000013 u8 0,1,2,3,5,6
@@ -97,7 +97,7 @@ field 0205EA58 5500031C f32 -500 500
 field 0205EA58 r3+0x314 f32 -500 500     # current.pos
 field 0205EA58 r3+0x318 f32 -500 500
 field 0205EA58 r3+0x31C f32 -500 500
-field 0205EA58 r3+0x468 f32 -500 500     # unk_2F4
+field 0205EA58 r3+0x468 f32 -500 500     # mTargetPos
 field 0205EA58 r3+0x46C f32 -500 500
 field 0205EA58 r3+0x470 f32 -500 500
 fret 028F4384 0 600                     # sqrtf
@@ -116,7 +116,7 @@ fret 0246BA0C -100 100                   # daSea_calcWave
 field 0205EA58 r3+0x37C f32 -100 100     # eyePos
 field 0205EA58 r3+0x380 f32 -100 100
 field 0205EA58 r3+0x384 f32 -100 100
-field 0205EA58 r3+0x4CC f32 -100 100     # unk_358
+field 0205EA58 r3+0x4CC f32 -100 100     # mPrevEyeY
 field 0205EA58 r3+0x554 u32 0,0x20       # acch flags (ground hit)
 # mutation-driven: tail angle clamp boundary (angle.y - atan vs +-0x3A98)
 ret 020195B0 0,0,0x100,-0x100            # cM_atan2s

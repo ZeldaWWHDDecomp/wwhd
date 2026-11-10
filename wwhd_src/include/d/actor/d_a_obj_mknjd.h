@@ -196,15 +196,15 @@ struct Act_c : dBgS_MoveBgActor {
     /* 0x538 */ request_of_phase_process_class mPhs;
     /* 0x540 */ gptr<J3DModel> mMainMdl;
     /* 0x544 */ gptr<J3DModel> mBreakMdl;
-    /* 0x548 */ be<u16> m0430;
-    /* 0x54A */ be<u16> m0432;
-    /* 0x54C */ be<u16> m0434;
+    /* 0x548 */ be<u16> mDemoEventBit;  /* was m0430: Create 02372DA8 sets 0x2910 (TYPE_WIND) or 0x2920; Execute 02373EA8 dComIfGs_onEventBit(it) when the statue's demo starts */
+    /* 0x54A */ be<u16> mBgmTimer;  /* was m0432: Execute 02373EA8: set 0x2B (TYPE_WIND) or 0x0E when the demo starts, counted down; at 1 starts JA_BGM_TAKT_MAKORE / JA_BGM_TAKT_MEDRI */
+    /* 0x54C */ be<u16> mFriendDrawTimer;  /* was m0434: Execute 02373EA8: set 5 when the demo starts, counted down; at 1 calls manage_friend_draw(1) */
     /* 0x54E */ u8 _54E[2];
     /* 0x550 */ be<s32> mBreakTimer;
     /* 0x554 */ be<u8> mMainMdlAlpha;
-    /* 0x555 */ be<u8> m043D;
-    /* 0x556 */ be<u8> m043E;
-    /* 0x557 */ be<u8> m043F;
+    /* 0x555 */ be<u8> mBreakMdlVisible;  /* was m043D: Create 02372DA8 clears it; daObjMknjD_break 023734B4 sets it at mBreakTimer 60; Draw 023747BC draws mBreakMdl only when set */
+    /* 0x556 */ be<u8> mType;  /* was m043E: Mthd_Create 0237274C: prm_get_Type() (TWW accessor); CreateHeap 023728DC / Create 02372DA8 / privateCut 02373A30 / Execute 02373EA8 test TYPE_WIND */
+    /* 0x557 */ be<u8> mState;  /* was m043F: Create 02372DA8 sets STATE_WAIT_LESSON or STATE_WAIT; Execute 02373EA8 switches on it (STATE_*) */
     /* 0x558 */ gptr<JPABaseEmitter> mEmitters[4];
     /* 0x568 */ MknjdSmokeCallback
         mSmokeCBs[4]; /* dPa_smokeEcallBack (emitter at +4, rate-off flag at +0x11) */
@@ -222,8 +222,8 @@ struct Act_c : dBgS_MoveBgActor {
     /* 0x610 */ be<s32> mMsgPID;
     /* 0x614 */ be<u8> mMsgFound; /* HD: replaces msg_class* mMsgPtr (the message manager is global) */
     /* 0x615 */ u8 _615[3];
-    /* 0x618 */ be<s32> m0500;
-    /* 0x61C */ be<u8> m0504;
+    /* 0x618 */ be<s32> mNormalTalk;  /* was m0500: Execute 02373EA8 sets 1 for a plain talk, 0 when the lesson starts (talk XY); talk 02373360 / TWW getMsg(): 0 gives message 0x5B3 with the melody, else 0x1901; privateCut 02373A30 clears it */
+    /* 0x61C */ be<u8> mMsgCanceled;  /* was m0504: talk 02373360 sets it when the message cancel button is pressed; privateCut 02373A30 (ACT_TACT) ends the cut only while it is clear, and clears it; Create 02372DA8 clears it */
     /* 0x61D */ u8 _61D[3];
 };
 WWHD_OFFSET(Act_c, mShardHeights, 0x4E8);
@@ -231,7 +231,7 @@ WWHD_OFFSET(Act_c, mMainMdl, 0x540);
 WWHD_OFFSET(Act_c, mSmokeCBs, 0x568);
 WWHD_OFFSET(Act_c, mBrokenPos, 0x5E8);
 WWHD_OFFSET(Act_c, mGoalPos, 0x600);
-WWHD_OFFSET(Act_c, m0504, 0x61C);
+WWHD_OFFSET(Act_c, mMsgCanceled, 0x61C);
 WWHD_SIZE(Act_c, 0x620);
 } // namespace daObjMknjD
 

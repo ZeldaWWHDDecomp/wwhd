@@ -9,81 +9,81 @@
 struct fganon_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhs1;
     /* 0x3D0 */ request_of_phase_process_class mPhs2;
-    /* 0x3D8 */ be<u8> m2BC;
-    /* 0x3D9 */ be<u8> m2BD;
+    /* 0x3D8 */ be<u8> mType;  /* was m2BC: daFganon_Create 02137F9C: parameter bits 0-3 (zeldaret/tww names the HIO child Phantom Ganon 1 / 2 / 3 for 0 / 1 / 2; 3 = a spin-attack clone, which reads mCloneNo); down 02139680 / standby, shot, move (in move 0213B3AC) branch on it (camera type, light-arrow checks) */
+    /* 0x3D9 */ be<u8> mStartDist;  /* was m2BD: daFganon_Create 02137F9C: parameter byte 1; start 02139AA0 and standby (in move 0213B3AC) begin when the player's XZ distance to home is below it * 10 */
     /* 0x3DA */ be<u8> mSwitchNo;
-    /* 0x3DB */ be<u8> m2BF;
+    /* 0x3DB */ be<u8> mBattleSwitchNo;  /* was m2BF: daFganon_Create 02137F9C: parameter byte 3; demo_camera (in daFganon_Execute 02134B28) turns this switch on when the opening demo hands over to the battle and off at the end of the defeat demo (0xFF = none) */
     /* 0x3DC */ gptr<mDoExt_McaMorf> mpMorf;
     /* 0x3E0 */ gptr<mDoExt_baseAnm> mpBrkAnm1;
     /* 0x3E4 */ gptr<J3DModel> mpKenModel;
     /* 0x3E8 */ gptr<mDoExt_baseAnm> mpBrkAnm2;
-    /* 0x3EC */ be<s8> m2D0;
+    /* 0x3EC */ be<s8> mKenState;  /* was m2D0: last_end 0213A228 sets 1 (sword no longer follows the hand) and 2 (sword handed to the Boko actor); execute_model (in daFganon_Execute 02134B28) places mpKenModel only at 0, daFganon_Draw 02134428 draws it unless 2 */
     /* 0x3ED */ be<u8> m2D1[0x2D4 - 0x2D1];
     /* 0x3F0 */ dKy_tevstr_c mKenTevStr;
-    /* 0x5B8 */ be<s16> m384;
+    /* 0x5B8 */ be<s16> mFrameCounter;  /* was m384: execute_model (in daFganon_Execute 02134B28) adds 1 per frame and uses it as the phase of the sway and hit-shake sines; fly_common (in move 0213B3AC) samples every 16th frame */
     /* 0x5BA */ be<s16> mAction;
     /* 0x5BC */ be<s16> mMode;
     /* 0x5BE */ be<s16> m38A;
-    /* 0x5C0 */ cXyz m38C;
-    /* 0x5CC */ be<s16> m398;
+    /* 0x5C0 */ cXyz mTargetPos;  /* was m38C: fly_common (in move 0213B3AC): player position + offset; spinattack2 02139194: player position; pos_move 02134840 turns current.angle toward it */
+    /* 0x5CC */ be<s16> mTargetAngleY;  /* was m398: fly_common (in move 0213B3AC): the player's shape_angle.y, re-sampled at random every 16 frames; YrotS by it to place mTargetPos around the player */
     /* 0x5CE */ be<s16> m39A;
-    /* 0x5D0 */ be<f32> m39C;
-    /* 0x5D4 */ be<f32> m3A0;
-    /* 0x5D8 */ be<s16> m3A4[5];
-    /* 0x5E2 */ be<s16> m3AE;
-    /* 0x5E4 */ be<f32> m3B0;
-    /* 0x5E8 */ be<s16> m3B4;
-    /* 0x5EA */ be<s16> m3B6;
-    /* 0x5EC */ be<s16> m3B8;
+    /* 0x5D0 */ be<f32> mTurnSpeed;  /* was m39C: fly_common (in move 0213B3AC) sets 1500 (+ reg); pos_move 02134840: angle step = it * mTurnSpeedRate */
+    /* 0x5D4 */ be<f32> mTurnSpeedRate;  /* was m3A0: fly_common (in move 0213B3AC) clears it, pos_move 02134840 eases it to 1 and multiplies mTurnSpeed by it */
+    /* 0x5D8 */ be<s16> mTimers[5];  /* was m3A4: daFganon_Execute 02134B28 counts all 5 down each frame; the actions load them (start 02139AA0 [0] = 0x50, down 02139680 [0] = l_HIO.m48, spinattack2 02139194 [0] = 40) */
+    /* 0x5E2 */ be<s16> mNoDamageTimer;  /* was m3AE: damage_check 0213A6FC returns while it is not 0 and sets 6 / 2 / 1000 after a hit; the demo and vanish actions (start 02139AA0, down 02139680, deru in move 0213B3AC) keep it at 3 / 5; execute_model (in daFganon_Execute 02134B28) counts it down */
+    /* 0x5E4 */ be<f32> mKnockbackDist;  /* was m3B0: knockDown (in damage_check 0213A6FC) sets 80 (+ reg); move 0213B3AC moves the actor by it along mKnockbackAngleY / X and eases it to 0 */
+    /* 0x5E8 */ be<s16> mKnockbackAngleY;  /* was m3B4: knockDown (in damage_check 0213A6FC): atan2 from the player to the actor; move 0213B3AC YrotS by it for the knockback */
+    /* 0x5EA */ be<s16> mKnockbackAngleX;  /* was m3B6: knockDown (in damage_check 0213A6FC): -atan2 of the height difference over the XZ distance; move 0213B3AC XrotM by it for the knockback */
+    /* 0x5EC */ be<s16> mHitShakeTimer;  /* was m3B8: knockDown (in damage_check 0213A6FC) sets 7 (+ reg); execute_model (in daFganon_Execute 02134B28) counts it down and shakes the model's Y / X rotation by it * 500 */
     /* 0x5EE */ be<u8> m3BA[0x3BC - 0x3BA];
-    /* 0x5F0 */ be<f32> m3BC;
-    /* 0x5F4 */ be<f32> m3C0;
+    /* 0x5F0 */ be<f32> mSwayAmplitude;  /* was m3BC: fly_common (in move 0213B3AC) eases it to 50; execute_model (in daFganon_Execute 02134B28) offsets the model by it * sin / cos of mFrameCounter and eases it to 0 */
+    /* 0x5F4 */ be<f32> mFadeFogEndZ;  /* was m3C0: last_end 0213A228: sets 10000 / 5100, eases it to 100 and copies it to tevStr.mFogEndZ (the white fade-out) */
     /* 0x5F8 */ gptr<void> mEmitters1[2];
     /* 0x600 */ gptr<void> mEmitters2[2];
     /* 0x608 */ gptr<void> mEmitters3[2];
     /* 0x610 */ be<u32> m3DC;
-    /* 0x614 */ cXyz m3E0;
-    /* 0x620 */ cXyz m3EC;
-    /* 0x62C */ cXyz m3F8;
-    /* 0x638 */ be<f32> m404;
-    /* 0x63C */ be<s8> m408;
-    /* 0x63D */ be<s8> m409;
-    /* 0x63E */ be<s8> m40A;
+    /* 0x614 */ cXyz mBallPos;  /* was m3E0: energy_ball_move (in daFganon_Execute 02134B28): the energy ball's position (hand joint, then + mBallVelocity); ball_bg_check line-checks from it; shot (in move 0213B3AC) plays the ball sound there */
+    /* 0x620 */ cXyz mBallPosOld;  /* was m3EC: energy_ball_move (in daFganon_Execute 02134B28) copies mBallPos before moving it; ball_bg_check checks the line from it */
+    /* 0x62C */ cXyz mBallVelocity;  /* was m3F8: aimEnergyBall (in daFganon_Execute 02134B28): MtxPosition of (0, 0, mBallSpeed) toward the target; energy_ball_move adds it to mBallPos and takes the effect angle from it */
+    /* 0x638 */ be<f32> mBallSpeed;  /* was m404: aimEnergyBall (in daFganon_Execute 02134B28): l_HIO.m1C / m20 when thrown, kept on each return; energy_ball_move adds l_HIO.m24 / m28 per return; shot (in move 0213B3AC) scales the swing distance by it */
+    /* 0x63C */ be<s8> mBallState;  /* was m408: energy_ball_move (in daFganon_Execute 02134B28): 0 none, 1 create the ball effects, 2 held in the hand, 3 thrown, 4 flying at the player, 5 sent back at Phantom Ganon, 35 remove; shot (in move 0213B3AC) / start 02139AA0 set 1, damage_check 0213A6FC / kieru set 35 */
+    /* 0x63D */ be<s8> mBallThrow;  /* was m409: shot (in move 0213B3AC) sets 1 at the throw frame; energy_ball_move (in daFganon_Execute 02134B28) then aims the ball, sets mBallState 3 and clears it */
+    /* 0x63E */ be<s8> mBallNoHitTimer;  /* was m40A: energy_ball_move (in daFganon_Execute 02134B28) sets 5 after each return (50 when the third form vanishes) and counts it down; while it runs the ball's colliders are moved away and hits are ignored */
     /* 0x63F */ be<s8> m40B;
     /* 0x640 */ dCcD_Sph mBallTgSph;
     /* 0x76C */ dCcD_Sph mBallAtSph;
-    /* 0x898 */ cXyz m664;
-    /* 0x8A4 */ be<s8> m670;
-    /* 0x8A5 */ be<s8> m671;
-    /* 0x8A6 */ be<u8> m672;
+    /* 0x898 */ cXyz mDarkBallPos;  /* was m664: tama_set (in shot2 02138670): the dark ball's position in front of the actor (mDarkBallDist); shot2 creates the 8 fgmahou balls there */
+    /* 0x8A4 */ be<s8> mMahouHitCount;  /* was m670: shot2 02138670 clears it; damage_check 0213A6FC adds 1 per hit by an fgmahou ball and knocks Phantom Ganon down at 5 */
+    /* 0x8A5 */ be<s8> mDarkBallState;  /* was m671: shot2 02138670 sets 1 / 3; tama_set (in shot2) 1: create the effects, 3: burst, 4: fade (mDarkBallAlpha), 5..9 then 0; daFganon_Draw 02134428 draws the dark ball model while it is not 0 */
+    /* 0x8A6 */ be<u8> mDarkBallAlpha;  /* was m672: tama_set (in shot2 02138670): 250 when the ball appears, -50 per frame after the burst; the emitters' global alpha; 0 removes them */
     /* 0x8A7 */ be<s8> m673;
     /* 0x8A8 */ gptr<J3DModel> mpEnergySphereModel;
     /* 0x8AC */ gptr<mDoExt_baseAnm> mpBtkAnm;
     /* 0x8B0 */ gptr<mDoExt_baseAnm> mpBrkAnm3;
-    /* 0x8B4 */ be<f32> m680;
-    /* 0x8B8 */ be<s8> m684;
-    /* 0x8B9 */ be<s8> m685;
-    /* 0x8BA */ be<s8> m686;
-    /* 0x8BB */ be<s8> m687;
-    /* 0x8BC */ be<s8> m688;
-    /* 0x8BD */ be<s8> m689;
-    /* 0x8BE */ be<s8> m68A;
-    /* 0x8BF */ be<s8> m68B;
-    /* 0x8C0 */ be<s8> m68C;
+    /* 0x8B4 */ be<f32> mDarkBallDist;  /* was m680: shot2 02138670 clears it and eases it to 250 at the throw; tama_set (in shot2) places mDarkBallPos it forward and it down */
+    /* 0x8B8 */ be<s8> mWeponAtStarted;  /* was m684: execute_collision (in daFganon_Execute 02134B28): set 1 after StartCAt of mWeponSph, MoveCAt while set; cleared when the sword attack is off */
+    /* 0x8B9 */ be<s8> mWeponAtOn;  /* was m685: spinattack2 02139194 / spinattack (in move 0213B3AC) set 1 each attack frame; execute_collision (in daFganon_Execute 02134B28) places mWeponSph on the sword while set and clears it */
+    /* 0x8BA */ be<s8> mBallSwing;  /* was m686: shot (in move 0213B3AC) sets 1 on swing frames 5..15; energy_ball_move (in daFganon_Execute 02134B28) sends a near ball back at the player while it is set; execute_collision clears it each frame */
+    /* 0x8BB */ be<s8> mSwingCount;  /* was m687: shot (in move 0213B3AC): cleared at the throw, +1 per swing at the ball; from 4 swings it may stop returning (mStopReturn) */
+    /* 0x8BC */ be<s8> mRallyCount;  /* was m688: shot (in move 0213B3AC) clears it; energy_ball_move (in daFganon_Execute 02134B28) adds 1 per return by the player and passes it + 2 (max 7) to mDoAud_changeSubBgmStatus; shot stops returning at 7 */
+    /* 0x8BD */ be<s8> mStopReturn;  /* was m689: shot (in move 0213B3AC): cleared at the throw, set when mRallyCount reaches 7 or at random after 4 swings; while set the ball is no longer swung back */
+    /* 0x8BE */ be<s8> mLaughTimer;  /* was m68A: execute_model (in daFganon_Execute 02134B28) sets 60 with the WARAU1 laugh and counts it down; shot2 02138670 / fly_common (in move 0213B3AC) return to WAIT1 at 1 */
+    /* 0x8BF */ be<s8> mLaughRequest;  /* was m68B: energy_ball_move (in daFganon_Execute 02134B28) sets 1 when the ball hits the player; d_a_fgmahou (view FgmahouBossHD) sets 1 when a dark ball hits; execute_model starts the laugh and clears it */
+    /* 0x8C0 */ be<s8> mBallHitSelf;  /* was m68C: energy_ball_move (in daFganon_Execute 02134B28) sets 1 when a returned ball reaches Phantom Ganon; damage_check 0213A6FC takes it as a hit; move 0213B3AC clears it */
     /* 0x8C1 */ be<s8> mbIsMaterialized;
-    /* 0x8C2 */ be<s8> m68E;
-    /* 0x8C3 */ be<u8> m68F;
-    /* 0x8C4 */ be<s8> m690;
+    /* 0x8C2 */ be<s8> mCapeOff;  /* was m68E: last_end 0213A228 sets 1; execute_collision (in daFganon_Execute 02134B28) eases the cape's scale.y to 0 while it is set */
+    /* 0x8C3 */ be<u8> mCloneNo;  /* was m68F: daFganon_Create 02137F9C: parameter bits 4-7 when mType is 3 (spinattack2 02139194 creates clones 1..4 with (i * 16) | 3); 0 = the real Phantom Ganon; spinattack2 / damage_check 0213A6FC / kieru branch on it */
+    /* 0x8C4 */ be<s8> mDownHealth;  /* was m690: damage_check 0213A6FC: sword damage is taken off it while Phantom Ganon is down; at 0 it is reset to 10 and he vanishes */
     /* 0x8C5 */ be<u8> m691[0x694 - 0x691];
-    /* 0x8C8 */ be<f32> m694;
-    /* 0x8CC */ be<f32> m698;
-    /* 0x8D0 */ be<f32> m69C;
-    /* 0x8D4 */ be<s16> m6A0;
-    /* 0x8D6 */ be<s16> m6A2;
-    /* 0x8D8 */ be<s16> m6A4;
-    /* 0x8DA */ be<s16> m6A6;
-    /* 0x8DC */ be<u32> m6A8;
-    /* 0x8E0 */ be<s8> m6AC;
+    /* 0x8C8 */ be<f32> mSwordFallAngle;  /* was m694: fail (in move 0213B3AC): + mSwordFallSpeed per frame up to 15884 (sword lying flat); execute_model (in daFganon_Execute 02134B28) XrotM of the sword by it */
+    /* 0x8CC */ be<f32> mSwordFallSpeed;  /* was m698: fail (in move 0213B3AC): + mSwordFallAccel per frame; on reaching the ground it bounces back (* -0.4) while above 700 */
+    /* 0x8D0 */ be<f32> mSwordFallAccel;  /* was m69C: fail (in move 0213B3AC): + 3 per frame up to a limit; added to mSwordFallSpeed and to the tilt step */
+    /* 0x8D4 */ be<s16> mSwordFallDir;  /* was m6A0: fail (in move 0213B3AC): angle from the sword to the wall line cross (+ 0x7058); execute_model (in daFganon_Execute 02134B28) ZrotM by it and its negative around the fall */
+    /* 0x8D6 */ be<s16> mSwordTilt;  /* was m6A2: fail (in move 0213B3AC) eases it toward mSwordFallDir by mSwordFallAccel + mSwordTiltStep; execute_model (in daFganon_Execute 02134B28) ZrotM of the sword by it */
+    /* 0x8D8 */ be<s16> mSwordTiltStep;  /* was m6A4: fail (in move 0213B3AC): 0x80, 0x800 once the sword lies flat; added to the cLib_addCalcAngleS2 step of mSwordTilt */
+    /* 0x8DA */ be<s16> mSwordShakeTimer;  /* was m6A6: fail (in move 0213B3AC) sets 30 (+ reg) on a bounce; execute_model (in daFganon_Execute 02134B28) shakes the sword by it * sin and counts it down */
+    /* 0x8DC */ be<u32> mSwordFallSeVolume;  /* was m6A8: fail (in move 0213B3AC): 100, passed to the sword-fall sound 0x6998 on each bounce, -20 per bounce down to 30 */
+    /* 0x8E0 */ be<s8> mBtAttackTimer;  /* was m6AC: spinattack2 02139194 / spinattack (in move 0213B3AC) set l_HIO.m40 - m3E; execute_collision (in daFganon_Execute 02134B28) counts it down and sets the bt attack data (frames 0..10) while it runs */
     /* 0x8E1 */ be<u8> m6AD[0x6B0 - 0x6AD];
     /* 0x8E4 */ be<u32> mBokoID;
     /* 0x8E8 */ be<u32> mCapeID;
@@ -92,19 +92,19 @@ struct fganon_class : fopEn_enemy_c {
     /* 0xAF0 */ dCcD_Stts mStts;
     /* 0xB2C */ dCcD_Cyl mCyl;
     /* 0xC5C */ dCcD_Sph mWeponSph;
-    /* 0xD88 */ be<s16> mB54;
-    /* 0xD8A */ be<s16> mB56;
+    /* 0xD88 */ be<s16> mDemoCamMode;  /* was mB54: start 02139AA0 sets 1, end 02139E80 50, last_end 0213A228 100 (+1 per step); demo_camera (in daFganon_Execute 02134B28) switches on it; cameraReset clears it */
+    /* 0xD8A */ be<s16> mDemoTimer;  /* was mB56: demo_camera (in daFganon_Execute 02134B28) clears it per step, adds 1 per frame and compares it with frame marks (2, 30, 45, 110, 280); last_end 0213A228 clears it */
     /* 0xD8C */ be<u8> mB58[0xB5C - 0xB58];
-    /* 0xD90 */ cXyz mB5C;
-    /* 0xD9C */ cXyz mB68;
+    /* 0xD90 */ cXyz mDemoCamEye;  /* was mB5C: demo_camera (in daFganon_Execute 02134B28): set to fixed points / eased; passed to dCamera_c::Set as the eye */
+    /* 0xD9C */ cXyz mDemoCamCenter;  /* was mB68: demo_camera (in daFganon_Execute 02134B28): set to fixed points, the actor's position or eyePos; passed to dCamera_c::Set as the centre */
     /* 0xDA8 */ be<s16> mB74;
-    /* 0xDAA */ be<s16> mB76;
+    /* 0xDAA */ be<s16> mDemoCamAngleY;  /* was mB76: demo_camera (in daFganon_Execute 02134B28): + 30 per frame, added to the player's shape_angle.y to orbit mDemoCamEye around the player */
     /* 0xDAC */ be<u8> mB78[0xB80 - 0xB78];
-    /* 0xDB4 */ be<f32> mB80;
-    /* 0xDB8 */ be<f32> mB84;
-    /* 0xDBC */ be<u8> mB88;
-    /* 0xDBD */ be<s8> mB89;
-    /* 0xDBE */ be<u8> mB8A;
+    /* 0xDB4 */ be<f32> mDemoCamSpeed;  /* was mB80: demo_camera (in daFganon_Execute 02134B28): cleared per step, eased to 0.1 / 1; scales the cLib_addCalc2 steps of mDemoCamEye / mDemoCamCenter */
+    /* 0xDB8 */ be<f32> mDemoCamFovy;  /* was mB84: demo_camera (in daFganon_Execute 02134B28): 55 or 60; passed to dCamera_c::Set as the fovy */
+    /* 0xDBC */ be<u8> mHioOwner;  /* was mB88: daFganon_Create 02137F9C sets 1 when it created the l_HIO child; daFganon_Delete 02137810 deletes the HIO child only then */
+    /* 0xDBD */ be<s8> mBgmStartTimer;  /* was mB89: standby (in move 0213B3AC) sets 22; execute_model (in daFganon_Execute 02134B28) counts it down and starts sub BGM 0x80000047 at 1; daFganon_Delete 02137810 stops the sub BGM when it is not 0 */
+    /* 0xDBE */ be<u8> mResLoadState;  /* was mB8A: daFganon_Create 02137F9C: 1 after requesting "Pgsw", 2 after requesting "Fganon"; daFganon_Delete 02137810 releases Pgsw from 1 and Fganon too from 2 */
     /* 0xDBF */ be<u8> mB8B;
     // HD: previous rendered position drives the added joint rotation callback.
     /* 0xDC0 */ cXyz mHdPreviousPos;
@@ -209,8 +209,8 @@ struct FganonBoko {
 };
 struct FganonCape {
     u8 _pad[0x362C];
-    cXyz m1BE0;
-    cXyz m1BEC;
+    cXyz mShoulderPosR;
+    cXyz mShoulderPosL;
 };
 
 struct FganonCameraView {
@@ -299,8 +299,8 @@ WWHD_OFFSET(FganonPlayerDemo, mDemoMode, 0x430);
 WWHD_OFFSET(FganonPlayerCut, mCutType, 0x69E8);
 WWHD_OFFSET(FganonBoko, mpModel, 0x3B4);
 WWHD_OFFSET(FganonBoko, mFloorFlg, 0x434);
-WWHD_OFFSET(FganonCape, m1BE0, 0x362C);
-WWHD_OFFSET(FganonCape, m1BEC, 0x3638);
+WWHD_OFFSET(FganonCape, mShoulderPosR, 0x362C);
+WWHD_OFFSET(FganonCape, mShoulderPosL, 0x3638);
 WWHD_OFFSET(FganonCameraView, mEye, 0xDC);
 WWHD_OFFSET(FganonCameraView, mCenter, 0xE8);
 WWHD_OFFSET(FganonCameraView, mBody, 0x248);

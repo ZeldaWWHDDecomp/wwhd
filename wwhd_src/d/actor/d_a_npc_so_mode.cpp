@@ -96,7 +96,7 @@ static inline bool so_isStartStage(const char* lit) {
 /* dLib_circle_path_c (0x24): mTranslation 0x00, mPos 0x0C, mRadius 0x18, mWobbleAmplitude 0x1C,
  * mAngle 0x20, mAngleSpeed 0x22 */
 static inline SoModeCirclePath* so_path(daNpc_So_c* t) {
-    return reinterpret_cast<SoModeCirclePath*>(t->mB10);
+    return reinterpret_cast<SoModeCirclePath*>(t->mCirclePath);
 }
 
 /* ====================================================================== */
@@ -160,7 +160,7 @@ bool daNpc_So_c::_draw() {
     if (soModeHIO().debugDraw != 0) { /* soModeHIO().mNpc.m22 */
         debugDraw();
     }
-    if (m6CC == 5) {
+    if (mMode == 5) {
         return true;
     }
     if (soModeHIO().m31 == 0) {
@@ -169,15 +169,15 @@ bool daNpc_So_c::_draw() {
         settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &current.pos, &tevStr);
         setLightTevColorType(dKy_getEnvlight(), model, &tevStr);
         soMode_enterBtp(mBtpAnm, gabi::ea(modelData),
-                        (s16)m86C); /* mBtpAnm.entry(modelData, m86C) */
+                        (s16)mBtpFrame); /* mBtpAnm.entry(modelData, mBtpFrame) */
         mpMorf->entryDL();
         soModeModelData(modelData).mpTexNoAnimator = 0; /* removeTexNoAnimator (HD inline) */
-        if (mA78 != 0 || soModeHIO().m2C != 0) {
+        if (mEquip != 0 || soModeHIO().m2C != 0) {
             hudeDraw();
         }
     }
     cXyz tmp;
-    f32 y = gabi::fadds_ppc(current.pos.y, mB34);
+    f32 y = gabi::fadds_ppc(current.pos.y, mOffsetY);
     tmp.x = (f32)current.pos.x;
     tmp.z = (f32)current.pos.z;
     tmp.y = y;
@@ -195,45 +195,45 @@ static BOOL daNpc_SoDraw(void* i_this) { return ((daNpc_So_c*)i_this)->_draw(); 
 
 /* 022E0020 */
 void daNpc_So_c::offsetAppear() {
-    mB38.x = 110.0f;
-    mB38.y = 22.0f;
-    mB38.z = 0.4f;
+    mOffsetYCalc.x = 110.0f;
+    mOffsetYCalc.y = 22.0f;
+    mOffsetYCalc.z = 0.4f;
 }
 
 /* 022E0048 */
 void daNpc_So_c::modeWaitInit() {
     speedF = 0.0f;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     offsetAppear();
 }
 
 /* 022E005C */
 void daNpc_So_c::offsetDive() {
-    mB38.x = -150.0f;
-    mB38.y = 10.0f;
-    mB38.z = 0.3f;
+    mOffsetYCalc.x = -150.0f;
+    mOffsetYCalc.y = 10.0f;
+    mOffsetYCalc.z = 0.3f;
 }
 
 /* 022E0084 */
 void daNpc_So_c::modeHideInit() {
-    mBDB = 1;
+    mNoPosMove = 1;
     offsetDive();
-    mA7C = 0.0f;
+    mJumpRange = 0.0f;
 }
 
 /* 022E00B8 */
 void daNpc_So_c::modeHide() {
-    so_word_copy3(gabi::ea(&current.pos), gabi::ea(&mA80)); /* current.pos = mA80 */
+    so_word_copy3(gabi::ea(&current.pos), gabi::ea(&mTagPos)); /* current.pos = mTagPos */
 }
 
 /* 022E00D4 */
 void daNpc_So_c::modeJumpInit() {
     f32 r = cM_rndF(5.0f);
-    f32 b08 = mB08;
+    f32 b08 = mTargetScale;
     f32 spd = gabi::fmuls_ppc(gabi::fadds_ppc(r, 5.0f), b08);
     f32 sp4 = gabi::fmuls_ppc(spd, 4.0f);
     f32 vy = gabi::fmadds(30.0f, b08, sp4);
-    mAFC = spd;
+    mTargetSpeedF = spd;
     speedF = spd;
     speed.y = vy;
     f32 mx = soModeHIO().m50;
@@ -241,7 +241,7 @@ void daNpc_So_c::modeJumpInit() {
         vy = mx;
         speed.y = vy;
     }
-    mB00 = vy;
+    mJumpSpeedY = vy;
     shape_angle.x = soModeHIO().m68;
     so_setAnm(this, 4, false);
     m_jnt.mbBackBoneLock = 1;
@@ -254,18 +254,18 @@ void daNpc_So_c::modeJumpInit() {
 void daNpc_So_c::modeJump() {
     // HD: while the player is near, the camera mode follows the Fishman
     fopAc_ac_c* pl = so_player();
-    f64 d = so_absXZ(gabi::ea(&pl->current.pos), gabi::ea(&mA80));
-    if (d < mA7C) {
-        mB70 = 2;
+    f64 d = so_absXZ(gabi::ea(&pl->current.pos), gabi::ea(&mTagPos));
+    if (d < mJumpRange) {
+        m_order_event_num = 2;
     }
     f64 wy = so_getWaterY(gabi::ea(&current.pos), gabi::ea(&mAcch));
     if (current.pos.y < wy) {
         so_seStart(this, SoModeConstants::JA_SE_CM_SO_LANDING_L, 0);
         soMode_createWaterPillar(&current.pos, gabi::fmuls_ppc(scale.x, 1.4f), 1.4f,
                                  0); /* fopKyM_createWpillar */
-        f64 d2 = so_absXZ(gabi::ea(&mA80), gabi::ea(&current.pos));
-        if (d2 > mA7C) {
-            u32 dst = gabi::ea(&current.pos), src = gabi::ea(&mA80);
+        f64 d2 = so_absXZ(gabi::ea(&mTagPos), gabi::ea(&current.pos));
+        if (d2 > mJumpRange) {
+            u32 dst = gabi::ea(&current.pos), src = gabi::ea(&mTagPos);
             u32 z = soModeWords(src).z, y = soModeWords(src).y;
             soModeWords(dst).z = z;
             soModeWords(dst).y = y;
@@ -279,7 +279,7 @@ void daNpc_So_c::modeJump() {
 void daNpc_So_c::modeSwimInit() {
     attention_info.flags = fopAc_Attn_TALKFLAG_NOTALK_e | fopAc_Attn_ACTION_SPEAK_e |
                            fopAc_Attn_LOCKON_TALK_e; /* attention_info.flags */
-    mA90 = gabi::ftoi(gabi::fadds_ppc(cM_rndF(90.0f), 30.0f));
+    mSwimTimer = gabi::ftoi(gabi::fadds_ppc(cM_rndF(90.0f), 30.0f));
     so_setAnm(this, 2, false);
     m_jnt.mbBackBoneLock = 1;
     offsetDive();
@@ -287,50 +287,50 @@ void daNpc_So_c::modeSwimInit() {
 
 /* 022E03A4 */
 void daNpc_So_c::modeSwim() {
-    mBDB = 0;
+    mNoPosMove = 0;
     fopAc_ac_c* pl = so_player();
-    f64 abs = so_absXZ(gabi::ea(&pl->current.pos), gabi::ea(&mA80));
+    f64 abs = so_absXZ(gabi::ea(&pl->current.pos), gabi::ea(&mTagPos));
     fopAc_ac_c* ship = so_ship();
     if (ship == nullptr)
         return;
     SoModeCirclePath* path = so_path(this);
     cLib_addCalc2(&path->mRadius, 200.0f, 0.1f, 10.0f);
-    f32 ty = mA80.y, tz = mA80.z;
+    f32 ty = mTagPos.y, tz = mTagPos.z;
     path->mTranslation.z = tz;
     path->mAngleSpeed = 0x150;
-    f32 tx = mA80.x;
+    f32 tx = mTagPos.x;
     path->mTranslation.y = ty;
     path->mTranslation.x = tx;
     path->mWobbleAmplitude = 50.0f;
     path->mTranslation.y = (f32)so_getWaterY(gabi::ea(path), gabi::ea(&mAcch));
     so_setCirclePath(gabi::ea(path));
     f32 wy = (f32)so_getWaterY(gabi::ea(&path->mPos), gabi::ea(&mAcch));
-    path->mPos.y = gabi::fadds_ppc(wy, mB34);
+    path->mPos.y = gabi::fadds_ppc(wy, mOffsetY);
     f64 d2 = so_absXZ(gabi::ea(&current.pos), gabi::ea(&path->mPos));
     bool rideCheck;
     if (d2 > 150.0f || ship->speedF > 10.0f) {
-        mAFC = 12.0f;
+        mTargetSpeedF = 12.0f;
         s16 target = cLib_targetAngleY(&current.pos, &path->mPos);
         cLib_addCalcAngleS2(&shape_angle.y, target, 8, 0x400);
-        f32 a7c = mA7C;
-        mB04 = 0.0f;
+        f32 a7c = mJumpRange;
+        mPathBlend = 0.0f;
         rideCheck = abs < a7c;
     } else {
-        cLib_addCalc2(&mB04, 1.0f, 0.01f, 0.05f);
+        cLib_addCalc2(&mPathBlend, 1.0f, 0.01f, 0.05f);
         cXyz d;
         cXyz_mi(gabi::ea(&path->mPos), gabi::ea(&d), gabi::ea(&current.pos));
         cXyz m;
-        cXyz_ml(gabi::ea(&d), gabi::ea(&m), mB04);
+        cXyz_ml(gabi::ea(&d), gabi::ea(&m), mPathBlend);
         cXyz p;
         cXyz_pl(gabi::ea(&current.pos), gabi::ea(&p), gabi::ea(&m));
         s16 ang = (s16)((s16)path->mAngle + 0x8000);
         so_word_copy3(gabi::ea(&current.pos), gabi::ea(&p));
         cLib_addCalcAngleS2(&shape_angle.y, ang, 4, 0x400);
-        rideCheck = abs < mA7C;
+        rideCheck = abs < mJumpRange;
     }
     if (rideCheck && (so_playerStatus0() & SoModeConstants::daPyStts0_SHIP_RIDE_e)) {
         so_modeProcInit(this, MODE_NEAR_SWIM_e);
-    } else if (so_calcTimerI(&mA90) == 0) {
+    } else if (so_calcTimerI(&mSwimTimer) == 0) {
         so_modeProcInit(this, MODE_JUMP_e);
     }
 }
@@ -353,12 +353,12 @@ void daNpc_So_c::modeNearSwim() {
         u32 cam = soMode_cameraBody();
         soMode_cameraType(cam, "WaterBattle", 0);
     }
-    mB70 = 2;
+    m_order_event_num = 2;
     fopAc_ac_c* ship = so_ship();
     if (ship == nullptr)
         return;
     fopAc_ac_c* pl = so_player();
-    f64 abs1 = so_absXZ(gabi::ea(&pl->current.pos), gabi::ea(&mA80));
+    f64 abs1 = so_absXZ(gabi::ea(&pl->current.pos), gabi::ea(&mTagPos));
     SoModeCirclePath* path = so_path(this);
     cLib_addCalc2(&path->mRadius, 400.0f, 0.1f, 10.0f);
     path->mAngleSpeed = 0x100;
@@ -369,31 +369,31 @@ void daNpc_So_c::modeNearSwim() {
     path->mTranslation.y = (f32)so_getWaterY(gabi::ea(path), gabi::ea(&mAcch));
     so_setCirclePath(gabi::ea(path));
     f32 wy = (f32)so_getWaterY(gabi::ea(&path->mPos), gabi::ea(&mAcch));
-    path->mPos.y = gabi::fadds_ppc(wy, mB34);
+    path->mPos.y = gabi::fadds_ppc(wy, mOffsetY);
     f64 d2 = so_absXZ(gabi::ea(&current.pos), gabi::ea(&path->mPos));
     bool keep;
     if (d2 > 150.0f || ship->speedF > 10.0f) {
-        mAFC = 12.0f;
+        mTargetSpeedF = 12.0f;
         s16 target = cLib_targetAngleY(&current.pos, &path->mPos);
         cLib_addCalcAngleS2(&shape_angle.y, target, 8, 0x400);
-        f32 a7c = mA7C;
-        f32 y = gabi::fadds_ppc(current.pos.y, mB34);
-        mB04 = 0.0f;
+        f32 a7c = mJumpRange;
+        f32 y = gabi::fadds_ppc(current.pos.y, mOffsetY);
+        mPathBlend = 0.0f;
         current.pos.y = y;
         keep = abs1 < a7c;
     } else {
-        cLib_addCalc2(&mB04, 1.0f, 0.01f, 0.05f);
+        cLib_addCalc2(&mPathBlend, 1.0f, 0.01f, 0.05f);
         cXyz d;
         cXyz_mi(gabi::ea(&path->mPos), gabi::ea(&d), gabi::ea(&current.pos));
         cXyz m;
-        cXyz_ml(gabi::ea(&d), gabi::ea(&m), mB04);
+        cXyz_ml(gabi::ea(&d), gabi::ea(&m), mPathBlend);
         cXyz p;
         cXyz_pl(gabi::ea(&current.pos), gabi::ea(&p), gabi::ea(&m));
         s16 ang = (s16)((s16)path->mAngle + 0x8000);
         so_word_copy3(gabi::ea(&current.pos), gabi::ea(&p));
         cLib_addCalcAngleS2(&shape_angle.y, ang, 4, 0x400);
-        f32 y = gabi::fadds_ppc(current.pos.y, mB34);
-        f32 a7c = mA7C;
+        f32 y = gabi::fadds_ppc(current.pos.y, mOffsetY);
+        f32 a7c = mJumpRange;
         current.pos.y = y;
         keep = abs1 < a7c;
     }
@@ -404,8 +404,8 @@ void daNpc_So_c::modeNearSwim() {
 
 /* 022E09B0 */
 void daNpc_So_c::modeEventFirstWaitInit() {
-    mA90 = 150;
-    mAFC = 0.0f;
+    mSwimTimer = 150;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
     offsetDive();
 }
@@ -417,7 +417,7 @@ void daNpc_So_c::modeEventFirstWait() {
         return;
     so_word_copy3(gabi::ea(&current.pos),
                   gabi::ea(&ship->current.pos)); /* current.pos = ship->current.pos */
-    f64 abs = so_absXZ(gabi::ea(&ship->current.pos), gabi::ea(&mAAC));
+    f64 abs = so_absXZ(gabi::ea(&ship->current.pos), gabi::ea(&mInitialPos));
     if (abs < soModeHIO().m54)
         return;
     // HD: the sail or item 0x77
@@ -433,16 +433,16 @@ void daNpc_So_c::modeEventFirstWait() {
 
 /* 022E0AB4 */
 void daNpc_So_c::offsetSwim() {
-    mB38.x = -40.0f;
-    mB38.y = 10.0f;
-    mB38.z = 0.3f;
+    mOffsetYCalc.x = -40.0f;
+    mOffsetYCalc.y = 10.0f;
+    mOffsetYCalc.z = 0.3f;
 }
 
 /* 022E0ADC */
 void daNpc_So_c::modeEventFirstInit() {
     offsetSwim();
     m_jnt.mbBackBoneLock = 0;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
 }
 
@@ -458,12 +458,12 @@ void daNpc_So_c::cutProc() {
     };
     static SoModeCutTable cut_tbl;
     s32 staffId = soMode_staffId(dComIfGp_ea() + 0x52C4, "NpcSo", 0, 0); /* getMyStaffId */
-    mB6C = staffId;
+    mStaffId = staffId;
     if (staffId == -1)
         return;
     s32 actIdx = soMode_actionIndex(dComIfGp_ea() + 0x52C4, staffId, gabi::ea(action_table), 21, 1,
                                     0); /* getMyActIdx */
-    staffId = mB6C;
+    staffId = mStaffId;
     if (actIdx == -1) {
         soMode_cutEnd(dComIfGp_ea() + 0x52C4, staffId); /* cutEnd */
         return;
@@ -490,13 +490,13 @@ void daNpc_So_c::modeEventFirst() {
         so_cut(this);
         if (so_endCheckOld("SO_1ST_MEET")) {
             so_event_onEventFlag8();
-            mB70 = 1;
+            m_order_event_num = 1;
             so_modeProcInit(this, MODE_TALK_e);
             attention_info.flags = fopAc_Attn_TALKFLAG_NOTALK_e | fopAc_Attn_ACTION_SPEAK_e |
                                    fopAc_Attn_LOCKON_TALK_e; /* attention_info.flags */
         }
     } else {
-        mB70 = 3;
+        m_order_event_num = 3;
     }
 }
 
@@ -504,7 +504,7 @@ void daNpc_So_c::modeEventFirst() {
 void daNpc_So_c::modeEventFirstEndInit() {
     offsetAppear();
     m_jnt.mbBackBoneLock = 0;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
 }
 
@@ -517,7 +517,7 @@ void daNpc_So_c::modeEventFirstEnd() {
             so_modeProcInit(this, MODE_DISAPPEAR_e);
         }
     } else if (talk(1) == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
-        mB70 = 4;
+        m_order_event_num = 4;
     }
 }
 
@@ -525,17 +525,17 @@ void daNpc_So_c::modeEventFirstEnd() {
 void daNpc_So_c::modeEventEsaInit() {
     offsetSwim();
     m_jnt.mbBackBoneLock = 0;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
 }
 
 /* 022E0E60 */
 void daNpc_So_c::modeEventEsa() {
     so_cut(this);
-    if (so_endCheck(mBDC)) {
+    if (so_endCheck(mEsaXyEventIdx)) {
         so_event_onEventFlag8();
-        mB70 = 1;
-        mBDC = -1;
+        m_order_event_num = 1;
+        mEsaXyEventIdx = -1;
         so_modeProcInit(this, MODE_TALK_e);
     }
 }
@@ -543,7 +543,7 @@ void daNpc_So_c::modeEventEsa() {
 /* 022E0EF4 */
 void daNpc_So_c::modeEventMapopenInit() {
     m_jnt.mbBackBoneLock = 0;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
 }
 
@@ -553,12 +553,12 @@ void daNpc_So_c::modeEventMapopen() {
         so_cut(this);
         if (so_endCheckOld("SO_MAPOPEN")) {
             so_event_onEventFlag8();
-            mB70 = 1;
-            mBD8 = 1;
+            m_order_event_num = 1;
+            mMapopenDone = 1;
             so_modeProcInit(this, MODE_TALK_e);
         }
     } else if (talk(1) == 0x12) {
-        mB70 = 5;
+        m_order_event_num = 5;
     }
 }
 
@@ -566,7 +566,7 @@ void daNpc_So_c::modeEventMapopen() {
 void daNpc_So_c::modeEventBowInit() {
     offsetSwim();
     m_jnt.mbBackBoneLock = 0;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
 }
 
@@ -575,31 +575,31 @@ void daNpc_So_c::modeEventBow() {
     if (so_demoAccept(this)) {
         so_cut(this);
         if (so_endCheckOld("SO_BOW")) {
-            mB0C = 1;
+            mBowEventDone = 1;
             so_event_onEventFlag8();
-            mBDB = 0;
+            mNoPosMove = 0;
             so_onEventBit(0x3A10);
             s8 camId = dComIfGp_getPlayerCameraID(0); /* dComIfGp_getPlayerCameraID(0) */
             u32 play = dComIfGp_ea();
             /* the reset position and centre are passed by value (lfs/stfs copies) */
             cXyz ctr;
             cXyz eye;
-            f32 bc0x = mBC0.x, bc0z = mBC0.z, bccx = mBCC.x, bccy = mBCC.y, bc0y = mBC0.y;
+            f32 bc0x = mCamEye.x, bc0z = mCamEye.z, bccx = mCamCenter.x, bccy = mCamCenter.y, bc0y = mCamEye.y;
             u32 cam = (u32)soModePlayCamera(play).mCamera[camId].mpCamera;
             ctr.y = bccy;
             eye.y = bc0y;
             eye.x = bc0x;
             ctr.x = bccx;
-            f32 bccz = mBCC.z;
+            f32 bccz = mCamCenter.z;
             eye.z = bc0z;
             ctr.z = bccz;
-            soMode_resetCamera(cam + 0x248, &ctr, &eye); /* dCamera_c::Reset(mBCC, mBC0) */
+            soMode_resetCamera(cam + 0x248, &ctr, &eye); /* dCamera_c::Reset(mCamCenter, mCamEye) */
             soMode_startCamera(cam + 0x248);             /* dCamera_c::Start */
-            mB70 = 1;
+            m_order_event_num = 1;
             so_modeProcInit(this, MODE_TALK_e);
         }
     } else if (talk(1) == 0x12) {
-        mB70 = 6;
+        m_order_event_num = 6;
     }
 }
 
@@ -632,28 +632,28 @@ void daNpc_So_c::modeDisappearInit() {
 
 /* 022E12B4 */
 void daNpc_So_c::modeDisappear() {
-    if (std::fabs(gabi::fsubs_ppc(mB34, mB38.x)) < 10.0f) {
-        // HD: no new hiding place is searched here (no searchTagSo loop, mA79 and current.pos
+    if (std::fabs(gabi::fsubs_ppc(mOffsetY, mOffsetYCalc.x)) < 10.0f) {
+        // HD: no new hiding place is searched here (no searchTagSo loop, mTagRndNum and current.pos
         // are left alone)
-        mBD8 = 0;
+        mMapopenDone = 0;
         mB84 = 0;
-        mB90.x = 0.0f;
-        mBA0.z = 0.0f;
-        mBA0.y = 0.0f;
-        mB8C = 0.0f;
-        mB90.y = 0.0f;
-        mB88 = 0.0f;
-        mBA0.x = 0.0f;
-        mB7C = 0;
-        mBAC = 0;
-        mB74 = 0;
-        mB0C = 0;
-        mB9C = 0;
-        mBDB = 1;
-        mB80 = 0;
-        mB78 = 0;
-        mBD9 = 0;
-        mB90.z = 0.0f;
+        mMiniGameTagPos.x = 0.0f;
+        mShipReturnPos.z = 0.0f;
+        mShipReturnPos.y = 0.0f;
+        mMiniGameAttnOfsZ = 0.0f;
+        mMiniGameTagPos.y = 0.0f;
+        mMiniGameAttnOfsX = 0.0f;
+        mShipReturnPos.x = 0.0f;
+        mMiniGameHitCount = 0;
+        mShipReturnAngle = 0;
+        mMiniGameStep = 0;
+        mBowEventDone = 0;
+        mMiniGameTagAngle = 0;
+        mNoPosMove = 1;
+        mMiniGameJumpCount = 0;
+        mMiniGameShotCount = 0;
+        mGetRupeeDone = 0;
+        mMiniGameTagPos.z = 0.0f;
         so_modeProcInit(this, MODE_HIDE_e);
         gravity = -2.5f;
     }
@@ -661,7 +661,7 @@ void daNpc_So_c::modeDisappear() {
 
 /* 022E136C */
 void daNpc_So_c::modeDebugInit() {
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
     so_setAnm(this, 1, false);
     fopAc_ac_c* pl = so_player();
@@ -682,8 +682,8 @@ void daNpc_So_c::modeGetRupee() {
         so_cut(this);
         if (so_endCheckOld("SO_GET_RUPEE")) {
             so_event_onEventFlag8();
-            mB70 = 1;
-            mBD9 = 1;
+            m_order_event_num = 1;
+            mGetRupeeDone = 1;
             so_modeProcInit(this, MODE_TALK_e);
         }
     } else if (talk(1) == 0x12) {
@@ -694,14 +694,14 @@ void daNpc_So_c::modeGetRupee() {
         u32 pl = gabi::ea(so_player());
         soModePlayerDemo(pl).mDemoType = 2;
         soModePlayerDemo(pl).mDemoMode = 1;
-        mB70 = 7;
+        m_order_event_num = 7;
     }
 }
 
 /* 022E1508 */
 void daNpc_So_c::modeEventTriForceInit() {
     m_jnt.mbBackBoneLock = 0;
-    mAFC = 0.0f;
+    mTargetSpeedF = 0.0f;
     speedF = 0.0f;
     offsetAppear();
     so_setAnm(this, 1, false);
@@ -719,7 +719,7 @@ void daNpc_So_c::modeEventTriForce() {
             so_onEventBit(0x3A20);
         }
     } else {
-        mB70 = 8;
+        m_order_event_num = 8;
     }
 }
 
@@ -727,13 +727,13 @@ void daNpc_So_c::modeEventTriForce() {
 bool daNpc_So_c::checkTgHit() {
     fopAc_ac_c* player = so_player();
     soMode_moveStatus(gabi::ea(&mStts2.__vtbl_gstts)); /* mStts2.Move() (dCcD_GStts::Move) */
-    if (so_calcTimerI(&m6D8) != 0)
+    if (so_calcTimerI(&mTgHitTimer) != 0)
         return false;
     if (!soMode_checkTargetHit(&mSph))
         return false;                        /* ChkTgHit */
     cXyz* pos = &mSph.mGObjTg.mHitPos;       /* GetTgHitPosP() */
     u32 obj = soMode_targetHitObject(&mSph); /* GetTgHitObj() */
-    m6D8 = soModeHIO().m7C;
+    mTgHitTimer = soModeHIO().m7C;
     if (obj == 0)
         return false;
     if (soModeHitObject(obj).mAtType == SoModeConstants::AT_TYPE_NORMAL_ARROW) {
@@ -754,10 +754,10 @@ bool daNpc_So_c::checkTgHit() {
 u16 daNpc_So_c::next_msgStatus(be<u32>* pMsgNo) {
     u16 ret = 0xF;
     u32 msgNo = *pMsgNo;
-    s32 m6d0 = m6D0;
+    s32 m6d0 = mParamMsgNo;
     SoModeMessage* msgMgr = soModeMessage(); /* HD message manager (select number at +0x948) */
     if (msgNo == (u32)m6d0) {
-        if (mBD8) {
+        if (mMapopenDone) {
             bool first = false;
             if (!so_isEventBit(0x901) && so_isStartStage("sea") &&
                 fopAcM_GetRoomNo(this) == 0xD /* dIsleRoom_DragonRoostIsland_e */) {
@@ -815,7 +815,7 @@ u16 daNpc_So_c::next_msgStatus(be<u32>* pMsgNo) {
         break;
     case 0x32D6:
         soMode_searchMinigame(0x022DDFF4 /* searchMinigameTagSo_CB */, this); /* fopAcM_Search */
-        if (soModeHIO().m30 != 0 || mBAE != 0) {
+        if (soModeHIO().m30 != 0 || mMiniGameTagFound != 0) {
             if (dComIfGs_getItem(SoModeConstants::dInvSlot_BOW_e) != 0xFF /* dComIfGs_getItem(dInvSlot_BOW_e) */ &&
                 dComIfG_getTimerPtr() == nullptr /* dComIfG_getTimerPtr() */) {
                 if (!so_isEventBit(0x3A10)) {
@@ -858,7 +858,7 @@ u16 daNpc_So_c::next_msgStatus(be<u32>* pMsgNo) {
         break;
     case 0x32DF:
     case 0x32E0: {
-        s32 add = mB7C * 10;
+        s32 add = mMiniGameHitCount * 10;
         dComIfGp_setItemRupeeCount(add);
         *pMsgNo = 0x32E2;
         break;
@@ -881,10 +881,10 @@ u16 daNpc_So_c::next_msgStatus(be<u32>* pMsgNo) {
 
 /* 022E1CA8 */
 u32 daNpc_So_c::getMsg() {
-    if (mB0C) {
+    if (mBowEventDone) {
         s32 n;
-        if (soModeHIO().m2E != 0 || (n = mB7C) >= 10) {
-            if (mBD9) {
+        if (soModeHIO().m2E != 0 || (n = mMiniGameHitCount) >= 10) {
+            if (mGetRupeeDone) {
                 return 0x32E2;
             }
             return 0x32DD;
@@ -902,8 +902,8 @@ u32 daNpc_So_c::getMsg() {
     if (!so_isEventBit(0x901) && so_isStartStage("sea") && fopAcM_GetRoomNo(this) == 0xD) {
         first = true;
     }
-    if (mBD8) {
-        return (u32)(s32)m6D0;
+    if (mMapopenDone) {
+        return (u32)(s32)mParamMsgNo;
     }
     return first ? 0x32CA : 0x32D0;
 }

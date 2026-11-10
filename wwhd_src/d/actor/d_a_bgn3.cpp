@@ -91,7 +91,7 @@ bool daBgn3_Draw(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
     u32 boss = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&bgn_s_sub), a);
     bgn = gabi::at<Bgn3BossView>(boss);
-    if (boss && static_cast<s8>(gabi::at<Bgn3BossView>(boss)->m02B5) == 2 &&
+    if (boss && static_cast<s8>(gabi::at<Bgn3BossView>(boss)->mForm) == 2 &&
         static_cast<u8>(l_HIO.m3E)) {
         ke_color.r = 188;
         ke_color.g = 152;
@@ -226,16 +226,16 @@ void part_control(u32 a) {
     direction.z = singleAdd(REG_F(0, 3), -300.0f);
     MtxPosition(&direction, &delta);
     Bgn3Bindings::cXyz_add(a + 0x314, gabi::ea(&output), gabi::ea(&delta));
-    bgn3Word(i_this->m0FD7C.x) = static_cast<u32>(bgn3Word(output.x));
-    bgn3Word(i_this->m0FD7C.y) = static_cast<u32>(bgn3Word(output.y));
-    bgn3Word(i_this->m0FD7C.z) = static_cast<u32>(bgn3Word(output.z));
+    bgn3Word(i_this->mPartRootPos.x) = static_cast<u32>(bgn3Word(output.x));
+    bgn3Word(i_this->mPartRootPos.y) = static_cast<u32>(bgn3Word(output.y));
+    bgn3Word(i_this->mPartRootPos.z) = static_cast<u32>(bgn3Word(output.z));
     for (int i = 0; i < 9; ++i) {
         f32 size = singleAdd(REG_F(0, 11), 1.7f);
         f32 factor = size_d[i];
-        i_this->mParts[i].m00F4 = factor * size;
+        i_this->mParts[i].mPart3Scale = factor * size;
     }
     f32 separation = singleAdd(REG_F(0, 8), 150.0f);
-    f32 stiffness = static_cast<f32>(i_this->m0FDB8);
+    f32 stiffness = static_cast<f32>(i_this->mPartStiffness);
     Bgn3LinChk line;
     Bgn3Bindings::cBgS_LinChk_ct(gabi::ea(&line));
     f32 gravity = singleAdd(REG_F(0, 6), -5.0f);
@@ -249,66 +249,66 @@ void part_control(u32 a) {
     line.__vtbl_58 = 0x10008FE4;
     line.__vtbl_20 = 0x10008FC4;
     u32 firstPart = a + 0x1BE8;
-    bgn3Word(bgn3Part(firstPart)->m00D4.x) = static_cast<u32>(bgn3Word(i_this->m0FD7C.x));
-    bgn3Word(bgn3Part(firstPart)->m00D4.y) = static_cast<u32>(bgn3Word(i_this->m0FD7C.y));
-    bgn3Word(bgn3Part(firstPart)->m00D4.z) = static_cast<u32>(bgn3Word(i_this->m0FD7C.z));
+    bgn3Word(bgn3Part(firstPart)->mPart3Pos.x) = static_cast<u32>(bgn3Word(i_this->mPartRootPos.x));
+    bgn3Word(bgn3Part(firstPart)->mPart3Pos.y) = static_cast<u32>(bgn3Word(i_this->mPartRootPos.y));
+    bgn3Word(bgn3Part(firstPart)->mPart3Pos.z) = static_cast<u32>(bgn3Word(i_this->mPartRootPos.z));
     cMtx_YrotS(calc_mtx(), static_cast<s16>(i_this->shape_angle.y));
     cMtx_XrotM(calc_mtx(), static_cast<s16>(i_this->shape_angle.x));
     direction.x = 0.0f;
     direction.y = 0.0f;
-    direction.z = -static_cast<f32>(i_this->m0FDBC);
+    direction.z = -static_cast<f32>(i_this->mPartDistance);
     MtxPosition(&direction, &delta);
     for (int i = 1; i < 10; ++i) {
         u32 part = firstPart + i * 0x19D8;
         u32 prev = part - 0x19D8;
-        f32 floor = singleAdd(REG_F(0, 19), 70.0f) * static_cast<f32>(bgn3Part(prev)->m00F4);
-        f32 y = singleAdd(singleAdd(static_cast<f32>(bgn3Part(part)->m00D4.y), gravity),
-                          static_cast<f32>(bgn3Part(part)->m00E8.y));
-        f32 x = static_cast<f32>(bgn3Part(part)->m00D4.x);
-        f32 prevZ = static_cast<f32>(bgn3Part(prev)->m00D4.z);
-        f32 prevX = static_cast<f32>(bgn3Part(prev)->m00D4.x);
+        f32 floor = singleAdd(REG_F(0, 19), 70.0f) * static_cast<f32>(bgn3Part(prev)->mPart3Scale);
+        f32 y = singleAdd(singleAdd(static_cast<f32>(bgn3Part(part)->mPart3Pos.y), gravity),
+                          static_cast<f32>(bgn3Part(part)->mPart3Speed.y));
+        f32 x = static_cast<f32>(bgn3Part(part)->mPart3Pos.x);
+        f32 prevZ = static_cast<f32>(bgn3Part(prev)->mPart3Pos.z);
+        f32 prevX = static_cast<f32>(bgn3Part(prev)->mPart3Pos.x);
         if (!(y > floor))
             y = floor;
-        f32 z = static_cast<f32>(bgn3Part(part)->m00D4.z);
-        f32 dx = singleAdd(x - prevX, static_cast<f32>(bgn3Part(part)->m00E8.x));
-        f32 dz = singleAdd(z - prevZ, static_cast<f32>(bgn3Part(part)->m00E8.z));
+        f32 z = static_cast<f32>(bgn3Part(part)->mPart3Pos.z);
+        f32 dx = singleAdd(x - prevX, static_cast<f32>(bgn3Part(part)->mPart3Speed.x));
+        f32 dz = singleAdd(z - prevZ, static_cast<f32>(bgn3Part(part)->mPart3Speed.z));
         dx = singleAdd(dx, static_cast<f32>(delta.x));
         dz = singleAdd(dz, static_cast<f32>(delta.z));
-        f32 dy = y - static_cast<f32>(bgn3Part(prev)->m00D4.y);
+        f32 dy = y - static_cast<f32>(bgn3Part(prev)->mPart3Pos.y);
         s16 heading = cM_atan2s(dx, dz);
-        bgn3Part(prev)->m00E2 = heading;
+        bgn3Part(prev)->mPart3AngleY = heading;
         f32 horizontal = Bgn3Bindings::sqrtf(gabi::fmadds(dx, dx, dz * dz));
         u32 pitch = cM_atan2s(dy, horizontal);
-        bgn3Part(prev)->m00E0 = (s16)(0u - pitch);
-        cMtx_YrotS(calc_mtx(), static_cast<s16>(bgn3Part(prev)->m00E2));
-        cMtx_XrotM(calc_mtx(), static_cast<s16>(bgn3Part(prev)->m00E0));
+        bgn3Part(prev)->mPart3AngleX = (s16)(0u - pitch);
+        cMtx_YrotS(calc_mtx(), static_cast<s16>(bgn3Part(prev)->mPart3AngleY));
+        cMtx_XrotM(calc_mtx(), static_cast<s16>(bgn3Part(prev)->mPart3AngleX));
         direction.y = 0.0f;
         direction.x = 0.0f;
-        direction.z = separation * static_cast<f32>(bgn3Part(prev)->m00F4);
+        direction.z = separation * static_cast<f32>(bgn3Part(prev)->mPart3Scale);
         cXyz segment;
         MtxPosition(&direction, &segment);
-        u32 oldX = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.x));
-        u32 oldY = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.y));
-        bgn3Word(bgn3Part(part)->m00E8.x) = oldX;
-        u32 oldZ = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.z));
-        bgn3Word(bgn3Part(part)->m00E8.y) = oldY;
-        bgn3Word(bgn3Part(part)->m00E8.z) = oldZ;
+        u32 oldX = static_cast<u32>(bgn3Word(bgn3Part(part)->mPart3Pos.x));
+        u32 oldY = static_cast<u32>(bgn3Word(bgn3Part(part)->mPart3Pos.y));
+        bgn3Word(bgn3Part(part)->mPart3Speed.x) = oldX;
+        u32 oldZ = static_cast<u32>(bgn3Word(bgn3Part(part)->mPart3Pos.z));
+        bgn3Word(bgn3Part(part)->mPart3Speed.y) = oldY;
+        bgn3Word(bgn3Part(part)->mPart3Speed.z) = oldZ;
         Bgn3Bindings::cXyz_add(prev + 0x288, gabi::ea(&output), gabi::ea(&segment));
-        bgn3Word(bgn3Part(part)->m00D4.x) = static_cast<u32>(bgn3Word(output.x));
+        bgn3Word(bgn3Part(part)->mPart3Pos.x) = static_cast<u32>(bgn3Word(output.x));
         f32 vx =
-            static_cast<f32>(bgn3Part(part)->m00D4.x) - static_cast<f32>(bgn3Part(part)->m00E8.x);
-        bgn3Word(bgn3Part(part)->m00D4.y) = static_cast<u32>(bgn3Word(output.y));
-        bgn3Word(bgn3Part(part)->m00D4.z) = static_cast<u32>(bgn3Word(output.z));
+            static_cast<f32>(bgn3Part(part)->mPart3Pos.x) - static_cast<f32>(bgn3Part(part)->mPart3Speed.x);
+        bgn3Word(bgn3Part(part)->mPart3Pos.y) = static_cast<u32>(bgn3Word(output.y));
+        bgn3Word(bgn3Part(part)->mPart3Pos.z) = static_cast<u32>(bgn3Word(output.z));
         f32 vy =
-            static_cast<f32>(bgn3Part(part)->m00D4.y) - static_cast<f32>(bgn3Part(part)->m00E8.y);
+            static_cast<f32>(bgn3Part(part)->mPart3Pos.y) - static_cast<f32>(bgn3Part(part)->mPart3Speed.y);
         f32 vz =
-            static_cast<f32>(bgn3Part(part)->m00D4.z) - static_cast<f32>(bgn3Part(part)->m00E8.z);
-        bgn3Part(part)->m00E8.x = vx * stiffness;
-        bgn3Part(part)->m00E8.y = vy * stiffness;
-        bgn3Part(part)->m00E8.z = vz * stiffness;
+            static_cast<f32>(bgn3Part(part)->mPart3Pos.z) - static_cast<f32>(bgn3Part(part)->mPart3Speed.z);
+        bgn3Part(part)->mPart3Speed.x = vx * stiffness;
+        bgn3Part(part)->mPart3Speed.y = vy * stiffness;
+        bgn3Part(part)->mPart3Speed.z = vz * stiffness;
     }
-    cLib_addCalc2(&i_this->m0FDB8, static_cast<f32>(l_HIO.m38), 1.0f, 0.002f);
-    cLib_addCalc2(&i_this->m0FDBC, static_cast<f32>(l_HIO.m34), 1.0f, 0.5f);
+    cLib_addCalc2(&i_this->mPartStiffness, static_cast<f32>(l_HIO.m38), 1.0f, 0.002f);
+    cLib_addCalc2(&i_this->mPartDistance, static_cast<f32>(l_HIO.m34), 1.0f, 0.5f);
     line.__vtbl_58 = 0x10008FE4;
     line.__vtbl_64 = 0x10008FA4;
     line.__vtbl_20 = 0x10008F94;
@@ -457,7 +457,7 @@ void splash(u32 a, u32 headEffect, u32 partEffect, bool ripples) {
     auto* i_this = gabi::at<bgn3_class>(a);
     u32 s = a + 0x11E58;
     cXyz p;
-    if (((static_cast<s16>(i_this->m0FD88) + 2) & 3) == 0) {
+    if (((static_cast<s16>(i_this->mFrameCounter) + 2) & 3) == 0) {
         bgn3Word(p.x) = static_cast<u32>(bgn3Word(i_this->current.pos.x));
         bgn3Word(p.y) = static_cast<u32>(bgn3Word(i_this->current.pos.y));
         bgn3Word(p.z) = static_cast<u32>(bgn3Word(i_this->current.pos.z));
@@ -466,27 +466,27 @@ void splash(u32 a, u32 headEffect, u32 partEffect, bool ripples) {
             Bgn3Bindings::dPa_control_c_setSimple(gabi::ea(bgn3GameInfo(play)->play.mParticle),
                                                   headEffect, gabi::ea(&p), 255, 0x101D5E98u,
                                                   0x101D5E98u, 0);
-            if (ripples && static_cast<s16>(i_this->m0FD94) == 0) {
+            if (ripples && static_cast<s16>(i_this->mRippleSeTimer) == 0) {
                 f32 random = cM_rndF(20.0f);
-                i_this->m0FD94 = (s16)gabi::ftoi(singleAdd(random, 20.0f));
+                i_this->mRippleSeTimer = (s16)gabi::ftoi(singleAdd(random, 20.0f));
                 moveSound(a, 0x6A44, 0);
             }
         }
     }
     for (int i = 0; i < 9; ++i) {
-        if (((static_cast<s16>(i_this->m0FD88) + i) & (ripples ? 3 : 7)) == 0) {
+        if (((static_cast<s16>(i_this->mFrameCounter) + i) & (ripples ? 3 : 7)) == 0) {
             u32 part = a + 0x1BE8 + i * 0x19D8;
-            bgn3Word(p.x) = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.x));
-            bgn3Word(p.y) = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.y));
-            bgn3Word(p.z) = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.z));
+            bgn3Word(p.x) = static_cast<u32>(bgn3Word(bgn3Part(part)->mPart3Pos.x));
+            bgn3Word(p.y) = static_cast<u32>(bgn3Word(bgn3Part(part)->mPart3Pos.y));
+            bgn3Word(p.z) = static_cast<u32>(bgn3Word(bgn3Part(part)->mPart3Pos.z));
             if (!gr_check(a, gabi::ea(&p))) {
                 u32 play = dComIfGp_ea();
                 Bgn3Bindings::dPa_control_c_setSimple(gabi::ea(bgn3GameInfo(play)->play.mParticle),
                                                       partEffect, gabi::ea(&p), 255, 0x101D5E98u,
                                                       0x101D5E98u, 0);
-                if (ripples && i == 8 && static_cast<s16>(i_this->m0FD94) == 0) {
+                if (ripples && i == 8 && static_cast<s16>(i_this->mRippleSeTimer) == 0) {
                     f32 random = cM_rndF(20.0f);
-                    i_this->m0FD94 = (s16)gabi::ftoi(singleAdd(random, 20.0f));
+                    i_this->mRippleSeTimer = (s16)gabi::ftoi(singleAdd(random, 20.0f));
                     s32 reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
                     Bgn3Bindings::mDoAud_seStart(0x6A45u, s + 0x2D8, 0, reverb);
                 }
@@ -504,20 +504,20 @@ bool move0(u32 a) {
     s16 center = 0;
     bool chase = false;
     if (bait) {
-        turn = static_cast<s16>(i_this->m0FD8E);
-        i_this->m0FD90 = 1;
-        center = static_cast<s16>(i_this->m0FDB0);
+        turn = static_cast<s16>(i_this->mTurnSpeed);
+        i_this->mChaseTimer = 1;
+        center = static_cast<s16>(i_this->mCenterTimer);
         chase = true;
     } else {
-        s16 timer = static_cast<s16>(i_this->m0FD90);
+        s16 timer = static_cast<s16>(i_this->mChaseTimer);
         if (timer) {
-            turn = static_cast<s16>(i_this->m0FD8E);
-            i_this->m0FD90 = (s16)(timer - 1);
-            center = static_cast<s16>(i_this->m0FDB0);
+            turn = static_cast<s16>(i_this->mTurnSpeed);
+            i_this->mChaseTimer = (s16)(timer - 1);
+            center = static_cast<s16>(i_this->mCenterTimer);
             chase = true;
         } else {
             i_this->current.angle.y =
-                (s16)(static_cast<s16>(i_this->current.angle.y) + static_cast<s16>(i_this->m0FD8E));
+                (s16)(static_cast<s16>(i_this->current.angle.y) + static_cast<s16>(i_this->mTurnSpeed));
         }
     }
     if (chase) {
@@ -531,14 +531,14 @@ bool move0(u32 a) {
             f32 x = static_cast<f32>(delta.x);
             f32 z = static_cast<f32>(delta.z);
             s16 heading = cM_atan2s(x, z);
-            i_this->m0FDBC = singleAdd(REG_F(10, 7), 30.0f);
+            i_this->mPartDistance = singleAdd(REG_F(10, 7), 30.0f);
             cLib_addCalcAngleS2(&i_this->current.angle.y, heading, 4, (s16)(amount * 2));
         } else {
             u32 play = dComIfGp_ea();
             s16 heading = Bgn3Bindings::fopAcM_searchActorAngleY(
                 a, gabi::ea(bgn3GameInfo(play)->play.mPlayerInfo[0].mpPlayer));
             s32 step = REG0_S(9) + 0x900;
-            s16 counter = static_cast<s16>(i_this->m0FD88);
+            s16 counter = static_cast<s16>(i_this->mFrameCounter);
             f32 amplitude = singleAdd(REG_F(0, 18), 4000.0f);
             f32 sine = cM_ssin(counter * step);
             s16 wobble = (s16)gabi::ftoi(sine * amplitude);
@@ -553,13 +553,13 @@ bool move0(u32 a) {
     pos_move(a);
     checkGround(a);
     bool struckWall = false;
-    if (checkWall(a) && static_cast<s16>(i_this->m0FDAA[1]) == 0) {
-        i_this->m0FD90 = 0;
+    if (checkWall(a) && static_cast<s16>(i_this->mTimers[1]) == 0) {
+        i_this->mChaseTimer = 0;
         s16 heading = centerAngle(a);
         i_this->current.angle.y = heading;
         f32 stiffness = singleAdd(REG_F(0, 5), 0.9f);
-        i_this->m0FDAA[1] = 20;
-        i_this->m0FDB8 = stiffness;
+        i_this->mTimers[1] = 20;
+        i_this->mPartStiffness = stiffness;
         struckWall = true;
         u32 play = dComIfGp_ea();
         s32 strength = REG0_S(2) + 5;
@@ -569,41 +569,41 @@ bool move0(u32 a) {
         direction.x = 0.0f;
         Bgn3Bindings::dVibration_c_StartShock(play + 0x599C, strength, -33, gabi::ea(&direction));
         moveSound(a, 0x5981, 0);
-        i_this->m100AC = static_cast<s16>(l_HIO.m3C);
+        i_this->mKiSetCount = static_cast<s16>(l_HIO.m3C);
         health = static_cast<s8>(i_this->health);
         s16 threshold = (health == 3   ? static_cast<s16>(l_HIO.m0E)
                          : health == 2 ? static_cast<s16>(l_HIO.m16)
                                        : static_cast<s16>(l_HIO.m1E));
-        s16 count = (s16)(static_cast<s16>(i_this->m0FD92) + 1);
+        s16 count = (s16)(static_cast<s16>(i_this->mWallHitCount) + 1);
         if (count >= threshold) {
-            i_this->m0FD92 = 0;
+            i_this->mWallHitCount = 0;
             health = static_cast<s8>(i_this->health);
-            i_this->m0FD90 = (health == 3   ? static_cast<s16>(l_HIO.m20)
+            i_this->mChaseTimer = (health == 3   ? static_cast<s16>(l_HIO.m20)
                               : health == 2 ? static_cast<s16>(l_HIO.m22)
                                             : static_cast<s16>(l_HIO.m24));
         } else {
-            i_this->m0FD92 = count;
+            i_this->mWallHitCount = count;
         }
     }
     bool newTurn = struckWall;
-    if (static_cast<s16>(i_this->m0FDAE) == 0) {
+    if (static_cast<s16>(i_this->mTurnTimer) == 0) {
         f32 random = cM_rndF(50.0f);
-        i_this->m0FDAE = (s16)gabi::ftoi(singleAdd(random, 30.0f));
+        i_this->mTurnTimer = (s16)gabi::ftoi(singleAdd(random, 30.0f));
         health = static_cast<s8>(i_this->health);
         newTurn = true;
     }
     if (newTurn) {
-        i_this->m0FD8E = (health == 3   ? static_cast<s16>(l_HIO.m0C)
+        i_this->mTurnSpeed = (health == 3   ? static_cast<s16>(l_HIO.m0C)
                           : health == 2 ? static_cast<s16>(l_HIO.m14)
                                         : static_cast<s16>(l_HIO.m1C));
         f32 random = cM_rndF(1.0f);
         if (random < 0.5f)
-            i_this->m0FD8E = (s16)(0u - (u32) static_cast<s16>(i_this->m0FD8E));
+            i_this->mTurnSpeed = (s16)(0u - (u32) static_cast<s16>(i_this->mTurnSpeed));
     }
-    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
-    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
-    i_this->m0FF28.mObjAt.mSPrm = second | 1;
-    i_this->m0FDFC.mObjAt.mSPrm = first | 1;
+    u32 second = static_cast<u32>(i_this->mDekuSph.mObjAt.mSPrm);
+    u32 first = static_cast<u32>(i_this->mHeadSph.mObjAt.mSPrm);
+    i_this->mDekuSph.mObjAt.mSPrm = second | 1;
+    i_this->mHeadSph.mObjAt.mSPrm = first | 1;
     i_this->current.angle.x = 0;
     if (static_cast<f32>(i_this->speedF) > 10.0f) {
         splash(a, 0x840E, 0x840D, false);
@@ -617,28 +617,28 @@ bool move0(u32 a) {
 void mahi(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
     dComIfGp_ea();
-    u16 phase = static_cast<u16>(i_this->m0FD8C);
+    u16 phase = static_cast<u16>(i_this->mMode);
     if (phase == 0) {
-        i_this->m0FD8C = 1;
+        i_this->mMode = 1;
         phase = 1;
     }
     if (phase == 1) {
         Bgn3Bindings::mDoExt_McaMorf_play(static_cast<u32>(bgn3Word(i_this->mpMorf)), a + 0x314, 0,
                                           0);
-        if (static_cast<s16>(i_this->m0FDAA[0]) == 0) {
-            i_this->m0FD8A = 0;
-            i_this->m0FD8C = 0;
+        if (static_cast<s16>(i_this->mTimers[0]) == 0) {
+            i_this->mAction = 0;
+            i_this->mMode = 0;
         }
     }
     cLib_addCalc0(&i_this->speedF, 1.0f, 3.0f);
     pos_move(a);
     i_this->current.angle.x = 0;
     checkGround(a);
-    if (checkWall(a) && static_cast<s16>(i_this->m0FDAA[1]) == 0) {
-        i_this->m0FD90 = 0;
+    if (checkWall(a) && static_cast<s16>(i_this->mTimers[1]) == 0) {
+        i_this->mChaseTimer = 0;
         s16 heading = centerAngle(a);
         i_this->current.angle.y = heading;
-        i_this->m0FDB8 = singleAdd(REG_F(0, 5), 0.9f);
+        i_this->mPartStiffness = singleAdd(REG_F(0, 5), 0.9f);
     }
 }
 
@@ -663,65 +663,65 @@ void movementPitch(u32 a) {
 void damage(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
     dComIfGp_ea();
-    u16 phase = static_cast<u16>(i_this->m0FD8C);
+    u16 phase = static_cast<u16>(i_this->mMode);
     if (phase == 0) {
         i_this->speed.y = 150.0f;
         i_this->speedF = 30.0f;
-        i_this->m0FDB8 = 1.0f;
-        i_this->m0FD8C = 1;
+        i_this->mPartStiffness = 1.0f;
+        i_this->mMode = 1;
     } else if (phase == 1) {
         f32 target = singleAdd(REG_F(0, 9), 350.0f);
         f32 step = singleAdd(REG_F(0, 10), 50.0f);
-        cLib_addCalc2(&i_this->m100A0, target, 1.0f, step);
+        cLib_addCalc2(&i_this->mRopeSway, target, 1.0f, step);
         if (checkGround(a)) {
             i_this->speed.y = 50.0f;
-            i_this->m0FD8C = 2;
+            i_this->mMode = 2;
             f32 random = cM_rndF(65536.0f);
             i_this->current.angle.y = (s16)gabi::ftoi(random);
-            i_this->m0FDB8 = 1.0f;
+            i_this->mPartStiffness = 1.0f;
             moveShock(a, 5);
             drop_eff_set(a);
         }
     } else if (phase == 2 && checkGround(a)) {
-        i_this->m0FD8A = 0;
-        i_this->m0FD8C = 0;
+        i_this->mAction = 0;
+        i_this->mMode = 0;
     }
     pos_move(a);
     movementPitch(a);
     checkGround(a);
-    if (checkWall(a) && static_cast<s16>(i_this->m0FDAA[1]) == 0) {
+    if (checkWall(a) && static_cast<s16>(i_this->mTimers[1]) == 0) {
         i_this->current.angle.y = centerAngle(a);
-        i_this->m0FDAA[1] = 20;
+        i_this->mTimers[1] = 20;
     }
-    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
-    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
-    i_this->m0FDFC.mObjAt.mSPrm = first & ~1u;
-    i_this->m0FF28.mObjAt.mSPrm = second & ~1u;
+    u32 first = static_cast<u32>(i_this->mHeadSph.mObjAt.mSPrm);
+    u32 second = static_cast<u32>(i_this->mDekuSph.mObjAt.mSPrm);
+    i_this->mHeadSph.mObjAt.mSPrm = first & ~1u;
+    i_this->mDekuSph.mObjAt.mSPrm = second & ~1u;
 }
 
 void end(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
     u32 play = dComIfGp_ea();
     u32 player = gabi::ea(bgn3GameInfo(play)->play.mPlayerInfo[0].mpPlayer);
-    u16 phase = static_cast<u16>(i_this->m0FD8C);
+    u16 phase = static_cast<u16>(i_this->mMode);
     if (phase == 0) {
         i_this->speed.y = 150.0f;
         i_this->speedF = 0.0f;
-        i_this->m0FD8C = 1;
+        i_this->mMode = 1;
         bgn->mCSMode = 20;
-        i_this->m0FDB8 = 1.0f;
+        i_this->mPartStiffness = 1.0f;
         if (player && player + 0x37C)
             monsterSound(player, 0x4830);
     } else if (phase >= 1 && phase <= 4) {
         f32 height = static_cast<f32>(i_this->current.pos.y) - 150.0f;
         if (height > 350.0f)
             height = 350.0f;
-        i_this->m100A0 = height;
+        i_this->mRopeSway = height;
         if (checkGround(a)) {
-            i_this->m0FD8C = (s16)(static_cast<s16>(i_this->m0FD8C) + 1);
+            i_this->mMode = (s16)(static_cast<s16>(i_this->mMode) + 1);
             f32 random = cM_rndF(65536.0f);
             i_this->current.angle.y = (s16)gabi::ftoi(random);
-            i_this->m0FDB8 = 1.0f;
+            i_this->mPartStiffness = 1.0f;
             moveShock(a, 5);
             drop_eff_set(a);
             i_this->speed.y = singleAdd(REG_F(0, 11), 130.0f);
@@ -730,34 +730,34 @@ void end(u32 a) {
             i_this->current.angle.y = (s16)gabi::ftoi(random);
             monsterSound(a, 0x496E);
         }
-        if (static_cast<s16>(i_this->m0FD8C) == 4 &&
+        if (static_cast<s16>(i_this->mMode) == 4 &&
             !(static_cast<f32>(i_this->speed.y) > -30.0f)) {
-            i_this->m0FD8C = 5;
-            i_this->m0FD8E = 0;
+            i_this->mMode = 5;
+            i_this->mTurnSpeed = 0;
         }
     } else if (phase == 5) {
         f32 rise = singleAdd(REG_F(0, 12), 5.5f);
         f32 speed = singleAdd(static_cast<f32>(i_this->speed.y), rise);
         i_this->speed.y = speed;
         if (speed > 0.0f)
-            cLib_addCalc2(&i_this->m10060, 1.0f, 1.0f, 0.015f);
+            cLib_addCalc2(&i_this->mFogFade, 1.0f, 1.0f, 0.015f);
         i_this->current.angle.y =
-            (s16)(static_cast<s16>(i_this->current.angle.y) + static_cast<s16>(i_this->m0FD8E));
+            (s16)(static_cast<s16>(i_this->current.angle.y) + static_cast<s16>(i_this->mTurnSpeed));
         i_this->shape_angle.y =
-            (s16)(static_cast<s16>(i_this->shape_angle.y) + static_cast<s16>(i_this->m0FD8E));
-        cLib_addCalcAngleS2(&i_this->m0FD8E, 5000, 4, 100);
+            (s16)(static_cast<s16>(i_this->shape_angle.y) + static_cast<s16>(i_this->mTurnSpeed));
+        cLib_addCalcAngleS2(&i_this->mTurnSpeed, 5000, 4, 100);
         f32 target = singleAdd(REG_F(0, 6), 50.0f);
-        cLib_addCalc2(&i_this->m0FDBC, target, 1.0f, 1.0f);
+        cLib_addCalc2(&i_this->mPartDistance, target, 1.0f, 1.0f);
         f32 step = singleAdd(REG_F(0, 10), 50.0f);
-        cLib_addCalc0(&i_this->m100A0, 1.0f, step);
+        cLib_addCalc0(&i_this->mRopeSway, 1.0f, step);
     }
     pos_move(a);
     movementPitch(a);
     checkGround(a);
-    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
-    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
-    i_this->m0FDFC.mObjAt.mSPrm = first & ~1u;
-    i_this->m0FF28.mObjAt.mSPrm = second & ~1u;
+    u32 second = static_cast<u32>(i_this->mDekuSph.mObjAt.mSPrm);
+    u32 first = static_cast<u32>(i_this->mHeadSph.mObjAt.mSPrm);
+    i_this->mHeadSph.mObjAt.mSPrm = first & ~1u;
+    i_this->mDekuSph.mObjAt.mSPrm = second & ~1u;
     cLib_addCalc2(&i_this->current.pos.x, -15.0f, 0.05f, 30.0f);
     cLib_addCalc2(&i_this->current.pos.z, 375.17f, 0.05f, 30.0f);
 }
@@ -813,7 +813,7 @@ void retireEmitter(u32 ownerSlot) {
 void damage_check(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
     u32 s = a + 0x11E58;
-    if (static_cast<s16>(i_this->m0FDB4))
+    if (static_cast<s16>(i_this->mDamageTimer))
         return;
     Bgn3AtInfo hit;
     if (Bgn3Bindings::dCcD_GObjInf_ChkTgHit(s + 0x80)) {
@@ -838,41 +838,41 @@ void damage_check(u32 a) {
             Bgn3Bindings::dVibration_c_StartShock(play + 0x599C, REG0_S(2) + 3, -33,
                                                   gabi::ea(&direction));
             bgn3PauseTimer() = 5;
-            i_this->m100A8 = 30;
+            i_this->mShakeTimer = 30;
             duration = static_cast<s16>(l_HIO.m30);
         } else if (kind == 2) {
-            i_this->m100A8 = 25;
+            i_this->mShakeTimer = 25;
             severity = 5;
             duration = static_cast<s16>(l_HIO.m2E);
         } else if (kind == 1) {
             u32 objectInfo = Bgn3Bindings::dCcD_GetGObjInf(static_cast<u32>(hit.mpObj));
             if (static_cast<u8>(gabi::at<dCcD_GObjInf>(objectInfo)->mGObjAt.mSpl) == 1) {
                 bgn3PauseTimer() = 3;
-                i_this->m100A8 = 20;
+                i_this->mShakeTimer = 20;
                 severity = 4;
                 duration = static_cast<s16>(l_HIO.m2C);
             } else {
                 bgn3PauseTimer() = 2;
-                i_this->m100A8 = 15;
+                i_this->mShakeTimer = 15;
                 severity = 3;
                 duration = static_cast<s16>(l_HIO.m2A);
             }
         } else if (static_cast<u32>(hit.mpActor) &&
                    fpcM_GetName(gabi::at<fopAc_ac_c>(hit.mpActor)) == fpcNm_ARROW_e) {
-            i_this->m100A8 = 10;
+            i_this->mShakeTimer = 10;
             severity = 2;
             duration = static_cast<s16>(l_HIO.m28);
         } else {
-            i_this->m100A8 = 7;
+            i_this->mShakeTimer = 7;
             severity = 1;
             duration = static_cast<s16>(l_HIO.m26);
         }
-        if (static_cast<s16>(i_this->m0FD8A) != 1) {
-            i_this->m0FDAA[0] = duration;
-            i_this->m0FD8A = 1;
+        if (static_cast<s16>(i_this->mAction) != 1) {
+            i_this->mTimers[0] = duration;
+            i_this->mAction = 1;
         }
-        i_this->m0FD8C = 0;
-        i_this->m0FDB4 = 20;
+        i_this->mMode = 0;
+        i_this->mDamageTimer = 20;
         if (severity >= 4) {
             movementParticle(s + 0x14C, 0x10);
             cXyz size;
@@ -888,19 +888,19 @@ void damage_check(u32 a) {
             angle.y = heading;
             movementParticle(s + 0x14C, 0xD, gabi::ea(&angle), gabi::ea(&size));
             cXyz p;
-            p.x = static_cast<f32>(i_this->m0FDFC.mGObjTg.mHitPos.x);
-            p.y = static_cast<f32>(i_this->m0FDFC.mGObjTg.mHitPos.y);
-            p.z = static_cast<f32>(i_this->m0FDFC.mGObjTg.mHitPos.z);
+            p.x = static_cast<f32>(i_this->mHeadSph.mGObjTg.mHitPos.x);
+            p.y = static_cast<f32>(i_this->mHeadSph.mGObjTg.mHitPos.y);
+            p.z = static_cast<f32>(i_this->mHeadSph.mGObjTg.mHitPos.z);
             Bgn3Bindings::dKy_SordFlush_set(gabi::ea(&p), 1);
         }
         Bgn3Bindings::def_se_set(a, static_cast<u32>(hit.mpObj), 0x40);
         return;
     }
     if (Bgn3Bindings::dCcD_GObjInf_ChkTgHit(a + 0xED54)) {
-        i_this->m0FDB4 = 20;
-        i_this->m0FD9E = 1;
-        i_this->m0FD8A = 2;
-        i_this->m0FD8C = 0;
+        i_this->mDamageTimer = 20;
+        i_this->mCoreHitFrame = 1;
+        i_this->mAction = 2;
+        i_this->mMode = 0;
         s8 health = static_cast<s8>(i_this->health);
         if (health) {
             i_this->health = (s8)(health - 1);
@@ -918,9 +918,9 @@ void damage_check(u32 a) {
                 emitter = movementParticle(s + 0x2D8, 0x8458);
                 if (emitter)
                     emitterScale(emitter, size);
-                i_this->m0FD8A = 3;
-                i_this->m0FD8C = 0;
-                i_this->m0FDB4 = 10000;
+                i_this->mAction = 3;
+                i_this->mMode = 0;
+                i_this->mDamageTimer = 10000;
                 reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
                 Bgn3Bindings::mDoAud_monsSeStart(0x4970u, 0, 0, reverb);
                 reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
@@ -948,8 +948,8 @@ void damage_check(u32 a) {
             hitAny = true;
         }
     }
-    if (hitAny && static_cast<s16>(i_this->m0FDB6) == 0) {
-        i_this->m0FDB6 = 10;
+    if (hitAny && static_cast<s16>(i_this->mHitSeTimer) == 0) {
+        i_this->mHitSeTimer = 10;
         Bgn3Bindings::def_se_set(a, static_cast<u32>(hit.mpObj), 0x44);
     }
 }
@@ -1072,19 +1072,19 @@ void setModels(u32 a, bool moving) {
     cMtx_ZrotM(calc_mtx(), static_cast<s16>(i_this->shape_angle.z));
     MtxPush();
     f32 size = singleAdd(REG_F(0, 10), 2.0f);
-    u32 model = static_cast<u32>(bgn3Word(i_this->m002CC));
+    u32 model = static_cast<u32>(bgn3Word(i_this->mpDekuModel));
     MtxScale(size, size, size, 1);
     copyModelMatrix(model);
     vector.x = 0.0f;
     vector.y = 0.0f;
     vector.z = 0.0f;
     MtxPosition(&vector, &world);
-    i_this->m0FF28.SetC(&world);
-    i_this->m0FF28.SetR(singleAdd(REG_F(0, 1), 200.0f));
+    i_this->mDekuSph.SetC(&world);
+    i_this->mDekuSph.SetR(singleAdd(REG_F(0, 1), 200.0f));
     Bgn3Bindings::cCcS_Set(dComIfGp_ea() + 0x26A4, s + 0x1AC);
     bool effect;
     s16 timer;
-    if (static_cast<s16>(i_this->m0FD9E) == 23) {
+    if (static_cast<s16>(i_this->mCoreHitFrame) == 23) {
         i_this->mArrowHitFlashTimer = 50;
         i_this->mArrowHitEffectTimer = 99;
         timer = 99;
@@ -1131,13 +1131,13 @@ void setModels(u32 a, bool moving) {
         MtxPull();
     }
     MtxTrans(0.0f, 0.0f, singleAdd(REG_F(0, 2), 250.0f), 1);
-    s16 shake = static_cast<s16>(i_this->m100A8);
+    s16 shake = static_cast<s16>(i_this->mShakeTimer);
     if (shake) {
         shake = (s16)(shake - 1);
-        i_this->m100A8 = shake;
+        i_this->mShakeTimer = shake;
     }
     f32 magnitude = (f32)shake * singleAdd(REG_F(0, 14), 500.0f);
-    s16 count = static_cast<s16>(i_this->m0FD88);
+    s16 count = static_cast<s16>(i_this->mFrameCounter);
     f32 sine = tableSin(0x104A44F8, (s16)(count * 0x2100));
     s16 yaw = (s16)gabi::ftoi(sine * magnitude);
     f32 cosine = tableCos(0x104A44F8, (s16)(count * 0x2300));
@@ -1149,8 +1149,8 @@ void setModels(u32 a, bool moving) {
     vector.z = 0.0f;
     vector.y = 0.0f;
     MtxPosition(&vector, &world);
-    i_this->m0FDFC.SetC(&world);
-    i_this->m0FDFC.SetR(singleAdd(REG_F(0, 0), 150.0f));
+    i_this->mHeadSph.SetC(&world);
+    i_this->mHeadSph.SetR(singleAdd(REG_F(0, 0), 150.0f));
     Bgn3Bindings::cCcS_Set(dComIfGp_ea() + 0x26A4, s + 0x80);
     u32 ex = static_cast<u32>(bgn3Word(world.x));
     bgn3Word(i_this->eyePos.x) = ex;
@@ -1165,21 +1165,21 @@ void setModels(u32 a, bool moving) {
     i_this->attention_info.position.y =
         singleAdd(static_cast<f32>(i_this->attention_info.position.y), eyeHeight);
     Bgn3Bindings::mDoExt_McaMorf_calc(static_cast<u32>(bgn3Word(i_this->mpMorf)));
-    s16 hit = static_cast<s16>(i_this->m0FD9E);
+    s16 hit = static_cast<s16>(i_this->mCoreHitFrame);
     if (hit) {
         hit = (s16)(hit + 1);
-        i_this->m0FD9E = hit > 100 ? 0 : hit;
+        i_this->mCoreHitFrame = hit > 100 ? 0 : hit;
     }
     for (int i = 0; i < 9; ++i) {
         u32 part = a + 0x1BE8 + i * 0x19D8;
-        x = static_cast<f32>(bgn3Part(part)->m00D4.x);
-        z = static_cast<f32>(bgn3Part(part)->m00D4.z);
-        y = static_cast<f32>(bgn3Part(part)->m00D4.y);
+        x = static_cast<f32>(bgn3Part(part)->mPart3Pos.x);
+        z = static_cast<f32>(bgn3Part(part)->mPart3Pos.z);
+        y = static_cast<f32>(bgn3Part(part)->mPart3Pos.y);
         MtxTrans(x, y, z, 0);
-        cMtx_YrotM(calc_mtx(), static_cast<s16>(bgn3Part(part)->m00E2));
-        cMtx_XrotM(calc_mtx(), static_cast<s16>(bgn3Part(part)->m00E0));
+        cMtx_YrotM(calc_mtx(), static_cast<s16>(bgn3Part(part)->mPart3AngleY));
+        cMtx_XrotM(calc_mtx(), static_cast<s16>(bgn3Part(part)->mPart3AngleX));
         MtxPush();
-        size = static_cast<f32>(bgn3Part(part)->m00F4);
+        size = static_cast<f32>(bgn3Part(part)->mPart3Scale);
         MtxScale(size, size, size, 1);
         vector.x = 0.0f;
         vector.y = 0.0f;
@@ -1192,16 +1192,16 @@ void setModels(u32 a, bool moving) {
                     : health == 1 ? static_cast<u32>(bgn3Word(i_this->mpJyakutenCModel))
                                   : 0;
             bgn3Word(bgn3Part(part)->mpPart3Model) = model;
-            bgn3Word(i_this->m10054.x) = static_cast<u32>(bgn3Word(world.x));
-            bgn3Word(i_this->m10054.y) = static_cast<u32>(bgn3Word(world.y));
-            bgn3Word(i_this->m10054.z) = static_cast<u32>(bgn3Word(world.z));
+            bgn3Word(i_this->mCorePos.x) = static_cast<u32>(bgn3Word(world.x));
+            bgn3Word(i_this->mCorePos.y) = static_cast<u32>(bgn3Word(world.y));
+            bgn3Word(i_this->mCorePos.z) = static_cast<u32>(bgn3Word(world.z));
         }
         model = static_cast<u32>(bgn3Word(bgn3Part(part)->mpPart3Model));
         if (model)
             copyModelMatrix(model, true);
         bgn3Part(part)->mPart3Sph.SetC(&world);
         f32 radius = singleAdd(REG_F(0, 12), 100.0f);
-        radius = static_cast<f32>(bgn3Part(part)->m00F4) * radius;
+        radius = static_cast<f32>(bgn3Part(part)->mPart3Scale) * radius;
         bgn3Part(part)->mPart3Sph.SetR(radius);
         u32 flags = static_cast<u32>(bgn3Part(part)->mPart3Sph.mObjAt.mSPrm);
         bgn3Part(part)->mPart3Sph.mObjAt.mSPrm = moving ? flags | 1 : flags & ~1u;
@@ -1214,18 +1214,18 @@ void setModels(u32 a, bool moving) {
                 f32 unusedHeight = singleAdd(REG_F(13, 13), 100.0f);
                 vector.y = unusedHeight;
                 f32 hairLength = singleAdd(REG_F(13, 12), 60.0f);
-                vector.y = static_cast<f32>(bgn3Part(part)->m00F4) * hairLength;
+                vector.y = static_cast<f32>(bgn3Part(part)->mPart3Scale) * hairLength;
                 u32 hair = part + 0x3F0 + j * 0x84;
                 MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m00[0]);
                 vector.y = static_cast<f32>(l_HIO.m40);
                 MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m78);
                 Bgn3Bindings::PSVECSubtract(hair + 0x78, gabi::ea(&world), hair + 0x78);
                 ke_move(part + 0x1890, hair, j,
-                        static_cast<f32>(bgn3Part(part)->m00F4) * static_cast<f32>(l_HIO.m44));
+                        static_cast<f32>(bgn3Part(part)->mPart3Scale) * static_cast<f32>(l_HIO.m44));
                 MtxPull();
             }
         }
-        if (static_cast<s16>(i_this->m0FD9E) == fl_check_d[i]) {
+        if (static_cast<s16>(i_this->mCoreHitFrame) == fl_check_d[i]) {
             bgn3Part(part)->mPart3ArrowHitFlashTimer = 50;
             bgn3Part(part)->mPart3ArrowHitEffectTimer = 100;
         }
@@ -1239,7 +1239,7 @@ void setModels(u32 a, bool moving) {
             f32 factor = singleAdd(REG_F(8, 0), 0.04f);
             // Both products keep the original operand order (first-NaN payload).
             f32 scale = gabi::fmuls_ppc(
-                gabi::fmuls_ppc(static_cast<f32>(bgn3Part(part)->m00F4), (f32)timer), factor);
+                gabi::fmuls_ppc(static_cast<f32>(bgn3Part(part)->mPart3Scale), (f32)timer), factor);
             if (static_cast<u32>(bgn3Word(bgn3Part(part)->mpPart3ArrowHitEmitter1)) == 0)
                 bgn3Word(bgn3Part(part)->mpPart3ArrowHitEmitter1) =
                     movementParticle(part + 0x288, 0x3ED);
@@ -1259,26 +1259,26 @@ void setModels(u32 a, bool moving) {
             retireEmitter(part + 0x3E8);
         }
     }
-    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
-    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
-    i_this->m0FDFC.mObjAt.mSPrm = moving ? first | 1 : first & ~1u;
-    i_this->m0FF28.mObjAt.mSPrm = moving ? second | 1 : second & ~1u;
-    model = static_cast<u32>(bgn3Word(i_this->m002CC));
+    u32 first = static_cast<u32>(i_this->mHeadSph.mObjAt.mSPrm);
+    u32 second = static_cast<u32>(i_this->mDekuSph.mObjAt.mSPrm);
+    i_this->mHeadSph.mObjAt.mSPrm = moving ? first | 1 : first & ~1u;
+    i_this->mDekuSph.mObjAt.mSPrm = moving ? second | 1 : second & ~1u;
+    model = static_cast<u32>(bgn3Word(i_this->mpDekuModel));
     PSMTXCopy(J3DModel_getBaseTRMtx(gabi::at<J3DModel>(model)), calc_mtx());
     vector.x = 0.0f;
     vector.y = 0.0f;
     vector.z = 0.0f;
     MtxPosition(&vector, &world);
-    cLib_addCalc0(&i_this->m100A0, 1.0f, 25.0f);
+    cLib_addCalc0(&i_this->mRopeSway, 1.0f, 25.0f);
     u32 packet = i_this->mRedRopeMat.mpLines;
     auto* line = gabi::at<Bgn3RopeLineRecord>(packet);
     cXyz* points = line->mpPositions;
     be<u8>* sizes = line->mpSizes;
     for (int i = 0; i < 60; ++i) {
         u32 angle = Bgn3Bindings::cM_rad2s((f32)i * 0.05324733629822731f) & 65535;
-        f32 amplitude = cM_ssin(angle) * static_cast<f32>(i_this->m100A0);
+        f32 amplitude = cM_ssin(angle) * static_cast<f32>(i_this->mRopeSway);
         s16 frequency = REG0_S(3);
-        s16 counter = static_cast<s16>(i_this->m0FD88);
+        s16 counter = static_cast<s16>(i_this->mFrameCounter);
         s16 stagger = REG0_S(4);
         u32 xAngle = (u32)(counter * (frequency + 300) + i * (stagger + 2000));
         s16 zStagger = REG0_S(6);
@@ -1307,7 +1307,7 @@ void move(u32 a) {
     dComIfGp_ea();
     bool moving = false;
     if (static_cast<u8>(l_HIO.m05) == 0) {
-        switch (static_cast<u16>(i_this->m0FD8A)) {
+        switch (static_cast<u16>(i_this->mAction)) {
         case 0:
             moving = move0(a);
             break;
@@ -1353,53 +1353,53 @@ bool daBgn3_Execute(u32 a) {
     u32 bait = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&esa_s_sub), a);
     boss = gabi::ea(bgn);
     esa = gabi::at<fopAc_ac_c>(bait);
-    if (static_cast<s8>(gabi::at<Bgn3BossView>(boss)->m02B5) != 2) {
-        i_this->m0FD8A = 10;
+    if (static_cast<s8>(gabi::at<Bgn3BossView>(boss)->mForm) != 2) {
+        i_this->mAction = 10;
         i_this->current.pos.z = 0.0f;
         i_this->attention_info.flags = 0;
         i_this->current.pos.x = 0.0f;
         i_this->current.pos.y = 30000.0f;
         return true;
     }
-    if (static_cast<s16>(i_this->m0FD8A) == 10) {
+    if (static_cast<s16>(i_this->mAction) == 10) {
         u32 z = static_cast<u32>(bgn3Word(i_this->home.pos.z)),
             x = static_cast<u32>(bgn3Word(i_this->home.pos.x));
         bgn3Word(i_this->current.pos.z) = z;
         u32 y = static_cast<u32>(bgn3Word(i_this->home.pos.y));
         bgn3Word(i_this->current.pos.x) = x;
         bgn3Word(i_this->current.pos.y) = y;
-        i_this->m0FD8A = 0;
-        i_this->m0FDB0 = 180;
-        i_this->m0FD90 = 180;
+        i_this->mAction = 0;
+        i_this->mCenterTimer = 180;
+        i_this->mChaseTimer = 180;
     }
     i_this->attention_info.flags = 4;
-    cLib_addCalc2(&i_this->m10060, 0.0f, 1.0f, 0.01f);
-    s16 counter = static_cast<s16>(i_this->m0FD88);
-    i_this->m0FD88 = counter + 1;
+    cLib_addCalc2(&i_this->mFogFade, 0.0f, 1.0f, 0.01f);
+    s16 counter = static_cast<s16>(i_this->mFrameCounter);
+    i_this->mFrameCounter = counter + 1;
     i_this->attention_info.distances[2] = 0x22;
     // HD retains the five-halfword timer sweep across the following timer fields.
-    auto* timers = gabi::at<Bgn3TimerView>(gabi::ea(i_this->m0FDAA));
+    auto* timers = gabi::at<Bgn3TimerView>(gabi::ea(i_this->mTimers));
     for (int i = 0; i < 5; ++i) {
         s16 n = timers->mTimers[i];
         if (n)
             timers->mTimers[i] = n - 1;
     }
-    s16 t = static_cast<s16>(i_this->m0FDB4);
+    s16 t = static_cast<s16>(i_this->mDamageTimer);
     if (t)
-        i_this->m0FDB4 = t - 1;
-    t = static_cast<s16>(i_this->m0FDB6);
-    s16 first = static_cast<s16>(i_this->m0FD94);
+        i_this->mDamageTimer = t - 1;
+    t = static_cast<s16>(i_this->mHitSeTimer);
+    s16 first = static_cast<s16>(i_this->mRippleSeTimer);
     if (t)
-        i_this->m0FDB6 = t - 1;
+        i_this->mHitSeTimer = t - 1;
     s16 second = static_cast<s16>(i_this->mArrowHitFlashTimer);
     if (first)
-        i_this->m0FD94 = first - 1;
+        i_this->mRippleSeTimer = first - 1;
     if (second)
         i_this->mArrowHitFlashTimer = second - 1;
     move(a);
-    u32 count = static_cast<u32>(i_this->m100AC);
+    u32 count = static_cast<u32>(i_this->mKiSetCount);
     if (count) {
-        i_this->m100AC = count - 1;
+        i_this->mKiSetCount = count - 1;
         ki_all_count = 0;
         Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&ki_c_sub), a);
         if (static_cast<s32>(ki_all_count) < 20) {
@@ -1421,12 +1421,12 @@ bool daBgn3_IsDelete(u32 a) { return true; }
 bool daBgn3_Delete(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
     dComIfG_resDelete(&i_this->mPhase, "Bgn");
-    if (i_this->m100B0) {
+    if (i_this->mHioOwner) {
         s8 n = l_HIO.mNo;
         hio_set = 0;
         mDoHIO_deleteChild(n);
     }
-    mDoAud_seDeleteObject(&i_this->m10054);
+    mDoAud_seDeleteObject(&i_this->mCorePos);
     return true;
 }
 
@@ -1445,7 +1445,7 @@ bool useHeapInit(u32 a) {
     Bgn3Bindings::mDoExt_J3DModelPacketS_setMaterial(a + 0x3D4, 0);
     u32 partData = resource(dRes_INDEX_BGN_BDL_BGN_DEKU1_e);
     u32 model = Bgn3Bindings::mDoExt_J3DModel_create(partData, 0, 0x11020203u);
-    bgn3Word(i_this->m002CC) = model;
+    bgn3Word(i_this->mpDekuModel) = model;
     if (!model)
         return false;
     Bgn3Bindings::mDoExt_J3DModelPacketS_setMaterial(a + 0x488, 0);
@@ -1556,7 +1556,7 @@ s32 daBgn3_Create(u32 a) {
     if (!Bgn3Bindings::fopAcM_entrySolidHeap(a, gabi::guest_fn((const void*)&useHeapInit), 0x96000))
         return cPhs_ERROR_e;
     if (!static_cast<u8>(hio_set)) {
-        i_this->m100B0 = 1;
+        i_this->mHioOwner = 1;
         hio_set = 1;
         l_HIO.mNo =
             Bgn3Bindings::mDoHIO_createChild(gabi::guest_addr("Ｇ（ハヤムシ）"), gabi::ea(&l_HIO));
@@ -1564,13 +1564,13 @@ s32 daBgn3_Create(u32 a) {
     u32 st = a + 0x11E9C;
     Bgn3Bindings::dCcD_Stts_Init(st, 255, 255, a);
     Bgn3Bindings::dCcD_Sph_Set(a + 0x12004, 0x10191208u);
-    u32 bits = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
-    bgn3Word(i_this->m0FF28.mStts) = st;
-    i_this->m0FF28.mObjAt.mSPrm = bits & ~1u;
+    u32 bits = static_cast<u32>(i_this->mDekuSph.mObjAt.mSPrm);
+    bgn3Word(i_this->mDekuSph.mStts) = st;
+    i_this->mDekuSph.mObjAt.mSPrm = bits & ~1u;
     Bgn3Bindings::dCcD_Sph_Set(a + 0x11ED8, 0x10191208u);
-    bits = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
-    bgn3Word(i_this->m0FDFC.mStts) = st;
-    i_this->m0FDFC.mObjAt.mSPrm = bits & ~1u;
+    bits = static_cast<u32>(i_this->mHeadSph.mObjAt.mSPrm);
+    bgn3Word(i_this->mHeadSph.mStts) = st;
+    i_this->mHeadSph.mObjAt.mSPrm = bits & ~1u;
     for (int i = 0; i < 9; ++i) {
         u32 part = a + 0x1BE8 + i * 0x19D8;
         Bgn3Bindings::dCcD_Sph_Set(part + 0x2AC, i == 8 ? 0x10191248u : 0x10191208u);

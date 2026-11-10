@@ -96,7 +96,7 @@ struct NpcVtable {
 WWHD_OFFSET(NpcVtable, setMessageAnimation, 0x154);
 struct MedliView : fopAc_ac_c {
     u8 padding[0x420C - 0x3AC];
-    be<u32> m30F0;
+    be<u32> mStatus;  /* was m30F0: daNpc_Md_c::mStatus (d_a_npc_md.h, offset 0x420C) */
 };
 struct MessageManager {
     u32 getStatus();

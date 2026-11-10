@@ -108,16 +108,16 @@ WWHD_SIZE(dNpc_HIO_c, 0x28);
 
 /* dNpc_HeadAnm_c (HD 0x20: the swing PTMF is 8 bytes, the members after it GameCube -4) [v d_npc; embedded in p1, bms1] */
 struct dNpc_HeadAnm_c {
-    /* 0x00 */ csXyz field_0x00;
+    /* 0x00 */ csXyz mSwingAngle;  /* was field_0x00: swing_vertical 0259F448 / swing_horizone 0259F5A4 ease .x/.y toward the swing target, move 0259F67C eases both to 0 without a procedure */
     /* 0x06 */ u8 _06[2];
     /* 0x08 */ be<s16> mProcDelta;       /* mProc: GHS PTMF {this delta, vtable index (-1: direct), function} */
     /* 0x0A */ be<s16> mProcIndex;
     /* 0x0C */ be<u32> mProcFunc;
-    /* 0x10 */ be<f32> field_0x14;       /* GameCube 0x14 */
-    /* 0x14 */ be<f32> field_0x18;
-    /* 0x18 */ be<s16> field_0x1C;
-    /* 0x1A */ be<s16> field_0x1E;
-    /* 0x1C */ be<s16> field_0x20;
+    /* 0x10 */ be<f32> mVerticalAmplitude;  /* was field_0x14: swing_vertical_init 0259F36C stores the amplitude argument; swing_vertical 0259F448 multiplies cM_ssin(phase) by it for angle.x (GameCube 0x14) */
+    /* 0x14 */ be<f32> mHorizontalAmplitude;  /* was field_0x18: swing_horizone_init 0259F514 stores the amplitude argument; swing_horizone 0259F5A4 multiplies cM_ssin(phase) by it for angle.y */
+    /* 0x18 */ be<s16> mSwingPhase;  /* was field_0x1C: both inits clear it; swing_vertical 0259F448 / swing_horizone 0259F5A4 add mSwingPhaseStep and take cM_ssin of it */
+    /* 0x1A */ be<s16> mSwingPhaseStep;  /* was field_0x1E: swing_vertical_init 0259F36C / swing_horizone_init 0259F514 store the step argument; added to mSwingPhase each frame */
+    /* 0x1C */ be<s16> mSwingCount;  /* was field_0x20: both inits store the count argument; the swing procedures subtract 1 per completed cycle (phase wraps to >= 0) and stop at 0 */
     /* 0x1E */ u8 _1E[2];
     /* 0259F36C / 0259F514 [g] */
     void swing_vertical_init(s16 count, s16 step, s16 amplitude, int resume) { gabi::call(0x0259F36C, this, count, step, amplitude, resume); }
@@ -125,7 +125,7 @@ struct dNpc_HeadAnm_c {
     /* 0259F67C [g] */
     void move() { gabi::call(0x0259F67C, this); }
 };
-WWHD_OFFSET(dNpc_HeadAnm_c, field_0x14, 0x10);
+WWHD_OFFSET(dNpc_HeadAnm_c, mVerticalAmplitude, 0x10);
 WWHD_SIZE(dNpc_HeadAnm_c, 0x20);
 
 /* dNpc_PathRun_c (0x8, unchanged from GameCube) [v d_npc] */
@@ -178,12 +178,12 @@ struct dNpc_EventCut_c {
     /* 0x28 */ cXyz mOffsetPos;
     /* 0x34 */ cXyz mTargetActorPos;
     /* 0x40 */ gptr<fopAc_ac_c> mpTargetActor;
-    /* 0x44 */ be<s16> field_0x44;
+    /* 0x44 */ be<s16> mLastTurnDiff;  /* was field_0x44: cutTurnToPosProc 025A0B3C / cutTurnToActorProc 0259FE88 store |target yaw - actor yaw| each frame and count the timer down while it is unchanged; the Start procs (025A0984, 0259FAB0) clear it */
     /* 0x46 */ u8 _46[2];
     /* 0x48 */ be<f32> mSpeed;
     /* 0x4C */ be<f32> pDelDistance;
     /* 0x50 */ be<s16> mAddAngle;
-    /* 0x52 */ be<u8> field_0x52;
+    /* 0x52 */ be<u8> mTalkActive;  /* was field_0x52: cutTalkMsgStart 025A1090 sets 1 after setting the message numbers; cutTalkMsgProc 025A1388 ends the cut when it is 0 and clears it when the talk returns 18 */
     /* 0x53 */ u8 _53;
     /* 0x54 */ cXyz mPos;
     /* 0x60 */ be<u8> mbAttention;

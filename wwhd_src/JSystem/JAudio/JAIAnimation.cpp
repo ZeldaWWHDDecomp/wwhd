@@ -175,8 +175,8 @@ void JAIAnimeSound::setAnimSoundVec(void* basic, cXyz* position, f32 currentFram
     JAInter::Actor actor;
     actor.field_0x0 = position;
     actor.field_0x8 = position;
-    actor.field_0x4 = position;
-    actor.field_0xc = flags;
+    actor.mPosition = position;
+    actor.mMapInfo = flags;
     setAnimSoundActor(basic, &actor, currentFrame, speed, owner);
 }
 /* 02801D3C */

@@ -819,9 +819,9 @@ WWHD_OFFSET(sightPacket_c, mDrawFlg, 4);
 WWHD_SIZE(sightPacket_c, 5);
 struct ropeMode_c {
     u8 beforeMode[0x3F8];
-    be<s32> m02DC;
+    be<s32> mState; /* was m02DC: view of himo2_class::mState (d_a_himo2.h, rope state himo2_state_e) */
 };
-WWHD_OFFSET(ropeMode_c, m02DC, 0x3F8);
+WWHD_OFFSET(ropeMode_c, mState, 0x3F8);
 WWHD_SIZE(ropeMode_c, 0x3FC);
 inline f32 ropeCatchHeight() { return *gabi::at<be<f32>>(0x1046CCEC); }
 } // namespace player02

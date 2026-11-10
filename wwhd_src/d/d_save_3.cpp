@@ -142,7 +142,7 @@ static inline void copyPlayerName(u32 dst, u32 src) {
 void d_save_cpp::dSv_player_info_c::init() {
 
     copyPlayerName(gabi::ea(mPlayerName), gabi::ea(l_defaultName));
-    field_0x10 = 0;
+    mSaveCount = 0;
     copyPlayerName(gabi::ea(field_0x25), gabi::ea(l_defaultName));
     copyPlayerName(gabi::ea(field_0x36), gabi::ea(l_defaultName));
     mDeathCount = 0;

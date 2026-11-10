@@ -41,101 +41,101 @@ struct btd_class : fopEn_enemy_c {
     /* 0x03FC */ gptr<mDoExt_McaMorf> mpDeadHeadMorf;
     /* 0x0400 */ gptr<mDoExt_btkAnm> mpDeadHeadBtkAnm;
     /* 0x0404 */ gptr<mDoExt_brkAnm> mpDeadHeadBrkAnm;
-    /* 0x0408 */ be<u8> m02E0;
+    /* 0x0408 */ be<u8> mBattlePhase;  /* was m02E0: get_anm 020F032C / get_btk / get_brk pick the phase-2 morf and animations when it is set; btdActionDamage (in move 020F6004) sets 1, end 020F52B8 sets 2; btd_effect 020F90C4 hides the fire chips at >= 2 */
     /* 0x0409 */ be<s8> m02E1;
-    /* 0x040A */ be<s16> m02E2;
-    /* 0x040C */ be<s16> m02E4;
+    /* 0x040A */ be<s16> mFrameCounter;  /* was m02E2: daBtd_Execute 020F1494 adds 1 per frame; btdExecCamera (in daBtd_Execute 020F1494) uses it as the cos phase of the camera bank shake */
+    /* 0x040C */ be<s16> mAction;  /* was m02E4: move 020F6004: switch (it) selects the action (BtdAction ACT_WAIT .. ACT_END); daBtd_Create 020F4308 sets ACT_START_DEMO, damage_check 020F4D80 sets 2 */
     /* 0x040E */ be<s16> mGohmaState;
     /* 0x0410 */ be<s8> mAttackType;
-    /* 0x0411 */ be<s8> m02E9;
-    /* 0x0412 */ be<s8> m02EA;
+    /* 0x0411 */ be<s8> mAttackAnmIdx;  /* was m02E9: btdActionWait (in move 020F6004) sets 0 / 5; btdActionJab / btdActionPunch index jab_bck / punch_bck with it, btdActionNextAnimation adds 1 */
+    /* 0x0412 */ be<s8> mAttackHand;  /* was m02EA: btdActionWait (in move 020F6004) sets 0 / 1; jab joint 10 : 8, hahen_set(side = it), btd_effect 020F90C4 picks the right-claw effects (effR_name) when it is set */
     /* 0x0413 */ be<u8> m02EB[1];
-    /* 0x0414 */ be<s16> m02EC[2];
-    /* 0x0418 */ be<s16> m02F0;
+    /* 0x0414 */ be<s16> mTimers[2];  /* was m02EC: daBtd_Execute 020F1494 counts [0], [1] down with mBlinkTimer and mStunTimer; btdActionWait (in move 020F6004) loads them (150, 300, 40) */
+    /* 0x0418 */ be<s16> mBlinkTimer;  /* was m02F0: daBtd_Execute 020F1494 counts it down; at 0 it reloads cM_rndF + 100 and sets mEyeCloseTimer to 20; startdemo 020F4924 sets 30 */
     /* 0x041A */ be<s16> mStunTimer;
     /* 0x041C */ be<s16> mActionState;
-    /* 0x041E */ be<u8> m02F6;
+    /* 0x041E */ be<u8> mRockHitState;  /* was m02F6: iwa_move (in daDr2_Execute 0212B3D0) sets 1 when the falling rock lands on the btd (then waits until it is 0 again); damage_check 020F4D80 turns 1 into 2 and starts the damage action; btdActionDamage (in move 020F6004) clears it */
     /* 0x041F */ be<u8> m02F7[1];
-    /* 0x0420 */ be<s16> m02F8;
-    /* 0x0422 */ be<s16> m02FA;
-    /* 0x0424 */ cXyz m02FC[19];
-    /* 0x0508 */ cXyz m03E0;
+    /* 0x0420 */ be<s16> mEyeCloseTimer;  /* was m02F8: daBtd_Execute 020F1494 sets 20 (blink, a sword cut or a weapon near the eye) and counts it down; while it is set the eyelid angle eases to 13000 */
+    /* 0x0422 */ be<s16> mEyelidAngle;  /* was m02FA: daBtd_Execute 020F1494 eases it to 13000 / 0 (cLib_addCalcAngleS2); nodeCallBack 020F04EC rotates the eyelid joints by it (XrotM) */
+    /* 0x0424 */ cXyz mJointPos[19];  /* was m02FC: nodeCallBack 020F04EC: MtxPosition of each joint_check role; daBtd_Execute 020F1494 sets mAtSphs[i] there, hahen_set2 020F0C68 / btdActionJab use the hand points [8] / [10] */
+    /* 0x0508 */ cXyz mEyeJointPos;  /* was m03E0: nodeCallBack 020F04EC: MtxPosition of the eye joint (copied to eyePos); daBtd_Execute 020F1494 centres mEyeSph there; damage_check 020F4D80 sets the hit particles there */
     /* 0x0514 */ dCcD_Stts mStts;
     /* 0x0550 */ dCcD_Sph mAtSphs[19];
     /* 0x1B94 */ dCcD_Sph mEyeSph;
     /* 0x1CC0 */ dCcD_Sph mFireSph;
     /* 0x1DEC */ dCcD_Sph mSibukiSphs[50];
     /* 0x5884 */ dCcD_Cyl mHandCyls[6];
-    /* 0x5FA4 */ be<u8> m5E7C;
+    /* 0x5FA4 */ be<u8> mHandCylMode;  /* was m5E7C: btdActionPunch (in move 020F6004) sets mAttackHand + 2, btdActionFire 1; daBtd_Execute 020F1494 places mHandCyls (1: all, 2: [0..2], 3: [3..5]) and clears it */
     /* 0x5FA5 */ be<u8> m5E7D[3];
-    /* 0x5FA8 */ be<f32> m5E80;
-    /* 0x5FAC */ be<u8> m5E84;
+    /* 0x5FA8 */ be<f32> mFireSize;  /* was m5E80: btdActionFire (in move 020F6004) grows it by 0.1 from 0; btdActionFireCollision: mFireSph radius = 200 * it */
+    /* 0x5FAC */ be<u8> mAtMode;  /* was m5E84: btdActionJab (in move 020F6004) sets 1, btdActionPunch 2, btdActionFire 3, move clears it; daBtd_Execute 020F1494 turns the At of the hand spheres (1/2: Atp 1/2) or the mouth spheres (3) on by it */
     /* 0x5FAD */ be<s8> mTotalDamage;
-    /* 0x5FAE */ be<u8> m5E86;
+    /* 0x5FAE */ be<u8> mLookMode;  /* was m5E86: btdActionWait / btdActionFire / btdActionHighFire (in move 020F6004) set 1..3; btdActionTrack turns the neck and head toward the player only while it is set, then clears it */
     /* 0x5FAF */ be<u8> m5E87[1];
-    /* 0x5FB0 */ be<s16> m5E88;
-    /* 0x5FB2 */ be<s16> m5E8A;
-    /* 0x5FB4 */ be<s16> m5E8C;
-    /* 0x5FB6 */ be<s16> m5E8E;
-    /* 0x5FB8 */ be<s16> m5E90;
-    /* 0x5FBA */ be<s16> m5E92;
-    /* 0x5FBC */ be<s16> m5E94;
+    /* 0x5FB0 */ be<s16> mNeckAngleY;  /* was m5E88: btdActionTrack (in move 020F6004) eases it toward the player angle (cLib_addCalcAngleS2); nodeCallBack 020F04EC: YrotM / ZrotM of the neck joint by it */
+    /* 0x5FB2 */ be<s16> mNeckAngleX;  /* was m5E8A: btdActionTrack (in move 020F6004) eases it to mNeckTargetAngleX; nodeCallBack 020F04EC: XrotM of the neck joint by it */
+    /* 0x5FB4 */ be<s16> mNeckTargetAngleX;  /* was m5E8C: btdActionHighFire (in move 020F6004) sets -pitch - 2500; btdActionTrack eases mNeckAngleX to it, then clears it */
+    /* 0x5FB6 */ be<s16> mHeadAngleY;  /* was m5E8E: btdActionTrack (in move 020F6004) eases it to half the eye-to-player angle; nodeCallBack 020F04EC: YrotM of the head (eye) joint by it */
+    /* 0x5FB8 */ be<s16> mTurnTargetAngleY;  /* was m5E90: btdActionWait (in move 020F6004) sets facing + 0x4000; btdActionTrack turns current.angle.y to it (player angle when 0), then clears it */
+    /* 0x5FBA */ be<s16> mTurnScale;  /* was m5E92: btdActionTurningPunch (in move 020F6004) sets 15 (+REG); btdActionTrack: scale argument of the cLib_addCalcAngleS2 turn, reset to 10 */
+    /* 0x5FBC */ be<s16> mTurnMaxStep;  /* was m5E94: btdActionWait / btdActionHighFire / btdActionTurningPunch (in move 020F6004) set 0x100..0xC00; btdActionTrack turns only while it is set (max step of the turn), then clears it */
     /* 0x5FBE */ be<s16> m5E96;
-    /* 0x5FC0 */ cXyz m5E98[25];
-    /* 0x60EC */ be<s16> m5FC4[19];
-    /* 0x6112 */ be<s16> m5FEA[6];
+    /* 0x5FC0 */ cXyz mHitSePos[25];  /* was m5E98: damage_check 020F4D80: [i] = mJointPos[i] and def_se_set_p at [i] / [i + 19]; daBtd_Execute 020F1494: [19 + i] = centre of mHandCyls[i]; daBtd_Delete 020F34A8 deletes their sound objects */
+    /* 0x60EC */ be<s16> mSphHitTimer[19];  /* was m5FC4: damage_check 020F4D80: per mAtSphs[i] hit, 10 frames before the next hit sound, counted down */
+    /* 0x6112 */ be<s16> mCylHitTimer[6];  /* was m5FEA: damage_check 020F4D80: per mHandCyls[i] hit, 10 frames before the next hit sound, counted down */
     /* 0x611E */ u8 _pad611E[0x2];
-    /* 0x6120 */ gptr<JPABaseEmitter> m5FF8[5];
-    /* 0x6134 */ gptr<JPABaseEmitter> m600C[7];
-    /* 0x6150 */ be<s16> m6028[7];
+    /* 0x6120 */ gptr<JPABaseEmitter> mFireChipEmitter[5];  /* was m5FF8: btd_effect 020F90C4: eff_name emitters on the eff_index joints (TWW eff_name: ID_AK_SN_ARMFIRECHIP / BACKBONEFIRECHIP), moved to -10000 at mBattlePhase >= 2 */
+    /* 0x6134 */ gptr<JPABaseEmitter> mAttackEmitter[7];  /* was m600C: btd_effect 020F90C4: effF_name / effR_name emitters (fire breath, claw rock and smoke) while mAttackEmitterTimer[i] runs; btdActionFire (in move 020F6004) clears [3] */
+    /* 0x6150 */ be<s16> mAttackEmitterTimer[7];  /* was m6028: btdActionPunch / btdActionFire / btdActionHighFire (in move 020F6004) load it; btd_effect 020F90C4 counts [i] down and keeps mAttackEmitter[i] while it is set */
     /* 0x615E */ be<u8> m6036[2];
-    /* 0x6160 */ gptr<JPABaseEmitter> m6038;
-    /* 0x6164 */ cXyz m603C;
-    /* 0x6170 */ csXyz m6048;
+    /* 0x6160 */ gptr<JPABaseEmitter> mpDeadHeadEmitter;  /* was m6038: end 020F52B8: particle_set(0x80DE) at mDeadHeadPos (TWW: ID_AK_SN_BTDBREAKDOWNHEAD00), moved with the head, made invalid when the head lands */
+    /* 0x6164 */ cXyz mHahenPos;  /* was m603C: hahen_set 020F0EB4: hand point - 100 in y; position of the debris (0x80A8 / 0x80A9) particles and smoke_set_s */
+    /* 0x6170 */ csXyz mHahenAngle;  /* was m6048: hahen_set 020F0EB4: current.angle +- 0x4000 in y by side; angle of the debris particles and smoke_set_s */
     /* 0x6176 */ be<u8> m604E[2];
     /* 0x6178 */ dPa_smokeEcallBack mPa_SmokeEcallBack[3];
     /* 0x61D8 */ LIGHT_INFLUENCE mLightInfluence;
-    /* 0x61FC */ be<f32> m60D0;
-    /* 0x6200 */ be<f32> m60D4;
-    /* 0x6204 */ be<u8> m60D8;
-    /* 0x6205 */ be<u8> m60D9;
-    /* 0x6206 */ be<u8> m60DA;
+    /* 0x61FC */ be<f32> mKankyoBlend;  /* was m60D0: btd_kankyo 020F94DC: eased per mKankyoState (cLib_addCalc2 / addCalc0), passed to dKy_custom_colset as the blend */
+    /* 0x6200 */ be<f32> mLightRate;  /* was m60D4: btd_kankyo 020F94DC: eased per mKankyoState; scales mLightInfluence colour and power */
+    /* 0x6204 */ be<u8> mLightColorR;  /* was m60D8: btd_kankyo 020F94DC: l_HIO.m3C / m42; red of mLightInfluence (times mLightRate) */
+    /* 0x6205 */ be<u8> mLightColorG;  /* was m60D9: btd_kankyo 020F94DC: l_HIO.m3E / m44; green of mLightInfluence (times mLightRate) */
+    /* 0x6206 */ be<u8> mLightColorB;  /* was m60DA: btd_kankyo 020F94DC: l_HIO.m40 / m46; blue of mLightInfluence (times mLightRate) */
     /* 0x6207 */ be<u8> mKankyoState;
     /* 0x6208 */ be<s16> mKankyoTimer;
     /* 0x620A */ be<u8> m60DE[2];
     /* 0x620C */ dKy_tevstr_c mTevstr;
-    /* 0x63D4 */ be<u8> m6190;
+    /* 0x63D4 */ be<u8> mCrackStage;  /* was m6190: btdActionBreakShell (in move 020F6004): index into hibi_brk (crack animations), +1 per hit up to 3; btdActionDamage tests >= 3 */
     /* 0x63D5 */ be<u8> m6191[3];
     /* 0x63D8 */ btd_hahen_s hahen[35];
     /* 0x6950 */ btd_sibuki_s mBtdSibukiS[50];
-    /* 0x7058 */ be<s8> m6E14;
-    /* 0x7059 */ be<u8> m6E15;
-    /* 0x705A */ be<s16> m6E16;
-    /* 0x705C */ be<s16> m6E18;
-    /* 0x705E */ be<s16> m6E1A;
-    /* 0x7060 */ cXyz m6E1C;
-    /* 0x706C */ cXyz m6E28;
-    /* 0x7078 */ be<s16> m6E34;
-    /* 0x707A */ be<s16> m6E36;
+    /* 0x7058 */ be<s8> mSplashPopCount;  /* was m6E14: sibuki_set 020F10B4 clears it; btdExecSplashMove (in daBtd_Execute 020F1494) adds 1 per splash pop near the player, up to 20 */
+    /* 0x7059 */ be<u8> mBlurRate;  /* was m6E15: daBtd_Draw 020F0A74: mDoGph_setBlureRate(it) while > 1, off and cleared at 1; end 020F52B8 sets 180, daBtd_Execute 020F1494 50 */
+    /* 0x705A */ be<s16> mDemoCamMode;  /* was m6E16: btdExecCamera (in daBtd_Execute 020F1494): switch (it) of the demo camera steps, +1 per step; 0 = no demo camera */
+    /* 0x705C */ be<s16> mDemoMainCount;  /* was m6E18: btdExecCamera (in daBtd_Execute 020F1494): +1 per frame, reported as "K MAIN COUNT  %d"; the player demo modes start at its frame marks */
+    /* 0x705E */ be<s16> mDemoSubCount;  /* was m6E1A: btdExecCamera (in daBtd_Execute 020F1494): +1 per frame, cleared per step, reported as "K SUB  COUNT  %d"; compared with each step's frame marks */
+    /* 0x7060 */ cXyz mDemoCamEye;  /* was m6E1C: btdExecCamera (in daBtd_Execute 020F1494): set / eased per step; the eye passed to dCamera_c::Set (with shake) and Reset */
+    /* 0x706C */ cXyz mDemoCamCenter;  /* was m6E28: btdExecCamera (in daBtd_Execute 020F1494): set / eased per step; the centre passed to dCamera_c::Set (with shake) and Reset */
+    /* 0x7078 */ be<s16> mDemoCamOrbitAngleX;  /* was m6E34: btdExecCamera (in daBtd_Execute 020F1494): -11000, eased; XrotM before mDemoCamEye = MtxPosition(0, 0, mDemoCamOrbitDist) */
+    /* 0x707A */ be<s16> mDemoCamOrbitAngleY;  /* was m6E36: btdExecCamera (in daBtd_Execute 020F1494): -6000, eased to 0x4000; YrotS before mDemoCamEye = MtxPosition(0, 0, mDemoCamOrbitDist) */
     /* 0x707C */ be<u8> m6E38[4];
-    /* 0x7080 */ be<f32> m6E3C;
-    /* 0x7084 */ be<f32> m6E40;
-    /* 0x7088 */ be<f32> m6E44;
-    /* 0x708C */ be<f32> m6E48;
-    /* 0x7090 */ be<u8> m6E4C;
+    /* 0x7080 */ be<f32> mDemoCamFovy;  /* was m6E3C: btdExecCamera (in daBtd_Execute 020F1494): 50 (+REG) / 55 / 60, eased; passed to dCamera_c::Set as the fovy */
+    /* 0x7084 */ be<f32> mDemoCamSpeed;  /* was m6E40: btdExecCamera (in daBtd_Execute 020F1494): cleared per step and eased up; scales the cLib_addCalc2 steps of mDemoCamEye / mDemoCamCenter */
+    /* 0x7088 */ be<f32> mDemoCamOrbitDist;  /* was m6E44: btdExecCamera (in daBtd_Execute 020F1494): 2800, eased to 500; z of the orbit vector that gives mDemoCamEye */
+    /* 0x708C */ be<f32> mDemoCamShake;  /* was m6E48: btdExecCamera (in daBtd_Execute 020F1494): sin / cos amplitude added to mDemoCamEye / mDemoCamCenter and the bank, decays (addCalc0); startdemo 020F4924 sets 40, end 020F52B8 30 */
+    /* 0x7090 */ be<u8> mDeadHeadOn;  /* was m6E4C: end 020F52B8 sets 1 when the head comes off; daBtd_Draw 020F0A74 then draws the dead-head model at mDeadHeadPos, nodeCallBack 020F04EC stops moving eyePos */
     /* 0x7091 */ be<u8> m6E4D[3];
-    /* 0x7094 */ cXyz m6E50;
-    /* 0x70A0 */ cXyz m6E5C;
-    /* 0x70AC */ cXyz m6E68;
-    /* 0x70B8 */ csXyz m6E74;
+    /* 0x7094 */ cXyz mDeadHeadPos;  /* was m6E50: end 020F52B8: starts at eyePos, moves by mDeadHeadSpeed toward mDeadHeadTargetPos; kubi_calc 020F1288 places the dead-head model there; daBtd_Draw 020F0A74 settingTevStruct at it */
+    /* 0x70A0 */ cXyz mDeadHeadTargetPos;  /* was m6E5C: btdExecCamera (in daBtd_Execute 020F1494): MtxPosition of the landing point; end 020F52B8 moves mDeadHeadPos toward it and lands at its y */
+    /* 0x70AC */ cXyz mDeadHeadSpeed;  /* was m6E68: end 020F52B8: MtxPosition of the throw vector, added to mDeadHeadPos per frame, y minus gravity, bounced */
+    /* 0x70B8 */ csXyz mDeadHeadAngle;  /* was m6E74: end 020F52B8: starts at current.angle, spins / eases; kubi_calc 020F1288: Y/X/ZrotM of the dead-head model by it */
     /* 0x70BE */ be<u8> m6E7A[2];
-    /* 0x70C0 */ be<f32> m6E7C;
-    /* 0x70C4 */ be<f32> m6E80;
-    /* 0x70C8 */ be<f32> m6E84;
-    /* 0x70CC */ be<u8> m6E88;
+    /* 0x70C0 */ be<f32> mWaveRadius;  /* was m6E7C: wave_set 020F02D4 clears it, daBtd_Execute 020F1494 adds 30 (+REG) up to 2300; dMagma_ballBoss_c::calc 024F60E8 raises the balls at about this distance from the centre */
+    /* 0x70C4 */ be<f32> mMagmaFloorY;  /* was m6E80: daBtd_Create 020F4308 sets -50; daBtd_Execute 020F1494 passes it to the magma floor (setYpos) */
+    /* 0x70C8 */ be<f32> mMagmaBallOffsetY;  /* was m6E84: daBtd_Create 020F4308 sets 0 / -30, end 020F52B8 -200, btdExecCamera eases it to 0; dMagma_ballBoss_c::setup 024F637C adds it to the ball base height, calc 024F60E8 sinks the balls below -150 */
+    /* 0x70CC */ be<u8> mMagmaRiseCenter;  /* was m6E88: daBtd_Execute 020F1494 sets 1, the actions (in move 020F6004) clear it; dMagma_ballBoss_c::setup 024F637C raises the balls near the centre only when it is 1 */
     /* 0x70CD */ be<u8> m6E89[3];
     /* 0x70D0 */ gptr<dMagma_floor_c> floor;
-    /* 0x70D4 */ be<s8> m6E90;
+    /* 0x70D4 */ be<s8> mForceBossCamera;  /* was m6E90: daBtd_Create 020F4308 sets 1, btdExecCamera clears it; daBtd_Execute 020F1494 calls SetTypeForce("Boss01") while it is set */
     /* 0x70D5 */ be<u8> m6E91[3];
 };
 WWHD_OFFSET(btd_class, mPhaseBtd, 0x3C8);
@@ -152,100 +152,100 @@ WWHD_OFFSET(btd_class, mpDeadBodyBrkAnm, 0x3F8);
 WWHD_OFFSET(btd_class, mpDeadHeadMorf, 0x3FC);
 WWHD_OFFSET(btd_class, mpDeadHeadBtkAnm, 0x400);
 WWHD_OFFSET(btd_class, mpDeadHeadBrkAnm, 0x404);
-WWHD_OFFSET(btd_class, m02E0, 0x408);
+WWHD_OFFSET(btd_class, mBattlePhase, 0x408);
 WWHD_OFFSET(btd_class, m02E1, 0x409);
-WWHD_OFFSET(btd_class, m02E2, 0x40A);
-WWHD_OFFSET(btd_class, m02E4, 0x40C);
+WWHD_OFFSET(btd_class, mFrameCounter, 0x40A);
+WWHD_OFFSET(btd_class, mAction, 0x40C);
 WWHD_OFFSET(btd_class, mGohmaState, 0x40E);
 WWHD_OFFSET(btd_class, mAttackType, 0x410);
-WWHD_OFFSET(btd_class, m02E9, 0x411);
-WWHD_OFFSET(btd_class, m02EA, 0x412);
+WWHD_OFFSET(btd_class, mAttackAnmIdx, 0x411);
+WWHD_OFFSET(btd_class, mAttackHand, 0x412);
 WWHD_OFFSET(btd_class, m02EB, 0x413);
-WWHD_OFFSET(btd_class, m02EC, 0x414);
-WWHD_OFFSET(btd_class, m02F0, 0x418);
+WWHD_OFFSET(btd_class, mTimers, 0x414);
+WWHD_OFFSET(btd_class, mBlinkTimer, 0x418);
 WWHD_OFFSET(btd_class, mStunTimer, 0x41A);
 WWHD_OFFSET(btd_class, mActionState, 0x41C);
-WWHD_OFFSET(btd_class, m02F6, 0x41E);
+WWHD_OFFSET(btd_class, mRockHitState, 0x41E);
 WWHD_OFFSET(btd_class, m02F7, 0x41F);
-WWHD_OFFSET(btd_class, m02F8, 0x420);
-WWHD_OFFSET(btd_class, m02FA, 0x422);
-WWHD_OFFSET(btd_class, m02FC, 0x424);
-WWHD_OFFSET(btd_class, m03E0, 0x508);
+WWHD_OFFSET(btd_class, mEyeCloseTimer, 0x420);
+WWHD_OFFSET(btd_class, mEyelidAngle, 0x422);
+WWHD_OFFSET(btd_class, mJointPos, 0x424);
+WWHD_OFFSET(btd_class, mEyeJointPos, 0x508);
 WWHD_OFFSET(btd_class, mStts, 0x514);
 WWHD_OFFSET(btd_class, mAtSphs, 0x550);
 WWHD_OFFSET(btd_class, mEyeSph, 0x1B94);
 WWHD_OFFSET(btd_class, mFireSph, 0x1CC0);
 WWHD_OFFSET(btd_class, mSibukiSphs, 0x1DEC);
 WWHD_OFFSET(btd_class, mHandCyls, 0x5884);
-WWHD_OFFSET(btd_class, m5E7C, 0x5FA4);
+WWHD_OFFSET(btd_class, mHandCylMode, 0x5FA4);
 WWHD_OFFSET(btd_class, m5E7D, 0x5FA5);
-WWHD_OFFSET(btd_class, m5E80, 0x5FA8);
-WWHD_OFFSET(btd_class, m5E84, 0x5FAC);
+WWHD_OFFSET(btd_class, mFireSize, 0x5FA8);
+WWHD_OFFSET(btd_class, mAtMode, 0x5FAC);
 WWHD_OFFSET(btd_class, mTotalDamage, 0x5FAD);
-WWHD_OFFSET(btd_class, m5E86, 0x5FAE);
+WWHD_OFFSET(btd_class, mLookMode, 0x5FAE);
 WWHD_OFFSET(btd_class, m5E87, 0x5FAF);
-WWHD_OFFSET(btd_class, m5E88, 0x5FB0);
-WWHD_OFFSET(btd_class, m5E8A, 0x5FB2);
-WWHD_OFFSET(btd_class, m5E8C, 0x5FB4);
-WWHD_OFFSET(btd_class, m5E8E, 0x5FB6);
-WWHD_OFFSET(btd_class, m5E90, 0x5FB8);
-WWHD_OFFSET(btd_class, m5E92, 0x5FBA);
-WWHD_OFFSET(btd_class, m5E94, 0x5FBC);
+WWHD_OFFSET(btd_class, mNeckAngleY, 0x5FB0);
+WWHD_OFFSET(btd_class, mNeckAngleX, 0x5FB2);
+WWHD_OFFSET(btd_class, mNeckTargetAngleX, 0x5FB4);
+WWHD_OFFSET(btd_class, mHeadAngleY, 0x5FB6);
+WWHD_OFFSET(btd_class, mTurnTargetAngleY, 0x5FB8);
+WWHD_OFFSET(btd_class, mTurnScale, 0x5FBA);
+WWHD_OFFSET(btd_class, mTurnMaxStep, 0x5FBC);
 WWHD_OFFSET(btd_class, m5E96, 0x5FBE);
-WWHD_OFFSET(btd_class, m5E98, 0x5FC0);
-WWHD_OFFSET(btd_class, m5FC4, 0x60EC);
-WWHD_OFFSET(btd_class, m5FEA, 0x6112);
-WWHD_OFFSET(btd_class, m5FF8, 0x6120);
-WWHD_OFFSET(btd_class, m600C, 0x6134);
-WWHD_OFFSET(btd_class, m6028, 0x6150);
+WWHD_OFFSET(btd_class, mHitSePos, 0x5FC0);
+WWHD_OFFSET(btd_class, mSphHitTimer, 0x60EC);
+WWHD_OFFSET(btd_class, mCylHitTimer, 0x6112);
+WWHD_OFFSET(btd_class, mFireChipEmitter, 0x6120);
+WWHD_OFFSET(btd_class, mAttackEmitter, 0x6134);
+WWHD_OFFSET(btd_class, mAttackEmitterTimer, 0x6150);
 WWHD_OFFSET(btd_class, m6036, 0x615E);
-WWHD_OFFSET(btd_class, m6038, 0x6160);
-WWHD_OFFSET(btd_class, m603C, 0x6164);
-WWHD_OFFSET(btd_class, m6048, 0x6170);
+WWHD_OFFSET(btd_class, mpDeadHeadEmitter, 0x6160);
+WWHD_OFFSET(btd_class, mHahenPos, 0x6164);
+WWHD_OFFSET(btd_class, mHahenAngle, 0x6170);
 WWHD_OFFSET(btd_class, m604E, 0x6176);
 WWHD_OFFSET(btd_class, mPa_SmokeEcallBack, 0x6178);
 WWHD_OFFSET(btd_class, mLightInfluence, 0x61D8);
-WWHD_OFFSET(btd_class, m60D0, 0x61FC);
-WWHD_OFFSET(btd_class, m60D4, 0x6200);
-WWHD_OFFSET(btd_class, m60D8, 0x6204);
-WWHD_OFFSET(btd_class, m60D9, 0x6205);
-WWHD_OFFSET(btd_class, m60DA, 0x6206);
+WWHD_OFFSET(btd_class, mKankyoBlend, 0x61FC);
+WWHD_OFFSET(btd_class, mLightRate, 0x6200);
+WWHD_OFFSET(btd_class, mLightColorR, 0x6204);
+WWHD_OFFSET(btd_class, mLightColorG, 0x6205);
+WWHD_OFFSET(btd_class, mLightColorB, 0x6206);
 WWHD_OFFSET(btd_class, mKankyoState, 0x6207);
 WWHD_OFFSET(btd_class, mKankyoTimer, 0x6208);
 WWHD_OFFSET(btd_class, m60DE, 0x620A);
 WWHD_OFFSET(btd_class, mTevstr, 0x620C);
-WWHD_OFFSET(btd_class, m6190, 0x63D4);
+WWHD_OFFSET(btd_class, mCrackStage, 0x63D4);
 WWHD_OFFSET(btd_class, m6191, 0x63D5);
 WWHD_OFFSET(btd_class, hahen, 0x63D8);
 WWHD_OFFSET(btd_class, mBtdSibukiS, 0x6950);
-WWHD_OFFSET(btd_class, m6E14, 0x7058);
-WWHD_OFFSET(btd_class, m6E15, 0x7059);
-WWHD_OFFSET(btd_class, m6E16, 0x705A);
-WWHD_OFFSET(btd_class, m6E18, 0x705C);
-WWHD_OFFSET(btd_class, m6E1A, 0x705E);
-WWHD_OFFSET(btd_class, m6E1C, 0x7060);
-WWHD_OFFSET(btd_class, m6E28, 0x706C);
-WWHD_OFFSET(btd_class, m6E34, 0x7078);
-WWHD_OFFSET(btd_class, m6E36, 0x707A);
+WWHD_OFFSET(btd_class, mSplashPopCount, 0x7058);
+WWHD_OFFSET(btd_class, mBlurRate, 0x7059);
+WWHD_OFFSET(btd_class, mDemoCamMode, 0x705A);
+WWHD_OFFSET(btd_class, mDemoMainCount, 0x705C);
+WWHD_OFFSET(btd_class, mDemoSubCount, 0x705E);
+WWHD_OFFSET(btd_class, mDemoCamEye, 0x7060);
+WWHD_OFFSET(btd_class, mDemoCamCenter, 0x706C);
+WWHD_OFFSET(btd_class, mDemoCamOrbitAngleX, 0x7078);
+WWHD_OFFSET(btd_class, mDemoCamOrbitAngleY, 0x707A);
 WWHD_OFFSET(btd_class, m6E38, 0x707C);
-WWHD_OFFSET(btd_class, m6E3C, 0x7080);
-WWHD_OFFSET(btd_class, m6E40, 0x7084);
-WWHD_OFFSET(btd_class, m6E44, 0x7088);
-WWHD_OFFSET(btd_class, m6E48, 0x708C);
-WWHD_OFFSET(btd_class, m6E4C, 0x7090);
+WWHD_OFFSET(btd_class, mDemoCamFovy, 0x7080);
+WWHD_OFFSET(btd_class, mDemoCamSpeed, 0x7084);
+WWHD_OFFSET(btd_class, mDemoCamOrbitDist, 0x7088);
+WWHD_OFFSET(btd_class, mDemoCamShake, 0x708C);
+WWHD_OFFSET(btd_class, mDeadHeadOn, 0x7090);
 WWHD_OFFSET(btd_class, m6E4D, 0x7091);
-WWHD_OFFSET(btd_class, m6E50, 0x7094);
-WWHD_OFFSET(btd_class, m6E5C, 0x70A0);
-WWHD_OFFSET(btd_class, m6E68, 0x70AC);
-WWHD_OFFSET(btd_class, m6E74, 0x70B8);
+WWHD_OFFSET(btd_class, mDeadHeadPos, 0x7094);
+WWHD_OFFSET(btd_class, mDeadHeadTargetPos, 0x70A0);
+WWHD_OFFSET(btd_class, mDeadHeadSpeed, 0x70AC);
+WWHD_OFFSET(btd_class, mDeadHeadAngle, 0x70B8);
 WWHD_OFFSET(btd_class, m6E7A, 0x70BE);
-WWHD_OFFSET(btd_class, m6E7C, 0x70C0);
-WWHD_OFFSET(btd_class, m6E80, 0x70C4);
-WWHD_OFFSET(btd_class, m6E84, 0x70C8);
-WWHD_OFFSET(btd_class, m6E88, 0x70CC);
+WWHD_OFFSET(btd_class, mWaveRadius, 0x70C0);
+WWHD_OFFSET(btd_class, mMagmaFloorY, 0x70C4);
+WWHD_OFFSET(btd_class, mMagmaBallOffsetY, 0x70C8);
+WWHD_OFFSET(btd_class, mMagmaRiseCenter, 0x70CC);
 WWHD_OFFSET(btd_class, m6E89, 0x70CD);
 WWHD_OFFSET(btd_class, floor, 0x70D0);
-WWHD_OFFSET(btd_class, m6E90, 0x70D4);
+WWHD_OFFSET(btd_class, mForceBossCamera, 0x70D4);
 WWHD_OFFSET(btd_class, m6E91, 0x70D5);
 WWHD_SIZE(btd_class, 0x70D8);
 

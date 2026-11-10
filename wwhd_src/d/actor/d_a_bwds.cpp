@@ -81,22 +81,22 @@ static BOOL daBwds_Draw(bwds_class* i_this) {
     settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &actor->current.pos, &actor->tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &actor->tevStr);
     i_this->mpMorf->entryDL();
-    for (s32 i = 0; i < 0xd - i_this->m04F0; i++) {
-        model = i_this->mp02BC[i];
+    for (s32 i = 0; i < 0xd - i_this->mBurstCount; i++) {
+        model = i_this->mpBodyModels[i];
         setLightTevColorType(dKy_getEnvlight(), model, &actor->tevStr);
         mDoExt_modelUpdateDL(model);
     }
     for (s32 i = 0; i < 2; i++) {
-        if (i_this->m1894[i] != 0) {
-            mDoExt_McaMorf* morf = i_this->mp18B0[i];
+        if (i_this->mSplashFrame[i] != 0) {
+            mDoExt_McaMorf* morf = i_this->mpSplashMorf[i];
             dScnKy_env_light_c* env = dKy_getEnvlight();
             setLightTevColorType(env, morf->getModel(), &actor->tevStr);
-            mDoExt_brkAnm* brk = i_this->mp18C0[i];
-            mDoExt_brkAnm_entry(brk, J3DModel_getModelData(i_this->mp18B0[i]->getModel()),
+            mDoExt_brkAnm* brk = i_this->mpSplashBrk[i];
+            mDoExt_brkAnm_entry(brk, J3DModel_getModelData(i_this->mpSplashMorf[i]->getModel()),
                                 brk->getFrame());
-            mDoExt_btkAnm* btk = i_this->mp18B8[i];
-            btk->entry(J3DModel_getModelData(i_this->mp18B0[i]->getModel()), btk->getFrame());
-            i_this->mp18B0[i]->entryDL();
+            mDoExt_btkAnm* btk = i_this->mpSplashBtk[i];
+            btk->entry(J3DModel_getModelData(i_this->mpSplashMorf[i]->getModel()), btk->getFrame());
+            i_this->mpSplashMorf[i]->entryDL();
         }
     }
     return TRUE;
@@ -109,15 +109,15 @@ static BOOL daBwds_IsDelete(bwds_class*) {
 
 /* 02108750 */
 static BOOL daBwds_Delete(bwds_class* i_this) {
-    dComIfG_resDelete(&i_this->m02AC, "Bwds");
-    if (i_this->m18C8 != 0) {
+    dComIfG_resDelete(&i_this->mPhs, "Bwds");
+    if (i_this->mHioOwner != 0) {
         hio_set = 0;
         mDoHIO_deleteChild(l_HIO.mNo);
     }
     for (s32 i = 0; i < 3; i++) {
-        bw_vremove(&i_this->m1820[i]); /* remove() */
+        bw_vremove(&i_this->mSmokeCb[i]); /* remove() */
     }
-    bw_vremove(&i_this->m1880);
+    bw_vremove(&i_this->mMoveSandCb);
     return TRUE;
 }
 
@@ -137,7 +137,7 @@ static BOOL useHeapInit(fopAc_ac_c* i_actor) {
     for (s32 i = 0; i < 0xd; i++) {
         J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Bwds", body_bdl[i], SAFESTRING_VTBL);
         J3DModel* model = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
-        i_this->mp02BC[i] = model;
+        i_this->mpBodyModels[i] = model;
         if (model == nullptr) {
             return FALSE;
         }
@@ -148,7 +148,7 @@ static BOOL useHeapInit(fopAc_ac_c* i_actor) {
         J3DAnmTransform* bck = (J3DAnmTransform*)dComIfG_getObjectRes("Bwd", s_bck[i], SAFESTRING_VTBL);
         mDoExt_McaMorf* m = mDoExt_McaMorf::create(nullptr, bdl, nullptr, nullptr, bck, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 0,
                                                    nullptr, 0, 0x11020203);
-        i_this->mp18B0[i] = m;
+        i_this->mpSplashMorf[i] = m;
         if (!m || !m->getModel()) {
             return FALSE;
         }
@@ -157,21 +157,21 @@ static BOOL useHeapInit(fopAc_ac_c* i_actor) {
         void* btk = operator_new(0x74);
         if (btk != nullptr)
             btk = bw_btkCtor(btk);
-        i_this->mp18B8[i] = (mDoExt_btkAnm*)btk;
+        i_this->mpSplashBtk[i] = (mDoExt_btkAnm*)btk;
         if (!btk) {
             return FALSE;
         }
         void* btkRes = dComIfG_getObjectRes("Bwd", s_btk[i], SAFESTRING_VTBL);
-        if (!i_this->mp18B8[i]->init(modelData, (J3DAnmTextureSRTKey*)btkRes, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0)) {
+        if (!i_this->mpSplashBtk[i]->init(modelData, (J3DAnmTextureSRTKey*)btkRes, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0)) {
             return FALSE;
         }
 
         void* brk = operator_new(0x78);
         if (brk != nullptr)
             brk = bw_brkCtor(brk);
-        i_this->mp18C0[i] = (mDoExt_brkAnm*)brk; /* no NULL check */
+        i_this->mpSplashBrk[i] = (mDoExt_brkAnm*)brk; /* no NULL check */
         void* brkRes = dComIfG_getObjectRes("Bwd", s_brk[i], SAFESTRING_VTBL);
-        if (!i_this->mp18C0[i]->init(modelData, (J3DAnmTevRegKey*)brkRes, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0)) {
+        if (!i_this->mpSplashBrk[i]->init(modelData, (J3DAnmTevRegKey*)brkRes, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0)) {
             return FALSE;
         }
     }
@@ -179,7 +179,7 @@ static BOOL useHeapInit(fopAc_ac_c* i_actor) {
 }
 
 /* 02108B24 */
-// HD: element constructor for m1820[] (dPa_smokeEcallBack(1))
+// HD: element constructor for mSmokeCb[] (dPa_smokeEcallBack(1))
 static void* smoke_ct_1(void* p) {
     return bw_smokeCtor(p, 1);
 }
@@ -194,11 +194,11 @@ static bwds_class* bwds_class_ct(bwds_class* i_this) {
     }
     fopAc_ac_c_ct(i_this);
     i_this->__vtbl = BWDS_VTBL;
-    dCcD_Stts_ct(&i_this->m0508);
-    bw_sphereCtor(&i_this->m0544);
-    bw_constructArray(i_this->m0670, 0xF, 0x12C, BWDS_SPHERE_CTOR);
-    bw_constructArray(i_this->m1820, 3, 0x20, gabi::guest_fn(reinterpret_cast<const void*>(smoke_ct_1)));
-    dPa_followEcallBack_ct(&i_this->m1880, 0, 0);
+    dCcD_Stts_ct(&i_this->mStts);
+    bw_sphereCtor(&i_this->mHsSph);
+    bw_constructArray(i_this->mBodySph, 0xF, 0x12C, BWDS_SPHERE_CTOR);
+    bw_constructArray(i_this->mSmokeCb, 3, 0x20, gabi::guest_fn(reinterpret_cast<const void*>(smoke_ct_1)));
+    dPa_followEcallBack_ct(&i_this->mMoveSandCb, 0, 0);
     return i_this;
 }
 
@@ -212,37 +212,37 @@ static cPhs_State daBwds_Create(fopAc_ac_c* a_this) {
         fopAcM_OnCondition(a_this, fopAcCnd_INIT_e);
     }
 
-    cPhs_State res = dComIfG_resLoad(&i_this->m02AC, "Bwds");
+    cPhs_State res = dComIfG_resLoad(&i_this->mPhs, "Bwds");
     if (res == cPhs_COMPLEATE_e) {
-        i_this->m02B4 = (u8)fopAcM_GetParam(a_this);
+        i_this->mType = (u8)fopAcM_GetParam(a_this);
         if (!fopAcM_entrySolidHeap(a_this, gabi::guest_fn(reinterpret_cast<const void*>(useHeapInit)), 0x4B000)) {
             return cPhs_ERROR_e;
         }
         if (hio_set == 0) {
-            i_this->m18C8 = 1;
+            i_this->mHioOwner = 1;
             hio_set = 1;
             // HD: glue maps this readable label to the original Shift-JIS "風ボス（子）" bytes.
-            l_HIO.mNo = mDoHIO_createChild("Wind Boss (Child)", &l_HIO);
+            l_HIO.mNo = mDoHIO_createChild("風ボス（子）", &l_HIO);
         }
         a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         a_this->attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 4;
         a_this->health = 4;
         a_this->max_health = 4;
-        i_this->m0508.Init(0xFA, 0, a_this);
-        i_this->m0544.Set(reinterpret_cast<const dCcD_SrcSph*>(&hs_sph_src));
-        i_this->m0544.SetStts(&i_this->m0508);
+        i_this->mStts.Init(0xFA, 0, a_this);
+        i_this->mHsSph.Set(reinterpret_cast<const dCcD_SrcSph*>(&hs_sph_src));
+        i_this->mHsSph.SetStts(&i_this->mStts);
 
         for (s32 i = 0; i < 0xf; i++) {
-            i_this->m0670[i].SetStts(&i_this->m0508);
+            i_this->mBodySph[i].SetStts(&i_this->mStts);
             if (i == 0) {
-                i_this->m0670[i].Set(reinterpret_cast<const dCcD_SrcSph*>(&cc_sph_src));
+                i_this->mBodySph[i].Set(reinterpret_cast<const dCcD_SrcSph*>(&cc_sph_src));
             } else {
-                i_this->m0670[i].Set(reinterpret_cast<const dCcD_SrcSph*>(&body_sph_src));
+                i_this->mBodySph[i].Set(reinterpret_cast<const dCcD_SrcSph*>(&body_sph_src));
             }
-            i_this->m032C[i].copy(a_this->current.pos);
+            i_this->mBodyPos[i].copy(a_this->current.pos);
         }
-        if (i_this->m02B4 == 0x23) {
-            i_this->m02F8 = -10;
+        if (i_this->mType == 0x23) {
+            i_this->mMode = -10;
         }
 
         eff_col.r = 0xA0;
@@ -267,7 +267,7 @@ static void SafeString_dt(void* p, s32 flags) {
 }
 
 /* 02108F90 */
-// HD: element destructor for m1820[] (dPa_smokeEcallBack: trivial)
+// HD: element destructor for mSmokeCb[] (dPa_smokeEcallBack: trivial)
 static void smoke_dt(void* p, s32 flags) {
     if (p != nullptr && (flags & 1))
         operator_delete(p);
@@ -282,10 +282,10 @@ static void SafeString_assure(void* p) {
 // HD: bwds_class deleting destructor (compiler-generated)
 static void bwds_class_dt(bwds_class* i_this, s32 flags) {
     if (i_this != nullptr) {
-        bw_destroyArray(i_this->m1820, 3, 0x20, gabi::guest_fn(reinterpret_cast<const void*>(smoke_dt)), 0, 0);
-        bw_destroyArray(i_this->m0670, 0xF, 0x12C, BWDS_SPHERE_DTOR, 0, 0);
-        bw_sphereDtor(&i_this->m0544, 2);
-        dCcD_Stts_dt(&i_this->m0508, 2);
+        bw_destroyArray(i_this->mSmokeCb, 3, 0x20, gabi::guest_fn(reinterpret_cast<const void*>(smoke_dt)), 0, 0);
+        bw_destroyArray(i_this->mBodySph, 0xF, 0x12C, BWDS_SPHERE_DTOR, 0, 0);
+        bw_sphereDtor(&i_this->mHsSph, 2);
+        dCcD_Stts_dt(&i_this->mStts, 2);
         bw_actorDtor(i_this, 0);
         if (flags & 1)
             operator_delete(i_this);
@@ -327,5 +327,5 @@ str 1000C370 "Bwds" in 02108750
 str 1000C37C "Bwds" in 021087FC
 str 1000C378 "Bwd" in 021087FC
 str 1000C384 "Bwds" in 02108BF0
-str 1000C38C "Wind Boss (Child)" renamed in 02108BF0
+str 1000C38C "風ボス（子）" in 02108BF0
 */

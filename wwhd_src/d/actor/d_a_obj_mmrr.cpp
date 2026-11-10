@@ -90,13 +90,13 @@ bool Act_c::create_heap() {
 /* 023751B0 */
 void Act_c::init_cc() {
     for (int i = 0; i < 5; i++) {
-        field_0x958[i].Init(0xff, 0xff, this);
-        Mmrr_setTriSource(&field_0x2C8[i], &M_tri_src); /* dCcD_Tri::Set */
-        field_0x2C8[i].SetStts(&field_0x958[i]);
-        field_0x2C8[i].mGObjTg.mSPrm = field_0x2C8[i].mGObjTg.mSPrm | 4; /* OnTgNoHitMark */
-        field_0xBBC.Init(0xff, 0xff, this);
-        Mmrr_setCpsSource(&field_0xA84, &M_cps_src); /* dCcD_Cps::Set */
-        field_0xA84.SetStts(&field_0xBBC);
+        mTriStts[i].Init(0xff, 0xff, this);
+        Mmrr_setTriSource(&mTri[i], &M_tri_src); /* dCcD_Tri::Set */
+        mTri[i].SetStts(&mTriStts[i]);
+        mTri[i].mGObjTg.mSPrm = mTri[i].mGObjTg.mSPrm | 4; /* OnTgNoHitMark */
+        mBeamStts.Init(0xff, 0xff, this);
+        Mmrr_setCpsSource(&mBeamCps, &M_cps_src); /* dCcD_Cps::Set */
+        mBeamCps.SetStts(&mBeamStts);
     }
     set_cc_rec_pos();
     set_cc_trans_pos();
@@ -124,7 +124,7 @@ void Act_c::set_cc_rec_pos() {
             to.z = (u32)from.z;
             PSMTXMultVec(mDoMtx_stack_c::get(), &temp, out[j]);
         }
-        Mmrr_setTri(&triangleShape(&field_0x2C8[i]).mTri, &a, &b, &c);
+        Mmrr_setTri(&triangleShape(&mTri[i]).mTri, &a, &b, &c);
     }
 }
 
@@ -165,10 +165,10 @@ void Act_c::set_cc_trans_pos() {
         endWords.z = (u32)crossWords.z;
         endWords.y = (u32)crossWords.y;
     }
-    Mmrr_setCapsule(&capsuleShape(&field_0xA84).mCps, &cps);
-    Mmrr_subtract(&capsuleShape(&field_0xA84).mCps.mEnd,
-                  &capsuleShape(&field_0xA84).mCps.mStart, &field_0xA84.mGObjAt.mVec);
-    Mmrr_normalizeRS(&field_0xA84.mGObjAt.mVec);
+    Mmrr_setCapsule(&capsuleShape(&mBeamCps).mCps, &cps);
+    Mmrr_subtract(&capsuleShape(&mBeamCps).mCps.mEnd,
+                  &capsuleShape(&mBeamCps).mCps.mStart, &mBeamCps.mGObjAt.mVec);
+    Mmrr_normalizeRS(&mBeamCps.mGObjAt.mVec);
     /* cXyz(cps.mStart).abs(cps.mEnd) */
     f32 sx = cps.mStart.x, sy = cps.mStart.y, sz = cps.mStart.z;
     tmp.z = sz;
@@ -179,14 +179,14 @@ void Act_c::set_cc_trans_pos() {
     chk.__vtbl_20 = 0x1002CCA8;
     chk.__vtbl_58 = 0x1002CCF8;
     chk.__vtbl_64 = 0x1002CCB8;
-    field_0xC00 = d;
+    mBeamLenRate = d;
     cBgS_LinChk_dt(&chk, 0);
 }
 
 /* 02375264 */
 void Act_c::set_cull() {
     f32 y1, z1;
-    if (field_0xBF9) {
+    if (mReflecting) {
         u16 ang = (u16)L_attr.field_0xBC;
         f32 d0 = L_attr.field_0xD0;
         f32 s = cM_ssin(ang), c = cM_scos(ang);
@@ -211,20 +211,20 @@ cPhs_State Act_c::_create() {
             __vtbl = ACT_VTBL;
             mDoExt_btkAnm::ct(&mMirrorBtkAnm);
             mDoExt_btkAnm::ct(&mBeamBtkAnm);
-            Mmrr_constructArray(field_0x2C8, 5, sizeof(dCcD_Tri), Mmrr_triangleConstructor);
-            Mmrr_constructArray(field_0x958, 5, sizeof(dCcD_Stts), Mmrr_statusConstructor);
+            Mmrr_constructArray(mTri, 5, sizeof(dCcD_Tri), Mmrr_triangleConstructor);
+            Mmrr_constructArray(mTriStts, 5, sizeof(dCcD_Stts), Mmrr_statusConstructor);
             /* dCcD_Cps */
-            Mmrr_constructGObj(&field_0xA84);
-            auto& capsule = capsuleShape(&field_0xA84);
+            Mmrr_constructGObj(&mBeamCps);
+            auto& capsule = capsuleShape(&mBeamCps);
             capsule.mShapeVtable = 0x100015A8;
             capsule.mAabVtable = AAB_VTBL;
             Mmrr_constructCps(&capsule.mCps);
-            field_0xA84.__vtbl_hitinf = 0x1004AF18;
+            mBeamCps.__vtbl_hitinf = 0x1004AF18;
             capsule.mCps.__vtbl = 0x1004AF60;
             capsule.mShapeVtable = 0x1004AF70;
-            dCcD_Stts_ct(&field_0xBBC);
-            dPa_followEcallBack_ct(&field_0xC04, 0, 0);
-            field_0xC04.__vtbl = EFF_VTBL;
+            dCcD_Stts_ct(&mBeamStts);
+            dPa_followEcallBack_ct(&mEff, 0, 0);
+            mEff.__vtbl = EFF_VTBL;
         }
         fopAcM_OnCondition(this, fopAcCnd_INIT_e);
     }
@@ -236,9 +236,9 @@ cPhs_State Act_c::_create() {
             cullMtx = gabi::ea(m->getBaseTRMtx());
             init_mtx();
             init_cc();
-            field_0xBF8 = false;
-            field_0xBFC = 0.0f;
-            field_0xBF9 = false;
+            mPosChanged = false;
+            mLightRate = 0.0f;
+            mReflecting = false;
             set_cull();
         } else {
             state = cPhs_ERROR_e;
@@ -256,8 +256,8 @@ bool Act_c::_delete() {
 
 /* 02374D2C */
 void Act_c::set_mtx() {
-    /* local_scale(scale.x, scale.y, scale.z * field_0xC00); mpBeamModel->setBaseScale(local_scale) */
-    f32 z = scale.z * field_0xC00;
+    /* local_scale(scale.x, scale.y, scale.z * mBeamLenRate); mpBeamModel->setBaseScale(local_scale) */
+    f32 z = scale.z * mBeamLenRate;
     auto& beamScale = positionWords(mpBeamModel->mBaseScale);
     auto& actorScale = positionWords(scale);
     beamScale.x = (u32)actorScale.x;
@@ -286,7 +286,7 @@ bool Act_c::chk_light() {
         ret = true;
     } else {
         for (int i = 0; i < 5; i++) {
-            dCcD_Tri* local_tri = &field_0x2C8[i];
+            dCcD_Tri* local_tri = &mTri[i];
             if (local_tri->ChkTgHit()) {
                 /* GetNP()->inprod(*GetTgRVecP()) */
                 if (PSVECDotProduct(&triangleShape(local_tri).mTri.mNormal, &local_tri->mGObjTg.mRVec) < 0.0f) {
@@ -303,17 +303,17 @@ bool Act_c::chk_light() {
 /* 023755D4 */
 void Act_c::eff_start() {
     dComIfGp_particle_set(dPa_name_ID_AK_SN_SASORIMIRROR00, &current.pos, &shape_angle, nullptr, 0xff,
-                          (dPa_levelEcallBack*)&field_0xC04, -1, nullptr, nullptr, nullptr);
+                          (dPa_levelEcallBack*)&mEff, -1, nullptr, nullptr, nullptr);
 }
 
 /* 0237563C */
 void Act_c::eff_stop() {
-    field_0xC04.end();
+    mEff.end();
 }
 
 /* 023754BC */
 void Act_c::eff_remove() {
-    field_0xC04.remove();
+    mEff.remove();
 }
 
 /* 02375644 */
@@ -332,23 +332,23 @@ bool Act_c::_execute() {
     eyePos.y = y;
     eyeWords.z = z;
     if (chk_light()) {
-        cLib_chaseF(&field_0xBFC, 1.0f, 0.2f);
+        cLib_chaseF(&mLightRate, 1.0f, 0.2f);
     } else {
-        cLib_chaseF(&field_0xBFC, 0.0f, 0.2f);
+        cLib_chaseF(&mLightRate, 0.0f, 0.2f);
     }
-    u8 old_bf9 = field_0xBF9;
-    field_0xBF9 = field_0xBFC > 0.999f;
+    u8 old_bf9 = mReflecting;
+    mReflecting = mLightRate > 0.999f;
     mMirrorBtkAnm.play();
     mBeamBtkAnm.play();
-    if (field_0xBF8) {
+    if (mPosChanged) {
         set_cc_rec_pos();
     }
-    if (field_0xBF8 || field_0xBF9) {
+    if (mPosChanged || mReflecting) {
         set_cc_trans_pos();
     }
     set_mtx();
     set_cull();
-    if (field_0xBF9) {
+    if (mReflecting) {
         if (!old_bf9) {
             mDoAud_seStart(JA_SE_OBJ_MIRROR_REFLECT, &eyePos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(this)));
             eff_start();
@@ -360,18 +360,18 @@ bool Act_c::_execute() {
         }
     }
     for (int i = 0; i < 5; i++) {
-        dComIfG_Ccsp_Set(&field_0x2C8[i]);
+        dComIfG_Ccsp_Set(&mTri[i]);
     }
-    if (field_0xBF9) {
-        dComIfG_Ccsp_Set(&field_0xA84);
+    if (mReflecting) {
+        dComIfG_Ccsp_Set(&mBeamCps);
     }
-    field_0xBF8 = false;
+    mPosChanged = false;
     return true;
 }
 
 /* 02375860 */
 bool Act_c::_draw() {
-    u8 bf9 = field_0xBF9;
+    u8 bf9 = mReflecting;
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
     setLightTevColorType(dKy_getEnvlight(), mpMirrorModel, &tevStr);
     mMirrorBtkAnm.entry(J3DModel_getModelData(mpMirrorModel), mMirrorBtkAnm.getFrame());
@@ -491,10 +491,10 @@ static void empty_virtual(void* p) {}
 // HD: Act_c deleting destructor (HD: Eff_c and the btk animations are not destroyed)
 static void Act_c_dt(Act_c* i_this, s32 flags) {
     if (i_this != nullptr) {
-        dCcD_Stts_dt(&i_this->field_0xBBC, 2);
-        Mmrr_destroyCps(&i_this->field_0xA84, 2); /* dCcD_Cps dtor (dCcD_GObjInf::~dCcD_GObjInf) */
-        Mmrr_destroyArray(i_this->field_0x958, 5, sizeof(dCcD_Stts), Mmrr_statusDestructor, 0, 0);
-        Mmrr_destroyArray(i_this->field_0x2C8, 5, sizeof(dCcD_Tri), Mmrr_triangleDestructor, 0, 0);
+        dCcD_Stts_dt(&i_this->mBeamStts, 2);
+        Mmrr_destroyCps(&i_this->mBeamCps, 2); /* dCcD_Cps dtor (dCcD_GObjInf::~dCcD_GObjInf) */
+        Mmrr_destroyArray(i_this->mTriStts, 5, sizeof(dCcD_Stts), Mmrr_statusDestructor, 0, 0);
+        Mmrr_destroyArray(i_this->mTri, 5, sizeof(dCcD_Tri), Mmrr_triangleDestructor, 0, 0);
         Mmrr_destroyActor(i_this, 0); /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(i_this);

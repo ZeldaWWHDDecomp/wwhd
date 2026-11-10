@@ -178,8 +178,8 @@ static inline void gm_zeroWingPhases(gm_class* actor) {
 static inline bool gm_groundProbe(gm_class* actor, cXyz* base, bool yaw) {
     if (yaw)
         gm_rotate(gm_currentMatrix(), GmRotation::YSet, actor->current.angle.y);
-    gm_rotate(gm_currentMatrix(), yaw ? GmRotation::XMultiply : GmRotation::XSet, actor->m43E);
-    gm_rotate(gm_currentMatrix(), GmRotation::ZMultiply, actor->m442);
+    gm_rotate(gm_currentMatrix(), yaw ? GmRotation::XMultiply : GmRotation::XSet, actor->mGroundPitch);
+    gm_rotate(gm_currentMatrix(), GmRotation::ZMultiply, actor->mGroundRoll);
     gabi::Local<cXyz> offset, target, copy;
     offset->x = 0.0f;
     offset->y = 100.0f;
@@ -322,7 +322,7 @@ static inline void action_hane_rakka(gm_class* actor) {
         gm_zeroWingPhases(actor);
         actor->gravity = -1.0f;
         actor->speed.y = 7.0f;
-        if ((u8)actor->m2CD != 2) {
+        if ((u8)actor->mLarvaType != 2) {
             actor->speedF = 40.0f;
             u8 type = actor->mWingFlags;
             f32 random = GmHD_cM_rndFX(4096.0f) + 16384.0f;
@@ -866,7 +866,7 @@ BOOL nodeCallBack(void* node, s32 phase) {
     gm_class* actor = gabi::at<gm_class>(GmGuest<GmModelHD>(model)->mUserArea);
     void* joint = GmHD_J3DNode_toJoint(node);
     u16 index = GmGuest<GmJointHD>(gabi::ea(joint))->mJntNo;
-    if (!gabi::ea(actor) || (u8)actor->m2CD != 0)
+    if (!gabi::ea(actor) || (u8)actor->mLarvaType != 0)
         return TRUE;
     u32 matrixObject = GmGuest<GmModelHD>(model)->mpMtxBuffer.v;
     u32 matrices = GmGuest<J3DMtxBuffer_hd>(matrixObject)->mpAnmMtx;
@@ -922,14 +922,14 @@ void draw_SUB(gm_class* actor) {
     f32 y = (f32)actor->current.pos.y + (f32)actor->mPositionOffset.y;
     f32 z = (f32)actor->current.pos.z + (f32)actor->mPositionOffset.z;
     GmHD_PSMTXTrans(&l_matrixStack, x, y, z);
-    gm_rotate(gabi::ea(&l_matrixStack), GmRotation::XMultiply, actor->m43E);
-    gm_rotate(gabi::ea(&l_matrixStack), GmRotation::ZMultiply, actor->m442);
+    gm_rotate(gabi::ea(&l_matrixStack), GmRotation::XMultiply, actor->mGroundPitch);
+    gm_rotate(gabi::ea(&l_matrixStack), GmRotation::ZMultiply, actor->mGroundRoll);
     gm_rotate(gabi::ea(&l_matrixStack), GmRotation::YMultiply, actor->shape_angle.y);
     gm_rotate(gabi::ea(&l_matrixStack), GmRotation::XMultiply, actor->shape_angle.x);
     gm_rotate(gabi::ea(&l_matrixStack), GmRotation::YMultiply, actor->mPitchOffset);
     gm_rotate(gabi::ea(&l_matrixStack), GmRotation::ZMultiply, actor->shape_angle.z);
     gm_copyMatrix(gabi::ea(&l_matrixStack), model + 0xC8);
-    if ((u8)actor->m2CD == 0) {
+    if ((u8)actor->mLarvaType == 0) {
         GmHD_mDoExt_McaMorf_calc(actor->mpMorf.get());
         GmHD_enemy_fire(&actor->mEnemyFire);
     }
@@ -946,12 +946,12 @@ BOOL daGM_Draw(gm_class* actor) {
                                                       &actor->tevStr);
     s16 angle = actor->shape_angle.y;
     GmHD_dSnap_RegistFig(0xBE, actor, &actor->attention_info.position, angle, 1.0f, 1.0f, 1.0f);
-    if ((u8)actor->m2CD == 0 && (s16)actor->mEnemyIce.mFreezeTimer > 20) {
+    if ((u8)actor->mLarvaType == 0 && (s16)actor->mEnemyIce.mFreezeTimer > 20) {
         GmHD_dMat_ice_c_entryDL(actor->mpMorf.get(), -1, &actor->mInvisibleModel);
         return TRUE;
     }
     gm_play();
-    if ((u8)actor->m2CD != 0) {
+    if ((u8)actor->mLarvaType != 0) {
         GmHD_mDoExt_McaMorf_updateDL(actor->mpMorf.get());
         return TRUE;
     }
@@ -1180,7 +1180,7 @@ BOOL body_atari_check(gm_class* actor) {
     u8 damageType = actor->mDamageType;
     if (damageType == 3 || damageType == 9)
         return TRUE;
-    if (((u8)actor->mWingFlags & 15) == 15 || (u8)actor->m2CD != 0)
+    if (((u8)actor->mWingFlags & 15) == 15 || (u8)actor->mLarvaType != 0)
         return TRUE;
     actor->mWallRadius = 250.0f;
     play = gm_play();
@@ -1284,9 +1284,9 @@ void BG_check(gm_class* actor) {
 BOOL Line_check(gm_class* actor, cXyz* end) {
     gabi::Local<dBgS_LinChk> check;
     dBgS_LinChk_ct(check.get(), {0x1000FD14, 0x1000FD24, 0x1000FD44, 0x1000FD34}, false);
-    s16 xAngle = actor->m43E;
+    s16 xAngle = actor->mGroundPitch;
     gm_rotate(gm_currentMatrix(), GmRotation::XSet, xAngle);
-    s16 zAngle = actor->m442;
+    s16 zAngle = actor->mGroundRoll;
     gm_rotate(gm_currentMatrix(), GmRotation::ZMultiply, zAngle);
     gabi::Local<cXyz> direction;
     direction->x = 0.0f;
@@ -1316,7 +1316,7 @@ BOOL Line_check(gm_class* actor, cXyz* end) {
 
 /* 0214CFA4 */
 BOOL ks_set_rtn(gm_class* actor) {
-    s16 count = actor->m31E;
+    s16 count = actor->mKsCount;
     if (count >= ((u8)actor->mType == 1 ? 10 : 20))
         return TRUE;
     s32 parameters = (s16)actor->mActionState == 83 ? 5 : 4;
@@ -1338,7 +1338,7 @@ BOOL ks_set_rtn(gm_class* actor) {
                                           room, angles.get(), &actor->scale, 0, 0);
     if (created == -1)
         return TRUE;
-    actor->m31E = (s16)((s16)actor->m31E + 1);
+    actor->mKsCount = (s16)((s16)actor->mKsCount + 1);
     return FALSE;
 }
 
@@ -1872,9 +1872,9 @@ void action_ground_attack(gm_class* actor) {
         if (gm_animationStopped(actor)) {
             actor->speed.y = 0.0f;
             actor->gravity = 0.0f;
-            actor->m43E = 0;
+            actor->mGroundPitch = 0;
             actor->mGroundAngle.y = 0;
-            actor->m442 = 0;
+            actor->mGroundRoll = 0;
             actor->mWeaponSph.mGObjAt.mSpl = 5;
             f32 height = l_HIO.mBtHeight, radius = l_HIO.mBtRadius;
             actor->mBtHeight = height + 200.0f;
@@ -2360,7 +2360,7 @@ void action_demo(gm_class* actor) {
 
 /* 0214D128 */
 BOOL daGM_Execute(gm_class* actor) {
-    if ((u8)actor->m2CD == 0) {
+    if ((u8)actor->mLarvaType == 0) {
         GmHD_fopAcM_setGbaName(actor, 45, 9, 38);
         if ((s16)actor->mDemoMode != 1) {
             u8 flags = actor->mWingFlags;
@@ -2406,7 +2406,7 @@ BOOL daGM_Execute(gm_class* actor) {
             gm_removeEmitter(actor->mpEmitters[2], actor->mAttackEmitterState);
             gm_removeEmitter(actor->mpEmitters[3], actor->mAttackEmitterState);
         }
-        if ((u8)actor->m2CD == 0 && GmHD_enemy_ice(&actor->mEnemyIce)) {
+        if ((u8)actor->mLarvaType == 0 && GmHD_enemy_ice(&actor->mEnemyIce)) {
             u32 model = GmGuest<mDoExt_McaMorf>(actor->mpMorf.v)->mpModel.v;
             gm_copyMatrix(gabi::ea(&l_matrixStack), model + 0xC8);
             GmHD_mDoExt_McaMorf_calc(actor->mpMorf.get());
@@ -2459,7 +2459,7 @@ BOOL daGM_Execute(gm_class* actor) {
     actor->speed.x = (f32)velocity->x;
     actor->speed.z = (f32)velocity->z;
     actor->speed.y = vertical;
-    u8 larva = actor->m2CD;
+    u8 larva = actor->mLarvaType;
     if (vertical < -100.0f)
         actor->speed.y = -100.0f;
     if (!larva) {
@@ -2633,7 +2633,7 @@ BOOL daGM_Delete(gm_class* actor) {
 
 /* 02150124 */
 BOOL useHeapInit(gm_class* actor) {
-    u8 larva = actor->m2CD;
+    u8 larva = actor->mLarvaType;
     if (!larva) {
         void* resource = gm_resource(gabi::guest_addr("Gm"), dRes_INDEX_GM_BDL_GM_e);
         void* morf = GmHD_mDoExt_McaMorf_mDoExt_McaMorf(gabi::at<void>(0), resource, 0, 0, 0, 1, 0,
@@ -2656,7 +2656,7 @@ BOOL useHeapInit(gm_class* actor) {
     u32 model = GmGuest<mDoExt_McaMorf>(morf)->mpModel.v;
     if (!model)
         return FALSE;
-    if ((u8)actor->m2CD == 0) {
+    if ((u8)actor->mLarvaType == 0) {
         GmGuest<GmModelHD>(model)->mUserArea = gabi::ea(actor);
         morf = gabi::ea(actor->mpMorf.get());
         model = GmGuest<mDoExt_McaMorf>(morf)->mpModel.v;
@@ -2678,10 +2678,10 @@ BOOL useHeapInit(gm_class* actor) {
             countObject = GmHD_J3DModelData_getJointTree(gabi::at<void>(data));
             count = GmGuest<GmJointTreeHD>(gabi::ea(countObject))->mJointCount;
         }
-        larva = actor->m2CD;
+        larva = actor->mLarvaType;
         morf = gabi::ea(actor->mpMorf.get());
     } else
-        larva = actor->m2CD;
+        larva = actor->mLarvaType;
     model = GmGuest<mDoExt_McaMorf>(morf)->mpModel.v;
     if (larva)
         return TRUE;
@@ -2725,7 +2725,7 @@ s32 daGM_Create(gm_class* actor) {
     u32 parameters = actor->mParameters;
     actor->mWingFlags = parameters;
     u8 type = (u32)actor->mParameters >> 8;
-    actor->m2CD = type;
+    actor->mLarvaType = type;
     actor->mType = (u32)actor->mParameters >> 16;
     actor->mSwitchNo = (u32)actor->mParameters >> 24;
     if ((u8)parameters == 255)
@@ -2733,10 +2733,10 @@ s32 daGM_Create(gm_class* actor) {
     u8 special = actor->mType;
     if (type == 255) {
         type = 0;
-        actor->m2CD = 0;
+        actor->mLarvaType = 0;
     }
     if (special == 255) {
-        type = actor->m2CD;
+        type = actor->mLarvaType;
         actor->mType = 0;
     }
     if (type == 0) {
@@ -2822,7 +2822,7 @@ s32 daGM_Create(gm_class* actor) {
         &GmGuest<GmNameTableHD>(gabi::ea(&GmGuest<dComIfG_inf_c>(gabi::ea(play))->play))
              ->mNameTable,
         "gmos", 0);
-    if ((u8)actor->m2CD != 0) {
+    if ((u8)actor->mLarvaType != 0) {
         actor->attention_info.flags = 0;
         u8 larvaType = actor->mWingFlags;
         actor->mWallRadius = 100.0f;

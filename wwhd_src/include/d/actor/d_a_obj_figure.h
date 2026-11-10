@@ -29,47 +29,47 @@ class daObjFigure_c : public fopAc_ac_c {
     void executeNormal();
     enum : u32 { __vt = 0x100282D4, CYL_AAB_VTABLE_HD = 0x100282C4 };
     enum Prm_e { PRM_FIGURE_NO_W = 8, PRM_FIGURE_NO_S = 0 };
-    request_of_phase_process_class mPhsLoad;    // 0x3AC
-    request_of_phase_process_class mPhsFigure;  // 0x3B4
-    request_of_phase_process_class mPhsRoomArc; // 0x3BC
-    gptr<J3DModel> mpModel;                     // 0x3C4
-    gptr<J3DModel> mpPedestalModel;             // 0x3C8
-    gptr<J3DAnmTexPattern> mpPedestalBtp;       // 0x3CC
-    mDoExt_btpAnm mBtpAnm1;                     // 0x3D0
-    u8 m2C8[4];
-    mDoExt_btpAnm mBtpAnm2;       // 0x448
-    gptr<mDoExt_McaMorf> mpMorf;  // 0x4BC
-    gptr<mDoExt_brkAnm> mpBrkAnm; // 0x4C0
-    dKy_tevstr_c mTevStrBG2;      // 0x4C4
-    u8 m398[0x30];
-    Mtx34 mMtx;           // 0x6BC
-    dCcD_Stts mStts;      // 0x6EC
-    dCcD_Cyl mCyl1;       // 0x728
-    dCcD_Cyl mCyl2;       // 0x858
-    be<u32> m694;         // 0x988
-    be<u8> mHasMessageHD; // HD: manager handle replaces mpCurrMsg.
-    u8 mMessagePaddingHD[3];
-    be<u32> m69C;              // 0x990
-    dNpc_EventCut_c mEventCut; // 0x994
-    cXyz m70C;                 // 0xA00
-    cXyz m718;                 // 0xA0C
-    be<f32> m724;
-    be<f32> m728;
-    gptr<be<u32>> m72C;
-    be<s16> mFigureCheckEvtIdx;
-    be<s16> m732;
-    be<s16> m734;
-    be<s16> m736;
-    be<s16> m738;
-    be<s16> m73A;
-    be<u8> m73C;
-    be<u8> mFigureNo;
-    be<u8> mbDisplay;
-    be<u8> m73F;
-    be<u8> m740;
-    be<s8> m741;
-    be<u8> mLoadFlags;
-    u8 m743;
+    /* 0x3AC */ request_of_phase_process_class mPhsLoad;
+    /* 0x3B4 */ request_of_phase_process_class mPhsFigure;
+    /* 0x3BC */ request_of_phase_process_class mPhsRoomArc;
+    /* 0x3C4 */ gptr<J3DModel> mpModel;
+    /* 0x3C8 */ gptr<J3DModel> mpPedestalModel;
+    /* 0x3CC */ gptr<J3DAnmTexPattern> mpPedestalBtp;
+    /* 0x3D0 */ mDoExt_btpAnm mBtpAnm1;
+    /* 0x444 */ u8 m2C8[4];
+    /* 0x448 */ mDoExt_btpAnm mBtpAnm2;
+    /* 0x4BC */ gptr<mDoExt_McaMorf> mpMorf;
+    /* 0x4C0 */ gptr<mDoExt_brkAnm> mpBrkAnm;
+    /* 0x4C4 */ dKy_tevstr_c mTevStrBG2;
+    /* 0x68C */ u8 m398[0x30];
+    /* 0x6BC */ Mtx34 mMtx;
+    /* 0x6EC */ dCcD_Stts mStts;
+    /* 0x728 */ dCcD_Cyl mCyl1;
+    /* 0x858 */ dCcD_Cyl mCyl2;
+    /* 0x988 */ be<u32> mCurrMsgBsPcId;  /* was m694: talk 02340128: the message process id (Figure_messageSetHD result), 0xFFFFFFFF while no message runs; setMessage 0233FF44 0xFFFFFFFF; eventMesSet 0234025C waits for it (tww m694 = fopMsgM_messageSet(..), fpcM_ERROR_PROCESS_ID_e); after tww fopNpc_npc_c::mCurrMsgBsPcId */
+    /* 0x98C */ be<u8> mHasMessageHD; // HD: manager handle replaces mpCurrMsg.
+    /* 0x98D */ u8 mMessagePaddingHD[3];
+    /* 0x990 */ be<u32> mCurrMsgNo;  /* was m69C: setMessage 0233FF44 sets it; talk 02340128 shows it, getMsg() for param 1, and steps it with next_msgStatus(&it) (tww); after tww fopNpc_npc_c::mCurrMsgNo */
+    /* 0x994 */ dNpc_EventCut_c mEventCut;
+    /* 0xA00 */ cXyz mCamCenter;  /* was m70C: eventMesSet 0234025C: (0, mCamHeight + 30, 0) plus current.pos, the camera centre handed to the camera Set (tww dCam_getBody()->Set(it, m718, ..)) */
+    /* 0xA0C */ cXyz mCamEye;  /* was m718: eventMesSet 0234025C: (0, mCamHeight + 30, 200) turned by current.angle.y + mCamAngleY plus current.pos, the camera eye (tww Set(m70C, it, ..)) */
+    /* 0xA18 */ be<f32> mCamFovy;  /* was m724: eventMesSetInit 0233FF68 50; eventMesSet 0234025C: minus 2 * sub stick Y, limited to 20..60, the camera Set's fovy argument (tww Set(.., .., it, 0)) */
+    /* 0xA1C */ be<f32> mCamHeight;  /* was m728: eventMesSetInit 0233FF68 118; eventMesSet 0234025C: plus 5 * stick Y, limited to 80..150; the camera centre and eye heights are it + 30 (tww) */
+    /* 0xA20 */ gptr<be<u32>> mpMsgList;  /* was m72C: eventMesSetInit 0233FF68 / getMsg 0233FF54 null; next_msgStatus 023400E0 steps it and returns its next message number, null at the 0 end (tww m72C++; *m72C) */
+    /* 0xA24 */ be<s16> mFigureCheckEvtIdx;
+    /* 0xA26 */ be<s16> m732;
+    /* 0xA28 */ be<s16> mCamAngleY;  /* was m734: eventMesSet 0234025C: plus 512 * stick X; the camera eye turns by current.angle.y + it; 0 on B (tww); daObjFigure_constructHD 0233F6DC 0 */
+    /* 0xA2A */ be<s16> mFigureAngleY;  /* was m736: setMtx 0233FA44 turns the figure by it (tww mDoMtx_stack_c::YrotM(it)); daObjFigure_constructHD 0233F6DC / eventMesSet 0234025C (B) current.angle.y; tww also turns it while idle (+= l_figure_check_tbl[0].field_0x28), HD does not */
+    /* 0xA2C */ be<s16> mSpinWait;  /* was m738: eventMesSetInit 0233FF68 0; eventMesSet 0234025C: 0 on stick input, counted down while idle (tww: table field_0x32 on input; at 0 tww turns mFigureAngleY) */
+    /* 0xA2E */ be<s16> mInputDelay;  /* was m73A: eventMesSetInit 0233FF68 10; eventMesSet 0234025C counts it down and reads no input (and allows no A/B) until it is 0 (tww) */
+    /* 0xA30 */ be<u8> mMoveProcIdx;  /* was m73C: daObjFigure_constructHD 0233F6DC 0; tww _execute calls (this->*moveProc[it])() (moveProc = { executeNormal }) */
+    /* 0xA31 */ be<u8> mFigureNo;
+    /* 0xA32 */ be<u8> mbDisplay;
+    /* 0xA33 */ be<u8> mMesState;  /* was m73F: eventMesSetInit 0233FF68 0; eventMesSet 0234025C: 0 looking (A sets 1), 1 starting the talk (2 once mCurrMsgBsPcId is set), 2 talking (0 when the box closes, status 0x12) (tww switch (it)) */
+    /* 0xA34 */ be<u8> m740;
+    /* 0xA35 */ be<s8> mActIdx;  /* was m741: privateCut 02340664: the event action index (tww it = dComIfGp_evmng_getMyActIdx(..), -1 ends the cut, switch (it)); same name as daObjDoguu_c::mActIdx and other actors' cut indices */
+    /* 0xA36 */ be<u8> mLoadFlags;
+    /* 0xA37 */ u8 m743;
 };
 WWHD_OFFSET(daObjFigure_c, mPhsLoad, 0x3AC);
 WWHD_OFFSET(daObjFigure_c, mPhsFigure, 0x3B4);
@@ -86,27 +86,27 @@ WWHD_OFFSET(daObjFigure_c, mMtx, 0x6BC);
 WWHD_OFFSET(daObjFigure_c, mStts, 0x6EC);
 WWHD_OFFSET(daObjFigure_c, mCyl1, 0x728);
 WWHD_OFFSET(daObjFigure_c, mCyl2, 0x858);
-WWHD_OFFSET(daObjFigure_c, m694, 0x988);
+WWHD_OFFSET(daObjFigure_c, mCurrMsgBsPcId, 0x988);
 WWHD_OFFSET(daObjFigure_c, mHasMessageHD, 0x98C);
-WWHD_OFFSET(daObjFigure_c, m69C, 0x990);
+WWHD_OFFSET(daObjFigure_c, mCurrMsgNo, 0x990);
 WWHD_OFFSET(daObjFigure_c, mEventCut, 0x994);
-WWHD_OFFSET(daObjFigure_c, m70C, 0xA00);
-WWHD_OFFSET(daObjFigure_c, m718, 0xA0C);
-WWHD_OFFSET(daObjFigure_c, m724, 0xA18);
-WWHD_OFFSET(daObjFigure_c, m728, 0xA1C);
-WWHD_OFFSET(daObjFigure_c, m72C, 0xA20);
+WWHD_OFFSET(daObjFigure_c, mCamCenter, 0xA00);
+WWHD_OFFSET(daObjFigure_c, mCamEye, 0xA0C);
+WWHD_OFFSET(daObjFigure_c, mCamFovy, 0xA18);
+WWHD_OFFSET(daObjFigure_c, mCamHeight, 0xA1C);
+WWHD_OFFSET(daObjFigure_c, mpMsgList, 0xA20);
 WWHD_OFFSET(daObjFigure_c, mFigureCheckEvtIdx, 0xA24);
 WWHD_OFFSET(daObjFigure_c, m732, 0xA26);
-WWHD_OFFSET(daObjFigure_c, m734, 0xA28);
-WWHD_OFFSET(daObjFigure_c, m736, 0xA2A);
-WWHD_OFFSET(daObjFigure_c, m738, 0xA2C);
-WWHD_OFFSET(daObjFigure_c, m73A, 0xA2E);
-WWHD_OFFSET(daObjFigure_c, m73C, 0xA30);
+WWHD_OFFSET(daObjFigure_c, mCamAngleY, 0xA28);
+WWHD_OFFSET(daObjFigure_c, mFigureAngleY, 0xA2A);
+WWHD_OFFSET(daObjFigure_c, mSpinWait, 0xA2C);
+WWHD_OFFSET(daObjFigure_c, mInputDelay, 0xA2E);
+WWHD_OFFSET(daObjFigure_c, mMoveProcIdx, 0xA30);
 WWHD_OFFSET(daObjFigure_c, mFigureNo, 0xA31);
 WWHD_OFFSET(daObjFigure_c, mbDisplay, 0xA32);
-WWHD_OFFSET(daObjFigure_c, m73F, 0xA33);
+WWHD_OFFSET(daObjFigure_c, mMesState, 0xA33);
 WWHD_OFFSET(daObjFigure_c, m740, 0xA34);
-WWHD_OFFSET(daObjFigure_c, m741, 0xA35);
+WWHD_OFFSET(daObjFigure_c, mActIdx, 0xA35);
 WWHD_OFFSET(daObjFigure_c, mLoadFlags, 0xA36);
 WWHD_SIZE(daObjFigure_c, 0xA38);
 

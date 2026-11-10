@@ -5,9 +5,9 @@
  * - mRopeLine (mDoExt_3DlineMat1_c) is 0x188 bytes (GameCube 0x3C), followed by the HD beacon model;
  * - HD-only: a cannon-sight McaMorf (0x5B4), a water shadow model (0x5B8) with its btk (0x5BC)
  *   and alpha (0x630);
- * - m034A..m0353 +0x2E9; mEvtStaffId..mNextMessageNo +0x2EC; mShadowId is gone (HD shadows):
- *   mSailAngle..m0392 +0x2E8; then one s16 fewer (+0x2E6) up to m03BC, m03C4.. +0x2E4;
- * - one HD float after m040C: mGridID.. +0x2E8, up to m19C0;
+ * - mReverb..mCraneShockFlg +0x2E9; mEvtStaffId..mNextMessageNo +0x2EC; mShadowId is gone (HD shadows):
+ *   mSailAngle..mBodyAnmFileIdx +0x2E8; then one s16 fewer (+0x2E6) up to mWarpSplashBackAngle, mGroundCode.. +0x2E4;
+ * - one HD float after mForceMoveAngle: mGridID.. +0x2E8, up to mRopeRipple;
  * - HD-only after mSph: a J3DPacket subclass (0x1B54), 128 rope collider stts/spheres
  *   (0x1BF8 / 0x39F8), then the GameCube particle callbacks from 0xCFF8 (+0xB7BC). */
 #pragma once
@@ -339,13 +339,27 @@ struct ShipShadowBtk {
     /* 0x10 */ u8 _10[0x74 - 0x10];
 };
 
+/* dPa_rippleEcallBack (HD 0x14) layout view: vtable 0x0, emitter 0x4, rate 0x10 */
+struct ShipRipple {
+    /* 0x000 */ u8 mPadding0[0x4];
+    /* 0x004 */ be<u32> mEmitter;
+    /* 0x008 */ u8 mPadding8[0x8];
+    /* 0x010 */ be<f32> mRate;
+};
+WWHD_SIZE(ShipRipple, 0x14);
+WWHD_OFFSET(ShipRipple, mEmitter, 0x4);
+WWHD_OFFSET(ShipRipple, mRate, 0x10);
+
+/* J3DTexMtx layout view (TWW J3DTexMtxInfo + mMtx, 0x94), defined below */
+struct ShipTexMtx;
+
 struct daShip_c : fopAc_ac_c {
     /* 0x03AC */ request_of_phase_process_class mPhs;
     /* 0x03B4 */ gptr<mDoExt_McaMorf> mpBodyAnm;
     /* 0x03B8 */ gptr<mDoExt_McaMorf> mpHeadAnm;
-    /* 0x03BC */ be<u32> m02A0; /* J3DTexMtx* */
-    /* 0x03C0 */ be<u32> m02A4; /* J3DTexMtx* */
-    /* 0x03C4 */ Mtx34 m02A8;
+    /* 0x03BC */ gptr<ShipTexMtx> mpEffectTexMtx;  /* was m02A0: create 0247C358 stores texGen->getTexMtx(1) of material "m_fn_main_hashi"; draw 0247255C writes the effect matrix (setEffectMtx, HD inline) into it; TWW type J3DTexMtx* (same uses at TWW d_a_ship.cpp draw/create); J3DTexMtx* (layout view ShipTexMtx) */
+    /* 0x03C0 */ gptr<ShipTexMtx> mpScrollTexMtx;  /* was m02A4: create 0247C358 stores the same getTexMtx(1); draw 0247255C only sets its mSRT.mTranslationX = m03D4 (texture scroll); TWW type J3DTexMtx*; J3DTexMtx* (layout view ShipTexMtx) */
+    /* 0x03C4 */ Mtx34 mOrthoMtx;  /* was m02A8: create 0247C358 fills it with an orthographic projection (C_MTXOrtho 50,-50,-50,50,0.1,100000 in TWW); draw 0247255C revConcats it into the effect matrix */
     /* 0x03F4 */ u8 m02D8[0x10];
     /* 0x0404 */ gptr<J3DAnmTransform> mAnmTransform;
     /* 0x0408 */ J3DFrameCtrl mFrameCtrl;
@@ -360,83 +374,83 @@ struct daShip_c : fopAc_ac_c {
     /* 0x05BC */ ShipShadowBtk mShadowBtk;      /* HD */
     /* 0x0630 */ be<u8> mShadowAlpha;             /* HD */
     /* 0x0631 */ u8 mShadowPadding[2];
-    /* 0x0633 */ be<s8> m034A;
-    /* 0x0634 */ be<u8> m034B;
+    /* 0x0633 */ be<s8> mReverb;  /* was m034A: setRoomInfo 024752F4 stores dComIfGp_getReverb(roomNo); seStart 02473080 passes it as the reverb argument of mDoAud_seStart; after TWW daPy_lk_c mReverb (src/d/actor/d_a_player_main.cpp, same getReverb store) */
+    /* 0x0634 */ be<u8> mPathId;  /* was m034B: create 0247C358 stores the low parameter byte; checkOutRange 02474A98 tests 0xFF and passes it to dPath_GetRoomPath; after TWW daOship_c mPathId (include/d/actor/d_a_oship.h) */
     /* 0x0635 */ be<u8> mCurMode;
     /* 0x0636 */ be<u8> mNextMode;
     /* 0x0637 */ be<u8> mPart;
-    /* 0x0638 */ be<u8> m034F;
-    /* 0x0639 */ be<u8> m0350;
-    /* 0x063A */ be<u8> m0351;
-    /* 0x063B */ be<u8> m0352;
-    /* 0x063C */ be<u8> m0353;
+    /* 0x0638 */ be<u8> mCraneLiftUpTimer;  /* was m034F: setRopePos 024763B0 sets 20 when the hook lifts out of the water (JA_SE_LK_SHIP_CRANE_LIFTUP), counts it down, and skips the drop splash/JA_SE_LK_SHIP_CRANE_DROP while non-zero */
+    /* 0x0639 */ be<u8> mDemoPart;  /* was m0350: procZevDemo_init 02474FEC sets 4 (none); procZevDemo 024800A8 stores the demo's part substance and copies it to mPart / setPartOnAnime(m0350) */
+    /* 0x063A */ be<u8> mDemoMode;  /* was m0351: execute 02477A24 stores the event cut number (or 0xFF); compared with the DemoMode_e values throughout procZevDemo 024800A8; TWW checkSalvageDemo() returns m0351 == DEMO_SALVAGE_e (enum DemoMode_e); player_main_07 reads it as checkSalvageDemo */
+    /* 0x063B */ be<u8> mWhirlCircleFlg;  /* was m0352: TWW onWhirlFlg() sets 1, onWhirlFlgDirect() sets 0 (WWHD obj_auzu: 1 inside the inner radius); execute 02477A24: when set the ship circles the whirl at m0400/m040C, else it is pulled directly */
+    /* 0x063C */ be<u8> mCraneShockFlg;  /* was m0353: procCrane_init 0247F57C / procCrane 0247F7CC set it to cM_rnd()<0.5; procCrane starts a controller shock (ship_StartShock) when set and mRopeCnt changed */
     /* 0x063D */ be<u8> mSwiftSailActive; // HD: Swift Sail state.
     /* 0x063E */ u8 _63E[2];
     /* 0x0640 */ be<s32> mEvtStaffId;
     /* 0x0644 */ be<u32> mStateFlag;
     /* 0x0648 */ be<u32> mNextMessageNo;
     /* 0x064C */ be<s16> mSailAngle;
-    /* 0x064E */ be<s16> m0366;
+    /* 0x064E */ be<s16> mTillerAngle;  /* was m0366: execute 02477A24: mTillerAngleRate = m0366 / 0x2000; setSelfMove 0247E2B4 / procSteerMove 0247E854 ease it toward the stick-driven tiller target and pass it to setMoveAngle; bodyJointCallBack 02471298 rotates the tiller joint by it */
     /* 0x0650 */ u8 m0368[4];
-    /* 0x0654 */ be<s16> m036C;
-    /* 0x0656 */ be<s16> m036E;
-    /* 0x0658 */ be<s16> m0370;
-    /* 0x065A */ be<s16> m0372;
-    /* 0x065C */ be<s16> m0374;
-    /* 0x065E */ be<s16> m0376;
+    /* 0x0654 */ be<s16> mControllAngle;  /* was m036C: setControllAngle 024751E0 springs it toward the given angle (m036C += m036E); execute 02477A24 shape_angle.z = m036C + m0372 */
+    /* 0x0656 */ be<s16> mControllAngleSpeed;  /* was m036E: setControllAngle 024751E0 velocity of the spring (m036E += step; m036C += m036E; eased to 0); cleared in procSteerMove 0247E854 / procZevDemo 024800A8 */
+    /* 0x0658 */ be<s16> mWaveAngleX;  /* was m0370: setWaveAngle 024759CC springs it toward the wave-slope pitch (m0370 += m0374); execute 02477A24 shape_angle.x = m0370 + m0384 and pitches speed by it; setYPos 024754D8 / setCrashData 0247D880 add sway/crash */
+    /* 0x065A */ be<s16> mWaveAngleZ;  /* was m0372: setWaveAngle 024759CC springs it toward the wave-slope roll (m0372 += m0376); execute 02477A24 shape_angle.z = m036C + m0372 */
+    /* 0x065C */ be<s16> mWaveAngleSpeedX;  /* was m0374: setWaveAngle 024759CC velocity of m0370 (fmadds diff*0.045, eased to 0); setCrashData 0247D880 kicks it */
+    /* 0x065E */ be<s16> mWaveAngleSpeedZ;  /* was m0376: setWaveAngle 024759CC velocity of m0372 (fmadds diff*0.045, eased to 0); setCrashData 0247D880 kicks it */
     /* 0x0660 */ be<s16> m0378;
-    /* 0x0662 */ be<s16> m037A;
-    /* 0x0664 */ be<s16> m037C;
-    /* 0x0666 */ be<s16> m037E;
-    /* 0x0668 */ be<s16> m0380;
+    /* 0x0662 */ be<s16> mProcVar0;  /* was m037A: per-proc scratch: countdown in procTurn 02481874 / procCannon 0247F0D0, joint index in procTornadoUp 02481C94, phase in procTactWarp 02482438 / procStartModeWarp 02481FAC / procStartModeThrow 02482970; after TP daAlink_c mProcVar0 */
+    /* 0x0664 */ be<s16> mOldShapeAngleX;  /* was m037C: execute 02477A24 copies shape_angle.x after setWaveAngle and reuses it as the wave pitch while flying; draw 0247255C uses it for the effect look-at */
+    /* 0x0666 */ be<s16> mOldShapeAngleZ;  /* was m037E: execute 02477A24 copies shape_angle.z after setWaveAngle and reuses it as the wave roll while flying; draw 0247255C passes it as the mDoMtx_lookAt roll */
+    /* 0x0668 */ be<s16> mTargetSailAngle;  /* was m0380: setSailAngle 0247D398 picks +-0x1555 from the wind side and eases mSailAngle toward it (cLib_addCalcAngleS(&mSailAngle, m0380,...)) */
     /* 0x066A */ be<s16> m0382;
     /* 0x066C */ be<s16> m0384;
     /* 0x066E */ be<s16> m0386;
-    /* 0x0670 */ be<s16> m0388;
-    /* 0x0672 */ be<u16> m038A;
-    /* 0x0674 */ be<s16> m038C;
-    /* 0x0676 */ be<s16> m038E;
+    /* 0x0670 */ be<s16> mLandTimer;  /* was m0388: setYPos 024754D8 sets 30 when the ship lands (offStateFlg(daSFLG_FLY_e)); execute 02477A24 counts down; setMoveAngle 0247D4B0 limits the turn rate while >= 15 */
+    /* 0x0672 */ be<u16> mAnmTransformFileIdx;  /* was m038A: procTalk_init 024749DC / procTalk 02481630: mAnmTransform = ship_getRes(m038A) (BCK_FN_TALK_A/B); TWW comment "file idx" */
+    /* 0x0674 */ be<s16> mTurnTargetAngle;  /* was m038C: checkOutRange 02474A98 stores the path direction +0x4000; procTurn 02481874 / execute 02477A24 ease shape_angle.y toward it (cLib_addCalcAngleS2) */
+    /* 0x0676 */ be<s16> mTurnAngleSpeed;  /* was m038E: procTurn 02481874 / execute 02477A24: max step of cLib_addCalcAngleS2(&shape_angle.y, m038C, 8, m038E), itself eased up to 0x800/0x1800; reset in procTurn_init 024814F8 */
     /* 0x0678 */ be<u16> m0390;
-    /* 0x067A */ be<u16> m0392;
-    /* 0x067C */ be<s16> m0394;
-    /* 0x067E */ be<s16> m0396;
-    /* 0x0680 */ be<s16> m0398;
+    /* 0x067A */ be<u16> mBodyAnmFileIdx;  /* was m0392: createHeap 0247B508 loads mpBodyAnm's anim from ship_getResIdx("Ship", m0392) (BCK_FN_MAST_ON2/OFF2); procZevDemo 024800A8 / setPartOnAnime 0247BB24 / setPartOffAnime 0247BA38 update it with each mpBodyAnm->setAnm; TWW comment "file idx" */
+    /* 0x067C */ be<s16> mCannonAngleY;  /* was m0394: TWW getCannonAngleY() returns shape_angle.y + m0394; procCannon 0247F0D0 aims it; cannonJointCallBack 024718C8 rotates by it */
+    /* 0x067E */ be<s16> mCannonAngleX;  /* was m0396: TWW getCannonAngleX() returns shape_angle.x + m0396 - 0x4000; procCannon 0247F0D0 clamps 0x1556..0x4000; cannonJointCallBack 024718C8 */
+    /* 0x0680 */ be<s16> mCraneAngle;  /* was m0398: TWW getCraneAngle() returns m0398; procCrane 0247F7CC eases it to mCraneBaseAngle; craneJointCallBack 02471AEC; d_a_salvage reads its sign */
     /* 0x0682 */ be<s16> mCraneBaseAngle;
-    /* 0x0684 */ be<s16> m039C;
+    /* 0x0684 */ be<s16> mCraneTurnAngle;  /* was m039C: procCrane 0247F7CC / procCraneUp 0247FBC4 chase it toward the local craneTurn; craneJointCallBack 02471AEC rotates by m0398 + m039C */
     /* 0x0686 */ be<s16> mRopeCnt;
-    /* 0x0688 */ be<s16> m03A0;
-    /* 0x068A */ be<s16> m03A2;
+    /* 0x0688 */ be<s16> mHeadAngleX;  /* was m03A0: headJointCallBack1 02471C88 mDoMtx_ZXYrotM(m03A0, m03A2, 0); execute 02477A24 eases it toward the look target X angle */
+    /* 0x068A */ be<s16> mHeadAngleY;  /* was m03A2: headJointCallBack1 02471C88 Y argument of ZXYrotM and per-joint shape_angle.y offset; execute 02477A24 eases it toward the look target Y angle */
     /* 0x068C */ be<s16> mStickMAng;
-    /* 0x068E */ be<s16> m03A6;
+    /* 0x068E */ be<s16> mProcVar1;  /* was m03A6: per-proc scratch: swing target in procCraneUp 0247FBC4, crane speed in procCrane 0247F7CC, flag in procTornadoUp 02481C94, spin speed in procStartModeWarp 02481FAC / procTactWarp 02482438; after TP daAlink_c mProcVar1 */
     /* 0x0690 */ be<s16> m03A8;
     /* 0x0692 */ be<s16> m03AA;
-    /* 0x0694 */ be<s16> m03AC;
-    /* 0x0696 */ be<s16> m03AE;
-    /* 0x0698 */ be<s16> m03B0;
-    /* 0x069A */ be<s16> m03B2;
-    /* 0x069C */ be<u16> m03B4;
-    /* 0x069E */ be<s16> m03B6;
+    /* 0x0694 */ be<s16> mSwayPhaseZ;  /* was m03AC: setYPos 024754D8 advances it by random 600..1200 * k and adds sin(m03AC)*rate*115 to m0372 (roll) */
+    /* 0x0696 */ be<s16> mSwayPhaseX;  /* was m03AE: setYPos 024754D8 advances it by random 800..1600 * k and adds sin(m03AE)*rate*100 to m0370 (pitch) */
+    /* 0x0698 */ be<s16> mSwayPhaseY;  /* was m03B0: setYPos 024754D8 advances it by random 1000..2000 + rate*500 and adds sin(m03B0)*rate*0.25 to current.pos.y */
+    /* 0x069A */ be<s16> mWhirlLinkID;  /* was m03B2: TWW onWhirlFlg(u32 whirlID, s16 linkID)/onWhirlFlgDirect store linkID here; WWHD obj_auzu stores PRM_LINK_ID; procWhirlDown 024827D4 passes it as the next-stage point */
+    /* 0x069C */ be<u16> mHeadAnmFileIdx;  /* was m03B4: setHeadAnm 02475DA8 compares/stores the head BCK index and loads ship_getRes(m03B4); createHeap 0247B508 / procTalkReady_init 0247309C / procZevDemo 024800A8 set FN_LOOK_L/R/LOSE1; TWW comment "file idx" */
+    /* 0x069E */ be<s16> mCrashTimer;  /* was m03B6: setCrashData 0247D880 returns early while non-zero and sets 30 after a crash; execute 02477A24 counts it down */
     /* 0x06A0 */ be<s16> m03B8;
-    /* 0x06A2 */ csXyz m03BC;
-    /* 0x06A8 */ be<s32> m03C4;
+    /* 0x06A2 */ csXyz mWarpSplashBackAngle;  /* was m03BC: procTactWarp_init 0247DBF8 / procStartModeWarp 02481FAC / procTactWarp 02482438 set it to (0, shape_angle.y+0x8000, 0); only used as the angle of the second ID_AK_JN_SHIPWARPSPLASH00 emitter (m1998) */
+    /* 0x06A8 */ be<s32> mGroundCode;  /* was m03C4: setRoomInfo 024752F4 stores dBgS GetGroundCode of the ground poly (0 when no ground); no reader in the ship files */
     /* 0x06AC */ be<s32> mTactWarpPosNum;
-    /* 0x06B0 */ be<s32> m03CC;
-    /* 0x06B4 */ be<f32> m03D0;
-    /* 0x06B8 */ be<f32> m03D4;
+    /* 0x06B0 */ be<s32> mAcchCirNum;  /* was m03CC: create 0247C358 sets 3 or 4 and passes it as the circle count to mAcch.Set(..., m03CC, mAcchCir, ...); setSelfMove 0247E2B4 loops i < m03CC */
+    /* 0x06B4 */ be<f32> mFloatSpeedY;  /* was m03D0: setYPos 024754D8: vertical spring speed toward the water (d = (m03F4-y)*0.05 + m03D0, clamped +-20, added to pos.y); set to speed.y*0.5 on landing */
+    /* 0x06B8 */ be<f32> mTexScrollX;  /* was m03D4: execute 02477A24 advances it by speedF (wrap 0..1); draw 0247255C writes it to the texture SRT mTranslationX of m02A4 and material m_fn_main_hashi */
     /* 0x06BC */ be<f32> m03D8;
     /* 0x06C0 */ be<f32> mTillerAngleRate;
-    /* 0x06C4 */ be<f32> m03E0;
+    /* 0x06C4 */ be<f32> mTargetSpeed;  /* was m03E0: TWW name (include/d/actor/d_a_ship.h 0x03E0 mTargetSpeed); procSteerMove 0247E854 sets it from the wind power; setSelfMove 0247E2B4 decelerates toward it */
     /* 0x06C8 */ be<f32> mJumpRate;
-    /* 0x06CC */ be<f32> m03E8;
+    /* 0x06CC */ be<f32> mSailScale;  /* was m03E8: bodyJointCallBack 02471298 PSMTXScale(m03E8); setPartOnAnime 0247BB24 sets 1.0 for PART_STEER (sail out) and 0.001 for cannon/crane; procWait/procGetOff/procPaddleMove reset 1.0 */
     /* 0x06D0 */ be<f32> mStickMVal;
     /* 0x06D4 */ u8 m03F0[4];
-    /* 0x06D8 */ be<f32> m03F4;
-    /* 0x06DC */ be<f32> m03F8;
+    /* 0x06D8 */ be<f32> mWaterY;  /* was m03F4: setYPos 024754D8 / create 0247C358 store getWaterY(); current.pos.y is set to/clamped around it; execute 02477A24 passes it to mTrack.setWaterY */
+    /* 0x06DC */ be<f32> mWaterFlatY;  /* was m03F8: getWaterY 024753BC stores mAcch.m_wtr height (or -1e9); getMaxWaterY 0247204C; execute 02477A24 passes it to mTrack.setWaterFlatY (dPa_trackEcallBack setter name) */
     /* 0x06E0 */ be<f32> mFwdVel;
-    /* 0x06E4 */ be<f32> m0400;
-    /* 0x06E8 */ be<f32> m0404;
-    /* 0x06EC */ be<f32> m0408;
-    /* 0x06F0 */ be<f32> m040C;
+    /* 0x06E4 */ be<f32> mForceMoveDist;  /* was m0400: setTornadoActor 02472C04 / setWhirlActor 02472F14 store the XZ distance to the tornado/whirl; execute 02477A24 shrinks it and places the ship at center + m0400*sin/cos(m040C); TWW checkForceMove() = tornado or whirl */
+    /* 0x06E8 */ be<f32> mForceMoveRate;  /* was m0404: setTornadoActor 02472C04 / setWhirlActor 02472F14 store (range - m0400)*k clamped >= 0; execute 02477A24 scales the speed cap by it; procCannon 0247F0D0 scales aim speed */
+    /* 0x06EC */ be<f32> mForceMoveAngleSpeed;  /* was m0408: execute 02477A24 stores the per-frame angle step speedF/m0400 added to m040C; procWhirlDown 024827D4 adds it (rad->s16) to shape_angle.y */
+    /* 0x06F0 */ be<f32> mForceMoveAngle;  /* was m040C: setTornadoActor 02472C04 / setWhirlActor 02472F14 store cM_atan2f of the offset from the center; execute 02477A24 advances it and positions the ship on the circle */
     /* 0x06F4 */ be<f32> mHDMovementRate; // HD: extra movement scalar; opaque here.
     /* 0x06F8 */ be<u32> mGridID;
     /* 0x06FC */ be<u32> mpGrid;
@@ -444,23 +458,23 @@ struct daShip_c : fopAc_ac_c {
     /* 0x0704 */ gptr<fopAc_ac_c> mTornadoActor;
     /* 0x0708 */ be<u32> mWhirlID;
     /* 0x070C */ gptr<fopAc_ac_c> mWhirlActor;
-    /* 0x0710 */ gptr<cXyz> m0428;
+    /* 0x0710 */ gptr<cXyz> mpEvtAtnPos;  /* was m0428: procZevDemo 024800A8 points it at the event pt1 eyePos or the "atn_pos" substance; execute 02477A24 aims eyePos/attention at it (after mAtnPos) */
     /* 0x0714 */ be<u32> mTactWarpID;
-    /* 0x0718 */ be<u32> m0430;
+    /* 0x0718 */ be<u32> mCurrMsgBsPcId;  /* was m0430: procTalk 02481630 stores fopMsgM_messageSet(...) and tests fpcM_ERROR_PROCESS_ID_e; procTalk_init 024749DC / procTurn_init 024814F8 reset it; after TWW dNpc mCurrMsgBsPcId (include/d/d_npc.h, same use) */
     /* 0x071C */ gptr<cXyz> mCraneTop;
     /* 0x0720 */ cXyz mTillerTopPos;
-    /* 0x072C */ cXyz m0444;
-    /* 0x0738 */ cXyz m0450;
-    /* 0x0744 */ cXyz m045C;
+    /* 0x072C */ cXyz mSailPos;  /* was m0444: execute 02477A24 copies the J_FN_SAIL1 joint translation and puts the grid actor there; SE origin for sail/part sounds in setSailAngle 0247D398 / setPartOn/OffAnime / procSteerMove; shipDelete 0247AE84 deletes its sound object */
+    /* 0x0738 */ cXyz mTurnEyePos;  /* was m0450: procTurn_init 024814F8 stores camera Center + dir*1600; procTurn 02481874 moves the camera eye toward it (camera_Set) */
+    /* 0x0744 */ cXyz mPrevPos;  /* was m045C: execute 02477A24 copies current.pos each frame before moving; procTurn 02481874 shifts the camera center by current.pos - m045C */
     /* 0x0750 */ cXyz mRopeLineSegments[250];
     /* 0x1308 */ cXyz mCraneRipplePos;
-    /* 0x1314 */ cXyz m102C;
-    /* 0x1320 */ cXyz m1038;
-    /* 0x132C */ cXyz m1044;
+    /* 0x1314 */ cXyz mCranePos;  /* was m102C: execute 02477A24 copies the VFNCR_JNT_V_CRANE_ROTATION joint translation; SE origin for crane sounds in incRopeCnt 02476204 / procCrane 0247F7CC; shipDelete 0247AE84 */
+    /* 0x1320 */ cXyz mCannonPos;  /* was m1038: execute 02477A24 copies the VFNCN_JNT_CANON2 joint translation; SE origin for JA_SE_LK_SHIP_CANNON_MOVE/FIRE (procCannon 0247F0D0, execute); shipDelete 0247AE84 */
+    /* 0x132C */ cXyz mBeltSpeed;  /* was m1044: TWW getBeltSpeed() returns m1044.absXZ(); execute 02477A24 eases it and adds it to current.pos; player_main_07 reads it as the belt speed */
     /* 0x1338 */ cXyz m1050;
     /* 0x1344 */ cXyz mEffPos;
-    /* 0x1350 */ cXyz m1068;
-    /* 0x135C */ cXyz m1074;
+    /* 0x1350 */ cXyz mAtnPos;  /* was m1068: TWW setAtnPos() sets daSFLG_UNK1000000_e and m1068 = *pPos; execute 02477A24 aims eyePos at it while that flag is set */
+    /* 0x135C */ cXyz mRopeRipplePos;  /* was m1074: setRopePos 024763B0 sets it to rope pos 0 XZ +-20 at water height m03F4 and uses it as the ripple emitter (m19C0) position; same role as mCraneRipplePos for mRipple */
     /* 0x1368 */ dBgS_AcchCir mAcchCir[4];
     /* 0x1468 */ dBgS_ObjAcch mAcch;
     /* 0x162C */ dCcD_Stts mStts;
@@ -474,11 +488,11 @@ struct daShip_c : fopAc_ac_c {
     /* 0xD05C */ u8 mWaveL[0x64];
     /* 0xD0C0 */ u8 mSplash[0x1C];
     /* 0xD0DC */ u8 mTrack[0x50];
-    /* 0xD12C */ u8 mRipple[0x14];
-    /* 0xD140 */ dPa_followEcallBack m1984;
-    /* 0xD154 */ dPa_followEcallBack m1998;
-    /* 0xD168 */ dPa_followEcallBack m19AC;
-    /* 0xD17C */ u8 m19C0[0x14];
+    /* 0xD12C */ ShipRipple mRipple;  /* dPa_rippleEcallBack (TWW d_a_ship.h 0x1970 dPa_rippleEcallBack mRipple); create 0247C358 constructs it (025A9084, inlined fopAcM_SetupActor constructor); setRopePos 024763B0 starts it (5,0x33) at mCraneRipplePos; procCraneUp_init 02475030 / procCrane_init 0247F57C set its rate; shipDelete 0247AE84 ends it */
+    /* 0xD140 */ dPa_followEcallBack mWarpSplash;  /* was m1984: procStartModeWarp 02481FAC / procTactWarp_init 0247DBF8 attach it to ID_AK_JN_SHIPWARPSPLASH00 at shape_angle; ended in procTactWarp 02482438 / shipDelete 0247AE84 / daShip_initStartPos 024832E0 */
+    /* 0xD154 */ dPa_followEcallBack mWarpSplashBack;  /* was m1998: same procs attach it to the second ID_AK_JN_SHIPWARPSPLASH00 emitter at m03BC (shape_angle.y + 0x8000); ended alongside m1984 */
+    /* 0xD168 */ dPa_followEcallBack mRopeDrip;  /* was m19AC: setRopePos 024763B0 attaches it to ID_IT_JN_LK_NURE_POTA00 (wet drip) at rope pos 0 when the hook lifts out; execute 02477A24 / shipDelete 0247AE84 / daShip_initStartPos end it */
+    /* 0xD17C */ ShipRipple mRopeRipple;  /* was m19C0: setRopePos 024763B0 ripple emitter (5,0x33) at m1074, ended with m19AC; create 0247C358 constructs it as a ripple callback (025A9084); TWW type dPa_rippleEcallBack; neighbour mRipple is the crane ripple */
     /* 0xD190 */ gabi::ptmf<BOOL (daShip_c::*)()> mProc;
     /* 0xD198 */ u8 mProcPadding[4];                   // HD: descriptor is 8 bytes; this trailing word stays untouched.
 
@@ -583,12 +597,16 @@ struct daShip_c : fopAc_ac_c {
                mProc.f == fn;
     }
 };
+WWHD_OFFSET(daShip_c, mpEffectTexMtx, 0x3BC);
+WWHD_OFFSET(daShip_c, mpScrollTexMtx, 0x3C0);
 WWHD_OFFSET(daShip_c, mpCannonModel, 0x418);
+WWHD_OFFSET(daShip_c, mRipple, 0xD12C);
+WWHD_OFFSET(daShip_c, mRopeRipple, 0xD17C);
 WWHD_OFFSET(daShip_c, mpFallPointAnm, 0x5B4);
 WWHD_OFFSET(daShip_c, mShadowAlpha, 0x630);
 WWHD_OFFSET(daShip_c, mStateFlag, 0x644);
-WWHD_OFFSET(daShip_c, m0392, 0x67A);
-WWHD_OFFSET(daShip_c, m03C4, 0x6A8);
+WWHD_OFFSET(daShip_c, mBodyAnmFileIdx, 0x67A);
+WWHD_OFFSET(daShip_c, mGroundCode, 0x6A8);
 WWHD_OFFSET(daShip_c, mGridID, 0x6F8);
 WWHD_OFFSET(daShip_c, mRopeLineSegments, 0x750);
 WWHD_OFFSET(daShip_c, mAcchCir, 0x1368);
@@ -782,16 +800,6 @@ WWHD_OFFSET(ShipTrack, mIndirectScroll, 0x3C);
 WWHD_OFFSET(ShipTrack, mIndirectScale, 0x40);
 WWHD_OFFSET(ShipTrack, mSpeed, 0x44);
 WWHD_OFFSET(ShipTrack, mEmitter, 0x4C);
-
-struct ShipRipple {
-    /* 0x000 */ u8 mPadding0[0x4];
-    /* 0x004 */ be<u32> mEmitter;
-    /* 0x008 */ u8 mPadding8[0x8];
-    /* 0x010 */ be<f32> mRate;
-};
-WWHD_SIZE(ShipRipple, 0x14);
-WWHD_OFFSET(ShipRipple, mEmitter, 0x4);
-WWHD_OFFSET(ShipRipple, mRate, 0x10);
 
 struct ShipEmitter {
     /* 0x000 */ u8 mPadding0[0x8];

@@ -60,28 +60,28 @@ struct daObj_Stair_c : dBgS_MoveBgActor {
   BOOL Draw();
   BOOL Delete();
 
-  /* 0x3E0 */ cXyz field_0x2C8;
-  /* 0x3EC */ cXyz field_0x2D4;
-  /* 0x3F8 */ be<s32> field_0x2E0;
-  /* 0x3FC */ be<s32> field_0x2E4;
-  /* 0x400 */ be<f32> field_0x2E8;
-  /* 0x404 */ be<f32> field_0x2EC;
+  /* 0x3E0 */ cXyz mHitOffset;  /* was field_0x2C8: ride_call_back 023905F4 / _execute 02390AC4 (bomb hit): the rider's or bomb's position minus the step's (tww); _execute uses its direction and length for the break tilt */
+  /* 0x3EC */ cXyz mBreakDir;  /* was field_0x2D4: ride_call_back 023905F4 (0, -1, 0) for the player; _execute 02390AC4 the bomb-to-step vector clamped to the step (tww); the break speed is l_HIO.m14 * mBreakPower * it, the tilt axis is mHitOffset x it */
+  /* 0x3F8 */ be<s32> mBreakTimer;  /* was field_0x2E0: _execute 02390AC4: frames since the break started; the break happens at l_HIO.m18, the fall after it, fopAcM_delete at l_HIO.m18 + 0xF0 (tww); ride_call_back 023905F4 only triggers while it is below l_HIO.m18; _create 0239069C 0 */
+  /* 0x3FC */ be<s32> mBreaking;  /* was field_0x2E4: ride_call_back 023905F4 / _execute 02390AC4 (bomb hit) set 1; _execute runs the break and Execute 02391328 shakes the debris position while it is 1 (tww) */
+  /* 0x400 */ be<f32> mShakeY;  /* was field_0x2E8: _execute 02390AC4: 1.5 * sin offset; Execute 02391328 adds it to current.pos.y (tww transS(.., current.pos.y + it, ..)); _create 0239069C 0 */
+  /* 0x404 */ be<f32> mBreakPower;  /* was field_0x2EC: ride_call_back 023905F4 1; _execute 02390AC4 scales the break speed and the tilt angle by it (tww); _create 0239069C 0 */
   /* 0x408 */ request_of_phase_process_class mPhs;
   /* 0x410 */ gptr<J3DModel> mpModel;
-  /* 0x414 */ Mtx34 field_0x2FC;
+  /* 0x414 */ Mtx34 mMtx;  /* was field_0x2FC: Execute 02391328: copy of mDoMtx_stack_c, handed out as the BG matrix (tww MTXCopy(.., it); *mtx = &it) */
   /* 0x444 */ dCcD_Stts mStts;
   /* 0x480 */ StairCapsuleHD mCps;
-  /* 0x5B8 */ Quaternion field_0x4A0;
-  /* 0x5C8 */ Quaternion field_0x4B0;
+  /* 0x5B8 */ Quaternion mRot;  /* was field_0x4A0: _create 0239069C: the start rotation; Execute 02391328 multiplies it by mRotSpeed each frame (tww mDoMtx_quatMultiply(&it, &mRotSpeed, &quat); it = quat) and applies it (quatM) */
+  /* 0x5C8 */ Quaternion mRotSpeed;  /* was field_0x4B0: _execute 02390AC4: the per-frame break rotation (axis mHitOffset x mBreakDir, angle from l_HIO.m10 and mBreakPower; identity when the axis is 0) (tww); _create 0239069C identity */
   /* 0x5D8 */ cXyz field_0x4C0;
 };
 WWHD_OFFSET(daObj_Stair_c, mStts, 0x444);
-WWHD_OFFSET(daObj_Stair_c, field_0x4A0, 0x5B8);
+WWHD_OFFSET(daObj_Stair_c, mRot, 0x5B8);
 WWHD_SIZE(daObj_Stair_c, 0x5E4);
 
 WWHD_SIZE(daobj_stairHIO_c, 0x1C);
 WWHD_OFFSET(daobj_stairHIO_c, m18, 0x14);
 WWHD_OFFSET(daobj_stairHIO_c, __vtbl, 0x18);
 WWHD_OFFSET(daObj_Stair_c, mCps, 0x480);
-WWHD_OFFSET(daObj_Stair_c, field_0x2FC, 0x414);
+WWHD_OFFSET(daObj_Stair_c, mMtx, 0x414);
 WWHD_OFFSET(daObj_Stair_c, field_0x4C0, 0x5D8);

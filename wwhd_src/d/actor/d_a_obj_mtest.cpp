@@ -113,7 +113,7 @@ BOOL daObjMtest::Act_c::CreateHeap() {
     }
     J3DModelData *data = (J3DModelData *)dComIfG_getObjectRes(M_arcname[M_type], index);
     if (!data)
-        Mtest_assert("d_a_obj_mtest.cpp", 265, "model_data != NULL");
+        Mtest_assert("d_a_obj_mtest.cpp", 265, "model_data != 0");
     mpModel = mDoExt_J3DModel__create(data, 0, 0x11020203);
     return mpModel != 0;
 }

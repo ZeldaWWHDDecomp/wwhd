@@ -30,7 +30,7 @@ WWHD_OFFSET(CameraUtilSetupHD, mManualEndVal, 0xA8);
 struct CameraUtilAttentionHD { u8 mPadding0[0x20]; be<u32> mFlags; };
 WWHD_OFFSET(CameraUtilAttentionHD, mFlags, 0x20);
 // HD: the shake pattern reads five bytes starting at camera+0x54D.
-struct CameraUtilShakePatternHD { be<u8> m548[5]; };
+struct CameraUtilShakePatternHD { be<u8> mShakeCyclePattern[5]; };
 WWHD_SIZE(CameraUtilShakePatternHD, 5);
 struct CameraUtilPointWordsHD { be<u32> x,y,z; };
 WWHD_SIZE(CameraUtilPointWordsHD, 12);

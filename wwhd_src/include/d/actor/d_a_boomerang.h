@@ -86,8 +86,10 @@ struct boomerangSampler_c {
     u8 _tail[7];
 };
 struct boomerangIndexBuffer_c {
-    gptr<void> mpIndices;
-    be<u32> mCount, mOffset, mPrimitive;
+    be<u32> mIndexFormat; /* was mpIndices (misnamed): GX2DrawIndexedEx indexType (r5) in daBoomerang_sightPacket_c::draw 020CDBFC and daBoomerang_blur_c::draw 020CDF78; view of agl::IndexBufferLayout (027B5430 construct, 027B54E0 setStorage format 4 in the setup functions 020CC5EC / 020CCA50), agl::IndexBufferLayout::mFormat */
+    be<u32> mPrimitiveMode; /* was mCount (misnamed): GX2DrawIndexedEx mode (r3) in 020CDBFC / 020CDF78, set to 6 (triangle strip) by daBoomerang_sightPacket_c::setup 020CC5EC and daBoomerang_blur_c::setup 020CCA50; agl::IndexBufferLayout::mPrimitiveMode */
+    gptr<void> mpIndices; /* was mOffset (misnamed): GX2DrawIndexedEx indices (r6) in 020CDBFC / 020CDF78 */
+    be<u32> mCount; /* was mPrimitive (misnamed): GX2DrawIndexedEx count (r4) in 020CDBFC / 020CDF78 (no draw when 0); setStorage count 4 */
     u8 _state[8];
 };
 struct boomerangVertexBuffer_c {

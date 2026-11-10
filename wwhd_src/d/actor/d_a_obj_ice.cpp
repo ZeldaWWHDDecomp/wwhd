@@ -36,9 +36,9 @@ J3DModelData *resource(s32 index) {
     return static_cast<J3DModelData *>(dComIfG_getObjectRes(l_arcname, index));
 }
 void setAction(daObjIce_c *ice, u32 fn) {
-    ice->m43C.delta = 0;
-    ice->m43C.index = -1;
-    ice->m43C.target = fn;
+    ice->mActProc.delta = 0;
+    ice->mActProc.index = -1;
+    ice->mActProc.target = fn;
 }
 void particle(daObjIce_c *ice, u32 id, cXyz *position, csXyz *angle, cXyz *scale) {
     dComIfGp_getParticle()->set(0, id, position, angle, scale, 255, nullptr, -1,
@@ -63,10 +63,10 @@ void daObjIce_c::set_mtx() {
     mDoMtx_stack_c::transS(ice->current.pos.x, ice->current.pos.y, ice->current.pos.z);
     iceXYZrotM(mDoMtx_stack_c::get(), (s16)ice->shape_angle.x, (s16)ice->shape_angle.y,
                (s16)ice->shape_angle.z);
-    mDoMtx_stack_c::scaleM(ice->m44C, ice->m450, ice->m44C);
+    mDoMtx_stack_c::scaleM(ice->mScaleXZ, ice->mScaleY, ice->mScaleXZ);
     J3DModel_setBaseTRMtx(ice->mModel.get(), mDoMtx_stack_c::get());
     mDoMtx_stack_c::scaleM(ice->scale.x, ice->scale.y, ice->scale.z);
-    PSMTXCopy(mDoMtx_stack_c::get(), &ice->m40C);
+    PSMTXCopy(mDoMtx_stack_c::get(), &ice->mMtx);
 }
 /* 0235D754 */
 void daObjIce_c::init_mtx() {
@@ -86,7 +86,7 @@ BOOL daObjIce_c::create_heap() {
     }
     ice->mModel = mDoExt_J3DModel__create(data, 0x80000, 0x11000222);
     auto *collision = reinterpret_cast<cBgD_t *>(resource(dRes_INDEX_IKORI_DZB_VICE_e));
-    ice->mBgw = iceNewBackground(collision, 1, &ice->m40C);
+    ice->mBgw = iceNewBackground(collision, 1, &ice->mMtx);
     return ice->mModel && ice->mBgw;
 }
 /* 0235D774 */
@@ -101,27 +101,27 @@ void tg_hitCallback(daObjIce_c *ice, void *collider, void *other, void *otherCol
         dz = col->mGObjTg.mHitPos.z - (f32)ice->current.pos.z;
     f32 x = gabi::fmadds(dx, cos, dz * sin), z = gabi::fmsubs(dz, cos, dx * sin),
         y = col->mGObjTg.mHitPos.y - (f32)ice->current.pos.y;
-    ice->m45C = 0;
+    ice->mMeltReq = 0;
     for (u32 i = 0; i < 3; i++) {
         f32 radius = l_co_radius_table[i], height = l_co_height_table[i];
-        f32 rx = (radius * (f32)ice->scale.x) * (f32)ice->m44C,
-            rz = (radius * (f32)ice->scale.z) * (f32)ice->m44C,
-            hy = (height * (f32)ice->scale.y) * (f32)ice->m450;
+        f32 rx = (radius * (f32)ice->scale.x) * (f32)ice->mScaleXZ,
+            rz = (radius * (f32)ice->scale.z) * (f32)ice->mScaleXZ,
+            hy = (height * (f32)ice->scale.y) * (f32)ice->mScaleY;
         if (y < hy && ((x * x) / (rx * rx) + (z * z) / (rz * rz)) < 1.f) {
             u32 type = hit->mAtType;
             if (type == 0x200 || type == 0x20000 || type == 0x40000) {
-                ice->m45C = 2;
+                ice->mMeltReq = 2;
                 col->mGObjTg.mSPrm |= 2;
                 return;
             }
             if (type != 0x20) {
-                f32 width = (f32)ice->m44C - .0009f;
+                f32 width = (f32)ice->mScaleXZ - .0009f;
                 if (width < 0.f)
                     width = 0.f;
-                ice->m44C = width;
-                ice->m450 = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
+                ice->mScaleXZ = width;
+                ice->mScaleY = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
                 if (width < .1f)
-                    ice->m45C = 1;
+                    ice->mMeltReq = 1;
                 gabi::Local<csXyz> rot;
                 csXyz_ct(rot.get(), 0, 0, 0);
                 rot->x = cM_atan2s((f32)ice->current.pos.y - col->mGObjTg.mHitPos.y,
@@ -129,7 +129,7 @@ void tg_hitCallback(daObjIce_c *ice, void *collider, void *other, void *otherCol
                 rot->y = cM_atan2s(col->mGObjTg.mHitPos.x - (f32)ice->current.pos.x,
                                    col->mGObjTg.mHitPos.z - (f32)ice->current.pos.z);
                 particle(ice, 0x465, &col->mGObjTg.mHitPos, rot.get(), nullptr);
-                if (ice->m45C) {
+                if (ice->mMeltReq) {
                     col->mGObjTg.mSPrm |= 2;
                     return;
                 }
@@ -182,8 +182,8 @@ s32 daObjIce_c::_create() {
     }
     s32 phase = 5;
     if ((u8)ice->mInitState == 0)
-        ice->m448 = ice->chk_appear();
-    if (!ice->m448)
+        ice->mAppear = ice->chk_appear();
+    if (!ice->mAppear)
         return phase;
     phase = dComIfG_resLoad(&ice->mPhase, l_arcname);
     if (phase != 4)
@@ -194,8 +194,8 @@ s32 daObjIce_c::_create() {
         return 5;
     J3DModel *model = ice->mModel;
     ice->cullMtx = gabi::ea(model->getBaseTRMtx());
-    ice->m44C = 1.f;
-    ice->m450 = 1.f;
+    ice->mScaleXZ = 1.f;
+    ice->mScaleY = 1.f;
     ice->init_mtx();
     f32 radiusScale = ice->scale.x;
     if (radiusScale < (f32)ice->scale.z)
@@ -220,7 +220,7 @@ s32 daObjIce_c::_create() {
         updateUniform(material, color.get());
         model = ice->mModel;
     }
-    ice->m454 = 255.f;
+    ice->mAlpha = 255.f;
     fopAcM_setCullSizeBox(ice, -80.f * (f32)ice->scale.x, 0.f * (f32)ice->scale.y,
                           -80.f * (f32)ice->scale.z, 80.f * (f32)ice->scale.x,
                           150.f * (f32)ice->scale.y, 80.f * (f32)ice->scale.z);
@@ -236,7 +236,7 @@ s32 daObjIce_c::_create() {
 /* 0235DF70 */
 BOOL daObjIce_c::_delete() {
     auto *ice = this;
-    if (ice->m448) {
+    if (ice->mAppear) {
         dComIfG_resDelete(&ice->mPhase, l_arcname);
         if (ice->heap && ice->mBgw) {
             if (ice->mBgw->ChkUsed())
@@ -253,13 +253,13 @@ void daObjIce_c::wait_act_proc() {
         ice->mCyl.mGObjAt.mSPrm &= ~1u;
     ice->mStts.Move();
     ice->mCyl.ClrTgHit();
-    s32 state = ice->m45C;
+    s32 state = ice->mMeltReq;
     if (state == 2) {
         s32 reverb = iceGetReverb((s32)(s8)ice->current.roomNo);
         mDoAud_seStart(0x6A16, &ice->current.pos, 0, reverb);
     }
     if (state == 1 || state == 2) {
-        ice->m458 = 90;
+        ice->mRetireTimer = 90;
         auto *emitter = reinterpret_cast<IceEmitter *>(
             dComIfGp_getParticle()->set(0, 0x464, &ice->current.pos, nullptr, &ice->scale, 255,
                                         nullptr, -1, &ice->tevStr.mColorK0, nullptr, nullptr));
@@ -280,13 +280,13 @@ void daObjIce_c::wait_act_proc() {
 /* 0235E820 */
 void daObjIce_c::fade_out_retire_act_proc() {
     auto *ice = this;
-    f32 alpha = (f32)ice->m454 - alphaFade, width = (f32)ice->m44C - widthFade;
-    ice->m454 = alpha;
+    f32 alpha = (f32)ice->mAlpha - alphaFade, width = (f32)ice->mScaleXZ - widthFade;
+    ice->mAlpha = alpha;
     if (alpha < 0.f)
-        ice->m454 = 0.f;
+        ice->mAlpha = 0.f;
     width = width >= 0.f ? width : 0.f;
-    ice->m44C = width;
-    ice->m450 = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
+    ice->mScaleXZ = width;
+    ice->mScaleY = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
     if (width < .4f && ice->mBgw && ice->mBgw->ChkUsed()) {
         cBgS_Release(dComIfG_Bgsp(), ice->mBgw);
         u32 sw = objIceParameter(ice, 8, 0);
@@ -294,8 +294,8 @@ void daObjIce_c::fade_out_retire_act_proc() {
             dComIfGs_onSwitch(sw, ice->home.roomNo);
         }
     }
-    ice->m458 = (s32)((u32)ice->m458 - 1);
-    if (ice->m458 <= 0)
+    ice->mRetireTimer = (s32)((u32)ice->mRetireTimer - 1);
+    if (ice->mRetireTimer <= 0)
         fopAcM_delete(ice);
 }
 namespace {
@@ -405,13 +405,13 @@ void effectMatrices(daObjIce_c *ice) {
 /* 0235DFF8 */
 BOOL daObjIce_c::_execute() {
     auto *ice = this;
-    ice->mCyl.SetR((75.f * (f32)ice->scale.x) * (f32)ice->m44C);
-    ice->mCyl.SetH((120.f * (f32)ice->scale.y) * (f32)ice->m450);
+    ice->mCyl.SetR((75.f * (f32)ice->scale.x) * (f32)ice->mScaleXZ);
+    ice->mCyl.SetH((120.f * (f32)ice->scale.y) * (f32)ice->mScaleY);
     ice->set_mtx();
     dBgW *bg = ice->mBgw;
     if (bg && bg->ChkUsed())
         bg->Move();
-    ptmf_call(gabi::ea(&ice->m43C), ice);
+    ptmf_call(gabi::ea(&ice->mActProc), ice);
     return 1;
 }
 /* 0235E0D0 */
@@ -427,7 +427,7 @@ BOOL daObjIce_c::_draw() {
     else
         dComIfGd_setListMaskOff();
     J3DModelData *data = ice->mModel->getModelData();
-    u8 alpha = (u8)gabi::ftoi(ice->m454);
+    u8 alpha = (u8)gabi::ftoi(ice->mAlpha);
     setAlpha(data, alpha);
     effectMatrices(ice);
     mDoExt_modelUpdateDL(ice->mModel.get(), 0);

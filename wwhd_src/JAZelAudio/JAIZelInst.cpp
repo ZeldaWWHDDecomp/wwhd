@@ -23,33 +23,33 @@ JAIZelInst* JAIZelInst_ct(JAIZelInst* self) {
         if (self == 0) return nullptr;
     }
     Inst_clear(self, 6); /* the judged positions (zeroed) */
-    self->field_0x48 = 0;
+    self->mUseNote62 = 0;
     self->mBeat = 3;
     self->field_0x28 = 60.0f;
-    self->field_0x20 = 0.6f;
+    self->mVolume = 0.6f;
     self->field_0x24 = 3.0f;
-    self->field_0x40 = nullptr;
-    self->field_0x2c = 1.0f;
-    self->field_0x3c = nullptr;
+    self->mpDroneSound = nullptr;
+    self->mBeatRate = 1.0f;
+    self->mpMetronomeSound = nullptr;
     self->field_0x38 = nullptr;
-    self->field_0x34 = 0x37;
-    self->field_0x44 = nullptr;
+    self->mArmNote = 0x37;
+    self->mpPulseSound = nullptr;
     self->mBeatFrames = 30.0f;
-    self->field_0x1e = 0;
+    self->mJudgedNoteCount = 0;
     return self;
 }
 
 /* 02029F10 */
 void JAIZelInst::reset() {
-    field_0x2c = 1.0f;
-    field_0x34 = 0x37;
+    mBeatRate = 1.0f;
+    mArmNote = 0x37;
     mBeat = 3;
     field_0x24 = 3.0f;
-    field_0x1e = 0;
+    mJudgedNoteCount = 0;
     mBeatFrames = 30.0f;
-    field_0x20 = 0.6f;
+    mVolume = 0.6f;
     field_0x28 = 60.0f;
-    field_0x48 = 0;
+    mUseNote62 = 0;
     seStop(JA_SE_WTAKT_ARM_SWING);
     seStop(JA_SE_WTAKT_METRONOME);
     seStop(JA_SE_WTAKT_DRONE);
@@ -59,9 +59,9 @@ void JAIZelInst::reset() {
     seStop(JA_SE_WTAKT_PULSE_4);
     seStop(JA_SE_WTAKT_PULSE_6);
     field_0x38 = nullptr;
-    field_0x44 = nullptr;
-    field_0x3c = nullptr;
-    field_0x40 = nullptr;
+    mpPulseSound = nullptr;
+    mpMetronomeSound = nullptr;
+    mpDroneSound = nullptr;
 }
 
 // HD: folded empty member; its exact GameCube arm/stick counterpart is unconfirmed.
@@ -82,7 +82,7 @@ void JAIZelInst::setBeat(u32 r) {
     case 0:
         mBeat = 3;
         field_0x24 = 3.0f;
-        field_0x2c = 1.0f;
+        mBeatRate = 1.0f;
         field_0x28 = 60.0f;
         mBeatFrames = 30.0f * 1.0f;
         break;
@@ -90,7 +90,7 @@ void JAIZelInst::setBeat(u32 r) {
         mBeat = 6;
         field_0x24 = 4.5f;
         field_0x28 = 80.0f;
-        field_0x2c = 0.75f;
+        mBeatRate = 0.75f;
         mBeatFrames = 30.0f * 0.75f;
         break;
     case 4: {
@@ -98,7 +98,7 @@ void JAIZelInst::setBeat(u32 r) {
         f32 f = l_fourBeatRate; /* 0.85714 */
         field_0x24 = l_fourBeatTime; /* 3.42857 */
         field_0x28 = 70.0f;
-        field_0x2c = f;
+        mBeatRate = f;
         mBeatFrames = 30.0f * f;
         break;
     }
@@ -111,7 +111,7 @@ void JAIZelInst::setVolume(f32 v) {
     f32 f = v / l_volumeScale; /* 0.7071 */
     if (f > 1.0f) f = 1.0f;
     else if (f < -1.0f) f = -1.0f;
-    field_0x20 = gabi::fmadds(f, 0.45f, 0.55f);
+    mVolume = gabi::fmadds(f, 0.45f, 0.55f);
 }
 
 /* 0202A1B8 */
@@ -119,25 +119,25 @@ s32 JAIZelInst::metronomePlay(u32 beat, u32 cpos) {
     if (cpos >= 5) return -2;
     u32 b = mBeat;
     if (beat == 0) {
-        if (b == 3) field_0x40 = se(JA_SE_WTAKT_DRONE, 0, field_0x20);
-        else if (b == 4) field_0x40 = se(JA_SE_WTAKT_DRONE_4, 0, field_0x20);
-        else if (b == 6) field_0x40 = se(JA_SE_WTAKT_DRONE_6, 0, field_0x20);
+        if (b == 3) mpDroneSound = se(JA_SE_WTAKT_DRONE, 0, mVolume);
+        else if (b == 4) mpDroneSound = se(JA_SE_WTAKT_DRONE_4, 0, mVolume);
+        else if (b == 6) mpDroneSound = se(JA_SE_WTAKT_DRONE_6, 0, mVolume);
         return -1;
     }
     if (b == 3) {
         if (beat == 1) return -1;
         if (beat != 2) return -2;
-        field_0x40 = se(JA_SE_WTAKT_AUFTAKT, 0, field_0x20);
+        mpDroneSound = se(JA_SE_WTAKT_AUFTAKT, 0, mVolume);
     } else if (b == 4) {
         if (beat < 1) return -2;
         if (beat < 3) return -1;
         if (beat != 3) return -2;
-        field_0x40 = se(JA_SE_WTAKT_AUFTAKT_4, 0, field_0x20);
+        mpDroneSound = se(JA_SE_WTAKT_AUFTAKT_4, 0, mVolume);
     } else if (b == 6) {
         if (beat < 1) return -2;
         if (beat < 5) return -1;
         if (beat != 5) return -2;
-        field_0x40 = se(JA_SE_WTAKT_AUFTAKT_6, 0, field_0x20);
+        mpDroneSound = se(JA_SE_WTAKT_AUFTAKT_6, 0, mVolume);
     } else {
         return -2;
     }
@@ -147,7 +147,7 @@ s32 JAIZelInst::metronomePlay(u32 beat, u32 cpos) {
 u32 JAIZelInst::cposNote(u32 b, u32 cpos) {
     if (b == 3) return mCPosToNote3.note[cpos];
     if (b == 4) return mCPosToNote4.note[cpos];
-    if (b == 6) return field_0x48 != 0 ? mCPosToNote62.note[cpos] : mCPosToNote61.note[cpos];
+    if (b == 6) return mUseNote62 != 0 ? mCPosToNote62.note[cpos] : mCPosToNote61.note[cpos];
     return 0;
 }
 
@@ -156,28 +156,28 @@ s32 JAIZelInst::judge(u32 beat, u32 cpos) {
     if (cpos >= 5) return -2;
     u32 b = mBeat;
     u32 note = cposNote(b, cpos);
-    if (b == 3) field_0x44 = se(JA_SE_WTAKT_PULSE_3, note, field_0x20);
-    else if (b == 4) field_0x44 = se(JA_SE_WTAKT_PULSE_4, note, field_0x20);
-    else if (b == 6) field_0x44 = se(JA_SE_WTAKT_PULSE_6, note, field_0x20);
+    if (b == 3) mpPulseSound = se(JA_SE_WTAKT_PULSE_3, note, mVolume);
+    else if (b == 4) mpPulseSound = se(JA_SE_WTAKT_PULSE_4, note, mVolume);
+    else if (b == 6) mpPulseSound = se(JA_SE_WTAKT_PULSE_6, note, mVolume);
     if (beat == 0) {
         u32 b7 = mBeat;
-        field_0x1e = 0;
-        field_0x48 = 0;
-        if (b7 == 6 && cpos == 1) field_0x48 = 1;
+        mJudgedNoteCount = 0;
+        mUseNote62 = 0;
+        if (b7 == 6 && cpos == 1) mUseNote62 = 1;
     }
-    field_0x3c = se(JA_SE_WTAKT_METRONOME, (note + 0x6400) & 0xFFFF, field_0x20);
-    u32 c = field_0x1e;
-    if ((s32)beat == 5) field_0x48 = 0;
+    mpMetronomeSound = se(JA_SE_WTAKT_METRONOME, (note + 0x6400) & 0xFFFF, mVolume);
+    u32 c = mJudgedNoteCount;
+    if ((s32)beat == 5) mUseNote62 = 0;
     if (c < 6) {
         c = (c + 1) & 0xFF;
-        field_0x1e = c;
-        field_0x18[c - 1] = cpos;
+        mJudgedNoteCount = c;
+        mJudgedNotes[c - 1] = cpos;
     } else {
-        field_0x1e = 6;
-        for (u32 i = 0; i < 5; i++) field_0x18[i] = (u8)field_0x18[i + 1];
-        field_0x18[(u8)field_0x1e - 1] = cpos;
+        mJudgedNoteCount = 6;
+        for (u32 i = 0; i < 5; i++) mJudgedNotes[i] = (u8)mJudgedNotes[i + 1];
+        mJudgedNotes[(u8)mJudgedNoteCount - 1] = cpos;
     }
-    c = field_0x1e;
+    c = mJudgedNoteCount;
     u32 bt = mBeat;
     if (c < bt) return -1;
     for (u32 m = 0; m < 8; m++) {
@@ -186,7 +186,7 @@ s32 JAIZelInst::judge(u32 beat, u32 cpos) {
         s32 k = c - bt;
         u32 j = 1;
         for (; k < (s32)c; k++) {
-            if (field_0x18[k] != melody.note[j]) break;
+            if (mJudgedNotes[k] != melody.note[j]) break;
             j++;
         }
         if (j == 7) return m;
@@ -197,21 +197,21 @@ s32 JAIZelInst::judge(u32 beat, u32 cpos) {
 
 /* 0202A77C */
 void JAIZelInst::ambientPlay() {
-    se(JA_SE_WTAKT_AMBIENT, 0, field_0x20);
+    se(JA_SE_WTAKT_AMBIENT, 0, mVolume);
     // HD: reload each handle and its sound after the preceding volume callback.
     InstSoundHandle* h = field_0x38;
-    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, field_0x20);
-    h = field_0x3c;
-    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, field_0x20);
-    h = field_0x40;
-    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, field_0x20);
-    h = field_0x44;
-    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, field_0x20);
+    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, mVolume);
+    h = mpMetronomeSound;
+    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, mVolume);
+    h = mpDroneSound;
+    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, mVolume);
+    h = mpPulseSound;
+    if (h && h->mpSound) JAISound_setVolume(h->mpSound, 3, 0, mVolume);
 }
 
 /* 0202A87C */
 void JAIZelInst::armSoundPlay(u32 cpos) {
-    field_0x34 = cposNote(mBeat, cpos);
+    mArmNote = cposNote(mBeat, cpos);
 }
 
 /* 0202A8F0 */

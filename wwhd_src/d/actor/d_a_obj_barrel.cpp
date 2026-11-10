@@ -57,11 +57,11 @@ void daObjBarrel::Act_c::set_mtx() {
         f32 height = vibrate ? 50.f : gabi::fmadds(5.f, cM_scos(this->shape_angle.z), 45.f);
         Barrel_transM(0.f, height, 0.f);
         Barrel_ZXYrotM(matrix, 0, (s16)this->shape_angle.y, (s16)this->shape_angle.z);
-        Barrel_YrotM(matrix, (s16)this->m612);
-        Barrel_XrotM(matrix, (s16)this->m610);
-        Barrel_YrotM(matrix, (s16) - (s16)this->m612);
+        Barrel_YrotM(matrix, (s16)this->mTiltDir);
+        Barrel_XrotM(matrix, (s16)this->mTiltAngle);
+        Barrel_YrotM(matrix, (s16) - (s16)this->mTiltDir);
         if (!vibrate)
-            Barrel_YrotM(matrix, (s16)this->m630);
+            Barrel_YrotM(matrix, (s16)this->mRollAngle);
         Barrel_transM(0.f, -50.f, 0.f);
     }
     J3DModel* model = this->mpModel;
@@ -104,9 +104,9 @@ void daObjBarrel::Act_c::mode_jump_init() {
     clear_carry_attention(this);
     this->shape_angle.y = 0;
     this->shape_angle.z = 0;
-    this->m610 = 0;
-    this->m612 = 0;
-    this->m630 = 0;
+    this->mTiltAngle = 0;
+    this->mTiltDir = 0;
+    this->mRollAngle = 0;
     this->gravity = -6.f;
     this->speed.y = 30.f;
     this->mMode = MODE_JUMP;
@@ -144,9 +144,9 @@ void daObjBarrel::Act_c::mode_vib0_init() {
     this->speed.y = 80.f;
     this->shape_angle.y = 0;
     this->shape_angle.z = 0;
-    this->m610 = 3500;
-    this->m612 = 0;
-    this->m630 = 0;
+    this->mTiltAngle = 3500;
+    this->mTiltDir = 0;
+    this->mRollAngle = 0;
     this->mTimer = 5;
     this->mMode = MODE_VIB0;
 }
@@ -314,26 +314,26 @@ bool daObjBarrel::Act_c::_draw() {
 }
 /* 0231DE48 */
 void daObjBarrel::Act_c::mode_carry() {
-    s16 angle = this->m61C;
+    s16 angle = this->mSlantAngle;
     if ((s32)this->mTimer > 0)
         this->mTimer = (s32)this->mTimer - 1;
     Barrel_chaseAngleS(&this->shape_angle.z, angle, 0x1000);
     if (!((u32)this->actor_status & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e))) {
         this->mLastGroundY = this->current.pos.y;
         Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
-        this->m610 = 0;
-        this->m612 = 0;
+        this->mTiltAngle = 0;
+        this->mTiltDir = 0;
         this->mode_wait_init();
     }
 }
 /* 0231DED0 */
 void daObjBarrel::Act_c::vib_pos_ang() {
     f32 factor = this->mAcch.ChkGroundHit() ? 0.8f : 1.f;
-    f32 angle = gabi::fmadds((f32)(s16)this->m610, 8.544921729480848e-05f, 0.3f);
+    f32 angle = gabi::fmadds((f32)(s16)this->mTiltAngle, 8.544921729480848e-05f, 0.3f);
     angle = ((16000.f * angle) * 0.1f) * factor;
     Barrel_posMoveF(this, &this->mStts.m_cc_move);
     this->shape_angle.y = (s16)this->shape_angle.y + (s16)gabi::ftoi(angle);
-    this->m612 = (s16)this->m612 + (s16)gabi::ftoi(14400.f * factor);
+    this->mTiltDir = (s16)this->mTiltDir + (s16)gabi::ftoi(14400.f * factor);
 }
 /* 0231E0AC */
 void daObjBarrel::Act_c::mode_vib0() {
@@ -351,13 +351,13 @@ void daObjBarrel::Act_c::mode_vib1() {
 }
 /* 0231E154 */
 void daObjBarrel::Act_c::mode_vib2() {
-    Barrel_chaseAngleS(&this->m610, 0, 150);
+    Barrel_chaseAngleS(&this->mTiltAngle, 0, 150);
     this->vib_pos_ang();
     this->mTimer = (u32)this->mTimer - 1u;
     if ((s32)this->mTimer <= 0) {
         this->shape_angle.x = 0;
-        this->m610 = 0;
-        this->m612 = 0;
+        this->mTiltAngle = 0;
+        this->mTiltDir = 0;
         this->mode_wait_init();
     }
 }
@@ -386,16 +386,16 @@ void daObjBarrel::Act_c::set_walk_rot() {
     s16 rotation = gabi::ftoi(roll * 3.f);
     s16 walk = gabi::ftoi(roll);
     if (negative) {
-        this->m612 = (s16)this->m612 + rotation;
-        this->m630 = (s16)this->m630 + walk;
+        this->mTiltDir = (s16)this->mTiltDir + rotation;
+        this->mRollAngle = (s16)this->mRollAngle + walk;
     } else {
-        this->m612 = (s16)this->m612 - rotation;
-        this->m630 = (s16)this->m630 - walk;
+        this->mTiltDir = (s16)this->mTiltDir - rotation;
+        this->mRollAngle = (s16)this->mRollAngle - walk;
     }
     f32 factor = magnitude / 30.f;
     if (factor > 1.f)
         factor = 1.f;
-    this->m610 = gabi::ftoi(2048.f * factor);
+    this->mTiltAngle = gabi::ftoi(2048.f * factor);
 }
 /* 0231DD40 */
 void daObjBarrel::Act_c::mode_wait() {

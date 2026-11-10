@@ -55,7 +55,7 @@ static BdkObjRegistration l_firstRegistration;
 static BdkObjRegistration l_secondRegistration;
 
 static inline BdkObjEmitterView *BdkObj_getEmitter(bdkobj_class *i_this) {
-    return reinterpret_cast<BdkObjEmitterView *>(i_this->m918.getEmitter());
+    return reinterpret_cast<BdkObjEmitterView *>(i_this->mSmokeCb.getEmitter());
 }
 static inline J3DModel *actor_model(fopAc_ac_c *a) { return gabi::at<J3DModel>(a->model); }
 
@@ -77,7 +77,7 @@ static BOOL daBdkobj_Draw(bdkobj_class *i_this) {
     if (a_this->model != 0) {
         J3DModel *model = actor_model(a_this);
         setLightTevColorType(dKy_getEnvlight(), model, &a_this->tevStr);
-        if (i_this->m298 < 2) {
+        if (i_this->mType < 2) {
             auto camera = dComIfGp_getCamera(0);
             gabi::Local<cXyz> vec;
             cXyz_mi(&a_this->current.pos, vec,
@@ -92,7 +92,7 @@ static BOOL daBdkobj_Draw(bdkobj_class *i_this) {
     }
     for (s32 i = 0; i < 3; i++) {
         bdo_eff_s *fragment = &i_this->mEffs[i];
-        if (fragment->m000 != 0) {
+        if (fragment->mState != 0) {
             J3DModel *model = fragment->mpModel;
             if (model != nullptr) {
                 setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
@@ -105,11 +105,11 @@ static BOOL daBdkobj_Draw(bdkobj_class *i_this) {
 
 /* rotation and scale matrix of a fragment, into its model */
 static inline void eff_set_mtx(bdo_eff_s *i_eff, f32 y) {
-    MtxTrans(i_eff->m008.x, y, i_eff->m008.z, 0);
-    cMtx_YrotM(calc_mtx(), i_eff->m030.y);
-    cMtx_XrotM(calc_mtx(), i_eff->m030.x);
-    cMtx_ZrotM(calc_mtx(), i_eff->m030.z);
-    f32 scale = i_eff->m028;
+    MtxTrans(i_eff->mPos.x, y, i_eff->mPos.z, 0);
+    cMtx_YrotM(calc_mtx(), i_eff->mAngle.y);
+    cMtx_XrotM(calc_mtx(), i_eff->mAngle.x);
+    cMtx_ZrotM(calc_mtx(), i_eff->mAngle.z);
+    f32 scale = i_eff->mScale;
     MtxScale(scale, scale, scale, 1);
     J3DModel_setBaseTRMtx(i_eff->mpModel, calc_mtx());
 }
@@ -123,12 +123,12 @@ static inline void top_hahen_move(bdkobj_class *i_this, bdo_eff_s *i_eff, dBgS_G
     BdkObj_groundCtor(gnd);
     BdkObj_lineCtor(lin);
 
-    f32 dVar8 = i_eff->m1A4;
-    i_eff->m014.copy(i_eff->m008);
+    f32 dVar8 = i_eff->mPushSpeed;
+    i_eff->mPosOld.copy(i_eff->mPos);
     if (dVar8 > 0.1f) {
-        f32 dVar9 = 20.0f * (1.0f - i_eff->m028);
+        f32 dVar9 = 20.0f * (1.0f - i_eff->mScale);
         Mtx34 *m = calc_mtx();
-        s16 a = i_eff->m1A8;
+        s16 a = i_eff->mPushAngleY;
         if (dVar8 > dVar9) {
             dVar8 = dVar9;
         }
@@ -137,53 +137,53 @@ static inline void top_hahen_move(bdkobj_class *i_this, bdo_eff_s *i_eff, dBgS_G
         local_14c->y = 0.0f;
         local_14c->z = dVar8;
         MtxPosition(local_14c, cStack344);
-        PSVECAdd(&i_eff->m008, cStack344, &i_eff->m008);
-        i_eff->m030.y = i_eff->m030.y + i_eff->m1AA;
+        PSVECAdd(&i_eff->mPos, cStack344, &i_eff->mPos);
+        i_eff->mAngle.y = i_eff->mAngle.y + i_eff->mPushSpinY;
     }
-    cLib_addCalc0(&i_eff->m1A4, 1.0f, REG_F(0, 18) + 0.2f);
-    cMtx_YrotS(calc_mtx(), i_eff->m030.y);
+    cLib_addCalc0(&i_eff->mPushSpeed, 1.0f, REG_F(0, 18) + 0.2f);
+    cMtx_YrotS(calc_mtx(), i_eff->mAngle.y);
 
     local_14c->x = 0.0f;
-    local_14c->y = i_eff->m024;
-    local_14c->z = i_eff->m020;
+    local_14c->y = i_eff->mSpeedY;
+    local_14c->z = i_eff->mSpeedF;
     MtxPosition(local_14c, cStack344);
-    PSVECAdd(&i_eff->m008, cStack344, &i_eff->m008);
-    i_eff->m024 = i_eff->m024 - 5.0f;
+    PSVECAdd(&i_eff->mPos, cStack344, &i_eff->mPos);
+    i_eff->mSpeedY = i_eff->mSpeedY - 5.0f;
 
     /* GetCCMoveP(): &mStts, never NULL */
-    i_eff->m008.x = i_eff->m008.x + i_eff->mStts.m_cc_move.x;
-    i_eff->m008.z = i_eff->m008.z + i_eff->mStts.m_cc_move.z;
+    i_eff->mPos.x = i_eff->mPos.x + i_eff->mStts.m_cc_move.x;
+    i_eff->mPos.z = i_eff->mPos.z + i_eff->mStts.m_cc_move.z;
 
     {
-        f32 x = i_eff->m008.x;
-        f32 z = i_eff->m008.z;
-        f32 y = i_eff->m008.y + 200.0f;
+        f32 x = i_eff->mPos.x;
+        f32 z = i_eff->mPos.z;
+        f32 y = i_eff->mPos.y + 200.0f;
         BdkObj_groundSetPos(gnd, x, y, z);
     }
 
     f32 ground = dComIfG_Bgsp()->GroundCross(gnd);
-    f32 fVar10 = gabi::fmadds(REG_F(0, 3) + 50.0f, i_eff->m028, ground);
-    if (!(i_eff->m008.y > fVar10)) {
-        i_eff->m008.y = fVar10;
-        if (i_eff->m024 < REG_F(8, 9) + -20.0f) {
-            i_eff->m024 = -(i_eff->m024 * (REG_F(8, 10) + 0.3f));
+    f32 fVar10 = gabi::fmadds(REG_F(0, 3) + 50.0f, i_eff->mScale, ground);
+    if (!(i_eff->mPos.y > fVar10)) {
+        i_eff->mPos.y = fVar10;
+        if (i_eff->mSpeedY < REG_F(8, 9) + -20.0f) {
+            i_eff->mSpeedY = -(i_eff->mSpeedY * (REG_F(8, 10) + 0.3f));
             s16 r = (s16)gabi::ftoi(cM_rndFX(5000.0f)); /* HD: 5000 (GameCube 8000) */
-            i_eff->m030.y = i_eff->m030.y + r;
-            i_eff->m02C = cM_rndFX(100.0f); /* HD: 100 (GameCube 200) */
+            i_eff->mAngle.y = i_eff->mAngle.y + r;
+            i_eff->mSpinRate = cM_rndFX(100.0f); /* HD: 100 (GameCube 200) */
         } else {
-            i_eff->m024 = 0.0f;
-            cLib_addCalc0(&i_eff->m020, 1.0f, REG_F(10, 7) + 2.0f); /* HD: 2.0 (GameCube 0.75) */
-            i_eff->m036.z = 0;
-            f32 v = i_eff->m020;
+            i_eff->mSpeedY = 0.0f;
+            cLib_addCalc0(&i_eff->mSpeedF, 1.0f, REG_F(10, 7) + 2.0f); /* HD: 2.0 (GameCube 0.75) */
+            i_eff->mAngleSpeed.z = 0;
+            f32 v = i_eff->mSpeedF;
             s16 sx = (s16)gabi::ftoi(v * (REG_F(10, 8) + 300.0f));
-            s16 sy = (s16)gabi::ftoi(v * i_eff->m02C);
-            i_eff->m036.x = sx;
-            i_eff->m036.y = sy;
+            s16 sy = (s16)gabi::ftoi(v * i_eff->mSpinRate);
+            i_eff->mAngleSpeed.x = sx;
+            i_eff->mAngleSpeed.y = sy;
         }
     }
     {
         gabi::Local<cXyz> d;
-        cXyz_mi(&i_eff->m008, d, &i_eff->m014);
+        cXyz_mi(&i_eff->mPos, d, &i_eff->mPosOld);
         BdkObj_word(local_14c->x) = BdkObj_word(d->x);
         local_14c->y = 0.0f;
         BdkObj_word(local_14c->z) = BdkObj_word(d->z);
@@ -195,47 +195,47 @@ static inline void top_hahen_move(bdkobj_class *i_this, bdo_eff_s *i_eff, dBgS_G
         cMtx_YrotS(m, a);
         local_14c->x = 0.0f;
         local_14c->y = 30.0f;
-        local_14c->z = 70.0f * i_eff->m028;
+        local_14c->z = 70.0f * i_eff->mScale;
         MtxPosition(local_14c, cStack344);
-        local_14c->x = i_eff->m008.x;
-        f32 y = i_eff->m008.y;
+        local_14c->x = i_eff->mPos.x;
+        f32 y = i_eff->mPos.y;
         local_14c->y = y;
-        local_14c->z = i_eff->m008.z;
+        local_14c->z = i_eff->mPos.z;
         local_14c->y = y + 30.0f;
-        PSVECAdd(cStack344, &i_eff->m008, cStack344);
+        PSVECAdd(cStack344, &i_eff->mPos, cStack344);
         lin->Set(local_14c, cStack344, i_this);
         if (dComIfG_Bgsp()->LineCross(lin)) {
-            i_eff->m008.x = i_eff->m014.x;
-            i_eff->m008.z = i_eff->m014.z;
-            i_eff->m020 = 0.0f;
+            i_eff->mPos.x = i_eff->mPosOld.x;
+            i_eff->mPos.z = i_eff->mPosOld.z;
+            i_eff->mSpeedF = 0.0f;
         }
     }
-    csXyz_apl(&i_eff->m030, &i_eff->m036);
-    eff_set_mtx(i_eff, i_eff->m008.y);
+    csXyz_apl(&i_eff->mAngle, &i_eff->mAngleSpeed);
+    eff_set_mtx(i_eff, i_eff->mPos.y);
 
-    i_eff->mSph.SetC(&i_eff->m008);
-    i_eff->mSph.SetR((REG_F(8, 15) + 85.0f) * i_eff->m028);
+    i_eff->mSph.SetC(&i_eff->mPos);
+    i_eff->mSph.SetR((REG_F(8, 15) + 85.0f) * i_eff->mScale);
     dComIfG_Ccsp_Set(&i_eff->mSph);
-    if (i_eff->mSph.ChkTgHit() && i_eff->m1A4 < 1.0f) {
+    if (i_eff->mSph.ChkTgHit() && i_eff->mPushSpeed < 1.0f) {
         gabi::Local<BdkObjAttackInfo> hit_atInfo;
         hit_atInfo->mpObj = static_cast<dCcD_GObjInf *>(i_eff->mSph.GetTgHitObj());
         hit_atInfo->mpActor = BdkObj_powerCheck(hit_atInfo);
         if (hit_atInfo->mResultingAttackType == 0x8) {
             f32 k = REG_F(14, 4) + 15.0f;
-            f32 s = 1.0f - i_eff->m028;
-            i_eff->m1A4 = s * (k + cM_rndF(1.0f));
+            f32 s = 1.0f - i_eff->mScale;
+            i_eff->mPushSpeed = s * (k + cM_rndF(1.0f));
 
             auto at = hit_atInfo->mpActor.get();
             if (at != nullptr) {
                 s16 r = (s16)gabi::ftoi(cM_rndFX(2000.0f));
-                i_eff->m1A8 = at->shape_angle.y + r;
+                i_eff->mPushAngleY = at->shape_angle.y + r;
             }
-            i_eff->m1AA = (s16)gabi::ftoi(cM_rndFX(400.0f));
+            i_eff->mPushSpinY = (s16)gabi::ftoi(cM_rndFX(400.0f));
         } else if (hit_atInfo->mResultingAttackType == 0x9) {
             /* HD: a type-9 hit breaks the fragment and drops an item (with a sound and an effect) */
-            i_eff->m000 = 0;
-            fopAcM_createItem(&i_eff->m008, 0, -1, -1, 0, nullptr, 4, nullptr);
-            mDoAud_seStart(0x692B, &i_eff->m008, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
+            i_eff->mState = 0;
+            fopAcM_createItem(&i_eff->mPos, 0, -1, -1, 0, nullptr, 4, nullptr);
+            mDoAud_seStart(0x692B, &i_eff->mPos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
             /* static cXyz scale(3.0f, 3.0f, 3.0f) */
             auto &guard = l_scaleGuard;
             cXyz *scale = &l_fragmentScale;
@@ -244,13 +244,13 @@ static inline void top_hahen_move(bdkobj_class *i_this, bdo_eff_s *i_eff, dBgS_G
                 scale->set(3.0f, 3.0f, 3.0f);
             }
             s8 room = fopAcM_GetRoomNo(i_this);
-            dPa_control_set(dComIfGp_getParticle(), 0, 0x3E3, &i_eff->m008, nullptr, scale, 0xFF, nullptr,
+            dPa_control_set(dComIfGp_getParticle(), 0, 0x3E3, &i_eff->mPos, nullptr, scale, 0xFF, nullptr,
                             room, &i_this->tevStr.mColorK0, &i_this->tevStr.mColorK0, nullptr);
         }
     }
 
-    if (i_eff->m008.y < 8500.0f) {
-        i_eff->m000 = 0;
+    if (i_eff->mPos.y < 8500.0f) {
+        i_eff->mState = 0;
     }
     BdkObj_destroyChecks(lin, gnd);
 }
@@ -264,23 +264,23 @@ static inline void kaidan_hahen_move(bdkobj_class *i_this, bdo_eff_s *i_eff, dBg
     gabi::Local<cXyz> out;
 
     BdkObj_specialGroundCtor(gnd);
-    csXyz_apl(&i_eff->m030, &i_eff->m036);
+    csXyz_apl(&i_eff->mAngle, &i_eff->mAngleSpeed);
 
     {
-        f32 vy = i_eff->m024;
-        f32 y = i_eff->m008.y + vy;
-        f32 x = i_eff->m008.x + i_eff->mHorizontalSpeedX;
-        u32 ox = BdkObj_word(i_eff->m008.x);
-        i_eff->m008.y = y;
-        u32 ny = BdkObj_word(i_eff->m008.y);
-        i_eff->m024 = vy - 3.0f;
-        f32 z = i_eff->m008.z + i_eff->mHorizontalSpeedZ;
-        i_eff->m008.x = x;
-        u32 oz = BdkObj_word(i_eff->m008.z);
-        i_eff->m008.z = z;
-        BdkObj_word(i_eff->m014.x) = ox;
-        BdkObj_word(i_eff->m014.y) = ny;
-        BdkObj_word(i_eff->m014.z) = oz;
+        f32 vy = i_eff->mSpeedY;
+        f32 y = i_eff->mPos.y + vy;
+        f32 x = i_eff->mPos.x + i_eff->mHorizontalSpeedX;
+        u32 ox = BdkObj_word(i_eff->mPos.x);
+        i_eff->mPos.y = y;
+        u32 ny = BdkObj_word(i_eff->mPos.y);
+        i_eff->mSpeedY = vy - 3.0f;
+        f32 z = i_eff->mPos.z + i_eff->mHorizontalSpeedZ;
+        i_eff->mPos.x = x;
+        u32 oz = BdkObj_word(i_eff->mPos.z);
+        i_eff->mPos.z = z;
+        BdkObj_word(i_eff->mPosOld.x) = ox;
+        BdkObj_word(i_eff->mPosOld.y) = ny;
+        BdkObj_word(i_eff->mPosOld.z) = oz;
         f32 vx = i_eff->mHorizontalSpeedX;
         i_eff->mHorizontalSpeedX = vx * (REG_F(18, 3) + 0.985f);
         f32 vz = i_eff->mHorizontalSpeedZ;
@@ -290,7 +290,7 @@ static inline void kaidan_hahen_move(bdkobj_class *i_this, bdo_eff_s *i_eff, dBg
     BdkObj_lineCtor(lin);
     {
         gabi::Local<cXyz> d;
-        cXyz_mi(&i_eff->m008, d, &i_eff->m014);
+        cXyz_mi(&i_eff->mPos, d, &i_eff->mPosOld);
         BdkObj_word(local_78->x) = BdkObj_word(d->x);
         local_78->y = 0.0f;
         BdkObj_word(local_78->z) = BdkObj_word(d->z);
@@ -303,44 +303,44 @@ static inline void kaidan_hahen_move(bdkobj_class *i_this, bdo_eff_s *i_eff, dBg
         local_78->y = 30.0f;
         local_78->z = 50.0f;
         MtxPosition(local_78, out);
-        local_78->x = i_eff->m008.x;
-        f32 y = i_eff->m008.y;
+        local_78->x = i_eff->mPos.x;
+        f32 y = i_eff->mPos.y;
         local_78->y = y;
-        local_78->z = i_eff->m008.z;
+        local_78->z = i_eff->mPos.z;
         local_78->y = y + 30.0f;
-        PSVECAdd(out, &i_eff->m008, out);
+        PSVECAdd(out, &i_eff->mPos, out);
         lin->Set(local_78, out, i_this);
         if (dComIfG_Bgsp()->LineCross(lin)) {
-            f32 x = i_eff->m014.x;
-            f32 z = i_eff->m014.z;
-            i_eff->m008.x = x;
-            i_eff->m008.z = z;
+            f32 x = i_eff->mPosOld.x;
+            f32 z = i_eff->mPosOld.z;
+            i_eff->mPos.x = x;
+            i_eff->mPos.z = z;
         }
     }
-    BdkObj_groundSetPos(gnd, i_eff->m008.x, i_eff->m008.y + 5000.0f, i_eff->m008.z);
+    BdkObj_groundSetPos(gnd, i_eff->mPos.x, i_eff->mPos.y + 5000.0f, i_eff->mPos.z);
 
     f32 fVal1 = dComIfG_Bgsp()->GroundCross(gnd);
     f32 fVal2 = 0.0f;
     if (fVal1 != -1000000000.0f) {
-        if (!(i_eff->m008.y > fVal1)) {
-            i_eff->m008.y = fVal1;
-            i_eff->m024 = 0.0f;
-            cLib_addCalcAngleS2(&i_eff->m036.y, REG_S(18, 0), 1, 10); /* HD: a debug-register target */
-            cLib_addCalcAngleS2(&i_eff->m036.z, 0, 1, 10);
-            f32 k = (i_eff->m028 - 0.7f) * 2000.0f;
+        if (!(i_eff->mPos.y > fVal1)) {
+            i_eff->mPos.y = fVal1;
+            i_eff->mSpeedY = 0.0f;
+            cLib_addCalcAngleS2(&i_eff->mAngleSpeed.y, REG_S(18, 0), 1, 10); /* HD: a debug-register target */
+            cLib_addCalcAngleS2(&i_eff->mAngleSpeed.z, 0, 1, 10);
+            f32 k = (i_eff->mScale - 0.7f) * 2000.0f;
             s16 s1 = (s16)gabi::ftoi(1500.0f - k);
-            f32 sin1 = cM_ssin((u16)(i_eff->m1AC * s1));
+            f32 sin1 = cM_ssin((u16)(i_eff->mFrameCounter * s1));
             s16 s2 = (s16)gabi::ftoi(1800.0f - k);
             s16 target = (s16)gabi::ftoi(sin1 * (REG_F(10, 11) + 800.0f));
-            cLib_addCalcAngleS2(&i_eff->m030.x, target, 10, 400);
-            f32 sin2 = cM_ssin((u16)(i_eff->m1AC * s2));
-            fVal2 = (sin2 * (REG_F(10, 10) + 5.0f)) * i_eff->m028;
+            cLib_addCalcAngleS2(&i_eff->mAngle.x, target, 10, 400);
+            f32 sin2 = cM_ssin((u16)(i_eff->mFrameCounter * s2));
+            fVal2 = (sin2 * (REG_F(10, 10) + 5.0f)) * i_eff->mScale;
         }
     } else {
-        i_eff->m000 = 0;
+        i_eff->mState = 0;
     }
 
-    eff_set_mtx(i_eff, i_eff->m008.y + fVal2);
+    eff_set_mtx(i_eff, i_eff->mPos.y + fVal2);
     BdkObj_destroyChecks(lin, gnd);
 }
 
@@ -356,24 +356,24 @@ static inline void tower_kaidan_move(bdkobj_class *i_this) {
             cBgS_Release(dComIfG_Bgsp(), i_this->pm_bgw);
             i_this->pm_bgw = nullptr;
             i_this->model = 0;
-            i_this->m299 = 100;
+            i_this->mBreakTimer = 100;
 
             dComIfGp_particle_set(ID_IT_SN_DK_BRIDGE_L00, &i_this->current.pos, &i_this->current.angle);
             dComIfGp_particle_set(ID_IT_SN_DK_BRIDGE_S00, &i_this->current.pos, &i_this->current.angle);
             dComIfGp_particle_set(ID_IT_SN_DK_BRIDGE_TENITA00, &i_this->current.pos, &i_this->current.angle);
-            i_this->m918.end(); /* m918.remove() */
-            /* m918.setColor({0x46, 0x3C, 0x28, 0xB4}) */
-            reinterpret_cast<be<u32> &>(i_this->m918.mColor) = 0x463C28B4;
+            i_this->mSmokeCb.end(); /* mSmokeCb.remove() */
+            /* mSmokeCb.setColor({0x46, 0x3C, 0x28, 0xB4}) */
+            reinterpret_cast<be<u32> &>(i_this->mSmokeCb.mColor) = 0x463C28B4;
             s8 room = fopAcM_GetRoomNo(i_this);
             /* dComIfGp_particle_setToon: the toon group (2) */
             dPa_control_set(dComIfGp_getParticle(), 2, ID_IT_ST_DK_BRIDGE_SMOKE00, &i_this->current.pos,
                             &i_this->current.angle, nullptr, 0xB4,
-                            (dPa_levelEcallBack *)(void *)&i_this->m918, room, nullptr, nullptr, nullptr);
+                            (dPa_levelEcallBack *)(void *)&i_this->mSmokeCb, room, nullptr, nullptr, nullptr);
             auto emitter = BdkObj_getEmitter(i_this);
             if (emitter != nullptr) {
                 /* becomeImmortalEmitter */
                 emitter->mStatus = emitter->mStatus | 0x40;
-                i_this->m938 = 0xB4;
+                i_this->mSmokeAlpha = 0xB4;
             }
 
             /* fopAcM_seStartCurrent (HD inline, null-checked) */
@@ -382,28 +382,28 @@ static inline void tower_kaidan_move(bdkobj_class *i_this) {
                                dComIfGp_getReverb(i_this->current.roomNo));
             for (s32 i = 0; i < 2; i++) {
                 bdo_eff_s *e = &i_this->mEffs[i];
-                e->m000 = 2;
-                e->m1AC = (s16)gabi::ftoi(cM_rndF(65536.0f));
-                e->m028 = cM_rndFX(0.25f) + 0.7f;
-                e->m008.x = i_this->current.pos.x + cM_rndFX(500.0f);
-                e->m008.y = i_this->current.pos.y;
-                e->m008.z = i_this->current.pos.z + cM_rndFX(500.0f);
-                e->m030.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
-                e->m030.z = (s16)gabi::ftoi(cM_rndF(65536.0f));
-                e->m036.y = (s16)gabi::ftoi(cM_rndFX(800.0f));
-                e->m030.x = (s16)gabi::ftoi(cM_rndFX(10000.0f));
-                e->m036.z = (s16)gabi::ftoi(cM_rndFX(800.0f));
+                e->mState = 2;
+                e->mFrameCounter = (s16)gabi::ftoi(cM_rndF(65536.0f));
+                e->mScale = cM_rndFX(0.25f) + 0.7f;
+                e->mPos.x = i_this->current.pos.x + cM_rndFX(500.0f);
+                e->mPos.y = i_this->current.pos.y;
+                e->mPos.z = i_this->current.pos.z + cM_rndFX(500.0f);
+                e->mAngle.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
+                e->mAngle.z = (s16)gabi::ftoi(cM_rndF(65536.0f));
+                e->mAngleSpeed.y = (s16)gabi::ftoi(cM_rndFX(800.0f));
+                e->mAngle.x = (s16)gabi::ftoi(cM_rndFX(10000.0f));
+                e->mAngleSpeed.z = (s16)gabi::ftoi(cM_rndFX(800.0f));
             }
             i_this->actor_status = i_this->actor_status & ~0x100u; /* fopAcM_OffStatus(fopAcStts_CULL_e) */
         }
     } else {
         auto emitter = BdkObj_getEmitter(i_this);
         if (emitter != nullptr) {
-            u8 a = i_this->m938;
-            if (i_this->m299 <= 0x5A && a != 0) {
+            u8 a = i_this->mSmokeAlpha;
+            if (i_this->mBreakTimer <= 0x5A && a != 0) {
                 a = a - 2;
                 emitter = BdkObj_getEmitter(i_this);
-                i_this->m938 = a;
+                i_this->mSmokeAlpha = a;
             }
             emitter->mGlobalAlpha = a; /* setGlobalAlpha */
         }
@@ -421,18 +421,18 @@ static inline void set_actor_mtx(bdkobj_class *i_this) {
 
 /* 020729A8 */
 static BOOL daBdkobj_Execute(bdkobj_class *i_this) {
-    if (i_this->m298 == 2) {
+    if (i_this->mType == 2) {
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
         tower_kaidan_move(i_this);
     } else {
         settingTevStruct(dKy_getEnvlight(), 4 /* TEV_TYPE_BG3 */, &i_this->current.pos, &i_this->tevStr);
     }
 
-    if (i_this->m299 != 0) {
-        i_this->m299 = i_this->m299 - 1;
+    if (i_this->mBreakTimer != 0) {
+        i_this->mBreakTimer = i_this->mBreakTimer - 1;
     }
 
-    if (i_this->m298 == 2) {
+    if (i_this->mType == 2) {
         if (i_this->model != 0) {
             set_actor_mtx(i_this);
             if (i_this->pm_bgw != nullptr) {
@@ -443,10 +443,10 @@ static BOOL daBdkobj_Execute(bdkobj_class *i_this) {
     } else {
         if (i_this->model != 0) {
             i_this->mCyl.SetC(&i_this->current.pos);
-            if (i_this->m298 == 0) {
+            if (i_this->mType == 0) {
                 i_this->mCyl.SetH(REG_F(6, 0) + 100.0f);
                 i_this->mCyl.SetR(REG_F(6, 1) + 100.0f);
-            } else if (i_this->m298 == 1) {
+            } else if (i_this->mType == 1) {
                 i_this->mCyl.SetH(REG_F(6, 2) + 900.0f);
                 i_this->mCyl.SetR(REG_F(6, 3) + 100.0f);
             }
@@ -459,7 +459,7 @@ static BOOL daBdkobj_Execute(bdkobj_class *i_this) {
                     i_this->eyePos.copy(i_this->current.pos);
 
                     u16 uVar8, uVar6, uVar4;
-                    if (i_this->m298 == 0) {
+                    if (i_this->mType == 0) {
                         uVar8 = ID_IT_ST_DK_BLOCK_SMOKE00;
                         uVar6 = ID_IT_SN_DK_BLOCK_S00;
                         uVar4 = ID_IT_SN_DK_BLOCK_L00;
@@ -479,11 +479,11 @@ static BOOL daBdkobj_Execute(bdkobj_class *i_this) {
                     eff_ang->z = 0;
                     eff_ang->x = 0;
 
-                    i_this->m918.end(); /* m918.remove() */
+                    i_this->mSmokeCb.end(); /* mSmokeCb.remove() */
                     {
                         s8 room = fopAcM_GetRoomNo(i_this);
                         dPa_control_set(dComIfGp_getParticle(), 2, uVar8, &i_this->current.pos, eff_ang,
-                                        nullptr, 0xB9, (dPa_levelEcallBack *)(void *)&i_this->m918, room,
+                                        nullptr, 0xB9, (dPa_levelEcallBack *)(void *)&i_this->mSmokeCb, room,
                                         nullptr, nullptr, nullptr);
                     }
                     GXColor *k0 = &i_this->tevStr.mColorK0; /* tevStr.mColorK0 */
@@ -501,20 +501,20 @@ static BOOL daBdkobj_Execute(bdkobj_class *i_this) {
                     i_this->model = 0;
                     for (int i = 0; i < 3; i++) {
                         bdo_eff_s *e = &i_this->mEffs[i];
-                        e->m000 = 1;
-                        e->m028 = cM_rndFX(0.25f) + 0.7f;
+                        e->mState = 1;
+                        e->mScale = cM_rndFX(0.25f) + 0.7f;
                         f32 px = i_this->current.pos.x;
-                        e->m008.x = px;
+                        e->mPos.x = px;
                         f32 py = i_this->current.pos.y;
-                        e->m008.y = py;
-                        e->m008.z = i_this->current.pos.z;
-                        e->m008.y = py + (REG_F(8, 12) + 100.0f);
-                        e->m024 = (cM_rndF(20.0f) + 60.0f) + REG_F(8, 16);
+                        e->mPos.y = py;
+                        e->mPos.z = i_this->current.pos.z;
+                        e->mPos.y = py + (REG_F(8, 12) + 100.0f);
+                        e->mSpeedY = (cM_rndF(20.0f) + 60.0f) + REG_F(8, 16);
                         s16 r = (s16)gabi::ftoi(cM_rndFX(10000.0f));
-                        e->m030.y = at->shape_angle.y + r;
-                        e->m020 = (cM_rndF(15.0f) + 20.0f) + REG_F(8, 14);
-                        e->m036.x = (s16)gabi::ftoi(cM_rndFX(6000.0f));
-                        e->m036.z = (s16)gabi::ftoi(cM_rndFX(6000.0f));
+                        e->mAngle.y = at->shape_angle.y + r;
+                        e->mSpeedF = (cM_rndF(15.0f) + 20.0f) + REG_F(8, 14);
+                        e->mAngleSpeed.x = (s16)gabi::ftoi(cM_rndFX(6000.0f));
+                        e->mAngleSpeed.z = (s16)gabi::ftoi(cM_rndFX(6000.0f));
                     }
                     i_this->actor_status =
                         i_this->actor_status & ~0x100u; /* fopAcM_OffStatus(fopAcStts_CULL_e) */
@@ -534,11 +534,11 @@ static BOOL daBdkobj_Execute(bdkobj_class *i_this) {
     /* hahen_move */
     for (s32 i = 0; i < 3; i++) {
         bdo_eff_s *fragment = &i_this->mEffs[i];
-        if (fragment->m000 != 0) {
-            fragment->m1AC = fragment->m1AC + 1;
+        if (fragment->mState != 0) {
+            fragment->mFrameCounter = fragment->mFrameCounter + 1;
             gabi::Local<dBgS_GndChk> gnd;
             gabi::Local<dBgS_LinChk> lin;
-            if (fragment->m000 == 1) {
+            if (fragment->mState == 1) {
                 top_hahen_move(i_this, fragment, gnd.get(), lin.get());
             } else {
                 kaidan_hahen_move(i_this, fragment, gnd.get(), lin.get());
@@ -555,7 +555,7 @@ static BOOL daBdkobj_IsDelete(bdkobj_class *) { return TRUE; }
 /* 020742C4 */
 static BOOL daBdkobj_Delete(bdkobj_class *i_this) {
     dComIfG_resDelete(&i_this->mPhase, l_deleteArcName.mText /* "Bdkobj" */);
-    i_this->m918.remove(); /* m918.remove() (virtual) */
+    i_this->mSmokeCb.remove(); /* mSmokeCb.remove() (virtual) */
     if (i_this->pm_bgw != nullptr) {
         dBgS *bgs = dComIfG_Bgsp();
         cBgS_Release(bgs, i_this->pm_bgw);
@@ -568,14 +568,14 @@ static BOOL useHeapInit(fopAc_ac_c *a_this) {
     bdkobj_class *i_this = (bdkobj_class *)a_this;
 
     J3DModelData *modelData = (J3DModelData *)dComIfG_getObjectRes(l_heapArcName.mText /* "Bdkobj" */,
-                                                                   bdl_data.entries[i_this->m298]);
+                                                                   bdl_data.entries[i_this->mType]);
     J3DModel *model = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     a_this->model = gabi::ea(model);
     if (model == nullptr) {
         return FALSE;
     }
     s32 iVar4 = 0;
-    if (i_this->m298 == 2) {
+    if (i_this->mType == 2) {
         i_this->pm_bgw = new_dBgW();
         if (i_this->pm_bgw == nullptr) /* JUT_ASSERT(0x394, i_this->pm_bgw != NULL) */
             JUT_ASSERT_fail(l_assertFile.mText, 0x394, l_assertExpression.mText);
@@ -591,7 +591,7 @@ static BOOL useHeapInit(fopAc_ac_c *a_this) {
     }
     for (s32 i = 0; i < iVar4 + 3; i++) {
         J3DModelData *hahen_modelData =
-            (J3DModelData *)dComIfG_getObjectRes(l_heapArcName.mText, hahen_bdl_data.entries[i_this->m298]);
+            (J3DModelData *)dComIfG_getObjectRes(l_heapArcName.mText, hahen_bdl_data.entries[i_this->mType]);
         i_this->mEffs[i].mpModel = mDoExt_J3DModel__create(hahen_modelData, 0x80000, 0x11000022);
         if (i_this->mEffs[i].mpModel == nullptr) {
             return FALSE;
@@ -614,7 +614,7 @@ static bdkobj_class *bdkobj_class_ct(bdkobj_class *i_this) {
                           gabi::guest_fn((const void *)bdo_eff_s_ct));
     dCcD_Stts_ct(&i_this->mStts);
     dCcD_Cyl_ct(&i_this->mCyl, CM3DGAAB_VTBL);
-    __ct(&i_this->m918, 1);
+    __ct(&i_this->mSmokeCb, 1);
     return i_this;
 }
 
@@ -635,9 +635,9 @@ static cPhs_State daBdkobj_Create(fopAc_ac_c *a_this) {
     if (res != cPhs_COMPLEATE_e) {
         return res;
     }
-    i_this->m918.m12 = 1; /* m918.setFollowOff() */
+    i_this->mSmokeCb.m12 = 1; /* mSmokeCb.setFollowOff() */
     u8 prm = fopAcM_GetParam(i_this) & 0xFF;
-    i_this->m298 = (prm == 0xFF) ? 0 : prm;
+    i_this->mType = (prm == 0xFF) ? 0 : prm;
 
     if (!fopAcM_entrySolidHeap(i_this, useHeapInit, 0x5000)) {
         return cPhs_ERROR_e;
@@ -647,7 +647,7 @@ static cPhs_State daBdkobj_Create(fopAc_ac_c *a_this) {
     fopAcM_SetMax(i_this, 500.0f, 1500.0f, 500.0f);
     i_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(actor_model(i_this))); /* fopAcM_SetMtx */
 
-    if (i_this->m298 == 2) {
+    if (i_this->mType == 2) {
         if (dBgS_Regist(dComIfG_Bgsp(), i_this->pm_bgw, i_this)) {
             return cPhs_ERROR_e;
         } else {
@@ -658,7 +658,7 @@ static cPhs_State daBdkobj_Create(fopAc_ac_c *a_this) {
     i_this->mStts.Init(0xFF, 0xFF, a_this);
     i_this->mCyl.Set(&cc_cyl_src);
     i_this->mCyl.SetStts(&i_this->mStts);
-    if (i_this->m298 == 0) {
+    if (i_this->mType == 0) {
         i_this->mCyl.SetH(REG_F(6, 0) + 300.0f);
         i_this->mCyl.SetR(REG_F(6, 1) + 200.0f);
     } else {

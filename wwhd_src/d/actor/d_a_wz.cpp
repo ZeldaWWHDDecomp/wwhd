@@ -118,7 +118,7 @@ static BOOL rod_nodeCallBack(J3DNode* node, s32 timing) {
 
 /* 024E2148 */
 void draw_SUB(wz_class* i_this) {
-    mDoExt_McaMorf* morf = i_this->m2B4;
+    mDoExt_McaMorf* morf = i_this->mpMorf;
     f32 sz = i_this->scale.z;
     J3DModel* model = morf->getModel();
     f32 sx = i_this->scale.x, sy = i_this->scale.y;
@@ -130,11 +130,11 @@ void draw_SUB(wz_class* i_this) {
     mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->shape_angle.x);
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), i_this->shape_angle.z);
     mtx_copy(&model->mBaseTransformMtx, mDoMtx_stack_c::get());
-    i_this->m2B4->calc();
+    i_this->mpMorf->calc();
     if (i_this->mBehaviorType < wz::FIRE_BALL) {
         if (i_this->mIsMiniBoss) {
             // The second body follows the back joint.
-            wz_jointMtxCopy(i_this->m2B4, wz::JOINT_SECOND_BODY, i_this->mpMorf2);
+            wz_jointMtxCopy(i_this->mpMorf, wz::JOINT_SECOND_BODY, i_this->mpMorf2);
             i_this->mpMorf2->calc();
         }
         mDoExt_McaMorf* rodMorf = i_this->mpRodMorf;
@@ -145,7 +145,7 @@ void draw_SUB(wz_class* i_this) {
         rod->mBaseScale.y = ry;
         rod->mBaseScale.z = rz;
         // The rod follows the hand joint.
-        wz_jointMtxCopy(i_this->m2B4, wz::JOINT_HAND, i_this->mpRodMorf);
+        wz_jointMtxCopy(i_this->mpMorf, wz::JOINT_HAND, i_this->mpRodMorf);
         i_this->mpRodMorf->calc();
         enemy_fire(i_this->mEnemyFire);
     }
@@ -178,13 +178,13 @@ static BOOL daWZ_Draw(wz_class* i_this) {
         PSMTXCopy(calc_mtx(), &i_this->mBallMtx);
         return TRUE;
     }
-    J3DModel* model = i_this->m2B4->getModel();
+    J3DModel* model = i_this->mpMorf->getModel();
     if (type >= wz::FIRE_BALL) {
         /* summon door */
         setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
         mDoExt_btkAnm* btk = i_this->mpBtkAnm;
         btk->entry(model->getModelData(), btk->getFrame());
-        i_this->m2B4->updateDL();
+        i_this->mpMorf->updateDL();
         wz::view<wz::ModelDataAnimations>(model->getModelData())->mpTextureSRTAnm = 0;
         return TRUE;
     }
@@ -217,12 +217,12 @@ static BOOL daWZ_Draw(wz_class* i_this) {
     if (i_this->mIceTimer > 20) {
         /* frozen */
         if (i_this->mAlpha != 0xFF) {
-            wz_iceEntryDL(i_this->m2B4, -1, 0);
+            wz_iceEntryDL(i_this->mpMorf, -1, 0);
             if (i_this->mIsMiniBoss) {
                 wz_iceEntryDL(i_this->mpMorf2, -1, 0);
             }
         } else {
-            wz_iceInvisibleDL(i_this->m2B4, -1, wz::view<wz::InvisibleModel>(i_this->mInvisModel));
+            wz_iceInvisibleDL(i_this->mpMorf, -1, wz::view<wz::InvisibleModel>(i_this->mInvisModel));
             if (i_this->mIsMiniBoss) {
                 wz_iceInvisibleDL(i_this->mpMorf2, -1,
                                   wz::view<wz::InvisibleModel>(i_this->mInvisModel2));
@@ -235,11 +235,11 @@ static BOOL daWZ_Draw(wz_class* i_this) {
     brk->entry(model->getModelData(), brk->getFrame());
     f32 frame = (f32)(s32)(i_this->mBehaviorType + i_this->mIsMiniBoss);
     brk = i_this->mpBrkAnm;
-    if (i_this->m351) {
+    if (i_this->mType3) {
         frame = 3.0f;
     }
     brk->setFrame(frame);
-    i_this->m2B4->entryDL();
+    i_this->mpMorf->entryDL();
     if (i_this->mIsMiniBoss) {
         i_this->mpMorf2->entryDL();
         if (i_this->mAlpha != 0xFF) {
@@ -268,10 +268,10 @@ void anm_init(wz_class* i_this, int bckFileIdx, f32 morf, u8 loopMode, f32 playS
     if (soundFileIdx >= 0) {
         void* anm = dComIfG_getObjectRes("Wz", bckFileIdx, SAFESTRING_VTBL);
         void* snd = dComIfG_getObjectRes("Wz", soundFileIdx, SAFESTRING_VTBL);
-        i_this->m2B4->setAnm((J3DAnmTransform*)anm, loopMode, morf, playSpeed, 0.0f, -1.0f, snd);
+        i_this->mpMorf->setAnm((J3DAnmTransform*)anm, loopMode, morf, playSpeed, 0.0f, -1.0f, snd);
     } else {
         void* anm = dComIfG_getObjectRes("Wz", bckFileIdx, SAFESTRING_VTBL);
-        i_this->m2B4->setAnm((J3DAnmTransform*)anm, loopMode, morf, playSpeed, 0.0f, -1.0f,
+        i_this->mpMorf->setAnm((J3DAnmTransform*)anm, loopMode, morf, playSpeed, 0.0f, -1.0f,
                              nullptr);
     }
 }
@@ -478,7 +478,7 @@ void weapon_shoot(wz_class* i_this, u8 kind) {
         }
     } else if (kind == 1) {
         /* summon: a child at the summon point */
-        if (i_this->mSummonSw == 0xFF || i_this->m540 == 0) {
+        if (i_this->mSummonSw == 0xFF || i_this->mpNextRoomPath == 0) {
             return;
         }
         f32 dz = i_this->mSummonPos.z - i_this->mRodTipPos.z;
@@ -498,7 +498,7 @@ void weapon_shoot(wz_class* i_this, u8 kind) {
         if (fopAcM_createChild(wz::fpcNm_WZ_e, fopAcM_GetID(i_this), 0xFFFFFF0B,
                                &i_this->mRodTipPos, room, angle.get(), scale.get(), 0,
                                0) != fpcM_ERROR_PROCESS_ID_e) {
-            i_this->m470 = 1;
+            i_this->mHasActiveSummon = 1;
         }
     }
 }
@@ -588,13 +588,13 @@ static void wz_jointMtxCopy(gptr<mDoExt_McaMorf> &srcMorf, u32 jointNo,
 
 /* 024E3950 */
 void next_tama_move(wz_class *i_this, const cXyz *pos) {
-  *wz::view<be<u32>>(&i_this->m314.x) = *wz::view<const be<u32>>(&pos->x);
-  *wz::view<be<u32>>(&i_this->m314.y) = *wz::view<const be<u32>>(&pos->y);
+  *wz::view<be<u32>>(&i_this->mBallHitPos.x) = *wz::view<const be<u32>>(&pos->x);
+  *wz::view<be<u32>>(&i_this->mBallHitPos.y) = *wz::view<const be<u32>>(&pos->y);
   i_this->speedF = 0.0f;
   i_this->mMode = 0x68;
   // HD: this path clears the sphere header word.
-  *wz::view<be<u32>>(&i_this->m7D8) &= ~1u;
-  *wz::view<be<u32>>(&i_this->m314.z) = *wz::view<const be<u32>>(&pos->z);
+  *wz::view<be<u32>>(&i_this->mBallSph) &= ~1u;
+  *wz::view<be<u32>>(&i_this->mBallHitPos.z) = *wz::view<const be<u32>>(&pos->z);
 }
 
 /* 024E61D8 */
@@ -662,7 +662,7 @@ static BOOL daWZ_Delete(wz_class *i_this) {
     /* a summoned Wizzrobe: tell the summoner */
     fopAc_ac_c *parent = fopAcM_SearchByID(i_this->mParentId);
     if (parent != nullptr) {
-      static_cast<wz_class *>(parent)->m470 = 0;
+      static_cast<wz_class *>(parent)->mHasActiveSummon = 0;
     }
     dComIfG_resDelete((request_of_phase_process_class *)i_this->mPhase,
                       "Wzb" /* "Wzb" */);
@@ -691,18 +691,18 @@ static BOOL useHeapInit(fopAc_ac_c *a_this) {
   wz_class *i_this = (wz_class *)a_this;
   void *bmd = wzRes("Wz", 0x18);
   void *bck = wzRes("Wz", 0x13);
-  i_this->m2B4.v =
+  i_this->mpMorf.v =
       new_McaMorf(bmd, bck, 2, 1.0f, 0, -1, 1, 0x80000, 0x37441422);
-  if (i_this->m2B4.v == 0 || morf_model(i_this->m2B4.v) == 0) {
+  if (i_this->mpMorf.v == 0 || morf_model(i_this->mpMorf.v) == 0) {
     return FALSE;
   }
-  gabi::at<J3DModel>(morf_model(i_this->m2B4.v))->mUserArea = gabi::ea(i_this);
+  gabi::at<J3DModel>(morf_model(i_this->mpMorf.v))->mUserArea = gabi::ea(i_this);
   for (u16 i = 0;
        i < modelData_jointNum(gabi::ea(
-               gabi::at<J3DModel>(morf_model(i_this->m2B4.v))->getModelData()));
+               gabi::at<J3DModel>(morf_model(i_this->mpMorf.v))->getModelData()));
        i = (u16)(i + 1)) {
     u32 data = gabi::ea(
-        gabi::at<J3DModel>(morf_model(i_this->m2B4.v))->getModelData());
+        gabi::at<J3DModel>(morf_model(i_this->mpMorf.v))->getModelData());
     u32 num = (u32)gabi::at<wz::JointArray>(data)->mCount;
     u32 jnt = gabi::at<wz::JointArray>(data)->mpEntries.v;
     if (i < num) {
@@ -749,7 +749,7 @@ static BOOL useHeapInit(fopAc_ac_c *a_this) {
     gabi::at<wz::JointSlot>(jnt)->mCallback =
         gabi::guest_fn((const void *)rod_nodeCallBack);
   }
-  u32 model = morf_model(i_this->m2B4.v);
+  u32 model = morf_model(i_this->mpMorf.v);
   void *brk = operator_new(0x78);
   if (brk != nullptr) {
     brk = wz_constructBrk(brk); /* mDoExt_brkAnm */
@@ -766,7 +766,7 @@ static BOOL useHeapInit(fopAc_ac_c *a_this) {
     return FALSE;
   }
   if (!wz_createInvisibleModel(i_this->mInvisModel,
-                               gabi::at<void>(morf_model(i_this->m2B4.v)))) {
+                               gabi::at<void>(morf_model(i_this->mpMorf.v)))) {
     return FALSE;
   }
   return TRUE;
@@ -777,12 +777,12 @@ static BOOL useHeapInit2(fopAc_ac_c *a_this) {
   wz_class *i_this = (wz_class *)a_this;
   void *bmd = wzRes("Wzb", 8);
   void *bck = wzRes("Wzb", 5);
-  i_this->m2B4.v =
+  i_this->mpMorf.v =
       new_McaMorf(bmd, bck, 0, 1.0f, 0, -1, 1, 0x80000, 0x19000222);
-  if (i_this->m2B4.v == 0 || morf_model(i_this->m2B4.v) == 0) {
+  if (i_this->mpMorf.v == 0 || morf_model(i_this->mpMorf.v) == 0) {
     return FALSE;
   }
-  u32 model = morf_model(i_this->m2B4.v);
+  u32 model = morf_model(i_this->mpMorf.v);
   void *btk = operator_new(0x74);
   if (btk != nullptr) {
     btk = wz_constructBtk(btk); /* mDoExt_btkAnm */
@@ -867,7 +867,7 @@ static inline void wz_followEnd(wz_class *a, int i) {
 /* ---- the summoner (types 12/13) ---- */
 
 static inline void wz_morfPlay(wz_class *i_this) {
-  wz_playMorf(gabi::at<void>(i_this->m2B4.v), (void *)nullptr, 0, 0);
+  wz_playMorf(gabi::at<void>(i_this->mpMorf.v), (void *)nullptr, 0, 0);
 }
 /* the summon smoke: the emitter's two scale vectors follow the actor scale */
 static void wz_summonSmoke(wz_class *i_this, u16 id) {
@@ -1047,7 +1047,7 @@ void action_summon_dousa(wz_class *i_this) {
     if (cnt == 20) {
       fopAc_ac_c *parent = fopAcM_SearchByID(i_this->mParentId);
       if (parent != nullptr) {
-        static_cast<wz_class *>(parent)->m470 = 0;
+        static_cast<wz_class *>(parent)->mHasActiveSummon = 0;
       }
       fopAcM_delete(i_this);
     }
@@ -1074,7 +1074,7 @@ static void wz_copySummonData(wz_class *i_this, wz_class *p) {
   cpy_u32(gabi::ea(&i_this->mSummonPos.z), gabi::ea(&p->mSummonPos.z));
   cpy_u32(gabi::ea(&wz::state(i_this)->mPathPoint),
           gabi::ea(&wz::state(p)->mPathPoint));
-  wz::state(i_this)->mHasActiveSummon = (u8)p->m470;
+  wz::state(i_this)->mHasActiveSummon = (u8)p->mHasActiveSummon;
   i_this->mSummonSlot = (s32)p->mSummonSlot;
   i_this->mSummonWave = (s32)p->mSummonWave;
 }
@@ -1186,7 +1186,7 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
     }
     if (type == 3) {
       i_this->mBehaviorType = 0;
-      i_this->m351 = 1;
+      i_this->mType3 = 1;
     }
   }
   if (i_this->mEnemySummonTableIndex == 0xFF) {
@@ -1217,7 +1217,7 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
       }
       fopAc_ac_c *p = fopAcM_SearchByID(id);
       if (p != nullptr) {
-        static_cast<wz_class *>(p)->m470 = 0;
+        static_cast<wz_class *>(p)->mHasActiveSummon = 0;
       }
     }
     return phase;
@@ -1230,7 +1230,7 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
     bool checkSw = type < 10;
     if (type > 10) {
       type = i_this->mBehaviorType;
-      i_this->m7D8.mAtType = 0x400; /* ball sphere */
+      i_this->mBallSph.mAtType = 0x400; /* ball sphere */
       wz_class *p;
       if (type == 12) {
         if ((u8)wz::state(i_this)->mSummonParentResolved != 0) {
@@ -1293,11 +1293,11 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
     if (!fopAcM_entrySolidHeap(a_this, 0x024E67FC /* useHeapInit2 */, 0xCC0)) {
       fopAc_ac_c *p = fopAcM_SearchByID(i_this->mParentId);
       if (p != nullptr) {
-        static_cast<wz_class *>(p)->m470 = 0;
+        static_cast<wz_class *>(p)->mHasActiveSummon = 0;
       }
       return cPhs_ERROR_e;
     }
-    u32 morf = i_this->m2B4.v;
+    u32 morf = i_this->mpMorf.v;
     if (i_this->mBehaviorType == wz::INTRO_DOOR) {
       a_this->actor_status |= 0x4000;
     }
@@ -1310,7 +1310,7 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
     if (tex == 0 || names == 0) {
       fopAc_ac_c *p = fopAcM_SearchByID(i_this->mParentId);
       if (p != nullptr) {
-        static_cast<wz_class *>(p)->m470 = 0;
+        static_cast<wz_class *>(p)->mHasActiveSummon = 0;
       }
       return cPhs_ERROR_e;
     }
@@ -1318,7 +1318,7 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
   }
 
   a_this->current.angle.z = 0;
-  u32 morf = i_this->m2B4.v;
+  u32 morf = i_this->mpMorf.v;
   a_this->shape_angle.z = 0;
   i_this->attention_info.flags = 0;
   u32 model = morf_model(morf);
@@ -1396,7 +1396,7 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
     wz::state(i_this)->mIceWallHeight = 50.0f;
     i_this->mAcchWallH = 100.0f;
     wz::view<wz::EnemyFire>(i_this->mEnemyFire)->mpMorf =
-        i_this->m2B4; /* enemyfire: morf */
+        i_this->mpMorf; /* enemyfire: morf */
     wz::view<wz::IcePrefix>(i_this->_A40)->mpActor = i_this;
     i_this->mAcchWallR = 110.0f;
     wz::view<wz::EnemyFire>(i_this->mEnemyFire)->mpActor =
@@ -1434,9 +1434,9 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
   } else {
     i_this->mAcchWallH = 0.0f;
     i_this->mAcchWallR = 40.0f;
-    wz_setSphere((&i_this->m7D8),
+    wz_setSphere((&i_this->mBallSph),
                  gabi::at<void>(0x101D3AB8)); /* dCcD_Sph::Set */
-    i_this->m7D8.mStts.v = gabi::ea((&i_this->mStts));
+    i_this->mBallSph.mStts.v = gabi::ea((&i_this->mStts));
     i_this->mAction = wz::ACTION_BALL;
     wz::state(i_this)->mTimers[2] = 300;
     i_this->mMode = 100;
@@ -1826,11 +1826,11 @@ void action_demo(wz_class *i_this) {
     }
     i_this->mAlpha = 0xFF;
     if ((s16)l_debug.mHoldIntro != 0) {
-      i_this->m2B4->mFrameCtrl.mRate = 0.0f; /* stop the animation */
+      i_this->mpMorf->mFrameCtrl.mRate = 0.0f; /* stop the animation */
       break;
     }
     wz::state(i_this)->mTimers[0] = (s16)gabi::ftoi((f32)l_debug.mEntranceWait);
-    i_this->m2B4->mFrameCtrl.mRate = 1.0f;
+    i_this->mpMorf->mFrameCtrl.mRate = 1.0f;
     i_this->mMode = (u8)(i_this->mMode + 1);
   }
     [[fallthrough]];
@@ -1838,7 +1838,7 @@ void action_demo(wz_class *i_this) {
     if (wz::state(i_this)->mTimers[0] != 0) {
       break;
     }
-    i_this->m2B4->mFrameCtrl.mRate = 1.0f;
+    i_this->mpMorf->mFrameCtrl.mRate = 1.0f;
     i_this->mMode = (u8)(i_this->mMode + 1);
     [[fallthrough]];
   case 0x56: {
@@ -1859,11 +1859,11 @@ void action_demo(wz_class *i_this) {
                (f32)l_debug.mDoorsCameraRate, 0.025f);
     wz_camCalc(&wz::state(i_this)->mDemoEyeZ, (f32)l_debug.mDoorsEyeZ + 330.0f,
                (f32)l_debug.mDoorsCameraRate, 0.025f);
-    if (!i_this->m2B4->mFrameCtrl.checkPass(159.0f)) {
+    if (!i_this->mpMorf->mFrameCtrl.checkPass(159.0f)) {
       break;
     }
     if ((s16)l_debug.mHoldIntro != 0) {
-      i_this->m2B4->mFrameCtrl.mRate = 0.0f;
+      i_this->mpMorf->mFrameCtrl.mRate = 0.0f;
       break;
     }
     f32 sp = (f32)l_debug.mIntroBackwardSpeed + 10.0f;
@@ -1968,7 +1968,7 @@ void action_demo(wz_class *i_this) {
     wz_camCalc(&wz::state(i_this)->mDemoEyeZ, (f32)l_debug.mFightEyeZ + 570.0f,
                (f32)l_debug.mFightCameraRate, 0.3f);
     {
-      mDoExt_McaMorf *morf = gabi::at<mDoExt_McaMorf>(i_this->m2B4.v);
+      mDoExt_McaMorf *morf = gabi::at<mDoExt_McaMorf>(i_this->mpMorf.v);
       if (!(morf->mFrameCtrl.mState & 1) &&
           !(morf->mFrameCtrl.getRate() == 0.0f)) {
         if (!morf->mFrameCtrl.checkPass((f32)l_debug.mFightStartFrame +
@@ -2028,7 +2028,7 @@ void action_demo(wz_class *i_this) {
         (s16)(fopAcM_searchActorAngleY(i_this, dComIfGp_getPlayer(0)) + 0x8000);
     wz_playerSetPos(player, vt, &player->current.pos, ang);
     cLib_addCalc0(&i_this->speedF, 1.0f, 2.0f);
-    mDoExt_McaMorf *morf = gabi::at<mDoExt_McaMorf>(i_this->m2B4.v);
+    mDoExt_McaMorf *morf = gabi::at<mDoExt_McaMorf>(i_this->mpMorf.v);
     if (!(morf->mFrameCtrl.mState & 1) &&
         !(morf->mFrameCtrl.getRate() == 0.0f)) {
       break;
@@ -2142,7 +2142,7 @@ void action_demo(wz_class *i_this) {
     wz::state(i_this)->mDemoEyeZ = ez;
   }
   if (i_this->mCurrBckIdx == 0x11 &&
-      i_this->m2B4->mFrameCtrl.checkPass(70.0f)) {
+      i_this->mpMorf->mFrameCtrl.checkPass(70.0f)) {
     wz_demoMonsSe(i_this);
   }
   s8 h = i_this->health;
@@ -2229,7 +2229,7 @@ static void wz_rodColor(wz_class *i_this, int cb) {
   wz_rodEmitterMtx(i_this, wz_cbEmitter(i_this, cb));
 }
 static inline bool wz_morfStopped(wz_class *i_this) {
-  mDoExt_McaMorf *m = gabi::at<mDoExt_McaMorf>(i_this->m2B4.v);
+  mDoExt_McaMorf *m = gabi::at<mDoExt_McaMorf>(i_this->mpMorf.v);
   return (m->mFrameCtrl.mState & 1) || m->mFrameCtrl.getRate() == 0.0f;
 }
 static inline void wz_monsSe(wz_class *i_this, u32 id) {
@@ -2366,14 +2366,14 @@ static void action_dousa(wz_class *i_this) {
     }
     u32 morf;
     if ((u8)wz::state(i_this)->mWeaponKind != 1) {
-      morf = i_this->m2B4.v;
+      morf = i_this->mpMorf.v;
       if ((f32)wz::morf(morf)->mFrameCtrl.mFrame < 38.0f) {
         wz::state(i_this)->mTargetAngle =
             fopAcM_searchActorAngleY(i_this, dComIfGp_getPlayer(0));
-        morf = i_this->m2B4.v;
+        morf = i_this->mpMorf.v;
       }
     } else {
-      morf = i_this->m2B4.v;
+      morf = i_this->mpMorf.v;
     }
     if (wz::morf(morf)->mFrameCtrl.checkPass(35.0f)) {
       u8 f = (u8)wz::state(i_this)->mWeaponKind;
@@ -2647,7 +2647,7 @@ static void action_itai(wz_class *i_this) {
       } else {
         i_this->mAlpha = a;
       }
-      mDoExt_McaMorf *m = gabi::at<mDoExt_McaMorf>(i_this->m2B4.v);
+      mDoExt_McaMorf *m = gabi::at<mDoExt_McaMorf>(i_this->mpMorf.v);
       (void)m;
       if (!wz_morfStopped(i_this)) {
         return;
@@ -2852,18 +2852,18 @@ static void action_tama_dousa(wz_class *i_this) {
                   i_this->current.pos.z);
       return;
     }
-    if (((u32)i_this->m7D8.mGObjAt.mRPrm & 1) ||
-        dCcD_GObjInf_ChkAtHit_wz((&i_this->m7D8))) {
-      f32 z = i_this->m7D8.mGObjAt.mHitPos.z,
-          x = i_this->m7D8.mGObjAt.mHitPos.x,
-          y = i_this->m7D8.mGObjAt.mHitPos.y;
+    if (((u32)i_this->mBallSph.mGObjAt.mRPrm & 1) ||
+        dCcD_GObjInf_ChkAtHit_wz((&i_this->mBallSph))) {
+      f32 z = i_this->mBallSph.mGObjAt.mHitPos.z,
+          x = i_this->mBallSph.mGObjAt.mHitPos.x,
+          y = i_this->mBallSph.mGObjAt.mHitPos.y;
       wz_tamaNext(i_this, x, y, z);
       return;
     }
-    if (dCcD_GObjInf_ChkTgHit((&i_this->m7D8))) {
-      f32 z = i_this->m7D8.mGObjTg.mHitPos.z,
-          x = i_this->m7D8.mGObjTg.mHitPos.x,
-          y = i_this->m7D8.mGObjTg.mHitPos.y;
+    if (dCcD_GObjInf_ChkTgHit((&i_this->mBallSph))) {
+      f32 z = i_this->mBallSph.mGObjTg.mHitPos.z,
+          x = i_this->mBallSph.mGObjTg.mHitPos.x,
+          y = i_this->mBallSph.mGObjTg.mHitPos.y;
       wz_tamaNext(i_this, x, y, z);
     }
     return;
@@ -2916,14 +2916,14 @@ static void action_tama_dousa(wz_class *i_this) {
       if (n == 0) {
         fopAc_ac_c *p = fopAcM_SearchByID(i_this->mParentId);
         if (p != nullptr) {
-          static_cast<wz_class *>(p)->m470 = 0;
+          static_cast<wz_class *>(p)->mHasActiveSummon = 0;
         }
       }
-      u32 at = (u32)*wz::view<be<u32>>(&i_this->m7D8),
-          tg = (u32)i_this->m7D8.mObjTg.mSPrm;
-      *wz::view<be<u32>>(&i_this->m7D8) = at & ~1u;
-      i_this->m7D8.mObjTg.mSPrm = tg & ~1u;
-      dCcD_GObjInf_ClrTgHit((&i_this->m7D8));
+      u32 at = (u32)*wz::view<be<u32>>(&i_this->mBallSph),
+          tg = (u32)i_this->mBallSph.mObjTg.mSPrm;
+      *wz::view<be<u32>>(&i_this->mBallSph) = at & ~1u;
+      i_this->mBallSph.mObjTg.mSPrm = tg & ~1u;
+      dCcD_GObjInf_ClrTgHit((&i_this->mBallSph));
       i_this->scale.x = 0.0f;
       i_this->scale.y = 0.0f;
       i_this->scale.z = 0.0f;
@@ -2982,16 +2982,16 @@ static void action_tama_dousa(wz_class *i_this) {
   if (st == 0x68) {
     u8 type = i_this->mBehaviorType;
     if (type == 10) {
-      dPa_control_set(dComIfGp_getParticle(), 0, 0x823A, &i_this->m314,
+      dPa_control_set(dComIfGp_getParticle(), 0, 0x823A, &i_this->mBallHitPos,
                       &i_this->current.angle, nullptr, 0xFF, nullptr, -1,
                       nullptr, nullptr, nullptr);
     } else if (type == 11) {
-      dPa_control_set(dComIfGp_getParticle(), 0, 0x8282, &i_this->m314,
+      dPa_control_set(dComIfGp_getParticle(), 0, 0x8282, &i_this->mBallHitPos,
                       &i_this->current.angle, nullptr, 0xFF, nullptr, -1,
                       nullptr, nullptr, nullptr);
       fopAc_ac_c *p = fopAcM_SearchByID(i_this->mParentId);
       if (p != nullptr) {
-        static_cast<wz_class *>(p)->m470 = 0;
+        static_cast<wz_class *>(p)->mHasActiveSummon = 0;
       }
     }
     wz_followEnd2(i_this, 0, 1);
@@ -3043,7 +3043,7 @@ static BOOL daWZ_Execute(wz_class *i_this) {
       fopAcM_setGbaName_wz(i_this, 0x3C, 0x11, 0x2F);
       if (enemy_ice_wz(i_this->_A40)) {
         /* frozen: the models only follow the ice matrix */
-        u32 model = morf_model(i_this->m2B4.v);
+        u32 model = morf_model(i_this->mpMorf.v);
         f32 m[12];
         for (int k = 0; k < 12; k++) {
           m[k] = (f32)mDoMtx_stack_c::get()->m[k / 4][k % 4];
@@ -3051,9 +3051,9 @@ static BOOL daWZ_Execute(wz_class *i_this) {
         for (int k = 0; k < 12; k++) {
           gabi::at<J3DModel>(model)->mBaseTransformMtx.m[k / 4][k % 4] = m[k];
         }
-        McaMorf_calc(gabi::at<mDoExt_McaMorf_c>(i_this->m2B4.v));
+        McaMorf_calc(gabi::at<mDoExt_McaMorf_c>(i_this->mpMorf.v));
         if (i_this->mIsMiniBoss) {
-          u32 blk = i_this->m2B4->getModel()->mpMtxBuffer.v;
+          u32 blk = i_this->mpMorf->getModel()->mpMtxBuffer.v;
           u32 model2 = morf_model(i_this->mpMorf2.v);
           u16 fl = (u16)gabi::at<J3DMtxBuffer_hd>(blk)->mFlags;
           u32 src = (u32)gabi::at<J3DMtxBuffer_hd>(blk)->mpAnmMtx + 0x390;
@@ -3159,12 +3159,12 @@ static BOOL daWZ_Execute(wz_class *i_this) {
     u8 type = i_this->mBehaviorType;
     if (type != 12 && type != 13) {
       BG_check(i_this);
-      wz_setSphereCenter(&i_this->m7D8.mSph,
+      wz_setSphereCenter(&i_this->mBallSph.mSph,
                          &i_this->current.pos); /* cM3dGSph::SetC */
-      wz_setSphereRadius(&i_this->m7D8.mSph,
+      wz_setSphereRadius(&i_this->mBallSph.mSph,
                          (f32)wz::state(i_this)->mBallRadius); /* SetR */
-      cCcS_Set_wz((&i_this->m7D8));
-      dCcMassS_Mng_Set_wz((&i_this->m7D8), 1);
+      cCcS_Set_wz((&i_this->mBallSph));
+      dCcMassS_Mng_Set_wz((&i_this->mBallSph), 1);
     }
   }
   draw_SUB(i_this);
@@ -3246,7 +3246,7 @@ static void *wz_class_ct(void *p_) {
   body->__vtbl_hitinf = wz::VT_CYL;
   body->mCyl.__vtbl = wz::VT_CYL_GEOMETRY;
   bodyShape->mShapeVtable = wz::VT_SHAPE_CYL;
-  wz_constructSphere(&i_this->m7D8);
+  wz_constructSphere(&i_this->mBallSph);
   i_this->mLight.mHD20 = 1.0f;
   dCcD_Stts *stts2 = wz::view<dCcD_Stts>(i_this->mStts2);
   dCcD_Stts_ct(stts2);
@@ -3293,7 +3293,7 @@ static void wz_class_dt(void *p_, s32 flags) {
   wz_destroyAcchCircle(&wz::view<dBgS_AcchCir>(i_this->mAcchCir2)->m_cir, 2);
   dCcD_Cyl_dt(wz::view<dCcD_Cyl>(i_this->mCyl2), 2);
   dCcD_Stts_dt(wz::view<dCcD_Stts>(i_this->mStts2), 2);
-  wz_destroySphere(&i_this->m7D8, 2);
+  wz_destroySphere(&i_this->mBallSph, 2);
   dCcD_Cyl_dt(&i_this->mBodyCyl, 2);
   dCcD_Stts_dt(&i_this->mStts, 2);
   static_cast<dBgS_GrpPassChk *>(&i_this->mAcch)->__vtbl = wz::VT_ACCH_GROUP;

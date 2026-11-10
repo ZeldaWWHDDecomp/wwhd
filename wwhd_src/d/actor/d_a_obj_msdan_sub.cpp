@@ -74,7 +74,7 @@ BOOL Act_c::Create() {
         } else {
             mCurObjNo = 0;
         }
-        m2D4 = 0;
+        mMinObjNo = 0;
     } else {
         if (fopAcM_isSwitch(this, prm_get_swSave())) {
             mCurObjNo = 31;
@@ -83,13 +83,13 @@ BOOL Act_c::Create() {
         } else {
             mCurObjNo = 16;
         }
-        m2D4 = 16;
+        mMinObjNo = 16;
     }
-    m2DC = home.pos.y;
-    m2E0 = 0.0f;
+    mMoveY = home.pos.y;
+    mSpeedY = 0.0f;
     init_mtx();
     mpBgW->Move();
-    m2E4 = false;
+    mShockDone = false;
     return TRUE;
 }
 
@@ -127,64 +127,64 @@ BOOL Act_c::Execute(gptr<Mtx34>* pMtx) {
     u32 sw = prm_get_swSave();
     if (size) {
         if (fopAcM_isSwitch(this, sw)) {
-            f32 v = m2E0;
+            f32 v = mSpeedY;
             s32 cur = mCurObjNo;
             if (v > 0.0f) {
                 v = 0.0f;
-                m2E0 = v;
+                mSpeedY = v;
             }
             if (cur < 31) {
                 v = v - 10.0f;
-                f32 dc = m2DC + v;
-                m2E0 = v;
-                m2DC = dc;
+                f32 dc = mMoveY + v;
+                mSpeedY = v;
+                mMoveY = dc;
                 u32 obj = prm_get_objNo();
                 if ((u32)(s32)mCurObjNo == obj) {
                     s32 n = mCurObjNo;
                     f32 y = step_y(home.pos.y, n);
                     current.pos.y = dc;
-                    if (!(m2DC > y)) {
+                    if (!(mMoveY > y)) {
                         n = mCurObjNo + 1;
                         current.pos.y = y;
                         mCurObjNo = n;
-                        if (m2E4 == 0) {
-                            if (!(m2DC > half_y(home.pos.y, n)) && (n <= 20 || (n & 1) != 0)) {
+                        if (mShockDone == 0) {
+                            if (!(mMoveY > half_y(home.pos.y, n)) && (n <= 20 || (n & 1) != 0)) {
                                 start_shock();
-                                m2E4 = true;
+                                mShockDone = true;
                             }
                         }
                         se_start_current(this, JA_SE_OBJ_SW_STAIR_ON_1);
-                        m2E0 = 0.0f;
+                        mSpeedY = 0.0f;
                     }
                 } else {
                     s32 n = mCurObjNo; /* loaded after the call above */
                     f32 h = home.pos.y;
                     f32 lim = gabi::fmadds((f32)(n + 1), 25.0f, (h + h) - 800.0f) * 0.5f;
                     if (!(dc > lim)) {
-                        m2E0 = 0.0f;
+                        mSpeedY = 0.0f;
                         mCurObjNo = n + 1;
-                        m2DC = home.pos.y;
+                        mMoveY = home.pos.y;
                     }
                 }
             }
         }
     } else if (fopAcM_isSwitch(this, sw)) {
-        f32 v = m2E0;
+        f32 v = mSpeedY;
         s32 cur = mCurObjNo;
         if (v > 0.0f) {
             v = 0.0f;
-            m2E0 = v;
+            mSpeedY = v;
         }
         if (cur < 31) {
             v = v - 10.0f;
-            f32 dc = m2DC + v;
-            m2E0 = v;
-            m2DC = dc;
+            f32 dc = mMoveY + v;
+            mSpeedY = v;
+            mMoveY = dc;
             u32 obj = prm_get_objNo();
             s32 n = mCurObjNo;
             if ((u32)n == obj) {
                 current.pos.y = dc;
-                dc = m2DC; /* loaded before the second (pure) prm_get_objNo() */
+                dc = mMoveY; /* loaded before the second (pure) prm_get_objNo() */
                 obj = prm_get_objNo();
             }
             f32 y = step_y(home.pos.y, n);
@@ -197,36 +197,36 @@ BOOL Act_c::Execute(gptr<Mtx34>* pMtx) {
                 }
                 dc = home.pos.y;
                 mCurObjNo = n1;
-                m2E0 = 0.0f;
+                mSpeedY = 0.0f;
                 n = n1;
-                m2DC = dc;
+                mMoveY = dc;
                 obj = prm_get_objNo();
             }
-            if ((u32)n == obj && m2E4 == 0) {
+            if ((u32)n == obj && mShockDone == 0) {
                 if (!(dc > half_y(home.pos.y, n)) && (n <= 20 || (n & 1) != 0)) {
                     start_shock();
-                    m2E4 = true;
+                    mShockDone = true;
                 }
             }
         }
     } else {
-        f32 v = m2E0;
+        f32 v = mSpeedY;
         s32 cur = mCurObjNo;
-        s32 d4 = m2D4;
+        s32 d4 = mMinObjNo;
         if (v < 0.0f) {
             v = 0.0f;
-            m2E0 = v;
+            mSpeedY = v;
         }
         if (cur >= d4) {
             v = v + 15.0f;
-            f32 dc = m2DC + v;
-            m2E0 = v;
-            m2DC = dc;
+            f32 dc = mMoveY + v;
+            mSpeedY = v;
+            mMoveY = dc;
             u32 obj = prm_get_objNo();
             f32 h = home.pos.y;
             if ((u32)(s32)mCurObjNo == obj) {
                 current.pos.y = dc;
-                dc = m2DC;
+                dc = mMoveY;
             }
             if (!(dc < h)) {
                 obj = prm_get_objNo();
@@ -235,20 +235,20 @@ BOOL Act_c::Execute(gptr<Mtx34>* pMtx) {
                     current.pos.y = h;
                     n = mCurObjNo;
                 }
-                if (n > m2D4) {
+                if (n > mMinObjNo) {
                     if ((u32)n == prm_get_objNo()) {
                         se_start_current(this, JA_SE_OBJ_SW_STAIR_OFF_1);
                         n = mCurObjNo;
-                        m2E4 = false;
+                        mShockDone = false;
                     }
                     n = n - 1;
                     f32 y = step_y(home.pos.y, n);
                     mCurObjNo = n;
-                    m2DC = y;
-                    m2E0 = 0.0f;
+                    mMoveY = y;
+                    mSpeedY = 0.0f;
                 } else {
-                    m2DC = home.pos.y;
-                    m2E0 = 0.0f;
+                    mMoveY = home.pos.y;
+                    mSpeedY = 0.0f;
                 }
             }
         }

@@ -139,7 +139,7 @@ bool dCamera_c::followCamera(s32 style) {
     f32 v20 = camParamVal(style, 20) * 0.86f; /* HD */
     (void)dComIfGp_getAttention();            /* dComIfGp_getAttention() (unused) */
     bool bVar2 = false;
-    if (m108 == 0) {
+    if (mCurModeTimer == 0) {
         p->m3AC = 0.0f;
         p->m3B0 = 0.0f;
         p->m3D9 = 0;
@@ -148,14 +148,14 @@ bool dCamera_c::followCamera(s32 style) {
         f31 = 0.66f;
         if (v15 < 35.0f)
             v15 = 35.0f;
-        cameraFollowAngleScaleAssign(&m148, 0.33f); /* m148 *= 0.33f */
+        cameraFollowAngleScaleAssign(&mForwardTiltOffset, 0.33f); /* mForwardTiltOffset *= 0.33f */
         if (v10 < 420.0f)
             v10 = 420.0f;
         if (v11 < 350.0f)
             v11 = 350.0f;
         cameraFollowAngleValFloat(&hi, 80.0f);
-        if (cb1Flying() && m788 != 0) {
-            if (m787 != 0) {
+        if (cb1Flying() && mIsKazeMap != 0) {
+            if (mInKazeCenter != 0) {
                 cSAngle_l a;
                 cSAngle_l* ap = cameraFollowAngleFloatCtor(&a, 30.0f);
                 if ((s16)lo < (s16)*ap)
@@ -196,7 +196,7 @@ bool dCamera_c::followCamera(s32 style) {
         bVar2 = true;
         v25 = 80.0f;
         v11 = v10;
-        m148 = angLoad(&angle0());
+        mForwardTiltOffset = angLoad(&angle0());
     }
     cSAngle_ct(&peep, &angle0());
     if (dComIfGp_getPlayerStatus0(mPadId) & (daPyStts0_UNK20_e | daPyStts0_UNK40_e)) {
@@ -234,7 +234,7 @@ bool dCamera_c::followCamera(s32 style) {
     cpf(&ofs.z, &p->m3B0);
     cpf(&ofs.x, &p->m3AC);
     ofs.y = v5;
-    if (m108 == 0) {
+    if (mCurModeTimer == 0) {
         cXyz d;
         cXyz pos;
         cXyz_mi(&mViewCache.mEye, &d, &mViewCache.mCenter);
@@ -265,10 +265,10 @@ bool dCamera_c::followCamera(s32 style) {
         p->m3B8 = 0.0f;
         positionOf(&pos, mpPlayerActor.get());
         cpf(&p->m3A4, &pos.y);
-        if ((mEventFlags & 0x8000) || m110 == 0) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((mEventFlags & 0x8000) || mModeChangeTransition == 0) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
             p->m37C = 1;
             cpf(&p->m39C, &mDirection.mRadius);
             cpf(&p->m398, &mDirection.mRadius);
@@ -320,15 +320,15 @@ bool dCamera_c::followCamera(s32 style) {
     directionOf(&pdir, mpPlayerActor.get());
     cameraFollowAngleSubtract(&pdir, &rel, &mViewCache.mDirection.mU); /* local_4ac */
     tgt.y = getWaterSurfaceHeight(&tgt);
-    if (m100 == 0) {
+    if (mStyleSettle0 == 0) {
         cXyz d;
         cXyz s;
         cXyz x;
         cXyz e;
-        if (m31D != 0)
+        if (mFollowMoveBg != 0)
             cameraFollowMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), 1,
                                        &p->m3C0, 0, 0); /* MoveBgMatrixCrrPos */
-        f32 r = (f32)(s32)((s32)p->m37C - (s32)m108);
+        f32 r = (f32)(s32)((s32)p->m37C - (s32)mCurModeTimer);
         f32 k = r / p->m380;
         p->m384 = r;
         cXyz_mi(&tgt, &d, &p->m3C0);
@@ -384,10 +384,10 @@ bool dCamera_c::followCamera(s32 style) {
         cXyz_pl(&mViewCache.mCenter, &e, &x);
         mViewCache.mEye.copy(e);
         p->m3CC.copy(mViewCache.mEye);
-        if ((u32)m108 >= (u32)((s32)p->m37C - 1)) {
-            m102 = 1;
-            m101 = 1;
-            m100 = 1;
+        if ((u32)mCurModeTimer >= (u32)((s32)p->m37C - 1)) {
+            mStyleSettle2 = 1;
+            mStyleSettle1 = 1;
+            mStyleSettle0 = 1;
         }
         p->m3A0 = angDegree(&mViewCache.mDirection.mV);
         cpf(&p->m39C, &mViewCache.mDirection.mRadius);
@@ -406,7 +406,7 @@ bool dCamera_c::followCamera(s32 style) {
     pp.y = pp.y + 10.0f;
     f32 foot = footHeightOf(mpPlayerActor.get());
     f32 height = foot - groundHeight(&pp);
-    if ((m360 != 0 || (dComIfGp_getPlayerStatus0(mPadId) & (daPyStts0_SWIM_e)) || hyoiKamome()) &&
+    if ((mPlayerOnFloor != 0 || (dComIfGp_getPlayerStatus0(mPadId) & (daPyStts0_SWIM_e)) || hyoiKamome()) &&
         !(dComIfGp_getPlayerStatus0(mPadId) & (daPyStts0_UNK200_e))) {
         p->m388 = 0;
         p->m394 = 0.0f;
@@ -482,7 +482,7 @@ bool dCamera_c::followCamera(s32 style) {
     cXyz_mi(&tgt, &d, &mViewCache.mCenter);
     cameraFollowVectorMultiply(&d, &s, &mul); /* cXyz * cXyz */
     PSVECAdd(&mViewCache.mCenter, &s, &mViewCache.mCenter);
-    if (m780 == 0) {
+    if (mIsSeaMap == 0) {
         cXyz a;
         attentionPos(&a, mpPlayerActor.get());
         if (dComIfGp_getPlayerStatus0(mPadId) &
@@ -656,7 +656,7 @@ bool dCamera_c::followCamera(s32 style) {
                     w = 0.25f;
                     v19 = 0.25f;
                 }
-                f32 deg = angDegree(&m148);
+                f32 deg = angDegree(&mForwardTiltOffset);
                 f32 a0 = p->m3A0;
                 f32 nn = gabi::fmadds((bc + deg) - a0, v19, a0);
                 p->m3A0 = nn;
@@ -800,7 +800,7 @@ bool dCamera_c::followCamera(s32 style) {
         cSAngle_l t32;
         cSAngle_l t4E;
         cSAngle_l t4C;
-        cSAngle_l* sp = cameraFollowAngleShortCtor(&t32, (s16)(m07C << 7));
+        cSAngle_l* sp = cameraFollowAngleShortCtor(&t32, (s16)(mFrameCounter << 7));
         f32 sn = cameraFollowAngleSin(sp); /* Sin */
         mViewCache.mFovy =
             gabi::fmadds(setup(this)->m07C, sn, mViewCache.mFovy); /* mCamSetup.m07C */

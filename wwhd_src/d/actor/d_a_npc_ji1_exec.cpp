@@ -58,8 +58,8 @@ BOOL daNpc_Ji1_c::_delete() {
   if (heap.get() && mpOrcaMorf.get()) {
     mpOrcaMorf->stopZelAnime();
   }
-  mDoAud_seDeleteObject(&field_0xB78);
-  mDoAud_seDeleteObject(&field_0xB84);
+  mDoAud_seDeleteObject(&mSpearTipPos);
+  mDoAud_seDeleteObject(&mSpearButtPos);
   dComIfGp_att_revivalAleart();
   reinterpret_cast<Ji1ExecCallbackHD *>(&mSmokeCb)->remove();
   reinterpret_cast<Ji1ExecCallbackHD *>(&mSmokeCbAT)->remove();
@@ -86,29 +86,29 @@ cPhs_State daNpc_Ji1_c::_create() {
                              gabi::ea(&l_objAcchVtable14),
                              gabi::ea(&l_objAcchVtable20));
       dBgS_AcchCir_ct(&mAcchCir);
-      dCcD_Stts_ct(&field_0x638);
-      dCcD_Stts_ct(&field_0x674);
-      dCcD_Cyl_ct(&field_0x6B0, gabi::ea(&l_aabVtable));
-      dCcD_Cyl_ct(&field_0x7E0, gabi::ea(&l_aabVtable));
-      dCcD_Cyl_ct(&field_0x910, gabi::ea(&l_aabVtable));
+      dCcD_Stts_ct(&mStts);
+      dCcD_Stts_ct(&mGuardStts);
+      dCcD_Cyl_ct(&mCyl, gabi::ea(&l_aabVtable));
+      dCcD_Cyl_ct(&mGuardCyl, gabi::ea(&l_aabVtable));
+      dCcD_Cyl_ct(&mAtCyl, gabi::ea(&l_aabVtable));
       /* dCcD_Cps: GObjInf, shape attr, cM3dGAab (per TU), cM3dGCps */
-      auto *capsule = ji1ExecCapsuleHD(&field_0xA40);
-      ji1ExecHitInfoConstructHD(&field_0xA40);
+      auto *capsule = ji1ExecCapsuleHD(&mAtCps);
+      ji1ExecHitInfoConstructHD(&mAtCps);
       capsule->mAabVtable = gabi::ea(&l_shapeVtable);
       capsule->mShapeVtable = gabi::ea(&l_aabVtable);
       ji1ExecLineConstructHD(&capsule->mCps);
       capsule->mCps.__vtbl = gabi::ea(&l_capsuleVtable);
-      field_0xA40.__vtbl_hitinf = gabi::ea(&l_hitInfoVtable);
+      mAtCps.__vtbl_hitinf = gabi::ea(&l_hitInfoVtable);
       capsule->mAabVtable = gabi::ea(&l_capsuleAttrVtable);
       auto *head = reinterpret_cast<dNpc_HeadAnm_c *>(mHeadAnm);
-      head->field_0x00.x = 0;
-      head->field_0x00.y = 0;
-      head->field_0x00.z = 0;
-      head->field_0x14 = 0.0f;
-      head->field_0x18 = 0.0f;
-      head->field_0x1C = 0;
-      head->field_0x1E = 0;
-      head->field_0x20 = 0;
+      head->mSwingAngle.x = 0;
+      head->mSwingAngle.y = 0;
+      head->mSwingAngle.z = 0;
+      head->mVerticalAmplitude = 0.0f;
+      head->mHorizontalAmplitude = 0.0f;
+      head->mSwingPhase = 0;
+      head->mSwingPhaseStep = 0;
+      head->mSwingCount = 0;
       cond = actor_condition;
     }
     actor_condition = cond | fopAcCnd_INIT_e;
@@ -129,7 +129,7 @@ static inline BOOL CreateInit_tail(daNpc_Ji1_c *i_this) {
   dComIfGp_att_offAleart();
   ji1ExecSetActorInfoHD(&i_this->mEventCut, "Ji1", i_this);
   i_this->mEventCut.mpJntCtrl = &i_this->m_jnt;
-  i_this->field_0xC84 = 0x12;
+  i_this->mEventNo = 0x12;
   i_this->field_0xD7B = 0;
   i_this->field_0xD7C = 0;
   i_this->field_0xD7E = 0;
@@ -139,7 +139,7 @@ static inline BOOL CreateInit_tail(daNpc_Ji1_c *i_this) {
   i_this->attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 0xB5;
   i_this->mCryBrkFrame = 0.0f;
   i_this->mCryBtkFrame = 0.0f;
-  i_this->field_0x430 = nullptr;
+  i_this->mpTearEmitter = nullptr;
   i_this->set_mtx();
   // HD: creation also clears the shared reply flag.
   l_replyFlag = 0;
@@ -164,79 +164,79 @@ BOOL daNpc_Ji1_c::CreateInit() {
   attention_info.flags = fopAc_Attn_LOCKON_MISC_e | fopAc_Attn_LOCKON_TALK_e |
                          fopAc_Attn_ACTION_SPEAK_e;
 
-  field_0x638.Init(0xFF, 0xFF, this);
-  field_0x674.Init(0xFF, 0xFF, this);
-  field_0x6B0.Set(&l_cyl_src);
-  field_0x6B0.SetStts(&field_0x638);
-  field_0x7E0.Set(&l_cyl2_src);
-  field_0x7E0.SetStts(&field_0x674);
-  field_0x7E0.mGObjTg.mHitCallback =
+  mStts.Init(0xFF, 0xFF, this);
+  mGuardStts.Init(0xFF, 0xFF, this);
+  mCyl.Set(&l_cyl_src);
+  mCyl.SetStts(&mStts);
+  mGuardCyl.Set(&l_cyl2_src);
+  mGuardCyl.SetStts(&mGuardStts);
+  mGuardCyl.mGObjTg.mHitCallback =
       ji1ExecTgHitCallbackHD; /* daJi1_TgHitCallback */
-  field_0x7E0.mGObjCo.mHitCallback =
+  mGuardCyl.mGObjCo.mHitCallback =
       ji1ExecCoHitCallbackHD;       /* daJi1_CoHitCallback */
-  field_0x6B0.mGObjTg.mSPrm &= ~1u; /* OffTgShield */
-  field_0x7E0.mGObjTg.mSPrm |= 1u;  /* OnTgShield */
-  field_0x910.Set(&l_cylAt_src);
-  field_0x910.SetStts(&field_0x638);
-  ji1ExecSetCapsuleHD(&field_0xA40, &l_cpsAt_src);
-  field_0xA40.SetStts(&field_0x638);
-  ji1ExecSetStartEndHD(&ji1ExecCapsuleHD(&field_0xA40)->mCps, &field_0xB84,
-                       &field_0xB78);
-  ji1ExecCapsuleHD(&field_0xA40)->mCps.mRadius = 50.0f;
-  field_0xA40.mGObjAt.mHitCallback =
+  mCyl.mGObjTg.mSPrm &= ~1u; /* OffTgShield */
+  mGuardCyl.mGObjTg.mSPrm |= 1u;  /* OnTgShield */
+  mAtCyl.Set(&l_cylAt_src);
+  mAtCyl.SetStts(&mStts);
+  ji1ExecSetCapsuleHD(&mAtCps, &l_cpsAt_src);
+  mAtCps.SetStts(&mStts);
+  ji1ExecSetStartEndHD(&ji1ExecCapsuleHD(&mAtCps)->mCps, &mSpearButtPos,
+                       &mSpearTipPos);
+  ji1ExecCapsuleHD(&mAtCps)->mCps.mRadius = 50.0f;
+  mAtCps.mGObjAt.mHitCallback =
       ji1ExecAtHitCallbackHD; /* daJi1_AtHitCallback */
 
   mBtHeight = 240.0f; /* initBt */
   mBtBodyR = 100.0f;
   mAnimation = -1;
   field_0xD68 = 0;
-  field_0xD6C = 0;
-  field_0xD70 = 0;
-  field_0xD74 = 0;
-  field_0xD78 = 0;
+  mSubActionPhase = 0;
+  mTeachStep = 0;
+  mGuardCount = 0;
+  mFirstMsgDone = 0;
   field_0xD79 = 0;
   field_0xC94 = 0;
   field_0xC90 = 0;
-  field_0xC98 = l_hio.field_0x54[field_0xD70];
-  field_0xC28 = 0;
-  field_0xC2C = 0;
-  field_0xC4C = 0.0f;
-  field_0xC50 = 0.0f;
-  field_0xC9C = 0.0f;
-  field_0xD38.copy(current.pos);
+  mTeachHitsLeft = l_hio.field_0x54[mTeachStep];
+  mCoHit = 0;
+  mAttackEndWait = 0;
+  mCoCorrectSum = 0.0f;
+  mBgCorrectSum = 0.0f;
+  mBackSlideDist = 0.0f;
+  mBackSlideStartPos.copy(current.pos);
 
   if (dComIfGs_isEventBit(0x0520)) {
     if (!dComIfGs_isEventBit(0x0002)) {
-      field_0xD84 = Ji1Exec_HARPOON_HIDDEN;
-      field_0xD50.set(-13.0f, -4.0f, 10.0f);
-      field_0xD5C.x = 0x4000;
-      field_0xD5C.y = 0;
-      field_0xD5C.z = 0x7FFF;
+      mHarpoonState = Ji1Exec_HARPOON_HIDDEN;
+      mHeldItemOffset.set(-13.0f, -4.0f, 10.0f);
+      mHeldItemAngle.x = 0x4000;
+      mHeldItemAngle.y = 0;
+      mHeldItemAngle.z = 0x7FFF;
       current.pos.x = 0.0f;
       current.pos.y = 0.0f;
       current.pos.z = -850.0f;
       current.angle.y = -0x8000;
       ji1_setAction(this, ACT_kaitenExpAction, nullptr);
     } else {
-      field_0xD84 = Ji1Exec_HARPOON_HELD;
-      field_0xD50.set(-13.0f, -4.0f, 10.0f);
-      field_0xD5C.x = 0x4000;
-      field_0xD5C.y = 0;
-      field_0xD5C.z = 0x7FFF;
+      mHarpoonState = Ji1Exec_HARPOON_HELD;
+      mHeldItemOffset.set(-13.0f, -4.0f, 10.0f);
+      mHeldItemAngle.x = 0x4000;
+      mHeldItemAngle.y = 0;
+      mHeldItemAngle.z = 0x7FFF;
       ji1_setAction(this, ACT_normalAction, nullptr);
     }
-    field_0xD28.copy(home.pos);
+    mInitPos.copy(home.pos);
   } else {
     if (dComIfGs_isEventBit(0x0501) || dComIfGs_isEventBit(0x0001)) {
-      field_0xD84 = Ji1Exec_HARPOON_HELD;
-      field_0xD50.set(-13.0f, -4.0f, 10.0f);
-      field_0xD5C.x = 0x4000;
-      field_0xD5C.y = 0;
-      field_0xD5C.z = 0x7FFF;
-      field_0xD28.copy(home.pos);
+      mHarpoonState = Ji1Exec_HARPOON_HELD;
+      mHeldItemOffset.set(-13.0f, -4.0f, 10.0f);
+      mHeldItemAngle.x = 0x4000;
+      mHeldItemAngle.y = 0;
+      mHeldItemAngle.z = 0x7FFF;
+      mInitPos.copy(home.pos);
       ji1_setAction(this, ACT_normalAction, nullptr);
     } else {
-      field_0xD84 = Ji1Exec_HARPOON_HIDDEN;
+      mHarpoonState = Ji1Exec_HARPOON_HIDDEN;
       if (!dComIfGs_isEventBit(0x0640) || l_hio.field_0x30) {
         field_0xD68 = 0;
         ji1_setAction(this, ACT_kaitenExpAction, nullptr);
@@ -247,7 +247,7 @@ BOOL daNpc_Ji1_c::CreateInit() {
       current.pos.y = 0.0f;
       current.pos.z = -850.0f;
       current.angle.y = -0x8000;
-      field_0xD28.copy(current.pos);
+      mInitPos.copy(current.pos);
       home.angle.y = -0x8000;
     }
   }
@@ -290,22 +290,22 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
     Mtx34 *m = ji1ExecGetAnmMtxHD(i_this->mpOrcaMorf->getModel(), head);
     PSMTXMultVecSR(m, &l_head_top, temp);
   }
-  s16 temp3 = i_this->field_0xBA6;
-  s16 temp4 = i_this->field_0xBA8;
+  s16 temp3 = i_this->mHeadPitch;
+  s16 temp4 = i_this->mHeadYaw;
   gabi::Local<cXyz> xz;
   xz->x = (f32)temp2->x;
   xz->y = 0.0f;
   xz->z = (f32)temp2->z;
   if (temp->y < 0.0f) {
     f32 d = std_sqrtf(PSVECSquareMag(xz));
-    i_this->field_0xBA6 = cM_atan2s(temp2->y, -d);
+    i_this->mHeadPitch = cM_atan2s(temp2->y, -d);
   } else {
     f32 d = std_sqrtf(PSVECSquareMag(xz));
-    i_this->field_0xBA6 = cM_atan2s(temp2->y, d);
+    i_this->mHeadPitch = cM_atan2s(temp2->y, d);
   }
   s16 ba8 = cM_atan2s(temp2->x, temp2->z);
-  i_this->field_0xBA8 = ba8;
-  s16 temp3_2 = (s16)(i_this->field_0xBA6 - temp3) >> 1;
+  i_this->mHeadYaw = ba8;
+  s16 temp3_2 = (s16)(i_this->mHeadPitch - temp3) >> 1;
   s16 temp4_2 = (s16)(ba8 - temp4) >> 1;
 
   Mtx34 *pMtx = ji1ExecGetAnmMtxHD(pModel, i_this->hair1JointNo);
@@ -314,9 +314,9 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
   sp48->y = (f32)pMtx->m[1][3];
   sp48->z = (f32)pMtx->m[2][3];
   gabi::Local<cXyz> sp3C;
-  sp3C->x = i_this->field_0xBC4.x - sp48->x;
-  sp3C->y = i_this->field_0xBC4.y - sp48->y - 8.5f;
-  sp3C->z = i_this->field_0xBC4.z - sp48->z;
+  sp3C->x = i_this->mHair1LastPos.x - sp48->x;
+  sp3C->y = i_this->mHair1LastPos.y - sp48->y - 8.5f;
+  sp3C->z = i_this->mHair1LastPos.z - sp48->z;
   gabi::Local<cXyz> wv;
   cXyz_ml(windVec, wv, wind);
   PSVECAdd(sp3C, wv, sp3C);
@@ -335,22 +335,22 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
   s16 r4 = i_this->current.angle.y + i_this->m_jnt.mAngles[0][1];
   f32 temp10 = gabi::fmadds(z, cM_scos(r4), x * cM_ssin(r4));
   f32 y = sp3C->y;
-  s16 r25 = i_this->field_0xBAC;
-  s16 r26 = i_this->field_0xBAA;
+  s16 r25 = i_this->mHair1AngleY;
+  s16 r26 = i_this->mHair1AngleZ;
   s16 temp9 = cM_atan2s(-temp10, -y);
   if (temp9 < 0 && temp9 > -0x6000) {
     temp9 = 0;
   } else if (temp9 > 0x7C00 || temp9 <= -0x6000) {
     temp9 = 0x7C00;
   }
-  temp9 += i_this->field_0xBA6;
-  cLib_addCalcAngleS2(&i_this->field_0xBAA, temp9, 5, 0x400);
+  temp9 += i_this->mHeadPitch;
+  cLib_addCalcAngleS2(&i_this->mHair1AngleZ, temp9, 5, 0x400);
   {
-    s32 add = i_this->field_0xBB6 + temp3_2;
-    i_this->field_0xBAA = (s16)(i_this->field_0xBAA + add + add);
+    s32 add = i_this->mHair1SpeedZ + temp3_2;
+    i_this->mHair1AngleZ = (s16)(i_this->mHair1AngleZ + add + add);
   }
-  i_this->field_0xBAA =
-      minMax(i_this->field_0xBAA, l_hio.field_0xF4, l_hio.field_0xF6);
+  i_this->mHair1AngleZ =
+      minMax(i_this->mHair1AngleZ, l_hio.field_0xF4, l_hio.field_0xF6);
 
   {
     s16 a = i_this->current.angle.y + i_this->m_jnt.mAngles[0][1];
@@ -360,80 +360,80 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
     f32 f6 = cM_scos(a);
     f32 sq = std_sqrtf(f1);
     f32 v = gabi::fmsubs((f32)sp3C->z, f5, (f32)sp3C->x * f6);
-    cLib_addCalcAngleS2(&i_this->field_0xBAC, cM_atan2s(v, sq), 5, 0x400);
+    cLib_addCalcAngleS2(&i_this->mHair1AngleY, cM_atan2s(v, sq), 5, 0x400);
   }
-  i_this->field_0xBAC =
-      (s16)(i_this->field_0xBAC + (s16)(i_this->field_0xBB8 - temp4_2));
-  s16 bac = minMax(i_this->field_0xBAC, l_hio.field_0xE8, l_hio.field_0xEA);
-  s16 baa = i_this->field_0xBAA;
-  i_this->field_0xBAC = bac;
+  i_this->mHair1AngleY =
+      (s16)(i_this->mHair1AngleY + (s16)(i_this->mHair1SpeedY - temp4_2));
+  s16 bac = minMax(i_this->mHair1AngleY, l_hio.field_0xE8, l_hio.field_0xEA);
+  s16 baa = i_this->mHair1AngleZ;
+  i_this->mHair1AngleY = bac;
 
   s32 d26 = baa - r26;
   s32 d25 = bac - r25;
-  i_this->field_0xBB6 = tenth2(d26);
-  i_this->field_0xBB8 = tenth2(d25);
-  i_this->field_0xBAE = (s16)(i_this->field_0xBAE - d26);
-  i_this->field_0xBB0 = (s16)(i_this->field_0xBB0 - d25);
-  r26 = i_this->field_0xBAE;
-  r25 = i_this->field_0xBB0;
-  cLib_addCalcAngleS2(&i_this->field_0xBAE, 0, 5, 0x400);
-  cLib_addCalcAngleS2(&i_this->field_0xBB0, 0, 5, 0x400);
+  i_this->mHair1SpeedZ = tenth2(d26);
+  i_this->mHair1SpeedY = tenth2(d25);
+  i_this->mHair2AngleZ = (s16)(i_this->mHair2AngleZ - d26);
+  i_this->mHair2AngleY = (s16)(i_this->mHair2AngleY - d25);
+  r26 = i_this->mHair2AngleZ;
+  r25 = i_this->mHair2AngleY;
+  cLib_addCalcAngleS2(&i_this->mHair2AngleZ, 0, 5, 0x400);
+  cLib_addCalcAngleS2(&i_this->mHair2AngleY, 0, 5, 0x400);
 
-  i_this->field_0xBAE =
-      (s16)(i_this->field_0xBAE + (s16)(i_this->field_0xBBA + temp3_2));
-  i_this->field_0xBAE =
-      minMax(i_this->field_0xBAE, (s16)(l_hio.field_0xF8 - i_this->field_0xBAA),
-             (s16)(l_hio.field_0xFA - i_this->field_0xBAA));
-  i_this->field_0xBB0 =
-      (s16)(i_this->field_0xBB0 + (s16)(i_this->field_0xBBC - temp4_2));
-  i_this->field_0xBB0 =
-      minMax(i_this->field_0xBB0, (s16)(l_hio.field_0xEC - i_this->field_0xBAC),
-             (s16)(l_hio.field_0xEE - i_this->field_0xBAC));
+  i_this->mHair2AngleZ =
+      (s16)(i_this->mHair2AngleZ + (s16)(i_this->mHair2SpeedZ + temp3_2));
+  i_this->mHair2AngleZ =
+      minMax(i_this->mHair2AngleZ, (s16)(l_hio.field_0xF8 - i_this->mHair1AngleZ),
+             (s16)(l_hio.field_0xFA - i_this->mHair1AngleZ));
+  i_this->mHair2AngleY =
+      (s16)(i_this->mHair2AngleY + (s16)(i_this->mHair2SpeedY - temp4_2));
+  i_this->mHair2AngleY =
+      minMax(i_this->mHair2AngleY, (s16)(l_hio.field_0xEC - i_this->mHair1AngleY),
+             (s16)(l_hio.field_0xEE - i_this->mHair1AngleY));
 
-  d26 = i_this->field_0xBAE - r26;
-  d25 = i_this->field_0xBB0 - r25;
-  i_this->field_0xBBA = tenth2(d26);
-  i_this->field_0xBBC = tenth2(d25);
-  i_this->field_0xBB2 = (s16)(i_this->field_0xBB2 - d26);
-  i_this->field_0xBB4 = (s16)(i_this->field_0xBB4 - d25);
-  r26 = i_this->field_0xBB2;
-  r25 = i_this->field_0xBB4;
-  cLib_addCalcAngleS2(&i_this->field_0xBB2, 0, 5, 0x400);
-  cLib_addCalcAngleS2(&i_this->field_0xBB4, 0, 5, 0x400);
+  d26 = i_this->mHair2AngleZ - r26;
+  d25 = i_this->mHair2AngleY - r25;
+  i_this->mHair2SpeedZ = tenth2(d26);
+  i_this->mHair2SpeedY = tenth2(d25);
+  i_this->mHair3AngleZ = (s16)(i_this->mHair3AngleZ - d26);
+  i_this->mHair3AngleY = (s16)(i_this->mHair3AngleY - d25);
+  r26 = i_this->mHair3AngleZ;
+  r25 = i_this->mHair3AngleY;
+  cLib_addCalcAngleS2(&i_this->mHair3AngleZ, 0, 5, 0x400);
+  cLib_addCalcAngleS2(&i_this->mHair3AngleY, 0, 5, 0x400);
 
-  i_this->field_0xBB2 =
-      (s16)(i_this->field_0xBB2 + (s16)(i_this->field_0xBBE + temp3_2));
-  i_this->field_0xBB2 = minMax(
-      i_this->field_0xBB2,
-      (s16)(l_hio.field_0xFC - i_this->field_0xBAA - i_this->field_0xBAE),
-      (s16)(l_hio.field_0xFE - i_this->field_0xBAA - i_this->field_0xBAE));
-  i_this->field_0xBB4 =
-      (s16)(i_this->field_0xBB4 + (s16)(i_this->field_0xBC0 - temp4_2));
-  i_this->field_0xBB4 = minMax(
-      i_this->field_0xBB4,
-      (s16)(l_hio.field_0xF0 - i_this->field_0xBB0 - i_this->field_0xBAC),
-      (s16)(l_hio.field_0xF2 - i_this->field_0xBB0 - i_this->field_0xBAC));
-  i_this->field_0xBBE = tenth2(i_this->field_0xBB2 - r26);
-  i_this->field_0xBC0 = tenth2(i_this->field_0xBB4 - r25);
+  i_this->mHair3AngleZ =
+      (s16)(i_this->mHair3AngleZ + (s16)(i_this->mHair3SpeedZ + temp3_2));
+  i_this->mHair3AngleZ = minMax(
+      i_this->mHair3AngleZ,
+      (s16)(l_hio.field_0xFC - i_this->mHair1AngleZ - i_this->mHair2AngleZ),
+      (s16)(l_hio.field_0xFE - i_this->mHair1AngleZ - i_this->mHair2AngleZ));
+  i_this->mHair3AngleY =
+      (s16)(i_this->mHair3AngleY + (s16)(i_this->mHair3SpeedY - temp4_2));
+  i_this->mHair3AngleY = minMax(
+      i_this->mHair3AngleY,
+      (s16)(l_hio.field_0xF0 - i_this->mHair2AngleY - i_this->mHair1AngleY),
+      (s16)(l_hio.field_0xF2 - i_this->mHair2AngleY - i_this->mHair1AngleY));
+  i_this->mHair3SpeedZ = tenth2(i_this->mHair3AngleZ - r26);
+  i_this->mHair3SpeedY = tenth2(i_this->mHair3AngleY - r25);
 
   wind = gabi::fmadds(
-             std_sqrtf(ji1ExecSquareDistanceHD(&i_this->field_0xBC4, sp48)),
+             std_sqrtf(ji1ExecSquareDistanceHD(&i_this->mHair1LastPos, sp48)),
              0.65f, wind) /
          30.0f;
   if (wind > 1.0f) {
     wind = 1.0f;
   }
   s16 temp14 = (s16)gabi::ftoi(gabi::fmadds(wind, 4600.0f, 1500.0f));
-  s16 bd0 = (s16)(i_this->field_0xBD0 + temp14);
-  i_this->field_0xBD0 = bd0;
-  i_this->field_0xBD2 = (s16)gabi::ftoi(wind * 2280.0f * cM_scos(bd0));
+  s16 bd0 = (s16)(i_this->mHairWindPhase + temp14);
+  i_this->mHairWindPhase = bd0;
+  i_this->mHair1WindAngle = (s16)gabi::ftoi(wind * 2280.0f * cM_scos(bd0));
   f32 f5 = (f32)temp14;
   f32 f8 = (f32)bd0;
-  i_this->field_0xBD4 = (s16)gabi::ftoi(
+  i_this->mHair2WindAngle = (s16)gabi::ftoi(
       wind * 3908.0f * cM_scos(gabi::ftoi(gabi::fnmsubs(3.0f, f5, f8))));
-  i_this->field_0xBD6 = (s16)gabi::ftoi(
+  i_this->mHair3WindAngle = (s16)gabi::ftoi(
       wind * 7568.0f * cM_scos(gabi::ftoi(gabi::fnmsubs(6.0f, f5, f8))));
-  i_this->field_0xBC4.copy(*sp48.get());
+  i_this->mHair1LastPos.copy(*sp48.get());
 }
 
 /* 0224B268 */
@@ -443,7 +443,7 @@ BOOL daNpc_Ji1_c::_execute() {
   // HD: retain the unused play-object access before decrementing the hit
   // window.
   u8 e64 = ji1ExecHitCooldownHD(this);
-  u8 d84 = field_0xD84;
+  u8 d84 = mHarpoonState;
   if (e64 != 0) {
     ji1ExecHitCooldownHD(this) = (u8)(e64 - 1);
   }
@@ -491,10 +491,10 @@ BOOL daNpc_Ji1_c::_execute() {
       l_itemAimAngleGuard = 1;
       csXyz_ct(aim_angle, 0x4000, 0, 0x7FFF);
     }
-    field_0xD5C.x = (s16)aim_angle->x;
-    field_0xD5C.y = (s16)aim_angle->y;
-    field_0xD5C.z = (s16)aim_angle->z;
-    cLib_addCalcPos2(&field_0xD50, *aim_offset, 0.25f, 5.0f);
+    mHeldItemAngle.x = (s16)aim_angle->x;
+    mHeldItemAngle.y = (s16)aim_angle->y;
+    mHeldItemAngle.z = (s16)aim_angle->z;
+    cLib_addCalcPos2(&mHeldItemOffset, *aim_offset, 0.25f, 5.0f);
   } else {
     /* static cXyz aim_offset(-13.06f, -4.0f, 44.35f); static csXyz
      * aim_angle(0x3E94, 0, 0x7E93) */
@@ -510,13 +510,13 @@ BOOL daNpc_Ji1_c::_execute() {
       l_normalAimAngleGuard = 1;
       csXyz_ct(aim_angle, 0x3E94, 0, 0x7E93);
     }
-    field_0xD5C.x = (s16)aim_angle->x;
-    field_0xD5C.y = (s16)aim_angle->y;
-    field_0xD5C.z = (s16)aim_angle->z;
-    cLib_addCalcPos2(&field_0xD50, *aim_offset, 0.25f, 5.0f);
+    mHeldItemAngle.x = (s16)aim_angle->x;
+    mHeldItemAngle.y = (s16)aim_angle->y;
+    mHeldItemAngle.z = (s16)aim_angle->z;
+    cLib_addCalcPos2(&mHeldItemOffset, *aim_offset, 0.25f, 5.0f);
   }
 
-  if (field_0xD84 == Ji1Exec_HARPOON_HELD &&
+  if (mHarpoonState == Ji1Exec_HARPOON_HELD &&
       (mAnimation == Ji1Exec_BCK_TATEATTACK ||
        mAnimation == Ji1Exec_BCK_YOKOATTACK)) {
     mpSpearMorf->setFrame(mpOrcaMorf->getFrame());
@@ -535,12 +535,12 @@ BOOL daNpc_Ji1_c::_execute() {
       mCryBtkFrame = v;
     }
   } else {
-    if (mAnimation != Ji1Exec_BCK_NUGUI && field_0x430.get() != nullptr) {
-      auto *emitter = reinterpret_cast<Ji1ExecEmitterHD *>(field_0x430.get());
+    if (mAnimation != Ji1Exec_BCK_NUGUI && mpTearEmitter.get() != nullptr) {
+      auto *emitter = reinterpret_cast<Ji1ExecEmitterHD *>(mpTearEmitter.get());
       u32 status = emitter->mStatus;
       emitter->mMaxFrame = -1;
       emitter->mStatus = status | 1;
-      field_0x430 = nullptr;
+      mpTearEmitter = nullptr;
     }
     if (mCryBtkFrame > 0.0f) {
       f32 v = mCryBrkFrame + 1.0f;
@@ -568,7 +568,7 @@ BOOL daNpc_Ji1_c::_execute() {
   eyePos.x = px;
   eyePos.y = py + 150.0f;
   eyePos.z = pz;
-  fopAcM_posMoveF(this, &field_0x638.m_cc_move);
+  fopAcM_posMoveF(this, &mStts.m_cc_move);
   gabi::Local<cXyz> temp;
   temp->x = (f32)current.pos.x;
   temp->y = (f32)current.pos.y;
@@ -576,18 +576,18 @@ BOOL daNpc_Ji1_c::_execute() {
   mAcch.CrrPos(dComIfG_Bgsp());
   gabi::Local<cXyz> diff;
   cXyz_mi(&current.pos, diff, temp);
-  field_0xC40.copy(*diff.get());
+  mBgCorrectVec.copy(*diff.get());
   tevStr.mRoomNo = (s8)ji1ExecRoomIdHD(
       dComIfG_Bgsp(), static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd));
   s32 col = ji1ExecPolyColorHD(dComIfG_Bgsp(),
                                static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd));
   tevStr.mEnvrIdxOverride = (u8)col;
   set_mtx();
-  field_0x6B0.SetC(&current.pos);
-  dComIfG_Ccsp_Set(&field_0x6B0);
-  field_0x7E0.SetC(&current.pos);
-  dComIfG_Ccsp_Set(&field_0x7E0);
-  field_0xC28 = 0;
+  mCyl.SetC(&current.pos);
+  dComIfG_Ccsp_Set(&mCyl);
+  mGuardCyl.SetC(&current.pos);
+  dComIfG_Ccsp_Set(&mGuardCyl);
+  mCoHit = 0;
   return true;
 }
 
@@ -711,13 +711,13 @@ static void daNpc_Ji1_HIO_dt(daNpc_Ji1_HIO_c *p, s32 flags) {
 static void daNpc_Ji1_dt(daNpc_Ji1_c *p, s32 flags) {
 
   if (p != nullptr) {
-    ji1ExecHitInfoDestructHD(&p->field_0xA40,
+    ji1ExecHitInfoDestructHD(&p->mAtCps,
                              2); /* dCcD_GObjInf::~dCcD_GObjInf (dCcD_Cps) */
-    dCcD_Cyl_dt(&p->field_0x910, 2);
-    dCcD_Cyl_dt(&p->field_0x7E0, 2);
-    dCcD_Cyl_dt(&p->field_0x6B0, 2);
-    dCcD_Stts_dt(&p->field_0x674, 2);
-    dCcD_Stts_dt(&p->field_0x638, 2);
+    dCcD_Cyl_dt(&p->mAtCyl, 2);
+    dCcD_Cyl_dt(&p->mGuardCyl, 2);
+    dCcD_Cyl_dt(&p->mCyl, 2);
+    dCcD_Stts_dt(&p->mGuardStts, 2);
+    dCcD_Stts_dt(&p->mStts, 2);
     ji1ExecCircleDestructHD(&p->mAcchCir.m_cir,
                             2); /* cM3dGCir::~cM3dGCir (mAcchCir.m_cir) */
     static_cast<dBgS_GrpPassChk &>(p->mAcch).__vtbl =

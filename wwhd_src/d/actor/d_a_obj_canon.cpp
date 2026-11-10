@@ -141,21 +141,21 @@ void daObj_Canon_c::_nodeControl(J3DNode* node, J3DModel* model) {
         y = REG_S(12, 3);
         z = REG_S(12, 4);
     } else {
-        x = -s16(field_0x2CA);
+        x = -s16(mPitch);
         y = rot->y;
-        z = -s16(field_0x2C6);
+        z = -s16(mYaw);
     }
     rot->x = x;
     rot->y = y;
     rot->z = z;
     canonRotateZXY(&canonMatrix, x, y, z);
-    s16 phase = s16(s16(field_0x468) + REG_S(12, 2) + 0x1830);
-    s16 recoil = field_0x46A;
-    field_0x468 = phase;
+    s16 phase = s16(s16(mRecoilPhase) + REG_S(12, 2) + 0x1830);
+    s16 recoil = mRecoil;
+    mRecoilPhase = phase;
     s32 factor = s32(REG_S(12, 5)) + 5;
     s16 shake = s16(gabi::ftoi(f32(s32(recoil) * factor) * cM_ssin(phase)));
     canonRotateX(&canonMatrix, shake);
-    f32 rise = field_0x46C;
+    f32 rise = mSinkY;
     f32 tx = REG_F(12, 3), tz = REG_F(12, 5);
     canonTranslate(tx, -rise, tz);
     canonCopyMatrix(&canonMatrix, &canonCurrentMatrix);
@@ -195,22 +195,22 @@ s32 daObj_Canon_c::_createHeap() {
 void daObj_Canon_c::setEffect(u16 id) {
     GXColor* color = id == canonHD::ID_IT_SN_MJTAIHOU_HAHEN00 ? &tevStr.mColorK0 : nullptr;
     dPa_followEcallBack* callback =
-        id == canonHD::ID_IT_JN_MJTAIHOU_SMOKE01 ? &field_0x470 : nullptr;
+        id == canonHD::ID_IT_JN_MJTAIHOU_SMOKE01 ? &mSmokeCallBack : nullptr;
     particle(id, &current.pos, &shape_angle, &scale, callback, color);
     if (id == canonHD::ID_IT_JN_MJTAIHOU_SMOKE01)
-        field_0x484 = 0xE6;
+        mSmokeTimer = 0xE6;
 }
 
 // HD: collision type compares and byte health wrapping retain the original widths.
 /* 02330A98 */
 s32 daObj_Canon_c::checkTgHit() {
     canonMoveGameStatus(&mStts.__vtbl_gstts);
-    if (canonHIO.field_0x05) {
+    if (canonHIO.mForceBreak) {
         health = 0;
         modeProc(PROC_INIT_e, MODE_DELETE);
         return 1;
     }
-    if (canonCalcTimer(&field_0x440))
+    if (canonCalcTimer(&mHitTimer))
         return 0;
     dCcD_GObjInf* hit = canonGetTargetHit(&mSph);
     gabi::Local<cXyz> pos;
@@ -220,14 +220,14 @@ s32 daObj_Canon_c::checkTgHit() {
         return 0;
     u32 type = hit->mAtType;
     if (type == canonHD::AT_TYPE_BOMB) {
-        field_0x440 = 5;
+        mHitTimer = 5;
         health = u8(u8(health) - 2);
     } else if (type == canonHD::AT_TYPE_BOOMERANG) {
         s8 room = current.roomNo;
-        field_0x46A = 0x190;
+        mRecoil = 0x190;
         s32 reverb = canonGetReverb(s32(room));
         canonStartSound(u32(canonHD::JA_SE_LK_W_WEP_HIT), &eyePos, u32(0x20), reverb);
-        field_0x440 = 5;
+        mHitTimer = 5;
         health = u8(u8(health) - 1);
     } else
         return 0;
@@ -254,83 +254,83 @@ s32 daObj_Canon_c::checkTgHit() {
 /* 02331298 */
 void daObj_Canon_c::attackCannon() {
     gabi::Local<csXyz> angle;
-    angle->x = s16(s16(shape_angle.x) - s16(field_0x2CA));
-    angle->y = s16(s16(shape_angle.y) + s16(field_0x2C6));
+    angle->x = s16(s16(shape_angle.x) - s16(mPitch));
+    angle->y = s16(s16(shape_angle.y) + s16(mYaw));
     angle->z = shape_angle.z;
     u32 params = canonMakeBombParameters(s32(4), s32(1), s32(1));
     s8 room = tevStr.mRoomNo;
-    fopAc_ac_c* bomb = canonCreateBomb(s16(fpcNm_BOMB_e), params, &field_0x450, room, angle.get(),
+    fopAc_ac_c* bomb = canonCreateBomb(s16(fpcNm_BOMB_e), params, &mMuzzlePos, room, angle.get(),
                                        nullptr, s32(-1), u32(0), u32(0));
     if (!bomb)
         return;
-    s16 noGravity = canonHIO.field_0x28;
+    s16 noGravity = canonHIO.mShotNoGravityTime;
     canonSetNoGravityTime(bomb, noGravity);
     s16 pitch = angle->x;
-    bomb->speedF = cM_scos(pitch) * canonHIO.field_0x20;
+    bomb->speedF = cM_scos(pitch) * canonHIO.mShotSpeed;
     pitch = angle->x;
-    bomb->speed.y = -(cM_ssin(pitch) * canonHIO.field_0x20);
-    bomb->gravity = canonHIO.field_0x24;
-    field_0x46A = 0xC8;
-    canonStartCannonSound(u32(canonHD::JA_SE_LK_SHIP_CANNON_FIRE), &field_0x450);
+    bomb->speed.y = -(cM_ssin(pitch) * canonHIO.mShotSpeed);
+    bomb->gravity = canonHIO.mShotGravity;
+    mRecoil = 0xC8;
+    canonStartCannonSound(u32(canonHD::JA_SE_LK_SHIP_CANNON_FIRE), &mMuzzlePos);
 }
 
 /* 0233113C */
 void daObj_Canon_c::lockonCannon() {
     gabi::Local<cXyz> difference, horizontal;
-    canonSubtractPosition(&current.pos, difference.get(), &field_0x2CC);
+    canonSubtractPosition(&current.pos, difference.get(), &mTargetPos);
     horizontal->x = difference->x;
     horizontal->y = 0.f;
     horizontal->z = difference->z;
     f32 sq = canonSquareMagnitude(horizontal.get());
     f32 distance = canonSqrt(sq);
-    s16 yaw = canonTargetYaw(&current.pos, &field_0x2CC);
-    field_0x2C4 = s16(yaw - s16(shape_angle.y));
-    f32 threshold = canonHIO.field_0x2C;
+    s16 yaw = canonTargetYaw(&current.pos, &mTargetPos);
+    mTargetYaw = s16(yaw - s16(shape_angle.y));
+    f32 threshold = canonHIO.mPitchLiftDist;
     s16 bias = 0;
     if (distance > threshold) {
         bias = s16(gabi::ftoi(distance - threshold));
-        s16 maximum = canonHIO.field_0x30;
+        s16 maximum = canonHIO.mPitchLiftMax;
         if (bias > maximum)
             bias = maximum;
     }
-    s16 pitch = canonTargetPitch(&current.pos, &field_0x2CC);
+    s16 pitch = canonTargetPitch(&current.pos, &mTargetPos);
     pitch = s16(pitch + bias);
-    field_0x2C8 = pitch;
-    s16 low = canonHIO.field_0x34, high = canonHIO.field_0x32;
+    mTargetPitch = pitch;
+    s16 low = canonHIO.mPitchMin, high = canonHIO.mPitchMax;
     if (pitch < low)
         pitch = low;
     else if (pitch > high)
         pitch = high;
-    field_0x2C8 = pitch;
-    yaw = field_0x2C4;
-    low = canonHIO.field_0x38;
-    high = canonHIO.field_0x36;
+    mTargetPitch = pitch;
+    yaw = mTargetYaw;
+    low = canonHIO.mYawMin;
+    high = canonHIO.mYawMax;
     if (yaw < low)
         yaw = low;
     else if (yaw > high)
         yaw = high;
-    field_0x2C4 = yaw;
+    mTargetYaw = yaw;
 }
 
 /* 0233069C */
 void daObj_Canon_c::setAttention() {
-    f32 z = field_0x45C.z, y = field_0x45C.y, x = field_0x45C.x;
+    f32 z = mAttentionPos.z, y = mAttentionPos.y, x = mAttentionPos.x;
     attention_info.position.z = z;
     attention_info.position.y = y;
     attention_info.position.x = x;
-    f32 offset = canonHIO.field_0x0C;
+    f32 offset = canonHIO.mAttentionY;
     eyePos.z = z;
     eyePos.y = y;
     eyePos.x = x;
     attention_info.position.y = y + offset;
-    eyePos.y = y + canonHIO.field_0x10;
+    eyePos.y = y + canonHIO.mEyeY;
 }
 
 /* 023306E4 */
 void daObj_Canon_c::setCollision() {
     f32 radius = (REG_F(12, 0) + 80.f) * f32(scale.x);
     canonSetSphereRadius(&mSph.mSph, radius);
-    canonSetSphereCenter(&mSph.mSph, &field_0x45C);
+    canonSetSphereCenter(&mSph.mSph, &mAttentionPos);
     s32 mode = mCurMode;
     if (mode != MODE_DELETE && mode != MODE_SW_WAIT) {
         dComIfG_inf_c* play = canonGetGameInfo();
@@ -358,7 +358,7 @@ void daObj_Canon_c::setMtx() {
 
 /* 02330A88 */
 void daObj_Canon_c::modeWaitInit() {
-    field_0x444 = canonHIO.field_0x3E;
+    mModeTimer = canonHIO.mWaitTime;
 }
 
 /* 02330D3C */
@@ -369,67 +369,67 @@ void daObj_Canon_c::modeWait() {
     fopAc_ac_c* player = play->play.mPlayerInfo[0].mpPlayer;
     play = canonGetGameInfo();
     if (play->play.mPlayerStatus[0][0] & canonHD::daPyStts0_UNK1000000_e) {
-        field_0x488 = 0;
-        field_0x444 = s32(canonHIO.field_0x3E) * 10;
+        mShipShotCount = 0;
+        mModeTimer = s32(canonHIO.mWaitTime) * 10;
     }
     play = canonGetGameInfo();
     canonHD::Ship* ship = reinterpret_cast<canonHD::Ship*>(play->play.mpPlayerPtr[2].get());
     if (ship && (ship->mState & canonHD::SHIP_SHOOT_CANNON))
-        field_0x488 = s32(u32(s32(field_0x488)) + 1);
-    if (canonCalcTimer(&field_0x444))
+        mShipShotCount = s32(u32(s32(mShipShotCount)) + 1);
+    if (canonCalcTimer(&mModeTimer))
         return;
-    if (!canonCheckInside(&field_0x298, &player->current.pos)) {
-        field_0x2C8 = 0;
-        field_0x2C4 = 0;
-        field_0x444 = canonHIO.field_0x3E;
+    if (!canonCheckInside(&mPathRun, &player->current.pos)) {
+        mTargetPitch = 0;
+        mTargetYaw = 0;
+        mModeTimer = canonHIO.mWaitTime;
         return;
     }
-    s16 prediction = s16(gabi::ftoi(canonHIO.field_0x08));
+    s16 prediction = s16(gabi::ftoi(canonHIO.mLeadDist));
     gabi::Local<cXyz> difference, horizontal;
-    canonSubtractPosition(&current.pos, difference.get(), &field_0x2CC);
+    canonSubtractPosition(&current.pos, difference.get(), &mTargetPos);
     horizontal->x = difference->x;
     horizontal->y = 0.f;
     horizontal->z = difference->z;
     f32 sq = canonSquareMagnitude(horizontal.get());
     f32 distance = canonSqrt(sq);
-    f32 threshold = canonHIO.field_0x40;
+    f32 threshold = canonHIO.mLeadFarDist;
     if (distance > threshold)
         prediction = s16(
-            gabi::ftoi(gabi::fmadds(distance - threshold, canonHIO.field_0x44, f32(prediction))));
+            gabi::ftoi(gabi::fmadds(distance - threshold, canonHIO.mLeadFarRate, f32(prediction))));
     play = canonGetGameInfo();
     player = play->play.mPlayerInfo[0].mpPlayer;
-    field_0x2CC.copy(*&player->current.pos);
-    if (!canonCheckInside(&field_0x298, &field_0x2CC))
+    mTargetPos.copy(*&player->current.pos);
+    if (!canonCheckInside(&mPathRun, &mTargetPos))
         return;
     play = canonGetGameInfo();
     if (play->play.mPlayerStatus[0][0] &
         (canonHD::daPyStts0_UNK1000000_e | canonHD::daPyStts0_SWIM_e)) {
-        field_0x488 = 0;
+        mShipShotCount = 0;
         prediction = s16(gabi::ftoi(f32(prediction) + 3000.f));
-    } else if (distance > canonHIO.field_0x40 && s32(field_0x488) < 6)
+    } else if (distance > canonHIO.mLeadFarDist && s32(mShipShotCount) < 6)
         prediction = s16(gabi::ftoi(
-            gabi::fmadds(f32(s32(u32(6) - u32(s32(field_0x488)))), 200.f, f32(prediction))));
+            gabi::fmadds(f32(s32(u32(6) - u32(s32(mShipShotCount)))), 200.f, f32(prediction))));
     play = canonGetGameInfo();
     player = play->play.mPlayerInfo[0].mpPlayer;
     s16 angle = canonSearchPlayerAngle(this, player);
-    f32 x = field_0x2CC.x;
-    field_0x2CC.x = gabi::fnmsubs(f32(prediction), cM_ssin(angle), x);
-    f32 z = field_0x2CC.z;
-    field_0x2CC.z = gabi::fnmsubs(f32(prediction), cM_scos(angle), z);
-    field_0x444 = canonHIO.field_0x3E;
+    f32 x = mTargetPos.x;
+    mTargetPos.x = gabi::fnmsubs(f32(prediction), cM_ssin(angle), x);
+    f32 z = mTargetPos.z;
+    mTargetPos.z = gabi::fnmsubs(f32(prediction), cM_scos(angle), z);
+    mModeTimer = canonHIO.mWaitTime;
     modeProc(PROC_INIT_e, MODE_ATTACK);
 }
 
 /* 0233112C */
 void daObj_Canon_c::modeAttackInit() {
-    field_0x444 = canonHIO.field_0x3C;
+    mModeTimer = canonHIO.mAttackTime;
 }
 
 /* 023313B4 */
 void daObj_Canon_c::modeAttack() {
     if (!checkTgHit()) {
         lockonCannon();
-        if (!canonCalcTimer(&field_0x444)) {
+        if (!canonCalcTimer(&mModeTimer)) {
             attackCannon();
             modeProc(PROC_INIT_e, MODE_WAIT);
         }
@@ -438,8 +438,8 @@ void daObj_Canon_c::modeAttack() {
 
 /* 02331558 */
 void daObj_Canon_c::modeDeleteInit() {
-    u8 sw = field_0x295;
-    field_0x46A = 0;
+    u8 sw = mDeleteSwNo;
+    mRecoil = 0;
     if (sw != 255) {
         s8 room = current.roomNo;
         canonHD::SaveBlock* save = canonSave;
@@ -458,12 +458,12 @@ void daObj_Canon_c::modeDelete() {}
 /* 023315F8 */
 void daObj_Canon_c::modeSwWaitInit() {
     actor_status = u32(actor_status) & ~(u32(canonHD::MAP_ICON_MASK) | u32(fopAcStts_SHOWMAP_e));
-    field_0x46C = 120.f;
+    mSinkY = 120.f;
 }
 
 /* 02331614 */
 void daObj_Canon_c::modeSwWait() {
-    u8 sw = field_0x296;
+    u8 sw = mAppearSwNo;
     if (sw != 255) {
         s8 room = current.roomNo;
         canonHD::SaveBlock* save = canonSave;
@@ -476,17 +476,17 @@ void daObj_Canon_c::modeSwWait() {
 /* 02331678 */
 void daObj_Canon_c::modeAppearInit() {
     u32 status = actor_status;
-    field_0x46A = 0x258;
-    field_0x46C = 120.f;
+    mRecoil = 0x258;
+    mSinkY = 120.f;
     actor_status = (status & ~(u32(canonHD::MAP_ICON_MASK) | u32(fopAcStts_SHOWMAP_e))) |
                    (u32(canonHD::MAP_ICON_CANNON) | u32(fopAcStts_SHOWMAP_e));
 }
 
 /* 023316A0 */
 void daObj_Canon_c::modeAppear() {
-    canonAddCalc(&field_0x46C, 0.f, 0.1f, 1.f);
-    if (f32(field_0x46C) < 2.f) {
-        field_0x46C = 0.f;
+    canonAddCalc(&mSinkY, 0.f, 0.1f, 1.f);
+    if (f32(mSinkY) < 2.f) {
+        mSinkY = 0.f;
         modeProc(PROC_INIT_e, MODE_WAIT);
     }
 }
@@ -504,22 +504,22 @@ void daObj_Canon_c::modeProc(s32 proc, s32 mode) {
 
 /* 02330760 */
 s32 daObj_Canon_c::_execute() {
-    canonAddCalcAngle(&field_0x46A, s16(0), s16(10), s16(10));
-    s16 pitch = field_0x2C8;
-    canonAddCalcAngle(&field_0x2CA, pitch, s16(6), s16(0x300));
-    s16 yaw = field_0x2C4;
-    canonAddCalcAngle(&field_0x2C6, yaw, s16(6), s16(0x300));
+    canonAddCalcAngle(&mRecoil, s16(0), s16(10), s16(10));
+    s16 pitch = mTargetPitch;
+    canonAddCalcAngle(&mPitch, pitch, s16(6), s16(0x300));
+    s16 yaw = mTargetYaw;
+    canonAddCalcAngle(&mYaw, yaw, s16(6), s16(0x300));
     setAttention();
     setCollision();
     modeProc(PROC_EXEC_e, MODE_COUNT);
     canonCalcModel(mpModel.get());
     gabi::Local<cXyz> muzzle, attention;
-    f32 actorScale = scale.x, height = canonHIO.field_0x18, x = canonHIO.field_0x14;
+    f32 actorScale = scale.x, height = canonHIO.mMuzzleY, x = canonHIO.mMuzzleX;
     muzzle->x = x;
     muzzle->y = height * actorScale;
-    muzzle->z = canonHIO.field_0x1C;
+    muzzle->z = canonHIO.mMuzzleZ;
     Mtx34* matrix = animationMatrix(mpModel, canonHD::WALLBOM_JNT_SHOT_e);
-    canonTransformPosition(matrix, muzzle.get(), &field_0x450);
+    canonTransformPosition(matrix, muzzle.get(), &mMuzzlePos);
     actorScale = scale.x;
     f32 y = REG_F(12, 1) + 60.f;
     x = REG_F(12, 0);
@@ -528,9 +528,9 @@ s32 daObj_Canon_c::_execute() {
     attention->z = REG_F(12, 2);
     attention->y = y * actorScale;
     matrix = animationMatrix(model, canonHD::WALLBOM_JNT_SHOT_e);
-    canonTransformPosition(matrix, attention.get(), &field_0x45C);
-    if (field_0x470.mpEmitter.v && canonCalcTimer(&field_0x484) == 0)
-        canonEndFollow(&field_0x470);
+    canonTransformPosition(matrix, attention.get(), &mAttentionPos);
+    if (mSmokeCallBack.mpEmitter.v && canonCalcTimer(&mSmokeTimer) == 0)
+        canonEndFollow(&mSmokeCallBack);
     setMtx();
     return 0;
 }
@@ -573,23 +573,23 @@ s32 daObj_Canon_c::_draw() {
 
 /* 02330304 */
 void daObj_Canon_c::createInit() {
-    u8 sw = field_0x295;
+    u8 sw = mDeleteSwNo;
     s32 mode = MODE_WAIT;
     if (sw != 255 && canonIsSwitch(&canonSave->mSaveInfo, s32(sw), s32(current.roomNo)))
         mode = MODE_DELETE;
     else {
-        sw = field_0x296;
+        sw = mAppearSwNo;
         if (sw != 255 && !canonIsSwitch(&canonSave->mSaveInfo, s32(sw), s32(current.roomNo)))
             mode = MODE_SW_WAIT;
     }
     modeProc(PROC_INIT_e, mode);
     s8 room = current.roomNo;
-    u8 path = field_0x294;
+    u8 path = mPathNo;
     health = 2;
     max_health = 2;
     dPath* route = canonGetRoomPath(s32(path), s32(room));
-    field_0x2B0 = route;
-    canonSetPath(&field_0x298, route);
+    mpPath = route;
+    canonSetPath(&mPathRun, route);
     setMtx();
     canonCalcModel(mpModel.get());
     J3DModel* model = mpModel;
@@ -606,10 +606,10 @@ void daObj_Canon_c::createInit() {
 /* 02330100 */
 void daObj_Canon_c::getArg() {
     u32 param = mParameters;
-    field_0x297 = u8(param);
-    field_0x296 = u8(param >> 8);
-    field_0x294 = u8(param >> 16);
-    field_0x295 = u8(param >> 24);
+    mScaleArg = u8(param);
+    mAppearSwNo = u8(param >> 8);
+    mPathNo = u8(param >> 16);
+    mDeleteSwNo = u8(param >> 24);
     if (u8(param) != 255) {
         f32 actorScale = f32(gabi::fmadd(f64(u8(param)), 0.1, 1.0));
         scale.x = actorScale;
@@ -630,7 +630,7 @@ s32 daObj_Canon_c::_create() {
             canonConstructGameStatus(&mStts.__vtbl_gstts);
             mStts.__vtbl = 0x1004AE88;
             mStts.__vtbl_gstts = 0x1004AEC0;
-            canonConstructFollow(&field_0x470, u32(0), u32(0));
+            canonConstructFollow(&mSmokeCallBack, u32(0), u32(0));
             cond = actor_condition;
         }
         actor_condition = cond | fopAcCnd_INIT_e;
@@ -638,7 +638,7 @@ s32 daObj_Canon_c::_create() {
     s32 result = canonLoadResource(&mPhs, "WallBom");
     if (result == cPhs_COMPLEATE_e) {
         getArg();
-        if (u8(field_0x294) == 255 ||
+        if (u8(mPathNo) == 255 ||
             !canonEnterHeap(this, gabi::guest_fn(reinterpret_cast<const void*>(createHeap_CB)),
                             u32(0x8C0)))
             return cPhs_ERROR_e;
@@ -650,8 +650,8 @@ s32 daObj_Canon_c::_create() {
 /* 02330640 */
 s32 daObj_Canon_c::_delete() {
     canonDeleteResource(&mPhs, "WallBom");
-    field_0x470.remove();
-    canonDeleteSound(&field_0x450);
+    mSmokeCallBack.remove();
+    canonDeleteSound(&mMuzzlePos);
     return 1;
 }
 
@@ -689,28 +689,28 @@ static void* daObj_Canon_HIO_c_ct(void* self) {
         if (!p)
             return nullptr;
     }
-    p->field_0x24 = -1.1f;
+    p->mShotGravity = -1.1f;
     p->field_0x3A = 0x2800;
-    p->field_0x32 = 0x2328;
-    p->field_0x20 = 90.f;
-    p->field_0x36 = 0x2328;
-    p->field_0x08 = 150.f;
-    p->field_0x28 = 0x16;
-    p->field_0x18 = 180.f;
-    p->field_0x3E = 30;
-    p->field_0x44 = 0.2f;
-    p->field_0x3C = 30;
+    p->mPitchMax = 0x2328;
+    p->mShotSpeed = 90.f;
+    p->mYawMax = 0x2328;
+    p->mLeadDist = 150.f;
+    p->mShotNoGravityTime = 0x16;
+    p->mMuzzleY = 180.f;
+    p->mWaitTime = 30;
+    p->mLeadFarRate = 0.2f;
+    p->mAttackTime = 30;
     p->__vtbl = 0x10026AA0;
-    p->field_0x2C = 5000.f;
-    p->field_0x40 = 2000.f;
-    p->field_0x38 = -0x2328;
+    p->mPitchLiftDist = 5000.f;
+    p->mLeadFarDist = 2000.f;
+    p->mYawMin = -0x2328;
     p->field_0x48 = 0;
     p->debug_draw = 0;
-    p->field_0x05 = 0;
-    p->field_0x30 = 0x3000;
-    p->field_0x1C = 0.f;
-    p->field_0x14 = 0.f;
-    p->field_0x34 = -0x2328;
+    p->mForceBreak = 0;
+    p->mPitchLiftMax = 0x3000;
+    p->mMuzzleZ = 0.f;
+    p->mMuzzleX = 0.f;
+    p->mPitchMin = -0x2328;
     return p;
 }
 

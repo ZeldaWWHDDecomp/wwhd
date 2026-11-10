@@ -6,15 +6,13 @@
 namespace JAInter {
 struct Actor {
     union { be<u32> mUnaccessed; gptr<cXyz> field_0x0; gptr<void> mActor; };
-    union { gptr<cXyz> field_0x4; gptr<cXyz> mPosition; };
+    gptr<cXyz> mPosition;
     union { be<u32> mUnaccessed8; gptr<void> field_0x8; be<u32> mPositionState; };
-    union { be<u32> field_0xc; be<u32> mMapInfo; };
+    be<u32> mMapInfo;
 };
 } // namespace JAInter
 WWHD_OFFSET(JAInter::Actor, field_0x0, 0);
-WWHD_OFFSET(JAInter::Actor, field_0x4, 4);
 WWHD_OFFSET(JAInter::Actor, field_0x8, 8);
-WWHD_OFFSET(JAInter::Actor, field_0xc, 0xC);
 WWHD_OFFSET(JAInter::Actor,mActor,0);
 WWHD_OFFSET(JAInter::Actor,mPosition,4);
 WWHD_OFFSET(JAInter::Actor,mPositionState,8);
@@ -22,38 +20,38 @@ WWHD_OFFSET(JAInter::Actor,mMapInfo,0xC);
 WWHD_SIZE(JAInter::Actor, 0x10);
 struct JAIZelCameraView {
     u8 mUnaccessed[8];
-    gptr<void> field_0x8;
+    gptr<void> matrix;  /* was field_0x8: JAInter::Camera::matrix (JSystem/JAudio/JAIBasic.h; the base class JAIBasic's mAudioCamera); startAnimSound 0201B71C transforms the actor position by it */
 };
-WWHD_OFFSET(JAIZelCameraView, field_0x8, 8);
+WWHD_OFFSET(JAIZelCameraView, matrix, 8);
 WWHD_SIZE(JAIZelCameraView, 0xC);
 struct JAIZelBasic {
     gptr<JAIZelCameraView> mCameras;
     u8 mUnaccessed4[0x38 - 4];
-    be<u32> field_0x0028;
+    be<u32> mSceneFrameCount;  /* was field_0x0028: JAIZelBasic::mSceneFrameCount (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed3c[0x55 - 0x3C];
-    be<u8> field_0x0045;
-    be<u8> field_0x0046;
+    be<u8> mLinkSwordShieldOnBack;  /* was field_0x0045: JAIZelBasic::mLinkSwordShieldOnBack (JAZelAudio/JAIZelBasic.h) */
+    be<u8> mLinkBootsType;  /* was field_0x0046: JAIZelBasic::mLinkBootsType (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed57[0x271 - 0x57];
-    be<u8> field_0x0201;
+    be<u8> mAllSeMuted;  /* was field_0x0201: JAIZelBasic::mAllSeMuted (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed272[4];
-    be<u8> field_0x0206;
-    be<u8> field_0x0207;
+    be<u8> mFanfareActive;  /* was field_0x0206: JAIZelBasic::mFanfareActive (JAZelAudio/JAIZelBasic.h) */
+    be<u8> mTaktSeTimer;  /* was field_0x0207: JAIZelBasic::mTaktSeTimer (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed278[0x294 - 0x278];
-    be<s32> field_0x0224;
+    be<s32> mSceneNo;  /* was field_0x0224: JAIZelBasic::mSceneNo (JAZelAudio/JAIZelBasic.h) */
     u8 mUnaccessed298[0x2A8 - 0x298];
     be<u8> mIslandRoomNo;
-    be<u8> field_0x0239;
+    be<u8> mLayerNo;  /* was field_0x0239: JAIZelBasic::mLayerNo (JAZelAudio/JAIZelBasic.h) */
 };
 WWHD_OFFSET(JAIZelBasic, mCameras, 0x0);
-WWHD_OFFSET(JAIZelBasic, field_0x0028, 0x38);
-WWHD_OFFSET(JAIZelBasic, field_0x0045, 0x55);
-WWHD_OFFSET(JAIZelBasic, field_0x0046, 0x56);
-WWHD_OFFSET(JAIZelBasic, field_0x0201, 0x271);
-WWHD_OFFSET(JAIZelBasic, field_0x0206, 0x276);
-WWHD_OFFSET(JAIZelBasic, field_0x0207, 0x277);
-WWHD_OFFSET(JAIZelBasic, field_0x0224, 0x294);
+WWHD_OFFSET(JAIZelBasic, mSceneFrameCount, 0x38);
+WWHD_OFFSET(JAIZelBasic, mLinkSwordShieldOnBack, 0x55);
+WWHD_OFFSET(JAIZelBasic, mLinkBootsType, 0x56);
+WWHD_OFFSET(JAIZelBasic, mAllSeMuted, 0x271);
+WWHD_OFFSET(JAIZelBasic, mFanfareActive, 0x276);
+WWHD_OFFSET(JAIZelBasic, mTaktSeTimer, 0x277);
+WWHD_OFFSET(JAIZelBasic, mSceneNo, 0x294);
 WWHD_OFFSET(JAIZelBasic, mIslandRoomNo, 0x2a8);
-WWHD_OFFSET(JAIZelBasic, field_0x0239, 0x2a9);
+WWHD_OFFSET(JAIZelBasic, mLayerNo, 0x2a9);
 WWHD_SIZE(JAIZelBasic, 0x2AA);
 struct JAIAnimeFrameSoundData {
     be<u32> mSoundID;

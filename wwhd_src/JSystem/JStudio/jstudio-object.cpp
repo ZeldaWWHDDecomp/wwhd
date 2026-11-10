@@ -78,25 +78,25 @@ void TVariableValue_TOutput_destroy(jst_timeline::TOutput* output, u32 flags) {
 }
 /* 02839E70 */
 void JStudio::TAdaptor::adaptor_setVariableValue_VOID_(TAdaptor* adaptor, TObject* object, u32 index, const void* content, u32 size) {
-    (&sead::elementAt(adaptor->mVariableValues, index))->field_0x8.v = 0;
+    (&sead::elementAt(adaptor->mVariableValues, index))->mUpdate.v = 0;
 }
 /* 02839E88 */
 void JStudio::TAdaptor::adaptor_setVariableValue_IMMEDIATE_(TAdaptor* adaptor, TObject* object, u32 index, const void* content, u32 size) {
     TVariableValue* value = &sead::elementAt(adaptor->mVariableValues, index);
     // HD: lfs/stfs without arithmetic preserves signalling-NaN bits.
     u32 immediate = *static_cast<const be<u32>*>(content);
-    value->field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
-    value->field_0x4 = 0;
-    value->field_0xc.bits = immediate;
+    value->mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
+    value->mAge = 0;
+    value->mParam.bits = immediate;
 }
 /* 02839EB4 */
 void JStudio::TAdaptor::adaptor_setVariableValue_TIME_(TAdaptor* adaptor, TObject* object, u32 index, const void* content, u32 size) {
     TVariableValue* value = &sead::elementAt(adaptor->mVariableValues, index);
     // HD: the time parameter is copied bitwise before later arithmetic uses it.
     u32 time = *static_cast<const be<u32>*>(content);
-    value->field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_time_));
-    value->field_0x4 = 0;
-    value->field_0xc.bits = time;
+    value->mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_time_));
+    value->mAge = 0;
+    value->mParam.bits = time;
 }
 /* 02839EE0 */
 void JStudio::TAdaptor::adaptor_setVariableValue_FVR_NAME_(TAdaptor* adaptor, TObject* object, u32 index, const void* content, u32 size) {
@@ -104,9 +104,9 @@ void JStudio::TAdaptor::adaptor_setVariableValue_FVR_NAME_(TAdaptor* adaptor, TO
     TVariableValue* value = &sead::elementAt(adaptor->mVariableValues, index);
     fvb::TObject* bankObject = control->fvb_Control.getObject(content, size);
     fvb::FunctionValue* function = bankObject ? bankObject->pfv_.get() : nullptr;
-    value->field_0xc.fv = reinterpret_cast<jst_timeline::TFunctionValue*>(function);
-    value->field_0x4 = 0;
-    value->field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_functionValue_));
+    value->mParam.fv = reinterpret_cast<jst_timeline::TFunctionValue*>(function);
+    value->mAge = 0;
+    value->mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_functionValue_));
 }
 /* 02839F48 */
 void JStudio::TAdaptor::adaptor_setVariableValue_FVR_INDEX_(TAdaptor* adaptor, TObject* object, u32 index, const void* content, u32 size) {
@@ -115,9 +115,9 @@ void JStudio::TAdaptor::adaptor_setVariableValue_FVR_INDEX_(TAdaptor* adaptor, T
     u32 bankIndex = *static_cast<const be<u32>*>(content);
     fvb::TObject* bankObject = control->fvb_Control.getObject_index(bankIndex);
     fvb::FunctionValue* function = bankObject ? bankObject->pfv_.get() : nullptr;
-    value->field_0xc.fv = reinterpret_cast<jst_timeline::TFunctionValue*>(function);
-    value->field_0x4 = 0;
-    value->field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_functionValue_));
+    value->mParam.fv = reinterpret_cast<jst_timeline::TFunctionValue*>(function);
+    value->mAge = 0;
+    value->mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_functionValue_));
 }
 /* 02839FAC */
 void JStudio::TAdaptor::adaptor_setVariableValue(TObject* object, u32 index, u32 operation, const void* content, u32 size) {
@@ -159,9 +159,9 @@ void JStudio::TAdaptor::adaptor_setVariableValue_immediate(const TSetVariableVal
         u32 index = values->index;
         TVariableValue* value = &sead::elementAt(mVariableValues, index);
         u32 immediate = *reinterpret_cast<const be<u32>*>(&values->value);
-        value->field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
-        value->field_0x4 = 0;
-        value->field_0xc.bits = immediate;
+        value->mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
+        value->mAge = 0;
+        value->mParam.bits = immediate;
         ++values;
     }
 }
@@ -172,9 +172,9 @@ void JStudio::TAdaptor::adaptor_setVariableValue_Vec(const be<u32>* indices, con
         u32 index = indices[i];
         TVariableValue* value = &sead::elementAt(mVariableValues, index);
         u32 component = components[i];
-        value->field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
-        value->field_0x4 = 0;
-        value->field_0xc.bits = component;
+        value->mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
+        value->mAge = 0;
+        value->mParam.bits = component;
     }
 }
 /* 0283A1E0 */
@@ -193,9 +193,9 @@ void JStudio::TAdaptor::adaptor_setVariableValue_GXColor(const be<u32>* indices,
         u32 index = indices[i];
         u32 component = color.components[i];
         TVariableValue* value = &sead::elementAt(mVariableValues.get(), index);
-        value->field_0x8.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
-        value->field_0x4 = 0;
-        value->field_0xc.val = f32(component);
+        value->mUpdate.v = gabi::guest_fn(reinterpret_cast<const void*>(TVariableValue_update_immediate_));
+        value->mAge = 0;
+        value->mParam.val = f32(component);
     }
 }
 /* 0283A318 */

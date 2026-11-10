@@ -137,3 +137,11 @@ framexact 0289C61C 0289C64C
 # Clearing/copying imports the tested functions reach (directly or through `real` callees), modelled so the
 # fixture keeps no bytes the original clears or overwrites: OSBlockSet C0009990.
 mockset C0009990 r3 r4 r5
+
+# zero-page rule (2026-11-10, clean 599/1000, LOST block): StreamSoundHandle::detach 028998D8 reads the
+# handle's sound (+0) and that sound's handle back-pointer (+0x298); the clear of the back-pointer was reached mostly on
+# page-0 inputs. The handle (r3) is a fixture 0x5EFC0000 holding no sound or the StreamSound fixture 0x5EFC1000, whose
+# back-pointer is this handle (the attached state the shipped game's attach leaves) or another handle.
+arg! 028998D8 r3 0x5EFC0000
+field 028998D8 0x5EFC0000 u32 0,0x5EFC1000,0x5EFC1000,0x5EFC1000
+field 028998D8 0x5EFC1298 u32 0x5EFC0000,0x5EFC0000,0x5EFC0100

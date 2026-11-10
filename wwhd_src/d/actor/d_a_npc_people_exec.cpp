@@ -218,7 +218,7 @@ static PeopleMoveProc moveProc[] = {{&daNpcPeople_c::executeWait}, {&daNpcPeople
 /* 022C305C */
 bool daNpcPeople_c::_execute() {
     // HD: reset the photo object here.
-    m7A6 = 0xFF;
+    mPsoNo = 0xFF;
     warp();
 
     switch (mNpcNo) {
@@ -243,7 +243,7 @@ bool daNpcPeople_c::_execute() {
     chkAttention();
     checkOrder();
     if (!dComIfGp_event_runCheck() || (eventInfo.getCommand() == 1 && m79C != 0)) {
-        (this->*moveProc[m78F].fn)();
+        (this->*moveProc[mExecuteMode].fn)();
     } else {
         eventMove();
     }
@@ -257,33 +257,33 @@ bool daNpcPeople_c::_execute() {
                 if (mAnmFlag & 0x3) {
                     mAnmFlag = mAnmFlag & ~0x3;
                     u8 rand = getRand(8);
-                    if (rand == m794) {
+                    if (rand == mLastRandNo) {
                         rand = 0;
                     }
                     setAnmTbl(l_npc_anm_ub1_tbl[rand], 1);
-                    m794 = rand;
+                    mLastRandNo = rand;
                 }
                 break;
             case NPC_UB2:
                 if (mAnmFlag & 0x3) {
                     mAnmFlag = mAnmFlag & ~0x3;
                     u8 rand = getRand(8);
-                    if (rand == m794) {
+                    if (rand == mLastRandNo) {
                         rand = 0;
                     }
                     setAnmTbl(l_npc_anm_ub2_tbl[rand], 1);
-                    m794 = rand;
+                    mLastRandNo = rand;
                 }
                 break;
             case NPC_UM3:
                 if (!dComIfGs_checkGetItem(dItemNo_COLLECT_MAP_15_e) && (mAnmFlag & 0x3)) {
                     mAnmFlag = mAnmFlag & ~0x3;
                     u8 rand = getRand(8);
-                    if (rand == m794) {
+                    if (rand == mLastRandNo) {
                         rand = 0;
                     }
                     setAnmTbl(l_npc_anm_um3_tbl[rand], 1);
-                    m794 = rand;
+                    mLastRandNo = rand;
                 }
                 break;
             }
@@ -293,18 +293,18 @@ bool daNpcPeople_c::_execute() {
                 if (mAnmFlag & 0x3) {
                     mAnmFlag = mAnmFlag & ~0x3;
                     u8 rand;
-                    if (m794 == 3) {
+                    if (mLastRandNo == 3) {
                         rand = 0;
-                        m744 = 15.0f;
+                        mMorf = 15.0f;
                     } else {
                         rand = getRand(4);
                     }
                     setAnmTbl(l_npc_anm_sa3_tbl[rand], 1);
-                    m794 = rand;
-                    if (m793 == 3) {
-                        m79E = 0;
+                    mLastRandNo = rand;
+                    if (mAnmIdx == 3) {
+                        mLookAtPlayer = 0;
                     } else {
-                        m79E = 1;
+                        mLookAtPlayer = 1;
                     }
                 }
                 break;
@@ -312,18 +312,18 @@ bool daNpcPeople_c::_execute() {
                 if (mAnmFlag & 0x3) {
                     mAnmFlag = mAnmFlag & ~0x3;
                     u8 rand;
-                    if (m794 == 3) {
+                    if (mLastRandNo == 3) {
                         rand = 0;
-                        m744 = 15.0f;
+                        mMorf = 15.0f;
                     } else {
                         rand = getRand(4);
                     }
                     setAnmTbl(l_npc_anm_sa5_tbl[rand], 1);
-                    m794 = rand;
-                    if (m793 == 3) {
-                        m79E = 0;
+                    mLastRandNo = rand;
+                    if (mAnmIdx == 3) {
+                        mLookAtPlayer = 0;
                     } else {
-                        m79E = 1;
+                        mLookAtPlayer = 1;
                     }
                 }
                 break;
@@ -334,9 +334,9 @@ bool daNpcPeople_c::_execute() {
     playTexPatternAnm();
     playAnm();
     if (m7A1 != 0) {
-        if (m793 == 2) {
-            cLib_chaseF(&speedF, m740, 0.1f);
-            f32 speed = speedF * mpNpcDat->field_0x44;
+        if (mAnmIdx == 2) {
+            cLib_chaseF(&speedF, mTargetSpeed, 0.1f);
+            f32 speed = speedF * mpNpcDat->mWalkAnmRate;
             mDoExt_McaMorf* morf = mpMorf;
             if (speed < 0.5f) {
                 speed = 0.5f;
@@ -355,16 +355,16 @@ bool daNpcPeople_c::_execute() {
         pos->x = current.pos.x;
         pos->y = current.pos.y;
         pos->z = current.pos.z;
-        setCollision(&mCyl, pos.get(), m74C, dat->field_0x40);
+        setCollision(&mCyl, pos.get(), mCylR, dat->mCylHeight);
     }
     gabi::Local<cXyz> temp;
     daNpcPeople_c__l_npc_dat* dat = mpNpcDat;
-    temp->set(dat->field_0x18, dat->field_0x1C, dat->field_0x20);
+    temp->set(dat->mAttnOffsetX, dat->mAttnOffsetY, dat->mAttnOffsetZ);
     mDoMtx_YrotS(mDoMtx_stack_c::get(), current.angle.y);
     PSMTXMultVec(mDoMtx_stack_c::get(), temp.get(), temp.get());
     PSVECAdd(temp.get(), &current.pos, temp.get()); /* temp += current.pos */
     attention_info.position.copy(*temp); /* attention_info.position = temp */
-    eyePos.set(current.pos.x, current.pos.y + mpNpcDat->field_0x24, current.pos.z);
+    eyePos.set(current.pos.x, current.pos.y + mpNpcDat->mEyeYOffset, current.pos.z);
     lookBack();
     setMtx();
     return false;
@@ -372,7 +372,7 @@ bool daNpcPeople_c::_execute() {
 
 /* 022C39F0 */
 BOOL daNpcPeople_c::chkSurprise() {
-    if (mNpcNo == NPC_UO2 && m78F != 1) {
+    if (mNpcNo == NPC_UO2 && mExecuteMode != 1) {
         daPy_py_c* player = static_cast<daPy_py_c*>(dComIfGp_getPlayer(0));
         if (player->checkResetFlg0(daPy_py_c::daPyRFlg0_FRONT_ROLL_CRASH)) { /* checkFrontRollCrash() */
             gabi::Local<cXyz> delta;
@@ -390,7 +390,7 @@ BOOL daNpcPeople_c::chkSurprise() {
 
 /* 022C3AC4 */
 bool daNpcPeople_c::executeCommon() {
-    if (m78B != 0 && mNoTalk == 0) {
+    if (mCanTalk != 0 && mNoTalk == 0) {
         mOrderEventNum = 1;
         switch (mNpcNo) {
         case NPC_UG1:
@@ -404,7 +404,7 @@ bool daNpcPeople_c::executeCommon() {
                     !dComIfGs_isEventBit(0x2B04) && !dComIfGs_isTmpBit(0x0208)) {
                     m79C = 0;
                     actor_status = actor_status & ~fopAcStts_NOCULLEXEC_e; /* fopAcM_OffStatus(NOCULLEXEC) */
-                    eventInfo.setEventId(m766[0]);
+                    eventInfo.setEventId(mEventIdx[0]);
                 } else {
                     eventInfo.setEventId(-1);
                     actor_status = actor_status | fopAcStts_NOCULLEXEC_e;
@@ -424,7 +424,7 @@ bool daNpcPeople_c::executeCommon() {
         executeSetMode(9);
         return true;
     }
-    if ((mEtcFlag & 0x4000) && m78F != 0xD) {
+    if ((mEtcFlag & 0x4000) && mExecuteMode != 0xD) {
         executeSetMode(0xD);
         return true;
     }
@@ -433,7 +433,7 @@ bool daNpcPeople_c::executeCommon() {
         executeSetMode(0xB);
         return true;
     }
-    if (mTalk == 1 && m79C != 0 && m78F != 1) {
+    if (mTalk == 1 && m79C != 0 && mExecuteMode != 1) {
         executeSetMode(1);
     }
     bool ret = false;
@@ -448,20 +448,20 @@ s32 daNpcPeople_c::executeWaitInit() {
     speedF = 0.0f;
     setWaitAnm();
     daNpcPeople_c__l_npc_dat* dat = mpNpcDat;
-    f32 rnd = cM_rndF((f32)(dat->field_0x52 - dat->field_0x50));
+    f32 rnd = cM_rndF((f32)(dat->mWaitTimeMax - dat->mWaitTimeMin));
     dat = mpNpcDat;
-    m76E = (s16)gabi::ftoi(rnd + (f32)dat->field_0x50);
-    m_jnt.setParam(dat->field_0x04, dat->field_0x06, dat->field_0x0C, dat->field_0x0E, dat->field_0x00, dat->field_0x02,
-                   dat->field_0x08, dat->field_0x0A, dat->field_0x10);
+    mWaitTimer = (s16)gabi::ftoi(rnd + (f32)dat->mWaitTimeMin);
+    m_jnt.setParam(dat->mMaxBackboneX, dat->mMaxBackboneY, dat->mMinBackboneX, dat->mMinBackboneY, dat->mMaxHeadX, dat->mMaxHeadY,
+                   dat->mMinHeadX, dat->mMinHeadY, dat->mMaxTurnStep);
     return 0;
 }
 
 /* 022C3E78 */
 BOOL daNpcPeople_c::checkPig() {
-    if (dComIfGs_isTmpBit(0x0280) && (m789 != 0 || m78A != 0)) {
+    if (dComIfGs_isTmpBit(0x0280) && (mInAttention != 0 || m78A != 0)) {
         for (int i = 0; i < 3; i++) {
             PeoplePigView* pPig = static_cast<PeoplePigView*>(peopleSearchFromName("Pig", 0xF00, l_pig_para[i]));
-            if (pPig != nullptr && pPig->m408 == 0 /* m408 */) {
+            if (pPig != nullptr && pPig->mTauraPosSet == 0 /* mTauraPosSet */) {
                 gabi::Local<cXyz> a, b;
                 gabi::Local<be<f32>> dist;
                 a->x = current.pos.x;
@@ -476,8 +476,8 @@ BOOL daNpcPeople_c::checkPig() {
                     if (!(std::fabs(y - pPig->current.pos.y) > 10.0f)) {
                         /* pPig->taura_pos_set(current.pos) */
                         f32 x = current.pos.x, z = current.pos.z;
-                        pPig->m408 = 1;
-                        cXyz* tp = &pPig->m450;
+                        pPig->mTauraPosSet = 1;
+                        cXyz* tp = &pPig->mTauraPos;
                         tp->x = x;
                         tp->z = z;
                         tp->y = y;
@@ -498,27 +498,27 @@ BOOL daNpcPeople_c::checkPig() {
 /* 022C4074 */
 void daNpcPeople_c::executeWait() {
     if (!executeCommon()) {
-        if (mPathRun.mPath.get() != nullptr && m76E != 0 && m789 == 0 && m78A == 0) {
-            m76E = m76E - 1;
-            if (m76E == 0) {
+        if (mPathRun.mPath.get() != nullptr && mWaitTimer != 0 && mInAttention == 0 && m78A == 0) {
+            mWaitTimer = mWaitTimer - 1;
+            if (mWaitTimer == 0) {
                 executeSetMode(3);
             }
         }
 
         switch (mNpcNo) {
-        // HD: no m7A6 (photo object) setting for UB4/UW2 here.
+        // HD: no mPsoNo (photo object) setting for UB4/UW2 here.
         case NPC_UM3:
             if (mbIsNight && (!dComIfGs_isEventBit(ENDLESS_NIGHT) || dComIfGs_checkGetItem(dItemNo_PEARL_NAYRU_e))) {
                 u32 status = dComIfGp_getPlayerStatus0();
-                f32 f = mpNpcDat->field_0x28;
+                f32 f = mpNpcDat->mMaxAttnDistXZ;
                 if (status & daPyStts0_TELESCOPE_LOOK_e) {
-                    m748 = (f32)(s16)gabi::ftoi(f + f);
+                    mMaxAttnDistXZ = (f32)(s16)gabi::ftoi(f + f);
                 } else {
-                    m748 = f;
+                    mMaxAttnDistXZ = f;
                     mEtcFlag = mEtcFlag & ~0x80000700;
                 }
 
-                if (m789) {
+                if (mInAttention) {
                     if (!dComIfGs_isEventBit(0x2320)) {
                         mOrderEventNum = 2;
                     } else if (dComIfGp_getPlayerStatus0() & daPyStts0_TELESCOPE_LOOK_e) {
@@ -552,9 +552,9 @@ void daNpcPeople_c::executeWait() {
             break;
         case NPC_UG1:
         case NPC_UG2:
-            if ((mEtcFlag & 0x1000) && m76E != 0) {
-                m76E = m76E - 1;
-                if (m76E == 0) {
+            if ((mEtcFlag & 0x1000) && mWaitTimer != 0) {
+                mWaitTimer = mWaitTimer - 1;
+                if (mWaitTimer == 0) {
                     executeSetMode(0xB);
                 }
             }
@@ -568,12 +568,12 @@ void daNpcPeople_c::executeWait() {
 /* 022C43A8 */
 s32 daNpcPeople_c::executeTalkInit() {
     if (m79C) {
-        if (m78F == 4) {
+        if (mExecuteMode == 4) {
             setAnmTbl(l_npc_anm_wait, 1);
         }
         return true;
     }
-    return m78F;
+    return mExecuteMode;
 }
 
 /* 022C4404 */
@@ -628,8 +628,8 @@ s32 daNpcPeople_c::executeWalkInit() {
     mEtcFlag = mEtcFlag & ~0x00400008;
     setAnmTbl(l_npc_anm_walk, 1);
     daNpcPeople_c__l_npc_dat* dat = mpNpcDat;
-    f32 rnd = cM_rndF((f32)(dat->field_0x56 - dat->field_0x54));
-    m76E = (s16)gabi::ftoi(rnd + (f32)mpNpcDat->field_0x54);
+    f32 rnd = cM_rndF((f32)(dat->mWalkTimeMax - dat->mWalkTimeMin));
+    mWaitTimer = (s16)gabi::ftoi(rnd + (f32)mpNpcDat->mWalkTimeMin);
     return 2;
 }
 
@@ -650,10 +650,10 @@ void daNpcPeople_c::executeWalk() {
             }
         }
 
-        if (m789 != 0 || m78A != 0) {
+        if (mInAttention != 0 || m78A != 0) {
             executeSetMode(0);
         } else if (!temp) {
-            if (m78F != 8) {
+            if (mExecuteMode != 8) {
                 gabi::Local<cXyz> point, a, b;
                 gabi::Local<be<s16>> angle;
                 peoplePathGetPoint(&mPathRun, point.get(), mPathRun.mIdx);
@@ -665,16 +665,16 @@ void daNpcPeople_c::executeWalk() {
                 a->z = current.pos.z;
                 peopleCalcDisXZAngY(a.get(), b.get(), nullptr, angle.get());
                 s16 ang = *angle;
-                m77A = ang;
-                m786 = ang;
-                m764 = false;
-                m782 = mpNpcDat->field_0x3A;
-                m799 = 2;
+                mTargetAngleY = ang;
+                mLookAngleY = ang;
+                mLookHeadOnly = false;
+                mLookMaxVelTarget = mpNpcDat->mWalkHeadTurnVel;
+                mLookMode = 2;
                 m_jnt.mbTrn = 1; /* setTrn() */
-                m740 = mpNpcDat->field_0x48;
-                if (m76E != 0) {
-                    m76E = m76E - 1;
-                    if (m76E == 0) {
+                mTargetSpeed = mpNpcDat->mWalkSpeed;
+                if (mWaitTimer != 0) {
+                    mWaitTimer = mWaitTimer - 1;
+                    if (mWaitTimer == 0) {
                         executeSetMode(0);
                     }
                 }
@@ -705,8 +705,8 @@ s32 daNpcPeople_c::executeTurnInit() {
     if (*angle == current.angle.y && (mEtcFlag & 8) == 0) {
         setAnmTbl(l_npc_anm_walk, 1);
         daNpcPeople_c__l_npc_dat* dat = mpNpcDat;
-        f32 rnd = cM_rndF((f32)(dat->field_0x56 - dat->field_0x54));
-        m76E = (s16)gabi::ftoi(rnd + (f32)mpNpcDat->field_0x54);
+        f32 rnd = cM_rndF((f32)(dat->mWalkTimeMax - dat->mWalkTimeMin));
+        mWaitTimer = (s16)gabi::ftoi(rnd + (f32)mpNpcDat->mWalkTimeMin);
         return 2;
     }
     return 3;
@@ -717,7 +717,7 @@ void daNpcPeople_c::executeTurn() {
     if (!executeCommon()) {
         s16 temp;
         if (mEtcFlag & 0x400008) {
-            temp = m77A;
+            temp = mTargetAngleY;
         } else {
             gabi::Local<cXyz> point, a, b;
             gabi::Local<be<s16>> angle;
@@ -731,9 +731,9 @@ void daNpcPeople_c::executeTurn() {
             peopleCalcDisXZAngY(a.get(), b.get(), nullptr, angle.get());
             temp = *angle;
         }
-        m786 = temp;
-        m764 = false;
-        m799 = 2;
+        mLookAngleY = temp;
+        mLookHeadOnly = false;
+        mLookMode = 2;
         m_jnt.mbTrn = 1; /* setTrn() */
         if (current.angle.y == temp) {
             if (mEtcFlag & 0x400000) {
@@ -751,17 +751,17 @@ void daNpcPeople_c::executeTurn() {
 s32 daNpcPeople_c::executeBikkuriInit() {
     m79A = m79A | 0x1;
     setAnmTbl(l_npc_anm_bikkuri, 1);
-    m772 = 0x15;
+    mReactTimer = 0x15;
     return 4;
 }
 
 /* 022C4B80 */
 void daNpcPeople_c::executeBikkuri() {
-    if (!executeCommon() && m772 != 0) {
-        m799 = 0;
-        m772 = m772 - 1;
-        if (m772 == 0) {
-            m744 = -1.0f;
+    if (!executeCommon() && mReactTimer != 0) {
+        mLookMode = 0;
+        mReactTimer = mReactTimer - 1;
+        if (mReactTimer == 0) {
+            mMorf = -1.0f;
             executeSetMode(5);
         }
     }
@@ -771,9 +771,9 @@ void daNpcPeople_c::executeBikkuri() {
 s32 daNpcPeople_c::executeFurueInit() {
     setAnmTbl(l_npc_anm_furue, 1);
     // HD: 150 frames; GameCube uses 0x78.
-    m772 = 0x96;
-    m774 = (s16)gabi::ftoi(cM_rndF(20.0f) + 10.0f);
-    m786 = current.angle.y;
+    mReactTimer = 0x96;
+    mFurueTimer = (s16)gabi::ftoi(cM_rndF(20.0f) + 10.0f);
+    mLookAngleY = current.angle.y;
     be<s16>* k = l_joint_dat_kyoro;
     m_jnt.setParam(k[2], k[3], k[6], k[7], k[0], k[1], k[4], k[5], k[8]);
     return 5;
@@ -782,29 +782,29 @@ s32 daNpcPeople_c::executeFurueInit() {
 /* 022C4CA8 */
 void daNpcPeople_c::executeFurue() {
     if (!executeCommon()) {
-        if (m772) {
-            if (m774 != 0) {
-                m774 = m774 - 1;
+        if (mReactTimer) {
+            if (mFurueTimer != 0) {
+                mFurueTimer = mFurueTimer - 1;
             } else {
                 f32 r = cM_rndF(20.0f);
                 m79A = m79A ^ 2;
-                m774 = (s16)gabi::ftoi(r + 10.0f);
+                mFurueTimer = (s16)gabi::ftoi(r + 10.0f);
             }
             if (m79A & 2) {
-                m786 = current.angle.y + 0x4000;
+                mLookAngleY = current.angle.y + 0x4000;
             } else {
-                m786 = current.angle.y - 0x4000;
+                mLookAngleY = current.angle.y - 0x4000;
             }
-            m764 = true;
-            m799 = 2;
-            m772 = m772 - 1;
-            if (m772 == 0) {
-                m744 = 8.0f;
+            mLookHeadOnly = true;
+            mLookMode = 2;
+            mReactTimer = mReactTimer - 1;
+            if (mReactTimer == 0) {
+                mMorf = 8.0f;
                 executeSetMode(0);
                 m79A = m79A & ~0x1;
             }
         }
-        m7A6 = 0;
+        mPsoNo = 0;
     }
 }
 

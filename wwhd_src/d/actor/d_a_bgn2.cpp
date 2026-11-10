@@ -99,7 +99,7 @@ int gr_check(bgn2_class* i_this, cXyz* param_2) {
 }
 
 /* 0208B268 */
-/* HD: the legs are m2B98[0..29] (GameCube i + 4, past the end of the array for the last four),
+/* HD: the legs are mLegPos[0..29] (GameCube i + 4, past the end of the array for the last four),
  * and the ripple frame test comes before the ground check  */
 void asi_hamon_set(bgn2_class* i_this) {
     gabi::Local<cXyz> local_1c;
@@ -110,8 +110,8 @@ void asi_hamon_set(bgn2_class* i_this) {
     local_28->y = 0.0f;
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG2, local_28, &bg_tevstr);
     for (int i = 0; i < 30; i++) {
-        local_1c->copy(i_this->m2B98[i]);
-        if (!((i_this->m0310 + i) & 7) && !gr_check(i_this, local_1c)) {
+        local_1c->copy(i_this->mLegPos[i]);
+        if (!((i_this->mFrameCounter + i) & 7) && !gr_check(i_this, local_1c)) {
             dComIfGp_particle_setSimple(ID_AK_SN_O_KGTCOMMONHAMON00, local_1c, 0xFF);
         }
     }
@@ -168,16 +168,16 @@ int pos_move(bgn2_class* i_this) {
     MtxPosition(local_18, local_24);
     actor->speed.x = local_24->x;
     actor->speed.z = local_24->z;
-    i_this->m034C.copy(i_this->m0340);
-    i_this->m0340.x = i_this->m0340.x + actor->speed.x;
-    i_this->m0340.z = i_this->m0340.z + actor->speed.z;
-    f32 x = i_this->m0340.x;
-    f32 z = i_this->m0340.z;
+    i_this->mMovePosOld.copy(i_this->mMovePos);
+    i_this->mMovePos.x = i_this->mMovePos.x + actor->speed.x;
+    i_this->mMovePos.z = i_this->mMovePos.z + actor->speed.z;
+    f32 x = i_this->mMovePos.x;
+    f32 z = i_this->mMovePos.z;
     fVar1 = std_sqrtf(gabi::fmadds(x, x, z * z));
     if (fVar1 > REG0_F(3) + 1500.0f) {
         actor->speedF = 0.0f;
-        i_this->m0340.z = i_this->m034C.z;
-        i_this->m0340.x = i_this->m034C.x;
+        i_this->mMovePos.z = i_this->mMovePosOld.z;
+        i_this->mMovePos.x = i_this->mMovePosOld.x;
         return TRUE;
     }
     return FALSE;
@@ -197,7 +197,7 @@ static BOOL daBgn2_IsDelete(bgn2_class*) { return TRUE; }
 /* 0208EE40 */
 static BOOL daBgn2_Delete(bgn2_class* i_this) {
     dComIfG_resDelete(&i_this->mPhase, "Bgn" /* "Bgn" */);
-    if (i_this->m30D8 != 0) {
+    if (i_this->mHioOwner != 0) {
         s8 no = l_HIO.mNo;
         hio_set = 0;
         mDoHIO_deleteChild(no);
@@ -206,7 +206,7 @@ static BOOL daBgn2_Delete(bgn2_class* i_this) {
 }
 
 /* 0208EEA4 */
-/* HD: the model packets (and a fourth one at m3304) are set up after the models  */
+/* HD: the model packets (and a fourth one at mHdPacket) are set up after the models  */
 static BOOL useHeapInit(fopAc_ac_c* a_this) {
     J3DModelData* modelData;
     J3DAnmTevRegKey* pBrk;
@@ -224,7 +224,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     if (i_this->mpHeadMorf == nullptr || i_this->mpHeadMorf->getModel() == nullptr) {
         return FALSE;
     }
-    bgn2_packet_init(i_this->m02B8, 0);
+    bgn2_packet_init(i_this->mHeadPacket, 0);
     {
         J3DModelData* md =
             (J3DModelData*)dComIfG_getObjectRes("Bgn", dRes_INDEX_BGN_BDL_BGN_KUMO1_e);
@@ -237,7 +237,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     if (i_this->mpBodyMorf == nullptr || i_this->mpBodyMorf->getModel() == nullptr) {
         return FALSE;
     }
-    bgn2_packet_init(i_this->m02D0, 0);
+    bgn2_packet_init(i_this->mBodyPacket, 0);
     modelData = (J3DModelData*)dComIfG_getObjectRes("Bgn", dRes_INDEX_BGN_BDL_BGN_JYAKUTENA2_e);
     i_this->mpJyakutenModel[2] = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     if (i_this->mpJyakutenModel[2] == nullptr) {
@@ -281,12 +281,12 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
                             1.0f, 0, -1, 0, 0)) {
         return FALSE;
     }
-    bgn2_packet_init(i_this->m02E4, 0);
+    bgn2_packet_init(i_this->mJyakutenPacket, 0);
     void* pBti = dComIfG_getObjectRes("Bgn", dRes_INDEX_BGN_BTI_NOT_CUT1_e);
     if (!mDoExt_3DlineMat1_init(&i_this->mRedRopeMat, 1, 0x3C, pBti, 1)) {
         return FALSE;
     }
-    bgn2_packet_init(i_this->m3304, 0);
+    bgn2_packet_init(i_this->mHdPacket, 0);
     return TRUE;
 }
 
@@ -298,16 +298,16 @@ static cPhs_State daBgn2_Create(fopAc_ac_c* a_this) {
         if (a_this != nullptr) {
             fopAc_ac_c_ct(a_this);
             a_this->__vtbl = BGN2_VTBL;
-            bgn2_packetConstruct(i_this->m02B8); /* mDoExt_J3DModelPacketS */
-            bgn2_packetConstruct(i_this->m02D0);
-            bgn2_packetConstruct(i_this->m02E4);
+            bgn2_packetConstruct(i_this->mHeadPacket); /* mDoExt_J3DModelPacketS */
+            bgn2_packetConstruct(i_this->mBodyPacket);
+            bgn2_packetConstruct(i_this->mJyakutenPacket);
             dCcD_Stts_ct(&i_this->mStts);
-            bgn2_sphereConstruct(&i_this->m039C);        /* dCcD_Sph::dCcD_Sph */
-            bgn2_sphereArrayConstruct(i_this->m04C8, 2); /* __construct_array */
-            bgn2_sphereArrayConstruct(i_this->m0720, 30);
-            bgn2_sphereConstruct(&i_this->m2A48);
+            bgn2_sphereConstruct(&i_this->mHeadSph);        /* dCcD_Sph::dCcD_Sph */
+            bgn2_sphereArrayConstruct(i_this->mBodySph, 2); /* __construct_array */
+            bgn2_sphereArrayConstruct(i_this->mLegSph, 30);
+            bgn2_sphereConstruct(&i_this->mCoreSph);
             bgn2_lineConstruct(&i_this->mRedRopeMat); /* mDoExt_3DlineMat1_c */
-            bgn2_packetConstruct(i_this->m3304);
+            bgn2_packetConstruct(i_this->mHdPacket);
             dBgS_AcchCir_ct(&i_this->mAcchCir);
             dBgS_ObjAcch_ct(&i_this->mAcch, dBgS_ObjAcch_vt{0x10008E14, 0x10008E34, 0x10008E24});
         }
@@ -321,27 +321,27 @@ static cPhs_State daBgn2_Create(fopAc_ac_c* a_this) {
             return cPhs_ERROR_e;
         }
         if (hio_set == 0) {
-            i_this->m30D8 = 1;
+            i_this->mHioOwner = 1;
             hio_set = 1;
             l_HIO.mNo = mDoHIO_createChild(
                 "\u0082f\u0081i\u0083^\u0083\u0089\u0083o\u0081j" /* "G (King crab)" */, &l_HIO);
         }
         i_this->mStts.Init(0xFF, 0xFF, a_this);
-        i_this->m039C.Set((dCcD_SrcSph*)&cc_sph_src /* cc_sph_src */);
-        i_this->m039C.SetStts(&i_this->mStts);
-        i_this->m039C.mObjAt.mSPrm &= ~1u; /* OffAtSetBit */
+        i_this->mHeadSph.Set((dCcD_SrcSph*)&cc_sph_src /* cc_sph_src */);
+        i_this->mHeadSph.SetStts(&i_this->mStts);
+        i_this->mHeadSph.mObjAt.mSPrm &= ~1u; /* OffAtSetBit */
         for (int i = 0; i < 2; i++) {
-            i_this->m04C8[i].Set((dCcD_SrcSph*)&cc_sph_src);
-            i_this->m04C8[i].SetStts(&i_this->mStts);
-            i_this->m04C8[i].mObjAt.mSPrm &= ~1u;
+            i_this->mBodySph[i].Set((dCcD_SrcSph*)&cc_sph_src);
+            i_this->mBodySph[i].SetStts(&i_this->mStts);
+            i_this->mBodySph[i].mObjAt.mSPrm &= ~1u;
         }
         for (int i = 0; i < 30; i++) {
-            i_this->m0720[i].Set((dCcD_SrcSph*)&cc_sph_src);
-            i_this->m0720[i].SetStts(&i_this->mStts);
+            i_this->mLegSph[i].Set((dCcD_SrcSph*)&cc_sph_src);
+            i_this->mLegSph[i].SetStts(&i_this->mStts);
         }
-        i_this->m2A48.Set((dCcD_SrcSph*)&core_sph_src /* core_sph_src */);
-        i_this->m2A48.SetStts(&i_this->mStts);
-        i_this->m0340.copy(a_this->current.pos);
+        i_this->mCoreSph.Set((dCcD_SrcSph*)&core_sph_src /* core_sph_src */);
+        i_this->mCoreSph.SetStts(&i_this->mStts);
+        i_this->mMovePos.copy(a_this->current.pos);
         a_this->health = 3;
         a_this->max_health = 3;
         i_this->mAcch.Set(&a_this->current.pos, &a_this->old.pos, a_this, 1, &i_this->mAcchCir,
@@ -422,16 +422,16 @@ static void bgn2_class_dt(bgn2_class* p, s32 flags) {
         /* dBgS_ObjAcch inline destructor (this TU's vtables) */
         bgn2_acchDestruct(&p->mAcch);
         bgn2_acchCirDestruct(&p->mAcchCir);
-        bgn2_packetDestruct(p->m3304, 2);       /* mDoExt_J3DModelPacketS::~ */
+        bgn2_packetDestruct(p->mHdPacket, 2);       /* mDoExt_J3DModelPacketS::~ */
         bgn2_lineDestruct(&p->mRedRopeMat, 2);  /* ~mDoExt_3DlineMat1_c (matcher: draw) */
-        bgn2_sphereDestruct(&p->m2A48, 2);      /* dCcD_Sph::~dCcD_Sph */
-        bgn2_sphereArrayDestruct(p->m0720, 30); /* __destroy_arr */
-        bgn2_sphereArrayDestruct(p->m04C8, 2);
-        bgn2_sphereDestruct(&p->m039C, 2);
+        bgn2_sphereDestruct(&p->mCoreSph, 2);      /* dCcD_Sph::~dCcD_Sph */
+        bgn2_sphereArrayDestruct(p->mLegSph, 30); /* __destroy_arr */
+        bgn2_sphereArrayDestruct(p->mBodySph, 2);
+        bgn2_sphereDestruct(&p->mHeadSph, 2);
         dCcD_Stts_dt(&p->mStts, 2);
-        bgn2_packetDestruct(p->m02E4, 2);
-        bgn2_packetDestruct(p->m02D0, 2);
-        bgn2_packetDestruct(p->m02B8, 2);
+        bgn2_packetDestruct(p->mJyakutenPacket, 2);
+        bgn2_packetDestruct(p->mBodyPacket, 2);
+        bgn2_packetDestruct(p->mHeadPacket, 2);
         bgn2_actorDestruct(p); /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(p);

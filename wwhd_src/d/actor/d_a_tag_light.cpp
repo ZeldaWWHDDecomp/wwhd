@@ -123,7 +123,7 @@ f32 Act_c::get_cc_r() {
 }
 /* 024AE044 */
 u8 Act_c::_delete() {
-    if (m2A0 == Type_Cone)
+    if (mType == Type_Cone)
         TagLight_resDelete(&mPhase, M_arcname);
     return 1;
 }
@@ -138,14 +138,14 @@ u32 Act_c::chk_light() {
 }
 /* 024AE0E8 */
 u8 Act_c::_execute() {
-    if (m2A0 == Type_Detector) {
+    if (mType == Type_Detector) {
         bool hit = chk_light();
-        s16 count = s16(u16(m306) + (hit ? 1u : 0xFFFFu));
+        s16 count = s16(u16(mLitCount) + (hit ? 1u : 0xFFFFu));
         if (count < 0)
             count = 0;
         else if (count > 20)
             count = 20;
-        m306 = count;
+        mLitCount = count;
         if (count > 10) {
             s32 index = TagLight_parameter(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
             dSv_info_c *save = dComIfGs_info();
@@ -155,11 +155,11 @@ u8 Act_c::_execute() {
         dComIfG_Ccsp_Set(&mSph);
     } else {
         u8 enabled = (TagLight_checkSwitch(this) != 0) && (TagLight_checkSchedule(this) != 0);
-        m304 = enabled;
+        mLightOn = enabled;
         f32 target = enabled ? 1.0f : 0.0f;
         s32 fade = TagLight_parameter(this, PRM_FADETYPE_W, PRM_FADETYPE_S);
         f32 speed = f32(M_alpha_spd[u32(fade)]);
-        TagLight_chaseAlpha(&m308, target, speed);
+        TagLight_chaseAlpha(&mAlpha, target, speed);
         mDoExt_btkAnm *btk = mpBtk;
         if (btk)
             TagLight_playAnimation(btk);
@@ -242,8 +242,8 @@ void Act_c::set_spot_mtx() {
     v->bottom.x = 0;
     v->bottom.y = -50;
     v->bottom.z = 0;
-    TagLight_multVec(m2A4, &v->offset, &v->start);
-    TagLight_multVec(m2A4, &v->bottom, &v->end);
+    TagLight_multVec(mMtx, &v->offset, &v->start);
+    TagLight_multVec(mMtx, &v->bottom, &v->end);
     TagLight_projectionInfo(this, &v->point, &v->normal, &v->center, &v->start, &v->end);
     TagLight_projectionMatrix(this, &v->point, &v->normal, &v->center, &v->start);
 }
@@ -294,7 +294,7 @@ void set_material(TagLightMaterialHD *material, u32 alpha) {
 }
 /* 024AE430 */
 u8 Act_c::_draw() {
-    if (m2A0 == Type_Cone && f32(m308) > 0.0f) {
+    if (mType == Type_Cone && f32(mAlpha) > 0.0f) {
         dScnKy_env_light_c *env = TagLight_env();
         TagLight_settingTev(env, 1, &current.pos, &tevStr);
         env = TagLight_env();
@@ -307,7 +307,7 @@ u8 Act_c::_draw() {
             J3DModelData *data = model->getModelData();
             TagLight_entryBtk(btk, data, frame);
         }
-        u8 alpha = u8(gabi::ftoi(f32(m308) * 255.5f));
+        u8 alpha = u8(gabi::ftoi(f32(mAlpha) * 255.5f));
         J3DModelData *data = mpModel->getModelData();
         TagLight_setMaterial(TagLight_jointMesh(data, 1), u32(alpha));
         TagLight_setMaterial(TagLight_jointMesh(data, 2), u32(alpha));
@@ -345,7 +345,7 @@ s32 Act_c::_create() {
     }
     s32 type = TagLight_parameter(this, PRM_TYPE_W, PRM_TYPE_S);
     f32 z = scale.z;
-    m2A0 = type;
+    mType = type;
     f32 y = scale.y, x = scale.x;
     f32 scaledZ = z;
     if (type == Type_Cone)
@@ -355,19 +355,19 @@ s32 Act_c::_create() {
         y = y + y;
         scaledZ = z + z;
     }
-    m4A4.x = x;
-    m4A4.z = scaledZ;
-    m4A4.y = y;
+    mSize.x = x;
+    mSize.z = scaledZ;
+    mSize.y = y;
     be<f32> *stack = &mDoMtx_stack_c::get()->m[0][0];
     f32 py = current.pos.y, px = current.pos.x, pz = current.pos.z;
     TagLight_transS(stack, px, py, pz);
     s16 rz = shape_angle.z, rx = shape_angle.x, ry = shape_angle.y;
     TagLight_ZXYrotM(stack, rx, ry, rz);
     TagLight_scaleM(x, y, scaledZ);
-    TagLight_copyMatrix(stack, m2A4);
-    TagLight_inverseMatrix(m2A4, m2D4);
+    TagLight_copyMatrix(stack, mMtx);
+    TagLight_inverseMatrix(mMtx, mInvMtx);
     s32 phase = cPhs_COMPLEATE_e;
-    if (m2A0 == Type_Cone) {
+    if (mType == Type_Cone) {
         phase = TagLight_resLoad(&mPhase, M_arcname);
         if (phase != cPhs_COMPLEATE_e)
             return phase;
@@ -394,15 +394,15 @@ s32 Act_c::_create() {
         m[1] = y;
         TagLight_initSpot(this);
     }
-    cullMtx = gabi::ea(m2A4);
+    cullMtx = gabi::ea(mMtx);
     TagLight_cullBox(this, -51.0f, -1.0f, -51.0f, 51.0f, 101.0f, 51.0f);
     bool active = false;
-    if (m2A0 != Type_Detector)
+    if (mType != Type_Detector)
         active = TagLight_checkSwitch(this) && TagLight_checkSchedule(this);
-    s32 currentType = m2A0;
-    m304 = active;
-    m306 = 0;
-    m308 = active ? 1.0f : 0.0f;
+    s32 currentType = mType;
+    mLightOn = active;
+    mLitCount = 0;
+    mAlpha = active ? 1.0f : 0.0f;
     if (currentType == Type_Detector) {
         mStts.Init(255, 255, this);
         mSph.Set(reinterpret_cast<dCcD_SrcSph *>(&M_sph_src));
@@ -458,11 +458,11 @@ void Act_c::make_projection_mtx(const cXyz *point, const cXyz *normal, const cXy
     be<f32> *cosineValue = &l_sinCos.mEntries[u32(u16(inclination)) >> 3].mCosine;
     f32 cosine = f32(*cosineValue);
     if (std::fabs(cosine) < 0.0010000000474974513f) {
-        m305 = 0;
+        mProjMtxValid = 0;
         return;
     }
-    m305 = 1;
-    f32 halfX = f32(m4A4.x) / f32(*cosineValue) * 0.5f, halfZ = f32(m4A4.z) * 0.5f;
+    mProjMtxValid = 1;
+    f32 halfX = f32(mSize.x) / f32(*cosineValue) * 0.5f, halfZ = f32(mSize.z) * 0.5f;
     f32 py = point->y, px, pz, factor;
     if (!narrow) {
         px = point->x;
@@ -487,7 +487,7 @@ void Act_c::make_projection_mtx(const cXyz *point, const cXyz *normal, const cXy
     TagLight_scaleM(halfX * factor, middle * factor, halfZ * factor);
     y = shape_angle.y;
     TagLight_YrotM(stack, y);
-    TagLight_copyMatrix(stack, m474);
+    TagLight_copyMatrix(stack, mProjMtx);
 }
 /* 024AD198 */
 void Act_c::get_projection_info(cXyz *point, cXyz *normal, cXyz *center, const cXyz *start, const cXyz *end) {
@@ -525,7 +525,7 @@ void Act_c::get_projection_info(cXyz *point, cXyz *normal, cXyz *center, const c
             normal->y = f32(plane->mNormal.y);
             normal->z = f32(plane->mNormal.z);
             if (narrow) {
-                f32 width = f32(m4A4.x) * 12.0f, depth = f32(m4A4.z) * 12.0f;
+                f32 width = f32(mSize.x) * 12.0f, depth = f32(mSize.z) * 12.0f;
                 for (int i = 0; i < 4; i++) {
                     d->cross[i].copy(*point);
                     d->offsets[0].x = width;
@@ -540,7 +540,7 @@ void Act_c::get_projection_info(cXyz *point, cXyz *normal, cXyz *center, const c
                     d->offsets[3].x = 0;
                     d->offsets[3].y = 0;
                     d->offsets[3].z = -depth;
-                    TagLight_multVec(m2A4, &d->offsets[i], &d->transformed);
+                    TagLight_multVec(mMtx, &d->offsets[i], &d->transformed);
                     f32 ny = f32(plane->mNormal.y), ty = d->transformed.y, sy = start->y,
                         tx = d->transformed.x, sx = start->x, sz = start->z;
                     f32 dx = tx - sx, dy = ty - sy, tz = d->transformed.z, dz = tz - sz,

@@ -30,7 +30,7 @@ field 02470E24 r3+0xB3 u8 0,1,53
 field 02470E24 101D024C u8 0 1
 field 02470D3C r3+0xF4C u8 0 1
 field 02470DA0 r3+0xB3 u8 0,1,53
-field 0246FB78 r3+0x650 f32 -15 15        # field_31C[19].mPos.y vs field_2D4.y (< 10)
+field 0246FB78 r3+0x650 f32 -15 15        # mLinks[19].mPos.y vs mTipTargetPos.y (< 10)
 field 0246FB78 r3+0x3F4 f32 0 0
 field 0246FB78 r3+0xF48 f32 -50 50        # ground_y (clamp)
 callee 025A847C r8=12          # particle scale compared

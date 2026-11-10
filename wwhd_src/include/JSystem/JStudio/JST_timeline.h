@@ -24,13 +24,13 @@ struct TVariableValue {
         be<f32> mValue;
         be<u32> mValueBits;
     };
-    be<u32> field_0x4;
-    gfn field_0x8;
+    be<u32> mAge;  /* was field_0x4: update_time_ 02839DB4 / update_functionValue_ 02839DF4 evaluate at age * seconds; TAdaptor::adaptor_updateVariableValue 0283A48C adds the frames (saturating); every adaptor_setVariableValue_* (e.g. 02839E88) resets it to 0 */
+    gfn mUpdate;  /* was field_0x8: update 02839D38 calls it when set (then outputs mValue); the adaptor_setVariableValue_* setters store update_immediate_ / update_time_ / update_functionValue_, VOID 02839E70 clears it; update_immediate_ 02839DA0 clears it after one use */
     union {
         gptr<TFunctionValue> fv;
         be<f32> val;
         be<u32> bits;
-    } field_0xc;
+    } mParam;  /* was field_0xc: union {fv, val, bits}: the setters store the immediate value, the time rate or the function value (02839E88, 02839EB4, 02839EE0); the update functions read it */
     gptr<TOutput> pOutput_;
     void update(f64, TAdaptor*);
 };
@@ -150,9 +150,9 @@ inline const u8* sequenceOffset(const u8* seq, u32 offset) {
 }
 
 WWHD_SIZE(TVariableValue, 0x14);
-WWHD_OFFSET(TVariableValue, field_0x4, 4);
-WWHD_OFFSET(TVariableValue, field_0x8, 8);
-WWHD_OFFSET(TVariableValue, field_0xc, 0xC);
+WWHD_OFFSET(TVariableValue, mAge, 4);
+WWHD_OFFSET(TVariableValue, mUpdate, 8);
+WWHD_OFFSET(TVariableValue, mParam, 0xC);
 WWHD_OFFSET(TVariableValue, pOutput_, 0x10);
 WWHD_SIZE(TAdaptor, 0xC);
 WWHD_OFFSET(TAdaptor, __vtbl, 8);

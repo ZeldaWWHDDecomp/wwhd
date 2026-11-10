@@ -83,7 +83,7 @@ ret 025200D4 0x54000000 0x54000000   # play object
 field 020E11E8 54005292 u8 0,0,1          # event running
 field 020E11E8 54005B2C u32 0x55000000    # player
 field 020E11E8 550003B8 u32 0,0x02000000
-field 020E11E8 r3+0x5A4 i8 0,0,2          # m033C
+field 020E11E8 r3+0x5A4 i8 0,0,2          # mRideTimer
 field 020E11E8 r3+0x570 i32 0,90,99,100,101,110
 field 020E11E8 10100C14 u8 0,4,5,6,7,4
 field 020E11E8 10100BAC i16 0,0,5,12

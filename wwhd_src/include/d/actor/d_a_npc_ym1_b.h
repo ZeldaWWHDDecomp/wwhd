@@ -8,9 +8,9 @@ WWHD_SIZE(daNpc_Ym1_c::anm_prm_c, 0x10);
 namespace ym1_b {
 struct State {
     u8 _pad0[0x7E8];
-    /* 0x7E8 */ gptr<J3DModel> m6D0;
+    /* 0x7E8 */ gptr<J3DModel> mItemModel;  /* was m6D0: view of daNpc_Ym1_c mItemModel (d_a_npc_ym1.h) */
     u8 _pad7EC[0x1CA];
-    /* 0x9B6 */ csXyz m846;
+    /* 0x9B6 */ csXyz mModelAngle;  /* was m846: view of daNpc_Ym1_c mModelAngle (d_a_npc_ym1.h) */
     u8 _pad9BC[0x18];
     /* 0x9D4 */ cXyz mNbtAttentionPosition;
     u8 _pad9E0[0xC];
@@ -25,32 +25,32 @@ struct State {
     /* 0xA09 */ be<u8> mAnimationWrapped;
     /* 0xA0A */ be<u8> mPresentItem;
     u8 _padA0B[0x1];
-    /* 0xA0C */ be<u8> m89C;
+    /* 0xA0C */ be<u8> mPrevKariFlag;  /* was m89C: view of daNpc_Ym1_c mPrevKariFlag (d_a_npc_ym1.h) */
     u8 _padA0D[0x1];
-    /* 0xA0E */ be<u8> m89E;
+    /* 0xA0E */ be<u8> mbWaitForDemo;  /* was m89E: view of daNpc_Ym1_c mbWaitForDemo (d_a_npc_ym1.h) */
     u8 _padA0F[0x1];
     /* 0xA10 */ be<u8> m8A0;
     u8 _padA11[0x1];
     /* 0xA12 */ be<s8> mPlayerAttending;
     /* 0xA13 */ be<s8> mTalkRequested;
-    /* 0xA14 */ be<s8> m8A4;
+    /* 0xA14 */ be<s8> mbHeadOnly;  /* was m8A4: view of daNpc_Ym1_c mbHeadOnly (d_a_npc_ym1.h) */
     /* 0xA15 */ be<s8> mTurnToPlayer;
     u8 _padA16[0x2];
     /* 0xA18 */ be<s8> mAnimationAttribute;
     /* 0xA19 */ be<s8> mAnimationTag;
     u8 _padA1A[0x1];
-    /* 0xA1B */ be<s8> m8AB;
+    /* 0xA1B */ be<s8> mAnmNum;  /* was m8AB: view of daNpc_Ym1_c mAnmNum (d_a_npc_ym1.h) */
     /* 0xA1C */ be<s8> mActionSubstate;
     /* 0xA1D */ be<s8> mStatus;
     /* 0xA1E */ be<s8> mReturnStatus;
-    /* 0xA1F */ be<s8> m8AF;
+    /* 0xA1F */ be<s8> mLookMode;  /* was m8AF: view of daNpc_Ym1_c mLookMode (d_a_npc_ym1.h) */
     u8 _padA20[0x2];
     /* 0xA22 */ be<s8> mActionPhase;
     /* 0xA23 */ be<s8> mMessageAnimationState;
 };
 WWHD_SIZE(State, 0xA24);
-WWHD_OFFSET(State, m6D0, 0x7E8);
-WWHD_OFFSET(State, m846, 0x9B6);
+WWHD_OFFSET(State, mItemModel, 0x7E8);
+WWHD_OFFSET(State, mModelAngle, 0x9B6);
 WWHD_OFFSET(State, mNbtAttentionPosition, 0x9D4);
 WWHD_OFFSET(State, mPreviousMorfFrame, 0x9EC);
 WWHD_OFFSET(State, mPreviousAngles, 0x9F0);
@@ -59,20 +59,20 @@ WWHD_OFFSET(State, mAttentionTimer, 0x9FE);
 WWHD_OFFSET(State, mAnimationStopped, 0xA08);
 WWHD_OFFSET(State, mAnimationWrapped, 0xA09);
 WWHD_OFFSET(State, mPresentItem, 0xA0A);
-WWHD_OFFSET(State, m89C, 0xA0C);
-WWHD_OFFSET(State, m89E, 0xA0E);
+WWHD_OFFSET(State, mPrevKariFlag, 0xA0C);
+WWHD_OFFSET(State, mbWaitForDemo, 0xA0E);
 WWHD_OFFSET(State, m8A0, 0xA10);
 WWHD_OFFSET(State, mPlayerAttending, 0xA12);
 WWHD_OFFSET(State, mTalkRequested, 0xA13);
-WWHD_OFFSET(State, m8A4, 0xA14);
+WWHD_OFFSET(State, mbHeadOnly, 0xA14);
 WWHD_OFFSET(State, mTurnToPlayer, 0xA15);
 WWHD_OFFSET(State, mAnimationAttribute, 0xA18);
 WWHD_OFFSET(State, mAnimationTag, 0xA19);
-WWHD_OFFSET(State, m8AB, 0xA1B);
+WWHD_OFFSET(State, mAnmNum, 0xA1B);
 WWHD_OFFSET(State, mActionSubstate, 0xA1C);
 WWHD_OFFSET(State, mStatus, 0xA1D);
 WWHD_OFFSET(State, mReturnStatus, 0xA1E);
-WWHD_OFFSET(State, m8AF, 0xA1F);
+WWHD_OFFSET(State, mLookMode, 0xA1F);
 WWHD_OFFSET(State, mActionPhase, 0xA22);
 WWHD_OFFSET(State, mMessageAnimationState, 0xA23);
 inline State* state(daNpc_Ym1_c* actor) {

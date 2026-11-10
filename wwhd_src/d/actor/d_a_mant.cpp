@@ -402,9 +402,9 @@ static BOOL daMant_Execute(mant_class* self) {
         return TRUE;
     mantGetGameInfo();
     self->mTick = (u32)self->mTick + 1;
-    s16 hitDelay = (s16)self->m2836;
+    s16 hitDelay = (s16)self->mHitWait;
     if (hitDelay)
-        self->m2836 = hitDelay - 1;
+        self->mHitWait = hitDelay - 1;
     mantOutputCount = 0;
     mantOutput = &self->mPacket.mPos[0];
     mantCollisionIndex = 0;
@@ -416,18 +416,18 @@ static BOOL daMant_Execute(mant_class* self) {
     gabi::Local<be<u32>[4]> linkage;
 
     mantSetAngles(gabi::ea(angle.get()), 0, 0, 0);
-    mantSubtractVector(&self->m1BE0, delta.get(), &self->m1BEC);
+    mantSubtractVector(&self->mShoulderPosR, delta.get(), &self->mShoulderPosL);
     s32 heading = mantAtan2s(delta->x.get(), delta->z.get());
     angle->y = heading + 0x4000;
     for (u32 row = 0; row < 9; ++row) {
         mant_j_s* joint = &self->mJoint[row];
         u32 strip = gabi::ea(joint);
         f32 factor = (f32)row;
-        f32 x = gabi::fmadds(delta->x.get() * 0.125f, factor, (f32)self->m1BEC.x);
+        f32 x = gabi::fmadds(delta->x.get() * 0.125f, factor, (f32)self->mShoulderPosL.x);
         joint->mPos[0].x = x;
-        f32 y = gabi::fmadds(delta->y.get() * 0.125f, factor, (f32)self->m1BEC.y);
+        f32 y = gabi::fmadds(delta->y.get() * 0.125f, factor, (f32)self->mShoulderPosL.y);
         joint->mPos[0].y = y;
-        f32 z = gabi::fmadds(delta->z.get() * 0.125f, factor, (f32)self->m1BEC.z);
+        f32 z = gabi::fmadds(delta->z.get() * 0.125f, factor, (f32)self->mShoulderPosL.z);
         joint->mPos[0].z = z;
         mantRotateY(mantCalcMatrix, (s32)(s16)angle->y);
         s32 phase = mantFloatToAngle(factor * mantRowPhase);
@@ -493,7 +493,7 @@ static BOOL daMant_Execute(mant_class* self) {
         mantTransformVector(offset.get(), turbulence.get());
         offset->x = 0.0f;
         offset->y = 0.0f;
-        offset->z = ((f32)self->m1BF8 + mant_sin(row * 23000)) * (f32)self->scale.y;
+        offset->z = ((f32)self->mSegmentLen + mant_sin(row * 23000)) * (f32)self->scale.y;
         bool severed = false;
         for (u32 node = 0; node < 9; ++node) {
             cXyz* position = &joint->mPos[node];
@@ -562,7 +562,7 @@ static BOOL daMant_Execute(mant_class* self) {
                 for (u32 j = 0; j < 3; ++j) {
                     f32 previous = reinterpret_cast<be<f32>*>(speed)[j].get();
                     f32 next = reinterpret_cast<be<f32>*>(position)[j].get();
-                    reinterpret_cast<be<f32>*>(speed)[j] = (next - previous) * (f32)self->m1BFC;
+                    reinterpret_cast<be<f32>*>(speed)[j] = (next - previous) * (f32)self->mSpeedRate;
                 }
             }
             u32 output = gabi::ea(mantOutput);
@@ -575,17 +575,17 @@ static BOOL daMant_Execute(mant_class* self) {
                 row != 0 && row != 8) {
                 u32 collision = mantCollisionIndex;
                 u32 spheres = gabi::ea(&self->mMeshSph[0]);
-                bool visible = (s8)(u8)self->m2834 != 0;
+                bool visible = (s8)(u8)self->mMeshHitOn != 0;
                 self->mMeshSph[collision].SetR(visible ? 30.0f : -200.0f);
                 collision = mantCollisionIndex;
                 self->mMeshSph[collision].SetC(visible ? position : &mantHiddenPosition);
                 play = gabi::at<dComIfG_inf_c>(mantGetGameInfo());
                 collision = mantCollisionIndex;
                 mantRegisterCollision(&play->play.mCcS, spheres + collision * 0x12C);
-                if (!(s16)self->m2836 && !(s16)self->mBurnTimer) {
+                if (!(s16)self->mHitWait && !(s16)self->mBurnTimer) {
                     collision = mantCollisionIndex;
                     if (mantCheckTargetHit(&self->mMeshSph[collision])) {
-                        self->m2836 = 10;
+                        self->mHitWait = 10;
                         collision = mantCollisionIndex;
                         u32 object = mantGetTargetHitObject(&self->mMeshSph[collision]);
                         u32 hit = gabi::ea(attack.get());
@@ -598,7 +598,7 @@ static BOOL daMant_Execute(mant_class* self) {
                             particleAngle->x = (s16)self->current.angle.x;
                             particleAngle->y = (s16)self->current.angle.y - 0x8000;
                             s32 room = (s8)(u8)self->current.roomNo;
-                            self->m2834 = 0;
+                            self->mMeshHitOn = 0;
                             self->mPacket.mTexNo = hitType == 2 ? 2 : 4;
                             particleAngle->z = (s16)self->current.angle.z;
                             play = gabi::at<dComIfG_inf_c>(mantGetGameInfo());
@@ -612,12 +612,12 @@ static BOOL daMant_Execute(mant_class* self) {
                             }
                             hitType = (u8)attack->mHitType;
                         }
-                        self->m1C0E = 2;
+                        self->mWindTimer = 2;
                         s16 direction = gabi::at<fopAc_ac_c>(player)->shape_angle.y.get();
                         self->mWindAmplitude = 10.0f;
                         self->mWindHeading = direction;
                         if (hitType == 5) {
-                            self->m1C0E = 6;
+                            self->mWindTimer = 6;
                             self->mBurnTimer = 26;
                             severed = true;
                             break;
@@ -680,17 +680,17 @@ static BOOL daMant_Execute(mant_class* self) {
         }
     }
     if (!deleting) {
-        cLib_addCalc2(&self->m1BF8, 30.0f, 0.1f, 1.0f);
-        cLib_addCalc2(&self->m1BFC, 0.7f, 0.1f, 0.05f);
+        cLib_addCalc2(&self->mSegmentLen, 30.0f, 0.1f, 1.0f);
+        cLib_addCalc2(&self->mSpeedRate, 0.7f, 0.1f, 0.05f);
         if (mantCheckTargetHit(&self->mWindSph)) {
-            self->m1C0E = mantWindDuration + 5;
+            self->mWindTimer = mantWindDuration + 5;
             dComIfG_inf_c* play = gabi::at<dComIfG_inf_c>(mantGetGameInfo());
             self->mWindHeading = play->play.mPlayerInfo[0].mpPlayer->shape_angle.y.get();
         }
         {
-            s16 windTimer = (s16)self->m1C0E;
+            s16 windTimer = (s16)self->mWindTimer;
             if (windTimer) {
-                self->m1C0E = windTimer - 1;
+                self->mWindTimer = windTimer - 1;
                 f32 target = mantWindTarget + 50.0f;
                 f32 step = mantWindStep + 10.0f;
                 cLib_addCalc2(&self->mWindAmplitude, target, 0.2f, step);
@@ -698,7 +698,7 @@ static BOOL daMant_Execute(mant_class* self) {
                 f32 step = mantWindDecay + 2.0f;
                 cLib_addCalc0(&self->mWindAmplitude, 0.1f, step);
             }
-            if ((s16)self->m1C0E <= 4)
+            if ((s16)self->mWindTimer <= 4)
                 cLib_addCalc0(&self->mWindGust, 0.1f, 0.1f);
             else
                 cLib_addCalc2(&self->mWindGust, 1.0f, 1.0f, 1.0f);
@@ -750,14 +750,14 @@ static cPhs_State daMant_Create(fopAc_ac_c* a_this) {
     if (type == Type_PHANTOM_GANON_e) {
         u8 t = i_this->mType;
         i_this->mPacket.mTexNo = 6; /* mpacket.setarg0 */
-        i_this->m1BF8 = 40.0f;
-        i_this->m1BFC = 0.8f;
+        i_this->mSegmentLen = 40.0f;
+        i_this->mSpeedRate = 0.8f;
         i_this->mGravity = -5.0f;
         warmPhantom = t == Type_PHANTOM_GANON_e;
     } else {
-        i_this->m1BFC = 0.7f;
+        i_this->mSpeedRate = 0.7f;
         i_this->mGravity = -10.0f;
-        i_this->m1BF8 = 30.0f;
+        i_this->mSegmentLen = 30.0f;
         i_this->mStts.Init(200, 0xFF, a_this);
         i_this->mWindSph.Set(&wind_cc_sph_src);
         i_this->mWindSph.SetStts(&i_this->mStts);
@@ -766,7 +766,7 @@ static cPhs_State daMant_Create(fopAc_ac_c* a_this) {
             i_this->mMeshSph[i].SetStts(&i_this->mStts);
         }
         u8 t = i_this->mType;
-        i_this->m2834 = 10;
+        i_this->mMeshHitOn = 10;
         warmPhantom = t == Type_PHANTOM_GANON_e;
     }
     if (warmPhantom) {
@@ -902,10 +902,10 @@ void daMant_packet_c::setupUniforms(void* pass, void* program, u32 type) {
         gabi::at<mantHD::ProgramEntry>(entries)->mAttributes[index == 0 ? 1 : 0].mpObjects.get()));
     u32 indexCount = (u32)packet->mIndices.mCount;
     if (indexCount) {
-        u32 primitive = (u32)packet->mIndices.mPrimitive;
+        u32 indexFormat = (u32)packet->mIndices.mIndexFormat;
         u32 indices = gabi::ea(packet->mIndices.mpIndices.get());
-        u32 format = (u32)packet->mIndices.mFormat;
-        mantGX2DrawIndexed(format, indexCount, primitive, indices, 0, 1);
+        u32 mode = (u32)packet->mIndices.mPrimitiveMode;
+        mantGX2DrawIndexed(mode, indexCount, indexFormat, indices, 0, 1);
     }
 }
 
@@ -1081,7 +1081,7 @@ static void* daMant_packet_c_ct(void* self) {
         mantSetUniformBlockSlots(gabi::at<void>(gabi::ea(&packet->mMatrixBlock[0]) + k * 0xA8), 0);
     u32 count = mantIndexCount;
     mantSetIndexBuffer(&packet->mIndices, 0x101B9F18, 4, count);
-    packet->mIndices.mFormat = 4;
+    packet->mIndices.mPrimitiveMode = 4;
     gabi::Local<mantHD::SafeString> archiveName, fileName;
     fileName->mVtable = gc_tu.safeString;
     fileName->mpString = gabi::at<char>(0x10014688);

@@ -2,7 +2,7 @@
  *
  * GameCube -> WWHD: fopEn_enemy_c +0x11C; the three mDoExt_J3DModelPacketS grew from 0x14 to 0xB0
  * (constructor 02080404), so the members after them are +0x2F0; mDoExt_3DlineMat1_c grew from
- * 0x3C to 0x188 (+0x14C more), and HD adds a fourth model packet (0xB0) after m2EC4, so the
+ * 0x3C to 0x188 (+0x14C more), and HD adds a fourth model packet (0xB0) after mRopeSway, so the
  * emitter pointers and the background check are +0x4EC. Size 0x35C8 (GameCube 0x30DC).
  * Measured from daBgn2_Create (inline constructors), the deleting destructor 0208FAE8,
  * useHeapInit and daBgn2_Execute. */
@@ -24,85 +24,85 @@ WWHD_SIZE(mDoExt_3DlineMat1_l, 0x188);
 struct bgn2_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpHeadMorf;
-    /* 0x3D4 */ u8 m02B8[0xB0]; /* mDoExt_J3DModelPacketS (HD 0xB0) */
+    /* 0x3D4 */ u8 mHeadPacket[0xB0];  /* was m02B8: useHeapInit 0208EEA4 sets the mDoExt_J3DModelPacketS up; daBgn_Draw 0207B2CC (inlined daBgn2_Draw) gives it the mpHeadMorf model and updates it; mDoExt_J3DModelPacketS (HD 0xB0) */
     /* 0x484 */ gptr<mDoExt_McaMorf> mpBodyMorf;
-    /* 0x488 */ u8 m02D0[0xB0]; /* mDoExt_J3DModelPacketS */
-    /* 0x538 */ u8 m02E4[0xB0]; /* mDoExt_J3DModelPacketS */
+    /* 0x488 */ u8 mBodyPacket[0xB0];  /* was m02D0: useHeapInit 0208EEA4 sets the mDoExt_J3DModelPacketS up; daBgn_Draw 0207B2CC (inlined daBgn2_Draw) gives it the mpBodyMorf model and updates it; mDoExt_J3DModelPacketS */
+    /* 0x538 */ u8 mJyakutenPacket[0xB0];  /* was m02E4: useHeapInit 0208EEA4 sets the mDoExt_J3DModelPacketS up; daBgn_Draw 0207B2CC (inlined daBgn2_Draw) gives it the mpJyakutenModel shown for the current health and updates it; mDoExt_J3DModelPacketS */
     /* 0x5E8 */ gptr<J3DModel> mpJyakutenModel[3];
     /* 0x5F4 */ gptr<mDoExt_brkAnm> mJyakutenCBrkAnm;
     /* 0x5F8 */ gptr<mDoExt_brkAnm> mJyakutenBBrkAnm;
     /* 0x5FC */ u8 _5FC[4];
-    /* 0x600 */ be<s16> m0310; /* frame counter */
-    /* 0x602 */ be<s16> m0312; /* action */
-    /* 0x604 */ be<s16> m0314; /* action step */
+    /* 0x600 */ be<s16> mFrameCounter;  /* was m0310: daBgn2_Execute 0208B6A4 adds 1 per frame and uses it as the cos / sin phase of the head shake; asi_hamon_set 0208B268 / asi_eff_set (in daBgn2_Execute) and the rope sway in move use it as a phase; frame counter */
+    /* 0x602 */ be<s16> mAction;  /* was m0312: move (in daBgn2_Execute 0208B6A4) switch: 0 start, 1 plesattack, 2 jumpattack, 4 mahi, 5 damage, 6 hensin, 10 none; damage_check sets 4 / 5 / 6; action */
+    /* 0x604 */ be<s16> mMode;  /* was m0314: the step inside mAction: start / plesattack / jumpattack / damage / hensin (in daBgn2_Execute 0208B6A4) switch on it; damage_check sets 0; action step */
     /* 0x606 */ u8 _606[2];
-    /* 0x608 */ cXyz m0318; /* target (player position) */
+    /* 0x608 */ cXyz mTargetPos;  /* was m0318: plesattack (in daBgn2_Execute 0208B6A4) copies the player position and turns toward it (cM_atan2s); target (player position) */
     /* 0x614 */ u8 _614[0xC];
-    /* 0x620 */ be<s16> m0330[5]; /* timers */
-    /* 0x62A */ be<s16> m033A;    /* damage cooldown */
-    /* 0x62C */ be<s16> m033C;    /* guard SE cooldown */
+    /* 0x620 */ be<s16> mTimers[5];  /* was m0330: daBgn2_Execute 0208B6A4 counts all 5 down; plesattack / mahi / hensin load [0] from l_HIO or constants and wait on it; timers */
+    /* 0x62A */ be<s16> mDamageTimer;  /* was m033A: damage_check (in daBgn2_Execute 0208B6A4) takes a core hit only at 0 and sets 20; daBgn2_Execute counts it down; damage cooldown */
+    /* 0x62C */ be<s16> mHitSeTimer;  /* was m033C: damage_check (in daBgn2_Execute 0208B6A4) plays def_se_set for a head / body / leg hit only at 0 and sets 10; daBgn2_Execute counts it down; guard SE cooldown */
     /* 0x62E */ u8 _62E[2];
-    /* 0x630 */ cXyz m0340;    /* movement target */
-    /* 0x63C */ cXyz m034C;    /* previous movement target */
-    /* 0x648 */ be<s16> m0358; /* head shake */
+    /* 0x630 */ cXyz mMovePos;  /* was m0340: pos_move 0208B530 adds speed to it (back to mMovePosOld on a wall); daBgn2_Create 0208F218 sets current.pos; move (in daBgn2_Execute 0208B6A4) eases current.pos x / z to it, hensin eases it to 0; movement target */
+    /* 0x63C */ cXyz mMovePosOld;  /* was m034C: pos_move 0208B530 keeps mMovePos in it before the step and restores mMovePos from it; previous movement target */
+    /* 0x648 */ be<s16> mShakeTimer;  /* was m0358: damage_check (in daBgn2_Execute 0208B6A4) sets REG0_S(5) + 20; daBgn2_Execute counts it down and shakes the head by it * (REG0_F(14) + 500); head shake */
     /* 0x64A */ u8 _64A[6];
     /* 0x650 */ dCcD_Stts mStts;
-    /* 0x68C */ dCcD_Sph m039C;     /* head */
-    /* 0x7B8 */ dCcD_Sph m04C8[2];  /* body */
-    /* 0xA10 */ dCcD_Sph m0720[30]; /* legs */
-    /* 0x2D38 */ dCcD_Sph m2A48;    /* weak point (light arrows) */
-    /* 0x2E64 */ cXyz m2B74;
-    /* 0x2E70 */ cXyz m2B80[2];
-    /* 0x2E88 */ cXyz m2B98[30];
+    /* 0x68C */ dCcD_Sph mHeadSph;  /* was m039C: daBgn2_Create 0208F218 sets it up (cc_sph_src); daBgn2_Execute 0208B6A4 centres it on mHeadPos (r 150); damage_check reads its hit (critical-hit flash); head */
+    /* 0x7B8 */ dCcD_Sph mBodySph[2];  /* was m04C8: daBgn2_Create 0208F218 sets the two up (cc_sph_src); daBgn2_Execute 0208B6A4 centres them on mBodyPos (body_scale radii) and turns their At on with mBodyAtOn; body */
+    /* 0xA10 */ dCcD_Sph mLegSph[30];  /* was m0720: daBgn2_Create 0208F218 sets the 30 up; daBgn2_Execute 0208B6A4 centres them on mLegPos and turns their At on with mLegAtOn; damage_check reads their hits; legs */
+    /* 0x2D38 */ dCcD_Sph mCoreSph;  /* was m2A48: daBgn2_Create 0208F218 sets it up from core_sph_src; daBgn2_Execute 0208B6A4 centres it on mCorePos (r 210); damage_check: its hit damages bgn2; weak point (light arrows) */
+    /* 0x2E64 */ cXyz mHeadPos;  /* was m2B74: daBgn2_Execute 0208B6A4: MtxPosition of the head joint; mHeadSph is centred there and eyePos copies it */
+    /* 0x2E70 */ cXyz mBodyPos[2];  /* was m2B80: daBgn2_Execute 0208B6A4: MtxPosition of body_d[i]; mBodySph[i] is centred there and attack_eff_set uses it */
+    /* 0x2E88 */ cXyz mLegPos[30];  /* was m2B98: daBgn2_Execute 0208B6A4: MtxPosition of each leg joint; mLegSph[i] is centred there; gr_check 0208B0C0 / asi_hamon_set 0208B268 / asi_eff_set use it for the ground ripples */
     /* 0x2FF0 */ be<s16> mArrowHitEffectTimer[32];
     /* 0x3030 */ u8 m2D40[0x20];
-    /* 0x3050 */ be<s16> m2D60;
+    /* 0x3050 */ be<s16> mFogColorAdd;  /* was m2D60: daBgn_Draw 0207B2CC (inlined daBgn2_Draw) raises it while mArrowHitFlashTimer runs and adds it to the fog colour (same use as bgn_class mFogColorAdd) */
     /* 0x3052 */ u8 _3052[2];
-    /* 0x3054 */ be<f32> m2D64;
+    /* 0x3054 */ be<f32> mFogStartAdd;  /* was m2D64: daBgn_Draw 0207B2CC (inlined daBgn2_Draw) moves the fog start by it while mArrowHitFlashTimer runs (same use as bgn_class mFogStartAdd) */
     /* 0x3058 */ be<s16> mArrowHitFlashTimer;
-    /* 0x305A */ be<s16> m2D6A;
+    /* 0x305A */ be<s16> mCoreHitFrame;  /* was m2D6A: damage_check (in daBgn2_Execute 0208B6A4) sets 1 on a core hit; daBgn2_Execute counts it up to 100 and starts mArrowHitEffectTimer[i] when it equals fl_check_d[i] (same use as bgn_class mCoreHitFrame) */
     /* 0x305C */ gptr<JPABaseEmitter> mpArrowHitEmitter1[32];
     /* 0x30DC */ gptr<JPABaseEmitter> mpArrowHitEmitter2[32];
-    /* 0x315C */ cXyz m2E6C;   /* weak point position */
-    /* 0x3168 */ be<s8> m2E78; /* body colliders attack */
-    /* 0x3169 */ be<s8> m2E79; /* leg colliders attack */
+    /* 0x315C */ cXyz mCorePos;  /* was m2E6C: daBgn2_Execute 0208B6A4: MtxPosition of BGN_KUMO1_JNT_JYAKUTEN; mCoreSph is centred there; damage_check sets the weak-point break / hit particles there; weak point position */
+    /* 0x3168 */ be<s8> mBodyAtOn;  /* was m2E78: plesattack (in daBgn2_Execute 0208B6A4) sets 1; daBgn2_Execute turns the At of mBodySph on while it is set and clears it; body colliders attack */
+    /* 0x3169 */ be<s8> mLegAtOn;  /* was m2E79: plesattack (in daBgn2_Execute 0208B6A4) sets 1; daBgn2_Execute turns the At of mLegSph on while it is set and clears it; leg colliders attack */
     /* 0x316A */ u8 _316A[2];
-    /* 0x316C */ be<f32> m2E7C;
-    /* 0x3170 */ be<s16> m2E80; /* spin speed */
-    /* 0x3172 */ be<s16> m2E82; /* spin speed target */
+    /* 0x316C */ be<f32> mFogFade;  /* was m2E7C: hensin (in daBgn2_Execute 0208B6A4) eases it to 1, daBgn2_Execute back to 0, bgn hensin 02084D6C sets 1; daBgn_Draw 0207B2CC (inlined daBgn2_Draw) blacks the fog and moves its start by -50000 * it (same use as bgn_class mFogFade) */
+    /* 0x3170 */ be<s16> mSpinSpeed;  /* was m2E80: move (in daBgn2_Execute 0208B6A4) adds it to shape_angle.y and eases it to mSpinSpeedTarget; damage sets 0x800, hensin 0; spin speed */
+    /* 0x3172 */ be<s16> mSpinSpeedTarget;  /* was m2E82: jumpattack (in daBgn2_Execute 0208B6A4) sets l_HIO speeds (and negates it), damage 0x800, plesattack 0; move eases mSpinSpeed to it; spin speed target */
     /* 0x3174 */ u8 _3174[4];
     /* 0x3178 */ mDoExt_3DlineMat1_l mRedRopeMat;
-    /* 0x3300 */ be<f32> m2EC4;  /* rope sway */
-    /* 0x3304 */ u8 m3304[0xB0]; /* HD: a fourth mDoExt_J3DModelPacketS */
-    /* 0x33B4 */ gptr<JPABaseEmitter> m2EC8[2];
-    /* 0x33BC */ be<s8> m2ED0; /* Keese spawns left */
+    /* 0x3300 */ be<f32> mRopeSway;  /* was m2EC4: plesattack / damage (in daBgn2_Execute 0208B6A4) ease it to 250; move eases it to 0 and swings the 60 points of mRedRopeMat by sin * it; rope sway */
+    /* 0x3304 */ u8 mHdPacket[0xB0];  /* was m3304: useHeapInit 0208EEA4 sets the fourth mDoExt_J3DModelPacketS up (HD); daBgn_Draw 0207B2CC (inlined daBgn2_Draw) points it at mRedRopeMat and updates it; the bgn_draw::bgn2_class view already calls it mHdPacket; HD: a fourth mDoExt_J3DModelPacketS */
+    /* 0x33B4 */ gptr<JPABaseEmitter> mpPotaEmitter[2];  /* was m2EC8: jumpattack (in daBgn2_Execute 0208B6A4) sets [0] = ID_AK_SN_KGTT2CHESTPOTA00 and [1] = ID_AK_SN_KGTT2STOMACHPOTA00 on the KARADA1 / KARADA2 joints and retires them */
+    /* 0x33BC */ be<s8> mKiSetCount;  /* was m2ED0: ki_set (in daBgn2_Execute 0208B6A4) sets l_HIO.m2E; daBgn2_Execute counts it down and spawns one fpcNm_KI_e (while ki_check < l_HIO.m30) per count; daBgn_Execute 0207E7B4 clears it; Keese spawns left */
     /* 0x33BD */ u8 _33BD;
-    /* 0x33BE */ be<s16> m2ED2; /* Keese spawn cooldown */
+    /* 0x33BE */ be<s16> mKiSetTimer;  /* was m2ED2: ki_set (in daBgn2_Execute 0208B6A4) returns while it runs and reloads it from l_HIO.m2C; daBgn2_Execute counts it down; Keese spawn cooldown */
     /* 0x33C0 */ dBgS_AcchCir mAcchCir;
     /* 0x3400 */ dBgS_ObjAcch mAcch;
-    /* 0x35C4 */ be<u8> m30D8; /* owns the HIO child */
+    /* 0x35C4 */ be<u8> mHioOwner;  /* was m30D8: daBgn2_Create 0208F218 sets 1 when it created the l_HIO child; daBgn2_Delete 0208EE40 deletes the HIO child only then (same as bgn_class mHioOwner); owns the HIO child */
     /* 0x35C5 */ u8 _35C5[3];
 };
 WWHD_OFFSET(bgn2_class, mpHeadMorf, 0x3D0);
 WWHD_OFFSET(bgn2_class, mpBodyMorf, 0x484);
 WWHD_OFFSET(bgn2_class, mpJyakutenModel, 0x5E8);
-WWHD_OFFSET(bgn2_class, m0310, 0x600);
-WWHD_OFFSET(bgn2_class, m0330, 0x620);
-WWHD_OFFSET(bgn2_class, m0340, 0x630);
+WWHD_OFFSET(bgn2_class, mFrameCounter, 0x600);
+WWHD_OFFSET(bgn2_class, mTimers, 0x620);
+WWHD_OFFSET(bgn2_class, mMovePos, 0x630);
 WWHD_OFFSET(bgn2_class, mStts, 0x650);
-WWHD_OFFSET(bgn2_class, m039C, 0x68C);
-WWHD_OFFSET(bgn2_class, m0720, 0xA10);
-WWHD_OFFSET(bgn2_class, m2A48, 0x2D38);
-WWHD_OFFSET(bgn2_class, m2B98, 0x2E88);
+WWHD_OFFSET(bgn2_class, mHeadSph, 0x68C);
+WWHD_OFFSET(bgn2_class, mLegSph, 0xA10);
+WWHD_OFFSET(bgn2_class, mCoreSph, 0x2D38);
+WWHD_OFFSET(bgn2_class, mLegPos, 0x2E88);
 WWHD_OFFSET(bgn2_class, mArrowHitEffectTimer, 0x2FF0);
-WWHD_OFFSET(bgn2_class, m2D6A, 0x305A);
-WWHD_OFFSET(bgn2_class, m2E6C, 0x315C);
+WWHD_OFFSET(bgn2_class, mCoreHitFrame, 0x305A);
+WWHD_OFFSET(bgn2_class, mCorePos, 0x315C);
 WWHD_OFFSET(bgn2_class, mRedRopeMat, 0x3178);
-WWHD_OFFSET(bgn2_class, m2EC4, 0x3300);
-WWHD_OFFSET(bgn2_class, m2EC8, 0x33B4);
+WWHD_OFFSET(bgn2_class, mRopeSway, 0x3300);
+WWHD_OFFSET(bgn2_class, mpPotaEmitter, 0x33B4);
 WWHD_OFFSET(bgn2_class, mAcchCir, 0x33C0);
 WWHD_OFFSET(bgn2_class, mAcch, 0x3400);
-WWHD_OFFSET(bgn2_class, m30D8, 0x35C4);
+WWHD_OFFSET(bgn2_class, mHioOwner, 0x35C4);
 WWHD_SIZE(bgn2_class, 0x35C8);
 
 /* daBgn2_HIO_c, HD: the vtable pointer is the last word (0x30); size 0x34 */
@@ -136,23 +136,23 @@ WWHD_SIZE(daBgn2_HIO_c, 0x34);
 // HD: phase-one and phase-three fields used by the spider phase.
 struct bgn2BgnView {
     u8 _000[0x3D5];
-    be<s8> m02B5;
+    be<s8> mForm;
     u8 _3D6[0x151CC - 0x3D6];
-    be<s16> mCA60;
+    be<s16> mBlurRate;
     be<s8> mCSMode;
     u8 _151CF[0x15764 - 0x151CF];
-    be<s8> mCC90;
+    be<s8> mFormRequest;
 };
-WWHD_OFFSET(bgn2BgnView, m02B5, 0x3D5);
-WWHD_OFFSET(bgn2BgnView, mCA60, 0x151CC);
+WWHD_OFFSET(bgn2BgnView, mForm, 0x3D5);
+WWHD_OFFSET(bgn2BgnView, mBlurRate, 0x151CC);
 WWHD_OFFSET(bgn2BgnView, mCSMode, 0x151CE);
-WWHD_OFFSET(bgn2BgnView, mCC90, 0x15764);
+WWHD_OFFSET(bgn2BgnView, mFormRequest, 0x15764);
 WWHD_SIZE(bgn2BgnView, 0x15765);
 struct bgn2Bgn3View : fopAc_ac_c {
     u8 _3AC[0x1213C - 0x3AC];
-    be<f32> m10060;
+    be<f32> mFogFade;
 };
-WWHD_OFFSET(bgn2Bgn3View, m10060, 0x1213C);
+WWHD_OFFSET(bgn2Bgn3View, mFogFade, 0x1213C);
 WWHD_SIZE(bgn2Bgn3View, 0x12140);
 
 /* ---- this TU's statics and .data ---- */

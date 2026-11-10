@@ -1309,9 +1309,9 @@ BOOL daPy_lk_c::changeShipEndProc() {
     }
     if (Link07::gameInfo()->play.mMiniGameType != 1 && Link07::ship(ship)->speedF < 3.0f) {
         gabi::Local<cXyz> belt; /* ship->getBeltSpeed() (HD: the XZ length of the vector at +0x132C) */
-        f32 bx = Link07::ship(ship)->m1044.x;
+        f32 bx = Link07::ship(ship)->mBeltSpeed.x;
         belt->y = 0.0f;
-        belt->z = Link07::ship(ship)->m1044.z;
+        belt->z = Link07::ship(ship)->mBeltSpeed.z;
         belt->x = bx;
         if (std_sqrtf(PSVECSquareMag(belt)) < 3.0f) {
             if (!checkShipNotNormalMode() ||
@@ -1980,7 +1980,7 @@ BOOL daPy_lk_c::procShipCrane() {
             resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
             initShipCraneAnime();
         }
-    } else if (Link07::ship(ship)->m0351 == 2 /* ship->checkSalvageDemo() */) {
+    } else if (Link07::ship(ship)->mDemoMode == 2 /* ship->checkSalvageDemo() */) {
         if (mProcVar2 == 0 && (Link07::ship(ship)->mStateFlag & 0x40000) /* ship->checkCraneUpEnd() */) {
             mProcVar2 = 1;
             s32 anm;
@@ -2521,7 +2521,7 @@ BOOL daPy_lk_c::procRopeDown_init() {
     } else {
         m35A4 =
             mRopePos.y -
-            gabi::at<Link07::Rope3>(gabi::ea(mActorKeepRope.mActor.get()))->m15FC; /* himo3: getPlayerMoveLength() */
+            gabi::at<Link07::Rope3>(gabi::ea(mActorKeepRope.mActor.get()))->mPlayerMoveLength; /* himo3: getPlayerMoveLength() */
     }
     if (current.pos.y > m35A4) {
         commonProcInit(Link07::daPyProc_ROPE_DOWN_e);

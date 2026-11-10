@@ -109,9 +109,9 @@ static inline void mDoAud_bgmStart(u32 id) { gabi::call(0x025E18EC, id); }
 #define GND_HIO_INIT 0x101B54D8u
 
 struct gnd_class : fopEn_enemy_c {
-    /* 0x3C8 */ be<u32> m03C8;                     /* this (written by the constructor) */
+    /* 0x3C8 */ be<u32> mpSelf;  /* was m03C8: gnd_class_ct 0215788C stores the actor's own address (name from the decomp view gndMainFields::mpSelf, d_a_gnd_main.h); this (written by the constructor) */
     /* 0x3CC */ request_of_phase_process_class mPhs;
-    /* 0x3D4 */ be<u8> m03D4;                      /* param & 0xF (BGM on create) */
+    /* 0x3D4 */ be<u8> mBgmParam;  /* was m03D4: daGnd_Create 02157B30: parameter bits 0-3; starts BGM 0x8000004D when not 0 (name from the decomp view gndExecFields::mBgmParam, d_a_gnd_exec.h); param & 0xF (BGM on create) */
     /* 0x3D5 */ u8 _3D5[3];
     /* 0x3D8 */ gptr<mDoExt_McaMorf> mpMorf;
     /* 0x3DC */ gptr<mDoExt_btkAnm> mpBtk;

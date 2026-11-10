@@ -34,8 +34,8 @@ field 0204938C r3+0x548 u32 0,0x20       # mAcch flags (ground hit)
 field 0204938C r3+0x3D4 u32 0x58000000 0x58000000      # mpMorf
 field 0204938C 580000A7 u8 0 1           # morf state (isStop)
 field 0204938C 58000098 f32 0,0,1        # morf rate
-field 0204938C r3+0x458 u32 0,0x59000000 # m033C
-field 0204938C r3+0x45C u32 0,0x5A000000 # m0340
+field 0204938C r3+0x458 u32 0,0x59000000 # mpBombEyeEmitter
+field 0204938C r3+0x45C u32 0,0x5A000000 # mpBombMouthEmitter
 field 0204938C r3+0x4A4 u32 0,0x5B000000 # mSmokeCbs[2] emitter
 field 0204938C r3+0x400 u32 0xFFFFFFFF,0x12345   # swallowed actor id
 field 0204938C 54005B2C u32 0x55000000 0x55000000  # player

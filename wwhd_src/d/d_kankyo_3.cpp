@@ -109,8 +109,8 @@ void EnvLight::setSunpos() {
     }
     x = kankyo3_sin(ang) * r80000;
     y = kankyo3_cos(ang) * r80000;
-    f32 m48000 = l_lightingSunDepth;
-    z = kankyo3_cos(ang) * m48000;
+    f32 sunDepth = l_lightingSunDepth; // was m48000: z scale of the sun/moon offset (1004F124)
+    z = kankyo3_cos(ang) * sunDepth;
     bool set = play().mEventRunning.get() == 0; // event not running
     if (!set && environment().mInitAnimTimer.get() != 0)
         set = true; // mInitAnimTimer
@@ -138,7 +138,7 @@ void EnvLight::setSunpos() {
             mSunPos.y = gabi::at<Camera>(cam)->mEye.y.get() - y;
             f32 cz = gabi::at<Camera>(cam)->mEye.z.get();
             ang = deg * l_lightingDegreesToRadians;
-            mSunPos.z = gabi::fmadds(c, m48000, cz);
+            mSunPos.z = gabi::fmadds(c, sunDepth, cz);
         }
     }
     u32 env = gabi::ea(&environment());
@@ -693,9 +693,9 @@ void EnvLight::setLightPosHD() {
     f32 y = kankyo3_cos(ang) * r80000;
     f32 c = kankyo3_cos(ang);
     const f32 zero = l_lightingZero;
-    f32 m48000 = l_lightingSunDepth;
+    f32 sunDepth = l_lightingSunDepth; // was m48000: as in setSunpos 02557228
     const f32 one = l_lightingOne;
-    f32 z = c * m48000;
+    f32 z = c * sunDepth;
     f32 f28 = l_lightingFadeStep;
     if (dir == 0) {
         f32 cur = mCurTime.get();
